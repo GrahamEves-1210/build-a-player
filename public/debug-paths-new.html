@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>QB Figure — Path Labels</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #111; display: flex; min-height: 100vh; font-family: monospace; }
+
+    #svg-wrap { position: relative; width: 360px; flex-shrink: 0; padding: 20px; }
+    #svg-wrap svg { width: 100%; height: auto; display: block; }
+
+    /* ── Color each path/group by ID ── */
+    /* Helmet = injected separately via JS (old SVG path) */
+    /* facemask excluded — solid blob */
+    #helmet-shell        { fill: #ff4040 !important; }
+    [id="chin"] path     { fill: #ffd700 !important; stroke: none !important; }
+    [id="shirt"]         { fill: #ccff00 !important; stroke: none !important; }
+    [id="chest"]         { fill: #44ff44 !important; stroke: none !important; }
+    [id="Neck"]          { fill: #00ffaa !important; stroke: none !important; }
+    [id="Belt"]          { fill: #00ddff !important; stroke: none !important; }
+    [id="left sleeve"]   { fill: #0099ff !important; opacity: 1 !important; stroke: none !important; }
+    [id="right shoulder"]{ fill: #4455ff !important; stroke: none !important; }
+    [id="Left shoulder"] { fill: #9900ff !important; stroke: none !important; }
+    [id="Right hand"]    { fill: #ff00cc !important; stroke: none !important; }
+    [id="Left hand"] path{ fill: #ff0066 !important; stroke: none !important; }
+    [id="forearm"]       { fill: #ff4488 !important; stroke: none !important; }
+    [id="Legs"]          { fill: #ff99cc !important; stroke: none !important; }
+    [id="right calf"] path { fill: #aaddff !important; stroke: none !important; }
+    [id="left calf"] path  { fill: #aaffdd !important; stroke: none !important; }
+    [id="Right sock"]    { fill: #eeffaa !important; stroke: none !important; }
+    [id="Left sock"]     { fill: #ffffcc !important; stroke: none !important; }
+    [id="Right foot"]    { fill: #ffcc88 !important; stroke: none !important; }
+    [id="Left foot"]     { fill: #ff9966 !important; stroke: none !important; }
+
+    #legend {
+      color: #ddd;
+      padding: 20px 24px;
+      overflow-y: auto;
+      flex: 1;
+    }
+    h2 { color: #fff; font-size: 15px; margin-bottom: 16px; letter-spacing: .05em; }
+
+    .group { margin-bottom: 20px; }
+    .group-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: .12em;
+      color: #555;
+      margin-bottom: 6px;
+    }
+    .row { display: flex; align-items: center; gap: 10px; margin: 4px 0; font-size: 13px; }
+    .sw { width: 14px; height: 14px; border-radius: 2px; flex-shrink: 0; }
+    .id { flex: 1; }
+    .note { color: #555; font-size: 11px; }
+  </style>
+</head>
+<body>
+
+<div id="svg-wrap">Loading…</div>
+
+<div id="legend">
+  <h2>PATH LEGEND</h2>
+
+  <div class="group">
+    <div class="group-label">football-iq → team color</div>
+    <div class="row"><div class="sw" style="background:#ff4040"></div><span class="id">Helmet shell</span><span class="note"> (hardcoded from QB-Figure 2)</span></div>
+    <div class="row"><div class="sw" style="background:#333;border:1px solid #555"></div><span class="id" style="opacity:.4">facemask</span><span class="note"> skipped — solid blob</span></div>
+    <div class="row"><div class="sw" style="background:#ffd700"></div><span class="id">chin</span><span class="note"> (group → child paths)</span></div>
+  </div>
+
+  <div class="group">
+    <div class="group-label">strength → team color</div>
+    <div class="row"><div class="sw" style="background:#ccff00"></div><span class="id">shirt</span><span class="note"> (torso fill)</span></div>
+    <div class="row"><div class="sw" style="background:#44ff44"></div><span class="id">chest</span></div>
+    <div class="row"><div class="sw" style="background:#00ffaa"></div><span class="id">Neck</span></div>
+    <div class="row"><div class="sw" style="background:#00ddff"></div><span class="id">Belt</span></div>
+  </div>
+
+  <div class="group">
+    <div class="group-label">arm-strength → team color</div>
+    <div class="row"><div class="sw" style="background:#0099ff"></div><span class="id">left sleeve</span></div>
+  </div>
+
+  <div class="group">
+    <div class="group-label">arm-strength → skin color</div>
+    <div class="row"><div class="sw" style="background:#4455ff"></div><span class="id">right shoulder</span></div>
+    <div class="row"><div class="sw" style="background:#9900ff"></div><span class="id">Left shoulder</span></div>
+    <div class="row"><div class="sw" style="background:#ff00cc"></div><span class="id">Right hand</span></div>
+    <div class="row"><div class="sw" style="background:#ff0066"></div><span class="id">Left hand</span></div>
+    <div class="row"><div class="sw" style="background:#ff4488"></div><span class="id">forearm</span></div>
+  </div>
+
+  <div class="group">
+    <div class="group-label">mobility → team color</div>
+    <div class="row"><div class="sw" style="background:#ff99cc"></div><span class="id">Legs</span></div>
+  </div>
+
+  <div class="group">
+    <div class="group-label">mobility → white (#cccccc)</div>
+    <div class="row"><div class="sw" style="background:#aaddff"></div><span class="id">right calf</span></div>
+    <div class="row"><div class="sw" style="background:#aaffdd"></div><span class="id">left calf</span></div>
+    <div class="row"><div class="sw" style="background:#eeffaa"></div><span class="id">Right sock</span></div>
+    <div class="row"><div class="sw" style="background:#ffffcc"></div><span class="id">Left sock</span></div>
+    <div class="row"><div class="sw" style="background:#ffcc88"></div><span class="id">Right foot</span></div>
+    <div class="row"><div class="sw" style="background:#ff9966"></div><span class="id">Left foot</span></div>
+  </div>
+</div>
+
+<script>
+  const HELMET_SHELL = 'M244.5 120.156L256 128.656L276 134.656L287 130.156C284.333 129.156 278.4 126.556 276 124.156C273 121.156 277.5 109.156 279 109.156C280.2 109.156 280.833 102.489 281 99.1556L276 89.1556L260.5 79.6556C252.1 72.0556 258.333 62.8222 262.5 59.1556L292 60.1556L322.5 53.1556V44.6556H345.5V43.1556C333.5 5.95558 298.167 -0.677753 282 0.65558C226.8 3.45558 212.667 44.4889 212.5 64.6556L215 68.6556C213.4 73.4556 219.333 93.9889 222.5 103.656V107.656V113.656L228.5 121.656H237.5L244.5 120.156Z'
+
+  fetch('/QB-Figure (3) (1).svg')
+    .then(r => r.text())
+    .then(svg => {
+      const wrap = document.getElementById('svg-wrap')
+      wrap.innerHTML = svg
+      const el = wrap.querySelector('svg')
+      el.removeAttribute('width')
+      el.removeAttribute('height')
+      el.style.cssText = 'width:100%;height:auto;display:block'
+      // Inject solid helmet shell path (sourced from QB-Figure 2, same viewBox)
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+      path.setAttribute('id', 'helmet-shell')
+      path.setAttribute('d', HELMET_SHELL)
+      el.appendChild(path)
+    })
+</script>
+</body>
+</html>
