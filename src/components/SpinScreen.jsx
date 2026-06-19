@@ -15,8 +15,8 @@ const FAST_MS = 36   // ms per item at peak speed — defines MAX_VEL
 function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, onStop, blurred, fast, durationMs = 1400 }) {
   const COPIES = useMemo(() => {
     const loopH  = items.length * ITEM_H
-    const needed = Math.ceil(14000 / Math.max(loopH, 1))  // enough runway for animation
-    return Math.max(4, Math.min(needed, Math.ceil(120 / Math.max(items.length, 1))))
+    const needed = Math.ceil(14000 / Math.max(loopH, 1))
+    return Math.max(3, Math.min(needed, Math.ceil(99 / Math.max(items.length, 1))))
   }, [items])
   const allItems = useMemo(
     () => Array.from({ length: COPIES }, () => items).flat(),
@@ -39,7 +39,7 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, on
   // never overwrite our direct DOM updates with a stale value.
   useLayoutEffect(() => {
     if (trackRef.current) {
-      trackRef.current.style.transform = `translateY(${-(posRef.current - CENTER * ITEM_H)}px)`
+      trackRef.current.style.transform = `translate3d(0,${-(posRef.current - CENTER * ITEM_H)}px,0)`
     }
   })
 
@@ -54,7 +54,7 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, on
       posRef.current = initOffset
       if (trackRef.current) {
         trackRef.current.style.transition = 'none'
-        trackRef.current.style.transform  = `translateY(${-(initOffset - CENTER * ITEM_H)}px)`
+        trackRef.current.style.transform  = `translate3d(0,${-(initOffset - CENTER * ITEM_H)}px,0)`
       }
       if (!spinning && !idle) return
     }
@@ -74,6 +74,9 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, on
       const MAX_VEL   = ITEM_H / FAST_MS   // px per ms at peak speed
       let lastFrame   = startTime
 
+      // Set transition once — not every frame
+      if (trackRef.current) trackRef.current.style.transition = 'none'
+
       const frame = (now) => {
         const elapsed = now - startTime
         const t       = Math.min(elapsed / duration, 1.0)
@@ -91,8 +94,7 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, on
         wrap()
 
         if (trackRef.current) {
-          trackRef.current.style.transition = 'none'
-          trackRef.current.style.transform  = `translateY(${-(posRef.current - CENTER * ITEM_H)}px)`
+          trackRef.current.style.transform = `translate3d(0,${-(posRef.current - CENTER * ITEM_H)}px,0)`
         }
 
         if (t >= 1.0) {
@@ -101,7 +103,7 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, on
           posRef.current     = snapped
           if (trackRef.current) {
             trackRef.current.style.transition = 'transform 140ms cubic-bezier(0.25,0.46,0.45,0.94)'
-            trackRef.current.style.transform  = `translateY(${-(snapped - CENTER * ITEM_H)}px)`
+            trackRef.current.style.transform  = `translate3d(0,${-(snapped - CENTER * ITEM_H)}px,0)`
           }
           stopRef.current = setTimeout(() => {
             if (trackRef.current) trackRef.current.style.transition = 'none'
@@ -219,9 +221,10 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
   const isSpinning     = isSpinningTeam || isSpinningQB
   const isDone         = phase === 'done'
 
-  // Stable QB items — excludes previous QB during respin
+  // Stable QB items — minimal placeholder until team is selected (QB reel is blurred/hidden)
   const qbReelItems = useMemo(() => {
-    const base = selectedTeam ? QBS.filter(q => q.team === selectedTeam.short) : QBS
+    if (!selectedTeam) return QBS.slice(0, 3)
+    const base = QBS.filter(q => q.team === selectedTeam.short)
     return excludedQB ? base.filter(q => q !== excludedQB) : base
   }, [selectedTeam, excludedQB])
 
@@ -271,7 +274,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
               onClick={canRespin ? handleQBRespin : handleSpin}
               disabled={isSpinning || complete || (isDone && !canRespin)}
             >
-              {canRespin ? 'QB RESPIN?' : 'SPIN'}
+              {canRespin ? <>QB RESPIN? <span className="spin-btn-badge">1</span></> : 'SPIN'}
             </button>
           )
         })()}

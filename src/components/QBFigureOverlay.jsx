@@ -147,9 +147,9 @@ export default function QBFigureOverlay({ build, className }) {
              style={SVG_STYLE} aria-hidden="true">
           {/* Chest number */}
           <text
-            x="297" y="340"
+            x="298" y="340"
             textAnchor="middle"
-            transform="rotate(-2, 297, 340)"
+            transform="rotate(-2, 298, 340)"
             fontFamily="'Bebas Neue', Impact, Arial, sans-serif"
             fontSize="117"
             fill="white"
@@ -165,13 +165,13 @@ export default function QBFigureOverlay({ build, className }) {
           >{build?.['strength']?.number ?? ''}</text>
 
           {/* Left shoulder number (viewer left, QB right arm) */}
-          <g transform="translate(179, 148) scale(1.6, 0.32) rotate(84)"
+          <g transform="translate(181, 148) scale(1.6, 0.32) rotate(84)"
              style={{ opacity: has('strength') ? 1 : 0, transition: 'opacity 0.5s ease' }}>
             <text
               x="0" y="0"
               textAnchor="middle"
               fontFamily="'Bebas Neue', Impact, Arial, sans-serif"
-              fontSize="38"
+              fontSize="37"
               fill="white"
               stroke="black"
               strokeWidth="3"
@@ -181,13 +181,13 @@ export default function QBFigureOverlay({ build, className }) {
           </g>
 
           {/* Right shoulder number (viewer right, QB left arm) */}
-          <g transform="translate(413, 138.5) scale(1.6, 0.32) rotate(-84)"
+          <g transform="translate(409, 136.5) scale(1.6, 0.32) rotate(-84)"
              style={{ opacity: has('strength') ? 1 : 0, transition: 'opacity 0.5s ease' }}>
             <text
               x="0" y="0"
               textAnchor="middle"
               fontFamily="'Bebas Neue', Impact, Arial, sans-serif"
-              fontSize="38"
+              fontSize="37"
               fill="white"
               stroke="black"
               strokeWidth="3"

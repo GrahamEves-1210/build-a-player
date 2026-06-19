@@ -1,8 +1,9 @@
 const STEPS = [
-  { text: <>Hit <strong>Spin the Wheel</strong> — a random NFL team and their starting QB are revealed.</> },
-  { text: <><strong>Drag</strong> an attribute chip (ARM, LEGS, CORE, IQ, COMPOSURE, ACCURACY) from the left panel and <strong>drop it</strong> onto the matching zone on the silhouette.</> },
-  { text: <>The body part <strong>lights up in that team's color</strong>. Spin again to find a different QB for your next slot.</> },
-  { text: <>Once all 6 slots are filled, hit <strong>Simulate Season</strong> to run a full NFL season with your Frankenstein QB.</> },
+  { text: <>Hit <strong>SPIN</strong> — the wheel randomly lands on an NFL team, then pulls a QB from their roster.</> },
+  { text: <>You get <strong>8 attribute slots</strong> to fill: Arm, Legs, Size, Decision Making, Leadership, Accuracy, Playmaking, and Pocket Presence — each from a different QB.</> },
+  { text: <><strong>Drag</strong> one of the QB's stat chips from the right panel and <strong>drop it</strong> onto the matching zone on the silhouette. The body part lights up in that team's colors.</> },
+  { text: <>You get <strong>one QB Respin per game</strong> — use it to swap your QB before locking in a stat.</> },
+  { text: <>Spin until all 8 slots are filled, then hit <strong>Simulate Season</strong> to see how your Frankenstein QB performs.</> },
 ]
 
 export default function HowToPlay({ open, onClose }) {
@@ -13,7 +14,7 @@ export default function HowToPlay({ open, onClose }) {
     >
       <div className="htp-card">
         <div className="htp-title">How to Play</div>
-        <div className="htp-sub">Build the perfect QB from every corner of the NFL</div>
+        <div className="htp-sub">Build the ultimate QB from every corner of the NFL</div>
 
         {STEPS.map((s, i) => (
           <div key={i} className="htp-step">
@@ -23,11 +24,11 @@ export default function HowToPlay({ open, onClose }) {
         ))}
 
         <div className="htp-tip">
-          <strong>Balance Bonus:</strong> A tight stat spread earns an OVR bonus. Mahomes' IQ + Allen's arm is tempting — but can you balance it with strong legs and composure too?
+          <strong>Strategy tip:</strong> A balanced stat spread earns an OVR bonus. Mahomes' IQ + Allen's arm is tempting — but neglect mobility and pocket presence at your own risk.
         </div>
 
         <button className="mbtn mbtn-primary mbtn-full" onClick={onClose}>
-          Got it
+          Let's Build
         </button>
       </div>
     </div>

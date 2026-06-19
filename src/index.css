@@ -323,6 +323,42 @@ body::after {
   letter-spacing: -0.1px;
 }
 
+/* About accordion body */
+.wm-about-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px 10px 10px 10px;
+  margin: 0 0 2px;
+  border-radius: 8px;
+  background: rgba(149,213,178,0.03);
+  border: 1px solid rgba(149,213,178,0.06);
+}
+
+.wm-about-text {
+  font-size: 10.5px;
+  color: var(--text-3);
+  line-height: 1.55;
+  letter-spacing: -0.1px;
+  margin: 0;
+}
+
+.wm-about-text strong {
+  color: var(--g50);
+  font-weight: 700;
+}
+
+.wm-about-disclaimer {
+  font-size: 9.5px;
+  color: var(--text-3);
+  opacity: 0.55;
+  line-height: 1.5;
+  letter-spacing: -0.1px;
+  margin: 4px 0 0;
+  padding-top: 6px;
+  border-top: 1px solid rgba(149,213,178,0.08);
+}
+
 .logo-mark {
   width: 26px;
   height: 26px;
@@ -537,7 +573,6 @@ body::after {
   background: var(--grey-900);
   border: 1px solid var(--border);
   border-radius: 20px;
-  overflow: hidden;
   position: relative;
   transition:
     border-color 0.25s var(--ease),
@@ -550,9 +585,8 @@ body::after {
 }
 
 .reel-outer.reel-blurred {
-  filter: blur(4px);
-  opacity: 0.55;
-  transition: filter 0.18s ease, opacity 0.18s ease;
+  opacity: 0.18;
+  transition: opacity 0.18s ease;
 }
 
 .reel-label {
@@ -575,6 +609,7 @@ body::after {
   height: 220px;
   overflow: hidden;
   contain: layout paint;
+  border-radius: 0 0 18px 18px;
 }
 
 /* Fade overlays — sit above the GPU-composited reel track as non-compositing siblings */
@@ -712,6 +747,21 @@ body::after {
   border: 1px solid rgba(116,198,157,0.35);
   color: rgba(116,198,157,0.45);
   box-shadow: none;
+}
+
+.spin-btn-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.25);
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1;
+  margin-left: 5px;
+  vertical-align: middle;
 }
 
 .spin-indicator {
@@ -1149,8 +1199,8 @@ body::after {
 
 .cz-drop-zone {
   position: absolute;
-  width: 100px;
-  height: 100px;
+  width: 120px;
+  height: 120px;
   border-radius: 50%;
   transform: translate(-50%, -50%);
   pointer-events: none;

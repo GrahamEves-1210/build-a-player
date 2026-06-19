@@ -3,7 +3,7 @@ import { useState, useRef, useEffect } from 'react'
 const STEPS = [
   { n: '1', title: 'Spin',      body: 'Pull a random NFL team, then a QB from their roster.' },
   { n: '2', title: 'Drag',      body: 'Drop one stat onto the matching zone on the player silhouette.' },
-  { n: '3', title: 'Repeat ×6', body: 'Fill all six attribute slots — one per spin.' },
+  { n: '3', title: 'Repeat ×8', body: 'Fill all eight attribute slots — one per spin.' },
   { n: '4', title: 'Simulate',  body: 'Hit Simulate to see how your Frankenstein QB performs.' },
 ]
 
@@ -52,6 +52,16 @@ function IconHelp() {
   )
 }
 
+function IconInfo() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true">
+      <circle cx="6.5" cy="6.5" r="5.5"/>
+      <line x1="6.5" y1="6" x2="6.5" y2="9.5"/>
+      <circle cx="6.5" cy="3.8" r="0.4" fill="currentColor" stroke="none"/>
+    </svg>
+  )
+}
+
 function IconChevron({ up }) {
   return (
     <svg
@@ -66,8 +76,9 @@ function IconChevron({ up }) {
 }
 
 export default function Navbar({ onReset }) {
-  const [open,    setOpen]    = useState(false)
-  const [htpOpen, setHtpOpen] = useState(false)
+  const [open,      setOpen]      = useState(false)
+  const [htpOpen,   setHtpOpen]   = useState(false)
+  const [aboutOpen, setAboutOpen] = useState(false)
   const ref = useRef(null)
 
   useEffect(() => {
@@ -132,6 +143,30 @@ export default function Navbar({ onReset }) {
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+
+            {/* About — accordion */}
+            <button
+              className="wm-row wm-row-accordion"
+              onClick={() => setAboutOpen(o => !o)}
+            >
+              <span className="wm-icon"><IconInfo /></span>
+              <span className="wm-label">About</span>
+              <span className="wm-chevron"><IconChevron up={aboutOpen} /></span>
+            </button>
+
+            {aboutOpen && (
+              <div className="wm-about-body">
+                <p className="wm-about-text">
+                  <strong>Build-A-Player Workshop</strong> is an independent fan-made game. Spin the wheel to pull random NFL QBs, mix and match their real attributes, and simulate a full season with your Frankenstein quarterback.
+                </p>
+                <p className="wm-about-text">
+                  More positions coming soon — Build-A-RB, Build-A-WR, and beyond.
+                </p>
+                <p className="wm-about-disclaimer">
+                  Not affiliated with, endorsed by, or sponsored by the NFL or any of its member clubs. NFL team names, logos, colors, and player likenesses are the intellectual property of their respective owners and are used here solely for entertainment and fan purposes.
+                </p>
               </div>
             )}
 
