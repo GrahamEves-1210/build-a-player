@@ -13,38 +13,70 @@ const OUT_DIR    = path.join(ROOT, 'public', 'headshots')
 const MAP_FILE   = path.join(ROOT, 'src', 'data', 'headshots.json')
 
 const QB_NAMES = [
-  'Kyler Murray','Clayton Tune','Desmond Ridder',
-  'Michael Penix Jr.','Taylor Heinicke','Logan Woodside',
-  'Lamar Jackson','Tyler Huntley','Josh Johnson',
-  'Josh Allen','Mitchell Trubisky','Kyle Allen',
-  'Bryce Young','Andy Dalton','Jake Luton',
-  'Caleb Williams','Tyson Bagent','Brett Rypien',
-  'Joe Burrow','Jake Browning','Reid Sinnett',
-  'Deshaun Watson','Joe Flacco','Dorian Thompson-Robinson',
-  'Dak Prescott','Cooper Rush','Trey Lance',
-  'Bo Nix','Zach Wilson','Jarrett Stidham',
-  'Jared Goff','Hendon Hooker','Nate Sudfeld',
-  'Jordan Love','Sean Clifford','Tim Boyle',
-  'C.J. Stroud','Case Keenum','Davis Mills',
-  'Anthony Richardson','Sam Ehlinger','Brett Hundley',
-  'Trevor Lawrence','Mac Jones','C.J. Beathard',
-  'Patrick Mahomes','Blaine Gabbert','Carson Wentz',
-  "Aidan O'Connell",'Gardner Minshew','Shane Buechele',
-  'Justin Herbert','Easton Stick','Will Grier',
-  'Matthew Stafford','Stetson Bennett','Dresser Winn',
-  'Tua Tagovailoa','Skylar Thompson','Mike White',
-  'J.J. McCarthy','Sam Darnold','Nick Mullens',
-  'Drake Maye','Jacoby Brissett','Bailey Zappe',
-  'Derek Carr','Jake Haener','Spencer Rattler',
-  'Tommy DeVito','Drew Lock','Jameis Winston',
-  'Aaron Rodgers','Tyrod Taylor','Jordan Travis',
-  'Jalen Hurts','Kenny Pickett','Tanner McKee',
-  'Justin Fields','Russell Wilson','Chris Streveler',
-  'Brock Purdy','Joshua Dobbs','Brandon Allen',
-  'Geno Smith','Sam Howell','Jaren Hall',
-  'Baker Mayfield','Kyle Trask','John Wolford',
-  'Cam Ward','Will Levis','Mason Rudolph',
-  'Jayden Daniels','Marcus Mariota','Jeff Driskel',
+  // ARI
+  'Jacoby Brissett','Gardner Minshew','Carson Beck',
+  // ATL
+  'Michael Penix Jr.','Tua Tagovailoa','Trevor Siemian',
+  // BAL
+  'Lamar Jackson','Tyler Huntley','Skylar Thompson',
+  // BUF
+  'Josh Allen','Kyle Allen','Shane Buechele',
+  // CAR
+  'Bryce Young','Kenny Pickett','Will Grier',
+  // CHI
+  'Caleb Williams','Tyson Bagent','Case Keenum',
+  // CIN
+  'Joe Burrow','Joe Flacco','Josh Johnson',
+  // CLE
+  'Shedeur Sanders','Deshaun Watson','Dillon Gabriel',
+  // DAL
+  'Dak Prescott','Joe Milton III','Sam Howell',
+  // DEN
+  'Bo Nix','Jarrett Stidham','Sam Ehlinger',
+  // DET
+  'Jared Goff','Teddy Bridgewater','Luke Altmyer',
+  // GB
+  'Jordan Love','Tyrod Taylor','Kyle McCord',
+  // HOU
+  'C.J. Stroud','Davis Mills','Graham Mertz',
+  // IND
+  'Daniel Jones','Anthony Richardson','Riley Leonard',
+  // JAX
+  'Trevor Lawrence','Nick Mullens','Carter Bradley',
+  // KC
+  'Patrick Mahomes','Justin Fields','Garrett Nussmeier',
+  // LV
+  'Kirk Cousins','Fernando Mendoza',"Aidan O'Connell",
+  // LAC
+  'Justin Herbert','Trey Lance','D.J. Uiagalelei',
+  // LAR
+  'Matthew Stafford','Ty Simpson','Stetson Bennett',
+  // MIA
+  'Malik Willis','Quinn Ewers','Cam Miller',
+  // MIN
+  'Kyler Murray','J.J. McCarthy','Carson Wentz',
+  // NE
+  'Drake Maye','Tommy DeVito','Behren Morton',
+  // NO
+  'Tyler Shough','Spencer Rattler','Zach Wilson',
+  // NYG
+  'Jaxson Dart','Jameis Winston','Brandon Allen',
+  // NYJ
+  'Geno Smith','Cade Klubnik','Brady Cook',
+  // PHI
+  'Jalen Hurts','Tanner McKee','Andy Dalton',
+  // PIT
+  'Aaron Rodgers','Mason Rudolph','Will Howard',
+  // SF
+  'Brock Purdy','Mac Jones','Adrian Martinez',
+  // SEA
+  'Sam Darnold','Drew Lock','Jalen Milroe',
+  // TB
+  'Baker Mayfield','Jake Browning','Connor Bazelak',
+  // TEN
+  'Cam Ward','Mitchell Trubisky','Will Levis',
+  // WAS
+  'Jayden Daniels','Marcus Mariota','Athan Kaliakmanis',
 ]
 
 function normalize(name) {

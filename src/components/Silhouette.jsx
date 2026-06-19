@@ -7,18 +7,21 @@ import QBFigureOverlay from './QBFigureOverlay'
 // Figure coordinate space (matches SVG viewBox 0 0 622 844)
 const FIG_W = 622
 const FIG_H = 844
-const CARD_W = 150  // must match .cz-card width in CSS
+const CARD_W = 207  // must match .cz-card width in CSS
 
 // Anchor positions in figure coordinate space
 // ax: 0=left edge of figure, 622=right edge
 // ay: 0=top of figure, 844=bottom
+// cy: fixed card Y position as fraction of sil-wrap height (cards don't track the dot)
 const ZONES = [
-  { type: 'football-iq',  ax: 308, ay:  42, side: 'right' },  // helmet center
-  { type: 'arm-strength', ax: 171, ay: 175, side: 'left'  },  // throwing shoulder
-  { type: 'accuracy',     ax:  90, ay: 230, side: 'left'  },  // right (throwing) hand
-  { type: 'composure',    ax: 300, ay: 270, side: 'left'  },  // heart / upper chest
-  { type: 'strength',     ax: 310, ay: 310, side: 'right' },  // torso center
-  { type: 'mobility',     ax: 217, ay: 525, side: 'left'  },  // upper legs — right thigh
+  { type: 'football-iq',     ax: 275, ay:  42, side: 'left',  cy: 0.11 },
+  { type: 'leadership',      ax: 330, ay: 120, side: 'right', cy: 0.14 },
+  { type: 'arm-strength',    ax: 171, ay: 175, side: 'left',  cy: 0.26 },
+  { type: 'strength',        ax: 340, ay: 310, side: 'right', cy: 0.54 },
+  { type: 'accuracy',        ax:  90, ay: 230, side: 'left',  cy: 0.46 },
+  { type: 'composure',       ax: 350, ay: 240, side: 'right', cy: 0.34 },
+  { type: 'mobility',        ax: 207, ay: 525, side: 'left',  cy: 0.68 },
+  { type: 'pocket-presence', ax: 465, ay: 520, side: 'right', cy: 0.74 },
 ]
 
 function useFigureBounds(ref) {
@@ -43,27 +46,20 @@ function useFigureBounds(ref) {
   return bounds
 }
 
-function CZCard({ zone, dotY, build, activeDrag, onDrop, hidden }) {
-  const [over, setOver] = useState(false)
-  const meta   = ATTR[zone.type]
-  const data   = build[zone.type]
-  const filled  = !!data
-  const canDrop = activeDrag?.type === zone.type && !filled
+function CZCard({ zone, cardY, build, activeDrag, hidden, invisible }) {
+  const meta  = ATTR[zone.type]
+  const data  = build[zone.type]
+  const filled = !!data
 
   return (
     <div
       className={[
         'cz-card', `cz-${zone.side}`,
-        filled   && 'cz-filled',
-        canDrop  && 'cz-can-drop',
-        over && canDrop && 'cz-drag-over',
-        hidden   && 'cz-hidden',
+        filled    && 'cz-filled',
+        hidden    && 'cz-hidden',
+        invisible && 'cz-invisible',
       ].filter(Boolean).join(' ')}
-      style={{ top: `${dotY ?? 50}%` }}
-      onDragEnter={e => { e.preventDefault(); if (canDrop) setOver(true) }}
-      onDragOver={e => { e.preventDefault(); if (canDrop) setOver(true) }}
-      onDragLeave={() => setOver(false)}
-      onDrop={e => { e.preventDefault(); e.stopPropagation(); setOver(false); if (canDrop) onDrop(zone.type) }}
+      style={{ top: `${cardY ?? 50}%` }}
     >
       <div className="cz-tag">{meta.label}</div>
       {filled && (
@@ -76,7 +72,10 @@ function CZCard({ zone, dotY, build, activeDrag, onDrop, hidden }) {
               onError={e => { e.currentTarget.style.display = 'none' }}
             />
           )}
-          <span className="cz-qb-name">{data.qbFull}</span>
+          <span className="cz-qb-name">
+              <span>{data.qbFull.split(' ')[0]}</span>
+              <span>{data.qbFull.split(' ').slice(1).join(' ')}</span>
+            </span>
         </div>
       )}
       {!filled && (
@@ -112,12 +111,14 @@ function HWTracker({ build }) {
 export default function Silhouette({ build, activeDrag, onDrop, activeCategory, onCategoryChange }) {
   const silRef = useRef(null)
   const bounds = useFigureBounds(silRef)
+  const boundsRef = useRef(bounds)
   const activeDragRef = useRef(activeDrag)
   const onDropRef = useRef(onDrop)
+  useLayoutEffect(() => { boundsRef.current = bounds }, [bounds])
   useLayoutEffect(() => { activeDragRef.current = activeDrag }, [activeDrag])
   useLayoutEffect(() => { onDropRef.current = onDrop }, [onDrop])
 
-  // Native DOM drag listeners — React synthetic drag events are unreliable
+  // Native drop — only registers within ~80 figure-units of the zone dot
   useEffect(() => {
     const el = silRef.current
     if (!el) return
@@ -125,7 +126,17 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
     const onDropNative = (e) => {
       e.preventDefault()
       const ad = activeDragRef.current
-      if (ad) onDropRef.current(ad.type)
+      if (!ad) return
+      const b = boundsRef.current
+      if (!b) return
+      const rect = el.getBoundingClientRect()
+      const { W, H, fx, fy, scale } = b
+      const figX = ((e.clientX - rect.left) / rect.width  * W - fx) / scale
+      const figY = ((e.clientY - rect.top)  / rect.height * H - fy) / scale
+      const zone = ZONES.find(z => z.type === ad.type)
+      if (!zone) return
+      const dist = Math.sqrt((figX - zone.ax) ** 2 + (figY - zone.ay) ** 2)
+      if (dist <= 80) onDropRef.current(ad.type)
     }
     el.addEventListener('dragover', onDragOver)
     el.addEventListener('drop', onDropNative)
@@ -138,18 +149,23 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
   const categoryTypes = activeCategory
     ? (CATEGORIES.find(c => c.id === activeCategory)?.types ?? [])
     : null
+  const complete = TYPES.every(t => build[t])
 
   // Convert figure-space (ax, ay) → sil-wrap percentage coords
   const pos = (zone) => {
     if (!bounds) return null
     const { W, H, fx, fy, scale } = bounds
-    const dotX = (fx + zone.ax * scale) / W * 100
-    const dotY = (fy + zone.ay * scale) / H * 100
-    // line endpoint x: right edge of left card, or left edge of right card
+    const dotX  = (fx + zone.ax * scale) / W * 100
+    const dotY  = (fy + zone.ay * scale) / H * 100
+    const cardY = zone.cy * 100
+    // card edge x
     const lineX = zone.side === 'left'
       ? (CARD_W / W) * 100
       : ((W - CARD_W) / W) * 100
-    return { dotX, dotY, lineX }
+    // 75px horizontal stub in SVG percentage units
+    const stub  = 125 / W * 100
+    const stubX = zone.side === 'left' ? lineX + stub : lineX - stub
+    return { dotX, dotY, cardY, lineX, stubX }
   }
 
   return (
@@ -160,7 +176,7 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
           <button
             key={cat.id}
             className={`cat-pill ${activeCategory === cat.id ? 'active' : ''}`}
-            onClick={() => onCategoryChange(cat.id)}
+            onClick={() => onCategoryChange(activeCategory === cat.id ? null : cat.id)}
           >
             {cat.label}
           </button>
@@ -179,17 +195,17 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
           aria-hidden="true"
         >
           {ZONES.map(zone => {
-            const hidden = !!categoryTypes && !categoryTypes.includes(zone.type) && !build[zone.type] && activeDrag?.type !== zone.type
-            if (hidden || !bounds) return null
+            const hidden = !complete && (!activeCategory || !categoryTypes?.includes(zone.type))
             const p = pos(zone)
             if (!p) return null
             return (
-              <line
+              <path
                 key={zone.type}
-                x1={p.dotX} y1={p.dotY}
-                x2={p.lineX} y2={p.dotY}
+                d={`M ${p.lineX} ${p.cardY} L ${p.stubX} ${p.cardY} L ${p.dotX} ${p.dotY}`}
                 stroke="#e8192c"
                 strokeWidth="0.3"
+                fill="none"
+                style={{ opacity: hidden ? 0 : 1 }}
               />
             )
           })}
@@ -198,24 +214,26 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
         {/* Dots + cards */}
         <div className="cz-layer" style={{ zIndex: 10 }}>
           {ZONES.map(zone => {
-            const isDragTarget = activeDrag?.type === zone.type
-            const hidden = !!categoryTypes && !categoryTypes.includes(zone.type) && !build[zone.type] && !isDragTarget
+            const hiddenFromTab = !complete && (!activeCategory || !categoryTypes?.includes(zone.type))
             const p = pos(zone)
             return (
               <div key={zone.type}>
                 {p && (
                   <div
-                    className={['cz-dot', hidden && 'cz-hidden'].filter(Boolean).join(' ')}
+                    className={['cz-dot', hiddenFromTab && 'cz-hidden'].filter(Boolean).join(' ')}
                     style={{ left: `${p.dotX}%`, top: `${p.dotY}%` }}
                   />
                 )}
+                {p && !hiddenFromTab && activeDrag?.type === zone.type && !build[zone.type] && (
+                  <div className="cz-drop-zone" style={{ left: `${p.dotX}%`, top: `${p.dotY}%` }} />
+                )}
                 <CZCard
                   zone={zone}
-                  dotY={p?.dotY}
+                  cardY={p?.cardY}
                   build={build}
                   activeDrag={activeDrag}
-                  onDrop={onDrop}
-                  hidden={hidden || !p}
+                  hidden={!p}
+                  invisible={hiddenFromTab && !!p}
                 />
               </div>
             )

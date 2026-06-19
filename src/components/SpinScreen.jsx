@@ -13,10 +13,11 @@ const FAST_MS = 36   // ms per item at peak speed — defines MAX_VEL
 
 // ─── Slot Reel ───────────────────────────────────────────────────────────────
 function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, onStop, blurred, fast, durationMs = 1400 }) {
-  const COPIES = useMemo(
-    () => Math.max(14, Math.ceil(18000 / Math.max(items.length * ITEM_H, 1))),
-    [items]
-  )
+  const COPIES = useMemo(() => {
+    const loopH  = items.length * ITEM_H
+    const needed = Math.ceil(14000 / Math.max(loopH, 1))  // enough runway for animation
+    return Math.max(4, Math.min(needed, Math.ceil(120 / Math.max(items.length, 1))))
+  }, [items])
   const allItems = useMemo(
     () => Array.from({ length: COPIES }, () => items).flat(),
     [items, COPIES]
@@ -145,7 +146,7 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, on
       <div className="reel-label">{label}</div>
       <div className="reel-window">
         <div className="reel-selector" />
-        <div ref={trackRef} className="reel-track">
+        <div ref={trackRef} className="reel-track" style={{ willChange: 'transform' }}>
           {allItems.map((item, i) => (
             <div key={i} className="reel-row" style={{ height: ITEM_H }}>
               <div className="reel-primary">{getDisplay(item)}</div>
@@ -179,7 +180,6 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
     setPhase('idle')
     setSelectedTeam(null)
     setSelectedQB(null)
-    setQbRespinUsed(false)
     setExcludedQB(null)
     setDraggingType(null)
   }, [resetKey])
@@ -203,7 +203,6 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
     clearAll()
     setSelectedTeam(null)
     setSelectedQB(null)
-    setQbRespinUsed(false)
     setExcludedQB(null)
     setPhase('team')
   }, [])
@@ -241,7 +240,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
               label="TEAM"
               items={TEAMS}
               spinning={isSpinningTeam}
-              idle={phase === 'idle'}
+              idle={false}
               locked={!!selectedTeam}
               getDisplay={t => t.short}
               getSub={t => t.name.split(' ').slice(-1)[0]}
@@ -252,7 +251,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
               label="QB"
               items={qbReelItems}
               spinning={isSpinningQB}
-              idle={phase === 'idle'}
+              idle={false}
               locked={!!selectedQB && phase === 'done'}
               getDisplay={q => q.name.split(' ')[0]}
               getSub={q => q.name.split(' ').slice(1).join(' ')}
@@ -280,22 +279,19 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
         {isDone && selectedQB && (
           <>
             <div className="qb-reveal-card" style={{ '--qb-color': selectedQB.color }}>
-              {HEADSHOTS[selectedQB.name] && (
-                <img
-                  className="qb-pfp-large"
-                  src={`/headshots/${HEADSHOTS[selectedQB.name]}.jpg`}
-                  alt={selectedQB.name}
-                  onError={e => { e.currentTarget.style.display = 'none' }}
-                />
-              )}
-              <div className="qb-reveal-info">
-                <div className="qb-team-bar" />
-                <div>
-                  <div className="qb-reveal-name">{selectedQB.name}</div>
-                  <div className="qb-reveal-meta">
-                    {selectedQB.teamName}{selectedQB.starter ? '' : ' · Backup'}
-                  </div>
-                </div>
+              <div className="qb-reveal-text">
+                <div className="qb-reveal-name">{selectedQB.name}</div>
+                <div className="qb-reveal-meta">{selectedQB.teamName}{selectedQB.starter ? '' : ' · Backup'}</div>
+              </div>
+              <div className="qb-reveal-hero">
+                {HEADSHOTS[selectedQB.name] && (
+                  <img
+                    className="qb-pfp-hero"
+                    src={`/headshots/${HEADSHOTS[selectedQB.name]}.jpg`}
+                    alt={selectedQB.name}
+                    onError={e => { e.currentTarget.parentElement.style.background = 'var(--grey-900)' }}
+                  />
+                )}
               </div>
             </div>
 
@@ -344,6 +340,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
                                 teamColor:  selectedQB.color,
                                 teamColor2: selectedQB.color2,
                                 skinColor:  selectedQB.skin,
+                                number:     selectedQB.number,
                                 photo: HEADSHOTS[selectedQB.name] ? `/headshots/${HEADSHOTS[selectedQB.name]}.jpg` : null,
                               })
                             }}
@@ -370,9 +367,11 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
           </>
         )}
 
-<div className="spin-hint-text">
-          Spin to reveal a QB.<br />Drag an attribute to your build.
-        </div>
+{!isDone && (
+          <div className="spin-hint-text">
+            Spin to reveal a QB.<br />Drag an attribute to your build.
+          </div>
+        )}
 
         {complete && (
           <div className="spin-hint-text" style={{ color: 'var(--accent)', paddingTop: 4 }}>
