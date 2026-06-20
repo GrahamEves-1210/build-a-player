@@ -75,10 +75,9 @@ function IconChevron({ up }) {
   )
 }
 
-export default function Navbar({ onReset }) {
-  const [open,      setOpen]      = useState(false)
-  const [htpOpen,   setHtpOpen]   = useState(false)
-  const [aboutOpen, setAboutOpen] = useState(false)
+export default function Navbar({ onReset, onAbout }) {
+  const [open,    setOpen]    = useState(false)
+  const [htpOpen, setHtpOpen] = useState(false)
   const ref = useRef(null)
 
   useEffect(() => {
@@ -89,6 +88,7 @@ export default function Navbar({ onReset }) {
   }, [open])
 
   const handleReset = () => { onReset?.(); setOpen(false) }
+  const handleAbout = () => { onAbout?.(); setOpen(false) }
 
   return (
     <header className="navbar">
@@ -146,29 +146,11 @@ export default function Navbar({ onReset }) {
               </div>
             )}
 
-            {/* About — accordion */}
-            <button
-              className="wm-row wm-row-accordion"
-              onClick={() => setAboutOpen(o => !o)}
-            >
+            {/* About */}
+            <button className="wm-row" onClick={handleAbout}>
               <span className="wm-icon"><IconInfo /></span>
               <span className="wm-label">About</span>
-              <span className="wm-chevron"><IconChevron up={aboutOpen} /></span>
             </button>
-
-            {aboutOpen && (
-              <div className="wm-about-body">
-                <p className="wm-about-text">
-                  <strong>Build-A-Player Workshop</strong> is an independent fan-made game. Spin the wheel to pull random NFL QBs, mix and match their real attributes, and simulate a full season with your Frankenstein quarterback.
-                </p>
-                <p className="wm-about-text">
-                  More positions coming soon — Build-A-RB, Build-A-WR, and beyond.
-                </p>
-                <p className="wm-about-disclaimer">
-                  Not affiliated with, endorsed by, or sponsored by the NFL or any of its member clubs. NFL team names, logos, colors, and player likenesses are the intellectual property of their respective owners and are used here solely for entertainment and fan purposes.
-                </p>
-              </div>
-            )}
 
             {/* Leaderboard — coming soon */}
             <div className="wm-row wm-row-soon">

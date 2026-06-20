@@ -243,7 +243,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
               label="TEAM"
               items={TEAMS}
               spinning={isSpinningTeam}
-              idle={false}
+              idle={!isSpinning && !selectedTeam}
               locked={!!selectedTeam}
               getDisplay={t => t.short}
               getSub={t => t.name.split(' ').slice(-1)[0]}
@@ -254,7 +254,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
               label="QB"
               items={qbReelItems}
               spinning={isSpinningQB}
-              idle={false}
+              idle={!isSpinning && !selectedQB}
               locked={!!selectedQB && phase === 'done'}
               getDisplay={q => q.name.split(' ')[0]}
               getSub={q => q.name.split(' ').slice(1).join(' ')}
@@ -344,6 +344,8 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
                                 teamColor2: selectedQB.color2,
                                 skinColor:  selectedQB.skin,
                                 number:     selectedQB.number,
+                                team:       selectedQB.team,
+                                captain:    selectedQB.captain ?? false,
                                 photo: HEADSHOTS[selectedQB.name] ? `/headshots/${HEADSHOTS[selectedQB.name]}.jpg` : null,
                               })
                             }}

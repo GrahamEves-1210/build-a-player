@@ -2,7 +2,7 @@ import { QBS, ATTR } from '../data/qbs'
 
 function AttributeChip({ qb, attr, used, onDragStart, onDragEnd }) {
   const meta = ATTR[attr.type]
-  const dragData = { type: attr.type, val: attr.val, qb: qb.short, qbFull: qb.name, photo: qb.photo, teamColor: qb.color, teamColor2: qb.color2, skinColor: qb.skin, number: qb.number }
+  const dragData = { type: attr.type, val: attr.val, qb: qb.short, qbFull: qb.name, photo: qb.photo, teamColor: qb.color, teamColor2: qb.color2, skinColor: qb.skin, number: qb.number, team: qb.team, captain: qb.captain ?? false }
 
   return (
     <div

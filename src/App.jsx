@@ -4,6 +4,7 @@ import SpinScreen from './components/SpinScreen'
 import Silhouette from './components/Silhouette'
 import ReportCard from './components/ReportCard'
 import SimModal from './components/SimModal'
+import AboutPage from './components/AboutPage'
 import { TYPES } from './data/qbs'
 import { runSimulation } from './utils/simulation'
 
@@ -11,6 +12,7 @@ const EMPTY_BUILD = Object.fromEntries(TYPES.map(t => [t, null]))
 
 
 export default function App() {
+  const [page, setPage]                 = useState('game')
   const [build, setBuild]               = useState({ ...EMPTY_BUILD })
   const [activeDrag, setActiveDrag]     = useState(null)
   const [activeCategory, setActiveCategory] = useState('physical')
@@ -49,9 +51,18 @@ export default function App() {
     setShowSim(true)
   }, [build])
 
+  if (page === 'about') {
+    return (
+      <>
+        <Navbar onReset={handleReset} onAbout={() => setPage('about')} />
+        <AboutPage onBack={() => setPage('game')} />
+      </>
+    )
+  }
+
   return (
     <>
-      <Navbar onReset={handleReset} />
+      <Navbar onReset={handleReset} onAbout={() => setPage('about')} />
 
       <main className="game-layout">
         <SpinScreen
