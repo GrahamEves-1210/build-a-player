@@ -108,7 +108,7 @@ function HWTracker({ build }) {
   )
 }
 
-export default function Silhouette({ build, activeDrag, onDrop, activeCategory, onCategoryChange, types = TYPES }) {
+export default function Silhouette({ build, activeDrag, onDrop, activeCategory, onCategoryChange, types = TYPES, isLite = false }) {
   const silRef = useRef(null)
   const bounds = useFigureBounds(silRef)
   const boundsRef = useRef(bounds)
@@ -176,6 +176,7 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
           <button
             key={cat.id}
             className={`cat-pill ${activeCategory === cat.id ? 'active' : ''}`}
+            style={isLite ? { visibility: 'hidden', pointerEvents: 'none' } : undefined}
             onClick={() => onCategoryChange(activeCategory === cat.id ? null : cat.id)}
           >
             {cat.label}
@@ -195,7 +196,7 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
           aria-hidden="true"
         >
           {ZONES.filter(z => types.includes(z.type)).map(zone => {
-            const hidden = !complete && (!activeCategory || !categoryTypes?.includes(zone.type))
+            const hidden = !isLite && !complete && (!activeCategory || !categoryTypes?.includes(zone.type))
             const p = pos(zone)
             if (!p) return null
             return (
@@ -214,7 +215,7 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
         {/* Dots + cards */}
         <div className="cz-layer" style={{ zIndex: 10 }}>
           {ZONES.filter(z => types.includes(z.type)).map(zone => {
-            const hiddenFromTab = !complete && (!activeCategory || !categoryTypes?.includes(zone.type))
+            const hiddenFromTab = !isLite && !complete && (!activeCategory || !categoryTypes?.includes(zone.type))
             const p = pos(zone)
             return (
               <div key={zone.type}>

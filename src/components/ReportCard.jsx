@@ -11,7 +11,7 @@ function BuildSlot({ type, data }) {
         <div className="sl-type">{meta.label}</div>
         {filled
           ? <div className="sl-qb-name">{data.qbFull}</div>
-          : <div className="sl-empty-hint">Drag to assign</div>}
+          : <div className="sl-empty-hint">–</div>}
       </div>
       {filled && <div className="sl-val">{valToGrade(data.val)}</div>}
     </div>

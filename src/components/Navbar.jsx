@@ -1,8 +1,14 @@
 import { useState, useRef, useEffect } from 'react'
 
-const STEPS = [
+const STEPS_DESKTOP = [
   { n: '1', title: 'Spin',      body: 'Pull a random NFL team, then a QB from their roster.' },
   { n: '2', title: 'Drag',      body: 'Drop one stat onto the matching zone on the player silhouette.' },
+  { n: '3', title: 'Repeat ×8', body: 'Fill all eight attribute slots — one per spin.' },
+  { n: '4', title: 'Simulate',  body: 'Hit Simulate to see how your Frankenstein QB performs.' },
+]
+const STEPS_MOBILE = [
+  { n: '1', title: 'Spin',      body: 'Pull a random NFL team, then a QB from their roster.' },
+  { n: '2', title: 'Tap',       body: 'Tap a stat chip to instantly assign it to your build.' },
   { n: '3', title: 'Repeat ×8', body: 'Fill all eight attribute slots — one per spin.' },
   { n: '4', title: 'Simulate',  body: 'Hit Simulate to see how your Frankenstein QB performs.' },
 ]
@@ -28,6 +34,15 @@ function IconReset() {
     <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M2 6.5a4.5 4.5 0 1 0 1-2.8"/>
       <path d="M2 2.5v2.2h2.2"/>
+    </svg>
+  )
+}
+
+function IconUser() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="6.5" cy="4.5" r="2.5"/>
+      <path d="M1.5 11.5c0-2.76 2.24-5 5-5s5 2.24 5 5"/>
     </svg>
   )
 }
@@ -75,10 +90,12 @@ function IconChevron({ up }) {
   )
 }
 
-export default function Navbar({ onReset, onAbout }) {
+export default function Navbar({ onReset, onAbout, onHome, onSignIn, user }) {
   const [open,    setOpen]    = useState(false)
   const [htpOpen, setHtpOpen] = useState(false)
   const ref = useRef(null)
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768
+  const STEPS = isMobile ? STEPS_MOBILE : STEPS_DESKTOP
 
   useEffect(() => {
     if (!open) return
@@ -87,12 +104,13 @@ export default function Navbar({ onReset, onAbout }) {
     return () => document.removeEventListener('mousedown', close)
   }, [open])
 
-  const handleReset = () => { onReset?.(); setOpen(false) }
-  const handleAbout = () => { onAbout?.(); setOpen(false) }
+  const handleReset   = () => { onReset?.();  setOpen(false) }
+  const handleAbout   = () => { onAbout?.();  setOpen(false) }
+  const handleSignIn  = () => { onSignIn?.(); setOpen(false) }
 
   return (
     <header className="navbar">
-      <div className="logo">
+      <div className="logo" onClick={onHome} style={onHome ? { cursor: 'pointer' } : undefined}>
         <div className="logo-text">
           Build<em>-A-</em>Player
         </div>
@@ -161,11 +179,18 @@ export default function Navbar({ onReset, onAbout }) {
 
             <div className="wm-divider" />
 
-            {/* Reset Build */}
-            <button className="wm-row wm-row-danger" onClick={handleReset}>
-              <span className="wm-icon"><IconReset /></span>
-              <span className="wm-label">Reset Build</span>
-            </button>
+            {/* Sign In / Account */}
+            {user ? (
+              <div className="wm-row wm-row-user">
+                <span className="wm-icon"><IconUser /></span>
+                <span className="wm-label wm-label-user">{user.user_metadata?.username || user.email}</span>
+              </div>
+            ) : (
+              <button className="wm-row wm-row-auth" onClick={handleSignIn}>
+                <span className="wm-icon"><IconUser /></span>
+                <span className="wm-label">Sign In / Create Account</span>
+              </button>
+            )}
           </div>
         )}
       </div>

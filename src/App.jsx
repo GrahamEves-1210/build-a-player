@@ -6,8 +6,10 @@ import ReportCard from './components/ReportCard'
 import SimModal from './components/SimModal'
 import AboutPage from './components/AboutPage'
 import SplashScreen from './components/SplashScreen'
+import AuthModal from './components/AuthModal'
 import { TYPES, LITE_TYPES } from './data/qbs'
 import { runSimulation } from './utils/simulation'
+import { supabase } from './lib/supabase'
 
 export default function App() {
   const [page, setPage]                 = useState('splash')
@@ -19,6 +21,17 @@ export default function App() {
   const [simResult, setSimResult]       = useState(null)
   const [spinResetKey, setSpinResetKey] = useState(0)
   const [mobileView, setMobileView]     = useState('spin')
+  const [user, setUser]                 = useState(null)
+  const [showAuth, setShowAuth]         = useState(false)
+
+  useEffect(() => {
+    if (!supabase) return
+    supabase.auth.getSession().then(({ data }) => setUser(data.session?.user ?? null))
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
+      setUser(session?.user ?? null)
+    })
+    return () => subscription.unsubscribe()
+  }, [])
 
   const activeTypes = gameMode === 'lite' ? LITE_TYPES : TYPES
 
@@ -62,14 +75,32 @@ export default function App() {
     setShowSim(true)
   }, [build, activeTypes])
 
+  const handleHome = useCallback(() => {
+    setPage('splash')
+    setGameMode(null)
+    setBuild({})
+    setSimResult(null)
+    setActiveDrag(null)
+    setSpinResetKey(0)
+    setMobileView('spin')
+  }, [])
+
   if (page === 'splash') {
     return <SplashScreen onStart={handleStart} />
+  }
+
+  const navbarProps = {
+    onReset: handleReset,
+    onAbout: () => setPage('about'),
+    onHome: handleHome,
+    onSignIn: () => setShowAuth(true),
+    user,
   }
 
   if (page === 'about') {
     return (
       <>
-        <Navbar onReset={handleReset} onAbout={() => setPage('about')} />
+        <Navbar {...navbarProps} />
         <AboutPage onBack={() => setPage('game')} />
       </>
     )
@@ -79,7 +110,7 @@ export default function App() {
 
   return (
     <>
-      <Navbar onReset={handleReset} onAbout={() => setPage('about')} />
+      <Navbar {...navbarProps} />
 
       <main className={`game-layout mobile-${mobileView}`}>
         <SpinScreen
@@ -91,6 +122,7 @@ export default function App() {
           resetKey={spinResetKey}
           onChipTap={handleChipTap}
           types={activeTypes}
+          isLite={gameMode === 'lite'}
         />
         <Silhouette
           build={build}
@@ -99,6 +131,7 @@ export default function App() {
           activeCategory={activeCategory}
           onCategoryChange={setActiveCategory}
           types={activeTypes}
+          isLite={gameMode === 'lite'}
         />
 
         <div className="right-panel-wrap">
@@ -148,6 +181,13 @@ export default function App() {
         onClose={() => setShowSim(false)}
         onReset={() => { handleReset(); setShowSim(false) }}
       />
+
+      {showAuth && (
+        <AuthModal
+          onClose={() => setShowAuth(false)}
+          onAuth={setUser}
+        />
+      )}
     </>
   )
 }

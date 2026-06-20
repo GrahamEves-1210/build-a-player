@@ -163,8 +163,47 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, on
   )
 }
 
+// ─── Chip ────────────────────────────────────────────────────────────────────
+function Chip({ type, meta, val, selectedQB, draggingType, onChipTap, onDragStart, onDragEnd, setDraggingType }) {
+  const photo = HEADSHOTS[selectedQB.name] ? `/headshots/${HEADSHOTS[selectedQB.name]}.jpg` : null
+  const chipData = {
+    type, val,
+    qb: selectedQB.short, qbFull: selectedQB.name,
+    teamColor: selectedQB.color, teamColor2: selectedQB.color2,
+    skinColor: selectedQB.skin, number: selectedQB.number,
+    team: selectedQB.team, captain: selectedQB.captain ?? false, photo,
+  }
+  return (
+    <div
+      className={`attr-chip${draggingType === type ? ' chip-dragging' : ''}`}
+      style={{ '--chip-col': meta.col }}
+      draggable
+      onClick={() => onChipTap && onChipTap(chipData)}
+      onDragStart={e => {
+        e.dataTransfer.effectAllowed = 'move'
+        e.dataTransfer.setData('text/plain', type)
+        const ghost = document.createElement('div')
+        ghost.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:150px;border-radius:5px;overflow:hidden;box-shadow:0 2px 14px rgba(0,0,0,0.55);pointer-events:none;font-family:Outfit,sans-serif;'
+        ghost.innerHTML = `<div style="display:flex;align-items:stretch;background:#fff;">${photo ? `<img src="${photo}" style="width:42px;height:42px;object-fit:cover;object-position:top center;flex-shrink:0;display:block;" />` : ''}<span style="font-size:11px;font-weight:900;color:#e8192c;text-transform:uppercase;letter-spacing:0.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;display:flex;align-items:center;padding:0 7px;line-height:1.2;">${selectedQB.name}</span></div>`
+        document.body.appendChild(ghost)
+        e.dataTransfer.setDragImage(ghost, 75, 21)
+        requestAnimationFrame(() => document.body.removeChild(ghost))
+        onDragStart(chipData)
+      }}
+      onDragEnd={onDragEnd}
+    >
+      <div className="chip-text">
+        <span className="chip-name">{meta.label}</span>
+        <span className="chip-qb">{selectedQB.name}</span>
+      </div>
+      <span className="chip-val">{valToGrade(val)}</span>
+      <span className="chip-hint">drag</span>
+    </div>
+  )
+}
+
 // ─── SpinScreen ──────────────────────────────────────────────────────────────
-export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, activeCategory, resetKey, onChipTap, types = TYPES }) {
+export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, activeCategory, resetKey, onChipTap, types = TYPES, isLite = false }) {
   const [phase, setPhase]               = useState('idle')
   const [selectedTeam, setSelectedTeam] = useState(null)
   const [selectedQB,   setSelectedQB]   = useState(null)
@@ -301,81 +340,31 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
 
             {hasAvailableChips ? (
               <>
-                {visibleCategories.map(cat => {
-                  const available = cat.types.filter(type => types.includes(type) && !build[type])
-                  if (!available.length) return null
-                  return (
-                    <div key={cat.id} className="attr-category-section">
-                      <div className="attr-category-hd">
-                        <div className="attr-category-line" />
-                        <span className="attr-category-lbl">{cat.label}</span>
-                        <div className="attr-category-line" />
-                      </div>
-                      {available.filter(type => types.includes(type)).map(type => {
-                        const meta = ATTR[type]
-                        const val  = selectedQB.attrs[type]
-                        return (
-                          <div
-                            key={type}
-                            className={`attr-chip${draggingType === type ? ' chip-dragging' : ''}`}
-                            style={{ '--chip-col': meta.col }}
-                            draggable
-                            onClick={() => onChipTap && onChipTap({
-                              type, val,
-                              qb: selectedQB.short,
-                              qbFull: selectedQB.name,
-                              teamColor:  selectedQB.color,
-                              teamColor2: selectedQB.color2,
-                              skinColor:  selectedQB.skin,
-                              number:     selectedQB.number,
-                              team:       selectedQB.team,
-                              captain:    selectedQB.captain ?? false,
-                              photo: HEADSHOTS[selectedQB.name] ? `/headshots/${HEADSHOTS[selectedQB.name]}.jpg` : null,
-                            })}
-                            onDragStart={e => {
-                              e.dataTransfer.effectAllowed = 'move'
-                              e.dataTransfer.setData('text/plain', type)
-
-                              const photo = HEADSHOTS[selectedQB.name] ? `/headshots/${HEADSHOTS[selectedQB.name]}.jpg` : null
-                              const ghost = document.createElement('div')
-                              ghost.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:150px;border-radius:5px;overflow:hidden;box-shadow:0 2px 14px rgba(0,0,0,0.55);pointer-events:none;font-family:Outfit,sans-serif;'
-                              ghost.innerHTML = `
-                                <div style="display:flex;align-items:stretch;background:#fff;">
-                                  ${photo ? `<img src="${photo}" style="width:42px;height:42px;object-fit:cover;object-position:top center;flex-shrink:0;display:block;" />` : ''}
-                                  <span style="font-size:11px;font-weight:900;color:#e8192c;text-transform:uppercase;letter-spacing:0.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;display:flex;align-items:center;padding:0 7px;line-height:1.2;">${selectedQB.name}</span>
-                                </div>
-                              `
-                              document.body.appendChild(ghost)
-                              e.dataTransfer.setDragImage(ghost, 75, 21)
-                              requestAnimationFrame(() => document.body.removeChild(ghost))
-
-                              onDragStart({
-                                type, val,
-                                qb: selectedQB.short,
-                                qbFull: selectedQB.name,
-                                teamColor:  selectedQB.color,
-                                teamColor2: selectedQB.color2,
-                                skinColor:  selectedQB.skin,
-                                number:     selectedQB.number,
-                                team:       selectedQB.team,
-                                captain:    selectedQB.captain ?? false,
-                                photo: HEADSHOTS[selectedQB.name] ? `/headshots/${HEADSHOTS[selectedQB.name]}.jpg` : null,
-                              })
-                            }}
-                            onDragEnd={() => { onDragEnd() }}
-                          >
-                            <div className="chip-text">
-                              <span className="chip-name">{meta.label}</span>
-                              <span className="chip-qb">{selectedQB.name}</span>
-                            </div>
-                            <span className="chip-val">{valToGrade(val)}</span>
-                            <span className="chip-hint">drag</span>
+                {(isLite || types.length <= 4)
+                  ? types.filter(t => !build[t]).map(t => {
+                      const meta = ATTR[t]
+                      const val  = selectedQB.attrs[t]
+                      return <Chip key={t} type={t} meta={meta} val={val} selectedQB={selectedQB} draggingType={draggingType} onChipTap={onChipTap} onDragStart={onDragStart} onDragEnd={onDragEnd} setDraggingType={setDraggingType} />
+                    })
+                  : visibleCategories.map(cat => {
+                      const available = cat.types.filter(type => types.includes(type) && !build[type])
+                      if (!available.length) return null
+                      return (
+                        <div key={cat.id} className="attr-category-section">
+                          <div className="attr-category-hd">
+                            <div className="attr-category-line" />
+                            <span className="attr-category-lbl">{cat.label}</span>
+                            <div className="attr-category-line" />
                           </div>
-                        )
-                      })}
-                    </div>
-                  )
-                })}
+                          {available.map(type => {
+                            const meta = ATTR[type]
+                            const val  = selectedQB.attrs[type]
+                            return <Chip key={type} type={type} meta={meta} val={val} selectedQB={selectedQB} draggingType={draggingType} onChipTap={onChipTap} onDragStart={onDragStart} onDragEnd={onDragEnd} setDraggingType={setDraggingType} />
+                          })}
+                        </div>
+                      )
+                    })
+                }
               </>
             ) : (
               <div className="spin-hint-text">
@@ -387,7 +376,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
 
 {!isDone && (
           <div className="spin-hint-text">
-            Spin to reveal a QB.<br />Drag an attribute to your build.
+            Spin to reveal a QB.<span className="hint-mobile-assign"><br />Select an attribute for your build.</span>
           </div>
         )}
 
