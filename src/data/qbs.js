@@ -272,14 +272,15 @@ export const ATTR = {
   'arm-strength':    { label: 'Arm',                   shortLabel: 'ARM',  category: 'physical', col: 'var(--c-arm)',  bodyZone: 'arm'    },
   'mobility':        { label: 'Legs',                  shortLabel: 'LEGS', category: 'physical', col: 'var(--c-mob)',  bodyZone: 'legs'   },
   'strength':        { label: 'Size',                  shortLabel: 'SIZE', category: 'physical', col: 'var(--c-str)',  bodyZone: 'core'   },
-  'football-iq':     { label: 'Decision Making',       shortLabel: 'DEC',  category: 'mental',   col: 'var(--c-iq)',   bodyZone: 'head'   },
+  'football-iq':     { label: 'Processing',            shortLabel: 'PRO',  category: 'mental',   col: 'var(--c-iq)',   bodyZone: 'head'   },
   'leadership':      { label: 'Leadership',            shortLabel: 'LDR',  category: 'mental',   col: 'var(--c-lead)', bodyZone: 'helmet' },
   'composure':       { label: 'Playmaking/Creativity', shortLabel: 'PLAY', category: 'skill',    col: 'var(--c-comp)', bodyZone: 'comp'   },
   'accuracy':        { label: 'Accuracy/Touch',        shortLabel: 'ACC',  category: 'skill',    col: 'var(--c-acc)',  bodyZone: 'hand'   },
   'pocket-presence': { label: 'Pocket Presence',       shortLabel: 'PKT',  category: 'skill',    col: 'var(--c-pkt)',  bodyZone: 'pocket' },
 }
 
-export const TYPES = ['arm-strength', 'mobility', 'strength', 'football-iq', 'leadership', 'composure', 'accuracy', 'pocket-presence']
+export const TYPES      = ['arm-strength', 'mobility', 'strength', 'football-iq', 'leadership', 'composure', 'accuracy', 'pocket-presence']
+export const LITE_TYPES = ['arm-strength', 'mobility', 'strength', 'football-iq']
 
 // height = total inches  |  weight = lbs
 export const QB_PHYSICALS = {

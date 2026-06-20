@@ -108,7 +108,7 @@ function HWTracker({ build }) {
   )
 }
 
-export default function Silhouette({ build, activeDrag, onDrop, activeCategory, onCategoryChange }) {
+export default function Silhouette({ build, activeDrag, onDrop, activeCategory, onCategoryChange, types = TYPES }) {
   const silRef = useRef(null)
   const bounds = useFigureBounds(silRef)
   const boundsRef = useRef(bounds)
@@ -149,7 +149,7 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
   const categoryTypes = activeCategory
     ? (CATEGORIES.find(c => c.id === activeCategory)?.types ?? [])
     : null
-  const complete = TYPES.every(t => build[t])
+  const complete = types.every(t => build[t])
 
   // Convert figure-space (ax, ay) → sil-wrap percentage coords
   const pos = (zone) => {
@@ -194,7 +194,7 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
           className="cz-lines-svg"
           aria-hidden="true"
         >
-          {ZONES.map(zone => {
+          {ZONES.filter(z => types.includes(z.type)).map(zone => {
             const hidden = !complete && (!activeCategory || !categoryTypes?.includes(zone.type))
             const p = pos(zone)
             if (!p) return null
@@ -213,7 +213,7 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
 
         {/* Dots + cards */}
         <div className="cz-layer" style={{ zIndex: 10 }}>
-          {ZONES.map(zone => {
+          {ZONES.filter(z => types.includes(z.type)).map(zone => {
             const hiddenFromTab = !complete && (!activeCategory || !categoryTypes?.includes(zone.type))
             const p = pos(zone)
             return (
@@ -242,7 +242,7 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
       </div>
 
       <div className="progress-strip">
-        {TYPES.map(t => (
+        {types.map(t => (
           <div
             key={t}
             className={`p-seg ${build[t] ? 'on' : ''}`}

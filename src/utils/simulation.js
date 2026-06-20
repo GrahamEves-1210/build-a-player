@@ -1,12 +1,25 @@
 import { TYPES } from '../data/qbs'
 
-export function calcOVR(build) {
-  const filled = TYPES.filter(t => build[t])
+export function valToGrade(val) {
+  if (val >= 95) return 'S'
+  if (val >= 91) return 'A+'
+  if (val >= 87) return 'A'
+  if (val >= 83) return 'A-'
+  if (val >= 79) return 'B+'
+  if (val >= 75) return 'B'
+  if (val >= 71) return 'B-'
+  if (val >= 67) return 'C+'
+  if (val >= 63) return 'C'
+  return 'C-'
+}
+
+export function calcOVR(build, types = TYPES) {
+  const filled = types.filter(t => build[t])
   if (!filled.length) return null
   const vals = filled.map(t => build[t].val)
   const avg = vals.reduce((a, b) => a + b, 0) / vals.length
   let bonus = 0
-  if (filled.length === TYPES.length) {
+  if (filled.length === types.length) {
     const spread = Math.max(...vals) - Math.min(...vals)
     if (spread <= 4) bonus = 3
     else if (spread <= 8) bonus = 1
@@ -15,10 +28,10 @@ export function calcOVR(build) {
   return Math.min(99, Math.round(avg + bonus))
 }
 
-export function getArchetype(ovr, build) {
-  const filled = TYPES.filter(t => build[t])
+export function getArchetype(ovr, build, types = TYPES) {
+  const filled = types.filter(t => build[t])
   if (!filled.length) return 'Spin to start building'
-  const rem = TYPES.length - filled.length
+  const rem = types.length - filled.length
   if (rem > 0) return `${rem} attribute${rem !== 1 ? 's' : ''} remaining`
   if (ovr >= 98) return 'All-Time Greatest'
   if (ovr >= 96) return 'Elite Franchise QB'
@@ -29,8 +42,8 @@ export function getArchetype(ovr, build) {
   return 'Solid Starter'
 }
 
-export function calcBalance(build) {
-  const filled = TYPES.filter(t => build[t])
+export function calcBalance(build, types = TYPES) {
+  const filled = types.filter(t => build[t])
   if (filled.length < 2) return 0
   const vals = filled.map(t => build[t].val)
   const spread = Math.max(...vals) - Math.min(...vals)
@@ -45,10 +58,10 @@ const OPPONENTS = [
   'Baltimore Ravens',
 ]
 
-export function runSimulation(build) {
-  const ovr = calcOVR(build)
-  const vals = TYPES.map(t => build[t]?.val ?? 0)
-  const avg = vals.reduce((a, b) => a + b, 0) / TYPES.length
+export function runSimulation(build, types = TYPES) {
+  const ovr = calcOVR(build, types)
+  const vals = types.map(t => build[t]?.val ?? 0)
+  const avg = vals.reduce((a, b) => a + b, 0) / types.length
   const spread = Math.max(...vals) - Math.min(...vals)
   const winP = Math.min(0.88, Math.max(0.22, (ovr - 68) / 32))
 

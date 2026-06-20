@@ -1,8 +1,9 @@
 import { ATTR, TYPES } from '../data/qbs'
+import { valToGrade } from '../utils/simulation'
 
 // Which side each attribute callout appears on, and its body zone label
 const CALLOUT_CONFIG = {
-  'football-iq':  { side: 'left',  partLabel: 'Football IQ'  },
+  'football-iq':  { side: 'left',  partLabel: 'Processing'   },
   'composure':    { side: 'left',  partLabel: 'Composure'    },
   'accuracy':     { side: 'left',  partLabel: 'Accuracy'     },
   'arm-strength': { side: 'right', partLabel: 'Arm'          },
@@ -24,7 +25,7 @@ function Callout({ type, data }) {
     >
       <div className="callout-part">{cfg.partLabel}</div>
       <div className="callout-name">{data.qbFull}</div>
-      <div className="callout-val">{data.val}</div>
+      <div className="callout-val">{valToGrade(data.val)}</div>
     </div>
   )
 }
@@ -131,7 +132,7 @@ export default function SimModal({ open, result, build, onClose, onReset }) {
               return (
                 <span key={t} className="sim-tag">
                   <span className="sim-tag-dot" style={{ background: meta.col }} />
-                  {meta.shortLabel} · {data.qb} · {data.val}
+                  {meta.shortLabel} · {data.qb} · {valToGrade(data.val)}
                 </span>
               )
             })}

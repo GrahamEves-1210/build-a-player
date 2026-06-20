@@ -9,7 +9,7 @@ const STEPS = [
 
 function IconGrid() {
   return (
-    <svg width="15" height="15" viewBox="0 0 15 15" fill="currentColor" aria-hidden="true">
+    <svg width="19" height="19" viewBox="0 0 15 15" fill="currentColor" aria-hidden="true">
       <rect x="0"  y="0"  width="4" height="4" rx="1"/>
       <rect x="5.5" y="0"  width="4" height="4" rx="1"/>
       <rect x="11" y="0"  width="4" height="4" rx="1"/>
@@ -94,7 +94,7 @@ export default function Navbar({ onReset, onAbout }) {
     <header className="navbar">
       <div className="logo">
         <div className="logo-text">
-          Build<em>-A-</em>Player <span className="logo-workshop">Workshop</span>
+          Build<em>-A-</em>Player
         </div>
       </div>
 

@@ -1,4 +1,5 @@
 import { QBS, ATTR } from '../data/qbs'
+import { valToGrade } from '../utils/simulation'
 
 function AttributeChip({ qb, attr, used, onDragStart, onDragEnd }) {
   const meta = ATTR[attr.type]
@@ -16,7 +17,7 @@ function AttributeChip({ qb, attr, used, onDragStart, onDragEnd }) {
     >
       <span className="chip-dot" style={{ background: meta.col }} />
       <div className="chip-label">{meta.label}</div>
-      <div className="chip-value">{attr.val}</div>
+      <div className="chip-value">{valToGrade(attr.val)}</div>
       <div className="chip-grip">⠿</div>
     </div>
   )

@@ -1,5 +1,6 @@
 import { useRef, useEffect, useLayoutEffect, useMemo, useCallback, useState } from 'react'
-import { QBS, TEAMS, ATTR, TYPES, CATEGORIES, QB_PHYSICALS } from '../data/qbs'
+import { QBS, TEAMS, ATTR, TYPES, CATEGORIES, QB_PHYSICALS, LITE_TYPES } from '../data/qbs'
+import { valToGrade } from '../utils/simulation'
 import HEADSHOTS from '../data/headshots.json'
 
 function fmtHeight(inches) {
@@ -163,7 +164,7 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, on
 }
 
 // ─── SpinScreen ──────────────────────────────────────────────────────────────
-export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, activeCategory, resetKey, onChipTap }) {
+export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, activeCategory, resetKey, onChipTap, types = TYPES }) {
   const [phase, setPhase]               = useState('idle')
   const [selectedTeam, setSelectedTeam] = useState(null)
   const [selectedQB,   setSelectedQB]   = useState(null)
@@ -172,7 +173,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
   const [draggingType, setDraggingType] = useState(null)
   const pauseRef = useRef(null)
 
-  const complete = TYPES.every(t => build[t])
+  const complete = types.every(t => build[t])
 
   const clearAll = () => clearTimeout(pauseRef.current)
 
@@ -230,7 +231,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
 
   const visibleCategories = CATEGORIES
   const hasAvailableChips = isDone && selectedQB && CATEGORIES.some(cat =>
-    cat.types.some(type => !build[type])
+    cat.types.some(type => types.includes(type) && !build[type])
   )
 
   return (
@@ -301,7 +302,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
             {hasAvailableChips ? (
               <>
                 {visibleCategories.map(cat => {
-                  const available = cat.types.filter(type => !build[type])
+                  const available = cat.types.filter(type => types.includes(type) && !build[type])
                   if (!available.length) return null
                   return (
                     <div key={cat.id} className="attr-category-section">
@@ -310,7 +311,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
                         <span className="attr-category-lbl">{cat.label}</span>
                         <div className="attr-category-line" />
                       </div>
-                      {available.map(type => {
+                      {available.filter(type => types.includes(type)).map(type => {
                         const meta = ATTR[type]
                         const val  = selectedQB.attrs[type]
                         return (
@@ -319,6 +320,18 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
                             className={`attr-chip${draggingType === type ? ' chip-dragging' : ''}`}
                             style={{ '--chip-col': meta.col }}
                             draggable
+                            onClick={() => onChipTap && onChipTap({
+                              type, val,
+                              qb: selectedQB.short,
+                              qbFull: selectedQB.name,
+                              teamColor:  selectedQB.color,
+                              teamColor2: selectedQB.color2,
+                              skinColor:  selectedQB.skin,
+                              number:     selectedQB.number,
+                              team:       selectedQB.team,
+                              captain:    selectedQB.captain ?? false,
+                              photo: HEADSHOTS[selectedQB.name] ? `/headshots/${HEADSHOTS[selectedQB.name]}.jpg` : null,
+                            })}
                             onDragStart={e => {
                               e.dataTransfer.effectAllowed = 'move'
                               e.dataTransfer.setData('text/plain', type)
@@ -355,7 +368,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
                               <span className="chip-name">{meta.label}</span>
                               <span className="chip-qb">{selectedQB.name}</span>
                             </div>
-                            <span className="chip-val">{val}</span>
+                            <span className="chip-val">{valToGrade(val)}</span>
                             <span className="chip-hint">drag</span>
                           </div>
                         )
