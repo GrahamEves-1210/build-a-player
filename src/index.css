@@ -904,7 +904,7 @@ body::after {
 .attr-category-section {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 5px;
 }
 
 .attr-category-hd {
@@ -2820,11 +2820,14 @@ body::after {
   }
 
   /* Reels: slightly narrower on mobile */
-  .reels-wrap { padding: 0 18px; }
+  .reels-wrap { padding: 0 36px; }
   .reels-row { gap: 8px; }
   .reel-outer { border-radius: 16px; }
-  .reel-tri-l { left: 9px; }
-  .reel-tri-r { right: 9px; }
+  .reel-tri-l { left: 26px; }
+  .reel-tri-r { right: 26px; }
+
+  /* Spin panel fill — prevent white showing through on overscroll */
+  .spin-panel-body { min-height: 100%; }
 
   /* ── Chips: larger tap targets, no drag hint ── */
   .chip-hint { display: none; }
@@ -2832,7 +2835,7 @@ body::after {
   .attr-chip {
     cursor: pointer;
     touch-action: manipulation;
-    padding: 9px 10px;
+    padding: 11.5px 10px;
     border-radius: 10px;
   }
   .attr-category-lbl { font-size: 13px; color: #fff; letter-spacing: 1px; }

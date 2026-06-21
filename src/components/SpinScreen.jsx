@@ -178,7 +178,7 @@ function Chip({ type, meta, val, selectedQB, draggingType, onChipTap, onDragStar
       className={`attr-chip${draggingType === type ? ' chip-dragging' : ''}`}
       style={{ '--chip-col': meta.col }}
       draggable
-      onClick={e => onChipTap && e.nativeEvent.pointerType !== 'mouse' && onChipTap(chipData)}
+      onClick={() => onChipTap && onChipTap(chipData)}
       onDragStart={e => {
         e.dataTransfer.effectAllowed = 'move'
         e.dataTransfer.setData('text/plain', type)
