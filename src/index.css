@@ -1024,6 +1024,8 @@ body::after {
   flex-shrink: 0;
   margin-top: 10px;
   margin-bottom: 6px;
+  position: relative;
+  z-index: 15;
   align-items: flex-end;
   justify-content: center;
   position: relative;
@@ -2799,6 +2801,7 @@ body::after {
     background-repeat: no-repeat, repeat, repeat;
     background-position: 0 0, 0 10px, 0 10px;
     background-attachment: scroll, fixed, fixed;
+    overscroll-behavior: none;
   }
   .spin-panel::before { display: none; }
   .spin-panel-body {
@@ -2896,21 +2899,21 @@ body::after {
     gap: 8px;
   }
   .build-slot {
-    padding: 10px 12px;
-    min-height: 56px;
+    padding: 5px 10px;
+    min-height: 36px;
   }
   .sl-type {
-    font-size: 10px;
+    font-size: 8px;
     letter-spacing: 1.2px;
-    margin-bottom: 3px;
+    margin-bottom: 2px;
     line-height: 1.2;
   }
   .sl-qb-name {
-    font-size: 14px;
+    font-size: 11px;
     line-height: 1.2;
   }
-  .sl-empty-hint { font-size: 13px; }
-  .sl-dot { width: 9px; height: 9px; }
+  .sl-empty-hint { font-size: 10px; }
+  .sl-dot { width: 8px; height: 8px; }
 
   /* Footer buttons */
   .panel-footer {
@@ -2938,7 +2941,7 @@ body::after {
 
   /* Build view: player model fixed height, report card scrolls with page */
   .mobile-build .field-center {
-    height: 62dvh;
+    height: 62svh;
     padding: 0 6px 8px;
     overflow: clip; /* clip without creating a scroll container */
   }
@@ -2949,7 +2952,7 @@ body::after {
     flex: 1;
     min-height: 0;
     height: auto;
-    width: 60%;
+    width: 66%;
     margin: 4px auto 0;
     overflow: visible;
   }
@@ -2966,8 +2969,8 @@ body::after {
   .mobile-build .cz-lines-svg { display: block; overflow: visible; }
 
   /* Push cards outward past sil-wrap edges — dots stay in place */
-  .mobile-build .cz-left  { left: -66px; }
-  .mobile-build .cz-right { right: -66px; }
+  .mobile-build .cz-left  { left: -64px; }
+  .mobile-build .cz-right { right: -64px; }
 
   /* Compact card styles */
   .mobile-build .cz-tag {
