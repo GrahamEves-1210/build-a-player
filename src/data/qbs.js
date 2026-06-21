@@ -10,7 +10,7 @@ export const TEAMS = [
   { name: 'Dallas Cowboys',        short: 'DAL', color: '#869397', color2: '#003594', logo: '/logos/DAL.png' },
   { name: 'Denver Broncos',        short: 'DEN', color: '#FB4F14', color2: '#002244', logo: '/logos/DEN.png' },
   { name: 'Detroit Lions',         short: 'DET', color: '#0076B6', color2: '#B0B7BC', logo: '/logos/DET.png' },
-  { name: 'Green Bay Packers',     short: 'GB',  color: '#FFB612', color2: '#203731', logo: '/logos/GB.png'  },
+  { name: 'Green Bay Packers',     short: 'GB',  color: '#203731', color2: '#FFB612', logo: '/logos/GB.png'  },
   { name: 'Houston Texans',        short: 'HOU', color: '#002244', color2: '#A71930', logo: '/logos/HOU.png' },
   { name: 'Indianapolis Colts',    short: 'IND', color: '#002C5F', color2: '#A2AAAD', logo: '/logos/IND.png' },
   { name: 'Jacksonville Jaguars',  short: 'JAX', color: '#006778', color2: '#D7A22A', logo: '/logos/JAX.png' },
@@ -21,7 +21,7 @@ export const TEAMS = [
   { name: 'Miami Dolphins',        short: 'MIA', color: '#008E97', color2: '#F26A24', logo: '/logos/MIA.png' },
   { name: 'Minnesota Vikings',     short: 'MIN', color: '#4F2683', color2: '#FFC62F', logo: '/logos/MIN.png' },
   { name: 'New England Patriots',  short: 'NE',  color: '#002244', color2: '#C60C30', logo: '/logos/NE.png'  },
-  { name: 'New Orleans Saints',    short: 'NO',  color: '#D3BC8D', color2: '#000000', logo: '/logos/NO.png'  },
+  { name: 'New Orleans Saints',    short: 'NO',  color: '#d4b982', color2: '#000000', logo: '/logos/NO.png'  },
   { name: 'New York Giants',       short: 'NYG', color: '#0B2265', color2: '#A71930', logo: '/logos/NYG.png' },
   { name: 'New York Jets',         short: 'NYJ', color: '#125740', color2: '#000000', logo: '/logos/NYJ.png' },
   { name: 'Philadelphia Eagles',   short: 'PHI', color: '#004C54', color2: '#A5ACAF', logo: '/logos/PHI.png' },
@@ -30,7 +30,7 @@ export const TEAMS = [
   { name: 'Seattle Seahawks',      short: 'SEA', color: '#002244', color2: '#69BE28', logo: '/logos/SEA.png' },
   { name: 'Tampa Bay Buccaneers',  short: 'TB',  color: '#D50A0A', color2: '#34302B', logo: '/logos/TB.png'  },
   { name: 'Tennessee Titans',      short: 'TEN', color: '#0C2340', color2: '#4B92DB', logo: '/logos/TEN.png' },
-  { name: 'Washington Commanders', short: 'WAS', color: '#773141', color2: '#FFB612', logo: '/logos/WAS.png' },
+  { name: 'Washington Commanders', short: 'WAS', color: '#773242', color2: '#FFB612', logo: '/logos/WAS.png' },
 ]
 
 export const NFL_LOGO = '/logos/nfl.png'
