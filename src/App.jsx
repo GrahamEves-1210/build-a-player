@@ -25,6 +25,11 @@ export default function App() {
   const [showAuth, setShowAuth]         = useState(false)
 
   useEffect(() => {
+    const meta = document.querySelector('meta[name="theme-color"]')
+    if (meta) meta.setAttribute('content', page === 'splash' ? '#080b09' : '#090a0d')
+  }, [page])
+
+  useEffect(() => {
     if (!supabase) return
     supabase.auth.getSession().then(({ data }) => setUser(data.session?.user ?? null))
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {

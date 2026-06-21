@@ -18,7 +18,7 @@ const ZONES = [
   { type: 'leadership',      ax: 330, ay: 120, side: 'right', cy: 0.14 },
   { type: 'arm-strength',    ax: 171, ay: 175, side: 'left',  cy: 0.26 },
   { type: 'strength',        ax: 340, ay: 310, side: 'right', cy: 0.54 },
-  { type: 'accuracy',        ax:  90, ay: 230, side: 'left',  cy: 0.46 },
+  { type: 'accuracy',        ax:  95, ay: 225, side: 'left',  cy: 0.46 },
   { type: 'composure',       ax: 350, ay: 240, side: 'right', cy: 0.34 },
   { type: 'mobility',        ax: 207, ay: 525, side: 'left',  cy: 0.68 },
   { type: 'pocket-presence', ax: 465, ay: 520, side: 'right', cy: 0.74 },
@@ -108,15 +108,27 @@ function HWTracker({ build }) {
   )
 }
 
+const MOBILE_CARD_W = 16   // card CSS width (82px) minus card offset (66px each side)
+
 export default function Silhouette({ build, activeDrag, onDrop, activeCategory, onCategoryChange, types = TYPES, isLite = false }) {
   const silRef = useRef(null)
   const bounds = useFigureBounds(silRef)
   const boundsRef = useRef(bounds)
+  const [isMobile, setIsMobile] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches
+  )
   const activeDragRef = useRef(activeDrag)
   const onDropRef = useRef(onDrop)
   useLayoutEffect(() => { boundsRef.current = bounds }, [bounds])
   useLayoutEffect(() => { activeDragRef.current = activeDrag }, [activeDrag])
   useLayoutEffect(() => { onDropRef.current = onDrop }, [onDrop])
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 768px)')
+    const handler = e => setIsMobile(e.matches)
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
 
   // Native drop — only registers within ~80 figure-units of the zone dot
   useEffect(() => {
@@ -155,16 +167,16 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
   const pos = (zone) => {
     if (!bounds) return null
     const { W, H, fx, fy, scale } = bounds
+    const effectiveCardW = isMobile ? MOBILE_CARD_W : CARD_W
     const dotX  = (fx + zone.ax * scale) / W * 100
     const dotY  = (fy + zone.ay * scale) / H * 100
     const cardY = zone.cy * 100
-    // card edge x
     const lineX = zone.side === 'left'
-      ? (CARD_W / W) * 100
-      : ((W - CARD_W) / W) * 100
-    // 75px horizontal stub in SVG percentage units
-    const stub  = 125 / W * 100
-    const stubX = zone.side === 'left' ? lineX + stub : lineX - stub
+      ? (effectiveCardW / W) * 100
+      : ((W - effectiveCardW) / W) * 100
+    const stubPx = isMobile ? 12 : 125
+    const stub   = stubPx / W * 100
+    const stubX  = zone.side === 'left' ? lineX + stub : lineX - stub
     return { dotX, dotY, cardY, lineX, stubX }
   }
 

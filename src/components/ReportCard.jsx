@@ -29,7 +29,7 @@ export default function ReportCard({ build, onSimulate, onReset, types = TYPES }
     <aside className="panel-right">
       <div className="ovr-block">
         <div className="ovr-label">Overall Rating</div>
-        <div className={`ovr-number ${ovr ? 'lit' : ''}`}>{ovr ? valToGrade(ovr) : '--'}</div>
+        <div className={`ovr-number ${ovr ? 'lit' : ''}`}>{ovr ?? '--'}</div>
         <div className="ovr-arch">{arch}</div>
       </div>
 

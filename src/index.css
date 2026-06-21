@@ -51,6 +51,8 @@
 
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
+html { background: #090a0d; }
+
 body {
   /* Grid lives IN the body background — the only layer that paints the canvas */
   background-color: var(--bg);
@@ -1007,7 +1009,7 @@ body::after {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 0 24px 8px;
+  padding: 0 90px 8px;
   gap: 0;
   overflow: hidden;
   position: relative;
@@ -2765,8 +2767,14 @@ body::after {
   .mobile-spin  .field-center      { display: none; }
   .mobile-spin  .right-panel-wrap  { display: none; }
   .mobile-build .spin-panel        { display: none; }
-  .mobile-build .field-center      { display: flex; flex: 1; min-height: 0; }
+  .mobile-build .field-center      { display: flex; flex: none; }
   .mobile-build .right-panel-wrap  { display: flex; flex-shrink: 0; }
+
+  /* Build view: let the page scroll naturally instead of clipping */
+  .game-layout.mobile-build {
+    height: auto;
+    overflow: visible;
+  }
 
   /* ── Spin panel — full height on mobile ── */
   .spin-panel {
@@ -2788,6 +2796,7 @@ body::after {
     background-size: 100% 100%, 16px 16px, 16px 16px;
     background-repeat: no-repeat, repeat, repeat;
     background-position: 0 0, 0 10px, 0 10px;
+    background-attachment: scroll, fixed, fixed;
   }
   .spin-panel::before { display: none; }
   .spin-panel-body {
@@ -2795,6 +2804,14 @@ body::after {
     overflow-y: visible;
     padding: 10px 14px 80px;
     gap: 14px;
+  }
+
+  /* Spin button: shorter width, slightly taller */
+  .spin-btn {
+    width: 62%;
+    align-self: center;
+    height: 56px;
+    min-height: 56px;
   }
 
   /* Reels: slightly narrower on mobile */
@@ -2874,14 +2891,24 @@ body::after {
   .build-slots {
     max-height: 280px;
     display: flex;
-    gap: 6px;
+    gap: 8px;
   }
   .build-slot {
-    padding: 2px 10px;
-    min-height: 0;
+    padding: 10px 12px;
+    min-height: 56px;
   }
-  .sl-type { margin-bottom: 0; line-height: 1.1; }
-  .sl-qb-name { line-height: 1.1; }
+  .sl-type {
+    font-size: 10px;
+    letter-spacing: 1.2px;
+    margin-bottom: 3px;
+    line-height: 1.2;
+  }
+  .sl-qb-name {
+    font-size: 14px;
+    line-height: 1.2;
+  }
+  .sl-empty-hint { font-size: 13px; }
+  .sl-dot { width: 9px; height: 9px; }
 
   /* Footer buttons */
   .panel-footer {
@@ -2907,18 +2934,58 @@ body::after {
   }
   .sim-player-fig { width: 100px; height: 160px; }
 
-  /* Build view: silhouette fills remaining height */
+  /* Build view: player model fixed height, report card scrolls with page */
   .mobile-build .field-center {
-    height: auto;
-    flex: 1;
-    min-height: 0;
-    padding: 0 12px 8px;
+    height: 62dvh;
+    padding: 0 6px 8px;
   }
   .mobile-build .sil-wrap {
-    height: calc(100% - 52px);
+    flex: 1;
+    min-height: 0;
+    height: auto;
+    width: 60%;
+    margin: 4px auto 0;
+    overflow: visible;
   }
   .mobile-build .right-panel-wrap {
-    padding-bottom: calc(58px + env(safe-area-inset-bottom, 0px));
+    overflow: visible;
+    background: var(--bg-raised);
+    padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+  }
+  .mobile-build .panel-right { overflow: visible; }
+  .mobile-build .build-slots { max-height: none; overflow-y: visible; }
+
+  /* Un-hide callout cards + lines in build view */
+  .mobile-build .cz-card      { display: block; width: 82px; }
+  .mobile-build .cz-lines-svg { display: block; overflow: visible; }
+
+  /* Push cards outward past sil-wrap edges — dots stay in place */
+  .mobile-build .cz-left  { left: -66px; }
+  .mobile-build .cz-right { right: -66px; }
+
+  /* Compact card styles */
+  .mobile-build .cz-tag {
+    font-size: 7px;
+    letter-spacing: 0.5px;
+    padding: 5px 3px;
+  }
+  .mobile-build .cz-headshot {
+    width: 30px;
+    height: 30px;
+  }
+  .mobile-build .cz-qb-name {
+    font-size: 8px;
+    letter-spacing: 0.2px;
+    padding: 0 3px;
+    line-height: 1.2;
+  }
+  .mobile-build .cz-drop-hint {
+    height: 30px;
+    margin: 2px;
+  }
+  .mobile-build .cz-dot {
+    width: 8px;
+    height: 8px;
   }
 }
 
@@ -2992,7 +3059,8 @@ body::after {
 
 /* ── Touch devices: disable hover animations ── */
 @media (hover: none) {
-  .attr-chip:hover            { background: transparent; }
+  .attr-chip                  { transition: none; -webkit-tap-highlight-color: transparent; }
+  .attr-chip:hover            { background: rgba(255,255,255,0.04); }
   .spin-btn:hover:not(:disabled) { background: linear-gradient(to right, #5EDBD8 0%, #3DD6A3 100%); }
   .qb-respin-btn:hover        { background: none; border-color: var(--border-hi); color: var(--text-2); }
   .splash-mode-classic:hover  { transform: none; }
