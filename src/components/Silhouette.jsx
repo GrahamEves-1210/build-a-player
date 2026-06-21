@@ -18,7 +18,7 @@ const ZONES = [
   { type: 'leadership',      ax: 330, ay: 120, side: 'right', cy: 0.14 },
   { type: 'arm-strength',    ax: 171, ay: 175, side: 'left',  cy: 0.26 },
   { type: 'strength',        ax: 340, ay: 310, side: 'right', cy: 0.54 },
-  { type: 'accuracy',        ax:  95, ay: 225, side: 'left',  cy: 0.46 },
+  { type: 'accuracy',        ax: 110, ay: 216, side: 'left',  cy: 0.46 },
   { type: 'composure',       ax: 350, ay: 240, side: 'right', cy: 0.34 },
   { type: 'mobility',        ax: 207, ay: 525, side: 'left',  cy: 0.68 },
   { type: 'pocket-presence', ax: 465, ay: 520, side: 'right', cy: 0.74 },

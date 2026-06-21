@@ -1,14 +1,14 @@
 import { useEffect, useState, useMemo } from 'react'
 
 const ATTRS = [
-  { label: 'Arm',                   col: '#f87171', angle: -20,  dist: 1.30, mx: 4,  my: 27 },
-  { label: 'Legs',                  col: '#60a5fa', angle:  30,  dist: 1.32, mx: 61, my: 24 },
-  { label: 'Size',                  col: '#fb923c', angle: 150,  dist: 1.28, mx: 5,  my: 52 },
-  { label: 'Processing',            col: '#a78bfa', angle: 195,  dist: 1.30, mx: 55, my: 68 },
-  { label: 'Accuracy/Touch',        col: '#34d399', angle: -145, dist: 1.30, mx: 3,  my: 68 },
-  { label: 'Leadership',            col: '#e879f9', angle: -55,  dist: 1.32, mx: 58, my: 42 },
-  { label: 'Playmaking/Creativity', col: '#fbbf24', angle: 115,  dist: 1.28, mx: 6,  my: 38 },
-  { label: 'Pocket Presence',       col: '#2dd4bf', angle: -100, dist: 1.30, mx: 52, my: 55 },
+  { label: 'Arm',                   col: '#f87171', angle:  -35, dist: 1.32, mx: 58, my: 14 },
+  { label: 'Legs',                  col: '#60a5fa', angle:   55, dist: 1.30, mx: 3,  my: 30 },
+  { label: 'Size',                  col: '#fb923c', angle:  165, dist: 1.28, mx: 62, my: 52 },
+  { label: 'Processing',            col: '#a78bfa', angle:  210, dist: 1.31, mx: 4,  my: 62 },
+  { label: 'Accuracy/Touch',        col: '#34d399', angle: -130, dist: 1.30, mx: 55, my: 72 },
+  { label: 'Leadership',            col: '#e879f9', angle:  -70, dist: 1.29, mx: 5,  my: 18 },
+  { label: 'Playmaking/Creativity', col: '#fbbf24', angle:  100, dist: 1.32, mx: 60, my: 34 },
+  { label: 'Pocket Presence',       col: '#2dd4bf', angle: -160, dist: 1.28, mx: 3,  my: 48 },
 ]
 
 function FloatingChip({ label, col, angle, dist, visible, mx, my, isMobile }) {

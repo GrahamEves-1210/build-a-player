@@ -1085,7 +1085,9 @@ body::after {
   object-position: center center;
   pointer-events: none;
   user-select: none;
-  filter: blur(0.75px);
+  filter: none;
+  image-rendering: -webkit-optimize-contrast;
+  -webkit-font-smoothing: antialiased;
 }
 
 .color-region {
@@ -1138,7 +1140,7 @@ body::after {
   height: 100%;
   pointer-events: none;
   z-index: 2;
-  filter: blur(0.75px);
+  filter: none;
   opacity: 0.85;
 }
 
@@ -2852,11 +2854,11 @@ body::after {
   }
   .category-pills::-webkit-scrollbar { display: none; }
   .cat-pill {
-    width: 88px;
+    width: 104px;
     flex-shrink: 0;
-    font-size: 8.5px;
+    font-size: 10px;
     letter-spacing: 1.5px;
-    padding: 9px 0 11px;
+    padding: 11px 0 13px;
     border-radius: 5px;
     touch-action: manipulation;
   }
@@ -2938,7 +2940,11 @@ body::after {
   .mobile-build .field-center {
     height: 62dvh;
     padding: 0 6px 8px;
+    overflow: clip; /* clip without creating a scroll container */
   }
+
+  .mobile-build .sil-img,
+  .mobile-build .player-qbfig { filter: none; }
   .mobile-build .sil-wrap {
     flex: 1;
     min-height: 0;

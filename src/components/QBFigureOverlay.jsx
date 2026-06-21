@@ -273,7 +273,7 @@ export default function QBFigureOverlay({ build, className }) {
               <image
                 href={`/logos/${build['football-iq'].team}.png`}
                 x="210" y="-2" width="80" height="80"
-                style={{ mixBlendMode: 'screen', opacity: 0.88, transition: 'opacity 0.5s ease' }}
+                style={{ mixBlendMode: 'screen', opacity: 1, transition: 'opacity 0.5s ease' }}
               />
             </g>
           )}
