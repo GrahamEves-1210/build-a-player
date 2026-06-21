@@ -48,6 +48,7 @@ export default function App() {
     setGameMode(mode)
     setBuild(Object.fromEntries(types.map(t => [t, null])))
     setPage('game')
+    window.scrollTo(0, 0)
   }, [])
 
   const handleDrop = useCallback((type) => {

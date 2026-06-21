@@ -3,24 +3,26 @@ import { useEffect, useState, useMemo } from 'react'
 const ATTRS = [
   { label: 'Arm',                   col: '#f87171', angle:  -35, dist: 1.32, mx: 58, my: 14 },
   { label: 'Legs',                  col: '#60a5fa', angle:   55, dist: 1.30, mx: 3,  my: 30 },
-  { label: 'Size',                  col: '#fb923c', angle:  165, dist: 1.28, mx: 62, my: 52 },
+  { label: 'Size',                  col: '#fb923c', angle:   15, dist: 1.28, mx: 62, my: 52 },
   { label: 'Processing',            col: '#a78bfa', angle:  210, dist: 1.31, mx: 4,  my: 62 },
   { label: 'Accuracy/Touch',        col: '#34d399', angle: -130, dist: 1.30, mx: 55, my: 72 },
-  { label: 'Leadership',            col: '#e879f9', angle:  -70, dist: 1.29, mx: 5,  my: 18 },
-  { label: 'Playmaking/Creativity', col: '#fbbf24', angle:  100, dist: 1.32, mx: 60, my: 34 },
-  { label: 'Pocket Presence',       col: '#2dd4bf', angle: -160, dist: 1.28, mx: 3,  my: 48 },
+  { label: 'Leadership',            col: '#e879f9', angle:  -70, dist: 1.29, mx: 5,  my: 18, doy: -30 },
+  { label: 'Playmaking/Creativity', col: '#fbbf24', angle:  100, dist: 1.32, mx: 60, my: 34, dox: -210 },
+  { label: 'Pocket Presence',       col: '#2dd4bf', angle: -160, dist: 1.28, mx: 3,  my: 48, doy: 200 },
 ]
 
-function FloatingChip({ label, col, angle, dist, visible, mx, my, isMobile }) {
+function FloatingChip({ label, col, angle, dist, visible, mx, my, isMobile, dox = 0, doy = 0 }) {
   const x = isMobile ? mx : 50 + dist * 34 * Math.cos((angle * Math.PI) / 180)
   const y = isMobile ? my : 48 + dist * 30 * Math.sin((angle * Math.PI) / 180)
+  const ox = isMobile ? 0 : dox
+  const oy = isMobile ? 0 : doy
 
   return (
     <div
       className="splash-chip"
       style={{
-        left: `${x}%`,
-        top:  `${y}%`,
+        left: ox ? `calc(${x}% + ${ox}px)` : `${x}%`,
+        top:  oy ? `calc(${y}% + ${oy}px)` : `${y}%`,
         borderColor: col,
         color: col,
         opacity: visible ? 1 : 0,

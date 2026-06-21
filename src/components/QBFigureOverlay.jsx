@@ -41,6 +41,9 @@ const HELMET_COLOR_OVERRIDE = {
 // Teams with custom helmet markings instead of logo
 const NO_HELMET_LOGO = new Set(['CLE', 'CIN', 'LAR', 'MIN'])
 
+// White helmets need multiply blend so the logo isn't washed out
+const WHITE_HELMET = new Set(['ARI', 'IND', 'LAC', 'TEN', 'BUF'])
+
 const helmColor = (team, fallback) => HELMET_COLOR_OVERRIDE[team] ?? fallback
 
 
@@ -273,7 +276,11 @@ export default function QBFigureOverlay({ build, className }) {
               <image
                 href={`/logos/${build['football-iq'].team}.png`}
                 x="210" y="-2" width="80" height="80"
-                style={{ mixBlendMode: 'screen', opacity: 1, transition: 'opacity 0.5s ease' }}
+                style={{
+                  mixBlendMode: WHITE_HELMET.has(build['football-iq'].team) ? 'multiply' : 'screen',
+                  opacity: 1,
+                  transition: 'opacity 0.5s ease'
+                }}
               />
             </g>
           )}

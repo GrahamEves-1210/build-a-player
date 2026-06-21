@@ -77,6 +77,35 @@ function IconInfo() {
   )
 }
 
+function IconX() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.742l7.737-8.835L1.254 2.25H8.08l4.265 5.638L18.244 2.25zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+    </svg>
+  )
+}
+
+function IconMail() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="1" y="3" width="11" height="8" rx="1"/>
+      <path d="M1 3.5l5.5 4 5.5-4"/>
+    </svg>
+  )
+}
+
+function IconCoffee() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M18 8h1a4 4 0 0 1 0 8h-1"/>
+      <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/>
+      <line x1="6" y1="1" x2="6" y2="4"/>
+      <line x1="10" y1="1" x2="10" y2="4"/>
+      <line x1="14" y1="1" x2="14" y2="4"/>
+    </svg>
+  )
+}
+
 function IconChevron({ up }) {
   return (
     <svg
@@ -175,6 +204,21 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, user }) {
               <span className="wm-icon"><IconLeaderboard /></span>
               <span className="wm-label">Leaderboard</span>
               <span className="wm-soon-badge">Soon</span>
+            </div>
+
+            <div className="wm-divider" />
+
+            {/* Social / contact */}
+            <div className="wm-social-row">
+              <a className="wm-social-btn" href="https://x.com/Build_A_Player" target="_blank" rel="noopener noreferrer" title="Follow on X">
+                <IconX />
+              </a>
+              <a className="wm-social-btn" href="mailto:buildaplayer@outlook.com" title="Email us">
+                <IconMail />
+              </a>
+              <a className="wm-social-btn wm-social-btn-coffee" href="https://buymeacoffee.com/32and0" target="_blank" rel="noopener noreferrer" title="Buy us a coffee">
+                <IconCoffee />
+              </a>
             </div>
 
             <div className="wm-divider" />

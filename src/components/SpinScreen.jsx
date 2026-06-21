@@ -175,7 +175,7 @@ function Chip({ type, meta, val, selectedQB, draggingType, onChipTap, onDragStar
   }
   return (
     <div
-      className={`attr-chip${draggingType === type ? ' chip-dragging' : ''}`}
+      className={`attr-chip attr-chip-${type}${draggingType === type ? ' chip-dragging' : ''}`}
       style={{ '--chip-col': meta.col }}
       draggable
       onClick={() => onChipTap && onChipTap(chipData)}
@@ -224,6 +224,8 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
     setSelectedQB(null)
     setExcludedQB(null)
     setDraggingType(null)
+    const panel = document.querySelector('.spin-panel')
+    if (panel) panel.scrollTop = 0
   }, [resetKey])
 
   useEffect(() => () => clearAll(), [])

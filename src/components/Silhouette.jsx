@@ -14,13 +14,13 @@ const CARD_W = 207  // must match .cz-card width in CSS
 // ay: 0=top of figure, 844=bottom
 // cy: fixed card Y position as fraction of sil-wrap height (cards don't track the dot)
 const ZONES = [
-  { type: 'football-iq',     ax: 275, ay:  42, side: 'left',  cy: 0.11 },
+  { type: 'football-iq',     ax: 275, ay:  42, side: 'left',  cy: 0.114 },
   { type: 'leadership',      ax: 330, ay: 120, side: 'right', cy: 0.114 },
-  { type: 'arm-strength',    ax: 171, ay: 175, side: 'left',  cy: 0.26 },
+  { type: 'arm-strength',    ax: 171, ay: 175, side: 'left',  cy: 0.314 },
   { type: 'strength',        ax: 340, ay: 310, side: 'right', cy: 0.514 },
-  { type: 'accuracy',        ax: 110, ay: 216, side: 'left',  cy: 0.46 },
+  { type: 'accuracy',        ax: 110, ay: 216, side: 'left',  cy: 0.514 },
   { type: 'composure',       ax: 350, ay: 240, side: 'right', cy: 0.314 },
-  { type: 'mobility',        ax: 207, ay: 525, side: 'left',  cy: 0.68 },
+  { type: 'mobility',        ax: 207, ay: 525, side: 'left',  cy: 0.714 },
   { type: 'pocket-presence', ax: 465, ay: 520, side: 'right', cy: 0.714 },
 ]
 
