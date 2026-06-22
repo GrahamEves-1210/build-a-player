@@ -42,17 +42,7 @@ export default function App() {
 
   const activeTypes = gameMode === 'lite' ? LITE_TYPES : TYPES
 
-  // TEMP: auto-fill all slots for testing
-  useEffect(() => {
-    if (!activeTypes.length) return
-    const TEST_NAMES = ['Patrick Mahomes', 'Josh Allen', 'Lamar Jackson', 'Joe Burrow', 'Justin Herbert', 'Jalen Hurts', 'Dak Prescott', 'Tua Tagovailoa', 'Brock Purdy']
-    setBuild(Object.fromEntries(activeTypes.map((t, i) => {
-      const name = TEST_NAMES[i] ?? TEST_NAMES[0]
-      const qb = QBS.find(q => q.name === name) ?? QBS[0]
-      const photo = HEADSHOTS[qb.name] ? `/headshots/${HEADSHOTS[qb.name]}.jpg` : null
-      return [t, { type: t, val: 8 + (i % 3), qb: qb.short, qbFull: qb.name, team: qb.team, teamColor: qb.color, teamColor2: qb.color2, photo }]
-    })))
-  }, [gameMode])
+
 
   const activeDragRef = useRef(activeDrag)
   useLayoutEffect(() => { activeDragRef.current = activeDrag }, [activeDrag])
