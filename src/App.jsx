@@ -74,6 +74,7 @@ export default function App() {
       return next
     })
     setSpinResetKey(k => k + 1)
+    window.scrollTo({ top: 0, behavior: 'instant' })
   }, [activeTypes])
 
   const handleSimulate = useCallback(() => {
@@ -154,7 +155,7 @@ export default function App() {
       <nav className="mobile-tab-bar">
         <button
           className={`mtab ${mobileView === 'spin' ? 'active' : ''}`}
-          onClick={() => setMobileView('spin')}
+          onClick={() => { setMobileView('spin'); window.scrollTo({ top: 0, behavior: 'instant' }) }}
         >
           <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="12" r="10"/>

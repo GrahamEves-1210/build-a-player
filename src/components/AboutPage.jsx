@@ -10,10 +10,10 @@ export default function AboutPage({ onBack }) {
         <section className="about-section">
           <h2 className="about-section-title">What is this?</h2>
           <p className="about-body">
-            Build-A-Player is an independent fan-made game that lets you construct the ultimate NFL quarterback by combining attributes from players across the league. Spin the wheel to land on a random team and QB, drag their stat onto your silhouette, and repeat until all 8 attribute slots are filled. Then simulate a full season to see how your Frankenstein QB stacks up.
+            Build-A-Player is an independent fan-made game that lets you construct the ultimate NFL quarterback by combining attributes from players across the league. Spin the wheel to land on a random team and QB, drag their stat onto your silhouette, and repeat until all 9 attribute slots are filled. Then simulate a full season to see how your Frankenstein QB stacks up.
           </p>
           <p className="about-body">
-            Each attribute — Arm, Legs, Size, Decision Making, Leadership, Accuracy, Playmaking, and Pocket Presence — comes from a different QB. You get one respin per game. Use it wisely.
+            Each attribute — Arm, Legs, Build, Processing, Leadership, Vision, Accuracy, Playmaking, and Pocket Presence — comes from a different QB. You get one respin per game. Use it wisely.
           </p>
         </section>
 

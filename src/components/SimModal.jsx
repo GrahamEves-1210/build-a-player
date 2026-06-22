@@ -3,12 +3,13 @@ import { valToGrade } from '../utils/simulation'
 
 // Which side each attribute callout appears on, and its body zone label
 const CALLOUT_CONFIG = {
-  'processing':  { side: 'left',  partLabel: 'Processing'   },
-  'playmaking':    { side: 'left',  partLabel: 'Composure'    },
-  'accuracy':     { side: 'left',  partLabel: 'Accuracy'     },
-  'arm': { side: 'right', partLabel: 'Arm'          },
-  'size':     { side: 'right', partLabel: 'Torso'        },
-  'legs':     { side: 'right', partLabel: 'Legs'         },
+  'processing':      { side: 'left',  partLabel: 'Processing' },
+  'playmaking':      { side: 'left',  partLabel: 'Playmaking' },
+  'accuracy':        { side: 'left',  partLabel: 'Accuracy'   },
+  'vision':          { side: 'right', partLabel: 'Vision'     },
+  'arm':             { side: 'right', partLabel: 'Arm'        },
+  'size':            { side: 'right', partLabel: 'Torso'      },
+  'legs':            { side: 'right', partLabel: 'Legs'       },
 }
 
 function Callout({ type, data }) {

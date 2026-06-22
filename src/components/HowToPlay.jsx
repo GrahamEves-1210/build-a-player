@@ -1,9 +1,9 @@
 const STEPS = [
   { text: <>Hit <strong>SPIN</strong> — the wheel randomly lands on an NFL team, then pulls a QB from their roster.</> },
-  { text: <>You get <strong>8 attribute slots</strong> to fill: Arm, Legs, Size, Decision Making, Leadership, Accuracy, Playmaking, and Pocket Presence — each from a different QB.</> },
+  { text: <>You get <strong>9 attribute slots</strong> to fill: Arm, Legs, Build, Processing, Leadership, Vision, Accuracy, Playmaking, and Pocket Presence — each from a different QB.</> },
   { text: <><strong>Drag</strong> one of the QB's stat chips from the right panel and <strong>drop it</strong> onto the matching zone on the silhouette. The body part lights up in that team's colors.</> },
   { text: <>You get <strong>one QB Respin per game</strong> — use it to swap your QB before locking in a stat.</> },
-  { text: <>Spin until all 8 slots are filled, then hit <strong>Simulate Season</strong> to see how your Frankenstein QB performs.</> },
+  { text: <>Spin until all 9 slots are filled, then hit <strong>Simulate Season</strong> to see how your Frankenstein QB performs.</> },
 ]
 
 export default function HowToPlay({ open, onClose }) {
