@@ -3073,6 +3073,8 @@ body::after {
     left: 0;
     right: 0;
     height: 64px;
+    min-height: 64px;
+    flex-shrink: 0;
     background: var(--grey-950, #0a0f0c);
     border-top: 1px solid var(--border);
     z-index: 200;
