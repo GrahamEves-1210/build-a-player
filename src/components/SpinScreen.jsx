@@ -2,6 +2,7 @@ import { useRef, useEffect, useLayoutEffect, useMemo, useCallback, useState } fr
 import { QBS, TEAMS, ATTR, TYPES, CATEGORIES, QB_PHYSICALS, LITE_TYPES } from '../data/qbs'
 import { valToGrade } from '../utils/simulation'
 import HEADSHOTS from '../data/headshots.json'
+import QBAvatar from './QBAvatar'
 
 function fmtHeight(inches) {
   return `${Math.floor(inches / 12)}'${inches % 12}"`
@@ -210,6 +211,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
   const [qbRespinUsed, setQbRespinUsed] = useState(false)
   const [excludedQB,   setExcludedQB]   = useState(null)
   const [draggingType, setDraggingType] = useState(null)
+  const [spinCount, setSpinCount]       = useState(0)
   const pauseRef = useRef(null)
 
   const complete = types.every(t => build[t])
@@ -248,6 +250,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
     setSelectedTeam(null)
     setSelectedQB(null)
     setExcludedQB(null)
+    setSpinCount(c => c + 1)
     setPhase('team')
   }, [])
 
@@ -260,14 +263,19 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
 
   const isSpinningTeam = phase === 'team'
   const isSpinningQB   = phase === 'qb'
-  const isSpinning     = isSpinningTeam || isSpinningQB
+  const isSpinning     = isSpinningTeam || phase === 'team-done' || isSpinningQB
   const isDone         = phase === 'done'
+
+  const teamReelItems = useMemo(() => {
+    return [...TEAMS].sort(() => Math.random() - 0.5)
+  }, [spinCount])
 
   // Stable QB items — minimal placeholder until team is selected (QB reel is blurred/hidden)
   const qbReelItems = useMemo(() => {
     if (!selectedTeam) return QBS.slice(0, 3)
     const base = QBS.filter(q => q.team === selectedTeam.short)
-    return excludedQB ? base.filter(q => q !== excludedQB) : base
+    const filtered = excludedQB ? base.filter(q => q !== excludedQB) : base
+    return [...filtered].sort(() => Math.random() - 0.5)
   }, [selectedTeam, excludedQB])
 
   const visibleCategories = CATEGORIES
@@ -283,7 +291,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
           <div className="reels-row">
             <SlotReel
               label="TEAM"
-              items={TEAMS}
+              items={teamReelItems}
               spinning={isSpinningTeam}
               idle={!isSpinning && !selectedTeam}
               locked={!!selectedTeam}
@@ -324,19 +332,17 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
         {isDone && selectedQB && (
           <>
             <div className="qb-reveal-card" style={{ '--qb-color': selectedQB.color }}>
+              <div className="qb-reveal-hero">
+                <QBAvatar
+                  photo={HEADSHOTS[selectedQB.name] ? `/headshots/${HEADSHOTS[selectedQB.name]}.jpg` : null}
+                  team={selectedQB.team}
+                  color={selectedQB.color}
+                  size={88}
+                />
+              </div>
               <div className="qb-reveal-text">
                 <div className="qb-reveal-name">{selectedQB.name}</div>
                 <div className="qb-reveal-meta">{selectedQB.teamName}{selectedQB.starter ? '' : ' · Backup'}</div>
-              </div>
-              <div className="qb-reveal-hero">
-                {HEADSHOTS[selectedQB.name] && (
-                  <img
-                    className="qb-pfp-hero"
-                    src={`/headshots/${HEADSHOTS[selectedQB.name]}.jpg`}
-                    alt={selectedQB.name}
-                    onError={e => { e.currentTarget.parentElement.style.background = 'var(--grey-900)' }}
-                  />
-                )}
               </div>
             </div>
 
@@ -384,7 +390,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
 
         {complete && (
           <div className="spin-hint-text" style={{ color: 'var(--accent)', paddingTop: 4 }}>
-            All 6 slots filled — simulate your season
+            All 9 slots filled — simulate your season
           </div>
         )}
       </div>

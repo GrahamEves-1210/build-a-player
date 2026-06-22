@@ -1,5 +1,6 @@
 import { useState, useRef, useLayoutEffect, useEffect, useCallback } from 'react'
 import { ATTR, TYPES, CATEGORIES, QB_PHYSICALS } from '../data/qbs'
+import QBAvatar from './QBAvatar'
 
 function fmtHeight(in_) { return `${Math.floor(in_ / 12)}'${in_ % 12}"` }
 import QBFigureOverlay from './QBFigureOverlay'
@@ -7,19 +8,19 @@ import QBFigureOverlay from './QBFigureOverlay'
 // Figure coordinate space (matches SVG viewBox 0 0 622 844)
 const FIG_W = 622
 const FIG_H = 844
-const CARD_W = 207  // must match .cz-card width in CSS
+const CARD_W = 211  // must match .cz-card width in CSS
 
 // Anchor positions in figure coordinate space
 // ax: 0=left edge of figure, 622=right edge
 // ay: 0=top of figure, 844=bottom
 // cy: fixed card Y position as fraction of sil-wrap height (cards don't track the dot)
 const ZONES = [
-  { type: 'vision',          ax: 360, ay:  75, side: 'right', cy: 0.09  },
+  { type: 'vision',          ax: 355, ay:  75, side: 'right', cy: 0.09  },
   { type: 'processing',      ax: 275, ay:  42, side: 'left',  cy: 0.14  },
   { type: 'leadership',      ax: 330, ay: 120, side: 'right', cy: 0.29  },
-  { type: 'arm',             ax: 171, ay: 175, side: 'left',  cy: 0.32  },
+  { type: 'arm',             ax: 171, ay: 175, side: 'left',  cy: 0.50  },
   { type: 'playmaking',      ax: 350, ay: 240, side: 'right', cy: 0.47  },
-  { type: 'accuracy',        ax: 110, ay: 216, side: 'left',  cy: 0.50  },
+  { type: 'accuracy',        ax: 110, ay: 216, side: 'left',  cy: 0.32  },
   { type: 'size',            ax: 340, ay: 310, side: 'right', cy: 0.65  },
   { type: 'legs',            ax: 207, ay: 525, side: 'left',  cy: 0.68  },
   { type: 'pocket-presence', ax: 465, ay: 520, side: 'right', cy: 0.83  },
@@ -47,7 +48,7 @@ function useFigureBounds(ref) {
   return bounds
 }
 
-function CZCard({ zone, cardY, build, activeDrag, hidden, invisible }) {
+function CZCard({ zone, cardY, build, activeDrag, hidden, invisible, isMobile }) {
   const meta  = ATTR[zone.type]
   const data  = build[zone.type]
   const filled = !!data
@@ -55,7 +56,7 @@ function CZCard({ zone, cardY, build, activeDrag, hidden, invisible }) {
   return (
     <div
       className={[
-        'cz-card', `cz-${zone.side}`,
+        'cz-card', `cz-${zone.side}`, `cz-type-${zone.type}`,
         filled    && 'cz-filled',
         hidden    && 'cz-hidden',
         invisible && 'cz-invisible',
@@ -65,18 +66,15 @@ function CZCard({ zone, cardY, build, activeDrag, hidden, invisible }) {
       <div className="cz-tag">{meta.label}</div>
       {filled && (
         <div className="cz-player-drop">
-          {data.photo && (
-            <img
-              className="cz-headshot"
-              src={data.photo}
-              alt={data.qbFull}
-              onError={e => { e.currentTarget.style.display = 'none' }}
-            />
-          )}
+          <QBAvatar
+            photo={data.photo}
+            team={data.team}
+            size={isMobile ? 26 : 53}
+          />
           <span className="cz-qb-name">
-              <span>{data.qbFull.split(' ')[0]}</span>
-              <span>{data.qbFull.split(' ').slice(1).join(' ')}</span>
-            </span>
+            <span>{data.qbFull.split(' ')[0]}</span>
+            <span>{data.qbFull.split(' ').slice(1).join(' ')}</span>
+          </span>
         </div>
       )}
       {!filled && (
@@ -109,7 +107,7 @@ function HWTracker({ build }) {
   )
 }
 
-const MOBILE_CARD_W = 18   // card CSS width (82px) minus card offset (64px each side)
+const MOBILE_CARD_W = 22   // card CSS width (86px) minus card offset (64px each side)
 
 export default function Silhouette({ build, activeDrag, onDrop, activeCategory, onCategoryChange, types = TYPES, isLite = false }) {
   const silRef = useRef(null)
@@ -188,9 +186,9 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
         {CATEGORIES.map(cat => (
           <button
             key={cat.id}
-            className={`cat-pill ${activeCategory === cat.id ? 'active' : ''}`}
+            className={`cat-pill ${(complete || activeCategory === cat.id) ? 'active' : ''}`}
             style={isLite ? { visibility: 'hidden', pointerEvents: 'none' } : undefined}
-            onClick={() => onCategoryChange(activeCategory === cat.id ? null : cat.id)}
+            onClick={() => !complete && onCategoryChange(activeCategory === cat.id ? null : cat.id)}
           >
             {cat.label}
           </button>
@@ -248,6 +246,7 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
                   activeDrag={activeDrag}
                   hidden={!p}
                   invisible={hiddenFromTab && !!p}
+                  isMobile={isMobile}
                 />
               </div>
             )

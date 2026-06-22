@@ -3,11 +3,13 @@ import Navbar from './components/Navbar'
 import SpinScreen from './components/SpinScreen'
 import Silhouette from './components/Silhouette'
 import ReportCard from './components/ReportCard'
-import SimModal from './components/SimModal'
+import SimPage from './components/SimPage'
 import AboutPage from './components/AboutPage'
 import SplashScreen from './components/SplashScreen'
 import AuthModal from './components/AuthModal'
-import { TYPES, LITE_TYPES } from './data/qbs'
+import ProfilePage from './components/ProfilePage'
+import { TYPES, LITE_TYPES, QBS } from './data/qbs'
+import HEADSHOTS from './data/headshots.json'
 import { runSimulation } from './utils/simulation'
 import { supabase } from './lib/supabase'
 
@@ -17,8 +19,8 @@ export default function App() {
   const [build, setBuild]               = useState({})
   const [activeDrag, setActiveDrag]     = useState(null)
   const [activeCategory, setActiveCategory] = useState('physical')
-  const [showSim, setShowSim]           = useState(false)
   const [simResult, setSimResult]       = useState(null)
+  const [simReplaying, setSimReplaying] = useState(false)
   const [spinResetKey, setSpinResetKey] = useState(0)
   const [mobileView, setMobileView]     = useState('spin')
   const [user, setUser]                 = useState(null)
@@ -39,6 +41,18 @@ export default function App() {
   }, [])
 
   const activeTypes = gameMode === 'lite' ? LITE_TYPES : TYPES
+
+  // TEMP: auto-fill all slots for testing
+  useEffect(() => {
+    if (!activeTypes.length) return
+    const TEST_NAMES = ['Patrick Mahomes', 'Josh Allen', 'Lamar Jackson', 'Joe Burrow', 'Justin Herbert', 'Jalen Hurts', 'Dak Prescott', 'Tua Tagovailoa', 'Brock Purdy']
+    setBuild(Object.fromEntries(activeTypes.map((t, i) => {
+      const name = TEST_NAMES[i] ?? TEST_NAMES[0]
+      const qb = QBS.find(q => q.name === name) ?? QBS[0]
+      const photo = HEADSHOTS[qb.name] ? `/headshots/${HEADSHOTS[qb.name]}.jpg` : null
+      return [t, { type: t, val: 8 + (i % 3), qb: qb.short, qbFull: qb.name, team: qb.team, teamColor: qb.color, teamColor2: qb.color2, photo }]
+    })))
+  }, [gameMode])
 
   const activeDragRef = useRef(activeDrag)
   useLayoutEffect(() => { activeDragRef.current = activeDrag }, [activeDrag])
@@ -62,8 +76,11 @@ export default function App() {
   const handleReset = useCallback(() => {
     setBuild(Object.fromEntries(activeTypes.map(t => [t, null])))
     setSimResult(null)
+    setSimReplaying(false)
     setActiveDrag(null)
     setSpinResetKey(0)
+    setMobileView('spin')
+    window.scrollTo({ top: 0, behavior: 'instant' })
   }, [activeTypes])
 
   const handleChipTap = useCallback((chipData) => {
@@ -78,9 +95,12 @@ export default function App() {
   }, [activeTypes])
 
   const handleSimulate = useCallback(() => {
-    setSimResult(runSimulation(build, activeTypes))
-    setShowSim(true)
-  }, [build, activeTypes])
+    const isReplay = !!simResult
+    if (!isReplay) setSimResult(runSimulation(build, activeTypes))
+    setSimReplaying(isReplay)
+    setPage('sim')
+    window.scrollTo({ top: 0, behavior: 'instant' })
+  }, [build, activeTypes, simResult])
 
   const handleHome = useCallback(() => {
     setPage('splash')
@@ -101,6 +121,7 @@ export default function App() {
     onAbout: () => setPage('about'),
     onHome: handleHome,
     onSignIn: () => setShowAuth(true),
+    onProfile: () => setPage('profile'),
     user,
   }
 
@@ -109,6 +130,38 @@ export default function App() {
       <>
         <Navbar {...navbarProps} />
         <AboutPage onBack={() => setPage('game')} />
+      </>
+    )
+  }
+
+  if (page === 'profile' && user) {
+    return (
+      <>
+        <Navbar {...navbarProps} />
+        <ProfilePage
+          user={user}
+          build={build}
+          simResult={simResult}
+          types={activeTypes}
+          onBack={() => setPage('game')}
+          onSignOut={() => { setPage('game'); setUser(null) }}
+        />
+      </>
+    )
+  }
+
+  if (page === 'sim' && simResult) {
+    return (
+      <>
+        <Navbar {...navbarProps} />
+        <SimPage
+          result={simResult}
+          build={build}
+          types={activeTypes}
+          replay={simReplaying}
+          onBack={() => setPage('game')}
+          onReset={() => { handleReset(); setPage('game') }}
+        />
       </>
     )
   }
@@ -147,6 +200,7 @@ export default function App() {
             onSimulate={handleSimulate}
             onReset={handleReset}
             types={activeTypes}
+            hasResult={!!simResult}
           />
         </div>
       </main>
@@ -166,7 +220,7 @@ export default function App() {
         <div className="mtab-sep" />
         <button
           className={`mtab ${mobileView === 'build' ? 'active' : ''}`}
-          onClick={() => setMobileView('build')}
+          onClick={() => { setMobileView('build'); window.scrollTo({ top: 0, behavior: 'instant' }) }}
         >
           <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <rect x="3" y="3" width="7" height="7" rx="1"/>
@@ -180,14 +234,6 @@ export default function App() {
           )}
         </button>
       </nav>
-
-      <SimModal
-        open={showSim}
-        result={simResult}
-        build={build}
-        onClose={() => setShowSim(false)}
-        onReset={() => { handleReset(); setShowSim(false) }}
-      />
 
       {showAuth && (
         <AuthModal

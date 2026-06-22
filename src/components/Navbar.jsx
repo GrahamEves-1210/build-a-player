@@ -3,13 +3,13 @@ import { useState, useRef, useEffect } from 'react'
 const STEPS_DESKTOP = [
   { n: '1', title: 'Spin',      body: 'Pull a random NFL team, then a QB from their roster.' },
   { n: '2', title: 'Drag',      body: 'Drop one stat onto the matching zone on the player silhouette.' },
-  { n: '3', title: 'Repeat ×8', body: 'Fill all eight attribute slots — one per spin.' },
+  { n: '3', title: 'Repeat ×9', body: 'Fill all nine attribute slots — one per spin.' },
   { n: '4', title: 'Simulate',  body: 'Hit Simulate to see how your Frankenstein QB performs.' },
 ]
 const STEPS_MOBILE = [
   { n: '1', title: 'Spin',      body: 'Pull a random NFL team, then a QB from their roster.' },
   { n: '2', title: 'Tap',       body: 'Tap a stat chip to instantly assign it to your build.' },
-  { n: '3', title: 'Repeat ×8', body: 'Fill all eight attribute slots — one per spin.' },
+  { n: '3', title: 'Repeat ×9', body: 'Fill all nine attribute slots — one per spin.' },
   { n: '4', title: 'Simulate',  body: 'Hit Simulate to see how your Frankenstein QB performs.' },
 ]
 
@@ -106,6 +106,14 @@ function IconCoffee() {
   )
 }
 
+function IconArrowRight() {
+  return (
+    <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M2 5.5h7M6 2.5l3 3-3 3"/>
+    </svg>
+  )
+}
+
 function IconChevron({ up }) {
   return (
     <svg
@@ -119,7 +127,7 @@ function IconChevron({ up }) {
   )
 }
 
-export default function Navbar({ onReset, onAbout, onHome, onSignIn, user }) {
+export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, user }) {
   const [open,    setOpen]    = useState(false)
   const [htpOpen, setHtpOpen] = useState(false)
   const ref = useRef(null)
@@ -133,9 +141,10 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, user }) {
     return () => document.removeEventListener('mousedown', close)
   }, [open])
 
-  const handleReset   = () => { onReset?.();  setOpen(false) }
-  const handleAbout   = () => { onAbout?.();  setOpen(false) }
-  const handleSignIn  = () => { onSignIn?.(); setOpen(false) }
+  const handleReset   = () => { onReset?.();   setOpen(false) }
+  const handleAbout   = () => { onAbout?.();   setOpen(false) }
+  const handleSignIn  = () => { onSignIn?.();  setOpen(false) }
+  const handleProfile = () => { onProfile?.(); setOpen(false) }
 
   return (
     <header className="navbar">
@@ -225,10 +234,11 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, user }) {
 
             {/* Sign In / Account */}
             {user ? (
-              <div className="wm-row wm-row-user">
+              <button className="wm-row wm-row-user" onClick={handleProfile}>
                 <span className="wm-icon"><IconUser /></span>
                 <span className="wm-label wm-label-user">{user.user_metadata?.username || user.email}</span>
-              </div>
+                <span className="wm-chevron"><IconArrowRight /></span>
+              </button>
             ) : (
               <button className="wm-row wm-row-auth" onClick={handleSignIn}>
                 <span className="wm-icon"><IconUser /></span>

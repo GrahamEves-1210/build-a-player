@@ -1,169 +1,252 @@
+import { useState } from 'react'
 import { ATTR, TYPES } from '../data/qbs'
 import { valToGrade } from '../utils/simulation'
 
-// Which side each attribute callout appears on, and its body zone label
-const CALLOUT_CONFIG = {
-  'processing':      { side: 'left',  partLabel: 'Processing' },
-  'playmaking':      { side: 'left',  partLabel: 'Playmaking' },
-  'accuracy':        { side: 'left',  partLabel: 'Accuracy'   },
-  'vision':          { side: 'right', partLabel: 'Vision'     },
-  'arm':             { side: 'right', partLabel: 'Arm'        },
-  'size':            { side: 'right', partLabel: 'Torso'      },
-  'legs':            { side: 'right', partLabel: 'Legs'       },
-}
-
-function Callout({ type, data }) {
-  if (!data) return null
-  const meta = ATTR[type]
-  const cfg = CALLOUT_CONFIG[type]
+// ── Screen 1: Build overview ──────────────────────────────────────────────────
+function ScreenBuild({ result, build, types, onNext, onClose }) {
+  const { ovr } = result
   return (
-    <div
-      className="sim-callout"
-      style={{
-        '--callout-col': meta.col,
-        textAlign: cfg.side === 'left' ? 'right' : 'left',
-      }}
-    >
-      <div className="callout-part">{cfg.partLabel}</div>
-      <div className="callout-name">{data.qbFull}</div>
-      <div className="callout-val">{valToGrade(data.val)}</div>
+    <div className="sim-screen">
+      <button className="sim-close-x" onClick={onClose}>✕</button>
+      <div className="sim-eyebrow">Your Frankenstein QB</div>
+      <div className="sim-ovr-hero">
+        <div className="sim-ovr-hero-num">{ovr}</div>
+        <div className="sim-ovr-hero-lbl">OVR</div>
+      </div>
+
+      <div className="sim-attr-table">
+        {types.filter(t => build[t]).map(t => {
+          const meta = ATTR[t]
+          const data = build[t]
+          return (
+            <div key={t} className="sim-attr-row">
+              <span className="sim-attr-dot" style={{ background: meta.col }} />
+              <span className="sim-attr-name">{meta.label}</span>
+              <span className="sim-attr-qb">{data.qbFull}</span>
+              <span className="sim-attr-grade" style={{ color: meta.col }}>{valToGrade(data.val)}</span>
+            </div>
+          )
+        })}
+      </div>
+
+      <button className="sim-cta-btn" onClick={onNext}>Simulate Season</button>
     </div>
   )
 }
 
-function SuperBowlResult({ playoffs, sbResult, wins }) {
+// ── Screen 2: Regular season ──────────────────────────────────────────────────
+function ScreenSeason({ result, onNext }) {
+  const { wins, losses, games, seasonPassYds, seasonTDs, seasonINTs, seasonRating, playoffs } = result
+  return (
+    <div className="sim-screen">
+      <div className="sim-screen-header">
+        <div className="sim-eyebrow">Regular Season</div>
+        <div className="sim-big-record">{wins}–{losses}</div>
+        <div className="sim-record-sub">{playoffs ? 'Playoff Bound' : 'Missed the Playoffs'}</div>
+      </div>
+
+      <div className="sim-games-scroll">
+        {games.map(g => (
+          <div key={g.wk} className={`sim-game-row ${g.won ? 'sgr-w' : 'sgr-l'}`}>
+            <span className="sgr-wk">WK {g.wk}</span>
+            <span className={`sgr-badge ${g.won ? 'sgr-badge-w' : 'sgr-badge-l'}`}>{g.won ? 'W' : 'L'}</span>
+            <span className="sgr-opp">{g.opponent}</span>
+            <span className="sgr-score">{g.mySc}–{g.oppSc}</span>
+            <span className="sgr-stat">{g.passYds}<span className="sgr-unit">yds</span> {g.tds}<span className="sgr-unit">TD</span> {g.ints}<span className="sgr-unit">INT</span></span>
+          </div>
+        ))}
+      </div>
+
+      <div className="sim-totals-strip">
+        <div className="sim-total">
+          <div className="sim-total-val">{seasonPassYds.toLocaleString()}</div>
+          <div className="sim-total-lbl">Pass Yds</div>
+        </div>
+        <div className="sim-total">
+          <div className="sim-total-val">{seasonTDs}</div>
+          <div className="sim-total-lbl">TDs</div>
+        </div>
+        <div className="sim-total">
+          <div className="sim-total-val">{seasonINTs}</div>
+          <div className="sim-total-lbl">INTs</div>
+        </div>
+        <div className="sim-total">
+          <div className="sim-total-val">{seasonRating}</div>
+          <div className="sim-total-lbl">Rating</div>
+        </div>
+      </div>
+
+      <button className="sim-cta-btn" onClick={onNext}>
+        {playoffs ? 'View Playoffs' : 'Season Summary'}
+      </button>
+    </div>
+  )
+}
+
+// ── Screen 3: Playoffs ────────────────────────────────────────────────────────
+function ScreenPlayoffs({ result, onNext }) {
+  const { wins, losses, playoffs, playoffRounds, sbResult } = result
+
   if (!playoffs) {
     return (
-      <div className="sb-result" style={{
-        borderColor: 'rgba(248,113,113,0.22)',
-        background: 'linear-gradient(135deg,rgba(248,113,113,0.05),transparent)',
-      }}>
-        <div className="sb-result-title">Missed the Playoffs</div>
-        <div className="sb-result-sub">{wins} wins wasn't enough. Rebuild and try again.</div>
-      </div>
-    )
-  }
-  if (!sbResult?.won) {
-    return (
-      <div className="sb-result" style={{
-        borderColor: 'rgba(251,191,36,0.22)',
-        background: 'linear-gradient(135deg,rgba(251,191,36,0.05),transparent)',
-      }}>
-        <div className="sb-result-title">Eliminated — {sbResult?.round}</div>
-        <div className="sb-result-sub">
-          {sbResult?.pwins} playoff win{sbResult?.pwins !== 1 ? 's' : ''}. A balanced build goes further.
+      <div className="sim-screen sim-screen-center">
+        <div className="sim-eyebrow">Postseason</div>
+        <div className="sim-miss-icon">○</div>
+        <div className="sim-miss-title">Missed the Playoffs</div>
+        <div className="sim-miss-sub">
+          {wins}–{losses}. You needed {9 - wins} more win{9 - wins !== 1 ? 's' : ''} to qualify.
+          A stronger build would've made the cut.
         </div>
+        <button className="sim-cta-btn" onClick={onNext}>See Summary</button>
       </div>
     )
   }
+
+  const champion = sbResult?.won
   return (
-    <div className="sb-result">
-      <div className="sb-result-title">Super Bowl Champion</div>
-      <div className="sb-result-sub">Your Frankenstein QB went all the way.</div>
-      <div className="sb-stats">
-        <div className="sb-stat">
-          <div className="sb-stat-val">{sbResult.passYds}</div>
-          <div className="sb-stat-lbl">Pass Yards</div>
+    <div className="sim-screen">
+      <div className="sim-screen-header">
+        <div className="sim-eyebrow">Playoffs</div>
+        <div className={`sim-big-record ${champion ? 'sim-record-champ' : 'sim-record-elim'}`}>
+          {champion ? 'Champions' : `Out — ${sbResult?.round}`}
         </div>
-        <div className="sb-stat">
-          <div className="sb-stat-val">{sbResult.tds}</div>
-          <div className="sb-stat-lbl">Touchdowns</div>
+      </div>
+
+      <div className="sim-rounds-list">
+        {playoffRounds.map((r, i) => (
+          <div key={r.round} className={`sim-round-card ${r.won ? 'src-w' : 'src-l'}`}>
+            <div className="src-label">{r.round}</div>
+            <div className="src-body">
+              <span className={`src-badge ${r.won ? 'src-badge-w' : 'src-badge-l'}`}>{r.won ? 'W' : 'L'}</span>
+              <span className="src-opp">vs {r.opponent}</span>
+              <span className="src-score">{r.mySc}–{r.oppSc}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <button className="sim-cta-btn" onClick={onNext}>Final Report</button>
+    </div>
+  )
+}
+
+// ── Screen 4: Final report ────────────────────────────────────────────────────
+function ScreenFinal({ result, onReset, onClose }) {
+  const { ovr, wins, losses, playoffs, sbResult, seasonPassYds, seasonTDs, seasonINTs, seasonRating, bestGame } = result
+  const champion = sbResult?.won
+
+  return (
+    <div className="sim-screen">
+      <div className={`sim-final-banner ${champion ? 'sfb-champ' : playoffs ? 'sfb-elim' : 'sfb-miss'}`}>
+        <div className="sfb-outcome">
+          {champion ? 'Super Bowl Champion' : playoffs ? `Eliminated — ${sbResult?.round}` : 'Missed the Playoffs'}
         </div>
-        <div className="sb-stat">
-          <div className="sb-stat-val">{sbResult.rating}</div>
-          <div className="sb-stat-lbl">QB Rating</div>
+        <div className="sfb-sub">{wins}–{losses} Season · OVR {ovr}</div>
+      </div>
+
+      {champion && (
+        <div className="sim-sb-box">
+          <div className="sim-sb-label">Super Bowl Performance</div>
+          <div className="sim-totals-strip">
+            <div className="sim-total">
+              <div className="sim-total-val">{sbResult.passYds}</div>
+              <div className="sim-total-lbl">Pass Yds</div>
+            </div>
+            <div className="sim-total">
+              <div className="sim-total-val">{sbResult.tds}</div>
+              <div className="sim-total-lbl">TDs</div>
+            </div>
+            <div className="sim-total">
+              <div className="sim-total-val">{sbResult.rating}</div>
+              <div className="sim-total-lbl">Rating</div>
+            </div>
+          </div>
         </div>
+      )}
+
+      <div className="sim-final-section">
+        <div className="sim-final-section-lbl">Season Stats</div>
+        <div className="sim-totals-strip">
+          <div className="sim-total">
+            <div className="sim-total-val">{seasonPassYds.toLocaleString()}</div>
+            <div className="sim-total-lbl">Pass Yds</div>
+          </div>
+          <div className="sim-total">
+            <div className="sim-total-val">{seasonTDs}</div>
+            <div className="sim-total-lbl">TDs</div>
+          </div>
+          <div className="sim-total">
+            <div className="sim-total-val">{seasonINTs}</div>
+            <div className="sim-total-lbl">INTs</div>
+          </div>
+          <div className="sim-total">
+            <div className="sim-total-val">{seasonRating}</div>
+            <div className="sim-total-lbl">Rating</div>
+          </div>
+        </div>
+      </div>
+
+      {bestGame && (
+        <div className="sim-best-game">
+          <div className="sim-final-section-lbl">Best Game</div>
+          <div className="sim-best-game-body">
+            <span className="sbg-week">Wk {bestGame.wk}</span>
+            <span className="sbg-opp">vs {bestGame.opponent}</span>
+            <span className="sbg-line">{bestGame.passYds} yds · {bestGame.tds} TD · {bestGame.ints} INT · {bestGame.rating} rating</span>
+          </div>
+        </div>
+      )}
+
+      <div className="sim-final-actions">
+        <button className="sim-cta-btn" onClick={onReset}>New Build</button>
+        <button className="sim-ghost-btn" onClick={onClose}>Close</button>
       </div>
     </div>
   )
 }
 
-export default function SimModal({ open, result, build, onClose, onReset }) {
-  if (!result) return null
-  const { ovr, wins, losses, highlights, playoffs, sbResult } = result
+// ── Progress dots ─────────────────────────────────────────────────────────────
+function ProgressDots({ screen, total }) {
+  return (
+    <div className="sim-progress-dots">
+      {Array.from({ length: total }).map((_, i) => (
+        <div key={i} className={`sim-dot ${i === screen ? 'sim-dot-active' : i < screen ? 'sim-dot-done' : ''}`} />
+      ))}
+    </div>
+  )
+}
 
-  const leftTypes  = TYPES.filter(t => CALLOUT_CONFIG[t].side === 'left')
-  const rightTypes = TYPES.filter(t => CALLOUT_CONFIG[t].side === 'right')
+// ── Root modal ────────────────────────────────────────────────────────────────
+export default function SimModal({ open, result, build, onClose, onReset, types = TYPES }) {
+  const [screen, setScreen] = useState(0)
+
+  if (!result) return null
+
+  const next = () => setScreen(s => s + 1)
+
+  const handleClose = () => { setScreen(0); onClose() }
+  const handleReset = () => { setScreen(0); onReset() }
+
+  const screens = [
+    <ScreenBuild    key="build"    result={result} build={build} types={types} onNext={next} onClose={handleClose} />,
+    <ScreenSeason   key="season"   result={result} onNext={next} />,
+    <ScreenPlayoffs key="playoffs" result={result} onNext={next} />,
+    <ScreenFinal    key="final"    result={result} onReset={handleReset} onClose={handleClose} />,
+  ]
 
   return (
     <div
       className={`modal-overlay ${open ? 'open' : ''}`}
-      onClick={e => { if (e.target === e.currentTarget) onClose() }}
+      onClick={e => { if (e.target === e.currentTarget) handleClose() }}
     >
-      <div className="modal">
-        <div className="modal-header">
-          <div className="modal-eyebrow">Season Report</div>
-          <div className="modal-title">{wins}–{losses}</div>
-          <div className="modal-sub">
-            {playoffs
-              ? `Made the playoffs with an OVR ${ovr} QB`
-              : `Fell short with ${losses} losses`}
-          </div>
+      <div className="sim-modal">
+        <ProgressDots screen={screen} total={screens.length} />
+        <div className="sim-screens-wrap">
+          {screens[screen]}
         </div>
-
-        {/* Player diagram with callouts */}
-        <div className="sim-diagram">
-          <div className="sim-callouts-left">
-            {leftTypes.map(t => (
-              <Callout key={t} type={t} data={build[t]} />
-            ))}
-          </div>
-
-          <div className="sim-player-fig">
-            <img src="/silhouette.png" alt="QB" draggable={false} />
-          </div>
-
-          <div className="sim-callouts-right">
-            {rightTypes.map(t => (
-              <Callout key={t} type={t} data={build[t]} />
-            ))}
-          </div>
-        </div>
-
-        {/* OVR summary band */}
-        <div className="sim-summary-band">
-          <div className="sim-ovr-badge">
-            <div className="sob-num">{ovr}</div>
-            <div className="sob-lbl">OVR</div>
-          </div>
-          <div className="sim-tag-list">
-            {TYPES.filter(t => build[t]).map(t => {
-              const meta = ATTR[t]
-              const data = build[t]
-              return (
-                <span key={t} className="sim-tag">
-                  <span className="sim-tag-dot" style={{ background: meta.col }} />
-                  {meta.shortLabel} · {data.qb} · {valToGrade(data.val)}
-                </span>
-              )
-            })}
-          </div>
-        </div>
-
-        {/* Season highlights */}
-        <div className="season-section">
-          <div className="section-lbl">Season Highlights ({wins}–{losses})</div>
-          {highlights.map((h, i) => (
-            <div
-              key={h.wk}
-              className="tl-row"
-              style={{ animationDelay: `${i * 50}ms` }}
-            >
-              <span className="tl-wk">Wk {h.wk}</span>
-              <span className={`tl-vs ${h.won ? 'tl-w' : 'tl-l'}`}>
-                {h.won ? '●' : '○'} vs {h.opponent}
-              </span>
-              <span className="tl-sc">{h.mySc}–{h.oppSc}</span>
-            </div>
-          ))}
-        </div>
-
-        <SuperBowlResult playoffs={playoffs} sbResult={sbResult} wins={wins} />
-
-        <div className="modal-actions">
-          <button className="mbtn mbtn-primary" onClick={onReset}>New Build</button>
-          <button className="mbtn mbtn-secondary" onClick={onClose}>Close</button>
-        </div>
+        {screen > 0 && screen < screens.length - 1 && (
+          <button className="sim-back-btn" onClick={() => setScreen(s => s - 1)}>← Back</button>
+        )}
       </div>
     </div>
   )
