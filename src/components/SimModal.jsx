@@ -3,12 +3,12 @@ import { valToGrade } from '../utils/simulation'
 
 // Which side each attribute callout appears on, and its body zone label
 const CALLOUT_CONFIG = {
-  'football-iq':  { side: 'left',  partLabel: 'Processing'   },
-  'composure':    { side: 'left',  partLabel: 'Composure'    },
+  'processing':  { side: 'left',  partLabel: 'Processing'   },
+  'playmaking':    { side: 'left',  partLabel: 'Composure'    },
   'accuracy':     { side: 'left',  partLabel: 'Accuracy'     },
-  'arm-strength': { side: 'right', partLabel: 'Arm'          },
-  'strength':     { side: 'right', partLabel: 'Torso'        },
-  'mobility':     { side: 'right', partLabel: 'Legs'         },
+  'arm': { side: 'right', partLabel: 'Arm'          },
+  'size':     { side: 'right', partLabel: 'Torso'        },
+  'legs':     { side: 'right', partLabel: 'Legs'         },
 }
 
 function Callout({ type, data }) {

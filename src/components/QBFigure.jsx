@@ -11,12 +11,12 @@ function secondary(hex) {
 export default function QBFigure({ build = null, className = '' }) {
   const slot = (type) => build?.[type] ?? null
 
-  const iq   = slot('football-iq')
-  const comp = slot('composure')
-  const arm  = slot('arm-strength')
-  const str  = slot('strength')
+  const iq   = slot('processing')
+  const comp = slot('playmaking')
+  const arm  = slot('arm')
+  const str  = slot('size')
   const acc  = slot('accuracy')
-  const mob  = slot('mobility')
+  const mob  = slot('legs')
 
   const helmetCp   = iq   ? iq.teamColor                                : null
   const helmetCs   = iq   ? (iq.teamColor2 ?? secondary(iq.teamColor))  : null

@@ -56,11 +56,11 @@ export default function QBFigureOverlay({ build, className }) {
   const css = `
     /* Decision Making (football-iq): chin = skin darkened + blur, neck = skin */
     #qb-fg [id="chin"] path {
-      fill: ${sk('football-iq')} !important; stroke: none !important;
+      fill: ${sk('processing')} !important; stroke: none !important;
       transition: fill .5s ease; filter: url(#skin-tex) brightness(0.45) blur(0.8px);
     }
     #qb-fg [id="Neck"] {
-      fill: ${sk('football-iq')} !important; stroke: none !important;
+      fill: ${sk('processing')} !important; stroke: none !important;
       transition: fill .5s ease; filter: url(#skin-tex);
     }
 
@@ -70,21 +70,21 @@ export default function QBFigureOverlay({ build, className }) {
       transition: fill .5s ease;
     }
     #qb-fg [id="Belt"] {
-      fill: ${tc('mobility')} !important; stroke: none !important; transition: fill .5s ease;
+      fill: ${tc('legs')} !important; stroke: none !important; transition: fill .5s ease;
       filter: blur(4px); opacity: 0.45;
     }
     #qb-fg [id="shirt"] {
-      fill: ${has('strength') ? '#111111' : 'transparent'} !important; stroke: none !important;
+      fill: ${has('size') ? '#111111' : 'transparent'} !important; stroke: none !important;
       transition: fill .5s ease; filter: url(#jersey-tex);
     }
 
     /* Arm (arm-strength): sleeve = white, shoulders = team color — jersey texture */
     #qb-fg [id="left sleeve"] {
-      fill: ${has('arm-strength') ? '#d8d8d8' : 'transparent'} !important; opacity: 1 !important; stroke: none !important;
+      fill: ${has('arm') ? '#d8d8d8' : 'transparent'} !important; opacity: 1 !important; stroke: none !important;
       transition: fill .5s ease; filter: url(#jersey-tex) brightness(0.92);
     }
     #qb-fg [id="right shoulder"], #qb-fg [id="Left shoulder"] {
-      fill: ${tc('arm-strength')} !important; stroke: none !important;
+      fill: ${tc('arm')} !important; stroke: none !important;
       transition: fill .5s ease; filter: url(#jersey-tex);
     }
 
@@ -104,20 +104,20 @@ export default function QBFigureOverlay({ build, className }) {
 
     /* Legs (mobility): pants = team color + jersey tex, calves/socks = off-white, feet = white */
     #qb-fg [id="Legs"] {
-      fill: ${tc('mobility')} !important; stroke: none !important;
+      fill: ${tc('legs')} !important; stroke: none !important;
       transition: fill .5s ease; filter: url(#jersey-tex);
     }
     #qb-fg [id="right calf"] path, #qb-fg [id="left calf"] path {
-      fill: ${has('mobility') ? '#1c1c1c' : 'transparent'} !important; stroke: none !important;
+      fill: ${has('legs') ? '#1c1c1c' : 'transparent'} !important; stroke: none !important;
       transition: fill .5s ease; filter: url(#jersey-tex) blur(0.5px);
     }
     #qb-fg [id="Right sock"], #qb-fg [id="Left sock"] {
-      fill: ${has('mobility') ? '#1c1c1c' : 'transparent'} !important; stroke: none !important;
+      fill: ${has('legs') ? '#1c1c1c' : 'transparent'} !important; stroke: none !important;
       transition: fill .5s ease; filter: blur(0.5px);
     }
     #qb-fg [id="Right foot"], #qb-fg [id="Left foot"] {
       fill: url(#shoe-grad) !important; stroke: none !important;
-      transition: opacity .5s ease; opacity: ${has('mobility') ? '1' : '0'};
+      transition: opacity .5s ease; opacity: ${has('legs') ? '1' : '0'};
     }
   `
 
@@ -153,14 +153,14 @@ export default function QBFigureOverlay({ build, className }) {
 
           {/* Torso gradient — team color full opacity at top, slightly transparent at bottom (darkens via screen blend) */}
           <linearGradient id="chest-grad" x1="0" y1="150" x2="0" y2="415" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stopColor={tc('strength')} stopOpacity="1" />
-            <stop offset="100%" stopColor={tc('strength')} stopOpacity="0.72" />
+            <stop offset="0%" stopColor={tc('size')} stopOpacity="1" />
+            <stop offset="100%" stopColor={tc('size')} stopOpacity="0.72" />
           </linearGradient>
 
           {/* Shoe gradient — dark charcoal at top, team color at sole */}
           <linearGradient id="shoe-grad" x1="0" y1="805" x2="0" y2="844" gradientUnits="userSpaceOnUse">
             <stop offset="0%" stopColor="#1c1c1c" />
-            <stop offset="100%" stopColor={tc('mobility')} />
+            <stop offset="100%" stopColor={tc('legs')} />
           </linearGradient>
         </defs>
       </svg>
@@ -185,16 +185,16 @@ export default function QBFigureOverlay({ build, className }) {
             strokeWidth="8"
             paintOrder="stroke"
             style={{
-              opacity: has('strength') ? 1 : 0,
+              opacity: has('size') ? 1 : 0,
               transition: 'opacity 0.5s ease',
               userSelect: 'none',
               pointerEvents: 'none',
             }}
-          >{build?.['strength']?.number ?? ''}</text>
+          >{build?.['size']?.number ?? ''}</text>
 
           {/* Left shoulder number (viewer left, QB right arm) */}
           <g transform="translate(181, 148) scale(1.6, 0.32) rotate(84)"
-             style={{ opacity: has('strength') ? 1 : 0, transition: 'opacity 0.5s ease' }}>
+             style={{ opacity: has('size') ? 1 : 0, transition: 'opacity 0.5s ease' }}>
             <text
               x="0" y="0"
               textAnchor="middle"
@@ -205,12 +205,12 @@ export default function QBFigureOverlay({ build, className }) {
               strokeWidth="3"
               paintOrder="stroke"
               style={{ userSelect: 'none', pointerEvents: 'none' }}
-            >{build?.['strength']?.number ?? ''}</text>
+            >{build?.['size']?.number ?? ''}</text>
           </g>
 
           {/* Right shoulder number (viewer right, QB left arm) */}
           <g transform="translate(409, 136.5) scale(1.6, 0.32) rotate(-84)"
-             style={{ opacity: has('strength') ? 1 : 0, transition: 'opacity 0.5s ease' }}>
+             style={{ opacity: has('size') ? 1 : 0, transition: 'opacity 0.5s ease' }}>
             <text
               x="0" y="0"
               textAnchor="middle"
@@ -221,11 +221,11 @@ export default function QBFigureOverlay({ build, className }) {
               strokeWidth="3"
               paintOrder="stroke"
               style={{ userSelect: 'none', pointerEvents: 'none' }}
-            >{build?.['strength']?.number ?? ''}</text>
+            >{build?.['size']?.number ?? ''}</text>
           </g>
 
           {/* NFL shield — upper left thigh, shows when Legs slot filled */}
-          {has('mobility') && (
+          {has('legs') && (
             <g transform="rotate(11, 246, 434)" style={{ pointerEvents: 'none' }}>
               <image
                 href="/logos/nfl.png"
@@ -238,7 +238,7 @@ export default function QBFigureOverlay({ build, className }) {
           {/* Captain C badge — left chest, shows when leadership QB is a captain */}
 
           {/* Tiny NFL shield — shows when Size/body slot filled */}
-          {has('strength') && (
+          {has('size') && (
             <image
               href="/logos/nfl.png"
               x="273" y="182" width="14" height="14"
@@ -247,10 +247,10 @@ export default function QBFigureOverlay({ build, className }) {
           )}
 
           {/* Team logo — right shoulder pad (arm-strength team) */}
-          {has('arm-strength') && build['arm-strength'].team && (
+          {has('arm') && build['arm'].team && (
             <g transform="rotate(-10, 409, 136)" style={{ pointerEvents: 'none' }}>
               <image
-                href={`/logos/${build['arm-strength'].team}.png`}
+                href={`/logos/${build['arm'].team}.png`}
                 x="393" y="148" width="43" height="43"
                 style={{ opacity: 1, mixBlendMode: 'screen' }}
               />
@@ -267,17 +267,17 @@ export default function QBFigureOverlay({ build, className }) {
             </clipPath>
           </defs>
           <path d={HELMET_SHELL}
-            fill={has('football-iq') ? helmColor(build['football-iq'].team, tc('football-iq')) : 'transparent'}
+            fill={has('processing') ? helmColor(build['processing'].team, tc('processing')) : 'transparent'}
             style={TR} />
 
           {/* Standard team logo */}
-          {has('football-iq') && build['football-iq'].team && !NO_HELMET_LOGO.has(build['football-iq'].team) && (
+          {has('processing') && build['processing'].team && !NO_HELMET_LOGO.has(build['processing'].team) && (
             <g transform="rotate(-8, 262, 40)" clipPath="url(#helmet-logo-clip)" style={{ pointerEvents: 'none' }}>
               <image
-                href={`/logos/${build['football-iq'].team}.png`}
+                href={`/logos/${build['processing'].team}.png`}
                 x="210" y="-2" width="80" height="80"
                 style={{
-                  mixBlendMode: WHITE_HELMET.has(build['football-iq'].team) ? 'multiply' : 'screen',
+                  mixBlendMode: WHITE_HELMET.has(build['processing'].team) ? 'multiply' : 'screen',
                   opacity: 1,
                   transition: 'opacity 0.5s ease'
                 }}
@@ -286,7 +286,7 @@ export default function QBFigureOverlay({ build, className }) {
           )}
 
           {/* Bengals — black tiger claw stripes */}
-          {has('football-iq') && build['football-iq'].team === 'CIN' && (
+          {has('processing') && build['processing'].team === 'CIN' && (
             <g clipPath="url(#helmet-logo-clip)" style={{ pointerEvents: 'none' }}>
               <path d="M 182 0 C 166 22 194 58 232 94 Q 235 100 239 90 C 217 56 178 16 189 0 Z" fill="#000" opacity="0.92" />
               <path d="M 208 0 C 192 22 220 58 258 94 Q 261 100 265 90 C 243 56 204 16 215 0 Z" fill="#000" opacity="0.92" />
@@ -299,7 +299,7 @@ export default function QBFigureOverlay({ build, className }) {
           )}
 
           {/* Rams — curling ram horn from right side */}
-          {has('football-iq') && build['football-iq'].team === 'LAR' && (
+          {has('processing') && build['processing'].team === 'LAR' && (
             <g clipPath="url(#helmet-logo-clip)" style={{ pointerEvents: 'none' }}>
               {/* Horn outer edge — starts at right, sweeps left and curls down */}
               <path d="
@@ -319,7 +319,7 @@ export default function QBFigureOverlay({ build, className }) {
           )}
 
           {/* Vikings — yellow horn shapes on sides */}
-          {has('football-iq') && build['football-iq'].team === 'MIN' && (
+          {has('processing') && build['processing'].team === 'MIN' && (
             <g clipPath="url(#helmet-logo-clip)" style={{ pointerEvents: 'none' }}>
               {/* Left horn */}
               <path d="M 214 75 Q 222 55 230 42 Q 234 36 238 38 Q 235 50 228 65 Q 224 74 220 80 Z"

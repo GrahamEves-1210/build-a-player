@@ -1786,11 +1786,11 @@ body::after {
 }
 
 .build-slot.filled { background: rgba(255,255,255,0.012); }
-.build-slot.filled.sl-arm-strength { border-color: rgba(248,113,113,0.24); }
-.build-slot.filled.sl-mobility     { border-color: rgba(96,165,250,0.24);  }
-.build-slot.filled.sl-strength     { border-color: rgba(251,146,60,0.24);  }
-.build-slot.filled.sl-football-iq  { border-color: rgba(167,139,250,0.24); }
-.build-slot.filled.sl-composure    { border-color: rgba(251,191,36,0.24);  }
+.build-slot.filled.sl-arm         { border-color: rgba(248,113,113,0.24); }
+.build-slot.filled.sl-legs        { border-color: rgba(96,165,250,0.24);  }
+.build-slot.filled.sl-size        { border-color: rgba(251,146,60,0.24);  }
+.build-slot.filled.sl-processing  { border-color: rgba(167,139,250,0.24); }
+.build-slot.filled.sl-playmaking  { border-color: rgba(251,191,36,0.24);  }
 .build-slot.filled.sl-accuracy     { border-color: rgba(52,211,153,0.20);  }
 
 .sl-dot {
@@ -1834,12 +1834,12 @@ body::after {
   flex-shrink: 0;
 }
 
-.sl-arm-strength    .sl-val { color: var(--c-arm);  }
-.sl-mobility        .sl-val { color: var(--c-mob);  }
-.sl-strength        .sl-val { color: var(--c-str);  }
-.sl-football-iq     .sl-val { color: var(--c-iq);   }
+.sl-arm             .sl-val { color: var(--c-arm);  }
+.sl-legs            .sl-val { color: var(--c-mob);  }
+.sl-size            .sl-val { color: var(--c-str);  }
+.sl-processing      .sl-val { color: var(--c-iq);   }
 .sl-leadership      .sl-val { color: var(--c-lead); }
-.sl-composure       .sl-val { color: var(--c-comp); }
+.sl-playmaking      .sl-val { color: var(--c-comp); }
 .sl-accuracy        .sl-val { color: var(--c-acc);  }
 .sl-pocket-presence .sl-val { color: var(--c-pkt);  }
 
