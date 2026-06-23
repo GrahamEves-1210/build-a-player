@@ -5993,3 +5993,27 @@ html.is-touch .bd-card-main:hover         { background: transparent !important; 
   }
   .lb-tab-active:last-child { border-right: none; }
 }
+
+/* ── Android fixes (scoped strictly — no effect on other platforms) ── */
+
+/* Navbar cramping: Android may reduce viewport height with system bars */
+html.is-android .navbar {
+  height: 56px;
+  min-height: 56px;
+  padding: env(safe-area-inset-top, 0px) 14px 0;
+}
+
+/* Player model: feTurbulence SVG filters render as solid blocks on Android GPU.
+   Strip the SVG url() reference, keep any CSS filter functions (brightness/blur). */
+html.is-android #qb-fg [id="chin"] path        { filter: brightness(0.45) blur(0.8px) !important; }
+html.is-android #qb-fg [id="Neck"]             { filter: none !important; }
+html.is-android #qb-fg [id="shirt"]            { filter: none !important; }
+html.is-android #qb-fg [id="left sleeve"]      { filter: brightness(0.92) !important; }
+html.is-android #qb-fg [id="right shoulder"],
+html.is-android #qb-fg [id="Left shoulder"]    { filter: none !important; }
+html.is-android #qb-fg [id="Right hand"]       { filter: none !important; }
+html.is-android #qb-fg [id="Left hand"] path   { filter: none !important; }
+html.is-android #qb-fg [id="forearm"]          { filter: brightness(0.82) blur(0.8px) !important; }
+html.is-android #qb-fg [id="Legs"]             { filter: none !important; }
+html.is-android #qb-fg [id="right calf"] path,
+html.is-android #qb-fg [id="left calf"] path   { filter: blur(0.5px) !important; }

@@ -87,7 +87,7 @@ export default function LeaderboardPage({ onBack, currentUser }) {
     if (!supabase) { setLoading(false); return }
     supabase
       .from('simulations')
-      .select('user_id, username, wins, losses, season_pass_yds, season_tds, champion, ovr, build')
+      .select('user_id, username, wins, losses, season_pass_yds, season_tds, champion, ovr, build, game_mode')
       .then(({ data, error }) => {
         if (!data || error) { setLoading(false); return }
 
@@ -116,14 +116,16 @@ export default function LeaderboardPage({ onBack, currentUser }) {
         })
         setRows(compiled)
 
+        const classicOnly = data.filter(r => r.game_mode !== 'lite')
+
         setBestBuilds(
-          [...data]
+          [...classicOnly]
             .filter(r => (r.ovr ?? 0) >= 80)
             .sort((a, b) => (b.ovr - a.ovr) || (b.wins - a.wins))
             .slice(0, 10)
         )
         setWorstBuilds(
-          [...data]
+          [...classicOnly]
             .filter(r => (r.ovr ?? 0) <= 80)
             .sort((a, b) => (a.ovr - b.ovr) || (b.wins - a.wins))
             .slice(0, 10)

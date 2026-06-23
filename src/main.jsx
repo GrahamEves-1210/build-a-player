@@ -8,6 +8,10 @@ document.addEventListener('touchstart', function() {
 if (/Twitter|XInApp/i.test(navigator.userAgent)) {
   document.documentElement.classList.add('is-x-browser')
 }
+
+if (/Android/i.test(navigator.userAgent)) {
+  document.documentElement.classList.add('is-android')
+}
 import { createRoot } from 'react-dom/client'
 import { Analytics } from '@vercel/analytics/react'
 import { SpeedInsights } from '@vercel/speed-insights/react'
