@@ -124,14 +124,15 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, on
       const VEL     = ITEM_H / IDLE_MS   // px/ms at idle speed
       let lastFrame = performance.now()
 
+      if (trackRef.current) trackRef.current.style.transition = 'none'
+
       const frame = (now) => {
         const dt  = Math.min(now - lastFrame, 50)
         lastFrame = now
         posRef.current += VEL * dt
         wrap()
         if (trackRef.current) {
-          trackRef.current.style.transition = 'none'
-          trackRef.current.style.transform  = `translateY(${-(posRef.current - CENTER * ITEM_H)}px)`
+          trackRef.current.style.transform = `translate3d(0,${-(posRef.current - CENTER * ITEM_H)}px,0)`
         }
         rafRef.current = requestAnimationFrame(frame)
       }

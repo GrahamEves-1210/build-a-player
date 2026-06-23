@@ -298,25 +298,6 @@ export default function QBFigureOverlay({ build, className }) {
             </g>
           )}
 
-          {/* Rams — curling ram horn from right side */}
-          {has('processing') && build['processing'].team === 'LAR' && (
-            <g clipPath="url(#helmet-logo-clip)" style={{ pointerEvents: 'none' }}>
-              {/* Horn outer edge — starts at right, sweeps left and curls down */}
-              <path d="
-                M 435 10
-                C 380 -8 300 5 255 45
-                C 225 70 218 98 230 108
-                C 238 90 252 70 278 52
-                C 310 30 358 18 400 28
-                C 424 34 438 55 428 78
-                C 420 96 398 106 372 106
-                C 350 106 336 96 330 88
-                C 336 104 358 116 386 112
-                C 420 106 448 82 448 50
-                C 448 24 442 14 435 10 Z"
-                fill="#FFC62F" style={{ transition: 'opacity 0.5s ease' }} />
-            </g>
-          )}
 
           {/* Vikings — yellow horn shapes on sides */}
           {has('processing') && build['processing'].team === 'MIN' && (
