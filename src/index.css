@@ -6002,6 +6002,12 @@ html.is-android .navbar {
   min-height: 56px;
   padding: env(safe-area-inset-top, 0px) 14px 0;
 }
+html.is-android .nav-pills-soon { display: none; }
+html.is-android .logo { transform: scale(0.8); transform-origin: left center; }
+html.is-android .tab-pill-qb {
+  left: 50%;
+  transform: translateX(-50%);
+}
 
 /* Player model: feTurbulence SVG filters render as solid blocks on Android GPU.
    Strip the SVG url() reference, keep any CSS filter functions (brightness/blur). */
