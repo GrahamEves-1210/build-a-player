@@ -269,6 +269,7 @@ export default function QBFigureOverlay({ build, className }) {
           <path d={HELMET_SHELL}
             fill={has('processing') ? helmColor(build['processing'].team, tc('processing')) : 'transparent'}
             style={TR} />
+          <path d={HELMET_SHELL} fill="url(#helm-gloss)" style={{ pointerEvents: 'none' }} />
 
           {/* Standard team logo */}
           {has('processing') && build['processing'].team && !NO_HELMET_LOGO.has(build['processing'].team) && (
@@ -277,7 +278,7 @@ export default function QBFigureOverlay({ build, className }) {
                 href={`/logos/${build['processing'].team}.png`}
                 x="210" y="-2" width="80" height="80"
                 style={{
-                  mixBlendMode: WHITE_HELMET.has(build['processing'].team) ? 'multiply' : 'screen',
+                  mixBlendMode: WHITE_HELMET.has(build['processing'].team) ? 'multiply' : 'normal',
                   opacity: 1,
                   transition: 'opacity 0.5s ease'
                 }}
@@ -300,7 +301,6 @@ export default function QBFigureOverlay({ build, className }) {
 
 
 
-          <path d={HELMET_SHELL} fill="url(#helm-gloss)" style={{ pointerEvents: 'none' }} />
         </svg>
       </div>
 
