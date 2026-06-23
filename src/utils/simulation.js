@@ -320,9 +320,14 @@ export function runSimulation(build, types = TYPES, team = null) {
   if (playoffs) {
     const conf     = team?.conf ?? 'AFC'
     const confPool = PLAYOFF_POOLS[conf]
+    const usedOpponents = new Set()
     const pick     = (pool) => {
-      const opts = pool.filter(n => n !== team?.name)
-      return opts[Math.floor(Math.random() * opts.length)]
+      const opts = pool.filter(n => n !== team?.name && !usedOpponents.has(n))
+      const chosen = opts.length
+        ? opts[Math.floor(Math.random() * opts.length)]
+        : pool.filter(n => n !== team?.name)[Math.floor(Math.random() * pool.filter(n => n !== team?.name).length)]
+      usedOpponents.add(chosen)
+      return chosen
     }
     const playoffBracket = [
       { round: 'Wild Card',               opponents: confPool['Wild Card'] },

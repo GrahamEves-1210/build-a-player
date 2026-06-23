@@ -922,7 +922,9 @@ a:focus-visible {
   object-position: top center;
 }
 .qb-avatar-photo[src*="5849"] {
-  object-position: center 50%;
+  object-position: center 70% !important;
+  bottom: auto;
+  top: 0;
 }
 .qb-avatar-fallback {
   position: absolute;
@@ -3836,9 +3838,8 @@ html.is-x-browser .mobile-tab-bar {
     bottom: 0;
     left: 0;
     right: 0;
-    height: 70px;
-    min-height: 70px;
-    max-height: 70px;
+    height: calc(70px + env(safe-area-inset-bottom, 0px));
+    min-height: calc(70px + env(safe-area-inset-bottom, 0px));
     flex-shrink: 0;
     background: var(--grey-950, #0a0f0c);
     border-top: 1px solid var(--border);

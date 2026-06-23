@@ -39,7 +39,7 @@ const HELMET_COLOR_OVERRIDE = {
 }
 
 // Teams with custom helmet markings instead of logo
-const NO_HELMET_LOGO = new Set(['CLE', 'CIN', 'LAR', 'MIN'])
+const NO_HELMET_LOGO = new Set(['CLE', 'CIN', 'LAR'])
 
 // White helmets need multiply blend so the logo isn't washed out
 const WHITE_HELMET = new Set(['ARI', 'IND', 'LAC', 'TEN', 'BUF'])
@@ -299,17 +299,6 @@ export default function QBFigureOverlay({ build, className }) {
           )}
 
 
-          {/* Vikings — yellow horn shapes on sides */}
-          {has('processing') && build['processing'].team === 'MIN' && (
-            <g clipPath="url(#helmet-logo-clip)" style={{ pointerEvents: 'none' }}>
-              {/* Left horn */}
-              <path d="M 214 75 Q 222 55 230 42 Q 234 36 238 38 Q 235 50 228 65 Q 224 74 220 80 Z"
-                fill="#FFC62F" style={{ transition: 'opacity 0.5s ease' }} />
-              {/* Right horn */}
-              <path d="M 330 60 Q 338 42 344 30 Q 347 24 350 26 Q 348 38 340 54 Q 336 62 332 68 Z"
-                fill="#FFC62F" style={{ transition: 'opacity 0.5s ease' }} />
-            </g>
-          )}
 
           <path d={HELMET_SHELL} fill="url(#helm-gloss)" style={{ pointerEvents: 'none' }} />
         </svg>

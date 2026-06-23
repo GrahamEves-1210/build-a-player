@@ -178,7 +178,7 @@ export default function App() {
     return (
       <>
         <Navbar {...navbarProps} />
-        <LeaderboardPage onBack={() => setPage('game')} currentUser={user} />
+        <LeaderboardPage onBack={() => { setPage('game'); window.scrollTo({ top: 0, behavior: 'instant' }) }} currentUser={user} />
       </>
     )
   }
@@ -187,7 +187,7 @@ export default function App() {
     return (
       <>
         <Navbar {...navbarProps} />
-        <AboutPage onBack={() => setPage('game')} />
+        <AboutPage onBack={() => { setPage('game'); window.scrollTo({ top: 0, behavior: 'instant' }) }} />
       </>
     )
   }
@@ -201,8 +201,8 @@ export default function App() {
           build={build}
           simResult={simResult}
           types={activeTypes}
-          onBack={() => setPage('game')}
-          onSignOut={() => { setPage('game'); setUser(null) }}
+          onBack={() => { setPage('game'); window.scrollTo({ top: 0, behavior: 'instant' }) }}
+          onSignOut={() => { setPage('game'); setUser(null); window.scrollTo({ top: 0, behavior: 'instant' }) }}
         />
       </>
     )
@@ -217,8 +217,8 @@ export default function App() {
           build={build}
           types={activeTypes}
           replay={simReplaying}
-          onBack={() => setPage('game')}
-          onReset={() => { handleReset(); setPage('game') }}
+          onBack={() => { setPage('game'); window.scrollTo({ top: 0, behavior: 'instant' }) }}
+          onReset={() => { handleReset(); setPage('game'); window.scrollTo({ top: 0, behavior: 'instant' }) }}
         />
       </>
     )

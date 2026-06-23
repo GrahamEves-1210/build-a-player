@@ -11,10 +11,10 @@ function fmtHeight(inches) {
 const ITEM_H  = 44
 const CENTER  = 2
 const IDLE_MS = 1200
-const FAST_MS = 36   // ms per item at peak speed — defines MAX_VEL
+const FAST_MS = 32   // ms per item at peak speed — defines MAX_VEL
 
 // ─── Slot Reel ───────────────────────────────────────────────────────────────
-function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, onStop, blurred, fast, durationMs = 1400 }) {
+function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, onStop, blurred, fast, durationMs = 1400, jitterMs = 500 }) {
   const COPIES = useMemo(() => {
     const loopH  = items.length * ITEM_H
     const needed = Math.ceil(14000 / Math.max(loopH, 1))
@@ -71,7 +71,7 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, on
     if (spinning) {
       const duration = fast
         ? 900 + Math.random() * 200
-        : durationMs + Math.random() * 500
+        : durationMs + Math.random() * jitterMs
       const startTime = performance.now()
       const MAX_VEL   = ITEM_H / FAST_MS   // px per ms at peak speed
       let lastFrame   = startTime
@@ -275,7 +275,12 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
   const isDone         = phase === 'done'
 
   const teamReelItems = useMemo(() => {
-    return [...TEAMS].sort(() => Math.random() - 0.5)
+    const arr = [...TEAMS]
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1))
+      ;[arr[i], arr[j]] = [arr[j], arr[i]]
+    }
+    return arr
   }, [spinCount])
 
   // Stable QB items — minimal placeholder until team is selected (QB reel is blurred/hidden)
@@ -307,7 +312,8 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
               getDisplay={t => t.short}
               getSub={t => t.name.split(' ').slice(-1)[0]}
               onStop={handleTeamStop}
-              durationMs={1300}
+              durationMs={1000}
+              jitterMs={1000}
             />
             <SlotReel
               label="QB"
