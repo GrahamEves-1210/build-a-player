@@ -1191,6 +1191,39 @@ a:focus-visible {
   flex-shrink: 0;
 }
 
+/* Desktop-only reset button inside the silhouette */
+.sil-reset-btn {
+  display: none;
+}
+@media (min-width: 769px) {
+  .sil-reset-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    bottom: 18px;
+    right: -40px;
+    height: 32px;
+    padding: 0 16px;
+    border-radius: 10px;
+    border: 1px solid rgba(220,38,38,0.75);
+    background: rgba(220,38,38,0.12);
+    color: #ef4444;
+    font-family: var(--font);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+    cursor: pointer;
+    z-index: 20;
+    transition: background 0.15s var(--ease), border-color 0.15s var(--ease), color 0.15s var(--ease);
+  }
+  .sil-reset-btn:hover {
+    background: rgba(220,38,38,0.20);
+    border-color: rgba(220,38,38,0.95);
+    color: #f87171;
+  }
+}
+
 .sil-img {
   display: block;
   width: 100%;
@@ -1832,7 +1865,7 @@ a:focus-visible {
   position: absolute;
   top: 50%;
   left: 50%;
-  transform: translate(-50%, calc(-50% + 5px));
+  transform: translate(calc(-50% + 2px), calc(-50% + 6px));
   z-index: 1;
   display: flex;
   flex-direction: column;
@@ -2062,6 +2095,9 @@ a:focus-visible {
   flex-direction: column;
   gap: 8px;
 }
+@media (min-width: 769px) {
+  .panel-footer { display: none; }
+}
 
 .balance-row {
   display: flex;
@@ -2152,7 +2188,7 @@ a:focus-visible {
 
 .reset-btn {
   width: 100%;
-  height: 40px;
+  height: 32px;
   border-radius: 10px;
   border: 1px solid rgba(248,113,113,0.22);
   background: rgba(248,113,113,0.05);

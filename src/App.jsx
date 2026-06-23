@@ -252,6 +252,7 @@ export default function App() {
           onCategoryChange={setActiveCategory}
           types={activeTypes}
           isLite={gameMode === 'lite'}
+          onReset={handleReset}
         />
 
         <div className="right-panel-wrap">

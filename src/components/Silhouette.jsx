@@ -109,7 +109,7 @@ function HWTracker({ build }) {
 
 const MOBILE_CARD_W = 22   // card CSS width (86px) minus card offset (64px each side)
 
-export default function Silhouette({ build, activeDrag, onDrop, activeCategory, onCategoryChange, types = TYPES, isLite = false }) {
+export default function Silhouette({ build, activeDrag, onDrop, activeCategory, onCategoryChange, types = TYPES, isLite = false, onReset }) {
   const silRef = useRef(null)
   const bounds = useFigureBounds(silRef)
   const boundsRef = useRef(bounds)
@@ -222,6 +222,10 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
             )
           })}
         </svg>
+
+        {onReset && (
+          <button className="sil-reset-btn" onClick={onReset}>Reset Build</button>
+        )}
 
         {/* Dots + cards */}
         <div className="cz-layer" style={{ zIndex: 10 }}>
