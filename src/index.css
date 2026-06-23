@@ -3580,8 +3580,47 @@ a:focus-visible {
     overflow: visible;
   }
 
-  /* OVR block */
-  .ovr-block { padding: 14px 18px 10px; display: block; text-align: center; }
+  /* OVR block — grid: ring left, sim button right */
+  .ovr-block {
+    padding: 10px 14px 10px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-rows: auto auto;
+    align-items: center;
+    gap: 0 10px;
+  }
+  .ovr-ring-row   { grid-column: 1; grid-row: 1; margin-left: -10px; }
+  .ovr-arch       { grid-column: 1; grid-row: 2; text-align: center; }
+  .sim-btn {
+    grid-column: 2;
+    grid-row: 1;
+    width: 187px;
+    height: 65px;
+    align-self: center;
+    transform: translateY(-4px);
+    margin-top: 0;
+    border-radius: 0;
+    border: none;
+    border-left: 1px solid var(--border);
+    background: transparent !important;
+    box-shadow: none !important;
+    color: var(--text-2);
+    font-size: 11px;
+    white-space: normal;
+    line-height: 1.4;
+    padding: 0 14px;
+  }
+  .sim-btn:not(:disabled) {
+    background: transparent !important;
+    color: #5EDBD8;
+    box-shadow: none !important;
+  }
+  .sim-btn:disabled {
+    background: transparent !important;
+    border-left: 1px solid var(--border);
+    color: var(--text-4);
+    box-shadow: none !important;
+  }
 
   /* Ring row — flex on mobile so H/W sits left of circle */
   .ovr-ring-row {
@@ -3589,7 +3628,6 @@ a:focus-visible {
     align-items: center;
     justify-content: center;
     width: 100%;
-    margin-top: 0;
   }
 
   /* H/W mini-display */
@@ -3631,6 +3669,34 @@ a:focus-visible {
     margin: -16px 0 18px;
     left: 0;
     flex-shrink: 0;
+  }
+
+  /* Scale OVR circle + HT/WT down 10% on mobile */
+  .ovr-ring-row {
+    transform: scale(0.9);
+    transform-origin: center top;
+    position: relative;
+    margin-top: 8px;
+  }
+
+  /* Hide "Spin to start building" on mobile build screen */
+  .ovr-arch-idle { display: none; }
+
+  /* Scroll hint chevron — right of OVR circle, halfway to screen edge */
+  @keyframes chevron-bounce {
+    0%, 100% { transform: translateY(-50%) }
+    50%       { transform: translateY(calc(-50% + 6px)) }
+  }
+  .scroll-chevron {
+    display: flex;
+    position: absolute;
+    right: 8%;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-4);
+    opacity: 0.55;
+    pointer-events: none;
+    animation: chevron-bounce 1.4s ease-in-out infinite;
   }
   .ovr-ring-inner { transform: translate(calc(-50% + 8px), calc(-50% + 8px)); }
   .ovr-number { font-size: 58px; }
@@ -3741,6 +3807,9 @@ a:focus-visible {
   }
 }
 
+/* Scroll chevron — hidden on desktop */
+.scroll-chevron { display: none; }
+
 /* ── Mobile tab bar (hidden on desktop) ── */
 .mobile-tab-bar {
   display: none;
@@ -3769,11 +3838,15 @@ html.is-x-browser .mobile-tab-bar {
     right: 0;
     height: 70px;
     min-height: 70px;
+    max-height: 70px;
     flex-shrink: 0;
     background: var(--grey-950, #0a0f0c);
     border-top: 1px solid var(--border);
     z-index: 200;
     padding-bottom: env(safe-area-inset-bottom, 0px);
+    transform: translateZ(0);
+    will-change: transform;
+    backface-visibility: hidden;
   }
 
   .mtab {

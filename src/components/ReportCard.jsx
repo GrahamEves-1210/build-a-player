@@ -1,3 +1,4 @@
+import { useState, useEffect, useRef } from 'react'
 import { ATTR, TYPES, QB_PHYSICALS } from '../data/qbs'
 import { calcOVR, getArchetype, calcBalance, valToGrade } from '../utils/simulation'
 import QBAvatar from './QBAvatar'
@@ -94,6 +95,16 @@ export default function ReportCard({ build, onSimulate, onReset, types = TYPES, 
   const arch = getArchetype(ovr, build, types)
   const balance = calcBalance(build, types)
   const complete = filled.length === types.length
+  const [showChevron, setShowChevron] = useState(true)
+  const panelRef = useRef(null)
+
+  useEffect(() => {
+    const el = panelRef.current
+    if (!el) return
+    const hide = () => setShowChevron(false)
+    el.addEventListener('scroll', hide, { passive: true, once: true })
+    return () => el.removeEventListener('scroll', hide)
+  }, [])
 
   const bodyPhys = build['size'] ? QB_PHYSICALS[build['size'].qbFull] : null
   const legsPhys = build['legs'] ? QB_PHYSICALS[build['legs'].qbFull] : null
@@ -102,7 +113,7 @@ export default function ReportCard({ build, onSimulate, onReset, types = TYPES, 
   const weightLbs = hwBoth ? Math.round(0.65 * bodyPhys.weight + 0.35 * legsPhys.weight) : null
 
   return (
-    <aside className="panel-right">
+    <aside className="panel-right" ref={panelRef}>
       <div className="ovr-block">
         <div className="ovr-ring-row">
           <div className="ovr-hw-mobile">
@@ -124,9 +135,15 @@ export default function ReportCard({ build, onSimulate, onReset, types = TYPES, 
               </div>
             </div>
           </div>
+          {showChevron && (
+            <div className="scroll-chevron" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </div>
+          )}
         </div>
-        <div className="ovr-arch">{arch}</div>
-        <div className="ovr-sep" />
+        <div className={`ovr-arch${!filled.length ? ' ovr-arch-idle' : ''}`}>{arch}</div>
         <button
           className={`sim-btn${complete ? '' : ' sim-btn-locked'}`}
           onClick={complete ? onSimulate : undefined}
