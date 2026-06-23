@@ -920,7 +920,7 @@ a:focus-visible {
   object-position: top center;
 }
 .qb-avatar-photo[src*="5849"] {
-  object-position: center 18%;
+  object-position: center 50%;
 }
 .qb-avatar-fallback {
   position: absolute;
