@@ -324,6 +324,8 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
               getDisplay={q => q.name.split(' ')[0]}
               getSub={q => q.name.split(' ').slice(1).join(' ')}
               onStop={handleQBStop}
+              durationMs={1100}
+              jitterMs={400}
               blurred={phase === 'team' || phase === 'team-done'}
               fast={qbRespinUsed}
             />

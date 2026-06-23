@@ -3,6 +3,20 @@ import { NFL_TEAMS } from '../data/nfl-teams'
 
 const TEAM_BY_NAME = Object.fromEntries(NFL_TEAMS.map(t => [t.name, t]))
 
+// Snap to nearest score expressible as 7a + 3b (no safeties)
+function snapNFL(n) {
+  if (n <= 0) return 0
+  for (let d = 0; d <= 5; d++) {
+    for (const v of [n - d, n + d]) {
+      if (v < 0) continue
+      for (let a = Math.floor(v / 7); a >= 0; a--) {
+        if ((v - 7 * a) % 3 === 0) return v
+      }
+    }
+  }
+  return n
+}
+
 const GRADES = ['F', 'D', 'C-', 'C', 'C+', 'B-', 'B', 'B+', 'A-', 'A', 'A+', 'S']
 
 export function valToGrade(val) {
@@ -288,10 +302,15 @@ export function runSimulation(build, types = TYPES, team = null) {
     // teamOffN boosts our scoring, teamDefN suppresses opponent scoring
     const myTDs  = gameTDs + gameRushTDs
     const estFGs = Math.max(0, Math.round(1.5 - myTDs * 0.35 + Math.random() * 1.5))
-    let mySc     = Math.max(3, Math.round(myTDs * 7 + estFGs * 3 + teamOffN * 3 + Math.random() * 3))
-    let oppSc    = Math.max(0, Math.round(14 + Math.random() * 13 - teamDefN * 5))
+    const bonusFG = Math.random() < 0.25 ? 3 : 0
+    let mySc     = Math.max(3, myTDs * 7 + estFGs * 3 + bonusFG + (teamOffN > 0 ? 3 : 0))
+    const oppTDs = Math.floor(1 + Math.random() * 3)
+    const oppFGs = Math.max(0, Math.round(1 - oppTDs * 0.3 + Math.random()))
+    let oppSc    = Math.max(0, oppTDs * 7 + oppFGs * 3 - Math.round(teamDefN * 4))
     if (won  && mySc  <= oppSc) mySc  = oppSc + 1 + Math.ceil(Math.random() * 4)
     if (!won && oppSc <= mySc)  oppSc = mySc  + 1 + Math.ceil(Math.random() * 4)
+    mySc  = snapNFL(mySc)
+    oppSc = snapNFL(oppSc)
 
     seasonPassYds     += gamePassYds
     seasonTDs         += gameTDs
@@ -353,12 +372,15 @@ export function runSimulation(build, types = TYPES, team = null) {
       const pgINTs  = Math.max(0, Math.round(pgAtts * intRateBase + randN() * 0.5))
       const pgRtg   = Math.round(passerRating(pgComp, pgAtts, pgYds, pgTDs, pgINTs))
 
-      const pgFGs  = Math.max(0, Math.round(1.2 - pgTDs * 0.35 + Math.random() * 1.2))
-      const base   = Math.max(3, Math.round(pgTDs * 7 + pgFGs * 3 + teamOffN * 2))
-      const opp    = Math.max(7, Math.round(13 + Math.random() * 13 - teamDefN * 4))
+      const pgFGs     = Math.max(0, Math.round(1.2 - pgTDs * 0.35 + Math.random() * 1.2))
+      const pgBonusFG = Math.random() < 0.25 ? 3 : 0
+      const base   = Math.max(3, pgTDs * 7 + pgFGs * 3 + pgBonusFG + (teamOffN > 0 ? 3 : 0))
+      const oppPTDs = Math.floor(1 + Math.random() * 3)
+      const oppPFGs = Math.max(0, Math.round(1 - oppPTDs * 0.3 + Math.random()))
+      const opp    = Math.max(7, oppPTDs * 7 + oppPFGs * 3 - Math.round(teamDefN * 3))
       const margin = Math.ceil(Math.random() * 7)
-      const finalMy  = won ? Math.max(base, opp + margin)  : Math.min(base, opp - margin)
-      const finalOpp = won ? opp : Math.max(opp, base + margin)
+      const finalMy  = snapNFL(won ? Math.max(base, opp + margin)  : Math.min(base, opp - margin))
+      const finalOpp = snapNFL(won ? opp : Math.max(opp, base + margin))
 
       playoffRounds.push({ round, opponent, mySc: finalMy, oppSc: finalOpp, won, passYds: pgYds, tds: pgTDs, ints: pgINTs, rating: pgRtg })
       if (won) { pwins++ } else { eliminated = round; break }
