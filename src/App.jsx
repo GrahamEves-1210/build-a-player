@@ -4,13 +4,15 @@ import SpinScreen from './components/SpinScreen'
 import Silhouette from './components/Silhouette'
 import ReportCard from './components/ReportCard'
 import SimPage from './components/SimPage'
+import TeamPickerModal from './components/TeamPickerModal'
 import AboutPage from './components/AboutPage'
 import SplashScreen from './components/SplashScreen'
 import AuthModal from './components/AuthModal'
 import ProfilePage from './components/ProfilePage'
+import LeaderboardPage from './components/LeaderboardPage'
 import { TYPES, LITE_TYPES, QBS } from './data/qbs'
 import HEADSHOTS from './data/headshots.json'
-import { runSimulation } from './utils/simulation'
+import { runSimulation, getArchetype } from './utils/simulation'
 import { supabase } from './lib/supabase'
 
 export default function App() {
@@ -25,6 +27,8 @@ export default function App() {
   const [mobileView, setMobileView]     = useState('spin')
   const [user, setUser]                 = useState(null)
   const [showAuth, setShowAuth]         = useState(false)
+  const [showTeamPicker, setShowTeamPicker] = useState(false)
+  const [savedSpinResult, setSavedSpinResult] = useState(null)
 
   useEffect(() => {
     const meta = document.querySelector('meta[name="theme-color"]')
@@ -63,12 +67,30 @@ export default function App() {
     setSpinResetKey(k => k + 1)
   }, [])
 
+  const fillTestBuild = useCallback(() => {
+    const newBuild = {}
+    activeTypes.forEach(type => {
+      const best = QBS.reduce((a, b) => ((b.attrs[type] ?? 0) > (a.attrs[type] ?? 0) ? b : a), QBS[0])
+      const photo = HEADSHOTS[best.name] ? `/headshots/${HEADSHOTS[best.name]}.jpg` : null
+      newBuild[type] = {
+        type, val: best.attrs[type],
+        qb: best.short, qbFull: best.name,
+        teamColor: best.color, teamColor2: best.color2,
+        skinColor: best.skin, number: best.number,
+        team: best.team, captain: best.captain ?? false, photo,
+      }
+    })
+    setBuild(newBuild)
+    setMobileView('build')
+  }, [activeTypes])
+
   const handleReset = useCallback(() => {
     setBuild(Object.fromEntries(activeTypes.map(t => [t, null])))
     setSimResult(null)
     setSimReplaying(false)
     setActiveDrag(null)
     setSpinResetKey(0)
+    setSavedSpinResult(null)
     setMobileView('spin')
     window.scrollTo({ top: 0, behavior: 'instant' })
   }, [activeTypes])
@@ -86,11 +108,47 @@ export default function App() {
 
   const handleSimulate = useCallback(() => {
     const isReplay = !!simResult
-    if (!isReplay) setSimResult(runSimulation(build, activeTypes))
-    setSimReplaying(isReplay)
+    if (isReplay) {
+      setSimReplaying(true)
+      setPage('sim')
+      window.scrollTo({ top: 0, behavior: 'instant' })
+      return
+    }
+    setShowTeamPicker(true)
+  }, [simResult])
+
+  const handleTeamPicked = useCallback((team) => {
+    setShowTeamPicker(false)
+    const result = runSimulation(build, activeTypes, team)
+    setSimResult(result)
+    if (user && supabase) {
+      const arch = getArchetype(result.ovr, build, activeTypes)
+      supabase.from('simulations').insert({
+        user_id: user.id,
+        username: user.user_metadata?.username || user.email?.split('@')[0] || 'Player',
+        ovr: result.ovr,
+        archetype: arch,
+        game_mode: gameMode,
+        wins: result.wins,
+        losses: result.losses,
+        season_pass_yds: result.seasonPassYds,
+        season_tds: result.seasonTDs,
+        season_ints: result.seasonINTs,
+        season_comp_pct: result.seasonCompPct,
+        season_rating: result.seasonRating,
+        playoffs: result.playoffs,
+        champion: result.sbResult?.won ?? false,
+        build: Object.fromEntries(
+          activeTypes.filter(t => build[t]).map(t => [t, {
+            qb: build[t].qbFull, team: build[t].team, val: build[t].val,
+          }])
+        ),
+      }).then(() => {})
+    }
+    setSimReplaying(false)
     setPage('sim')
     window.scrollTo({ top: 0, behavior: 'instant' })
-  }, [build, activeTypes, simResult])
+  }, [build, activeTypes, user, gameMode])
 
   const handleHome = useCallback(() => {
     setPage('splash')
@@ -112,7 +170,17 @@ export default function App() {
     onHome: handleHome,
     onSignIn: () => setShowAuth(true),
     onProfile: () => setPage('profile'),
+    onLeaderboard: () => setPage('leaderboard'),
     user,
+  }
+
+  if (page === 'leaderboard') {
+    return (
+      <>
+        <Navbar {...navbarProps} />
+        <LeaderboardPage onBack={() => setPage('game')} currentUser={user} />
+      </>
+    )
   }
 
   if (page === 'about') {
@@ -173,6 +241,8 @@ export default function App() {
           onChipTap={handleChipTap}
           types={activeTypes}
           isLite={gameMode === 'lite'}
+          savedResult={savedSpinResult}
+          onSaveResult={setSavedSpinResult}
         />
         <Silhouette
           build={build}
@@ -230,6 +300,10 @@ export default function App() {
           onClose={() => setShowAuth(false)}
           onAuth={setUser}
         />
+      )}
+
+      {showTeamPicker && (
+        <TeamPickerModal onSelect={handleTeamPicked} />
       )}
     </>
   )

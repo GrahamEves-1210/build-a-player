@@ -1,0 +1,56 @@
+import { TEAMS } from './qbs'
+
+const CONF = {
+  ARI: 'NFC', ATL: 'NFC', BAL: 'AFC', BUF: 'AFC', CAR: 'NFC',
+  CHI: 'NFC', CIN: 'AFC', CLE: 'AFC', DAL: 'NFC', DEN: 'AFC',
+  DET: 'NFC', GB:  'NFC', HOU: 'AFC', IND: 'AFC', JAX: 'AFC',
+  KC:  'AFC', LV:  'AFC', LAC: 'AFC', LAR: 'NFC', MIA: 'AFC',
+  MIN: 'NFC', NE:  'AFC', NO:  'NFC', NYG: 'NFC', NYJ: 'AFC',
+  PHI: 'NFC', PIT: 'AFC', SF:  'NFC', SEA: 'NFC', TB:  'NFC',
+  TEN: 'AFC', WAS: 'NFC',
+}
+
+// OFF/DEF ratings 1–10 reflecting ~2024-25 roster quality
+// OFF = supporting cast / scheme quality (boosts passing stats)
+// DEF = defensive strength (independent win contribution)
+const RATINGS = {
+  ARI: { off: 5, def: 5 },
+  ATL: { off: 7, def: 5 },
+  BAL: { off: 7, def: 7 },
+  BUF: { off: 5, def: 7 },
+  CAR: { off: 5, def: 6 },
+  CHI: { off: 7, def: 6 },
+  CIN: { off: 8, def: 1 },
+  CLE: { off: 2, def: 6 },
+  DAL: { off: 8, def: 3 },
+  DEN: { off: 6, def: 8 },
+  DET: { off: 8, def: 6 },
+  GB:  { off: 6, def: 7 },
+  HOU: { off: 4, def: 9 },
+  IND: { off: 6, def: 5 },
+  JAX: { off: 6, def: 6 },
+  KC:  { off: 7, def: 7 },
+  LV:  { off: 5, def: 3 },
+  LAC: { off: 7, def: 7 },
+  LAR: { off: 9, def: 9 },
+  MIA: { off: 2, def: 2 },
+  MIN: { off: 7, def: 5 },
+  NE:  { off: 7, def: 7 },
+  NO:  { off: 5, def: 4 },
+  NYG: { off: 6, def: 7 },
+  NYJ: { off: 2, def: 4 },
+  PHI: { off: 8, def: 8 },
+  PIT: { off: 5, def: 7 },
+  SF:  { off: 9, def: 7 },
+  SEA: { off: 7, def: 9 },
+  TB:  { off: 7, def: 6 },
+  TEN: { off: 3, def: 5 },
+  WAS: { off: 6, def: 6 },
+}
+
+export const NFL_TEAMS = TEAMS.map(t => ({
+  ...t,
+  off: RATINGS[t.short]?.off ?? 6,
+  def: RATINGS[t.short]?.def ?? 6,
+  conf: CONF[t.short] ?? 'AFC',
+}))

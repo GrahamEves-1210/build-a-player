@@ -71,7 +71,9 @@ export default function QBFigure({ build = null, className = '' }) {
             d="M100 5 C56 5 44 24 44 52 C44 70 52 82 64 88 L64 94 L136 94 L136 88
                C148 82 156 70 156 52 C156 24 144 5 100 5 Z
                M68 90 Q100 97 132 90 L132 44 C132 30 118 24 100 24 C82 24 68 30 68 44 Z"/>
-          <path fill={f(helmetCs)} opacity="0.6" d="M94 6 L106 6 L107 91 L93 91 Z"/>
+          {iq?.team !== 'LAR' && (
+            <path fill={f(helmetCs)} opacity="0.6" d="M94 6 L106 6 L107 91 L93 91 Z"/>
+          )}
         </>
       )}
       <ellipse fill={f(helmetCp)} cx="48"  cy="60" rx="5" ry="9" opacity="0.7"

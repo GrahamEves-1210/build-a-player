@@ -9,7 +9,7 @@ const ATTRS = [
   { label: 'Leadership',            col: '#e879f9', angle:  -70, dist: 1.29, mx: 5,  my: 18, doy: -30 },
   { label: 'Playmaking/Creativity', col: '#fbbf24', angle:  100, dist: 1.32, mx: 60, my: 34, dox: -210 },
   { label: 'Pocket Presence',       col: '#2dd4bf', angle: -160, dist: 1.28, mx: 3,  my: 48, doy: 200 },
-  { label: 'Vision',                col: '#38bdf8', angle:   80, dist: 1.31, mx: 58, my: 44 },
+  { label: 'Vision',                col: '#38bdf8', angle:   80, dist: 1.31, mx: 58, my: 44, dox: 90 },
 ]
 
 function FloatingChip({ label, col, angle, dist, visible, mx, my, isMobile, dox = 0, doy = 0 }) {
@@ -75,8 +75,8 @@ export default function SplashScreen({ onStart }) {
 
         <div className="splash-modes">
           <button className="splash-mode-classic" onClick={() => onStart('classic')}>
-            <div className="smode-badge">Recommended</div>
             <div className="smode-title">Classic</div>
+            <div className="smode-badge">Recommended</div>
             <div className="smode-cta">
               START DRAFTING
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">

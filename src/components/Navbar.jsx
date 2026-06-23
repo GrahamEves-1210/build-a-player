@@ -40,7 +40,7 @@ function IconReset() {
 
 function IconUser() {
   return (
-    <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg width="15" height="15" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <circle cx="6.5" cy="4.5" r="2.5"/>
       <path d="M1.5 11.5c0-2.76 2.24-5 5-5s5 2.24 5 5"/>
     </svg>
@@ -49,7 +49,7 @@ function IconUser() {
 
 function IconLeaderboard() {
   return (
-    <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg width="15" height="15" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <rect x="1" y="7" width="3" height="5" rx="0.5"/>
       <rect x="5" y="4" width="3" height="8" rx="0.5"/>
       <rect x="9" y="1" width="3" height="11" rx="0.5"/>
@@ -127,7 +127,7 @@ function IconChevron({ up }) {
   )
 }
 
-export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, user }) {
+export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, onLeaderboard, user }) {
   const [open,    setOpen]    = useState(false)
   const [htpOpen, setHtpOpen] = useState(false)
   const ref = useRef(null)
@@ -141,10 +141,11 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
     return () => document.removeEventListener('mousedown', close)
   }, [open])
 
-  const handleReset   = () => { onReset?.();   setOpen(false) }
-  const handleAbout   = () => { onAbout?.();   setOpen(false) }
-  const handleSignIn  = () => { onSignIn?.();  setOpen(false) }
-  const handleProfile = () => { onProfile?.(); setOpen(false) }
+  const handleReset       = () => { onReset?.();       setOpen(false) }
+  const handleAbout       = () => { onAbout?.();       setOpen(false) }
+  const handleSignIn      = () => { onSignIn?.();      setOpen(false) }
+  const handleProfile     = () => { onProfile?.();     setOpen(false) }
+  const handleLeaderboard = () => { onLeaderboard?.(); setOpen(false) }
 
   return (
     <header className="navbar">
@@ -208,13 +209,6 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
               <span className="wm-label">About</span>
             </button>
 
-            {/* Leaderboard — coming soon */}
-            <div className="wm-row wm-row-soon">
-              <span className="wm-icon"><IconLeaderboard /></span>
-              <span className="wm-label">Leaderboard</span>
-              <span className="wm-soon-badge">Soon</span>
-            </div>
-
             <div className="wm-divider" />
 
             {/* Social / contact */}
@@ -231,6 +225,12 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
             </div>
 
             <div className="wm-divider" />
+
+            {/* Leaderboard */}
+            <button className="wm-row wm-row-leaderboard" onClick={handleLeaderboard}>
+              <span className="wm-icon"><IconLeaderboard /></span>
+              <span className="wm-label">Leaderboard</span>
+            </button>
 
             {/* Sign In / Account */}
             {user ? (

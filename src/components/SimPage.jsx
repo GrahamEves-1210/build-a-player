@@ -1,9 +1,21 @@
-import { useState, useEffect } from 'react'
-import { ATTR, TYPES } from '../data/qbs'
+import { useState, useEffect, useRef } from 'react'
+import { ATTR, TYPES, TEAMS } from '../data/qbs'
 import { valToGrade, getArchetype } from '../utils/simulation'
 import QBAvatar from './QBAvatar'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
+
+function offDefGrade(val) {
+  if (val >= 10) return 'A+'
+  if (val >= 9)  return 'A'
+  if (val >= 8)  return 'B+'
+  if (val >= 7)  return 'B'
+  if (val >= 6)  return 'C+'
+  if (val >= 5)  return 'C'
+  if (val >= 4)  return 'D+'
+  if (val >= 3)  return 'D'
+  return 'F'
+}
 
 function useCountUp(target, duration = 900, enabled = true) {
   const [val, setVal] = useState(0)
@@ -80,7 +92,7 @@ function ScreenBuild({ result, build, types, onNext }) {
 // ── Screen 2: Regular Season ──────────────────────────────────────────────────
 
 function ScreenSeason({ result, onNext }) {
-  const { games, seasonPassYds, seasonTDs, seasonINTs, seasonRating, playoffs } = result
+  const { games, seasonPassYds, seasonTDs, seasonINTs, seasonRating, seasonCompPct, seasonRushYds, seasonRushTDs, seasonSacks, playoffs } = result
 
   const [phase, setPhase]           = useState('loading')
   const [revealed, setRevealed]     = useState(0)
@@ -148,22 +160,39 @@ function ScreenSeason({ result, onNext }) {
           </div>
 
           {allDone && (
-            <div className="simp-totals simp-totals-in">
-              <div className="simp-total-cell">
-                <div className="simp-total-val">{seasonPassYds.toLocaleString()}</div>
-                <div className="simp-total-lbl">Pass Yds</div>
+            <div className="simp-stat-section simp-totals-in">
+              <div className="simp-stat-group-lbl">Production</div>
+              <div className="simp-totals">
+                <div className="simp-total-cell">
+                  <div className="simp-total-val">{seasonPassYds.toLocaleString()}</div>
+                  <div className="simp-total-lbl">Pass Yds</div>
+                </div>
+                <div className="simp-total-cell">
+                  <div className="simp-total-val">{seasonTDs}</div>
+                  <div className="simp-total-lbl">Pass TDs</div>
+                </div>
+                <div className="simp-total-cell">
+                  <div className="simp-total-val">{seasonINTs}</div>
+                  <div className="simp-total-lbl">INTs</div>
+                </div>
+                <div className="simp-total-cell">
+                  <div className="simp-total-val">{seasonCompPct}%</div>
+                  <div className="simp-total-lbl">Comp%</div>
+                </div>
               </div>
-              <div className="simp-total-cell">
-                <div className="simp-total-val">{seasonTDs}</div>
-                <div className="simp-total-lbl">TDs</div>
-              </div>
-              <div className="simp-total-cell">
-                <div className="simp-total-val">{seasonINTs}</div>
-                <div className="simp-total-lbl">INTs</div>
-              </div>
-              <div className="simp-total-cell">
-                <div className="simp-total-val">{seasonRating}</div>
-                <div className="simp-total-lbl">Rating</div>
+              <div className="simp-totals simp-totals-3" style={{ marginTop: 14 }}>
+                <div className="simp-total-cell">
+                  <div className="simp-total-val">{seasonRushYds.toLocaleString()}</div>
+                  <div className="simp-total-lbl">Rush Yds</div>
+                </div>
+                <div className="simp-total-cell">
+                  <div className="simp-total-val">{seasonRushTDs}</div>
+                  <div className="simp-total-lbl">Rush TDs</div>
+                </div>
+                <div className="simp-total-cell">
+                  <div className="simp-total-val">{seasonSacks}</div>
+                  <div className="simp-total-lbl">Sacks</div>
+                </div>
               </div>
             </div>
           )}
@@ -179,64 +208,295 @@ function ScreenSeason({ result, onNext }) {
   )
 }
 
+// ── Score timeline builder ────────────────────────────────────────────────────
+
+function buildScoreTimeline(myFinal, oppFinal) {
+  const shuffle = arr => {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1))
+      ;[arr[i], arr[j]] = [arr[j], arr[i]]
+    }
+    return arr
+  }
+  const toPlays = total => {
+    if (total <= 0) return []
+    const plays = []; let rem = total
+    while (rem >= 7) {
+      if (Math.random() < 0.62 || rem < 10) { plays.push(7); rem -= 7 }
+      else { plays.push(3); rem -= 3 }
+    }
+    while (rem >= 3) { plays.push(3); rem -= 3 }
+    if      (rem === 2)                     plays.push(2)
+    else if (rem === 1 && plays.length > 0) plays[0]++
+    return shuffle(plays)
+  }
+  const myPlays  = toPlays(myFinal)
+  const oppPlays = toPlays(oppFinal)
+  const all = shuffle([
+    ...myPlays.map(pts  => ({ team: 'me',  pts })),
+    ...oppPlays.map(pts => ({ team: 'opp', pts })),
+  ])
+  const spacing = all.length ? Math.floor(3500 / all.length) : 900
+  return all.map((evt, i) => ({
+    ...evt,
+    gameSec: Math.min(3500, Math.round(spacing * i + Math.random() * spacing * 0.7 + 25)),
+  }))
+}
+
+const GAME_MS    = 10_000
+const TICK_MS    = 50
+const TOTAL_TICK = GAME_MS / TICK_MS
+const GAME_SECS  = 3_600
+
+// ── Live playoff game ─────────────────────────────────────────────────────────
+
+const TEAM_BY_NAME = Object.fromEntries(TEAMS.map(t => [t.name, t]))
+
+function PlayoffGame({ round, opponent, mySc, oppSc, won, teamColor, teamAbbr, teamLogo, isFinal, onDone }) {
+  const [phase,    setPhase]    = useState('pre')
+  const [gameSec,  setGameSec]  = useState(0)
+  const [myScore,  setMyScore]  = useState(0)
+  const [oppScore, setOppScore] = useState(0)
+  const [visEvt,   setVisEvt]   = useState(null)
+  const [evtKey,   setEvtKey]   = useState(0)
+  const [events]                = useState(() => buildScoreTimeline(mySc, oppSc))
+  const tickRef    = useRef(0)
+  const evtIdxRef  = useRef(0)
+  const myScoreRef = useRef(0)
+  const oppScoreRef= useRef(0)
+  const ivRef      = useRef(null)
+  const doneRef    = useRef(false)
+
+  useEffect(() => {
+    const pre = setTimeout(() => {
+      setPhase('live')
+      ivRef.current = setInterval(() => {
+        tickRef.current++
+        const tick = tickRef.current
+        const gs = Math.min(GAME_SECS - 1, Math.round((tick / TOTAL_TICK) * GAME_SECS))
+        setGameSec(gs)
+
+        while (evtIdxRef.current < events.length && events[evtIdxRef.current].gameSec <= gs) {
+          const e = events[evtIdxRef.current]
+          if (e.team === 'me') {
+            myScoreRef.current += e.pts
+            setMyScore(myScoreRef.current)
+          } else {
+            oppScoreRef.current += e.pts
+            setOppScore(oppScoreRef.current)
+          }
+          setVisEvt(e)
+          setEvtKey(k => k + 1)
+          evtIdxRef.current++
+        }
+
+        if (tick >= TOTAL_TICK && !doneRef.current) {
+          clearInterval(ivRef.current)
+          // Snap to final only if events didn't fully accumulate
+          if (myScoreRef.current !== mySc)   setMyScore(mySc)
+          if (oppScoreRef.current !== oppSc) setOppScore(oppSc)
+          setGameSec(GAME_SECS - 1)
+          setPhase('post')
+          doneRef.current = true
+          setTimeout(onDone, 2400)
+        }
+      }, TICK_MS)
+    }, 700)
+    return () => { clearTimeout(pre); clearInterval(ivRef.current) }
+  }, [])
+
+  const q        = Math.min(3, Math.floor(gameSec / 900))
+  const qSec     = 900 - (gameSec % 900)
+  const progress = gameSec / (GAME_SECS - 1)
+  const evtLabel = pts => pts >= 6 ? '▲ TD' : pts === 3 ? '▲ FG' : '▲ Safety'
+  const oppTeam  = TEAM_BY_NAME[opponent]
+  const oppLogo  = oppTeam?.logo
+
+  const postMsg  = won ? (isFinal ? '✓ Champions!' : '✓ Advancing') : '✗ Eliminated'
+
+  return (
+    <div className={`plf-game${phase === 'post' ? (won ? ' plf-game-won' : ' plf-game-lost') : ''}`}>
+      <div className="plf-round-lbl">{round}</div>
+      <div className="plf-matchup">vs {opponent}</div>
+
+      <div className="plf-scoreboard">
+        <div className="plf-score-side plf-score-me">
+          {teamLogo && <img src={teamLogo} alt="" className="plf-team-logo" />}
+          <div className="plf-team-abbr" style={{ color: teamColor }}>{teamAbbr}</div>
+          <div className="plf-score-num" style={{ color: teamColor }}>
+            <span key={myScore} className="plf-num-pop">{myScore}</span>
+          </div>
+        </div>
+
+        <div className="plf-score-mid">
+          {phase === 'live' ? (
+            <div className="plf-live-pill">
+              <span className="plf-live-dot" />LIVE
+            </div>
+          ) : phase === 'post' ? (
+            <div className={`plf-result-badge ${won ? 'plf-rb-win' : 'plf-rb-loss'}`}>{won ? 'W' : 'L'}</div>
+          ) : null}
+        </div>
+
+        <div className="plf-score-side plf-score-opp">
+          {oppLogo && <img src={oppLogo} alt="" className="plf-team-logo plf-logo-opp" />}
+          <div className="plf-team-abbr plf-abbr-opp">{oppTeam?.short ?? opponent.split(' ').slice(-1)[0]}</div>
+          <div className="plf-score-num plf-score-opp-num">
+            <span key={oppScore} className="plf-num-pop">{oppScore}</span>
+          </div>
+        </div>
+      </div>
+
+      {phase === 'live' && (
+        <>
+          <div className="plf-status-row">
+            <div className="plf-qtr-dots">
+              {[0,1,2,3].map(i => (
+                <div
+                  key={i}
+                  className={`plf-qtr-dot${i < q ? ' plf-qd-done' : i === q ? ' plf-qd-active' : ''}`}
+                  style={i === q ? { background: teamColor, boxShadow: `0 0 10px ${teamColor}99` } : {}}
+                />
+              ))}
+            </div>
+            <div className="plf-clock-box">
+              <span className="plf-qtr-lbl">Q{q + 1}</span>
+              <span className="plf-clk-sep">·</span>
+              <span className="plf-clock-time">
+                {Math.floor(qSec / 60)}:{String(qSec % 60).padStart(2, '0')}
+              </span>
+            </div>
+          </div>
+          <div className="plf-progress">
+            <div className="plf-progress-fill" style={{ width: `${progress * 100}%`, background: teamColor }} />
+          </div>
+        </>
+      )}
+
+      {visEvt && phase === 'live' && (
+        <div key={evtKey} className={`plf-score-evt ${visEvt.team === 'me' ? 'plf-evt-me' : 'plf-evt-opp'}`}>
+          {evtLabel(visEvt.pts)} · {visEvt.team === 'me' ? teamAbbr : (oppTeam?.short ?? opponent.split(' ').slice(-1)[0])}
+        </div>
+      )}
+
+      {phase === 'post' && (
+        <div className={`plf-post-line ${won ? 'plf-pl-won' : 'plf-pl-lost'}`}>
+          <span>{postMsg}</span>
+          <span className="plf-post-score">{mySc} – {oppSc}</span>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Screen 3: Playoffs ────────────────────────────────────────────────────────
 
 function ScreenPlayoffs({ result, onNext }) {
-  const { wins, losses, playoffs, playoffRounds, sbResult } = result
-  const [revealed, setRevealed] = useState(0)
+  const { wins, losses, playoffs, playoffRounds, team } = result
+  const [gameIdx, setGameIdx] = useState(0)
+  const [status,  setStatus]  = useState('playing')
+  const [started, setStarted] = useState(false)
 
   useEffect(() => {
     if (!playoffs) return
-    let i = 0
-    const revealNext = () => {
-      if (i >= playoffRounds.length) return
-      setRevealed(i + 1)
-      i++
-      setTimeout(revealNext, 1600)
-    }
-    const t = setTimeout(revealNext, 600)
+    const t = setTimeout(() => setStarted(true), 500)
     return () => clearTimeout(t)
   }, [playoffs])
+
+  const handleGameDone = () => {
+    const r = playoffRounds[gameIdx]
+    if (!r.won) { setStatus('eliminated'); return }
+    if (gameIdx === playoffRounds.length - 1) { setStatus('champion'); return }
+    setStatus('between')
+    setTimeout(() => {
+      setGameIdx(i => i + 1)
+      setStatus('playing')
+    }, 2500)
+  }
+
+  const teamColor = team?.color || '#5EDBD8'
+  const teamAbbr  = team?.short || 'YOU'
+  const teamLogo  = team?.logo  || null
 
   if (!playoffs) {
     return (
       <div className="simp-screen simp-screen-center">
         <div className="simp-eyebrow">Postseason</div>
-        <div className="simp-miss-icon">○</div>
-        <div className="simp-miss-title">Missed the Playoffs</div>
-        <div className="simp-miss-sub">
-          {wins}–{losses}. Needed {9 - wins} more win{9 - wins !== 1 ? 's' : ''} to qualify.
+        <div className="simp-miss-icon">
+          <svg width="48" height="48" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="24" cy="24" r="19"/>
+            <path d="M16 16l16 16M32 16L16 32"/>
+          </svg>
         </div>
+        <div className="simp-miss-title">Missed the Playoffs</div>
         <button className="simp-cta" onClick={onNext}>See Summary</button>
       </div>
     )
   }
 
-  const champion = sbResult?.won
-  const allDone  = revealed === playoffRounds.length
+  if (status === 'champion') {
+    const sb = playoffRounds[playoffRounds.length - 1]
+    return (
+      <div className="simp-screen simp-screen-center plf-champion-screen">
+        <img src="/trophy.png" alt="" className="sfb-trophy" />
+        <div className="plf-champ-label">Super Bowl Champions</div>
+        <div className="plf-champ-sub">{sb.mySc}–{sb.oppSc} vs {sb.opponent}</div>
+        <button className="simp-cta simp-cta-in" onClick={onNext}>Final Report</button>
+      </div>
+    )
+  }
 
+  if (status === 'eliminated') {
+    const r = playoffRounds[gameIdx]
+    return (
+      <div className="simp-screen simp-screen-center">
+        <div className="simp-eyebrow">Season Over</div>
+        <div className="plf-elim-title">{r.round === 'Super Bowl' ? 'Lost Super Bowl' : 'Eliminated'}</div>
+        <div className="plf-elim-round">{r.round === 'Super Bowl' ? '' : r.round}</div>
+        <div className="plf-elim-score">{r.mySc} – {r.oppSc} · vs {r.opponent}</div>
+        <button className="simp-cta" onClick={onNext}>Final Report</button>
+      </div>
+    )
+  }
+
+  if (status === 'between') {
+    const r    = playoffRounds[gameIdx]
+    const next = playoffRounds[gameIdx + 1]
+    return (
+      <div className="simp-screen simp-screen-center plf-between-screen">
+        <div className="plf-bw-result">
+          <span className="plf-bw-w">W</span>
+          <span className="plf-bw-score">{r.mySc}–{r.oppSc}</span>
+        </div>
+        <div className="plf-bw-adv">Advancing…</div>
+        {next && <div className="plf-bw-next">Next up · {next.round}</div>}
+      </div>
+    )
+  }
+
+  const current = playoffRounds[gameIdx]
   return (
     <div className="simp-screen">
       <div className="simp-eyebrow">Playoffs</div>
-      {allDone && (
-        <div className={`simp-big-record simp-big-record-in ${champion ? 'simp-record-champ' : 'simp-record-elim'}`}>
-          {champion ? 'Champions' : `Out — ${sbResult?.round}`}
+      {!started ? (
+        <div className="simp-loading">
+          <div className="simp-loading-dot" /><div className="simp-loading-dot" /><div className="simp-loading-dot" />
+          <div className="simp-loading-lbl">Entering Playoffs…</div>
         </div>
-      )}
-      <div className="simp-rounds-list">
-        {playoffRounds.slice(0, revealed).map(r => (
-          <div key={r.round} className={`simp-round-card ${r.won ? 'src-w' : 'src-l'} src-in`}>
-            <div className="src-label">{r.round}</div>
-            <div className="src-body">
-              <span className={`src-badge ${r.won ? 'src-badge-w' : 'src-badge-l'}`}>{r.won ? 'W' : 'L'}</span>
-              <span className="src-opp">vs {r.opponent}</span>
-              <span className="src-score">{r.mySc}–{r.oppSc}</span>
-            </div>
-          </div>
-        ))}
-      </div>
-      {allDone && (
-        <button className="simp-cta simp-cta-in" onClick={onNext}>Final Report</button>
+      ) : (
+        <PlayoffGame
+          key={gameIdx}
+          round={current.round}
+          opponent={current.opponent}
+          mySc={current.mySc}
+          oppSc={current.oppSc}
+          won={current.won}
+          teamColor={teamColor}
+          teamAbbr={teamAbbr}
+          teamLogo={teamLogo}
+          isFinal={gameIdx === playoffRounds.length - 1}
+          onDone={handleGameDone}
+        />
       )}
     </div>
   )
@@ -244,8 +504,8 @@ function ScreenPlayoffs({ result, onNext }) {
 
 // ── Screen 4: Final Report ────────────────────────────────────────────────────
 
-function ScreenFinal({ result, onReset, onBack }) {
-  const { ovr, wins, losses, playoffs, sbResult, seasonPassYds, seasonTDs, seasonINTs, seasonRushYds, seasonRushTDs, seasonCompPct, seasonRating, bestGame } = result
+function ScreenFinal({ result, build, types, onReset, onBack }) {
+  const { ovr, wins, losses, playoffs, sbResult, seasonPassYds, seasonTDs, seasonINTs, seasonRushYds, seasonRushTDs, seasonSacks, seasonCompPct, seasonRating, bestGame } = result
   const champion = sbResult?.won
   const [show, setShow] = useState(false)
 
@@ -255,12 +515,14 @@ function ScreenFinal({ result, onReset, onBack }) {
   const tds     = useCountUp(seasonTDs, 900, show)
   const ints    = useCountUp(seasonINTs, 900, show)
   const rushYds = useCountUp(seasonRushYds, 1000, show)
+  const sacks   = useCountUp(seasonSacks, 900, show)
 
   return (
     <div className="simp-screen">
       <div className={`simp-final-banner ${champion ? 'sfb-champ' : playoffs ? 'sfb-elim' : 'sfb-miss'}`}>
+        {champion && <img src="/trophy.png" alt="Super Bowl Trophy" className="sfb-trophy" />}
         <div className="sfb-outcome">
-          {champion ? 'Super Bowl Champion' : playoffs ? `Eliminated — ${sbResult?.round}` : 'Missed the Playoffs'}
+          {champion ? 'Super Bowl Champions' : playoffs ? (sbResult?.round === 'Super Bowl' ? 'Lost Super Bowl' : `Eliminated — ${sbResult?.round}`) : 'Missed the Playoffs'}
         </div>
         <div className="sfb-sub">{wins}–{losses} Season · OVR {ovr}</div>
       </div>
@@ -301,6 +563,16 @@ function ScreenFinal({ result, onReset, onBack }) {
             <div className="simp-total-lbl">Pass TDs</div>
           </div>
           <div className="simp-total-cell">
+            <div className="simp-total-val">{show ? ints : '–'}</div>
+            <div className="simp-total-lbl">INTs</div>
+          </div>
+          <div className="simp-total-cell">
+            <div className="simp-total-val">{show ? `${seasonCompPct}%` : '–'}</div>
+            <div className="simp-total-lbl">Comp%</div>
+          </div>
+        </div>
+        <div className="simp-totals simp-totals-3" style={{ marginTop: 14 }}>
+          <div className="simp-total-cell">
             <div className="simp-total-val">{show ? rushYds.toLocaleString() : '–'}</div>
             <div className="simp-total-lbl">Rush Yds</div>
           </div>
@@ -308,22 +580,36 @@ function ScreenFinal({ result, onReset, onBack }) {
             <div className="simp-total-val">{show ? result.seasonRushTDs : '–'}</div>
             <div className="simp-total-lbl">Rush TDs</div>
           </div>
-        </div>
-        <div className="simp-totals simp-totals-3" style={{ marginTop: 14 }}>
           <div className="simp-total-cell">
-            <div className="simp-total-val">{show ? `${seasonCompPct}%` : '–'}</div>
-            <div className="simp-total-lbl">Comp%</div>
-          </div>
-          <div className="simp-total-cell">
-            <div className="simp-total-val">{show ? ints : '–'}</div>
-            <div className="simp-total-lbl">INTs</div>
-          </div>
-          <div className="simp-total-cell">
-            <div className="simp-total-val">{show ? seasonRating : '–'}</div>
-            <div className="simp-total-lbl">Rating</div>
+            <div className="simp-total-val">{show ? sacks : '–'}</div>
+            <div className="simp-total-lbl">Sacks</div>
           </div>
         </div>
       </div>
+
+      {build && types && (
+        <div className="simp-stat-section">
+          <div className="simp-stat-group-lbl">Your Build</div>
+          <div className="simp-attr-table simp-attr-table-sm">
+            {types.filter(t => build[t]).map(t => {
+              const meta = ATTR[t]
+              const data = build[t]
+              return (
+                <div key={t} className="simp-attr-row simp-row-visible">
+                  <QBAvatar photo={data.photo} team={data.team} color={data.teamColor} size={36} />
+                  <div className="simp-attr-info">
+                    <span className="simp-attr-name">{meta.label}</span>
+                    <span className="simp-attr-qb">{data.qbFull}</span>
+                  </div>
+                  <span className="simp-grade-circle" style={{ background: meta.hex, color: '#07120a' }}>
+                    {valToGrade(data.val)}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {bestGame && (
         <div className="simp-best-game">
@@ -360,7 +646,11 @@ function ProgressDots({ screen, total }) {
 
 export default function SimPage({ result, build, types = TYPES, onBack, onReset, replay = false }) {
   const [screen, setScreen] = useState(replay ? 3 : 0)
-  const next = () => { document.querySelector('.simp-page')?.scrollTo({ top: 0, behavior: 'instant' }); setScreen(s => s + 1) }
+  const next = () => {
+    document.querySelector('.simp-page')?.scrollTo({ top: 0, behavior: 'instant' })
+    window.scrollTo({ top: 0, behavior: 'instant' })
+    setScreen(s => s + 1)
+  }
 
   const handleReset = () => { setScreen(0); onReset() }
   const handleBack  = () => { setScreen(0); onBack()  }
@@ -369,11 +659,16 @@ export default function SimPage({ result, build, types = TYPES, onBack, onReset,
     <ScreenBuild    key="build"    result={result} build={build} types={types} onNext={next} />,
     <ScreenSeason   key="season"   result={result} onNext={next} />,
     <ScreenPlayoffs key="playoffs" result={result} onNext={next} />,
-    <ScreenFinal    key="final"    result={result} onReset={handleReset} onBack={handleBack} />,
+    <ScreenFinal    key="final"    result={result} build={build} types={types} onReset={handleReset} onBack={handleBack} />,
   ]
 
+  const team = result.team
+  const teamStyle = team
+    ? { '--team-color': team.color, '--team-color2': team.color2 }
+    : undefined
+
   return (
-    <div className="simp-page">
+    <div className="simp-page" style={teamStyle}>
       <div className="simp-col">
         <div className="simp-top-bar">
           {screen > 0 && screen < screens.length - 1 && (
@@ -381,6 +676,39 @@ export default function SimPage({ result, build, types = TYPES, onBack, onReset,
           )}
           <ProgressDots screen={screen} total={screens.length} />
         </div>
+
+        {team && (
+          <div className="simp-team-strip">
+            <img src={team.logo} alt={team.short} className="sts-logo" />
+            <div className="sts-info">
+              <span className="sts-name">{team.name}</span>
+              <span className="sts-abbr">{team.short}</span>
+            </div>
+            {(team.off != null || team.def != null) && (
+              <div className="sts-grades">
+                {team.off != null && (
+                  <div className="sts-grade-item">
+                    <span className="sts-grade-key">OFF</span>
+                    <div className="sts-grade-track">
+                      <div className="sts-grade-fill" style={{ width: `${team.off * 10}%` }} />
+                    </div>
+                    <span className="sts-grade-badge">{offDefGrade(team.off)}</span>
+                  </div>
+                )}
+                {team.def != null && (
+                  <div className="sts-grade-item">
+                    <span className="sts-grade-key">DEF</span>
+                    <div className="sts-grade-track">
+                      <div className="sts-grade-fill" style={{ width: `${team.def * 10}%` }} />
+                    </div>
+                    <span className="sts-grade-badge">{offDefGrade(team.def)}</span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         {screens[screen]}
       </div>
     </div>

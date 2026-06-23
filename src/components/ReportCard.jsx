@@ -1,6 +1,8 @@
-import { ATTR, TYPES } from '../data/qbs'
+import { ATTR, TYPES, QB_PHYSICALS } from '../data/qbs'
 import { calcOVR, getArchetype, calcBalance, valToGrade } from '../utils/simulation'
 import QBAvatar from './QBAvatar'
+
+function fmtHeight(inches) { return `${Math.floor(inches / 12)}'${inches % 12}"` }
 
 const RING_R    = 62
 const RING_SIZE = 144
@@ -93,15 +95,33 @@ export default function ReportCard({ build, onSimulate, onReset, types = TYPES, 
   const balance = calcBalance(build, types)
   const complete = filled.length === types.length
 
+  const bodyPhys = build['size'] ? QB_PHYSICALS[build['size'].qbFull] : null
+  const legsPhys = build['legs'] ? QB_PHYSICALS[build['legs'].qbFull] : null
+  const hwBoth   = bodyPhys && legsPhys
+  const heightStr = hwBoth ? fmtHeight(Math.round(0.65 * legsPhys.height + 0.35 * bodyPhys.height)) : null
+  const weightLbs = hwBoth ? Math.round(0.65 * bodyPhys.weight + 0.35 * legsPhys.weight) : null
+
   return (
     <aside className="panel-right">
       <div className="ovr-block">
-        <div className="ovr-ring-wrap">
-          <OvrRing ovr={ovr} />
-          <div className="ovr-ring-inner">
-            <div className="ovr-ring-label">OVR</div>
-            <div className={`ovr-number ${ovr ? 'lit' : ''}`} style={ovr ? { color: ovrColor(ovr), textShadow: `0 0 32px ${ovrColor(ovr)}55` } : undefined}>
-              {ovr ?? '--'}
+        <div className="ovr-ring-row">
+          <div className="ovr-hw-mobile">
+            <div className="ohm-stat">
+              <span className="ohm-val">{heightStr ?? '--'}</span>
+              <span className="ohm-lbl">HT</span>
+            </div>
+            <div className="ohm-stat">
+              <span className="ohm-val">{weightLbs ?? '--'}</span>
+              <span className="ohm-lbl">WT</span>
+            </div>
+          </div>
+          <div className="ovr-ring-wrap">
+            <OvrRing ovr={ovr} />
+            <div className="ovr-ring-inner">
+              <div className="ovr-ring-label">OVR</div>
+              <div className={`ovr-number ${ovr ? 'lit' : ''}`} style={ovr ? { color: ovrColor(ovr), textShadow: `0 0 32px ${ovrColor(ovr)}55` } : undefined}>
+                {ovr ?? '--'}
+              </div>
             </div>
           </div>
         </div>

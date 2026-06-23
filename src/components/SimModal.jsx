@@ -7,7 +7,11 @@ function ScreenBuild({ result, build, types, onNext, onClose }) {
   const { ovr } = result
   return (
     <div className="sim-screen">
-      <button className="sim-close-x" onClick={onClose}>✕</button>
+      <button className="sim-close-x" onClick={onClose} aria-label="Close">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+          <path d="M1 1l10 10M11 1L1 11"/>
+        </svg>
+      </button>
       <div className="sim-eyebrow">Your Frankenstein QB</div>
       <div className="sim-ovr-hero">
         <div className="sim-ovr-hero-num">{ovr}</div>
@@ -91,11 +95,15 @@ function ScreenPlayoffs({ result, onNext }) {
     return (
       <div className="sim-screen sim-screen-center">
         <div className="sim-eyebrow">Postseason</div>
-        <div className="sim-miss-icon">○</div>
+        <div className="sim-miss-icon">
+          <svg width="44" height="44" viewBox="0 0 44 44" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="22" cy="22" r="18"/>
+            <path d="M15 15l14 14M29 15L15 29"/>
+          </svg>
+        </div>
         <div className="sim-miss-title">Missed the Playoffs</div>
         <div className="sim-miss-sub">
-          {wins}–{losses}. You needed {9 - wins} more win{9 - wins !== 1 ? 's' : ''} to qualify.
-          A stronger build would've made the cut.
+          {wins}–{losses}. A stronger build would've made the cut.
         </div>
         <button className="sim-cta-btn" onClick={onNext}>See Summary</button>
       </div>
@@ -139,7 +147,7 @@ function ScreenFinal({ result, onReset, onClose }) {
     <div className="sim-screen">
       <div className={`sim-final-banner ${champion ? 'sfb-champ' : playoffs ? 'sfb-elim' : 'sfb-miss'}`}>
         <div className="sfb-outcome">
-          {champion ? 'Super Bowl Champion' : playoffs ? `Eliminated — ${sbResult?.round}` : 'Missed the Playoffs'}
+          {champion ? 'Super Bowl Champion' : playoffs ? (sbResult?.round === 'Super Bowl' ? 'Lost Super Bowl' : `Eliminated — ${sbResult?.round}`) : 'Missed the Playoffs'}
         </div>
         <div className="sfb-sub">{wins}–{losses} Season · OVR {ovr}</div>
       </div>

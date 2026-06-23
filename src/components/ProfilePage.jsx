@@ -52,8 +52,36 @@ function StatBar({ label, value, grade, max, color }) {
 }
 
 export default function ProfilePage({ user, build, simResult, types = TYPES, onBack, onSignOut }) {
-  const [show, setShow] = useState(false)
+  const [show, setShow]           = useState(false)
+  const [career, setCareer]       = useState(null)
+  const [careerLoad, setCareerLoad] = useState(true)
+
   useEffect(() => { const t = setTimeout(() => setShow(true), 120); return () => clearTimeout(t) }, [])
+
+  useEffect(() => {
+    if (!supabase || !user) { setCareerLoad(false); return }
+    supabase
+      .from('simulations')
+      .select('wins,losses,season_pass_yds,season_tds,season_ints,season_rating,playoffs,champion,ovr,created_at')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .then(({ data }) => {
+        if (!data || data.length === 0) { setCareer(null); setCareerLoad(false); return }
+        const totalWins   = data.reduce((s, r) => s + (r.wins  ?? 0), 0)
+        const totalLosses = data.reduce((s, r) => s + (r.losses ?? 0), 0)
+        const totalTDs    = data.reduce((s, r) => s + (r.season_tds ?? 0), 0)
+        const totalYds    = data.reduce((s, r) => s + (r.season_pass_yds ?? 0), 0)
+        const totalINTs   = data.reduce((s, r) => s + (r.season_ints ?? 0), 0)
+        const rings       = data.filter(r => r.champion).length
+        const playoffApps = data.filter(r => r.playoffs).length
+        const totalGames  = totalWins + totalLosses
+        const winPct      = totalGames > 0 ? ((totalWins / totalGames) * 100).toFixed(1) : '0.0'
+        const avgOVR      = (data.reduce((s, r) => s + (r.ovr ?? 0), 0) / data.length).toFixed(1)
+        const best        = data.reduce((b, r) => (r.wins ?? 0) > (b.wins ?? 0) ? r : b, data[0])
+        setCareer({ count: data.length, totalWins, totalLosses, totalTDs, totalYds, totalINTs, rings, playoffApps, winPct, avgOVR, best })
+        setCareerLoad(false)
+      })
+  }, [user])
 
   const filled   = types.filter(t => build?.[t])
   const ovr      = calcOVR(build || {}, types)
@@ -64,6 +92,8 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, onB
   const winsDisplay = useCountUp(simResult?.wins, 800, show && !!simResult)
   const ydsDisplay  = useCountUp(simResult?.seasonPassYds, 1200, show && !!simResult)
   const tdsDisplay  = useCountUp(simResult?.seasonTDs, 900, show && !!simResult)
+  const careerYds   = useCountUp(career?.totalYds, 1400, show && !!career)
+  const careerTDs   = useCountUp(career?.totalTDs, 1000, show && !!career)
 
   const displayName = user.user_metadata?.username || user.email?.split('@')[0] || 'Player'
   const initials    = getInitials(user)
@@ -151,58 +181,59 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, onB
         )}
 
         {/* ── Last season ── */}
-        {simResult ? (
-          <div className={`prf-card ${show ? 'prf-card-in' : ''}`} style={{ animationDelay: '0.2s' }}>
+        {/* ── Career stats ── */}
+        {!careerLoad && career && (
+          <div className={`prf-card ${show ? 'prf-card-in' : ''}`} style={{ animationDelay: '0.3s' }}>
             <div className="prf-card-hd">
-              <span className="prf-card-title">Last Season</span>
-              <span className={`prf-outcome-badge ${simResult.sbResult?.won ? 'pob-champ' : simResult.playoffs ? 'pob-playoffs' : 'pob-miss'}`}>
-                {simResult.sbResult?.won ? 'Super Bowl Champion' : simResult.playoffs ? 'Playoff Bound' : 'Missed Playoffs'}
-              </span>
+              <span className="prf-card-title">Career</span>
+              <span className="prf-career-count">{career.count} season{career.count !== 1 ? 's' : ''}</span>
             </div>
 
-            <div className="prf-record-hero">
-              <span className="prh-w">{show ? winsDisplay : '–'}</span>
-              <span className="prh-sep">–</span>
-              <span className="prh-l">{simResult.losses}</span>
+            <div className="prf-career-record">
+              <span className="pcr-w">{career.totalWins}</span>
+              <span className="pcr-sep">–</span>
+              <span className="pcr-l">{career.totalLosses}</span>
+              <span className="pcr-label">Career Record</span>
             </div>
 
-            <div className="prf-season-grid">
-              <div className="psg-cell">
-                <div className="psg-val">{show ? ydsDisplay.toLocaleString() : '–'}</div>
-                <div className="psg-lbl">Pass Yards</div>
+            <div className="prf-career-grid">
+              <div className="pcg-cell">
+                <div className="pcg-val">{career.rings}</div>
+                <div className="pcg-lbl">Rings</div>
               </div>
-              <div className="psg-cell">
-                <div className="psg-val">{show ? tdsDisplay : '–'}</div>
-                <div className="psg-lbl">Touchdowns</div>
+              <div className="pcg-cell">
+                <div className="pcg-val">{career.playoffApps}</div>
+                <div className="pcg-lbl">Playoff Apps</div>
               </div>
-              <div className="psg-cell">
-                <div className="psg-val">{simResult.seasonINTs}</div>
-                <div className="psg-lbl">Interceptions</div>
+              <div className="pcg-cell">
+                <div className="pcg-val">{career.winPct}%</div>
+                <div className="pcg-lbl">Win %</div>
               </div>
-              <div className="psg-cell">
-                <div className="psg-val">{simResult.seasonRating}</div>
-                <div className="psg-lbl">QB Rating</div>
+              <div className="pcg-cell">
+                <div className="pcg-val">{show ? careerYds.toLocaleString() : '–'}</div>
+                <div className="pcg-lbl">Career Yards</div>
+              </div>
+              <div className="pcg-cell">
+                <div className="pcg-val">{show ? careerTDs : '–'}</div>
+                <div className="pcg-lbl">Career TDs</div>
+              </div>
+              <div className="pcg-cell">
+                <div className="pcg-val">{career.avgOVR}</div>
+                <div className="pcg-lbl">Avg OVR</div>
               </div>
             </div>
 
-            {simResult.bestGame && (
-              <div className="prf-best-game">
-                <span className="pbg-lbl">Best Game</span>
-                <span className="pbg-body">
-                  Wk {simResult.bestGame.wk} vs {simResult.bestGame.opponent} — {simResult.bestGame.passYds} yds · {simResult.bestGame.tds} TD · {simResult.bestGame.rating} RTG
-                </span>
+            {career.best && (
+              <div className="prf-best-season">
+                <span className="pbs-lbl">Best Season</span>
+                <span className="pbs-val">{career.best.wins}–{career.best.losses} · {career.best.season_tds} TD · {(career.best.season_pass_yds ?? 0).toLocaleString()} yds</span>
               </div>
             )}
-          </div>
-        ) : (
-          <div className={`prf-card prf-card-empty ${show ? 'prf-card-in' : ''}`} style={{ animationDelay: '0.2s' }}>
-            <div className="prf-card-hd"><span className="prf-card-title">Last Season</span></div>
-            <div className="prf-empty-msg">No season simulated yet. Complete your build and hit Simulate.</div>
           </div>
         )}
 
         {/* ── Actions ── */}
-        <div className={`prf-actions ${show ? 'prf-card-in' : ''}`} style={{ animationDelay: '0.3s' }}>
+        <div className={`prf-actions ${show ? 'prf-card-in' : ''}`} style={{ animationDelay: career ? '0.4s' : '0.3s' }}>
           <button className="prf-signout-btn" onClick={handleSignOut}>Sign Out</button>
         </div>
 

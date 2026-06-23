@@ -1,4 +1,9 @@
 import { StrictMode } from 'react'
+
+// Adds class on first touch — CSS uses this to kill sticky :hover states
+document.addEventListener('touchstart', function() {
+  document.documentElement.classList.add('is-touch')
+}, { passive: true, once: true })
 import { createRoot } from 'react-dom/client'
 import { Analytics } from '@vercel/analytics/react'
 import { SpeedInsights } from '@vercel/speed-insights/react'

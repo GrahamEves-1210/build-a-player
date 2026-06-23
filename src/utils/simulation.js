@@ -1,4 +1,7 @@
 import { TYPES } from '../data/qbs'
+import { NFL_TEAMS } from '../data/nfl-teams'
+
+const TEAM_BY_NAME = Object.fromEntries(NFL_TEAMS.map(t => [t.name, t]))
 
 const GRADES = ['F', 'D', 'C-', 'C', 'C+', 'B-', 'B', 'B+', 'A-', 'A', 'A+', 'S']
 
@@ -11,7 +14,7 @@ export function calcOVR(build, types = TYPES) {
   if (!filled.length) return null
   const vals   = filled.map(t => build[t].val)
   const avg    = vals.reduce((a, b) => a + b, 0) / filled.length
-  const base = 52 + 2 * avg + 0.28 * avg * avg
+  const base = 58 + 2.2 * avg + 0.24 * avg * avg
 
   let bonus = 0
   if (filled.length === types.length) {
@@ -142,17 +145,32 @@ const REG_OPPONENTS = [
   'Baltimore Ravens',
 ]
 
-const PLAYOFF_BRACKET = [
-  { round: 'Wild Card',               opponents: ['Houston Texans',      'Los Angeles Rams',     'Minnesota Vikings',    'Green Bay Packers'     ] },
-  { round: 'Divisional Round',        opponents: ['Detroit Lions',       'Baltimore Ravens',     'Buffalo Bills',        'Washington Commanders' ] },
-  { round: 'Conference Championship', opponents: ['Philadelphia Eagles', 'San Francisco 49ers',  'Kansas City Chiefs',   'Dallas Cowboys'        ] },
-  { round: 'Super Bowl',              opponents: ['Kansas City Chiefs',  'Philadelphia Eagles',  'San Francisco 49ers',  'Baltimore Ravens'      ] },
-]
+const PLAYOFF_POOLS = {
+  AFC: {
+    'Wild Card':               ['Cincinnati Bengals', 'Houston Texans', 'Los Angeles Chargers', 'Denver Broncos', 'Miami Dolphins', 'Pittsburgh Steelers', 'Indianapolis Colts'],
+    'Divisional Round':        ['Baltimore Ravens', 'Buffalo Bills', 'Kansas City Chiefs', 'Pittsburgh Steelers', 'Cincinnati Bengals', 'Houston Texans'],
+    'Conference Championship': ['Kansas City Chiefs', 'Baltimore Ravens', 'Buffalo Bills', 'Cincinnati Bengals'],
+  },
+  NFC: {
+    'Wild Card':               ['Minnesota Vikings', 'Los Angeles Rams', 'Tampa Bay Buccaneers', 'Green Bay Packers', 'Chicago Bears', 'Washington Commanders', 'Atlanta Falcons'],
+    'Divisional Round':        ['Philadelphia Eagles', 'Detroit Lions', 'San Francisco 49ers', 'Washington Commanders', 'Green Bay Packers', 'Los Angeles Rams'],
+    'Conference Championship': ['Philadelphia Eagles', 'San Francisco 49ers', 'Detroit Lions', 'Green Bay Packers'],
+  },
+}
+
+const SB_POOLS = {
+  AFC: ['Philadelphia Eagles', 'San Francisco 49ers', 'Detroit Lions', 'Dallas Cowboys', 'Green Bay Packers'],
+  NFC: ['Kansas City Chiefs', 'Baltimore Ravens', 'Buffalo Bills', 'Cincinnati Bengals', 'Houston Texans'],
+}
 
 // ── Core simulation ───────────────────────────────────────────────────────────
 
-export function runSimulation(build, types = TYPES) {
+export function runSimulation(build, types = TYPES, team = null) {
   const ovr = calcOVR(build, types)
+
+  // Team support factors (off/def each 1–10, 5 = league average)
+  const teamOffN = team ? (team.off - 5) / 5 : 0   // −1 to +1
+  const teamDefN = team ? (team.def - 5) / 5 : 0
 
   // ── Attribute extraction (0–11 scale → 0–1 normalized) ───────────────────
   const raw = (k) => build[k]?.val ?? 5
@@ -172,7 +190,7 @@ export function runSimulation(build, types = TYPES) {
   // Each attribute's coefficient reflects its real-world influence on that stat.
 
   // Pass yards/game: arm (long ball yardage), accuracy (completion = more yards), vision (open receivers)
-  const passYdBase = 155 + armN * 65 + acN * 45 + viN * 22 + pkN * 14 + pmN * 9
+  const passYdBase = 148 + armN * 55 + acN * 38 + viN * 20 + pkN * 12 + pmN * 8 + teamOffN * 14
 
   // Attempts/game: inversely linked to accuracy (inaccurate QBs need more attempts) + base volume
   const attBase = 30 + (1 - acN) * 6 + randN() * 0
@@ -181,7 +199,7 @@ export function runSimulation(build, types = TYPES) {
   const compBase = Math.min(0.76, 0.535 + acN * 0.105 + viN * 0.045 + prN * 0.032 + pkN * 0.022)
 
   // TD rate per attempt: accuracy (throws into tight windows), vision (finding end zone looks), processing (red zone)
-  const tdRateBase = 0.028 + acN * 0.019 + viN * 0.013 + prN * 0.009 + armN * 0.005
+  const tdRateBase = 0.026 + acN * 0.016 + viN * 0.011 + prN * 0.008 + armN * 0.004
 
   // INT rate per attempt: processing (primary reducer — reads the field), then accuracy, vision, pocket
   // Leadership has zero impact on INTs — it's not a stat attribute
@@ -189,9 +207,12 @@ export function runSimulation(build, types = TYPES) {
     0.044 - prN * 0.018 - acN * 0.011 - pkN * 0.009 - viN * 0.006
   )
 
-  // Rush yards/game: legs (dominant), playmaking (broken plays, ad libs)
-  // Arm/accuracy/vision/leadership have no rushing impact
-  const rushYdBase = legN * 42 + pmN * 13
+  // Rush yards/game: legs (dominant), playmaking (broken plays, ad libs), build (tackle-breaking, YAC)
+  const rushYdBase = legN * 44 + pmN * 9 + szN * 5
+
+  // Sacks/game: 70% pocket presence, 30% legs — bad OFF team grade adds sacks moderately
+  // teamOffN is negative for bad OL/scheme teams, which drives sacks up
+  const sackBase = Math.max(1.0, 3.5 - pkN * 1.60 - legN * 0.68 - teamOffN * 0.50)
 
   // ── Win probability ────────────────────────────────────────────────────
   // Accuracy and processing are the strongest win predictors in modern NFL.
@@ -209,21 +230,19 @@ export function runSimulation(build, types = TYPES) {
     + legN * 0.04  // mobile QBs add dimension
     + ldN * 0.03   // leadership: small team W-L effect, NOT stats
     + szN * 0.02   // durability — stays healthy
+    + teamOffN * 0.025  // supporting cast / scheme
+    + teamDefN * 0.035  // defense wins games independently
   ))
 
-  // Playoff win probability: same base but leadership has more weight (clutch factor, team belief)
-  // Pocket presence matters more in big games too
-  const playoffWinP = Math.min(0.80, Math.max(0.20,
-    winP
-    + ldN * 0.05   // leadership shines most in playoffs
-    + pkN * 0.03   // pocket presence crucial in playoff atmospheres
-    + prN * 0.02   // processing elite defenses
-  ))
+  // Playoff win probability is calculated per-game inside the loop.
+  // Base 50%, adjusted equally by QB build quality and team matchup.
+  const ovrN         = (ovr - 75) / 22   // steeper scale: high OVR rewarded more
+  const playerTeamAvg = ((team?.off ?? 5.5) + (team?.def ?? 5.5)) / 2
 
   // ── Regular season simulation ────────────────────────────────────────────
   let wins = 0, losses = 0
   let seasonPassYds = 0, seasonTDs = 0, seasonINTs = 0
-  let seasonRushYds = 0, seasonRushTDs = 0
+  let seasonRushYds = 0, seasonRushTDs = 0, seasonSacks = 0
   let seasonAttempts = 0, seasonCompletions = 0
 
   const games = REG_OPPONENTS.map((opponent, i) => {
@@ -233,11 +252,12 @@ export function runSimulation(build, types = TYPES) {
     const gameAtts   = Math.max(18, Math.round(attBase + v() * 5))
     const gameCompPct = Math.min(0.85, Math.max(0.35, compBase + v() * 0.07))
     const gameComps  = Math.round(gameAtts * gameCompPct)
-    const gamePassYds = Math.max(60, Math.round(passYdBase + v() * 72))
-    const gameTDs    = Math.max(0, Math.round(gameAtts * tdRateBase + v() * 0.9))
-    const gameINTs   = Math.max(0, Math.round(gameAtts * intRateBase + Math.random() * 0.7))
+    const gamePassYds = Math.max(60, Math.round(passYdBase + v() * 62))
+    const gameTDs    = Math.max(0, Math.round(gameAtts * tdRateBase + v() * 0.85))
+    const gameINTs   = Math.max(0, Math.round(gameAtts * intRateBase + randN() * 0.5))
     const gameRushYds = Math.max(0, Math.round(rushYdBase + v() * 18))
-    const gameRushTDs = Math.random() < (legN * 0.26 + pmN * 0.08) ? 1 : 0
+    const gameRushTDs = Math.random() < (legN * 0.35 + szN * 0.08 + pmN * 0.08) ? 1 : 0
+    const gameSacks   = Math.max(0, Math.round(sackBase + v() * 1.2))
 
     const rating = passerRating(gameComps, gameAtts, gamePassYds, gameTDs, gameINTs)
 
@@ -248,24 +268,33 @@ export function runSimulation(build, types = TYPES) {
     const won        = Math.random() < gameWinP
     won ? wins++ : losses++
 
-    // Score: performance-correlated but with randomness (defense matters)
-    const mySc  = Math.max(3,  Math.round(13 + gameTDs * 5.5 + gameRushTDs * 5 + gamePassYds / 40 + Math.random() * 7))
-    const oppSc = Math.max(0,  Math.round(11 + Math.random() * 24))
+    // Score: TDs * 7 (PAT assumed) + estimated field goals + team factors
+    // teamOffN boosts our scoring, teamDefN suppresses opponent scoring
+    const myTDs  = gameTDs + gameRushTDs
+    const estFGs = Math.max(0, Math.round(1.5 - myTDs * 0.35 + Math.random() * 1.5))
+    let mySc     = Math.max(3, Math.round(myTDs * 7 + estFGs * 3 + teamOffN * 3 + Math.random() * 3))
+    let oppSc    = Math.max(0, Math.round(14 + Math.random() * 13 - teamDefN * 5))
+    if (won  && mySc  <= oppSc) mySc  = oppSc + 1 + Math.ceil(Math.random() * 4)
+    if (!won && oppSc <= mySc)  oppSc = mySc  + 1 + Math.ceil(Math.random() * 4)
 
     seasonPassYds     += gamePassYds
     seasonTDs         += gameTDs
     seasonINTs        += gameINTs
     seasonRushYds     += gameRushYds
     seasonRushTDs     += gameRushTDs
+    seasonSacks       += gameSacks
     seasonAttempts    += gameAtts
     seasonCompletions += gameComps
 
-    return { wk: i + 1, opponent, mySc, oppSc, won, passYds: gamePassYds, tds: gameTDs, ints: gameINTs, rushYds: gameRushYds, rating: Math.round(rating) }
+    return { wk: i + 1, opponent, mySc, oppSc, won, passYds: gamePassYds, tds: gameTDs, ints: gameINTs, rushYds: gameRushYds, sacks: gameSacks, rating: Math.round(rating) }
   })
 
   const seasonCompPct = Math.round((seasonCompletions / seasonAttempts) * 1000) / 10
   const seasonRating  = Math.round(passerRating(seasonCompletions, seasonAttempts, seasonPassYds, seasonTDs, seasonINTs))
-  const bestGame      = [...games].sort((a, b) => b.rating - a.rating)[0]
+  const bestGame      = [...games].sort((a, b) => {
+    const score = g => g.passYds * 0.15 + g.tds * 12 + (g.ints === 0 ? 4 : 0) + g.rating * 0.1
+    return score(b) - score(a)
+  })[0]
 
   // ── Playoffs ─────────────────────────────────────────────────────────────
   const playoffs      = wins >= 9
@@ -273,22 +302,40 @@ export function runSimulation(build, types = TYPES) {
   let sbResult = null
 
   if (playoffs) {
+    const conf     = team?.conf ?? 'AFC'
+    const confPool = PLAYOFF_POOLS[conf]
+    const pick     = (pool) => {
+      const opts = pool.filter(n => n !== team?.name)
+      return opts[Math.floor(Math.random() * opts.length)]
+    }
+    const playoffBracket = [
+      { round: 'Wild Card',               opponents: confPool['Wild Card'] },
+      { round: 'Divisional Round',        opponents: confPool['Divisional Round'] },
+      { round: 'Conference Championship', opponents: confPool['Conference Championship'] },
+      { round: 'Super Bowl',              opponents: SB_POOLS[conf] },
+    ]
+
     let pwins = 0, eliminated = null
-    for (const { round, opponents } of PLAYOFF_BRACKET) {
-      const opponent = opponents[Math.floor(Math.random() * opponents.length)]
-      const won      = Math.random() < playoffWinP
+    for (const { round, opponents } of playoffBracket) {
+      const opponent   = pick(opponents)
+      const oppTeam    = TEAM_BY_NAME[opponent]
+      const oppTeamAvg = ((oppTeam?.off ?? 5.5) + (oppTeam?.def ?? 5.5)) / 2
+      const teamN      = (playerTeamAvg - oppTeamAvg) / 9
+      const pgWinP     = Math.min(0.94, Math.max(0.15, 0.36 + ovrN * 0.58 + teamN * 0.26))
+      const won        = Math.random() < pgWinP
 
       // Playoff game stats use similar logic but with higher stakes variance
       const pgAtts  = Math.round(35 + randN() * 5)
       const pgComp  = Math.round(pgAtts * (compBase + randN() * 0.05))
       const pgYds   = Math.max(100, Math.round(passYdBase * 1.05 + randN() * 55))
       const pgTDs   = Math.max(0, Math.round(pgAtts * tdRateBase * 1.1 + randN() * 0.7))
-      const pgINTs  = Math.max(0, Math.round(pgAtts * intRateBase + Math.random() * 0.6))
+      const pgINTs  = Math.max(0, Math.round(pgAtts * intRateBase + randN() * 0.5))
       const pgRtg   = Math.round(passerRating(pgComp, pgAtts, pgYds, pgTDs, pgINTs))
 
-      const base   = Math.round(14 + pgTDs * 5 + pgYds / 45 + Math.random() * 7)
-      const opp    = Math.round(10 + Math.random() * 24)
-      const margin = Math.ceil(Math.random() * 8)
+      const pgFGs  = Math.max(0, Math.round(1.2 - pgTDs * 0.35 + Math.random() * 1.2))
+      const base   = Math.max(3, Math.round(pgTDs * 7 + pgFGs * 3 + teamOffN * 2))
+      const opp    = Math.max(7, Math.round(13 + Math.random() * 13 - teamDefN * 4))
+      const margin = Math.ceil(Math.random() * 7)
       const finalMy  = won ? Math.max(base, opp + margin)  : Math.min(base, opp - margin)
       const finalOpp = won ? opp : Math.max(opp, base + margin)
 
@@ -301,7 +348,7 @@ export function runSimulation(build, types = TYPES) {
       const sbComp = Math.round(sbAtts * (compBase + randN() * 0.04))
       const sbYds  = Math.max(150, Math.round(passYdBase * 1.08 + randN() * 60))
       const sbTDs  = Math.max(1,   Math.round(sbAtts * tdRateBase * 1.15 + randN() * 0.6))
-      const sbINTs = Math.max(0,   Math.round(sbAtts * intRateBase * 0.8 + Math.random() * 0.5))
+      const sbINTs = Math.max(0,   Math.round(sbAtts * intRateBase * 0.8 + randN() * 0.4))
       sbResult = {
         won: true,
         passYds: sbYds,
@@ -315,11 +362,11 @@ export function runSimulation(build, types = TYPES) {
   }
 
   return {
-    ovr, wins, losses,
+    team, ovr, wins, losses,
     games,
     highlights: games.filter(g => g.wk <= 4 || g.wk >= 14),
     seasonPassYds, seasonTDs, seasonINTs,
-    seasonRushYds, seasonRushTDs,
+    seasonRushYds, seasonRushTDs, seasonSacks,
     seasonAttempts, seasonCompletions, seasonCompPct,
     seasonRating,
     bestGame,
