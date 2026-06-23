@@ -4,6 +4,10 @@ import { StrictMode } from 'react'
 document.addEventListener('touchstart', function() {
   document.documentElement.classList.add('is-touch')
 }, { passive: true, once: true })
+
+if (/Twitter|XInApp/i.test(navigator.userAgent)) {
+  document.documentElement.classList.add('is-x-browser')
+}
 import { createRoot } from 'react-dom/client'
 import { Analytics } from '@vercel/analytics/react'
 import { SpeedInsights } from '@vercel/speed-insights/react'

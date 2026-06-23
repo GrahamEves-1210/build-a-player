@@ -3746,6 +3746,13 @@ a:focus-visible {
   display: none;
 }
 
+/* X.com in-app browser has a persistent bottom toolbar — push tab bar up */
+html.is-x-browser .mobile-tab-bar {
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), 20px);
+  height: 90px;
+  min-height: 90px;
+}
+
 @media (max-width: 768px) {
   .build-slots .qb-avatar {
     width: 46px !important;
