@@ -9,12 +9,28 @@ export function valToGrade(val) {
   return GRADES[Math.max(0, Math.min(11, Math.round(val)))] ?? 'F'
 }
 
+// Mirrors the win probability coefficients — accuracy/processing/vision matter most
+const ATTR_WEIGHT = {
+  'accuracy':        0.17,
+  'processing':      0.16,
+  'arm':             0.15,
+  'legs':            0.15,
+  'playmaking':      0.10,
+  'vision':          0.09,
+  'pocket-presence': 0.07,
+  'size':            0.07,
+  'leadership':      0.04,
+}
+
 export function calcOVR(build, types = TYPES) {
   const filled = types.filter(t => build[t])
   if (!filled.length) return null
+
+  // Weighted average — normalize to filled slots only so partial builds work
+  const totalW = filled.reduce((s, t) => s + (ATTR_WEIGHT[t] ?? 0.05), 0)
+  const avg    = filled.reduce((s, t) => s + build[t].val * (ATTR_WEIGHT[t] ?? 0.05) / totalW, 0)
   const vals   = filled.map(t => build[t].val)
-  const avg    = vals.reduce((a, b) => a + b, 0) / filled.length
-  const base = 58 + 2.2 * avg + 0.24 * avg * avg
+  const base   = 58 + 2.2 * avg + 0.24 * avg * avg
 
   let bonus = 0
   if (filled.length === types.length) {
