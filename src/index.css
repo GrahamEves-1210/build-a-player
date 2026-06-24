@@ -1073,6 +1073,24 @@ a:focus-visible {
 
 .chip-qb { display: none; }
 
+.grade-toggle-btn {
+  display: block;
+  margin: -1px auto -8px;
+  padding: 4px 11px;
+  font-size: 10px;
+  font-family: inherit;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: #5bb8f5;
+  background: transparent;
+  border: 1px solid rgba(91,184,245,0.4);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+  white-space: nowrap;
+}
+.grade-toggle-btn:hover { color: #8dd0ff; border-color: rgba(91,184,245,0.7); background: rgba(91,184,245,0.06); }
+
 .chip-val {
   width: 38px;
   height: 38px;

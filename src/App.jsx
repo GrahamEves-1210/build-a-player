@@ -25,8 +25,10 @@ try {
   if (_enc) _sharedData = decodeBuild(_enc)
 } catch {}
 
+const _isPrivacy = window.location.pathname === '/privacy'
+
 export default function App() {
-  const [page, setPage]               = useState(_sharedData ? 'shared' : 'splash')
+  const [page, setPage]               = useState(_sharedData ? 'shared' : _isPrivacy ? 'privacy' : 'splash')
   const [sharedBuild]                 = useState(_sharedData?.build ?? null)
   const [sharedTypes]                 = useState(_sharedData?.types ?? null)
   const [gameMode, setGameMode]         = useState(null)

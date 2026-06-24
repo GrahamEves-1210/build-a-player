@@ -168,7 +168,7 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, on
 }
 
 // ─── Chip ────────────────────────────────────────────────────────────────────
-function Chip({ type, meta, val, selectedQB, draggingType, onChipTap, onDragStart, onDragEnd, setDraggingType }) {
+function Chip({ type, meta, val, selectedQB, draggingType, onChipTap, onDragStart, onDragEnd, setDraggingType, hideGrades }) {
   const photo = HEADSHOTS[selectedQB.name] ? `/headshots/${HEADSHOTS[selectedQB.name]}.jpg` : null
   const chipData = {
     type, val,
@@ -200,7 +200,7 @@ function Chip({ type, meta, val, selectedQB, draggingType, onChipTap, onDragStar
         <span className="chip-name">{meta.label}</span>
         <span className="chip-qb">{selectedQB.name}</span>
       </div>
-      <span className="chip-val">{valToGrade(val)}</span>
+      <span className="chip-val" style={hideGrades ? { visibility: 'hidden' } : undefined}>{valToGrade(val)}</span>
       <span className="chip-hint">drag</span>
     </div>
   )
@@ -215,6 +215,13 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
   const [excludedQB,   setExcludedQB]   = useState(null)
   const [draggingType, setDraggingType] = useState(null)
   const [spinCount, setSpinCount]       = useState(0)
+  const [hideGrades,   setHideGrades]   = useState(() => localStorage.getItem('bap-hide-grades') === 'true')
+
+  const toggleGrades = () => setHideGrades(prev => {
+    const next = !prev
+    localStorage.setItem('bap-hide-grades', next)
+    return next
+  })
   const usedTeamsRef = useRef([])
   const pauseRef = useRef(null)
 
@@ -312,6 +319,9 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
     <aside className="spin-panel">
       {isSpinning && <div className="spin-blocker" />}
       <div className="spin-panel-body">
+        <button className="grade-toggle-btn" onClick={toggleGrades}>
+          {hideGrades ? 'Hiding Grades' : 'Showing Grades'}
+        </button>
         <div className="reels-wrap">
           <div className="reel-tri reel-tri-l" />
           <div className="reels-row">
@@ -348,13 +358,15 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
         {(() => {
           const canRespin = isDone && !qbRespinUsed && !complete
           return (
-            <button
-              className={`spin-btn${isDone && !canRespin ? ' spin-btn-wait' : ''}`}
-              onClick={canRespin ? handleQBRespin : handleSpin}
-              disabled={isSpinning || complete || (isDone && !canRespin)}
-            >
-              {canRespin ? <>QB RESPIN? <span className="spin-btn-badge">1</span></> : 'SPIN'}
-            </button>
+            <>
+              <button
+                className={`spin-btn${isDone && !canRespin ? ' spin-btn-wait' : ''}`}
+                onClick={canRespin ? handleQBRespin : handleSpin}
+                disabled={isSpinning || complete || (isDone && !canRespin)}
+              >
+                {canRespin ? <>QB RESPIN? <span className="spin-btn-badge">1</span></> : 'SPIN'}
+              </button>
+            </>
           )
         })()}
 
@@ -381,7 +393,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
                   ? types.filter(t => !build[t]).map(t => {
                       const meta = ATTR[t]
                       const val  = selectedQB.attrs[t]
-                      return <Chip key={t} type={t} meta={meta} val={val} selectedQB={selectedQB} draggingType={draggingType} onChipTap={onChipTap} onDragStart={onDragStart} onDragEnd={onDragEnd} setDraggingType={setDraggingType} />
+                      return <Chip key={t} type={t} meta={meta} val={val} selectedQB={selectedQB} draggingType={draggingType} onChipTap={onChipTap} onDragStart={onDragStart} onDragEnd={onDragEnd} setDraggingType={setDraggingType} hideGrades={hideGrades} />
                     })
                   : visibleCategories.map(cat => {
                       const available = cat.types.filter(type => types.includes(type) && !build[type])
@@ -396,7 +408,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
                           {available.map(type => {
                             const meta = ATTR[type]
                             const val  = selectedQB.attrs[type]
-                            return <Chip key={type} type={type} meta={meta} val={val} selectedQB={selectedQB} draggingType={draggingType} onChipTap={onChipTap} onDragStart={onDragStart} onDragEnd={onDragEnd} setDraggingType={setDraggingType} />
+                            return <Chip key={type} type={type} meta={meta} val={val} selectedQB={selectedQB} draggingType={draggingType} onChipTap={onChipTap} onDragStart={onDragStart} onDragEnd={onDragEnd} setDraggingType={setDraggingType} hideGrades={hideGrades} />
                           })}
                         </div>
                       )

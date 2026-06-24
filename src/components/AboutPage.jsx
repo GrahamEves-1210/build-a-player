@@ -31,7 +31,7 @@ export default function AboutPage({ onBack, onPrivacy }) {
         </button>
 
         <div className="about-footer-links">
-          <button className="about-text-link" onClick={onPrivacy}>Privacy Policy</button>
+          <a className="about-text-link" href="/privacy">Privacy Policy</a>
         </div>
 
       </div>

@@ -72,7 +72,7 @@ export const QBS = [
     attrs: { 'arm': 4, 'legs': 2, 'size': 3, 'processing': 2, 'leadership': 3, 'vision': 2, 'playmaking': 2, 'accuracy': 2, 'pocket-presence': 2 } },
   // CHI
   { name: 'Caleb Williams',     short: 'Williams',    team: 'CHI', teamName: 'Chicago Bears',         color: '#C83803', color2: '#0B162A', skin: '#8a5c30', starter: true,  captain: true,  number: 18,
-    attrs: { 'arm': 11, 'legs': 9, 'size': 6, 'processing': 6, 'leadership': 5, 'vision': 8, 'playmaking': 10, 'accuracy': 8, 'pocket-presence': 5 } },
+    attrs: { 'arm': 11, 'legs': 9, 'size': 6, 'processing': 6, 'leadership': 5, 'vision': 8, 'playmaking': 10, 'accuracy': 7, 'pocket-presence': 5 } },
   { name: 'Tyson Bagent',       short: 'Bagent',      team: 'CHI', teamName: 'Chicago Bears',         color: '#C83803', color2: '#0B162A', skin: '#f0c4a0', starter: false, number: 17,
     attrs: { 'arm': 4, 'legs': 4, 'size': 4, 'processing': 3, 'leadership': 3, 'vision': 3, 'playmaking': 4, 'accuracy': 3, 'pocket-presence': 3 } },
   { name: 'Case Keenum',        short: 'Keenum',      team: 'CHI', teamName: 'Chicago Bears',         color: '#C83803', color2: '#0B162A', skin: '#f0c4a0', starter: false, number: 8,
