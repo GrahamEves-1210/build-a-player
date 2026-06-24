@@ -122,13 +122,13 @@ export default function LeaderboardPage({ onBack, currentUser }) {
           [...classicOnly]
             .filter(r => (r.ovr ?? 0) >= 80)
             .sort((a, b) => (b.ovr - a.ovr) || (b.wins - a.wins))
-            .slice(0, 10)
+            .slice(0, 20)
         )
         setWorstBuilds(
           [...classicOnly]
             .filter(r => (r.ovr ?? 0) <= 80)
             .sort((a, b) => (a.ovr - b.ovr) || (a.wins - b.wins))
-            .slice(0, 10)
+            .slice(0, 20)
         )
 
         setLoading(false)
@@ -140,10 +140,10 @@ export default function LeaderboardPage({ onBack, currentUser }) {
 
   const activeMetric = METRICS.find(m => m.key === metric)
   const sorted = [...rows].sort((a, b) => b[metric] - a[metric])
-  const profileSlots = Array.from({ length: 10 }, (_, i) => sorted[i] ?? null)
+  const profileSlots = Array.from({ length: 20 }, (_, i) => sorted[i] ?? null)
 
   const buildsList = buildsTab === 'best' ? bestBuilds : worstBuilds
-  const buildSlots = Array.from({ length: 10 }, (_, i) => buildsList[i] ?? null)
+  const buildSlots = Array.from({ length: 20 }, (_, i) => buildsList[i] ?? null)
 
   return (
     <div className="lb-page">
