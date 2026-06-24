@@ -301,8 +301,8 @@ export function runSimulation(build, types = TYPES, team = null) {
       + (ovr < 67 ? (67 - ovr) * 0.018 : 0)
     : 0
 
-  const winP = Math.min(0.80, Math.max(0.15,
-    0.22
+  const winP = Math.min(0.82, Math.max(0.15,
+    0.24
     + acN * 0.11   // most important — accurate QBs win
     + prN * 0.10   // smart QBs protect the ball and win close games
     + viN * 0.09   // vision drives efficiency
@@ -312,8 +312,8 @@ export function runSimulation(build, types = TYPES, team = null) {
     + legN * 0.04  // mobile QBs add dimension
     + ldN * 0.03   // leadership: small team W-L effect, NOT stats
     + szN * 0.02   // durability — stays healthy
-    + teamOffN * 0.040  // supporting cast / scheme — bad teams penalised more
-    + teamDefN * 0.050  // defense wins games independently
+    + teamOffN * 0.050  // supporting cast / scheme — bad teams penalised more
+    + teamDefN * 0.060  // defense wins games independently
     - ovrPenalty
   ))
 
