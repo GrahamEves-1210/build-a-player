@@ -221,13 +221,14 @@ function buildScoreTimeline(myFinal, oppFinal) {
   const toPlays = total => {
     if (total <= 0) return []
     const plays = []; let rem = total
-    while (rem >= 7) {
-      if (Math.random() < 0.62 || rem < 10) { plays.push(7); rem -= 7 }
-      else { plays.push(3); rem -= 3 }
+    while (rem >= 3) {
+      const r = Math.random()
+      if (rem >= 6 && r < 0.72) { plays.push(7); rem -= 7 }       // TD + PAT
+      else if (rem >= 6 && r < 0.76) { plays.push(8); rem -= 8 }  // TD + 2pt
+      else if (rem >= 6 && r < 0.80) { plays.push(6); rem -= 6 }  // TD no PAT
+      else { plays.push(3); rem -= 3 }                              // FG
+      if (rem < 0) rem = 0
     }
-    while (rem >= 3) { plays.push(3); rem -= 3 }
-    if      (rem === 2)                     plays.push(2)
-    else if (rem === 1 && plays.length > 0) plays[0]++
     return shuffle(plays)
   }
   const myPlays  = toPlays(myFinal)
@@ -308,7 +309,7 @@ function PlayoffGame({ round, opponent, mySc, oppSc, won, teamColor, teamAbbr, t
   const q        = Math.min(3, Math.floor(gameSec / 900))
   const qSec     = 900 - (gameSec % 900)
   const progress = gameSec / (GAME_SECS - 1)
-  const evtLabel = pts => pts >= 6 ? '▲ TD' : pts === 3 ? '▲ FG' : '▲ Safety'
+  const evtLabel = pts => pts === 8 ? '▲ TD + 2pt' : pts >= 6 ? '▲ TD' : '▲ FG'
   const oppTeam  = TEAM_BY_NAME[opponent]
   const oppLogo  = oppTeam?.logo
 

@@ -249,8 +249,8 @@ export function runSimulation(build, types = TYPES, team = null) {
   // Leadership has a small but real team effect on W-L (locker room rallies, etc.)
   // Size is a durability proxy — slightly reduces blowout loss risk.
   // Leadership has NO impact on individual stats — only team W-L and playoffs.
-  const winP = Math.min(0.83, Math.max(0.17,
-    0.26
+  const winP = Math.min(0.80, Math.max(0.15,
+    0.22
     + acN * 0.11   // most important — accurate QBs win
     + prN * 0.10   // smart QBs protect the ball and win close games
     + viN * 0.09   // vision drives efficiency
@@ -260,8 +260,8 @@ export function runSimulation(build, types = TYPES, team = null) {
     + legN * 0.04  // mobile QBs add dimension
     + ldN * 0.03   // leadership: small team W-L effect, NOT stats
     + szN * 0.02   // durability — stays healthy
-    + teamOffN * 0.025  // supporting cast / scheme
-    + teamDefN * 0.035  // defense wins games independently
+    + teamOffN * 0.040  // supporting cast / scheme — bad teams penalised more
+    + teamDefN * 0.050  // defense wins games independently
   ))
 
   // Playoff win probability is calculated per-game inside the loop.
@@ -361,7 +361,7 @@ export function runSimulation(build, types = TYPES, team = null) {
       const oppTeam    = TEAM_BY_NAME[opponent]
       const oppTeamAvg = ((oppTeam?.off ?? 5.5) + (oppTeam?.def ?? 5.5)) / 2
       const teamN      = (playerTeamAvg - oppTeamAvg) / 9
-      const pgWinP     = Math.min(0.94, Math.max(0.15, 0.36 + ovrN * 0.58 + teamN * 0.26))
+      const pgWinP     = Math.min(0.90, Math.max(0.12, 0.30 + ovrN * 0.58 + teamN * 0.38))
       const won        = Math.random() < pgWinP
 
       // Playoff game stats use similar logic but with higher stakes variance
