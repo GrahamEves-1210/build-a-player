@@ -6,6 +6,9 @@ import ReportCard from './components/ReportCard'
 import SimPage from './components/SimPage'
 import TeamPickerModal from './components/TeamPickerModal'
 import AboutPage from './components/AboutPage'
+import PrivacyPage from './components/PrivacyPage'
+import SharedBuildPage from './components/SharedBuildPage'
+import { decodeBuild } from './utils/shareUrl'
 import SplashScreen from './components/SplashScreen'
 import AuthModal from './components/AuthModal'
 import ProfilePage from './components/ProfilePage'
@@ -15,8 +18,17 @@ import HEADSHOTS from './data/headshots.json'
 import { runSimulation, getArchetype } from './utils/simulation'
 import { supabase } from './lib/supabase'
 
+// Detect shared build at module load time — before any React rendering
+let _sharedData = null
+try {
+  const _enc = new URLSearchParams(window.location.search).get('b')
+  if (_enc) _sharedData = decodeBuild(_enc)
+} catch {}
+
 export default function App() {
-  const [page, setPage]                 = useState('splash')
+  const [page, setPage]               = useState(_sharedData ? 'shared' : 'splash')
+  const [sharedBuild]                 = useState(_sharedData?.build ?? null)
+  const [sharedTypes]                 = useState(_sharedData?.types ?? null)
   const [gameMode, setGameMode]         = useState(null)
   const [build, setBuild]               = useState({})
   const [activeDrag, setActiveDrag]     = useState(null)
@@ -183,11 +195,36 @@ export default function App() {
     )
   }
 
+  if (page === 'shared' && sharedBuild) {
+    return (
+      <>
+        <Navbar {...navbarProps} />
+        <SharedBuildPage
+          build={sharedBuild}
+          types={sharedTypes}
+          onPlay={() => {
+            window.history.replaceState({}, '', window.location.pathname)
+            setPage('splash')
+          }}
+        />
+      </>
+    )
+  }
+
   if (page === 'about') {
     return (
       <>
         <Navbar {...navbarProps} />
-        <AboutPage onBack={() => { setPage('game'); window.scrollTo({ top: 0, behavior: 'instant' }) }} />
+        <AboutPage onBack={() => { setPage('game'); window.scrollTo({ top: 0, behavior: 'instant' }) }} onPrivacy={() => setPage('privacy')} />
+      </>
+    )
+  }
+
+  if (page === 'privacy') {
+    return (
+      <>
+        <Navbar {...navbarProps} />
+        <PrivacyPage onBack={() => setPage('about')} />
       </>
     )
   }
@@ -306,6 +343,7 @@ export default function App() {
       {showTeamPicker && (
         <TeamPickerModal onSelect={handleTeamPicked} />
       )}
+
     </>
   )
 }

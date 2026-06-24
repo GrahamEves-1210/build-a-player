@@ -242,7 +242,12 @@ export function runSimulation(build, types = TYPES, team = null) {
   const teamDefN = team ? (team.def - 5) / 5 : 0
 
   // ── Attribute extraction (0–11 scale → 0–1 normalized) ───────────────────
-  const raw = (k) => build[k]?.val ?? 5
+  // In lite mode, missing attributes inherit the average of filled slots so the
+  // sim performance matches the displayed OVR (not a hardcoded middling default).
+  const filledAvg = types.length > 0
+    ? types.reduce((s, t) => s + (build[t]?.val ?? 5), 0) / types.length
+    : 5
+  const raw = (k) => build[k]?.val ?? filledAvg
   const n   = (k) => raw(k) / 11
 
   const armN  = n('arm')             // Arm strength — distance, velocity
@@ -288,6 +293,14 @@ export function runSimulation(build, types = TYPES, team = null) {
   // Leadership has a small but real team effect on W-L (locker room rallies, etc.)
   // Size is a durability proxy — slightly reduces blowout loss risk.
   // Leadership has NO impact on individual stats — only team W-L and playoffs.
+
+  // Sub-75 OVR penalty: low-overall QBs drag the whole team down
+  const ovrPenalty = ovr !== null && ovr < 75
+    ? (75 - ovr) * 0.010
+      + (ovr < 70 ? (70 - ovr) * 0.012 : 0)
+      + (ovr < 67 ? (67 - ovr) * 0.018 : 0)
+    : 0
+
   const winP = Math.min(0.80, Math.max(0.15,
     0.22
     + acN * 0.11   // most important — accurate QBs win
@@ -301,6 +314,7 @@ export function runSimulation(build, types = TYPES, team = null) {
     + szN * 0.02   // durability — stays healthy
     + teamOffN * 0.040  // supporting cast / scheme — bad teams penalised more
     + teamDefN * 0.050  // defense wins games independently
+    - ovrPenalty
   ))
 
   // Playoff win probability is calculated per-game inside the loop.
@@ -372,7 +386,7 @@ export function runSimulation(build, types = TYPES, team = null) {
   })[0]
 
   // ── Playoffs ─────────────────────────────────────────────────────────────
-  const playoffs      = wins >= 9
+  const playoffs      = wins >= 10
   const playoffRounds = []
   let sbResult = null
 
@@ -403,8 +417,11 @@ export function runSimulation(build, types = TYPES, team = null) {
       const opponent   = pick(opponents)
       const oppTeam    = TEAM_BY_NAME[opponent]
       const oppTeamAvg = ((oppTeam?.off ?? 5.5) + (oppTeam?.def ?? 5.5)) / 2
-      const teamN      = (playerTeamAvg - oppTeamAvg) / 9
-      const pgWinP     = Math.min(0.90, Math.max(0.12, 0.30 + ovrN * 0.58 + teamN * 0.38))
+      const teamN        = (playerTeamAvg - oppTeamAvg) / 9
+      const pgOvrPenalty = ovr !== null && ovr < 85
+        ? (85 - ovr) * 0.011
+        : 0
+      const pgWinP     = Math.min(0.90, Math.max(0.10, 0.30 + ovrN * 0.58 + teamN * 0.38 - pgOvrPenalty))
       const won        = Math.random() < pgWinP
 
       // Playoff game stats use similar logic but with higher stakes variance

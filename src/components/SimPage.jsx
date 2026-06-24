@@ -218,18 +218,28 @@ function buildScoreTimeline(myFinal, oppFinal) {
     }
     return arr
   }
+
+  // Returns true if n can be exactly expressed as a sum of {3,6,7,8}
+  // Unreachable values: 1, 2, 4, 5 — everything else >= 0 is reachable
+  const reachable = n => n === 0 || (n >= 3 && n !== 4 && n !== 5)
+
   const toPlays = total => {
     if (total <= 0) return []
-    const plays = []; let rem = total
-    const ok = after => after === 0 || after >= 3  // remainder must be cleanly decomposable
-    while (rem >= 3) {
-      const r = Math.random()
-      if (rem >= 7 && r < 0.72)                          { plays.push(7); rem -= 7 }
-      else if (rem >= 8 && r < 0.76 && ok(rem - 8))     { plays.push(8); rem -= 8 }
-      else if (rem >= 6 && r < 0.80 && ok(rem - 6))     { plays.push(6); rem -= 6 }
-      else                                               { plays.push(3); rem -= 3 }
+    // Bump truly unreachable totals (1,2,4,5) up to nearest reachable value
+    let target = total
+    while (!reachable(target)) target++
+
+    const plays = []
+    let rem = target
+    while (rem > 0) {
+      // Shuffle scoring options so distribution is varied
+      const opts = shuffle([3, 6, 7, 8])
+      const pick = opts.find(p => p <= rem && reachable(rem - p))
+      if (!pick) break // should never happen given reachable() logic
+      plays.push(pick)
+      rem -= pick
     }
-    return shuffle(plays)
+    return plays
   }
   const myPlays  = toPlays(myFinal)
   const oppPlays = toPlays(oppFinal)
@@ -260,6 +270,7 @@ function PlayoffGame({ round, opponent, mySc, oppSc, won, teamColor, teamAbbr, t
   const [oppScore, setOppScore] = useState(0)
   const [visEvt,   setVisEvt]   = useState(null)
   const [evtKey,   setEvtKey]   = useState(0)
+  const [noAnim,   setNoAnim]   = useState(false)
   const [events]                = useState(() => buildScoreTimeline(mySc, oppSc))
   const tickRef    = useRef(0)
   const evtIdxRef  = useRef(0)
@@ -293,7 +304,7 @@ function PlayoffGame({ round, opponent, mySc, oppSc, won, teamColor, teamAbbr, t
 
         if (tick >= TOTAL_TICK && !doneRef.current) {
           clearInterval(ivRef.current)
-          // Snap to final only if events didn't fully accumulate
+          setNoAnim(true)
           if (myScoreRef.current !== mySc)   setMyScore(mySc)
           if (oppScoreRef.current !== oppSc) setOppScore(oppSc)
           setGameSec(GAME_SECS - 1)
@@ -325,7 +336,7 @@ function PlayoffGame({ round, opponent, mySc, oppSc, won, teamColor, teamAbbr, t
           {teamLogo && <img src={teamLogo} alt="" className="plf-team-logo" />}
           <div className="plf-team-abbr" style={{ color: teamColor }}>{teamAbbr}</div>
           <div className="plf-score-num" style={{ color: teamColor }}>
-            <span key={myScore} className="plf-num-pop">{myScore}</span>
+            <span key={noAnim ? 'my-final' : myScore} className={noAnim ? '' : 'plf-num-pop'}>{myScore}</span>
           </div>
         </div>
 
@@ -343,7 +354,7 @@ function PlayoffGame({ round, opponent, mySc, oppSc, won, teamColor, teamAbbr, t
           {oppLogo && <img src={oppLogo} alt="" className="plf-team-logo plf-logo-opp" />}
           <div className="plf-team-abbr plf-abbr-opp">{oppTeam?.short ?? opponent.split(' ').slice(-1)[0]}</div>
           <div className="plf-score-num plf-score-opp-num">
-            <span key={oppScore} className="plf-num-pop">{oppScore}</span>
+            <span key={noAnim ? 'opp-final' : oppScore} className={noAnim ? '' : 'plf-num-pop'}>{oppScore}</span>
           </div>
         </div>
       </div>

@@ -1,4 +1,4 @@
-export default function AboutPage({ onBack }) {
+export default function AboutPage({ onBack, onPrivacy }) {
   return (
     <div className="about-page">
       <div className="about-inner">
@@ -29,6 +29,10 @@ export default function AboutPage({ onBack }) {
         <button className="about-back-btn" onClick={onBack}>
           ← Back to Game
         </button>
+
+        <div className="about-footer-links">
+          <button className="about-text-link" onClick={onPrivacy}>Privacy Policy</button>
+        </div>
 
       </div>
     </div>

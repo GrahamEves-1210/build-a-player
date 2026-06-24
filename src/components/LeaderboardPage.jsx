@@ -127,7 +127,7 @@ export default function LeaderboardPage({ onBack, currentUser }) {
         setWorstBuilds(
           [...classicOnly]
             .filter(r => (r.ovr ?? 0) <= 80)
-            .sort((a, b) => (a.ovr - b.ovr) || (b.wins - a.wins))
+            .sort((a, b) => (a.ovr - b.ovr) || (a.wins - b.wins))
             .slice(0, 10)
         )
 

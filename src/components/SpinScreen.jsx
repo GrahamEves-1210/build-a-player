@@ -11,7 +11,7 @@ function fmtHeight(inches) {
 const ITEM_H  = 44
 const CENTER  = 2
 const IDLE_MS = 1200
-const FAST_MS = 32   // ms per item at peak speed — defines MAX_VEL
+const FAST_MS = 36   // ms per item at peak speed — defines MAX_VEL
 
 // ─── Slot Reel ───────────────────────────────────────────────────────────────
 function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, onStop, blurred, fast, durationMs = 1400, jitterMs = 500 }) {
@@ -74,7 +74,7 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, on
         ? 900 + Math.random() * 200
         : durationMs + Math.random() * jitterMs
       const startTime = performance.now()
-      const speedMult = 0.88 + Math.random() * 0.24  // subtle ±12% speed variance
+      const speedMult = 0.93 + Math.random() * 0.10  // subtle ±5% speed variance
       const MAX_VEL   = (ITEM_H / FAST_MS) * speedMult
       let lastFrame   = startTime
 
@@ -324,7 +324,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
               getDisplay={t => t.short}
               getSub={t => t.name.split(' ').slice(-1)[0]}
               onStop={handleTeamStop}
-              durationMs={1000}
+              durationMs={800}
               jitterMs={1000}
             />
             <SlotReel

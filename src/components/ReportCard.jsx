@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { ATTR, TYPES, QB_PHYSICALS } from '../data/qbs'
 import { calcOVR, getArchetype, calcBalance, valToGrade } from '../utils/simulation'
+import { buildShareUrl } from '../utils/shareUrl'
 import QBAvatar from './QBAvatar'
 
 function fmtHeight(inches) { return `${Math.floor(inches / 12)}'${inches % 12}"` }
@@ -32,22 +34,11 @@ function OvrRing({ ovr }) {
       viewBox={`0 0 ${RING_SIZE} ${RING_SIZE}`}
       aria-hidden="true"
     >
-      {/* Track */}
+      <circle cx={RING_CX} cy={RING_CY} r={RING_R} fill="none" stroke="rgba(149,213,178,0.18)" strokeWidth="6" />
       <circle
         cx={RING_CX} cy={RING_CY} r={RING_R}
-        fill="none"
-        stroke="rgba(149,213,178,0.18)"
-        strokeWidth="6"
-      />
-      {/* Progress */}
-      <circle
-        cx={RING_CX} cy={RING_CY} r={RING_R}
-        fill="none"
-        stroke={color}
-        strokeWidth="6"
-        strokeLinecap="round"
-        strokeDasharray={RING_CIRC}
-        strokeDashoffset={offset}
+        fill="none" stroke={color} strokeWidth="6" strokeLinecap="round"
+        strokeDasharray={RING_CIRC} strokeDashoffset={offset}
         style={{
           transform: `rotate(-90deg)`,
           transformOrigin: `${RING_CX}px ${RING_CY}px`,
@@ -89,6 +80,126 @@ function BuildSlot({ type, data }) {
   )
 }
 
+// ── Share Modal ───────────────────────────────────────────────────────────────
+
+export function ShareModal({ ovr, arch, build, types, onClose }) {
+  const [copied, setCopied] = useState(false)
+
+  const shareText = `I made a ${ovr} overall ${arch} quarterback, think you can do better?`
+  const shareUrl  = buildShareUrl(build, types)
+
+  const tweetUrl  = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`
+  const fbUrl     = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}&quote=${encodeURIComponent(shareText)}`
+  const redditUrl = `https://www.reddit.com/submit?url=${encodeURIComponent(shareUrl)}&title=${encodeURIComponent(shareText)}`
+
+  const handleCopy = () => {
+    const text = shareUrl
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).catch(() => legacyCopy(text))
+    } else {
+      legacyCopy(text)
+    }
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  function legacyCopy(text) {
+    const el = document.createElement('textarea')
+    el.value = text
+    el.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0'
+    document.body.appendChild(el)
+    el.focus()
+    el.select()
+    try { document.execCommand('copy') } catch {}
+    document.body.removeChild(el)
+  }
+
+  // Close on Escape
+  useEffect(() => {
+    const onKey = e => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  return (
+    <div className="share-overlay" onClick={onClose}>
+      <div className="share-modal" onClick={e => e.stopPropagation()}>
+
+        <button className="share-modal-close" onClick={onClose} aria-label="Close">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+
+        <div className="share-modal-title">Share Your Build</div>
+
+        <div className="share-preview-text">"{shareText}"</div>
+
+        {/* OG link card */}
+        <div className="share-og-card">
+          <div className="share-og-img-wrap">
+            <img src="/logo.png" alt="" className="share-og-img" />
+          </div>
+          <div className="share-og-body">
+            <div className="share-og-domain">build-a-player.com</div>
+            <div className="share-og-title">{ovr} OVR · {arch}</div>
+            <div className="share-og-desc">{shareText}</div>
+          </div>
+        </div>
+
+        {/* 2×2 share grid */}
+        <div className="share-icons-grid">
+          <a className="share-icon-btn" href={tweetUrl} target="_blank" rel="noopener noreferrer">
+            <div className="share-icon-circle share-icon-x">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.748l7.73-8.835L1.254 2.25H8.08l4.213 5.567 5.951-5.567zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+              </svg>
+            </div>
+            <span className="share-icon-label">X</span>
+          </a>
+
+          <a className="share-icon-btn" href={fbUrl} target="_blank" rel="noopener noreferrer">
+            <div className="share-icon-circle share-icon-fb">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+              </svg>
+            </div>
+            <span className="share-icon-label">Facebook</span>
+          </a>
+
+          <a className="share-icon-btn" href={redditUrl} target="_blank" rel="noopener noreferrer">
+            <div className="share-icon-circle share-icon-reddit">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 0 1-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.111 3.111 0 0 1 .042.52c0 2.694-3.13 4.87-7.004 4.87-3.874 0-7.004-2.176-7.004-4.87 0-.183.015-.366.043-.534A1.748 1.748 0 0 1 4.028 12c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.487l.885-4.182a.342.342 0 0 1 .14-.197.35.35 0 0 1 .238-.042l2.906.617a1.214 1.214 0 0 1 1.108-.701zM9.25 12C8.561 12 8 12.562 8 13.25c0 .687.561 1.248 1.25 1.248.687 0 1.248-.561 1.248-1.249 0-.688-.561-1.249-1.249-1.249zm5.5 0c-.687 0-1.248.561-1.248 1.25 0 .687.561 1.248 1.249 1.248.688 0 1.249-.561 1.249-1.249 0-.687-.562-1.249-1.25-1.249zm-5.466 3.99a.327.327 0 0 0-.231.094.33.33 0 0 0 0 .463c.842.842 2.484.913 2.961.913.477 0 2.105-.056 2.961-.913a.361.361 0 0 0 .029-.463.33.33 0 0 0-.464 0c-.547.533-1.684.73-2.512.73-.828 0-1.979-.196-2.512-.73a.326.326 0 0 0-.232-.095z"/>
+              </svg>
+            </div>
+            <span className="share-icon-label">Reddit</span>
+          </a>
+
+          <button className="share-icon-btn" onClick={handleCopy}>
+            <div className={`share-icon-circle share-icon-copy${copied ? ' share-icon-copied' : ''}`}>
+              {copied ? (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+              ) : (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                  <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                </svg>
+              )}
+            </div>
+            <span className="share-icon-label">{copied ? 'Copied!' : 'Copy Link'}</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+  )
+}
+
+// ── ReportCard ────────────────────────────────────────────────────────────────
+
 export default function ReportCard({ build, onSimulate, onReset, types = TYPES, hasResult = false }) {
   const filled = types.filter(t => build[t])
   const ovr = calcOVR(build, types)
@@ -96,6 +207,7 @@ export default function ReportCard({ build, onSimulate, onReset, types = TYPES, 
   const balance = calcBalance(build, types)
   const complete = filled.length === types.length
   const [showChevron, setShowChevron] = useState(true)
+  const [showShare, setShowShare]     = useState(false)
   const panelRef = useRef(null)
 
   useEffect(() => {
@@ -143,7 +255,17 @@ export default function ReportCard({ build, onSimulate, onReset, types = TYPES, 
             </div>
           )}
         </div>
-        <div className={`ovr-arch${!filled.length ? ' ovr-arch-idle' : ''}`}>{arch}</div>
+
+        <div className="ovr-arch-row">
+          <div className={`ovr-arch${!filled.length ? ' ovr-arch-idle' : ''}`}>{arch}</div>
+        </div>
+
+        {complete && (
+          <button className="share-build-btn" onClick={() => setShowShare(true)}>
+            Share Build
+          </button>
+        )}
+
         <button
           className={`sim-btn${complete ? '' : ' sim-btn-locked'}`}
           onClick={complete ? onSimulate : undefined}
@@ -162,6 +284,11 @@ export default function ReportCard({ build, onSimulate, onReset, types = TYPES, 
       <div className="panel-footer">
         <button className="reset-btn" onClick={onReset}>Reset Build</button>
       </div>
+
+      {showShare && createPortal(
+        <ShareModal ovr={ovr} arch={arch} build={build} types={types} onClose={() => setShowShare(false)} />,
+        document.body
+      )}
     </aside>
   )
 }
