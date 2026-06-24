@@ -221,13 +221,13 @@ function buildScoreTimeline(myFinal, oppFinal) {
   const toPlays = total => {
     if (total <= 0) return []
     const plays = []; let rem = total
+    const ok = after => after === 0 || after >= 3  // remainder must be cleanly decomposable
     while (rem >= 3) {
       const r = Math.random()
-      if (rem >= 6 && r < 0.72) { plays.push(7); rem -= 7 }       // TD + PAT
-      else if (rem >= 6 && r < 0.76) { plays.push(8); rem -= 8 }  // TD + 2pt
-      else if (rem >= 6 && r < 0.80) { plays.push(6); rem -= 6 }  // TD no PAT
-      else { plays.push(3); rem -= 3 }                              // FG
-      if (rem < 0) rem = 0
+      if (rem >= 7 && r < 0.72)                          { plays.push(7); rem -= 7 }
+      else if (rem >= 8 && r < 0.76 && ok(rem - 8))     { plays.push(8); rem -= 8 }
+      else if (rem >= 6 && r < 0.80 && ok(rem - 6))     { plays.push(6); rem -= 6 }
+      else                                               { plays.push(3); rem -= 3 }
     }
     return shuffle(plays)
   }
