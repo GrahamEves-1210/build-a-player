@@ -162,6 +162,11 @@ a:focus-visible {
   gap: 4px;
   align-items: center;
 }
+@media (display-mode: standalone) {
+  .nav-pills-soon {
+    top: calc(50% + env(safe-area-inset-top, 0px) / 2);
+  }
+}
 
 .nav-right {
   display: flex;

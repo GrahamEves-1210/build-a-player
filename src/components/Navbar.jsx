@@ -106,6 +106,15 @@ function IconCoffee() {
   )
 }
 
+function IconDownload() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M6.5 1v7M4 6l2.5 2.5L9 6"/>
+      <path d="M2 10h9"/>
+    </svg>
+  )
+}
+
 function IconArrowRight() {
   return (
     <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -128,10 +137,14 @@ function IconChevron({ up }) {
 }
 
 export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, onLeaderboard, user }) {
-  const [open,    setOpen]    = useState(false)
-  const [htpOpen, setHtpOpen] = useState(false)
+  const [open,         setOpen]        = useState(false)
+  const [htpOpen,      setHtpOpen]     = useState(false)
+  const [installOpen,  setInstallOpen] = useState(false)
   const ref = useRef(null)
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768
+  const isStandalone = typeof window !== 'undefined' && window.matchMedia('(display-mode: standalone)').matches
+  const isIOS = typeof navigator !== 'undefined' && /iPhone|iPad|iPod/i.test(navigator.userAgent)
+  const isAndroid = typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent)
   const STEPS = isMobile ? STEPS_MOBILE : STEPS_DESKTOP
 
   useEffect(() => {
@@ -201,6 +214,84 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
                   </div>
                 ))}
               </div>
+            )}
+
+            {/* Install App — hidden if already standalone */}
+            {!isStandalone && (
+              <>
+                <button
+                  className="wm-row wm-row-accordion"
+                  onClick={() => setInstallOpen(o => !o)}
+                >
+                  <span className="wm-icon"><IconDownload /></span>
+                  <span className="wm-label">Install App</span>
+                  <span className="wm-chevron"><IconChevron up={installOpen} /></span>
+                </button>
+
+                {installOpen && (
+                  <div className="wm-htp-body">
+                    {isIOS ? (
+                      <>
+                        <div className="wm-htp-step">
+                          <span className="wm-htp-num">1</span>
+                          <div>
+                            <div className="wm-htp-title">Open in Safari</div>
+                            <div className="wm-htp-desc">Make sure you're using Safari, not Chrome or another browser.</div>
+                          </div>
+                        </div>
+                        <div className="wm-htp-step">
+                          <span className="wm-htp-num">2</span>
+                          <div>
+                            <div className="wm-htp-title">Tap Share</div>
+                            <div className="wm-htp-desc">Tap the Share button at the bottom of the screen (box with an arrow).</div>
+                          </div>
+                        </div>
+                        <div className="wm-htp-step">
+                          <span className="wm-htp-num">3</span>
+                          <div>
+                            <div className="wm-htp-title">Add to Home Screen</div>
+                            <div className="wm-htp-desc">Scroll down and tap "Add to Home Screen", then tap Add.</div>
+                          </div>
+                        </div>
+                      </>
+                    ) : isAndroid ? (
+                      <>
+                        <div className="wm-htp-step">
+                          <span className="wm-htp-num">1</span>
+                          <div>
+                            <div className="wm-htp-title">Open Menu</div>
+                            <div className="wm-htp-desc">Tap the three-dot menu in the top right of Chrome.</div>
+                          </div>
+                        </div>
+                        <div className="wm-htp-step">
+                          <span className="wm-htp-num">2</span>
+                          <div>
+                            <div className="wm-htp-title">Install App</div>
+                            <div className="wm-htp-desc">Tap "Add to Home Screen" or "Install app" and confirm.</div>
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="wm-htp-step">
+                          <span className="wm-htp-num">1</span>
+                          <div>
+                            <div className="wm-htp-title">Look for the icon</div>
+                            <div className="wm-htp-desc">In Chrome, click the install icon on the right side of the address bar.</div>
+                          </div>
+                        </div>
+                        <div className="wm-htp-step">
+                          <span className="wm-htp-num">2</span>
+                          <div>
+                            <div className="wm-htp-title">Click Install</div>
+                            <div className="wm-htp-desc">Click "Install" in the prompt and the app will open in its own window.</div>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+              </>
             )}
 
             {/* About */}
