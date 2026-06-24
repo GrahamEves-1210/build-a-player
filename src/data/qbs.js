@@ -65,7 +65,7 @@ export const QBS = [
     attrs: { 'arm': 3, 'legs': 3, 'size': 3, 'processing': 3, 'leadership': 4, 'vision': 4, 'playmaking': 2, 'accuracy': 3, 'pocket-presence': 3 } },
   // CAR
   { name: 'Bryce Young',        short: 'Young',       team: 'CAR', teamName: 'Carolina Panthers',     color: '#0085CA', color2: '#000000', skin: '#5e3c22', starter: true,  captain: true,  number: 9,
-    attrs: { 'arm': 4, 'legs': 7, 'size': 0, 'processing': 6, 'leadership': 8, 'vision': 7, 'playmaking': 8, 'accuracy': 6, 'pocket-presence': 6 } },
+    attrs: { 'arm': 5, 'legs': 7, 'size': 0, 'processing': 6, 'leadership': 8, 'vision': 7, 'playmaking': 8, 'accuracy': 6, 'pocket-presence': 6 } },
   { name: 'Kenny Pickett',      short: 'Pickett',     team: 'CAR', teamName: 'Carolina Panthers',     color: '#0085CA', color2: '#000000', skin: '#f0c4a0', starter: false, number: 8,
     attrs: { 'arm': 4, 'legs': 5, 'size': 4, 'processing': 5, 'leadership': 5, 'vision': 5, 'playmaking': 5, 'accuracy': 6, 'pocket-presence': 4 } },
   { name: 'Will Grier',         short: 'Grier',       team: 'CAR', teamName: 'Carolina Panthers',     color: '#0085CA', color2: '#000000', skin: '#f2c8a4', starter: false, number: 7,

@@ -53,10 +53,11 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, on
     prevItemsRef.current = items
 
     if (itemsChanged) {
-      posRef.current = initOffset
+      const randomShift = Math.floor(Math.random() * items.length) * ITEM_H
+      posRef.current = initOffset + randomShift
       if (trackRef.current) {
         trackRef.current.style.transition = 'none'
-        trackRef.current.style.transform  = `translate3d(0,${-(initOffset - CENTER * ITEM_H)}px,0)`
+        trackRef.current.style.transform  = `translate3d(0,${-(posRef.current - CENTER * ITEM_H)}px,0)`
       }
       if (!spinning && !idle) return
     }
@@ -222,14 +223,16 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
   const clearAll = () => clearTimeout(pauseRef.current)
 
   useEffect(() => {
-    if (resetKey === 0) return
+    if (resetKey === 0) {
+      usedTeamsRef.current = []
+      return
+    }
     clearAll()
     setPhase('idle')
     setSelectedTeam(null)
     setSelectedQB(null)
     setExcludedQB(null)
     setDraggingType(null)
-    usedTeamsRef.current = []
     const panel = document.querySelector('.spin-panel')
     if (panel) panel.scrollTop = 0
   }, [resetKey])
