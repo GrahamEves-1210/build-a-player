@@ -213,7 +213,22 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
 
             {/* Social / contact */}
             <div className="wm-social-row">
-              <a className="wm-social-btn" href="https://x.com/Build_A_Player" target="_blank" rel="noopener noreferrer" title="Follow on X">
+              <a
+                className="wm-social-btn"
+                href="https://x.com/Build_A_Player"
+                title="Follow on X"
+                onClick={e => {
+                  e.preventDefault()
+                  const isMobile = /iPhone|iPad|Android/i.test(navigator.userAgent)
+                  if (!isMobile) { window.open('https://x.com/Build_A_Player', '_blank'); return }
+                  window.location.href = 'twitter://user?screen_name=Build_A_Player'
+                  const t = setTimeout(() => { window.location.href = 'https://x.com/Build_A_Player' }, 1500)
+                  document.addEventListener('visibilitychange', function onVis() {
+                    if (document.hidden) clearTimeout(t)
+                    document.removeEventListener('visibilitychange', onVis)
+                  })
+                }}
+              >
                 <IconX />
               </a>
               <a className="wm-social-btn" href="mailto:buildaplayer@outlook.com" title="Email us">
