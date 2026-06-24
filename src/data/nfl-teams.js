@@ -10,6 +10,19 @@ const CONF = {
   TEN: 'AFC', WAS: 'NFC',
 }
 
+const DIV = {
+  // AFC
+  BUF: 'AFC East',  MIA: 'AFC East',  NE: 'AFC East',  NYJ: 'AFC East',
+  BAL: 'AFC North', CIN: 'AFC North', CLE: 'AFC North', PIT: 'AFC North',
+  HOU: 'AFC South', IND: 'AFC South', JAX: 'AFC South', TEN: 'AFC South',
+  DEN: 'AFC West',  KC:  'AFC West',  LAC: 'AFC West',  LV:  'AFC West',
+  // NFC
+  DAL: 'NFC East',  NYG: 'NFC East',  PHI: 'NFC East',  WAS: 'NFC East',
+  CHI: 'NFC North', DET: 'NFC North', GB:  'NFC North', MIN: 'NFC North',
+  ATL: 'NFC South', CAR: 'NFC South', NO:  'NFC South', TB:  'NFC South',
+  ARI: 'NFC West',  LAR: 'NFC West',  SF:  'NFC West',  SEA: 'NFC West',
+}
+
 // OFF/DEF ratings 1–10 reflecting ~2024-25 roster quality
 // OFF = supporting cast / scheme quality (boosts passing stats)
 // DEF = defensive strength (independent win contribution)
@@ -50,7 +63,8 @@ const RATINGS = {
 
 export const NFL_TEAMS = TEAMS.map(t => ({
   ...t,
-  off: RATINGS[t.short]?.off ?? 6,
-  def: RATINGS[t.short]?.def ?? 6,
+  off:  RATINGS[t.short]?.off ?? 6,
+  def:  RATINGS[t.short]?.def ?? 6,
   conf: CONF[t.short] ?? 'AFC',
+  div:  DIV[t.short]  ?? 'AFC East',
 }))

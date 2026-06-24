@@ -73,7 +73,8 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, on
         ? 900 + Math.random() * 200
         : durationMs + Math.random() * jitterMs
       const startTime = performance.now()
-      const MAX_VEL   = ITEM_H / FAST_MS   // px per ms at peak speed
+      const speedMult = 0.88 + Math.random() * 0.24  // subtle ±12% speed variance
+      const MAX_VEL   = (ITEM_H / FAST_MS) * speedMult
       let lastFrame   = startTime
 
       // Set transition once — not every frame
@@ -213,6 +214,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
   const [excludedQB,   setExcludedQB]   = useState(null)
   const [draggingType, setDraggingType] = useState(null)
   const [spinCount, setSpinCount]       = useState(0)
+  const usedTeamsRef = useRef([])
   const pauseRef = useRef(null)
 
   const complete = types.every(t => build[t])
@@ -227,6 +229,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
     setSelectedQB(null)
     setExcludedQB(null)
     setDraggingType(null)
+    usedTeamsRef.current = []
     const panel = document.querySelector('.spin-panel')
     if (panel) panel.scrollTop = 0
   }, [resetKey])
@@ -242,6 +245,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
   // Team reel calls this when it naturally halts
   const handleTeamStop = useCallback((team) => {
     setSelectedTeam(team)
+    usedTeamsRef.current = [...usedTeamsRef.current, team]
     setPhase('team-done')
     pauseRef.current = setTimeout(() => setPhase('qb'), 300)
   }, [])
@@ -275,21 +279,26 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
   const isDone         = phase === 'done'
 
   const teamReelItems = useMemo(() => {
-    const arr = [...TEAMS]
-    for (let i = arr.length - 1; i > 0; i--) {
+    const used = usedTeamsRef.current
+    const pool = used.length >= TEAMS.length ? [...TEAMS] : TEAMS.filter(t => !used.includes(t))
+    for (let i = pool.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1))
-      ;[arr[i], arr[j]] = [arr[j], arr[i]]
+      ;[pool[i], pool[j]] = [pool[j], pool[i]]
     }
-    return arr
+    return pool
   }, [spinCount])
 
   // Stable QB items — minimal placeholder until team is selected (QB reel is blurred/hidden)
   const qbReelItems = useMemo(() => {
     if (!selectedTeam) return QBS.slice(0, 3)
     const base = QBS.filter(q => q.team === selectedTeam.short)
-    const filtered = excludedQB ? base.filter(q => q !== excludedQB) : base
-    return [...filtered].sort(() => Math.random() - 0.5)
-  }, [selectedTeam, excludedQB])
+    const arr = excludedQB ? base.filter(q => q !== excludedQB) : [...base]
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1))
+      ;[arr[i], arr[j]] = [arr[j], arr[i]]
+    }
+    return arr
+  }, [selectedTeam, excludedQB, spinCount])
 
   const visibleCategories = CATEGORIES
   const hasAvailableChips = isDone && selectedQB && CATEGORIES.some(cat =>

@@ -167,30 +167,69 @@ function passerRating(comps, atts, yards, tds, ints) {
 
 // ── Schedule ──────────────────────────────────────────────────────────────────
 
-const REG_OPPONENTS = [
-  'Dallas Cowboys',      'Miami Dolphins',        'San Francisco 49ers', 'Philadelphia Eagles',
-  'Cincinnati Bengals',  'Minnesota Vikings',      'Los Angeles Rams',    'Seattle Seahawks',
-  'Buffalo Bills',       'Tampa Bay Buccaneers',   'New York Giants',     'Chicago Bears',
-  'Detroit Lions',       'Green Bay Packers',      'Pittsburgh Steelers', 'New England Patriots',
-  'Baltimore Ravens',
-]
+function buildSchedule(team) {
+  // Fallback static schedule when no team is selected
+  if (!team?.div) {
+    return [
+      'Dallas Cowboys', 'Miami Dolphins', 'San Francisco 49ers', 'Philadelphia Eagles',
+      'Cincinnati Bengals', 'Minnesota Vikings', 'Los Angeles Rams', 'Seattle Seahawks',
+      'Buffalo Bills', 'Tampa Bay Buccaneers', 'New York Giants', 'Chicago Bears',
+      'Detroit Lions', 'Green Bay Packers', 'Pittsburgh Steelers', 'New England Patriots',
+      'Baltimore Ravens',
+    ]
+  }
+
+  const byDiv = {}
+  NFL_TEAMS.forEach(t => {
+    if (!byDiv[t.div]) byDiv[t.div] = []
+    byDiv[t.div].push(t.name)
+  })
+
+  // 6 divisional games — play each division opponent twice
+  const divOpponents = byDiv[team.div].filter(n => n !== team.name)
+  const divGames = [...divOpponents, ...divOpponents]
+
+  // Pick 2 other same-conference divisions for 4+4 games
+  const sameConfDivs = Object.keys(byDiv)
+    .filter(d => d.startsWith(team.conf.slice(0, 3)) && d !== team.div)
+  const shuffle = arr => {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1))
+      ;[arr[i], arr[j]] = [arr[j], arr[i]]
+    }
+    return arr
+  }
+  shuffle(sameConfDivs)
+  const confGames = [
+    ...byDiv[sameConfDivs[0]],
+    ...byDiv[sameConfDivs[1]],
+  ]
+
+  // Pick 1 cross-conference division for 4 games
+  const crossConfDivs = shuffle(
+    Object.keys(byDiv).filter(d => !d.startsWith(team.conf.slice(0, 3)))
+  )
+  const crossGames = byDiv[crossConfDivs[0]]
+
+  // 3 remaining games: one from each remaining same-conf division + one cross-conf
+  const remainSameConf = byDiv[sameConfDivs[2]] ? shuffle([...byDiv[sameConfDivs[2]]]).slice(0, 2) : []
+  const remainCross    = shuffle([...byDiv[crossConfDivs[1]]]).slice(0, 1)
+  const flexGames      = [...remainSameConf, ...remainCross]
+
+  const schedule = shuffle([...divGames, ...confGames, ...crossGames, ...flexGames])
+
+  // Ensure exactly 17 games
+  return schedule.slice(0, 17)
+}
 
 const PLAYOFF_POOLS = {
-  AFC: {
-    'Wild Card':               ['Cincinnati Bengals', 'Houston Texans', 'Los Angeles Chargers', 'Denver Broncos', 'Miami Dolphins', 'Pittsburgh Steelers', 'Indianapolis Colts'],
-    'Divisional Round':        ['Baltimore Ravens', 'Buffalo Bills', 'Kansas City Chiefs', 'Pittsburgh Steelers', 'Cincinnati Bengals', 'Houston Texans'],
-    'Conference Championship': ['Kansas City Chiefs', 'Baltimore Ravens', 'Buffalo Bills', 'Cincinnati Bengals'],
-  },
-  NFC: {
-    'Wild Card':               ['Minnesota Vikings', 'Los Angeles Rams', 'Tampa Bay Buccaneers', 'Green Bay Packers', 'Chicago Bears', 'Washington Commanders', 'Atlanta Falcons'],
-    'Divisional Round':        ['Philadelphia Eagles', 'Detroit Lions', 'San Francisco 49ers', 'Washington Commanders', 'Green Bay Packers', 'Los Angeles Rams'],
-    'Conference Championship': ['Philadelphia Eagles', 'San Francisco 49ers', 'Detroit Lions', 'Green Bay Packers'],
-  },
+  AFC: ['Kansas City Chiefs', 'Baltimore Ravens', 'Buffalo Bills', 'Houston Texans', 'Pittsburgh Steelers', 'Denver Broncos', 'Los Angeles Chargers', 'Indianapolis Colts', 'Jacksonville Jaguars', 'New England Patriots'],
+  NFC: ['Philadelphia Eagles', 'Detroit Lions', 'San Francisco 49ers', 'Los Angeles Rams', 'Green Bay Packers', 'Minnesota Vikings', 'Seattle Seahawks', 'Dallas Cowboys', 'Washington Commanders', 'Tampa Bay Buccaneers'],
 }
 
 const SB_POOLS = {
-  AFC: ['Philadelphia Eagles', 'San Francisco 49ers', 'Detroit Lions', 'Dallas Cowboys', 'Green Bay Packers'],
-  NFC: ['Kansas City Chiefs', 'Baltimore Ravens', 'Buffalo Bills', 'Cincinnati Bengals', 'Houston Texans'],
+  AFC: ['Philadelphia Eagles', 'Detroit Lions', 'San Francisco 49ers', 'Los Angeles Rams', 'Green Bay Packers', 'Minnesota Vikings'],
+  NFC: ['Kansas City Chiefs', 'Baltimore Ravens', 'Buffalo Bills', 'Houston Texans', 'Pittsburgh Steelers', 'Denver Broncos'],
 }
 
 // ── Core simulation ───────────────────────────────────────────────────────────
@@ -275,7 +314,8 @@ export function runSimulation(build, types = TYPES, team = null) {
   let seasonRushYds = 0, seasonRushTDs = 0, seasonSacks = 0
   let seasonAttempts = 0, seasonCompletions = 0
 
-  const games = REG_OPPONENTS.map((opponent, i) => {
+  const schedule = buildSchedule(team)
+  const games = schedule.map((opponent, i) => {
     // Per-game variance (randN is roughly ±1.5 range, centered)
     const v = () => randN()
 
@@ -338,21 +378,24 @@ export function runSimulation(build, types = TYPES, team = null) {
 
   if (playoffs) {
     const conf     = team?.conf ?? 'AFC'
-    const confPool = PLAYOFF_POOLS[conf]
+    // Strip player's own team from pool once, upfront
+    const confPool = PLAYOFF_POOLS[conf].filter(n => n !== team?.name)
+    const sbPool   = SB_POOLS[conf].filter(n => n !== team?.name)
     const usedOpponents = new Set()
-    const pick     = (pool) => {
-      const opts = pool.filter(n => n !== team?.name && !usedOpponents.has(n))
-      const chosen = opts.length
-        ? opts[Math.floor(Math.random() * opts.length)]
-        : pool.filter(n => n !== team?.name)[Math.floor(Math.random() * pool.filter(n => n !== team?.name).length)]
+    const pick = (pool) => {
+      const available = pool.filter(n => !usedOpponents.has(n))
+      // Fallback: if pool is somehow exhausted, allow repeats but never own team
+      const chosen = available.length > 0
+        ? available[Math.floor(Math.random() * available.length)]
+        : pool[Math.floor(Math.random() * pool.length)]
       usedOpponents.add(chosen)
       return chosen
     }
     const playoffBracket = [
-      { round: 'Wild Card',               opponents: confPool['Wild Card'] },
-      { round: 'Divisional Round',        opponents: confPool['Divisional Round'] },
-      { round: 'Conference Championship', opponents: confPool['Conference Championship'] },
-      { round: 'Super Bowl',              opponents: SB_POOLS[conf] },
+      { round: 'Wild Card',               opponents: confPool },
+      { round: 'Divisional Round',        opponents: confPool },
+      { round: 'Conference Championship', opponents: confPool },
+      { round: 'Super Bowl',              opponents: sbPool },
     ]
 
     let pwins = 0, eliminated = null
