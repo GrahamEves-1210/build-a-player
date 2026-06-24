@@ -230,10 +230,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
   const clearAll = () => clearTimeout(pauseRef.current)
 
   useEffect(() => {
-    if (resetKey === 0) {
-      usedTeamsRef.current = []
-      return
-    }
+    if (resetKey === 0) usedTeamsRef.current = []
     clearAll()
     setPhase('idle')
     setSelectedTeam(null)
