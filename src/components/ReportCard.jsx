@@ -88,7 +88,19 @@ export function ShareModal({ ovr, arch, build, types, onClose }) {
   const shareText = `I made a ${ovr} overall ${arch} quarterback, think you can do better?`
   const shareUrl  = buildShareUrl(build, types)
 
-  const tweetUrl  = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`
+  const tweetWebUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`
+  const handleTweet = (e) => {
+    e.preventDefault()
+    const isMobile = /iPhone|iPad|Android/i.test(navigator.userAgent)
+    if (!isMobile) { window.open(tweetWebUrl, '_blank'); return }
+    const deepLink = `twitter://post?message=${encodeURIComponent(shareText + ' ' + shareUrl)}`
+    window.location.href = deepLink
+    const t = setTimeout(() => { window.location.href = tweetWebUrl }, 1500)
+    document.addEventListener('visibilitychange', function onVis() {
+      if (document.hidden) clearTimeout(t)
+      document.removeEventListener('visibilitychange', onVis)
+    })
+  }
   const fbUrl     = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}&quote=${encodeURIComponent(shareText)}`
   const redditUrl = `https://www.reddit.com/submit?url=${encodeURIComponent(shareUrl)}&title=${encodeURIComponent(shareText)}`
 
@@ -149,7 +161,7 @@ export function ShareModal({ ovr, arch, build, types, onClose }) {
 
         {/* 2×2 share grid */}
         <div className="share-icons-grid">
-          <a className="share-icon-btn" href={tweetUrl} target="_blank" rel="noopener noreferrer">
+          <a className="share-icon-btn" href={tweetWebUrl} onClick={handleTweet}>
             <div className="share-icon-circle share-icon-x">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.748l7.73-8.835L1.254 2.25H8.08l4.213 5.567 5.951-5.567zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
