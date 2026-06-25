@@ -38,6 +38,7 @@ export default function App() {
   const [simResult, setSimResult]       = useState(null)
   const [simReplaying, setSimReplaying] = useState(false)
   const [spinResetKey, setSpinResetKey] = useState(0)
+  const [gameKey, setGameKey]           = useState(0)
   const [mobileView, setMobileView]     = useState('spin')
   const [user, setUser]                 = useState(null)
   const [showAuth, setShowAuth]         = useState(false)
@@ -105,6 +106,7 @@ export default function App() {
     setSimReplaying(false)
     setActiveDrag(null)
     setSpinResetKey(k => k + 1)
+    setGameKey(k => k + 1)
     setSavedSpinResult(null)
     setMobileView('spin')
     window.scrollTo({ top: 0, behavior: 'instant' })
@@ -284,6 +286,7 @@ export default function App() {
           savedResult={savedSpinResult}
           onSaveResult={setSavedSpinResult}
           onPhaseChange={setSpinPhase}
+          gameKey={gameKey}
         />
         <Silhouette
           build={build}

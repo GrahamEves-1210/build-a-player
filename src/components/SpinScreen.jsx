@@ -207,11 +207,11 @@ function Chip({ type, meta, val, selectedQB, draggingType, onChipTap, onDragStar
 }
 
 // ─── SpinScreen ──────────────────────────────────────────────────────────────
-export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, activeCategory, resetKey, onChipTap, types = TYPES, isLite = false, savedResult = null, onSaveResult, onPhaseChange }) {
+export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, activeCategory, resetKey, onChipTap, types = TYPES, isLite = false, savedResult = null, onSaveResult, onPhaseChange, gameKey }) {
   const [phase, setPhase]               = useState(() => savedResult?.selectedQB ? 'done' : 'idle')
   const [selectedTeam, setSelectedTeam] = useState(() => savedResult?.selectedTeam ?? null)
   const [selectedQB,   setSelectedQB]   = useState(() => savedResult?.selectedQB ?? null)
-  const [qbRespinUsed, setQbRespinUsed] = useState(() => savedResult?.qbRespinUsed ?? false)
+  const [qbRespinUsed, setQbRespinUsed] = useState(() => savedResult?.qbRespinUsed ?? 0)
   const [excludedQB,   setExcludedQB]   = useState(null)
   const [draggingType, setDraggingType] = useState(null)
   const [spinCount, setSpinCount]       = useState(0)
@@ -237,7 +237,6 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
     setSelectedQB(null)
     setExcludedQB(null)
     setDraggingType(null)
-    setQbRespinUsed(false)
     const panel = document.querySelector('.spin-panel')
     if (panel) panel.scrollTop = 0
   }, [resetKey])
@@ -253,6 +252,10 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
   useEffect(() => {
     if (onPhaseChange) onPhaseChange(phase)
   }, [phase])
+
+  useEffect(() => {
+    setQbRespinUsed(0)
+  }, [gameKey])
 
   // Team reel calls this when it naturally halts
   const handleTeamStop = useCallback((team) => {
@@ -280,7 +283,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
 
   const handleQBRespin = useCallback(() => {
     setExcludedQB(selectedQB)
-    setQbRespinUsed(true)
+    setQbRespinUsed(n => n + 1)
     setSelectedQB(null)
     setPhase('qb')
   }, [selectedQB])
@@ -321,7 +324,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
     <aside className="spin-panel">
       {isSpinning && <div className="spin-blocker" />}
       <div className="spin-panel-body">
-        <button className="grade-toggle-btn" onClick={toggleGrades}>
+        <button className={`grade-toggle-btn${hideGrades ? ' grade-toggle-off' : ' grade-toggle-on'}`} onClick={toggleGrades}>
           {hideGrades ? 'Hiding Grades' : 'Showing Grades'}
         </button>
         <div className="reels-wrap">
@@ -351,14 +354,14 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
               durationMs={1100}
               jitterMs={400}
               blurred={phase === 'team' || phase === 'team-done'}
-              fast={qbRespinUsed}
+              fast={qbRespinUsed > 0}
             />
           </div>
           <div className="reel-tri reel-tri-r" />
         </div>
 
         {(() => {
-          const canRespin = isDone && !qbRespinUsed && !complete
+          const canRespin = isDone && qbRespinUsed < 2 && !complete
           return (
             <>
               <button
@@ -366,7 +369,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
                 onClick={canRespin ? handleQBRespin : handleSpin}
                 disabled={isSpinning || complete || (isDone && !canRespin)}
               >
-                {canRespin ? <>QB RESPIN? <span className="spin-btn-badge">1</span></> : 'SPIN'}
+                {canRespin ? <>QB RESPIN? <span className="spin-btn-badge">{2 - qbRespinUsed}</span></> : 'SPIN'}
               </button>
             </>
           )

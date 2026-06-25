@@ -1082,14 +1082,16 @@ a:focus-visible {
   font-family: inherit;
   font-weight: 600;
   letter-spacing: 0.3px;
-  color: var(--text-3);
   background: none;
   border: none;
   cursor: pointer;
   transition: color 0.15s;
   white-space: nowrap;
 }
-.grade-toggle-btn:hover { color: var(--text-2); }
+.grade-toggle-on  { color: #5edbd8; }
+.grade-toggle-off { color: #f87171; }
+.grade-toggle-on:hover  { color: #8de8e6; }
+.grade-toggle-off:hover { color: #fca5a5; }
 
 .chip-val {
   width: 38px;
