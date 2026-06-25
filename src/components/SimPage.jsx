@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { ATTR, TYPES, TEAMS } from '../data/qbs'
-import { valToGrade, getArchetype } from '../utils/simulation'
+import { valToGrade, getArchetype, readableTextColor } from '../utils/simulation'
 import QBAvatar from './QBAvatar'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -228,19 +228,25 @@ function buildScoreTimeline(myFinal, oppFinal) {
 
   const toPlays = total => {
     if (total <= 0) return []
-    // Bump truly unreachable totals (1,2,4,5) up to nearest reachable value
     let target = total
     while (!reachable(target)) target++
 
     const plays = []
     let rem = target
     while (rem > 0) {
-      // Shuffle scoring options so distribution is varied
-      const opts = shuffle([3, 6, 7, 8])
-      const pick = opts.find(p => p <= rem && reachable(rem - p))
-      if (!pick) break // should never happen given reachable() logic
-      plays.push(pick)
-      rem -= pick
+      // Weighted: among TDs → 90% = 7pts, 5% = 8pts, 5% = 6pts; ~30% of all plays are FGs
+      const opts = [
+        { pts: 7, w: 63 },
+        { pts: 3, w: 30 },
+        { pts: 8, w:  4 },
+        { pts: 6, w:  3 },
+      ].filter(o => o.pts <= rem && reachable(rem - o.pts))
+      if (opts.length === 0) break
+      const pool = opts.reduce((s, o) => s + o.w, 0)
+      let r = Math.random() * pool
+      const pick = opts.find(o => (r -= o.w) < 0) ?? opts[0]
+      plays.push(pick.pts)
+      rem -= pick.pts
     }
     return plays
   }
@@ -333,13 +339,15 @@ function PlayoffGame({ round, opponent, home, weather, mySc, oppSc, won, teamCol
 
   return (
     <div className={`plf-game${phase === 'post' ? (won ? ' plf-game-won' : ' plf-game-lost') : ''}`}>
-      <div className="plf-round-lbl">{round}</div>
-      {weather && (
-        <div className="plf-weather-block">
-          <span className="plf-weather-icon">{WEATHER_EMOJI[weather]}</span>
-          <span className="plf-weather-lbl">{weather.charAt(0).toUpperCase() + weather.slice(1)}</span>
-        </div>
-      )}
+      <div className="plf-round-row">
+        <div className="plf-round-lbl">{round}</div>
+        {weather && (
+          <div className="plf-weather-block">
+            <span className="plf-weather-icon">{WEATHER_EMOJI[weather]}</span>
+            <span className="plf-weather-lbl">{weather.charAt(0).toUpperCase() + weather.slice(1)}</span>
+          </div>
+        )}
+      </div>
       <div className="plf-matchup">
         <span>{round === 'Super Bowl' ? 'vs' : home ? 'vs' : '@'} {opponent}</span>
         {round !== 'Super Bowl' && <span className="plf-venue-tag">{home ? 'HOME' : 'AWAY'}</span>}
@@ -354,8 +362,8 @@ function PlayoffGame({ round, opponent, home, weather, mySc, oppSc, won, teamCol
               <div className="plf-score-num plf-score-opp-num"><span key={noAnim ? 'opp-final' : oppScore} className={noAnim ? '' : 'plf-num-pop'}>{oppScore}</span></div></>
           ) : (
             <>{teamLogo && <img src={teamLogo} alt="" className="plf-team-logo" />}
-              <div className="plf-team-abbr" style={{ color: teamColor }}>{teamAbbr}</div>
-              <div className="plf-score-num" style={{ color: teamColor }}><span key={noAnim ? 'my-final' : myScore} className={noAnim ? '' : 'plf-num-pop'}>{myScore}</span></div></>
+              <div className="plf-team-abbr" style={{ color: readableTextColor(teamColor) }}>{teamAbbr}</div>
+              <div className="plf-score-num" style={{ color: readableTextColor(teamColor) }}><span key={noAnim ? 'my-final' : myScore} className={noAnim ? '' : 'plf-num-pop'}>{myScore}</span></div></>
           )}
         </div>
 
@@ -374,8 +382,8 @@ function PlayoffGame({ round, opponent, home, weather, mySc, oppSc, won, teamCol
         <div className="plf-score-side plf-score-opp">
           {home ? (
             <>{teamLogo && <img src={teamLogo} alt="" className="plf-team-logo plf-logo-opp" />}
-              <div className="plf-team-abbr" style={{ color: teamColor }}>{teamAbbr}</div>
-              <div className="plf-score-num" style={{ color: teamColor }}><span key={noAnim ? 'my-final' : myScore} className={noAnim ? '' : 'plf-num-pop'}>{myScore}</span></div></>
+              <div className="plf-team-abbr" style={{ color: readableTextColor(teamColor) }}>{teamAbbr}</div>
+              <div className="plf-score-num" style={{ color: readableTextColor(teamColor) }}><span key={noAnim ? 'my-final' : myScore} className={noAnim ? '' : 'plf-num-pop'}>{myScore}</span></div></>
           ) : (
             <>{oppLogo && <img src={oppLogo} alt="" className="plf-team-logo plf-logo-opp" />}
               <div className="plf-team-abbr plf-abbr-opp">{oppTeam?.short ?? opponent.split(' ').slice(-1)[0]}</div>

@@ -4631,6 +4631,12 @@ html.is-touch .bd-card-main:hover         { background: transparent !important; 
   background: rgba(248,113,113,0.04);
 }
 
+.plf-round-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
 .plf-round-lbl {
   font-size: 9px;
   font-weight: 800;
@@ -4640,13 +4646,11 @@ html.is-touch .bd-card-main:hover         { background: transparent !important; 
 }
 .plf-weather-block {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 3px;
-  margin: 2px 0;
+  gap: 5px;
 }
-.plf-weather-icon { font-size: 22px; line-height: 1; }
-.plf-weather-lbl  { font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--text-4); }
+.plf-weather-icon { font-size: 16px; line-height: 1; }
+.plf-weather-lbl  { font-size: 9px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--text-4); }
 .plf-matchup {
   font-size: 20px;
   font-weight: 800;

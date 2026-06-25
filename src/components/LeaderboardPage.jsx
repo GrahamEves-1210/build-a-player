@@ -91,7 +91,6 @@ export default function LeaderboardPage({ onBack, currentUser }) {
     supabase
       .from('simulations')
       .select('user_id, username, wins, losses, season_pass_yds, season_tds, champion, ovr, game_mode')
-      .limit(3000)
       .then(({ data, error }) => {
         if (!data || error) { setLoading(false); return }
 
@@ -126,26 +125,28 @@ export default function LeaderboardPage({ onBack, currentUser }) {
   const loadBuilds = () => {
     if (buildsLoaded || !supabase) return
     setBuildsLoading(true)
-    supabase
+    const bestQ = supabase
       .from('simulations')
       .select('user_id, username, wins, losses, ovr, build, game_mode')
       .neq('game_mode', 'lite')
       .not('build', 'is', null)
+      .gte('ovr', 80)
       .order('ovr', { ascending: false })
-      .limit(200)
-      .then(({ data, error }) => {
-        if (data && !error) {
-          setBestBuilds(
-            data.filter(r => (r.ovr ?? 0) >= 80).slice(0, 50)
-          )
-          setWorstBuilds(
-            [...data].filter(r => (r.ovr ?? 0) <= 80)
-              .sort((a, b) => a.ovr - b.ovr).slice(0, 20)
-          )
-          setBuildsLoaded(true)
-        }
-        setBuildsLoading(false)
-      })
+      .limit(50)
+    const worstQ = supabase
+      .from('simulations')
+      .select('user_id, username, wins, losses, ovr, build, game_mode')
+      .neq('game_mode', 'lite')
+      .not('build', 'is', null)
+      .lt('ovr', 80)
+      .order('ovr', { ascending: true })
+      .limit(20)
+    Promise.all([bestQ, worstQ]).then(([best, worst]) => {
+      if (best.data)  setBestBuilds(best.data)
+      if (worst.data) setWorstBuilds(worst.data)
+      setBuildsLoaded(true)
+      setBuildsLoading(false)
+    })
   }
 
   const switchBuildsTab = (tab) => { setBuildsTab(tab); setExpandedIdx(null) }
