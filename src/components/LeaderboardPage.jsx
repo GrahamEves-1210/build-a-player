@@ -77,7 +77,9 @@ export default function LeaderboardPage({ onBack, currentUser }) {
   const [rows, setRows]               = useState([])
   const [bestBuilds, setBestBuilds]   = useState([])
   const [worstBuilds, setWorstBuilds] = useState([])
+  const [buildsLoaded, setBuildsLoaded] = useState(false)
   const [loading, setLoading]         = useState(true)
+  const [buildsLoading, setBuildsLoading] = useState(false)
   const [metric, setMetric]           = useState('rings')
   const [view, setView]               = useState('profiles')
   const [buildsTab, setBuildsTab]     = useState('best')
@@ -85,9 +87,11 @@ export default function LeaderboardPage({ onBack, currentUser }) {
 
   useEffect(() => {
     if (!supabase) { setLoading(false); return }
+    // No `build` column here — fetched separately only when builds tab opens
     supabase
       .from('simulations')
-      .select('user_id, username, wins, losses, season_pass_yds, season_tds, champion, ovr, build, game_mode')
+      .select('user_id, username, wins, losses, season_pass_yds, season_tds, champion, ovr, game_mode')
+      .limit(3000)
       .then(({ data, error }) => {
         if (!data || error) { setLoading(false); return }
 
@@ -115,25 +119,34 @@ export default function LeaderboardPage({ onBack, currentUser }) {
           }
         })
         setRows(compiled)
-
-        const classicOnly = data.filter(r => r.game_mode !== 'lite')
-
-        setBestBuilds(
-          [...classicOnly]
-            .filter(r => (r.ovr ?? 0) >= 80)
-            .sort((a, b) => (b.ovr - a.ovr) || (b.wins - a.wins))
-            .slice(0, 50)
-        )
-        setWorstBuilds(
-          [...classicOnly]
-            .filter(r => (r.ovr ?? 0) <= 80)
-            .sort((a, b) => (a.ovr - b.ovr) || (a.wins - b.wins))
-            .slice(0, 20)
-        )
-
         setLoading(false)
       })
   }, [])
+
+  const loadBuilds = () => {
+    if (buildsLoaded || !supabase) return
+    setBuildsLoading(true)
+    supabase
+      .from('simulations')
+      .select('user_id, username, wins, losses, ovr, build, game_mode')
+      .neq('game_mode', 'lite')
+      .not('build', 'is', null)
+      .order('ovr', { ascending: false })
+      .limit(200)
+      .then(({ data, error }) => {
+        if (data && !error) {
+          setBestBuilds(
+            data.filter(r => (r.ovr ?? 0) >= 80).slice(0, 50)
+          )
+          setWorstBuilds(
+            [...data].filter(r => (r.ovr ?? 0) <= 80)
+              .sort((a, b) => a.ovr - b.ovr).slice(0, 20)
+          )
+          setBuildsLoaded(true)
+        }
+        setBuildsLoading(false)
+      })
+  }
 
   const switchBuildsTab = (tab) => { setBuildsTab(tab); setExpandedIdx(null) }
   const toggleExpand = (i) => setExpandedIdx(prev => prev === i ? null : i)
@@ -161,7 +174,7 @@ export default function LeaderboardPage({ onBack, currentUser }) {
           </button>
           <button
             className={`lb-main-seg-btn ${view === 'builds' ? 'lb-main-seg-active' : ''}`}
-            onClick={() => setView('builds')}
+            onClick={() => { setView('builds'); loadBuilds() }}
           >
             Builds
           </button>
@@ -246,7 +259,7 @@ export default function LeaderboardPage({ onBack, currentUser }) {
               </button>
             </div>
 
-            {loading ? (
+            {buildsLoading ? (
               <div className="lb-loading">Loading...</div>
             ) : (
               <div className="lb-list" key={buildsTab}>
