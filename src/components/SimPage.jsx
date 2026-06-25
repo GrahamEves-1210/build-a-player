@@ -92,7 +92,7 @@ function ScreenBuild({ result, build, types, onNext }) {
 // ── Screen 2: Regular Season ──────────────────────────────────────────────────
 
 function ScreenSeason({ result, onNext }) {
-  const { games, seasonPassYds, seasonTDs, seasonINTs, seasonRating, seasonCompPct, seasonRushYds, seasonRushTDs, seasonSacks, playoffs } = result
+  const { games, seasonPassYds, seasonTDs, seasonINTs, seasonRating, seasonCompPct, seasonRushYds, seasonRushTDs, seasonSacks, playoffs, hasBye } = result
 
   const [phase, setPhase]           = useState('loading')
   const [revealed, setRevealed]     = useState(0)
@@ -146,13 +146,16 @@ function ScreenSeason({ result, onNext }) {
               {playoffs ? 'Playoff Bound' : 'Missed the Playoffs'}
             </div>
           )}
+          {allDone && hasBye && (
+            <div className="simp-bye-badge simp-record-sub-in">First Round Bye</div>
+          )}
 
           <div className="simp-games-list">
             {games.slice(0, revealed).map(g => (
               <div key={g.wk} className={`simp-game-row ${g.won ? 'sgr-w' : 'sgr-l'} sgr-in`}>
                 <span className="sgr-wk">WK {g.wk}</span>
                 <span className={`sgr-badge ${g.won ? 'sgr-badge-w' : 'sgr-badge-l'}`}>{g.won ? 'W' : 'L'}</span>
-                <span className="sgr-opp">{g.opponent}</span>
+                <span className="sgr-opp"><span className="sgr-venue">{g.home ? 'vs' : '@'}</span>{g.opponent}</span>
                 <span className="sgr-score">{g.mySc}–{g.oppSc}</span>
                 <span className="sgr-stat">{g.passYds}<span className="sgr-unit">yds</span> {g.tds}<span className="sgr-unit">TD</span> {g.ints}<span className="sgr-unit">INT</span></span>
               </div>
@@ -263,7 +266,9 @@ const GAME_SECS  = 3_600
 
 const TEAM_BY_NAME = Object.fromEntries(TEAMS.map(t => [t.name, t]))
 
-function PlayoffGame({ round, opponent, mySc, oppSc, won, teamColor, teamAbbr, teamLogo, isFinal, onDone }) {
+const WEATHER_EMOJI = { clear: '☀️', rain: '🌧️', snow: '❄️', dome: '🏟️' }
+
+function PlayoffGame({ round, opponent, home, weather, mySc, oppSc, won, teamColor, teamAbbr, teamLogo, isFinal, onDone }) {
   const [phase,    setPhase]    = useState('pre')
   const [gameSec,  setGameSec]  = useState(0)
   const [myScore,  setMyScore]  = useState(0)
@@ -329,18 +334,33 @@ function PlayoffGame({ round, opponent, mySc, oppSc, won, teamColor, teamAbbr, t
   return (
     <div className={`plf-game${phase === 'post' ? (won ? ' plf-game-won' : ' plf-game-lost') : ''}`}>
       <div className="plf-round-lbl">{round}</div>
-      <div className="plf-matchup">vs {opponent}</div>
+      {weather && (
+        <div className="plf-weather-block">
+          <span className="plf-weather-icon">{WEATHER_EMOJI[weather]}</span>
+          <span className="plf-weather-lbl">{weather.charAt(0).toUpperCase() + weather.slice(1)}</span>
+        </div>
+      )}
+      <div className="plf-matchup">
+        <span>{round === 'Super Bowl' ? 'vs' : home ? 'vs' : '@'} {opponent}</span>
+        {round !== 'Super Bowl' && <span className="plf-venue-tag">{home ? 'HOME' : 'AWAY'}</span>}
+      </div>
 
       <div className="plf-scoreboard">
+        {/* Left side — away team */}
         <div className="plf-score-side plf-score-me">
-          {teamLogo && <img src={teamLogo} alt="" className="plf-team-logo" />}
-          <div className="plf-team-abbr" style={{ color: teamColor }}>{teamAbbr}</div>
-          <div className="plf-score-num" style={{ color: teamColor }}>
-            <span key={noAnim ? 'my-final' : myScore} className={noAnim ? '' : 'plf-num-pop'}>{myScore}</span>
-          </div>
+          {home ? (
+            <>{oppLogo && <img src={oppLogo} alt="" className="plf-team-logo" />}
+              <div className="plf-team-abbr plf-abbr-opp">{oppTeam?.short ?? opponent.split(' ').slice(-1)[0]}</div>
+              <div className="plf-score-num plf-score-opp-num"><span key={noAnim ? 'opp-final' : oppScore} className={noAnim ? '' : 'plf-num-pop'}>{oppScore}</span></div></>
+          ) : (
+            <>{teamLogo && <img src={teamLogo} alt="" className="plf-team-logo" />}
+              <div className="plf-team-abbr" style={{ color: teamColor }}>{teamAbbr}</div>
+              <div className="plf-score-num" style={{ color: teamColor }}><span key={noAnim ? 'my-final' : myScore} className={noAnim ? '' : 'plf-num-pop'}>{myScore}</span></div></>
+          )}
         </div>
 
         <div className="plf-score-mid">
+          <span className="plf-at-sym">@</span>
           {phase === 'live' ? (
             <div className="plf-live-pill">
               <span className="plf-live-dot" />LIVE
@@ -350,12 +370,17 @@ function PlayoffGame({ round, opponent, mySc, oppSc, won, teamColor, teamAbbr, t
           ) : null}
         </div>
 
+        {/* Right side — home team */}
         <div className="plf-score-side plf-score-opp">
-          {oppLogo && <img src={oppLogo} alt="" className="plf-team-logo plf-logo-opp" />}
-          <div className="plf-team-abbr plf-abbr-opp">{oppTeam?.short ?? opponent.split(' ').slice(-1)[0]}</div>
-          <div className="plf-score-num plf-score-opp-num">
-            <span key={noAnim ? 'opp-final' : oppScore} className={noAnim ? '' : 'plf-num-pop'}>{oppScore}</span>
-          </div>
+          {home ? (
+            <>{teamLogo && <img src={teamLogo} alt="" className="plf-team-logo plf-logo-opp" />}
+              <div className="plf-team-abbr" style={{ color: teamColor }}>{teamAbbr}</div>
+              <div className="plf-score-num" style={{ color: teamColor }}><span key={noAnim ? 'my-final' : myScore} className={noAnim ? '' : 'plf-num-pop'}>{myScore}</span></div></>
+          ) : (
+            <>{oppLogo && <img src={oppLogo} alt="" className="plf-team-logo plf-logo-opp" />}
+              <div className="plf-team-abbr plf-abbr-opp">{oppTeam?.short ?? opponent.split(' ').slice(-1)[0]}</div>
+              <div className="plf-score-num plf-score-opp-num"><span key={noAnim ? 'opp-final' : oppScore} className={noAnim ? '' : 'plf-num-pop'}>{oppScore}</span></div></>
+          )}
         </div>
       </div>
 
@@ -386,7 +411,7 @@ function PlayoffGame({ round, opponent, mySc, oppSc, won, teamColor, teamAbbr, t
       )}
 
       {visEvt && phase === 'live' && (
-        <div key={evtKey} className={`plf-score-evt ${visEvt.team === 'me' ? 'plf-evt-me' : 'plf-evt-opp'}`}>
+        <div key={evtKey} className={`plf-score-evt ${visEvt.team === 'me' ? 'plf-evt-me' : 'plf-evt-opp'} ${(visEvt.team === 'me') === home ? 'plf-evt-right' : 'plf-evt-left'}`}>
           {evtLabel(visEvt.pts)} · {visEvt.team === 'me' ? teamAbbr : (oppTeam?.short ?? opponent.split(' ').slice(-1)[0])}
         </div>
       )}
@@ -500,6 +525,8 @@ function ScreenPlayoffs({ result, onNext }) {
           key={gameIdx}
           round={current.round}
           opponent={current.opponent}
+          home={current.home}
+          weather={current.weather}
           mySc={current.mySc}
           oppSc={current.oppSc}
           won={current.won}

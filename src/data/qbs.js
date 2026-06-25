@@ -177,9 +177,9 @@ export const QBS = [
     attrs: { 'arm': 3, 'legs': 4, 'size': 3, 'processing': 2, 'leadership': 2, 'vision': 2, 'playmaking': 2, 'accuracy': 2, 'pocket-presence': 2 } },
   // MIN
   { name: 'Kyler Murray',       short: 'Murray',      team: 'MIN', teamName: 'Minnesota Vikings',     color: '#4F2683', color2: '#FFC62F', skin: '#b07848', starter: true,  captain: true,  number: 1,
-    attrs: { 'arm': 6, 'legs': 9, 'size': 3, 'processing': 4, 'leadership': 4, 'vision': 7, 'playmaking': 8, 'accuracy': 6, 'pocket-presence': 5 } },
+    attrs: { 'arm': 6, 'legs': 9, 'size': 2, 'processing': 4, 'leadership': 4, 'vision': 5, 'playmaking': 8, 'accuracy': 6, 'pocket-presence': 5 } },
   { name: 'J.J. McCarthy',      short: 'McCarthy',    team: 'MIN', teamName: 'Minnesota Vikings',     color: '#4F2683', color2: '#FFC62F', skin: '#f2c8a4', starter: false, number: 9,
-    attrs: { 'arm': 7, 'legs': 6, 'size': 5, 'processing': 3, 'leadership': 3, 'vision': 3, 'playmaking': 4, 'accuracy': 2, 'pocket-presence': 2 } },
+    attrs: { 'arm': 7, 'legs': 6, 'size': 5, 'processing': 2, 'leadership': 3, 'vision': 3, 'playmaking': 4, 'accuracy': 2, 'pocket-presence': 2 } },
   { name: 'Carson Wentz',       short: 'Wentz',       team: 'MIN', teamName: 'Minnesota Vikings',     color: '#4F2683', color2: '#FFC62F', skin: '#f0c4a0', starter: false, number: 11,
     attrs: { 'arm': 4, 'legs': 5, 'size': 6, 'processing': 4, 'leadership': 4, 'vision': 4, 'playmaking': 2, 'accuracy': 3, 'pocket-presence': 4 } },
   // NE

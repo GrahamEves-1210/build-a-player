@@ -3149,6 +3149,12 @@ a:focus-visible {
 
 .sgr-w .sgr-score { color: var(--accent); }
 .sgr-l .sgr-score { color: #f87171; }
+.sgr-venue {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-4);
+  margin-right: 5px;
+}
 .sgr-opp {
   flex: 1;
   font-weight: 500;
@@ -4524,6 +4530,7 @@ html.is-touch .bd-card-main:hover         { background: transparent !important; 
 .simp-record-champ { color: var(--accent); }
 .simp-record-elim  { color: #f87171; }
 .simp-record-sub   { font-size: 13px; color: var(--text-3); font-weight: 500; margin-top: -8px; }
+.simp-bye-badge    { font-size: 11px; font-weight: 800; letter-spacing: 0.8px; text-transform: uppercase; color: var(--accent); background: rgba(149,213,178,0.12); border: 1px solid rgba(149,213,178,0.25); border-radius: 6px; padding: 3px 10px; margin-top: 4px; display: inline-block; }
 
 .simp-games-list {
   border: 1px solid var(--border);
@@ -4631,11 +4638,32 @@ html.is-touch .bd-card-main:hover         { background: transparent !important; 
   text-transform: uppercase;
   color: var(--text-4);
 }
+.plf-weather-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  margin: 2px 0;
+}
+.plf-weather-icon { font-size: 22px; line-height: 1; }
+.plf-weather-lbl  { font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--text-4); }
 .plf-matchup {
   font-size: 20px;
   font-weight: 800;
   letter-spacing: -0.5px;
   color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.plf-venue-tag {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: rgba(149,213,178,0.12);
+  color: var(--accent);
 }
 
 /* Scoreboard */
@@ -4688,6 +4716,14 @@ html.is-touch .bd-card-main:hover         { background: transparent !important; 
 .plf-num-pop {
   display: inline-block;
   animation: plf-num-pop 0.28s cubic-bezier(0.22,1,0.36,1) both;
+}
+
+.plf-at-sym {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-4);
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
 }
 
 /* Middle column */
@@ -4810,8 +4846,10 @@ html.is-touch .bd-card-main:hover         { background: transparent !important; 
   border-radius: 8px;
   animation: plf-evt-in 0.22s cubic-bezier(0.22,1,0.36,1) both;
 }
-.plf-evt-me  { background: rgba(74,222,128,0.16);  color: #4ade80; border: 1px solid rgba(74,222,128,0.35); }
-.plf-evt-opp { background: rgba(248,113,113,0.13); color: #f87171; border: 1px solid rgba(248,113,113,0.3); align-self: flex-end; }
+.plf-evt-me   { background: rgba(74,222,128,0.16);  color: #4ade80; border: 1px solid rgba(74,222,128,0.35); }
+.plf-evt-opp  { background: rgba(248,113,113,0.13); color: #f87171; border: 1px solid rgba(248,113,113,0.3); }
+.plf-evt-left  { align-self: flex-start; }
+.plf-evt-right { align-self: flex-end; }
 
 /* Post-game result line */
 @keyframes plf-post-in {

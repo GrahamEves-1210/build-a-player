@@ -41,7 +41,7 @@ const RATINGS = {
   GB:  { off: 6, def: 8 },
   HOU: { off: 5, def: 9 },
   IND: { off: 7, def: 5 },
-  JAX: { off: 6, def: 6 },
+  JAX: { off: 7, def: 6 },
   KC:  { off: 7, def: 7 },
   LV:  { off: 5, def: 3 },
   LAC: { off: 7, def: 7 },
