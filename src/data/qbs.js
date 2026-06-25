@@ -174,7 +174,7 @@ export const QBS = [
   { name: 'Quinn Ewers',        short: 'Ewers',       team: 'MIA', teamName: 'Miami Dolphins',        color: '#008E97', color2: '#F26A24', skin: '#f2c8a4', starter: false, number: 3,
     attrs: { 'arm': 5, 'legs': 4, 'size': 5, 'processing': 5, 'leadership': 4, 'vision': 4, 'playmaking': 4, 'accuracy': 4, 'pocket-presence': 3 } },
   { name: 'Cam Miller',         short: 'C. Miller',   team: 'MIA', teamName: 'Miami Dolphins',        color: '#008E97', color2: '#F26A24', skin: '#f0c4a0', starter: false, number: 16,
-    attrs: { 'arm': 3, 'legs': 4, 'size': 3, 'processing': 3, 'leadership': 2, 'vision': 2, 'playmaking': 2, 'accuracy': 2, 'pocket-presence': 2 } },
+    attrs: { 'arm': 3, 'legs': 4, 'size': 3, 'processing': 2, 'leadership': 2, 'vision': 2, 'playmaking': 2, 'accuracy': 2, 'pocket-presence': 2 } },
   // MIN
   { name: 'Kyler Murray',       short: 'Murray',      team: 'MIN', teamName: 'Minnesota Vikings',     color: '#4F2683', color2: '#FFC62F', skin: '#b07848', starter: true,  captain: true,  number: 1,
     attrs: { 'arm': 6, 'legs': 9, 'size': 3, 'processing': 4, 'leadership': 4, 'vision': 7, 'playmaking': 8, 'accuracy': 6, 'pocket-presence': 5 } },
