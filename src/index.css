@@ -1131,6 +1131,7 @@ a:focus-visible {
 /* ── Desktop: compact spin panel below the spin button ── */
 @media (min-width: 769px) {
   .spin-panel-body       { gap: 9px; padding-bottom: 10px; }
+  .grade-toggle-btn      { margin-top: -2px; }
 .spin-hint-text        { padding-top: 6px; padding-bottom: 2px; font-size: 11px; }
   .attr-chip             { padding: 5px 8px 5px 10px; }
   .qb-reveal-text        { padding: 10px 10px; }

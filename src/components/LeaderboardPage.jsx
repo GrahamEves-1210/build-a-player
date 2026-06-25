@@ -122,7 +122,7 @@ export default function LeaderboardPage({ onBack, currentUser }) {
           [...classicOnly]
             .filter(r => (r.ovr ?? 0) >= 80)
             .sort((a, b) => (b.ovr - a.ovr) || (b.wins - a.wins))
-            .slice(0, 20)
+            .slice(0, 50)
         )
         setWorstBuilds(
           [...classicOnly]
@@ -143,7 +143,7 @@ export default function LeaderboardPage({ onBack, currentUser }) {
   const profileSlots = Array.from({ length: 20 }, (_, i) => sorted[i] ?? null)
 
   const buildsList = buildsTab === 'best' ? bestBuilds : worstBuilds
-  const buildSlots = Array.from({ length: 20 }, (_, i) => buildsList[i] ?? null)
+  const buildSlots = Array.from({ length: buildsTab === 'best' ? 50 : 20 }, (_, i) => buildsList[i] ?? null)
 
   return (
     <div className="lb-page">

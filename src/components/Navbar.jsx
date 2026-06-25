@@ -325,7 +325,8 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
               <a className="wm-social-btn" href="mailto:buildaplayer@outlook.com" title="Email us">
                 <IconMail />
               </a>
-              <a className="wm-social-btn wm-social-btn-coffee" href="https://buymeacoffee.com/32and0" target="_blank" rel="noopener noreferrer" title="Buy us a coffee">
+              <a className="wm-social-btn wm-social-btn-coffee" href="https://buymeacoffee.com/32and0" target="_blank" rel="noopener noreferrer" title="Buy us a coffee" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', padding: '4px 4px' }}>
+                <span style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.4px', lineHeight: 1 }}>Tip Jar</span>
                 <IconCoffee />
               </a>
             </div>

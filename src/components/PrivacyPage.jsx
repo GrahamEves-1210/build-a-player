@@ -36,7 +36,11 @@ export default function PrivacyPage({ onBack }) {
           <ul className="about-list">
             <li><a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer" className="about-link">Google Analytics</a></li>
             <li><a href="https://supabase.com/privacy" target="_blank" rel="noopener noreferrer" className="about-link">Supabase</a></li>
+            <li><a href="https://www.playwire.com/privacy-policy" target="_blank" rel="noopener noreferrer" className="about-link">Playwire</a></li>
           </ul>
+          <p className="about-body">
+            All or partial advertising on this Website or App is managed by Playwire LLC. If Playwire publisher advertising services are used, Playwire LLC may collect and use certain aggregated and anonymized data for advertising purposes. To learn more about the types of data collected, how data is used and your choices as a user, please visit <a href="https://www.playwire.com/privacy-policy" target="_blank" rel="noopener noreferrer" className="about-link">https://www.playwire.com/privacy-policy</a>.
+          </p>
         </section>
 
         <section className="about-section">
@@ -59,6 +63,13 @@ export default function PrivacyPage({ onBack }) {
             Questions? Reach us at <a href="mailto:buildaplayer@outlook.com" className="about-link">buildaplayer@outlook.com</a>
           </p>
         </section>
+
+        <div style={{ textAlign: 'center', marginTop: '24px' }}>
+          <a href="https://www.playwire.com/contact-direct-sales" rel="noopener" target="_blank">
+            <img src="https://www.playwire.com/hubfs/Powered-by-Playwire-Badges/Ads-Powered-by-playwire-2021-standalone-small-white-300px.png" alt="Ads Powered by Playwire" width="200" height="56" loading="lazy" style={{ width: '200px', height: 'auto', maxWidth: '100%', display: 'block', margin: '0 auto' }} />
+          </a>
+          <a href="https://www.playwire.com/contact-direct-sales" rel="noopener" target="_blank" className="about-link" style={{ display: 'block', marginTop: '8px' }}>Advertise on this site.</a>
+        </div>
 
         <button className="about-back-btn" onClick={onBack}>
           ← Back
