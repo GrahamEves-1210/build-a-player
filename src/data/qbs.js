@@ -198,7 +198,7 @@ export const QBS = [
     attrs: { 'arm': 7, 'legs': 4, 'size': 2, 'processing': 1, 'leadership': 2, 'vision': 2, 'playmaking': 2, 'accuracy': 1, 'pocket-presence': 1 } },
   // NYG
   { name: 'Jaxson Dart',        short: 'Dart',        team: 'NYG', teamName: 'New York Giants',       color: '#0B2265', color2: '#A71930', skin: '#f2c8a4', starter: true,  captain: true,  number: 14,
-    attrs: { 'arm': 7, 'legs': 8, 'size': 8, 'processing': 6, 'leadership': 5, 'vision': 7, 'playmaking': 7, 'accuracy': 6, 'pocket-presence': 6 } },
+    attrs: { 'arm': 7, 'legs': 8, 'size': 8, 'processing': 5, 'leadership': 5, 'vision': 7, 'playmaking': 7, 'accuracy': 6, 'pocket-presence': 5 } },
   { name: 'Jameis Winston',     short: 'Winston',     team: 'NYG', teamName: 'New York Giants',       color: '#0B2265', color2: '#A71930', skin: '#7a5030', starter: false, number: 5,
     attrs: { 'arm': 5, 'legs': 3, 'size': 6, 'processing': 4, 'leadership': 10, 'vision': 0, 'playmaking': 4, 'accuracy': 5, 'pocket-presence': 3 } },
   { name: 'Brandon Allen',      short: 'B. Allen',    team: 'NYG', teamName: 'New York Giants',       color: '#0B2265', color2: '#A71930', skin: '#f0c4a0', starter: false, number: 8,
@@ -219,7 +219,7 @@ export const QBS = [
     attrs: { 'arm': 4, 'legs': 1, 'size': 4, 'processing': 5, 'leadership': 4, 'vision': 3, 'playmaking': 1, 'accuracy': 3, 'pocket-presence': 2 } },
   // PIT
   { name: 'Aaron Rodgers',      short: 'Rodgers',     team: 'PIT', teamName: 'Pittsburgh Steelers',   color: '#FFB612', color2: '#101820', skin: '#f0c0a0', starter: true,  captain: true,  number: 8,
-    attrs: { 'arm': 8, 'legs': 3, 'size': 3, 'processing': 9, 'leadership': 1, 'vision': 9, 'playmaking': 5, 'accuracy': 8, 'pocket-presence': 9 } },
+    attrs: { 'arm': 8, 'legs': 3, 'size': 3, 'processing': 9, 'leadership': 4, 'vision': 9, 'playmaking': 5, 'accuracy': 8, 'pocket-presence': 9 } },
   { name: 'Mason Rudolph',      short: 'Rudolph',     team: 'PIT', teamName: 'Pittsburgh Steelers',   color: '#FFB612', color2: '#101820', skin: '#f0c4a0', starter: false, number: 2,
     attrs: { 'arm': 4, 'legs': 3, 'size': 4, 'processing': 4, 'leadership': 2, 'vision': 3, 'playmaking': 3, 'accuracy': 3, 'pocket-presence': 2 } },
   { name: 'Will Howard',        short: 'W. Howard',   team: 'PIT', teamName: 'Pittsburgh Steelers',   color: '#FFB612', color2: '#101820', skin: '#f0c4a0', starter: false, number: 18,

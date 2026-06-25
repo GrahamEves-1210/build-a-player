@@ -50,9 +50,11 @@ export function calcOVR(build, types = TYPES) {
   if (filled.length === types.length) {
     const spread = Math.max(...vals) - Math.min(...vals)
     const minVal = Math.min(...vals)
-    if (spread <= 1) bonus += 3
-    else if (spread <= 2) bonus += 1.5
-    else if (spread <= 3) bonus += 0.5
+    if (minVal > 0) {
+      if (spread <= 1) bonus += 3
+      else if (spread <= 2) bonus += 1.5
+      else if (spread <= 3) bonus += 0.5
+    }
     if (minVal >= 9) bonus += 2.5
     else if (minVal >= 8) bonus += 0.8
   }
@@ -273,7 +275,8 @@ export function runSimulation(build, types = TYPES, team = null) {
   const compBase = Math.min(0.76, 0.535 + acN * 0.105 + viN * 0.045 + prN * 0.032 + pkN * 0.022)
 
   // TD rate per attempt: accuracy (throws into tight windows), vision (finding end zone looks), processing (red zone)
-  const tdRateBase = 0.026 + acN * 0.016 + viN * 0.011 + prN * 0.008 + armN * 0.004
+  const tdOvrScale = ovr !== null ? Math.min(1.0, Math.max(0.70, (ovr - 55) / 40)) : 1.0
+  const tdRateBase = (0.026 + acN * 0.018 + viN * 0.012 + prN * 0.009 + armN * 0.005 + teamOffN * 0.007) * tdOvrScale
 
   // INT rate per attempt: processing (primary reducer — reads the field), then accuracy, vision, pocket
   // Leadership has zero impact on INTs — it's not a stat attribute
@@ -337,7 +340,8 @@ export function runSimulation(build, types = TYPES, team = null) {
     const gameCompPct = Math.min(0.85, Math.max(0.35, compBase + v() * 0.07))
     const gameComps  = Math.round(gameAtts * gameCompPct)
     const gamePassYds = Math.max(60, Math.round(passYdBase + v() * 85))
-    const gameTDs    = Math.max(0, Math.round(gameAtts * tdRateBase + v() * 1.1))
+    const tdVariance = ovr !== null && ovr >= 97 ? 1.75 : 1.4
+    const gameTDs    = Math.max(0, Math.round(gameAtts * tdRateBase + v() * tdVariance))
     const gameINTs   = Math.max(0, Math.round(gameAtts * intRateBase + randN() * 0.5))
     const gameRushYds = Math.max(0, Math.round(rushYdBase + v() * 18))
     const gameRushTDs = Math.random() < (legN * 0.35 + szN * 0.08 + pmN * 0.08) ? 1 : 0

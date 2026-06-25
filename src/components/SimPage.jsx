@@ -634,6 +634,17 @@ function ScreenFinal({ result, build, types, onReset, onBack }) {
         </div>
       )}
 
+      <a
+        className="simp-fanatics-link"
+        href="https://fanatics.93n6tx.net/c/7434845/586570/9663"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        <img src="/fanatics.webp" alt="Fanatics" className="simp-fanatics-logo" />
+        <span className="simp-fanatics-text">Shop official NFL jerseys &amp; gear</span>
+        <span className="simp-fanatics-cta">Shop Now →</span>
+      </a>
+
       <div className="simp-final-actions">
         <button className="simp-cta" onClick={onReset}>New Build</button>
         <button className="simp-ghost" onClick={onBack}>Back to Build</button>

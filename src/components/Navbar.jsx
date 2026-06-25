@@ -353,6 +353,19 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
               </button>
             )}
 
+            <a
+              className="wm-fanatics-banner"
+              href="https://fanatics.93n6tx.net/c/7434845/586570/9663"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <img src="/fanatics.webp" alt="Fanatics" className="wm-fanatics-logo" />
+              <span className="wm-fanatics-banner-labels">
+                <span className="wm-fanatics-banner-text">Official NFL Gear</span>
+                <span className="wm-fanatics-banner-cta">Shop Now →</span>
+              </span>
+            </a>
+
           </div>
         )}
       </div>
