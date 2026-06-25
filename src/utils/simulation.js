@@ -264,7 +264,7 @@ export function runSimulation(build, types = TYPES, team = null) {
   // Each attribute's coefficient reflects its real-world influence on that stat.
 
   // Pass yards/game: arm (long ball yardage), accuracy (completion = more yards), vision (open receivers)
-  const passYdBase = 148 + armN * 55 + acN * 38 + viN * 20 + pkN * 12 + pmN * 8 + teamOffN * 14
+  const passYdBase = 138 + armN * 65 + acN * 45 + viN * 24 + pkN * 14 + pmN * 10 + teamOffN * 16
 
   // Attempts/game: inversely linked to accuracy (inaccurate QBs need more attempts) + base volume
   const attBase = 30 + (1 - acN) * 6 + randN() * 0
@@ -336,8 +336,8 @@ export function runSimulation(build, types = TYPES, team = null) {
     const gameAtts   = Math.max(18, Math.round(attBase + v() * 5))
     const gameCompPct = Math.min(0.85, Math.max(0.35, compBase + v() * 0.07))
     const gameComps  = Math.round(gameAtts * gameCompPct)
-    const gamePassYds = Math.max(60, Math.round(passYdBase + v() * 62))
-    const gameTDs    = Math.max(0, Math.round(gameAtts * tdRateBase + v() * 0.85))
+    const gamePassYds = Math.max(60, Math.round(passYdBase + v() * 85))
+    const gameTDs    = Math.max(0, Math.round(gameAtts * tdRateBase + v() * 1.1))
     const gameINTs   = Math.max(0, Math.round(gameAtts * intRateBase + randN() * 0.5))
     const gameRushYds = Math.max(0, Math.round(rushYdBase + v() * 18))
     const gameRushTDs = Math.random() < (legN * 0.35 + szN * 0.08 + pmN * 0.08) ? 1 : 0
@@ -348,17 +348,20 @@ export function runSimulation(build, types = TYPES, team = null) {
     // Win chance: base + performance premium (great game = better chance)
     const perfBonus  = (gameTDs >= 3 ? 0.06 : gameTDs >= 2 ? 0.02 : 0)
                      - (gameINTs >= 2 ? 0.07 : gameINTs === 1 ? 0.02 : 0)
-    const gameWinP   = Math.min(0.90, Math.max(0.08, winP + perfBonus + v() * 0.08))
+    const gameWinP   = Math.min(0.90, Math.max(0.08, winP + perfBonus + v() * 0.05))
     const won        = Math.random() < gameWinP
     won ? wins++ : losses++
 
     // Score: TDs * 7 (PAT assumed) + estimated field goals + team factors
     // teamOffN boosts our scoring, teamDefN suppresses opponent scoring
+    const oppTeamData  = TEAM_BY_NAME[opponent]
+    const oppOffN = oppTeamData ? (oppTeamData.off - 5) / 5 : 0
+    const oppDefN = oppTeamData ? (oppTeamData.def - 5) / 5 : 0
     const myTDs  = gameTDs + gameRushTDs
     const estFGs = Math.max(0, Math.round(1.5 - myTDs * 0.35 + Math.random() * 1.5))
     const bonusFG = Math.random() < 0.25 ? 3 : 0
-    let mySc     = Math.max(3, myTDs * 7 + estFGs * 3 + bonusFG + (teamOffN > 0 ? 3 : 0))
-    const oppTDs = Math.floor(1 + Math.random() * 3)
+    let mySc     = Math.max(3, myTDs * 7 + estFGs * 3 + bonusFG + (teamOffN > 0 ? 3 : 0) - Math.round(oppDefN * 3))
+    const oppTDs = Math.floor(1 + Math.random() * 3 + oppOffN * 0.8)
     const oppFGs = Math.max(0, Math.round(1 - oppTDs * 0.3 + Math.random()))
     let oppSc    = Math.max(0, oppTDs * 7 + oppFGs * 3 - Math.round(teamDefN * 4))
     if (won  && mySc  <= oppSc) mySc  = oppSc + 1 + Math.ceil(Math.random() * 4)
@@ -427,15 +430,17 @@ export function runSimulation(build, types = TYPES, team = null) {
       // Playoff game stats use similar logic but with higher stakes variance
       const pgAtts  = Math.round(35 + randN() * 5)
       const pgComp  = Math.round(pgAtts * (compBase + randN() * 0.05))
-      const pgYds   = Math.max(100, Math.round(passYdBase * 1.05 + randN() * 55))
-      const pgTDs   = Math.max(0, Math.round(pgAtts * tdRateBase * 1.1 + randN() * 0.7))
+      const pgYds   = Math.max(100, Math.round(passYdBase * 1.08 + randN() * 75))
+      const pgTDs   = Math.max(0, Math.round(pgAtts * tdRateBase * 1.15 + randN() * 1.0))
       const pgINTs  = Math.max(0, Math.round(pgAtts * intRateBase + randN() * 0.5))
       const pgRtg   = Math.round(passerRating(pgComp, pgAtts, pgYds, pgTDs, pgINTs))
 
+      const oppTeamOffN = oppTeam ? (oppTeam.off - 5) / 5 : 0
+      const oppTeamDefN = oppTeam ? (oppTeam.def - 5) / 5 : 0
       const pgFGs     = Math.max(0, Math.round(1.2 - pgTDs * 0.35 + Math.random() * 1.2))
       const pgBonusFG = Math.random() < 0.25 ? 3 : 0
-      const base   = Math.max(3, pgTDs * 7 + pgFGs * 3 + pgBonusFG + (teamOffN > 0 ? 3 : 0))
-      const oppPTDs = Math.floor(1 + Math.random() * 3)
+      const base   = Math.max(3, pgTDs * 7 + pgFGs * 3 + pgBonusFG + (teamOffN > 0 ? 3 : 0) - Math.round(oppTeamDefN * 3))
+      const oppPTDs = Math.floor(1 + Math.random() * 3 + oppTeamOffN * 0.8)
       const oppPFGs = Math.max(0, Math.round(1 - oppPTDs * 0.3 + Math.random()))
       const opp    = Math.max(7, oppPTDs * 7 + oppPFGs * 3 - Math.round(teamDefN * 3))
       const margin = Math.ceil(Math.random() * 7)

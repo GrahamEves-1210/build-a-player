@@ -138,7 +138,7 @@ export default function App() {
     setShowTeamPicker(false)
     const result = runSimulation(build, activeTypes, team)
     setSimResult(result)
-    if (user && supabase) {
+    if (user && supabase && result.wins <= 17 && result.ovr <= 99) {
       const arch = getArchetype(result.ovr, build, activeTypes)
       supabase.from('simulations').insert({
         user_id: user.id,
@@ -287,6 +287,7 @@ export default function App() {
           onSaveResult={setSavedSpinResult}
           onPhaseChange={setSpinPhase}
           gameKey={gameKey}
+          onReset={handleReset}
         />
         <Silhouette
           build={build}

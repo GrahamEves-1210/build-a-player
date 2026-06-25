@@ -207,7 +207,7 @@ function Chip({ type, meta, val, selectedQB, draggingType, onChipTap, onDragStar
 }
 
 // ─── SpinScreen ──────────────────────────────────────────────────────────────
-export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, activeCategory, resetKey, onChipTap, types = TYPES, isLite = false, savedResult = null, onSaveResult, onPhaseChange, gameKey }) {
+export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, activeCategory, resetKey, onChipTap, types = TYPES, isLite = false, savedResult = null, onSaveResult, onPhaseChange, gameKey, onReset }) {
   const [phase, setPhase]               = useState(() => savedResult?.selectedQB ? 'done' : 'idle')
   const [selectedTeam, setSelectedTeam] = useState(() => savedResult?.selectedTeam ?? null)
   const [selectedQB,   setSelectedQB]   = useState(() => savedResult?.selectedQB ?? null)
@@ -440,6 +440,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
           </div>
         )}
       </div>
+      {onReset && <button className="spin-reset-btn-mobile" onClick={onReset}>Reset Build</button>}
     </aside>
   )
 }

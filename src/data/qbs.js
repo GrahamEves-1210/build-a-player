@@ -121,7 +121,7 @@ export const QBS = [
     attrs: { 'arm': 4, 'legs': 3, 'size': 5, 'processing': 3, 'leadership': 2, 'vision': 2, 'playmaking': 2, 'accuracy': 4, 'pocket-presence': 2 } },
   // HOU
   { name: 'C.J. Stroud',        short: 'Stroud',      team: 'HOU', teamName: 'Houston Texans',        color: '#002244', color2: '#A71930', skin: '#7a5030', starter: true,  captain: true,  number: 7,
-    attrs: { 'arm': 8, 'legs': 5, 'size': 6, 'processing': 6, 'leadership': 7, 'vision': 6, 'playmaking': 6, 'accuracy': 9, 'pocket-presence': 4 } },
+    attrs: { 'arm': 8, 'legs': 5, 'size': 6, 'processing': 6, 'leadership': 7, 'vision': 5, 'playmaking': 6, 'accuracy': 8, 'pocket-presence': 4 } },
   { name: 'Davis Mills',        short: 'Mills',       team: 'HOU', teamName: 'Houston Texans',        color: '#002244', color2: '#A71930', skin: '#f2c8a4', starter: false, number: 10,
     attrs: { 'arm': 4, 'legs': 1, 'size': 4, 'processing': 5, 'leadership': 3, 'vision': 3, 'playmaking': 1, 'accuracy': 4, 'pocket-presence': 4 } },
   { name: 'Graham Mertz',       short: 'Mertz',       team: 'HOU', teamName: 'Houston Texans',        color: '#002244', color2: '#A71930', skin: '#f0c4a0', starter: false, number: 5,
@@ -135,7 +135,7 @@ export const QBS = [
     attrs: { 'arm': 3, 'legs': 6, 'size': 6, 'processing': 3, 'leadership': 5, 'vision': 3, 'playmaking': 5, 'accuracy': 3, 'pocket-presence': 2 } },
   // JAX
   { name: 'Trevor Lawrence',    short: 'Lawrence',    team: 'JAX', teamName: 'Jacksonville Jaguars',  color: '#006778', color2: '#D7A22A', skin: '#f2c8a4', starter: true,  captain: true,  number: 16,
-    attrs: { 'arm': 8, 'legs': 6, 'size': 7, 'processing': 6, 'leadership': 6, 'vision': 6, 'playmaking': 6, 'accuracy': 7, 'pocket-presence': 6 } },
+    attrs: { 'arm': 8, 'legs': 6, 'size': 9, 'processing': 6, 'leadership': 6, 'vision': 6, 'playmaking': 6, 'accuracy': 7, 'pocket-presence': 6 } },
   { name: 'Nick Mullens',       short: 'Mullens',     team: 'JAX', teamName: 'Jacksonville Jaguars',  color: '#006778', color2: '#D7A22A', skin: '#f0c4a0', starter: false, number: 12,
     attrs: { 'arm': 5, 'legs': 3, 'size': 4, 'processing': 2, 'leadership': 3, 'vision': 0, 'playmaking': 4, 'accuracy': 5, 'pocket-presence': 2 } },
   { name: 'Carter Bradley',     short: 'Bradley',     team: 'JAX', teamName: 'Jacksonville Jaguars',  color: '#006778', color2: '#D7A22A', skin: '#f0c4a0', starter: false, number: 9,
@@ -212,7 +212,7 @@ export const QBS = [
     attrs: { 'arm': 3, 'legs': 3, 'size': 4, 'processing': 3, 'leadership': 3, 'vision': 3, 'playmaking': 2, 'accuracy': 3, 'pocket-presence': 2 } },
   // PHI
   { name: 'Jalen Hurts',        short: 'Hurts',       team: 'PHI', teamName: 'Philadelphia Eagles',   color: '#004C54', color2: '#A5ACAF', skin: '#7a5030', starter: true,  captain: true,  number: 1,
-    attrs: { 'arm': 5, 'legs': 9, 'size': 10, 'processing': 6, 'leadership': 8, 'vision': 7, 'playmaking': 8, 'accuracy': 7, 'pocket-presence': 6 } },
+    attrs: { 'arm': 5, 'legs': 9, 'size': 9, 'processing': 6, 'leadership': 8, 'vision': 7, 'playmaking': 8, 'accuracy': 7, 'pocket-presence': 6 } },
   { name: 'Tanner McKee',       short: 'McKee',       team: 'PHI', teamName: 'Philadelphia Eagles',   color: '#004C54', color2: '#A5ACAF', skin: '#f2c8a4', starter: false, number: 14,
     attrs: { 'arm': 5, 'legs': 3, 'size': 4, 'processing': 4, 'leadership': 3, 'vision': 4, 'playmaking': 2, 'accuracy': 4, 'pocket-presence': 3 } },
   { name: 'Andy Dalton',        short: 'Dalton',      team: 'PHI', teamName: 'Philadelphia Eagles',   color: '#004C54', color2: '#A5ACAF', skin: '#f0c4a0', starter: false, number: 14,

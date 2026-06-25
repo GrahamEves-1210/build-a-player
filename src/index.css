@@ -2241,8 +2241,35 @@ a:focus-visible {
   flex-direction: column;
   gap: 8px;
 }
-@media (min-width: 769px) {
-  .panel-footer { display: none; }
+/* panel-footer hidden on all breakpoints — mobile reset is now spin-reset-btn-mobile */
+.panel-footer { display: none; }
+
+/* Mobile-only reset button in spin panel */
+.spin-reset-btn-mobile {
+  display: none;
+}
+@media (max-width: 768px) {
+  .spin-reset-btn-mobile {
+    display: block;
+    position: fixed;
+    bottom: calc(70px + env(safe-area-inset-bottom, 0px) + 8px);
+    right: 16px;
+    padding: 0 20px;
+    height: 38px;
+    border-radius: 10px;
+    border: none;
+    background: #ef4444;
+    color: #fff;
+    font-family: var(--font);
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+    cursor: pointer;
+    z-index: 20;
+    transition: background 0.15s;
+  }
+  .spin-reset-btn-mobile:hover { background: #dc2626; }
+  .mobile-build .spin-reset-btn-mobile { display: none; }
 }
 
 .balance-row {

@@ -166,13 +166,17 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
   const pos = (zone) => {
     if (!bounds) return null
     const { W, H, fx, fy, scale } = bounds
-    const effectiveCardW = isMobile ? MOBILE_CARD_W : CARD_W
+    // Desktop: card is 211px wide, scale(1.15) expands right edge by 7.5%
+    // Mobile: card is 86px wide at left:-64px, so visible edge = 22px + scale expansion from card center (43 * 0.15 = 6.45px)
+    const cardEdgePx = isMobile
+      ? MOBILE_CARD_W + (86 / 2) * 0.15
+      : CARD_W * 1.075
     const dotX  = (fx + zone.ax * scale) / W * 100
     const dotY  = (fy + zone.ay * scale) / H * 100
     const cardY = zone.cy * 100
     const lineX = zone.side === 'left'
-      ? (effectiveCardW / W) * 100
-      : ((W - effectiveCardW) / W) * 100
+      ? (cardEdgePx / W) * 100
+      : ((W - cardEdgePx) / W) * 100
     const stubPx = isMobile ? 12 : 125
     const stub   = stubPx / W * 100
     const stubX  = zone.side === 'left' ? lineX + stub : lineX - stub
