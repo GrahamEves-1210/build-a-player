@@ -352,6 +352,7 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
                 <span className="wm-label">Sign In / Create Account</span>
               </button>
             )}
+
           </div>
         )}
       </div>

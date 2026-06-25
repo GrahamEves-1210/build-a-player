@@ -39,7 +39,7 @@ export const QBS = [
   { name: 'Jacoby Brissett',    short: 'Brissett',    team: 'ARI', teamName: 'Arizona Cardinals',     color: '#97233F', color2: '#000000', skin: '#9a6840', starter: true,  captain: true,  number: 14,
     attrs: { 'arm': 5, 'legs': 3, 'size': 7, 'processing': 7, 'leadership': 6, 'vision': 6, 'playmaking': 1, 'accuracy': 6, 'pocket-presence': 6 } },
   { name: 'Gardner Minshew',    short: 'Minshew',     team: 'ARI', teamName: 'Arizona Cardinals',     color: '#97233F', color2: '#000000', skin: '#eec0a0', starter: false, number: 10,
-    attrs: { 'arm': 1, 'legs': 4, 'size': 2, 'processing': 5, 'leadership': 5, 'vision': 5, 'playmaking': 3, 'accuracy': 4, 'pocket-presence': 4 } },
+    attrs: { 'arm': 1, 'legs': 4, 'size': 3, 'processing': 5, 'leadership': 5, 'vision': 5, 'playmaking': 3, 'accuracy': 4, 'pocket-presence': 4 } },
   { name: 'Carson Beck',        short: 'Beck',        team: 'ARI', teamName: 'Arizona Cardinals',     color: '#97233F', color2: '#000000', skin: '#f0c4a0', starter: false, number: 15,
     attrs: { 'arm': 5, 'legs': 4, 'size': 5, 'processing': 2, 'leadership': 1, 'vision': 3, 'playmaking': 4, 'accuracy': 3, 'pocket-presence': 2 } },
   // ATL
@@ -51,7 +51,7 @@ export const QBS = [
     attrs: { 'arm': 4, 'legs': 1, 'size': 3, 'processing': 5, 'leadership': 3, 'vision': 4, 'playmaking': 1, 'accuracy': 3, 'pocket-presence': 2 } },
   // BAL
   { name: 'Lamar Jackson',      short: 'Jackson',     team: 'BAL', teamName: 'Baltimore Ravens',      color: '#241773', color2: '#9E7C0C', skin: '#5e3c22', starter: true,  captain: true,  number: 8,
-    attrs: { 'arm': 8, 'legs': 11, 'size': 8, 'processing': 6, 'leadership': 7, 'vision': 9, 'playmaking': 9, 'accuracy': 8, 'pocket-presence': 9 } },
+    attrs: { 'arm': 8, 'legs': 11, 'size': 6, 'processing': 6, 'leadership': 7, 'vision': 9, 'playmaking': 9, 'accuracy': 8, 'pocket-presence': 9 } },
   { name: 'Tyler Huntley',      short: 'Huntley',     team: 'BAL', teamName: 'Baltimore Ravens',      color: '#241773', color2: '#9E7C0C', skin: '#7a5030', starter: false, number: 2,
     attrs: { 'arm': 4, 'legs': 6, 'size': 4, 'processing': 3, 'leadership': 4, 'vision': 5, 'playmaking': 4, 'accuracy': 3, 'pocket-presence': 4 } },
   { name: 'Skylar Thompson',    short: 'Thompson',    team: 'BAL', teamName: 'Baltimore Ravens',      color: '#241773', color2: '#9E7C0C', skin: '#f0c4a0', starter: false, number: 19,
@@ -72,7 +72,7 @@ export const QBS = [
     attrs: { 'arm': 4, 'legs': 2, 'size': 3, 'processing': 2, 'leadership': 3, 'vision': 2, 'playmaking': 2, 'accuracy': 2, 'pocket-presence': 2 } },
   // CHI
   { name: 'Caleb Williams',     short: 'Williams',    team: 'CHI', teamName: 'Chicago Bears',         color: '#C83803', color2: '#0B162A', skin: '#8a5c30', starter: true,  captain: true,  number: 18,
-    attrs: { 'arm': 11, 'legs': 9, 'size': 6, 'processing': 6, 'leadership': 5, 'vision': 8, 'playmaking': 10, 'accuracy': 7, 'pocket-presence': 5 } },
+    attrs: { 'arm': 10, 'legs': 8, 'size': 6, 'processing': 6, 'leadership': 5, 'vision': 8, 'playmaking': 10, 'accuracy': 7, 'pocket-presence': 6 } },
   { name: 'Tyson Bagent',       short: 'Bagent',      team: 'CHI', teamName: 'Chicago Bears',         color: '#C83803', color2: '#0B162A', skin: '#f0c4a0', starter: false, number: 17,
     attrs: { 'arm': 4, 'legs': 4, 'size': 4, 'processing': 3, 'leadership': 3, 'vision': 3, 'playmaking': 4, 'accuracy': 3, 'pocket-presence': 3 } },
   { name: 'Case Keenum',        short: 'Keenum',      team: 'CHI', teamName: 'Chicago Bears',         color: '#C83803', color2: '#0B162A', skin: '#f0c4a0', starter: false, number: 8,
@@ -81,7 +81,7 @@ export const QBS = [
   { name: 'Joe Burrow',         short: 'Burrow',      team: 'CIN', teamName: 'Cincinnati Bengals',    color: '#FB4F14', color2: '#000000', skin: '#f2c8a4', starter: true,  captain: true,  number: 9,
     attrs: { 'arm': 7, 'legs': 6, 'size': 6, 'processing': 11, 'leadership': 7, 'vision': 9, 'playmaking': 9, 'accuracy': 11, 'pocket-presence': 9 } },
   { name: 'Joe Flacco',         short: 'Flacco',      team: 'CIN', teamName: 'Cincinnati Bengals',    color: '#FB4F14', color2: '#000000', skin: '#eebc98', starter: false, number: 15,
-    attrs: { 'arm': 8, 'legs': 0, 'size': 6, 'processing': 6, 'leadership': 5, 'vision': 6, 'playmaking': 0, 'accuracy': 7, 'pocket-presence': 5 } },
+    attrs: { 'arm': 8, 'legs': 0, 'size': 7, 'processing': 6, 'leadership': 5, 'vision': 6, 'playmaking': 0, 'accuracy': 7, 'pocket-presence': 5 } },
   { name: 'Josh Johnson',       short: 'J. Johnson',  team: 'CIN', teamName: 'Cincinnati Bengals',    color: '#FB4F14', color2: '#000000', skin: '#7a5030', starter: false, number: 8,
     attrs: { 'arm': 3, 'legs': 4, 'size': 3, 'processing': 4, 'leadership': 4, 'vision': 2, 'playmaking': 3, 'accuracy': 2, 'pocket-presence': 3 } },
   // CLE
@@ -104,7 +104,7 @@ export const QBS = [
   { name: 'Jarrett Stidham',    short: 'Stidham',     team: 'DEN', teamName: 'Denver Broncos',        color: '#FB4F14', color2: '#002244', skin: '#eec0a0', starter: false, number: 3,
     attrs: { 'arm': 6, 'legs': 2, 'size': 5, 'processing': 4, 'leadership': 3, 'vision': 3, 'playmaking': 2, 'accuracy': 4, 'pocket-presence': 4 } },
   { name: 'Sam Ehlinger',       short: 'Ehlinger',    team: 'DEN', teamName: 'Denver Broncos',        color: '#FB4F14', color2: '#002244', skin: '#f0c4a0', starter: false, number: 4,
-    attrs: { 'arm': 5, 'legs': 2, 'size': 4, 'processing': 3, 'leadership': 2, 'vision': 2, 'playmaking': 1, 'accuracy': 2, 'pocket-presence': 2 } },
+    attrs: { 'arm': 5, 'legs': 5, 'size': 4, 'processing': 3, 'leadership': 2, 'vision': 2, 'playmaking': 1, 'accuracy': 2, 'pocket-presence': 2 } },
   // DET
   { name: 'Jared Goff',         short: 'Goff',        team: 'DET', teamName: 'Detroit Lions',         color: '#0076B6', color2: '#B0B7BC', skin: '#f2c8a4', starter: true,  captain: true,  number: 16,
     attrs: { 'arm': 6, 'legs': 1, 'size': 3, 'processing': 8, 'leadership': 7, 'vision': 7, 'playmaking': 1, 'accuracy': 9, 'pocket-presence': 7 } },
@@ -144,7 +144,7 @@ export const QBS = [
   { name: 'Patrick Mahomes',    short: 'Mahomes',     team: 'KC',  teamName: 'Kansas City Chiefs',    color: '#E31837', color2: '#FFB81C', skin: '#b07840', starter: true,  captain: true,  number: 15,
     attrs: { 'arm': 10, 'legs': 8, 'size': 8, 'processing': 9, 'leadership': 8, 'vision': 11, 'playmaking': 10, 'accuracy': 8, 'pocket-presence': 10 } },
   { name: 'Justin Fields',      short: 'Fields',      team: 'KC',  teamName: 'Kansas City Chiefs',    color: '#E31837', color2: '#FFB81C', skin: '#7a5030', starter: false, number: 1,
-    attrs: { 'arm': 4, 'legs': 10, 'size': 6, 'processing': 1, 'leadership': 5, 'vision': 1, 'playmaking': 4, 'accuracy': 2, 'pocket-presence': 1 } },
+    attrs: { 'arm': 4, 'legs': 10, 'size': 7, 'processing': 1, 'leadership': 5, 'vision': 1, 'playmaking': 4, 'accuracy': 2, 'pocket-presence': 1 } },
   { name: 'Garrett Nussmeier',  short: 'Nussmeier',   team: 'KC',  teamName: 'Kansas City Chiefs',    color: '#E31837', color2: '#FFB81C', skin: '#f0c4a0', starter: false, number: 13,
     attrs: { 'arm': 4, 'legs': 3, 'size': 5, 'processing': 4, 'leadership': 3, 'vision': 3, 'playmaking': 2, 'accuracy': 4, 'pocket-presence': 3 } },
   // LV
@@ -156,11 +156,11 @@ export const QBS = [
     attrs: { 'arm': 4, 'legs': 3, 'size': 4, 'processing': 4, 'leadership': 3, 'vision': 4, 'playmaking': 3, 'accuracy': 5, 'pocket-presence': 3 } },
   // LAC
   { name: 'Justin Herbert',     short: 'Herbert',     team: 'LAC', teamName: 'Los Angeles Chargers',  color: '#0080C6', color2: '#FFC20E', skin: '#f2c8a4', starter: true,  captain: true,  number: 10,
-    attrs: { 'arm': 10, 'legs': 7, 'size': 8, 'processing': 8, 'leadership': 6, 'vision': 8, 'playmaking': 8, 'accuracy': 9, 'pocket-presence': 7 } },
+    attrs: { 'arm': 10, 'legs': 7, 'size': 9, 'processing': 8, 'leadership': 6, 'vision': 8, 'playmaking': 8, 'accuracy': 9, 'pocket-presence': 7 } },
   { name: 'Trey Lance',         short: 'Lance',       team: 'LAC', teamName: 'Los Angeles Chargers',  color: '#0080C6', color2: '#FFC20E', skin: '#9a6840', starter: false, number: 5,
     attrs: { 'arm': 4, 'legs': 6, 'size': 5, 'processing': 2, 'leadership': 2, 'vision': 2, 'playmaking': 3, 'accuracy': 2, 'pocket-presence': 2 } },
   { name: 'D.J. Uiagalelei',    short: 'DJ Uiaga.',   team: 'LAC', teamName: 'Los Angeles Chargers',  color: '#0080C6', color2: '#FFC20E', skin: '#b07848', starter: false, number: 4,
-    attrs: { 'arm': 2, 'legs': 5, 'size': 7, 'processing': 0, 'leadership': 2, 'vision': 3, 'playmaking': 2, 'accuracy': 1, 'pocket-presence': 1 } },
+    attrs: { 'arm': 2, 'legs': 5, 'size': 8, 'processing': 0, 'leadership': 2, 'vision': 3, 'playmaking': 2, 'accuracy': 1, 'pocket-presence': 1 } },
   // LAR
   { name: 'Matthew Stafford',   short: 'Stafford',    team: 'LAR', teamName: 'Los Angeles Rams',      color: '#003594', color2: '#FFA300', skin: '#f0c4a0', starter: true,  captain: true,  number: 9,
     attrs: { 'arm': 9, 'legs': 2, 'size': 5, 'processing': 9, 'leadership': 8, 'vision': 10, 'playmaking': 7, 'accuracy': 9, 'pocket-presence': 8 } },
@@ -200,7 +200,7 @@ export const QBS = [
   { name: 'Jaxson Dart',        short: 'Dart',        team: 'NYG', teamName: 'New York Giants',       color: '#0B2265', color2: '#A71930', skin: '#f2c8a4', starter: true,  captain: true,  number: 14,
     attrs: { 'arm': 7, 'legs': 8, 'size': 8, 'processing': 6, 'leadership': 5, 'vision': 7, 'playmaking': 7, 'accuracy': 6, 'pocket-presence': 6 } },
   { name: 'Jameis Winston',     short: 'Winston',     team: 'NYG', teamName: 'New York Giants',       color: '#0B2265', color2: '#A71930', skin: '#7a5030', starter: false, number: 5,
-    attrs: { 'arm': 5, 'legs': 3, 'size': 4, 'processing': 4, 'leadership': 10, 'vision': 0, 'playmaking': 4, 'accuracy': 5, 'pocket-presence': 3 } },
+    attrs: { 'arm': 5, 'legs': 3, 'size': 6, 'processing': 4, 'leadership': 10, 'vision': 0, 'playmaking': 4, 'accuracy': 5, 'pocket-presence': 3 } },
   { name: 'Brandon Allen',      short: 'B. Allen',    team: 'NYG', teamName: 'New York Giants',       color: '#0B2265', color2: '#A71930', skin: '#f0c4a0', starter: false, number: 8,
     attrs: { 'arm': 4, 'legs': 3, 'size': 5, 'processing': 3, 'leadership': 2, 'vision': 2, 'playmaking': 3, 'accuracy': 2, 'pocket-presence': 3 } },
   // NYJ
@@ -212,7 +212,7 @@ export const QBS = [
     attrs: { 'arm': 3, 'legs': 3, 'size': 4, 'processing': 3, 'leadership': 3, 'vision': 3, 'playmaking': 2, 'accuracy': 3, 'pocket-presence': 2 } },
   // PHI
   { name: 'Jalen Hurts',        short: 'Hurts',       team: 'PHI', teamName: 'Philadelphia Eagles',   color: '#004C54', color2: '#A5ACAF', skin: '#7a5030', starter: true,  captain: true,  number: 1,
-    attrs: { 'arm': 5, 'legs': 9, 'size': 10, 'processing': 6, 'leadership': 8, 'vision': 7, 'playmaking': 8, 'accuracy': 7, 'pocket-presence': 8 } },
+    attrs: { 'arm': 5, 'legs': 9, 'size': 10, 'processing': 6, 'leadership': 8, 'vision': 7, 'playmaking': 8, 'accuracy': 7, 'pocket-presence': 6 } },
   { name: 'Tanner McKee',       short: 'McKee',       team: 'PHI', teamName: 'Philadelphia Eagles',   color: '#004C54', color2: '#A5ACAF', skin: '#f2c8a4', starter: false, number: 14,
     attrs: { 'arm': 5, 'legs': 3, 'size': 4, 'processing': 4, 'leadership': 3, 'vision': 4, 'playmaking': 2, 'accuracy': 4, 'pocket-presence': 3 } },
   { name: 'Andy Dalton',        short: 'Dalton',      team: 'PHI', teamName: 'Philadelphia Eagles',   color: '#004C54', color2: '#A5ACAF', skin: '#f0c4a0', starter: false, number: 14,
@@ -228,7 +228,7 @@ export const QBS = [
   { name: 'Brock Purdy',        short: 'Purdy',       team: 'SF',  teamName: 'San Francisco 49ers',   color: '#AA0000', color2: '#B3995D', skin: '#f0c4a0', starter: true,  captain: true,  number: 13,
     attrs: { 'arm': 5, 'legs': 6, 'size': 3, 'processing': 8, 'leadership': 7, 'vision': 8, 'playmaking': 8, 'accuracy': 6, 'pocket-presence': 8 } },
   { name: 'Mac Jones',          short: 'Mac Jones',   team: 'SF',  teamName: 'San Francisco 49ers',   color: '#AA0000', color2: '#B3995D', skin: '#f2c8a4', starter: false, number: 10,
-    attrs: { 'arm': 5, 'legs': 1, 'size': 1, 'processing': 5, 'leadership': 5, 'vision': 3, 'playmaking': 2, 'accuracy': 5, 'pocket-presence': 5 } },
+    attrs: { 'arm': 5, 'legs': 1, 'size': 2, 'processing': 5, 'leadership': 5, 'vision': 3, 'playmaking': 2, 'accuracy': 5, 'pocket-presence': 5 } },
   { name: 'Adrian Martinez',    short: 'Martinez',    team: 'SF',  teamName: 'San Francisco 49ers',   color: '#AA0000', color2: '#B3995D', skin: '#d4a070', starter: false, number: 7,
     attrs: { 'arm': 4, 'legs': 6, 'size': 6, 'processing': 3, 'leadership': 2, 'vision': 3, 'playmaking': 2, 'accuracy': 3, 'pocket-presence': 2 } },
   // SEA
@@ -256,14 +256,14 @@ export const QBS = [
   { name: 'Jayden Daniels',     short: 'Daniels',     team: 'WAS', teamName: 'Washington Commanders', color: '#773141', color2: '#FFB612', skin: '#7a5030', starter: true,  captain: true,  number: 5,
     attrs: { 'arm': 8, 'legs': 10, 'size': 4, 'processing': 7, 'leadership': 7, 'vision': 9, 'playmaking': 8, 'accuracy': 8, 'pocket-presence': 7 } },
   { name: 'Marcus Mariota',     short: 'Mariota',     team: 'WAS', teamName: 'Washington Commanders', color: '#773141', color2: '#FFB612', skin: '#c09060', starter: false, number: 8,
-    attrs: { 'arm': 4, 'legs': 6, 'size': 5, 'processing': 4, 'leadership': 4, 'vision': 3, 'playmaking': 4, 'accuracy': 4, 'pocket-presence': 3 } },
+    attrs: { 'arm': 4, 'legs': 6, 'size': 6, 'processing': 4, 'leadership': 4, 'vision': 3, 'playmaking': 4, 'accuracy': 4, 'pocket-presence': 3 } },
   { name: 'Athan Kaliakmanis',  short: 'Kaliak.',     team: 'WAS', teamName: 'Washington Commanders', color: '#773141', color2: '#FFB612', skin: '#f0c4a0', starter: false, number: 16,
     attrs: { 'arm': 2, 'legs': 4, 'size': 4, 'processing': 2, 'leadership': 2, 'vision': 1, 'playmaking': 2, 'accuracy': 2, 'pocket-presence': 2 } },
 ]
 export const CATEGORIES = [
   { id: 'physical', label: 'Physical', types: ['arm', 'legs', 'size'] },
   { id: 'mental',   label: 'Mental',   types: ['processing', 'leadership', 'vision'] },
-  { id: 'skill',    label: 'Skills',   types: ['accuracy', 'playmaking', 'pocket-presence'] },
+  { id: 'skill',    label: 'Skill',   types: ['accuracy', 'playmaking', 'pocket-presence'] },
 ]
 
 export const ATTR = {

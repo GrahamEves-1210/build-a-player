@@ -43,6 +43,7 @@ export default function App() {
   const [showAuth, setShowAuth]         = useState(false)
   const [showTeamPicker, setShowTeamPicker] = useState(false)
   const [savedSpinResult, setSavedSpinResult] = useState(null)
+  const [spinPhase, setSpinPhase] = useState('idle')
 
   useEffect(() => {
     const meta = document.querySelector('meta[name="theme-color"]')
@@ -103,7 +104,7 @@ export default function App() {
     setSimResult(null)
     setSimReplaying(false)
     setActiveDrag(null)
-    setSpinResetKey(0)
+    setSpinResetKey(k => k + 1)
     setSavedSpinResult(null)
     setMobileView('spin')
     window.scrollTo({ top: 0, behavior: 'instant' })
@@ -282,6 +283,7 @@ export default function App() {
           isLite={gameMode === 'lite'}
           savedResult={savedSpinResult}
           onSaveResult={setSavedSpinResult}
+          onPhaseChange={setSpinPhase}
         />
         <Silhouette
           build={build}

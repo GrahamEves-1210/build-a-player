@@ -301,8 +301,8 @@ export function runSimulation(build, types = TYPES, team = null) {
       + (ovr < 67 ? (67 - ovr) * 0.018 : 0)
     : 0
 
-  const winP = Math.min(0.82, Math.max(0.15,
-    0.24
+  const winP = Math.min(0.84, Math.max(0.15,
+    0.27
     + acN * 0.11   // most important — accurate QBs win
     + prN * 0.10   // smart QBs protect the ball and win close games
     + viN * 0.09   // vision drives efficiency
@@ -312,8 +312,8 @@ export function runSimulation(build, types = TYPES, team = null) {
     + legN * 0.04  // mobile QBs add dimension
     + ldN * 0.03   // leadership: small team W-L effect, NOT stats
     + szN * 0.02   // durability — stays healthy
-    + teamOffN * 0.050  // supporting cast / scheme — bad teams penalised more
-    + teamDefN * 0.060  // defense wins games independently
+    + teamOffN * 0.055  // supporting cast / scheme — bad teams penalised more
+    + teamDefN * 0.065  // defense wins games independently
     - ovrPenalty
   ))
 
@@ -421,7 +421,7 @@ export function runSimulation(build, types = TYPES, team = null) {
       const pgOvrPenalty = ovr !== null && ovr < 85
         ? (85 - ovr) * 0.011
         : 0
-      const pgWinP     = Math.min(0.90, Math.max(0.10, 0.30 + ovrN * 0.58 + teamN * 0.38 - pgOvrPenalty))
+      const pgWinP     = Math.min(0.90, Math.max(0.10, 0.30 + ovrN * 0.61 + teamN * 0.41 - pgOvrPenalty))
       const won        = Math.random() < pgWinP
 
       // Playoff game stats use similar logic but with higher stakes variance

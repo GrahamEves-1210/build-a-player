@@ -64,13 +64,6 @@ export default function PrivacyPage({ onBack }) {
           </p>
         </section>
 
-        <div style={{ textAlign: 'center', marginTop: '24px' }}>
-          <a href="https://www.playwire.com/contact-direct-sales" rel="noopener" target="_blank">
-            <img src="https://www.playwire.com/hubfs/Powered-by-Playwire-Badges/Ads-Powered-by-playwire-2021-standalone-small-white-300px.png" alt="Ads Powered by Playwire" width="200" height="56" loading="lazy" style={{ width: '200px', height: 'auto', maxWidth: '100%', display: 'block', margin: '0 auto' }} />
-          </a>
-          <a href="https://www.playwire.com/contact-direct-sales" rel="noopener" target="_blank" className="about-link" style={{ display: 'block', marginTop: '8px' }}>Advertise on this site.</a>
-        </div>
-
         <button className="about-back-btn" onClick={onBack}>
           ← Back
         </button>

@@ -207,7 +207,7 @@ function Chip({ type, meta, val, selectedQB, draggingType, onChipTap, onDragStar
 }
 
 // ─── SpinScreen ──────────────────────────────────────────────────────────────
-export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, activeCategory, resetKey, onChipTap, types = TYPES, isLite = false, savedResult = null, onSaveResult }) {
+export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, activeCategory, resetKey, onChipTap, types = TYPES, isLite = false, savedResult = null, onSaveResult, onPhaseChange }) {
   const [phase, setPhase]               = useState(() => savedResult?.selectedQB ? 'done' : 'idle')
   const [selectedTeam, setSelectedTeam] = useState(() => savedResult?.selectedTeam ?? null)
   const [selectedQB,   setSelectedQB]   = useState(() => savedResult?.selectedQB ?? null)
@@ -230,13 +230,14 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
   const clearAll = () => clearTimeout(pauseRef.current)
 
   useEffect(() => {
-    if (resetKey === 0) usedTeamsRef.current = []
+    usedTeamsRef.current = []
     clearAll()
     setPhase('idle')
     setSelectedTeam(null)
     setSelectedQB(null)
     setExcludedQB(null)
     setDraggingType(null)
+    setQbRespinUsed(false)
     const panel = document.querySelector('.spin-panel')
     if (panel) panel.scrollTop = 0
   }, [resetKey])
@@ -248,6 +249,10 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
     if (phase === 'done' && selectedQB) onSaveResult({ selectedTeam, selectedQB, qbRespinUsed })
     else if (phase === 'idle') onSaveResult(null)
   }, [phase, selectedTeam, selectedQB, qbRespinUsed])
+
+  useEffect(() => {
+    if (onPhaseChange) onPhaseChange(phase)
+  }, [phase])
 
   // Team reel calls this when it naturally halts
   const handleTeamStop = useCallback((team) => {

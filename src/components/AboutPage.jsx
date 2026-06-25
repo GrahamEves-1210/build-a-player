@@ -3,6 +3,8 @@ export default function AboutPage({ onBack, onPrivacy }) {
     <div className="about-page">
       <div className="about-inner">
 
+        <button className="prf-top-back" onClick={onBack}>← Back to Game</button>
+
         <div className="about-header">
           <div className="about-title">Build<em>-A-</em>Player</div>
         </div>
@@ -26,12 +28,15 @@ export default function AboutPage({ onBack, onPrivacy }) {
           </p>
         </section>
 
-        <button className="about-back-btn" onClick={onBack}>
-          ← Back to Game
-        </button>
-
         <div className="about-footer-links">
           <a className="about-text-link" href="/privacy">Privacy Policy</a>
+        </div>
+
+        <div style={{ textAlign: 'center', marginTop: '4px' }}>
+          <a href="https://www.playwire.com/contact-direct-sales" rel="noopener" target="_blank">
+            <img src="https://www.playwire.com/hubfs/Powered-by-Playwire-Badges/Ads-Powered-by-playwire-2021-standalone-small-white-300px.png" alt="Ads Powered by Playwire" width="200" height="56" loading="lazy" style={{ width: '200px', height: 'auto', maxWidth: '100%', display: 'block', margin: '0 auto' }} />
+          </a>
+          <a href="https://www.playwire.com/contact-direct-sales" rel="noopener" target="_blank" className="about-link" style={{ display: 'block', marginTop: '8px' }}>Advertise on this site.</a>
         </div>
 
       </div>
