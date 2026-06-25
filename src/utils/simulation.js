@@ -453,9 +453,24 @@ export function runSimulation(build, types = TYPES, team = null) {
     const pgHomeProb = (round) => {
       if (round === 'Super Bowl') return 0
       if (seed === 1) return 1.0
-      if (round === 'Wild Card')               return seed <= 3 ? 0.75 : seed <= 4 ? 0.45 : 0.20
-      if (round === 'Divisional Round')        return seed <= 2 ? 0.70 : seed <= 3 ? 0.50 : 0.30
-      if (round === 'Conference Championship') return seed <= 2 ? 0.65 : seed <= 3 ? 0.45 : 0.30
+      if (round === 'Wild Card') {
+        // In the NFL, seeds 2-4 always host Wild Card; seeds 5+ always travel
+        return seed <= 4 ? 1.0 : 0.0
+      }
+      if (round === 'Divisional Round') {
+        // Lower seeds almost always travel to 1 or 2 seed after winning Wild Card
+        if (seed === 2) return 0.80
+        if (seed === 3) return 0.10
+        if (seed === 4) return 0.08
+        return 0.05
+      }
+      if (round === 'Conference Championship') {
+        // 2 seed hosts if they're the highest remaining; lower seeds rarely host
+        if (seed === 2) return 0.60
+        if (seed === 3) return 0.20
+        if (seed === 4) return 0.12
+        return 0.10
+      }
       return 0
     }
 
