@@ -136,7 +136,7 @@ function IconChevron({ up }) {
   )
 }
 
-export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, onLeaderboard, user }) {
+export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, onLeaderboard, user, gameMode }) {
   const [open,         setOpen]        = useState(false)
   const [htpOpen,      setHtpOpen]     = useState(false)
   const [installOpen,  setInstallOpen] = useState(false)
@@ -161,10 +161,11 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
   const handleLeaderboard = () => { onLeaderboard?.(); setOpen(false) }
 
   return (
-    <header className="navbar">
+    <header className={`navbar${gameMode === 'legends' ? ' legends-mode' : ''}`}>
       <div className="logo" onClick={onHome} style={onHome ? { cursor: 'pointer' } : undefined}>
-        <div className="logo-text">
-          Build<em>-A-</em>Player
+        <div className="logo-text-stack">
+          <div className="logo-text">Build<em>-A-</em>Player</div>
+          {gameMode === 'legends' && <span className="logo-mode-tag">Legends</span>}
         </div>
       </div>
 
@@ -353,18 +354,6 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
               </button>
             )}
 
-            <a
-              className="wm-fanatics-banner"
-              href="https://fanatics.93n6tx.net/c/7434845/586570/9663"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <img src="/fanatics.webp" alt="Fanatics" className="wm-fanatics-logo" />
-              <span className="wm-fanatics-banner-labels">
-                <span className="wm-fanatics-banner-text">Official NFL Gear</span>
-                <span className="wm-fanatics-banner-cta">Shop Now →</span>
-              </span>
-            </a>
 
           </div>
         )}

@@ -1,5 +1,6 @@
 /* ── DESIGN TOKENS ── */
 :root {
+  --ad-h: 90px; /* Playwire bottom rail height — desktop */
   --g50:  #D8F3DC;
   --g100: #B7E4C7;
   --g200: #95D5B2;
@@ -425,6 +426,10 @@ a:focus-visible {
 }
 
 
+.logo-text-stack {
+  position: relative;
+}
+
 .logo-text {
   font-family: Impact, 'Arial Narrow Bold', sans-serif;
   font-size: 22px;
@@ -434,6 +439,22 @@ a:focus-visible {
   text-transform: uppercase;
   white-space: nowrap;
   line-height: 1;
+}
+
+.logo-mode-tag {
+  position: absolute;
+  top: calc(100% + 1.5px);
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: 'Outfit', 'Inter', sans-serif;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 5px;
+  color: #D4AF37;
+  text-transform: uppercase;
+  line-height: 1;
+  white-space: nowrap;
+  pointer-events: none;
 }
 
 .logo-text em {
@@ -582,15 +603,35 @@ a:focus-visible {
 
 .spin-panel-body {
   flex: 1;
-  overflow-y: auto;
-  padding: 9px 11px 15px;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.spin-panel-static {
+  flex-shrink: 0;
+  padding: 9px 11px 0;
   display: flex;
   flex-direction: column;
   gap: 14px;
-  scrollbar-width: none;
 }
 
-.spin-panel-body::-webkit-scrollbar { display: none; }
+.spin-panel-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 3px 11px 80px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.15) transparent;
+}
+
+.spin-panel-scroll::-webkit-scrollbar { width: 3px; }
+.spin-panel-scroll::-webkit-scrollbar-track { background: transparent; margin: 8px 0; }
+.spin-panel-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.18); border-radius: 2px; }
 
 /* ── SLOT REELS ── */
 .reels-wrap {
@@ -1135,7 +1176,11 @@ a:focus-visible {
 
 /* ── Desktop: compact spin panel below the spin button ── */
 @media (min-width: 769px) {
-  .spin-panel-body       { gap: 8px; padding-bottom: 9px; }
+  .spin-panel-static     { gap: 8px; }
+  .sil-wrap              { transform: scale(0.88) translateY(-5px); transform-origin: top center; }
+  .spin-panel-scroll     { overflow: hidden; gap: 5px; padding-bottom: 0; }
+  .build-slots           { padding-bottom: var(--ad-h); }
+  .build-slots .qb-avatar { width: 41.8px !important; height: 41.8px !important; }
   .grade-toggle-btn      { margin-top: -2px; }
   .reset-btn {
     height: 38px;
@@ -1146,13 +1191,13 @@ a:focus-visible {
     text-shadow: 0 0 8px rgba(248,113,113,0.4);
   }
   .spin-hint-text        { padding-top: 5px; padding-bottom: 2px; font-size: 10.5px; }
-  .attr-chip             { padding: 4.5px 7.5px 4.5px 9.5px; }
+  .attr-chip             { padding: 3.4px 7.4px 3.4px 9.4px; }
   .qb-reveal-text        { padding: 9px 9px; }
   .qb-reveal-hero        { width: 76px; }
   .qb-reveal-hero .qb-avatar { width: 52px !important; height: 52px !important; }
-  .attr-category-section { gap: 3.5px; }
-  .attr-category-hd      { padding-bottom: 1px; }
-  .chip-val              { width: 31px; height: 31px; font-size: 11.5px; }
+  .attr-category-section { gap: 2px; }
+  .attr-category-hd      { padding-bottom: 0; }
+  .chip-val              { width: 28.4px; height: 28.4px; font-size: 10.5px; }
 }
 
 /* ── CENTER FIELD ── */
@@ -1230,7 +1275,7 @@ a:focus-visible {
   width: 100%;
   height: calc(100dvh - 130px);
   overflow: visible;
-  margin-top: 25px;
+  margin-top: 15px;
   flex-shrink: 0;
 }
 
@@ -1244,16 +1289,16 @@ a:focus-visible {
     align-items: center;
     justify-content: center;
     position: absolute;
-    bottom: 18px;
-    right: -40px;
-    height: 44px;
-    padding: 0 32px;
-    border-radius: 10px;
+    bottom: -2px;
+    left: -150px;
+    height: 53px;
+    padding: 0 38px;
+    border-radius: 12px;
     border: none;
     background: #ef4444;
     color: #fff;
     font-family: var(--font);
-    font-size: 16px;
+    font-size: 19px;
     font-weight: 700;
     letter-spacing: 0.2px;
     cursor: pointer;
@@ -1439,7 +1484,7 @@ a:focus-visible {
   line-height: 1.25;
 }
 
-.cz-type-playmaking .cz-tag { font-size: 5.5px !important; }
+.cz-type-playmaking .cz-tag { font-size: 9px !important; letter-spacing: 0.4px; }
 
 /* White player section — drops below tag when filled */
 .cz-player-drop {
@@ -1495,23 +1540,6 @@ a:focus-visible {
   animation: cz-pulse 1.6s ease-in-out infinite;
 }
 
-/* Progress strip */
-.progress-strip {
-  display: flex;
-  gap: 5px;
-  flex-shrink: 0;
-  padding-top: 10px;
-}
-
-.p-seg {
-  height: 2px;
-  width: 28px;
-  border-radius: 2px;
-  background: rgba(255,255,255,0.07);
-  transition: background-color 0.3s var(--ease), box-shadow 0.3s var(--ease);
-}
-
-.p-seg.on { background: var(--accent); box-shadow: 0 0 7px var(--accent); }
 
 /* ── ABOUT PAGE ── */
 .about-page {
@@ -1962,7 +1990,7 @@ a:focus-visible {
 }
 
 .ovr-block {
-  padding: 16px 18px 12px;
+  padding: 15px 17px 11px;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
   display: flex;
@@ -1974,7 +2002,7 @@ a:focus-visible {
   width: 100%;
   height: 1px;
   background: var(--border);
-  margin: 8px 0 0;
+  margin: 7px 0 0;
 }
 
 .ovr-label {
@@ -1983,7 +2011,7 @@ a:focus-visible {
   letter-spacing: 1.6px;
   text-transform: uppercase;
   color: var(--text);
-  margin-bottom: 4px;
+  margin-bottom: 3px;
 }
 
 /* Desktop: wrapper is invisible to layout — ring-wrap behaves as before */
@@ -1996,7 +2024,9 @@ a:focus-visible {
   position: relative;
   width: 133px;
   height: 133px;
-  margin: -16px 0 18px;
+  margin: -16px 0 8px;
+  transform: scale(0.97) translateY(-4.5px);
+  transform-origin: top center;
 }
 
 .ovr-ring-svg {
@@ -2040,8 +2070,8 @@ a:focus-visible {
 }
 
 .ovr-arch-row {
-  margin-top: 4px;
-  margin-bottom: 2px;
+  margin-top: -2px;
+  margin-bottom: 1px;
   text-align: center;
 }
 
@@ -2058,10 +2088,10 @@ a:focus-visible {
 .build-slots {
   flex: 1;
   overflow-y: auto;
-  padding: 10px 12px;
+  padding: 9px 11px;
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 4px;
   scrollbar-width: none;
 }
 
@@ -2070,11 +2100,11 @@ a:focus-visible {
 .build-slot {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
+  gap: 7px;
+  padding: 7px 9px;
   border-radius: 10px;
   border: 1px solid transparent;
-  min-height: 50px;
+  min-height: 49px;
   transition:
     background-color 0.22s var(--ease),
     border-color 0.22s var(--ease),
@@ -2113,7 +2143,7 @@ a:focus-visible {
   letter-spacing: 1.1px;
   text-transform: uppercase;
   color: var(--text-4);
-  margin-bottom: 2px;
+  margin-bottom: 1px;
 }
 
 .sl-qb-name {
@@ -2244,7 +2274,7 @@ a:focus-visible {
   flex-direction: column;
   gap: 8px;
 }
-/* panel-footer hidden on all breakpoints — mobile reset is now spin-reset-btn-mobile */
+/* panel-footer hidden on all breakpoints */
 .panel-footer { display: none; }
 
 /* Mobile-only reset button in spin panel */
@@ -2255,7 +2285,7 @@ a:focus-visible {
   .spin-reset-btn-mobile {
     display: block;
     position: fixed;
-    bottom: calc(70px + env(safe-area-inset-bottom, 0px) + 8px);
+    bottom: calc(50px + 70px + env(safe-area-inset-bottom, 0px) + 10px);
     right: 16px;
     padding: 0 20px;
     height: 38px;
@@ -2268,7 +2298,7 @@ a:focus-visible {
     font-weight: 700;
     letter-spacing: 0.2px;
     cursor: pointer;
-    z-index: 20;
+    z-index: 210;
     transition: background 0.15s;
   }
   .spin-reset-btn-mobile:hover { background: #dc2626; }
@@ -3647,7 +3677,7 @@ a:focus-visible {
 }
 
 .splash-mode-classic,
-.splash-mode-lite {
+.splash-mode-legends {
   border: none;
   border-radius: 18px;
   cursor: pointer;
@@ -3674,22 +3704,33 @@ a:focus-visible {
 
 .splash-mode-classic:active { transform: scale(0.98); }
 
-/* Lite — secondary card */
-.splash-mode-lite {
-  background: rgba(255,255,255,0.04);
-  border: 1.5px solid rgba(255,255,255,0.10);
-  padding: 18px 18px 16px;
-  flex: 1;
-  transition: transform 0.22s var(--ease), background 0.22s var(--ease), border-color 0.22s var(--ease);
+/* Legends — gold secondary card */
+.splash-mode-legends {
+  background: linear-gradient(145deg, rgba(212,175,55,0.16) 0%, rgba(255,182,18,0.09) 100%);
+  border: 1.5px solid rgba(212,175,55,0.40);
+  box-shadow: inset 0 1px 0 rgba(212,175,55,0.18), 0 2px 12px rgba(212,175,55,0.08);
+  padding: 18px 20px 18px;
+  flex: 1.2;
+  position: relative;
+  transition: transform 0.22s var(--ease), box-shadow 0.22s var(--ease), border-color 0.22s var(--ease);
 }
 
-.splash-mode-lite:hover {
-  transform: translateY(-2px);
-  background: rgba(255,255,255,0.07);
-  border-color: rgba(255,255,255,0.18);
+.splash-mode-legends:hover {
+  transform: translateY(-2px) scale(1.01);
+  box-shadow: inset 0 1px 0 rgba(212,175,55,0.22), 0 8px 28px rgba(212,175,55,0.18), 0 0 0 1px rgba(212,175,55,0.22);
+  border-color: rgba(212,175,55,0.58);
 }
 
-.splash-mode-lite:active { transform: scale(0.98); }
+.splash-mode-legends:active { transform: scale(0.98); }
+
+.splash-mode-legends--coming-soon {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: grayscale(0.6);
+}
+.splash-mode-legends--coming-soon:hover  { transform: none !important; box-shadow: none !important; border-color: rgba(212,175,55,0.18) !important; }
+.splash-mode-legends--coming-soon:active { transform: none !important; }
+.smode-new-badge--soon { background: rgba(120,120,120,0.5); color: #aaa; border-color: rgba(150,150,150,0.3); }
 
 .smode-badge {
   display: inline-block;
@@ -3714,11 +3755,32 @@ a:focus-visible {
   line-height: 1;
 }
 
-.splash-mode-lite .smode-title {
-  font-size: 20px;
-  color: rgba(255,255,255,0.7);
+.smode-title--legends {
+  color: #fff;
 }
 
+.smode-new-badge {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: #0a0a0a;
+  background: #D4AF37;
+  border-radius: 4px;
+  padding: 2px 7px;
+  line-height: 1.4;
+}
+
+.smode-badge--legends {
+  font-size: 8px;
+  white-space: nowrap;
+  color: #D4AF37;
+  background: rgba(212,175,55,0.12);
+  border-color: rgba(212,175,55,0.28);
+}
 
 .smode-cta {
   display: flex;
@@ -3733,8 +3795,8 @@ a:focus-visible {
   white-space: nowrap;
 }
 
-.splash-mode-lite .smode-cta {
-  color: rgba(255,255,255,0.45);
+.smode-cta--legends {
+  color: #D4AF37;
 }
 
 
@@ -3751,8 +3813,9 @@ a:focus-visible {
 @media (max-width: 768px) {
   .splash-chip { display: none; }
   .smode-title { font-size: 20px; }
+  .smode-title--legends { font-size: 18px; }
   .splash-mode-classic { padding: 16px 16px 14px; }
-  .splash-mode-lite { padding: 16px 14px 14px; }
+  .splash-mode-legends { padding: 16px 14px 14px; }
   .splash-glow { width: 300px; height: 300px; }
   .splash-header {
     position: absolute;
@@ -3783,14 +3846,14 @@ a:focus-visible {
     flex-direction: row-reverse;
   }
   .splash-mode-classic,
-  .splash-mode-lite {
+  .splash-mode-legends {
     min-width: 0;
     flex-shrink: 1;
     overflow: hidden;
   }
   .splash-mode-classic { flex: 1.4; }
-  .splash-mode-lite    { flex: 1; }
-  .splash-mode-lite .smode-cta { font-size: 12px; letter-spacing: 1px; gap: 5px; }
+  .splash-mode-legends { flex: 1.1; }
+  .splash-mode-legends .smode-cta { letter-spacing: 2px; gap: 6px; }
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -3809,6 +3872,7 @@ a:focus-visible {
     background: #090a0d;
   }
   .logo-text { font-size: 18px; margin-left: -2px; letter-spacing: -0.5px; }
+  .logo-mode-tag { top: calc(100% + 4px); font-size: 9px; }
   .tab-pill { font-size: 8.5px; padding: 3px 8px; letter-spacing: 0.3px; }
   .tab-pill-qb { font-size: 10.5px; }
   .tab-soon-label { font-size: 7px; letter-spacing: 0.3px; }
@@ -3833,7 +3897,7 @@ a:focus-visible {
   .game-layout {
     display: flex;
     flex-direction: column;
-    height: calc(100svh - 52px - env(safe-area-inset-top) - 64px); /* navbar + safe area + tab bar */
+    height: calc(100svh - 52px - env(safe-area-inset-top) - 64px - 50px); /* navbar + safe area + tab bar + ad */
     overflow: hidden;
     background: var(--bg-raised);
   }
@@ -3850,13 +3914,14 @@ a:focus-visible {
   .game-layout.mobile-spin {
     height: auto;
     overflow: visible;
-    min-height: calc(100svh - 52px - env(safe-area-inset-top) - 64px);
+    min-height: calc(100svh - 52px - env(safe-area-inset-top) - 64px - 50px);
   }
 
   /* Build view: let the page scroll naturally instead of clipping */
   .game-layout.mobile-build {
     height: auto;
     overflow: visible;
+    padding-bottom: 60px;
   }
 
   /* ── Spin panel — full height on mobile ── */
@@ -4127,8 +4192,8 @@ a:focus-visible {
 
   /* Build view: player model fixed height, report card scrolls with page */
   .mobile-build .field-center {
-    height: 62svh;
-    padding: 0 6px 8px;
+    height: 57svh;
+    padding: 0 6px 0;
     overflow: clip;
     background-color: #306699;
     background-image: radial-gradient(circle, rgba(255,255,255,0.08) 1px, transparent 1px);
@@ -4214,7 +4279,7 @@ html.is-x-browser .mobile-tab-bar {
   .mobile-tab-bar {
     display: flex;
     position: fixed;
-    bottom: 0;
+    bottom: 50px; /* sit above the Playwire bottom rail */
     left: 0;
     right: 0;
     height: calc(70px + env(safe-area-inset-bottom, 0px));
@@ -4292,7 +4357,7 @@ html.is-touch .wm-social-btn:hover        { background: transparent !important; 
 html.is-touch .wm-social-btn-coffee:hover { background: #FFDD00 !important; color: #1a1200 !important; }
 html.is-touch .tab-pill:hover             { background: transparent !important; color: var(--text-3) !important; border-color: rgba(149,213,178,0.12) !important; }
 html.is-touch .splash-mode-classic:hover  { transform: none !important; box-shadow: none !important; border-color: rgba(94,219,216,0.35) !important; }
-html.is-touch .splash-mode-lite:hover     { transform: none !important; background: rgba(255,255,255,0.04) !important; border-color: rgba(255,255,255,0.10) !important; }
+html.is-touch .splash-mode-legends:hover  { transform: none !important; box-shadow: none !important; border-color: rgba(212,175,55,0.32) !important; }
 html.is-touch .attr-chip:hover            { background: rgba(255,255,255,0.04) !important; }
 html.is-touch .spin-btn:hover:not(:disabled) { background: linear-gradient(to right, #5EDBD8 0%, #3DD6A3 100%) !important; }
 html.is-touch .qb-respin-btn:hover        { background: none !important; border-color: var(--border-hi) !important; color: var(--text-2) !important; }
@@ -4322,7 +4387,7 @@ html.is-touch .bd-card-main:hover         { background: transparent !important; 
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  padding: 40px 20px 60px;
+  padding: 40px 20px calc(60px + var(--ad-h));
   background:
     radial-gradient(ellipse 90% 35% at 50% 0%, color-mix(in srgb, var(--team-color, var(--accent)) 9%, transparent) 0%, transparent 100%),
     var(--bg-raised);
@@ -4492,7 +4557,7 @@ html.is-touch .bd-card-main:hover         { background: transparent !important; 
 .panel-right .simp-attr-row .simp-attr-info { position: relative; left: -15px; }
 .panel-right .simp-attr-row .simp-grade-circle { position: relative; left: 11px; }
 .panel-right .sl-playmaking .simp-attr-name { font-size: 9px; }
-.panel-right .simp-attr-row { padding: 6px 12px; }
+.panel-right .simp-attr-row { padding: 5px 11px; }
 .panel-right .simp-attr-name { font-size: 9px; }
 .panel-right .simp-attr-qb { font-size: 11px; }
 .panel-right .simp-grade-circle { width: 37px; height: 37px; min-width: 37px; font-size: 11px; }
@@ -5017,85 +5082,6 @@ html.is-touch .bd-card-main:hover         { background: transparent !important; 
 .sbg-opp  { font-size: 14px; font-weight: 700; color: var(--text); }
 .sbg-line { font-size: 13px; color: var(--text-3); width: 100%; }
 
-.simp-fanatics-link {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  text-decoration: none;
-  padding: 12px 16px;
-  border-radius: 10px;
-  background: #fff;
-  margin-bottom: 4px;
-  transition: background 0.15s;
-}
-.simp-fanatics-link:hover { background: #f0f0f0; }
-.simp-fanatics-logo {
-  height: 22px;
-  width: auto;
-}
-.simp-fanatics-text {
-  font-size: 11px;
-  font-weight: 600;
-  color: #12233a;
-  letter-spacing: 0.3px;
-  text-transform: uppercase;
-}
-.simp-fanatics-cta {
-  font-size: 12px;
-  font-weight: 700;
-  color: #e31837;
-  letter-spacing: 0.3px;
-  white-space: nowrap;
-}
-
-/* Navbar fanatics banner */
-.wm-fanatics-banner {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin: 4px -8px -8px;
-  padding: 12px 14px;
-  background: #fff;
-  border-radius: 0 0 14px 14px;
-  border: none;
-  border-top: 1px solid rgba(149,213,178,0.15);
-  outline: none;
-  text-decoration: none;
-  transition: background 0.15s;
-  overflow: hidden;
-}
-.wm-fanatics-banner:hover { background: #f0f0f0; }
-.wm-fanatics-logo {
-  height: 20px;
-  width: auto;
-  flex-shrink: 0;
-}
-.wm-fanatics-banner-labels {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 3px;
-  position: relative;
-  left: -4px;
-}
-.wm-fanatics-banner-text {
-  font-size: 15px;
-  font-weight: 600;
-  color: #12233a;
-  letter-spacing: 0.2px;
-  white-space: nowrap;
-  line-height: 1;
-}
-.wm-fanatics-banner-cta {
-  font-size: 11px;
-  font-weight: 800;
-  color: #e31837;
-  letter-spacing: 0.4px;
-  text-transform: uppercase;
-  line-height: 1;
-}
 .simp-final-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
 
 .simp-cta {
@@ -6591,3 +6577,39 @@ html.is-android #qb-fg [id="forearm"]          { filter: brightness(0.82) blur(0
 html.is-android #qb-fg [id="Legs"]             { filter: none !important; }
 html.is-android #qb-fg [id="right calf"] path,
 html.is-android #qb-fg [id="left calf"] path   { filter: blur(0.5px) !important; }
+
+/* ══════════════════════════════════════════════════════════════════
+   LEGENDS MODE — spin button gold + logo accent
+   ══════════════════════════════════════════════════════════════════ */
+
+.navbar.legends-mode { --accent: #D4AF37; }
+
+/* Gold spin button */
+.legends-mode .spin-btn {
+  background: linear-gradient(135deg, #FBF0A0 0%, #D4AF37 55%, #C49A10 100%);
+  color: #1a1000;
+  border-color: rgba(0,0,0,0.18);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.20), inset 0 1px 0 rgba(255,255,255,0.40);
+  /* Remove background from transition — flat-color ↔ gradient can't interpolate */
+  transition: transform 0.12s var(--ease), box-shadow 0.15s var(--ease);
+}
+.legends-mode .spin-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #FFF5B0 0%, #E8C547 55%, #D4A010 100%);
+  box-shadow: 0 4px 20px rgba(212,175,55,0.38), 0 2px 8px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.45);
+}
+.legends-mode .spin-btn:disabled {
+  background: linear-gradient(135deg, rgba(251,240,160,0.18) 0%, rgba(212,175,55,0.14) 55%, rgba(196,154,16,0.10) 100%);
+  border-color: rgba(212,175,55,0.12);
+  color: rgba(180,145,20,0.30);
+  box-shadow: none;
+}
+.legends-mode .spin-btn.spin-btn-wait:disabled {
+  background: transparent;
+  border-color: rgba(212,175,55,0.32);
+  color: rgba(212,175,55,0.42);
+  box-shadow: none;
+}
+html.is-touch .legends-mode .spin-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #FBF0A0 0%, #D4AF37 55%, #C49A10 100%) !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.20) !important;
+}

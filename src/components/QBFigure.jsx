@@ -224,19 +224,7 @@ export default function QBFigure({ build = null, className = '' }) {
 
       {/* SOCKS */}
       <path fill={f(sockCs)} stroke={OL} strokeWidth="0.5" style={tr} d="M46 406 L74  406 L73  422 L47  422 Z"/>
-      {legCp && (
-        <>
-          <path fill={legCp} opacity="0.55" d="M46 410 L74 410 L74 414 L46 414 Z"/>
-          <path fill={legCp} opacity="0.3"  d="M46 417 L74 417 L74 420 L46 420 Z"/>
-        </>
-      )}
       <path fill={f(sockCs)} stroke={OL} strokeWidth="0.5" style={tr} d="M126 406 L154 406 L153 422 L127 422 Z"/>
-      {legCp && (
-        <>
-          <path fill={legCp} opacity="0.55" d="M126 410 L154 410 L154 414 L126 414 Z"/>
-          <path fill={legCp} opacity="0.3"  d="M126 417 L154 417 L154 420 L126 420 Z"/>
-        </>
-      )}
 
       {/* SHOES */}
       <path fill={f(shoeCsh)} stroke={OL} strokeWidth={sw} style={tr}

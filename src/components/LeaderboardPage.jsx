@@ -122,6 +122,7 @@ export default function LeaderboardPage({ onBack, currentUser }) {
       .not('build', 'is', null)
       .gte('ovr', 80)
       .order('ovr', { ascending: false })
+      .order('wins', { ascending: false })
       .limit(50)
     const worstQ = supabase
       .from('simulations')
@@ -130,6 +131,7 @@ export default function LeaderboardPage({ onBack, currentUser }) {
       .not('build', 'is', null)
       .lt('ovr', 80)
       .order('ovr', { ascending: true })
+      .order('wins', { ascending: true })
       .limit(20)
     Promise.all([bestQ, worstQ]).then(([best, worst]) => {
       if (best.data)  setBestBuilds(best.data)
@@ -143,7 +145,7 @@ export default function LeaderboardPage({ onBack, currentUser }) {
   const toggleExpand = (i) => setExpandedIdx(prev => prev === i ? null : i)
 
   const activeMetric = METRICS.find(m => m.key === metric)
-  const sorted = [...rows].sort((a, b) => b[metric] - a[metric])
+  const sorted = [...rows].sort((a, b) => (b[metric] - a[metric]) || (b.wins - a.wins))
   const profileSlots = Array.from({ length: 20 }, (_, i) => sorted[i] ?? null)
 
   const buildsList = buildsTab === 'best' ? bestBuilds : worstBuilds

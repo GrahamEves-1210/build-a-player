@@ -76,7 +76,7 @@ export default function SplashScreen({ onStart }) {
         <div className="splash-modes">
           <button className="splash-mode-classic" onClick={() => onStart('classic')}>
             <div className="smode-title">Classic</div>
-            <div className="smode-badge">Recommended</div>
+            <div className="smode-badge">Current QBs</div>
             <div className="smode-cta">
               START DRAFTING
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -85,13 +85,12 @@ export default function SplashScreen({ onStart }) {
             </div>
           </button>
 
-          <button className="splash-mode-lite" onClick={() => onStart('lite')}>
-            <div className="smode-title">Lite</div>
-            <div className="smode-cta">
-              START DRAFTING
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M5 12h14M12 5l7 7-7 7"/>
-              </svg>
+          <button className="splash-mode-legends splash-mode-legends--coming-soon" disabled>
+            <span className="smode-new-badge smode-new-badge--soon">SOON</span>
+            <div className="smode-title smode-title--legends">Legends</div>
+            <div className="smode-badge smode-badge--legends">Draft the Greats</div>
+            <div className="smode-cta smode-cta--legends">
+              COMING SOON
             </div>
           </button>
         </div>

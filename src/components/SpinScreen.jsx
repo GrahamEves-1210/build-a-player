@@ -207,7 +207,7 @@ function Chip({ type, meta, val, selectedQB, draggingType, onChipTap, onDragStar
 }
 
 // ─── SpinScreen ──────────────────────────────────────────────────────────────
-export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, activeCategory, resetKey, onChipTap, types = TYPES, isLite = false, savedResult = null, onSaveResult, onPhaseChange, gameKey, onReset }) {
+export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, activeCategory, resetKey, onChipTap, types = TYPES, isLite = false, qbPool = QBS, savedResult = null, onSaveResult, onPhaseChange, gameKey, onReset }) {
   const [phase, setPhase]               = useState(() => savedResult?.selectedQB ? 'done' : 'idle')
   const [selectedTeam, setSelectedTeam] = useState(() => savedResult?.selectedTeam ?? null)
   const [selectedQB,   setSelectedQB]   = useState(() => savedResult?.selectedQB ?? null)
@@ -305,8 +305,8 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
 
   // Stable QB items — minimal placeholder until team is selected (QB reel is blurred/hidden)
   const qbReelItems = useMemo(() => {
-    if (!selectedTeam) return QBS.slice(0, 3)
-    const base = QBS.filter(q => q.team === selectedTeam.short)
+    if (!selectedTeam) return qbPool.slice(0, 3)
+    const base = qbPool.filter(q => q.team === selectedTeam.short)
     const arr = excludedQB ? base.filter(q => q !== excludedQB) : [...base]
     for (let i = arr.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1))
@@ -324,59 +324,59 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
     <aside className="spin-panel">
       {isSpinning && <div className="spin-blocker" />}
       <div className="spin-panel-body">
-        <button className={`grade-toggle-btn${hideGrades ? ' grade-toggle-off' : ' grade-toggle-on'}`} onClick={toggleGrades}>
-          {hideGrades ? 'Hiding Grades' : 'Showing Grades'}
-        </button>
-        <div className="reels-wrap">
-          <div className="reel-tri reel-tri-l" />
-          <div className="reels-row">
-            <SlotReel
-              label="TEAM"
-              items={teamReelItems}
-              spinning={isSpinningTeam}
-              idle={!isSpinning && !selectedTeam}
-              locked={!!selectedTeam}
-              getDisplay={t => t.short}
-              getSub={t => t.name.split(' ').slice(-1)[0]}
-              onStop={handleTeamStop}
-              durationMs={800}
-              jitterMs={1000}
-            />
-            <SlotReel
-              label="QB"
-              items={qbReelItems}
-              spinning={isSpinningQB}
-              idle={!isSpinning && !selectedQB}
-              locked={!!selectedQB && phase === 'done'}
-              getDisplay={q => q.name.split(' ')[0]}
-              getSub={q => q.name.split(' ').slice(1).join(' ')}
-              onStop={handleQBStop}
-              durationMs={1100}
-              jitterMs={400}
-              blurred={phase === 'team' || phase === 'team-done'}
-              fast={qbRespinUsed > 0}
-            />
+        <div className="spin-panel-static">
+          <button className={`grade-toggle-btn${hideGrades ? ' grade-toggle-off' : ' grade-toggle-on'}`} onClick={toggleGrades}>
+            {hideGrades ? 'Hiding Grades' : 'Showing Grades'}
+          </button>
+          <div className="reels-wrap">
+            <div className="reel-tri reel-tri-l" />
+            <div className="reels-row">
+              <SlotReel
+                label="TEAM"
+                items={teamReelItems}
+                spinning={isSpinningTeam}
+                idle={!isSpinning && !selectedTeam}
+                locked={!!selectedTeam}
+                getDisplay={t => t.short}
+                getSub={t => t.name.split(' ').slice(-1)[0]}
+                onStop={handleTeamStop}
+                durationMs={800}
+                jitterMs={1000}
+              />
+              <SlotReel
+                label="QB"
+                items={qbReelItems}
+                spinning={isSpinningQB}
+                idle={!isSpinning && !selectedQB}
+                locked={!!selectedQB && phase === 'done'}
+                getDisplay={q => q.name.split(' ')[0]}
+                getSub={q => q.name.split(' ').slice(1).join(' ')}
+                onStop={handleQBStop}
+                durationMs={1100}
+                jitterMs={400}
+                blurred={phase === 'team' || phase === 'team-done'}
+                fast={qbRespinUsed > 0}
+              />
+            </div>
+            <div className="reel-tri reel-tri-r" />
           </div>
-          <div className="reel-tri reel-tri-r" />
-        </div>
 
-        {(() => {
-          const canRespin = isDone && qbRespinUsed < 2 && !complete
-          return (
-            <>
-              <button
-                className={`spin-btn${isDone && !canRespin ? ' spin-btn-wait' : ''}`}
-                onClick={canRespin ? handleQBRespin : handleSpin}
-                disabled={isSpinning || complete || (isDone && !canRespin)}
-              >
-                {canRespin ? <>QB RESPIN? <span className="spin-btn-badge">{2 - qbRespinUsed}</span></> : 'SPIN'}
-              </button>
-            </>
-          )
-        })()}
+          {(() => {
+            const canRespin = isDone && qbRespinUsed < 2 && !complete
+            return (
+              <>
+                <button
+                  className={`spin-btn${isDone && !canRespin ? ' spin-btn-wait' : ''}`}
+                  onClick={canRespin ? handleQBRespin : handleSpin}
+                  disabled={isSpinning || complete || (isDone && !canRespin)}
+                >
+                  {canRespin ? <>QB RESPIN? <span className="spin-btn-badge">{2 - qbRespinUsed}</span></> : 'SPIN'}
+                </button>
+              </>
+            )
+          })()}
 
-        {isDone && selectedQB && (
-          <>
+          {isDone && selectedQB && (
             <div className="qb-reveal-card" style={{ '--qb-color': selectedQB.color }}>
               <div className="qb-reveal-hero">
                 <QBAvatar
@@ -391,8 +391,12 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
                 <div className="qb-reveal-meta">{selectedQB.teamName}{selectedQB.starter ? '' : ' · Backup'}</div>
               </div>
             </div>
+          )}
+        </div>
 
-            {hasAvailableChips ? (
+        <div className="spin-panel-scroll">
+          {isDone && selectedQB && (
+            hasAvailableChips ? (
               <>
                 {(isLite || types.length <= 4)
                   ? types.filter(t => !build[t]).map(t => {
@@ -424,21 +428,21 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
               <div className="spin-hint-text">
                 {complete ? 'All slots filled' : 'All available slots filled for this QB'}
               </div>
-            )}
-          </>
-        )}
+            )
+          )}
 
-{!isDone && (
-          <div className="spin-hint-text">
-            Spin to reveal a QB.<span className="hint-mobile-assign"><br />Select an attribute for your build.</span>
-          </div>
-        )}
+          {!isDone && (
+            <div className="spin-hint-text">
+              Spin to reveal a QB.<span className="hint-mobile-assign"><br />Select an attribute for your build.</span>
+            </div>
+          )}
 
-        {complete && (
-          <div className="spin-hint-text" style={{ color: 'var(--accent)', paddingTop: 4 }}>
-            All 9 slots filled — simulate your season
-          </div>
-        )}
+          {complete && (
+            <div className="spin-hint-text" style={{ color: 'var(--accent)', paddingTop: 4 }}>
+              All 9 slots filled — simulate your season
+            </div>
+          )}
+        </div>
       </div>
       {onReset && <button className="spin-reset-btn-mobile" onClick={onReset}>Reset Build</button>}
     </aside>

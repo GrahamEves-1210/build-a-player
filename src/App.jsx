@@ -52,6 +52,12 @@ export default function App() {
   }, [page])
 
   useEffect(() => {
+    window.ramp?.que?.push(() => {
+      window.ramp.spaNewPage()
+    })
+  }, [page])
+
+  useEffect(() => {
     if (!supabase) return
     supabase.auth.getSession().then(({ data }) => setUser(data.session?.user ?? null))
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
@@ -61,6 +67,7 @@ export default function App() {
   }, [])
 
   const activeTypes = gameMode === 'lite' ? LITE_TYPES : TYPES
+  const activePool  = QBS
 
 
 
@@ -86,7 +93,7 @@ export default function App() {
   const fillTestBuild = useCallback(() => {
     const newBuild = {}
     activeTypes.forEach(type => {
-      const best = QBS.reduce((a, b) => ((b.attrs[type] ?? 0) > (a.attrs[type] ?? 0) ? b : a), QBS[0])
+      const best = activePool.reduce((a, b) => ((b.attrs[type] ?? 0) > (a.attrs[type] ?? 0) ? b : a), activePool[0])
       const photo = HEADSHOTS[best.name] ? `/headshots/${HEADSHOTS[best.name]}.jpg` : null
       newBuild[type] = {
         type, val: best.attrs[type],
@@ -98,7 +105,7 @@ export default function App() {
     })
     setBuild(newBuild)
     setMobileView('build')
-  }, [activeTypes])
+  }, [activeTypes, activePool])
 
   const handleReset = useCallback(() => {
     setBuild(Object.fromEntries(activeTypes.map(t => [t, null])))
@@ -189,6 +196,7 @@ export default function App() {
     onProfile: () => setPage('profile'),
     onLeaderboard: () => setPage('leaderboard'),
     user,
+    gameMode,
   }
 
   if (page === 'leaderboard') {
@@ -283,6 +291,7 @@ export default function App() {
           onChipTap={handleChipTap}
           types={activeTypes}
           isLite={gameMode === 'lite'}
+          qbPool={activePool}
           savedResult={savedSpinResult}
           onSaveResult={setSavedSpinResult}
           onPhaseChange={setSpinPhase}
