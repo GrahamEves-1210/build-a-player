@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { ATTR, TEAMS, TYPES } from '../data/qbs'
 import { valToGrade } from '../utils/simulation'
@@ -84,6 +84,15 @@ export default function LeaderboardPage({ onBack, currentUser }) {
   const [view, setView]               = useState('profiles')
   const [buildsTab, setBuildsTab]     = useState('best')
   const [expandedIdx, setExpandedIdx] = useState(null)
+  const adInvokedRef = useRef(false)
+
+  useEffect(() => {
+    if (adInvokedRef.current) return
+    adInvokedRef.current = true
+    window.ramp?.que?.push(() => {
+      window.ramp.spaAddAds([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-lb' }])
+    })
+  }, [])
 
   useEffect(() => {
     if (!supabase) { setLoading(false); return }
@@ -218,6 +227,8 @@ export default function LeaderboardPage({ onBack, currentUser }) {
             Builds
           </button>
         </div>
+
+        <div id="ramp-cntr1-lb" className="ad-cntr1-lb" />
 
         {view === 'profiles' ? (
           <>

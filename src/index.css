@@ -2307,7 +2307,7 @@ a:focus-visible {
     align-items: center;
     justify-content: center;
     gap: 2px;
-    padding: 5px 7px;
+    padding: 12px 7px;
     border-radius: 10px;
     border: 1px solid rgba(239,68,68,0.35);
     background: rgba(239,68,68,0.12);
@@ -2316,7 +2316,7 @@ a:focus-visible {
     position: absolute;
     right: -17px;
     top: 50%;
-    transform: translateY(calc(-50% - 8px + 57px));
+    transform: translateY(calc(-50% + 57px));
     transition: background 0.15s, border-color 0.15s;
   }
   .spin-reset-circle svg { width: 17px; height: 17px; }
@@ -2328,7 +2328,7 @@ a:focus-visible {
     line-height: 1;
     color: #f87171;
   }
-  .spin-reset-circle:hover { background: rgba(239,68,68,0.22); border-color: #f87171; }
+  .spin-reset-circle:active { background: rgba(239,68,68,0.22); border-color: #f87171; }
   .mobile-build .spin-reset-circle { display: none; }
 }
 
@@ -6145,6 +6145,16 @@ html.is-touch .bd-card-main:hover         { background: transparent !important; 
   opacity: 0.7;
 }
 
+/* Eliminate 300ms tap delay on all leaderboard interactive elements */
+.lb-tab,
+.lb-main-seg-btn,
+.lb-row-clickable,
+.lb-expand-wrap,
+.prf-top-back {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
 /* ── metric tabs ── */
 .lb-tabs-scroll {
   display: flex;
@@ -6153,6 +6163,7 @@ html.is-touch .bd-card-main:hover         { background: transparent !important; 
   padding-bottom: 2px;
   scrollbar-width: none;
   -ms-overflow-style: none;
+  touch-action: pan-x;
 }
 .lb-tabs-scroll::-webkit-scrollbar { display: none; }
 .lb-tab {
@@ -6271,6 +6282,23 @@ html.is-touch .bd-card-main:hover         { background: transparent !important; 
 .lb-empty-val  { color: var(--text-4); font-size: 16px; }
 
 /* ── Leaderboard main toggle pill ── */
+/* Leaderboard ad — flush between seg and header */
+.ad-cntr1-lb {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  margin: 0 0 -22px;
+  overflow: hidden;
+  line-height: 0;
+  font-size: 0;
+}
+.ad-cntr1-lb > * {
+  margin: 0 !important;
+  padding: 0 !important;
+  line-height: 0 !important;
+  max-width: 100% !important;
+}
+
 .lb-main-seg {
   display: flex;
   background: rgba(149,213,178,0.05);

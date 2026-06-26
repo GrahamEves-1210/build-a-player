@@ -104,7 +104,7 @@ export const QBS = [
   { name: 'Jarrett Stidham',    short: 'Stidham',     team: 'DEN', teamName: 'Denver Broncos',        color: '#FB4F14', color2: '#002244', skin: '#eec0a0', starter: false, number: 3,
     attrs: { 'arm': 6, 'legs': 2, 'size': 5, 'processing': 4, 'leadership': 3, 'vision': 3, 'playmaking': 2, 'accuracy': 4, 'pocket-presence': 4 } },
   { name: 'Sam Ehlinger',       short: 'Ehlinger',    team: 'DEN', teamName: 'Denver Broncos',        color: '#FB4F14', color2: '#002244', skin: '#f0c4a0', starter: false, number: 4,
-    attrs: { 'arm': 5, 'legs': 5, 'size': 4, 'processing': 3, 'leadership': 2, 'vision': 2, 'playmaking': 1, 'accuracy': 2, 'pocket-presence': 2 } },
+    attrs: { 'arm': 2, 'legs': 5, 'size': 4, 'processing': 3, 'leadership': 2, 'vision': 2, 'playmaking': 1, 'accuracy': 2, 'pocket-presence': 2 } },
   // DET
   { name: 'Jared Goff',         short: 'Goff',        team: 'DET', teamName: 'Detroit Lions',         color: '#0076B6', color2: '#B0B7BC', skin: '#f2c8a4', starter: true,  captain: true,  number: 16,
     attrs: { 'arm': 6, 'legs': 1, 'size': 3, 'processing': 8, 'leadership': 7, 'vision': 7, 'playmaking': 1, 'accuracy': 9, 'pocket-presence': 7 } },

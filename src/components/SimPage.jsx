@@ -705,6 +705,7 @@ export default function SimPage({ result, build, types = TYPES, onBack, onReset,
   const next = () => {
     document.querySelector('.simp-page')?.scrollTo({ top: 0, behavior: 'instant' })
     window.scrollTo({ top: 0, behavior: 'instant' })
+    window.ramp?.que?.push(() => window.ramp.spaNewPage())
     setScreen(s => s + 1)
   }
 
