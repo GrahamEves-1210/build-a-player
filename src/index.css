@@ -6695,6 +6695,17 @@ html.is-touch .legends-mode .spin-btn:hover:not(:disabled) {
   }
 }
 
+/* Hide Playwire corner/floating video ads */
+[id*="corner_video"],
+[id*="floating_video"],
+[id*="corner-video"],
+[class*="corner_video"],
+[class*="floating_video"],
+[id^="pw-oop-video"],
+[id^="pw-oop-corner"] {
+  display: none !important;
+}
+
 /* Strip Playwire's injected background/border from the bottom rail container */
 #adBanner,
 .adLeaderboard,
