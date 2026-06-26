@@ -320,14 +320,34 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
     cat.types.some(type => types.includes(type) && !build[type])
   )
 
+  const adInvokedRef = useRef(false)
+  useEffect(() => {
+    if (!isDone || adInvokedRef.current) return
+    adInvokedRef.current = true
+    window.ramp?.que?.push(() => {
+      window.ramp.spaAddAds([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1' }])
+    })
+  }, [isDone])
+
   return (
     <aside className="spin-panel">
       {isSpinning && <div className="spin-blocker" />}
       <div className="spin-panel-body">
         <div className="spin-panel-static">
-          <button className={`grade-toggle-btn${hideGrades ? ' grade-toggle-off' : ' grade-toggle-on'}`} onClick={toggleGrades}>
-            {hideGrades ? 'Hiding Grades' : 'Showing Grades'}
-          </button>
+          <div className="spin-top-row">
+            <button className={`grade-toggle-btn${hideGrades ? ' grade-toggle-off' : ' grade-toggle-on'}`} onClick={toggleGrades}>
+              {hideGrades ? 'Hiding Grades' : 'Showing Grades'}
+            </button>
+            {onReset && (
+              <button className="spin-reset-circle" onClick={onReset} aria-label="Reset build">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                  <path d="M3 3v5h5"/>
+                </svg>
+                <span className="spin-reset-circle-lbl">Reset</span>
+              </button>
+            )}
+          </div>
           <div className="reels-wrap">
             <div className="reel-tri reel-tri-l" />
             <div className="reels-row">
@@ -392,6 +412,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
               </div>
             </div>
           )}
+          <div id="ramp-cntr1" className={`ad-cntr1-mobile${isDone ? '' : ' ad-cntr1-hidden'}`} />
         </div>
 
         <div className="spin-panel-scroll">
@@ -404,7 +425,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
                       const val  = selectedQB.attrs[t]
                       return <Chip key={t} type={t} meta={meta} val={val} selectedQB={selectedQB} draggingType={draggingType} onChipTap={onChipTap} onDragStart={onDragStart} onDragEnd={onDragEnd} setDraggingType={setDraggingType} hideGrades={hideGrades} />
                     })
-                  : visibleCategories.map(cat => {
+                  : visibleCategories.map((cat, catIdx) => {
                       const available = cat.types.filter(type => types.includes(type) && !build[type])
                       if (!available.length) return null
                       return (
@@ -444,7 +465,6 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
           )}
         </div>
       </div>
-      {onReset && <button className="spin-reset-btn-mobile" onClick={onReset}>Reset Build</button>}
     </aside>
   )
 }

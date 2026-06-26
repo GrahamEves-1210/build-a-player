@@ -558,6 +558,12 @@ function ScreenFinal({ result, build, types, onReset, onBack }) {
 
   useEffect(() => { const t = setTimeout(() => setShow(true), 200); return () => clearTimeout(t) }, [])
 
+  useEffect(() => {
+    window.ramp?.que?.push(() => {
+      window.ramp.spaAddAds([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-sim' }])
+    })
+  }, [])
+
   const yds     = useCountUp(seasonPassYds, 1200, show)
   const tds     = useCountUp(seasonTDs, 900, show)
   const ints    = useCountUp(seasonINTs, 900, show)
@@ -669,6 +675,8 @@ function ScreenFinal({ result, build, types, onReset, onBack }) {
         </div>
       )}
 
+
+      <div id="ramp-cntr1-sim" className="ad-cntr1-mobile" />
 
       <div className="simp-final-actions">
         <button className="simp-cta" onClick={onReset}>New Build</button>

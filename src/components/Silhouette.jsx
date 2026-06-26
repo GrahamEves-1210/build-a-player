@@ -31,7 +31,10 @@ function useFigureBounds(ref) {
   useLayoutEffect(() => {
     if (!ref.current) return
     const compute = () => {
-      const { width: W, height: H } = ref.current.getBoundingClientRect()
+      // Use offsetWidth/offsetHeight (layout size before CSS transform) so that
+      // SVG percentage coords align with CSS left/top percentage positions on children.
+      const W = ref.current.offsetWidth
+      const H = ref.current.offsetHeight
       if (!W || !H) return
       const scale = Math.min(W / FIG_W, H / FIG_H)
       setBounds({

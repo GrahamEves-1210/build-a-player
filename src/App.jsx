@@ -14,6 +14,7 @@ import AuthModal from './components/AuthModal'
 import ProfilePage from './components/ProfilePage'
 import LeaderboardPage from './components/LeaderboardPage'
 import { TYPES, LITE_TYPES, QBS } from './data/qbs'
+import { LEGENDS, LEGEND_TYPES } from './data/legends'
 import HEADSHOTS from './data/headshots.json'
 import { runSimulation, getArchetype } from './utils/simulation'
 import { supabase } from './lib/supabase'
@@ -66,8 +67,8 @@ export default function App() {
     return () => subscription.unsubscribe()
   }, [])
 
-  const activeTypes = gameMode === 'lite' ? LITE_TYPES : TYPES
-  const activePool  = QBS
+  const activeTypes = gameMode === 'lite' ? LITE_TYPES : gameMode === 'legends' ? LEGEND_TYPES : TYPES
+  const activePool  = gameMode === 'legends' ? LEGENDS : QBS
 
 
 
@@ -145,6 +146,8 @@ export default function App() {
     setShowTeamPicker(false)
     const result = runSimulation(build, activeTypes, team)
     setSimResult(result)
+    if (!user) console.warn('[build-a-player] sim result not saved — user not logged in')
+    else if (!supabase) console.warn('[build-a-player] sim result not saved — supabase not configured')
     if (user && supabase && result.wins <= 17 && result.ovr <= 99) {
       const arch = getArchetype(result.ovr, build, activeTypes)
       supabase.from('simulations').insert({
@@ -167,7 +170,9 @@ export default function App() {
             qb: build[t].qbFull, team: build[t].team, val: build[t].val,
           }])
         ),
-      }).then(() => {})
+      }).then(({ error }) => {
+        if (error) console.error('[build-a-player] simulation save failed:', error)
+      })
     }
     setSimReplaying(false)
     setPage('sim')
@@ -280,7 +285,7 @@ export default function App() {
     <>
       <Navbar {...navbarProps} />
 
-      <main className={`game-layout mobile-${mobileView}`}>
+      <main className={`game-layout mobile-${mobileView}${gameMode === 'legends' ? ' legends-mode' : ''}`}>
         <SpinScreen
           build={build}
           activeDrag={activeDrag}

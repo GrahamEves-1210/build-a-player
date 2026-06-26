@@ -87,29 +87,75 @@ export default function LeaderboardPage({ onBack, currentUser }) {
 
   useEffect(() => {
     if (!supabase) { setLoading(false); return }
-    supabase
-      .from('leaderboard_profiles')
-      .select('*')
-      .then(({ data, error }) => {
-        if (!data || error) { setLoading(false); return }
-        const compiled = data.map(u => {
-          const games = (u.wins ?? 0) + (u.losses ?? 0)
-          return {
-            uid:    u.user_id,
-            username: u.username || `Player_${u.user_id?.slice(0, 5)}`,
-            wins:   u.wins   ?? 0,
-            losses: u.losses ?? 0,
-            yds:    u.yds    ?? 0,
-            tds:    u.tds    ?? 0,
-            rings:  u.rings  ?? 0,
-            count:  u.count  ?? 0,
-            avgOvr: u.avg_ovr ?? 0,
-            winPct: games > 0 ? +((u.wins / games) * 100).toFixed(1) : 0,
-          }
-        })
-        setRows(compiled)
-        setLoading(false)
+    // Fetch top 20 for each metric separately with server-side ordering so we
+    // always get the true global top regardless of Supabase's default row limit.
+    // win% is computed client-side so we fetch top 100 by wins as a superset.
+    const q = (col, limit = 20) =>
+      supabase.from('leaderboard_profiles').select('*').order(col, { ascending: false }).limit(limit)
+    Promise.all([
+      q('rings'),
+      q('avg_ovr'),
+      q('wins'),
+      q('wins', 100), // superset for win% (computed client-side)
+      q('yds'),
+      q('tds'),
+    ]).then(results => {
+      const err = results.find(r => r.error)
+      if (err) console.error('[build-a-player] leaderboard_profiles query failed:', err.error)
+
+      // Merge all result rows into one deduplicated map keyed by user_id.
+      // Each metric query returns the true top for that column so the union
+      // covers the true top 20 for every displayable metric.
+      const byUid = new Map()
+      const allRows = results.flatMap(r => r.data ?? [])
+      for (const u of allRows) {
+        const uid = u.user_id
+        if (!uid) continue
+        if (!byUid.has(uid)) {
+          byUid.set(uid, {
+            user_id: uid,
+            username: u.username || null,
+            wins:    u.wins    ?? 0,
+            losses:  u.losses  ?? 0,
+            yds:     u.yds     ?? 0,
+            tds:     u.tds     ?? 0,
+            rings:   u.rings   ?? 0,
+            count:   u.count   ?? 0,
+            avg_ovr: u.avg_ovr ?? 0,
+          })
+        } else {
+          // Same user appeared in multiple metric queries — take max per column
+          // (the view already aggregates per user so values should be identical;
+          //  taking max is safe and handles any view-grouping duplicates)
+          const acc = byUid.get(uid)
+          acc.wins    = Math.max(acc.wins,    u.wins    ?? 0)
+          acc.losses  = Math.max(acc.losses,  u.losses  ?? 0)
+          acc.yds     = Math.max(acc.yds,     u.yds     ?? 0)
+          acc.tds     = Math.max(acc.tds,     u.tds     ?? 0)
+          acc.rings   = Math.max(acc.rings,   u.rings   ?? 0)
+          acc.count   = Math.max(acc.count,   u.count   ?? 0)
+          acc.avg_ovr = Math.max(acc.avg_ovr, u.avg_ovr ?? 0)
+          if (!acc.username && u.username) acc.username = u.username
+        }
+      }
+      const compiled = Array.from(byUid.values()).map(u => {
+        const games = u.wins + u.losses
+        return {
+          uid:    u.user_id,
+          username: u.username || `Player_${u.user_id?.slice(0, 5)}`,
+          wins:   u.wins,
+          losses: u.losses,
+          yds:    u.yds,
+          tds:    u.tds,
+          rings:  u.rings,
+          count:  u.count,
+          avgOvr: +(u.avg_ovr).toFixed(1),
+          winPct: games > 0 ? +((u.wins / games) * 100).toFixed(1) : 0,
+        }
       })
+      setRows(compiled)
+      setLoading(false)
+    })
   }, [])
 
   const loadBuilds = () => {

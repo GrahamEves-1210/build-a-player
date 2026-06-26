@@ -101,7 +101,7 @@ function SlotReel({ items, spinning, idle, onStop }) {
         wrap()
         if (trackRef.current) {
           trackRef.current.style.transition = 'none'
-          trackRef.current.style.transform  = `translateY(${-(posRef.current - CENTER * ITEM_H)}px)`
+          trackRef.current.style.transform  = `translate3d(0,${-(posRef.current - CENTER * ITEM_H)}px,0)`
         }
         rafRef.current = requestAnimationFrame(frame)
       }
