@@ -202,7 +202,7 @@ export const QBS = [
   { name: 'Jameis Winston',     short: 'Winston',     team: 'NYG', teamName: 'New York Giants',       color: '#0B2265', color2: '#A71930', skin: '#7a5030', starter: false, number: 5,
     attrs: { 'arm': 5, 'legs': 3, 'size': 6, 'processing': 4, 'leadership': 10, 'vision': 0, 'playmaking': 4, 'accuracy': 5, 'pocket-presence': 3 } },
   { name: 'Brandon Allen',      short: 'B. Allen',    team: 'NYG', teamName: 'New York Giants',       color: '#0B2265', color2: '#A71930', skin: '#f0c4a0', starter: false, number: 8,
-    attrs: { 'arm': 4, 'legs': 3, 'size': 5, 'processing': 3, 'leadership': 2, 'vision': 2, 'playmaking': 3, 'accuracy': 2, 'pocket-presence': 3 } },
+    attrs: { 'arm': 0, 'legs': 3, 'size': 5, 'processing': 3, 'leadership': 2, 'vision': 2, 'playmaking': 3, 'accuracy': 2, 'pocket-presence': 3 } },
   // NYJ
   { name: 'Geno Smith',         short: 'G. Smith',    team: 'NYJ', teamName: 'New York Jets',         color: '#125740', color2: '#000000', skin: '#9a6840', starter: true,  captain: true,  number: 7,
     attrs: { 'arm': 5, 'legs': 4, 'size': 5, 'processing': 6, 'leadership': 6, 'vision': 5, 'playmaking': 4, 'accuracy': 5, 'pocket-presence': 2 } },

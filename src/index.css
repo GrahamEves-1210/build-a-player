@@ -3553,6 +3553,9 @@ a:focus-visible {
   opacity: 0;
   transition: opacity 0.4s ease;
 }
+html.is-mac .spin-panel {
+  padding-bottom: var(--ad-h);
+}
 
 .splash-screen.splash-in { opacity: 1; }
 
