@@ -87,34 +87,24 @@ export default function LeaderboardPage({ onBack, currentUser }) {
 
   useEffect(() => {
     if (!supabase) { setLoading(false); return }
-    // No `build` column here — fetched separately only when builds tab opens
     supabase
-      .from('simulations')
-      .select('user_id, username, wins, losses, season_pass_yds, season_tds, champion, ovr, game_mode')
+      .from('leaderboard_profiles')
+      .select('*')
       .then(({ data, error }) => {
         if (!data || error) { setLoading(false); return }
-
-        const byUser = {}
-        data.forEach(r => {
-          const uid = r.user_id
-          if (!byUser[uid]) byUser[uid] = { uid, username: r.username || `Player_${uid.slice(0,5)}`, wins: 0, losses: 0, yds: 0, tds: 0, rings: 0, ovrSum: 0, count: 0 }
-          const u = byUser[uid]
-          if (r.username) u.username = r.username
-          u.wins   += r.wins ?? 0
-          u.losses += r.losses ?? 0
-          u.yds    += r.season_pass_yds ?? 0
-          u.tds    += r.season_tds ?? 0
-          u.rings  += r.champion ? 1 : 0
-          u.ovrSum += r.ovr ?? 0
-          u.count  += 1
-        })
-
-        const compiled = Object.values(byUser).map(u => {
-          const games = u.wins + u.losses
+        const compiled = data.map(u => {
+          const games = (u.wins ?? 0) + (u.losses ?? 0)
           return {
-            ...u,
+            uid:    u.user_id,
+            username: u.username || `Player_${u.user_id?.slice(0, 5)}`,
+            wins:   u.wins   ?? 0,
+            losses: u.losses ?? 0,
+            yds:    u.yds    ?? 0,
+            tds:    u.tds    ?? 0,
+            rings:  u.rings  ?? 0,
+            count:  u.count  ?? 0,
+            avgOvr: u.avg_ovr ?? 0,
             winPct: games > 0 ? +((u.wins / games) * 100).toFixed(1) : 0,
-            avgOvr: u.count > 0 ? +(u.ovrSum / u.count).toFixed(1) : 0,
           }
         })
         setRows(compiled)
