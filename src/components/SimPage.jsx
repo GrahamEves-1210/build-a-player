@@ -551,7 +551,7 @@ function ScreenPlayoffs({ result, onNext }) {
 
 // ── Screen 4: Final Report ────────────────────────────────────────────────────
 
-function ScreenFinal({ result, build, types, onReset, onBack }) {
+function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = false }) {
   const { ovr, wins, losses, playoffs, sbResult, seasonPassYds, seasonTDs, seasonINTs, seasonRushYds, seasonRushTDs, seasonSacks, seasonCompPct, seasonRating, bestGame } = result
   const champion = sbResult?.won
   const [show, setShow] = useState(false)
@@ -717,7 +717,7 @@ export default function SimPage({ result, build, types = TYPES, onBack, onReset,
     <ScreenBuild    key="build"    result={result} build={build} types={types} onNext={next} />,
     <ScreenSeason   key="season"   result={result} onNext={next} />,
     <ScreenPlayoffs key="playoffs" result={result} onNext={next} />,
-    <ScreenFinal    key="final"    result={result} build={build} types={types} onReset={handleReset} onBack={handleBack} />,
+    <ScreenFinal    key="final"    result={result} build={build} types={types} onReset={handleReset} onBack={handleBack} adsDisabled={adsDisabled} />,
   ]
 
   const team = result.team
