@@ -402,7 +402,7 @@ export function runSimulation(build, types = TYPES, team = null, isAllTime = fal
     const oppOffN = oppTeamData ? (oppTeamData.off - 5) / 5 : 0
     const oppDefN = oppTeamData ? (oppTeamData.def - 5) / 5 : 0
     // In All-Time mode, facing all-time opponents is slightly harder
-    const oppPenalty = isAllTime ? oppOffN * 0.038 + oppDefN * 0.047 : 0
+    const oppPenalty = isAllTime ? oppOffN * 0.062 + oppDefN * 0.074 : 0
 
     // Win chance: base + performance premium (great game = better chance)
     const perfBonus  = (gameTDs >= 3 ? 0.06 : gameTDs >= 2 ? 0.02 : 0)

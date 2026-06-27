@@ -291,8 +291,8 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
                       </div>
                     </div>
                     <div className="lb-row-val lb-row-val-rings">
-                      {row.rings > 0 ? '★'.repeat(Math.min(row.rings, 5)) : '—'}
-                      {row.rings > 5 && <span className="lb-rings-count"> ×{row.rings}</span>}
+                      {row.rings > 0 ? row.rings : '—'}
+                      <span className="lb-rings-label">rings</span>
                     </div>
                   </div>
                 ))}

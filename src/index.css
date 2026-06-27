@@ -6456,6 +6456,9 @@ html.is-touch .bd-card-main:hover         { background: transparent !important; 
   border-color: rgba(245,200,66,0.08);
 }
 .lb-row-val-rings {
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
   color: #F5C842;
   font-size: 14px;
   letter-spacing: 1px;
@@ -6464,6 +6467,13 @@ html.is-touch .bd-card-main:hover         { background: transparent !important; 
 .lb-rings-count {
   font-size: 11px;
   opacity: 0.75;
+}
+.lb-rings-label {
+  font-size: 10px;
+  font-weight: 500;
+  opacity: 0.6;
+  margin-left: 3px;
+  letter-spacing: 0;
 }
 .lb-legends-empty {
   color: rgba(255,255,255,0.3);
