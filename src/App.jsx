@@ -28,6 +28,20 @@ try {
 
 const _isPrivacy = window.location.pathname === '/privacy'
 
+function enableAdFreeMode() {
+  document.documentElement.classList.add('ads-hidden')
+  // Force-hide via JS since Playwire sets inline display with !important
+  const hide = () => {
+    document.querySelectorAll('[id^="pw-"],[id^="ramp-"],[class^="pw-"],[id^="adBanner"]').forEach(el => {
+      el.style.setProperty('display', 'none', 'important')
+    })
+  }
+  hide()
+  // Watch for any late-injected Playwire elements
+  const obs = new MutationObserver(hide)
+  obs.observe(document.body, { childList: true, subtree: true })
+}
+
 export default function App() {
   const [page, setPage]               = useState(_sharedData ? 'shared' : _isPrivacy ? 'privacy' : 'splash')
   const [sharedBuild]                 = useState(_sharedData?.build ?? null)
@@ -65,7 +79,7 @@ export default function App() {
       const u = data.session?.user ?? null
       setUser(u)
       if (u) supabase.from('profiles').select('ads_disabled').eq('id', u.id).single()
-        .then(({ data: p }) => { if (p?.ads_disabled) setAdsDisabled(true) })
+        .then(({ data: p }) => { if (p?.ads_disabled) { setAdsDisabled(true); enableAdFreeMode() } })
     })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
       setUser(session?.user ?? null)
@@ -264,7 +278,7 @@ export default function App() {
           types={activeTypes}
           onBack={() => { setPage('game'); window.scrollTo({ top: 0, behavior: 'instant' }) }}
           onSignOut={() => { setPage('game'); setUser(null); window.scrollTo({ top: 0, behavior: 'instant' }) }}
-          onAdsDisabled={() => setAdsDisabled(true)}
+          onAdsDisabled={() => { setAdsDisabled(true); enableAdFreeMode() }}
         />
       </>
     )

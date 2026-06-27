@@ -6790,6 +6790,17 @@ html.is-touch .legends-mode .spin-btn:hover:not(:disabled) {
   padding-top: 0 !important;
 }
 
+/* ── Ad-free: hide all Playwire elements ── */
+html.ads-hidden [id^="pw-"],
+html.ads-hidden [class^="pw-"],
+html.ads-hidden [id^="ramp-"],
+html.ads-hidden [id^="adBanner"],
+html.ads-hidden [id^="pw-oop"],
+html.ads-hidden .ad-cntr1-mobile,
+html.ads-hidden .ad-cntr1-lb {
+  display: none !important;
+}
+
 /* ── iPad layout — force mobile-style single-panel view ── */
 html.is-tablet body { background-color: var(--bg-raised); background-image: none; overflow-y: auto; overflow-x: hidden; }
 html.is-tablet #root { height: auto; min-height: 100dvh; }
