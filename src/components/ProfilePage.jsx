@@ -51,12 +51,46 @@ function StatBar({ label, value, grade, max, color }) {
   )
 }
 
-export default function ProfilePage({ user, build, simResult, types = TYPES, onBack, onSignOut }) {
+export default function ProfilePage({ user, build, simResult, types = TYPES, onBack, onSignOut, onAdsDisabled }) {
   const [show, setShow]           = useState(false)
   const [career, setCareer]       = useState(null)
   const [careerLoad, setCareerLoad] = useState(true)
+  const [adsDisabled, setAdsDisabled] = useState(false)
+  const [adFreeLoading, setAdFreeLoading] = useState(false)
 
   useEffect(() => { const t = setTimeout(() => setShow(true), 120); return () => clearTimeout(t) }, [])
+
+  useEffect(() => {
+    if (!supabase || !user) return
+    supabase.from('profiles').select('ads_disabled').eq('id', user.id).single()
+      .then(({ data }) => { if (data?.ads_disabled) setAdsDisabled(true) })
+  }, [user])
+
+  // Check for successful Stripe return
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('ad_free') === '1') {
+      setAdsDisabled(true)
+      onAdsDisabled?.()
+      window.history.replaceState({}, '', window.location.pathname)
+    }
+  }, [])
+
+  const handleAdFree = async () => {
+    if (adFreeLoading || adsDisabled || !user) return
+    setAdFreeLoading(true)
+    try {
+      const res = await fetch('/api/create-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id, email: user.email }),
+      })
+      const { url } = await res.json()
+      if (url) window.location.href = url
+    } catch {
+      setAdFreeLoading(false)
+    }
+  }
 
   useEffect(() => {
     if (!supabase || !user) { setCareerLoad(false); return }
@@ -109,7 +143,16 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, onB
       <div className="prf-col">
 
         {/* ── Top nav ── */}
-        <button className="prf-top-back" onClick={onBack}>← Back to Build</button>
+        <div className="prf-top-nav">
+          <button className="prf-top-back" onClick={onBack}>← Back to Build</button>
+          {!adsDisabled ? (
+            <button className="prf-top-adfree" onClick={handleAdFree} disabled={adFreeLoading}>
+              {adFreeLoading ? '...' : '✦ Go Ad-Free · $1.99'}
+            </button>
+          ) : (
+            <span className="prf-top-adfree prf-top-adfree--on">✦ Ad-Free</span>
+          )}
+        </div>
 
         {/* ── Hero header ── */}
         <div className={`prf-hero ${show ? 'prf-hero-in' : ''}`}>

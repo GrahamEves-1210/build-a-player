@@ -559,10 +559,11 @@ function ScreenFinal({ result, build, types, onReset, onBack }) {
   useEffect(() => { const t = setTimeout(() => setShow(true), 200); return () => clearTimeout(t) }, [])
 
   useEffect(() => {
+    if (adsDisabled) return
     window.ramp?.que?.push(() => {
       window.ramp.spaAddAds([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-sim' }])
     })
-  }, [])
+  }, [adsDisabled])
 
   const yds     = useCountUp(seasonPassYds, 1200, show)
   const tds     = useCountUp(seasonTDs, 900, show)
@@ -700,7 +701,7 @@ function ProgressDots({ screen, total }) {
 
 // ── SimPage ───────────────────────────────────────────────────────────────────
 
-export default function SimPage({ result, build, types = TYPES, onBack, onReset, replay = false }) {
+export default function SimPage({ result, build, types = TYPES, onBack, onReset, replay = false, adsDisabled = false }) {
   const [screen, setScreen] = useState(replay ? 3 : 0)
   const next = () => {
     document.querySelector('.simp-page')?.scrollTo({ top: 0, behavior: 'instant' })

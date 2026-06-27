@@ -73,7 +73,7 @@ function BuildExpand({ build }) {
   )
 }
 
-export default function LeaderboardPage({ onBack, currentUser }) {
+export default function LeaderboardPage({ onBack, currentUser, adsDisabled = false }) {
   const [rows, setRows]               = useState([])
   const [bestBuilds, setBestBuilds]   = useState([])
   const [worstBuilds, setWorstBuilds] = useState([])
@@ -87,7 +87,7 @@ export default function LeaderboardPage({ onBack, currentUser }) {
   const adInvokedRef = useRef(false)
 
   useEffect(() => {
-    if (adInvokedRef.current) return
+    if (adInvokedRef.current || adsDisabled) return
     adInvokedRef.current = true
     window.ramp?.que?.push(() => {
       window.ramp.spaAddAds([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-lb' }])

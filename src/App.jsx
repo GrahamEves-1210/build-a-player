@@ -46,6 +46,7 @@ export default function App() {
   const [showTeamPicker, setShowTeamPicker] = useState(false)
   const [savedSpinResult, setSavedSpinResult] = useState(null)
   const [spinPhase, setSpinPhase] = useState('idle')
+  const [adsDisabled, setAdsDisabled] = useState(false)
 
   useEffect(() => {
     const meta = document.querySelector('meta[name="theme-color"]')
@@ -60,7 +61,12 @@ export default function App() {
 
   useEffect(() => {
     if (!supabase) return
-    supabase.auth.getSession().then(({ data }) => setUser(data.session?.user ?? null))
+    supabase.auth.getSession().then(({ data }) => {
+      const u = data.session?.user ?? null
+      setUser(u)
+      if (u) supabase.from('profiles').select('ads_disabled').eq('id', u.id).single()
+        .then(({ data: p }) => { if (p?.ads_disabled) setAdsDisabled(true) })
+    })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
       setUser(session?.user ?? null)
     })
@@ -208,7 +214,7 @@ export default function App() {
     return (
       <>
         <Navbar {...navbarProps} />
-        <LeaderboardPage onBack={() => { setPage('game'); window.scrollTo({ top: 0, behavior: 'instant' }) }} currentUser={user} />
+        <LeaderboardPage onBack={() => { setPage('game'); window.scrollTo({ top: 0, behavior: 'instant' }) }} currentUser={user} adsDisabled={adsDisabled} />
       </>
     )
   }
@@ -258,6 +264,7 @@ export default function App() {
           types={activeTypes}
           onBack={() => { setPage('game'); window.scrollTo({ top: 0, behavior: 'instant' }) }}
           onSignOut={() => { setPage('game'); setUser(null); window.scrollTo({ top: 0, behavior: 'instant' }) }}
+          onAdsDisabled={() => setAdsDisabled(true)}
         />
       </>
     )
@@ -272,6 +279,7 @@ export default function App() {
           build={build}
           types={activeTypes}
           replay={simReplaying}
+          adsDisabled={adsDisabled}
           onBack={() => { setPage('game'); window.scrollTo({ top: 0, behavior: 'instant' }) }}
           onReset={() => { handleReset(); setPage('game'); window.scrollTo({ top: 0, behavior: 'instant' }) }}
         />
@@ -302,6 +310,7 @@ export default function App() {
           onPhaseChange={setSpinPhase}
           gameKey={gameKey}
           onReset={handleReset}
+          adsDisabled={adsDisabled}
         />
         <Silhouette
           build={build}

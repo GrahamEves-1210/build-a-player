@@ -3553,8 +3553,9 @@ a:focus-visible {
   opacity: 0;
   transition: opacity 0.4s ease;
 }
-html.is-mac .spin-panel {
-  padding-bottom: var(--ad-h);
+html.is-mac .spin-panel-scroll {
+  overflow-y: auto !important;
+  padding-bottom: calc(80px + var(--ad-h));
 }
 
 .splash-screen.splash-in { opacity: 1; }
@@ -5313,6 +5314,11 @@ html.is-touch .bd-card-main:hover         { background: transparent !important; 
 }
 
 /* Top back button */
+.prf-top-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
 .prf-top-back {
   display: inline-flex;
   align-items: center;
@@ -5338,6 +5344,40 @@ html.is-touch .bd-card-main:hover         { background: transparent !important; 
 .prf-top-back:active {
   transform: scale(0.97);
   box-shadow: 0 1px 4px rgba(94,219,216,0.12);
+}
+.prf-top-adfree {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 22px;
+  border-radius: 8px;
+  border: 1px solid rgba(212,180,96,0.35);
+  background: rgba(212,180,96,0.07);
+  color: rgba(212,180,96,0.75);
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+  font-family: var(--font);
+  box-shadow: 0 2px 10px rgba(212,180,96,0.08), inset 0 1px 0 rgba(255,255,255,0.06);
+  transition: background 0.15s var(--ease), box-shadow 0.15s var(--ease), transform 0.12s var(--ease), color 0.15s var(--ease);
+}
+.prf-top-adfree:hover:not(:disabled) {
+  background: rgba(212,180,96,0.13);
+  color: rgba(212,180,96,0.95);
+  box-shadow: 0 4px 16px rgba(212,180,96,0.14), inset 0 1px 0 rgba(255,255,255,0.1);
+  transform: translateY(-1px);
+}
+.prf-top-adfree:active:not(:disabled) {
+  transform: scale(0.97);
+}
+.prf-top-adfree:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.prf-top-adfree--on {
+  cursor: default;
+  opacity: 0.8;
 }
 
 /* Hero */
@@ -6748,4 +6788,106 @@ html.is-touch .legends-mode .spin-btn:hover:not(:disabled) {
   border: none !important;
   box-shadow: none !important;
   padding-top: 0 !important;
+}
+
+/* ── iPad layout — force mobile-style single-panel view ── */
+html.is-tablet body { background-color: var(--bg-raised); background-image: none; overflow-y: auto; overflow-x: hidden; }
+html.is-tablet #root { height: auto; min-height: 100dvh; }
+
+html.is-tablet .game-layout {
+  display: flex;
+  flex-direction: column;
+  height: calc(100svh - 52px - env(safe-area-inset-top) - 64px - 50px);
+  overflow: hidden;
+  background: var(--bg-raised);
+}
+html.is-tablet .game-layout.mobile-spin {
+  height: auto;
+  overflow: visible;
+  min-height: calc(100svh - 52px - env(safe-area-inset-top) - 64px - 50px);
+}
+html.is-tablet .game-layout.mobile-build {
+  height: auto;
+  overflow: visible;
+  padding-bottom: 60px;
+}
+
+/* Panel show/hide */
+html.is-tablet .mobile-spin  .spin-panel        { display: flex; }
+html.is-tablet .mobile-spin  .field-center      { display: none; }
+html.is-tablet .mobile-spin  .right-panel-wrap  { display: none; }
+html.is-tablet .mobile-build .spin-panel        { display: none; }
+html.is-tablet .mobile-build .field-center      { display: flex; flex: none; }
+html.is-tablet .mobile-build .right-panel-wrap  { display: flex; flex-shrink: 0; }
+
+/* Spin panel */
+html.is-tablet .spin-panel {
+  width: 100%;
+  flex: 1;
+  overflow-y: visible;
+  scrollbar-width: none;
+  box-shadow: none;
+  border: none;
+  background-color: var(--bg-raised);
+  background-image: none;
+  min-height: calc(100svh - 52px - env(safe-area-inset-top) - 64px);
+}
+html.is-tablet .spin-panel::before { display: none; }
+html.is-tablet .spin-panel-body {
+  flex: none;
+  overflow-y: visible;
+  padding: 10px 14px 140px;
+  margin-top: -30px;
+  gap: 14px;
+}
+html.is-tablet .spin-panel-scroll { overflow: visible !important; padding-bottom: 0; }
+
+/* Mobile tab bar */
+html.is-tablet .mobile-tab-bar { display: flex; }
+
+/* Center figure */
+html.is-tablet .field-center {
+  width: 100%;
+  height: 420px;
+  padding: 0 16px 8px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+html.is-tablet .cz-card { display: none; }
+html.is-tablet .cz-lines-svg { display: none; }
+html.is-tablet .sil-wrap { height: calc(100% - 60px); margin-top: 6px; transform: none; }
+
+/* Right panel */
+html.is-tablet .right-panel-wrap {
+  width: 100%;
+  flex-shrink: 0;
+  box-shadow: inset 0 2px 0 rgba(149,213,178,0.55);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+html.is-tablet .panel-right {
+  border-left: none;
+  border-top: 1px solid var(--border-hi);
+  overflow: visible;
+}
+
+/* Chips */
+html.is-tablet .attr-chip { cursor: pointer; touch-action: manipulation; padding: 8px 8px 8px 12px; border-radius: 10px; }
+html.is-tablet .chip-hint { display: none; }
+html.is-tablet .hint-mobile-assign { display: inline; }
+
+/* Spin button */
+html.is-tablet .spin-btn { width: 62%; align-self: center; height: 56px; min-height: 56px; }
+
+/* Desktop overrides that should not apply on tablet */
+html.is-tablet .attr-chip { padding: 8px 8px 8px 12px !important; }
+html.is-tablet .chip-val { width: 38px !important; height: 38px !important; font-size: 13px !important; }
+html.is-tablet .attr-category-section { gap: 8px !important; }
+
+/* On Mac the bottom rail overlaps the spin panel and blocks scroll gestures */
+html.is-mac [id^="pw-oop-bottom_rail"] {
+  pointer-events: none;
+}
+html.is-mac [id^="pw-oop-bottom_rail"] iframe,
+html.is-mac [id^="pw-oop-bottom_rail"] > * {
+  pointer-events: auto;
 }

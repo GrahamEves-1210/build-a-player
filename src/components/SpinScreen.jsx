@@ -207,7 +207,7 @@ function Chip({ type, meta, val, selectedQB, draggingType, onChipTap, onDragStar
 }
 
 // ─── SpinScreen ──────────────────────────────────────────────────────────────
-export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, activeCategory, resetKey, onChipTap, types = TYPES, isLite = false, qbPool = QBS, savedResult = null, onSaveResult, onPhaseChange, gameKey, onReset }) {
+export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, activeCategory, resetKey, onChipTap, types = TYPES, isLite = false, qbPool = QBS, savedResult = null, onSaveResult, onPhaseChange, gameKey, onReset, adsDisabled = false }) {
   const [phase, setPhase]               = useState(() => savedResult?.selectedQB ? 'done' : 'idle')
   const [selectedTeam, setSelectedTeam] = useState(() => savedResult?.selectedTeam ?? null)
   const [selectedQB,   setSelectedQB]   = useState(() => savedResult?.selectedQB ?? null)
@@ -322,12 +322,12 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
 
   const adInvokedRef = useRef(false)
   useEffect(() => {
-    if (!isDone || adInvokedRef.current) return
+    if (!isDone || adInvokedRef.current || adsDisabled) return
     adInvokedRef.current = true
     window.ramp?.que?.push(() => {
       window.ramp.spaAddAds([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1' }])
     })
-  }, [isDone])
+  }, [isDone, adsDisabled])
 
   return (
     <aside className="spin-panel">

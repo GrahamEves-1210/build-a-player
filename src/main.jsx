@@ -16,6 +16,10 @@ if (/Android/i.test(navigator.userAgent)) {
 if (/Mac/.test(navigator.platform) && !/iPhone|iPad/.test(navigator.userAgent)) {
   document.documentElement.classList.add('is-mac')
 }
+
+if (/iPad/.test(navigator.userAgent) || (/Mac/.test(navigator.platform) && navigator.maxTouchPoints > 1)) {
+  document.documentElement.classList.add('is-tablet')
+}
 import { createRoot } from 'react-dom/client'
 import { Analytics } from '@vercel/analytics/react'
 import './index.css'
