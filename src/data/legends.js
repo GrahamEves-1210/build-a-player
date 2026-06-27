@@ -177,7 +177,7 @@ const _raw = [
   {
     name: 'Tony Romo',       short: 'Romo',       team: 'DAL', teamName: 'Dallas Cowboys',
     skin: '#f0c4a0', number: 9,  starter: true, captain: true, years: '2003–16',
-    attrs: { arm: 8, legs: 5, size: 7, processing: 7, vision: 8, leadership: 6, accuracy: 8, playmaking: 6, 'pocket-presence': 7 }
+    attrs: { arm: 8, legs: 5, size: 7, processing: 8, vision: 7, leadership: 6, accuracy: 8, playmaking: 5, 'pocket-presence': 8 }
   },
 
   // ─── DENVER BRONCOS ──────────────────────────────────────────────────────
@@ -275,7 +275,7 @@ const _raw = [
   {
     name: 'Mark Brunell',    short: 'Brunell',    team: 'JAX', teamName: 'Jacksonville Jaguars',
     skin: '#f0c4a0', number: 8,  starter: true, captain: true, years: '1995–2003',
-    attrs: { arm: 7, legs: 9, size: 6, processing: 7, vision: 8, leadership: 8, accuracy: 8, playmaking: 9, 'pocket-presence': 6 }
+    attrs: { arm: 7, legs: 7, size: 6, processing: 7, vision: 8, leadership: 8, accuracy: 8, playmaking: 9, 'pocket-presence': 6 }
   },
   {
     name: 'David Garrard',   short: 'Garrard',    team: 'JAX', teamName: 'Jacksonville Jaguars',
