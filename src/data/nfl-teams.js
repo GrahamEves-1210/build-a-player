@@ -68,3 +68,39 @@ export const NFL_TEAMS = TEAMS.map(t => ({
   conf: CONF[t.short] ?? 'AFC',
   div:  DIV[t.short]  ?? 'AFC East',
 }))
+
+// All-time franchise grades — reflects each team's best historical era
+export const ALLTIME_RATINGS = {
+  ARI: { off: 8, def: 8 },  // Warner era + Fitzgerald
+  ATL: { off: 9, def: 8 },  // Vick + Ryan/Jones eras
+  BAL: { off: 8, def: 10 }, // Ray Lewis/Ed Reed dynasty
+  BUF: { off: 9, def: 9 },  // Kelly era — 4 SB appearances
+  CAR: { off: 8, def: 8 },  // Newton SB run + defense
+  CHI: { off: 8, def: 10 }, // 85 Bears Monsters of the Midway
+  CIN: { off: 8, def: 8 },  // Boomer era + Burrow/Chase
+  CLE: { off: 8, def: 8 },  // Otto Graham dynasty (pre-move)
+  DAL: { off: 9, def: 9 },  // 5 SBs — Doomsday + 90s dynasty
+  DEN: { off: 9, def: 10 }, // Elway + Orange Crush + Von Miller
+  DET: { off: 7, def: 7 },  // historically limited
+  GB:  { off: 9, def: 9 },  // Lombardi + Favre + Rodgers — most titles
+  HOU: { off: 7, def: 9 },  // J.J. Watt defense
+  IND: { off: 10, def: 8 }, // Manning + Unitas eras
+  JAX: { off: 8, def: 9 },  // early JAGS elite defense
+  KC:  { off: 10, def: 9 }, // Mahomes dynasty + Len Dawson AFL
+  LV:  { off: 9, def: 9 },  // Raiders — 3 SBs, Al Davis dynasty
+  LAC: { off: 9, def: 8 },  // LT + Rivers + AFL prominence
+  LAR: { off: 10, def: 8 }, // Greatest Show on Turf + recent SB
+  MIA: { off: 10, def: 9 }, // Marino + Shula perfect season
+  MIN: { off: 9, def: 9 },  // Purple People Eaters + Favre era
+  NE:  { off: 10, def: 10 },// Brady/Belichick — greatest dynasty
+  NO:  { off: 9, def: 8 },  // Brees era dominance
+  NYG: { off: 8, def: 10 }, // Lawrence Taylor + 4 SBs
+  NYJ: { off: 8, def: 9 },  // Broadway Joe + Rex Ryan defenses
+  PHI: { off: 9, def: 9 },  // McNabb + Foles + Hurts eras
+  PIT: { off: 8, def: 10 }, // Steel Curtain + 6 SBs
+  SF:  { off: 10, def: 9 }, // Walsh dynasty — 5 SBs
+  SEA: { off: 8, def: 10 }, // Legion of Boom
+  TB:  { off: 9, def: 9 },  // Sapp/Lynch defense + Brady era
+  TEN: { off: 8, def: 9 },  // Earl Campbell Oilers + McNair era
+  WAS: { off: 9, def: 9 },  // 3 SBs — Riggins/Theismann dynasty
+}

@@ -408,7 +408,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
               </div>
               <div className="qb-reveal-text">
                 <div className="qb-reveal-name">{selectedQB.name}</div>
-                <div className="qb-reveal-meta">{selectedQB.teamName}{selectedQB.starter ? '' : ' · Backup'}</div>
+                <div className="qb-reveal-meta">{selectedQB.teamName}{selectedQB.years ? ` · ${selectedQB.years}` : ''}{selectedQB.starter ? '' : ' · Backup'}</div>
               </div>
             </div>
           )}

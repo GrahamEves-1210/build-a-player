@@ -1,7 +1,12 @@
 import { TYPES } from '../data/qbs'
-import { NFL_TEAMS } from '../data/nfl-teams'
+import { NFL_TEAMS, ALLTIME_RATINGS } from '../data/nfl-teams'
 
 const TEAM_BY_NAME = Object.fromEntries(NFL_TEAMS.map(t => [t.name, t]))
+
+// All-time ratings keyed by team name for opponent lookups
+const ALLTIME_BY_NAME = Object.fromEntries(
+  NFL_TEAMS.map(t => [t.name, { ...t, ...(ALLTIME_RATINGS[t.short] ?? { off: 8, def: 8 }) }])
+)
 
 // Snap to nearest score expressible as 7a + 3b (no safeties)
 function snapNFL(n) {
@@ -264,9 +269,21 @@ const SB_POOLS = {
   NFC: ['Kansas City Chiefs', 'Baltimore Ravens', 'Buffalo Bills', 'Houston Texans', 'Pittsburgh Steelers', 'Denver Broncos'],
 }
 
+// All-Time playoff pools — historically dominant franchises only
+const ALLTIME_PLAYOFF_POOLS = {
+  AFC: ['New England Patriots', 'Pittsburgh Steelers', 'Baltimore Ravens', 'Kansas City Chiefs', 'Denver Broncos', 'Buffalo Bills', 'Miami Dolphins', 'Indianapolis Colts', 'Las Vegas Raiders', 'Los Angeles Chargers'],
+  NFC: ['San Francisco 49ers', 'Dallas Cowboys', 'Green Bay Packers', 'Minnesota Vikings', 'New York Giants', 'Chicago Bears', 'Los Angeles Rams', 'Seattle Seahawks', 'Philadelphia Eagles', 'Washington Commanders'],
+}
+
+const ALLTIME_SB_POOLS = {
+  AFC: ['San Francisco 49ers', 'Dallas Cowboys', 'Green Bay Packers', 'Minnesota Vikings', 'New York Giants', 'Chicago Bears', 'Los Angeles Rams'],
+  NFC: ['New England Patriots', 'Pittsburgh Steelers', 'Baltimore Ravens', 'Kansas City Chiefs', 'Denver Broncos', 'Miami Dolphins', 'Indianapolis Colts'],
+}
+
 // ── Core simulation ───────────────────────────────────────────────────────────
 
-export function runSimulation(build, types = TYPES, team = null) {
+export function runSimulation(build, types = TYPES, team = null, isAllTime = false) {
+  const oppLookup = isAllTime ? ALLTIME_BY_NAME : TEAM_BY_NAME
   const ovr = calcOVR(build, types)
 
   // Team support factors (off/def each 1–10, 5 = league average)
@@ -310,7 +327,7 @@ export function runSimulation(build, types = TYPES, team = null) {
 
   // INT rate per attempt: processing (primary reducer — reads the field), then accuracy, vision, pocket
   // Leadership has zero impact on INTs — it's not a stat attribute
-  const intRateBase = Math.max(0.008,
+  const intRateBase = Math.max(0.012,
     0.044 - prN * 0.018 - acN * 0.011 - pkN * 0.009 - viN * 0.006
   )
 
@@ -380,18 +397,22 @@ export function runSimulation(build, types = TYPES, team = null) {
 
     const rating = passerRating(gameComps, gameAtts, gamePassYds, gameTDs, gameINTs)
 
+    // Opponent team strength — used for both win probability and scoring
+    const oppTeamData = oppLookup[opponent]
+    const oppOffN = oppTeamData ? (oppTeamData.off - 5) / 5 : 0
+    const oppDefN = oppTeamData ? (oppTeamData.def - 5) / 5 : 0
+    // In All-Time mode, facing all-time opponents is slightly harder
+    const oppPenalty = isAllTime ? oppOffN * 0.038 + oppDefN * 0.047 : 0
+
     // Win chance: base + performance premium (great game = better chance)
     const perfBonus  = (gameTDs >= 3 ? 0.06 : gameTDs >= 2 ? 0.02 : 0)
                      - (gameINTs >= 2 ? 0.07 : gameINTs === 1 ? 0.02 : 0)
-    const gameWinP   = Math.min(0.90, Math.max(0.08, winP + perfBonus + (home ? 0.05 : 0) + v() * 0.05))
+    const gameWinP   = Math.min(0.90, Math.max(0.08, winP + perfBonus + (home ? 0.05 : 0) + v() * 0.05 - oppPenalty))
     const won        = Math.random() < gameWinP
     won ? wins++ : losses++
 
     // Score: TDs * 7 (PAT assumed) + estimated field goals + team factors
     // teamOffN boosts our scoring, teamDefN suppresses opponent scoring
-    const oppTeamData  = TEAM_BY_NAME[opponent]
-    const oppOffN = oppTeamData ? (oppTeamData.off - 5) / 5 : 0
-    const oppDefN = oppTeamData ? (oppTeamData.def - 5) / 5 : 0
     const myTDs  = gameTDs + gameRushTDs
     const estFGs = Math.max(0, Math.round(1.5 - myTDs * 0.35 + Math.random() * 1.5))
     const bonusFG = Math.random() < 0.25 ? 3 : 0
@@ -416,6 +437,7 @@ export function runSimulation(build, types = TYPES, team = null) {
     return { wk: i + 1, opponent, home, mySc, oppSc, won, passYds: gamePassYds, tds: gameTDs, ints: gameINTs, rushYds: gameRushYds, sacks: gameSacks, rating: Math.round(rating) }
   })
 
+  seasonINTs = Math.max(3, seasonINTs)
   const seasonCompPct = Math.round((seasonCompletions / seasonAttempts) * 1000) / 10
   const seasonRating  = Math.round(passerRating(seasonCompletions, seasonAttempts, seasonPassYds, seasonTDs, seasonINTs))
   const bestGame      = [...games].sort((a, b) => {
@@ -431,9 +453,11 @@ export function runSimulation(build, types = TYPES, team = null) {
 
   if (playoffs) {
     const conf     = team?.conf ?? 'AFC'
+    const activePlayoffPools = isAllTime ? ALLTIME_PLAYOFF_POOLS : PLAYOFF_POOLS
+    const activeSbPools      = isAllTime ? ALLTIME_SB_POOLS      : SB_POOLS
     // Strip player's own team from pool once, upfront
-    const confPool = PLAYOFF_POOLS[conf].filter(n => n !== team?.name)
-    const sbPool   = SB_POOLS[conf].filter(n => n !== team?.name)
+    const confPool = activePlayoffPools[conf].filter(n => n !== team?.name)
+    const sbPool   = activeSbPools[conf].filter(n => n !== team?.name)
     const usedOpponents = new Set()
     const pick = (pool) => {
       const available = pool.filter(n => !usedOpponents.has(n))
@@ -490,13 +514,13 @@ export function runSimulation(build, types = TYPES, team = null) {
       const pgHome     = Math.random() < pgHomeProb(round)
       const homeShort  = pgHome ? team?.short : TEAM_BY_NAME[opponent]?.short
       const weather    = playoffWeather(homeShort, round === 'Super Bowl')
-      const oppTeam    = TEAM_BY_NAME[opponent]
+      const oppTeam    = oppLookup[opponent]
       const oppTeamAvg = ((oppTeam?.off ?? 5.5) + (oppTeam?.def ?? 5.5)) / 2
       const teamN        = (playerTeamAvg - oppTeamAvg) / 9
       const pgOvrPenalty = ovr !== null && ovr < 85
         ? (85 - ovr) * 0.011
         : 0
-      const pgWinP     = Math.min(0.90, Math.max(0.10, 0.30 + ovrN * 0.61 + teamN * 0.41 - pgOvrPenalty + (pgHome ? 0.03 : 0)))
+      const pgWinP     = Math.min(0.90, Math.max(0.10, 0.30 + ovrN * 0.61 + teamN * 0.41 - pgOvrPenalty + (pgHome ? 0.03 : 0) - (isAllTime ? 0.02 : 0)))
       const won        = Math.random() < pgWinP
 
       // Playoff game stats use similar logic but with higher stakes variance

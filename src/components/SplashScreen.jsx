@@ -85,12 +85,15 @@ export default function SplashScreen({ onStart }) {
             </div>
           </button>
 
-          <button className="splash-mode-legends splash-mode-legends--coming-soon" disabled>
-            <span className="smode-new-badge smode-new-badge--soon">SOON</span>
-            <div className="smode-title smode-title--legends">Legends</div>
-            <div className="smode-badge smode-badge--legends">Draft the Greats</div>
-            <div className="smode-cta smode-cta--legends">
-              COMING SOON
+          <button className="splash-mode-alltime" onClick={() => onStart('all-time')}>
+            <span className="smode-new-badge">NEW</span>
+            <div className="smode-title smode-title--alltime">All-Time</div>
+            <div className="smode-badge smode-badge--alltime">Draft the Greats</div>
+            <div className="smode-cta smode-cta--alltime">
+              START DRAFTING
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+              </svg>
             </div>
           </button>
         </div>

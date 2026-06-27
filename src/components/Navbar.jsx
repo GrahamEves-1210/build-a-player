@@ -161,11 +161,11 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
   const handleLeaderboard = () => { onLeaderboard?.(); setOpen(false) }
 
   return (
-    <header className={`navbar${gameMode === 'legends' ? ' legends-mode' : ''}`}>
+    <header className={`navbar${gameMode === 'all-time' ? ' alltime-mode' : ''}`}>
       <div className="logo" onClick={onHome} style={onHome ? { cursor: 'pointer' } : undefined}>
         <div className="logo-text-stack">
           <div className="logo-text">Build<em>-A-</em>Player</div>
-          {gameMode === 'legends' && <span className="logo-mode-tag">Legends</span>}
+          {gameMode === 'all-time' && <span className="logo-mode-tag">All-Time</span>}
         </div>
       </div>
 

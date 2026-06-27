@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-function Img({ src, className, onError }) {
+function Img({ src, className }) {
   const [failed, setFailed] = useState(false)
   if (failed) return null
   return (
@@ -19,10 +19,8 @@ export default function QBAvatar({ photo, team, color, size = 48 }) {
       {team && (
         <Img key={team} className="qb-avatar-logo" src={`/logos/${team}.png`} />
       )}
-      {photo ? (
+      {photo && (
         <Img key={photo} className="qb-avatar-photo" src={photo} />
-      ) : (
-        <div className="qb-avatar-fallback" />
       )}
     </div>
   )

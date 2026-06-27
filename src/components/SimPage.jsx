@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { ATTR, TYPES, TEAMS } from '../data/qbs'
 import { valToGrade, getArchetype, readableTextColor } from '../utils/simulation'
 import QBAvatar from './QBAvatar'
+import QBFigureOverlay from './QBFigureOverlay'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -44,6 +45,16 @@ function ScreenBuild({ result, build, types, onNext }) {
   const [rowsVisible, setRowsVisible] = useState(0)
   const filled = types.filter(t => build[t])
 
+  const team = result.team
+  const monoTeamBuild = team
+    ? Object.fromEntries(
+        Object.entries(build).map(([k, v]) => [
+          k,
+          v ? { ...v, teamColor: team.color, teamColor2: team.color2, team: team.short } : v,
+        ])
+      )
+    : build
+
   useEffect(() => {
     let i = 0
     const tick = () => {
@@ -64,6 +75,15 @@ function ScreenBuild({ result, build, types, onNext }) {
       </div>
       <div className="simp-archetype">{archetype}</div>
       <button className="simp-cta" onClick={onNext}>Simulate Season</button>
+
+      {team && (
+        <div className="simp-team-model">
+          <div className="simp-team-model-glow" />
+          <img src="/qb-silhouette.png" alt="" className="simp-sil-ghost" draggable={false} />
+          <QBFigureOverlay build={monoTeamBuild} className="player-qbfig" />
+        </div>
+      )}
+
       <div className="simp-attr-table">
         {filled.map((t, i) => {
           const meta = ATTR[t]
@@ -274,7 +294,7 @@ const TEAM_BY_NAME = Object.fromEntries(TEAMS.map(t => [t.name, t]))
 
 const WEATHER_EMOJI = { clear: '☀️', rain: '🌧️', snow: '❄️', dome: '🏟️' }
 
-function PlayoffGame({ round, opponent, home, weather, mySc, oppSc, won, teamColor, teamAbbr, teamLogo, isFinal, onDone }) {
+function PlayoffGame({ round, opponent, home, weather, mySc, oppSc, won, teamColor, teamAbbr, teamLogo, isFinal, isAllTime, onDone }) {
   const [phase,    setPhase]    = useState('pre')
   const [gameSec,  setGameSec]  = useState(0)
   const [myScore,  setMyScore]  = useState(0)
@@ -359,10 +379,12 @@ function PlayoffGame({ round, opponent, home, weather, mySc, oppSc, won, teamCol
           {home ? (
             <>{oppLogo && <img src={oppLogo} alt="" className="plf-team-logo" />}
               <div className="plf-team-abbr plf-abbr-opp">{oppTeam?.short ?? opponent.split(' ').slice(-1)[0]}</div>
+              {isAllTime && <span className="plf-team-alltime">★ All-Time</span>}
               <div className="plf-score-num plf-score-opp-num"><span key={noAnim ? 'opp-final' : oppScore} className={noAnim ? '' : 'plf-num-pop'}>{oppScore}</span></div></>
           ) : (
             <>{teamLogo && <img src={teamLogo} alt="" className="plf-team-logo" />}
               <div className="plf-team-abbr" style={{ color: readableTextColor(teamColor) }}>{teamAbbr}</div>
+              {isAllTime && <span className="plf-team-alltime">★ All-Time</span>}
               <div className="plf-score-num" style={{ color: readableTextColor(teamColor) }}><span key={noAnim ? 'my-final' : myScore} className={noAnim ? '' : 'plf-num-pop'}>{myScore}</span></div></>
           )}
         </div>
@@ -383,10 +405,12 @@ function PlayoffGame({ round, opponent, home, weather, mySc, oppSc, won, teamCol
           {home ? (
             <>{teamLogo && <img src={teamLogo} alt="" className="plf-team-logo plf-logo-opp" />}
               <div className="plf-team-abbr" style={{ color: readableTextColor(teamColor) }}>{teamAbbr}</div>
+              {isAllTime && <span className="plf-team-alltime">★ All-Time</span>}
               <div className="plf-score-num" style={{ color: readableTextColor(teamColor) }}><span key={noAnim ? 'my-final' : myScore} className={noAnim ? '' : 'plf-num-pop'}>{myScore}</span></div></>
           ) : (
             <>{oppLogo && <img src={oppLogo} alt="" className="plf-team-logo plf-logo-opp" />}
               <div className="plf-team-abbr plf-abbr-opp">{oppTeam?.short ?? opponent.split(' ').slice(-1)[0]}</div>
+              {isAllTime && <span className="plf-team-alltime">★ All-Time</span>}
               <div className="plf-score-num plf-score-opp-num"><span key={noAnim ? 'opp-final' : oppScore} className={noAnim ? '' : 'plf-num-pop'}>{oppScore}</span></div></>
           )}
         </div>
@@ -542,6 +566,7 @@ function ScreenPlayoffs({ result, onNext }) {
           teamAbbr={teamAbbr}
           teamLogo={teamLogo}
           isFinal={gameIdx === playoffRounds.length - 1}
+          isAllTime={!!team?.isAllTime}
           onDone={handleGameDone}
         />
       )}
@@ -556,6 +581,16 @@ function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = fals
   const champion = sbResult?.won
   const [show, setShow] = useState(false)
 
+  const team = result.team
+  const monoTeamBuild = team
+    ? Object.fromEntries(
+        Object.entries(build || {}).map(([k, v]) => [
+          k,
+          v ? { ...v, teamColor: team.color, teamColor2: team.color2, team: team.short } : v,
+        ])
+      )
+    : build
+
   useEffect(() => { const t = setTimeout(() => setShow(true), 200); return () => clearTimeout(t) }, [])
 
   useEffect(() => {
@@ -563,7 +598,7 @@ function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = fals
     window.ramp?.que?.push(() => {
       window.ramp.spaAddAds([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-sim' }])
     })
-  }, [adsDisabled])
+  }, [])
 
   const yds     = useCountUp(seasonPassYds, 1200, show)
   const tds     = useCountUp(seasonTDs, 900, show)
@@ -602,6 +637,14 @@ function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = fals
               <div className="simp-total-lbl">Rating</div>
             </div>
           </div>
+        </div>
+      )}
+
+      {team && build && (
+        <div className="simp-team-model">
+          <div className="simp-team-model-glow" />
+          <img src="/qb-silhouette.png" alt="" className="simp-sil-ghost" draggable={false} />
+          <QBFigureOverlay build={monoTeamBuild} className="player-qbfig" />
         </div>
       )}
 
@@ -739,8 +782,11 @@ export default function SimPage({ result, build, types = TYPES, onBack, onReset,
           <div className="simp-team-strip">
             <img src={team.logo} alt={team.short} className="sts-logo" />
             <div className="sts-info">
-              <span className="sts-name">{team.name}</span>
-              <span className="sts-abbr">{team.short}</span>
+              {team.isAllTime && <span className="sts-alltime-badge">★ All-Time</span>}
+              <div className="sts-name-wrap">
+                <span className="sts-city">{team.name.split(' ').slice(0, -1).join(' ')}</span>
+                <span className="sts-nickname">{team.name.split(' ').slice(-1)[0]}</span>
+              </div>
             </div>
             {(team.off != null || team.def != null) && (
               <div className="sts-grades">

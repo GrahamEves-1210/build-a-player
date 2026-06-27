@@ -980,11 +980,6 @@ a:focus-visible {
   top: 0;
   transform: translateX(-50%) translateY(37%);
 }
-.qb-avatar-fallback {
-  position: absolute;
-  inset: 0;
-  background: var(--grey-900);
-}
 
 .qb-pfp {
   width: 38px;
@@ -1323,7 +1318,7 @@ a:focus-visible {
   object-position: center center;
   pointer-events: none;
   user-select: none;
-  filter: none;
+  filter: drop-shadow(0 0 1.5px rgba(255,255,255,0.55)) drop-shadow(0 0 0.5px rgba(255,255,255,0.9));
   image-rendering: -webkit-optimize-contrast;
   -webkit-font-smoothing: antialiased;
 }
@@ -3708,7 +3703,7 @@ html.is-mac .spin-panel-scroll {
 }
 
 .splash-mode-classic,
-.splash-mode-legends {
+.splash-mode-alltime {
   border: none;
   border-radius: 18px;
   cursor: pointer;
@@ -3735,33 +3730,23 @@ html.is-mac .spin-panel-scroll {
 
 .splash-mode-classic:active { transform: scale(0.98); }
 
-/* Legends — gold secondary card */
-.splash-mode-legends {
-  background: linear-gradient(145deg, rgba(212,175,55,0.16) 0%, rgba(255,182,18,0.09) 100%);
-  border: 1.5px solid rgba(212,175,55,0.40);
-  box-shadow: inset 0 1px 0 rgba(212,175,55,0.18), 0 2px 12px rgba(212,175,55,0.08);
+/* All-Time — secondary card */
+.splash-mode-alltime {
+  background: linear-gradient(145deg, rgba(212,175,55,0.14) 0%, rgba(245,200,66,0.08) 100%);
+  border: 1.5px solid rgba(212,175,55,0.45);
   padding: 18px 20px 18px;
   flex: 1.2;
   position: relative;
   transition: transform 0.22s var(--ease), box-shadow 0.22s var(--ease), border-color 0.22s var(--ease);
 }
 
-.splash-mode-legends:hover {
+.splash-mode-alltime:hover {
   transform: translateY(-2px) scale(1.01);
-  box-shadow: inset 0 1px 0 rgba(212,175,55,0.22), 0 8px 28px rgba(212,175,55,0.18), 0 0 0 1px rgba(212,175,55,0.22);
-  border-color: rgba(212,175,55,0.58);
+  box-shadow: 0 8px 28px rgba(212,175,55,0.16), 0 0 0 1px rgba(212,175,55,0.28);
+  border-color: rgba(212,175,55,0.65);
 }
 
-.splash-mode-legends:active { transform: scale(0.98); }
-
-.splash-mode-legends--coming-soon {
-  opacity: 0.45;
-  cursor: not-allowed;
-  filter: grayscale(0.6);
-}
-.splash-mode-legends--coming-soon:hover  { transform: none !important; box-shadow: none !important; border-color: rgba(212,175,55,0.18) !important; }
-.splash-mode-legends--coming-soon:active { transform: none !important; }
-.smode-new-badge--soon { background: rgba(120,120,120,0.5); color: #aaa; border-color: rgba(150,150,150,0.3); }
+.splash-mode-alltime:active { transform: scale(0.98); }
 
 .smode-badge {
   display: inline-block;
@@ -3786,7 +3771,7 @@ html.is-mac .spin-panel-scroll {
   line-height: 1;
 }
 
-.smode-title--legends {
+.smode-title--alltime {
   color: #fff;
 }
 
@@ -3805,7 +3790,7 @@ html.is-mac .spin-panel-scroll {
   line-height: 1.4;
 }
 
-.smode-badge--legends {
+.smode-badge--alltime {
   font-size: 8px;
   white-space: nowrap;
   color: #D4AF37;
@@ -3826,7 +3811,7 @@ html.is-mac .spin-panel-scroll {
   white-space: nowrap;
 }
 
-.smode-cta--legends {
+.smode-cta--alltime {
   color: #D4AF37;
 }
 
@@ -3844,9 +3829,9 @@ html.is-mac .spin-panel-scroll {
 @media (max-width: 768px) {
   .splash-chip { display: none; }
   .smode-title { font-size: 20px; }
-  .smode-title--legends { font-size: 18px; }
+  .smode-title--alltime { font-size: 18px; }
   .splash-mode-classic { padding: 16px 16px 14px; }
-  .splash-mode-legends { padding: 16px 14px 14px; }
+  .splash-mode-alltime { padding: 16px 14px 14px; }
   .splash-glow { width: 300px; height: 300px; }
   .splash-header {
     position: absolute;
@@ -3877,14 +3862,14 @@ html.is-mac .spin-panel-scroll {
     flex-direction: row-reverse;
   }
   .splash-mode-classic,
-  .splash-mode-legends {
+  .splash-mode-alltime {
     min-width: 0;
     flex-shrink: 1;
     overflow: hidden;
   }
   .splash-mode-classic { flex: 1.4; }
-  .splash-mode-legends { flex: 1.1; }
-  .splash-mode-legends .smode-cta { letter-spacing: 2px; gap: 6px; }
+  .splash-mode-alltime { flex: 1.1; }
+  .splash-mode-alltime .smode-cta { letter-spacing: 2px; gap: 6px; }
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -4232,7 +4217,6 @@ html.is-mac .spin-panel-scroll {
     background-size: 18px 18px;
   }
 
-  .mobile-build .sil-img,
   .mobile-build .player-qbfig { filter: none; }
   .mobile-build .sil-wrap {
     flex: 1;
@@ -4391,7 +4375,7 @@ html.is-touch .wm-social-btn:hover        { background: transparent !important; 
 html.is-touch .wm-social-btn-coffee:hover { background: #FFDD00 !important; color: #1a1200 !important; }
 html.is-touch .tab-pill:hover             { background: transparent !important; color: var(--text-3) !important; border-color: rgba(149,213,178,0.12) !important; }
 html.is-touch .splash-mode-classic:hover  { transform: none !important; box-shadow: none !important; border-color: rgba(94,219,216,0.35) !important; }
-html.is-touch .splash-mode-legends:hover  { transform: none !important; box-shadow: none !important; border-color: rgba(212,175,55,0.32) !important; }
+html.is-touch .splash-mode-alltime:hover  { transform: none !important; box-shadow: none !important; border-color: rgba(212,175,55,0.45) !important; }
 html.is-touch .attr-chip:hover            { background: rgba(255,255,255,0.04) !important; }
 html.is-touch .spin-btn:hover:not(:disabled) { background: linear-gradient(to right, #5EDBD8 0%, #3DD6A3 100%) !important; }
 html.is-touch .qb-respin-btn:hover        { background: none !important; border-color: var(--border-hi) !important; color: var(--text-2) !important; }
@@ -4572,6 +4556,33 @@ html.is-touch .bd-card-main:hover         { background: transparent !important; 
   margin-top: -8px;
 }
 
+/* Player model — team-colored silhouette on screen 1 */
+.simp-team-model {
+  position: relative;
+  width: 176px;
+  aspect-ratio: 622 / 844;
+  margin: 8px auto 20px;
+  flex-shrink: 0;
+}
+.simp-team-model-glow {
+  position: absolute;
+  width: 300px;
+  height: 300px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle, rgba(116,198,157,0.22) 0%, transparent 68%);
+  pointer-events: none;
+}
+.simp-sil-ghost {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 0 1.5px rgba(255,255,255,0.55)) drop-shadow(0 0 0.5px rgba(255,255,255,0.9));
+}
+
 .simp-attr-table {
   border: 1px solid rgba(149,213,178,0.2);
   border-radius: 14px;
@@ -4742,6 +4753,26 @@ html.is-touch .bd-card-main:hover         { background: transparent !important; 
   letter-spacing: 2.5px;
   text-transform: uppercase;
   color: var(--text-4);
+}
+.plf-alltime-badge {
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: #F5C842;
+  text-transform: none;
+  white-space: nowrap;
+}
+.plf-team-alltime {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: #F5C842;
+  text-transform: none;
+  white-space: nowrap;
+  display: block;
+  text-align: center;
+  margin-top: 1px;
+  opacity: 0.85;
 }
 .plf-weather-block {
   display: flex;
@@ -5177,24 +5208,49 @@ html.is-touch .bd-card-main:hover         { background: transparent !important; 
   flex: 1;
   min-width: 0;
 }
-.sts-name {
-  font-size: 16px;
+.sts-name-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.sts-city {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-3);
+  letter-spacing: 0.1px;
+  line-height: 1;
+  white-space: nowrap;
+}
+.sts-nickname {
+  font-size: 18px;
   font-weight: 800;
   color: var(--text);
   letter-spacing: -0.4px;
-  line-height: 1;
+  line-height: 1.1;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
-.sts-abbr {
-  font-family: var(--mono);
-  font-size: 9.5px;
+@media (min-width: 700px) {
+  .sts-name-wrap {
+    flex-direction: row;
+    align-items: baseline;
+    gap: 5px;
+  }
+  .sts-city {
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--text);
+    letter-spacing: -0.4px;
+  }
+  .sts-nickname {
+    font-size: 18px;
+  }
+}
+.sts-alltime-badge {
+  font-size: 9px;
   font-weight: 700;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: var(--team-color, var(--accent));
-  opacity: 0.85;
+  letter-spacing: 0.5px;
+  color: #F5C842;
+  white-space: nowrap;
 }
 .sts-grades {
   display: flex;
@@ -5828,6 +5884,22 @@ html.is-touch .bd-card-main:hover         { background: transparent !important; 
   font-variant-numeric: tabular-nums;
 }
 
+/* ── Legends career card (gold variant) ── */
+.prf-card-legend {
+  border-color: rgba(245,200,66,0.30);
+  background: rgba(245,200,66,0.035);
+}
+.prf-card-title-legend {
+  color: #F5C842;
+}
+.pcg-cell-legend {
+  background: rgba(245,200,66,0.06);
+  border-color: rgba(245,200,66,0.18);
+}
+.pcg-val-legend {
+  color: #F5C842;
+}
+
 /* Actions */
 .prf-actions {
   display: flex;
@@ -6188,6 +6260,7 @@ html.is-touch .bd-card-main:hover         { background: transparent !important; 
 /* Eliminate 300ms tap delay on all leaderboard interactive elements */
 .lb-tab,
 .lb-main-seg-btn,
+.lb-main-seg-btn-legends,
 .lb-row-clickable,
 .lb-expand-wrap,
 .prf-top-back {
@@ -6364,6 +6437,36 @@ html.is-touch .bd-card-main:hover         { background: transparent !important; 
 .lb-main-seg-active {
   background: rgba(149,213,178,0.14);
   color: var(--text);
+}
+.lb-main-seg-btn-legends {
+  color: rgba(245,200,66,0.65);
+}
+.lb-main-seg-active-gold {
+  background: #F5C842;
+  color: #07120a;
+  font-weight: 700;
+}
+.lb-title-legends {
+  color: #F5C842;
+}
+.lb-header-line-legends {
+  background: rgba(245,200,66,0.35);
+}
+.lb-row-legends {
+  border-color: rgba(245,200,66,0.08);
+}
+.lb-row-val-rings {
+  color: #F5C842;
+  font-size: 14px;
+  letter-spacing: 1px;
+  flex-shrink: 0;
+}
+.lb-rings-count {
+  font-size: 11px;
+  opacity: 0.75;
+}
+.lb-legends-empty {
+  color: rgba(255,255,255,0.3);
 }
 
 /* ── Builds OVR inline label ── */
@@ -6689,13 +6792,13 @@ html.is-android #qb-fg [id="right calf"] path,
 html.is-android #qb-fg [id="left calf"] path   { filter: blur(0.5px) !important; }
 
 /* ══════════════════════════════════════════════════════════════════
-   LEGENDS MODE — spin button gold + logo accent
+   ALL-TIME MODE — spin button gold + logo accent
    ══════════════════════════════════════════════════════════════════ */
 
-.navbar.legends-mode { --accent: #D4AF37; }
+.navbar.alltime-mode { --accent: #D4AF37; }
 
 /* Gold spin button */
-.legends-mode .spin-btn {
+.alltime-mode .spin-btn {
   background: linear-gradient(135deg, #FBF0A0 0%, #D4AF37 55%, #C49A10 100%);
   color: #1a1000;
   border-color: rgba(0,0,0,0.18);
@@ -6703,23 +6806,27 @@ html.is-android #qb-fg [id="left calf"] path   { filter: blur(0.5px) !important;
   /* Remove background from transition — flat-color ↔ gradient can't interpolate */
   transition: transform 0.12s var(--ease), box-shadow 0.15s var(--ease);
 }
-.legends-mode .spin-btn:hover:not(:disabled) {
+.alltime-mode .spin-btn:hover:not(:disabled) {
   background: linear-gradient(135deg, #FFF5B0 0%, #E8C547 55%, #D4A010 100%);
   box-shadow: 0 4px 20px rgba(212,175,55,0.38), 0 2px 8px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.45);
 }
-.legends-mode .spin-btn:disabled {
-  background: linear-gradient(135deg, rgba(251,240,160,0.18) 0%, rgba(212,175,55,0.14) 55%, rgba(196,154,16,0.10) 100%);
+.alltime-mode .spin-btn:active:not(:disabled) {
+  background: #C49A10;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.22), inset 0 1px 0 rgba(0,0,0,0.10);
+}
+.alltime-mode .spin-btn:disabled {
+  background: rgba(212,175,55,0.12);
   border-color: rgba(212,175,55,0.12);
   color: rgba(180,145,20,0.30);
   box-shadow: none;
 }
-.legends-mode .spin-btn.spin-btn-wait:disabled {
+.alltime-mode .spin-btn.spin-btn-wait:disabled {
   background: transparent;
   border-color: rgba(212,175,55,0.32);
   color: rgba(212,175,55,0.42);
   box-shadow: none;
 }
-html.is-touch .legends-mode .spin-btn:hover:not(:disabled) {
+html.is-touch .alltime-mode .spin-btn:hover:not(:disabled) {
   background: linear-gradient(135deg, #FBF0A0 0%, #D4AF37 55%, #C49A10 100%) !important;
   box-shadow: 0 2px 8px rgba(0,0,0,0.20) !important;
 }

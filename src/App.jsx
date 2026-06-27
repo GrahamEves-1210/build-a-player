@@ -14,6 +14,7 @@ import AuthModal from './components/AuthModal'
 import ProfilePage from './components/ProfilePage'
 import LeaderboardPage from './components/LeaderboardPage'
 import { TYPES, LITE_TYPES, QBS } from './data/qbs'
+import { ALLTIME_RATINGS } from './data/nfl-teams'
 import { LEGENDS, LEGEND_TYPES } from './data/legends'
 import HEADSHOTS from './data/headshots.json'
 import { runSimulation, getArchetype } from './utils/simulation'
@@ -98,7 +99,7 @@ export default function App() {
       const u = data.session?.user ?? null
       setUser(u)
       if (u) supabase.from('accounts').select('ads_disabled').eq('id', u.id).single()
-        .then(({ data: p, error: e }) => { console.log('[ads]', p, e); if (p?.ads_disabled) { setAdsDisabled(true); enableAdFreeMode() } })
+        .then(({ data: p }) => { if (p?.ads_disabled) { setAdsDisabled(true); enableAdFreeMode() } })
     })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
       setUser(session?.user ?? null)
@@ -106,8 +107,8 @@ export default function App() {
     return () => subscription.unsubscribe()
   }, [])
 
-  const activeTypes = gameMode === 'lite' ? LITE_TYPES : gameMode === 'legends' ? LEGEND_TYPES : TYPES
-  const activePool  = gameMode === 'legends' ? LEGENDS : QBS
+  const activeTypes = gameMode === 'lite' ? LITE_TYPES : gameMode === 'all-time' ? LEGEND_TYPES : TYPES
+  const activePool  = gameMode === 'all-time' ? LEGENDS : QBS
 
 
 
@@ -183,7 +184,11 @@ export default function App() {
 
   const handleTeamPicked = useCallback((team) => {
     setShowTeamPicker(false)
-    const result = runSimulation(build, activeTypes, team)
+    const atRatings = ALLTIME_RATINGS[team.short]
+    const effectiveTeam = gameMode === 'all-time' && atRatings
+      ? { ...team, off: atRatings.off, def: atRatings.def, isAllTime: true }
+      : team
+    const result = runSimulation(build, activeTypes, effectiveTeam, gameMode === 'all-time')
     setSimResult(result)
     if (!user) console.warn('[build-a-player] sim result not saved — user not logged in')
     else if (!supabase) console.warn('[build-a-player] sim result not saved — supabase not configured')
@@ -326,7 +331,7 @@ export default function App() {
     <>
       <Navbar {...navbarProps} />
 
-      <main className={`game-layout mobile-${mobileView}${gameMode === 'legends' ? ' legends-mode' : ''}`}>
+      <main className={`game-layout mobile-${mobileView}${gameMode === 'all-time' ? ' alltime-mode' : ''}`}>
         <SpinScreen
           build={build}
           activeDrag={activeDrag}

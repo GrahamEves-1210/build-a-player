@@ -77,9 +77,12 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
   const [rows, setRows]               = useState([])
   const [bestBuilds, setBestBuilds]   = useState([])
   const [worstBuilds, setWorstBuilds] = useState([])
+  const [legendRows, setLegendRows]   = useState([])
   const [buildsLoaded, setBuildsLoaded] = useState(false)
+  const [legendLoaded, setLegendLoaded] = useState(false)
   const [loading, setLoading]         = useState(true)
   const [buildsLoading, setBuildsLoading] = useState(false)
+  const [legendLoading, setLegendLoading] = useState(false)
   const [metric, setMetric]           = useState('rings')
   const [view, setView]               = useState('profiles')
   const [buildsTab, setBuildsTab]     = useState('best')
@@ -96,73 +99,52 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
 
   useEffect(() => {
     if (!supabase) { setLoading(false); return }
-    // Fetch top 20 for each metric separately with server-side ordering so we
-    // always get the true global top regardless of Supabase's default row limit.
-    // win% is computed client-side so we fetch top 100 by wins as a superset.
-    const q = (col, limit = 20) =>
-      supabase.from('leaderboard_profiles').select('*').order(col, { ascending: false }).limit(limit)
-    Promise.all([
-      q('rings'),
-      q('avg_ovr'),
-      q('wins'),
-      q('wins', 100), // superset for win% (computed client-side)
-      q('yds'),
-      q('tds'),
-    ]).then(results => {
-      const err = results.find(r => r.error)
-      if (err) console.error('[build-a-player] leaderboard_profiles query failed:', err.error)
-
-      // Merge all result rows into one deduplicated map keyed by user_id.
-      // Each metric query returns the true top for that column so the union
-      // covers the true top 20 for every displayable metric.
-      const byUid = new Map()
-      const allRows = results.flatMap(r => r.data ?? [])
-      for (const u of allRows) {
-        const uid = u.user_id
-        if (!uid) continue
-        if (!byUid.has(uid)) {
-          byUid.set(uid, {
-            user_id: uid,
-            username: u.username || null,
-            wins:    u.wins    ?? 0,
-            losses:  u.losses  ?? 0,
-            yds:     u.yds     ?? 0,
-            tds:     u.tds     ?? 0,
-            rings:   u.rings   ?? 0,
-            count:   u.count   ?? 0,
-            avg_ovr: u.avg_ovr ?? 0,
-          })
-        } else {
-          // Same user appeared in multiple metric queries — take max per column
-          // (the view already aggregates per user so values should be identical;
-          //  taking max is safe and handles any view-grouping duplicates)
-          const acc = byUid.get(uid)
-          acc.wins    = Math.max(acc.wins,    u.wins    ?? 0)
-          acc.losses  = Math.max(acc.losses,  u.losses  ?? 0)
-          acc.yds     = Math.max(acc.yds,     u.yds     ?? 0)
-          acc.tds     = Math.max(acc.tds,     u.tds     ?? 0)
-          acc.rings   = Math.max(acc.rings,   u.rings   ?? 0)
-          acc.count   = Math.max(acc.count,   u.count   ?? 0)
-          acc.avg_ovr = Math.max(acc.avg_ovr, u.avg_ovr ?? 0)
-          if (!acc.username && u.username) acc.username = u.username
+    // Query simulations directly so we can exclude all-time and lite games.
+    // Client-side aggregation mirrors what leaderboard_profiles did server-side.
+    supabase
+      .from('simulations')
+      .select('user_id, username, wins, losses, season_pass_yds, season_tds, champion, ovr')
+      .neq('game_mode', 'all-time')
+      .neq('game_mode', 'lite')
+      .limit(10000)
+      .then(({ data, error }) => {
+        if (error) console.error('[build-a-player] profiles query failed:', error)
+        const byUid = new Map()
+        for (const row of (data ?? [])) {
+          if (!row.user_id) continue
+          if (!byUid.has(row.user_id)) {
+            byUid.set(row.user_id, {
+              user_id:  row.user_id,
+              username: row.username || null,
+              wins: 0, losses: 0, yds: 0, tds: 0, rings: 0, count: 0, totalOvr: 0,
+            })
+          }
+          const u = byUid.get(row.user_id)
+          u.wins     += row.wins             ?? 0
+          u.losses   += row.losses           ?? 0
+          u.yds      += row.season_pass_yds  ?? 0
+          u.tds      += row.season_tds       ?? 0
+          if (row.champion) u.rings++
+          u.count++
+          u.totalOvr += row.ovr ?? 0
+          if (!u.username && row.username) u.username = row.username
         }
-      }
-      const compiled = Array.from(byUid.values()).map(u => {
-        const games = u.wins + u.losses
-        return {
-          uid:    u.user_id,
-          username: u.username || `Player_${u.user_id?.slice(0, 5)}`,
-          wins:   u.wins,
-          losses: u.losses,
-          yds:    u.yds,
-          tds:    u.tds,
-          rings:  u.rings,
-          count:  u.count,
-          avgOvr: +(u.avg_ovr).toFixed(1),
-          winPct: games > 0 ? +((u.wins / games) * 100).toFixed(1) : 0,
-        }
-      })
-      setRows(compiled)
+        const compiled = Array.from(byUid.values()).map(u => {
+          const games = u.wins + u.losses
+          return {
+            uid:    u.user_id,
+            username: u.username || `Player_${u.user_id?.slice(0, 5)}`,
+            wins:   u.wins,
+            losses: u.losses,
+            yds:    u.yds,
+            tds:    u.tds,
+            rings:  u.rings,
+            count:  u.count,
+            avgOvr: u.count > 0 ? +(u.totalOvr / u.count).toFixed(1) : 0,
+            winPct: games > 0 ? +((u.wins / games) * 100).toFixed(1) : 0,
+          }
+        })
+        setRows(compiled)
       setLoading(false)
     })
   }, [])
@@ -174,6 +156,7 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
       .from('simulations')
       .select('user_id, username, wins, losses, ovr, build, game_mode')
       .neq('game_mode', 'lite')
+      .neq('game_mode', 'all-time')
       .not('build', 'is', null)
       .gte('ovr', 80)
       .order('ovr', { ascending: false })
@@ -183,6 +166,7 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
       .from('simulations')
       .select('user_id, username, wins, losses, ovr, build, game_mode')
       .neq('game_mode', 'lite')
+      .neq('game_mode', 'all-time')
       .not('build', 'is', null)
       .lt('ovr', 80)
       .order('ovr', { ascending: true })
@@ -194,6 +178,46 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
       setBuildsLoaded(true)
       setBuildsLoading(false)
     })
+  }
+
+  const loadLegends = () => {
+    if (legendLoaded || !supabase) return
+    setLegendLoading(true)
+    supabase
+      .from('simulations')
+      .select('user_id, username, wins, losses, champion, playoffs, ovr')
+      .eq('game_mode', 'all-time')
+      .then(({ data }) => {
+        if (!data) { setLegendLoading(false); return }
+        const byUid = new Map()
+        for (const row of data) {
+          if (!row.user_id) continue
+          if (!byUid.has(row.user_id)) {
+            byUid.set(row.user_id, {
+              uid: row.user_id,
+              username: row.username || `Player_${row.user_id.slice(0, 5)}`,
+              wins: 0, losses: 0, rings: 0, playoffApps: 0, count: 0, totalOvr: 0,
+            })
+          }
+          const u = byUid.get(row.user_id)
+          u.wins    += row.wins ?? 0
+          u.losses  += row.losses ?? 0
+          if (row.champion) u.rings++
+          if (row.playoffs) u.playoffApps++
+          u.count++
+          u.totalOvr += row.ovr ?? 0
+          if (!u.username && row.username) u.username = row.username
+        }
+        const compiled = Array.from(byUid.values()).map(u => ({
+          ...u,
+          avgOvr: u.count > 0 ? +(u.totalOvr / u.count).toFixed(1) : 0,
+          winPct: (u.wins + u.losses) > 0 ? +((u.wins / (u.wins + u.losses)) * 100).toFixed(1) : 0,
+        }))
+        compiled.sort((a, b) => b.rings - a.rings || b.wins - a.wins)
+        setLegendRows(compiled)
+        setLegendLoaded(true)
+        setLegendLoading(false)
+      })
   }
 
   const switchBuildsTab = (tab) => { setBuildsTab(tab); setExpandedIdx(null) }
@@ -226,11 +250,56 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
           >
             Builds
           </button>
+          <button
+            className={`lb-main-seg-btn lb-main-seg-btn-legends ${view === 'legends' ? 'lb-main-seg-active-gold' : ''}`}
+            onClick={() => { setView('legends'); loadLegends() }}
+          >
+            ★ All-Time
+          </button>
         </div>
 
         <div id="ramp-cntr1-lb" className="ad-cntr1-lb" />
 
-        {view === 'profiles' ? (
+        {view === 'legends' ? (
+          <>
+            <div className="lb-header">
+              <div className="lb-title lb-title-legends">★ All-Time Leaderboard</div>
+              <div className="lb-subtitle">All-Time mode · ranked by rings</div>
+              <div className="lb-header-line lb-header-line-legends" />
+            </div>
+
+            {legendLoading ? (
+              <div className="lb-loading">Loading...</div>
+            ) : legendRows.length === 0 ? (
+              <div className="lb-loading lb-legends-empty">No All-Time games played yet.</div>
+            ) : (
+              <div className="lb-list">
+                {legendRows.slice(0, 20).map((row, i) => (
+                  <div
+                    key={row.uid}
+                    className={`lb-row lb-row-legends ${currentUser && row.uid === currentUser.id ? 'lb-row-me' : ''} ${i < 3 ? `lb-row-top${i + 1}` : ''}`}
+                    style={{ animationDelay: `${i * 35}ms` }}
+                  >
+                    <RankBadge rank={i + 1} />
+                    <div className="lb-row-info">
+                      <div className="lb-row-name">
+                        {row.username}
+                        {currentUser && row.uid === currentUser.id && <span className="lb-you">you</span>}
+                      </div>
+                      <div className="lb-row-sub">
+                        {row.wins}W · {row.losses}L · {row.playoffApps} playoff{row.playoffApps !== 1 ? 's' : ''} · {row.count} season{row.count !== 1 ? 's' : ''}
+                      </div>
+                    </div>
+                    <div className="lb-row-val lb-row-val-rings">
+                      {row.rings > 0 ? '★'.repeat(Math.min(row.rings, 5)) : '—'}
+                      {row.rings > 5 && <span className="lb-rings-count"> ×{row.rings}</span>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        ) : view === 'profiles' ? (
           <>
             <div className="lb-header">
               <div className="lb-title">Leaderboard</div>

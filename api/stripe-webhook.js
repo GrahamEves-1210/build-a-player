@@ -32,7 +32,10 @@ export default async function handler(req, res) {
     const session = event.data.object
     const userId = session.metadata?.userId
     if (userId) {
-      await supabase.from('accounts').update({ ads_disabled: true }).eq('id', userId)
+      const { error } = await supabase
+        .from('accounts')
+        .upsert({ id: userId, ads_disabled: true }, { onConflict: 'id' })
+      if (error) console.error('[webhook] supabase upsert failed:', error)
     }
   }
 

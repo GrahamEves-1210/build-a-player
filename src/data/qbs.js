@@ -114,14 +114,14 @@ export const QBS = [
     attrs: { 'arm': 3, 'legs': 3, 'size': 3, 'processing': 1, 'leadership': 2, 'vision': 2, 'playmaking': 1, 'accuracy': 2, 'pocket-presence': 2 } },
   // GB
   { name: 'Jordan Love',        short: 'Love',        team: 'GB',  teamName: 'Green Bay Packers',     color: '#FFB612', color2: '#203731', skin: '#c09860', starter: true,  captain: true,  number: 10,
-    attrs: { 'arm': 9, 'legs': 5, 'size': 6, 'processing': 8, 'leadership': 7, 'vision': 8, 'playmaking': 6, 'accuracy': 8, 'pocket-presence': 7 } },
+    attrs: { 'arm': 9, 'legs': 5, 'size': 6, 'processing': 8, 'leadership': 7, 'vision': 6, 'playmaking': 6, 'accuracy': 8, 'pocket-presence': 7 } },
   { name: 'Tyrod Taylor',       short: 'T. Taylor',   team: 'GB',  teamName: 'Green Bay Packers',     color: '#FFB612', color2: '#203731', skin: '#9a6840', starter: false, number: 5,
     attrs: { 'arm': 3, 'legs': 4, 'size': 3, 'processing': 5, 'leadership': 6, 'vision': 4, 'playmaking': 3, 'accuracy': 4, 'pocket-presence': 3 } },
   { name: 'Kyle McCord',        short: 'McCord',      team: 'GB',  teamName: 'Green Bay Packers',     color: '#FFB612', color2: '#203731', skin: '#f0c4a0', starter: false, number: 6,
     attrs: { 'arm': 4, 'legs': 3, 'size': 5, 'processing': 3, 'leadership': 2, 'vision': 2, 'playmaking': 2, 'accuracy': 4, 'pocket-presence': 2 } },
   // HOU
   { name: 'C.J. Stroud',        short: 'Stroud',      team: 'HOU', teamName: 'Houston Texans',        color: '#002244', color2: '#A71930', skin: '#7a5030', starter: true,  captain: true,  number: 7,
-    attrs: { 'arm': 8, 'legs': 5, 'size': 6, 'processing': 6, 'leadership': 7, 'vision': 5, 'playmaking': 6, 'accuracy': 8, 'pocket-presence': 4 } },
+    attrs: { 'arm': 7, 'legs': 5, 'size': 6, 'processing': 6, 'leadership': 7, 'vision': 5, 'playmaking': 6, 'accuracy': 8, 'pocket-presence': 4 } },
   { name: 'Davis Mills',        short: 'Mills',       team: 'HOU', teamName: 'Houston Texans',        color: '#002244', color2: '#A71930', skin: '#f2c8a4', starter: false, number: 10,
     attrs: { 'arm': 4, 'legs': 1, 'size': 4, 'processing': 5, 'leadership': 3, 'vision': 3, 'playmaking': 1, 'accuracy': 4, 'pocket-presence': 4 } },
   { name: 'Graham Mertz',       short: 'Mertz',       team: 'HOU', teamName: 'Houston Texans',        color: '#002244', color2: '#A71930', skin: '#f0c4a0', starter: false, number: 5,
