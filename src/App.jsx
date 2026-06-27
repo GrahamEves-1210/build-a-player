@@ -28,6 +28,11 @@ try {
 
 const _isPrivacy = window.location.pathname === '/privacy'
 
+function hideVideoAds() {
+  const sel = '[id*="corner_video"],[id*="floating_video"],[id*="corner-video"],[class*="corner_video"],[class*="floating_video"],[id^="pw-oop-video"],[id^="pw-oop-corner"]'
+  document.querySelectorAll(sel).forEach(el => el.style.setProperty('display', 'none', 'important'))
+}
+
 function enableAdFreeMode() {
   document.documentElement.classList.add('ads-hidden')
   // Force-hide via JS since Playwire sets inline display with !important
@@ -63,6 +68,13 @@ export default function App() {
   const [adsDisabled, setAdsDisabled] = useState(false)
 
   useEffect(() => {
+    hideVideoAds()
+    const obs = new MutationObserver(hideVideoAds)
+    obs.observe(document.body, { childList: true, subtree: true })
+    return () => obs.disconnect()
+  }, [])
+
+  useEffect(() => {
     const meta = document.querySelector('meta[name="theme-color"]')
     if (meta) meta.setAttribute('content', page === 'splash' ? '#080b09' : '#090a0d')
   }, [page])
@@ -79,7 +91,7 @@ export default function App() {
       const u = data.session?.user ?? null
       setUser(u)
       if (u) supabase.from('profiles').select('ads_disabled').eq('id', u.id).single()
-        .then(({ data: p }) => { if (p?.ads_disabled) { setAdsDisabled(true); enableAdFreeMode() } })
+        .then(({ data: p }) => { console.log('[ads]', p); if (p?.ads_disabled) { setAdsDisabled(true); enableAdFreeMode() } })
     })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
       setUser(session?.user ?? null)
