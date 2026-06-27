@@ -62,7 +62,7 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, onB
 
   useEffect(() => {
     if (!supabase || !user) return
-    supabase.from('profiles').select('ads_disabled').eq('id', user.id).single()
+    supabase.from('accounts').select('ads_disabled').eq('id', user.id).single()
       .then(({ data }) => { if (data?.ads_disabled) setAdsDisabled(true) })
   }, [user])
 
