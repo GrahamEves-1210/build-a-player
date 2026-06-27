@@ -29,8 +29,13 @@ try {
 const _isPrivacy = window.location.pathname === '/privacy'
 
 function hideVideoAds() {
-  const sel = '[id*="corner_video"],[id*="floating_video"],[id*="corner-video"],[class*="corner_video"],[class*="floating_video"],[id^="pw-oop-video"],[id^="pw-oop-corner"]'
+  const sel = '[id*="corner_video"],[id*="floating_video"],[id*="corner-video"],[class*="corner_video"],[class*="floating_video"],[id^="pw-oop-video"],[id^="pw-oop-corner"],[id*="video_corner"],[id*="vid_corner"],[class*="video_corner"]'
   document.querySelectorAll(sel).forEach(el => el.style.setProperty('display', 'none', 'important'))
+  // Also catch any fixed-position Playwire video iframes injected directly
+  document.querySelectorAll('div[id^="pw-"]').forEach(el => {
+    const id = el.id.toLowerCase()
+    if (id.includes('video') || id.includes('corner')) el.style.setProperty('display', 'none', 'important')
+  })
 }
 
 function enableAdFreeMode() {
@@ -71,7 +76,9 @@ export default function App() {
     hideVideoAds()
     const obs = new MutationObserver(hideVideoAds)
     obs.observe(document.body, { childList: true, subtree: true })
-    return () => obs.disconnect()
+    const interval = setInterval(hideVideoAds, 1000)
+    setTimeout(() => clearInterval(interval), 15000)
+    return () => { obs.disconnect(); clearInterval(interval) }
   }, [])
 
   useEffect(() => {

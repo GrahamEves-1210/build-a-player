@@ -37,6 +37,11 @@
       window.ramp.passiveMode = true;
       window.ramp.settings = window.ramp.settings || {};
       window.ramp.settings.slots = { video: false, corner_video: false, floating_video: false };
+      window.ramp.forceUnits = [
+        { unit: 'corner_ad_video', force: 'off' },
+        { unit: 'floating_video', force: 'off' },
+        { unit: 'video', force: 'off' }
+      ];
     </script>
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-ZVFT1H73NW"></script>
