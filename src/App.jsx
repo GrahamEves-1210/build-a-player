@@ -91,7 +91,7 @@ export default function App() {
       const u = data.session?.user ?? null
       setUser(u)
       if (u) supabase.from('accounts').select('ads_disabled').eq('id', u.id).single()
-        .then(({ data: p }) => { console.log('[ads]', p); if (p?.ads_disabled) { setAdsDisabled(true); enableAdFreeMode() } })
+        .then(({ data: p, error: e }) => { console.log('[ads]', p, e); if (p?.ads_disabled) { setAdsDisabled(true); enableAdFreeMode() } })
     })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
       setUser(session?.user ?? null)
