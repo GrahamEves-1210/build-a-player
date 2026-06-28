@@ -294,14 +294,18 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
   const isDone         = phase === 'done'
 
   const teamReelItems = useMemo(() => {
-    const used = usedTeamsRef.current
-    const pool = used.length >= TEAMS.length ? [...TEAMS] : TEAMS.filter(t => !used.includes(t))
-    for (let i = pool.length - 1; i > 0; i--) {
+    const usedShorts = new Set([
+      ...usedTeamsRef.current.map(t => t.short),
+      ...types.map(t => build[t]?.team).filter(Boolean),
+    ])
+    const pool = TEAMS.filter(t => !usedShorts.has(t.short))
+    const finalPool = pool.length > 0 ? pool : [...TEAMS]
+    for (let i = finalPool.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1))
-      ;[pool[i], pool[j]] = [pool[j], pool[i]]
+      ;[finalPool[i], finalPool[j]] = [finalPool[j], finalPool[i]]
     }
-    return pool
-  }, [spinCount])
+    return finalPool
+  }, [spinCount, build, types])
 
   // Stable QB items — minimal placeholder until team is selected (QB reel is blurred/hidden)
   const qbReelItems = useMemo(() => {
