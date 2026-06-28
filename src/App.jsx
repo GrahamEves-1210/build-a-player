@@ -150,22 +150,15 @@ export default function App() {
     setSpinResetKey(k => k + 1)
   }, [])
 
-  const fillTestBuild = useCallback(() => {
-    const newBuild = {}
-    activeTypes.forEach(type => {
-      const best = activePool.reduce((a, b) => ((b.attrs[type] ?? 0) > (a.attrs[type] ?? 0) ? b : a), activePool[0])
-      const photo = HEADSHOTS[best.name] ? `/headshots/${HEADSHOTS[best.name]}.jpg` : null
-      newBuild[type] = {
-        type, val: best.attrs[type],
-        qb: best.short, qbFull: best.name,
-        teamColor: best.color, teamColor2: best.color2,
-        skinColor: best.skin, number: best.number,
-        team: best.team, captain: best.captain ?? false, photo,
-      }
-    })
-    setBuild(newBuild)
-    setMobileView('build')
-  }, [activeTypes, activePool])
+
+  const handleMVPWon = useCallback(async (isAllTime) => {
+    if (!user || !supabase) return
+    const col = isAllTime ? 'alltime_mvps' : 'classic_mvps'
+    const { data } = await supabase.from('accounts').select('classic_mvps,alltime_mvps').eq('id', user.id).single()
+    const current = data?.[col] ?? 0
+    supabase.from('accounts').upsert({ id: user.id, [col]: current + 1 }, { onConflict: 'id' })
+      .then(({ error }) => { if (error) console.error('[mvp] failed to save mvp:', error) })
+  }, [user])
 
   const handleReset = useCallback(() => {
     setBuild(Object.fromEntries(activeTypes.map(t => [t, null])))
@@ -337,6 +330,7 @@ export default function App() {
           types={activeTypes}
           replay={simReplaying}
           adsDisabled={adsDisabled}
+          onMVPWon={handleMVPWon}
           onBack={() => { setPage('game'); window.scrollTo({ top: 0, behavior: 'instant' }) }}
           onReset={() => { handleReset(); setPage('game'); window.scrollTo({ top: 0, behavior: 'instant' }) }}
         />
@@ -390,6 +384,7 @@ export default function App() {
           />
         </div>
       </main>
+
 
       {/* Mobile bottom tab bar */}
       <nav className="mobile-tab-bar">

@@ -280,6 +280,100 @@ const ALLTIME_SB_POOLS = {
   NFC: ['New England Patriots', 'Pittsburgh Steelers', 'Baltimore Ravens', 'Kansas City Chiefs', 'Denver Broncos', 'Miami Dolphins', 'Indianapolis Colts'],
 }
 
+// ── MVP ───────────────────────────────────────────────────────────────────────
+
+const CLASSIC_MVP_POOL = [
+  { name: 'Patrick Mahomes', team: 'KC',  color: '#E31837' },
+  { name: 'Lamar Jackson',   team: 'BAL', color: '#241773' },
+  { name: 'Josh Allen',      team: 'BUF', color: '#00338D' },
+  { name: 'Joe Burrow',      team: 'CIN', color: '#FB4F14' },
+  { name: 'Jalen Hurts',     team: 'PHI', color: '#004C54' },
+  { name: 'Dak Prescott',    team: 'DAL', color: '#869397' },
+  { name: 'C.J. Stroud',     team: 'HOU', color: '#002244' },
+]
+
+const ALLTIME_MVP_POOL = [
+  { name: 'Tom Brady',      team: 'NE',  color: '#002244' },
+  { name: 'Peyton Manning', team: 'IND', color: '#002C5F' },
+  { name: 'Joe Montana',    team: 'SF',  color: '#AA0000' },
+  { name: 'Dan Marino',     team: 'MIA', color: '#008E97' },
+  { name: 'Brett Favre',    team: 'GB',  color: '#203731' },
+  { name: 'Aaron Rodgers',  team: 'GB',  color: '#203731' },
+  { name: 'Steve Young',    team: 'SF',  color: '#AA0000' },
+  { name: 'John Elway',     team: 'DEN', color: '#002244' },
+  { name: 'Johnny Unitas',  team: 'IND', color: '#002C5F' },
+]
+
+export function calcMVPResult(result, isAllTime = false) {
+  const { wins = 0, seasonTDs = 0, seasonRushTDs = 0, seasonPassYds = 0, seasonRushYds = 0, ovr = 70, playoffs = false, sbResult = null } = result
+  const totalTDs = seasonTDs + seasonRushTDs
+  const totalYds = seasonPassYds + seasonRushYds
+
+  let p = 0
+
+  // TDs — most important factor
+  if (totalTDs >= 50)      p += 0.52
+  else if (totalTDs >= 45) p += 0.44
+  else if (totalTDs >= 40) p += 0.35
+  else if (totalTDs >= 35) p += 0.25
+  else if (totalTDs >= 30) p += 0.13
+  // <30 TDs contributes nothing — essentially disqualifying
+
+  // Yards — second most important
+  if (totalYds >= 5500)      p += 0.32
+  else if (totalYds >= 5000) p += 0.26
+  else if (totalYds >= 4500) p += 0.20
+  else if (totalYds >= 4000) p += 0.13
+  else if (totalYds >= 3500) p += 0.05
+
+  // OVR
+  if (ovr >= 95)      p += 0.08
+  else if (ovr >= 90) p += 0.05
+  else if (ovr >= 85) p += 0.02
+
+  // Wins — tiebreaker only
+  if (wins >= 16)      p += 0.08
+  else if (wins >= 14) p += 0.05
+  else if (wins >= 12) p += 0.03
+  else if (wins >= 10) p += 0.01
+
+  if (playoffs) p += 0.02
+  if (sbResult) p += 0.03
+
+  // Hard cap: under 30 combined TDs, essentially never wins
+  if (totalTDs < 30) p = Math.min(p, 0.03)
+
+  if (isAllTime) p *= 0.80
+
+  p = Math.min(p, 0.90)
+
+  const userWins = Math.random() < p
+  const pool = isAllTime ? ALLTIME_MVP_POOL : CLASSIC_MVP_POOL
+  const winner = pool[Math.floor(Math.random() * pool.length)]
+  const unanimous = wins >= 15 && totalTDs >= 40 && totalYds >= 5000
+
+  // Generate winner stats always at least comparable/better than user's stats
+  const ri = (lo, hi) => Math.round(lo + Math.random() * (hi - lo))
+  const winnerTDs      = ri(Math.max(32, totalTDs + 1), Math.max(44, totalTDs + 8))
+  const winnerTotalYds = ri(Math.max(3900, totalYds + 100), Math.max(4800, totalYds + 600))
+  const winnerWins     = ri(Math.max(12, wins), Math.min(15, Math.max(13, wins + 2)))
+  const winnerINTs     = ri(5, 12)
+  const winnerCompPct  = (ri(635, 710) / 10).toFixed(1)
+  const winnerRating   = ri(94, 116)
+
+  const winnerStats = {
+    wins: winnerWins,
+    losses: 17 - winnerWins,
+    totalYds: winnerTotalYds,
+    tds: winnerTDs,
+    ints: winnerINTs,
+    compPct: winnerCompPct,
+    rating: winnerRating,
+  }
+
+  return { userWins, winner, unanimous, winnerStats }
+}
+
 // ── Core simulation ───────────────────────────────────────────────────────────
 
 export function runSimulation(build, types = TYPES, team = null, isAllTime = false) {

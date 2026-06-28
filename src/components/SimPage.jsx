@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
 import { ATTR, TYPES, TEAMS } from '../data/qbs'
-import { valToGrade, getArchetype, readableTextColor } from '../utils/simulation'
+import { valToGrade, getArchetype, readableTextColor, calcMVPResult } from '../utils/simulation'
 import QBAvatar from './QBAvatar'
 import QBFigureOverlay from './QBFigureOverlay'
+import MVPModal from './MVPModal'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -460,7 +461,7 @@ function PlayoffGame({ round, opponent, home, weather, mySc, oppSc, won, teamCol
 
 // ── Screen 3: Playoffs ────────────────────────────────────────────────────────
 
-function ScreenPlayoffs({ result, onNext }) {
+function ScreenPlayoffs({ result, onNext, onPreSuperBowl }) {
   const { wins, losses, playoffs, playoffRounds, team } = result
   const [gameIdx, setGameIdx] = useState(0)
   const [status,  setStatus]  = useState('playing')
@@ -472,15 +473,25 @@ function ScreenPlayoffs({ result, onNext }) {
     return () => clearTimeout(t)
   }, [playoffs])
 
+  const advanceToSB = () => {
+    setGameIdx(i => i + 1)
+    setStatus('playing')
+  }
+
   const handleGameDone = () => {
     const r = playoffRounds[gameIdx]
     if (!r.won) { setStatus('eliminated'); return }
     if (gameIdx === playoffRounds.length - 1) { setStatus('champion'); return }
+    const nextIsSB = gameIdx === playoffRounds.length - 2
     setStatus('between')
-    setTimeout(() => {
-      setGameIdx(i => i + 1)
-      setStatus('playing')
-    }, 2500)
+    if (nextIsSB && onPreSuperBowl) {
+      setTimeout(() => onPreSuperBowl(advanceToSB), 2500)
+    } else {
+      setTimeout(() => {
+        setGameIdx(i => i + 1)
+        setStatus('playing')
+      }, 2500)
+    }
   }
 
   const teamColor = team?.color || '#5EDBD8'
@@ -576,7 +587,7 @@ function ScreenPlayoffs({ result, onNext }) {
 
 // ── Screen 4: Final Report ────────────────────────────────────────────────────
 
-function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = false }) {
+function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = false, mvpWon = false }) {
   const { ovr, wins, losses, playoffs, sbResult, seasonPassYds, seasonTDs, seasonINTs, seasonRushYds, seasonRushTDs, seasonSacks, seasonCompPct, seasonRating, bestGame } = result
   const champion = sbResult?.won
   const [show, setShow] = useState(false)
@@ -682,6 +693,15 @@ function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = fals
             <div className="simp-total-lbl">Sacks</div>
           </div>
         </div>
+        {mvpWon && (
+          <div className="sfb-mvp-row">
+            <img src="/mvp.png" alt="MVP Trophy" className="sfb-mvp-row-img" />
+            <div className="sfb-mvp-row-text">
+              <div className="sfb-mvp-row-title">Regular Season MVP</div>
+              <div className="sfb-mvp-row-sub">NFL Award Winner</div>
+            </div>
+          </div>
+        )}
       </div>
 
       {build && types && (
@@ -744,13 +764,52 @@ function ProgressDots({ screen, total }) {
 
 // ── SimPage ───────────────────────────────────────────────────────────────────
 
-export default function SimPage({ result, build, types = TYPES, onBack, onReset, replay = false, adsDisabled = false }) {
+export default function SimPage({ result, build, types = TYPES, onBack, onReset, replay = false, adsDisabled = false, onMVPWon }) {
   const [screen, setScreen] = useState(replay ? 3 : 0)
-  const next = () => {
+  const [mvpResult, setMvpResult] = useState(null)
+  const [mvpWon, setMvpWon] = useState(false)
+  const [mvpContinuation, setMvpContinuation] = useState(null)
+  const isAllTime = !!result.team?.isAllTime
+  const reachesSB = !!result.sbResult
+
+  const advancePage = () => {
     document.querySelector('.simp-page')?.scrollTo({ top: 0, behavior: 'instant' })
     window.scrollTo({ top: 0, behavior: 'instant' })
     window.ramp?.que?.push(() => window.ramp.spaNewPage())
     setScreen(s => s + 1)
+  }
+
+  const triggerMVP = (continuation = null) => {
+    const r = calcMVPResult(result, isAllTime)
+    setMvpResult(r)
+    if (r.userWins) {
+      setMvpWon(true)
+      onMVPWon?.(isAllTime)
+    }
+    if (continuation) setMvpContinuation(() => continuation)
+  }
+
+  const next = () => {
+    // SB players get MVP pre-SB via onPreSuperBowl — skip MVP here
+    if (screen === 2 && !mvpResult && !reachesSB) {
+      triggerMVP()
+      return
+    }
+    advancePage()
+  }
+
+  const handleMVPDismiss = () => {
+    setMvpResult(null)
+    if (mvpContinuation) {
+      mvpContinuation()
+      setMvpContinuation(null)
+    } else {
+      advancePage()
+    }
+  }
+
+  const handlePreSuperBowl = (continuation) => {
+    triggerMVP(continuation)
   }
 
   const handleReset = () => { setScreen(0); onReset() }
@@ -759,8 +818,8 @@ export default function SimPage({ result, build, types = TYPES, onBack, onReset,
   const screens = [
     <ScreenBuild    key="build"    result={result} build={build} types={types} onNext={next} />,
     <ScreenSeason   key="season"   result={result} onNext={next} />,
-    <ScreenPlayoffs key="playoffs" result={result} onNext={next} />,
-    <ScreenFinal    key="final"    result={result} build={build} types={types} onReset={handleReset} onBack={handleBack} adsDisabled={adsDisabled} />,
+    <ScreenPlayoffs key="playoffs" result={result} onNext={next} onPreSuperBowl={handlePreSuperBowl} />,
+    <ScreenFinal    key="final"    result={result} build={build} types={types} onReset={handleReset} onBack={handleBack} adsDisabled={adsDisabled} mvpWon={mvpWon} />,
   ]
 
   const team = result.team
@@ -815,6 +874,14 @@ export default function SimPage({ result, build, types = TYPES, onBack, onReset,
 
         {screens[screen]}
       </div>
+
+      {mvpResult && (
+        <MVPModal
+          result={result}
+          mvpResult={mvpResult}
+          onDismiss={handleMVPDismiss}
+        />
+      )}
     </div>
   )
 }

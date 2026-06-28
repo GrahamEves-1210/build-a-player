@@ -62,10 +62,15 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, onB
 
   useEffect(() => { const t = setTimeout(() => setShow(true), 120); return () => clearTimeout(t) }, [])
 
+  const [mvpCounts, setMvpCounts] = useState({ classic: 0, alltime: 0 })
+
   useEffect(() => {
     if (!supabase || !user) return
-    supabase.from('accounts').select('ads_disabled').eq('id', user.id).single()
-      .then(({ data }) => { if (data?.ads_disabled) setAdsDisabled(true) })
+    supabase.from('accounts').select('ads_disabled,classic_mvps,alltime_mvps').eq('id', user.id).single()
+      .then(({ data }) => {
+        if (data?.ads_disabled) setAdsDisabled(true)
+        setMvpCounts({ classic: data?.classic_mvps ?? 0, alltime: data?.alltime_mvps ?? 0 })
+      })
   }, [user])
 
   // Check for successful Stripe return
@@ -274,8 +279,8 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, onB
 
             <div className="prf-career-grid">
               <div className="pcg-cell">
-                <div className="pcg-val">{career.rings}</div>
-                <div className="pcg-lbl">Rings</div>
+                <div className="pcg-val">{mvpCounts.classic}</div>
+                <div className="pcg-lbl">MVPs</div>
               </div>
               <div className="pcg-cell">
                 <div className="pcg-val">{career.playoffApps}</div>
@@ -296,6 +301,10 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, onB
               <div className="pcg-cell">
                 <div className="pcg-val">{career.avgOVR}</div>
                 <div className="pcg-lbl">Avg OVR</div>
+              </div>
+              <div className="pcg-cell pcg-cell-rings">
+                <div className="pcg-val pcg-val-rings">{career.rings}</div>
+                <div className="pcg-lbl pcg-lbl-rings">Rings</div>
               </div>
             </div>
 
@@ -353,8 +362,8 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, onB
 
             <div className="prf-career-grid">
               <div className="pcg-cell pcg-cell-legend">
-                <div className="pcg-val pcg-val-legend">{legendCareer.rings}</div>
-                <div className="pcg-lbl">Rings</div>
+                <div className="pcg-val">{mvpCounts.alltime}</div>
+                <div className="pcg-lbl">MVPs</div>
               </div>
               <div className="pcg-cell pcg-cell-legend">
                 <div className="pcg-val">{legendCareer.playoffApps}</div>
@@ -375,6 +384,10 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, onB
               <div className="pcg-cell pcg-cell-legend">
                 <div className="pcg-val">{legendCareer.avgOVR}</div>
                 <div className="pcg-lbl">Avg OVR</div>
+              </div>
+              <div className="pcg-cell pcg-cell-rings pcg-cell-rings--legend">
+                <div className="pcg-val pcg-val-rings">{legendCareer.rings}</div>
+                <div className="pcg-lbl pcg-lbl-rings">Rings</div>
               </div>
             </div>
 
