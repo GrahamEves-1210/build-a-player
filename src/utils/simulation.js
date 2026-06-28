@@ -402,7 +402,7 @@ export function runSimulation(build, types = TYPES, team = null, isAllTime = fal
     const oppOffN = oppTeamData ? (oppTeamData.off - 5) / 5 : 0
     const oppDefN = oppTeamData ? (oppTeamData.def - 5) / 5 : 0
     // In All-Time mode, facing all-time opponents is slightly harder
-    const oppPenalty = isAllTime ? oppOffN * 0.078 + oppDefN * 0.092 : 0
+    const oppPenalty = isAllTime ? oppOffN * 0.095 + oppDefN * 0.110 : 0
 
     // Win chance: base + performance premium (great game = better chance)
     const perfBonus  = (gameTDs >= 3 ? 0.06 : gameTDs >= 2 ? 0.02 : 0)
@@ -520,7 +520,7 @@ export function runSimulation(build, types = TYPES, team = null, isAllTime = fal
       const pgOvrPenalty = ovr !== null && ovr < 85
         ? (85 - ovr) * 0.011
         : 0
-      const pgWinP     = Math.min(0.90, Math.max(0.10, 0.30 + ovrN * 0.61 + teamN * 0.41 - pgOvrPenalty + (pgHome ? 0.03 : 0) - (isAllTime ? 0.07 : 0)))
+      const pgWinP     = Math.min(0.90, Math.max(0.10, 0.30 + ovrN * 0.61 + teamN * 0.41 - pgOvrPenalty + (pgHome ? 0.03 : 0) - (isAllTime ? 0.09 : 0)))
       const won        = Math.random() < pgWinP
 
       // Playoff game stats use similar logic but with higher stakes variance

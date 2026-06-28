@@ -84,6 +84,7 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
   const [buildsLoading, setBuildsLoading] = useState(false)
   const [legendLoading, setLegendLoading] = useState(false)
   const [metric, setMetric]           = useState('rings')
+  const [legendMetric, setLegendMetric] = useState('rings')
   const [view, setView]               = useState('profiles')
   const [buildsTab, setBuildsTab]     = useState('best')
   const [expandedIdx, setExpandedIdx] = useState(null)
@@ -187,7 +188,7 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
     setLegendLoading(true)
     supabase
       .from('simulations')
-      .select('user_id, username, wins, losses, champion, playoffs, ovr')
+      .select('user_id, username, wins, losses, champion, playoffs, ovr, season_pass_yds, season_tds')
       .eq('game_mode', 'all-time')
       .then(({ data }) => {
         if (!data) { setLegendLoading(false); return }
@@ -198,12 +199,14 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
             byUid.set(row.user_id, {
               uid: row.user_id,
               username: row.username || `Player_${row.user_id.slice(0, 5)}`,
-              wins: 0, losses: 0, rings: 0, playoffApps: 0, count: 0, totalOvr: 0,
+              wins: 0, losses: 0, rings: 0, playoffApps: 0, count: 0, totalOvr: 0, yds: 0, tds: 0,
             })
           }
           const u = byUid.get(row.user_id)
           u.wins    += row.wins ?? 0
           u.losses  += row.losses ?? 0
+          u.yds     += row.season_pass_yds ?? 0
+          u.tds     += row.season_tds ?? 0
           if (row.champion) u.rings++
           if (row.playoffs) u.playoffApps++
           u.count++
@@ -215,7 +218,6 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
           avgOvr: u.count > 0 ? +(u.totalOvr / u.count).toFixed(1) : 0,
           winPct: (u.wins + u.losses) > 0 ? +((u.wins / (u.wins + u.losses)) * 100).toFixed(1) : 0,
         }))
-        compiled.sort((a, b) => b.rings - a.rings || b.wins - a.wins)
         setLegendRows(compiled)
         setLegendLoaded(true)
         setLegendLoading(false)
@@ -267,40 +269,63 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
           <>
             <div className="lb-header">
               <div className="lb-title lb-title-legends">★ All-Time Leaderboard</div>
-              <div className="lb-subtitle">All-Time mode · ranked by rings</div>
+              <div className="lb-subtitle">All-Time mode · career stats · all players ranked</div>
               <div className="lb-header-line lb-header-line-legends" />
+            </div>
+
+            <div className="lb-tabs-scroll">
+              {METRICS.map(m => (
+                <button
+                  key={m.key}
+                  className={`lb-tab lb-tab-legends ${legendMetric === m.key ? 'lb-tab-active lb-tab-active-legends' : ''}`}
+                  onClick={() => setLegendMetric(m.key)}
+                >
+                  {m.label}
+                </button>
+              ))}
             </div>
 
             {legendLoading ? (
               <div className="lb-loading">Loading...</div>
             ) : legendRows.length === 0 ? (
               <div className="lb-loading lb-legends-empty">No All-Time games played yet.</div>
-            ) : (
-              <div className="lb-list">
-                {legendRows.slice(0, 20).map((row, i) => (
-                  <div
-                    key={row.uid}
-                    className={`lb-row lb-row-legends ${currentUser && row.uid === currentUser.id ? 'lb-row-me' : ''} ${i < 3 ? `lb-row-top${i + 1}` : ''}`}
-                    style={{ animationDelay: `${i * 35}ms` }}
-                  >
-                    <RankBadge rank={i + 1} />
-                    <div className="lb-row-info">
-                      <div className="lb-row-name">
-                        {row.username}
-                        {currentUser && row.uid === currentUser.id && <span className="lb-you">you</span>}
+            ) : (() => {
+              const filteredLegend = legendMetric === 'avgOvr' ? legendRows.filter(r => r.count >= 2) : legendRows
+              const sortedLegend = [...filteredLegend].sort((a, b) => (b[legendMetric] - a[legendMetric]) || (b.wins - a.wins))
+              const activeLegendMetric = METRICS.find(m => m.key === legendMetric)
+              return (
+                <div className="lb-list" key={legendMetric}>
+                  {Array.from({ length: 20 }, (_, i) => sortedLegend[i] ?? null).map((row, i) =>
+                    row ? (
+                      <div
+                        key={row.uid}
+                        className={`lb-row lb-row-legends ${currentUser && row.uid === currentUser.id ? 'lb-row-me' : ''} ${i < 3 ? `lb-row-top${i + 1}` : ''}`}
+                        style={{ animationDelay: `${i * 35}ms` }}
+                      >
+                        <RankBadge rank={i + 1} />
+                        <div className="lb-row-info">
+                          <div className="lb-row-name">
+                            {row.username}
+                            {currentUser && row.uid === currentUser.id && <span className="lb-you">you</span>}
+                          </div>
+                          <div className="lb-row-sub">
+                            {row.wins}W · {row.losses}L · {row.rings} ring{row.rings !== 1 ? 's' : ''} · {row.count} season{row.count !== 1 ? 's' : ''}
+                          </div>
+                        </div>
+                        <div className="lb-row-val">{activeLegendMetric.fmt(row[legendMetric])}</div>
                       </div>
-                      <div className="lb-row-sub">
-                        {row.wins}W · {row.losses}L · {row.playoffApps} playoff{row.playoffApps !== 1 ? 's' : ''} · {row.count} season{row.count !== 1 ? 's' : ''}
+                    ) : (
+                      <div key={`empty-${i}`} className="lb-row lb-row-empty lb-row-legends" style={{ animationDelay: `${i * 35}ms` }}>
+                        <div className="lb-rank-badge lb-rank-n">{i + 1}</div>
+                        <div className="lb-row-info">
+                          <div className="lb-row-name lb-empty-name">——</div>
+                        </div>
                       </div>
-                    </div>
-                    <div className="lb-row-val lb-row-val-rings">
-                      {row.rings > 0 ? row.rings : '—'}
-                      <span className="lb-rings-label">rings</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+                    )
+                  )}
+                </div>
+              )
+            })()}
           </>
         ) : view === 'profiles' ? (
           <>
