@@ -98,7 +98,7 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, onB
     if (!supabase || !user) { setCareerLoad(false); return }
     supabase
       .from('simulations')
-      .select('wins,losses,season_pass_yds,season_tds,season_ints,season_rating,playoffs,champion,ovr,created_at')
+      .select('wins,losses,season_pass_yds,season_tds,season_ints,season_rating,playoffs,champion,ovr,archetype,build,created_at')
       .eq('user_id', user.id)
       .neq('game_mode', 'all-time')
       .order('created_at', { ascending: false })
@@ -115,7 +115,10 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, onB
         const winPct      = totalGames > 0 ? ((totalWins / totalGames) * 100).toFixed(1) : '0.0'
         const avgOVR      = (data.reduce((s, r) => s + (r.ovr ?? 0), 0) / data.length).toFixed(1)
         const best        = data.reduce((b, r) => (r.wins ?? 0) > (b.wins ?? 0) ? r : b, data[0])
-        setCareer({ count: data.length, totalWins, totalLosses, totalTDs, totalYds, totalINTs, rings, playoffApps, winPct, avgOVR, best })
+        const withBuilds  = data.filter(r => r.build && r.ovr)
+        const bestBuild   = withBuilds.length ? withBuilds.reduce((b, r) => (r.ovr ?? 0) > (b.ovr ?? 0) ? r : b, withBuilds[0]) : null
+        const worstBuild  = withBuilds.length ? withBuilds.reduce((b, r) => (r.ovr ?? 0) < (b.ovr ?? 0) ? r : b, withBuilds[0]) : null
+        setCareer({ count: data.length, totalWins, totalLosses, totalTDs, totalYds, totalINTs, rings, playoffApps, winPct, avgOVR, best, bestBuild, worstBuild })
         setCareerLoad(false)
       })
   }, [user])
@@ -300,6 +303,34 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, onB
               <div className="prf-best-season">
                 <span className="pbs-lbl">Best Season</span>
                 <span className="pbs-val">{career.best.wins}–{career.best.losses} · {career.best.season_tds} TD · {(career.best.season_pass_yds ?? 0).toLocaleString()} yds</span>
+              </div>
+            )}
+
+            {(career.bestBuild || career.worstBuild) && (
+              <div className="prf-build-extremes">
+                {[
+                  career.bestBuild && { data: career.bestBuild, type: 'best', label: 'Best Build' },
+                  career.worstBuild && career.worstBuild.ovr !== career.bestBuild?.ovr && { data: career.worstBuild, type: 'worst', label: 'Worst Build' },
+                ].filter(Boolean).map(({ data: bd, type, label }) => (
+                  <div key={type} className={`prf-build-extreme prf-build-extreme--${type}`}>
+                    <div className="pbe-header">
+                      <span className="pbe-label">{label}</span>
+                      <span className="pbe-ovr">{bd.ovr} OVR</span>
+                      {bd.archetype && <span className="pbe-arch">{bd.archetype}</span>}
+                    </div>
+                    <div className="pbe-slots">
+                      {Object.entries(bd.build).map(([slot, d]) => (
+                        <div key={slot} className="pbe-slot-row">
+                          <span className="pbe-slot-attr">{ATTR[slot]?.shortLabel ?? slot}</span>
+                          <span className="pbe-slot-qb">{d.qb}</span>
+                          <span className="pbe-slot-grade" style={{ background: ATTR[slot]?.hex ?? '#95d5b2' }}>
+                            {valToGrade(d.val)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>

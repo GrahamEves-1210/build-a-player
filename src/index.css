@@ -1191,7 +1191,7 @@ a:focus-visible {
 @media (min-width: 769px) {
   .spin-panel-static     { gap: 8px; }
   .sil-wrap              { transform: scale(0.88) translateY(-5px); transform-origin: top center; }
-  .spin-panel-scroll     { overflow: hidden; gap: 5px; padding-bottom: 0; }
+  .spin-panel-scroll     { overflow-y: auto; gap: 5px; padding-bottom: 0; }
   .build-slots           { padding-bottom: var(--ad-h); }
   .build-slots .qb-avatar { width: 41.8px !important; height: 41.8px !important; }
   .reset-btn {
@@ -5897,6 +5897,83 @@ html.is-touch .bd-card-main:hover         { background: transparent !important; 
   color: rgba(255,255,255,0.7);
   line-height: 1.4;
   font-variant-numeric: tabular-nums;
+}
+.prf-build-extremes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+.prf-build-extreme {
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+}
+.prf-build-extreme--best  { border-color: rgba(149,213,178,0.15); }
+.prf-build-extreme--worst { border-color: rgba(239,68,68,0.12); }
+.pbe-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.pbe-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.3);
+}
+.pbe-ovr {
+  font-size: 13px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.prf-build-extreme--best  .pbe-ovr { color: #95d5b2; }
+.prf-build-extreme--worst .pbe-ovr { color: #f87171; }
+.pbe-arch {
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.3);
+  margin-left: auto;
+}
+.pbe-slots {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.pbe-slot-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.pbe-slot-attr {
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: rgba(255,255,255,0.25);
+  width: 28px;
+  flex-shrink: 0;
+}
+.pbe-slot-qb {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.7);
+  flex: 1;
+}
+.pbe-slot-grade {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8.5px;
+  font-weight: 900;
+  color: #07120a;
+  flex-shrink: 0;
 }
 
 /* ── Legends career card (gold variant) ── */
