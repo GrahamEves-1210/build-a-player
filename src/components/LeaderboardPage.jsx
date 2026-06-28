@@ -100,50 +100,23 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
 
   useEffect(() => {
     if (!supabase) { setLoading(false); return }
-    const PAGE = 1000
-    const base = supabase.from('simulations')
-      .select('user_id, username, wins, losses, season_pass_yds, season_tds, champion, ovr')
-      .neq('game_mode', 'all-time')
-      .neq('game_mode', 'lite')
     ;(async () => {
-      const { count } = await supabase.from('simulations')
-        .select('*', { count: 'exact', head: true })
-        .neq('game_mode', 'all-time')
-        .neq('game_mode', 'lite')
-      const pages = Math.ceil((count ?? PAGE) / PAGE)
-      const results = await Promise.all(
-        Array.from({ length: pages }, (_, i) =>
-          base.range(i * PAGE, i * PAGE + PAGE - 1).then(r => r.data ?? [])
-        )
-      )
-      const byUid = new Map()
-      for (const row of results.flat()) {
-        if (!row.user_id) continue
-        if (!byUid.has(row.user_id)) {
-          byUid.set(row.user_id, {
-            user_id: row.user_id, username: row.username || null,
-            wins: 0, losses: 0, yds: 0, tds: 0, rings: 0, count: 0, totalOvr: 0,
-          })
-        }
-        const u = byUid.get(row.user_id)
-        u.wins     += row.wins            ?? 0
-        u.losses   += row.losses          ?? 0
-        u.yds      += row.season_pass_yds ?? 0
-        u.tds      += row.season_tds      ?? 0
-        if (row.champion) u.rings++
-        u.count++
-        u.totalOvr += row.ovr ?? 0
-        if (!u.username && row.username) u.username = row.username
-      }
-      const compiled = Array.from(byUid.values()).map(u => {
+      const { data, error } = await supabase.from('leaderboard_profiles')
+        .select('user_id, username, wins, losses, yds, tds, rings, count, avg_ovr')
+        .limit(10000)
+      if (error) console.error('[LB] leaderboard_profiles error:', error)
+      const compiled = (data ?? []).filter(r => r.user_id).map(u => {
         const games = u.wins + u.losses
         return {
           uid:    u.user_id,
           username: u.username || `Player_${u.user_id?.slice(0, 5)}`,
-          wins:   u.wins, losses: u.losses,
-          yds:    u.yds,  tds:    u.tds,
-          rings:  u.rings, count: u.count,
-          avgOvr: u.count > 0 ? +(u.totalOvr / u.count).toFixed(1) : 0,
+          wins:   u.wins   ?? 0,
+          losses: u.losses ?? 0,
+          yds:    u.yds    ?? 0,
+          tds:    u.tds    ?? 0,
+          rings:  u.rings  ?? 0,
+          count:  u.count  ?? 0,
+          avgOvr: u.avg_ovr ?? 0,
           winPct: games > 0 ? +((u.wins / games) * 100).toFixed(1) : 0,
         }
       })
@@ -158,8 +131,7 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
     const bestQ = supabase
       .from('simulations')
       .select('user_id, username, wins, losses, ovr, build, game_mode')
-      .neq('game_mode', 'lite')
-      .neq('game_mode', 'all-time')
+      .not('game_mode', 'in', '("all-time","lite","legends")')
       .not('build', 'is', null)
       .gte('ovr', 80)
       .order('ovr', { ascending: false })
@@ -168,8 +140,7 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
     const worstQ = supabase
       .from('simulations')
       .select('user_id, username, wins, losses, ovr, build, game_mode')
-      .neq('game_mode', 'lite')
-      .neq('game_mode', 'all-time')
+      .not('game_mode', 'in', '("all-time","lite","legends")')
       .not('build', 'is', null)
       .lt('ovr', 80)
       .order('ovr', { ascending: true })
@@ -183,45 +154,55 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
     })
   }
 
+  useEffect(() => { loadLegends() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
   const loadLegends = () => {
     if (legendLoaded || !supabase) return
     setLegendLoading(true)
-    supabase
-      .from('simulations')
-      .select('user_id, username, wins, losses, champion, playoffs, ovr, season_pass_yds, season_tds')
-      .eq('game_mode', 'all-time')
-      .then(({ data }) => {
-        if (!data) { setLegendLoading(false); return }
-        const byUid = new Map()
-        for (const row of data) {
-          if (!row.user_id) continue
-          if (!byUid.has(row.user_id)) {
-            byUid.set(row.user_id, {
-              uid: row.user_id,
-              username: row.username || `Player_${row.user_id.slice(0, 5)}`,
-              wins: 0, losses: 0, rings: 0, playoffApps: 0, count: 0, totalOvr: 0, yds: 0, tds: 0,
-            })
-          }
-          const u = byUid.get(row.user_id)
-          u.wins    += row.wins ?? 0
-          u.losses  += row.losses ?? 0
-          u.yds     += row.season_pass_yds ?? 0
-          u.tds     += row.season_tds ?? 0
-          if (row.champion) u.rings++
-          if (row.playoffs) u.playoffApps++
-          u.count++
-          u.totalOvr += row.ovr ?? 0
-          if (!u.username && row.username) u.username = row.username
+    const PAGE = 1000
+    ;(async () => {
+      const { count } = await supabase.from('simulations')
+        .select('*', { count: 'exact', head: true })
+        .or('game_mode.eq.all-time,game_mode.eq.legends')
+      const pages = Math.ceil((count ?? PAGE) / PAGE)
+      const mkLegendQuery = () => supabase.from('simulations')
+        .select('user_id, username, wins, losses, champion, playoffs, ovr, season_pass_yds, season_tds')
+        .or('game_mode.eq.all-time,game_mode.eq.legends')
+      const results = await Promise.all(
+        Array.from({ length: pages }, (_, i) =>
+          mkLegendQuery().range(i * PAGE, i * PAGE + PAGE - 1).then(r => r.data ?? [])
+        )
+      )
+      const byUid = new Map()
+      for (const row of results.flat()) {
+        if (!row.user_id) continue
+        if (!byUid.has(row.user_id)) {
+          byUid.set(row.user_id, {
+            uid: row.user_id,
+            username: row.username || `Player_${row.user_id.slice(0, 5)}`,
+            wins: 0, losses: 0, rings: 0, playoffApps: 0, count: 0, totalOvr: 0, yds: 0, tds: 0,
+          })
         }
-        const compiled = Array.from(byUid.values()).map(u => ({
-          ...u,
-          avgOvr: u.count > 0 ? +(u.totalOvr / u.count).toFixed(1) : 0,
-          winPct: (u.wins + u.losses) > 0 ? +((u.wins / (u.wins + u.losses)) * 100).toFixed(1) : 0,
-        }))
-        setLegendRows(compiled)
-        setLegendLoaded(true)
-        setLegendLoading(false)
-      })
+        const u = byUid.get(row.user_id)
+        u.wins    += row.wins ?? 0
+        u.losses  += row.losses ?? 0
+        u.yds     += row.season_pass_yds ?? 0
+        u.tds     += row.season_tds ?? 0
+        if (row.champion) u.rings++
+        if (row.playoffs) u.playoffApps++
+        u.count++
+        u.totalOvr += row.ovr ?? 0
+        if (!u.username && row.username) u.username = row.username
+      }
+      const compiled = Array.from(byUid.values()).map(u => ({
+        ...u,
+        avgOvr: u.count > 0 ? +(u.totalOvr / u.count).toFixed(1) : 0,
+        winPct: (u.wins + u.losses) > 0 ? +((u.wins / (u.wins + u.losses)) * 100).toFixed(1) : 0,
+      }))
+      setLegendRows(compiled)
+      setLegendLoaded(true)
+      setLegendLoading(false)
+    })()
   }
 
   const switchBuildsTab = (tab) => { setBuildsTab(tab); setExpandedIdx(null) }

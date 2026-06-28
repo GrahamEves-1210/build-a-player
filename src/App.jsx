@@ -95,11 +95,30 @@ export default function App() {
 
   useEffect(() => {
     if (!supabase) return
+    const adFreeReturn = new URLSearchParams(window.location.search).get('ad_free') === '1'
+    if (adFreeReturn) {
+      enableAdFreeMode()
+      window.history.replaceState({}, '', window.location.pathname)
+    }
     supabase.auth.getSession().then(({ data }) => {
       const u = data.session?.user ?? null
       setUser(u)
-      if (u) supabase.from('accounts').select('ads_disabled').eq('id', u.id).single()
-        .then(({ data: p }) => { if (p?.ads_disabled) { setAdsDisabled(true); enableAdFreeMode() } })
+      if (!u) return
+      if (adFreeReturn) {
+        // Poll DB until webhook confirms ads_disabled, up to 10 attempts
+        let attempts = 0
+        const poll = () => {
+          supabase.from('accounts').select('ads_disabled').eq('id', u.id).single()
+            .then(({ data: p }) => {
+              if (p?.ads_disabled) { setAdsDisabled(true); enableAdFreeMode() }
+              else if (++attempts < 10) setTimeout(poll, 2000)
+            })
+        }
+        poll()
+      } else {
+        supabase.from('accounts').select('ads_disabled').eq('id', u.id).single()
+          .then(({ data: p }) => { if (p?.ads_disabled) { setAdsDisabled(true); enableAdFreeMode() } })
+      }
     })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
       setUser(session?.user ?? null)

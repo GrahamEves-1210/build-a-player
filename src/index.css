@@ -324,8 +324,18 @@ a:focus-visible {
   background: rgba(149,213,178,0.08);
   color: var(--grey-100);
 }
-.wm-social-sep {
-  border-left: 1px solid rgba(149,213,178,0.10);
+.wm-social-sep + .wm-social-sep {
+  position: relative;
+}
+.wm-social-sep + .wm-social-sep::before {
+  content: '';
+  position: absolute;
+  left: -1px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1px;
+  height: 24px;
+  background: rgba(255,255,255,0.12);
 }
 .wm-social-btn-coffee {
   background: #FFDD00;
@@ -2327,6 +2337,8 @@ a:focus-visible {
     color: #f87171;
   }
   .spin-reset-circle:active { background: rgba(239,68,68,0.22); border-color: #f87171; }
+  .spin-reset-circle::after { content: ''; position: absolute; inset: -10px; }
+  .spin-reset-circle:disabled { opacity: 0.35; pointer-events: none; }
   .mobile-build .spin-reset-circle { display: none; }
 }
 
