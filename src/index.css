@@ -1191,7 +1191,7 @@ a:focus-visible {
 @media (min-width: 769px) {
   .spin-panel-static     { gap: 8px; }
   .sil-wrap              { transform: scale(0.88) translateY(-5px); transform-origin: top center; }
-  .spin-panel-scroll     { overflow-y: auto; gap: 5px; padding-bottom: 0; }
+  .spin-panel-scroll     { overflow-y: auto; gap: 5px; padding-bottom: var(--ad-h); }
   .build-slots           { padding-bottom: var(--ad-h); }
   .build-slots .qb-avatar { width: 41.8px !important; height: 41.8px !important; }
   .reset-btn {
