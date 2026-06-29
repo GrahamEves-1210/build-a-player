@@ -1203,7 +1203,7 @@ a:focus-visible {
     text-shadow: 0 0 8px rgba(248,113,113,0.4);
   }
   .spin-hint-text        { padding-top: 5px; padding-bottom: 2px; font-size: 10.5px; }
-  .attr-chip             { padding: 4.3px 7.9px 4.3px 10px; }
+  .attr-chip             { padding: 2.3px 7.9px 2.3px 10px; }
   .qb-reveal-text        { padding: 9px 9px; }
   .qb-reveal-hero        { width: 76px; }
   .qb-reveal-hero .qb-avatar { width: 52px !important; height: 52px !important; }
