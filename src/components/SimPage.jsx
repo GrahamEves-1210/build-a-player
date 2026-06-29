@@ -482,7 +482,7 @@ function ScreenPlayoffs({ result, onNext, onPreSuperBowl }) {
     const r = playoffRounds[gameIdx]
     if (!r.won) { setStatus('eliminated'); return }
     if (gameIdx === playoffRounds.length - 1) { setStatus('champion'); return }
-    const nextIsSB = gameIdx === playoffRounds.length - 2
+    const nextIsSB = playoffRounds[gameIdx + 1]?.round === 'Super Bowl'
     setStatus('between')
     if (nextIsSB && onPreSuperBowl) {
       setTimeout(() => onPreSuperBowl(advanceToSB), 2500)
@@ -770,7 +770,7 @@ export default function SimPage({ result, build, types = TYPES, onBack, onReset,
   const [mvpWon, setMvpWon] = useState(false)
   const [mvpContinuation, setMvpContinuation] = useState(null)
   const isAllTime = !!result.team?.isAllTime
-  const reachesSB = !!result.sbResult
+  const reachesSB = result.playoffRounds?.some(r => r.round === 'Super Bowl') ?? false
 
   const advancePage = () => {
     document.querySelector('.simp-page')?.scrollTo({ top: 0, behavior: 'instant' })
@@ -880,6 +880,7 @@ export default function SimPage({ result, build, types = TYPES, onBack, onReset,
           result={result}
           mvpResult={mvpResult}
           onDismiss={handleMVPDismiss}
+          toSuperBowl={!!mvpContinuation}
         />
       )}
     </div>

@@ -72,7 +72,7 @@ export const QBS = [
     attrs: { 'arm': 4, 'legs': 2, 'size': 3, 'processing': 2, 'leadership': 3, 'vision': 2, 'playmaking': 2, 'accuracy': 2, 'pocket-presence': 2 } },
   // CHI
   { name: 'Caleb Williams',     short: 'Williams',    team: 'CHI', teamName: 'Chicago Bears',         color: '#C83803', color2: '#0B162A', skin: '#8a5c30', starter: true,  captain: true,  number: 18,
-    attrs: { 'arm': 10, 'legs': 8, 'size': 6, 'processing': 6, 'leadership': 5, 'vision': 8, 'playmaking': 10, 'accuracy': 7, 'pocket-presence': 8 } },
+    attrs: { 'arm': 10, 'legs': 8, 'size': 6, 'processing': 6, 'leadership': 5, 'vision': 8, 'playmaking': 10, 'accuracy': 6, 'pocket-presence': 8 } },
   { name: 'Tyson Bagent',       short: 'Bagent',      team: 'CHI', teamName: 'Chicago Bears',         color: '#C83803', color2: '#0B162A', skin: '#f0c4a0', starter: false, number: 17,
     attrs: { 'arm': 4, 'legs': 4, 'size': 4, 'processing': 3, 'leadership': 3, 'vision': 3, 'playmaking': 4, 'accuracy': 3, 'pocket-presence': 3 } },
   { name: 'Case Keenum',        short: 'Keenum',      team: 'CHI', teamName: 'Chicago Bears',         color: '#C83803', color2: '#0B162A', skin: '#f0c4a0', starter: false, number: 8,
@@ -179,7 +179,7 @@ export const QBS = [
   { name: 'Kyler Murray',       short: 'Murray',      team: 'MIN', teamName: 'Minnesota Vikings',     color: '#4F2683', color2: '#FFC62F', skin: '#b07848', starter: true,  captain: true,  number: 1,
     attrs: { 'arm': 6, 'legs': 9, 'size': 2, 'processing': 4, 'leadership': 4, 'vision': 5, 'playmaking': 8, 'accuracy': 6, 'pocket-presence': 5 } },
   { name: 'J.J. McCarthy',      short: 'McCarthy',    team: 'MIN', teamName: 'Minnesota Vikings',     color: '#4F2683', color2: '#FFC62F', skin: '#f2c8a4', starter: false, number: 9,
-    attrs: { 'arm': 7, 'legs': 6, 'size': 5, 'processing': 2, 'leadership': 3, 'vision': 3, 'playmaking': 4, 'accuracy': 2, 'pocket-presence': 2 } },
+    attrs: { 'arm': 7, 'legs': 6, 'size': 5, 'processing': 2, 'leadership': 3, 'vision': 3, 'playmaking': 4, 'accuracy': 1, 'pocket-presence': 3 } },
   { name: 'Carson Wentz',       short: 'Wentz',       team: 'MIN', teamName: 'Minnesota Vikings',     color: '#4F2683', color2: '#FFC62F', skin: '#f0c4a0', starter: false, number: 11,
     attrs: { 'arm': 4, 'legs': 5, 'size': 6, 'processing': 4, 'leadership': 4, 'vision': 4, 'playmaking': 2, 'accuracy': 3, 'pocket-presence': 4 } },
   // NE
@@ -195,7 +195,7 @@ export const QBS = [
   { name: 'Spencer Rattler',    short: 'Rattler',     team: 'NO',  teamName: 'New Orleans Saints',    color: '#D3BC8D', color2: '#000000', skin: '#d4a070', starter: false, number: 3,
     attrs: { 'arm': 6, 'legs': 3, 'size': 4, 'processing': 3, 'leadership': 1, 'vision': 3, 'playmaking': 3, 'accuracy': 4, 'pocket-presence': 3 } },
   { name: 'Zach Wilson',        short: 'Z. Wilson',   team: 'NO',  teamName: 'New Orleans Saints',    color: '#D3BC8D', color2: '#000000', skin: '#f2c8a4', starter: false, number: 2,
-    attrs: { 'arm': 7, 'legs': 4, 'size': 2, 'processing': 1, 'leadership': 2, 'vision': 2, 'playmaking': 2, 'accuracy': 1, 'pocket-presence': 1 } },
+    attrs: { 'arm': 7, 'legs': 4, 'size': 2, 'processing': 1, 'leadership': 2, 'vision': 2, 'playmaking': 2, 'accuracy': 1, 'pocket-presence': 0 } },
   // NYG
   { name: 'Jaxson Dart',        short: 'Dart',        team: 'NYG', teamName: 'New York Giants',       color: '#0B2265', color2: '#A71930', skin: '#f2c8a4', starter: true,  captain: true,  number: 14,
     attrs: { 'arm': 7, 'legs': 8, 'size': 8, 'processing': 5, 'leadership': 5, 'vision': 7, 'playmaking': 7, 'accuracy': 6, 'pocket-presence': 5 } },

@@ -212,7 +212,7 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
 
   const activeMetric = METRICS.find(m => m.key === metric)
   const filteredRows = metric === 'avgOvr' ? rows.filter(r => r.count >= 2) : rows
-  const sortKey = (r) => metric === 'winPct' ? r.winPctWeighted : r[metric]
+  const sortKey = (r) => r[metric]
   const sorted = [...filteredRows].sort((a, b) => (sortKey(b) - sortKey(a)) || (b.wins - a.wins))
   const profileSlots = Array.from({ length: 20 }, (_, i) => sorted[i] ?? null)
 
@@ -275,7 +275,7 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
               <div className="lb-loading lb-legends-empty">No All-Time games played yet.</div>
             ) : (() => {
               const filteredLegend = legendMetric === 'avgOvr' ? legendRows.filter(r => r.count >= 2) : legendRows
-              const legendSortKey = (r) => legendMetric === 'winPct' ? r.winPctWeighted : r[legendMetric]
+              const legendSortKey = (r) => r[legendMetric]
               const sortedLegend = [...filteredLegend].sort((a, b) => (legendSortKey(b) - legendSortKey(a)) || (b.wins - a.wins))
               const activeLegendMetric = METRICS.find(m => m.key === legendMetric)
               return (

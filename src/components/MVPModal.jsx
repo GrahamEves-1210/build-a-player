@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import HEADSHOTS from '../data/headshots.json'
 import QBAvatar from './QBAvatar'
 
-export default function MVPModal({ result, mvpResult, onDismiss }) {
+export default function MVPModal({ result, mvpResult, onDismiss, toSuperBowl = false }) {
   const [phase, setPhase] = useState('loading')
   const [barWidth, setBarWidth] = useState(0)
   const [visible, setVisible] = useState(false)
@@ -118,7 +118,7 @@ export default function MVPModal({ result, mvpResult, onDismiss }) {
               </>
             )}
             <button className="mvp-continue" onClick={onDismiss}>
-              Continue to Final Report
+              {toSuperBowl ? 'Continue to Super Bowl' : 'Continue to Final Report'}
             </button>
           </div>
         )}
