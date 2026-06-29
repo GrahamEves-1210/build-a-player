@@ -156,7 +156,7 @@ export default function App() {
     const col = isAllTime ? 'alltime_mvps' : 'classic_mvps'
     const { data } = await supabase.from('accounts').select('classic_mvps,alltime_mvps').eq('id', user.id).single()
     const current = data?.[col] ?? 0
-    supabase.from('accounts').upsert({ id: user.id, [col]: current + 1 }, { onConflict: 'id' })
+    supabase.from('accounts').update({ [col]: current + 1 }).eq('id', user.id)
       .then(({ error }) => { if (error) console.error('[mvp] failed to save mvp:', error) })
   }, [user])
 

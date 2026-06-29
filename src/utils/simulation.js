@@ -342,6 +342,7 @@ export function calcMVPResult(result, isAllTime = false) {
 
   // Hard cap: under 30 combined TDs, essentially never wins
   if (totalTDs < 30) p = Math.min(p, 0.03)
+  if (wins < 10) p = 0
 
   if (isAllTime) p *= 0.80
 
