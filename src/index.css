@@ -1,6 +1,6 @@
 /* ── DESIGN TOKENS ── */
 :root {
-  --ad-h: 90px; /* Playwire bottom rail height — desktop */
+  --ad-h: 110px; /* Playwire bottom rail height — extra clearance to prevent accidental clicks */
   --g50:  #D8F3DC;
   --g100: #B7E4C7;
   --g200: #95D5B2;
@@ -1562,7 +1562,7 @@ a:focus-visible {
   min-height: calc(100dvh - 56px);
   overflow-y: auto;
   background: var(--bg-raised);
-  padding: 40px 20px 80px;
+  padding: 40px 20px calc(40px + var(--ad-h));
 }
 
 .about-inner {
