@@ -717,7 +717,7 @@ export function calcOVRRB(build, types = RB_TYPES) {
   const totalW = filled.reduce((s, t) => s + (RB_ATTR_WEIGHT[t] ?? 0.05), 0)
   const avg    = filled.reduce((s, t) => s + build[t].val * (RB_ATTR_WEIGHT[t] ?? 0.05) / totalW, 0)
   const vals   = filled.map(t => build[t].val)
-  const base   = 56 + 2.0 * avg + 0.22 * avg * avg
+  const base   = 61 + 2.0 * avg + 0.19 * avg * avg
 
   let bonus = 0
   if (filled.length === types.length) {
