@@ -35,7 +35,7 @@ export default function MVPModal({ result, mvpResult, onDismiss, toSuperBowl = f
     return () => { clearTimeout(t0); clearTimeout(t1); clearTimeout(t2) }
   }, [])
 
-  const winnerHeadshot = HEADSHOTS[winner.name]
+  const winnerHeadshot = winner && HEADSHOTS[winner.name]
     ? `/headshots/${HEADSHOTS[winner.name]}.jpg`
     : null
 
