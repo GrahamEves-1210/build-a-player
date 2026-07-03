@@ -371,7 +371,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
                 jitterMs={1000}
               />
               <SlotReel
-                label="QB"
+                label={isRB ? 'RB' : 'QB'}
                 items={qbReelItems}
                 spinning={isSpinningQB}
                 idle={!isSpinning && !selectedQB}
