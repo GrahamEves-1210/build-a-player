@@ -919,7 +919,7 @@ export function calcOPOYResult(result, isAllTime = false, teamShort = null) {
   else if (ovr >= 90)             p += 0.02
 
   // Hard caps
-  if (seasonRushYds < 1500) p = Math.min(p, 0.01)
+  if (seasonRushYds < 1500 && totalYds < 1700) p = Math.min(p, 0.01)
   if (totalTDs < 12)        p = Math.min(p, 0.04)
   if (wins < 7)             p = 0
 

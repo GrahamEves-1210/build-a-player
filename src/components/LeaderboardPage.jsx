@@ -367,20 +367,16 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
 
   // ── Derived QB lists ─────────────────────────────────────────────────────────
   const activeQBMetric = QB_METRICS.find(m => m.key === metric)
-  const filteredQBRows = metric === 'avgOvr'
-    ? rows.filter(r => r.count >= 2)
-    : metric === 'winPct'
-      ? rows.filter(r => r.count >= 10)
-      : rows
+  const filteredQBRows = metric === 'avgOvr' || metric === 'winPct'
+    ? rows.filter(r => r.count >= 10)
+    : rows
   const sortedQB       = [...filteredQBRows].sort((a, b) => (b[metric] - a[metric]) || (b.wins - a.wins))
   const qbProfileSlots = Array.from({ length: 20 }, (_, i) => sortedQB[i] ?? null)
 
   const activeLegendMetric  = QB_METRICS.find(m => m.key === legendMetric)
-  const filteredLegendRows  = legendMetric === 'avgOvr'
-    ? legendRows.filter(r => r.count >= 2)
-    : legendMetric === 'winPct'
-      ? legendRows.filter(r => r.count >= 10)
-      : legendRows
+  const filteredLegendRows  = legendMetric === 'avgOvr' || legendMetric === 'winPct'
+    ? legendRows.filter(r => r.count >= 10)
+    : legendRows
   const sortedLegend        = [...filteredLegendRows].sort((a, b) => (b[legendMetric] - a[legendMetric]) || (b.wins - a.wins))
   const legendSlots         = Array.from({ length: 20 }, (_, i) => sortedLegend[i] ?? null)
 
@@ -389,11 +385,9 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
 
   // ── Derived RB lists ─────────────────────────────────────────────────────────
   const activeRBMetric  = RB_METRICS.find(m => m.key === rbMetric)
-  const filteredRBRows  = rbMetric === 'avgOvr'
-    ? rbRows.filter(r => r.count >= 2)
-    : rbMetric === 'winPct'
-      ? rbRows.filter(r => r.count >= 10)
-      : rbRows
+  const filteredRBRows  = rbMetric === 'avgOvr' || rbMetric === 'winPct'
+    ? rbRows.filter(r => r.count >= 10)
+    : rbRows
   const sortedRB        = [...filteredRBRows].sort((a, b) => (b[rbMetric] - a[rbMetric]) || (b.wins - a.wins))
   const rbProfileSlots  = Array.from({ length: 20 }, (_, i) => sortedRB[i] ?? null)
 
@@ -460,7 +454,7 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
                 </button>
               ))}
             </div>
-            {(isRB ? rbMetric : metric) === 'winPct' && (
+            {(['winPct', 'avgOvr'].includes(isRB ? rbMetric : metric)) && (
               <div className="lb-winpct-note">Min. 10 seasons required</div>
             )}
 
@@ -625,7 +619,7 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
                 </button>
               ))}
             </div>
-            {legendMetric === 'winPct' && (
+            {['winPct', 'avgOvr'].includes(legendMetric) && (
               <div className="lb-winpct-note">Min. 10 seasons required</div>
             )}
 
