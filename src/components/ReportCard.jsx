@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { ATTR, TYPES, QB_PHYSICALS } from '../data/qbs'
-import { calcOVR, getArchetype, calcBalance, valToGrade } from '../utils/simulation'
+import { RB_PHYSICALS } from '../data/rbs'
+import { calcOVR, calcOVRRB, getArchetype, getArchetypeRB, calcBalance, valToGrade } from '../utils/simulation'
 import { buildShareUrl } from '../utils/shareUrl'
 import QBAvatar from './QBAvatar'
 
@@ -212,10 +213,10 @@ export function ShareModal({ ovr, arch, build, types, onClose }) {
 
 // ── ReportCard ────────────────────────────────────────────────────────────────
 
-export default function ReportCard({ build, onSimulate, onReset, types = TYPES, hasResult = false }) {
+export default function ReportCard({ build, onSimulate, onReset, types = TYPES, hasResult = false, isRB = false }) {
   const filled = types.filter(t => build[t])
-  const ovr = calcOVR(build, types)
-  const arch = getArchetype(ovr, build, types)
+  const ovr = isRB ? calcOVRRB(build, types) : calcOVR(build, types)
+  const arch = isRB ? getArchetypeRB(ovr, build, types) : getArchetype(ovr, build, types)
   const balance = calcBalance(build, types)
   const complete = filled.length === types.length
   const [showChevron, setShowChevron] = useState(true)
@@ -230,11 +231,18 @@ export default function ReportCard({ build, onSimulate, onReset, types = TYPES, 
     return () => el.removeEventListener('scroll', hide)
   }, [])
 
-  const bodyPhys = build['size'] ? QB_PHYSICALS[build['size'].qbFull] : null
-  const legsPhys = build['legs'] ? QB_PHYSICALS[build['legs'].qbFull] : null
-  const hwBoth   = bodyPhys && legsPhys
-  const heightStr = hwBoth ? fmtHeight(Math.round(0.65 * legsPhys.height + 0.35 * bodyPhys.height)) : null
-  const weightLbs = hwBoth ? Math.round(0.65 * bodyPhys.weight + 0.35 * legsPhys.weight) : null
+  let heightStr, weightLbs
+  if (isRB) {
+    const rbPhys = build['size'] ? RB_PHYSICALS[build['size'].qbFull] : null
+    heightStr = rbPhys ? fmtHeight(rbPhys.height) : null
+    weightLbs = rbPhys ? rbPhys.weight : null
+  } else {
+    const bodyPhys = build['size'] ? QB_PHYSICALS[build['size'].qbFull] : null
+    const legsPhys = build['legs'] ? QB_PHYSICALS[build['legs'].qbFull] : null
+    const hwBoth   = bodyPhys && legsPhys
+    heightStr = hwBoth ? fmtHeight(Math.round(0.65 * legsPhys.height + 0.35 * bodyPhys.height)) : null
+    weightLbs = hwBoth ? Math.round(0.65 * bodyPhys.weight + 0.35 * legsPhys.weight) : null
+  }
 
   return (
     <aside className="panel-right" ref={panelRef}>

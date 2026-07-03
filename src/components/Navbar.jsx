@@ -1,16 +1,16 @@
 import { useState, useRef, useEffect } from 'react'
 
-const STEPS_DESKTOP = [
-  { n: '1', title: 'Spin',      body: 'Pull a random NFL team, then a QB from their roster.' },
+const STEPS_DESKTOP = (isRB) => [
+  { n: '1', title: 'Spin',      body: `Pull a random NFL team, then an ${isRB ? 'RB' : 'QB'} from their roster.` },
   { n: '2', title: 'Drag',      body: 'Drop one stat onto the matching zone on the player silhouette.' },
   { n: '3', title: 'Repeat ×9', body: 'Fill all nine attribute slots — one per spin.' },
-  { n: '4', title: 'Simulate',  body: 'Hit Simulate to see how your Frankenstein QB performs.' },
+  { n: '4', title: 'Simulate',  body: `Hit Simulate to see how your Frankenstein ${isRB ? 'RB' : 'QB'} performs.` },
 ]
-const STEPS_MOBILE = [
-  { n: '1', title: 'Spin',      body: 'Pull a random NFL team, then a QB from their roster.' },
+const STEPS_MOBILE = (isRB) => [
+  { n: '1', title: 'Spin',      body: `Pull a random NFL team, then an ${isRB ? 'RB' : 'QB'} from their roster.` },
   { n: '2', title: 'Tap',       body: 'Tap a stat chip to instantly assign it to your build.' },
   { n: '3', title: 'Repeat ×9', body: 'Fill all nine attribute slots — one per spin.' },
-  { n: '4', title: 'Simulate',  body: 'Hit Simulate to see how your Frankenstein QB performs.' },
+  { n: '4', title: 'Simulate',  body: `Hit Simulate to see how your Frankenstein ${isRB ? 'RB' : 'QB'} performs.` },
 ]
 
 function IconGrid() {
@@ -144,7 +144,7 @@ function IconChevron({ up }) {
   )
 }
 
-export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, onLeaderboard, user, gameMode }) {
+export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, onLeaderboard, onSwitchPosition, user, gameMode, isRB }) {
   const [open,         setOpen]        = useState(false)
   const [htpOpen,      setHtpOpen]     = useState(false)
   const [installOpen,  setInstallOpen] = useState(false)
@@ -153,7 +153,7 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
   const isStandalone = typeof window !== 'undefined' && window.matchMedia('(display-mode: standalone)').matches
   const isIOS = typeof navigator !== 'undefined' && /iPhone|iPad|iPod/i.test(navigator.userAgent)
   const isAndroid = typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent)
-  const STEPS = isMobile ? STEPS_MOBILE : STEPS_DESKTOP
+  const STEPS = isMobile ? STEPS_MOBILE(isRB) : STEPS_DESKTOP(isRB)
 
   useEffect(() => {
     if (!open) return
@@ -177,17 +177,14 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
         </div>
       </div>
 
-      <button className="tab-pill active tab-pill-qb">Build-A-QB</button>
+      <button className="tab-pill tab-pill-qb active">
+        {isRB ? 'Build-A-RB' : 'Build-A-QB'}
+      </button>
 
       <div className="nav-pills-soon">
-        <div className="tab-soon-wrap">
-          <span className="tab-soon-label">Coming Soon</span>
-          <button className="tab-pill soon-1">Build-A-RB</button>
-        </div>
-        <div className="tab-soon-wrap">
-          <span className="tab-soon-label">Coming Soon</span>
-          <button className="tab-pill soon-2">Build-A-WR</button>
-        </div>
+        <button className="tab-pill tab-pill-rb" onClick={() => onSwitchPosition?.(isRB ? 'qb' : 'rb')}>
+          {isRB ? 'Build-A-QB' : 'Build-A-RB'}
+        </button>
       </div>
 
       <div className="nav-right" ref={ref}>

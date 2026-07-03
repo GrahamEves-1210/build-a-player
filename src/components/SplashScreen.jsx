@@ -1,15 +1,26 @@
 import { useEffect, useState, useMemo } from 'react'
 
-const ATTRS = [
+const QB_ATTRS = [
   { label: 'Arm',                   col: '#f87171', angle:  -35, dist: 1.32, mx: 58, my: 14 },
   { label: 'Legs',                  col: '#60a5fa', angle:   55, dist: 1.30, mx: 3,  my: 30 },
-  { label: 'Build',                  col: '#fb923c', angle:   15, dist: 1.28, mx: 62, my: 52 },
+  { label: 'Build',                 col: '#fb923c', angle:   15, dist: 1.28, mx: 62, my: 52 },
   { label: 'Processing',            col: '#a78bfa', angle:  210, dist: 1.31, mx: 4,  my: 62 },
   { label: 'Accuracy/Touch',        col: '#34d399', angle: -130, dist: 1.30, mx: 55, my: 72 },
-  { label: 'Leadership',            col: '#e879f9', angle:  -70, dist: 1.29, mx: 5,  my: 18, doy: -30 },
+  { label: 'Leadership',            col: '#e879f9', angle:  -70, dist: 1.29, mx: 5,  my: 18, doy: -30, dox: 140 },
   { label: 'Playmaking/Creativity', col: '#fbbf24', angle:  100, dist: 1.32, mx: 60, my: 34, dox: -210 },
   { label: 'Pocket Presence',       col: '#2dd4bf', angle: -160, dist: 1.28, mx: 3,  my: 48, doy: 200 },
   { label: 'Vision',                col: '#38bdf8', angle:   80, dist: 1.31, mx: 58, my: 44, dox: 90 },
+]
+
+const RB_ATTRS = [
+  { label: 'Long Speed',      col: '#f87171', angle:  -35, dist: 1.32, mx: 58, my: 14 },
+  { label: 'Burst',           col: '#60a5fa', angle:   55, dist: 1.30, mx: 3,  my: 30 },
+  { label: 'Strength',        col: '#fbbf24', angle:   15, dist: 1.28, mx: 62, my: 52 },
+  { label: 'Size',            col: '#fb923c', angle:  210, dist: 1.31, mx: 4,  my: 62 },
+  { label: 'Contact Balance', col: '#2dd4bf', angle: -130, dist: 1.30, mx: 55, my: 72 },
+  { label: 'Hands',           col: '#34d399', angle:  -70, dist: 1.29, mx: 5,  my: 18, doy: -30, dox: 140 },
+  { label: 'Vision',          col: '#38bdf8', angle:  100, dist: 1.32, mx: 60, my: 34, dox: -210 },
+  { label: 'Elusiveness',     col: '#a78bfa', angle: -160, dist: 1.28, mx: 3,  my: 48, doy: 200 },
 ]
 
 function FloatingChip({ label, col, angle, dist, visible, mx, my, isMobile, dox = 0, doy = 0 }) {
@@ -41,6 +52,7 @@ function FloatingChip({ label, col, angle, dist, visible, mx, my, isMobile, dox 
 
 export default function SplashScreen({ onStart }) {
   const [phase, setPhase] = useState(0)
+  const [position, setPosition] = useState(() => localStorage.getItem('lastPosition') || 'qb')
   const isMobile = useMemo(() => window.innerWidth <= 768, [])
 
   useEffect(() => {
@@ -50,12 +62,14 @@ export default function SplashScreen({ onStart }) {
     return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3) }
   }, [])
 
+  const attrs = position === 'rb' ? RB_ATTRS : QB_ATTRS
+
   return (
     <div className={`splash-screen ${phase >= 1 ? 'splash-in' : ''}`}>
 
       <div className="splash-glow" style={{ opacity: phase >= 2 ? 1 : 0 }} />
 
-      {ATTRS.map((a) => (
+      {attrs.map((a) => (
         <FloatingChip key={a.label} {...a} visible={phase >= 3} isMobile={isMobile} />
       ))}
 
@@ -63,20 +77,34 @@ export default function SplashScreen({ onStart }) {
         <div className="splash-title">
           BUILD<em>-A-</em>PLAYER
         </div>
+        <div className="splash-pos-toggle" style={{ opacity: phase >= 3 ? 1 : 0, transform: phase >= 3 ? 'none' : 'translateY(8px)' }}>
+          <button
+            className={`splash-pos-btn ${position === 'qb' ? 'splash-pos-btn--active' : ''}`}
+            onClick={() => setPosition('qb')}
+          >QB</button>
+          <button
+            className={`splash-pos-btn ${position === 'rb' ? 'splash-pos-btn--active' : ''}`}
+            onClick={() => setPosition('rb')}
+          >RB</button>
+        </div>
       </div>
 
       <div className="splash-figure-wrap" style={{ opacity: phase >= 2 ? 1 : 0, transform: phase >= 2 ? 'none' : 'translateY(40px) scale(0.92)' }}>
-        <img src="/qb-silhouette.png" className="splash-figure" alt="" draggable={false} />
+        <img src="/qb-silhouette.png" className="splash-figure" alt="" draggable={false}
+          style={{ position: 'absolute', inset: 0, opacity: position === 'qb' ? 1 : 0 }} />
+        <img src="/rbsilhouette.png" className="splash-figure" alt="" draggable={false}
+          style={{ position: 'absolute', inset: 0, opacity: position === 'rb' ? 1 : 0 }} />
         <div className="splash-figure-glow" />
       </div>
 
       <div className="splash-footer" style={{ opacity: phase >= 3 ? 1 : 0, transform: phase >= 3 ? 'none' : 'translateY(16px)' }}>
-        <div className="splash-tagline">Spin the wheel · Build your QB</div>
+
+        <div className="splash-tagline">Spin the wheel · Build your {position.toUpperCase()}</div>
 
         <div className="splash-modes">
-          <button className="splash-mode-classic" onClick={() => onStart('classic')}>
+          <button className="splash-mode-classic" onClick={() => { localStorage.setItem('lastPosition', position); onStart('classic', position) }}>
             <div className="smode-title">Classic</div>
-            <div className="smode-badge">Current QBs</div>
+            <div className="smode-badge">Current {position === 'rb' ? 'RBs' : 'QBs'}</div>
             <div className="smode-cta">
               START DRAFTING
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -85,7 +113,10 @@ export default function SplashScreen({ onStart }) {
             </div>
           </button>
 
-          <button className="splash-mode-alltime" onClick={() => onStart('all-time')}>
+          <button
+            className={`splash-mode-alltime${position === 'rb' ? ' splash-mode-alltime--soon' : ''}`}
+            onClick={() => { if (position === 'rb') return; localStorage.setItem('lastPosition', position); onStart('all-time', position) }}
+          >
             <span className="smode-new-badge">NEW</span>
             <div className="smode-title smode-title--alltime">All-Time</div>
             <div className="smode-badge smode-badge--alltime">Draft the Greats</div>
@@ -95,6 +126,9 @@ export default function SplashScreen({ onStart }) {
                 <path d="M5 12h14M12 5l7 7-7 7"/>
               </svg>
             </div>
+            {position === 'rb' && (
+              <div className="smode-coming-soon">Coming Soon</div>
+            )}
           </button>
         </div>
 

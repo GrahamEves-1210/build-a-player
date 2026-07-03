@@ -267,6 +267,7 @@ export const CATEGORIES = [
 ]
 
 export const ATTR = {
+  // QB attributes
   'arm':             { label: 'Arm',                   shortLabel: 'ARM',  category: 'physical', col: 'var(--c-arm)',  hex: '#f87171', bodyZone: 'arm'    },
   'legs':            { label: 'Legs',                  shortLabel: 'LEGS', category: 'physical', col: 'var(--c-mob)',  hex: '#60a5fa', bodyZone: 'legs'   },
   'size':            { label: 'Build',                 shortLabel: 'BLD',  category: 'physical', col: 'var(--c-str)',  hex: '#fb923c', bodyZone: 'core'   },
@@ -276,6 +277,14 @@ export const ATTR = {
   'playmaking':      { label: 'Playmaking/Creativity', shortLabel: 'PLAY', category: 'skill',    col: 'var(--c-comp)', hex: '#fbbf24', bodyZone: 'comp'   },
   'accuracy':        { label: 'Accuracy/Touch',        shortLabel: 'ACC',  category: 'skill',    col: 'var(--c-acc)',  hex: '#34d399', bodyZone: 'hand'   },
   'pocket-presence': { label: 'Pocket Presence',       shortLabel: 'PKT',  category: 'skill',    col: 'var(--c-pkt)',  hex: '#2dd4bf', bodyZone: 'pocket' },
+  // RB attributes
+  'speed':           { label: 'Long Speed',            shortLabel: 'SPD',  category: 'physical', col: 'var(--c-arm)',  hex: '#f87171', bodyZone: 'legs'   },
+  'burst':           { label: 'Burst',                 shortLabel: 'BST',  category: 'physical', col: 'var(--c-mob)',  hex: '#60a5fa', bodyZone: 'legs'   },
+  'strength':        { label: 'Strength',              shortLabel: 'STR',  category: 'physical', col: 'var(--c-comp)', hex: '#fbbf24', bodyZone: 'core'   },
+  'hands':           { label: 'Hands',                 shortLabel: 'HND',  category: 'skill',    col: 'var(--c-acc)',  hex: '#34d399', bodyZone: 'hand'   },
+  'balance':         { label: 'Contact Balance',       shortLabel: 'BAL',  category: 'skill',    col: 'var(--c-pkt)',  hex: '#2dd4bf', bodyZone: 'core'   },
+  'elusiveness':     { label: 'Elusiveness',           shortLabel: 'ELU',  category: 'physical', col: 'var(--c-lead)', hex: '#a78bfa', bodyZone: 'legs'   },
+  'carrying':        { label: 'Carrying',               shortLabel: 'CAR',  category: 'skill',    col: 'var(--c-str)',  hex: '#fb923c', bodyZone: 'hand'   },
 }
 
 export const TYPES      = ['arm', 'legs', 'size', 'processing', 'leadership', 'vision', 'playmaking', 'accuracy', 'pocket-presence']

@@ -1,12 +1,14 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { ATTR, TEAMS, TYPES } from '../data/qbs'
+import { RB_TYPES } from '../data/rbs'
 import { valToGrade } from '../utils/simulation'
 import QBAvatar from './QBAvatar'
 import HEADSHOTS from '../data/headshots.json'
 
-const METRICS = [
+const QB_METRICS = [
   { key: 'rings',   label: 'Rings',    fmt: v => v },
+  { key: 'mvps',   label: 'MVPs',     fmt: v => v, awards: true },
   { key: 'avgOvr',  label: 'Avg OVR',  fmt: v => v },
   { key: 'wins',    label: 'Wins',     fmt: v => v },
   { key: 'winPct',  label: 'Win %',    fmt: v => `${v}%` },
@@ -14,11 +16,18 @@ const METRICS = [
   { key: 'tds',     label: 'Pass TDs', fmt: v => v },
 ]
 
-// team short → primary color
-const TEAM_COLOR = Object.fromEntries(TEAMS.map(t => [t.short, t.color]))
+const RB_METRICS = [
+  { key: 'rings',   label: 'Rings',     fmt: v => v },
+  { key: 'opoys',  label: 'OPOYs',     fmt: v => v, awards: true },
+  { key: 'avgOvr',  label: 'Avg OVR',   fmt: v => v },
+  { key: 'wins',    label: 'Wins',      fmt: v => v },
+  { key: 'winPct',  label: 'Win %',     fmt: v => `${v}%` },
+  { key: 'yds',     label: 'Rush Yds',  fmt: v => v.toLocaleString() },
+  { key: 'tds',     label: 'TDs',       fmt: v => v },
+]
 
-// qb full name → photo URL (derived at runtime, no DB column needed)
-const QB_PHOTO = (name) => HEADSHOTS[name] ? `/headshots/${HEADSHOTS[name]}.jpg` : null
+const TEAM_COLOR = Object.fromEntries(TEAMS.map(t => [t.short, t.color]))
+const QB_PHOTO   = (name) => HEADSHOTS[name] ? `/headshots/${HEADSHOTS[name]}.jpg` : null
 
 function ovrColor(ovr) {
   if (ovr >= 95) return '#74C69D'
@@ -29,8 +38,17 @@ function ovrColor(ovr) {
 }
 
 function RankBadge({ rank }) {
+  return <div className={`lb-rank-badge lb-rank-${rank <= 3 ? rank : 'n'}`}>{rank}</div>
+}
+
+function LBSpinner() {
   return (
-    <div className={`lb-rank-badge lb-rank-${rank <= 3 ? rank : 'n'}`}>{rank}</div>
+    <div className="lb-spinner-wrap">
+      <svg className="lb-spinner" viewBox="0 0 36 36">
+        <circle className="lb-spinner-track" cx="18" cy="18" r="14" fill="none" strokeWidth="3" />
+        <circle className="lb-spinner-arc" cx="18" cy="18" r="14" fill="none" strokeWidth="3" />
+      </svg>
+    </div>
   )
 }
 
@@ -47,8 +65,8 @@ function ChevronIcon({ open }) {
   )
 }
 
-function BuildExpand({ build }) {
-  const slots = TYPES.filter(k => build[k])
+function BuildExpand({ build, types = TYPES }) {
+  const slots = types.filter(k => build[k])
   if (slots.length === 0) return <div className="lb-expand-empty">Build data unavailable</div>
   return (
     <div className="simp-attr-table lb-attr-table">
@@ -63,7 +81,7 @@ function BuildExpand({ build }) {
               <span className="simp-attr-name">{meta?.label || k}</span>
               <span className="simp-attr-qb">{data.qb}</span>
             </div>
-            <span className="simp-grade-circle" style={{ background: meta?.hex, color: '#07120a' }}>
+            <span className="simp-grade-circle" style={{ background: meta?.hex, color: '#111111' }}>
               {valToGrade(data.val)}
             </span>
           </div>
@@ -73,20 +91,40 @@ function BuildExpand({ build }) {
   )
 }
 
-export default function LeaderboardPage({ onBack, currentUser, adsDisabled = false }) {
+export default function LeaderboardPage({ onBack, currentUser, adsDisabled = false, isRB = false }) {
+  // ── QB state ────────────────────────────────────────────────────────────────
   const [rows, setRows]               = useState([])
   const [bestBuilds, setBestBuilds]   = useState([])
   const [worstBuilds, setWorstBuilds] = useState([])
   const [legendRows, setLegendRows]   = useState([])
-  const [buildsLoaded, setBuildsLoaded] = useState(false)
-  const [legendLoaded, setLegendLoaded] = useState(false)
-  const [loading, setLoading]         = useState(true)
+  const [buildsLoaded, setBuildsLoaded]   = useState(false)
+  const [legendLoaded, setLegendLoaded]   = useState(false)
+  const [loading, setLoading]             = useState(true)
   const [buildsLoading, setBuildsLoading] = useState(false)
   const [legendLoading, setLegendLoading] = useState(false)
   const [metric, setMetric]           = useState('rings')
   const [legendMetric, setLegendMetric] = useState('rings')
-  const [view, setView]               = useState('profiles')
-  const [buildsTab, setBuildsTab]     = useState('best')
+
+  // ── RB state ────────────────────────────────────────────────────────────────
+  const [rbRows, setRbRows]                 = useState([])
+  const [rbBestBuilds, setRbBestBuilds]     = useState([])
+  const [rbWorstBuilds, setRbWorstBuilds]   = useState([])
+  const [rbLoaded, setRbLoaded]             = useState(false)
+  const [rbBuildsLoaded, setRbBuildsLoaded] = useState(false)
+  const [rbLoading, setRbLoading]           = useState(false)
+  const [rbBuildsLoading, setRbBuildsLoading] = useState(false)
+  const [rbMetric, setRbMetric]             = useState('rings')
+
+  // ── Awards state ─────────────────────────────────────────────────────────────
+  const [awardsRows, setAwardsRows]                   = useState([])
+  const [alltimeAwardsRows, setAlltimeAwardsRows]     = useState([])
+  const [awardsLoaded, setAwardsLoaded]               = useState(false)
+  const [awardsLoading, setAwardsLoading]             = useState(false)
+  const [awardsMode, setAwardsMode]                   = useState('classic')
+
+  // ── Shared UI state ──────────────────────────────────────────────────────────
+  const [view, setView]           = useState('profiles')
+  const [buildsTab, setBuildsTab] = useState('best')
   const [expandedIdx, setExpandedIdx] = useState(null)
   const adInvokedRef = useRef(false)
 
@@ -98,34 +136,38 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
     })
   }, [])
 
+  // ── QB profiles (classic) ────────────────────────────────────────────────────
   useEffect(() => {
-    if (!supabase) { setLoading(false); return }
+    if (isRB || !supabase) { setLoading(false); return }
     ;(async () => {
-      const { data, error } = await supabase.from('leaderboard_profiles')
-        .select('user_id, username, wins, losses, yds, tds, rings, count, avg_ovr')
-        .limit(10000)
-      if (error) console.error('[LB] leaderboard_profiles error:', error)
-      const compiled = (data ?? []).filter(r => r.user_id).map(u => {
-        const games = u.wins + u.losses
+      const { data } = await supabase.rpc('get_qb_leaderboard')
+      const compiled = (data ?? []).map(u => {
+        const wins = Number(u.wins)
+        const losses = Number(u.losses)
+        const count = Number(u.count)
+        const totalOvr = Number(u.total_ovr)
+        const games = wins + losses
         return {
-          uid:    u.user_id,
-          username: u.username || `Player_${u.user_id?.slice(0, 5)}`,
-          wins:   u.wins   ?? 0,
-          losses: u.losses ?? 0,
-          yds:    u.yds    ?? 0,
-          tds:    u.tds    ?? 0,
-          rings:  u.rings  ?? 0,
-          count:  u.count  ?? 0,
-          avgOvr: u.avg_ovr ?? 0,
-          winPct: games > 0 ? +((u.wins / games) * 100).toFixed(1) : 0,
-          winPctWeighted: games > 0 ? (u.wins + 17) / (games + 34) * 100 : 0,
+          uid: u.uid,
+          username: u.username || `Player_${u.uid.slice(0, 5)}`,
+          wins,
+          losses,
+          rings: Number(u.rings),
+          count,
+          totalOvr,
+          yds: Number(u.yds),
+          tds: Number(u.tds),
+          avgOvr: count > 0 ? +(totalOvr / count).toFixed(1) : 0,
+          winPct: games > 0 ? +((wins / games) * 100).toFixed(1) : 0,
+          winPctWeighted: games > 0 ? (wins + 17) / (games + 34) * 100 : 0,
         }
       })
       setRows(compiled)
       setLoading(false)
     })()
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── QB builds ───────────────────────────────────────────────────────────────
   const loadBuilds = () => {
     if (buildsLoaded || !supabase) return
     setBuildsLoading(true)
@@ -155,7 +197,8 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
     })
   }
 
-  useEffect(() => { loadLegends() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  // ── QB all-time ──────────────────────────────────────────────────────────────
+  useEffect(() => { if (!isRB) loadLegends() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadLegends = () => {
     if (legendLoaded || !supabase) return
@@ -166,12 +209,13 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
         .select('*', { count: 'exact', head: true })
         .or('game_mode.eq.all-time,game_mode.eq.legends')
       const pages = Math.ceil((count ?? PAGE) / PAGE)
-      const mkLegendQuery = () => supabase.from('simulations')
+      const mkQ = () => supabase.from('simulations')
         .select('user_id, username, wins, losses, champion, playoffs, ovr, season_pass_yds, season_tds')
         .or('game_mode.eq.all-time,game_mode.eq.legends')
+        .order('id', { ascending: true })
       const results = await Promise.all(
         Array.from({ length: pages }, (_, i) =>
-          mkLegendQuery().range(i * PAGE, i * PAGE + PAGE - 1).then(r => r.data ?? [])
+          mkQ().range(i * PAGE, i * PAGE + PAGE - 1).then(r => r.data ?? [])
         )
       )
       const byUid = new Map()
@@ -207,140 +251,262 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
     })()
   }
 
+  // ── RB profiles ──────────────────────────────────────────────────────────────
+  useEffect(() => { if (isRB) loadRB() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const loadRB = () => {
+    if (rbLoaded || !supabase) return
+    setRbLoading(true)
+    const PAGE = 1000
+    ;(async () => {
+      const { count } = await supabase.from('simulations')
+        .select('*', { count: 'exact', head: true })
+        .ilike('game_mode', 'rb-%')
+      const pages = Math.ceil((count ?? PAGE) / PAGE)
+      const mkQ = () => supabase.from('simulations')
+        .select('user_id, username, wins, losses, champion, playoffs, ovr, season_pass_yds, season_tds')
+        .ilike('game_mode', 'rb-%')
+        .order('id', { ascending: true })
+      const results = await Promise.all(
+        Array.from({ length: pages }, (_, i) =>
+          mkQ().range(i * PAGE, i * PAGE + PAGE - 1).then(r => r.data ?? [])
+        )
+      )
+      const byUid = new Map()
+      for (const row of results.flat()) {
+        if (!row.user_id) continue
+        if (!byUid.has(row.user_id)) {
+          byUid.set(row.user_id, {
+            uid: row.user_id,
+            username: row.username || `Player_${row.user_id.slice(0, 5)}`,
+            wins: 0, losses: 0, rings: 0, playoffApps: 0, count: 0, totalOvr: 0, yds: 0, tds: 0,
+          })
+        }
+        const u = byUid.get(row.user_id)
+        u.wins    += row.wins ?? 0
+        u.losses  += row.losses ?? 0
+        u.yds     += row.season_pass_yds ?? 0
+        u.tds     += row.season_tds ?? 0
+        if (row.champion) u.rings++
+        if (row.playoffs) u.playoffApps++
+        u.count++
+        u.totalOvr += row.ovr ?? 0
+        if (!u.username && row.username) u.username = row.username
+      }
+      const compiled = Array.from(byUid.values()).map(u => ({
+        ...u,
+        avgOvr: u.count > 0 ? +(u.totalOvr / u.count).toFixed(1) : 0,
+        winPct: (u.wins + u.losses) > 0 ? +((u.wins / (u.wins + u.losses)) * 100).toFixed(1) : 0,
+      }))
+      setRbRows(compiled)
+      setRbLoaded(true)
+      setRbLoading(false)
+    })()
+  }
+
+  // ── RB builds ────────────────────────────────────────────────────────────────
+  const loadRBBuilds = () => {
+    if (rbBuildsLoaded || !supabase) return
+    setRbBuildsLoading(true)
+    const bestQ = supabase
+      .from('simulations')
+      .select('user_id, username, wins, losses, ovr, build, game_mode')
+      .ilike('game_mode', 'rb-%')
+      .not('build', 'is', null)
+      .gte('ovr', 75)
+      .order('ovr', { ascending: false })
+      .order('wins', { ascending: false })
+      .limit(200)
+    const worstQ = supabase
+      .from('simulations')
+      .select('user_id, username, wins, losses, ovr, build, game_mode')
+      .ilike('game_mode', 'rb-%')
+      .not('build', 'is', null)
+      .lt('ovr', 75)
+      .order('ovr', { ascending: true })
+      .order('wins', { ascending: true })
+      .limit(20)
+    Promise.all([bestQ, worstQ]).then(([best, worst]) => {
+      if (best.data)  setRbBestBuilds(best.data)
+      if (worst.data) setRbWorstBuilds(worst.data)
+      setRbBuildsLoaded(true)
+      setRbBuildsLoading(false)
+    })
+  }
+
+  // ── Awards leaderboard ───────────────────────────────────────────────────────
+  const loadAwards = () => {
+    if (awardsLoaded || !supabase) return
+    setAwardsLoading(true)
+    const classicCol  = isRB ? 'classic_opoys' : 'classic_mvps'
+    const alltimeCol  = 'alltime_mvps'
+    const selectCols  = isRB ? `id, username, ${classicCol}` : `id, username, ${classicCol}, ${alltimeCol}`
+    supabase
+      .from('accounts')
+      .select(selectCols)
+      .or(isRB ? `${classicCol}.gt.0` : `${classicCol}.gt.0,${alltimeCol}.gt.0`)
+      .limit(200)
+      .then(({ data }) => {
+        const toRow = (r, col) => ({ uid: r.id, username: r.username || `Player_${r.id.slice(0, 5)}`, count: r[col] ?? 0 })
+        const classic = (data ?? []).filter(r => (r[classicCol] ?? 0) > 0).sort((a, b) => b[classicCol] - a[classicCol]).map(r => toRow(r, classicCol))
+        setAwardsRows(classic)
+        if (!isRB) {
+          const alltime = (data ?? []).filter(r => (r[alltimeCol] ?? 0) > 0).sort((a, b) => b[alltimeCol] - a[alltimeCol]).map(r => toRow(r, alltimeCol))
+          setAlltimeAwardsRows(alltime)
+        }
+        setAwardsLoaded(true)
+        setAwardsLoading(false)
+      })
+  }
+
+  const isAwardsMetric = isRB ? rbMetric === 'opoys' : metric === 'mvps'
+
+  // ── Helpers ──────────────────────────────────────────────────────────────────
   const switchBuildsTab = (tab) => { setBuildsTab(tab); setExpandedIdx(null) }
-  const toggleExpand = (i) => setExpandedIdx(prev => prev === i ? null : i)
+  const toggleExpand    = (i)   => setExpandedIdx(prev => prev === i ? null : i)
 
-  const activeMetric = METRICS.find(m => m.key === metric)
-  const filteredRows = metric === 'avgOvr' ? rows.filter(r => r.count >= 2) : rows
-  const sortKey = (r) => r[metric]
-  const sorted = [...filteredRows].sort((a, b) => (sortKey(b) - sortKey(a)) || (b.wins - a.wins))
-  const profileSlots = Array.from({ length: 20 }, (_, i) => sorted[i] ?? null)
+  // ── Derived QB lists ─────────────────────────────────────────────────────────
+  const activeQBMetric = QB_METRICS.find(m => m.key === metric)
+  const filteredQBRows = metric === 'avgOvr'
+    ? rows.filter(r => r.count >= 2)
+    : metric === 'winPct'
+      ? rows.filter(r => r.count >= 10)
+      : rows
+  const sortedQB       = [...filteredQBRows].sort((a, b) => (b[metric] - a[metric]) || (b.wins - a.wins))
+  const qbProfileSlots = Array.from({ length: 20 }, (_, i) => sortedQB[i] ?? null)
 
-  const buildsList = buildsTab === 'best' ? bestBuilds : worstBuilds
-  const buildSlots = Array.from({ length: buildsTab === 'best' ? 200 : 20 }, (_, i) => buildsList[i] ?? null)
+  const activeLegendMetric  = QB_METRICS.find(m => m.key === legendMetric)
+  const filteredLegendRows  = legendMetric === 'avgOvr'
+    ? legendRows.filter(r => r.count >= 2)
+    : legendMetric === 'winPct'
+      ? legendRows.filter(r => r.count >= 10)
+      : legendRows
+  const sortedLegend        = [...filteredLegendRows].sort((a, b) => (b[legendMetric] - a[legendMetric]) || (b.wins - a.wins))
+  const legendSlots         = Array.from({ length: 20 }, (_, i) => sortedLegend[i] ?? null)
 
+  const qbBuildsList  = buildsTab === 'best' ? bestBuilds : worstBuilds
+  const qbBuildSlots  = Array.from({ length: buildsTab === 'best' ? 200 : 20 }, (_, i) => qbBuildsList[i] ?? null)
+
+  // ── Derived RB lists ─────────────────────────────────────────────────────────
+  const activeRBMetric  = RB_METRICS.find(m => m.key === rbMetric)
+  const filteredRBRows  = rbMetric === 'avgOvr'
+    ? rbRows.filter(r => r.count >= 2)
+    : rbMetric === 'winPct'
+      ? rbRows.filter(r => r.count >= 10)
+      : rbRows
+  const sortedRB        = [...filteredRBRows].sort((a, b) => (b[rbMetric] - a[rbMetric]) || (b.wins - a.wins))
+  const rbProfileSlots  = Array.from({ length: 20 }, (_, i) => sortedRB[i] ?? null)
+
+  const rbBuildsList  = buildsTab === 'best' ? rbBestBuilds : rbWorstBuilds
+  const rbBuildSlots  = Array.from({ length: buildsTab === 'best' ? 200 : 20 }, (_, i) => rbBuildsList[i] ?? null)
+
+  // ── Render ───────────────────────────────────────────────────────────────────
   return (
     <div className="lb-page">
       <div className="lb-col">
 
         <button className="prf-top-back" onClick={onBack}>← Back to Build</button>
 
-        {/* Main toggle pill */}
+        {/* Tab bar */}
         <div className="lb-main-seg">
           <button
             className={`lb-main-seg-btn ${view === 'profiles' ? 'lb-main-seg-active' : ''}`}
-            onClick={() => setView('profiles')}
+            onClick={() => { setView('profiles'); setExpandedIdx(null) }}
           >
             Profiles
           </button>
           <button
             className={`lb-main-seg-btn ${view === 'builds' ? 'lb-main-seg-active' : ''}`}
-            onClick={() => { setView('builds'); loadBuilds() }}
+            onClick={() => {
+              setView('builds')
+              setExpandedIdx(null)
+              if (isRB) loadRBBuilds()
+              else loadBuilds()
+            }}
           >
             Builds
           </button>
-          <button
-            className={`lb-main-seg-btn lb-main-seg-btn-legends ${view === 'legends' ? 'lb-main-seg-active-gold' : ''}`}
-            onClick={() => { setView('legends'); loadLegends() }}
-          >
-            ★ All-Time
-          </button>
+          {!isRB && (
+            <button
+              className={`lb-main-seg-btn lb-main-seg-btn-legends ${view === 'legends' ? 'lb-main-seg-active-gold' : ''}`}
+              onClick={() => { setView('legends'); loadLegends() }}
+            >
+              All-Time
+            </button>
+          )}
         </div>
 
         <div id="ramp-cntr1-lb" className="ad-cntr1-lb" />
 
-        {view === 'legends' ? (
+        {/* ── PROFILES ────────────────────────────────────────────────────────── */}
+        {view === 'profiles' && (
           <>
             <div className="lb-header">
-              <div className="lb-title lb-title-legends">★ All-Time Leaderboard</div>
-              <div className="lb-subtitle">All-Time mode · career stats · all players ranked</div>
-              <div className="lb-header-line lb-header-line-legends" />
+              <div className="lb-title">{isRB ? 'RB Leaderboard' : 'Leaderboard'}</div>
+              <div className="lb-subtitle">
+                {isRB ? 'RB mode · career stats · all players ranked' : 'Career stats · all players ranked'}
+              </div>
+              <div className={`lb-header-line${isRB ? ' lb-header-line-rb' : ''}`} />
             </div>
 
             <div className="lb-tabs-scroll">
-              {METRICS.map(m => (
+              {(isRB ? RB_METRICS : QB_METRICS).map(m => (
                 <button
                   key={m.key}
-                  className={`lb-tab lb-tab-legends ${legendMetric === m.key ? 'lb-tab-active lb-tab-active-legends' : ''}`}
-                  onClick={() => setLegendMetric(m.key)}
+                  className={`lb-tab${isRB ? ' lb-tab-rb' : ''} ${(isRB ? rbMetric : metric) === m.key ? `lb-tab-active${isRB ? ' lb-tab-active-rb' : ''}` : ''}`}
+                  onClick={() => { if (isRB) setRbMetric(m.key); else setMetric(m.key); if (m.awards) loadAwards() }}
                 >
                   {m.label}
                 </button>
               ))}
             </div>
+            {(isRB ? rbMetric : metric) === 'winPct' && (
+              <div className="lb-winpct-note">Min. 10 seasons required</div>
+            )}
 
-            {legendLoading ? (
-              <div className="lb-loading">Loading...</div>
-            ) : legendRows.length === 0 ? (
-              <div className="lb-loading lb-legends-empty">No All-Time games played yet.</div>
-            ) : (() => {
-              const filteredLegend = legendMetric === 'avgOvr' ? legendRows.filter(r => r.count >= 2) : legendRows
-              const legendSortKey = (r) => r[legendMetric]
-              const sortedLegend = [...filteredLegend].sort((a, b) => (legendSortKey(b) - legendSortKey(a)) || (b.wins - a.wins))
-              const activeLegendMetric = METRICS.find(m => m.key === legendMetric)
-              return (
-                <div className="lb-list" key={legendMetric}>
-                  {Array.from({ length: 20 }, (_, i) => sortedLegend[i] ?? null).map((row, i) =>
-                    row ? (
-                      <div
-                        key={row.uid}
-                        className={`lb-row lb-row-legends ${currentUser && row.uid === currentUser.id ? 'lb-row-me' : ''} ${i < 3 ? `lb-row-top${i + 1}` : ''}`}
-                        style={{ animationDelay: `${i * 35}ms` }}
-                      >
-                        <RankBadge rank={i + 1} />
-                        <div className="lb-row-info">
-                          <div className="lb-row-name">
-                            {row.username}
-                            {currentUser && row.uid === currentUser.id && <span className="lb-you">you</span>}
-                          </div>
-                          <div className="lb-row-sub">
-                            {row.wins}W · {row.losses}L · {row.rings} ring{row.rings !== 1 ? 's' : ''} · {row.count} season{row.count !== 1 ? 's' : ''}
-                          </div>
-                        </div>
-                        <div className="lb-row-val">{activeLegendMetric.fmt(row[legendMetric])}</div>
-                      </div>
-                    ) : (
-                      <div key={`empty-${i}`} className="lb-row lb-row-empty lb-row-legends" style={{ animationDelay: `${i * 35}ms` }}>
-                        <div className="lb-rank-badge lb-rank-n">{i + 1}</div>
-                        <div className="lb-row-info">
-                          <div className="lb-row-name lb-empty-name">——</div>
-                        </div>
-                      </div>
-                    )
-                  )}
-                </div>
-              )
-            })()}
-          </>
-        ) : view === 'profiles' ? (
-          <>
-            <div className="lb-header">
-              <div className="lb-title">Leaderboard</div>
-              <div className="lb-subtitle">Career stats · all players ranked</div>
-              <div className="lb-header-line" />
-            </div>
-
-            <div className="lb-tabs-scroll">
-              {METRICS.map(m => (
-                <button
-                  key={m.key}
-                  className={`lb-tab ${metric === m.key ? 'lb-tab-active' : ''}`}
-                  onClick={() => setMetric(m.key)}
-                >
-                  {m.label}
-                </button>
-              ))}
-            </div>
-
-            {loading ? (
-              <div className="lb-loading">Loading...</div>
+            {isAwardsMetric ? (
+              awardsLoading ? (
+                <LBSpinner />
+              ) : awardsRows.length === 0 ? (
+              <div className="lb-loading lb-legends-empty">No {isRB ? 'OPOY' : 'MVP'} awards yet.</div>
             ) : (
-              <div className="lb-list" key={metric}>
-                {profileSlots.map((row, i) =>
+              <div className="lb-list" key={isRB ? 'opoys' : 'mvps'}>
+                {Array.from({ length: 20 }, (_, i) => awardsRows[i] ?? null).map((row, i) =>
                   row ? (
                     <div
                       key={row.uid}
-                      className={`lb-row ${currentUser && row.uid === currentUser.id ? 'lb-row-me' : ''} ${i < 3 ? `lb-row-top${i + 1}` : ''}`}
+                      className={`lb-row${isRB ? ' lb-row-rb' : ''} ${currentUser && row.uid === currentUser.id ? 'lb-row-me' : ''} ${i < 3 ? `lb-row-top${i + 1}` : ''}`}
+                      style={{ animationDelay: `${i * 35}ms` }}
+                    >
+                      <RankBadge rank={i + 1} />
+                      <div className="lb-row-info">
+                        <div className="lb-row-name">
+                          {row.username}
+                          {currentUser && row.uid === currentUser.id && <span className="lb-you">you</span>}
+                        </div>
+                        {(() => { const c = (isRB ? rbRows : rows).find(r => r.uid === row.uid); return c ? <div className="lb-row-sub">{c.wins}W · {c.losses}L · {c.rings} ring{c.rings !== 1 ? 's' : ''} · {c.count} season{c.count !== 1 ? 's' : ''}</div> : null })()}
+                      </div>
+                      <div className="lb-row-val">{row.count}</div>
+                    </div>
+                  ) : (
+                    <div key={`empty-${i}`} className={`lb-row lb-row-empty${isRB ? ' lb-row-rb' : ''}`} style={{ animationDelay: `${i * 35}ms` }}>
+                      <div className="lb-rank-badge lb-rank-n">{i + 1}</div>
+                      <div className="lb-row-info"><div className="lb-row-name lb-empty-name">——</div></div>
+                      <div className="lb-row-val lb-empty-val">—</div>
+                    </div>
+                  )
+                )}
+              </div>
+            )
+            ) : (isRB ? rbLoading : loading) ? (
+              <LBSpinner />
+            ) : (
+              <div className="lb-list" key={isRB ? rbMetric : metric}>
+                {(isRB ? rbProfileSlots : qbProfileSlots).map((row, i) =>
+                  row ? (
+                    <div
+                      key={row.uid}
+                      className={`lb-row${isRB ? ' lb-row-rb' : ''} ${currentUser && row.uid === currentUser.id ? 'lb-row-me' : ''} ${i < 3 ? `lb-row-top${i + 1}` : ''}`}
                       style={{ animationDelay: `${i * 35}ms` }}
                     >
                       <RankBadge rank={i + 1} />
@@ -353,10 +519,12 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
                           {row.wins}W · {row.losses}L · {row.rings} ring{row.rings !== 1 ? 's' : ''} · {row.count} season{row.count !== 1 ? 's' : ''}
                         </div>
                       </div>
-                      <div className="lb-row-val">{activeMetric.fmt(row[metric])}</div>
+                      <div className="lb-row-val">
+                        {isRB ? activeRBMetric.fmt(row[rbMetric]) : activeQBMetric.fmt(row[metric])}
+                      </div>
                     </div>
                   ) : (
-                    <div key={`empty-${i}`} className="lb-row lb-row-empty" style={{ animationDelay: `${i * 35}ms` }}>
+                    <div key={`empty-${i}`} className={`lb-row lb-row-empty${isRB ? ' lb-row-rb' : ''}`} style={{ animationDelay: `${i * 35}ms` }}>
                       <div className="lb-rank-badge lb-rank-n">{i + 1}</div>
                       <div className="lb-row-info">
                         <div className="lb-row-name lb-empty-name">——</div>
@@ -368,34 +536,37 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
               </div>
             )}
           </>
-        ) : (
+        )}
+
+        {/* ── BUILDS ──────────────────────────────────────────────────────────── */}
+        {view === 'builds' && (
           <>
             <div className="lb-header">
-              <div className="lb-title">Builds</div>
-              <div className="lb-subtitle">Best and worst builds</div>
-              <div className="lb-header-line" />
+              <div className="lb-title">{isRB ? 'RB Builds' : 'Builds'}</div>
+              <div className="lb-subtitle">{isRB ? 'RB mode · best and worst builds' : 'Best and worst builds'}</div>
+              <div className={`lb-header-line${isRB ? ' lb-header-line-rb' : ''}`} />
             </div>
 
             <div className="lb-tabs-scroll">
               <button
-                className={`lb-tab ${buildsTab === 'best' ? 'lb-tab-active' : ''}`}
+                className={`lb-tab${isRB ? ' lb-tab-rb' : ''} ${buildsTab === 'best' ? `lb-tab-active${isRB ? ' lb-tab-active-rb' : ''}` : ''}`}
                 onClick={() => switchBuildsTab('best')}
               >
                 Best
               </button>
               <button
-                className={`lb-tab ${buildsTab === 'worst' ? 'lb-tab-active' : ''}`}
+                className={`lb-tab${isRB ? ' lb-tab-rb' : ''} ${buildsTab === 'worst' ? `lb-tab-active${isRB ? ' lb-tab-active-rb' : ''}` : ''}`}
                 onClick={() => switchBuildsTab('worst')}
               >
                 Worst
               </button>
             </div>
 
-            {buildsLoading ? (
-              <div className="lb-loading">Loading...</div>
+            {(isRB ? rbBuildsLoading : buildsLoading) ? (
+              <LBSpinner />
             ) : (
-              <div className="lb-list" key={buildsTab}>
-                {buildSlots.map((row, i) =>
+              <div className="lb-list" key={`${isRB ? 'rb-' : ''}builds-${buildsTab}`}>
+                {(isRB ? rbBuildSlots : qbBuildSlots).map((row, i) =>
                   row ? (
                     <div key={i} className="lb-expand-wrap" style={{ animationDelay: `${i * 35}ms` }}>
                       <div
@@ -415,7 +586,7 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
                       </div>
                       {expandedIdx === i && (
                         <div className="lb-build-expand">
-                          <BuildExpand build={row.build || {}} />
+                          <BuildExpand build={row.build || {}} types={isRB ? RB_TYPES : TYPES} />
                         </div>
                       )}
                     </div>
@@ -433,6 +604,102 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
             )}
           </>
         )}
+
+        {/* ── ALL-TIME (QB only) ───────────────────────────────────────────────── */}
+        {!isRB && view === 'legends' && (
+          <>
+            <div className="lb-header">
+              <div className="lb-title lb-title-legends">All-Time Leaderboard</div>
+              <div className="lb-subtitle">All-Time mode · career stats · all players ranked</div>
+              <div className="lb-header-line lb-header-line-legends" />
+            </div>
+
+            <div className="lb-tabs-scroll">
+              {QB_METRICS.map(m => (
+                <button
+                  key={m.key}
+                  className={`lb-tab lb-tab-legends ${legendMetric === m.key ? 'lb-tab-active lb-tab-active-legends' : ''}`}
+                  onClick={() => { setLegendMetric(m.key); if (m.awards) loadAwards() }}
+                >
+                  {m.label}
+                </button>
+              ))}
+            </div>
+            {legendMetric === 'winPct' && (
+              <div className="lb-winpct-note">Min. 10 seasons required</div>
+            )}
+
+            {legendMetric === 'mvps' ? (
+              awardsLoading ? <LBSpinner /> :
+              alltimeAwardsRows.length === 0 ? (
+                <div className="lb-loading lb-legends-empty">No All-Time MVP awards yet.</div>
+              ) : (
+                <div className="lb-list" key="legend-mvps">
+                  {alltimeAwardsRows.map((row, i) => {
+                    const career = legendRows.find(r => r.uid === row.uid)
+                    return (
+                      <div
+                        key={row.uid}
+                        className={`lb-row lb-row-legends ${currentUser && row.uid === currentUser.id ? 'lb-row-me' : ''} ${i < 3 ? `lb-row-top${i + 1}` : ''}`}
+                        style={{ animationDelay: `${i * 35}ms` }}
+                      >
+                        <RankBadge rank={i + 1} />
+                        <div className="lb-row-info">
+                          <div className="lb-row-name">
+                            {row.username}
+                            {currentUser && row.uid === currentUser.id && <span className="lb-you">you</span>}
+                          </div>
+                          {career && (
+                            <div className="lb-row-sub">
+                              {career.wins}W · {career.losses}L · {career.rings} ring{career.rings !== 1 ? 's' : ''} · {career.count} season{career.count !== 1 ? 's' : ''}
+                            </div>
+                          )}
+                        </div>
+                        <div className="lb-row-val">{row.count}</div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )
+            ) : legendLoading ? (
+              <LBSpinner />
+            ) : legendRows.length === 0 ? (
+              <div className="lb-loading lb-legends-empty">No All-Time games played yet.</div>
+            ) : (
+              <div className="lb-list" key={legendMetric}>
+                {legendSlots.map((row, i) =>
+                  row ? (
+                    <div
+                      key={row.uid}
+                      className={`lb-row lb-row-legends ${currentUser && row.uid === currentUser.id ? 'lb-row-me' : ''} ${i < 3 ? `lb-row-top${i + 1}` : ''}`}
+                      style={{ animationDelay: `${i * 35}ms` }}
+                    >
+                      <RankBadge rank={i + 1} />
+                      <div className="lb-row-info">
+                        <div className="lb-row-name">
+                          {row.username}
+                          {currentUser && row.uid === currentUser.id && <span className="lb-you">you</span>}
+                        </div>
+                        <div className="lb-row-sub">
+                          {row.wins}W · {row.losses}L · {row.rings} ring{row.rings !== 1 ? 's' : ''} · {row.count} season{row.count !== 1 ? 's' : ''}
+                        </div>
+                      </div>
+                      <div className="lb-row-val">{activeLegendMetric.fmt(row[legendMetric])}</div>
+                    </div>
+                  ) : (
+                    <div key={`empty-${i}`} className="lb-row lb-row-empty lb-row-legends" style={{ animationDelay: `${i * 35}ms` }}>
+                      <div className="lb-rank-badge lb-rank-n">{i + 1}</div>
+                      <div className="lb-row-info">
+                        <div className="lb-row-name lb-empty-name">——</div>
+                      </div>
+                    </div>
+                  )
+                )}
+              </div>
+            )}
+          </>
+        )}
+
 
       </div>
     </div>

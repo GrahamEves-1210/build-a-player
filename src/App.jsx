@@ -14,10 +14,11 @@ import AuthModal from './components/AuthModal'
 import ProfilePage from './components/ProfilePage'
 import LeaderboardPage from './components/LeaderboardPage'
 import { TYPES, LITE_TYPES, QBS } from './data/qbs'
+import { RBS, RB_TYPES, RB_LITE_TYPES } from './data/rbs'
 import { ALLTIME_RATINGS } from './data/nfl-teams'
 import { LEGENDS, LEGEND_TYPES } from './data/legends'
 import HEADSHOTS from './data/headshots.json'
-import { runSimulation, getArchetype } from './utils/simulation'
+import { runSimulation, getArchetype, runRBSimulation, calcOVRRB, getArchetypeRB } from './utils/simulation'
 import { supabase } from './lib/supabase'
 
 // Detect shared build at module load time — before any React rendering
@@ -58,6 +59,7 @@ export default function App() {
   const [sharedBuild]                 = useState(_sharedData?.build ?? null)
   const [sharedTypes]                 = useState(_sharedData?.types ?? null)
   const [gameMode, setGameMode]         = useState(null)
+  const [position, setPosition]         = useState('qb')
   const [build, setBuild]               = useState({})
   const [activeDrag, setActiveDrag]     = useState(null)
   const [activeCategory, setActiveCategory] = useState('physical')
@@ -72,6 +74,8 @@ export default function App() {
   const [savedSpinResult, setSavedSpinResult] = useState(null)
   const [spinPhase, setSpinPhase] = useState('idle')
   const [adsDisabled, setAdsDisabled] = useState(false)
+  const [saveToast, setSaveToast] = useState(null)
+  const saveToastTimer = useRef(null)
 
   useEffect(() => {
     hideVideoAds()
@@ -126,18 +130,22 @@ export default function App() {
     return () => subscription.unsubscribe()
   }, [])
 
-  const activeTypes = gameMode === 'lite' ? LITE_TYPES : gameMode === 'all-time' ? LEGEND_TYPES : TYPES
-  const activePool  = gameMode === 'all-time' ? LEGENDS : QBS
+  const isRB        = position === 'rb'
+  const activeTypes = gameMode === 'lite' ? (isRB ? RB_LITE_TYPES : LITE_TYPES) : gameMode === 'all-time' ? LEGEND_TYPES : (isRB ? RB_TYPES : TYPES)
+  const activePool  = gameMode === 'all-time' ? LEGENDS : (isRB ? RBS : QBS)
 
 
 
   const activeDragRef = useRef(activeDrag)
   useLayoutEffect(() => { activeDragRef.current = activeDrag }, [activeDrag])
 
-  const handleStart = useCallback((mode) => {
-    const types = mode === 'lite' ? LITE_TYPES : TYPES
+  const handleStart = useCallback((mode, pos = 'qb') => {
+    setPosition(pos)
+    const isRBMode = pos === 'rb'
+    const types = mode === 'lite' ? (isRBMode ? RB_LITE_TYPES : LITE_TYPES) : (isRBMode ? RB_TYPES : TYPES)
     setGameMode(mode)
     setBuild(Object.fromEntries(types.map(t => [t, null])))
+    setActiveCategory('physical')
     setPage('game')
     window.scrollTo(0, 0)
   }, [])
@@ -151,13 +159,16 @@ export default function App() {
   }, [])
 
 
-  const handleMVPWon = useCallback(async (isAllTime) => {
+  const handleMVPWon = useCallback(async (isAllTime, isRBMode = false) => {
     if (!user || !supabase) return
-    const col = isAllTime ? 'alltime_mvps' : 'classic_mvps'
-    const { data } = await supabase.from('accounts').select('classic_mvps,alltime_mvps').eq('id', user.id).single()
+    const col = isRBMode
+      ? (isAllTime ? 'alltime_opoys' : 'classic_opoys')
+      : (isAllTime ? 'alltime_mvps'  : 'classic_mvps')
+    const { data } = await supabase.from('accounts')
+      .select('classic_mvps,alltime_mvps,classic_opoys,alltime_opoys').eq('id', user.id).single()
     const current = data?.[col] ?? 0
     supabase.from('accounts').update({ [col]: current + 1 }).eq('id', user.id)
-      .then(({ error }) => { if (error) console.error('[mvp] failed to save mvp:', error) })
+      .then(({ error }) => { if (error) console.error('[award] failed to save award:', error) })
   }, [user])
 
   const handleReset = useCallback(() => {
@@ -194,46 +205,63 @@ export default function App() {
     setShowTeamPicker(true)
   }, [simResult])
 
+  const showSaveToast = useCallback((type, msg) => {
+    setSaveToast({ type, msg })
+    clearTimeout(saveToastTimer.current)
+    saveToastTimer.current = setTimeout(() => setSaveToast(null), 4500)
+  }, [])
+
   const handleTeamPicked = useCallback((team) => {
     setShowTeamPicker(false)
     const atRatings = ALLTIME_RATINGS[team.short]
     const effectiveTeam = gameMode === 'all-time' && atRatings
       ? { ...team, off: atRatings.off, def: atRatings.def, isAllTime: true }
       : team
-    const result = runSimulation(build, activeTypes, effectiveTeam, gameMode === 'all-time')
+    const result = isRB
+      ? runRBSimulation(build, activeTypes, effectiveTeam, gameMode === 'all-time')
+      : runSimulation(build, activeTypes, effectiveTeam, gameMode === 'all-time')
     setSimResult(result)
-    if (!user) console.warn('[build-a-player] sim result not saved — user not logged in')
-    else if (!supabase) console.warn('[build-a-player] sim result not saved — supabase not configured')
-    if (user && supabase && result.wins <= 17 && result.ovr <= 99) {
-      const arch = getArchetype(result.ovr, build, activeTypes)
+    if (!user) {
+      showSaveToast('no-auth', 'Sign in to save your stats')
+    } else if (!supabase) {
+      console.warn('[build-a-player] sim result not saved — supabase not configured')
+    } else {
+      const arch = isRB
+        ? getArchetypeRB(result.ovr, build, activeTypes)
+        : getArchetype(result.ovr, build, activeTypes)
       supabase.from('simulations').insert({
         user_id: user.id,
         username: user.user_metadata?.username || user.email?.split('@')[0] || 'Player',
         ovr: result.ovr,
         archetype: arch,
-        game_mode: gameMode,
+        game_mode: isRB ? `rb-${gameMode || 'classic'}` : gameMode,
         wins: result.wins,
         losses: result.losses,
-        season_pass_yds: result.seasonPassYds,
-        season_tds: result.seasonTDs,
-        season_ints: result.seasonINTs,
-        season_comp_pct: result.seasonCompPct,
-        season_rating: result.seasonRating,
+        season_pass_yds: isRB ? result.seasonRushYds : result.seasonPassYds,
+        season_tds: isRB ? (result.seasonRushTDs + result.seasonRecTDs) : result.seasonTDs,
+        season_ints: isRB ? null : result.seasonINTs,
+        season_comp_pct: isRB ? null : result.seasonCompPct,
+        season_rating: isRB ? null : result.seasonRating,
         playoffs: result.playoffs,
         champion: result.sbResult?.won ?? false,
         build: Object.fromEntries(
           activeTypes.filter(t => build[t]).map(t => [t, {
-            qb: build[t].qbFull, team: build[t].team, val: build[t].val,
+            qb: build[t].qbFull || build[t].name, team: build[t].team, val: build[t].val,
           }])
         ),
       }).then(({ error }) => {
-        if (error) console.error('[build-a-player] simulation save failed:', error)
+        if (error) {
+          console.error('[build-a-player] simulation save failed:', error)
+          showSaveToast('error', `Save failed: ${error.message}`)
+        } else {
+          showSaveToast('saved', 'Saved to profile!')
+        }
       })
     }
     setSimReplaying(false)
     setPage('sim')
     window.scrollTo({ top: 0, behavior: 'instant' })
-  }, [build, activeTypes, user, gameMode])
+  }, [build, activeTypes, user, gameMode, showSaveToast])
 
   const handleHome = useCallback(() => {
     setPage('splash')
@@ -256,15 +284,17 @@ export default function App() {
     onSignIn: () => setShowAuth(true),
     onProfile: () => setPage('profile'),
     onLeaderboard: () => setPage('leaderboard'),
+    onSwitchPosition: (pos) => { localStorage.setItem('lastPosition', pos); handleHome() },
     user,
     gameMode,
+    isRB,
   }
 
   if (page === 'leaderboard') {
     return (
       <>
         <Navbar {...navbarProps} />
-        <LeaderboardPage onBack={() => { setPage('game'); window.scrollTo({ top: 0, behavior: 'instant' }) }} currentUser={user} adsDisabled={adsDisabled} />
+        <LeaderboardPage onBack={() => { setPage('game'); window.scrollTo({ top: 0, behavior: 'instant' }) }} currentUser={user} adsDisabled={adsDisabled} isRB={isRB} />
       </>
     )
   }
@@ -312,6 +342,7 @@ export default function App() {
           build={build}
           simResult={simResult}
           types={activeTypes}
+          isRB={isRB}
           onBack={() => { setPage('game'); window.scrollTo({ top: 0, behavior: 'instant' }) }}
           onSignOut={() => { setPage('game'); setUser(null); window.scrollTo({ top: 0, behavior: 'instant' }) }}
           onAdsDisabled={() => { setAdsDisabled(true); enableAdFreeMode() }}
@@ -330,10 +361,21 @@ export default function App() {
           types={activeTypes}
           replay={simReplaying}
           adsDisabled={adsDisabled}
+          isRB={isRB}
           onMVPWon={handleMVPWon}
           onBack={() => { setPage('game'); window.scrollTo({ top: 0, behavior: 'instant' }) }}
           onReset={() => { handleReset(); setPage('game'); window.scrollTo({ top: 0, behavior: 'instant' }) }}
         />
+        {saveToast && (
+          <div className={`save-toast save-toast--${saveToast.type}`} onClick={() => setSaveToast(null)}>
+            {saveToast.type === 'saved' && (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+            )}
+            {saveToast.msg}
+          </div>
+        )}
       </>
     )
   }
@@ -362,6 +404,7 @@ export default function App() {
           gameKey={gameKey}
           onReset={handleReset}
           adsDisabled={adsDisabled}
+          isRB={isRB}
         />
         <Silhouette
           build={build}
@@ -372,6 +415,7 @@ export default function App() {
           types={activeTypes}
           isLite={gameMode === 'lite'}
           onReset={handleReset}
+          isRB={isRB}
         />
 
         <div className="right-panel-wrap">
@@ -381,6 +425,7 @@ export default function App() {
             onReset={handleReset}
             types={activeTypes}
             hasResult={!!simResult}
+            isRB={isRB}
           />
         </div>
       </main>
@@ -425,6 +470,20 @@ export default function App() {
 
       {showTeamPicker && (
         <TeamPickerModal onSelect={handleTeamPicked} />
+      )}
+
+      {saveToast && (
+        <div
+          className={`save-toast save-toast--${saveToast.type}`}
+          onClick={() => setSaveToast(null)}
+        >
+          {saveToast.type === 'saved' && (
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+          )}
+          {saveToast.msg}
+        </div>
       )}
 
     </>

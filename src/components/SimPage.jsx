@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { ATTR, TYPES, TEAMS } from '../data/qbs'
-import { valToGrade, getArchetype, readableTextColor, calcMVPResult } from '../utils/simulation'
+import { valToGrade, getArchetype, getArchetypeRB, readableTextColor, calcMVPResult, calcOPOYResult } from '../utils/simulation'
+import RBFigureOverlay from './RBFigureOverlay'
 import QBAvatar from './QBAvatar'
 import QBFigureOverlay from './QBFigureOverlay'
 import MVPModal from './MVPModal'
@@ -10,13 +11,14 @@ import MVPModal from './MVPModal'
 function offDefGrade(val) {
   if (val >= 10) return 'A+'
   if (val >= 9)  return 'A'
-  if (val >= 8)  return 'B+'
-  if (val >= 7)  return 'B'
-  if (val >= 6)  return 'C+'
-  if (val >= 5)  return 'C'
-  if (val >= 4)  return 'D+'
-  if (val >= 3)  return 'D'
-  return 'F'
+  if (val >= 8)  return 'A-'
+  if (val >= 7)  return 'B+'
+  if (val >= 6)  return 'B'
+  if (val >= 5)  return 'B-'
+  if (val >= 4)  return 'C+'
+  if (val >= 3)  return 'C'
+  if (val >= 2)  return 'C-'
+  return 'D'
 }
 
 function useCountUp(target, duration = 900, enabled = true) {
@@ -39,9 +41,9 @@ function useCountUp(target, duration = 900, enabled = true) {
 
 // ── Screen 1: Build Overview ──────────────────────────────────────────────────
 
-function ScreenBuild({ result, build, types, onNext }) {
+function ScreenBuild({ result, build, types, onNext, isRB }) {
   const { ovr } = result
-  const archetype = getArchetype(ovr, build, types)
+  const archetype = isRB ? getArchetypeRB(ovr, build, types) : getArchetype(ovr, build, types)
   const ovrDisplay = useCountUp(ovr, 900)
   const [rowsVisible, setRowsVisible] = useState(0)
   const filled = types.filter(t => build[t])
@@ -78,10 +80,19 @@ function ScreenBuild({ result, build, types, onNext }) {
       <button className="simp-cta" onClick={onNext}>Simulate Season</button>
 
       {team && (
-        <div className="simp-team-model">
+        <div className={`simp-team-model${isRB ? ' simp-team-model--rb' : ''}`}>
           <div className="simp-team-model-glow" />
-          <img src="/qb-silhouette.png" alt="" className="simp-sil-ghost" draggable={false} />
-          <QBFigureOverlay build={monoTeamBuild} className="player-qbfig" />
+          {isRB ? (
+            <>
+              <img src="/rbsilhouette.png" alt="" className="simp-sil-ghost" draggable={false} />
+              <RBFigureOverlay build={monoTeamBuild} />
+            </>
+          ) : (
+            <>
+              <img src="/qb-silhouette.png" alt="" className="simp-sil-ghost" draggable={false} />
+              <QBFigureOverlay build={monoTeamBuild} className="player-qbfig" />
+            </>
+          )}
         </div>
       )}
 
@@ -112,8 +123,10 @@ function ScreenBuild({ result, build, types, onNext }) {
 
 // ── Screen 2: Regular Season ──────────────────────────────────────────────────
 
-function ScreenSeason({ result, onNext }) {
-  const { games, seasonPassYds, seasonTDs, seasonINTs, seasonRating, seasonCompPct, seasonRushYds, seasonRushTDs, seasonSacks, playoffs, hasBye } = result
+function ScreenSeason({ result, onNext, isRB = false }) {
+  const { games, playoffs, hasBye } = result
+  const { seasonPassYds, seasonTDs, seasonINTs, seasonRating, seasonCompPct, seasonRushYds: qbRushYds, seasonRushTDs: qbRushTDs, seasonSacks } = result
+  const { seasonRushYds: rbRushYds, seasonRushTDs: rbRushTDs, seasonYPC, seasonFumbles, seasonRecYds, seasonRecTDs, seasonRecs, seasonLong } = result
 
   const [phase, setPhase]           = useState('loading')
   const [revealed, setRevealed]     = useState(0)
@@ -178,7 +191,11 @@ function ScreenSeason({ result, onNext }) {
                 <span className={`sgr-badge ${g.won ? 'sgr-badge-w' : 'sgr-badge-l'}`}>{g.won ? 'W' : 'L'}</span>
                 <span className="sgr-opp"><span className="sgr-venue">{g.home ? 'vs' : '@'}</span>{g.opponent}</span>
                 <span className="sgr-score">{g.mySc}–{g.oppSc}</span>
-                <span className="sgr-stat">{g.passYds}<span className="sgr-unit">yds</span> {g.tds}<span className="sgr-unit">TD</span> {g.ints}<span className="sgr-unit">INT</span></span>
+                {isRB ? (
+                  <span className="sgr-stat">{g.rushYds}<span className="sgr-unit">rush</span> {g.rushTDs + g.recTDs}<span className="sgr-unit">TD</span> {g.ypc}<span className="sgr-unit">YPC</span></span>
+                ) : (
+                  <span className="sgr-stat">{g.passYds}<span className="sgr-unit">yds</span> {g.tds}<span className="sgr-unit">TD</span> {g.ints}<span className="sgr-unit">INT</span></span>
+                )}
               </div>
             ))}
           </div>
@@ -186,38 +203,77 @@ function ScreenSeason({ result, onNext }) {
           {allDone && (
             <div className="simp-stat-section simp-totals-in">
               <div className="simp-stat-group-lbl">Production</div>
-              <div className="simp-totals">
-                <div className="simp-total-cell">
-                  <div className="simp-total-val">{seasonPassYds.toLocaleString()}</div>
-                  <div className="simp-total-lbl">Pass Yds</div>
-                </div>
-                <div className="simp-total-cell">
-                  <div className="simp-total-val">{seasonTDs}</div>
-                  <div className="simp-total-lbl">Pass TDs</div>
-                </div>
-                <div className="simp-total-cell">
-                  <div className="simp-total-val">{seasonINTs}</div>
-                  <div className="simp-total-lbl">INTs</div>
-                </div>
-                <div className="simp-total-cell">
-                  <div className="simp-total-val">{seasonCompPct}%</div>
-                  <div className="simp-total-lbl">Comp%</div>
-                </div>
-              </div>
-              <div className="simp-totals simp-totals-3" style={{ marginTop: 14 }}>
-                <div className="simp-total-cell">
-                  <div className="simp-total-val">{seasonRushYds.toLocaleString()}</div>
-                  <div className="simp-total-lbl">Rush Yds</div>
-                </div>
-                <div className="simp-total-cell">
-                  <div className="simp-total-val">{seasonRushTDs}</div>
-                  <div className="simp-total-lbl">Rush TDs</div>
-                </div>
-                <div className="simp-total-cell">
-                  <div className="simp-total-val">{seasonSacks}</div>
-                  <div className="simp-total-lbl">Sacks</div>
-                </div>
-              </div>
+              {isRB ? (
+                <>
+                  <div className="simp-totals">
+                    <div className="simp-total-cell">
+                      <div className="simp-total-val">{rbRushYds?.toLocaleString()}</div>
+                      <div className="simp-total-lbl">Rush Yds</div>
+                    </div>
+                    <div className="simp-total-cell">
+                      <div className="simp-total-val">{rbRushTDs}</div>
+                      <div className="simp-total-lbl">Rush TDs</div>
+                    </div>
+                    <div className="simp-total-cell">
+                      <div className="simp-total-val">{seasonYPC?.toFixed(1)}</div>
+                      <div className="simp-total-lbl">YPC</div>
+                    </div>
+                    <div className="simp-total-cell">
+                      <div className="simp-total-val">{seasonFumbles}</div>
+                      <div className="simp-total-lbl">Fumbles</div>
+                    </div>
+                  </div>
+                  <div className="simp-totals simp-totals-3" style={{ marginTop: 14 }}>
+                    <div className="simp-total-cell">
+                      <div className="simp-total-val">{seasonRecYds?.toLocaleString()}</div>
+                      <div className="simp-total-lbl">Rec Yds</div>
+                    </div>
+                    <div className="simp-total-cell">
+                      <div className="simp-total-val">{seasonRecTDs}</div>
+                      <div className="simp-total-lbl">Rec TDs</div>
+                    </div>
+                    <div className="simp-total-cell">
+                      <div className="simp-total-val">{seasonLong}</div>
+                      <div className="simp-total-lbl">Long</div>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="simp-totals">
+                    <div className="simp-total-cell">
+                      <div className="simp-total-val">{seasonPassYds?.toLocaleString()}</div>
+                      <div className="simp-total-lbl">Pass Yds</div>
+                    </div>
+                    <div className="simp-total-cell">
+                      <div className="simp-total-val">{seasonTDs}</div>
+                      <div className="simp-total-lbl">Pass TDs</div>
+                    </div>
+                    <div className="simp-total-cell">
+                      <div className="simp-total-val">{seasonINTs}</div>
+                      <div className="simp-total-lbl">INTs</div>
+                    </div>
+                    <div className="simp-total-cell">
+                      <div className="simp-total-val">{seasonCompPct}%</div>
+                      <div className="simp-total-lbl">Comp%</div>
+                    </div>
+                  </div>
+                  <div className="simp-totals simp-totals-3" style={{ marginTop: 14 }}>
+                    <div className="simp-total-cell">
+                      <div className="simp-total-val">{qbRushYds?.toLocaleString()}</div>
+                      <div className="simp-total-lbl">Rush Yds</div>
+                    </div>
+                    <div className="simp-total-cell">
+                      <div className="simp-total-val">{qbRushTDs}</div>
+                      <div className="simp-total-lbl">Rush TDs</div>
+                    </div>
+                    <div className="simp-total-cell">
+                      <div className="simp-total-val">{seasonSacks}</div>
+                      <div className="simp-total-lbl">Sacks</div>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           )}
 
@@ -461,7 +517,7 @@ function PlayoffGame({ round, opponent, home, weather, mySc, oppSc, won, teamCol
 
 // ── Screen 3: Playoffs ────────────────────────────────────────────────────────
 
-function ScreenPlayoffs({ result, onNext, onPreSuperBowl }) {
+function ScreenPlayoffs({ result, onNext, onPreSuperBowl, adsDisabled = false }) {
   const { wins, losses, playoffs, playoffRounds, team } = result
   const [gameIdx, setGameIdx] = useState(0)
   const [status,  setStatus]  = useState('playing')
@@ -472,6 +528,7 @@ function ScreenPlayoffs({ result, onNext, onPreSuperBowl }) {
     const t = setTimeout(() => setStarted(true), 500)
     return () => clearTimeout(t)
   }, [playoffs])
+
 
   const advanceToSB = () => {
     setGameIdx(i => i + 1)
@@ -514,22 +571,23 @@ function ScreenPlayoffs({ result, onNext, onPreSuperBowl }) {
     )
   }
 
+  const current = playoffRounds[gameIdx]
+
+  let inner
   if (status === 'champion') {
     const sb = playoffRounds[playoffRounds.length - 1]
-    return (
-      <div className="simp-screen simp-screen-center plf-champion-screen">
+    inner = (
+      <div className="simp-screen-center plf-champion-screen" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
         <img src="/trophy.png" alt="" className="sfb-trophy" />
         <div className="plf-champ-label">Super Bowl Champions</div>
         <div className="plf-champ-sub">{sb.mySc}–{sb.oppSc} vs {sb.opponent}</div>
         <button className="simp-cta simp-cta-in" onClick={onNext}>Final Report</button>
       </div>
     )
-  }
-
-  if (status === 'eliminated') {
+  } else if (status === 'eliminated') {
     const r = playoffRounds[gameIdx]
-    return (
-      <div className="simp-screen simp-screen-center">
+    inner = (
+      <div className="simp-screen-center" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
         <div className="simp-eyebrow">Season Over</div>
         <div className="plf-elim-title">{r.round === 'Super Bowl' ? 'Lost Super Bowl' : 'Eliminated'}</div>
         <div className="plf-elim-round">{r.round === 'Super Bowl' ? '' : r.round}</div>
@@ -537,13 +595,11 @@ function ScreenPlayoffs({ result, onNext, onPreSuperBowl }) {
         <button className="simp-cta" onClick={onNext}>Final Report</button>
       </div>
     )
-  }
-
-  if (status === 'between') {
+  } else if (status === 'between') {
     const r    = playoffRounds[gameIdx]
     const next = playoffRounds[gameIdx + 1]
-    return (
-      <div className="simp-screen simp-screen-center plf-between-screen">
+    inner = (
+      <div className="plf-between-screen" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
         <div className="plf-bw-result">
           <span className="plf-bw-w">W</span>
           <span className="plf-bw-score">{r.mySc}–{r.oppSc}</span>
@@ -552,43 +608,56 @@ function ScreenPlayoffs({ result, onNext, onPreSuperBowl }) {
         {next && <div className="plf-bw-next">Next up · {next.round}</div>}
       </div>
     )
+  } else {
+    inner = (
+      <>
+        <div className="simp-eyebrow">Playoffs</div>
+        {!started ? (
+          <div className="simp-loading">
+            <div className="simp-loading-dot" /><div className="simp-loading-dot" /><div className="simp-loading-dot" />
+            <div className="simp-loading-lbl">Entering Playoffs…</div>
+          </div>
+        ) : (
+          <PlayoffGame
+            key={gameIdx}
+            round={current.round}
+            opponent={current.opponent}
+            home={current.home}
+            weather={current.weather}
+            mySc={current.mySc}
+            oppSc={current.oppSc}
+            won={current.won}
+            teamColor={teamColor}
+            teamAbbr={teamAbbr}
+            teamLogo={teamLogo}
+            isFinal={gameIdx === playoffRounds.length - 1}
+            isAllTime={!!team?.isAllTime}
+            onDone={handleGameDone}
+          />
+        )}
+      </>
+    )
   }
 
-  const current = playoffRounds[gameIdx]
   return (
     <div className="simp-screen">
-      <div className="simp-eyebrow">Playoffs</div>
-      {!started ? (
-        <div className="simp-loading">
-          <div className="simp-loading-dot" /><div className="simp-loading-dot" /><div className="simp-loading-dot" />
-          <div className="simp-loading-lbl">Entering Playoffs…</div>
-        </div>
-      ) : (
-        <PlayoffGame
-          key={gameIdx}
-          round={current.round}
-          opponent={current.opponent}
-          home={current.home}
-          weather={current.weather}
-          mySc={current.mySc}
-          oppSc={current.oppSc}
-          won={current.won}
-          teamColor={teamColor}
-          teamAbbr={teamAbbr}
-          teamLogo={teamLogo}
-          isFinal={gameIdx === playoffRounds.length - 1}
-          isAllTime={!!team?.isAllTime}
-          onDone={handleGameDone}
-        />
-      )}
+      {inner}
     </div>
   )
 }
 
 // ── Screen 4: Final Report ────────────────────────────────────────────────────
 
-function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = false, mvpWon = false }) {
-  const { ovr, wins, losses, playoffs, sbResult, seasonPassYds, seasonTDs, seasonINTs, seasonRushYds, seasonRushTDs, seasonSacks, seasonCompPct, seasonRating, bestGame } = result
+function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = false, mvpWon = false, isRB = false }) {
+  const { ovr, wins, losses, playoffs, sbResult, bestGame } = result
+
+  // QB stats
+  const { seasonPassYds, seasonTDs, seasonINTs, seasonRushYds: qbRushYds, seasonRushTDs, seasonSacks, seasonCompPct, seasonRating } = result
+
+  // RB stats
+  const { seasonRushYds: rbRushYds, seasonRushTDs: rbRushTDs, seasonYPC, seasonFumbles,
+          seasonRecYds, seasonRecTDs, seasonRecs, seasonLong, seasonCarries, hundredYardGames } = result
+
   const champion = sbResult?.won
   const [show, setShow] = useState(false)
 
@@ -611,11 +680,16 @@ function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = fals
     })
   }, [])
 
-  const yds     = useCountUp(seasonPassYds, 1200, show)
-  const tds     = useCountUp(seasonTDs, 900, show)
-  const ints    = useCountUp(seasonINTs, 900, show)
-  const rushYds = useCountUp(seasonRushYds, 1000, show)
-  const sacks   = useCountUp(seasonSacks, 900, show)
+  // QB count-ups
+  const yds     = useCountUp(seasonPassYds, 1200, show && !isRB)
+  const tds     = useCountUp(seasonTDs, 900, show && !isRB)
+  const ints    = useCountUp(seasonINTs, 900, show && !isRB)
+  const rushYds = useCountUp(qbRushYds, 1000, show && !isRB)
+  const sacks   = useCountUp(seasonSacks, 900, show && !isRB)
+
+  // RB count-ups
+  const rbRushYdsAnim = useCountUp(rbRushYds, 1200, show && isRB)
+  const rbRecYdsAnim  = useCountUp(seasonRecYds, 1000, show && isRB)
 
   return (
     <div className="simp-screen">
@@ -631,73 +705,150 @@ function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = fals
         <div className="simp-sb-box">
           <div className="simp-section-lbl">Super Bowl Performance</div>
           <div className="simp-totals">
-            <div className="simp-total-cell">
-              <div className="simp-total-val">{sbResult.passYds}</div>
-              <div className="simp-total-lbl">Pass Yds</div>
-            </div>
-            <div className="simp-total-cell">
-              <div className="simp-total-val">{sbResult.tds}</div>
-              <div className="simp-total-lbl">TDs</div>
-            </div>
-            <div className="simp-total-cell">
-              <div className="simp-total-val">{sbResult.ints ?? 0}</div>
-              <div className="simp-total-lbl">INTs</div>
-            </div>
-            <div className="simp-total-cell">
-              <div className="simp-total-val">{sbResult.rating}</div>
-              <div className="simp-total-lbl">Rating</div>
-            </div>
+            {isRB ? (
+              <>
+                <div className="simp-total-cell">
+                  <div className="simp-total-val">{sbResult.rushYds ?? 0}</div>
+                  <div className="simp-total-lbl">Rush Yds</div>
+                </div>
+                <div className="simp-total-cell">
+                  <div className="simp-total-val">{sbResult.rushTDs ?? 0}</div>
+                  <div className="simp-total-lbl">Rush TDs</div>
+                </div>
+                <div className="simp-total-cell">
+                  <div className="simp-total-val">{sbResult.recYds ?? 0}</div>
+                  <div className="simp-total-lbl">Rec Yds</div>
+                </div>
+                <div className="simp-total-cell">
+                  <div className="simp-total-val">{sbResult.recTDs ?? 0}</div>
+                  <div className="simp-total-lbl">Rec TDs</div>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="simp-total-cell">
+                  <div className="simp-total-val">{sbResult.passYds}</div>
+                  <div className="simp-total-lbl">Pass Yds</div>
+                </div>
+                <div className="simp-total-cell">
+                  <div className="simp-total-val">{sbResult.tds}</div>
+                  <div className="simp-total-lbl">TDs</div>
+                </div>
+                <div className="simp-total-cell">
+                  <div className="simp-total-val">{sbResult.ints ?? 0}</div>
+                  <div className="simp-total-lbl">INTs</div>
+                </div>
+                <div className="simp-total-cell">
+                  <div className="simp-total-val">{sbResult.rating}</div>
+                  <div className="simp-total-lbl">Rating</div>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
 
       {team && build && (
-        <div className="simp-team-model">
+        <div className={`simp-team-model${isRB ? ' simp-team-model--rb' : ''}`}>
           <div className="simp-team-model-glow" />
-          <img src="/qb-silhouette.png" alt="" className="simp-sil-ghost" draggable={false} />
-          <QBFigureOverlay build={monoTeamBuild} className="player-qbfig" />
+          {isRB ? (
+            <>
+              <img src="/rbsilhouette.png" alt="" className="simp-sil-ghost" draggable={false} />
+              <RBFigureOverlay build={monoTeamBuild} />
+            </>
+          ) : (
+            <>
+              <img src="/qb-silhouette.png" alt="" className="simp-sil-ghost" draggable={false} />
+              <QBFigureOverlay build={monoTeamBuild} className="player-qbfig" />
+            </>
+          )}
         </div>
       )}
 
       <div className="simp-stat-section">
         <div className="simp-stat-group-lbl">Production</div>
-        <div className="simp-totals">
-          <div className="simp-total-cell">
-            <div className="simp-total-val">{show ? yds.toLocaleString() : '–'}</div>
-            <div className="simp-total-lbl">Pass Yds</div>
-          </div>
-          <div className="simp-total-cell">
-            <div className="simp-total-val">{show ? tds : '–'}</div>
-            <div className="simp-total-lbl">Pass TDs</div>
-          </div>
-          <div className="simp-total-cell">
-            <div className="simp-total-val">{show ? ints : '–'}</div>
-            <div className="simp-total-lbl">INTs</div>
-          </div>
-          <div className="simp-total-cell">
-            <div className="simp-total-val">{show ? `${seasonCompPct}%` : '–'}</div>
-            <div className="simp-total-lbl">Comp%</div>
-          </div>
-        </div>
-        <div className="simp-totals simp-totals-3" style={{ marginTop: 14 }}>
-          <div className="simp-total-cell">
-            <div className="simp-total-val">{show ? rushYds.toLocaleString() : '–'}</div>
-            <div className="simp-total-lbl">Rush Yds</div>
-          </div>
-          <div className="simp-total-cell">
-            <div className="simp-total-val">{show ? result.seasonRushTDs : '–'}</div>
-            <div className="simp-total-lbl">Rush TDs</div>
-          </div>
-          <div className="simp-total-cell">
-            <div className="simp-total-val">{show ? sacks : '–'}</div>
-            <div className="simp-total-lbl">Sacks</div>
-          </div>
-        </div>
+
+        {isRB ? (
+          <>
+            <div className="simp-totals">
+              <div className="simp-total-cell">
+                <div className="simp-total-val">{show ? rbRushYdsAnim.toLocaleString() : '–'}</div>
+                <div className="simp-total-lbl">Rush Yds</div>
+              </div>
+              <div className="simp-total-cell">
+                <div className="simp-total-val">{show ? rbRushTDs : '–'}</div>
+                <div className="simp-total-lbl">Rush TDs</div>
+              </div>
+              <div className="simp-total-cell">
+                <div className="simp-total-val">{show ? seasonCarries : '–'}</div>
+                <div className="simp-total-lbl">Carries</div>
+              </div>
+              <div className="simp-total-cell">
+                <div className="simp-total-val">{show ? seasonYPC?.toFixed(1) : '–'}</div>
+                <div className="simp-total-lbl">YPC</div>
+              </div>
+            </div>
+            <div className="simp-totals" style={{ marginTop: 14 }}>
+              <div className="simp-total-cell">
+                <div className="simp-total-val">{show ? rbRecYdsAnim.toLocaleString() : '–'}</div>
+                <div className="simp-total-lbl">Rec Yds</div>
+              </div>
+              <div className="simp-total-cell">
+                <div className="simp-total-val">{show ? seasonRecTDs : '–'}</div>
+                <div className="simp-total-lbl">Rec TDs</div>
+              </div>
+              <div className="simp-total-cell">
+                <div className="simp-total-val">{show ? seasonFumbles : '–'}</div>
+                <div className="simp-total-lbl">Fumbles</div>
+              </div>
+              <div className="simp-total-cell">
+                <div className="simp-total-val">{show ? seasonLong : '–'}</div>
+                <div className="simp-total-lbl">Long</div>
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="simp-totals">
+              <div className="simp-total-cell">
+                <div className="simp-total-val">{show ? yds.toLocaleString() : '–'}</div>
+                <div className="simp-total-lbl">Pass Yds</div>
+              </div>
+              <div className="simp-total-cell">
+                <div className="simp-total-val">{show ? tds : '–'}</div>
+                <div className="simp-total-lbl">Pass TDs</div>
+              </div>
+              <div className="simp-total-cell">
+                <div className="simp-total-val">{show ? ints : '–'}</div>
+                <div className="simp-total-lbl">INTs</div>
+              </div>
+              <div className="simp-total-cell">
+                <div className="simp-total-val">{show ? `${seasonCompPct}%` : '–'}</div>
+                <div className="simp-total-lbl">Comp%</div>
+              </div>
+            </div>
+            <div className="simp-totals simp-totals-3" style={{ marginTop: 14 }}>
+              <div className="simp-total-cell">
+                <div className="simp-total-val">{show ? rushYds.toLocaleString() : '–'}</div>
+                <div className="simp-total-lbl">Rush Yds</div>
+              </div>
+              <div className="simp-total-cell">
+                <div className="simp-total-val">{show ? seasonRushTDs : '–'}</div>
+                <div className="simp-total-lbl">Rush TDs</div>
+              </div>
+              <div className="simp-total-cell">
+                <div className="simp-total-val">{show ? sacks : '–'}</div>
+                <div className="simp-total-lbl">Sacks</div>
+              </div>
+            </div>
+          </>
+        )}
+
         {mvpWon && (
           <div className="sfb-mvp-row">
             <img src="/mvp.png" alt="MVP Trophy" className="sfb-mvp-row-img" />
             <div className="sfb-mvp-row-text">
-              <div className="sfb-mvp-row-title">Regular Season MVP</div>
+              <div className="sfb-mvp-row-title">{isRB ? 'Offensive Player of the Year' : 'Regular Season MVP'}</div>
               <div className="sfb-mvp-row-sub">NFL Award Winner</div>
             </div>
           </div>
@@ -728,13 +879,28 @@ function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = fals
         </div>
       )}
 
-      {bestGame && (
+      {bestGame && !isRB && (
         <div className="simp-best-game">
           <div className="simp-section-lbl">Best Game</div>
           <div className="simp-best-body">
             <span className="sbg-week">Wk {bestGame.wk}</span>
             <span className="sbg-opp">vs {bestGame.opponent}</span>
             <span className="sbg-line">{bestGame.passYds} yds · {bestGame.tds} TD · {bestGame.ints} INT · {bestGame.rating} RTG</span>
+          </div>
+        </div>
+      )}
+
+      {bestGame && isRB && (
+        <div className="simp-best-game">
+          <div className="simp-section-lbl">Best Game</div>
+          <div className="simp-best-body">
+            <span className="sbg-week">Wk {bestGame.wk}</span>
+            <span className="sbg-opp">vs {bestGame.opponent}</span>
+            <span className="sbg-line">
+              {bestGame.rushYds} rush yds · {bestGame.rushTDs + bestGame.recTDs} TD
+              {bestGame.recYds > 0 ? ` · ${bestGame.recYds} rec yds` : ''}
+              {bestGame.fumbles > 0 ? ' · 1 FUM' : ''}
+            </span>
           </div>
         </div>
       )}
@@ -764,7 +930,7 @@ function ProgressDots({ screen, total }) {
 
 // ── SimPage ───────────────────────────────────────────────────────────────────
 
-export default function SimPage({ result, build, types = TYPES, onBack, onReset, replay = false, adsDisabled = false, onMVPWon }) {
+export default function SimPage({ result, build, types = TYPES, onBack, onReset, replay = false, adsDisabled = false, isRB = false, onMVPWon }) {
   const [screen, setScreen] = useState(replay ? 3 : 0)
   const [mvpResult, setMvpResult] = useState(null)
   const [mvpWon, setMvpWon] = useState(false)
@@ -775,16 +941,25 @@ export default function SimPage({ result, build, types = TYPES, onBack, onReset,
   const advancePage = () => {
     document.querySelector('.simp-page')?.scrollTo({ top: 0, behavior: 'instant' })
     window.scrollTo({ top: 0, behavior: 'instant' })
-    window.ramp?.que?.push(() => window.ramp.spaNewPage())
-    setScreen(s => s + 1)
+    setScreen(s => {
+      const next = s + 1
+      window.ramp?.que?.push(() => {
+        window.ramp.spaNewPage()
+        // Re-register the playoff banner slot on every screen except the final report (screen 3)
+        if (!adsDisabled && next < 3) {
+          window.ramp.spaAddAds([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-plf' }])
+        }
+      })
+      return next
+    })
   }
 
   const triggerMVP = (continuation = null) => {
-    const r = calcMVPResult(result, isAllTime)
+    const r = isRB ? calcOPOYResult(result, isAllTime, result.team?.short) : calcMVPResult(result, isAllTime, result.team?.short)
     setMvpResult(r)
     if (r.userWins) {
       setMvpWon(true)
-      onMVPWon?.(isAllTime)
+      onMVPWon?.(isAllTime, isRB)
     }
     if (continuation) setMvpContinuation(() => continuation)
   }
@@ -816,10 +991,10 @@ export default function SimPage({ result, build, types = TYPES, onBack, onReset,
   const handleBack  = () => { setScreen(0); onBack()  }
 
   const screens = [
-    <ScreenBuild    key="build"    result={result} build={build} types={types} onNext={next} />,
-    <ScreenSeason   key="season"   result={result} onNext={next} />,
-    <ScreenPlayoffs key="playoffs" result={result} onNext={next} onPreSuperBowl={handlePreSuperBowl} />,
-    <ScreenFinal    key="final"    result={result} build={build} types={types} onReset={handleReset} onBack={handleBack} adsDisabled={adsDisabled} mvpWon={mvpWon} />,
+    <ScreenBuild    key="build"    result={result} build={build} types={types} onNext={next} isRB={isRB} />,
+    <ScreenSeason   key="season"   result={result} onNext={next} isRB={isRB} />,
+    <ScreenPlayoffs key="playoffs" result={result} onNext={next} onPreSuperBowl={handlePreSuperBowl} adsDisabled={adsDisabled} />,
+    <ScreenFinal    key="final"    result={result} build={build} types={types} onReset={handleReset} onBack={handleBack} adsDisabled={adsDisabled} mvpWon={mvpWon} isRB={isRB} />,
   ]
 
   const team = result.team
@@ -872,6 +1047,9 @@ export default function SimPage({ result, build, types = TYPES, onBack, onReset,
           </div>
         )}
 
+        {!adsDisabled && screen < screens.length - 1 && (
+          <div id="ramp-cntr1-plf" className="plf-banner-ad" />
+        )}
         {screens[screen]}
       </div>
 
@@ -881,6 +1059,7 @@ export default function SimPage({ result, build, types = TYPES, onBack, onReset,
           mvpResult={mvpResult}
           onDismiss={handleMVPDismiss}
           toSuperBowl={!!mvpContinuation}
+          isRB={isRB}
         />
       )}
     </div>

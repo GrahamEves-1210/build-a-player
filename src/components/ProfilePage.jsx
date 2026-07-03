@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import { ATTR, TYPES } from '../data/qbs'
-import { calcOVR, getArchetype, valToGrade } from '../utils/simulation'
+import { calcOVR, calcOVRRB, getArchetype, getArchetypeRB, valToGrade } from '../utils/simulation'
 import QBAvatar from './QBAvatar'
 import { supabase } from '../lib/supabase'
+import { RB_TYPES } from '../data/rbs'
 
 function useCountUp(target, duration = 900, enabled = true) {
   const [val, setVal] = useState(0)
@@ -51,25 +52,33 @@ function StatBar({ label, value, grade, max, color }) {
   )
 }
 
-export default function ProfilePage({ user, build, simResult, types = TYPES, onBack, onSignOut, onAdsDisabled }) {
+export default function ProfilePage({ user, build, simResult, types = TYPES, isRB = false, onBack, onSignOut, onAdsDisabled }) {
   const [show, setShow]           = useState(false)
   const [career, setCareer]       = useState(null)
   const [careerLoad, setCareerLoad] = useState(true)
+  const [rbCareer, setRbCareer]   = useState(null)
+  const [rbCareerLoad, setRbCareerLoad] = useState(true)
   const [legendCareer, setLegendCareer] = useState(null)
   const [legendCareerLoad, setLegendCareerLoad] = useState(true)
+  const [careerMode, setCareerMode] = useState(isRB ? 'rb' : 'qb')
   const [adsDisabled, setAdsDisabled] = useState(false)
   const [adFreeLoading, setAdFreeLoading] = useState(false)
 
   useEffect(() => { const t = setTimeout(() => setShow(true), 120); return () => clearTimeout(t) }, [])
 
-  const [mvpCounts, setMvpCounts] = useState({ classic: 0, alltime: 0 })
+  const [mvpCounts, setMvpCounts] = useState({ classic: 0, alltime: 0, classicOpoy: 0, alltimeOpoy: 0 })
 
   useEffect(() => {
     if (!supabase || !user) return
-    supabase.from('accounts').select('ads_disabled,classic_mvps,alltime_mvps').eq('id', user.id).single()
+    supabase.from('accounts').select('ads_disabled,classic_mvps,alltime_mvps,classic_opoys,alltime_opoys').eq('id', user.id).single()
       .then(({ data }) => {
         if (data?.ads_disabled) setAdsDisabled(true)
-        setMvpCounts({ classic: data?.classic_mvps ?? 0, alltime: data?.alltime_mvps ?? 0 })
+        setMvpCounts({
+          classic:     data?.classic_mvps  ?? 0,
+          alltime:     data?.alltime_mvps  ?? 0,
+          classicOpoy: data?.classic_opoys ?? 0,
+          alltimeOpoy: data?.alltime_opoys ?? 0,
+        })
       })
   }, [user])
 
@@ -103,9 +112,10 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, onB
     if (!supabase || !user) { setCareerLoad(false); return }
     supabase
       .from('simulations')
-      .select('wins,losses,season_pass_yds,season_tds,season_ints,season_rating,playoffs,champion,ovr,archetype,build,created_at')
+      .select('wins,losses,season_pass_yds,season_tds,season_ints,season_rating,playoffs,champion,ovr,archetype,build,created_at,game_mode')
       .eq('user_id', user.id)
-      .neq('game_mode', 'all-time')
+      .not('game_mode', 'in', '("all-time","legends")')
+      .not('game_mode', 'ilike', 'rb-%')
       .order('created_at', { ascending: false })
       .then(({ data }) => {
         if (!data || data.length === 0) { setCareer(null); setCareerLoad(false); return }
@@ -125,6 +135,34 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, onB
         const worstBuild  = withBuilds.length ? withBuilds.reduce((b, r) => (r.ovr ?? 0) < (b.ovr ?? 0) ? r : b, withBuilds[0]) : null
         setCareer({ count: data.length, totalWins, totalLosses, totalTDs, totalYds, totalINTs, rings, playoffApps, winPct, avgOVR, best, bestBuild, worstBuild })
         setCareerLoad(false)
+      })
+  }, [user])
+
+  useEffect(() => {
+    if (!supabase || !user) { setRbCareerLoad(false); return }
+    supabase
+      .from('simulations')
+      .select('wins,losses,season_pass_yds,season_tds,playoffs,champion,ovr,archetype,build,created_at')
+      .eq('user_id', user.id)
+      .ilike('game_mode', 'rb-%')
+      .order('created_at', { ascending: false })
+      .then(({ data }) => {
+        if (!data || data.length === 0) { setRbCareer(null); setRbCareerLoad(false); return }
+        const totalWins   = data.reduce((s, r) => s + (r.wins   ?? 0), 0)
+        const totalLosses = data.reduce((s, r) => s + (r.losses ?? 0), 0)
+        const totalTDs    = data.reduce((s, r) => s + (r.season_tds     ?? 0), 0)
+        const totalRushYds= data.reduce((s, r) => s + (r.season_pass_yds ?? 0), 0) // stored in season_pass_yds
+        const rings       = data.filter(r => r.champion).length
+        const playoffApps = data.filter(r => r.playoffs).length
+        const totalGames  = totalWins + totalLosses
+        const winPct      = totalGames > 0 ? ((totalWins / totalGames) * 100).toFixed(1) : '0.0'
+        const avgOVR      = (data.reduce((s, r) => s + (r.ovr ?? 0), 0) / data.length).toFixed(1)
+        const best        = data.reduce((b, r) => (r.wins ?? 0) > (b.wins ?? 0) ? r : b, data[0])
+        const withBuilds  = data.filter(r => r.build && r.ovr)
+        const bestBuild   = withBuilds.length ? withBuilds.reduce((b, r) => (r.ovr ?? 0) > (b.ovr ?? 0) ? r : b, withBuilds[0]) : null
+        const worstBuild  = withBuilds.length ? withBuilds.reduce((b, r) => (r.ovr ?? 0) < (b.ovr ?? 0) ? r : b, withBuilds[0]) : null
+        setRbCareer({ count: data.length, totalWins, totalLosses, totalTDs, totalRushYds, rings, playoffApps, winPct, avgOVR, best, bestBuild, worstBuild })
+        setRbCareerLoad(false)
       })
   }, [user])
 
@@ -154,8 +192,8 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, onB
   }, [user])
 
   const filled   = types.filter(t => build?.[t])
-  const ovr      = calcOVR(build || {}, types)
-  const arch     = (ovr && filled.length === types.length) ? getArchetype(ovr, build, types) : null
+  const ovr      = isRB ? calcOVRRB(build || {}, types) : calcOVR(build || {}, types)
+  const arch     = (ovr && filled.length === types.length) ? (isRB ? getArchetypeRB(ovr, build, types) : getArchetype(ovr, build, types)) : null
   const complete = filled.length === types.length
 
   const ovrDisplay  = useCountUp(ovr, 1000, show && !!ovr)
@@ -164,6 +202,8 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, onB
   const tdsDisplay  = useCountUp(simResult?.seasonTDs, 900, show && !!simResult)
   const careerYds       = useCountUp(career?.totalYds, 1400, show && !!career)
   const careerTDs       = useCountUp(career?.totalTDs, 1000, show && !!career)
+  const rbCareerYds     = useCountUp(rbCareer?.totalRushYds, 1400, show && !!rbCareer)
+  const rbCareerTDs     = useCountUp(rbCareer?.totalTDs, 1000, show && !!rbCareer)
   const legendCareerYds = useCountUp(legendCareer?.totalYds, 1400, show && !!legendCareer)
   const legendCareerTDs = useCountUp(legendCareer?.totalTDs, 1000, show && !!legendCareer)
 
@@ -183,13 +223,6 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, onB
         {/* ── Top nav ── */}
         <div className="prf-top-nav">
           <button className="prf-top-back" onClick={onBack}>← Back to Build</button>
-          {!adsDisabled ? (
-            <button className="prf-top-adfree" onClick={handleAdFree} disabled={adFreeLoading}>
-              {adFreeLoading ? '...' : '✦ Go Ad-Free · $1.99'}
-            </button>
-          ) : (
-            <span className="prf-top-adfree prf-top-adfree--on">✦ Ad-Free</span>
-          )}
         </div>
 
         {/* ── Hero header ── */}
@@ -246,7 +279,7 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, onB
                       <span className="prf-attr-name">{meta.label}</span>
                       <span className="prf-attr-qb">{data.qbFull}</span>
                     </div>
-                    <span className="prf-grade" style={{ background: meta.hex, color: '#07120a' }}>
+                    <span className="prf-grade" style={{ background: meta.hex, color: '#111111' }}>
                       {valToGrade(data.val)}
                     </span>
                   </div>
@@ -261,91 +294,135 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, onB
           </div>
         )}
 
-        {/* ── Last season ── */}
-        {/* ── Career stats ── */}
-        {!careerLoad && career && (
-          <div className={`prf-card ${show ? 'prf-card-in' : ''}`} style={{ animationDelay: '0.3s' }}>
-            <div className="prf-card-hd">
-              <span className="prf-card-title">Career</span>
-              <span className="prf-career-count">{career.count} season{career.count !== 1 ? 's' : ''}</span>
+        {/* ── Career stats — QB / RB toggle ── */}
+        {(() => {
+          const qbReady = !careerLoad
+          const rbReady = !rbCareerLoad
+          if (!qbReady || !rbReady) return (
+            <div className={`prf-card ${show ? 'prf-card-in' : ''}`} style={{ animationDelay: '0.3s' }}>
+              <div className="prf-card-hd"><span className="prf-card-title">Career</span></div>
+              <div className="prf-loading-msg">Loading...</div>
             </div>
+          )
+          if (!career && !rbCareer) return null
 
-            <div className="prf-career-record">
-              <span className="pcr-w">{career.totalWins}</span>
-              <span className="pcr-sep">–</span>
-              <span className="pcr-l">{career.totalLosses}</span>
-              <span className="pcr-label">Career Record</span>
-            </div>
+          const showToggle = career && rbCareer
+          const active = careerMode === 'rb' && rbCareer ? rbCareer : career
+          const isRBView = careerMode === 'rb' && !!rbCareer
 
-            <div className="prf-career-grid">
-              <div className="pcg-cell">
-                <div className="pcg-val">{mvpCounts.classic}</div>
-                <div className="pcg-lbl">MVPs</div>
-              </div>
-              <div className="pcg-cell">
-                <div className="pcg-val">{career.playoffApps}</div>
-                <div className="pcg-lbl">Playoff Apps</div>
-              </div>
-              <div className="pcg-cell">
-                <div className="pcg-val">{career.winPct}%</div>
-                <div className="pcg-lbl">Win %</div>
-              </div>
-              <div className="pcg-cell">
-                <div className="pcg-val">{show ? careerYds.toLocaleString() : '–'}</div>
-                <div className="pcg-lbl">Career Yards</div>
-              </div>
-              <div className="pcg-cell">
-                <div className="pcg-val">{show ? careerTDs : '–'}</div>
-                <div className="pcg-lbl">Career TDs</div>
-              </div>
-              <div className="pcg-cell">
-                <div className="pcg-val">{career.avgOVR}</div>
-                <div className="pcg-lbl">Avg OVR</div>
-              </div>
-              <div className="pcg-cell pcg-cell-rings">
-                <div className="pcg-val pcg-val-rings">{career.rings}</div>
-                <div className="pcg-lbl pcg-lbl-rings">Rings</div>
-              </div>
-            </div>
+          if (!active) return null
 
-            {career.best && (
-              <div className="prf-best-season">
-                <span className="pbs-lbl">Best Season</span>
-                <span className="pbs-val">{career.best.wins}–{career.best.losses} · {career.best.season_tds} TD · {(career.best.season_pass_yds ?? 0).toLocaleString()} yds</span>
+          return (
+            <div className={`prf-card ${show ? 'prf-card-in' : ''}`} style={{ animationDelay: '0.3s' }}>
+              <div className="prf-card-hd">
+                <span className="prf-card-title">Career</span>
+                <span className="prf-career-count">{active.count} season{active.count !== 1 ? 's' : ''}</span>
               </div>
-            )}
 
-            {(career.bestBuild || career.worstBuild) && (
-              <div className="prf-build-extremes">
-                {[
-                  career.bestBuild && { data: career.bestBuild, type: 'best', label: 'Best Build' },
-                  career.worstBuild && career.worstBuild.ovr !== career.bestBuild?.ovr && { data: career.worstBuild, type: 'worst', label: 'Worst Build' },
-                ].filter(Boolean).map(({ data: bd, type, label }) => (
-                  <div key={type} className={`prf-build-extreme prf-build-extreme--${type}`}>
-                    <div className="pbe-header">
-                      <span className="pbe-label">{label}</span>
-                      <span className="pbe-ovr">{bd.ovr} OVR</span>
-                      {bd.archetype && <span className="pbe-arch">{bd.archetype}</span>}
-                    </div>
-                    <div className="pbe-slots">
-                      {Object.entries(bd.build).map(([slot, d]) => (
-                        <div key={slot} className="pbe-slot-row">
-                          <span className="pbe-slot-attr">{ATTR[slot]?.shortLabel ?? slot}</span>
-                          <span className="pbe-slot-qb">{d.qb}</span>
-                          <span className="pbe-slot-grade" style={{ background: ATTR[slot]?.hex ?? '#95d5b2' }}>
-                            {valToGrade(d.val)}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
+              {showToggle && (
+                <div className="lb-main-seg prf-career-seg">
+                  <button
+                    className={`lb-main-seg-btn ${careerMode === 'qb' ? 'lb-main-seg-active' : ''}`}
+                    onClick={() => setCareerMode('qb')}
+                  >
+                    QB
+                  </button>
+                  <button
+                    className={`lb-main-seg-btn ${careerMode === 'rb' ? 'lb-main-seg-active' : ''}`}
+                    onClick={() => setCareerMode('rb')}
+                  >
+                    RB
+                  </button>
+                </div>
+              )}
+
+              <div className="prf-career-record">
+                <span className="pcr-w">{active.totalWins}</span>
+                <span className="pcr-sep">–</span>
+                <span className="pcr-l">{active.totalLosses}</span>
+                <span className="pcr-label">Career Record</span>
+              </div>
+
+              <div className="prf-career-grid">
+                <div className="pcg-cell">
+                  <div className="pcg-val">{isRBView ? mvpCounts.classicOpoy : mvpCounts.classic}</div>
+                  <div className="pcg-lbl">{isRBView ? 'OPOYs' : 'MVPs'}</div>
+                </div>
+                <div className="pcg-cell">
+                  <div className="pcg-val">{active.playoffApps}</div>
+                  <div className="pcg-lbl">Playoff Apps</div>
+                </div>
+                <div className="pcg-cell">
+                  <div className="pcg-val">{active.winPct}%</div>
+                  <div className="pcg-lbl">Win %</div>
+                </div>
+                <div className="pcg-cell">
+                  <div className="pcg-val">
+                    {show ? (isRBView ? rbCareerYds.toLocaleString() : careerYds.toLocaleString()) : '–'}
                   </div>
-                ))}
+                  <div className="pcg-lbl">{isRBView ? 'Rush Yards' : 'Career Yards'}</div>
+                </div>
+                <div className="pcg-cell">
+                  <div className="pcg-val">{show ? (isRBView ? rbCareerTDs : careerTDs) : '–'}</div>
+                  <div className="pcg-lbl">Career TDs</div>
+                </div>
+                <div className="pcg-cell">
+                  <div className="pcg-val">{active.avgOVR}</div>
+                  <div className="pcg-lbl">Avg OVR</div>
+                </div>
+                <div className="pcg-cell pcg-cell-rings">
+                  <div className="pcg-val pcg-val-rings">{active.rings}</div>
+                  <div className="pcg-lbl pcg-lbl-rings">Rings</div>
+                </div>
               </div>
-            )}
-          </div>
-        )}
+
+              {active.best && (
+                <div className="prf-best-season">
+                  <span className="pbs-lbl">Best Season</span>
+                  <span className="pbs-val">
+                    {active.best.wins}–{active.best.losses} · {active.best.season_tds} TD · {(active.best.season_pass_yds ?? 0).toLocaleString()} {isRBView ? 'rush yds' : 'yds'}
+                  </span>
+                </div>
+              )}
+
+              {(active.bestBuild || active.worstBuild) && (
+                <div className="prf-build-extremes">
+                  {[
+                    active.bestBuild && { data: active.bestBuild, type: 'best', label: 'Best Build' },
+                    active.worstBuild && active.worstBuild.ovr !== active.bestBuild?.ovr && { data: active.worstBuild, type: 'worst', label: 'Worst Build' },
+                  ].filter(Boolean).map(({ data: bd, type, label }) => (
+                    <div key={type} className={`prf-build-extreme prf-build-extreme--${type}`}>
+                      <div className="pbe-header">
+                        <span className="pbe-label">{label}</span>
+                        <span className="pbe-ovr">{bd.ovr} OVR</span>
+                        {bd.archetype && <span className="pbe-arch">{bd.archetype}</span>}
+                      </div>
+                      <div className="pbe-slots">
+                        {Object.entries(bd.build).map(([slot, d]) => (
+                          <div key={slot} className="pbe-slot-row">
+                            <span className="pbe-slot-attr">{ATTR[slot]?.shortLabel ?? slot}</span>
+                            <span className="pbe-slot-qb">{d.qb}</span>
+                            <span className="pbe-slot-grade" style={{ background: ATTR[slot]?.hex ?? '#95d5b2', color: '#111111' }}>
+                              {valToGrade(d.val)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )
+        })()}
 
         {/* ── Legends career stats ── */}
+        {legendCareerLoad && (
+          <div className={`prf-card prf-card-legend ${show ? 'prf-card-in' : ''}`} style={{ animationDelay: '0.4s' }}>
+            <div className="prf-card-hd"><span className="prf-card-title prf-card-title-legend">★ All-Time Career</span></div>
+            <div className="prf-loading-msg">Loading...</div>
+          </div>
+        )}
         {!legendCareerLoad && legendCareer && (
           <div className={`prf-card prf-card-legend ${show ? 'prf-card-in' : ''}`} style={{ animationDelay: '0.4s' }}>
             <div className="prf-card-hd">

@@ -1,5 +1,6 @@
 import { useRef, useEffect, useLayoutEffect, useMemo, useCallback, useState } from 'react'
 import { QBS, TEAMS, ATTR, TYPES, CATEGORIES, QB_PHYSICALS, LITE_TYPES } from '../data/qbs'
+import { RB_CATEGORIES } from '../data/rbs'
 import { valToGrade } from '../utils/simulation'
 import HEADSHOTS from '../data/headshots.json'
 import QBAvatar from './QBAvatar'
@@ -176,6 +177,7 @@ function Chip({ type, meta, val, selectedQB, draggingType, onChipTap, onDragStar
     teamColor: selectedQB.color, teamColor2: selectedQB.color2,
     skinColor: selectedQB.skin, number: selectedQB.number,
     team: selectedQB.team, captain: selectedQB.captain ?? false, photo,
+    height: selectedQB.height ?? null, weight: selectedQB.weight ?? null,
   }
   return (
     <div
@@ -207,7 +209,7 @@ function Chip({ type, meta, val, selectedQB, draggingType, onChipTap, onDragStar
 }
 
 // ─── SpinScreen ──────────────────────────────────────────────────────────────
-export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, activeCategory, resetKey, onChipTap, types = TYPES, isLite = false, qbPool = QBS, savedResult = null, onSaveResult, onPhaseChange, gameKey, onReset, adsDisabled = false }) {
+export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, activeCategory, resetKey, onChipTap, types = TYPES, isLite = false, qbPool = QBS, savedResult = null, onSaveResult, onPhaseChange, gameKey, onReset, adsDisabled = false, isRB = false }) {
   const [phase, setPhase]               = useState(() => savedResult?.selectedQB ? 'done' : 'idle')
   const [selectedTeam, setSelectedTeam] = useState(() => savedResult?.selectedTeam ?? null)
   const [selectedQB,   setSelectedQB]   = useState(() => savedResult?.selectedQB ?? null)
@@ -319,8 +321,8 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
     return arr
   }, [selectedTeam, excludedQB, spinCount])
 
-  const visibleCategories = CATEGORIES
-  const hasAvailableChips = isDone && selectedQB && CATEGORIES.some(cat =>
+  const visibleCategories = isRB ? RB_CATEGORIES : CATEGORIES
+  const hasAvailableChips = isDone && selectedQB && visibleCategories.some(cat =>
     cat.types.some(type => types.includes(type) && !build[type])
   )
 
@@ -332,6 +334,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
       window.ramp.spaAddAds([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1' }])
     })
   }, [isDone, adsDisabled])
+
 
   return (
     <aside className="spin-panel">
@@ -394,7 +397,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
                   onClick={canRespin ? handleQBRespin : handleSpin}
                   disabled={isSpinning || complete || (isDone && !canRespin)}
                 >
-                  {canRespin ? <>QB RESPIN? <span className="spin-btn-badge">{2 - qbRespinUsed}</span></> : 'SPIN'}
+                  {canRespin ? <>{isRB ? 'RB' : 'QB'} RESPIN? <span className="spin-btn-badge">{2 - qbRespinUsed}</span></> : 'SPIN'}
                 </button>
               </>
             )
@@ -451,14 +454,14 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
               </>
             ) : (
               <div className="spin-hint-text">
-                {complete ? 'All slots filled' : 'All available slots filled for this QB'}
+                {complete ? 'All slots filled' : `All available slots filled for this ${isRB ? 'RB' : 'QB'}`}
               </div>
             )
           )}
 
           {!isDone && (
-            <div className="spin-hint-text">
-              Spin to reveal a QB.<span className="hint-mobile-assign"><br />Select an attribute for your build.</span>
+            <div className="spin-hint-text" style={{ marginBottom: '40px' }}>
+              Spin to select an attribute for your build.
             </div>
           )}
 

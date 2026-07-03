@@ -27,38 +27,58 @@ const DIV = {
 // OFF = supporting cast / scheme quality (boosts passing stats)
 // DEF = defensive strength (independent win contribution)
 const RATINGS = {
-  ARI: { off: 5, def: 5 },
-  ATL: { off: 8, def: 5 },
-  BAL: { off: 7, def: 7 },
-  BUF: { off: 6, def: 7 },
-  CAR: { off: 6, def: 6 },
-  CHI: { off: 7, def: 6 },
-  CIN: { off: 8, def: 1 },
-  CLE: { off: 2, def: 7 },
-  DAL: { off: 8, def: 3 },
-  DEN: { off: 6, def: 9 },
-  DET: { off: 9, def: 7 },
-  GB:  { off: 6, def: 8 },
-  HOU: { off: 5, def: 9 },
-  IND: { off: 7, def: 5 },
-  JAX: { off: 7, def: 6 },
-  KC:  { off: 7, def: 7 },
-  LV:  { off: 5, def: 3 },
-  LAC: { off: 7, def: 7 },
+  ARI: { off: 4, def: 4 },
+  ATL: { off: 7, def: 4 },
+  BAL: { off: 6, def: 6 },
+  BUF: { off: 5, def: 6 },
+  CAR: { off: 5, def: 5 },
+  CHI: { off: 6, def: 5 },
+  CIN: { off: 7, def: 1 },
+  CLE: { off: 1, def: 6 },
+  DAL: { off: 7, def: 2 },
+  DEN: { off: 5, def: 8 },
+  DET: { off: 8, def: 6 },
+  GB:  { off: 5, def: 7 },
+  HOU: { off: 4, def: 8 },
+  IND: { off: 6, def: 4 },
+  JAX: { off: 6, def: 5 },
+  KC:  { off: 6, def: 6 },
+  LV:  { off: 4, def: 2 },
+  LAC: { off: 6, def: 6 },
   LAR: { off: 9, def: 9 },
-  MIA: { off: 1, def: 2 },
-  MIN: { off: 7, def: 5 },
-  NE:  { off: 7, def: 7 },
-  NO:  { off: 5, def: 4 },
-  NYG: { off: 6, def: 7 },
-  NYJ: { off: 2, def: 4 },
-  PHI: { off: 8, def: 8 },
+  MIA: { off: 1, def: 1 },
+  MIN: { off: 6, def: 4 },
+  NE:  { off: 6, def: 6 },
+  NO:  { off: 4, def: 3 },
+  NYG: { off: 5, def: 6 },
+  NYJ: { off: 1, def: 3 },
+  PHI: { off: 7, def: 7 },
   PIT: { off: 5, def: 7 },
-  SF:  { off: 9, def: 7 },
-  SEA: { off: 7, def: 9 },
-  TB:  { off: 7, def: 6 },
-  TEN: { off: 3, def: 5 },
-  WAS: { off: 6, def: 6 },
+  SF:  { off: 8, def: 6 },
+  SEA: { off: 6, def: 8 },
+  TB:  { off: 6, def: 5 },
+  TEN: { off: 2, def: 4 },
+  WAS: { off: 5, def: 5 },
+}
+
+// RB-mode offensive ratings: same as RATINGS but QB quality baked in separately.
+// In QB mode the player IS the QB, so RATINGS reflects supporting cast.
+// In RB mode the QB is a separate team asset — a good QB lifts RB win probability too.
+export const RB_RATINGS = {
+  ...RATINGS,
+  BAL: { ...RATINGS.BAL, off: 7  }, // Lamar Jackson
+  BUF: { ...RATINGS.BUF, off: 7  }, // Josh Allen
+  CIN: { ...RATINGS.CIN, off: 7  }, // Joe Burrow
+  DAL: { ...RATINGS.DAL, off: 7  }, // Dak Prescott
+  GB:  { ...RATINGS.GB,  off: 5  }, // Jordan Love
+  HOU: { ...RATINGS.HOU, off: 5  }, // CJ Stroud
+  KC:  { ...RATINGS.KC,  off: 7  }, // Patrick Mahomes
+  LAC: { ...RATINGS.LAC, off: 7  }, // Justin Herbert
+  LAR: { ...RATINGS.LAR, off: 9  }, // Matthew Stafford
+  NE:  { ...RATINGS.NE,  off: 6  }, // Drake Maye
+  PHI: { ...RATINGS.PHI, off: 9  }, // Jalen Hurts
+  TB:  { ...RATINGS.TB,  off: 6  }, // Baker Mayfield
+  WAS: { ...RATINGS.WAS, off: 6  }, // Jayden Daniels
 }
 
 export const NFL_TEAMS = TEAMS.map(t => ({

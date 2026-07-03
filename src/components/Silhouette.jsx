@@ -1,53 +1,72 @@
 import { useState, useRef, useLayoutEffect, useEffect, useCallback } from 'react'
 import { ATTR, TYPES, CATEGORIES, QB_PHYSICALS } from '../data/qbs'
+import { RB_CATEGORIES, RB_PHYSICALS } from '../data/rbs'
 import QBAvatar from './QBAvatar'
 
 function fmtHeight(in_) { return `${Math.floor(in_ / 12)}'${in_ % 12}"` }
 import QBFigureOverlay from './QBFigureOverlay'
+import RBFigureOverlay from './RBFigureOverlay'
 
-// Figure coordinate space (matches SVG viewBox 0 0 622 844)
+// Figure coordinate space (matches QB silhouette dimensions)
 const FIG_W = 622
 const FIG_H = 844
 const CARD_W = 211  // must match .cz-card width in CSS
 
-// Anchor positions in figure coordinate space
-// ax: 0=left edge of figure, 622=right edge
-// ay: 0=top of figure, 844=bottom
-// cy: fixed card Y position as fraction of sil-wrap height (cards don't track the dot)
+// RB silhouette coordinate space
+const RB_FIG_W = 574
+const RB_FIG_H = 865
+
+// CSS scale applied to the RB figure image + overlay
+const RB_FIGURE_SCALE = 0.90
+
+// QB anchor positions
 const ZONES = [
-  { type: 'vision',          ax: 355, ay:  75, side: 'right', cy: 0.09  },
+  { type: 'vision',          ax: 375, ay:  75, side: 'right', cy: 0.09  },
   { type: 'processing',      ax: 275, ay:  42, side: 'left',  cy: 0.14  },
   { type: 'leadership',      ax: 330, ay: 120, side: 'right', cy: 0.277 },
   { type: 'arm',             ax: 171, ay: 175, side: 'left',  cy: 0.504 },
   { type: 'playmaking',      ax: 350, ay: 240, side: 'right', cy: 0.464 },
   { type: 'accuracy',        ax: 110, ay: 216, side: 'left',  cy: 0.322 },
-  { type: 'size',            ax: 340, ay: 310, side: 'right', cy: 0.651 },
+  { type: 'size',            ax: 380, ay: 250, side: 'right', cy: 0.651 },
   { type: 'legs',            ax: 207, ay: 525, side: 'left',  cy: 0.686 },
   { type: 'pocket-presence', ax: 465, ay: 520, side: 'right', cy: 0.838 },
 ]
 
-function useFigureBounds(ref) {
+// RB anchor positions — calibrated to the running pose (head upper-right,
+// stiff arm / ball arm right, free arm left, lead leg lower-right)
+// cy values evenly spaced (0.06→0.94, step 0.11) alternating sides
+const RB_ZONES = [
+  { type: 'vision',      ax: 273, ay: 100, side: 'right', cy: 0.06 },  // helmet
+  { type: 'burst',       ax: 144, ay: 620, side: 'left',  cy: 0.83 },  // left foot
+  { type: 'hands',       ax: 175, ay: 473, side: 'left',  cy: 0.61 },  // right foot
+  { type: 'strength',    ax:  84, ay: 286, side: 'left',  cy: 0.17 },  // left arm
+  { type: 'carrying',    ax: 455, ay: 355, side: 'right', cy: 0.50 },  // right glove
+  { type: 'balance',     ax: 245, ay: 359, side: 'left',  cy: 0.39 },  // waist/core
+  { type: 'size',        ax: 315, ay: 245, side: 'right', cy: 0.28 },  // jersey
+  { type: 'elusiveness', ax: 495, ay: 830, side: 'right', cy: 0.94 },  // left glove
+  { type: 'speed',       ax: 300, ay: 510, side: 'right', cy: 0.72 },  // thighs
+]
+
+function useFigureBounds(ref, figW, figH) {
   const [bounds, setBounds] = useState(null)
   useLayoutEffect(() => {
     if (!ref.current) return
     const compute = () => {
-      // Use offsetWidth/offsetHeight (layout size before CSS transform) so that
-      // SVG percentage coords align with CSS left/top percentage positions on children.
       const W = ref.current.offsetWidth
       const H = ref.current.offsetHeight
       if (!W || !H) return
-      const scale = Math.min(W / FIG_W, H / FIG_H)
+      const scale = Math.min(W / figW, H / figH)
       setBounds({
         W, H, scale,
-        fx: (W - FIG_W * scale) / 2,  // left offset of figure in sil-wrap
-        fy: (H - FIG_H * scale) / 2,  // top offset
+        fx: (W - figW * scale) / 2,
+        fy: (H - figH * scale) / 2,
       })
     }
     compute()
     const ro = new ResizeObserver(compute)
     ro.observe(ref.current)
     return () => ro.disconnect()
-  }, [ref])
+  }, [ref, figW, figH])
   return bounds
 }
 
@@ -87,12 +106,19 @@ function CZCard({ zone, cardY, build, activeDrag, hidden, invisible, isMobile })
   )
 }
 
-function HWTracker({ build }) {
-  const bodyPhys = build['size'] ? QB_PHYSICALS[build['size'].qbFull] : null
-  const legsPhys = build['legs'] ? QB_PHYSICALS[build['legs'].qbFull] : null
-  const both = bodyPhys && legsPhys
-  const ht = both ? fmtHeight(Math.round(0.65 * legsPhys.height + 0.35 * bodyPhys.height)) : null
-  const wt = both ? Math.round(0.65 * bodyPhys.weight + 0.35 * legsPhys.weight) : null
+function HWTracker({ build, isRB = false }) {
+  let ht, wt
+  if (isRB) {
+    const rbPhys = build['size'] ? RB_PHYSICALS[build['size'].qbFull] : null
+    ht = rbPhys ? fmtHeight(rbPhys.height) : null
+    wt = rbPhys ? rbPhys.weight : null
+  } else {
+    const bodyPhys = build['size'] ? QB_PHYSICALS[build['size'].qbFull] : null
+    const legsPhys = build['legs'] ? QB_PHYSICALS[build['legs'].qbFull] : null
+    const both = bodyPhys && legsPhys
+    ht = both ? fmtHeight(Math.round(0.65 * legsPhys.height + 0.35 * bodyPhys.height)) : null
+    wt = both ? Math.round(0.65 * bodyPhys.weight + 0.35 * legsPhys.weight) : null
+  }
   return (
     <div className="hw-tracker hw-tracker-pills">
       <div className="hw-stat">
@@ -112,18 +138,23 @@ function HWTracker({ build }) {
 
 const MOBILE_CARD_W = 22   // card CSS width (86px) minus card offset (64px each side)
 
-export default function Silhouette({ build, activeDrag, onDrop, activeCategory, onCategoryChange, types = TYPES, isLite = false, onReset }) {
+export default function Silhouette({ build, activeDrag, onDrop, activeCategory, onCategoryChange, types = TYPES, isLite = false, onReset, isRB = false }) {
+  const figW   = isRB ? RB_FIG_W : FIG_W
+  const figH   = isRB ? RB_FIG_H : FIG_H
+  const zones  = isRB ? RB_ZONES : ZONES
   const silRef = useRef(null)
-  const bounds = useFigureBounds(silRef)
+  const bounds = useFigureBounds(silRef, figW, figH)
   const boundsRef = useRef(bounds)
   const [isMobile, setIsMobile] = useState(
     () => typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches
   )
   const activeDragRef = useRef(activeDrag)
   const onDropRef = useRef(onDrop)
+  const zonesRef = useRef(zones)
   useLayoutEffect(() => { boundsRef.current = bounds }, [bounds])
   useLayoutEffect(() => { activeDragRef.current = activeDrag }, [activeDrag])
   useLayoutEffect(() => { onDropRef.current = onDrop }, [onDrop])
+  useLayoutEffect(() => { zonesRef.current = zones }, [zones])
 
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 768px)')
@@ -147,7 +178,7 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
       const { W, H, fx, fy, scale } = b
       const figX = ((e.clientX - rect.left) / rect.width  * W - fx) / scale
       const figY = ((e.clientY - rect.top)  / rect.height * H - fy) / scale
-      const zone = ZONES.find(z => z.type === ad.type)
+      const zone = zonesRef.current.find(z => z.type === ad.type)
       if (!zone) return
       const dist = Math.sqrt((figX - zone.ax) ** 2 + (figY - zone.ay) ** 2)
       if (dist <= 80) onDropRef.current(ad.type)
@@ -160,8 +191,9 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
     }
   }, [])
 
+  const cats = isRB ? RB_CATEGORIES : CATEGORIES
   const categoryTypes = activeCategory
-    ? (CATEGORIES.find(c => c.id === activeCategory)?.types ?? [])
+    ? (cats.find(c => c.id === activeCategory)?.types ?? [])
     : null
   const complete = types.every(t => build[t])
 
@@ -169,14 +201,19 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
   const pos = (zone) => {
     if (!bounds) return null
     const { W, H, fx, fy, scale } = bounds
-    // Desktop: card is 211px wide, scale(1.15) expands right edge by 7.5%
-    // Mobile: card is 86px wide at left:-64px, so visible edge = 22px + scale expansion from card center (43 * 0.15 = 6.45px)
     const cardEdgePx = isMobile
       ? MOBILE_CARD_W + (86 / 2) * 0.15
       : CARD_W * 1.075
-    const dotX  = (fx + zone.ax * scale) / W * 100
-    const dotY  = (fy + zone.ay * scale) / H * 100
-    const cardY = zone.cy * 100
+    let dotX  = (fx + zone.ax * scale) / W * 100
+    let dotY  = (fy + zone.ay * scale) / H * 100
+    // Compensate for CSS scale on RB figure — scale dot positions inward from center
+    if (isRB) {
+      dotX = (dotX - 50) * RB_FIGURE_SCALE + 50
+      dotY = (dotY - 50) * RB_FIGURE_SCALE + 50
+    }
+    const cardY = isMobile
+      ? ((zone.cy - 0.5) * 0.85 + 0.5) * 100
+      : zone.cy * 100
     const lineX = zone.side === 'left'
       ? (cardEdgePx / W) * 100
       : ((W - cardEdgePx) / W) * 100
@@ -189,22 +226,33 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
   return (
     <section className="field-center">
       <div className="category-pills">
-        <HWTracker build={build} />
-        {CATEGORIES.map(cat => (
+        <HWTracker build={build} isRB={isRB} />
+        {cats.map(cat => (
           <button
             key={cat.id}
             className={`cat-pill ${(complete || activeCategory === cat.id) ? 'active' : ''}`}
             style={isLite ? { visibility: 'hidden', pointerEvents: 'none' } : undefined}
-            onClick={() => !complete && onCategoryChange(activeCategory === cat.id ? null : cat.id)}
+            onClick={() => !complete && activeCategory !== cat.id && onCategoryChange(cat.id)}
           >
             {cat.label}
           </button>
         ))}
       </div>
 
-      <div className="sil-wrap" ref={silRef}>
-        <img src="/qb-silhouette.png" alt="" className="sil-img" draggable={false} />
-        <QBFigureOverlay build={build} className="player-qbfig" />
+      <div className={`sil-wrap${isRB ? ' sil-wrap--rb' : ''}`} ref={silRef}>
+        <img
+          src={isRB ? '/rbsilhouette.png' : '/qb-silhouette.png'}
+          alt=""
+          className={`sil-img${isRB ? ' sil-img--rb' : ''}`}
+          draggable={false}
+          style={isRB ? { transform: `scale(${RB_FIGURE_SCALE})`, transformOrigin: 'center center' } : undefined}
+        />
+        {!isRB && <QBFigureOverlay build={build} className="player-qbfig" />}
+        {isRB && (
+          <div style={{ position: 'absolute', inset: 0, transform: `scale(${RB_FIGURE_SCALE})`, transformOrigin: 'center center' }}>
+            <RBFigureOverlay build={build} />
+          </div>
+        )}
 
         {/* Lines — stretch to fill sil-wrap via preserveAspectRatio="none" */}
         <svg
@@ -213,7 +261,7 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
           className="cz-lines-svg"
           aria-hidden="true"
         >
-          {ZONES.filter(z => types.includes(z.type)).map(zone => {
+          {zones.filter(z => types.includes(z.type)).map(zone => {
             const hidden = !isLite && !complete && (!activeCategory || !categoryTypes?.includes(zone.type))
             const p = pos(zone)
             if (!p) return null
@@ -236,7 +284,7 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
 
         {/* Dots + cards */}
         <div className="cz-layer" style={{ zIndex: 10 }}>
-          {ZONES.filter(z => types.includes(z.type)).map(zone => {
+          {zones.filter(z => types.includes(z.type)).map(zone => {
             const hiddenFromTab = !isLite && !complete && (!activeCategory || !categoryTypes?.includes(zone.type))
             const p = pos(zone)
             return (
