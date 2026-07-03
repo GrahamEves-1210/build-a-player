@@ -1000,7 +1000,7 @@ export function runRBSimulation(build, types = RB_TYPES, team = null, isAllTime 
   // ── Per-game stat baselines ───────────────────────────────────────────────
   // Carries: size = bell-cow usage; OVR star treatment drives extra opportunities; vision = coaches trust
   const ovrCarryN = ovr != null ? Math.min(0.6, (ovr - 75) / 22) : 0
-  const carriesBase = 10.0 + szN * 5.8 + ovrCarryN * 6.0 + visN * 1.0
+  const carriesBase = 10.0 + szN * 5.8 + ovrCarryN * 6.0 + visN * 1.0 - hndN * hndN * 2.5
 
   // Curve multiplier: penalises bad backs (< OVR 80) on a steepening slope; elite backs unaffected
   const lowOvrCurve = ovr !== null && ovr < 80
@@ -1019,8 +1019,8 @@ export function runRBSimulation(build, types = RB_TYPES, team = null, isAllTime 
   const fumbleBase = Math.max(0.008, 0.29 - cryN * 0.26)
 
   // Receiving: hands dominant; elusiveness = route running/separation; burst = out-of-backfield
-  const recBase   = 0.35 + hndN * 2.2 + eluN * 0.70 + bstN * 0.28 + teamOffN * 0.28
-  const yprBase   = 6.0  + spdN * 1.8 + eluN * 1.1  + bstN * 0.45
+  const recBase   = 0.40 + hndN * 2.8 + eluN * 0.80 + bstN * 0.30 + teamOffN * 0.30 + hndN * hndN * 0.9
+  const yprBase   = 7.0  + spdN * 1.8 + eluN * 1.2  + bstN * 0.50
   const recTDRate = 0.07 + hndN * 0.14 + eluN * 0.042 + bstN * 0.018 + teamOffN * 0.014
 
   // ── Win probability — team is the foundation, RB is the add-on ──────────
@@ -1116,7 +1116,11 @@ export function runRBSimulation(build, types = RB_TYPES, team = null, isAllTime 
     const gameFumbles = Math.random() < (fumbleBase + wxFumble + Math.random() * 0.018) ? 1 : 0
 
     // Receiving — heavy carry workload reduces targets (game script eats into routes)
-    const workloadCut = gameCarries > 20 ? 0.62 : gameCarries > 15 ? 0.80 : 1.0
+    const workloadCut = gameCarries > 20
+      ? Math.max(0.40, Math.min(0.95, 0.40 + hndN * 0.60))
+      : gameCarries > 15
+        ? Math.max(0.55, Math.min(1.0,  0.55 + hndN * 0.50))
+        : 1.0
     const gameRecs    = Math.max(0, Math.round((recBase + v() * 1.8) * workloadCut))
     const gameRecYds  = gameRecs > 0 ? Math.max(0, Math.round(gameRecs * (yprBase + v() * 2.5))) : 0
     const gameRecTDs  = gameRecs > 0 && !isLimited && Math.random() < (recTDRate + v() * 0.018) ? 1 : 0
