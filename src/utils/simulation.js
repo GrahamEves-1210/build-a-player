@@ -1000,7 +1000,7 @@ export function runRBSimulation(build, types = RB_TYPES, team = null, isAllTime 
   // ── Per-game stat baselines ───────────────────────────────────────────────
   // Carries: size = bell-cow usage; OVR star treatment drives extra opportunities; vision = coaches trust
   const ovrCarryN = ovr != null ? Math.min(0.6, (ovr - 75) / 22) : 0
-  const carriesBase = 10.0 + szN * 5.8 + ovrCarryN * 6.0 + visN * 1.0 - hndN * hndN * 2.5
+  const carriesBase = 11.0 + szN * 5.8 + ovrCarryN * 6.0 + visN * 1.0 - hndN * hndN * 2.5
 
   // Curve multiplier: penalises bad backs (< OVR 80) on a steepening slope; elite backs unaffected
   const lowOvrCurve = ovr !== null && ovr < 80
@@ -1010,7 +1010,7 @@ export function runRBSimulation(build, types = RB_TYPES, team = null, isAllTime 
   // YPC: balance + vision are the true YPC drivers (staying upright, reading blocks).
   // Burst = first-step burst through the hole; strength/size = extra yards after contact.
   // Speed matters mainly for breakaway plays, not base per-carry average.
-  const ypcBase = Math.min(5.5, 2.5 + balN * 0.62 + visN * 0.72 + bstN * 0.42 + strN * 0.28 + szN * 0.18 + eluN * 0.23 + spdN * 0.09 + teamOffN * 0.24)
+  const ypcBase = Math.min(5.5, 2.6 + balN * 0.62 + visN * 0.72 + bstN * 0.42 + strN * 0.28 + szN * 0.18 + eluN * 0.23 + spdN * 0.09 + teamOffN * 0.24)
 
   // Rush TD rate: red-zone specialists (strength/size) score far more than speed backs
   const tdRate = 0.015 + strN * 0.016 + szN * 0.013 + balN * 0.008 + visN * 0.006 + teamOffN * 0.007
