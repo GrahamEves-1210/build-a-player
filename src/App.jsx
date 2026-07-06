@@ -30,6 +30,11 @@ try {
 
 const _isPrivacy = window.location.pathname === '/privacy'
 
+const _saved = (() => {
+  if (_sharedData || _isPrivacy) return null
+  try { return JSON.parse(localStorage.getItem('bap_progress')) } catch { return null }
+})()
+
 function hideVideoAds() {
   const sel = '[id*="corner_video"],[id*="floating_video"],[id*="corner-video"],[class*="corner_video"],[class*="floating_video"],[id^="pw-oop-video"],[id^="pw-oop-corner"],[id*="video_corner"],[id*="vid_corner"],[class*="video_corner"]'
   document.querySelectorAll(sel).forEach(el => el.style.setProperty('display', 'none', 'important'))
@@ -55,12 +60,12 @@ function enableAdFreeMode() {
 }
 
 export default function App() {
-  const [page, setPage]               = useState(_sharedData ? 'shared' : _isPrivacy ? 'privacy' : 'splash')
+  const [page, setPage]               = useState(_sharedData ? 'shared' : _isPrivacy ? 'privacy' : (_saved?.gameMode ? 'game' : 'splash'))
   const [sharedBuild]                 = useState(_sharedData?.build ?? null)
   const [sharedTypes]                 = useState(_sharedData?.types ?? null)
-  const [gameMode, setGameMode]         = useState(null)
-  const [position, setPosition]         = useState('qb')
-  const [build, setBuild]               = useState({})
+  const [gameMode, setGameMode]         = useState(_saved?.gameMode ?? null)
+  const [position, setPosition]         = useState(_saved?.position ?? 'qb')
+  const [build, setBuild]               = useState(_saved?.build ?? {})
   const [activeDrag, setActiveDrag]     = useState(null)
   const [activeCategory, setActiveCategory] = useState('physical')
   const [simResult, setSimResult]       = useState(null)
@@ -96,6 +101,11 @@ export default function App() {
       window.ramp.spaNewPage()
     })
   }, [page])
+
+  useEffect(() => {
+    if (!gameMode) return
+    try { localStorage.setItem('bap_progress', JSON.stringify({ gameMode, position, build })) } catch {}
+  }, [build, gameMode, position])
 
   useEffect(() => {
     if (!supabase) return
@@ -167,8 +177,10 @@ export default function App() {
     const { data } = await supabase.from('accounts')
       .select('classic_mvps,alltime_mvps,classic_opoys,alltime_opoys').eq('id', user.id).single()
     const current = data?.[col] ?? 0
-    supabase.from('accounts').update({ [col]: current + 1 }).eq('id', user.id)
-      .then(({ error }) => { if (error) console.error('[award] failed to save award:', error) })
+    const q = data
+      ? supabase.from('accounts').update({ [col]: current + 1 }).eq('id', user.id)
+      : supabase.from('accounts').insert({ id: user.id, [col]: 1 })
+    q.then(({ error }) => { if (error) console.error('[award] failed to save award:', error) })
   }, [user])
 
   const handleReset = useCallback(() => {

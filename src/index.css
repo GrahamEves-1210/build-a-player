@@ -7572,9 +7572,12 @@ html.is-touch .alltime-mode .spin-btn:hover:not(:disabled) {
   align-items: center;
   overflow: hidden;
 }
-/* spin screen: break out of spin-panel-static (11px) + spin-panel-body (14px) padding */
+/* spin screen: pre-reserve ad height so chips never jump when ad loads */
 .spin-panel-static .ad-cntr1-mobile {
-  margin: -14px -25px -18px;
+  height: 60px;
+  min-height: 60px;
+  overflow: hidden;
+  margin: 0 -11px -20px;
 }
 .ad-cntr1-hidden {
   visibility: hidden;

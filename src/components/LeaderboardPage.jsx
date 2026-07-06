@@ -118,7 +118,7 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
   // ── Awards state ─────────────────────────────────────────────────────────────
   const [awardsRows, setAwardsRows]                   = useState([])
   const [alltimeAwardsRows, setAlltimeAwardsRows]     = useState([])
-  const [awardsLoaded, setAwardsLoaded]               = useState(false)
+  const [awardsLoadedFor, setAwardsLoadedFor]         = useState(null) // 'rb' | 'qb' | null
   const [awardsLoading, setAwardsLoading]             = useState(false)
   const [awardsMode, setAwardsMode]                   = useState('classic')
 
@@ -336,27 +336,32 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
 
   // ── Awards leaderboard ───────────────────────────────────────────────────────
   const loadAwards = () => {
-    if (awardsLoaded || !supabase) return
+    const modeKey = isRB ? 'rb' : 'qb'
+    if (awardsLoadedFor === modeKey || !supabase) return
     setAwardsLoading(true)
-    const classicCol  = isRB ? 'classic_opoys' : 'classic_mvps'
-    const alltimeCol  = 'alltime_mvps'
-    const selectCols  = isRB ? `id, username, ${classicCol}` : `id, username, ${classicCol}, ${alltimeCol}`
-    supabase
+    const classicCol = isRB ? 'classic_opoys' : 'classic_mvps'
+    const alltimeCol = isRB ? 'alltime_opoys' : 'alltime_mvps'
+    const toRow = (r, col) => ({ uid: r.id, username: r.username || `Player_${r.id.slice(0, 5)}`, count: r[col] ?? 0 })
+    const classicQ = supabase
       .from('accounts')
-      .select(selectCols)
-      .or(isRB ? `${classicCol}.gt.0` : `${classicCol}.gt.0,${alltimeCol}.gt.0`)
-      .limit(200)
-      .then(({ data }) => {
-        const toRow = (r, col) => ({ uid: r.id, username: r.username || `Player_${r.id.slice(0, 5)}`, count: r[col] ?? 0 })
-        const classic = (data ?? []).filter(r => (r[classicCol] ?? 0) > 0).sort((a, b) => b[classicCol] - a[classicCol]).map(r => toRow(r, classicCol))
-        setAwardsRows(classic)
-        if (!isRB) {
-          const alltime = (data ?? []).filter(r => (r[alltimeCol] ?? 0) > 0).sort((a, b) => b[alltimeCol] - a[alltimeCol]).map(r => toRow(r, alltimeCol))
-          setAlltimeAwardsRows(alltime)
-        }
-        setAwardsLoaded(true)
-        setAwardsLoading(false)
-      })
+      .select(`id, username, ${classicCol}`)
+      .gt(classicCol, 0)
+      .order(classicCol, { ascending: false })
+      .limit(50)
+    const alltimeQ = isRB ? null : supabase
+      .from('accounts')
+      .select(`id, username, ${alltimeCol}`)
+      .gt(alltimeCol, 0)
+      .order(alltimeCol, { ascending: false })
+      .limit(50)
+    Promise.all([classicQ, alltimeQ ?? Promise.resolve({ data: [], error: null })]).then(([classicRes, alltimeRes]) => {
+      if (classicRes.error) { console.error('[awards] classic query error:', classicRes.error); setAwardsLoading(false); return }
+      setAwardsRows((classicRes.data ?? []).map(r => toRow(r, classicCol)))
+      if (alltimeRes.error) { console.error('[awards] alltime query error:', alltimeRes.error) }
+      else setAlltimeAwardsRows((alltimeRes.data ?? []).map(r => toRow(r, alltimeCol)))
+      setAwardsLoadedFor(modeKey)
+      setAwardsLoading(false)
+    })
   }
 
   const isAwardsMetric = isRB ? rbMetric === 'opoys' : metric === 'mvps'
@@ -465,30 +470,22 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
               <div className="lb-loading lb-legends-empty">No {isRB ? 'OPOY' : 'MVP'} awards yet.</div>
             ) : (
               <div className="lb-list" key={isRB ? 'opoys' : 'mvps'}>
-                {Array.from({ length: 20 }, (_, i) => awardsRows[i] ?? null).map((row, i) =>
-                  row ? (
-                    <div
-                      key={row.uid}
-                      className={`lb-row${isRB ? ' lb-row-rb' : ''} ${currentUser && row.uid === currentUser.id ? 'lb-row-me' : ''} ${i < 3 ? `lb-row-top${i + 1}` : ''}`}
-                      style={{ animationDelay: `${i * 35}ms` }}
-                    >
-                      <RankBadge rank={i + 1} />
-                      <div className="lb-row-info">
-                        <div className="lb-row-name">
-                          {row.username}
-                          {currentUser && row.uid === currentUser.id && <span className="lb-you">you</span>}
-                        </div>
-                        {(() => { const c = (isRB ? rbRows : rows).find(r => r.uid === row.uid); return c ? <div className="lb-row-sub">{c.wins}W · {c.losses}L · {c.rings} ring{c.rings !== 1 ? 's' : ''} · {c.count} season{c.count !== 1 ? 's' : ''}</div> : null })()}
+                {awardsRows.map((row, i) =>
+                  <div
+                    key={row.uid}
+                    className={`lb-row${isRB ? ' lb-row-rb' : ''} ${currentUser && row.uid === currentUser.id ? 'lb-row-me' : ''} ${i < 3 ? `lb-row-top${i + 1}` : ''}`}
+                    style={{ animationDelay: `${Math.min(i, 20) * 35}ms` }}
+                  >
+                    <RankBadge rank={i + 1} />
+                    <div className="lb-row-info">
+                      <div className="lb-row-name">
+                        {row.username}
+                        {currentUser && row.uid === currentUser.id && <span className="lb-you">you</span>}
                       </div>
-                      <div className="lb-row-val">{row.count}</div>
+                      {(() => { const c = (isRB ? rbRows : rows).find(r => r.uid === row.uid); return c ? <div className="lb-row-sub">{c.wins}W · {c.losses}L · {c.rings} ring{c.rings !== 1 ? 's' : ''} · {c.count} season{c.count !== 1 ? 's' : ''}</div> : null })()}
                     </div>
-                  ) : (
-                    <div key={`empty-${i}`} className={`lb-row lb-row-empty${isRB ? ' lb-row-rb' : ''}`} style={{ animationDelay: `${i * 35}ms` }}>
-                      <div className="lb-rank-badge lb-rank-n">{i + 1}</div>
-                      <div className="lb-row-info"><div className="lb-row-name lb-empty-name">——</div></div>
-                      <div className="lb-row-val lb-empty-val">—</div>
-                    </div>
-                  )
+                    <div className="lb-row-val">{row.count}</div>
+                  </div>
                 )}
               </div>
             )

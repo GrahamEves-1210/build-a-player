@@ -335,7 +335,6 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
     })
   }, [isDone, adsDisabled])
 
-
   return (
     <aside className="spin-panel">
       {isSpinning && <div className="spin-blocker" />}
