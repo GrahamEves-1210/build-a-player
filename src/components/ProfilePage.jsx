@@ -1,4 +1,15 @@
 import { useState, useEffect, useRef } from 'react'
+
+function PrfSpinner() {
+  return (
+    <div className="lb-spinner-wrap">
+      <svg className="lb-spinner" viewBox="0 0 36 36">
+        <circle className="lb-spinner-track" cx="18" cy="18" r="14" fill="none" strokeWidth="3" />
+        <circle className="lb-spinner-arc" cx="18" cy="18" r="14" fill="none" strokeWidth="3" />
+      </svg>
+    </div>
+  )
+}
 import { ATTR, TYPES } from '../data/qbs'
 import { calcOVR, calcOVRRB, getArchetype, getArchetypeRB, valToGrade } from '../utils/simulation'
 import QBAvatar from './QBAvatar'
@@ -334,17 +345,14 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
         </div>
 
         {/* ── Build-A-Player Plus ── */}
+        {isPlus && (
         <div className={`prf-card ${show ? 'prf-card-in' : ''}`} style={{ animationDelay: '0.1s' }}>
           <div className="prf-card-hd">
             <span className="prf-card-title">Build-A-Player Plus</span>
-            {isPlus
-              ? <span className="plus-status-badge plus-status-badge--on">Active</span>
-              : <span className="plus-status-badge">$4.99/mo</span>
-            }
+            <span className="plus-status-badge plus-status-badge--on">Active</span>
           </div>
 
-          {isPlus ? (
-            <div className="plus-content">
+          <div className="plus-content">
 
               <div className="plus-adfree-row">
                 <span className="plus-adfree-check">✓</span>
@@ -422,15 +430,8 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
               </button>
 
             </div>
-          ) : (
-            <div className="plus-gate">
-              <p className="plus-gate-perks">No ads · Custom themes · Custom icons · Custom ratings</p>
-              <button className="plus-subscribe-btn" onClick={handleAdFree} disabled={adFreeLoading}>
-                {adFreeLoading ? 'Redirecting…' : 'Subscribe — $4.99/mo'}
-              </button>
-            </div>
-          )}
         </div>
+        )}
 
         {/* ── Current build ── */}
         {complete && ovr ? (
@@ -496,7 +497,7 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
           if (!qbReady || !rbReady) return (
             <div className={`prf-card ${show ? 'prf-card-in' : ''}`} style={{ animationDelay: '0.3s' }}>
               <div className="prf-card-hd"><span className="prf-card-title">Career</span></div>
-              <div className="prf-loading-msg">Loading...</div>
+              <PrfSpinner />
             </div>
           )
           if (!career && !rbCareer) return null
@@ -615,7 +616,7 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
         {legendCareerLoad && (
           <div className={`prf-card prf-card-legend ${show ? 'prf-card-in' : ''}`} style={{ animationDelay: '0.4s' }}>
             <div className="prf-card-hd"><span className="prf-card-title prf-card-title-legend">★ All-Time Career</span></div>
-            <div className="prf-loading-msg">Loading...</div>
+            <PrfSpinner />
           </div>
         )}
         {!legendCareerLoad && legendCareer && (

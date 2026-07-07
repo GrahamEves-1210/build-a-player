@@ -211,7 +211,7 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
             {/* How to Play — accordion */}
             <button
               className="wm-row wm-row-accordion"
-              onClick={() => setHtpOpen(o => !o)}
+              onClick={() => { setHtpOpen(o => !o); setInstallOpen(false); setPlusWmOpen(false) }}
             >
               <span className="wm-icon"><IconHelp /></span>
               <span className="wm-label">How to Play</span>
@@ -237,7 +237,7 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
               <>
                 <button
                   className="wm-row wm-row-accordion"
-                  onClick={() => setInstallOpen(o => !o)}
+                  onClick={() => { setInstallOpen(o => !o); setHtpOpen(false); setPlusWmOpen(false) }}
                 >
                   <span className="wm-icon"><IconDownload /></span>
                   <span className="wm-label">Install App</span>
@@ -363,7 +363,7 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
                 <div className="wm-divider" />
                 <button
                   className="wm-row wm-row-accordion"
-                  onClick={() => setPlusWmOpen(o => !o)}
+                  onClick={() => { setPlusWmOpen(o => !o); setHtpOpen(false); setInstallOpen(false) }}
                 >
                   <span className="wm-icon wm-plus-icon">✦</span>
                   <span className="wm-label wm-plus-label">Build-A-Player Plus</span>

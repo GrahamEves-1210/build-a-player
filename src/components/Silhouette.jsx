@@ -216,7 +216,7 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
       dotY = (dotY - 50) * RB_FIGURE_SCALE + 50
     }
     const cardY = isMobile
-      ? ((zone.cy - 0.5) * 0.85 + 0.5) * 100
+      ? ((zone.cy - 0.5) * 0.92 + 0.5) * 100
       : zone.cy * 100
     const lineX = zone.side === 'left'
       ? (cardEdgePx / W) * 100
