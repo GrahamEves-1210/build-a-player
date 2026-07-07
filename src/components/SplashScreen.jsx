@@ -114,8 +114,8 @@ export default function SplashScreen({ onStart }) {
           </button>
 
           <button
-            className={`splash-mode-alltime${position === 'rb' ? ' splash-mode-alltime--soon' : ''}`}
-            onClick={() => { if (position === 'rb') return; localStorage.setItem('lastPosition', position); onStart('all-time', position) }}
+            className="splash-mode-alltime"
+            onClick={() => { localStorage.setItem('lastPosition', position); onStart('all-time', position) }}
           >
             <span className="smode-new-badge">NEW</span>
             <div className="smode-title smode-title--alltime">All-Time</div>
@@ -126,9 +126,6 @@ export default function SplashScreen({ onStart }) {
                 <path d="M5 12h14M12 5l7 7-7 7"/>
               </svg>
             </div>
-            {position === 'rb' && (
-              <div className="smode-coming-soon">Coming Soon</div>
-            )}
           </button>
         </div>
 

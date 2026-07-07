@@ -17,9 +17,11 @@ import { TYPES, LITE_TYPES, QBS } from './data/qbs'
 import { RBS, RB_TYPES, RB_LITE_TYPES } from './data/rbs'
 import { ALLTIME_RATINGS } from './data/nfl-teams'
 import { LEGENDS, LEGEND_TYPES } from './data/legends'
+import { RB_LEGENDS } from './data/rb-legends'
 import HEADSHOTS from './data/headshots.json'
 import { runSimulation, getArchetype, runRBSimulation, calcOVRRB, getArchetypeRB } from './utils/simulation'
 import { supabase } from './lib/supabase'
+import CustomRatingsModal from './components/CustomRatingsModal'
 
 // Detect shared build at module load time — before any React rendering
 let _sharedData = null
@@ -79,6 +81,16 @@ export default function App() {
   const [savedSpinResult, setSavedSpinResult] = useState(null)
   const [spinPhase, setSpinPhase] = useState('idle')
   const [adsDisabled, setAdsDisabled] = useState(false)
+  const [isSubscribed, setIsSubscribed] = useState(() => {
+    try { return localStorage.getItem('bap_subscribed') === '1' } catch { return false }
+  })
+  const [isCustomMode, setIsCustomMode] = useState(() => {
+    try { return localStorage.getItem('bap_custom_mode') === '1' } catch { return false }
+  })
+  const [customRatings, setCustomRatings] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('bap_custom_ratings') || '{}') } catch { return {} }
+  })
+  const [showCustomModal, setShowCustomModal] = useState(false)
   const [saveToast, setSaveToast] = useState(null)
   const saveToastTimer = useRef(null)
 
@@ -112,26 +124,40 @@ export default function App() {
     const adFreeReturn = new URLSearchParams(window.location.search).get('ad_free') === '1'
     if (adFreeReturn) {
       enableAdFreeMode()
+      setIsSubscribed(true)
+      try { localStorage.setItem('bap_subscribed', '1') } catch {}
       window.history.replaceState({}, '', window.location.pathname)
     }
     supabase.auth.getSession().then(({ data }) => {
       const u = data.session?.user ?? null
       setUser(u)
-      if (!u) return
+      if (!u) {
+        try { localStorage.removeItem('bap_subscribed') } catch {}
+        return
+      }
       if (adFreeReturn) {
         // Poll DB until webhook confirms ads_disabled, up to 10 attempts
         let attempts = 0
         const poll = () => {
-          supabase.from('accounts').select('ads_disabled').eq('id', u.id).single()
+          supabase.from('accounts').select('ads_disabled,subscription_status').eq('id', u.id).single()
             .then(({ data: p }) => {
-              if (p?.ads_disabled) { setAdsDisabled(true); enableAdFreeMode() }
+              if (p?.ads_disabled || p?.subscription_status === 'active') { setAdsDisabled(true); enableAdFreeMode() }
+              if (p?.subscription_status === 'active') { setIsSubscribed(true); try { localStorage.setItem('bap_subscribed', '1') } catch {} }
               else if (++attempts < 10) setTimeout(poll, 2000)
             })
         }
         poll()
       } else {
-        supabase.from('accounts').select('ads_disabled').eq('id', u.id).single()
-          .then(({ data: p }) => { if (p?.ads_disabled) { setAdsDisabled(true); enableAdFreeMode() } })
+        supabase.from('accounts').select('ads_disabled,subscription_status').eq('id', u.id).single()
+          .then(({ data: p }) => {
+            if (p?.ads_disabled || p?.subscription_status === 'active') { setAdsDisabled(true); enableAdFreeMode() }
+            if (p?.subscription_status === 'active') {
+              setIsSubscribed(true)
+              try { localStorage.setItem('bap_subscribed', '1') } catch {}
+            } else {
+              try { localStorage.removeItem('bap_subscribed') } catch {}
+            }
+          })
       }
     })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
@@ -141,8 +167,26 @@ export default function App() {
   }, [])
 
   const isRB        = position === 'rb'
-  const activeTypes = gameMode === 'lite' ? (isRB ? RB_LITE_TYPES : LITE_TYPES) : gameMode === 'all-time' ? LEGEND_TYPES : (isRB ? RB_TYPES : TYPES)
-  const activePool  = gameMode === 'all-time' ? LEGENDS : (isRB ? RBS : QBS)
+  const activeTypes = gameMode === 'lite' ? (isRB ? RB_LITE_TYPES : LITE_TYPES) : (gameMode === 'all-time' && !isRB) ? LEGEND_TYPES : (isRB ? RB_TYPES : TYPES)
+  const activePool  = gameMode === 'all-time' ? (isRB ? RB_LEGENDS : LEGENDS) : (isRB ? RBS : QBS)
+  const isPlus      = isSubscribed
+
+  // Theme must be declared after isPlus
+  useEffect(() => {
+    try {
+      if (!isPlus) { document.documentElement.removeAttribute('data-theme'); return }
+      const t = localStorage.getItem('bap_theme')
+      if (t && t !== 'default') document.documentElement.setAttribute('data-theme', t)
+      else document.documentElement.removeAttribute('data-theme')
+    } catch {}
+  }, [isPlus])
+
+  const displayPool = (isCustomMode && isPlus && customRatings[isRB ? 'rb' : 'qb'])
+    ? activePool.map(p => {
+        const override = customRatings[isRB ? 'rb' : 'qb'][`${p.name}|${p.team}`]
+        return override ? { ...p, attrs: { ...p.attrs, ...override } } : p
+      })
+    : activePool
 
 
 
@@ -235,6 +279,8 @@ export default function App() {
     setSimResult(result)
     if (!user) {
       showSaveToast('no-auth', 'Sign in to save your stats')
+    } else if (isCustomMode) {
+      showSaveToast('custom', 'Custom mode — results not saved')
     } else if (!supabase) {
       console.warn('[build-a-player] sim result not saved — supabase not configured')
     } else {
@@ -297,9 +343,12 @@ export default function App() {
     onProfile: () => setPage('profile'),
     onLeaderboard: () => setPage('leaderboard'),
     onSwitchPosition: (pos) => { localStorage.setItem('lastPosition', pos); handleHome() },
+    onSubscribe: () => { if (user) setPage('profile'); else setShowAuth(true) },
+    onOpenCustomRatings: () => { if (isPlus) setShowCustomModal(true) },
     user,
     gameMode,
     isRB,
+    isPlus,
   }
 
   if (page === 'leaderboard') {
@@ -355,10 +404,60 @@ export default function App() {
           simResult={simResult}
           types={activeTypes}
           isRB={isRB}
+          isPlus={isPlus}
+          currentPool={activePool}
+          isCustomMode={isCustomMode && isPlus}
+          onCustomModeChange={(val) => {
+            const next = val && isPlus
+            setIsCustomMode(next)
+            try { localStorage.setItem('bap_custom_mode', next ? '1' : '0') } catch {}
+          }}
+          onCustomRatingsChange={(ratings) => {
+            setCustomRatings(ratings)
+            try { localStorage.setItem('bap_custom_ratings', JSON.stringify(ratings)) } catch {}
+          }}
+          onThemeChange={(themeId) => {
+            try { localStorage.setItem('bap_theme', themeId) } catch {}
+            if (themeId === 'default') document.documentElement.removeAttribute('data-theme')
+            else document.documentElement.setAttribute('data-theme', themeId)
+          }}
           onBack={() => { setPage('game'); window.scrollTo({ top: 0, behavior: 'instant' }) }}
           onSignOut={() => { setPage('game'); setUser(null); window.scrollTo({ top: 0, behavior: 'instant' }) }}
-          onAdsDisabled={() => { setAdsDisabled(true); enableAdFreeMode() }}
+          onAdsDisabled={() => { setAdsDisabled(true); setIsSubscribed(true); enableAdFreeMode() }}
+          onOpenCustomModal={() => setShowCustomModal(true)}
         />
+        {showCustomModal && isPlus && (
+          <CustomRatingsModal
+            isRB={isRB}
+            gameMode={gameMode}
+            pool={activePool}
+            onClose={() => setShowCustomModal(false)}
+            onSave={(ratings) => {
+              setCustomRatings(ratings)
+              try { localStorage.setItem('bap_custom_ratings', JSON.stringify(ratings)) } catch {}
+            }}
+            build={build}
+            buildTypes={activeTypes}
+            onAddToBuild={(p, playerOverrides, attrType) => {
+              const photo = HEADSHOTS[p.name] ? `/headshots/${HEADSHOTS[p.name]}.jpg` : null
+              const chipData = {
+                type: attrType,
+                val: playerOverrides?.[attrType] ?? p.attrs?.[attrType] ?? 5,
+                qb: p.short || p.name,
+                qbFull: p.name,
+                teamColor: p.color,
+                teamColor2: p.color2,
+                skinColor: p.skin,
+                number: p.number,
+                team: p.team,
+                captain: p.captain ?? false,
+                photo,
+              }
+              setBuild(prev => ({ ...prev, [attrType]: chipData }))
+              setShowCustomModal(false)
+            }}
+          />
+        )}
       </>
     )
   }
@@ -409,7 +508,7 @@ export default function App() {
           onChipTap={handleChipTap}
           types={activeTypes}
           isLite={gameMode === 'lite'}
-          qbPool={activePool}
+          qbPool={displayPool}
           savedResult={savedSpinResult}
           onSaveResult={setSavedSpinResult}
           onPhaseChange={setSpinPhase}
@@ -428,6 +527,9 @@ export default function App() {
           isLite={gameMode === 'lite'}
           onReset={handleReset}
           isRB={isRB}
+          isPlus={isPlus}
+          isCustomMode={isCustomMode}
+          onOpenCustomModal={() => setShowCustomModal(true)}
         />
 
         <div className="right-panel-wrap">
@@ -438,6 +540,9 @@ export default function App() {
             types={activeTypes}
             hasResult={!!simResult}
             isRB={isRB}
+            isPlus={isPlus}
+            isCustomMode={isCustomMode}
+            onOpenCustomModal={() => setShowCustomModal(true)}
           />
         </div>
       </main>
@@ -496,6 +601,40 @@ export default function App() {
           )}
           {saveToast.msg}
         </div>
+      )}
+
+      {showCustomModal && isPlus && (
+        <CustomRatingsModal
+          isRB={isRB}
+          gameMode={gameMode}
+          pool={activePool}
+          onClose={() => setShowCustomModal(false)}
+          onSave={(ratings) => {
+            setCustomRatings(ratings)
+            try { localStorage.setItem('bap_custom_ratings', JSON.stringify(ratings)) } catch {}
+          }}
+          build={build}
+          buildTypes={activeTypes}
+          onAddToBuild={(p, playerOverrides, attrType) => {
+            const photo = HEADSHOTS[p.name] ? `/headshots/${HEADSHOTS[p.name]}.jpg` : null
+            const chipData = {
+              type: attrType,
+              val: playerOverrides?.[attrType] ?? p.attrs?.[attrType] ?? 5,
+              qb: p.short || p.name,
+              qbFull: p.name,
+              teamColor: p.color,
+              teamColor2: p.color2,
+              skinColor: p.skin,
+              number: p.number,
+              team: p.team,
+              captain: p.captain ?? false,
+              photo,
+            }
+            setBuild(prev => ({ ...prev, [attrType]: chipData }))
+            setMobileView('build')
+            setShowCustomModal(false)
+          }}
+        />
       )}
 
     </>

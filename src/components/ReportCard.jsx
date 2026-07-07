@@ -2,6 +2,10 @@ import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { ATTR, TYPES, QB_PHYSICALS } from '../data/qbs'
 import { RB_PHYSICALS } from '../data/rbs'
+import { QB_LEGEND_PHYSICALS } from '../data/legends'
+import { RB_LEGEND_PHYSICALS } from '../data/rb-legends'
+const ALL_QB_PHYS = { ...QB_LEGEND_PHYSICALS, ...QB_PHYSICALS }
+const ALL_RB_PHYS = { ...RB_LEGEND_PHYSICALS, ...RB_PHYSICALS }
 import { calcOVR, calcOVRRB, getArchetype, getArchetypeRB, calcBalance, valToGrade } from '../utils/simulation'
 import { buildShareUrl } from '../utils/shareUrl'
 import QBAvatar from './QBAvatar'
@@ -213,7 +217,7 @@ export function ShareModal({ ovr, arch, build, types, onClose }) {
 
 // ── ReportCard ────────────────────────────────────────────────────────────────
 
-export default function ReportCard({ build, onSimulate, onReset, types = TYPES, hasResult = false, isRB = false }) {
+export default function ReportCard({ build, onSimulate, onReset, types = TYPES, hasResult = false, isRB = false, isPlus = false, isCustomMode = false, onOpenCustomModal }) {
   const filled = types.filter(t => build[t])
   const ovr = isRB ? calcOVRRB(build, types) : calcOVR(build, types)
   const arch = isRB ? getArchetypeRB(ovr, build, types) : getArchetype(ovr, build, types)
@@ -233,12 +237,12 @@ export default function ReportCard({ build, onSimulate, onReset, types = TYPES, 
 
   let heightStr, weightLbs
   if (isRB) {
-    const rbPhys = build['size'] ? RB_PHYSICALS[build['size'].qbFull] : null
+    const rbPhys = build['size'] ? ALL_RB_PHYS[build['size'].qbFull] : null
     heightStr = rbPhys ? fmtHeight(rbPhys.height) : null
     weightLbs = rbPhys ? rbPhys.weight : null
   } else {
-    const bodyPhys = build['size'] ? QB_PHYSICALS[build['size'].qbFull] : null
-    const legsPhys = build['legs'] ? QB_PHYSICALS[build['legs'].qbFull] : null
+    const bodyPhys = build['size'] ? ALL_QB_PHYS[build['size'].qbFull] : null
+    const legsPhys = build['legs'] ? ALL_QB_PHYS[build['legs'].qbFull] : null
     const hwBoth   = bodyPhys && legsPhys
     heightStr = hwBoth ? fmtHeight(Math.round(0.65 * legsPhys.height + 0.35 * bodyPhys.height)) : null
     weightLbs = hwBoth ? Math.round(0.65 * bodyPhys.weight + 0.35 * legsPhys.weight) : null
@@ -284,6 +288,14 @@ export default function ReportCard({ build, onSimulate, onReset, types = TYPES, 
           <button className="share-build-btn" onClick={() => setShowShare(true)}>
             Share Build
           </button>
+        )}
+
+        {isPlus && (
+          <button
+            className={`rc-custom-ratings-btn--mobile${!isCustomMode ? ' rc-custom-ratings-btn--off' : ''}`}
+            onClick={isCustomMode ? onOpenCustomModal : undefined}
+            disabled={!isCustomMode}
+          >Custom Build</button>
         )}
 
         <button

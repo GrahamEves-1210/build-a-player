@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { ATTR, TYPES } from '../data/qbs'
 import { calcOVR, calcOVRRB, getArchetype, getArchetypeRB, valToGrade } from '../utils/simulation'
 import QBAvatar from './QBAvatar'
@@ -52,7 +52,25 @@ function StatBar({ label, value, grade, max, color }) {
   )
 }
 
-export default function ProfilePage({ user, build, simResult, types = TYPES, isRB = false, onBack, onSignOut, onAdsDisabled }) {
+const THEMES = [
+  { id: 'default', label: 'Green',  dots: ['#74C69D','#52B788','#2D6A4F'] },
+  { id: 'blue',    label: 'Blue',   dots: ['#93c5fd','#3b82f6','#1d4ed8'] },
+  { id: 'purple',  label: 'Purple', dots: ['#e9d5ff','#c084fc','#9333ea'] },
+  { id: 'orange',  label: 'Orange', dots: ['#fed7aa','#fb923c','#ea580c'] },
+  { id: 'red',     label: 'Red',    dots: ['#ffbbbb','#f45252','#cc1010'] },
+  { id: 'teal',    label: 'Teal',   dots: ['#a5f3fc','#22d3ee','#0891b2'] },
+  { id: 'gold',    label: 'Gold',   dots: ['#fde68a','#fbbf24','#d97706'] },
+  { id: 'rose',    label: 'Rose',   dots: ['#fbcfe8','#f472b6','#db2777'] },
+]
+
+const PROFILE_ICONS = [
+  { id: 'trophy',   e: '🏆' }, { id: 'star',   e: '⭐' }, { id: 'football', e: '🏈' },
+  { id: 'bolt',     e: '⚡' }, { id: 'crown',  e: '👑' }, { id: 'fire',     e: '🔥' },
+  { id: 'gem',      e: '💎' }, { id: 'rocket', e: '🚀' }, { id: 'muscle',   e: '💪' },
+  { id: 'skull',    e: '💀' }, { id: 'goat',   e: '🐐' },
+]
+
+export default function ProfilePage({ user, build, simResult, types = TYPES, isRB = false, isPlus = false, currentPool = [], isCustomMode = false, onCustomModeChange, onCustomRatingsChange, onThemeChange, onBack, onSignOut, onAdsDisabled, onOpenCustomModal }) {
   const [show, setShow]           = useState(false)
   const [career, setCareer]       = useState(null)
   const [careerLoad, setCareerLoad] = useState(true)
@@ -62,7 +80,23 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
   const [legendCareerLoad, setLegendCareerLoad] = useState(true)
   const [careerMode, setCareerMode] = useState(isRB ? 'rb' : 'qb')
   const [adsDisabled, setAdsDisabled] = useState(false)
+  const [adsLifetime, setAdsLifetime] = useState(false)
   const [adFreeLoading, setAdFreeLoading] = useState(false)
+  const [activeTheme, setActiveTheme] = useState(() => {
+    try { return localStorage.getItem('bap_theme') || 'default' } catch { return 'default' }
+  })
+  const [profileIcon, setProfileIcon] = useState(() => {
+    try { return localStorage.getItem('bap_profile_icon') || null } catch { return null }
+  })
+  const [plusOpen, setPlusOpen] = useState(false)
+  const plusRef = useRef(null)
+
+  useEffect(() => {
+    if (!plusOpen) return
+    const close = (e) => { if (plusRef.current && !plusRef.current.contains(e.target)) setPlusOpen(false) }
+    document.addEventListener('mousedown', close)
+    return () => document.removeEventListener('mousedown', close)
+  }, [plusOpen])
 
   useEffect(() => { const t = setTimeout(() => setShow(true), 120); return () => clearTimeout(t) }, [])
 
@@ -70,9 +104,10 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
 
   useEffect(() => {
     if (!supabase || !user) return
-    supabase.from('accounts').select('ads_disabled,classic_mvps,alltime_mvps,classic_opoys,alltime_opoys').eq('id', user.id).single()
+    supabase.from('accounts').select('ads_disabled,subscription_status,classic_mvps,alltime_mvps,classic_opoys,alltime_opoys').eq('id', user.id).single()
       .then(({ data }) => {
-        if (data?.ads_disabled) setAdsDisabled(true)
+        if (data?.ads_disabled) { setAdsDisabled(true); setAdsLifetime(true) }
+        else if (data?.subscription_status === 'active') setAdsDisabled(true)
         setMvpCounts({
           classic:     data?.classic_mvps  ?? 0,
           alltime:     data?.alltime_mvps  ?? 0,
@@ -92,11 +127,23 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
     }
   }, [])
 
+  const handleManageSubscription = async () => {
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/create-portal`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id }),
+      })
+      const { url } = await res.json()
+      if (url) window.location.href = url
+    } catch {}
+  }
+
   const handleAdFree = async () => {
     if (adFreeLoading || adsDisabled || !user) return
     setAdFreeLoading(true)
     try {
-      const res = await fetch('/api/create-checkout', {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/create-checkout`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user.id, email: user.email }),
@@ -223,18 +270,166 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
         {/* ── Top nav ── */}
         <div className="prf-top-nav">
           <button className="prf-top-back" onClick={onBack}>← Back to Build</button>
+          <div className="prf-plus-wrap" ref={plusRef}>
+            <button
+              className={`prf-top-adfree${isPlus ? ' prf-top-adfree--on' : ''}`}
+              onClick={isPlus ? undefined : () => setPlusOpen(o => !o)}
+              style={isPlus ? { cursor: 'default' } : undefined}
+            >
+              {isPlus ? '✦ PLUS Active' : '✦ Build-A-Player Plus'}
+            </button>
+            {!isPlus && plusOpen && (
+              <div className="prf-plus-dropdown">
+                <div className="wm-plus-body">
+                  {[
+                    { icon: '🚫', label: 'No ads' },
+                    { icon: '⚙️', label: 'Customize player ratings' },
+                    { icon: '➕', label: 'Manually add players to your build' },
+                    { icon: '🎨', label: 'Customize color themes' },
+                    { icon: '👤', label: 'Customize profile icons' },
+                    { icon: '⭐', label: 'PLUS badge on leaderboard' },
+                  ].map(p => (
+                    <div key={p.label} className="wm-plus-perk">
+                      <span className="wm-plus-perk-icon">{p.icon}</span>
+                      <span>{p.label}</span>
+                    </div>
+                  ))}
+                  {!isPlus ? (
+                    <button
+                      className="plus-subscribe-btn wm-plus-subscribe"
+                      disabled={adFreeLoading}
+                      onClick={() => { setPlusOpen(false); handleAdFree() }}
+                    >
+                      {adFreeLoading ? 'Redirecting…' : 'Subscribe — $4.99/mo'}
+                    </button>
+                  ) : (
+                    <button
+                      className="wm-plus-edit-btn"
+                      onClick={() => { setPlusOpen(false); onOpenCustomModal?.() }}
+                    >
+                      <span>⚙️</span>
+                      <span>Edit Custom Ratings</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* ── Hero header ── */}
         <div className={`prf-hero ${show ? 'prf-hero-in' : ''}`}>
           <div className="prf-avatar-wrap">
-            <div className="prf-avatar">{initials}</div>
+            <div className="prf-avatar">
+              {(isPlus && profileIcon)
+                ? <span className="prf-avatar-emoji">{PROFILE_ICONS.find(i => i.id === profileIcon)?.e ?? initials}</span>
+                : initials}
+            </div>
             <div className="prf-avatar-ring" />
           </div>
           <div className="prf-identity">
             <div className="prf-name">{displayName}</div>
             {since && <div className="prf-since">Joined {since}</div>}
           </div>
+        </div>
+
+        {/* ── Build-A-Player Plus ── */}
+        <div className={`prf-card ${show ? 'prf-card-in' : ''}`} style={{ animationDelay: '0.1s' }}>
+          <div className="prf-card-hd">
+            <span className="prf-card-title">Build-A-Player Plus</span>
+            {isPlus
+              ? <span className="plus-status-badge plus-status-badge--on">Active</span>
+              : <span className="plus-status-badge">$4.99/mo</span>
+            }
+          </div>
+
+          {isPlus ? (
+            <div className="plus-content">
+
+              <div className="plus-adfree-row">
+                <span className="plus-adfree-check">✓</span>
+                <span className="plus-adfree-label">Ad-Free</span>
+              </div>
+
+              <div className="plus-section">
+                <span className="plus-section-label">Color Theme</span>
+                <div className="plus-theme-row">
+                  {THEMES.map(t => (
+                    <button
+                      key={t.id}
+                      className={`plus-theme-swatch${activeTheme === t.id ? ' plus-theme-swatch--on' : ''}`}
+                      onClick={() => {
+                        setActiveTheme(t.id)
+                        try { localStorage.setItem('bap_theme', t.id) } catch {}
+                        onThemeChange?.(t.id)
+                      }}
+                    >
+                      <div
+                        className="plus-theme-bar"
+                        style={{ background: `linear-gradient(135deg, ${t.dots[0]}, ${t.dots[2]})` }}
+                      />
+                      <span className="plus-theme-name">{t.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="plus-section">
+                <span className="plus-section-label">Profile Icon</span>
+                <div className="plus-icon-grid">
+                  <button
+                    className={`plus-icon-btn${!profileIcon ? ' plus-icon-btn--on' : ''}`}
+                    onClick={() => { setProfileIcon(null); try { localStorage.removeItem('bap_profile_icon') } catch {} }}
+                  >
+                    <span className="plus-icon-initials">{initials}</span>
+                  </button>
+                  {PROFILE_ICONS.map(icon => (
+                    <button
+                      key={icon.id}
+                      className={`plus-icon-btn${profileIcon === icon.id ? ' plus-icon-btn--on' : ''}`}
+                      onClick={() => { setProfileIcon(icon.id); try { localStorage.setItem('bap_profile_icon', icon.id) } catch {} }}
+                    >
+                      {icon.e}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="plus-section plus-section--last">
+                <div className="plus-ratings-hd">
+                  <span className="plus-section-label">Custom Ratings</span>
+                  <label className="plus-toggle">
+                    <input
+                      type="checkbox"
+                      checked={isCustomMode}
+                      onChange={e => onCustomModeChange?.(e.target.checked)}
+                    />
+                    <span className="plus-toggle-track" />
+                  </label>
+                </div>
+                <span className="plus-ratings-warn" style={{ visibility: isCustomMode ? 'visible' : 'hidden' }}>Builds won't save</span>
+                <button
+                  className={`plus-edit-ratings-btn${!isCustomMode ? ' plus-edit-ratings-btn--off' : ''}`}
+                  onClick={isCustomMode ? () => onOpenCustomModal?.() : undefined}
+                  disabled={!isCustomMode}
+                >
+                  Edit ratings
+                </button>
+              </div>
+
+              <button className="plus-manage-btn" onClick={handleManageSubscription}>
+                Manage Subscription
+              </button>
+
+            </div>
+          ) : (
+            <div className="plus-gate">
+              <p className="plus-gate-perks">No ads · Custom themes · Custom icons · Custom ratings</p>
+              <button className="plus-subscribe-btn" onClick={handleAdFree} disabled={adFreeLoading}>
+                {adFreeLoading ? 'Redirecting…' : 'Subscribe — $4.99/mo'}
+              </button>
+            </div>
+          )}
         </div>
 
         {/* ── Current build ── */}

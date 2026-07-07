@@ -21,7 +21,7 @@ export const RB_CATEGORIES = [
 const _RBS = [
   // ARI
   { name: 'Jeremiyah Love',         short: 'Love',         team: 'ARI', teamName: 'Arizona Cardinals', skin: '#5e3c22', height: 73, weight: 210, starter: true,  captain: true,  number: 4,  attrs: { speed: 10, burst: 9, strength: 6, size: 6, balance: 7, hands: 7, vision: 6, elusiveness: 8,  carrying: 7 } },
-  { name: 'Tyler Allgeier',         short: 'Allgeier',     team: 'ARI', teamName: 'Arizona Cardinals', skin: '#b07848', height: 71, weight: 222, starter: false, number: 22, attrs: { speed: 2, burst: 4, strength: 8, size: 7, balance: 8, hands: 3, vision: 6, elusiveness: 4,  carrying: 6 } },
+  { name: 'Tyler Allgeier',         short: 'Allgeier',     team: 'ARI', teamName: 'Arizona Cardinals', skin: '#b07848', height: 71, weight: 222, starter: false, number: 22, attrs: { speed: 2, burst: 4, strength: 8, size: 7, balance: 8, hands: 3, vision: 6, elusiveness: 4,  carrying: 11 } },
   { name: 'James Conner',           short: 'Conner',       team: 'ARI', teamName: 'Arizona Cardinals', skin: '#5e3c22', height: 73, weight: 233, starter: false, number: 6,  attrs: { speed: 4, burst: 5, strength: 9, size: 9, balance: 8, hands: 6, vision: 7, elusiveness: 4,  carrying: 7 } },
   { name: 'Trey Benson',            short: 'Benson',       team: 'ARI', teamName: 'Arizona Cardinals', skin: '#5e3c22', height: 72, weight: 216, starter: false, number: 33, attrs: { speed: 8, burst: 6, strength: 6, size: 6, balance: 3, hands: 4, vision: 2, elusiveness: 4,  carrying: 5 } },
   // ATL

@@ -1,6 +1,10 @@
 import { useState, useRef, useLayoutEffect, useEffect, useCallback } from 'react'
 import { ATTR, TYPES, CATEGORIES, QB_PHYSICALS } from '../data/qbs'
 import { RB_CATEGORIES, RB_PHYSICALS } from '../data/rbs'
+import { QB_LEGEND_PHYSICALS } from '../data/legends'
+import { RB_LEGEND_PHYSICALS } from '../data/rb-legends'
+const ALL_QB_PHYS = { ...QB_LEGEND_PHYSICALS, ...QB_PHYSICALS }
+const ALL_RB_PHYS = { ...RB_LEGEND_PHYSICALS, ...RB_PHYSICALS }
 import QBAvatar from './QBAvatar'
 
 function fmtHeight(in_) { return `${Math.floor(in_ / 12)}'${in_ % 12}"` }
@@ -109,12 +113,12 @@ function CZCard({ zone, cardY, build, activeDrag, hidden, invisible, isMobile })
 function HWTracker({ build, isRB = false }) {
   let ht, wt
   if (isRB) {
-    const rbPhys = build['size'] ? RB_PHYSICALS[build['size'].qbFull] : null
+    const rbPhys = build['size'] ? ALL_RB_PHYS[build['size'].qbFull] : null
     ht = rbPhys ? fmtHeight(rbPhys.height) : null
     wt = rbPhys ? rbPhys.weight : null
   } else {
-    const bodyPhys = build['size'] ? QB_PHYSICALS[build['size'].qbFull] : null
-    const legsPhys = build['legs'] ? QB_PHYSICALS[build['legs'].qbFull] : null
+    const bodyPhys = build['size'] ? ALL_QB_PHYS[build['size'].qbFull] : null
+    const legsPhys = build['legs'] ? ALL_QB_PHYS[build['legs'].qbFull] : null
     const both = bodyPhys && legsPhys
     ht = both ? fmtHeight(Math.round(0.65 * legsPhys.height + 0.35 * bodyPhys.height)) : null
     wt = both ? Math.round(0.65 * bodyPhys.weight + 0.35 * legsPhys.weight) : null
@@ -138,7 +142,7 @@ function HWTracker({ build, isRB = false }) {
 
 const MOBILE_CARD_W = 22   // card CSS width (86px) minus card offset (64px each side)
 
-export default function Silhouette({ build, activeDrag, onDrop, activeCategory, onCategoryChange, types = TYPES, isLite = false, onReset, isRB = false }) {
+export default function Silhouette({ build, activeDrag, onDrop, activeCategory, onCategoryChange, types = TYPES, isLite = false, onReset, isRB = false, isPlus = false, isCustomMode = false, onOpenCustomModal }) {
   const figW   = isRB ? RB_FIG_W : FIG_W
   const figH   = isRB ? RB_FIG_H : FIG_H
   const zones  = isRB ? RB_ZONES : ZONES
@@ -281,6 +285,13 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
         {onReset && (
           <button className="sil-reset-btn" onClick={onReset}>Reset Build</button>
         )}
+        {isPlus && (
+          <button
+            className={`sil-custom-ratings-btn${!isCustomMode ? ' sil-custom-ratings-btn--off' : ''}`}
+            onClick={isCustomMode ? onOpenCustomModal : undefined}
+            disabled={!isCustomMode}
+          >Custom Build</button>
+        )}
 
         {/* Dots + cards */}
         <div className="cz-layer" style={{ zIndex: 10 }}>
@@ -312,6 +323,7 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
           })}
         </div>
       </div>
+
 
     </section>
   )

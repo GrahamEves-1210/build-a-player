@@ -32,10 +32,30 @@ export default async function handler(req, res) {
     const session = event.data.object
     const userId = session.metadata?.userId
     if (userId) {
+      if (session.mode === 'subscription') {
+        const { error } = await supabase
+          .from('accounts')
+          .upsert({ id: userId, subscription_status: 'active', subscription_id: session.subscription, is_plus: true }, { onConflict: 'id' })
+        if (error) console.error('[webhook] subscription upsert failed:', error)
+      } else {
+        // Legacy one-time purchase — keep ads_disabled for existing buyers
+        const { error } = await supabase
+          .from('accounts')
+          .upsert({ id: userId, ads_disabled: true }, { onConflict: 'id' })
+        if (error) console.error('[webhook] ads_disabled upsert failed:', error)
+      }
+    }
+  }
+
+  if (event.type === 'customer.subscription.deleted') {
+    const sub = event.data.object
+    const userId = sub.metadata?.userId
+    if (userId) {
       const { error } = await supabase
         .from('accounts')
-        .upsert({ id: userId, ads_disabled: true }, { onConflict: 'id' })
-      if (error) console.error('[webhook] supabase upsert failed:', error)
+        .update({ subscription_status: null, subscription_id: null, is_plus: false })
+        .eq('id', userId)
+      if (error) console.error('[webhook] subscription cancel failed:', error)
     }
   }
 

@@ -11,18 +11,15 @@ export default async function handler(req, res) {
   const origin = req.headers.origin || 'https://build-a-player.com'
 
   const session = await stripe.checkout.sessions.create({
-    mode: 'payment',
+    mode: 'subscription',
     payment_method_types: ['card'],
     line_items: [{
-      price_data: {
-        currency: 'usd',
-        product_data: { name: 'Build-A-Player · Ad-Free', description: 'Remove all ads forever' },
-        unit_amount: 199,
-      },
+      price: process.env.STRIPE_PRICE_ID,
       quantity: 1,
     }],
     customer_email: email || undefined,
     metadata: { userId },
+    subscription_data: { metadata: { userId } },
     success_url: `${origin}/?ad_free=1`,
     cancel_url: `${origin}/`,
   })

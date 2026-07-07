@@ -144,10 +144,20 @@ function IconChevron({ up }) {
   )
 }
 
-export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, onLeaderboard, onSwitchPosition, user, gameMode, isRB }) {
+const PERKS = [
+  { icon: '🚫', label: 'No ads' },
+  { icon: '⚙️', label: 'Customize player ratings' },
+  { icon: '➕', label: 'Manually add players to your build' },
+  { icon: '🎨', label: 'Customize color themes' },
+  { icon: '👤', label: 'Customize profile icons' },
+  { icon: '⭐', label: 'PLUS badge on leaderboard' },
+]
+
+export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, onLeaderboard, onSwitchPosition, onSubscribe, onOpenCustomRatings, user, gameMode, isRB, isPlus }) {
   const [open,         setOpen]        = useState(false)
   const [htpOpen,      setHtpOpen]     = useState(false)
   const [installOpen,  setInstallOpen] = useState(false)
+  const [plusWmOpen,   setPlusWmOpen]  = useState(false)
   const ref = useRef(null)
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768
   const isStandalone = typeof window !== 'undefined' && window.matchMedia('(display-mode: standalone)').matches
@@ -328,7 +338,7 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
               >
                 <IconX />
               </a>
-              <a className="wm-social-btn wm-social-sep" href="https://discord.gg/jHtnp33Ym" target="_blank" rel="noopener noreferrer" title="Join our Discord">
+              <a className="wm-social-btn wm-social-sep" href="https://discord.gg/zdZBu2VjUD" target="_blank" rel="noopener noreferrer" title="Join our Discord">
                 <IconDiscord />
               </a>
               <a className="wm-social-btn wm-social-sep" href="mailto:buildaplayer@outlook.com" title="Email us">
@@ -347,6 +357,36 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
               <span className="wm-icon"><IconLeaderboard /></span>
               <span className="wm-label">Leaderboard</span>
             </button>
+
+            {!isPlus && (
+              <>
+                <div className="wm-divider" />
+                <button
+                  className="wm-row wm-row-accordion"
+                  onClick={() => setPlusWmOpen(o => !o)}
+                >
+                  <span className="wm-icon wm-plus-icon">✦</span>
+                  <span className="wm-label wm-plus-label">Build-A-Player Plus</span>
+                  <span className="wm-chevron"><IconChevron up={plusWmOpen} /></span>
+                </button>
+                {plusWmOpen && (
+                  <div className="wm-plus-body">
+                    {PERKS.map(p => (
+                      <div key={p.label} className="wm-plus-perk">
+                        <span className="wm-plus-perk-icon">{p.icon}</span>
+                        <span>{p.label}</span>
+                      </div>
+                    ))}
+                    <button
+                      className="plus-subscribe-btn wm-plus-subscribe"
+                      onClick={() => { setOpen(false); onSubscribe?.() }}
+                    >
+                      Subscribe — $4.99/mo
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
 
             {/* Sign In / Account */}
             {user ? (

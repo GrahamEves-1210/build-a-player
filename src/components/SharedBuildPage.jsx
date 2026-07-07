@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
 import { ATTR, QB_PHYSICALS } from '../data/qbs'
+import { QB_LEGEND_PHYSICALS } from '../data/legends'
+const ALL_QB_PHYS = { ...QB_LEGEND_PHYSICALS, ...QB_PHYSICALS }
 import { calcOVR, getArchetype, valToGrade } from '../utils/simulation'
 import QBAvatar from './QBAvatar'
 
@@ -22,8 +24,8 @@ export default function SharedBuildPage({ build, types, onPlay }) {
   const arch   = getArchetype(ovr, build, types)
   const color  = ovrColor(ovr)
 
-  const bodyPhys  = build['size'] ? QB_PHYSICALS[build['size'].qbFull] : null
-  const legsPhys  = build['legs'] ? QB_PHYSICALS[build['legs'].qbFull] : null
+  const bodyPhys  = build['size'] ? ALL_QB_PHYS[build['size'].qbFull] : null
+  const legsPhys  = build['legs'] ? ALL_QB_PHYS[build['legs'].qbFull] : null
   const hwBoth    = bodyPhys && legsPhys
   const heightStr = hwBoth ? fmtHeight(Math.round(0.65 * legsPhys.height + 0.35 * bodyPhys.height)) : null
   const weightLbs = hwBoth ? Math.round(0.65 * bodyPhys.weight + 0.35 * legsPhys.weight) : null

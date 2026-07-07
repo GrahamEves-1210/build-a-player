@@ -115,6 +115,14 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
   const [rbBuildsLoading, setRbBuildsLoading] = useState(false)
   const [rbMetric, setRbMetric]             = useState('rings')
 
+  // ── RB All-Time state ────────────────────────────────────────────────────────
+  const [rbLegendRows, setRbLegendRows]         = useState([])
+  const [rbLegendLoaded, setRbLegendLoaded]     = useState(false)
+  const [rbLegendLoading, setRbLegendLoading]   = useState(false)
+  const [rbLegendMetric, setRbLegendMetric]     = useState('rings')
+
+  const [plusUids, setPlusUids] = useState(new Set())
+
   // ── Awards state ─────────────────────────────────────────────────────────────
   const [awardsRows, setAwardsRows]                   = useState([])
   const [alltimeAwardsRows, setAlltimeAwardsRows]     = useState([])
@@ -164,6 +172,10 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
       })
       setRows(compiled)
       setLoading(false)
+      const uids = compiled.map(r => r.uid)
+      supabase.from('accounts').select('id').in('id', uids)
+        .or('ads_disabled.eq.true,subscription_status.eq.active')
+        .then(({ data: pd }) => { if (pd) setPlusUids(prev => new Set([...prev, ...pd.map(a => a.id)])) })
     })()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -334,6 +346,58 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
     })
   }
 
+  // ── RB all-time ──────────────────────────────────────────────────────────────
+  const loadRBLegends = () => {
+    if (rbLegendLoaded || !supabase) return
+    setRbLegendLoading(true)
+    const PAGE = 1000
+    ;(async () => {
+      const { count } = await supabase.from('simulations')
+        .select('*', { count: 'exact', head: true })
+        .eq('game_mode', 'rb-all-time')
+      const pages = Math.ceil((count ?? PAGE) / PAGE)
+      const mkQ = () => supabase.from('simulations')
+        .select('user_id, username, wins, losses, champion, playoffs, ovr, season_pass_yds, season_tds')
+        .eq('game_mode', 'rb-all-time')
+        .order('id', { ascending: true })
+      const results = await Promise.all(
+        Array.from({ length: pages }, (_, i) =>
+          mkQ().range(i * PAGE, i * PAGE + PAGE - 1).then(r => r.data ?? [])
+        )
+      )
+      const byUid = new Map()
+      for (const row of results.flat()) {
+        if (!row.user_id) continue
+        if (!byUid.has(row.user_id)) {
+          byUid.set(row.user_id, {
+            uid: row.user_id,
+            username: row.username || `Player_${row.user_id.slice(0, 5)}`,
+            wins: 0, losses: 0, rings: 0, playoffApps: 0, count: 0, totalOvr: 0, yds: 0, tds: 0,
+          })
+        }
+        const u = byUid.get(row.user_id)
+        u.wins    += row.wins ?? 0
+        u.losses  += row.losses ?? 0
+        u.yds     += row.season_pass_yds ?? 0
+        u.tds     += row.season_tds ?? 0
+        if (row.champion) u.rings++
+        if (row.playoffs) u.playoffApps++
+        u.count++
+        u.totalOvr += row.ovr ?? 0
+        if (!u.username && row.username) u.username = row.username
+      }
+      const compiled = Array.from(byUid.values()).map(u => ({
+        ...u,
+        avgOvr: u.count > 0 ? +(u.totalOvr / u.count).toFixed(1) : 0,
+        winPct: (u.wins + u.losses) > 0 ? +((u.wins / (u.wins + u.losses)) * 100).toFixed(1) : 0,
+        winPctWeighted: (u.wins + u.losses) > 0 ? (u.wins + 17) / (u.wins + u.losses + 34) * 100 : 0,
+      }))
+      setRbLegendRows(compiled)
+      setRbLegendLoaded(true)
+      setRbLegendLoading(false)
+    })()
+  }
+
   // ── Awards leaderboard ───────────────────────────────────────────────────────
   const loadAwards = () => {
     const modeKey = isRB ? 'rb' : 'qb'
@@ -348,13 +412,13 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
       .gt(classicCol, 0)
       .order(classicCol, { ascending: false })
       .limit(50)
-    const alltimeQ = isRB ? null : supabase
+    const alltimeQ = supabase
       .from('accounts')
       .select(`id, username, ${alltimeCol}`)
       .gt(alltimeCol, 0)
       .order(alltimeCol, { ascending: false })
       .limit(50)
-    Promise.all([classicQ, alltimeQ ?? Promise.resolve({ data: [], error: null })]).then(([classicRes, alltimeRes]) => {
+    Promise.all([classicQ, alltimeQ]).then(([classicRes, alltimeRes]) => {
       if (classicRes.error) { console.error('[awards] classic query error:', classicRes.error); setAwardsLoading(false); return }
       setAwardsRows((classicRes.data ?? []).map(r => toRow(r, classicCol)))
       if (alltimeRes.error) { console.error('[awards] alltime query error:', alltimeRes.error) }
@@ -399,6 +463,12 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
   const rbBuildsList  = buildsTab === 'best' ? rbBestBuilds : rbWorstBuilds
   const rbBuildSlots  = Array.from({ length: buildsTab === 'best' ? 200 : 20 }, (_, i) => rbBuildsList[i] ?? null)
 
+  const filteredRBLegendRows = rbLegendMetric === 'avgOvr' || rbLegendMetric === 'winPct'
+    ? rbLegendRows.filter(r => r.count >= 10)
+    : rbLegendRows
+  const sortedRBLegend   = [...filteredRBLegendRows].sort((a, b) => (b[rbLegendMetric] - a[rbLegendMetric]) || (b.wins - a.wins))
+  const rbLegendSlots    = Array.from({ length: 20 }, (_, i) => sortedRBLegend[i] ?? null)
+
   // ── Render ───────────────────────────────────────────────────────────────────
   return (
     <div className="lb-page">
@@ -429,6 +499,14 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
             <button
               className={`lb-main-seg-btn lb-main-seg-btn-legends ${view === 'legends' ? 'lb-main-seg-active-gold' : ''}`}
               onClick={() => { setView('legends'); loadLegends() }}
+            >
+              All-Time
+            </button>
+          )}
+          {isRB && (
+            <button
+              className={`lb-main-seg-btn lb-main-seg-btn-legends ${view === 'rb-legends' ? 'lb-main-seg-active-gold' : ''}`}
+              onClick={() => { setView('rb-legends'); loadRBLegends() }}
             >
               All-Time
             </button>
@@ -480,6 +558,7 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
                     <div className="lb-row-info">
                       <div className="lb-row-name">
                         {row.username}
+                        {plusUids.has(row.uid) && <span className="lb-plus-badge">+</span>}
                         {currentUser && row.uid === currentUser.id && <span className="lb-you">you</span>}
                       </div>
                       {(() => { const c = (isRB ? rbRows : rows).find(r => r.uid === row.uid); return c ? <div className="lb-row-sub">{c.wins}W · {c.losses}L · {c.rings} ring{c.rings !== 1 ? 's' : ''} · {c.count} season{c.count !== 1 ? 's' : ''}</div> : null })()}
@@ -504,6 +583,7 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
                       <div className="lb-row-info">
                         <div className="lb-row-name">
                           {row.username}
+                          {plusUids.has(row.uid) && <span className="lb-plus-badge">+</span>}
                           {currentUser && row.uid === currentUser.id && <span className="lb-you">you</span>}
                         </div>
                         <div className="lb-row-sub">
@@ -669,6 +749,7 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
                       <div className="lb-row-info">
                         <div className="lb-row-name">
                           {row.username}
+                          {plusUids.has(row.uid) && <span className="lb-plus-badge">+</span>}
                           {currentUser && row.uid === currentUser.id && <span className="lb-you">you</span>}
                         </div>
                         <div className="lb-row-sub">
@@ -691,6 +772,107 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
           </>
         )}
 
+        {/* ── ALL-TIME RB ──────────────────────────────────────────────────────── */}
+        {isRB && view === 'rb-legends' && (
+          <>
+            <div className="lb-header">
+              <div className="lb-title lb-title-legends">RB All-Time Leaderboard</div>
+              <div className="lb-subtitle">All-Time RB mode · career stats · all players ranked</div>
+              <div className="lb-header-line lb-header-line-rb" />
+            </div>
+
+            <div className="lb-tabs-scroll">
+              {RB_METRICS.map(m => (
+                <button
+                  key={m.key}
+                  className={`lb-tab lb-tab-rb lb-tab-legends ${rbLegendMetric === m.key ? 'lb-tab-active lb-tab-active-rb' : ''}`}
+                  onClick={() => { setRbLegendMetric(m.key); if (m.awards) loadAwards() }}
+                >
+                  {m.label}
+                </button>
+              ))}
+            </div>
+            {['winPct', 'avgOvr'].includes(rbLegendMetric) && (
+              <div className="lb-winpct-note">Min. 10 seasons required</div>
+            )}
+
+            {rbLegendMetric === 'opoys' ? (
+              awardsLoading ? <LBSpinner /> : (
+                <div className="lb-list" key="rb-legend-opoys">
+                  {Array.from({ length: 20 }, (_, i) => alltimeAwardsRows[i] ?? null).map((row, i) =>
+                    row ? (() => {
+                      const career = rbLegendRows.find(r => r.uid === row.uid)
+                      return (
+                        <div
+                          key={row.uid}
+                          className={`lb-row lb-row-rb lb-row-legends ${currentUser && row.uid === currentUser.id ? 'lb-row-me' : ''} ${i < 3 ? `lb-row-top${i + 1}` : ''}`}
+                          style={{ animationDelay: `${i * 35}ms` }}
+                        >
+                          <RankBadge rank={i + 1} />
+                          <div className="lb-row-info">
+                            <div className="lb-row-name">
+                              {row.username}
+                              {currentUser && row.uid === currentUser.id && <span className="lb-you">you</span>}
+                            </div>
+                            {career && (
+                              <div className="lb-row-sub">
+                                {career.wins}W · {career.losses}L · {career.rings} ring{career.rings !== 1 ? 's' : ''} · {career.count} season{career.count !== 1 ? 's' : ''}
+                              </div>
+                            )}
+                          </div>
+                          <div className="lb-row-val">{row.count}</div>
+                        </div>
+                      )
+                    })() : (
+                      <div key={`empty-${i}`} className="lb-row lb-row-empty lb-row-rb lb-row-legends" style={{ animationDelay: `${i * 35}ms` }}>
+                        <div className="lb-rank-badge lb-rank-n">{i + 1}</div>
+                        <div className="lb-row-info"><div className="lb-row-name lb-empty-name">——</div></div>
+                        <div className="lb-row-val lb-empty-val">—</div>
+                      </div>
+                    )
+                  )}
+                </div>
+              )
+            ) : rbLegendLoading ? (
+              <LBSpinner />
+            ) : (
+              <div className="lb-list" key={rbLegendMetric}>
+                {rbLegendSlots.map((row, i) =>
+                  row ? (
+                    <div
+                      key={row.uid}
+                      className={`lb-row lb-row-rb lb-row-legends ${currentUser && row.uid === currentUser.id ? 'lb-row-me' : ''} ${i < 3 ? `lb-row-top${i + 1}` : ''}`}
+                      style={{ animationDelay: `${i * 35}ms` }}
+                    >
+                      <RankBadge rank={i + 1} />
+                      <div className="lb-row-info">
+                        <div className="lb-row-name">
+                          {row.username}
+                          {plusUids.has(row.uid) && <span className="lb-plus-badge">+</span>}
+                          {currentUser && row.uid === currentUser.id && <span className="lb-you">you</span>}
+                        </div>
+                        <div className="lb-row-sub">
+                          {row.wins}W · {row.losses}L · {row.rings} ring{row.rings !== 1 ? 's' : ''} · {row.count} season{row.count !== 1 ? 's' : ''}
+                        </div>
+                      </div>
+                      <div className="lb-row-val">
+                        {RB_METRICS.find(m => m.key === rbLegendMetric)?.fmt(row[rbLegendMetric]) ?? row[rbLegendMetric]}
+                      </div>
+                    </div>
+                  ) : (
+                    <div key={`empty-${i}`} className="lb-row lb-row-empty lb-row-rb" style={{ animationDelay: `${i * 35}ms` }}>
+                      <div className="lb-rank-badge lb-rank-n">{i + 1}</div>
+                      <div className="lb-row-info">
+                        <div className="lb-row-name lb-empty-name">——</div>
+                      </div>
+                      <div className="lb-row-val lb-empty-val">—</div>
+                    </div>
+                  )
+                )}
+              </div>
+            )}
+          </>
+        )}
 
       </div>
     </div>
