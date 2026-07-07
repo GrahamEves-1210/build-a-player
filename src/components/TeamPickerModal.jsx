@@ -133,10 +133,12 @@ function SlotReel({ items, spinning, idle, onStop }) {
   )
 }
 
-export default function TeamPickerModal({ onSelect }) {
-  const [phase, setPhase]   = useState('idle')
-  const [result, setResult] = useState(null)
+export default function TeamPickerModal({ onSelect, isPlus = false }) {
+  const [phase, setPhase]       = useState('idle')
+  const [result, setResult]     = useState(null)
   const [spinCount, setSpinCount] = useState(0)
+  const [mode, setMode]         = useState('spin')
+  const [search, setSearch]     = useState('')
 
   const items = useMemo(() => [...NFL_TEAMS].sort(() => Math.random() - 0.5), [spinCount])
 
@@ -153,45 +155,109 @@ export default function TeamPickerModal({ onSelect }) {
     setTimeout(() => onSelect(team), 1500)
   }, [onSelect])
 
+  const handlePickTeam = (team) => {
+    setResult(team)
+    setTimeout(() => onSelect(team), 800)
+  }
+
+  const filteredTeams = useMemo(() => {
+    if (!search) return NFL_TEAMS
+    const s = search.toLowerCase()
+    return NFL_TEAMS.filter(t =>
+      t.name.toLowerCase().includes(s) || t.short.toLowerCase().includes(s)
+    )
+  }, [search])
+
   const cardStyle = result
     ? { '--tpm-color': result.color, borderColor: result.color + '55', boxShadow: `0 0 32px ${result.color}22, 0 32px 80px rgba(0,0,0,0.55)` }
     : undefined
 
   return (
     <div className="tpm-overlay">
-      <div className="tpm-card" style={cardStyle}>
+      <div className={`tpm-card${mode === 'pick' ? ' tpm-card-pick' : ''}`} style={cardStyle}>
         <div className="tpm-eyebrow">Simulate Season</div>
-        <div className="tpm-heading">Spin Your Team</div>
+        <div className="tpm-heading">{mode === 'pick' ? 'Pick Your Team' : 'Spin Your Team'}</div>
 
-        <div className="reels-wrap tpm-reels">
-          <div className="reel-tri reel-tri-l" />
-          <div className="reels-row">
-            <SlotReel
-              items={items}
-              spinning={phase === 'spinning'}
-              idle={phase === 'idle'}
-              onStop={handleStop}
-            />
-          </div>
-          <div className="reel-tri reel-tri-r" />
-        </div>
-
-        {result && (
-          <div className="tpm-result" style={{ '--tpm-color': result.color }}>
-            <div className="tpm-result-bg" />
-            <img src={result.logo} alt={result.name} className="tpm-result-logo" />
-            <div className="tpm-result-name">{result.name}</div>
-            <div className="tpm-result-abbr">{result.short}</div>
+        {isPlus && (
+          <div className="tpm-mode-tabs">
+            <button
+              className={`tpm-tab${mode === 'spin' ? ' tpm-tab-active' : ''}`}
+              onClick={() => { setMode('spin'); setResult(null); setSearch('') }}
+            >Spin</button>
+            <button
+              className={`tpm-tab${mode === 'pick' ? ' tpm-tab-active' : ''}`}
+              onClick={() => { setMode('pick'); setResult(null); setPhase('idle') }}
+            >Pick</button>
           </div>
         )}
 
-        <button
-          className="spin-btn"
-          onClick={handleSpin}
-          disabled={phase === 'spinning' || phase === 'done'}
-        >
-          SPIN
-        </button>
+        {mode === 'spin' ? (
+          <>
+            <div className="reels-wrap tpm-reels">
+              <div className="reel-tri reel-tri-l" />
+              <div className="reels-row">
+                <SlotReel
+                  items={items}
+                  spinning={phase === 'spinning'}
+                  idle={phase === 'idle'}
+                  onStop={handleStop}
+                />
+              </div>
+              <div className="reel-tri reel-tri-r" />
+            </div>
+
+            {result && (
+              <div className="tpm-result" style={{ '--tpm-color': result.color }}>
+                <div className="tpm-result-bg" />
+                <img src={result.logo} alt={result.name} className="tpm-result-logo" />
+                <div className="tpm-result-name">{result.name}</div>
+                <div className="tpm-result-abbr">{result.short}</div>
+              </div>
+            )}
+
+            <button
+              className="spin-btn"
+              onClick={handleSpin}
+              disabled={phase === 'spinning' || phase === 'done'}
+            >
+              SPIN
+            </button>
+          </>
+        ) : (
+          <div className="tpm-pick-wrap">
+            {result ? (
+              <div className="tpm-result" style={{ '--tpm-color': result.color }}>
+                <div className="tpm-result-bg" />
+                <img src={result.logo} alt={result.name} className="tpm-result-logo" />
+                <div className="tpm-result-name">{result.name}</div>
+                <div className="tpm-result-abbr">{result.short}</div>
+              </div>
+            ) : (
+              <>
+                <input
+                  className="tpm-pick-search"
+                  placeholder="Search teams…"
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  autoComplete="off"
+                />
+                <div className="tpm-team-grid">
+                  {filteredTeams.map(team => (
+                    <button
+                      key={team.short}
+                      className="tpm-team-btn"
+                      style={{ '--t-color': team.color }}
+                      onClick={() => handlePickTeam(team)}
+                    >
+                      <img src={team.logo} alt={team.short} className="tpm-team-logo" />
+                      <span className="tpm-team-abbr">{team.short}</span>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )

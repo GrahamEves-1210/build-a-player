@@ -467,6 +467,31 @@ export default function App() {
               setBuild(prev => ({ ...prev, [attrType]: chipData }))
               setShowCustomModal(false)
             }}
+            onAddAllToBuild={(p, playerOverrides) => {
+              const photo = HEADSHOTS[p.name] ? `/headshots/${HEADSHOTS[p.name]}.jpg` : null
+              setBuild(prev => {
+                const next = { ...prev }
+                activeTypes.forEach(attrType => {
+                  if (!prev[attrType]) {
+                    next[attrType] = {
+                      type: attrType,
+                      val: playerOverrides?.[attrType] ?? p.attrs?.[attrType] ?? 5,
+                      qb: p.short || p.name,
+                      qbFull: p.name,
+                      teamColor: p.color,
+                      teamColor2: p.color2,
+                      skinColor: p.skin,
+                      number: p.number,
+                      team: p.team,
+                      captain: p.captain ?? false,
+                      photo,
+                    }
+                  }
+                })
+                return next
+              })
+              setShowCustomModal(false)
+            }}
           />
         )}
       </>
@@ -597,7 +622,7 @@ export default function App() {
       )}
 
       {showTeamPicker && (
-        <TeamPickerModal onSelect={handleTeamPicked} />
+        <TeamPickerModal onSelect={handleTeamPicked} isPlus={isCustomMode} />
       )}
 
       {saveToast && (
@@ -642,6 +667,32 @@ export default function App() {
               photo,
             }
             setBuild(prev => ({ ...prev, [attrType]: chipData }))
+            setMobileView('build')
+            setShowCustomModal(false)
+          }}
+          onAddAllToBuild={(p, playerOverrides) => {
+            const photo = HEADSHOTS[p.name] ? `/headshots/${HEADSHOTS[p.name]}.jpg` : null
+            setBuild(prev => {
+              const next = { ...prev }
+              activeTypes.forEach(attrType => {
+                if (!prev[attrType]) {
+                  next[attrType] = {
+                    type: attrType,
+                    val: playerOverrides?.[attrType] ?? p.attrs?.[attrType] ?? 5,
+                    qb: p.short || p.name,
+                    qbFull: p.name,
+                    teamColor: p.color,
+                    teamColor2: p.color2,
+                    skinColor: p.skin,
+                    number: p.number,
+                    team: p.team,
+                    captain: p.captain ?? false,
+                    photo,
+                  }
+                }
+              })
+              return next
+            })
             setMobileView('build')
             setShowCustomModal(false)
           }}

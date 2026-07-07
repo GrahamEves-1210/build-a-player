@@ -23,7 +23,7 @@ const RB_ATTR = {
   carrying:    { label: 'Carrying' },
 }
 
-export default function CustomRatingsModal({ isRB, gameMode, pool, build = {}, buildTypes: _buildTypesProp, onClose, onSave, onAddToBuild }) {
+export default function CustomRatingsModal({ isRB, gameMode, pool, build = {}, buildTypes: _buildTypesProp, onClose, onSave, onAddToBuild, onAddAllToBuild }) {
   const modeKey = `${isRB ? 'rb' : 'qb'}${gameMode === 'all-time' ? '_legends' : ''}`
   const attrMeta = isRB ? RB_ATTR : ATTR
   const buildTypes = (_buildTypesProp && _buildTypesProp.length > 0)
@@ -158,7 +158,7 @@ export default function CustomRatingsModal({ isRB, gameMode, pool, build = {}, b
                         </button>
                       )}
                       <button className="cr-add-build-btn" onClick={() => setSlotPickerPlayer(slotPickerPlayer?.name === p.name ? null : p)}>
-                        Add player to build
+                        Add to build
                       </button>
                     </div>
                   </div>
@@ -185,6 +185,12 @@ export default function CustomRatingsModal({ isRB, gameMode, pool, build = {}, b
                     {attrMeta[attr]?.label || attrMeta[attr]?.shortLabel || attr}
                   </button>
                 ))}
+              </div>
+              <div className="cr-slot-actions">
+                <button className="cr-add-all-btn" onClick={() => {
+                  const k = `${slotPickerPlayer.name}|${slotPickerPlayer.team}`
+                  onAddAllToBuild?.(slotPickerPlayer, overrides[k])
+                }}>Add All</button>
                 <button className="cr-slot-cancel" onClick={() => setSlotPickerPlayer(null)}>Cancel</button>
               </div>
             </>

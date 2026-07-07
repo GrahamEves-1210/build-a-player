@@ -6945,6 +6945,57 @@ html.is-touch .bd-card-main:hover         { background: transparent !important; 
   position: relative;
 }
 
+/* ── Team picker: pick mode ──────────────────────────────────────────────────── */
+.tpm-card-pick {
+  width: min(92vw, 400px);
+  gap: 14px;
+}
+.tpm-mode-tabs {
+  display: flex; gap: 4px; width: 100%;
+  background: rgba(255,255,255,0.04); border-radius: 10px; padding: 3px;
+}
+.tpm-tab {
+  flex: 1; padding: 7px; border-radius: 8px; font-size: 12px; font-weight: 700;
+  cursor: pointer; font-family: var(--font); border: none;
+  background: none; color: rgba(255,255,255,0.4);
+  transition: background 0.15s, color 0.15s;
+}
+.tpm-tab-active {
+  background: rgba(255,255,255,0.1); color: var(--text);
+}
+.tpm-pick-wrap {
+  width: 100%; display: flex; flex-direction: column; gap: 10px;
+}
+.tpm-pick-search {
+  width: 100%; padding: 9px 12px; border-radius: 8px; font-size: 16px;
+  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+  color: var(--text); font-family: var(--font); outline: none; box-sizing: border-box;
+}
+.tpm-pick-search:focus { border-color: rgba(255,255,255,0.22); }
+.tpm-pick-search::placeholder { color: rgba(255,255,255,0.3); }
+.tpm-team-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;
+  max-height: 46vh; overflow-y: auto;
+}
+.tpm-team-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 8px 4px; border-radius: 8px;
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07);
+  cursor: pointer; transition: background 0.1s, border-color 0.1s;
+}
+.tpm-team-btn:hover {
+  background: color-mix(in srgb, var(--t-color) 15%, transparent);
+  border-color: color-mix(in srgb, var(--t-color) 45%, transparent);
+}
+.tpm-team-logo {
+  width: 36px; height: 36px; object-fit: contain;
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,0.5));
+}
+.tpm-team-abbr {
+  font-size: 9px; font-weight: 800; letter-spacing: 0.5px;
+  color: rgba(255,255,255,0.65); font-family: var(--font);
+}
+
 /* â”€â”€ Auth overlay â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .auth-overlay {
   position: fixed;
@@ -8296,15 +8347,22 @@ html.is-mac [id^="pw-oop-bottom_rail"] > * {
   font-size: 13px; font-weight: 800; width: 28px; text-align: right; flex-shrink: 0;
 }
 .cr-quick-btns {
-  display: flex; gap: 6px; margin-top: 8px; align-items: center; flex-wrap: wrap;
+  display: flex; gap: 6px; margin-top: 10px; align-items: center; flex-wrap: wrap;
 }
 .cr-add-build-btn {
-  margin-left: auto; padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 700;
+  margin-left: auto; padding: 8px 14px; border-radius: 6px; font-size: 12px; font-weight: 700;
   cursor: pointer; font-family: var(--font);
   background: linear-gradient(135deg, var(--btn-start) 0%, var(--btn-end) 100%);
-  border: none; color: var(--btn-txt); transition: filter 0.12s;
+  border: none; color: var(--btn-txt); transition: filter 0.12s; white-space: nowrap;
 }
 .cr-add-build-btn:hover { filter: brightness(1.1); }
+.cr-add-all-btn {
+  flex: 1; padding: 10px 14px; border-radius: 6px; font-size: 12px; font-weight: 700;
+  cursor: pointer; font-family: var(--font);
+  background: rgba(245,158,11,0.15); border: 1px solid rgba(245,158,11,0.35);
+  color: #fbbf24; transition: filter 0.12s; white-space: nowrap;
+}
+.cr-add-all-btn:hover { filter: brightness(1.2); }
 .cr-slot-panel {
   flex-shrink: 0;
   border-top: 1px solid var(--border-hi);
@@ -8316,22 +8374,26 @@ html.is-mac [id^="pw-oop-bottom_rail"] > * {
 }
 .cr-slot-panel-hd strong { color: var(--text); font-weight: 700; }
 .cr-slot-picker {
-  display: flex; flex-wrap: wrap; gap: 6px;
-  padding: 6px 14px 14px;
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;
+  width: 100%;
 }
 .cr-slot-btn {
-  padding: 5px 10px; border-radius: 5px; font-size: 10px; font-weight: 700;
+  padding: 10px 8px; border-radius: 6px; font-size: 11px; font-weight: 700;
   cursor: pointer; font-family: var(--font); text-transform: uppercase; letter-spacing: 0.4px;
   background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
   color: rgba(255,255,255,0.7); transition: background 0.1s, border-color 0.1s, color 0.1s;
+  text-align: center;
 }
 .cr-slot-btn:hover {
   background: color-mix(in srgb, var(--btn-start) 15%, transparent);
   border-color: color-mix(in srgb, var(--btn-start) 40%, transparent);
   color: var(--text);
 }
+.cr-slot-actions {
+  display: flex; gap: 6px; width: 100%; margin-top: 2px;
+}
 .cr-quick-btn {
-  padding: 5px 12px; border-radius: 5px; font-size: 11px; font-weight: 700;
+  padding: 8px 14px; border-radius: 6px; font-size: 12px; font-weight: 700;
   cursor: pointer; font-family: var(--font); border: none; transition: filter 0.12s;
 }
 .cr-quick-f {
@@ -8353,14 +8415,14 @@ html.is-mac [id^="pw-oop-bottom_rail"] > * {
 .cr-empty { padding: 24px; text-align: center; font-size: 12px; color: rgba(255,255,255,0.3); }
 .cr-footer {
   display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 14px;
-  border-top: 1px solid var(--border); flex-shrink: 0;
+  border-top: 1px solid var(--border); flex-shrink: 0; align-items: stretch;
 }
 .cr-slot-label {
   width: 100%; font-size: 11px; color: rgba(255,255,255,0.5); margin-bottom: 2px;
 }
 .cr-slot-label strong { color: var(--text); }
 .cr-slot-cancel {
-  padding: 5px 10px; border-radius: 5px; font-size: 10px; font-weight: 700;
+  padding: 10px 16px; border-radius: 6px; font-size: 12px; font-weight: 700;
   cursor: pointer; font-family: var(--font); text-transform: uppercase; letter-spacing: 0.4px;
   background: none; border: 1px solid rgba(255,255,255,0.12);
   color: rgba(255,255,255,0.4); transition: border-color 0.12s, color 0.12s;
