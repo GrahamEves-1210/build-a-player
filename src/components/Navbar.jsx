@@ -145,12 +145,12 @@ function IconChevron({ up }) {
 }
 
 const PERKS = [
-  { icon: '🚫', label: 'No ads' },
-  { icon: '⚙️', label: 'Customize player ratings' },
-  { icon: '➕', label: 'Manually add players to your build' },
-  { icon: '🎨', label: 'Customize color themes' },
-  { icon: '👤', label: 'Customize profile icons' },
-  { icon: '⭐', label: 'PLUS badge on leaderboard' },
+  'No ads',
+  'Custom player ratings',
+  'Manually add players to your build',
+  'Custom color themes',
+  'Custom profile icons',
+  'PLUS badge on leaderboard',
 ]
 
 export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, onLeaderboard, onSwitchPosition, onSubscribe, onOpenCustomRatings, user, gameMode, isRB, isPlus }) {
@@ -365,18 +365,20 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
                   className="wm-row wm-row-accordion"
                   onClick={() => { setPlusWmOpen(o => !o); setHtpOpen(false); setInstallOpen(false) }}
                 >
-                  <span className="wm-icon wm-plus-icon">✦</span>
+                  <span className="wm-plus-icon">✦</span>
                   <span className="wm-label wm-plus-label">Build-A-Player Plus</span>
                   <span className="wm-chevron"><IconChevron up={plusWmOpen} /></span>
                 </button>
                 {plusWmOpen && (
                   <div className="wm-plus-body">
-                    {PERKS.map(p => (
-                      <div key={p.label} className="wm-plus-perk">
-                        <span className="wm-plus-perk-icon">{p.icon}</span>
-                        <span>{p.label}</span>
-                      </div>
-                    ))}
+                    <div className="wm-plus-perks">
+                      {PERKS.map(label => (
+                        <div key={label} className="wm-plus-perk">
+                          <span className="wm-plus-check">✓</span>
+                          <span>{label}</span>
+                        </div>
+                      ))}
+                    </div>
                     <button
                       className="plus-subscribe-btn wm-plus-subscribe"
                       onClick={() => { setOpen(false); onSubscribe?.() }}

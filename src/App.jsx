@@ -343,7 +343,18 @@ export default function App() {
     onProfile: () => setPage('profile'),
     onLeaderboard: () => setPage('leaderboard'),
     onSwitchPosition: (pos) => { localStorage.setItem('lastPosition', pos); handleHome() },
-    onSubscribe: () => { if (user) setPage('profile'); else setShowAuth(true) },
+    onSubscribe: async () => {
+      if (!user) { setShowAuth(true); return }
+      try {
+        const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/create-checkout`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: user.id, email: user.email }),
+        })
+        const { url } = await res.json()
+        if (url) window.location.href = url
+      } catch {}
+    },
     onOpenCustomRatings: () => { if (isPlus) setShowCustomModal(true) },
     user,
     gameMode,

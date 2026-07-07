@@ -293,16 +293,16 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
               <div className="prf-plus-dropdown">
                 <div className="wm-plus-body">
                   {[
-                    { icon: '🚫', label: 'No ads' },
-                    { icon: '⚙️', label: 'Customize player ratings' },
-                    { icon: '➕', label: 'Manually add players to your build' },
-                    { icon: '🎨', label: 'Customize color themes' },
-                    { icon: '👤', label: 'Customize profile icons' },
-                    { icon: '⭐', label: 'PLUS badge on leaderboard' },
-                  ].map(p => (
-                    <div key={p.label} className="wm-plus-perk">
-                      <span className="wm-plus-perk-icon">{p.icon}</span>
-                      <span>{p.label}</span>
+                    'No ads',
+                    'Custom player ratings',
+                    'Manually add players to your build',
+                    'Custom color themes',
+                    'Custom profile icons',
+                    'PLUS badge on leaderboard',
+                  ].map(label => (
+                    <div key={label} className="wm-plus-perk">
+                      <span className="wm-plus-check">✓</span>
+                      <span>{label}</span>
                     </div>
                   ))}
                   {!isPlus ? (
