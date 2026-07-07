@@ -7,9 +7,13 @@ const app = express()
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
 
-const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || 'https://build-a-player.com'
+const ALLOWED_ORIGINS = [
+  'https://build-a-player.com',
+  'https://www.build-a-player.com',
+  ...(process.env.ALLOWED_ORIGIN ? [process.env.ALLOWED_ORIGIN] : []),
+]
 
-app.use(cors({ origin: ALLOWED_ORIGIN }))
+app.use(cors({ origin: (origin, cb) => cb(null, !origin || ALLOWED_ORIGINS.includes(origin)) }))
 
 // Webhook must use raw body — register before express.json()
 app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async (req, res) => {
