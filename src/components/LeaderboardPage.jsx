@@ -123,6 +123,13 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
 
   const [plusUids, setPlusUids] = useState(new Set())
 
+  // ── Daily state ──────────────────────────────────────────────────────────────
+  const [showDaily, setShowDaily]       = useState(false)
+  const [dailyRows, setDailyRows]       = useState([])
+  const [dailyLoaded, setDailyLoaded]   = useState(false)
+  const [dailyLoading, setDailyLoading] = useState(false)
+  const [dailyMetric, setDailyMetric]   = useState('rings')
+
   // ── Awards state ─────────────────────────────────────────────────────────────
   const [awardsRows, setAwardsRows]                   = useState([])
   const [alltimeAwardsRows, setAlltimeAwardsRows]     = useState([])
@@ -428,6 +435,54 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
     })
   }
 
+  const loadDaily = () => {
+    if (dailyLoaded || !supabase) return
+    setDailyLoading(true)
+    const now = new Date()
+    const etDate = now.toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
+    const isDST = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', timeZoneName: 'short' }).format(now).includes('EDT')
+    const todayStartISO = `${etDate}T${isDST ? '04' : '05'}:00:00.000Z`
+    const classicMode = isRB ? 'rb-classic' : 'classic'
+    const awardCol = isRB ? 'classic_opoys' : 'classic_mvps'
+    ;(async () => {
+      const { data } = await supabase
+        .from('simulations')
+        .select('user_id, username, wins, losses, champion, ovr')
+        .gte('created_at', todayStartISO)
+        .eq('game_mode', classicMode)
+        .limit(2000)
+      const byUid = new Map()
+      for (const row of data ?? []) {
+        if (!row.user_id) continue
+        if (!byUid.has(row.user_id)) {
+          byUid.set(row.user_id, {
+            uid: row.user_id,
+            username: row.username || `Player_${row.user_id.slice(0, 5)}`,
+            wins: 0, losses: 0, rings: 0, count: 0, mvps: 0,
+          })
+        }
+        const u = byUid.get(row.user_id)
+        u.wins += row.wins ?? 0
+        u.losses += row.losses ?? 0
+        if (row.champion) u.rings++
+        u.count++
+      }
+      const uids = Array.from(byUid.keys())
+      if (uids.length > 0) {
+        const { data: accs } = await supabase
+          .from('accounts')
+          .select(`id, ${awardCol}`)
+          .in('id', uids)
+        for (const acc of accs ?? []) {
+          if (byUid.has(acc.id)) byUid.get(acc.id).mvps = acc[awardCol] ?? 0
+        }
+      }
+      setDailyRows(Array.from(byUid.values()))
+      setDailyLoaded(true)
+      setDailyLoading(false)
+    })()
+  }
+
   const isAwardsMetric = isRB ? rbMetric === 'opoys' : metric === 'mvps'
 
   // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -474,9 +529,19 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
     <div className="lb-page">
       <div className="lb-col">
 
-        <button className="prf-top-back" onClick={onBack}>← Back to Build</button>
+        <div className="lb-top-nav">
+          <button className="prf-top-back" onClick={showDaily ? () => setShowDaily(false) : onBack}>
+            {showDaily ? '← Back' : '← Back to Build'}
+          </button>
+          {!showDaily && (
+            <button className="lb-daily-nav-btn" onClick={() => { setShowDaily(true); loadDaily() }}>
+              Daily →
+            </button>
+          )}
+        </div>
 
-        {/* Tab bar */}
+        {/* Tab bar — hidden on daily page */}
+        {!showDaily && (
         <div className="lb-main-seg">
           <button
             className={`lb-main-seg-btn ${view === 'profiles' ? 'lb-main-seg-active' : ''}`}
@@ -512,11 +577,80 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
             </button>
           )}
         </div>
+        )}
 
-        <div id="ramp-cntr1-lb" className="ad-cntr1-lb" />
+        {/* ── DAILY PAGE ──────────────────────────────────────────────────────── */}
+        {showDaily && (() => {
+          const awardLabel = isRB ? 'OPOYs' : 'MVPs'
+          const DAILY_METRICS = [
+            { key: 'rings', label: 'Rings' },
+            { key: 'wins',  label: 'Wins' },
+            { key: 'mvps',  label: awardLabel },
+          ]
+          const sorted = [...dailyRows].sort((a, b) => (b[dailyMetric] - a[dailyMetric]) || (b.wins - a.wins))
+          const slots  = Array.from({ length: 20 }, (_, i) => sorted[i] ?? null)
+          return (
+            <>
+              <div className="lb-header">
+                <div className="lb-title lb-title-daily">Daily Leaderboard</div>
+                <div className="lb-subtitle">{isRB ? 'RB classic · resets midnight EST' : 'QB classic · resets midnight EST'}</div>
+                <div className="lb-header-line lb-header-line-daily" />
+              </div>
+              <div className="lb-tabs-scroll">
+                {DAILY_METRICS.map(m => (
+                  <button
+                    key={m.key}
+                    className={`lb-tab lb-tab-daily ${dailyMetric === m.key ? 'lb-tab-active lb-tab-active-daily' : ''}`}
+                    onClick={() => setDailyMetric(m.key)}
+                  >
+                    {m.label}
+                  </button>
+                ))}
+              </div>
+              {dailyLoading ? (
+                <LBSpinner />
+              ) : dailyRows.length === 0 ? (
+                <div className="lb-loading lb-legends-empty">No sims today yet — be the first!</div>
+              ) : (
+                <div className="lb-list" key={dailyMetric}>
+                  {slots.map((row, i) =>
+                    row ? (
+                      <div
+                        key={row.uid}
+                        className={`lb-row lb-row-daily ${currentUser && row.uid === currentUser.id ? 'lb-row-me' : ''} ${i < 3 ? `lb-row-top${i + 1}` : ''}`}
+                        style={{ animationDelay: `${i * 35}ms` }}
+                      >
+                        <RankBadge rank={i + 1} />
+                        <div className="lb-row-info">
+                          <div className="lb-row-name">
+                            {row.username}
+                            {plusUids.has(row.uid) && <span className="lb-plus-badge">+</span>}
+                            {currentUser && row.uid === currentUser.id && <span className="lb-you">you</span>}
+                          </div>
+                          <div className="lb-row-sub">
+                            {row.wins}W · {row.losses}L · {row.rings} ring{row.rings !== 1 ? 's' : ''} · {row.count} sim{row.count !== 1 ? 's' : ''}
+                          </div>
+                        </div>
+                        <div className="lb-row-val">{row[dailyMetric]}</div>
+                      </div>
+                    ) : (
+                      <div key={`empty-${i}`} className="lb-row lb-row-empty lb-row-daily" style={{ animationDelay: `${i * 35}ms` }}>
+                        <div className="lb-rank-badge lb-rank-n">{i + 1}</div>
+                        <div className="lb-row-info"><div className="lb-row-name lb-empty-name">——</div></div>
+                        <div className="lb-row-val lb-empty-val">—</div>
+                      </div>
+                    )
+                  )}
+                </div>
+              )}
+            </>
+          )
+        })()}
+
+        {!showDaily && <div id="ramp-cntr1-lb" className="ad-cntr1-lb" />}
 
         {/* ── PROFILES ────────────────────────────────────────────────────────── */}
-        {view === 'profiles' && (
+        {!showDaily && view === 'profiles' && (
           <>
             <div className="lb-header">
               <div className="lb-title">{isRB ? 'RB Leaderboard' : 'Leaderboard'}</div>
@@ -610,7 +744,7 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
         )}
 
         {/* ── BUILDS ──────────────────────────────────────────────────────────── */}
-        {view === 'builds' && (
+        {!showDaily && view === 'builds' && (
           <>
             <div className="lb-header">
               <div className="lb-title">{isRB ? 'RB Builds' : 'Builds'}</div>
@@ -677,7 +811,7 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
         )}
 
         {/* ── ALL-TIME (QB only) ───────────────────────────────────────────────── */}
-        {!isRB && view === 'legends' && (
+        {!showDaily && !isRB && view === 'legends' && (
           <>
             <div className="lb-header">
               <div className="lb-title lb-title-legends">All-Time Leaderboard</div>
@@ -773,7 +907,7 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
         )}
 
         {/* ── ALL-TIME RB ──────────────────────────────────────────────────────── */}
-        {isRB && view === 'rb-legends' && (
+        {!showDaily && isRB && view === 'rb-legends' && (
           <>
             <div className="lb-header">
               <div className="lb-title lb-title-legends">RB All-Time Leaderboard</div>
@@ -873,6 +1007,7 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
             )}
           </>
         )}
+
 
       </div>
     </div>

@@ -1,7 +1,7 @@
 // Legendary / retired RBs — 3–5 per franchise
 // Attrs: speed, burst, strength, size, balance, elusiveness, vision, hands, carrying (scale 1–11)
 // Calibrated: Jim Brown (strength=11), Barry Sanders (elusiveness=11, vision=11), LaDainian Tomlinson (hands=9)
-// Skin tones: #f0c4a0 white · #b07848 medium mixed · #7a5030 medium brown · #5e3c22 dark brown · #3a2010 very dark
+// Skin tones: #f0c4a0 white Â· #b07848 medium mixed Â· #7a5030 medium brown Â· #5e3c22 dark brown Â· #3a2010 very dark
 
 import { TEAMS } from './qbs'
 
@@ -296,9 +296,9 @@ const _raw = [
 
   // ─── KANSAS CITY CHIEFS ──────────────────────────────────────────────────
   {
-    name: 'Christian Okoye', short: 'Okoye',       team: 'KC',  teamName: 'Kansas City Chiefs',
-    skin: '#3a2010', number: 35, starter: true, captain: true, years: '1987–92',
-    attrs: { speed: 7, burst: 6, strength: 11, size: 11, balance: 8, elusiveness: 4, vision: 7, hands: 5, carrying: 8 }
+    name: 'Jamaal Charles',  short: 'J. Charles',   team: 'KC',  teamName: 'Kansas City Chiefs',
+    skin: '#5e3c22', number: 25, starter: true, captain: true, years: '2008–16',
+    attrs: { speed: 10, burst: 11, strength: 5, size: 5, balance: 8, elusiveness: 10, vision: 10, hands: 8, carrying: 7 }
   },
   {
     name: 'Priest Holmes',   short: 'P. Holmes',   team: 'KC',  teamName: 'Kansas City Chiefs',
@@ -337,7 +337,7 @@ const _raw = [
   {
     name: 'LaDainian Tomlinson', short: 'LT',      team: 'LAC', teamName: 'Los Angeles Chargers',
     skin: '#7a5030', number: 21, starter: true, captain: true, years: '2001–09',
-    attrs: { speed: 9, burst: 10, strength: 7, size: 6, balance: 8, elusiveness: 9, vision: 9, hands: 9, carrying: 8 }
+    attrs: { speed: 9, burst: 11, strength: 7, size: 6, balance: 8, elusiveness: 11, vision: 9, hands: 10, carrying: 8 }
   },
   {
     name: 'Natrone Means',   short: 'Means',       team: 'LAC', teamName: 'Los Angeles Chargers',
@@ -589,6 +589,11 @@ const _raw = [
     name: 'Eddie George',    short: 'E. George',   team: 'TEN', teamName: 'Tennessee Titans',
     skin: '#5e3c22', number: 27, starter: true, captain: true, years: '1996–03',
     attrs: { speed: 7, burst: 7, strength: 9, size: 9, balance: 8, elusiveness: 5, vision: 8, hands: 7, carrying: 8 }
+  },
+  {
+    name: 'Chris Johnson',   short: 'CJ2K',        team: 'TEN', teamName: 'Tennessee Titans',
+    skin: '#3a2010', number: 28, starter: true, captain: true, years: '2008–13',
+    attrs: { speed: 11, burst: 11, strength: 5, size: 4, balance: 7, elusiveness: 9, vision: 8, hands: 7, carrying: 7 }
   },
   {
     name: 'Derrick Henry',   short: 'D. Henry',    team: 'TEN', teamName: 'Tennessee Titans',

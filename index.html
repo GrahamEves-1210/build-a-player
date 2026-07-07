@@ -37,11 +37,13 @@
       window.ramp.que = window.ramp.que || [];
       window.ramp.passiveMode = true;
       window.ramp.settings = window.ramp.settings || {};
-      window.ramp.settings.slots = { video: false, corner_video: false, floating_video: false };
+      window.ramp.settings.slots = { video: false, corner_video: false, floating_video: false, interstitial: false };
       window.ramp.forceUnits = [
         { unit: 'corner_ad_video', force: 'off' },
         { unit: 'floating_video', force: 'off' },
-        { unit: 'video', force: 'off' }
+        { unit: 'video', force: 'off' },
+        { unit: 'interstitial', force: 'off' },
+        { unit: 'corner_video', force: 'off' }
       ];
     </script>
     <!-- Google tag (gtag.js) -->

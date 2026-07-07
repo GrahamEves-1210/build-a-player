@@ -6099,6 +6099,38 @@ html.is-touch .bd-card-main:hover         { background: transparent !important; 
   align-items: center;
   justify-content: space-between;
 }
+.lb-top-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+.lb-daily-nav-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 22px;
+  border-radius: 8px;
+  border: none;
+  background: linear-gradient(135deg, rgba(80,160,255,0.9) 0%, rgba(60,130,220,0.9) 100%);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+  font-family: var(--font);
+  box-shadow: 0 2px 10px rgba(80,160,255,0.35), inset 0 1px 0 rgba(255,255,255,0.18);
+  transition: filter 0.15s var(--ease), box-shadow 0.15s var(--ease), transform 0.12s var(--ease);
+}
+.lb-daily-nav-btn:hover {
+  filter: brightness(1.1);
+  box-shadow: 0 4px 16px rgba(80,160,255,0.5), inset 0 1px 0 rgba(255,255,255,0.22);
+  transform: translateY(-1px);
+}
+.lb-daily-nav-btn:active {
+  transform: scale(0.97);
+  box-shadow: 0 1px 4px rgba(80,160,255,0.3);
+}
 .prf-top-back {
   display: inline-flex;
   align-items: center;
@@ -6112,7 +6144,6 @@ html.is-touch .bd-card-main:hover         { background: transparent !important; 
   font-weight: 800;
   letter-spacing: 0.3px;
   cursor: pointer;
-  align-self: flex-start;
   box-shadow: 0 2px 10px color-mix(in srgb, var(--btn-glow) 60%, transparent), inset 0 1px 0 rgba(255,255,255,0.18);
   transition: filter 0.15s var(--ease), box-shadow 0.15s var(--ease), transform 0.12s var(--ease);
 }
@@ -6840,7 +6871,7 @@ html.is-touch .bd-card-main:hover         { background: transparent !important; 
   .prh-sep { font-size: 28px; }
   .prf-season-grid { grid-template-columns: repeat(2, 1fr); }
   .psg-val { font-size: 15px; }
-  .prf-top-back { padding: 9px 14px; font-size: 12px; }
+  .prf-top-back, .lb-daily-nav-btn { padding: 9px 14px; font-size: 12px; }
   .prf-top-adfree { padding: 9px 12px; font-size: 11px; }
   .prf-plus-dropdown { width: min(230px, calc(100vw - 28px)); }
 }
@@ -7228,16 +7259,17 @@ html.is-touch .bd-card-main:hover         { background: transparent !important; 
 .lb-tabs-scroll {
   display: flex;
   gap: 6px;
+  width: 100%;
   overflow-x: auto;
   padding-bottom: 2px;
   scrollbar-width: none;
   -ms-overflow-style: none;
   touch-action: pan-x;
 }
-.lb-tabs-scroll .lb-tab:last-child { margin-right: 8px; }
 .lb-tabs-scroll::-webkit-scrollbar { display: none; }
 .lb-tab {
-  flex-shrink: 0;
+  flex: 1;
+  min-width: fit-content;
   background: var(--surface);
   border: 1px solid rgba(149,213,178,0.10);
   border-radius: 8px;
@@ -7440,6 +7472,51 @@ html.is-touch .bd-card-main:hover         { background: transparent !important; 
 }
 .lb-row-legends {
   border-color: rgba(245,200,66,0.08);
+}
+
+/* ── Daily leaderboard (sky blue accent) ── */
+.lb-main-seg-btn-daily {
+  color: rgba(100,180,255,0.7);
+}
+.lb-main-seg-active-daily {
+  background: rgba(100,180,255,1);
+  color: #0a1a2a;
+  font-weight: 700;
+}
+.lb-title-daily {
+  color: rgba(100,180,255,1);
+}
+.lb-header-line-daily {
+  background: rgba(100,180,255,0.35);
+}
+.lb-tabs-daily-row {
+  display: flex;
+  gap: 6px;
+  width: 100%;
+}
+.lb-tab-daily-btn {
+  flex: 1;
+  padding: 8px 4px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: var(--font);
+  cursor: pointer;
+  border: 1px solid rgba(100,180,255,0.15);
+  background: var(--surface);
+  color: rgba(100,180,255,0.7);
+  white-space: nowrap;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.lb-tab-active-daily {
+  background: rgba(100,180,255,0.15);
+  color: rgba(100,180,255,1);
+  border-color: rgba(100,180,255,0.3);
+}
+.lb-row-daily {
+  border-color: rgba(100,180,255,0.08);
 }
 
 /* â”€â”€ MVP / OPOY leaderboard (orange accent) â”€â”€ */
@@ -7953,14 +8030,17 @@ html.is-touch .alltime-mode .spin-btn:hover:not(:disabled) {
   }
 }
 
-/* Hide Playwire corner/floating video ads */
+/* Hide Playwire corner/floating/interstitial video ads */
 [id*="corner_video"],
 [id*="floating_video"],
 [id*="corner-video"],
 [class*="corner_video"],
 [class*="floating_video"],
+[id*="interstitial"],
+[class*="interstitial"],
 [id^="pw-oop-video"],
-[id^="pw-oop-corner"] {
+[id^="pw-oop-corner"],
+[id^="pw-oop-interstitial"] {
   display: none !important;
 }
 
