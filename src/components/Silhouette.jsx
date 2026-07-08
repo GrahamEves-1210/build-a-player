@@ -209,7 +209,7 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
       ? MOBILE_CARD_W + (86 / 2) * 0.15
       : CARD_W * 1.075
     let dotX  = (fx + zone.ax * scale) / W * 100
-    let dotY  = (fy + zone.ay * scale) / H * 100
+    let dotY  = (fy + zone.ay * scale) / H * 100 + (!isMobile && zone.type === 'size' ? 30 / H * 100 : 0)
     // Compensate for CSS scale on RB figure — scale dot positions inward from center
     if (isRB) {
       dotX = (dotX - 50) * RB_FIGURE_SCALE + 50

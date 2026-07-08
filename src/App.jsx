@@ -40,7 +40,6 @@ const _saved = (() => {
 function hideVideoAds() {
   const sel = '[id*="corner_video"],[id*="floating_video"],[id*="corner-video"],[class*="corner_video"],[class*="floating_video"],[id^="pw-oop-video"],[id^="pw-oop-corner"],[id^="pw-oop-interstitial"],[id*="interstitial"],[class*="interstitial"],[id*="video_corner"],[id*="vid_corner"],[class*="video_corner"]'
   document.querySelectorAll(sel).forEach(el => el.style.setProperty('display', 'none', 'important'))
-  // Also catch any fixed-position Playwire video/interstitial iframes injected directly
   document.querySelectorAll('div[id^="pw-"]').forEach(el => {
     const id = el.id.toLowerCase()
     if (id.includes('video') || id.includes('corner') || id.includes('interstitial')) el.style.setProperty('display', 'none', 'important')
@@ -75,6 +74,7 @@ export default function App() {
   const [spinResetKey, setSpinResetKey] = useState(0)
   const [gameKey, setGameKey]           = useState(0)
   const [mobileView, setMobileView]     = useState('spin')
+  const [onlineCount, setOnlineCount]   = useState(0)
   const [user, setUser]                 = useState(null)
   const [showAuth, setShowAuth]         = useState(false)
   const [showTeamPicker, setShowTeamPicker] = useState(false)
@@ -164,6 +164,17 @@ export default function App() {
       setUser(session?.user ?? null)
     })
     return () => subscription.unsubscribe()
+  }, [])
+
+  useEffect(() => {
+    if (!supabase) return
+    const ch = supabase.channel('online', { config: { presence: { key: 'u' } } })
+    ch.on('presence', { event: 'sync' }, () => {
+      setOnlineCount(Object.keys(ch.presenceState()).length)
+    }).subscribe(async (status) => {
+      if (status === 'SUBSCRIBED') await ch.track({ t: Date.now() })
+    })
+    return () => supabase.removeChannel(ch)
   }, [])
 
   const isRB        = position === 'rb'
@@ -552,6 +563,7 @@ export default function App() {
           onReset={handleReset}
           adsDisabled={adsDisabled}
           isRB={isRB}
+          onlineCount={onlineCount}
         />
         <Silhouette
           build={build}
