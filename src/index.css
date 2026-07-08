@@ -7248,6 +7248,7 @@ html.is-touch .bd-card-main:hover         { background: transparent !important; 
 .lb-main-seg-btn,
 .lb-main-seg-btn-legends,
 .lb-main-seg-btn-awards,
+.lb-main-seg-btn-daily,
 .lb-row-clickable,
 .lb-expand-wrap,
 .prf-top-back {
@@ -7458,6 +7459,14 @@ html.is-touch .bd-card-main:hover         { background: transparent !important; 
 }
 .lb-main-seg-btn-legends {
   color: rgba(245,200,66,0.65);
+}
+.lb-main-seg-btn-daily {
+  color: rgba(100,180,255,0.65);
+}
+.lb-main-seg-active-daily {
+  background: rgba(100,180,255,1);
+  color: #0a1a2a;
+  font-weight: 700;
 }
 .lb-main-seg-active-gold {
   background: #F5C842;
