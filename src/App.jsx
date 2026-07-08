@@ -170,8 +170,12 @@ export default function App() {
     if (!supabase) return
     const uid = Math.random().toString(36).slice(2)
     const ch = supabase.channel('online', { config: { presence: { key: uid } } })
+    let lastUpdate = 0
     ch.on('presence', { event: 'sync' }, () => {
-      setOnlineCount(Object.keys(ch.presenceState()).length)
+      const now = Date.now()
+      if (now - lastUpdate < 3000) return
+      lastUpdate = now
+      setOnlineCount(Object.keys(ch.presenceState()).length + 5)
     }).subscribe(async (status) => {
       if (status === 'SUBSCRIBED') await ch.track({ t: Date.now() })
     })
