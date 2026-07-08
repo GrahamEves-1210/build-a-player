@@ -639,7 +639,7 @@ export default function App() {
       )}
 
       {showTeamPicker && (
-        <TeamPickerModal onSelect={handleTeamPicked} isPlus={isCustomMode} />
+        <TeamPickerModal onSelect={handleTeamPicked} isPlus={isCustomMode && isPlus} />
       )}
 
       {saveToast && (
