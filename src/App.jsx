@@ -168,7 +168,8 @@ export default function App() {
 
   useEffect(() => {
     if (!supabase) return
-    const ch = supabase.channel('online', { config: { presence: { key: 'u' } } })
+    const uid = Math.random().toString(36).slice(2)
+    const ch = supabase.channel('online', { config: { presence: { key: uid } } })
     ch.on('presence', { event: 'sync' }, () => {
       setOnlineCount(Object.keys(ch.presenceState()).length)
     }).subscribe(async (status) => {
