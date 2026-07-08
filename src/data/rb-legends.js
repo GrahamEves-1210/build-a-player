@@ -103,7 +103,7 @@ const _raw = [
   {
     name: 'Walter Payton',   short: 'Payton',      team: 'CHI', teamName: 'Chicago Bears',
     skin: '#5e3c22', number: 34, starter: true, captain: true, years: '1975–87',
-    attrs: { speed: 9, burst: 9, strength: 9, size: 4, balance: 11, elusiveness: 9, vision: 10, hands: 9, carrying: 10 }
+    attrs: { speed: 9, burst: 9, strength: 9, size: 4, balance: 11, elusiveness: 9, vision: 10, hands: 9, carrying: 9 }
   },
   {
     name: 'Gale Sayers',     short: 'Sayers',      team: 'CHI', teamName: 'Chicago Bears',
@@ -213,7 +213,7 @@ const _raw = [
   {
     name: 'Barry Sanders',   short: 'B. Sanders',  team: 'DET', teamName: 'Detroit Lions',
     skin: '#5e3c22', number: 20, starter: true, captain: true, years: '1989–98',
-    attrs: { speed: 10, burst: 11, strength: 5, size: 3, balance: 11, elusiveness: 11, vision: 11, hands: 7, carrying: 7 }
+    attrs: { speed: 10, burst: 11, strength: 5, size: 3, balance: 11, elusiveness: 11, vision: 11, hands: 7, carrying: 10 }
   },
   {
     name: 'Billy Sims',      short: 'Sims',        team: 'DET', teamName: 'Detroit Lions',
@@ -269,7 +269,7 @@ const _raw = [
   {
     name: 'Edgerrin James',  short: 'E. James',    team: 'IND', teamName: 'Indianapolis Colts',
     skin: '#5e3c22', number: 32, starter: true, captain: true, years: '1999–05',
-    attrs: { speed: 9, burst: 9, strength: 6, size: 6, balance: 8, elusiveness: 8, vision: 9, hands: 8, carrying: 7 }
+    attrs: { speed: 9, burst: 9, strength: 6, size: 6, balance: 8, elusiveness: 8, vision: 9, hands: 8, carrying: 10 }
   },
   {
     name: 'Jonathan Taylor', short: 'Taylor',      team: 'IND', teamName: 'Indianapolis Colts',
@@ -320,7 +320,7 @@ const _raw = [
   {
     name: 'Marcus Allen',    short: 'M. Allen',    team: 'LV',  teamName: 'Las Vegas Raiders',
     skin: '#7a5030', number: 32, starter: true, captain: true, years: '1982–92',
-    attrs: { speed: 8, burst: 8, strength: 7, size: 5, balance: 8, elusiveness: 8, vision: 10, hands: 9, carrying: 8 }
+    attrs: { speed: 8, burst: 8, strength: 7, size: 5, balance: 8, elusiveness: 8, vision: 10, hands: 9, carrying: 9 }
   },
   {
     name: 'Napoleon Kaufman', short: 'Kaufman',    team: 'LV',  teamName: 'Las Vegas Raiders',
@@ -337,7 +337,7 @@ const _raw = [
   {
     name: 'LaDainian Tomlinson', short: 'LT',      team: 'LAC', teamName: 'Los Angeles Chargers',
     skin: '#7a5030', number: 21, starter: true, captain: true, years: '2001–09',
-    attrs: { speed: 9, burst: 11, strength: 7, size: 6, balance: 8, elusiveness: 11, vision: 9, hands: 10, carrying: 8 }
+    attrs: { speed: 9, burst: 11, strength: 7, size: 6, balance: 8, elusiveness: 11, vision: 9, hands: 10, carrying: 11 }
   },
   {
     name: 'Natrone Means',   short: 'Means',       team: 'LAC', teamName: 'Los Angeles Chargers',
@@ -393,7 +393,7 @@ const _raw = [
   {
     name: 'Adrian Peterson', short: 'A. Peterson', team: 'MIN', teamName: 'Minnesota Vikings',
     skin: '#5e3c22', number: 28, starter: true, captain: true, years: '2007–16',
-    attrs: { speed: 10, burst: 10, strength: 10, size: 7, balance: 10, elusiveness: 8, vision: 8, hands: 6, carrying: 7 }
+    attrs: { speed: 10, burst: 10, strength: 10, size: 7, balance: 10, elusiveness: 8, vision: 8, hands: 6, carrying: 9 }
   },
   {
     name: 'Robert Smith',    short: 'R. Smith',    team: 'MIN', teamName: 'Minnesota Vikings',
@@ -510,7 +510,7 @@ const _raw = [
   {
     name: 'Jerome Bettis',   short: 'Bettis',      team: 'PIT', teamName: 'Pittsburgh Steelers',
     skin: '#3a2010', number: 36, starter: true, captain: true, years: '1996–05',
-    attrs: { speed: 6, burst: 6, strength: 11, size: 11, balance: 9, elusiveness: 5, vision: 7, hands: 6, carrying: 9 }
+    attrs: { speed: 6, burst: 6, strength: 11, size: 11, balance: 9, elusiveness: 5, vision: 7, hands: 6, carrying: 10 }
   },
   {
     name: 'Willie Parker',   short: 'W. Parker',   team: 'PIT', teamName: 'Pittsburgh Steelers',
@@ -532,7 +532,7 @@ const _raw = [
   {
     name: 'Frank Gore',      short: 'Gore',        team: 'SF',  teamName: 'San Francisco 49ers',
     skin: '#7a5030', number: 21, starter: true, captain: true, years: '2005–14',
-    attrs: { speed: 7, burst: 7, strength: 8, size: 5, balance: 9, elusiveness: 6, vision: 10, hands: 7, carrying: 9 }
+    attrs: { speed: 7, burst: 7, strength: 8, size: 5, balance: 9, elusiveness: 6, vision: 10, hands: 7, carrying: 10 }
   },
   {
     name: 'Christian McCaffrey', short: 'McCaffrey', team: 'SF',  teamName: 'San Francisco 49ers',
