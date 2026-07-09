@@ -354,7 +354,7 @@ const _raw = [
   {
     name: 'Eric Dickerson',  short: 'Dickerson',   team: 'LAR', teamName: 'Los Angeles Rams',
     skin: '#5e3c22', number: 29, starter: true, captain: true, years: '1983–87',
-    attrs: { speed: 11, burst: 10, strength: 7, size: 7, balance: 8, elusiveness: 7, vision: 8, hands: 6, carrying: 7 }
+    attrs: { speed: 11, burst: 10, strength: 9, size: 9, balance: 8, elusiveness: 7, vision: 8, hands: 6, carrying: 8 }
   },
   {
     name: 'Marshall Faulk',  short: 'Faulk',       team: 'LAR', teamName: 'Los Angeles Rams',
@@ -393,7 +393,7 @@ const _raw = [
   {
     name: 'Adrian Peterson', short: 'A. Peterson', team: 'MIN', teamName: 'Minnesota Vikings',
     skin: '#5e3c22', number: 28, starter: true, captain: true, years: '2007–16',
-    attrs: { speed: 10, burst: 10, strength: 10, size: 7, balance: 10, elusiveness: 8, vision: 8, hands: 6, carrying: 9 }
+    attrs: { speed: 10, burst: 9, strength: 11, size: 9, balance: 10, elusiveness: 8, vision: 8, hands: 6, carrying: 9 }
   },
   {
     name: 'Robert Smith',    short: 'R. Smith',    team: 'MIN', teamName: 'Minnesota Vikings',
@@ -549,7 +549,7 @@ const _raw = [
   {
     name: 'Shaun Alexander', short: 'Alexander',   team: 'SEA', teamName: 'Seattle Seahawks',
     skin: '#5e3c22', number: 37, starter: true, captain: true, years: '2000–07',
-    attrs: { speed: 7, burst: 8, strength: 8, size: 7, balance: 7, elusiveness: 6, vision: 8, hands: 6, carrying: 7 }
+    attrs: { speed: 7, burst: 9, strength: 8, size: 7, balance: 7, elusiveness: 6, vision: 10, hands: 6, carrying: 9 }
   },
   {
     name: 'Marshawn Lynch',  short: 'Lynch',       team: 'SEA', teamName: 'Seattle Seahawks',
