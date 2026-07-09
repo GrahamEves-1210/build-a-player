@@ -10,6 +10,7 @@ import PrivacyPage from './components/PrivacyPage'
 import SharedBuildPage from './components/SharedBuildPage'
 import { decodeBuild } from './utils/shareUrl'
 import SplashScreen from './components/SplashScreen'
+import DepthChart from './components/DepthChart'
 import AuthModal from './components/AuthModal'
 import ProfilePage from './components/ProfilePage'
 import LeaderboardPage from './components/LeaderboardPage'
@@ -105,7 +106,7 @@ export default function App() {
 
   useEffect(() => {
     const meta = document.querySelector('meta[name="theme-color"]')
-    if (meta) meta.setAttribute('content', page === 'splash' ? '#080b09' : '#090a0d')
+    if (meta) meta.setAttribute('content', page === 'splash' ? '#080b09' : page === 'depth-chart' ? '#111318' : '#090a0d')
   }, [page])
 
   useEffect(() => {
@@ -348,7 +349,11 @@ export default function App() {
   }, [])
 
   if (page === 'splash') {
-    return <SplashScreen onStart={handleStart} />
+    return <SplashScreen onStart={handleStart} onDepthChart={() => setPage('depth-chart')} />
+  }
+
+  if (page === 'depth-chart') {
+    return <DepthChart onBack={() => setPage('splash')} user={user} />
   }
 
   const navbarProps = {

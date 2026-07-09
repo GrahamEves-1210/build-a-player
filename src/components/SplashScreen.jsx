@@ -50,7 +50,7 @@ function FloatingChip({ label, col, angle, dist, visible, mx, my, isMobile, dox 
   )
 }
 
-export default function SplashScreen({ onStart }) {
+export default function SplashScreen({ onStart, onDepthChart }) {
   const [phase, setPhase] = useState(0)
   const [position, setPosition] = useState(() => localStorage.getItem('lastPosition') || 'qb')
   const isMobile = useMemo(() => window.innerWidth <= 768, [])
@@ -100,6 +100,11 @@ export default function SplashScreen({ onStart }) {
       <div className="splash-footer" style={{ opacity: phase >= 3 ? 1 : 0, transform: phase >= 3 ? 'none' : 'translateY(16px)' }}>
 
         <div className="splash-tagline">Spin the wheel · Build your {position.toUpperCase()}</div>
+
+        <button className="splash-minigame-btn" onClick={onDepthChart}>
+          <div className="splash-mg-label">THE DEPTH CHART</div>
+          <div className="splash-mg-sub">NEW MINI-GAME</div>
+        </button>
 
         <div className="splash-modes">
           <button className="splash-mode-classic" onClick={() => { localStorage.setItem('lastPosition', position); onStart('classic', position) }}>
