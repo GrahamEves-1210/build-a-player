@@ -156,7 +156,7 @@ export const QBS = [
     attrs: { 'arm': 4, 'legs': 3, 'size': 4, 'processing': 4, 'leadership': 3, 'vision': 4, 'playmaking': 3, 'accuracy': 5, 'pocket-presence': 3 } },
   // LAC
   { name: 'Justin Herbert',     short: 'Herbert',     team: 'LAC', teamName: 'Los Angeles Chargers',  color: '#0080C6', color2: '#FFC20E', skin: '#f2c8a4', starter: true,  captain: true,  number: 10,
-    attrs: { 'arm': 10, 'legs': 7, 'size': 9, 'processing': 8, 'leadership': 6, 'vision': 8, 'playmaking': 8, 'accuracy': 9, 'pocket-presence': 7 } },
+    attrs: { 'arm': 11, 'legs': 7, 'size': 9, 'processing': 8, 'leadership': 6, 'vision': 8, 'playmaking': 8, 'accuracy': 9, 'pocket-presence': 7 } },
   { name: 'Trey Lance',         short: 'Lance',       team: 'LAC', teamName: 'Los Angeles Chargers',  color: '#0080C6', color2: '#FFC20E', skin: '#9a6840', starter: false, number: 5,
     attrs: { 'arm': 4, 'legs': 6, 'size': 5, 'processing': 2, 'leadership': 2, 'vision': 2, 'playmaking': 3, 'accuracy': 2, 'pocket-presence': 2 } },
   { name: 'D.J. Uiagalelei',    short: 'DJ Uiaga.',   team: 'LAC', teamName: 'Los Angeles Chargers',  color: '#0080C6', color2: '#FFC20E', skin: '#b07848', starter: false, number: 4,

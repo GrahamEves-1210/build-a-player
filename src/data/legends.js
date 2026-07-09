@@ -339,7 +339,7 @@ const _raw = [
     // Synced to qbs.js
     name: 'Justin Herbert',  short: 'Herbert',    team: 'LAC', teamName: 'Los Angeles Chargers',
     skin: '#f2c8a4', number: 10, starter: true, captain: true, years: '2020–',
-    attrs: { arm: 10, legs: 7, size: 9, processing: 8, vision: 8, leadership: 6, accuracy: 9, playmaking: 8, 'pocket-presence': 7 }
+    attrs: { arm: 11, legs: 7, size: 9, processing: 8, vision: 8, leadership: 6, accuracy: 9, playmaking: 8, 'pocket-presence': 7 }
   },
 
   // ─── LOS ANGELES RAMS ────────────────────────────────────────────────────

@@ -79,7 +79,9 @@ export default function App() {
   const [user, setUser]                 = useState(null)
   const [showAuth, setShowAuth]         = useState(false)
   const [showTeamPicker, setShowTeamPicker] = useState(false)
-  const [savedSpinResult, setSavedSpinResult] = useState(null)
+  const [savedSpinResult, setSavedSpinResult] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('bap_spin_result')) } catch { return null }
+  })
   const [spinPhase, setSpinPhase] = useState('idle')
   const [adsDisabled, setAdsDisabled] = useState(false)
   const [isSubscribed, setIsSubscribed] = useState(() => {
@@ -119,6 +121,13 @@ export default function App() {
     if (!gameMode) return
     try { localStorage.setItem('bap_progress', JSON.stringify({ gameMode, position, build })) } catch {}
   }, [build, gameMode, position])
+
+  useEffect(() => {
+    try {
+      if (savedSpinResult) localStorage.setItem('bap_spin_result', JSON.stringify(savedSpinResult))
+      else localStorage.removeItem('bap_spin_result')
+    } catch {}
+  }, [savedSpinResult])
 
   useEffect(() => {
     if (!supabase) return
