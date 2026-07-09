@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react'
 import { getQBPhoto, pickThree } from '../data/depth-chart-players'
 import { supabase } from '../lib/supabase'
 import { TEAMS } from '../data/qbs'
@@ -12,9 +12,16 @@ const SORT_STATS  = ['passingTDs', 'passingYards', 'rushingYards']
 function streakColor(n) {
   if (n === 0) return 'rgba(255,255,255,0.5)'
   if (n <= 2)  return '#fff'
-  const t = Math.min(1, (n - 3) / 10)
-  const hue = Math.round(45 * (1 - t))
-  return `hsl(${hue}, 100%, 57%)`
+  if (n <= 15) {
+    const t = Math.min(1, (n - 3) / 12)
+    const hue = Math.round(45 * (1 - t))
+    return `hsl(${hue}, 100%, 57%)`
+  }
+  if (n < 20) return 'hsl(0, 100%, 57%)'
+  const t = Math.min(1, (n - 20) / 15)
+  const hue = (360 - Math.round(120 * t)) % 360
+  const lightness = Math.round(57 + 13 * t)
+  return `hsl(${hue}, 100%, ${lightness}%)`
 }
 const STAT_LABELS = { passingTDs: 'PASSING TDs', passingYards: 'PASSING YDS', rushingYards: 'RUSH YDS' }
 
@@ -34,6 +41,7 @@ function LeaderboardDropdown({ onClose }) {
       .from('depth_chart_streaks')
       .select('username, streak')
       .order('streak', { ascending: false })
+      .order('created_at', { ascending: true })
       .limit(10)
       .then(({ data }) => setRows(data || []))
       .catch(() => setRows([]))
@@ -75,7 +83,7 @@ function LeaderboardDropdown({ onClose }) {
 }
 
 // ── Main component ──────────────────────────────────────────────────────────
-export default function DepthChart({ onBack, user }) {
+export default function DepthChart({ onBack, user, onlineCount = 0 }) {
   const [players,        setPlayers]        = useState(null)
   const [order,          setOrder]          = useState([0, 1, 2])
   const [revealed,       setRevealed]       = useState([false, false, false])
@@ -94,6 +102,7 @@ export default function DepthChart({ onBack, user }) {
   const [promptName,     setPromptName]     = useState('')
 
   const cardRefs    = useRef([])
+  const flipSnap    = useRef(null)
   const dragState   = useRef({ active: false, srcIdx: null, lastDst: null })
   const timerRafRef = useRef(null)
   const timerStart  = useRef(null)
@@ -207,6 +216,27 @@ export default function DepthChart({ onBack, user }) {
     return () => cancelAnimationFrame(timerRafRef.current)
   }, [phase])
 
+  // ── FLIP animation when correct order is revealed ────────────────────────────
+  useLayoutEffect(() => {
+    if (!flipSnap.current || !players) return
+    const snap = flipSnap.current
+    flipSnap.current = null
+    order.forEach((playerIdx, newSlotIdx) => {
+      const oldRect = snap[players[playerIdx].name]
+      const el = cardRefs.current[newSlotIdx]
+      if (!el || !oldRect) return
+      const dy = oldRect.top - el.getBoundingClientRect().top
+      if (Math.abs(dy) < 1) return
+      el.style.transition = 'none'
+      el.style.transform = `translateY(${dy}px)`
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        el.style.transition = 'transform 0.35s cubic-bezier(0.22,1,0.36,1)'
+        el.style.transform = ''
+        el.addEventListener('transitionend', () => { el.style.transition = ''; el.style.transform = '' }, { once: true })
+      }))
+    })
+  }, [order])
+
   // ── Correct answer ──────────────────────────────────────────────────────────
   const correctOrder = players
     ? [...players].sort((a, b) => b[sortStat] - a[sortStat])
@@ -215,9 +245,10 @@ export default function DepthChart({ onBack, user }) {
   function submitAnswer() {
     if (phase !== 'playing' || !players) return
     const cur = orderRef.current
-    const isCorrect = cur.every((playerIdx, slotIdx) =>
-      players[playerIdx].name === correctOrder[slotIdx].name
-    )
+    const isCorrect = cur.every((playerIdx, slotIdx) => {
+      if (slotIdx === 0) return true
+      return players[cur[slotIdx - 1]][sortStat] >= players[playerIdx][sortStat]
+    })
     if (isCorrect) {
       const newStreak = streak + 1
       setStreak(newStreak)
@@ -228,6 +259,11 @@ export default function DepthChart({ onBack, user }) {
       setPhase('wrong')
       setTimeout(() => {
         const correctIdxs = correctOrder.map(cp => players.findIndex(p => p.name === cp.name))
+        const snap = {}
+        orderRef.current.forEach((playerIdx, slotIdx) => {
+          snap[players[playerIdx].name] = cardRefs.current[slotIdx]?.getBoundingClientRect()
+        })
+        flipSnap.current = snap
         orderRef.current = correctIdxs
         setOrder(correctIdxs)
         setPhase('revealing')
@@ -331,6 +367,12 @@ export default function DepthChart({ onBack, user }) {
 
         <div className="dc-title-block">
           <div className="dc-title">THE DEPTH CHART</div>
+          {onlineCount > 0 && (
+            <span className="spin-online-count dc-online-count">
+              <span className="spin-online-dot" />
+              {onlineCount} online
+            </span>
+          )}
         </div>
 
         <div className="dc-lb-wrap">
@@ -421,10 +463,10 @@ export default function DepthChart({ onBack, user }) {
               <div className="dc-card-inner">
                 <div className="dc-drag-col">
                   {!showTDs && (
-                    <svg width="10" height="16" viewBox="0 0 10 16" fill="currentColor">
-                      <circle cx="2" cy="2" r="1.5"/><circle cx="8" cy="2" r="1.5"/>
-                      <circle cx="2" cy="8" r="1.5"/><circle cx="8" cy="8" r="1.5"/>
-                      <circle cx="2" cy="14" r="1.5"/><circle cx="8" cy="14" r="1.5"/>
+                    <svg width="14" height="22" viewBox="0 0 14 22" fill="currentColor">
+                      <circle cx="3" cy="3" r="2.2"/><circle cx="11" cy="3" r="2.2"/>
+                      <circle cx="3" cy="11" r="2.2"/><circle cx="11" cy="11" r="2.2"/>
+                      <circle cx="3" cy="19" r="2.2"/><circle cx="11" cy="19" r="2.2"/>
                     </svg>
                   )}
                 </div>

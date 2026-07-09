@@ -353,7 +353,7 @@ export default function App() {
   }
 
   if (page === 'depth-chart') {
-    return <DepthChart onBack={() => setPage('splash')} user={user} />
+    return <DepthChart onBack={() => setPage('splash')} user={user} onlineCount={onlineCount} />
   }
 
   const navbarProps = {

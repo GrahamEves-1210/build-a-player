@@ -4393,19 +4393,21 @@ html.is-mac .spin-panel-scroll {
   left: 0;
   right: 0;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
   pointer-events: none;
 }
+.dc-online-count {
+  display: flex !important;
+  position: static !important;
+  transform: none !important;
+  left: unset !important;
+  top: unset !important;
+  margin-top: 2px;
+  margin-bottom: -12px;
+}
 .dc-title-block::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 200px;
-  height: 60px;
-  background: radial-gradient(ellipse, rgba(255,255,255,0.1) 0%, transparent 70%);
-  pointer-events: none;
+  display: none;
 }
 .dc-title {
   font-family: Impact, 'Arial Narrow Bold', sans-serif;
@@ -4413,7 +4415,7 @@ html.is-mac .spin-panel-scroll {
   font-weight: 900;
   letter-spacing: 1px;
   line-height: 1;
-  color: #fff;
+  color: #e53935;
   text-transform: uppercase;
 }
 
@@ -4699,6 +4701,13 @@ html.is-mac .spin-panel-scroll {
 .dc-card--correct {
   border-color: rgba(74,222,128,0.6) !important;
   box-shadow: 0 0 0 3px rgba(74,222,128,0.12) !important;
+}
+@keyframes dc-slide-reveal {
+  from { opacity: 0; transform: translateY(-18px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.dc-card--revealing {
+  animation: dc-slide-reveal 0.22s cubic-bezier(0.22,1,0.36,1) both;
 }
 
 .dc-card--blank {

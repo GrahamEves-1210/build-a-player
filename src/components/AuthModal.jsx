@@ -17,6 +17,10 @@ export default function AuthModal({ onClose, onAuth }) {
     e.preventDefault()
     if (!supabase) { setError('Auth not configured yet. Add Supabase credentials to .env.local.'); return }
     if (!username.trim()) { setError('Please enter a username.'); return }
+    if (!/^[a-zA-Z0-9_-]+$/.test(username.trim())) {
+      setError('Username can only contain letters, numbers, underscores, and hyphens.')
+      return
+    }
     setLoading(true)
     setError(null)
 
@@ -25,9 +29,12 @@ export default function AuthModal({ onClose, onAuth }) {
     if (tab === 'signin') {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) {
-        setError(error.message === 'Invalid login credentials'
-          ? 'Username or password is incorrect.'
-          : error.message)
+        setError(
+          error.message === 'Invalid login credentials' ? 'Username or password is incorrect.' :
+          error.message.toLowerCase().includes('not confirmed') ? 'Account sign-up is not complete. Please try creating your account again.' :
+          error.message.toLowerCase().includes('validate email') ? 'Username can only contain letters, numbers, underscores, and hyphens.' :
+          error.message
+        )
         setLoading(false)
         return
       }

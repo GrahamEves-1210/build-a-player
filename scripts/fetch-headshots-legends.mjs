@@ -61,7 +61,7 @@ const LEGEND_NAMES = [
   // NYG
   'Eli Manning', 'Phil Simms', 'Y.A. Tittle',
   // NYJ
-  'Joe Namath', 'Vinny Testaverde', 'Mark Sanchez', 'Chad Pennington',
+  'Joe Namath', 'Vinny Testaverde', 'Mark Sanchez', 'Chad Pennington', 'Josh McCown',
   // PHI
   'Randall Cunningham', 'Donovan McNabb', 'Nick Foles',
   // PIT
