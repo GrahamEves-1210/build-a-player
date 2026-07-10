@@ -655,11 +655,23 @@ export function runSimulation(build, types = TYPES, team = null, isAllTime = fal
       const oppPTDs = Math.floor(1 + Math.random() * 3 + oppTeamOffN * 0.8)
       const oppPFGs = Math.max(0, Math.round(1 - oppPTDs * 0.3 + Math.random()))
       const opp    = Math.max(7, Math.round((oppPTDs * 7 + oppPFGs * 3 - Math.round(teamDefN * 3)) * weatherMult))
-      const margin = Math.ceil(Math.random() * 7)
-      const finalMy  = snapNFL(won ? Math.max(base, opp + margin)  : Math.min(base, opp - margin))
-      const finalOpp = snapNFL(won ? opp : Math.max(opp, base + margin))
+      // Overtime: playoff games are close — ~20% OT rate for even matchups
+      const pgCloseness = 1 - 2 * Math.abs(pgWinP - 0.5)
+      const pgOT        = Math.random() < pgCloseness * 0.22
+      let finalMy, finalOpp
+      if (pgOT) {
+        const baseTDs2 = Math.max(pgTDs, Math.floor(1 + Math.random() * 3 + oppTeamOffN * 0.8), 1)
+        const tiedSc   = snapNFL(Math.max(10, baseTDs2 * 7 + Math.floor(Math.random() * 3) * 3))
+        const otPts    = Math.random() < 0.27 ? 7 : 3
+        finalMy  = won ? tiedSc + otPts : tiedSc
+        finalOpp = won ? tiedSc : tiedSc + otPts
+      } else {
+        const margin = Math.ceil(Math.random() * 7)
+        finalMy  = snapNFL(won ? Math.max(base, opp + margin)  : Math.min(base, opp - margin))
+        finalOpp = snapNFL(won ? opp : Math.max(opp, base + margin))
+      }
 
-      playoffRounds.push({ round, opponent, home: pgHome, weather, mySc: finalMy, oppSc: finalOpp, won, passYds: pgYds, tds: pgTDs, ints: pgINTs, rating: pgRtg })
+      playoffRounds.push({ round, opponent, home: pgHome, weather, mySc: finalMy, oppSc: finalOpp, won, overtime: pgOT, passYds: pgYds, tds: pgTDs, ints: pgINTs, rating: pgRtg })
       if (won) { pwins++ } else { eliminated = round; break }
     }
 
@@ -1284,12 +1296,24 @@ export function runRBSimulation(build, types = RB_TYPES, team = null, isAllTime 
       const oppPTDs  = Math.floor(1 + Math.random() * 3 + oppTeamOffN * 0.8)
       const oppPFGs  = Math.max(0, Math.round(1 - oppPTDs * 0.3 + Math.random()))
       const opp      = Math.max(7, Math.round((oppPTDs * 7 + oppPFGs * 3 - Math.round(teamDefN * 3)) * wMult))
-      const margin   = Math.ceil(Math.random() * 7)
-      const finalMy  = snapNFL(won ? Math.max(base, opp + margin) : Math.min(base, opp - margin))
-      const finalOpp = snapNFL(won ? opp : Math.max(opp, base + margin))
+      // Overtime: playoff games are close — ~20% OT rate for even matchups
+      const pgCloseness = 1 - 2 * Math.abs(pgWinP - 0.5)
+      const pgOT        = Math.random() < pgCloseness * 0.22
+      let finalMy, finalOpp
+      if (pgOT) {
+        const baseTDs2 = Math.max(pgRushTDs + pgRecTDs, Math.floor(1 + Math.random() * 3 + oppTeamOffN * 0.8), 1)
+        const tiedSc   = snapNFL(Math.max(10, baseTDs2 * 7 + Math.floor(Math.random() * 3) * 3))
+        const otPts    = Math.random() < 0.27 ? 7 : 3
+        finalMy  = won ? tiedSc + otPts : tiedSc
+        finalOpp = won ? tiedSc : tiedSc + otPts
+      } else {
+        const margin = Math.ceil(Math.random() * 7)
+        finalMy  = snapNFL(won ? Math.max(base, opp + margin) : Math.min(base, opp - margin))
+        finalOpp = snapNFL(won ? opp : Math.max(opp, base + margin))
+      }
 
       playoffRounds.push({
-        round, opponent, home: pgHome, weather, mySc: finalMy, oppSc: finalOpp, won,
+        round, opponent, home: pgHome, weather, mySc: finalMy, oppSc: finalOpp, won, overtime: pgOT,
         rushYds: pgRushYds, rushTDs: pgRushTDs, carries: pgCarries,
         recYds: pgRecYds, recTDs: pgRecTDs, recs: pgRecs,
       })

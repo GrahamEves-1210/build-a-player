@@ -290,7 +290,7 @@ function ScreenSeason({ result, onNext, isRB = false }) {
 
 // ── Score timeline builder ────────────────────────────────────────────────────
 
-function buildScoreTimeline(myFinal, oppFinal) {
+function buildScoreTimeline(myFinal, oppFinal, overtime = false) {
   const shuffle = arr => {
     for (let i = arr.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1))
@@ -327,23 +327,57 @@ function buildScoreTimeline(myFinal, oppFinal) {
     }
     return plays
   }
-  const myPlays  = toPlays(myFinal)
-  const oppPlays = toPlays(oppFinal)
+  let regMyFinal = myFinal
+  let regOppFinal = oppFinal
+  let otEvent = null
+
+  if (overtime) {
+    // Regulation must end tied — derive tie score and isolate the OT-winning play
+    const tiedScore = Math.min(myFinal, oppFinal)
+    const otPts     = Math.abs(myFinal - oppFinal)  // 3 (FG) or 7 (TD)
+    regMyFinal  = tiedScore
+    regOppFinal = tiedScore
+    otEvent = { team: myFinal > oppFinal ? 'me' : 'opp', pts: otPts }
+  }
+
+  const myPlays  = toPlays(regMyFinal)
+  const oppPlays = toPlays(regOppFinal)
   const all = shuffle([
     ...myPlays.map(pts  => ({ team: 'me',  pts })),
     ...oppPlays.map(pts => ({ team: 'opp', pts })),
   ])
-  const spacing = all.length ? Math.floor(3500 / all.length) : 900
-  return all.map((evt, i) => ({
+  const spacing = all.length ? Math.floor(3400 / all.length) : 900
+  const events = all.map((evt, i) => ({
     ...evt,
-    gameSec: Math.min(3500, Math.round(spacing * i + Math.random() * spacing * 0.7 + 25)),
+    gameSec: Math.min(3400, Math.round(spacing * i + Math.random() * spacing * 0.7 + 25)),
   }))
+
+  if (otEvent) {
+    // OT-winning score drops somewhere in the OT period
+    events.push({ ...otEvent, gameSec: 3700 + Math.floor(Math.random() * 600) })
+  } else {
+    // Close game: sometimes push the game-winning score into the final minute
+    const margin = Math.abs(myFinal - oppFinal)
+    if (events.length >= 1 && margin <= 7 && Math.random() < 0.50) {
+      const winner = myFinal > oppFinal ? 'me' : 'opp'
+      for (let i = events.length - 1; i >= 0; i--) {
+        if (events[i].team === winner) {
+          events[i].gameSec = 3530 + Math.floor(Math.random() * 65)
+          events.sort((a, b) => a.gameSec - b.gameSec)
+          break
+        }
+      }
+    }
+  }
+
+  return events
 }
 
 const GAME_MS    = 10_000
 const TICK_MS    = 50
 const TOTAL_TICK = GAME_MS / TICK_MS
 const GAME_SECS  = 3_600
+const OT_EXTRA   = 900   // virtual seconds added for OT period (900/4500 * 10000ms = 2s)
 
 // ── Live playoff game ─────────────────────────────────────────────────────────
 
@@ -351,7 +385,7 @@ const TEAM_BY_NAME = Object.fromEntries(TEAMS.map(t => [t.name, t]))
 
 const WEATHER_EMOJI = { clear: '☀️', rain: '🌧️', snow: '❄️', dome: '🏟️' }
 
-function PlayoffGame({ round, opponent, home, weather, mySc, oppSc, won, teamColor, teamAbbr, teamLogo, isFinal, isAllTime, onDone }) {
+function PlayoffGame({ round, opponent, home, weather, mySc, oppSc, won, overtime, teamColor, teamAbbr, teamLogo, isFinal, isAllTime, onDone }) {
   const [phase,    setPhase]    = useState('pre')
   const [gameSec,  setGameSec]  = useState(0)
   const [myScore,  setMyScore]  = useState(0)
@@ -359,22 +393,39 @@ function PlayoffGame({ round, opponent, home, weather, mySc, oppSc, won, teamCol
   const [visEvt,   setVisEvt]   = useState(null)
   const [evtKey,   setEvtKey]   = useState(0)
   const [noAnim,   setNoAnim]   = useState(false)
-  const [events]                = useState(() => buildScoreTimeline(mySc, oppSc))
-  const tickRef    = useRef(0)
-  const evtIdxRef  = useRef(0)
-  const myScoreRef = useRef(0)
-  const oppScoreRef= useRef(0)
-  const ivRef      = useRef(null)
-  const doneRef    = useRef(false)
+  const [events]                = useState(() => buildScoreTimeline(mySc, oppSc, overtime))
+  const [showOTBanner, setShowOTBanner] = useState(false)
+  const totalGameSecs           = overtime ? GAME_SECS + OT_EXTRA : GAME_SECS
+  const tickRef      = useRef(0)
+  const evtIdxRef    = useRef(0)
+  const myScoreRef   = useRef(0)
+  const oppScoreRef  = useRef(0)
+  const ivRef        = useRef(null)
+  const doneRef      = useRef(false)
+  const otPauseRef   = useRef(false)   // true while OT break is in progress
+  const otTriggered  = useRef(false)   // have we fired the OT pause yet
 
   useEffect(() => {
     const pre = setTimeout(() => {
       setPhase('live')
       ivRef.current = setInterval(() => {
+        if (otPauseRef.current) return   // frozen during OT break
+
         tickRef.current++
         const tick = tickRef.current
-        const gs = Math.min(GAME_SECS - 1, Math.round((tick / TOTAL_TICK) * GAME_SECS))
+        const gs = Math.min(totalGameSecs - 1, Math.round((tick / TOTAL_TICK) * totalGameSecs))
         setGameSec(gs)
+
+        // Pause at end of regulation before OT starts
+        if (overtime && !otTriggered.current && gs >= GAME_SECS) {
+          otTriggered.current = true
+          otPauseRef.current  = true
+          setShowOTBanner(true)
+          setTimeout(() => {
+            otPauseRef.current = false
+            setShowOTBanner(false)
+          }, 1600)
+        }
 
         while (evtIdxRef.current < events.length && events[evtIdxRef.current].gameSec <= gs) {
           const e = events[evtIdxRef.current]
@@ -395,7 +446,7 @@ function PlayoffGame({ round, opponent, home, weather, mySc, oppSc, won, teamCol
           setNoAnim(true)
           if (myScoreRef.current !== mySc)   setMyScore(mySc)
           if (oppScoreRef.current !== oppSc) setOppScore(oppSc)
-          setGameSec(GAME_SECS - 1)
+          setGameSec(totalGameSecs - 1)
           setPhase('post')
           doneRef.current = true
           setTimeout(onDone, 2400)
@@ -405,9 +456,10 @@ function PlayoffGame({ round, opponent, home, weather, mySc, oppSc, won, teamCol
     return () => { clearTimeout(pre); clearInterval(ivRef.current) }
   }, [])
 
-  const q        = Math.min(3, Math.floor(gameSec / 900))
-  const qSec     = 900 - (gameSec % 900)
-  const progress = gameSec / (GAME_SECS - 1)
+  const isOTPhase = overtime && gameSec >= GAME_SECS
+  const q         = isOTPhase ? 4 : Math.min(3, Math.floor(gameSec / 900))
+  const qSec      = isOTPhase ? Math.max(0, OT_EXTRA - (gameSec - GAME_SECS)) : 900 - (gameSec % 900)
+  const progress  = isOTPhase ? (gameSec - GAME_SECS) / (OT_EXTRA - 1) : gameSec / (GAME_SECS - 1)
   const evtLabel = pts => pts === 8 ? '▲ TD + 2pt' : pts >= 6 ? '▲ TD' : '▲ FG'
   const oppTeam  = TEAM_BY_NAME[opponent]
   const oppLogo  = oppTeam?.logo
@@ -448,12 +500,16 @@ function PlayoffGame({ round, opponent, home, weather, mySc, oppSc, won, teamCol
 
         <div className="plf-score-mid">
           <span className="plf-at-sym">@</span>
-          {phase === 'live' ? (
+          {showOTBanner ? (
+            <div className="plf-ot-banner">OT</div>
+          ) : phase === 'live' ? (
             <div className="plf-live-pill">
               <span className="plf-live-dot" />LIVE
             </div>
           ) : phase === 'post' ? (
-            <div className={`plf-result-badge ${won ? 'plf-rb-win' : 'plf-rb-loss'}`}>{won ? 'W' : 'L'}</div>
+            <div className={`plf-result-badge ${won ? 'plf-rb-win' : 'plf-rb-loss'}`}>
+              {won ? 'W' : 'L'}{overtime && <span className="plf-ot-tag">OT</span>}
+            </div>
           ) : null}
         </div>
 
@@ -477,16 +533,16 @@ function PlayoffGame({ round, opponent, home, weather, mySc, oppSc, won, teamCol
         <>
           <div className="plf-status-row">
             <div className="plf-qtr-dots">
-              {[0,1,2,3].map(i => (
+              {[0,1,2,3,...(isOTPhase ? [4] : [])].map(i => (
                 <div
                   key={i}
-                  className={`plf-qtr-dot${i < q ? ' plf-qd-done' : i === q ? ' plf-qd-active' : ''}`}
-                  style={i === q ? { background: teamColor, boxShadow: `0 0 10px ${teamColor}99` } : {}}
+                  className={`plf-qtr-dot${i < q ? ' plf-qd-done' : i === q ? ' plf-qd-active' : ''}${i === 4 ? ' plf-qd-ot' : ''}`}
+                  style={i === q ? { background: i === 4 ? '#fbbf24' : teamColor, boxShadow: `0 0 10px ${i === 4 ? '#fbbf2499' : teamColor + '99'}` } : {}}
                 />
               ))}
             </div>
             <div className="plf-clock-box">
-              <span className="plf-qtr-lbl">Q{q + 1}</span>
+              <span className={`plf-qtr-lbl${isOTPhase ? ' plf-qtr-lbl-ot' : ''}`}>{isOTPhase ? 'OT' : `Q${q + 1}`}</span>
               <span className="plf-clk-sep">·</span>
               <span className="plf-clock-time">
                 {Math.floor(qSec / 60)}:{String(qSec % 60).padStart(2, '0')}
@@ -508,7 +564,7 @@ function PlayoffGame({ round, opponent, home, weather, mySc, oppSc, won, teamCol
       {phase === 'post' && (
         <div className={`plf-post-line ${won ? 'plf-pl-won' : 'plf-pl-lost'}`}>
           <span>{postMsg}</span>
-          <span className="plf-post-score">{mySc} – {oppSc}</span>
+          <span className="plf-post-score">{mySc} – {oppSc}{overtime && <span className="plf-post-ot"> OT</span>}</span>
         </div>
       )}
     </div>
@@ -580,7 +636,7 @@ function ScreenPlayoffs({ result, onNext, onPreSuperBowl, adsDisabled = false })
       <div className="simp-screen-center plf-champion-screen" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
         <img src="/trophy.png" alt="" className="sfb-trophy" />
         <div className="plf-champ-label">Super Bowl Champions</div>
-        <div className="plf-champ-sub">{sb.mySc}–{sb.oppSc} vs {sb.opponent}</div>
+        <div className="plf-champ-sub">{sb.mySc}–{sb.oppSc}{sb.overtime ? ' OT' : ''} vs {sb.opponent}</div>
         <button className="simp-cta simp-cta-in" onClick={onNext}>Final Report</button>
       </div>
     )
@@ -591,7 +647,7 @@ function ScreenPlayoffs({ result, onNext, onPreSuperBowl, adsDisabled = false })
         <div className="simp-eyebrow">Season Over</div>
         <div className="plf-elim-title">{r.round === 'Super Bowl' ? 'Lost Super Bowl' : 'Eliminated'}</div>
         <div className="plf-elim-round">{r.round === 'Super Bowl' ? '' : r.round}</div>
-        <div className="plf-elim-score">{r.mySc} – {r.oppSc} · vs {r.opponent}</div>
+        <div className="plf-elim-score">{r.mySc} – {r.oppSc}{r.overtime ? ' OT' : ''} · vs {r.opponent}</div>
         <button className="simp-cta" onClick={onNext}>Final Report</button>
       </div>
     )
@@ -602,7 +658,7 @@ function ScreenPlayoffs({ result, onNext, onPreSuperBowl, adsDisabled = false })
       <div className="plf-between-screen" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
         <div className="plf-bw-result">
           <span className="plf-bw-w">W</span>
-          <span className="plf-bw-score">{r.mySc}–{r.oppSc}</span>
+          <span className="plf-bw-score">{r.mySc}–{r.oppSc}{r.overtime ? ' OT' : ''}</span>
         </div>
         <div className="plf-bw-adv">Advancing…</div>
         {next && <div className="plf-bw-next">Next up · {next.round}</div>}
@@ -627,6 +683,7 @@ function ScreenPlayoffs({ result, onNext, onPreSuperBowl, adsDisabled = false })
             mySc={current.mySc}
             oppSc={current.oppSc}
             won={current.won}
+            overtime={current.overtime}
             teamColor={teamColor}
             teamAbbr={teamAbbr}
             teamLogo={teamLogo}

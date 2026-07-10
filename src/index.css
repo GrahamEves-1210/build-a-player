@@ -129,6 +129,45 @@
   --btn-start:#f9a8d4;--btn-end:#db2777;--btn-glow:rgba(236,72,153,0.32);--btn-txt:#1a0312;
 }
 
+/* ── BASKETBALL (data-sport="bucket") ── */
+[data-sport="bucket"] {
+  --g50:#fff7ed;--g100:#ffedd5;--g200:#fed7aa;--g300:#fdba74;
+  --g400:#fb923c;--g500:#f97316;--g600:#ea580c;--g700:#c2410c;--g800:#7c2d12;
+  --bg:#ddd0c5;--surface:#1c0e06;--card:#2d160a;
+  --border:rgba(253,186,116,0.10);--border-hi:rgba(253,186,116,0.24);
+  --accent:#fed7aa;--accent-hi:#ffedd5;--accent-lo:rgba(253,186,116,0.10);--accent-dk:#fb923c;
+  --text:#fff7ed;--text-2:#fed7aa;--text-3:#fb923c;--text-4:#ea580c;
+  --btn-start:#fdba74;--btn-end:#ea580c;--btn-glow:rgba(249,115,22,0.32);--btn-txt:#1c0a02;
+}
+
+[data-sport="bucket"] .splash-screen {
+  background: radial-gradient(ellipse 90% 70% at 50% 0%, rgba(249,115,22,0.18) 0%, transparent 65%),
+              #0f0804;
+}
+
+[data-sport="bucket"] .splash-title {
+  background: linear-gradient(135deg, #fdba74 0%, #fb923c 55%, #ea580c 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+[data-sport="bucket"] .splash-logo-icon {
+  font-size: 3.5rem;
+  display: block;
+  margin-bottom: 0.5rem;
+  filter: drop-shadow(0 0 24px rgba(249,115,22,0.55));
+}
+
+[data-sport="bucket"] .bucket-mode-btn {
+  border-color: rgba(253,186,116,0.28);
+  background: rgba(253,186,116,0.06);
+}
+[data-sport="bucket"] .bucket-mode-btn:hover {
+  border-color: rgba(253,186,116,0.50);
+  background: rgba(253,186,116,0.12);
+}
+
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
 
@@ -6301,6 +6340,7 @@ html.is-touch .bd-card-main:hover         { background: transparent !important; 
   width: 46px; height: 46px;
   border-radius: 50%;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   font-family: Impact, 'Arial Narrow Bold', sans-serif;
@@ -6314,6 +6354,23 @@ html.is-touch .bd-card-main:hover         { background: transparent !important; 
 }
 .plf-rb-win  { background: rgba(74,222,128,0.18); color: #4ade80; border: 2px solid rgba(74,222,128,0.45); }
 .plf-rb-loss { background: rgba(248,113,113,0.14); color: #f87171; border: 2px solid rgba(248,113,113,0.35); }
+.plf-ot-tag      { display: block; font-size: 9px; letter-spacing: 0.5px; line-height: 1; margin-top: 1px; opacity: 0.85; }
+.plf-post-ot     { font-size: 11px; opacity: 0.7; margin-left: 4px; font-family: inherit; letter-spacing: 0.5px; }
+.plf-qd-ot       { border-color: rgba(251,191,36,0.5) !important; }
+.plf-qd-ot.plf-qd-done { background: rgba(251,191,36,0.4) !important; border-color: #fbbf24 !important; }
+.plf-qtr-lbl-ot  { color: #fbbf24 !important; }
+.plf-ot-banner {
+  font-family: Impact, 'Arial Narrow Bold', sans-serif;
+  font-size: 22px;
+  letter-spacing: 3px;
+  color: #fbbf24;
+  text-shadow: 0 0 16px rgba(251,191,36,0.7);
+  animation: plf-ot-banner-in 0.3s cubic-bezier(0.34,1.56,0.64,1) both;
+}
+@keyframes plf-ot-banner-in {
+  from { transform: scale(0.5); opacity: 0; }
+  to   { transform: none; opacity: 1; }
+}
 
 /* Quarter dots + clock */
 .plf-status-row {
@@ -9152,7 +9209,7 @@ html.is-mac [id^="pw-oop-bottom_rail"] > * {
   display: flex; gap: 6px; margin-top: 10px; align-items: center; flex-wrap: wrap;
 }
 .cr-add-build-btn {
-  margin-left: auto; padding: 8px 14px; border-radius: 6px; font-size: 12px; font-weight: 700;
+  flex: 1; padding: 8px 14px; border-radius: 6px; font-size: 12px; font-weight: 700;
   cursor: pointer; font-family: var(--font);
   background: linear-gradient(135deg, var(--btn-start) 0%, var(--btn-end) 100%);
   border: none; color: var(--btn-txt); transition: filter 0.12s; white-space: nowrap;
@@ -9195,7 +9252,7 @@ html.is-mac [id^="pw-oop-bottom_rail"] > * {
   display: flex; gap: 6px; width: 100%; margin-top: 2px;
 }
 .cr-quick-btn {
-  padding: 8px 14px; border-radius: 6px; font-size: 12px; font-weight: 700;
+  flex: 1; padding: 8px 14px; border-radius: 6px; font-size: 12px; font-weight: 700;
   cursor: pointer; font-family: var(--font); border: none; transition: filter 0.12s;
 }
 .cr-quick-f {
@@ -9209,7 +9266,7 @@ html.is-mac [id^="pw-oop-bottom_rail"] > * {
 }
 .cr-quick-s:hover { filter: brightness(1.2); }
 .cr-reset-player {
-  margin-left: auto; padding: 5px 10px; background: none; border: 1px solid rgba(255,255,255,0.1);
+  flex: 1; padding: 5px 10px; background: none; border: 1px solid rgba(255,255,255,0.1);
   border-radius: 5px; color: rgba(255,255,255,0.4); font-size: 10px; cursor: pointer;
   font-family: var(--font); transition: border-color 0.12s, color 0.12s;
 }
@@ -9224,7 +9281,7 @@ html.is-mac [id^="pw-oop-bottom_rail"] > * {
 }
 .cr-slot-label strong { color: var(--text); }
 .cr-slot-cancel {
-  padding: 10px 16px; border-radius: 6px; font-size: 12px; font-weight: 700;
+  flex: 1; padding: 10px 16px; border-radius: 6px; font-size: 12px; font-weight: 700;
   cursor: pointer; font-family: var(--font); text-transform: uppercase; letter-spacing: 0.4px;
   background: none; border: 1px solid rgba(255,255,255,0.12);
   color: rgba(255,255,255,0.4); transition: border-color 0.12s, color 0.12s;
@@ -9244,6 +9301,13 @@ html.is-mac [id^="pw-oop-bottom_rail"] > * {
   font-family: var(--font); transition: filter 0.15s;
 }
 .cr-save:hover { filter: brightness(1.09); }
+@media (max-width: 480px) {
+  .cr-quick-btn { padding: 6px 10px; font-size: 11px; }
+  .cr-add-build-btn { padding: 6px 10px; font-size: 11px; }
+  .cr-slot-btn { padding: 7px 4px; font-size: 10px; }
+  .cr-add-all-btn { padding: 7px 10px; font-size: 11px; }
+  .cr-slot-cancel { padding: 7px 12px; font-size: 11px; }
+}
 
 /* â”€â”€ CUSTOM MODE INDICATOR â”€â”€ */
 .custom-mode-bar {

@@ -209,7 +209,7 @@ function Chip({ type, meta, val, selectedQB, draggingType, onChipTap, onDragStar
 }
 
 // ─── SpinScreen ──────────────────────────────────────────────────────────────
-export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, activeCategory, resetKey, onChipTap, types = TYPES, isLite = false, qbPool = QBS, savedResult = null, onSaveResult, onPhaseChange, gameKey, onReset, adsDisabled = false, isRB = false, onlineCount = 0 }) {
+export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, activeCategory, resetKey, onChipTap, types = TYPES, isLite = false, qbPool = QBS, savedResult = null, onSaveResult, onPhaseChange, gameKey, onReset, adsDisabled = false, isRB = false, onlineCount = 0, attrMap = ATTR, categoriesData = CATEGORIES, teamsPool = TEAMS, logoDir = '/logos/' }) {
   const [phase, setPhase]               = useState(() => savedResult?.selectedQB ? 'done' : 'idle')
   const [selectedTeam, setSelectedTeam] = useState(() => savedResult?.selectedTeam ?? null)
   const [selectedQB,   setSelectedQB]   = useState(() => savedResult?.selectedQB ?? null)
@@ -300,8 +300,8 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
       ...usedTeamsRef.current.map(t => t.short),
       ...types.map(t => build[t]?.team).filter(Boolean),
     ])
-    const pool = TEAMS.filter(t => !usedShorts.has(t.short))
-    const finalPool = pool.length > 0 ? pool : [...TEAMS]
+    const pool = teamsPool.filter(t => !usedShorts.has(t.short))
+    const finalPool = pool.length > 0 ? pool : [...teamsPool]
     for (let i = finalPool.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1))
       ;[finalPool[i], finalPool[j]] = [finalPool[j], finalPool[i]]
@@ -321,7 +321,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
     return arr
   }, [selectedTeam, excludedQB, spinCount])
 
-  const visibleCategories = isRB ? RB_CATEGORIES : CATEGORIES
+  const visibleCategories = isRB ? RB_CATEGORIES : categoriesData
   const hasAvailableChips = isDone && selectedQB && visibleCategories.some(cat =>
     cat.types.some(type => types.includes(type) && !build[type])
   )
@@ -416,6 +416,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
                   team={selectedQB.team}
                   color={selectedQB.color}
                   size={88}
+                  logoDir={logoDir}
                 />
               </div>
               <div className="qb-reveal-text">
@@ -433,7 +434,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
               <>
                 {(isLite || types.length <= 4)
                   ? types.filter(t => !build[t]).map(t => {
-                      const meta = ATTR[t]
+                      const meta = attrMap[t]
                       const val  = selectedQB.attrs[t]
                       return <Chip key={t} type={t} meta={meta} val={val} selectedQB={selectedQB} draggingType={draggingType} onChipTap={onChipTap} onDragStart={onDragStart} onDragEnd={onDragEnd} setDraggingType={setDraggingType} hideGrades={hideGrades} />
                     })
@@ -448,7 +449,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
                             <div className="attr-category-line" />
                           </div>
                           {available.map(type => {
-                            const meta = ATTR[type]
+                            const meta = attrMap[type]
                             const val  = selectedQB.attrs[type]
                             return <Chip key={type} type={type} meta={meta} val={val} selectedQB={selectedQB} draggingType={draggingType} onChipTap={onChipTap} onDragStart={onDragStart} onDragEnd={onDragEnd} setDraggingType={setDraggingType} hideGrades={hideGrades} />
                           })}

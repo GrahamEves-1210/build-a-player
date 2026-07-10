@@ -13,11 +13,11 @@ function Img({ src, className }) {
   )
 }
 
-export default function QBAvatar({ photo, team, color, size = 48 }) {
+export default function QBAvatar({ photo, team, color, size = 48, logoDir = '/logos/' }) {
   return (
     <div className="qb-avatar" style={{ width: size, height: size, boxShadow: color ? `0 0 0 2px ${color}` : undefined }}>
       {team && (
-        <Img key={team} className="qb-avatar-logo" src={`/logos/${team}.png`} />
+        <Img key={team} className="qb-avatar-logo" src={`${logoDir}${team}.png`} />
       )}
       {photo && (
         <Img key={photo} className="qb-avatar-photo" src={photo} />

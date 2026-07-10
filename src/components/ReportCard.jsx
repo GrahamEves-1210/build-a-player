@@ -55,8 +55,8 @@ function OvrRing({ ovr }) {
   )
 }
 
-function BuildSlot({ type, data }) {
-  const meta = ATTR[type]
+function BuildSlot({ type, data, attrMap = ATTR }) {
+  const meta = attrMap[type]
   const filled = !!data
 
   if (!filled) {
@@ -217,7 +217,7 @@ export function ShareModal({ ovr, arch, build, types, onClose }) {
 
 // ── ReportCard ────────────────────────────────────────────────────────────────
 
-export default function ReportCard({ build, onSimulate, onReset, types = TYPES, hasResult = false, isRB = false, isPlus = false, isCustomMode = false, onOpenCustomModal }) {
+export default function ReportCard({ build, onSimulate, onReset, types = TYPES, hasResult = false, isRB = false, isPlus = false, isCustomMode = false, onOpenCustomModal, attrMap = ATTR }) {
   const filled = types.filter(t => build[t])
   const ovr = isRB ? calcOVRRB(build, types) : calcOVR(build, types)
   const arch = isRB ? getArchetypeRB(ovr, build, types) : getArchetype(ovr, build, types)
@@ -309,7 +309,7 @@ export default function ReportCard({ build, onSimulate, onReset, types = TYPES, 
 
       <div className="build-slots">
         {types.map(t => (
-          <BuildSlot key={t} type={t} data={build[t]} />
+          <BuildSlot key={t} type={t} data={build[t]} attrMap={attrMap} />
         ))}
       </div>
 

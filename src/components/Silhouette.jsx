@@ -74,8 +74,8 @@ function useFigureBounds(ref, figW, figH) {
   return bounds
 }
 
-function CZCard({ zone, cardY, build, activeDrag, hidden, invisible, isMobile }) {
-  const meta  = ATTR[zone.type]
+function CZCard({ zone, cardY, build, activeDrag, hidden, invisible, isMobile, attrMap = ATTR }) {
+  const meta  = attrMap[zone.type]
   const data  = build[zone.type]
   const filled = !!data
 
@@ -142,7 +142,7 @@ function HWTracker({ build, isRB = false }) {
 
 const MOBILE_CARD_W = 22   // card CSS width (86px) minus card offset (64px each side)
 
-export default function Silhouette({ build, activeDrag, onDrop, activeCategory, onCategoryChange, types = TYPES, isLite = false, onReset, isRB = false, isPlus = false, isCustomMode = false, onOpenCustomModal }) {
+export default function Silhouette({ build, activeDrag, onDrop, activeCategory, onCategoryChange, types = TYPES, isLite = false, onReset, isRB = false, isPlus = false, isCustomMode = false, onOpenCustomModal, attrMap = ATTR, categoriesData = CATEGORIES }) {
   const figW   = isRB ? RB_FIG_W : FIG_W
   const figH   = isRB ? RB_FIG_H : FIG_H
   const zones  = isRB ? RB_ZONES : ZONES
@@ -195,7 +195,7 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
     }
   }, [])
 
-  const cats = isRB ? RB_CATEGORIES : CATEGORIES
+  const cats = isRB ? RB_CATEGORIES : categoriesData
   const categoryTypes = activeCategory
     ? (cats.find(c => c.id === activeCategory)?.types ?? [])
     : null
@@ -317,6 +317,7 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
                   hidden={!p}
                   invisible={hiddenFromTab && !!p}
                   isMobile={isMobile}
+                  attrMap={attrMap}
                 />
               </div>
             )
