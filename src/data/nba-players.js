@@ -365,7 +365,7 @@ export const NBA_GUARD_PLAYERS = [
     attrs: { jumpShot:10, finishing:8, passing:5, handles:9, perimeterDefense:6, speed:7, bounce:6, size:10, basketballIQ:8, clutch:6 } },
 
   { name: "Reed Sheppard", short: "Sheppard", team: 'HOU', starter: false, captain: false,
-    attrs: { jumpShot:6, finishing:4, passing:4, handles:5, perimeterDefense:3, speed:7, bounce:4, size:3, basketballIQ:4, clutch:3 } },
+    attrs: { jumpShot:7, finishing:4, passing:4, handles:5, perimeterDefense:3, speed:7, bounce:4, size:3, basketballIQ:4, clutch:3 } },
 
   { name: "Marcus Smart", short: "Smart", team: 'HOU', starter: true, captain: false,
     attrs: { jumpShot:5, finishing:7, passing:7, handles:5, perimeterDefense:9, speed:6, bounce:5, size:6, basketballIQ:9, clutch:8 } },
@@ -1143,7 +1143,7 @@ export const NBA_BIG_PLAYERS = [
     attrs: { jumpShot:5, finishing:7, rebounding:5, playmaking:6, interiorDefense:5, speed:5, bounce:3, size:6, basketballIQ:5, clutch:5 } },
 
   { name: "Zach Edey", short: "Edey", team: 'MEM', starter: true, captain: false,
-    attrs: { jumpShot:4, finishing:8, rebounding:9, playmaking:4, interiorDefense:8, speed:2, bounce:1, size:9, basketballIQ:5, clutch:7 } },
+    attrs: { jumpShot:4, finishing:8, rebounding:9, playmaking:4, interiorDefense:8, speed:2, bounce:1, size:11, basketballIQ:5, clutch:7 } },
 
   { name: "Taylor Hendricks", short: "Hendricks", team: 'MEM', starter: false, captain: false,
     attrs: { jumpShot:4, finishing:5, rebounding:7, playmaking:3, interiorDefense:4, speed:6, bounce:5, size:6, basketballIQ:4, clutch:4 } },

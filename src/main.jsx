@@ -21,6 +21,7 @@ if (/iPad/.test(navigator.userAgent) || (/Mac/.test(navigator.platform) && navig
   document.documentElement.classList.add('is-tablet')
 }
 import { createRoot } from 'react-dom/client'
+import { HelmetProvider } from 'react-helmet-async'
 import { Analytics } from '@vercel/analytics/react'
 import { registerSW } from 'virtual:pwa-register'
 import './index.css'
@@ -71,7 +72,9 @@ const isBucket = window.location.pathname.startsWith('/bucket')
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    {isBucket ? <BucketApp /> : <App />}
+    <HelmetProvider>
+      {isBucket ? <BucketApp /> : <App />}
+    </HelmetProvider>
     <Analytics />
   </StrictMode>,
 )

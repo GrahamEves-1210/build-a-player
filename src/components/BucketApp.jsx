@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect, useLayoutEffect, useMemo } from 'react'
+import { Helmet } from 'react-helmet-async'
 import Navbar from './Navbar'
 import SpinScreen from './SpinScreen'
 import Silhouette from './Silhouette'
@@ -656,6 +657,14 @@ export default function BucketApp() {
 
   return (
     <>
+      <Helmet>
+        <title>Build-A-Bucket | NBA Player Simulator</title>
+        <meta name="description" content="Spin the wheel, build your NBA player, simulate a full season and climb the all-time GOAT list." />
+        <link rel="canonical" href="https://www.build-a-player.com/bucket" />
+        <meta property="og:title" content="Build-A-Bucket | NBA Player Simulator" />
+        <meta property="og:description" content="Spin the wheel, build your NBA player, simulate a full season and climb the all-time GOAT list." />
+        <meta property="og:url" content="https://www.build-a-player.com/bucket" />
+      </Helmet>
       <Navbar {...navbarProps} />
 
       <main className={`game-layout mobile-${mobileView}`}>
