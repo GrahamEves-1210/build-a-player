@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
+      registerType: 'prompt',
       includeAssets: ['logo.png', 'qb-silhouette.png', 'logos/**', 'headshots/**'],
       manifest: {
         name: 'Build-A-Player',

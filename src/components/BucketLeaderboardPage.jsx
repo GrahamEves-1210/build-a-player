@@ -189,7 +189,7 @@ export default function BucketLeaderboardPage({ onBack, currentUser, adsDisabled
         count,
         avgOvr:    r.total_ovr && count ? Math.round(Number(r.total_ovr) / count) : 0,
         avgPpg,
-        playoffs:  Number(r.playoffs),
+        playoffs:  Number(r.playoffs ?? 0),
         totalWins: wins,
         totalPts:  Math.round(avgPpg * count * 82),
         winPct:    wins + losses > 0 ? Math.round((wins / (wins + losses)) * 100) : 0,

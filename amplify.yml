@@ -1,0 +1,25 @@
+version: 1
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - npm install
+    build:
+      commands:
+        - npm run build
+  artifacts:
+    baseDirectory: dist
+    files:
+      - '**/*'
+  cache:
+    paths:
+      - node_modules/**/*
+  customHeaders:
+    - pattern: 'sw.js'
+      headers:
+        - key: Cache-Control
+          value: no-cache, no-store, must-revalidate
+    - pattern: '*.html'
+      headers:
+        - key: Cache-Control
+          value: no-cache, no-store, must-revalidate
