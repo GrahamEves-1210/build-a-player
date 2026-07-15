@@ -699,7 +699,7 @@ export function BucketModelFigure({ build, team, className = '', style = {}, hea
 
 // ─── Screen 0: Build Overview ─────────────────────────────────────────────────
 
-function ScreenBuild({ result, build, types, attrMap, onNext }) {
+function ScreenBuild({ result, build, types, attrMap, onNext, adsDisabled = false }) {
   const { ovr, position, team } = result
   const archetype  = position === 'big'
     ? getBucketBigArchetype(ovr, build, types)
@@ -719,6 +719,13 @@ function ScreenBuild({ result, build, types, attrMap, onNext }) {
     return () => clearTimeout(t)
   }, [])
 
+  useEffect(() => {
+    if (adsDisabled || window.innerWidth > 768) return
+    window.ramp?.que?.push(() => {
+      window.ramp.spaAddAds([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-build' }])
+    })
+  }, [])
+
   return (
     <div className="simp-screen">
       <div className="simp-ovr-hero">
@@ -728,6 +735,7 @@ function ScreenBuild({ result, build, types, attrMap, onNext }) {
       <div className="simp-archetype">{archetype}</div>
       <button className="simp-cta" onClick={onNext}>Simulate Season</button>
       {team && <BucketModelFigure build={build} team={team} />}
+      <div id="ramp-cntr1-build" className="ad-cntr1-mobile" />
 
       <div className="simp-attr-table">
         {filled.map((t, i) => {
@@ -2499,7 +2507,7 @@ export default function BucketSimPage({ result, build, types, position, onBack, 
   const handleGoatBack = () => setScreen(s => s - 1)
 
   const screens = [
-    <ScreenBuild    key="build"    result={result} build={build} types={types} attrMap={BUCKET_ATTR} onNext={advancePage} />,
+    <ScreenBuild    key="build"    result={result} build={build} types={types} attrMap={BUCKET_ATTR} onNext={advancePage} adsDisabled={adsDisabled} />,
     <ScreenSeason   key="season"   result={result} awards={awards} onNext={advancePage} adsDisabled={adsDisabled} />,
     <ScreenPlayoffs key="playoffs" result={result} onNext={advancePage} />,
     <ScreenGOAT     key="goat"     result={result} awards={awards} onNext={advancePage} onReset={handleReset} onBack={handleGoatBack} />,

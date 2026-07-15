@@ -360,7 +360,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
 
   const adInvokedRef = useRef(false)
   useEffect(() => {
-    if (!isDone || adInvokedRef.current || adsDisabled || isBucket || window.innerWidth > 768) return
+    if (!isDone || adInvokedRef.current || adsDisabled || window.innerWidth > 768) return
     adInvokedRef.current = true
     window.ramp?.que?.push(() => {
       window.ramp.spaAddAds([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1' }])
