@@ -191,7 +191,7 @@ function Chip({ type, meta, val, selectedQB, draggingType, onChipTap, onDragStar
   return (
     <div
       className={`attr-chip attr-chip-${type}${draggingType === type ? ' chip-dragging' : ''}`}
-      style={{ '--chip-col': isBucket ? gradeColor(val) : meta.col, '--chip-team': selectedQB.color }}
+      style={{ '--chip-col': isBucket ? (hideGrades ? '#64748b' : gradeColor(val)) : meta.col, '--chip-team': selectedQB.color }}
       draggable
       onClick={() => onChipTap && onChipTap(chipData)}
       onDragStart={e => {

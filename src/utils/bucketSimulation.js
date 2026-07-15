@@ -185,17 +185,34 @@ function simPlayoffs(mySeed, winProb, conf, standings) {
   const r1SeedMap = { 1:8, 2:7, 3:6, 4:5, 5:4, 6:3, 7:2, 8:1 }
   const r1Seed = r1SeedMap[currentSeed] ?? 8
 
-  // R2: winner from the paired bracket game in our half
-  let r2OppSeed
-  if ([1, 8].includes(currentSeed))       r2OppSeed = Math.random() < 0.68 ? 4 : 5
-  else if ([4, 5].includes(currentSeed))  r2OppSeed = Math.random() < 0.75 ? 1 : 8
-  else if ([2, 7].includes(currentSeed))  r2OppSeed = Math.random() < 0.68 ? 3 : 6
-  else                                     r2OppSeed = Math.random() < 0.75 ? 2 : 7
+  // Simulate a parallel series between two seeds using actual team ratings,
+  // so the R2/R3 opponent is whoever actually won — not a random probability pick
+  // that could contradict another round's result.
+  const simParallel = (seedA, seedB) => {
+    const tA = get(seedA), tB = get(seedB)
+    return Math.random() < matchupProb(teamWP(tA.short), tB.short)
+      ? { ...tA, seed: seedA }
+      : { ...tB, seed: seedB }
+  }
 
-  // R3: winner from the other half of the bracket
-  let r3OppSeed
-  if ([1,4,5,8].includes(currentSeed)) r3OppSeed = Math.random() < 0.62 ? 2 : 3
-  else                                   r3OppSeed = Math.random() < 0.68 ? 1 : 4
+  // R2: winner of the other R1 series in our bracket half
+  let r2Opp
+  if ([1, 8].includes(currentSeed))       r2Opp = simParallel(4, 5)
+  else if ([4, 5].includes(currentSeed))  r2Opp = simParallel(1, 8)
+  else if ([2, 7].includes(currentSeed))  r2Opp = simParallel(3, 6)
+  else                                     r2Opp = simParallel(2, 7)
+
+  // R3: simulate both R1 games in the other bracket half, then their semifinal
+  let r3Opp
+  if ([1, 4, 5, 8].includes(currentSeed)) {
+    const sfA = simParallel(2, 7)
+    const sfB = simParallel(3, 6)
+    r3Opp = Math.random() < matchupProb(teamWP(sfA.short), sfB.short) ? sfA : sfB
+  } else {
+    const sfA = simParallel(1, 8)
+    const sfB = simParallel(4, 5)
+    r3Opp = Math.random() < matchupProb(teamWP(sfA.short), sfB.short) ? sfA : sfB
+  }
 
   // Finals: elite team from other conference
   const otherConf = conf === 'east' ? 'west' : 'east'
@@ -205,8 +222,8 @@ function simPlayoffs(mySeed, winProb, conf, standings) {
 
   const opponentsByRound = [
     { ...get(r1Seed), seed: r1Seed },
-    { ...get(r2OppSeed), seed: r2OppSeed },
-    { ...get(r3OppSeed), seed: r3OppSeed },
+    r2Opp,
+    r3Opp,
     { short: r4Short, wins: r4Wins, seed: 1, isOtherConf: true },
   ]
 
@@ -292,10 +309,10 @@ export function runBucketSimulation(build, types, team, position = 'guard') {
       ? fin * 0.95 + js * 0.33 + sz * 0.24 + iq * 0.16
       : js  * 0.45 + fin * 0.38 + hnd * 0.18 + iq * 0.13)
   )))
-  // 3P%: guards cap ~45 (Curry-tier), bigs cap ~41 (elite stretch big)
-  const threePct = Math.min(isBig ? 41 : 45, Math.max(isBig ? 20 : 24, Math.round(
-    (isBig ? 22 : 26) + rn(-2, 2) +
-    js  * 1.30 +
+  // 3P%: F jumpshot = 0 (doesn't shoot threes); guards cap ~45 (Curry-tier), bigs cap ~41
+  const threePct = js === 0 ? 0 : Math.min(isBig ? 41 : 45, Math.max(0, Math.round(
+    (isBig ? 12 : 15) + rn(-2, 2) +
+    js  * 2.25 + (js >= 2 ? 3 : 0) +
     iq  * 0.25 +
     spd * 0.15 +
     sz  * 0.10

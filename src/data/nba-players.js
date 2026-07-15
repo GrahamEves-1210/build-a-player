@@ -87,7 +87,7 @@ export const NBA_GUARD_PLAYERS = [
 
   // ─── ATL ───────────────────────────────────────────────────────────
   { name: "Nickeil Alexander-Walker", short: "Alexander-Walker", team: 'ATL', starter: false, captain: false,
-    attrs: { jumpShot:7, finishing:5, passing:5, handles:5, perimeterDefense:5, speed:6, bounce:5, size:6, basketballIQ:5, clutch:4 } },
+    attrs: { jumpShot:7, finishing:5, passing:5, handles:5, perimeterDefense:8, speed:6, bounce:5, size:6, basketballIQ:5, clutch:4 } },
   { name: "Devin Carter", short: "Carter", team: 'ATL', starter: false, captain: false,
     attrs: { jumpShot:4, finishing:4, passing:4, handles:3, perimeterDefense:4, speed:10, bounce:6, size:4, basketballIQ:3, clutch:3 } },
   { name: "Dyson Daniels", short: "Daniels", team: 'ATL', starter: true, captain: false,
