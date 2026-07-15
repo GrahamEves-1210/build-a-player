@@ -318,7 +318,7 @@ export default function BucketApp() {
       const now = Date.now()
       if (now - lastUpdate < 3000) return
       lastUpdate = now
-      setOnlineCount(Math.round(Object.keys(ch.presenceState()).length * 2))
+      setOnlineCount(Math.round(Object.keys(ch.presenceState()).length * 3))
     }).subscribe(async (status) => {
       if (status === 'SUBSCRIBED') await ch.track({ t: Date.now() })
     })
