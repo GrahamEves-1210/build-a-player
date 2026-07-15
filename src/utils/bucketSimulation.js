@@ -372,10 +372,20 @@ export function runBucketSimulation(build, types, team, position = 'guard') {
     champion = po.champion
   }
 
-  // MVP: top seed or top-2 + elite PER/PPG + good win total
-  const mvpScore = wins * 0.5 + per * 2.5 + ppg * 0.8 + (seed === 1 ? 12 : seed <= 3 ? 6 : 0)
-  const mvpThreshold = 85 + Math.random() * 18
-  const mvp = mvpScore >= mvpThreshold
+  // MVP: player must out-stat the real MVP candidate pool (SGA, Jokic, Luka, Wemby, Giannis)
+  const mvpStat = (p, a, r) => p + a * 1.5 + r * 0.75
+  const playerMvpRating = mvpStat(ppg, apg, rpg)
+  const topCandidateRating = Math.max(
+    mvpStat(31 + Math.random() * 3, 5  + Math.random() * 2, 4  + Math.random() * 2),  // SGA
+    mvpStat(26 + Math.random() * 3, 8  + Math.random() * 2, 11 + Math.random() * 2),  // Jokic
+    mvpStat(29 + Math.random() * 3, 8  + Math.random() * 2, 8  + Math.random() * 2),  // Luka
+    mvpStat(23 + Math.random() * 4, 3  + Math.random() * 2, 10 + Math.random() * 3),  // Wemby
+    mvpStat(27 + Math.random() * 4, 5  + Math.random() * 2, 11 + Math.random() * 2),  // Giannis
+  )
+  const mvpGap = playerMvpRating - topCandidateRating
+  // Sigmoid: tied with top candidate = 50%, climbs quickly as gap opens
+  const mvpOdds = 1 / (1 + Math.exp(-mvpGap * 0.4))
+  const mvp = wins >= 44 && Math.random() < mvpOdds
 
   // DPOY: truly elite defensive stats — rare, ~8-15% of seasons
   const dpoyScore = spg * 10 + bpg * 8 + (seed <= 4 ? 4 : seed <= 8 ? 2 : 0)

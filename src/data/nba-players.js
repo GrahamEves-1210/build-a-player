@@ -331,7 +331,7 @@ export const NBA_GUARD_PLAYERS = [
 
   // ─── GSW ───────────────────────────────────────────────────────────
   { name: "Jimmy Butler III", short: "III", team: 'GSW', starter: true, captain: false,
-    attrs: { jumpShot:5, finishing:8, passing:7, handles:6, perimeterDefense:4, speed:7, bounce:6, size:7, basketballIQ:3, clutch:3 } },
+    attrs: { jumpShot:5, finishing:8, passing:7, handles:6, perimeterDefense:4, speed:7, bounce:6, size:7, basketballIQ:9, clutch:10 } },
 
   { name: "Seth Curry", short: "Curry", team: 'GSW', starter: false, captain: false,
     attrs: { jumpShot:8, finishing:2, passing:3, handles:3, perimeterDefense:2, speed:5, bounce:5, size:3, basketballIQ:3, clutch:3 } },
@@ -346,7 +346,7 @@ export const NBA_GUARD_PLAYERS = [
     attrs: { jumpShot:5, finishing:5, passing:3, handles:4, perimeterDefense:6, speed:6, bounce:6, size:6, basketballIQ:4, clutch:4 } },
 
   { name: "Gary Payton II", short: "II", team: 'GSW', starter: false, captain: false,
-    attrs: { jumpShot:4, finishing:6, passing:4, handles:4, perimeterDefense:6, speed:7, bounce:8, size:2, basketballIQ:3, clutch:3 } },
+    attrs: { jumpShot:4, finishing:6, passing:4, handles:4, perimeterDefense:7, speed:7, bounce:8, size:2, basketballIQ:3, clutch:3 } },
 
   { name: "Brandin Podziemski", short: "Podziemski", team: 'GSW', starter: true, captain: false,
     attrs: { jumpShot:5, finishing:5, passing:6, handles:5, perimeterDefense:4, speed:6, bounce:5, size:4, basketballIQ:5, clutch:5 } },
@@ -438,7 +438,7 @@ export const NBA_GUARD_PLAYERS = [
     attrs: { jumpShot:4, finishing:4, passing:3, handles:3, perimeterDefense:4, speed:5, bounce:5, size:5, basketballIQ:3, clutch:3 } },
 
   { name: "Luka Doncic", short: "Luka", team: 'LAL', starter: true, captain: true,
-    attrs: { jumpShot:10, finishing:10, passing:11, handles:10, perimeterDefense:3, speed:7, bounce:4, size:8, basketballIQ:10, clutch:10 } },
+    attrs: { jumpShot:10, finishing:10, passing:11, handles:10, perimeterDefense:3, speed:6, bounce:4, size:8, basketballIQ:10, clutch:10 } },
 
   { name: "Quentin Grimes", short: "Grimes", team: 'LAL', starter: false, captain: false,
     attrs: { jumpShot:6, finishing:5, passing:3, handles:4, perimeterDefense:6, speed:7, bounce:6, size:6, basketballIQ:4, clutch:3 } },
@@ -456,7 +456,7 @@ export const NBA_GUARD_PLAYERS = [
     attrs: { jumpShot:7, finishing:7, passing:6, handles:5, perimeterDefense:2, speed:5, bounce:5, size:6, basketballIQ:6, clutch:6 } },
 
   { name: "Collin Sexton", short: "Sexton", team: 'LAL', starter: true, captain: false,
-    attrs: { jumpShot:6, finishing:6, passing:3, handles:6, perimeterDefense:5, speed:8, bounce:7, size:2, basketballIQ:5, clutch:5 } },
+    attrs: { jumpShot:6, finishing:6, passing:3, handles:6, perimeterDefense:6, speed:8, bounce:7, size:2, basketballIQ:5, clutch:5 } },
 
   { name: "Adou Thiero", short: "Thiero", team: 'LAL', starter: false, captain: false,
     attrs: { jumpShot:2, finishing:4, passing:3, handles:1, perimeterDefense:4, speed:8, bounce:9, size:6, basketballIQ:3, clutch:3 } },
@@ -583,7 +583,7 @@ export const NBA_GUARD_PLAYERS = [
     attrs: { jumpShot:7, finishing:4, passing:3, handles:4, perimeterDefense:10, speed:6, bounce:7, size:6, basketballIQ:6, clutch:4 } },
 
   { name: "Terrence Shannon Jr.", short: "Jr.", team: 'MIN', starter: false, captain: false,
-    attrs: { jumpShot:5, finishing:4, passing:4, handles:4, perimeterDefense:4, speed:5, bounce:5, size:5, basketballIQ:3, clutch:3 } },
+    attrs: { jumpShot:5, finishing:4, passing:4, handles:4, perimeterDefense:4, speed:6, bounce:5, size:5, basketballIQ:3, clutch:3 } },
 
   // ─── NOP ───────────────────────────────────────────────────────────
   { name: "Saddiq Bey", short: "Bey", team: 'NOP', starter: false, captain: false,
@@ -1225,7 +1225,7 @@ export const NBA_BIG_PLAYERS = [
     attrs: { jumpShot:6, finishing:7, rebounding:7, playmaking:4, interiorDefense:8, speed:6, bounce:3, size:8, basketballIQ:6, clutch:3 } },
 
   { name: "Aday Mara", short: "Mara", team: 'OKC', starter: false, captain: false,
-    attrs: { jumpShot:3, finishing:5, rebounding:6, playmaking:2, interiorDefense:6, speed:1, bounce:2, size:7, basketballIQ:4, clutch:3 } },
+    attrs: { jumpShot:3, finishing:5, rebounding:6, playmaking:2, interiorDefense:6, speed:1, bounce:2, size:10, basketballIQ:4, clutch:3 } },
 
   { name: "Thomas Sorber", short: "Sorber", team: 'OKC', starter: false, captain: false,
     attrs: { jumpShot:2, finishing:4, rebounding:5, playmaking:2, interiorDefense:5, speed:5, bounce:3, size:7, basketballIQ:3, clutch:3 } },
