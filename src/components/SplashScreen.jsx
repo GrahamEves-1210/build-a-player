@@ -1,5 +1,17 @@
 import { useEffect, useState, useMemo } from 'react'
 
+const HoopU = () => (
+  <svg className="hoop-u-svg" viewBox="0 0 68 90" fill="none" aria-hidden="true">
+    <circle cx="34" cy="14" r="14.4" fill="#f97316"/>
+    <path d="M8 24 L18 88 L50 88 L60 24" stroke="white" strokeWidth="6" strokeLinejoin="round" fill="none"/>
+    <line x1="17" y1="25" x2="38" y2="88" stroke="white" strokeWidth="3.5"/>
+    <line x1="27" y1="25" x2="48" y2="88" stroke="white" strokeWidth="3.5"/>
+    <line x1="41" y1="25" x2="20" y2="88" stroke="white" strokeWidth="3.5"/>
+    <line x1="51" y1="25" x2="30" y2="88" stroke="white" strokeWidth="3.5"/>
+    <line x1="5" y1="26" x2="63" y2="26" stroke="white" strokeWidth="5" strokeLinecap="round"/>
+  </svg>
+)
+
 const QB_ATTRS = [
   { label: 'Arm',                   col: '#f87171', angle:  -35, dist: 1.32, mx: 58, my: 14 },
   { label: 'Legs',                  col: '#60a5fa', angle:   55, dist: 1.30, mx: 3,  my: 30 },
@@ -23,9 +35,9 @@ const RB_ATTRS = [
   { label: 'Elusiveness',     col: '#a78bfa', angle: -160, dist: 1.28, mx: 3,  my: 48, doy: 200 },
 ]
 
-function FloatingChip({ label, col, angle, dist, visible, mx, my, isMobile, dox = 0, doy = 0 }) {
-  const x = isMobile ? mx : 50 + dist * 34 * Math.cos((angle * Math.PI) / 180)
-  const y = isMobile ? my : 48 + dist * 30 * Math.sin((angle * Math.PI) / 180)
+function FloatingChip({ label, col, angle, dist, visible, mx, my, isMobile, orbitScale = 1, dox = 0, doy = 0 }) {
+  const x = isMobile ? mx : 50 + dist * 34 * orbitScale * Math.cos((angle * Math.PI) / 180)
+  const y = isMobile ? my : 48 + dist * 30 * orbitScale * Math.sin((angle * Math.PI) / 180)
   const ox = isMobile ? 0 : dox
   const oy = isMobile ? 0 : doy
 
@@ -53,7 +65,9 @@ function FloatingChip({ label, col, angle, dist, visible, mx, my, isMobile, dox 
 export default function SplashScreen({ onStart, onDepthChart }) {
   const [phase, setPhase] = useState(0)
   const [position, setPosition] = useState(() => localStorage.getItem('lastPosition') || 'qb')
-  const isMobile = useMemo(() => window.innerWidth <= 768, [])
+  const isMobile  = useMemo(() => window.innerWidth <= 768, [])
+  const isDesktop = useMemo(() => window.innerWidth > 768, [])
+  const orbitScale = isDesktop ? 0.8 : 1
 
   useEffect(() => {
     const t1 = setTimeout(() => setPhase(1), 80)
@@ -70,12 +84,12 @@ export default function SplashScreen({ onStart, onDepthChart }) {
       <div className="splash-glow" style={{ opacity: phase >= 2 ? 1 : 0 }} />
 
       {attrs.map((a) => (
-        <FloatingChip key={a.label} {...a} visible={phase >= 3} isMobile={isMobile} />
+        <FloatingChip key={a.label} {...a} visible={phase >= 3} isMobile={isMobile} orbitScale={orbitScale} />
       ))}
 
       <div className="splash-header" style={{ opacity: phase >= 1 ? 1 : 0, transform: phase >= 1 ? 'none' : 'translateY(-28px)' }}>
         <div className="splash-title">
-          BUILD<em>-A-</em>PLAYER
+          BUIL<span className="logo-d">D</span><em>-<span className="logo-a">A</span>-</em>PLAYER
         </div>
         <div className="splash-pos-toggle" style={{ opacity: phase >= 3 ? 1 : 0, transform: phase >= 3 ? 'none' : 'translateY(8px)' }}>
           <button
@@ -97,13 +111,24 @@ export default function SplashScreen({ onStart, onDepthChart }) {
         <div className="splash-figure-glow" />
       </div>
 
+      <button
+        className="splash-dc-float"
+        onClick={onDepthChart}
+        style={{ opacity: phase >= 3 ? 1 : 0, transform: phase >= 3 ? 'translateY(-50%)' : 'translateY(calc(-50% + 10px)) scale(0.8)' }}
+      >
+        <div className="splash-dc-float-main">THE DEPTH CHART</div>
+        <div className="splash-dc-float-sub">MINI GAME</div>
+      </button>
+
       <div className="splash-footer" style={{ opacity: phase >= 3 ? 1 : 0, transform: phase >= 3 ? 'none' : 'translateY(16px)' }}>
 
         <div className="splash-tagline">Spin the wheel · Build your {position.toUpperCase()}</div>
 
-        <button className="splash-minigame-btn" onClick={onDepthChart}>
-          <div className="splash-mg-label">THE DEPTH CHART</div>
-          <div className="splash-mg-sub">NEW MINI-GAME</div>
+        <button className="splash-minigame-btn splash-minigame-btn--bucket" onClick={() => window.location.href = '/bucket'}>
+          <div className="splash-xlink-logo">
+            BUIL<span className="splash-xlink-d">D</span><em className="splash-xlink-em splash-xlink-em--bucket">-<span className="splash-xlink-a">A</span>-</em>B<HoopU />CKET
+          </div>
+          <div className="splash-mg-sub">BASKETBALL BUILDER</div>
         </button>
 
         <div className="splash-modes">

@@ -32,9 +32,11 @@ try {
 } catch {}
 
 const _isPrivacy = window.location.pathname === '/privacy'
+const _isProfile = !_sharedData && !_isPrivacy && window.location.pathname === '/profile'
+const _isAbout   = !_sharedData && !_isPrivacy && !_isProfile && new URLSearchParams(window.location.search).has('about')
 
 const _saved = (() => {
-  if (_sharedData || _isPrivacy) return null
+  if (_sharedData || _isPrivacy || _isAbout || _isProfile) return null
   try { return JSON.parse(localStorage.getItem('bap_progress')) } catch { return null }
 })()
 
@@ -62,7 +64,7 @@ function enableAdFreeMode() {
 }
 
 export default function App() {
-  const [page, setPage]               = useState(_sharedData ? 'shared' : _isPrivacy ? 'privacy' : (_saved?.gameMode ? 'game' : 'splash'))
+  const [page, setPage]               = useState(_sharedData ? 'shared' : _isPrivacy ? 'privacy' : _isProfile ? 'profile' : _isAbout ? 'about' : (_saved?.gameMode ? 'game' : 'splash'))
   const [sharedBuild]                 = useState(_sharedData?.build ?? null)
   const [sharedTypes]                 = useState(_sharedData?.types ?? null)
   const [gameMode, setGameMode]         = useState(_saved?.gameMode ?? null)
@@ -177,6 +179,17 @@ export default function App() {
   }, [])
 
   useEffect(() => {
+    const handlePop = () => {
+      if (window.location.pathname !== '/profile') {
+        setPage(prev => prev === 'profile' ? 'game' : prev)
+        window.scrollTo({ top: 0, behavior: 'instant' })
+      }
+    }
+    window.addEventListener('popstate', handlePop)
+    return () => window.removeEventListener('popstate', handlePop)
+  }, [])
+
+  useEffect(() => {
     if (!supabase) return
     const uid = Math.random().toString(36).slice(2)
     const ch = supabase.channel('online', { config: { presence: { key: uid } } })
@@ -185,7 +198,7 @@ export default function App() {
       const now = Date.now()
       if (now - lastUpdate < 3000) return
       lastUpdate = now
-      setOnlineCount(Object.keys(ch.presenceState()).length + 5)
+      setOnlineCount(Math.round(Object.keys(ch.presenceState()).length * 2))
     }).subscribe(async (status) => {
       if (status === 'SUBSCRIBED') await ch.track({ t: Date.now() })
     })
@@ -370,7 +383,7 @@ export default function App() {
     onAbout: () => setPage('about'),
     onHome: handleHome,
     onSignIn: () => setShowAuth(true),
-    onProfile: () => setPage('profile'),
+    onProfile: () => { window.history.pushState({}, '', '/profile'); setPage('profile') },
     onLeaderboard: () => setPage('leaderboard'),
     onSwitchPosition: (pos) => { localStorage.setItem('lastPosition', pos); handleHome() },
     onSubscribe: async () => {
@@ -438,7 +451,6 @@ export default function App() {
   if (page === 'profile' && user) {
     return (
       <>
-        <Navbar {...navbarProps} />
         <ProfilePage
           user={user}
           build={build}
@@ -462,8 +474,8 @@ export default function App() {
             if (themeId === 'default') document.documentElement.removeAttribute('data-theme')
             else document.documentElement.setAttribute('data-theme', themeId)
           }}
-          onBack={() => { setPage('game'); window.scrollTo({ top: 0, behavior: 'instant' }) }}
-          onSignOut={() => { setPage('game'); setUser(null); window.scrollTo({ top: 0, behavior: 'instant' }) }}
+          onBack={() => { window.history.back() }}
+          onSignOut={() => { setUser(null); window.location.href = '/' }}
           onAdsDisabled={() => { setAdsDisabled(true); setIsSubscribed(true); enableAdFreeMode() }}
           onOpenCustomModal={() => setShowCustomModal(true)}
         />

@@ -140,16 +140,6 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
   const [view, setView]           = useState('profiles')
   const [buildsTab, setBuildsTab] = useState('best')
   const [expandedIdx, setExpandedIdx] = useState(null)
-  const adInvokedRef = useRef(false)
-
-  useEffect(() => {
-    if (adInvokedRef.current || adsDisabled) return
-    adInvokedRef.current = true
-    window.ramp?.que?.push(() => {
-      window.ramp.spaAddAds([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-lb' }])
-    })
-  }, [])
-
   // ── QB profiles (classic) ────────────────────────────────────────────────────
   useEffect(() => {
     if (isRB || !supabase) { setLoading(false); return }
@@ -630,8 +620,6 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
             </>
           )
         })()}
-
-        {view !== 'daily' && <div id="ramp-cntr1-lb" className="ad-cntr1-lb" />}
 
         {/* ── PROFILES ────────────────────────────────────────────────────────── */}
         {view === 'profiles' && (

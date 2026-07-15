@@ -13,6 +13,31 @@ const STEPS_MOBILE = (isRB) => [
   { n: '4', title: 'Simulate',  body: `Hit Simulate to see how your Frankenstein ${isRB ? 'RB' : 'QB'} performs.` },
 ]
 
+const BUCKET_STEPS_DESKTOP = [
+  { n: '1', title: 'Spin',       body: 'Pull a random NBA player from any roster.' },
+  { n: '2', title: 'Drag',       body: 'Drop one stat chip onto the matching zone on the silhouette.' },
+  { n: '3', title: 'Repeat ×10', body: 'Fill all ten attribute slots — one per spin.' },
+  { n: '4', title: 'Simulate',   body: 'Spin or pick an NBA team, then run a full 82-game season.' },
+]
+const BUCKET_STEPS_MOBILE = [
+  { n: '1', title: 'Spin',       body: 'Pull a random NBA player from any roster.' },
+  { n: '2', title: 'Tap',        body: 'Tap a stat chip to instantly assign it to your build.' },
+  { n: '3', title: 'Repeat ×10', body: 'Fill all ten attribute slots — one per spin.' },
+  { n: '4', title: 'Simulate',   body: 'Spin or pick an NBA team, then run a full 82-game season.' },
+]
+
+const HoopU = () => (
+  <svg className="hoop-u-svg" viewBox="0 0 68 90" fill="none" aria-hidden="true">
+    <circle cx="34" cy="14" r="14.4" fill="#f97316"/>
+    <path d="M8 24 L18 88 L50 88 L60 24" stroke="white" strokeWidth="6" strokeLinejoin="round" fill="none"/>
+    <line x1="17" y1="25" x2="38" y2="88" stroke="white" strokeWidth="3.5"/>
+    <line x1="27" y1="25" x2="48" y2="88" stroke="white" strokeWidth="3.5"/>
+    <line x1="41" y1="25" x2="20" y2="88" stroke="white" strokeWidth="3.5"/>
+    <line x1="51" y1="25" x2="30" y2="88" stroke="white" strokeWidth="3.5"/>
+    <line x1="5" y1="26" x2="63" y2="26" stroke="white" strokeWidth="5" strokeLinecap="round"/>
+  </svg>
+)
+
 function IconGrid() {
   return (
     <svg width="20" height="20" viewBox="0 0 15 15" fill="currentColor" aria-hidden="true">
@@ -153,7 +178,7 @@ const PERKS = [
   'PLUS badge on leaderboard',
 ]
 
-export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, onLeaderboard, onSwitchPosition, onSubscribe, onOpenCustomRatings, user, gameMode, isRB, isPlus }) {
+export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, onLeaderboard, onSwitchPosition, onSwitchBucketPosition, onSubscribe, onOpenCustomRatings, user, gameMode, isRB, isPlus, isBucket, bucketPosition }) {
   const [open,         setOpen]        = useState(false)
   const [htpOpen,      setHtpOpen]     = useState(false)
   const [installOpen,  setInstallOpen] = useState(false)
@@ -163,7 +188,9 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
   const isStandalone = typeof window !== 'undefined' && window.matchMedia('(display-mode: standalone)').matches
   const isIOS = typeof navigator !== 'undefined' && /iPhone|iPad|iPod/i.test(navigator.userAgent)
   const isAndroid = typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent)
-  const STEPS = isMobile ? STEPS_MOBILE(isRB) : STEPS_DESKTOP(isRB)
+  const STEPS = isBucket
+    ? (isMobile ? BUCKET_STEPS_MOBILE : BUCKET_STEPS_DESKTOP)
+    : (isMobile ? STEPS_MOBILE(isRB) : STEPS_DESKTOP(isRB))
 
   useEffect(() => {
     if (!open) return
@@ -182,20 +209,41 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
     <header className={`navbar${gameMode === 'all-time' ? ' alltime-mode' : ''}`}>
       <div className="logo" onClick={onHome} style={onHome ? { cursor: 'pointer' } : undefined}>
         <div className="logo-text-stack">
-          <div className="logo-text">Build<em>-A-</em>Player</div>
-          {gameMode === 'all-time' && <span className="logo-mode-tag">All-Time</span>}
+          <div className="logo-text">Buil<span className="logo-d">d</span><em>-<span className="logo-a">A</span>-</em>{isBucket ? <>B<HoopU />cket</> : 'Player'}</div>
+          {!isBucket && gameMode === 'all-time' && <span className="logo-mode-tag">All-Time</span>}
         </div>
       </div>
 
-      <button className="tab-pill tab-pill-qb active">
-        {isRB ? 'Build-A-RB' : 'Build-A-QB'}
-      </button>
-
-      <div className="nav-pills-soon">
-        <button className="tab-pill tab-pill-rb" onClick={() => onSwitchPosition?.(isRB ? 'qb' : 'rb')}>
-          {isRB ? 'Build-A-QB' : 'Build-A-RB'}
-        </button>
-      </div>
+      {isBucket ? (
+        <>
+          <button className="tab-pill tab-pill-qb active">
+            {`Build-A-${bucketPosition.charAt(0).toUpperCase() + bucketPosition.slice(1)}`}
+          </button>
+          <div className="nav-pills-soon">
+            {['guard', 'big'].filter(p => p !== bucketPosition).map(pos => (
+              <button
+                key={pos}
+                className="tab-pill tab-pill-rb"
+                style={pos === 'guard' && bucketPosition === 'big' ? { position: 'relative', left: '-6px' } : undefined}
+                onClick={() => onSwitchBucketPosition?.(pos)}
+              >
+                {`Build-A-${pos.charAt(0).toUpperCase() + pos.slice(1)}`}
+              </button>
+            ))}
+          </div>
+        </>
+      ) : (
+        <>
+          <button className="tab-pill tab-pill-qb active">
+            {isRB ? 'Build-A-RB' : 'Build-A-QB'}
+          </button>
+          <div className="nav-pills-soon">
+            <button className="tab-pill tab-pill-rb" onClick={() => onSwitchPosition?.(isRB ? 'qb' : 'rb')}>
+              {isRB ? 'Build-A-QB' : 'Build-A-RB'}
+            </button>
+          </div>
+        </>
+      )}
 
       <div className="nav-right" ref={ref}>
         <button

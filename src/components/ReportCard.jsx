@@ -4,13 +4,25 @@ import { ATTR, TYPES, QB_PHYSICALS } from '../data/qbs'
 import { RB_PHYSICALS } from '../data/rbs'
 import { QB_LEGEND_PHYSICALS } from '../data/legends'
 import { RB_LEGEND_PHYSICALS } from '../data/rb-legends'
+import NBA_MEASUREMENTS from '../data/nba-measurements.json'
 const ALL_QB_PHYS = { ...QB_LEGEND_PHYSICALS, ...QB_PHYSICALS }
 const ALL_RB_PHYS = { ...RB_LEGEND_PHYSICALS, ...RB_PHYSICALS }
 import { calcOVR, calcOVRRB, getArchetype, getArchetypeRB, calcBalance, valToGrade } from '../utils/simulation'
+import { calcBucketOVR, getBucketGuardArchetype, getBucketBigArchetype } from '../utils/bucketSimulation'
 import { buildShareUrl } from '../utils/shareUrl'
+import { generateBucketShareCard, shareOrDownloadCard } from '../utils/generateShareCard'
 import QBAvatar from './QBAvatar'
 
 function fmtHeight(inches) { return `${Math.floor(inches / 12)}'${inches % 12}"` }
+
+function gradeColor(val) {
+  if (val >= 11) return '#a855f7'
+  if (val >= 8)  return '#3b82f6'
+  if (val >= 5)  return '#22c55e'
+  if (val >= 2)  return '#eab308'
+  if (val >= 1)  return '#f97316'
+  return '#ef4444'
+}
 
 const RING_R    = 62
 const RING_SIZE = 144
@@ -20,9 +32,10 @@ const RING_CIRC = 2 * Math.PI * RING_R
 
 function ovrColor(ovr) {
   if (!ovr) return 'rgba(149,213,178,0.12)'
-  if (ovr >= 95) return '#fbbf24'
-  if (ovr >= 85) return '#95D5B2'
-  if (ovr >= 75) return '#60a5fa'
+  if (ovr >= 96) return '#fbbf24'
+  if (ovr >= 90) return '#ef4444'
+  if (ovr >= 85) return '#60a5fa'
+  if (ovr >= 75) return '#95D5B2'
   if (ovr >= 65) return '#fb923c'
   return '#f87171'
 }
@@ -55,7 +68,7 @@ function OvrRing({ ovr }) {
   )
 }
 
-function BuildSlot({ type, data, attrMap = ATTR }) {
+function BuildSlot({ type, data, attrMap = ATTR, logoDir = '/logos/' }) {
   const meta = attrMap[type]
   const filled = !!data
 
@@ -73,12 +86,12 @@ function BuildSlot({ type, data, attrMap = ATTR }) {
 
   return (
     <div className={`simp-attr-row simp-row-visible sl-${type}`}>
-      <QBAvatar photo={data.photo} team={data.team} color={data.teamColor} size={44} />
+      <QBAvatar photo={data.photo} team={data.team} color={data.teamColor} size={44} logoDir={logoDir} />
       <div className="simp-attr-info">
         <span className="simp-attr-name">{meta.label}</span>
         <span className="simp-attr-qb">{data.qbFull}</span>
       </div>
-      <span className="simp-grade-circle" style={{ background: meta.hex, color: '#07120a' }}>
+      <span className="simp-grade-circle" style={{ background: gradeColor(data.val), color: '#07120a' }}>
         {valToGrade(data.val)}
       </span>
     </div>
@@ -87,48 +100,78 @@ function BuildSlot({ type, data, attrMap = ATTR }) {
 
 // ── Share Modal ───────────────────────────────────────────────────────────────
 
-export function ShareModal({ ovr, arch, build, types, onClose }) {
-  const [copied, setCopied] = useState(false)
+export function ShareModal({ ovr, arch, build, types, onClose, isBucket = false, attrMap = {}, position = 'guard', captureFigure }) {
+  const [copied, setCopied]       = useState(false)
+  const [cardDataUrl, setCardDataUrl] = useState(null)
+  const [cardBlob, setCardBlob]       = useState(null)
 
-  const shareText = `I made a ${ovr} overall ${arch} quarterback, think you can do better?`
-  const shareUrl  = buildShareUrl(build, types)
+  const bucketText = `I built a ${ovr} OVR ${arch}. Think you can do better?`
+  const shareText  = isBucket ? bucketText : `I made a ${ovr} overall ${arch} quarterback, think you can do better?`
+  const shareUrl   = buildShareUrl(build, types)
+  const filename   = `bucket-build-${ovr}-${arch.toLowerCase().replace(/\s+/g, '-')}.png`
 
-  const tweetWebUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`
-  const handleTweet = (e) => {
-    e.preventDefault()
-    const isMobile = /iPhone|iPad|Android/i.test(navigator.userAgent)
-    if (!isMobile) { window.open(tweetWebUrl, '_blank'); return }
-    const deepLink = `twitter://post?message=${encodeURIComponent(shareText + ' ' + shareUrl)}`
-    window.location.href = deepLink
-    const t = setTimeout(() => { window.location.href = tweetWebUrl }, 1500)
-    document.addEventListener('visibilitychange', function onVis() {
-      if (document.hidden) clearTimeout(t)
-      document.removeEventListener('visibilitychange', onVis)
-    })
-  }
-  const fbUrl     = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}&quote=${encodeURIComponent(shareText)}`
-  const redditUrl = `https://www.reddit.com/submit?url=${encodeURIComponent(shareUrl)}&title=${encodeURIComponent(shareText)}`
-
-  const handleCopy = () => {
-    const text = shareUrl
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(text).catch(() => legacyCopy(text))
-    } else {
-      legacyCopy(text)
-    }
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
+  // Auto-generate card on open for bucket builds
+  useEffect(() => {
+    if (!isBucket) return
+    generateBucketShareCard({ build, types, ovr, arch, position, attrMap }).then(canvas => {
+      setCardDataUrl(canvas.toDataURL('image/png'))
+      canvas.toBlob(b => setCardBlob(b), 'image/png')
+    }).catch(console.error)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   function legacyCopy(text) {
     const el = document.createElement('textarea')
     el.value = text
     el.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0'
-    document.body.appendChild(el)
-    el.focus()
-    el.select()
+    document.body.appendChild(el); el.focus(); el.select()
     try { document.execCommand('copy') } catch {}
     document.body.removeChild(el)
+  }
+
+  // On mobile: share image + URL together via native sheet
+  // On desktop: fall back to link-only or download
+  const handleNativeShare = async (e) => {
+    e?.preventDefault()
+    const file = cardBlob ? new File([cardBlob], filename, { type: 'image/png' }) : null
+    const shareData = {
+      title: `${ovr} OVR · ${arch}`,
+      text: shareText,
+      url: shareUrl,
+      ...(file && navigator.canShare?.({ files: [file] }) ? { files: [file] } : {}),
+    }
+    if (navigator.share) {
+      try { await navigator.share(shareData); return } catch (err) {
+        if (err.name === 'AbortError') return
+      }
+    }
+    // Desktop fallback: open tweet
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`, '_blank')
+  }
+
+  const handleTweet = (e) => {
+    e.preventDefault()
+    const isMobile = /iPhone|iPad|Android/i.test(navigator.userAgent)
+    if (isMobile && navigator.share) { handleNativeShare(e); return }
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`, '_blank')
+  }
+
+  const fbUrl     = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}&quote=${encodeURIComponent(shareText)}`
+  const redditUrl = `https://www.reddit.com/submit?url=${encodeURIComponent(shareUrl)}&title=${encodeURIComponent(shareText)}`
+
+  const handleCopy = () => {
+    const text = shareUrl
+    if (navigator.clipboard) navigator.clipboard.writeText(text).catch(() => legacyCopy(text))
+    else legacyCopy(text)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  const handleDownload = () => {
+    if (!cardBlob) return
+    const url = URL.createObjectURL(cardBlob)
+    const a = document.createElement('a')
+    a.href = url; a.download = filename; a.click()
+    setTimeout(() => URL.revokeObjectURL(url), 5000)
   }
 
   // Close on Escape
@@ -150,23 +193,42 @@ export function ShareModal({ ovr, arch, build, types, onClose }) {
 
         <div className="share-modal-title">Share Your Build</div>
 
-        <div className="share-preview-text">"{shareText}"</div>
+        {/* Card preview — bucket only, auto-generated */}
+        {isBucket && (
+          <div className="share-card-preview-wrap">
+            {cardDataUrl
+              ? <img src={cardDataUrl} alt="Build card" className="share-card-preview" />
+              : <div className="share-card-preview-skeleton" />
+            }
+            {cardDataUrl && (
+              <button className="share-card-download" onClick={handleDownload} title="Download image">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="7 10 12 15 17 10"/>
+                  <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                Save
+              </button>
+            )}
+          </div>
+        )}
 
-        {/* OG link card */}
-        <div className="share-og-card">
-          <div className="share-og-img-wrap">
-            <img src="/logo.png" alt="" className="share-og-img" />
+        {!isBucket && (
+          <div className="share-og-card">
+            <div className="share-og-img-wrap">
+              <img src="/logo.png" alt="" className="share-og-img" />
+            </div>
+            <div className="share-og-body">
+              <div className="share-og-domain">build-a-player.com</div>
+              <div className="share-og-title">{ovr} OVR · {arch}</div>
+              <div className="share-og-desc">{shareText}</div>
+            </div>
           </div>
-          <div className="share-og-body">
-            <div className="share-og-domain">build-a-player.com</div>
-            <div className="share-og-title">{ovr} OVR · {arch}</div>
-            <div className="share-og-desc">{shareText}</div>
-          </div>
-        </div>
+        )}
 
         {/* 2×2 share grid */}
         <div className="share-icons-grid">
-          <a className="share-icon-btn" href={tweetWebUrl} onClick={handleTweet}>
+          <a className="share-icon-btn" href="#" onClick={handleTweet}>
             <div className="share-icon-circle share-icon-x">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.748l7.73-8.835L1.254 2.25H8.08l4.213 5.567 5.951-5.567zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
@@ -217,10 +279,12 @@ export function ShareModal({ ovr, arch, build, types, onClose }) {
 
 // ── ReportCard ────────────────────────────────────────────────────────────────
 
-export default function ReportCard({ build, onSimulate, onReset, types = TYPES, hasResult = false, isRB = false, isPlus = false, isCustomMode = false, onOpenCustomModal, attrMap = ATTR }) {
+export default function ReportCard({ build, onSimulate, onReset, types = TYPES, hasResult = false, isRB = false, isBucket = false, bucketPosition = 'guard', isPlus = false, isCustomMode = false, onOpenCustomModal, onSandboxToggle, attrMap = ATTR, logoDir = '/logos/', captureFigure }) {
   const filled = types.filter(t => build[t])
-  const ovr = isRB ? calcOVRRB(build, types) : calcOVR(build, types)
-  const arch = isRB ? getArchetypeRB(ovr, build, types) : getArchetype(ovr, build, types)
+  const ovr = isBucket ? calcBucketOVR(build, types, bucketPosition) : isRB ? calcOVRRB(build, types) : calcOVR(build, types)
+  const arch = isBucket
+    ? (bucketPosition === 'big' ? getBucketBigArchetype(ovr, build, types) : getBucketGuardArchetype(ovr, build, types))
+    : isRB ? getArchetypeRB(ovr, build, types) : getArchetype(ovr, build, types)
   const balance = calcBalance(build, types)
   const complete = filled.length === types.length
   const [showChevron, setShowChevron] = useState(true)
@@ -236,7 +300,12 @@ export default function ReportCard({ build, onSimulate, onReset, types = TYPES, 
   }, [])
 
   let heightStr, weightLbs
-  if (isRB) {
+  if (isBucket) {
+    const slot = build['size'] || build['heightLength']
+    const phys = slot ? NBA_MEASUREMENTS[slot.qbFull] : null
+    heightStr = phys ? fmtHeight(phys.height) : null
+    weightLbs = phys ? phys.weight : null
+  } else if (isRB) {
     const rbPhys = build['size'] ? ALL_RB_PHYS[build['size'].qbFull] : null
     heightStr = rbPhys ? fmtHeight(rbPhys.height) : null
     weightLbs = rbPhys ? rbPhys.weight : null
@@ -263,11 +332,11 @@ export default function ReportCard({ build, onSimulate, onReset, types = TYPES, 
             </div>
           </div>
           <div className="ovr-ring-wrap">
-            <OvrRing ovr={ovr} />
+            <OvrRing ovr={filled.length === 0 ? 0 : ovr} />
             <div className="ovr-ring-inner">
               <div className="ovr-ring-label">OVR</div>
-              <div className={`ovr-number ${ovr ? 'lit' : ''}`} style={ovr ? { color: ovrColor(ovr), textShadow: `0 0 32px ${ovrColor(ovr)}55` } : undefined}>
-                {ovr ?? '--'}
+              <div className={`ovr-number ${filled.length > 0 && ovr ? 'lit' : ''}`} style={filled.length > 0 && ovr ? { color: ovrColor(ovr), textShadow: `0 0 32px ${ovrColor(ovr)}55` } : undefined}>
+                {filled.length === 0 ? '–' : (ovr ?? '--')}
               </div>
             </div>
           </div>
@@ -290,7 +359,20 @@ export default function ReportCard({ build, onSimulate, onReset, types = TYPES, 
           </button>
         )}
 
-        {isPlus && (
+        {isBucket ? (
+          <div className="rc-sandbox-wrap">
+            <span className="sil-sandbox-label">Sandbox mode</span>
+            <label className="plus-toggle">
+              <input type="checkbox" checked={!!isCustomMode} onChange={e => onSandboxToggle?.(e.target.checked)} />
+              <span className="plus-toggle-track" />
+            </label>
+            <button
+              className={`rc-custom-ratings-btn--mobile${!isCustomMode ? ' rc-custom-ratings-btn--off' : ''}`}
+              onClick={isCustomMode ? onOpenCustomModal : undefined}
+              disabled={!isCustomMode}
+            >Custom Build</button>
+          </div>
+        ) : isPlus && (
           <button
             className={`rc-custom-ratings-btn--mobile${!isCustomMode ? ' rc-custom-ratings-btn--off' : ''}`}
             onClick={isCustomMode ? onOpenCustomModal : undefined}
@@ -309,7 +391,7 @@ export default function ReportCard({ build, onSimulate, onReset, types = TYPES, 
 
       <div className="build-slots">
         {types.map(t => (
-          <BuildSlot key={t} type={t} data={build[t]} attrMap={attrMap} />
+          <BuildSlot key={t} type={t} data={build[t]} attrMap={attrMap} logoDir={logoDir} />
         ))}
       </div>
 
@@ -318,7 +400,8 @@ export default function ReportCard({ build, onSimulate, onReset, types = TYPES, 
       </div>
 
       {showShare && createPortal(
-        <ShareModal ovr={ovr} arch={arch} build={build} types={types} onClose={() => setShowShare(false)} />,
+        <ShareModal ovr={ovr} arch={arch} build={build} types={types} onClose={() => setShowShare(false)}
+          isBucket={isBucket} attrMap={attrMap} position={bucketPosition} captureFigure={captureFigure} />,
         document.body
       )}
     </aside>

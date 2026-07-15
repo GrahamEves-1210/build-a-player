@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { ATTR, TYPES, LITE_TYPES } from '../data/qbs'
 import { RB_TYPES, RB_LITE_TYPES } from '../data/rbs'
 import { LEGEND_TYPES } from '../data/legends'
+import { BUCKET_ATTR, GUARD_TYPES, BIG_TYPES } from '../data/nba-players'
 import { valToGrade } from '../utils/simulation'
 
 const GRADE_COLOR = {
@@ -23,11 +24,15 @@ const RB_ATTR = {
   carrying:    { label: 'Carrying' },
 }
 
-export default function CustomRatingsModal({ isRB, gameMode, pool, build = {}, buildTypes: _buildTypesProp, onClose, onSave, onAddToBuild, onAddAllToBuild }) {
-  const modeKey = `${isRB ? 'rb' : 'qb'}${gameMode === 'all-time' ? '_legends' : ''}`
-  const attrMeta = isRB ? RB_ATTR : ATTR
+export default function CustomRatingsModal({ isRB, isBucket = false, bucketPosition = 'guard', gameMode, pool, build = {}, buildTypes: _buildTypesProp, onClose, onSave, onAddToBuild, onAddAllToBuild }) {
+  const storageKey = isBucket ? 'bab_bucket_custom_ratings' : 'bap_custom_ratings'
+  const modeKey = isBucket
+    ? `bucket_${bucketPosition}`
+    : `${isRB ? 'rb' : 'qb'}${gameMode === 'all-time' ? '_legends' : ''}`
+  const attrMeta = isBucket ? BUCKET_ATTR : (isRB ? RB_ATTR : ATTR)
   const buildTypes = (_buildTypesProp && _buildTypesProp.length > 0)
     ? _buildTypesProp
+    : isBucket ? (bucketPosition === 'big' ? BIG_TYPES : GUARD_TYPES)
     : gameMode === 'lite' ? (isRB ? RB_LITE_TYPES : LITE_TYPES)
     : (gameMode === 'all-time' && !isRB) ? LEGEND_TYPES
     : (isRB ? RB_TYPES : TYPES)
@@ -42,7 +47,7 @@ export default function CustomRatingsModal({ isRB, gameMode, pool, build = {}, b
   const [search, setSearch] = useState('')
   const [overrides, setOverrides] = useState(() => {
     try {
-      const saved = JSON.parse(localStorage.getItem('bap_custom_ratings') || '{}')
+      const saved = JSON.parse(localStorage.getItem(storageKey) || '{}')
       return saved[modeKey] || {}
     } catch { return {} }
   })
@@ -72,9 +77,9 @@ export default function CustomRatingsModal({ isRB, gameMode, pool, build = {}, b
 
   const handleSave = () => {
     let all = {}
-    try { all = JSON.parse(localStorage.getItem('bap_custom_ratings') || '{}') } catch {}
+    try { all = JSON.parse(localStorage.getItem(storageKey) || '{}') } catch {}
     all[modeKey] = overrides
-    localStorage.setItem('bap_custom_ratings', JSON.stringify(all))
+    localStorage.setItem(storageKey, JSON.stringify(all))
     onSave(all)
     onClose()
   }

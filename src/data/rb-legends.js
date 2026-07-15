@@ -527,7 +527,7 @@ const _raw = [
   {
     name: 'Roger Craig',     short: 'R. Craig',    team: 'SF',  teamName: 'San Francisco 49ers',
     skin: '#7a5030', number: 33, starter: true, captain: true, years: '1983–90',
-    attrs: { speed: 8, burst: 7, strength: 7, size: 7, balance: 8, elusiveness: 7, vision: 8, hands: 10, carrying: 8 }
+    attrs: { speed: 8, burst: 7, strength: 7, size: 7, balance: 8, elusiveness: 7, vision: 8, hands: 11, carrying: 8 }
   },
   {
     name: 'Frank Gore',      short: 'Gore',        team: 'SF',  teamName: 'San Francisco 49ers',

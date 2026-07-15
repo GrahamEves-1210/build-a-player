@@ -9,6 +9,15 @@ function fmtHeight(inches) {
   return `${Math.floor(inches / 12)}'${inches % 12}"`
 }
 
+function gradeColor(val) {
+  if (val >= 11) return '#a855f7'
+  if (val >= 8)  return '#3b82f6'
+  if (val >= 5)  return '#22c55e'
+  if (val >= 2)  return '#eab308'
+  if (val >= 1)  return '#f97316'
+  return '#ef4444'
+}
+
 const ITEM_H  = 44
 const CENTER  = 2
 const IDLE_MS = 1200
@@ -169,8 +178,8 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, on
 }
 
 // ─── Chip ────────────────────────────────────────────────────────────────────
-function Chip({ type, meta, val, selectedQB, draggingType, onChipTap, onDragStart, onDragEnd, setDraggingType, hideGrades }) {
-  const photo = HEADSHOTS[selectedQB.name] ? `/headshots/${HEADSHOTS[selectedQB.name]}.jpg` : null
+function Chip({ type, meta, val, selectedQB, draggingType, onChipTap, onDragStart, onDragEnd, setDraggingType, hideGrades, headshotsMap, headshotsDir, isBucket }) {
+  const photo = headshotsMap[selectedQB.name] ? `${headshotsDir}${headshotsMap[selectedQB.name]}.jpg` : null
   const chipData = {
     type, val,
     qb: selectedQB.short, qbFull: selectedQB.name,
@@ -182,7 +191,7 @@ function Chip({ type, meta, val, selectedQB, draggingType, onChipTap, onDragStar
   return (
     <div
       className={`attr-chip attr-chip-${type}${draggingType === type ? ' chip-dragging' : ''}`}
-      style={{ '--chip-col': meta.col }}
+      style={{ '--chip-col': isBucket ? gradeColor(val) : meta.col, '--chip-team': selectedQB.color }}
       draggable
       onClick={() => onChipTap && onChipTap(chipData)}
       onDragStart={e => {
@@ -198,6 +207,7 @@ function Chip({ type, meta, val, selectedQB, draggingType, onChipTap, onDragStar
       }}
       onDragEnd={onDragEnd}
     >
+      {photo && <img src={photo} alt="" className="chip-photo" />}
       <div className="chip-text">
         <span className="chip-name">{meta.label}</span>
         <span className="chip-qb">{selectedQB.name}</span>
@@ -208,8 +218,16 @@ function Chip({ type, meta, val, selectedQB, draggingType, onChipTap, onDragStar
   )
 }
 
+const POS_COLORS = {
+  QB: '#fb923c', RB: '#60a5fa', WR: '#34d399', TE: '#a78bfa',
+  OL: '#fbbf24', DL: '#f87171', LB: '#2dd4bf', DB: '#e879f9',
+  K: '#94a3b8',  P: '#94a3b8',
+  PG: '#7dd3fc', SG: '#86efac', SF: '#fdba74', PF: '#d8b4fe', C: '#fca5a5',
+}
+
 // ─── SpinScreen ──────────────────────────────────────────────────────────────
-export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, activeCategory, resetKey, onChipTap, types = TYPES, isLite = false, qbPool = QBS, savedResult = null, onSaveResult, onPhaseChange, gameKey, onReset, adsDisabled = false, isRB = false, onlineCount = 0, attrMap = ATTR, categoriesData = CATEGORIES, teamsPool = TEAMS, logoDir = '/logos/' }) {
+export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, activeCategory, resetKey, onChipTap, types = TYPES, isLite = false, qbPool = QBS, savedResult = null, onSaveResult, onPhaseChange, gameKey, onReset, adsDisabled = false, isRB = false, isBucket = false, onlineCount = 0, attrMap = ATTR, categoriesData = CATEGORIES, teamsPool = TEAMS, logoDir = '/logos/', playerLabel, headshotsMap = HEADSHOTS, headshotsDir = '/headshots/', hideTeamResult = false }) {
+  const pLabel = playerLabel ?? (isRB ? 'RB' : 'QB')
   const [phase, setPhase]               = useState(() => savedResult?.selectedQB ? 'done' : 'idle')
   const [selectedTeam, setSelectedTeam] = useState(() => savedResult?.selectedTeam ?? null)
   const [selectedQB,   setSelectedQB]   = useState(() => savedResult?.selectedQB ?? null)
@@ -326,9 +344,23 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
     cat.types.some(type => types.includes(type) && !build[type])
   )
 
+  // Preload headshots + logo while QB reel is spinning so card appears instantly
+  useEffect(() => {
+    if (!selectedTeam) return
+    const logo = new Image()
+    logo.src = `${logoDir}${selectedTeam.short}.png`
+    qbReelItems.forEach(qb => {
+      const file = headshotsMap[qb.name]
+      if (file) {
+        const img = new Image()
+        img.src = `${headshotsDir}${file}.jpg`
+      }
+    })
+  }, [selectedTeam, qbReelItems])
+
   const adInvokedRef = useRef(false)
   useEffect(() => {
-    if (!isDone || adInvokedRef.current || adsDisabled) return
+    if (!isDone || adInvokedRef.current || adsDisabled || isBucket || window.innerWidth > 768) return
     adInvokedRef.current = true
     window.ramp?.que?.push(() => {
       window.ramp.spaAddAds([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1' }])
@@ -336,6 +368,16 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
   }, [isDone, adsDisabled])
 
   return (
+    <div className="spin-panel-wrap">
+      {onReset && (
+        <button className="spin-panel-reset-tab" onClick={onReset}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+            <path d="M3 3v5h5"/>
+          </svg>
+          <span>Reset</span>
+        </button>
+      )}
     <aside className="spin-panel">
       {isSpinning && <div className="spin-blocker" />}
       <div className="spin-panel-body">
@@ -350,15 +392,6 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
             <button className={`grade-toggle-btn${hideGrades ? ' grade-toggle-off' : ' grade-toggle-on'}`} onClick={toggleGrades}>
               {hideGrades ? 'Hiding Grades' : 'Showing Grades'}
             </button>
-            {onReset && (
-              <button className="spin-reset-circle" onClick={onReset} disabled={phase === 'team' || phase === 'team-done' || phase === 'qb'} aria-label="Reset build">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
-                  <path d="M3 3v5h5"/>
-                </svg>
-                <span className="spin-reset-circle-lbl">Reset</span>
-              </button>
-            )}
           </div>
           <div className="reels-wrap">
             <div className="reel-tri reel-tri-l" />
@@ -369,6 +402,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
                 spinning={isSpinningTeam}
                 idle={!isSpinning && !selectedTeam}
                 locked={!!selectedTeam}
+                blurred={hideTeamResult && !!selectedTeam}
                 getDisplay={t => t.short}
                 getSub={t => t.name.split(' ').slice(-1)[0]}
                 onStop={handleTeamStop}
@@ -376,7 +410,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
                 jitterMs={1000}
               />
               <SlotReel
-                label={isRB ? 'RB' : 'QB'}
+                label={pLabel}
                 items={qbReelItems}
                 spinning={isSpinningQB}
                 idle={!isSpinning && !selectedQB}
@@ -396,15 +430,24 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
           {(() => {
             const canRespin = isDone && qbRespinUsed < 2 && !complete
             return (
-              <>
+              <div className="spin-btn-wrap">
                 <button
                   className={`spin-btn${isDone && !canRespin ? ' spin-btn-wait' : ''}`}
                   onClick={canRespin ? handleQBRespin : handleSpin}
                   disabled={isSpinning || complete || (isDone && !canRespin)}
                 >
-                  {canRespin ? <>{isRB ? 'RB' : 'QB'} RESPIN? <span className="spin-btn-badge">{2 - qbRespinUsed}</span></> : 'SPIN'}
+                  {canRespin ? <>{pLabel} RESPIN? <span className="spin-btn-badge">{2 - qbRespinUsed}</span></> : 'SPIN'}
                 </button>
-              </>
+                {onReset && (
+                  <button className="spin-reset-circle" onClick={onReset} disabled={phase === 'team' || phase === 'team-done' || phase === 'qb'} aria-label="Reset build">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                      <path d="M3 3v5h5"/>
+                    </svg>
+                    <span className="spin-reset-circle-lbl">Reset</span>
+                  </button>
+                )}
+              </div>
             )
           })()}
 
@@ -412,17 +455,26 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
             <div className="qb-reveal-card" style={{ '--qb-color': selectedQB.color }}>
               <div className="qb-reveal-hero">
                 <QBAvatar
-                  photo={HEADSHOTS[selectedQB.name] ? `/headshots/${HEADSHOTS[selectedQB.name]}.jpg` : null}
+                  photo={headshotsMap[selectedQB.name] ? `${headshotsDir}${headshotsMap[selectedQB.name]}.jpg` : null}
                   team={selectedQB.team}
                   color={selectedQB.color}
-                  size={88}
+                  size={56}
                   logoDir={logoDir}
                 />
               </div>
               <div className="qb-reveal-text">
                 <div className="qb-reveal-name">{selectedQB.name}</div>
-                <div className="qb-reveal-meta">{selectedQB.teamName}{selectedQB.years ? ` · ${selectedQB.years}` : ''}{selectedQB.starter ? '' : ' · Backup'}</div>
+                <div className="qb-reveal-meta">
+                  {selectedQB.teamName ?? selectedQB.team}
+                  {selectedQB.years ? ` · ${selectedQB.years}` : ''}
+                  {!isBucket && (selectedQB.starter ? '' : ' · Bench')}
+                </div>
               </div>
+              {selectedQB.position && (
+                <div className="qb-reveal-pos" style={{ background: POS_COLORS[selectedQB.position] ?? selectedQB.color }}>
+                  {selectedQB.position}
+                </div>
+              )}
             </div>
           )}
           <div id="ramp-cntr1" className={`ad-cntr1-mobile${isDone ? '' : ' ad-cntr1-hidden'}`} />
@@ -436,7 +488,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
                   ? types.filter(t => !build[t]).map(t => {
                       const meta = attrMap[t]
                       const val  = selectedQB.attrs[t]
-                      return <Chip key={t} type={t} meta={meta} val={val} selectedQB={selectedQB} draggingType={draggingType} onChipTap={onChipTap} onDragStart={onDragStart} onDragEnd={onDragEnd} setDraggingType={setDraggingType} hideGrades={hideGrades} />
+                      return <Chip key={t} type={t} meta={meta} val={val} selectedQB={selectedQB} draggingType={draggingType} onChipTap={onChipTap} onDragStart={onDragStart} onDragEnd={onDragEnd} setDraggingType={setDraggingType} hideGrades={hideGrades} headshotsMap={headshotsMap} headshotsDir={headshotsDir} isBucket={isBucket} />
                     })
                   : visibleCategories.map((cat, catIdx) => {
                       const available = cat.types.filter(type => types.includes(type) && !build[type])
@@ -451,7 +503,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
                           {available.map(type => {
                             const meta = attrMap[type]
                             const val  = selectedQB.attrs[type]
-                            return <Chip key={type} type={type} meta={meta} val={val} selectedQB={selectedQB} draggingType={draggingType} onChipTap={onChipTap} onDragStart={onDragStart} onDragEnd={onDragEnd} setDraggingType={setDraggingType} hideGrades={hideGrades} />
+                            return <Chip key={type} type={type} meta={meta} val={val} selectedQB={selectedQB} draggingType={draggingType} onChipTap={onChipTap} onDragStart={onDragStart} onDragEnd={onDragEnd} setDraggingType={setDraggingType} hideGrades={hideGrades} headshotsMap={headshotsMap} headshotsDir={headshotsDir} isBucket={isBucket} />
                           })}
                         </div>
                       )
@@ -460,7 +512,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
               </>
             ) : (
               <div className="spin-hint-text">
-                {complete ? 'All slots filled' : `All available slots filled for this ${isRB ? 'RB' : 'QB'}`}
+                {complete ? 'All slots filled' : `All available slots filled for this ${pLabel}`}
               </div>
             )
           )}
@@ -479,5 +531,6 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
         </div>
       </div>
     </aside>
+    </div>
   )
 }

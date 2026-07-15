@@ -3,13 +3,23 @@ import { ATTR, TYPES, CATEGORIES, QB_PHYSICALS } from '../data/qbs'
 import { RB_CATEGORIES, RB_PHYSICALS } from '../data/rbs'
 import { QB_LEGEND_PHYSICALS } from '../data/legends'
 import { RB_LEGEND_PHYSICALS } from '../data/rb-legends'
+import NBA_MEASUREMENTS from '../data/nba-measurements.json'
+import { NBA_FACE_ADJUSTMENTS } from '../data/nba-face-adjustments'
 const ALL_QB_PHYS = { ...QB_LEGEND_PHYSICALS, ...QB_PHYSICALS }
 const ALL_RB_PHYS = { ...RB_LEGEND_PHYSICALS, ...RB_PHYSICALS }
 import QBAvatar from './QBAvatar'
 
 function fmtHeight(in_) { return `${Math.floor(in_ / 12)}'${in_ % 12}"` }
+function lightenHex(hex, amt) {
+  if (!hex || !hex.startsWith('#')) return hex
+  const r = Math.min(255, parseInt(hex.slice(1,3),16) + amt)
+  const g = Math.min(255, parseInt(hex.slice(3,5),16) + amt)
+  const b = Math.min(255, parseInt(hex.slice(5,7),16) + amt)
+  return `rgb(${r},${g},${b})`
+}
 import QBFigureOverlay from './QBFigureOverlay'
 import RBFigureOverlay from './RBFigureOverlay'
+import BucketFigureOverlay from './BucketFigureOverlay'
 
 // Figure coordinate space (matches QB silhouette dimensions)
 const FIG_W = 622
@@ -22,6 +32,7 @@ const RB_FIG_H = 865
 
 // CSS scale applied to the RB figure image + overlay
 const RB_FIGURE_SCALE = 0.90
+const BUCKET_FIGURE_SCALE = 1.10
 
 // QB anchor positions
 const ZONES = [
@@ -74,7 +85,7 @@ function useFigureBounds(ref, figW, figH) {
   return bounds
 }
 
-function CZCard({ zone, cardY, build, activeDrag, hidden, invisible, isMobile, attrMap = ATTR }) {
+function CZCard({ zone, cardY, build, activeDrag, hidden, invisible, isMobile, attrMap = ATTR, logoDir = '/logos/' }) {
   const meta  = attrMap[zone.type]
   const data  = build[zone.type]
   const filled = !!data
@@ -96,6 +107,7 @@ function CZCard({ zone, cardY, build, activeDrag, hidden, invisible, isMobile, a
             photo={data.photo}
             team={data.team}
             size={isMobile ? 26 : 53}
+            logoDir={logoDir}
           />
           <span className="cz-qb-name">
             <span>{data.qbFull.split(' ')[0]}</span>
@@ -110,9 +122,13 @@ function CZCard({ zone, cardY, build, activeDrag, hidden, invisible, isMobile, a
   )
 }
 
-function HWTracker({ build, isRB = false }) {
+function HWTracker({ build, isRB = false, isBucket = false }) {
   let ht, wt
-  if (isRB) {
+  if (isBucket) {
+    const phys = build['size'] ? NBA_MEASUREMENTS[build['size'].qbFull] : null
+    ht = phys ? fmtHeight(phys.height) : null
+    wt = phys ? phys.weight : null
+  } else if (isRB) {
     const rbPhys = build['size'] ? ALL_RB_PHYS[build['size'].qbFull] : null
     ht = rbPhys ? fmtHeight(rbPhys.height) : null
     wt = rbPhys ? rbPhys.weight : null
@@ -142,10 +158,53 @@ function HWTracker({ build, isRB = false }) {
 
 const MOBILE_CARD_W = 22   // card CSS width (86px) minus card offset (64px each side)
 
-export default function Silhouette({ build, activeDrag, onDrop, activeCategory, onCategoryChange, types = TYPES, isLite = false, onReset, isRB = false, isPlus = false, isCustomMode = false, onOpenCustomModal, attrMap = ATTR, categoriesData = CATEGORIES }) {
-  const figW   = isRB ? RB_FIG_W : FIG_W
-  const figH   = isRB ? RB_FIG_H : FIG_H
-  const zones  = isRB ? RB_ZONES : ZONES
+// Basketball silhouette coordinate space (matches PNG pixel dimensions 936×897)
+const BUCKET_FIG_W = 936
+const BUCKET_FIG_H = 897
+// Head center in bucket figure space (calibrated to basketballsilhouetteheadless.png)
+const BUCKET_HEAD    = { ax: 468, ay: 74,  r: 54 }
+const BUCKET_COLLAR_AY = 140  // SVG y where jersey collar meets shoulder (left stripe ends ~143)
+
+const BUCKET_ZONES = [
+  { type: 'basketballIQ',    ax: 415, ay:   -5, side: 'left',  cy: 0.015 },
+  { type: 'clutch',          ax: 440, ay:  180, side: 'left',  cy: 0.690 },
+  { type: 'jumpShot',        ax: 230, ay:  160, side: 'left',  cy: 0.526 },
+  { type: 'finishing',       ax: 670, ay:  135, side: 'right', cy: 0.526 },
+  { type: 'handles',         ax: 845, ay:  125, side: 'right', cy: 0.360, lineAnchor: 'top', lineAnchorOffsetX: 50 },
+  { type: 'passing',         ax:  90, ay:  155, side: 'left',  cy: 0.360, lineAnchor: 'top' },
+  { type: 'size',            ax: 610, ay:  430, side: 'right', cy: 0.044, noDot: true },
+  { type: 'perimeterDefense',ax: 550, ay:  115, side: 'right', cy: 0.690 },
+  { type: 'speed',           ax: 535, ay:  485, side: 'right', cy: 0.87 },
+  { type: 'bounce',          ax: 390, ay:  820, side: 'left',  cy: 0.87 },
+]
+
+const BUCKET_BIG_ZONES = [
+  { type: 'basketballIQ',   ax: 415, ay:   -5, side: 'left',  cy: 0.015 },
+  { type: 'clutch',         ax: 440, ay:  180, side: 'left',  cy: 0.690 },
+  { type: 'jumpShot',       ax: 230, ay:  160, side: 'left',  cy: 0.526 },
+  { type: 'finishing',      ax: 670, ay:  135, side: 'right', cy: 0.526 },
+  { type: 'playmaking',     ax: 845, ay:  125, side: 'right', cy: 0.360, lineAnchor: 'top', lineAnchorOffsetX: 50 },
+  { type: 'rebounding',     ax:  90, ay:  155, side: 'left',  cy: 0.360, lineAnchor: 'top' },
+  { type: 'size',           ax: 610, ay:  430, side: 'right', cy: 0.044, noDot: true },
+  { type: 'interiorDefense',ax: 550, ay:  115, side: 'right', cy: 0.690 },
+  { type: 'speed',          ax: 535, ay:  485, side: 'right', cy: 0.87 },
+  { type: 'bounce',         ax: 390, ay:  820, side: 'left',  cy: 0.87 },
+]
+
+function getDominantPlayer(build) {
+  const counts = {}
+  Object.values(build).forEach(chip => {
+    if (!chip) return
+    counts[chip.qbFull] = (counts[chip.qbFull] || 0) + 1
+  })
+  const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1])
+  return sorted[0]?.[0] ?? null
+}
+
+export default function Silhouette({ build, activeDrag, onDrop, activeCategory, onCategoryChange, types = TYPES, isLite = false, onReset, isRB = false, isBucket = false, isPlus = false, isCustomMode = false, onOpenCustomModal, onSandboxToggle, attrMap = ATTR, categoriesData = CATEGORIES, figureRef }) {
+  const figW   = isBucket ? BUCKET_FIG_W : (isRB ? RB_FIG_W : FIG_W)
+  const figH   = isBucket ? BUCKET_FIG_H : (isRB ? RB_FIG_H : FIG_H)
+  const zones  = isBucket ? (types.includes('interiorDefense') ? BUCKET_BIG_ZONES : BUCKET_ZONES) : isRB ? RB_ZONES : ZONES
   const silRef = useRef(null)
   const bounds = useFigureBounds(silRef, figW, figH)
   const boundsRef = useRef(bounds)
@@ -201,36 +260,118 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
     : null
   const complete = types.every(t => build[t])
 
+  // Headshot only from basketballIQ slot for bucket builds
+  const bucketPhoto = isBucket
+    ? (build['basketballIQ']?.photo || null)
+    : null
+
+  // Sample bottom color + capture aspect ratio for correct objectPosition centering
+  const [hsBottomColor, setHsBottomColor] = useState(null)
+  const [hsImgRatio, setHsImgRatio] = useState(1.333)  // h/w, default 3:4 portrait
+  useEffect(() => {
+    if (!bucketPhoto) { setHsBottomColor(null); setHsImgRatio(1.333); return }
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+    img.onload = () => {
+      const iw = img.naturalWidth, ih = img.naturalHeight
+      const R = ih / iw
+      setHsImgRatio(R)
+
+      // Sample color at bottom of visible headshot (jersey area)
+      const S = 200
+      const canvas = document.createElement('canvas')
+      canvas.width = S; canvas.height = S
+      const ctx = canvas.getContext('2d')
+      const sc = Math.max(S / iw, S / ih)
+      const sw = iw * sc, sh = ih * sc
+      // objectFit:cover + objectPosition:50% 50% draw position
+      const ox = (S - sw) / 2, oy = (S - sh) / 2
+      ctx.drawImage(img, ox, oy, sw, sh)
+      const sampleY = Math.round(S * 0.88)
+      const sampleX = Math.round(S / 2)
+      const radius = 8
+      let r = 0, g = 0, b = 0, count = 0
+      for (let dy = -radius; dy <= radius; dy++) {
+        for (let dx = -radius; dx <= radius; dx++) {
+          const py = Math.min(S - 1, Math.max(0, sampleY + dy))
+          const px = Math.min(S - 1, Math.max(0, sampleX + dx))
+          const d = ctx.getImageData(px, py, 1, 1).data
+          r += d[0]; g += d[1]; b += d[2]; count++
+        }
+      }
+      setHsBottomColor(`rgb(${Math.round(r/count)},${Math.round(g/count)},${Math.round(b/count)})`)
+    }
+    img.onerror = () => setHsBottomColor(null)
+    img.src = bucketPhoto
+  }, [bucketPhoto])
+
   // Convert figure-space (ax, ay) → sil-wrap percentage coords
   const pos = (zone) => {
     if (!bounds) return null
     const { W, H, fx, fy, scale } = bounds
+    const bucketCardScale = 0.88
     const cardEdgePx = isMobile
-      ? MOBILE_CARD_W + (86 / 2) * 0.15
-      : CARD_W * 1.075
+      ? isBucket
+        ? -64 + (86 / 2) * (1 + bucketCardScale)   // -64px offset + scaled half-width × 2
+        : MOBILE_CARD_W + (86 / 2) * 0.15           // default scale 1.15
+      : isBucket
+        ? (CARD_W / 2) + (CARD_W / 2) * bucketCardScale
+        : CARD_W * 1.075
     let dotX  = (fx + zone.ax * scale) / W * 100
-    let dotY  = (fy + zone.ay * scale) / H * 100 + (!isMobile && zone.type === 'size' ? 30 / H * 100 : 0)
-    // Compensate for CSS scale on RB figure — scale dot positions inward from center
+    let dotY  = (fy + zone.ay * scale) / H * 100 + (!isMobile && zone.type === 'size' ? (isBucket ? 60 : 30) / H * 100 : 0)
+    // Compensate for CSS scale on RB/bucket figure — scale dot positions outward/inward from center
     if (isRB) {
       dotX = (dotX - 50) * RB_FIGURE_SCALE + 50
       dotY = (dotY - 50) * RB_FIGURE_SCALE + 50
     }
+    if (isBucket) {
+      dotX = (dotX - 50) * BUCKET_FIGURE_SCALE + 50
+      dotY = (dotY - 50) * BUCKET_FIGURE_SCALE + 50
+    }
+    const zoneCardYNudgePx = (!isMobile && isBucket)
+      ? (zone.type === 'passing' || zone.type === 'rebounding' ? -15 : zone.type === 'speed' ? 25 : zone.type === 'size' ? -100 : zone.type === 'handles' || zone.type === 'playmaking' ? -10 : 0)
+      : 0
     const cardY = isMobile
       ? ((zone.cy - 0.5) * 0.92 + 0.5) * 100
-      : zone.cy * 100
+      : zone.cy * 100 + (zoneCardYNudgePx / H) * 100
+    const lineInsetPx = (!isMobile && isBucket) ? 10 : 0
+    // Per-zone desktop line X nudge (positive = inward for both sides)
+    const zoneLineNudge = (!isMobile && isBucket)
+      ? (zone.type === 'passing' || zone.type === 'rebounding' ? -50 : zone.type === 'handles' || zone.type === 'playmaking' ? -50 : 0)
+      : 0
     const lineX = zone.side === 'left'
-      ? (cardEdgePx / W) * 100
-      : ((W - cardEdgePx) / W) * 100
-    const stubPx = isMobile ? 12 : 125
+      ? ((cardEdgePx + lineInsetPx - zoneLineNudge) / W) * 100
+      : ((W - cardEdgePx - lineInsetPx + zoneLineNudge) / W) * 100
+    const stubPx = isMobile ? 12 : (isBucket ? 88 : 125)
     const stub   = stubPx / W * 100
     const stubX  = zone.side === 'left' ? lineX + stub : lineX - stub
-    return { dotX, dotY, cardY, lineX, stubX }
+    // Center X of the card face (for top-anchor lines)
+    // Left cards: left:0, so center = half card rendered width from left
+    // Right cards: right:0, so center = W minus half card rendered width
+    const cardScale = isBucket ? 0.88 : 1.15
+    const cardHalfW = isMobile
+      ? (86 / 2) / W * 100
+      : (CARD_W * cardScale / 2) / W * 100
+    const cardCenterX = zone.side === 'left'
+      ? cardHalfW
+      : 100 - cardHalfW
+    const cardHalfH = isMobile
+      ? (130 * 0.55 / 2) / H * 100
+      : (130 * (isBucket ? 0.88 : 1.15) / 2) / H * 100
+    // Per-zone desktop anchor nudges for top-anchor lines
+    const anchorNudgeX = (!isMobile && isBucket)
+      ? (zone.type === 'passing' || zone.type === 'rebounding' ? (295 / W) * 100 : zone.type === 'handles' || zone.type === 'playmaking' ? (-300 / W) * 100 : 0)
+      : 0
+    const anchorNudgeY = (!isMobile && isBucket)
+      ? (zone.type === 'passing' || zone.type === 'rebounding' ? (-70 / H) * 100 : zone.type === 'handles' || zone.type === 'playmaking' ? (-60 / H) * 100 : 0)
+      : 0
+    return { dotX, dotY, cardY, lineX, stubX, cardCenterX, cardHalfH, anchorNudgeX, anchorNudgeY }
   }
 
   return (
     <section className="field-center">
       <div className="category-pills">
-        <HWTracker build={build} isRB={isRB} />
+        <HWTracker build={build} isRB={isRB} isBucket={isBucket} />
         {cats.map(cat => (
           <button
             key={cat.id}
@@ -242,16 +383,175 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
           </button>
         ))}
       </div>
+      {isBucket && (
+        <div className="sil-sandbox-wrap">
+          <span className="sil-sandbox-label">Sandbox</span>
+          <label className="plus-toggle">
+            <input type="checkbox" checked={!!isCustomMode} onChange={e => onSandboxToggle?.(e.target.checked)} />
+            <span className="plus-toggle-track" />
+          </label>
+          <button
+            className={`sil-custom-ratings-btn${!isCustomMode ? ' sil-custom-ratings-btn--off' : ''}`}
+            onClick={isCustomMode ? onOpenCustomModal : undefined}
+            disabled={!isCustomMode}
+          >Custom Build</button>
+        </div>
+      )}
 
       <div className={`sil-wrap${isRB ? ' sil-wrap--rb' : ''}`} ref={silRef}>
+        {isBucket && (
+          <div style={{
+            position: 'absolute',
+            left: '50%', top: 'calc(15% + 42px)',
+            transform: 'translate(-50%, -50%)',
+            width: '40px', height: '40px',
+            background: build?.['clutch']?.teamColor || '#333333',
+            zIndex: 2,
+            pointerEvents: 'none',
+          }} />
+        )}
+
+        {/* Measurement outlines — height + wingspan derived from size val */}
+        {isBucket && (build?.['size'] || build?.['heightLength']) && (() => {
+          const chip = build['size'] || build['heightLength']
+          const val  = chip.val ?? 5
+          const col  = '#ffffff'
+          const phys = NBA_MEASUREMENTS[chip.qbFull]
+
+          const heightIn   = phys ? phys.height   : Math.round(72 + (val - 1) * 16 / 9)
+          const wingspanIn = phys ? phys.wingspan  : Math.round(heightIn + 1 + (val - 1) * 8 / 9)
+
+          // Player boundaries in bucket SVG viewBox coords (42.5 -35.2 850.9 815.5)
+          const headY  = -85
+          const footY  = 818
+          const leftX  = -4
+          const rightX = 940
+          const midX   = 468
+          const midY   = (headY + footY) / 2
+
+          // Height bracket — right side
+          const hx     = 682
+          const tickH  = 10
+          // Wingspan bracket — horizontal near feet
+          const wy     = -28
+          const tickW  = 10
+
+          const lw  = 3.5
+          const op  = 0.75
+          const op2 = 1.0
+          const font = "'Bebas Neue', monospace, sans-serif"
+
+          return (
+            <svg
+              viewBox="42.5 -35.2 850.9 815.5"
+              preserveAspectRatio="xMidYMid meet"
+              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', overflow: 'visible' }}
+              aria-hidden="true"
+            >
+              {/* HEIGHT: right-side vertical bracket */}
+              <line x1={hx} y1={headY} x2={hx} y2={footY} stroke={col} strokeWidth={lw} strokeDasharray="7 5" opacity={op} />
+              <line x1={hx - tickH} y1={headY} x2={hx + tickH} y2={headY} stroke={col} strokeWidth={lw * 1.3} opacity={op2} />
+              <line x1={hx - tickH} y1={footY} x2={hx + tickH} y2={footY} stroke={col} strokeWidth={lw * 1.3} opacity={op2} />
+              <text
+                x={hx + 12} y={midY + 150}
+                textAnchor="middle"
+                fontFamily={font}
+                fontSize="45"
+                fill={col}
+                opacity={op2}
+                transform={`rotate(90, ${hx + 12}, ${midY + 150})`}
+                style={{ userSelect: 'none' }}
+              >{fmtHeight(heightIn)}  HEIGHT</text>
+
+              {/* WINGSPAN: horizontal bracket near feet */}
+              <line x1={leftX} y1={wy} x2={rightX} y2={wy} stroke={col} strokeWidth={lw} strokeDasharray="7 5" opacity={op} />
+              <line x1={leftX} y1={wy - tickW} x2={leftX} y2={wy + tickW} stroke={col} strokeWidth={lw * 1.3} opacity={op2} />
+              <line x1={rightX} y1={wy - tickW} x2={rightX} y2={wy + tickW} stroke={col} strokeWidth={lw * 1.3} opacity={op2} />
+              <text
+                x={midX - 200} y={wy + 36}
+                textAnchor="middle"
+                fontFamily={font}
+                fontSize="41"
+                fill={col}
+                opacity={op2}
+                style={{ userSelect: 'none' }}
+              >{fmtHeight(wingspanIn)} WINGSPAN</text>
+            </svg>
+          )
+        })()}
+
+        <div ref={isBucket ? figureRef : undefined} style={{ position: 'absolute', inset: 0, ...(isBucket ? { pointerEvents: 'none' } : {}) }}>
         <img
-          src={isRB ? '/rbsilhouette.png' : '/qb-silhouette.png'}
+          src={
+            isBucket
+              ? (bucketPhoto ? '/basketballsilhouetteheadless.png' : '/basketballsilhouette.png')
+              : (isRB ? '/rbsilhouette.png' : '/qb-silhouette.png')
+          }
           alt=""
-          className={`sil-img${isRB ? ' sil-img--rb' : ''}`}
+          className={`sil-img${isRB ? ' sil-img--rb' : ''}${isBucket ? ' sil-img--bucket' : ''}`}
           draggable={false}
-          style={isRB ? { transform: `scale(${RB_FIGURE_SCALE})`, transformOrigin: 'center center' } : undefined}
+          style={isBucket ? { transform: `scale(${BUCKET_FIGURE_SCALE})`, transformOrigin: 'center center' } : isRB ? { transform: `scale(${RB_FIGURE_SCALE})`, transformOrigin: 'center center' } : undefined}
         />
-        {!isRB && <QBFigureOverlay build={build} className="player-qbfig" />}
+        {isBucket && <BucketFigureOverlay build={build} />}
+        {isBucket && bucketPhoto && bounds && (() => {
+          const { W, H, fx, fy, scale } = bounds
+          const hxRaw    = (fx + BUCKET_HEAD.ax    * scale) / W * 100
+          const collarYRaw = (fy + BUCKET_COLLAR_AY * scale) / H * 100
+          const hx       = 50 + (hxRaw     - 50) * BUCKET_FIGURE_SCALE
+          const collarY  = 50 + (collarYRaw - 50) * BUCKET_FIGURE_SCALE
+          const faceChip = build['basketballIQ']
+          const fc = faceChip?.faceCenter
+          const hpx = BUCKET_HEAD.r * 2 * scale * 1.805 * BUCKET_FIGURE_SCALE
+          const R = hsImgRatio
+          // Target face at ~58% of container: with clip bottom (89%) at collar,
+          // this places the face near the silhouette head center
+          const objPosY = fc && Math.abs(R - 1) > 0.05
+            ? Math.max(0, Math.min(100, 100 * (0.58 - (fc[1] / 100) * R) / (1 - R)))
+            : (fc ? fc[1] : 50)
+          const objPos = `50% ${objPosY}%`
+          const clipY = 45
+          const faceScale = fc ? Math.max(0.93, Math.min(1.12, 1 + (42 - fc[1]) * 0.014)) : 1
+          const playerName = faceChip?.qbFull || faceChip?.qb || ''
+          const adj = NBA_FACE_ADJUSTMENTS[playerName] || { dx: 0, dy: 0, scale: 1 }
+          return (
+            <div
+              key={bucketPhoto}
+              style={{
+                position: 'absolute',
+                left: `${hx}%`,
+                top: `${collarY}%`,
+                width: `${hpx}px`,
+                height: `${hpx}px`,
+                transform: `translate(calc(-50% + 0.75px + ${adj.dx}px), calc(-89% + 4px + ${adj.dy}px))`,
+                overflow: 'hidden',
+                pointerEvents: 'none',
+                zIndex: 1,
+                WebkitMaskImage: `radial-gradient(ellipse 82% 78% at 50% ${clipY}%, black 52%, transparent 84%)`,
+                maskImage: `radial-gradient(ellipse 82% 78% at 50% ${clipY}%, black 52%, transparent 84%)`,
+              }}
+            >
+              <img
+                src={bucketPhoto}
+                alt=""
+                draggable={false}
+                onError={e => { e.currentTarget.parentElement.style.display = 'none' }}
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  objectPosition: objPos,
+                  transform: `scale(${faceScale * adj.scale})`,
+                  transformOrigin: `50% ${objPosY}%`,
+                  filter: 'saturate(0.75) contrast(1.05)',
+                }}
+              />
+            </div>
+          )
+        })()}
+        </div>
+        {!isRB && !isBucket && <QBFigureOverlay build={build} className="player-qbfig" />}
         {isRB && (
           <div style={{ position: 'absolute', inset: 0, transform: `scale(${RB_FIGURE_SCALE})`, transformOrigin: 'center center' }}>
             <RBFigureOverlay build={build} />
@@ -265,15 +565,21 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
           className="cz-lines-svg"
           aria-hidden="true"
         >
-          {zones.filter(z => types.includes(z.type)).map(zone => {
+          {zones.filter(z => types.includes(z.type) && !z.noDot).map(zone => {
             const hidden = !isLite && !complete && (!activeCategory || !categoryTypes?.includes(zone.type))
             const p = pos(zone)
             if (!p) return null
+            const cardTopY = p.cardY - p.cardHalfH
+            const anchorX = p.cardCenterX - 25 + (zone.lineAnchorOffsetX ?? 0) + (p.anchorNudgeX ?? 0)
+            const anchorY = cardTopY + 10 + (p.anchorNudgeY ?? 0)
+            const d = zone.lineAnchor === 'top'
+              ? `M ${anchorX} ${anchorY} L ${anchorX} ${anchorY - 8} L ${p.dotX} ${p.dotY}`
+              : `M ${p.lineX} ${p.cardY} L ${p.stubX} ${p.cardY} L ${p.dotX} ${p.dotY}`
             return (
               <path
                 key={zone.type}
-                d={`M ${p.lineX} ${p.cardY} L ${p.stubX} ${p.cardY} L ${p.dotX} ${p.dotY}`}
-                stroke="#e8192c"
+                d={d}
+                stroke={isBucket ? '#f97316' : '#e8192c'}
                 strokeWidth="0.3"
                 fill="none"
                 style={{ opacity: hidden ? 0 : 1 }}
@@ -282,17 +588,6 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
           })}
         </svg>
 
-        {onReset && (
-          <button className="sil-reset-btn" onClick={onReset}>Reset Build</button>
-        )}
-        {isPlus && (
-          <button
-            className={`sil-custom-ratings-btn${!isCustomMode ? ' sil-custom-ratings-btn--off' : ''}`}
-            onClick={isCustomMode ? onOpenCustomModal : undefined}
-            disabled={!isCustomMode}
-          >Custom Build</button>
-        )}
-
         {/* Dots + cards */}
         <div className="cz-layer" style={{ zIndex: 10 }}>
           {zones.filter(z => types.includes(z.type)).map(zone => {
@@ -300,13 +595,13 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
             const p = pos(zone)
             return (
               <div key={zone.type}>
-                {p && (
+                {p && !zone.noDot && (
                   <div
                     className={['cz-dot', hiddenFromTab && 'cz-hidden'].filter(Boolean).join(' ')}
                     style={{ left: `${p.dotX}%`, top: `${p.dotY}%` }}
                   />
                 )}
-                {p && !hiddenFromTab && activeDrag?.type === zone.type && !build[zone.type] && (
+                {p && !zone.noDot && !hiddenFromTab && activeDrag?.type === zone.type && !build[zone.type] && (
                   <div className="cz-drop-zone" style={{ left: `${p.dotX}%`, top: `${p.dotY}%` }} />
                 )}
                 <CZCard
@@ -318,11 +613,29 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
                   invisible={hiddenFromTab && !!p}
                   isMobile={isMobile}
                   attrMap={attrMap}
+                  logoDir={isBucket ? '/logos/nba/' : '/logos/'}
                 />
               </div>
             )
           })}
         </div>
+
+        {onReset && (
+          <button className="sil-reset-btn" onClick={onReset}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+              <path d="M3 3v5h5"/>
+            </svg>
+            <span>Reset</span>
+          </button>
+        )}
+        {!isBucket && isPlus && (
+          <button
+            className={`sil-custom-ratings-btn${!isCustomMode ? ' sil-custom-ratings-btn--off' : ''}`}
+            onClick={isCustomMode ? onOpenCustomModal : undefined}
+            disabled={!isCustomMode}
+          >Custom Build</button>
+        )}
       </div>
 
 
