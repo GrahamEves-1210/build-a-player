@@ -549,7 +549,7 @@ export default function BucketApp() {
       <>
         <Navbar {...navbarProps} />
         <BucketLeaderboardPage
-          onBack={() => { setPage('game'); window.scrollTo({ top: 0, behavior: 'instant' }) }}
+          onBack={() => { setPage(simResult ? 'sim' : 'game'); window.scrollTo({ top: 0, behavior: 'instant' }) }}
           currentUser={user}
           adsDisabled={adsDisabled}
         />

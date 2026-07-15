@@ -678,7 +678,7 @@ export function BucketModelFigure({ build, team, className = '', style = {}, hea
           left: `${hx}%`, top: `${collarY}%`,
           width: `${hpx}px`, height: `${hpx}px`,
           transform: `translate(calc(-50% + 0.75px), calc(-89% + ${2 + headYOffset}px))`,
-          overflow: 'hidden', pointerEvents: 'none', zIndex: 1,
+          overflow: 'hidden', borderRadius: '50%', pointerEvents: 'none', zIndex: 1,
           WebkitMaskImage: 'radial-gradient(ellipse 82% 78% at 50% 45%, black 52%, transparent 84%)',
           maskImage: 'radial-gradient(ellipse 82% 78% at 50% 45%, black 52%, transparent 84%)',
         }}>
