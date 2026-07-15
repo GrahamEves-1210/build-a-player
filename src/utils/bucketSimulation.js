@@ -290,8 +290,8 @@ export function runBucketSimulation(build, types, team, position = 'guard') {
     : pd  * 0.55 + iq  * 0.35 + spd * 0.10
 
   // --- per-game stats (calibrated to realistic NBA ranges) ---
-  // PPG: guard 6–40+, big 7–32 (A+ build ~33.5, S tier can exceed)
-  const ppg = +(Math.max(isBig ? 7 : 6, (isBig ? 0 : -2.5) + rn(-1, 1) + scoringRaw * (isBig ? 2.2 : 4.0))).toFixed(1)
+  // PPG: guard 4–40+, big 5–32 (A+ build ~33.5, S tier can exceed)
+  const ppg = +(Math.max(isBig ? 5 : 4, (isBig ? 0 : -3.5) + rn(-1, 1) + scoringRaw * (isBig ? 2.2 : 4.0))).toFixed(1)
   // RPG: guard 1.5–9+, big 5–14 (A+ build ~7.7, S tier can exceed)
   const rpg = +(Math.max(isBig ? 5 : 1.5, (isBig ? 3.5 : 0.5) + rn(-0.4, 0.4) + rebRaw * (isBig ? 0.75 : 0.75))).toFixed(1)
   // APG: guard 1–11+, big 0.5–7 (A+ build ~10, S tier can exceed)
