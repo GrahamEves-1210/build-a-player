@@ -261,6 +261,13 @@ export default function BucketApp() {
   const activeDragRef = useRef(activeDrag)
   useLayoutEffect(() => { activeDragRef.current = activeDrag }, [activeDrag])
 
+  // Once sandbox is ever enabled during a build, taint it until reset
+  // Prevents: toggle on → edit → toggle off → simulate exploit
+  const sandboxTainted = useRef(isBucketCustomMode)
+  useEffect(() => {
+    if (isBucketCustomMode) sandboxTainted.current = true
+  }, [isBucketCustomMode])
+
   // Set basketball sport attribute on root
   useEffect(() => {
     document.documentElement.setAttribute('data-sport', 'bucket')
@@ -368,9 +375,10 @@ export default function BucketApp() {
     const types = POS_TYPES[pos] ?? GUARD_TYPES
     setBuild(Object.fromEntries(types.map(t => [t, null])))
     setActiveCategory((POS_CATS[pos] ?? GUARD_CATEGORIES)[0].id)
+    sandboxTainted.current = isBucketCustomMode
     setPage('game')
     window.scrollTo(0, 0)
-  }, [])
+  }, [isBucketCustomMode])
 
   const handleSwitchPosition = useCallback((pos) => {
     localStorage.setItem('bucketPosition', pos)
@@ -402,6 +410,7 @@ export default function BucketApp() {
     setSimResult(null)
     setSavedSpinResult(null)
     setShowTeamSpin(false)
+    sandboxTainted.current = isBucketCustomMode
     setPage('game')
     window.scrollTo({ top: 0, behavior: 'instant' })
   }, [activeTypes])
@@ -413,7 +422,7 @@ export default function BucketApp() {
     setPage('sim')
     window.scrollTo({ top: 0, behavior: 'instant' })
 
-    if (!supabase || !user || isBucketCustomMode) return
+    if (!supabase || !user || isBucketCustomMode || sandboxTainted.current) return
     const archetype = position === 'big'
       ? getBucketBigArchetype(result.ovr, build, activeTypes)
       : getBucketGuardArchetype(result.ovr, build, activeTypes)
@@ -489,7 +498,8 @@ export default function BucketApp() {
     setActiveDrag(null)
     setSpinResetKey(0)
     setMobileView('spin')
-  }, [])
+    sandboxTainted.current = isBucketCustomMode
+  }, [isBucketCustomMode])
 
   const handleNavPositionSwitch = useCallback((pos) => {
     localStorage.setItem('bucketPosition', pos)
