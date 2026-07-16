@@ -23,7 +23,8 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,jpg,jpeg,json}'],
+        globPatterns: ['**/*.{js,css,html,ico,svg,json}'],
+        globIgnores: ['**/headshots/**', '**/logos/**'],
         runtimeCaching: [
           {
             urlPattern: /\/logos\/.+\.png$/,
