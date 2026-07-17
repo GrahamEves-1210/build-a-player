@@ -161,15 +161,13 @@ export default function BucketLeaderboardPage({ onBack, currentUser, adsDisabled
 
   useEffect(() => {
     if (adsDisabled || window.innerWidth <= 768) return
-    window.ramp?.que?.push(() => {
-      window.ramp.spaNewPage()
-      window.ramp.spaAddAds([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-lb-desktop' }])
-    })
+    window.ramp?.que?.push(() => { window.ramp.spaNewPage() })
   }, [])
 
   useEffect(() => {
     if (adsDisabled || window.innerWidth > 768) return
     window.ramp?.que?.push(() => {
+      window.ramp.spaNewPage()
       window.ramp.spaAddAds([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-lb-mob-top' }])
     })
   }, [])
@@ -381,9 +379,6 @@ export default function BucketLeaderboardPage({ onBack, currentUser, adsDisabled
             Best GOAT rankings ever achieved
           </div>
         )}
-
-        {/* Desktop ad — hidden on mobile */}
-        {!adsDisabled && <div id="ramp-cntr1-lb-desktop" className="ad-cntr1-desktop" />}
 
         {/* List */}
         {loading ? <LBSpinner /> : (

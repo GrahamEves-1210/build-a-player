@@ -671,13 +671,6 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
                   <button className={`prf-game-switch-btn${section === 'bucket' ? ' active' : ''}`} onClick={() => setGameSection('bucket')}>
                     <MiniBucketLogo />
                   </button>
-                  {hasSalary && (
-                    <button className={`prf-game-switch-btn${section === 'salary' ? ' active' : ''}`} onClick={() => setGameSection('salary')}>
-                      <span className="prf-mini-logo logo-text" style={{ letterSpacing: '0.02em' }}>
-                        Buil<span className="logo-d">d</span><em style={{ color: '#a855f7', WebkitTextFillColor: '#a855f7' }}>-<span className="logo-a">A</span>-</em>Salary
-                      </span>
-                    </button>
-                  )}
                 </div>
               )}
 
@@ -937,14 +930,14 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
                 </div>
               )}
 
-              {section === 'salary' && !salaryCareer && (
+              {section === 'bucket' && !salaryCareer && hasSalary && (
                 <div className={`prf-card prf-card-empty ${show ? 'prf-card-in' : ''}`} style={{ animationDelay: '0.3s' }}>
                   <div className="prf-card-hd"><span className="prf-card-title">Salary Career</span></div>
                   <div className="prf-empty-msg">No Salary Cap plays yet. Head over and start playing.</div>
                 </div>
               )}
 
-              {section === 'salary' && salaryCareer && (
+              {section === 'bucket' && salaryCareer && (
                 <div className={`prf-card ${show ? 'prf-card-in' : ''}`} style={{ animationDelay: '0.3s' }}>
                   <div className="prf-card-hd">
                     <span className="prf-card-title">Salary Career</span>

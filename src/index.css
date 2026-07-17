@@ -9789,7 +9789,7 @@ html.is-touch .bd-card-main:hover         { background: transparent !important; 
 }
 
 @media (max-width: 768px) {
-  .prf-page { padding: 28px 14px 60px; height: auto; min-height: calc(100dvh - 54px); overflow-y: visible; }
+  .prf-page { padding: 28px 14px 60px; height: auto; min-height: calc(100dvh - 54px); overflow-y: auto; overflow-x: hidden; }
   .prf-hero { padding: 20px 16px; gap: 14px; }
   .prf-avatar { width: 56px; height: 56px; font-size: 21px; }
   .prf-name { font-size: 17px; }
@@ -10931,6 +10931,14 @@ html.is-touch .alltime-mode .spin-btn:hover:not(:disabled) {
   align-items: center;
   overflow: hidden;
 }
+.ad-cntr1-footer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  min-height: 50px;
+  margin: 4px 0;
+}
 .ad-cntr1-desktop {
   display: none;
 }
@@ -11019,9 +11027,6 @@ html.is-touch .alltime-mode .spin-btn:hover:not(:disabled) {
   border: none !important;
   box-shadow: none !important;
   padding-top: 0 !important;
-}
-@media (min-width: 769px) {
-  [id^="pw-oop-bottom_rail"] { display: none !important; }
 }
 
 /* â”€â”€ Ad-free: hide all Playwire elements â”€â”€ */
@@ -13687,7 +13692,7 @@ html.is-mac [id^="pw-oop-bottom_rail"] > * {
 @media (min-width: 768px) {
   .sc-screen {
     align-items: center;
-    padding: 16px 24px 0;
+    padding: 10px 24px 0;
     height: 100dvh;
     overflow: hidden;
   }
@@ -13712,7 +13717,7 @@ html.is-mac [id^="pw-oop-bottom_rail"] > * {
     align-items: stretch;
     gap: 8px;
     padding: 10px 0 20px;
-    margin-top: 10px;
+    margin-top: -6px;
   }
   .sc-footer-btns {
     display: flex;
@@ -13731,12 +13736,12 @@ html.is-mac [id^="pw-oop-bottom_rail"] > * {
   .sc-budget-label { font-size: 17px; }
   .sc-back-btn {
     font-size: 14px;
-    height: 52px;
+    height: 47px;
     padding: 0 22px;
   }
   .sc-confirm-btn {
     font-size: 16px;
-    padding: 16px 28px;
+    padding: 14px 28px;
   }
   .sc-date-btn {
     width: 56px;

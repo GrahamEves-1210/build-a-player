@@ -408,7 +408,7 @@ export function runBucketSimulation(build, types, team, position = 'guard', rngS
   const mvpOddsBase = 1 / (1 + Math.exp(-mvpGap * 0.9))
   // Historically dominant seasons lock up MVP — lower wins bar to just making playoffs
   const mvpDominant = madePlayoffs && (ppg >= 30 || (ppg >= 27 && apg >= 8 && rpg >= 8))
-  const mvpOdds = mvpDominant ? Math.max(0.97, mvpOddsBase) : mvpOddsBase
+  const mvpOdds = mvpDominant ? Math.max(0.99, mvpOddsBase) : mvpOddsBase
   const mvp = madePlayoffs && rand() < mvpOdds
 
   // DPOY: truly elite defensive stats — rare, ~8-15% of seasons
