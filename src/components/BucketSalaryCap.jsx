@@ -7,10 +7,24 @@ import { supabase } from '../lib/supabase'
 import { valToGrade } from '../utils/simulation'
 
 /*
-  Supabase table required:
+  Supabase tables required:
+
   CREATE TABLE salary_cap_plays (
     id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     date_str      text NOT NULL,
+    user_id       uuid REFERENCES auth.users(id),
+    username      text,
+    picks         jsonb NOT NULL,
+    overall_score int  NOT NULL,
+    ppg           numeric(4,1),
+    apg           numeric(3,1),
+    rpg           numeric(3,1),
+    budget_used   int,
+    created_at    timestamptz DEFAULT now()
+  );
+
+  CREATE TABLE salary_infinite_plays (
+    id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id       uuid REFERENCES auth.users(id),
     username      text,
     picks         jsonb NOT NULL,
@@ -227,7 +241,8 @@ function legendTierFor(legend, col, regulars) {
     .map(p => { const ts = typesFor(p, col); return ts.reduce((s, t) => s + (p.attrs?.[t] ?? 5), 0) / ts.length })
     .sort((a, b) => b - a)
   const rank = sorted.findIndex(s => s <= legScore)
-  const pct  = rank === -1 ? 0 : rank / sorted.length
+  // rank === -1 means no player scored as low as the legend → legend is the worst → pct = 1.0
+  const pct  = rank === -1 ? 1.0 : rank / sorted.length
   if (pct < 0.22) return 0  // $50
   if (pct < 0.40) return 1  // $40
   if (pct < 0.55) return 2  // $30
@@ -464,22 +479,37 @@ function BudgetBar({ spent, total, pickedAll }) {
 }
 
 // ─── DatePicker ───────────────────────────────────────────────────────────────
-function DatePicker({ activeDate, dates, onSelect }) {
+function DatePicker({ activeDate, dates, onSelect, mode, onInfinite }) {
   const [open, setOpen] = useState(false)
   return (
     <div className="sc-date-wrap">
       <button className="sc-date-btn" onClick={() => setOpen(v => !v)}>
-        <span className="sc-date-day">{activeDate.day}</span>
-        <span className="sc-date-month">{activeDate.label.split(' ')[0].toUpperCase()}</span>
+        {mode === 'infinite'
+          ? <>
+              <span className="sc-date-day sc-date-day--inf">∞</span>
+              <span className="sc-date-month">INF</span>
+            </>
+          : <>
+              <span className="sc-date-day">{activeDate.day}</span>
+              <span className="sc-date-month">{activeDate.label.split(' ')[0].toUpperCase()}</span>
+            </>
+        }
       </button>
       {open && (
         <>
           <div className="sc-date-backdrop" onClick={() => setOpen(false)} />
           <div className="sc-date-dropdown">
+            <button
+              className={`sc-date-item sc-date-item--inf${mode === 'infinite' ? ' sc-date-item--active' : ''}`}
+              onClick={() => { onInfinite(); setOpen(false) }}
+            >
+              <span className="sc-date-item-label">∞ Infinite</span>
+              {mode === 'infinite' && <span className="sc-date-item-reset">tap to reset</span>}
+            </button>
             {dates.map(date => (
               <button
                 key={date.str}
-                className={`sc-date-item${activeDate.str === date.str ? ' sc-date-item--active' : ''}`}
+                className={`sc-date-item${mode === 'daily' && activeDate.str === date.str ? ' sc-date-item--active' : ''}`}
                 onClick={() => { onSelect(date); setOpen(false) }}
               >
                 <span className="sc-date-item-label">{date.label}</span>
@@ -489,6 +519,54 @@ function DatePicker({ activeDate, dates, onSelect }) {
         </>
       )}
     </div>
+  )
+}
+
+// ─── InfiniteLeaderboard ─────────────────────────────────────────────────────
+function InfiniteLeaderboard({ onClose }) {
+  const [rows, setRows] = useState(null)
+  useEffect(() => {
+    if (!supabase) { setRows([]); return }
+    supabase
+      .from('salary_infinite_plays')
+      .select('username, picks, overall_score, ppg, apg, rpg')
+      .order('overall_score', { ascending: false })
+      .limit(10)
+      .then(({ data }) => setRows((data || []).slice(0, 10)))
+      .catch(() => setRows([]))
+  }, [])
+  return (
+    <>
+      <div className="sc-lb-backdrop" onClick={onClose} />
+      <div className="sc-lb-dropdown">
+        <div className="sc-lb-header">
+          <span className="sc-lb-title">ALL-TIME TOP BUILDS</span>
+        </div>
+        {rows === null && <div className="sc-lb-empty">Loading…</div>}
+        {rows !== null && rows.length === 0 && <div className="sc-lb-empty">No builds yet — be the first!</div>}
+        {rows !== null && rows.map((r, i) => (
+          <div key={i} className={`sc-lb-row${i === 0 ? ' sc-lb-row--top' : ''}`} style={{ animationDelay: `${i * 0.04}s` }}>
+            <div className="sc-lb-row-main">
+              <span className="sc-lb-rank">{i + 1}</span>
+              <span className="sc-lb-name">{r.username || 'Anonymous'}</span>
+              <span className="sc-lb-ovr">{r.overall_score} OVR</span>
+            </div>
+            {r.picks && (
+              <div className="sc-lb-picks">
+                {r.picks.map((p, pi) => (
+                  <div key={pi} className="sc-lb-pick" title={p.name} style={{ '--tc': p.teamColor || '#444' }}>
+                    {p.photo
+                      ? <img src={p.photo} alt={p.name} />
+                      : <img src={`/logos/nba/${p.team}.png`} alt={p.team} style={{ padding: '4px', opacity: 0.7 }} />
+                    }
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </>
   )
 }
 
@@ -589,15 +667,22 @@ export default function BucketSalaryCap({ onConfirm, onBack, user, initialDateSt
   const [scoutedGrades,   setScoutedGrades]   = useState({})
   const [powerMenuOpen,   setPowerMenuOpen]   = useState(false)
   const [powerSeen,       setPowerSeen]       = useState(() => !!localStorage.getItem(POWER_SEEN_KEY))
+  const [mode,            setMode]            = useState('daily')
+  const [infiniteSeed,    setInfiniteSeed]    = useState(() => Math.random() * 0x7FFFFFFF | 0)
+  const [infShufflesLeft, setInfShufflesLeft] = useState(1)
+  const [infScoutsLeft,   setInfScoutsLeft]   = useState(1)
 
   const grid = useMemo(() => {
+    if (mode === 'infinite') {
+      const rand = seededRandom(infiniteSeed)
+      return generateGrid(SAL_COLS, ALL_PLAYERS, rand, new Set(), infiniteSeed)
+    }
     const rand = seededRandom(activeDate.seed)
-    // Compute yesterday's date seed (proper calendar subtraction)
     const yesterday = new Date(activeDate.y, activeDate.m - 1, activeDate.day - 1)
     const yy = yesterday.getFullYear(), ym = yesterday.getMonth() + 1, yd = yesterday.getDate()
     const recentlyUsed = getPickedNamesForSeed(yy * 10000 + ym * 100 + yd, SAL_COLS, ALL_PLAYERS)
     return generateGrid(SAL_COLS, ALL_PLAYERS, rand, recentlyUsed, activeDate.seed)
-  }, [activeDate.seed, activeDate.y, activeDate.m, activeDate.day])
+  }, [mode, infiniteSeed, activeDate.seed, activeDate.y, activeDate.m, activeDate.day])
 
   // Preload all headshots for the current day's grid so cards render instantly
   useEffect(() => {
@@ -613,14 +698,19 @@ export default function BucketSalaryCap({ onConfirm, onBack, user, initialDateSt
 
   // Daily budget varies ±20 from 150 in steps of 10, seeded by date
   const dailyBudget = useMemo(() => {
+    if (mode === 'infinite') {
+      const r = seededRandom(infiniteSeed ^ 0xB0B0B0)
+      return BUDGET_OPTIONS[Math.floor(r() * BUDGET_OPTIONS.length)]
+    }
     if (activeDate.str === '2026-07-16') return 150
     if (activeDate.str === '2026-07-17') return 140
     const r = seededRandom(activeDate.seed ^ 0xB0B0B0)
     return BUDGET_OPTIONS[Math.floor(r() * BUDGET_OPTIONS.length)]
-  }, [activeDate.seed, activeDate.str])
+  }, [mode, infiniteSeed, activeDate.seed, activeDate.str])
 
   const executeShuffleCol = (ci) => {
-    if (shufflesLeft === 0 || shufflingCol !== null || alreadyPlayed) return
+    const effectiveShuffle = mode === 'infinite' ? infShufflesLeft : shufflesLeft
+    if (effectiveShuffle === 0 || shufflingCol !== null || (mode === 'daily' && alreadyPlayed)) return
     setShuffleMode(false)
     setShufflingCol(ci)
     setShufflePhase('out')
@@ -641,20 +731,29 @@ export default function BucketSalaryCap({ onConfirm, onBack, user, initialDateSt
         const { [ci]: _, ...rest } = prev
         return rest
       })
-      localStorage.setItem(SHUFFLED_KEY(activeDate.str, user?.id), JSON.stringify({ ci, players: newPlayers }))
-      setShufflesLeft(0)
+      if (mode === 'infinite') {
+        setInfShufflesLeft(0)
+      } else {
+        localStorage.setItem(SHUFFLED_KEY(activeDate.str, user?.id), JSON.stringify({ ci, players: newPlayers }))
+        setShufflesLeft(0)
+      }
       setShufflePhase('in')
       setTimeout(() => { setShufflingCol(null); setShufflePhase(null) }, 500)
     }, 380)
   }
 
   const executeScout = (player) => {
-    if (scoutsLeft === 0 || alreadyPlayed) return
+    const effectiveScout = mode === 'infinite' ? infScoutsLeft : scoutsLeft
+    if (effectiveScout === 0 || (mode === 'daily' && alreadyPlayed)) return
     const grade = calcGrade(player)
     const newGrades = { ...scoutedGrades, [player.name]: grade }
     setScoutedGrades(newGrades)
-    localStorage.setItem(SCOUTED_KEY(activeDate.str, user?.id), JSON.stringify(newGrades))
-    setScoutsLeft(0)
+    if (mode === 'infinite') {
+      setInfScoutsLeft(0)
+    } else {
+      localStorage.setItem(SCOUTED_KEY(activeDate.str, user?.id), JSON.stringify(newGrades))
+      setScoutsLeft(0)
+    }
     setScoutMode(false)
   }
 
@@ -752,6 +851,24 @@ export default function BucketSalaryCap({ onConfirm, onBack, user, initialDateSt
     setShufflePhase(null)
   }
 
+  const handleInfinite = () => {
+    setMode('infinite')
+    setAlreadyPlayed(null)
+    setInfiniteSeed(Math.random() * 0x7FFFFFFF | 0)
+    setSel({})
+    setShuffleOverride({})
+    setInfShufflesLeft(1)
+    setInfScoutsLeft(1)
+    setShufflingCol(null)
+    setShufflePhase(null)
+    setScoutedGrades({})
+    setShuffleMode(false)
+    setScoutMode(false)
+    setPowerMenuOpen(false)
+    setShowLB(false)
+    setShowLBPrompt(false)
+  }
+
   const buildFromSel = () => {
     const build = {}
     SAL_COLS.forEach((col, ci) => {
@@ -772,6 +889,23 @@ export default function BucketSalaryCap({ onConfirm, onBack, user, initialDateSt
 
   const confirm = () => {
     if (!pickedAll) return
+
+    if (mode === 'infinite') {
+      if (overBudget) return
+      const build = buildFromSel()
+      const stats = calcStats(sel)
+      const picks = SAL_COLS.map((col, ci) => {
+        const p = sel[ci]
+        return { name: p.name, team: p.team, price: p.price, photo: p.photo, teamColor: p.teamColor, number: p.number }
+      })
+      const saveData = {
+        picks, ppg: stats.ppg, apg: stats.apg, rpg: stats.rpg,
+        userId: user?.id ?? null, username: user?.email?.split('@')[0] ?? null,
+        totalCost, infinite: true,
+      }
+      onConfirm(build, false, null, saveData)
+      return
+    }
 
     if (alreadyPlayed) {
       onConfirm(buildFromSel(), true, activeDate.str)
@@ -812,10 +946,12 @@ export default function BucketSalaryCap({ onConfirm, onBack, user, initialDateSt
     onConfirm(build, false, activeDate.str, saveData)
   }
 
+  const effectiveShufflesLeft = mode === 'infinite' ? infShufflesLeft : shufflesLeft
+  const effectiveScoutsLeft   = mode === 'infinite' ? infScoutsLeft   : scoutsLeft
   const missing   = SAL_COLS.length - Object.keys(sel).length
-  const viewReady = alreadyPlayed && pickedAll
+  const viewReady = mode === 'daily' && alreadyPlayed && pickedAll
   const disabled  = viewReady ? false : (!pickedAll || overBudget)
-  const ctaLabel  = alreadyPlayed
+  const ctaLabel  = mode === 'daily' && alreadyPlayed
     ? (pickedAll ? 'View Results →' : '…')
     : !pickedAll
     ? `Pick ${missing} more`
@@ -828,7 +964,7 @@ export default function BucketSalaryCap({ onConfirm, onBack, user, initialDateSt
       <div className="sc-header">
         <div className="sc-title">BUILD<span style={{ color: '#a855f7' }}>-A-</span>PLAYER <span style={{ color: '#a855f7' }}>SALARY</span></div>
         <div className="sc-footer-icons">
-          {(shufflesLeft > 0 || scoutsLeft > 0) && !alreadyPlayed && (
+          {(effectiveShufflesLeft > 0 || effectiveScoutsLeft > 0) && (mode === 'infinite' || !alreadyPlayed) && (
             <div className="sc-power-wrap">
               <button
                 className={`sc-lb-btn${powerMenuOpen ? ' sc-lb-btn--open' : ''}${!powerSeen && !powerMenuOpen ? ' sc-lb-btn--pulse' : ''}`}
@@ -855,10 +991,10 @@ export default function BucketSalaryCap({ onConfirm, onBack, user, initialDateSt
                   <div className="sc-power-menu">
                     <div className="sc-power-item">
                       <button
-                        className={`sc-power-circle${shuffleMode ? ' sc-power-circle--active' : ''}${shufflesLeft === 0 ? ' sc-power-circle--used' : ''}`}
-                        disabled={shufflesLeft === 0}
+                        className={`sc-power-circle${shuffleMode ? ' sc-power-circle--active' : ''}${effectiveShufflesLeft === 0 ? ' sc-power-circle--used' : ''}`}
+                        disabled={effectiveShufflesLeft === 0}
                         onClick={() => {
-                          if (shufflesLeft === 0) return
+                          if (effectiveShufflesLeft === 0) return
                           setPowerMenuOpen(false)
                           setShuffleMode(v => !v)
                           setScoutMode(false)
@@ -867,16 +1003,16 @@ export default function BucketSalaryCap({ onConfirm, onBack, user, initialDateSt
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                           <path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/>
                         </svg>
-                        <span className="sc-power-badge">{shufflesLeft}</span>
+                        <span className="sc-power-badge">{effectiveShufflesLeft}</span>
                       </button>
                       <span className="sc-power-label">SHUFFLE</span>
                     </div>
                     <div className="sc-power-item">
                       <button
-                        className={`sc-power-circle${scoutMode ? ' sc-power-circle--active' : ''}${scoutsLeft === 0 ? ' sc-power-circle--used' : ''}`}
-                        disabled={scoutsLeft === 0}
+                        className={`sc-power-circle${scoutMode ? ' sc-power-circle--active' : ''}${effectiveScoutsLeft === 0 ? ' sc-power-circle--used' : ''}`}
+                        disabled={effectiveScoutsLeft === 0}
                         onClick={() => {
-                          if (scoutsLeft === 0) return
+                          if (effectiveScoutsLeft === 0) return
                           setPowerMenuOpen(false)
                           setScoutMode(v => !v)
                           setShuffleMode(false)
@@ -886,7 +1022,7 @@ export default function BucketSalaryCap({ onConfirm, onBack, user, initialDateSt
                           <circle cx="11" cy="11" r="8"/>
                           <path d="m21 21-4.35-4.35"/>
                         </svg>
-                        <span className="sc-power-badge">{scoutsLeft}</span>
+                        <span className="sc-power-badge">{effectiveScoutsLeft}</span>
                       </button>
                       <span className="sc-power-label">SCOUT</span>
                     </div>
@@ -900,11 +1036,11 @@ export default function BucketSalaryCap({ onConfirm, onBack, user, initialDateSt
               className={`sc-lb-btn${showLB ? ' sc-lb-btn--open' : ''}`}
               onClick={e => {
                 e.currentTarget.blur()
-                if (!alreadyPlayed) {
+                if (mode === 'infinite' || alreadyPlayed) {
+                  setShowLB(v => !v)
+                } else {
                   setShowLBPrompt(true)
                   setTimeout(() => setShowLBPrompt(false), 2800)
-                } else {
-                  setShowLB(v => !v)
                 }
               }}
               aria-label="Today's top builds"
@@ -921,17 +1057,20 @@ export default function BucketSalaryCap({ onConfirm, onBack, user, initialDateSt
             {showLBPrompt && (
               <div className="sc-lb-prompt">Play today's game to unlock</div>
             )}
-            {showLB && <SalaryLeaderboard dateStr={activeDate.str} dateLabel={activeDate.label} onClose={() => setShowLB(false)} />}
+            {showLB && mode === 'infinite' && <InfiniteLeaderboard onClose={() => setShowLB(false)} />}
+            {showLB && mode === 'daily' && <SalaryLeaderboard dateStr={activeDate.str} dateLabel={activeDate.label} onClose={() => setShowLB(false)} />}
           </div>
         </div>
         <DatePicker
           activeDate={activeDate}
           dates={dates}
-          onSelect={handleSelectDate}
+          onSelect={date => { setMode('daily'); handleSelectDate(date) }}
+          mode={mode}
+          onInfinite={handleInfinite}
         />
       </div>
 
-      {alreadyPlayed && (
+      {mode === 'daily' && alreadyPlayed && (
         <div className="sc-played-banner">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <rect x="3" y="11" width="18" height="11" rx="2"/>

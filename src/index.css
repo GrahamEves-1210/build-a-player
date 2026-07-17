@@ -145,7 +145,7 @@
   transform: none;
 }
 @media (min-width: 769px) {
-  [data-sport="bucket"] .sil-wrap { transform: scale(0.8) translateY(101px); transform-origin: top center; }
+  [data-sport="bucket"] .sil-wrap { transform: scale(0.75) translateY(91px); transform-origin: top center; }
   [data-sport="bucket"] .cz-left  { transform: translateY(-50%) translateX(-20px) scale(1.2) !important; }
   [data-sport="bucket"] .cz-right { transform: translateY(-50%) translateX(20px) scale(1.2) !important; }
   [data-sport="bucket"] .cz-left.cz-hidden,
@@ -7229,6 +7229,11 @@ html.is-touch .bd-card-main:hover         { background: transparent !important; 
 .panel-right .simp-attr-qb { font-size: 11px; }
 .panel-right .simp-grade-circle { width: 37px; height: 37px; min-width: 37px; font-size: 11px; }
 .panel-right .qb-avatar { width: 43px !important; height: 43px !important; }
+@media (min-width: 769px) {
+  .panel-right .simp-attr-row { padding: 4px 13px; }
+  .panel-right .qb-avatar { width: 36px !important; height: 36px !important; }
+  .panel-right .simp-grade-circle { width: 32px; height: 32px; min-width: 32px; font-size: 10px; }
+}
 .simp-attr-name { font-size: 10px; font-weight: 700; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.4px; }
 .simp-attr-qb   { font-size: 12px; font-weight: 500; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
@@ -11043,14 +11048,6 @@ html.ads-hidden #ramp-cntr1-final-stats {
   display: none !important;
 }
 
-/* ── Bucket desktop: suppress all Playwire-injected elements ── */
-@media (min-width: 769px) {
-  [data-sport="bucket"] [id^="pw-"],
-  [data-sport="bucket"] [class^="pw-"],
-  [data-sport="bucket"] [id^="adBanner"] {
-    display: none !important;
-  }
-}
 
 /* â”€â”€ iPad layout â€” force mobile-style single-panel view â”€â”€ */
 html.is-tablet body { background-color: var(--bg-raised); background-image: none; overflow-y: auto; overflow-x: hidden; }
@@ -11366,6 +11363,9 @@ html.is-mac [id^="pw-oop-bottom_rail"] > * {
   background: var(--grey-900, #111318); border: 1px solid var(--border-hi);
   border-radius: 14px; display: flex; flex-direction: column; overflow: hidden;
   box-shadow: 0 16px 48px rgba(0,0,0,0.6);
+}
+@media (min-width: 769px) {
+  .cr-modal { transform: scale(0.95); margin-bottom: 80px; }
 }
 .cr-header {
   display: flex; align-items: center; gap: 10px;
@@ -13672,6 +13672,16 @@ html.is-mac [id^="pw-oop-bottom_rail"] > * {
 }
 .sc-date-item:hover { background: rgba(255,255,255,0.07); }
 .sc-date-item--active { background: rgba(168,85,247,0.15); }
+.sc-date-item--inf .sc-date-item-label { color: #a855f7; }
+.sc-date-item--inf:hover { background: rgba(168,85,247,0.1); }
+.sc-date-day--inf { font-size: 20px; }
+.sc-date-item-reset {
+  font-size: 9px;
+  font-weight: 600;
+  color: rgba(168,85,247,0.55);
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
 .sc-date-item-label {
   font-size: 12px;
   font-weight: 600;

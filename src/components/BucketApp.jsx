@@ -32,8 +32,10 @@ function enableAdFreeMode() {
     })
   }
   hide()
+  // CSS (ads-hidden class) handles suppression going forward; observer only needed briefly for mid-injection elements
   const obs = new MutationObserver(hide)
   obs.observe(document.body, { childList: true, subtree: true })
+  setTimeout(() => obs.disconnect(), 5000)
 }
 
 const HoopU = () => (
@@ -288,7 +290,7 @@ export default function BucketApp() {
     return () => window.removeEventListener('popstate', handlePop)
   }, [])
 
-  // Initialize Playwire ads on mount and page change — desktop gets no ads for bucket
+  // Initialize Playwire ads on mount and page change
   useEffect(() => {
     if (window.innerWidth > 768) return
     window.ramp?.que?.push(() => { window.ramp.spaNewPage() })
@@ -409,17 +411,30 @@ export default function BucketApp() {
     window.scrollTo(0, 0)
     // Save to leaderboard with the real sim OVR (only on fresh plays, not View Results)
     if (saveData && supabase && !skipToEnd) {
-      supabase.from('salary_cap_plays').insert({
-        date_str:      dateStr,
-        user_id:       saveData.userId,
-        username:      saveData.username,
-        picks:         saveData.picks,
-        overall_score: result.ovr,
-        ppg:           saveData.ppg,
-        apg:           saveData.apg,
-        rpg:           saveData.rpg,
-        budget_used:   saveData.totalCost,
-      }).then(({ error }) => { if (error) console.error('[salary-cap] save failed:', error) })
+      if (saveData.infinite) {
+        supabase.from('salary_infinite_plays').insert({
+          user_id:       saveData.userId,
+          username:      saveData.username,
+          picks:         saveData.picks,
+          overall_score: result.ovr,
+          ppg:           saveData.ppg,
+          apg:           saveData.apg,
+          rpg:           saveData.rpg,
+          budget_used:   saveData.totalCost,
+        }).then(({ error }) => { if (error) console.error('[salary-infinite] save failed:', error) })
+      } else {
+        supabase.from('salary_cap_plays').insert({
+          date_str:      dateStr,
+          user_id:       saveData.userId,
+          username:      saveData.username,
+          picks:         saveData.picks,
+          overall_score: result.ovr,
+          ppg:           saveData.ppg,
+          apg:           saveData.apg,
+          rpg:           saveData.rpg,
+          budget_used:   saveData.totalCost,
+        }).then(({ error }) => { if (error) console.error('[salary-cap] save failed:', error) })
+      }
     }
   }, [activeTypes, position])
 

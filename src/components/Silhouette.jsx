@@ -1,4 +1,4 @@
-import { useState, useRef, useLayoutEffect, useEffect, useCallback } from 'react'
+import { useState, useRef, useLayoutEffect, useEffect, useCallback, useMemo } from 'react'
 import { ATTR, TYPES, CATEGORIES, QB_PHYSICALS } from '../data/qbs'
 import { RB_CATEGORIES, RB_PHYSICALS } from '../data/rbs'
 import { QB_LEGEND_PHYSICALS } from '../data/legends'
@@ -368,6 +368,13 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
     return { dotX, dotY, cardY, lineX, stubX, cardCenterX, cardHalfH, anchorNudgeX, anchorNudgeY }
   }
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const zonePosMap = useMemo(() => {
+    const map = {}
+    zones.forEach(z => { map[z.type] = pos(z) })
+    return map
+  }, [bounds, isMobile, isBucket, isRB, zones])
+
   return (
     <section className="field-center">
       <div className="category-pills">
@@ -568,7 +575,7 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
         >
           {zones.filter(z => types.includes(z.type) && !z.noDot).map(zone => {
             const hidden = !isLite && !complete && (!activeCategory || !categoryTypes?.includes(zone.type))
-            const p = pos(zone)
+            const p = zonePosMap[zone.type]
             if (!p) return null
             const cardTopY = p.cardY - p.cardHalfH
             const anchorX = p.cardCenterX - 25 + (zone.lineAnchorOffsetX ?? 0) + (p.anchorNudgeX ?? 0)
@@ -593,7 +600,7 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
         <div className="cz-layer" style={{ zIndex: 10 }}>
           {zones.filter(z => types.includes(z.type)).map(zone => {
             const hiddenFromTab = !isLite && !complete && (!activeCategory || !categoryTypes?.includes(zone.type))
-            const p = pos(zone)
+            const p = zonePosMap[zone.type]
             return (
               <div key={zone.type}>
                 {p && !zone.noDot && (

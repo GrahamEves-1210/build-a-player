@@ -820,7 +820,7 @@ export const NBA_GUARD_PLAYERS = [
     attrs: { jumpShot:4, finishing:4, passing:3, handles:3, perimeterDefense:5, speed:5, bounce:5, size:5, basketballIQ:2, clutch:3 } },
 
   { name: "Stephon Castle", short: "Castle", team: 'SAS', starter: true, captain: false,
-    attrs: { jumpShot:5, finishing:8, passing:2, handles:6, perimeterDefense:7, speed:6, bounce:8, size:6, basketballIQ:5, clutch:3 } },
+    attrs: { jumpShot:5, finishing:8, passing:2, handles:6, perimeterDefense:7, speed:8, bounce:9, size:7, basketballIQ:5, clutch:3 } },
 
   { name: "Julian Champagnie", short: "Champagnie", team: 'SAS', starter: false, captain: false,
     attrs: { jumpShot:8, finishing:3, passing:3, handles:3, perimeterDefense:4, speed:5, bounce:5, size:7, basketballIQ:6, clutch:3 } },
@@ -927,7 +927,13 @@ export const NBA_GUARD_PLAYERS = [
     attrs: { jumpShot:3, finishing:4, passing:3, handles:3, perimeterDefense:4, speed:5, bounce:5, size:8, basketballIQ:3, clutch:3 } },
 
   { name: "Trae Young", short: "Trae", team: 'WAS', starter: true, captain: true,
-    attrs: { jumpShot:7, finishing:5, passing:10, handles:10, perimeterDefense:0, speed:7, bounce:3, size:0, basketballIQ:8, clutch:9 } }
+    attrs: { jumpShot:7, finishing:5, passing:10, handles:10, perimeterDefense:0, speed:7, bounce:3, size:0, basketballIQ:8, clutch:9 } },
+
+  { name: "Giannis Antetokounmpo", short: "Giannis", team: 'MIA', posGroup: 'guard', starter: true, captain: true,
+    attrs: { jumpShot:4, finishing:11, passing:8, handles:7, perimeterDefense:9, speed:10, bounce:8, size:9, basketballIQ:9, clutch:10 } },
+
+  { name: "Paolo Banchero", short: "Banchero", team: 'ORL', posGroup: 'guard', starter: true, captain: true,
+    attrs: { jumpShot:5, finishing:8, passing:7, handles:7, perimeterDefense:5, speed:6, bounce:6, size:8, basketballIQ:7, clutch:6 } }
 ]
 
 export const NBA_BIG_PLAYERS = [

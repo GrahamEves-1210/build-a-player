@@ -233,21 +233,22 @@ export default function BucketLeaderboardPage({ onBack, currentUser, adsDisabled
     })
 
     setRows(eligible)
+    setLoading(false)
 
     const uids = eligible.map(r => r.uid).filter(Boolean)
     if (uids.length) {
-      const { data: accs } = await supabase
+      supabase
         .from('accounts')
         .select('id, ads_disabled, subscription_status')
         .in('id', uids)
-      if (accs) {
-        setPlusSet(new Set(accs
-          .filter(a => a.ads_disabled || a.subscription_status === 'active')
-          .map(a => a.id)))
-      }
+        .then(({ data: accs }) => {
+          if (accs) {
+            setPlusSet(new Set(accs
+              .filter(a => a.ads_disabled || a.subscription_status === 'active')
+              .map(a => a.id)))
+          }
+        })
     }
-
-    setLoading(false)
   }
 
   async function fetchBuilds(isDaily = false) {
