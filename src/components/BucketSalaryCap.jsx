@@ -113,14 +113,14 @@ const GOAT_SALARY_PLAYERS = [
   },
 ]
 
-// ─── Player pool: no pure Cs, no bench scrubs ─────────────────────────────────
-const ALL_PLAYERS = [...NBA_GUARD_PLAYERS, ...NBA_BIG_PLAYERS, ...GOAT_SALARY_PLAYERS].filter(p => {
-  const pos = NBA_POSITIONS[p.name]?.pos
-  if (pos === 'C') return false
-  if (!p.attrs) return false
-  const vals = Object.values(p.attrs)
-  return vals.reduce((s, v) => s + v, 0) / vals.length >= 5.5
-})
+// ─── Player pool (Jul 18+ and infinite) ──────────────────────────────────────
+const ALL_PLAYERS = [...NBA_GUARD_PLAYERS, ...NBA_BIG_PLAYERS, ...GOAT_SALARY_PLAYERS]
+  .filter(p => {
+    if (!p.attrs) return false
+    const vals = Object.values(p.attrs)
+    return vals.reduce((s, v) => s + v, 0) / vals.length >= 4.0
+  })
+  .filter((p, i, a) => a.findIndex(q => q.name === p.name) === i)
 
 // ─── Seeded RNG (mulberry32 variant) ──────────────────────────────────────────
 function seededRandom(seed) {
@@ -193,6 +193,54 @@ export const SAL_ATTR_MAP = {
 }
 
 const TEAM_META = Object.fromEntries(NBA_TEAMS.map(t => [t.short, t]))
+
+// ─── Hardcoded grids for Jul 15-17 (locked forever) ──────────────────────────
+const _playerMap = new Map(
+  [...NBA_GUARD_PLAYERS, ...NBA_BIG_PLAYERS, ...GOAT_SALARY_PLAYERS]
+    .filter((p, i, a) => a.findIndex(q => q.name === p.name) === i)
+    .map(p => [p.name, p])
+)
+function buildHardcodedGrid(nameGrid) {
+  return SAL_COLS.map((col, ci) =>
+    TIERS.map((price, ti) => {
+      const p = _playerMap.get(nameGrid[ci][ti]) ?? { name: nameGrid[ci][ti], team: 'NBA', attrs: {} }
+      const attrs = {}
+      typesFor(p, col).forEach(t => { attrs[t] = p.attrs?.[t] ?? 5 })
+      const hsId = NBA_HEADSHOTS[p.name]
+      return {
+        ...p, price, attrs,
+        teamColor:  TEAM_META[p.team]?.color  ?? '#444',
+        teamColor2: TEAM_META[p.team]?.color2 ?? '#222',
+        photo:  hsId ? `/headshots/nba/${hsId}.jpg` : null,
+        number: NBA_JERSEY_NUMBERS[p.name] ?? null,
+        id:     `${col.key}-${price}-${p.name}`,
+      }
+    })
+  )
+}
+const HARDCODED_GRIDS = {
+  20260715: buildHardcodedGrid([
+    ['Aaron Gordon','Chris Paul','Donovan Mitchell','Dyson Daniels','Amen Thompson'],
+    ['Devin Vassell','Michael Porter Jr.','Immanuel Quickley','Paul George','Josh Giddey'],
+    ['Alex Caruso','Kyle Kuzma','Pascal Siakam','Miles Bridges','Tyrese Haliburton'],
+    ['Jrue Holiday','Paolo Banchero','Ausar Thompson','Wilt Chamberlain','Julius Randle'],
+    ['LeBron James','Andrew Nembhard','Luguentz Dort','LaMelo Ball','Josh Hart'],
+  ]),
+  20260716: buildHardcodedGrid([
+    ['Franz Wagner','Steve Nash','LeBron James','Amen Thompson','Dylan Harper'],
+    ['Tyrese Maxey','Cade Cunningham','Donovan Mitchell','Aaron Gordon','Paolo Banchero'],
+    ['Charles Barkley','Paul George','Kyrie Irving','Kyle Kuzma','Tyler Herro'],
+    ['Desmond Bane','Matas Buzelis','Luguentz Dort','Shai Gilgeous-Alexander','Jayson Tatum'],
+    ['Jaylen Brown','Cooper Flagg','Tyrese Haliburton',"De'Aaron Fox",'Keyonte George'],
+  ]),
+  20260717: buildHardcodedGrid([
+    ['Kareem Abdul-Jabbar','Andrew Nembhard','Shai Gilgeous-Alexander','Jimmy Butler III','Jaren Jackson Jr.'],
+    ['Austin Reaves','Alex Caruso','Cooper Flagg','Deni Avdija','LeBron James'],
+    ['Bill Russell','Mikal Bridges',"De'Aaron Fox",'Paolo Banchero','Tyrese Maxey'],
+    ['Jalen Brunson','Miles Bridges','Kawhi Leonard','Shaedon Sharpe','Josh Hart'],
+    ['John Collins','Pascal Siakam','Jaden McDaniels','Josh Giddey','RJ Barrett'],
+  ]),
+}
 
 // Category accent colors — one per column key
 const COL_COLORS = {
@@ -677,6 +725,7 @@ export default function BucketSalaryCap({ onConfirm, onBack, user, initialDateSt
       const rand = seededRandom(infiniteSeed)
       return generateGrid(SAL_COLS, ALL_PLAYERS, rand, new Set(), infiniteSeed)
     }
+    if (HARDCODED_GRIDS[activeDate.seed]) return HARDCODED_GRIDS[activeDate.seed]
     const rand = seededRandom(activeDate.seed)
     const yesterday = new Date(activeDate.y, activeDate.m - 1, activeDate.day - 1)
     const yy = yesterday.getFullYear(), ym = yesterday.getMonth() + 1, yd = yesterday.getDate()
@@ -702,6 +751,7 @@ export default function BucketSalaryCap({ onConfirm, onBack, user, initialDateSt
       const r = seededRandom(infiniteSeed ^ 0xB0B0B0)
       return BUDGET_OPTIONS[Math.floor(r() * BUDGET_OPTIONS.length)]
     }
+    if (activeDate.str === '2026-07-15') return 140
     if (activeDate.str === '2026-07-16') return 150
     if (activeDate.str === '2026-07-17') return 140
     const r = seededRandom(activeDate.seed ^ 0xB0B0B0)

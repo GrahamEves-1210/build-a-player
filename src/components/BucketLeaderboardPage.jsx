@@ -159,18 +159,6 @@ export default function BucketLeaderboardPage({ onBack, currentUser, adsDisabled
     setExpanded(null)
   }
 
-  useEffect(() => {
-    if (adsDisabled || window.innerWidth <= 768) return
-    window.ramp?.que?.push(() => { window.ramp.spaNewPage() })
-  }, [])
-
-  useEffect(() => {
-    if (adsDisabled || window.innerWidth > 768) return
-    window.ramp?.que?.push(() => {
-      window.ramp.spaNewPage()
-      window.ramp.spaAddAds([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-lb-mob-top' }])
-    })
-  }, [])
 
   useEffect(() => {
     if (adsDisabled || window.innerWidth > 768 || loading || !rows.length) return
@@ -325,8 +313,6 @@ export default function BucketLeaderboardPage({ onBack, currentUser, adsDisabled
           <h2 className="lb-title">Leaderboard</h2>
         </div>
 
-        {/* Mobile ad under title */}
-        {!adsDisabled && <div id="ramp-cntr1-lb-mob-top" className="ad-cntr1-mobile" style={{ margin: '4px 0' }} />}
 
         {/* View tabs */}
         <div className="lb-view-tabs">
