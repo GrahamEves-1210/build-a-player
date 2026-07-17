@@ -6959,6 +6959,12 @@ html.is-touch .bd-card-main:hover         { background: transparent !important; 
 .goat-card + .goat-card {
   border-top: 1px solid rgba(255,255,255,0.05);
 }
+
+[id^="ramp-cntr1-goat-"] {
+  margin: 0;
+  padding: 0;
+  min-height: 0;
+}
 .goat-card--you {
   padding: 14px 14px 14px 16px;
   border-left: 4px solid #e8a820;

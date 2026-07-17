@@ -2560,9 +2560,11 @@ export default function BucketSimPage({ result, build, types, position, onBack, 
       const next = s + 1
       window.ramp?.que?.push(() => {
         window.ramp.spaNewPage()
+        const ads = [{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-footer' }]
         if (!adsDisabled && next < 3 && window.innerWidth <= 768) {
-          window.ramp.spaAddAds([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-plf' }])
+          ads.push({ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-plf' })
         }
+        if (!adsDisabled && window.innerWidth <= 768) window.ramp.spaAddAds(ads)
       })
       return next
     })
@@ -2643,6 +2645,9 @@ export default function BucketSimPage({ result, build, types, position, onBack, 
           <div id="ramp-cntr1-plf" className="plf-banner-ad" />
         )}
         {screens[screen]}
+        {!adsDisabled && window.innerWidth <= 768 && (
+          <div id="ramp-cntr1-footer" className="ad-cntr1-mobile" />
+        )}
         <div className="simp-footer-disclaimer">Fan-made · Not affiliated with the NBA</div>
       </div>
     </div>
