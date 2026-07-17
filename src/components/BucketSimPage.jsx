@@ -1173,7 +1173,6 @@ function ScreenGOAT({ result, awards, onNext, onReset, onBack, adsDisabled = fal
     if (!listVisible || adsDisabled || window.innerWidth > 768) return
     window.ramp?.que?.push(() => {
       window.ramp.spaAddAds([
-        { type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-goat-71' },
         { type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-goat-61' },
         { type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-goat-51' },
         { type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-goat-41' },
@@ -1251,7 +1250,7 @@ function ScreenGOAT({ result, awards, onNext, onReset, onBack, adsDisabled = fal
             {Array.from({ length: 75 }, (_, i) => 75 - i).map(r => (
               <React.Fragment key={r}>
                 <GoatCard rank={r} entry={GOAT_MAP[r]} isPlayer={false} playerTeam={team?.short} playerTeamColor={team?.color} />
-                {(r === 71 || r === 61 || r === 51 || r === 41 || r === 31 || r === 21) && (
+                {(r === 61 || r === 51 || r === 41 || r === 31 || r === 21) && (
                   <div id={`ramp-cntr1-goat-${r}`} className="ad-cntr1-mobile" />
                 )}
               </React.Fragment>
@@ -1294,7 +1293,7 @@ function ScreenGOAT({ result, awards, onNext, onReset, onBack, adsDisabled = fal
                     playerTeam={team?.short}
                     playerTeamColor={team?.color}
                   />
-                  {(r === 71 || r === 61 || r === 51 || r === 41 || r === 31 || r === 21) && (
+                  {(r === 61 || r === 51 || r === 41 || r === 31 || r === 21) && (
                     <div id={`ramp-cntr1-goat-${r}`} className="ad-cntr1-mobile" />
                   )}
                 </React.Fragment>
@@ -2528,6 +2527,7 @@ function TeamStarters({ teamShort, teamColor, isBig, iqPhoto }) {
 export default function BucketSimPage({ result, build, types, position, onBack, onReset, adsDisabled = false, isSalaryMode = false, initialScreen = 0 }) {
   const [screen, setScreen] = useState(initialScreen)
 
+
   // Compute awards once — result is stable after sim runs
   const awards = useMemo(() => {
     if (!result) return null
@@ -2560,11 +2560,12 @@ export default function BucketSimPage({ result, build, types, position, onBack, 
       const next = s + 1
       window.ramp?.que?.push(() => {
         window.ramp.spaNewPage()
-        const ads = [{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-footer' }]
-        if (!adsDisabled && next < 3 && window.innerWidth <= 768) {
-          ads.push({ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-plf' })
+        if (!adsDisabled && window.innerWidth <= 768) {
+          const ads = []
+          if (next > 0 && next < screens.length - 1) ads.push({ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-footer' })
+          if (next < 3) ads.push({ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-plf' })
+          if (ads.length) window.ramp.spaAddAds(ads)
         }
-        if (!adsDisabled && window.innerWidth <= 768) window.ramp.spaAddAds(ads)
       })
       return next
     })
@@ -2645,8 +2646,8 @@ export default function BucketSimPage({ result, build, types, position, onBack, 
           <div id="ramp-cntr1-plf" className="plf-banner-ad" />
         )}
         {screens[screen]}
-        {!adsDisabled && window.innerWidth <= 768 && (
-          <div id="ramp-cntr1-footer" className="ad-cntr1-mobile" />
+        {!adsDisabled && screen > 0 && screen < screens.length - 1 && window.innerWidth <= 768 && (
+          <div id="ramp-cntr1-footer" className="ad-cntr1-mobile" style={{ marginTop: 8 }} />
         )}
         <div className="simp-footer-disclaimer">Fan-made · Not affiliated with the NBA</div>
       </div>

@@ -722,7 +722,7 @@ export default function App() {
         </div>
       )}
 
-      {showCustomModal && isPlus && (
+      {showCustomModal && (isPlus || isCustomMode) && (
         <CustomRatingsModal
           isRB={isRB}
           gameMode={gameMode}
