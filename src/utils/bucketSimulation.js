@@ -303,9 +303,9 @@ export function runBucketSimulation(build, types, team, position = 'guard', rngS
 
   // --- per-game stats (calibrated to realistic NBA ranges) ---
   // PPG: guard 4–40+, big 5–32 (A+ build ~33.5, S tier can exceed)
-  const ppg = +(Math.max(isBig ? 5 : 4, (isBig ? 0 : -3.5) + rn(-1, 1, rand) + scoringRaw * (isBig ? 2.2 : 4.0))).toFixed(1)
-  // RPG: guard 1.5–9+, big 5–14 (A+ build ~7.7, S tier can exceed)
-  const rpg = +(Math.max(isBig ? 5 : 1.5, (isBig ? 3.5 : 0.5) + rn(-0.4, 0.4, rand) + rebRaw * (isBig ? 0.75 : 0.75))).toFixed(1)
+  const ppg = +(Math.max(isBig ? 5 : 4, (isBig ? -2 : -3.5) + rn(-1, 1, rand) + scoringRaw * (isBig ? 3.5 : 4.0))).toFixed(1)
+  // RPG: guard 1.5–9+, big 6–15 (A+ build ~10, S tier can exceed)
+  const rpg = +(Math.max(isBig ? 5 : 1.5, (isBig ? 4.0 : 0.5) + rn(-0.4, 0.4, rand) + rebRaw * (isBig ? 0.82 : 0.75))).toFixed(1)
   // APG: guard 1–11+, big 0.5–11 (quadratic for steep drop-off — S-tier passer bigs reach Jokic ~11)
   const bigApgBase = astRaw >= 8
     ? Math.max(0.5, 0.125 * astRaw * astRaw - 0.375 * astRaw)

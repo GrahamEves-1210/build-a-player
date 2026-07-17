@@ -173,7 +173,7 @@ const PERKS = [
   'No ads',
   'Custom color themes',
   'Custom profile icons',
-  'PLUS badge on leaderboard',
+  'PLUS badge on leaderboard entries',
 ]
 
 export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, onLeaderboard, onSwitchPosition, onSwitchBucketPosition, onSubscribe, onOpenCustomRatings, user, gameMode, isRB, isPlus, isBucket, bucketPosition }) {

@@ -2564,7 +2564,6 @@ export default function BucketSimPage({ result, build, types, position, onBack, 
         if (!adsDisabled && window.innerWidth <= 768) {
           const ads = []
           if (next > 0 && next < screens.length - 1) ads.push({ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-footer' })
-          if (next < 3) ads.push({ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-plf' })
           if (ads.length) window.ramp.spaAddAds(ads)
         }
       })
@@ -2643,9 +2642,6 @@ export default function BucketSimPage({ result, build, types, position, onBack, 
           </div>
         )}
 
-        {!adsDisabled && screen < screens.length - 1 && window.innerWidth <= 768 && (
-          <div id="ramp-cntr1-plf" className="plf-banner-ad" />
-        )}
         {screens[screen]}
         {!adsDisabled && screen > 0 && screen < screens.length - 1 && window.innerWidth <= 768 && (
           <div id="ramp-cntr1-footer" className="ad-cntr1-mobile" style={{ marginTop: 8 }} />

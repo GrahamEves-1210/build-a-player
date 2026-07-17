@@ -160,6 +160,31 @@ export default function BucketLeaderboardPage({ onBack, currentUser, adsDisabled
   }
 
   useEffect(() => {
+    if (adsDisabled || window.innerWidth <= 768) return
+    window.ramp?.que?.push(() => {
+      window.ramp.spaNewPage()
+      window.ramp.spaAddAds([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-lb-desktop' }])
+    })
+  }, [])
+
+  useEffect(() => {
+    if (adsDisabled || window.innerWidth > 768) return
+    window.ramp?.que?.push(() => {
+      window.ramp.spaAddAds([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-lb-mob-top' }])
+    })
+  }, [])
+
+  useEffect(() => {
+    if (adsDisabled || window.innerWidth > 768 || !rows.length) return
+    const count = view === 'goat' ? rows.length : SLOTS
+    const ads = []
+    for (let i = 10; i <= count; i += 10) {
+      ads.push({ type: 'standard_iab_cntr1', selectorId: `ramp-cntr1-lb-mob-${i}` })
+    }
+    if (ads.length) window.ramp?.que?.push(() => window.ramp.spaAddAds(ads))
+  }, [rows])
+
+  useEffect(() => {
     if (!supabase) { setLoading(false); return }
     setLoading(true)
     setRows([])
@@ -301,6 +326,9 @@ export default function BucketLeaderboardPage({ onBack, currentUser, adsDisabled
           <h2 className="lb-title">Leaderboard</h2>
         </div>
 
+        {/* Mobile ad under title */}
+        {!adsDisabled && <div id="ramp-cntr1-lb-mob-top" className="ad-cntr1-mobile" style={{ margin: '4px 0' }} />}
+
         {/* View tabs */}
         <div className="lb-view-tabs">
           {['profiles', 'builds', 'goat', 'daily'].map(v => (
@@ -354,34 +382,43 @@ export default function BucketLeaderboardPage({ onBack, currentUser, adsDisabled
           </div>
         )}
 
+        {/* Desktop ad — hidden on mobile */}
+        {!adsDisabled && <div id="ramp-cntr1-lb-desktop" className="ad-cntr1-desktop" />}
+
         {/* List */}
         {loading ? <LBSpinner /> : (
           <div className="lb-list">
-            {display.map((row, i) => {
-              const delay = { animationDelay: `${i * 30}ms` }
+            {display.flatMap((row, i) => {
+              const delay  = { animationDelay: `${i * 30}ms` }
               const topCls = i < 3 ? ` lb-row-top${i + 1}` : ''
+              const metric = metrics.find(m => m.key === sortKey)
+              const adAfter = !adsDisabled && (i + 1) % 10 === 0
+              const adEl = adAfter
+                ? <div key={`lb-mob-ad-${i+1}`} id={`ramp-cntr1-lb-mob-${i+1}`} className="ad-cntr1-mobile lb-list-ad" />
+                : null
+
+              let rowEl
 
               // ── Empty slot ──────────────────────────────────────────────────
-              if (!row) return (
-                <div key={`empty-${i}`} className={`lb-row lb-row-empty${topCls}`} style={delay}>
-                  <div className="lb-rank-badge lb-rank-n">{i + 1}</div>
-                  <div className="lb-row-info">
-                    <div className="lb-row-name-line">
-                      <span className="lb-username lb-empty-name">——</span>
+              if (!row) {
+                rowEl = (
+                  <div key={`empty-${i}`} className={`lb-row lb-row-empty${topCls}`} style={delay}>
+                    <div className="lb-rank-badge lb-rank-n">{i + 1}</div>
+                    <div className="lb-row-info">
+                      <div className="lb-row-name-line">
+                        <span className="lb-username lb-empty-name">——</span>
+                      </div>
                     </div>
+                    <span className="lb-row-val lb-empty-val">—</span>
                   </div>
-                  <span className="lb-row-val lb-empty-val">—</span>
-                </div>
-              )
-
-              const metric = metrics.find(m => m.key === sortKey)
+                )
 
               // ── Profiles ────────────────────────────────────────────────────
-              if (view === 'profiles') {
+              } else if (view === 'profiles') {
                 const val    = metric?.fmt(row[sortKey] ?? 0) ?? row[sortKey]
                 const isYou  = row.uid === meId
                 const isPlus = plusSet.has(row.uid)
-                return (
+                rowEl = (
                   <div key={row.uid} className={`lb-row${topCls}${isYou ? ' lb-row-you' : ''}`} style={delay}>
                     <RankBadge rank={i + 1} />
                     <div className="lb-row-info">
@@ -399,16 +436,15 @@ export default function BucketLeaderboardPage({ onBack, currentUser, adsDisabled
                     <span className="lb-row-val">{val}</span>
                   </div>
                 )
-              }
 
               // ── GOAT ────────────────────────────────────────────────────────
-              if (view === 'goat') {
-                const isYou = row.user_id === meId
-                const tc    = TEAM_COLOR[row.team_short] ?? '#888'
-                const tier  = goatTierLabel(row.goatRank)
+              } else if (view === 'goat') {
+                const isYou     = row.user_id === meId
+                const tc        = TEAM_COLOR[row.team_short] ?? '#888'
+                const tier      = goatTierLabel(row.goatRank)
                 const tierColor = row.goatRank <= 5 ? '#f59e0b' : row.goatRank <= 15 ? '#a855f7' : row.goatRank <= 35 ? '#3b82f6' : '#22c55e'
                 const isExpanded = expanded === row.id
-                return (
+                rowEl = (
                   <div key={row.id} className={`lb-row lb-row-expandable${topCls}${isYou ? ' lb-row-you' : ''}`} style={delay}>
                     <div className="lb-row-main" onClick={() => row.build && toggleExpand(row.id)}>
                       <div className="lb-rank-badge lb-rank-n" style={{ background: tierColor, color: '#111', fontWeight: 900, fontSize: 13 }}>
@@ -437,42 +473,44 @@ export default function BucketLeaderboardPage({ onBack, currentUser, adsDisabled
                     )}
                   </div>
                 )
-              }
 
               // ── Builds + Daily (expandable) ─────────────────────────────────
-              const dataVal    = sortKey === 'lowOvr' ? row.ovr : row[sortKey]
-              const val        = metric?.fmt(dataVal ?? 0) ?? dataVal
-              const isYou      = row.user_id === meId
-              const tc         = TEAM_COLOR[row.team_short] ?? '#888'
-              const isExpanded = expanded === row.id
-
-              return (
-                <div key={row.id} className={`lb-row lb-row-expandable${topCls}${isYou ? ' lb-row-you' : ''}`} style={delay}>
-                  <div className="lb-row-main" onClick={() => row.build && toggleExpand(row.id)}>
-                    <RankBadge rank={i + 1} />
-                    <div className="lb-row-info">
-                      <div className="lb-row-name-line">
-                        <span className="lb-username">{row.username ?? 'Anonymous'}</span>
-                        <PosBadge position={row.position} />
-                        {row.champion && <span className="lb-champ-icon">🏆</span>}
-                        {isYou && <span className="lb-you">you</span>}
+              } else {
+                const dataVal    = sortKey === 'lowOvr' ? row.ovr : row[sortKey]
+                const val        = metric?.fmt(dataVal ?? 0) ?? dataVal
+                const isYou      = row.user_id === meId
+                const tc         = TEAM_COLOR[row.team_short] ?? '#888'
+                const isExpanded = expanded === row.id
+                rowEl = (
+                  <div key={row.id} className={`lb-row lb-row-expandable${topCls}${isYou ? ' lb-row-you' : ''}`} style={delay}>
+                    <div className="lb-row-main" onClick={() => row.build && toggleExpand(row.id)}>
+                      <RankBadge rank={i + 1} />
+                      <div className="lb-row-info">
+                        <div className="lb-row-name-line">
+                          <span className="lb-username">{row.username ?? 'Anonymous'}</span>
+                          <PosBadge position={row.position} />
+                          {row.champion && <span className="lb-champ-icon">🏆</span>}
+                          {isYou && <span className="lb-you">you</span>}
+                        </div>
+                        <div className="lb-row-sub">
+                          <span style={{ color: tc, fontWeight: 700 }}>{row.team_short}</span>
+                          {row.archetype && <> · <span>{row.archetype}</span></>}
+                          {' · '}{row.wins}W {row.losses}L
+                        </div>
                       </div>
-                      <div className="lb-row-sub">
-                        <span style={{ color: tc, fontWeight: 700 }}>{row.team_short}</span>
-                        {row.archetype && <> · <span>{row.archetype}</span></>}
-                        {' · '}{row.wins}W {row.losses}L
+                      <div className="lb-row-right">
+                        <span className="lb-row-val">{val}</span>
+                        {row.build && <ChevronIcon open={isExpanded} />}
                       </div>
                     </div>
-                    <div className="lb-row-right">
-                      <span className="lb-row-val">{val}</span>
-                      {row.build && <ChevronIcon open={isExpanded} />}
-                    </div>
+                    {isExpanded && row.build && (
+                      <BucketBuildExpand build={row.build} position={row.position} row={row} />
+                    )}
                   </div>
-                  {isExpanded && row.build && (
-                    <BucketBuildExpand build={row.build} position={row.position} row={row} />
-                  )}
-                </div>
-              )
+                )
+              }
+
+              return adEl ? [rowEl, adEl] : [rowEl]
             })}
           </div>
         )}

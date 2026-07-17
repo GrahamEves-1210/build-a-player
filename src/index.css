@@ -10931,6 +10931,22 @@ html.is-touch .alltime-mode .spin-btn:hover:not(:disabled) {
   align-items: center;
   overflow: hidden;
 }
+.ad-cntr1-desktop {
+  display: none;
+}
+.lb-list-ad {
+  margin: 6px 0;
+}
+@media (min-width: 769px) {
+  .ad-cntr1-desktop {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    margin: 4px 0 8px;
+    overflow: hidden;
+    min-height: 90px;
+  }
+}
 /* spin screen: pre-reserve ad height so chips never jump when ad loads */
 .spin-panel-static .ad-cntr1-mobile {
   height: 60px;
@@ -11015,6 +11031,7 @@ html.ads-hidden [id^="ramp-"],
 html.ads-hidden [id^="adBanner"],
 html.ads-hidden [id^="pw-oop"],
 html.ads-hidden .ad-cntr1-mobile,
+html.ads-hidden .ad-cntr1-desktop,
 html.ads-hidden .ad-cntr1-lb,
 html.ads-hidden #ramp-cntr1-season,
 html.ads-hidden #ramp-cntr1-final-stats {

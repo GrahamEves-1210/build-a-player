@@ -655,7 +655,7 @@ export const NBA_GUARD_PLAYERS = [
     attrs: { jumpShot:6, finishing:5, passing:3, handles:3, perimeterDefense:2, speed:5, bounce:5, size:3, basketballIQ:3, clutch:3 } },
 
   { name: "Ajay Mitchell", short: "Mitchell", team: 'OKC', starter: false, captain: false,
-    attrs: { jumpShot:5, finishing:6, passing:6, handles:5, perimeterDefense:4, speed:6, bounce:5, size:4, basketballIQ:5, clutch:3 } },
+    attrs: { jumpShot:6, finishing:7, passing:6, handles:5, perimeterDefense:4, speed:6, bounce:5, size:4, basketballIQ:5, clutch:3 } },
 
   { name: "Bennett Stirtz", short: "Stirtz", team: 'OKC', starter: false, captain: false,
     attrs: { jumpShot:5, finishing:4, passing:5, handles:4, perimeterDefense:3, speed:5, bounce:4, size:1, basketballIQ:4, clutch:3 } },
@@ -1076,7 +1076,7 @@ export const NBA_BIG_PLAYERS = [
     attrs: { jumpShot:4, finishing:6, rebounding:5, playmaking:2, interiorDefense:5, speed:5, bounce:5, size:6, basketballIQ:6, clutch:3 } },
 
   { name: "Kristaps Porzingis", short: "Porzingis", team: 'GSW', starter: false, captain: false,
-    attrs: { jumpShot:5, finishing:6, rebounding:7, playmaking:4, interiorDefense:8, speed:2, bounce:3, size:9, basketballIQ:5, clutch:4 } },
+    attrs: { jumpShot:5, finishing:6, rebounding:7, playmaking:4, interiorDefense:8, speed:2, bounce:3, size:10, basketballIQ:5, clutch:4 } },
 
 
   // ─── HOU ───────────────────────────────────────────────────────────
