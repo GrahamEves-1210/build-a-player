@@ -96,8 +96,16 @@ export default function App() {
     try { return JSON.parse(localStorage.getItem('bap_custom_ratings') || '{}') } catch { return {} }
   })
   const [showCustomModal, setShowCustomModal] = useState(false)
+  const [showSandboxWarning, setShowSandboxWarning] = useState(false)
   const [saveToast, setSaveToast] = useState(null)
   const saveToastTimer = useRef(null)
+
+  // Once sandbox is ever turned on during a build session, taint it permanently
+  // until reset — prevents toggle-on → edit → toggle-off → simulate exploit
+  const sandboxTainted = useRef(isCustomMode)
+  useEffect(() => {
+    if (isCustomMode) sandboxTainted.current = true
+  }, [isCustomMode])
 
   useEffect(() => {
     hideVideoAds()
@@ -220,7 +228,7 @@ export default function App() {
     } catch {}
   }, [isPlus])
 
-  const displayPool = (isCustomMode && isPlus && customRatings[isRB ? 'rb' : 'qb'])
+  const displayPool = (isCustomMode && customRatings[isRB ? 'rb' : 'qb'])
     ? activePool.map(p => {
         const override = customRatings[isRB ? 'rb' : 'qb'][`${p.name}|${p.team}`]
         return override ? { ...p, attrs: { ...p.attrs, ...override } } : p
@@ -239,9 +247,10 @@ export default function App() {
     setGameMode(mode)
     setBuild(Object.fromEntries(types.map(t => [t, null])))
     setActiveCategory('physical')
+    sandboxTainted.current = isCustomMode
     setPage('game')
     window.scrollTo(0, 0)
-  }, [])
+  }, [isCustomMode])
 
   const handleDrop = useCallback((type) => {
     const drag = activeDragRef.current
@@ -274,9 +283,10 @@ export default function App() {
     setSpinResetKey(k => k + 1)
     setGameKey(k => k + 1)
     setSavedSpinResult(null)
+    sandboxTainted.current = isCustomMode
     setMobileView('spin')
     window.scrollTo({ top: 0, behavior: 'instant' })
-  }, [activeTypes])
+  }, [activeTypes, isCustomMode])
 
   const handleChipTap = useCallback((chipData) => {
     setBuild(prev => {
@@ -300,6 +310,21 @@ export default function App() {
     setShowTeamPicker(true)
   }, [simResult])
 
+  const handleSandboxToggle = useCallback((on) => {
+    if (on) {
+      setShowSandboxWarning(true)
+    } else {
+      try { localStorage.setItem('bap_custom_mode', '0') } catch {}
+      setIsCustomMode(false)
+    }
+  }, [])
+
+  const confirmSandbox = useCallback(() => {
+    setIsCustomMode(true)
+    try { localStorage.setItem('bap_custom_mode', '1') } catch {}
+    setShowSandboxWarning(false)
+  }, [])
+
   const showSaveToast = useCallback((type, msg) => {
     setSaveToast({ type, msg })
     clearTimeout(saveToastTimer.current)
@@ -318,7 +343,7 @@ export default function App() {
     setSimResult(result)
     if (!user) {
       showSaveToast('no-auth', 'Sign in to save your stats')
-    } else if (isCustomMode) {
+    } else if (isCustomMode || sandboxTainted.current) {
       showSaveToast('custom', 'Custom mode — results not saved')
     } else if (!supabase) {
       console.warn('[build-a-player] sim result not saved — supabase not configured')
@@ -368,7 +393,8 @@ export default function App() {
     setActiveDrag(null)
     setSpinResetKey(0)
     setMobileView('spin')
-  }, [])
+    sandboxTainted.current = isCustomMode
+  }, [isCustomMode])
 
   if (page === 'splash') {
     return <SplashScreen onStart={handleStart} onDepthChart={() => setPage('depth-chart')} />
@@ -398,7 +424,7 @@ export default function App() {
         if (url) window.location.href = url
       } catch {}
     },
-    onOpenCustomRatings: () => { if (isPlus) setShowCustomModal(true) },
+    onOpenCustomRatings: () => setShowCustomModal(true),
     user,
     gameMode,
     isRB,
@@ -459,11 +485,10 @@ export default function App() {
           isRB={isRB}
           isPlus={isPlus}
           currentPool={activePool}
-          isCustomMode={isCustomMode && isPlus}
+          isCustomMode={isCustomMode}
           onCustomModeChange={(val) => {
-            const next = val && isPlus
-            setIsCustomMode(next)
-            try { localStorage.setItem('bap_custom_mode', next ? '1' : '0') } catch {}
+            setIsCustomMode(val)
+            try { localStorage.setItem('bap_custom_mode', val ? '1' : '0') } catch {}
           }}
           onCustomRatingsChange={(ratings) => {
             setCustomRatings(ratings)
@@ -479,7 +504,7 @@ export default function App() {
           onAdsDisabled={() => { setAdsDisabled(true); setIsSubscribed(true); enableAdFreeMode() }}
           onOpenCustomModal={() => setShowCustomModal(true)}
         />
-        {showCustomModal && isPlus && (
+        {showCustomModal && (
           <CustomRatingsModal
             isRB={isRB}
             gameMode={gameMode}
@@ -609,6 +634,7 @@ export default function App() {
           isPlus={isPlus}
           isCustomMode={isCustomMode}
           onOpenCustomModal={() => setShowCustomModal(true)}
+          onSandboxToggle={handleSandboxToggle}
         />
 
         <div className="right-panel-wrap">
@@ -622,6 +648,7 @@ export default function App() {
             isPlus={isPlus}
             isCustomMode={isCustomMode}
             onOpenCustomModal={() => setShowCustomModal(true)}
+            onSandboxToggle={handleSandboxToggle}
           />
         </div>
       </main>
@@ -665,7 +692,20 @@ export default function App() {
       )}
 
       {showTeamPicker && (
-        <TeamPickerModal onSelect={handleTeamPicked} isPlus={isCustomMode && isPlus} />
+        <TeamPickerModal onSelect={handleTeamPicked} isPlus={isCustomMode} />
+      )}
+
+      {showSandboxWarning && (
+        <div className="sandbox-warning-overlay" onClick={() => setShowSandboxWarning(false)}>
+          <div className="sandbox-warning-modal" onClick={e => e.stopPropagation()}>
+            <div className="sandbox-warning-title">⚠ Sandbox Mode</div>
+            <div className="sandbox-warning-body">Sandbox mode builds will not be saved to your profile or leaderboard. Are you sure you want to continue?</div>
+            <div className="sandbox-warning-btns">
+              <button className="sandbox-warning-cancel" onClick={() => setShowSandboxWarning(false)}>Cancel</button>
+              <button className="sandbox-warning-confirm" onClick={confirmSandbox}>Continue</button>
+            </div>
+          </div>
+        </div>
       )}
 
       {saveToast && (

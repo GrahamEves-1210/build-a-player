@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef, useMemo, useCallback, useLayoutEffect } from 'react'
+import React, { useState, useEffect, useRef, useMemo, useCallback, useLayoutEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { NBA_TEAMS, NBA_PLAYERS, BUCKET_ATTR } from '../data/nba-players'
 import NBA_HEADSHOTS from '../data/nba-headshots.json'
 import { valToGrade } from '../utils/simulation'
 import { getBucketGuardArchetype, getBucketBigArchetype, TEAM_RATINGS } from '../utils/bucketSimulation'
+import { SAL_REP_TYPES, SAL_ATTR_MAP } from './BucketSalaryCap'
 import QBAvatar from './QBAvatar'
 import BucketFigureOverlay from './BucketFigureOverlay'
 import { ShareModal } from './ReportCard'
@@ -625,7 +626,7 @@ const BUCKET_HEAD        = { ax: 468, ay: 74, r: 54 }
 const BUCKET_COLLAR_AY   = 140
 
 // Reusable player model — exact same headshot math as ScreenBuild/ScreenFinal
-export function BucketModelFigure({ build, team, className = '', style = {}, headYOffset = 0 }) {
+export function BucketModelFigure({ build, team, className = '', style = {}, headYOffset = 0, photoKey = 'basketballIQ' }) {
   const modelRef   = useRef(null)
   const [modelW, setModelW] = useState(0)
   const [hsImgRatio, setHsImgRatio] = useState(1.333)
@@ -634,7 +635,7 @@ export function BucketModelFigure({ build, team, className = '', style = {}, hea
     ? Object.fromEntries(Object.entries(build).map(([k, v]) => [k, v ? { ...v, teamColor: team.color, teamColor2: team.color2, team: team.short } : v]))
     : build
 
-  const bucketPhoto = build['basketballIQ']?.photo || null
+  const bucketPhoto = build[photoKey]?.photo || null
 
   useLayoutEffect(() => {
     if (!modelRef.current) return
@@ -699,7 +700,7 @@ export function BucketModelFigure({ build, team, className = '', style = {}, hea
 
 // ─── Screen 0: Build Overview ─────────────────────────────────────────────────
 
-function ScreenBuild({ result, build, types, attrMap, onNext, adsDisabled = false }) {
+function ScreenBuild({ result, build, types, attrMap, onNext, adsDisabled = false, isSalaryMode = false }) {
   const { ovr, position, team } = result
   const archetype  = position === 'big'
     ? getBucketBigArchetype(ovr, build, types)
@@ -722,7 +723,7 @@ function ScreenBuild({ result, build, types, attrMap, onNext, adsDisabled = fals
   useEffect(() => {
     if (adsDisabled || window.innerWidth > 768) return
     window.ramp?.que?.push(() => {
-      window.ramp.spaAddAds([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-build' }])
+      window.ramp.spaAddAds([{ type: 'standard_iab_cntr2', selectorId: 'ramp-cntr1-build' }])
     })
   }, [])
 
@@ -734,7 +735,7 @@ function ScreenBuild({ result, build, types, attrMap, onNext, adsDisabled = fals
       </div>
       <div className="simp-archetype">{archetype}</div>
       <button className="simp-cta" onClick={onNext}>Simulate Season</button>
-      {team && <BucketModelFigure build={build} team={team} />}
+      {team && <BucketModelFigure build={build} team={team} photoKey={isSalaryMode ? 'size' : 'basketballIQ'} />}
       <div id="ramp-cntr1-build" className="ad-cntr1-mobile" />
 
       <div className="simp-attr-table">
@@ -825,13 +826,13 @@ function StatCard({ ppg, rpg, apg, spg, bpg, tov, fgPct, threePct, ftPct, per })
 // ─── Screen 1: Regular Season ─────────────────────────────────────────────────
 const CONF_LABEL = { east: 'Eastern', west: 'Western' }
 
-function ConferenceStandings({ standings, myShort, teamColor }) {
+function ConferenceStandings({ standings, myShort, teamColor, conf }) {
   if (!standings?.length) return null
   const topWins = standings[0].wins
   return (
     <div className="bsim-standings">
       <div className="bsim-std-header">
-        <span>{CONF_LABEL[standings._conf] ?? ''} Conference Standings</span>
+        <span>{CONF_LABEL[conf] ?? ''} Conference Standings</span>
         <span className="bsim-std-col-labels">
           <span className="bsim-std-col-record">W–L</span>
           <span className="bsim-std-col-gb">GB</span>
@@ -840,8 +841,8 @@ function ConferenceStandings({ standings, myShort, teamColor }) {
       {standings.map((row, i) => {
         const gb = i === 0 ? '-' : ((topWins - row.wins) / 2).toFixed(1).replace('.0', '')
         const isMe = row.short === myShort
-        const isPlayoffLine = i === 5
-        const isPlayinLine = i === 9
+        const isPlayoffLine = i === 6
+        const isPlayinLine = i === 10
         return (
           <div key={row.short}>
             {isPlayoffLine && <div className="bsim-std-divider"><span>Play-In</span></div>}
@@ -873,6 +874,13 @@ function ScreenSeason({ result, awards, onNext, adsDisabled = false }) {
   const [liveLosses,  setLiveLosses]  = useState(0)
   const [awardsPhase, setAwardsPhase] = useState(0)
   const allDone = revealed === games.length
+
+  useEffect(() => {
+    if (!allDone || adsDisabled || window.innerWidth > 768) return
+    window.ramp?.que?.push(() => {
+      window.ramp.spaAddAds([{ type: 'standard_iab_cntr2', selectorId: 'ramp-cntr1-season' }])
+    })
+  }, [allDone])
 
   useEffect(() => {
     const loadTimer = setTimeout(() => {
@@ -929,8 +937,10 @@ function ScreenSeason({ result, awards, onNext, adsDisabled = false }) {
           </div>
 
           {allDone && (
-            <ConferenceStandings standings={standings} myShort={team?.short} teamColor={team?.color} />
+            <ConferenceStandings standings={standings} myShort={team?.short} teamColor={team?.color} conf={conference} />
           )}
+
+          {allDone && <div id="ramp-cntr1-season" className="ad-cntr1-mobile" />}
 
           {allDone && (
             <StatCard ppg={ppg} rpg={rpg} apg={apg} spg={spg} bpg={bpg} tov={tov} fgPct={fgPct} threePct={threePct} ftPct={ftPct} per={per} />
@@ -1149,7 +1159,7 @@ function GoatCard({ rank, entry, isPlayer, playerTeam, playerTeamColor }) {
   )
 }
 
-function ScreenGOAT({ result, awards, onNext, onReset, onBack }) {
+function ScreenGOAT({ result, awards, onNext, onReset, onBack, adsDisabled = false }) {
   const { ovr, team } = result
   const playerRank   = computeGoatRank(result, awards)
   const qualified    = playerRank !== null
@@ -1158,6 +1168,20 @@ function ScreenGOAT({ result, awards, onNext, onReset, onBack }) {
   const [tickerRank,  setTickerRank] = useState(76)
   const [listVisible, setListVisible] = useState(false)
   const listRef = useRef(null)
+
+  useEffect(() => {
+    if (!listVisible || adsDisabled || window.innerWidth > 768) return
+    window.ramp?.que?.push(() => {
+      window.ramp.spaAddAds([
+        { type: 'standard_iab_cntr2', selectorId: 'ramp-cntr1-goat-71' },
+        { type: 'standard_iab_cntr2', selectorId: 'ramp-cntr1-goat-61' },
+        { type: 'standard_iab_cntr2', selectorId: 'ramp-cntr1-goat-51' },
+        { type: 'standard_iab_cntr2', selectorId: 'ramp-cntr1-goat-41' },
+        { type: 'standard_iab_cntr2', selectorId: 'ramp-cntr1-goat-31' },
+        { type: 'standard_iab_cntr2', selectorId: 'ramp-cntr1-goat-21' },
+      ])
+    })
+  }, [listVisible])
 
   useEffect(() => {
     const t = setTimeout(() => { setPhase(qualified ? 'ticker' : 'miss'); if (!qualified) setListVisible(true) }, 2200)
@@ -1225,7 +1249,12 @@ function ScreenGOAT({ result, awards, onNext, onReset, onBack }) {
           <button className="simp-cta simp-cta-in" onClick={onNext} style={{ marginBottom: 8 }}>Final Report →</button>
           <div ref={listRef} className={`goat-full-list${listVisible ? ' goat-list-in' : ''}`}>
             {Array.from({ length: 75 }, (_, i) => 75 - i).map(r => (
-              <GoatCard key={r} rank={r} entry={GOAT_MAP[r]} isPlayer={false} playerTeam={team?.short} playerTeamColor={team?.color} />
+              <React.Fragment key={r}>
+                <GoatCard rank={r} entry={GOAT_MAP[r]} isPlayer={false} playerTeam={team?.short} playerTeamColor={team?.color} />
+                {(r === 71 || r === 61 || r === 51 || r === 41 || r === 31 || r === 21) && (
+                  <div id={`ramp-cntr1-goat-${r}`} className="ad-cntr1-mobile" />
+                )}
+              </React.Fragment>
             ))}
           </div>
           <button className="simp-cta simp-cta-in" onClick={onNext} style={{ marginTop: 12 }}>Final Report →</button>
@@ -1257,14 +1286,18 @@ function ScreenGOAT({ result, awards, onNext, onReset, onBack }) {
               const isMe = r === playerRank
               const eff  = isMe ? null : getEffectiveEntry(r, playerRank)
               return (
-                <GoatCard
-                  key={r}
-                  rank={r}
-                  entry={eff}
-                  isPlayer={isMe}
-                  playerTeam={team?.short}
-                  playerTeamColor={team?.color}
-                />
+                <React.Fragment key={r}>
+                  <GoatCard
+                    rank={r}
+                    entry={eff}
+                    isPlayer={isMe}
+                    playerTeam={team?.short}
+                    playerTeamColor={team?.color}
+                  />
+                  {(r === 71 || r === 61 || r === 51 || r === 41 || r === 31 || r === 21) && (
+                    <div id={`ramp-cntr1-goat-${r}`} className="ad-cntr1-mobile" />
+                  )}
+                </React.Fragment>
               )
             })}
           </div>
@@ -1648,7 +1681,7 @@ function FullBracket({ myConf, confBracket, otherBracket, myShort, mySeed, teamC
 }
 
 // ─── Screen 3: NBA Playoffs ───────────────────────────────────────────────────
-function ScreenPlayoffs({ result, onNext }) {
+function ScreenPlayoffs({ result, onNext, autoSkip = false }) {
   const { playoffRounds = [], madePlayoffs, team, standings = [], seed: rawSeed } = result
   const playinRound = playoffRounds.find(r => r.type === 'playin' && r.advanced)
   const seed = playinRound?.newSeed ?? rawSeed
@@ -1663,7 +1696,7 @@ function ScreenPlayoffs({ result, onNext }) {
   const [roundIdx,   setRoundIdx]   = useState(0)
   const [gameIdx,    setGameIdx]    = useState(0)
   const [status,     setStatus]     = useState('playing')
-  const [tipOff,     setTipOff]     = useState(false)  // false = show button
+  const [tipOff,     setTipOff]     = useState(autoSkip) // skip tip-off in autoSkip mode
   const [ballFired,  setBallFired]  = useState(false)  // jump animation playing
   const [speedMult,  setSpeedMult]  = useState(1)      // 1=fast 4=slow
   const [paused,     setPaused]     = useState(false)
@@ -1672,6 +1705,10 @@ function ScreenPlayoffs({ result, onNext }) {
   const [showStatsLog,     setShowStatsLog]     = useState(false)
   const [parallelSeriesMap,  setParallelSeriesMap]  = useState({})
   const [champPopped,        setChampPopped]        = useState(false)
+
+  // Ref so autoSkip effect can call handleSkip even though it's defined after early returns
+  const handleSkipRef = useRef(null)
+  useEffect(() => { if (autoSkip) handleSkipRef.current?.() }, []) // eslint-disable-line
 
   const conf = result.conference ?? 'east'
   const otherConf = conf === 'east' ? 'west' : 'east'
@@ -1702,9 +1739,10 @@ function ScreenPlayoffs({ result, onNext }) {
     return () => clearInterval(iv)
   }, [status, speedMult]) // eslint-disable-line
 
-  // Auto-advance play-in after timer
+  // Auto-advance play-in after timer (not needed in autoSkip mode — handleSkip covers it)
   useEffect(() => {
     if (!tipOff) return
+    if (autoSkip) return
     const cur = playoffRounds[roundIdx]
     if (!cur || cur.type !== 'playin') return
     const TICK = 40
@@ -1727,7 +1765,9 @@ function ScreenPlayoffs({ result, onNext }) {
     setTimeout(() => setTipOff(true), 400)
   }
 
-  if (!madePlayoffs) {
+  const playinEliminatedRound = !madePlayoffs && playoffRounds.find(r => r.type === 'playin' && !r.advanced)
+
+  if (!madePlayoffs && !playinEliminatedRound) {
     return (
       <div className="simp-screen simp-screen-center">
         <div className="simp-eyebrow">Postseason</div>
@@ -1737,6 +1777,24 @@ function ScreenPlayoffs({ result, onNext }) {
           </svg>
         </div>
         <div className="simp-miss-title">Missed the Playoffs</div>
+        <button className="simp-cta" onClick={onNext}>See Summary</button>
+      </div>
+    )
+  }
+
+  if (playinEliminatedRound) {
+    return (
+      <div className="simp-screen simp-screen-center">
+        <div className="simp-eyebrow">Play-In Tournament</div>
+        <div className="simp-miss-icon">
+          <svg width="48" height="48" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="24" cy="24" r="19"/><path d="M16 16l16 16M32 16L16 32"/>
+          </svg>
+        </div>
+        <div className="simp-miss-title">Eliminated in Play-In</div>
+        <div className="simp-miss-sub" style={{ color: 'rgba(255,255,255,0.55)', fontSize: 13, marginTop: 6 }}>
+          {playinEliminatedRound.opponent?.short ? `Lost to ${playinEliminatedRound.opponent.short}` : 'Better luck next season'}
+        </div>
         <button className="simp-cta" onClick={onNext}>See Summary</button>
       </div>
     )
@@ -1972,7 +2030,7 @@ function ScreenPlayoffs({ result, onNext }) {
         const won = round.games[gIdx] === 'W'
         const stats = genPlayoffGameStats(baseStats, won)
         newLogEntries.push({
-          roundIdx: rIdx,
+          roundIdx: round.roundIndex ?? rIdx,
           roundName: round.name,
           oppShort: round.opponent?.short ?? '???',
           gameNum: gIdx + 1,
@@ -2027,6 +2085,9 @@ function ScreenPlayoffs({ result, onNext }) {
     setStatus(isChampion ? 'champion' : 'eliminated')
   }
 
+  // Keep ref current so the early-mounted autoSkip effect can call handleSkip
+  handleSkipRef.current = handleSkip
+
   const handleGameDone = () => {
     const gms    = currentRound.games
     const played = gameIdx + 1
@@ -2038,7 +2099,7 @@ function ScreenPlayoffs({ result, onNext }) {
     const baseStats = { ppg: result.ppg ?? 22, rpg: result.rpg ?? 5, apg: result.apg ?? 4, spg: result.spg ?? 1.2, bpg: result.bpg ?? 0.8 }
     const stats = genPlayoffGameStats(baseStats, won)
     setPlayoffGameLog(prev => [...prev, {
-      roundIdx,
+      roundIdx: currentRound.roundIndex ?? roundIdx,
       roundName: currentRound.name,
       oppShort: currentRound.opponent?.short ?? '???',
       gameNum: gameIdx + 1,
@@ -2215,7 +2276,7 @@ function ScreenPlayoffs({ result, onNext }) {
 }
 
 // ─── Screen 3: Final Report ───────────────────────────────────────────────────
-function ScreenFinal({ result, awards, build, types, attrMap, onReset, onBack, adsDisabled = false }) {
+function ScreenFinal({ result, awards, build, types, attrMap, onReset, onBack, adsDisabled = false, isSalaryMode = false }) {
   const {
     ovr, wins, losses, champion, madePlayoffs, playoffRounds = [],
     ppg, rpg, apg, spg, bpg, tov, fgPct, threePct, ftPct, per, bestGame, team,
@@ -2228,7 +2289,7 @@ function ScreenFinal({ result, awards, build, types, attrMap, onReset, onBack, a
     if (adsDisabled || window.innerWidth > 768) return
     window.ramp?.que?.push(() => {
       window.ramp.spaAddAds([
-        { type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-final-stats' },
+        { type: 'standard_iab_cntr2', selectorId: 'ramp-cntr1-final-stats' },
         { type: 'standard_iab_cntr2', selectorId: 'ramp-cntr1-sim' },
       ])
     })
@@ -2351,8 +2412,13 @@ function ScreenFinal({ result, awards, build, types, attrMap, onReset, onBack, a
       <div id="ramp-cntr1-sim" className="ad-cntr1-mobile" />
 
       <div className="simp-final-actions">
-        <button className="simp-cta" onClick={onReset}>New Build</button>
-        <button className="simp-ghost" onClick={onBack}>Back to Build</button>
+        {isSalaryMode
+          ? <button className="simp-cta" onClick={onBack}>← Back to Salary</button>
+          : <>
+              <button className="simp-cta" onClick={onReset}>New Build</button>
+              <button className="simp-ghost" onClick={onBack}>Back to Build</button>
+            </>
+        }
       </div>
     </div>
   )
@@ -2459,8 +2525,8 @@ function TeamStarters({ teamShort, teamColor, isBig, iqPhoto }) {
 }
 
 // ─── Main BucketSimPage ───────────────────────────────────────────────────────
-export default function BucketSimPage({ result, build, types, position, onBack, onReset, adsDisabled = false }) {
-  const [screen, setScreen] = useState(0)
+export default function BucketSimPage({ result, build, types, position, onBack, onReset, adsDisabled = false, isSalaryMode = false, initialScreen = 0 }) {
+  const [screen, setScreen] = useState(initialScreen)
 
   // Compute awards once — result is stable after sim runs
   const awards = useMemo(() => {
@@ -2495,7 +2561,7 @@ export default function BucketSimPage({ result, build, types, position, onBack, 
       window.ramp?.que?.push(() => {
         window.ramp.spaNewPage()
         if (!adsDisabled && next < 3 && window.innerWidth <= 768) {
-          window.ramp.spaAddAds([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-plf' }])
+          window.ramp.spaAddAds([{ type: 'standard_iab_cntr2', selectorId: 'ramp-cntr1-plf' }])
         }
       })
       return next
@@ -2506,12 +2572,20 @@ export default function BucketSimPage({ result, build, types, position, onBack, 
   const handleBack     = () => { setScreen(0); onBack()  }
   const handleGoatBack = () => setScreen(s => s - 1)
 
-  const screens = [
-    <ScreenBuild    key="build"    result={result} build={build} types={types} attrMap={BUCKET_ATTR} onNext={advancePage} adsDisabled={adsDisabled} />,
+  const simTypes   = isSalaryMode ? SAL_REP_TYPES : types
+  const simAttrMap = isSalaryMode ? SAL_ATTR_MAP  : BUCKET_ATTR
+  const screens = isSalaryMode ? [
+    <ScreenBuild    key="build"    result={result} build={build} types={simTypes} attrMap={simAttrMap} onNext={advancePage} adsDisabled={adsDisabled} isSalaryMode={isSalaryMode} />,
+    <ScreenSeason   key="season"   result={result} awards={awards} onNext={advancePage} adsDisabled={adsDisabled} />,
+    <ScreenPlayoffs key="playoffs" result={result} onNext={advancePage} autoSkip={true} />,
+    <ScreenGOAT     key="goat"     result={result} awards={awards} onNext={advancePage} onReset={handleReset} onBack={handleGoatBack} adsDisabled={adsDisabled} />,
+    <ScreenFinal    key="final"    result={result} awards={awards} build={build} types={simTypes} attrMap={simAttrMap} onReset={handleReset} onBack={handleBack} adsDisabled={adsDisabled} isSalaryMode={isSalaryMode} />,
+  ] : [
+    <ScreenBuild    key="build"    result={result} build={build} types={simTypes} attrMap={simAttrMap} onNext={advancePage} adsDisabled={adsDisabled} isSalaryMode={isSalaryMode} />,
     <ScreenSeason   key="season"   result={result} awards={awards} onNext={advancePage} adsDisabled={adsDisabled} />,
     <ScreenPlayoffs key="playoffs" result={result} onNext={advancePage} />,
-    <ScreenGOAT     key="goat"     result={result} awards={awards} onNext={advancePage} onReset={handleReset} onBack={handleGoatBack} />,
-    <ScreenFinal    key="final"    result={result} awards={awards} build={build} types={types} attrMap={BUCKET_ATTR} onReset={handleReset} onBack={handleBack} adsDisabled={adsDisabled} />,
+    <ScreenGOAT     key="goat"     result={result} awards={awards} onNext={advancePage} onReset={handleReset} onBack={handleGoatBack} adsDisabled={adsDisabled} />,
+    <ScreenFinal    key="final"    result={result} awards={awards} build={build} types={simTypes} attrMap={simAttrMap} onReset={handleReset} onBack={handleBack} adsDisabled={adsDisabled} isSalaryMode={isSalaryMode} />,
   ]
 
   const team      = result?.team

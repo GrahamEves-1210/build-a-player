@@ -171,8 +171,6 @@ function IconChevron({ up }) {
 
 const PERKS = [
   'No ads',
-  'Custom player ratings',
-  'Manually add players to your build',
   'Custom color themes',
   'Custom profile icons',
   'PLUS badge on leaderboard',
@@ -215,23 +213,27 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
       </div>
 
       {isBucket ? (
-        <>
-          <button className="tab-pill tab-pill-qb active">
-            {`Build-A-${bucketPosition.charAt(0).toUpperCase() + bucketPosition.slice(1)}`}
-          </button>
-          <div className="nav-pills-soon">
-            {['guard', 'big'].filter(p => p !== bucketPosition).map(pos => (
-              <button
-                key={pos}
-                className="tab-pill tab-pill-rb"
-                style={pos === 'guard' && bucketPosition === 'big' ? { position: 'relative', left: '-6px' } : undefined}
-                onClick={() => onSwitchBucketPosition?.(pos)}
-              >
-                {`Build-A-${pos.charAt(0).toUpperCase() + pos.slice(1)}`}
-              </button>
-            ))}
-          </div>
-        </>
+        gameMode === 'salarycap' ? (
+          <button className="tab-pill tab-pill-qb tab-pill-salary active">Salary Cap</button>
+        ) : (
+          <>
+            <button className="tab-pill tab-pill-qb active">
+              {`Build-A-${bucketPosition.charAt(0).toUpperCase() + bucketPosition.slice(1)}`}
+            </button>
+            <div className="nav-pills-soon">
+              {['guard', 'big'].filter(p => p !== bucketPosition).map(pos => (
+                <button
+                  key={pos}
+                  className="tab-pill tab-pill-rb"
+                  style={pos === 'guard' && bucketPosition === 'big' ? { position: 'relative', left: '-6px' } : undefined}
+                  onClick={() => onSwitchBucketPosition?.(pos)}
+                >
+                  {`Build-A-${pos.charAt(0).toUpperCase() + pos.slice(1)}`}
+                </button>
+              ))}
+            </div>
+          </>
+        )
       ) : (
         <>
           <button className="tab-pill tab-pill-qb active">

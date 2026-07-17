@@ -279,7 +279,7 @@ export function ShareModal({ ovr, arch, build, types, onClose, isBucket = false,
 
 // ── ReportCard ────────────────────────────────────────────────────────────────
 
-export default function ReportCard({ build, onSimulate, onReset, types = TYPES, hasResult = false, isRB = false, isBucket = false, bucketPosition = 'guard', isPlus = false, isCustomMode = false, onOpenCustomModal, onSandboxToggle, attrMap = ATTR, logoDir = '/logos/', captureFigure }) {
+export default function ReportCard({ build, onSimulate, onReset, types = TYPES, hasResult = false, isRB = false, isBucket = false, bucketPosition = 'guard', isPlus = false, isCustomMode = false, onOpenCustomModal, onSandboxToggle, attrMap = ATTR, logoDir = '/logos/', captureFigure, isSalaryMode = false }) {
   const filled = types.filter(t => build[t])
   const ovr = isBucket ? calcBucketOVR(build, types, bucketPosition) : isRB ? calcOVRRB(build, types) : calcOVR(build, types)
   const arch = isBucket
@@ -359,7 +359,7 @@ export default function ReportCard({ build, onSimulate, onReset, types = TYPES, 
           </button>
         )}
 
-        {isBucket ? (
+        {(isBucket && !isSalaryMode) || !!onSandboxToggle ? (
           <div className="rc-sandbox-wrap">
             <span className="sil-sandbox-label">Sandbox mode</span>
             <label className="plus-toggle">

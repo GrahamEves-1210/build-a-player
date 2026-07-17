@@ -383,7 +383,7 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
           </button>
         ))}
       </div>
-      {isBucket && (
+      {(isBucket || !!onSandboxToggle) && (
         <div className="sil-sandbox-wrap">
           <span className="sil-sandbox-label">Sandbox</span>
           <label className="plus-toggle">
@@ -630,7 +630,7 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
             <span>Reset</span>
           </button>
         )}
-        {!isBucket && isPlus && (
+        {!isBucket && !onSandboxToggle && isPlus && (
           <button
             className={`sil-custom-ratings-btn${!isCustomMode ? ' sil-custom-ratings-btn--off' : ''}`}
             onClick={isCustomMode ? onOpenCustomModal : undefined}

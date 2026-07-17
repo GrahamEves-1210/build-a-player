@@ -32,7 +32,18 @@ const CONF_ELITE = {
   west: ['OKC','SAS','DEN','LAL','HOU','MIN'],
 }
 
-function rn(min, max) { return min + Math.random() * (max - min) }
+function seededRandom(seed) {
+  // Mulberry32 — well-tested PRNG that avoids degenerate cycles on date-like seeds
+  let s = seed >>> 0
+  return () => {
+    s = s + 0x6D2B79F5 | 0
+    let t = Math.imul(s ^ s >>> 15, 1 | s)
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t
+    return ((t ^ t >>> 14) >>> 0) / 4294967296
+  }
+}
+
+function rn(min, max, rand = Math.random) { return min + rand() * (max - min) }
 
 // ─── OVR Calculation ──────────────────────────────────────────────────────────
 // Guard types: jumpShot finishing passing handles perimeterDefense speed bounce size basketballIQ clutch
@@ -86,11 +97,11 @@ export function calcBucketOVR(build, types, position = 'guard') {
 }
 
 // ─── Best-of-7 Series ─────────────────────────────────────────────────────────
-function simulateSeries(winProb) {
+function simulateSeries(winProb, rand = Math.random) {
   const games = []
   let mW = 0, mL = 0
   while (mW < 4 && mL < 4) {
-    const w = Math.random() < winProb
+    const w = rand() < winProb
     if (w) { mW++ } else { mL++ }
     games.push(w ? 'W' : 'L')
   }
@@ -98,16 +109,16 @@ function simulateSeries(winProb) {
 }
 
 // ─── Conference Standings ─────────────────────────────────────────────────────
-function simConferenceStandings(myWins, myShort, conf) {
+function simConferenceStandings(myWins, myShort, conf, rand = Math.random) {
   const others = CONF_TEAMS[conf]
     .filter(s => s !== myShort)
     .map(s => {
       const tr = TEAM_RATINGS[s] ?? { off: 68, def: 65 }
       // score range ~0.57 (worst) to ~0.83 (best); map to WP 0.13–0.77
       const score = (tr.off + tr.def) / 200
-      const baseWP = Math.max(0.13, Math.min(0.77, 0.20 + (score - 0.59) / 0.24 * 0.57 + rn(-0.06, 0.06)))
+      const baseWP = Math.max(0.13, Math.min(0.77, 0.20 + (score - 0.59) / 0.24 * 0.57 + rn(-0.06, 0.06, rand)))
       let w = 0
-      for (let i = 0; i < 82; i++) if (Math.random() < baseWP) w++
+      for (let i = 0; i < 82; i++) if (rand() < baseWP) w++
       return { short: s, wins: w }
     })
 
@@ -118,19 +129,19 @@ function simConferenceStandings(myWins, myShort, conf) {
 }
 
 // ─── Play-In Tournament ───────────────────────────────────────────────────────
-function simPlayIn(mySeed, standings, winProb) {
+function simPlayIn(mySeed, standings, winProb, rand = Math.random) {
   const getPair = s => standings[s - 1] ?? { short: '???', wins: 35 }
 
   if (mySeed === 7 || mySeed === 8) {
     const opp7or8 = getPair(mySeed === 7 ? 8 : 7)
-    const g1 = Math.random() < (mySeed === 7 ? winProb + 0.04 : winProb - 0.04)
+    const g1 = rand() < (mySeed === 7 ? winProb + 0.04 : winProb - 0.04)
 
     if (g1) {
       return { type: 'playin', advanced: true, newSeed: 7, games: ['W'],
         opponent: opp7or8, label: `Beat ${opp7or8.short} — Earned #7 Seed` }
     }
     const survivor = getPair(9)
-    const g2 = Math.random() < (winProb - 0.03)
+    const g2 = rand() < (winProb - 0.03)
     return { type: 'playin', advanced: g2, newSeed: g2 ? 8 : null,
       games: ['L', g2 ? 'W' : 'L'], opponent: g2 ? survivor : opp7or8,
       label: g2 ? `Survived Play-In — Earned #8 Seed` : `Eliminated in Play-In` }
@@ -138,12 +149,12 @@ function simPlayIn(mySeed, standings, winProb) {
 
   // Seeds 9 or 10 — harder path
   const oppPeer = getPair(mySeed === 9 ? 10 : 9)
-  const g1 = Math.random() < (winProb - 0.06)
+  const g1 = rand() < (winProb - 0.06)
   if (!g1) return { type: 'playin', advanced: false, games: ['L'],
     opponent: oppPeer, label: 'Eliminated in Play-In' }
 
   const oppLowerSeed = getPair(mySeed === 9 ? 7 : 8)
-  const g2 = Math.random() < (winProb - 0.02)
+  const g2 = rand() < (winProb - 0.02)
   return { type: 'playin', advanced: g2, newSeed: g2 ? 8 : null,
     games: ['W', g2 ? 'W' : 'L'], opponent: g2 ? oppLowerSeed : oppPeer,
     label: g2 ? `Survived Play-In — Earned #8 Seed` : `Eliminated in Play-In` }
@@ -167,12 +178,12 @@ function matchupProb(myWP, oppShort) {
 }
 
 // ─── Playoff Path ─────────────────────────────────────────────────────────────
-function simPlayoffs(mySeed, winProb, conf, standings) {
+function simPlayoffs(mySeed, winProb, conf, standings, rand = Math.random) {
   const rounds = []
   let currentSeed = mySeed
 
   if (currentSeed >= 7 && currentSeed <= 10) {
-    const pi = simPlayIn(currentSeed, standings, winProb)
+    const pi = simPlayIn(currentSeed, standings, winProb, rand)
     rounds.push(pi)
     if (!pi.advanced) return { rounds, champion: false }
     currentSeed = pi.newSeed
@@ -190,7 +201,7 @@ function simPlayoffs(mySeed, winProb, conf, standings) {
   // that could contradict another round's result.
   const simParallel = (seedA, seedB) => {
     const tA = get(seedA), tB = get(seedB)
-    return Math.random() < matchupProb(teamWP(tA.short), tB.short)
+    return rand() < matchupProb(teamWP(tA.short), tB.short)
       ? { ...tA, seed: seedA }
       : { ...tB, seed: seedB }
   }
@@ -207,18 +218,18 @@ function simPlayoffs(mySeed, winProb, conf, standings) {
   if ([1, 4, 5, 8].includes(currentSeed)) {
     const sfA = simParallel(2, 7)
     const sfB = simParallel(3, 6)
-    r3Opp = Math.random() < matchupProb(teamWP(sfA.short), sfB.short) ? sfA : sfB
+    r3Opp = rand() < matchupProb(teamWP(sfA.short), sfB.short) ? sfA : sfB
   } else {
     const sfA = simParallel(1, 8)
     const sfB = simParallel(4, 5)
-    r3Opp = Math.random() < matchupProb(teamWP(sfA.short), sfB.short) ? sfA : sfB
+    r3Opp = rand() < matchupProb(teamWP(sfA.short), sfB.short) ? sfA : sfB
   }
 
   // Finals: elite team from other conference
   const otherConf = conf === 'east' ? 'west' : 'east'
   const elites = CONF_ELITE[otherConf]
-  const r4Short = elites[Math.floor(rn(0, 3))]
-  const r4Wins = Math.round(rn(52, 64))
+  const r4Short = elites[Math.floor(rn(0, 3, rand))]
+  const r4Wins = Math.round(rn(52, 64, rand))
 
   const opponentsByRound = [
     { ...get(r1Seed), seed: r1Seed },
@@ -234,7 +245,7 @@ function simPlayoffs(mySeed, winProb, conf, standings) {
     const opp = opponentsByRound[r]
     // Per-game probability driven by actual matchup talent, same OVR boost as regular season
     const adjProb = matchupProb(winProb, opp.short)
-    const series = simulateSeries(adjProb)
+    const series = simulateSeries(adjProb, rand)
     rounds.push({ type: 'series', name: roundNames[r], roundIndex: r,
       opponent: opp, ...series })
     if (!series.won) eliminated = true
@@ -245,7 +256,8 @@ function simPlayoffs(mySeed, winProb, conf, standings) {
 }
 
 // ─── Main Simulation Entry Point ─────────────────────────────────────────────
-export function runBucketSimulation(build, types, team, position = 'guard') {
+export function runBucketSimulation(build, types, team, position = 'guard', rngSeed = null) {
+  const rand = rngSeed != null ? seededRandom(rngSeed) : Math.random
   const ovr = calcBucketOVR(build, types, position)
   const tr = TEAM_RATINGS[team.short] ?? { off: 68, def: 65 }
 
@@ -291,27 +303,30 @@ export function runBucketSimulation(build, types, team, position = 'guard') {
 
   // --- per-game stats (calibrated to realistic NBA ranges) ---
   // PPG: guard 4–40+, big 5–32 (A+ build ~33.5, S tier can exceed)
-  const ppg = +(Math.max(isBig ? 5 : 4, (isBig ? 0 : -3.5) + rn(-1, 1) + scoringRaw * (isBig ? 2.2 : 4.0))).toFixed(1)
+  const ppg = +(Math.max(isBig ? 5 : 4, (isBig ? 0 : -3.5) + rn(-1, 1, rand) + scoringRaw * (isBig ? 2.2 : 4.0))).toFixed(1)
   // RPG: guard 1.5–9+, big 5–14 (A+ build ~7.7, S tier can exceed)
-  const rpg = +(Math.max(isBig ? 5 : 1.5, (isBig ? 3.5 : 0.5) + rn(-0.4, 0.4) + rebRaw * (isBig ? 0.75 : 0.75))).toFixed(1)
-  // APG: guard 1–11+, big 0.5–7 (A+ build ~10, S tier can exceed)
-  const apg = +(Math.max(isBig ? 0.5 : 1.0, (isBig ? -1.5 : -1.0) + rn(-0.3, 0.3) + astRaw * (isBig ? 0.78 : 1.1))).toFixed(1)
+  const rpg = +(Math.max(isBig ? 5 : 1.5, (isBig ? 3.5 : 0.5) + rn(-0.4, 0.4, rand) + rebRaw * (isBig ? 0.75 : 0.75))).toFixed(1)
+  // APG: guard 1–11+, big 0.5–11 (quadratic for steep drop-off — S-tier passer bigs reach Jokic ~11)
+  const bigApgBase = astRaw >= 8
+    ? Math.max(0.5, 0.125 * astRaw * astRaw - 0.375 * astRaw)
+    : (3.8 * astRaw + 4.6) / 7
+  const apg = +(Math.max(isBig ? 0.5 : 1.0, (isBig ? bigApgBase : (-1.0 + astRaw * 1.1)) + rn(-0.3, 0.3, rand))).toFixed(1)
   // SPG: 0.2–2.3+ (A+ build ~2.0, S tier can exceed)
-  const spg = +(Math.max(0.2, stlRaw * 0.21 + rn(-0.1, 0.14))).toFixed(1)
+  const spg = +(Math.max(0.2, stlRaw * 0.21 + rn(-0.1, 0.14, rand))).toFixed(1)
   // BPG: guard 0–1.3, big 0.4–3.1
-  const bpg = +(Math.max(isBig ? 0.4 : 0.0, (isBig ? 0.2 : 0) + rn(-0.08, 0.15) + blkRaw * (isBig ? 0.27 : 0.13))).toFixed(1)
+  const bpg = +(Math.max(isBig ? 0.4 : 0.0, (isBig ? 0.2 : 0) + rn(-0.08, 0.15, rand) + blkRaw * (isBig ? 0.27 : 0.13))).toFixed(1)
 
   // --- shooting percentages ---
   // FG%: guards 43–53% (elite NBA guards ~48%), bigs 50–63% (rim-runners higher)
   const fgPct = Math.min(isBig ? 63 : 53, Math.max(isBig ? 42 : 38, Math.round(
-    (isBig ? 42 : 38) + rn(-2, 2) +
+    (isBig ? 42 : 38) + rn(-2, 2, rand) +
     (isBig
       ? fin * 0.95 + js * 0.33 + sz * 0.24 + iq * 0.16
       : js  * 0.45 + fin * 0.38 + hnd * 0.18 + iq * 0.13)
   )))
   // 3P%: F jumpshot = 0 (doesn't shoot threes); guards cap ~45 (Curry-tier), bigs cap ~41
   const threePct = js === 0 ? 0 : Math.min(isBig ? 41 : 45, Math.max(0, Math.round(
-    (isBig ? 12 : 15) + rn(-2, 2) +
+    (isBig ? 12 : 15) + rn(-2, 2, rand) +
     js  * 2.25 + (js >= 2 ? 3 : 0) +
     iq  * 0.25 +
     spd * 0.15 +
@@ -320,17 +335,17 @@ export function runBucketSimulation(build, types, team, position = 'guard') {
   // FT%: jump shot mechanics are nearly identical to free throw form; IQ for routine/pressure;
   //       handles/touch matter slightly for guards
   const ftPct = Math.min(99, Math.max(52, Math.round(
-    52 + rn(-3, 3) +
+    52 + rn(-3, 3, rand) +
     js  * 2.8 +
     iq  * 1.2 +
     (isBig ? 0 : hnd * 0.5)
   )))
-  const per      = +(Math.max(8, rn(-1, 1) + 8 + (ovr - 60) * 0.55)).toFixed(1)
+  const per      = +(Math.max(8, rn(-1, 1, rand) + 8 + (ovr - 60) * 0.55)).toFixed(1)
 
   const tovRaw   = isBig
     ? 2.0 - ((pm + iq) / 2) * 0.18 + ppg * 0.04
     : 2.6 - ((hnd + pas + iq) / 3) * 0.24 + ppg * 0.05
-  const tov      = +(Math.max(0.5, Math.min(5.5, tovRaw + rn(-0.4, 0.4)))).toFixed(1)
+  const tov      = +(Math.max(0.5, Math.min(5.5, tovRaw + rn(-0.4, 0.4, rand)))).toFixed(1)
 
   // 82-game regular season with per-game data
   let wins = 0, losses = 0
@@ -340,57 +355,62 @@ export function runBucketSimulation(build, types, team, position = 'guard') {
   const allOpps = [...CONF_TEAMS.east, ...CONF_TEAMS.west].filter(s => s !== team.short)
 
   for (let i = 0; i < 82; i++) {
-    const w = Math.random() < winProb
+    const w = rand() < winProb
     if (w) { wins++ } else { losses++ }
     gameLog.push(w ? 'W' : 'L')
 
-    const loserBase = 94 + Math.floor(Math.random() * 22)
-    const margin    = 3  + Math.floor(Math.random() * 17)
+    const loserBase = 94 + Math.floor(rand() * 22)
+    const margin    = 3  + Math.floor(rand() * 17)
     const mySc  = w ? loserBase + margin : loserBase
     const oppSc = w ? loserBase : loserBase + margin
-    const oppShort = allOpps[Math.floor(Math.random() * allOpps.length)]
+    const oppShort = allOpps[Math.floor(rand() * allOpps.length)]
 
-    const gamePts = Math.max(0, Math.round(ppg + rn(-7, 10)))
-    const gameReb = Math.max(0, Math.round(rpg + rn(-3, 3)))
-    const gameAst = Math.max(0, Math.round(apg + rn(-2, 2.5)))
+    const gamePts = Math.max(0, Math.round(ppg + rn(-7, 10, rand)))
+    const gameReb = Math.max(0, Math.round(rpg + rn(-3, 3, rand)))
+    const gameAst = Math.max(0, Math.round(apg + rn(-2, 2.5, rand)))
 
-    const game = { g: i + 1, won: w, home: Math.random() < 0.5, opponent: oppShort, mySc, oppSc, pts: gamePts, reb: gameReb, ast: gameAst }
+    const game = { g: i + 1, won: w, home: rand() < 0.5, opponent: oppShort, mySc, oppSc, pts: gamePts, reb: gameReb, ast: gameAst }
     games.push(game)
     if (!bestGame || gamePts > bestGame.pts) bestGame = game
   }
 
   const conf = EAST.has(team.short) ? 'east' : 'west'
-  const { seed, standings } = simConferenceStandings(wins, team.short, conf)
+  const { seed, standings } = simConferenceStandings(wins, team.short, conf, rand)
 
-  const madePlayoffs = seed <= 10
+  // Seeds 1-6 go directly; seeds 7-10 must survive play-in
+  const playinEligible = seed <= 10
   let playoffRounds = [], champion = false
 
-  if (madePlayoffs) {
+  if (playinEligible) {
     const playoffWinProb = Math.min(0.85, winProb + 0.04)
-    const po = simPlayoffs(seed, playoffWinProb, conf, standings)
+    const po = simPlayoffs(seed, playoffWinProb, conf, standings, rand)
     playoffRounds = po.rounds
     champion = po.champion
   }
+
+  // madePlayoffs = true only if they actually reached the bracket (seed 1-6, or survived play-in)
+  const playinResult = playoffRounds.find(r => r.type === 'playin')
+  const madePlayoffs = seed <= 6 || (seed <= 10 && playinResult?.advanced === true)
 
   // MVP: player must out-stat the real MVP candidate pool (SGA, Jokic, Luka, Wemby, Giannis)
   const mvpStat = (p, a, r) => p + a * 1.5 + r * 0.75
   const playerMvpRating = mvpStat(ppg, apg, rpg)
   const topCandidateRating = Math.max(
     48, // floor — even in a weak MVP year the bar never drops below this
-    mvpStat(31 + Math.random() * 3, 5  + Math.random() * 2, 4  + Math.random() * 2),  // SGA
-    mvpStat(26 + Math.random() * 3, 8  + Math.random() * 2, 11 + Math.random() * 2),  // Jokic
-    mvpStat(29 + Math.random() * 3, 8  + Math.random() * 2, 8  + Math.random() * 2),  // Luka
-    mvpStat(23 + Math.random() * 4, 3  + Math.random() * 2, 10 + Math.random() * 3),  // Wemby
-    mvpStat(27 + Math.random() * 4, 5  + Math.random() * 2, 11 + Math.random() * 2),  // Giannis
+    mvpStat(31 + rand() * 3, 5  + rand() * 2, 4  + rand() * 2),  // SGA
+    mvpStat(26 + rand() * 3, 8  + rand() * 2, 11 + rand() * 2),  // Jokic
+    mvpStat(29 + rand() * 3, 8  + rand() * 2, 8  + rand() * 2),  // Luka
+    mvpStat(23 + rand() * 4, 3  + rand() * 2, 10 + rand() * 3),  // Wemby
+    mvpStat(27 + rand() * 4, 5  + rand() * 2, 11 + rand() * 2),  // Giannis
   )
   // shift+4, steep k: tied ≈ 97%, 4pts below = 50%, 8pts below ≈ 3% (effectively gone)
   const mvpGap = playerMvpRating - topCandidateRating + 4
   const mvpOdds = 1 / (1 + Math.exp(-mvpGap * 0.9))
-  const mvp = wins >= 44 && Math.random() < mvpOdds
+  const mvp = wins >= 44 && rand() < mvpOdds
 
   // DPOY: truly elite defensive stats — rare, ~8-15% of seasons
   const dpoyScore = spg * 10 + bpg * 8 + (seed <= 4 ? 4 : seed <= 8 ? 2 : 0)
-  const dpoyThreshold = 26 + Math.random() * 10
+  const dpoyThreshold = 26 + rand() * 10
   const dpoy = dpoyScore >= dpoyThreshold && !mvp
 
   const finalsRound = playoffRounds.find(r => r.type === 'series' && r.roundIndex === 3)

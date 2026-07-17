@@ -8,6 +8,7 @@ import AuthModal from './AuthModal'
 import BucketSimPage, { TeamSpinModal } from './BucketSimPage'
 import { runBucketSimulation, getBucketGuardArchetype, getBucketBigArchetype } from '../utils/bucketSimulation'
 import BucketLeaderboardPage from './BucketLeaderboardPage'
+import BucketSalaryCap from './BucketSalaryCap'
 import PrivacyPage from './PrivacyPage'
 import {
   NBA_GUARD_PLAYERS, NBA_BIG_PLAYERS, NBA_TEAMS, BUCKET_ATTR,
@@ -189,16 +190,16 @@ function BucketSplash({ onStart }) {
             </div>
           </button>
 
-          <button className="splash-mode-alltime splash-mode-alltime--soon" disabled>
-            <div className="smode-title">All-Time</div>
-            <div className="smode-badge">NBA Legends</div>
+          <button className="splash-mode-salarycap" style={{ position: 'relative' }} onClick={() => { localStorage.setItem('bucketPosition', position); onStart('salarycap', position) }}>
+            <div className="smode-daily-banner">DAILY</div>
+            <div className="smode-title">Salary Cap</div>
+            <div className="smode-badge">Build on a budget</div>
             <div className="smode-cta">
               START DRAFTING
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M5 12h14M12 5l7 7-7 7"/>
               </svg>
             </div>
-            <div className="smode-coming-soon">COMING SOON</div>
           </button>
         </div>
 
@@ -246,6 +247,8 @@ export default function BucketApp() {
   const [spinPhase, setSpinPhase]     = useState('idle')
   const [showTeamSpin, setShowTeamSpin] = useState(false)
   const [simResult, setSimResult]     = useState(null)
+  const [simInitialScreen, setSimInitialScreen] = useState(0)
+  const [salaryReturnDate, setSalaryReturnDate] = useState(null)
   const [savedSpinResult, setSavedSpinResult] = useState(() => {
     try { return JSON.parse(localStorage.getItem('bab_spin_result')) } catch { return null }
   })
@@ -261,8 +264,8 @@ export default function BucketApp() {
   const activeDragRef = useRef(activeDrag)
   useLayoutEffect(() => { activeDragRef.current = activeDrag }, [activeDrag])
 
-  // Once sandbox is ever enabled during a build, taint it until reset
-  // Prevents: toggle on → edit → toggle off → simulate exploit
+  // Once sandbox is ever turned on during a build session, taint it permanently
+  // until reset — prevents toggle-on → edit → toggle-off → simulate exploit
   const sandboxTainted = useRef(isBucketCustomMode)
   useEffect(() => {
     if (isBucketCustomMode) sandboxTainted.current = true
@@ -376,9 +379,49 @@ export default function BucketApp() {
     setBuild(Object.fromEntries(types.map(t => [t, null])))
     setActiveCategory((POS_CATS[pos] ?? GUARD_CATEGORIES)[0].id)
     sandboxTainted.current = isBucketCustomMode
-    setPage('game')
+    setPage(mode === 'salarycap' ? 'salarycap' : 'game')
     window.scrollTo(0, 0)
   }, [isBucketCustomMode])
+
+  const handleSalaryCapConfirm = useCallback((capBuild, skipToEnd = false, dateStr = null, saveData = null) => {
+    if (dateStr) setSalaryReturnDate(dateStr)
+    // Salary cap covers 10 specific types; fill gaps so sim can fire
+    const fullBuild = { ...capBuild }
+    const fallback = capBuild['passing'] ?? capBuild['playmaking'] ?? Object.values(capBuild).find(Boolean)
+    activeTypes.forEach(t => {
+      if (!fullBuild[t] && fallback) fullBuild[t] = { ...fallback, type: t }
+    })
+    // Use size player for model figure (jersey number + headshot come from 'clutch' slot)
+    if (capBuild['size']) {
+      fullBuild['clutch']       = { ...capBuild['size'], type: 'clutch' }
+      fullBuild['basketballIQ'] = { ...capBuild['size'], type: 'basketballIQ' }
+    }
+    setBuild(fullBuild)
+    // Auto-sim: skip the build screen and go straight to results
+    // Team is seeded from the date so "View Results" always returns the same team
+    const dateSeed = dateStr ? parseInt(dateStr.replace(/-/g, ''), 10) : Date.now()
+    let h = dateSeed | 0; h ^= h >>> 16; h = Math.imul(h, 0x45d9f3b) | 0; h ^= h >>> 16
+    const randomTeam = NBA_TEAMS[Math.floor(((h >>> 0) / 0x100000000) * NBA_TEAMS.length)]
+    const result = runBucketSimulation(fullBuild, activeTypes, randomTeam, position, dateSeed)
+    setSimResult(result)
+    setSimInitialScreen(skipToEnd ? 4 : 0)
+    setPage('sim')
+    window.scrollTo(0, 0)
+    // Save to leaderboard with the real sim OVR (only on fresh plays, not View Results)
+    if (saveData && supabase && !skipToEnd) {
+      supabase.from('salary_cap_plays').insert({
+        date_str:      dateStr,
+        user_id:       saveData.userId,
+        username:      saveData.username,
+        picks:         saveData.picks,
+        overall_score: result.ovr,
+        ppg:           saveData.ppg,
+        apg:           saveData.apg,
+        rpg:           saveData.rpg,
+        budget_used:   saveData.totalCost,
+      }).then(({ error }) => { if (error) console.error('[salary-cap] save failed:', error) })
+    }
+  }, [activeTypes, position])
 
   const handleSwitchPosition = useCallback((pos) => {
     localStorage.setItem('bucketPosition', pos)
@@ -510,6 +553,17 @@ export default function BucketApp() {
     return <BucketSplash onStart={handleStart} />
   }
 
+  if (page === 'salarycap') {
+    return (
+      <BucketSalaryCap
+        onConfirm={handleSalaryCapConfirm}
+        onBack={() => setPage('splash')}
+        user={user}
+        initialDateStr={salaryReturnDate}
+      />
+    )
+  }
+
   const navbarProps = {
     onReset: handleReset,
     onHome: handleHome,
@@ -547,9 +601,11 @@ export default function BucketApp() {
           build={build}
           types={activeTypes}
           position={position}
-          onBack={() => { setPage('game'); window.scrollTo({ top: 0, behavior: 'instant' }) }}
+          onBack={() => { setPage(gameMode === 'salarycap' ? 'salarycap' : 'game'); window.scrollTo({ top: 0, behavior: 'instant' }) }}
           onReset={handleReset}
           adsDisabled={adsDisabled}
+          isSalaryMode={gameMode === 'salarycap'}
+          initialScreen={simInitialScreen}
         />
       </>
     )
@@ -743,6 +799,7 @@ export default function BucketApp() {
             attrMap={BUCKET_ATTR}
             logoDir="/logos/nba/"
             captureFigure={captureFigure}
+            isSalaryMode={gameMode === 'salarycap'}
           />
         </div>
       </main>
@@ -826,7 +883,7 @@ export default function BucketApp() {
         />
       )}
 
-      <nav className="mobile-tab-bar">
+      {gameMode !== 'salarycap' && <nav className="mobile-tab-bar">
         <button
           className={`mtab ${mobileView === 'spin' ? 'active' : ''}`}
           onClick={() => { setMobileView('spin'); window.scrollTo({ top: 0, behavior: 'instant' }) }}
@@ -853,7 +910,7 @@ export default function BucketApp() {
             <span className="mtab-badge">{filledCount}/{activeTypes.length}</span>
           )}
         </button>
-      </nav>
+      </nav>}
 
       {showAuth && (
         <AuthModal

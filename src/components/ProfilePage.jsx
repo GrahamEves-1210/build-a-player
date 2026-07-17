@@ -169,6 +169,8 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
   const [bucketCareerLoad, setBucketCareerLoad] = useState(true)
   const [bucketRingSeasons, setBucketRingSeasons] = useState([])
   const [showRings, setShowRings] = useState(false)
+  const [salaryCareer, setSalaryCareer] = useState(null)
+  const [salaryCareerLoad, setSalaryCareerLoad] = useState(true)
   const [gameSection, setGameSection] = useState('nfl')
   const [careerGame, setCareerGame] = useState(isRB ? 'rb' : 'qb')
   const [adsDisabled, setAdsDisabled] = useState(false)
@@ -181,6 +183,7 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
     try { return localStorage.getItem('bap_profile_icon') || null } catch { return null }
   })
   const [plusOpen, setPlusOpen] = useState(false)
+  const [showSandboxWarning, setShowSandboxWarning] = useState(false)
   const plusRef = useRef(null)
   const [showPwForm, setShowPwForm] = useState(false)
   const [newPw, setNewPw] = useState('')
@@ -261,6 +264,7 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
       .eq('user_id', user.id)
       .not('game_mode', 'in', '("all-time","legends")')
       .not('game_mode', 'ilike', 'rb-%')
+      .not('game_mode', 'ilike', 'bucket-%')
       .order('created_at', { ascending: false })
       .then(({ data }) => {
         if (!data || data.length === 0) { setCareer(null); setCareerLoad(false); return }
@@ -367,7 +371,7 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
       .from('simulations')
       .select('wins,losses,champion,mvp,dpoy,ovr,ppg,rpg,apg,spg,bpg,archetype,team_short,build,created_at')
       .eq('user_id', user.id)
-      .ilike('game_mode', 'bucket-%')
+      .eq('game_mode', 'bucket-classic')
       .order('created_at', { ascending: false })
       .then(({ data }) => {
         if (!data || data.length === 0) { setBucketCareer(null); setBucketCareerLoad(false); return }
@@ -390,6 +394,26 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
         setBucketRingSeasons(ringSeasons)
         setBucketCareer({ count: data.length, totalWins, totalLosses, rings, mvps, dpoys, winPct, avgOVR, avgPPG, best, bestBuild, worstBuild, bestGoatRank: bestGoatEntry?.rank ?? null, bestGoatSeason: bestGoatEntry?.season ?? null })
         setBucketCareerLoad(false)
+      })
+  }, [user])
+
+  useEffect(() => {
+    if (!supabase || !user) { setSalaryCareerLoad(false); return }
+    supabase
+      .from('salary_cap_plays')
+      .select('date_str,overall_score,ppg,apg,rpg,budget_used,picks')
+      .eq('user_id', user.id)
+      .order('date_str', { ascending: false })
+      .then(({ data }) => {
+        if (!data || data.length === 0) { setSalaryCareer(null); setSalaryCareerLoad(false); return }
+        const count    = data.length
+        const best     = data.reduce((b, r) => (r.overall_score ?? 0) > (b.overall_score ?? 0) ? r : b, data[0])
+        const avgScore = (data.reduce((s, r) => s + (r.overall_score ?? 0), 0) / count).toFixed(1)
+        const avgPPG   = (data.reduce((s, r) => s + (r.ppg ?? 0), 0) / count).toFixed(1)
+        const avgAPG   = (data.reduce((s, r) => s + (r.apg ?? 0), 0) / count).toFixed(1)
+        const avgRPG   = (data.reduce((s, r) => s + (r.rpg ?? 0), 0) / count).toFixed(1)
+        setSalaryCareer({ count, best, avgScore, avgPPG, avgAPG, avgRPG })
+        setSalaryCareerLoad(false)
       })
   }, [user])
 
@@ -455,8 +479,6 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
                 <div className="wm-plus-body">
                   {[
                     'No ads',
-                    'Custom player ratings',
-                    'Manually add players to your build',
                     'Custom color themes',
                     'Custom profile icons',
                     'PLUS badge on leaderboard',
@@ -571,25 +593,27 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
               <div className="plus-ratings-box plus-ratings-box--player">
                 <div className="plus-ratings-hd">
                   <div className="plus-ratings-lbl-group">
-                    <span className="plus-section-label">Custom Ratings</span>
-                    <span className="plus-ratings-game plus-ratings-game--player">Build-A-Player</span>
+                    <span className="plus-section-label">Sandbox Mode</span>
+                    <span className="plus-ratings-warn" style={{ visibility: isCustomMode ? 'visible' : 'hidden' }}>Builds won't save</span>
                   </div>
                   <label className="plus-toggle">
                     <input
                       type="checkbox"
                       checked={isCustomMode}
-                      onChange={e => onCustomModeChange?.(e.target.checked)}
+                      onChange={e => {
+                        if (e.target.checked) setShowSandboxWarning(true)
+                        else onCustomModeChange?.(false)
+                      }}
                     />
                     <span className="plus-toggle-track" />
                   </label>
                 </div>
-                <span className="plus-ratings-warn" style={{ visibility: isCustomMode ? 'visible' : 'hidden' }}>Builds won't save</span>
                 <button
                   className={`plus-edit-ratings-btn${!isCustomMode ? ' plus-edit-ratings-btn--off' : ''}`}
                   onClick={isCustomMode ? () => onOpenCustomModal?.() : undefined}
                   disabled={!isCustomMode}
                 >
-                  Edit ratings
+                  Custom Build
                 </button>
               </div>
 
@@ -604,9 +628,10 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
 
         {/* ── Career ── */}
         {(() => {
-          const allReady = !careerLoad && !rbCareerLoad && !rbLegendCareerLoad && !bucketCareerLoad && !legendCareerLoad
+          const allReady = !careerLoad && !rbCareerLoad && !rbLegendCareerLoad && !bucketCareerLoad && !legendCareerLoad && !salaryCareerLoad
           const hasNFL    = career || rbCareer || legendCareer || rbLegendCareer
           const hasBucket = !!bucketCareer
+          const hasSalary = !!salaryCareer
 
           if (!allReady) return (
             <div className={`prf-card ${show ? 'prf-card-in' : ''}`} style={{ animationDelay: '0.25s' }}>
@@ -615,11 +640,11 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
             </div>
           )
 
-          if (!hasNFL && !hasBucket) return null
+          if (!hasNFL && !hasBucket && !hasSalary) return null
 
           // Show toggle whenever there's NFL data (bucket section shows empty state if no data yet)
           const showToggle = !!hasNFL
-          const section = showToggle ? gameSection : (hasBucket ? 'bucket' : 'nfl')
+          const section = showToggle ? gameSection : (hasBucket ? 'bucket' : hasSalary ? 'salary' : 'nfl')
 
           // NFL sub-tabs
           const NFL_TABS = [
@@ -646,6 +671,13 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
                   <button className={`prf-game-switch-btn${section === 'bucket' ? ' active' : ''}`} onClick={() => setGameSection('bucket')}>
                     <MiniBucketLogo />
                   </button>
+                  {hasSalary && (
+                    <button className={`prf-game-switch-btn${section === 'salary' ? ' active' : ''}`} onClick={() => setGameSection('salary')}>
+                      <span className="prf-mini-logo logo-text" style={{ letterSpacing: '0.02em' }}>
+                        Buil<span className="logo-d">d</span><em style={{ color: '#a855f7', WebkitTextFillColor: '#a855f7' }}>-<span className="logo-a">A</span>-</em>Salary
+                      </span>
+                    </button>
+                  )}
                 </div>
               )}
 
@@ -904,6 +936,41 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
                   )}
                 </div>
               )}
+
+              {section === 'salary' && !salaryCareer && (
+                <div className={`prf-card prf-card-empty ${show ? 'prf-card-in' : ''}`} style={{ animationDelay: '0.3s' }}>
+                  <div className="prf-card-hd"><span className="prf-card-title">Salary Career</span></div>
+                  <div className="prf-empty-msg">No Salary Cap plays yet. Head over and start playing.</div>
+                </div>
+              )}
+
+              {section === 'salary' && salaryCareer && (
+                <div className={`prf-card ${show ? 'prf-card-in' : ''}`} style={{ animationDelay: '0.3s' }}>
+                  <div className="prf-card-hd">
+                    <span className="prf-card-title">Salary Career</span>
+                    <span className="prf-career-count">{salaryCareer.count} play{salaryCareer.count !== 1 ? 's' : ''}</span>
+                  </div>
+                  <div className="prf-career-grid">
+                    <div className="pcg-cell"><div className="pcg-val">{salaryCareer.best.overall_score ?? '–'}</div><div className="pcg-lbl">Best Score</div></div>
+                    <div className="pcg-cell"><div className="pcg-val">{salaryCareer.avgScore}</div><div className="pcg-lbl">Avg Score</div></div>
+                    <div className="pcg-cell"><div className="pcg-val">{salaryCareer.avgPPG}</div><div className="pcg-lbl">Avg PPG</div></div>
+                    <div className="pcg-cell"><div className="pcg-val">{salaryCareer.avgRPG}</div><div className="pcg-lbl">Avg RPG</div></div>
+                    <div className="pcg-cell"><div className="pcg-val">{salaryCareer.avgAPG}</div><div className="pcg-lbl">Avg APG</div></div>
+                    <div className="pcg-cell"><div className="pcg-val">{salaryCareer.count}</div><div className="pcg-lbl">Days Played</div></div>
+                  </div>
+                  {salaryCareer.best && (
+                    <div className="prf-best-season">
+                      <span className="pbs-lbl">Best Day</span>
+                      <span className="pbs-val">
+                        {salaryCareer.best.date_str}
+                        {salaryCareer.best.overall_score != null && ` · ${salaryCareer.best.overall_score} pts`}
+                        {salaryCareer.best.ppg != null && ` · ${(+salaryCareer.best.ppg).toFixed(1)} PPG`}
+                        {salaryCareer.best.budget_used != null && ` · $${salaryCareer.best.budget_used}M used`}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
             </>
           )
         })()}
@@ -946,6 +1013,19 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
         </div>
 
       </div>
+
+      {showSandboxWarning && (
+        <div className="sandbox-warning-overlay" onClick={() => setShowSandboxWarning(false)}>
+          <div className="sandbox-warning-modal" onClick={e => e.stopPropagation()}>
+            <div className="sandbox-warning-title">⚠ Sandbox Mode</div>
+            <div className="sandbox-warning-body">Sandbox mode builds will not be saved to your profile or leaderboard. Are you sure you want to continue?</div>
+            <div className="sandbox-warning-btns">
+              <button className="sandbox-warning-cancel" onClick={() => setShowSandboxWarning(false)}>Cancel</button>
+              <button className="sandbox-warning-confirm" onClick={() => { onCustomModeChange?.(true); setShowSandboxWarning(false) }}>Continue</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

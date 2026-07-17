@@ -91,7 +91,7 @@ export const NBA_GUARD_PLAYERS = [
   { name: "Devin Carter", short: "Carter", team: 'ATL', starter: false, captain: false,
     attrs: { jumpShot:4, finishing:4, passing:4, handles:3, perimeterDefense:4, speed:10, bounce:6, size:4, basketballIQ:3, clutch:3 } },
   { name: "Dyson Daniels", short: "Daniels", team: 'ATL', starter: true, captain: false,
-    attrs: { jumpShot:1, finishing:5, passing:5, handles:5, perimeterDefense:11, speed:7, bounce:5, size:5, basketballIQ:6, clutch:4 } },
+    attrs: { jumpShot:1, finishing:5, passing:5, handles:5, perimeterDefense:11, speed:7, bounce:5, size:8, basketballIQ:6, clutch:4 } },
   { name: "Kingston Flemings", short: "Flemings", team: 'ATL', starter: false, captain: false,
     attrs: { jumpShot:5, finishing:4, passing:4, handles:3, perimeterDefense:4, speed:7, bounce:6, size:4, basketballIQ:3, clutch:3 } },
   { name: "Buddy Hield", short: "Hield", team: 'ATL', starter: false, captain: false,
@@ -103,7 +103,7 @@ export const NBA_GUARD_PLAYERS = [
   { name: "CJ McCollum", short: "McCollum", team: 'ATL', starter: true, captain: false,
     attrs: { jumpShot:8, finishing:5, passing:6, handles:6, perimeterDefense:3, speed:7, bounce:3, size:4, basketballIQ:8, clutch:6 } },
   { name: "Zaccharie Risacher", short: "Risacher", team: 'ATL', starter: false, captain: false,
-    attrs: { jumpShot:5, finishing:3, passing:3, handles:3, perimeterDefense:5, speed:5, bounce:4, size:6, basketballIQ:3, clutch:3 } },
+    attrs: { jumpShot:5, finishing:3, passing:3, handles:3, perimeterDefense:5, speed:5, bounce:4, size:9, basketballIQ:3, clutch:3 } },
   { name: "Aaron Wiggins", short: "Wiggins", team: 'ATL', starter: false, captain: false,
     attrs: { jumpShot:6, finishing:2, passing:4, handles:4, perimeterDefense:4, speed:6, bounce:3, size:5, basketballIQ:4, clutch:3 } },
 
@@ -141,10 +141,10 @@ export const NBA_GUARD_PLAYERS = [
     attrs: { jumpShot:5, finishing:4, passing:5, handles:5, perimeterDefense:3, speed:6, bounce:5, size:4, basketballIQ:4, clutch:3 } },
 
   { name: "Egor Demin", short: "Demin", team: 'BKN', starter: true, captain: false,
-    attrs: { jumpShot:5, finishing:5, passing:5, handles:5, perimeterDefense:3, speed:6, bounce:4, size:5, basketballIQ:5, clutch:3 } },
+    attrs: { jumpShot:5, finishing:5, passing:5, handles:5, perimeterDefense:3, speed:6, bounce:4, size:9, basketballIQ:5, clutch:3 } },
 
   { name: "Keon Ellis", short: "K. Ellis", team: 'BKN', starter: false, captain: false,
-    attrs: { jumpShot:4, finishing:3, passing:3, handles:3, perimeterDefense:7, speed:5, bounce:4, size:4, basketballIQ:3, clutch:3 } },
+    attrs: { jumpShot:4, finishing:3, passing:3, handles:3, perimeterDefense:7, speed:5, bounce:4, size:6, basketballIQ:3, clutch:3 } },
 
   { name: "Joshua Jefferson", short: "Jefferson", team: 'BKN', starter: false, captain: false,
     attrs: { jumpShot:4, finishing:3, passing:3, handles:3, perimeterDefense:4, speed:5, bounce:3, size:7, basketballIQ:3, clutch:3 } },
@@ -168,7 +168,7 @@ export const NBA_GUARD_PLAYERS = [
     attrs: { jumpShot:4, finishing:2, passing:6, handles:4, perimeterDefense:3, speed:5, bounce:3, size:3, basketballIQ:4, clutch:3 } },
 
   { name: "Ziaire Williams", short: "Williams", team: 'BKN', starter: false, captain: false,
-    attrs: { jumpShot:4, finishing:1, passing:3, handles:5, perimeterDefense:4, speed:5, bounce:3, size:6, basketballIQ:3, clutch:3 } },
+    attrs: { jumpShot:4, finishing:1, passing:3, handles:5, perimeterDefense:4, speed:5, bounce:3, size:8, basketballIQ:3, clutch:3 } },
 
   // ─── CHA ───────────────────────────────────────────────────────────
   { name: "Grayson Allen", short: "G. Allen", team: 'CHA', starter: true, captain: false,
@@ -187,29 +187,29 @@ export const NBA_GUARD_PLAYERS = [
     attrs: { jumpShot:10, finishing:5, passing:4, handles:4, perimeterDefense:4, speed:4, bounce:3, size:6, basketballIQ:4, clutch:4 } },
 
   { name: "Tre Mann", short: "Mann", team: 'CHA', starter: false, captain: false,
-    attrs: { jumpShot:6, finishing:4, passing:3, handles:5, perimeterDefense:1, speed:6, bounce:5, size:4, basketballIQ:3, clutch:3 } },
+    attrs: { jumpShot:6, finishing:4, passing:3, handles:5, perimeterDefense:1, speed:6, bounce:5, size:6, basketballIQ:3, clutch:3 } },
 
   { name: "Brandon Miller", short: "B. Miller", team: 'CHA', starter: true, captain: false,
-    attrs: { jumpShot:7, finishing:7, passing:5, handles:6, perimeterDefense:6, speed:7, bounce:8, size:6, basketballIQ:5, clutch:5 } },
+    attrs: { jumpShot:7, finishing:7, passing:5, handles:6, perimeterDefense:6, speed:7, bounce:8, size:9, basketballIQ:5, clutch:5 } },
 
   { name: "Royce O'Neale", short: "O'Neale", team: 'CHA', starter: false, captain: false,
     attrs: { jumpShot:4, finishing:4, passing:3, handles:3, perimeterDefense:4, speed:5, bounce:5, size:7, basketballIQ:3, clutch:3 } },
 
   { name: "Tidjane Salaun", short: "Salaun", team: 'CHA', starter: false, captain: false,
-    attrs: { jumpShot:4, finishing:3, passing:2, handles:4, perimeterDefense:5, speed:6, bounce:6, size:7, basketballIQ:2, clutch:4 } },
+    attrs: { jumpShot:4, finishing:3, passing:2, handles:4, perimeterDefense:5, speed:6, bounce:6, size:9, basketballIQ:2, clutch:4 } },
 
   { name: "Coby White", short: "C. White", team: 'CHA', starter: true, captain: false,
     attrs: { jumpShot:6, finishing:6, passing:5, handles:7, perimeterDefense:4, speed:8, bounce:7, size:4, basketballIQ:6, clutch:6 } },
 
   // ─── CHI ───────────────────────────────────────────────────────────
   { name: "Matas Buzelis", short: "Buzelis", team: 'CHI', starter: true, captain: false,
-    attrs: { jumpShot:5, finishing:8, passing:3, handles:4, perimeterDefense:7, speed:7, bounce:9, size:6, basketballIQ:3, clutch:3 } },
+    attrs: { jumpShot:5, finishing:8, passing:3, handles:4, perimeterDefense:7, speed:7, bounce:9, size:9, basketballIQ:3, clutch:3 } },
 
   { name: "Rob Dillingham", short: "Dillingham", team: 'CHI', starter: false, captain: false,
     attrs: { jumpShot:4, finishing:3, passing:4, handles:6, perimeterDefense:3, speed:8, bounce:4, size:0, basketballIQ:4, clutch:3 } },
 
   { name: "Noa Essengue", short: "Essengue", team: 'CHI', starter: false, captain: false,
-    attrs: { jumpShot:3, finishing:4, passing:2, handles:3, perimeterDefense:5, speed:5, bounce:6, size:7, basketballIQ:3, clutch:3 } },
+    attrs: { jumpShot:3, finishing:4, passing:2, handles:3, perimeterDefense:5, speed:5, bounce:6, size:9, basketballIQ:3, clutch:3 } },
 
   { name: "Josh Giddey", short: "Giddey", team: 'CHI', starter: true, captain: false,
     attrs: { jumpShot:4, finishing:4, passing:8, handles:7, perimeterDefense:4, speed:5, bounce:5, size:8, basketballIQ:6, clutch:6 } },
@@ -237,10 +237,10 @@ export const NBA_GUARD_PLAYERS = [
     attrs: { jumpShot:7, finishing:6, passing:9, handles:10, perimeterDefense:3, speed:7, bounce:5, size:7, basketballIQ:6, clutch:4 } },
 
   { name: "Sam Merrill", short: "Merrill", team: 'CLE', starter: false, captain: false,
-    attrs: { jumpShot:9, finishing:2, passing:3, handles:3, perimeterDefense:4, speed:4, bounce:5, size:4, basketballIQ:3, clutch:3 } },
+    attrs: { jumpShot:9, finishing:2, passing:3, handles:3, perimeterDefense:4, speed:4, bounce:5, size:6, basketballIQ:3, clutch:3 } },
 
   { name: "Donovan Mitchell", short: "Mitchell", team: 'CLE', starter: true, captain: true,
-    attrs: { jumpShot:8, finishing:10, passing:6, handles:8, perimeterDefense:6, speed:10, bounce:9, size:5, basketballIQ:7, clutch:7 } },
+    attrs: { jumpShot:8, finishing:10, passing:6, handles:8, perimeterDefense:6, speed:10, bounce:9, size:2, basketballIQ:7, clutch:7 } },
 
   { name: "Tyrese Proctor", short: "Proctor", team: 'CLE', starter: true, captain: false,
     attrs: { jumpShot:6, finishing:4, passing:4, handles:5, perimeterDefense:3, speed:5, bounce:4, size:4, basketballIQ:4, clutch:3 } },
@@ -256,10 +256,10 @@ export const NBA_GUARD_PLAYERS = [
 
   // ─── DAL ───────────────────────────────────────────────────────────
   { name: "Max Christie", short: "Christie", team: 'DAL', starter: false, captain: false,
-    attrs: { jumpShot:8, finishing:5, passing:3, handles:3, perimeterDefense:6, speed:7, bounce:5, size:4, basketballIQ:3, clutch:3 } },
+    attrs: { jumpShot:8, finishing:5, passing:3, handles:3, perimeterDefense:6, speed:7, bounce:5, size:7, basketballIQ:3, clutch:3 } },
 
   { name: "Cooper Flagg", short: "Flagg", team: 'DAL', starter: true, captain: true,
-    attrs: { jumpShot:5, finishing:8, passing:5, handles:5, perimeterDefense:8, speed:7, bounce:7, size:7, basketballIQ:5, clutch:4 } },
+    attrs: { jumpShot:5, finishing:8, passing:5, handles:5, perimeterDefense:8, speed:7, bounce:7, size:9, basketballIQ:5, clutch:4 } },
 
   { name: "Kyrie Irving", short: "Kyrie", team: 'DAL', starter: true, captain: false,
     attrs: { jumpShot:9, finishing:10, passing:6, handles:11, perimeterDefense:4, speed:8, bounce:3, size:3, basketballIQ:8, clutch:8 } },
@@ -274,7 +274,7 @@ export const NBA_GUARD_PLAYERS = [
     attrs: { jumpShot:5, finishing:2, passing:4, handles:5, perimeterDefense:0, speed:6, bounce:4, size:2, basketballIQ:4, clutch:3 } },
 
   { name: "Marcus Sasser", short: "Sasser", team: 'DAL', starter: false, captain: false,
-    attrs: { jumpShot:5, finishing:3, passing:3, handles:4, perimeterDefense:4, speed:5, bounce:5, size:3, basketballIQ:3, clutch:3 } },
+    attrs: { jumpShot:5, finishing:3, passing:3, handles:4, perimeterDefense:4, speed:5, bounce:5, size:1, basketballIQ:3, clutch:3 } },
 
   { name: "Klay Thompson", short: "Klay", team: 'DAL', starter: true, captain: false,
     attrs: { jumpShot:8, finishing:2, passing:4, handles:3, perimeterDefense:5, speed:5, bounce:3, size:6, basketballIQ:6, clutch:6 } },
@@ -299,7 +299,7 @@ export const NBA_GUARD_PLAYERS = [
     attrs: { jumpShot:5, finishing:3, passing:3, handles:3, perimeterDefense:3, speed:5, bounce:5, size:7, basketballIQ:3, clutch:3 } },
 
   { name: "Peyton Watson", short: "Watson", team: 'DEN', starter: false, captain: false,
-    attrs: { jumpShot:6, finishing:5, passing:3, handles:3, perimeterDefense:6, speed:6, bounce:5, size:6, basketballIQ:3, clutch:3 } },
+    attrs: { jumpShot:6, finishing:5, passing:3, handles:3, perimeterDefense:6, speed:6, bounce:5, size:8, basketballIQ:3, clutch:3 } },
 
   // ─── DET ───────────────────────────────────────────────────────────
   { name: "Cade Cunningham", short: "Cunningham", team: 'DET', starter: true, captain: false,
@@ -368,13 +368,13 @@ export const NBA_GUARD_PLAYERS = [
     attrs: { jumpShot:7, finishing:4, passing:4, handles:5, perimeterDefense:3, speed:7, bounce:4, size:3, basketballIQ:4, clutch:3 } },
 
   { name: "Marcus Smart", short: "Smart", team: 'HOU', starter: true, captain: false,
-    attrs: { jumpShot:5, finishing:7, passing:7, handles:5, perimeterDefense:9, speed:6, bounce:5, size:6, basketballIQ:9, clutch:8 } },
+    attrs: { jumpShot:5, finishing:7, passing:7, handles:5, perimeterDefense:9, speed:6, bounce:5, size:3, basketballIQ:9, clutch:8 } },
 
   { name: "Amen Thompson", short: "A. Thompson", team: 'HOU', starter: true, captain: false,
     attrs: { jumpShot:1, finishing:8, passing:6, handles:7, perimeterDefense:10, speed:11, bounce:11, size:8, basketballIQ:5, clutch:5 } },
 
   { name: "Fred VanVleet", short: "VanVleet", team: 'HOU', starter: false, captain: false,
-    attrs: { jumpShot:6, finishing:4, passing:7, handles:6, perimeterDefense:5, speed:5, bounce:4, size:3, basketballIQ:7, clutch:7 } },
+    attrs: { jumpShot:6, finishing:4, passing:7, handles:6, perimeterDefense:5, speed:5, bounce:4, size:1, basketballIQ:7, clutch:7 } },
 
   // ─── IND ───────────────────────────────────────────────────────────
   { name: "Kobe Brown", short: "Brown", team: 'IND', starter: false, captain: false,
@@ -384,16 +384,16 @@ export const NBA_GUARD_PLAYERS = [
     attrs: { jumpShot:5, finishing:4, passing:4, handles:3, perimeterDefense:4, speed:5, bounce:5, size:7, basketballIQ:3, clutch:3 } },
 
   { name: "Tyrese Haliburton", short: "Haliburton", team: 'IND', starter: true, captain: true,
-    attrs: { jumpShot:7, finishing:7, passing:11, handles:9, perimeterDefense:4, speed:7, bounce:6, size:3, basketballIQ:9, clutch:9 } },
+    attrs: { jumpShot:7, finishing:7, passing:11, handles:9, perimeterDefense:4, speed:7, bounce:6, size:6, basketballIQ:9, clutch:9 } },
 
   { name: "Quenton Jackson", short: "Jackson", team: 'IND', starter: false, captain: false,
     attrs: { jumpShot:5, finishing:4, passing:3, handles:3, perimeterDefense:4, speed:5, bounce:5, size:5, basketballIQ:3, clutch:3 } },
 
   { name: "T.J. McConnell", short: "McConnell", team: 'IND', starter: false, captain: false,
-    attrs: { jumpShot:5, finishing:3, passing:9, handles:6, perimeterDefense:7, speed:5, bounce:2, size:3, basketballIQ:8, clutch:3 } },
+    attrs: { jumpShot:5, finishing:3, passing:9, handles:6, perimeterDefense:7, speed:5, bounce:2, size:1, basketballIQ:8, clutch:3 } },
 
   { name: "Andrew Nembhard", short: "Nembhard", team: 'IND', starter: true, captain: false,
-    attrs: { jumpShot:7, finishing:6, passing:5, handles:7, perimeterDefense:6, speed:7, bounce:6, size:4, basketballIQ:7, clutch:6 } },
+    attrs: { jumpShot:7, finishing:6, passing:5, handles:7, perimeterDefense:6, speed:7, bounce:6, size:6, basketballIQ:7, clutch:6 } },
 
   { name: "Aaron Nesmith", short: "Nesmith", team: 'IND', starter: false, captain: false,
     attrs: { jumpShot:7, finishing:3, passing:4, handles:4, perimeterDefense:5, speed:6, bounce:5, size:7, basketballIQ:5, clutch:5 } },
@@ -405,7 +405,7 @@ export const NBA_GUARD_PLAYERS = [
     attrs: { jumpShot:4, finishing:3, passing:3, handles:4, perimeterDefense:4, speed:5, bounce:5, size:6, basketballIQ:3, clutch:3 } },
 
   { name: "Braden Smith", short: "Smith", team: 'IND', starter: false, captain: false,
-    attrs: { jumpShot:5, finishing:3, passing:5, handles:5, perimeterDefense:3, speed:5, bounce:4, size:4, basketballIQ:4, clutch:3 } },
+    attrs: { jumpShot:5, finishing:3, passing:5, handles:5, perimeterDefense:3, speed:5, bounce:4, size:1, basketballIQ:4, clutch:3 } },
 
 
   // ─── LAC ───────────────────────────────────────────────────────────
@@ -891,7 +891,7 @@ export const NBA_GUARD_PLAYERS = [
     attrs: { jumpShot:6, finishing:6, passing:4, handles:7, perimeterDefense:5, speed:7, bounce:6, size:4, basketballIQ:5, clutch:3 } },
 
   { name: "Brice Sensabaugh", short: "Sensabaugh", team: 'UTA', starter: false, captain: false,
-    attrs: { jumpShot:6, finishing:5, passing:4, handles:3, perimeterDefense:4, speed:5, bounce:5, size:8, basketballIQ:3, clutch:3 } },
+    attrs: { jumpShot:6, finishing:5, passing:4, handles:3, perimeterDefense:4, speed:5, bounce:5, size:6, basketballIQ:3, clutch:3 } },
 
   { name: "Cody Williams", short: "Williams", team: 'UTA', starter: false, captain: false,
     attrs: { jumpShot:2, finishing:5, passing:2, handles:3, perimeterDefense:4, speed:5, bounce:5, size:5, basketballIQ:3, clutch:3 } },
@@ -991,7 +991,7 @@ export const NBA_BIG_PLAYERS = [
 
   // ─── CHI ───────────────────────────────────────────────────────────
   { name: "Nic Claxton", short: "Claxton", team: 'CHI', starter: true, captain: false,
-    attrs: { jumpShot:2, finishing:5, rebounding:7, playmaking:2, interiorDefense:8, speed:4, bounce:5, size:6, basketballIQ:6, clutch:4 } },
+    attrs: { jumpShot:2, finishing:5, rebounding:7, playmaking:2, interiorDefense:8, speed:4, bounce:5, size:8, basketballIQ:6, clutch:4 } },
 
   { name: "Zach Collins", short: "Z. Collins", team: 'CHI', starter: false, captain: false,
     attrs: { jumpShot:3, finishing:5, rebounding:6, playmaking:3, interiorDefense:3, speed:2, bounce:2, size:7, basketballIQ:5, clutch:4 } },
@@ -1000,7 +1000,7 @@ export const NBA_BIG_PLAYERS = [
     attrs: { jumpShot:2, finishing:5, rebounding:6, playmaking:2, interiorDefense:5, speed:3, bounce:3, size:6, basketballIQ:4, clutch:3 } },
 
   { name: "Caleb Wilson", short: "Wilson", team: 'CHI', starter: true, captain: false,
-    attrs: { jumpShot:4, finishing:7, rebounding:4, playmaking:5, interiorDefense:3, speed:8, bounce:3, size:6, basketballIQ:4, clutch:3 } },
+    attrs: { jumpShot:4, finishing:7, rebounding:4, playmaking:5, interiorDefense:3, speed:8, bounce:8, size:8, basketballIQ:4, clutch:3 } },
 
   { name: "Guerschon Yabusele", short: "Yabusele", team: 'CHI', starter: false, captain: false,
     attrs: { jumpShot:2, finishing:4, rebounding:5, playmaking:2, interiorDefense:4, speed:3, bounce:3, size:6, basketballIQ:3, clutch:3 } },
@@ -1011,7 +1011,7 @@ export const NBA_BIG_PLAYERS = [
     attrs: { jumpShot:2, finishing:7, rebounding:8, playmaking:4, interiorDefense:7, speed:7, bounce:5, size:7, basketballIQ:7, clutch:6 } },
 
   { name: "Thomas Bryant", short: "Bryant", team: 'CLE', starter: false, captain: false,
-    attrs: { jumpShot:5, finishing:4, rebounding:6, playmaking:2, interiorDefense:3, speed:1, bounce:2, size:6, basketballIQ:5, clutch:4 } },
+    attrs: { jumpShot:5, finishing:4, rebounding:6, playmaking:2, interiorDefense:3, speed:1, bounce:2, size:8, basketballIQ:5, clutch:4 } },
 
   { name: "Evan Mobley", short: "Mobley", team: 'CLE', starter: true, captain: false,
     attrs: { jumpShot:4, finishing:8, rebounding:8, playmaking:5, interiorDefense:10, speed:6, bounce:6, size:8, basketballIQ:8, clutch:6 } },
@@ -1056,7 +1056,7 @@ export const NBA_BIG_PLAYERS = [
 
   // ─── DET ───────────────────────────────────────────────────────────
   { name: "John Collins", short: "Collins", team: 'DET', starter: true, captain: false,
-    attrs: { jumpShot:5, finishing:8, rebounding:8, playmaking:3, interiorDefense:5, speed:6, bounce:8, size:7, basketballIQ:4, clutch:5 } },
+    attrs: { jumpShot:5, finishing:8, rebounding:8, playmaking:3, interiorDefense:5, speed:6, bounce:8, size:5, basketballIQ:4, clutch:5 } },
 
   { name: "Jalen Duren", short: "Duren", team: 'DET', starter: true, captain: false,
     attrs: { jumpShot:1, finishing:4, rebounding:9, playmaking:4, interiorDefense:6, speed:6, bounce:6, size:7, basketballIQ:2, clutch:2 } },
@@ -1174,7 +1174,7 @@ export const NBA_BIG_PLAYERS = [
 
   // ─── MIL ───────────────────────────────────────────────────────────
   { name: "Nate Ament", short: "Ament", team: 'MIL', starter: false, captain: false,
-    attrs: { jumpShot:3, finishing:1, rebounding:2, playmaking:2, interiorDefense:6, speed:6, bounce:3, size:5, basketballIQ:2, clutch:3 } },
+    attrs: { jumpShot:3, finishing:1, rebounding:2, playmaking:2, interiorDefense:6, speed:6, bounce:3, size:8, basketballIQ:2, clutch:3 } },
 
   { name: "Myles Turner", short: "M. Turner", team: 'MIL', starter: true, captain: false,
     attrs: { jumpShot:6, finishing:6, rebounding:7, playmaking:4, interiorDefense:8, speed:4, bounce:5, size:8, basketballIQ:6, clutch:6 } },
@@ -1185,7 +1185,7 @@ export const NBA_BIG_PLAYERS = [
 
   // ─── MIN ───────────────────────────────────────────────────────────
   { name: "Joan Beringer", short: "Beringer", team: 'MIN', starter: true, captain: false,
-    attrs: { jumpShot:0, finishing:4, rebounding:6, playmaking:2, interiorDefense:5, speed:6, bounce:5, size:7, basketballIQ:3, clutch:3 } },
+    attrs: { jumpShot:0, finishing:4, rebounding:6, playmaking:2, interiorDefense:5, speed:6, bounce:5, size:10, basketballIQ:3, clutch:3 } },
 
   { name: "Trey Lyles", short: "Lyles", team: 'MIN', starter: false, captain: false,
     attrs: { jumpShot:5, finishing:4, rebounding:4, playmaking:3, interiorDefense:3, speed:4, bounce:4, size:5, basketballIQ:4, clutch:4 } },
@@ -1267,7 +1267,7 @@ export const NBA_BIG_PLAYERS = [
     attrs: { jumpShot:1, finishing:5, rebounding:5, playmaking:2, interiorDefense:5, speed:9, bounce:6, size:6, basketballIQ:3, clutch:3 } },
 
   { name: "Khaman Maluach", short: "Maluach", team: 'PHX', starter: false, captain: false,
-    attrs: { jumpShot:1, finishing:4, rebounding:6, playmaking:2, interiorDefense:7, speed:2, bounce:2, size:7, basketballIQ:4, clutch:3 } },
+    attrs: { jumpShot:1, finishing:4, rebounding:6, playmaking:2, interiorDefense:7, speed:2, bounce:2, size:10, basketballIQ:4, clutch:3 } },
 
   { name: "Mark Williams", short: "M. Williams", team: 'PHX', starter: true, captain: false,
     attrs: { jumpShot:0, finishing:5, rebounding:8, playmaking:1, interiorDefense:8, speed:3, bounce:5, size:8, basketballIQ:5, clutch:4 } },
@@ -1275,10 +1275,10 @@ export const NBA_BIG_PLAYERS = [
 
   // ─── POR ───────────────────────────────────────────────────────────
   { name: "Donovan Clingan", short: "Clingan", team: 'POR', starter: true, captain: false,
-    attrs: { jumpShot:4, finishing:6, rebounding:9, playmaking:2, interiorDefense:8, speed:2, bounce:1, size:8, basketballIQ:6, clutch:3 } },
+    attrs: { jumpShot:4, finishing:6, rebounding:9, playmaking:2, interiorDefense:8, speed:2, bounce:1, size:10, basketballIQ:6, clutch:3 } },
 
   { name: "Yang Hansen", short: "Hansen", team: 'POR', starter: false, captain: false,
-    attrs: { jumpShot:2, finishing:4, rebounding:5, playmaking:7, interiorDefense:3, speed:1, bounce:2, size:8, basketballIQ:5, clutch:3 } },
+    attrs: { jumpShot:2, finishing:4, rebounding:5, playmaking:7, interiorDefense:3, speed:1, bounce:2, size:10, basketballIQ:5, clutch:3 } },
 
   { name: "Robert Williams III", short: "III", team: 'POR', starter: true, captain: false,
     attrs: { jumpShot:3, finishing:4, rebounding:7, playmaking:2, interiorDefense:10, speed:3, bounce:5, size:6, basketballIQ:6, clutch:3 } },
@@ -1292,7 +1292,7 @@ export const NBA_BIG_PLAYERS = [
     attrs: { jumpShot:2, finishing:5, rebounding:5, playmaking:2, interiorDefense:5, speed:9, bounce:5, size:5, basketballIQ:3, clutch:3 } },
 
   { name: "Maxime Raynaud", short: "Raynaud", team: 'SAC', starter: false, captain: false,
-    attrs: { jumpShot:2, finishing:7, rebounding:6, playmaking:3, interiorDefense:4, speed:1, bounce:2, size:7, basketballIQ:3, clutch:3 } },
+    attrs: { jumpShot:2, finishing:7, rebounding:6, playmaking:3, interiorDefense:4, speed:1, bounce:2, size:10, basketballIQ:3, clutch:3 } },
 
   { name: "Domantas Sabonis", short: "Sabonis", team: 'SAC', starter: true, captain: false,
     attrs: { jumpShot:3, finishing:7, rebounding:9, playmaking:9, interiorDefense:0, speed:2, bounce:2, size:7, basketballIQ:8, clutch:6 } },
@@ -1300,7 +1300,7 @@ export const NBA_BIG_PLAYERS = [
 
   // ─── SAS ───────────────────────────────────────────────────────────
   { name: "Luke Kornet", short: "Kornet", team: 'SAS', starter: false, captain: false,
-    attrs: { jumpShot:3, finishing:5, rebounding:6, playmaking:2, interiorDefense:6, speed:1, bounce:2, size:8, basketballIQ:4, clutch:6 } },
+    attrs: { jumpShot:3, finishing:5, rebounding:6, playmaking:2, interiorDefense:6, speed:1, bounce:2, size:10, basketballIQ:4, clutch:6 } },
 
   { name: "Kelly Olynyk", short: "Olynyk", team: 'SAS', starter: false, captain: false,
     attrs: { jumpShot:5, finishing:4, rebounding:6, playmaking:4, interiorDefense:2, speed:0, bounce:2, size:7, basketballIQ:5, clutch:5 } },
@@ -1309,7 +1309,7 @@ export const NBA_BIG_PLAYERS = [
     attrs: { jumpShot:2, finishing:6, rebounding:6, playmaking:2, interiorDefense:5, speed:3, bounce:7, size:7, basketballIQ:5, clutch:3 } },
 
   { name: "Jayden Quaintance", short: "Quaintance", team: 'SAS', starter: false, captain: false,
-    attrs: { jumpShot:3, finishing:5, rebounding:5, playmaking:2, interiorDefense:5, speed:3, bounce:5, size:6, basketballIQ:3, clutch:3 } },
+    attrs: { jumpShot:3, finishing:5, rebounding:5, playmaking:2, interiorDefense:5, speed:3, bounce:5, size:8, basketballIQ:3, clutch:3 } },
 
   { name: "Tarris Reed Jr.", short: "Jr.", team: 'SAS', starter: false, captain: false,
     attrs: { jumpShot:2, finishing:6, rebounding:6, playmaking:2, interiorDefense:4, speed:1, bounce:2, size:6, basketballIQ:4, clutch:5 } },
@@ -1357,7 +1357,7 @@ export const NBA_BIG_PLAYERS = [
     attrs: { jumpShot:3, finishing:8, rebounding:8, playmaking:6, interiorDefense:9, speed:7, bounce:6, size:8, basketballIQ:7, clutch:7 } },
 
   { name: "Alex Sarr", short: "Sarr", team: 'WAS', starter: true, captain: false,
-    attrs: { jumpShot:4, finishing:6, rebounding:6, playmaking:2, interiorDefense:9, speed:6, bounce:6, size:6, basketballIQ:4, clutch:3 } },
+    attrs: { jumpShot:4, finishing:6, rebounding:6, playmaking:2, interiorDefense:9, speed:6, bounce:6, size:9, basketballIQ:4, clutch:3 } },
 
   { name: "Tristan Vukcevic", short: "Vukcevic", team: 'WAS', starter: false, captain: false,
     attrs: { jumpShot:5, finishing:5, rebounding:5, playmaking:2, interiorDefense:4, speed:4, bounce:3, size:6, basketballIQ:3, clutch:3 } }

@@ -267,7 +267,7 @@ export default function BucketProfilePage({
                 <span className="plus-coming-soon">Not available for Build-A-Bucket yet</span>
               </div>
               <div className="plus-section">
-                <span className="plus-section-label">Custom Ratings</span>
+                <span className="plus-section-label">Sandbox Mode</span>
                 <span className="plus-coming-soon">Not available for Build-A-Bucket yet</span>
               </div>
               <div className="plus-section plus-section--last">
