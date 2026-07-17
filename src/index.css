@@ -8629,6 +8629,9 @@ html.is-touch .bd-card-main:hover         { background: transparent !important; 
   padding: 48px 20px 160px;
   background: var(--bg-raised);
 }
+[data-sport="bucket"] .prf-page {
+  height: 100dvh;
+}
 
 .prf-col {
   width: 100%;
