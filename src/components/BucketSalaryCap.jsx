@@ -26,76 +26,76 @@ import { valToGrade } from '../utils/simulation'
 // ─── All-time legends (only players with headshots) ──────────────────────────
 const GOAT_SALARY_PLAYERS = [
   {
-    name: 'Michael Jordan', team: 'CHI', legend: true,
-    attrs: { jumpShot:7, finishing:11, perimeterDefense:11, interiorDefense:7, passing:8, handles:9, playmaking:8, size:7, speed:10, bounce:11 },
+    name: 'Michael Jordan', team: 'CHI', legend: true, posGroup: 'guard',
+    attrs: { jumpShot:7, finishing:11, perimeterDefense:11, interiorDefense:7, passing:8, handles:9, playmaking:8, size:9, speed:10, bounce:11 },
   },
   {
-    name: 'Kobe Bryant', team: 'LAL', legend: true,
+    name: 'Kobe Bryant', team: 'LAL', legend: true, posGroup: 'guard',
     attrs: { jumpShot:9, finishing:10, perimeterDefense:8, interiorDefense:6, passing:6, handles:9, playmaking:8, size:7, speed:9, bounce:9 },
   },
   {
-    name: 'Larry Bird', team: 'BOS', legend: true,
+    name: 'Larry Bird', team: 'BOS', legend: true, posGroup: 'guard',
     attrs: { jumpShot:10, finishing:9, perimeterDefense:6, interiorDefense:6, passing:10, handles:7, playmaking:10, size:8, speed:3, bounce:3 },
   },
   {
-    name: 'Allen Iverson', team: 'PHI', legend: true,
-    attrs: { jumpShot:8, finishing:9, perimeterDefense:6, interiorDefense:3, passing:7, handles:11, playmaking:10, size:2, speed:11, bounce:9 },
+    name: 'Allen Iverson', team: 'PHI', legend: true, posGroup: 'guard',
+    attrs: { jumpShot:8, finishing:9, perimeterDefense:6, interiorDefense:3, passing:9, handles:11, playmaking:10, size:2, speed:11, bounce:9 },
   },
   {
-    name: 'Dwyane Wade', team: 'MIA', legend: true,
+    name: 'Dwyane Wade', team: 'MIA', legend: true, posGroup: 'guard',
     attrs: { jumpShot:7, finishing:10, perimeterDefense:9, interiorDefense:5, passing:8, handles:9, playmaking:8, size:7, speed:10, bounce:10 },
   },
   {
-    name: 'Chris Paul', team: 'PHX', legend: true,
+    name: 'Chris Paul', team: 'PHX', legend: true, posGroup: 'guard',
     attrs: { jumpShot:7, finishing:7, perimeterDefense:10, interiorDefense:4, passing:11, handles:10, playmaking:11, size:3, speed:8, bounce:7 },
   },
   {
-    name: 'Kareem Abdul-Jabbar', team: 'LAL', legend: true,
-    attrs: { jumpShot:2, finishing:11, perimeterDefense:6, interiorDefense:10, passing:5, handles:3, playmaking:6, size:10, speed:5, bounce:7 },
+    name: 'Kareem Abdul-Jabbar', team: 'LAL', legend: true, posGroup: 'big',
+    attrs: { jumpShot:2, finishing:11, perimeterDefense:6, interiorDefense:10, passing:5, handles:3, playmaking:6, size:10, speed:5, bounce:10 },
   },
   {
-    name: "Shaquille O'Neal", team: 'LAL', legend: true,
-    attrs: { jumpShot:0, finishing:11, perimeterDefense:4, interiorDefense:10, passing:5, handles:3, playmaking:6, size:11, speed:8, bounce:9 },
+    name: "Shaquille O'Neal", team: 'LAL', legend: true, posGroup: 'big',
+    attrs: { jumpShot:0, finishing:11, perimeterDefense:4, interiorDefense:10, passing:5, handles:3, playmaking:6, size:11, speed:8, bounce:11 },
   },
   {
-    name: 'Tim Duncan', team: 'SAS', legend: true,
+    name: 'Tim Duncan', team: 'SAS', legend: true, posGroup: 'big',
     attrs: { jumpShot:7, finishing:10, perimeterDefense:7, interiorDefense:11, passing:8, handles:5, playmaking:8, size:9, speed:5, bounce:6 },
   },
   {
-    name: 'Wilt Chamberlain', team: 'PHI', legend: true,
+    name: 'Wilt Chamberlain', team: 'PHI', legend: true, posGroup: 'big',
     attrs: { jumpShot:0, finishing:11, perimeterDefense:5, interiorDefense:11, passing:6, handles:4, playmaking:6, size:11, speed:9, bounce:11 },
   },
   {
-    name: 'Charles Barkley', team: 'PHX', legend: true,
+    name: 'Charles Barkley', team: 'PHX', legend: true, posGroup: 'big',
     attrs: { jumpShot:6, finishing:9, perimeterDefense:7, interiorDefense:9, passing:6, handles:6, playmaking:6, size:9, speed:8, bounce:8 },
   },
   {
-    name: 'Dirk Nowitzki', team: 'DAL', legend: true,
+    name: 'Dirk Nowitzki', team: 'DAL', legend: true, posGroup: 'big',
     attrs: { jumpShot:10, finishing:8, perimeterDefense:6, interiorDefense:6, passing:7, handles:5, playmaking:7, size:10, speed:4, bounce:5 },
   },
   {
-    name: 'Bill Russell', team: 'BOS', legend: true,
+    name: 'Bill Russell', team: 'BOS', legend: true, posGroup: 'big',
     attrs: { jumpShot:0, finishing:9, perimeterDefense:6, interiorDefense:11, passing:6, handles:3, playmaking:6, size:9, speed:8, bounce:9 },
   },
   {
-    name: 'Tracy McGrady', team: 'ORL', legend: true,
+    name: 'Tracy McGrady', team: 'ORL', legend: true, posGroup: 'guard',
     attrs: { jumpShot:9, finishing:9, perimeterDefense:7, interiorDefense:5, passing:7, handles:9, playmaking:8, size:8, speed:8, bounce:9 },
   },
   {
-    name: 'Carmelo Anthony', team: 'NYK', legend: true,
+    name: 'Carmelo Anthony', team: 'NYK', legend: true, posGroup: 'guard',
     attrs: { jumpShot:9, finishing:9, perimeterDefense:5, interiorDefense:5, passing:6, handles:9, playmaking:9, size:8, speed:6, bounce:7 },
   },
   {
-    name: 'Paul Pierce', team: 'BOS', legend: true,
+    name: 'Paul Pierce', team: 'BOS', legend: true, posGroup: 'guard',
     attrs: { jumpShot:9, finishing:8, perimeterDefense:7, interiorDefense:6, passing:7, handles:7, playmaking:7, size:7, speed:5, bounce:6 },
   },
   {
-    name: 'Ray Allen', team: 'BOS', legend: true,
+    name: 'Ray Allen', team: 'BOS', legend: true, posGroup: 'guard',
     attrs: { jumpShot:11, finishing:6, perimeterDefense:8, interiorDefense:5, passing:6, handles:6, playmaking:6, size:6, speed:8, bounce:6 },
   },
   {
-    name: 'Steve Nash', team: 'PHX', legend: true,
-    attrs: { jumpShot:10, finishing:7, perimeterDefense:4, interiorDefense:3, passing:11, handles:9, playmaking:11, size:4, speed:8, bounce:6 },
+    name: 'Steve Nash', team: 'PHX', legend: true, posGroup: 'guard',
+    attrs: { jumpShot:10, finishing:7, perimeterDefense:4, interiorDefense:3, passing:11, handles:11, playmaking:11, size:4, speed:8, bounce:6 },
   },
 ]
 
@@ -150,12 +150,22 @@ const TIER_BANDS = [
 ]
 
 export const SAL_COLS = [
-  { key: 'finishing',  label: 'FINISHING',          types: ['finishing'] },
-  { key: 'shooting',   label: 'SHOOTING',           types: ['jumpShot'] },
-  { key: 'defense',    label: 'DEFENSE',            types: ['perimeterDefense', 'interiorDefense'] },
-  { key: 'playmaking', label: 'PLAYMAKING',         types: ['passing', 'handles', 'playmaking'] },
-  { key: 'size',       label: 'SIZE & ATHLETICISM', types: ['size', 'speed', 'bounce'] },
+  { key: 'finishing',  label: 'FINISHING',          guardTypes: ['finishing'],                          bigTypes: ['finishing'] },
+  { key: 'shooting',   label: 'SHOOTING',           guardTypes: ['jumpShot'],                           bigTypes: ['jumpShot'] },
+  { key: 'defense',    label: 'DEFENSE',            guardTypes: ['perimeterDefense'],                   bigTypes: ['interiorDefense'] },
+  { key: 'playmaking', label: 'PLAYMAKING',         guardTypes: ['handles', 'passing'],                 bigTypes: ['playmaking'] },
+  { key: 'size',       label: 'SIZE & ATHLETICISM', guardTypes: ['speed', 'bounce', 'size'],             bigTypes: ['size', 'bounce'] },
 ]
+
+function playerPosGroup(player) {
+  if (player.posGroup) return player.posGroup
+  const pos = NBA_POSITIONS[player.name]?.pos
+  return (pos === 'C' || pos === 'PF') ? 'big' : 'guard'
+}
+
+function typesFor(player, col) {
+  return playerPosGroup(player) === 'big' ? col.bigTypes : col.guardTypes
+}
 
 // One representative type per category (for ReportCard / SimPage display)
 export const SAL_REP_TYPES = ['finishing', 'jumpShot', 'perimeterDefense', 'passing', 'size']
@@ -211,9 +221,10 @@ const POWER_SEEN_KEY = 'sal_power_seen'
 // Compute the correct salary tier for a legend in a given column by ranking
 // their catScore against the regular player pool (no rand needed — deterministic).
 function legendTierFor(legend, col, regulars) {
-  const legScore = col.types.reduce((s, t) => s + (legend.attrs?.[t] ?? 5), 0) / col.types.length
-  const sorted   = regulars
-    .map(p => col.types.reduce((s, t) => s + (p.attrs?.[t] ?? 5), 0) / col.types.length)
+  const legTypes  = typesFor(legend, col)
+  const legScore  = legTypes.reduce((s, t) => s + (legend.attrs?.[t] ?? 5), 0) / legTypes.length
+  const sorted    = regulars
+    .map(p => { const ts = typesFor(p, col); return ts.reduce((s, t) => s + (p.attrs?.[t] ?? 5), 0) / ts.length })
     .sort((a, b) => b - a)
   const rank = sorted.findIndex(s => s <= legScore)
   const pct  = rank === -1 ? 0 : rank / sorted.length
@@ -283,7 +294,7 @@ function getPickedNamesForSeed(seed, cols, players) {
     const scored = regulars
       .map(p => ({
         name: p.name,
-        catScore: col.types.reduce((s, t) => s + (p.attrs?.[t] ?? 5), 0) / col.types.length
+        catScore: (() => { const ts = typesFor(p, col); return ts.reduce((s, t) => s + (p.attrs?.[t] ?? 5), 0) / ts.length })()
                   + (playerNoise.get(p.name) ?? 0),
       }))
       .sort((a, b) => b.catScore - a.catScore)
@@ -313,12 +324,13 @@ function generateGrid(cols, players, rand, recentlyUsed = new Set(), seed = 0) {
 
   function buildCard(p, col, price) {
     const attrs = {}
-    col.types.forEach(t => { attrs[t] = p.attrs?.[t] ?? 5 })
+    const pts = typesFor(p, col)
+    pts.forEach(t => { attrs[t] = p.attrs?.[t] ?? 5 })
     const hsId = NBA_HEADSHOTS[p.name]
     return {
       ...p,
       price, attrs,
-      catScore: col.types.reduce((s, t) => s + (p.attrs?.[t] ?? 5), 0) / col.types.length,
+      catScore: pts.reduce((s, t) => s + (p.attrs?.[t] ?? 5), 0) / pts.length,
       teamColor:  TEAM_META[p.team]?.color  ?? '#444',
       teamColor2: TEAM_META[p.team]?.color2 ?? '#222',
       photo:  hsId ? `/headshots/nba/${hsId}.jpg` : null,
@@ -336,7 +348,7 @@ function generateGrid(cols, players, rand, recentlyUsed = new Set(), seed = 0) {
         ...p,
         teamColor:  TEAM_META[p.team]?.color  ?? '#444',
         teamColor2: TEAM_META[p.team]?.color2 ?? '#222',
-        catScore: col.types.reduce((s, t) => s + (p.attrs?.[t] ?? 5), 0) / col.types.length
+        catScore: (() => { const ts = typesFor(p, col); return ts.reduce((s, t) => s + (p.attrs?.[t] ?? 5), 0) / ts.length })()
                   + (playerNoise.get(p.name) ?? 0)
                   - (recentlyUsed.has(p.name) ? RECENT_PENALTY : 0),
       }))
@@ -355,7 +367,7 @@ function generateGrid(cols, players, rand, recentlyUsed = new Set(), seed = 0) {
       const player = pool[Math.floor(rand() * pool.length)]
       used.add(player.name)
       const attrs = {}
-      col.types.forEach(t => { attrs[t] = player.attrs?.[t] ?? 5 })
+      typesFor(player, col).forEach(t => { attrs[t] = player.attrs?.[t] ?? 5 })
       const hsId = NBA_HEADSHOTS[player.name]
       return {
         ...player,
@@ -744,7 +756,7 @@ export default function BucketSalaryCap({ onConfirm, onBack, user, initialDateSt
     const build = {}
     SAL_COLS.forEach((col, ci) => {
       const p = sel[ci]
-      col.types.forEach(type => {
+      typesFor(p, col).forEach(type => {
         build[type] = {
           type, val: p.attrs[type] ?? 5,
           qb: p.short ?? p.name, qbFull: p.name,

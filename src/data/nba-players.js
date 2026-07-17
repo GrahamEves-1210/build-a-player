@@ -134,7 +134,7 @@ export const NBA_GUARD_PLAYERS = [
     attrs: { jumpShot:4, finishing:3, passing:3, handles:3, perimeterDefense:7, speed:5, bounce:4, size:6, basketballIQ:3, clutch:3 } },
 
   { name: "Derrick White", short: "White", team: 'BOS', starter: true, captain: false,
-    attrs: { jumpShot:5, finishing:5, passing:8, handles:5, perimeterDefense:8, speed:6, bounce:6, size:4, basketballIQ:8, clutch:5 } },
+    attrs: { jumpShot:5, finishing:5, passing:8, handles:5, perimeterDefense:9, speed:6, bounce:6, size:4, basketballIQ:8, clutch:5 } },
 
   // ─── BKN ───────────────────────────────────────────────────────────
   { name: "Mikel Brown Jr.", short: "Jr.", team: 'BKN', starter: false, captain: false,
@@ -167,7 +167,7 @@ export const NBA_GUARD_PLAYERS = [
   { name: "Nolan Traore", short: "Traore", team: 'BKN', starter: false, captain: false,
     attrs: { jumpShot:4, finishing:2, passing:6, handles:4, perimeterDefense:3, speed:5, bounce:3, size:3, basketballIQ:4, clutch:3 } },
 
-  { name: "Ziaire Williams", short: "Williams", team: 'BKN', starter: false, captain: false,
+  { name: "Ziaire Williams", short: "Williams", team: 'LAL', starter: false, captain: false,
     attrs: { jumpShot:4, finishing:1, passing:3, handles:5, perimeterDefense:4, speed:5, bounce:3, size:8, basketballIQ:3, clutch:3 } },
 
   // ─── CHA ───────────────────────────────────────────────────────────
@@ -324,14 +324,14 @@ export const NBA_GUARD_PLAYERS = [
     attrs: { jumpShot:5, finishing:4, passing:4, handles:3, perimeterDefense:4, speed:5, bounce:5, size:7, basketballIQ:3, clutch:3 } },
 
   { name: "Duncan Robinson", short: "Robinson", team: 'DET', starter: false, captain: false,
-    attrs: { jumpShot:8, finishing:4, passing:2, handles:2, perimeterDefense:2, speed:5, bounce:4, size:7, basketballIQ:4, clutch:4 } },
+    attrs: { jumpShot:9, finishing:4, passing:2, handles:2, perimeterDefense:2, speed:5, bounce:4, size:7, basketballIQ:4, clutch:4 } },
 
   { name: "Ausar Thompson", short: "Thompson", team: 'DET', starter: true, captain: false,
     attrs: { jumpShot:2, finishing:8, passing:5, handles:5, perimeterDefense:11, speed:10, bounce:11, size:7, basketballIQ:4, clutch:4 } },
 
   // ─── GSW ───────────────────────────────────────────────────────────
   { name: "Jimmy Butler III", short: "III", team: 'GSW', starter: true, captain: false,
-    attrs: { jumpShot:5, finishing:8, passing:7, handles:6, perimeterDefense:4, speed:7, bounce:6, size:7, basketballIQ:9, clutch:10 } },
+    attrs: { jumpShot:5, finishing:8, passing:7, handles:6, perimeterDefense:4, speed:7, bounce:6, size:7, basketballIQ:9, clutch:11 } },
 
   { name: "Seth Curry", short: "Curry", team: 'GSW', starter: false, captain: false,
     attrs: { jumpShot:8, finishing:2, passing:3, handles:3, perimeterDefense:2, speed:5, bounce:5, size:3, basketballIQ:3, clutch:3 } },
@@ -384,7 +384,7 @@ export const NBA_GUARD_PLAYERS = [
     attrs: { jumpShot:5, finishing:4, passing:4, handles:3, perimeterDefense:4, speed:5, bounce:5, size:7, basketballIQ:3, clutch:3 } },
 
   { name: "Tyrese Haliburton", short: "Haliburton", team: 'IND', starter: true, captain: true,
-    attrs: { jumpShot:7, finishing:7, passing:11, handles:9, perimeterDefense:4, speed:7, bounce:6, size:6, basketballIQ:9, clutch:9 } },
+    attrs: { jumpShot:7, finishing:7, passing:11, handles:9, perimeterDefense:4, speed:7, bounce:6, size:6, basketballIQ:9, clutch:11 } },
 
   { name: "Quenton Jackson", short: "Jackson", team: 'IND', starter: false, captain: false,
     attrs: { jumpShot:5, finishing:4, passing:3, handles:3, perimeterDefense:4, speed:5, bounce:5, size:5, basketballIQ:3, clutch:3 } },
@@ -422,7 +422,7 @@ export const NBA_GUARD_PLAYERS = [
     attrs: { jumpShot:4, finishing:7, passing:2, handles:2, perimeterDefense:7, speed:8, bounce:9, size:7, basketballIQ:3, clutch:3 } },
 
   { name: "Kawhi Leonard", short: "Kawhi", team: 'LAC', starter: true, captain: false,
-    attrs: { jumpShot:8, finishing:7, passing:6, handles:7, perimeterDefense:9, speed:7, bounce:8, size:8, basketballIQ:8, clutch:8 } },
+    attrs: { jumpShot:9, finishing:7, passing:6, handles:7, perimeterDefense:9, speed:7, bounce:8, size:8, basketballIQ:8, clutch:8 } },
 
   { name: "Bennedict Mathurin", short: "Mathurin", team: 'LAC', starter: false, captain: false,
     attrs: { jumpShot:6, finishing:6, passing:3, handles:5, perimeterDefense:4, speed:7, bounce:7, size:6, basketballIQ:4, clutch:4 } },
@@ -500,7 +500,7 @@ export const NBA_GUARD_PLAYERS = [
     attrs: { jumpShot:6, finishing:4, passing:3, handles:3, perimeterDefense:4, speed:5, bounce:5, size:7, basketballIQ:3, clutch:3 } },
 
   { name: "Tim Hardaway Jr.", short: "Jr.", team: 'MIA', starter: true, captain: false,
-    attrs: { jumpShot:6, finishing:5, passing:3, handles:4, perimeterDefense:3, speed:6, bounce:5, size:5, basketballIQ:5, clutch:4 } },
+    attrs: { jumpShot:7, finishing:5, passing:3, handles:4, perimeterDefense:3, speed:6, bounce:5, size:5, basketballIQ:5, clutch:4 } },
 
   { name: "Keshad Johnson", short: "Johnson", team: 'MIA', starter: false, captain: false,
     attrs: { jumpShot:2, finishing:5, passing:2, handles:2, perimeterDefense:4, speed:7, bounce:10, size:6, basketballIQ:3, clutch:3 } },
@@ -667,7 +667,7 @@ export const NBA_GUARD_PLAYERS = [
     attrs: { jumpShot:6, finishing:4, passing:4, handles:5, perimeterDefense:8, speed:6, bounce:5, size:4, basketballIQ:3, clutch:3 } },
 
   { name: "Jalen Williams", short: "Williams", team: 'OKC', starter: true, captain: false,
-    attrs: { jumpShot:5, finishing:7, passing:7, handles:7, perimeterDefense:5, speed:7, bounce:7, size:6, basketballIQ:7, clutch:6 } },
+    attrs: { jumpShot:5, finishing:8, passing:7, handles:7, perimeterDefense:9, speed:7, bounce:7, size:6, basketballIQ:7, clutch:6 } },
 
   { name: "Kenrich Williams", short: "K. Williams", team: 'OKC', starter: false, captain: false,
     attrs: { jumpShot:6, finishing:5, passing:4, handles:3, perimeterDefense:5, speed:5, bounce:6, size:7, basketballIQ:5, clutch:5 } },
@@ -677,7 +677,7 @@ export const NBA_GUARD_PLAYERS = [
     attrs: { jumpShot:8, finishing:6, passing:6, handles:5, perimeterDefense:4, speed:7, bounce:6, size:6, basketballIQ:6, clutch:6 } },
 
   { name: "Anthony Black", short: "Black", team: 'ORL', starter: false, captain: false,
-    attrs: { jumpShot:5, finishing:4, passing:5, handles:5, perimeterDefense:6, speed:5, bounce:5, size:6, basketballIQ:3, clutch:3 } },
+    attrs: { jumpShot:5, finishing:4, passing:5, handles:5, perimeterDefense:7, speed:5, bounce:5, size:6, basketballIQ:3, clutch:3 } },
 
   { name: "Tristan da Silva", short: "Silva", team: 'ORL', starter: false, captain: false,
     attrs: { jumpShot:6, finishing:6, passing:4, handles:3, perimeterDefense:5, speed:5, bounce:6, size:7, basketballIQ:4, clutch:4 } },

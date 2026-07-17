@@ -742,6 +742,7 @@ function ScreenBuild({ result, build, types, attrMap, onNext, adsDisabled = fals
         {filled.map((t, i) => {
           const meta = attrMap[t] ?? { label: t, hex: '#888' }
           const data = build[t]
+          const displayVal = t === 'size' ? Math.min(11, data.val + 1) : data.val
           return (
             <div key={t} className={`simp-attr-row${i < rowsVisible ? ' simp-row-visible' : ''}`}>
               <QBAvatar photo={data.photo} team={data.team} color={data.teamColor} size={46} logoDir="/logos/nba/" />
@@ -749,8 +750,8 @@ function ScreenBuild({ result, build, types, attrMap, onNext, adsDisabled = fals
                 <span className="simp-attr-name">{meta.label}</span>
                 <span className="simp-attr-qb">{data.qbFull}</span>
               </div>
-              <span className="simp-grade-circle" style={{ background: gradeColor(data.val), color: '#07120a' }}>
-                {valToGrade(data.val)}
+              <span className="simp-grade-circle" style={{ background: gradeColor(displayVal), color: '#07120a' }}>
+                {valToGrade(displayVal)}
               </span>
             </div>
           )
