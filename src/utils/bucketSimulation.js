@@ -394,7 +394,8 @@ export function runBucketSimulation(build, types, team, position = 'guard', rngS
 
   // MVP: player must out-stat the real MVP candidate pool (SGA, Jokic, Luka, Wemby, Giannis)
   const mvpStat = (p, a, r) => p + a * 1.5 + r * 0.75
-  const playerMvpRating = mvpStat(ppg, apg, rpg)
+  const eliteScoringBonus = Math.max(0, ppg - 30) * 1.5
+  const playerMvpRating = mvpStat(ppg, apg, rpg) + eliteScoringBonus
   const topCandidateRating = Math.max(
     48, // floor — even in a weak MVP year the bar never drops below this
     mvpStat(31 + rand() * 3, 5  + rand() * 2, 4  + rand() * 2),  // SGA
@@ -403,10 +404,12 @@ export function runBucketSimulation(build, types, team, position = 'guard', rngS
     mvpStat(23 + rand() * 4, 3  + rand() * 2, 10 + rand() * 3),  // Wemby
     mvpStat(27 + rand() * 4, 5  + rand() * 2, 11 + rand() * 2),  // Giannis
   )
-  // shift+4, steep k: tied ≈ 97%, 4pts below = 50%, 8pts below ≈ 3% (effectively gone)
   const mvpGap = playerMvpRating - topCandidateRating + 4
-  const mvpOdds = 1 / (1 + Math.exp(-mvpGap * 0.9))
-  const mvp = wins >= 44 && rand() < mvpOdds
+  const mvpOddsBase = 1 / (1 + Math.exp(-mvpGap * 0.9))
+  // Historically dominant seasons lock up MVP — lower wins bar to just making playoffs
+  const mvpDominant = madePlayoffs && (ppg >= 30 || (ppg >= 27 && apg >= 8 && rpg >= 8))
+  const mvpOdds = mvpDominant ? Math.max(0.97, mvpOddsBase) : mvpOddsBase
+  const mvp = madePlayoffs && rand() < mvpOdds
 
   // DPOY: truly elite defensive stats — rare, ~8-15% of seasons
   const dpoyScore = spg * 10 + bpg * 8 + (seed <= 4 ? 4 : seed <= 8 ? 2 : 0)

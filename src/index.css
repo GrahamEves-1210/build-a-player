@@ -12627,8 +12627,8 @@ html.is-mac [id^="pw-oop-bottom_rail"] > * {
 
 /* Matchup box */
 .brk2-matchup {
-  background: rgba(255,255,255,0.10);
-  border: 1px solid rgba(255,255,255,0.18);
+  background: var(--card);
+  border: 1px solid var(--border-hi);
   border-radius: 7px;
   overflow: hidden;
   position: relative;
@@ -12641,22 +12641,22 @@ html.is-mac [id^="pw-oop-bottom_rail"] > * {
   top: 25%;
   height: 50%;
   width: 5px;
-  border-top: 1px solid rgba(255,255,255,0.15);
-  border-bottom: 1px solid rgba(255,255,255,0.15);
-  border-right: 1px solid rgba(255,255,255,0.15);
+  border-top: 1px solid var(--border-hi);
+  border-bottom: 1px solid var(--border-hi);
+  border-right: 1px solid var(--border-hi);
 }
 /* Reversed: connector on left */
 .brk2-conf-rev .brk2-col:not(:last-child) .brk2-matchup::after {
   right: auto;
   left: -5px;
   border-right: none;
-  border-left: 1px solid rgba(255,255,255,0.15);
+  border-left: 1px solid var(--border-hi);
 }
 
 /* Separator line between two teams in a matchup */
 .brk2-mid-line {
   height: 1px;
-  background: rgba(255,255,255,0.07);
+  background: var(--border);
 }
 
 /* Team row */

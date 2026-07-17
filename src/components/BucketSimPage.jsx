@@ -1407,27 +1407,23 @@ function generateConfBracket(standings, myShort, playoffRounds) {
   const get = s => ({ ...(standings[s - 1] ?? { short: '???', wins: 30 }), seed: s })
   const simGame = (aAdv = 0) => (0.38 + aAdv + Math.random() * 0.24) > 0.50
 
-  // Play-in: seeds 7-10 → produce seeds 7 and 8
-  const s7 = get(7), s8 = get(8), s9 = get(9), s10 = get(10)
-  let playin7 = simGame(0.05) ? { ...s7, seed: 7 } : { ...s8, seed: 7 }
-  const loser78  = playin7.short === s7.short ? { ...s8 } : { ...s7 }
-  const win910   = simGame(0.05) ? { ...s9 } : { ...s10 }
-  let playin8  = simGame(0.03) ? { ...loser78, seed: 8 } : { ...win910, seed: 8 }
+  // Use standings positions directly for seeds 7 and 8 — this matches what simPlayoffs uses
+  // (get(8) = standings[7]) so the bracket teams are always consistent with the actual opponents.
+  // Only override if the player themselves went through the play-in.
+  let playin7 = { ...get(7), seed: 7 }
+  let playin8 = { ...get(8), seed: 8 }
 
-  // If player went through play-in, override to match their actual result
   const myPlayin = playoffRounds?.find(r => r.type === 'playin')
   if (myPlayin) {
-    const myTeamObj = [s7, s8, s9, s10].find(t => t.short === myShort)
+    const myTeamObj = [get(7), get(8), get(9), get(10)].find(t => t.short === myShort)
     if (myTeamObj) {
       if (myPlayin.newSeed === 7) {
         playin7 = { ...myTeamObj, seed: 7 }
-        // simulation may have also placed player as seed 8 (loser78 path); fix it
-        if (playin8.short === myShort) playin8 = { ...win910, seed: 8 }
+        if (playin8.short === myShort) playin8 = { ...get(8), seed: 8 }
       }
       if (myPlayin.newSeed === 8) {
         playin8 = { ...myTeamObj, seed: 8 }
-        // simulation may have also placed player as seed 7; the actual 7-seed winner is the other team
-        if (playin7.short === myShort) playin7 = { ...(s7.short === myShort ? s8 : s7), seed: 7 }
+        if (playin7.short === myShort) playin7 = { ...get(7), seed: 7 }
       }
     }
   }
@@ -1444,6 +1440,12 @@ function generateConfBracket(standings, myShort, playoffRounds) {
     if (isMyMatchup) {
       const r = playoffRounds.find(r => r.type === 'series' && r.roundIndex === roundIndex)
       if (r) return r.won ? (a.short === myShort ? { ...a } : { ...b }) : (a.short === myShort ? { ...b } : { ...a })
+    }
+    // If the player's next-round opponent came from this matchup, force the correct winner
+    const nextRound = playoffRounds?.find(r => r.type === 'series' && r.roundIndex === roundIndex + 1)
+    if (nextRound?.opponent) {
+      if (a.short === nextRound.opponent.short) return { ...a }
+      if (b.short === nextRound.opponent.short) return { ...b }
     }
     return simMatchup(a, b)
   }
@@ -2564,7 +2566,7 @@ export default function BucketSimPage({ result, build, types, position, onBack, 
         if (!adsDisabled && window.innerWidth <= 768) {
           const ads = []
           if (next > 0 && next < screens.length - 1) ads.push({ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-footer' })
-          if (next < 3 && next !== 2) ads.push({ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-plf' })
+          if (next < 3) ads.push({ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-plf' })
           if (ads.length) window.ramp.spaAddAds(ads)
         }
       })
@@ -2643,11 +2645,11 @@ export default function BucketSimPage({ result, build, types, position, onBack, 
           </div>
         )}
 
-        {!adsDisabled && screen < screens.length - 1 && screen !== 2 && window.innerWidth <= 768 && (
+        {!adsDisabled && screen < screens.length - 1 && window.innerWidth <= 768 && (
           <div id="ramp-cntr1-plf" className="plf-banner-ad" />
         )}
         {screens[screen]}
-        {!adsDisabled && screen > 0 && screen < screens.length - 1 && window.innerWidth <= 768 && (
+        {!adsDisabled && screen > 0 && screen < screens.length - 1 && screen !== 2 && window.innerWidth <= 768 && (
           <div id="ramp-cntr1-footer" className="ad-cntr1-mobile" style={{ marginTop: 8 }} />
         )}
         <div className="simp-footer-disclaimer">Fan-made · Not affiliated with the NBA</div>

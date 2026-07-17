@@ -175,14 +175,14 @@ export default function BucketLeaderboardPage({ onBack, currentUser, adsDisabled
   }, [])
 
   useEffect(() => {
-    if (adsDisabled || window.innerWidth > 768 || !rows.length) return
+    if (adsDisabled || window.innerWidth > 768 || loading || !rows.length) return
     const count = view === 'goat' ? rows.length : SLOTS
     const ads = []
     for (let i = 10; i <= count; i += 10) {
       ads.push({ type: 'standard_iab_cntr1', selectorId: `ramp-cntr1-lb-mob-${i}` })
     }
     if (ads.length) window.ramp?.que?.push(() => window.ramp.spaAddAds(ads))
-  }, [rows])
+  }, [loading])
 
   useEffect(() => {
     if (!supabase) { setLoading(false); return }
