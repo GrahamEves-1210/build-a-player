@@ -723,7 +723,7 @@ function ScreenBuild({ result, build, types, attrMap, onNext, adsDisabled = fals
   useEffect(() => {
     if (adsDisabled || window.innerWidth > 768) return
     window.ramp?.que?.push(() => {
-      window.ramp.spaAddAds([{ type: 'standard_iab_cntr2', selectorId: 'ramp-cntr1-build' }])
+      window.ramp.spaAddAds([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-build' }])
     })
   }, [])
 
@@ -878,7 +878,7 @@ function ScreenSeason({ result, awards, onNext, adsDisabled = false }) {
   useEffect(() => {
     if (!allDone || adsDisabled || window.innerWidth > 768) return
     window.ramp?.que?.push(() => {
-      window.ramp.spaAddAds([{ type: 'standard_iab_cntr2', selectorId: 'ramp-cntr1-season' }])
+      window.ramp.spaAddAds([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-season' }])
     })
   }, [allDone])
 
@@ -1173,12 +1173,12 @@ function ScreenGOAT({ result, awards, onNext, onReset, onBack, adsDisabled = fal
     if (!listVisible || adsDisabled || window.innerWidth > 768) return
     window.ramp?.que?.push(() => {
       window.ramp.spaAddAds([
-        { type: 'standard_iab_cntr2', selectorId: 'ramp-cntr1-goat-71' },
-        { type: 'standard_iab_cntr2', selectorId: 'ramp-cntr1-goat-61' },
-        { type: 'standard_iab_cntr2', selectorId: 'ramp-cntr1-goat-51' },
-        { type: 'standard_iab_cntr2', selectorId: 'ramp-cntr1-goat-41' },
-        { type: 'standard_iab_cntr2', selectorId: 'ramp-cntr1-goat-31' },
-        { type: 'standard_iab_cntr2', selectorId: 'ramp-cntr1-goat-21' },
+        { type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-goat-71' },
+        { type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-goat-61' },
+        { type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-goat-51' },
+        { type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-goat-41' },
+        { type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-goat-31' },
+        { type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-goat-21' },
       ])
     })
   }, [listVisible])
@@ -2289,8 +2289,8 @@ function ScreenFinal({ result, awards, build, types, attrMap, onReset, onBack, a
     if (adsDisabled || window.innerWidth > 768) return
     window.ramp?.que?.push(() => {
       window.ramp.spaAddAds([
-        { type: 'standard_iab_cntr2', selectorId: 'ramp-cntr1-final-stats' },
-        { type: 'standard_iab_cntr2', selectorId: 'ramp-cntr1-sim' },
+        { type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-final-stats' },
+        { type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-sim' },
       ])
     })
   }, [])
@@ -2561,7 +2561,7 @@ export default function BucketSimPage({ result, build, types, position, onBack, 
       window.ramp?.que?.push(() => {
         window.ramp.spaNewPage()
         if (!adsDisabled && next < 3 && window.innerWidth <= 768) {
-          window.ramp.spaAddAds([{ type: 'standard_iab_cntr2', selectorId: 'ramp-cntr1-plf' }])
+          window.ramp.spaAddAds([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-plf' }])
         }
       })
       return next
