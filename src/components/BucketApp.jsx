@@ -292,7 +292,6 @@ export default function BucketApp() {
 
   // Initialize Playwire ads on mount and page change
   useEffect(() => {
-    if (window.innerWidth > 768) return
     window.ramp?.que?.push(() => { window.ramp.spaNewPage() })
   }, [page])
 
