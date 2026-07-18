@@ -461,7 +461,12 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
 
   return (
     <div className="prf-page">
-      <div className="prf-col">
+      {!isBucket && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', overflow: 'hidden' }}>
+          <div style={{ position: 'absolute', inset: '-20px', backgroundImage: "url('/footballbackground.png')", backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(4px) brightness(0.12)' }} />
+        </div>
+      )}
+      <div className="prf-col" style={!isBucket ? { position: 'relative', zIndex: 1 } : undefined}>
 
         {/* ── Top nav ── */}
         <div className="prf-top-nav">
@@ -590,32 +595,6 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
                 </div>
               </div>
 
-              <div className="plus-ratings-box plus-ratings-box--player">
-                <div className="plus-ratings-hd">
-                  <div className="plus-ratings-lbl-group">
-                    <span className="plus-section-label">Sandbox Mode</span>
-                    <span className="plus-ratings-warn" style={{ visibility: isCustomMode ? 'visible' : 'hidden' }}>Builds won't save</span>
-                  </div>
-                  <label className="plus-toggle">
-                    <input
-                      type="checkbox"
-                      checked={isCustomMode}
-                      onChange={e => {
-                        if (e.target.checked) setShowSandboxWarning(true)
-                        else onCustomModeChange?.(false)
-                      }}
-                    />
-                    <span className="plus-toggle-track" />
-                  </label>
-                </div>
-                <button
-                  className={`plus-edit-ratings-btn${!isCustomMode ? ' plus-edit-ratings-btn--off' : ''}`}
-                  onClick={isCustomMode ? () => onOpenCustomModal?.() : undefined}
-                  disabled={!isCustomMode}
-                >
-                  Custom Build
-                </button>
-              </div>
 
 
               <button className="plus-manage-btn" onClick={handleManageSubscription}>

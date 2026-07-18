@@ -231,8 +231,9 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
   const [phase, setPhase]               = useState(() => savedResult?.selectedQB ? 'done' : 'idle')
   const [selectedTeam, setSelectedTeam] = useState(() => savedResult?.selectedTeam ?? null)
   const [selectedQB,   setSelectedQB]   = useState(() => savedResult?.selectedQB ?? null)
-  const [qbRespinUsed, setQbRespinUsed] = useState(() => savedResult?.qbRespinUsed ?? 0)
-  const [excludedQB,   setExcludedQB]   = useState(null)
+  const [qbRespinUsed,   setQbRespinUsed]   = useState(() => savedResult?.qbRespinUsed   ?? 0)
+  const [teamRespinUsed, setTeamRespinUsed] = useState(() => savedResult?.teamRespinUsed ?? 0)
+  const [excludedQB,     setExcludedQB]     = useState(null)
   const [draggingType, setDraggingType] = useState(null)
   const [spinCount, setSpinCount]       = useState(0)
   const [hideGrades,   setHideGrades]   = useState(() => localStorage.getItem('bap-hide-grades') === 'true')
@@ -265,7 +266,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
 
   useEffect(() => {
     if (!onSaveResult) return
-    if (phase === 'done' && selectedQB) onSaveResult({ selectedTeam, selectedQB, qbRespinUsed })
+    if (phase === 'done' && selectedQB) onSaveResult({ selectedTeam, selectedQB, qbRespinUsed, teamRespinUsed })
     else if (phase === 'idle') onSaveResult(null)
   }, [phase, selectedTeam, selectedQB, qbRespinUsed])
 
@@ -275,6 +276,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
 
   useEffect(() => {
     setQbRespinUsed(0)
+    setTeamRespinUsed(0)
   }, [gameKey])
 
   // Team reel calls this when it naturally halts
@@ -307,6 +309,16 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
     setSelectedQB(null)
     setPhase('qb')
   }, [selectedQB])
+
+  const handleTeamRespin = useCallback(() => {
+    clearAll()
+    setSelectedQB(null)
+    setSelectedTeam(null)
+    setExcludedQB(null)
+    setTeamRespinUsed(n => n + 1)
+    setSpinCount(c => c + 1)
+    setPhase('team')
+  }, [])
 
   const isSpinningTeam = phase === 'team'
   const isSpinningQB   = phase === 'qb'
@@ -427,29 +439,56 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
             <div className="reel-tri reel-tri-r" />
           </div>
 
-          {(() => {
-            const canRespin = isDone && qbRespinUsed < 2 && !complete
-            return (
-              <div className="spin-btn-wrap">
+          <div className="spin-btn-wrap">
+            {isDone && !complete ? (
+              <div className="spin-respin-split">
                 <button
-                  className={`spin-btn${isDone && !canRespin ? ' spin-btn-wait' : ''}`}
-                  onClick={canRespin ? handleQBRespin : handleSpin}
-                  disabled={isSpinning || complete || (isDone && !canRespin)}
+                  className={`spin-respin-half spin-respin-team${teamRespinUsed >= 1 ? ' spin-respin-used' : ''}`}
+                  onClick={teamRespinUsed < 1 ? handleTeamRespin : undefined}
+                  disabled={teamRespinUsed >= 1}
+                  onPointerDown={e => {
+                    if (teamRespinUsed >= 1) return
+                    const el = e.currentTarget
+                    el.style.transform = 'scale(0.97) translateZ(0)'
+                    setTimeout(() => { el.style.transform = '' }, 160)
+                  }}
                 >
-                  {canRespin ? <>{pLabel} RESPIN? <span className="spin-btn-badge">{2 - qbRespinUsed}</span></> : 'SPIN'}
+                  RESPIN TEAM <span className="spin-btn-badge">{Math.max(0, 1 - teamRespinUsed)}</span>
                 </button>
-                {onReset && (
-                  <button className="spin-reset-circle" onClick={onReset} disabled={phase === 'team' || phase === 'team-done' || phase === 'qb'} aria-label="Reset build">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
-                      <path d="M3 3v5h5"/>
-                    </svg>
-                    <span className="spin-reset-circle-lbl">Reset</span>
-                  </button>
-                )}
+                <div className="spin-respin-divider" />
+                <button
+                  className={`spin-respin-half spin-respin-player${qbRespinUsed >= 1 ? ' spin-respin-used' : ''}`}
+                  onClick={qbRespinUsed < 1 ? handleQBRespin : undefined}
+                  disabled={qbRespinUsed >= 1}
+                  onPointerDown={e => {
+                    if (qbRespinUsed >= 1) return
+                    const el = e.currentTarget
+                    el.style.transform = 'scale(0.97) translateZ(0)'
+                    setTimeout(() => { el.style.transform = '' }, 160)
+                  }}
+                >
+                  RESPIN {pLabel} <span className="spin-btn-badge">{Math.max(0, 1 - qbRespinUsed)}</span>
+                </button>
               </div>
-            )
-          })()}
+            ) : (
+              <button
+                className={`spin-btn${isDone && complete ? ' spin-btn-wait' : ''}`}
+                onClick={handleSpin}
+                disabled={isSpinning || complete}
+              >
+                SPIN
+              </button>
+            )}
+            {onReset && (
+              <button className="spin-reset-circle" onClick={onReset} disabled={phase === 'team' || phase === 'team-done' || phase === 'qb'} aria-label="Reset build">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                  <path d="M3 3v5h5"/>
+                </svg>
+                <span className="spin-reset-circle-lbl">Reset</span>
+              </button>
+            )}
+          </div>
 
           {isDone && selectedQB && (
             <div className="qb-reveal-card" style={{ '--qb-color': selectedQB.color }}>
@@ -466,9 +505,11 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
                 <div className="qb-reveal-name">{selectedQB.name}</div>
                 <div className="qb-reveal-meta">
                   {selectedQB.teamName ?? selectedQB.team}
-                  {selectedQB.years ? ` · ${selectedQB.years}` : ''}
                   {!isBucket && (selectedQB.starter ? '' : ' · Bench')}
                 </div>
+                {selectedQB.years && (
+                  <div className="qb-reveal-year">{selectedQB.years}</div>
+                )}
               </div>
               {selectedQB.position && (
                 <div className="qb-reveal-pos" style={{ background: POS_COLORS[selectedQB.position] ?? selectedQB.color }}>

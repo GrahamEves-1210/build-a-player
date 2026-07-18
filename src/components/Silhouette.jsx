@@ -376,7 +376,17 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
   }, [bounds, isMobile, isBucket, isRB, zones])
 
   return (
-    <section className="field-center">
+    <section className="field-center" style={isBucket ? { backgroundColor: '#090a0d' } : undefined}>
+      {isBucket && (
+        <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', zIndex: 0, pointerEvents: 'none' }}>
+          <div style={{ position: 'absolute', inset: '-20px', backgroundImage: "url('/bucketbackground.png')", backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(4px) brightness(1.4)' }} />
+        </div>
+      )}
+      {!isBucket && (
+        <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', zIndex: 0, pointerEvents: 'none' }}>
+          <div style={{ position: 'absolute', inset: '-20px', backgroundImage: "url('/footballbackground.png')", backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(4px) brightness(0.7)' }} />
+        </div>
+      )}
       <div className="category-pills">
         <HWTracker build={build} isRB={isRB} isBucket={isBucket} />
         {cats.map(cat => (
@@ -495,7 +505,7 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
               : (isRB ? '/rbsilhouette.png' : '/qb-silhouette.png')
           }
           alt=""
-          className={`sil-img${isRB ? ' sil-img--rb' : ''}${isBucket ? ' sil-img--bucket' : ''}`}
+          className={`sil-img${isRB ? ' sil-img--rb' : ''}${isBucket ? ' sil-img--bucket' : ''}${complete ? ' sil-img--done' : ''}`}
           draggable={false}
           style={isBucket ? { transform: `scale(${BUCKET_FIGURE_SCALE})`, transformOrigin: 'center center' } : isRB ? { transform: `scale(${RB_FIGURE_SCALE})`, transformOrigin: 'center center' } : undefined}
         />

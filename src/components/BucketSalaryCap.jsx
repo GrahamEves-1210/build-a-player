@@ -240,6 +240,13 @@ const HARDCODED_GRIDS = {
     ['Jalen Brunson','Miles Bridges','Kawhi Leonard','Shaedon Sharpe','Josh Hart'],
     ['John Collins','Pascal Siakam','Jaden McDaniels','Josh Giddey','RJ Barrett'],
   ]),
+  20260718: buildHardcodedGrid([
+    ['Michael Jordan','Michael Porter Jr.','Nickeil Alexander-Walker','Terance Mann','Toumani Camara'],
+    ['Dirk Nowitzki','Tristan da Silva','Jase Richardson','Sion James','Julius Randle'],
+    ['Walker Kessler','Peyton Watson','Aaron Gordon','Jamal Murray','Ace Bailey'],
+    ['Nikola Jokic','AJ Dybantsa','OG Anunoby','Jaden McDaniels','Koa Peat'],
+    ['Russell Westbrook','Tyrese Maxey','Luke Kornet','Kingston Flemings','Jabari Smith Jr.'],
+  ]),
 }
 
 // Category accent colors — one per column key
@@ -473,15 +480,16 @@ function gradeColor(g) {
 }
 
 // ─── PlayerCard ───────────────────────────────────────────────────────────────
-function PlayerCard({ player, isSelected, colHasSelection, onClick, viewOnly, shufflePhase, shuffleDelay = 0, scoutGrade = null, scoutMode = false }) {
+function PlayerCard({ player, isSelected, colHasSelection, onClick, viewOnly, shufflePhase, shuffleDelay = 0, scoutGrade = null, scoutMode = false, shuffleHighlight = null }) {
   const dimmed = colHasSelection && !isSelected
   const [first, ...rest] = player.name.split(' ')
   const last = rest.join(' ')
   const animClass = shufflePhase === 'out' ? ' sc-card--flip-out' : shufflePhase === 'in' ? ' sc-card--flip-in' : ''
+  const hlClass = shuffleHighlight === 'col' ? ' sc-card--hl-col' : shuffleHighlight === 'row' ? ' sc-card--hl-row' : ''
   return (
     <button
       onClick={viewOnly ? undefined : onClick}
-      className={`sc-card${isSelected ? ' sc-card--sel' : ''}${dimmed ? ' sc-card--dim' : ''}${viewOnly ? ' sc-card--view' : ''}${animClass}`}
+      className={`sc-card${isSelected ? ' sc-card--sel' : ''}${dimmed ? ' sc-card--dim' : ''}${viewOnly ? ' sc-card--view' : ''}${animClass}${hlClass}`}
       style={{ '--tc': player.teamColor, '--sel': isNearBlack(player.teamColor) ? '#888' : player.teamColor, '--sd': `${shuffleDelay}ms` }}
     >
       <div className="sc-card-visual" data-team={player.team}>
@@ -708,8 +716,11 @@ export default function BucketSalaryCap({ onConfirm, onBack, user, initialDateSt
     try { const { ci, players } = JSON.parse(saved); return { [ci]: players } } catch { return {} }
   })
   const [shufflingCol,    setShufflingCol]    = useState(null)
+  const [shufflingRow,    setShufflingRow]    = useState(null)
+  const [rowOverrides,    setRowOverrides]    = useState({})
   const [shufflePhase,    setShufflePhase]    = useState(null)
   const [shuffleMode,     setShuffleMode]     = useState(false)
+  const [hoveredShuffle,  setHoveredShuffle]  = useState(null)
   const [scoutsLeft,      setScoutsLeft]      = useState(() => localStorage.getItem(SCOUTED_KEY(getESTDate(0).str, user?.id)) ? 0 : 1)
   const [scoutMode,       setScoutMode]       = useState(false)
   const [scoutedGrades,   setScoutedGrades]   = useState({})
@@ -740,9 +751,14 @@ export default function BucketSalaryCap({ onConfirm, onBack, user, initialDateSt
     return () => imgs.forEach(i => { i.src = '' })
   }, [grid])
 
+  useEffect(() => { if (!shuffleMode) setHoveredShuffle(null) }, [shuffleMode])
+
   const effectiveGrid = useMemo(
-    () => grid.map((col, ci) => shuffleOverride[ci] ?? col),
-    [grid, shuffleOverride]
+    () => grid.map((col, ci) => {
+      const base = shuffleOverride[ci] ?? col
+      return base.map((player, ti) => rowOverrides[ti]?.[ci] ?? player)
+    }),
+    [grid, shuffleOverride, rowOverrides]
   )
 
   // Daily budget varies ±20 from 150 in steps of 10, seeded by date
@@ -789,6 +805,46 @@ export default function BucketSalaryCap({ onConfirm, onBack, user, initialDateSt
       }
       setShufflePhase('in')
       setTimeout(() => { setShufflingCol(null); setShufflePhase(null) }, 500)
+    }, 380)
+  }
+
+  const executeShuffleRow = (ti) => {
+    const effectiveShuffle = mode === 'infinite' ? infShufflesLeft : shufflesLeft
+    if (effectiveShuffle === 0 || shufflingCol !== null || shufflingRow !== null || (mode === 'daily' && alreadyPlayed)) return
+    setShuffleMode(false)
+    setShufflingRow(ti)
+    setShufflePhase('out')
+    setTimeout(() => {
+      const original = effectiveGrid.map(col => col[ti])
+      let current
+      do {
+        current = [...original]
+        for (let i = current.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1))
+          ;[current[i], current[j]] = [current[j], current[i]]
+        }
+      } while (current.some((p, i) => p.name === original[i].name))
+      const price = TIERS[ti]
+      const newMap = {}
+      current.forEach((p, ci) => {
+        const col = SAL_COLS[ci]
+        const srcAttrs = _playerMap.get(p.name)?.attrs ?? p.attrs ?? {}
+        const attrs = {}
+        typesFor({ ...p, attrs: srcAttrs }, col).forEach(t => { attrs[t] = srcAttrs[t] ?? 5 })
+        newMap[ci] = { ...p, price, attrs, id: `${col.key}-${price}-${p.name}-r` }
+      })
+      setRowOverrides(prev => ({ ...prev, [ti]: newMap }))
+      setSel(prev => {
+        const next = { ...prev }
+        SAL_COLS.forEach((_, ci) => {
+          if (next[ci] && original[ci]?.name === next[ci]?.name) delete next[ci]
+        })
+        return next
+      })
+      if (mode === 'infinite') { setInfShufflesLeft(0) }
+      else { setShufflesLeft(0) }
+      setShufflePhase('in')
+      setTimeout(() => { setShufflingRow(null); setShufflePhase(null) }, 500)
     }, 380)
   }
 
@@ -898,6 +954,8 @@ export default function BucketSalaryCap({ onConfirm, onBack, user, initialDateSt
     setSel({})
     setShowLB(false)
     setShufflingCol(null)
+    setShufflingRow(null)
+    setRowOverrides({})
     setShufflePhase(null)
   }
 
@@ -907,9 +965,11 @@ export default function BucketSalaryCap({ onConfirm, onBack, user, initialDateSt
     setInfiniteSeed(Math.random() * 0x7FFFFFFF | 0)
     setSel({})
     setShuffleOverride({})
+    setRowOverrides({})
     setInfShufflesLeft(1)
     setInfScoutsLeft(1)
     setShufflingCol(null)
+    setShufflingRow(null)
     setShufflePhase(null)
     setScoutedGrades({})
     setShuffleMode(false)
@@ -1133,14 +1193,32 @@ export default function BucketSalaryCap({ onConfirm, onBack, user, initialDateSt
       <div className="sc-grid-wrap">
         <div className={`sc-grid${shuffleMode ? ' sc-grid--shuffle-mode' : ''}${scoutMode ? ' sc-grid--scout-mode' : ''}`} style={{ gridTemplateColumns: `var(--price-col, 40px) repeat(${SAL_COLS.length}, 1fr)` }}>
           <div />
-          {SAL_COLS.map(col => (
+          {SAL_COLS.map((col, ci) => (
             <div key={col.key} className="sc-col-header">
               <span className="sc-col-label">{col.label}</span>
+              {shuffleMode && (
+                <button className="sc-shuffle-col-target"
+                  onClick={() => executeShuffleCol(ci)}
+                  onMouseEnter={() => setHoveredShuffle({ type: 'col', idx: ci })}
+                  onMouseLeave={() => setHoveredShuffle(null)}>
+                  <span className="sc-shuffle-dir-arrow">⇅</span>
+                </button>
+              )}
             </div>
           ))}
           {TIERS.map((tier, ti) => (
             <React.Fragment key={tier}>
-              <div className="sc-price-label">${tier}M</div>
+              <div className="sc-price-label">
+                <span className="sc-price-text">${tier}M</span>
+                {shuffleMode && (
+                  <button className="sc-shuffle-row-target"
+                    onClick={() => executeShuffleRow(ti)}
+                    onMouseEnter={() => setHoveredShuffle({ type: 'row', idx: ti })}
+                    onMouseLeave={() => setHoveredShuffle(null)}>
+                    <span className="sc-shuffle-dir-arrow">⇄</span>
+                  </button>
+                )}
+              </div>
               {SAL_COLS.map((col, ci) => (
                 <PlayerCard
                   key={effectiveGrid[ci][ti].id}
@@ -1149,10 +1227,15 @@ export default function BucketSalaryCap({ onConfirm, onBack, user, initialDateSt
                   colHasSelection={!!sel[ci]}
                   onClick={() => pick(ci, effectiveGrid[ci][ti])}
                   viewOnly={!!alreadyPlayed}
-                  shufflePhase={shufflingCol === ci ? shufflePhase : null}
-                  shuffleDelay={ti * 45}
+                  shufflePhase={(shufflingCol === ci || shufflingRow === ti) ? shufflePhase : null}
+                  shuffleDelay={shufflingRow === ti ? ci * 45 : ti * 45}
                   scoutGrade={scoutedGrades[effectiveGrid[ci][ti].name] ?? null}
                   scoutMode={scoutMode}
+                  shuffleHighlight={
+                    hoveredShuffle?.type === 'col' && hoveredShuffle.idx === ci ? 'col' :
+                    hoveredShuffle?.type === 'row' && hoveredShuffle.idx === ti ? 'row' :
+                    null
+                  }
                 />
               ))}
             </React.Fragment>
@@ -1161,18 +1244,7 @@ export default function BucketSalaryCap({ onConfirm, onBack, user, initialDateSt
         {shuffleMode && (
           <>
             <div className="sc-shuffle-backdrop" onClick={() => setShuffleMode(false)} />
-            <div className="sc-shuffle-overlay" style={{ gridTemplateColumns: `var(--price-col, 40px) repeat(${SAL_COLS.length}, 1fr)` }}>
-              <div />
-              {SAL_COLS.map((col, ci) => (
-                <button
-                  key={col.key}
-                  className="sc-shuffle-col-target"
-                  onClick={() => executeShuffleCol(ci)}
-                  style={{ '--col': COL_COLORS[col.key] }}
-                />
-              ))}
-            </div>
-            <div className="sc-shuffle-hint">Choose a column to shuffle</div>
+            <div className="sc-shuffle-hint">⇅ column &nbsp;·&nbsp; ⇄ row</div>
           </>
         )}
         {scoutMode && (

@@ -61,7 +61,7 @@ export function getBucketSVGMarkup(build) {
   svg = setFill(svg, 'neck stripe',  tc('clutch') !== 'transparent' ? tc('clutch') : '#111111', '0.90')
 
   if (has('speed')) {
-    const legSkin  = warmSkin(sk('speed'), -65)
+    const legSkin  = warmSkin(sk('speed'), -40)
     const sockDefs = `<defs>
       <linearGradient id="bk-sock-stripe" x1="0" y1="0" x2="6" y2="0" gradientUnits="userSpaceOnUse">
         <stop offset="0%" stop-color="#ebebeb" stop-opacity="0.95"/>
@@ -93,8 +93,8 @@ export function getBucketSVGMarkup(build) {
   }
 
   if (has('size')) {
-    const leftArmSkin  = warmSkin(sk(has('jumpShot')  ? 'jumpShot'  : 'size'), -65)
-    const rightArmSkin = warmSkin(sk(has('finishing') ? 'finishing' : 'size'), -65)
+    const leftArmSkin  = warmSkin(sk(has('jumpShot')  ? 'jumpShot'  : 'size'), -40)
+    const rightArmSkin = warmSkin(sk(has('finishing') ? 'finishing' : 'size'), -40)
     svg = setFill(svg, 'left arm',  leftArmSkin,  '0.82')
     svg = setFill(svg, 'right arm', rightArmSkin, '0.82')
   }
@@ -152,7 +152,7 @@ export default function BucketFigureOverlay({ build }) {
 
   // ── SPEED: legs skin, compressions black, socks textured, shorts + leg designs team colors, leg stripes black
   if (has('speed')) {
-    const legSkin  = warmSkin(sk('speed'), -65)
+    const legSkin  = warmSkin(sk('speed'), -40)
     const sockDefs = `<defs>
       <linearGradient id="bk-sock-stripe" x1="0" y1="0" x2="6" y2="0" gradientUnits="userSpaceOnUse">
         <stop offset="0%"   stop-color="#ebebeb" stop-opacity="0.95"/>
@@ -189,8 +189,8 @@ export default function BucketFigureOverlay({ build }) {
 
   // ── SIZE: arms skin color + shine highlight
   if (has('size')) {
-    const leftArmSkin  = warmSkin(sk(has('jumpShot')  ? 'jumpShot'  : 'size'), -65)
-    const rightArmSkin = warmSkin(sk(has('finishing') ? 'finishing' : 'size'), -65)
+    const leftArmSkin  = warmSkin(sk(has('jumpShot')  ? 'jumpShot'  : 'size'), -40)
+    const rightArmSkin = warmSkin(sk(has('finishing') ? 'finishing' : 'size'), -40)
     svg = setFill(svg, 'left arm',  leftArmSkin,  '0.82')
     svg = setFill(svg, 'right arm', rightArmSkin, '0.82')
 

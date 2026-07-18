@@ -549,7 +549,7 @@ export const NBA_GUARD_PLAYERS = [
     attrs: { jumpShot:5, finishing:4, passing:4, handles:6, perimeterDefense:4, speed:5, bounce:6, size:5, basketballIQ:5, clutch:4 } },
 
   { name: "Kevin Porter Jr.", short: "Jr.", team: 'MIL', starter: false, captain: false,
-    attrs: { jumpShot:5, finishing:4, passing:5, handles:4, perimeterDefense:5, speed:7, bounce:5, size:5, basketballIQ:3, clutch:3 } },
+    attrs: { jumpShot:7, finishing:4, passing:5, handles:4, perimeterDefense:5, speed:7, bounce:5, size:5, basketballIQ:3, clutch:3 } },
 
   { name: "Ryan Rollins", short: "Rollins", team: 'MIL', starter: false, captain: false,
     attrs: { jumpShot:4, finishing:3, passing:3, handles:3, perimeterDefense:4, speed:5, bounce:4, size:4, basketballIQ:3, clutch:3 } },

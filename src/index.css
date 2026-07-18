@@ -168,9 +168,32 @@
 }
 
 [data-sport="bucket"] .splash-screen {
-  background: radial-gradient(ellipse 90% 70% at 50% 0%, rgba(249,115,22,0.18) 0%, transparent 65%),
-              #0f0804;
+  background:
+    radial-gradient(ellipse 90% 70% at 50% 0%, rgba(249,115,22,0.18) 0%, transparent 65%),
+    linear-gradient(rgba(15,8,4,0.88), rgba(15,8,4,0.88)),
+    #0f0804;
 }
+
+[data-sport="bucket"] .prf-page,
+[data-sport="bucket"] .game-layout {
+  background-image:
+    linear-gradient(rgba(13,16,20,0.80), rgba(13,16,20,0.80)),
+    url('/bucketbackground.png');
+  background-size: cover;
+  background-position: center;
+}
+[data-sport="bucket"] .prf-page {
+  background-image:
+    linear-gradient(rgba(13,16,20,0.93), rgba(13,16,20,0.93)),
+    url('/bucketbackground.png');
+}
+
+@media (max-width: 768px) {
+  [data-sport="bucket"] .lb-page {
+    background-image: none;
+  }
+}
+
 
 [data-sport="bucket"] .splash-logo-icon {
   font-size: 3.5rem;
@@ -211,8 +234,14 @@
   background: radial-gradient(circle, rgba(251,146,60,0.22) 0%, transparent 68%);
 }
 [data-sport="bucket"] .splash-mode-classic {
-  background: linear-gradient(145deg, rgba(251,146,60,0.14) 0%, rgba(245,158,11,0.10) 100%);
-  border-color: rgba(251,146,60,0.35);
+  background: linear-gradient(145deg, rgba(251,146,60,0.28) 0%, rgba(245,158,11,0.20) 100%), rgba(13,10,5,0.70);
+  border-color: rgba(251,146,60,0.50);
+}
+[data-sport="bucket"] .splash-mode-salarycap {
+  background: linear-gradient(145deg, rgba(168,85,247,0.28) 0%, rgba(139,92,246,0.20) 100%), rgba(10,8,15,0.70);
+}
+[data-sport="bucket"] .splash-mode-alltime {
+  background: linear-gradient(145deg, rgba(212,175,55,0.28) 0%, rgba(245,200,66,0.18) 100%), rgba(13,12,5,0.70);
 }
 [data-sport="bucket"] .splash-mode-classic:hover {
   box-shadow: 0 8px 28px rgba(251,146,60,0.14), 0 0 0 1px rgba(251,146,60,0.22);
@@ -467,6 +496,7 @@
 .bucket-figure-wrap {
   width: clamp(184px, 32.5vw, 344px) !important;
   aspect-ratio: 936 / 897 !important;
+  margin-top: 10px;
 }
 .bucket-figure-wrap .splash-figure {
   filter: brightness(0) invert(1) opacity(0.28);
@@ -1465,6 +1495,62 @@ a:focus-visible {
   box-shadow: none;
 }
 
+/* Split respin — plain flex shell, no spin-btn inheritance */
+.spin-respin-split {
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+  height: 50px;
+  min-height: 50px;
+  padding: 0;
+}
+
+.spin-respin-half {
+  all: unset;
+  flex: 1;
+  align-self: stretch;
+  box-sizing: border-box;
+  border-radius: 14px 0 0 14px;
+  border: 1.5px solid rgba(0,0,0,0.18);
+  border-right: none;
+  background: linear-gradient(135deg, var(--btn-start) 0%, var(--btn-end) 100%);
+  color: var(--btn-txt);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.20), inset 0 1px 0 rgba(255,255,255,0.22);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  cursor: pointer;
+  font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
+  font-size: clamp(9px, 2.8vw, 13px);
+  letter-spacing: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  will-change: transform;
+  transition: filter 0.12s ease, transform 0.1s ease, box-shadow 0.1s ease;
+}
+.spin-respin-half:hover:not(:disabled) {
+  filter: brightness(1.08);
+  box-shadow: 0 4px 16px var(--btn-glow), 0 2px 8px rgba(0,0,0,0.20), inset 0 1px 0 rgba(255,255,255,0.24);
+}
+.spin-respin-half:active:not(:disabled) {
+  transform: scale(0.97) translateZ(0);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.18);
+}
+.spin-respin-half.spin-respin-used { opacity: 0.38; cursor: default; }
+.spin-respin-half:last-child {
+  border-radius: 0 14px 14px 0;
+  border-left: none;
+  border-right: 1.5px solid rgba(0,0,0,0.18);
+}
+.spin-respin-half .spin-btn-badge { margin-left: 0; }
+.spin-respin-divider {
+  width: 3px;
+  background: rgba(0,0,0,0.35);
+  align-self: stretch;
+  flex-shrink: 0;
+}
+
 .spin-btn-badge {
   display: inline-flex;
   align-items: center;
@@ -1477,11 +1563,7 @@ a:focus-visible {
   font-weight: 900;
   line-height: 1;
   margin-left: 6px;
-  vertical-align: middle;
-  position: relative;
-  top: -1px;
-  padding-top: 1px;
-  padding-left: 3px;
+  flex-shrink: 0;
 }
 
 .spin-indicator {
@@ -1568,6 +1650,13 @@ a:focus-visible {
     color: var(--text-3);
     white-space: nowrap;
     margin-top: 2px;
+  }
+  .qb-reveal-year {
+    font-size: 9px;
+    color: var(--text-3);
+    opacity: 0.7;
+    white-space: nowrap;
+    margin-top: 1px;
   }
   .qb-reveal-pos {
     flex-shrink: 0;
@@ -2112,15 +2201,18 @@ a:focus-visible {
   object-position: center center;
   pointer-events: none;
   user-select: none;
-  filter: drop-shadow(0 0 1.5px rgba(255,255,255,0.55)) drop-shadow(0 0 0.5px rgba(255,255,255,0.9));
+  filter: drop-shadow(0 0 2px rgba(255,255,255,0.60)) drop-shadow(0 0 0.5px rgba(255,255,255,0.92));
   image-rendering: -webkit-optimize-contrast;
   -webkit-font-smoothing: antialiased;
+  transition: filter 0.4s ease;
 }
 
 .sil-img--rb {
-  filter:
-    drop-shadow(0 0 1.5px rgba(255,255,255,0.55))
-    drop-shadow(0 0 0.5px rgba(255,255,255,0.9));
+  filter: drop-shadow(0 0 2px rgba(255,255,255,0.60)) drop-shadow(0 0 0.5px rgba(255,255,255,0.92));
+}
+
+.sil-img--done {
+  filter: none;
 }
 
 
@@ -4720,8 +4812,8 @@ html.is-mac .spin-panel-scroll {
 
 /* Classic â€” dominant card */
 .splash-mode-classic {
-  background: linear-gradient(145deg, rgba(94,219,216,0.14) 0%, rgba(31,201,138,0.10) 100%);
-  border: 1.5px solid rgba(94,219,216,0.35);
+  background: linear-gradient(145deg, rgba(94,219,216,0.28) 0%, rgba(31,201,138,0.20) 100%), rgba(5,13,13,0.70);
+  border: 1.5px solid rgba(94,219,216,0.50);
   padding: 20px 22px 18px;
   flex: 1.6;
   transition: transform 0.22s var(--ease), box-shadow 0.22s var(--ease), border-color 0.22s var(--ease);
@@ -4736,8 +4828,8 @@ html.is-mac .spin-panel-scroll {
 
 /* Salary Cap — secondary card, mirrors classic with purple palette */
 .splash-mode-salarycap {
-  background: linear-gradient(145deg, rgba(168,85,247,0.14) 0%, rgba(139,92,246,0.10) 100%);
-  border: 1.5px solid rgba(168,85,247,0.35);
+  background: linear-gradient(145deg, rgba(168,85,247,0.28) 0%, rgba(139,92,246,0.20) 100%), rgba(10,8,15,0.70);
+  border: 1.5px solid rgba(168,85,247,0.50);
   padding: 20px 22px 18px;
   flex: 1.2;
   overflow: hidden;
@@ -4752,8 +4844,8 @@ html.is-mac .spin-panel-scroll {
 
 /* All-Time â€” secondary card */
 .splash-mode-alltime {
-  background: linear-gradient(145deg, rgba(212,175,55,0.14) 0%, rgba(245,200,66,0.08) 100%);
-  border: 1.5px solid rgba(212,175,55,0.45);
+  background: linear-gradient(145deg, rgba(212,175,55,0.28) 0%, rgba(245,200,66,0.18) 100%), rgba(13,12,5,0.70);
+  border: 1.5px solid rgba(212,175,55,0.55);
   padding: 18px 20px 18px;
   flex: 1.2;
   position: relative;
@@ -4959,20 +5051,20 @@ html.is-mac .spin-panel-scroll {
   border-color: rgba(229,57,53,0.8);
 }
 .splash-minigame-btn--bucket {
-  background: rgba(249,115,22,0.12);
-  border-color: rgba(249,115,22,0.50);
+  background: linear-gradient(145deg, rgba(249,115,22,0.28) 0%, rgba(245,158,11,0.20) 100%), rgba(13,8,3,0.70);
+  border-color: rgba(249,115,22,0.55);
 }
 .splash-minigame-btn--bucket:hover {
-  background: rgba(249,115,22,0.22);
-  border-color: rgba(249,115,22,0.85);
+  background: linear-gradient(145deg, rgba(249,115,22,0.38) 0%, rgba(245,158,11,0.28) 100%), rgba(13,8,3,0.70);
+  border-color: rgba(249,115,22,0.90);
 }
 .splash-minigame-btn--player {
-  background: rgba(149,213,178,0.10);
-  border-color: rgba(149,213,178,0.45);
+  background: linear-gradient(145deg, rgba(31,201,138,0.35) 0%, rgba(16,160,100,0.22) 100%), rgba(3,13,13,0.70);
+  border-color: rgba(31,201,138,0.62);
 }
 .splash-minigame-btn--player:hover {
-  background: rgba(149,213,178,0.18);
-  border-color: rgba(149,213,178,0.80);
+  background: linear-gradient(145deg, rgba(31,201,138,0.48) 0%, rgba(16,160,100,0.32) 100%), rgba(3,13,13,0.70);
+  border-color: rgba(31,201,138,0.90);
 }
 .splash-xlink-logo {
   font-family: Impact, 'Arial Narrow Bold', sans-serif;
@@ -4999,7 +5091,7 @@ html.is-mac .spin-panel-scroll {
 .splash-minigame-btn--player .splash-mg-sub {
   font-size: 8px;
   letter-spacing: 1.2px;
-  color: #95D5B2;
+  color: #1fc98a;
 }
 .splash-xlink-logo .hoop-u-svg {
   height: 0.80em;
@@ -5809,6 +5901,12 @@ html.is-mac .spin-panel-scroll {
     height: 56px;
     min-height: 56px;
   }
+  .spin-respin-split {
+    width: 62%;
+    align-self: center;
+    height: 56px;
+    min-height: 56px;
+  }
 
   /* Reels: slightly narrower on mobile */
   .reels-wrap { padding: 0 36px; }
@@ -6055,6 +6153,9 @@ html.is-mac .spin-panel-scroll {
     background-color: #306699;
     background-image: radial-gradient(circle, rgba(255,255,255,0.08) 1px, transparent 1px);
     background-size: 18px 18px;
+  }
+  [data-sport="bucket"] .mobile-build .field-center {
+    background: #090a0d !important;
   }
 
   .mobile-build .player-qbfig { filter: none; }
@@ -8637,6 +8738,10 @@ html.is-touch .bd-card-main:hover         { background: transparent !important; 
 [data-sport="bucket"] .prf-page {
   height: 100dvh;
 }
+[data-sport="bucket"] .prf-card {
+  background: rgba(10,12,16,0.72);
+  border-color: rgba(255,255,255,0.10);
+}
 
 .prf-col {
   width: 100%;
@@ -10929,6 +11034,29 @@ html.is-touch .alltime-mode .spin-btn:hover:not(:disabled) {
   box-shadow: 0 2px 8px rgba(0,0,0,0.20) !important;
 }
 
+/* Gold respin halves in all-time mode */
+.alltime-mode .spin-respin-half {
+  background: linear-gradient(135deg, #FBF0A0 0%, #D4AF37 55%, #C49A10 100%);
+  color: #1a1000;
+  border-color: rgba(0,0,0,0.18);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.20), inset 0 1px 0 rgba(255,255,255,0.40);
+  transition: transform 0.12s var(--ease), box-shadow 0.15s var(--ease), filter 0.12s ease;
+}
+.alltime-mode .spin-respin-half:hover:not(:disabled) {
+  background: linear-gradient(135deg, #FFF5B0 0%, #E8C547 55%, #D4A010 100%);
+  filter: none;
+  box-shadow: 0 4px 20px rgba(212,175,55,0.38), 0 2px 8px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.45);
+}
+.alltime-mode .spin-respin-half:active:not(:disabled) {
+  background: #C49A10;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.22), inset 0 1px 0 rgba(0,0,0,0.10);
+  transform: scale(0.97) translateZ(0);
+}
+html.is-touch .alltime-mode .spin-respin-half:hover:not(:disabled) {
+  background: linear-gradient(135deg, #FBF0A0 0%, #D4AF37 55%, #C49A10 100%) !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.20) !important;
+}
+
 /* â”€â”€ Mobile ad unit above Mental category â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .ad-cntr1-mobile {
   display: flex;
@@ -11136,11 +11264,20 @@ html.is-tablet .hint-mobile-assign { display: inline; }
 
 /* Spin button */
 html.is-tablet .spin-btn { width: 62%; align-self: center; height: 56px; min-height: 56px; }
+html.is-tablet .spin-respin-split { width: 62%; align-self: center; height: 56px; min-height: 56px; }
 
 /* Desktop overrides that should not apply on tablet */
 html.is-tablet .attr-chip { padding: 8px 8px 8px 12px !important; }
 html.is-tablet .chip-val { width: 38px !important; height: 38px !important; font-size: 13px !important; }
 html.is-tablet .attr-category-section { gap: 8px !important; }
+
+/* On Mac, salary screen footer can be clipped by Safari chrome — allow scroll */
+@media (min-width: 768px) {
+  html.is-mac .sc-screen {
+    height: auto;
+    overflow-y: auto;
+  }
+}
 
 /* On Mac the bottom rail overlaps the spin panel and blocks scroll gestures */
 html.is-mac [id^="pw-oop-bottom_rail"] {
@@ -13164,6 +13301,7 @@ html.is-mac [id^="pw-oop-bottom_rail"] > * {
 .sc-col-header {
   text-align: center;
   padding: 0 2px 7px;
+  min-height: 32px;
   border-bottom: 1.5px solid rgba(255,255,255,0.12);
   display: flex;
   flex-direction: column;
@@ -13194,6 +13332,8 @@ html.is-mac [id^="pw-oop-bottom_rail"] > * {
   font-size: clamp(12px, 3vw, 18px);
   color: rgba(255,255,255,0.75);
   line-height: 1;
+}
+.sc-price-text {
 }
 
 /* Player card */
@@ -13243,23 +13383,12 @@ html.is-mac [id^="pw-oop-bottom_rail"] > * {
   inset: 0;
   z-index: 8;
 }
-.sc-shuffle-overlay {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  gap: 4px;
-  padding: 0 2px 2px;
-  grid-template-rows: 1fr;
-  z-index: 9;
-  align-items: stretch;
-  pointer-events: none;
-}
+/* .sc-shuffle-overlay removed — targets are now inline in the grid */
 .sc-shuffle-hint {
   position: absolute;
-  bottom: 12px;
-  left: 0;
-  right: 0;
-  text-align: center;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   font-size: 13px;
   font-weight: 800;
   letter-spacing: 1.5px;
@@ -13402,27 +13531,72 @@ html.is-mac [id^="pw-oop-bottom_rail"] > * {
   text-shadow: 0 0 18px color-mix(in srgb, var(--gc, #22c55e) 50%, transparent);
 }
 
-.sc-shuffle-col-target {
+.sc-col-header,
+.sc-price-label { position: relative; }
+
+.sc-shuffle-col-target,
+.sc-shuffle-row-target {
   all: unset;
-  pointer-events: all;
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  border: 1.5px solid color-mix(in srgb, var(--col, #a855f7) 45%, transparent);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--col, #a855f7) 8%, transparent);
-  animation: sc-col-target-in 0.18s ease both, sc-col-pulse 2s ease-in-out infinite;
+  border-radius: 7px;
   box-sizing: border-box;
+  z-index: 9;
+}
+.sc-shuffle-col-target {
+  border: 1.5px solid rgba(147,197,253,0.65);
+  background: rgba(147,197,253,0.18);
+  animation: sc-shuffle-target-in 0.18s ease both, sc-col-pulse 2s ease-in-out infinite;
+  transition: background 0.1s ease, border-color 0.1s ease, box-shadow 0.1s ease;
 }
 .sc-shuffle-col-target:hover {
-  background: color-mix(in srgb, var(--col, #a855f7) 16%, transparent);
-  border-color: color-mix(in srgb, var(--col, #a855f7) 70%, transparent);
+  background: rgba(147,197,253,0.30);
+  border-color: rgba(147,197,253,0.90);
 }
-@keyframes sc-col-target-in {
-  from { opacity: 0; transform: scaleY(0.95); }
-  to   { opacity: 1; transform: scaleY(1); }
+.sc-shuffle-row-target {
+  inset: 0 1px;
+  border: 1.5px solid rgba(252,165,165,0.65);
+  background: rgba(252,165,165,0.18);
+  animation: sc-shuffle-target-in 0.18s ease both, sc-row-pulse 2s ease-in-out infinite;
+}
+.sc-shuffle-row-target:hover {
+  background: rgba(252,165,165,0.32);
+  border-color: rgba(252,165,165,0.90);
+}
+.sc-shuffle-dir-arrow {
+  font-size: 26px;
+  line-height: 1;
+  pointer-events: none;
+  font-family: "Segoe UI Symbol", "Apple Symbols", Arial, sans-serif;
+}
+.sc-shuffle-col-target .sc-shuffle-dir-arrow { color: #93c5fd; }
+.sc-shuffle-row-target .sc-shuffle-dir-arrow { color: #fca5a5; font-size: 28px; }
+
+.sc-card--hl-col {
+  border-color: rgba(147,197,253,0.65) !important;
+  box-shadow: 0 0 10px rgba(147,197,253,0.25);
+}
+.sc-card--hl-row {
+  border-color: rgba(252,165,165,0.65) !important;
+  box-shadow: 0 0 10px rgba(252,165,165,0.25);
+}
+.sc-card--dim.sc-card--hl-col,
+.sc-card--dim.sc-card--hl-row { opacity: 0.9; }
+@keyframes sc-shuffle-target-in {
+  from { opacity: 0; transform: scale(0.92); }
+  to   { opacity: 1; transform: scale(1); }
 }
 @keyframes sc-col-pulse {
-  0%,  100% { opacity: 0.65; box-shadow: 0 0 5px color-mix(in srgb, var(--col, #a855f7) 15%, transparent); }
-  50%        { opacity: 1;   box-shadow: 0 0 10px color-mix(in srgb, var(--col, #a855f7) 30%, transparent); }
+  0%,  100% { opacity: 0.65; box-shadow: 0 0 5px rgba(147,197,253,0.18); }
+  50%        { opacity: 1;   box-shadow: 0 0 12px rgba(147,197,253,0.40); }
+}
+@keyframes sc-row-pulse {
+  0%,  100% { opacity: 0.6; box-shadow: 0 0 5px rgba(255,255,255,0.08); }
+  50%        { opacity: 1;  box-shadow: 0 0 10px rgba(255,255,255,0.2); }
 }
 
 /* Shuffle badge on button */

@@ -140,6 +140,10 @@ function BucketSplash({ onStart }) {
   return (
     <div className={`splash-screen bucket-splash ${phase >= 1 ? 'splash-in' : ''}`}>
 
+      <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', zIndex: 0, pointerEvents: 'none' }}>
+        <div style={{ position: 'absolute', inset: '-20px', backgroundImage: "url('/bucketbackground.png')", backgroundSize: 'cover', backgroundPosition: 'center 65%', filter: 'blur(3px) brightness(0.55)' }} />
+      </div>
+
       <div className="splash-glow" style={{ opacity: phase >= 2 ? 1 : 0 }} />
 
       {splashAttrs.map(a => (

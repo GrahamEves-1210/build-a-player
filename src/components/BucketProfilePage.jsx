@@ -266,10 +266,6 @@ export default function BucketProfilePage({
                 <span className="plus-section-label">Color Theme</span>
                 <span className="plus-coming-soon">Not available for Build-A-Bucket yet</span>
               </div>
-              <div className="plus-section">
-                <span className="plus-section-label">Sandbox Mode</span>
-                <span className="plus-coming-soon">Not available for Build-A-Bucket yet</span>
-              </div>
               <div className="plus-section plus-section--last">
                 <span className="plus-section-label">Profile Icon</span>
                 <div className="plus-icon-grid">
