@@ -5869,7 +5869,7 @@ html.is-mac .spin-panel-scroll {
   .game-layout.mobile-build {
     height: auto;
     overflow: visible;
-    padding-bottom: 60px;
+    padding-bottom: calc(60px + var(--ad-h));
   }
 
   /* â”€â”€ Spin panel â€” full height on mobile â”€â”€ */
@@ -5889,7 +5889,7 @@ html.is-mac .spin-panel-scroll {
   .spin-panel-body {
     flex: none;
     overflow-y: visible;
-    padding: 10px 14px 140px;
+    padding: 10px 14px calc(140px + var(--ad-h));
     margin-top: -30px;
     gap: 14px;
   }
@@ -6230,7 +6230,7 @@ html.is-mac .spin-panel-scroll {
 
 /* X.com in-app browser has a persistent bottom toolbar â€” push tab bar up */
 html.is-x-browser .mobile-tab-bar {
-  bottom: calc(74px + env(safe-area-inset-bottom, 0px));
+  bottom: calc(74px + env(safe-area-inset-bottom, 0px) + var(--ad-h));
 }
 
 @media (max-width: 768px) {
@@ -6244,7 +6244,7 @@ html.is-x-browser .mobile-tab-bar {
   .mobile-tab-bar {
     display: flex;
     position: fixed;
-    bottom: calc(54px + env(safe-area-inset-bottom, 0px));
+    bottom: calc(54px + env(safe-area-inset-bottom, 0px) + var(--ad-h));
     left: 50%;
     transform: translateX(-50%);
     width: auto;
@@ -6255,6 +6255,7 @@ html.is-x-browser .mobile-tab-bar {
     border: none;
     padding: 0;
     pointer-events: none;
+    transition: bottom 0.25s ease;
   }
 
   .mtab {
@@ -11196,7 +11197,7 @@ html.is-tablet .game-layout.mobile-spin {
 html.is-tablet .game-layout.mobile-build {
   height: auto;
   overflow: visible;
-  padding-bottom: 60px;
+  padding-bottom: calc(60px + var(--ad-h));
 }
 
 /* Panel show/hide */
@@ -11223,7 +11224,7 @@ html.is-tablet .spin-panel::before { display: none; }
 html.is-tablet .spin-panel-body {
   flex: none;
   overflow-y: visible;
-  padding: 10px 14px 140px;
+  padding: 10px 14px calc(140px + var(--ad-h));
   margin-top: -30px;
   gap: 14px;
 }
