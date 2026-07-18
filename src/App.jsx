@@ -116,48 +116,24 @@ export default function App() {
     return () => { obs.disconnect(); clearInterval(interval) }
   }, [])
 
-  // Dynamically track Playwire bottom rail height so mobile buttons stay above the ad
+  // Fine-tune --ad-h to the exact rail height when JS can measure it
+  // CSS :has([data-pw-status="loaded"]) already provides the 96px fallback
   useEffect(() => {
     const root = document.documentElement
-
     function measure() {
-      const el = document.querySelector('[id^="pw-oop-bottom_rail"]')
-      let h = el ? el.getBoundingClientRect().height : 0
-      // Playwire sometimes sets height on the iframe child, not the container
-      if (h < 4 && el) {
+      const el = document.querySelector('[id^="pw-oop"][data-pw-status="loaded"]')
+      if (!el) return
+      let h = el.getBoundingClientRect().height
+      if (h < 4) {
         for (const child of el.querySelectorAll('iframe, div')) {
           h = Math.max(h, child.getBoundingClientRect().height)
         }
       }
-      root.style.setProperty('--ad-h', h > 4 ? `${Math.ceil(h) + 6}px` : '0px')
+      if (h > 4) root.style.setProperty('--ad-h', `${Math.ceil(h) + 6}px`)
     }
-
-    let resizeObs = null
-    let trackedEl = null
-
-    function attach() {
-      const el = document.querySelector('[id^="pw-oop-bottom_rail"]')
-      if (el !== trackedEl) {
-        if (resizeObs) { resizeObs.disconnect(); resizeObs = null }
-        trackedEl = el
-        if (el) {
-          resizeObs = new ResizeObserver(measure)
-          resizeObs.observe(el)
-          el.querySelectorAll('iframe, div').forEach(c => resizeObs.observe(c))
-        }
-        measure()
-      }
-    }
-
-    attach()
-    const mutObs = new MutationObserver(attach)
-    mutObs.observe(document.body, { childList: true, subtree: true })
-
-    // Polling fallback — catches delayed ad loads and height changes ResizeObserver might miss
-    const poll = setInterval(measure, 800)
-    setTimeout(() => clearInterval(poll), 60000)
-
-    return () => { mutObs.disconnect(); if (resizeObs) resizeObs.disconnect(); clearInterval(poll) }
+    const obs = new MutationObserver(measure)
+    obs.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-pw-status'] })
+    return () => obs.disconnect()
   }, [])
 
   useEffect(() => {

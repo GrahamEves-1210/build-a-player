@@ -11150,6 +11150,16 @@ html.is-touch .alltime-mode .spin-respin-half:hover:not(:disabled) {
   display: none !important;
 }
 
+/* -- Bottom rail ad: push mobile tab bar above the ad when it's loaded -- */
+/* Uses :has() so it reacts to DOM changes instantly without JS timing issues */
+@media (max-width: 768px) {
+  html:has([id^="pw-oop"][data-pw-status="loaded"][style*="bottom"]):not(.ads-hidden) {
+    --ad-h: 96px;
+  }
+}
+html.is-tablet:has([id^="pw-oop"][data-pw-status="loaded"][style*="bottom"]):not(.ads-hidden) {
+  --ad-h: 96px;
+}
 /* Strip Playwire's injected background/border from the bottom rail container */
 #adBanner,
 .adLeaderboard,
