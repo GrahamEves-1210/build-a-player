@@ -116,20 +116,22 @@ export default function App() {
     return () => { obs.disconnect(); clearInterval(interval) }
   }, [])
 
-  // Fine-tune --ad-h to the exact rail height when JS can measure it
-  // CSS :has([data-pw-status="loaded"]) already provides the 96px fallback
+  // Fine-tune --ad-h to exact rail height; CSS :has() provides 44px fallback
   useEffect(() => {
     const root = document.documentElement
     function measure() {
       const el = document.querySelector('[id^="pw-oop"][data-pw-status="loaded"]')
-      if (!el) return
+      if (!el) { root.style.removeProperty('--ad-h'); return }
       let h = el.getBoundingClientRect().height
       if (h < 4) {
         for (const child of el.querySelectorAll('iframe, div')) {
           h = Math.max(h, child.getBoundingClientRect().height)
         }
       }
-      if (h > 4) root.style.setProperty('--ad-h', `${Math.ceil(h) + 6}px`)
+      // Subtract the tab bar's base offset (54px) so we only bridge the gap
+      const adH = Math.max(0, Math.ceil(h) - 48)
+      if (adH > 0) root.style.setProperty('--ad-h', `${adH}px`)
+      else root.style.removeProperty('--ad-h')
     }
     const obs = new MutationObserver(measure)
     obs.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-pw-status'] })
