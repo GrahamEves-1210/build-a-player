@@ -118,30 +118,46 @@ export default function App() {
 
   // Dynamically track Playwire bottom rail height so mobile buttons stay above the ad
   useEffect(() => {
+    const root = document.documentElement
+
+    function measure() {
+      const el = document.querySelector('[id^="pw-oop-bottom_rail"]')
+      let h = el ? el.getBoundingClientRect().height : 0
+      // Playwire sometimes sets height on the iframe child, not the container
+      if (h < 4 && el) {
+        for (const child of el.querySelectorAll('iframe, div')) {
+          h = Math.max(h, child.getBoundingClientRect().height)
+        }
+      }
+      root.style.setProperty('--ad-h', h > 4 ? `${Math.ceil(h) + 6}px` : '0px')
+    }
+
     let resizeObs = null
     let trackedEl = null
 
-    function measure() {
-      const h = trackedEl ? trackedEl.getBoundingClientRect().height : 0
-      document.documentElement.style.setProperty('--ad-h', h > 0 ? `${Math.ceil(h) + 6}px` : '0px')
-    }
-
-    function sync() {
+    function attach() {
       const el = document.querySelector('[id^="pw-oop-bottom_rail"]')
-      if (el === trackedEl) return
-      if (resizeObs) { resizeObs.disconnect(); resizeObs = null }
-      trackedEl = el
-      if (el) {
-        resizeObs = new ResizeObserver(measure)
-        resizeObs.observe(el)
+      if (el !== trackedEl) {
+        if (resizeObs) { resizeObs.disconnect(); resizeObs = null }
+        trackedEl = el
+        if (el) {
+          resizeObs = new ResizeObserver(measure)
+          resizeObs.observe(el)
+          el.querySelectorAll('iframe, div').forEach(c => resizeObs.observe(c))
+        }
+        measure()
       }
-      measure()
     }
 
-    sync()
-    const mutObs = new MutationObserver(sync)
+    attach()
+    const mutObs = new MutationObserver(attach)
     mutObs.observe(document.body, { childList: true, subtree: true })
-    return () => { mutObs.disconnect(); if (resizeObs) resizeObs.disconnect() }
+
+    // Polling fallback — catches delayed ad loads and height changes ResizeObserver might miss
+    const poll = setInterval(measure, 800)
+    setTimeout(() => clearInterval(poll), 60000)
+
+    return () => { mutObs.disconnect(); if (resizeObs) resizeObs.disconnect(); clearInterval(poll) }
   }, [])
 
   useEffect(() => {
