@@ -11154,11 +11154,11 @@ html.is-touch .alltime-mode .spin-respin-half:hover:not(:disabled) {
 /* Uses :has() so it reacts to DOM changes instantly without JS timing issues */
 @media (max-width: 768px) {
   html:has([id^="pw-oop"][data-pw-status="loaded"][style*="bottom"]):not(.ads-hidden) {
-    --ad-h: 44px;
+    --ad-h: 48px;
   }
 }
 html.is-tablet:has([id^="pw-oop"][data-pw-status="loaded"][style*="bottom"]):not(.ads-hidden) {
-  --ad-h: 44px;
+  --ad-h: 48px;
 }
 /* Strip Playwire's injected background/border from the bottom rail container */
 #adBanner,

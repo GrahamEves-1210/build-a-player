@@ -116,26 +116,50 @@ export default function App() {
     return () => { obs.disconnect(); clearInterval(interval) }
   }, [])
 
-  // Fine-tune --ad-h to exact rail height; CSS :has() provides 44px fallback
+  // Fine-tune --ad-h to exact rail height; CSS :has() provides 48px fallback
   useEffect(() => {
     const root = document.documentElement
+    let elObs = null
+
     function measure() {
       const el = document.querySelector('[id^="pw-oop"][data-pw-status="loaded"]')
-      if (!el) { root.style.removeProperty('--ad-h'); return }
+      if (!el) { root.style.setProperty('--ad-h', '0px'); return }
+
+      // Check if Playwire hid it via display:none (e.g. user clicked X)
+      const cs = window.getComputedStyle(el)
+      if (cs.display === 'none' || cs.visibility === 'hidden') {
+        root.style.setProperty('--ad-h', '0px')
+        return
+      }
+
       let h = el.getBoundingClientRect().height
       if (h < 4) {
         for (const child of el.querySelectorAll('iframe, div')) {
           h = Math.max(h, child.getBoundingClientRect().height)
         }
       }
-      // Subtract the tab bar's base offset (54px) so we only bridge the gap
-      const adH = Math.max(0, Math.ceil(h) - 48)
-      if (adH > 0) root.style.setProperty('--ad-h', `${adH}px`)
-      else root.style.removeProperty('--ad-h')
+
+      if (h > 4) {
+        // Bridge only the gap between base offset (54px) and the ad height
+        root.style.setProperty('--ad-h', `${Math.max(0, Math.ceil(h) - 50)}px`)
+      } else {
+        root.style.setProperty('--ad-h', '0px')
+      }
     }
-    const obs = new MutationObserver(measure)
-    obs.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-pw-status'] })
-    return () => obs.disconnect()
+
+    function attachElObs() {
+      if (elObs) { elObs.disconnect(); elObs = null }
+      const el = document.querySelector('[id^="pw-oop"][data-pw-status="loaded"]')
+      if (el) {
+        elObs = new MutationObserver(measure)
+        elObs.observe(el, { attributes: true, attributeFilter: ['style', 'class'] })
+      }
+    }
+
+    measure()
+    const bodyObs = new MutationObserver(() => { attachElObs(); measure() })
+    bodyObs.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-pw-status', 'style'] })
+    return () => { bodyObs.disconnect(); if (elObs) elObs.disconnect() }
   }, [])
 
   useEffect(() => {
