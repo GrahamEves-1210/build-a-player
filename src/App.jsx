@@ -116,6 +116,34 @@ export default function App() {
     return () => { obs.disconnect(); clearInterval(interval) }
   }, [])
 
+  // Dynamically track Playwire bottom rail height so mobile buttons stay above the ad
+  useEffect(() => {
+    let resizeObs = null
+    let trackedEl = null
+
+    function measure() {
+      const h = trackedEl ? trackedEl.getBoundingClientRect().height : 0
+      document.documentElement.style.setProperty('--ad-h', h > 0 ? `${Math.ceil(h) + 6}px` : '0px')
+    }
+
+    function sync() {
+      const el = document.querySelector('[id^="pw-oop-bottom_rail"]')
+      if (el === trackedEl) return
+      if (resizeObs) { resizeObs.disconnect(); resizeObs = null }
+      trackedEl = el
+      if (el) {
+        resizeObs = new ResizeObserver(measure)
+        resizeObs.observe(el)
+      }
+      measure()
+    }
+
+    sync()
+    const mutObs = new MutationObserver(sync)
+    mutObs.observe(document.body, { childList: true, subtree: true })
+    return () => { mutObs.disconnect(); if (resizeObs) resizeObs.disconnect() }
+  }, [])
+
   useEffect(() => {
     const meta = document.querySelector('meta[name="theme-color"]')
     if (meta) meta.setAttribute('content', page === 'splash' ? '#080b09' : page === 'depth-chart' ? '#111318' : '#090a0d')

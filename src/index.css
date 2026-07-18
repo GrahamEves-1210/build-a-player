@@ -1,6 +1,6 @@
 ﻿/* â”€â”€ DESIGN TOKENS â”€â”€ */
 :root {
-  --ad-h: 110px; /* Playwire bottom rail height â€” extra clearance to prevent accidental clicks */
+  --ad-h: 0px;    /* Playwire bottom rail height — set dynamically by JS when rail appears */ /* Playwire bottom rail height â€” extra clearance to prevent accidental clicks */
   --g50:  #D8F3DC;
   --g100: #B7E4C7;
   --g200: #95D5B2;
