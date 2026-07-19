@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback, useLayoutEffect } from 'react'
+﻿import React, { useState, useEffect, useRef, useMemo, useCallback, useLayoutEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { NBA_TEAMS, NBA_PLAYERS, BUCKET_ATTR } from '../data/nba-players'
 import NBA_HEADSHOTS from '../data/nba-headshots.json'
@@ -1117,7 +1117,7 @@ function GoatAvatar({ entry, isPlayer, playerTeam, playerTeamColor, size = 56 })
   const teamObj    = TEAM_MAP[teamShort]
   const color      = isPlayer ? playerTeamColor : teamObj?.color
   const headshotId = !isPlayer ? NBA_HEADSHOTS[entry?.name] : null
-  const photo      = headshotId ? `/headshots/nba/${headshotId}.jpg` : null
+  const photo      = headshotId ? `/headshots/nba/${headshotId}.webp` : null
   return (
     <QBAvatar
       photo={photo}
@@ -2152,7 +2152,7 @@ function ScreenPlayoffs({ result, onNext, autoSkip = false }) {
             </div>
           )}
           {champPopped
-            ? <img src="/trophybasketball.png" alt="" className="sfb-trophy plf-trophy-reveal" />
+            ? <img src="/trophybasketball.webp" alt="" className="sfb-trophy plf-trophy-reveal" />
             : <button className="plf-champ-bottle" onClick={() => setChampPopped(true)} aria-label="Pop champagne">🍾</button>
           }
           <div className="plf-champ-label">NBA Champions!</div>
@@ -2318,7 +2318,7 @@ function ScreenFinal({ result, awards, build, types, attrMap, onReset, onBack, a
   return (
     <div className="simp-screen">
       <div className={`simp-final-banner ${champion ? 'sfb-champ' : madePlayoffs ? 'sfb-elim' : 'sfb-miss'}`}>
-        {champion && <img src="/trophybasketball.png" alt="NBA Trophy" className="sfb-trophy" />}
+        {champion && <img src="/trophybasketball.webp" alt="NBA Trophy" className="sfb-trophy" />}
         <div className="sfb-outcome">{playoffSummary}</div>
         <div className="sfb-sub">{wins}–{losses} Season · OVR {ovr}</div>
       </div>
@@ -2504,7 +2504,7 @@ function TeamStarters({ teamShort, teamColor, isBig, iqPhoto }) {
       {starters.map((p, i) => {
         const isMe   = i === replaceIdx
         const espnId = !isMe && NBA_HEADSHOTS[p.name]
-        const photo  = espnId ? `/headshots/nba/${espnId}.jpg` : null
+        const photo  = espnId ? `/headshots/nba/${espnId}.webp` : null
         return (
           <div key={isMe ? 'you' : p.name} className={`sts-starter${isMe ? ' sts-starter--you' : ''}`}>
             <div className="sts-starter-ring" style={{ borderColor: isMe ? teamColor : teamColor + '99' }}>

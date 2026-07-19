@@ -1,4 +1,4 @@
-import HEADSHOTS from './headshots.json'
+﻿import HEADSHOTS from './headshots.json'
 
 export const QB_POOL = [
   { name: 'Tom Brady',          team: 'TB',  passingTDs: 649, passingYards: 89214, rushingYards: 1123 },
@@ -103,7 +103,7 @@ export const QB_POOL = [
 
 export function getQBPhoto(name) {
   const id = HEADSHOTS[name]
-  return id ? `/headshots/${id}.jpg` : null
+  return id ? `/headshots/${id}.webp` : null
 }
 
 export function pickThree(exclude = []) {

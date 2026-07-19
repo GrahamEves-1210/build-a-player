@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react'
+﻿import React, { useState, useMemo, useEffect } from 'react'
 import { NBA_GUARD_PLAYERS, NBA_BIG_PLAYERS, NBA_TEAMS } from '../data/nba-players'
 import NBA_HEADSHOTS from '../data/nba-headshots.json'
 import NBA_POSITIONS from '../data/nba-positions.json'
@@ -211,7 +211,7 @@ function buildHardcodedGrid(nameGrid) {
         ...p, price, attrs,
         teamColor:  TEAM_META[p.team]?.color  ?? '#444',
         teamColor2: TEAM_META[p.team]?.color2 ?? '#222',
-        photo:  hsId ? `/headshots/nba/${hsId}.jpg` : null,
+        photo:  hsId ? `/headshots/nba/${hsId}.webp` : null,
         number: NBA_JERSEY_NUMBERS[p.name] ?? null,
         id:     `${col.key}-${price}-${p.name}`,
       }
@@ -403,7 +403,7 @@ function generateGrid(cols, players, rand, recentlyUsed = new Set(), seed = 0) {
       catScore: pts.reduce((s, t) => s + (p.attrs?.[t] ?? 5), 0) / pts.length,
       teamColor:  TEAM_META[p.team]?.color  ?? '#444',
       teamColor2: TEAM_META[p.team]?.color2 ?? '#222',
-      photo:  hsId ? `/headshots/nba/${hsId}.jpg` : null,
+      photo:  hsId ? `/headshots/nba/${hsId}.webp` : null,
       number: NBA_JERSEY_NUMBERS[p.name] ?? null,
       id:     `${col.key}-${price}-${p.name}`,
     }
@@ -443,7 +443,7 @@ function generateGrid(cols, players, rand, recentlyUsed = new Set(), seed = 0) {
         ...player,
         price, attrs,
         catScore: player.catScore,
-        photo:  hsId ? `/headshots/nba/${hsId}.jpg` : null,
+        photo:  hsId ? `/headshots/nba/${hsId}.webp` : null,
         number: NBA_JERSEY_NUMBERS[player.name] ?? null,
         id:     `${col.key}-${price}-${player.name}`,
       }

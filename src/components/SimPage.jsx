@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+﻿import { useState, useEffect, useRef } from 'react'
 import { ATTR, TYPES, TEAMS } from '../data/qbs'
 import { valToGrade, getArchetype, getArchetypeRB, readableTextColor, calcMVPResult, calcOPOYResult } from '../utils/simulation'
 import RBFigureOverlay from './RBFigureOverlay'
@@ -84,12 +84,12 @@ function ScreenBuild({ result, build, types, onNext, isRB }) {
           <div className="simp-team-model-glow" />
           {isRB ? (
             <>
-              <img src="/rbsilhouette.png" alt="" className="simp-sil-ghost" draggable={false} />
+              <img src="/rbsilhouette.webp" alt="" className="simp-sil-ghost" draggable={false} />
               <RBFigureOverlay build={monoTeamBuild} />
             </>
           ) : (
             <>
-              <img src="/qb-silhouette.png" alt="" className="simp-sil-ghost" draggable={false} />
+              <img src="/qb-silhouette.webp" alt="" className="simp-sil-ghost" draggable={false} />
               <QBFigureOverlay build={monoTeamBuild} className="player-qbfig" />
             </>
           )}
@@ -634,7 +634,7 @@ function ScreenPlayoffs({ result, onNext, onPreSuperBowl, adsDisabled = false })
     const sb = playoffRounds[playoffRounds.length - 1]
     inner = (
       <div className="simp-screen-center plf-champion-screen" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
-        <img src="/trophy.png" alt="" className="sfb-trophy" />
+        <img src="/trophy.webp" alt="" className="sfb-trophy" />
         <div className="plf-champ-label">Super Bowl Champions</div>
         <div className="plf-champ-sub">{sb.mySc}–{sb.oppSc}{sb.overtime ? ' OT' : ''} vs {sb.opponent}</div>
         <button className="simp-cta simp-cta-in" onClick={onNext}>Final Report</button>
@@ -751,7 +751,7 @@ function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = fals
   return (
     <div className="simp-screen">
       <div className={`simp-final-banner ${champion ? 'sfb-champ' : playoffs ? 'sfb-elim' : 'sfb-miss'}`}>
-        {champion && <img src="/trophy.png" alt="Super Bowl Trophy" className="sfb-trophy" />}
+        {champion && <img src="/trophy.webp" alt="Super Bowl Trophy" className="sfb-trophy" />}
         <div className="sfb-outcome">
           {champion ? 'Super Bowl Champions' : playoffs ? (sbResult?.round === 'Super Bowl' ? 'Lost Super Bowl' : `Eliminated — ${sbResult?.round}`) : 'Missed the Playoffs'}
         </div>
@@ -810,12 +810,12 @@ function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = fals
           <div className="simp-team-model-glow" />
           {isRB ? (
             <>
-              <img src="/rbsilhouette.png" alt="" className="simp-sil-ghost" draggable={false} />
+              <img src="/rbsilhouette.webp" alt="" className="simp-sil-ghost" draggable={false} />
               <RBFigureOverlay build={monoTeamBuild} />
             </>
           ) : (
             <>
-              <img src="/qb-silhouette.png" alt="" className="simp-sil-ghost" draggable={false} />
+              <img src="/qb-silhouette.webp" alt="" className="simp-sil-ghost" draggable={false} />
               <QBFigureOverlay build={monoTeamBuild} className="player-qbfig" />
             </>
           )}

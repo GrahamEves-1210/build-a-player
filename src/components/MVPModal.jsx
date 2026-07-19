@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import HEADSHOTS from '../data/headshots.json'
 import QBAvatar from './QBAvatar'
 
@@ -36,7 +36,7 @@ export default function MVPModal({ result, mvpResult, onDismiss, toSuperBowl = f
   }, [])
 
   const winnerHeadshot = winner && HEADSHOTS[winner.name]
-    ? `/headshots/${HEADSHOTS[winner.name]}.jpg`
+    ? `/headshots/${HEADSHOTS[winner.name]}.webp`
     : null
 
   return (

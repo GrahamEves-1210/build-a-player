@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+﻿import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { BUCKET_ATTR, NBA_TEAMS } from '../data/nba-players'
 import { calcBucketOVR, getBucketGuardArchetype, getBucketBigArchetype } from '../utils/bucketSimulation'
@@ -329,7 +329,7 @@ export default function BucketProfilePage({
               {filled.map(t => {
                 const meta  = BUCKET_ATTR[t]
                 const slot  = build[t]
-                const photo = slot.photo || (NBA_HEADSHOTS[slot.qbFull] ? `/headshots/nba/${NBA_HEADSHOTS[slot.qbFull]}.jpg` : null)
+                const photo = slot.photo || (NBA_HEADSHOTS[slot.qbFull] ? `/headshots/nba/${NBA_HEADSHOTS[slot.qbFull]}.webp` : null)
                 const tc    = slot.teamColor || TEAM_COLOR[slot.team] || '#333'
                 return (
                   <div key={t} className="prf-attr-row">

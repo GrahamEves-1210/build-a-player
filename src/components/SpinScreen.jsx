@@ -1,4 +1,4 @@
-import { useRef, useEffect, useLayoutEffect, useMemo, useCallback, useState } from 'react'
+﻿import { useRef, useEffect, useLayoutEffect, useMemo, useCallback, useState } from 'react'
 import { QBS, TEAMS, ATTR, TYPES, CATEGORIES, QB_PHYSICALS, LITE_TYPES } from '../data/qbs'
 import { RB_CATEGORIES } from '../data/rbs'
 import { valToGrade } from '../utils/simulation'
@@ -179,7 +179,7 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, on
 
 // ─── Chip ────────────────────────────────────────────────────────────────────
 function Chip({ type, meta, val, selectedQB, draggingType, onChipTap, onDragStart, onDragEnd, setDraggingType, hideGrades, headshotsMap, headshotsDir, isBucket }) {
-  const photo = headshotsMap[selectedQB.name] ? `${headshotsDir}${headshotsMap[selectedQB.name]}.jpg` : null
+  const photo = headshotsMap[selectedQB.name] ? `${headshotsDir}${headshotsMap[selectedQB.name]}.webp` : null
   const chipData = {
     type, val,
     qb: selectedQB.short, qbFull: selectedQB.name,
@@ -365,7 +365,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
       const file = headshotsMap[qb.name]
       if (file) {
         const img = new Image()
-        img.src = `${headshotsDir}${file}.jpg`
+        img.src = `${headshotsDir}${file}.webp`
       }
     })
   }, [selectedTeam, qbReelItems])
@@ -494,7 +494,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
             <div className="qb-reveal-card" style={{ '--qb-color': selectedQB.color }}>
               <div className="qb-reveal-hero">
                 <QBAvatar
-                  photo={headshotsMap[selectedQB.name] ? `${headshotsDir}${headshotsMap[selectedQB.name]}.jpg` : null}
+                  photo={headshotsMap[selectedQB.name] ? `${headshotsDir}${headshotsMap[selectedQB.name]}.webp` : null}
                   team={selectedQB.team}
                   color={selectedQB.color}
                   size={56}

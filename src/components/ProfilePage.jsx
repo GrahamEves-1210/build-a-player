@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+﻿import { useState, useEffect, useRef } from 'react'
 
 function PrfSpinner() {
   return (
@@ -65,7 +65,7 @@ function enrichBucketBuild(savedBuild) {
         teamColor2:  teamInfo.color2 ?? '#888888',
         skinColor:   NBA_SKIN_COLORS[d.qb] ?? '#c8956c',
         number:      d.number ?? null,
-        photo:       hsId ? `/headshots/nba/${hsId}.jpg` : null,
+        photo:       hsId ? `/headshots/nba/${hsId}.webp` : null,
         faceCenter:  NBA_FACE_CENTERS[d.qb] ?? null,
       }]
     })
@@ -463,7 +463,7 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
     <div className="prf-page">
       {!isBucket && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', overflow: 'hidden' }}>
-          <div style={{ position: 'absolute', inset: '-20px', backgroundImage: "url('/footballbackground.png')", backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(4px) brightness(0.12)' }} />
+          <div style={{ position: 'absolute', inset: '-20px', backgroundImage: "url('/footballbackground.webp')", backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(4px) brightness(0.12)' }} />
         </div>
       )}
       <div className="prf-col" style={!isBucket ? { position: 'relative', zIndex: 1 } : undefined}>

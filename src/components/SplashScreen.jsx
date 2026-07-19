@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react'
+﻿import { useEffect, useState, useMemo } from 'react'
 
 const HoopU = () => (
   <svg className="hoop-u-svg" viewBox="0 0 68 90" fill="none" aria-hidden="true">
@@ -82,7 +82,7 @@ export default function SplashScreen({ onStart, onDepthChart }) {
     <div className={`splash-screen ${phase >= 1 ? 'splash-in' : ''}`}>
 
       <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', zIndex: 0, pointerEvents: 'none' }}>
-        <div style={{ position: 'absolute', inset: '-20px', backgroundImage: "url('/footballbackground.png')", backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(4px) brightness(0.5)' }} />
+        <div style={{ position: 'absolute', inset: '-20px', backgroundImage: "url('/footballbackground.webp')", backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(4px) brightness(0.5)' }} />
       </div>
 
       <div className="splash-glow" style={{ opacity: phase >= 2 ? 1 : 0 }} />
@@ -108,9 +108,9 @@ export default function SplashScreen({ onStart, onDepthChart }) {
       </div>
 
       <div className="splash-figure-wrap" style={{ opacity: phase >= 2 ? 1 : 0, transform: phase >= 2 ? 'none' : 'translateY(40px) scale(0.92)' }}>
-        <img src="/qb-silhouette.png" className="splash-figure" alt="" draggable={false}
+        <img src="/qb-silhouette.webp" className="splash-figure" alt="" draggable={false}
           style={{ position: 'absolute', inset: 0, opacity: position === 'qb' ? 1 : 0 }} />
-        <img src="/rbsilhouette.png" className="splash-figure" alt="" draggable={false}
+        <img src="/rbsilhouette.webp" className="splash-figure" alt="" draggable={false}
           style={{ position: 'absolute', inset: 0, opacity: position === 'rb' ? 1 : 0 }} />
         <div className="splash-figure-glow" />
       </div>

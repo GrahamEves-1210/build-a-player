@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+﻿import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { ATTR, TEAMS, TYPES } from '../data/qbs'
 import { RB_TYPES } from '../data/rbs'
@@ -27,7 +27,7 @@ const RB_METRICS = [
 ]
 
 const TEAM_COLOR = Object.fromEntries(TEAMS.map(t => [t.short, t.color]))
-const QB_PHOTO   = (name) => HEADSHOTS[name] ? `/headshots/${HEADSHOTS[name]}.jpg` : null
+const QB_PHOTO   = (name) => HEADSHOTS[name] ? `/headshots/${HEADSHOTS[name]}.webp` : null
 
 function ovrColor(ovr) {
   if (ovr >= 95) return '#74C69D'

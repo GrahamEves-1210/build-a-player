@@ -1,4 +1,4 @@
-import { useState, useRef, useLayoutEffect, useEffect, useCallback, useMemo } from 'react'
+﻿import { useState, useRef, useLayoutEffect, useEffect, useCallback, useMemo } from 'react'
 import { ATTR, TYPES, CATEGORIES, QB_PHYSICALS } from '../data/qbs'
 import { RB_CATEGORIES, RB_PHYSICALS } from '../data/rbs'
 import { QB_LEGEND_PHYSICALS } from '../data/legends'
@@ -379,12 +379,12 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
     <section className="field-center" style={isBucket ? { backgroundColor: '#090a0d' } : undefined}>
       {isBucket && (
         <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', zIndex: 0, pointerEvents: 'none' }}>
-          <div style={{ position: 'absolute', inset: '-20px', backgroundImage: "url('/bucketbackground.png')", backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(4px) brightness(1.4)' }} />
+          <div style={{ position: 'absolute', inset: '-20px', backgroundImage: "url('/bucketbackground.webp')", backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(4px) brightness(1.4)' }} />
         </div>
       )}
       {!isBucket && (
         <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', zIndex: 0, pointerEvents: 'none' }}>
-          <div style={{ position: 'absolute', inset: '-20px', backgroundImage: "url('/footballbackground.png')", backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(4px) brightness(0.7)' }} />
+          <div style={{ position: 'absolute', inset: '-20px', backgroundImage: "url('/footballbackground.webp')", backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(4px) brightness(0.7)' }} />
         </div>
       )}
       <div className="category-pills">
@@ -502,7 +502,7 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
           src={
             isBucket
               ? (bucketPhoto ? '/basketballsilhouetteheadless.png' : '/basketballsilhouette.png')
-              : (isRB ? '/rbsilhouette.png' : '/qb-silhouette.png')
+              : (isRB ? '/rbsilhouette.webp' : '/qb-silhouette.webp')
           }
           alt=""
           className={`sil-img${isRB ? ' sil-img--rb' : ''}${isBucket ? ' sil-img--bucket' : ''}${complete ? ' sil-img--done' : ''}`}

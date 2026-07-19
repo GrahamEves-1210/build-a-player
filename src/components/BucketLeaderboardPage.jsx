@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+﻿import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { BUCKET_ATTR, GUARD_TYPES, BIG_TYPES, NBA_TEAMS } from '../data/nba-players'
 import { valToGrade } from '../utils/simulation'
@@ -116,7 +116,7 @@ function BucketBuildExpand({ build, position, row }) {
         {slots.map(k => {
           const slot  = build[k]
           const meta  = BUCKET_ATTR[k]
-          const photo = NBA_HEADSHOTS[slot.qb] ? `/headshots/nba/${NBA_HEADSHOTS[slot.qb]}.jpg` : null
+          const photo = NBA_HEADSHOTS[slot.qb] ? `/headshots/nba/${NBA_HEADSHOTS[slot.qb]}.webp` : null
           const tc    = TEAM_COLOR[slot.team] ?? '#555'
           return (
             <div key={k} className="simp-attr-row simp-row-visible">
