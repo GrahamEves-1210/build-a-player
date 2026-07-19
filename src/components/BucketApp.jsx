@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect, useLayoutEffect, useMemo } from 'react'
+﻿import { useState, useCallback, useRef, useEffect, useLayoutEffect, useMemo, lazy, Suspense } from 'react'
 import { Helmet } from 'react-helmet-async'
 import Navbar from './Navbar'
 import SpinScreen from './SpinScreen'
@@ -23,6 +23,8 @@ import { NBA_FACE_CENTERS }  from '../data/nba-face-centers'
 import { supabase } from '../lib/supabase'
 import ProfilePage from './ProfilePage'
 import CustomRatingsModal from './CustomRatingsModal'
+const VersusLobby       = lazy(() => import('./VersusLobby'))
+const BucketVersusResult = lazy(() => import('./BucketVersusResult'))
 
 function enableAdFreeMode() {
   document.documentElement.classList.add('ads-hidden')
@@ -141,7 +143,7 @@ function BucketSplash({ onStart }) {
     <div className={`splash-screen bucket-splash ${phase >= 1 ? 'splash-in' : ''}`}>
 
       <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', zIndex: 0, pointerEvents: 'none' }}>
-        <div style={{ position: 'absolute', inset: '-20px', backgroundImage: "url('/bucketbackground.png')", backgroundSize: 'cover', backgroundPosition: 'center 65%', filter: 'blur(3px) brightness(0.55)' }} />
+        <div style={{ position: 'absolute', inset: '-20px', backgroundImage: "url('/bucketbackground.webp')", backgroundSize: 'cover', backgroundPosition: 'center 65%', filter: 'blur(3px) brightness(0.55)' }} />
       </div>
 
       <div className="splash-glow" style={{ opacity: phase >= 2 ? 1 : 0 }} />
@@ -209,6 +211,7 @@ function BucketSplash({ onStart }) {
           </button>
         </div>
 
+
         <div className="splash-disclaimer">Fan-made · Not affiliated with the NBA</div>
       </div>
 
@@ -266,6 +269,11 @@ export default function BucketApp() {
   })
   const [showBucketCustomModal, setShowBucketCustomModal] = useState(false)
   const [showSandboxWarning, setShowSandboxWarning] = useState(false)
+
+  // Versus mode
+  const [versusRoom, setVersusRoom]   = useState(null)
+  const [oppBuild, setOppBuild]       = useState({})
+  const [oppPlayer, setOppPlayer]     = useState(null)
 
   const activeDragRef = useRef(activeDrag)
   useLayoutEffect(() => { activeDragRef.current = activeDrag }, [activeDrag])
@@ -527,7 +535,7 @@ export default function BucketApp() {
       const sorted = [...pool].sort((a, b) => (b.attrs[type] ?? 0) - (a.attrs[type] ?? 0))
       const topN = sorted.slice(0, 8)
       const p = topN[Math.floor(Math.random() * topN.length)]
-      const photo = NBA_HEADSHOTS[p.name] ? `/headshots/nba/${NBA_HEADSHOTS[p.name]}.jpg` : null
+      const photo = NBA_HEADSHOTS[p.name] ? `/headshots/nba/${NBA_HEADSHOTS[p.name]}.webp` : null
       return [type, {
         type, val: p.attrs[type] ?? 5,
         qb: p.short, qbFull: p.name,
@@ -567,8 +575,80 @@ export default function BucketApp() {
     handleHome()
   }, [handleHome])
 
+  const handleVersusJoin = useCallback(({ code, role, oppId, oppName, channel }) => {
+    channel.on('broadcast', { event: 'bab_build' }, ({ payload }) => {
+      setOppBuild(payload.build || {})
+      setOppPlayer(payload.player || null)
+    })
+    setVersusRoom({ code, role, oppId, oppName, channel })
+    setOppBuild({})
+    setOppPlayer(null)
+    setBuild(Object.fromEntries(activeTypes.map(t => [t, null])))
+    setActiveCategory((POS_CATS[position] ?? GUARD_CATEGORIES)[0].id)
+    setSavedSpinResult(null)
+    setSimResult(null)
+    setMobileView('spin')
+    setSpinResetKey(k => k + 1)
+    setPage('versus-game')
+    window.scrollTo(0, 0)
+  }, [activeTypes, position])
+
+  useEffect(() => {
+    if (!versusRoom?.channel || page !== 'versus-game') return
+    versusRoom.channel.send({
+      type: 'broadcast', event: 'bab_build',
+      payload: { build, player: savedSpinResult },
+    }).catch(() => {})
+  }, [build, savedSpinResult, versusRoom, page])
+
   if (page === 'splash') {
-    return <BucketSplash onStart={handleStart} />
+    return (
+      <BucketSplash
+        onStart={handleStart}
+      />
+    )
+  }
+
+  if (page === 'versus-lobby') {
+    return (
+      <Suspense fallback={null}>
+        <VersusLobby
+          onJoin={handleVersusJoin}
+          position={position}
+          gameMode="classic"
+          onBack={() => setPage('splash')}
+          user={user}
+          channelPrefix="bab"
+        />
+      </Suspense>
+    )
+  }
+
+  if (page === 'versus-result') {
+    return (
+      <Suspense fallback={null}>
+        <BucketVersusResult
+          myData={{ build, player: savedSpinResult }}
+          oppData={{ build: oppBuild, player: oppPlayer, name: versusRoom?.oppName || 'Opponent' }}
+          position={position}
+          onRematch={() => {
+            setBuild(Object.fromEntries(activeTypes.map(t => [t, null])))
+            setOppBuild({})
+            setOppPlayer(null)
+            setSavedSpinResult(null)
+            setMobileView('spin')
+            setSpinResetKey(k => k + 1)
+            setPage('versus-game')
+            window.scrollTo(0, 0)
+          }}
+          onExit={() => {
+            if (versusRoom?.channel) supabase.removeChannel(versusRoom.channel)
+            setVersusRoom(null)
+            setPage('splash')
+          }}
+        />
+      </Suspense>
+    )
   }
 
   if (page === 'salarycap') {
@@ -701,7 +781,7 @@ export default function BucketApp() {
                 skinColor: p.skin,
                 number: p.number,
                 faceCenter: p.faceCenter,
-                photo: NBA_HEADSHOTS[p.name] ? `/headshots/nba/${NBA_HEADSHOTS[p.name]}.jpg` : null,
+                photo: NBA_HEADSHOTS[p.name] ? `/headshots/nba/${NBA_HEADSHOTS[p.name]}.webp` : null,
                 captain: p.captain ?? false,
               }}))
               setShowBucketCustomModal(false)
@@ -722,7 +802,7 @@ export default function BucketApp() {
                       skinColor: p.skin,
                       number: p.number,
                       faceCenter: p.faceCenter,
-                      photo: NBA_HEADSHOTS[p.name] ? `/headshots/nba/${NBA_HEADSHOTS[p.name]}.jpg` : null,
+                      photo: NBA_HEADSHOTS[p.name] ? `/headshots/nba/${NBA_HEADSHOTS[p.name]}.webp` : null,
                       captain: p.captain ?? false,
                     }
                   }
@@ -751,7 +831,7 @@ export default function BucketApp() {
       </Helmet>
       <Navbar {...navbarProps} />
 
-      <main className={`game-layout mobile-${mobileView}`}>
+      <main className={`game-layout mobile-${mobileView}${page === 'versus-game' ? ' versus-active' : ''}`}>
         <SpinScreen
           build={build}
           activeDrag={activeDrag}
@@ -803,7 +883,7 @@ export default function BucketApp() {
         <div className="right-panel-wrap">
           <ReportCard
             build={build}
-            onSimulate={() => setShowTeamSpin(true)}
+            onSimulate={page === 'versus-game' ? () => setPage('versus-result') : () => setShowTeamSpin(true)}
             onReset={handleReset}
             types={activeTypes}
             hasResult={false}
@@ -820,6 +900,34 @@ export default function BucketApp() {
             isSalaryMode={gameMode === 'salarycap'}
           />
         </div>
+
+        {page === 'versus-game' && versusRoom && (() => {
+          const oppFilled = activeTypes.filter(t => oppBuild[t]).length
+          const myFilled  = activeTypes.filter(t => build[t]).length
+          return (
+            <div className="versus-hud">
+              <div className="versus-hud-inner">
+                <div className="vhud-side vhud-side--me">
+                  <span className="vhud-label">YOU</span>
+                  <span className="vhud-count">{myFilled}/{activeTypes.length}</span>
+                </div>
+                <div className="vhud-vs">VS</div>
+                <div className="vhud-side vhud-side--opp">
+                  <span className="vhud-label">{versusRoom.oppName}</span>
+                  <span className="vhud-count">{oppFilled}/{activeTypes.length}</span>
+                </div>
+              </div>
+              {myFilled === activeTypes.length && (
+                <button className="vhud-faceoff-btn" onClick={() => setPage('versus-result')}>
+                  FACE OFF
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M5 12h14M12 5l7 7-7 7"/>
+                  </svg>
+                </button>
+              )}
+            </div>
+          )
+        })()}
       </main>
 
 
@@ -868,7 +976,7 @@ export default function BucketApp() {
               skinColor: p.skin,
               number: p.number,
               faceCenter: p.faceCenter,
-              photo: NBA_HEADSHOTS[p.name] ? `/headshots/nba/${NBA_HEADSHOTS[p.name]}.jpg` : null,
+              photo: NBA_HEADSHOTS[p.name] ? `/headshots/nba/${NBA_HEADSHOTS[p.name]}.webp` : null,
               captain: p.captain ?? false,
             }}))
             setShowBucketCustomModal(false)
@@ -889,7 +997,7 @@ export default function BucketApp() {
                     skinColor: p.skin,
                     number: p.number,
                     faceCenter: p.faceCenter,
-                    photo: NBA_HEADSHOTS[p.name] ? `/headshots/nba/${NBA_HEADSHOTS[p.name]}.jpg` : null,
+                    photo: NBA_HEADSHOTS[p.name] ? `/headshots/nba/${NBA_HEADSHOTS[p.name]}.webp` : null,
                     captain: p.captain ?? false,
                   }
                 }

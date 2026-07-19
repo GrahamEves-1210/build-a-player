@@ -1,19 +1,23 @@
-import { useState, useCallback, useRef, useEffect, useLayoutEffect } from 'react'
+﻿import { useState, useCallback, useRef, useEffect, useLayoutEffect, lazy, Suspense } from 'react'
 import Navbar from './components/Navbar'
 import SpinScreen from './components/SpinScreen'
 import Silhouette from './components/Silhouette'
 import ReportCard from './components/ReportCard'
-import SimPage from './components/SimPage'
 import TeamPickerModal from './components/TeamPickerModal'
-import AboutPage from './components/AboutPage'
-import PrivacyPage from './components/PrivacyPage'
-import SharedBuildPage from './components/SharedBuildPage'
-import { decodeBuild } from './utils/shareUrl'
-import SplashScreen from './components/SplashScreen'
-import DepthChart from './components/DepthChart'
 import AuthModal from './components/AuthModal'
-import ProfilePage from './components/ProfilePage'
-import LeaderboardPage from './components/LeaderboardPage'
+import SplashScreen from './components/SplashScreen'
+import { decodeBuild } from './utils/shareUrl'
+
+// Lazy-loaded pages — only downloaded when the user actually navigates there
+const SimPage        = lazy(() => import('./components/SimPage'))
+const AboutPage      = lazy(() => import('./components/AboutPage'))
+const PrivacyPage    = lazy(() => import('./components/PrivacyPage'))
+const SharedBuildPage= lazy(() => import('./components/SharedBuildPage'))
+const DepthChart     = lazy(() => import('./components/DepthChart'))
+const ProfilePage    = lazy(() => import('./components/ProfilePage'))
+const LeaderboardPage= lazy(() => import('./components/LeaderboardPage'))
+const VersusLobby    = lazy(() => import('./components/VersusLobby'))
+const VersusResult   = lazy(() => import('./components/VersusResult'))
 import { TYPES, LITE_TYPES, QBS } from './data/qbs'
 import { RBS, RB_TYPES, RB_LITE_TYPES } from './data/rbs'
 import { ALLTIME_RATINGS } from './data/nfl-teams'
@@ -99,6 +103,11 @@ export default function App() {
   const [showSandboxWarning, setShowSandboxWarning] = useState(false)
   const [saveToast, setSaveToast] = useState(null)
   const saveToastTimer = useRef(null)
+
+  // Versus mode state
+  const [versusRoom, setVersusRoom]     = useState(null)  // { code, role, oppId, oppName, channel }
+  const [oppBuild, setOppBuild]         = useState({})
+  const [oppQB, setOppQB]               = useState(null)
 
   // Once sandbox is ever turned on during a build session, taint it permanently
   // until reset — prevents toggle-on → edit → toggle-off → simulate exploit
@@ -442,12 +451,101 @@ export default function App() {
     sandboxTainted.current = isCustomMode
   }, [isCustomMode])
 
+  const handleVersusJoin = useCallback(({ code, role, oppId, oppName, channel }) => {
+    // Subscribe to opponent build broadcasts before setting state
+    channel.on('broadcast', { event: 'vs_build' }, ({ payload }) => {
+      setOppBuild(payload.build || {})
+      setOppQB(payload.qb || null)
+    })
+    setVersusRoom({ code, role, oppId, oppName, channel })
+    setOppBuild({})
+    setOppQB(null)
+    setBuild(Object.fromEntries(activeTypes.map(t => [t, null])))
+    setActiveCategory('physical')
+    setSavedSpinResult(null)
+    setSimResult(null)
+    setMobileView('spin')
+    setSpinResetKey(k => k + 1)
+    setPage('versus-game')
+    window.scrollTo(0, 0)
+  }, [activeTypes])
+
+  // Broadcast my build + qb to the versus channel whenever they change
+  useEffect(() => {
+    if (!versusRoom?.channel || page !== 'versus-game') return
+    versusRoom.channel.send({
+      type: 'broadcast', event: 'vs_build',
+      payload: { build, qb: savedSpinResult },
+    }).catch(() => {})
+  }, [build, savedSpinResult, versusRoom, page])
+
   if (page === 'splash') {
-    return <SplashScreen onStart={handleStart} onDepthChart={() => setPage('depth-chart')} />
+    return (
+      <SplashScreen
+        onStart={handleStart}
+        onDepthChart={() => setPage('depth-chart')}
+        onVersus={(pos) => {
+          const p = pos || 'qb'
+          localStorage.setItem('lastPosition', p)
+          setPosition(p)
+          setGameMode('classic')
+          setBuild(Object.fromEntries(
+            (p === 'rb' ? RB_TYPES : TYPES).map(t => [t, null])
+          ))
+          setPage('versus-lobby')
+        }}
+      />
+    )
   }
 
   if (page === 'depth-chart') {
-    return <DepthChart onBack={() => setPage('splash')} user={user} onlineCount={onlineCount} />
+    return (
+      <Suspense fallback={null}>
+        <DepthChart onBack={() => setPage('splash')} user={user} onlineCount={onlineCount} />
+      </Suspense>
+    )
+  }
+
+  if (page === 'versus-lobby') {
+    return (
+      <Suspense fallback={null}>
+        <VersusLobby
+          onJoin={handleVersusJoin}
+          position={position}
+          gameMode={gameMode || 'classic'}
+          onBack={() => setPage('splash')}
+          user={user}
+        />
+      </Suspense>
+    )
+  }
+
+  if (page === 'versus-result') {
+    return (
+      <Suspense fallback={null}>
+        <VersusResult
+          myData={{ build, qb: savedSpinResult }}
+          oppData={{ build: oppBuild, qb: oppQB, name: versusRoom?.oppName || 'Opponent' }}
+          position={position}
+          gameMode={gameMode || 'classic'}
+          onRematch={() => {
+            setBuild(Object.fromEntries(activeTypes.map(t => [t, null])))
+            setOppBuild({})
+            setOppQB(null)
+            setSavedSpinResult(null)
+            setMobileView('spin')
+            setSpinResetKey(k => k + 1)
+            setPage('versus-game')
+            window.scrollTo(0, 0)
+          }}
+          onExit={() => {
+            if (versusRoom?.channel) supabase.removeChannel(versusRoom.channel)
+            setVersusRoom(null)
+            setPage('splash')
+          }}
+        />
+      </Suspense>
+    )
   }
 
   const navbarProps = {
@@ -479,16 +577,16 @@ export default function App() {
 
   if (page === 'leaderboard') {
     return (
-      <>
+      <Suspense fallback={null}>
         <Navbar {...navbarProps} />
         <LeaderboardPage onBack={() => { setPage(simResult ? 'sim' : 'game'); window.scrollTo({ top: 0, behavior: 'instant' }) }} currentUser={user} adsDisabled={adsDisabled} isRB={isRB} />
-      </>
+      </Suspense>
     )
   }
 
   if (page === 'shared' && sharedBuild) {
     return (
-      <>
+      <Suspense fallback={null}>
         <Navbar {...navbarProps} />
         <SharedBuildPage
           build={sharedBuild}
@@ -498,31 +596,31 @@ export default function App() {
             setPage('splash')
           }}
         />
-      </>
+      </Suspense>
     )
   }
 
   if (page === 'about') {
     return (
-      <>
+      <Suspense fallback={null}>
         <Navbar {...navbarProps} />
         <AboutPage onBack={() => { setPage(simResult ? 'sim' : 'game'); window.scrollTo({ top: 0, behavior: 'instant' }) }} onPrivacy={() => setPage('privacy')} />
-      </>
+      </Suspense>
     )
   }
 
   if (page === 'privacy') {
     return (
-      <>
+      <Suspense fallback={null}>
         <Navbar {...navbarProps} />
         <PrivacyPage onBack={() => setPage('about')} />
-      </>
+      </Suspense>
     )
   }
 
   if (page === 'profile' && user) {
     return (
-      <>
+      <Suspense fallback={null}>
         <ProfilePage
           user={user}
           build={build}
@@ -563,7 +661,7 @@ export default function App() {
             build={build}
             buildTypes={activeTypes}
             onAddToBuild={(p, playerOverrides, attrType) => {
-              const photo = HEADSHOTS[p.name] ? `/headshots/${HEADSHOTS[p.name]}.jpg` : null
+              const photo = HEADSHOTS[p.name] ? `/headshots/${HEADSHOTS[p.name]}.webp` : null
               const chipData = {
                 type: attrType,
                 val: playerOverrides?.[attrType] ?? p.attrs?.[attrType] ?? 5,
@@ -581,7 +679,7 @@ export default function App() {
               setShowCustomModal(false)
             }}
             onAddAllToBuild={(p, playerOverrides) => {
-              const photo = HEADSHOTS[p.name] ? `/headshots/${HEADSHOTS[p.name]}.jpg` : null
+              const photo = HEADSHOTS[p.name] ? `/headshots/${HEADSHOTS[p.name]}.webp` : null
               setBuild(prev => {
                 const next = { ...prev }
                 activeTypes.forEach(attrType => {
@@ -607,13 +705,13 @@ export default function App() {
             }}
           />
         )}
-      </>
+      </Suspense>
     )
   }
 
   if (page === 'sim' && simResult) {
     return (
-      <>
+      <Suspense fallback={null}>
         <Navbar {...navbarProps} />
         <SimPage
           result={simResult}
@@ -636,7 +734,7 @@ export default function App() {
             {saveToast.msg}
           </div>
         )}
-      </>
+      </Suspense>
     )
   }
 
@@ -646,7 +744,7 @@ export default function App() {
     <>
       <Navbar {...navbarProps} />
 
-      <main className={`game-layout mobile-${mobileView}${gameMode === 'all-time' ? ' alltime-mode' : ''}`}>
+      <main className={`game-layout mobile-${mobileView}${gameMode === 'all-time' ? ' alltime-mode' : ''}${page === 'versus-game' ? ' versus-active' : ''}`}>
         <SpinScreen
           build={build}
           activeDrag={activeDrag}
@@ -686,17 +784,49 @@ export default function App() {
         <div className="right-panel-wrap">
           <ReportCard
             build={build}
-            onSimulate={handleSimulate}
+            onSimulate={page === 'versus-game'
+              ? () => setPage('versus-result')
+              : handleSimulate}
             onReset={handleReset}
             types={activeTypes}
-            hasResult={!!simResult}
+            hasResult={page === 'versus-game' ? false : !!simResult}
             isRB={isRB}
             isPlus={isPlus}
             isCustomMode={isCustomMode}
             onOpenCustomModal={() => setShowCustomModal(true)}
             onSandboxToggle={handleSandboxToggle}
+            versusMode={page === 'versus-game'}
           />
         </div>
+
+        {/* Versus opponent status overlay */}
+        {page === 'versus-game' && versusRoom && (() => {
+          const oppFilled = activeTypes.filter(t => oppBuild[t]).length
+          const myFilled  = activeTypes.filter(t => build[t]).length
+          return (
+            <div className="versus-hud">
+              <div className="versus-hud-inner">
+                <div className="vhud-side vhud-side--me">
+                  <span className="vhud-label">YOU</span>
+                  <span className="vhud-count">{myFilled}/{activeTypes.length}</span>
+                </div>
+                <div className="vhud-vs">VS</div>
+                <div className="vhud-side vhud-side--opp">
+                  <span className="vhud-label">{versusRoom.oppName}</span>
+                  <span className="vhud-count">{oppFilled}/{activeTypes.length}</span>
+                </div>
+              </div>
+              {myFilled === activeTypes.length && (
+                <button className="vhud-faceoff-btn" onClick={() => setPage('versus-result')}>
+                  FACE OFF
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M5 12h14M12 5l7 7-7 7"/>
+                  </svg>
+                </button>
+              )}
+            </div>
+          )
+        })()}
       </main>
 
 
@@ -781,7 +911,7 @@ export default function App() {
           build={build}
           buildTypes={activeTypes}
           onAddToBuild={(p, playerOverrides, attrType) => {
-            const photo = HEADSHOTS[p.name] ? `/headshots/${HEADSHOTS[p.name]}.jpg` : null
+            const photo = HEADSHOTS[p.name] ? `/headshots/${HEADSHOTS[p.name]}.webp` : null
             const chipData = {
               type: attrType,
               val: playerOverrides?.[attrType] ?? p.attrs?.[attrType] ?? 5,
@@ -800,7 +930,7 @@ export default function App() {
             setShowCustomModal(false)
           }}
           onAddAllToBuild={(p, playerOverrides) => {
-            const photo = HEADSHOTS[p.name] ? `/headshots/${HEADSHOTS[p.name]}.jpg` : null
+            const photo = HEADSHOTS[p.name] ? `/headshots/${HEADSHOTS[p.name]}.webp` : null
             setBuild(prev => {
               const next = { ...prev }
               activeTypes.forEach(attrType => {
