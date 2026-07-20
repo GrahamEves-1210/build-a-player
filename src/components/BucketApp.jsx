@@ -23,9 +23,6 @@ import { NBA_FACE_CENTERS }  from '../data/nba-face-centers'
 import { supabase } from '../lib/supabase'
 import ProfilePage from './ProfilePage'
 import CustomRatingsModal from './CustomRatingsModal'
-const VersusLobby        = lazy(() => import('./VersusLobby'))
-const BucketVersusResult = lazy(() => import('./BucketVersusResult'))
-const VsPvPLeaderboard   = lazy(() => import('./VsPvPLeaderboard'))
 
 const RAMP_AD_UNITS = ['bottom_rail', 'corner_ad_video', 'standard_iab', 'video_bottom_rail']
 const RAMP_FORCE_OFF = RAMP_AD_UNITS.map(unit => ({ unit, force: 'off' }))
@@ -801,69 +798,6 @@ export default function BucketApp() {
     )
   }
 
-  if (page === 'versus-lobby') {
-    return (
-      <Suspense fallback={null}>
-        <VersusLobby
-          onJoin={handleVersusJoin}
-          position={position}
-          gameMode="classic"
-          onBack={() => setPage('splash')}
-          onLeaderboard={() => setPage('pvp-leaderboard')}
-          user={user}
-          vsRecord={vsRecord}
-          channelPrefix="bab"
-        />
-      </Suspense>
-    )
-  }
-
-  if (page === 'versus-result') {
-    return (
-      <Suspense fallback={null}>
-        <BucketVersusResult
-          myData={{ build, player: savedSpinResult, name: user?.user_metadata?.username || user?.email?.split('@')[0] || 'You' }}
-          oppData={{ build: oppBuild, player: oppPlayer, name: versusRoom?.oppName || 'Opponent' }}
-          position={position}
-          role={versusRoom?.role}
-          channel={versusRoom?.channel}
-          versusGame={versusGame}
-          onResult={recordVsResult}
-          onRematch={() => {
-            faceoffFiredRef.current = false
-            setVersusGame(null)
-            setBuild(Object.fromEntries(activeTypes.map(t => [t, null])))
-            setOppBuild({})
-            setOppPlayer(null)
-            setSavedSpinResult(null)
-            setMobileView('spin')
-            setSpinResetKey(k => k + 1)
-            setPage('versus-game')
-            window.scrollTo(0, 0)
-          }}
-          onExit={() => {
-            cleanupVersusChannel(versusRoom?.channel)
-            setVersusRoom(null)
-            setVersusGame(null)
-            setOppBuild({})
-            setOppPlayer(null)
-            setPage('splash')
-          }}
-        />
-      </Suspense>
-    )
-  }
-
-  if (page === 'pvp-leaderboard') {
-    return (
-      <Suspense fallback={null}>
-        <VsPvPLeaderboard
-          onBack={() => setPage('versus-game')}
-          position={position}
-        />
-      </Suspense>
-    )
-  }
 
   if (page === 'salarycap') {
     return (
