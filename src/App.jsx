@@ -132,9 +132,11 @@ export default function App() {
 
     function measure() {
       const el = document.querySelector('[id^="pw-oop"][data-pw-status="loaded"]')
-      if (!el) { root.style.setProperty('--ad-h', '0px'); return }
+      if (!el) { root.style.removeProperty('--ad-h'); return }
 
-      // Check if Playwire hid it via display:none (e.g. user clicked X)
+      // Check if Playwire hid it via display:none (e.g. user clicked X or ad-free mode)
+      // Use setProperty('0px') here specifically to suppress the CSS :has() fallback,
+      // since a hidden element still matches :has() but shouldn't trigger padding.
       const cs = window.getComputedStyle(el)
       if (cs.display === 'none' || cs.visibility === 'hidden') {
         root.style.setProperty('--ad-h', '0px')
@@ -149,10 +151,17 @@ export default function App() {
       }
 
       if (h > 4) {
-        // Bridge only the gap between base offset (54px) and the ad height
-        root.style.setProperty('--ad-h', `${Math.max(0, Math.ceil(h) - 50)}px`)
+        const extra = Math.max(0, Math.ceil(h) - 50)
+        if (extra > 0) {
+          root.style.setProperty('--ad-h', `${extra}px`)
+        } else {
+          // Ad fits within tab bar's base clearance — remove inline override so
+          // the CSS :has() fallback (48px) can apply for the spin button.
+          root.style.removeProperty('--ad-h')
+        }
       } else {
-        root.style.setProperty('--ad-h', '0px')
+        // Not yet sized — remove so CSS :has() fallback can handle it
+        root.style.removeProperty('--ad-h')
       }
     }
 

@@ -14,12 +14,48 @@ frontend:
   cache:
     paths:
       - node_modules/**/*
-  customHeaders:
-    - pattern: 'sw.js'
-      headers:
-        - key: Cache-Control
-          value: no-cache, no-store, must-revalidate
-    - pattern: '*.html'
-      headers:
-        - key: Cache-Control
-          value: no-cache, no-store, must-revalidate
+customHeaders:
+  - pattern: '**/*.html'
+    headers:
+      - key: Cache-Control
+        value: no-cache, no-store, must-revalidate
+  - pattern: '**/sw.js'
+    headers:
+      - key: Cache-Control
+        value: no-cache, no-store, must-revalidate
+  - pattern: '**/assets/**'
+    headers:
+      - key: Cache-Control
+        value: public, max-age=31536000, immutable
+  - pattern: '**/*.js'
+    headers:
+      - key: Cache-Control
+        value: public, max-age=31536000, immutable
+  - pattern: '**/*.css'
+    headers:
+      - key: Cache-Control
+        value: public, max-age=31536000, immutable
+  - pattern: '**/*.webp'
+    headers:
+      - key: Cache-Control
+        value: public, max-age=604800
+  - pattern: '**/*.png'
+    headers:
+      - key: Cache-Control
+        value: public, max-age=604800
+  - pattern: '**/*.jpg'
+    headers:
+      - key: Cache-Control
+        value: public, max-age=604800
+  - pattern: '**/*.svg'
+    headers:
+      - key: Cache-Control
+        value: public, max-age=604800
+  - pattern: '**/logos/**'
+    headers:
+      - key: Cache-Control
+        value: public, max-age=2592000
+  - pattern: '**/headshots/**'
+    headers:
+      - key: Cache-Control
+        value: public, max-age=2592000
