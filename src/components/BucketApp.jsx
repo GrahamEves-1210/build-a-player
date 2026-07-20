@@ -29,21 +29,21 @@ const BucketVersusResult = lazy(() => import('./BucketVersusResult'))
 function enableAdFreeMode() {
   document.documentElement.classList.add('ads-hidden')
   const hide = () => {
-    document.querySelectorAll('[id^="pw-"],[id^="ramp-"],[class^="pw-"],[id^="adBanner"],[id*="bottom_rail"],[class*="bottom_rail"],[id*="video-bottom"],[class*="video-bottom"]').forEach(el => {
+    document.querySelectorAll('[id^="pw-"],[id^="ramp-"],[class^="pw-"],[id^="adBanner"],[id*="bottom_rail"],[class*="bottom_rail"],[id*="video-bottom"],[class*="video-bottom"],[data-pw-desk-top],[data-pw-moat]').forEach(el => {
       el.style.setProperty('display', 'none', 'important')
     })
   }
   hide()
-  // Destroy Ramp bottom rail video unit via API
+  // Destroy Ramp units immediately (if already initialized) and via queue (if not yet)
+  try { window.ramp?.destroyUnits?.(['video_bottom_rail', 'bottom_rail']) } catch {}
   window.ramp = window.ramp || {}
   window.ramp.que = window.ramp.que || []
   window.ramp.que.push(() => {
     try { window.ramp.destroyUnits(['video_bottom_rail', 'bottom_rail']) } catch {}
   })
-  // CSS (ads-hidden class) handles suppression going forward; observer only needed briefly for mid-injection elements
+  // Permanent observer — bottom rail can inject long after page load
   const obs = new MutationObserver(hide)
   obs.observe(document.body, { childList: true, subtree: true })
-  setTimeout(() => obs.disconnect(), 5000)
 }
 
 const HoopU = () => (

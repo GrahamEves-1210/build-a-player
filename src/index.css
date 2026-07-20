@@ -11188,7 +11188,9 @@ html.ads-hidden [id*="bottom_rail"],
 html.ads-hidden [class*="bottom_rail"],
 html.ads-hidden [id*="video-bottom"],
 html.ads-hidden [class*="video-bottom"],
-html.ads-hidden [id*="video_bottom"] {
+html.ads-hidden [id*="video_bottom"],
+html.ads-hidden [data-pw-desk-top],
+html.ads-hidden [data-pw-moat] {
   display: none !important;
 }
 
