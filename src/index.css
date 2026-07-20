@@ -7478,7 +7478,7 @@ html.is-touch .bd-card-main:hover         { background: transparent !important; 
 .plf-banner-ad {
   display: none;
   width: 100%;
-  min-height: 50px;
+  min-height: 270px;
   margin: 0;
   padding: 0;
 }
@@ -11064,6 +11064,7 @@ html.is-touch .alltime-mode .spin-respin-half:hover:not(:disabled) {
   justify-content: center;
   align-items: center;
   overflow: hidden;
+  min-height: 270px;
 }
 .ad-cntr1-footer {
   display: flex;
@@ -11091,8 +11092,8 @@ html.is-touch .alltime-mode .spin-respin-half:hover:not(:disabled) {
 }
 /* spin screen: pre-reserve ad height so chips never jump when ad loads */
 .spin-panel-static .ad-cntr1-mobile {
-  height: 60px;
-  min-height: 60px;
+  height: 270px;
+  min-height: 270px;
   overflow: hidden;
   margin: 0 -11px -20px;
 }
