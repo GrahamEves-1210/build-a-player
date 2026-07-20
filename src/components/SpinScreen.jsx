@@ -326,18 +326,16 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
   const isDone         = phase === 'done'
 
   const teamReelItems = useMemo(() => {
-    const usedShorts = new Set([
-      ...usedTeamsRef.current.map(t => t.short),
-      ...types.map(t => build[t]?.team).filter(Boolean),
-    ])
-    const pool = teamsPool.filter(t => !usedShorts.has(t.short))
-    const finalPool = pool.length > 0 ? pool : [...teamsPool]
+    const usedShorts = new Set(usedTeamsRef.current.map(t => t.short))
+    const eligible = teamsPool.filter(t => !usedShorts.has(t.short))
+    const pool = eligible.length > 0 ? eligible : [...teamsPool]
+    const finalPool = [...pool]
     for (let i = finalPool.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1))
       ;[finalPool[i], finalPool[j]] = [finalPool[j], finalPool[i]]
     }
     return finalPool
-  }, [spinCount, build, types])
+  }, [spinCount, teamsPool])
 
   // Stable QB items — minimal placeholder until team is selected (QB reel is blurred/hidden)
   const qbReelItems = useMemo(() => {
@@ -375,7 +373,10 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
     if (!isDone || adInvokedRef.current || adsDisabled || window.innerWidth > 768) return
     adInvokedRef.current = true
     window.ramp?.que?.push(() => {
-      window.ramp.spaAddAds([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1' }])
+      const hasMental = visibleCategories.some(c => c.id === 'mental')
+      const ads = [{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-physical' }]
+      if (hasMental) ads.push({ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-mental' })
+      window.ramp.spaAddAds(ads)
     })
   }, [isDone, adsDisabled])
 
@@ -520,7 +521,6 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
               )}
             </div>
           )}
-          <div id="ramp-cntr1" className={`ad-cntr1-mobile${isDone ? '' : ' ad-cntr1-hidden'}`} />
         </div>
 
         <div className="spin-panel-scroll">
@@ -536,18 +536,24 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
                   : visibleCategories.map((cat, catIdx) => {
                       const available = cat.types.filter(type => types.includes(type) && !build[type])
                       if (!available.length) return null
+                      const adId = cat.id === 'physical' ? 'ramp-cntr1-physical' : cat.id === 'mental' ? 'ramp-cntr1-mental' : null
                       return (
-                        <div key={cat.id} className="attr-category-section">
-                          <div className="attr-category-hd">
-                            <div className="attr-category-line" />
-                            <span className="attr-category-lbl">{cat.label}</span>
-                            <div className="attr-category-line" />
+                        <div key={cat.id}>
+                          {adId && !adsDisabled && window.innerWidth <= 768 && (
+                            <div id={adId} className="ad-cntr1-mobile" />
+                          )}
+                          <div className="attr-category-section">
+                            <div className="attr-category-hd">
+                              <div className="attr-category-line" />
+                              <span className="attr-category-lbl">{cat.label}</span>
+                              <div className="attr-category-line" />
+                            </div>
+                            {available.map(type => {
+                              const meta = attrMap[type]
+                              const val  = selectedQB.attrs[type]
+                              return <Chip key={type} type={type} meta={meta} val={val} selectedQB={selectedQB} draggingType={draggingType} onChipTap={onChipTap} onDragStart={onDragStart} onDragEnd={onDragEnd} setDraggingType={setDraggingType} hideGrades={isVersusMode || hideGrades} headshotsMap={headshotsMap} headshotsDir={headshotsDir} isBucket={isBucket} />
+                            })}
                           </div>
-                          {available.map(type => {
-                            const meta = attrMap[type]
-                            const val  = selectedQB.attrs[type]
-                            return <Chip key={type} type={type} meta={meta} val={val} selectedQB={selectedQB} draggingType={draggingType} onChipTap={onChipTap} onDragStart={onDragStart} onDragEnd={onDragEnd} setDraggingType={setDraggingType} hideGrades={isVersusMode || hideGrades} headshotsMap={headshotsMap} headshotsDir={headshotsDir} isBucket={isBucket} />
-                          })}
                         </div>
                       )
                     })

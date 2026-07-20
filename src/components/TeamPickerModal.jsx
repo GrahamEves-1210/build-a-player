@@ -133,7 +133,7 @@ function SlotReel({ items, spinning, idle, onStop }) {
   )
 }
 
-export default function TeamPickerModal({ onSelect, isPlus = false }) {
+export default function TeamPickerModal({ onSelect, isPlus = false, build = {} }) {
   const [phase, setPhase]       = useState('idle')
   const [result, setResult]     = useState(null)
   const [spinCount, setSpinCount] = useState(0)
@@ -160,13 +160,20 @@ export default function TeamPickerModal({ onSelect, isPlus = false }) {
     setTimeout(() => onSelect(team), 800)
   }
 
+  const pickPool = useMemo(() => {
+    const TEAM_MAP = Object.fromEntries(NFL_TEAMS.map(t => [t.short, t]))
+    const shorts = [...new Set(Object.values(build).filter(Boolean).map(v => v.team).filter(Boolean))]
+    const filtered = shorts.map(s => TEAM_MAP[s]).filter(Boolean)
+    return filtered.length > 0 ? filtered : NFL_TEAMS
+  }, [build])
+
   const filteredTeams = useMemo(() => {
-    if (!search) return NFL_TEAMS
+    if (!search) return pickPool
     const s = search.toLowerCase()
-    return NFL_TEAMS.filter(t =>
+    return pickPool.filter(t =>
       t.name.toLowerCase().includes(s) || t.short.toLowerCase().includes(s)
     )
-  }, [search])
+  }, [search, pickPool])
 
   const cardStyle = result
     ? { '--tpm-color': result.color, borderColor: result.color + '55', boxShadow: `0 0 32px ${result.color}22, 0 32px 80px rgba(0,0,0,0.55)` }

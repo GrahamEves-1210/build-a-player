@@ -333,7 +333,10 @@ export default function BucketApp() {
 
   // Initialize Playwire ads on mount and page change
   useEffect(() => {
-    window.ramp?.que?.push(() => { window.ramp.spaNewPage() })
+    window.ramp?.que?.push(() => {
+      window.ramp.spaNewPage()
+      if (page === 'splash') try { window.ramp.destroyUnits(RAMP_AD_UNITS) } catch {}
+    })
   }, [page])
 
   // Fetch my W-L record when entering versus-game

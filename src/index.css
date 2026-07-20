@@ -11096,13 +11096,6 @@ html.is-touch .alltime-mode .spin-respin-half:hover:not(:disabled) {
     min-height: 90px;
   }
 }
-/* spin screen: pre-reserve ad height so chips never jump when ad loads */
-.spin-panel-static .ad-cntr1-mobile {
-  height: 270px;
-  min-height: 270px;
-  overflow: hidden;
-  margin: 0 -11px -20px;
-}
 .ad-cntr1-hidden {
   visibility: hidden;
   height: 0;

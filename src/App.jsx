@@ -188,6 +188,7 @@ export default function App() {
   useEffect(() => {
     window.ramp?.que?.push(() => {
       window.ramp.spaNewPage()
+      if (page === 'splash') try { window.ramp.destroyUnits(['bottom_rail', 'corner_ad_video', 'standard_iab', 'video_bottom_rail']) } catch {}
     })
   }, [page])
 
@@ -877,7 +878,7 @@ export default function App() {
       )}
 
       {showTeamPicker && (
-        <TeamPickerModal onSelect={handleTeamPicked} isPlus={isCustomMode} />
+        <TeamPickerModal onSelect={handleTeamPicked} isPlus={isCustomMode} build={build} />
       )}
 
       {showSandboxWarning && (
