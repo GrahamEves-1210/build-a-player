@@ -41,7 +41,7 @@ function enableAdFreeMode() {
   })
   // DOM fallback: hide any elements that already loaded or slip through
   const hide = () => {
-    document.querySelectorAll('[id^="pw-"],[id^="ramp-"],[class^="pw-"],[id^="adBanner"],[id*="bottom_rail"],[class*="bottom_rail"],[id*="video-bottom"],[class*="video-bottom"],[data-pw-desk-top],[data-pw-moat]').forEach(el => {
+    document.querySelectorAll('[id^="pw-"],[id^="ramp-"],[class^="pw-"],[id^="adBanner"],[id*="bottom_rail"],[class*="bottom_rail"],[id*="video-bottom"],[class*="video-bottom"],[data-pw-desk-top],[data-pw-moat],.square-ad').forEach(el => {
       el.style.setProperty('display', 'none', 'important')
     })
   }

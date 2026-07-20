@@ -11190,7 +11190,8 @@ html.ads-hidden [id*="video-bottom"],
 html.ads-hidden [class*="video-bottom"],
 html.ads-hidden [id*="video_bottom"],
 html.ads-hidden [data-pw-desk-top],
-html.ads-hidden [data-pw-moat] {
+html.ads-hidden [data-pw-moat],
+html.ads-hidden .square-ad {
   display: none !important;
 }
 
