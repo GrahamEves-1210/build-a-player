@@ -7482,6 +7482,7 @@ html.is-touch .bd-card-main:hover         { background: transparent !important; 
   margin: 0;
   padding: 0;
 }
+.plf-banner-ad:empty { min-height: 0; }
 @media (max-width: 768px) {
   .plf-banner-ad {
     display: block;
@@ -11066,6 +11067,7 @@ html.is-touch .alltime-mode .spin-respin-half:hover:not(:disabled) {
   overflow: hidden;
   min-height: 270px;
 }
+.ad-cntr1-mobile:empty { min-height: 0; }
 .ad-cntr1-footer {
   display: flex;
   justify-content: center;
