@@ -279,7 +279,7 @@ export function ShareModal({ ovr, arch, build, types, onClose, isBucket = false,
 
 // ── ReportCard ────────────────────────────────────────────────────────────────
 
-export default function ReportCard({ build, onSimulate, onReset, types = TYPES, hasResult = false, isRB = false, isBucket = false, bucketPosition = 'guard', isPlus = false, isCustomMode = false, onOpenCustomModal, onSandboxToggle, attrMap = ATTR, logoDir = '/logos/', captureFigure, isSalaryMode = false }) {
+export default function ReportCard({ build, onSimulate, onReset, types = TYPES, hasResult = false, isRB = false, isBucket = false, bucketPosition = 'guard', isPlus = false, isCustomMode = false, onOpenCustomModal, onSandboxToggle, attrMap = ATTR, logoDir = '/logos/', captureFigure, isSalaryMode = false, isVersusMode = false }) {
   const filled = types.filter(t => build[t])
   const ovr = isBucket ? calcBucketOVR(build, types, bucketPosition) : isRB ? calcOVRRB(build, types) : calcOVR(build, types)
   const arch = isBucket
@@ -353,7 +353,7 @@ export default function ReportCard({ build, onSimulate, onReset, types = TYPES, 
           <div className={`ovr-arch${!filled.length ? ' ovr-arch-idle' : ''}`}>{arch}</div>
         </div>
 
-        {complete && (
+        {complete && !isVersusMode && (
           <button className="share-build-btn" onClick={() => setShowShare(true)}>
             Share Build
           </button>
@@ -380,13 +380,15 @@ export default function ReportCard({ build, onSimulate, onReset, types = TYPES, 
           >Custom Build</button>
         )}
 
-        <button
-          className={`sim-btn${complete ? '' : ' sim-btn-locked'}`}
-          onClick={complete ? onSimulate : undefined}
-          disabled={!complete}
-        >
-          {!complete ? `${types.length - filled.length} slots remaining` : hasResult ? 'View Results' : 'Simulate Season'}
-        </button>
+        {!isVersusMode && (
+          <button
+            className={`sim-btn${complete ? '' : ' sim-btn-locked'}`}
+            onClick={complete ? onSimulate : undefined}
+            disabled={!complete}
+          >
+            {!complete ? `${types.length - filled.length} slots remaining` : hasResult ? 'View Results' : 'Simulate Season'}
+          </button>
+        )}
       </div>
 
       <div className="build-slots">
@@ -395,9 +397,11 @@ export default function ReportCard({ build, onSimulate, onReset, types = TYPES, 
         ))}
       </div>
 
-      <div className="panel-footer">
-        <button className="reset-btn" onClick={onReset}>Reset Build</button>
-      </div>
+      {!isVersusMode && (
+        <div className="panel-footer">
+          <button className="reset-btn" onClick={onReset}>Reset Build</button>
+        </div>
+      )}
 
       {showShare && createPortal(
         <ShareModal ovr={ovr} arch={arch} build={build} types={types} onClose={() => setShowShare(false)}

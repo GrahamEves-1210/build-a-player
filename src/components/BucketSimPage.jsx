@@ -2645,8 +2645,8 @@ export default function BucketSimPage({ result, build, types, position, onBack, 
           </div>
         )}
 
-        {!adsDisabled && screen < screens.length - 1 && window.innerWidth <= 768 && (
-          <div id="ramp-cntr1-plf" className="plf-banner-ad" />
+        {!adsDisabled && screen < 3 && window.innerWidth <= 768 && (
+          <div id="ramp-cntr1-plf" className="plf-banner-ad" style={screen === 0 ? { minHeight: 0 } : undefined} />
         )}
         {screens[screen]}
         {!adsDisabled && screen > 0 && screen < screens.length - 1 && screen !== 2 && (

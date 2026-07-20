@@ -226,7 +226,7 @@ const POS_COLORS = {
 }
 
 // ─── SpinScreen ──────────────────────────────────────────────────────────────
-export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, activeCategory, resetKey, onChipTap, types = TYPES, isLite = false, qbPool = QBS, savedResult = null, onSaveResult, onPhaseChange, gameKey, onReset, adsDisabled = false, isRB = false, isBucket = false, onlineCount = 0, attrMap = ATTR, categoriesData = CATEGORIES, teamsPool = TEAMS, logoDir = '/logos/', playerLabel, headshotsMap = HEADSHOTS, headshotsDir = '/headshots/', hideTeamResult = false }) {
+export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, activeCategory, resetKey, onChipTap, types = TYPES, isLite = false, qbPool = QBS, savedResult = null, onSaveResult, onPhaseChange, gameKey, onReset, adsDisabled = false, isRB = false, isBucket = false, isVersusMode = false, onlineCount = 0, attrMap = ATTR, categoriesData = CATEGORIES, teamsPool = TEAMS, logoDir = '/logos/', playerLabel, headshotsMap = HEADSHOTS, headshotsDir = '/headshots/', hideTeamResult = false }) {
   const pLabel = playerLabel ?? (isRB ? 'RB' : 'QB')
   const [phase, setPhase]               = useState(() => savedResult?.selectedQB ? 'done' : 'idle')
   const [selectedTeam, setSelectedTeam] = useState(() => savedResult?.selectedTeam ?? null)
@@ -401,9 +401,11 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
                 {onlineCount} online
               </span>
             )}
-            <button className={`grade-toggle-btn${hideGrades ? ' grade-toggle-off' : ' grade-toggle-on'}`} onClick={toggleGrades}>
-              {hideGrades ? 'Hiding Grades' : 'Showing Grades'}
-            </button>
+            {!isVersusMode && (
+              <button className={`grade-toggle-btn${hideGrades ? ' grade-toggle-off' : ' grade-toggle-on'}`} onClick={toggleGrades}>
+                {hideGrades ? 'Hiding Grades' : 'Showing Grades'}
+              </button>
+            )}
           </div>
           <div className="reels-wrap">
             <div className="reel-tri reel-tri-l" />
@@ -529,7 +531,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
                   ? types.filter(t => !build[t]).map(t => {
                       const meta = attrMap[t]
                       const val  = selectedQB.attrs[t]
-                      return <Chip key={t} type={t} meta={meta} val={val} selectedQB={selectedQB} draggingType={draggingType} onChipTap={onChipTap} onDragStart={onDragStart} onDragEnd={onDragEnd} setDraggingType={setDraggingType} hideGrades={hideGrades} headshotsMap={headshotsMap} headshotsDir={headshotsDir} isBucket={isBucket} />
+                      return <Chip key={t} type={t} meta={meta} val={val} selectedQB={selectedQB} draggingType={draggingType} onChipTap={onChipTap} onDragStart={onDragStart} onDragEnd={onDragEnd} setDraggingType={setDraggingType} hideGrades={isVersusMode || hideGrades} headshotsMap={headshotsMap} headshotsDir={headshotsDir} isBucket={isBucket} />
                     })
                   : visibleCategories.map((cat, catIdx) => {
                       const available = cat.types.filter(type => types.includes(type) && !build[type])
@@ -544,7 +546,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
                           {available.map(type => {
                             const meta = attrMap[type]
                             const val  = selectedQB.attrs[type]
-                            return <Chip key={type} type={type} meta={meta} val={val} selectedQB={selectedQB} draggingType={draggingType} onChipTap={onChipTap} onDragStart={onDragStart} onDragEnd={onDragEnd} setDraggingType={setDraggingType} hideGrades={hideGrades} headshotsMap={headshotsMap} headshotsDir={headshotsDir} isBucket={isBucket} />
+                            return <Chip key={type} type={type} meta={meta} val={val} selectedQB={selectedQB} draggingType={draggingType} onChipTap={onChipTap} onDragStart={onDragStart} onDragEnd={onDragEnd} setDraggingType={setDraggingType} hideGrades={isVersusMode || hideGrades} headshotsMap={headshotsMap} headshotsDir={headshotsDir} isBucket={isBucket} />
                           })}
                         </div>
                       )

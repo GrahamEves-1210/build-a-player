@@ -6,7 +6,7 @@ import Silhouette from './Silhouette'
 import ReportCard from './ReportCard'
 import AuthModal from './AuthModal'
 import BucketSimPage, { TeamSpinModal } from './BucketSimPage'
-import { runBucketSimulation, getBucketGuardArchetype, getBucketBigArchetype } from '../utils/bucketSimulation'
+import { runBucketSimulation, getBucketGuardArchetype, getBucketBigArchetype, calcBucketOVR } from '../utils/bucketSimulation'
 import BucketLeaderboardPage from './BucketLeaderboardPage'
 import BucketSalaryCap from './BucketSalaryCap'
 import PrivacyPage from './PrivacyPage'
@@ -23,8 +23,9 @@ import { NBA_FACE_CENTERS }  from '../data/nba-face-centers'
 import { supabase } from '../lib/supabase'
 import ProfilePage from './ProfilePage'
 import CustomRatingsModal from './CustomRatingsModal'
-const VersusLobby       = lazy(() => import('./VersusLobby'))
+const VersusLobby        = lazy(() => import('./VersusLobby'))
 const BucketVersusResult = lazy(() => import('./BucketVersusResult'))
+const VsPvPLeaderboard   = lazy(() => import('./VsPvPLeaderboard'))
 
 const RAMP_AD_UNITS = ['bottom_rail', 'corner_ad_video', 'standard_iab', 'video_bottom_rail']
 const RAMP_FORCE_OFF = RAMP_AD_UNITS.map(unit => ({ unit, force: 'off' }))
@@ -138,7 +139,7 @@ function BucketChip({ label, col, angle, dist, visible, mx, my, isMobile, dox = 
 
 const POS_LABELS = { guard: 'Guard', big: 'Big' }
 
-function BucketSplash({ onStart }) {
+function BucketSplash({ onStart, onVersus }) {
   const [phase, setPhase]       = useState(0)
   const [position, setPosition] = useState(() => { const p = localStorage.getItem('bucketPosition'); return (p === 'guard' || p === 'big') ? p : 'guard' })
   const isMobile = useMemo(() => window.innerWidth <= 768, [])
@@ -192,13 +193,6 @@ function BucketSplash({ onStart }) {
 
         <div className="splash-tagline">Spin the wheel · Build-A-{POS_LABELS[position]}</div>
 
-        <button className="splash-minigame-btn splash-minigame-btn--player" onClick={() => { localStorage.removeItem('bap_progress'); window.location.href = '/'; }}>
-          <div className="splash-xlink-logo">
-            BUIL<span className="splash-xlink-d">D</span><em className="splash-xlink-em splash-xlink-em--player">-<span className="splash-xlink-a">A</span>-</em>PLAYER
-          </div>
-          <div className="splash-mg-sub">FOOTBALL BUILDER</div>
-        </button>
-
         <div className="splash-modes">
           <button className="splash-mode-classic" onClick={() => { localStorage.setItem('bucketPosition', position); onStart('classic', position) }}>
             <div className="smode-title">Classic</div>
@@ -224,6 +218,18 @@ function BucketSplash({ onStart }) {
           </button>
         </div>
 
+        <button className="splash-minigame-btn splash-minigame-btn--h2h" style={{ position: 'relative' }} onClick={() => onVersus?.(position)}>
+          <span className="splash-h2h-new">NEW</span>
+          <div className="splash-h2h-logo">HEAD-TO-HEAD</div>
+          <div className="splash-mg-sub splash-mg-sub--h2h">1v1 · 5v5</div>
+        </button>
+
+        <button className="splash-minigame-btn splash-minigame-btn--player" onClick={() => { localStorage.removeItem('bap_progress'); window.location.href = '/'; }}>
+          <div className="splash-xlink-logo">
+            BUIL<span className="splash-xlink-d">D</span><em className="splash-xlink-em splash-xlink-em--player">-<span className="splash-xlink-a">A</span>-</em>PLAYER
+          </div>
+          <div className="splash-mg-sub">FOOTBALL BUILDER</div>
+        </button>
 
         <div className="splash-disclaimer">Fan-made · Not affiliated with the NBA</div>
       </div>
@@ -284,9 +290,19 @@ export default function BucketApp() {
   const [showSandboxWarning, setShowSandboxWarning] = useState(false)
 
   // Versus mode
-  const [versusRoom, setVersusRoom]   = useState(null)
-  const [oppBuild, setOppBuild]       = useState({})
-  const [oppPlayer, setOppPlayer]     = useState(null)
+  const [versusRoom,     setVersusRoom]     = useState(null)
+  const [oppBuild,       setOppBuild]       = useState({})
+  const [oppPlayer,      setOppPlayer]      = useState(null)
+  const [leaveConfirm,   setLeaveConfirm]   = useState(null)
+  const [vsRecord,       setVsRecord]       = useState({ wins: 0, losses: 0 })
+  const [oppRecord,      setOppRecord]      = useState(null)
+  const [oppPosition,    setOppPosition]    = useState(null)
+  const [showVsPrompt,   setShowVsPrompt]   = useState(false)
+  const [oppDisconnected, setOppDisconnected] = useState(false)
+  const [versusGame,     setVersusGame]     = useState(null)
+  const vsResultRef      = useRef({ build: {}, user: null, position: 'guard' })
+  const faceoffFiredRef  = useRef(false)
+  useEffect(() => { vsResultRef.current = { build, user, position } }, [build, user, position])
 
   const activeDragRef = useRef(activeDrag)
   useLayoutEffect(() => { activeDragRef.current = activeDrag }, [activeDrag])
@@ -319,6 +335,37 @@ export default function BucketApp() {
   useEffect(() => {
     window.ramp?.que?.push(() => { window.ramp.spaNewPage() })
   }, [page])
+
+  // Fetch my W-L record when entering versus-game
+  useEffect(() => {
+    if (page !== 'versus-game' || !user || !supabase) return
+    supabase
+      .from('vs_results')
+      .select('result')
+      .eq('user_id', user.id)
+      .then(({ data }) => {
+        if (!data) return
+        const wins   = data.filter(r => r.result === 'win').length
+        const losses = data.filter(r => r.result === 'loss' || r.result === 'forfeit').length
+        setVsRecord({ wins, losses })
+      })
+  }, [page, user])
+
+  // Fetch opponent W-L record when versusRoom is set
+  useEffect(() => {
+    if (!versusRoom?.oppId || !supabase) return
+    setOppRecord(null)
+    supabase
+      .from('vs_results')
+      .select('result')
+      .eq('user_id', versusRoom.oppId)
+      .then(({ data }) => {
+        if (!data) return
+        const wins   = data.filter(r => r.result === 'win').length
+        const losses = data.filter(r => r.result === 'loss' || r.result === 'forfeit').length
+        setOppRecord({ wins, losses })
+      })
+  }, [versusRoom?.oppId])
 
   useEffect(() => {
     if (!supabase) return
@@ -483,6 +530,14 @@ export default function BucketApp() {
   }, [])
 
   const handleReset = useCallback(() => {
+    faceoffFiredRef.current = false
+    setVersusGame(null)
+    setVersusRoom(prev => {
+      if (prev) { recordVsForfeiture(); cleanupVersusChannel(prev.channel) }
+      return null
+    })
+    setOppBuild({})
+    setOppPlayer(null)
     setBuild(Object.fromEntries(activeTypes.map(t => [t, null])))
     setActiveDrag(null)
     setSpinResetKey(k => k + 1)
@@ -574,6 +629,14 @@ export default function BucketApp() {
   }, [activeTypes])
 
   const handleHome = useCallback(() => {
+    faceoffFiredRef.current = false
+    setVersusGame(null)
+    setVersusRoom(prev => {
+      if (prev) { recordVsForfeiture(); cleanupVersusChannel(prev.channel) }
+      return null
+    })
+    setOppBuild({})
+    setOppPlayer(null)
     setPage('splash')
     setGameMode(null)
     setBuild({})
@@ -588,22 +651,86 @@ export default function BucketApp() {
     handleHome()
   }, [handleHome])
 
+  // Guard: show leave-confirmation modal before any action that exits an active versus game
+  const guardedLeave = useCallback((fn) => {
+    if (versusRoom) { setLeaveConfirm({ fn }); return }
+    fn()
+  }, [versusRoom])
+
+  // Intercept browser back while in an active versus game
+  useEffect(() => {
+    if (!versusRoom) return
+    window.history.pushState(null, '', window.location.href)
+    const handler = () => {
+      window.history.pushState(null, '', window.location.href)
+      setLeaveConfirm({ fn: handleReset })
+    }
+    window.addEventListener('popstate', handler)
+    return () => window.removeEventListener('popstate', handler)
+  }, [versusRoom, handleReset])
+
   const handleVersusJoin = useCallback(({ code, role, oppId, oppName, channel }) => {
     channel.on('broadcast', { event: 'bab_build' }, ({ payload }) => {
       setOppBuild(payload.build || {})
       setOppPlayer(payload.player || null)
     })
+    channel.on('broadcast', { event: 'bab_faceoff' }, () => {
+      setPage('versus-result')
+    })
+    channel.on('broadcast', { event: 'bab_position' }, ({ payload }) => {
+      setOppPosition(payload.position || null)
+    })
+    // Guest stores game data broadcast by host (with perspective flipped)
+    channel.on('broadcast', { event: 'bab_game' }, ({ payload }) => {
+      if (role !== 'guest' || !payload?.plays) return
+      const flipped = payload.plays.map(p => ({
+        ...p,
+        who: p.who === 'me' ? 'opp' : p.who === 'opp' ? 'me' : p.who,
+        milestoneFor: p.milestoneFor === 'me' ? 'opp' : p.milestoneFor === 'opp' ? 'me' : p.milestoneFor,
+        myPts: p.oppPts,
+        oppPts: p.myPts,
+      }))
+      setVersusGame({ plays: flipped, finalMy: payload.finalOpp, finalOpp: payload.finalMy })
+    })
+
+    // Detect opponent disconnect via Supabase presence (not available on BroadcastChannel mock)
+    if (!channel._bc) {
+      channel.on('presence', { event: 'leave' }, ({ leftPresences }) => {
+        const theyLeft = leftPresences.some(p => p.vid === oppId)
+        if (!theyLeft) return
+        const { build: b, user: u, position: pos } = vsResultRef.current
+        if (u && supabase) {
+          supabase.from('vs_results').insert({
+            user_id:  u.id,
+            username: u.user_metadata?.username || u.email?.split('@')[0],
+            result:   'win',
+            ovr:      calcBucketOVR(b, POS_TYPES[pos] ?? GUARD_TYPES, pos),
+            position: pos,
+          }).catch(() => {})
+        }
+        setOppDisconnected(true)
+        setVersusRoom(null)
+        cleanupVersusChannel(channel)
+      })
+    }
+
     setVersusRoom({ code, role, oppId, oppName, channel })
     setOppBuild({})
     setOppPlayer(null)
+    setOppPosition(null)
+    setOppRecord(null)
     setBuild(Object.fromEntries(activeTypes.map(t => [t, null])))
     setActiveCategory((POS_CATS[position] ?? GUARD_CATEGORIES)[0].id)
     setSavedSpinResult(null)
     setSimResult(null)
     setMobileView('spin')
     setSpinResetKey(k => k + 1)
+    setShowVsPrompt(true)
     setPage('versus-game')
     window.scrollTo(0, 0)
+
+    // Broadcast my position so opponent's prompt can show it
+    channel.send({ type: 'broadcast', event: 'bab_position', payload: { position } }).catch?.(() => {})
   }, [activeTypes, position])
 
   useEffect(() => {
@@ -611,13 +738,62 @@ export default function BucketApp() {
     versusRoom.channel.send({
       type: 'broadcast', event: 'bab_build',
       payload: { build, player: savedSpinResult },
-    }).catch(() => {})
+    }).catch?.(() => {})
   }, [build, savedSpinResult, versusRoom, page])
+
+  // Auto-start: when both players have all attributes, host fires faceoff automatically
+  useEffect(() => {
+    if (page !== 'versus-game' || !versusRoom || versusRoom.role !== 'host') {
+      if (!versusRoom || page !== 'versus-game') faceoffFiredRef.current = false
+      return
+    }
+    const myF  = activeTypes.filter(t => build[t]).length
+    const oppF = activeTypes.filter(t => oppBuild[t]).length
+    if (myF === activeTypes.length && oppF === activeTypes.length && !faceoffFiredRef.current) {
+      faceoffFiredRef.current = true
+      versusRoom.channel?.send({ type: 'broadcast', event: 'bab_faceoff', payload: {} }).catch?.(() => {})
+      setTimeout(() => setPage('versus-result'), 300)
+    }
+  }, [build, oppBuild, page, versusRoom, activeTypes])
+
+  function cleanupVersusChannel(ch) {
+    if (!ch) return
+    if (ch._bc) { ch.close() }
+    else { try { supabase.removeChannel(ch) } catch {} }
+  }
+
+  function vsResultPayload(result) {
+    return {
+      user_id:  user.id,
+      username: user.user_metadata?.username || user.email?.split('@')[0],
+      result,
+      ovr:      calcBucketOVR(build, activeTypes, position),
+      position,
+    }
+  }
+
+  function recordVsForfeiture() {
+    if (!supabase || !user) return
+    supabase.from('vs_results').insert(vsResultPayload('forfeit')).catch(() => {})
+  }
+
+  function recordVsResult(result) {
+    if (!supabase || !user) return
+    supabase.from('vs_results').insert(vsResultPayload(result)).catch(() => {})
+  }
 
   if (page === 'splash') {
     return (
       <BucketSplash
         onStart={handleStart}
+        onVersus={(pos) => {
+          const p = pos || 'guard'
+          localStorage.setItem('bucketPosition', p)
+          setPosition(p)
+          setGameMode('classic')
+          setBuild(Object.fromEntries((POS_TYPES[p] ?? GUARD_TYPES).map(t => [t, null])))
+          setPage('versus-lobby')
+        }}
       />
     )
   }
@@ -630,7 +806,9 @@ export default function BucketApp() {
           position={position}
           gameMode="classic"
           onBack={() => setPage('splash')}
+          onLeaderboard={() => setPage('pvp-leaderboard')}
           user={user}
+          vsRecord={vsRecord}
           channelPrefix="bab"
         />
       </Suspense>
@@ -641,10 +819,16 @@ export default function BucketApp() {
     return (
       <Suspense fallback={null}>
         <BucketVersusResult
-          myData={{ build, player: savedSpinResult }}
+          myData={{ build, player: savedSpinResult, name: user?.user_metadata?.username || user?.email?.split('@')[0] || 'You' }}
           oppData={{ build: oppBuild, player: oppPlayer, name: versusRoom?.oppName || 'Opponent' }}
           position={position}
+          role={versusRoom?.role}
+          channel={versusRoom?.channel}
+          versusGame={versusGame}
+          onResult={recordVsResult}
           onRematch={() => {
+            faceoffFiredRef.current = false
+            setVersusGame(null)
             setBuild(Object.fromEntries(activeTypes.map(t => [t, null])))
             setOppBuild({})
             setOppPlayer(null)
@@ -655,10 +839,24 @@ export default function BucketApp() {
             window.scrollTo(0, 0)
           }}
           onExit={() => {
-            if (versusRoom?.channel) supabase.removeChannel(versusRoom.channel)
+            cleanupVersusChannel(versusRoom?.channel)
             setVersusRoom(null)
+            setVersusGame(null)
+            setOppBuild({})
+            setOppPlayer(null)
             setPage('splash')
           }}
+        />
+      </Suspense>
+    )
+  }
+
+  if (page === 'pvp-leaderboard') {
+    return (
+      <Suspense fallback={null}>
+        <VsPvPLeaderboard
+          onBack={() => setPage('versus-game')}
+          position={position}
         />
       </Suspense>
     )
@@ -676,12 +874,12 @@ export default function BucketApp() {
   }
 
   const navbarProps = {
-    onReset: handleReset,
-    onHome: handleHome,
+    onReset: () => guardedLeave(handleReset),
+    onHome: () => guardedLeave(handleHome),
     onSignIn: () => setShowAuth(true),
-    onProfile: () => user ? (window.history.pushState({}, '', '/profile'), setPage('profile')) : setShowAuth(true),
-    onAbout: () => { window.location.href = '/?about' },
-    onLeaderboard: () => setPage('leaderboard'),
+    onProfile: () => guardedLeave(() => user ? (window.history.pushState({}, '', '/profile'), setPage('profile')) : setShowAuth(true)),
+    onAbout: () => guardedLeave(() => { window.location.href = '/?about' }),
+    onLeaderboard: () => guardedLeave(() => setPage('leaderboard')),
     onSubscribe: async () => {
       if (!user) { setShowAuth(true); return }
       try {
@@ -694,13 +892,26 @@ export default function BucketApp() {
         if (url) window.location.href = url
       } catch {}
     },
-    onSwitchBucketPosition: handleNavPositionSwitch,
+    onSwitchBucketPosition: (pos) => guardedLeave(() => handleNavPositionSwitch(pos)),
     user,
     gameMode,
     isRB: false,
     isPlus: isSubscribed,
     isBucket: true,
     bucketPosition: position,
+    versusState: page === 'versus-game' && versusRoom ? (() => {
+      const myF  = activeTypes.filter(t => build[t]).length
+      const oppF = activeTypes.filter(t => oppBuild[t]).length
+      return {
+        myFilled: myF, oppFilled: oppF, total: activeTypes.length,
+        oppName: versusRoom.oppName,
+        bothReady: myF === activeTypes.length && oppF === activeTypes.length,
+        onFaceOff: () => {
+          versusRoom.channel?.send({ type: 'broadcast', event: 'bab_faceoff', payload: {} }).catch?.(() => {})
+          setPage('versus-result')
+        },
+      }
+    })() : null,
   }
 
   if (page === 'sim') {
@@ -864,6 +1075,7 @@ export default function BucketApp() {
           adsDisabled={adsDisabled}
           isRB={false}
           isBucket={true}
+          isVersusMode={page === 'versus-game'}
           onlineCount={onlineCount}
           attrMap={BUCKET_ATTR}
           categoriesData={activeCategories}
@@ -896,7 +1108,7 @@ export default function BucketApp() {
         <div className="right-panel-wrap">
           <ReportCard
             build={build}
-            onSimulate={page === 'versus-game' ? () => setPage('versus-result') : () => setShowTeamSpin(true)}
+            onSimulate={() => setShowTeamSpin(true)}
             onReset={handleReset}
             types={activeTypes}
             hasResult={false}
@@ -911,37 +1123,66 @@ export default function BucketApp() {
             logoDir="/logos/nba/"
             captureFigure={captureFigure}
             isSalaryMode={gameMode === 'salarycap'}
+            isVersusMode={page === 'versus-game'}
           />
         </div>
+      </main>
 
-        {page === 'versus-game' && versusRoom && (() => {
-          const oppFilled = activeTypes.filter(t => oppBuild[t]).length
-          const myFilled  = activeTypes.filter(t => build[t]).length
-          return (
-            <div className="versus-hud">
-              <div className="versus-hud-inner">
-                <div className="vhud-side vhud-side--me">
-                  <span className="vhud-label">YOU</span>
-                  <span className="vhud-count">{myFilled}/{activeTypes.length}</span>
-                </div>
-                <div className="vhud-vs">VS</div>
-                <div className="vhud-side vhud-side--opp">
-                  <span className="vhud-label">{versusRoom.oppName}</span>
-                  <span className="vhud-count">{oppFilled}/{activeTypes.length}</span>
+      {leaveConfirm && (
+        <div className="leave-confirm-overlay" onClick={() => setLeaveConfirm(null)}>
+          <div className="leave-confirm-modal" onClick={e => e.stopPropagation()}>
+            <div className="lcm-title">Leave game?</div>
+            <div className="lcm-body">Leaving an active game counts as a loss on your record.</div>
+            <div className="lcm-actions">
+              <button className="lcm-stay" onClick={() => setLeaveConfirm(null)}>Stay in game</button>
+              <button className="lcm-leave" onClick={() => { leaveConfirm.fn(); setLeaveConfirm(null) }}>Leave &amp; take the L</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showVsPrompt && page === 'versus-game' && (
+        <div className="vs-prompt-overlay">
+          <div className="vs-prompt-modal">
+            <div className="vs-prompt-eyebrow">HEAD TO HEAD</div>
+            <div className="vs-prompt-matchup">
+              <div className="vs-prompt-side">
+                <div className="vs-prompt-pos">{position === 'big' ? 'BIG' : 'GUARD'}</div>
+                <div className="vs-prompt-name">{user?.user_metadata?.username || user?.email?.split('@')[0] || 'You'}</div>
+                <div className="vs-prompt-record">
+                  {vsRecord.wins}W – {vsRecord.losses}L
                 </div>
               </div>
-              {myFilled === activeTypes.length && (
-                <button className="vhud-faceoff-btn" onClick={() => setPage('versus-result')}>
-                  FACE OFF
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M5 12h14M12 5l7 7-7 7"/>
-                  </svg>
-                </button>
-              )}
+              <div className="vs-prompt-vs">VS</div>
+              <div className="vs-prompt-side">
+                <div className="vs-prompt-pos">{oppPosition === 'big' ? 'BIG' : oppPosition === 'guard' ? 'GUARD' : '—'}</div>
+                <div className="vs-prompt-name">{versusRoom?.oppName || 'Player'}</div>
+                <div className="vs-prompt-record">
+                  {oppRecord ? `${oppRecord.wins}W – ${oppRecord.losses}L` : '— W – — L'}
+                </div>
+              </div>
             </div>
-          )
-        })()}
-      </main>
+            <button className="vs-prompt-start" onClick={() => setShowVsPrompt(false)}>
+              START BUILDING
+            </button>
+          </div>
+        </div>
+      )}
+
+      {oppDisconnected && (
+        <div className="opp-disconnect-overlay" onClick={() => setOppDisconnected(false)}>
+          <div className="opp-disconnect-modal" onClick={e => e.stopPropagation()}>
+            <div className="odm-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55M5 12.55a10.94 10.94 0 0 1 5.17-2.39M10.71 5.05A16 16 0 0 1 22.56 9M1.42 9a15.91 15.91 0 0 1 4.7-2.88M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01"/>
+              </svg>
+            </div>
+            <div className="odm-title">Opponent disconnected</div>
+            <div className="odm-body">You've been given the win.</div>
+            <button className="odm-ok" onClick={() => setOppDisconnected(false)}>OK</button>
+          </div>
+        </div>
+      )}
 
 
       {showTeamSpin && (

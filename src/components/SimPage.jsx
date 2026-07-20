@@ -1105,7 +1105,7 @@ export default function SimPage({ result, build, types = TYPES, onBack, onReset,
         )}
 
         {!adsDisabled && screen < screens.length - 1 && (
-          <div id="ramp-cntr1-plf" className="plf-banner-ad" />
+          <div id="ramp-cntr1-plf" className="plf-banner-ad" style={screen === 0 ? { minHeight: 0, marginBottom: 8 } : undefined} />
         )}
         {screens[screen]}
       </div>

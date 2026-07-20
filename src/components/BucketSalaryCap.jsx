@@ -696,10 +696,10 @@ function SalaryLeaderboard({ dateStr, dateLabel, onClose }) {
 
 // ─── BucketSalaryCap ──────────────────────────────────────────────────────────
 export default function BucketSalaryCap({ onConfirm, onBack, user, initialDateStr }) {
-  const dates      = useMemo(() => Array.from({ length: 3 }, (_, i) => getESTDate(-i)), [])
+  const dates      = useMemo(() => Array.from({ length: 10 }, (_, i) => getESTDate(-i)), [])
   const [activeDate,    setActiveDate]    = useState(() => {
     if (initialDateStr) {
-      const allDates = Array.from({ length: 3 }, (_, i) => getESTDate(-i))
+      const allDates = Array.from({ length: 10 }, (_, i) => getESTDate(-i))
       const match = allDates.find(d => d.str === initialDateStr)
       if (match) return match
     }

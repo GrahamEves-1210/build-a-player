@@ -128,13 +128,6 @@ export default function SplashScreen({ onStart, onDepthChart }) {
 
         <div className="splash-tagline">Spin the wheel · Build your {position.toUpperCase()}</div>
 
-        <button className="splash-minigame-btn splash-minigame-btn--bucket" onClick={() => window.location.href = '/bucket'}>
-          <div className="splash-xlink-logo">
-            BUIL<span className="splash-xlink-d">D</span><em className="splash-xlink-em splash-xlink-em--bucket">-<span className="splash-xlink-a">A</span>-</em>B<HoopU />CKET
-          </div>
-          <div className="splash-mg-sub">BASKETBALL BUILDER</div>
-        </button>
-
         <div className="splash-modes">
           <button className="splash-mode-classic" onClick={() => { localStorage.setItem('lastPosition', position); onStart('classic', position) }}>
             <div className="smode-title">Classic</div>
@@ -162,6 +155,13 @@ export default function SplashScreen({ onStart, onDepthChart }) {
             </div>
           </button>
         </div>
+
+        <button className="splash-minigame-btn splash-minigame-btn--bucket" onClick={() => window.location.href = '/bucket'}>
+          <div className="splash-xlink-logo">
+            BUIL<span className="splash-xlink-d">D</span><em className="splash-xlink-em splash-xlink-em--bucket">-<span className="splash-xlink-a">A</span>-</em>B<HoopU />CKET
+          </div>
+          <div className="splash-mg-sub">BASKETBALL BUILDER</div>
+        </button>
 
         <div className="splash-disclaimer">Fan-made · Not affiliated with the NFL</div>
       </div>

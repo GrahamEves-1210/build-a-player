@@ -176,7 +176,7 @@ const PERKS = [
   'PLUS badge on leaderboard entries',
 ]
 
-export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, onLeaderboard, onSwitchPosition, onSwitchBucketPosition, onSubscribe, onOpenCustomRatings, user, gameMode, isRB, isPlus, isBucket, bucketPosition }) {
+export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, onLeaderboard, onSwitchPosition, onSwitchBucketPosition, onSubscribe, onOpenCustomRatings, user, gameMode, isRB, isPlus, isBucket, bucketPosition, versusState }) {
   const [open,         setOpen]        = useState(false)
   const [htpOpen,      setHtpOpen]     = useState(false)
   const [installOpen,  setInstallOpen] = useState(false)
@@ -212,7 +212,22 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
         </div>
       </div>
 
-      {isBucket ? (
+      {versusState ? (
+        <div className="nav-versus-counter">
+          <span className="nvc-side">YOU {versusState.myFilled}/{versusState.total}</span>
+          <span className="nvc-vs">VS</span>
+          <span className="nvc-side">{versusState.oppName} {versusState.oppFilled}/{versusState.total}</span>
+          {versusState.bothReady && !isBucket && (
+            <button className="nvc-faceoff" onClick={versusState.onFaceOff}>FACE OFF →</button>
+          )}
+          {versusState.bothReady && isBucket && (
+            <span className="nvc-waiting" style={{ color: '#f97316', opacity: 1 }}>Starting…</span>
+          )}
+          {versusState.myFilled === versusState.total && !versusState.bothReady && (
+            <span className="nvc-waiting">Waiting…</span>
+          )}
+        </div>
+      ) : isBucket ? (
         gameMode === 'salarycap' ? (
           <button className="tab-pill tab-pill-qb tab-pill-salary active">Salary Cap</button>
         ) : (
