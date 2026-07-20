@@ -11183,7 +11183,12 @@ html.ads-hidden .ad-cntr1-mobile,
 html.ads-hidden .ad-cntr1-desktop,
 html.ads-hidden .ad-cntr1-lb,
 html.ads-hidden #ramp-cntr1-season,
-html.ads-hidden #ramp-cntr1-final-stats {
+html.ads-hidden #ramp-cntr1-final-stats,
+html.ads-hidden [id*="bottom_rail"],
+html.ads-hidden [class*="bottom_rail"],
+html.ads-hidden [id*="video-bottom"],
+html.ads-hidden [class*="video-bottom"],
+html.ads-hidden [id*="video_bottom"] {
   display: none !important;
 }
 
