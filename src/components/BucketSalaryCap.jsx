@@ -983,7 +983,10 @@ export default function BucketSalaryCap({ onConfirm, onBack, user, initialDateSt
     const build = {}
     SAL_COLS.forEach((col, ci) => {
       const p = sel[ci]
-      typesFor(p, col).forEach(type => {
+      // Use game position (not player's natural position) so defense always maps to the
+      // correct key for the mode (perimeterDefense in guard mode, interiorDefense in big mode)
+      const modeTypes = position === 'big' ? col.bigTypes : col.guardTypes
+      modeTypes.forEach(type => {
         build[type] = {
           type, val: p.attrs[type] ?? 5,
           qb: p.short ?? p.name, qbFull: p.name,
