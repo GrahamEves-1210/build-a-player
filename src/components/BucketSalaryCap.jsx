@@ -933,9 +933,10 @@ export default function BucketSalaryCap({ onConfirm, onBack, user, initialDateSt
     setSel(newSel)
   }, [alreadyPlayed, effectiveGrid])
 
-  const totalCost  = Object.values(sel).reduce((s, p) => s + p.price, 0)
-  const pickedAll  = Object.keys(sel).length === SAL_COLS.length
-  const overBudget = totalCost > dailyBudget
+  const totalCost       = Object.values(sel).reduce((s, p) => s + p.price, 0)
+  const pickedAll       = Object.keys(sel).length === SAL_COLS.length
+  const overBudget      = totalCost > dailyBudget
+  const effectivePosition = sel[4] ? (playerPosGroup(sel[4]) === 'big' ? 'big' : 'guard') : position
 
   const pick = (ci, player) => {
     if (alreadyPlayed) return
@@ -985,10 +986,12 @@ export default function BucketSalaryCap({ onConfirm, onBack, user, initialDateSt
       const p = sel[ci]
       // Use game position (not player's natural position) so defense always maps to the
       // correct key for the mode (perimeterDefense in guard mode, interiorDefense in big mode)
-      const modeTypes = position === 'big' ? col.bigTypes : col.guardTypes
+      const modeTypes     = position === 'big' ? col.bigTypes : col.guardTypes
+      const fallbackTypes = position === 'big' ? col.guardTypes : col.bigTypes
       modeTypes.forEach(type => {
+        const val = p.attrs[type] ?? fallbackTypes.map(t => p.attrs[t]).find(v => v != null) ?? 5
         build[type] = {
-          type, val: p.attrs[type] ?? 5,
+          type, val,
           qb: p.short ?? p.name, qbFull: p.name,
           teamColor: p.teamColor, teamColor2: p.teamColor2,
           team: p.team, captain: p.captain ?? false,
@@ -1016,12 +1019,12 @@ export default function BucketSalaryCap({ onConfirm, onBack, user, initialDateSt
         userId: user?.id ?? null, username: user?.email?.split('@')[0] ?? null,
         totalCost, infinite: true,
       }
-      onConfirm(build, false, null, saveData)
+      onConfirm(build, false, null, saveData, effectivePosition)
       return
     }
 
     if (alreadyPlayed) {
-      onConfirm(buildFromSel(), true, activeDate.str)
+      onConfirm(buildFromSel(), true, activeDate.str, null, effectivePosition)
       return
     }
 
@@ -1056,7 +1059,7 @@ export default function BucketSalaryCap({ onConfirm, onBack, user, initialDateSt
       totalCost,
     }
 
-    onConfirm(build, false, activeDate.str, saveData)
+    onConfirm(build, false, activeDate.str, saveData, effectivePosition)
   }
 
   const effectiveShufflesLeft = mode === 'infinite' ? infShufflesLeft : shufflesLeft

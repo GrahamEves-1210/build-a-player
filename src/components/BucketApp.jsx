@@ -452,7 +452,7 @@ export default function BucketApp() {
     window.scrollTo(0, 0)
   }, [isBucketCustomMode])
 
-  const handleSalaryCapConfirm = useCallback((capBuild, skipToEnd = false, dateStr = null, saveData = null) => {
+  const handleSalaryCapConfirm = useCallback((capBuild, skipToEnd = false, dateStr = null, saveData = null, capPosition = null) => {
     if (dateStr) setSalaryReturnDate(dateStr)
     // Salary cap covers 10 specific types; fill gaps so sim can fire
     const fullBuild = { ...capBuild }
@@ -465,13 +465,23 @@ export default function BucketApp() {
       fullBuild['clutch']       = { ...capBuild['size'], type: 'clutch' }
       fullBuild['basketballIQ'] = { ...capBuild['size'], type: 'basketballIQ' }
     }
+    // When a big was picked for size/athl, remap guard attrs → big attr keys
+    // so getBucketBigArchetype can read interiorDefense, playmaking, rebounding
+    if (capPosition === 'big' && position === 'guard') {
+      if (fullBuild.perimeterDefense)
+        fullBuild.interiorDefense = { ...fullBuild.perimeterDefense, type: 'interiorDefense' }
+      if (!fullBuild.playmaking)
+        fullBuild.playmaking = { ...(fullBuild.passing ?? fallback), type: 'playmaking' }
+      if (!fullBuild.rebounding)
+        fullBuild.rebounding = { ...(fallback), type: 'rebounding', val: 6 }
+    }
     setBuild(fullBuild)
     // Auto-sim: skip the build screen and go straight to results
     // Team is seeded from the date so "View Results" always returns the same team
     const dateSeed = dateStr ? parseInt(dateStr.replace(/-/g, ''), 10) : Date.now()
     let h = dateSeed | 0; h ^= h >>> 16; h = Math.imul(h, 0x45d9f3b) | 0; h ^= h >>> 16
     const randomTeam = NBA_TEAMS[Math.floor(((h >>> 0) / 0x100000000) * NBA_TEAMS.length)]
-    const result = runBucketSimulation(fullBuild, activeTypes, randomTeam, position, dateSeed)
+    const result = runBucketSimulation(fullBuild, activeTypes, randomTeam, capPosition ?? position, dateSeed)
     setSimResult(result)
     setSimInitialScreen(skipToEnd ? 4 : 0)
     setPage('sim')
