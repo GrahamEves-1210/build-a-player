@@ -877,10 +877,7 @@ function ScreenSeason({ result, awards, onNext, adsDisabled = false }) {
   const allDone = revealed === games.length
 
   useEffect(() => {
-    if (!allDone || adsDisabled || window.innerWidth > 768) return
-    window.ramp?.que?.push(() => {
-      window.ramp.spaAddAds([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-season' }])
-    })
+    if (!allDone) return
   }, [allDone])
 
   useEffect(() => {
@@ -940,8 +937,6 @@ function ScreenSeason({ result, awards, onNext, adsDisabled = false }) {
           {allDone && (
             <ConferenceStandings standings={standings} myShort={team?.short} teamColor={team?.color} conf={conference} />
           )}
-
-          {allDone && <div id="ramp-cntr1-season" className="ad-cntr1-mobile" />}
 
           {allDone && (
             <StatCard ppg={ppg} rpg={rpg} apg={apg} spg={spg} bpg={bpg} tov={tov} fgPct={fgPct} threePct={threePct} ftPct={ftPct} per={per} />

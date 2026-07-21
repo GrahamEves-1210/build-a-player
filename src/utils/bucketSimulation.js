@@ -404,10 +404,10 @@ export function runBucketSimulation(build, types, team, position = 'guard', rngS
     mvpStat(23 + rand() * 4, 3  + rand() * 2, 10 + rand() * 3),  // Wemby
     mvpStat(27 + rand() * 4, 5  + rand() * 2, 11 + rand() * 2),  // Giannis
   )
-  const mvpGap = playerMvpRating - topCandidateRating + 4
+  const mvpGap = playerMvpRating - topCandidateRating + 1
   const mvpOddsBase = 1 / (1 + Math.exp(-mvpGap * 0.9))
-  // Historically dominant seasons lock up MVP — lower wins bar to just making playoffs
-  const mvpDominant = madePlayoffs && (ppg >= 30 || (ppg >= 27 && apg >= 8 && rpg >= 8))
+  // Historically dominant seasons lock up MVP — needs truly elite scoring
+  const mvpDominant = madePlayoffs && (ppg >= 33 || (ppg >= 27 && apg + rpg >= 16))
   const mvpOdds = mvpDominant ? Math.max(0.99, mvpOddsBase) : mvpOddsBase
   const mvp = madePlayoffs && rand() < mvpOdds
 
