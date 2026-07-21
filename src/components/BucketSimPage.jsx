@@ -2539,11 +2539,19 @@ export default function BucketSimPage({ result, build, types, position, onBack, 
       { name: 'Luka Doncic',             short: 'Luka',    team: 'LAL', ppg: rb(26,30), rpg: rb(8,10),  apg: rb(8,11)  },
       { name: 'Victor Wembanyama',       short: 'Wemby',   team: 'SAS', ppg: rb(24,28), rpg: rb(9,12),  apg: rb(3,5)   },
     ]
-    const playerEntry = { name: 'You', short: 'You', team: team?.short, ppg, rpg, apg, isPlayer: true }
-    const allMVP = [...MVP_POOL, playerEntry].map(c => ({ ...c, w: Math.pow(Math.max(0, mvpScore(c.ppg, c.rpg, c.apg)), 2.5) * (c.mult ?? 1) }))
-    const totalW = allMVP.reduce((s, c) => s + c.w, 0)
-    let rand = Math.random() * totalW, mvp = allMVP[0]
-    for (const c of allMVP) { rand -= c.w; if (rand <= 0) { mvp = c; break } }
+    const topScore = Math.max(...MVP_POOL.map(c => mvpScore(c.ppg, c.rpg, c.apg)))
+    const myScore = mvpScore(ppg, rpg, apg)
+    let mvp
+    if (myScore >= topScore * 1.06) {
+      mvp = { name: 'You', short: 'You', team: team?.short, ppg, rpg, apg, isPlayer: true }
+    } else {
+      const playerMult = myScore >= topScore * 0.92 ? 1 : 0
+      const playerEntry = { name: 'You', short: 'You', team: team?.short, ppg, rpg, apg, isPlayer: true, mult: playerMult }
+      const allMVP = [...MVP_POOL, playerEntry].map(c => ({ ...c, w: Math.pow(Math.max(0, mvpScore(c.ppg, c.rpg, c.apg)), 2.5) * (c.mult ?? 1) }))
+      const totalW = allMVP.reduce((s, c) => s + c.w, 0)
+      let rand = Math.random() * totalW; mvp = allMVP[0]
+      for (const c of allMVP) { rand -= c.w; if (rand <= 0) { mvp = c; break } }
+    }
     const playerDPOY = ovr >= 80 && bpg >= 2.8 && spg >= 1.5
     const dpoy = playerDPOY
       ? { name: 'You', short: 'You', team: team?.short, spg, bpg, isPlayer: true }

@@ -802,6 +802,7 @@ export default function BucketApp() {
         onBack={() => setPage('splash')}
         user={user}
         initialDateStr={salaryReturnDate}
+        position={position}
       />
     )
   }

@@ -695,7 +695,7 @@ function SalaryLeaderboard({ dateStr, dateLabel, onClose }) {
 }
 
 // ─── BucketSalaryCap ──────────────────────────────────────────────────────────
-export default function BucketSalaryCap({ onConfirm, onBack, user, initialDateStr }) {
+export default function BucketSalaryCap({ onConfirm, onBack, user, initialDateStr, position = 'guard' }) {
   const dates      = useMemo(() => Array.from({ length: 10 }, (_, i) => getESTDate(-i)), [])
   const [activeDate,    setActiveDate]    = useState(() => {
     if (initialDateStr) {
