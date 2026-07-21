@@ -48,8 +48,8 @@ function enableAdFreeMode() {
   obs.observe(document.body, { childList: true, subtree: true })
 }
 
-// Early call for returning plus users — fires before Ramp initializes so forceUnits takes effect
-try { if (localStorage.getItem('bap_subscribed') === '1') enableAdFreeMode() } catch {}
+// Early call — fires before Ramp initializes so forceUnits takes effect
+try { if (localStorage.getItem('bap_subscribed') === '1' || localStorage.getItem('bap_ads_off') === '1') enableAdFreeMode() } catch {}
 
 const HoopU = () => (
   <svg className="hoop-u-svg" viewBox="0 0 68 90" fill="none" aria-hidden="true">
@@ -377,6 +377,8 @@ export default function BucketApp() {
       supabase.from('accounts').select('ads_disabled,subscription_status').eq('id', u.id).single()
         .then(({ data: p }) => {
           if (p?.ads_disabled || p?.subscription_status === 'active') { setAdsDisabled(true); enableAdFreeMode() }
+          if (p?.ads_disabled) { try { localStorage.setItem('bap_ads_off', '1') } catch {} }
+          else { try { localStorage.removeItem('bap_ads_off') } catch {} }
           if (p?.subscription_status === 'active') { setIsSubscribed(true); try { localStorage.setItem('bap_subscribed', '1') } catch {} }
           else { try { localStorage.removeItem('bap_subscribed') } catch {} }
         })

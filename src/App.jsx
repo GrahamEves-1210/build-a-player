@@ -53,19 +53,30 @@ function hideVideoAds() {
   })
 }
 
+const RAMP_AD_UNITS = ['bottom_rail', 'corner_ad_video', 'standard_iab', 'standard_iab_cntr1', 'video_bottom_rail']
+const RAMP_FORCE_OFF = RAMP_AD_UNITS.map(unit => ({ unit, force: 'off' }))
+
 function enableAdFreeMode() {
   document.documentElement.classList.add('ads-hidden')
-  // Force-hide via JS since Playwire sets inline display with !important
+  window.ramp = window.ramp || {}
+  window.ramp.forceUnits = RAMP_FORCE_OFF
+  window.ramp.que = window.ramp.que || []
+  window.ramp.que.push(() => {
+    window.ramp.forceUnits = RAMP_FORCE_OFF
+    try { window.ramp.destroyUnits(RAMP_AD_UNITS) } catch {}
+  })
   const hide = () => {
-    document.querySelectorAll('[id^="pw-"],[id^="ramp-"],[class^="pw-"],[id^="adBanner"]').forEach(el => {
+    document.querySelectorAll('[id^="pw-"],[id^="ramp-"],[class^="pw-"],[id^="adBanner"],[id*="bottom_rail"],[class*="bottom_rail"],[id*="video-bottom"],[class*="video-bottom"]').forEach(el => {
       el.style.setProperty('display', 'none', 'important')
     })
   }
   hide()
-  // Watch for any late-injected Playwire elements
   const obs = new MutationObserver(hide)
   obs.observe(document.body, { childList: true, subtree: true })
 }
+
+// Early call — fires before Ramp initializes so forceUnits takes effect
+try { if (localStorage.getItem('bap_subscribed') === '1' || localStorage.getItem('bap_ads_off') === '1') enableAdFreeMode() } catch {}
 
 export default function App() {
   const [page, setPage]               = useState(_sharedData ? 'shared' : _isPrivacy ? 'privacy' : _isProfile ? 'profile' : _isAbout ? 'about' : (_saved?.gameMode ? 'game' : 'splash'))
@@ -188,7 +199,7 @@ export default function App() {
   useEffect(() => {
     window.ramp?.que?.push(() => {
       window.ramp.spaNewPage()
-      if (page === 'splash') try { window.ramp.destroyUnits(['bottom_rail', 'corner_ad_video', 'standard_iab', 'video_bottom_rail']) } catch {}
+      if (page === 'splash') try { window.ramp.destroyUnits(RAMP_AD_UNITS) } catch {}
     })
   }, [page])
 
@@ -236,6 +247,8 @@ export default function App() {
         supabase.from('accounts').select('ads_disabled,subscription_status').eq('id', u.id).single()
           .then(({ data: p }) => {
             if (p?.ads_disabled || p?.subscription_status === 'active') { setAdsDisabled(true); enableAdFreeMode() }
+            if (p?.ads_disabled) { try { localStorage.setItem('bap_ads_off', '1') } catch {} }
+            else { try { localStorage.removeItem('bap_ads_off') } catch {} }
             if (p?.subscription_status === 'active') {
               setIsSubscribed(true)
               try { localStorage.setItem('bap_subscribed', '1') } catch {}
