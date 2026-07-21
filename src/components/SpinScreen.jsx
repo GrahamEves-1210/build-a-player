@@ -258,6 +258,10 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
     setSelectedQB(null)
     setExcludedQB(null)
     setDraggingType(null)
+    adInvokedRef.current = false
+    window.ramp?.que?.push(() => {
+      try { window.ramp.destroyUnits(['standard_iab_cntr1']) } catch {}
+    })
     const panel = document.querySelector('.spin-panel')
     if (panel) panel.scrollTop = 0
   }, [resetKey])
