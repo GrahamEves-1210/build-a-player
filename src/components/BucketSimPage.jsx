@@ -2636,19 +2636,16 @@ export default function BucketSimPage({ result, build, types, position, onBack, 
   const advancePage = () => {
     document.querySelector('.simp-page')?.scrollTo({ top: 0, behavior: 'instant' })
     window.scrollTo({ top: 0, behavior: 'instant' })
-    setScreen(s => {
-      const next = s + 1
-      window.ramp?.que?.push(() => {
-        window.ramp.spaNewPage()
-        if (!adsDisabled) {
-          const ads = []
-          if (next > 0 && next < screens.length - 1 && next !== 2) ads.push({ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-footer' })
-          if (ads.length) window.ramp.spaAddAds(ads)
-        }
-      })
-      return next
-    })
+    window.ramp?.que?.push(() => { window.ramp.spaNewPage() })
+    setScreen(s => s + 1)
   }
+
+  useEffect(() => {
+    if (adsDisabled || screen === 0 || screen === 2 || screen >= screens.length - 1) return
+    window.ramp?.que?.push(() => {
+      window.ramp.spaAddAds([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-footer' }])
+    })
+  }, [screen]) // eslint-disable-line
 
   const handleReset    = () => { setScreen(0); onReset() }
   const handleBack     = () => { setScreen(0); onBack()  }
