@@ -887,6 +887,13 @@ function ScreenSeason({ result, awards, onNext, adsDisabled = false, isAllTime =
   const allDone = revealed === games.length
 
   useEffect(() => {
+    if (!allDone || adsDisabled) return
+    window.ramp?.que?.push(() => {
+      window.ramp.spaAddAds([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-square' }])
+    })
+  }, [allDone]) // eslint-disable-line
+
+  useEffect(() => {
     if (!allDone) return
   }, [allDone])
 
