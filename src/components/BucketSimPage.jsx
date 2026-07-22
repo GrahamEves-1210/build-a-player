@@ -2644,7 +2644,7 @@ export default function BucketSimPage({ result, build, types, position, onBack, 
   }
 
   useEffect(() => {
-    if (adsDisabled || screen === 0 || screen === 2 || screen === 3 || screen >= screens.length - 1) return
+    if (adsDisabled || screen === 0 || screen === 1 || screen === 2 || screen === 3 || screen >= screens.length - 1) return
     window.ramp?.que?.push(() => {
       window.ramp.spaAddAds([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-footer' }])
     })
