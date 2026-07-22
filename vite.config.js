@@ -19,6 +19,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      injectRegister: null,
       includeAssets: ['logo.png', 'qb-silhouette.png', 'logos/**', 'headshots/**'],
       manifest: {
         name: 'Build-A-Player',
