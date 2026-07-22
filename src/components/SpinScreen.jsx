@@ -232,7 +232,7 @@ const POS_COLORS = {
 }
 
 // ─── SpinScreen ──────────────────────────────────────────────────────────────
-export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, activeCategory, resetKey, onChipTap, types = TYPES, isLite = false, qbPool = QBS, savedResult = null, onSaveResult, onPhaseChange, gameKey, onReset, adsDisabled = false, isRB = false, isBucket = false, isVersusMode = false, onlineCount = 0, attrMap = ATTR, categoriesData = CATEGORIES, teamsPool = TEAMS, logoDir = '/logos/', playerLabel, headshotsMap = HEADSHOTS, headshotsDir = '/headshots/', hideTeamResult = false, headshotFallback = () => null }) {
+export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, activeCategory, resetKey, onChipTap, types = TYPES, isLite = false, qbPool = QBS, savedResult = null, onSaveResult, onPhaseChange, gameKey, onReset, adsDisabled = false, isRB = false, isBucket = false, isVersusMode = false, attrMap = ATTR, categoriesData = CATEGORIES, teamsPool = TEAMS, logoDir = '/logos/', playerLabel, headshotsMap = HEADSHOTS, headshotsDir = '/headshots/', hideTeamResult = false, headshotFallback = () => null }) {
   const pLabel = playerLabel ?? (isRB ? 'RB' : 'QB')
   const [phase, setPhase]               = useState(() => savedResult?.selectedQB ? 'done' : 'idle')
   const [selectedTeam, setSelectedTeam] = useState(() => savedResult?.selectedTeam ?? null)
@@ -403,12 +403,6 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
       <div className="spin-panel-body">
         <div className="spin-panel-static">
           <div className="spin-top-row">
-            {onlineCount > 0 && (
-              <span className="spin-online-count">
-                <span className="spin-online-dot" />
-                {onlineCount} online
-              </span>
-            )}
             {!isVersusMode && (
               <button className={`grade-toggle-btn${hideGrades ? ' grade-toggle-off' : ' grade-toggle-on'}`} onClick={toggleGrades}>
                 {hideGrades ? 'Hiding Grades' : 'Showing Grades'}
