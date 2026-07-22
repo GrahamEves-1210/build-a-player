@@ -303,8 +303,8 @@ export default function ReportCard({ build, onSimulate, onReset, types = TYPES, 
   if (isBucket) {
     const slot = build['size'] || build['heightLength']
     const phys = slot ? NBA_MEASUREMENTS[slot.qbFull] : null
-    heightStr = phys ? fmtHeight(phys.height) : null
-    weightLbs = phys ? phys.weight : null
+    heightStr = phys ? fmtHeight(phys.height) : (slot?.height ? fmtHeight(slot.height) : null)
+    weightLbs = phys ? phys.weight : (slot?.weight ?? null)
   } else if (isRB) {
     const rbPhys = build['size'] ? ALL_RB_PHYS[build['size'].qbFull] : null
     heightStr = rbPhys ? fmtHeight(rbPhys.height) : null

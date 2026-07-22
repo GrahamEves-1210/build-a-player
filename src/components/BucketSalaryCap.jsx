@@ -1180,7 +1180,7 @@ export default function BucketSalaryCap({ onConfirm, onBack, user, initialDateSt
         <DatePicker
           activeDate={activeDate}
           dates={dates}
-          onSelect={date => { setMode('daily'); handleSelectDate(date) }}
+          onSelect={date => { setMode('daily'); setSel({}); handleSelectDate(date) }}
           mode={mode}
           onInfinite={handleInfinite}
         />

@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { NBA_TEAMS, NBA_PLAYERS, BUCKET_ATTR } from '../data/nba-players'
 import NBA_HEADSHOTS from '../data/nba-headshots.json'
 import { valToGrade } from '../utils/simulation'
-import { getBucketGuardArchetype, getBucketBigArchetype, TEAM_RATINGS } from '../utils/bucketSimulation'
+import { getBucketGuardArchetype, getBucketBigArchetype, TEAM_RATINGS, ALLTIME_TEAM_RATINGS } from '../utils/bucketSimulation'
 import { SAL_REP_TYPES, SAL_ATTR_MAP } from './BucketSalaryCap'
 import QBAvatar from './QBAvatar'
 import BucketFigureOverlay from './BucketFigureOverlay'
@@ -668,17 +668,19 @@ export function BucketModelFigure({ build, team, className = '', style = {}, hea
     <div ref={modelRef} className={`simp-team-model simp-team-model--bucket ${className}`} style={style}>
       {team && <div className="simp-team-model-glow" style={{ background: `radial-gradient(circle, ${team.color}66 0%, ${team.color}22 50%, transparent 80%)` }} />}
       <img
-        src={bucketPhoto ? '/basketballsilhouetteheadless.png' : '/basketballsilhouette.png'}
+        src="/basketballsilhouetteheadless.png"
         alt="" className="simp-sil-ghost" draggable={false}
         style={{ transform: 'scale(1.10)', transformOrigin: 'center center', zIndex: 4 }}
       />
       <BucketFigureOverlay build={monoTeamBuild} />
-      {bucketPhoto && modelW > 0 && (
+      {bucketPhoto && modelW > 0 && (() => {
+        const isGeneric = bucketPhoto === '/genericdark.webp' || bucketPhoto === '/genericlight.webp'
+        return (
         <div style={{
           position: 'absolute',
           left: `${hx}%`, top: `${collarY}%`,
           width: `${hpx}px`, height: `${hpx}px`,
-          transform: `translate(calc(-50% + 0.75px), calc(-89% + ${2 + headYOffset}px))`,
+          transform: `translate(calc(-50% + ${0.75 + (isGeneric ? 0.75 : 0)}px), calc(-89% + ${2 + headYOffset + (isGeneric ? 4.5 : 0)}px))`,
           overflow: 'hidden', borderRadius: '50%', pointerEvents: 'none', zIndex: 1,
           WebkitMaskImage: 'radial-gradient(ellipse 82% 78% at 50% 45%, black 52%, transparent 84%)',
           maskImage: 'radial-gradient(ellipse 82% 78% at 50% 45%, black 52%, transparent 84%)',
@@ -693,7 +695,8 @@ export function BucketModelFigure({ build, team, className = '', style = {}, hea
             }}
           />
         </div>
-      )}
+        )
+      })()}
     </div>
   )
 }
@@ -745,7 +748,7 @@ function ScreenBuild({ result, build, types, attrMap, onNext, adsDisabled = fals
           const displayVal = t === 'size' ? Math.min(11, data.val + 1) : data.val
           return (
             <div key={t} className={`simp-attr-row${i < rowsVisible ? ' simp-row-visible' : ''}`}>
-              <QBAvatar photo={data.photo} team={data.team} color={data.teamColor} size={46} logoDir="/logos/nba/" />
+              <QBAvatar photo={data.photo} team={data.team} color={data.teamColor} size={46} logoDir="/logos/nba/" faceCenter={data.faceCenter} />
               <div className="simp-attr-info">
                 <span className="simp-attr-name">{meta.label}</span>
                 <span className="simp-attr-qb">{data.qbFull}</span>
@@ -865,11 +868,18 @@ function ConferenceStandings({ standings, myShort, teamColor, conf }) {
   )
 }
 
-function ScreenSeason({ result, awards, onNext, adsDisabled = false }) {
+function ScreenSeason({ result, awards, onNext, adsDisabled = false, isAllTime = false }) {
   const { games = [], madePlayoffs, seed: rawSeed, playoffRounds = [], conference, ppg, rpg, apg, spg, bpg, tov, fgPct, threePct, ftPct, per, ovr = 0, standings, team } = result
   const playinRound = playoffRounds.find(r => r.type === 'playin' && r.advanced)
   const seed = playinRound?.newSeed ?? rawSeed
   const [phase,       setPhase]       = useState('loading')
+
+  useEffect(() => {
+    if (adsDisabled) return
+    window.ramp?.que?.push(() => {
+      window.ramp.spaAddAds([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-square' }])
+    })
+  }, [])
   const [revealed,    setRevealed]    = useState(0)
   const [liveWins,    setLiveWins]    = useState(0)
   const [liveLosses,  setLiveLosses]  = useState(0)
@@ -922,7 +932,7 @@ function ScreenSeason({ result, awards, onNext, adsDisabled = false }) {
       )}
       {phase !== 'loading' && (
         <>
-          <div className="simp-eyebrow">Regular Season</div>
+          <div className="simp-eyebrow">{isAllTime ? 'All-Time Regular Season' : 'Regular Season'}</div>
           <div className="simp-live-record">
             <span className="slr-w">{liveWins}</span>
             <span className="slr-sep">–</span>
@@ -933,9 +943,12 @@ function ScreenSeason({ result, awards, onNext, adsDisabled = false }) {
               <span key={i} className={`bsim-sdot bsim-sdot--${g.won ? 'w' : 'l'}`} />
             ))}
           </div>
-
           {allDone && (
             <ConferenceStandings standings={standings} myShort={team?.short} teamColor={team?.color} conf={conference} />
+          )}
+
+          {!adsDisabled && (
+            <div id="ramp-cntr1-square" className="square-ad simp-square-ad" />
           )}
 
           {allDone && (
@@ -1678,7 +1691,7 @@ function FullBracket({ myConf, confBracket, otherBracket, myShort, mySeed, teamC
 }
 
 // ─── Screen 3: NBA Playoffs ───────────────────────────────────────────────────
-function ScreenPlayoffs({ result, onNext, autoSkip = false }) {
+function ScreenPlayoffs({ result, onNext, autoSkip = false, isAllTime = false, adsDisabled = false }) {
   const { playoffRounds = [], madePlayoffs, team, standings = [], seed: rawSeed } = result
   const playinRound = playoffRounds.find(r => r.type === 'playin' && r.advanced)
   const seed = playinRound?.newSeed ?? rawSeed
@@ -1706,6 +1719,13 @@ function ScreenPlayoffs({ result, onNext, autoSkip = false }) {
   // Ref so autoSkip effect can call handleSkip even though it's defined after early returns
   const handleSkipRef = useRef(null)
   useEffect(() => { if (autoSkip) handleSkipRef.current?.() }, []) // eslint-disable-line
+
+  useEffect(() => {
+    if (adsDisabled || window.innerWidth > 768) return
+    window.ramp?.que?.push(() => {
+      window.ramp.spaAddAds([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-plf' }])
+    })
+  }, [])
 
   const conf = result.conference ?? 'east'
   const otherConf = conf === 'east' ? 'west' : 'east'
@@ -1809,7 +1829,7 @@ function ScreenPlayoffs({ result, onNext, autoSkip = false }) {
   if (!tipOff) {
     return (
       <div className="simp-screen">
-        <div className="simp-eyebrow" style={{ textAlign: 'center' }}>Playoffs</div>
+        <div className="simp-eyebrow" style={{ textAlign: 'center' }}>{isAllTime ? 'All-Time Playoffs' : 'Playoffs'}</div>
         <div className="tipoff-header">
           <div className="tipoff-arena">
             <span className={`tipoff-ball${ballFired ? ' tipoff-ball--fired' : ''}`}>🏀</span>
@@ -2151,13 +2171,16 @@ function ScreenPlayoffs({ result, onNext, autoSkip = false }) {
             : <button className="plf-champ-bottle" onClick={() => setChampPopped(true)} aria-label="Pop champagne">🍾</button>
           }
           <div className="plf-champ-label">NBA Champions!</div>
-          <div className="plf-champ-sub">{myW}–{oppW} vs {currentRound.opponent?.short} · {currentRound.name}</div>
+          <div className="plf-champ-sub">{myW}–{oppW} vs {otherBracket?.confChamp?.short ?? currentRound.opponent?.short} · {currentRound.name}</div>
           {champPopped
             ? <button className="simp-cta simp-cta-in plf-report-reveal" onClick={onNext}>GOAT Status →</button>
             : <div className="plf-champ-tap-hint">tap the bottle</div>
           }
         </div>
         <PlayoffStatsLog log={playoffGameLog} playoffRounds={playoffRounds} />
+        {!adsDisabled && window.innerWidth <= 768 && (
+          <div id="ramp-cntr1-plf" className="plf-banner-ad" style={{ minHeight: 0 }} />
+        )}
         <FullBracket {...bracketProps} />
       </div>
     )
@@ -2172,10 +2195,13 @@ function ScreenPlayoffs({ result, onNext, autoSkip = false }) {
           <div className="simp-eyebrow">Season Over</div>
           <div className="plf-elim-title">{currentRound.name === 'NBA Finals' ? 'Lost the Finals' : 'Eliminated'}</div>
           <div className="plf-elim-round">{currentRound.name === 'NBA Finals' ? '' : currentRound.name}</div>
-          <div className="plf-elim-score">Lost series {myW}–{oppW} vs {currentRound.opponent?.short}</div>
+          <div className="plf-elim-score">Lost series {myW}–{oppW} vs {currentRound.name === 'NBA Finals' ? (otherBracket?.confChamp?.short ?? currentRound.opponent?.short) : currentRound.opponent?.short}</div>
           <button className="simp-cta" onClick={onNext}>GOAT Status →</button>
         </div>
         <PlayoffStatsLog log={playoffGameLog} playoffRounds={playoffRounds} />
+        {!adsDisabled && window.innerWidth <= 768 && (
+          <div id="ramp-cntr1-plf" className="plf-banner-ad" style={{ minHeight: 0 }} />
+        )}
         <FullBracket {...bracketProps} />
       </div>
     )
@@ -2267,6 +2293,9 @@ function ScreenPlayoffs({ result, onNext, autoSkip = false }) {
         ) : <div />}
       </div>
       {showStatsLog && <PlayoffStatsLog log={playoffGameLog} playoffRounds={playoffRounds} />}
+      {!adsDisabled && window.innerWidth <= 768 && (
+        <div id="ramp-cntr1-plf" className="plf-banner-ad" style={{ minHeight: 0 }} />
+      )}
       <FullBracket {...bracketProps} />
     </div>
   )
@@ -2391,7 +2420,7 @@ function ScreenFinal({ result, awards, build, types, attrMap, onReset, onBack, a
               const data = build[t]
               return (
                 <div key={t} className="simp-attr-row simp-row-visible">
-                  <QBAvatar photo={data.photo} team={data.team} color={data.teamColor} size={36} logoDir="/logos/nba/" />
+                  <QBAvatar photo={data.photo} team={data.team} color={data.teamColor} size={36} logoDir="/logos/nba/" faceCenter={data.faceCenter} />
                   <div className="simp-attr-info">
                     <span className="simp-attr-name">{meta.label}</span>
                     <span className="simp-attr-qb">{data.qbFull}</span>
@@ -2431,6 +2460,44 @@ function ProgressDots({ screen, total }) {
     </div>
   )
 }
+
+// ─── All-Time Starting 5: ordered PG → SG → SF → PF → C (each franchise at its peak era) ─
+// Guard build replaces index 2 (SF); big build replaces index 3 (PF)
+const ALLTIME_STARTERS = {
+  ATL: ['Pete Maravich',    'Trae Young',        'Dominique Wilkins',   'Bob Pettit',          'Dikembe Mutombo'],
+  BOS: ['Bob Cousy',        'Paul Pierce',       'Larry Bird',          'Kevin McHale',         'Bill Russell'],
+  BKN: ['Jason Kidd',       'Kyrie Irving',      'Kevin Durant',        'Julius Erving',        'Brook Lopez'],
+  CHA: ['Muggsy Bogues',    'Dell Curry',        'Glen Rice',           'Larry Johnson',        'Alonzo Mourning'],
+  CHI: ['Derrick Rose',     'Michael Jordan',    'Scottie Pippen',      'Dennis Rodman',        'Joakim Noah'],
+  CLE: ['Kyrie Irving',     'Mark Price',        'LeBron James',        'Kevin Love',           'Zydrunas Ilgauskas'],
+  DAL: ['Jason Kidd',       'Jason Terry',       'Luka Doncic',         'Dirk Nowitzki',        'Tyson Chandler'],
+  DEN: ['Chauncey Billups', 'David Thompson',    'Alex English',        'Carmelo Anthony',      'Nikola Jokic'],
+  DET: ['Isiah Thomas',     'Joe Dumars',        'Grant Hill',          'Dennis Rodman',        'Bill Laimbeer'],
+  GSW: ['Stephen Curry',    'Klay Thompson',     'Rick Barry',          'Draymond Green',       'Wilt Chamberlain'],
+  HOU: ['Steve Francis',    'James Harden',      'Clyde Drexler',       'Charles Barkley',      'Hakeem Olajuwon'],
+  IND: ['Mark Jackson',     'Reggie Miller',     'Paul George',         "Jermaine O'Neal",     'Rik Smits'],
+  LAC: ['Chris Paul',       'Lou Williams',      'Kawhi Leonard',       'Blake Griffin',        'DeAndre Jordan'],
+  LAL: ['Magic Johnson',    'Kobe Bryant',       'LeBron James',        "Shaquille O'Neal",     'Kareem Abdul-Jabbar'],
+  MEM: ['Mike Conley',      'Tony Allen',        'Pau Gasol',           'Zach Randolph',        'Marc Gasol'],
+  MIA: ['Tim Hardaway',     'Dwyane Wade',       'LeBron James',        'Chris Bosh',           'Alonzo Mourning'],
+  MIL: ['Oscar Robertson',  'Ray Allen',         'Giannis Antetokounmpo','Marques Johnson',     'Kareem Abdul-Jabbar'],
+  MIN: ['Stephon Marbury',  'Anthony Edwards',   'Jimmy Butler',        'Kevin Garnett',        'Karl-Anthony Towns'],
+  NOP: ['Chris Paul',       'Jrue Holiday',      'Brandon Ingram',      'Anthony Davis',        'Zion Williamson'],
+  NYK: ['Walt Frazier',     'Earl Monroe',       'Carmelo Anthony',     'Patrick Ewing',        'Willis Reed'],
+  OKC: ['Gary Payton',      'Russell Westbrook', 'Kevin Durant',        'Shawn Kemp',           'Serge Ibaka'],
+  ORL: ['Penny Hardaway',   'Nick Anderson',     'Tracy McGrady',       "Shaquille O'Neal",     'Dwight Howard'],
+  PHI: ['Maurice Cheeks',   'Allen Iverson',     'Julius Erving',       'Charles Barkley',      'Wilt Chamberlain'],
+  PHX: ['Steve Nash',       'Devin Booker',      'Dan Majerle',         'Charles Barkley',      "Amar'e Stoudemire"],
+  POR: ['Damian Lillard',   'Clyde Drexler',     'Brandon Roy',         'LaMarcus Aldridge',    'Bill Walton'],
+  SAC: ['Jason Williams',   'Mitch Richmond',    'Peja Stojakovic',     'Chris Webber',         'Vlade Divac'],
+  SAS: ['Tony Parker',      'Manu Ginobili',     'Kawhi Leonard',       'Tim Duncan',           'David Robinson'],
+  TOR: ['Kyle Lowry',       'Vince Carter',      'Kawhi Leonard',       'Chris Bosh',           'Pascal Siakam'],
+  UTA: ['John Stockton',    'Donovan Mitchell',  'Adrian Dantley',      'Karl Malone',          'Mark Eaton'],
+  WAS: ['John Wall',        'Gilbert Arenas',    'Bradley Beal',        'Elvin Hayes',          'Wes Unseld'],
+}
+
+// Visual-only all-time ratings for off/def meters — uses ALLTIME_TEAM_RATINGS values
+const ALLTIME_VISUAL_RATINGS = ALLTIME_TEAM_RATINGS
 
 // ─── Starting 5: ordered PG → SG → SF → PF → C (2025-26 rosters from database) ─
 const TEAM_STARTERS = {
@@ -2482,12 +2549,34 @@ function playerOvr(p) {
 }
 
 // ─── TeamStarters ─────────────────────────────────────────────────────────────
-function TeamStarters({ teamShort, teamColor, isBig, iqPhoto }) {
+function TeamStarters({ teamShort, teamColor, isBig, iqPhoto, isAllTime = false }) {
+  if (isAllTime) {
+    const names = ALLTIME_STARTERS[teamShort] ?? []
+    if (!names.length) return null
+    const replaceIdx = isBig ? 3 : 2
+    return (
+      <div className="sts-starters">
+        {names.map((name, i) => {
+          const isMe  = i === replaceIdx
+          const hid   = !isMe && NBA_HEADSHOTS[name]
+          const photo = isMe ? iqPhoto : (hid ? `/headshots/nba/${hid}.webp` : null)
+          return (
+            <div key={isMe ? 'you' : name} className={`sts-starter${isMe ? ' sts-starter--you' : ''}`}>
+              <QBAvatar photo={photo} team={teamShort} color={isMe ? teamColor : teamColor + '99'} size={42} logoDir="/logos/nba/" />
+              <span className="sts-starter-name" style={isMe ? { color: teamColor, fontWeight: 700 } : undefined}>
+                {isMe ? 'YOU' : name}
+              </span>
+            </div>
+          )
+        })}
+      </div>
+    )
+  }
+
   const names    = TEAM_STARTERS[teamShort] ?? []
   const starters = names.map(n => PLAYER_INDEX[n]).filter(Boolean)
   if (!starters.length) return null
 
-  // slots 0-2 = guards (PG/SG/SF), slots 3-4 = bigs (PF/C)
   const mySlots    = isBig ? [3, 4] : [0, 1, 2]
   const validSlots = mySlots.filter(i => starters[i])
   const replaceIdx = validSlots.reduce((weakIdx, i) =>
@@ -2497,22 +2586,14 @@ function TeamStarters({ teamShort, teamColor, isBig, iqPhoto }) {
   return (
     <div className="sts-starters">
       {starters.map((p, i) => {
-        const isMe   = i === replaceIdx
-        const espnId = !isMe && NBA_HEADSHOTS[p.name]
-        const photo  = espnId ? `/headshots/nba/${espnId}.webp` : null
+        const isMe  = i === replaceIdx
+        const hid   = !isMe && NBA_HEADSHOTS[p.name]
+        const photo = isMe ? iqPhoto : (hid ? `/headshots/nba/${hid}.webp` : null)
         return (
           <div key={isMe ? 'you' : p.name} className={`sts-starter${isMe ? ' sts-starter--you' : ''}`}>
-            <div className="sts-starter-ring" style={{ borderColor: isMe ? teamColor : teamColor + '99' }}>
-              {isMe
-                ? iqPhoto
-                  ? <img src={iqPhoto} alt="Your Player" className="sts-starter-photo" onError={e => { e.currentTarget.style.display = 'none' }} />
-                  : <span className="sts-starter-you-label">YOUR<br/>PLAYER</span>
-                : photo
-                  ? <img src={photo} alt={p.short} className="sts-starter-photo" onError={e => { e.currentTarget.style.display = 'none' }} />
-                  : <span className="sts-starter-init">{p.short[0]}</span>}
-            </div>
+            <QBAvatar photo={photo} team={p.team} color={isMe ? teamColor : teamColor + '99'} size={42} logoDir="/logos/nba/" />
             <span className="sts-starter-name" style={isMe ? { color: teamColor, fontWeight: 700 } : undefined}>
-              {isMe ? 'YOUR PLAYER' : starterDisplayName(p)}
+              {isMe ? 'YOU' : starterDisplayName(p)}
             </span>
           </div>
         )
@@ -2522,9 +2603,8 @@ function TeamStarters({ teamShort, teamColor, isBig, iqPhoto }) {
 }
 
 // ─── Main BucketSimPage ───────────────────────────────────────────────────────
-export default function BucketSimPage({ result, build, types, position, onBack, onReset, adsDisabled = false, isSalaryMode = false, initialScreen = 0 }) {
+export default function BucketSimPage({ result, build, types, position, onBack, onReset, adsDisabled = false, isSalaryMode = false, initialScreen = 0, gameMode = null }) {
   const [screen, setScreen] = useState(initialScreen)
-
 
   // Compute awards once — result is stable after sim runs
   const awards = useMemo(() => {
@@ -2569,7 +2649,6 @@ export default function BucketSimPage({ result, build, types, position, onBack, 
         if (!adsDisabled) {
           const ads = []
           if (next > 0 && next < screens.length - 1 && next !== 2) ads.push({ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-footer' })
-          if (window.innerWidth <= 768 && next < 3) ads.push({ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-plf' })
           if (ads.length) window.ramp.spaAddAds(ads)
         }
       })
@@ -2583,16 +2662,17 @@ export default function BucketSimPage({ result, build, types, position, onBack, 
 
   const simTypes   = isSalaryMode ? SAL_REP_TYPES : types
   const simAttrMap = isSalaryMode ? SAL_ATTR_MAP  : BUCKET_ATTR
+  const isAllTime  = gameMode === 'all-time'
   const screens = isSalaryMode ? [
     <ScreenBuild    key="build"    result={result} build={build} types={simTypes} attrMap={simAttrMap} onNext={advancePage} adsDisabled={adsDisabled} isSalaryMode={isSalaryMode} />,
-    <ScreenSeason   key="season"   result={result} awards={awards} onNext={advancePage} adsDisabled={adsDisabled} />,
-    <ScreenPlayoffs key="playoffs" result={result} onNext={advancePage} autoSkip={true} />,
+    <ScreenSeason   key="season"   result={result} awards={awards} onNext={advancePage} adsDisabled={adsDisabled} isAllTime={isAllTime} />,
+    <ScreenPlayoffs key="playoffs" result={result} onNext={advancePage} autoSkip={true} isAllTime={isAllTime} adsDisabled={adsDisabled} />,
     <ScreenGOAT     key="goat"     result={result} awards={awards} onNext={advancePage} onReset={handleReset} onBack={handleGoatBack} adsDisabled={adsDisabled} />,
     <ScreenFinal    key="final"    result={result} awards={awards} build={build} types={simTypes} attrMap={simAttrMap} onReset={handleReset} onBack={handleBack} adsDisabled={adsDisabled} isSalaryMode={isSalaryMode} />,
   ] : [
     <ScreenBuild    key="build"    result={result} build={build} types={simTypes} attrMap={simAttrMap} onNext={advancePage} adsDisabled={adsDisabled} isSalaryMode={isSalaryMode} />,
-    <ScreenSeason   key="season"   result={result} awards={awards} onNext={advancePage} adsDisabled={adsDisabled} />,
-    <ScreenPlayoffs key="playoffs" result={result} onNext={advancePage} />,
+    <ScreenSeason   key="season"   result={result} awards={awards} onNext={advancePage} adsDisabled={adsDisabled} isAllTime={isAllTime} />,
+    <ScreenPlayoffs key="playoffs" result={result} onNext={advancePage} isAllTime={isAllTime} adsDisabled={adsDisabled} />,
     <ScreenGOAT     key="goat"     result={result} awards={awards} onNext={advancePage} onReset={handleReset} onBack={handleGoatBack} adsDisabled={adsDisabled} />,
     <ScreenFinal    key="final"    result={result} awards={awards} build={build} types={simTypes} attrMap={simAttrMap} onReset={handleReset} onBack={handleBack} adsDisabled={adsDisabled} isSalaryMode={isSalaryMode} />,
   ]
@@ -2601,7 +2681,11 @@ export default function BucketSimPage({ result, build, types, position, onBack, 
   const teamStyle = team
     ? { '--team-color': team.color, '--team-color2': team.color2 ?? team.color }
     : undefined
-  const tr = team ? (TEAM_VISUAL_RATINGS[team.short] ?? TEAM_RATINGS[team.short] ?? null) : null
+  const tr = team
+    ? (isAllTime
+        ? (ALLTIME_VISUAL_RATINGS[team.short] ?? null)
+        : (TEAM_VISUAL_RATINGS[team.short] ?? TEAM_RATINGS[team.short] ?? null))
+    : null
   const myIsBig  = result?.position === 'big'
   const myIQPhoto = build?.basketballIQ?.photo ?? null
 
@@ -2623,6 +2707,7 @@ export default function BucketSimPage({ result, build, types, position, onBack, 
                 <div className="sts-name-wrap">
                   <span className="sts-city">{team.name.split(' ').slice(0, -1).join(' ')}</span>
                   <span className="sts-nickname">{team.name.split(' ').slice(-1)[0]}</span>
+                  {isAllTime && <span className="sts-alltime-badge">ALL-TIME ERA</span>}
                 </div>
               </div>
               {tr && (
@@ -2644,13 +2729,10 @@ export default function BucketSimPage({ result, build, types, position, onBack, 
                 </div>
               )}
             </div>
-            <TeamStarters teamShort={team.short} teamColor={team.color} isBig={myIsBig} iqPhoto={myIQPhoto} />
+            <TeamStarters teamShort={team.short} teamColor={team.color} isBig={myIsBig} iqPhoto={myIQPhoto} isAllTime={isAllTime} />
           </div>
         )}
 
-        {!adsDisabled && screen < 3 && window.innerWidth <= 768 && (
-          <div id="ramp-cntr1-plf" className="plf-banner-ad" style={screen === 0 ? { minHeight: 0 } : undefined} />
-        )}
         {screens[screen]}
         {!adsDisabled && screen > 0 && screen < screens.length - 1 && screen !== 2 && (
           <div id="ramp-cntr1-footer" className="ad-cntr1-footer" />

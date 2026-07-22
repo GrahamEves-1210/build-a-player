@@ -123,7 +123,7 @@ function ScreenBuild({ result, build, types, onNext, isRB }) {
 
 // ── Screen 2: Regular Season ──────────────────────────────────────────────────
 
-function ScreenSeason({ result, onNext, isRB = false }) {
+function ScreenSeason({ result, onNext, isRB = false, adsDisabled = false }) {
   const { games, playoffs, hasBye } = result
   const { seasonPassYds, seasonTDs, seasonINTs, seasonRating, seasonCompPct, seasonRushYds: qbRushYds, seasonRushTDs: qbRushTDs, seasonSacks } = result
   const { seasonRushYds: rbRushYds, seasonRushTDs: rbRushTDs, seasonYPC, seasonFumbles, seasonRecYds, seasonRecTDs, seasonRecs, seasonLong } = result
@@ -134,6 +134,13 @@ function ScreenSeason({ result, onNext, isRB = false }) {
   const [liveLosses, setLiveLosses] = useState(0)
 
   const allDone = revealed === games.length
+
+  useEffect(() => {
+    if (adsDisabled) return
+    window.ramp?.que?.push(() => {
+      window.ramp.spaAddAds([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-season' }])
+    })
+  }, [])
 
   useEffect(() => {
     const loadTimer = setTimeout(() => {
@@ -199,6 +206,10 @@ function ScreenSeason({ result, onNext, isRB = false }) {
               </div>
             ))}
           </div>
+
+          {!adsDisabled && (
+            <div id="ramp-cntr1-season" className="plf-banner-ad" style={{ minHeight: 0 }} />
+          )}
 
           {allDone && (
             <div className="simp-stat-section simp-totals-in">
@@ -585,6 +596,12 @@ function ScreenPlayoffs({ result, onNext, onPreSuperBowl, adsDisabled = false })
     return () => clearTimeout(t)
   }, [playoffs])
 
+  useEffect(() => {
+    if (adsDisabled) return
+    window.ramp?.que?.push(() => {
+      window.ramp.spaAddAds([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-plf' }])
+    })
+  }, [])
 
   const advanceToSB = () => {
     setGameIdx(i => i + 1)
@@ -691,6 +708,9 @@ function ScreenPlayoffs({ result, onNext, onPreSuperBowl, adsDisabled = false })
             isAllTime={!!team?.isAllTime}
             onDone={handleGameDone}
           />
+        )}
+        {!adsDisabled && (
+          <div id="ramp-cntr1-plf" className="plf-banner-ad" style={{ minHeight: 0 }} />
         )}
       </>
     )
@@ -1002,10 +1022,6 @@ export default function SimPage({ result, build, types = TYPES, onBack, onReset,
       const next = s + 1
       window.ramp?.que?.push(() => {
         window.ramp.spaNewPage()
-        // Re-register the playoff banner slot on every screen except the final report (screen 3)
-        if (!adsDisabled && next < 3) {
-          window.ramp.spaAddAds([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-plf' }])
-        }
       })
       return next
     })
@@ -1049,7 +1065,7 @@ export default function SimPage({ result, build, types = TYPES, onBack, onReset,
 
   const screens = [
     <ScreenBuild    key="build"    result={result} build={build} types={types} onNext={next} isRB={isRB} />,
-    <ScreenSeason   key="season"   result={result} onNext={next} isRB={isRB} />,
+    <ScreenSeason   key="season"   result={result} onNext={next} isRB={isRB} adsDisabled={adsDisabled} />,
     <ScreenPlayoffs key="playoffs" result={result} onNext={next} onPreSuperBowl={handlePreSuperBowl} adsDisabled={adsDisabled} />,
     <ScreenFinal    key="final"    result={result} build={build} types={types} onReset={handleReset} onBack={handleBack} adsDisabled={adsDisabled} mvpWon={mvpWon} isRB={isRB} />,
   ]
@@ -1104,9 +1120,6 @@ export default function SimPage({ result, build, types = TYPES, onBack, onReset,
           </div>
         )}
 
-        {!adsDisabled && screen < screens.length - 1 && (
-          <div id="ramp-cntr1-plf" className="plf-banner-ad" style={screen === 0 ? { minHeight: 0, marginBottom: 8 } : undefined} />
-        )}
         {screens[screen]}
       </div>
 

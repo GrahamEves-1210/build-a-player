@@ -126,8 +126,9 @@ function HWTracker({ build, isRB = false, isBucket = false }) {
   let ht, wt
   if (isBucket) {
     const phys = build['size'] ? NBA_MEASUREMENTS[build['size'].qbFull] : null
-    ht = phys ? fmtHeight(phys.height) : null
-    wt = phys ? phys.weight : null
+    const chip = build['size']
+    ht = phys ? fmtHeight(phys.height) : (chip?.height ? fmtHeight(chip.height) : null)
+    wt = phys ? phys.weight : (chip?.weight ?? null)
   } else if (isRB) {
     const rbPhys = build['size'] ? ALL_RB_PHYS[build['size'].qbFull] : null
     ht = rbPhys ? fmtHeight(rbPhys.height) : null
@@ -435,8 +436,8 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
           const col  = '#ffffff'
           const phys = NBA_MEASUREMENTS[chip.qbFull]
 
-          const heightIn   = phys ? phys.height   : Math.round(72 + (val - 1) * 16 / 9)
-          const wingspanIn = phys ? phys.wingspan  : Math.round(heightIn + 1 + (val - 1) * 8 / 9)
+          const heightIn   = phys?.height ?? chip.height ?? Math.round(72 + (val - 1) * 16 / 9)
+          const wingspanIn = phys?.wingspan ?? Math.round(heightIn + 1 + (val - 1) * 8 / 9)
 
           // Player boundaries in bucket SVG viewBox coords (42.5 -35.2 850.9 815.5)
           const headY  = -85
@@ -530,6 +531,7 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
           const faceScale = fc ? Math.max(0.93, Math.min(1.12, 1 + (42 - fc[1]) * 0.014)) : 1
           const playerName = faceChip?.qbFull || faceChip?.qb || ''
           const adj = NBA_FACE_ADJUSTMENTS[playerName] || { dx: 0, dy: 0, scale: 1 }
+          const isGeneric = bucketPhoto === '/genericdark.webp' || bucketPhoto === '/genericlight.webp'
           return (
             <div
               key={bucketPhoto}
@@ -539,7 +541,7 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
                 top: `${collarY}%`,
                 width: `${hpx}px`,
                 height: `${hpx}px`,
-                transform: `translate(calc(-50% + 0.75px + ${adj.dx}px), calc(-89% + 4px + ${adj.dy}px))`,
+                transform: `translate(calc(-50% + 0.75px + ${adj.dx + (isGeneric ? 0.75 : 0)}px), calc(-89% + 4px + ${adj.dy + (isGeneric ? 4.5 : 0)}px))`,
                 overflow: 'hidden',
                 borderRadius: '50%',
                 pointerEvents: 'none',

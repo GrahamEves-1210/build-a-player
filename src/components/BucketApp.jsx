@@ -11,7 +11,9 @@ import BucketLeaderboardPage from './BucketLeaderboardPage'
 import BucketSalaryCap from './BucketSalaryCap'
 import PrivacyPage from './PrivacyPage'
 import {
-  NBA_GUARD_PLAYERS, NBA_BIG_PLAYERS, NBA_TEAMS, BUCKET_ATTR,
+  NBA_GUARD_PLAYERS, NBA_BIG_PLAYERS,
+  NBA_ALLTIME_GUARD_PLAYERS, NBA_ALLTIME_BIG_PLAYERS,
+  NBA_TEAMS, BUCKET_ATTR,
   GUARD_TYPES, GUARD_CATEGORIES,
   BIG_TYPES, BIG_CATEGORIES,
 } from '../data/nba-players'
@@ -23,6 +25,21 @@ import { NBA_FACE_CENTERS }  from '../data/nba-face-centers'
 import { supabase } from '../lib/supabase'
 import ProfilePage from './ProfilePage'
 import CustomRatingsModal from './CustomRatingsModal'
+
+function parseHtToIn(ht) {
+  if (!ht) return null
+  const m = ht.match(/^(\d+)'(\d+)/)
+  return m ? +m[1] * 12 + +m[2] : null
+}
+
+function genericHeadshot(skinHex) {
+  if (!skinHex) return '/genericdark.webp'
+  const r = parseInt(skinHex.slice(1, 3), 16)
+  const g = parseInt(skinHex.slice(3, 5), 16)
+  const b = parseInt(skinHex.slice(5, 7), 16)
+  const luminance = 0.299 * r + 0.587 * g + 0.114 * b
+  return luminance > 155 ? '/genericlight.webp' : '/genericdark.webp'
+}
 
 const RAMP_AD_UNITS = ['bottom_rail', 'corner_ad_video', 'standard_iab', 'video_bottom_rail']
 const RAMP_FORCE_OFF = RAMP_AD_UNITS.map(unit => ({ unit, force: 'off' }))
@@ -74,14 +91,16 @@ function enrichPlayer(p) {
     color2:     TEAM_META[p.team]?.color2   ?? '#555555',
     teamName:   TEAM_META[p.team]?.teamName ?? p.team,
     position:   NBA_POSITIONS[p.name]?.pos  ?? '',
-    number:     NBA_JERSEY_NUMBERS[p.name]  ?? null,
+    number:     NBA_JERSEY_NUMBERS[p.name]  ?? p.number ?? null,
     skin:       NBA_SKIN_COLORS[p.name]     ?? null,
     faceCenter: NBA_FACE_CENTERS[p.name]    ?? null,
   }
 }
 
-const ENRICHED_GUARDS = NBA_GUARD_PLAYERS.map(enrichPlayer)
-const ENRICHED_BIGS   = NBA_BIG_PLAYERS.map(enrichPlayer)
+const ENRICHED_GUARDS         = NBA_GUARD_PLAYERS.map(enrichPlayer)
+const ENRICHED_BIGS           = NBA_BIG_PLAYERS.map(enrichPlayer)
+const ENRICHED_ALLTIME_GUARDS = NBA_ALLTIME_GUARD_PLAYERS.map(enrichPlayer)
+const ENRICHED_ALLTIME_BIGS   = NBA_ALLTIME_BIG_PLAYERS.map(enrichPlayer)
 
 // ─── Bucket Splash ────────────────────────────────────────────────────────────
 const BUCKET_SPLASH_ATTRS = {
@@ -202,17 +221,19 @@ function BucketSplash({ onStart, onVersus }) {
             </div>
           </button>
 
-          <button className="splash-mode-salarycap" style={{ position: 'relative' }} onClick={() => { localStorage.setItem('bucketPosition', position); onStart('salarycap', position) }}>
-            <div className="smode-daily-banner">DAILY</div>
-            <div className="smode-title">Salary Cap</div>
-            <div className="smode-badge">Build on a budget</div>
-            <div className="smode-cta">
-              START DRAFTING
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M5 12h14M12 5l7 7-7 7"/>
-              </svg>
-            </div>
-          </button>
+          <div className="splash-modes-secondary">
+            <button className="splash-mode-alltime" onClick={() => { localStorage.setItem('bucketPosition', position); onStart('all-time', position) }}>
+              <div className="smode-daily-banner" style={{ background: 'linear-gradient(135deg, #ca8a04, #eab308)' }}>NEW</div>
+              <div className="smode-title">All-Time</div>
+              <div className="smode-badge">NBA Legends</div>
+            </button>
+
+            <button className="splash-mode-salarycap" style={{ position: 'relative' }} onClick={() => { localStorage.setItem('bucketPosition', position); onStart('salarycap', position) }}>
+              <div className="smode-daily-banner">DAILY</div>
+              <div className="smode-title">Salary Cap</div>
+              <div className="smode-badge">Build on a budget</div>
+            </button>
+          </div>
         </div>
 
 <button className="splash-minigame-btn splash-minigame-btn--player" onClick={() => { localStorage.removeItem('bap_progress'); window.location.href = '/'; }}>
@@ -325,8 +346,11 @@ export default function BucketApp() {
   // Initialize Playwire ads on mount and page change
   useEffect(() => {
     window.ramp?.que?.push(() => {
-      window.ramp.spaNewPage()
-      if (page === 'splash') try { window.ramp.destroyUnits(RAMP_AD_UNITS) } catch {}
+      if (page === 'splash') {
+        try { window.ramp.destroyUnits(RAMP_AD_UNITS) } catch {}
+      } else {
+        window.ramp.spaNewPage()
+      }
     })
   }, [page])
 
@@ -373,7 +397,7 @@ export default function BucketApp() {
     supabase.auth.getSession().then(({ data }) => {
       const u = data.session?.user ?? null
       setUser(u)
-      if (!u) { try { localStorage.removeItem('bap_subscribed') } catch {}; return }
+      if (!u) { try { localStorage.removeItem('bap_subscribed') } catch {}; try { localStorage.removeItem('bap_ads_off') } catch {}; return }
       supabase.from('accounts').select('ads_disabled,subscription_status').eq('id', u.id).single()
         .then(({ data: p }) => {
           if (p?.ads_disabled || p?.subscription_status === 'active') { setAdsDisabled(true); enableAdFreeMode() }
@@ -431,6 +455,9 @@ export default function BucketApp() {
   }, [])
 
   const currentPool = useMemo(() => {
+    if (gameMode === 'all-time') {
+      return position === 'guard' ? ENRICHED_ALLTIME_GUARDS : ENRICHED_ALLTIME_BIGS
+    }
     const base = position === 'guard' ? ENRICHED_GUARDS : ENRICHED_BIGS
     if (!isBucketCustomMode) return base
     const overrides = bucketCustomRatings[`bucket_${position}`] || {}
@@ -439,7 +466,7 @@ export default function BucketApp() {
       const override = overrides[`${p.name}|${p.team}`]
       return override ? { ...p, attrs: { ...p.attrs, ...override } } : p
     })
-  }, [position, isBucketCustomMode, bucketCustomRatings])
+  }, [position, gameMode, isBucketCustomMode, bucketCustomRatings])
 
   const handleStart = useCallback((mode, pos = 'guard') => {
     setGameMode(mode)
@@ -559,13 +586,13 @@ export default function BucketApp() {
   }, [activeTypes])
 
   const handleTeamPicked = useCallback((team) => {
-    const result = runBucketSimulation(build, activeTypes, team, position)
+    const result = runBucketSimulation(build, activeTypes, team, position, null, gameMode)
     setSimResult(result)
     setShowTeamSpin(false)
     setPage('sim')
     window.scrollTo({ top: 0, behavior: 'instant' })
 
-    if (!supabase || !user || isBucketCustomMode || sandboxTainted.current) return
+    if (!supabase || !user || isBucketCustomMode || sandboxTainted.current || gameMode === 'all-time') return
     const archetype = position === 'big'
       ? getBucketBigArchetype(result.ovr, build, activeTypes)
       : getBucketGuardArchetype(result.ovr, build, activeTypes)
@@ -600,7 +627,7 @@ export default function BucketApp() {
       team_short:  team.short,
       build:       buildJson,
     }).then(({ error }) => { if (error) console.error('[bucket save]', error.code, error.message, error.details, error.hint) })
-  }, [build, activeTypes, position, user])
+  }, [build, activeTypes, position, user, gameMode])
 
   const handleDevFill = useCallback(() => {
     const pool = currentPool.filter(p => p.attrs)
@@ -609,7 +636,7 @@ export default function BucketApp() {
       const sorted = [...pool].sort((a, b) => (b.attrs[type] ?? 0) - (a.attrs[type] ?? 0))
       const topN = sorted.slice(0, 8)
       const p = topN[Math.floor(Math.random() * topN.length)]
-      const photo = NBA_HEADSHOTS[p.name] ? `/headshots/nba/${NBA_HEADSHOTS[p.name]}.webp` : null
+      const photo = NBA_HEADSHOTS[p.name] ? `/headshots/nba/${NBA_HEADSHOTS[p.name]}.webp` : genericHeadshot(p.skin)
       return [type, {
         type, val: p.attrs[type] ?? 5,
         qb: p.short, qbFull: p.name,
@@ -871,6 +898,7 @@ export default function BucketApp() {
           onReset={handleReset}
           adsDisabled={adsDisabled}
           isSalaryMode={gameMode === 'salarycap'}
+          gameMode={gameMode}
           initialScreen={simInitialScreen}
         />
       </>
@@ -949,8 +977,10 @@ export default function BucketApp() {
                 skinColor: p.skin,
                 number: p.number,
                 faceCenter: p.faceCenter,
-                photo: NBA_HEADSHOTS[p.name] ? `/headshots/nba/${NBA_HEADSHOTS[p.name]}.webp` : null,
+                photo: NBA_HEADSHOTS[p.name] ? `/headshots/nba/${NBA_HEADSHOTS[p.name]}.webp` : genericHeadshot(p.skin),
                 captain: p.captain ?? false,
+                height: p.height ?? parseHtToIn(p.ht) ?? null,
+                weight: p.weight ?? p.wt ?? null,
               }}))
               setShowBucketCustomModal(false)
             }}
@@ -970,8 +1000,10 @@ export default function BucketApp() {
                       skinColor: p.skin,
                       number: p.number,
                       faceCenter: p.faceCenter,
-                      photo: NBA_HEADSHOTS[p.name] ? `/headshots/nba/${NBA_HEADSHOTS[p.name]}.webp` : null,
+                      photo: NBA_HEADSHOTS[p.name] ? `/headshots/nba/${NBA_HEADSHOTS[p.name]}.webp` : genericHeadshot(p.skin),
                       captain: p.captain ?? false,
+                      height: p.height ?? parseHtToIn(p.ht) ?? null,
+                      weight: p.weight ?? p.wt ?? null,
                     }
                   }
                 })
@@ -999,7 +1031,7 @@ export default function BucketApp() {
       </Helmet>
       <Navbar {...navbarProps} />
 
-      <main className={`game-layout mobile-${mobileView}${page === 'versus-game' ? ' versus-active' : ''}`}>
+      <main className={`game-layout mobile-${mobileView}${gameMode === 'all-time' ? ' alltime-mode' : ''}${page === 'versus-game' ? ' versus-active' : ''}`}>
         <SpinScreen
           build={build}
           activeDrag={activeDrag}
@@ -1028,6 +1060,7 @@ export default function BucketApp() {
           playerLabel="PLAYER"
           headshotsMap={NBA_HEADSHOTS}
           headshotsDir="/headshots/nba/"
+          headshotFallback={genericHeadshot}
         />
         <Silhouette
           build={build}
@@ -1174,8 +1207,10 @@ export default function BucketApp() {
               skinColor: p.skin,
               number: p.number,
               faceCenter: p.faceCenter,
-              photo: NBA_HEADSHOTS[p.name] ? `/headshots/nba/${NBA_HEADSHOTS[p.name]}.webp` : null,
+              photo: NBA_HEADSHOTS[p.name] ? `/headshots/nba/${NBA_HEADSHOTS[p.name]}.webp` : genericHeadshot(p.skin),
               captain: p.captain ?? false,
+              height: p.height ?? parseHtToIn(p.ht) ?? null,
+              weight: p.weight ?? p.wt ?? null,
             }}))
             setShowBucketCustomModal(false)
           }}
@@ -1195,8 +1230,10 @@ export default function BucketApp() {
                     skinColor: p.skin,
                     number: p.number,
                     faceCenter: p.faceCenter,
-                    photo: NBA_HEADSHOTS[p.name] ? `/headshots/nba/${NBA_HEADSHOTS[p.name]}.webp` : null,
+                    photo: NBA_HEADSHOTS[p.name] ? `/headshots/nba/${NBA_HEADSHOTS[p.name]}.webp` : genericHeadshot(p.skin),
                     captain: p.captain ?? false,
+                    height: p.height ?? parseHtToIn(p.ht) ?? null,
+                    weight: p.weight ?? p.wt ?? null,
                   }
                 }
               })

@@ -208,7 +208,7 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
       <div className="logo" onClick={onHome} style={onHome ? { cursor: 'pointer' } : undefined}>
         <div className="logo-text-stack">
           <div className="logo-text">Buil<span className="logo-d">d</span><em>-<span className="logo-a">A</span>-</em>{isBucket ? <>B<HoopU />cket</> : 'Player'}</div>
-          {!isBucket && gameMode === 'all-time' && <span className="logo-mode-tag">All-Time</span>}
+          {gameMode === 'all-time' && <span className="logo-mode-tag">All-Time</span>}
         </div>
       </div>
 

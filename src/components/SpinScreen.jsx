@@ -9,6 +9,12 @@ function fmtHeight(inches) {
   return `${Math.floor(inches / 12)}'${inches % 12}"`
 }
 
+function parseHtToIn(ht) {
+  if (!ht) return null
+  const m = ht.match(/^(\d+)'(\d+)/)
+  return m ? +m[1] * 12 + +m[2] : null
+}
+
 function gradeColor(val) {
   if (val >= 11) return '#a855f7'
   if (val >= 8)  return '#3b82f6'
@@ -178,15 +184,15 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, on
 }
 
 // ─── Chip ────────────────────────────────────────────────────────────────────
-function Chip({ type, meta, val, selectedQB, draggingType, onChipTap, onDragStart, onDragEnd, setDraggingType, hideGrades, headshotsMap, headshotsDir, isBucket }) {
-  const photo = headshotsMap[selectedQB.name] ? `${headshotsDir}${headshotsMap[selectedQB.name]}.webp` : null
+function Chip({ type, meta, val, selectedQB, draggingType, onChipTap, onDragStart, onDragEnd, setDraggingType, hideGrades, headshotsMap, headshotsDir, isBucket, headshotFallback = () => null }) {
+  const photo = headshotsMap[selectedQB.name] ? `${headshotsDir}${headshotsMap[selectedQB.name]}.webp` : headshotFallback(selectedQB.skin)
   const chipData = {
     type, val,
     qb: selectedQB.short, qbFull: selectedQB.name,
     teamColor: selectedQB.color, teamColor2: selectedQB.color2,
     skinColor: selectedQB.skin, number: selectedQB.number,
     team: selectedQB.team, captain: selectedQB.captain ?? false, photo,
-    height: selectedQB.height ?? null, weight: selectedQB.weight ?? null,
+    height: selectedQB.height ?? parseHtToIn(selectedQB.ht), weight: selectedQB.weight ?? selectedQB.wt ?? null,
   }
   return (
     <div
@@ -226,7 +232,7 @@ const POS_COLORS = {
 }
 
 // ─── SpinScreen ──────────────────────────────────────────────────────────────
-export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, activeCategory, resetKey, onChipTap, types = TYPES, isLite = false, qbPool = QBS, savedResult = null, onSaveResult, onPhaseChange, gameKey, onReset, adsDisabled = false, isRB = false, isBucket = false, isVersusMode = false, onlineCount = 0, attrMap = ATTR, categoriesData = CATEGORIES, teamsPool = TEAMS, logoDir = '/logos/', playerLabel, headshotsMap = HEADSHOTS, headshotsDir = '/headshots/', hideTeamResult = false }) {
+export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, activeCategory, resetKey, onChipTap, types = TYPES, isLite = false, qbPool = QBS, savedResult = null, onSaveResult, onPhaseChange, gameKey, onReset, adsDisabled = false, isRB = false, isBucket = false, isVersusMode = false, onlineCount = 0, attrMap = ATTR, categoriesData = CATEGORIES, teamsPool = TEAMS, logoDir = '/logos/', playerLabel, headshotsMap = HEADSHOTS, headshotsDir = '/headshots/', hideTeamResult = false, headshotFallback = () => null }) {
   const pLabel = playerLabel ?? (isRB ? 'RB' : 'QB')
   const [phase, setPhase]               = useState(() => savedResult?.selectedQB ? 'done' : 'idle')
   const [selectedTeam, setSelectedTeam] = useState(() => savedResult?.selectedTeam ?? null)
@@ -498,7 +504,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
             <div className="qb-reveal-card" style={{ '--qb-color': selectedQB.color }}>
               <div className="qb-reveal-hero">
                 <QBAvatar
-                  photo={headshotsMap[selectedQB.name] ? `${headshotsDir}${headshotsMap[selectedQB.name]}.webp` : null}
+                  photo={headshotsMap[selectedQB.name] ? `${headshotsDir}${headshotsMap[selectedQB.name]}.webp` : headshotFallback(selectedQB.skin)}
                   team={selectedQB.team}
                   color={selectedQB.color}
                   size={56}
@@ -523,7 +529,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
             </div>
           )}
           {isDone && !adsDisabled && window.innerWidth <= 768 && (
-            <div id="ramp-cntr1" className="ad-cntr1-mobile" />
+            <div id="ramp-cntr1" className="ad-cntr1-mobile" style={{ minHeight: 60 }} />
           )}
         </div>
 
@@ -535,7 +541,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
                   ? types.filter(t => !build[t]).map(t => {
                       const meta = attrMap[t]
                       const val  = selectedQB.attrs[t]
-                      return <Chip key={t} type={t} meta={meta} val={val} selectedQB={selectedQB} draggingType={draggingType} onChipTap={onChipTap} onDragStart={onDragStart} onDragEnd={onDragEnd} setDraggingType={setDraggingType} hideGrades={isVersusMode || hideGrades} headshotsMap={headshotsMap} headshotsDir={headshotsDir} isBucket={isBucket} />
+                      return <Chip key={t} type={t} meta={meta} val={val} selectedQB={selectedQB} draggingType={draggingType} onChipTap={onChipTap} onDragStart={onDragStart} onDragEnd={onDragEnd} setDraggingType={setDraggingType} hideGrades={isVersusMode || hideGrades} headshotsMap={headshotsMap} headshotsDir={headshotsDir} isBucket={isBucket} headshotFallback={headshotFallback} />
                     })
                   : visibleCategories.map((cat, catIdx) => {
                       const available = cat.types.filter(type => types.includes(type) && !build[type])
@@ -550,7 +556,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
                           {available.map(type => {
                             const meta = attrMap[type]
                             const val  = selectedQB.attrs[type]
-                            return <Chip key={type} type={type} meta={meta} val={val} selectedQB={selectedQB} draggingType={draggingType} onChipTap={onChipTap} onDragStart={onDragStart} onDragEnd={onDragEnd} setDraggingType={setDraggingType} hideGrades={isVersusMode || hideGrades} headshotsMap={headshotsMap} headshotsDir={headshotsDir} isBucket={isBucket} />
+                            return <Chip key={type} type={type} meta={meta} val={val} selectedQB={selectedQB} draggingType={draggingType} onChipTap={onChipTap} onDragStart={onDragStart} onDragEnd={onDragEnd} setDraggingType={setDraggingType} hideGrades={isVersusMode || hideGrades} headshotsMap={headshotsMap} headshotsDir={headshotsDir} isBucket={isBucket} headshotFallback={headshotFallback} />
                           })}
                         </div>
                       )
