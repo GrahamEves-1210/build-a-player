@@ -873,18 +873,18 @@ function ScreenSeason({ result, awards, onNext, adsDisabled = false, isAllTime =
   const playinRound = playoffRounds.find(r => r.type === 'playin' && r.advanced)
   const seed = playinRound?.newSeed ?? rawSeed
   const [phase,       setPhase]       = useState('loading')
-
-  useEffect(() => {
-    if (adsDisabled) return
-    window.ramp?.que?.push(() => {
-      window.ramp.spaAddAds([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-square' }])
-    })
-  }, [])
   const [revealed,    setRevealed]    = useState(0)
   const [liveWins,    setLiveWins]    = useState(0)
   const [liveLosses,  setLiveLosses]  = useState(0)
   const [awardsPhase, setAwardsPhase] = useState(0)
   const allDone = revealed === games.length
+
+  useEffect(() => {
+    if (!allDone || adsDisabled) return
+    window.ramp?.que?.push(() => {
+      window.ramp.spaAddAds([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-square' }])
+    })
+  }, [allDone]) // eslint-disable-line
 
   useEffect(() => {
     if (!allDone) return
@@ -947,7 +947,7 @@ function ScreenSeason({ result, awards, onNext, adsDisabled = false, isAllTime =
             <ConferenceStandings standings={standings} myShort={team?.short} teamColor={team?.color} conf={conference} />
           )}
 
-          {!adsDisabled && (
+          {allDone && !adsDisabled && (
             <div id="ramp-cntr1-square" className="square-ad simp-square-ad" />
           )}
 
@@ -1189,7 +1189,7 @@ function ScreenGOAT({ result, awards, onNext, onReset, onBack, adsDisabled = fal
         { type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-goat-21' },
       ])
     })
-  }, [listVisible])
+  }, [listVisible]) // eslint-disable-line
 
   useEffect(() => {
     const t = setTimeout(() => { setPhase(qualified ? 'ticker' : 'miss'); if (!qualified) setListVisible(true) }, 2200)
@@ -2148,69 +2148,10 @@ function ScreenPlayoffs({ result, onNext, autoSkip = false, isAllTime = false, a
     showAllRounds: status === 'eliminated' || status === 'champion',
   }
 
-  if (status === 'champion') {
-    const { myW, oppW } = getSeriesScore()
-    return (
-      <div className="simp-screen">
-        <div className="simp-eyebrow-row"><div className="simp-eyebrow">Playoffs</div></div>
-        <div className="plf-end-card plf-end-card--champ">
-          {champPopped && (
-            <div className="plf-champ-bubbles" aria-hidden="true">
-              {Array.from({length: 18}).map((_,i) => (
-                <span key={i} className="plf-bubble" style={{
-                  '--bx': `${Math.round((Math.random()-0.5)*180)}px`,
-                  '--by': `${-Math.round(60 + Math.random()*120)}px`,
-                  '--bs': `${0.5 + Math.random()*1.1}`,
-                  animationDelay: `${(i * 0.045).toFixed(2)}s`,
-                }}>✦</span>
-              ))}
-            </div>
-          )}
-          {champPopped
-            ? <img src="/trophybasketball.webp" alt="" className="sfb-trophy plf-trophy-reveal" />
-            : <button className="plf-champ-bottle" onClick={() => setChampPopped(true)} aria-label="Pop champagne">🍾</button>
-          }
-          <div className="plf-champ-label">NBA Champions!</div>
-          <div className="plf-champ-sub">{myW}–{oppW} vs {otherBracket?.confChamp?.short ?? currentRound.opponent?.short} · {currentRound.name}</div>
-          {champPopped
-            ? <button className="simp-cta simp-cta-in plf-report-reveal" onClick={onNext}>GOAT Status →</button>
-            : <div className="plf-champ-tap-hint">tap the bottle</div>
-          }
-        </div>
-        <PlayoffStatsLog log={playoffGameLog} playoffRounds={playoffRounds} />
-        {!adsDisabled && window.innerWidth <= 768 && (
-          <div id="ramp-cntr1-plf" className="plf-banner-ad" style={{ minHeight: 0 }} />
-        )}
-        <FullBracket {...bracketProps} />
-      </div>
-    )
-  }
-
-  if (status === 'eliminated') {
-    const { myW, oppW } = getSeriesScore()
-    return (
-      <div className="simp-screen">
-        <div className="simp-eyebrow-row"><div className="simp-eyebrow">Playoffs</div></div>
-        <div className="plf-end-card">
-          <div className="simp-eyebrow">Season Over</div>
-          <div className="plf-elim-title">{currentRound.name === 'NBA Finals' ? 'Lost the Finals' : 'Eliminated'}</div>
-          <div className="plf-elim-round">{currentRound.name === 'NBA Finals' ? '' : currentRound.name}</div>
-          <div className="plf-elim-score">Lost series {myW}–{oppW} vs {currentRound.name === 'NBA Finals' ? (otherBracket?.confChamp?.short ?? currentRound.opponent?.short) : currentRound.opponent?.short}</div>
-          <button className="simp-cta" onClick={onNext}>GOAT Status →</button>
-        </div>
-        <PlayoffStatsLog log={playoffGameLog} playoffRounds={playoffRounds} />
-        {!adsDisabled && window.innerWidth <= 768 && (
-          <div id="ramp-cntr1-plf" className="plf-banner-ad" style={{ minHeight: 0 }} />
-        )}
-        <FullBracket {...bracketProps} />
-      </div>
-    )
-  }
-
   // Playing state — NBA home court by game number
   const isBetween = status === 'between-rounds'
   const currentScore = allScores[roundIdx]?.[gameIdx]
-  if (!currentScore && !isBetween) return null
+  const endScore = (status === 'champion' || status === 'eliminated') ? getSeriesScore() : null
 
   const oppShort = currentRound.opponent?.short ?? 'OPP'
   const prevW = currentRound.games.slice(0, gameIdx).filter(g => g === 'W').length
@@ -2222,77 +2163,132 @@ function ScreenPlayoffs({ result, onNext, autoSkip = false, isAllTime = false, a
 
   return (
     <div className="simp-screen">
-      <div className="simp-eyebrow-row">
-        <div className="simp-eyebrow">Playoffs</div>
-      </div>
-      <div className="bsim-series-header">
-        <span className="bsim-sh-round">{currentRound.name}</span>
-        <span className="bsim-sh-opp">vs {oppShort}{currentRound.opponent?.seed ? ` · #${currentRound.opponent.seed}` : ''}</span>
-      </div>
-      <div className="bsim-mini-series">
-        {currentRound.games.slice(0, gameIdx).map((g, i) => (
-          <span key={i} className={`bsim-ms-dot bsim-ms-dot--${g === 'W' ? 'w' : 'l'}`}>{g}</span>
-        ))}
-        {Array.from({ length: Math.max(0, 7 - gameIdx) }).map((_, i) => (
-          <span key={`e${i}`} className="bsim-ms-dot bsim-ms-dot--empty" />
-        ))}
-        <span className="bsim-ms-score">{prevW}–{prevL}</span>
-      </div>
-      {isBetween ? (
-        <div className="plf-game plf-game-won">
-          <div className="plf-round-row">
-            <div className="plf-round-lbl">{currentRound.name} · Series Complete</div>
-          </div>
-          <div className="plf-bw-inner">
-            <div className="plf-bw-result">
-              <span className="plf-bw-w">W</span>
-              <span className="plf-bw-score">Series {prevW}–{prevL}</span>
-            </div>
-            <div className="plf-bw-adv">Advancing…</div>
-            {nextRound && (
-              <div className="plf-bw-next">Next up · {nextRound.name}{nextRound.opponent?.short ? ` vs ${nextRound.opponent.short}` : ''}</div>
+
+      {/* Champion */}
+      {status === 'champion' && endScore && (
+        <>
+          <div className="simp-eyebrow-row"><div className="simp-eyebrow">Playoffs</div></div>
+          <div className="plf-end-card plf-end-card--champ">
+            {champPopped && (
+              <div className="plf-champ-bubbles" aria-hidden="true">
+                {Array.from({length: 18}).map((_,i) => (
+                  <span key={i} className="plf-bubble" style={{
+                    '--bx': `${Math.round((Math.random()-0.5)*180)}px`,
+                    '--by': `${-Math.round(60 + Math.random()*120)}px`,
+                    '--bs': `${0.5 + Math.random()*1.1}`,
+                    animationDelay: `${(i * 0.045).toFixed(2)}s`,
+                  }}>✦</span>
+                ))}
+              </div>
             )}
+            {champPopped
+              ? <img src="/trophybasketball.webp" alt="" className="sfb-trophy plf-trophy-reveal" />
+              : <button className="plf-champ-bottle" onClick={() => setChampPopped(true)} aria-label="Pop champagne">🍾</button>
+            }
+            <div className="plf-champ-label">NBA Champions!</div>
+            <div className="plf-champ-sub">{endScore.myW}–{endScore.oppW} vs {otherBracket?.confChamp?.short ?? currentRound.opponent?.short} · {currentRound.name}</div>
+            {champPopped
+              ? <button className="simp-cta simp-cta-in plf-report-reveal" onClick={onNext}>GOAT Status →</button>
+              : <div className="plf-champ-tap-hint">tap the bottle</div>
+            }
           </div>
-          <div className="plf-live-area" style={{ visibility: 'hidden' }} />
-          <div className="plf-post-line plf-pl-won" style={{ visibility: 'hidden' }} />
-          <div className="plf-series-timer"><div className="plf-series-timer-fill" style={{ width: `${timerPct}%` }} /></div>
-        </div>
-      ) : (
-        <NBAPlayoffGame
-          key={`${roundIdx}-${gameIdx}`}
-          gameNum={gameIdx + 1}
-          seriesName={currentRound.name}
-          oppShort={oppShort}
-          myColor={teamColor}
-          myShort={teamShort}
-          myFinal={currentScore.myScore}
-          oppFinal={currentScore.oppScore}
-          won={currentRound.games[gameIdx] === 'W'}
-          isHome={isHome}
-          speedMult={speedMult}
-          paused={paused}
-          mySeed={seed}
-          oppSeed={currentRound.opponent?.seed}
-          onDone={handleGameDone}
-        />
+          <PlayoffStatsLog log={playoffGameLog} playoffRounds={playoffRounds} />
+        </>
       )}
-      <div className="po-log-toggle-row">
-        <div className="plf-seg">
-          <button className={`plf-seg-btn${!paused && speedMult === 10 ? ' plf-seg-btn--active' : ''}`} onClick={() => { setSpeedMult(10); setPaused(false) }}>Slowest</button>
-          <button className={`plf-seg-btn${!paused && speedMult === 4 ? ' plf-seg-btn--active' : ''}`} onClick={() => { setSpeedMult(4); setPaused(false) }}>Slow</button>
-          <button className={`plf-seg-btn plf-seg-btn-pause-icon${paused ? ' plf-seg-btn--pause' : ''}`} onClick={() => setPaused(true)}>
-            <svg width="10" height="12" viewBox="0 0 10 12" fill="currentColor"><rect x="0" y="0" width="3.5" height="12" rx="1"/><rect x="6.5" y="0" width="3.5" height="12" rx="1"/></svg>
-          </button>
-          <button className={`plf-seg-btn${!paused && speedMult === 1 ? ' plf-seg-btn--active' : ''}`} onClick={() => { setSpeedMult(1); setPaused(false) }}>Fast</button>
-          <button className="plf-seg-btn plf-seg-btn-skip" onClick={handleSkip}>Skip<br/>Playoff</button>
-        </div>
-        {playoffGameLog.length > 0 ? (
-          <button className="po-log-toggle-btn" onClick={() => setShowStatsLog(s => !s)}>
-            {showStatsLog ? 'Hide' : 'View'} Game Log
-          </button>
-        ) : <div />}
-      </div>
-      {showStatsLog && <PlayoffStatsLog log={playoffGameLog} playoffRounds={playoffRounds} />}
+
+      {/* Eliminated */}
+      {status === 'eliminated' && endScore && (
+        <>
+          <div className="simp-eyebrow-row"><div className="simp-eyebrow">Playoffs</div></div>
+          <div className="plf-end-card">
+            <div className="simp-eyebrow">Season Over</div>
+            <div className="plf-elim-title">{currentRound.name === 'NBA Finals' ? 'Lost the Finals' : 'Eliminated'}</div>
+            <div className="plf-elim-round">{currentRound.name === 'NBA Finals' ? '' : currentRound.name}</div>
+            <div className="plf-elim-score">Lost series {endScore.myW}–{endScore.oppW} vs {currentRound.name === 'NBA Finals' ? (otherBracket?.confChamp?.short ?? currentRound.opponent?.short) : currentRound.opponent?.short}</div>
+            <button className="simp-cta" onClick={onNext}>GOAT Status →</button>
+          </div>
+          <PlayoffStatsLog log={playoffGameLog} playoffRounds={playoffRounds} />
+        </>
+      )}
+
+      {/* Playing / between-rounds */}
+      {status !== 'champion' && status !== 'eliminated' && (currentScore || isBetween) && (
+        <>
+          <div className="simp-eyebrow-row">
+            <div className="simp-eyebrow">Playoffs</div>
+          </div>
+          <div className="bsim-series-header">
+            <span className="bsim-sh-round">{currentRound.name}</span>
+            <span className="bsim-sh-opp">vs {oppShort}{currentRound.opponent?.seed ? ` · #${currentRound.opponent.seed}` : ''}</span>
+          </div>
+          <div className="bsim-mini-series">
+            {currentRound.games.slice(0, gameIdx).map((g, i) => (
+              <span key={i} className={`bsim-ms-dot bsim-ms-dot--${g === 'W' ? 'w' : 'l'}`}>{g}</span>
+            ))}
+            {Array.from({ length: Math.max(0, 7 - gameIdx) }).map((_, i) => (
+              <span key={`e${i}`} className="bsim-ms-dot bsim-ms-dot--empty" />
+            ))}
+            <span className="bsim-ms-score">{prevW}–{prevL}</span>
+          </div>
+          {isBetween ? (
+            <div className="plf-game plf-game-won">
+              <div className="plf-round-row">
+                <div className="plf-round-lbl">{currentRound.name} · Series Complete</div>
+              </div>
+              <div className="plf-bw-inner">
+                <div className="plf-bw-result">
+                  <span className="plf-bw-w">W</span>
+                  <span className="plf-bw-score">Series {prevW}–{prevL}</span>
+                </div>
+                <div className="plf-bw-adv">Advancing…</div>
+                {nextRound && (
+                  <div className="plf-bw-next">Next up · {nextRound.name}{nextRound.opponent?.short ? ` vs ${nextRound.opponent.short}` : ''}</div>
+                )}
+              </div>
+              <div className="plf-live-area" style={{ visibility: 'hidden' }} />
+              <div className="plf-post-line plf-pl-won" style={{ visibility: 'hidden' }} />
+              <div className="plf-series-timer"><div className="plf-series-timer-fill" style={{ width: `${timerPct}%` }} /></div>
+            </div>
+          ) : (
+            <NBAPlayoffGame
+              key={`${roundIdx}-${gameIdx}`}
+              gameNum={gameIdx + 1}
+              seriesName={currentRound.name}
+              oppShort={oppShort}
+              myColor={teamColor}
+              myShort={teamShort}
+              myFinal={currentScore.myScore}
+              oppFinal={currentScore.oppScore}
+              won={currentRound.games[gameIdx] === 'W'}
+              isHome={isHome}
+              speedMult={speedMult}
+              paused={paused}
+              mySeed={seed}
+              oppSeed={currentRound.opponent?.seed}
+              onDone={handleGameDone}
+            />
+          )}
+          <div className="po-log-toggle-row">
+            <div className="plf-seg">
+              <button className={`plf-seg-btn${!paused && speedMult === 10 ? ' plf-seg-btn--active' : ''}`} onClick={() => { setSpeedMult(10); setPaused(false) }}>Slowest</button>
+              <button className={`plf-seg-btn${!paused && speedMult === 4 ? ' plf-seg-btn--active' : ''}`} onClick={() => { setSpeedMult(4); setPaused(false) }}>Slow</button>
+              <button className={`plf-seg-btn plf-seg-btn-pause-icon${paused ? ' plf-seg-btn--pause' : ''}`} onClick={() => setPaused(true)}>
+                <svg width="10" height="12" viewBox="0 0 10 12" fill="currentColor"><rect x="0" y="0" width="3.5" height="12" rx="1"/><rect x="6.5" y="0" width="3.5" height="12" rx="1"/></svg>
+              </button>
+              <button className={`plf-seg-btn${!paused && speedMult === 1 ? ' plf-seg-btn--active' : ''}`} onClick={() => { setSpeedMult(1); setPaused(false) }}>Fast</button>
+              <button className="plf-seg-btn plf-seg-btn-skip" onClick={handleSkip}>Skip<br/>Playoff</button>
+            </div>
+            {playoffGameLog.length > 0 ? (
+              <button className="po-log-toggle-btn" onClick={() => setShowStatsLog(s => !s)}>
+                {showStatsLog ? 'Hide' : 'View'} Game Log
+              </button>
+            ) : <div />}
+          </div>
+          {showStatsLog && <PlayoffStatsLog log={playoffGameLog} playoffRounds={playoffRounds} />}
+        </>
+      )}
+
+      {/* Always mounted — single stable ad + bracket */}
       {!adsDisabled && window.innerWidth <= 768 && (
         <div id="ramp-cntr1-plf" className="plf-banner-ad" style={{ minHeight: 0 }} />
       )}
@@ -2312,13 +2308,10 @@ function ScreenFinal({ result, awards, build, types, attrMap, onReset, onBack, a
   useEffect(() => { const t = setTimeout(() => setShow(true), 200); return () => clearTimeout(t) }, [])
 
   useEffect(() => {
-    if (adsDisabled || window.innerWidth > 768) return
-    window.ramp?.que?.push(() => {
-      window.ramp.spaAddAds([
-        { type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-final-stats' },
-        { type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-sim' },
-      ])
-    })
+    if (adsDisabled) return
+    const ads = [{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-sim' }]
+    if (window.innerWidth <= 768) ads.push({ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-final-stats' })
+    window.ramp?.que?.push(() => { window.ramp.spaAddAds(ads) })
   }, [])
 
   const fgAnim    = useCountUp(fgPct,    900, show)
@@ -2496,7 +2489,6 @@ const ALLTIME_STARTERS = {
   WAS: ['John Wall',        'Gilbert Arenas',    'Bradley Beal',        'Elvin Hayes',          'Wes Unseld'],
 }
 
-// Visual-only all-time ratings for off/def meters — uses ALLTIME_TEAM_RATINGS values
 const ALLTIME_VISUAL_RATINGS = ALLTIME_TEAM_RATINGS
 
 // ─── Starting 5: ordered PG → SG → SF → PF → C (2025-26 rosters from database) ─
@@ -2642,19 +2634,16 @@ export default function BucketSimPage({ result, build, types, position, onBack, 
   const advancePage = () => {
     document.querySelector('.simp-page')?.scrollTo({ top: 0, behavior: 'instant' })
     window.scrollTo({ top: 0, behavior: 'instant' })
-    setScreen(s => {
-      const next = s + 1
-      window.ramp?.que?.push(() => {
-        window.ramp.spaNewPage()
-        if (!adsDisabled) {
-          const ads = []
-          if (next > 0 && next < screens.length - 1 && next !== 2) ads.push({ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-footer' })
-          if (ads.length) window.ramp.spaAddAds(ads)
-        }
-      })
-      return next
-    })
+    window.ramp?.que?.push(() => { window.ramp.spaNewPage() })
+    setScreen(s => s + 1)
   }
+
+  useEffect(() => {
+    if (adsDisabled || screen === 0 || screen === 2 || screen === 3 || screen >= screens.length - 1) return
+    window.ramp?.que?.push(() => {
+      window.ramp.spaAddAds([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-footer' }])
+    })
+  }, [screen]) // eslint-disable-line
 
   const handleReset    = () => { setScreen(0); onReset() }
   const handleBack     = () => { setScreen(0); onBack()  }
@@ -2682,9 +2671,7 @@ export default function BucketSimPage({ result, build, types, position, onBack, 
     ? { '--team-color': team.color, '--team-color2': team.color2 ?? team.color }
     : undefined
   const tr = team
-    ? (isAllTime
-        ? (ALLTIME_VISUAL_RATINGS[team.short] ?? null)
-        : (TEAM_VISUAL_RATINGS[team.short] ?? TEAM_RATINGS[team.short] ?? null))
+    ? (isAllTime ? (ALLTIME_VISUAL_RATINGS[team.short] ?? null) : (TEAM_VISUAL_RATINGS[team.short] ?? TEAM_RATINGS[team.short] ?? null))
     : null
   const myIsBig  = result?.position === 'big'
   const myIQPhoto = build?.basketballIQ?.photo ?? null

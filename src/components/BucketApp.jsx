@@ -229,7 +229,6 @@ function BucketSplash({ onStart, onVersus }) {
             </button>
 
             <button className="splash-mode-salarycap" style={{ position: 'relative' }} onClick={() => { localStorage.setItem('bucketPosition', position); onStart('salarycap', position) }}>
-              <div className="smode-daily-banner">DAILY</div>
               <div className="smode-title">Salary Cap</div>
               <div className="smode-badge">Build on a budget</div>
             </button>
