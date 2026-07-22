@@ -675,12 +675,14 @@ export function BucketModelFigure({ build, team, className = '', style = {}, hea
       <BucketFigureOverlay build={monoTeamBuild} />
       {bucketPhoto && modelW > 0 && (() => {
         const isGeneric = bucketPhoto === '/genericdark.webp' || bucketPhoto === '/genericlight.webp'
+        const isGenericLight = bucketPhoto === '/genericlight.webp'
+        const genericYAdj = isGenericLight ? 2.5 : isGeneric ? 4.5 : 0
         return (
         <div style={{
           position: 'absolute',
           left: `${hx}%`, top: `${collarY}%`,
           width: `${hpx}px`, height: `${hpx}px`,
-          transform: `translate(calc(-50% + ${0.75 + (isGeneric ? 0.75 : 0)}px), calc(-89% + ${2 + headYOffset + (isGeneric ? 4.5 : 0)}px))`,
+          transform: `translate(calc(-50% + ${0.75 + (isGeneric ? 0.75 : 0)}px), calc(-89% + ${2 + headYOffset + genericYAdj}px))`,
           overflow: 'hidden', borderRadius: '50%', pointerEvents: 'none', zIndex: 1,
           WebkitMaskImage: 'radial-gradient(ellipse 82% 78% at 50% 45%, black 52%, transparent 84%)',
           maskImage: 'radial-gradient(ellipse 82% 78% at 50% 45%, black 52%, transparent 84%)',
@@ -690,7 +692,7 @@ export function BucketModelFigure({ build, team, className = '', style = {}, hea
             style={{
               position: 'absolute', inset: 0, width: '100%', height: '100%',
               objectFit: 'cover', objectPosition: `50% ${objPosY}%`,
-              transform: `scale(${faceScale})`, transformOrigin: `50% ${objPosY}%`,
+              transform: `scale(${isGenericLight ? faceScale * 1.05 : faceScale})`, transformOrigin: `50% ${objPosY}%`,
               filter: 'saturate(0.75) contrast(1.05)',
             }}
           />
