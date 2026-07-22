@@ -882,7 +882,7 @@ function ScreenSeason({ result, awards, onNext, adsDisabled = false, isAllTime =
   useEffect(() => {
     if (!allDone || adsDisabled) return
     window.ramp?.que?.push(() => {
-      window.ramp.spaAddAds([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-season-top' }])
+      window.ramp.spaAddAds([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-square' }])
     })
   }, [allDone]) // eslint-disable-line
 
@@ -943,11 +943,11 @@ function ScreenSeason({ result, awards, onNext, adsDisabled = false, isAllTime =
               <span key={i} className={`bsim-sdot bsim-sdot--${g.won ? 'w' : 'l'}`} />
             ))}
           </div>
-          {allDone && !adsDisabled && (
-            <div id="ramp-cntr1-season-top" className="simp-season-ad" />
-          )}
           {allDone && (
             <ConferenceStandings standings={standings} myShort={team?.short} teamColor={team?.color} conf={conference} />
+          )}
+          {allDone && !adsDisabled && (
+            <div id="ramp-cntr1-square" className="simp-season-ad" />
           )}
           {allDone && (
             <StatCard ppg={ppg} rpg={rpg} apg={apg} spg={spg} bpg={bpg} tov={tov} fgPct={fgPct} threePct={threePct} ftPct={ftPct} per={per} />
