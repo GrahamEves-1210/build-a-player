@@ -943,12 +943,11 @@ function ScreenSeason({ result, awards, onNext, adsDisabled = false, isAllTime =
               <span key={i} className={`bsim-sdot bsim-sdot--${g.won ? 'w' : 'l'}`} />
             ))}
           </div>
-          {allDone && (
-            <ConferenceStandings standings={standings} myShort={team?.short} teamColor={team?.color} conf={conference} />
-          )}
-
           {allDone && !adsDisabled && (
             <div id="ramp-cntr1-square" className="square-ad simp-square-ad" />
+          )}
+          {allDone && (
+            <ConferenceStandings standings={standings} myShort={team?.short} teamColor={team?.color} conf={conference} />
           )}
 
           {allDone && (
