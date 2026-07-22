@@ -21,6 +21,42 @@ export const TEAM_RATINGS = {
   SAC:{off:63,def:61}, SAS:{off:83,def:82}, UTA:{off:62,def:62},
 }
 
+// All-time team ratings — each franchise at its historical peak era (off/def out of 100)
+export const ALLTIME_TEAM_RATINGS = {
+  // EAST
+  ATL: { off: 82, def: 78 }, // Dominique Wilkins / Bob Pettit era — elite scorer, solid defense
+  BOS: { off: 88, def: 94 }, // Russell 11-ring dynasty + Bird three-peat — greatest franchise ever
+  BKN: { off: 83, def: 78 }, // ABA Dr. J Nets + KD/Kyrie superteam
+  CHA: { off: 79, def: 75 }, // Mourning / Larry Johnson era — fun but not deep
+  CHI: { off: 90, def: 93 }, // Jordan two three-peats — top-3 dynasty in NBA history
+  CLE: { off: 84, def: 82 }, // LeBron eras: 2007 / 2016 champion / multiple Finals runs
+  DET: { off: 82, def: 90 }, // Bad Boys + 2004 Pistons — historically elite defense
+  IND: { off: 83, def: 85 }, // Reggie Miller / Paul George era — top East contender
+  MIA: { off: 87, def: 87 }, // LeBron/Wade/Bosh two-peat + Wade 2006 — back-to-back champs
+  MIL: { off: 85, def: 83 }, // Kareem era + Giannis 2021 championship
+  NYK: { off: 83, def: 88 }, // Frazier/Reed 1970/73 championships + Ewing elite-defense era
+  ORL: { off: 82, def: 82 }, // Shaq/Penny Finals + Dwight Howard dominant run (peak ~59W)
+  PHI: { off: 88, def: 86 }, // Wilt + Dr. J + Barkley + Iverson — multiple legendary eras
+  TOR: { off: 82, def: 83 }, // Kawhi 2019 championship + Vince Carter / Chris Bosh era
+  WAS: { off: 80, def: 82 }, // Unseld/Hayes 1978 champion + Gilbert Arenas scoring era
+  // WEST
+  DAL: { off: 85, def: 82 }, // Dirk 2011 championship + Luka era ascent
+  DEN: { off: 84, def: 80 }, // Jokic 2023 championship + Carmelo Anthony era
+  GSW: { off: 95, def: 87 }, // 73-9 Warriors + Curry dynasty — greatest offense in NBA history
+  HOU: { off: 87, def: 86 }, // Hakeem two-peat + Twin Towers + Harden MVP era
+  LAC: { off: 82, def: 80 }, // CP3 / Blake Griffin / DeAndre — perennial contender era
+  LAL: { off: 93, def: 88 }, // Showtime + Kobe/Shaq three-peat + LeBron — most titles in NBA
+  MEM: { off: 79, def: 83 }, // Grit-and-grind era — Gasol/Randolph excellent defense (peak ~57W)
+  MIN: { off: 83, def: 80 }, // Kevin Garnett era — best team that never reached Finals
+  NOP: { off: 80, def: 79 }, // Chris Paul era + Anthony Davis — brief windows of excellence (peak ~56W)
+  OKC: { off: 87, def: 83 }, // Durant/Westbrook era + Payton/Kemp Sonics dynasty
+  PHX: { off: 90, def: 76 }, // Nash 7-seconds era — historically elite offense, weak defense
+  POR: { off: 84, def: 82 }, // Walton 1977 champ + Clyde Drexler + Lillard era
+  SAC: { off: 82, def: 76 }, // Webber/Peja/Bibby era — deep WCF runs, no ring (peak ~55W)
+  SAS: { off: 86, def: 94 }, // Duncan/Popovich 5-ring dynasty — historically elite defense
+  UTA: { off: 88, def: 83 }, // Stockton/Malone back-to-back Finals (both losses but elite team)
+}
+
 const CONF_TEAMS = {
   east: ['ATL','BOS','BKN','CHA','CHI','CLE','DET','IND','MIA','MIL','NYK','ORL','PHI','TOR','WAS'],
   west: ['DAL','DEN','GSW','HOU','LAC','LAL','MEM','MIN','NOP','OKC','PHX','POR','SAC','SAS','UTA'],
@@ -30,6 +66,12 @@ const CONF_TEAMS = {
 const CONF_ELITE = {
   east: ['DET','BOS','NYK','CLE','TOR','ATL'],
   west: ['OKC','SAS','DEN','LAL','HOU','MIN'],
+}
+
+// All-time Finals opponent pools (historically dominant franchises per conference)
+const ALLTIME_CONF_ELITE = {
+  east: ['BOS','CHI','MIA','PHI','DET','NYK'],  // west player faces these East legends in Finals
+  west: ['LAL','GSW','SAS','HOU','UTA','OKC'],  // east player faces these West legends in Finals
 }
 
 function seededRandom(seed) {
@@ -109,11 +151,11 @@ function simulateSeries(winProb, rand = Math.random) {
 }
 
 // ─── Conference Standings ─────────────────────────────────────────────────────
-function simConferenceStandings(myWins, myShort, conf, rand = Math.random) {
+function simConferenceStandings(myWins, myShort, conf, rand = Math.random, ratings = TEAM_RATINGS) {
   const others = CONF_TEAMS[conf]
     .filter(s => s !== myShort)
     .map(s => {
-      const tr = TEAM_RATINGS[s] ?? { off: 68, def: 65 }
+      const tr = ratings[s] ?? { off: 68, def: 65 }
       // score range ~0.57 (worst) to ~0.83 (best); map to WP 0.13–0.77
       const score = (tr.off + tr.def) / 200
       const baseWP = Math.max(0.13, Math.min(0.77, 0.20 + (score - 0.59) / 0.24 * 0.57 + rn(-0.06, 0.06, rand)))
@@ -161,14 +203,14 @@ function simPlayIn(mySeed, standings, winProb, rand = Math.random) {
 }
 
 // ─── Per-matchup win probability (log5 formula + slight talent amplification) ──
-function teamWP(short) {
-  const tr = TEAM_RATINGS[short] ?? { off: 68, def: 65 }
+function teamWP(short, ratings = TEAM_RATINGS) {
+  const tr = ratings[short] ?? { off: 68, def: 65 }
   const score = (tr.off + tr.def) / 200
   return Math.max(0.13, Math.min(0.77, 0.20 + (score - 0.59) / 0.24 * 0.57))
 }
 
-function matchupProb(myWP, oppShort) {
-  const oppWP = teamWP(oppShort)
+function matchupProb(myWP, oppShort, ratings = TEAM_RATINGS) {
+  const oppWP = teamWP(oppShort, ratings)
   // Log5: unbiased head-to-head probability from two win rates
   const denom = myWP + oppWP - 2 * myWP * oppWP
   const p = denom === 0 ? 0.5 : (myWP - myWP * oppWP) / denom
@@ -178,7 +220,7 @@ function matchupProb(myWP, oppShort) {
 }
 
 // ─── Playoff Path ─────────────────────────────────────────────────────────────
-function simPlayoffs(mySeed, winProb, conf, standings, rand = Math.random) {
+function simPlayoffs(mySeed, winProb, conf, standings, rand = Math.random, ratings = TEAM_RATINGS, confElite = CONF_ELITE) {
   const rounds = []
   let currentSeed = mySeed
 
@@ -201,7 +243,7 @@ function simPlayoffs(mySeed, winProb, conf, standings, rand = Math.random) {
   // that could contradict another round's result.
   const simParallel = (seedA, seedB) => {
     const tA = get(seedA), tB = get(seedB)
-    return rand() < matchupProb(teamWP(tA.short), tB.short)
+    return rand() < matchupProb(teamWP(tA.short, ratings), tB.short, ratings)
       ? { ...tA, seed: seedA }
       : { ...tB, seed: seedB }
   }
@@ -218,16 +260,16 @@ function simPlayoffs(mySeed, winProb, conf, standings, rand = Math.random) {
   if ([1, 4, 5, 8].includes(currentSeed)) {
     const sfA = simParallel(2, 7)
     const sfB = simParallel(3, 6)
-    r3Opp = rand() < matchupProb(teamWP(sfA.short), sfB.short) ? sfA : sfB
+    r3Opp = rand() < matchupProb(teamWP(sfA.short, ratings), sfB.short, ratings) ? sfA : sfB
   } else {
     const sfA = simParallel(1, 8)
     const sfB = simParallel(4, 5)
-    r3Opp = rand() < matchupProb(teamWP(sfA.short), sfB.short) ? sfA : sfB
+    r3Opp = rand() < matchupProb(teamWP(sfA.short, ratings), sfB.short, ratings) ? sfA : sfB
   }
 
   // Finals: elite team from other conference
   const otherConf = conf === 'east' ? 'west' : 'east'
-  const elites = CONF_ELITE[otherConf]
+  const elites = confElite[otherConf]
   const r4Short = elites[Math.floor(rn(0, 3, rand))]
   const r4Wins = Math.round(rn(52, 64, rand))
 
@@ -244,7 +286,7 @@ function simPlayoffs(mySeed, winProb, conf, standings, rand = Math.random) {
     if (eliminated) break
     const opp = opponentsByRound[r]
     // Per-game probability driven by actual matchup talent, same OVR boost as regular season
-    const adjProb = matchupProb(winProb, opp.short)
+    const adjProb = matchupProb(winProb, opp.short, ratings)
     const series = simulateSeries(adjProb, rand)
     rounds.push({ type: 'series', name: roundNames[r], roundIndex: r,
       opponent: opp, ...series })
@@ -256,20 +298,24 @@ function simPlayoffs(mySeed, winProb, conf, standings, rand = Math.random) {
 }
 
 // ─── Main Simulation Entry Point ─────────────────────────────────────────────
-export function runBucketSimulation(build, types, team, position = 'guard', rngSeed = null) {
+export function runBucketSimulation(build, types, team, position = 'guard', rngSeed = null, gameMode = 'classic') {
   const rand = rngSeed != null ? seededRandom(rngSeed) : Math.random
   const ovr = calcBucketOVR(build, types, position)
-  const tr = TEAM_RATINGS[team.short] ?? { off: 68, def: 65 }
+  const isAllTime = gameMode === 'all-time'
+  const simRatings  = isAllTime ? ALLTIME_TEAM_RATINGS : TEAM_RATINGS
+  const simConfElite = isAllTime ? ALLTIME_CONF_ELITE : CONF_ELITE
+  const tr = simRatings[team.short] ?? { off: 68, def: 65 }
 
   // Team strength → baseline WP (same formula as standings generator)
   const teamScore = (tr.off + tr.def) / 200
   const teamWP    = Math.max(0.13, Math.min(0.77, 0.20 + (teamScore - 0.59) / 0.24 * 0.57))
-  // OVR 82 = neutral; 90+ stars have amplified positive impact (up to +15%)
+  // OVR boost: all-time mode amplifies star power — legends should dominate, busts should suffer
   const rawDelta  = (ovr - 82) / 17
+  const boostMult = isAllTime ? 1.45 : 1.0
   const ovrBoost  = rawDelta >= 0
-    ? Math.min(0.20, rawDelta * 0.20)
-    : Math.max(-0.10, rawDelta * 0.10)
-  const winProb   = Math.min(0.87, Math.max(0.12, teamWP + ovrBoost))
+    ? Math.min(isAllTime ? 0.28 : 0.20, rawDelta * 0.20 * boostMult)
+    : Math.max(isAllTime ? -0.15 : -0.10, rawDelta * 0.10 * boostMult)
+  const winProb   = Math.min(isAllTime ? 0.91 : 0.87, Math.max(0.12, teamWP + ovrBoost))
 
   // Season stat averages (computed from actual build attributes)
   const isBig = position === 'big'
@@ -375,15 +421,15 @@ export function runBucketSimulation(build, types, team, position = 'guard', rngS
   }
 
   const conf = EAST.has(team.short) ? 'east' : 'west'
-  const { seed, standings } = simConferenceStandings(wins, team.short, conf, rand)
+  const { seed, standings } = simConferenceStandings(wins, team.short, conf, rand, simRatings)
 
   // Seeds 1-6 go directly; seeds 7-10 must survive play-in
   const playinEligible = seed <= 10
   let playoffRounds = [], champion = false
 
   if (playinEligible) {
-    const playoffWinProb = Math.min(0.85, winProb + 0.04)
-    const po = simPlayoffs(seed, playoffWinProb, conf, standings, rand)
+    const playoffWinProb = Math.min(isAllTime ? 0.89 : 0.85, winProb + 0.04)
+    const po = simPlayoffs(seed, playoffWinProb, conf, standings, rand, simRatings, simConfElite)
     playoffRounds = po.rounds
     champion = po.champion
   }
