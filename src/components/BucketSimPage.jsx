@@ -2317,7 +2317,6 @@ function ScreenFinal({ result, awards, build, types, attrMap, onReset, onBack, a
   useEffect(() => {
     if (adsDisabled) return
     const ads = [{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-sim' }]
-    if (window.innerWidth <= 768) ads.push({ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-final-stats' })
     window.ramp?.que?.push(() => { window.ramp.spaAddAds(ads) })
   }, [])
 
@@ -2374,8 +2373,6 @@ function ScreenFinal({ result, awards, build, types, attrMap, onReset, onBack, a
           per={show ? per : null}
         />
       </div>
-
-      <div id="ramp-cntr1-final-stats" className="ad-cntr1-mobile" />
 
       {bestGame && (
         <div className="simp-best-game">
