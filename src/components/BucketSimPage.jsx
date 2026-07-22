@@ -2606,9 +2606,21 @@ export default function BucketSimPage({ result, build, types, position, onBack, 
   const awards = useMemo(() => {
     if (!result) return null
     const { ppg, rpg, apg, spg, bpg, ovr, team } = result
+    const isAllTime = gameMode === 'all-time'
     const rb = (lo, hi) => parseFloat((lo + Math.random() * (hi - lo)).toFixed(1))
     const mvpScore = (p, r, a) => p * 2.0 + r * 1.0 + a * 1.5
-    const MVP_POOL = [
+    const MVP_POOL = isAllTime ? [
+      { name: 'Michael Jordan',    short: 'Jordan',   team: 'CHI', ppg: rb(31,35), rpg: rb(5,6),   apg: rb(5,6)   },
+      { name: 'LeBron James',      short: 'LeBron',   team: 'MIA', ppg: rb(27,30), rpg: rb(7,9),   apg: rb(7,9)   },
+      { name: 'Wilt Chamberlain',  short: 'Wilt',     team: 'PHI', ppg: rb(38,50), rpg: rb(22,27), apg: rb(2,4)   },
+      { name: 'Kareem Abdul-Jabbar', short: 'Kareem', team: 'LAL', ppg: rb(28,35), rpg: rb(13,17), apg: rb(3,5)   },
+      { name: 'Magic Johnson',     short: 'Magic',    team: 'LAL', ppg: rb(20,23), rpg: rb(6,8),   apg: rb(10,13) },
+      { name: 'Larry Bird',        short: 'Bird',     team: 'BOS', ppg: rb(27,30), rpg: rb(9,11),  apg: rb(6,7)   },
+      { name: 'Oscar Robertson',   short: 'Oscar',    team: 'MIL', ppg: rb(28,31), rpg: rb(10,13), apg: rb(10,12) },
+      { name: 'Shaquille O\'Neal', short: 'Shaq',     team: 'LAL', ppg: rb(27,30), rpg: rb(12,14), apg: rb(3,4)   },
+      { name: 'Hakeem Olajuwon',   short: 'Hakeem',   team: 'HOU', ppg: rb(24,27), rpg: rb(12,14), apg: rb(3,4)   },
+      { name: 'Moses Malone',      short: 'Moses',    team: 'HOU', ppg: rb(27,31), rpg: rb(13,15), apg: rb(1,2)   },
+    ] : [
       { name: 'Nikola Jokic',            short: 'Jokic',   team: 'DEN', ppg: rb(26,30), rpg: rb(11,14), apg: rb(9,12)  },
       { name: 'Shai Gilgeous-Alexander', short: 'SGA',     team: 'OKC', ppg: rb(29,33), rpg: rb(4,6),   apg: rb(5,7)   },
       { name: 'Giannis Antetokounmpo',   short: 'Giannis', team: 'MIA', ppg: rb(28,32), rpg: rb(10,13), apg: rb(5,7), mult: 0.35 },
@@ -2631,7 +2643,19 @@ export default function BucketSimPage({ result, build, types, position, onBack, 
     const playerDPOY = ovr >= 80 && bpg >= 2.8 && spg >= 1.5
     const dpoy = playerDPOY
       ? { name: 'You', short: 'You', team: team?.short, spg, bpg, isPlayer: true }
-      : { name: 'Victor Wembanyama', short: 'Wembanyama', team: 'SAS', spg: rb(1.2, 1.6), bpg: rb(3.2, 3.8) }
+      : isAllTime
+        ? (() => {
+            const DPOY_POOL = [
+              { name: 'Hakeem Olajuwon', short: 'Hakeem', team: 'HOU', spg: rb(1.6,2.0), bpg: rb(3.7,4.2) },
+              { name: 'Bill Russell',    short: 'Russell', team: 'BOS', spg: rb(1.8,2.2), bpg: rb(6.0,7.5) },
+              { name: 'David Robinson', short: 'Robinson', team: 'SAS', spg: rb(1.7,1.9), bpg: rb(3.8,4.5) },
+              { name: 'Dikembe Mutombo', short: 'Mutombo', team: 'DEN', spg: rb(0.5,0.7), bpg: rb(3.0,3.5) },
+              { name: 'Gary Payton',    short: 'Payton',   team: 'SEA', spg: rb(1.8,2.3), bpg: rb(0.2,0.4) },
+              { name: 'Ben Wallace',    short: 'Wallace',  team: 'DET', spg: rb(1.2,1.6), bpg: rb(3.0,3.7) },
+            ]
+            return DPOY_POOL[Math.floor(Math.random() * DPOY_POOL.length)]
+          })()
+        : { name: 'Victor Wembanyama', short: 'Wembanyama', team: 'SAS', spg: rb(1.2, 1.6), bpg: rb(3.2, 3.8) }
     return { mvp, dpoy }
   }, [result]) // eslint-disable-line
 
