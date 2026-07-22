@@ -2312,13 +2312,10 @@ function ScreenFinal({ result, awards, build, types, attrMap, onReset, onBack, a
   useEffect(() => { const t = setTimeout(() => setShow(true), 200); return () => clearTimeout(t) }, [])
 
   useEffect(() => {
-    if (adsDisabled || window.innerWidth > 768) return
-    window.ramp?.que?.push(() => {
-      window.ramp.spaAddAds([
-        { type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-final-stats' },
-        { type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-sim' },
-      ])
-    })
+    if (adsDisabled) return
+    const ads = [{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-sim' }]
+    if (window.innerWidth <= 768) ads.push({ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-final-stats' })
+    window.ramp?.que?.push(() => { window.ramp.spaAddAds(ads) })
   }, [])
 
   const fgAnim    = useCountUp(fgPct,    900, show)

@@ -11134,6 +11134,12 @@ html.is-touch .alltime-mode .spin-respin-half:hover:not(:disabled) {
   .ad-cntr1-mobile {
     display: none;
   }
+  #ramp-cntr1-sim {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 270px;
+  }
 }
 
 /* Hide Playwire corner/floating/interstitial video ads */
