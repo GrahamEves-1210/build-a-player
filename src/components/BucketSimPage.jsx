@@ -1727,6 +1727,13 @@ function ScreenPlayoffs({ result, onNext, autoSkip = false, isAllTime = false, a
     })
   }, [])
 
+  useEffect(() => {
+    if (!showStatsLog || adsDisabled || window.innerWidth > 768) return
+    window.ramp?.que?.push(() => {
+      window.ramp.spaAddAds([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-plf-log' }])
+    })
+  }, [showStatsLog]) // eslint-disable-line
+
   const conf = result.conference ?? 'east'
   const otherConf = conf === 'east' ? 'west' : 'east'
   const [confBracket, otherBracket] = useMemo(() => {
@@ -2285,6 +2292,9 @@ function ScreenPlayoffs({ result, onNext, autoSkip = false, isAllTime = false, a
             ) : <div />}
           </div>
           {showStatsLog && <PlayoffStatsLog log={playoffGameLog} playoffRounds={playoffRounds} />}
+          {showStatsLog && !adsDisabled && (
+            <div id="ramp-cntr1-plf-log" className="plf-banner-ad" />
+          )}
         </>
       )}
 
