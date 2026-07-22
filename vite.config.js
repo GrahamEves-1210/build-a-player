@@ -18,7 +18,7 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'prompt',
+      registerType: 'autoUpdate',
       includeAssets: ['logo.png', 'qb-silhouette.png', 'logos/**', 'headshots/**'],
       manifest: {
         name: 'Build-A-Player',
@@ -35,6 +35,8 @@ export default defineConfig({
         ],
       },
       workbox: {
+        skipWaiting: true,
+        clientsClaim: true,
         globPatterns: ['**/*.{js,css,html,ico,svg,json}'],
         globIgnores: ['**/headshots/**', '**/logos/**'],
         runtimeCaching: [

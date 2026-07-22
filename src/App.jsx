@@ -229,6 +229,7 @@ export default function App() {
       setUser(u)
       if (!u) {
         try { localStorage.removeItem('bap_subscribed') } catch {}
+        try { localStorage.removeItem('bap_ads_off') } catch {}
         return
       }
       if (adFreeReturn) {

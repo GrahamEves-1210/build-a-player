@@ -63,9 +63,11 @@ function showUpdateBanner() {
   document.getElementById('sw-dismiss-btn').addEventListener('click', () => banner.remove())
 }
 
-const updateSW = registerSW({
+registerSW({
   immediate: true,
-  onNeedRefresh() { showUpdateBanner() },
+  onRegisteredSW(swUrl, r) {
+    r && setInterval(() => r.update(), 60 * 1000)
+  },
 })
 
 const isBucket = window.location.pathname.startsWith('/bucket')
