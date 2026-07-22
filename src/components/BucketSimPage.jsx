@@ -2296,11 +2296,10 @@ function ScreenPlayoffs({ result, onNext, autoSkip = false, isAllTime = false, a
         </>
       )}
 
-      {/* Always mounted — single stable ad + bracket */}
+      <FullBracket {...bracketProps} />
       {!adsDisabled && window.innerWidth <= 768 && (
         <div id="ramp-cntr1-plf" className="plf-banner-ad" />
       )}
-      <FullBracket {...bracketProps} />
     </div>
   )
 }
