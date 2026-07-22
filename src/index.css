@@ -7515,10 +7515,8 @@ html.is-touch .bd-card-main:hover         { background: transparent !important; 
 .simp-season-ad {
   display: none;
   width: 100%;
-  min-height: 270px;
   margin: 8px 0;
 }
-.simp-season-ad:empty { min-height: 0; }
 @media (max-width: 768px) {
   .simp-season-ad { display: block; }
 }
