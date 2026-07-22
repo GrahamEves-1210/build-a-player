@@ -682,7 +682,7 @@ export function BucketModelFigure({ build, team, className = '', style = {}, hea
           position: 'absolute',
           left: `${hx}%`, top: `${collarY}%`,
           width: `${hpx}px`, height: `${hpx}px`,
-          transform: `translate(calc(-50% + ${0.75 + (isGeneric ? 0.75 : 0)}px), calc(-89% + ${2 + headYOffset + genericYAdj}px))`,
+          transform: `translate(calc(-50% + ${0.75 + (isGeneric ? 0.75 : 0)}px), calc(-89% + ${4 + headYOffset + genericYAdj}px))`,
           overflow: 'hidden', borderRadius: '50%', pointerEvents: 'none', zIndex: 1,
           WebkitMaskImage: 'radial-gradient(ellipse 82% 78% at 50% 45%, black 52%, transparent 84%)',
           maskImage: 'radial-gradient(ellipse 82% 78% at 50% 45%, black 52%, transparent 84%)',
@@ -725,13 +725,6 @@ function ScreenBuild({ result, build, types, attrMap, onNext, adsDisabled = fals
     return () => clearTimeout(t)
   }, [])
 
-  useEffect(() => {
-    if (adsDisabled || window.innerWidth > 768) return
-    window.ramp?.que?.push(() => {
-      window.ramp.spaAddAds([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-build' }])
-    })
-  }, [])
-
   return (
     <div className="simp-screen">
       <div className="simp-ovr-hero">
@@ -741,7 +734,6 @@ function ScreenBuild({ result, build, types, attrMap, onNext, adsDisabled = fals
       <div className="simp-archetype">{archetype}</div>
       <button className="simp-cta" onClick={onNext}>Simulate Season</button>
       {team && <BucketModelFigure build={build} team={team} photoKey={isSalaryMode ? 'size' : 'basketballIQ'} />}
-      <div id="ramp-cntr1-build" className="ad-cntr1-mobile" />
 
       <div className="simp-attr-table">
         {filled.map((t, i) => {
@@ -1105,9 +1097,8 @@ function computeGoatRank(result, awards) {
   // Top 3 requires MVP + championship + 97+ OVR
   if (rank <= 3 && !(wonMVP && champion && ovr >= 97)) rank = 4
 
-  // #1 requires MVP + DPOY + championship + 99 OVR + great stats
-  const greatStats = ppg >= 28 && (rpg >= 9 || apg >= 8)
-  if (rank <= 1 && !(wonMVP && wonDPOY && champion && ovr >= 99 && greatStats)) rank = 2
+  // #1 requires MVP + championship + 99 OVR
+  if (rank <= 1 && !(wonMVP && champion && ovr >= 99)) rank = 2
 
   return Math.max(1, Math.min(75, rank))
 }
@@ -1721,13 +1712,6 @@ function ScreenPlayoffs({ result, onNext, autoSkip = false, isAllTime = false, a
   useEffect(() => { if (autoSkip) handleSkipRef.current?.() }, []) // eslint-disable-line
 
   useEffect(() => {
-    if (adsDisabled || window.innerWidth > 768) return
-    window.ramp?.que?.push(() => {
-      window.ramp.spaAddAds([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-plf' }])
-    })
-  }, [])
-
-  useEffect(() => {
     if (!showStatsLog || adsDisabled || window.innerWidth > 768) return
     window.ramp?.que?.push(() => {
       window.ramp.spaAddAds([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-plf-log' }])
@@ -2299,9 +2283,6 @@ function ScreenPlayoffs({ result, onNext, autoSkip = false, isAllTime = false, a
       )}
 
       <FullBracket {...bracketProps} />
-      {!adsDisabled && window.innerWidth <= 768 && (
-        <div id="ramp-cntr1-plf" className="plf-banner-ad" />
-      )}
     </div>
   )
 }
@@ -2668,13 +2649,6 @@ export default function BucketSimPage({ result, build, types, position, onBack, 
     setScreen(s => s + 1)
   }
 
-  useEffect(() => {
-    if (adsDisabled || screen === 0 || screen === 1 || screen === 2 || screen === 3 || screen >= screens.length - 1) return
-    window.ramp?.que?.push(() => {
-      window.ramp.spaAddAds([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-footer' }])
-    })
-  }, [screen]) // eslint-disable-line
-
   const handleReset    = () => { setScreen(0); onReset() }
   const handleBack     = () => { setScreen(0); onBack()  }
   const handleGoatBack = () => setScreen(s => s - 1)
@@ -2751,9 +2725,6 @@ export default function BucketSimPage({ result, build, types, position, onBack, 
         )}
 
         {screens[screen]}
-        {!adsDisabled && screen > 0 && screen < screens.length - 1 && screen !== 1 && screen !== 2 && (
-          <div id="ramp-cntr1-footer" className="ad-cntr1-footer" />
-        )}
         <div className="simp-footer-disclaimer">Fan-made · Not affiliated with the NBA</div>
       </div>
     </div>

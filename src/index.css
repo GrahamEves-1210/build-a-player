@@ -4600,7 +4600,7 @@ html.is-mac .spin-panel-scroll {
   .splash-figure-scale { transform: scale(0.8); transform-origin: center center; }
   .bucket-figure-wrap  { margin-top: 0px !important; }
   .bucket-splash       { justify-content: flex-start; padding-top: 4vh; }
-  .splash-footer       { margin-top: 5px; align-items: stretch; width: clamp(340px, 42vw, 520px); gap: 6px; }
+  .splash-footer       { margin-top: 5px; align-items: stretch; width: clamp(380px, 50vw, 620px); gap: 6px; }
   .splash-modes        { width: 100%; }
   .splash-minigame-btn { width: 100%; }
   .splash-minigame-btn--h2h { margin-top: 0; }
@@ -4820,6 +4820,7 @@ html.is-mac .spin-panel-scroll {
   transition: transform 0.15s ease, box-shadow 0.15s ease;
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
   gap: 6px;
 }
 
@@ -4828,7 +4829,7 @@ html.is-mac .spin-panel-scroll {
   background: linear-gradient(145deg, rgba(94,219,216,0.28) 0%, rgba(31,201,138,0.20) 100%), rgba(5,13,13,0.70);
   border: 1.5px solid rgba(94,219,216,0.50);
   padding: 13px 22px 12px;
-  flex: 1.6;
+  flex: 1.3;
   transition: transform 0.22s var(--ease), box-shadow 0.22s var(--ease), border-color 0.22s var(--ease);
 }
 
@@ -4862,6 +4863,7 @@ html.is-mac .spin-panel-scroll {
   padding: 9px 16px 8px;
   flex: 1;
   position: relative;
+  overflow: hidden;
   transition: transform 0.22s var(--ease), box-shadow 0.22s var(--ease), border-color 0.22s var(--ease);
 }
 
@@ -4996,6 +4998,24 @@ html.is-mac .spin-panel-scroll {
   margin: 0;
 }
 
+.splash-mob-disclaimer {
+  display: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  color: rgba(255,255,255,0.45);
+  margin: 0;
+  padding: 5px 0 4px;
+  line-height: 1;
+  z-index: 10;
+  pointer-events: none;
+}
+
 /* Mobile adjustments for splash */
 @media (max-width: 768px) {
   .splash-chip { display: none; }
@@ -5022,13 +5042,13 @@ html.is-mac .spin-panel-scroll {
     margin-top: 65px;
   }
   .bucket-figure-wrap {
-    margin-top: 75px !important;
+    margin-top: 66px !important;
     width: clamp(190px, 61vw, 310px) !important;
     aspect-ratio: 936 / 897 !important;
   }
   .splash-footer {
     margin-top: 0;
-    margin-bottom: 60px;
+    margin-bottom: 83px;
     gap: 6px;
     width: 100%;
     padding: 0 20px;
@@ -5040,6 +5060,9 @@ html.is-mac .spin-panel-scroll {
   }
   .splash-disclaimer--header { display: block; margin-bottom: -4px; line-height: 1; }
   .splash-disclaimer:not(.splash-disclaimer--header) { display: none; }
+  .bucket-splash .splash-pos-toggle { margin-top: 7px; }
+  .smode-cta--alltime { left: -10px; }
+  .splash-mob-disclaimer { display: block; }
   .splash-modes-secondary { gap: 5px; }
   .splash-mode-classic,
   .splash-mode-salarycap,
@@ -5083,6 +5106,7 @@ html.is-mac .spin-panel-scroll {
 .splash-minigame-btn--player {
   background: linear-gradient(145deg, rgba(31,201,138,0.35) 0%, rgba(16,160,100,0.22) 100%), rgba(3,13,13,0.70);
   border-color: rgba(31,201,138,0.62);
+  padding: 2px 14px;
 }
 .splash-minigame-btn--player:hover {
   background: linear-gradient(145deg, rgba(31,201,138,0.48) 0%, rgba(16,160,100,0.32) 100%), rgba(3,13,13,0.70);
@@ -7090,6 +7114,7 @@ html.is-touch .bd-card-main:hover         { background: transparent !important; 
   padding: 0;
   min-height: 0;
 }
+[id^="ramp-cntr1-goat-"]:empty { min-height: 0; }
 .goat-card--you {
   padding: 14px 14px 14px 16px;
   border-left: 4px solid #e8a820;
@@ -7505,7 +7530,7 @@ html.is-touch .bd-card-main:hover         { background: transparent !important; 
   margin: 0;
   padding: 0;
 }
-.plf-banner-ad:empty { min-height: 0; }
+.plf-banner-ad:empty { min-height: 0; margin: 0; }
 @media (max-width: 768px) {
   .plf-banner-ad {
     display: block;
@@ -7515,8 +7540,10 @@ html.is-touch .bd-card-main:hover         { background: transparent !important; 
 .simp-season-ad {
   display: none;
   width: 100%;
+  min-height: 270px;
   margin: 8px 0;
 }
+.simp-season-ad:empty { min-height: 0; margin: 0; }
 @media (max-width: 768px) {
   .simp-season-ad { display: block; }
 }
@@ -8397,13 +8424,6 @@ html.is-touch .bd-card-main:hover         { background: transparent !important; 
   .sts-nickname {
     font-size: 18px;
   }
-}
-.sts-alltime-badge {
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  color: #F5C842;
-  white-space: nowrap;
 }
 .sts-grades {
   display: flex;
@@ -11086,7 +11106,9 @@ html.is-touch .alltime-mode .spin-respin-half:hover:not(:disabled) {
   overflow: hidden;
   margin-top: -10px;
 }
-.ad-cntr1-mobile:empty { min-height: 0; margin-top: 0; }
+.ad-cntr1-mobile:empty { margin: 0; }
+/* spin screen: reserve the space even when empty so Ramp doesn't fight layout shifts */
+#ramp-cntr1:empty { display: flex !important; visibility: hidden; min-height: 60px; }
 .simp-square-ad {
   display: flex;
   justify-content: center;
@@ -11105,6 +11127,7 @@ html.is-touch .alltime-mode .spin-respin-half:hover:not(:disabled) {
   min-height: 50px;
   margin: 4px 0;
 }
+.ad-cntr1-footer:empty { min-height: 0; margin: 0; }
 .ad-cntr1-desktop {
   display: none;
 }
@@ -11142,6 +11165,9 @@ html.is-touch .alltime-mode .spin-respin-half:hover:not(:disabled) {
   line-height: 0;
   font-size: 0;
 }
+#ramp-cntr1-sim:empty,
+#ramp-cntr1-season:empty,
+#ramp-cntr1-final-stats:empty { margin: 0; width: 0; }
 #ramp-cntr1-sim > *,
 #ramp-cntr1-season > *,
 #ramp-cntr1-final-stats > * {

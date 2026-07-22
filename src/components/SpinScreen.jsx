@@ -528,7 +528,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
               )}
             </div>
           )}
-          {isDone && !adsDisabled && window.innerWidth <= 768 && (
+          {!adsDisabled && window.innerWidth <= 768 && (
             <div id="ramp-cntr1" className="ad-cntr1-mobile" style={{ minHeight: 60 }} />
           )}
         </div>

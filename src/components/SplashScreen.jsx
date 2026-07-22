@@ -85,6 +85,7 @@ export default function SplashScreen({ onStart, onDepthChart }) {
         <div style={{ position: 'absolute', inset: '-20px', backgroundImage: "url('/footballbackground.webp')", backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(4px) brightness(0.5)' }} />
       </div>
 
+      <div className="splash-mob-disclaimer">Fan-made · Not affiliated with the NFL</div>
       <div className="splash-glow" style={{ opacity: phase >= 2 ? 1 : 0 }} />
 
       {attrs.map((a) => (

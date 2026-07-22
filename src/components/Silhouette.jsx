@@ -5,6 +5,8 @@ import { QB_LEGEND_PHYSICALS } from '../data/legends'
 import { RB_LEGEND_PHYSICALS } from '../data/rb-legends'
 import NBA_MEASUREMENTS from '../data/nba-measurements.json'
 import { NBA_FACE_ADJUSTMENTS } from '../data/nba-face-adjustments'
+import NBA_HEADSHOTS from '../data/nba-headshots.json'
+import { NBA_FACE_CENTERS } from '../data/nba-face-centers'
 const ALL_QB_PHYS = { ...QB_LEGEND_PHYSICALS, ...QB_PHYSICALS }
 const ALL_RB_PHYS = { ...RB_LEGEND_PHYSICALS, ...RB_PHYSICALS }
 import QBAvatar from './QBAvatar'
@@ -262,9 +264,7 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
   const complete = types.every(t => build[t])
 
   // Headshot only from basketballIQ slot for bucket builds
-  const bucketPhoto = isBucket
-    ? (build['basketballIQ']?.photo || null)
-    : null
+  const bucketPhoto = isBucket ? (build['basketballIQ']?.photo || null) : null
 
   // Sample bottom color + capture aspect ratio for correct objectPosition centering
   const [hsBottomColor, setHsBottomColor] = useState(null)
@@ -532,6 +532,8 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
           const playerName = faceChip?.qbFull || faceChip?.qb || ''
           const adj = NBA_FACE_ADJUSTMENTS[playerName] || { dx: 0, dy: 0, scale: 1 }
           const isGeneric = bucketPhoto === '/genericdark.webp' || bucketPhoto === '/genericlight.webp'
+          const isGenericLight = bucketPhoto === '/genericlight.webp'
+          const genericYAdj = isGenericLight ? 2.5 : isGeneric ? 4.5 : 0
           return (
             <div
               key={bucketPhoto}
@@ -541,7 +543,7 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
                 top: `${collarY}%`,
                 width: `${hpx}px`,
                 height: `${hpx}px`,
-                transform: `translate(calc(-50% + 0.75px + ${adj.dx + (isGeneric ? 0.75 : 0)}px), calc(-89% + 4px + ${adj.dy + (isGeneric ? 4.5 : 0)}px))`,
+                transform: `translate(calc(-50% + 0.75px + ${adj.dx + (isGeneric ? 0.75 : 0)}px), calc(-89% + 4px + ${adj.dy + genericYAdj}px))`,
                 overflow: 'hidden',
                 borderRadius: '50%',
                 pointerEvents: 'none',
@@ -562,7 +564,7 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
                   height: '100%',
                   objectFit: 'cover',
                   objectPosition: objPos,
-                  transform: `scale(${faceScale * adj.scale})`,
+                  transform: `scale(${(faceScale * adj.scale) * (isGenericLight ? 1.05 : 1)}) rotate(${adj.rotate ?? 0}deg)`,
                   transformOrigin: `50% ${objPosY}%`,
                   filter: 'saturate(0.75) contrast(1.05)',
                 }}
@@ -656,6 +658,7 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
             disabled={!isCustomMode}
           >Custom Build</button>
         )}
+
       </div>
 
 

@@ -176,6 +176,7 @@ function BucketSplash({ onStart, onVersus }) {
         <div style={{ position: 'absolute', inset: '-20px', backgroundImage: "url('/bucketbackground.webp')", backgroundSize: 'cover', backgroundPosition: 'center 65%', filter: 'blur(3px) brightness(0.55)' }} />
       </div>
 
+      <div className="splash-mob-disclaimer">Fan-made · Not affiliated with the NBA</div>
       <div className="splash-glow" style={{ opacity: phase >= 2 ? 1 : 0 }} />
 
       {splashAttrs.map(a => (
