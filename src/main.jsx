@@ -23,24 +23,15 @@ if (/iPad/.test(navigator.userAgent) || (/Mac/.test(navigator.platform) && navig
 import { createRoot } from 'react-dom/client'
 import { HelmetProvider } from 'react-helmet-async'
 import { Analytics } from '@vercel/analytics/react'
-import { registerSW } from 'virtual:pwa-register'
 import './index.css'
 import App from './App.jsx'
 import BucketApp from './components/BucketApp.jsx'
 
-let reloading = false
-navigator.serviceWorker?.addEventListener('controllerchange', () => {
-  if (reloading) return
-  reloading = true
-  window.location.reload()
-})
-
-registerSW({
-  immediate: true,
-  onRegisteredSW(swUrl, r) {
-    r && setInterval(() => r.update(), 60 * 1000)
-  },
-})
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(regs => {
+    regs.forEach(r => r.unregister())
+  })
+}
 
 const isBucket = window.location.pathname.startsWith('/bucket')
 
