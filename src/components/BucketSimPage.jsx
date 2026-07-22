@@ -873,6 +873,11 @@ function ScreenSeason({ result, awards, onNext, adsDisabled = false, isAllTime =
   const playinRound = playoffRounds.find(r => r.type === 'playin' && r.advanced)
   const seed = playinRound?.newSeed ?? rawSeed
   const [phase,       setPhase]       = useState('loading')
+  const [revealed,    setRevealed]    = useState(0)
+  const [liveWins,    setLiveWins]    = useState(0)
+  const [liveLosses,  setLiveLosses]  = useState(0)
+  const [awardsPhase, setAwardsPhase] = useState(0)
+  const allDone = revealed === games.length
 
   useEffect(() => {
     if (!allDone || adsDisabled) return
@@ -880,11 +885,6 @@ function ScreenSeason({ result, awards, onNext, adsDisabled = false, isAllTime =
       window.ramp.spaAddAds([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-square' }])
     })
   }, [allDone]) // eslint-disable-line
-  const [revealed,    setRevealed]    = useState(0)
-  const [liveWins,    setLiveWins]    = useState(0)
-  const [liveLosses,  setLiveLosses]  = useState(0)
-  const [awardsPhase, setAwardsPhase] = useState(0)
-  const allDone = revealed === games.length
 
   useEffect(() => {
     if (!allDone) return
