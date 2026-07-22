@@ -18,6 +18,7 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
+      selfDestroying: true,
       registerType: 'autoUpdate',
       includeAssets: ['logo.png', 'qb-silhouette.png', 'logos/**', 'headshots/**'],
       manifest: {
