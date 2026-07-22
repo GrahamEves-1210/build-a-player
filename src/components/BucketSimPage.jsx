@@ -2728,7 +2728,7 @@ export default function BucketSimPage({ result, build, types, position, onBack, 
         )}
 
         {screens[screen]}
-        {!adsDisabled && screen > 0 && screen < screens.length - 1 && screen !== 2 && (
+        {!adsDisabled && screen > 0 && screen < screens.length - 1 && screen !== 1 && screen !== 2 && (
           <div id="ramp-cntr1-footer" className="ad-cntr1-footer" />
         )}
         <div className="simp-footer-disclaimer">Fan-made · Not affiliated with the NBA</div>
