@@ -253,6 +253,8 @@
 [data-sport="bucket"] .smode-cta { color: #fb923c; }
 [data-sport="bucket"] .splash-mode-salarycap .smode-cta { color: #c084fc; position: relative; left: -6px; }
 [data-sport="bucket"] .splash-mode-salarycap .smode-badge { color: #a78bfa; background: rgba(168,85,247,0.12); border-color: rgba(168,85,247,0.25); white-space: nowrap; margin-left: -8px; }
+[data-sport="bucket"] .splash-mode-alltime .smode-cta { color: #e8c84a; }
+[data-sport="bucket"] .splash-mode-alltime .smode-badge { color: #d4af37; background: rgba(212,175,55,0.12); border-color: rgba(212,175,55,0.25); }
 
 .smode-daily-banner {
   position: absolute;
@@ -4692,7 +4694,7 @@ html.is-mac .spin-panel-scroll {
   background: rgba(255,255,255,0.06);
   border: 1px solid rgba(255,255,255,0.12);
   border-radius: 16px;
-  padding: 5px;
+  padding: 3px;
   margin: 10px auto 0;
   width: fit-content;
   transition: opacity 0.4s ease, transform 0.4s ease;
@@ -4766,9 +4768,16 @@ html.is-mac .spin-panel-scroll {
 .splash-modes {
   display: flex;
   flex-direction: row-reverse;
-  gap: 15px;
+  gap: 12px;
   align-items: stretch;
   margin-bottom: 0;
+}
+
+.splash-modes-secondary {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
 }
 
 /* Save status toast */
@@ -4834,8 +4843,8 @@ html.is-mac .spin-panel-scroll {
 .splash-mode-salarycap {
   background: linear-gradient(145deg, rgba(168,85,247,0.28) 0%, rgba(139,92,246,0.20) 100%), rgba(10,8,15,0.70);
   border: 1.5px solid rgba(168,85,247,0.50);
-  padding: 13px 22px 12px;
-  flex: 1.2;
+  padding: 9px 16px 8px;
+  flex: 1;
   overflow: hidden;
   transition: transform 0.22s var(--ease), box-shadow 0.22s var(--ease), border-color 0.22s var(--ease);
 }
@@ -4846,12 +4855,12 @@ html.is-mac .spin-panel-scroll {
 }
 .splash-mode-salarycap:active { transform: scale(0.98); }
 
-/* All-Time â€” secondary card */
+/* All-Time — secondary card */
 .splash-mode-alltime {
   background: linear-gradient(145deg, rgba(212,175,55,0.28) 0%, rgba(245,200,66,0.18) 100%), rgba(13,12,5,0.70);
   border: 1.5px solid rgba(212,175,55,0.55);
-  padding: 18px 20px 18px;
-  flex: 1.2;
+  padding: 9px 16px 8px;
+  flex: 1;
   position: relative;
   transition: transform 0.22s var(--ease), box-shadow 0.22s var(--ease), border-color 0.22s var(--ease);
 }
@@ -4981,17 +4990,22 @@ html.is-mac .spin-panel-scroll {
   opacity: 0.8;
 }
 
+.splash-disclaimer--header {
+  display: none;
+  top: 0;
+  margin: 0;
+}
+
 /* Mobile adjustments for splash */
 @media (max-width: 768px) {
   .splash-chip { display: none; }
-  .smode-title { font-size: 20px; }
-  .smode-title--alltime { font-size: 18px; }
+  .smode-title { font-size: 18px; }
+  .smode-title--alltime { font-size: 16px; }
   .splash-mode-classic  { padding: 9px 14px 9px; }
-  .splash-mode-salarycap { padding: 9px 14px 9px; }
   .splash-glow { width: 300px; height: 300px; }
   .splash-header {
     position: absolute;
-    top: calc(6vh - 13px);
+    top: calc(6vh - 20px);
     left: 0;
     right: 0;
     text-align: center;
@@ -4999,7 +5013,7 @@ html.is-mac .spin-panel-scroll {
   }
   .splash-screen {
     justify-content: space-between;
-    padding-top: calc(18vh - 45px);
+    padding-top: calc(18vh - 58px);
     padding-bottom: max(env(safe-area-inset-bottom, 0px), 53px);
   }
   .splash-figure-wrap {
@@ -5008,11 +5022,13 @@ html.is-mac .spin-panel-scroll {
     margin-top: 65px;
   }
   .bucket-figure-wrap {
+    margin-top: 75px !important;
     width: clamp(190px, 61vw, 310px) !important;
     aspect-ratio: 936 / 897 !important;
   }
   .splash-footer {
     margin-top: 0;
+    margin-bottom: 60px;
     gap: 6px;
     width: 100%;
     padding: 0 20px;
@@ -5022,6 +5038,9 @@ html.is-mac .spin-panel-scroll {
     width: 100%;
     flex-direction: row-reverse;
   }
+  .splash-disclaimer--header { display: block; margin-bottom: -4px; line-height: 1; }
+  .splash-disclaimer:not(.splash-disclaimer--header) { display: none; }
+  .splash-modes-secondary { gap: 5px; }
   .splash-mode-classic,
   .splash-mode-salarycap,
   .splash-mode-alltime {
@@ -5030,8 +5049,8 @@ html.is-mac .spin-panel-scroll {
     overflow: hidden;
   }
   .splash-mode-classic { flex: 1.4; }
-  .splash-mode-salarycap { flex: 1.1; }
-  .splash-mode-alltime { flex: 1.1; padding: 12px 14px 11px; }
+  .splash-mode-salarycap { padding: 5px 12px 5px; }
+  .splash-mode-alltime  { padding: 5px 12px 5px; }
 }
 
 /* ─── SPLASH MINI-GAME BUTTON ─────────────────────────────────────────────── */
@@ -7308,7 +7327,7 @@ html.is-touch .bd-card-main:hover         { background: transparent !important; 
   width: 100%;
   height: 100%;
   object-fit: contain;
-  filter: drop-shadow(0 0 1.5px rgba(255,255,255,0.55)) drop-shadow(0 0 0.5px rgba(255,255,255,0.9));
+  filter: drop-shadow(0 0 3px rgba(255,255,255,0.35));
 }
 
 .simp-attr-table {
@@ -8336,6 +8355,19 @@ html.is-touch .bd-card-main:hover         { background: transparent !important; 
   flex-direction: column;
   gap: 1px;
 }
+.sts-alltime-badge {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: #d4af37;
+  background: rgba(212,175,55,0.12);
+  border: 1px solid rgba(212,175,55,0.3);
+  border-radius: 4px;
+  padding: 2px 5px;
+  width: fit-content;
+  margin-top: 2px;
+}
 .sts-city {
   font-size: 13px;
   font-weight: 500;
@@ -8450,32 +8482,7 @@ html.is-touch .bd-card-main:hover         { background: transparent !important; 
   gap: 4px;
   flex: 1;
 }
-.sts-starter-ring {
-  position: relative;
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
-  border: 2px solid rgba(255,255,255,0.15);
-  overflow: hidden;
-  background: rgba(255,255,255,0.05);
-  flex-shrink: 0;
-}
-.sts-starter-photo {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: 50% 12%;
-}
-.sts-starter-init {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 100%;
-  font-size: 14px;
-  font-weight: 700;
-  color: rgba(255,255,255,0.4);
-}
+.sts-starter .qb-avatar { flex-shrink: 0; }
 .sts-starter-cap {
   position: absolute;
   bottom: 0;
@@ -11079,9 +11086,19 @@ html.is-touch .alltime-mode .spin-respin-half:hover:not(:disabled) {
   justify-content: center;
   align-items: center;
   overflow: hidden;
-  min-height: 270px;
+  margin-top: -10px;
 }
-.ad-cntr1-mobile:empty { min-height: 0; }
+.ad-cntr1-mobile:empty { min-height: 0; margin-top: 0; }
+.simp-square-ad {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  margin: 8px 0 4px;
+}
+.simp-square-ad:empty { min-height: 0; margin: 0; }
+@media (min-width: 769px) { .simp-square-ad { display: none; } }
+
 .ad-cntr1-footer {
   display: flex;
   justify-content: center;

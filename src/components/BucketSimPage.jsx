@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { NBA_TEAMS, NBA_PLAYERS, BUCKET_ATTR } from '../data/nba-players'
 import NBA_HEADSHOTS from '../data/nba-headshots.json'
 import { valToGrade } from '../utils/simulation'
-import { getBucketGuardArchetype, getBucketBigArchetype, TEAM_RATINGS } from '../utils/bucketSimulation'
+import { getBucketGuardArchetype, getBucketBigArchetype, TEAM_RATINGS, ALLTIME_TEAM_RATINGS } from '../utils/bucketSimulation'
 import { SAL_REP_TYPES, SAL_ATTR_MAP } from './BucketSalaryCap'
 import QBAvatar from './QBAvatar'
 import BucketFigureOverlay from './BucketFigureOverlay'
@@ -2496,6 +2496,8 @@ const ALLTIME_STARTERS = {
   WAS: ['John Wall',        'Gilbert Arenas',    'Bradley Beal',        'Elvin Hayes',          'Wes Unseld'],
 }
 
+const ALLTIME_VISUAL_RATINGS = ALLTIME_TEAM_RATINGS
+
 // ─── Starting 5: ordered PG → SG → SF → PF → C (2025-26 rosters from database) ─
 const TEAM_STARTERS = {
   ATL: ['CJ McCollum','Dyson Daniels','Jalen Johnson','Zaccharie Risacher','Onyeka Okongwu'],
@@ -2676,7 +2678,7 @@ export default function BucketSimPage({ result, build, types, position, onBack, 
     ? { '--team-color': team.color, '--team-color2': team.color2 ?? team.color }
     : undefined
   const tr = team
-    ? (TEAM_VISUAL_RATINGS[team.short] ?? TEAM_RATINGS[team.short] ?? null)
+    ? (isAllTime ? (ALLTIME_VISUAL_RATINGS[team.short] ?? null) : (TEAM_VISUAL_RATINGS[team.short] ?? TEAM_RATINGS[team.short] ?? null))
     : null
   const myIsBig  = result?.position === 'big'
   const myIQPhoto = build?.basketballIQ?.photo ?? null
