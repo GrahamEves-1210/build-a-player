@@ -875,11 +875,11 @@ function ScreenSeason({ result, awards, onNext, adsDisabled = false, isAllTime =
   const [phase,       setPhase]       = useState('loading')
 
   useEffect(() => {
-    if (adsDisabled) return
+    if (awardsPhase < 5 || adsDisabled) return
     window.ramp?.que?.push(() => {
       window.ramp.spaAddAds([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-square' }])
     })
-  }, [])
+  }, [awardsPhase]) // eslint-disable-line
   const [revealed,    setRevealed]    = useState(0)
   const [liveWins,    setLiveWins]    = useState(0)
   const [liveLosses,  setLiveLosses]  = useState(0)
@@ -947,10 +947,6 @@ function ScreenSeason({ result, awards, onNext, adsDisabled = false, isAllTime =
             <ConferenceStandings standings={standings} myShort={team?.short} teamColor={team?.color} conf={conference} />
           )}
 
-          {!adsDisabled && (
-            <div id="ramp-cntr1-square" className="square-ad simp-square-ad" />
-          )}
-
           {allDone && (
             <StatCard ppg={ppg} rpg={rpg} apg={apg} spg={spg} bpg={bpg} tov={tov} fgPct={fgPct} threePct={threePct} ftPct={ftPct} per={per} />
           )}
@@ -997,7 +993,12 @@ function ScreenSeason({ result, awards, onNext, adsDisabled = false, isAllTime =
           )}
 
           {awardsPhase >= 5 && (
-            <button className="simp-cta simp-cta-in" onClick={onNext}>Enter Playoffs</button>
+            <>
+              <button className="simp-cta simp-cta-in" onClick={onNext}>Enter Playoffs</button>
+              {!adsDisabled && (
+                <div id="ramp-cntr1-square" className="square-ad simp-square-ad" />
+              )}
+            </>
           )}
         </>
       )}
@@ -1178,18 +1179,6 @@ function ScreenGOAT({ result, awards, onNext, onReset, onBack, adsDisabled = fal
   const [listVisible, setListVisible] = useState(false)
   const listRef = useRef(null)
 
-  useEffect(() => {
-    if (!listVisible || adsDisabled || window.innerWidth > 768) return
-    window.ramp?.que?.push(() => {
-      window.ramp.spaAddAds([
-        { type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-goat-61' },
-        { type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-goat-51' },
-        { type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-goat-41' },
-        { type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-goat-31' },
-        { type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-goat-21' },
-      ])
-    })
-  }, [listVisible])
 
   useEffect(() => {
     const t = setTimeout(() => { setPhase(qualified ? 'ticker' : 'miss'); if (!qualified) setListVisible(true) }, 2200)
@@ -1259,9 +1248,6 @@ function ScreenGOAT({ result, awards, onNext, onReset, onBack, adsDisabled = fal
             {Array.from({ length: 75 }, (_, i) => 75 - i).map(r => (
               <React.Fragment key={r}>
                 <GoatCard rank={r} entry={GOAT_MAP[r]} isPlayer={false} playerTeam={team?.short} playerTeamColor={team?.color} />
-                {(r === 61 || r === 51 || r === 41 || r === 31 || r === 21) && (
-                  <div id={`ramp-cntr1-goat-${r}`} className="ad-cntr1-mobile" />
-                )}
               </React.Fragment>
             ))}
           </div>
@@ -1721,11 +1707,11 @@ function ScreenPlayoffs({ result, onNext, autoSkip = false, isAllTime = false, a
   useEffect(() => { if (autoSkip) handleSkipRef.current?.() }, []) // eslint-disable-line
 
   useEffect(() => {
-    if (adsDisabled || window.innerWidth > 768) return
+    if (status === 'between-rounds' || adsDisabled || window.innerWidth > 768) return
     window.ramp?.que?.push(() => {
       window.ramp.spaAddAds([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-plf' }])
     })
-  }, [])
+  }, [status]) // eslint-disable-line
 
   const conf = result.conference ?? 'east'
   const otherConf = conf === 'east' ? 'west' : 'east'
