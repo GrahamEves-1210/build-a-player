@@ -2442,7 +2442,18 @@ function ProgressDots({ screen, total }) {
 }
 
 // ─── All-Time Starting 5: ordered PG → SG → SF → PF → C (each franchise at its peak era) ─
-// Guard build replaces index 2 (SF); big build replaces index 3 (PF)
+// Replacement slot per team — lowest OVR among the guard (0-2) or big (3-4) positions
+const ALLTIME_REPLACE_IDX = {
+  ATL: {g:1, b:4}, BOS: {g:0, b:3}, BKN: {g:2, b:4}, CHA: {g:1, b:3},
+  CHI: {g:0, b:3}, CLE: {g:1, b:4}, DAL: {g:1, b:4}, DEN: {g:2, b:3},
+  DET: {g:1, b:4}, GSW: {g:1, b:3}, HOU: {g:0, b:3}, IND: {g:0, b:4},
+  LAC: {g:1, b:4}, LAL: {g:1, b:3}, MEM: {g:1, b:3}, MIA: {g:0, b:3},
+  MIL: {g:1, b:3}, MIN: {g:0, b:4}, NOP: {g:2, b:4}, NYK: {g:2, b:4},
+  OKC: {g:2, b:4}, ORL: {g:1, b:4}, PHI: {g:0, b:3}, PHX: {g:2, b:4},
+  POR: {g:0, b:3}, SAC: {g:2, b:4}, SAS: {g:0, b:4}, TOR: {g:0, b:3},
+  UTA: {g:1, b:4}, WAS: {g:2, b:3},
+}
+
 const ALLTIME_STARTERS = {
   ATL: ['Pete Maravich',    'Trae Young',        'Dominique Wilkins',   'Bob Pettit',          'Dikembe Mutombo'],
   BOS: ['Bob Cousy',        'Paul Pierce',       'Larry Bird',          'Kevin McHale',         'Bill Russell'],
@@ -2532,7 +2543,8 @@ function TeamStarters({ teamShort, teamColor, isBig, iqPhoto, isAllTime = false 
   if (isAllTime) {
     const names = ALLTIME_STARTERS[teamShort] ?? []
     if (!names.length) return null
-    const replaceIdx = isBig ? 3 : 2
+    const ri = ALLTIME_REPLACE_IDX[teamShort] ?? { g: 2, b: 3 }
+    const replaceIdx = isBig ? ri.b : ri.g
     return (
       <div className="sts-starters">
         {names.map((name, i) => {
@@ -2543,7 +2555,7 @@ function TeamStarters({ teamShort, teamColor, isBig, iqPhoto, isAllTime = false 
             <div key={isMe ? 'you' : name} className={`sts-starter${isMe ? ' sts-starter--you' : ''}`}>
               <QBAvatar photo={photo} team={teamShort} color={isMe ? teamColor : teamColor + '99'} size={42} logoDir="/logos/nba/" />
               <span className="sts-starter-name" style={isMe ? { color: teamColor, fontWeight: 700 } : undefined}>
-                {isMe ? 'YOU' : name}
+                {isMe ? 'YOUR BUILD' : name}
               </span>
             </div>
           )
@@ -2572,7 +2584,7 @@ function TeamStarters({ teamShort, teamColor, isBig, iqPhoto, isAllTime = false 
           <div key={isMe ? 'you' : p.name} className={`sts-starter${isMe ? ' sts-starter--you' : ''}`}>
             <QBAvatar photo={photo} team={p.team} color={isMe ? teamColor : teamColor + '99'} size={42} logoDir="/logos/nba/" />
             <span className="sts-starter-name" style={isMe ? { color: teamColor, fontWeight: 700 } : undefined}>
-              {isMe ? 'YOU' : starterDisplayName(p)}
+              {isMe ? 'YOUR BUILD' : starterDisplayName(p)}
             </span>
           </div>
         )
