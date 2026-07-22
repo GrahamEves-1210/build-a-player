@@ -2647,7 +2647,7 @@ export default function BucketSimPage({ result, build, types, position, onBack, 
         ? (() => {
             const DPOY_POOL = [
               { name: 'Hakeem Olajuwon', short: 'Hakeem', team: 'HOU', spg: rb(1.6,2.0), bpg: rb(3.7,4.2) },
-              { name: 'Bill Russell',    short: 'Russell', team: 'BOS', spg: rb(1.8,2.2), bpg: rb(6.0,7.5) },
+              { name: 'Bill Russell',    short: 'Russell', team: 'BOS', spg: rb(1.8,2.2), bpg: rb(4.5,5.5) },
               { name: 'David Robinson', short: 'Robinson', team: 'SAS', spg: rb(1.7,1.9), bpg: rb(3.8,4.5) },
               { name: 'Dikembe Mutombo', short: 'Mutombo', team: 'DEN', spg: rb(0.5,0.7), bpg: rb(3.0,3.5) },
               { name: 'Gary Payton',    short: 'Payton',   team: 'SEA', spg: rb(1.8,2.3), bpg: rb(0.2,0.4) },
