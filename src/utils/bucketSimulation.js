@@ -309,12 +309,12 @@ export function runBucketSimulation(build, types, team, position = 'guard', rngS
   // Team strength → baseline WP (same formula as standings generator)
   const teamScore = (tr.off + tr.def) / 200
   const teamWP    = Math.max(0.13, Math.min(0.77, 0.20 + (teamScore - 0.59) / 0.24 * 0.57))
-  // OVR boost: all-time mode amplifies star power — legends should dominate, busts should suffer
+  // OVR boost: in all-time you're one role player among legends — team strength dominates
   const rawDelta  = (ovr - 82) / 17
-  const boostMult = isAllTime ? 1.45 : 1.0
+  const boostMult = isAllTime ? 0.45 : 1.0
   const ovrBoost  = rawDelta >= 0
-    ? Math.min(isAllTime ? 0.28 : 0.20, rawDelta * 0.20 * boostMult)
-    : Math.max(isAllTime ? -0.15 : -0.10, rawDelta * 0.10 * boostMult)
+    ? Math.min(isAllTime ? 0.09 : 0.20, rawDelta * 0.20 * boostMult)
+    : Math.max(isAllTime ? -0.05 : -0.10, rawDelta * 0.10 * boostMult)
   const winProb   = Math.min(isAllTime ? 0.91 : 0.87, Math.max(0.12, teamWP + ovrBoost))
 
   // Season stat averages (computed from actual build attributes)
