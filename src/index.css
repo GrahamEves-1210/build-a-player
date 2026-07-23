@@ -2423,6 +2423,12 @@ a:focus-visible {
 .mobile-build .cz-type-playmaking .cz-tag { font-size: 5.5px !important; letter-spacing: 0.1px; }
 @media (min-width: 769px) {
   .cz-type-playmaking .cz-tag { font-size: 11px !important; letter-spacing: 0.5px; }
+
+  /* NFL splash pill positions */
+  .splash-screen:not(.bucket-splash) .cz-type-playmaking { left: 40px !important; right: auto !important; }
+  .splash-screen:not(.bucket-splash) .cz-type-vision { right: 40px !important; left: auto !important; }
+  .splash-screen:not(.bucket-splash) .cz-type-legs   { right: 40px !important; left: auto !important; }
+
 }
 
 /* White player section â€” drops below tag when filled */
@@ -8770,6 +8776,7 @@ html.is-touch .bd-card-main:hover         { background: transparent !important; 
 .prf-page {
   height: calc(100dvh - 54px);
   overflow-y: auto;
+  overflow-x: hidden;
   display: flex;
   justify-content: center;
   align-items: flex-start;
@@ -9451,6 +9458,7 @@ html.is-touch .bd-card-main:hover         { background: transparent !important; 
   border: 1px solid rgba(255,255,255,0.1);
   border-radius: 12px;
   margin-top: 8px;
+  margin-bottom: 12px;
 }
 .prf-goat-entry.pge--elite {
   background: rgba(245,200,66,0.08);
@@ -11211,11 +11219,11 @@ html.is-touch .alltime-mode .spin-respin-half:hover:not(:disabled) {
 /* Uses :has() so it reacts to DOM changes instantly without JS timing issues */
 @media (max-width: 768px) {
   html:has([id^="pw-oop"][data-pw-status="loaded"][style*="bottom"]):not(.ads-hidden) {
-    --ad-h: 50px;
+    --ad-h: 52px;
   }
 }
 html.is-tablet:has([id^="pw-oop"][data-pw-status="loaded"][style*="bottom"]):not(.ads-hidden) {
-  --ad-h: 50px;
+  --ad-h: 52px;
 }
 /* Strip Playwire's injected background/border from the bottom rail container */
 #adBanner,
@@ -13042,6 +13050,40 @@ html.is-mac [id^="pw-oop-bottom_rail"] > * {
   font-weight: 800;
 }
 
+/* ── Classic / All-Time mode toggle ── */
+.lb-mode-toggle {
+  display: flex;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 12px;
+  overflow: hidden;
+  height: 38px;
+  flex-shrink: 0;
+}
+.lb-mode-btn {
+  flex: 1;
+  height: 100%;
+  border: none;
+  border-right: 1px solid rgba(255,255,255,0.08);
+  border-radius: 0;
+  background: transparent;
+  color: rgba(255,255,255,0.40);
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.lb-mode-btn:last-child { border-right: none; }
+.lb-mode-btn-active {
+  background: rgba(249,115,22,0.15);
+  color: #F97316;
+  font-weight: 800;
+}
+
 /* ── Position filter ── */
 .lb-pos-filter {
   display: flex;
@@ -13105,7 +13147,7 @@ html.is-mac [id^="pw-oop-bottom_rail"] > * {
   -webkit-tap-highlight-color: transparent;
 }
 .lb-metric-tab:last-child { border-right: none; }
-@media (hover: hover) { .lb-metric-tab:hover { color: rgba(249,115,22,0.85); } }
+@media (hover: hover) { .lb-metric-tab:not(.lb-metric-tab-active):hover { color: rgba(249,115,22,0.85); } }
 .lb-metric-tab-active {
   background: #F97316;
   color: #fff;
@@ -14401,6 +14443,15 @@ html.is-mac [id^="pw-oop-bottom_rail"] > * {
 }
 .sc-lb-row--top .sc-lb-ovr { color: #c084fc; }
 
+.sc-lb-spare {
+  font-size: 11px;
+  font-weight: 700;
+  color: #4ade80;
+  flex-shrink: 0;
+  letter-spacing: 0.2px;
+  margin-left: auto;
+}
+
 /* 5 pick avatars */
 .sc-lb-picks {
   display: flex;
@@ -14450,7 +14501,8 @@ html.is-mac [id^="pw-oop-bottom_rail"] > * {
 .vlh-bab-logo { font-family: Impact, 'Arial Narrow Bold', sans-serif; font-size: clamp(16px, 2.8vw, 22px); letter-spacing: 1px; color: #fff; line-height: 1; text-transform: uppercase; margin-bottom: 8px; }
 .vlh-bab-logo .hoop-u-svg { height: 0.80em; vertical-align: -0.06em; transform: translateX(-0.75px); }
 .vlh-bab-logo .splash-xlink-em--bucket { color: #f97316; }
-.h2h-to { -webkit-text-fill-color: #f97316; background: none; -webkit-background-clip: unset; background-clip: unset; letter-spacing: -3px; }
+.h2h-to { -webkit-text-fill-color: #ffffff; background: none; -webkit-background-clip: unset; background-clip: unset; letter-spacing: -3px; }
+.splash-h2h-logo .h2h-to { letter-spacing: -0.5px; }
 .versus-lobby-title { font-family: Impact, 'Arial Narrow Bold', sans-serif; font-size: clamp(54px, 11vw, 88px); letter-spacing: -3px; background: linear-gradient(135deg, #fecaca 0%, #ef4444 55%, #f87171 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; line-height: 0.88; text-align: center; }
 .versus-lobby-modes { display: grid; grid-template-columns: 1fr auto 1fr; align-items: flex-end; margin: 16px 0 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
 .vlm-pills { display: flex; align-items: flex-end; }
@@ -14727,6 +14779,8 @@ html.is-mac [id^="pw-oop-bottom_rail"] > * {
 
 /* Result flavor text */
 .bvr-result-flavor { font-size: 10px; font-weight: 600; letter-spacing: 0.1em; color: rgba(255,255,255,0.28); text-transform: uppercase; font-family: var(--mono); margin-top: 4px; }
+.bvr-play--miss .bvr-play-text { font-style: italic; color: rgba(255,255,255,0.28); }
+.bvr-play--miss .bvr-play-dot { opacity: 0.35; }
 
 /* ═══════════════════════════════════════════════════════════
    PVP SPLASH SECTION
@@ -14847,8 +14901,10 @@ html.is-mac [id^="pw-oop-bottom_rail"] > * {
 /* ═══════════════════════════════════════════════════════════
    NAV VERSUS COUNTER
 ═══════════════════════════════════════════════════════════ */
-.nav-versus-counter { display: flex; align-items: center; gap: 7px; }
-.nvc-side { font-size: 11px; font-weight: 900; letter-spacing: 0.05em; color: rgba(255,255,255,0.72); font-family: var(--mono); white-space: nowrap; }
+.nav-versus-counter { position: absolute; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 7px; }
+.nav-versus-counter .nvc-faceoff { pointer-events: auto; }
+.nvc-side { font-size: 13px; font-weight: 900; letter-spacing: 0.05em; color: rgba(255,255,255,0.72); font-family: var(--mono); white-space: nowrap; }
+.nvc-pos { font-size: 9px; font-weight: 800; letter-spacing: 0.1em; color: rgba(251,146,60,0.7); font-family: var(--mono); margin: 0 1px; }
 .nvc-vs { font-size: 8px; font-weight: 900; letter-spacing: 0.18em; color: rgba(251,146,60,0.45); font-family: var(--mono); }
 .nvc-waiting { font-size: 9px; font-weight: 700; letter-spacing: 0.08em; color: rgba(255,255,255,0.25); font-family: var(--mono); }
 .nvc-faceoff { padding: 5px 11px; background: rgba(251,146,60,0.13); border: 1px solid rgba(251,146,60,0.45); border-radius: 6px; color: #f97316; font-size: 10px; font-weight: 900; letter-spacing: 0.08em; cursor: pointer; font-family: var(--mono); transition: background 0.15s, box-shadow 0.15s; animation: nvcPulse 2s ease-in-out infinite; }
@@ -14891,6 +14947,12 @@ html.is-mac [id^="pw-oop-bottom_rail"] > * {
 .vs-prompt-start { width: 100%; padding: 14px; background: linear-gradient(135deg, rgba(249,115,22,0.85), rgba(245,158,11,0.7)); border: none; border-radius: 12px; color: #fff; font-size: 13px; font-weight: 900; letter-spacing: 0.12em; cursor: pointer; font-family: var(--mono); transition: opacity 0.15s, transform 0.1s; }
 .vs-prompt-start:hover { opacity: 0.88; }
 .vs-prompt-start:active { transform: scale(0.98); }
+.vs-prompt-pos-btns { display: flex; gap: 12px; width: 100%; }
+.vs-prompt-pos-btn { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 16px 8px 14px; border: 1px solid rgba(249,115,22,0.22); border-radius: 12px; background: rgba(249,115,22,0.05); color: rgba(255,255,255,0.6); font-size: 14px; font-weight: 900; letter-spacing: 0.12em; cursor: pointer; font-family: var(--mono); transition: background 0.15s, border-color 0.15s, color 0.15s; }
+.vs-prompt-pos-btn:hover { background: rgba(249,115,22,0.1); border-color: rgba(249,115,22,0.45); color: #fff; }
+.vs-prompt-pos-btn--active { background: linear-gradient(135deg, rgba(249,115,22,0.85), rgba(245,158,11,0.7)); border-color: transparent; color: #fff; }
+.vs-prompt-pos-btn--active:hover { background: linear-gradient(135deg, rgba(249,115,22,0.95), rgba(245,158,11,0.85)); }
+.vs-ppb-sub { font-size: 8px; font-weight: 700; letter-spacing: 0.1em; color: rgba(255,255,255,0.45); font-family: var(--font); }
 
 /* ═══════════════════════════════════════════════════════════
    OPPONENT DISCONNECT NOTIFICATION

@@ -153,6 +153,16 @@ function getESTDate(daysOffset = 0) {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const BUDGET_OPTIONS = [130, 140, 150, 160, 170]
+
+function budgetForDateStr(dateStr) {
+  if (dateStr === '2026-07-15') return 140
+  if (dateStr === '2026-07-16') return 150
+  if (dateStr === '2026-07-17') return 140
+  const [y, m, d] = dateStr.split('-').map(Number)
+  const seed = y * 10000 + m * 100 + d
+  const r = seededRandom(seed ^ 0xB0B0B0)
+  return BUDGET_OPTIONS[Math.floor(r() * BUDGET_OPTIONS.length)]
+}
 const TIERS  = [50, 40, 30, 20, 10]
 
 const TIER_BANDS = [
@@ -629,12 +639,13 @@ function InfiniteLeaderboard({ onClose }) {
 // ─── SalaryLeaderboard ────────────────────────────────────────────────────────
 function SalaryLeaderboard({ dateStr, dateLabel, onClose }) {
   const [rows, setRows] = useState(null)
+  const budget = budgetForDateStr(dateStr)
 
   useEffect(() => {
     if (!supabase) { setRows([]); return }
     supabase
       .from('salary_cap_plays')
-      .select('username, picks, overall_score, ppg, apg, rpg')
+      .select('username, picks, overall_score, ppg, apg, rpg, budget_used')
       .eq('date_str', dateStr)
       .order('overall_score', { ascending: false })
       .limit(200)
@@ -669,6 +680,9 @@ function SalaryLeaderboard({ dateStr, dateLabel, onClose }) {
               <span className="sc-lb-rank">{i + 1}</span>
               <span className="sc-lb-name">{r.username || 'Anonymous'}</span>
               <span className="sc-lb-ovr">{r.overall_score} OVR</span>
+              {r.budget_used != null && budget - r.budget_used > 0 && (
+                <span className="sc-lb-spare">+${budget - r.budget_used}M</span>
+              )}
             </div>
             {r.picks && (
               <div className="sc-lb-picks">

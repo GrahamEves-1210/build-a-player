@@ -1705,7 +1705,7 @@ export const NBA_ALLTIME_GUARD_PLAYERS = [
   { name: "Donovan Mitchell", short: "Spida", team: 'UTA', starter: true, captain: false, number: 45, ht: "6'1\"", wt: 215, years: '2017–22',
     attrs: { jumpShot:8, finishing:9, passing:6, handles:8, perimeterDefense:6, speed:9, bounce:8, size:2, basketballIQ:7, clutch:8 } },
   { name: "Jeff Hornacek", short: "Hornacek", team: 'UTA', starter: false, captain: false, number: 14, ht: "6'4\"", wt: 190, years: '1994–00',
-    attrs: { jumpShot:8, finishing:6, passing:6, handles:6, perimeterDefense:6, speed:6, bounce:3, size:5, basketballIQ:8, clutch:8 } },
+    attrs: { jumpShot:10, finishing:6, passing:6, handles:6, perimeterDefense:6, speed:6, bounce:3, size:5, basketballIQ:8, clutch:8 } },
   { name: "Pete Maravich", short: "Pistol Pete", team: 'UTA', starter: false, captain: false, number: 7, ht: "6'5\"", wt: 197, years: '1974–80',
     attrs: { jumpShot:8, finishing:8, passing:9, handles:11, perimeterDefense:3, speed:7, bounce:4, size:5, basketballIQ:8, clutch:8 } },
   { name: "Darrell Griffith", short: "Dr. Dunkenstein", team: 'UTA', starter: false, captain: false, number: 35, ht: "6'4\"", wt: 190, years: '1980–91',

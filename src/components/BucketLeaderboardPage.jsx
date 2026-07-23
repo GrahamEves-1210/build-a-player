@@ -36,9 +36,10 @@ const PROFILE_METRICS = [
   { key: 'count',     label: 'Seasons', fmt: v => v },
 ]
 const BUILD_METRICS = [
-  { key: 'ovr',    label: 'OVR',     fmt: v => v },
+  { key: 'ovr',    label: 'OVR',        fmt: v => v },
   { key: 'lowOvr', label: 'Lowest OVR', fmt: v => v },
-  { key: 'ppg',    label: 'PPG',     fmt: v => `${v}` },
+  { key: 'ppg',    label: 'PPG',        fmt: v => `${v}` },
+  { key: 'goat',   label: 'GOAT',       fmt: v => `#${v}` },
 ]
 const DAILY_METRICS = [
   { key: 'rings', label: 'Rings', fmt: v => v },
@@ -141,12 +142,15 @@ function BucketBuildExpand({ build, position, row }) {
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function BucketLeaderboardPage({ onBack, currentUser, adsDisabled = false }) {
   const [view,      setView]      = useState('profiles')
+  const [lbMode,    setLbMode]    = useState('classic')
   const [posFilter, setPosFilter] = useState('guard')
-  const [sortKey,   setSortKey]   = useState('rings')
-  const [rows,      setRows]      = useState([])
-  const [loading,   setLoading]   = useState(true)
-  const [expanded,  setExpanded]  = useState(null)
-  const [plusSet,   setPlusSet]   = useState(new Set())
+  const [sortKey,       setSortKey]      = useState('rings')
+  const [rows,          setRows]         = useState([])
+  const [loading,       setLoading]      = useState(true)
+  const [expanded,      setExpanded]     = useState(null)
+  const [plusSet,       setPlusSet]      = useState(new Set())
+
+  const isGoatView = view === 'builds' && sortKey === 'goat'
 
   const metrics = view === 'profiles' ? PROFILE_METRICS
                 : view === 'daily'    ? DAILY_METRICS
@@ -162,7 +166,7 @@ export default function BucketLeaderboardPage({ onBack, currentUser, adsDisabled
 
   useEffect(() => {
     if (adsDisabled || window.innerWidth > 768 || loading || !rows.length) return
-    const count = view === 'goat' ? rows.length : SLOTS
+    const count = isGoatView ? rows.length : SLOTS
     const ads = []
     for (let i = 10; i <= count; i += 10) {
       ads.push({ type: 'standard_iab_cntr1', selectorId: `ramp-cntr1-lb-mob-${i}` })
@@ -176,40 +180,54 @@ export default function BucketLeaderboardPage({ onBack, currentUser, adsDisabled
     setRows([])
     setExpanded(null)
 
-    if (view === 'profiles')    fetchProfiles()
+    if (view === 'profiles')   fetchProfiles()
+    else if (isGoatView)       fetchGoat()
     else if (view === 'builds') fetchBuilds()
-    else if (view === 'goat')   fetchGoat()
-    else                        fetchDaily()
-  }, [view, posFilter, sortKey])
+    else                       fetchDaily()
+  }, [view, posFilter, sortKey, lbMode])
 
   async function fetchProfiles() {
-    const { data, error } = await supabase.rpc('get_bucket_leaderboard', { pos_filter: null })
+    const gameMode = lbMode === 'alltime' ? 'bucket-all-time' : 'bucket-classic'
+    const { data, error } = await supabase
+      .from('simulations')
+      .select('user_id, username, wins, losses, champion, ovr, ppg')
+      .eq('game_mode', gameMode)
+      .not('user_id', 'is', null)
+      .limit(10000)
     if (error || !data) { setLoading(false); return }
 
-    let processed = data.map(r => {
-      const wins   = Number(r.wins)
-      const losses = Number(r.losses)
-      const count  = Number(r.count)
-      const avgPpg = Number(r.avg_ppg ?? 0)
+    const map = {}
+    data.forEach(r => {
+      if (!r.user_id) return
+      if (!map[r.user_id]) map[r.user_id] = { uid: r.user_id, username: r.username, wins: 0, losses: 0, rings: 0, count: 0, totalOvr: 0, totalPpg: 0 }
+      const u = map[r.user_id]
+      u.wins     += Number(r.wins   || 0)
+      u.losses   += Number(r.losses || 0)
+      u.rings    += r.champion ? 1 : 0
+      u.count    += 1
+      u.totalOvr += Number(r.ovr   || 0)
+      u.totalPpg += Number(r.ppg   || 0)
+    })
+
+    let processed = Object.values(map).map(u => {
+      const avgPpg = u.count ? Math.round((u.totalPpg / u.count) * 10) / 10 : 0
       return {
-        uid:       r.uid,
-        username:  r.username,
-        wins,
-        losses,
-        rings:     Number(r.rings),
-        count,
-        avgOvr:    r.total_ovr && count ? Math.round(Number(r.total_ovr) / count) : 0,
+        uid:       u.uid,
+        username:  u.username,
+        wins:      u.wins,
+        losses:    u.losses,
+        rings:     u.rings,
+        count:     u.count,
+        avgOvr:    u.count ? Math.round(u.totalOvr / u.count) : 0,
         avgPpg,
-        playoffs:  Number(r.playoffs ?? 0),
-        totalWins: wins,
-        totalPts:  Math.round(avgPpg * count * 82),
-        winPct:    wins + losses > 0 ? Math.round((wins / (wins + losses)) * 100) : 0,
+        playoffs:  0,
+        totalWins: u.wins,
+        totalPts:  Math.round(avgPpg * u.count * 82),
+        winPct:    u.wins + u.losses > 0 ? Math.round((u.wins / (u.wins + u.losses)) * 100) : 0,
       }
     })
 
-    // win% requires min 5 seasons to qualify
     const eligible = sortKey === 'winPct' ? processed.filter(r => r.count >= 5) : processed
-
     eligible.sort((a, b) => {
       if (sortKey === 'winPct')    return b.winPct    - a.winPct
       if (sortKey === 'avgOvr')    return b.avgOvr    - a.avgOvr
@@ -244,11 +262,12 @@ export default function BucketLeaderboardPage({ onBack, currentUser, adsDisabled
     const colMap = { rings: 'champion', lowOvr: 'ovr' }
     const col = colMap[sortKey] ?? sortKey
     const asc = sortKey === 'lowOvr'
+    const mode = isDaily ? (lbMode === 'alltime' ? 'bucket-all-time' : 'bucket-classic') : 'bucket-classic'
 
     let q = supabase
       .from('simulations')
       .select('id, user_id, username, ovr, archetype, position, wins, losses, champion, ppg, rpg, apg, fg_pct, three_pct, team_short, build, created_at')
-      .eq('game_mode', 'bucket-classic')
+      .eq('game_mode', mode)
       .not('build', 'is', null)
       .order(col, { ascending: asc })
       .limit(100)
@@ -298,7 +317,7 @@ export default function BucketLeaderboardPage({ onBack, currentUser, adsDisabled
   }
 
   const meId    = currentUser?.id
-  const display = view === 'goat'
+  const display = isGoatView
     ? rows
     : Array.from({ length: SLOTS }, (_, i) => rows[i] ?? null)
 
@@ -316,19 +335,37 @@ export default function BucketLeaderboardPage({ onBack, currentUser, adsDisabled
 
         {/* View tabs */}
         <div className="lb-view-tabs">
-          {['profiles', 'builds', 'goat', 'daily'].map(v => (
+          {['profiles', 'daily', 'builds'].map(v => (
             <button
               key={v}
               className={`lb-view-tab ${view === v ? 'lb-view-tab-active' : ''}`}
               onClick={() => switchView(v)}
             >
-              {v === 'profiles' ? 'Profiles' : v === 'builds' ? 'Builds' : v === 'goat' ? 'GOAT' : 'Daily'}
+              {v === 'profiles' ? 'Profiles' : v === 'daily' ? 'Daily' : 'Builds'}
             </button>
           ))}
         </div>
 
-        {/* Position filter — builds only */}
-        {(view === 'builds') && (
+        {/* Classic / All-Time mode toggle — profiles and daily only */}
+        {(view === 'profiles' || view === 'daily') && (
+          <div className="lb-pos-filter">
+            <button
+              className={`lb-pos-btn${lbMode === 'classic' ? ' lb-pos-btn-active' : ''}`}
+              onClick={() => { setLbMode('classic'); setRows([]); setLoading(true) }}
+            >
+              Classic
+            </button>
+            <button
+              className={`lb-pos-btn${lbMode === 'alltime' ? ' lb-pos-btn-active' : ''}`}
+              onClick={() => { setLbMode('alltime'); setRows([]); setLoading(true) }}
+            >
+              All-Time ★
+            </button>
+          </div>
+        )}
+
+        {/* Position filter — builds only (not GOAT) */}
+        {(view === 'builds' && !isGoatView) && (
           <div className="lb-pos-filter">
             {['guard', 'big'].map(p => (
               <button
@@ -342,8 +379,8 @@ export default function BucketLeaderboardPage({ onBack, currentUser, adsDisabled
           </div>
         )}
 
-        {/* Sort metric tabs — hidden on GOAT view */}
-        {view !== 'goat' && <div className="lb-metrics-row">
+        {/* Sort metric tabs */}
+        {<div className="lb-metrics-row">
           {metrics.map(m => (
             <button
               key={m.key}
@@ -361,7 +398,7 @@ export default function BucketLeaderboardPage({ onBack, currentUser, adsDisabled
         )}
 
         {/* GOAT view description */}
-        {view === 'goat' && (
+        {isGoatView && (
           <div className="lb-winpct-note" style={{ marginBottom: 4 }}>
             Best GOAT rankings ever achieved
           </div>
@@ -420,7 +457,7 @@ export default function BucketLeaderboardPage({ onBack, currentUser, adsDisabled
                 )
 
               // ── GOAT ────────────────────────────────────────────────────────
-              } else if (view === 'goat') {
+              } else if (isGoatView) {
                 const isYou     = row.user_id === meId
                 const tc        = TEAM_COLOR[row.team_short] ?? '#888'
                 const tier      = goatTierLabel(row.goatRank)

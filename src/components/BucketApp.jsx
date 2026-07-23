@@ -25,6 +25,9 @@ import { NBA_FACE_CENTERS }  from '../data/nba-face-centers'
 import { supabase } from '../lib/supabase'
 import ProfilePage from './ProfilePage'
 import CustomRatingsModal from './CustomRatingsModal'
+const VersusLobby        = lazy(() => import('./VersusLobby'))
+const BucketVersusResult = lazy(() => import('./BucketVersusResult'))
+const VsPvPLeaderboard   = lazy(() => import('./VsPvPLeaderboard'))
 
 function parseHtToIn(ht) {
   if (!ht) return null
@@ -111,9 +114,9 @@ const BUCKET_SPLASH_ATTRS = {
     { label: 'Speed',       col: '#f87171', angle:  210, dist: 1.31, mx: 4,  my: 62 },
     { label: 'Bounce',      col: '#fdba74', angle: -130, dist: 1.30, mx: 55, my: 72 },
     { label: 'Passing',     col: '#60a5fa', angle:  -70, dist: 1.29, mx: 5,  my: 18, doy: -30, dox: 140 },
-    { label: 'Perimeter D', col: '#38bdf8', angle:  100, dist: 1.32, mx: 60, my: 34, dox: -210 },
+    { label: 'Perimeter D', col: '#38bdf8', angle:  100, dist: 1.32, mx: 60, my: 34, dox: -240, doy: -20 },
     { label: 'Strength',    col: '#fbbf24', angle: -160, dist: 1.28, mx: 3,  my: 48, doy: 200 },
-    { label: 'H/L',         col: '#e879f9', angle:   80, dist: 1.31, mx: 58, my: 44, dox: 90 },
+    { label: 'H/L',         col: '#e879f9', angle:   80, dist: 1.31, mx: 58, my: 44, dox: 110, doy: 10 },
   ],
   big: [
     { label: 'Jump Shot',    col: '#34d399', angle:  -35, dist: 1.32, mx: 58, my: 14 },
@@ -237,7 +240,13 @@ function BucketSplash({ onStart, onVersus }) {
           </div>
         </div>
 
-<button className="splash-minigame-btn splash-minigame-btn--player" onClick={() => { localStorage.removeItem('bap_progress'); window.location.href = '/'; }}>
+<button className="splash-minigame-btn splash-minigame-btn--h2h" style={{ position: 'relative' }} onClick={() => onVersus?.(position)}>
+          <span className="splash-h2h-new">NEW</span>
+          <div className="splash-h2h-logo">HEAD<span className="h2h-to">-TO-</span>HEAD</div>
+          <div className="splash-mg-sub splash-mg-sub--h2h">1v1 · 5v5</div>
+        </button>
+
+        <button className="splash-minigame-btn splash-minigame-btn--player" onClick={() => { localStorage.removeItem('bap_progress'); window.location.href = '/'; }}>
           <div className="splash-xlink-logo">
             BUIL<span className="splash-xlink-d">D</span><em className="splash-xlink-em splash-xlink-em--player">-<span className="splash-xlink-a">A</span>-</em>PLAYER
           </div>
@@ -280,7 +289,6 @@ export default function BucketApp() {
   const [spinResetKey, setSpinResetKey] = useState(0)
   const [gameKey, setGameKey]         = useState(0)
   const [mobileView, setMobileView]   = useState('spin')
-  const [onlineCount, setOnlineCount] = useState(0)
   const [user, setUser]               = useState(null)
   const [adsDisabled, setAdsDisabled] = useState(false)
   const [isSubscribed, setIsSubscribed] = useState(() => { try { return localStorage.getItem('bap_subscribed') === '1' } catch { return false } })
@@ -331,6 +339,52 @@ export default function BucketApp() {
   useEffect(() => {
     document.documentElement.setAttribute('data-sport', 'bucket')
     return () => document.documentElement.removeAttribute('data-sport')
+  }, [])
+
+  // Measure bottom-rail ad height and set --ad-h so buttons move up correctly
+  useEffect(() => {
+    const root = document.documentElement
+    let elObs = null
+
+    function measure() {
+      const el = document.querySelector('[id^="pw-oop"][data-pw-status="loaded"]')
+      if (!el) { root.style.removeProperty('--ad-h'); return }
+      const cs = window.getComputedStyle(el)
+      if (cs.display === 'none' || cs.visibility === 'hidden') {
+        root.style.setProperty('--ad-h', '0px')
+        return
+      }
+      let h = el.getBoundingClientRect().height
+      if (h < 4) {
+        for (const child of el.querySelectorAll('iframe, div')) {
+          h = Math.max(h, child.getBoundingClientRect().height)
+        }
+      }
+      if (h > 4) {
+        const extra = Math.max(0, Math.ceil(h) - 50)
+        if (extra > 0) {
+          root.style.setProperty('--ad-h', `${extra}px`)
+        } else {
+          root.style.removeProperty('--ad-h')
+        }
+      } else {
+        root.style.removeProperty('--ad-h')
+      }
+    }
+
+    function attachElObs() {
+      if (elObs) { elObs.disconnect(); elObs = null }
+      const el = document.querySelector('[id^="pw-oop"][data-pw-status="loaded"]')
+      if (el) {
+        elObs = new MutationObserver(measure)
+        elObs.observe(el, { attributes: true, attributeFilter: ['style', 'class'] })
+      }
+    }
+
+    measure()
+    const bodyObs = new MutationObserver(() => { attachElObs(); measure() })
+    bodyObs.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-pw-status', 'style'] })
+    return () => { bodyObs.disconnect(); if (elObs) elObs.disconnect() }
   }, [])
 
   useEffect(() => {
@@ -414,21 +468,6 @@ export default function BucketApp() {
     return () => subscription.unsubscribe()
   }, [])
 
-  useEffect(() => {
-    if (!supabase) return
-    const uid = Math.random().toString(36).slice(2)
-    const ch = supabase.channel('online', { config: { presence: { key: uid } } })
-    let lastUpdate = 0
-    ch.on('presence', { event: 'sync' }, () => {
-      const now = Date.now()
-      if (now - lastUpdate < 3000) return
-      lastUpdate = now
-      setOnlineCount(Math.round(Object.keys(ch.presenceState()).length * 3))
-    }).subscribe(async (status) => {
-      if (status === 'SUBSCRIBED') await ch.track({ t: Date.now() })
-    })
-    return () => supabase.removeChannel(ch)
-  }, [])
 
   useEffect(() => {
     try {
@@ -593,7 +632,7 @@ export default function BucketApp() {
     setPage('sim')
     window.scrollTo({ top: 0, behavior: 'instant' })
 
-    if (!supabase || !user || isBucketCustomMode || sandboxTainted.current || gameMode === 'all-time') return
+    if (!supabase || !user || isBucketCustomMode || sandboxTainted.current) return
     const archetype = position === 'big'
       ? getBucketBigArchetype(result.ovr, build, activeTypes)
       : getBucketGuardArchetype(result.ovr, build, activeTypes)
@@ -607,7 +646,7 @@ export default function BucketApp() {
       username:    user.user_metadata?.username || user.email?.split('@')[0],
       ovr:         result.ovr,
       archetype,
-      game_mode:   'bucket-classic',
+      game_mode:   gameMode === 'all-time' ? 'bucket-all-time' : 'bucket-classic',
       position,
       wins:        result.wins,
       losses:      result.losses,
@@ -833,6 +872,79 @@ export default function BucketApp() {
   }
 
 
+  if (page === 'versus-lobby') {
+    return (
+      <>
+        <Suspense fallback={null}>
+          <VersusLobby
+            onJoin={handleVersusJoin}
+            position={position}
+            gameMode="classic"
+            onBack={() => setPage('splash')}
+            onLeaderboard={() => setPage('pvp-leaderboard')}
+            onSignIn={() => setShowAuth(true)}
+            user={user}
+            vsRecord={vsRecord}
+            channelPrefix="bab"
+          />
+        </Suspense>
+        {showAuth && (
+          <AuthModal
+            onClose={() => setShowAuth(false)}
+            onAuth={setUser}
+          />
+        )}
+      </>
+    )
+  }
+
+  if (page === 'versus-result') {
+    return (
+      <Suspense fallback={null}>
+        <BucketVersusResult
+          myData={{ build, player: savedSpinResult, name: user?.user_metadata?.username || user?.email?.split('@')[0] || 'You' }}
+          oppData={{ build: oppBuild, player: oppPlayer, name: versusRoom?.oppName || 'Opponent' }}
+          position={position}
+          role={versusRoom?.role}
+          channel={versusRoom?.channel}
+          versusGame={versusGame}
+          onResult={recordVsResult}
+          onRematch={() => {
+            faceoffFiredRef.current = false
+            setVersusGame(null)
+            setBuild(Object.fromEntries(activeTypes.map(t => [t, null])))
+            setOppBuild({})
+            setOppPlayer(null)
+            setSavedSpinResult(null)
+            setMobileView('spin')
+            setSpinResetKey(k => k + 1)
+            setPage('versus-game')
+            window.scrollTo(0, 0)
+          }}
+          onExit={() => {
+            cleanupVersusChannel(versusRoom?.channel)
+            setVersusRoom(null)
+            setVersusGame(null)
+            setOppBuild({})
+            setOppPlayer(null)
+            setPage('splash')
+          }}
+        />
+      </Suspense>
+    )
+  }
+
+  if (page === 'pvp-leaderboard') {
+    return (
+      <Suspense fallback={null}>
+        <VsPvPLeaderboard
+          onBack={() => setPage('versus-game')}
+          position={position}
+        />
+      </Suspense>
+    )
+  }
+
   if (page === 'salarycap') {
     return (
       <BucketSalaryCap
@@ -877,6 +989,8 @@ export default function BucketApp() {
       return {
         myFilled: myF, oppFilled: oppF, total: activeTypes.length,
         oppName: versusRoom.oppName,
+        myPosition: position,
+        oppPosition,
         bothReady: myF === activeTypes.length && oppF === activeTypes.length,
         onFaceOff: () => {
           versusRoom.channel?.send({ type: 'broadcast', event: 'bab_faceoff', payload: {} }).catch?.(() => {})
@@ -1023,11 +1137,12 @@ export default function BucketApp() {
   return (
     <>
       <Helmet>
-        <title>Build-A-Bucket | NBA Player Simulator</title>
-        <meta name="description" content="Spin the wheel, build your NBA player, simulate a full season and climb the all-time GOAT list." />
+        <title>Build-A-Bucket: Build a Bucket NBA Game — Player Creator & Simulator</title>
+        <meta name="description" content="Build a bucket — spin the wheel to create your ultimate NBA player, simulate a full season, and compete on the all-time GOAT leaderboard. Play Build-A-Bucket free." />
+        <meta name="keywords" content="build a bucket, build-a-bucket, buildabucket, NBA player creator, basketball simulator, NBA game" />
         <link rel="canonical" href="https://www.build-a-player.com/bucket" />
-        <meta property="og:title" content="Build-A-Bucket | NBA Player Simulator" />
-        <meta property="og:description" content="Spin the wheel, build your NBA player, simulate a full season and climb the all-time GOAT list." />
+        <meta property="og:title" content="Build-A-Bucket: Build a Bucket NBA Game — Player Creator & Simulator" />
+        <meta property="og:description" content="Build a bucket — spin the wheel to create your ultimate NBA player, simulate a full season, and compete on the all-time GOAT leaderboard. Play Build-A-Bucket free." />
         <meta property="og:url" content="https://www.build-a-player.com/bucket" />
       </Helmet>
       <Navbar {...navbarProps} />
@@ -1053,7 +1168,6 @@ export default function BucketApp() {
           isRB={false}
           isBucket={true}
           isVersusMode={page === 'versus-game'}
-          onlineCount={onlineCount}
           attrMap={BUCKET_ATTR}
           categoriesData={activeCategories}
           teamsPool={NBA_TEAMS}
@@ -1140,9 +1254,26 @@ export default function BucketApp() {
                 </div>
               </div>
             </div>
-            <button className="vs-prompt-start" onClick={() => setShowVsPrompt(false)}>
-              START BUILDING
-            </button>
+            <div className="vs-prompt-pos-btns">
+              {['guard', 'big'].map(pos => (
+                <button
+                  key={pos}
+                  className={`vs-prompt-pos-btn${position === pos ? ' vs-prompt-pos-btn--active' : ''}`}
+                  onClick={() => {
+                    localStorage.setItem('bucketPosition', pos)
+                    setPosition(pos)
+                    const types = POS_TYPES[pos] ?? GUARD_TYPES
+                    setBuild(Object.fromEntries(types.map(t => [t, null])))
+                    setActiveCategory((POS_CATS[pos] ?? GUARD_CATEGORIES)[0].id)
+                    versusRoom?.channel?.send({ type: 'broadcast', event: 'bab_position', payload: { position: pos } }).catch?.(() => {})
+                    setShowVsPrompt(false)
+                  }}
+                >
+                  {pos === 'guard' ? 'GUARD' : 'BIG'}
+                  <span className="vs-ppb-sub">{pos === 'guard' ? 'PG · SG · SF' : 'PF · C'}</span>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       )}

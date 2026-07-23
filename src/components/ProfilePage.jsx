@@ -21,6 +21,14 @@ function FootballIcon() {
     </svg>
   )
 }
+function BballIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M3.5 9h17M3.5 15h17M12 3a11 11 0 0 1 0 18M12 3a11 11 0 0 0 0 18" />
+    </svg>
+  )
+}
 function HoopU() {
   return (
     <svg className="prf-hoop-u" viewBox="0 0 68 90" fill="none" aria-hidden="true">
@@ -168,6 +176,10 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
   const [bucketCareer, setBucketCareer] = useState(null)
   const [bucketCareerLoad, setBucketCareerLoad] = useState(true)
   const [bucketRingSeasons, setBucketRingSeasons] = useState([])
+  const [bucketAlltimeCareer, setBucketAlltimeCareer] = useState(null)
+  const [bucketAlltimeCareerLoad, setBucketAlltimeCareerLoad] = useState(true)
+  const [bucketAlltimeRingSeasons, setBucketAlltimeRingSeasons] = useState([])
+  const [bucketCareerMode, setBucketCareerMode] = useState('classic')
   const [showRings, setShowRings] = useState(false)
   const [salaryCareer, setSalaryCareer] = useState(null)
   const [salaryCareerLoad, setSalaryCareerLoad] = useState(true)
@@ -398,6 +410,38 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
   }, [user])
 
   useEffect(() => {
+    if (!supabase || !user) { setBucketAlltimeCareerLoad(false); return }
+    supabase
+      .from('simulations')
+      .select('wins,losses,champion,mvp,dpoy,ovr,ppg,rpg,apg,spg,bpg,archetype,team_short,build,created_at')
+      .eq('user_id', user.id)
+      .eq('game_mode', 'bucket-all-time')
+      .order('created_at', { ascending: false })
+      .then(({ data }) => {
+        if (!data || data.length === 0) { setBucketAlltimeCareer(null); setBucketAlltimeCareerLoad(false); return }
+        const totalWins   = data.reduce((s, r) => s + (r.wins  ?? 0), 0)
+        const totalLosses = data.reduce((s, r) => s + (r.losses ?? 0), 0)
+        const rings       = data.filter(r => r.champion).length
+        const mvps        = data.filter(r => r.mvp).length
+        const dpoys       = data.filter(r => r.dpoy).length
+        const totalGames  = totalWins + totalLosses
+        const winPct      = totalGames > 0 ? ((totalWins / totalGames) * 100).toFixed(1) : '0.0'
+        const avgOVR      = (data.reduce((s, r) => s + (r.ovr ?? 0), 0) / data.length).toFixed(1)
+        const avgPPG      = (data.reduce((s, r) => s + (r.ppg ?? 0), 0) / data.length).toFixed(1)
+        const best        = data.reduce((b, r) => (r.wins ?? 0) > (b.wins ?? 0) ? r : b, data[0])
+        const withBuilds  = data.filter(r => r.build && r.ovr)
+        const bestBuild   = withBuilds.length ? withBuilds.reduce((b, r) => (r.ovr ?? 0) > (b.ovr ?? 0) ? r : b, withBuilds[0]) : null
+        const worstBuild  = withBuilds.length ? withBuilds.reduce((b, r) => (r.ovr ?? 0) < (b.ovr ?? 0) ? r : b, withBuilds[0]) : null
+        const ringSeasons = data.filter(r => r.champion)
+        const goatEntries = data.map(r => ({ rank: computeBucketGoatRank(r), season: r })).filter(e => e.rank !== null)
+        const bestGoatEntry = goatEntries.length ? goatEntries.reduce((a, b) => a.rank <= b.rank ? a : b) : null
+        setBucketAlltimeRingSeasons(ringSeasons)
+        setBucketAlltimeCareer({ count: data.length, totalWins, totalLosses, rings, mvps, dpoys, winPct, avgOVR, avgPPG, best, bestBuild, worstBuild, bestGoatRank: bestGoatEntry?.rank ?? null, bestGoatSeason: bestGoatEntry?.season ?? null })
+        setBucketAlltimeCareerLoad(false)
+      })
+  }, [user])
+
+  useEffect(() => {
     if (!supabase || !user) { setSalaryCareerLoad(false); return }
     supabase
       .from('salary_cap_plays')
@@ -607,9 +651,9 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
 
         {/* ── Career ── */}
         {(() => {
-          const allReady = !careerLoad && !rbCareerLoad && !rbLegendCareerLoad && !bucketCareerLoad && !legendCareerLoad && !salaryCareerLoad
+          const allReady = !careerLoad && !rbCareerLoad && !rbLegendCareerLoad && !bucketCareerLoad && !bucketAlltimeCareerLoad && !legendCareerLoad && !salaryCareerLoad
           const hasNFL    = career || rbCareer || legendCareer || rbLegendCareer
-          const hasBucket = !!bucketCareer
+          const hasBucket = !!bucketCareer || !!bucketAlltimeCareer
           const hasSalary = !!salaryCareer
 
           if (!allReady) return (
@@ -750,199 +794,226 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
                 </>
               )}
 
-              {section === 'bucket' && !bucketCareer && (
-                <div className={`prf-card prf-card-empty ${show ? 'prf-card-in' : ''}`} style={{ animationDelay: '0.3s' }}>
-                  <div className="prf-card-hd"><span className="prf-card-title">Career</span></div>
-                  <div className="prf-empty-msg">No Build-A-Bucket seasons yet. Head over and start playing.</div>
-                </div>
-              )}
+              {section === 'bucket' && (() => {
+                const isAlltimeBucket   = bucketCareerMode === 'alltime'
+                const activeBucketCareer = isAlltimeBucket ? bucketAlltimeCareer : bucketCareer
+                const activeRingSeasons  = isAlltimeBucket ? bucketAlltimeRingSeasons : bucketRingSeasons
+                return (
+                  <>
+                    {/* Classic / All-Time sub-toggle */}
+                    {(bucketCareer || bucketAlltimeCareer) && (
+                      <div className={`prf-cgame-toggle ${show ? 'prf-card-in' : ''}`} style={{ animationDelay: '0.25s' }}>
+                        <button
+                          className={`prf-cgame-btn${!isAlltimeBucket ? ' active' : ''}`}
+                          onClick={() => { setBucketCareerMode('classic'); setShowRings(false) }}
+                        >
+                          <div className="prf-cgame-icon-wrap"><BballIcon /></div>
+                          <span className="prf-cgame-label">Classic</span>
+                        </button>
+                        <button
+                          className={`prf-cgame-btn${isAlltimeBucket ? ' active' : ''}`}
+                          onClick={() => { setBucketCareerMode('alltime'); setShowRings(false) }}
+                        >
+                          <div className="prf-cgame-icon-wrap">
+                            <BballIcon />
+                            <span className="prf-cgame-star">★</span>
+                          </div>
+                          <span className="prf-cgame-label">All-Time</span>
+                        </button>
+                      </div>
+                    )}
 
-              {section === 'bucket' && bucketCareer && (
-                <div className={`prf-card ${show ? 'prf-card-in' : ''}`} style={{ animationDelay: '0.3s' }}>
-                  <div className="prf-card-hd">
-                    <span className="prf-card-title">Career</span>
-                    <span className="prf-career-count">{bucketCareer.count} season{bucketCareer.count !== 1 ? 's' : ''}</span>
-                  </div>
-                  <div className="prf-career-record">
-                    <span className="pcr-w">{bucketCareer.totalWins}</span>
-                    <span className="pcr-sep">–</span>
-                    <span className="pcr-l">{bucketCareer.totalLosses}</span>
-                    <span className="pcr-label">Career Record</span>
-                  </div>
-                  <div className="prf-career-grid">
-                    <div className={`pcg-cell pcg-cell-rings${showRings ? ' open' : ''}`}>
-                      <button
-                        className={`pcg-cell-rings-btn${showRings ? ' open' : ''}`}
-                        onClick={() => setShowRings(v => !v)}
-                        disabled={bucketCareer.rings === 0}
-                      >
-                        <div className="pcg-val pcg-val-rings">{bucketCareer.rings}</div>
-                        <div className="pcg-lbl pcg-lbl-rings">
-                          Rings
-                          {bucketCareer.rings > 0 && (
-                            <span className="pcg-rings-view-row">
-                              <span className="pcg-rings-view-lbl">VIEW</span>
-                              <svg className="pcg-rings-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                <polyline points="6 9 12 15 18 9"/>
-                              </svg>
-                            </span>
-                          )}
+                    {/* Empty state */}
+                    {!activeBucketCareer && (
+                      <div className={`prf-card prf-card-empty ${show ? 'prf-card-in' : ''}`} style={{ animationDelay: '0.3s' }}>
+                        <div className="prf-card-hd"><span className="prf-card-title">Career</span></div>
+                        <div className="prf-empty-msg">No {isAlltimeBucket ? 'All-Time' : 'Classic'} Build-A-Bucket seasons yet.</div>
+                      </div>
+                    )}
+
+                    {/* Career card */}
+                    {activeBucketCareer && (
+                      <div className={`prf-card${isAlltimeBucket ? ' prf-card-legend' : ''} ${show ? 'prf-card-in' : ''}`} style={{ animationDelay: '0.3s' }}>
+                        <div className="prf-card-hd">
+                          <span className={`prf-card-title${isAlltimeBucket ? ' prf-card-title-legend' : ''}`}>{isAlltimeBucket ? '★ ' : ''}Career</span>
+                          <span className="prf-career-count">{activeBucketCareer.count} season{activeBucketCareer.count !== 1 ? 's' : ''}</span>
                         </div>
-                      </button>
-                      {showRings && bucketRingSeasons.length > 0 && (
-                        <div className="prf-ring-dropdown">
-                          {bucketRingSeasons.map((s, i) => {
-                            const enriched = enrichBucketBuild(s.build)
-                            const ringTeam = NBA_TEAM_MAP[s.team_short] ?? null
-                            return (
-                              <div key={i} className="prf-ring-season">
-                                <BucketModelFigure
-                                  build={enriched}
-                                  team={ringTeam}
-                                  className="prs-figure-model"
-                                  headYOffset={5}
-                                />
-                                <div className="prs-info">
-                                  <div className="prs-header">
-                                    <span className="prs-ring">🏆</span>
-                                    {ringTeam && <img src={`/logos/nba/${ringTeam.short}.png`} alt={ringTeam.short} className="prs-team-logo" />}
-                                    <span className="prs-arch">{s.archetype ?? 'Champion'}</span>
-                                    <span className="prs-ovr">{s.ovr} OVR</span>
-                                  </div>
-                                  {s.finals_opp && s.finals_series ? (
-                                    <div className="prs-finals-row">
-                                      <img src={`/logos/nba/${s.finals_opp}.png`} alt={s.finals_opp} className="prs-finals-logo" />
-                                      <span className="prs-finals-score">{s.finals_series}</span>
-                                      <img src={`/logos/nba/${s.team_short}.png`} alt={s.team_short} className="prs-finals-logo" />
+                        <div className="prf-career-record">
+                          <span className="pcr-w">{activeBucketCareer.totalWins}</span>
+                          <span className="pcr-sep">–</span>
+                          <span className="pcr-l">{activeBucketCareer.totalLosses}</span>
+                          <span className="pcr-label">{isAlltimeBucket ? 'All-Time Record' : 'Career Record'}</span>
+                        </div>
+                        <div className="prf-career-grid">
+                          <div className={`pcg-cell pcg-cell-rings${showRings ? ' open' : ''}`}>
+                            <button
+                              className={`pcg-cell-rings-btn${showRings ? ' open' : ''}`}
+                              onClick={() => setShowRings(v => !v)}
+                              disabled={activeBucketCareer.rings === 0}
+                            >
+                              <div className="pcg-val pcg-val-rings">{activeBucketCareer.rings}</div>
+                              <div className="pcg-lbl pcg-lbl-rings">
+                                Rings
+                                {activeBucketCareer.rings > 0 && (
+                                  <span className="pcg-rings-view-row">
+                                    <span className="pcg-rings-view-lbl">VIEW</span>
+                                    <svg className="pcg-rings-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                      <polyline points="6 9 12 15 18 9"/>
+                                    </svg>
+                                  </span>
+                                )}
+                              </div>
+                            </button>
+                            {showRings && activeRingSeasons.length > 0 && (
+                              <div className="prf-ring-dropdown">
+                                {activeRingSeasons.map((s, i) => {
+                                  const enriched = enrichBucketBuild(s.build)
+                                  const ringTeam = NBA_TEAM_MAP[s.team_short] ?? null
+                                  return (
+                                    <div key={i} className="prf-ring-season">
+                                      <BucketModelFigure build={enriched} team={ringTeam} className="prs-figure-model" headYOffset={5} />
+                                      <div className="prs-info">
+                                        <div className="prs-header">
+                                          <span className="prs-ring">🏆</span>
+                                          {ringTeam && <img src={`/logos/nba/${ringTeam.short}.png`} alt={ringTeam.short} className="prs-team-logo" />}
+                                          <span className="prs-arch">{s.archetype ?? 'Champion'}</span>
+                                          <span className="prs-ovr">{s.ovr} OVR</span>
+                                        </div>
+                                        {s.finals_opp && s.finals_series ? (
+                                          <div className="prs-finals-row">
+                                            <img src={`/logos/nba/${s.finals_opp}.png`} alt={s.finals_opp} className="prs-finals-logo" />
+                                            <span className="prs-finals-score">{s.finals_series}</span>
+                                            <img src={`/logos/nba/${s.team_short}.png`} alt={s.team_short} className="prs-finals-logo" />
+                                          </div>
+                                        ) : (
+                                          <div className="prs-record">{s.wins}–{s.losses}</div>
+                                        )}
+                                        <div className="prs-stats">
+                                          {s.ppg != null && <span>{(+s.ppg).toFixed(1)} PPG</span>}
+                                          {s.rpg != null && <span>{(+s.rpg).toFixed(1)} RPG</span>}
+                                          {s.apg != null && <span>{(+s.apg).toFixed(1)} APG</span>}
+                                          {s.spg != null && <span>{(+s.spg).toFixed(1)} SPG</span>}
+                                          {s.bpg != null && <span>{(+s.bpg).toFixed(1)} BPG</span>}
+                                        </div>
+                                        {(s.mvp === true || s.dpoy === true) && (
+                                          <div className="prs-awards">
+                                            {s.mvp  === true && <span className="prs-award prs-award--mvp">MVP</span>}
+                                            {s.dpoy === true && <span className="prs-award prs-award--dpoy">DPOY</span>}
+                                          </div>
+                                        )}
+                                      </div>
                                     </div>
-                                  ) : (
-                                    <div className="prs-record">{s.wins}–{s.losses}</div>
-                                  )}
-                                  <div className="prs-stats">
-                                    {s.ppg != null && <span>{(+s.ppg).toFixed(1)} PPG</span>}
-                                    {s.rpg != null && <span>{(+s.rpg).toFixed(1)} RPG</span>}
-                                    {s.apg != null && <span>{(+s.apg).toFixed(1)} APG</span>}
-                                    {s.spg != null && <span>{(+s.spg).toFixed(1)} SPG</span>}
-                                    {s.bpg != null && <span>{(+s.bpg).toFixed(1)} BPG</span>}
-                                  </div>
-                                  {(s.mvp === true || s.dpoy === true) && (
-                                    <div className="prs-awards">
-                                      {s.mvp  === true && <span className="prs-award prs-award--mvp">MVP</span>}
-                                      {s.dpoy === true && <span className="prs-award prs-award--dpoy">DPOY</span>}
-                                    </div>
-                                  )}
+                                  )
+                                })}
+                              </div>
+                            )}
+                          </div>
+                          <div className="pcg-cell"><div className="pcg-val">{activeBucketCareer.mvps}</div><div className="pcg-lbl">MVPs</div></div>
+                          <div className="pcg-cell"><div className="pcg-val">{activeBucketCareer.dpoys}</div><div className="pcg-lbl">DPOYs</div></div>
+                          <div className="pcg-cell"><div className="pcg-val">{activeBucketCareer.winPct}%</div><div className="pcg-lbl">Win %</div></div>
+                          <div className="pcg-cell"><div className="pcg-val">{activeBucketCareer.avgPPG}</div><div className="pcg-lbl">Avg PPG</div></div>
+                          <div className="pcg-cell"><div className="pcg-val">{activeBucketCareer.avgOVR}</div><div className="pcg-lbl">Avg OVR</div></div>
+                          <div className="pcg-cell"><div className="pcg-val">{activeBucketCareer.count}</div><div className="pcg-lbl">Seasons</div></div>
+                        </div>
+
+                        {activeBucketCareer.bestGoatRank && activeBucketCareer.bestGoatSeason && (() => {
+                          const s = activeBucketCareer.bestGoatSeason
+                          const rank = activeBucketCareer.bestGoatRank
+                          return (
+                            <div className={`prf-goat-entry${rank <= 10 ? ' pge--elite' : rank <= 25 ? ' pge--great' : ''}`}>
+                              <div className="pge-left">
+                                <div className="pge-rank">#{rank}</div>
+                                <div className="pge-sublbl">Best GOAT Rank</div>
+                              </div>
+                              <div className="pge-right">
+                                <div className="pge-season-line">
+                                  <span className="pge-record">{s.wins}–{s.losses}</span>
+                                  {s.ovr && <span className="pge-ovr">{s.ovr} OVR</span>}
+                                </div>
+                                <div className="pge-accolades">
+                                  {s.champion && <span className="pge-badge pge-badge--ring">🏆 Champion</span>}
+                                  {s.mvp === true && <span className="pge-badge pge-badge--mvp">MVP</span>}
+                                  {s.dpoy === true && <span className="pge-badge pge-badge--dpoy">DPOY</span>}
                                 </div>
                               </div>
-                            )
-                          })}
-                        </div>
-                      )}
-                    </div>
-                    <div className="pcg-cell"><div className="pcg-val">{bucketCareer.mvps}</div><div className="pcg-lbl">MVPs</div></div>
-                    <div className="pcg-cell"><div className="pcg-val">{bucketCareer.dpoys}</div><div className="pcg-lbl">DPOYs</div></div>
-                    <div className="pcg-cell"><div className="pcg-val">{bucketCareer.winPct}%</div><div className="pcg-lbl">Win %</div></div>
-                    <div className="pcg-cell"><div className="pcg-val">{bucketCareer.avgPPG}</div><div className="pcg-lbl">Avg PPG</div></div>
-                    <div className="pcg-cell"><div className="pcg-val">{bucketCareer.avgOVR}</div><div className="pcg-lbl">Avg OVR</div></div>
-                    <div className="pcg-cell"><div className="pcg-val">{bucketCareer.count}</div><div className="pcg-lbl">Seasons</div></div>
-                  </div>
+                            </div>
+                          )
+                        })()}
 
-                  {bucketCareer.bestGoatRank && bucketCareer.bestGoatSeason && (() => {
-                    const s = bucketCareer.bestGoatSeason
-                    const rank = bucketCareer.bestGoatRank
-                    const isTop10 = rank <= 10
-                    const isTop25 = rank <= 25
-                    return (
-                      <div className={`prf-goat-entry${isTop10 ? ' pge--elite' : isTop25 ? ' pge--great' : ''}`}>
-                        <div className="pge-left">
-                          <div className="pge-rank">#{rank}</div>
-                          <div className="pge-sublbl">Best GOAT Rank</div>
-                        </div>
-                        <div className="pge-right">
-                          <div className="pge-season-line">
-                            <span className="pge-record">{s.wins}–{s.losses}</span>
-                            {s.ovr && <span className="pge-ovr">{s.ovr} OVR</span>}
+                        {activeBucketCareer.best && (
+                          <div className="prf-best-season">
+                            <span className="pbs-lbl">{isAlltimeBucket ? 'Best All-Time Season' : 'Best Season'}</span>
+                            <span className="pbs-val">{activeBucketCareer.best.wins}–{activeBucketCareer.best.losses}{activeBucketCareer.best.ppg ? ` · ${activeBucketCareer.best.ppg.toFixed(1)} PPG` : ''}</span>
                           </div>
-                          <div className="pge-accolades">
-                            {s.champion && <span className="pge-badge pge-badge--ring">🏆 Champion</span>}
-                            {s.mvp === true && <span className="pge-badge pge-badge--mvp">MVP</span>}
-                            {s.dpoy === true && <span className="pge-badge pge-badge--dpoy">DPOY</span>}
-                          </div>
-                        </div>
-                      </div>
-                    )
-                  })()}
-
-                  {bucketCareer.best && (
-                    <div className="prf-best-season">
-                      <span className="pbs-lbl">Best Season</span>
-                      <span className="pbs-val">{bucketCareer.best.wins}–{bucketCareer.best.losses}{bucketCareer.best.ppg ? ` · ${bucketCareer.best.ppg.toFixed(1)} PPG` : ''}</span>
-                    </div>
-                  )}
-                  {(bucketCareer.bestBuild || bucketCareer.worstBuild) && (
-                    <div className="prf-build-extremes">
-                      {[
-                        bucketCareer.bestBuild  && { data: bucketCareer.bestBuild,  type: 'best',  label: 'Best Build' },
-                        bucketCareer.worstBuild && bucketCareer.worstBuild.ovr !== bucketCareer.bestBuild?.ovr && { data: bucketCareer.worstBuild, type: 'worst', label: 'Worst Build' },
-                      ].filter(Boolean).map(({ data: bd, type, label }) => (
-                        <div key={type} className={`prf-build-extreme prf-build-extreme--${type}`}>
-                          <div className="pbe-header">
-                            <span className="pbe-label">{label}</span>
-                            <span className="pbe-ovr">{bd.ovr} OVR</span>
-                            {bd.archetype && <span className="pbe-arch">{bd.archetype}</span>}
-                          </div>
-                          <div className="pbe-slots">
-                            {Object.entries(bd.build).map(([slot, d]) => {
-                              const meta = BUCKET_ATTR[slot]
-                              return (
-                                <div key={slot} className="pbe-slot-row">
-                                  <span className="pbe-slot-attr">{meta?.shortLabel ?? slot}</span>
-                                  <span className="pbe-slot-qb">{d.qb}</span>
-                                  <span className="pbe-slot-grade" style={{ background: meta?.hex ?? '#95d5b2', color: '#111111' }}>{valToGrade(d.val)}</span>
+                        )}
+                        {(activeBucketCareer.bestBuild || activeBucketCareer.worstBuild) && (
+                          <div className="prf-build-extremes">
+                            {[
+                              activeBucketCareer.bestBuild  && { data: activeBucketCareer.bestBuild,  type: 'best',  label: 'Best Build' },
+                              activeBucketCareer.worstBuild && activeBucketCareer.worstBuild.ovr !== activeBucketCareer.bestBuild?.ovr && { data: activeBucketCareer.worstBuild, type: 'worst', label: 'Worst Build' },
+                            ].filter(Boolean).map(({ data: bd, type, label }) => (
+                              <div key={type} className={`prf-build-extreme prf-build-extreme--${type}`}>
+                                <div className="pbe-header">
+                                  <span className="pbe-label">{label}</span>
+                                  <span className="pbe-ovr">{bd.ovr} OVR</span>
+                                  {bd.archetype && <span className="pbe-arch">{bd.archetype}</span>}
                                 </div>
-                              )
-                            })}
+                                <div className="pbe-slots">
+                                  {Object.entries(bd.build).map(([slot, d]) => {
+                                    const meta = BUCKET_ATTR[slot]
+                                    return (
+                                      <div key={slot} className="pbe-slot-row">
+                                        <span className="pbe-slot-attr">{meta?.shortLabel ?? slot}</span>
+                                        <span className="pbe-slot-qb">{d.qb}</span>
+                                        <span className="pbe-slot-grade" style={{ background: meta?.hex ?? '#95d5b2', color: '#111111' }}>{valToGrade(d.val)}</span>
+                                      </div>
+                                    )
+                                  })}
+                                </div>
+                              </div>
+                            ))}
                           </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Salary career — classic only */}
+                    {!isAlltimeBucket && !salaryCareer && hasSalary && (
+                      <div className={`prf-card prf-card-empty ${show ? 'prf-card-in' : ''}`} style={{ animationDelay: '0.35s' }}>
+                        <div className="prf-card-hd"><span className="prf-card-title">Salary Career</span></div>
+                        <div className="prf-empty-msg">No Salary Cap plays yet. Head over and start playing.</div>
+                      </div>
+                    )}
+                    {!isAlltimeBucket && salaryCareer && (
+                      <div className={`prf-card ${show ? 'prf-card-in' : ''}`} style={{ animationDelay: '0.35s' }}>
+                        <div className="prf-card-hd">
+                          <span className="prf-card-title">Salary Career</span>
+                          <span className="prf-career-count">{salaryCareer.count} play{salaryCareer.count !== 1 ? 's' : ''}</span>
                         </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {section === 'bucket' && !salaryCareer && hasSalary && (
-                <div className={`prf-card prf-card-empty ${show ? 'prf-card-in' : ''}`} style={{ animationDelay: '0.3s' }}>
-                  <div className="prf-card-hd"><span className="prf-card-title">Salary Career</span></div>
-                  <div className="prf-empty-msg">No Salary Cap plays yet. Head over and start playing.</div>
-                </div>
-              )}
-
-              {section === 'bucket' && salaryCareer && (
-                <div className={`prf-card ${show ? 'prf-card-in' : ''}`} style={{ animationDelay: '0.3s' }}>
-                  <div className="prf-card-hd">
-                    <span className="prf-card-title">Salary Career</span>
-                    <span className="prf-career-count">{salaryCareer.count} play{salaryCareer.count !== 1 ? 's' : ''}</span>
-                  </div>
-                  <div className="prf-career-grid">
-                    <div className="pcg-cell"><div className="pcg-val">{salaryCareer.best.overall_score ?? '–'}</div><div className="pcg-lbl">Best Score</div></div>
-                    <div className="pcg-cell"><div className="pcg-val">{salaryCareer.avgScore}</div><div className="pcg-lbl">Avg Score</div></div>
-                    <div className="pcg-cell"><div className="pcg-val">{salaryCareer.avgPPG}</div><div className="pcg-lbl">Avg PPG</div></div>
-                    <div className="pcg-cell"><div className="pcg-val">{salaryCareer.avgRPG}</div><div className="pcg-lbl">Avg RPG</div></div>
-                    <div className="pcg-cell"><div className="pcg-val">{salaryCareer.avgAPG}</div><div className="pcg-lbl">Avg APG</div></div>
-                    <div className="pcg-cell"><div className="pcg-val">{salaryCareer.count}</div><div className="pcg-lbl">Days Played</div></div>
-                  </div>
-                  {salaryCareer.best && (
-                    <div className="prf-best-season">
-                      <span className="pbs-lbl">Best Day</span>
-                      <span className="pbs-val">
-                        {salaryCareer.best.date_str}
-                        {salaryCareer.best.overall_score != null && ` · ${salaryCareer.best.overall_score} pts`}
-                        {salaryCareer.best.ppg != null && ` · ${(+salaryCareer.best.ppg).toFixed(1)} PPG`}
-                        {salaryCareer.best.budget_used != null && ` · $${salaryCareer.best.budget_used}M used`}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              )}
+                        <div className="prf-career-grid">
+                          <div className="pcg-cell"><div className="pcg-val">{salaryCareer.best.overall_score ?? '–'}</div><div className="pcg-lbl">Best Score</div></div>
+                          <div className="pcg-cell"><div className="pcg-val">{salaryCareer.avgScore}</div><div className="pcg-lbl">Avg Score</div></div>
+                          <div className="pcg-cell"><div className="pcg-val">{salaryCareer.avgPPG}</div><div className="pcg-lbl">Avg PPG</div></div>
+                          <div className="pcg-cell"><div className="pcg-val">{salaryCareer.avgRPG}</div><div className="pcg-lbl">Avg RPG</div></div>
+                          <div className="pcg-cell"><div className="pcg-val">{salaryCareer.avgAPG}</div><div className="pcg-lbl">Avg APG</div></div>
+                          <div className="pcg-cell"><div className="pcg-val">{salaryCareer.count}</div><div className="pcg-lbl">Days Played</div></div>
+                        </div>
+                        {salaryCareer.best && (
+                          <div className="prf-best-season">
+                            <span className="pbs-lbl">Best Day</span>
+                            <span className="pbs-val">
+                              {salaryCareer.best.date_str}
+                              {salaryCareer.best.overall_score != null && ` · ${salaryCareer.best.overall_score} pts`}
+                              {salaryCareer.best.ppg != null && ` · ${(+salaryCareer.best.ppg).toFixed(1)} PPG`}
+                              {salaryCareer.best.budget_used != null && ` · $${salaryCareer.best.budget_used}M used`}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </>
+                )
+              })()}
             </>
           )
         })()}
