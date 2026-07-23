@@ -125,6 +125,10 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
         try { bc.postMessage(msg) } catch {}
         return Promise.resolve()
       },
+      subscribe(cb) {
+        if (cb) Promise.resolve().then(() => cb('SUBSCRIBED'))
+        return this
+      },
       close() { try { bc.close() } catch {} },
     }
   }
@@ -269,23 +273,13 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
       clearInterval(heartbeatTimer)
       setStatus('Match found!')
       rt.removeChannel(ch)
-      chRef.current = null
+      chRef.current = null  // clear so abandon() on unmount is a no-op
 
-      const roomCh = makeChannel(`${channelPrefix}-vs-${code}`)
-      chRef.current = roomCh
-      let joined = false
-
-      const fallback = setTimeout(() => {
-        if (!joined) { joined = true; onJoin({ code, role, oppId, oppName, channel: roomCh }) }
-      }, 3000)
-
-      roomCh.subscribe(async s => {
-        if (s === 'SUBSCRIBED' && !joined) {
-          joined = true
-          clearTimeout(fallback)
-          setTimeout(() => onJoin({ code, role, oppId, oppName, channel: roomCh }), 300)
-        }
-      })
+      // Create game channel but do NOT subscribe here — handleVersusJoin will
+      // register .on() handlers first, then subscribe (correct Supabase order).
+      // Also don't store in chRef so abandon() can't kill it on VersusLobby unmount.
+      const roomCh = rt.channel(`${channelPrefix}-vs-${code}`)
+      setTimeout(() => onJoin({ code, role, oppId, oppName, channel: roomCh }), 800)
     }
 
     // Guest: receive match packet from host

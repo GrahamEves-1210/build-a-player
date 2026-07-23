@@ -802,8 +802,14 @@ export default function BucketApp() {
     setPage('versus-game')
     window.scrollTo(0, 0)
 
-    // Broadcast my position so opponent's prompt can show it
-    channel.send({ type: 'broadcast', event: 'bab_position', payload: { position } }).catch?.(() => {})
+    // Subscribe the game channel now that all .on() handlers are registered.
+    // For BC-wrapped channels, subscribe() is a no-op (BC is always ready).
+    // For already-subscribed friend-room channels, this is also safe (idempotent).
+    channel.subscribe(s => {
+      if (s === 'SUBSCRIBED') {
+        channel.send({ type: 'broadcast', event: 'bab_position', payload: { position } }).catch?.(() => {})
+      }
+    })
   }, [activeTypes, position])
 
   useEffect(() => {
