@@ -96,7 +96,8 @@ export default function SplashScreen({ onStart, onDepthChart }) {
         <div className="splash-title">
           BUIL<span className="logo-d">D</span><em>-<span className="logo-a">A</span>-</em>PLAYER
         </div>
-        <div className="splash-pos-toggle" style={{ opacity: phase >= 3 ? 1 : 0, transform: phase >= 3 ? 'none' : 'translateY(8px)' }}>
+        <div className="splash-disclaimer splash-disclaimer--under-logo">Fan-made · Not affiliated with the NFL</div>
+        <div className="splash-pos-toggle" style={{ opacity: phase >= 3 ? 1 : 0, transform: phase >= 3 ? (isMobile ? 'translateY(-8px)' : 'none') : 'translateY(8px)' }}>
           <button
             className={`splash-pos-btn ${position === 'qb' ? 'splash-pos-btn--active' : ''}`}
             onClick={() => setPosition('qb')}
@@ -125,7 +126,7 @@ export default function SplashScreen({ onStart, onDepthChart }) {
         <div className="splash-dc-float-sub">MINI GAME</div>
       </button>
 
-      <div className="splash-footer" style={{ opacity: phase >= 3 ? 1 : 0, transform: phase >= 3 ? 'none' : 'translateY(16px)' }}>
+      <div className="splash-footer" style={{ opacity: phase >= 3 ? 1 : 0, transform: phase >= 3 ? (isMobile ? 'translateY(-64px)' : 'none') : 'translateY(16px)' }}>
 
         <div className="splash-tagline">Spin the wheel · Build your {position.toUpperCase()}</div>
 
@@ -164,7 +165,7 @@ export default function SplashScreen({ onStart, onDepthChart }) {
           <div className="splash-mg-sub">BASKETBALL BUILDER</div>
         </button>
 
-        <div className="splash-disclaimer">Fan-made · Not affiliated with the NFL</div>
+        <div className="splash-disclaimer splash-disclaimer--footer">Fan-made · Not affiliated with the NFL</div>
       </div>
 
       <div className="splash-field-lines">
