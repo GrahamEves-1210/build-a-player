@@ -22,7 +22,7 @@ import NBA_POSITIONS     from '../data/nba-positions.json'
 import { NBA_JERSEY_NUMBERS } from '../data/nba-jersey-numbers'
 import { NBA_SKIN_COLORS }   from '../data/nba-skin-colors'
 import { NBA_FACE_CENTERS }  from '../data/nba-face-centers'
-import { supabase } from '../lib/supabase'
+import { supabase, rtSupabase } from '../lib/supabase'
 import ProfilePage from './ProfilePage'
 import CustomRatingsModal from './CustomRatingsModal'
 const VersusLobby        = lazy(() => import('./VersusLobby'))
@@ -796,8 +796,14 @@ export default function BucketApp() {
     setPage('versus-game')
     window.scrollTo(0, 0)
 
-    // Broadcast my position so opponent's prompt can show it
-    channel.send({ type: 'broadcast', event: 'bab_position', payload: { position } }).catch?.(() => {})
+    // Subscribe the game channel now that all .on() handlers are registered.
+    // For BC-wrapped channels, subscribe() is a no-op (BC is always ready).
+    // For already-subscribed friend-room channels, this is also safe (idempotent).
+    channel.subscribe(s => {
+      if (s === 'SUBSCRIBED') {
+        channel.send({ type: 'broadcast', event: 'bab_position', payload: { position } }).catch?.(() => {})
+      }
+    })
   }, [activeTypes, position])
 
   useEffect(() => {
@@ -826,7 +832,7 @@ export default function BucketApp() {
   function cleanupVersusChannel(ch) {
     if (!ch) return
     if (ch._bc) { ch.close() }
-    else { try { supabase.removeChannel(ch) } catch {} }
+    else { try { (rtSupabase || supabase).removeChannel(ch) } catch {} }
   }
 
   function vsResultPayload(result) {
@@ -877,6 +883,8 @@ export default function BucketApp() {
             onBack={() => setPage('splash')}
             onLeaderboard={() => setPage('pvp-leaderboard')}
             onSignIn={() => setShowAuth(true)}
+            onProfile={() => user ? (window.history.pushState({}, '', '/profile'), setPage('profile')) : setShowAuth(true)}
+            onAbout={() => { window.location.href = '/?about' }}
             user={user}
             vsRecord={vsRecord}
             channelPrefix="bab"
@@ -902,6 +910,7 @@ export default function BucketApp() {
           role={versusRoom?.role}
           channel={versusRoom?.channel}
           versusGame={versusGame}
+          user={user}
           onResult={recordVsResult}
           onRematch={() => {
             faceoffFiredRef.current = false
