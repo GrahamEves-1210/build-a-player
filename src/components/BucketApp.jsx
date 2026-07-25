@@ -240,13 +240,7 @@ function BucketSplash({ onStart, onVersus }) {
           </div>
         </div>
 
-<button className="splash-minigame-btn splash-minigame-btn--h2h" style={{ position: 'relative' }} onClick={() => onVersus?.(position)}>
-          <span className="splash-h2h-new">NEW</span>
-          <div className="splash-h2h-logo">HEAD<span className="h2h-to">-TO-</span>HEAD</div>
-          <div className="splash-mg-sub splash-mg-sub--h2h">1v1 · 5v5</div>
-        </button>
-
-        <button className="splash-minigame-btn splash-minigame-btn--player" onClick={() => { localStorage.removeItem('bap_progress'); window.location.href = '/'; }}>
+<button className="splash-minigame-btn splash-minigame-btn--player" onClick={() => { localStorage.removeItem('bap_progress'); window.location.href = '/'; }}>
           <div className="splash-xlink-logo">
             BUIL<span className="splash-xlink-d">D</span><em className="splash-xlink-em splash-xlink-em--player">-<span className="splash-xlink-a">A</span>-</em>PLAYER
           </div>
