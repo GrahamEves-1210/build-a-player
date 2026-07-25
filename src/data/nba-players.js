@@ -230,9 +230,6 @@ export const NBA_GUARD_PLAYERS = [
     attrs: { jumpShot:6, finishing:3, passing:4, handles:3, perimeterDefense:6, speed:2, bounce:7, size:8, basketballIQ:4, clutch:4 } },
 
   // ─── CLE ───────────────────────────────────────────────────────────
-  { name: "LeBron James", short: "LeBron", team: 'CLE', starter: false, captain: true, number: 23, ht: "6'9\"", wt: 250,
-    attrs: { jumpShot:5, finishing:10, passing:10, handles:7, perimeterDefense:5, speed:8, bounce:9, size:11, basketballIQ:11, clutch:9 } },
-
   { name: "James Harden", short: "Harden", team: 'CLE', starter: true, captain: false,
     attrs: { jumpShot:7, finishing:6, passing:9, handles:10, perimeterDefense:3, speed:7, bounce:5, size:7, basketballIQ:6, clutch:4 } },
 
@@ -698,6 +695,9 @@ export const NBA_GUARD_PLAYERS = [
     attrs: { jumpShot:6, finishing:8, passing:6, handles:7, perimeterDefense:6, speed:7, bounce:6, size:8, basketballIQ:7, clutch:7 } },
 
   // ─── PHI ───────────────────────────────────────────────────────────
+  { name: "LeBron James", short: "LeBron", team: 'PHI', starter: true, captain: true,
+    attrs: { jumpShot:7, finishing:10, passing:10, handles:8, perimeterDefense:5, speed:7, bounce:7, size:10, basketballIQ:11, clutch:9 } },
+
   { name: "Jaylen Brown", short: "J. Brown", team: 'PHI', starter: true, captain: false,
     attrs: { jumpShot:6, finishing:9, passing:5, handles:7, perimeterDefense:8, speed:8, bounce:9, size:7, basketballIQ:8, clutch:6 } },
 

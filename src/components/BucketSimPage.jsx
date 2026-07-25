@@ -1072,17 +1072,17 @@ function computeGoatRank(result, awards) {
   // Base rank from OVR — 92→75, 95→46, 97→26, 99→7 (before floors)
   const baseRank = Math.round(75 - ((ovr - 92) / 7) * 68)
 
-  // Stats nudge — capped at 5 positions total
+  // Stats nudge — capped at 8 positions total
   const statScore =
-    Math.max(0, ppg - 28) * 0.5 +
-    Math.max(0, rpg - 10) * 0.4 +
-    Math.max(0, apg - 8)  * 0.4 +
-    Math.max(0, spg - 2.2) * 0.8 +
-    Math.max(0, bpg - 2.2) * 0.8
-  const statBoost = Math.min(5, Math.round(statScore * 1.0))
+    Math.max(0, ppg - 24) * 0.5 +
+    Math.max(0, rpg - 9)  * 0.4 +
+    Math.max(0, apg - 7)  * 0.4 +
+    Math.max(0, spg - 1.8) * 0.8 +
+    Math.max(0, bpg - 1.8) * 0.8
+  const statBoost = Math.min(8, Math.round(statScore * 1.2))
 
-  // Accolades
-  const champBoost = champion ? 4 : 0
+  // Accolades — ring worth less than MVP; #1 still requires 99 OVR + MVP + ring
+  const champBoost = champion ? 2 : 0
   const mvpBoost   = wonMVP  ? 4 : 0
   const dpoyBoost  = wonDPOY ? 2 : 0
 
@@ -1090,9 +1090,6 @@ function computeGoatRank(result, awards) {
 
   // Can't crack top 10 without championship
   if (!champion) rank = Math.max(rank, 11)
-
-  // Can't crack top 7 without MVP + championship
-  if (!wonMVP || !champion) rank = Math.max(rank, 8)
 
   // Top 3 requires MVP + championship + 97+ OVR
   if (rank <= 3 && !(wonMVP && champion && ovr >= 97)) rank = 4
