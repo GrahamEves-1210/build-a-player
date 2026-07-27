@@ -1,4 +1,4 @@
-﻿import { useState, useCallback, useRef, useEffect, useLayoutEffect, lazy, Suspense } from 'react'
+﻿import { useState, useCallback, useRef, useEffect, useLayoutEffect, lazy, Suspense } from 'react' // v2
 import Navbar from './components/Navbar'
 import SpinScreen from './components/SpinScreen'
 import Silhouette from './components/Silhouette'
