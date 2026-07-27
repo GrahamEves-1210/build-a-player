@@ -14627,8 +14627,8 @@ html.is-mac [id^="pw-oop-bottom_rail"] > * {
 .vlm-fb-badge { position: absolute; top: 5px; right: 8px; background: #dc2626; color: #fff; font-size: 8px; font-weight: 800; width: 14px; height: 14px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: var(--mono); pointer-events: none; }
 
 /* ── Friend panel ────────────────────────────────────────────────────────── */
-.vlf-backdrop { position: fixed; inset: 0; z-index: 99; background: rgba(0,0,0,0.45); }
-.vlf-panel { position: fixed; top: 0; right: 0; bottom: 0; width: min(320px, 92vw); background: #0b0208; border-left: 1px solid rgba(239,68,68,0.18); z-index: 100; display: flex; flex-direction: column; animation: vlf-in 0.2s ease; }
+.vlf-backdrop { position: fixed; inset: 0; z-index: 299; background: rgba(0,0,0,0.45); }
+.vlf-panel { position: fixed; top: 0; right: 0; bottom: 0; width: min(320px, 92vw); background: #0b0208; border-left: 1px solid rgba(239,68,68,0.18); z-index: 300; display: flex; flex-direction: column; animation: vlf-in 0.2s ease; }
 @keyframes vlf-in { from { transform: translateX(100%); } to { transform: translateX(0); } }
 .vlf-header { display: flex; align-items: center; justify-content: space-between; padding: 20px 20px 16px; border-bottom: 1px solid rgba(239,68,68,0.1); flex-shrink: 0; }
 .vlf-header-title { font-family: Impact, 'Arial Narrow Bold', sans-serif; font-size: 17px; letter-spacing: 1.5px; color: #fecaca; }
