@@ -87,6 +87,8 @@ export default function AuthModal({ onClose, onAuth }) {
               required
               autoComplete="username"
               autoCapitalize="none"
+              inputMode="text"
+              style={{ touchAction: 'manipulation' }}
             />
           </div>
 
@@ -101,6 +103,7 @@ export default function AuthModal({ onClose, onAuth }) {
               required
               minLength={6}
               autoComplete={tab === 'signin' ? 'current-password' : 'new-password'}
+              style={{ touchAction: 'manipulation' }}
             />
           </div>
 

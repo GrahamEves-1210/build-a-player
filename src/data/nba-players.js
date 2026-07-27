@@ -83,6 +83,20 @@ export const BUCKET_TYPES      = GUARD_TYPES
 export const BUCKET_CATEGORIES = GUARD_CATEGORIES
 export const BUCKET_LITE_TYPES = GUARD_TYPES.slice(0, 4)
 
+// ─── H2H Versus — drops leadership/clutch from both; passing from guard; rebounding from big ────
+export const VERSUS_GUARD_TYPES = GUARD_TYPES.filter(t => t !== 'passing' && t !== 'clutch')
+export const VERSUS_GUARD_CATEGORIES = [
+  { id: 'skills',   label: 'Skills',   types: ['jumpShot', 'finishing', 'handles', 'perimeterDefense'] },
+  { id: 'physical', label: 'Physical', types: ['speed', 'bounce', 'size'] },
+  { id: 'mental',   label: 'Mental',   types: ['basketballIQ'] },
+]
+export const VERSUS_BIG_TYPES = BIG_TYPES.filter(t => t !== 'rebounding' && t !== 'clutch')
+export const VERSUS_BIG_CATEGORIES = [
+  { id: 'skills',   label: 'Skills',   types: ['jumpShot', 'finishing', 'playmaking', 'interiorDefense'] },
+  { id: 'physical', label: 'Physical', types: ['speed', 'bounce', 'size'] },
+  { id: 'mental',   label: 'Mental',   types: ['basketballIQ'] },
+]
+
 export const NBA_GUARD_PLAYERS = [
 
   // ─── ATL ───────────────────────────────────────────────────────────
@@ -522,7 +536,7 @@ export const NBA_GUARD_PLAYERS = [
     attrs: { jumpShot:4, finishing:5, passing:3, handles:2, perimeterDefense:4, speed:5, bounce:5, size:7, basketballIQ:3, clutch:3 } },
 
   { name: "AJ Green", short: "Green", team: 'MIL', starter: false, captain: false,
-    attrs: { jumpShot:7, finishing:4, passing:3, handles:4, perimeterDefense:4, speed:6, bounce:5, size:5, basketballIQ:4, clutch:3 } },
+    attrs: { jumpShot:8, finishing:4, passing:3, handles:4, perimeterDefense:4, speed:6, bounce:5, size:5, basketballIQ:4, clutch:3 } },
 
   { name: "Tyler Herro", short: "Herro", team: 'MIL', starter: true, captain: false,
     attrs: { jumpShot:7, finishing:7, passing:6, handles:6, perimeterDefense:3, speed:7, bounce:7, size:4, basketballIQ:6, clutch:6 } },
@@ -1259,7 +1273,7 @@ export const NBA_BIG_PLAYERS = [
     attrs: { jumpShot:2, finishing:5, rebounding:5, playmaking:2, interiorDefense:2, speed:4, bounce:3, size:6, basketballIQ:3, clutch:4 } },
 
   { name: "Joel Embiid", short: "Embiid", team: 'PHI', starter: true, captain: true,
-    attrs: { jumpShot:6, finishing:8, rebounding:8, playmaking:6, interiorDefense:5, speed:3, bounce:1, size:8, basketballIQ:9, clutch:6 } },
+    attrs: { jumpShot:7, finishing:9, rebounding:8, playmaking:7, interiorDefense:5, speed:4, bounce:4, size:9, basketballIQ:9, clutch:6 } },
 
   { name: "Trendon Watford", short: "Watford", team: 'PHI', starter: false, captain: false,
     attrs: { jumpShot:2, finishing:5, rebounding:5, playmaking:2, interiorDefense:5, speed:3, bounce:3, size:5, basketballIQ:3, clutch:3 } },

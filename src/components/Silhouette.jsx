@@ -401,7 +401,7 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
           </button>
         ))}
       </div>
-      {(isBucket || !!onSandboxToggle) && (
+      {!!onSandboxToggle && (
         <div className="sil-sandbox-wrap">
           <span className="sil-sandbox-label">Sandbox</span>
           <label className="plus-toggle">

@@ -205,43 +205,56 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
 
   return (
     <header className={`navbar${gameMode === 'all-time' ? ' alltime-mode' : ''}`}>
-      <div className="logo" onClick={onHome} style={onHome ? { cursor: 'pointer' } : undefined}>
-        <div className="logo-text-stack">
-          <div className="logo-text">Buil<span className="logo-d">d</span><em>-<span className="logo-a">A</span>-</em>{isBucket ? <>B<HoopU />cket</> : 'Player'}</div>
-          {gameMode === 'all-time' && <span className="logo-mode-tag">All-Time</span>}
+      {versusState ? (
+        <div className="logo nav-h2h-logo" onClick={onHome} style={onHome ? { cursor: 'pointer' } : undefined}>
+          HEAD<span className="h2h-to bvr-h2h-to">-TO-</span>HEAD
         </div>
-      </div>
+      ) : (
+        <div className="logo" onClick={onHome} style={onHome ? { cursor: 'pointer' } : undefined}>
+          <div className="logo-text-stack">
+            <div className="logo-text">Buil<span className="logo-d">d</span><em>-<span className="logo-a">A</span>-</em>{isBucket ? <>B<HoopU />cket</> : 'Player'}</div>
+            {gameMode === 'all-time' && <span className="logo-mode-tag">All-Time</span>}
+          </div>
+        </div>
+      )}
 
       {versusState ? (
         <div className="nav-versus-counter">
-          <span className="nvc-side">YOU {versusState.myFilled}/{versusState.total}</span>
-          <span className="nvc-vs">VS</span>
-          <span className="nvc-side">{versusState.oppName} {versusState.oppFilled}/{versusState.total}</span>
-          {versusState.bothReady && !isBucket && (
-            <button className="nvc-faceoff" onClick={versusState.onFaceOff}>FACE OFF →</button>
+          {versusState.countdownSec != null && (
+            <div className={`nvc-countdown${versusState.countdownSec <= 30 ? ' nvc-countdown--urgent' : ''}`}>
+              {String(Math.floor(versusState.countdownSec / 60))}:{String(versusState.countdownSec % 60).padStart(2, '0')}
+            </div>
           )}
-          {versusState.bothReady && isBucket && (
-            <span className="nvc-waiting" style={{ color: '#f97316', opacity: 1 }}>Starting…</span>
-          )}
-          {versusState.myFilled === versusState.total && !versusState.bothReady && (
-            <span className="nvc-waiting">Waiting…</span>
-          )}
+          <div className="nvc-positions">
+            <span>{versusState.myPosition === 'big' ? 'Big' : versusState.myPosition === 'guard' ? 'Guard' : ''}</span>
+            <span>{versusState.oppPosition === 'big' ? 'Big' : versusState.oppPosition === 'guard' ? 'Guard' : '—'}</span>
+          </div>
+          <div className="nvc-row">
+            <span className="nvc-side">YOU {versusState.myFilled}/{versusState.myTotal}</span>
+            <span className="nvc-vs">VS</span>
+            <span className="nvc-side">{versusState.oppName || 'Opponent'} {versusState.oppFilled}/{versusState.oppTotal}</span>
+            {versusState.bothReady && !isBucket && (
+              <button className="nvc-faceoff" onClick={versusState.onFaceOff}>FACE OFF →</button>
+            )}
+            {versusState.bothReady && isBucket && (
+              <span className="nvc-waiting" style={{ color: '#f97316', opacity: 1 }}>Starting…</span>
+            )}
+            {versusState.myFilled === versusState.total && !versusState.bothReady && (
+              <span className="nvc-waiting">Waiting…</span>
+            )}
+          </div>
         </div>
       ) : isBucket ? (
         gameMode === 'salarycap' ? (
           <button className="tab-pill tab-pill-qb tab-pill-salary active">Salary Cap</button>
-        ) : (
+        ) : gameMode === 'versus' ? null : (
           <>
-            <button className="tab-pill tab-pill-qb active">
-              {`Build-A-${bucketPosition.charAt(0).toUpperCase() + bucketPosition.slice(1)}`}
-            </button>
-            <div className="nav-pills-soon">
-              {['guard', 'big'].filter(p => p !== bucketPosition).map(pos => (
+            <div className="bucket-pos-pills tab-pill-qb">
+              {['guard', 'big'].map(pos => (
                 <button
                   key={pos}
-                  className="tab-pill tab-pill-rb"
-                  style={pos === 'guard' && bucketPosition === 'big' ? { position: 'relative', left: '-6px' } : undefined}
-                  onClick={() => onSwitchBucketPosition?.(pos)}
+                  className={`tab-pill${bucketPosition === pos ? ' active' : ''}`}
+                  onClick={() => bucketPosition !== pos && onSwitchBucketPosition?.(pos)}
                 >
                   {`Build-A-${pos.charAt(0).toUpperCase() + pos.slice(1)}`}
                 </button>

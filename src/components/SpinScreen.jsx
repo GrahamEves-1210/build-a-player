@@ -193,6 +193,7 @@ function Chip({ type, meta, val, selectedQB, draggingType, onChipTap, onDragStar
     skinColor: selectedQB.skin, number: selectedQB.number,
     team: selectedQB.team, captain: selectedQB.captain ?? false, photo,
     height: selectedQB.height ?? parseHtToIn(selectedQB.ht), weight: selectedQB.weight ?? selectedQB.wt ?? null,
+    attrs: selectedQB.attrs ?? null,
   }
   return (
     <div

@@ -367,12 +367,6 @@ export default function DepthChart({ onBack, user, onlineCount = 0 }) {
 
         <div className="dc-title-block">
           <div className="dc-title">THE DEPTH CHART</div>
-          {onlineCount > 0 && (
-            <span className="spin-online-count dc-online-count">
-              <span className="spin-online-dot" />
-              {onlineCount} online
-            </span>
-          )}
         </div>
 
         <div className="dc-lb-wrap">

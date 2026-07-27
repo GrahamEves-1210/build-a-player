@@ -438,24 +438,30 @@ export function runBucketSimulation(build, types, team, position = 'guard', rngS
   const playinResult = playoffRounds.find(r => r.type === 'playin')
   const madePlayoffs = seed <= 6 || (seed <= 10 && playinResult?.advanced === true)
 
-  // MVP: player must out-stat the real MVP candidate pool (SGA, Jokic, Luka, Wemby, Giannis)
-  const mvpStat = (p, a, r) => p + a * 1.5 + r * 0.75
-  const eliteScoringBonus = Math.max(0, ppg - 30) * 1.5
-  const playerMvpRating = mvpStat(ppg, apg, rpg) + eliteScoringBonus
-  const topCandidateRating = Math.max(
-    48, // floor — even in a weak MVP year the bar never drops below this
-    mvpStat(31 + rand() * 3, 5  + rand() * 2, 4  + rand() * 2),  // SGA
-    mvpStat(26 + rand() * 3, 8  + rand() * 2, 11 + rand() * 2),  // Jokic
-    mvpStat(29 + rand() * 3, 8  + rand() * 2, 8  + rand() * 2),  // Luka
-    mvpStat(23 + rand() * 4, 3  + rand() * 2, 10 + rand() * 3),  // Wemby
-    mvpStat(27 + rand() * 4, 5  + rand() * 2, 11 + rand() * 2),  // Giannis
-  )
-  const mvpGap = playerMvpRating - topCandidateRating + 1
-  const mvpOddsBase = 1 / (1 + Math.exp(-mvpGap * 0.9))
-  // Historically dominant seasons lock up MVP — needs truly elite scoring
-  const mvpDominant = madePlayoffs && (ppg >= 33 || (ppg >= 27 && apg + rpg >= 16))
-  const mvpOdds = mvpDominant ? Math.max(0.99, mvpOddsBase) : mvpOddsBase
-  const mvp = madePlayoffs && rand() < mvpOdds
+  // MVP: highest stat score among player + candidate pool wins
+  // Score = PPG + APG×1.5 + RPG×0.75
+  const mvpScore = (p, a, r) => p + a * 1.5 + r * 0.75
+  const playerMvpScore = mvpScore(ppg, apg, rpg)
+
+  const classicCandidates = [
+    mvpScore(31 + rand() * 4, 5  + rand() * 3, 4  + rand() * 2),  // SGA
+    mvpScore(26 + rand() * 4, 8  + rand() * 3, 11 + rand() * 3),  // Jokic
+    mvpScore(29 + rand() * 4, 8  + rand() * 3, 8  + rand() * 2),  // Luka
+    mvpScore(23 + rand() * 5, 3  + rand() * 2, 10 + rand() * 3),  // Wemby
+    mvpScore(27 + rand() * 4, 5  + rand() * 3, 11 + rand() * 2),  // Giannis
+  ]
+
+  const alltimeCandidates = [
+    mvpScore(30 + rand() * 5, 5  + rand() * 3, 6  + rand() * 2),  // Jordan
+    mvpScore(26 + rand() * 4, 7  + rand() * 3, 7  + rand() * 2),  // LeBron
+    mvpScore(19 + rand() * 4, 11 + rand() * 3, 7  + rand() * 2),  // Magic
+    mvpScore(23 + rand() * 5, 6  + rand() * 2, 9  + rand() * 3),  // Bird
+    mvpScore(25 + rand() * 4, 3  + rand() * 2, 13 + rand() * 3),  // Kareem
+  ]
+
+  const candidatePool = isAllTime ? alltimeCandidates : classicCandidates
+  const topCandidateScore = Math.max(...candidatePool)
+  const mvp = madePlayoffs && playerMvpScore > topCandidateScore
 
   // DPOY: truly elite defensive stats — rare, ~8-15% of seasons
   const dpoyScore = spg * 10 + bpg * 8 + (seed <= 4 ? 4 : seed <= 8 ? 2 : 0)

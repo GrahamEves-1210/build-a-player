@@ -33,7 +33,7 @@ export function getVsId() {
   return _vsId
 }
 
-export default function VersusLobby({ onJoin, position, gameMode, onBack, onLeaderboard, onSignIn, onProfile, onAbout, user, vsRecord, channelPrefix = 'bap' }) {
+export default function VersusLobby({ onJoin, position, gameMode, onBack, onLeaderboard, onSignIn, onProfile, onAbout, onSwitchBucketPosition, user, vsRecord, channelPrefix = 'bap' }) {
   const [screen, setScreen]       = useState('menu')
   const [myCode, setMyCode]       = useState('')
   const [inputCode, setInputCode] = useState('')
@@ -71,7 +71,8 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
           if (!byUser[r.user_id]) byUser[r.user_id] = { username: r.username, wins: 0, losses: 0, ovrs: [] }
           if (r.result === 'win') byUser[r.user_id].wins++
           if (r.result === 'loss' || r.result === 'forfeit') byUser[r.user_id].losses++
-          if (r.ovr != null) byUser[r.user_id].ovrs.push(Number(r.ovr))
+          // Exclude forfeits from OVR average — incomplete builds give falsely low values
+          if (r.result !== 'forfeit' && r.ovr != null && r.ovr > 0) byUser[r.user_id].ovrs.push(Number(r.ovr))
         })
         const rows = Object.values(byUser).map(u => ({
           username: u.username,
@@ -88,7 +89,7 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
   function makeChannel(name) {
     return rt.channel(name, { config: { presence: { key: myId } } })
   }
-  const myName = user?.user_metadata?.username || user?.email?.split('@')[0] || 'Player'
+  const myName = user?.user_metadata?.username || user?.email?.split('@')[0] || null
 
   useEffect(() => {
     document.documentElement.setAttribute('data-page', 'versus-lobby')
@@ -162,8 +163,17 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
     function matchWith(opp, bc) {
       if (matched) return
       matched = true
-      // Transfer BC ownership to caller so it survives unmount
-      const gameChannel = bc ? (bcRef.current = null, wrapBC(bc)) : chRef.current
+      // Remove the presence channel and create a fresh game channel so
+      // handleVersusJoin can subscribe it cleanly (same pattern as random matchmaking).
+      let gameChannel
+      if (bc) {
+        bcRef.current = null
+        gameChannel = wrapBC(bc)
+      } else {
+        rt.removeChannel(ch)
+        chRef.current = null
+        gameChannel = rt.channel(chName + '-g')
+      }
       setStatus('Opponent connected!')
       setTimeout(() => onJoin({ code, role: 'host', oppId: opp.vid, oppName: opp.name, channel: gameChannel }), 500)
     }
@@ -177,6 +187,10 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
     ch.subscribe(async s => {
       if (s === 'SUBSCRIBED') {
         await ch.track({ vid: myId, name: myName })
+        if (!matched) {
+          const opp = Object.values(ch.presenceState()).flat().find(u => u.vid !== myId)
+          if (opp) matchWith(opp, null)
+        }
       } else if (s === 'TIMED_OUT' || s === 'CHANNEL_ERROR') {
         openBC(chName, matchWith)
       }
@@ -195,17 +209,29 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
     const ch = makeChannel(chName)
     chRef.current = ch
     let done = false
+    let trackDone = false  // guard: don't run matchWith before track completes
 
     function matchWith(opp, bc) {
       if (done) return
       done = true
-      const gameChannel = bc ? (bcRef.current = null, wrapBC(bc)) : chRef.current
+      let gameChannel
+      if (bc) {
+        bcRef.current = null
+        gameChannel = wrapBC(bc)
+      } else {
+        rt.removeChannel(ch)
+        chRef.current = null
+        gameChannel = rt.channel(chName + '-g')
+      }
       setStatus('Connected!')
       setTimeout(() => onJoin({ code, role: 'guest', oppId: opp.vid, oppName: opp.name, channel: gameChannel }), 500)
     }
 
+    // Block sync until after track is acknowledged — the initial presence_state fires
+    // before we've tracked, so the host wouldn't see us yet; we'd removeChannel too early
+    // and the host would never detect us.
     ch.on('presence', { event: 'sync' }, () => {
-      if (done) return
+      if (done || !trackDone) return
       const opp = Object.values(ch.presenceState()).flat().find(u => u.vid !== myId)
       if (opp) matchWith(opp, null)
     })
@@ -213,6 +239,12 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
     ch.subscribe(async s => {
       if (s === 'SUBSCRIBED') {
         await ch.track({ vid: myId, name: myName })
+        trackDone = true
+        // Check immediately after track — host may already be present
+        if (!done) {
+          const opp = Object.values(ch.presenceState()).flat().find(u => u.vid !== myId)
+          if (opp) matchWith(opp, null)
+        }
       } else if (s === 'TIMED_OUT' || s === 'CHANNEL_ERROR') {
         openBC(chName, matchWith)
         setTimeout(() => { if (!done && bcRef.current) bcRef.current.postMessage({ vid: myId, name: myName }) }, 500)
@@ -450,22 +482,29 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
     let matched = false
     ch.on('presence', { event: 'sync' }, () => {
       const state = Object.values(ch.presenceState()).flat()
-      console.log('[challenge] host presence sync:', state)
       if (matched) return
       const opp = state.find(u => u.vid !== myId)
       if (!opp) return
       matched = true
-      const gameChannel = chRef.current
+      rt.removeChannel(ch)
+      chRef.current = null
+      const gameChannel = rt.channel(chName + '-g')
       setStatus(`${friend.username} joined!`)
       setTimeout(() => onJoin({ code, role: 'host', oppId: opp.vid, oppName: opp.name, channel: gameChannel }), 500)
     })
     ch.subscribe(async s => {
-      console.log('[challenge] host channel status:', s)
-      if (s === 'SUBSCRIBED') await ch.track({ vid: myId, name: myName })
-      else if (s === 'TIMED_OUT' || s === 'CHANNEL_ERROR') openBC(chName, (opp, bc) => {
+      if (s === 'SUBSCRIBED') {
+        await ch.track({ vid: myId, name: myName })
+        if (!matched) {
+          const opp = Object.values(ch.presenceState()).flat().find(u => u.vid !== myId)
+          if (opp) matchWith(opp, null)
+        }
+      } else if (s === 'TIMED_OUT' || s === 'CHANNEL_ERROR') openBC(chName, (opp, bc) => {
         if (matched) return
         matched = true
-        const gameChannel = bc ? (bcRef.current = null, wrapBC(bc)) : chRef.current
+        rt.removeChannel(ch)
+        chRef.current = null
+        const gameChannel = bc ? (bcRef.current = null, wrapBC(bc)) : rt.channel(chName)
         setTimeout(() => onJoin({ code, role: 'host', oppId: opp.vid, oppName: opp.name, channel: gameChannel }), 500)
       })
     })
@@ -484,25 +523,37 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
     setScreen('joining')
     setStatus(`Joining ${invite.from_username}'s game…`)
     let done = false
+    let trackDone = false
     function matchWith(opp, bc) {
       if (done) return
       done = true
-      console.log('[accept] matched with:', opp)
-      const gameChannel = bc ? (bcRef.current = null, wrapBC(bc)) : chRef.current
+      let gameChannel
+      if (bc) {
+        bcRef.current = null
+        chRef.current = null
+        gameChannel = wrapBC(bc)
+      } else {
+        rt.removeChannel(ch)
+        chRef.current = null
+        gameChannel = rt.channel(chName + '-g')
+      }
       setStatus('Connected!')
       setTimeout(() => onJoin({ code, role: 'guest', oppId: opp.vid, oppName: opp.name, channel: gameChannel }), 500)
     }
     ch.on('presence', { event: 'sync' }, () => {
-      const state = Object.values(ch.presenceState()).flat()
-      console.log('[accept] presence sync:', state)
-      if (done) return
-      const opp = state.find(u => u.vid !== myId)
+      if (done || !trackDone) return
+      const opp = Object.values(ch.presenceState()).flat().find(u => u.vid !== myId)
       if (opp) matchWith(opp, null)
     })
     ch.subscribe(async s => {
-      console.log('[accept] channel status:', s)
-      if (s === 'SUBSCRIBED') await ch.track({ vid: myId, name: myName })
-      else if (s === 'TIMED_OUT' || s === 'CHANNEL_ERROR') {
+      if (s === 'SUBSCRIBED') {
+        await ch.track({ vid: myId, name: myName })
+        trackDone = true
+        if (!done) {
+          const opp = Object.values(ch.presenceState()).flat().find(u => u.vid !== myId)
+          if (opp) matchWith(opp, null)
+        }
+      } else if (s === 'TIMED_OUT' || s === 'CHANNEL_ERROR') {
         openBC(chName, matchWith)
         setTimeout(() => { if (!done && bcRef.current) bcRef.current.postMessage({ vid: myId, name: myName }) }, 500)
       }
@@ -517,7 +568,7 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
     <div className="versus-lobby">
       <Navbar
         isBucket
-        bucketPosition={position}
+        gameMode="versus"
         user={user}
         onSignIn={onSignIn}
         onHome={() => { abandon(); onBack() }}
@@ -527,9 +578,6 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
       />
 
       <div className="versus-lobby-hero">
-        <div className="vlh-bab-logo">
-          BUIL<span className="splash-xlink-d">D</span><em className="splash-xlink-em splash-xlink-em--bucket">-<span className="splash-xlink-a">A</span>-</em>B<HoopU />CKET
-        </div>
         <div className="versus-lobby-title">HEAD<span className="h2h-to">-TO-</span>HEAD</div>
         <div className="versus-lobby-modes">
           <div className="vlm-spacer" />
@@ -537,7 +585,7 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
             <button className="vlm-btn vlm-btn--active">1v1</button>
             <button className="vlm-btn vlm-btn--soon" disabled>
               <span className="vlm-soon-label">COMING SOON</span>
-              5v5
+              3v3
             </button>
           </div>
           <div className="vlm-right">

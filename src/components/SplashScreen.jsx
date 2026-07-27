@@ -126,7 +126,7 @@ export default function SplashScreen({ onStart, onDepthChart }) {
         <div className="splash-dc-float-sub">MINI GAME</div>
       </button>
 
-      <div className="splash-footer" style={{ opacity: phase >= 3 ? 1 : 0, transform: phase >= 3 ? (isMobile ? 'translateY(-64px)' : 'none') : 'translateY(16px)' }}>
+      <div className="splash-footer" style={{ opacity: phase >= 3 ? 1 : 0, transform: phase >= 3 ? (isMobile ? 'translateY(6px)' : 'none') : 'translateY(16px)' }}>
 
         <div className="splash-tagline">Spin the wheel · Build your {position.toUpperCase()}</div>
 
