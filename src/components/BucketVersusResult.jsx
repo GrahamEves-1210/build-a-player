@@ -354,8 +354,8 @@ function CourtVisual({ play, myColor, oppColor, myName, oppName, possession, dis
       } else {
         // Off-the-dribble pull-up — drive from the wing, stop and fire at arc
         const driveDir   = Math.random() < 0.5 ? -1 : 1
-        const driveStart = { x: cl(50 + driveDir * rnd(22, 36)), y: clY(finalOff.y + rnd(10, 18)) }
-        const stopPt     = { x: cl(driveStart.x - driveDir * rnd(12, 22)), y: clY(driveStart.y - rnd(4, 8)) }
+        const driveStart = { x: cl(50 + driveDir * rnd(16, 26)), y: clY(finalOff.y + rnd(10, 18)) }
+        const stopPt     = { x: cl(driveStart.x - driveDir * rnd(10, 18)), y: clY(driveStart.y - rnd(4, 8)) }
         mv(setOff, driveStart.x, driveStart.y, od * 0.85)
         mv(setDef, cl(finalOff.x + rnd(-6, 6)), finalOff.y - rnd(4, 8), dd * 0.80)
         after(Math.round(420 * od / 0.52), () => {
@@ -460,7 +460,7 @@ function CourtVisual({ play, myColor, oppColor, myName, oppName, possession, dis
         } else {
         // Baseline cut to mid — player runs from the baseline side, catches and fires
         const cutDir   = Math.random() < 0.5 ? -1 : 1
-        const cutStart = { x: cl(50 + cutDir * rnd(26, 38)), y: midSpot.y + rnd(18, 28) }
+        const cutStart = { x: cl(50 + cutDir * rnd(18, 28)), y: midSpot.y + rnd(18, 28) }
         mv(setOff, cutStart.x, cutStart.y, od * 0.78)
         mv(setDef, cl(midSpot.x + rnd(-8, 8)), midSpot.y - rnd(4, 8), dd * 0.85)
         after(Math.round(360 * od / 0.52), () => {
@@ -546,9 +546,9 @@ function CourtVisual({ play, myColor, oppColor, myName, oppName, possession, dis
         } else {
           // Spin move in the lane — drive, spin off defender, finish other side of rim
           const spinDir    = Math.random() < 0.5 ? -1 : 1
-          const driveStart = { x: cl(50 + spinDir * rnd(16, 28)), y: rnd(52, 65) }
-          const spinEntry  = { x: cl(50 + spinDir * rnd(4, 10)),  y: rnd(28, 38) }
-          const finishSpot = { x: cl(50 - spinDir * rnd(2, 8)),   y: rimSpot.y + rnd(2, 8) }
+          const driveStart = { x: cl(50 + spinDir * rnd(10, 18)), y: rnd(52, 65) }
+          const spinEntry  = { x: cl(50 + spinDir * rnd(2, 6)),  y: rnd(28, 38) }
+          const finishSpot = { x: cl(50 - spinDir * rnd(1, 5)),   y: rimSpot.y + rnd(2, 8) }
           mv(setOff, driveStart.x, driveStart.y, od * 0.70)
           mv(setDef, cl(50 + spinDir * rnd(2, 8)), rnd(24, 32), dd * 0.85)
           after(Math.round(380 * od / 0.52), () => {

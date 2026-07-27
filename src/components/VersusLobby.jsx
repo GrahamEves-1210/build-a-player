@@ -63,7 +63,8 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
   const myId   = user?.id ? `${user.id}-${getVsId()}` : getVsId()
 
   useEffect(() => {
-    supabase.from('vs_results').select('user_id, username, result, ovr')
+    supabase.from('vs_results').select('user_id, username, result, ovr, match_type')
+      .or('match_type.eq.pickup,match_type.is.null')
       .then(({ data }) => {
         if (!data) { setLbLoading(false); return }
         const byUser = {}
@@ -175,7 +176,7 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
         gameChannel = rt.channel(chName + '-g')
       }
       setStatus('Opponent connected!')
-      setTimeout(() => onJoin({ code, role: 'host', oppId: opp.vid, oppName: opp.name, channel: gameChannel }), 500)
+      setTimeout(() => onJoin({ code, role: 'host', oppId: opp.vid, oppName: opp.name, channel: gameChannel, matchType: 'friend' }), 500)
     }
 
     ch.on('presence', { event: 'sync' }, () => {
@@ -224,7 +225,7 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
         gameChannel = rt.channel(chName + '-g')
       }
       setStatus('Connected!')
-      setTimeout(() => onJoin({ code, role: 'guest', oppId: opp.vid, oppName: opp.name, channel: gameChannel }), 500)
+      setTimeout(() => onJoin({ code, role: 'guest', oppId: opp.vid, oppName: opp.name, channel: gameChannel, matchType: 'friend' }), 500)
     }
 
     // Block sync until after track is acknowledged — the initial presence_state fires
@@ -311,7 +312,7 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
       // register .on() handlers first, then subscribe (correct Supabase order).
       // Also don't store in chRef so abandon() can't kill it on VersusLobby unmount.
       const roomCh = rt.channel(`${channelPrefix}-vs-${code}`)
-      setTimeout(() => onJoin({ code, role, oppId, oppName, channel: roomCh }), 800)
+      setTimeout(() => onJoin({ code, role, oppId, oppName, channel: roomCh, matchType: 'pickup' }), 800)
     }
 
     // Guest: receive match packet from host
@@ -360,7 +361,7 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
             const oppId = role === 'host' ? m.g : m.h
             const oppName = role === 'host' ? m.gn : m.hn
             bcQ.close(); bcRef.current = null
-            onJoin({ code: m.code, role, oppId, oppName, channel: wrapBC(new BroadcastChannel(`${channelPrefix}-vs-${m.code}`)) })
+            onJoin({ code: m.code, role, oppId, oppName, channel: wrapBC(new BroadcastChannel(`${channelPrefix}-vs-${m.code}`)), matchType: 'pickup' })
             return
           }
           // Received a "looking" announcement — lower ID is host, higher ID waits for match packet
@@ -373,7 +374,7 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
               clearInterval(searchTimerRef.current)
               bcQ.postMessage({ match: m })
               bcQ.close(); bcRef.current = null
-              onJoin({ code, role: 'host', oppId: d.vid, oppName: d.name, channel: wrapBC(new BroadcastChannel(`${channelPrefix}-vs-${code}`)) })
+              onJoin({ code, role: 'host', oppId: d.vid, oppName: d.name, channel: wrapBC(new BroadcastChannel(`${channelPrefix}-vs-${code}`)), matchType: 'pickup' })
             }
             // Guest: do nothing here, wait for the match packet the host will send
           }
@@ -490,7 +491,7 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
       chRef.current = null
       const gameChannel = rt.channel(chName + '-g')
       setStatus(`${friend.username} joined!`)
-      setTimeout(() => onJoin({ code, role: 'host', oppId: opp.vid, oppName: opp.name, channel: gameChannel }), 500)
+      setTimeout(() => onJoin({ code, role: 'host', oppId: opp.vid, oppName: opp.name, channel: gameChannel, matchType: 'friend' }), 500)
     })
     ch.subscribe(async s => {
       if (s === 'SUBSCRIBED') {
@@ -505,7 +506,7 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
         rt.removeChannel(ch)
         chRef.current = null
         const gameChannel = bc ? (bcRef.current = null, wrapBC(bc)) : rt.channel(chName)
-        setTimeout(() => onJoin({ code, role: 'host', oppId: opp.vid, oppName: opp.name, channel: gameChannel }), 500)
+        setTimeout(() => onJoin({ code, role: 'host', oppId: opp.vid, oppName: opp.name, channel: gameChannel, matchType: 'friend' }), 500)
       })
     })
   }
@@ -538,7 +539,7 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
         gameChannel = rt.channel(chName + '-g')
       }
       setStatus('Connected!')
-      setTimeout(() => onJoin({ code, role: 'guest', oppId: opp.vid, oppName: opp.name, channel: gameChannel }), 500)
+      setTimeout(() => onJoin({ code, role: 'guest', oppId: opp.vid, oppName: opp.name, channel: gameChannel, matchType: 'friend' }), 500)
     }
     ch.on('presence', { event: 'sync' }, () => {
       if (done || !trackDone) return

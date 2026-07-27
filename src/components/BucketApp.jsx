@@ -329,7 +329,7 @@ export default function BucketApp() {
   const vsResultRef      = useRef({ build: {}, user: null, position: 'guard' })
   const faceoffFiredRef  = useRef(false)
   const lastOppPingRef   = useRef(0)
-  useEffect(() => { vsResultRef.current = { build, user, position } }, [build, user, position])
+  useEffect(() => { vsResultRef.current = { build, user, position, matchType: versusRoom?.matchType ?? null } }, [build, user, position, versusRoom?.matchType])
 
   const activeDragRef = useRef(activeDrag)
   useLayoutEffect(() => { activeDragRef.current = activeDrag }, [activeDrag])
@@ -749,7 +749,7 @@ export default function BucketApp() {
     return () => window.removeEventListener('popstate', handler)
   }, [versusRoom, handleReset])
 
-  const handleVersusJoin = useCallback(({ code, role, oppId, oppName, channel }) => {
+  const handleVersusJoin = useCallback(({ code, role, oppId, oppName, channel, matchType }) => {
     channel.on('broadcast', { event: 'bab_build' }, ({ payload }) => {
       setOppBuild(payload.build || {})
       setOppPlayer(payload.player || null)
@@ -784,16 +784,17 @@ export default function BucketApp() {
       channel.on('presence', { event: 'leave' }, ({ leftPresences }) => {
         const theyLeft = leftPresences.some(p => p.vid === oppId)
         if (!theyLeft) return
-        const { build: b, user: u, position: pos } = vsResultRef.current
+        const { build: b, user: u, position: pos, matchType: mt } = vsResultRef.current
         if (u && supabase) {
           setVsRecord(prev => ({ wins: (prev?.wins ?? 0) + 1, losses: prev?.losses ?? 0 }))
           const winOvr = calcBucketOVR(b, VERSUS_POS_TYPES[pos] ?? VERSUS_GUARD_TYPES, pos)
           if (winOvr > 0) supabase.from('vs_results').insert({
-            user_id:  u.id,
-            username: u.user_metadata?.username || u.email?.split('@')[0],
-            result:   'win',
-            ovr:      winOvr,
-            position: pos,
+            user_id:    u.id,
+            username:   u.user_metadata?.username || u.email?.split('@')[0],
+            result:     'win',
+            ovr:        winOvr,
+            position:   pos,
+            match_type: mt,
           }).then(null, () => {})
         }
         setOppDisconnected(true)
@@ -802,7 +803,7 @@ export default function BucketApp() {
       })
     }
 
-    setVersusRoom({ code, role, oppId, oppName, channel })
+    setVersusRoom({ code, role, oppId, oppName, channel, matchType })
     setOppBuild({})
     setOppPlayer(null)
     setOppPosition(null)
@@ -879,16 +880,17 @@ export default function BucketApp() {
     const id = setInterval(() => {
       if (Date.now() - lastOppPingRef.current > 22000) {
         lastOppPingRef.current = Date.now() // prevent double-fire
-        const { build: b, user: u, position: pos } = vsResultRef.current
+        const { build: b, user: u, position: pos, matchType: mt } = vsResultRef.current
         if (u && supabase) {
           setVsRecord(prev => ({ wins: (prev?.wins ?? 0) + 1, losses: prev?.losses ?? 0 }))
           const winOvr = calcBucketOVR(b, VERSUS_POS_TYPES[pos] ?? VERSUS_GUARD_TYPES, pos)
           if (winOvr > 0) supabase.from('vs_results').insert({
-            user_id:  u.id,
-            username: u.user_metadata?.username || u.email?.split('@')[0],
-            result:   'win',
-            ovr:      winOvr,
-            position: pos,
+            user_id:    u.id,
+            username:   u.user_metadata?.username || u.email?.split('@')[0],
+            result:     'win',
+            ovr:        winOvr,
+            position:   pos,
+            match_type: mt,
           }).then(null, () => {})
         }
         setOppDisconnected(true)
@@ -959,11 +961,12 @@ export default function BucketApp() {
 
   function vsResultPayload(result) {
     return {
-      user_id:  user.id,
-      username: user.user_metadata?.username || user.email?.split('@')[0],
+      user_id:    user.id,
+      username:   user.user_metadata?.username || user.email?.split('@')[0],
       result,
-      ovr:      calcBucketOVR(build, activeTypes, position),
+      ovr:        calcBucketOVR(build, activeTypes, position),
       position,
+      match_type: versusRoom?.matchType ?? null,
     }
   }
 
