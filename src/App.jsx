@@ -24,6 +24,11 @@ import { ALLTIME_RATINGS } from './data/nfl-teams'
 import { LEGENDS, LEGEND_TYPES } from './data/legends'
 import { RB_LEGENDS } from './data/rb-legends'
 import HEADSHOTS from './data/headshots.json'
+
+const _dd = arr => { const s = new Set(); return arr.filter(p => { const k = `${p.name}|${p.team}`; if (s.has(k)) return false; s.add(k); return true }) }
+const _bt = (a, b) => a.team.localeCompare(b.team) || a.name.localeCompare(b.name)
+const CUSTOM_QB_POOL = _dd([...QBS, ...LEGENDS]).sort(_bt)
+const CUSTOM_RB_POOL = _dd([...RBS, ...RB_LEGENDS]).sort(_bt)
 import { runSimulation, getArchetype, runRBSimulation, calcOVRRB, getArchetypeRB } from './utils/simulation'
 import { supabase } from './lib/supabase'
 import CustomRatingsModal from './components/CustomRatingsModal'
@@ -676,7 +681,7 @@ export default function App() {
           <CustomRatingsModal
             isRB={isRB}
             gameMode={gameMode}
-            pool={activePool}
+            pool={isRB ? CUSTOM_RB_POOL : CUSTOM_QB_POOL}
             onClose={() => setShowCustomModal(false)}
             onSave={(ratings) => {
               setCustomRatings(ratings)
@@ -926,7 +931,7 @@ export default function App() {
         <CustomRatingsModal
           isRB={isRB}
           gameMode={gameMode}
-          pool={activePool}
+          pool={isRB ? CUSTOM_RB_POOL : CUSTOM_QB_POOL}
           onClose={() => setShowCustomModal(false)}
           onSave={(ratings) => {
             setCustomRatings(ratings)

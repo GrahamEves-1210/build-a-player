@@ -1020,7 +1020,7 @@ export default function SimPage({ result, build, types = TYPES, onBack, onReset,
     window.scrollTo({ top: 0, behavior: 'instant' })
     setScreen(s => {
       const next = s + 1
-      window.ramp?.que?.push(() => {
+      if (!adsDisabled) window.ramp?.que?.push(() => {
         window.ramp.spaNewPage()
       })
       return next

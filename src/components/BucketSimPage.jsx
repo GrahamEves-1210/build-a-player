@@ -2654,7 +2654,7 @@ export default function BucketSimPage({ result, build, types, position, onBack, 
   const advancePage = () => {
     document.querySelector('.simp-page')?.scrollTo({ top: 0, behavior: 'instant' })
     window.scrollTo({ top: 0, behavior: 'instant' })
-    window.ramp?.que?.push(() => { window.ramp.spaNewPage() })
+    if (!adsDisabled) window.ramp?.que?.push(() => { window.ramp.spaNewPage() })
     setScreen(s => s + 1)
   }
 

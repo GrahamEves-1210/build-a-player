@@ -107,6 +107,11 @@ const ENRICHED_BIGS           = NBA_BIG_PLAYERS.map(enrichPlayer)
 const ENRICHED_ALLTIME_GUARDS = NBA_ALLTIME_GUARD_PLAYERS.map(enrichPlayer)
 const ENRICHED_ALLTIME_BIGS   = NBA_ALLTIME_BIG_PLAYERS.map(enrichPlayer)
 
+const _dedup = arr => { const s = new Set(); return arr.filter(p => { const k = `${p.name}|${p.team}`; if (s.has(k)) return false; s.add(k); return true }) }
+const _byTeam = (a, b) => a.team.localeCompare(b.team) || a.name.localeCompare(b.name)
+const CUSTOM_MODAL_GUARDS = _dedup([...ENRICHED_GUARDS, ...ENRICHED_ALLTIME_GUARDS]).sort(_byTeam)
+const CUSTOM_MODAL_BIGS   = _dedup([...ENRICHED_BIGS,   ...ENRICHED_ALLTIME_BIGS]).sort(_byTeam)
+
 // ─── Bucket Splash ────────────────────────────────────────────────────────────
 const BUCKET_SPLASH_ATTRS = {
   guard: [
@@ -1044,6 +1049,7 @@ export default function BucketApp() {
           channel={versusRoom?.channel}
           versusGame={versusGame}
           user={user}
+          adsDisabled={adsDisabled}
           onResult={recordVsResult}
           onRematch={() => {
             faceoffFiredRef.current = false
@@ -1213,7 +1219,7 @@ export default function BucketApp() {
           <CustomRatingsModal
             isBucket={true}
             bucketPosition={position}
-            pool={currentPool}
+            pool={position === 'guard' ? CUSTOM_MODAL_GUARDS : CUSTOM_MODAL_BIGS}
             build={build}
             buildTypes={activeTypes}
             onClose={() => setShowBucketCustomModal(false)}
@@ -1461,7 +1467,7 @@ export default function BucketApp() {
         <CustomRatingsModal
           isBucket={true}
           bucketPosition={position}
-          pool={currentPool}
+          pool={position === 'guard' ? CUSTOM_MODAL_GUARDS : CUSTOM_MODAL_BIGS}
           build={build}
           buildTypes={activeTypes}
           onClose={() => setShowBucketCustomModal(false)}

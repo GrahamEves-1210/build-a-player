@@ -710,7 +710,7 @@ function CourtVisual({ play, myColor, oppColor, myName, oppName, possession, dis
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
-export default function BucketVersusResult({ myData, oppData, position, oppPosition, role, channel, versusGame, onRematch, onExit, onResult, user, oppDisconnected }) {
+export default function BucketVersusResult({ myData, oppData, position, oppPosition, role, channel, versusGame, onRematch, onExit, onResult, user, oppDisconnected, adsDisabled }) {
   const [phase,           setPhase]           = useState('reveal')
   const [playIdx,         setPlayIdx]         = useState(0)
   const [shownIdx,        setShownIdx]        = useState(0)
@@ -792,7 +792,10 @@ export default function BucketVersusResult({ myData, oppData, position, oppPosit
   // Sync adjustment ref and notify host when guest changes adj mid-game
   useEffect(() => {
     myAdjRef.current = myAdj
-    if (phase !== 'live' || role !== 'guest' || !channel) return
+    if (phase !== 'live') return
+    // Trim buffered plays so the new adjustment takes effect on the very next play
+    setPlays(prev => prev.slice(0, playIdx + 2))
+    if (role !== 'guest' || !channel) return
     channel.send({ type: 'broadcast', event: 'bab_adjustment', payload: { adjustment: myAdj } }).catch?.(() => {})
   }, [myAdj]) // eslint-disable-line
 
@@ -829,13 +832,13 @@ export default function BucketVersusResult({ myData, oppData, position, oppPosit
     if (phase !== 'reveal') return
     const t = setTimeout(() => {
       setPhase('live')
-      window.ramp?.que?.push(() => { window.ramp.spaNewPage() })
+      if (!adsDisabled) window.ramp?.que?.push(() => { window.ramp.spaNewPage() })
     }, 5500)
     return () => clearTimeout(t)
   }, [phase])
 
   useEffect(() => {
-    if (phase === 'result') window.ramp?.que?.push(() => { window.ramp.spaNewPage() })
+    if (phase === 'result' && !adsDisabled) window.ramp?.que?.push(() => { window.ramp.spaNewPage() })
   }, [phase])
 
   // Guest: advance to next play when it arrives from channel
@@ -1111,10 +1114,10 @@ export default function BucketVersusResult({ myData, oppData, position, oppPosit
               >
                 {p.who && (
                   <QBAvatar
-                    photo={p.who === 'me' ? myFaceSlot?.photo ?? null : oppFaceSlot?.photo ?? null}
-                    team={p.who === 'me' ? myFaceSlot?.team ?? null  : oppFaceSlot?.team ?? null}
+                    photo={p.who === 'me' ? myBestSlot?.photo ?? null : oppBestSlot?.photo ?? null}
+                    team={p.who === 'me' ? myBestSlot?.team ?? null  : oppBestSlot?.team ?? null}
                     color={null} size={24} logoDir="/logos/nba/"
-                    faceCenter={p.who === 'me' ? myFaceSlot?.faceCenter : oppFaceSlot?.faceCenter}
+                    faceCenter={p.who === 'me' ? myBestSlot?.faceCenter : oppBestSlot?.faceCenter}
                   />
                 )}
                 <span className="bvr-play-text">{resolveText(p)}</span>
