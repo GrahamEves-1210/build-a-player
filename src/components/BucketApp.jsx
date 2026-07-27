@@ -980,7 +980,7 @@ export default function BucketApp() {
       : { wins: prev?.wins ?? 0, losses: (prev?.losses ?? 0) + 1 }
     )
     const payload = vsResultPayload(result)
-    if (payload.ovr > 0) try { await supabase.from('vs_results').insert(payload) } catch {}
+    if (payload.ovr > 0 || result !== 'win') try { await supabase.from('vs_results').insert(payload) } catch {}
   }
 
   if (page === 'splash') {
