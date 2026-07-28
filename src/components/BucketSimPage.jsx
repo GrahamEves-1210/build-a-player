@@ -2622,12 +2622,11 @@ export default function BucketSimPage({ result, build, types, position, onBack, 
     const topScore = Math.max(...MVP_POOL.map(c => mvpScore(c.ppg, c.rpg, c.apg)))
     const myScore = mvpScore(ppg, rpg, apg)
     let mvp
-    if (myScore >= topScore * 1.06) {
+    if (myScore >= topScore) {
       mvp = { name: 'You', short: 'You', team: team?.short, ppg, rpg, apg, isPlayer: true }
     } else {
-      const playerMult = myScore >= topScore * 0.92 ? 1 : 0
-      const playerEntry = { name: 'You', short: 'You', team: team?.short, ppg, rpg, apg, isPlayer: true, mult: playerMult }
-      const allMVP = [...MVP_POOL, playerEntry].map(c => ({ ...c, w: Math.pow(Math.max(0, mvpScore(c.ppg, c.rpg, c.apg)), 2.5) * (c.mult ?? 1) }))
+      const playerEntry = { name: 'You', short: 'You', team: team?.short, ppg, rpg, apg, isPlayer: true }
+      const allMVP = [...MVP_POOL, playerEntry].map(c => ({ ...c, w: Math.pow(Math.max(0, mvpScore(c.ppg, c.rpg, c.apg)), 2.5) }))
       const totalW = allMVP.reduce((s, c) => s + c.w, 0)
       let rand = Math.random() * totalW; mvp = allMVP[0]
       for (const c of allMVP) { rand -= c.w; if (rand <= 0) { mvp = c; break } }

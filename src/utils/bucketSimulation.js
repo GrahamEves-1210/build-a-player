@@ -231,6 +231,7 @@ function simPlayoffs(mySeed, winProb, conf, standings, rand = Math.random, ratin
     currentSeed = pi.newSeed
   }
 
+  const myShort = standings.find(t => t.isUs)?.short
   const get = seed => standings[seed - 1] ?? { short: 'OPP', wins: 40 }
   const roundNames = ['First Round', 'Conference Semifinals', 'Conference Finals', 'NBA Finals']
 
@@ -241,8 +242,11 @@ function simPlayoffs(mySeed, winProb, conf, standings, rand = Math.random, ratin
   // Simulate a parallel series between two seeds using actual team ratings,
   // so the R2/R3 opponent is whoever actually won — not a random probability pick
   // that could contradict another round's result.
+  // Safety: never return the player's own team as an opponent.
   const simParallel = (seedA, seedB) => {
     const tA = get(seedA), tB = get(seedB)
+    if (tA.short === myShort) return { ...tB, seed: seedB }
+    if (tB.short === myShort) return { ...tA, seed: seedA }
     return rand() < matchupProb(teamWP(tA.short, ratings), tB.short, ratings)
       ? { ...tA, seed: seedA }
       : { ...tB, seed: seedB }

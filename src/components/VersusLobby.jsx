@@ -164,8 +164,6 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
     function matchWith(opp, bc) {
       if (matched) return
       matched = true
-      // Remove the presence channel and create a fresh game channel so
-      // handleVersusJoin can subscribe it cleanly (same pattern as random matchmaking).
       let gameChannel
       if (bc) {
         bcRef.current = null
@@ -179,6 +177,18 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
       setTimeout(() => onJoin({ code, role: 'host', oppId: opp.vid, oppName: opp.name, channel: gameChannel, matchType: 'friend' }), 500)
     }
 
+    // Primary: guest explicitly broadcasts bab_joined before removing lobby channel.
+    // This fires reliably even if presence sync arrives after guest has left.
+    ch.on('broadcast', { event: 'bab_joined' }, ({ payload }) => {
+      if (matched || !payload?.vid) return
+      matchWith({ vid: payload.vid, name: payload.name || 'Opponent' }, null)
+    })
+    // Fallback: presence events in case broadcast fails
+    ch.on('presence', { event: 'join' }, ({ newPresences }) => {
+      if (matched) return
+      const opp = (newPresences || []).find(u => u.vid !== myId)
+      if (opp) matchWith(opp, null)
+    })
     ch.on('presence', { event: 'sync' }, () => {
       if (matched) return
       const opp = Object.values(ch.presenceState()).flat().find(u => u.vid !== myId)
@@ -220,6 +230,9 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
         bcRef.current = null
         gameChannel = wrapBC(bc)
       } else {
+        // Broadcast BEFORE removing channel — FIFO WebSocket guarantees host
+        // receives bab_joined before the unsubscribe message arrives.
+        ch.send({ type: 'broadcast', event: 'bab_joined', payload: { vid: myId, name: myName } }).catch(() => {})
         rt.removeChannel(ch)
         chRef.current = null
         gameChannel = rt.channel(chName + '-g')
@@ -228,9 +241,14 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
       setTimeout(() => onJoin({ code, role: 'guest', oppId: opp.vid, oppName: opp.name, channel: gameChannel, matchType: 'friend' }), 500)
     }
 
-    // Block sync until after track is acknowledged — the initial presence_state fires
-    // before we've tracked, so the host wouldn't see us yet; we'd removeChannel too early
-    // and the host would never detect us.
+    // Block join/sync until after track is acknowledged — the initial presence events
+    // fire before we've tracked, so the host wouldn't see us yet; we'd removeChannel too
+    // early and the host would never detect us.
+    ch.on('presence', { event: 'join' }, ({ newPresences }) => {
+      if (done || !trackDone) return
+      const opp = (newPresences || []).find(u => u.vid !== myId)
+      if (opp) matchWith(opp, null)
+    })
     ch.on('presence', { event: 'sync' }, () => {
       if (done || !trackDone) return
       const opp = Object.values(ch.presenceState()).flat().find(u => u.vid !== myId)
@@ -396,9 +414,6 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
       supabase.from('vs_invites').select('*').eq('to_id', uid).eq('status', 'pending')
         .gte('created_at', new Date(Date.now() - 30 * 60 * 1000).toISOString()),
     ])
-    console.log('[friends] incoming requests:', reqRes.data, reqRes.error)
-    console.log('[friends] accepted:', accRes.data, accRes.error)
-    console.log('[friends] invites:', invRes.data, invRes.error)
     const { data: incoming } = reqRes
     const { data: accepted } = accRes
     const { data: invites }  = invRes
@@ -454,7 +469,6 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
       from_id: user.id, from_username: myName,
       to_id: target.user_id, to_username: target.username, status: 'pending',
     })
-    console.log('[friends] insert result:', insErr)
     if (insErr) { setFriendSearchMsg(`Error: ${insErr.message}`); return }
     setFriendSearchResult(null)
     setFriendSearch('')
@@ -481,24 +495,33 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
     const ch = makeChannel(chName)
     chRef.current = ch
     let matched = false
-    ch.on('presence', { event: 'sync' }, () => {
-      const state = Object.values(ch.presenceState()).flat()
+
+    function enterGame(opp) {
       if (matched) return
-      const opp = state.find(u => u.vid !== myId)
-      if (!opp) return
       matched = true
       rt.removeChannel(ch)
       chRef.current = null
       const gameChannel = rt.channel(chName + '-g')
       setStatus(`${friend.username} joined!`)
       setTimeout(() => onJoin({ code, role: 'host', oppId: opp.vid, oppName: opp.name, channel: gameChannel, matchType: 'friend' }), 500)
+    }
+
+    ch.on('broadcast', { event: 'bab_joined' }, ({ payload }) => {
+      if (matched || !payload?.vid) return
+      enterGame({ vid: payload.vid, name: payload.name || friend.username })
+    })
+    ch.on('presence', { event: 'sync' }, () => {
+      const state = Object.values(ch.presenceState()).flat()
+      if (matched) return
+      const opp = state.find(u => u.vid !== myId)
+      if (opp) enterGame(opp)
     })
     ch.subscribe(async s => {
       if (s === 'SUBSCRIBED') {
         await ch.track({ vid: myId, name: myName })
         if (!matched) {
           const opp = Object.values(ch.presenceState()).flat().find(u => u.vid !== myId)
-          if (opp) matchWith(opp, null)
+          if (opp) enterGame(opp)
         }
       } else if (s === 'TIMED_OUT' || s === 'CHANNEL_ERROR') openBC(chName, (opp, bc) => {
         if (matched) return
@@ -512,13 +535,10 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
   }
 
   async function acceptChallenge(invite) {
-    console.log('[accept] invite:', invite)
     const { error: updErr } = await supabase.from('vs_invites').update({ status: 'accepted' }).eq('id', invite.id)
-    console.log('[accept] update error:', updErr)
     setFriendsOpen(false)
     const code    = invite.room_code
     const chName  = `${channelPrefix}-vs-${code}`
-    console.log('[accept] joining channel:', chName)
     const ch      = makeChannel(chName)
     chRef.current = ch
     setScreen('joining')
@@ -534,6 +554,7 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
         chRef.current = null
         gameChannel = wrapBC(bc)
       } else {
+        ch.send({ type: 'broadcast', event: 'bab_joined', payload: { vid: myId, name: myName } }).catch(() => {})
         rt.removeChannel(ch)
         chRef.current = null
         gameChannel = rt.channel(chName + '-g')
@@ -541,6 +562,11 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
       setStatus('Connected!')
       setTimeout(() => onJoin({ code, role: 'guest', oppId: opp.vid, oppName: opp.name, channel: gameChannel, matchType: 'friend' }), 500)
     }
+    ch.on('presence', { event: 'join' }, ({ newPresences }) => {
+      if (done || !trackDone) return
+      const opp = (newPresences || []).find(u => u.vid !== myId)
+      if (opp) matchWith(opp, null)
+    })
     ch.on('presence', { event: 'sync' }, () => {
       if (done || !trackDone) return
       const opp = Object.values(ch.presenceState()).flat().find(u => u.vid !== myId)

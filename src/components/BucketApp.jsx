@@ -758,6 +758,7 @@ export default function BucketApp() {
     channel.on('broadcast', { event: 'bab_build' }, ({ payload }) => {
       setOppBuild(payload.build || {})
       setOppPlayer(payload.player || null)
+      if (payload.position) setOppPosition(payload.position)
     })
     channel.on('broadcast', { event: 'bab_faceoff' }, () => {
       setPage('versus-result')
@@ -846,7 +847,7 @@ export default function BucketApp() {
     if (!versusRoom?.channel || page !== 'versus-game') return
     versusRoom.channel.send({
       type: 'broadcast', event: 'bab_build',
-      payload: { build, player: savedSpinResult },
+      payload: { build, player: savedSpinResult, position },
     }).catch?.(() => {})
   }, [build, savedSpinResult, versusRoom, page])
 
@@ -878,12 +879,17 @@ export default function BucketApp() {
     return () => clearInterval(id)
   }, [page, versusRoom])
 
-  // Heartbeat: if no ping received in 22s, opponent is gone — award win
+  // Heartbeat: if no ping received in 45s, opponent is gone — award win.
+  // Skips while tab is hidden (Chrome throttles background timers, causing false positives).
+  // Resets the ping clock when tab becomes visible so returning players get a fresh window.
   useEffect(() => {
     if (page !== 'versus-game' || !versusRoom?.channel) return
-    lastOppPingRef.current = Date.now() // reset on every new versus-game session
+    lastOppPingRef.current = Date.now()
+    const onVisible = () => { if (!document.hidden) lastOppPingRef.current = Date.now() }
+    document.addEventListener('visibilitychange', onVisible)
     const id = setInterval(() => {
-      if (Date.now() - lastOppPingRef.current > 22000) {
+      if (document.hidden) return
+      if (Date.now() - lastOppPingRef.current > 45000) {
         lastOppPingRef.current = Date.now() // prevent double-fire
         const { build: b, user: u, position: pos, matchType: mt } = vsResultRef.current
         if (u && supabase) {
@@ -903,7 +909,7 @@ export default function BucketApp() {
         setVersusRoom(null)
       }
     }, 5000)
-    return () => clearInterval(id)
+    return () => { clearInterval(id); document.removeEventListener('visibilitychange', onVisible) }
   }, [page, versusRoom]) // eslint-disable-line
 
   // 3-minute build timer: start on entering versus-game, resolve at 0
@@ -1434,7 +1440,7 @@ export default function BucketApp() {
                 <line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55M5 12.55a10.94 10.94 0 0 1 5.17-2.39M10.71 5.05A16 16 0 0 1 22.56 9M1.42 9a15.91 15.91 0 0 1 4.7-2.88M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01"/>
               </svg>
             </div>
-            <div className="odm-title">Opponent disconnected</div>
+            <div className="odm-title">Your opponent has left</div>
             <div className="odm-body">You've been given the win.</div>
             <button className="odm-ok" onClick={() => { setOppDisconnected(false); handleHome(); }}>OK</button>
           </div>
