@@ -30,25 +30,10 @@ import BucketApp from './components/BucketApp.jsx'
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.getRegistrations().then(regs => {
     if (regs.length > 0) {
-      Promise.all(regs.map(r => r.unregister())).then(() => {
-        if ('caches' in window) {
-          caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k))))
-        }
-        window.location.reload()
-      })
+      Promise.all(regs.map(r => r.unregister())).then(() => window.location.reload())
     }
   })
 }
-
-// When Vite chunk hashes change after a deploy, cached users get 404s on old
-// chunk filenames → blank screen. Auto-reload once to pick up the new files.
-window.addEventListener('vite:preloadError', () => {
-  const key = 'bap_chunk_reload'
-  if (!sessionStorage.getItem(key)) {
-    sessionStorage.setItem(key, '1')
-    window.location.reload()
-  }
-})
 
 const isBucket = window.location.pathname.startsWith('/bucket')
 
