@@ -820,6 +820,7 @@ export default function BucketApp() {
     setSimResult(null)
     setMobileView('spin')
     setSpinResetKey(k => k + 1)
+    setIsBucketCustomMode(false)
     setShowVsPrompt(true)
     setPage('versus-game')
     window.scrollTo(0, 0)
