@@ -495,6 +495,7 @@ export default function App() {
     setSimResult(null)
     setMobileView('spin')
     setSpinResetKey(k => k + 1)
+    setIsCustomMode(false)
     setPage('versus-game')
     window.scrollTo(0, 0)
   }, [activeTypes])
