@@ -20,6 +20,7 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       injectRegister: null,
+      filename: 'workbox-sw.js',
       includeAssets: ['logo.png', 'qb-silhouette.png', 'logos/**', 'headshots/**'],
       manifest: {
         name: 'Build-A-Player',
@@ -36,22 +37,11 @@ export default defineConfig({
         ],
       },
       workbox: {
+        swDest: 'dist/workbox-sw.js',
         skipWaiting: true,
         clientsClaim: true,
         globPatterns: ['**/*.{js,css,html,ico,svg,json}'],
         globIgnores: ['**/headshots/**', '**/logos/**'],
-        runtimeCaching: [
-          {
-            urlPattern: /\/logos\/.+\.png$/,
-            handler: 'CacheFirst',
-            options: { cacheName: 'logos', expiration: { maxEntries: 50, maxAgeSeconds: 60 * 60 * 24 * 30 } },
-          },
-          {
-            urlPattern: /\/headshots\/.+\.jpg$/,
-            handler: 'CacheFirst',
-            options: { cacheName: 'headshots', expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 30 } },
-          },
-        ],
       },
     }),
   ],
