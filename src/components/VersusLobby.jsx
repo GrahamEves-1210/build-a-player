@@ -73,7 +73,7 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
         avgOvr: r.avg_ovr != null ? String(r.avg_ovr) : null,
       })))
       setLbLoading(false)
-    })
+    }).catch(() => setLbLoading(false))
   }, [])
 
   function makeChannel(name) {
