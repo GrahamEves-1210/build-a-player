@@ -63,38 +63,17 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
   const myId   = user?.id ? `${user.id}-${getVsId()}` : getVsId()
 
   useEffect(() => {
-    async function loadLb() {
-      const PAGE = 9000
-      const byUser = {}
-      let offset = 0
-      while (true) {
-        const { data } = await supabase
-          .from('vs_results')
-          .select('user_id, username, result, ovr')
-          .range(offset, offset + PAGE - 1)
-        if (!data || data.length === 0) break
-        data.forEach(r => {
-          if (!r.user_id) return
-          if (!byUser[r.user_id]) byUser[r.user_id] = { username: r.username, wins: 0, losses: 0, ovrs: [] }
-          if (r.result === 'win') byUser[r.user_id].wins++
-          if (r.result === 'loss' || r.result === 'forfeit') byUser[r.user_id].losses++
-          // Exclude forfeits from OVR average — incomplete builds give falsely low values
-          if (r.result !== 'forfeit' && r.ovr != null && r.ovr > 0) byUser[r.user_id].ovrs.push(Number(r.ovr))
-        })
-        if (data.length < PAGE) break
-        offset += PAGE
-      }
-      const rows = Object.values(byUser).map(u => ({
-        username: u.username,
-        wins: u.wins,
-        losses: u.losses,
-        winPct: u.wins + u.losses > 0 ? ((u.wins / (u.wins + u.losses)) * 100).toFixed(1) : null,
-        avgOvr: u.ovrs.length > 0 ? (u.ovrs.reduce((a, b) => a + b, 0) / u.ovrs.length).toFixed(1) : null,
-      }))
-      setLbRows(rows)
+    supabase.rpc('get_h2h_leaderboard').then(({ data }) => {
+      if (!data) { setLbLoading(false); return }
+      setLbRows(data.map(r => ({
+        username: r.username,
+        wins: Number(r.wins),
+        losses: Number(r.losses),
+        winPct: r.win_pct != null ? String(r.win_pct) : null,
+        avgOvr: r.avg_ovr != null ? String(r.avg_ovr) : null,
+      })))
       setLbLoading(false)
-    }
-    loadLb()
+    })
   }, [])
 
   function makeChannel(name) {
