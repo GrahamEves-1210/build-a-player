@@ -1,7 +1,7 @@
 ﻿import { useRef, useEffect, useLayoutEffect, useMemo, useCallback, useState } from 'react'
 import { QBS, TEAMS, ATTR, TYPES, CATEGORIES, QB_PHYSICALS, LITE_TYPES } from '../data/qbs'
 import { RB_CATEGORIES } from '../data/rbs'
-import { valToGrade } from '../utils/simulation'
+import { valToGrade, HEADSHOT_BASE } from '../utils/simulation'
 import HEADSHOTS from '../data/headshots.json'
 import QBAvatar from './QBAvatar'
 
@@ -233,7 +233,7 @@ const POS_COLORS = {
 }
 
 // ─── SpinScreen ──────────────────────────────────────────────────────────────
-export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, activeCategory, resetKey, onChipTap, types = TYPES, isLite = false, qbPool = QBS, savedResult = null, onSaveResult, onPhaseChange, gameKey, onReset, adsDisabled = false, isRB = false, isWR = false, isBucket = false, isVersusMode = false, attrMap = ATTR, categoriesData = CATEGORIES, teamsPool = TEAMS, logoDir = '/logos/', playerLabel, headshotsMap = HEADSHOTS, headshotsDir = '/headshots/', hideTeamResult = false, headshotFallback = () => null }) {
+export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, activeCategory, resetKey, onChipTap, types = TYPES, isLite = false, qbPool = QBS, savedResult = null, onSaveResult, onPhaseChange, gameKey, onReset, adsDisabled = false, isRB = false, isWR = false, isBucket = false, isVersusMode = false, attrMap = ATTR, categoriesData = CATEGORIES, teamsPool = TEAMS, logoDir = '/logos/', playerLabel, headshotsMap = HEADSHOTS, headshotsDir = `${HEADSHOT_BASE}/`, hideTeamResult = false, headshotFallback = () => null }) {
   const pLabel = playerLabel ?? (isWR ? 'WR' : isRB ? 'RB' : 'QB')
   const [phase, setPhase]               = useState(() => savedResult?.selectedQB ? 'done' : 'idle')
   const [selectedTeam, setSelectedTeam] = useState(() => savedResult?.selectedTeam ?? null)

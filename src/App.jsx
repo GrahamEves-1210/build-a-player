@@ -25,7 +25,7 @@ import { ALLTIME_RATINGS } from './data/nfl-teams'
 import { LEGENDS, LEGEND_TYPES } from './data/legends'
 import { RB_LEGENDS } from './data/rb-legends'
 import HEADSHOTS from './data/headshots.json'
-import { runSimulation, getArchetype, runRBSimulation, calcOVRRB, getArchetypeRB, runWRSimulation, calcOVRWR, getArchetypeWR } from './utils/simulation'
+import { runSimulation, getArchetype, runRBSimulation, calcOVRRB, getArchetypeRB, runWRSimulation, calcOVRWR, getArchetypeWR, HEADSHOT_BASE } from './utils/simulation'
 import { supabase } from './lib/supabase'
 import CustomRatingsModal from './components/CustomRatingsModal'
 
@@ -702,7 +702,7 @@ export default function App() {
             build={build}
             buildTypes={activeTypes}
             onAddToBuild={(p, playerOverrides, attrType) => {
-              const photo = HEADSHOTS[p.name] ? `/headshots/${HEADSHOTS[p.name]}.webp` : null
+              const photo = HEADSHOTS[p.name] ? `${HEADSHOT_BASE}/${HEADSHOTS[p.name]}.webp` : null
               const chipData = {
                 type: attrType,
                 val: playerOverrides?.[attrType] ?? p.attrs?.[attrType] ?? 5,
@@ -720,7 +720,7 @@ export default function App() {
               setShowCustomModal(false)
             }}
             onAddAllToBuild={(p, playerOverrides) => {
-              const photo = HEADSHOTS[p.name] ? `/headshots/${HEADSHOTS[p.name]}.webp` : null
+              const photo = HEADSHOTS[p.name] ? `${HEADSHOT_BASE}/${HEADSHOTS[p.name]}.webp` : null
               setBuild(prev => {
                 const next = { ...prev }
                 activeTypes.forEach(attrType => {
@@ -963,7 +963,7 @@ export default function App() {
           build={build}
           buildTypes={activeTypes}
           onAddToBuild={(p, playerOverrides, attrType) => {
-            const photo = HEADSHOTS[p.name] ? `/headshots/${HEADSHOTS[p.name]}.webp` : null
+            const photo = HEADSHOTS[p.name] ? `${HEADSHOT_BASE}/${HEADSHOTS[p.name]}.webp` : null
             const chipData = {
               type: attrType,
               val: playerOverrides?.[attrType] ?? p.attrs?.[attrType] ?? 5,
@@ -982,7 +982,7 @@ export default function App() {
             setShowCustomModal(false)
           }}
           onAddAllToBuild={(p, playerOverrides) => {
-            const photo = HEADSHOTS[p.name] ? `/headshots/${HEADSHOTS[p.name]}.webp` : null
+            const photo = HEADSHOTS[p.name] ? `${HEADSHOT_BASE}/${HEADSHOTS[p.name]}.webp` : null
             setBuild(prev => {
               const next = { ...prev }
               activeTypes.forEach(attrType => {

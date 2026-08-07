@@ -25,6 +25,7 @@ import { NBA_JERSEY_NUMBERS } from '../data/nba-jersey-numbers'
 import { NBA_SKIN_COLORS }   from '../data/nba-skin-colors'
 import { NBA_FACE_CENTERS }  from '../data/nba-face-centers'
 import { supabase, rtSupabase } from '../lib/supabase'
+import { HEADSHOT_BASE } from '../utils/simulation'
 import ProfilePage from './ProfilePage'
 import CustomRatingsModal from './CustomRatingsModal'
 const VersusLobby        = lazy(() => import('./VersusLobby'))
@@ -689,7 +690,7 @@ export default function BucketApp() {
       const sorted = [...pool].sort((a, b) => (b.attrs[type] ?? 0) - (a.attrs[type] ?? 0))
       const topN = sorted.slice(0, 8)
       const p = topN[Math.floor(Math.random() * topN.length)]
-      const photo = NBA_HEADSHOTS[p.name] ? `/headshots/nba/${NBA_HEADSHOTS[p.name]}.webp` : genericHeadshot(p.skin)
+      const photo = NBA_HEADSHOTS[p.name] ? `${HEADSHOT_BASE}/nba/${NBA_HEADSHOTS[p.name]}.webp` : genericHeadshot(p.skin)
       return [type, {
         type, val: p.attrs[type] ?? 5,
         qb: p.short, qbFull: p.name,
@@ -1247,7 +1248,7 @@ export default function BucketApp() {
                 skinColor: p.skin,
                 number: p.number,
                 faceCenter: p.faceCenter,
-                photo: NBA_HEADSHOTS[p.name] ? `/headshots/nba/${NBA_HEADSHOTS[p.name]}.webp` : genericHeadshot(p.skin),
+                photo: NBA_HEADSHOTS[p.name] ? `${HEADSHOT_BASE}/nba/${NBA_HEADSHOTS[p.name]}.webp` : genericHeadshot(p.skin),
                 captain: p.captain ?? false,
                 height: p.height ?? parseHtToIn(p.ht) ?? null,
                 weight: p.weight ?? p.wt ?? null,
@@ -1270,7 +1271,7 @@ export default function BucketApp() {
                       skinColor: p.skin,
                       number: p.number,
                       faceCenter: p.faceCenter,
-                      photo: NBA_HEADSHOTS[p.name] ? `/headshots/nba/${NBA_HEADSHOTS[p.name]}.webp` : genericHeadshot(p.skin),
+                      photo: NBA_HEADSHOTS[p.name] ? `${HEADSHOT_BASE}/nba/${NBA_HEADSHOTS[p.name]}.webp` : genericHeadshot(p.skin),
                       captain: p.captain ?? false,
                       height: p.height ?? parseHtToIn(p.ht) ?? null,
                       weight: p.weight ?? p.wt ?? null,
@@ -1329,7 +1330,7 @@ export default function BucketApp() {
           logoDir="/logos/nba/"
           playerLabel="PLAYER"
           headshotsMap={NBA_HEADSHOTS}
-          headshotsDir="/headshots/nba/"
+          headshotsDir={`${HEADSHOT_BASE}/nba/`}
           headshotFallback={genericHeadshot}
         />
         <Silhouette
@@ -1495,7 +1496,7 @@ export default function BucketApp() {
               skinColor: p.skin,
               number: p.number,
               faceCenter: p.faceCenter,
-              photo: NBA_HEADSHOTS[p.name] ? `/headshots/nba/${NBA_HEADSHOTS[p.name]}.webp` : genericHeadshot(p.skin),
+              photo: NBA_HEADSHOTS[p.name] ? `${HEADSHOT_BASE}/nba/${NBA_HEADSHOTS[p.name]}.webp` : genericHeadshot(p.skin),
               captain: p.captain ?? false,
               height: p.height ?? parseHtToIn(p.ht) ?? null,
               weight: p.weight ?? p.wt ?? null,
@@ -1518,7 +1519,7 @@ export default function BucketApp() {
                     skinColor: p.skin,
                     number: p.number,
                     faceCenter: p.faceCenter,
-                    photo: NBA_HEADSHOTS[p.name] ? `/headshots/nba/${NBA_HEADSHOTS[p.name]}.webp` : genericHeadshot(p.skin),
+                    photo: NBA_HEADSHOTS[p.name] ? `${HEADSHOT_BASE}/nba/${NBA_HEADSHOTS[p.name]}.webp` : genericHeadshot(p.skin),
                     captain: p.captain ?? false,
                     height: p.height ?? parseHtToIn(p.ht) ?? null,
                     weight: p.weight ?? p.wt ?? null,

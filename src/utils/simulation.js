@@ -3,9 +3,11 @@ import { RB_TYPES } from '../data/rbs'
 import { WR_TYPES, WRS } from '../data/wrs'
 import { NFL_TEAMS, ALLTIME_RATINGS, RB_RATINGS } from '../data/nfl-teams'
 
+export const HEADSHOT_BASE = 'https://cdn.jsdelivr.net/gh/GrahamEves-1210/build-a-player@main/public/headshots'
+
 export function nflHeadshot(id) {
   if (!id) return null
-  return id.includes('.') ? `/headshots/${id}` : `/headshots/${id}.webp`
+  return id.includes('.') ? `${HEADSHOT_BASE}/${id}` : `${HEADSHOT_BASE}/${id}.webp`
 }
 
 const TEAM_BY_NAME = Object.fromEntries(NFL_TEAMS.map(t => [t.name, t]))

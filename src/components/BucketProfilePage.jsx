@@ -2,7 +2,7 @@
 import { supabase } from '../lib/supabase'
 import { BUCKET_ATTR, NBA_TEAMS } from '../data/nba-players'
 import { calcBucketOVR, getBucketGuardArchetype, getBucketBigArchetype } from '../utils/bucketSimulation'
-import { valToGrade } from '../utils/simulation'
+import { valToGrade, HEADSHOT_BASE } from '../utils/simulation'
 
 function gradeColor(val) {
   if (val >= 11) return '#a855f7'
@@ -329,7 +329,7 @@ export default function BucketProfilePage({
               {filled.map(t => {
                 const meta  = BUCKET_ATTR[t]
                 const slot  = build[t]
-                const photo = slot.photo || (NBA_HEADSHOTS[slot.qbFull] ? `/headshots/nba/${NBA_HEADSHOTS[slot.qbFull]}.webp` : null)
+                const photo = slot.photo || (NBA_HEADSHOTS[slot.qbFull] ? `${HEADSHOT_BASE}/nba/${NBA_HEADSHOTS[slot.qbFull]}.webp` : null)
                 const tc    = slot.teamColor || TEAM_COLOR[slot.team] || '#333'
                 return (
                   <div key={t} className="prf-attr-row">

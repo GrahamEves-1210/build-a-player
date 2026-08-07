@@ -2,7 +2,7 @@
 import { createPortal } from 'react-dom'
 import { NBA_TEAMS, NBA_PLAYERS, BUCKET_ATTR } from '../data/nba-players'
 import NBA_HEADSHOTS from '../data/nba-headshots.json'
-import { valToGrade } from '../utils/simulation'
+import { valToGrade, HEADSHOT_BASE } from '../utils/simulation'
 import { getBucketGuardArchetype, getBucketBigArchetype, TEAM_RATINGS, ALLTIME_TEAM_RATINGS } from '../utils/bucketSimulation'
 import { SAL_REP_TYPES, SAL_ATTR_MAP } from './BucketSalaryCap'
 import QBAvatar from './QBAvatar'
@@ -1116,7 +1116,7 @@ function GoatAvatar({ entry, isPlayer, playerTeam, playerTeamColor, size = 56 })
   const teamObj    = TEAM_MAP[teamShort]
   const color      = isPlayer ? playerTeamColor : teamObj?.color
   const headshotId = !isPlayer ? NBA_HEADSHOTS[entry?.name] : null
-  const photo      = headshotId ? `/headshots/nba/${headshotId}.webp` : null
+  const photo      = headshotId ? `${HEADSHOT_BASE}/nba/${headshotId}.webp` : null
   return (
     <QBAvatar
       photo={photo}
@@ -2550,7 +2550,7 @@ function TeamStarters({ teamShort, teamColor, isBig, iqPhoto, isAllTime = false 
         {names.map((name, i) => {
           const isMe  = i === replaceIdx
           const hid   = !isMe && NBA_HEADSHOTS[name]
-          const photo = isMe ? iqPhoto : (hid ? `/headshots/nba/${hid}.webp` : null)
+          const photo = isMe ? iqPhoto : (hid ? `${HEADSHOT_BASE}/nba/${hid}.webp` : null)
           return (
             <div key={isMe ? 'you' : name} className={`sts-starter${isMe ? ' sts-starter--you' : ''}`}>
               <QBAvatar photo={photo} team={teamShort} color={isMe ? teamColor : teamColor + '99'} size={42} logoDir="/logos/nba/" />
@@ -2579,7 +2579,7 @@ function TeamStarters({ teamShort, teamColor, isBig, iqPhoto, isAllTime = false 
       {starters.map((p, i) => {
         const isMe  = i === replaceIdx
         const hid   = !isMe && NBA_HEADSHOTS[p.name]
-        const photo = isMe ? iqPhoto : (hid ? `/headshots/nba/${hid}.webp` : null)
+        const photo = isMe ? iqPhoto : (hid ? `${HEADSHOT_BASE}/nba/${hid}.webp` : null)
         return (
           <div key={isMe ? 'you' : p.name} className={`sts-starter${isMe ? ' sts-starter--you' : ''}`}>
             <QBAvatar photo={photo} team={p.team} color={isMe ? teamColor : teamColor + '99'} size={42} logoDir="/logos/nba/" />

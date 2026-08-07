@@ -73,7 +73,7 @@ function enrichBucketBuild(savedBuild) {
         teamColor2:  teamInfo.color2 ?? '#888888',
         skinColor:   NBA_SKIN_COLORS[d.qb] ?? '#c8956c',
         number:      d.number ?? null,
-        photo:       hsId ? `/headshots/nba/${hsId}.webp` : null,
+        photo:       hsId ? `${HEADSHOT_BASE}/nba/${hsId}.webp` : null,
         faceCenter:  NBA_FACE_CENTERS[d.qb] ?? null,
       }]
     })
@@ -93,7 +93,7 @@ function computeBucketGoatRank(s) {
   return Math.max(1, Math.min(75, rank))
 }
 
-import { calcOVR, calcOVRRB, calcOVRWR, getArchetype, getArchetypeRB, getArchetypeWR, valToGrade } from '../utils/simulation'
+import { calcOVR, calcOVRRB, calcOVRWR, getArchetype, getArchetypeRB, getArchetypeWR, valToGrade, HEADSHOT_BASE } from '../utils/simulation'
 import QBAvatar from './QBAvatar'
 import { supabase } from '../lib/supabase'
 import { RB_TYPES } from '../data/rbs'
