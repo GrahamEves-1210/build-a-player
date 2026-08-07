@@ -1,5 +1,6 @@
 ﻿import { TEAMS, QBS, TYPES } from '../data/qbs'
 import HEADSHOTS from '../data/headshots.json'
+import { nflHeadshot } from './simulation'
 
 const QB_IDX   = Object.fromEntries(QBS.map((q, i) => [q.name, i]))
 const TEAM_IDX = Object.fromEntries(TEAMS.map((t, i) => [t.short, i]))
@@ -86,7 +87,7 @@ export function decodeBuild(encoded) {
         team:      team.short,
         qbFull:    qb.name,
         teamColor: team.color,
-        photo:     HEADSHOTS[qb.name] ? `/headshots/${HEADSHOTS[qb.name]}.webp` : null,
+        photo:     nflHeadshot(HEADSHOTS[qb.name]),
       }
       decodedTypes.push(t)
     }

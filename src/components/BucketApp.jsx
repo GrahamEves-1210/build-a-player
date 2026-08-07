@@ -544,9 +544,10 @@ export default function BucketApp() {
       fullBuild['clutch']       = { ...capBuild['size'], type: 'clutch' }
       fullBuild['basketballIQ'] = { ...capBuild['size'], type: 'basketballIQ' }
     }
-    // When a big was picked for size/athl, remap guard attrs → big attr keys
-    // so getBucketBigArchetype can read interiorDefense, playmaking, rebounding
-    if (capPosition === 'big' && position === 'guard') {
+    // When effective position is big, add big attr keys alongside the guard ones
+    // so getBucketBigArchetype can read interiorDefense, playmaking, rebounding.
+    // Build always uses guard-key names, so this remap is needed for any big sim.
+    if (capPosition === 'big') {
       if (fullBuild.perimeterDefense)
         fullBuild.interiorDefense = { ...fullBuild.perimeterDefense, type: 'interiorDefense' }
       if (!fullBuild.playmaking)

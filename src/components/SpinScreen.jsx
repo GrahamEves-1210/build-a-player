@@ -184,7 +184,7 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, on
 }
 
 // ─── Chip ────────────────────────────────────────────────────────────────────
-function Chip({ type, meta, val, selectedQB, draggingType, onChipTap, onDragStart, onDragEnd, setDraggingType, hideGrades, headshotsMap, headshotsDir, isBucket, headshotFallback = () => null }) {
+function Chip({ type, meta, val, selectedQB, draggingType, onChipTap, onDragStart, onDragEnd, setDraggingType, hideGrades, headshotsMap, headshotsDir, isBucket, isWR, headshotFallback = () => null }) {
   const photo = headshotsMap[selectedQB.name] ? `${headshotsDir}${headshotsMap[selectedQB.name]}.webp` : headshotFallback(selectedQB.skin)
   const chipData = {
     type, val,
@@ -198,7 +198,7 @@ function Chip({ type, meta, val, selectedQB, draggingType, onChipTap, onDragStar
   return (
     <div
       className={`attr-chip attr-chip-${type}${draggingType === type ? ' chip-dragging' : ''}`}
-      style={{ '--chip-col': isBucket ? (hideGrades ? '#64748b' : gradeColor(val)) : meta.col, '--chip-team': selectedQB.color }}
+      style={{ '--chip-col': hideGrades ? '#64748b' : gradeColor(val), '--chip-team': selectedQB.color }}
       draggable
       onClick={() => onChipTap && onChipTap(chipData)}
       onDragStart={e => {
@@ -233,8 +233,8 @@ const POS_COLORS = {
 }
 
 // ─── SpinScreen ──────────────────────────────────────────────────────────────
-export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, activeCategory, resetKey, onChipTap, types = TYPES, isLite = false, qbPool = QBS, savedResult = null, onSaveResult, onPhaseChange, gameKey, onReset, adsDisabled = false, isRB = false, isBucket = false, isVersusMode = false, attrMap = ATTR, categoriesData = CATEGORIES, teamsPool = TEAMS, logoDir = '/logos/', playerLabel, headshotsMap = HEADSHOTS, headshotsDir = '/headshots/', hideTeamResult = false, headshotFallback = () => null }) {
-  const pLabel = playerLabel ?? (isRB ? 'RB' : 'QB')
+export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, activeCategory, resetKey, onChipTap, types = TYPES, isLite = false, qbPool = QBS, savedResult = null, onSaveResult, onPhaseChange, gameKey, onReset, adsDisabled = false, isRB = false, isWR = false, isBucket = false, isVersusMode = false, attrMap = ATTR, categoriesData = CATEGORIES, teamsPool = TEAMS, logoDir = '/logos/', playerLabel, headshotsMap = HEADSHOTS, headshotsDir = '/headshots/', hideTeamResult = false, headshotFallback = () => null }) {
+  const pLabel = playerLabel ?? (isWR ? 'WR' : isRB ? 'RB' : 'QB')
   const [phase, setPhase]               = useState(() => savedResult?.selectedQB ? 'done' : 'idle')
   const [selectedTeam, setSelectedTeam] = useState(() => savedResult?.selectedTeam ?? null)
   const [selectedQB,   setSelectedQB]   = useState(() => savedResult?.selectedQB ?? null)
@@ -495,6 +495,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
             )}
           </div>
 
+
           {isDone && selectedQB && (
             <div className="qb-reveal-card" style={{ '--qb-color': selectedQB.color }}>
               <div className="qb-reveal-hero">
@@ -510,7 +511,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
                 <div className="qb-reveal-name">{selectedQB.name}</div>
                 <div className="qb-reveal-meta">
                   {selectedQB.teamName ?? selectedQB.team}
-                  {!isBucket && (selectedQB.starter ? '' : ' · Bench')}
+                  {!isBucket && !isWR && (selectedQB.starter ? '' : ' · Bench')}
                 </div>
                 {selectedQB.years && (
                   <div className="qb-reveal-year">{selectedQB.years}</div>
@@ -536,7 +537,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
                   ? types.filter(t => !build[t]).map(t => {
                       const meta = attrMap[t]
                       const val  = selectedQB.attrs[t]
-                      return <Chip key={t} type={t} meta={meta} val={val} selectedQB={selectedQB} draggingType={draggingType} onChipTap={onChipTap} onDragStart={onDragStart} onDragEnd={onDragEnd} setDraggingType={setDraggingType} hideGrades={isVersusMode || hideGrades} headshotsMap={headshotsMap} headshotsDir={headshotsDir} isBucket={isBucket} headshotFallback={headshotFallback} />
+                      return <Chip key={t} type={t} meta={meta} val={val} selectedQB={selectedQB} draggingType={draggingType} onChipTap={onChipTap} onDragStart={onDragStart} onDragEnd={onDragEnd} setDraggingType={setDraggingType} hideGrades={isVersusMode || hideGrades} headshotsMap={headshotsMap} headshotsDir={headshotsDir} isBucket={isBucket} isWR={isWR} headshotFallback={headshotFallback} />
                     })
                   : visibleCategories.map((cat, catIdx) => {
                       const available = cat.types.filter(type => types.includes(type) && !build[type])
@@ -551,7 +552,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
                           {available.map(type => {
                             const meta = attrMap[type]
                             const val  = selectedQB.attrs[type]
-                            return <Chip key={type} type={type} meta={meta} val={val} selectedQB={selectedQB} draggingType={draggingType} onChipTap={onChipTap} onDragStart={onDragStart} onDragEnd={onDragEnd} setDraggingType={setDraggingType} hideGrades={isVersusMode || hideGrades} headshotsMap={headshotsMap} headshotsDir={headshotsDir} isBucket={isBucket} headshotFallback={headshotFallback} />
+                            return <Chip key={type} type={type} meta={meta} val={val} selectedQB={selectedQB} draggingType={draggingType} onChipTap={onChipTap} onDragStart={onDragStart} onDragEnd={onDragEnd} setDraggingType={setDraggingType} hideGrades={isVersusMode || hideGrades} headshotsMap={headshotsMap} headshotsDir={headshotsDir} isBucket={isBucket} isWR={isWR} headshotFallback={headshotFallback} />
                           })}
                         </div>
                       )

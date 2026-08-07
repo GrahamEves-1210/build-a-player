@@ -1,16 +1,16 @@
 import { useState, useRef, useEffect } from 'react'
 
-const STEPS_DESKTOP = (isRB) => [
-  { n: '1', title: 'Spin',      body: `Pull a random NFL team, then an ${isRB ? 'RB' : 'QB'} from their roster.` },
+const STEPS_DESKTOP = (isRB, isWR) => [
+  { n: '1', title: 'Spin',      body: `Pull a random NFL team, then a${isWR ? ' WR' : isRB ? 'n RB' : 'n QB'} from their roster.` },
   { n: '2', title: 'Drag',      body: 'Drop one stat onto the matching zone on the player silhouette.' },
   { n: '3', title: 'Repeat ×9', body: 'Fill all nine attribute slots — one per spin.' },
-  { n: '4', title: 'Simulate',  body: `Hit Simulate to see how your Frankenstein ${isRB ? 'RB' : 'QB'} performs.` },
+  { n: '4', title: 'Simulate',  body: `Hit Simulate to see how your Frankenstein ${isWR ? 'WR' : isRB ? 'RB' : 'QB'} performs.` },
 ]
-const STEPS_MOBILE = (isRB) => [
-  { n: '1', title: 'Spin',      body: `Pull a random NFL team, then an ${isRB ? 'RB' : 'QB'} from their roster.` },
+const STEPS_MOBILE = (isRB, isWR) => [
+  { n: '1', title: 'Spin',      body: `Pull a random NFL team, then a${isWR ? ' WR' : isRB ? 'n RB' : 'n QB'} from their roster.` },
   { n: '2', title: 'Tap',       body: 'Tap a stat chip to instantly assign it to your build.' },
   { n: '3', title: 'Repeat ×9', body: 'Fill all nine attribute slots — one per spin.' },
-  { n: '4', title: 'Simulate',  body: `Hit Simulate to see how your Frankenstein ${isRB ? 'RB' : 'QB'} performs.` },
+  { n: '4', title: 'Simulate',  body: `Hit Simulate to see how your Frankenstein ${isWR ? 'WR' : isRB ? 'RB' : 'QB'} performs.` },
 ]
 
 const BUCKET_STEPS_DESKTOP = [
@@ -176,19 +176,21 @@ const PERKS = [
   'PLUS badge on leaderboard entries',
 ]
 
-export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, onLeaderboard, onSwitchPosition, onSwitchBucketPosition, onSubscribe, onOpenCustomRatings, user, gameMode, isRB, isPlus, isBucket, bucketPosition, versusState }) {
+export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, onLeaderboard, onSwitchPosition, onSwitchBucketPosition, onSubscribe, onOpenCustomRatings, user, gameMode, isRB, isWR, position, isPlus, isBucket, bucketPosition, versusState }) {
   const [open,         setOpen]        = useState(false)
   const [htpOpen,      setHtpOpen]     = useState(false)
   const [installOpen,  setInstallOpen] = useState(false)
   const [plusWmOpen,   setPlusWmOpen]  = useState(false)
+  const [posDropOpen,  setPosDropOpen] = useState(false)
   const ref = useRef(null)
+  const posDropRef = useRef(null)
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768
   const isStandalone = typeof window !== 'undefined' && window.matchMedia('(display-mode: standalone)').matches
   const isIOS = typeof navigator !== 'undefined' && /iPhone|iPad|iPod/i.test(navigator.userAgent)
   const isAndroid = typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent)
   const STEPS = isBucket
     ? (isMobile ? BUCKET_STEPS_MOBILE : BUCKET_STEPS_DESKTOP)
-    : (isMobile ? STEPS_MOBILE(isRB) : STEPS_DESKTOP(isRB))
+    : (isMobile ? STEPS_MOBILE(isRB, isWR) : STEPS_DESKTOP(isRB, isWR))
 
   useEffect(() => {
     if (!open) return
@@ -196,6 +198,13 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
     document.addEventListener('mousedown', close)
     return () => document.removeEventListener('mousedown', close)
   }, [open])
+
+  useEffect(() => {
+    if (!posDropOpen) return
+    const close = (e) => { if (posDropRef.current && !posDropRef.current.contains(e.target)) setPosDropOpen(false) }
+    document.addEventListener('mousedown', close)
+    return () => document.removeEventListener('mousedown', close)
+  }, [posDropOpen])
 
   const handleReset       = () => { onReset?.();       setOpen(false) }
   const handleAbout       = () => { onAbout?.();       setOpen(false) }
@@ -263,16 +272,34 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
           </>
         )
       ) : (
-        <>
-          <button className="tab-pill tab-pill-qb active">
-            {isRB ? 'Build-A-RB' : 'Build-A-QB'}
+        <div className="nav-pos-dropdown" ref={posDropRef}>
+          <button
+            className="tab-pill tab-pill-qb active nav-pos-trigger"
+            onClick={() => setPosDropOpen(o => !o)}
+          >
+            {isWR ? 'Build-A-WR' : isRB ? 'Build-A-RB' : 'Build-A-QB'}
+            <IconChevron up={posDropOpen} />
           </button>
-          <div className="nav-pills-soon">
-            <button className="tab-pill tab-pill-rb" onClick={() => onSwitchPosition?.(isRB ? 'qb' : 'rb')}>
-              {isRB ? 'Build-A-QB' : 'Build-A-RB'}
-            </button>
-          </div>
-        </>
+          {posDropOpen && (
+            <div className="nav-pos-menu">
+              {!isWR && (
+                <button className="nav-pos-item" onClick={() => { setPosDropOpen(false); onSwitchPosition?.('wr') }}>
+                  Build-A-WR
+                </button>
+              )}
+              {!isRB && (
+                <button className="nav-pos-item" onClick={() => { setPosDropOpen(false); onSwitchPosition?.('rb') }}>
+                  Build-A-RB
+                </button>
+              )}
+              {(isRB || isWR) && (
+                <button className="nav-pos-item" onClick={() => { setPosDropOpen(false); onSwitchPosition?.('qb') }}>
+                  Build-A-QB
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       )}
 
       <div className="nav-right" ref={ref}>

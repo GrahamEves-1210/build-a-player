@@ -570,7 +570,7 @@ export const NBA_GUARD_PLAYERS = [
 
   // ─── MIN ───────────────────────────────────────────────────────────
   { name: "LaMelo Ball", short: "LaMelo", team: 'MIN', starter: true, captain: true,
-    attrs: { jumpShot:6, finishing:7, passing:10, handles:9, perimeterDefense:4, speed:8, bounce:7, size:4, basketballIQ:7, clutch:4 } },
+    attrs: { jumpShot:6, finishing:7, passing:10, handles:9, perimeterDefense:4, speed:8, bounce:7, size:8, basketballIQ:7, clutch:4 } },
 
   { name: "Donte DiVincenzo", short: "DiVincenzo", team: 'MIN', starter: false, captain: false,
     attrs: { jumpShot:6, finishing:5, passing:4, handles:5, perimeterDefense:6, speed:7, bounce:7, size:5, basketballIQ:4, clutch:4 } },
@@ -944,7 +944,7 @@ export const NBA_GUARD_PLAYERS = [
     attrs: { jumpShot:7, finishing:5, passing:10, handles:10, perimeterDefense:0, speed:7, bounce:3, size:0, basketballIQ:8, clutch:9 } },
 
   { name: "Giannis Antetokounmpo", short: "Giannis", team: 'MIA', posGroup: 'guard', starter: true, captain: true,
-    attrs: { jumpShot:4, finishing:11, passing:8, handles:7, perimeterDefense:9, speed:10, bounce:8, size:9, basketballIQ:9, clutch:10 } },
+    attrs: { jumpShot:4, finishing:11, passing:8, handles:7, perimeterDefense:9, speed:10, bounce:8, size:11, basketballIQ:9, clutch:10 } },
 
   { name: "Paolo Banchero", short: "Banchero", team: 'ORL', posGroup: 'guard', starter: true, captain: true,
     attrs: { jumpShot:5, finishing:8, passing:7, handles:7, perimeterDefense:5, speed:6, bounce:6, size:8, basketballIQ:7, clutch:6 } }
@@ -1183,7 +1183,7 @@ export const NBA_BIG_PLAYERS = [
     attrs: { jumpShot:4, finishing:8, rebounding:8, playmaking:7, interiorDefense:10, speed:7, bounce:6, size:7, basketballIQ:9, clutch:8 } },
 
   { name: "Giannis Antetokounmpo", short: "Giannis", team: 'MIA', starter: true, captain: true,
-    attrs: { jumpShot:4, finishing:11, rebounding:8, playmaking:8, interiorDefense:9, speed:10, bounce:8, size:9, basketballIQ:9, clutch:10 } },
+    attrs: { jumpShot:4, finishing:11, rebounding:8, playmaking:8, interiorDefense:9, speed:10, bounce:8, size:11, basketballIQ:9, clutch:10 } },
 
   { name: "Bobby Portis", short: "Portis", team: 'MIA', starter: false, captain: false,
     attrs: { jumpShot:8, finishing:6, rebounding:8, playmaking:3, interiorDefense:4, speed:4, bounce:5, size:7, basketballIQ:6, clutch:5 } },
@@ -1222,6 +1222,9 @@ export const NBA_BIG_PLAYERS = [
 
   { name: "Derik Queen", short: "Queen", team: 'NOP', starter: true, captain: false,
     attrs: { jumpShot:3, finishing:7, rebounding:7, playmaking:7, interiorDefense:5, speed:5, bounce:4, size:6, basketballIQ:6, clutch:7 } },
+
+  { name: "Hunter Dickinson", short: "Dickinson", team: 'NOP', starter: true, captain: false,
+    attrs: { jumpShot:5, finishing:7, rebounding:8, playmaking:3, interiorDefense:6, speed:2, bounce:3, size:9, basketballIQ:5, clutch:4 } },
 
   { name: "Zion Williamson", short: "Zion", team: 'NOP', starter: true, captain: true,
     attrs: { jumpShot:3, finishing:10, rebounding:4, playmaking:6, interiorDefense:2, speed:8, bounce:11, size:7, basketballIQ:4, clutch:3 } },
@@ -1428,7 +1431,7 @@ export const NBA_ALLTIME_GUARD_PLAYERS = [
   { name: "Kemba Walker", short: "Kemba", team: 'CHA', starter: true, captain: true, number: 15, ht: "6'1\"", wt: 184, years: '2011–19',
     attrs: { jumpShot:8, finishing:8, passing:6, handles:9, perimeterDefense:4, speed:8, bounce:5, size:2, basketballIQ:7, clutch:8 } },
   { name: "Muggsy Bogues", short: "Bogues", team: 'CHA', starter: true, captain: false, number: 14, ht: "5'3\"", wt: 136, years: '1988–97',
-    attrs: { jumpShot:4, finishing:5, passing:8, handles:10, perimeterDefense:8, speed:11, bounce:4, size:0, basketballIQ:8, clutch:6 } },
+    attrs: { jumpShot:4, finishing:8, passing:8, handles:9, perimeterDefense:6, speed:9, bounce:10, size:0, basketballIQ:8, clutch:6 } },
   { name: "Dell Curry", short: "D. Curry", team: 'CHA', starter: false, captain: false, number: 30, ht: "6'5\"", wt: 200, years: '1988–98',
     attrs: { jumpShot:9, finishing:4, passing:3, handles:4, perimeterDefense:3, speed:6, bounce:3, size:6, basketballIQ:6, clutch:7 } },
   { name: "LaMelo Ball", short: "LaMelo", team: 'CHA', starter: true, captain: false, number: 2, ht: "6'7\"", wt: 180, years: '2020–',
@@ -1565,7 +1568,7 @@ export const NBA_ALLTIME_GUARD_PLAYERS = [
 
   // ─── MIA ───────────────────────────────────────────────────────────
   { name: "Dwyane Wade", short: "D-Wade", team: 'MIA', starter: true, captain: true, number: 3, ht: "6'4\"", wt: 220, years: '2003–19',
-    attrs: { jumpShot:8, finishing:11, passing:7, handles:8, perimeterDefense:8, speed:9, bounce:8, size:5, basketballIQ:8, clutch:10 } },
+    attrs: { jumpShot:8, finishing:11, passing:7, handles:8, perimeterDefense:8, speed:11, bounce:8, size:5, basketballIQ:8, clutch:10 } },
   { name: "LeBron James", short: "LeBron", team: 'MIA', starter: true, captain: false, number: 6, ht: "6'9\"", wt: 250, years: '2010–14',
     attrs: { jumpShot:7, finishing:11, passing:11, handles:8, perimeterDefense:7, speed:11, bounce:11, size:10, basketballIQ:10, clutch:9 } },
   { name: "Tim Hardaway", short: "T. Hardaway", team: 'MIA', starter: false, captain: false, number: 10, ht: "6'0\"", wt: 195, years: '1996–01',
@@ -1895,7 +1898,7 @@ export const NBA_ALLTIME_BIG_PLAYERS = [
   { name: "Kareem Abdul-Jabbar", short: "Kareem", team: 'MIL', starter: true, captain: true, number: 33, ht: "7'2\"", wt: 267, years: '1969–75',
     attrs: { jumpShot:6, finishing:11, rebounding:9, playmaking:4, interiorDefense:9, speed:5, bounce:7, size:11, basketballIQ:10, clutch:8 } },
   { name: "Giannis Antetokounmpo", short: "Giannis", team: 'MIL', starter: true, captain: true, number: 34, ht: "6'11\"", wt: 242, years: '2013–',
-    attrs: { jumpShot:4, finishing:11, rebounding:9, playmaking:8, interiorDefense:8, speed:10, bounce:9, size:9, basketballIQ:8, clutch:8 } },
+    attrs: { jumpShot:4, finishing:11, rebounding:9, playmaking:8, interiorDefense:8, speed:10, bounce:9, size:11, basketballIQ:8, clutch:8 } },
   { name: "Terry Cummings", short: "Cummings", team: 'MIL', starter: false, captain: false, number: 35, ht: "6'9\"", wt: 235, years: '1984–89',
     attrs: { jumpShot:7, finishing:8, rebounding:8, playmaking:3, interiorDefense:4, speed:6, bounce:7, size:7, basketballIQ:6, clutch:6 } },
 

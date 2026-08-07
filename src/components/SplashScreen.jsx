@@ -35,6 +35,18 @@ const RB_ATTRS = [
   { label: 'Elusiveness',     col: '#a78bfa', angle: -160, dist: 1.28, mx: 3,  my: 48, doy: 200 },
 ]
 
+const WR_ATTRS = [
+  { label: 'Speed',        col: '#f87171', angle:  -35, dist: 1.32, mx: 58, my: 14 },
+  { label: 'Body Control', col: '#60a5fa', angle:   55, dist: 1.30, mx: 3,  my: 30 },
+  { label: 'Vertical',     col: '#34d399', angle:   15, dist: 1.28, mx: 62, my: 52 },
+  { label: 'Size',         col: '#fb923c', angle:  210, dist: 1.31, mx: 4,  my: 62 },
+  { label: 'Route Running',col: '#2dd4bf', angle: -130, dist: 1.30, mx: 55, my: 72 },
+  { label: 'Release',      col: '#e879f9', angle:  -70, dist: 1.29, mx: 5,  my: 18, doy: -30, dox: 140 },
+  { label: 'Hands',        col: '#fbbf24', angle:  100, dist: 1.32, mx: 60, my: 34, dox: -210 },
+  { label: 'Awareness',    col: '#a78bfa', angle: -160, dist: 1.28, mx: 3,  my: 48, doy: 200 },
+  { label: 'After Catch',  col: '#38bdf8', angle:   80, dist: 1.31, mx: 74, my: 44, dox: 270 },
+]
+
 function FloatingChip({ label, col, angle, dist, visible, mx, my, isMobile, orbitScale = 1, dox = 0, doy = 0 }) {
   const x = isMobile ? mx : 50 + dist * 34 * orbitScale * Math.cos((angle * Math.PI) / 180)
   const y = isMobile ? my : 48 + dist * 30 * orbitScale * Math.sin((angle * Math.PI) / 180)
@@ -76,7 +88,7 @@ export default function SplashScreen({ onStart, onDepthChart }) {
     return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3) }
   }, [])
 
-  const attrs = position === 'rb' ? RB_ATTRS : QB_ATTRS
+  const attrs = position === 'wr' ? WR_ATTRS : position === 'rb' ? RB_ATTRS : QB_ATTRS
 
   return (
     <div className={`splash-screen ${phase >= 1 ? 'splash-in' : ''}`}>
@@ -106,6 +118,10 @@ export default function SplashScreen({ onStart, onDepthChart }) {
             className={`splash-pos-btn ${position === 'rb' ? 'splash-pos-btn--active' : ''}`}
             onClick={() => setPosition('rb')}
           >RB</button>
+          <button
+            className={`splash-pos-btn ${position === 'wr' ? 'splash-pos-btn--active' : ''}`}
+            onClick={() => setPosition('wr')}
+          >WR<span className="splash-pos-new">new</span></button>
         </div>
       </div>
 
@@ -114,6 +130,8 @@ export default function SplashScreen({ onStart, onDepthChart }) {
           style={{ position: 'absolute', inset: 0, opacity: position === 'qb' ? 1 : 0 }} />
         <img src="/rbsilhouette.webp" className="splash-figure" alt="" draggable={false}
           style={{ position: 'absolute', inset: 0, opacity: position === 'rb' ? 1 : 0 }} />
+        <img src="/wr-silhouette.png" className="splash-figure" alt="" draggable={false}
+          style={{ position: 'absolute', inset: 0, opacity: position === 'wr' ? 1 : 0, transform: 'scale(1.18)', transformOrigin: 'center center' }} />
         <div className="splash-figure-glow" />
       </div>
 
@@ -133,7 +151,7 @@ export default function SplashScreen({ onStart, onDepthChart }) {
         <div className="splash-modes">
           <button className="splash-mode-classic" onClick={() => { localStorage.setItem('lastPosition', position); onStart('classic', position) }}>
             <div className="smode-title">Classic</div>
-            <div className="smode-badge">Current {position === 'rb' ? 'RBs' : 'QBs'}</div>
+            <div className="smode-badge">Current {position === 'rb' ? 'RBs' : position === 'wr' ? 'WRs' : 'QBs'}</div>
             <div className="smode-cta">
               START DRAFTING
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -142,20 +160,34 @@ export default function SplashScreen({ onStart, onDepthChart }) {
             </div>
           </button>
 
-          <button
-            className="splash-mode-alltime"
-            onClick={() => { localStorage.setItem('lastPosition', position); onStart('all-time', position) }}
-          >
-            <span className="smode-new-badge">NEW</span>
-            <div className="smode-title smode-title--alltime">All-Time</div>
-            <div className="smode-badge smode-badge--alltime">Draft the Greats</div>
-            <div className="smode-cta smode-cta--alltime">
-              START DRAFTING
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M5 12h14M12 5l7 7-7 7"/>
-              </svg>
-            </div>
-          </button>
+          {position === 'wr' ? (
+            <button className="splash-mode-alltime splash-mode-alltime--soon" disabled>
+              <div className="splash-mode-alltime--soon-banner">COMING SOON</div>
+              <div className="smode-title smode-title--alltime">All-Time</div>
+              <div className="smode-badge smode-badge--alltime">Draft the Greats</div>
+              <div className="smode-cta smode-cta--alltime">
+                START DRAFTING
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M5 12h14M12 5l7 7-7 7"/>
+                </svg>
+              </div>
+            </button>
+          ) : (
+            <button
+              className="splash-mode-alltime"
+              onClick={() => { localStorage.setItem('lastPosition', position); onStart('all-time', position) }}
+            >
+              <span className="smode-new-badge">NEW</span>
+              <div className="smode-title smode-title--alltime">All-Time</div>
+              <div className="smode-badge smode-badge--alltime">Draft the Greats</div>
+              <div className="smode-cta smode-cta--alltime">
+                START DRAFTING
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M5 12h14M12 5l7 7-7 7"/>
+                </svg>
+              </div>
+            </button>
+          )}
         </div>
 
         <button className="splash-minigame-btn splash-minigame-btn--bucket" onClick={() => window.location.href = '/bucket'}>

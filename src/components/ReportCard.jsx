@@ -2,12 +2,13 @@ import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { ATTR, TYPES, QB_PHYSICALS } from '../data/qbs'
 import { RB_PHYSICALS } from '../data/rbs'
+import { WR_PHYSICALS } from '../data/wrs'
 import { QB_LEGEND_PHYSICALS } from '../data/legends'
 import { RB_LEGEND_PHYSICALS } from '../data/rb-legends'
 import NBA_MEASUREMENTS from '../data/nba-measurements.json'
 const ALL_QB_PHYS = { ...QB_LEGEND_PHYSICALS, ...QB_PHYSICALS }
 const ALL_RB_PHYS = { ...RB_LEGEND_PHYSICALS, ...RB_PHYSICALS }
-import { calcOVR, calcOVRRB, getArchetype, getArchetypeRB, calcBalance, valToGrade } from '../utils/simulation'
+import { calcOVR, calcOVRRB, calcOVRWR, getArchetype, getArchetypeRB, getArchetypeWR, calcBalance, valToGrade } from '../utils/simulation'
 import { calcBucketOVR, getBucketGuardArchetype, getBucketBigArchetype } from '../utils/bucketSimulation'
 import { buildShareUrl } from '../utils/shareUrl'
 import { generateBucketShareCard, shareOrDownloadCard } from '../utils/generateShareCard'
@@ -279,12 +280,12 @@ export function ShareModal({ ovr, arch, build, types, onClose, isBucket = false,
 
 // ── ReportCard ────────────────────────────────────────────────────────────────
 
-export default function ReportCard({ build, onSimulate, onReset, types = TYPES, hasResult = false, isRB = false, isBucket = false, bucketPosition = 'guard', isPlus = false, isCustomMode = false, onOpenCustomModal, onSandboxToggle, attrMap = ATTR, logoDir = '/logos/', captureFigure, isSalaryMode = false, isVersusMode = false, oppPosition = null, oppFilledCount = 0, oppTotal = null }) {
+export default function ReportCard({ build, onSimulate, onReset, types = TYPES, hasResult = false, isRB = false, isWR = false, isBucket = false, bucketPosition = 'guard', isPlus = false, isCustomMode = false, onOpenCustomModal, onSandboxToggle, attrMap = ATTR, logoDir = '/logos/', captureFigure, isSalaryMode = false, isVersusMode = false, oppPosition = null, oppFilledCount = 0, oppTotal = null }) {
   const filled = types.filter(t => build[t])
-  const ovr = isBucket ? calcBucketOVR(build, types, bucketPosition) : isRB ? calcOVRRB(build, types) : calcOVR(build, types)
+  const ovr = isBucket ? calcBucketOVR(build, types, bucketPosition) : isWR ? calcOVRWR(build, types) : isRB ? calcOVRRB(build, types) : calcOVR(build, types)
   const arch = isBucket
     ? (bucketPosition === 'big' ? getBucketBigArchetype(ovr, build, types) : getBucketGuardArchetype(ovr, build, types))
-    : isRB ? getArchetypeRB(ovr, build, types) : getArchetype(ovr, build, types)
+    : isWR ? getArchetypeWR(ovr, build, types) : isRB ? getArchetypeRB(ovr, build, types) : getArchetype(ovr, build, types)
   const balance = calcBalance(build, types)
   const complete = filled.length === types.length
   const [showChevron, setShowChevron] = useState(true)
@@ -305,6 +306,10 @@ export default function ReportCard({ build, onSimulate, onReset, types = TYPES, 
     const phys = slot ? NBA_MEASUREMENTS[slot.qbFull] : null
     heightStr = phys ? fmtHeight(phys.height) : (slot?.height ? fmtHeight(slot.height) : null)
     weightLbs = phys ? phys.weight : (slot?.weight ?? null)
+  } else if (isWR) {
+    const wrPhys = build['size'] ? WR_PHYSICALS[build['size'].qbFull] : null
+    heightStr = wrPhys ? fmtHeight(wrPhys.height) : null
+    weightLbs = wrPhys ? wrPhys.weight : null
   } else if (isRB) {
     const rbPhys = build['size'] ? ALL_RB_PHYS[build['size'].qbFull] : null
     heightStr = rbPhys ? fmtHeight(rbPhys.height) : null

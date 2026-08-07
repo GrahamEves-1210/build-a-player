@@ -285,6 +285,13 @@ export const ATTR = {
   'balance':         { label: 'Contact Balance',       shortLabel: 'BAL',  category: 'skill',    col: 'var(--c-pkt)',  hex: '#2dd4bf', bodyZone: 'core'   },
   'elusiveness':     { label: 'Elusiveness',           shortLabel: 'ELU',  category: 'physical', col: 'var(--c-lead)', hex: '#a78bfa', bodyZone: 'legs'   },
   'carrying':        { label: 'Carrying',               shortLabel: 'CAR',  category: 'skill',    col: 'var(--c-str)',  hex: '#fb923c', bodyZone: 'hand'   },
+  // WR attributes
+  'agility':         { label: 'Agility',               shortLabel: 'AGI',  category: 'physical', col: 'var(--c-mob)',  hex: '#60a5fa', bodyZone: 'legs'   },
+  'vertical':        { label: 'Vertical',              shortLabel: 'VRT',  category: 'physical', col: 'var(--c-lead)', hex: '#a78bfa', bodyZone: 'torso'  },
+  'routeRunning':    { label: 'Route Running',         shortLabel: 'RTE',  category: 'skill',    col: 'var(--c-acc)',  hex: '#34d399', bodyZone: 'legs'   },
+  'release':         { label: 'Release',               shortLabel: 'REL',  category: 'skill',    col: 'var(--c-pkt)',  hex: '#2dd4bf', bodyZone: 'hand'   },
+  'awareness':       { label: 'Awareness/Grit',        shortLabel: 'AWR',  category: 'mental',   col: 'var(--c-iq)',   hex: '#e879f9', bodyZone: 'head'   },
+  'afterCatch':      { label: 'After Catch',            shortLabel: 'YAC',  category: 'skill',    col: 'var(--c-comp)', hex: '#fbbf24', bodyZone: 'legs'   },
 }
 
 export const TYPES      = ['arm', 'legs', 'size', 'processing', 'leadership', 'vision', 'playmaking', 'accuracy', 'pocket-presence']

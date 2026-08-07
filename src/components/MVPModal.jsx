@@ -1,8 +1,9 @@
-﻿import { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import HEADSHOTS from '../data/headshots.json'
+import { nflHeadshot } from '../utils/simulation'
 import QBAvatar from './QBAvatar'
 
-export default function MVPModal({ result, mvpResult, onDismiss, toSuperBowl = false, isRB = false }) {
+export default function MVPModal({ result, mvpResult, onDismiss, toSuperBowl = false, isRB = false, isWR = false }) {
   const [phase, setPhase] = useState('loading')
   const [barWidth, setBarWidth] = useState(0)
   const [visible, setVisible] = useState(false)
@@ -16,17 +17,23 @@ export default function MVPModal({ result, mvpResult, onDismiss, toSuperBowl = f
   const rbRushYds  = result.seasonRushYds ?? 0
   const rbRecYds   = result.seasonRecYds  ?? 0
   const rbTotalTDs = rbRushTDs + rbRecTDs
-  const rbTotalYds = rbRushYds + rbRecYds
+
+  // WR totals
+  const wrRecYds  = result.seasonRecYds  ?? 0
+  const wrRecTDs  = result.seasonRecTDs  ?? 0
+  const wrRecs    = result.seasonRecs    ?? 0
+  const wrLong    = result.seasonLong    ?? 0
 
   // QB totals
   const qbTotalTDs = (seasonTDs ?? 0) + (seasonRushTDs ?? 0)
   const qbTotalYds = (seasonPassYds ?? 0) + (seasonRushYds ?? 0)
 
-  const awardLabel    = isRB ? 'OPOY Award'        : 'MVP Award'
+  const isOPOY = isRB || isWR
+  const awardLabel    = isOPOY ? 'OPOY Award'           : 'MVP Award'
   const awardEyebrow  = 'NFL Regular Season'
-  const userWinsLabel = isRB ? 'Your Build Wins OPOY' : 'Your Build Wins MVP'
-  const unanimousLbl  = isRB ? 'Unanimous OPOY'       : 'Unanimous MVP'
-  const regularLbl    = isRB ? 'Regular Season OPOY'  : 'Regular Season MVP'
+  const userWinsLabel = isOPOY ? 'Your Build Wins OPOY' : 'Your Build Wins MVP'
+  const unanimousLbl  = isOPOY ? 'Unanimous OPOY'       : 'Unanimous MVP'
+  const regularLbl    = isOPOY ? 'Regular Season OPOY'  : 'Regular Season MVP'
 
   useEffect(() => {
     const t0 = setTimeout(() => setVisible(true), 30)
@@ -35,9 +42,7 @@ export default function MVPModal({ result, mvpResult, onDismiss, toSuperBowl = f
     return () => { clearTimeout(t0); clearTimeout(t1); clearTimeout(t2) }
   }, [])
 
-  const winnerHeadshot = winner && HEADSHOTS[winner.name]
-    ? `/headshots/${HEADSHOTS[winner.name]}.webp`
-    : null
+  const winnerHeadshot = winner ? nflHeadshot(HEADSHOTS[winner.name]) : null
 
   return (
     <div className={`mvp-overlay ${visible ? 'mvp-overlay-in' : ''}`}>
@@ -59,7 +64,19 @@ export default function MVPModal({ result, mvpResult, onDismiss, toSuperBowl = f
               <div className="mvp-stat-pill">
                 <span>{wins}–{losses}</span><span>W–L</span>
               </div>
-              {isRB ? (
+              {isWR ? (
+                <>
+                  <div className="mvp-stat-pill">
+                    <span>{wrRecYds.toLocaleString()}</span><span>Rec Yds</span>
+                  </div>
+                  <div className="mvp-stat-pill">
+                    <span>{wrRecs}</span><span>Recs</span>
+                  </div>
+                  <div className="mvp-stat-pill">
+                    <span>{wrRecTDs}</span><span>TDs</span>
+                  </div>
+                </>
+              ) : isRB ? (
                 <>
                   <div className="mvp-stat-pill">
                     <span>{rbRushYds.toLocaleString()}</span><span>Rush Yds</span>
@@ -96,7 +113,30 @@ export default function MVPModal({ result, mvpResult, onDismiss, toSuperBowl = f
                 <img src="/mvp.png" alt="Trophy" className="mvp-trophy-img" draggable={false} />
                 <div className="mvp-winner-name">{unanimous ? unanimousLbl : regularLbl}</div>
                 <div className="mvp-season-stats">
-                  {isRB ? (
+                  {isWR ? (
+                    <>
+                      <div className="mvp-stat-row">
+                        <span className="mvp-stat-label">Record</span>
+                        <span className="mvp-stat-val">{wins}–{losses}</span>
+                      </div>
+                      <div className="mvp-stat-row">
+                        <span className="mvp-stat-label">Rec Yards</span>
+                        <span className="mvp-stat-val">{wrRecYds.toLocaleString()}</span>
+                      </div>
+                      <div className="mvp-stat-row">
+                        <span className="mvp-stat-label">Receptions</span>
+                        <span className="mvp-stat-val">{wrRecs}</span>
+                      </div>
+                      <div className="mvp-stat-row">
+                        <span className="mvp-stat-label">Rec TDs</span>
+                        <span className="mvp-stat-val">{wrRecTDs}</span>
+                      </div>
+                      <div className="mvp-stat-row">
+                        <span className="mvp-stat-label">Long Rec</span>
+                        <span className="mvp-stat-val">{wrLong} yds</span>
+                      </div>
+                    </>
+                  ) : isRB ? (
                     <>
                       <div className="mvp-stat-row">
                         <span className="mvp-stat-label">Record</span>
@@ -165,10 +205,50 @@ export default function MVPModal({ result, mvpResult, onDismiss, toSuperBowl = f
                 <div className="mvp-winner-name">{winner.name}</div>
                 <div className="mvp-winner-sub">
                   {winner.team}
-                  {isRB && <span className="mvp-winner-pos">{winner.pos}</span>}
+                  {isOPOY && <span className="mvp-winner-pos">{winner.pos}</span>}
                 </div>
                 <div className="mvp-season-stats">
-                  {isRB ? (
+                  {isWR ? (
+                    winner.pos === 'RB' ? (
+                      <>
+                        <div className="mvp-stat-row">
+                          <span className="mvp-stat-label">Record</span>
+                          <span className="mvp-stat-val">{winnerStats.wins}–{winnerStats.losses}</span>
+                        </div>
+                        <div className="mvp-stat-row">
+                          <span className="mvp-stat-label">Rush Yards</span>
+                          <span className="mvp-stat-val">{winnerStats.rushYds?.toLocaleString()}</span>
+                        </div>
+                        <div className="mvp-stat-row">
+                          <span className="mvp-stat-label">Rec Yards</span>
+                          <span className="mvp-stat-val">{winnerStats.recYds?.toLocaleString()}</span>
+                        </div>
+                        <div className="mvp-stat-row">
+                          <span className="mvp-stat-label">Touchdowns</span>
+                          <span className="mvp-stat-val">{winnerStats.tds}</span>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="mvp-stat-row">
+                          <span className="mvp-stat-label">Record</span>
+                          <span className="mvp-stat-val">{winnerStats.wins}–{winnerStats.losses}</span>
+                        </div>
+                        <div className="mvp-stat-row">
+                          <span className="mvp-stat-label">Rec Yards</span>
+                          <span className="mvp-stat-val">{winnerStats.recYds?.toLocaleString()}</span>
+                        </div>
+                        <div className="mvp-stat-row">
+                          <span className="mvp-stat-label">Receptions</span>
+                          <span className="mvp-stat-val">{winnerStats.recs}</span>
+                        </div>
+                        <div className="mvp-stat-row">
+                          <span className="mvp-stat-label">Rec TDs</span>
+                          <span className="mvp-stat-val">{winnerStats.recTDs}</span>
+                        </div>
+                      </>
+                    )
+                  ) : isRB ? (
                     winner.pos === 'WR' ? (
                       <>
                         <div className="mvp-stat-row">

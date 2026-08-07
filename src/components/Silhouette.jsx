@@ -1,6 +1,7 @@
 ﻿import { useState, useRef, useLayoutEffect, useEffect, useCallback, useMemo } from 'react'
 import { ATTR, TYPES, CATEGORIES, QB_PHYSICALS } from '../data/qbs'
 import { RB_CATEGORIES, RB_PHYSICALS } from '../data/rbs'
+import { WR_CATEGORIES, WR_PHYSICALS } from '../data/wrs'
 import { QB_LEGEND_PHYSICALS } from '../data/legends'
 import { RB_LEGEND_PHYSICALS } from '../data/rb-legends'
 import NBA_MEASUREMENTS from '../data/nba-measurements.json'
@@ -21,6 +22,7 @@ function lightenHex(hex, amt) {
 }
 import QBFigureOverlay from './QBFigureOverlay'
 import RBFigureOverlay from './RBFigureOverlay'
+import WRFigureOverlay from './WRFigureOverlay'
 import BucketFigureOverlay from './BucketFigureOverlay'
 
 // Figure coordinate space (matches QB silhouette dimensions)
@@ -34,6 +36,8 @@ const RB_FIG_H = 865
 
 // CSS scale applied to the RB figure image + overlay
 const RB_FIGURE_SCALE = 0.90
+const WR_FIGURE_SCALE = 0.975
+const WR_FIGURE_SCALE_MOBILE = 1.005
 const BUCKET_FIGURE_SCALE = 1.10
 
 // QB anchor positions
@@ -62,6 +66,19 @@ const RB_ZONES = [
   { type: 'size',        ax: 315, ay: 245, side: 'right', cy: 0.28 },  // jersey
   { type: 'elusiveness', ax: 495, ay: 830, side: 'right', cy: 0.94 },  // left glove
   { type: 'speed',       ax: 300, ay: 510, side: 'right', cy: 0.72 },  // thighs
+]
+
+// WR zones — same silhouette as RB, WR attribute keys mapped to matching body positions
+const WR_ZONES = [
+  { type: 'awareness',    ax: 313, ay: 110, side: 'right', cy: 0.07 },
+  { type: 'size',         ax: 340, ay: 215, side: 'right', cy: 0.26 },
+  { type: 'vertical',     ax: 163, ay: 653, side: 'left',  cy: 0.61 },
+  { type: 'release',      ax: 500, ay: 635, side: 'right', cy: 0.64 },
+  { type: 'hands',        ax: 115, ay: 100, side: 'left',  cy: 0.15 },
+  { type: 'routeRunning', ax: 144, ay: 800, side: 'left',  cy: 0.84 },
+  { type: 'afterCatch',   ax: 280, ay: 230, side: 'right', cy: 0.45 },
+  { type: 'speed',        ax: 400, ay: 600, side: 'right', cy: 0.83 },
+  { type: 'bodyControl',  ax: 205, ay: 375, side: 'left',  cy: 0.38 },
 ]
 
 function useFigureBounds(ref, figW, figH) {
@@ -124,13 +141,17 @@ function CZCard({ zone, cardY, build, activeDrag, hidden, invisible, isMobile, a
   )
 }
 
-function HWTracker({ build, isRB = false, isBucket = false }) {
+function HWTracker({ build, isRB = false, isWR = false, isBucket = false }) {
   let ht, wt
   if (isBucket) {
     const phys = build['size'] ? NBA_MEASUREMENTS[build['size'].qbFull] : null
     const chip = build['size']
     ht = phys ? fmtHeight(phys.height) : (chip?.height ? fmtHeight(chip.height) : null)
     wt = phys ? phys.weight : (chip?.weight ?? null)
+  } else if (isWR) {
+    const wrPhys = build['size'] ? WR_PHYSICALS[build['size'].qbFull] : null
+    ht = wrPhys ? fmtHeight(wrPhys.height) : null
+    wt = wrPhys ? wrPhys.weight : null
   } else if (isRB) {
     const rbPhys = build['size'] ? ALL_RB_PHYS[build['size'].qbFull] : null
     ht = rbPhys ? fmtHeight(rbPhys.height) : null
@@ -204,10 +225,10 @@ function getDominantPlayer(build) {
   return sorted[0]?.[0] ?? null
 }
 
-export default function Silhouette({ build, activeDrag, onDrop, activeCategory, onCategoryChange, types = TYPES, isLite = false, onReset, isRB = false, isBucket = false, isPlus = false, isCustomMode = false, onOpenCustomModal, onSandboxToggle, attrMap = ATTR, categoriesData = CATEGORIES, figureRef }) {
-  const figW   = isBucket ? BUCKET_FIG_W : (isRB ? RB_FIG_W : FIG_W)
-  const figH   = isBucket ? BUCKET_FIG_H : (isRB ? RB_FIG_H : FIG_H)
-  const zones  = isBucket ? (types.includes('interiorDefense') ? BUCKET_BIG_ZONES : BUCKET_ZONES) : isRB ? RB_ZONES : ZONES
+export default function Silhouette({ build, activeDrag, onDrop, activeCategory, onCategoryChange, types = TYPES, isLite = false, onReset, isRB = false, isWR = false, isBucket = false, isPlus = false, isCustomMode = false, onOpenCustomModal, onSandboxToggle, attrMap = ATTR, categoriesData = CATEGORIES, figureRef }) {
+  const figW   = isBucket ? BUCKET_FIG_W : (isRB || isWR ? RB_FIG_W : FIG_W)
+  const figH   = isBucket ? BUCKET_FIG_H : (isRB || isWR ? RB_FIG_H : FIG_H)
+  const zones  = isBucket ? (types.includes('interiorDefense') ? BUCKET_BIG_ZONES : BUCKET_ZONES) : isWR ? WR_ZONES : isRB ? RB_ZONES : ZONES
   const silRef = useRef(null)
   const bounds = useFigureBounds(silRef, figW, figH)
   const boundsRef = useRef(bounds)
@@ -257,7 +278,7 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
     }
   }, [])
 
-  const cats = isRB ? RB_CATEGORIES : categoriesData
+  const cats = isWR ? WR_CATEGORIES : isRB ? RB_CATEGORIES : categoriesData
   const categoryTypes = activeCategory
     ? (cats.find(c => c.id === activeCategory)?.types ?? [])
     : null
@@ -320,10 +341,14 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
         : CARD_W * 1.075
     let dotX  = (fx + zone.ax * scale) / W * 100
     let dotY  = (fy + zone.ay * scale) / H * 100 + (!isMobile && zone.type === 'size' ? (isBucket ? 60 : 30) / H * 100 : 0)
-    // Compensate for CSS scale on RB/bucket figure — scale dot positions outward/inward from center
+    // Compensate for CSS scale on RB/WR/bucket figure — scale dot positions outward/inward from center
     if (isRB) {
       dotX = (dotX - 50) * RB_FIGURE_SCALE + 50
       dotY = (dotY - 50) * RB_FIGURE_SCALE + 50
+    }
+    if (isWR) {
+      dotX = (dotX - 50) * WR_FIGURE_SCALE + 50
+      dotY = (dotY - 50) * WR_FIGURE_SCALE + 50
     }
     if (isBucket) {
       dotX = (dotX - 50) * BUCKET_FIGURE_SCALE + 50
@@ -374,7 +399,7 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
     const map = {}
     zones.forEach(z => { map[z.type] = pos(z) })
     return map
-  }, [bounds, isMobile, isBucket, isRB, zones])
+  }, [bounds, isMobile, isBucket, isRB, isWR, zones])
 
   return (
     <section className="field-center" style={isBucket ? { backgroundColor: '#090a0d' } : undefined}>
@@ -389,7 +414,7 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
         </div>
       )}
       <div className="category-pills">
-        <HWTracker build={build} isRB={isRB} isBucket={isBucket} />
+        <HWTracker build={build} isRB={isRB} isWR={isWR} isBucket={isBucket} />
         {cats.map(cat => (
           <button
             key={cat.id}
@@ -503,12 +528,19 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
           src={
             isBucket
               ? (bucketPhoto ? '/basketballsilhouetteheadless.png' : '/basketballsilhouette.png')
-              : (isRB ? '/rbsilhouette.webp' : '/qb-silhouette.webp')
+              : isWR ? '/wr-silhouette.png'
+              : isRB ? '/rbsilhouette.webp'
+              : '/qb-silhouette.webp'
           }
           alt=""
-          className={`sil-img${isRB ? ' sil-img--rb' : ''}${isBucket ? ' sil-img--bucket' : ''}${complete ? ' sil-img--done' : ''}`}
+          className={`sil-img${isRB || isWR ? ' sil-img--rb' : ''}${isBucket ? ' sil-img--bucket' : ''}${complete ? ' sil-img--done' : ''}`}
           draggable={false}
-          style={isBucket ? { transform: `scale(${BUCKET_FIGURE_SCALE})`, transformOrigin: 'center center' } : isRB ? { transform: `scale(${RB_FIGURE_SCALE})`, transformOrigin: 'center center' } : undefined}
+          style={
+            isBucket ? { transform: `scale(${BUCKET_FIGURE_SCALE})`, transformOrigin: 'center center' }
+            : isWR   ? { transform: isMobile ? `translateY(-6px) scale(${WR_FIGURE_SCALE_MOBILE})` : `scale(${WR_FIGURE_SCALE})`, transformOrigin: 'center center', filter: complete ? 'none' : 'brightness(0.55) drop-shadow(0 0 2px rgba(255,255,255,0.60)) drop-shadow(0 0 0.5px rgba(255,255,255,0.92))' }
+            : isRB   ? { transform: `scale(${RB_FIGURE_SCALE})`, transformOrigin: 'center center' }
+            : undefined
+          }
         />
         {isBucket && <BucketFigureOverlay build={build} />}
         {isBucket && bucketPhoto && bounds && (() => {
@@ -573,10 +605,15 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
           )
         })()}
         </div>
-        {!isRB && !isBucket && <QBFigureOverlay build={build} className="player-qbfig" />}
+        {!isRB && !isWR && !isBucket && <QBFigureOverlay build={build} className="player-qbfig" />}
         {isRB && (
           <div style={{ position: 'absolute', inset: 0, transform: `scale(${RB_FIGURE_SCALE})`, transformOrigin: 'center center' }}>
             <RBFigureOverlay build={build} />
+          </div>
+        )}
+        {isWR && (
+          <div style={{ position: 'absolute', inset: 0, transform: isMobile ? `translateY(-6px) scale(${WR_FIGURE_SCALE_MOBILE})` : `scale(${WR_FIGURE_SCALE})`, transformOrigin: 'center center' }}>
+            <WRFigureOverlay build={build} />
           </div>
         )}
 

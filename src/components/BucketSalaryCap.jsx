@@ -998,12 +998,11 @@ export default function BucketSalaryCap({ onConfirm, onBack, user, initialDateSt
     const build = {}
     SAL_COLS.forEach((col, ci) => {
       const p = sel[ci]
-      // Use game position (not player's natural position) so defense always maps to the
-      // correct key for the mode (perimeterDefense in guard mode, interiorDefense in big mode)
-      const modeTypes     = position === 'big' ? col.bigTypes : col.guardTypes
-      const fallbackTypes = position === 'big' ? col.guardTypes : col.bigTypes
-      modeTypes.forEach(type => {
-        const val = p.attrs[type] ?? fallbackTypes.map(t => p.attrs[t]).find(v => v != null) ?? 5
+      // Always use guard-key names as canonical keys so the build is consistent
+      // regardless of which position mode the user started in. Values fall back
+      // to the big-type attr when a player doesn't have the guard-type attr.
+      col.guardTypes.forEach(type => {
+        const val = p.attrs[type] ?? col.bigTypes.map(t => p.attrs[t]).find(v => v != null) ?? 5
         build[type] = {
           type, val,
           qb: p.short ?? p.name, qbFull: p.name,

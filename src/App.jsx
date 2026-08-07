@@ -20,11 +20,12 @@ const VersusLobby    = lazy(() => import('./components/VersusLobby'))
 const VersusResult   = lazy(() => import('./components/VersusResult'))
 import { TYPES, LITE_TYPES, QBS } from './data/qbs'
 import { RBS, RB_TYPES, RB_LITE_TYPES } from './data/rbs'
+import { WRS, WR_TYPES, WR_LITE_TYPES, WR_CATEGORIES, WR_ATTR } from './data/wrs'
 import { ALLTIME_RATINGS } from './data/nfl-teams'
 import { LEGENDS, LEGEND_TYPES } from './data/legends'
 import { RB_LEGENDS } from './data/rb-legends'
 import HEADSHOTS from './data/headshots.json'
-import { runSimulation, getArchetype, runRBSimulation, calcOVRRB, getArchetypeRB } from './utils/simulation'
+import { runSimulation, getArchetype, runRBSimulation, calcOVRRB, getArchetypeRB, runWRSimulation, calcOVRWR, getArchetypeWR } from './utils/simulation'
 import { supabase } from './lib/supabase'
 import CustomRatingsModal from './components/CustomRatingsModal'
 
@@ -32,6 +33,7 @@ const _dd = arr => { const s = new Set(); return arr.filter(p => { const k = `${
 const _bt = (a, b) => a.team.localeCompare(b.team) || a.name.localeCompare(b.name)
 const CUSTOM_QB_POOL = _dd([...QBS, ...LEGENDS]).sort(_bt)
 const CUSTOM_RB_POOL = _dd([...RBS, ...RB_LEGENDS]).sort(_bt)
+const CUSTOM_WR_POOL = [...WRS].sort(_bt)
 
 // Detect shared build at module load time — before any React rendering
 let _sharedData = null
@@ -298,8 +300,9 @@ export default function App() {
   }, [])
 
   const isRB        = position === 'rb'
-  const activeTypes = gameMode === 'lite' ? (isRB ? RB_LITE_TYPES : LITE_TYPES) : (gameMode === 'all-time' && !isRB) ? LEGEND_TYPES : (isRB ? RB_TYPES : TYPES)
-  const activePool  = gameMode === 'all-time' ? (isRB ? RB_LEGENDS : LEGENDS) : (isRB ? RBS : QBS)
+  const isWR        = position === 'wr'
+  const activeTypes = isWR ? (gameMode === 'lite' ? WR_LITE_TYPES : WR_TYPES) : gameMode === 'lite' ? (isRB ? RB_LITE_TYPES : LITE_TYPES) : (gameMode === 'all-time' && !isRB) ? LEGEND_TYPES : (isRB ? RB_TYPES : TYPES)
+  const activePool  = isWR ? WRS : gameMode === 'all-time' ? (isRB ? RB_LEGENDS : LEGENDS) : (isRB ? RBS : QBS)
   const isPlus      = isSubscribed
 
   // Theme must be declared after isPlus
@@ -327,10 +330,12 @@ export default function App() {
   const handleStart = useCallback((mode, pos = 'qb') => {
     setPosition(pos)
     const isRBMode = pos === 'rb'
-    const types = mode === 'lite' ? (isRBMode ? RB_LITE_TYPES : LITE_TYPES) : (isRBMode ? RB_TYPES : TYPES)
+    const isWRMode = pos === 'wr'
+    const types = isWRMode ? (mode === 'lite' ? WR_LITE_TYPES : WR_TYPES) : mode === 'lite' ? (isRBMode ? RB_LITE_TYPES : LITE_TYPES) : (isRBMode ? RB_TYPES : TYPES)
     setGameMode(mode)
     setBuild(Object.fromEntries(types.map(t => [t, null])))
     setActiveCategory('physical')
+    setSavedSpinResult(null)
     sandboxTainted.current = isCustomMode
     setPage('game')
     window.scrollTo(0, 0)
@@ -421,9 +426,11 @@ export default function App() {
     const effectiveTeam = gameMode === 'all-time' && atRatings
       ? { ...team, off: atRatings.off, def: atRatings.def, isAllTime: true }
       : team
-    const result = isRB
-      ? runRBSimulation(build, activeTypes, effectiveTeam, gameMode === 'all-time')
-      : runSimulation(build, activeTypes, effectiveTeam, gameMode === 'all-time')
+    const result = isWR
+      ? runWRSimulation(build, activeTypes, effectiveTeam, gameMode === 'all-time')
+      : isRB
+        ? runRBSimulation(build, activeTypes, effectiveTeam, gameMode === 'all-time')
+        : runSimulation(build, activeTypes, effectiveTeam, gameMode === 'all-time')
     setSimResult(result)
     if (!user) {
       showSaveToast('no-auth', 'Sign in to save your stats')
@@ -432,22 +439,24 @@ export default function App() {
     } else if (!supabase) {
       console.warn('[build-a-player] sim result not saved — supabase not configured')
     } else {
-      const arch = isRB
-        ? getArchetypeRB(result.ovr, build, activeTypes)
-        : getArchetype(result.ovr, build, activeTypes)
+      const arch = isWR
+        ? getArchetypeWR(result.ovr, build, activeTypes)
+        : isRB
+          ? getArchetypeRB(result.ovr, build, activeTypes)
+          : getArchetype(result.ovr, build, activeTypes)
       supabase.from('simulations').insert({
         user_id: user.id,
         username: user.user_metadata?.username || user.email?.split('@')[0] || 'Player',
         ovr: result.ovr,
         archetype: arch,
-        game_mode: isRB ? `rb-${gameMode || 'classic'}` : gameMode,
+        game_mode: isWR ? `wr-${gameMode || 'classic'}` : isRB ? `rb-${gameMode || 'classic'}` : gameMode,
         wins: result.wins,
         losses: result.losses,
-        season_pass_yds: isRB ? result.seasonRushYds : result.seasonPassYds,
-        season_tds: isRB ? (result.seasonRushTDs + result.seasonRecTDs) : result.seasonTDs,
-        season_ints: isRB ? null : result.seasonINTs,
-        season_comp_pct: isRB ? null : result.seasonCompPct,
-        season_rating: isRB ? null : result.seasonRating,
+        season_pass_yds: isWR ? result.seasonRecYds : isRB ? result.seasonRushYds : result.seasonPassYds,
+        season_tds: isWR ? result.seasonRecTDs : isRB ? (result.seasonRushTDs + result.seasonRecTDs) : result.seasonTDs,
+        season_ints: isWR ? result.seasonRecs : isRB ? null : result.seasonINTs,
+        season_comp_pct: isWR ? result.seasonTargets : isRB ? null : result.seasonCompPct,
+        season_rating: (isRB || isWR) ? null : result.seasonRating,
         playoffs: result.playoffs,
         champion: result.sbResult?.won ?? false,
         build: Object.fromEntries(
@@ -602,6 +611,7 @@ export default function App() {
     user,
     gameMode,
     isRB,
+    isWR,
     isPlus,
   }
 
@@ -609,7 +619,7 @@ export default function App() {
     return (
       <Suspense fallback={null}>
         <Navbar {...navbarProps} />
-        <LeaderboardPage onBack={() => { setPage(simResult ? 'sim' : 'game'); window.scrollTo({ top: 0, behavior: 'instant' }) }} currentUser={user} adsDisabled={adsDisabled} isRB={isRB} />
+        <LeaderboardPage onBack={() => { setPage(simResult ? 'sim' : 'game'); window.scrollTo({ top: 0, behavior: 'instant' }) }} currentUser={user} adsDisabled={adsDisabled} isRB={isRB} isWR={isWR} />
       </Suspense>
     )
   }
@@ -657,6 +667,7 @@ export default function App() {
           simResult={simResult}
           types={activeTypes}
           isRB={isRB}
+          isWR={isWR}
           isPlus={isPlus}
           currentPool={activePool}
           isCustomMode={isCustomMode}
@@ -750,6 +761,7 @@ export default function App() {
           replay={simReplaying}
           adsDisabled={adsDisabled}
           isRB={isRB}
+          isWR={isWR}
           onMVPWon={handleMVPWon}
           onBack={() => { setPage('game'); window.scrollTo({ top: 0, behavior: 'instant' }) }}
           onReset={() => { handleReset(); setPage('game'); window.scrollTo({ top: 0, behavior: 'instant' }) }}
@@ -793,6 +805,10 @@ export default function App() {
           onReset={handleReset}
           adsDisabled={adsDisabled}
           isRB={isRB}
+          isWR={isWR}
+          playerLabel={isWR ? 'WR' : undefined}
+          attrMap={isWR ? WR_ATTR : undefined}
+          categoriesData={isWR ? WR_CATEGORIES : undefined}
           onlineCount={onlineCount}
         />
         <Silhouette
@@ -805,6 +821,9 @@ export default function App() {
           isLite={gameMode === 'lite'}
           onReset={handleReset}
           isRB={isRB}
+          isWR={isWR}
+          categoriesData={isWR ? WR_CATEGORIES : undefined}
+          attrMap={isWR ? WR_ATTR : undefined}
           isPlus={isPlus}
           isCustomMode={isCustomMode}
           onOpenCustomModal={() => setShowCustomModal(true)}
@@ -821,6 +840,8 @@ export default function App() {
             types={activeTypes}
             hasResult={page === 'versus-game' ? false : !!simResult}
             isRB={isRB}
+            isWR={isWR}
+            attrMap={isWR ? WR_ATTR : undefined}
             isPlus={isPlus}
             isCustomMode={isCustomMode}
             onOpenCustomModal={() => setShowCustomModal(true)}
@@ -931,8 +952,9 @@ export default function App() {
       {showCustomModal && (isPlus || isCustomMode) && (
         <CustomRatingsModal
           isRB={isRB}
+          isWR={isWR}
           gameMode={gameMode}
-          pool={isRB ? CUSTOM_RB_POOL : CUSTOM_QB_POOL}
+          pool={isWR ? CUSTOM_WR_POOL : isRB ? CUSTOM_RB_POOL : CUSTOM_QB_POOL}
           onClose={() => setShowCustomModal(false)}
           onSave={(ratings) => {
             setCustomRatings(ratings)

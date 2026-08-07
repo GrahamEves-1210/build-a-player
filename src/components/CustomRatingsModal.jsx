@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { ATTR, TYPES, LITE_TYPES } from '../data/qbs'
 import { RB_TYPES, RB_LITE_TYPES } from '../data/rbs'
+import { WR_TYPES, WR_LITE_TYPES, WR_ATTR } from '../data/wrs'
 import { LEGEND_TYPES } from '../data/legends'
 import { BUCKET_ATTR, GUARD_TYPES, BIG_TYPES } from '../data/nba-players'
 import { valToGrade } from '../utils/simulation'
@@ -24,15 +25,16 @@ const RB_ATTR = {
   carrying:    { label: 'Carrying' },
 }
 
-export default function CustomRatingsModal({ isRB, isBucket = false, bucketPosition = 'guard', gameMode, pool, build = {}, buildTypes: _buildTypesProp, onClose, onSave, onAddToBuild, onAddAllToBuild }) {
+export default function CustomRatingsModal({ isRB, isWR = false, isBucket = false, bucketPosition = 'guard', gameMode, pool, build = {}, buildTypes: _buildTypesProp, onClose, onSave, onAddToBuild, onAddAllToBuild }) {
   const storageKey = isBucket ? 'bab_bucket_custom_ratings' : 'bap_custom_ratings'
   const modeKey = isBucket
     ? `bucket_${bucketPosition}`
-    : `${isRB ? 'rb' : 'qb'}${gameMode === 'all-time' ? '_legends' : ''}`
-  const attrMeta = isBucket ? BUCKET_ATTR : (isRB ? RB_ATTR : ATTR)
+    : isWR ? 'wr' : `${isRB ? 'rb' : 'qb'}${gameMode === 'all-time' ? '_legends' : ''}`
+  const attrMeta = isBucket ? BUCKET_ATTR : isWR ? WR_ATTR : ATTR
   const buildTypes = (_buildTypesProp && _buildTypesProp.length > 0)
     ? _buildTypesProp
     : isBucket ? (bucketPosition === 'big' ? BIG_TYPES : GUARD_TYPES)
+    : isWR ? (gameMode === 'lite' ? WR_LITE_TYPES : WR_TYPES)
     : gameMode === 'lite' ? (isRB ? RB_LITE_TYPES : LITE_TYPES)
     : (gameMode === 'all-time' && !isRB) ? LEGEND_TYPES
     : (isRB ? RB_TYPES : TYPES)

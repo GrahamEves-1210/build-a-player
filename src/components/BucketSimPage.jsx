@@ -1088,11 +1088,14 @@ function computeGoatRank(result, awards) {
 
   let rank = baseRank - statBoost - champBoost - mvpBoost - dpoyBoost
 
-  // Can't crack top 10 without championship
-  if (!champion) rank = Math.max(rank, 11)
+  // Very hard to crack top 10 without a championship (rank 10 possible with elite build)
+  if (!champion) rank = Math.max(rank, 10)
 
-  // Top 3 requires MVP + championship + 97+ OVR
-  if (rank <= 3 && !(wonMVP && champion && ovr >= 97)) rank = 4
+  // Rank 3 requires championship + 97+ OVR (MVP not required)
+  if (rank <= 3 && !(champion && ovr >= 97)) rank = 4
+
+  // Rank 2 requires MVP + championship + 97+ OVR
+  if (rank <= 2 && !(wonMVP && champion && ovr >= 97)) rank = 3
 
   // #1 requires MVP + championship + 99 OVR
   if (rank <= 1 && !(wonMVP && champion && ovr >= 99)) rank = 2
