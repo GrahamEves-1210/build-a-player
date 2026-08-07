@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "node scripts/compress-images.mjs && vite build && node -e \"const fs=require('fs');fs.rmSync('dist/headshots',{recursive:true,force:true})\"",
+    "build": "node scripts/compress-images.mjs && vite build && node scripts/strip-dist-headshots.mjs",
     "preview": "vite preview",
     "headshots": "node scripts/fetch-headshots.js"
   },
