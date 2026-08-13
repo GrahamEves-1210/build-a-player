@@ -11644,14 +11644,6 @@ html.is-tablet .attr-chip { padding: 8px 8px 8px 12px !important; }
 html.is-tablet .chip-val { width: 38px !important; height: 38px !important; font-size: 13px !important; }
 html.is-tablet .attr-category-section { gap: 8px !important; }
 
-/* On Mac, salary screen footer can be clipped by Safari chrome — allow scroll */
-@media (min-width: 768px) {
-  html.is-mac .sc-screen {
-    height: auto;
-    overflow-y: auto;
-  }
-}
-
 /* On Mac the bottom rail overlaps the spin panel and blocks scroll gestures */
 html.is-mac [id^="pw-oop-bottom_rail"] {
   pointer-events: none;
@@ -14284,8 +14276,9 @@ html.is-mac [id^="pw-oop-bottom_rail"] > * {
   .sc-screen {
     align-items: center;
     padding: 10px 24px 0;
-    height: 100dvh;
-    overflow: hidden;
+    min-height: 100dvh;
+    height: auto;
+    overflow-y: auto;
   }
   .sc-header,
   .sc-grid-wrap,
