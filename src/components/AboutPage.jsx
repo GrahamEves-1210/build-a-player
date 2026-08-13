@@ -34,6 +34,8 @@ export default function AboutPage({ onBack, onPrivacy }) {
 
         <div className="about-footer-links">
           <a className="about-text-link" href="/privacy">Privacy Policy</a>
+          <span style={{ color: 'var(--text-muted, #666)', margin: '0 8px' }}>·</span>
+          <a className="about-text-link" href="/terms">Terms of Service</a>
         </div>
 
 
