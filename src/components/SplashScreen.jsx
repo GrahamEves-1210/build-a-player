@@ -1,4 +1,139 @@
-﻿import { useEffect, useState, useMemo } from 'react'
+﻿import { useEffect, useState, useMemo, useRef } from 'react'
+import { nflHeadshot, HEADSHOT_BASE } from '../utils/simulation'
+
+function hsUrl(id) {
+  if (!id) return null
+  if (id.startsWith('http')) return id
+  return id.includes('.') ? `${HEADSHOT_BASE}/${id}` : `${HEADSHOT_BASE}/${id}.webp`
+}
+
+const POS_OPTIONS = [
+  {
+    pos: 'qb', label: 'QB', classic: true, alltime: true,
+    players: [
+      { id: '6770', color: '#fb4f14' },       // Joe Burrow - CIN
+      { id: '4984', color: '#00338d' },       // Josh Allen - BUF
+      { id: '4881', color: '#241773' },       // Lamar Jackson - BAL
+    ],
+  },
+  {
+    pos: 'rb', label: 'RB', classic: true, alltime: true,
+    players: [
+      { id: '3198', color: '#241773' },       // Derrick Henry - BAL
+      { id: '9509', color: '#a71930' },       // Bijan Robinson - ATL
+      { id: '9221', color: '#0076b6' },       // Jahmyr Gibbs - DET
+    ],
+  },
+  {
+    pos: 'wr', label: 'WR', classic: true, alltime: false,
+    players: [
+      { id: 'espn_4262921',   color: '#4f2683' },  // Justin Jefferson - MIN
+      { id: 'espn_4241389',   color: '#003594' },  // CeeDee Lamb - DAL
+      { id: 'espn_4430878',   color: '#69be28' },  // Jaxon Smith-Njigba - SEA
+    ],
+  },
+  {
+    pos: 'te', label: 'TE', classic: true, alltime: false,
+    players: [
+      { id: '11604', color: '#a5acaf' },      // Brock Bowers - LV
+      { id: '4217',  color: '#aa0000' },      // George Kittle - SF
+      { id: '8130',  color: '#97233f' },      // Trey McBride - ARI
+    ],
+  },
+  {
+    pos: 'db', label: 'DB', classic: false, alltime: false, disabled: true,
+    players: [
+      { id: 'espn_4372012', color: '#fb4f14' },  // Pat Surtain II - DEN
+      { id: 'espn_4686772', color: '#0C2340' },  // Christian Gonzalez - NE
+      { id: 'espn_4575517', color: '#241773' },  // Kyle Hamilton - BAL
+    ],
+  },
+  {
+    pos: 'lb', label: 'LB', classic: false, alltime: false, disabled: true,
+    players: [
+      { id: 'espn_3138826', color: '#aa0000' },  // Fred Warner - SF
+      { id: 'espn_3915189', color: '#241773' },  // Roquan Smith - BAL
+      { id: 'espn_4569465', color: '#0076b6' },  // Jack Campbell - DET
+    ],
+  },
+]
+
+function MiniAv({ id, color, size = 28 }) {
+  const src = hsUrl(id)
+  return (
+    <div className="mini-av" style={{ width: size, height: size, background: color, borderRadius: '50%', overflow: 'hidden', flexShrink: 0 }}>
+      {src && <img src={src} alt="" draggable={false} style={{ width: '130%', height: '130%', objectFit: 'cover', objectPosition: 'top center', marginTop: '-3px', marginLeft: '-15%' }} onError={e => { e.currentTarget.style.display = 'none' }} />}
+    </div>
+  )
+}
+
+function AvatarTrio({ players, size = 26 }) {
+  return (
+    <div className="splash-av-trio">
+      {players.map((p, i) => (
+        <div key={i} className="splash-av-trio-item" style={{ marginLeft: i === 0 ? 0 : -size * 0.32 }}>
+          <MiniAv id={p.id} color={p.color} size={size} />
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function PositionPicker({ position, onChange }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef()
+  const current = POS_OPTIONS.find(o => o.pos === position) || POS_OPTIONS[0]
+
+  useEffect(() => {
+    if (!open) return
+    const handler = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', handler, true)
+    return () => document.removeEventListener('mousedown', handler, true)
+  }, [open])
+
+  const select = pos => { onChange(pos); setOpen(false) }
+
+  return (
+    <div className="splash-pos-picker" ref={ref}>
+      <button className="splash-pos-trigger" onClick={() => setOpen(o => !o)} aria-expanded={open}>
+        <div className="splash-pos-trigger-trios">
+          {POS_OPTIONS.map(opt => (
+            <div key={opt.pos} className={`splash-pos-trigger-trio-slot${opt.pos === position ? ' splash-pos-trigger-trio-slot--active' : ''}`}>
+              <AvatarTrio players={opt.players} size={40} />
+            </div>
+          ))}
+        </div>
+        <span className="splash-pos-trigger-label">{current.label}</span>
+        <svg className={`splash-pos-caret${open ? ' open' : ''}`} width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M6 9l6 6 6-6"/>
+        </svg>
+      </button>
+
+      <div className={`splash-pos-popup${open ? ' splash-pos-popup--open' : ''}`} aria-hidden={!open}>
+        <div className="splash-pos-popup-grid">
+          {POS_OPTIONS.map(opt => (
+            <button
+              key={opt.pos}
+              className={`splash-pos-option${opt.pos === position ? ' splash-pos-option--active' : ''}${opt.disabled ? ' splash-pos-option--disabled' : ''}`}
+              onClick={() => !opt.disabled && select(opt.pos)}
+              tabIndex={opt.disabled || !open ? -1 : 0}
+            >
+              {opt.disabled && <div className="splash-pos-soon-banner">COMING SOON</div>}
+              <div className="splash-pos-option-top">
+                <AvatarTrio players={opt.players} size={40} />
+                <span className="splash-pos-option-name">{opt.label}</span>
+              </div>
+              <div className="splash-pos-option-modes">
+                <span className={`splash-mode-pill ${opt.disabled ? 'splash-mode-pill--alltime-soon' : opt.alltime ? 'splash-mode-pill--alltime' : 'splash-mode-pill--alltime-soon'}`}>All‑Time</span>
+                <span className={`splash-mode-pill ${opt.disabled ? 'splash-mode-pill--classic-soon' : opt.classic ? 'splash-mode-pill--avail' : 'splash-mode-pill--na'}`}>Classic</span>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
 
 const HoopU = () => (
   <svg className="hoop-u-svg" viewBox="0 0 68 90" fill="none" aria-hidden="true">
@@ -47,6 +182,18 @@ const WR_ATTRS = [
   { label: 'After Catch',  col: '#38bdf8', angle:   80, dist: 1.31, mx: 74, my: 44, dox: 270 },
 ]
 
+const TE_ATTRS = [
+  { label: 'Speed',        col: '#f87171', angle:  -35, dist: 1.32, mx: 58, my: 14 },
+  { label: 'Blocking',     col: '#60a5fa', angle:   55, dist: 1.30, mx: 3,  my: 30 },
+  { label: 'Vertical',     col: '#34d399', angle:   15, dist: 1.28, mx: 62, my: 52 },
+  { label: 'Size',         col: '#fb923c', angle:  210, dist: 1.31, mx: 4,  my: 62 },
+  { label: 'Route Running',col: '#2dd4bf', angle: -130, dist: 1.30, mx: 55, my: 72 },
+  { label: 'Strength',     col: '#e879f9', angle:  -70, dist: 1.29, mx: 5,  my: 18, doy: -30, dox: 140 },
+  { label: 'Hands',        col: '#fbbf24', angle:  100, dist: 1.32, mx: 60, my: 34, dox: -210 },
+  { label: 'Awareness',    col: '#a78bfa', angle: -160, dist: 1.28, mx: 3,  my: 48, doy: 200 },
+  { label: 'After Catch',  col: '#38bdf8', angle:   80, dist: 1.31, mx: 74, my: 44, dox: 270 },
+]
+
 function FloatingChip({ label, col, angle, dist, visible, mx, my, isMobile, orbitScale = 1, dox = 0, doy = 0 }) {
   const x = isMobile ? mx : 50 + dist * 34 * orbitScale * Math.cos((angle * Math.PI) / 180)
   const y = isMobile ? my : 48 + dist * 30 * orbitScale * Math.sin((angle * Math.PI) / 180)
@@ -77,9 +224,17 @@ function FloatingChip({ label, col, angle, dist, visible, mx, my, isMobile, orbi
 export default function SplashScreen({ onStart, onDepthChart }) {
   const [phase, setPhase] = useState(0)
   const [position, setPosition] = useState(() => localStorage.getItem('lastPosition') || 'qb')
+  const handlePosChange = pos => { setPosition(pos); localStorage.setItem('lastPosition', pos) }
   const isMobile  = useMemo(() => window.innerWidth <= 768, [])
   const isDesktop = useMemo(() => window.innerWidth > 768, [])
   const orbitScale = isDesktop ? 0.8 : 1
+
+  useEffect(() => {
+    POS_OPTIONS.forEach(opt => opt.players.forEach(p => {
+      const src = hsUrl(p.id)
+      if (src) { const img = new Image(); img.src = src }
+    }))
+  }, [])
 
   useEffect(() => {
     const t1 = setTimeout(() => setPhase(1), 80)
@@ -88,7 +243,7 @@ export default function SplashScreen({ onStart, onDepthChart }) {
     return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3) }
   }, [])
 
-  const attrs = position === 'wr' ? WR_ATTRS : position === 'rb' ? RB_ATTRS : QB_ATTRS
+  const attrs = position === 'te' ? TE_ATTRS : position === 'wr' ? WR_ATTRS : position === 'rb' ? RB_ATTRS : QB_ATTRS
 
   return (
     <div className={`splash-screen ${phase >= 1 ? 'splash-in' : ''}`}>
@@ -109,19 +264,8 @@ export default function SplashScreen({ onStart, onDepthChart }) {
           BUIL<span className="logo-d">D</span><em>-<span className="logo-a">A</span>-</em>PLAYER
         </div>
         <div className="splash-disclaimer splash-disclaimer--under-logo">Fan-made · Not affiliated with the NFL</div>
-        <div className="splash-pos-toggle" style={{ opacity: phase >= 3 ? 1 : 0, transform: phase >= 3 ? (isMobile ? 'translateY(-8px)' : 'none') : 'translateY(8px)' }}>
-          <button
-            className={`splash-pos-btn ${position === 'qb' ? 'splash-pos-btn--active' : ''}`}
-            onClick={() => setPosition('qb')}
-          >QB</button>
-          <button
-            className={`splash-pos-btn ${position === 'rb' ? 'splash-pos-btn--active' : ''}`}
-            onClick={() => setPosition('rb')}
-          >RB</button>
-          <button
-            className={`splash-pos-btn ${position === 'wr' ? 'splash-pos-btn--active' : ''}`}
-            onClick={() => setPosition('wr')}
-          >WR<span className="splash-pos-new">new</span></button>
+        <div className="splash-pos-toggle splash-pos-toggle--picker" style={{ opacity: phase >= 3 ? 1 : 0, transform: phase >= 3 ? (isMobile ? 'translateY(-8px)' : 'none') : 'translateY(8px)' }}>
+          <PositionPicker position={position} onChange={handlePosChange} />
         </div>
       </div>
 
@@ -131,7 +275,7 @@ export default function SplashScreen({ onStart, onDepthChart }) {
         <img src="/rbsilhouette.webp" className="splash-figure" alt="" draggable={false}
           style={{ position: 'absolute', inset: 0, opacity: position === 'rb' ? 1 : 0 }} />
         <img src="/wr-silhouette.png" className="splash-figure" alt="" draggable={false}
-          style={{ position: 'absolute', inset: 0, opacity: position === 'wr' ? 1 : 0, transform: 'scale(1.18)', transformOrigin: 'center center' }} />
+          style={{ position: 'absolute', inset: 0, opacity: (position === 'wr' || position === 'te') ? 1 : 0, transform: 'scale(1.18)', transformOrigin: 'center center' }} />
         <div className="splash-figure-glow" />
       </div>
 
@@ -151,7 +295,7 @@ export default function SplashScreen({ onStart, onDepthChart }) {
         <div className="splash-modes">
           <button className="splash-mode-classic" onClick={() => { localStorage.setItem('lastPosition', position); onStart('classic', position) }}>
             <div className="smode-title">Classic</div>
-            <div className="smode-badge">Current {position === 'rb' ? 'RBs' : position === 'wr' ? 'WRs' : 'QBs'}</div>
+            <div className="smode-badge">Current {position === 'rb' ? 'RBs' : position === 'wr' ? 'WRs' : position === 'te' ? 'TEs' : 'QBs'}</div>
             <div className="smode-cta">
               START DRAFTING
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -160,7 +304,7 @@ export default function SplashScreen({ onStart, onDepthChart }) {
             </div>
           </button>
 
-          {position === 'wr' ? (
+          {(position === 'wr' || position === 'te') ? (
             <button className="splash-mode-alltime splash-mode-alltime--soon" disabled>
               <div className="splash-mode-alltime--soon-banner">COMING SOON</div>
               <div className="smode-title smode-title--alltime">All-Time</div>
@@ -177,7 +321,6 @@ export default function SplashScreen({ onStart, onDepthChart }) {
               className="splash-mode-alltime"
               onClick={() => { localStorage.setItem('lastPosition', position); onStart('all-time', position) }}
             >
-              <span className="smode-new-badge">NEW</span>
               <div className="smode-title smode-title--alltime">All-Time</div>
               <div className="smode-badge smode-badge--alltime">Draft the Greats</div>
               <div className="smode-cta smode-cta--alltime">

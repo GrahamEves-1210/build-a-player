@@ -335,7 +335,10 @@ export default function BucketApp() {
   const vsResultRef      = useRef({ build: {}, user: null, position: 'guard' })
   const faceoffFiredRef  = useRef(false)
   const lastOppPingRef   = useRef(0)
+  const savedSpinRef     = useRef(null)
+  const vsChannelReady   = useRef(false)
   useEffect(() => { vsResultRef.current = { build, user, position, matchType: versusRoom?.matchType ?? null } }, [build, user, position, versusRoom?.matchType])
+  useEffect(() => { savedSpinRef.current = savedSpinResult }, [savedSpinResult])
 
   const activeDragRef = useRef(activeDrag)
   useLayoutEffect(() => { activeDragRef.current = activeDrag }, [activeDrag])
@@ -830,9 +833,17 @@ export default function BucketApp() {
     // Subscribe the game channel now that all .on() handlers are registered.
     // For BC-wrapped channels, subscribe() is a no-op (BC is always ready).
     // For already-subscribed friend-room channels, this is also safe (idempotent).
+    vsChannelReady.current = false
+    let chRetries = 0
     channel.subscribe(s => {
       if (s === 'SUBSCRIBED') {
+        chRetries = 0
+        vsChannelReady.current = true
         channel.send({ type: 'broadcast', event: 'bab_position', payload: { position } }).catch?.(() => {})
+        // Send current build state now that WebSocket is established.
+        // This is the authoritative initial send — the useEffect is gated behind vsChannelReady.
+        const { build: curBuild, position: curPos } = vsResultRef.current
+        channel.send({ type: 'broadcast', event: 'bab_build', payload: { build: curBuild, player: savedSpinRef.current, position: curPos } }).catch?.(() => {})
         // Track presence so the opponent's 'presence leave' handler fires on disconnect.
         // vid must match the format used in VersusLobby's myId so oppId check works.
         if (!channel._bc) {
@@ -842,12 +853,17 @@ export default function BucketApp() {
           const name = user?.user_metadata?.username || user?.email?.split('@')[0] || 'Your Build'
           if (vid) channel.track({ vid, name }).catch?.(() => {})
         }
+      } else if ((s === 'TIMED_OUT' || s === 'CHANNEL_ERROR') && !channel._bc && chRetries < 5) {
+        // WebSocket dropped — retry resubscription with backoff.
+        vsChannelReady.current = false
+        chRetries++
+        setTimeout(() => { try { channel.subscribe() } catch {} }, 1500 * chRetries)
       }
     })
   }, [activeTypes, position])
 
   useEffect(() => {
-    if (!versusRoom?.channel || page !== 'versus-game') return
+    if (!versusRoom?.channel || page !== 'versus-game' || !vsChannelReady.current) return
     versusRoom.channel.send({
       type: 'broadcast', event: 'bab_build',
       payload: { build, player: savedSpinResult, position },
@@ -892,7 +908,7 @@ export default function BucketApp() {
     document.addEventListener('visibilitychange', onVisible)
     const id = setInterval(() => {
       if (document.hidden) return
-      if (Date.now() - lastOppPingRef.current > 45000) {
+      if (Date.now() - lastOppPingRef.current > 30000) {
         lastOppPingRef.current = Date.now() // prevent double-fire
         const { build: b, user: u, position: pos, matchType: mt } = vsResultRef.current
         if (u && supabase) {
@@ -968,6 +984,7 @@ export default function BucketApp() {
   }, [vsCountdown, page, versusRoom, oppPosition, activeTypes, build, oppBuild]) // eslint-disable-line
 
   function cleanupVersusChannel(ch) {
+    vsChannelReady.current = false
     if (!ch) return
     if (ch._bc) { ch.close() }
     else { try { (rtSupabase || supabase).removeChannel(ch) } catch {} }

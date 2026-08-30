@@ -12,6 +12,7 @@ import { decodeBuild } from './utils/shareUrl'
 const SimPage        = lazy(() => import('./components/SimPage'))
 const AboutPage      = lazy(() => import('./components/AboutPage'))
 const PrivacyPage    = lazy(() => import('./components/PrivacyPage'))
+const TermsPage      = lazy(() => import('./components/TermsPage'))
 const SharedBuildPage= lazy(() => import('./components/SharedBuildPage'))
 const DepthChart     = lazy(() => import('./components/DepthChart'))
 const ProfilePage    = lazy(() => import('./components/ProfilePage'))
@@ -21,11 +22,12 @@ const VersusResult   = lazy(() => import('./components/VersusResult'))
 import { TYPES, LITE_TYPES, QBS } from './data/qbs'
 import { RBS, RB_TYPES, RB_LITE_TYPES } from './data/rbs'
 import { WRS, WR_TYPES, WR_LITE_TYPES, WR_CATEGORIES, WR_ATTR } from './data/wrs'
+import { TES, TE_TYPES, TE_LITE_TYPES, TE_CATEGORIES, TE_ATTR } from './data/tes'
 import { ALLTIME_RATINGS } from './data/nfl-teams'
 import { LEGENDS, LEGEND_TYPES } from './data/legends'
 import { RB_LEGENDS } from './data/rb-legends'
 import HEADSHOTS from './data/headshots.json'
-import { runSimulation, getArchetype, runRBSimulation, calcOVRRB, getArchetypeRB, runWRSimulation, calcOVRWR, getArchetypeWR, HEADSHOT_BASE } from './utils/simulation'
+import { runSimulation, getArchetype, runRBSimulation, calcOVRRB, getArchetypeRB, runWRSimulation, calcOVRWR, getArchetypeWR, runTESimulation, calcOVRTE, getArchetypeTE, HEADSHOT_BASE } from './utils/simulation'
 import { supabase } from './lib/supabase'
 import CustomRatingsModal from './components/CustomRatingsModal'
 
@@ -34,6 +36,7 @@ const _bt = (a, b) => a.team.localeCompare(b.team) || a.name.localeCompare(b.nam
 const CUSTOM_QB_POOL = _dd([...QBS, ...LEGENDS]).sort(_bt)
 const CUSTOM_RB_POOL = _dd([...RBS, ...RB_LEGENDS]).sort(_bt)
 const CUSTOM_WR_POOL = [...WRS].sort(_bt)
+const CUSTOM_TE_POOL = [...TES].sort(_bt)
 
 // Detect shared build at module load time — before any React rendering
 let _sharedData = null
@@ -43,8 +46,9 @@ try {
 } catch {}
 
 const _isPrivacy = window.location.pathname === '/privacy'
-const _isProfile = !_sharedData && !_isPrivacy && window.location.pathname === '/profile'
-const _isAbout   = !_sharedData && !_isPrivacy && !_isProfile && new URLSearchParams(window.location.search).has('about')
+const _isTerms   = window.location.pathname === '/terms'
+const _isProfile = !_sharedData && !_isPrivacy && !_isTerms && window.location.pathname === '/profile'
+const _isAbout   = !_sharedData && !_isPrivacy && !_isTerms && !_isProfile && new URLSearchParams(window.location.search).has('about')
 
 const _saved = (() => {
   if (_sharedData || _isPrivacy || _isAbout || _isProfile) return null
@@ -86,7 +90,7 @@ function enableAdFreeMode() {
 try { if (localStorage.getItem('bap_subscribed') === '1' || localStorage.getItem('bap_ads_off') === '1') enableAdFreeMode() } catch {}
 
 export default function App() {
-  const [page, setPage]               = useState(_sharedData ? 'shared' : _isPrivacy ? 'privacy' : _isProfile ? 'profile' : _isAbout ? 'about' : (_saved?.gameMode ? 'game' : 'splash'))
+  const [page, setPage]               = useState(_sharedData ? 'shared' : _isPrivacy ? 'privacy' : _isTerms ? 'terms' : _isProfile ? 'profile' : _isAbout ? 'about' : (_saved?.gameMode ? 'game' : 'splash'))
   const [sharedBuild]                 = useState(_sharedData?.build ?? null)
   const [sharedTypes]                 = useState(_sharedData?.types ?? null)
   const [gameMode, setGameMode]         = useState(_saved?.gameMode ?? null)
@@ -301,8 +305,9 @@ export default function App() {
 
   const isRB        = position === 'rb'
   const isWR        = position === 'wr'
-  const activeTypes = isWR ? (gameMode === 'lite' ? WR_LITE_TYPES : WR_TYPES) : gameMode === 'lite' ? (isRB ? RB_LITE_TYPES : LITE_TYPES) : (gameMode === 'all-time' && !isRB) ? LEGEND_TYPES : (isRB ? RB_TYPES : TYPES)
-  const activePool  = isWR ? WRS : gameMode === 'all-time' ? (isRB ? RB_LEGENDS : LEGENDS) : (isRB ? RBS : QBS)
+  const isTE        = position === 'te'
+  const activeTypes = isTE ? (gameMode === 'lite' ? TE_LITE_TYPES : TE_TYPES) : isWR ? (gameMode === 'lite' ? WR_LITE_TYPES : WR_TYPES) : gameMode === 'lite' ? (isRB ? RB_LITE_TYPES : LITE_TYPES) : (gameMode === 'all-time' && !isRB) ? LEGEND_TYPES : (isRB ? RB_TYPES : TYPES)
+  const activePool  = isTE ? TES : isWR ? WRS : gameMode === 'all-time' ? (isRB ? RB_LEGENDS : LEGENDS) : (isRB ? RBS : QBS)
   const isPlus      = isSubscribed
 
   // Theme must be declared after isPlus
@@ -331,7 +336,8 @@ export default function App() {
     setPosition(pos)
     const isRBMode = pos === 'rb'
     const isWRMode = pos === 'wr'
-    const types = isWRMode ? (mode === 'lite' ? WR_LITE_TYPES : WR_TYPES) : mode === 'lite' ? (isRBMode ? RB_LITE_TYPES : LITE_TYPES) : (isRBMode ? RB_TYPES : TYPES)
+    const isTEMode = pos === 'te'
+    const types = isTEMode ? (mode === 'lite' ? TE_LITE_TYPES : TE_TYPES) : isWRMode ? (mode === 'lite' ? WR_LITE_TYPES : WR_TYPES) : mode === 'lite' ? (isRBMode ? RB_LITE_TYPES : LITE_TYPES) : (isRBMode ? RB_TYPES : TYPES)
     setGameMode(mode)
     setBuild(Object.fromEntries(types.map(t => [t, null])))
     setActiveCategory('physical')
@@ -426,11 +432,13 @@ export default function App() {
     const effectiveTeam = gameMode === 'all-time' && atRatings
       ? { ...team, off: atRatings.off, def: atRatings.def, isAllTime: true }
       : team
-    const result = isWR
-      ? runWRSimulation(build, activeTypes, effectiveTeam, gameMode === 'all-time')
-      : isRB
-        ? runRBSimulation(build, activeTypes, effectiveTeam, gameMode === 'all-time')
-        : runSimulation(build, activeTypes, effectiveTeam, gameMode === 'all-time')
+    const result = isTE
+      ? runTESimulation(build, activeTypes, effectiveTeam, gameMode === 'all-time')
+      : isWR
+        ? runWRSimulation(build, activeTypes, effectiveTeam, gameMode === 'all-time')
+        : isRB
+          ? runRBSimulation(build, activeTypes, effectiveTeam, gameMode === 'all-time')
+          : runSimulation(build, activeTypes, effectiveTeam, gameMode === 'all-time')
     setSimResult(result)
     if (!user) {
       showSaveToast('no-auth', 'Sign in to save your stats')
@@ -439,24 +447,26 @@ export default function App() {
     } else if (!supabase) {
       console.warn('[build-a-player] sim result not saved — supabase not configured')
     } else {
-      const arch = isWR
-        ? getArchetypeWR(result.ovr, build, activeTypes)
-        : isRB
-          ? getArchetypeRB(result.ovr, build, activeTypes)
-          : getArchetype(result.ovr, build, activeTypes)
+      const arch = isTE
+        ? getArchetypeTE(result.ovr, build, activeTypes)
+        : isWR
+          ? getArchetypeWR(result.ovr, build, activeTypes)
+          : isRB
+            ? getArchetypeRB(result.ovr, build, activeTypes)
+            : getArchetype(result.ovr, build, activeTypes)
       supabase.from('simulations').insert({
         user_id: user.id,
         username: user.user_metadata?.username || user.email?.split('@')[0] || 'Player',
         ovr: result.ovr,
         archetype: arch,
-        game_mode: isWR ? `wr-${gameMode || 'classic'}` : isRB ? `rb-${gameMode || 'classic'}` : gameMode,
+        game_mode: isTE ? `te-${gameMode || 'classic'}` : isWR ? `wr-${gameMode || 'classic'}` : isRB ? `rb-${gameMode || 'classic'}` : gameMode,
         wins: result.wins,
         losses: result.losses,
-        season_pass_yds: isWR ? result.seasonRecYds : isRB ? result.seasonRushYds : result.seasonPassYds,
-        season_tds: isWR ? result.seasonRecTDs : isRB ? (result.seasonRushTDs + result.seasonRecTDs) : result.seasonTDs,
-        season_ints: isWR ? result.seasonRecs : isRB ? null : result.seasonINTs,
-        season_comp_pct: isWR ? result.seasonTargets : isRB ? null : result.seasonCompPct,
-        season_rating: (isRB || isWR) ? null : result.seasonRating,
+        season_pass_yds: (isWR || isTE) ? result.seasonRecYds : isRB ? result.seasonRushYds : result.seasonPassYds,
+        season_tds: (isWR || isTE) ? result.seasonRecTDs : isRB ? (result.seasonRushTDs + result.seasonRecTDs) : result.seasonTDs,
+        season_ints: (isWR || isTE) ? result.seasonRecs : isRB ? null : result.seasonINTs,
+        season_comp_pct: (isWR || isTE) ? result.seasonTargets : isRB ? null : result.seasonCompPct,
+        season_rating: (isRB || isWR || isTE) ? null : result.seasonRating,
         playoffs: result.playoffs,
         champion: result.sbResult?.won ?? false,
         build: Object.fromEntries(
@@ -490,11 +500,28 @@ export default function App() {
   }, [isCustomMode])
 
   const handleVersusJoin = useCallback(({ code, role, oppId, oppName, channel }) => {
-    // Subscribe to opponent build broadcasts before setting state
+    let oppSeen = false
+
     channel.on('broadcast', { event: 'vs_build' }, ({ payload }) => {
+      oppSeen = true
       setOppBuild(payload.build || {})
       setOppQB(payload.qb || null)
     })
+
+    // Opponent presence check — if no vs_build received within 20s, opponent is a ghost
+    channel.on('broadcast', { event: 'vs_ping' }, () => { oppSeen = true })
+    const ghostTimer = setTimeout(() => {
+      if (!oppSeen) {
+        supabase?.removeChannel(channel)
+        setVersusRoom(null)
+        setPage('versus-lobby')
+        alert('Opponent didn\'t show up. Returning to matchmaking.')
+      }
+    }, 20000)
+
+    channel.on('broadcast', { event: 'vs_build' }, () => clearTimeout(ghostTimer))
+    channel.subscribe?.()
+
     setVersusRoom({ code, role, oppId, oppName, channel })
     setOppBuild({})
     setOppQB(null)
@@ -508,6 +535,12 @@ export default function App() {
     setPage('versus-game')
     window.scrollTo(0, 0)
   }, [activeTypes])
+
+  // Announce presence immediately on entering game room so opponent's ghost timer clears
+  useEffect(() => {
+    if (!versusRoom?.channel || page !== 'versus-game') return
+    versusRoom.channel.send({ type: 'broadcast', event: 'vs_ping', payload: {} }).catch(() => {})
+  }, [versusRoom, page])
 
   // Broadcast my build + qb to the versus channel whenever they change
   useEffect(() => {
@@ -612,6 +645,7 @@ export default function App() {
     gameMode,
     isRB,
     isWR,
+    isTE,
     isPlus,
   }
 
@@ -619,7 +653,7 @@ export default function App() {
     return (
       <Suspense fallback={null}>
         <Navbar {...navbarProps} />
-        <LeaderboardPage onBack={() => { setPage(simResult ? 'sim' : 'game'); window.scrollTo({ top: 0, behavior: 'instant' }) }} currentUser={user} adsDisabled={adsDisabled} isRB={isRB} isWR={isWR} />
+        <LeaderboardPage onBack={() => { setPage(simResult ? 'sim' : 'game'); window.scrollTo({ top: 0, behavior: 'instant' }) }} currentUser={user} adsDisabled={adsDisabled} isRB={isRB} isWR={isWR} isTE={isTE} />
       </Suspense>
     )
   }
@@ -658,6 +692,15 @@ export default function App() {
     )
   }
 
+  if (page === 'terms') {
+    return (
+      <Suspense fallback={null}>
+        <Navbar {...navbarProps} />
+        <TermsPage onBack={() => setPage('about')} />
+      </Suspense>
+    )
+  }
+
   if (page === 'profile' && user) {
     return (
       <Suspense fallback={null}>
@@ -668,6 +711,7 @@ export default function App() {
           types={activeTypes}
           isRB={isRB}
           isWR={isWR}
+          isTE={isTE}
           isPlus={isPlus}
           currentPool={activePool}
           isCustomMode={isCustomMode}
@@ -692,8 +736,10 @@ export default function App() {
         {showCustomModal && (
           <CustomRatingsModal
             isRB={isRB}
+            isWR={isWR}
+            isTE={isTE}
             gameMode={gameMode}
-            pool={isRB ? CUSTOM_RB_POOL : CUSTOM_QB_POOL}
+            pool={isTE ? CUSTOM_TE_POOL : isWR ? CUSTOM_WR_POOL : isRB ? CUSTOM_RB_POOL : CUSTOM_QB_POOL}
             onClose={() => setShowCustomModal(false)}
             onSave={(ratings) => {
               setCustomRatings(ratings)
@@ -762,6 +808,7 @@ export default function App() {
           adsDisabled={adsDisabled}
           isRB={isRB}
           isWR={isWR}
+          isTE={isTE}
           onMVPWon={handleMVPWon}
           onBack={() => { setPage('game'); window.scrollTo({ top: 0, behavior: 'instant' }) }}
           onReset={() => { handleReset(); setPage('game'); window.scrollTo({ top: 0, behavior: 'instant' }) }}
@@ -806,9 +853,10 @@ export default function App() {
           adsDisabled={adsDisabled}
           isRB={isRB}
           isWR={isWR}
-          playerLabel={isWR ? 'WR' : undefined}
-          attrMap={isWR ? WR_ATTR : undefined}
-          categoriesData={isWR ? WR_CATEGORIES : undefined}
+          isTE={isTE}
+          playerLabel={isTE ? 'TE' : isWR ? 'WR' : undefined}
+          attrMap={isTE ? TE_ATTR : isWR ? WR_ATTR : undefined}
+          categoriesData={isTE ? TE_CATEGORIES : isWR ? WR_CATEGORIES : undefined}
           onlineCount={onlineCount}
         />
         <Silhouette
@@ -822,8 +870,9 @@ export default function App() {
           onReset={handleReset}
           isRB={isRB}
           isWR={isWR}
-          categoriesData={isWR ? WR_CATEGORIES : undefined}
-          attrMap={isWR ? WR_ATTR : undefined}
+          isTE={isTE}
+          categoriesData={isTE ? TE_CATEGORIES : isWR ? WR_CATEGORIES : undefined}
+          attrMap={isTE ? TE_ATTR : isWR ? WR_ATTR : undefined}
           isPlus={isPlus}
           isCustomMode={isCustomMode}
           onOpenCustomModal={() => setShowCustomModal(true)}
@@ -841,7 +890,8 @@ export default function App() {
             hasResult={page === 'versus-game' ? false : !!simResult}
             isRB={isRB}
             isWR={isWR}
-            attrMap={isWR ? WR_ATTR : undefined}
+            isTE={isTE}
+            attrMap={isTE ? TE_ATTR : isWR ? WR_ATTR : undefined}
             isPlus={isPlus}
             isCustomMode={isCustomMode}
             onOpenCustomModal={() => setShowCustomModal(true)}
@@ -953,8 +1003,9 @@ export default function App() {
         <CustomRatingsModal
           isRB={isRB}
           isWR={isWR}
+          isTE={isTE}
           gameMode={gameMode}
-          pool={isWR ? CUSTOM_WR_POOL : isRB ? CUSTOM_RB_POOL : CUSTOM_QB_POOL}
+          pool={isTE ? CUSTOM_TE_POOL : isWR ? CUSTOM_WR_POOL : isRB ? CUSTOM_RB_POOL : CUSTOM_QB_POOL}
           onClose={() => setShowCustomModal(false)}
           onSave={(ratings) => {
             setCustomRatings(ratings)

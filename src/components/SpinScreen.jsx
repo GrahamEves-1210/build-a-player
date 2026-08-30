@@ -233,8 +233,9 @@ const POS_COLORS = {
 }
 
 // ─── SpinScreen ──────────────────────────────────────────────────────────────
-export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, activeCategory, resetKey, onChipTap, types = TYPES, isLite = false, qbPool = QBS, savedResult = null, onSaveResult, onPhaseChange, gameKey, onReset, adsDisabled = false, isRB = false, isWR = false, isBucket = false, isVersusMode = false, attrMap = ATTR, categoriesData = CATEGORIES, teamsPool = TEAMS, logoDir = '/logos/', playerLabel, headshotsMap = HEADSHOTS, headshotsDir = `${HEADSHOT_BASE}/`, hideTeamResult = false, headshotFallback = () => null }) {
-  const pLabel = playerLabel ?? (isWR ? 'WR' : isRB ? 'RB' : 'QB')
+export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, activeCategory, resetKey, onChipTap, types = TYPES, isLite = false, qbPool = QBS, savedResult = null, onSaveResult, onPhaseChange, gameKey, onReset, adsDisabled = false, isRB = false, isWR = false, isTE = false, isBucket = false, isVersusMode = false, attrMap = ATTR, categoriesData = CATEGORIES, teamsPool = TEAMS, logoDir = '/logos/', playerLabel, headshotsMap = HEADSHOTS, headshotsDir = `${HEADSHOT_BASE}/`, hideTeamResult = false, headshotFallback = () => null }) {
+  const pLabel = playerLabel ?? (isTE ? 'TE' : isWR ? 'WR' : isRB ? 'RB' : 'QB')
+  const maxPlayerRespin = isTE ? 2 : 1
   const [phase, setPhase]               = useState(() => savedResult?.selectedQB ? 'done' : 'idle')
   const [selectedTeam, setSelectedTeam] = useState(() => savedResult?.selectedTeam ?? null)
   const [selectedQB,   setSelectedQB]   = useState(() => savedResult?.selectedQB ?? null)
@@ -462,17 +463,17 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
                 </button>
                 <div className="spin-respin-divider" />
                 <button
-                  className={`spin-respin-half spin-respin-player${qbRespinUsed >= 1 ? ' spin-respin-used' : ''}`}
-                  onClick={qbRespinUsed < 1 ? handleQBRespin : undefined}
-                  disabled={qbRespinUsed >= 1}
+                  className={`spin-respin-half spin-respin-player${qbRespinUsed >= maxPlayerRespin ? ' spin-respin-used' : ''}`}
+                  onClick={qbRespinUsed < maxPlayerRespin ? handleQBRespin : undefined}
+                  disabled={qbRespinUsed >= maxPlayerRespin}
                   onPointerDown={e => {
-                    if (qbRespinUsed >= 1) return
+                    if (qbRespinUsed >= maxPlayerRespin) return
                     const el = e.currentTarget
                     el.style.transform = 'scale(0.97) translateZ(0)'
                     setTimeout(() => { el.style.transform = '' }, 160)
                   }}
                 >
-                  RESPIN {pLabel} <span className="spin-btn-badge">{Math.max(0, 1 - qbRespinUsed)}</span>
+                  RESPIN {pLabel} <span className="spin-btn-badge">{Math.max(0, maxPlayerRespin - qbRespinUsed)}</span>
                 </button>
               </div>
             ) : (

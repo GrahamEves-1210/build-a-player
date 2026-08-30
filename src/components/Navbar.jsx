@@ -1,16 +1,16 @@
 import { useState, useRef, useEffect } from 'react'
 
-const STEPS_DESKTOP = (isRB, isWR) => [
-  { n: '1', title: 'Spin',      body: `Pull a random NFL team, then a${isWR ? ' WR' : isRB ? 'n RB' : 'n QB'} from their roster.` },
+const STEPS_DESKTOP = (isRB, isWR, isTE) => [
+  { n: '1', title: 'Spin',      body: `Pull a random NFL team, then a${isWR ? ' WR' : isRB ? 'n RB' : isTE ? ' TE' : 'n QB'} from their roster.` },
   { n: '2', title: 'Drag',      body: 'Drop one stat onto the matching zone on the player silhouette.' },
   { n: '3', title: 'Repeat ×9', body: 'Fill all nine attribute slots — one per spin.' },
-  { n: '4', title: 'Simulate',  body: `Hit Simulate to see how your Frankenstein ${isWR ? 'WR' : isRB ? 'RB' : 'QB'} performs.` },
+  { n: '4', title: 'Simulate',  body: `Hit Simulate to see how your Frankenstein ${isWR ? 'WR' : isRB ? 'RB' : isTE ? 'TE' : 'QB'} performs.` },
 ]
-const STEPS_MOBILE = (isRB, isWR) => [
-  { n: '1', title: 'Spin',      body: `Pull a random NFL team, then a${isWR ? ' WR' : isRB ? 'n RB' : 'n QB'} from their roster.` },
+const STEPS_MOBILE = (isRB, isWR, isTE) => [
+  { n: '1', title: 'Spin',      body: `Pull a random NFL team, then a${isWR ? ' WR' : isRB ? 'n RB' : isTE ? ' TE' : 'n QB'} from their roster.` },
   { n: '2', title: 'Tap',       body: 'Tap a stat chip to instantly assign it to your build.' },
   { n: '3', title: 'Repeat ×9', body: 'Fill all nine attribute slots — one per spin.' },
-  { n: '4', title: 'Simulate',  body: `Hit Simulate to see how your Frankenstein ${isWR ? 'WR' : isRB ? 'RB' : 'QB'} performs.` },
+  { n: '4', title: 'Simulate',  body: `Hit Simulate to see how your Frankenstein ${isWR ? 'WR' : isRB ? 'RB' : isTE ? 'TE' : 'QB'} performs.` },
 ]
 
 const BUCKET_STEPS_DESKTOP = [
@@ -176,7 +176,7 @@ const PERKS = [
   'PLUS badge on leaderboard entries',
 ]
 
-export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, onLeaderboard, onSwitchPosition, onSwitchBucketPosition, onSubscribe, onOpenCustomRatings, user, gameMode, isRB, isWR, position, isPlus, isBucket, bucketPosition, versusState }) {
+export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, onLeaderboard, onSwitchPosition, onSwitchBucketPosition, onSubscribe, onOpenCustomRatings, user, gameMode, isRB, isWR, isTE, position, isPlus, isBucket, bucketPosition, versusState }) {
   const [open,         setOpen]        = useState(false)
   const [htpOpen,      setHtpOpen]     = useState(false)
   const [installOpen,  setInstallOpen] = useState(false)
@@ -190,7 +190,7 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
   const isAndroid = typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent)
   const STEPS = isBucket
     ? (isMobile ? BUCKET_STEPS_MOBILE : BUCKET_STEPS_DESKTOP)
-    : (isMobile ? STEPS_MOBILE(isRB, isWR) : STEPS_DESKTOP(isRB, isWR))
+    : (isMobile ? STEPS_MOBILE(isRB, isWR, isTE) : STEPS_DESKTOP(isRB, isWR, isTE))
 
   useEffect(() => {
     if (!open) return
@@ -277,7 +277,7 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
             className="tab-pill tab-pill-qb active nav-pos-trigger"
             onClick={() => setPosDropOpen(o => !o)}
           >
-            {isWR ? 'Build-A-WR' : isRB ? 'Build-A-RB' : 'Build-A-QB'}
+            {isWR ? 'Build-A-WR' : isRB ? 'Build-A-RB' : isTE ? 'Build-A-TE' : 'Build-A-QB'}
             <IconChevron up={posDropOpen} />
           </button>
           {posDropOpen && (
@@ -292,7 +292,12 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
                   Build-A-RB
                 </button>
               )}
-              {(isRB || isWR) && (
+              {!isTE && (
+                <button className="nav-pos-item" onClick={() => { setPosDropOpen(false); onSwitchPosition?.('te') }}>
+                  Build-A-TE
+                </button>
+              )}
+              {(isRB || isWR || isTE) && (
                 <button className="nav-pos-item" onClick={() => { setPosDropOpen(false); onSwitchPosition?.('qb') }}>
                   Build-A-QB
                 </button>
@@ -425,8 +430,12 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
 
             {/* Social / contact */}
             <div className="wm-social-row">
+              <a className="wm-social-btn wm-social-sep" href="mailto:buildaplayer@outlook.com" title="Email us" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', padding: '4px 4px' }}>
+                <span style={{ fontSize: '8px', fontWeight: 700, letterSpacing: '0.4px', textTransform: 'uppercase', opacity: 0.7, lineHeight: 1 }}>Email us</span>
+                <IconMail />
+              </a>
               <a
-                className="wm-social-btn wm-social-sep"
+                className="wm-social-btn wm-social-btn-x wm-social-sep"
                 href="https://x.com/Build_A_Player"
                 title="Follow on X"
                 onClick={e => {
@@ -443,16 +452,14 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
               >
                 <IconX />
               </a>
-              <a className="wm-social-btn wm-social-sep" href="https://discord.gg/zdZBu2VjUD" target="_blank" rel="noopener noreferrer" title="Join our Discord">
+              <a className="wm-social-btn wm-social-btn-discord wm-social-sep" href="https://discord.gg/zdZBu2VjUD" target="_blank" rel="noopener noreferrer" title="Join our Discord">
                 <IconDiscord />
               </a>
-              <a className="wm-social-btn wm-social-sep" href="mailto:buildaplayer@outlook.com" title="Email us">
-                <IconMail />
-              </a>
-              <a className="wm-social-btn wm-social-btn-coffee wm-social-sep" href="https://buymeacoffee.com/32and0" target="_blank" rel="noopener noreferrer" title="Buy us a coffee" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', padding: '4px 4px' }}>
-                <span style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.4px', lineHeight: 1 }}>Tip Jar</span>
-                <IconCoffee />
-              </a>
+              <button className="wm-social-btn wm-social-btn-32 wm-social-sep" title="32-0game.com" tabIndex={-1} style={{ borderRadius: '8px', cursor: 'pointer', border: 'none' }}
+                onClick={(e) => { e.stopPropagation(); window.open('https://32-0game.com', '_blank', 'noopener,noreferrer') }}
+              >
+                <img src="/32-0logocutout.png" alt="32-0" style={{ height: '26px', width: 'auto', transform: 'scale(1.5)' }} />
+              </button>
             </div>
 
             <div className="wm-divider" />

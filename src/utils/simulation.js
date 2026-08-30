@@ -1,9 +1,12 @@
 import { TYPES } from '../data/qbs'
 import { RB_TYPES } from '../data/rbs'
 import { WR_TYPES, WRS } from '../data/wrs'
+import { TE_TYPES, TES } from '../data/tes'
 import { NFL_TEAMS, ALLTIME_RATINGS, RB_RATINGS } from '../data/nfl-teams'
 
-export const HEADSHOT_BASE = 'https://cdn.jsdelivr.net/gh/GrahamEves-1210/build-a-player@main/public/headshots'
+export const HEADSHOT_BASE = import.meta.env.DEV
+  ? '/headshots'
+  : 'https://cdn.jsdelivr.net/gh/GrahamEves-1210/build-a-player@main/public/headshots'
 
 export function nflHeadshot(id) {
   if (!id) return null
@@ -545,6 +548,7 @@ export function runSimulation(build, types = TYPES, team = null, isAllTime = fal
     if (!won && oppSc <= mySc)  oppSc = mySc  + 1 + Math.ceil(Math.random() * 4)
     mySc  = snapNFL(mySc)
     oppSc = snapNFL(oppSc)
+    if (mySc === oppSc) { if (won) mySc = snapNFL(mySc + 3); else oppSc = snapNFL(oppSc + 3) }
 
     seasonPassYds     += gamePassYds
     seasonTDs         += gameTDs
@@ -873,35 +877,31 @@ export function getArchetypeRB(ovr, build, types = RB_TYPES) {
   return 'Practice Squad'
 }
 
-// ── OPOY pools (Offensive Player of the Year) — RBs + WRs compete ────────────
+// ── OPOY pools (Offensive Player of the Year) — shared across RB / WR / TE modes ─
 
 const CLASSIC_OPOY_POOL = [
-  // RBs — elite backs who contend annually
+  { name: 'Justin Jefferson',    team: 'MIN', color: '#4F2683', pos: 'WR' },
+  { name: "Ja'Marr Chase",       team: 'CIN', color: '#FB4F14', pos: 'WR' },
+  { name: 'CeeDee Lamb',         team: 'DAL', color: '#003594', pos: 'WR' },
+  { name: 'Puka Nacua',          team: 'LAR', color: '#003594', pos: 'WR' },
+  { name: 'Malik Nabers',        team: 'NYG', color: '#0B2265', pos: 'WR' },
   { name: 'Saquon Barkley',      team: 'PHI', color: '#004C54', pos: 'RB' },
   { name: 'Derrick Henry',       team: 'BAL', color: '#241773', pos: 'RB' },
   { name: 'Christian McCaffrey', team: 'SF',  color: '#AA0000', pos: 'RB' },
-  { name: 'Jonathan Taylor',     team: 'IND', color: '#002C5F', pos: 'RB' },
   { name: 'Bijan Robinson',      team: 'ATL', color: '#A71930', pos: 'RB' },
-  { name: 'Jahmyr Gibbs',        team: 'DET', color: '#0076B6', pos: 'RB' },
-  // WRs — top receivers who steal OPOY in big seasons
-  { name: 'Justin Jefferson',    team: 'MIN', color: '#4F2683', pos: 'WR' },
-  { name: "Ja'Marr Chase",       team: 'CIN', color: '#FB4F14', pos: 'WR' },
-  { name: 'Puka Nacua',          team: 'LAR', color: '#003594', pos: 'WR' },
 ]
 
 const ALLTIME_OPOY_POOL = [
-  // RBs — all-time greats who dominated the award
-  { name: 'Barry Sanders',       team: 'DET', color: '#0076B6', pos: 'RB' },
-  { name: 'Emmitt Smith',        team: 'DAL', color: '#003594', pos: 'RB' },
-  { name: 'LaDainian Tomlinson', team: 'LAC', color: '#002A5E', pos: 'RB' },
-  { name: 'Walter Payton',       team: 'CHI', color: '#0B162A', pos: 'RB' },
-  { name: 'Adrian Peterson',     team: 'MIN', color: '#4F2683', pos: 'RB' },
-  { name: 'Eric Dickerson',      team: 'LAR', color: '#003594', pos: 'RB' },
-  // WRs — all-time receivers who could outshine any back
   { name: 'Jerry Rice',          team: 'SF',  color: '#AA0000', pos: 'WR' },
   { name: 'Randy Moss',          team: 'MIN', color: '#4F2683', pos: 'WR' },
   { name: 'Calvin Johnson',      team: 'DET', color: '#0076B6', pos: 'WR' },
-  { name: 'Julio Jones',         team: 'ATL', color: '#A71930', pos: 'WR' },
+  { name: 'Terrell Owens',       team: 'DAL', color: '#003594', pos: 'WR' },
+  { name: 'Marvin Harrison',     team: 'IND', color: '#002C5F', pos: 'WR' },
+  { name: 'Barry Sanders',       team: 'DET', color: '#0076B6', pos: 'RB' },
+  { name: 'LaDainian Tomlinson', team: 'LAC', color: '#002A5E', pos: 'RB' },
+  { name: 'Walter Payton',       team: 'CHI', color: '#0B162A', pos: 'RB' },
+  { name: 'Adrian Peterson',     team: 'MIN', color: '#4F2683', pos: 'RB' },
+  { name: 'Emmitt Smith',        team: 'DAL', color: '#003594', pos: 'RB' },
 ]
 
 export function calcOPOYResult(result, isAllTime = false, teamShort = null) {
@@ -1176,6 +1176,7 @@ export function runRBSimulation(build, types = RB_TYPES, team = null, isAllTime 
     if (!won && oppSc <= mySc)  oppSc = mySc  + 1 + Math.ceil(Math.random() * 4)
     mySc  = snapNFL(mySc)
     oppSc = snapNFL(oppSc)
+    if (mySc === oppSc) { if (won) mySc = snapNFL(mySc + 3); else oppSc = snapNFL(oppSc + 3) }
 
     // Game script: blowout wins → more clock-kill carries; blowout losses → abandon the run
     const margin = mySc - oppSc
@@ -1420,10 +1421,10 @@ export function getArchetypeWR(ovr, build, types = WR_TYPES) {
   const big  = sz >= 9
 
   if (ovr >= 95) {
-    if (hi(spd) && hi(yac) && hi(bct))               return 'The Ghost'
-    if (hi(hnd) && hi(rte) && hi(spd))               return 'Once-in-a-Generation Receiver'
+    if (hi(spd) && hi(yac) && hi(bct))               return 'Uncoverable'
+    if (hi(hnd) && hi(rte) && hi(spd))               return 'Once-in-a-Generation'
     if (hi(rte) && hi(rel) && hi(awr))               return 'Route God'
-    if (hi(sz) && hi(vrt) && hi(hnd))                return '50-50 Nightmare'
+    if (hi(sz) && hi(vrt) && hi(hnd))                return 'Jump Ball Nightmare'
     if (hi(hnd) && hi(rte) && hi(yac))               return 'Complete Receiver'
     if (hi(spd) && hi(rte) && hi(rel))               return 'Unguardable'
     if (hi(hnd) && hi(yac))                          return 'Matchup Nightmare'
@@ -1449,7 +1450,7 @@ export function getArchetypeWR(ovr, build, types = WR_TYPES) {
 
   if (ovr >= 86) {
     if (top('spd') && top('bct') && slim && up(yac)) return 'Slot Missile'
-    if (hi(spd) && slim)                             return 'Burner'
+    if (hi(spd) && slim)                             return 'Deep Threat'
     if (top('spd') && top('bct') && slim)            return 'Slot Weapon'
     if (top('spd') && top('bct'))                    return 'Speedster'
     if (top('spd') && top('yac') && slim)            return 'Open-Field Menace'
@@ -1469,11 +1470,11 @@ export function getArchetypeWR(ovr, build, types = WR_TYPES) {
   }
 
   if (ovr >= 82) {
-    if (up(spd) && slim && top('bct'))               return 'Speed Demon'
-    if (top('spd') && top('bct') && slim)            return 'Slot Option'
-    if (top('spd') && top('bct'))                    return 'Speed Merchant'
+    if (up(spd) && slim && top('bct'))               return 'Burner'
+    if (top('spd') && top('bct') && slim)            return 'Burner'
+    if (top('spd') && top('bct'))                    return 'Burner'
     if (top('spd') && top('yac'))                    return 'RAC Threat'
-    if (up(spd) && vrt >= 8 && rte < 8)             return 'Deep Threat'
+    if (up(spd) && vrt >= 8 && rte < 8)             return 'Burner'
     if (big && top('vrt') && up(vrt))                return 'Red Zone Threat'
     if (big && top('vrt'))                           return 'Jump-Ball Receiver'
     if (top('rte') && top('rel') && ok(awr))         return 'Technician'
@@ -1487,9 +1488,9 @@ export function getArchetypeWR(ovr, build, types = WR_TYPES) {
   }
 
   if (ovr >= 76) {
-    if (up(spd) && rte < 7 && slim)                 return 'Speed Only'
-    if (top('spd') && top('bct') && slim)            return 'Change-of-Pace'
-    if (up(spd))                                     return 'Speed Threat'
+    if (up(spd) && rte < 7 && slim)                 return 'Burner'
+    if (top('spd') && top('bct') && slim)            return 'Burner'
+    if (up(spd))                                     return 'Burner'
     if (big && top('vrt'))                           return 'Jump-Ball Option'
     if (big && hnd >= 7)                             return 'Boundary Receiver'
     if (top('rte') && top('rel'))                    return 'Technical WR'
@@ -1501,7 +1502,7 @@ export function getArchetypeWR(ovr, build, types = WR_TYPES) {
   }
 
   if (ovr >= 68) {
-    if (up(spd))                                     return 'Flyer'
+    if (up(spd))                                     return 'Burner'
     if (big && top('vrt'))                           return 'Redzone Specialist'
     if (top('hnd'))                                  return 'Hands Guy'
     if (top('rte') && ok(rte))                       return 'Route Technician'
@@ -1520,27 +1521,7 @@ export function getArchetypeWR(ovr, build, types = WR_TYPES) {
   return 'Practice Squad'
 }
 
-// OPOY pools for WR mode — WRs and a few elite RBs compete
-const CLASSIC_WR_OPOY_POOL = [
-  { name: 'Justin Jefferson',    team: 'MIN', color: '#4F2683', pos: 'WR' },
-  { name: "Ja'Marr Chase",       team: 'CIN', color: '#FB4F14', pos: 'WR' },
-  { name: 'CeeDee Lamb',         team: 'DAL', color: '#003594', pos: 'WR' },
-  { name: 'Nico Collins',        team: 'HOU', color: '#002244', pos: 'WR' },
-  { name: 'Brian Thomas Jr.',    team: 'JAX', color: '#006778', pos: 'WR' },
-  { name: 'Malik Nabers',        team: 'NYG', color: '#0B2265', pos: 'WR' },
-  { name: 'Saquon Barkley',      team: 'PHI', color: '#004C54', pos: 'RB' },
-  { name: 'Derrick Henry',       team: 'BAL', color: '#241773', pos: 'RB' },
-]
-
-const ALLTIME_WR_OPOY_POOL = [
-  { name: 'Jerry Rice',          team: 'SF',  color: '#AA0000', pos: 'WR' },
-  { name: 'Randy Moss',          team: 'MIN', color: '#4F2683', pos: 'WR' },
-  { name: 'Calvin Johnson',      team: 'DET', color: '#0076B6', pos: 'WR' },
-  { name: 'Terrell Owens',       team: 'DAL', color: '#003594', pos: 'WR' },
-  { name: 'Marvin Harrison',     team: 'IND', color: '#002C5F', pos: 'WR' },
-  { name: 'Barry Sanders',       team: 'DET', color: '#0076B6', pos: 'RB' },
-  { name: 'LaDainian Tomlinson', team: 'LAC', color: '#002A5E', pos: 'RB' },
-]
+// WR mode uses the shared OPOY pools defined above
 
 export function calcWROPOYResult(result, isAllTime = false, teamShort = null) {
   const { wins = 0, seasonRecYds = 0, seasonRecTDs = 0, seasonRecs = 0, ovr = 70 } = result
@@ -1591,7 +1572,7 @@ export function calcWROPOYResult(result, isAllTime = false, teamShort = null) {
   p = Math.min(p, 0.88)
 
   const userWins = Math.random() < p
-  const pool = isAllTime ? ALLTIME_WR_OPOY_POOL : CLASSIC_WR_OPOY_POOL
+  const pool = isAllTime ? ALLTIME_OPOY_POOL : CLASSIC_OPOY_POOL
   const filteredPool = teamShort ? pool.filter(w => w.team !== teamShort) : pool
   const activePool = filteredPool.length ? filteredPool : pool
   const winner = activePool[Math.floor(Math.random() * activePool.length)]
@@ -1750,15 +1731,15 @@ export function runWRSimulation(build, types = WR_TYPES, team = null, isAllTime 
                   : 1.0
 
     const rawTargets  = Math.max(1, Math.round((targetBase - defTgtPenalty + v() * 2.5) * tgtMult * lowOvrCurve))
-    const gameTargets = isLimited ? Math.max(1, Math.round(1 + Math.random() * 3)) : rawTargets
+    const gameTargets = isLimited ? Math.max(1, Math.round(1 + Math.random() * 3)) : Math.min(rawTargets, 16)
 
-    const gameCatchRate = Math.min(0.93, Math.max(0.28, catchBase - wxCatchHit + v() * 0.09))
-    const gameRecs      = Math.max(0, Math.round(gameTargets * gameCatchRate))
+    const gameCatchRate = Math.min(0.88, Math.max(0.28, catchBase - wxCatchHit + v() * 0.09))
+    const gameRecs      = Math.max(0, Math.min(Math.round(gameTargets * gameCatchRate), 14))
 
-    const gameYpr    = Math.max(3.5, (yprBase - defYprPenalty - wxYprHit) * yprMult + v() * 3.0)
+    const gameYpr    = Math.max(3.5, Math.min((yprBase - defYprPenalty - wxYprHit) * yprMult + v() * 3.0, 26))
     const gameRecYds = isLimited
       ? Math.max(0, Math.round(gameRecs * 7))
-      : Math.max(0, Math.round(gameRecs * gameYpr))
+      : Math.max(0, Math.min(Math.round(gameRecs * gameYpr), 350))
 
     // TD production: inherently streaky — cold weeks and hot weeks create real season variance.
     // Dud games suppress TDs; legendary games boost them; random streaks handle the rest.
@@ -1770,7 +1751,7 @@ export function runWRSimulation(build, types = WR_TYPES, team = null, isAllTime 
                       : isTDHot  ? baseTdP * 2.5 + v() * 0.018
                       : baseTdP + v() * 0.014
     const rawTdExp    = isLimited ? 0 : gameRecs * Math.max(0, gameTdP)
-    const gameRecTDs  = Math.floor(rawTdExp) + (Math.random() < (rawTdExp % 1) ? 1 : 0)
+    const gameRecTDs  = Math.min(Math.floor(rawTdExp) + (Math.random() < (rawTdExp % 1) ? 1 : 0), 4)
 
     // Long reception: speed/vertical WRs and breakout games produce the big plays
     const bigPlayChance = Math.max(0.06,
@@ -1800,6 +1781,7 @@ export function runWRSimulation(build, types = WR_TYPES, team = null, isAllTime 
     if (!won && oppSc <= mySc)  oppSc = mySc  + 1 + Math.ceil(Math.random() * 4)
     mySc  = snapNFL(mySc)
     oppSc = snapNFL(oppSc)
+    if (mySc === oppSc) { if (won) mySc = snapNFL(mySc + 3); else oppSc = snapNFL(oppSc + 3) }
 
     seasonRecs    += gameRecs
     seasonRecYds  += gameRecYds
@@ -1894,6 +1876,552 @@ export function runWRSimulation(build, types = WR_TYPES, team = null, isAllTime 
       const pgTargets = Math.round(5 + relN * 3 + rteN * 2 + randN() * 2)
       const pgRecs    = Math.max(0, Math.round(pgTargets * (catchBase + randN() * 0.06)))
       const pgRecYds  = pgRecs > 0 ? Math.max(0, Math.round(pgRecs * (yprBase * wMult + randN() * 3))) : 0
+      const pgRecTDs  = pgRecs > 0 && Math.random() < tdRateBase * 1.1 ? 1 : 0
+
+      const oppTeamOffN = oppTeam ? (oppTeam.off - 5) / 5 : 0
+      const oppTeamDefN = oppTeam ? (oppTeam.def - 5) / 5 : 0
+      const pgTmTDs  = Math.max(0, Math.round(1.3 + teamOffN * 1.0 + pgRecTDs + randN() * 0.8))
+      const pgFGs    = Math.max(0, Math.round(1.2 - pgTmTDs * 0.3 + Math.random() * 1.2))
+      const base     = Math.max(3, Math.round((pgTmTDs * 7 + pgFGs * 3 - Math.round(oppTeamDefN * 3)) * wMult))
+      const oppPTDs  = Math.floor(1 + Math.random() * 3 + oppTeamOffN * 0.8)
+      const oppPFGs  = Math.max(0, Math.round(1 - oppPTDs * 0.3 + Math.random()))
+      const opp      = Math.max(7, Math.round((oppPTDs * 7 + oppPFGs * 3 - Math.round(teamDefN * 3)) * wMult))
+      const pgCloseness = 1 - 2 * Math.abs(pgWinP - 0.5)
+      const pgOT        = Math.random() < pgCloseness * 0.22
+      let finalMy, finalOpp
+      if (pgOT) {
+        const baseTDs2 = Math.max(pgTmTDs, Math.floor(1 + Math.random() * 3 + oppTeamOffN * 0.8), 1)
+        const tiedSc   = snapNFL(Math.max(10, baseTDs2 * 7 + Math.floor(Math.random() * 3) * 3))
+        const otPts    = Math.random() < 0.27 ? 7 : 3
+        finalMy  = won ? tiedSc + otPts : tiedSc
+        finalOpp = won ? tiedSc : tiedSc + otPts
+      } else {
+        const margin = Math.ceil(Math.random() * 7)
+        finalMy  = snapNFL(won ? Math.max(base, opp + margin) : Math.min(base, opp - margin))
+        finalOpp = snapNFL(won ? opp : Math.max(opp, base + margin))
+      }
+
+      playoffRounds.push({
+        round, opponent, home: pgHome, weather, mySc: finalMy, oppSc: finalOpp, won, overtime: pgOT,
+        rec: pgRecs, recYds: pgRecYds, recTDs: pgRecTDs, targets: pgTargets,
+      })
+      if (won) pwins++
+      else { eliminated = round; break }
+    }
+
+    if (pwins === winsNeeded) {
+      const sbGame = playoffRounds[playoffRounds.length - 1]
+      sbResult = { won: true, recYds: sbGame.recYds, recTDs: sbGame.recTDs, rec: sbGame.rec }
+    } else {
+      sbResult = { won: false, round: eliminated, pwins }
+    }
+  }
+
+  return {
+    team, ovr, wins, losses,
+    games,
+    highlights: games.filter(g => g.wk <= 4 || g.wk >= 14),
+    seasonRecs, seasonRecYds, seasonRecTDs, seasonTargets, seasonYPR,
+    seasonLong, hundredYardGames, catchRate,
+    bestGame,
+    playoffs, playoffRounds, sbResult, hasBye: playoffs && hasBye,
+  }
+}
+
+// ── TE SIMULATION ─────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+
+const TE_ATTR_WEIGHT = {
+  'hands':        0.16,
+  'routeRunning': 0.15,
+  'size':         0.12,
+  'awareness':    0.11,
+  'afterCatch':   0.11,
+  'blocking':     0.09,
+  'strength':     0.09,
+  'vertical':     0.09,
+  'speed':        0.08,
+}
+
+export function calcOVRTE(build, types = TE_TYPES) {
+  const filled = types.filter(t => build[t])
+  if (!filled.length) return null
+
+  const totalW = filled.reduce((s, t) => s + (TE_ATTR_WEIGHT[t] ?? 0.05), 0)
+  const avg    = filled.reduce((s, t) => s + build[t].val * (TE_ATTR_WEIGHT[t] ?? 0.05) / totalW, 0)
+  const vals   = filled.map(t => build[t].val)
+  const base   = 60 + 2.1 * avg + 0.21 * avg * avg
+
+  let bonus = 0
+  if (filled.length === types.length) {
+    const spread = Math.max(...vals) - Math.min(...vals)
+    const minVal = Math.min(...vals)
+    if (spread <= 1) bonus += 2.5
+    else if (spread <= 2) bonus += 1.0
+    else if (spread <= 3) bonus += 0.3
+    if (minVal >= 9) bonus += 2.0
+    else if (minVal >= 8) bonus += 0.5
+  }
+
+  return Math.min(99, Math.max(0, Math.round(base + bonus)))
+}
+
+export function getArchetypeTE(ovr, build, types = TE_TYPES) {
+  const filled = types.filter(t => build[t])
+  if (!filled.length) return 'Spin to start building'
+  const rem = types.length - filled.length
+  if (rem > 0) return `${rem} attribute${rem !== 1 ? 's' : ''} remaining`
+
+  const g   = k => build[k]?.val ?? 0
+  const spd = g('speed'), blk = g('blocking'), vrt = g('vertical'), sz = g('size')
+  const rte = g('routeRunning'), str = g('strength'), hnd = g('hands')
+  const awr = g('awareness'), yac = g('afterCatch')
+
+  const vals   = filled.map(t => build[t].val)
+  const spread = Math.max(...vals) - Math.min(...vals)
+
+  const ranked = [
+    { k: 'spd', v: spd }, { k: 'blk', v: blk }, { k: 'vrt', v: vrt }, { k: 'sz',  v: sz  },
+    { k: 'rte', v: rte }, { k: 'str', v: str }, { k: 'hnd', v: hnd },
+    { k: 'awr', v: awr }, { k: 'yac', v: yac },
+  ].sort((a, b) => b.v - a.v)
+
+  const t1   = ranked[0].k
+  const t2   = ranked[1].k
+  const t3   = ranked[2].k
+  const top  = k => t1 === k || t2 === k
+  const top3 = k => t1 === k || t2 === k || t3 === k
+  const hi   = v => v >= 10
+  const up   = v => v >= 9
+  const ok   = v => v >= 7
+  const slim = sz <= 7
+  const big  = sz >= 10
+  const fast = spd >= 8
+
+  if (ovr >= 95) {
+    if (hi(blk) && hi(str) && up(rte))              return 'Blocking Anchor'
+    if (hi(rte) && hi(awr) && up(hnd))              return 'Route God'
+    if (hi(hnd) && hi(awr) && hi(rte))              return 'Unstoppable Weapon'
+    if (hi(yac) && hi(hnd) && fast)                 return 'Nightmare Matchup'
+    if (hi(blk) && hi(hnd) && hi(rte))              return 'Complete Tight End'
+    if (spread <= 1)                                 return 'Generational TE'
+    return 'Transcendent TE'
+  }
+
+  if (ovr >= 90) {
+    if (top('blk') && top('str') && up(rte))        return 'Dominant Blocker'
+    if (top('spd') && top('yac') && up(hnd))        return 'Seam Wrecker'
+    if (top('rte') && top('hnd') && up(awr))        return 'Elite Pass Catcher'
+    if (top('blk') && top('hnd') && up(rte))        return 'Swiss Army TE'
+    if (fast && top('yac') && up(hnd))              return 'Big Play Machine'
+    if (big && top('vrt') && up(hnd))               return 'Red Zone Nightmare'
+    if (top('rte') && top('awr') && up(hnd))        return 'Versatile Weapon'
+    if (top('hnd') && top('yac') && slim)           return 'Move TE'
+    if (spread <= 2)                                 return 'Franchise Tight End'
+    return 'Superstar TE'
+  }
+
+  if (ovr >= 86) {
+    if (top('blk') && top('str'))                   return 'Mauler'
+    if (top('blk') && up(blk) && top3('rte'))       return 'Run Blocker'
+    if (top('spd') && top('yac') && slim)           return 'Seam Missile'
+    if (fast && top('vrt') && up(hnd))              return 'Deep Threat TE'
+    if (top('rte') && top('hnd') && top3('awr'))    return 'Route Runner'
+    if (big && top('vrt') && up(hnd))               return 'Jump-Ball Monster'
+    if (top('hnd') && top('awr') && top3('rte'))    return 'Chain Mover'
+    if (top('yac') && top('hnd') && slim)           return 'YAC Machine'
+    if (top('blk') && top('rte'))                   return 'Versatile Weapon'
+    if (spread <= 2)                                 return 'Pro Bowl TE'
+    return 'Pro Bowl TE'
+  }
+
+  if (ovr >= 82) {
+    if (top('blk') && top('str'))                   return 'Inline Blocker'
+    if (top('spd') && top('yac'))                   return 'Speed TE'
+    if (top('rte') && top('hnd'))                   return 'Receiving TE'
+    if (big && top('vrt'))                          return 'Red Zone Threat'
+    if (top('hnd') && top('awr'))                   return 'Possession TE'
+    if (fast && up(spd))                             return 'Athletic TE'
+    if (top('blk') && up(blk))                      return 'Power Blocker'
+    if (spread <= 2)                                 return 'Solid Starter'
+    return 'Solid Starter'
+  }
+
+  if (ovr >= 76) {
+    if (top('blk') && top('str'))                   return 'Block-First TE'
+    if (top('spd') && slim)                         return 'Move TE'
+    if (top('rte') && ok(hnd))                      return 'Route Technician'
+    if (big && top('vrt'))                          return 'Jump-Ball Option'
+    if (top('hnd') && ok(awr))                      return 'Reliable Hands'
+    if (top('yac') && slim)                         return 'Gadget TE'
+    if (spread <= 2)                                 return 'Reliable Option'
+    return 'Rotational TE'
+  }
+
+  if (ovr >= 68) {
+    if (up(blk))                                     return 'Y-Blocker'
+    if (big && top('vrt'))                           return 'Redzone Specialist'
+    if (top('hnd'))                                  return 'Possession TE'
+    if (spread >= 5)                                 return 'Raw Athlete'
+    return 'Depth TE'
+  }
+
+  if (ovr >= 60) {
+    if (blk >= 9 || str >= 9)                        return 'Blocking Project'
+    if (spd >= 9 || vrt >= 9)                        return 'Athletic Project'
+    return 'Depth Piece'
+  }
+  if (ovr >= 50) return (blk >= 9 || sz >= 9) ? 'Physical Prospect' : 'Camp Body'
+  return 'Practice Squad'
+}
+
+// TE mode uses the shared OPOY pools defined above
+
+export function calcTEOPOYResult(result, isAllTime = false, teamShort = null) {
+  const { wins = 0, seasonRecYds = 0, seasonRecTDs = 0, seasonRecs = 0, ovr = 70 } = result
+
+  let p = 0
+
+  // Receiving yards — same thresholds as WR mode
+  if (seasonRecYds >= 2000)      p += 0.48
+  else if (seasonRecYds >= 1800) p += 0.38
+  else if (seasonRecYds >= 1600) p += 0.24
+  else if (seasonRecYds >= 1400) p += 0.10
+  else if (seasonRecYds >= 1200) p += 0.03
+
+  // TDs
+  if (seasonRecTDs >= 18)        p += 0.25
+  else if (seasonRecTDs >= 14)   p += 0.17
+  else if (seasonRecTDs >= 10)   p += 0.07
+  else if (seasonRecTDs >= 7)    p += 0.02
+
+  // Receptions
+  if (seasonRecs >= 120)         p += 0.06
+  else if (seasonRecs >= 100)    p += 0.03
+
+  // Wins
+  if (wins >= 14)                p += 0.10
+  else if (wins >= 12)           p += 0.06
+  else if (wins >= 10)           p += 0.02
+
+  // OVR
+  if (ovr >= 95)                 p += 0.04
+  else if (ovr >= 90)            p += 0.02
+
+  // Hard caps
+  if (seasonRecYds < 1100)       p = Math.min(p, 0.02)
+  if (seasonRecTDs < 7)          p = Math.min(p, 0.05)
+  if (wins < 7)                  p = 0
+
+  // Guaranteed thresholds — same as WR
+  if (seasonRecYds >= 1900 && seasonRecTDs >= 12 && wins >= 10) {
+    const unanimous = seasonRecYds >= 2100 || seasonRecTDs >= 16
+    return { userWins: true, winner: null, unanimous, winnerStats: null }
+  }
+
+  // RB/WR competition factor
+  p *= 0.88
+
+  if (isAllTime) p *= 0.75
+  p = Math.min(p, 0.88)
+
+  const userWins = Math.random() < p
+  const pool = isAllTime ? ALLTIME_OPOY_POOL : CLASSIC_OPOY_POOL
+  const filteredPool = teamShort ? pool.filter(w => w.team !== teamShort) : pool
+  const activePool = filteredPool.length ? filteredPool : pool
+  const winner = activePool[Math.floor(Math.random() * activePool.length)]
+  const unanimous = wins >= 14 && seasonRecYds >= 1800 && seasonRecTDs >= 14
+
+  const ri = (lo, hi) => Math.round(lo + Math.random() * (hi - lo))
+  const winnerWins = ri(Math.max(11, wins), Math.min(15, Math.max(12, wins + 2)))
+
+  let winnerStats
+  if (winner.pos === 'RB') {
+    winnerStats = {
+      wins: winnerWins, losses: 17 - winnerWins,
+      rushYds: ri(1700, 2100), recYds: ri(200, 500), tds: ri(14, 22),
+    }
+  } else {
+    winnerStats = {
+      wins:    winnerWins,
+      losses:  17 - winnerWins,
+      recYds:  ri(Math.max(1400, seasonRecYds + 30), Math.max(1700, seasonRecYds + 200)),
+      recTDs:  ri(Math.max(9,    seasonRecTDs + 1),  Math.max(13,   seasonRecTDs + 4)),
+      recs:    ri(Math.max(85,   seasonRecs - 5),    Math.max(110,  seasonRecs + 20)),
+    }
+  }
+
+  return { userWins, winner, unanimous, winnerStats }
+}
+
+export function runTESimulation(build, types = TE_TYPES, team = null, isAllTime = false) {
+  const oppLookup = isAllTime ? ALLTIME_BY_NAME : TEAM_BY_NAME
+  const ovr = calcOVRTE(build, types)
+
+  const teamOffN = team ? (team.off - 5) / 5 : 0
+  const teamDefN = team ? (team.def - 5) / 5 : 0
+
+  const filledAvg = types.length > 0
+    ? types.reduce((s, t) => s + (build[t]?.val ?? 5), 0) / types.length
+    : 5
+  const raw = k => build[k]?.val ?? filledAvg
+  const n   = k => raw(k) / 11
+
+  const spdN = n('speed')
+  const blkN = n('blocking')    // blocking — inline run blocking proficiency
+  const vrtN = n('vertical')    // jump ball / contested catches in end zone
+  const szN  = n('size')        // physical domination
+  const rteN = n('routeRunning')// separation and target share
+  const strN = n('strength')    // releasing vs. LBs/DBs
+  const hndN = n('hands')       // catch rate, drops
+  const awrN = n('awareness')   // IQ, situational production
+  const yacN = n('afterCatch')  // RAC yards, broken tackles
+
+  // Targets: TEs get ~45-90 targets; route running and awareness primary drivers
+  // blocking reduces target share (block-first TEs get fewer routes run)
+  const ovrTargetBonus = ovr !== null ? Math.max(0, Math.min(1.0, (ovr - 82) / 16)) : 0
+
+  const dcRank = team?.short
+    ? TES.filter(te => te.team === team.short && te.ovr > ovr).length
+    : 0
+  const dcMult = dcRank === 0 ? 1.00
+               : dcRank === 1 ? 0.84
+               : dcRank === 2 ? 0.68
+               : 0.55
+
+  // TEs get fewer targets than WRs; blocking TEs get even fewer
+  // speed added: faster TEs threaten seam/crossing routes and earn more targets
+  const targetBase = (3.2 + rteN * 2.0 + hndN * 0.8 + strN * 0.6 + yacN * 0.4 + awrN * 0.35 + spdN * 0.30 - blkN * 0.3 + teamOffN * 0.45 + ovrTargetBonus) * dcMult
+
+  // Higher catch rate than WR — TEs run more controlled routes, contested less
+  const catchBase = Math.min(0.84, 0.54 + hndN * 0.16 + rteN * 0.06 + awrN * 0.04 + strN * 0.02)
+
+  // Piecewise OVR curve
+  const lowOvrCurve = ovr === null ? 1.0
+    : ovr >= 82 ? 1.0
+    : ovr >= 76 ? 0.85 + (ovr - 76) * 0.025
+    : ovr >= 70 ? 0.68 + (ovr - 70) * 0.028
+    : ovr >= 62 ? 0.48 + (ovr - 62) * 0.025
+    : Math.max(0.30, 0.30 + (ovr - 50) * 0.015)
+
+  // YPR: seam routes, crossers — elite TEs average 13-15 YPR; Kittle/Kelce-type ceiling is ~15-16
+  // afterCatch bumped: YAC is the primary YPR driver for modern TEs
+  const yprBase = Math.min(isAllTime ? 17.5 : 16.0,
+    8.5 + spdN * 2.5 + vrtN * 1.3 + yacN * 1.5 + rteN * 0.6 + awrN * 0.3 - szN * 0.35 + teamOffN * 0.40)
+
+  // TD rate: size and vertical are massive for TEs (red zone dominance)
+  // strength and hands also contribute; blocking doesn't help scoring
+  const tdRateBase = 0.055 + szN * 0.035 + vrtN * 0.030 + hndN * 0.015 + rteN * 0.010 + strN * 0.008 + teamOffN * 0.010
+
+  const ovrPenalty = ovr !== null && ovr < 75
+    ? (75 - ovr) * 0.005 + (ovr < 68 ? (68 - ovr) * 0.006 : 0)
+    : 0
+  const starBonus = ovr !== null && ovr > 75
+    ? Math.min(0.20, (ovr - 75) * (ovr - 75) * 0.00040)
+    : 0
+  const winP = Math.min(0.88, Math.max(0.18,
+    0.44
+    + (spdN + blkN + rteN + hndN + yacN) * 0.011
+    + starBonus
+    + teamOffN * 0.185
+    + teamDefN * 0.195
+    - ovrPenalty
+  ))
+
+  const ovrN = ovr !== null ? (ovr - 75) / 22 : 0
+  const playerTeamAvg = ((team?.off ?? 5.5) + (team?.def ?? 5.5)) / 2
+
+  let wins = 0, losses = 0
+  let seasonRecs = 0, seasonRecYds = 0, seasonRecTDs = 0, seasonTargets = 0
+  let seasonLong = 0, hundredYardGames = 0
+
+  const schedule = buildSchedule(team)
+  const games = schedule.map(({ opponent, home }, i) => {
+    const v = () => randN()
+
+    const oppTeam = oppLookup[opponent]
+    const oppDefN = oppTeam ? (oppTeam.def - 5) / 5 : 0
+    const oppOffN = oppTeam ? (oppTeam.off - 5) / 5 : 0
+    const oppPenalty = isAllTime
+      ? oppOffN * 0.08 + oppDefN * 0.10
+      : oppOffN * 0.10 + oppDefN * 0.12
+
+    const homeShort  = home ? (team?.short ?? '') : (oppTeam?.short ?? '')
+    const badWeather = !DOME_TEAMS.has(homeShort) && COLD_TEAMS.has(homeShort) && Math.random() < 0.15
+    const wxCatchHit = badWeather ? 0.03 : 0
+    const wxYprHit   = badWeather ? (0.4 + Math.random() * 0.7) : 0
+
+    const isLimited = Math.random() < 0.07
+
+    const statScale     = isAllTime ? 1.0 : 0.60
+    const defTgtPenalty = oppDefN * 0.70 * statScale
+    const defYprPenalty = oppDefN * 0.85 * statScale
+
+    const gameMood       = Math.random()
+    const dudThreshold   = 0.18 + oppDefN * 0.10
+    const breakThreshold = 0.78 + oppDefN * 0.07
+    const isDud          = !isLimited && gameMood < dudThreshold
+    const isBreakout     = !isLimited && gameMood > breakThreshold
+    const isLegendary    = isBreakout && (
+      ovr >= 99 ? Math.random() < 0.14 :
+      ovr >= 95 ? Math.random() < 0.09 :
+      ovr >= 88 ? Math.random() < 0.040 :
+      ovr >= 80 ? Math.random() < 0.018 : false
+    )
+
+    const tgtMult = isDud       ? (0.35 + Math.random() * 0.22)
+                  : isLegendary ? (1.30 + Math.random() * 0.40)
+                  : isBreakout  ? (1.08 + Math.random() * 0.26)
+                  : 1.0
+    const yprMult = isDud       ? (0.50 + Math.random() * 0.22)
+                  : isLegendary ? (1.40 + Math.random() * 0.50)
+                  : isBreakout  ? (1.10 + Math.random() * 0.28)
+                  : 1.0
+
+    const rawTargets  = Math.max(0, Math.round((targetBase - defTgtPenalty + v() * 2.0) * tgtMult * lowOvrCurve))
+    const gameTargets = isLimited ? Math.max(0, Math.round(Math.random() * 2)) : Math.min(rawTargets, 13)
+
+    const gameCatchRate = Math.min(0.88, Math.max(0.35, catchBase - wxCatchHit + v() * 0.08))
+    const gameRecs      = Math.max(0, Math.min(Math.round(gameTargets * gameCatchRate), 12))
+
+    const gameYpr    = Math.max(4.5, Math.min((yprBase - defYprPenalty - wxYprHit) * yprMult + v() * 2.5, 23))
+    const gameRecYds = isLimited
+      ? Math.max(0, Math.round(gameRecs * 8))
+      : Math.max(0, Math.min(Math.round(gameRecs * gameYpr), 250))
+
+    const tdStreakRoll = Math.random()
+    const isTDCold    = !isLimited && (isDud || (!isBreakout && tdStreakRoll < 0.28))
+    const isTDHot     = !isLimited && (isLegendary || (isBreakout && tdStreakRoll > 0.55) || (!isDud && !isBreakout && tdStreakRoll > 0.88))
+    const baseTdP     = Math.max(0, tdRateBase + szN * 0.008)
+    const gameTdP     = isTDCold ? baseTdP * 0.05
+                      : isTDHot  ? baseTdP * 2.6 + v() * 0.020
+                      : baseTdP + v() * 0.015
+    const rawTdExp    = isLimited ? 0 : gameRecs * Math.max(0, gameTdP)
+    const gameRecTDs  = Math.min(Math.floor(rawTdExp) + (Math.random() < (rawTdExp % 1) ? 1 : 0), 4)
+
+    // Long reception: speed/vertical TEs occasionally break open on seam routes
+    const bigPlayChance = Math.max(0.05,
+      (0.10 + spdN * 0.18 + vrtN * 0.12 + yacN * 0.06)
+      * (badWeather ? 0.60 : 1.0)
+      * (1 - oppDefN * 0.20 * statScale)
+      * (isDud ? 0.10 : isBreakout ? 1.70 : 1.0)
+    )
+    const hasBigPlay = !isLimited && gameRecs > 0 && Math.random() < bigPlayChance
+    const gameLong   = hasBigPlay
+      ? Math.round(16 + spdN * 20 + vrtN * 14 + Math.random() * 14)
+      : Math.round(6  + spdN * 6  + vrtN * 4  + Math.random() * 7)
+
+    const perfBonus = (gameRecYds >= 100 ? 0.04 : gameRecYds >= 70 ? 0.02 : 0)
+                    + (gameRecTDs >= 2 ? 0.03 : 0)
+    const gameWinP  = Math.min(0.90, Math.max(0.08, winP + perfBonus + (home ? 0.04 : 0) + v() * 0.09 - oppPenalty))
+    const won       = Math.random() < gameWinP
+    won ? wins++ : losses++
+
+    const totalTDs = Math.max(0, Math.round(1.4 + teamOffN * 1.1 + gameRecTDs + v() * 0.9))
+    const estFGs   = Math.max(0, Math.round(1.5 - totalTDs * 0.30 + Math.random() * 1.5))
+    let mySc  = Math.max(3, totalTDs * 7 + estFGs * 3 - Math.round(oppDefN * 3))
+    const oppTDs = Math.floor(1.2 + Math.random() * 3 + oppOffN * 0.9)
+    const oppFGs = Math.max(0, Math.round(1 - oppTDs * 0.3 + Math.random()))
+    let oppSc = Math.max(0, oppTDs * 7 + oppFGs * 3 - Math.round(teamDefN * 4))
+    if (won  && mySc  <= oppSc) mySc  = oppSc + 1 + Math.ceil(Math.random() * 4)
+    if (!won && oppSc <= mySc)  oppSc = mySc  + 1 + Math.ceil(Math.random() * 4)
+    mySc  = snapNFL(mySc)
+    oppSc = snapNFL(oppSc)
+    if (mySc === oppSc) { if (won) mySc = snapNFL(mySc + 3); else oppSc = snapNFL(oppSc + 3) }
+
+    seasonRecs    += gameRecs
+    seasonRecYds  += gameRecYds
+    seasonRecTDs  += gameRecTDs
+    seasonTargets += gameTargets
+    if (gameLong > seasonLong) seasonLong = gameLong
+    if (gameRecYds >= 100) hundredYardGames++
+
+    const gameYPR = gameRecs > 0 ? Math.round((gameRecYds / gameRecs) * 10) / 10 : 0
+    return {
+      wk: i + 1, opponent, home, mySc, oppSc, won,
+      rec: gameRecs, recYds: gameRecYds, recTDs: gameRecTDs, targets: gameTargets, ypr: gameYPR,
+      long: gameLong,
+    }
+  })
+
+  const seasonYPR  = seasonRecs > 0 ? Math.round((seasonRecYds / seasonRecs) * 10) / 10 : 0
+  const catchRate  = seasonTargets > 0 ? Math.round((seasonRecs / seasonTargets) * 1000) / 10 : 0
+
+  const bestGame = [...games].sort((a, b) => {
+    const score = g => g.recYds * 0.16 + g.recTDs * 14 + g.rec * 1.5
+    return score(b) - score(a)
+  })[0]
+
+  // ── Playoffs ──────────────────────────────────────────────────────────────
+  const playoffs = wins >= 10
+    || (wins === 9 && Math.random() < 0.50)
+    || (wins === 8 && Math.random() < 0.06)
+  const playoffRounds = []
+  let sbResult = null
+  let hasBye = false
+
+  if (playoffs) {
+    const conf = team?.conf ?? 'AFC'
+    const activePlayoffPools = isAllTime ? ALLTIME_PLAYOFF_POOLS : PLAYOFF_POOLS
+    const activeSbPools      = isAllTime ? ALLTIME_SB_POOLS      : SB_POOLS
+    const confPool = activePlayoffPools[conf].filter(n => n !== team?.name)
+    const sbPool   = activeSbPools[conf].filter(n => n !== team?.name)
+    const usedOpponents = new Set()
+    const pick = pool => {
+      const avail = pool.filter(n => !usedOpponents.has(n))
+      const chosen = (avail.length > 0 ? avail : pool)[Math.floor(Math.random() * (avail.length || pool.length))]
+      usedOpponents.add(chosen)
+      return chosen
+    }
+
+    hasBye = wins >= 14 ? true : wins >= 13 ? Math.random() < 0.60 : false
+    const bracket = hasBye
+      ? [
+          { round: 'Divisional Round',        pool: confPool },
+          { round: 'Conference Championship', pool: confPool },
+          { round: 'Super Bowl',              pool: sbPool   },
+        ]
+      : [
+          { round: 'Wild Card',               pool: confPool },
+          { round: 'Divisional Round',        pool: confPool },
+          { round: 'Conference Championship', pool: confPool },
+          { round: 'Super Bowl',              pool: sbPool   },
+        ]
+    const winsNeeded = hasBye ? 3 : 4
+    const seed = hasBye && wins >= 14 ? 1 : hasBye ? 2 : wins >= 12 ? 3 : wins >= 11 ? 4 : 5
+
+    const pgHomeProb = round => {
+      if (round === 'Super Bowl') return 0
+      if (seed === 1) return 1.0
+      if (round === 'Wild Card') return seed <= 4 ? 1.0 : 0.0
+      if (round === 'Divisional Round') return seed === 2 ? 0.80 : seed === 3 ? 0.10 : 0.06
+      if (round === 'Conference Championship') return seed === 2 ? 0.60 : seed === 3 ? 0.20 : 0.10
+      return 0
+    }
+
+    let pwins = 0, eliminated = null
+    for (const { round, pool } of bracket) {
+      const opponent  = pick(pool)
+      const pgHome    = Math.random() < pgHomeProb(round)
+      const homeShort = pgHome ? team?.short : TEAM_BY_NAME[opponent]?.short
+      const weather   = playoffWeather(homeShort, round === 'Super Bowl')
+
+      const oppTeam    = oppLookup[opponent]
+      const oppTeamAvg = ((oppTeam?.off ?? 5.5) + (oppTeam?.def ?? 5.5)) / 2
+      const teamN      = (playerTeamAvg - oppTeamAvg) / 9
+      const pgOvrPenalty = ovr !== null && ovr < 82 ? (82 - ovr) * 0.007 : 0
+
+      const pgWinP = Math.min(0.78, Math.max(0.15,
+        0.42 + ovrN * 0.20 + teamN * 0.46 - pgOvrPenalty
+        + (pgHome ? 0.04 : 0)
+        - (isAllTime ? 0.08 : 0)
+      ))
+      const won = Math.random() < pgWinP
+
+      const wMult     = weather === 'snow' ? 0.88 : weather === 'rain' ? 0.92 : 1.0
+      const pgTargets = Math.round(4 + strN * 2.5 + rteN * 2 + randN() * 2)
+      const pgRecs    = Math.max(0, Math.round(pgTargets * (catchBase + randN() * 0.06)))
+      const pgRecYds  = pgRecs > 0 ? Math.max(0, Math.round(pgRecs * (yprBase * wMult + randN() * 2.5))) : 0
       const pgRecTDs  = pgRecs > 0 && Math.random() < tdRateBase * 1.1 ? 1 : 0
 
       const oppTeamOffN = oppTeam ? (oppTeam.off - 5) / 5 : 0

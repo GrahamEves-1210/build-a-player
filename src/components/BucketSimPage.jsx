@@ -1768,6 +1768,24 @@ function ScreenPlayoffs({ result, onNext, autoSkip = false, isAllTime = false, a
     return () => clearInterval(iv)
   }, [roundIdx, tipOff]) // eslint-disable-line
 
+  // autoSkip + play-in bug fix: when salary cap mode passes autoSkip=true and the team starts
+  // at a play-in round, the component early-returns before handleSkipRef.current is assigned,
+  // so the mount effect's handleSkipRef.current?.() is a no-op. This effect advances past the
+  // play-in round so the next render (a series round) sets handleSkipRef.current, then calls handleSkip.
+  const _autoSkipPlayinRef = useRef(false)
+  useEffect(() => {
+    if (!autoSkip || _autoSkipPlayinRef.current) return
+    const cur = playoffRounds[roundIdx]
+    if (!cur) return
+    if (cur.type === 'playin') {
+      if (cur.advanced) { setRoundIdx(r => r + 1); setGameIdx(0) }
+      else onNext()
+      return
+    }
+    _autoSkipPlayinRef.current = true
+    handleSkipRef.current?.()
+  }, [roundIdx]) // eslint-disable-line
+
   const handleTipOff = () => {
     setBallFired(true)
     setTimeout(() => setTipOff(true), 400)
@@ -2426,6 +2444,16 @@ function ScreenFinal({ result, awards, build, types, attrMap, onReset, onBack, a
             </>
         }
       </div>
+
+      <div style={{ textAlign: 'center', marginTop: '12px', fontSize: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+        <span style={{ color: 'rgba(255,255,255,0.6)' }}>
+          If you are enjoying Build-A-Player, check out my college basketball game —{' '}
+          <a href="https://32-0game.com" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>32-0game.com</a>
+        </span>
+        <a href="https://32-0game.com" target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+          <img src="/32-0logocutout.png" alt="32-0" style={{ height: '32px', width: 'auto', background: 'white', borderRadius: '5px', padding: '2px 6px', display: 'block' }} />
+        </a>
+      </div>
     </div>
   )
 }
@@ -2736,7 +2764,9 @@ export default function BucketSimPage({ result, build, types, position, onBack, 
         )}
 
         {screens[screen]}
-        <div className="simp-footer-disclaimer">Fan-made · Not affiliated with the NBA</div>
+        {screens[screen]?.key !== 'final' && (
+          <div className="simp-footer-disclaimer">Fan-made · Not affiliated with the NBA</div>
+        )}
       </div>
     </div>
   )

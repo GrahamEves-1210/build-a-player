@@ -3,12 +3,15 @@ import { createPortal } from 'react-dom'
 import { ATTR, TYPES, QB_PHYSICALS } from '../data/qbs'
 import { RB_PHYSICALS } from '../data/rbs'
 import { WR_PHYSICALS } from '../data/wrs'
+import { TE_PHYSICALS } from '../data/tes'
 import { QB_LEGEND_PHYSICALS } from '../data/legends'
 import { RB_LEGEND_PHYSICALS } from '../data/rb-legends'
+import { WR_LEGEND_PHYSICALS } from '../data/wr-legends'
 import NBA_MEASUREMENTS from '../data/nba-measurements.json'
 const ALL_QB_PHYS = { ...QB_LEGEND_PHYSICALS, ...QB_PHYSICALS }
 const ALL_RB_PHYS = { ...RB_LEGEND_PHYSICALS, ...RB_PHYSICALS }
-import { calcOVR, calcOVRRB, calcOVRWR, getArchetype, getArchetypeRB, getArchetypeWR, calcBalance, valToGrade } from '../utils/simulation'
+const ALL_WR_PHYS = { ...WR_LEGEND_PHYSICALS, ...WR_PHYSICALS }
+import { calcOVR, calcOVRRB, calcOVRWR, calcOVRTE, getArchetype, getArchetypeRB, getArchetypeWR, getArchetypeTE, calcBalance, valToGrade } from '../utils/simulation'
 import { calcBucketOVR, getBucketGuardArchetype, getBucketBigArchetype } from '../utils/bucketSimulation'
 import { buildShareUrl } from '../utils/shareUrl'
 import { generateBucketShareCard, shareOrDownloadCard } from '../utils/generateShareCard'
@@ -101,13 +104,14 @@ function BuildSlot({ type, data, attrMap = ATTR, logoDir = '/logos/' }) {
 
 // ── Share Modal ───────────────────────────────────────────────────────────────
 
-export function ShareModal({ ovr, arch, build, types, onClose, isBucket = false, attrMap = {}, position = 'guard', captureFigure }) {
+export function ShareModal({ ovr, arch, build, types, onClose, isBucket = false, attrMap = {}, position = 'guard', isRB = false, isWR = false, isTE = false, captureFigure }) {
   const [copied, setCopied]       = useState(false)
   const [cardDataUrl, setCardDataUrl] = useState(null)
   const [cardBlob, setCardBlob]       = useState(null)
 
+  const posWord    = isWR ? 'wide receiver' : isRB ? 'running back' : isTE ? 'tight end' : 'quarterback'
   const bucketText = `I built a ${ovr} OVR ${arch}. Think you can do better?`
-  const shareText  = isBucket ? bucketText : `I made a ${ovr} overall ${arch} quarterback, think you can do better?`
+  const shareText  = isBucket ? bucketText : `I made a ${ovr} overall ${arch} ${posWord}, think you can do better?`
   const shareUrl   = buildShareUrl(build, types)
   const filename   = `bucket-build-${ovr}-${arch.toLowerCase().replace(/\s+/g, '-')}.png`
 
@@ -280,12 +284,12 @@ export function ShareModal({ ovr, arch, build, types, onClose, isBucket = false,
 
 // ── ReportCard ────────────────────────────────────────────────────────────────
 
-export default function ReportCard({ build, onSimulate, onReset, types = TYPES, hasResult = false, isRB = false, isWR = false, isBucket = false, bucketPosition = 'guard', isPlus = false, isCustomMode = false, onOpenCustomModal, onSandboxToggle, attrMap = ATTR, logoDir = '/logos/', captureFigure, isSalaryMode = false, isVersusMode = false, oppPosition = null, oppFilledCount = 0, oppTotal = null }) {
+export default function ReportCard({ build, onSimulate, onReset, types = TYPES, hasResult = false, isRB = false, isWR = false, isTE = false, isBucket = false, bucketPosition = 'guard', isPlus = false, isCustomMode = false, onOpenCustomModal, onSandboxToggle, attrMap = ATTR, logoDir = '/logos/', captureFigure, isSalaryMode = false, isVersusMode = false, oppPosition = null, oppFilledCount = 0, oppTotal = null }) {
   const filled = types.filter(t => build[t])
-  const ovr = isBucket ? calcBucketOVR(build, types, bucketPosition) : isWR ? calcOVRWR(build, types) : isRB ? calcOVRRB(build, types) : calcOVR(build, types)
+  const ovr = isBucket ? calcBucketOVR(build, types, bucketPosition) : isTE ? calcOVRTE(build, types) : isWR ? calcOVRWR(build, types) : isRB ? calcOVRRB(build, types) : calcOVR(build, types)
   const arch = isBucket
     ? (bucketPosition === 'big' ? getBucketBigArchetype(ovr, build, types) : getBucketGuardArchetype(ovr, build, types))
-    : isWR ? getArchetypeWR(ovr, build, types) : isRB ? getArchetypeRB(ovr, build, types) : getArchetype(ovr, build, types)
+    : isTE ? getArchetypeTE(ovr, build, types) : isWR ? getArchetypeWR(ovr, build, types) : isRB ? getArchetypeRB(ovr, build, types) : getArchetype(ovr, build, types)
   const balance = calcBalance(build, types)
   const complete = filled.length === types.length
   const [showChevron, setShowChevron] = useState(true)
@@ -306,8 +310,12 @@ export default function ReportCard({ build, onSimulate, onReset, types = TYPES, 
     const phys = slot ? NBA_MEASUREMENTS[slot.qbFull] : null
     heightStr = phys ? fmtHeight(phys.height) : (slot?.height ? fmtHeight(slot.height) : null)
     weightLbs = phys ? phys.weight : (slot?.weight ?? null)
+  } else if (isTE) {
+    const tePhys = build['size'] ? TE_PHYSICALS[build['size'].qbFull] : null
+    heightStr = tePhys ? fmtHeight(tePhys.height) : null
+    weightLbs = tePhys ? tePhys.weight : null
   } else if (isWR) {
-    const wrPhys = build['size'] ? WR_PHYSICALS[build['size'].qbFull] : null
+    const wrPhys = build['size'] ? ALL_WR_PHYS[build['size'].qbFull] : null
     heightStr = wrPhys ? fmtHeight(wrPhys.height) : null
     weightLbs = wrPhys ? wrPhys.weight : null
   } else if (isRB) {
@@ -410,7 +418,7 @@ export default function ReportCard({ build, onSimulate, onReset, types = TYPES, 
 
       {showShare && createPortal(
         <ShareModal ovr={ovr} arch={arch} build={build} types={types} onClose={() => setShowShare(false)}
-          isBucket={isBucket} attrMap={attrMap} position={bucketPosition} captureFigure={captureFigure} />,
+          isBucket={isBucket} attrMap={attrMap} position={bucketPosition} isRB={isRB} isWR={isWR} isTE={isTE} captureFigure={captureFigure} />,
         document.body
       )}
     </aside>

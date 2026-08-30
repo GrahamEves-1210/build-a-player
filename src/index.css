@@ -797,7 +797,7 @@ a:focus-visible {
 }
 
 .wm-row:hover {
-  background: rgba(149,213,178,0.07);
+  background: var(--accent-lo);
   color: var(--g50);
 }
 
@@ -869,21 +869,14 @@ a:focus-visible {
   height: 18px;
 }
 .wm-social-btn:hover {
-  background: rgba(149,213,178,0.08);
+  background: var(--accent-lo);
   color: var(--grey-100);
 }
 .wm-social-sep + .wm-social-sep {
   position: relative;
 }
 .wm-social-sep + .wm-social-sep::before {
-  content: '';
-  position: absolute;
-  left: -1px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 1px;
-  height: 24px;
-  background: rgba(255,255,255,0.12);
+  content: none;
 }
 .wm-social-btn-coffee {
   background: #FFDD00;
@@ -892,6 +885,26 @@ a:focus-visible {
 .wm-social-btn-coffee:hover {
   background: #ffe833;
   color: #1a1200;
+}
+.wm-social-btn-32 { background: white !important; }
+.wm-social-btn-32:hover { background: #f0f0f0 !important; }
+.wm-social-btn-32:active { background: white !important; }
+.wm-social-btn-32:focus { background: white !important; outline: none; }
+.wm-social-btn-discord {
+  background: #5865F2;
+  color: #fff;
+}
+.wm-social-btn-discord:hover {
+  background: #6b77f5;
+  color: #fff;
+}
+.wm-social-btn-x {
+  background: #1a1a1a;
+  color: #fff;
+}
+.wm-social-btn-x:hover {
+  background: #2e2e2e;
+  color: #fff;
 }
 
 /* Divider */
@@ -2755,7 +2768,7 @@ a:focus-visible {
   background: none;
   border: none;
   color: var(--text-3);
-  font-size: 12px;
+  font-size: 15px;
   cursor: pointer;
   text-decoration: underline;
   font-family: var(--font);
@@ -4709,7 +4722,7 @@ html.is-mac .spin-panel-scroll {
 /* Header */
 .splash-header {
   position: relative;
-  z-index: 3;
+  z-index: 20;
   text-align: center;
   transition: opacity 0.55s ease, transform 0.55s cubic-bezier(0.22,1,0.36,1);
   margin-bottom: -20px;
@@ -4844,15 +4857,23 @@ html.is-mac .spin-panel-scroll {
   width: fit-content;
   transition: opacity 0.4s ease, transform 0.4s ease;
 }
+/* Picker variant — no pill container, the trigger has its own styling */
+.splash-pos-toggle--picker {
+  background: none;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  gap: 0;
+}
 .splash-pos-btn {
   position: relative;
   background: transparent;
   border: none;
   color: var(--text-3);
   font-family: Impact, 'Arial Narrow Bold', sans-serif;
-  font-size: 28px;
-  letter-spacing: 4px;
-  padding: 6px 36px 4px;
+  font-size: 20px;
+  letter-spacing: 2px;
+  padding: 6px 16px 4px;
   border-radius: 11px;
   cursor: pointer;
   transition: background 0.18s ease, color 0.18s ease;
@@ -4880,6 +4901,237 @@ html.is-mac .spin-panel-scroll {
   line-height: 1.3;
   pointer-events: none;
 }
+/* ─── POSITION PICKER (new dropdown) ─────────────────────────────────────── */
+.splash-pos-picker {
+  position: relative;
+  display: inline-block;
+  margin-top: 4px;
+}
+.splash-pos-trigger {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: none;
+  border: none;
+  padding: 8px 4px;
+  color: #fff;
+  font-family: var(--font-display, system-ui);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  white-space: nowrap;
+  outline: none;
+}
+.splash-pos-trigger:hover {
+  background: none;
+}
+.splash-pos-trigger-trios {
+  position: relative;
+  flex-shrink: 0;
+}
+.splash-pos-trigger-trio-slot {
+  position: absolute;
+  top: 0;
+  left: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+.splash-pos-trigger-trio-slot:first-child {
+  position: relative;
+}
+.splash-pos-trigger-trio-slot--active {
+  opacity: 1;
+}
+.splash-pos-trigger-label {
+  font-family: var(--font-display, Impact, system-ui);
+  font-size: 28px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  line-height: 1;
+}
+.splash-pos-caret {
+  opacity: 0.7;
+  transition: transform 0.2s;
+  flex-shrink: 0;
+}
+.splash-pos-caret.open {
+  transform: rotate(180deg);
+}
+.splash-av-trio {
+  display: flex;
+  align-items: center;
+}
+.splash-av-trio-item {
+  border-radius: 50%;
+  border: 2px solid rgba(10,10,12,0.9);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.5);
+  line-height: 0;
+}
+/* Popup */
+.splash-pos-popup {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%) scale(0.95);
+  transform-origin: top center;
+  background: rgba(10,10,14,0.94);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 30px;
+  padding: 16px;
+  width: clamp(340px, 42vw, 520px);
+  z-index: 200;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.85);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+.splash-pos-popup--open {
+  opacity: 1;
+  transform: translateX(-50%) scale(1);
+  pointer-events: auto;
+}
+.splash-pos-popup-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+/* Option cards */
+.splash-pos-option {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 22px;
+  padding: 16px 17px 15px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.14s, border-color 0.14s;
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
+}
+.splash-pos-option:hover:not(.splash-pos-option--disabled) {
+  background: rgba(255,255,255,0.10);
+  border-color: rgba(255,255,255,0.20);
+}
+.splash-pos-option:active:not(.splash-pos-option--disabled) {
+  transform: scale(0.97);
+}
+.splash-pos-option--active {
+  background: rgba(94,219,216,0.14);
+  border-color: rgba(94,219,216,0.52);
+}
+.splash-pos-option--disabled {
+  cursor: not-allowed;
+}
+.splash-pos-option--disabled .splash-av-trio {
+  opacity: 0.45;
+}
+.splash-pos-option--disabled .splash-pos-option-modes {
+  opacity: 0.8;
+}
+.splash-pos-option-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+.splash-pos-option-name {
+  font-family: var(--font-display, Impact, system-ui);
+  font-size: 30px;
+  font-weight: 900;
+  color: #fff;
+  letter-spacing: 1px;
+  line-height: 1;
+  margin-left: auto;
+}
+.splash-pos-option-modes {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.splash-mode-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-ui, system-ui, sans-serif);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  line-height: 1;
+  background: none;
+  border: none;
+  padding: 0;
+}
+.splash-mode-pill::before {
+  content: '';
+  display: block;
+  width: 5px;
+  height: 5px;
+  border-radius: 1px;
+  flex-shrink: 0;
+}
+.splash-mode-pill--avail {
+  color: rgba(94,219,216,0.85);
+}
+.splash-mode-pill--avail::before {
+  background: rgba(94,219,216,0.85);
+}
+.splash-mode-pill--alltime {
+  color: #d4a017;
+}
+.splash-mode-pill--alltime::before {
+  background: #d4a017;
+}
+.splash-mode-pill--alltime-soon {
+  color: rgba(180,140,30,0.25);
+}
+.splash-mode-pill--alltime-soon::before {
+  background: rgba(180,140,30,0.15);
+}
+.splash-mode-pill--classic-soon {
+  color: rgba(74,222,128,0.55);
+}
+.splash-mode-pill--classic-soon::before {
+  background: rgba(74,222,128,0.15);
+}
+.splash-mode-pill--na {
+  display: none;
+}
+.splash-pos-soon-banner {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: Impact, 'Arial Narrow Bold', sans-serif;
+  font-size: 11px;
+  letter-spacing: 2.5px;
+  color: rgba(255,255,255,0.5);
+  background: rgba(0,0,0,0.5);
+  z-index: 2;
+  border-radius: 22px;
+}
+@media (min-width: 769px) {
+  .splash-pos-popup { zoom: 1.08; }
+}
+@media (max-width: 768px) {
+  .splash-pos-popup {
+    zoom: 0.82;
+    width: min(460px, calc(100vw - 24px));
+    max-width: calc(100vw - 24px);
+    left: 50%;
+  }
+  .splash-pos-trigger { zoom: 0.82; }
+}
+/* ─────────────────────────────────────────────────────────────────────────── */
+
 .splash-mode-alltime--soon,
 .splash-mode-classic--soon {
   cursor: not-allowed;
@@ -5266,7 +5518,7 @@ html.is-mac .spin-panel-scroll {
   .splash-mode-salarycap { flex: 1.1; }
   .splash-mode-alltime { flex: 1.1; padding: 9px 14px 9px; }
   .splash-title { line-height: 0.87; }
-  .splash-pos-btn { padding: 6px 36px 4px; }
+  .splash-pos-btn { padding: 6px 20px 4px; }
   .bucket-splash .splash-pos-btn { padding: 3px 20px 1px; }
 }
 

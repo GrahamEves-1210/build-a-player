@@ -3,7 +3,7 @@ import HEADSHOTS from '../data/headshots.json'
 import { nflHeadshot } from '../utils/simulation'
 import QBAvatar from './QBAvatar'
 
-export default function MVPModal({ result, mvpResult, onDismiss, toSuperBowl = false, isRB = false, isWR = false }) {
+export default function MVPModal({ result, mvpResult, onDismiss, toSuperBowl = false, isRB = false, isWR = false, isTE = false }) {
   const [phase, setPhase] = useState('loading')
   const [barWidth, setBarWidth] = useState(0)
   const [visible, setVisible] = useState(false)
@@ -28,7 +28,7 @@ export default function MVPModal({ result, mvpResult, onDismiss, toSuperBowl = f
   const qbTotalTDs = (seasonTDs ?? 0) + (seasonRushTDs ?? 0)
   const qbTotalYds = (seasonPassYds ?? 0) + (seasonRushYds ?? 0)
 
-  const isOPOY = isRB || isWR
+  const isOPOY = isRB || isWR || isTE
   const awardLabel    = isOPOY ? 'OPOY Award'           : 'MVP Award'
   const awardEyebrow  = 'NFL Regular Season'
   const userWinsLabel = isOPOY ? 'Your Build Wins OPOY' : 'Your Build Wins MVP'
@@ -64,7 +64,7 @@ export default function MVPModal({ result, mvpResult, onDismiss, toSuperBowl = f
               <div className="mvp-stat-pill">
                 <span>{wins}–{losses}</span><span>W–L</span>
               </div>
-              {isWR ? (
+              {(isWR || isTE) ? (
                 <>
                   <div className="mvp-stat-pill">
                     <span>{wrRecYds.toLocaleString()}</span><span>Rec Yds</span>
@@ -113,7 +113,7 @@ export default function MVPModal({ result, mvpResult, onDismiss, toSuperBowl = f
                 <img src="/mvp.png" alt="Trophy" className="mvp-trophy-img" draggable={false} />
                 <div className="mvp-winner-name">{unanimous ? unanimousLbl : regularLbl}</div>
                 <div className="mvp-season-stats">
-                  {isWR ? (
+                  {(isWR || isTE) ? (
                     <>
                       <div className="mvp-stat-row">
                         <span className="mvp-stat-label">Record</span>
@@ -208,7 +208,7 @@ export default function MVPModal({ result, mvpResult, onDismiss, toSuperBowl = f
                   {isOPOY && <span className="mvp-winner-pos">{winner.pos}</span>}
                 </div>
                 <div className="mvp-season-stats">
-                  {isWR ? (
+                  {(isTE || isWR) ? (
                     winner.pos === 'RB' ? (
                       <>
                         <div className="mvp-stat-row">

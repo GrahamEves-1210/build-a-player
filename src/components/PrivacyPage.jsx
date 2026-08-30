@@ -3,9 +3,11 @@ export default function PrivacyPage({ onBack }) {
     <div className="about-page">
       <div className="about-inner">
 
+        <button className="prf-top-back" onClick={onBack}>← Back to Game</button>
+
         <div className="about-header">
           <div className="about-title">Privacy <em>Policy</em></div>
-          <div className="about-subtitle">Last updated: June 24, 2026</div>
+          <div className="about-subtitle">Last updated: August 22, 2026</div>
         </div>
 
         <section className="about-section">
@@ -14,7 +16,10 @@ export default function PrivacyPage({ onBack }) {
             <strong>Analytics.</strong> We use Google Analytics to collect anonymized data about how visitors use the site — pages visited, session duration, device type, and general location (country/region). This data does not identify you personally.
           </p>
           <p className="about-body">
-            <strong>Accounts.</strong> If you create an account, we store your email address and the simulation results you choose to save (wins, losses, stats, and build data). This information is stored securely via Supabase and is not sold to third parties.
+            <strong>Accounts.</strong> If you create an account, we store your chosen username, password (hashed), and the simulation results you choose to save (wins, losses, stats, and build data). We do not collect your email address. This information is stored securely via Supabase and is not sold to third parties.
+          </p>
+          <p className="about-body">
+            <strong>Payments.</strong> If you subscribe to Build-A-Player Plus, payment is processed by Stripe. We do not store your card details. Stripe may collect billing information in accordance with their own privacy policy.
           </p>
           <p className="about-body">
             <strong>Local storage.</strong> Your in-progress build may be stored in your browser's local storage to preserve your session. This data stays on your device and is not transmitted to our servers.
@@ -24,7 +29,7 @@ export default function PrivacyPage({ onBack }) {
         <section className="about-section">
           <h2 className="about-section-title">Cookies</h2>
           <p className="about-body">
-            We use cookies for analytics (Google Analytics) and advertising (Google AdSense). By using this site you consent to the use of cookies in accordance with this policy. You can disable cookies in your browser settings at any time, though some features may not function correctly.
+            We use cookies for analytics (Google Analytics) and advertising (Playwire / Ramp). By using this site you consent to the use of cookies in accordance with this policy. You can disable cookies in your browser settings at any time, though some features may not function correctly.
           </p>
         </section>
 
@@ -36,7 +41,8 @@ export default function PrivacyPage({ onBack }) {
           <ul className="about-list">
             <li><a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer" className="about-link">Google Analytics</a></li>
             <li><a href="https://supabase.com/privacy" target="_blank" rel="noopener noreferrer" className="about-link">Supabase</a></li>
-            <li><a href="https://www.playwire.com/privacy-policy" target="_blank" rel="noopener noreferrer" className="about-link">Playwire</a></li>
+            <li><a href="https://www.playwire.com/privacy-policy" target="_blank" rel="noopener noreferrer" className="about-link">Playwire (Ramp)</a></li>
+            <li><a href="https://stripe.com/privacy" target="_blank" rel="noopener noreferrer" className="about-link">Stripe</a></li>
           </ul>
           <p className="about-body">
             All or partial advertising on this Website or App is managed by Playwire LLC. If Playwire publisher advertising services are used, Playwire LLC may collect and use certain aggregated and anonymized data for advertising purposes. To learn more about the types of data collected, how data is used and your choices as a user, please visit <a href="https://www.playwire.com/privacy-policy" target="_blank" rel="noopener noreferrer" className="about-link">https://www.playwire.com/privacy-policy</a>.
@@ -63,10 +69,6 @@ export default function PrivacyPage({ onBack }) {
             Questions? Reach us at <a href="mailto:buildaplayer@outlook.com" className="about-link">buildaplayer@outlook.com</a>
           </p>
         </section>
-
-        <button className="about-back-btn" onClick={onBack}>
-          ← Back
-        </button>
 
       </div>
     </div>

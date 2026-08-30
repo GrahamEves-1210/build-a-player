@@ -52,7 +52,7 @@ function darkenColor(hex, factor = 0.6) {
   return `rgb(${Math.round(r * factor)},${Math.round(g * factor)},${Math.round(b * factor)})`
 }
 
-export default function WRFigureOverlay({ build }) {
+export default function WRFigureOverlay({ build, isTE = false }) {
   const tc  = (s) => build?.[s]?.teamColor  ?? 'transparent'
   const sk  = (s) => build?.[s]?.skinColor  ?? 'transparent'
   const has = (s) => !!build?.[s]
@@ -93,8 +93,9 @@ export default function WRFigureOverlay({ build }) {
   svg = setFill(svg, 'neck stripe',   has('size') ? '#111111' : 'transparent')
   svg = setFill(svg, 'neck stripe 2', has('size') ? '#111111' : 'transparent')
 
-  // ── AFTER CATCH: arms (skin color lightened for screen blend)
-  const armSkin = has('afterCatch') ? warmSkin(sk('afterCatch'), 15, 12) : 'transparent'
+  // ── AFTER CATCH / STRENGTH (TE): arms (skin color lightened for screen blend)
+  const armKey  = isTE ? 'strength' : 'afterCatch'
+  const armSkin = has(armKey) ? warmSkin(sk(armKey), 15, 12) : 'transparent'
   svg = setFill(svg, 'left arm',  armSkin, 'opacity:0.72;')
   svg = setFill(svg, 'right arm', armSkin, 'opacity:0.72;')
 

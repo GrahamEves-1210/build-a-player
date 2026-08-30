@@ -2,14 +2,17 @@
 import { ATTR, TYPES, CATEGORIES, QB_PHYSICALS } from '../data/qbs'
 import { RB_CATEGORIES, RB_PHYSICALS } from '../data/rbs'
 import { WR_CATEGORIES, WR_PHYSICALS } from '../data/wrs'
+import { TE_PHYSICALS } from '../data/tes'
 import { QB_LEGEND_PHYSICALS } from '../data/legends'
 import { RB_LEGEND_PHYSICALS } from '../data/rb-legends'
+import { WR_LEGEND_PHYSICALS } from '../data/wr-legends'
 import NBA_MEASUREMENTS from '../data/nba-measurements.json'
 import { NBA_FACE_ADJUSTMENTS } from '../data/nba-face-adjustments'
 import NBA_HEADSHOTS from '../data/nba-headshots.json'
 import { NBA_FACE_CENTERS } from '../data/nba-face-centers'
 const ALL_QB_PHYS = { ...QB_LEGEND_PHYSICALS, ...QB_PHYSICALS }
 const ALL_RB_PHYS = { ...RB_LEGEND_PHYSICALS, ...RB_PHYSICALS }
+const ALL_WR_PHYS = { ...WR_LEGEND_PHYSICALS, ...WR_PHYSICALS }
 import QBAvatar from './QBAvatar'
 
 function fmtHeight(in_) { return `${Math.floor(in_ / 12)}'${in_ % 12}"` }
@@ -81,6 +84,19 @@ const WR_ZONES = [
   { type: 'bodyControl',  ax: 205, ay: 375, side: 'left',  cy: 0.38 },
 ]
 
+// TE zones — same silhouette as WR, blocking replaces bodyControl, strength replaces release
+const TE_ZONES = [
+  { type: 'awareness',    ax: 313, ay: 110, side: 'right', cy: 0.07 },
+  { type: 'size',         ax: 290, ay: 335, side: 'right', cy: 0.64 },
+  { type: 'vertical',     ax: 163, ay: 653, side: 'left',  cy: 0.61 },
+  { type: 'strength',     ax: 340, ay: 215, side: 'right', cy: 0.26 },
+  { type: 'hands',        ax: 115, ay: 100, side: 'left',  cy: 0.15 },
+  { type: 'routeRunning', ax: 144, ay: 800, side: 'left',  cy: 0.84 },
+  { type: 'afterCatch',   ax: 280, ay: 230, side: 'right', cy: 0.45 },
+  { type: 'speed',        ax: 400, ay: 600, side: 'right', cy: 0.83 },
+  { type: 'blocking',     ax: 160, ay: 240, side: 'left',  cy: 0.38 },
+]
+
 function useFigureBounds(ref, figW, figH) {
   const [bounds, setBounds] = useState(null)
   useLayoutEffect(() => {
@@ -141,15 +157,19 @@ function CZCard({ zone, cardY, build, activeDrag, hidden, invisible, isMobile, a
   )
 }
 
-function HWTracker({ build, isRB = false, isWR = false, isBucket = false }) {
+function HWTracker({ build, isRB = false, isWR = false, isTE = false, isBucket = false }) {
   let ht, wt
   if (isBucket) {
     const phys = build['size'] ? NBA_MEASUREMENTS[build['size'].qbFull] : null
     const chip = build['size']
     ht = phys ? fmtHeight(phys.height) : (chip?.height ? fmtHeight(chip.height) : null)
     wt = phys ? phys.weight : (chip?.weight ?? null)
+  } else if (isTE) {
+    const tePhys = build['size'] ? TE_PHYSICALS[build['size'].qbFull] : null
+    ht = tePhys ? fmtHeight(tePhys.height) : null
+    wt = tePhys ? tePhys.weight : null
   } else if (isWR) {
-    const wrPhys = build['size'] ? WR_PHYSICALS[build['size'].qbFull] : null
+    const wrPhys = build['size'] ? ALL_WR_PHYS[build['size'].qbFull] : null
     ht = wrPhys ? fmtHeight(wrPhys.height) : null
     wt = wrPhys ? wrPhys.weight : null
   } else if (isRB) {
@@ -225,10 +245,10 @@ function getDominantPlayer(build) {
   return sorted[0]?.[0] ?? null
 }
 
-export default function Silhouette({ build, activeDrag, onDrop, activeCategory, onCategoryChange, types = TYPES, isLite = false, onReset, isRB = false, isWR = false, isBucket = false, isPlus = false, isCustomMode = false, onOpenCustomModal, onSandboxToggle, attrMap = ATTR, categoriesData = CATEGORIES, figureRef }) {
-  const figW   = isBucket ? BUCKET_FIG_W : (isRB || isWR ? RB_FIG_W : FIG_W)
-  const figH   = isBucket ? BUCKET_FIG_H : (isRB || isWR ? RB_FIG_H : FIG_H)
-  const zones  = isBucket ? (types.includes('interiorDefense') ? BUCKET_BIG_ZONES : BUCKET_ZONES) : isWR ? WR_ZONES : isRB ? RB_ZONES : ZONES
+export default function Silhouette({ build, activeDrag, onDrop, activeCategory, onCategoryChange, types = TYPES, isLite = false, onReset, isRB = false, isWR = false, isTE = false, isBucket = false, isPlus = false, isCustomMode = false, onOpenCustomModal, onSandboxToggle, attrMap = ATTR, categoriesData = CATEGORIES, figureRef }) {
+  const figW   = isBucket ? BUCKET_FIG_W : (isRB || isWR || isTE ? RB_FIG_W : FIG_W)
+  const figH   = isBucket ? BUCKET_FIG_H : (isRB || isWR || isTE ? RB_FIG_H : FIG_H)
+  const zones  = isBucket ? (types.includes('interiorDefense') ? BUCKET_BIG_ZONES : BUCKET_ZONES) : isTE ? TE_ZONES : isWR ? WR_ZONES : isRB ? RB_ZONES : ZONES
   const silRef = useRef(null)
   const bounds = useFigureBounds(silRef, figW, figH)
   const boundsRef = useRef(bounds)
@@ -278,7 +298,7 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
     }
   }, [])
 
-  const cats = isWR ? WR_CATEGORIES : isRB ? RB_CATEGORIES : categoriesData
+  const cats = isTE ? categoriesData : isWR ? WR_CATEGORIES : isRB ? RB_CATEGORIES : categoriesData
   const categoryTypes = activeCategory
     ? (cats.find(c => c.id === activeCategory)?.types ?? [])
     : null
@@ -346,7 +366,7 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
       dotX = (dotX - 50) * RB_FIGURE_SCALE + 50
       dotY = (dotY - 50) * RB_FIGURE_SCALE + 50
     }
-    if (isWR) {
+    if (isWR || isTE) {
       dotX = (dotX - 50) * WR_FIGURE_SCALE + 50
       dotY = (dotY - 50) * WR_FIGURE_SCALE + 50
     }
@@ -399,7 +419,7 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
     const map = {}
     zones.forEach(z => { map[z.type] = pos(z) })
     return map
-  }, [bounds, isMobile, isBucket, isRB, isWR, zones])
+  }, [bounds, isMobile, isBucket, isRB, isWR, isTE, zones])
 
   return (
     <section className="field-center" style={isBucket ? { backgroundColor: '#090a0d' } : undefined}>
@@ -414,7 +434,7 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
         </div>
       )}
       <div className="category-pills">
-        <HWTracker build={build} isRB={isRB} isWR={isWR} isBucket={isBucket} />
+        <HWTracker build={build} isRB={isRB} isWR={isWR} isTE={isTE} isBucket={isBucket} />
         {cats.map(cat => (
           <button
             key={cat.id}
@@ -528,17 +548,17 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
           src={
             isBucket
               ? (bucketPhoto ? '/basketballsilhouetteheadless.png' : '/basketballsilhouette.png')
-              : isWR ? '/wr-silhouette.png'
+              : (isWR || isTE) ? '/wr-silhouette.png'
               : isRB ? '/rbsilhouette.webp'
               : '/qb-silhouette.webp'
           }
           alt=""
-          className={`sil-img${isRB || isWR ? ' sil-img--rb' : ''}${isBucket ? ' sil-img--bucket' : ''}${complete ? ' sil-img--done' : ''}`}
+          className={`sil-img${(isRB || isWR || isTE) ? ' sil-img--rb' : ''}${isBucket ? ' sil-img--bucket' : ''}${complete ? ' sil-img--done' : ''}`}
           draggable={false}
           style={
-            isBucket ? { transform: `scale(${BUCKET_FIGURE_SCALE})`, transformOrigin: 'center center' }
-            : isWR   ? { transform: isMobile ? `translateY(-6px) scale(${WR_FIGURE_SCALE_MOBILE})` : `scale(${WR_FIGURE_SCALE})`, transformOrigin: 'center center', filter: complete ? 'none' : 'brightness(0.55) drop-shadow(0 0 2px rgba(255,255,255,0.60)) drop-shadow(0 0 0.5px rgba(255,255,255,0.92))' }
-            : isRB   ? { transform: `scale(${RB_FIGURE_SCALE})`, transformOrigin: 'center center' }
+            isBucket   ? { transform: `scale(${BUCKET_FIGURE_SCALE})`, transformOrigin: 'center center' }
+            : (isWR || isTE) ? { transform: isMobile ? `translateY(-6px) scale(${WR_FIGURE_SCALE_MOBILE})` : `scale(${WR_FIGURE_SCALE})`, transformOrigin: 'center center', filter: complete ? 'none' : 'brightness(0.55) drop-shadow(0 0 2px rgba(255,255,255,0.60)) drop-shadow(0 0 0.5px rgba(255,255,255,0.92))' }
+            : isRB     ? { transform: `scale(${RB_FIGURE_SCALE})`, transformOrigin: 'center center' }
             : undefined
           }
         />
@@ -605,15 +625,15 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
           )
         })()}
         </div>
-        {!isRB && !isWR && !isBucket && <QBFigureOverlay build={build} className="player-qbfig" />}
+        {!isRB && !isWR && !isTE && !isBucket && <QBFigureOverlay build={build} className="player-qbfig" />}
         {isRB && (
           <div style={{ position: 'absolute', inset: 0, transform: `scale(${RB_FIGURE_SCALE})`, transformOrigin: 'center center' }}>
             <RBFigureOverlay build={build} />
           </div>
         )}
-        {isWR && (
+        {(isWR || isTE) && (
           <div style={{ position: 'absolute', inset: 0, transform: isMobile ? `translateY(-6px) scale(${WR_FIGURE_SCALE_MOBILE})` : `scale(${WR_FIGURE_SCALE})`, transformOrigin: 'center center' }}>
-            <WRFigureOverlay build={build} />
+            <WRFigureOverlay build={build} isTE={isTE} />
           </div>
         )}
 

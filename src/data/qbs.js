@@ -51,7 +51,7 @@ export const QBS = [
     attrs: { 'arm': 4, 'legs': 1, 'size': 3, 'processing': 5, 'leadership': 3, 'vision': 4, 'playmaking': 1, 'accuracy': 3, 'pocket-presence': 2 } },
   // BAL
   { name: 'Lamar Jackson',      short: 'Jackson',     team: 'BAL', teamName: 'Baltimore Ravens',      color: '#241773', color2: '#9E7C0C', skin: '#5e3c22', starter: true,  captain: true,  number: 8,
-    attrs: { 'arm': 8, 'legs': 11, 'size': 6, 'processing': 6, 'leadership': 7, 'vision': 9, 'playmaking': 9, 'accuracy': 8, 'pocket-presence': 9 } },
+    attrs: { 'arm': 8, 'legs': 11, 'size': 6, 'processing': 6, 'leadership': 7, 'vision': 9, 'playmaking': 10, 'accuracy': 8, 'pocket-presence': 9 } },
   { name: 'Tyler Huntley',      short: 'Huntley',     team: 'BAL', teamName: 'Baltimore Ravens',      color: '#241773', color2: '#9E7C0C', skin: '#7a5030', starter: false, number: 2,
     attrs: { 'arm': 4, 'legs': 6, 'size': 4, 'processing': 3, 'leadership': 4, 'vision': 5, 'playmaking': 4, 'accuracy': 3, 'pocket-presence': 4 } },
   { name: 'Skylar Thompson',    short: 'Thompson',    team: 'BAL', teamName: 'Baltimore Ravens',      color: '#241773', color2: '#9E7C0C', skin: '#f0c4a0', starter: false, number: 19,
@@ -287,6 +287,8 @@ export const ATTR = {
   'carrying':        { label: 'Carrying',               shortLabel: 'CAR',  category: 'skill',    col: 'var(--c-str)',  hex: '#fb923c', bodyZone: 'hand'   },
   // WR attributes
   'agility':         { label: 'Agility',               shortLabel: 'AGI',  category: 'physical', col: 'var(--c-mob)',  hex: '#60a5fa', bodyZone: 'legs'   },
+  'bodyControl':     { label: 'Body Control',          shortLabel: 'BCT',  category: 'physical', col: 'var(--c-mob)',  hex: '#60a5fa', bodyZone: 'legs'   },
+  'blocking':        { label: 'Blocking',              shortLabel: 'BLK',  category: 'physical', col: 'var(--c-str)',  hex: '#fb923c', bodyZone: 'core'   },
   'vertical':        { label: 'Vertical',              shortLabel: 'VRT',  category: 'physical', col: 'var(--c-lead)', hex: '#a78bfa', bodyZone: 'torso'  },
   'routeRunning':    { label: 'Route Running',         shortLabel: 'RTE',  category: 'skill',    col: 'var(--c-acc)',  hex: '#34d399', bodyZone: 'legs'   },
   'release':         { label: 'Release',               shortLabel: 'REL',  category: 'skill',    col: 'var(--c-pkt)',  hex: '#2dd4bf', bodyZone: 'hand'   },

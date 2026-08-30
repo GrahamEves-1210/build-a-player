@@ -164,7 +164,7 @@ const PROFILE_ICONS = [
   { id: 'skull',    e: '💀' }, { id: 'goat',   e: '🐐' },
 ]
 
-export default function ProfilePage({ user, build, simResult, types = TYPES, isRB = false, isWR = false, isPlus = false, isBucket = false, currentPool = [], isCustomMode = false, onCustomModeChange, onCustomRatingsChange, onThemeChange, onBack, onSignOut, onAdsDisabled, onOpenCustomModal, isBucketCustomMode = false, onBucketCustomModeChange, onOpenBucketCustomModal }) {
+export default function ProfilePage({ user, build, simResult, types = TYPES, isRB = false, isWR = false, isTE = false, isPlus = false, isBucket = false, currentPool = [], isCustomMode = false, onCustomModeChange, onCustomRatingsChange, onThemeChange, onBack, onSignOut, onAdsDisabled, onOpenCustomModal, isBucketCustomMode = false, onBucketCustomModeChange, onOpenBucketCustomModal }) {
   const [show, setShow]           = useState(false)
   const [career, setCareer]       = useState(null)
   const [careerLoad, setCareerLoad] = useState(true)
@@ -172,6 +172,8 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
   const [rbCareerLoad, setRbCareerLoad] = useState(true)
   const [wrCareer, setWrCareer]   = useState(null)
   const [wrCareerLoad, setWrCareerLoad] = useState(true)
+  const [teCareer, setTeCareer]   = useState(null)
+  const [teCareerLoad, setTeCareerLoad] = useState(true)
   const [legendCareer, setLegendCareer] = useState(null)
   const [legendCareerLoad, setLegendCareerLoad] = useState(true)
   const [rbLegendCareer, setRbLegendCareer] = useState(null)
@@ -187,7 +189,7 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
   const [salaryCareer, setSalaryCareer] = useState(null)
   const [salaryCareerLoad, setSalaryCareerLoad] = useState(true)
   const [gameSection, setGameSection] = useState('nfl')
-  const [careerGame, setCareerGame] = useState(isWR ? 'wr' : isRB ? 'rb' : 'qb')
+  const [careerGame, setCareerGame] = useState(isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb')
   const [adsDisabled, setAdsDisabled] = useState(false)
   const [adsLifetime, setAdsLifetime] = useState(false)
   const [adFreeLoading, setAdFreeLoading] = useState(false)
@@ -280,6 +282,7 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
       .not('game_mode', 'in', '("all-time","legends")')
       .not('game_mode', 'ilike', 'rb-%')
       .not('game_mode', 'ilike', 'wr-%')
+      .not('game_mode', 'ilike', 'te-%')
       .not('game_mode', 'ilike', 'bucket-%')
       .order('created_at', { ascending: false })
       .then(({ data }) => {
@@ -330,6 +333,36 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
         const worstBuild   = withBuilds.length ? withBuilds.reduce((b, r) => (r.ovr ?? 0) < (b.ovr ?? 0) ? r : b, withBuilds[0]) : null
         setWrCareer({ count: data.length, totalWins, totalLosses, totalTDs, totalRecYds, totalRecs, totalTargets, rings, playoffApps, winPct, avgOVR, best, bestBuild, worstBuild })
         setWrCareerLoad(false)
+      })
+  }, [user])
+
+  useEffect(() => {
+    if (!supabase || !user) { setTeCareerLoad(false); return }
+    supabase
+      .from('simulations')
+      .select('wins,losses,season_pass_yds,season_tds,season_ints,season_comp_pct,playoffs,champion,ovr,archetype,build,created_at')
+      .eq('user_id', user.id)
+      .ilike('game_mode', 'te-%')
+      .order('created_at', { ascending: false })
+      .then(({ data }) => {
+        if (!data || data.length === 0) { setTeCareer(null); setTeCareerLoad(false); return }
+        const totalWins    = data.reduce((s, r) => s + (r.wins     ?? 0), 0)
+        const totalLosses  = data.reduce((s, r) => s + (r.losses   ?? 0), 0)
+        const totalTDs     = data.reduce((s, r) => s + (r.season_tds      ?? 0), 0)
+        const totalRecYds  = data.reduce((s, r) => s + (r.season_pass_yds ?? 0), 0)
+        const totalRecs    = data.reduce((s, r) => s + (r.season_ints     ?? 0), 0)
+        const totalTargets = data.reduce((s, r) => s + (r.season_comp_pct ?? 0), 0)
+        const rings        = data.filter(r => r.champion).length
+        const playoffApps  = data.filter(r => r.playoffs).length
+        const totalGames   = totalWins + totalLosses
+        const winPct       = totalGames > 0 ? ((totalWins / totalGames) * 100).toFixed(1) : '0.0'
+        const avgOVR       = (data.reduce((s, r) => s + (r.ovr ?? 0), 0) / data.length).toFixed(1)
+        const best         = data.reduce((b, r) => (r.wins ?? 0) > (b.wins ?? 0) ? r : b, data[0])
+        const withBuilds   = data.filter(r => r.build && r.ovr)
+        const bestBuild    = withBuilds.length ? withBuilds.reduce((b, r) => (r.ovr ?? 0) > (b.ovr ?? 0) ? r : b, withBuilds[0]) : null
+        const worstBuild   = withBuilds.length ? withBuilds.reduce((b, r) => (r.ovr ?? 0) < (b.ovr ?? 0) ? r : b, withBuilds[0]) : null
+        setTeCareer({ count: data.length, totalWins, totalLosses, totalTDs, totalRecYds, totalRecs, totalTargets, rings, playoffApps, winPct, avgOVR, best, bestBuild, worstBuild })
+        setTeCareerLoad(false)
       })
   }, [user])
 
@@ -515,6 +548,9 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
   const wrCareerRecYds      = useCountUp(wrCareer?.totalRecYds, 1400, show && !!wrCareer)
   const wrCareerTDs         = useCountUp(wrCareer?.totalTDs, 1000, show && !!wrCareer)
   const wrCareerRecs        = useCountUp(wrCareer?.totalRecs, 1200, show && !!wrCareer)
+  const teCareerRecYds      = useCountUp(teCareer?.totalRecYds, 1400, show && !!teCareer)
+  const teCareerTDs         = useCountUp(teCareer?.totalTDs, 1000, show && !!teCareer)
+  const teCareerRecs        = useCountUp(teCareer?.totalRecs, 1200, show && !!teCareer)
 
   const displayName = user.user_metadata?.username || user.email?.split('@')[0] || 'Player'
   const initials    = getInitials(user)
@@ -688,8 +724,8 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
 
         {/* ── Career ── */}
         {(() => {
-          const allReady = !careerLoad && !rbCareerLoad && !wrCareerLoad && !rbLegendCareerLoad && !bucketCareerLoad && !bucketAlltimeCareerLoad && !legendCareerLoad && !salaryCareerLoad
-          const hasNFL    = career || rbCareer || legendCareer || rbLegendCareer
+          const allReady = !careerLoad && !rbCareerLoad && !wrCareerLoad && !teCareerLoad && !rbLegendCareerLoad && !bucketCareerLoad && !bucketAlltimeCareerLoad && !legendCareerLoad && !salaryCareerLoad
+          const hasNFL    = career || rbCareer || wrCareer || teCareer || legendCareer || rbLegendCareer
           const hasBucket = !!bucketCareer || !!bucketAlltimeCareer
           const hasSalary = !!salaryCareer
 
@@ -711,16 +747,18 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
             career         ? { id: 'qb',         label: 'QB',          star: false } : null,
             rbCareer       ? { id: 'rb',         label: 'RB',          star: false } : null,
             wrCareer       ? { id: 'wr',         label: 'WR',          star: false } : null,
+            teCareer       ? { id: 'te',         label: 'TE',          star: false } : null,
             legendCareer   ? { id: 'alltime-qb', label: 'All-Time QB', star: true  } : null,
             rbLegendCareer ? { id: 'alltime-rb', label: 'All-Time RB', star: true  } : null,
           ].filter(Boolean)
 
           const activeNFL  = NFL_TABS.find(t => t.id === careerGame)?.id ?? NFL_TABS[0]?.id
-          const dataMap    = { qb: career, rb: rbCareer, wr: wrCareer, 'alltime-qb': legendCareer, 'alltime-rb': rbLegendCareer }
+          const dataMap    = { qb: career, rb: rbCareer, wr: wrCareer, te: teCareer, 'alltime-qb': legendCareer, 'alltime-rb': rbLegendCareer }
           const nflData    = dataMap[activeNFL]
           const isAlltimeView = activeNFL === 'alltime-qb' || activeNFL === 'alltime-rb'
           const isRBView      = activeNFL === 'rb' || activeNFL === 'alltime-rb'
           const isWRView      = activeNFL === 'wr'
+          const isTEView      = activeNFL === 'te'
 
           return (
             <>
@@ -798,6 +836,37 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
                             <div className="pcg-lbl pcg-lbl-rings">Rings</div>
                           </div>
                         </>
+                      ) : isTEView ? (
+                        <>
+                          <div className="pcg-cell">
+                            <div className="pcg-val">{show ? teCareerRecs.toLocaleString() : '–'}</div>
+                            <div className="pcg-lbl">Career Recs</div>
+                          </div>
+                          <div className="pcg-cell">
+                            <div className="pcg-val">{nflData.playoffApps}</div>
+                            <div className="pcg-lbl">Playoff Apps</div>
+                          </div>
+                          <div className="pcg-cell">
+                            <div className="pcg-val">{nflData.winPct}%</div>
+                            <div className="pcg-lbl">Win %</div>
+                          </div>
+                          <div className="pcg-cell">
+                            <div className="pcg-val">{show ? teCareerRecYds.toLocaleString() : '–'}</div>
+                            <div className="pcg-lbl">Rec Yards</div>
+                          </div>
+                          <div className="pcg-cell">
+                            <div className="pcg-val">{show ? teCareerTDs : '–'}</div>
+                            <div className="pcg-lbl">Rec TDs</div>
+                          </div>
+                          <div className="pcg-cell">
+                            <div className="pcg-val">{nflData.avgOVR}</div>
+                            <div className="pcg-lbl">Avg OVR</div>
+                          </div>
+                          <div className="pcg-cell pcg-cell-rings">
+                            <div className="pcg-val pcg-val-rings">{nflData.rings}</div>
+                            <div className="pcg-lbl pcg-lbl-rings">Rings</div>
+                          </div>
+                        </>
                       ) : (
                         <>
                           <div className={`pcg-cell${isAlltimeView ? ' pcg-cell-legend' : ''}`}>
@@ -838,7 +907,7 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
                         <span className="pbs-lbl">{isAlltimeView ? 'Best All-Time Season' : 'Best Season'}</span>
                         <span className="pbs-val">
                           {nflData.best.wins}–{nflData.best.losses} · {nflData.best.season_tds} TD ·{' '}
-                          {isWRView
+                          {(isWRView || isTEView)
                             ? `${(nflData.best.season_pass_yds ?? 0).toLocaleString()} rec yds${nflData.best.season_ints ? ` · ${nflData.best.season_ints} rec` : ''}`
                             : `${(nflData.best.season_pass_yds ?? 0).toLocaleString()} ${isRBView ? 'rush yds' : 'yds'}`
                           }
@@ -860,7 +929,7 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
                             <div className="pbe-slots">
                               {Object.entries(bd.build).map(([slot, d]) => (
                                 <div key={slot} className="pbe-slot-row">
-                                  <span className="pbe-slot-attr">{ATTR[slot]?.shortLabel ?? slot}</span>
+                                  <span className="pbe-slot-attr">{(isWRView || isTEView) && slot === 'size' ? 'SIZE' : ATTR[slot]?.shortLabel ?? slot}</span>
                                   <span className="pbe-slot-qb">{d.qb}</span>
                                   <span className="pbe-slot-grade" style={{ background: ATTR[slot]?.hex ?? '#95d5b2', color: '#111111' }}>{valToGrade(d.val)}</span>
                                 </div>

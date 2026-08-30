@@ -40,7 +40,6 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
   const [status, setStatus]       = useState('')
   const [error, setError]         = useState('')
   const [lbOpen, setLbOpen]       = useState(false)
-  const [lbTab, setLbTab]         = useState('record')
   const [lbRows, setLbRows]       = useState([])
   const [lbLoading, setLbLoading] = useState(true)
   const [searchSecs, setSearchSecs]   = useState(0)
@@ -334,6 +333,8 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
     // Receive heartbeats from other searching players
     ch.on('broadcast', { event: 'bab_queue' }, async ({ payload }) => {
       if (done || !payload?.vid || payload.vid === myId) return
+      // Reject stale heartbeats — player must have sent within the last 7s
+      if (payload.ts && Date.now() - payload.ts > 7000) return
       if (seen.has(payload.vid)) return
       seen.add(payload.vid)
       setQueueSize(s => Math.max(s, 2))
@@ -348,7 +349,7 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
     ch.subscribe(async s => {
       if (s === 'SUBSCRIBED') {
         // Broadcast presence immediately, then every 3s so late joiners find us
-        const announce = () => { if (!done) ch.send({ type: 'broadcast', event: 'bab_queue', payload: { vid: myId, name: myName } }).catch(() => {}) }
+        const announce = () => { if (!done) ch.send({ type: 'broadcast', event: 'bab_queue', payload: { vid: myId, name: myName, ts: Date.now() } }).catch(() => {}) }
         announce()
         heartbeatTimer = setInterval(announce, 3000)
       }
@@ -719,10 +720,6 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
               <button className="vlf-close" onClick={() => setLbOpen(false)}>×</button>
             </div>
             <div className="vlf-body">
-              <div className="vlh-lb-tabs" style={{marginBottom:8}}>
-                <button className={`vlh-lb-tab${lbTab === 'record' ? ' vlh-lb-tab--active' : ''}`} onClick={() => setLbTab('record')}>RECORD</button>
-                <button className={`vlh-lb-tab${lbTab === 'ovr' ? ' vlh-lb-tab--active' : ''}`} onClick={() => setLbTab('ovr')}>AVG OVR</button>
-              </div>
               {lbLoading ? (
                 <div className="vlh-lb-loading"><div className="versus-dots"><span/><span/><span/></div></div>
               ) : (
@@ -730,26 +727,18 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
                   <div className="vlh-lb-thead">
                     <span className="vlh-lb-th vlh-lb-th--rank">#</span>
                     <span className="vlh-lb-th vlh-lb-th--name">Player</span>
-                    {lbTab === 'record'
-                      ? <span className="vlh-lb-th vlh-lb-th--right">W-L <span className="vlh-lb-th-sub">WIN%</span></span>
-                      : <span className="vlh-lb-th vlh-lb-th--right">OVR</span>
-                    }
+                    <span className="vlh-lb-th vlh-lb-th--right">W-L <span className="vlh-lb-th-sub">WIN%</span></span>
                   </div>
                   {(() => {
-                    const sorted = lbTab === 'record'
-                      ? [...lbRows].sort((a, b) => b.wins - a.wins)
-                      : [...lbRows].sort((a, b) => (b.avgOvr ?? 0) - (a.avgOvr ?? 0))
+                    const sorted = [...lbRows].sort((a, b) => b.wins - a.wins)
                     const padded = [...sorted, ...Array(Math.max(0, 20 - sorted.length)).fill(null)]
                     return padded.slice(0, 20).map((r, i) => (
                       <div key={i} className={`vlh-lb-row${!r ? ' vlh-lb-row--empty' : ''}`}>
                         <span className="vlh-lb-td vlh-lb-td--rank">{r ? i + 1 : ''}</span>
                         <span className="vlh-lb-td vlh-lb-td--name">{r?.username || ''}</span>
-                        {lbTab === 'record'
-                          ? <span className="vlh-lb-td vlh-lb-td--right">
-                              {r ? <>{r.wins}–{r.losses} <span className="vlh-lb-pct">{r.winPct != null ? `${r.winPct}%` : '—'}</span></> : ''}
-                            </span>
-                          : <span className="vlh-lb-td vlh-lb-td--right">{r?.avgOvr ?? ''}</span>
-                        }
+                        <span className="vlh-lb-td vlh-lb-td--right">
+                          {r ? <>{r.wins}–{r.losses} <span className="vlh-lb-pct">{r.winPct != null ? `${r.winPct}%` : '—'}</span></> : ''}
+                        </span>
                       </div>
                     ))
                   })()}
