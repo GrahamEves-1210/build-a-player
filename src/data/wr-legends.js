@@ -82,7 +82,7 @@ const _raw = [
   {
     name: 'Steve Smith Sr.',   short: 'S. Smith',      team: 'BAL', teamName: 'Baltimore Ravens',
     skin: '#7a5030', height: 69, weight: 185, number: 89, starter: true, captain: true, years: '2014–16',
-    attrs: { speed: 9, bodyControl: 10, vertical: 7, routeRunning: 9, release: 9, hands: 9, awareness: 9, size: 3, afterCatch: 9 },
+    attrs: { speed: 9, bodyControl: 10, vertical: 7, routeRunning: 9, release: 11, hands: 9, awareness: 9, size: 3, afterCatch: 9 },
   },
 
   // ─── BUFFALO BILLS ───────────────────────────────────────────────────────
