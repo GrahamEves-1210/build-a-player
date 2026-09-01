@@ -494,12 +494,7 @@ export function TeamSpinModal({ isCustomMode, onTeamSelected, build = {} }) {
   const [mode,       setMode]       = useState(isCustomMode ? 'pick' : 'spin')
   const [search,     setSearch]     = useState('')
 
-  const pickPool = useMemo(() => {
-    const shorts = [...new Set(Object.values(build).filter(Boolean).map(v => v.team).filter(Boolean))]
-    const TEAM_MAP = Object.fromEntries(NBA_TEAMS.map(t => [t.short, t]))
-    const filtered = shorts.map(s => TEAM_MAP[s]).filter(Boolean)
-    return filtered.length > 0 ? filtered : NBA_TEAMS
-  }, [build])
+  const pickPool = NBA_TEAMS
 
   const items = useMemo(() => [...NBA_TEAMS].sort(() => Math.random() - 0.5), [spinCount])
 

@@ -178,6 +178,8 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
   const [legendCareerLoad, setLegendCareerLoad] = useState(true)
   const [rbLegendCareer, setRbLegendCareer] = useState(null)
   const [rbLegendCareerLoad, setRbLegendCareerLoad] = useState(true)
+  const [wrLegendCareer, setWrLegendCareer] = useState(null)
+  const [wrLegendCareerLoad, setWrLegendCareerLoad] = useState(true)
   const [bucketCareer, setBucketCareer] = useState(null)
   const [bucketCareerLoad, setBucketCareerLoad] = useState(true)
   const [bucketRingSeasons, setBucketRingSeasons] = useState([])
@@ -445,6 +447,32 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
   }, [user])
 
   useEffect(() => {
+    if (!supabase || !user) { setWrLegendCareerLoad(false); return }
+    supabase
+      .from('simulations')
+      .select('wins,losses,season_pass_yds,season_tds,season_ints,playoffs,champion,ovr,created_at')
+      .eq('user_id', user.id)
+      .eq('game_mode', 'wr-all-time')
+      .order('created_at', { ascending: false })
+      .then(({ data }) => {
+        if (!data || data.length === 0) { setWrLegendCareer(null); setWrLegendCareerLoad(false); return }
+        const totalWins   = data.reduce((s, r) => s + (r.wins  ?? 0), 0)
+        const totalLosses = data.reduce((s, r) => s + (r.losses ?? 0), 0)
+        const totalTDs    = data.reduce((s, r) => s + (r.season_tds      ?? 0), 0)
+        const totalRecYds = data.reduce((s, r) => s + (r.season_pass_yds ?? 0), 0)
+        const totalRecs   = data.reduce((s, r) => s + (r.season_ints     ?? 0), 0)
+        const rings       = data.filter(r => r.champion).length
+        const playoffApps = data.filter(r => r.playoffs).length
+        const totalGames  = totalWins + totalLosses
+        const winPct      = totalGames > 0 ? ((totalWins / totalGames) * 100).toFixed(1) : '0.0'
+        const avgOVR      = (data.reduce((s, r) => s + (r.ovr ?? 0), 0) / data.length).toFixed(1)
+        const best        = data.reduce((b, r) => (r.wins ?? 0) > (b.wins ?? 0) ? r : b, data[0])
+        setWrLegendCareer({ count: data.length, totalWins, totalLosses, totalTDs, totalRecYds, totalRecs, rings, playoffApps, winPct, avgOVR, best })
+        setWrLegendCareerLoad(false)
+      })
+  }, [user])
+
+  useEffect(() => {
     if (!supabase || !user) { setBucketCareerLoad(false); return }
     supabase
       .from('simulations')
@@ -545,9 +573,12 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
   const legendCareerTDs     = useCountUp(legendCareer?.totalTDs, 1000, show && !!legendCareer)
   const rbLegendCareerYds   = useCountUp(rbLegendCareer?.totalRushYds, 1400, show && !!rbLegendCareer)
   const rbLegendCareerTDs   = useCountUp(rbLegendCareer?.totalTDs, 1000, show && !!rbLegendCareer)
-  const wrCareerRecYds      = useCountUp(wrCareer?.totalRecYds, 1400, show && !!wrCareer)
-  const wrCareerTDs         = useCountUp(wrCareer?.totalTDs, 1000, show && !!wrCareer)
-  const wrCareerRecs        = useCountUp(wrCareer?.totalRecs, 1200, show && !!wrCareer)
+  const wrCareerRecYds          = useCountUp(wrCareer?.totalRecYds, 1400, show && !!wrCareer)
+  const wrCareerTDs             = useCountUp(wrCareer?.totalTDs, 1000, show && !!wrCareer)
+  const wrCareerRecs            = useCountUp(wrCareer?.totalRecs, 1200, show && !!wrCareer)
+  const wrLegendCareerRecYds    = useCountUp(wrLegendCareer?.totalRecYds, 1400, show && !!wrLegendCareer)
+  const wrLegendCareerTDs       = useCountUp(wrLegendCareer?.totalTDs, 1000, show && !!wrLegendCareer)
+  const wrLegendCareerRecs      = useCountUp(wrLegendCareer?.totalRecs, 1200, show && !!wrLegendCareer)
   const teCareerRecYds      = useCountUp(teCareer?.totalRecYds, 1400, show && !!teCareer)
   const teCareerTDs         = useCountUp(teCareer?.totalTDs, 1000, show && !!teCareer)
   const teCareerRecs        = useCountUp(teCareer?.totalRecs, 1200, show && !!teCareer)
@@ -724,8 +755,8 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
 
         {/* ── Career ── */}
         {(() => {
-          const allReady = !careerLoad && !rbCareerLoad && !wrCareerLoad && !teCareerLoad && !rbLegendCareerLoad && !bucketCareerLoad && !bucketAlltimeCareerLoad && !legendCareerLoad && !salaryCareerLoad
-          const hasNFL    = career || rbCareer || wrCareer || teCareer || legendCareer || rbLegendCareer
+          const allReady = !careerLoad && !rbCareerLoad && !wrCareerLoad && !teCareerLoad && !rbLegendCareerLoad && !wrLegendCareerLoad && !bucketCareerLoad && !bucketAlltimeCareerLoad && !legendCareerLoad && !salaryCareerLoad
+          const hasNFL    = career || rbCareer || wrCareer || teCareer || legendCareer || rbLegendCareer || wrLegendCareer
           const hasBucket = !!bucketCareer || !!bucketAlltimeCareer
           const hasSalary = !!salaryCareer
 
@@ -750,14 +781,15 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
             teCareer       ? { id: 'te',         label: 'TE',          star: false } : null,
             legendCareer   ? { id: 'alltime-qb', label: 'All-Time QB', star: true  } : null,
             rbLegendCareer ? { id: 'alltime-rb', label: 'All-Time RB', star: true  } : null,
+            wrLegendCareer ? { id: 'alltime-wr', label: 'All-Time WR', star: true  } : null,
           ].filter(Boolean)
 
           const activeNFL  = NFL_TABS.find(t => t.id === careerGame)?.id ?? NFL_TABS[0]?.id
-          const dataMap    = { qb: career, rb: rbCareer, wr: wrCareer, te: teCareer, 'alltime-qb': legendCareer, 'alltime-rb': rbLegendCareer }
+          const dataMap    = { qb: career, rb: rbCareer, wr: wrCareer, te: teCareer, 'alltime-qb': legendCareer, 'alltime-rb': rbLegendCareer, 'alltime-wr': wrLegendCareer }
           const nflData    = dataMap[activeNFL]
-          const isAlltimeView = activeNFL === 'alltime-qb' || activeNFL === 'alltime-rb'
+          const isAlltimeView = activeNFL === 'alltime-qb' || activeNFL === 'alltime-rb' || activeNFL === 'alltime-wr'
           const isRBView      = activeNFL === 'rb' || activeNFL === 'alltime-rb'
-          const isWRView      = activeNFL === 'wr'
+          const isWRView      = activeNFL === 'wr' || activeNFL === 'alltime-wr'
           const isTEView      = activeNFL === 'te'
 
           return (
@@ -807,31 +839,31 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
                     <div className="prf-career-grid">
                       {isWRView ? (
                         <>
-                          <div className="pcg-cell">
-                            <div className="pcg-val">{show ? wrCareerRecs.toLocaleString() : '–'}</div>
+                          <div className={`pcg-cell${isAlltimeView ? ' pcg-cell-legend' : ''}`}>
+                            <div className="pcg-val">{isAlltimeView ? (show ? wrLegendCareerRecs.toLocaleString() : '–') : (show ? wrCareerRecs.toLocaleString() : '–')}</div>
                             <div className="pcg-lbl">Career Recs</div>
                           </div>
-                          <div className="pcg-cell">
+                          <div className={`pcg-cell${isAlltimeView ? ' pcg-cell-legend' : ''}`}>
                             <div className="pcg-val">{nflData.playoffApps}</div>
                             <div className="pcg-lbl">Playoff Apps</div>
                           </div>
-                          <div className="pcg-cell">
+                          <div className={`pcg-cell${isAlltimeView ? ' pcg-cell-legend' : ''}`}>
                             <div className="pcg-val">{nflData.winPct}%</div>
                             <div className="pcg-lbl">Win %</div>
                           </div>
-                          <div className="pcg-cell">
-                            <div className="pcg-val">{show ? wrCareerRecYds.toLocaleString() : '–'}</div>
+                          <div className={`pcg-cell${isAlltimeView ? ' pcg-cell-legend' : ''}`}>
+                            <div className="pcg-val">{isAlltimeView ? (show ? wrLegendCareerRecYds.toLocaleString() : '–') : (show ? wrCareerRecYds.toLocaleString() : '–')}</div>
                             <div className="pcg-lbl">Rec Yards</div>
                           </div>
-                          <div className="pcg-cell">
-                            <div className="pcg-val">{show ? wrCareerTDs : '–'}</div>
+                          <div className={`pcg-cell${isAlltimeView ? ' pcg-cell-legend' : ''}`}>
+                            <div className="pcg-val">{isAlltimeView ? (show ? wrLegendCareerTDs : '–') : (show ? wrCareerTDs : '–')}</div>
                             <div className="pcg-lbl">Rec TDs</div>
                           </div>
-                          <div className="pcg-cell">
+                          <div className={`pcg-cell${isAlltimeView ? ' pcg-cell-legend' : ''}`}>
                             <div className="pcg-val">{nflData.avgOVR}</div>
                             <div className="pcg-lbl">Avg OVR</div>
                           </div>
-                          <div className="pcg-cell pcg-cell-rings">
+                          <div className={`pcg-cell pcg-cell-rings${isAlltimeView ? ' pcg-cell-rings--legend' : ''}`}>
                             <div className="pcg-val pcg-val-rings">{nflData.rings}</div>
                             <div className="pcg-lbl pcg-lbl-rings">Rings</div>
                           </div>

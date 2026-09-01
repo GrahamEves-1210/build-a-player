@@ -22,6 +22,7 @@ const VersusResult   = lazy(() => import('./components/VersusResult'))
 import { TYPES, LITE_TYPES, QBS } from './data/qbs'
 import { RBS, RB_TYPES, RB_LITE_TYPES } from './data/rbs'
 import { WRS, WR_TYPES, WR_LITE_TYPES, WR_CATEGORIES, WR_ATTR } from './data/wrs'
+import { WR_LEGENDS } from './data/wr-legends'
 import { TES, TE_TYPES, TE_LITE_TYPES, TE_CATEGORIES, TE_ATTR } from './data/tes'
 import { ALLTIME_RATINGS } from './data/nfl-teams'
 import { LEGENDS, LEGEND_TYPES } from './data/legends'
@@ -35,7 +36,7 @@ const _dd = arr => { const s = new Set(); return arr.filter(p => { const k = `${
 const _bt = (a, b) => a.team.localeCompare(b.team) || a.name.localeCompare(b.name)
 const CUSTOM_QB_POOL = _dd([...QBS, ...LEGENDS]).sort(_bt)
 const CUSTOM_RB_POOL = _dd([...RBS, ...RB_LEGENDS]).sort(_bt)
-const CUSTOM_WR_POOL = [...WRS].sort(_bt)
+const CUSTOM_WR_POOL = _dd([...WRS, ...WR_LEGENDS]).sort(_bt)
 const CUSTOM_TE_POOL = [...TES].sort(_bt)
 
 // Detect shared build at module load time — before any React rendering
@@ -307,7 +308,7 @@ export default function App() {
   const isWR        = position === 'wr'
   const isTE        = position === 'te'
   const activeTypes = isTE ? (gameMode === 'lite' ? TE_LITE_TYPES : TE_TYPES) : isWR ? (gameMode === 'lite' ? WR_LITE_TYPES : WR_TYPES) : gameMode === 'lite' ? (isRB ? RB_LITE_TYPES : LITE_TYPES) : (gameMode === 'all-time' && !isRB) ? LEGEND_TYPES : (isRB ? RB_TYPES : TYPES)
-  const activePool  = isTE ? TES : isWR ? WRS : gameMode === 'all-time' ? (isRB ? RB_LEGENDS : LEGENDS) : (isRB ? RBS : QBS)
+  const activePool  = isTE ? TES : isWR ? (gameMode === 'all-time' ? WR_LEGENDS : WRS) : gameMode === 'all-time' ? (isRB ? RB_LEGENDS : LEGENDS) : (isRB ? RBS : QBS)
   const isPlus      = isSubscribed
 
   // Theme must be declared after isPlus

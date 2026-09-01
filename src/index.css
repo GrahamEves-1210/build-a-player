@@ -5118,6 +5118,33 @@ html.is-mac .spin-panel-scroll {
   z-index: 2;
   border-radius: 22px;
 }
+.splash-pos-new-tag {
+  position: absolute;
+  top: 8px;
+  right: 7px;
+  padding: 1px 5px;
+  font-family: Impact, 'Arial Narrow Bold', sans-serif;
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  color: #111;
+  background: #f59e0b;
+  border-radius: 3px;
+  line-height: 1.5;
+  z-index: 3;
+}
+.splash-alltime-new-tag {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 7px;
+  font-family: Impact, 'Arial Narrow Bold', sans-serif;
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  color: #111;
+  background: #f59e0b;
+  border-radius: 3px;
+  vertical-align: middle;
+  line-height: 1.5;
+}
 @media (min-width: 769px) {
   .splash-pos-popup { zoom: 1.08; }
 }
@@ -11212,6 +11239,7 @@ html.is-touch .bd-card-main:hover         { background: transparent !important; 
 }
 .lb-row-rb { border-color: rgba(52,211,153,0.08); }
 
+.lb-title-wr { color: #fbbf24; }
 .lb-header-line-wr { background: rgba(251,191,36,0.35); }
 .lb-tab-wr {
   border-color: rgba(251,191,36,0.14);

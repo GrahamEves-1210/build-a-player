@@ -103,7 +103,7 @@ export const ALLTIME_RATINGS = {
   DEN: { off: 9, def: 10 }, // Elway + Orange Crush + Von Miller
   DET: { off: 7, def: 7 },  // historically limited
   GB:  { off: 9, def: 9 },  // Lombardi + Favre + Rodgers — most titles
-  HOU: { off: 7, def: 9 },  // J.J. Watt defense
+  HOU: { off: 6, def: 10 },  // J.J. Watt defense
   IND: { off: 10, def: 8 }, // Manning + Unitas eras
   JAX: { off: 8, def: 9 },  // early JAGS elite defense
   KC:  { off: 10, def: 9 }, // Mahomes dynasty + Len Dawson AFL

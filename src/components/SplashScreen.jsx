@@ -25,7 +25,7 @@ const POS_OPTIONS = [
     ],
   },
   {
-    pos: 'wr', label: 'WR', classic: true, alltime: false,
+    pos: 'wr', label: 'WR', classic: true, alltime: true,
     players: [
       { id: 'espn_4262921',   color: '#4f2683' },  // Justin Jefferson - MIN
       { id: 'espn_4241389',   color: '#003594' },  // CeeDee Lamb - DAL
@@ -119,6 +119,7 @@ function PositionPicker({ position, onChange }) {
               tabIndex={opt.disabled || !open ? -1 : 0}
             >
               {opt.disabled && <div className="splash-pos-soon-banner">COMING SOON</div>}
+              {opt.pos === 'te' && <span className="splash-pos-new-tag">NEW</span>}
               <div className="splash-pos-option-top">
                 <AvatarTrio players={opt.players} size={40} />
                 <span className="splash-pos-option-name">{opt.label}</span>
@@ -304,7 +305,7 @@ export default function SplashScreen({ onStart, onDepthChart }) {
             </div>
           </button>
 
-          {(position === 'wr' || position === 'te') ? (
+          {(position === 'te') ? (
             <button className="splash-mode-alltime splash-mode-alltime--soon" disabled>
               <div className="splash-mode-alltime--soon-banner">COMING SOON</div>
               <div className="smode-title smode-title--alltime">All-Time</div>
@@ -321,7 +322,10 @@ export default function SplashScreen({ onStart, onDepthChart }) {
               className="splash-mode-alltime"
               onClick={() => { localStorage.setItem('lastPosition', position); onStart('all-time', position) }}
             >
-              <div className="smode-title smode-title--alltime">All-Time</div>
+              <div className="smode-title smode-title--alltime">
+                All-Time
+                {position === 'wr' && <span className="splash-alltime-new-tag">NEW</span>}
+              </div>
               <div className="smode-badge smode-badge--alltime">Draft the Greats</div>
               <div className="smode-cta smode-cta--alltime">
                 START DRAFTING

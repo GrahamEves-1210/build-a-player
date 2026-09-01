@@ -160,12 +160,7 @@ export default function TeamPickerModal({ onSelect, isPlus = false, build = {} }
     setTimeout(() => onSelect(team), 800)
   }
 
-  const pickPool = useMemo(() => {
-    const TEAM_MAP = Object.fromEntries(NFL_TEAMS.map(t => [t.short, t]))
-    const shorts = [...new Set(Object.values(build).filter(Boolean).map(v => v.team).filter(Boolean))]
-    const filtered = shorts.map(s => TEAM_MAP[s]).filter(Boolean)
-    return filtered.length > 0 ? filtered : NFL_TEAMS
-  }, [build])
+  const pickPool = NFL_TEAMS
 
   const filteredTeams = useMemo(() => {
     if (!search) return pickPool
