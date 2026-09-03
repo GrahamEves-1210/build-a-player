@@ -305,6 +305,16 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
     setPhase('done')
   }, [])
 
+  const adInvokedRef = useRef(false)
+
+  const triggerMobileAd = useCallback(() => {
+    if (adsDisabled || window.innerWidth > 768 || adInvokedRef.current) return
+    adInvokedRef.current = true
+    window.ramp?.que?.push(() => {
+      window.ramp.spaAddAds([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1' }])
+    })
+  }, [adsDisabled])
+
   const handleSpin = useCallback(() => {
     clearAll()
     setSelectedTeam(null)
@@ -313,7 +323,8 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
     setSpinCount(c => c + 1)
     onSaveResult?.(null)
     setPhase('team')
-  }, [onSaveResult])
+    triggerMobileAd()
+  }, [onSaveResult, triggerMobileAd])
 
   const handleQBRespin = useCallback(() => {
     setExcludedQB(selectedQB)
@@ -380,14 +391,6 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
     })
   }, [selectedTeam, qbReelItems])
 
-  const adInvokedRef = useRef(false)
-  useEffect(() => {
-    if (!isDone || adInvokedRef.current || adsDisabled || window.innerWidth > 768) return
-    adInvokedRef.current = true
-    window.ramp?.que?.push(() => {
-      window.ramp.spaAddAds([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1' }])
-    })
-  }, [isDone, adsDisabled])
 
   return (
     <div className="spin-panel-wrap">

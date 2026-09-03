@@ -1,5 +1,9 @@
 ﻿import { useEffect, useState, useMemo, useRef } from 'react'
 import { nflHeadshot, HEADSHOT_BASE } from '../utils/simulation'
+import { supabase } from '../lib/supabase'
+
+const VOTE_KEY   = 'bap_next_mode_vote'
+const VOTE_SEED  = { db: 0, lb: 0, dl: 0, ol: 0 }
 
 function hsUrl(id) {
   if (!id) return null
@@ -56,6 +60,22 @@ const POS_OPTIONS = [
       { id: 'espn_4569465', color: '#0076b6' },  // Jack Campbell - DET
     ],
   },
+  {
+    pos: 'dl', label: 'DL', classic: false, alltime: false, disabled: true,
+    players: [
+      { id: 'espn_3122132', color: '#003594' },  // Myles Garrett - LAR
+      { id: 'espn_3916655', color: '#000000' },  // Maxx Crosby - LV
+      { id: '10892',        color: '#03202f' },  // Will Anderson Jr - HOU
+    ],
+  },
+  {
+    pos: 'ol', label: 'OL', classic: false, alltime: false, disabled: true,
+    players: [
+      { id: 'espn_13241',   color: '#aa0000' },  // Trent Williams - SF
+      { id: 'espn_15797',   color: '#004c54' },  // Lane Johnson - PHI
+      { id: 'espn_3129308', color: '#002c5f' },  // Quenton Nelson - IND
+    ],
+  },
 ]
 
 function MiniAv({ id, color, size = 28 }) {
@@ -79,7 +99,7 @@ function AvatarTrio({ players, size = 26 }) {
   )
 }
 
-function PositionPicker({ position, onChange }) {
+function PositionPicker({ position, onChange, voteCounts, votedFor, onVote }) {
   const [open, setOpen] = useState(false)
   const ref = useRef()
   const current = POS_OPTIONS.find(o => o.pos === position) || POS_OPTIONS[0]
@@ -92,6 +112,8 @@ function PositionPicker({ position, onChange }) {
   }, [open])
 
   const select = pos => { onChange(pos); setOpen(false) }
+
+  const voteTotal = Object.values(voteCounts).reduce((a, b) => a + b, 0)
 
   return (
     <div className="splash-pos-picker" ref={ref}>
@@ -108,25 +130,72 @@ function PositionPicker({ position, onChange }) {
           <path d="M6 9l6 6 6-6"/>
         </svg>
       </button>
+      <div className="splash-pos-vote-below-trigger">VOTE FOR NEXT MODE</div>
 
       <div className={`splash-pos-popup${open ? ' splash-pos-popup--open' : ''}`} aria-hidden={!open}>
         <div className="splash-pos-popup-grid">
-          {POS_OPTIONS.map(opt => (
+          {POS_OPTIONS.filter(o => !o.disabled).map(opt => (
             <button
               key={opt.pos}
-              className={`splash-pos-option${opt.pos === position ? ' splash-pos-option--active' : ''}${opt.disabled ? ' splash-pos-option--disabled' : ''}`}
-              onClick={() => !opt.disabled && select(opt.pos)}
-              tabIndex={opt.disabled || !open ? -1 : 0}
+              className={`splash-pos-option${opt.pos === position ? ' splash-pos-option--active' : ''}`}
+              onClick={() => select(opt.pos)}
+              tabIndex={!open ? -1 : 0}
             >
-              {opt.disabled && <div className="splash-pos-soon-banner">COMING SOON</div>}
               {opt.pos === 'te' && <span className="splash-pos-new-tag">NEW</span>}
               <div className="splash-pos-option-top">
                 <AvatarTrio players={opt.players} size={40} />
                 <span className="splash-pos-option-name">{opt.label}</span>
               </div>
               <div className="splash-pos-option-modes">
-                <span className={`splash-mode-pill ${opt.disabled ? 'splash-mode-pill--alltime-soon' : opt.alltime ? 'splash-mode-pill--alltime' : 'splash-mode-pill--alltime-soon'}`}>All‑Time</span>
-                <span className={`splash-mode-pill ${opt.disabled ? 'splash-mode-pill--classic-soon' : opt.classic ? 'splash-mode-pill--avail' : 'splash-mode-pill--na'}`}>Classic</span>
+                <span className={`splash-mode-pill ${opt.alltime ? 'splash-mode-pill--alltime' : 'splash-mode-pill--alltime-soon'}`}>All‑Time</span>
+                <span className={`splash-mode-pill ${opt.classic ? 'splash-mode-pill--avail' : 'splash-mode-pill--na'}`}>Classic</span>
+              </div>
+            </button>
+          ))}
+        </div>
+
+        <div className="splash-pos-vote-section-header">
+          <div className="splash-pos-vote-section-rule" />
+          <span className="splash-pos-vote-section-label">VOTE FOR NEXT MODE</span>
+          <div className="splash-pos-vote-section-rule" />
+        </div>
+
+        <div className="splash-pos-popup-grid">
+          {POS_OPTIONS.filter(o => o.disabled).map(opt => (
+            <button
+              key={opt.pos}
+              className="splash-pos-option splash-pos-option--disabled"
+              onClick={e => e.preventDefault()}
+              tabIndex={!open ? -1 : 0}
+            >
+              <div className="splash-pos-soon-banner">COMING SOON</div>
+              <div className="splash-pos-option-top">
+                <AvatarTrio players={opt.players} size={40} />
+                <span className="splash-pos-option-name">{opt.label}</span>
+              </div>
+              <div className="splash-pos-option-modes">
+                <span className="splash-mode-pill splash-mode-pill--alltime-soon">All‑Time</span>
+                <span className="splash-mode-pill splash-mode-pill--classic-soon">Classic</span>
+              </div>
+              <div className="splash-pos-vote">
+                {votedFor ? (
+                  <div className={`splash-pos-vote-result${votedFor === opt.pos ? ' splash-pos-vote-result--mine' : ''}`}>
+                    <div
+                      className="splash-pos-vote-fill"
+                      style={{ width: `${Math.round((voteCounts[opt.pos] || 0) / Math.max(voteTotal, 1) * 100)}%` }}
+                    />
+                    <span className="splash-pos-vote-pct">
+                      {Math.round((voteCounts[opt.pos] || 0) / Math.max(voteTotal, 1) * 100)}%
+                    </span>
+                  </div>
+                ) : (
+                  <button
+                    className="splash-pos-vote-btn"
+                    onClick={e => { e.stopPropagation(); onVote(opt.pos) }}
+                  >
+                    VOTE
+                  </button>
+                )}
               </div>
             </button>
           ))}
@@ -230,6 +299,26 @@ export default function SplashScreen({ onStart, onDepthChart }) {
   const isDesktop = useMemo(() => window.innerWidth > 768, [])
   const orbitScale = isDesktop ? 0.8 : 1
 
+  const [voteCounts, setVoteCounts] = useState(VOTE_SEED)
+  const [votedFor, setVotedFor] = useState(() => { try { return localStorage.getItem(VOTE_KEY) } catch { return null } })
+
+  useEffect(() => {
+    supabase.from('mode_votes').select('position,count').then(({ data }) => {
+      if (!data) return
+      const counts = { ...VOTE_SEED }
+      data.forEach(row => { if (counts[row.position] !== undefined) counts[row.position] = row.count })
+      setVoteCounts(counts)
+    }).catch(() => {})
+  }, [])
+
+  const handleVote = async pos => {
+    if (votedFor) return
+    try { localStorage.setItem(VOTE_KEY, pos) } catch {}
+    setVotedFor(pos)
+    setVoteCounts(prev => ({ ...prev, [pos]: (prev[pos] || 0) + 1 }))
+    try { await supabase.rpc('increment_mode_vote', { p_pos: pos }) } catch {}
+  }
+
   useEffect(() => {
     POS_OPTIONS.forEach(opt => opt.players.forEach(p => {
       const src = hsUrl(p.id)
@@ -266,7 +355,7 @@ export default function SplashScreen({ onStart, onDepthChart }) {
         </div>
         <div className="splash-disclaimer splash-disclaimer--under-logo">Fan-made · Not affiliated with the NFL</div>
         <div className="splash-pos-toggle splash-pos-toggle--picker" style={{ opacity: phase >= 3 ? 1 : 0, transform: phase >= 3 ? (isMobile ? 'translateY(-8px)' : 'none') : 'translateY(8px)' }}>
-          <PositionPicker position={position} onChange={handlePosChange} />
+          <PositionPicker position={position} onChange={handlePosChange} voteCounts={voteCounts} votedFor={votedFor} onVote={handleVote} />
         </div>
       </div>
 

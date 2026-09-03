@@ -94,7 +94,7 @@ const _raw = [
   {
     name: 'Stefon Diggs',      short: 'S. Diggs',      team: 'BUF', teamName: 'Buffalo Bills',
     skin: '#5e3c22', height: 72, weight: 191, number: 14, starter: true, captain: true, years: '2020–23',
-    attrs: { speed: 8, bodyControl: 9, vertical: 8, routeRunning: 9, release: 9, hands: 8, awareness: 9, size: 6, afterCatch: 9 },
+    attrs: { speed: 8, bodyControl: 9, vertical: 8, routeRunning: 10, release: 9, hands: 8, awareness: 9, size: 6, afterCatch: 9 },
   },
   {
     name: 'Eric Moulds',       short: 'Moulds',        team: 'BUF', teamName: 'Buffalo Bills',
@@ -161,7 +161,7 @@ const _raw = [
   {
     name: "Ja'Marr Chase",     short: 'Chase',         team: 'CIN', teamName: 'Cincinnati Bengals',
     skin: '#5e3c22', height: 72, weight: 201, number: 1, starter: true, captain: true, years: '2021–',
-    attrs: { speed: 10, bodyControl: 9, vertical: 10, routeRunning: 9, release: 10, hands: 10, awareness: 8, size: 6, afterCatch: 10 },
+    attrs: { speed: 10, bodyControl: 11, vertical: 10, routeRunning: 9, release: 10, hands: 11, awareness: 9, size: 6,  afterCatch: 11 },
   },
 
   // ─── CLEVELAND BROWNS ────────────────────────────────────────────────────
@@ -450,7 +450,7 @@ const _raw = [
   {
     name: 'Randy Moss',        short: 'R. Moss',       team: 'MIN', teamName: 'Minnesota Vikings',
     skin: '#5e3c22', height: 76, weight: 210, number: 84, starter: true, captain: true, years: '1998–04',
-    attrs: { speed: 10, bodyControl: 11, vertical: 11, routeRunning: 8, release: 10, hands: 11, awareness: 9, size: 10, afterCatch: 7 },
+    attrs: { speed: 11, bodyControl: 11, vertical: 11, routeRunning: 8, release: 10, hands: 11, awareness: 9, size: 10, afterCatch: 7 },
   },
   {
     name: 'Cris Carter',       short: 'C. Carter',     team: 'MIN', teamName: 'Minnesota Vikings',
@@ -477,12 +477,12 @@ const _raw = [
   {
     name: 'Randy Moss',        short: 'R. Moss',       team: 'NE',  teamName: 'New England Patriots',
     skin: '#5e3c22', height: 76, weight: 210, number: 81, starter: true, captain: true, years: '2007–10',
-    attrs: { speed: 10, bodyControl: 11, vertical: 11, routeRunning: 8, release: 10, hands: 11, awareness: 8, size: 10, afterCatch: 7 },
+    attrs: { speed: 11, bodyControl: 11, vertical: 11, routeRunning: 8, release: 10, hands: 11, awareness: 8, size: 10, afterCatch: 7 },
   },
   {
     name: 'Wes Welker',        short: 'W. Welker',     team: 'NE',  teamName: 'New England Patriots',
     skin: '#f0c4a0', height: 69, weight: 185, number: 83, starter: true, captain: true, years: '2007–12',
-    attrs: { speed: 6, bodyControl: 10, vertical: 6, routeRunning: 10, release: 9, hands: 9, awareness: 10, size: 3, afterCatch: 10 },
+    attrs: { speed: 6, bodyControl: 10, vertical: 6, routeRunning: 10, release: 9, hands: 9, awareness: 10, size: 3, afterCatch: 9 },
   },
   {
     name: 'Julian Edelman',    short: 'Edelman',       team: 'NE',  teamName: 'New England Patriots',
@@ -521,7 +521,7 @@ const _raw = [
   {
     name: 'Odell Beckham Jr.', short: 'OBJ',           team: 'NYG', teamName: 'New York Giants',
     skin: '#5e3c22', height: 71, weight: 198, number: 13, starter: true, captain: true, years: '2014–18',
-    attrs: { speed: 8, bodyControl: 10, vertical: 8, routeRunning: 8, release: 9, hands: 11, awareness: 9, size: 6, afterCatch: 10 },
+    attrs: { speed: 9, bodyControl: 10, vertical: 8, routeRunning: 8, release: 9, hands: 11, awareness: 9, size: 6, afterCatch: 10 },
   },
   {
     name: 'Plaxico Burress',   short: 'Burress',       team: 'NYG', teamName: 'New York Giants',
@@ -565,7 +565,7 @@ const _raw = [
   {
     name: 'DeSean Jackson',    short: 'D. Jackson',    team: 'PHI', teamName: 'Philadelphia Eagles',
     skin: '#5e3c22', height: 69, weight: 169, number: 10, starter: true, captain: true, years: '2008–13',
-    attrs: { speed: 11, bodyControl: 9, vertical: 6, routeRunning: 8, release: 9, hands: 6, awareness: 8, size: 3, afterCatch: 9 },
+    attrs: { speed: 11, bodyControl: 9, vertical: 6, routeRunning: 8, release: 9, hands: 6, awareness: 8, size: 3, afterCatch: 11 },
   },
   {
     name: 'Mike Quick',        short: 'M. Quick',      team: 'PHI', teamName: 'Philadelphia Eagles',
@@ -582,7 +582,7 @@ const _raw = [
   {
     name: 'Antonio Brown',     short: 'A. Brown',      team: 'PIT', teamName: 'Pittsburgh Steelers',
     skin: '#5e3c22', height: 70, weight: 185, number: 84, starter: true, captain: true, years: '2010–18',
-    attrs: { speed: 10, bodyControl: 10, vertical: 7, routeRunning: 11, release: 10, hands: 9, awareness: 7, size: 4, afterCatch: 10 },
+    attrs: { speed: 10, bodyControl: 10, vertical: 7, routeRunning: 11, release: 11, hands: 9, awareness: 7, size: 4, afterCatch: 10 },
   },
   {
     name: 'John Stallworth',   short: 'Stallworth',    team: 'PIT', teamName: 'Pittsburgh Steelers',
@@ -597,7 +597,7 @@ const _raw = [
   {
     name: 'Hines Ward',        short: 'H. Ward',       team: 'PIT', teamName: 'Pittsburgh Steelers',
     skin: '#b07848', height: 72, weight: 205, number: 86, starter: true, captain: true, years: '1998–11',
-    attrs: { speed: 7, bodyControl: 10, vertical: 7, routeRunning: 8, release: 7, hands: 9, awareness: 9, size: 7, afterCatch: 10 },
+    attrs: { speed: 7, bodyControl: 10, vertical: 7, routeRunning: 8, release: 7, hands: 9, awareness: 9, size: 7, afterCatch: 8 },
   },
 
   // ─── SAN FRANCISCO 49ERS ─────────────────────────────────────────────────
