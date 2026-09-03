@@ -5050,13 +5050,16 @@ html.is-mac .spin-panel-scroll {
   line-height: 1;
 }
 .splash-pos-vote-below-trigger {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
   font-family: Impact, 'Arial Narrow Bold', sans-serif;
   font-size: 10px;
   letter-spacing: 2px;
   text-transform: uppercase;
   color: rgba(255,255,255,0.65);
-  text-align: center;
-  margin-top: 5px;
   pointer-events: none;
 }
 .splash-pos-caret {
@@ -5080,7 +5083,7 @@ html.is-mac .spin-panel-scroll {
 /* Popup */
 .splash-pos-popup {
   position: absolute;
-  top: calc(100% + 10px);
+  top: calc(100%);
   left: 50%;
   transform: translateX(-50%) scale(0.95);
   transform-origin: top center;
