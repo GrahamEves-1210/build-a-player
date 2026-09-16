@@ -1462,7 +1462,12 @@ function generateConfBracket(standings, myShort, playoffRounds) {
   }
 }
 
-function generateOtherConfBracket(otherConf) {
+// forcedChamp: the real NBA Finals opponent the player actually faced
+// (from playoffRounds[3].opponent) — without this, the bracket's "other
+// conference" was simulated completely independently of that real matchup,
+// so the displayed conference champion could (and often did) disagree with
+// who the player actually played in the Finals.
+function generateOtherConfBracket(otherConf, forcedChamp) {
   const teams = CONF_TEAMS_LISTS[otherConf]
     .map(s => {
       const tr = TEAM_RATINGS[s] ?? { off: 65, def: 65 }
@@ -1470,7 +1475,24 @@ function generateOtherConfBracket(otherConf) {
       return { short: s, wins: Math.round(base * 0.9 + Math.random() * 8 - 4) }
     })
     .sort((a, b) => b.wins - a.wins)
-  return generateConfBracket(teams, null, [])
+
+  if (forcedChamp) {
+    // Guarantee the real Finals opponent is actually seeded into this bracket
+    // (as the #1 seed) — otherwise it might not even be one of the 8 teams
+    // generated here and could never be forced to win through to the CF.
+    const idx = teams.findIndex(t => t.short === forcedChamp)
+    if (idx > 0) { const [t] = teams.splice(idx, 1); teams.unshift(t) }
+    else if (idx === -1) teams.unshift({ short: forcedChamp, wins: teams[0]?.wins ?? 60 })
+  }
+
+  // Force the real opponent to win every round it's part of, all the way to
+  // the Conference Finals — same "next round's opponent" mechanism already
+  // used to keep the player's own bracket half consistent.
+  const forcedRounds = forcedChamp
+    ? [1, 2, 3].map(roundIndex => ({ type: 'series', roundIndex, opponent: { short: forcedChamp } }))
+    : []
+
+  return generateConfBracket(teams, null, forcedRounds)
 }
 
 // ─── Full Bracket Component ────────────────────────────────────────────────────
@@ -1576,7 +1598,7 @@ function FullBracket({ myConf, confBracket, otherBracket, myShort, mySeed, teamC
 
   // eastStyle: apply row-reverse CSS (brk2-conf-rev) but keep col array in natural order
   // so East reads: Finals(left/inner) | CF | Semis | R1(right/outer) — traditional bracket orientation
-  function ConfBracket({ bracket, conf, reversed, eastStyle, finalsA, finalsB, finalsDone }) {
+  function ConfBracket({ bracket, conf, reversed, eastStyle, finalsA, finalsB, finalsDone, finalsWinner, showFinals }) {
     if (!bracket) return null
     const { r1, sf, cf } = bracket
     const isMyConf = conf === myConf
@@ -1594,10 +1616,22 @@ function FullBracket({ myConf, confBracket, otherBracket, myShort, mySeed, teamC
     const orderedCols = reversed ? [...cols].reverse() : cols
     const useRevClass = reversed || eastStyle
 
+    // Finals sits innermost — after CF for West, before CF (DOM-wise, before
+    // row-reverse) for East — so it always lands visually closest to center.
+    const finalsCol = showFinals && (
+      <div key="finals" className="brk2-col brk2-col-finals">
+        <div className="brk2-col-lbl">NBA Finals</div>
+        <div className="brk2-matchups">
+          <Matchup a={finalsA} b={finalsB} winner={finalsWinner} rIdx={3} matchupIdx={0} myBracket={true} />
+        </div>
+      </div>
+    )
+
     return (
       <div className={`brk2-conf${useRevClass ? ' brk2-conf-rev' : ''}`}>
         <div className="brk2-conf-label">{conf === 'east' ? 'Eastern' : 'Western'}</div>
         <div className="brk2-cols">
+          {reversed && finalsCol}
           {orderedCols.map((col) => (
             <div key={col.key} className={`brk2-col brk2-col-${col.key}`}>
               <div className="brk2-col-lbl">{col.label}</div>
@@ -1608,6 +1642,7 @@ function FullBracket({ myConf, confBracket, otherBracket, myShort, mySeed, teamC
               </div>
             </div>
           ))}
+          {!reversed && finalsCol}
         </div>
       </div>
     )
@@ -1669,7 +1704,8 @@ function FullBracket({ myConf, confBracket, otherBracket, myShort, mySeed, teamC
           conf={mobileConf}
           reversed={mobileConf === 'west'}
           eastStyle={mobileConf === 'east'}
-          finalsA={finalsA} finalsB={finalsB} finalsDone={finalsDone}
+          finalsA={finalsA} finalsB={finalsB} finalsDone={finalsDone} finalsWinner={finalsWinner}
+          showFinals
         />
       </div>
     </div>
@@ -1717,9 +1753,10 @@ function ScreenPlayoffs({ result, onNext, autoSkip = false, isAllTime = false, a
   const otherConf = conf === 'east' ? 'west' : 'east'
   const [confBracket, otherBracket] = useMemo(() => {
     if (!standings.length) return [null, null]
+    const finalsOpponentShort = playoffRounds.find(r => r.type === 'series' && r.roundIndex === 3)?.opponent?.short
     return [
       generateConfBracket(standings, teamShort, playoffRounds),
-      generateOtherConfBracket(otherConf),
+      generateOtherConfBracket(otherConf, finalsOpponentShort),
     ]
   }, []) // eslint-disable-line
 
@@ -2130,6 +2167,10 @@ function ScreenPlayoffs({ result, onNext, autoSkip = false, isAllTime = false, a
 
     if (myW === 4 || oppW === 4) {
       completeParallelSeries(activeRoundIdx)
+      // Advance gameIdx here too — otherwise games.slice(0, gameIdx) reads used
+      // for the series-complete banner and the bracket's live score exclude the
+      // clinching game itself, showing e.g. "3-0" instead of "4-0".
+      setGameIdx(g => g + 1)
       if (oppW === 4) { completeAllRemainingRounds(activeRoundIdx); setStatus('eliminated') }
       else if (roundIdx >= playoffRounds.length - 1) setStatus('champion')
       else                                          setStatus('between-rounds')

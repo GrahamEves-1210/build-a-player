@@ -586,6 +586,9 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
           const isGeneric = bucketPhoto === '/genericdark.webp' || bucketPhoto === '/genericlight.webp'
           const isGenericLight = bucketPhoto === '/genericlight.webp'
           const genericYAdj = isGenericLight ? 2.5 : isGeneric ? 4.5 : 0
+          // Desktop-only nudge for the two generic (no-headshot) placeholders
+          const genericDesktopX = isGeneric && !isMobile ? 2.5 : 0
+          const genericDesktopY = isGeneric && !isMobile ? 16 : 0
           return (
             <div
               key={bucketPhoto}
@@ -595,7 +598,7 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
                 top: `${collarY}%`,
                 width: `${hpx}px`,
                 height: `${hpx}px`,
-                transform: `translate(calc(-50% + 0.75px + ${adj.dx + (isGeneric ? 0.75 : 0)}px), calc(-89% + 4px + ${adj.dy + genericYAdj}px))`,
+                transform: `translate(calc(-50% + 0.75px + ${adj.dx + (isGeneric ? 0.75 : 0) + genericDesktopX}px), calc(-89% + 4px + ${adj.dy + genericYAdj + genericDesktopY}px))`,
                 overflow: 'hidden',
                 borderRadius: '50%',
                 pointerEvents: 'none',

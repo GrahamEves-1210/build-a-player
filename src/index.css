@@ -13022,12 +13022,6 @@ html.is-mac [id^="pw-oop-bottom_rail"] > * {
   .sstat-section-hdr { font-size: 10px; }
   .sstat-tile { padding: 16px 8px 14px; }
   .bsim-standings { zoom: 1.4; }
-  [data-sport="bucket"] .brk2-root {
-    width: 90vw;
-    position: relative;
-    left: 50%;
-    transform: translateX(-50%);
-  }
   .brk2-col.brk2-col-finals-center {
     flex: 0 0 200px;
     width: 200px;
@@ -13555,7 +13549,7 @@ html.is-mac [id^="pw-oop-bottom_rail"] > * {
 @media (min-width: 769px) {
   .brk2-root { width: 100%; }
   .brk2-desktop { gap: 4px; }
-  .brk2-col-lbl { font-size: 11px; }
+  .brk2-col-lbl { font-size: 13px; }
   .brk2-abbr { font-size: 15px; }
   .brk2-seed { font-size: 13px; }
   .brk2-logo { width: 26px; height: 26px; }
@@ -13592,11 +13586,11 @@ html.is-mac [id^="pw-oop-bottom_rail"] > * {
   min-width: 68px;
 }
 .brk2-col-lbl {
-  font-size: 8px;
-  font-weight: 700;
+  font-size: 11px;
+  font-weight: 800;
   letter-spacing: 0.6px;
   text-transform: uppercase;
-  color: rgba(255,255,255,0.22);
+  color: rgba(255,255,255,0.55);
   text-align: center;
   margin-bottom: 5px;
 }
@@ -13738,13 +13732,12 @@ html.is-mac [id^="pw-oop-bottom_rail"] > * {
   .brk2-col.brk2-col-finals-center { flex: 0 0 200px; width: 200px; }
 }
 
-/* Mobile: stack one conference */
-@media (max-width: 680px) {
-  .brk2-desktop { display: none; }
-  .brk2-mobile  { display: block; }
-  .brk2-mobile-toggle { display: flex; }
-  .brk2-conf-label { display: none; }
-}
+/* Always stack one conference at a time — desktop matches mobile so the
+   ad sidebar rails on this screen have room */
+.brk2-desktop { display: none; }
+.brk2-mobile  { display: block; }
+.brk2-mobile-toggle { display: flex; }
+.brk2-conf-label { display: none; }
 
 /* ═══════════════════════════════════════════════════════════════════
    BUCKET LEADERBOARD
@@ -15266,7 +15259,7 @@ html.is-mac [id^="pw-oop-bottom_rail"] > * {
 .vlm-pills { display: flex; align-items: flex-end; }
 .vlm-spacer { }
 .vlm-right { display: flex; align-items: flex-end; padding-left: 6px; }
-.versus-lobby-sub { font-size: 9px; color: rgba(252,165,165,0.3); letter-spacing: 0.14em; text-transform: uppercase; margin-top: 14px; font-family: var(--font); text-align: center; }
+.versus-lobby-sub { font-size: 11px; font-weight: 700; color: rgba(252,165,165,0.65); letter-spacing: 0.14em; text-transform: uppercase; margin-top: 14px; font-family: var(--font); text-align: center; }
 .vlh-stat-card { display: flex; align-items: center; justify-content: space-between; margin-top: 20px; padding: 16px 20px; border-top: 1px solid rgba(239,68,68,0.12); border-bottom: 1px solid rgba(239,68,68,0.12); width: 100%; gap: 16px; }
 .vlh-stat-left { display: flex; flex-direction: column; gap: 3px; }
 .vlh-stat-name { font-size: 16px; font-weight: 700; color: #fff; font-family: var(--font); line-height: 1; }
@@ -15313,7 +15306,7 @@ html.is-mac [id^="pw-oop-bottom_rail"] > * {
 .versus-mode-btn--friend svg { color: rgba(248,113,113,0.45); flex-shrink: 0; }
 .vmb-title { font-size: 13px; font-weight: 700; letter-spacing: 0.02em; font-family: var(--font); color: #fff; }
 .vmb-sub { font-size: 12px; color: rgba(252,165,165,0.38); margin-top: 3px; font-family: var(--font); }
-.versus-divider { display: flex; align-items: center; gap: 12px; color: rgba(255,255,255,0.14); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; font-family: var(--font); margin: 0 24px; padding: 14px 0; }
+.versus-divider { display: flex; align-items: center; gap: 12px; color: rgba(255,255,255,0.5); font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; font-family: var(--font); margin: 0 24px; padding: 14px 0; }
 .versus-divider::before, .versus-divider::after { content: ""; flex: 1; height: 1px; background: rgba(239,68,68,0.07); }
 .versus-join-row { display: flex; gap: 0; margin: 10px 24px 0; border: 1px solid rgba(239,68,68,0.2); border-radius: 6px; overflow: hidden; }
 .versus-code-input { flex: 1; background: rgba(255,255,255,0.02); border: none; color: #fff; font-size: 16px; font-weight: 700; letter-spacing: 0.12em; padding: 13px 16px; outline: none; transition: background 0.15s; font-family: var(--mono); }
