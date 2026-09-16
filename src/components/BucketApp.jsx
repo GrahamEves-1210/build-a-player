@@ -404,14 +404,41 @@ export default function BucketApp() {
 
   useEffect(() => {
     const handlePop = () => {
-      if (window.location.pathname !== '/profile') {
+      const path = window.location.pathname
+      let changed = false
+      if (path !== '/profile') {
         setPage(prev => prev === 'profile' ? 'game' : prev)
-        window.scrollTo({ top: 0, behavior: 'instant' })
+        changed = true
       }
+      if (path !== '/bucket/simulate') {
+        setPage(prev => prev === 'sim' ? 'game' : prev)
+        changed = true
+      }
+      if (path !== '/bucket/leaderboard') {
+        setPage(prev => prev === 'leaderboard' ? 'game' : prev)
+        changed = true
+      }
+      if (changed) window.scrollTo({ top: 0, behavior: 'instant' })
     }
     window.addEventListener('popstate', handlePop)
     return () => window.removeEventListener('popstate', handlePop)
   }, [])
+
+  // Dedicated URLs for the simulate/season/playoffs/final flow and the
+  // leaderboard — lets Playwire apply ad rules by path. Kept under /bucket
+  // so a refresh still resolves to BucketApp (main.jsx picks the app by
+  // whether the path starts with /bucket). Purely a URL sync layer; doesn't
+  // touch page state, the existing ramp queue calls, or any nav logic.
+  useEffect(() => {
+    const targetPath = page === 'sim' ? '/bucket/simulate' : page === 'leaderboard' ? '/bucket/leaderboard' : null
+    if (targetPath) {
+      if (window.location.pathname !== targetPath) {
+        window.history.pushState({}, '', targetPath)
+      }
+    } else if (window.location.pathname === '/bucket/simulate' || window.location.pathname === '/bucket/leaderboard') {
+      window.history.replaceState({}, '', '/bucket')
+    }
+  }, [page])
 
   // Initialize Playwire ads on mount and page change
   useEffect(() => {
