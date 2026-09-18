@@ -1397,7 +1397,7 @@ export const NBA_ALLTIME_GUARD_PLAYERS = [
   { name: "Joe Johnson", short: "Iso Joe", team: 'ATL', starter: false, captain: false, number: 2, ht: "6'7\"", wt: 240, years: '2005–12',
     attrs: { jumpShot:7, finishing:7, passing:5, handles:6, perimeterDefense:5, speed:5, bounce:5, size:8, basketballIQ:7, clutch:8 } },
   { name: "Pete Maravich", short: "Pistol Pete", team: 'ATL', starter: true, captain: false, number: 44, ht: "6'5\"", wt: 197, years: '1970–74',
-    attrs: { jumpShot:6, finishing:8, passing:10, handles:10, perimeterDefense:3, speed:7, bounce:4, size:5, basketballIQ:8, clutch:8 } },
+    attrs: { jumpShot:7, finishing:9, passing:10, handles:10, perimeterDefense:4, speed:7, bounce:4, size:5, basketballIQ:10, clutch:9 } },
   { name: "Spud Webb", short: "Webb", team: 'ATL', starter: false, captain: false, number: 4, ht: "5'7\"", wt: 133, years: '1986–91',
     attrs: { jumpShot:6, finishing:7, passing:6, handles:8, perimeterDefense:3, speed:10, bounce:10, size:0, basketballIQ:6, clutch:6 } },
 

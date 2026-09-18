@@ -3,6 +3,7 @@ import { ATTR, TYPES, LITE_TYPES } from '../data/qbs'
 import { RB_TYPES, RB_LITE_TYPES } from '../data/rbs'
 import { WR_TYPES, WR_LITE_TYPES, WR_ATTR } from '../data/wrs'
 import { TE_ATTR, TE_TYPES, TE_LITE_TYPES } from '../data/tes'
+import { DB_ATTR, DB_TYPES, DB_LITE_TYPES } from '../data/dbs'
 import { LEGEND_TYPES } from '../data/legends'
 import { BUCKET_ATTR, GUARD_TYPES, BIG_TYPES } from '../data/nba-players'
 import { valToGrade } from '../utils/simulation'
@@ -26,15 +27,16 @@ const RB_ATTR = {
   carrying:    { label: 'Carrying' },
 }
 
-export default function CustomRatingsModal({ isRB, isWR = false, isTE = false, isBucket = false, bucketPosition = 'guard', gameMode, pool, build = {}, buildTypes: _buildTypesProp, onClose, onSave, onAddToBuild, onAddAllToBuild }) {
+export default function CustomRatingsModal({ isRB, isWR = false, isTE = false, isDB = false, isBucket = false, bucketPosition = 'guard', gameMode, pool, build = {}, buildTypes: _buildTypesProp, onClose, onSave, onAddToBuild, onAddAllToBuild }) {
   const storageKey = isBucket ? 'bab_bucket_custom_ratings' : 'bap_custom_ratings'
   const modeKey = isBucket
     ? `bucket_${bucketPosition}`
-    : isTE ? 'te' : isWR ? 'wr' : `${isRB ? 'rb' : 'qb'}${gameMode === 'all-time' ? '_legends' : ''}`
-  const attrMeta = isBucket ? BUCKET_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : ATTR
+    : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : `${isRB ? 'rb' : 'qb'}${gameMode === 'all-time' ? '_legends' : ''}`
+  const attrMeta = isBucket ? BUCKET_ATTR : isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : ATTR
   const buildTypes = (_buildTypesProp && _buildTypesProp.length > 0)
     ? _buildTypesProp
     : isBucket ? (bucketPosition === 'big' ? BIG_TYPES : GUARD_TYPES)
+    : isDB ? (gameMode === 'lite' ? DB_LITE_TYPES : DB_TYPES)
     : isTE ? (gameMode === 'lite' ? TE_LITE_TYPES : TE_TYPES)
     : isWR ? (gameMode === 'lite' ? WR_LITE_TYPES : WR_TYPES)
     : gameMode === 'lite' ? (isRB ? RB_LITE_TYPES : LITE_TYPES)

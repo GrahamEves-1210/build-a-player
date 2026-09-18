@@ -7998,6 +7998,9 @@ html.is-touch .bd-card-main:hover         { background: transparent !important; 
 .simp-team-model--rb {
   aspect-ratio: 574 / 865;
 }
+.simp-team-model--db {
+  aspect-ratio: 479 / 1028;
+}
 .simp-team-model--bucket {
   aspect-ratio: 936 / 897;
   width: 100%;

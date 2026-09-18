@@ -1,5 +1,5 @@
 import { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react'
-import { getQBPhoto, pickThree } from '../data/depth-chart-players'
+import { getPlayerPhoto, pickThreeFrom, QB_POOL, RB_POOL, WR_POOL } from '../data/depth-chart-players'
 import { supabase } from '../lib/supabase'
 import { TEAMS } from '../data/qbs'
 import QBAvatar from './QBAvatar'
@@ -7,7 +7,35 @@ import QBAvatar from './QBAvatar'
 const TEAM_COLOR  = Object.fromEntries(TEAMS.map(t => [t.short, t.color]))
 const SLOT_LABELS = ['STARTER', '2ND STRING', '3RD STRING']
 const TIMER_MS    = 10000
-const SORT_STATS  = ['passingTDs', 'passingYards', 'rushingYards']
+
+// Which pool each round draws from, its sort-stat options, and how likely each stat is.
+const POOL_CONFIG = {
+  QB: { pool: QB_POOL, stats: ['passingTDs', 'passingYards', 'rushingYards'], weights: [0.4, 0.4, 0.2] },
+  RB: { pool: RB_POOL, stats: ['rushingYards', 'rushingTDs'],                 weights: [0.5, 0.5] },
+  WR: { pool: WR_POOL, stats: ['receivingYards', 'receivingTDs'],             weights: [0.5, 0.5] },
+}
+const POOL_TYPE_WEIGHTS = [['QB', 0.5], ['RB', 0.25], ['WR', 0.25]]
+
+function pickPoolType() {
+  const r = Math.random()
+  let acc = 0
+  for (const [type, w] of POOL_TYPE_WEIGHTS) {
+    acc += w
+    if (r < acc) return type
+  }
+  return 'QB'
+}
+
+function pickSortStat(poolType) {
+  const { stats, weights } = POOL_CONFIG[poolType]
+  const r = Math.random()
+  let acc = 0
+  for (let i = 0; i < stats.length; i++) {
+    acc += weights[i]
+    if (r < acc) return stats[i]
+  }
+  return stats[stats.length - 1]
+}
 
 function streakColor(n) {
   if (n === 0) return 'rgba(255,255,255,0.5)'
@@ -23,11 +51,13 @@ function streakColor(n) {
   const lightness = Math.round(57 + 13 * t)
   return `hsl(${hue}, 100%, ${lightness}%)`
 }
-const STAT_LABELS = { passingTDs: 'PASSING TDs', passingYards: 'PASSING YDS', rushingYards: 'RUSH YDS' }
-
-function pickSortStat() {
-  const r = Math.random()
-  return r < 0.4 ? 'passingTDs' : r < 0.8 ? 'passingYards' : 'rushingYards'
+const STAT_LABELS = {
+  passingTDs: 'PASSING TDs', passingYards: 'PASSING YDS', rushingYards: 'RUSH YDS',
+  rushingTDs: 'RUSH TDs', receivingYards: 'REC YDS', receivingTDs: 'REC TDs',
+}
+const STAT_COLORS = {
+  passingTDs: '#fca5a5', passingYards: '#93c5fd', rushingYards: '#86efac',
+  rushingTDs: '#fca5a5', receivingYards: '#93c5fd', receivingTDs: '#fca5a5',
 }
 
 // ── Leaderboard dropdown ───────────────────────────────────────────────────
@@ -95,6 +125,7 @@ export default function DepthChart({ onBack, user, onlineCount = 0 }) {
   const [showLB,         setShowLB]         = useState(false)
   const [timerPct,       setTimerPct]       = useState(1)
   const [hasInteracted,  setHasInteracted]  = useState(false)
+  const [poolType,       setPoolType]       = useState('QB')
   const [sortStat,       setSortStat]       = useState('passingTDs')
   const [displayStat,    setDisplayStat]    = useState('passingTDs')
   const [sortSpinning,   setSortSpinning]   = useState(false)
@@ -113,9 +144,11 @@ export default function DepthChart({ onBack, user, onlineCount = 0 }) {
 
   // ── Load a new round ───────────────────────────────────────────────────────
   const loadRound = useCallback((prevNames = []) => {
-    const next = pickThree(prevNames)
-    const newStat = pickSortStat()
+    const newPoolType = pickPoolType()
+    const next = pickThreeFrom(POOL_CONFIG[newPoolType].pool, prevNames)
+    const newStat = pickSortStat(newPoolType)
     setPlayers(next)
+    setPoolType(newPoolType)
     setSortStat(newStat)
     setSortSpinning(true)
     orderRef.current = [0, 1, 2]
@@ -132,11 +165,12 @@ export default function DepthChart({ onBack, user, onlineCount = 0 }) {
   useEffect(() => {
     if (!sortSpinning) return
     let count = 0
-    const sequence = [
-      SORT_STATS[(SORT_STATS.indexOf(sortStat) + 1) % 3],
-      SORT_STATS[(SORT_STATS.indexOf(sortStat) + 2) % 3],
-      sortStat,
-    ]
+    const stats = POOL_CONFIG[poolType].stats
+    const n = stats.length
+    const cur = stats.indexOf(sortStat)
+    const sequence = n > 1
+      ? [...Array(n - 1)].map((_, i) => stats[(cur + i + 1) % n]).concat(sortStat)
+      : [sortStat]
     const id = setInterval(() => {
       setDisplayStat(sequence[count % sequence.length])
       count++
@@ -394,7 +428,7 @@ export default function DepthChart({ onBack, user, onlineCount = 0 }) {
 
       <div className="dc-sort-box">
         <span className="dc-sort-by">SORT BY</span>
-        <span key={isReady ? 'empty' : displayStat} className={`dc-sort-val${sortSpinning ? ' dc-sort-val--spin' : ''}`} style={{ color: isReady ? 'transparent' : displayStat === 'passingTDs' ? '#fca5a5' : displayStat === 'passingYards' ? '#93c5fd' : '#86efac' }}>
+        <span key={isReady ? 'empty' : displayStat} className={`dc-sort-val${sortSpinning ? ' dc-sort-val--spin' : ''}`} style={{ color: isReady ? 'transparent' : STAT_COLORS[displayStat] }}>
           {STAT_LABELS[displayStat]}
         </span>
       </div>
@@ -429,7 +463,7 @@ export default function DepthChart({ onBack, user, onlineCount = 0 }) {
         ))}
         {!isReady && order.map((playerIdx, slotIdx) => {
           const player    = players[playerIdx]
-          const photo     = getQBPhoto(player.name)
+          const photo     = getPlayerPhoto(player.name)
           const color     = TEAM_COLOR[player.team] || '#e8192c'
           const corrPl    = correctOrder[slotIdx]
           const slotRight = revealOk && player.name === corrPl.name

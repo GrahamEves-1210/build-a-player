@@ -4,6 +4,7 @@ import { RB_CATEGORIES } from '../data/rbs'
 import { valToGrade, HEADSHOT_BASE } from '../utils/simulation'
 import HEADSHOTS from '../data/headshots.json'
 import QBAvatar from './QBAvatar'
+import { track } from '../lib/track'
 
 function fmtHeight(inches) {
   return `${Math.floor(inches / 12)}'${inches % 12}"`
@@ -194,6 +195,7 @@ function Chip({ type, meta, val, selectedQB, draggingType, onChipTap, onDragStar
     team: selectedQB.team, captain: selectedQB.captain ?? false, photo,
     height: selectedQB.height ?? parseHtToIn(selectedQB.ht), weight: selectedQB.weight ?? selectedQB.wt ?? null,
     attrs: selectedQB.attrs ?? null,
+    subpos: selectedQB.subpos ?? null,
   }
   return (
     <div
@@ -233,7 +235,7 @@ const POS_COLORS = {
 }
 
 // ─── SpinScreen ──────────────────────────────────────────────────────────────
-export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, activeCategory, resetKey, onChipTap, types = TYPES, isLite = false, qbPool = QBS, savedResult = null, onSaveResult, onPhaseChange, gameKey, onReset, adsDisabled = false, isRB = false, isWR = false, isTE = false, isBucket = false, isVersusMode = false, attrMap = ATTR, categoriesData = CATEGORIES, teamsPool = TEAMS, logoDir = '/logos/', playerLabel, headshotsMap = HEADSHOTS, headshotsDir = `${HEADSHOT_BASE}/`, hideTeamResult = false, headshotFallback = () => null }) {
+export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, activeCategory, resetKey, onChipTap, types = TYPES, isLite = false, qbPool = QBS, savedResult = null, onSaveResult, onPhaseChange, gameKey, onReset, adsDisabled = false, isRB = false, isWR = false, isTE = false, isDB = false, isBucket = false, isVersusMode = false, attrMap = ATTR, categoriesData = CATEGORIES, teamsPool = TEAMS, logoDir = '/logos/', playerLabel, headshotsMap = HEADSHOTS, headshotsDir = `${HEADSHOT_BASE}/`, hideTeamResult = false, headshotFallback = () => null }) {
   const pLabel = playerLabel ?? (isTE ? 'TE' : isWR ? 'WR' : isRB ? 'RB' : 'QB')
   const maxPlayerRespin = isTE ? 2 : 1
   const [phase, setPhase]               = useState(() => savedResult?.selectedQB ? 'done' : 'idle')
@@ -324,7 +326,12 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
     onSaveResult?.(null)
     setPhase('team')
     triggerMobileAd()
-  }, [onSaveResult, triggerMobileAd])
+    track('spin', {
+      app: isBucket ? 'bucket' : 'nfl',
+      position: isBucket ? 'bucket' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb',
+      gameMode: isLite ? 'lite' : null,
+    })
+  }, [onSaveResult, triggerMobileAd, isBucket, isDB, isTE, isWR, isRB, isLite])
 
   const handleQBRespin = useCallback(() => {
     setExcludedQB(selectedQB)

@@ -1,16 +1,16 @@
 import { useState, useRef, useEffect } from 'react'
 
-const STEPS_DESKTOP = (isRB, isWR, isTE) => [
-  { n: '1', title: 'Spin',      body: `Pull a random NFL team, then a${isWR ? ' WR' : isRB ? 'n RB' : isTE ? ' TE' : 'n QB'} from their roster.` },
+const STEPS_DESKTOP = (isRB, isWR, isTE, isDB) => [
+  { n: '1', title: 'Spin',      body: `Pull a random NFL team, then a${isWR ? ' WR' : isRB ? 'n RB' : isTE ? ' TE' : isDB ? ' DB' : 'n QB'} from their roster.` },
   { n: '2', title: 'Drag',      body: 'Drop one stat onto the matching zone on the player silhouette.' },
   { n: '3', title: 'Repeat ×9', body: 'Fill all nine attribute slots — one per spin.' },
-  { n: '4', title: 'Simulate',  body: `Hit Simulate to see how your Frankenstein ${isWR ? 'WR' : isRB ? 'RB' : isTE ? 'TE' : 'QB'} performs.` },
+  { n: '4', title: 'Simulate',  body: `Hit Simulate to see how your Frankenstein ${isWR ? 'WR' : isRB ? 'RB' : isTE ? 'TE' : isDB ? 'DB' : 'QB'} performs.` },
 ]
-const STEPS_MOBILE = (isRB, isWR, isTE) => [
-  { n: '1', title: 'Spin',      body: `Pull a random NFL team, then a${isWR ? ' WR' : isRB ? 'n RB' : isTE ? ' TE' : 'n QB'} from their roster.` },
+const STEPS_MOBILE = (isRB, isWR, isTE, isDB) => [
+  { n: '1', title: 'Spin',      body: `Pull a random NFL team, then a${isWR ? ' WR' : isRB ? 'n RB' : isTE ? ' TE' : isDB ? ' DB' : 'n QB'} from their roster.` },
   { n: '2', title: 'Tap',       body: 'Tap a stat chip to instantly assign it to your build.' },
   { n: '3', title: 'Repeat ×9', body: 'Fill all nine attribute slots — one per spin.' },
-  { n: '4', title: 'Simulate',  body: `Hit Simulate to see how your Frankenstein ${isWR ? 'WR' : isRB ? 'RB' : isTE ? 'TE' : 'QB'} performs.` },
+  { n: '4', title: 'Simulate',  body: `Hit Simulate to see how your Frankenstein ${isWR ? 'WR' : isRB ? 'RB' : isTE ? 'TE' : isDB ? 'DB' : 'QB'} performs.` },
 ]
 
 const BUCKET_STEPS_DESKTOP = [
@@ -176,7 +176,7 @@ const PERKS = [
   'PLUS badge on leaderboard entries',
 ]
 
-export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, onLeaderboard, onSwitchPosition, onSwitchBucketPosition, onSubscribe, onOpenCustomRatings, user, gameMode, isRB, isWR, isTE, position, isPlus, isBucket, bucketPosition, versusState }) {
+export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, onLeaderboard, onSwitchPosition, onSwitchBucketPosition, onSubscribe, onOpenCustomRatings, user, gameMode, isRB, isWR, isTE, isDB, position, isPlus, isBucket, bucketPosition, versusState }) {
   const [open,         setOpen]        = useState(false)
   const [htpOpen,      setHtpOpen]     = useState(false)
   const [installOpen,  setInstallOpen] = useState(false)
@@ -190,7 +190,7 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
   const isAndroid = typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent)
   const STEPS = isBucket
     ? (isMobile ? BUCKET_STEPS_MOBILE : BUCKET_STEPS_DESKTOP)
-    : (isMobile ? STEPS_MOBILE(isRB, isWR, isTE) : STEPS_DESKTOP(isRB, isWR, isTE))
+    : (isMobile ? STEPS_MOBILE(isRB, isWR, isTE, isDB) : STEPS_DESKTOP(isRB, isWR, isTE, isDB))
 
   useEffect(() => {
     if (!open) return
@@ -277,7 +277,7 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
             className="tab-pill tab-pill-qb active nav-pos-trigger"
             onClick={() => setPosDropOpen(o => !o)}
           >
-            {isWR ? 'Build-A-WR' : isRB ? 'Build-A-RB' : isTE ? 'Build-A-TE' : 'Build-A-QB'}
+            {isWR ? 'Build-A-WR' : isRB ? 'Build-A-RB' : isTE ? 'Build-A-TE' : isDB ? 'Build-A-DB' : 'Build-A-QB'}
             <IconChevron up={posDropOpen} />
           </button>
           {posDropOpen && (
@@ -297,7 +297,12 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
                   Build-A-TE
                 </button>
               )}
-              {(isRB || isWR || isTE) && (
+              {!isDB && (
+                <button className="nav-pos-item" onClick={() => { setPosDropOpen(false); onSwitchPosition?.('db') }}>
+                  Build-A-DB
+                </button>
+              )}
+              {(isRB || isWR || isTE || isDB) && (
                 <button className="nav-pos-item" onClick={() => { setPosDropOpen(false); onSwitchPosition?.('qb') }}>
                   Build-A-QB
                 </button>

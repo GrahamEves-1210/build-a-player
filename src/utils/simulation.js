@@ -2,6 +2,7 @@ import { TYPES } from '../data/qbs'
 import { RB_TYPES } from '../data/rbs'
 import { WR_TYPES, WRS } from '../data/wrs'
 import { TE_TYPES, TES } from '../data/tes'
+import { DB_TYPES } from '../data/dbs'
 import { NFL_TEAMS, ALLTIME_RATINGS, RB_RATINGS } from '../data/nfl-teams'
 
 export const HEADSHOT_BASE = import.meta.env.DEV
@@ -2470,6 +2471,563 @@ export function runTESimulation(build, types = TE_TYPES, team = null, isAllTime 
     seasonRecs, seasonRecYds, seasonRecTDs, seasonTargets, seasonYPR,
     seasonLong, hundredYardGames, catchRate,
     bestGame,
+    playoffs, playoffRounds, sbResult, hasBye: playoffs && hasBye,
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ── DB SIMULATION ─────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+
+const DB_ATTR_WEIGHT = {
+  'speed':           0.13,
+  'size':            0.06,
+  'fluidity':        0.14,
+  'press':           0.11,
+  'hands':           0.10,
+  'zoneIQ':          0.12,
+  'manCoverage':     0.14,
+  'playRecognition': 0.13,
+  'runSupport':      0.07,
+}
+
+export function calcOVRDB(build, types = DB_TYPES) {
+  const filled = types.filter(t => build[t])
+  if (!filled.length) return null
+
+  const totalW = filled.reduce((s, t) => s + (DB_ATTR_WEIGHT[t] ?? 0.05), 0)
+  const avg    = filled.reduce((s, t) => s + build[t].val * (DB_ATTR_WEIGHT[t] ?? 0.05) / totalW, 0)
+  const vals   = filled.map(t => build[t].val)
+  const base   = 60 + 2.1 * avg + 0.21 * avg * avg
+
+  let bonus = 0
+  if (filled.length === types.length) {
+    const spread = Math.max(...vals) - Math.min(...vals)
+    const minVal = Math.min(...vals)
+    if (spread <= 1) bonus += 2.5
+    else if (spread <= 2) bonus += 1.0
+    else if (spread <= 3) bonus += 0.3
+    if (minVal >= 9) bonus += 2.0
+    else if (minVal >= 8) bonus += 0.5
+  }
+
+  return Math.min(99, Math.max(0, Math.round(base + bonus)))
+}
+
+export function getArchetypeDB(ovr, build, types = DB_TYPES) {
+  const filled = types.filter(t => build[t])
+  if (!filled.length) return 'Spin to start building'
+  const rem = types.length - filled.length
+  if (rem > 0) return `${rem} attribute${rem !== 1 ? 's' : ''} remaining`
+
+  const g   = k => build[k]?.val ?? 0
+  const spd = g('speed'), sz = g('size'), flu = g('fluidity')
+  const prs = g('press'), hnd = g('hands')
+  const ziq = g('zoneIQ'), man = g('manCoverage'), prk = g('playRecognition'), rus = g('runSupport')
+
+  const vals   = filled.map(t => build[t].val)
+  const spread = Math.max(...vals) - Math.min(...vals)
+
+  const ranked = [
+    { k: 'spd', v: spd }, { k: 'sz',  v: sz  }, { k: 'flu', v: flu },
+    { k: 'prs', v: prs }, { k: 'hnd', v: hnd },
+    { k: 'ziq', v: ziq }, { k: 'man', v: man }, { k: 'prk', v: prk }, { k: 'rus', v: rus },
+  ].sort((a, b) => b.v - a.v)
+
+  const t1   = ranked[0].k
+  const t2   = ranked[1].k
+  const t3   = ranked[2].k
+  const top  = k => t1 === k || t2 === k
+  const top3 = k => t1 === k || t2 === k || t3 === k
+  const hi   = v => v >= 10
+  const up   = v => v >= 9
+  const ok   = v => v >= 7
+
+  // Anchor on the "size" chip's real position when we have it (same anchor
+  // the depth chart uses) so the archetype name and depth-chart slot always
+  // agree — a build built around a real safety should read "Safety", not
+  // fall back to a stat-threshold guess that can disagree with the chart.
+  const anchorSubpos = build?.['size']?.subpos
+  const isSafetyBuild = anchorSubpos ? anchorSubpos === 's' : (sz >= 8 && rus >= 8)
+
+  if (ovr >= 95) {
+    if (isSafetyBuild) {
+      if (hi(prk) && hi(ziq))                        return 'Generational Free Safety'
+      if (hi(rus) && hi(sz) && up(prk))              return 'Box Menace'
+      if (hi(hnd) && hi(prk))                        return 'Ball Hawk'
+      return 'Transcendent Safety'
+    }
+    if (hi(man) && hi(flu) && hi(spd))               return 'Matchup Nightmare'
+    if (hi(man) && hi(prs) && hi(prk))               return 'Lockdown Nightmare'
+    if (hi(ziq) && hi(man) && hi(flu))               return 'Coverage Savant'
+    if (hi(hnd) && hi(man))                          return 'Takeaway Menace'
+    if (spread <= 1)                                  return 'Generational Corner'
+    return 'Transcendent Corner'
+  }
+
+  if (ovr >= 90) {
+    if (isSafetyBuild) {
+      if (top('prk') && top('ziq') && up(hnd))       return 'Ball Hawk'
+      if (top('rus') && top('sz') && up(prk))        return 'Box General'
+      if (top('prk') && top('man') && up(ziq))       return 'Hybrid Enforcer'
+      if (top('ziq') && top3('prk') && up(hnd))      return 'Deep Zone Anchor'
+      if (top('spd') && top('prk'))                  return 'Range Safety'
+      if (spread <= 2)                               return 'All-Pro Safety'
+      return 'Single-High General'
+    }
+    if (hi(spd) && top('man') && up(flu))            return 'Island Corner'
+    if (top('man') && top('prs') && up(prk))         return 'Press Shutdown Corner'
+    if (top('flu') && top('man') && up(spd))         return 'Shutdown Corner'
+    if (top('ziq') && top('prk') && up(man))         return 'Route Jumper'
+    if (top('man') && top('hnd') && up(flu))         return 'Pick Artist'
+    if (top('prs') && top3('man'))                   return 'Jammer'
+    if (spread <= 2)                                 return 'Franchise Corner'
+    return 'Blanket Corner'
+  }
+
+  if (ovr >= 86) {
+    if (isSafetyBuild) {
+      if (top('rus') && top('sz') && up(rus))        return 'Downhill Safety'
+      if (top('prk') && top('ziq'))                  return 'Deep Safety'
+      if (top('man') && top('prk'))                  return 'Coverage Safety'
+      if (top('spd') && top('prk'))                  return 'Impact Safety'
+      if (spread <= 2)                               return 'Well-Rounded Safety'
+      return 'Three-Level Safety'
+    }
+    if (top('spd') && top('flu') && up(man))         return 'Track Corner'
+    if (top('prs') && top('man') && up(sz))          return 'Physical Corner'
+    if (top('man') && top('flu'))                    return 'Mirror Corner'
+    if (top('ziq') && top3('man'))                   return 'Zone Specialist'
+    if (top('hnd') && top('man'))                    return 'Ball Hawk Corner'
+    if (top('prs') && up(sz))                        return 'Jammer'
+    if (spread <= 2)                                 return 'Well-Rounded Corner'
+    return 'Elite Corner'
+  }
+
+  if (ovr >= 84) {
+    if (isSafetyBuild) {
+      if (top('rus') && top('sz'))                   return 'Box Safety'
+      if (top('prk') && top('ziq'))                  return 'Zone Safety'
+      if (spread <= 2)                               return 'Balanced Safety'
+      return 'Reliable Safety'
+    }
+    if (top('spd') && top('flu'))                    return 'Speed Corner'
+    if (top('man') && top('prs'))                    return "Bump n' Run Corner"
+    if (top('ziq') && top('prk'))                    return 'Read-and-React Corner'
+    if (sz <= 5)                                     return 'Slot Corner'
+    if (spread <= 2)                                 return 'Reliable Starter'
+    return 'Complete Corner'
+  }
+
+  if (ovr >= 76) {
+    if (isSafetyBuild) {
+      if (top('rus') && up(rus))                     return 'Run Stopper'
+      return 'Every-Down Safety'
+    }
+    if (top('spd') && up(spd))                       return 'Speed Corner'
+    if (top('prs') && ok(man))                       return 'Press Corner'
+    if (top('ziq') && ok(prk))                       return 'Zone Corner'
+    if (top('man') && ok(flu))                       return 'Man Corner'
+    if (sz <= 5)                                     return 'Slot Corner'
+    if (spread <= 2)                                 return 'Reliable Starter'
+    return 'Starting Corner'
+  }
+  if (ovr >= 68) {
+    if (isSafetyBuild) {
+      if (top('ziq') && ok(prk))                    return 'Zone Safety'
+      if (top('rus') && up(sz))                     return 'Box Safety'
+      return 'Rotational Safety'
+    }
+    if (top('man') && ok(flu))                      return 'Press-Man Corner'
+    if (top('ziq'))                                 return 'Soft Zone Corner'
+    if (top('spd'))                                 return 'Nickel Corner'
+    if (sz <= 5)                                    return 'Slot Corner'
+    return 'Rotational Corner'
+  }
+  if (ovr >= 60) {
+    return 'Special Teamer'
+  }
+  if (isSafetyBuild)                                return 'Practice Squad Safety'
+  return 'Practice Squad Corner'
+}
+
+// ── Defensive Player of the Year ─────────────────────────────────────────────
+// Real-world DPOY voting is dominated by pass rushers: of the AP's 53 all-time
+// awards, 17 went to LBs, 15 to DEs, 10 to DTs, and only 6 to CBs / 5 to Ss —
+// and in the last ~20 years just two corners (Gilmore '19, Surtain '24) and one
+// safety (Polamalu '10) have won it. Modeled here as a rare, special feat: even
+// a monster individual season is usually not enough to beat a great pass rusher.
+
+const DB_TEAM_BY_SHORT = Object.fromEntries(NFL_TEAMS.map(t => [t.short, t]))
+
+const DPOY_CANDIDATE_POOL = [
+  { name: 'Myles Garrett',     team: 'LAR', pos: 'EDGE', tier: 'S', weight: 30 },
+  { name: 'Will Anderson Jr.', team: 'HOU', pos: 'EDGE', tier: 'A', weight: 18 },
+  { name: 'Maxx Crosby',       team: 'LV',  pos: 'EDGE', tier: 'A', weight: 13 },
+  { name: 'Aidan Hutchinson',  team: 'DET', pos: 'EDGE', tier: 'A', weight: 12 },
+  { name: 'T.J. Watt',         team: 'PIT', pos: 'EDGE', tier: 'A', weight: 10 },
+  { name: 'Nick Bosa',         team: 'SF',  pos: 'EDGE', tier: 'B', weight: 8  },
+  { name: 'Trey Hendrickson',  team: 'CIN', pos: 'EDGE', tier: 'B', weight: 6  },
+  { name: 'Micah Parsons',     team: 'GB',  pos: 'EDGE', tier: 'B', weight: 5  },
+  { name: 'Chris Jones',       team: 'KC',  pos: 'DL',   tier: 'B', weight: 6  },
+  { name: 'Quinnen Williams',  team: 'NYJ', pos: 'DL',   tier: 'C', weight: 4  },
+  { name: 'Fred Warner',       team: 'SF',  pos: 'LB',   tier: 'B', weight: 6  },
+  { name: 'Roquan Smith',      team: 'BAL', pos: 'LB',   tier: 'C', weight: 4  },
+  { name: 'Zack Baun',         team: 'PHI', pos: 'LB',   tier: 'C', weight: 3  },
+  { name: 'Sauce Gardner',     team: 'IND', pos: 'CB',   tier: 'C', weight: 2  },
+  { name: 'Kyle Hamilton',     team: 'BAL', pos: 'S',    tier: 'C', weight: 2  },
+]
+
+function pickWeighted(pool) {
+  const total = pool.reduce((s, p) => s + p.weight, 0)
+  let r = Math.random() * total
+  for (const p of pool) {
+    r -= p.weight
+    if (r <= 0) return p
+  }
+  return pool[pool.length - 1]
+}
+
+function genDPOYCandidateStats(c) {
+  const ri = (lo, hi) => Math.round(lo + Math.random() * (hi - lo))
+  if (c.pos === 'EDGE') {
+    const [lo, hi] = c.tier === 'S' ? [17, 24] : c.tier === 'A' ? [12, 18] : [9, 14]
+    const sacks = ri(lo, hi)
+    return {
+      sacks, tfl: ri(Math.round(sacks * 1.15), Math.round(sacks * 1.55)),
+      ff: ri(1, Math.max(2, Math.round(sacks * 0.28))), tackles: ri(36, 55),
+    }
+  }
+  if (c.pos === 'DL') {
+    const sacks = ri(7, 13)
+    return { sacks, tfl: ri(11, 18), tackles: ri(45, 66) }
+  }
+  if (c.pos === 'LB') {
+    return { tackles: ri(105, 148), sacks: ri(3, 8), ints: ri(1, 3) }
+  }
+  if (c.pos === 'CB') {
+    return { ints: ri(4, 8), pbus: ri(14, 20), tackles: ri(35, 50) }
+  }
+  return { ints: ri(3, 6), pbus: ri(8, 13), tackles: ri(75, 110) } // S
+}
+
+function dpoyStatLine(pos, s) {
+  if (pos === 'EDGE') return `${s.sacks} sacks · ${s.tfl} TFL · ${s.ff} FF`
+  if (pos === 'DL')   return `${s.sacks} sacks · ${s.tfl} TFL · ${s.tackles} tkl`
+  if (pos === 'LB')   return `${s.tackles} tkl · ${s.sacks} sacks · ${s.ints} INT`
+  if (pos === 'CB')   return `${s.ints} INT · ${s.pbus} PBU`
+  return `${s.ints} INT · ${s.tackles} tkl`
+}
+
+export function calcDBDpoyResult(result) {
+  const {
+    ovr = 60, seasonINTs = 0, seasonPBUs = 0, seasonTackles = 0, seasonPickSixes = 0, minAttrVal = 0,
+  } = result
+
+  // Historic-season "case strength", 0–1, benchmarked against real ball-hawk
+  // seasons (Charles Woodson '09: 9 INT/3 TD, DaRon Bland '23: 9 INT/5 TD)
+  // and the modern DB tackle record (Budda Baker, 164 combined tackles, 2024)
+  const intCase   = Math.min(1, seasonINTs / 9)
+  const pbuCase   = Math.min(1, seasonPBUs / 24)
+  const tklCase   = Math.min(1, seasonTackles / 164)
+  const pick6Case = Math.min(1, seasonPickSixes / 3)
+  const ovrCase   = Math.max(0, Math.min(1, (ovr - 90) / 9))
+
+  const caseStrength = intCase * 0.34 + pbuCase * 0.22 + pick6Case * 0.20 + tklCase * 0.12 + ovrCase * 0.12
+
+  // Two hard gates, not a curve — below either, ZERO chance, no roll even
+  // happens. Good-but-not-elite builds never sniff this award, full stop:
+  // (1) the BUILD itself must be truly maxed (OVR is fixed per build, not
+  // subject to season variance, so this alone locks out anything short of
+  // a near-perfect spin), and (2) that season must also be a statistically
+  // historic one. Clear both and the chance is real and high — a
+  // best-ever-caliber year is a legitimate contender, not a lottery ticket.
+  const BUILD_OVR_GATE = 96
+  const SEASON_GATE = 0.80
+  let winP = 0
+  if (ovr >= BUILD_OVR_GATE && caseStrength >= SEASON_GATE) {
+    const t = (caseStrength - SEASON_GATE) / (1 - SEASON_GATE)
+    winP = 0.40 + t * 0.55
+  }
+  // Every single attribute A+ or S (val >= 10) — a build that dedicated is
+  // a guaranteed win, no roll needed.
+  if (minAttrVal >= 10) winP = 1
+  const userWins = Math.random() < winP
+
+  if (userWins) {
+    const unanimous = seasonINTs >= 8 || seasonPickSixes >= 3
+    return { userWins: true, winner: null, unanimous, winnerStats: null }
+  }
+
+  const candidate = pickWeighted(DPOY_CANDIDATE_POOL)
+  const stats = genDPOYCandidateStats(candidate)
+  const team = DB_TEAM_BY_SHORT[candidate.team]
+  return {
+    userWins: false,
+    winner: { name: candidate.name, team: candidate.team, pos: candidate.pos, color: team?.color },
+    winnerStats: stats,
+    winnerStatLine: dpoyStatLine(candidate.pos, stats),
+    unanimous: false,
+  }
+}
+
+// Knuth's algorithm — realistic discrete counts (mostly 0/1, occasional 2+)
+// rather than rounding a continuous rate, which over-produces near-integer means.
+function poissonSample(lambda) {
+  if (lambda <= 0) return 0
+  const L = Math.exp(-lambda)
+  let k = 0, p = 1
+  do { k++; p *= Math.random() } while (p > L)
+  return k - 1
+}
+
+export function runDBSimulation(build, team = null) {
+  const oppLookup = TEAM_BY_NAME
+  const ovr = calcOVRDB(build) ?? 60
+
+  // Anchor on the "size" chip's real position (same anchor the depth chart
+  // and archetype naming use) so a build built around a real safety actually
+  // produces safety-shaped stats, and vice versa.
+  const subpos = build?.['size']?.subpos === 's' ? 's' : 'cb'
+
+  function statVal(attr) { return build[attr]?.val ?? 5 }
+  const spd = statVal('speed'), sz = statVal('size'), flu = statVal('fluidity')
+  const prs = statVal('press'), hnd = statVal('hands')
+  const ziq = statVal('zoneIQ'), man = statVal('manCoverage')
+  const prk = statVal('playRecognition'), rus = statVal('runSupport')
+
+  const spdN = spd / 11, szN = sz / 11, fluN = flu / 11, prsN = prs / 11, hndN = hnd / 11
+  const ziqN = ziq / 11, manN = man / 11, prkN = prk / 11, rusN = rus / 11
+
+  // Every attribute contributes to every stat, weighted to mirror how each
+  // trait shows up in real NFL box scores — not just a 2-3-attribute blend.
+  // INTs: ball skills + anticipation dominate (hands/zoneIQ/playRecognition),
+  //   with coverage technique, recovery speed, and jam disruption as smaller
+  //   factors (Woodson-'09/Bland-'23-caliber peaks around 9 picks).
+  const intSkill = hndN * 0.30 + ziqN * 0.25 + prkN * 0.20 + manN * 0.12 + fluN * 0.08 + prsN * 0.03 + spdN * 0.02
+  // PBUs: change-of-direction and man technique at the catch point lead,
+  //   press disrupts timing, hands/zoneIQ finish and position the play
+  //   (Surtain/Sauce-caliber seasons run 18-24 PBU).
+  const pbuSkill = fluN * 0.28 + manN * 0.25 + prsN * 0.18 + hndN * 0.12 + ziqN * 0.10 + spdN * 0.05 + prkN * 0.02
+  // Tackles: run-support instinct, size to finish, and range dominate, with
+  //   play recognition/zone IQ speeding up the read (elite tackling safety
+  //   runs 100-140/season, with the modern DB record — Budda Baker, 164
+  //   combined tackles in 2024 — as the ceiling; a coverage corner tops out
+  //   closer to 55-70).
+  const tklSkill = rusN * 0.32 + szN * 0.20 + spdN * 0.18 + prkN * 0.15 + ziqN * 0.08 + prsN * 0.04 + manN * 0.03
+  // TFL: backfield splash plays need instinct + power to blow the play up
+  //   before it develops, with speed and press as secondary factors.
+  const tflSkill = rusN * 0.35 + szN * 0.25 + prkN * 0.25 + spdN * 0.10 + prsN * 0.05
+  // Pick-six return chance: closing/return speed plus the recognition to see
+  //   the running lane once the ball is caught.
+  const pick6Chance = Math.min(0.30, 0.08 + spdN * 0.14 + prkN * 0.11)
+
+  // Per-game Poisson means, calibrated against real-world season totals:
+  // avg starter ≈ 2–3 INT / 8–10 PBU / 40–65 tkl · elite ≈ 5–7 INT / 13–16 PBU
+  // · max build ≈ 12 INT / 25 PBU / ~164 tkl (true safety build, tackle
+  //   ceiling matched to Budda Baker's 2024 record of 164)
+  const intLambdaBase = 0.70 * Math.pow(intSkill, 3)
+  // PBUs and tackles split by real position — corners see far more single-
+  // coverage volume (Sauce Gardner's 20-PBU rookie year) so keep the higher
+  // PBU ceiling and ONLY they get it; safeties get meaningfully fewer PBUs
+  // but a much higher tackle ceiling from run support (career tackle rates:
+  // CBs James Bradberry/Trevon Diggs ~45-50/season vs. safeties Kamren Curl
+  // ~115+/season, Tashaun Gipson ~63/season) — a corner should never see
+  // anything close to 120 tackles in a season, unlike a true safety build.
+  const pbuLambdaBase = (subpos === 's' ? 1.0 : 1.49) * Math.pow(pbuSkill, 2)
+  const tklLambdaBase = subpos === 's'
+    ? 1.3 + 8.35 * Math.pow(tklSkill, 2.2)
+    : 1.3 + 3.2 * Math.pow(tklSkill, 1.7)
+  const tflLambdaBase = 0.60 * Math.pow(tflSkill, 2)
+
+  const teamOffN = team ? (team.off - 5) / 5 : 0
+  const teamDefN = team ? (team.def - 5) / 5 : 0
+  const ovrN = (ovr - 78) / 20
+  const teamDefBoost = teamDefN + ovrN * 0.12
+  const playerTeamAvg = ((team?.off ?? 5.5) + (team?.def ?? 5.5)) / 2
+
+  let wins = 0, losses = 0
+  let seasonINTs = 0, seasonPBUs = 0, seasonTackles = 0, seasonTFL = 0, seasonPickSixes = 0
+
+  const schedule = buildSchedule(team)
+  const games = schedule.map(({ opponent, home }, i) => {
+    const v = () => randN()
+    const oppTeam = oppLookup[opponent]
+    const oppOffN = oppTeam ? (oppTeam.off - 5) / 5 : 0
+    const oppDefN = oppTeam ? (oppTeam.def - 5) / 5 : 0
+
+    const homeShort  = home ? (team?.short ?? '') : (oppTeam?.short ?? '')
+    const badWeather = !DOME_TEAMS.has(homeShort) && COLD_TEAMS.has(homeShort) && Math.random() < 0.15
+
+    const gameMood    = Math.random()
+    const isDud       = gameMood < 0.16
+    const isBreakout  = gameMood > 0.82
+    const boost       = isDud ? (0.35 + Math.random() * 0.25) : isBreakout ? (1.45 + Math.random() * 0.55) : 1.0
+    const oppOffBoost = 1 + oppOffN * 0.35
+    const oppDefResist = 1 - oppDefN * 0.12
+
+    const gameInt = poissonSample(Math.max(0, intLambdaBase * boost * oppOffBoost))
+    const gamePbu = poissonSample(Math.max(0, pbuLambdaBase * boost * oppOffBoost * oppDefResist))
+    const gameTkl = Math.max(1, poissonSample(tklLambdaBase * (badWeather ? 0.94 : 1.0)))
+    const gameTfl = poissonSample(Math.max(0, tflLambdaBase * boost))
+    let gamePick6 = 0
+    for (let k = 0; k < gameInt; k++) if (Math.random() < pick6Chance) gamePick6++
+
+    seasonINTs      += gameInt
+    seasonPBUs      += gamePbu
+    seasonTackles   += gameTkl
+    seasonTFL       += gameTfl
+    seasonPickSixes += gamePick6
+
+    // Team result — mostly driven by team quality, nudged by this DB's own big plays
+    const perfBonus = (gameInt >= 2 ? 0.05 : gameInt === 1 ? 0.02 : 0) + (gamePbu >= 3 ? 0.02 : 0)
+    const winP = Math.min(0.88, Math.max(0.14,
+      0.50 + teamOffN * 0.20 + teamDefBoost * 0.24 + (home ? 0.045 : -0.02) + perfBonus + v() * 0.09 - oppOffN * 0.10 - oppDefN * 0.04
+    ))
+    const won = Math.random() < winP
+    won ? wins++ : losses++
+
+    const teamTDs = Math.max(0, Math.round(1.5 + teamOffN * 1.1 + v() * 0.9))
+    const teamFGs = Math.max(0, Math.round(1.5 - teamTDs * 0.3 + Math.random() * 1.5))
+    let mySc = Math.max(3, teamTDs * 7 + teamFGs * 3)
+    const oppTDs = Math.max(0, Math.floor(1.2 + Math.random() * 3 + oppOffN * 0.9 - teamDefBoost * 0.6))
+    const oppFGs = Math.max(0, Math.round(1 - oppTDs * 0.3 + Math.random()))
+    let oppSc = Math.max(0, oppTDs * 7 + oppFGs * 3)
+    if (gamePick6 > 0) mySc += gamePick6 * 7
+    if (won  && mySc  <= oppSc) mySc  = oppSc + 1 + Math.ceil(Math.random() * 4)
+    if (!won && oppSc <= mySc)  oppSc = mySc  + 1 + Math.ceil(Math.random() * 4)
+    mySc  = snapNFL(mySc)
+    oppSc = snapNFL(oppSc)
+    if (mySc === oppSc) { if (won) mySc = snapNFL(mySc + 3); else oppSc = snapNFL(oppSc + 3) }
+
+    return {
+      wk: i + 1, opponent, home, mySc, oppSc, won,
+      ints: gameInt, pbus: gamePbu, tackles: gameTkl, tfl: gameTfl, pickSixes: gamePick6,
+    }
+  })
+
+  const bestGame = [...games].sort((a, b) => {
+    const score = g => g.ints * 5 + g.pickSixes * 6 + g.pbus * 1.5 + g.tackles * 0.3 + g.tfl * 1.2
+    return score(b) - score(a)
+  })[0]
+
+  // ── Playoffs ──────────────────────────────────────────────────────────────
+  const playoffs = wins >= 10
+    || (wins === 9 && Math.random() < 0.50)
+    || (wins === 8 && Math.random() < 0.06)
+  const playoffRounds = []
+  let sbResult = null
+  let hasBye = false
+
+  if (playoffs) {
+    const conf = team?.conf ?? 'AFC'
+    const confPool = PLAYOFF_POOLS[conf].filter(n => n !== team?.name)
+    const sbPool   = SB_POOLS[conf].filter(n => n !== team?.name)
+    const usedOpponents = new Set()
+    const pick = pool => {
+      const avail = pool.filter(n => !usedOpponents.has(n))
+      const chosen = (avail.length > 0 ? avail : pool)[Math.floor(Math.random() * (avail.length || pool.length))]
+      usedOpponents.add(chosen)
+      return chosen
+    }
+
+    hasBye = wins >= 14 ? true : wins >= 13 ? Math.random() < 0.60 : false
+    const bracket = hasBye
+      ? [
+          { round: 'Divisional Round',        pool: confPool },
+          { round: 'Conference Championship', pool: confPool },
+          { round: 'Super Bowl',              pool: sbPool   },
+        ]
+      : [
+          { round: 'Wild Card',               pool: confPool },
+          { round: 'Divisional Round',        pool: confPool },
+          { round: 'Conference Championship', pool: confPool },
+          { round: 'Super Bowl',              pool: sbPool   },
+        ]
+    const winsNeeded = hasBye ? 3 : 4
+    const seed = hasBye && wins >= 14 ? 1 : hasBye ? 2 : wins >= 12 ? 3 : wins >= 11 ? 4 : 5
+
+    const pgHomeProb = round => {
+      if (round === 'Super Bowl') return 0
+      if (seed === 1) return 1.0
+      if (round === 'Wild Card') return seed <= 4 ? 1.0 : 0.0
+      if (round === 'Divisional Round') return seed === 2 ? 0.80 : seed === 3 ? 0.10 : 0.06
+      if (round === 'Conference Championship') return seed === 2 ? 0.60 : seed === 3 ? 0.20 : 0.10
+      return 0
+    }
+
+    let pwins = 0, eliminated = null
+    for (const { round, pool } of bracket) {
+      const opponent  = pick(pool)
+      const pgHome    = Math.random() < pgHomeProb(round)
+      const homeShort = pgHome ? team?.short : TEAM_BY_NAME[opponent]?.short
+      const weather   = playoffWeather(homeShort, round === 'Super Bowl')
+
+      const oppTeam    = oppLookup[opponent]
+      const oppTeamAvg = ((oppTeam?.off ?? 5.5) + (oppTeam?.def ?? 5.5)) / 2
+      const teamN      = (playerTeamAvg - oppTeamAvg) / 9
+      const pgOvrPenalty = ovr < 82 ? (82 - ovr) * 0.007 : 0
+
+      const pgWinP = Math.min(0.78, Math.max(0.15,
+        0.42 + ovrN * 0.20 + teamN * 0.46 - pgOvrPenalty + (pgHome ? 0.04 : 0)
+      ))
+      const won = Math.random() < pgWinP
+
+      const wMult = weather === 'snow' ? 0.90 : weather === 'rain' ? 0.94 : 1.0
+      const pgInt = poissonSample(Math.max(0, intLambdaBase * 1.1 * wMult))
+      const pgPbu = poissonSample(Math.max(0, pbuLambdaBase * wMult))
+      const pgTkl = Math.max(1, poissonSample(tklLambdaBase))
+
+      const oppTeamOffN = oppTeam ? (oppTeam.off - 5) / 5 : 0
+      const oppTeamDefN = oppTeam ? (oppTeam.def - 5) / 5 : 0
+      const pgTmTDs = Math.max(0, Math.round(1.4 + teamOffN * 1.0 + randN() * 0.8))
+      const pgFGs   = Math.max(0, Math.round(1.2 - pgTmTDs * 0.3 + Math.random() * 1.2))
+      const base    = Math.max(3, Math.round((pgTmTDs * 7 + pgFGs * 3) * wMult))
+      const oppPTDs = Math.max(0, Math.floor(1 + Math.random() * 3 + oppTeamOffN * 0.8))
+      const oppPFGs = Math.max(0, Math.round(1 - oppPTDs * 0.3 + Math.random()))
+      const opp     = Math.max(7, Math.round((oppPTDs * 7 + oppPFGs * 3) * wMult))
+      const pgCloseness = 1 - 2 * Math.abs(pgWinP - 0.5)
+      const pgOT = Math.random() < pgCloseness * 0.22
+      let finalMy, finalOpp
+      if (pgOT) {
+        const baseTDs2 = Math.max(pgTmTDs, Math.floor(1 + Math.random() * 3 + oppTeamOffN * 0.8), 1)
+        const tiedSc = snapNFL(Math.max(10, baseTDs2 * 7 + Math.floor(Math.random() * 3) * 3))
+        const otPts  = Math.random() < 0.27 ? 7 : 3
+        finalMy  = won ? tiedSc + otPts : tiedSc
+        finalOpp = won ? tiedSc : tiedSc + otPts
+      } else {
+        const margin = Math.ceil(Math.random() * 7)
+        finalMy  = snapNFL(won ? Math.max(base, opp + margin) : Math.min(base, opp - margin))
+        finalOpp = snapNFL(won ? opp : Math.max(opp, base + margin))
+      }
+
+      seasonINTs    += pgInt
+      seasonPBUs    += pgPbu
+      seasonTackles += pgTkl
+
+      playoffRounds.push({
+        round, opponent, home: pgHome, weather, mySc: finalMy, oppSc: finalOpp, won, overtime: pgOT,
+        ints: pgInt, pbus: pgPbu, tackles: pgTkl,
+      })
+      if (won) pwins++
+      else { eliminated = round; break }
+    }
+
+    if (pwins === winsNeeded) {
+      const sbGame = playoffRounds[playoffRounds.length - 1]
+      sbResult = { won: true, ints: sbGame.ints, pbus: sbGame.pbus, tackles: sbGame.tackles }
+    } else {
+      sbResult = { won: false, round: eliminated, pwins }
+    }
+  }
+
+  const minAttrVal = Math.min(spd, sz, flu, prs, hnd, ziq, man, prk, rus)
+
+  return {
+    team, ovr, wins, losses,
+    games,
+    seasonINTs, seasonPBUs, seasonTackles, seasonTFL, seasonPickSixes,
+    bestGame, minAttrVal,
     playoffs, playoffRounds, sbResult, hasBye: playoffs && hasBye,
   }
 }

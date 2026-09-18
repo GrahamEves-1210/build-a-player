@@ -61,7 +61,7 @@ const _WRS = [
   { name: 'Joshua Palmer',       short: 'Palmer',      team: 'BUF', teamName: 'Buffalo Bills',         skin: '#5e3c22', height: 73, weight: 200, starter: false, number: 5,
     attrs: { speed: 5,  bodyControl: 5,  vertical: 4,  routeRunning: 6,  release: 5,  hands: 5,  awareness: 5,  size: 7,  afterCatch: 4  } },
   { name: 'Khalil Shakir',       short: 'Shakir',      team: 'BUF', teamName: 'Buffalo Bills',         skin: '#5e3c22', height: 71, weight: 190, starter: false, number: 10,
-    attrs: { speed: 7,  bodyControl: 6,  vertical: 4,  routeRunning: 5,  release: 3,  hands: 5,  awareness: 7,  size: 5,  afterCatch: 6  } },
+    attrs: { speed: 7,  bodyControl: 6,  vertical: 4,  routeRunning: 5,  release: 3,  hands: 6,  awareness: 7,  size: 5,  afterCatch: 8  } },
   { name: 'Skyler Bell',         short: 'Bell',        team: 'BUF', teamName: 'Buffalo Bills',         skin: '#b07848', height: 71, weight: 188, starter: false, number: 15,
     attrs: { speed: 6,  bodyControl: 4,  vertical: 3,  routeRunning: 3,  release: 4,  hands: 4,  awareness: 3,  size: 5,  afterCatch: 4  } },
   // CAR

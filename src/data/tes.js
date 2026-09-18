@@ -180,7 +180,7 @@ const _TES = [
   { name: 'T.J. Hockenson',    short: 'Hockenson',   team: 'MIN', teamName: 'Minnesota Vikings',      skin: '#f0c4a0', height: 76, weight: 251, starter: true,  captain: true,  number: 87,
     attrs: { speed: 6, blocking: 5, vertical: 6, routeRunning: 7, strength: 6, hands: 7, awareness: 6, size: 7, afterCatch: 6 } },
   { name: 'Josh Oliver',       short: 'Oliver',      team: 'MIN', teamName: 'Minnesota Vikings',      skin: '#5e3c22', height: 77, weight: 249, starter: false, number: 84,
-    attrs: { speed: 5, blocking: 4, vertical: 5, routeRunning: 4, strength: 5, hands: 6, awareness: 6, size: 8, afterCatch: 5 } },
+    attrs: { speed: 5, blocking: 9, vertical: 5, routeRunning: 4, strength: 5, hands: 6, awareness: 6, size: 8, afterCatch: 5 } },
   { name: 'Ben Yurosek',       short: 'Yurosek',     team: 'MIN', teamName: 'Minnesota Vikings',      skin: '#f0c4a0', height: 77, weight: 246, starter: false, number: 85,
     attrs: { speed: 5, blocking: 4, vertical: 5, routeRunning: 4, strength: 4, hands: 3, awareness: 5, size: 8, afterCatch: 3 } },
   // NE

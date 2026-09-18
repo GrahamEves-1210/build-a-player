@@ -200,7 +200,7 @@ const _raw = [
   {
     name: 'Bob Hayes',         short: 'B. Hayes',      team: 'DAL', teamName: 'Dallas Cowboys',
     skin: '#5e3c22', height: 71, weight: 185, number: 22, starter: true, captain: true, years: '1965–74',
-    attrs: { speed: 10, bodyControl: 6, vertical: 9, routeRunning: 6, release: 6, hands: 7, awareness: 7, size: 5, afterCatch: 8 },
+    attrs: { speed: 11, bodyControl: 6, vertical: 9, routeRunning: 6, release: 6, hands: 7, awareness: 7, size: 5, afterCatch: 8 },
   },
   {
     name: 'Terrell Owens',     short: 'T.O. Dallas',   team: 'DAL', teamName: 'Dallas Cowboys',

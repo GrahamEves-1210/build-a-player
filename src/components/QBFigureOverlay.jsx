@@ -46,11 +46,20 @@ const WHITE_HELMET = new Set(['ARI', 'IND', 'LAC', 'TEN', 'BUF'])
 
 const helmColor = (team, fallback) => HELMET_COLOR_OVERRIDE[team] ?? fallback
 
+// Boosts red in a skin tone — matches the warmer, more visibly red skin
+// treatment used elsewhere (Bucket, DB, WR, RB).
+function warmSkin(hex, redBoost = 22) {
+  if (!hex || hex === 'transparent') return hex
+  const r = Math.min(255, parseInt(hex.slice(1, 3), 16) + redBoost)
+  const g = parseInt(hex.slice(3, 5), 16)
+  const b = Math.max(0, parseInt(hex.slice(5, 7), 16) - 4)
+  return `rgb(${r},${g},${b})`
+}
 
 export default function QBFigureOverlay({ build, className }) {
   const tc  = (s) => build?.[s]?.teamColor  ?? 'transparent'
   const tc2 = (s) => build?.[s]?.teamColor2 ?? 'transparent'
-  const sk  = (s) => build?.[s]?.skinColor  ?? 'transparent'
+  const sk  = (s) => warmSkin(build?.[s]?.skinColor  ?? 'transparent')
   const has = (s) => !!build?.[s]
 
   const css = `

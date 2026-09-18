@@ -3,13 +3,19 @@ import HEADSHOTS from '../data/headshots.json'
 import { nflHeadshot } from '../utils/simulation'
 import QBAvatar from './QBAvatar'
 
-export default function MVPModal({ result, mvpResult, onDismiss, toSuperBowl = false, isRB = false, isWR = false, isTE = false }) {
+export default function MVPModal({ result, mvpResult, onDismiss, toSuperBowl = false, isRB = false, isWR = false, isTE = false, isDB = false }) {
   const [phase, setPhase] = useState('loading')
   const [barWidth, setBarWidth] = useState(0)
   const [visible, setVisible] = useState(false)
 
-  const { userWins, winner, unanimous, winnerStats } = mvpResult
+  const { userWins, winner, unanimous, winnerStats, winnerStatLine } = mvpResult
   const { wins, losses, seasonPassYds, seasonRushYds, seasonTDs, seasonRushTDs, seasonINTs, seasonCompPct, seasonRating } = result
+
+  // DB totals
+  const dbINTs      = result.seasonINTs      ?? 0
+  const dbPBUs      = result.seasonPBUs      ?? 0
+  const dbTackles   = result.seasonTackles   ?? 0
+  const dbPickSixes = result.seasonPickSixes ?? 0
 
   // RB totals
   const rbRushTDs  = result.seasonRushTDs ?? 0
@@ -29,11 +35,11 @@ export default function MVPModal({ result, mvpResult, onDismiss, toSuperBowl = f
   const qbTotalYds = (seasonPassYds ?? 0) + (seasonRushYds ?? 0)
 
   const isOPOY = isRB || isWR || isTE
-  const awardLabel    = isOPOY ? 'OPOY Award'           : 'MVP Award'
+  const awardLabel    = isDB ? 'DPOY Award' : isOPOY ? 'OPOY Award'           : 'MVP Award'
   const awardEyebrow  = 'NFL Regular Season'
-  const userWinsLabel = isOPOY ? 'Your Build Wins OPOY' : 'Your Build Wins MVP'
-  const unanimousLbl  = isOPOY ? 'Unanimous OPOY'       : 'Unanimous MVP'
-  const regularLbl    = isOPOY ? 'Regular Season OPOY'  : 'Regular Season MVP'
+  const userWinsLabel = isDB ? 'Your Build Wins DPOY' : isOPOY ? 'Your Build Wins OPOY' : 'Your Build Wins MVP'
+  const unanimousLbl  = isDB ? 'Unanimous DPOY' : isOPOY ? 'Unanimous OPOY'       : 'Unanimous MVP'
+  const regularLbl    = isDB ? 'Defensive Player of the Year' : isOPOY ? 'Regular Season OPOY'  : 'Regular Season MVP'
 
   useEffect(() => {
     const t0 = setTimeout(() => setVisible(true), 30)
@@ -64,7 +70,19 @@ export default function MVPModal({ result, mvpResult, onDismiss, toSuperBowl = f
               <div className="mvp-stat-pill">
                 <span>{wins}–{losses}</span><span>W–L</span>
               </div>
-              {(isWR || isTE) ? (
+              {isDB ? (
+                <>
+                  <div className="mvp-stat-pill">
+                    <span>{dbINTs}</span><span>INTs</span>
+                  </div>
+                  <div className="mvp-stat-pill">
+                    <span>{dbPBUs}</span><span>PBUs</span>
+                  </div>
+                  <div className="mvp-stat-pill">
+                    <span>{dbTackles}</span><span>Tackles</span>
+                  </div>
+                </>
+              ) : (isWR || isTE) ? (
                 <>
                   <div className="mvp-stat-pill">
                     <span>{wrRecYds.toLocaleString()}</span><span>Rec Yds</span>
@@ -113,7 +131,32 @@ export default function MVPModal({ result, mvpResult, onDismiss, toSuperBowl = f
                 <img src="/mvp.png" alt="Trophy" className="mvp-trophy-img" draggable={false} />
                 <div className="mvp-winner-name">{unanimous ? unanimousLbl : regularLbl}</div>
                 <div className="mvp-season-stats">
-                  {(isWR || isTE) ? (
+                  {isDB ? (
+                    <>
+                      <div className="mvp-stat-row">
+                        <span className="mvp-stat-label">Record</span>
+                        <span className="mvp-stat-val">{wins}–{losses}</span>
+                      </div>
+                      <div className="mvp-stat-row">
+                        <span className="mvp-stat-label">Interceptions</span>
+                        <span className="mvp-stat-val">{dbINTs}</span>
+                      </div>
+                      <div className="mvp-stat-row">
+                        <span className="mvp-stat-label">Pass Breakups</span>
+                        <span className="mvp-stat-val">{dbPBUs}</span>
+                      </div>
+                      <div className="mvp-stat-row">
+                        <span className="mvp-stat-label">Tackles</span>
+                        <span className="mvp-stat-val">{dbTackles}</span>
+                      </div>
+                      {dbPickSixes > 0 && (
+                        <div className="mvp-stat-row">
+                          <span className="mvp-stat-label">TDs</span>
+                          <span className="mvp-stat-val">{dbPickSixes}</span>
+                        </div>
+                      )}
+                    </>
+                  ) : (isWR || isTE) ? (
                     <>
                       <div className="mvp-stat-row">
                         <span className="mvp-stat-label">Record</span>
@@ -205,10 +248,79 @@ export default function MVPModal({ result, mvpResult, onDismiss, toSuperBowl = f
                 <div className="mvp-winner-name">{winner.name}</div>
                 <div className="mvp-winner-sub">
                   {winner.team}
-                  {isOPOY && <span className="mvp-winner-pos">{winner.pos}</span>}
+                  {(isOPOY || isDB) && <span className="mvp-winner-pos">{winner.pos}</span>}
                 </div>
                 <div className="mvp-season-stats">
-                  {(isTE || isWR) ? (
+                  {isDB ? (
+                    winner.pos === 'EDGE' ? (
+                      <>
+                        <div className="mvp-stat-row">
+                          <span className="mvp-stat-label">Sacks</span>
+                          <span className="mvp-stat-val">{winnerStats.sacks}</span>
+                        </div>
+                        <div className="mvp-stat-row">
+                          <span className="mvp-stat-label">Tackles for Loss</span>
+                          <span className="mvp-stat-val">{winnerStats.tfl}</span>
+                        </div>
+                        <div className="mvp-stat-row">
+                          <span className="mvp-stat-label">Forced Fumbles</span>
+                          <span className="mvp-stat-val">{winnerStats.ff}</span>
+                        </div>
+                      </>
+                    ) : winner.pos === 'DL' ? (
+                      <>
+                        <div className="mvp-stat-row">
+                          <span className="mvp-stat-label">Sacks</span>
+                          <span className="mvp-stat-val">{winnerStats.sacks}</span>
+                        </div>
+                        <div className="mvp-stat-row">
+                          <span className="mvp-stat-label">Tackles for Loss</span>
+                          <span className="mvp-stat-val">{winnerStats.tfl}</span>
+                        </div>
+                        <div className="mvp-stat-row">
+                          <span className="mvp-stat-label">Tackles</span>
+                          <span className="mvp-stat-val">{winnerStats.tackles}</span>
+                        </div>
+                      </>
+                    ) : winner.pos === 'LB' ? (
+                      <>
+                        <div className="mvp-stat-row">
+                          <span className="mvp-stat-label">Tackles</span>
+                          <span className="mvp-stat-val">{winnerStats.tackles}</span>
+                        </div>
+                        <div className="mvp-stat-row">
+                          <span className="mvp-stat-label">Sacks</span>
+                          <span className="mvp-stat-val">{winnerStats.sacks}</span>
+                        </div>
+                        <div className="mvp-stat-row">
+                          <span className="mvp-stat-label">Interceptions</span>
+                          <span className="mvp-stat-val">{winnerStats.ints}</span>
+                        </div>
+                      </>
+                    ) : winner.pos === 'CB' ? (
+                      <>
+                        <div className="mvp-stat-row">
+                          <span className="mvp-stat-label">Interceptions</span>
+                          <span className="mvp-stat-val">{winnerStats.ints}</span>
+                        </div>
+                        <div className="mvp-stat-row">
+                          <span className="mvp-stat-label">Pass Breakups</span>
+                          <span className="mvp-stat-val">{winnerStats.pbus}</span>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="mvp-stat-row">
+                          <span className="mvp-stat-label">Interceptions</span>
+                          <span className="mvp-stat-val">{winnerStats.ints}</span>
+                        </div>
+                        <div className="mvp-stat-row">
+                          <span className="mvp-stat-label">Tackles</span>
+                          <span className="mvp-stat-val">{winnerStats.tackles}</span>
+                        </div>
+                      </>
+                    )
+                  ) : (isTE || isWR) ? (
                     winner.pos === 'RB' ? (
                       <>
                         <div className="mvp-stat-row">

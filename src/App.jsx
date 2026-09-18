@@ -24,12 +24,14 @@ import { RBS, RB_TYPES, RB_LITE_TYPES } from './data/rbs'
 import { WRS, WR_TYPES, WR_LITE_TYPES, WR_CATEGORIES, WR_ATTR } from './data/wrs'
 import { WR_LEGENDS } from './data/wr-legends'
 import { TES, TE_TYPES, TE_LITE_TYPES, TE_CATEGORIES, TE_ATTR } from './data/tes'
+import { DBS, DB_TYPES, DB_LITE_TYPES, DB_CATEGORIES, DB_ATTR } from './data/dbs'
 import { ALLTIME_RATINGS } from './data/nfl-teams'
 import { LEGENDS, LEGEND_TYPES } from './data/legends'
 import { RB_LEGENDS } from './data/rb-legends'
 import HEADSHOTS from './data/headshots.json'
-import { runSimulation, getArchetype, runRBSimulation, calcOVRRB, getArchetypeRB, runWRSimulation, calcOVRWR, getArchetypeWR, runTESimulation, calcOVRTE, getArchetypeTE, HEADSHOT_BASE } from './utils/simulation'
-import { supabase } from './lib/supabase'
+import { runSimulation, getArchetype, calcOVR, runRBSimulation, calcOVRRB, getArchetypeRB, runWRSimulation, calcOVRWR, getArchetypeWR, runTESimulation, calcOVRTE, getArchetypeTE, runDBSimulation, calcOVRDB, getArchetypeDB, HEADSHOT_BASE } from './utils/simulation'
+import { supabase, rtSupabase } from './lib/supabase'
+import { track } from './lib/track'
 import CustomRatingsModal from './components/CustomRatingsModal'
 
 const _dd = arr => { const s = new Set(); return arr.filter(p => { const k = `${p.name}|${p.team}`; if (s.has(k)) return false; s.add(k); return true }) }
@@ -38,6 +40,7 @@ const CUSTOM_QB_POOL = _dd([...QBS, ...LEGENDS]).sort(_bt)
 const CUSTOM_RB_POOL = _dd([...RBS, ...RB_LEGENDS]).sort(_bt)
 const CUSTOM_WR_POOL = _dd([...WRS, ...WR_LEGENDS]).sort(_bt)
 const CUSTOM_TE_POOL = [...TES].sort(_bt)
+const CUSTOM_DB_POOL = [...DBS].sort(_bt)
 
 // Detect shared build at module load time — before any React rendering
 let _sharedData = null
@@ -131,6 +134,18 @@ export default function App() {
   const [versusRoom, setVersusRoom]     = useState(null)  // { code, role, oppId, oppName, channel }
   const [oppBuild, setOppBuild]         = useState({})
   const [oppQB, setOppQB]               = useState(null)
+  const [vsRecord, setVsRecord]         = useState({ wins: 0, losses: 0 })
+  const [oppDisconnected, setOppDisconnected] = useState(false)
+  const [vsFinalResult, setVsFinalResult] = useState(null) // host-computed, broadcast to guest
+  const vsChannelReady = useRef(false)
+  const lastOppPingRef = useRef(Date.now())
+  const faceoffFiredRef = useRef(false)
+  // Latest build/user/position for handlers set up once (heartbeat timers, etc.)
+  // that would otherwise close over stale values.
+  const vsResultRef = useRef({ build: {}, user: null, position: 'qb' })
+  useEffect(() => {
+    vsResultRef.current = { build, user, position }
+  })
 
   // Once sandbox is ever turned on during a build session, taint it permanently
   // until reset — prevents toggle-on → edit → toggle-off → simulate exploit
@@ -333,9 +348,23 @@ export default function App() {
   const isRB        = position === 'rb'
   const isWR        = position === 'wr'
   const isTE        = position === 'te'
-  const activeTypes = isTE ? (gameMode === 'lite' ? TE_LITE_TYPES : TE_TYPES) : isWR ? (gameMode === 'lite' ? WR_LITE_TYPES : WR_TYPES) : gameMode === 'lite' ? (isRB ? RB_LITE_TYPES : LITE_TYPES) : (gameMode === 'all-time' && !isRB) ? LEGEND_TYPES : (isRB ? RB_TYPES : TYPES)
-  const activePool  = isTE ? TES : isWR ? (gameMode === 'all-time' ? WR_LEGENDS : WRS) : gameMode === 'all-time' ? (isRB ? RB_LEGENDS : LEGENDS) : (isRB ? RBS : QBS)
+  const isDB        = position === 'db'
+  const activeTypes = isDB ? (gameMode === 'lite' ? DB_LITE_TYPES : DB_TYPES) : isTE ? (gameMode === 'lite' ? TE_LITE_TYPES : TE_TYPES) : isWR ? (gameMode === 'lite' ? WR_LITE_TYPES : WR_TYPES) : gameMode === 'lite' ? (isRB ? RB_LITE_TYPES : LITE_TYPES) : (gameMode === 'all-time' && !isRB) ? LEGEND_TYPES : (isRB ? RB_TYPES : TYPES)
+  const activePool  = isDB ? DBS : isTE ? TES : isWR ? (gameMode === 'all-time' ? WR_LEGENDS : WRS) : gameMode === 'all-time' ? (isRB ? RB_LEGENDS : LEGENDS) : (isRB ? RBS : QBS)
   const isPlus      = isSubscribed
+
+  // Tracks once per completed build (resets when the build becomes incomplete
+  // again, e.g. after a reset), independent of the drag vs. tap-to-place path.
+  const buildCompleteTracked = useRef(false)
+  useEffect(() => {
+    const complete = activeTypes.length > 0 && activeTypes.every(t => build[t])
+    if (complete && !buildCompleteTracked.current) {
+      buildCompleteTracked.current = true
+      track('build_complete', { position, gameMode })
+    } else if (!complete) {
+      buildCompleteTracked.current = false
+    }
+  }, [build, activeTypes, position, gameMode])
 
   // Theme must be declared after isPlus
   useEffect(() => {
@@ -347,9 +376,10 @@ export default function App() {
     } catch {}
   }, [isPlus])
 
-  const displayPool = (isCustomMode && customRatings[isRB ? 'rb' : 'qb'])
+  const customModeKey = isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : `${isRB ? 'rb' : 'qb'}${gameMode === 'all-time' ? '_legends' : ''}`
+  const displayPool = (isCustomMode && customRatings[customModeKey])
     ? activePool.map(p => {
-        const override = customRatings[isRB ? 'rb' : 'qb'][`${p.name}|${p.team}`]
+        const override = customRatings[customModeKey][`${p.name}|${p.team}`]
         return override ? { ...p, attrs: { ...p.attrs, ...override } } : p
       })
     : activePool
@@ -364,13 +394,15 @@ export default function App() {
     const isRBMode = pos === 'rb'
     const isWRMode = pos === 'wr'
     const isTEMode = pos === 'te'
-    const types = isTEMode ? (mode === 'lite' ? TE_LITE_TYPES : TE_TYPES) : isWRMode ? (mode === 'lite' ? WR_LITE_TYPES : WR_TYPES) : mode === 'lite' ? (isRBMode ? RB_LITE_TYPES : LITE_TYPES) : (isRBMode ? RB_TYPES : TYPES)
+    const isDBMode = pos === 'db'
+    const types = isDBMode ? (mode === 'lite' ? DB_LITE_TYPES : DB_TYPES) : isTEMode ? (mode === 'lite' ? TE_LITE_TYPES : TE_TYPES) : isWRMode ? (mode === 'lite' ? WR_LITE_TYPES : WR_TYPES) : mode === 'lite' ? (isRBMode ? RB_LITE_TYPES : LITE_TYPES) : (isRBMode ? RB_TYPES : TYPES)
     setGameMode(mode)
     setBuild(Object.fromEntries(types.map(t => [t, null])))
     setActiveCategory('physical')
     setSavedSpinResult(null)
     sandboxTainted.current = isCustomMode
     setPage('game')
+    track('mode_selected', { position: pos, gameMode: mode })
     window.scrollTo(0, 0)
   }, [isCustomMode])
 
@@ -398,6 +430,10 @@ export default function App() {
   }, [user])
 
   const handleReset = useCallback(() => {
+    setVersusRoom(prev => {
+      if (prev) { recordVsForfeiture(); cleanupVersusChannel(prev.channel) }
+      return null
+    })
     setBuild(Object.fromEntries(activeTypes.map(t => [t, null])))
     setSimResult(null)
     setSimReplaying(false)
@@ -459,14 +495,17 @@ export default function App() {
     const effectiveTeam = gameMode === 'all-time' && atRatings
       ? { ...team, off: atRatings.off, def: atRatings.def, isAllTime: true }
       : team
-    const result = isTE
-      ? runTESimulation(build, activeTypes, effectiveTeam, gameMode === 'all-time')
-      : isWR
-        ? runWRSimulation(build, activeTypes, effectiveTeam, gameMode === 'all-time')
-        : isRB
-          ? runRBSimulation(build, activeTypes, effectiveTeam, gameMode === 'all-time')
-          : runSimulation(build, activeTypes, effectiveTeam, gameMode === 'all-time')
+    const result = isDB
+      ? runDBSimulation(build, effectiveTeam)
+      : isTE
+        ? runTESimulation(build, activeTypes, effectiveTeam, gameMode === 'all-time')
+        : isWR
+          ? runWRSimulation(build, activeTypes, effectiveTeam, gameMode === 'all-time')
+          : isRB
+            ? runRBSimulation(build, activeTypes, effectiveTeam, gameMode === 'all-time')
+            : runSimulation(build, activeTypes, effectiveTeam, gameMode === 'all-time')
     setSimResult(result)
+    track('simulate', { position, gameMode, userId: user?.id ?? null })
     if (!user) {
       showSaveToast('no-auth', 'Sign in to save your stats')
     } else if (isCustomMode || sandboxTainted.current) {
@@ -474,26 +513,28 @@ export default function App() {
     } else if (!supabase) {
       console.warn('[build-a-player] sim result not saved — supabase not configured')
     } else {
-      const arch = isTE
-        ? getArchetypeTE(result.ovr, build, activeTypes)
-        : isWR
-          ? getArchetypeWR(result.ovr, build, activeTypes)
-          : isRB
-            ? getArchetypeRB(result.ovr, build, activeTypes)
-            : getArchetype(result.ovr, build, activeTypes)
+      const arch = isDB
+        ? getArchetypeDB(result.ovr, build, DB_TYPES)
+        : isTE
+          ? getArchetypeTE(result.ovr, build, activeTypes)
+          : isWR
+            ? getArchetypeWR(result.ovr, build, activeTypes)
+            : isRB
+              ? getArchetypeRB(result.ovr, build, activeTypes)
+              : getArchetype(result.ovr, build, activeTypes)
       supabase.from('simulations').insert({
         user_id: user.id,
         username: user.user_metadata?.username || user.email?.split('@')[0] || 'Player',
         ovr: result.ovr,
         archetype: arch,
-        game_mode: isTE ? `te-${gameMode || 'classic'}` : isWR ? `wr-${gameMode || 'classic'}` : isRB ? `rb-${gameMode || 'classic'}` : gameMode,
-        wins: result.wins,
-        losses: result.losses,
-        season_pass_yds: (isWR || isTE) ? result.seasonRecYds : isRB ? result.seasonRushYds : result.seasonPassYds,
-        season_tds: (isWR || isTE) ? result.seasonRecTDs : isRB ? (result.seasonRushTDs + result.seasonRecTDs) : result.seasonTDs,
-        season_ints: (isWR || isTE) ? result.seasonRecs : isRB ? null : result.seasonINTs,
-        season_comp_pct: (isWR || isTE) ? result.seasonTargets : isRB ? null : result.seasonCompPct,
-        season_rating: (isRB || isWR || isTE) ? null : result.seasonRating,
+        game_mode: isDB ? `db-${gameMode || 'classic'}` : isTE ? `te-${gameMode || 'classic'}` : isWR ? `wr-${gameMode || 'classic'}` : isRB ? `rb-${gameMode || 'classic'}` : gameMode,
+        wins: result.wins ?? null,
+        losses: result.losses ?? null,
+        season_pass_yds: isDB ? result.seasonTackles : (isWR || isTE) ? result.seasonRecYds : isRB ? result.seasonRushYds : result.seasonPassYds,
+        season_tds: isDB ? result.seasonINTs : (isWR || isTE) ? result.seasonRecTDs : isRB ? (result.seasonRushTDs + result.seasonRecTDs) : result.seasonTDs,
+        season_ints: isDB ? result.seasonPBUs : (isWR || isTE) ? result.seasonRecs : isRB ? null : result.seasonINTs,
+        season_comp_pct: isDB ? null : (isWR || isTE) ? result.seasonTargets : isRB ? null : result.seasonCompPct,
+        season_rating: (isDB || isRB || isWR || isTE) ? null : result.seasonRating,
         playoffs: result.playoffs,
         champion: result.sbResult?.won ?? false,
         build: Object.fromEntries(
@@ -513,9 +554,13 @@ export default function App() {
     setSimReplaying(false)
     setPage('sim')
     window.scrollTo({ top: 0, behavior: 'instant' })
-  }, [build, activeTypes, user, gameMode, showSaveToast])
+  }, [build, activeTypes, user, gameMode, position, showSaveToast])
 
   const handleHome = useCallback(() => {
+    setVersusRoom(prev => {
+      if (prev) { recordVsForfeiture(); cleanupVersusChannel(prev.channel) }
+      return null
+    })
     setPage('splash')
     setGameMode(null)
     setBuild({})
@@ -526,32 +571,104 @@ export default function App() {
     sandboxTainted.current = isCustomMode
   }, [isCustomMode])
 
-  const handleVersusJoin = useCallback(({ code, role, oppId, oppName, channel }) => {
-    let oppSeen = false
+  function cleanupVersusChannel(ch) {
+    vsChannelReady.current = false
+    if (!ch) return
+    if (ch._bc) { ch.close() }
+    else { try { (rtSupabase || supabase).removeChannel(ch) } catch {} }
+  }
+
+  async function recordVsResult(result) {
+    setVsRecord(prev => result === 'win'
+      ? { wins: (prev?.wins ?? 0) + 1, losses: prev?.losses ?? 0 }
+      : { wins: prev?.wins ?? 0, losses: (prev?.losses ?? 0) + 1 })
+    if (!supabase || !user) return
+    const { build: b, position: pos } = vsResultRef.current
+    const ovr = isDB ? calcOVRDB(b) : isTE ? calcOVRTE(b) : isWR ? calcOVRWR(b) : isRB ? calcOVRRB(b) : calcOVR(b)
+    try {
+      await supabase.from('vs_results').insert({
+        user_id: user.id,
+        username: user.user_metadata?.username || user.email?.split('@')[0],
+        result, ovr: ovr || null, position: pos,
+        match_type: versusRoom?.matchType ?? null,
+      })
+    } catch {}
+  }
+
+  async function recordVsForfeiture() {
+    setVsRecord(prev => ({ wins: prev?.wins ?? 0, losses: (prev?.losses ?? 0) + 1 }))
+    if (!supabase || !user) return
+    const { build: b, position: pos } = vsResultRef.current
+    const ovr = isDB ? calcOVRDB(b) : isTE ? calcOVRTE(b) : isWR ? calcOVRWR(b) : isRB ? calcOVRRB(b) : calcOVR(b)
+    try {
+      await supabase.from('vs_results').insert({
+        user_id: user.id,
+        username: user.user_metadata?.username || user.email?.split('@')[0],
+        result: 'forfeit', ovr: ovr || null, position: pos,
+        match_type: versusRoom?.matchType ?? null,
+      })
+    } catch {}
+  }
+
+  // Opponent presumed gone — award the local player a win and bail to the lobby.
+  function handleOppGone(ch) {
+    setVsRecord(prev => ({ wins: (prev?.wins ?? 0) + 1, losses: prev?.losses ?? 0 }))
+    if (supabase && user) {
+      const { build: b, position: pos } = vsResultRef.current
+      const ovr = isDB ? calcOVRDB(b) : isTE ? calcOVRTE(b) : isWR ? calcOVRWR(b) : isRB ? calcOVRRB(b) : calcOVR(b)
+      if (ovr > 0) {
+        supabase.from('vs_results').insert({
+          user_id: user.id,
+          username: user.user_metadata?.username || user.email?.split('@')[0],
+          result: 'win', ovr, position: pos,
+          match_type: versusRoom?.matchType ?? null,
+        }).then(null, () => {})
+      }
+    }
+    cleanupVersusChannel(ch)
+    setVersusRoom(null)
+    setOppDisconnected(true)
+    setPage('versus-lobby')
+  }
+
+  const handleVersusJoin = useCallback(({ code, role, oppId, oppName, channel, matchType }) => {
+    faceoffFiredRef.current = false
+    setOppDisconnected(false)
 
     channel.on('broadcast', { event: 'vs_build' }, ({ payload }) => {
-      oppSeen = true
+      lastOppPingRef.current = Date.now()
       setOppBuild(payload.build || {})
       setOppQB(payload.qb || null)
     })
+    channel.on('broadcast', { event: 'vs_ping' }, () => { lastOppPingRef.current = Date.now() })
+    channel.on('broadcast', { event: 'vs_faceoff' }, () => setPage('versus-result'))
+    channel.on('broadcast', { event: 'vs_result_final' }, ({ payload }) => setVsFinalResult(payload))
 
-    // Opponent presence check — if no vs_build received within 20s, opponent is a ghost
-    channel.on('broadcast', { event: 'vs_ping' }, () => { oppSeen = true })
+    // Presence-based disconnect detection (real Realtime channels only — the
+    // BroadcastChannel fallback has no presence equivalent).
+    if (!channel._bc) {
+      channel.on('presence', { event: 'leave' }, ({ leftPresences }) => {
+        if (!leftPresences.some(p => p.vid === oppId)) return
+        handleOppGone(channel)
+      })
+    }
+
+    // Opponent never showed up at all — give up after 20s of total silence.
     const ghostTimer = setTimeout(() => {
-      if (!oppSeen) {
-        supabase?.removeChannel(channel)
+      if (Date.now() - lastOppPingRef.current > 19000) {
+        cleanupVersusChannel(channel)
         setVersusRoom(null)
         setPage('versus-lobby')
         alert('Opponent didn\'t show up. Returning to matchmaking.')
       }
     }, 20000)
-
     channel.on('broadcast', { event: 'vs_build' }, () => clearTimeout(ghostTimer))
-    channel.subscribe?.()
+    channel.on('broadcast', { event: 'vs_ping' }, () => clearTimeout(ghostTimer))
 
-    setVersusRoom({ code, role, oppId, oppName, channel })
+    setVersusRoom({ code, role, oppId, oppName, channel, matchType })
     setOppBuild({})
     setOppQB(null)
+    setVsFinalResult(null)
     setBuild(Object.fromEntries(activeTypes.map(t => [t, null])))
     setActiveCategory('physical')
     setSavedSpinResult(null)
@@ -561,22 +678,103 @@ export default function App() {
     setIsCustomMode(false)
     setPage('versus-game')
     window.scrollTo(0, 0)
+
+    // Subscribe now that every .on() handler above is registered. Nothing is
+    // sent until Realtime confirms SUBSCRIBED — sending immediately after
+    // calling subscribe() races the WebSocket handshake and gets silently
+    // dropped, which is what made matches "connect" but never actually sync.
+    vsChannelReady.current = false
+    lastOppPingRef.current = Date.now()
+    let retries = 0
+    channel.subscribe(async s => {
+      if (s === 'SUBSCRIBED') {
+        retries = 0
+        vsChannelReady.current = true
+        const { build: curBuild } = vsResultRef.current
+        channel.send({ type: 'broadcast', event: 'vs_ping', payload: {} }).catch(() => {})
+        channel.send({ type: 'broadcast', event: 'vs_build', payload: { build: curBuild, qb: savedSpinResult } }).catch(() => {})
+        if (!channel._bc) {
+          const vsId = sessionStorage.getItem('bap_vs_id')
+          const vid  = user?.id ? `${user.id}-${vsId}` : vsId
+          const name = user?.user_metadata?.username || user?.email?.split('@')[0] || 'Your Build'
+          if (vid) channel.track({ vid, name }).catch(() => {})
+        }
+      } else if ((s === 'TIMED_OUT' || s === 'CHANNEL_ERROR') && !channel._bc && retries < 5) {
+        vsChannelReady.current = false
+        retries++
+        setTimeout(() => { try { channel.subscribe() } catch {} }, 1500 * retries)
+      }
+    })
   }, [activeTypes])
 
-  // Announce presence immediately on entering game room so opponent's ghost timer clears
+  // Broadcast my build + qb to the versus channel whenever they change —
+  // gated on vsChannelReady so nothing is lost to the subscribe race above.
   useEffect(() => {
-    if (!versusRoom?.channel || page !== 'versus-game') return
-    versusRoom.channel.send({ type: 'broadcast', event: 'vs_ping', payload: {} }).catch(() => {})
-  }, [versusRoom, page])
-
-  // Broadcast my build + qb to the versus channel whenever they change
-  useEffect(() => {
-    if (!versusRoom?.channel || page !== 'versus-game') return
+    if (!versusRoom?.channel || page !== 'versus-game' || !vsChannelReady.current) return
     versusRoom.channel.send({
       type: 'broadcast', event: 'vs_build',
       payload: { build, qb: savedSpinResult },
     }).catch(() => {})
   }, [build, savedSpinResult, versusRoom, page])
+
+  // Heartbeat — lets the opponent detect a dropped connection mid-game even
+  // when Supabase presence doesn't fire a clean 'leave' (e.g. tab killed, wifi drop).
+  useEffect(() => {
+    if (page !== 'versus-game' || !versusRoom?.channel) return
+    const id = setInterval(() => {
+      versusRoom.channel.send({ type: 'broadcast', event: 'vs_ping', payload: {} }).catch(() => {})
+    }, 8000)
+    return () => clearInterval(id)
+  }, [page, versusRoom])
+
+  useEffect(() => {
+    if (page !== 'versus-game' || !versusRoom?.channel) return
+    lastOppPingRef.current = Date.now()
+    const onVisible = () => { if (!document.hidden) lastOppPingRef.current = Date.now() }
+    document.addEventListener('visibilitychange', onVisible)
+    const id = setInterval(() => {
+      if (document.hidden) return
+      if (Date.now() - lastOppPingRef.current > 30000) {
+        lastOppPingRef.current = Date.now()
+        handleOppGone(versusRoom.channel)
+      }
+    }, 5000)
+    return () => { clearInterval(id); document.removeEventListener('visibilitychange', onVisible) }
+  }, [page, versusRoom]) // eslint-disable-line
+
+  // Auto-faceoff once both builds are complete — host broadcasts as the
+  // authoritative trigger so both sides transition together instead of each
+  // player having to separately notice and click Face Off.
+  useEffect(() => {
+    if (page !== 'versus-game' || !versusRoom) { faceoffFiredRef.current = false; return }
+    const myFilled  = activeTypes.filter(t => build[t]).length
+    const oppFilled = activeTypes.filter(t => oppBuild[t]).length
+    if (myFilled === activeTypes.length && oppFilled === activeTypes.length && !faceoffFiredRef.current) {
+      faceoffFiredRef.current = true
+      if (versusRoom.role === 'host') {
+        versusRoom.channel?.send({ type: 'broadcast', event: 'vs_faceoff', payload: {} }).catch(() => {})
+      }
+      setTimeout(() => setPage('versus-result'), 300)
+    }
+  }, [build, oppBuild, page, versusRoom, activeTypes])
+
+  const handleFaceoff = useCallback(() => {
+    if (faceoffFiredRef.current) return
+    faceoffFiredRef.current = true
+    versusRoom?.channel?.send({ type: 'broadcast', event: 'vs_faceoff', payload: {} }).catch(() => {})
+    setPage('versus-result')
+  }, [versusRoom])
+
+  // Fetch my H2H W-L record when entering the lobby or a game
+  useEffect(() => {
+    if ((page !== 'versus-game' && page !== 'versus-lobby') || !user || !supabase) return
+    supabase.from('vs_results').select('result').eq('user_id', user.id).then(({ data }) => {
+      if (!data) return
+      const wins   = data.filter(r => r.result === 'win').length
+      const losses = data.filter(r => r.result === 'loss' || r.result === 'forfeit').length
+      setVsRecord({ wins, losses })
+    })
+  }, [page, user])
 
   if (page === 'splash') {
     return (
@@ -614,6 +812,11 @@ export default function App() {
           gameMode={gameMode || 'classic'}
           onBack={() => setPage('splash')}
           user={user}
+          vsRecord={vsRecord}
+          onSignIn={() => setShowAuth(true)}
+          onProfile={() => { window.history.pushState({}, '', '/profile'); setPage('profile') }}
+          onAbout={() => setPage('about')}
+          onLeaderboard={() => setPage('leaderboard')}
         />
       </Suspense>
     )
@@ -627,10 +830,16 @@ export default function App() {
           oppData={{ build: oppBuild, qb: oppQB, name: versusRoom?.oppName || 'Opponent' }}
           position={position}
           gameMode={gameMode || 'classic'}
+          role={versusRoom?.role}
+          channel={versusRoom?.channel}
+          vsFinalResult={vsFinalResult}
+          onResult={recordVsResult}
           onRematch={() => {
+            faceoffFiredRef.current = false
             setBuild(Object.fromEntries(activeTypes.map(t => [t, null])))
             setOppBuild({})
             setOppQB(null)
+            setVsFinalResult(null)
             setSavedSpinResult(null)
             setMobileView('spin')
             setSpinResetKey(k => k + 1)
@@ -638,7 +847,7 @@ export default function App() {
             window.scrollTo(0, 0)
           }}
           onExit={() => {
-            if (versusRoom?.channel) supabase.removeChannel(versusRoom.channel)
+            cleanupVersusChannel(versusRoom?.channel)
             setVersusRoom(null)
             setPage('splash')
           }}
@@ -673,6 +882,7 @@ export default function App() {
     isRB,
     isWR,
     isTE,
+    isDB,
     isPlus,
   }
 
@@ -680,7 +890,7 @@ export default function App() {
     return (
       <Suspense fallback={null}>
         <Navbar {...navbarProps} />
-        <LeaderboardPage onBack={() => { setPage(simResult ? 'sim' : 'game'); window.scrollTo({ top: 0, behavior: 'instant' }) }} currentUser={user} adsDisabled={adsDisabled} isRB={isRB} isWR={isWR} isTE={isTE} />
+        <LeaderboardPage onBack={() => { setPage(simResult ? 'sim' : 'game'); window.scrollTo({ top: 0, behavior: 'instant' }) }} currentUser={user} adsDisabled={adsDisabled} isRB={isRB} isWR={isWR} isTE={isTE} isDB={isDB} />
       </Suspense>
     )
   }
@@ -739,6 +949,7 @@ export default function App() {
           isRB={isRB}
           isWR={isWR}
           isTE={isTE}
+          isDB={isDB}
           isPlus={isPlus}
           currentPool={activePool}
           isCustomMode={isCustomMode}
@@ -765,8 +976,9 @@ export default function App() {
             isRB={isRB}
             isWR={isWR}
             isTE={isTE}
+            isDB={isDB}
             gameMode={gameMode}
-            pool={isTE ? CUSTOM_TE_POOL : isWR ? CUSTOM_WR_POOL : isRB ? CUSTOM_RB_POOL : CUSTOM_QB_POOL}
+            pool={isDB ? CUSTOM_DB_POOL : isTE ? CUSTOM_TE_POOL : isWR ? CUSTOM_WR_POOL : isRB ? CUSTOM_RB_POOL : CUSTOM_QB_POOL}
             onClose={() => setShowCustomModal(false)}
             onSave={(ratings) => {
               setCustomRatings(ratings)
@@ -836,6 +1048,7 @@ export default function App() {
           isRB={isRB}
           isWR={isWR}
           isTE={isTE}
+          isDB={isDB}
           onMVPWon={handleMVPWon}
           onBack={() => { setPage('game'); window.scrollTo({ top: 0, behavior: 'instant' }) }}
           onReset={() => { handleReset(); setPage('game'); window.scrollTo({ top: 0, behavior: 'instant' }) }}
@@ -881,9 +1094,10 @@ export default function App() {
           isRB={isRB}
           isWR={isWR}
           isTE={isTE}
-          playerLabel={isTE ? 'TE' : isWR ? 'WR' : undefined}
-          attrMap={isTE ? TE_ATTR : isWR ? WR_ATTR : undefined}
-          categoriesData={isTE ? TE_CATEGORIES : isWR ? WR_CATEGORIES : undefined}
+          isDB={isDB}
+          playerLabel={isDB ? 'DB' : isTE ? 'TE' : isWR ? 'WR' : undefined}
+          attrMap={isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : undefined}
+          categoriesData={isDB ? DB_CATEGORIES : isTE ? TE_CATEGORIES : isWR ? WR_CATEGORIES : undefined}
           onlineCount={onlineCount}
         />
         <Silhouette
@@ -898,8 +1112,9 @@ export default function App() {
           isRB={isRB}
           isWR={isWR}
           isTE={isTE}
-          categoriesData={isTE ? TE_CATEGORIES : isWR ? WR_CATEGORIES : undefined}
-          attrMap={isTE ? TE_ATTR : isWR ? WR_ATTR : undefined}
+          isDB={isDB}
+          categoriesData={isDB ? DB_CATEGORIES : isTE ? TE_CATEGORIES : isWR ? WR_CATEGORIES : undefined}
+          attrMap={isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : undefined}
           isPlus={isPlus}
           isCustomMode={isCustomMode}
           onOpenCustomModal={() => setShowCustomModal(true)}
@@ -910,7 +1125,7 @@ export default function App() {
           <ReportCard
             build={build}
             onSimulate={page === 'versus-game'
-              ? () => setPage('versus-result')
+              ? handleFaceoff
               : handleSimulate}
             onReset={handleReset}
             types={activeTypes}
@@ -918,7 +1133,8 @@ export default function App() {
             isRB={isRB}
             isWR={isWR}
             isTE={isTE}
-            attrMap={isTE ? TE_ATTR : isWR ? WR_ATTR : undefined}
+            isDB={isDB}
+            attrMap={isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : undefined}
             isPlus={isPlus}
             isCustomMode={isCustomMode}
             onOpenCustomModal={() => setShowCustomModal(true)}
@@ -945,7 +1161,7 @@ export default function App() {
                 </div>
               </div>
               {myFilled === activeTypes.length && (
-                <button className="vhud-faceoff-btn" onClick={() => setPage('versus-result')}>
+                <button className="vhud-faceoff-btn" onClick={handleFaceoff}>
                   FACE OFF
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M5 12h14M12 5l7 7-7 7"/>
@@ -1031,8 +1247,9 @@ export default function App() {
           isRB={isRB}
           isWR={isWR}
           isTE={isTE}
+          isDB={isDB}
           gameMode={gameMode}
-          pool={isTE ? CUSTOM_TE_POOL : isWR ? CUSTOM_WR_POOL : isRB ? CUSTOM_RB_POOL : CUSTOM_QB_POOL}
+          pool={isDB ? CUSTOM_DB_POOL : isTE ? CUSTOM_TE_POOL : isWR ? CUSTOM_WR_POOL : isRB ? CUSTOM_RB_POOL : CUSTOM_QB_POOL}
           onClose={() => setShowCustomModal(false)}
           onSave={(ratings) => {
             setCustomRatings(ratings)

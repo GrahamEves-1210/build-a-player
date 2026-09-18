@@ -25,6 +25,7 @@ import { NBA_JERSEY_NUMBERS } from '../data/nba-jersey-numbers'
 import { NBA_SKIN_COLORS }   from '../data/nba-skin-colors'
 import { NBA_FACE_CENTERS }  from '../data/nba-face-centers'
 import { supabase, rtSupabase } from '../lib/supabase'
+import { track } from '../lib/track'
 import { HEADSHOT_BASE } from '../utils/simulation'
 import ProfilePage from './ProfilePage'
 import CustomRatingsModal from './CustomRatingsModal'
@@ -522,6 +523,19 @@ export default function BucketApp() {
   const activeTypes = (isVersusMode ? VERSUS_POS_TYPES : POS_TYPES)[position] ?? (isVersusMode ? VERSUS_GUARD_TYPES : GUARD_TYPES)
   const activeCategories = (isVersusMode ? VERSUS_POS_CATS : POS_CATS)[position] ?? (isVersusMode ? VERSUS_GUARD_CATEGORIES : GUARD_CATEGORIES)
 
+  // Tracks once per completed build (resets when the build becomes incomplete again)
+  const buildCompleteTracked = useRef(false)
+  useEffect(() => {
+    if (isVersusMode) return
+    const complete = activeTypes.length > 0 && activeTypes.every(t => build[t])
+    if (complete && !buildCompleteTracked.current) {
+      buildCompleteTracked.current = true
+      track('build_complete', { app: 'bucket', position, gameMode })
+    } else if (!complete) {
+      buildCompleteTracked.current = false
+    }
+  }, [build, activeTypes, isVersusMode, position, gameMode])
+
   const handleSandboxToggle = useCallback((on) => {
     if (on) {
       setShowSandboxWarning(true)
@@ -674,6 +688,7 @@ export default function BucketApp() {
     setSimResult(result)
     setShowTeamSpin(false)
     setPage('sim')
+    track('simulate', { app: 'bucket', position, gameMode, userId: user?.id ?? null })
     window.scrollTo({ top: 0, behavior: 'instant' })
 
     if (!supabase || !user || isBucketCustomMode || sandboxTainted.current) return

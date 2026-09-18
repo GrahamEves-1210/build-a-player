@@ -1,14 +1,21 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Silhouette from './Silhouette'
 import { calcOVR, runSimulation, calcOVRRB, runRBSimulation } from '../utils/simulation'
 import { TYPES } from '../data/qbs'
 import { RB_TYPES } from '../data/rbs'
 
-export default function VersusResult({ myData, oppData, position, gameMode, onRematch, onExit }) {
+// Only the host actually runs runSimulation() (which uses Math.random()
+// internally) and broadcasts the full result over `channel`. The guest never
+// computes its own outcome — it waits for vsFinalResult (fed in by App.jsx's
+// vs_result_final listener) and mirrors it with perspective flipped. Without
+// this, each side independently rolled its own random season and could
+// (and did) disagree about who actually won.
+export default function VersusResult({ myData, oppData, position, gameMode, role, channel, vsFinalResult, onResult, onRematch, onExit }) {
   const [phase, setPhase]     = useState('reveal')   // reveal → sim → result
-  const [winner, setWinner]   = useState(null)        // 'me' | 'opp' | 'tie'
+  const [winner, setWinner]   = useState(null)        // 'me' | 'opp'
   const [myStats, setMyStats]   = useState(null)
   const [oppStats, setOppStats] = useState(null)
+  const resultSent = useRef(false)
 
   const isRB    = position === 'rb'
   const types   = isRB ? RB_TYPES : TYPES
@@ -17,25 +24,68 @@ export default function VersusResult({ myData, oppData, position, gameMode, onRe
 
   useEffect(() => {
     const t1 = setTimeout(() => setPhase('sim'), 1800)
-    const t2 = setTimeout(() => {
-      const mySim  = isRB
-        ? runRBSimulation(myData.build, types)
-        : runSimulation(myData.build, types, myData.team, gameMode === 'all-time')
-      const oppSim = isRB
-        ? runRBSimulation(oppData.build, types)
-        : runSimulation(oppData.build, types, oppData.team, gameMode === 'all-time')
+    let t2, t3
 
-      setMyStats(mySim)
-      setOppStats(oppSim)
+    if (role === 'host') {
+      t2 = setTimeout(() => {
+        const mySim  = isRB
+          ? runRBSimulation(myData.build, types)
+          : runSimulation(myData.build, types, myData.team, gameMode === 'all-time')
+        const oppSim = isRB
+          ? runRBSimulation(oppData.build, types)
+          : runSimulation(oppData.build, types, oppData.team, gameMode === 'all-time')
 
-      const myW  = mySim?.wins  ?? 0
-      const oppW = oppSim?.wins ?? 0
-      setWinner(myW > oppW ? 'me' : myW < oppW ? 'opp' : (myOVR >= oppOVR ? 'me' : 'opp'))
-      setPhase('result')
-    }, 3400)
+        const myW  = mySim?.wins  ?? 0
+        const oppW = oppSim?.wins ?? 0
+        const w = myW > oppW ? 'me' : myW < oppW ? 'opp' : (myOVR >= oppOVR ? 'me' : 'opp')
 
-    return () => { clearTimeout(t1); clearTimeout(t2) }
+        setMyStats(mySim)
+        setOppStats(oppSim)
+        setWinner(w)
+        setPhase('result')
+        channel?.send({
+          type: 'broadcast', event: 'vs_result_final',
+          payload: { hostStats: mySim, guestStats: oppSim, hostWinner: w },
+        }).catch(() => {})
+        if (!resultSent.current) { resultSent.current = true; onResult?.(w === 'me' ? 'win' : 'loss') }
+      }, 1600)
+    } else {
+      // Guest fallback: if the host's broadcast never arrives (lost packet,
+      // host tab died mid-compute), don't hang forever — compute locally as
+      // a last resort so the guest isn't stuck, even though this reintroduces
+      // the disagreement risk in that one edge case.
+      t3 = setTimeout(() => {
+        if (resultSent.current) return
+        console.warn('[versus] never received host result — falling back to local sim')
+        const mySim  = isRB ? runRBSimulation(myData.build, types) : runSimulation(myData.build, types, myData.team, gameMode === 'all-time')
+        const oppSim = isRB ? runRBSimulation(oppData.build, types) : runSimulation(oppData.build, types, oppData.team, gameMode === 'all-time')
+        const myW  = mySim?.wins  ?? 0
+        const oppW = oppSim?.wins ?? 0
+        const w = myW > oppW ? 'me' : myW < oppW ? 'opp' : (myOVR >= oppOVR ? 'me' : 'opp')
+        setMyStats(mySim)
+        setOppStats(oppSim)
+        setWinner(w)
+        setPhase('result')
+        resultSent.current = true
+        onResult?.(w === 'me' ? 'win' : 'loss')
+      }, 12000)
+    }
+
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3) }
   }, [])
+
+  // Guest: apply the host-broadcast result as soon as it arrives, flipping
+  // perspective (host's "me" is this side's "opp").
+  useEffect(() => {
+    if (role === 'host' || !vsFinalResult || resultSent.current) return
+    resultSent.current = true
+    setMyStats(vsFinalResult.guestStats)
+    setOppStats(vsFinalResult.hostStats)
+    const w = vsFinalResult.hostWinner === 'me' ? 'opp' : 'me'
+    setWinner(w)
+    setPhase('result')
+    onResult?.(w === 'me' ? 'win' : 'loss')
+  }, [vsFinalResult, role])
 
   const myQB  = myData.qb
   const oppQB = oppData.qb

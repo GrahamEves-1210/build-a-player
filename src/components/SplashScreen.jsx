@@ -3,7 +3,7 @@ import { nflHeadshot, HEADSHOT_BASE } from '../utils/simulation'
 import { supabase } from '../lib/supabase'
 
 const VOTE_KEY   = 'bap_next_mode_vote'
-const VOTE_SEED  = { db: 0, lb: 0, dl: 0, ol: 0 }
+const VOTE_SEED  = { lb: 0, dl: 0 }
 
 function hsUrl(id) {
   if (!id) return null
@@ -45,7 +45,7 @@ const POS_OPTIONS = [
     ],
   },
   {
-    pos: 'db', label: 'DB', classic: false, alltime: false, disabled: true,
+    pos: 'db', label: 'DB', classic: true, alltime: false, disabled: false,
     players: [
       { id: 'espn_4372012', color: '#fb4f14' },  // Pat Surtain II - DEN
       { id: 'espn_4686772', color: '#0C2340' },  // Christian Gonzalez - NE
@@ -66,14 +66,6 @@ const POS_OPTIONS = [
       { id: 'espn_3122132', color: '#003594' },  // Myles Garrett - LAR
       { id: 'espn_3916655', color: '#000000' },  // Maxx Crosby - LV
       { id: '10892',        color: '#03202f' },  // Will Anderson Jr - HOU
-    ],
-  },
-  {
-    pos: 'ol', label: 'OL', classic: false, alltime: false, disabled: true,
-    players: [
-      { id: 'espn_13241',   color: '#aa0000' },  // Trent Williams - SF
-      { id: 'espn_15797',   color: '#004c54' },  // Lane Johnson - PHI
-      { id: 'espn_3129308', color: '#002c5f' },  // Quenton Nelson - IND
     ],
   },
 ]
@@ -264,6 +256,18 @@ const TE_ATTRS = [
   { label: 'After Catch',  col: '#38bdf8', angle:   80, dist: 1.31, mx: 74, my: 44, dox: 270 },
 ]
 
+const DB_ATTRS = [
+  { label: 'Speed',            col: '#f87171', angle:  -35, dist: 1.32, mx: 58, my: 14 },
+  { label: 'Size',             col: '#fb923c', angle:   55, dist: 1.30, mx: 3,  my: 30 },
+  { label: 'Fluidity',         col: '#60a5fa', angle:   15, dist: 1.28, mx: 62, my: 52 },
+  { label: 'Press',            col: '#2dd4bf', angle:  210, dist: 1.31, mx: 4,  my: 62 },
+  { label: 'Ball Skills',      col: '#34d399', angle: -130, dist: 1.30, mx: 55, my: 72 },
+  { label: 'Zone IQ',          col: '#e879f9', angle:  -70, dist: 1.29, mx: 5,  my: 18, doy: -30, dox: 140 },
+  { label: 'Man Coverage',     col: '#a78bfa', angle:  100, dist: 1.32, mx: 60, my: 34, dox: -210 },
+  { label: 'Play Recognition', col: '#38bdf8', angle: -160, dist: 1.28, mx: 3,  my: 48, doy: 200 },
+  { label: 'Run Support',      col: '#fbbf24', angle:   80, dist: 1.31, mx: 74, my: 44, dox: 270 },
+]
+
 function FloatingChip({ label, col, angle, dist, visible, mx, my, isMobile, orbitScale = 1, dox = 0, doy = 0 }) {
   const x = isMobile ? mx : 50 + dist * 34 * orbitScale * Math.cos((angle * Math.PI) / 180)
   const y = isMobile ? my : 48 + dist * 30 * orbitScale * Math.sin((angle * Math.PI) / 180)
@@ -333,7 +337,7 @@ export default function SplashScreen({ onStart, onDepthChart }) {
     return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3) }
   }, [])
 
-  const attrs = position === 'te' ? TE_ATTRS : position === 'wr' ? WR_ATTRS : position === 'rb' ? RB_ATTRS : QB_ATTRS
+  const attrs = position === 'db' ? DB_ATTRS : position === 'te' ? TE_ATTRS : position === 'wr' ? WR_ATTRS : position === 'rb' ? RB_ATTRS : QB_ATTRS
 
   return (
     <div className={`splash-screen ${phase >= 1 ? 'splash-in' : ''}`}>
@@ -366,6 +370,8 @@ export default function SplashScreen({ onStart, onDepthChart }) {
           style={{ position: 'absolute', inset: 0, opacity: position === 'rb' ? 1 : 0 }} />
         <img src="/wr-silhouette.png" className="splash-figure" alt="" draggable={false}
           style={{ position: 'absolute', inset: 0, opacity: (position === 'wr' || position === 'te') ? 1 : 0, transform: 'scale(1.18)', transformOrigin: 'center center' }} />
+        <img src="/db-silhouette.png" className="splash-figure" alt="" draggable={false}
+          style={{ position: 'absolute', inset: 0, opacity: position === 'db' ? 1 : 0, transform: 'scale(1.05)', transformOrigin: 'center center' }} />
         <div className="splash-figure-glow" />
       </div>
 
@@ -385,7 +391,7 @@ export default function SplashScreen({ onStart, onDepthChart }) {
         <div className="splash-modes">
           <button className="splash-mode-classic" onClick={() => { localStorage.setItem('lastPosition', position); onStart('classic', position) }}>
             <div className="smode-title">Classic</div>
-            <div className="smode-badge">Current {position === 'rb' ? 'RBs' : position === 'wr' ? 'WRs' : position === 'te' ? 'TEs' : 'QBs'}</div>
+            <div className="smode-badge">Current {position === 'rb' ? 'RBs' : position === 'wr' ? 'WRs' : position === 'te' ? 'TEs' : position === 'db' ? 'DBs' : 'QBs'}</div>
             <div className="smode-cta">
               START DRAFTING
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -394,7 +400,7 @@ export default function SplashScreen({ onStart, onDepthChart }) {
             </div>
           </button>
 
-          {(position === 'te') ? (
+          {(position === 'te' || position === 'db') ? (
             <button className="splash-mode-alltime splash-mode-alltime--soon" disabled>
               <div className="splash-mode-alltime--soon-banner">COMING SOON</div>
               <div className="smode-title smode-title--alltime">All-Time</div>

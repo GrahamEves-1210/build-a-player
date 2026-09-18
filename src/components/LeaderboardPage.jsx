@@ -2,8 +2,9 @@
 import { supabase } from '../lib/supabase'
 import { ATTR, TEAMS, TYPES } from '../data/qbs'
 import { RB_TYPES } from '../data/rbs'
-import { WR_TYPES } from '../data/wrs'
-import { TE_TYPES } from '../data/tes'
+import { WR_TYPES, WR_ATTR } from '../data/wrs'
+import { TE_TYPES, TE_ATTR } from '../data/tes'
+import { DB_TYPES, DB_ATTR } from '../data/dbs'
 import { valToGrade, nflHeadshot } from '../utils/simulation'
 import QBAvatar from './QBAvatar'
 import HEADSHOTS from '../data/headshots.json'
@@ -48,6 +49,16 @@ const TE_METRICS = [
   { key: 'recs',    label: 'Recs',     fmt: v => v },
 ]
 
+const DB_METRICS = [
+  { key: 'rings',   label: 'Rings',    fmt: v => v },
+  { key: 'avgOvr',  label: 'Avg OVR',  fmt: v => v },
+  { key: 'wins',    label: 'Wins',     fmt: v => v },
+  { key: 'winPct',  label: 'Win %',    fmt: v => `${v}%` },
+  { key: 'tackles', label: 'Tackles',  fmt: v => v.toLocaleString() },
+  { key: 'ints',    label: 'INTs',     fmt: v => v },
+  { key: 'pbus',    label: 'PBUs',     fmt: v => v },
+]
+
 const TEAM_COLOR = Object.fromEntries(TEAMS.map(t => [t.short, t.color]))
 const QB_PHOTO   = (name) => nflHeadshot(HEADSHOTS[name])
 
@@ -87,14 +98,14 @@ function ChevronIcon({ open }) {
   )
 }
 
-function BuildExpand({ build, types = TYPES }) {
+function BuildExpand({ build, types = TYPES, attrMap = ATTR }) {
   const slots = types.filter(k => build[k])
   if (slots.length === 0) return <div className="lb-expand-empty">Build data unavailable</div>
   return (
     <div className="simp-attr-table lb-attr-table">
       {slots.map(k => {
         const data = build[k]
-        const meta = ATTR[k]
+        const meta = attrMap[k]
         const teamColor = TEAM_COLOR[data.team]
         return (
           <div key={k} className="simp-attr-row simp-row-visible">
@@ -113,7 +124,7 @@ function BuildExpand({ build, types = TYPES }) {
   )
 }
 
-export default function LeaderboardPage({ onBack, currentUser, adsDisabled = false, isRB = false, isWR = false, isTE = false }) {
+export default function LeaderboardPage({ onBack, currentUser, adsDisabled = false, isRB = false, isWR = false, isTE = false, isDB = false }) {
   // ── QB state ────────────────────────────────────────────────────────────────
   const [rows, setRows]               = useState([])
   const [bestBuilds, setBestBuilds]   = useState([])
@@ -168,6 +179,16 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
   const [teLoading, setTeLoading]           = useState(false)
   const [teBuildsLoading, setTeBuildsLoading] = useState(false)
   const [teMetric, setTeMetric]             = useState('rings')
+
+  // ── DB state ──────────────────────────────────────────────────────────────────
+  const [dbRows, setDbRows]                 = useState([])
+  const [dbBestBuilds, setDbBestBuilds]     = useState([])
+  const [dbWorstBuilds, setDbWorstBuilds]   = useState([])
+  const [dbLoaded, setDbLoaded]             = useState(false)
+  const [dbBuildsLoaded, setDbBuildsLoaded] = useState(false)
+  const [dbLoading, setDbLoading]           = useState(false)
+  const [dbBuildsLoading, setDbBuildsLoading] = useState(false)
+  const [dbMetric, setDbMetric]             = useState('rings')
 
   const [plusUids, setPlusUids] = useState(new Set())
 
@@ -285,7 +306,7 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
     })()
   }
 
-  useEffect(() => { setDailyLoaded(false); setDailyRows([]); if (view === 'daily' || view === 'wr-legends' || view === 'rb-legends') setView('profiles') }, [isRB, isWR, isTE]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setDailyLoaded(false); setDailyRows([]); if (view === 'daily' || view === 'wr-legends' || view === 'rb-legends') setView('profiles') }, [isRB, isWR, isTE, isDB]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── RB profiles ──────────────────────────────────────────────────────────────
   useEffect(() => { if (isRB) loadRB() }, []) // eslint-disable-line react-hooks/exhaustive-deps
@@ -517,6 +538,67 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
     })
   }
 
+  // ── DB profiles ───────────────────────────────────────────────────────────────
+  useEffect(() => { if (isDB) loadDB() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const loadDB = () => {
+    if (dbLoaded || !supabase) return
+    setDbLoading(true)
+    ;(async () => { try {
+      const { data } = await supabase.rpc('get_db_leaderboard')
+      const compiled = (data ?? []).map(u => {
+        const wins = Number(u.wins), losses = Number(u.losses)
+        const count = Number(u.count), totalOvr = Number(u.total_ovr)
+        const games = wins + losses
+        return {
+          uid: u.uid,
+          username: u.username || `Player_${u.uid.slice(0, 5)}`,
+          wins, losses, rings: Number(u.rings), playoffApps: Number(u.playoff_apps),
+          count, totalOvr, tackles: Number(u.tackles), ints: Number(u.ints), pbus: Number(u.pbus),
+          avgOvr: count > 0 ? +(totalOvr / count).toFixed(1) : 0,
+          winPct: games > 0 ? +((wins / games) * 100).toFixed(1) : 0,
+        }
+      })
+      setDbRows(compiled)
+      setDbLoaded(true)
+      setDbLoading(false)
+      const uids = compiled.map(r => r.uid)
+      supabase.from('accounts').select('id').in('id', uids)
+        .or('ads_disabled.eq.true,subscription_status.eq.active')
+        .then(({ data: pd }) => { if (pd) setPlusUids(prev => new Set([...prev, ...pd.map(a => a.id)])) })
+    } catch (e) { console.error('loadDB error', e); setDbLoading(false) } })()
+  }
+
+  // ── DB builds ─────────────────────────────────────────────────────────────────
+  const loadDBBuilds = () => {
+    if (dbBuildsLoaded || !supabase) return
+    setDbBuildsLoading(true)
+    const bestQ = supabase
+      .from('simulations')
+      .select('user_id, username, wins, losses, ovr, build, game_mode')
+      .ilike('game_mode', 'db-%')
+      .not('build', 'is', null)
+      .gte('ovr', 75)
+      .order('ovr', { ascending: false })
+      .order('wins', { ascending: false })
+      .limit(200)
+    const worstQ = supabase
+      .from('simulations')
+      .select('user_id, username, wins, losses, ovr, build, game_mode')
+      .ilike('game_mode', 'db-%')
+      .not('build', 'is', null)
+      .lt('ovr', 75)
+      .order('ovr', { ascending: true })
+      .order('wins', { ascending: true })
+      .limit(20)
+    Promise.all([bestQ, worstQ]).then(([best, worst]) => {
+      if (best.data)  setDbBestBuilds(best.data)
+      if (worst.data) setDbWorstBuilds(worst.data)
+      setDbBuildsLoaded(true)
+      setDbBuildsLoading(false)
+    })
+  }
+
   // ── Awards leaderboard ───────────────────────────────────────────────────────
   const loadAwards = () => {
     const modeKey = isRB ? 'rb' : 'qb'
@@ -554,7 +636,7 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
     const etDate = now.toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
     const isDST = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', timeZoneName: 'short' }).format(now).includes('EDT')
     const todayStartISO = `${etDate}T${isDST ? '04' : '05'}:00:00.000Z`
-    const classicMode = isTE ? 'te-classic' : isWR ? 'wr-classic' : isRB ? 'rb-classic' : 'classic'
+    const classicMode = isDB ? 'db-classic' : isTE ? 'te-classic' : isWR ? 'wr-classic' : isRB ? 'rb-classic' : 'classic'
     ;(async () => {
       const { data } = await supabase
         .from('simulations')
@@ -584,7 +666,7 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
     })()
   }
 
-  const isAwardsMetric = (isWR || isTE) ? false : isRB ? rbMetric === 'opoys' : metric === 'mvps'
+  const isAwardsMetric = (isWR || isTE || isDB) ? false : isRB ? rbMetric === 'opoys' : metric === 'mvps'
 
   // ── Helpers ──────────────────────────────────────────────────────────────────
   const switchBuildsTab = (tab) => { setBuildsTab(tab); setExpandedIdx(null) }
@@ -661,6 +743,21 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
   const teBuildsList  = buildsTab === 'best' ? teBestBuilds : teWorstBuilds
   const teBuildSlots  = Array.from({ length: buildsTab === 'best' ? 200 : 20 }, (_, i) => teBuildsList[i] ?? null)
 
+  // ── Derived DB lists ──────────────────────────────────────────────────────────
+  const activeDBMetric  = DB_METRICS.find(m => m.key === dbMetric)
+  const filteredDBRows  = dbMetric === 'avgOvr' || dbMetric === 'winPct'
+    ? dbRows.filter(r => r.count >= 10)
+    : dbRows
+  const sortedDB        = [...filteredDBRows].sort((a, b) => (b[dbMetric] - a[dbMetric]) || (b.wins - a.wins))
+  const dbProfileSlots  = Array.from({ length: 20 }, (_, i) => sortedDB[i] ?? null)
+
+  const myDBEntry   = currentUser ? filteredDBRows.find(r => r.uid === currentUser.id) : null
+  const myDBRank    = myDBEntry ? sortedDB.findIndex(r => r.uid === currentUser.id) + 1 : 0
+  const myDBInTop20 = dbProfileSlots.some(r => r?.uid === currentUser?.id)
+
+  const dbBuildsList  = buildsTab === 'best' ? dbBestBuilds : dbWorstBuilds
+  const dbBuildSlots  = Array.from({ length: buildsTab === 'best' ? 200 : 20 }, (_, i) => dbBuildsList[i] ?? null)
+
   // ── Render ───────────────────────────────────────────────────────────────────
   return (
     <div className="lb-page">
@@ -682,7 +779,8 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
             onClick={() => {
               setView('builds')
               setExpandedIdx(null)
-              if (isTE) loadTEBuilds()
+              if (isDB) loadDBBuilds()
+              else if (isTE) loadTEBuilds()
               else if (isWR) loadWRBuilds()
               else if (isRB) loadRBBuilds()
               else loadBuilds()
@@ -690,7 +788,7 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
           >
             Builds
           </button>
-          {!isRB && !isWR && !isTE && (
+          {!isRB && !isWR && !isTE && !isDB && (
             <button
               className={`lb-main-seg-btn lb-main-seg-btn-legends ${view === 'legends' ? 'lb-main-seg-active-gold' : ''}`}
               onClick={() => { setView('legends'); loadLegends() }}
@@ -734,7 +832,7 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
             <>
               <div className="lb-header">
                 <div className="lb-title lb-title-daily">Daily Leaderboard</div>
-                <div className="lb-subtitle">{isTE ? 'TE classic · resets midnight EST' : isWR ? 'WR classic · resets midnight EST' : isRB ? 'RB classic · resets midnight EST' : 'QB classic · resets midnight EST'}</div>
+                <div className="lb-subtitle">{isDB ? 'DB classic · resets midnight EST' : isTE ? 'TE classic · resets midnight EST' : isWR ? 'WR classic · resets midnight EST' : isRB ? 'RB classic · resets midnight EST' : 'QB classic · resets midnight EST'}</div>
                 <div className="lb-header-line lb-header-line-daily" />
               </div>
               <div className="lb-tabs-scroll">
@@ -792,25 +890,25 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
         {view === 'profiles' && (
           <>
             <div className="lb-header">
-              <div className="lb-title">{isTE ? 'TE Leaderboard' : isWR ? 'WR Leaderboard' : isRB ? 'RB Leaderboard' : 'Leaderboard'}</div>
+              <div className="lb-title">{isDB ? 'DB Leaderboard' : isTE ? 'TE Leaderboard' : isWR ? 'WR Leaderboard' : isRB ? 'RB Leaderboard' : 'Leaderboard'}</div>
               <div className="lb-subtitle">
-                {isTE ? 'TE mode · career stats · all players ranked' : isWR ? 'WR mode · career stats · all players ranked' : isRB ? 'RB mode · career stats · all players ranked' : 'Career stats · all players ranked'}
+                {isDB ? 'DB mode · career stats · all players ranked' : isTE ? 'TE mode · career stats · all players ranked' : isWR ? 'WR mode · career stats · all players ranked' : isRB ? 'RB mode · career stats · all players ranked' : 'Career stats · all players ranked'}
               </div>
-              <div className={`lb-header-line${isTE ? ' lb-header-line-wr' : isWR ? ' lb-header-line-wr' : isRB ? ' lb-header-line-rb' : ''}`} />
+              <div className={`lb-header-line${isDB ? ' lb-header-line-wr' : isTE ? ' lb-header-line-wr' : isWR ? ' lb-header-line-wr' : isRB ? ' lb-header-line-rb' : ''}`} />
             </div>
 
             <div className="lb-tabs-scroll">
-              {(isTE ? TE_METRICS : isWR ? WR_METRICS : isRB ? RB_METRICS : QB_METRICS).map(m => (
+              {(isDB ? DB_METRICS : isTE ? TE_METRICS : isWR ? WR_METRICS : isRB ? RB_METRICS : QB_METRICS).map(m => (
                 <button
                   key={m.key}
-                  className={`lb-tab${(isWR || isTE) ? ' lb-tab-wr' : isRB ? ' lb-tab-rb' : ''} ${(isTE ? teMetric : isWR ? wrMetric : isRB ? rbMetric : metric) === m.key ? `lb-tab-active${(isWR || isTE) ? ' lb-tab-active-wr' : isRB ? ' lb-tab-active-rb' : ''}` : ''}`}
-                  onClick={() => { if (isTE) setTeMetric(m.key); else if (isWR) setWrMetric(m.key); else if (isRB) setRbMetric(m.key); else setMetric(m.key); if (m.awards) loadAwards() }}
+                  className={`lb-tab${(isWR || isTE || isDB) ? ' lb-tab-wr' : isRB ? ' lb-tab-rb' : ''} ${(isDB ? dbMetric : isTE ? teMetric : isWR ? wrMetric : isRB ? rbMetric : metric) === m.key ? `lb-tab-active${(isWR || isTE || isDB) ? ' lb-tab-active-wr' : isRB ? ' lb-tab-active-rb' : ''}` : ''}`}
+                  onClick={() => { if (isDB) setDbMetric(m.key); else if (isTE) setTeMetric(m.key); else if (isWR) setWrMetric(m.key); else if (isRB) setRbMetric(m.key); else setMetric(m.key); if (m.awards) loadAwards() }}
                 >
                   {m.label}
                 </button>
               ))}
             </div>
-            {(['winPct', 'avgOvr'].includes(isTE ? teMetric : isWR ? wrMetric : isRB ? rbMetric : metric)) && (
+            {(['winPct', 'avgOvr'].includes(isDB ? dbMetric : isTE ? teMetric : isWR ? wrMetric : isRB ? rbMetric : metric)) && (
               <div className="lb-winpct-note">Min. 10 seasons required</div>
             )}
 
@@ -841,15 +939,15 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
                 )}
               </div>
             )
-            ) : (isTE ? teLoading : isWR ? wrLoading : isRB ? rbLoading : loading) ? (
+            ) : (isDB ? dbLoading : isTE ? teLoading : isWR ? wrLoading : isRB ? rbLoading : loading) ? (
               <LBSpinner />
             ) : (
-              <div className="lb-list" key={isTE ? teMetric : isWR ? wrMetric : isRB ? rbMetric : metric}>
-                {(isTE ? teProfileSlots : isWR ? wrProfileSlots : isRB ? rbProfileSlots : qbProfileSlots).map((row, i) =>
+              <div className="lb-list" key={isDB ? dbMetric : isTE ? teMetric : isWR ? wrMetric : isRB ? rbMetric : metric}>
+                {(isDB ? dbProfileSlots : isTE ? teProfileSlots : isWR ? wrProfileSlots : isRB ? rbProfileSlots : qbProfileSlots).map((row, i) =>
                   row ? (
                     <div
                       key={row.uid}
-                      className={`lb-row${(isWR || isTE) ? ' lb-row-wr' : isRB ? ' lb-row-rb' : ''} ${currentUser && row.uid === currentUser.id ? 'lb-row-me' : ''} ${i < 3 ? `lb-row-top${i + 1}` : ''}`}
+                      className={`lb-row${(isWR || isTE || isDB) ? ' lb-row-wr' : isRB ? ' lb-row-rb' : ''} ${currentUser && row.uid === currentUser.id ? 'lb-row-me' : ''} ${i < 3 ? `lb-row-top${i + 1}` : ''}`}
                       style={{ animationDelay: `${i * 35}ms` }}
                     >
                       <RankBadge rank={i + 1} />
@@ -864,11 +962,11 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
                         </div>
                       </div>
                       <div className="lb-row-val">
-                        {isTE ? activeTEMetric.fmt(row[teMetric]) : isWR ? activeWRMetric.fmt(row[wrMetric]) : isRB ? activeRBMetric.fmt(row[rbMetric]) : activeQBMetric.fmt(row[metric])}
+                        {isDB ? activeDBMetric.fmt(row[dbMetric]) : isTE ? activeTEMetric.fmt(row[teMetric]) : isWR ? activeWRMetric.fmt(row[wrMetric]) : isRB ? activeRBMetric.fmt(row[rbMetric]) : activeQBMetric.fmt(row[metric])}
                       </div>
                     </div>
                   ) : (
-                    <div key={`empty-${i}`} className={`lb-row lb-row-empty${(isWR || isTE) ? ' lb-row-wr' : isRB ? ' lb-row-rb' : ''}`} style={{ animationDelay: `${i * 35}ms` }}>
+                    <div key={`empty-${i}`} className={`lb-row lb-row-empty${(isWR || isTE || isDB) ? ' lb-row-wr' : isRB ? ' lb-row-rb' : ''}`} style={{ animationDelay: `${i * 35}ms` }}>
                       <div className="lb-rank-badge lb-rank-n">{i + 1}</div>
                       <div className="lb-row-info">
                         <div className="lb-row-name lb-empty-name">——</div>
@@ -915,6 +1013,25 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
                     </div>
                   </>
                 )}
+                {isDB && myDBEntry && !myDBInTop20 && (
+                  <>
+                    <div className="lb-you-sep">YOUR RANK · #{myDBRank}</div>
+                    <div className="lb-row lb-row-wr lb-row-me">
+                      <RankBadge rank={myDBRank} />
+                      <div className="lb-row-info">
+                        <div className="lb-row-name">
+                          {myDBEntry.username}
+                          {plusUids.has(myDBEntry.uid) && <span className="lb-plus-badge">+</span>}
+                          <span className="lb-you">you</span>
+                        </div>
+                        <div className="lb-row-sub">
+                          {myDBEntry.wins}W · {myDBEntry.losses}L · {myDBEntry.rings} ring{myDBEntry.rings !== 1 ? 's' : ''} · {myDBEntry.count} season{myDBEntry.count !== 1 ? 's' : ''}
+                        </div>
+                      </div>
+                      <div className="lb-row-val">{activeDBMetric.fmt(myDBEntry[dbMetric])}</div>
+                    </div>
+                  </>
+                )}
               </div>
             )}
           </>
@@ -924,31 +1041,31 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
         {view === 'builds' && (
           <>
             <div className="lb-header">
-              <div className="lb-title">{isTE ? 'TE Builds' : isWR ? 'WR Builds' : isRB ? 'RB Builds' : 'Builds'}</div>
-              <div className="lb-subtitle">{isTE ? 'TE mode · best and worst builds' : isWR ? 'WR mode · best and worst builds' : isRB ? 'RB mode · best and worst builds' : 'Best and worst builds'}</div>
-              <div className={`lb-header-line${(isWR || isTE) ? ' lb-header-line-wr' : isRB ? ' lb-header-line-rb' : ''}`} />
+              <div className="lb-title">{isDB ? 'DB Builds' : isTE ? 'TE Builds' : isWR ? 'WR Builds' : isRB ? 'RB Builds' : 'Builds'}</div>
+              <div className="lb-subtitle">{isDB ? 'DB mode · best and worst builds' : isTE ? 'TE mode · best and worst builds' : isWR ? 'WR mode · best and worst builds' : isRB ? 'RB mode · best and worst builds' : 'Best and worst builds'}</div>
+              <div className={`lb-header-line${(isWR || isTE || isDB) ? ' lb-header-line-wr' : isRB ? ' lb-header-line-rb' : ''}`} />
             </div>
 
             <div className="lb-tabs-scroll">
               <button
-                className={`lb-tab${(isWR || isTE) ? ' lb-tab-wr' : isRB ? ' lb-tab-rb' : ''} ${buildsTab === 'best' ? `lb-tab-active${(isWR || isTE) ? ' lb-tab-active-wr' : isRB ? ' lb-tab-active-rb' : ''}` : ''}`}
+                className={`lb-tab${(isWR || isTE || isDB) ? ' lb-tab-wr' : isRB ? ' lb-tab-rb' : ''} ${buildsTab === 'best' ? `lb-tab-active${(isWR || isTE || isDB) ? ' lb-tab-active-wr' : isRB ? ' lb-tab-active-rb' : ''}` : ''}`}
                 onClick={() => switchBuildsTab('best')}
               >
                 Best
               </button>
               <button
-                className={`lb-tab${(isWR || isTE) ? ' lb-tab-wr' : isRB ? ' lb-tab-rb' : ''} ${buildsTab === 'worst' ? `lb-tab-active${(isWR || isTE) ? ' lb-tab-active-wr' : isRB ? ' lb-tab-active-rb' : ''}` : ''}`}
+                className={`lb-tab${(isWR || isTE || isDB) ? ' lb-tab-wr' : isRB ? ' lb-tab-rb' : ''} ${buildsTab === 'worst' ? `lb-tab-active${(isWR || isTE || isDB) ? ' lb-tab-active-wr' : isRB ? ' lb-tab-active-rb' : ''}` : ''}`}
                 onClick={() => switchBuildsTab('worst')}
               >
                 Worst
               </button>
             </div>
 
-            {(isTE ? teBuildsLoading : isWR ? wrBuildsLoading : isRB ? rbBuildsLoading : buildsLoading) ? (
+            {(isDB ? dbBuildsLoading : isTE ? teBuildsLoading : isWR ? wrBuildsLoading : isRB ? rbBuildsLoading : buildsLoading) ? (
               <LBSpinner />
             ) : (
-              <div className="lb-list" key={`${isTE ? 'te-' : isWR ? 'wr-' : isRB ? 'rb-' : ''}builds-${buildsTab}`}>
-                {(isTE ? teBuildSlots : isWR ? wrBuildSlots : isRB ? rbBuildSlots : qbBuildSlots).map((row, i) =>
+              <div className="lb-list" key={`${isDB ? 'db-' : isTE ? 'te-' : isWR ? 'wr-' : isRB ? 'rb-' : ''}builds-${buildsTab}`}>
+                {(isDB ? dbBuildSlots : isTE ? teBuildSlots : isWR ? wrBuildSlots : isRB ? rbBuildSlots : qbBuildSlots).map((row, i) =>
                   row ? (
                     <div key={i} className="lb-expand-wrap" style={{ animationDelay: `${i * 35}ms` }}>
                       <div
@@ -968,7 +1085,11 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
                       </div>
                       {expandedIdx === i && (
                         <div className="lb-build-expand">
-                          <BuildExpand build={row.build || {}} types={isTE ? TE_TYPES : isWR ? WR_TYPES : isRB ? RB_TYPES : TYPES} />
+                          <BuildExpand
+                            build={row.build || {}}
+                            types={isDB ? DB_TYPES : isTE ? TE_TYPES : isWR ? WR_TYPES : isRB ? RB_TYPES : TYPES}
+                            attrMap={isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : ATTR}
+                          />
                         </div>
                       )}
                     </div>

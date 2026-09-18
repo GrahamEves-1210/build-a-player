@@ -584,7 +584,7 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
   return (
     <div className="versus-lobby">
       <Navbar
-        isBucket
+        isBucket={channelPrefix === 'bab'}
         gameMode="versus"
         user={user}
         onSignIn={onSignIn}

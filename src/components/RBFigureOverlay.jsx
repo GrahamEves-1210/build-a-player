@@ -44,6 +44,16 @@ function darkenColor(hex, factor = 0.6) {
   return `rgb(${Math.round(r * factor)},${Math.round(g * factor)},${Math.round(b * factor)})`
 }
 
+// Boosts red in a base skin tone before it's lightened/darkened downstream —
+// matches the warmer, more visibly red skin treatment used elsewhere (Bucket, DB, WR).
+function warmSkin(hex, redBoost = 22) {
+  if (!hex || hex === 'transparent') return hex
+  const r = Math.min(255, parseInt(hex.slice(1, 3), 16) + redBoost)
+  const g = parseInt(hex.slice(3, 5), 16)
+  const b = Math.max(0, parseInt(hex.slice(5, 7), 16) - 4)
+  return `rgb(${r},${g},${b})`
+}
+
 // Subtle lip redness — just slightly warmer than the skin tone
 function reddenSkin(hex) {
   if (!hex || hex === 'transparent') return 'transparent'
@@ -59,8 +69,8 @@ export default function RBFigureOverlay({ build }) {
   const sk  = (s) => build?.[s]?.skinColor  ?? 'transparent'
   const has = (s) => !!build?.[s]
 
-  const faceSkin  = sk('vision')
-  const armSkin   = sk('strength')
+  const faceSkin  = warmSkin(sk('vision'))
+  const armSkin   = warmSkin(sk('strength'))
   const eluSkin   = sk('elusiveness')
 
   let svg = PROCESSED_SVG
