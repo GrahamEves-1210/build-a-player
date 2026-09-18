@@ -588,7 +588,7 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
               ? (bucketPhoto ? '/basketballsilhouetteheadless.png' : '/basketballsilhouette.png')
               : isDB ? '/db-silhouette.png'
               : (isWR || isTE) ? '/wr-silhouette.png'
-              : isRB ? '/rbsilhouette.webp'
+              : isRB ? '/rb-silhouette.webp'
               : '/qb-silhouette.webp'
           }
           alt=""

@@ -15858,3 +15858,69 @@ html.is-mac [id^="pw-oop-bottom_rail"] > * {
 .odm-body { font-size: 13px; color: rgba(255,255,255,0.55); text-align: center; font-family: var(--mono); }
 .odm-ok { margin-top: 4px; padding: 11px 32px; background: rgba(74,222,128,0.1); border: 1px solid rgba(74,222,128,0.3); border-radius: 10px; color: #4ade80; font-size: 13px; font-weight: 800; letter-spacing: 0.08em; cursor: pointer; font-family: var(--mono); transition: background 0.15s; }
 .odm-ok:hover { background: rgba(74,222,128,0.18); }
+
+/* ── DB season line: ESPN-style one-row stat table ───────────────────────── */
+.dbt {
+  background: var(--grey-900);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.dbt-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.dbt-table {
+  width: 100%;
+  min-width: 330px;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+.dbt-table th,
+.dbt-table td { text-align: right; white-space: nowrap; }
+.dbt-table thead th {
+  padding: 8px 10px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.9px;
+  text-transform: uppercase;
+  color: var(--text-3);
+  background: var(--grey-800);
+  border-bottom: 1px solid var(--border);
+}
+.dbt-table tbody td {
+  padding: 14px 10px;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+  color: var(--text);
+}
+.dbt-table tbody td.dbt-dim { font-weight: 600; color: var(--text-3); }
+.dbt-table .dbt-name {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  text-align: left;
+  padding-left: 12px;
+  padding-right: 14px;
+}
+.dbt-table thead .dbt-name { background: var(--grey-800); }
+.dbt-table tbody .dbt-name {
+  background: var(--grey-900);
+  border-left: 3px solid var(--dbt-accent, var(--border));
+  padding-left: 10px;
+  font-weight: inherit;
+}
+.dbt-player {
+  display: block;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: -0.2px;
+  color: var(--text);
+}
+.dbt-meta {
+  display: block;
+  margin-top: 2px;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+  color: var(--text-3);
+}

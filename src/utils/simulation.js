@@ -2665,17 +2665,11 @@ const DPOY_CANDIDATE_POOL = [
   { name: 'Will Anderson Jr.', team: 'HOU', pos: 'EDGE', tier: 'A', weight: 18 },
   { name: 'Maxx Crosby',       team: 'LV',  pos: 'EDGE', tier: 'A', weight: 13 },
   { name: 'Aidan Hutchinson',  team: 'DET', pos: 'EDGE', tier: 'A', weight: 12 },
-  { name: 'T.J. Watt',         team: 'PIT', pos: 'EDGE', tier: 'A', weight: 10 },
   { name: 'Nick Bosa',         team: 'SF',  pos: 'EDGE', tier: 'B', weight: 8  },
   { name: 'Trey Hendrickson',  team: 'CIN', pos: 'EDGE', tier: 'B', weight: 6  },
-  { name: 'Micah Parsons',     team: 'GB',  pos: 'EDGE', tier: 'B', weight: 5  },
+  { name: 'Micah Parsons',     team: 'GB',  pos: 'EDGE', tier: 'B', weight: 20 },
   { name: 'Chris Jones',       team: 'KC',  pos: 'DL',   tier: 'B', weight: 6  },
-  { name: 'Quinnen Williams',  team: 'NYJ', pos: 'DL',   tier: 'C', weight: 4  },
   { name: 'Fred Warner',       team: 'SF',  pos: 'LB',   tier: 'B', weight: 6  },
-  { name: 'Roquan Smith',      team: 'BAL', pos: 'LB',   tier: 'C', weight: 4  },
-  { name: 'Zack Baun',         team: 'PHI', pos: 'LB',   tier: 'C', weight: 3  },
-  { name: 'Sauce Gardner',     team: 'IND', pos: 'CB',   tier: 'C', weight: 2  },
-  { name: 'Kyle Hamilton',     team: 'BAL', pos: 'S',    tier: 'C', weight: 2  },
 ]
 
 function pickWeighted(pool) {
@@ -2726,14 +2720,17 @@ export function calcDBDpoyResult(result) {
 
   // Historic-season "case strength", 0–1, benchmarked against real ball-hawk
   // seasons (Charles Woodson '09: 9 INT/3 TD, DaRon Bland '23: 9 INT/5 TD)
-  // and the modern DB tackle record (Budda Baker, 164 combined tackles, 2024)
-  const intCase   = Math.min(1, seasonINTs / 9)
+  // and the modern DB tackle record (Budda Baker, 164 combined tackles, 2024).
+  // INT and pick-six denominators sit below those all-time records because the
+  // sim's per-rating counts are calibrated to a typical season, not the record
+  // book — an elite build's real ceiling is ~6 INT / 1-2 pick-sixes.
+  const intCase   = Math.min(1, seasonINTs / 6)
   const pbuCase   = Math.min(1, seasonPBUs / 24)
   const tklCase   = Math.min(1, seasonTackles / 164)
-  const pick6Case = Math.min(1, seasonPickSixes / 3)
+  const pick6Case = Math.min(1, seasonPickSixes / 1.6)
   const ovrCase   = Math.max(0, Math.min(1, (ovr - 90) / 9))
 
-  const caseStrength = intCase * 0.34 + pbuCase * 0.22 + pick6Case * 0.20 + tklCase * 0.12 + ovrCase * 0.12
+  const caseStrength = intCase * 0.40 + pbuCase * 0.22 + pick6Case * 0.14 + tklCase * 0.12 + ovrCase * 0.12
 
   // Two hard gates, not a curve — below either, ZERO chance, no roll even
   // happens. Good-but-not-elite builds never sniff this award, full stop:
@@ -2755,7 +2752,7 @@ export function calcDBDpoyResult(result) {
   const userWins = Math.random() < winP
 
   if (userWins) {
-    const unanimous = seasonINTs >= 8 || seasonPickSixes >= 3
+    const unanimous = seasonINTs >= 7 || seasonPickSixes >= 2
     return { userWins: true, winner: null, unanimous, winnerStats: null }
   }
 
@@ -2813,20 +2810,23 @@ export function runDBSimulation(build, team = null) {
   //   play recognition/zone IQ speeding up the read (elite tackling safety
   //   runs 100-140/season, with the modern DB record — Budda Baker, 164
   //   combined tackles in 2024 — as the ceiling; a coverage corner tops out
-  //   closer to 55-70).
-  const tklSkill = rusN * 0.32 + szN * 0.20 + spdN * 0.18 + prkN * 0.15 + ziqN * 0.08 + prsN * 0.04 + manN * 0.03
+  //   closer to 55-70). Size matters less than instinct and range — the
+  //   5'10" Baker out-tackles 6'4" safeties — so run support and play
+  //   recognition lead.
+  const tklSkill = rusN * 0.36 + prkN * 0.18 + spdN * 0.16 + szN * 0.10 + ziqN * 0.09 + fluN * 0.05 + prsN * 0.03 + manN * 0.03
   // TFL: backfield splash plays need instinct + power to blow the play up
   //   before it develops, with speed and press as secondary factors.
   const tflSkill = rusN * 0.35 + szN * 0.25 + prkN * 0.25 + spdN * 0.10 + prsN * 0.05
   // Pick-six return chance: closing/return speed plus the recognition to see
-  //   the running lane once the ball is caught.
-  const pick6Chance = Math.min(0.30, 0.08 + spdN * 0.14 + prkN * 0.11)
+  //   the running lane once the ball is caught. Real DBs take roughly 1 in 10
+  //   interceptions to the house (league-wide ~6%; ball-hawk peaks 15-20%).
+  const pick6Chance = Math.min(0.20, 0.02 + spdN * 0.08 + prkN * 0.06)
 
   // Per-game Poisson means, calibrated against real-world season totals:
-  // avg starter ≈ 2–3 INT / 8–10 PBU / 40–65 tkl · elite ≈ 5–7 INT / 13–16 PBU
-  // · max build ≈ 12 INT / 25 PBU / ~164 tkl (true safety build, tackle
-  //   ceiling matched to Budda Baker's 2024 record of 164)
-  const intLambdaBase = 0.70 * Math.pow(intSkill, 3)
+  // avg starter ≈ 2 INT / 8–9 PBU · CB 50 tkl / S 65 tkl · elite ≈ 4–5 INT /
+  // 14–18 PBU · elite S 95–110 tkl · max build ≈ 8 INT / 25 PBU / ~150 tkl
+  // (true safety build, ceiling near Budda Baker's 2024 record of 164)
+  const intLambdaBase = 0.447 * Math.pow(intSkill, 2.2)
   // PBUs and tackles split by real position — corners see far more single-
   // coverage volume (Sauce Gardner's 20-PBU rookie year) so keep the higher
   // PBU ceiling and ONLY they get it; safeties get meaningfully fewer PBUs
@@ -2836,9 +2836,24 @@ export function runDBSimulation(build, team = null) {
   // anything close to 120 tackles in a season, unlike a true safety build.
   const pbuLambdaBase = (subpos === 's' ? 1.0 : 1.49) * Math.pow(pbuSkill, 2)
   const tklLambdaBase = subpos === 's'
-    ? 1.3 + 8.35 * Math.pow(tklSkill, 2.2)
-    : 1.3 + 3.2 * Math.pow(tklSkill, 1.7)
-  const tflLambdaBase = 0.60 * Math.pow(tflSkill, 2)
+    ? 1.3 + 7.4 * Math.pow(tklSkill, 1.8)
+    : 0.45 + 5.2 * Math.pow(tklSkill, 1.2)
+  // Backfield plays: safeties in the box average ~2 TFL/season (elite 5-8),
+  // corners ~1 (3+ is a slot/nickel outlier).
+  const tflLambdaBase = (subpos === 's' ? 0.45 : 0.20) * Math.pow(tflSkill, 2)
+
+  // Forced fumbles: strip technique comes from tackling instinct and ball
+  // skills, with power and closing speed behind it. A starting DB averages
+  // ~0.7/season (safeties a bit more — they tackle more), elite strippers
+  // 2-3, and the sim's ceiling for a maxed build sits around 3-4.
+  const ffSkill = rusN * 0.30 + hndN * 0.20 + prkN * 0.15 + szN * 0.15 + spdN * 0.10 + prsN * 0.10
+  const ffLambdaBase = (subpos === 's' ? 0.205 : 0.155) * Math.pow(ffSkill, 2.5)
+
+  // Season-long role/scheme luck: a corner moved into the slot, or a safety
+  // asked to play more box, sees more tackles all year regardless of rating.
+  // Applied once per season so counts swing like real year-to-year totals.
+  const tklRole = Math.max(0.75, Math.min(1.30, 1 + randN() * 0.20))
+  const pbuRole = Math.max(0.72, Math.min(1.35, 1 + randN() * 0.24))
 
   const teamOffN = team ? (team.off - 5) / 5 : 0
   const teamDefN = team ? (team.def - 5) / 5 : 0
@@ -2847,7 +2862,7 @@ export function runDBSimulation(build, team = null) {
   const playerTeamAvg = ((team?.off ?? 5.5) + (team?.def ?? 5.5)) / 2
 
   let wins = 0, losses = 0
-  let seasonINTs = 0, seasonPBUs = 0, seasonTackles = 0, seasonTFL = 0, seasonPickSixes = 0
+  let seasonINTs = 0, seasonPBUs = 0, seasonTackles = 0, seasonTFL = 0, seasonPickSixes = 0, seasonFF = 0
 
   const schedule = buildSchedule(team)
   const games = schedule.map(({ opponent, home }, i) => {
@@ -2867,9 +2882,10 @@ export function runDBSimulation(build, team = null) {
     const oppDefResist = 1 - oppDefN * 0.12
 
     const gameInt = poissonSample(Math.max(0, intLambdaBase * boost * oppOffBoost))
-    const gamePbu = poissonSample(Math.max(0, pbuLambdaBase * boost * oppOffBoost * oppDefResist))
-    const gameTkl = Math.max(1, poissonSample(tklLambdaBase * (badWeather ? 0.94 : 1.0)))
-    const gameTfl = poissonSample(Math.max(0, tflLambdaBase * boost))
+    const gamePbu = poissonSample(Math.max(0, pbuLambdaBase * pbuRole * boost * oppOffBoost * oppDefResist))
+    const gameTkl = Math.max(1, poissonSample(tklLambdaBase * tklRole * (1 + oppOffN * 0.06) * (badWeather ? 0.94 : 1.0)))
+    const gameTfl = poissonSample(Math.max(0, tflLambdaBase * tklRole * boost))
+    const gameFF  = poissonSample(Math.max(0, ffLambdaBase * boost))
     let gamePick6 = 0
     for (let k = 0; k < gameInt; k++) if (Math.random() < pick6Chance) gamePick6++
 
@@ -2877,6 +2893,7 @@ export function runDBSimulation(build, team = null) {
     seasonPBUs      += gamePbu
     seasonTackles   += gameTkl
     seasonTFL       += gameTfl
+    seasonFF        += gameFF
     seasonPickSixes += gamePick6
 
     // Team result — mostly driven by team quality, nudged by this DB's own big plays
@@ -2902,12 +2919,12 @@ export function runDBSimulation(build, team = null) {
 
     return {
       wk: i + 1, opponent, home, mySc, oppSc, won,
-      ints: gameInt, pbus: gamePbu, tackles: gameTkl, tfl: gameTfl, pickSixes: gamePick6,
+      ints: gameInt, pbus: gamePbu, tackles: gameTkl, tfl: gameTfl, ff: gameFF, pickSixes: gamePick6,
     }
   })
 
   const bestGame = [...games].sort((a, b) => {
-    const score = g => g.ints * 5 + g.pickSixes * 6 + g.pbus * 1.5 + g.tackles * 0.3 + g.tfl * 1.2
+    const score = g => g.ints * 5 + g.pickSixes * 6 + g.pbus * 1.5 + g.tackles * 0.3 + g.tfl * 1.2 + g.ff * 3
     return score(b) - score(a)
   })[0]
 
@@ -2975,8 +2992,9 @@ export function runDBSimulation(build, team = null) {
 
       const wMult = weather === 'snow' ? 0.90 : weather === 'rain' ? 0.94 : 1.0
       const pgInt = poissonSample(Math.max(0, intLambdaBase * 1.1 * wMult))
-      const pgPbu = poissonSample(Math.max(0, pbuLambdaBase * wMult))
-      const pgTkl = Math.max(1, poissonSample(tklLambdaBase))
+      const pgPbu = poissonSample(Math.max(0, pbuLambdaBase * pbuRole * wMult))
+      const pgTkl = Math.max(1, poissonSample(tklLambdaBase * tklRole))
+      const pgFF  = poissonSample(Math.max(0, ffLambdaBase))
 
       const oppTeamOffN = oppTeam ? (oppTeam.off - 5) / 5 : 0
       const oppTeamDefN = oppTeam ? (oppTeam.def - 5) / 5 : 0
@@ -3004,10 +3022,11 @@ export function runDBSimulation(build, team = null) {
       seasonINTs    += pgInt
       seasonPBUs    += pgPbu
       seasonTackles += pgTkl
+      seasonFF      += pgFF
 
       playoffRounds.push({
         round, opponent, home: pgHome, weather, mySc: finalMy, oppSc: finalOpp, won, overtime: pgOT,
-        ints: pgInt, pbus: pgPbu, tackles: pgTkl,
+        ints: pgInt, pbus: pgPbu, tackles: pgTkl, ff: pgFF,
       })
       if (won) pwins++
       else { eliminated = round; break }
@@ -3015,7 +3034,7 @@ export function runDBSimulation(build, team = null) {
 
     if (pwins === winsNeeded) {
       const sbGame = playoffRounds[playoffRounds.length - 1]
-      sbResult = { won: true, ints: sbGame.ints, pbus: sbGame.pbus, tackles: sbGame.tackles }
+      sbResult = { won: true, ints: sbGame.ints, pbus: sbGame.pbus, tackles: sbGame.tackles, ff: sbGame.ff }
     } else {
       sbResult = { won: false, round: eliminated, pwins }
     }
@@ -3026,7 +3045,7 @@ export function runDBSimulation(build, team = null) {
   return {
     team, ovr, wins, losses,
     games,
-    seasonINTs, seasonPBUs, seasonTackles, seasonTFL, seasonPickSixes,
+    seasonINTs, seasonPBUs, seasonTackles, seasonTFL, seasonFF, seasonPickSixes,
     bestGame, minAttrVal,
     playoffs, playoffRounds, sbResult, hasBye: playoffs && hasBye,
   }

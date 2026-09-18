@@ -30,7 +30,7 @@ function _wrOVR(a) {
 const _WRS = [
   // ARI
   { name: 'Marvin Harrison Jr.', short: 'Harrison',    team: 'ARI', teamName: 'Arizona Cardinals',     skin: '#5e3c22', height: 76, weight: 205, starter: true,  captain: true,  number: 18,
-    attrs: { speed: 7,  bodyControl: 6,  vertical: 8,  routeRunning: 6,  release: 8,  hands: 4,  awareness: 5,  size: 9,  afterCatch: 5  } },
+    attrs: { speed: 6,  bodyControl: 6,  vertical: 8,  routeRunning: 6,  release: 8,  hands: 4,  awareness: 5,  size: 9,  afterCatch: 5  } },
   { name: 'Michael Wilson',      short: 'Wilson',      team: 'ARI', teamName: 'Arizona Cardinals',     skin: '#5e3c22', height: 75, weight: 220, starter: false, number: 14,
     attrs: { speed: 6,  bodyControl: 7,  vertical: 6,  routeRunning: 5,  release: 6,  hands: 6,  awareness: 5,  size: 9,  afterCatch: 5  } },
   { name: 'Kendrick Bourne',     short: 'Bourne',      team: 'ARI', teamName: 'Arizona Cardinals',     skin: '#5e3c22', height: 73, weight: 203, starter: false, number: 84,
@@ -39,7 +39,7 @@ const _WRS = [
     attrs: { speed: 3,  bodyControl: 3,  vertical: 6,  routeRunning: 2,  release: 3,  hands: 4,  awareness: 4,  size: 10, afterCatch: 3  } },
   // ATL
   { name: 'Drake London',        short: 'London',      team: 'ATL', teamName: 'Atlanta Falcons',       skin: '#5e3c22', height: 76, weight: 219, starter: true,  captain: true,  number: 5,
-    attrs: { speed: 6,  bodyControl: 9,  vertical: 9,  routeRunning: 7,  release: 7,  hands: 9,  awareness: 7,  size: 10, afterCatch: 6  } },
+    attrs: { speed: 7,  bodyControl: 9,  vertical: 9,  routeRunning: 7,  release: 7,  hands: 9,  awareness: 7,  size: 10, afterCatch: 6  } },
   { name: 'Jahan Dotson',        short: 'Dotson',      team: 'ATL', teamName: 'Atlanta Falcons',       skin: '#5e3c22', height: 71, weight: 178, starter: false, number: 1,
     attrs: { speed: 7,  bodyControl: 5,  vertical: 7,  routeRunning: 5,  release: 5,  hands: 5,  awareness: 5,  size: 5,  afterCatch: 5  } },
   { name: 'Olamide Zaccheaus',   short: 'Zaccheaus',   team: 'ATL', teamName: 'Atlanta Falcons',       skin: '#3a2010', height: 68, weight: 192, starter: false, number: 17,
@@ -48,7 +48,7 @@ const _WRS = [
     attrs: { speed: 9,  bodyControl: 5,  vertical: 6,  routeRunning: 3,  release: 2,  hands: 4,  awareness: 3,  size: 4,  afterCatch: 6  } },
   // BAL
   { name: 'Zay Flowers',         short: 'Flowers',     team: 'BAL', teamName: 'Baltimore Ravens',      skin: '#3a2010', height: 69, weight: 175, starter: true,  captain: true,  number: 4,
-    attrs: { speed: 9,  bodyControl: 9,  vertical: 5,  routeRunning: 8,  release: 8,  hands: 6,  awareness: 7,  size: 3,  afterCatch: 8  } },
+    attrs: { speed: 10,  bodyControl: 9,  vertical: 5,  routeRunning: 8,  release: 8,  hands: 6,  awareness: 7,  size: 3,  afterCatch: 8  } },
   { name: 'Rashod Bateman',      short: 'Bateman',     team: 'BAL', teamName: 'Baltimore Ravens',      skin: '#5e3c22', height: 72, weight: 190, starter: false, number: 1,
     attrs: { speed: 8,  bodyControl: 6,  vertical: 6,  routeRunning: 6,  release: 6,  hands: 4,  awareness: 4,  size: 6,  afterCatch: 4  } },
   { name: 'Devontez Walker',     short: 'Walker',      team: 'BAL', teamName: 'Baltimore Ravens',      skin: '#5e3c22', height: 73, weight: 190, starter: false, number: 14,
@@ -74,7 +74,7 @@ const _WRS = [
   { name: 'Chris Brazzell II',   short: 'Brazzell',    team: 'CAR', teamName: 'Carolina Panthers',     skin: '#5e3c22', height: 77, weight: 210, starter: false, number: 18,
     attrs: { speed: 8,  bodyControl: 5,  vertical: 7,  routeRunning: 3,  release: 3,  hands: 4,  awareness: 3,  size: 10, afterCatch: 3  } },
   { name: 'Jalen Coker',         short: 'Coker',       team: 'CAR', teamName: 'Carolina Panthers',     skin: '#3a2010', height: 74, weight: 200, starter: false, number: 15,
-    attrs: { speed: 6,  bodyControl: 6,  vertical: 9,  routeRunning: 5,  release: 5,  hands: 8,  awareness: 8,  size: 8,  afterCatch: 4  } },
+    attrs: { speed: 7,  bodyControl: 6,  vertical: 9,  routeRunning: 5,  release: 5,  hands: 8,  awareness: 8,  size: 8,  afterCatch: 4  } },
   // CHI
   { name: 'Rome Odunze',         short: 'Odunze',      team: 'CHI', teamName: 'Chicago Bears',         skin: '#5e3c22', height: 75, weight: 215, starter: true,  captain: true,  number: 15,
     attrs: { speed: 8,  bodyControl: 8,  vertical: 9,  routeRunning: 7,  release: 7,  hands: 8,  awareness: 6,  size: 9,  afterCatch: 6  } },

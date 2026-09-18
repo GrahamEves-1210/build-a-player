@@ -184,8 +184,11 @@ function DBDepthChart({ team, build, types }) {
   })
   const userRow = { name: 'Your Build', ovr: userOVR, isUser: true, photo: userPhoto, teamColor: team.color, teamShort: team.short }
 
-  const teamSafeties = DBS.filter(d => d.team === team.short && d.subpos === 's').map(withOVR).sort((a, b) => b.ovr - a.ovr).slice(0, 2)
-  const teamCorners  = DBS.filter(d => d.team === team.short && d.subpos === 'cb').map(withOVR).sort((a, b) => b.ovr - a.ovr).slice(0, 2)
+  // Always two starters per position: your build takes one of the two spots in
+  // its own group (the team's best player keeps the other), so the chart is
+  // always S, S, CB1, CB2 — never a CB3.
+  const teamSafeties = DBS.filter(d => d.team === team.short && d.subpos === 's').map(withOVR).sort((a, b) => b.ovr - a.ovr).slice(0, isUserSafety ? 1 : 2)
+  const teamCorners  = DBS.filter(d => d.team === team.short && d.subpos === 'cb').map(withOVR).sort((a, b) => b.ovr - a.ovr).slice(0, isUserSafety ? 2 : 1)
 
   const safetyRows = (isUserSafety ? [...teamSafeties.map(toRow), userRow] : teamSafeties.map(toRow))
     .sort((a, b) => b.ovr - a.ovr || (a.isUser ? 1 : -1))
@@ -208,6 +211,59 @@ function DBDepthChart({ team, build, types }) {
           <span className="wr-dc-ovr">{row.ovr}</span>
         </div>
       ))}
+    </div>
+  )
+}
+
+// ESPN-style season line: one header row of abbreviations, one data row, with
+// "Your Build" pinned as the first column (sticky so it stays put when the
+// table scrolls sideways on a phone). `values` lets the final screen pass
+// count-up animated numbers; anything left out falls back to the raw result.
+function DBStatTable({ result, build, values = {}, ready = true }) {
+  const team = result.team
+  const pos = build?.['size']?.subpos === 's' ? 'S' : 'CB'
+  const gp = (result.games?.length ?? 0) + (result.playoffRounds?.length ?? 0)
+  const v = {
+    gp,
+    tkl: values.tkl ?? result.seasonTackles,
+    tfl: values.tfl ?? result.seasonTFL,
+    pd:  values.pd  ?? result.seasonPBUs,
+    int: values.int ?? result.seasonINTs,
+    td:  values.td  ?? result.seasonPickSixes,
+    ff:  values.ff  ?? result.seasonFF ?? 0,
+  }
+  const cols = [
+    { key: 'gp',  label: 'GP',  dim: true },
+    { key: 'tkl', label: 'TKL' },
+    { key: 'tfl', label: 'TFL' },
+    { key: 'pd',  label: 'PD' },
+    { key: 'int', label: 'INT' },
+    { key: 'td',  label: 'TD' },
+    { key: 'ff',  label: 'FF' },
+  ]
+  return (
+    <div className="dbt" style={{ '--dbt-accent': team?.color ?? 'var(--border)' }}>
+      <div className="dbt-scroll">
+        <table className="dbt-table">
+          <thead>
+            <tr>
+              <th scope="col" className="dbt-name">Player</th>
+              {cols.map(c => <th key={c.key} scope="col">{c.label}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th scope="row" className="dbt-name">
+                <span className="dbt-player">Your Build</span>
+                <span className="dbt-meta">{team?.short ?? '—'} · {pos}</span>
+              </th>
+              {cols.map(c => (
+                <td key={c.key} className={c.dim ? 'dbt-dim' : undefined}>{ready ? v[c.key] : '–'}</td>
+              ))}
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   )
 }
@@ -279,7 +335,7 @@ function ScreenBuild({ result, build, types, onNext, isRB, isWR, isTE, isDB }) {
             <div className="simp-team-model-glow" />
             {isRB ? (
               <>
-                <img src="/rbsilhouette.webp" alt="" className="simp-sil-ghost" draggable={false} />
+                <img src="/rb-silhouette.webp" alt="" className="simp-sil-ghost" draggable={false} />
                 <RBFigureOverlay build={monoTeamBuild} />
               </>
             ) : (
@@ -406,6 +462,7 @@ function ScreenSeason({ result, onNext, isRB = false, isWR = false, isTE = false
                   <span className="sgr-stat">
                     {g.ints > 0 && <>{g.ints}<span className="sgr-unit">INT</span>{g.pickSixes > 0 ? ' (TD)' : ''} </>}
                     {g.pbus}<span className="sgr-unit">PBU</span> {g.tackles}<span className="sgr-unit">TKL</span>
+                    {g.ff > 0 && <> {g.ff}<span className="sgr-unit">FF</span></>}
                   </span>
                 ) : (isWR || isTE) ? (
                   <span className="sgr-stat">{g.rec}<span className="sgr-unit">rec</span> {g.recYds}<span className="sgr-unit">yds</span> {g.recTDs}<span className="sgr-unit">TD</span></span>
@@ -425,34 +482,9 @@ function ScreenSeason({ result, onNext, isRB = false, isWR = false, isTE = false
           {allDone && (
             <div className="simp-stat-section simp-totals-in">
               {!adsDisabled && <div id="ramp-season-prod" className="simp-season-ad" />}
-              <div className="simp-stat-group-lbl">Production</div>
+              <div className="simp-eyebrow">Production</div>
               {isDB ? (
-                <>
-                  <div className="simp-totals simp-totals-3">
-                    <div className="simp-total-cell">
-                      <div className="simp-total-val">{dbINTs}</div>
-                      <div className="simp-total-lbl">INTs</div>
-                    </div>
-                    <div className="simp-total-cell">
-                      <div className="simp-total-val">{seasonPBUs}</div>
-                      <div className="simp-total-lbl">PBUs</div>
-                    </div>
-                    <div className="simp-total-cell">
-                      <div className="simp-total-val">{seasonTackles}</div>
-                      <div className="simp-total-lbl">Tackles</div>
-                    </div>
-                  </div>
-                  <div className="simp-totals simp-totals-2" style={{ marginTop: 14 }}>
-                    <div className="simp-total-cell">
-                      <div className="simp-total-val">{seasonTFL}</div>
-                      <div className="simp-total-lbl">TFL</div>
-                    </div>
-                    <div className="simp-total-cell">
-                      <div className="simp-total-val">{seasonPickSixes}</div>
-                      <div className="simp-total-lbl">TDs</div>
-                    </div>
-                  </div>
-                </>
+                <DBStatTable result={result} build={build} />
               ) : (isWR || isTE) ? (
                 <>
                   <div className="simp-totals">
@@ -1155,7 +1187,7 @@ function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = fals
             <div className="simp-team-model-glow" />
             {isRB ? (
               <>
-                <img src="/rbsilhouette.webp" alt="" className="simp-sil-ghost" draggable={false} />
+                <img src="/rb-silhouette.webp" alt="" className="simp-sil-ghost" draggable={false} />
                 <RBFigureOverlay build={monoTeamBuild} />
               </>
             ) : (
@@ -1169,35 +1201,13 @@ function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = fals
       )}
 
       <div className="simp-stat-section">
-        <div className="simp-stat-group-lbl">Production</div>
+        <div className="simp-eyebrow">Production</div>
 
         {isDB ? (
-          <>
-            <div className="simp-totals simp-totals-3">
-              <div className="simp-total-cell">
-                <div className="simp-total-val">{show ? dbINTsAnim : '–'}</div>
-                <div className="simp-total-lbl">INTs</div>
-              </div>
-              <div className="simp-total-cell">
-                <div className="simp-total-val">{show ? dbPBUsAnim : '–'}</div>
-                <div className="simp-total-lbl">PBUs</div>
-              </div>
-              <div className="simp-total-cell">
-                <div className="simp-total-val">{show ? dbTacklesAnim : '–'}</div>
-                <div className="simp-total-lbl">Tackles</div>
-              </div>
-            </div>
-            <div className="simp-totals simp-totals-2" style={{ marginTop: 14 }}>
-              <div className="simp-total-cell">
-                <div className="simp-total-val">{show ? seasonTFL : '–'}</div>
-                <div className="simp-total-lbl">TFL</div>
-              </div>
-              <div className="simp-total-cell">
-                <div className="simp-total-val">{show ? seasonPickSixes : '–'}</div>
-                <div className="simp-total-lbl">TDs</div>
-              </div>
-            </div>
-          </>
+          <DBStatTable
+            result={result} build={build} ready={show}
+            values={{ tkl: dbTacklesAnim, pd: dbPBUsAnim, int: dbINTsAnim }}
+          />
         ) : (isWR || isTE) ? (
           <>
             <div className="simp-totals">

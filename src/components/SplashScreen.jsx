@@ -366,7 +366,7 @@ export default function SplashScreen({ onStart, onDepthChart }) {
       <div className="splash-figure-wrap" style={{ opacity: phase >= 2 ? 1 : 0, transform: phase >= 2 ? 'none' : 'translateY(40px) scale(0.92)' }}>
         <img src="/qb-silhouette.webp" className="splash-figure" alt="" draggable={false}
           style={{ position: 'absolute', inset: 0, opacity: position === 'qb' ? 1 : 0 }} />
-        <img src="/rbsilhouette.webp" className="splash-figure" alt="" draggable={false}
+        <img src="/rb-silhouette.webp" className="splash-figure" alt="" draggable={false}
           style={{ position: 'absolute', inset: 0, opacity: position === 'rb' ? 1 : 0 }} />
         <img src="/wr-silhouette.png" className="splash-figure" alt="" draggable={false}
           style={{ position: 'absolute', inset: 0, opacity: (position === 'wr' || position === 'te') ? 1 : 0, transform: 'scale(1.18)', transformOrigin: 'center center' }} />
