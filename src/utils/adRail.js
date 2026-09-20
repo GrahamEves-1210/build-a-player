@@ -10,16 +10,18 @@ const MAX_PX = 400
 
 // Tab bar sits this far above the bottom when no ad is showing
 // (see .mobile-tab-bar in index.css; the X in-app browser adds 20px)
+// The safe-area inset is measured once, before the observers below are attached,
+// because adding the probe element would otherwise retrigger them.
+let insetPx = null
+function measureInset() {
+  const probe = document.createElement('div')
+  probe.style.cssText = 'position:fixed;left:0;bottom:0;width:0;padding-bottom:env(safe-area-inset-bottom,0px);visibility:hidden;pointer-events:none'
+  document.body.appendChild(probe)
+  insetPx = probe.getBoundingClientRect().height
+  probe.remove()
+}
 function baseOffsetPx() {
-  const inset = (() => {
-    const probe = document.createElement('div')
-    probe.style.cssText = 'position:fixed;left:0;bottom:0;width:0;padding-bottom:env(safe-area-inset-bottom,0px);visibility:hidden;pointer-events:none'
-    document.body.appendChild(probe)
-    const px = probe.getBoundingClientRect().height
-    probe.remove()
-    return px
-  })()
-  return (document.documentElement.classList.contains('is-x-browser') ? 74 : 54) + inset
+  return (document.documentElement.classList.contains('is-x-browser') ? 74 : 54) + (insetPx ?? 0)
 }
 
 function isShown(node) {
@@ -95,8 +97,16 @@ export function watchAdRail() {
     }
   }
 
-  const tick = () => { attachResizeObs(); measure() }
-  tick()
+  const run = () => { attachResizeObs(); measure() }
+  // Coalesce bursts (spin animations mutate styles constantly) into one
+  // measurement per ~150ms so this never competes with rendering
+  let timer = null
+  const tick = () => {
+    if (timer) return
+    timer = setTimeout(() => { timer = null; run() }, 150)
+  }
+  measureInset()
+  run()
   const bodyObs = new MutationObserver(tick)
   bodyObs.observe(document.body, {
     childList: true, subtree: true, attributes: true,
@@ -113,5 +123,6 @@ export function watchAdRail() {
     window.removeEventListener('resize', tick)
     window.removeEventListener('orientationchange', tick)
     clearInterval(interval)
+    clearTimeout(timer)
   }
 }
