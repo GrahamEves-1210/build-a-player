@@ -5,8 +5,22 @@
 // its container in the DOM and keep matching that fallback.
 
 const RAIL_SELECTOR = '[id^="pw-oop"][data-pw-status="loaded"]'
-const GAP_PX = 2          // clearance above the ad (52px for a standard 50px rail)
+const GAP_PX = 4          // clearance between the buttons and the top of the ad
 const MAX_PX = 400
+
+// Tab bar sits this far above the bottom when no ad is showing
+// (see .mobile-tab-bar in index.css; the X in-app browser adds 20px)
+function baseOffsetPx() {
+  const inset = (() => {
+    const probe = document.createElement('div')
+    probe.style.cssText = 'position:fixed;left:0;bottom:0;width:0;padding-bottom:env(safe-area-inset-bottom,0px);visibility:hidden;pointer-events:none'
+    document.body.appendChild(probe)
+    const px = probe.getBoundingClientRect().height
+    probe.remove()
+    return px
+  })()
+  return (document.documentElement.classList.contains('is-x-browser') ? 74 : 54) + inset
+}
 
 function isShown(node) {
   const cs = window.getComputedStyle(node)
@@ -15,37 +29,31 @@ function isShown(node) {
   return r.width >= 4 && r.height >= 4
 }
 
-// True while the container holds actual visible ad content. Closing the ad can
-// leave the (still full-height) container behind with nothing inside it.
-function hasVisibleContent(el) {
+// Top edge (viewport y) of the ad's visible, clickable content, or null when
+// there is none. Closing the ad can leave the container behind with nothing
+// inside it, so the container's own size is not trusted.
+function contentTop(el) {
+  let top = null
   for (const node of el.querySelectorAll('iframe, img, video, canvas, svg, ins')) {
-    if (isShown(node)) return true
+    if (!isShown(node)) continue
+    const r = node.getBoundingClientRect()
+    if (r.bottom < window.innerHeight - 200) continue   // not part of a bottom rail
+    top = top === null ? r.top : Math.min(top, r.top)
   }
-  return false
+  return top
 }
 
-// Returns the px the ad occupies from the bottom of the viewport, 0 when it is
-// hidden / closed / gone, or null when it exists but has nothing to measure yet.
+// Extra px the buttons must rise above their normal position to clear the ad:
+// 0 when the ad is hidden/closed/gone (or short enough not to need it), null
+// when the container exists but has no visible content yet.
 function measureRail(el) {
   if (!el) return 0
   const cs = window.getComputedStyle(el)
   if (cs.display === 'none' || cs.visibility === 'hidden' || el.getClientRects().length === 0) return 0
-  if (!hasVisibleContent(el)) return null
-
-  let rect = el.getBoundingClientRect()
-  if (rect.height < 4) {
-    let best = null
-    for (const child of el.querySelectorAll('iframe, div')) {
-      const r = child.getBoundingClientRect()
-      if (r.height >= 4 && (!best || r.height > best.height)) best = r
-    }
-    if (!best) return null
-    rect = best
-  }
-  const vh = window.innerHeight
-  // Use the ad's real top edge so any offset from the bottom is included
-  const occupied = rect.bottom >= vh - 200 ? vh - rect.top : rect.height
-  return Math.min(MAX_PX, Math.max(0, Math.ceil(occupied)))
+  const top = contentTop(el)
+  if (top === null) return null
+  const occupied = window.innerHeight - top
+  return Math.min(MAX_PX, Math.max(0, Math.ceil(occupied - baseOffsetPx() + GAP_PX)))
 }
 
 export function watchAdRail() {
@@ -68,10 +76,10 @@ export function watchAdRail() {
       apply(seenVisible ? '0px' : null)
       return
     }
-    if (h > 4) { seenVisible = true; apply(`${h + GAP_PX}px`); return }
-    // Hidden, collapsed or removed: once an ad was showing, force back to 0 so
-    // the CSS :has() fallback can't keep the buttons raised.
-    apply(seenVisible || el ? '0px' : null)
+    // Visible ad -> rise exactly as much as needed; hidden, collapsed or removed
+    // -> force 0 so the CSS :has() fallback can't keep the buttons raised.
+    if (el) seenVisible = true
+    apply(`${h}px`)
   }
 
   let resizeObs = null
