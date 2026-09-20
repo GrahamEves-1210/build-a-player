@@ -133,7 +133,7 @@ function PositionPicker({ position, onChange, voteCounts, votedFor, onVote }) {
               onClick={() => select(opt.pos)}
               tabIndex={!open ? -1 : 0}
             >
-              {opt.pos === 'te' && <span className="splash-pos-new-tag">NEW</span>}
+              {opt.pos === 'db' && <span className="splash-pos-new-tag">NEW</span>}
               <div className="splash-pos-option-top">
                 <AvatarTrio players={opt.players} size={40} />
                 <span className="splash-pos-option-name">{opt.label}</span>
@@ -307,6 +307,7 @@ export default function SplashScreen({ onStart, onDepthChart }) {
   const [votedFor, setVotedFor] = useState(() => { try { return localStorage.getItem(VOTE_KEY) } catch { return null } })
 
   useEffect(() => {
+    if (!supabase) return
     supabase.from('mode_votes').select('position,count').then(({ data }) => {
       if (!data) return
       const counts = { ...VOTE_SEED }
@@ -320,7 +321,7 @@ export default function SplashScreen({ onStart, onDepthChart }) {
     try { localStorage.setItem(VOTE_KEY, pos) } catch {}
     setVotedFor(pos)
     setVoteCounts(prev => ({ ...prev, [pos]: (prev[pos] || 0) + 1 }))
-    try { await supabase.rpc('increment_mode_vote', { p_pos: pos }) } catch {}
+    try { await supabase?.rpc('increment_mode_vote', { p_pos: pos }) } catch {}
   }
 
   useEffect(() => {

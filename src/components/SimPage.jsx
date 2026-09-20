@@ -217,30 +217,63 @@ function DBDepthChart({ team, build, types }) {
 
 // ESPN-style season line: one header row of abbreviations, one data row, with
 // "Your Build" pinned as the first column (sticky so it stays put when the
-// table scrolls sideways on a phone). `values` lets the final screen pass
-// count-up animated numbers; anything left out falls back to the raw result.
-function DBStatTable({ result, build, values = {}, ready = true }) {
-  const team = result.team
-  const pos = build?.['size']?.subpos === 's' ? 'S' : 'CB'
-  const gp = (result.games?.length ?? 0) + (result.playoffRounds?.length ?? 0)
-  const v = {
-    gp,
-    tkl: values.tkl ?? result.seasonTackles,
-    tfl: values.tfl ?? result.seasonTFL,
-    pd:  values.pd  ?? result.seasonPBUs,
-    int: values.int ?? result.seasonINTs,
-    td:  values.td  ?? result.seasonPickSixes,
-    ff:  values.ff  ?? result.seasonFF ?? 0,
+// table scrolls sideways on a phone). Used for every position. `values` lets
+// the final screen pass count-up animated numbers keyed by column; anything
+// left out falls back to the raw result.
+const int0 = n => (typeof n === 'number' ? Math.round(n).toLocaleString() : n)
+const dec1 = n => (typeof n === 'number' ? n.toFixed(1) : n)
+
+function statCols(kind, r) {
+  const gp = { key: 'gp', label: 'GP', dim: true, val: r.games?.length ?? 0 }
+  switch (kind) {
+    case 'db': return [
+      gp,
+      { key: 'tkl', label: 'TKL', val: r.seasonTackles },
+      { key: 'tfl', label: 'TFL', val: r.seasonTFL },
+      { key: 'pd',  label: 'PD',  val: r.seasonPBUs },
+      { key: 'int', label: 'INT', val: r.seasonINTs },
+      { key: 'td',  label: 'TD',  val: r.seasonPickSixes },
+      { key: 'ff',  label: 'FF',  val: r.seasonFF ?? 0 },
+    ]
+    case 'rb': return [
+      gp,
+      { key: 'car',     label: 'CAR',     val: r.seasonCarries },
+      { key: 'rushYds', label: 'YDS',     val: r.seasonRushYds, fmt: int0 },
+      { key: 'ypc',     label: 'AVG',     val: r.seasonYPC, fmt: dec1 },
+      { key: 'rushTD',  label: 'TD',      val: r.seasonRushTDs },
+      { key: 'recYds',  label: 'REC YDS', val: r.seasonRecYds, fmt: int0 },
+      { key: 'recTD',   label: 'REC TD',  val: r.seasonRecTDs },
+      { key: 'fum',     label: 'FUM',     val: r.seasonFumbles },
+      { key: 'lng',     label: 'LNG',     val: r.seasonLong },
+    ]
+    case 'wr':
+    case 'te': return [
+      gp,
+      { key: 'tgt',    label: 'TGT', val: r.seasonTargets },
+      { key: 'rec',    label: 'REC', val: r.seasonRecs },
+      { key: 'recYds', label: 'YDS', val: r.seasonRecYds, fmt: int0 },
+      { key: 'ypr',    label: 'AVG', val: r.seasonYPR, fmt: dec1 },
+      { key: 'recTD',  label: 'TD',  val: r.seasonRecTDs },
+      { key: 'lng',    label: 'LNG', val: r.seasonLong },
+    ]
+    default: return [
+      gp,
+      { key: 'cmp',     label: 'CMP%',    val: r.seasonCompPct, fmt: n => `${n}%` },
+      { key: 'yds',     label: 'YDS',     val: r.seasonPassYds, fmt: int0 },
+      { key: 'td',      label: 'TD',      val: r.seasonTDs },
+      { key: 'int',     label: 'INT',     val: r.seasonINTs },
+      { key: 'rtg',     label: 'RTG',     val: r.seasonRating },
+      { key: 'rushYds', label: 'RSH YDS', val: r.seasonRushYds, fmt: int0 },
+      { key: 'rushTD',  label: 'RSH TD',  val: r.seasonRushTDs },
+      { key: 'sck',     label: 'SCK',     val: r.seasonSacks },
+    ]
   }
-  const cols = [
-    { key: 'gp',  label: 'GP',  dim: true },
-    { key: 'tkl', label: 'TKL' },
-    { key: 'tfl', label: 'TFL' },
-    { key: 'pd',  label: 'PD' },
-    { key: 'int', label: 'INT' },
-    { key: 'td',  label: 'TD' },
-    { key: 'ff',  label: 'FF' },
-  ]
+}
+
+function StatLineTable({ result, build, kind, values = {}, ready = true }) {
+  const team = result.team
+  const pos = kind === 'db' ? (build?.['size']?.subpos === 's' ? 'S' : 'CB') : kind.toUpperCase()
+  const cols = statCols(kind, result)
   return (
     <div className="dbt" style={{ '--dbt-accent': team?.color ?? 'var(--border)' }}>
       <div className="dbt-scroll">
@@ -257,9 +290,11 @@ function DBStatTable({ result, build, values = {}, ready = true }) {
                 <span className="dbt-player">Your Build</span>
                 <span className="dbt-meta">{team?.short ?? '—'} · {pos}</span>
               </th>
-              {cols.map(c => (
-                <td key={c.key} className={c.dim ? 'dbt-dim' : undefined}>{ready ? v[c.key] : '–'}</td>
-              ))}
+              {cols.map(c => {
+                const raw = values[c.key] ?? c.val
+                const shown = raw == null ? '–' : (c.fmt ? c.fmt(raw) : raw)
+                return <td key={c.key} className={c.dim ? 'dbt-dim' : undefined}>{ready ? shown : '–'}</td>
+              })}
             </tr>
           </tbody>
         </table>
@@ -483,110 +518,7 @@ function ScreenSeason({ result, onNext, isRB = false, isWR = false, isTE = false
             <div className="simp-stat-section simp-totals-in">
               {!adsDisabled && <div id="ramp-season-prod" className="simp-season-ad" />}
               <div className="simp-eyebrow">Production</div>
-              {isDB ? (
-                <DBStatTable result={result} build={build} />
-              ) : (isWR || isTE) ? (
-                <>
-                  <div className="simp-totals">
-                    <div className="simp-total-cell">
-                      <div className="simp-total-val">{seasonRecYds?.toLocaleString()}</div>
-                      <div className="simp-total-lbl">Yds</div>
-                    </div>
-                    <div className="simp-total-cell">
-                      <div className="simp-total-val">{seasonRecTDs}</div>
-                      <div className="simp-total-lbl">TDs</div>
-                    </div>
-                    <div className="simp-total-cell">
-                      <div className="simp-total-val">{seasonRecs}</div>
-                      <div className="simp-total-lbl">Rec</div>
-                    </div>
-                    <div className="simp-total-cell">
-                      <div className="simp-total-val">{seasonTargets}</div>
-                      <div className="simp-total-lbl">Targets</div>
-                    </div>
-                  </div>
-                  <div className="simp-totals simp-totals-2" style={{ marginTop: 14 }}>
-                    <div className="simp-total-cell">
-                      <div className="simp-total-val">{seasonYPR?.toFixed(1)}</div>
-                      <div className="simp-total-lbl">YPR</div>
-                    </div>
-                    <div className="simp-total-cell">
-                      <div className="simp-total-val">{seasonLong}</div>
-                      <div className="simp-total-lbl">Long</div>
-                    </div>
-                  </div>
-                </>
-              ) : isRB ? (
-                <>
-                  <div className="simp-totals">
-                    <div className="simp-total-cell">
-                      <div className="simp-total-val">{rbRushYds?.toLocaleString()}</div>
-                      <div className="simp-total-lbl">Rush Yds</div>
-                    </div>
-                    <div className="simp-total-cell">
-                      <div className="simp-total-val">{rbRushTDs}</div>
-                      <div className="simp-total-lbl">Rush TDs</div>
-                    </div>
-                    <div className="simp-total-cell">
-                      <div className="simp-total-val">{seasonYPC?.toFixed(1)}</div>
-                      <div className="simp-total-lbl">YPC</div>
-                    </div>
-                    <div className="simp-total-cell">
-                      <div className="simp-total-val">{seasonFumbles}</div>
-                      <div className="simp-total-lbl">Fumbles</div>
-                    </div>
-                  </div>
-                  <div className="simp-totals simp-totals-3" style={{ marginTop: 14 }}>
-                    <div className="simp-total-cell">
-                      <div className="simp-total-val">{seasonRecYds?.toLocaleString()}</div>
-                      <div className="simp-total-lbl">Rec Yds</div>
-                    </div>
-                    <div className="simp-total-cell">
-                      <div className="simp-total-val">{seasonRecTDs}</div>
-                      <div className="simp-total-lbl">Rec TDs</div>
-                    </div>
-                    <div className="simp-total-cell">
-                      <div className="simp-total-val">{seasonLong}</div>
-                      <div className="simp-total-lbl">Long</div>
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="simp-totals">
-                    <div className="simp-total-cell">
-                      <div className="simp-total-val">{seasonPassYds?.toLocaleString()}</div>
-                      <div className="simp-total-lbl">Pass Yds</div>
-                    </div>
-                    <div className="simp-total-cell">
-                      <div className="simp-total-val">{seasonTDs}</div>
-                      <div className="simp-total-lbl">Pass TDs</div>
-                    </div>
-                    <div className="simp-total-cell">
-                      <div className="simp-total-val">{seasonINTs}</div>
-                      <div className="simp-total-lbl">INTs</div>
-                    </div>
-                    <div className="simp-total-cell">
-                      <div className="simp-total-val">{seasonCompPct}%</div>
-                      <div className="simp-total-lbl">Comp%</div>
-                    </div>
-                  </div>
-                  <div className="simp-totals simp-totals-3" style={{ marginTop: 14 }}>
-                    <div className="simp-total-cell">
-                      <div className="simp-total-val">{qbRushYds?.toLocaleString()}</div>
-                      <div className="simp-total-lbl">Rush Yds</div>
-                    </div>
-                    <div className="simp-total-cell">
-                      <div className="simp-total-val">{qbRushTDs}</div>
-                      <div className="simp-total-lbl">Rush TDs</div>
-                    </div>
-                    <div className="simp-total-cell">
-                      <div className="simp-total-val">{seasonSacks}</div>
-                      <div className="simp-total-lbl">Sacks</div>
-                    </div>
-                  </div>
-                </>
-              )}
+              <StatLineTable result={result} build={build} kind={isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'} />
             </div>
           )}
 
@@ -1203,117 +1135,15 @@ function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = fals
       <div className="simp-stat-section">
         <div className="simp-eyebrow">Production</div>
 
-        {isDB ? (
-          <DBStatTable
-            result={result} build={build} ready={show}
-            values={{ tkl: dbTacklesAnim, pd: dbPBUsAnim, int: dbINTsAnim }}
-          />
-        ) : (isWR || isTE) ? (
-          <>
-            <div className="simp-totals">
-              <div className="simp-total-cell">
-                <div className="simp-total-val">{show ? wrRecYdsAnim.toLocaleString() : '–'}</div>
-                <div className="simp-total-lbl">Yds</div>
-              </div>
-              <div className="simp-total-cell">
-                <div className="simp-total-val">{show ? seasonRecTDs : '–'}</div>
-                <div className="simp-total-lbl">TDs</div>
-              </div>
-              <div className="simp-total-cell">
-                <div className="simp-total-val">{show ? seasonRecs : '–'}</div>
-                <div className="simp-total-lbl">Rec</div>
-              </div>
-              <div className="simp-total-cell">
-                <div className="simp-total-val">{show ? seasonTargets : '–'}</div>
-                <div className="simp-total-lbl">Targets</div>
-              </div>
-            </div>
-            <div className="simp-totals simp-totals-2" style={{ marginTop: 14 }}>
-              <div className="simp-total-cell">
-                <div className="simp-total-val">{show ? seasonYPR?.toFixed(1) : '–'}</div>
-                <div className="simp-total-lbl">YPR</div>
-              </div>
-              <div className="simp-total-cell">
-                <div className="simp-total-val">{show ? seasonLong : '–'}</div>
-                <div className="simp-total-lbl">Long</div>
-              </div>
-            </div>
-          </>
-        ) : isRB ? (
-          <>
-            <div className="simp-totals">
-              <div className="simp-total-cell">
-                <div className="simp-total-val">{show ? rbRushYdsAnim.toLocaleString() : '–'}</div>
-                <div className="simp-total-lbl">Rush Yds</div>
-              </div>
-              <div className="simp-total-cell">
-                <div className="simp-total-val">{show ? rbRushTDs : '–'}</div>
-                <div className="simp-total-lbl">Rush TDs</div>
-              </div>
-              <div className="simp-total-cell">
-                <div className="simp-total-val">{show ? seasonCarries : '–'}</div>
-                <div className="simp-total-lbl">Carries</div>
-              </div>
-              <div className="simp-total-cell">
-                <div className="simp-total-val">{show ? seasonYPC?.toFixed(1) : '–'}</div>
-                <div className="simp-total-lbl">YPC</div>
-              </div>
-            </div>
-            <div className="simp-totals" style={{ marginTop: 14 }}>
-              <div className="simp-total-cell">
-                <div className="simp-total-val">{show ? rbRecYdsAnim.toLocaleString() : '–'}</div>
-                <div className="simp-total-lbl">Rec Yds</div>
-              </div>
-              <div className="simp-total-cell">
-                <div className="simp-total-val">{show ? seasonRecTDs : '–'}</div>
-                <div className="simp-total-lbl">Rec TDs</div>
-              </div>
-              <div className="simp-total-cell">
-                <div className="simp-total-val">{show ? seasonFumbles : '–'}</div>
-                <div className="simp-total-lbl">Fumbles</div>
-              </div>
-              <div className="simp-total-cell">
-                <div className="simp-total-val">{show ? seasonLong : '–'}</div>
-                <div className="simp-total-lbl">Long</div>
-              </div>
-            </div>
-          </>
-        ) : (
-          <>
-            <div className="simp-totals">
-              <div className="simp-total-cell">
-                <div className="simp-total-val">{show ? yds.toLocaleString() : '–'}</div>
-                <div className="simp-total-lbl">Pass Yds</div>
-              </div>
-              <div className="simp-total-cell">
-                <div className="simp-total-val">{show ? tds : '–'}</div>
-                <div className="simp-total-lbl">Pass TDs</div>
-              </div>
-              <div className="simp-total-cell">
-                <div className="simp-total-val">{show ? ints : '–'}</div>
-                <div className="simp-total-lbl">INTs</div>
-              </div>
-              <div className="simp-total-cell">
-                <div className="simp-total-val">{show ? `${seasonCompPct}%` : '–'}</div>
-                <div className="simp-total-lbl">Comp%</div>
-              </div>
-            </div>
-            <div className="simp-totals simp-totals-3" style={{ marginTop: 14 }}>
-              <div className="simp-total-cell">
-                <div className="simp-total-val">{show ? rushYds.toLocaleString() : '–'}</div>
-                <div className="simp-total-lbl">Rush Yds</div>
-              </div>
-              <div className="simp-total-cell">
-                <div className="simp-total-val">{show ? seasonRushTDs : '–'}</div>
-                <div className="simp-total-lbl">Rush TDs</div>
-              </div>
-              <div className="simp-total-cell">
-                <div className="simp-total-val">{show ? sacks : '–'}</div>
-                <div className="simp-total-lbl">Sacks</div>
-              </div>
-            </div>
-          </>
-        )}
+        <StatLineTable
+          result={result} build={build} ready={show} kind={isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'}
+          values={
+            isDB ? { tkl: dbTacklesAnim, pd: dbPBUsAnim, int: dbINTsAnim }
+            : isRB ? { rushYds: rbRushYdsAnim, recYds: rbRecYdsAnim }
+            : (isWR || isTE) ? { recYds: wrRecYdsAnim }
+            : { yds, td: tds, int: ints, rushYds, sck: sacks }
+          }
+        />
 
         {mvpWon && (
           <div className="sfb-mvp-row">
