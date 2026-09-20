@@ -1,5 +1,6 @@
 ﻿import { useState, useCallback, useRef, useEffect, useLayoutEffect, useMemo, lazy, Suspense } from 'react'
 import { Helmet } from 'react-helmet-async'
+import { watchAdRail } from '../utils/adRail'
 import Navbar from './Navbar'
 import SpinScreen from './SpinScreen'
 import Silhouette from './Silhouette'
@@ -357,51 +358,8 @@ export default function BucketApp() {
     return () => document.documentElement.removeAttribute('data-sport')
   }, [])
 
-  // Measure bottom-rail ad height and set --ad-h so buttons move up correctly
-  useEffect(() => {
-    const root = document.documentElement
-    let elObs = null
-
-    function measure() {
-      const el = document.querySelector('[id^="pw-oop"][data-pw-status="loaded"]')
-      if (!el) { root.style.removeProperty('--ad-h'); return }
-      const cs = window.getComputedStyle(el)
-      if (cs.display === 'none' || cs.visibility === 'hidden') {
-        root.style.setProperty('--ad-h', '0px')
-        return
-      }
-      let h = el.getBoundingClientRect().height
-      if (h < 4) {
-        for (const child of el.querySelectorAll('iframe, div')) {
-          h = Math.max(h, child.getBoundingClientRect().height)
-        }
-      }
-      if (h > 4) {
-        const extra = Math.max(0, Math.ceil(h) - 50)
-        if (extra > 0) {
-          root.style.setProperty('--ad-h', `${extra}px`)
-        } else {
-          root.style.removeProperty('--ad-h')
-        }
-      } else {
-        root.style.removeProperty('--ad-h')
-      }
-    }
-
-    function attachElObs() {
-      if (elObs) { elObs.disconnect(); elObs = null }
-      const el = document.querySelector('[id^="pw-oop"][data-pw-status="loaded"]')
-      if (el) {
-        elObs = new MutationObserver(measure)
-        elObs.observe(el, { attributes: true, attributeFilter: ['style', 'class'] })
-      }
-    }
-
-    measure()
-    const bodyObs = new MutationObserver(() => { attachElObs(); measure() })
-    bodyObs.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-pw-status', 'style'] })
-    return () => { bodyObs.disconnect(); if (elObs) elObs.disconnect() }
-  }, [])
+  // Keep --ad-h in sync with the bottom-rail ad (rises with it, drops when closed)
+  useEffect(() => watchAdRail(), [])
 
   useEffect(() => {
     const handlePop = () => {
