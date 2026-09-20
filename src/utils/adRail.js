@@ -5,24 +5,8 @@
 // its container in the DOM and keep matching that fallback.
 
 const RAIL_SELECTOR = '[id^="pw-oop"][data-pw-status="loaded"]'
-const GAP_PX = 4          // clearance between the buttons and the top of the ad
+const GAP_PX = 2          // clearance above the ad: a 50px ad -> 52px lift
 const MAX_PX = 400
-
-// Tab bar sits this far above the bottom when no ad is showing
-// (see .mobile-tab-bar in index.css; the X in-app browser adds 20px)
-// The safe-area inset is measured once, before the observers below are attached,
-// because adding the probe element would otherwise retrigger them.
-let insetPx = null
-function measureInset() {
-  const probe = document.createElement('div')
-  probe.style.cssText = 'position:fixed;left:0;bottom:0;width:0;padding-bottom:env(safe-area-inset-bottom,0px);visibility:hidden;pointer-events:none'
-  document.body.appendChild(probe)
-  insetPx = probe.getBoundingClientRect().height
-  probe.remove()
-}
-function baseOffsetPx() {
-  return (document.documentElement.classList.contains('is-x-browser') ? 74 : 54) + (insetPx ?? 0)
-}
 
 function isShown(node) {
   const cs = window.getComputedStyle(node)
@@ -45,9 +29,9 @@ function contentTop(el) {
   return top
 }
 
-// Extra px the buttons must rise above their normal position to clear the ad:
-// 0 when the ad is hidden/closed/gone (or short enough not to need it), null
-// when the container exists but has no visible content yet.
+// Height of the visible, clickable ad from the bottom of the viewport (+ gap):
+// 0 when the ad is hidden/closed/gone, null when the container exists but has
+// no visible content yet.
 function measureRail(el) {
   if (!el) return 0
   const cs = window.getComputedStyle(el)
@@ -55,7 +39,7 @@ function measureRail(el) {
   const top = contentTop(el)
   if (top === null) return null
   const occupied = window.innerHeight - top
-  return Math.min(MAX_PX, Math.max(0, Math.ceil(occupied - baseOffsetPx() + GAP_PX)))
+  return Math.min(MAX_PX, Math.max(0, Math.ceil(occupied + GAP_PX)))
 }
 
 export function watchAdRail() {
@@ -105,7 +89,6 @@ export function watchAdRail() {
     if (timer) return
     timer = setTimeout(() => { timer = null; run() }, 150)
   }
-  measureInset()
   run()
   const bodyObs = new MutationObserver(tick)
   bodyObs.observe(document.body, {
