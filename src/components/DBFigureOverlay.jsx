@@ -1,3 +1,4 @@
+import { useState, useRef, useLayoutEffect } from 'react'
 import svgRaw from '../assets/db-figure-color.svg?raw'
 
 const PROCESSED_SVG = (() => {
@@ -101,7 +102,24 @@ function lipTint(hex) {
   return `rgb(${r},${g},${b})`
 }
 
-export default function DBFigureOverlay({ build }) {
+// numberNudgePx: screen-pixel offset for the chest jersey number (mobile tweak).
+// The SVG scales to fit its box, so convert px to viewBox units at runtime.
+export default function DBFigureOverlay({ build, numberNudgePx = null }) {
+  const numSvgRef = useRef(null)
+  const [unitsPerPx, setUnitsPerPx] = useState(1)
+  useLayoutEffect(() => {
+    if (!numberNudgePx) return
+    const measure = () => {
+      const r = numSvgRef.current?.getBoundingClientRect()
+      if (!r || !r.width || !r.height) return
+      setUnitsPerPx(1 / Math.min(r.width / 479, r.height / 1028))
+    }
+    measure()
+    window.addEventListener('resize', measure)
+    return () => window.removeEventListener('resize', measure)
+  }, [numberNudgePx])
+  const nudgeX = (numberNudgePx?.x ?? 0) * unitsPerPx
+  const nudgeY = (numberNudgePx?.y ?? 0) * unitsPerPx
   const tc  = (s) => build?.[s]?.teamColor  ?? 'transparent'
   const tc2 = (s) => build?.[s]?.teamColor2 ?? 'transparent'
   const sk  = (s) => build?.[s]?.skinColor  ?? 'transparent'
@@ -196,7 +214,7 @@ export default function DBFigureOverlay({ build }) {
       <div style={SVG_STYLE} dangerouslySetInnerHTML={{ __html: svg }} />
 
       {/* Jersey number + team name + shoulder numbers — angled to match the torso tilt */}
-      <svg viewBox="0 0 479 1028" preserveAspectRatio="xMidYMid meet"
+      <svg ref={numSvgRef} viewBox="0 0 479 1028" preserveAspectRatio="xMidYMid meet"
            style={SVG_STYLE} aria-hidden="true">
         <g transform={`rotate(${BODY_ANGLE}, 252, 300)`}>
           <text
@@ -230,6 +248,7 @@ export default function DBFigureOverlay({ build }) {
             helmet logo) so it stays in the jersey's real, unrotated coordinate
             space and can't bleed past the jersey's actual silhouette. */}
         <g clipPath="url(#db-jersey-clip)">
+          <g transform={`translate(${nudgeX}, ${nudgeY})`}>
           <g transform={`rotate(${BODY_ANGLE}, 252, 300)`}>
             <text
               x="269" y="458"
@@ -245,11 +264,12 @@ export default function DBFigureOverlay({ build }) {
                 transition: 'opacity 0.5s ease',
                 userSelect: 'none',
                 pointerEvents: 'none',
-                transform: 'perspective(360px) rotateY(-6deg) scaleY(0.9) rotate(5deg)',
+                transform: `perspective(360px) rotateY(-6deg) scaleY(0.9) rotate(${numberNudgePx ? 4 : 5}deg)`,
                 transformBox: 'fill-box',
                 transformOrigin: 'left top',
               }}
             >{sizeChip?.number ?? ''}</text>
+          </g>
           </g>
         </g>
 
