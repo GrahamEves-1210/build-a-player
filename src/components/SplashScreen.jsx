@@ -307,6 +307,7 @@ export default function SplashScreen({ onStart, onDepthChart }) {
   const [votedFor, setVotedFor] = useState(() => { try { return localStorage.getItem(VOTE_KEY) } catch { return null } })
 
   useEffect(() => {
+    if (!supabase) return
     supabase.from('mode_votes').select('position,count').then(({ data }) => {
       if (!data) return
       const counts = { ...VOTE_SEED }
@@ -320,7 +321,7 @@ export default function SplashScreen({ onStart, onDepthChart }) {
     try { localStorage.setItem(VOTE_KEY, pos) } catch {}
     setVotedFor(pos)
     setVoteCounts(prev => ({ ...prev, [pos]: (prev[pos] || 0) + 1 }))
-    try { await supabase.rpc('increment_mode_vote', { p_pos: pos }) } catch {}
+    try { await supabase?.rpc('increment_mode_vote', { p_pos: pos }) } catch {}
   }
 
   useEffect(() => {

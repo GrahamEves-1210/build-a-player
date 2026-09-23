@@ -108,6 +108,15 @@ const TE_ZONES = [
 const DB_FIG_W = 479
 const DB_FIG_H = 1028
 
+// Mobile-only dot nudges in screen px (+x right, +y down), per DB zone
+const DB_MOBILE_DOT_NUDGE_PX = {
+  zoneIQ:          { x: 15, y: -5 },
+  playRecognition: { x: 5,  y: -2 },
+  manCoverage:     { x: -1, y: 3 },
+  runSupport:      { x: -1, y: -14 },
+  size:            { x: -10, y: 0 },
+}
+
 // DB anchor positions — ax/ay are exact path bounding-box centers from
 // src/assets/db-figure-color.svg (the red dots on the body). cy is the
 // CARD's vertical position, independent of ax/ay — evenly spaced per side
@@ -409,6 +418,11 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
     if (isDB) {
       dotX = (dotX - 50) * DB_FIGURE_SCALE + 50
       dotY = (dotY - 50) * DB_FIGURE_SCALE + 50
+      const nudge = isMobile ? DB_MOBILE_DOT_NUDGE_PX[zone.type] : null
+      if (nudge) {
+        dotX += nudge.x / W * 100
+        dotY += nudge.y / H * 100
+      }
     }
     const zoneCardYNudgePx = (!isMobile && isBucket)
       ? (zone.type === 'passing' || zone.type === 'rebounding' ? -15 : zone.type === 'speed' ? 25 : zone.type === 'size' ? -100 : zone.type === 'handles' || zone.type === 'playmaking' ? -10 : 0)
@@ -669,7 +683,7 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
         {!isRB && !isWR && !isTE && !isDB && !isBucket && <QBFigureOverlay build={build} className="player-qbfig" />}
         {isDB && (
           <div style={{ position: 'absolute', inset: 0, transform: `scale(${DB_FIGURE_SCALE})`, transformOrigin: 'center center' }}>
-            <DBFigureOverlay build={build} />
+            <DBFigureOverlay build={build} numberNudgePx={isMobile ? { x: 7, y: 7 } : null} />
           </div>
         )}
         {isRB && (
