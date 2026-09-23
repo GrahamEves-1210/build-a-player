@@ -1062,7 +1062,7 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
                           onClick={() => { setBucketCareerMode('classic'); setShowRings(false) }}
                         >
                           <div className="prf-cgame-icon-wrap"><BballIcon /></div>
-                          <span className="prf-cgame-label">Classic</span>
+                          <span className="prf-cgame-label">Current</span>
                         </button>
                         <button
                           className={`prf-cgame-btn${isAlltimeBucket ? ' active' : ''}`}
@@ -1081,7 +1081,7 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
                     {!activeBucketCareer && (
                       <div className={`prf-card prf-card-empty ${show ? 'prf-card-in' : ''}`} style={{ animationDelay: '0.3s' }}>
                         <div className="prf-card-hd"><span className="prf-card-title">Career</span></div>
-                        <div className="prf-empty-msg">No {isAlltimeBucket ? 'All-Time' : 'Classic'} Build-A-Bucket seasons yet.</div>
+                        <div className="prf-empty-msg">No {isAlltimeBucket ? 'All-Time' : 'Current'} Build-A-Bucket seasons yet.</div>
                       </div>
                     )}
 

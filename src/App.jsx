@@ -68,7 +68,7 @@ function hideVideoAds() {
   })
 }
 
-const RAMP_AD_UNITS = ['bottom_rail', 'corner_ad_video', 'standard_iab', 'standard_iab_cntr1', 'video_bottom_rail']
+const RAMP_AD_UNITS = ['bottom_rail', 'corner_ad_video', 'left_rail', 'standard_iab', 'standard_iab_cntr1', 'video_bottom_rail']
 const RAMP_FORCE_OFF = RAMP_AD_UNITS.map(unit => ({ unit, force: 'off' }))
 
 function enableAdFreeMode() {
@@ -226,7 +226,14 @@ export default function App() {
   useEffect(() => {
     window.ramp?.que?.push(() => {
       window.ramp.spaNewPage()
-      if (page === 'splash') try { window.ramp.destroyUnits(RAMP_AD_UNITS) } catch {}
+      if (page === 'splash') {
+        try { window.ramp.destroyUnits(RAMP_AD_UNITS) } catch {}
+      } else {
+        // Playwire-requested video/rail units (2026-09 test) — kept off the splash
+        // page per existing house rule; Playwire scopes further (e.g. to /simulate
+        // only) on their side once this goes live.
+        try { window.ramp.spaAddAds([{ type: 'corner_ad_video' }, { type: 'left_rail' }]) } catch {}
+      }
     })
   }, [page])
 

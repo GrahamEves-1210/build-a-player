@@ -832,7 +832,7 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
             <>
               <div className="lb-header">
                 <div className="lb-title lb-title-daily">Daily Leaderboard</div>
-                <div className="lb-subtitle">{isDB ? 'DB classic · resets midnight EST' : isTE ? 'TE classic · resets midnight EST' : isWR ? 'WR classic · resets midnight EST' : isRB ? 'RB classic · resets midnight EST' : 'QB classic · resets midnight EST'}</div>
+                <div className="lb-subtitle">{isDB ? 'DB current · resets midnight EST' : isTE ? 'TE current · resets midnight EST' : isWR ? 'WR current · resets midnight EST' : isRB ? 'RB current · resets midnight EST' : 'QB current · resets midnight EST'}</div>
                 <div className="lb-header-line lb-header-line-daily" />
               </div>
               <div className="lb-tabs-scroll">

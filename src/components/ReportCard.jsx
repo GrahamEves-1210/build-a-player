@@ -328,10 +328,8 @@ export default function ReportCard({ build, onSimulate, onReset, types = TYPES, 
     weightLbs = rbPhys ? rbPhys.weight : null
   } else {
     const bodyPhys = build['size'] ? ALL_QB_PHYS[build['size'].qbFull] : null
-    const legsPhys = build['legs'] ? ALL_QB_PHYS[build['legs'].qbFull] : null
-    const hwBoth   = bodyPhys && legsPhys
-    heightStr = hwBoth ? fmtHeight(Math.round(0.65 * legsPhys.height + 0.35 * bodyPhys.height)) : null
-    weightLbs = hwBoth ? Math.round(0.65 * bodyPhys.weight + 0.35 * legsPhys.weight) : null
+    heightStr = bodyPhys ? fmtHeight(bodyPhys.height) : null
+    weightLbs = bodyPhys ? bodyPhys.weight : null
   }
 
   return (

@@ -1626,8 +1626,10 @@ export function runWRSimulation(build, types = WR_TYPES, team = null, isAllTime 
 
   // Targets: route running drives separation/volume; slot/YAC WRs get quick-game looks;
   // release = off-the-line separation; size/agi secondary contributors.
-  // Elite OVR WRs command more looks (star treatment, defensive attention = more scheming)
-  const ovrTargetBonus = ovr !== null ? Math.max(0, Math.min(1.4, (ovr - 82) / 14)) : 0
+  // Elite OVR WRs command more looks (star treatment, defensive attention = more scheming) —
+  // kicks in earlier and scales harder than before so a truly great (not just perfect) build
+  // reads as a clear WR1, not a marginal bump over an average build.
+  const ovrTargetBonus = ovr !== null ? Math.max(0, Math.min(1.55, (ovr - 80) / 13)) : 0
 
   // Depth chart position: fewer targets down the roster (WR2 slight, WR3/4 moderate)
   const dcRank = team?.short
@@ -1638,11 +1640,17 @@ export function runWRSimulation(build, types = WR_TYPES, team = null, isAllTime 
                : dcRank === 2 ? 0.75
                : 0.63
 
-  const targetBase = (3.3 + rteN * 2.2 + hndN * 0.9 + relN * 0.8 + yacN * 0.45 + agiN * 0.40 + szN * 0.15 + teamOffN * 0.5 + ovrTargetBonus) * dcMult
+  // All-Time opponents are full-weight elite defenses (see statScale below), which was
+  // quietly making a legend's box score look worse than the same build in Current mode —
+  // backwards for the "draft the greats" fantasy. A modest All-Time volume/rate bump keeps
+  // legends producing at or above their Current-mode equivalent despite tougher matchups.
+  const atBoost = isAllTime ? 1.08 : 1.0
+
+  const targetBase = (3.45 + rteN * 2.3 + hndN * 0.92 + relN * 0.82 + yacN * 0.46 + agiN * 0.41 + szN * 0.15 + teamOffN * 0.5 + ovrTargetBonus) * dcMult * atBoost
 
   // Catch rate: hands dominant; speed WRs = boom-or-bust (lower); slot/RAC guys = reliable
-  // A pure speed WR with no hands averages ~59-63%; elite hands WR hits ~74-78%
-  const catchBase = Math.min(0.82, 0.50 + hndN * 0.17 + rteN * 0.07 + awrN * 0.04 + yacN * 0.02 - spdN * 0.04)
+  // A pure speed WR with no hands averages ~59-63%; elite hands WR hits ~75-79%
+  const catchBase = Math.min(0.83, 0.515 + hndN * 0.175 + rteN * 0.07 + awrN * 0.04 + yacN * 0.02 - spdN * 0.038 + (isAllTime ? 0.01 : 0))
 
   // Piecewise OVR curve — steeply punishes bad WRs, full production at 82+
   const lowOvrCurve = ovr === null ? 1.0
@@ -1654,12 +1662,12 @@ export function runWRSimulation(build, types = WR_TYPES, team = null, isAllTime 
 
   // YPR: speed/vertical = big plays; SIZE actively reduces YPR (big WRs run shorter routes,
   // don't break away in the open field the way a small speed WR does)
-  const yprBase = Math.min(isAllTime ? 19.0 : 17.5,
-    10.0 + spdN * 2.8 + vrtN * 0.9 + yacN * 1.4 + agiN * 0.7 + rteN * 0.5 + awrN * 0.3 - szN * 0.8 + teamOffN * 0.4)
+  const yprBase = Math.min(isAllTime ? 19.2 : 17.5,
+    10.1 + spdN * 2.8 + vrtN * 0.9 + yacN * 1.4 + agiN * 0.7 + rteN * 0.5 + awrN * 0.3 - szN * 0.8 + teamOffN * 0.4)
 
   // TD rate: size + vertical = red zone monster (jump balls, contested catches);
   // speed and route running are secondary contributors to end zone production
-  const tdRateBase = 0.038 + szN * 0.030 + vrtN * 0.025 + hndN * 0.014 + rteN * 0.010 + awrN * 0.008 + teamOffN * 0.009
+  const tdRateBase = (0.039 + szN * 0.031 + vrtN * 0.026 + hndN * 0.0145 + rteN * 0.0105 + awrN * 0.0085 + teamOffN * 0.009) * atBoost
 
   // Win probability — WR is a moderate team contributor; defense/offense dominate
   const ovrPenalty = ovr !== null && ovr < 75

@@ -417,7 +417,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
           <div className="spin-top-row">
             {!isVersusMode && (
               <button className={`grade-toggle-btn${hideGrades ? ' grade-toggle-off' : ' grade-toggle-on'}`} onClick={toggleGrades}>
-                {hideGrades ? 'Hiding Grades' : 'Showing Grades'}
+                {hideGrades ? 'TURN ON GRADES' : 'TURN OFF GRADES'}
               </button>
             )}
           </div>

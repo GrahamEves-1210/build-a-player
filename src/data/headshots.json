@@ -612,7 +612,7 @@
   "Tyreek Hill": "3321",
   "Dwayne Bowe": "286",
   "Jeremy Maclin": "411",
-  "Tim Brown": "295",
+  "Tim Brown": null,
   "Amari Cooper": "2309",
   "Keenan Allen": "1479",
   "Vincent Jackson": "128",
@@ -775,5 +775,16 @@
   "Caleb Downs": "espn_4870706",
   "Michael Taaffe": "espn_4880346",
   "Amik Robertson": "espn_4239694",
-  "Cooper DeJean": "espn_4682618"
+  "Cooper DeJean": "espn_4682618",
+  "Cooper Rush": "espn_2972515",
+  "Joe Fagnano": "espn_4429582",
+  "Haynes King": "espn_4428993",
+  "Taylen Green": "espn_4431325",
+  "Kedon Slovis": "espn_4428512",
+  "Kurtis Rourke": "espn_4430431",
+  "Jalon Daniels": "espn_4596472",
+  "Easton Stick": "espn_3120590",
+  "Hendon Hooker": "espn_4240858",
+  "Jake Haener": "espn_4243322",
+  "Joshua Dobbs": "espn_3044720"
 }

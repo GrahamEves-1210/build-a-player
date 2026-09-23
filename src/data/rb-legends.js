@@ -69,7 +69,7 @@ const _raw = [
   {
     name: 'O.J. Simpson',    short: 'Simpson',     team: 'BUF', teamName: 'Buffalo Bills',
     skin: '#7a5030', number: 32, starter: true, captain: true, years: '1969–77',
-    attrs: { speed: 10, burst: 9, strength: 7, size: 6, balance: 8, elusiveness: 9, vision: 9, hands: 7, carrying: 8 }
+    attrs: { speed: 10, burst: 10, strength: 7, size: 6, balance: 8, elusiveness: 10, vision: 9, hands: 7, carrying: 8 }
   },
   {
     name: 'Thurman Thomas',  short: 'T. Thomas',   team: 'BUF', teamName: 'Buffalo Bills',
@@ -147,7 +147,7 @@ const _raw = [
   {
     name: 'Jim Brown',       short: 'J. Brown',    team: 'CLE', teamName: 'Cleveland Browns',
     skin: '#5e3c22', number: 32, starter: true, captain: true, years: '1957–65',
-    attrs: { speed: 9, burst: 9, strength: 11, size: 9, balance: 9, elusiveness: 8, vision: 9, hands: 8, carrying: 9 }
+    attrs: { speed: 9, burst: 9, strength: 11, size: 9, balance: 10, elusiveness: 8, vision: 10, hands: 7, carrying: 9 }
   },
   {
     name: 'Nick Chubb',      short: 'Chubb',       team: 'CLE', teamName: 'Cleveland Browns',
@@ -174,7 +174,7 @@ const _raw = [
   {
     name: 'Emmitt Smith',    short: 'E. Smith',    team: 'DAL', teamName: 'Dallas Cowboys',
     skin: '#7a5030', number: 22, starter: true, captain: true, years: '1990–02',
-    attrs: { speed: 7, burst: 7, strength: 8, size: 5, balance: 9, elusiveness: 7, vision: 11, hands: 8, carrying: 10 }
+    attrs: { speed: 7, burst: 8, strength: 9, size: 6, balance: 9, elusiveness: 8, vision: 11, hands: 8, carrying: 10 }
   },
   {
     name: 'Herschel Walker', short: 'H. Walker',   team: 'DAL', teamName: 'Dallas Cowboys',
@@ -432,7 +432,7 @@ const _raw = [
   {
     name: 'Deuce McAllister', short: 'McAllister', team: 'NO',  teamName: 'New Orleans Saints',
     skin: '#5e3c22', number: 26, starter: true, captain: true, years: '2001–08',
-    attrs: { speed: 8, burst: 8, strength: 9, size: 8, balance: 8, elusiveness: 7, vision: 8, hands: 7, carrying: 8 }
+    attrs: { speed: 8, burst: 8, strength: 9, size: 8, balance: 8, elusiveness: 7, vision: 8, hands: 6, carrying: 8 }
   },
   {
     name: 'Mark Ingram',     short: 'M. Ingram',   team: 'NO',  teamName: 'New Orleans Saints',
@@ -459,7 +459,7 @@ const _raw = [
   {
     name: 'Tiki Barber',     short: 'T. Barber',   team: 'NYG', teamName: 'New York Giants',
     skin: '#7a5030', number: 21, starter: true, captain: true, years: '1997–06',
-    attrs: { speed: 8, burst: 8, strength: 5, size: 4, balance: 7, elusiveness: 9, vision: 10, hands: 9, carrying: 7 }
+    attrs: { speed: 8, burst: 8, strength: 6, size: 5, balance: 7, elusiveness: 9, vision: 10, hands: 9, carrying: 7 }
   },
   {
     name: 'Saquon Barkley',  short: 'Barkley',     team: 'NYG', teamName: 'New York Giants',

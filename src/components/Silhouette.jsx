@@ -212,10 +212,8 @@ function HWTracker({ build, isRB = false, isWR = false, isTE = false, isBucket =
     wt = dbPhys ? dbPhys.weight : null
   } else {
     const bodyPhys = build['size'] ? ALL_QB_PHYS[build['size'].qbFull] : null
-    const legsPhys = build['legs'] ? ALL_QB_PHYS[build['legs'].qbFull] : null
-    const both = bodyPhys && legsPhys
-    ht = both ? fmtHeight(Math.round(0.65 * legsPhys.height + 0.35 * bodyPhys.height)) : null
-    wt = both ? Math.round(0.65 * bodyPhys.weight + 0.35 * legsPhys.weight) : null
+    ht = bodyPhys ? fmtHeight(bodyPhys.height) : null
+    wt = bodyPhys ? bodyPhys.weight : null
   }
   return (
     <div className="hw-tracker hw-tracker-pills">

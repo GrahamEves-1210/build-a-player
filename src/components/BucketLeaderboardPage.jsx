@@ -353,7 +353,7 @@ export default function BucketLeaderboardPage({ onBack, currentUser, adsDisabled
               className={`lb-pos-btn${lbMode === 'classic' ? ' lb-pos-btn-active' : ''}`}
               onClick={() => { setLbMode('classic'); setRows([]); setLoading(true) }}
             >
-              Classic
+              Current
             </button>
             <button
               className={`lb-pos-btn${lbMode === 'alltime' ? ' lb-pos-btn-active' : ''}`}

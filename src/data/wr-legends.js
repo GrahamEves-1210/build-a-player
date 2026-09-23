@@ -38,7 +38,7 @@ const _raw = [
   {
     name: 'DeAndre Hopkins',   short: 'D. Hopkins',    team: 'ARI', teamName: 'Arizona Cardinals',
     skin: '#5e3c22', height: 73, weight: 212, number: 10, starter: true, captain: true, years: '2020–22',
-    attrs: { speed: 8, bodyControl: 11, vertical: 10, routeRunning: 8, release: 9, hands: 11, awareness: 10, size: 8, afterCatch: 9 },
+    attrs: { speed: 8, bodyControl: 11, vertical: 9, routeRunning: 8, release: 9, hands: 11, awareness: 10, size: 8, afterCatch: 9 },
   },
   {
     name: 'Roy Green',         short: 'R. Green',      team: 'ARI', teamName: 'Arizona Cardinals',
@@ -50,7 +50,7 @@ const _raw = [
   {
     name: 'Julio Jones',       short: 'J. Jones',      team: 'ATL', teamName: 'Atlanta Falcons',
     skin: '#5e3c22', height: 75, weight: 220, number: 11, starter: true, captain: true, years: '2011–20',
-    attrs: { speed: 9, bodyControl: 11, vertical: 10, routeRunning: 9, release: 10, hands: 10, awareness: 9, size: 10, afterCatch: 8 },
+    attrs: { speed: 9, bodyControl: 11, vertical: 10, routeRunning: 9, release: 10, hands: 11, awareness: 9, size: 10, afterCatch: 8 },
   },
   {
     name: 'Roddy White',       short: 'R. White',      team: 'ATL', teamName: 'Atlanta Falcons',
@@ -71,34 +71,34 @@ const _raw = [
   },
   {
     name: 'Derrick Mason',     short: 'D. Mason',      team: 'BAL', teamName: 'Baltimore Ravens',
-    skin: '#5e3c22', height: 70, weight: 191, number: 85, starter: true, captain: true, years: '2005–10',
+    skin: '#5e3c22', height: 70, weight: 197, number: 85, starter: true, captain: true, years: '2005–10',
     attrs: { speed: 8, bodyControl: 8, vertical: 7, routeRunning: 8, release: 8, hands: 8, awareness: 8, size: 5, afterCatch: 8 },
   },
   {
     name: 'Torrey Smith',      short: 'T. Smith',      team: 'BAL', teamName: 'Baltimore Ravens',
-    skin: '#3a2010', height: 71, weight: 205, number: 82, starter: true, captain: true, years: '2011–14',
+    skin: '#3a2010', height: 72, weight: 205, number: 82, starter: true, captain: true, years: '2011–14',
     attrs: { speed: 10, bodyControl: 6, vertical: 9, routeRunning: 6, release: 7, hands: 7, awareness: 7, size: 7, afterCatch: 7 },
   },
   {
     name: 'Steve Smith Sr.',   short: 'S. Smith',      team: 'BAL', teamName: 'Baltimore Ravens',
-    skin: '#7a5030', height: 69, weight: 185, number: 89, starter: true, captain: true, years: '2014–16',
-    attrs: { speed: 9, bodyControl: 10, vertical: 7, routeRunning: 9, release: 11, hands: 9, awareness: 9, size: 3, afterCatch: 9 },
+    skin: '#7a5030', height: 69, weight: 195, number: 89, starter: true, captain: true, years: '2014–16',
+    attrs: { speed: 9, bodyControl: 10, vertical: 7, routeRunning: 9, release: 11, hands: 9, awareness: 11, size: 3, afterCatch: 10 },
   },
 
   // ─── BUFFALO BILLS ───────────────────────────────────────────────────────
   {
     name: 'Andre Reed',        short: 'A. Reed',       team: 'BUF', teamName: 'Buffalo Bills',
-    skin: '#5e3c22', height: 72, weight: 190, number: 83, starter: true, captain: true, years: '1985–00',
+    skin: '#5e3c22', height: 74, weight: 190, number: 83, starter: true, captain: true, years: '1985–00',
     attrs: { speed: 7, bodyControl: 9, vertical: 8, routeRunning: 9, release: 8, hands: 10, awareness: 9, size: 6, afterCatch: 9 },
   },
   {
     name: 'Stefon Diggs',      short: 'S. Diggs',      team: 'BUF', teamName: 'Buffalo Bills',
     skin: '#5e3c22', height: 72, weight: 191, number: 14, starter: true, captain: true, years: '2020–23',
-    attrs: { speed: 8, bodyControl: 9, vertical: 8, routeRunning: 10, release: 9, hands: 8, awareness: 9, size: 6, afterCatch: 9 },
+    attrs: { speed: 8, bodyControl: 8, vertical: 8, routeRunning: 10, release: 9, hands: 9, awareness: 9, size: 6, afterCatch: 9 },
   },
   {
     name: 'Eric Moulds',       short: 'Moulds',        team: 'BUF', teamName: 'Buffalo Bills',
-    skin: '#5e3c22', height: 72, weight: 210, number: 80, starter: true, captain: true, years: '1996–05',
+    skin: '#5e3c22', height: 74, weight: 225, number: 80, starter: true, captain: true, years: '1996–05',
     attrs: { speed: 8, bodyControl: 7, vertical: 8, routeRunning: 7, release: 7, hands: 8, awareness: 7, size: 7, afterCatch: 8 },
   },
 
@@ -106,8 +106,8 @@ const _raw = [
   // ─── CAROLINA PANTHERS ───────────────────────────────────────────────────
   {
     name: 'Steve Smith Sr.',   short: 'S. Smith',      team: 'CAR', teamName: 'Carolina Panthers',
-    skin: '#7a5030', height: 69, weight: 185, number: 89, starter: true, captain: true, years: '1999–13',
-    attrs: { speed: 9, bodyControl: 10, vertical: 9, routeRunning: 10, release: 11, hands: 9, awareness: 9, size: 3, afterCatch: 10 },
+    skin: '#7a5030', height: 69, weight: 195, number: 89, starter: true, captain: true, years: '1999–13',
+    attrs: { speed: 9, bodyControl: 10, vertical: 9, routeRunning: 10, release: 11, hands: 9, awareness: 11, size: 3, afterCatch: 10 },
   },
   {
     name: 'Muhsin Muhammad',   short: 'Muhammad',      team: 'CAR', teamName: 'Carolina Panthers',
@@ -116,14 +116,14 @@ const _raw = [
   },
   {
     name: 'DJ Moore',          short: 'DJ Moore',      team: 'CAR', teamName: 'Carolina Panthers',
-    skin: '#3a2010', height: 72, weight: 210, number: 2, starter: true, captain: true, years: '2018–22',
+    skin: '#3a2010', height: 72, weight: 213, number: 2, starter: true, captain: true, years: '2018–22',
     attrs: { speed: 8, bodyControl: 9, vertical: 8, routeRunning: 7, release: 6, hands: 7, awareness: 8, size: 6, afterCatch: 9 },
   },
 
   // ─── CHICAGO BEARS ───────────────────────────────────────────────────────
   {
     name: 'Brandon Marshall', short: 'Marshall',       team: 'CHI', teamName: 'Chicago Bears',
-    skin: '#5e3c22', height: 76, weight: 230, number: 15, starter: true, captain: true, years: '2012–14',
+    skin: '#5e3c22', height: 77, weight: 232, number: 15, starter: true, captain: true, years: '2012–14',
     attrs: { speed: 7, bodyControl: 9, vertical: 9, routeRunning: 7, release: 8, hands: 9, awareness: 9, size: 11, afterCatch: 9 },
   },
   {
@@ -133,12 +133,12 @@ const _raw = [
   },
   {
     name: 'Willie Gault',      short: 'Gault',         team: 'CHI', teamName: 'Chicago Bears',
-    skin: '#5e3c22', height: 72, weight: 176, number: 83, starter: true, captain: true, years: '1983–87',
+    skin: '#5e3c22', height: 72, weight: 178, number: 83, starter: true, captain: true, years: '1983–87',
     attrs: { speed: 10, bodyControl: 6, vertical: 7, routeRunning: 5, release: 6, hands: 6, awareness: 6, size: 5, afterCatch: 7 },
   },
   {
     name: 'Allen Robinson',    short: 'A. Robinson',   team: 'CHI', teamName: 'Chicago Bears',
-    skin: '#5e3c22', height: 74, weight: 220, number: 12, starter: true, captain: true, years: '2018–21',
+    skin: '#5e3c22', height: 74, weight: 210, number: 12, starter: true, captain: true, years: '2018–21',
     attrs: { speed: 8, bodyControl: 9, vertical: 8, routeRunning: 7, release: 7, hands: 9, awareness: 9, size: 9, afterCatch: 5 },
   },
 
@@ -155,12 +155,12 @@ const _raw = [
   },
   {
     name: 'Chris Collinsworth', short: 'Collinsworth', team: 'CIN', teamName: 'Cincinnati Bengals',
-    skin: '#f0c4a0', height: 74, weight: 192, number: 80, starter: true, captain: true, years: '1981–88',
+    skin: '#f0c4a0', height: 77, weight: 192, number: 80, starter: true, captain: true, years: '1981–88',
     attrs: { speed: 8, bodyControl: 8, vertical: 7, routeRunning: 9, release: 8, hands: 8, awareness: 9, size: 6, afterCatch: 8 },
   },
   {
     name: "Ja'Marr Chase",     short: 'Chase',         team: 'CIN', teamName: 'Cincinnati Bengals',
-    skin: '#5e3c22', height: 72, weight: 201, number: 1, starter: true, captain: true, years: '2021–',
+    skin: '#5e3c22', height: 72, weight: 205, number: 1, starter: true, captain: true, years: '2021–',
     attrs: { speed: 10, bodyControl: 11, vertical: 10, routeRunning: 9, release: 10, hands: 11, awareness: 9, size: 6,  afterCatch: 11 },
   },
 
@@ -172,19 +172,19 @@ const _raw = [
   },
   {
     name: 'Paul Warfield',     short: 'P. Warfield',   team: 'CLE', teamName: 'Cleveland Browns',
-    skin: '#5e3c22', height: 72, weight: 185, number: 42, starter: true, captain: true, years: '1964–69',
+    skin: '#5e3c22', height: 72, weight: 188, number: 42, starter: true, captain: true, years: '1964–69',
     attrs: { speed: 10, bodyControl: 8, vertical: 7, routeRunning: 7, release: 6, hands: 9, awareness: 8, size: 6, afterCatch: 7 },
   },
   {
     name: 'Jarvis Landry',     short: 'J. Landry',     team: 'CLE', teamName: 'Cleveland Browns',
-    skin: '#5e3c22', height: 71, weight: 205, number: 80, starter: true, captain: true, years: '2018–21',
+    skin: '#5e3c22', height: 71, weight: 202, number: 80, starter: true, captain: true, years: '2018–21',
     attrs: { speed: 4, bodyControl: 9, vertical: 5, routeRunning: 9, release: 6, hands: 10, awareness: 9, size: 7, afterCatch: 9 },
   },
 
   // ─── DALLAS COWBOYS ──────────────────────────────────────────────────────
   {
     name: 'Michael Irvin',     short: 'M. Irvin',      team: 'DAL', teamName: 'Dallas Cowboys',
-    skin: '#5e3c22', height: 75, weight: 207, number: 88, starter: true, captain: true, years: '1988–99',
+    skin: '#5e3c22', height: 74, weight: 207, number: 88, starter: true, captain: true, years: '1988–99',
     attrs: { speed: 8, bodyControl: 9, vertical: 8, routeRunning: 8, release: 9, hands: 9, awareness: 9, size: 9, afterCatch: 9 },
   },
   {
@@ -194,12 +194,12 @@ const _raw = [
   },
   {
     name: 'CeeDee Lamb',       short: 'CeeDee Lamb',   team: 'DAL', teamName: 'Dallas Cowboys',
-    skin: '#5e3c22', height: 74, weight: 198, number: 88, starter: true, captain: true, years: '2020–',
+    skin: '#5e3c22', height: 74, weight: 201, number: 88, starter: true, captain: true, years: '2020–',
     attrs: { speed: 7, bodyControl: 11, vertical: 9, routeRunning: 8, release: 10, hands: 8, awareness: 9, size: 8, afterCatch: 9 },
   },
   {
     name: 'Bob Hayes',         short: 'B. Hayes',      team: 'DAL', teamName: 'Dallas Cowboys',
-    skin: '#5e3c22', height: 71, weight: 185, number: 22, starter: true, captain: true, years: '1965–74',
+    skin: '#5e3c22', height: 72, weight: 187, number: 22, starter: true, captain: true, years: '1965–74',
     attrs: { speed: 11, bodyControl: 6, vertical: 9, routeRunning: 6, release: 6, hands: 7, awareness: 7, size: 5, afterCatch: 8 },
   },
   {
@@ -211,12 +211,12 @@ const _raw = [
   // ─── DENVER BRONCOS ──────────────────────────────────────────────────────
   {
     name: 'Demaryius Thomas',  short: 'D. Thomas',     team: 'DEN', teamName: 'Denver Broncos',
-    skin: '#5e3c22', height: 75, weight: 229, number: 88, starter: true, captain: true, years: '2010–18',
+    skin: '#5e3c22', height: 75, weight: 225, number: 88, starter: true, captain: true, years: '2010–18',
     attrs: { speed: 9, bodyControl: 9, vertical: 8, routeRunning: 8, release: 7, hands: 9, awareness: 8, size: 10, afterCatch: 9 },
   },
   {
     name: 'Rod Smith',         short: 'Rod Smith',     team: 'DEN', teamName: 'Denver Broncos',
-    skin: '#5e3c22', height: 73, weight: 200, number: 80, starter: true, captain: true, years: '1995–06',
+    skin: '#5e3c22', height: 72, weight: 200, number: 80, starter: true, captain: true, years: '1995–06',
     attrs: { speed: 8, bodyControl: 8, vertical: 7, routeRunning: 8, release: 7, hands: 8, awareness: 9, size: 7, afterCatch: 7 },
   },
   {
@@ -226,7 +226,7 @@ const _raw = [
   },
   {
     name: 'Ed McCaffrey',      short: 'McCaffrey',     team: 'DEN', teamName: 'Denver Broncos',
-    skin: '#f0c4a0', height: 76, weight: 215, number: 87, starter: true, captain: true, years: '1995–03',
+    skin: '#f0c4a0', height: 77, weight: 215, number: 87, starter: true, captain: true, years: '1995–03',
     attrs: { speed: 5, bodyControl: 7, vertical: 6, routeRunning: 7, release: 7, hands: 8, awareness: 8, size: 10, afterCatch: 6 },
   },
 
@@ -238,7 +238,7 @@ const _raw = [
   },
   {
     name: 'Herman Moore',      short: 'H. Moore',      team: 'DET', teamName: 'Detroit Lions',
-    skin: '#5e3c22', height: 74, weight: 210, number: 84, starter: true, captain: true, years: '1991–01',
+    skin: '#5e3c22', height: 76, weight: 210, number: 84, starter: true, captain: true, years: '1991–01',
     attrs: { speed: 8, bodyControl: 8, vertical: 9, routeRunning: 8, release: 7, hands: 9, awareness: 8, size: 9, afterCatch: 8 },
   },
   {
@@ -248,34 +248,34 @@ const _raw = [
   },
   {
     name: 'Roy Williams',      short: 'R. Williams',   team: 'DET', teamName: 'Detroit Lions',
-    skin: '#5e3c22', height: 74, weight: 220, number: 11, starter: true, captain: true, years: '2004–08',
+    skin: '#5e3c22', height: 75, weight: 215, number: 11, starter: true, captain: true, years: '2004–08',
     attrs: { speed: 7, bodyControl: 8, vertical: 8, routeRunning: 7, release: 6, hands: 7, awareness: 7, size: 9, afterCatch: 7 },
   },
 
   // ─── GREEN BAY PACKERS ───────────────────────────────────────────────────
   {
     name: 'Davante Adams',     short: 'D. Adams',      team: 'GB',  teamName: 'Green Bay Packers',
-    skin: '#5e3c22', height: 73, weight: 215, number: 17, starter: true, captain: true, years: '2014–21',
+    skin: '#5e3c22', height: 73, weight: 204, number: 17, starter: true, captain: true, years: '2014–21',
     attrs: { speed: 8, bodyControl: 10, vertical: 7, routeRunning: 11, release: 10, hands: 9, awareness: 10, size: 7, afterCatch: 9 },
   },
   {
     name: 'Sterling Sharpe',   short: 'S. Sharpe',     team: 'GB',  teamName: 'Green Bay Packers',
-    skin: '#5e3c22', height: 72, weight: 202, number: 84, starter: true, captain: true, years: '1988–94',
+    skin: '#5e3c22', height: 72, weight: 207, number: 84, starter: true, captain: true, years: '1988–94',
     attrs: { speed: 9, bodyControl: 9, vertical: 8, routeRunning: 9, release: 9, hands: 10, awareness: 9, size: 7, afterCatch: 9 },
   },
   {
     name: 'Jordy Nelson',      short: 'J. Nelson',     team: 'GB',  teamName: 'Green Bay Packers',
-    skin: '#f0c4a0', height: 74, weight: 217, number: 87, starter: true, captain: true, years: '2008–17',
+    skin: '#f0c4a0', height: 75, weight: 217, number: 87, starter: true, captain: true, years: '2008–17',
     attrs: { speed: 9, bodyControl: 8, vertical: 7, routeRunning: 8, release: 8, hands: 9, awareness: 8, size: 9, afterCatch: 8 },
   },
   {
     name: 'James Lofton',      short: 'J. Lofton',     team: 'GB',  teamName: 'Green Bay Packers',
-    skin: '#5e3c22', height: 74, weight: 192, number: 80, starter: true, captain: true, years: '1978–86',
+    skin: '#5e3c22', height: 75, weight: 192, number: 80, starter: true, captain: true, years: '1978–86',
     attrs: { speed: 10, bodyControl: 8, vertical: 9, routeRunning: 7, release: 8, hands: 8, awareness: 8, size: 6, afterCatch: 8 },
   },
   {
     name: 'Donald Driver',     short: 'D. Driver',     team: 'GB',  teamName: 'Green Bay Packers',
-    skin: '#5e3c22', height: 71, weight: 188, number: 80, starter: true, captain: true, years: '1999–12',
+    skin: '#5e3c22', height: 72, weight: 194, number: 80, starter: true, captain: true, years: '1999–12',
     attrs: { speed: 9, bodyControl: 8, vertical: 8, routeRunning: 8, release: 8, hands: 9, awareness: 8, size: 5, afterCatch: 8 },
   },
 
@@ -288,62 +288,62 @@ const _raw = [
   {
     name: 'DeAndre Hopkins',   short: 'D. Hopkins',    team: 'HOU', teamName: 'Houston Texans',
     skin: '#5e3c22', height: 73, weight: 212, number: 10, starter: true, captain: true, years: '2013–19',
-    attrs: { speed: 7, bodyControl: 11, vertical: 11, routeRunning: 8, release: 9, hands: 11, awareness: 10, size: 8, afterCatch: 9 },
+    attrs: { speed: 7, bodyControl: 11, vertical: 9, routeRunning: 8, release: 9, hands: 11, awareness: 10, size: 8, afterCatch: 9 },
   },
   {
     name: 'Brandin Cooks',     short: 'Cooks HOU',     team: 'HOU', teamName: 'Houston Texans',
-    skin: '#5e3c22', height: 70, weight: 183, number: 13, starter: true, captain: true, years: '2020–22',
+    skin: '#5e3c22', height: 70, weight: 190, number: 13, starter: true, captain: true, years: '2020–22',
     attrs: { speed: 10, bodyControl: 7, vertical: 8, routeRunning: 8, release: 9, hands: 8, awareness: 8, size: 4, afterCatch: 8 },
   },
 
   // ─── INDIANAPOLIS COLTS ──────────────────────────────────────────────────
   {
     name: 'Marvin Harrison',   short: 'M. Harrison',   team: 'IND', teamName: 'Indianapolis Colts',
-    skin: '#5e3c22', height: 72, weight: 175, number: 88, starter: true, captain: true, years: '1996–08',
+    skin: '#5e3c22', height: 72, weight: 185, number: 88, starter: true, captain: true, years: '1996–08',
     attrs: { speed: 9, bodyControl: 9, vertical: 8, routeRunning: 10, release: 11, hands: 10, awareness: 10, size: 5, afterCatch: 8 },
   },
   {
     name: 'Reggie Wayne',      short: 'R. Wayne',      team: 'IND', teamName: 'Indianapolis Colts',
-    skin: '#5e3c22', height: 71, weight: 198, number: 87, starter: true, captain: true, years: '2001–14',
+    skin: '#5e3c22', height: 72, weight: 203, number: 87, starter: true, captain: true, years: '2001–14',
     attrs: { speed: 8, bodyControl: 9, vertical: 8, routeRunning: 9, release: 9, hands: 9, awareness: 9, size: 5, afterCatch: 8 },
   },
   {
     name: 'Raymond Berry',     short: 'R. Berry',      team: 'IND', teamName: 'Indianapolis Colts',
-    skin: '#f0c4a0', height: 73, weight: 187, number: 82, starter: true, captain: true, years: '1955–67',
+    skin: '#f0c4a0', height: 74, weight: 187, number: 82, starter: true, captain: true, years: '1955–67',
     attrs: { speed: 5, bodyControl: 9, vertical: 7, routeRunning: 7, release: 8, hands: 9, awareness: 10, size: 5, afterCatch: 6 },
   },
   {
     name: 'T.Y. Hilton',       short: 'T.Y. Hilton',   team: 'IND', teamName: 'Indianapolis Colts',
-    skin: '#5e3c22', height: 70, weight: 178, number: 13, starter: true, captain: true, years: '2012–21',
+    skin: '#5e3c22', height: 70, weight: 183, number: 13, starter: true, captain: true, years: '2012–21',
     attrs: { speed: 9, bodyControl: 9, vertical: 6, routeRunning: 8, release: 6, hands: 7, awareness: 8, size: 4, afterCatch: 8 },
   },
 
   // ─── JACKSONVILLE JAGUARS ────────────────────────────────────────────────
   {
     name: 'Jimmy Smith',       short: 'Jimmy Smith',   team: 'JAX', teamName: 'Jacksonville Jaguars',
-    skin: '#5e3c22', height: 73, weight: 208, number: 82, starter: true, captain: true, years: '1995–05',
+    skin: '#5e3c22', height: 73, weight: 202, number: 82, starter: true, captain: true, years: '1995–05',
     attrs: { speed: 8, bodyControl: 9, vertical: 8, routeRunning: 9, release: 8, hands: 9, awareness: 9, size: 8, afterCatch: 8 },
   },
   {
     name: 'Keenan McCardell',  short: 'McCardell',     team: 'JAX', teamName: 'Jacksonville Jaguars',
-    skin: '#5e3c22', height: 72, weight: 191, number: 87, starter: true, captain: true, years: '1996–01',
+    skin: '#5e3c22', height: 73, weight: 191, number: 87, starter: true, captain: true, years: '1996–01',
     attrs: { speed: 7, bodyControl: 8, vertical: 7, routeRunning: 7, release: 7, hands: 9, awareness: 8, size: 6, afterCatch: 7 },
   },
   {
     name: 'Allen Robinson',    short: 'A. Rob JAX',    team: 'JAX', teamName: 'Jacksonville Jaguars',
-    skin: '#5e3c22', height: 74, weight: 220, number: 15, starter: true, captain: true, years: '2013–16',
+    skin: '#5e3c22', height: 74, weight: 210, number: 15, starter: true, captain: true, years: '2013–16',
     attrs: { speed: 7, bodyControl: 9, vertical: 9, routeRunning: 7, release: 8, hands: 9, awareness: 9, size: 8, afterCatch: 5 },
   },
 
   // ─── KANSAS CITY CHIEFS ──────────────────────────────────────────────────
   {
     name: 'Tyreek Hill',       short: 'T. Hill',       team: 'KC',  teamName: 'Kansas City Chiefs',
-    skin: '#5e3c22', height: 70, weight: 185, number: 10, starter: true, captain: true, years: '2016–21',
+    skin: '#5e3c22', height: 70, weight: 191, number: 10, starter: true, captain: true, years: '2016–21',
     attrs: { speed: 11, bodyControl: 10, vertical: 6, routeRunning: 10, release: 9, hands: 7, awareness: 8, size: 4, afterCatch: 11 },
   },
   {
     name: 'Otis Taylor',       short: 'O. Taylor',     team: 'KC',  teamName: 'Kansas City Chiefs',
-    skin: '#5e3c22', height: 74, weight: 215, number: 89, starter: true, captain: true, years: '1965–75',
+    skin: '#5e3c22', height: 75, weight: 215, number: 89, starter: true, captain: true, years: '1965–75',
     attrs: { speed: 9, bodyControl: 8, vertical: 9, routeRunning: 7, release: 7, hands: 8, awareness: 8, size: 9, afterCatch: 8 },
   },
   {
@@ -356,7 +356,7 @@ const _raw = [
   // ─── LAS VEGAS RAIDERS ───────────────────────────────────────────────────
   {
     name: 'Tim Brown',         short: 'T. Brown',      team: 'LV',  teamName: 'Las Vegas Raiders',
-    skin: '#5e3c22', height: 71, weight: 195, number: 81, starter: true, captain: true, years: '1988–03',
+    skin: '#5e3c22', height: 72, weight: 195, number: 81, starter: true, captain: true, years: '1988–03',
     attrs: { speed: 9, bodyControl: 9, vertical: 8, routeRunning: 8, release: 9, hands: 9, awareness: 9, size: 5, afterCatch: 8 },
   },
   {
@@ -366,7 +366,7 @@ const _raw = [
   },
   {
     name: 'Fred Biletnikoff',  short: 'Biletnikoff',   team: 'LV',  teamName: 'Las Vegas Raiders',
-    skin: '#f0c4a0', height: 72, weight: 190, number: 25, starter: true, captain: true, years: '1965–78',
+    skin: '#f0c4a0', height: 73, weight: 190, number: 25, starter: true, captain: true, years: '1965–78',
     attrs: { speed: 6, bodyControl: 8, vertical: 7, routeRunning: 9, release: 8, hands: 10, awareness: 10, size: 6, afterCatch: 6 },
   },
   {
@@ -388,17 +388,17 @@ const _raw = [
   },
   {
     name: 'Charlie Joiner',    short: 'C. Joiner',     team: 'LAC', teamName: 'Los Angeles Chargers',
-    skin: '#5e3c22', height: 71, weight: 185, number: 18, starter: true, captain: true, years: '1976–86',
+    skin: '#5e3c22', height: 71, weight: 188, number: 18, starter: true, captain: true, years: '1976–86',
     attrs: { speed: 8, bodyControl: 8, vertical: 7, routeRunning: 7, release: 8, hands: 9, awareness: 9, size: 5, afterCatch: 6 },
   },
   {
     name: 'Vincent Jackson',   short: 'V. Jackson',    team: 'LAC', teamName: 'Los Angeles Chargers',
-    skin: '#5e3c22', height: 76, weight: 230, number: 83, starter: true, captain: true, years: '2005–11',
+    skin: '#5e3c22', height: 77, weight: 230, number: 83, starter: true, captain: true, years: '2005–11',
     attrs: { speed: 8, bodyControl: 8, vertical: 9, routeRunning: 8, release: 7, hands: 8, awareness: 8, size: 11, afterCatch: 8 },
   },
   {
     name: 'Wes Chandler',      short: 'W. Chandler',   team: 'LAC', teamName: 'Los Angeles Chargers',
-    skin: '#f0c4a0', height: 71, weight: 183, number: 85, starter: true, captain: true, years: '1981–87',
+    skin: '#f0c4a0', height: 72, weight: 196, number: 85, starter: true, captain: true, years: '1981–87',
     attrs: { speed: 9, bodyControl: 8, vertical: 7, routeRunning: 8, release: 8, hands: 8, awareness: 8, size: 5, afterCatch: 8 },
   },
 
@@ -410,7 +410,7 @@ const _raw = [
   },
   {
     name: 'Torry Holt',        short: 'T. Holt',       team: 'LAR', teamName: 'Los Angeles Rams',
-    skin: '#5e3c22', height: 72, weight: 190, number: 88, starter: true, captain: true, years: '1999–08',
+    skin: '#5e3c22', height: 72, weight: 200, number: 88, starter: true, captain: true, years: '1999–08',
     attrs: { speed: 9, bodyControl: 9, vertical: 8, routeRunning: 10, release: 9, hands: 9, awareness: 9, size: 6, afterCatch: 8 },
   },
   {
@@ -437,12 +437,12 @@ const _raw = [
   },
   {
     name: 'Jarvis Landry',     short: 'J. Landry',     team: 'MIA', teamName: 'Miami Dolphins',
-    skin: '#5e3c22', height: 71, weight: 205, number: 14, starter: true, captain: true, years: '2014–18',
+    skin: '#5e3c22', height: 71, weight: 202, number: 14, starter: true, captain: true, years: '2014–18',
     attrs: { speed: 4, bodyControl: 9, vertical: 5, routeRunning: 9, release: 6, hands: 10, awareness: 9, size: 5, afterCatch: 9 },
   },
   {
     name: 'Tyreek Hill',       short: 'T. Hill',       team: 'MIA', teamName: 'Miami Dolphins',
-    skin: '#5e3c22', height: 70, weight: 185, number: 10, starter: true, captain: true, years: '2022–',
+    skin: '#5e3c22', height: 70, weight: 191, number: 10, starter: true, captain: true, years: '2022–',
     attrs: { speed: 11, bodyControl: 10, vertical: 6, routeRunning: 10, release: 9, hands: 7, awareness: 8, size: 4, afterCatch: 11 },
   },
 
@@ -454,7 +454,7 @@ const _raw = [
   },
   {
     name: 'Cris Carter',       short: 'C. Carter',     team: 'MIN', teamName: 'Minnesota Vikings',
-    skin: '#5e3c22', height: 75, weight: 200, number: 80, starter: true, captain: true, years: '1990–01',
+    skin: '#5e3c22', height: 75, weight: 202, number: 80, starter: true, captain: true, years: '1990–01',
     attrs: { speed: 7, bodyControl: 10, vertical: 9, routeRunning: 9, release: 9, hands: 11, awareness: 10, size: 8, afterCatch: 7 },
   },
   {
@@ -508,12 +508,12 @@ const _raw = [
   },
   {
     name: 'Joe Horn',          short: 'J. Horn',       team: 'NO',  teamName: 'New Orleans Saints',
-    skin: '#5e3c22', height: 72, weight: 220, number: 87, starter: true, captain: true, years: '2000–06',
+    skin: '#5e3c22', height: 73, weight: 213, number: 87, starter: true, captain: true, years: '2000–06',
     attrs: { speed: 9, bodyControl: 8, vertical: 8, routeRunning: 8, release: 8, hands: 8, awareness: 8, size: 7, afterCatch: 8 },
   },
   {
     name: 'Brandin Cooks',     short: 'Cooks',         team: 'NO',  teamName: 'New Orleans Saints',
-    skin: '#5e3c22', height: 70, weight: 183, number: 10, starter: true, captain: true, years: '2014–16',
+    skin: '#5e3c22', height: 70, weight: 190, number: 10, starter: true, captain: true, years: '2014–16',
     attrs: { speed: 9, bodyControl: 8, vertical: 7, routeRunning: 7, release: 9, hands: 8, awareness: 8, size: 4, afterCatch: 8 },
   },
 
@@ -525,7 +525,7 @@ const _raw = [
   },
   {
     name: 'Plaxico Burress',   short: 'Burress',       team: 'NYG', teamName: 'New York Giants',
-    skin: '#5e3c22', height: 76, weight: 226, number: 17, starter: true, captain: true, years: '2005–08',
+    skin: '#5e3c22', height: 77, weight: 232, number: 17, starter: true, captain: true, years: '2005–08',
     attrs: { speed: 7, bodyControl: 8, vertical: 9, routeRunning: 7, release: 7, hands: 8, awareness: 8, size: 11, afterCatch: 7 },
   },
   {
@@ -552,19 +552,19 @@ const _raw = [
   },
   {
     name: 'Keyshawn Johnson',  short: 'K. Johnson',    team: 'NYJ', teamName: 'New York Jets',
-    skin: '#5e3c22', height: 74, weight: 215, number: 19, starter: true, captain: true, years: '1996–00',
+    skin: '#5e3c22', height: 76, weight: 211, number: 19, starter: true, captain: true, years: '1996–00',
     attrs: { speed: 7, bodyControl: 8, vertical: 8, routeRunning: 7, release: 7, hands: 8, awareness: 8, size: 9, afterCatch: 7 },
   },
 
   // ─── PHILADELPHIA EAGLES ─────────────────────────────────────────────────
   {
     name: 'Harold Carmichael', short: 'Carmichael',    team: 'PHI', teamName: 'Philadelphia Eagles',
-    skin: '#5e3c22', height: 78, weight: 225, number: 17, starter: true, captain: true, years: '1971–83',
+    skin: '#5e3c22', height: 80, weight: 225, number: 17, starter: true, captain: true, years: '1971–83',
     attrs: { speed: 7, bodyControl: 6, vertical: 6, routeRunning: 5, release: 7, hands: 9, awareness: 8, size: 11, afterCatch: 7 },
   },
   {
     name: 'DeSean Jackson',    short: 'D. Jackson',    team: 'PHI', teamName: 'Philadelphia Eagles',
-    skin: '#5e3c22', height: 69, weight: 169, number: 10, starter: true, captain: true, years: '2008–13',
+    skin: '#5e3c22', height: 70, weight: 175, number: 10, starter: true, captain: true, years: '2008–13',
     attrs: { speed: 11, bodyControl: 9, vertical: 6, routeRunning: 8, release: 9, hands: 6, awareness: 8, size: 3, afterCatch: 11 },
   },
   {
@@ -591,7 +591,7 @@ const _raw = [
   },
   {
     name: 'Lynn Swann',        short: 'L. Swann',      team: 'PIT', teamName: 'Pittsburgh Steelers',
-    skin: '#5e3c22', height: 72, weight: 180, number: 88, starter: true, captain: true, years: '1974–82',
+    skin: '#5e3c22', height: 71, weight: 180, number: 88, starter: true, captain: true, years: '1974–82',
     attrs: { speed: 8, bodyControl: 9, vertical: 7, routeRunning: 8, release: 8, hands: 9, awareness: 8, size: 4, afterCatch: 8 },
   },
   {
@@ -620,7 +620,7 @@ const _raw = [
   // ─── SEATTLE SEAHAWKS ────────────────────────────────────────────────────
   {
     name: 'Steve Largent',     short: 'S. Largent',    team: 'SEA', teamName: 'Seattle Seahawks',
-    skin: '#f0c4a0', height: 71, weight: 191, number: 80, starter: true, captain: true, years: '1976–89',
+    skin: '#f0c4a0', height: 71, weight: 187, number: 80, starter: true, captain: true, years: '1976–89',
     attrs: { speed: 6, bodyControl: 8, vertical: 8, routeRunning: 9, release: 9, hands: 10, awareness: 10, size: 5, afterCatch: 7 },
   },
   {
@@ -631,11 +631,11 @@ const _raw = [
   {
     name: 'Tyler Lockett',     short: 'T. Lockett',    team: 'SEA', teamName: 'Seattle Seahawks',
     skin: '#5e3c22', height: 70, weight: 182, number: 16, starter: true, captain: true, years: '2015–',
-    attrs: { speed: 8, bodyControl: 11, vertical: 5, routeRunning: 9, release: 8, hands: 9, awareness: 10, size: 4, afterCatch: 4 },
+    attrs: { speed: 8, bodyControl: 10, vertical: 5, routeRunning: 9, release: 8, hands: 9, awareness: 10, size: 4, afterCatch: 4 },
   },
   {
     name: 'Doug Baldwin',      short: 'D. Baldwin',    team: 'SEA', teamName: 'Seattle Seahawks',
-    skin: '#5e3c22', height: 70, weight: 189, number: 89, starter: true, captain: true, years: '2011–18',
+    skin: '#5e3c22', height: 70, weight: 192, number: 89, starter: true, captain: true, years: '2011–18',
     attrs: { speed: 8, bodyControl: 10, vertical: 8, routeRunning: 8, release: 8, hands: 9, awareness: 10, size: 4, afterCatch: 7 },
   },
 
@@ -647,24 +647,24 @@ const _raw = [
   },
   {
     name: 'Vincent Jackson',   short: 'V. Jackson',    team: 'TB',  teamName: 'Tampa Bay Buccaneers',
-    skin: '#5e3c22', height: 76, weight: 230, number: 83, starter: true, captain: true, years: '2012–16',
+    skin: '#5e3c22', height: 77, weight: 230, number: 83, starter: true, captain: true, years: '2012–16',
     attrs: { speed: 8, bodyControl: 8, vertical: 9, routeRunning: 8, release: 7, hands: 8, awareness: 8, size: 11, afterCatch: 8 },
   },
   {
     name: 'Chris Godwin',      short: 'C. Godwin',     team: 'TB',  teamName: 'Tampa Bay Buccaneers',
-    skin: '#5e3c22', height: 73, weight: 212, number: 14, starter: true, captain: true, years: '2017–',
+    skin: '#5e3c22', height: 73, weight: 209, number: 14, starter: true, captain: true, years: '2017–',
     attrs: { speed: 7, bodyControl: 7, vertical: 6, routeRunning: 7, release: 7, hands: 8, awareness: 8, size: 7, afterCatch: 8 },
   },
   {
     name: 'Keyshawn Johnson',  short: 'K. Johnson TB', team: 'TB',  teamName: 'Tampa Bay Buccaneers',
-    skin: '#5e3c22', height: 74, weight: 215, number: 19, starter: true, captain: true, years: '2001–03',
+    skin: '#5e3c22', height: 76, weight: 211, number: 19, starter: true, captain: true, years: '2001–03',
     attrs: { speed: 7, bodyControl: 8, vertical: 8, routeRunning: 7, release: 7, hands: 8, awareness: 8, size: 9, afterCatch: 7 },
   },
 
   // ─── TENNESSEE TITANS ────────────────────────────────────────────────────
   {
     name: 'Haywood Jeffires',  short: 'Jeffires',      team: 'TEN', teamName: 'Tennessee Titans',
-    skin: '#5e3c22', height: 74, weight: 201, number: 84, starter: true, captain: true, years: '1987–95',
+    skin: '#5e3c22', height: 74, weight: 210, number: 84, starter: true, captain: true, years: '1987–95',
     attrs: { speed: 8, bodyControl: 9, vertical: 8, routeRunning: 8, release: 8, hands: 9, awareness: 9, size: 8, afterCatch: 8 },
   },
   {
@@ -679,7 +679,7 @@ const _raw = [
   },
   {
     name: 'Derrick Mason',     short: 'D. Mason',      team: 'TEN', teamName: 'Tennessee Titans',
-    skin: '#5e3c22', height: 70, weight: 191, number: 85, starter: true, captain: true, years: '1997–04',
+    skin: '#5e3c22', height: 70, weight: 197, number: 85, starter: true, captain: true, years: '1997–04',
     attrs: { speed: 7, bodyControl: 8, vertical: 7, routeRunning: 8, release: 8, hands: 8, awareness: 8, size: 5, afterCatch: 7 },
   },
 
@@ -701,7 +701,7 @@ const _raw = [
   },
   {
     name: 'Santana Moss',      short: 'S. Moss',       team: 'WAS', teamName: 'Washington Commanders',
-    skin: '#5e3c22', height: 68, weight: 185, number: 89, starter: true, captain: true, years: '2005–14',
+    skin: '#5e3c22', height: 70, weight: 193, number: 89, starter: true, captain: true, years: '2005–14',
     attrs: { speed: 10, bodyControl: 8, vertical: 7, routeRunning: 8, release: 8, hands: 8, awareness: 8, size: 4, afterCatch: 8 },
   },
   {
@@ -729,71 +729,71 @@ export const WR_LEGEND_PHYSICALS = {
   'Julio Jones':       { height: 75, weight: 220 },
   'Roddy White':       { height: 72, weight: 211 },
   'Andre Rison':       { height: 72, weight: 188 },
-  'Derrick Mason':     { height: 70, weight: 191 },
-  'Torrey Smith':      { height: 71, weight: 205 },
-  'Steve Smith Sr.':   { height: 69, weight: 185 },
-  'Andre Reed':        { height: 72, weight: 190 },
+  'Derrick Mason':     { height: 70, weight: 197 },
+  'Torrey Smith':      { height: 72, weight: 205 },
+  'Steve Smith Sr.':   { height: 69, weight: 195 },
+  'Andre Reed':        { height: 74, weight: 190 },
   'Stefon Diggs':      { height: 72, weight: 191 },
-  'Eric Moulds':       { height: 72, weight: 210 },
+  'Eric Moulds':       { height: 74, weight: 225 },
   'Lee Evans':         { height: 72, weight: 198 },
   'Muhsin Muhammad':   { height: 74, weight: 215 },
-  'DJ Moore':          { height: 72, weight: 210 },
-  'Brandon Marshall':  { height: 76, weight: 230 },
+  'DJ Moore':          { height: 72, weight: 213 },
+  'Brandon Marshall':  { height: 77, weight: 232 },
   'Alshon Jeffery':    { height: 75, weight: 218 },
-  'Willie Gault':      { height: 72, weight: 176 },
-  'Allen Robinson':    { height: 74, weight: 220 },
+  'Willie Gault':      { height: 72, weight: 178 },
+  'Allen Robinson':    { height: 74, weight: 210 },
   'Chad Ochocinco':    { height: 73, weight: 192 },
-  'A.J. Green':        { height: 75, weight: 210 },
-  'Chris Collinsworth':{ height: 74, weight: 192 },
-  "Ja'Marr Chase":     { height: 72, weight: 201 },
+  'A.J. Green':        { height: 76, weight: 207 },
+  'Chris Collinsworth':{ height: 77, weight: 192 },
+  "Ja'Marr Chase":     { height: 72, weight: 205 },
   'Josh Gordon':       { height: 75, weight: 225 },
-  'Paul Warfield':     { height: 72, weight: 185 },
-  'Jarvis Landry':     { height: 71, weight: 205 },
-  'Michael Irvin':     { height: 75, weight: 207 },
+  'Paul Warfield':     { height: 72, weight: 188 },
+  'Jarvis Landry':     { height: 71, weight: 202 },
+  'Michael Irvin':     { height: 74, weight: 207 },
   'Dez Bryant':        { height: 74, weight: 220 },
-  'CeeDee Lamb':       { height: 74, weight: 198 },
-  'Bob Hayes':         { height: 71, weight: 185 },
+  'CeeDee Lamb':       { height: 74, weight: 201 },
+  'Bob Hayes':         { height: 72, weight: 187 },
   'Terrell Owens':     { height: 75, weight: 226 },
-  'Demaryius Thomas':  { height: 74, weight: 229 },
-  'Rod Smith':         { height: 73, weight: 200 },
-  'Emmanuel Sanders':  { height: 70, weight: 180 },
-  'Ed McCaffrey':      { height: 76, weight: 215 },
+  'Demaryius Thomas':  { height: 75, weight: 225 },
+  'Rod Smith':         { height: 72, weight: 200 },
+  'Emmanuel Sanders':  { height: 71, weight: 180 },
+  'Ed McCaffrey':      { height: 77, weight: 215 },
   'Calvin Johnson':    { height: 77, weight: 236 },
-  'Herman Moore':      { height: 74, weight: 210 },
+  'Herman Moore':      { height: 76, weight: 210 },
   'Amon-Ra St. Brown': { height: 72, weight: 200 },
-  'Roy Williams':      { height: 74, weight: 220 },
-  'Davante Adams':     { height: 72, weight: 215 },
-  'Sterling Sharpe':   { height: 72, weight: 202 },
-  'Jordy Nelson':      { height: 74, weight: 217 },
-  'James Lofton':      { height: 74, weight: 192 },
-  'Donald Driver':     { height: 71, weight: 188 },
+  'Roy Williams':      { height: 75, weight: 215 },
+  'Davante Adams':     { height: 73, weight: 204 },
+  'Sterling Sharpe':   { height: 72, weight: 207 },
+  'Jordy Nelson':      { height: 75, weight: 217 },
+  'James Lofton':      { height: 75, weight: 192 },
+  'Donald Driver':     { height: 72, weight: 194 },
   'Andre Johnson':     { height: 75, weight: 230 },
-  'Marvin Harrison':   { height: 72, weight: 175 },
-  'Reggie Wayne':      { height: 71, weight: 198 },
-  'Raymond Berry':     { height: 73, weight: 187 },
-  'T.Y. Hilton':       { height: 70, weight: 178 },
-  'Jimmy Smith':       { height: 73, weight: 208 },
-  'Keenan McCardell':  { height: 72, weight: 191 },
-  'Tyreek Hill':       { height: 70, weight: 185 },
-  'Otis Taylor':       { height: 74, weight: 215 },
+  'Marvin Harrison':   { height: 72, weight: 185 },
+  'Reggie Wayne':      { height: 72, weight: 203 },
+  'Raymond Berry':     { height: 74, weight: 187 },
+  'T.Y. Hilton':       { height: 70, weight: 183 },
+  'Jimmy Smith':       { height: 73, weight: 202 },
+  'Keenan McCardell':  { height: 73, weight: 191 },
+  'Tyreek Hill':       { height: 70, weight: 191 },
+  'Otis Taylor':       { height: 75, weight: 215 },
   'Dwayne Bowe':       { height: 74, weight: 221 },
-  'Tim Brown':         { height: 71, weight: 195 },
+  'Tim Brown':         { height: 72, weight: 195 },
   'Cliff Branch':      { height: 71, weight: 170 },
-  'Fred Biletnikoff':  { height: 72, weight: 190 },
+  'Fred Biletnikoff':  { height: 73, weight: 190 },
   'Amari Cooper':      { height: 73, weight: 210 },
   'Lance Alworth':     { height: 72, weight: 184 },
   'Keenan Allen':      { height: 74, weight: 211 },
-  'Charlie Joiner':    { height: 71, weight: 185 },
-  'Vincent Jackson':   { height: 76, weight: 230 },
-  'Wes Chandler':      { height: 71, weight: 183 },
+  'Charlie Joiner':    { height: 71, weight: 188 },
+  'Vincent Jackson':   { height: 77, weight: 230 },
+  'Wes Chandler':      { height: 72, weight: 196 },
   'Isaac Bruce':       { height: 72, weight: 188 },
-  'Torry Holt':        { height: 72, weight: 190 },
+  'Torry Holt':        { height: 72, weight: 200 },
   'Cooper Kupp':       { height: 74, weight: 208 },
   'Robert Woods':      { height: 72, weight: 191 },
   'Mark Duper':        { height: 69, weight: 185 },
   'Mark Clayton':      { height: 69, weight: 175 },
   'Randy Moss':        { height: 76, weight: 210 },
-  'Cris Carter':       { height: 74, weight: 196 },
+  'Cris Carter':       { height: 75, weight: 202 },
   'Adam Thielen':      { height: 74, weight: 200 },
   'Justin Jefferson':  { height: 73, weight: 195 },
   'Wes Welker':        { height: 69, weight: 185 },
@@ -801,38 +801,38 @@ export const WR_LEGEND_PHYSICALS = {
   'Stanley Morgan':    { height: 71, weight: 181 },
   'Michael Thomas':    { height: 75, weight: 212 },
   'Marques Colston':   { height: 76, weight: 225 },
-  'Joe Horn':          { height: 72, weight: 220 },
-  'Brandin Cooks':     { height: 70, weight: 183 },  // skin fixed to #5e3c22
+  'Joe Horn':          { height: 73, weight: 213 },
+  'Brandin Cooks':     { height: 70, weight: 190 },  // skin fixed to #5e3c22
   'Odell Beckham Jr.': { height: 71, weight: 198 },
-  'Plaxico Burress':   { height: 76, weight: 226 },
+  'Plaxico Burress':   { height: 77, weight: 232 },
   'Victor Cruz':       { height: 72, weight: 204 },
   'Amani Toomer':      { height: 75, weight: 205 },
   'Don Maynard':       { height: 72, weight: 180 },
   'Al Toon':           { height: 76, weight: 205 },
-  'Keyshawn Johnson':  { height: 74, weight: 215 },
-  'Harold Carmichael': { height: 78, weight: 225 },
-  'DeSean Jackson':    { height: 69, weight: 169 },
+  'Keyshawn Johnson':  { height: 76, weight: 211 },
+  'Harold Carmichael': { height: 80, weight: 225 },
+  'DeSean Jackson':    { height: 70, weight: 175 },
   'Mike Quick':        { height: 74, weight: 190 },
   'A.J. Brown':        { height: 73, weight: 226 },
   'Antonio Brown':     { height: 70, weight: 185 },
   'John Stallworth':   { height: 74, weight: 191 },
-  'Lynn Swann':        { height: 72, weight: 180 },
+  'Lynn Swann':        { height: 71, weight: 180 },
   'Hines Ward':        { height: 72, weight: 205 },
   'Jerry Rice':        { height: 74, weight: 200 },
   'Dwight Clark':      { height: 75, weight: 215 },
   'John Taylor':       { height: 73, weight: 185 },
   'Brandon Aiyuk':     { height: 73, weight: 205 },
-  'Steve Largent':     { height: 71, weight: 191 },
+  'Steve Largent':     { height: 71, weight: 187 },
   'DK Metcalf':        { height: 76, weight: 229 },
   'Tyler Lockett':     { height: 70, weight: 182 },
-  'Doug Baldwin':      { height: 70, weight: 189 },
+  'Doug Baldwin':      { height: 70, weight: 192 },
   'Mike Evans':        { height: 77, weight: 231 },
-  'Chris Godwin':      { height: 73, weight: 212 },
-  'Haywood Jeffires':  { height: 74, weight: 201 },
+  'Chris Godwin':      { height: 73, weight: 209 },
+  'Haywood Jeffires':  { height: 74, weight: 210 },
   'Ernest Givins':     { height: 69, weight: 172 },
   'Art Monk':          { height: 75, weight: 210 },
   'Charley Taylor':    { height: 75, weight: 210 },
   'Gary Clark':        { height: 69, weight: 175 },
-  'Santana Moss':      { height: 68, weight: 185 },
+  'Santana Moss':      { height: 70, weight: 193 },
   'Terry McLaurin':    { height: 72, weight: 210 },
 }

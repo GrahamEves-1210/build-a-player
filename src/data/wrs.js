@@ -66,7 +66,7 @@ const _WRS = [
     attrs: { speed: 6,  bodyControl: 4,  vertical: 3,  routeRunning: 3,  release: 4,  hands: 4,  awareness: 3,  size: 5,  afterCatch: 4  } },
   // CAR
   { name: 'Tetairoa McMillan',   short: 'McMillan',    team: 'CAR', teamName: 'Carolina Panthers',     skin: '#b07848', height: 77, weight: 212, starter: true,  captain: true,  number: 4,
-    attrs: { speed: 6,  bodyControl: 9,  vertical: 7,  routeRunning: 6,  release: 6,  hands: 8,  awareness: 7,  size: 10, afterCatch: 7  } },
+    attrs: { speed: 7,  bodyControl: 9,  vertical: 7,  routeRunning: 7,  release: 6,  hands: 8,  awareness: 7,  size: 10, afterCatch: 7  } },
   { name: 'Xavier Legette',      short: 'Legette',     team: 'CAR', teamName: 'Carolina Panthers',     skin: '#5e3c22', height: 74, weight: 221, starter: false, number: 17,
     attrs: { speed: 7,  bodyControl: 0,  vertical: 7,  routeRunning: 3,  release: 3,  hands: 2,  awareness: 3,  size: 8,  afterCatch: 3  } },
   { name: 'John Metchie III',    short: 'Metchie',     team: 'CAR', teamName: 'Carolina Panthers',     skin: '#b07848', height: 72, weight: 195, starter: false, number: 8,
@@ -74,7 +74,7 @@ const _WRS = [
   { name: 'Chris Brazzell II',   short: 'Brazzell',    team: 'CAR', teamName: 'Carolina Panthers',     skin: '#5e3c22', height: 77, weight: 210, starter: false, number: 18,
     attrs: { speed: 8,  bodyControl: 5,  vertical: 7,  routeRunning: 3,  release: 3,  hands: 4,  awareness: 3,  size: 10, afterCatch: 3  } },
   { name: 'Jalen Coker',         short: 'Coker',       team: 'CAR', teamName: 'Carolina Panthers',     skin: '#3a2010', height: 74, weight: 200, starter: false, number: 15,
-    attrs: { speed: 7,  bodyControl: 6,  vertical: 9,  routeRunning: 5,  release: 5,  hands: 8,  awareness: 8,  size: 8,  afterCatch: 4  } },
+    attrs: { speed: 7,  bodyControl: 8,  vertical: 9,  routeRunning: 6,  release: 6,  hands: 9,  awareness: 8,  size: 8,  afterCatch: 5  } },
   // CHI
   { name: 'Rome Odunze',         short: 'Odunze',      team: 'CHI', teamName: 'Chicago Bears',         skin: '#5e3c22', height: 75, weight: 215, starter: true,  captain: true,  number: 15,
     attrs: { speed: 8,  bodyControl: 8,  vertical: 9,  routeRunning: 7,  release: 7,  hands: 8,  awareness: 6,  size: 9,  afterCatch: 6  } },

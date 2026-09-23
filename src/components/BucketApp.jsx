@@ -48,7 +48,7 @@ function genericHeadshot(skinHex) {
   return luminance > 155 ? '/genericlight.webp' : '/genericdark.webp'
 }
 
-const RAMP_AD_UNITS = ['bottom_rail', 'corner_ad_video', 'standard_iab', 'video_bottom_rail']
+const RAMP_AD_UNITS = ['bottom_rail', 'corner_ad_video', 'left_rail', 'standard_iab', 'video_bottom_rail']
 const RAMP_FORCE_OFF = RAMP_AD_UNITS.map(unit => ({ unit, force: 'off' }))
 
 function enableAdFreeMode() {
@@ -224,7 +224,7 @@ function BucketSplash({ onStart, onVersus }) {
 
         <div className="splash-modes">
           <button className="splash-mode-classic" onClick={() => { localStorage.setItem('bucketPosition', position); onStart('classic', position) }}>
-            <div className="smode-title">Classic</div>
+            <div className="smode-title">Current</div>
             <div className="smode-badge">Current NBA</div>
             <div className="smode-cta">
               START DRAFTING
@@ -448,6 +448,9 @@ export default function BucketApp() {
         try { window.ramp.destroyUnits(RAMP_AD_UNITS) } catch {}
       } else {
         window.ramp.spaNewPage()
+        // Playwire-requested video/rail units (2026-09 test) — kept off the splash
+        // page per existing house rule; Playwire scopes further on their side once live.
+        try { window.ramp.spaAddAds([{ type: 'corner_ad_video' }, { type: 'left_rail' }]) } catch {}
       }
     })
   }, [page])

@@ -25,10 +25,8 @@ export default function SharedBuildPage({ build, types, onPlay }) {
   const color  = ovrColor(ovr)
 
   const bodyPhys  = build['size'] ? ALL_QB_PHYS[build['size'].qbFull] : null
-  const legsPhys  = build['legs'] ? ALL_QB_PHYS[build['legs'].qbFull] : null
-  const hwBoth    = bodyPhys && legsPhys
-  const heightStr = hwBoth ? fmtHeight(Math.round(0.65 * legsPhys.height + 0.35 * bodyPhys.height)) : null
-  const weightLbs = hwBoth ? Math.round(0.65 * bodyPhys.weight + 0.35 * legsPhys.weight) : null
+  const heightStr = bodyPhys ? fmtHeight(bodyPhys.height) : null
+  const weightLbs = bodyPhys ? bodyPhys.weight : null
 
   useEffect(() => {
     let i = 0

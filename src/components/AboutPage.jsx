@@ -38,6 +38,13 @@ export default function AboutPage({ onBack, onPrivacy }) {
           </div>
         </section>
 
+        <section className="about-section" style={{ textAlign: 'center' }}>
+          <div className="about-body" style={{ margin: '0 0 4px', fontSize: '12px' }}>Featured on</div>
+          <a href="https://sportsminigames.com/" target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block' }}>
+            <img src="/sports-mini-games-badge.png" alt="Featured on Sports Mini Games" style={{ height: '36px', width: 'auto', maxWidth: '100%', display: 'block', borderRadius: '6px' }} />
+          </a>
+        </section>
+
         <section className="about-section">
           <h2 className="about-section-title">Disclaimer</h2>
           <p className="about-disclaimer">

@@ -2073,24 +2073,26 @@ a:focus-visible {
 
 .grade-toggle-btn {
   display: block;
-  margin: -1px auto -8px;
-  padding: 3px 8px;
-  font-size: 11px;
+  margin: -2px auto 0;
+  padding: 2px 11px;
+  font-size: 10.5px;
   font-family: inherit;
-  font-weight: 600;
-  letter-spacing: 0.3px;
-  background: none;
-  border: none;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  line-height: 1.3;
+  border-radius: 100px;
+  border: 1.25px solid currentColor;
   cursor: pointer;
-  transition: color 0.15s;
+  transition: color 0.15s, background 0.15s, box-shadow 0.15s, transform 0.1s;
   white-space: nowrap;
 }
-.grade-toggle-on  { color: #5edbd8; }
-.grade-toggle-off { color: #f87171; }
-.grade-toggle-on:hover  { color: #8de8e6; }
-.grade-toggle-off:hover { color: #fca5a5; }
+.grade-toggle-btn:active { transform: scale(0.96); }
+.grade-toggle-on  { color: #5edbd8; background: rgba(94,219,216,0.12); }
+.grade-toggle-off { color: #f87171; background: rgba(248,113,113,0.12); }
+.grade-toggle-on:hover  { color: #8de8e6; background: rgba(94,219,216,0.20); }
+.grade-toggle-off:hover { color: #fca5a5; background: rgba(248,113,113,0.20); }
 @media (max-width: 768px) {
-  .grade-toggle-btn { margin: 10px 0 0 122px; text-align: center; width: fit-content; min-width: 108px; transform: translateY(6px); border: 1px solid currentColor; border-radius: 6px; }
+  .grade-toggle-btn { margin: 0 auto; text-align: center; width: fit-content; min-width: 100px; }
 }
 
 .chip-val {
@@ -2134,7 +2136,7 @@ a:focus-visible {
 @media (min-width: 769px) {
   .spin-panel-static     { gap: 8px; }
   .sil-wrap              { transform: scale(0.88) translateY(-5px); transform-origin: top center; }
-  .spin-panel-scroll     { overflow-y: auto; gap: 5px; padding-bottom: calc(90px + var(--ad-h)); }
+  .spin-panel-scroll     { overflow-y: auto; gap: 5px; padding-bottom: calc(130px + var(--ad-h)); }
   .build-slots           { padding-bottom: calc(90px + var(--ad-h)); }
   .build-slots .qb-avatar { width: 41.8px !important; height: 41.8px !important; }
   .reset-btn {
@@ -3399,6 +3401,10 @@ a:focus-visible {
   .spin-top-row {
     display: block;
     position: relative;
+    /* .spin-panel-body has margin-top:-30px on mobile; a plain margin-top here
+       would collapse into that negative margin and vanish, so use padding
+       (which never collapses) to actually clear the navbar above it. */
+    padding-top: 14px;
   }
 }
 
@@ -6604,7 +6610,7 @@ html.is-mac .spin-panel-scroll {
   .spin-panel-body {
     flex: none;
     overflow-y: visible;
-    padding: 10px 14px calc(140px + var(--ad-h));
+    padding: 10px 14px calc(190px + var(--ad-h));
     margin-top: -30px;
     gap: 14px;
   }

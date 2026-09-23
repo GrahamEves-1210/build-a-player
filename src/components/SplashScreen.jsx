@@ -133,14 +133,14 @@ function PositionPicker({ position, onChange, voteCounts, votedFor, onVote }) {
               onClick={() => select(opt.pos)}
               tabIndex={!open ? -1 : 0}
             >
-              {opt.pos === 'te' && <span className="splash-pos-new-tag">NEW</span>}
+              {opt.pos === 'db' && <span className="splash-pos-new-tag">NEW</span>}
               <div className="splash-pos-option-top">
                 <AvatarTrio players={opt.players} size={40} />
                 <span className="splash-pos-option-name">{opt.label}</span>
               </div>
               <div className="splash-pos-option-modes">
                 <span className={`splash-mode-pill ${opt.alltime ? 'splash-mode-pill--alltime' : 'splash-mode-pill--alltime-soon'}`}>All‑Time</span>
-                <span className={`splash-mode-pill ${opt.classic ? 'splash-mode-pill--avail' : 'splash-mode-pill--na'}`}>Classic</span>
+                <span className={`splash-mode-pill ${opt.classic ? 'splash-mode-pill--avail' : 'splash-mode-pill--na'}`}>Current</span>
               </div>
             </button>
           ))}
@@ -167,7 +167,7 @@ function PositionPicker({ position, onChange, voteCounts, votedFor, onVote }) {
               </div>
               <div className="splash-pos-option-modes">
                 <span className="splash-mode-pill splash-mode-pill--alltime-soon">All‑Time</span>
-                <span className="splash-mode-pill splash-mode-pill--classic-soon">Classic</span>
+                <span className="splash-mode-pill splash-mode-pill--classic-soon">Current</span>
               </div>
               <div className="splash-pos-vote">
                 {votedFor ? (
@@ -390,7 +390,7 @@ export default function SplashScreen({ onStart, onDepthChart }) {
 
         <div className="splash-modes">
           <button className="splash-mode-classic" onClick={() => { localStorage.setItem('lastPosition', position); onStart('classic', position) }}>
-            <div className="smode-title">Classic</div>
+            <div className="smode-title">Current</div>
             <div className="smode-badge">Current {position === 'rb' ? 'RBs' : position === 'wr' ? 'WRs' : position === 'te' ? 'TEs' : position === 'db' ? 'DBs' : 'QBs'}</div>
             <div className="smode-cta">
               START DRAFTING
