@@ -125,7 +125,7 @@ const BUCKET_SPLASH_ATTRS = {
     { label: 'Passing',     col: '#60a5fa', angle:  -70, dist: 1.29, mx: 5,  my: 18, doy: -30, dox: 140 },
     { label: 'Perimeter D', col: '#38bdf8', angle:  100, dist: 1.32, mx: 60, my: 34, dox: -240, doy: -20 },
     { label: 'Strength',    col: '#fbbf24', angle: -160, dist: 1.28, mx: 3,  my: 48, doy: 200 },
-    { label: 'H/L',         col: '#e879f9', angle:   80, dist: 1.31, mx: 58, my: 44, dox: 110, doy: 10 },
+    { label: 'H/L',         col: '#e879f9', angle:   80, dist: 1.31, mx: 58, my: 44, dox: 170, doy: 10 },
   ],
   big: [
     { label: 'Jump Shot',    col: '#34d399', angle:  -35, dist: 1.32, mx: 58, my: 14 },
@@ -184,10 +184,6 @@ function BucketSplash({ onStart, onVersus }) {
   return (
     <div className={`splash-screen bucket-splash ${phase >= 1 ? 'splash-in' : ''}`}>
 
-      <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', zIndex: 0, pointerEvents: 'none' }}>
-        <div style={{ position: 'absolute', inset: '-20px', backgroundImage: "url('/bucketbackground.webp')", backgroundSize: 'cover', backgroundPosition: 'center 65%', filter: 'blur(3px) brightness(0.55)' }} />
-      </div>
-
       <div className="splash-mob-disclaimer">Fan-made · Not affiliated with the NBA</div>
       <div className="splash-glow" style={{ opacity: phase >= 2 ? 1 : 0 }} />
 
@@ -196,7 +192,8 @@ function BucketSplash({ onStart, onVersus }) {
       ))}
 
       <div className="splash-header" style={{ opacity: phase >= 1 ? 1 : 0, transform: phase >= 1 ? 'none' : 'translateY(-28px)' }}>
-        <div className="splash-title">
+        <img src="/logo-v3.png" alt="Build-A-Bucket" className="splash-logo-mark" draggable={false} />
+        <div className="splash-title splash-title--small">
           BUIL<span className="logo-d">D</span><em>-<span className="logo-a">A</span>-</em>B<HoopU />CKET
         </div>
         <div className="splash-pos-toggle" style={{ opacity: phase >= 3 ? 1 : 0, transform: phase >= 3 ? 'none' : 'translateY(8px)' }}>
@@ -220,7 +217,7 @@ function BucketSplash({ onStart, onVersus }) {
 
       <div className="splash-footer" style={{ opacity: phase >= 3 ? 1 : 0, transform: phase >= 3 ? 'none' : 'translateY(16px)' }}>
 
-        <div className="splash-tagline">Spin the wheel · Build-A-{POS_LABELS[position]}</div>
+        <div className="splash-tagline"><span className="splash-tagline-dot" />1M+ Players · Build the Perfect Player</div>
 
         <div className="splash-modes">
           <button className="splash-mode-classic" onClick={() => { localStorage.setItem('bucketPosition', position); onStart('classic', position) }}>
@@ -398,8 +395,12 @@ export default function BucketApp() {
     }
 
     measure()
+    // Only watch data-pw-status at the body+subtree level — 'style' was here
+    // too, which meant every inline-style animation frame anywhere in the app
+    // (spin reels, chip drag/drop) re-triggered a layout-forcing measure().
+    // The ad element's own style changes are already covered by elObs below.
     const bodyObs = new MutationObserver(() => { attachElObs(); measure() })
-    bodyObs.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-pw-status', 'style'] })
+    bodyObs.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-pw-status'] })
     return () => { bodyObs.disconnect(); if (elObs) elObs.disconnect() }
   }, [])
 
@@ -441,6 +442,11 @@ export default function BucketApp() {
     }
   }, [page])
 
+  useEffect(() => {
+    const meta = document.querySelector('meta[name="theme-color"]')
+    if (meta) meta.setAttribute('content', page === 'splash' ? '#1b140c' : '#090a0d')
+  }, [page])
+
   // Initialize Playwire ads on mount and page change
   useEffect(() => {
     window.ramp?.que?.push(() => {
@@ -448,9 +454,13 @@ export default function BucketApp() {
         try { window.ramp.destroyUnits(RAMP_AD_UNITS) } catch {}
       } else {
         window.ramp.spaNewPage()
-        // Playwire-requested video/rail units (2026-09 test) — kept off the splash
-        // page per existing house rule; Playwire scopes further on their side once live.
+      }
+      // Playwire corner_ad_video + left_rail (2026-09): live only on the sim
+      // results page, destroyed the moment the user navigates anywhere else.
+      if (page === 'sim') {
         try { window.ramp.spaAddAds([{ type: 'corner_ad_video' }, { type: 'left_rail' }]) } catch {}
+      } else if (page !== 'splash') {
+        try { window.ramp.destroyUnits(['corner_ad_video', 'left_rail']) } catch {}
       }
     })
   }, [page])

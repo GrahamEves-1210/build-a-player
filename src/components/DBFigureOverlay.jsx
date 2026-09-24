@@ -251,10 +251,11 @@ export default function DBFigureOverlay({ build, numberNudgePx = null }) {
           <g transform={`translate(${nudgeX}, ${nudgeY})`}>
           <g transform={`rotate(${BODY_ANGLE}, 252, 300)`}>
             <text
-              x="269" y="458"
+              x="265" y="454"
               textAnchor="middle"
               fontFamily="'Bebas Neue', Impact, Arial, sans-serif"
               fontSize="140"
+              letterSpacing="-6"
               fill="white"
               stroke="black"
               strokeWidth="5"
@@ -264,7 +265,7 @@ export default function DBFigureOverlay({ build, numberNudgePx = null }) {
                 transition: 'opacity 0.5s ease',
                 userSelect: 'none',
                 pointerEvents: 'none',
-                transform: `perspective(360px) rotateY(-6deg) scaleY(0.9) rotate(${numberNudgePx ? 4 : 5}deg)`,
+                transform: `perspective(360px) rotateY(-6deg) scaleY(0.9) rotate(${numberNudgePx ? 7 : 8}deg)`,
                 transformBox: 'fill-box',
                 transformOrigin: 'left top',
               }}

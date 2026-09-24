@@ -23,6 +23,12 @@ import { valToGrade, HEADSHOT_BASE } from '../utils/simulation'
     created_at    timestamptz DEFAULT now()
   );
 
+  CREATE TABLE salary_cap_grids (
+    date_str      text PRIMARY KEY,
+    grid          jsonb NOT NULL,
+    created_at    timestamptz DEFAULT now()
+  );
+
   CREATE TABLE salary_infinite_plays (
     id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id       uuid REFERENCES auth.users(id),
@@ -745,21 +751,78 @@ export default function BucketSalaryCap({ onConfirm, onBack, user, initialDateSt
   const [infShufflesLeft, setInfShufflesLeft] = useState(1)
   const [infScoutsLeft,   setInfScoutsLeft]   = useState(1)
 
-  const grid = useMemo(() => {
-    if (mode === 'infinite') {
-      const rand = seededRandom(infiniteSeed)
-      return generateGrid(SAL_COLS, ALL_PLAYERS, rand, new Set(), infiniteSeed)
-    }
-    if (HARDCODED_GRIDS[activeDate.seed]) return HARDCODED_GRIDS[activeDate.seed]
-    const rand = seededRandom(activeDate.seed)
-    const yesterday = new Date(activeDate.y, activeDate.m - 1, activeDate.day - 1)
+  // Daily grids are frozen server-side the first time each date is generated
+  // (in salary_cap_grids), so a day's board can never quietly drift out from
+  // under players who already submitted picks for it — regenerating on the
+  // fly (the old behavior) breaks the moment the underlying roster data
+  // changes, since the same seed then picks different actual players.
+  const localGenerateGrid = (date) => {
+    const rand = seededRandom(date.seed)
+    const yesterday = new Date(date.y, date.m - 1, date.day - 1)
     const yy = yesterday.getFullYear(), ym = yesterday.getMonth() + 1, yd = yesterday.getDate()
     const recentlyUsed = getPickedNamesForSeed(yy * 10000 + ym * 100 + yd, SAL_COLS, ALL_PLAYERS)
-    return generateGrid(SAL_COLS, ALL_PLAYERS, rand, recentlyUsed, activeDate.seed)
+    return generateGrid(SAL_COLS, ALL_PLAYERS, rand, recentlyUsed, date.seed)
+  }
+  const computeGridSync = (date, currentMode, seed) => {
+    if (currentMode === 'infinite') {
+      const rand = seededRandom(seed)
+      return generateGrid(SAL_COLS, ALL_PLAYERS, rand, new Set(), seed)
+    }
+    if (HARDCODED_GRIDS[date.seed]) return HARDCODED_GRIDS[date.seed]
+    return localGenerateGrid(date)
+  }
+
+  // Always render instantly from a local (possibly stale, for old dates)
+  // computation — never a loading spinner — then quietly swap in the frozen
+  // server copy in the background below if it turns out to be different.
+  const [grid, setGrid] = useState(() => computeGridSync(activeDate, mode, infiniteSeed))
+
+  useEffect(() => {
+    setGrid(computeGridSync(activeDate, mode, infiniteSeed))
   }, [mode, infiniteSeed, activeDate.seed, activeDate.y, activeDate.m, activeDate.day])
+
+  useEffect(() => {
+    if (mode === 'infinite' || HARDCODED_GRIDS[activeDate.seed] || !supabase) return
+    let cancelled = false
+    const isToday = activeDate.str === getESTDate(0).str
+    const localGuess = localGenerateGrid(activeDate)
+
+    if (isToday) {
+      // Nobody can have a frozen copy of today yet — our local guess IS the
+      // canonical copy, so just save it (first writer wins; a concurrent
+      // duplicate is fine, both generated the same thing from the same seed).
+      supabase.from('salary_cap_grids')
+        .upsert({ date_str: activeDate.str, grid: localGuess }, { onConflict: 'date_str', ignoreDuplicates: true })
+        .then(({ error }) => { if (error) console.error('[salary-cap] grid save failed:', error) })
+      return
+    }
+
+    // Past date: check whether a frozen copy exists and differs from our
+    // fresh local regeneration (it will, if roster data has changed since).
+    supabase.from('salary_cap_grids')
+      .select('grid')
+      .eq('date_str', activeDate.str)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (cancelled) return
+        if (error) { console.error('[salary-cap] grid fetch failed:', error); return }
+        if (data?.grid) {
+          setGrid(data.grid) // swap to the historically-accurate frozen board
+        } else {
+          // No frozen record (a date from before this fix shipped) — lock in
+          // our local regeneration now so it's stable from here on.
+          supabase.from('salary_cap_grids')
+            .upsert({ date_str: activeDate.str, grid: localGuess }, { onConflict: 'date_str', ignoreDuplicates: true })
+            .then(({ error }) => { if (error) console.error('[salary-cap] grid save failed:', error) })
+        }
+      })
+
+    return () => { cancelled = true }
+  }, [mode, activeDate.seed, activeDate.str, activeDate.y, activeDate.m, activeDate.day])
 
   // Preload all headshots for the current day's grid so cards render instantly
   useEffect(() => {
+    if (!grid) return
     const urls = grid.flat().map(p => p.photo).filter(Boolean)
     const imgs = urls.map(url => { const i = new Image(); i.src = url; return i })
     return () => imgs.forEach(i => { i.src = '' })
@@ -767,13 +830,13 @@ export default function BucketSalaryCap({ onConfirm, onBack, user, initialDateSt
 
   useEffect(() => { if (!shuffleMode) setHoveredShuffle(null) }, [shuffleMode])
 
-  const effectiveGrid = useMemo(
-    () => grid.map((col, ci) => {
+  const effectiveGrid = useMemo(() => {
+    if (!grid) return null
+    return grid.map((col, ci) => {
       const base = shuffleOverride[ci] ?? col
       return base.map((player, ti) => rowOverrides[ti]?.[ci] ?? player)
-    }),
-    [grid, shuffleOverride, rowOverrides]
-  )
+    })
+  }, [grid, shuffleOverride, rowOverrides])
 
   // Daily budget varies ±20 from 150 in steps of 10, seeded by date
   const dailyBudget = useMemo(() => {
@@ -935,13 +998,13 @@ export default function BucketSalaryCap({ onConfirm, onBack, user, initialDateSt
 
   // Re-populate sel from saved picks so the grid shows their previous selections
   useEffect(() => {
-    if (!alreadyPlayed?.picks) return
+    if (!alreadyPlayed?.picks || !effectiveGrid) return
     const newSel = {}
     alreadyPlayed.picks.forEach((savedPlayer, ci) => {
       if (!savedPlayer) return
       // Search effectiveGrid (includes shuffle overrides) first, fall back to base grid
       const found = effectiveGrid[ci]?.find(p => p.name === savedPlayer.name)
-               ?? grid[ci]?.find(p => p.name === savedPlayer.name)
+               ?? grid?.[ci]?.find(p => p.name === savedPlayer.name)
       if (found) newSel[ci] = found
     })
     setSel(newSel)

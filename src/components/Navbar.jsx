@@ -26,6 +26,10 @@ const BUCKET_STEPS_MOBILE = [
   { n: '4', title: 'Simulate',   body: 'Spin or pick an NBA team, then run a full 82-game season.' },
 ]
 
+const POS_COLORS = { qb: '#95D5B2', rb: '#fb923c', wr: '#60a5fa', te: '#c084fc', db: '#f87171' }
+const POS_NAMES  = { qb: 'Quarterback', rb: 'Running Back', wr: 'Wide Receiver', te: 'Tight End', db: 'Defensive Back' }
+const BUCKET_POS_SUB    = { guard: 'PG · SG · SF', big: 'PF · C' }
+
 const HoopU = () => (
   <svg className="hoop-u-svg" viewBox="0 0 68 90" fill="none" aria-hidden="true">
     <circle cx="34" cy="14" r="14.4" fill="#f97316"/>
@@ -221,7 +225,10 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
       ) : (
         <div className="logo" onClick={onHome} style={onHome ? { cursor: 'pointer' } : undefined}>
           <div className="logo-text-stack">
-            <div className="logo-text">Buil<span className="logo-d">d</span><em>-<span className="logo-a">A</span>-</em>{isBucket ? <>B<HoopU />cket</> : 'Player'}</div>
+            <img src="/logo-v3.png" alt="Build-A-Player" className="logo-img-full" draggable={false} />
+            <div className="logo-text logo-text--small">
+              Buil<span className="logo-d">d</span><em>-<span className="logo-a">A</span>-</em>{isBucket ? <>B<HoopU />cket</> : 'Player'}
+            </div>
             {gameMode === 'all-time' && <span className="logo-mode-tag">All-Time</span>}
           </div>
         </div>
@@ -257,19 +264,30 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
         gameMode === 'salarycap' ? (
           <button className="tab-pill tab-pill-qb tab-pill-salary active">Salary Cap</button>
         ) : gameMode === 'versus' ? null : (
-          <>
-            <div className="bucket-pos-pills tab-pill-qb">
-              {['guard', 'big'].map(pos => (
-                <button
-                  key={pos}
-                  className={`tab-pill${bucketPosition === pos ? ' active' : ''}`}
-                  onClick={() => bucketPosition !== pos && onSwitchBucketPosition?.(pos)}
-                >
-                  {`Build-A-${pos.charAt(0).toUpperCase() + pos.slice(1)}`}
-                </button>
-              ))}
-            </div>
-          </>
+          <div className="nav-pos-dropdown" ref={posDropRef}>
+            <button
+              className="tab-pill tab-pill-qb active nav-pos-trigger"
+              onClick={() => setPosDropOpen(o => !o)}
+            >
+              <span className="nav-pos-sub">{BUCKET_POS_SUB[bucketPosition]}</span>
+              {bucketPosition.charAt(0).toUpperCase() + bucketPosition.slice(1)}
+              <IconChevron up={posDropOpen} />
+            </button>
+            {posDropOpen && (
+              <div className="nav-pos-menu">
+                {['guard', 'big'].filter(pos => pos !== bucketPosition).map(pos => (
+                  <button
+                    key={pos}
+                    className="nav-pos-item"
+                    onClick={() => { setPosDropOpen(false); onSwitchBucketPosition?.(pos) }}
+                  >
+                    <span className="nav-pos-sub">{BUCKET_POS_SUB[pos]}</span>
+                    {pos.charAt(0).toUpperCase() + pos.slice(1)}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         )
       ) : (
         <div className="nav-pos-dropdown" ref={posDropRef}>
@@ -277,34 +295,42 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
             className="tab-pill tab-pill-qb active nav-pos-trigger"
             onClick={() => setPosDropOpen(o => !o)}
           >
-            {isWR ? 'Build-A-WR' : isRB ? 'Build-A-RB' : isTE ? 'Build-A-TE' : isDB ? 'Build-A-DB' : 'Build-A-QB'}
+            <span className="nav-pos-badge" style={{ '--pos-col': POS_COLORS[isWR ? 'wr' : isRB ? 'rb' : isTE ? 'te' : isDB ? 'db' : 'qb'] }}>
+              {isWR ? 'WR' : isRB ? 'RB' : isTE ? 'TE' : isDB ? 'DB' : 'QB'}
+            </span>
+            {POS_NAMES[isWR ? 'wr' : isRB ? 'rb' : isTE ? 'te' : isDB ? 'db' : 'qb']}
             <IconChevron up={posDropOpen} />
           </button>
           {posDropOpen && (
             <div className="nav-pos-menu">
               {!isWR && (
                 <button className="nav-pos-item" onClick={() => { setPosDropOpen(false); onSwitchPosition?.('wr') }}>
-                  Build-A-WR
+                  <span className="nav-pos-badge" style={{ '--pos-col': POS_COLORS.wr }}>WR</span>
+                  {POS_NAMES.wr}
                 </button>
               )}
               {!isRB && (
                 <button className="nav-pos-item" onClick={() => { setPosDropOpen(false); onSwitchPosition?.('rb') }}>
-                  Build-A-RB
+                  <span className="nav-pos-badge" style={{ '--pos-col': POS_COLORS.rb }}>RB</span>
+                  {POS_NAMES.rb}
                 </button>
               )}
               {!isTE && (
                 <button className="nav-pos-item" onClick={() => { setPosDropOpen(false); onSwitchPosition?.('te') }}>
-                  Build-A-TE
+                  <span className="nav-pos-badge" style={{ '--pos-col': POS_COLORS.te }}>TE</span>
+                  {POS_NAMES.te}
                 </button>
               )}
               {!isDB && (
                 <button className="nav-pos-item" onClick={() => { setPosDropOpen(false); onSwitchPosition?.('db') }}>
-                  Build-A-DB
+                  <span className="nav-pos-badge" style={{ '--pos-col': POS_COLORS.db }}>DB</span>
+                  {POS_NAMES.db}
                 </button>
               )}
               {(isRB || isWR || isTE || isDB) && (
                 <button className="nav-pos-item" onClick={() => { setPosDropOpen(false); onSwitchPosition?.('qb') }}>
-                  Build-A-QB
+                  <span className="nav-pos-badge" style={{ '--pos-col': POS_COLORS.qb }}>QB</span>
+                  {POS_NAMES.qb}
                 </button>
               )}
             </div>

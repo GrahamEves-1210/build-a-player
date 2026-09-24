@@ -122,7 +122,6 @@ function PositionPicker({ position, onChange, voteCounts, votedFor, onVote }) {
           <path d="M6 9l6 6 6-6"/>
         </svg>
       </button>
-      <div className="splash-pos-vote-below-trigger">VOTE FOR NEXT MODE</div>
 
       <div className={`splash-pos-popup${open ? ' splash-pos-popup--open' : ''}`} aria-hidden={!open}>
         <div className="splash-pos-popup-grid">
@@ -343,10 +342,6 @@ export default function SplashScreen({ onStart, onDepthChart }) {
   return (
     <div className={`splash-screen ${phase >= 1 ? 'splash-in' : ''}`}>
 
-      <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', zIndex: 0, pointerEvents: 'none' }}>
-        <div style={{ position: 'absolute', inset: '-20px', backgroundImage: "url('/footballbackground.webp')", backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(4px) brightness(0.5)' }} />
-      </div>
-
       <div className="splash-mob-disclaimer">Fan-made · Not affiliated with the NFL</div>
       <div className="splash-glow" style={{ opacity: phase >= 2 ? 1 : 0 }} />
 
@@ -355,7 +350,8 @@ export default function SplashScreen({ onStart, onDepthChart }) {
       ))}
 
       <div className="splash-header" style={{ opacity: phase >= 1 ? 1 : 0, transform: phase >= 1 ? 'none' : 'translateY(-28px)' }}>
-        <div className="splash-title">
+        <img src="/logo-v3.png" alt="Build-A-Player" className="splash-logo-mark" draggable={false} />
+        <div className="splash-title splash-title--small">
           BUIL<span className="logo-d">D</span><em>-<span className="logo-a">A</span>-</em>PLAYER
         </div>
         <div className="splash-disclaimer splash-disclaimer--under-logo">Fan-made · Not affiliated with the NFL</div>
@@ -387,7 +383,7 @@ export default function SplashScreen({ onStart, onDepthChart }) {
 
       <div className="splash-footer" style={{ opacity: phase >= 3 ? 1 : 0, transform: phase >= 3 ? (isMobile ? 'translateY(6px)' : 'none') : 'translateY(16px)' }}>
 
-        <div className="splash-tagline">Spin the wheel · Build your {position.toUpperCase()}</div>
+        <div className="splash-tagline"><span className="splash-tagline-dot" />1M+ Players · Build the Perfect Player</div>
 
         <div className="splash-modes">
           <button className="splash-mode-classic" onClick={() => { localStorage.setItem('lastPosition', position); onStart('classic', position) }}>

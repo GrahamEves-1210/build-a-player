@@ -169,9 +169,10 @@
 
 [data-sport="bucket"] .splash-screen {
   background:
+    radial-gradient(ellipse 100% 30% at 50% 0%, rgba(149,213,178,0.14) 0%, transparent 65%),
     radial-gradient(ellipse 90% 70% at 50% 0%, rgba(249,115,22,0.18) 0%, transparent 65%),
     linear-gradient(rgba(15,8,4,0.88), rgba(15,8,4,0.88)),
-    #0f0804;
+    #0a0603;
 }
 
 [data-sport="bucket"] .prf-page,
@@ -579,7 +580,7 @@ a:focus-visible {
   align-items: center;
   height: 52px;
   padding: 0 30px;
-  background: #090a0d;
+  background: #0a0a0a;
   transform: translateZ(0);
   will-change: transform;
   border-bottom: 1px solid var(--border);
@@ -602,6 +603,22 @@ a:focus-visible {
   width: 34px;
   object-fit: contain;
   border-radius: 6px;
+}
+
+/* The new brand mark is a wide lockup (~3.3:1), not square — let it keep its
+   own aspect ratio instead of squashing into the old square .logo-img box. */
+.logo-img--mark {
+  width: auto;
+  border-radius: 0;
+}
+
+.logo-img-full {
+  display: block;
+  height: 22px;
+  width: auto;
+}
+@media (min-width: 769px) {
+  .logo-img-full { height: 26px; }
 }
 
 /* QB pill â€” aligned with center of the field column (left panel 272px, right 256px â†’ +8px offset) */
@@ -630,23 +647,54 @@ a:focus-visible {
 .nav-pos-trigger {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 7px;
+}
+.nav-pos-sub {
+  color: var(--text-3);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+.nav-pos-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  background: var(--pos-col);
+  border: none;
+  color: #0a0f0c;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0;
+  flex-shrink: 0;
 }
 .nav-pos-menu {
   position: absolute;
   top: calc(100% + 8px);
   left: 50%;
   transform: translateX(-50%);
-  background: #111318;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 4px;
+  background: #0f1318;
+  border: 1px solid rgba(149,213,178,0.12);
+  border-top-color: rgba(149,213,178,0.20);
+  border-radius: 14px;
+  padding: 6px;
   display: flex;
   flex-direction: column;
-  min-width: 160px;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+  gap: 2px;
+  min-width: 176px;
+  box-shadow: 0 16px 40px rgba(0,0,0,0.65), 0 0 0 1px rgba(0,0,0,0.4);
+  animation: navPosMenuIn 0.16s cubic-bezier(0.22,1,0.36,1);
+}
+@keyframes navPosMenuIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(-4px) scale(0.97); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
 }
 .nav-pos-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   background: transparent;
   border: none;
   color: var(--text-2);
@@ -654,11 +702,13 @@ a:focus-visible {
   font-size: 13px;
   font-weight: 600;
   letter-spacing: -0.2px;
-  padding: 10px 16px;
+  padding: 8px 10px;
   text-align: left;
-  border-radius: 7px;
+  border-radius: 9px;
   cursor: pointer;
   white-space: nowrap;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
   transition: background 0.15s ease, color 0.15s ease;
 }
 .nav-pos-item:hover {
@@ -667,11 +717,6 @@ a:focus-visible {
 }
 
 /* Bucket guard/big pill pair — flex row inside .tab-pill-qb container */
-.bucket-pos-pills {
-  display: flex;
-  gap: 6px;
-  width: max-content;
-}
 
 /* RB pill â€” same size as QB pill */
 .tab-pill-rb,
@@ -1213,6 +1258,10 @@ a:focus-visible {
 
 .logo-text-stack {
   position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
 }
 
 .logo-text {
@@ -1250,6 +1299,20 @@ a:focus-visible {
 .logo-text em .logo-a { letter-spacing: -1.1px; }
 .logo-text .logo-d { letter-spacing: -0.4px; }
 
+/* Small caption variant — icon-above-text lockup (navbar) */
+.logo-text.logo-text--small {
+  font-size: 12px;
+  letter-spacing: 0;
+  text-align: center;
+}
+@media (min-width: 769px) {
+  .logo-text.logo-text--small { font-size: 14px; }
+}
+.logo-text.logo-text--small em { letter-spacing: -0.4px; }
+.logo-text.logo-text--small em .logo-a { letter-spacing: -0.5px; }
+.logo-text.logo-text--small .logo-d { letter-spacing: -0.2px; }
+.logo-text.logo-text--small .hoop-u-svg { height: 0.82em; vertical-align: -0.07em; }
+
 
 /* Pills â€” absolutely centered */
 .nav-pills {
@@ -1278,6 +1341,7 @@ a:focus-visible {
   cursor: pointer;
   white-space: nowrap;
   outline: none;
+  -webkit-tap-highlight-color: transparent;
   transition:
     background-color 0.18s var(--ease),
     border-color 0.18s var(--ease),
@@ -1302,6 +1366,24 @@ a:focus-visible {
   border-color: color-mix(in srgb, var(--btn-start) 35%, transparent);
   color: var(--text);
   box-shadow: inset 0 1px 0 color-mix(in srgb, var(--btn-start) 15%, transparent);
+}
+
+.tab-pill.nav-pos-trigger.active,
+[data-theme] .tab-pill.nav-pos-trigger.active {
+  background: #0f1318;
+  border-color: rgba(149,213,178,0.20);
+  color: var(--text);
+  box-shadow: none;
+}
+[data-sport="bucket"] .tab-pill.nav-pos-trigger.active {
+  border-color: rgba(251,146,60,0.35);
+}
+[data-sport="bucket"] .nav-pos-menu {
+  border-color: rgba(251,146,60,0.20);
+  border-top-color: rgba(251,146,60,0.35);
+}
+.nav-pos-trigger.active .nav-pos-sub {
+  color: var(--text-3);
 }
 
 .tab-pill.soon-1 { opacity: 0.45; pointer-events: none; }
@@ -2072,6 +2154,8 @@ a:focus-visible {
 }
 
 .grade-toggle-btn {
+  position: relative;
+  z-index: 151;
   display: block;
   margin: -2px auto 0;
   padding: 2px 11px;
@@ -2087,6 +2171,7 @@ a:focus-visible {
   white-space: nowrap;
 }
 .grade-toggle-btn:active { transform: scale(0.96); }
+.grade-toggle-btn:focus-visible { outline: none; box-shadow: none; }
 .grade-toggle-on  { color: #5edbd8; background: rgba(94,219,216,0.12); }
 .grade-toggle-off { color: #f87171; background: rgba(248,113,113,0.12); }
 .grade-toggle-on:hover  { color: #8de8e6; background: rgba(94,219,216,0.20); }
@@ -2212,20 +2297,11 @@ a:focus-visible {
 }
 
 /* Bottom accent bar */
-.cat-pill::after {
-  content: '';
-  position: absolute;
-  bottom: 0; left: 0; right: 0;
-  height: 2px;
-  background: rgb(var(--pc));
-  transform: scaleX(0);
-}
-
 .cat-pill.active {
-  background: rgba(var(--pc), 0.32);
+  background: rgba(var(--pc), 0.75);
+  border-color: rgb(var(--pc));
   color: #fff;
 }
-.cat-pill.active::after { transform: scaleX(1); }
 
 /* â”€â”€ SILHOUETTE â”€â”€ */
 .sil-wrap {
@@ -2592,7 +2668,7 @@ a:focus-visible {
 [data-sport="bucket"] .cz-type-size { transform: translateY(calc(-50% - 7px)) translateX(7px) scale(0.88); }
 .mobile-build .cz-type-playmaking .cz-tag { font-size: 5.5px !important; letter-spacing: 0.1px; }
 @media (min-width: 769px) {
-  .cz-type-playmaking .cz-tag { font-size: 11px !important; letter-spacing: 0.5px; }
+  .cz-type-playmaking .cz-tag { font-size: 13px !important; letter-spacing: 0.5px; }
 
   /* NFL splash pill positions */
   .splash-screen:not(.bucket-splash) .cz-type-playmaking { left: 40px !important; right: auto !important; }
@@ -2679,11 +2755,25 @@ a:focus-visible {
   padding-bottom: 32px;
   border-bottom: 1px solid rgba(149,213,178,0.14);
 }
+.about-header--stacked {
+  flex-direction: column;
+  gap: 8px;
+}
+.about-title.about-title--small {
+  font-size: 20px;
+  letter-spacing: -0.4px;
+}
 
 .about-nfl-logo {
   width: 72px;
   height: 72px;
   object-fit: contain;
+  flex-shrink: 0;
+}
+
+.about-logo-mark {
+  height: 50px;
+  width: auto;
   flex-shrink: 0;
 }
 
@@ -3404,7 +3494,10 @@ a:focus-visible {
     /* .spin-panel-body has margin-top:-30px on mobile; a plain margin-top here
        would collapse into that negative margin and vanish, so use padding
        (which never collapses) to actually clear the navbar above it. */
-    padding-top: 14px;
+    padding: 18px 0 0;
+    /* Pull .reels-wrap closer without touching .spin-panel-static's shared
+       `gap` (which also spaces other siblings like .spin-btn-wrap). */
+    margin-bottom: -6px;
   }
 }
 
@@ -4775,7 +4868,9 @@ a:focus-visible {
   position: fixed;
   inset: 0;
   z-index: 1000;
-  background: #080b09;
+  background:
+    radial-gradient(ellipse 100% 34% at 50% 0%, rgba(149,213,178,0.16) 0%, transparent 70%),
+    #050705;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -4835,6 +4930,37 @@ html.is-mac .spin-panel-scroll {
 }
 
 
+.splash-logo-mark {
+  display: block;
+  height: clamp(48px, 8.5vw, 90px);
+  width: auto;
+  margin: 0 auto 4px;
+}
+
+.splash-title.splash-title--small {
+  font-size: clamp(24px, 5vw, 42px);
+  letter-spacing: -1.2px;
+  margin-top: 2px;
+}
+.splash-title.splash-title--small em { letter-spacing: -1.6px; }
+.splash-title.splash-title--small em .logo-a { letter-spacing: -1.7px; }
+.splash-title.splash-title--small .logo-d { letter-spacing: -1.3px; }
+
+.splash-players-tag {
+  display: inline-flex;
+  align-items: center;
+  margin: 5px auto 0;
+  padding: 3px 10px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  color: var(--accent);
+  background: var(--accent-lo);
+  border: 1px solid var(--accent);
+  border-radius: 100px;
+  white-space: nowrap;
+}
+
 .splash-title {
   font-family: Impact, 'Arial Narrow Bold', sans-serif;
   font-size: clamp(58px, 11.7vw, 106px);
@@ -4856,12 +4982,15 @@ html.is-mac .spin-panel-scroll {
 
 
 @media (min-width: 769px) {
-  .splash-figure-wrap  { margin-top: 24px; margin-bottom: 24px; position: relative; top: 20px; }
+  .splash-figure-wrap  { margin-top: 24px; margin-bottom: 8px; position: relative; top: -7px; }
+  .splash-figure-wrap:not(.bucket-figure-wrap) { margin-top: 8px; }
   .splash-figure-scale { transform: scale(0.8); transform-origin: center center; }
-  .bucket-figure-wrap  { margin-top: 0px !important; }
+  .bucket-figure-wrap  { margin-top: 5px !important; }
   .bucket-splash       { justify-content: flex-start; padding-top: 4vh; }
+  .splash-header       { top: -20px; }
+  .splash-pos-toggle--picker { position: relative; top: -10px; }
   .splash-screen:not(.bucket-splash) { justify-content: flex-start; padding-top: 4vh; }
-  .splash-footer       { margin-top: 5px; align-items: stretch; width: clamp(340px, 42vw, 520px); gap: 6px; }
+  .splash-footer       { margin-top: 5px; align-items: stretch; width: clamp(340px, 42vw, 520px); gap: 6px; position: relative; top: -15px; }
   .splash-modes        { width: 100%; }
   .splash-minigame-btn { width: 100%; }
   .splash-minigame-btn--h2h { margin-top: 0; }
@@ -5407,7 +5536,7 @@ html.is-mac .spin-panel-scroll {
 }
 @media (min-width: 769px) {
   .bucket-splash .splash-pos-btn {
-    padding: 10px 36px 8px;
+    padding: 2px 36px 1px;
     min-width: 160px;
     font-size: 32px;
   }
@@ -5418,16 +5547,30 @@ html.is-mac .spin-panel-scroll {
 }
 
 .splash-tagline {
-  font-family: var(--mono);
-  font-size: 10.5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'Bebas Neue', Impact, 'Arial Narrow Bold', sans-serif;
+  font-size: 16px;
   color: var(--text-2);
-  letter-spacing: 3.5px;
+  letter-spacing: 2.5px;
   text-transform: uppercase;
-  font-weight: 500;
-  opacity: 0.9;
+  font-weight: 800;
+  opacity: 0.95;
   position: relative;
   top: 5px;
   margin-bottom: 1px;
+  white-space: nowrap;
+}
+.splash-tagline-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #22c55e;
+  flex-shrink: 0;
+}
+@media (min-width: 769px) {
+  .splash-tagline { font-size: 24px; letter-spacing: 2.5px; }
 }
 
 /* Mode selection cards */
@@ -5660,8 +5803,9 @@ html.is-mac .spin-panel-scroll {
 .splash-disclaimer--under-logo { display: none; }
 .splash-disclaimer--footer { display: block; }
 @media (max-width: 768px) {
-  .splash-disclaimer--under-logo { display: block; }
+  .splash-disclaimer--under-logo { display: block; top: -2px; }
   .splash-disclaimer--footer { display: none; }
+  .splash-header > .splash-disclaimer { top: -2px; }
 }
 
 .splash-disclaimer--header {
@@ -5733,8 +5877,9 @@ html.is-mac .spin-panel-scroll {
   .splash-disclaimer--header { display: block; margin-bottom: -4px; line-height: 1; }
   .splash-disclaimer:not(.splash-disclaimer--header) { display: none; }
   .bucket-splash .splash-pos-toggle { margin-top: 7px; }
+  .splash-pos-toggle--picker { margin-top: 4px; }
   .smode-cta--alltime { left: -10px; }
-  .splash-mob-disclaimer { display: block; }
+  .splash-mob-disclaimer { display: block; top: -2px; }
   .splash-modes-secondary { gap: 5px; }
   .splash-mode-classic,
   .splash-mode-salarycap,
@@ -6535,7 +6680,7 @@ html.is-mac .spin-panel-scroll {
     padding: 0 12px;
     padding-top: env(safe-area-inset-top);
     height: calc(54px + env(safe-area-inset-top));
-    background: #090a0d;
+    background: #0a0a0a;
     z-index: 201;
   }
   .logo-text { font-size: 18px; margin-left: -2px; letter-spacing: -0.5px; }
@@ -7056,7 +7201,7 @@ html.is-touch .wm-row-danger:hover .wm-icon { color: var(--text-4) !important; }
 html.is-touch .wm-row-auth:hover          { background: transparent !important; color: var(--text-2) !important; }
 html.is-touch .wm-social-btn:hover        { background: transparent !important; color: var(--grey-400) !important; }
 html.is-touch .wm-social-btn-coffee:hover { background: #FFDD00 !important; color: #1a1200 !important; }
-html.is-touch .tab-pill:hover             { background: transparent !important; color: var(--text-3) !important; border-color: var(--border) !important; }
+html.is-touch .tab-pill:not(.nav-pos-trigger):hover { background: transparent !important; color: var(--text-3) !important; border-color: var(--border) !important; }
 html.is-touch .splash-mode-classic:hover  { transform: none !important; box-shadow: none !important; border-color: rgba(94,219,216,0.35) !important; }
 html.is-touch .splash-mode-salarycap:hover  { transform: none !important; box-shadow: none !important; border-color: rgba(168,85,247,0.45) !important; }
 html.is-touch .splash-mode-alltime:hover    { transform: none !important; box-shadow: none !important; border-color: rgba(212,175,55,0.45) !important; }

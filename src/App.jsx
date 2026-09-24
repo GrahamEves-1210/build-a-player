@@ -159,8 +159,12 @@ export default function App() {
     const obs = new MutationObserver(hideVideoAds)
     obs.observe(document.body, { childList: true, subtree: true })
     const interval = setInterval(hideVideoAds, 1000)
-    setTimeout(() => clearInterval(interval), 15000)
-    return () => { obs.disconnect(); clearInterval(interval) }
+    // Ads only need hiding briefly right after load — leaving this observer
+    // running for the whole session means every DOM mutation anywhere in the
+    // app (chip animations, spin reels, drag state) re-triggers two full-page
+    // querySelectorAll scans. Cap it to match the interval's own 15s window.
+    const stopTimer = setTimeout(() => { clearInterval(interval); obs.disconnect() }, 15000)
+    return () => { obs.disconnect(); clearInterval(interval); clearTimeout(stopTimer) }
   }, [])
 
   // Fine-tune --ad-h to exact rail height; CSS :has() provides 48px fallback
@@ -213,14 +217,22 @@ export default function App() {
     }
 
     measure()
+    // NOTE: this used to also watch 'style' at the body+subtree level, which
+    // means ANY inline style change ANYWHERE in the app (every spin-reel/chip
+    // animation frame) re-triggered a querySelector + layout-forcing
+    // getBoundingClientRect() here — that's what was making the build screen
+    // laggy. Style changes on the ad element itself are already covered by
+    // elObs below, scoped to just that one element, so the body-wide watch
+    // only needs data-pw-status (rare) plus childList (to catch the ad
+    // element first appearing).
     const bodyObs = new MutationObserver(() => { attachElObs(); measure() })
-    bodyObs.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-pw-status', 'style'] })
+    bodyObs.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-pw-status'] })
     return () => { bodyObs.disconnect(); if (elObs) elObs.disconnect() }
   }, [])
 
   useEffect(() => {
     const meta = document.querySelector('meta[name="theme-color"]')
-    if (meta) meta.setAttribute('content', page === 'splash' ? '#080b09' : page === 'depth-chart' ? '#111318' : '#090a0d')
+    if (meta) meta.setAttribute('content', page === 'splash' ? '#0f1612' : page === 'depth-chart' ? '#111318' : '#090a0d')
   }, [page])
 
   useEffect(() => {
@@ -228,14 +240,19 @@ export default function App() {
       window.ramp.spaNewPage()
       if (page === 'splash') {
         try { window.ramp.destroyUnits(RAMP_AD_UNITS) } catch {}
-      } else {
-        // Playwire-requested video/rail units (2026-09 test) — kept off the splash
-        // page per existing house rule; Playwire scopes further (e.g. to /simulate
-        // only) on their side once this goes live.
+      }
+      // Playwire corner_ad_video + left_rail (2026-09): live only on /simulate
+      // (same page === 'sim' && simResult check the URL-sync effect below uses
+      // to decide the page is actually /simulate) — destroyed the moment the
+      // user navigates anywhere else, per Playwire's spec.
+      const onSimulate = page === 'sim' && !!simResult
+      if (onSimulate) {
         try { window.ramp.spaAddAds([{ type: 'corner_ad_video' }, { type: 'left_rail' }]) } catch {}
+      } else if (page !== 'splash') {
+        try { window.ramp.destroyUnits(['corner_ad_video', 'left_rail']) } catch {}
       }
     })
-  }, [page])
+  }, [page, simResult])
 
   useEffect(() => {
     if (!gameMode) return

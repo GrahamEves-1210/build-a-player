@@ -80,7 +80,7 @@ export default function QBFigureOverlay({ build, className }) {
     }
     #qb-fg [id="Belt"] {
       fill: ${tc('legs')} !important; stroke: none !important; transition: fill .5s ease;
-      filter: blur(4px); opacity: 0.45;
+      opacity: 1; filter: url(#jersey-tex);
     }
     #qb-fg [id="shirt"] {
       fill: ${has('size') ? '#111111' : 'transparent'} !important; stroke: none !important;

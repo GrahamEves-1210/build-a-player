@@ -5,8 +5,9 @@ export default function AboutPage({ onBack, onPrivacy }) {
 
         <button className="prf-top-back" onClick={onBack}>← Back to Game</button>
 
-        <div className="about-header">
-          <div className="about-title">Build<em>-A-</em>Player</div>
+        <div className="about-header about-header--stacked">
+          <img src="/logo-v3.png" alt="Build-A-Player" className="about-logo-mark" />
+          <div className="about-title about-title--small">Build<em>-A-</em>Player</div>
         </div>
 
         <section className="about-section">
@@ -39,9 +40,10 @@ export default function AboutPage({ onBack, onPrivacy }) {
         </section>
 
         <section className="about-section" style={{ textAlign: 'center' }}>
-          <div className="about-body" style={{ margin: '0 0 4px', fontSize: '12px' }}>Featured on</div>
-          <a href="https://sportsminigames.com/" target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block' }}>
-            <img src="/sports-mini-games-badge.png" alt="Featured on Sports Mini Games" style={{ height: '36px', width: 'auto', maxWidth: '100%', display: 'block', borderRadius: '6px' }} />
+          <div className="about-body" style={{ margin: '0 0 4px', fontSize: '12px', textAlign: 'center' }}>Featured on</div>
+          <a href="https://www.sportsdeck.io/" target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignSelf: 'center', flexShrink: 0, width: 'max-content', maxWidth: 'none', alignItems: 'center', gap: '8px', background: 'white', borderRadius: '6px', padding: '6px 10px', textDecoration: 'none' }}>
+            <img src="/sportsdeck-logo.png" alt="Sportsdeck" style={{ height: '24px', width: 'auto', display: 'block', flexShrink: 0 }} />
+            <span style={{ fontSize: '10px', fontWeight: 600, color: '#333', lineHeight: 1.2, textAlign: 'left', whiteSpace: 'nowrap', flexShrink: 0, width: 'max-content' }}>The Home of Sports Apps,<br />Tools &amp; Creators</span>
           </a>
         </section>
 

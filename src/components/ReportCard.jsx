@@ -223,7 +223,7 @@ export function ShareModal({ ovr, arch, build, types, onClose, isBucket = false,
         {!isBucket && (
           <div className="share-og-card">
             <div className="share-og-img-wrap">
-              <img src="/logo.png" alt="" className="share-og-img" />
+              <img src="/logo-v2.png" alt="" className="share-og-img" />
             </div>
             <div className="share-og-body">
               <div className="share-og-domain">build-a-player.com</div>
