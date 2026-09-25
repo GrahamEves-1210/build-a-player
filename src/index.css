@@ -12146,7 +12146,7 @@ html.is-tablet:has([id^="pw-oop"][data-pw-status="loaded"][style*="bottom"]):not
 }
 /* Corner video ad: nudge down, Playwire sets margin-bottom:95px inline */
 .pw-corner-ad-video {
-  margin-bottom: 55px !important;
+  margin-bottom: 10px !important;
 }
 /* Strip Playwire's injected background/border from the bottom rail container */
 #adBanner,
