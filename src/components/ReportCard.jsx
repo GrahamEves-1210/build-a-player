@@ -413,6 +413,7 @@ export default function ReportCard({ build, onSimulate, onReset, types = TYPES, 
         {types.map(t => (
           <BuildSlot key={t} type={t} data={build[t]} attrMap={attrMap} logoDir={logoDir} />
         ))}
+        <hr className="bs-bottom-line" />
       </div>
 
       {!isVersusMode && (

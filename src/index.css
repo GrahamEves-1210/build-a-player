@@ -3198,7 +3198,7 @@ a:focus-visible {
 /* Custom ratings button on build screen */
 
 .ovr-block {
-  padding: 17px 19px 13px;
+  padding: 17px 19px 6px;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
   display: flex;
@@ -3305,6 +3305,21 @@ a:focus-visible {
 
 .build-slots::-webkit-scrollbar { display: none; }
 
+.bs-bottom-line {
+  border: none;
+  border-top: none;
+  border-bottom: none;
+  height: 1px;
+  background: rgba(255,255,255,0.15);
+  margin: 0;
+  padding: 0;
+  flex-shrink: 0;
+}
+.simp-attr-row:last-of-type {
+  border-bottom: none !important;
+}
+
+
 .build-slot {
   display: flex;
   align-items: center;
@@ -3324,6 +3339,7 @@ a:focus-visible {
   border-color: rgba(255,255,255,0.05);
   opacity: 0.4;
 }
+
 
 .build-slot.filled { background: rgba(255,255,255,0.012); }
 .build-slot.filled.sl-arm         { border-color: rgba(248,113,113,0.24); }
@@ -3682,7 +3698,7 @@ a:focus-visible {
   cursor: pointer;
   will-change: transform;
   transform: translateZ(0);
-  margin-top: 5px;
+  margin-top: 3px;
   transition:
     background 0.15s var(--ease),
     box-shadow 0.15s var(--ease),
@@ -3724,7 +3740,7 @@ a:focus-visible {
   align-items: center;
   justify-content: center;
   align-self: center;
-  margin: 14px auto 8px;
+  margin: 8px auto 4px;
   width: auto;
   height: 34px;
   padding: 0 20px;
@@ -12146,7 +12162,7 @@ html.is-tablet:has([id^="pw-oop"][data-pw-status="loaded"][style*="bottom"]):not
 }
 /* Corner video ad: nudge down/left, Playwire sets margin-bottom:95px / margin-right:10px inline */
 .pw-corner-ad-video {
-  margin-bottom: 10px !important;
+  margin-bottom: 9px !important;
   margin-right: 15px !important;
 }
 /* Strip Playwire's injected background/border from the bottom rail container */
