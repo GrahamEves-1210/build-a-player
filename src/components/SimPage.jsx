@@ -1279,13 +1279,7 @@ export default function SimPage({ result, build, types = TYPES, onBack, onReset,
   const advancePage = () => {
     document.querySelector('.simp-page')?.scrollTo({ top: 0, behavior: 'instant' })
     window.scrollTo({ top: 0, behavior: 'instant' })
-    setScreen(s => {
-      const next = s + 1
-      if (!adsDisabled) window.ramp?.que?.push(() => {
-        window.ramp.spaNewPage()
-      })
-      return next
-    })
+    setScreen(s => s + 1)
   }
 
   const triggerMVP = (continuation = null) => {
