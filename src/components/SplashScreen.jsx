@@ -383,7 +383,7 @@ export default function SplashScreen({ onStart, onDepthChart }) {
 
       <div className="splash-footer" style={{ opacity: phase >= 3 ? 1 : 0, transform: phase >= 3 ? (isMobile ? 'translateY(6px)' : 'none') : 'translateY(16px)' }}>
 
-        <div className="splash-tagline"><span className="splash-tagline-dot" />1M+ Players · Build the Perfect Player</div>
+        <div className="splash-tagline"><span className="splash-tagline-dot" />1M+ Players. Build the Perfect Player.</div>
 
         <div className="splash-modes">
           <button className="splash-mode-classic" onClick={() => { localStorage.setItem('lastPosition', position); onStart('classic', position) }}>

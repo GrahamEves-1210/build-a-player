@@ -139,6 +139,7 @@ export default function App() {
   const [vsFinalResult, setVsFinalResult] = useState(null) // host-computed, broadcast to guest
   const vsChannelReady = useRef(false)
   const lastOppPingRef = useRef(Date.now())
+  const oppLeaveTimerRef = useRef(null)
   const faceoffFiredRef = useRef(false)
   // Latest build/user/position for handlers set up once (heartbeat timers, etc.)
   // that would otherwise close over stale values.
@@ -241,15 +242,17 @@ export default function App() {
       if (page === 'splash') {
         try { window.ramp.destroyUnits(RAMP_AD_UNITS) } catch {}
       }
-      // Playwire corner_ad_video + left_rail (2026-09): live only on /simulate
+      // Playwire left_rail (2026-09, per Abhi/TS): live only on /simulate
       // (same page === 'sim' && simResult check the URL-sync effect below uses
       // to decide the page is actually /simulate) — destroyed the moment the
-      // user navigates anywhere else, per Playwire's spec.
+      // user navigates anywhere else. corner_ad_video is already showing on
+      // every page on Playwire's end regardless of what we call here, so it's
+      // no longer requested/destroyed from this side.
       const onSimulate = page === 'sim' && !!simResult
       if (onSimulate) {
-        try { window.ramp.spaAddAds([{ type: 'corner_ad_video' }, { type: 'left_rail' }]) } catch {}
+        try { window.ramp.spaAddAds({ type: 'left_rail' }) } catch {}
       } else if (page !== 'splash') {
-        try { window.ramp.destroyUnits(['corner_ad_video', 'left_rail']) } catch {}
+        try { window.ramp.destroyUnits(['left_rail']) } catch {}
       }
     })
   }, [page, simResult])
@@ -597,6 +600,7 @@ export default function App() {
 
   function cleanupVersusChannel(ch) {
     vsChannelReady.current = false
+    clearTimeout(oppLeaveTimerRef.current)
     if (!ch) return
     if (ch._bc) { ch.close() }
     else { try { (rtSupabase || supabase).removeChannel(ch) } catch {} }
@@ -669,11 +673,19 @@ export default function App() {
     channel.on('broadcast', { event: 'vs_result_final' }, ({ payload }) => setVsFinalResult(payload))
 
     // Presence-based disconnect detection (real Realtime channels only — the
-    // BroadcastChannel fallback has no presence equivalent).
+    // BroadcastChannel fallback has no presence equivalent). A leave doesn't
+    // immediately end the match — a brief WiFi drop/reconnect (common when
+    // both players share one router) looks identical to a real departure at
+    // first, so we wait a few seconds for a rejoin before giving up.
     if (!channel._bc) {
       channel.on('presence', { event: 'leave' }, ({ leftPresences }) => {
         if (!leftPresences.some(p => p.vid === oppId)) return
-        handleOppGone(channel)
+        clearTimeout(oppLeaveTimerRef.current)
+        oppLeaveTimerRef.current = setTimeout(() => handleOppGone(channel), 4000)
+      })
+      channel.on('presence', { event: 'join' }, ({ newPresences }) => {
+        if (!newPresences.some(p => p.vid === oppId)) return
+        clearTimeout(oppLeaveTimerRef.current)
       })
     }
 

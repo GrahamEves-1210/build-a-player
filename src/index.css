@@ -618,7 +618,7 @@ a:focus-visible {
   width: auto;
 }
 @media (min-width: 769px) {
-  .logo-img-full { height: 26px; }
+  .logo-img-full { height: 29px; }
 }
 
 /* QB pill â€” aligned with center of the field column (left panel 272px, right 256px â†’ +8px offset) */
@@ -1306,7 +1306,7 @@ a:focus-visible {
   text-align: center;
 }
 @media (min-width: 769px) {
-  .logo-text.logo-text--small { font-size: 14px; }
+  .logo-text.logo-text--small { font-size: 18px; }
 }
 .logo-text.logo-text--small em { letter-spacing: -0.4px; }
 .logo-text.logo-text--small em .logo-a { letter-spacing: -0.5px; }
@@ -5012,6 +5012,26 @@ html.is-mac .spin-panel-scroll {
   .splash-minigame-btn--h2h { margin-top: 0; }
   .splash-minigame-btn--bucket { margin-top: 0; }
   .splash-minigame-btn--player { margin-top: 0; }
+}
+
+/* Shorter desktop viewports (typical laptops) — the rules above size mostly
+   off viewport WIDTH (vw), so a wide-but-short laptop screen gets the same
+   "spacious" sizing as a tall monitor and the stacked content overflows.
+   Tighten vertical spacing/sizing specifically when height is limited. */
+@media (min-width: 769px) and (max-height: 820px) {
+  .splash-screen        { padding-top: 1.5vh; padding-bottom: 1.5vh; }
+  .splash-header        { top: -8px; }
+  .splash-logo-mark      { height: clamp(40px, 6vw, 60px); }
+  .splash-figure-wrap    { width: clamp(120px, 18vw, 200px); margin-top: 0; margin-bottom: 0; top: 0; }
+  .bucket-figure-wrap    { margin-top: 0 !important; }
+  .splash-footer         { margin-top: 0; top: -4px; gap: 4px; }
+  .splash-tagline        { font-size: 15px !important; }
+  .splash-modes          { gap: 6px; }
+}
+@media (min-width: 769px) and (max-height: 700px) {
+  .splash-figure-wrap    { width: clamp(100px, 14vw, 160px); }
+  .splash-header         { top: 0; }
+  .splash-logo-mark      { height: clamp(34px, 5vw, 48px); }
 }
 
 /* QB/RB figure */

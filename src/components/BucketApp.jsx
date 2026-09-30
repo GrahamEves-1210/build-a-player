@@ -217,7 +217,7 @@ function BucketSplash({ onStart, onVersus }) {
 
       <div className="splash-footer" style={{ opacity: phase >= 3 ? 1 : 0, transform: phase >= 3 ? 'none' : 'translateY(16px)' }}>
 
-        <div className="splash-tagline"><span className="splash-tagline-dot" />1M+ Players · Build the Perfect Player</div>
+        <div className="splash-tagline"><span className="splash-tagline-dot" />1M+ Players. Build the Perfect Player.</div>
 
         <div className="splash-modes">
           <button className="splash-mode-classic" onClick={() => { localStorage.setItem('bucketPosition', position); onStart('classic', position) }}>
@@ -333,6 +333,7 @@ export default function BucketApp() {
   const vsResultRef      = useRef({ build: {}, user: null, position: 'guard' })
   const faceoffFiredRef  = useRef(false)
   const lastOppPingRef   = useRef(0)
+  const oppLeaveTimerRef = useRef(null)
   const savedSpinRef     = useRef(null)
   const vsChannelReady   = useRef(false)
   useEffect(() => { vsResultRef.current = { build, user, position, matchType: versusRoom?.matchType ?? null } }, [build, user, position, versusRoom?.matchType])
@@ -455,12 +456,15 @@ export default function BucketApp() {
       } else {
         window.ramp.spaNewPage()
       }
-      // Playwire corner_ad_video + left_rail (2026-09): live only on the sim
+      // Playwire left_rail (2026-09, per Abhi/TS): live only on the sim
       // results page, destroyed the moment the user navigates anywhere else.
+      // corner_ad_video is already showing on every page on Playwire's end
+      // regardless of what we call here, so it's no longer requested/destroyed
+      // from this side.
       if (page === 'sim') {
-        try { window.ramp.spaAddAds([{ type: 'corner_ad_video' }, { type: 'left_rail' }]) } catch {}
+        try { window.ramp.spaAddAds({ type: 'left_rail' }) } catch {}
       } else if (page !== 'splash') {
-        try { window.ramp.destroyUnits(['corner_ad_video', 'left_rail']) } catch {}
+        try { window.ramp.destroyUnits(['left_rail']) } catch {}
       }
     })
   }, [page])
@@ -845,27 +849,37 @@ export default function BucketApp() {
       lastOppPingRef.current = Date.now()
     })
 
-    // Detect opponent disconnect via Supabase presence (not available on BroadcastChannel mock)
+    // Detect opponent disconnect via Supabase presence (not available on BroadcastChannel mock).
+    // A leave doesn't immediately end the match — a brief WiFi drop/reconnect (common
+    // when both players share one router) looks identical to a real departure at
+    // first, so we wait a few seconds for a rejoin before giving up.
     if (!channel._bc) {
       channel.on('presence', { event: 'leave' }, ({ leftPresences }) => {
         const theyLeft = leftPresences.some(p => p.vid === oppId)
         if (!theyLeft) return
-        const { build: b, user: u, position: pos, matchType: mt } = vsResultRef.current
-        if (u && supabase) {
-          setVsRecord(prev => ({ wins: (prev?.wins ?? 0) + 1, losses: prev?.losses ?? 0 }))
-          const winOvr = calcBucketOVR(b, VERSUS_POS_TYPES[pos] ?? VERSUS_GUARD_TYPES, pos)
-          if (winOvr > 0) supabase.from('vs_results').insert({
-            user_id:    u.id,
-            username:   u.user_metadata?.username || u.email?.split('@')[0],
-            result:     'win',
-            ovr:        winOvr,
-            position:   pos,
-            match_type: mt,
-          }).then(null, () => {})
-        }
-        setOppDisconnected(true)
-        setVersusRoom(null)
-        cleanupVersusChannel(channel)
+        clearTimeout(oppLeaveTimerRef.current)
+        oppLeaveTimerRef.current = setTimeout(() => {
+          const { build: b, user: u, position: pos, matchType: mt } = vsResultRef.current
+          if (u && supabase) {
+            setVsRecord(prev => ({ wins: (prev?.wins ?? 0) + 1, losses: prev?.losses ?? 0 }))
+            const winOvr = calcBucketOVR(b, VERSUS_POS_TYPES[pos] ?? VERSUS_GUARD_TYPES, pos)
+            if (winOvr > 0) supabase.from('vs_results').insert({
+              user_id:    u.id,
+              username:   u.user_metadata?.username || u.email?.split('@')[0],
+              result:     'win',
+              ovr:        winOvr,
+              position:   pos,
+              match_type: mt,
+            }).then(null, () => {})
+          }
+          setOppDisconnected(true)
+          setVersusRoom(null)
+          cleanupVersusChannel(channel)
+        }, 4000)
+      })
+      channel.on('presence', { event: 'join' }, ({ newPresences }) => {
+        if (!newPresences.some(p => p.vid === oppId)) return
+        clearTimeout(oppLeaveTimerRef.current)
       })
     }
 
@@ -1040,6 +1054,7 @@ export default function BucketApp() {
 
   function cleanupVersusChannel(ch) {
     vsChannelReady.current = false
+    clearTimeout(oppLeaveTimerRef.current)
     if (!ch) return
     if (ch._bc) { ch.close() }
     else { try { (rtSupabase || supabase).removeChannel(ch) } catch {} }

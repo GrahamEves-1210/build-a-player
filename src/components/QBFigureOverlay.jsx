@@ -13,10 +13,10 @@ const BASE_SVG = (() => {
   return html
 })()
 
+
 const HELMET_SHELL = 'M244.5 120.156L256 128.656L276 134.656L287 130.156C284.333 129.156 278.4 126.556 276 124.156C273 121.156 277.5 109.156 279 109.156C280.2 109.156 280.833 102.489 281 99.1556L276 89.1556L260.5 79.6556C252.1 72.0556 258.333 62.8222 262.5 59.1556L292 60.1556L322.5 53.1556V44.6556H345.5V43.1556C333.5 5.95558 298.167 -0.677753 282 0.65558C226.8 3.45558 212.667 44.4889 212.5 64.6556L215 68.6556C213.4 73.4556 219.333 93.9889 222.5 103.656V107.656V113.656L228.5 121.656H237.5L244.5 120.156Z'
 
 const SVG_STYLE = { position: 'absolute', inset: 0, width: '100%', height: '100%' }
-const TR = { transition: 'fill .5s ease' }
 
 // Teams whose helmet color differs from their primary team color
 const HELMET_COLOR_OVERRIDE = {
@@ -184,7 +184,7 @@ export default function QBFigureOverlay({ build, className }) {
              style={SVG_STYLE} aria-hidden="true">
           {/* Chest number */}
           <text
-            x="298" y="340"
+            x="298" y="343"
             textAnchor="middle"
             transform="rotate(-3, 298, 340)"
             fontFamily="'Bebas Neue', Impact, Arial, sans-serif"
@@ -277,7 +277,7 @@ export default function QBFigureOverlay({ build, className }) {
           </defs>
           <path d={HELMET_SHELL}
             fill={has('processing') ? helmColor(build['processing'].team, tc('processing')) : 'transparent'}
-            style={TR} />
+            style={{ transition: 'fill .5s ease' }} />
           <path d={HELMET_SHELL} fill="url(#helm-gloss)" style={{ pointerEvents: 'none' }} />
 
           {/* Standard team logo */}
