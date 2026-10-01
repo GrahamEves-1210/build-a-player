@@ -13,6 +13,7 @@ import WRFigureOverlay from './WRFigureOverlay'
 import DBFigureOverlay from './DBFigureOverlay'
 import QBAvatar from './QBAvatar'
 import QBFigureOverlay from './QBFigureOverlay'
+import SiteFooter from './SiteFooter'
 import MVPModal from './MVPModal'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -1402,6 +1403,7 @@ export default function SimPage({ result, build, types = TYPES, onBack, onReset,
         {screens[screen]?.key !== 'final' && (
           <div className="simp-footer-disclaimer">Fan-made · Not affiliated with the NFL</div>
         )}
+        <SiteFooter sport="nfl" />
       </div>
 
       {mvpResult && (

@@ -33,6 +33,8 @@ import { runSimulation, getArchetype, calcOVR, runRBSimulation, calcOVRRB, getAr
 import { supabase, rtSupabase } from './lib/supabase'
 import { track } from './lib/track'
 import CustomRatingsModal from './components/CustomRatingsModal'
+import SiteFooter from './components/SiteFooter'
+import SiteFeatures from './components/SiteFeatures'
 
 const _dd = arr => { const s = new Set(); return arr.filter(p => { const k = `${p.name}|${p.team}`; if (s.has(k)) return false; s.add(k); return true }) }
 const _bt = (a, b) => a.team.localeCompare(b.team) || a.name.localeCompare(b.name)
@@ -53,9 +55,10 @@ const _isPrivacy = window.location.pathname === '/privacy'
 const _isTerms   = window.location.pathname === '/terms'
 const _isProfile = !_sharedData && !_isPrivacy && !_isTerms && window.location.pathname === '/profile'
 const _isAbout   = !_sharedData && !_isPrivacy && !_isTerms && !_isProfile && new URLSearchParams(window.location.search).has('about')
+const _isDepthChart = !_sharedData && !_isPrivacy && !_isTerms && !_isProfile && !_isAbout && window.location.pathname === '/depth-chart'
 
 const _saved = (() => {
-  if (_sharedData || _isPrivacy || _isAbout || _isProfile) return null
+  if (_sharedData || _isPrivacy || _isAbout || _isProfile || _isDepthChart) return null
   try { return JSON.parse(localStorage.getItem('bap_progress')) } catch { return null }
 })()
 
@@ -94,7 +97,7 @@ function enableAdFreeMode() {
 try { if (localStorage.getItem('bap_subscribed') === '1' || localStorage.getItem('bap_ads_off') === '1') enableAdFreeMode() } catch {}
 
 export default function App() {
-  const [page, setPage]               = useState(_sharedData ? 'shared' : _isPrivacy ? 'privacy' : _isTerms ? 'terms' : _isProfile ? 'profile' : _isAbout ? 'about' : (_saved?.gameMode ? 'game' : 'splash'))
+  const [page, setPage]               = useState(_sharedData ? 'shared' : _isPrivacy ? 'privacy' : _isTerms ? 'terms' : _isProfile ? 'profile' : _isAbout ? 'about' : _isDepthChart ? 'depth-chart' : (_saved?.gameMode ? 'game' : 'splash'))
   const [sharedBuild]                 = useState(_sharedData?.build ?? null)
   const [sharedTypes]                 = useState(_sharedData?.types ?? null)
   const [gameMode, setGameMode]         = useState(_saved?.gameMode ?? null)
@@ -126,7 +129,6 @@ export default function App() {
     try { return JSON.parse(localStorage.getItem('bap_custom_ratings') || '{}') } catch { return {} }
   })
   const [showCustomModal, setShowCustomModal] = useState(false)
-  const [showSandboxWarning, setShowSandboxWarning] = useState(false)
   const [saveToast, setSaveToast] = useState(null)
   const saveToastTimer = useRef(null)
 
@@ -238,9 +240,10 @@ export default function App() {
 
   useEffect(() => {
     window.ramp?.que?.push(() => {
-      window.ramp.spaNewPage()
       if (page === 'splash') {
         try { window.ramp.destroyUnits(RAMP_AD_UNITS) } catch {}
+      } else {
+        window.ramp.spaNewPage()
       }
       // Playwire left_rail (2026-09, per Abhi/TS): live only on /simulate
       // (same page === 'sim' && simResult check the URL-sync effect below uses
@@ -335,23 +338,27 @@ export default function App() {
         setPage(prev => prev === 'leaderboard' ? 'game' : prev)
         changed = true
       }
+      if (path !== '/depth-chart') {
+        setPage(prev => prev === 'depth-chart' ? 'splash' : prev)
+        changed = true
+      }
       if (changed) window.scrollTo({ top: 0, behavior: 'instant' })
     }
     window.addEventListener('popstate', handlePop)
     return () => window.removeEventListener('popstate', handlePop)
   }, [])
 
-  // Dedicated URLs for the simulate/season/playoffs/final flow and the
-  // leaderboard — lets Playwire apply ad rules by path. Purely a URL sync
-  // layer; doesn't touch page state, the existing ramp.spaNewPage() calls,
-  // or any in-app navigation logic.
+  // Dedicated URLs for the simulate/season/playoffs/final flow, the
+  // leaderboard, and the depth chart mini-game — lets Playwire apply ad
+  // rules by path. Purely a URL sync layer; doesn't touch page state, the
+  // existing ramp.spaNewPage() calls, or any in-app navigation logic.
   useEffect(() => {
-    const targetPath = (page === 'sim' && simResult) ? '/simulate' : page === 'leaderboard' ? '/leaderboard' : null
+    const targetPath = (page === 'sim' && simResult) ? '/simulate' : page === 'leaderboard' ? '/leaderboard' : page === 'depth-chart' ? '/depth-chart' : null
     if (targetPath) {
       if (window.location.pathname !== targetPath) {
         window.history.pushState({}, '', targetPath)
       }
-    } else if (window.location.pathname === '/simulate' || window.location.pathname === '/leaderboard') {
+    } else if (window.location.pathname === '/simulate' || window.location.pathname === '/leaderboard' || window.location.pathname === '/depth-chart') {
       window.history.replaceState({}, '', '/')
     }
   }, [page, simResult])
@@ -496,18 +503,8 @@ export default function App() {
   }, [simResult])
 
   const handleSandboxToggle = useCallback((on) => {
-    if (on) {
-      setShowSandboxWarning(true)
-    } else {
-      try { localStorage.setItem('bap_custom_mode', '0') } catch {}
-      setIsCustomMode(false)
-    }
-  }, [])
-
-  const confirmSandbox = useCallback(() => {
-    setIsCustomMode(true)
-    try { localStorage.setItem('bap_custom_mode', '1') } catch {}
-    setShowSandboxWarning(false)
+    try { localStorage.setItem('bap_custom_mode', on ? '1' : '0') } catch {}
+    setIsCustomMode(on)
   }, [])
 
   const showSaveToast = useCallback((type, msg) => {
@@ -1109,6 +1106,7 @@ export default function App() {
     <>
       <Navbar {...navbarProps} />
 
+      <div className="game-page-scroll">
       <main className={`game-layout mobile-${mobileView}${gameMode === 'all-time' ? ' alltime-mode' : ''}${page === 'versus-game' ? ' versus-active' : ''}`}>
         <SpinScreen
           build={build}
@@ -1208,6 +1206,11 @@ export default function App() {
           )
         })()}
       </main>
+      <div className="build-footer-section">
+        <SiteFeatures sport="nfl" className="build-site-features" />
+        <SiteFooter sport="nfl" onDepthChart={() => setPage('depth-chart')} />
+      </div>
+      </div>
 
 
       {/* Mobile bottom tab bar */}
@@ -1217,8 +1220,9 @@ export default function App() {
           onClick={() => { setMobileView('spin'); window.scrollTo({ top: 0, behavior: 'instant' }) }}
         >
           <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="10"/>
-            <path d="M12 8v4l3 3"/>
+            <polyline points="23 4 23 10 17 10"/>
+            <polyline points="1 20 1 14 7 14"/>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
           </svg>
           Spin
         </button>
@@ -1228,10 +1232,7 @@ export default function App() {
           onClick={() => { setMobileView('build'); window.scrollTo({ top: 0, behavior: 'instant' }) }}
         >
           <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3" y="3" width="7" height="7" rx="1"/>
-            <rect x="14" y="3" width="7" height="7" rx="1"/>
-            <rect x="3" y="14" width="7" height="7" rx="1"/>
-            <rect x="14" y="14" width="7" height="7" rx="1"/>
+            <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
           </svg>
           Build
           {filledCount > 0 && (
@@ -1249,19 +1250,6 @@ export default function App() {
 
       {showTeamPicker && (
         <TeamPickerModal onSelect={handleTeamPicked} isPlus={isCustomMode} build={build} />
-      )}
-
-      {showSandboxWarning && (
-        <div className="sandbox-warning-overlay" onClick={() => setShowSandboxWarning(false)}>
-          <div className="sandbox-warning-modal" onClick={e => e.stopPropagation()}>
-            <div className="sandbox-warning-title">⚠ Sandbox Mode</div>
-            <div className="sandbox-warning-body">Sandbox mode builds will not be saved to your profile or leaderboard. Are you sure you want to continue?</div>
-            <div className="sandbox-warning-btns">
-              <button className="sandbox-warning-cancel" onClick={() => setShowSandboxWarning(false)}>Cancel</button>
-              <button className="sandbox-warning-confirm" onClick={confirmSandbox}>Continue</button>
-            </div>
-          </div>
-        </div>
       )}
 
       {saveToast && (

@@ -29,6 +29,8 @@ import { track } from '../lib/track'
 import { HEADSHOT_BASE } from '../utils/simulation'
 import ProfilePage from './ProfilePage'
 import CustomRatingsModal from './CustomRatingsModal'
+import SiteFooter from './SiteFooter'
+import SiteFeatures from './SiteFeatures'
 const VersusLobby        = lazy(() => import('./VersusLobby'))
 const BucketVersusResult = lazy(() => import('./BucketVersusResult'))
 const VsPvPLeaderboard   = lazy(() => import('./VsPvPLeaderboard'))
@@ -117,50 +119,83 @@ const CUSTOM_MODAL_BIGS   = _dedup([...ENRICHED_BIGS,   ...ENRICHED_ALLTIME_BIGS
 // ─── Bucket Splash ────────────────────────────────────────────────────────────
 const BUCKET_SPLASH_ATTRS = {
   guard: [
-    { label: 'Jump Shot',   col: '#34d399', angle:  -35, dist: 1.32, mx: 58, my: 14 },
-    { label: 'Finishing',   col: '#fb923c', angle:   55, dist: 1.30, mx: 3,  my: 30 },
-    { label: 'Handles',     col: '#a78bfa', angle:   15, dist: 1.28, mx: 62, my: 52 },
-    { label: 'Speed',       col: '#f87171', angle:  210, dist: 1.31, mx: 4,  my: 62 },
-    { label: 'Bounce',      col: '#fdba74', angle: -130, dist: 1.30, mx: 55, my: 72 },
+    { label: 'Handles',     col: '#a78bfa', angle:  -35, dist: 1.32, mx: 58, my: 14 },
+    { label: 'Jump Shot',   col: '#34d399', angle:   15, dist: 1.28, mx: 62, my: 52 },
+    { label: 'Finishing',   col: '#f87171', angle:   55, dist: 1.30, mx: 3,  my: 30 },
+    { label: 'Speed',       col: '#fb923c', angle:  210, dist: 1.31, mx: 4,  my: 62 },
+    { label: 'Bounce',      col: '#fcd34d', angle: -130, dist: 1.30, mx: 55, my: 72 },
     { label: 'Passing',     col: '#60a5fa', angle:  -70, dist: 1.29, mx: 5,  my: 18, doy: -30, dox: 140 },
-    { label: 'Perimeter D', col: '#38bdf8', angle:  100, dist: 1.32, mx: 60, my: 34, dox: -240, doy: -20 },
-    { label: 'Strength',    col: '#fbbf24', angle: -160, dist: 1.28, mx: 3,  my: 48, doy: 200 },
+    { label: 'Perimeter D', col: '#4ade80', angle:  100, dist: 1.32, mx: 60, my: 34, dox: -240, doy: -20 },
+    { label: 'Strength',    col: '#fdba74', angle: -160, dist: 1.28, mx: 3,  my: 48, doy: 200 },
     { label: 'H/L',         col: '#e879f9', angle:   80, dist: 1.31, mx: 58, my: 44, dox: 170, doy: 10 },
   ],
   big: [
-    { label: 'Jump Shot',    col: '#34d399', angle:  -35, dist: 1.32, mx: 58, my: 14 },
-    { label: 'Finishing',    col: '#fb923c', angle:   55, dist: 1.30, mx: 3,  my: 30 },
+    { label: 'Finishing',    col: '#f87171', angle:  -35, dist: 1.32, mx: 58, my: 14 },
+    { label: 'Jump Shot',    col: '#34d399', angle:   55, dist: 1.30, mx: 3,  my: 30 },
     { label: 'Playmaking',   col: '#38bdf8', angle:   15, dist: 1.28, mx: 62, my: 52 },
     { label: 'Interior D',   col: '#4ade80', angle:  210, dist: 1.31, mx: 4,  my: 62 },
     { label: 'Rebounding',   col: '#a3e635', angle: -130, dist: 1.30, mx: 55, my: 72 },
-    { label: 'Speed',        col: '#f87171', angle:  -70, dist: 1.29, mx: 5,  my: 18, doy: -30, dox: 140 },
+    { label: 'Speed',        col: '#fb923c', angle:  -70, dist: 1.29, mx: 5,  my: 18, doy: -30, dox: 140 },
     { label: 'Bounce',       col: '#fcd34d', angle:  100, dist: 1.32, mx: 60, my: 34, dox: -210 },
-    { label: 'Basketball IQ',col: '#818cf8', angle: -160, dist: 1.28, mx: 3,  my: 48, doy: 200 },
+    { label: 'Basketball IQ',col: '#38bdf8', angle: -160, dist: 1.28, mx: 3,  my: 48, doy: 200 },
     { label: 'Leadership',   col: '#818cf8', angle:   80, dist: 1.31, mx: 58, my: 44, dox: 90 },
   ],
 }
 
-function BucketChip({ label, col, angle, dist, visible, mx, my, isMobile, dox = 0, doy = 0 }) {
-  const x = isMobile ? mx : 50 + dist * 34 * Math.cos((angle * Math.PI) / 180)
-  const y = isMobile ? my : 48 + dist * 30 * Math.sin((angle * Math.PI) / 180)
-  const ox = isMobile ? 0 : dox
-  const oy = isMobile ? 0 : doy
+// Basketball play-diagram sketch scattered faintly across the background in
+// place of the old attribute pills.
+function PlayBackground({ visible }) {
+  return <div className={`splash-route-field${visible ? ' splash-route-field--visible' : ''}`} aria-hidden="true" />
+}
+
+// Manages its own "reveal shortly after mount" timer rather than reacting to
+// an externally-toggled boolean. Combined with `key={position}` at the call
+// site, a position switch fully unmounts the previous instance (killing any
+// in-flight CSS transitions/timers outright) and mounts a clean one, so a
+// fast switch can never leave a stale, half-finished animation behind.
+function useRevealOnMount(ready) {
+  const [visible, setVisible] = useState(false)
+  useEffect(() => {
+    if (!ready) return
+    const t = setTimeout(() => setVisible(true), 60)
+    return () => clearTimeout(t)
+  }, [ready])
+  return visible
+}
+
+
+// Silhouette body re-rendered as stacked, color-coded bands — one per build
+// attribute, using each attribute's real in-game color — clipped to the
+// silhouette's outline via a CSS mask.
+function BucketStackedSilhouette({ attrs, ready }) {
+  const visible = useRevealOnMount(ready)
   return (
     <div
-      className="splash-chip"
+      className="splash-stack-figure"
       style={{
-        left: ox ? `calc(${x}% + ${ox}px)` : `${x}%`,
-        top:  oy ? `calc(${y}% + ${oy}px)` : `${y}%`,
-        borderColor: col, color: col,
-        opacity: visible ? 1 : 0,
-        transform: visible
-          ? (isMobile ? 'translate(0,-50%) scale(1)' : 'translate(-50%,-50%) scale(1)')
-          : (isMobile ? 'translate(0,-50%) scale(0.6)' : 'translate(-50%,-50%) scale(0.6)'),
-        transitionDelay: visible ? `${300 + Math.abs(angle) % 400}ms` : '0ms',
+        WebkitMaskImage: 'url(/basketballsilhouette.png)',
+        maskImage: 'url(/basketballsilhouette.png)',
       }}
     >
-      <span className="splash-chip-dot" style={{ background: col }} />
-      {label}
+      {attrs.map((a, i) => (
+        <div
+          key={a.label}
+          className="splash-stack-band"
+          style={{
+            background: a.col,
+            flex: a.label === 'Jump Shot' || a.label === 'Handles' || a.label === 'Finishing' ? 1.4 : 1,
+            opacity: visible ? 1 : 0,
+            // Starts stacked at the very top (i band-heights up) and falls
+            // down to its own row — lower bands fall further.
+            transform: visible ? 'translateY(0)' : `translateY(-${i * 100}%)`,
+            // Fully sequential — each band only starts once the previous one
+            // has completely finished falling (delay = full fall duration).
+            transitionDelay: visible ? `${(attrs.length - 1 - i) * 170}ms` : '0ms',
+          }}
+        >
+          <span className="splash-stack-band-label">{a.label}</span>
+        </div>
+      ))}
     </div>
   )
 }
@@ -181,15 +216,14 @@ function BucketSplash({ onStart, onVersus }) {
 
   const splashAttrs = BUCKET_SPLASH_ATTRS[position]
 
+  const handlePosChange = pos => setPosition(pos)
+
   return (
     <div className={`splash-screen bucket-splash ${phase >= 1 ? 'splash-in' : ''}`}>
+    <PlayBackground visible={phase >= 3} />
+    <div className="splash-hero">
 
-      <div className="splash-mob-disclaimer">Fan-made · Not affiliated with the NBA</div>
       <div className="splash-glow" style={{ opacity: phase >= 2 ? 1 : 0 }} />
-
-      {splashAttrs.map(a => (
-        <BucketChip key={a.label} {...a} visible={phase >= 3} isMobile={isMobile} />
-      ))}
 
       <div className="splash-header" style={{ opacity: phase >= 1 ? 1 : 0, transform: phase >= 1 ? 'none' : 'translateY(-28px)' }}>
         <img src="/logo-v3.png" alt="Build-A-Bucket" className="splash-logo-mark" draggable={false} />
@@ -201,7 +235,7 @@ function BucketSplash({ onStart, onVersus }) {
             <button
               key={pos}
               className={`splash-pos-btn${position === pos ? ' splash-pos-btn--active' : ''}`}
-              onClick={() => setPosition(pos)}
+              onClick={() => handlePosChange(pos)}
             >
               {POS_LABELS[pos]}
               <span className="splash-pos-sub">{pos === 'guard' ? 'PG · SG · SF' : 'PF · C'}</span>
@@ -211,8 +245,11 @@ function BucketSplash({ onStart, onVersus }) {
       </div>
 
       <div className="splash-figure-wrap bucket-figure-wrap" style={{ opacity: phase >= 2 ? 1 : 0, transform: phase >= 2 ? 'none' : 'translateY(40px) scale(0.92)' }}>
-        <img src="/basketballsilhouette.png" className="splash-figure" alt="" draggable={false} style={{ position: 'absolute', inset: 0 }} />
-        <div className="splash-figure-glow" />
+        <div className="splash-figure-parallax">
+          <img src="/basketballsilhouette.png" className="splash-figure" alt="" draggable={false} style={{ position: 'absolute', inset: 0 }} />
+          <BucketStackedSilhouette key={position} attrs={splashAttrs} ready={phase >= 3} />
+          <div className="splash-figure-glow" />
+        </div>
       </div>
 
       <div className="splash-footer" style={{ opacity: phase >= 3 ? 1 : 0, transform: phase >= 3 ? 'none' : 'translateY(16px)' }}>
@@ -249,7 +286,7 @@ function BucketSplash({ onStart, onVersus }) {
         <button className="splash-minigame-btn splash-minigame-btn--h2h" style={{ position: 'relative' }} onClick={() => onVersus?.(position)}>
           <span className="splash-h2h-new">NEW</span>
           <div className="splash-h2h-logo">HEAD<span className="h2h-to">-TO-</span>HEAD</div>
-          <div className="splash-mg-sub splash-mg-sub--h2h">1v1 · 3v3</div>
+          <div className="splash-mg-sub splash-mg-sub--h2h">1v1</div>
         </button>
 
         <button className="splash-minigame-btn splash-minigame-btn--player" onClick={() => { localStorage.removeItem('bap_progress'); window.location.href = '/'; }}>
@@ -258,8 +295,6 @@ function BucketSplash({ onStart, onVersus }) {
           </div>
           <div className="splash-mg-sub">FOOTBALL BUILDER</div>
         </button>
-
-        <div className="splash-disclaimer">Fan-made · Not affiliated with the NBA</div>
       </div>
 
       <div className="splash-field-lines">
@@ -267,6 +302,11 @@ function BucketSplash({ onStart, onVersus }) {
           <div key={i} className="splash-yard-line" style={{ opacity: phase >= 2 ? 1 : 0, transitionDelay: `${600 + i * 60}ms` }} />
         ))}
       </div>
+    </div>
+
+    <SiteFeatures sport="bucket" />
+
+    <SiteFooter sport="bucket" />
     </div>
   )
 }
@@ -316,7 +356,6 @@ export default function BucketApp() {
     try { return JSON.parse(localStorage.getItem('bab_bucket_custom_ratings') || '{}') } catch { return {} }
   })
   const [showBucketCustomModal, setShowBucketCustomModal] = useState(false)
-  const [showSandboxWarning, setShowSandboxWarning] = useState(false)
 
   // Versus mode
   const [versusRoom,     setVersusRoom]     = useState(null)
@@ -554,18 +593,8 @@ export default function BucketApp() {
   }, [build, activeTypes, isVersusMode, position, gameMode])
 
   const handleSandboxToggle = useCallback((on) => {
-    if (on) {
-      setShowSandboxWarning(true)
-    } else {
-      setIsBucketCustomMode(false)
-      try { localStorage.setItem('bab_custom_mode', '0') } catch {}
-    }
-  }, [])
-
-  const confirmSandbox = useCallback(() => {
-    setIsBucketCustomMode(true)
-    try { localStorage.setItem('bab_custom_mode', '1') } catch {}
-    setShowSandboxWarning(false)
+    try { localStorage.setItem('bab_custom_mode', on ? '1' : '0') } catch {}
+    setIsBucketCustomMode(on)
   }, [])
 
   const currentPool = useMemo(() => {
@@ -1390,6 +1419,7 @@ export default function BucketApp() {
       </Helmet>
       <Navbar {...navbarProps} />
 
+      <div className="game-page-scroll">
       <main className={`game-layout mobile-${mobileView}${gameMode === 'all-time' ? ' alltime-mode' : ''}${page === 'versus-game' ? ' versus-active' : ''}`}>
         <SpinScreen
           build={build}
@@ -1465,6 +1495,11 @@ export default function BucketApp() {
           />
         </div>
       </main>
+      <div className="build-footer-section">
+        <SiteFeatures sport="bucket" className="build-site-features" />
+        <SiteFooter sport="bucket" />
+      </div>
+      </div>
 
       {leaveConfirm && (
         <div className="leave-confirm-overlay" onClick={() => setLeaveConfirm(null)}>
@@ -1546,19 +1581,6 @@ export default function BucketApp() {
         />
       )}
 
-      {showSandboxWarning && (
-        <div className="sandbox-warning-overlay" onClick={() => setShowSandboxWarning(false)}>
-          <div className="sandbox-warning-modal" onClick={e => e.stopPropagation()}>
-            <div className="sandbox-warning-title">⚠ Sandbox Mode</div>
-            <div className="sandbox-warning-body">Sandbox mode builds will not be saved to your profile or leaderboard. Are you sure you want to continue?</div>
-            <div className="sandbox-warning-btns">
-              <button className="sandbox-warning-cancel" onClick={() => setShowSandboxWarning(false)}>Cancel</button>
-              <button className="sandbox-warning-confirm" onClick={confirmSandbox}>Continue</button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {showBucketCustomModal && (
         <CustomRatingsModal
           isBucket={true}
@@ -1626,8 +1648,9 @@ export default function BucketApp() {
           onClick={() => { setMobileView('spin'); window.scrollTo({ top: 0, behavior: 'instant' }) }}
         >
           <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="10"/>
-            <path d="M12 8v4l3 3"/>
+            <polyline points="23 4 23 10 17 10"/>
+            <polyline points="1 20 1 14 7 14"/>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
           </svg>
           Spin
         </button>
@@ -1637,10 +1660,7 @@ export default function BucketApp() {
           onClick={() => { setMobileView('build'); window.scrollTo({ top: 0, behavior: 'instant' }) }}
         >
           <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3" y="3" width="7" height="7" rx="1"/>
-            <rect x="14" y="3" width="7" height="7" rx="1"/>
-            <rect x="3" y="14" width="7" height="7" rx="1"/>
-            <rect x="14" y="14" width="7" height="7" rx="1"/>
+            <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
           </svg>
           Build
           {filledCount > 0 && (

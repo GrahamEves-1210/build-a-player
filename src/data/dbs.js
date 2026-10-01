@@ -103,8 +103,8 @@ const _DBS = [
   // DAL
   { name: 'DaRon Bland',         short: 'Bland',          team: 'DAL', teamName: 'Dallas Cowboys',    skin: '#5e3c22', height: 74, weight: 202, starter: true,  captain: true,  number: 26, subpos: 'cb',
     attrs: { speed: 7, size: 8, fluidity: 7, press: 6, hands: 9, zoneIQ: 9, manCoverage: 6, playRecognition: 8, runSupport: 5} },
-  { name: 'Cobie Durant',        short: 'Durant',         team: 'DAL', teamName: 'Dallas Cowboys',    skin: '#5e3c22', height: 71, weight: 187, starter: true,  number: 2, subpos: 'cb',
-    attrs: { speed: 7, size: 3, fluidity: 6, press: 6, hands: 6, zoneIQ: 7, manCoverage: 7, playRecognition: 6, runSupport: 4} },
+  { name: 'Joey Porter Jr.',     short: 'Porter Jr.',     team: 'DAL', teamName: 'Dallas Cowboys',    skin: '#5e3c22', height: 74, weight: 193, starter: true,  number: 24, subpos: 'cb',
+    attrs: { speed: 6, size: 7, fluidity: 5, press: 9, hands: 6, zoneIQ: 5, manCoverage: 6, playRecognition: 6, runSupport: 5} },
   { name: 'Caleb Downs', short: 'Downs', team: 'DAL', teamName: 'Dallas Cowboys', skin: '#5e3c22', height: 72, weight: 210, starter: true,  captain: true,  number: 13, subpos: 's',
     attrs: { speed: 8, size: 6, fluidity: 7, press: 5, hands: 8, zoneIQ: 8, manCoverage: 6, playRecognition: 7, runSupport: 6} },
   { name: 'Jalen Thompson',      short: 'J. Thompson',    team: 'DAL', teamName: 'Dallas Cowboys',    skin: '#5e3c22', height: 71, weight: 190, starter: true,  number: 34, subpos: 's',
@@ -263,10 +263,10 @@ const _DBS = [
   { name: 'Cooper DeJean',       short: 'DeJean',         team: 'PHI', teamName: 'Philadelphia Eagles', skin: '#f0c4a0', height: 72, weight: 198, starter: true,  number: 33, subpos: 's',
     attrs: { speed: 8, size: 6, fluidity: 8, press: 7, hands: 8, zoneIQ: 8, manCoverage: 7, playRecognition: 8, runSupport: 11} },
   // PIT
-  { name: 'Joey Porter Jr.',     short: 'Porter Jr.',     team: 'PIT', teamName: 'Pittsburgh Steelers', skin: '#5e3c22', height: 74, weight: 193, starter: true,  captain: true,  number: 24, subpos: 'cb',
-    attrs: { speed: 6, size: 7, fluidity: 5, press: 9, hands: 6, zoneIQ: 5, manCoverage: 6, playRecognition: 6, runSupport: 5} },
   { name: 'Jamel Dean',          short: 'Dean',           team: 'PIT', teamName: 'Pittsburgh Steelers', skin: '#5e3c22', height: 73, weight: 206, starter: true,  number: 35, subpos: 'cb',
     attrs: { speed: 8, size: 7, fluidity: 6, press: 6, hands: 6, zoneIQ: 6, manCoverage: 7, playRecognition: 6, runSupport: 5} },
+  { name: 'Asante Samuel Jr.',   short: 'Samuel Jr.',     team: 'PIT', teamName: 'Pittsburgh Steelers', skin: '#5e3c22', height: 70, weight: 180, starter: true,  number: 22, subpos: 'cb',
+    attrs: { speed: 8, size: 2, fluidity: 8, press: 1, hands: 7, zoneIQ: 6, manCoverage: 5, playRecognition: 6, runSupport: 3} },
   { name: 'Jaquan Brisker',      short: 'Brisker',        team: 'PIT', teamName: 'Pittsburgh Steelers', skin: '#5e3c22', height: 73, weight: 204, starter: true,  captain: true,  number: 3,  subpos: 's',
     attrs: { speed: 6, size: 7, fluidity: 6, press: 5, hands: 5, zoneIQ: 6, manCoverage: 5, playRecognition: 7, runSupport: 8} },
   { name: 'Jalen Ramsey',        short: 'Ramsey',         team: 'PIT', teamName: 'Pittsburgh Steelers', skin: '#5e3c22', height: 73, weight: 208, starter: true,  number: 5,  subpos: 's',

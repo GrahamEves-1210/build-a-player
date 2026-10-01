@@ -1,6 +1,8 @@
 ﻿import { useEffect, useState, useMemo, useRef } from 'react'
 import { nflHeadshot, HEADSHOT_BASE } from '../utils/simulation'
 import { supabase } from '../lib/supabase'
+import SiteFooter from './SiteFooter'
+import SiteFeatures from './SiteFeatures'
 
 const VOTE_KEY   = 'bap_next_mode_vote'
 const VOTE_SEED  = { lb: 0, dl: 0 }
@@ -212,9 +214,9 @@ const QB_ATTRS = [
   { label: 'Arm',                   col: '#f87171', angle:  -35, dist: 1.32, mx: 58, my: 14 },
   { label: 'Legs',                  col: '#60a5fa', angle:   55, dist: 1.30, mx: 3,  my: 30, dox: 80 },
   { label: 'Build',                 col: '#fb923c', angle:   15, dist: 1.28, mx: 62, my: 52 },
-  { label: 'Processing',            col: '#a78bfa', angle:  210, dist: 1.31, mx: 4,  my: 62 },
+  { label: 'Processing',            col: '#e879f9', angle:  210, dist: 1.31, mx: 4,  my: 62 },
   { label: 'Accuracy/Touch',        col: '#34d399', angle: -130, dist: 1.30, mx: 55, my: 72 },
-  { label: 'Leadership',            col: '#e879f9', angle:  -70, dist: 1.29, mx: 5,  my: 18, doy: -30, dox: 140 },
+  { label: 'Leadership',            col: '#a78bfa', angle:  -70, dist: 1.29, mx: 5,  my: 18, doy: -30, dox: 140 },
   { label: 'Playmaking/Creativity', col: '#fbbf24', angle:  100, dist: 1.32, mx: 68, my: 34, dox: -290 },
   { label: 'Pocket Presence',       col: '#2dd4bf', angle: -160, dist: 1.28, mx: 3,  my: 48, doy: 200 },
   { label: 'Vision',                col: '#38bdf8', angle:   80, dist: 1.31, mx: 74, my: 44, dox: 270 },
@@ -234,25 +236,25 @@ const RB_ATTRS = [
 const WR_ATTRS = [
   { label: 'Speed',        col: '#f87171', angle:  -35, dist: 1.32, mx: 58, my: 14 },
   { label: 'Body Control', col: '#60a5fa', angle:   55, dist: 1.30, mx: 3,  my: 30 },
-  { label: 'Vertical',     col: '#34d399', angle:   15, dist: 1.28, mx: 62, my: 52 },
+  { label: 'Vertical',     col: '#a78bfa', angle:   15, dist: 1.28, mx: 62, my: 52 },
   { label: 'Size',         col: '#fb923c', angle:  210, dist: 1.31, mx: 4,  my: 62 },
-  { label: 'Route Running',col: '#2dd4bf', angle: -130, dist: 1.30, mx: 55, my: 72 },
-  { label: 'Release',      col: '#e879f9', angle:  -70, dist: 1.29, mx: 5,  my: 18, doy: -30, dox: 140 },
-  { label: 'Hands',        col: '#fbbf24', angle:  100, dist: 1.32, mx: 60, my: 34, dox: -210 },
-  { label: 'Awareness',    col: '#a78bfa', angle: -160, dist: 1.28, mx: 3,  my: 48, doy: 200 },
-  { label: 'After Catch',  col: '#38bdf8', angle:   80, dist: 1.31, mx: 74, my: 44, dox: 270 },
+  { label: 'Route Running',col: '#34d399', angle: -130, dist: 1.30, mx: 55, my: 72 },
+  { label: 'Release',      col: '#2dd4bf', angle:  -70, dist: 1.29, mx: 5,  my: 18, doy: -30, dox: 140 },
+  { label: 'Hands',        col: '#34d399', angle:  100, dist: 1.32, mx: 60, my: 34, dox: -210 },
+  { label: 'Awareness',    col: '#e879f9', angle: -160, dist: 1.28, mx: 3,  my: 48, doy: 200 },
+  { label: 'After Catch',  col: '#fbbf24', angle:   80, dist: 1.31, mx: 74, my: 44, dox: 270 },
 ]
 
 const TE_ATTRS = [
   { label: 'Speed',        col: '#f87171', angle:  -35, dist: 1.32, mx: 58, my: 14 },
   { label: 'Blocking',     col: '#60a5fa', angle:   55, dist: 1.30, mx: 3,  my: 30 },
-  { label: 'Vertical',     col: '#34d399', angle:   15, dist: 1.28, mx: 62, my: 52 },
+  { label: 'Vertical',     col: '#a78bfa', angle:   15, dist: 1.28, mx: 62, my: 52 },
   { label: 'Size',         col: '#fb923c', angle:  210, dist: 1.31, mx: 4,  my: 62 },
-  { label: 'Route Running',col: '#2dd4bf', angle: -130, dist: 1.30, mx: 55, my: 72 },
-  { label: 'Strength',     col: '#e879f9', angle:  -70, dist: 1.29, mx: 5,  my: 18, doy: -30, dox: 140 },
-  { label: 'Hands',        col: '#fbbf24', angle:  100, dist: 1.32, mx: 60, my: 34, dox: -210 },
-  { label: 'Awareness',    col: '#a78bfa', angle: -160, dist: 1.28, mx: 3,  my: 48, doy: 200 },
-  { label: 'After Catch',  col: '#38bdf8', angle:   80, dist: 1.31, mx: 74, my: 44, dox: 270 },
+  { label: 'Route Running',col: '#34d399', angle: -130, dist: 1.30, mx: 55, my: 72 },
+  { label: 'Strength',     col: '#fbbf24', angle:  -70, dist: 1.29, mx: 5,  my: 18, doy: -30, dox: 140 },
+  { label: 'Hands',        col: '#34d399', angle:  100, dist: 1.32, mx: 60, my: 34, dox: -210 },
+  { label: 'Awareness',    col: '#e879f9', angle: -160, dist: 1.28, mx: 3,  my: 48, doy: 200 },
+  { label: 'After Catch',  col: '#fbbf24', angle:   80, dist: 1.31, mx: 74, my: 44, dox: 270 },
 ]
 
 const DB_ATTRS = [
@@ -267,29 +269,69 @@ const DB_ATTRS = [
   { label: 'Run Support',      col: '#fbbf24', angle:   80, dist: 1.31, mx: 74, my: 44, dox: 270 },
 ]
 
-function FloatingChip({ label, col, angle, dist, visible, mx, my, isMobile, orbitScale = 1, dox = 0, doy = 0 }) {
-  const x = isMobile ? mx : 50 + dist * 34 * orbitScale * Math.cos((angle * Math.PI) / 180)
-  const y = isMobile ? my : 48 + dist * 30 * orbitScale * Math.sin((angle * Math.PI) / 180)
-  const ox = isMobile ? 0 : dox
-  const oy = isMobile ? 0 : doy
+// Football route-tree playbook sketch scattered faintly across the background
+// in place of the old attribute pills.
+function RouteBackground({ visible }) {
+  return <div className={`splash-route-field${visible ? ' splash-route-field--visible' : ''}`} aria-hidden="true" />
+}
 
+// Manages its own "reveal shortly after mount" timer rather than reacting to
+// an externally-toggled boolean. Combined with `key={position}` at the call
+// site, a position switch fully unmounts the previous instance (killing any
+// in-flight CSS transitions/timers outright) and mounts a clean one, so a
+// fast switch can never leave a stale, half-finished animation behind.
+function useRevealOnMount(ready) {
+  const [visible, setVisible] = useState(false)
+  useEffect(() => {
+    if (!ready) return
+    const t = setTimeout(() => setVisible(true), 60)
+    return () => clearTimeout(t)
+  }, [ready])
+  return visible
+}
+
+const STACK_MASK = {
+  qb: { src: '/qb-silhouette.webp', scale: 1 },
+  rb: { src: '/rb-silhouette.webp', scale: 1 },
+  wr: { src: '/wr-silhouette.png',  scale: 1.18 },
+  te: { src: '/wr-silhouette.png',  scale: 1.18 },
+  db: { src: '/db-silhouette.png',  scale: 1.05 },
+}
+
+// Silhouette body re-rendered as stacked, color-coded bands — one per build
+// attribute, using each attribute's real in-game color — clipped to the
+// exact outline of the position's silhouette image via a CSS mask, so it
+// reads as the attributes "stacking up" into the body.
+function StackedSilhouette({ position, attrs, ready }) {
+  const visible = useRevealOnMount(ready)
+  const mask = STACK_MASK[position] ?? STACK_MASK.qb
   return (
     <div
-      className="splash-chip"
+      className="splash-stack-figure"
       style={{
-        left: ox ? `calc(${x}% + ${ox}px)` : `${x}%`,
-        top:  oy ? `calc(${y}% + ${oy}px)` : `${y}%`,
-        borderColor: col,
-        color: col,
-        opacity: visible ? 1 : 0,
-        transform: visible
-          ? (isMobile ? 'translate(0,-50%) scale(1)' : 'translate(-50%,-50%) scale(1)')
-          : (isMobile ? 'translate(0,-50%) scale(0.6)' : 'translate(-50%,-50%) scale(0.6)'),
-        transitionDelay: visible ? `${300 + Math.abs(angle) % 400}ms` : '0ms',
+        WebkitMaskImage: `url(${mask.src})`,
+        maskImage: `url(${mask.src})`,
+        transform: mask.scale !== 1 ? `scale(${mask.scale})` : undefined,
       }}
     >
-      <span className="splash-chip-dot" style={{ background: col }} />
-      {label}
+      {attrs.map((a, i) => (
+        <div
+          key={a.label}
+          className="splash-stack-band"
+          style={{
+            background: a.col,
+            opacity: visible ? 1 : 0,
+            // Starts stacked at the very top (i band-heights up) and falls
+            // down to its own row — lower bands fall further.
+            transform: visible ? 'translateY(0)' : `translateY(-${i * 100}%)`,
+            // Fully sequential — each band only starts once the previous one
+            // has completely finished falling (delay = full fall duration).
+            transitionDelay: visible ? `${(attrs.length - 1 - i) * 170}ms` : '0ms',
+          }}
+        >
+          <span className="splash-stack-band-label">{a.label}</span>
+        </div>
+      ))}
     </div>
   )
 }
@@ -297,10 +339,11 @@ function FloatingChip({ label, col, angle, dist, visible, mx, my, isMobile, orbi
 export default function SplashScreen({ onStart, onDepthChart }) {
   const [phase, setPhase] = useState(0)
   const [position, setPosition] = useState(() => localStorage.getItem('lastPosition') || 'qb')
-  const handlePosChange = pos => { setPosition(pos); localStorage.setItem('lastPosition', pos) }
   const isMobile  = useMemo(() => window.innerWidth <= 768, [])
   const isDesktop = useMemo(() => window.innerWidth > 768, [])
   const orbitScale = isDesktop ? 0.8 : 1
+
+  const handlePosChange = pos => { setPosition(pos); localStorage.setItem('lastPosition', pos) }
 
   const [voteCounts, setVoteCounts] = useState(VOTE_SEED)
   const [votedFor, setVotedFor] = useState(() => { try { return localStorage.getItem(VOTE_KEY) } catch { return null } })
@@ -341,45 +384,35 @@ export default function SplashScreen({ onStart, onDepthChart }) {
 
   return (
     <div className={`splash-screen ${phase >= 1 ? 'splash-in' : ''}`}>
+    <RouteBackground visible={phase >= 3} />
+    <div className="splash-hero">
 
-      <div className="splash-mob-disclaimer">Fan-made · Not affiliated with the NFL</div>
       <div className="splash-glow" style={{ opacity: phase >= 2 ? 1 : 0 }} />
-
-      {attrs.map((a) => (
-        <FloatingChip key={a.label} {...a} visible={phase >= 3} isMobile={isMobile} orbitScale={orbitScale} />
-      ))}
 
       <div className="splash-header" style={{ opacity: phase >= 1 ? 1 : 0, transform: phase >= 1 ? 'none' : 'translateY(-28px)' }}>
         <img src="/logo-v3.png" alt="Build-A-Player" className="splash-logo-mark" draggable={false} />
         <div className="splash-title splash-title--small">
           BUIL<span className="logo-d">D</span><em>-<span className="logo-a">A</span>-</em>PLAYER
         </div>
-        <div className="splash-disclaimer splash-disclaimer--under-logo">Fan-made · Not affiliated with the NFL</div>
         <div className="splash-pos-toggle splash-pos-toggle--picker" style={{ opacity: phase >= 3 ? 1 : 0, transform: phase >= 3 ? (isMobile ? 'translateY(-8px)' : 'none') : 'translateY(8px)' }}>
           <PositionPicker position={position} onChange={handlePosChange} voteCounts={voteCounts} votedFor={votedFor} onVote={handleVote} />
         </div>
       </div>
 
       <div className="splash-figure-wrap" style={{ opacity: phase >= 2 ? 1 : 0, transform: phase >= 2 ? 'none' : 'translateY(40px) scale(0.92)' }}>
-        <img src="/qb-silhouette.webp" className="splash-figure" alt="" draggable={false}
-          style={{ position: 'absolute', inset: 0, opacity: position === 'qb' ? 1 : 0 }} />
-        <img src="/rb-silhouette.webp" className="splash-figure" alt="" draggable={false}
-          style={{ position: 'absolute', inset: 0, opacity: position === 'rb' ? 1 : 0 }} />
-        <img src="/wr-silhouette.png" className="splash-figure" alt="" draggable={false}
-          style={{ position: 'absolute', inset: 0, opacity: (position === 'wr' || position === 'te') ? 1 : 0, transform: 'scale(1.18)', transformOrigin: 'center center' }} />
-        <img src="/db-silhouette.png" className="splash-figure" alt="" draggable={false}
-          style={{ position: 'absolute', inset: 0, opacity: position === 'db' ? 1 : 0, transform: 'scale(1.05)', transformOrigin: 'center center' }} />
-        <div className="splash-figure-glow" />
+        <div className="splash-figure-parallax">
+          <img src="/qb-silhouette.webp" className="splash-figure" alt="" draggable={false}
+            style={{ position: 'absolute', inset: 0, opacity: position === 'qb' ? 1 : 0 }} />
+          <img src="/rb-silhouette.webp" className="splash-figure" alt="" draggable={false}
+            style={{ position: 'absolute', inset: 0, opacity: position === 'rb' ? 1 : 0 }} />
+          <img src="/wr-silhouette.png" className="splash-figure" alt="" draggable={false}
+            style={{ position: 'absolute', inset: 0, opacity: (position === 'wr' || position === 'te') ? 1 : 0, transform: 'scale(1.18)', transformOrigin: 'center center' }} />
+          <img src="/db-silhouette.png" className="splash-figure" alt="" draggable={false}
+            style={{ position: 'absolute', inset: 0, opacity: position === 'db' ? 1 : 0, transform: 'scale(1.05)', transformOrigin: 'center center' }} />
+          <StackedSilhouette key={position} position={position} attrs={attrs} ready={phase >= 3} />
+          <div className="splash-figure-glow" />
+        </div>
       </div>
-
-      <button
-        className="splash-dc-float"
-        onClick={onDepthChart}
-        style={{ opacity: phase >= 3 ? 1 : 0, transform: phase >= 3 ? 'translateY(-50%)' : 'translateY(calc(-50% + 10px)) scale(0.8)' }}
-      >
-        <div className="splash-dc-float-main">THE DEPTH CHART</div>
-        <div className="splash-dc-float-sub">MINI GAME</div>
-      </button>
 
       <div className="splash-footer" style={{ opacity: phase >= 3 ? 1 : 0, transform: phase >= 3 ? (isMobile ? 'translateY(6px)' : 'none') : 'translateY(16px)' }}>
 
@@ -429,14 +462,17 @@ export default function SplashScreen({ onStart, onDepthChart }) {
           )}
         </div>
 
+        <button className="splash-minigame-btn splash-minigame-btn--depthchart" onClick={onDepthChart}>
+          <div className="splash-dc-float-main">THE DEPTH CHART</div>
+          <div className="splash-mg-sub">MINI GAME</div>
+        </button>
+
         <button className="splash-minigame-btn splash-minigame-btn--bucket" onClick={() => window.location.href = '/bucket'}>
           <div className="splash-xlink-logo">
             BUIL<span className="splash-xlink-d">D</span><em className="splash-xlink-em splash-xlink-em--bucket">-<span className="splash-xlink-a">A</span>-</em>B<HoopU />CKET
           </div>
           <div className="splash-mg-sub">BASKETBALL BUILDER</div>
         </button>
-
-        <div className="splash-disclaimer splash-disclaimer--footer">Fan-made · Not affiliated with the NFL</div>
       </div>
 
       <div className="splash-field-lines">
@@ -444,6 +480,11 @@ export default function SplashScreen({ onStart, onDepthChart }) {
           <div key={i} className="splash-yard-line" style={{ opacity: phase >= 2 ? 1 : 0, transitionDelay: `${600 + i * 60}ms` }} />
         ))}
       </div>
+    </div>
+
+    <SiteFeatures sport="nfl" />
+
+    <SiteFooter sport="nfl" onDepthChart={onDepthChart} />
     </div>
   )
 }

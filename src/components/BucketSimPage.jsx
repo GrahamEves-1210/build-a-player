@@ -8,6 +8,7 @@ import { SAL_REP_TYPES, SAL_ATTR_MAP } from './BucketSalaryCap'
 import QBAvatar from './QBAvatar'
 import BucketFigureOverlay from './BucketFigureOverlay'
 import { ShareModal } from './ReportCard'
+import SiteFooter from './SiteFooter'
 
 function gradeColor(val) {
   if (val >= 11) return '#a855f7'
@@ -2802,6 +2803,7 @@ export default function BucketSimPage({ result, build, types, position, onBack, 
         {screens[screen]?.key !== 'final' && (
           <div className="simp-footer-disclaimer">Fan-made · Not affiliated with the NBA</div>
         )}
+        <SiteFooter sport="bucket" />
       </div>
     </div>
   )

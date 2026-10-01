@@ -1800,7 +1800,7 @@ export const NBA_ALLTIME_BIG_PLAYERS = [
 
   // ─── DAL ───────────────────────────────────────────────────────────
   { name: "Dirk Nowitzki", short: "Dirk", team: 'DAL', starter: true, captain: true, number: 41, ht: "7'0\"", wt: 245, years: '1998–19',
-    attrs: { jumpShot:11, finishing:9, rebounding:7, playmaking:6, interiorDefense:3, speed:4, bounce:4, size:8, basketballIQ:9, clutch:11 } },
+    attrs: { jumpShot:10, finishing:9, rebounding:7, playmaking:6, interiorDefense:3, speed:4, bounce:4, size:8, basketballIQ:9, clutch:11 } },
   { name: "Jamal Mashburn", short: "Monster Mash", team: 'DAL', starter: true, captain: false, number: 24, ht: "6'8\"", wt: 250, years: '1993–97',
     attrs: { jumpShot:8, finishing:8, rebounding:6, playmaking:5, interiorDefense:3, speed:6, bounce:6, size:7, basketballIQ:6, clutch:7 } },
   { name: "Roy Tarpley", short: "Tarpley", team: 'DAL', starter: false, captain: false, number: 42, ht: "6'11\"", wt: 240, years: '1986–95',

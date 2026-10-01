@@ -474,12 +474,12 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
   return (
     <section className="field-center" style={isBucket ? { backgroundColor: '#090a0d' } : undefined}>
       {isBucket && (
-        <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', zIndex: 0, pointerEvents: 'none' }}>
+        <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', zIndex: -1, pointerEvents: 'none' }}>
           <div style={{ position: 'absolute', inset: '-20px', backgroundImage: "url('/bucketbackground.webp')", backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(4px) brightness(1.4)' }} />
         </div>
       )}
       {!isBucket && (
-        <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', zIndex: 0, pointerEvents: 'none' }}>
+        <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', zIndex: -1, pointerEvents: 'none' }}>
           <div style={{ position: 'absolute', inset: '-20px', backgroundImage: "url('/footballbackground.webp')", backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(4px) brightness(0.7)' }} />
         </div>
       )}
@@ -497,17 +497,43 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
         ))}
       </div>
       {!!onSandboxToggle && (
-        <div className="sil-sandbox-wrap">
-          <span className="sil-sandbox-label">Sandbox</span>
-          <label className="plus-toggle">
-            <input type="checkbox" checked={!!isCustomMode} onChange={e => onSandboxToggle?.(e.target.checked)} />
-            <span className="plus-toggle-track" />
-          </label>
-          <button
-            className={`sil-custom-ratings-btn${!isCustomMode ? ' sil-custom-ratings-btn--off' : ''}`}
-            onClick={isCustomMode ? onOpenCustomModal : undefined}
-            disabled={!isCustomMode}
-          >Custom Build</button>
+        <div className="sil-sandbox-outer">
+          <div className="sil-sandbox-toprow">
+            <div
+              className={`sil-sandbox-wrap${isCustomMode ? ' sil-sandbox-wrap--active' : ''}`}
+              onClick={() => onSandboxToggle?.(!isCustomMode)}
+            >
+              <span className="sil-sandbox-icon">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 3h6" />
+                  <path d="M10 3v6.7L4.4 18.9a1.8 1.8 0 0 0 1.6 2.6h12a1.8 1.8 0 0 0 1.6-2.6L14 9.7V3" />
+                  <path d="M6.6 15h10.8" />
+                </svg>
+              </span>
+              <span className="sil-sandbox-label">Sandbox</span>
+              <label className="plus-toggle">
+                <input type="checkbox" checked={!!isCustomMode} readOnly />
+                <span className="plus-toggle-track" />
+              </label>
+              <div className="sil-sandbox-info" onClick={e => e.stopPropagation()}>
+                <button className="sil-sandbox-info-btn" type="button">?</button>
+                <div className="sil-sandbox-tooltip">Customize your build and player ratings.<br />Sandbox results aren't saved to your profile or the leaderboard.</div>
+              </div>
+            </div>
+          </div>
+          {isCustomMode && (
+            <button className="sil-custom-ratings-btn" onClick={onOpenCustomModal}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="4" y1="6" x2="20" y2="6" />
+                <circle cx="14" cy="6" r="2" fill="currentColor" stroke="none" />
+                <line x1="4" y1="12" x2="20" y2="12" />
+                <circle cx="8" cy="12" r="2" fill="currentColor" stroke="none" />
+                <line x1="4" y1="18" x2="20" y2="18" />
+                <circle cx="16" cy="18" r="2" fill="currentColor" stroke="none" />
+              </svg>
+              Customize
+            </button>
+          )}
         </div>
       )}
 

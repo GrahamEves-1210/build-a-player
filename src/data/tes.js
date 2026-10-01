@@ -59,7 +59,7 @@ const _TES = [
     attrs: { speed: 3, blocking: 4, vertical: 3, routeRunning: 3, strength: 6, hands: 3, awareness: 4, size: 9, afterCatch: 2 } },
   // BUF
   { name: 'Dalton Kincaid',    short: 'Kincaid',     team: 'BUF', teamName: 'Buffalo Bills',          skin: '#5e3c22', height: 76, weight: 236, starter: true,  captain: true,  number: 86,
-    attrs: { speed: 5, blocking: 3, vertical: 7, routeRunning: 7, strength: 4, hands: 6, awareness: 6, size: 5, afterCatch: 6 } },
+    attrs: { speed: 5, blocking: 3, vertical: 7, routeRunning: 8, strength: 4, hands: 7, awareness: 6, size: 5, afterCatch: 7 } },
   { name: 'Dawson Knox',       short: 'Knox',        team: 'BUF', teamName: 'Buffalo Bills',          skin: '#f0c4a0', height: 76, weight: 254, starter: false, number: 88,
     attrs: { speed: 8, blocking: 5, vertical: 5, routeRunning: 6, strength: 6, hands: 5, awareness: 6, size: 7, afterCatch: 5 } },
   { name: 'Jackson Hawes',     short: 'Hawes',       team: 'BUF', teamName: 'Buffalo Bills',          skin: '#f0c4a0', height: 76, weight: 237, starter: false, number: 85,
@@ -115,7 +115,7 @@ const _TES = [
     attrs: { speed: 4, blocking: 6, vertical: 5, routeRunning: 6, strength: 5, hands: 5, awareness: 5, size: 3, afterCatch: 5 } },
   // GB
   { name: 'Tucker Kraft',      short: 'Kraft',       team: 'GB',  teamName: 'Green Bay Packers',      skin: '#f0c4a0', height: 77, weight: 255, starter: true,  captain: true,  number: 85,
-    attrs: { speed: 6, blocking: 6, vertical: 7, routeRunning: 7, strength: 8, hands: 7, awareness: 6, size: 9, afterCatch: 9 } },
+    attrs: { speed: 6, blocking: 6, vertical: 7, routeRunning: 7, strength: 8, hands: 6, awareness: 6, size: 9, afterCatch: 8 } },
   { name: 'Josh Whyle',        short: 'Whyle',       team: 'GB',  teamName: 'Green Bay Packers',      skin: '#f0c4a0', height: 78, weight: 249, starter: false, number: 81,
     attrs: { speed: 6, blocking: 4, vertical: 6, routeRunning: 4, strength: 4, hands: 5, awareness: 4, size: 10, afterCatch: 6 } },
   { name: 'Luke Musgrave',     short: 'Musgrave',    team: 'GB',  teamName: 'Green Bay Packers',      skin: '#f0c4a0', height: 78, weight: 253, starter: false, number: 88,

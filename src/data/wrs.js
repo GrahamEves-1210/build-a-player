@@ -30,7 +30,7 @@ function _wrOVR(a) {
 const _WRS = [
   // ARI
   { name: 'Marvin Harrison Jr.', short: 'Harrison',    team: 'ARI', teamName: 'Arizona Cardinals',     skin: '#5e3c22', height: 76, weight: 205, starter: true,  captain: true,  number: 18,
-    attrs: { speed: 6,  bodyControl: 6,  vertical: 8,  routeRunning: 6,  release: 8,  hands: 4,  awareness: 5,  size: 9,  afterCatch: 5  } },
+    attrs: { speed: 6,  bodyControl: 6,  vertical: 8,  routeRunning: 5,  release: 7,  hands: 4,  awareness: 5,  size: 9,  afterCatch: 5  } },
   { name: 'Michael Wilson',      short: 'Wilson',      team: 'ARI', teamName: 'Arizona Cardinals',     skin: '#5e3c22', height: 75, weight: 220, starter: false, number: 14,
     attrs: { speed: 6,  bodyControl: 7,  vertical: 6,  routeRunning: 5,  release: 6,  hands: 6,  awareness: 5,  size: 9,  afterCatch: 5  } },
   { name: 'Kendrick Bourne',     short: 'Bourne',      team: 'ARI', teamName: 'Arizona Cardinals',     skin: '#5e3c22', height: 73, weight: 203, starter: false, number: 84,
@@ -211,7 +211,7 @@ const _WRS = [
   { name: 'Malik Washington',    short: 'M. Washington', team: 'MIA', teamName: 'Miami Dolphins',      skin: '#5e3c22', height: 71, weight: 196, starter: false, number: 17,
     attrs: { speed: 6,  bodyControl: 5,  vertical: 5,  routeRunning: 3,  release: 4,  hands: 3,  awareness: 3,  size: 5,  afterCatch: 5  } },
   { name: 'Chris Bell',          short: 'C. Bell',     team: 'MIA', teamName: 'Miami Dolphins',        skin: '#3a2010', height: 75, weight: 205, starter: false, number: 14,
-    attrs: { speed: 6,  bodyControl: 4,  vertical: 5,  routeRunning: 2,  release: 3,  hands: 3,  awareness: 2,  size: 9,  afterCatch: 2  } },
+    attrs: { speed: 6,  bodyControl: 4,  vertical: 5,  routeRunning: 2,  release: 3,  hands: 3,  awareness: 2,  size: 9,  afterCatch: 6  } },
   // MIN
   { name: 'Justin Jefferson',    short: 'Jefferson',   team: 'MIN', teamName: 'Minnesota Vikings',     skin: '#3a2010', height: 73, weight: 195, starter: true,  captain: true,  number: 18,
     attrs: { speed: 9,  bodyControl: 10, vertical: 9,  routeRunning: 11, release: 11, hands: 11, awareness: 10,  size: 7,  afterCatch: 8 } },
@@ -234,7 +234,7 @@ const _WRS = [
     attrs: { speed: 9,  bodyControl: 4,  vertical: 4,  routeRunning: 3,  release: 4,  hands: 3,  awareness: 4,  size: 4,  afterCatch: 5  } },
   // NO
   { name: 'Chris Olave',         short: 'Olave',       team: 'NO',  teamName: 'New Orleans Saints',    skin: '#b07848', height: 73, weight: 188, starter: true,  captain: true,  number: 12,
-    attrs: { speed: 9,  bodyControl: 8,  vertical: 7,  routeRunning: 9,  release: 8,  hands: 6,  awareness: 7,  size: 6,  afterCatch: 6  } },
+    attrs: { speed: 9,  bodyControl: 8,  vertical: 7,  routeRunning: 9,  release: 8,  hands: 8,  awareness: 8,  size: 6,  afterCatch: 6  } },
   { name: 'Jordyn Tyson',        short: 'Tyson',       team: 'NO',  teamName: 'New Orleans Saints',    skin: '#5e3c22', height: 74, weight: 200, starter: false, number: 18,
     attrs: { speed: 9,  bodyControl: 8,  vertical: 7,  routeRunning: 7,  release: 7,  hands: 4,  awareness: 3,  size: 8,  afterCatch: 5  } },
   { name: 'Brandin Cooks',       short: 'Cooks',       team: 'NO',  teamName: 'New Orleans Saints',    skin: '#b07848', height: 70, weight: 183, starter: false, number: 10,
@@ -256,7 +256,7 @@ const _WRS = [
     attrs: { speed: 9,  bodyControl: 5,  vertical: 5,  routeRunning: 6,  release: 5,  hands: 4,  awareness: 5,  size: 2,  afterCatch: 4  } },
   // NYJ
   { name: 'Garrett Wilson',      short: 'G. Wilson',   team: 'NYJ', teamName: 'New York Jets',         skin: '#5e3c22', height: 72, weight: 192, starter: true,  captain: true,  number: 17,
-    attrs: { speed: 8,  bodyControl: 9,  vertical: 7,  routeRunning: 8,  release: 7,  hands: 9,  awareness: 8,  size: 6,  afterCatch: 7  } },
+    attrs: { speed: 8,  bodyControl: 9,  vertical: 7,  routeRunning: 9,  release: 8,  hands: 9,  awareness: 8,  size: 6,  afterCatch: 7  } },
   { name: 'Adonai Mitchell',     short: 'Mitchell',    team: 'NYJ', teamName: 'New York Jets',         skin: '#3a2010', height: 74, weight: 210, starter: false, number: 10,
     attrs: { speed: 7,  bodyControl: 4,  vertical: 6,  routeRunning: 5,  release: 4,  hands: 5,  awareness: 3,  size: 8,  afterCatch: 5  } },
   { name: 'Omar Cooper Jr.',     short: 'Cooper',      team: 'NYJ', teamName: 'New York Jets',         skin: '#5e3c22', height: 74, weight: 204, starter: false, number: 1,
@@ -276,7 +276,7 @@ const _WRS = [
     attrs: { speed: 9,  bodyControl: 6,  vertical: 5,  routeRunning: 3,  release: 4,  hands: 4,  awareness: 3,  size: 5,  afterCatch: 4  } },
   // PIT
   { name: 'DK Metcalf',          short: 'Metcalf',     team: 'PIT', teamName: 'Pittsburgh Steelers',   skin: '#3a2010', height: 75, weight: 229, starter: true,  captain: true,  number: 4,
-    attrs: { speed: 9,  bodyControl: 5,  vertical: 9,  routeRunning: 5,  release: 5,  hands: 5,  awareness: 6,  size: 9,  afterCatch: 6  } },
+    attrs: { speed: 9,  bodyControl: 4,  vertical: 9,  routeRunning: 5,  release: 5,  hands: 4,  awareness: 6,  size: 9,  afterCatch: 6  } },
   { name: 'Michael Pittman Jr.', short: 'Pittman',     team: 'PIT', teamName: 'Pittsburgh Steelers',   skin: '#5e3c22', height: 76, weight: 223, starter: false, number: 11,
     attrs: { speed: 6,  bodyControl: 6,  vertical: 7,  routeRunning: 6,  release: 5,  hands: 7,  awareness: 7,  size: 10, afterCatch: 5  } },
   { name: 'Roman Wilson',        short: 'R. Wilson',   team: 'PIT', teamName: 'Pittsburgh Steelers',   skin: '#3a2010', height: 72, weight: 193, starter: false, number: 10,

@@ -320,43 +320,50 @@ export default function BucketFigureOverlay({ build }) {
 
 
 
-      {/* Jersey number + team name — outside screen-blend so team color shows on white jersey */}
-      {has('clutch') && (teamNick || jerseyNum != null) && (
+      {/* Team name — outside screen-blend so team color shows on white jersey; kept below jersey number in z */}
+      {has('clutch') && teamNick && (
+        <svg
+          viewBox={overlayViewBox}
+          preserveAspectRatio="xMidYMid meet"
+          style={{ ...overlayStyle, zIndex: 7 }}
+          aria-hidden="true"
+        >
+          <text
+            x="476" y="148"
+            textAnchor="middle"
+            fontFamily="'Bebas Neue', Impact, Arial Black, sans-serif"
+            fontSize={teamNameFontSize}
+            letterSpacing={teamNameLetterSpacing}
+            fill={tc('clutch')}
+            stroke={tc2('clutch')}
+            strokeWidth="2"
+            paintOrder="stroke"
+            style={{ opacity: 0.90, userSelect: 'none', pointerEvents: 'none' }}
+          >{teamNick}</text>
+        </svg>
+      )}
+
+      {/* Jersey number — outside screen-blend so team color shows on white jersey */}
+      {has('clutch') && jerseyNum != null && (
         <svg
           viewBox={overlayViewBox}
           preserveAspectRatio="xMidYMid meet"
           style={{ ...overlayStyle, zIndex: 9 }}
           aria-hidden="true"
         >
-          {teamNick && (
+          <g transform="translate(474, 235) scale(0.78, 1)">
             <text
-              x="476" y="148"
+              x="0" y="0"
               textAnchor="middle"
-              fontFamily="'Bebas Neue', Impact, Arial Black, sans-serif"
-              fontSize={teamNameFontSize}
-              letterSpacing={teamNameLetterSpacing}
+              fontFamily="'Audiowide', 'Bebas Neue', Impact, Arial Black, sans-serif"
+              fontSize="99"
               fill={tc('clutch')}
               stroke={tc2('clutch')}
-              strokeWidth="2"
+              strokeWidth="4"
               paintOrder="stroke"
-              style={{ opacity: 0.90, userSelect: 'none', pointerEvents: 'none' }}
-            >{teamNick}</text>
-          )}
-          {jerseyNum != null && (
-            <g transform="translate(474, 235) scale(0.78, 1)">
-              <text
-                x="0" y="0"
-                textAnchor="middle"
-                fontFamily="'Audiowide', 'Bebas Neue', Impact, Arial Black, sans-serif"
-                fontSize="99"
-                fill={tc('clutch')}
-                stroke={tc2('clutch')}
-                strokeWidth="4"
-                paintOrder="stroke"
-                style={{ opacity: 0.92, userSelect: 'none', pointerEvents: 'none' }}
-              >{jerseyNum}</text>
-            </g>
-          )}
+              style={{ opacity: 0.92, userSelect: 'none', pointerEvents: 'none' }}
+            >{jerseyNum}</text>
+          </g>
         </svg>
       )}
     </>

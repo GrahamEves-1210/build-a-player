@@ -206,7 +206,6 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
     try { return localStorage.getItem('bap_profile_icon') || null } catch { return null }
   })
   const [plusOpen, setPlusOpen] = useState(false)
-  const [showSandboxWarning, setShowSandboxWarning] = useState(false)
   const plusRef = useRef(null)
   const [showPwForm, setShowPwForm] = useState(false)
   const [newPw, setNewPw] = useState('')
@@ -1311,18 +1310,6 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
 
       </div>
 
-      {showSandboxWarning && (
-        <div className="sandbox-warning-overlay" onClick={() => setShowSandboxWarning(false)}>
-          <div className="sandbox-warning-modal" onClick={e => e.stopPropagation()}>
-            <div className="sandbox-warning-title">⚠ Sandbox Mode</div>
-            <div className="sandbox-warning-body">Sandbox mode builds will not be saved to your profile or leaderboard. Are you sure you want to continue?</div>
-            <div className="sandbox-warning-btns">
-              <button className="sandbox-warning-cancel" onClick={() => setShowSandboxWarning(false)}>Cancel</button>
-              <button className="sandbox-warning-confirm" onClick={() => { onCustomModeChange?.(true); setShowSandboxWarning(false) }}>Continue</button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

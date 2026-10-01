@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 
 const STEPS_DESKTOP = (isRB, isWR, isTE, isDB) => [
   { n: '1', title: 'Spin',      body: `Pull a random NFL team, then a${isWR ? ' WR' : isRB ? 'n RB' : isTE ? ' TE' : isDB ? ' DB' : 'n QB'} from their roster.` },
-  { n: '2', title: 'Drag',      body: 'Drop one stat onto the matching zone on the player silhouette.' },
+  { n: '2', title: 'Select',    body: 'Click a stat chip to assign it to your build — or drag it onto the matching zone.' },
   { n: '3', title: 'Repeat ×9', body: 'Fill all nine attribute slots — one per spin.' },
   { n: '4', title: 'Simulate',  body: `Hit Simulate to see how your Frankenstein ${isWR ? 'WR' : isRB ? 'RB' : isTE ? 'TE' : isDB ? 'DB' : 'QB'} performs.` },
 ]
@@ -15,7 +15,7 @@ const STEPS_MOBILE = (isRB, isWR, isTE, isDB) => [
 
 const BUCKET_STEPS_DESKTOP = [
   { n: '1', title: 'Spin',       body: 'Pull a random NBA player from any roster.' },
-  { n: '2', title: 'Drag',       body: 'Drop one stat chip onto the matching zone on the silhouette.' },
+  { n: '2', title: 'Select',     body: 'Click a stat chip to assign it to your build — or drag it onto the matching zone.' },
   { n: '3', title: 'Repeat ×10', body: 'Fill all ten attribute slots — one per spin.' },
   { n: '4', title: 'Simulate',   body: 'Spin or pick an NBA team, then run a full 82-game season.' },
 ]
@@ -143,15 +143,6 @@ function IconCoffee() {
   )
 }
 
-function IconDownload() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M6.5 1v7M4 6l2.5 2.5L9 6"/>
-      <path d="M2 10h9"/>
-    </svg>
-  )
-}
-
 function IconArrowRight() {
   return (
     <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -183,15 +174,11 @@ const PERKS = [
 export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, onLeaderboard, onSwitchPosition, onSwitchBucketPosition, onSubscribe, onOpenCustomRatings, user, gameMode, isRB, isWR, isTE, isDB, position, isPlus, isBucket, bucketPosition, versusState }) {
   const [open,         setOpen]        = useState(false)
   const [htpOpen,      setHtpOpen]     = useState(false)
-  const [installOpen,  setInstallOpen] = useState(false)
   const [plusWmOpen,   setPlusWmOpen]  = useState(false)
   const [posDropOpen,  setPosDropOpen] = useState(false)
   const ref = useRef(null)
   const posDropRef = useRef(null)
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768
-  const isStandalone = typeof window !== 'undefined' && window.matchMedia('(display-mode: standalone)').matches
-  const isIOS = typeof navigator !== 'undefined' && /iPhone|iPad|iPod/i.test(navigator.userAgent)
-  const isAndroid = typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent)
   const STEPS = isBucket
     ? (isMobile ? BUCKET_STEPS_MOBILE : BUCKET_STEPS_DESKTOP)
     : (isMobile ? STEPS_MOBILE(isRB, isWR, isTE, isDB) : STEPS_DESKTOP(isRB, isWR, isTE, isDB))
@@ -226,10 +213,11 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
         <div className="logo" onClick={onHome} style={onHome ? { cursor: 'pointer' } : undefined}>
           <div className="logo-text-stack">
             <img src="/logo-v3.png" alt="Build-A-Player" className="logo-img-full" draggable={false} />
-            <div className="logo-text logo-text--small">
-              Buil<span className="logo-d">d</span><em>-<span className="logo-a">A</span>-</em>{isBucket ? <>B<HoopU />cket</> : 'Player'}
+            <div className="logo-text-row">
+              <div className="logo-text logo-text--small">
+                Buil<span className="logo-d">d</span><em>-<span className="logo-a">A</span>-</em>{isBucket ? <>B<HoopU />cket</> : 'Player'}
+              </div>
             </div>
-            {gameMode === 'all-time' && <span className="logo-mode-tag">All-Time</span>}
           </div>
         </div>
       )}
@@ -352,7 +340,7 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
             {/* How to Play — accordion */}
             <button
               className="wm-row wm-row-accordion"
-              onClick={() => { setHtpOpen(o => !o); setInstallOpen(false); setPlusWmOpen(false) }}
+              onClick={() => { setHtpOpen(o => !o); setPlusWmOpen(false) }}
             >
               <span className="wm-icon"><IconHelp /></span>
               <span className="wm-label">How to Play</span>
@@ -373,96 +361,24 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
               </div>
             )}
 
-            {/* Install App — hidden if already standalone */}
-            {!isStandalone && (
-              <>
-                <button
-                  className="wm-row wm-row-accordion"
-                  onClick={() => { setInstallOpen(o => !o); setHtpOpen(false); setPlusWmOpen(false) }}
-                >
-                  <span className="wm-icon"><IconDownload /></span>
-                  <span className="wm-label">Install App</span>
-                  <span className="wm-chevron"><IconChevron up={installOpen} /></span>
-                </button>
-
-                {installOpen && (
-                  <div className="wm-htp-body">
-                    {isIOS ? (
-                      <>
-                        <div className="wm-htp-step">
-                          <span className="wm-htp-num">1</span>
-                          <div>
-                            <div className="wm-htp-title">Open in Safari</div>
-                            <div className="wm-htp-desc">Make sure you're using Safari, not Chrome or another browser.</div>
-                          </div>
-                        </div>
-                        <div className="wm-htp-step">
-                          <span className="wm-htp-num">2</span>
-                          <div>
-                            <div className="wm-htp-title">Tap Share</div>
-                            <div className="wm-htp-desc">Tap the Share button at the bottom of the screen (box with an arrow).</div>
-                          </div>
-                        </div>
-                        <div className="wm-htp-step">
-                          <span className="wm-htp-num">3</span>
-                          <div>
-                            <div className="wm-htp-title">Add to Home Screen</div>
-                            <div className="wm-htp-desc">Scroll down and tap "Add to Home Screen", then tap Add.</div>
-                          </div>
-                        </div>
-                      </>
-                    ) : isAndroid ? (
-                      <>
-                        <div className="wm-htp-step">
-                          <span className="wm-htp-num">1</span>
-                          <div>
-                            <div className="wm-htp-title">Open Menu</div>
-                            <div className="wm-htp-desc">Tap the three-dot menu in the top right of Chrome.</div>
-                          </div>
-                        </div>
-                        <div className="wm-htp-step">
-                          <span className="wm-htp-num">2</span>
-                          <div>
-                            <div className="wm-htp-title">Install App</div>
-                            <div className="wm-htp-desc">Tap "Add to Home Screen" or "Install app" and confirm.</div>
-                          </div>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <div className="wm-htp-step">
-                          <span className="wm-htp-num">1</span>
-                          <div>
-                            <div className="wm-htp-title">Look for the icon</div>
-                            <div className="wm-htp-desc">In Chrome, click the install icon on the right side of the address bar.</div>
-                          </div>
-                        </div>
-                        <div className="wm-htp-step">
-                          <span className="wm-htp-num">2</span>
-                          <div>
-                            <div className="wm-htp-title">Click Install</div>
-                            <div className="wm-htp-desc">Click "Install" in the prompt and the app will open in its own window.</div>
-                          </div>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                )}
-              </>
-            )}
-
             {/* About */}
             <button className="wm-row" onClick={handleAbout}>
               <span className="wm-icon"><IconInfo /></span>
               <span className="wm-label">About</span>
             </button>
 
+            <div className="wm-legal-links">
+              <a className="wm-legal-link" href="/privacy">Privacy Policy</a>
+              <span className="wm-legal-sep">·</span>
+              <a className="wm-legal-link" href="/terms">Terms of Service</a>
+            </div>
+
             <div className="wm-divider" />
 
             {/* Social / contact */}
             <div className="wm-social-row">
-              <a className="wm-social-btn wm-social-sep" href="mailto:buildaplayer@outlook.com" title="Email us" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', padding: '4px 4px' }}>
-                <span style={{ fontSize: '8px', fontWeight: 700, letterSpacing: '0.4px', textTransform: 'uppercase', opacity: 0.7, lineHeight: 1 }}>Email us</span>
+              <a className="wm-social-btn wm-social-sep" href="mailto:buildaplayer@outlook.com" title="Email us" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', padding: '4px 4px', color: '#fff' }}>
+                <span style={{ fontSize: '8px', fontWeight: 700, letterSpacing: '0.4px', textTransform: 'uppercase', opacity: 1, lineHeight: 1, color: '#fff' }}>Email us</span>
                 <IconMail />
               </a>
               <a
@@ -506,7 +422,7 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
                 <div className="wm-divider" />
                 <button
                   className="wm-row wm-row-accordion"
-                  onClick={() => { setPlusWmOpen(o => !o); setHtpOpen(false); setInstallOpen(false) }}
+                  onClick={() => { setPlusWmOpen(o => !o); setHtpOpen(false) }}
                 >
                   <span className="wm-plus-icon">✦</span>
                   <span className="wm-label wm-plus-label">Build-A-Player Plus</span>
@@ -546,7 +462,6 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
                 <span className="wm-label">Sign In / Create Account</span>
               </button>
             )}
-
 
           </div>
         )}

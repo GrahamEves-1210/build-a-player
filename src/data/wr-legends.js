@@ -146,7 +146,7 @@ const _raw = [
   {
     name: 'Chad Ochocinco',    short: 'Ochocinco',     team: 'CIN', teamName: 'Cincinnati Bengals',
     skin: '#5e3c22', height: 73, weight: 192, number: 85, starter: true, captain: true, years: '2001–10',
-    attrs: { speed: 9, bodyControl: 10, vertical: 9, routeRunning: 10, release: 10, hands: 8, awareness: 9, size: 7, afterCatch: 9 },
+    attrs: { speed: 9, bodyControl: 10, vertical: 9, routeRunning: 11, release: 10, hands: 8, awareness: 9, size: 7, afterCatch: 9 },
   },
   {
     name: 'A.J. Green',        short: 'A.J. Green',    team: 'CIN', teamName: 'Cincinnati Bengals',
@@ -205,7 +205,7 @@ const _raw = [
   {
     name: 'Terrell Owens',     short: 'T.O. Dallas',   team: 'DAL', teamName: 'Dallas Cowboys',
     skin: '#5e3c22', height: 75, weight: 226, number: 81, starter: true, captain: true, years: '2006–08',
-    attrs: { speed: 9, bodyControl: 9, vertical: 10, routeRunning: 8, release: 7, hands: 9, awareness: 8, size: 10, afterCatch: 10 },
+    attrs: { speed: 8, bodyControl: 10, vertical: 9, routeRunning: 8, release: 9, hands: 10, awareness: 9, size: 10, afterCatch: 9 },
   },
 
   // ─── DENVER BRONCOS ──────────────────────────────────────────────────────
@@ -339,7 +339,7 @@ const _raw = [
   {
     name: 'Tyreek Hill',       short: 'T. Hill',       team: 'KC',  teamName: 'Kansas City Chiefs',
     skin: '#5e3c22', height: 70, weight: 191, number: 10, starter: true, captain: true, years: '2016–21',
-    attrs: { speed: 11, bodyControl: 10, vertical: 6, routeRunning: 10, release: 9, hands: 7, awareness: 8, size: 4, afterCatch: 11 },
+    attrs: { speed: 11, bodyControl: 10, vertical: 6, routeRunning: 10, release: 11, hands: 7, awareness: 8, size: 4, afterCatch: 11 },
   },
   {
     name: 'Otis Taylor',       short: 'O. Taylor',     team: 'KC',  teamName: 'Kansas City Chiefs',
@@ -609,7 +609,7 @@ const _raw = [
   {
     name: 'Terrell Owens',     short: 'T.O. SF',       team: 'SF',  teamName: 'San Francisco 49ers',
     skin: '#5e3c22', height: 75, weight: 226, number: 81, starter: true, captain: true, years: '1996–03',
-    attrs: { speed: 8, bodyControl: 9, vertical: 9, routeRunning: 8, release: 7, hands: 9, awareness: 8, size: 10, afterCatch: 9 },
+    attrs: { speed: 8, bodyControl: 10, vertical: 9, routeRunning: 8, release: 9, hands: 10, awareness: 9, size: 10, afterCatch: 9 },
   },
   {
     name: 'John Taylor',       short: 'J. Taylor',     team: 'SF',  teamName: 'San Francisco 49ers',

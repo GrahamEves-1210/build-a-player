@@ -296,7 +296,16 @@ export default function ReportCard({ build, onSimulate, onReset, types = TYPES, 
   const complete = filled.length === types.length
   const [showChevron, setShowChevron] = useState(true)
   const [showShare, setShowShare]     = useState(false)
+  const [showSandboxInfo, setShowSandboxInfo] = useState(false)
+  const sandboxInfoRef = useRef(null)
   const panelRef = useRef(null)
+
+  useEffect(() => {
+    if (!showSandboxInfo) return
+    const onDocClick = e => { if (sandboxInfoRef.current && !sandboxInfoRef.current.contains(e.target)) setShowSandboxInfo(false) }
+    document.addEventListener('mousedown', onDocClick)
+    return () => document.removeEventListener('mousedown', onDocClick)
+  }, [showSandboxInfo])
 
   useEffect(() => {
     const el = panelRef.current
@@ -378,17 +387,50 @@ export default function ReportCard({ build, onSimulate, onReset, types = TYPES, 
         )}
 
         {!isVersusMode && ((isBucket && !isSalaryMode) || !!onSandboxToggle) ? (
-          <div className="rc-sandbox-wrap">
-            <span className="sil-sandbox-label">Sandbox mode</span>
-            <label className="plus-toggle">
-              <input type="checkbox" checked={!!isCustomMode} onChange={e => onSandboxToggle?.(e.target.checked)} />
-              <span className="plus-toggle-track" />
-            </label>
-            <button
-              className={`rc-custom-ratings-btn--mobile${!isCustomMode ? ' rc-custom-ratings-btn--off' : ''}`}
-              onClick={isCustomMode ? onOpenCustomModal : undefined}
-              disabled={!isCustomMode}
-            >Custom Build</button>
+          <div className="rc-sandbox-outer">
+            <div className="rc-sandbox-toprow">
+              <div
+                className={`rc-sandbox-wrap${isCustomMode ? ' rc-sandbox-wrap--active' : ''}`}
+                onClick={() => onSandboxToggle?.(!isCustomMode)}
+              >
+                <div className="rc-sandbox-row">
+                  <span className="sil-sandbox-icon">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M9 3h6" />
+                      <path d="M10 3v6.7L4.4 18.9a1.8 1.8 0 0 0 1.6 2.6h12a1.8 1.8 0 0 0 1.6-2.6L14 9.7V3" />
+                      <path d="M6.6 15h10.8" />
+                    </svg>
+                  </span>
+                  <span className="sil-sandbox-label">Sandbox mode</span>
+                  <label className="plus-toggle">
+                    <input type="checkbox" checked={!!isCustomMode} readOnly />
+                    <span className="plus-toggle-track" />
+                  </label>
+                </div>
+              </div>
+              <div className="rc-sandbox-info" ref={sandboxInfoRef}>
+                <button
+                  className="rc-sandbox-info-btn"
+                  onClick={e => { e.stopPropagation(); setShowSandboxInfo(v => !v) }}
+                >?</button>
+                {showSandboxInfo && (
+                  <div className="rc-sandbox-tooltip">Customize your build and player ratings.<br />Sandbox results aren't saved to your profile or the leaderboard.</div>
+                )}
+              </div>
+            </div>
+            {isCustomMode && (
+              <button className="rc-custom-ratings-btn--mobile" onClick={onOpenCustomModal}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="4" y1="6" x2="20" y2="6" />
+                  <circle cx="14" cy="6" r="2" fill="currentColor" stroke="none" />
+                  <line x1="4" y1="12" x2="20" y2="12" />
+                  <circle cx="8" cy="12" r="2" fill="currentColor" stroke="none" />
+                  <line x1="4" y1="18" x2="20" y2="18" />
+                  <circle cx="16" cy="18" r="2" fill="currentColor" stroke="none" />
+                </svg>
+                Customize
+              </button>
+            )}
           </div>
         ) : !isVersusMode && isPlus && (
           <button
