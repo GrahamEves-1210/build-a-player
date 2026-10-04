@@ -12870,7 +12870,6 @@ html.is-tablet:has([id^="pw-oop"][data-pw-status="loaded"][style*="bottom"]):not
   border: none !important;
   box-shadow: none !important;
   padding-top: 0 !important;
-  bottom: 50px !important;
 }
 
 /* â”€â”€ Ad-free: hide all Playwire elements â”€â”€ */
