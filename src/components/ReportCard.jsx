@@ -4,15 +4,17 @@ import { ATTR, TYPES, QB_PHYSICALS } from '../data/qbs'
 import { RB_PHYSICALS } from '../data/rbs'
 import { WR_PHYSICALS } from '../data/wrs'
 import { TE_PHYSICALS } from '../data/tes'
+import { TE_LEGENDS } from '../data/te-legends'
 import { DBS } from '../data/dbs'
-import { QB_LEGEND_PHYSICALS } from '../data/legends'
+import { DB_LEGENDS } from '../data/db-legends'
+import { QB_LEGEND_PHYSICALS } from '../data/qb-legends'
 import { RB_LEGEND_PHYSICALS } from '../data/rb-legends'
 import { WR_LEGEND_PHYSICALS } from '../data/wr-legends'
-import NBA_MEASUREMENTS from '../data/nba-measurements.json'
 const ALL_QB_PHYS = { ...QB_LEGEND_PHYSICALS, ...QB_PHYSICALS }
-const DB_PHYS = Object.fromEntries(DBS.map(d => [d.name, { height: d.height, weight: d.weight }]))
+const DB_PHYS = Object.fromEntries([...DBS, ...DB_LEGENDS].map(d => [d.name, { height: d.height, weight: d.weight }]))
 const ALL_RB_PHYS = { ...RB_LEGEND_PHYSICALS, ...RB_PHYSICALS }
 const ALL_WR_PHYS = { ...WR_LEGEND_PHYSICALS, ...WR_PHYSICALS }
+const ALL_TE_PHYS = { ...Object.fromEntries(TE_LEGENDS.map(t => [t.name, { height: t.height, weight: t.weight }])), ...TE_PHYSICALS }
 import { calcOVR, calcOVRRB, calcOVRWR, calcOVRTE, calcOVRDB, getArchetype, getArchetypeRB, getArchetypeWR, getArchetypeTE, getArchetypeDB, calcBalance, valToGrade } from '../utils/simulation'
 import { calcBucketOVR, getBucketGuardArchetype, getBucketBigArchetype } from '../utils/bucketSimulation'
 import { buildShareUrl } from '../utils/shareUrl'
@@ -318,16 +320,15 @@ export default function ReportCard({ build, onSimulate, onReset, types = TYPES, 
   let heightStr, weightLbs
   if (isBucket) {
     const slot = build['size'] || build['heightLength']
-    const phys = slot ? NBA_MEASUREMENTS[slot.qbFull] : null
-    heightStr = phys ? fmtHeight(phys.height) : (slot?.height ? fmtHeight(slot.height) : null)
-    weightLbs = phys ? phys.weight : (slot?.weight ?? null)
+    heightStr = slot?.height ? fmtHeight(slot.height) : null
+    weightLbs = slot?.weight ?? null
   } else if (isDB) {
     const dbChip = build['size']
     const dbPhys = dbChip ? DB_PHYS[dbChip.qbFull] : null
     heightStr = dbPhys ? fmtHeight(dbPhys.height) : (dbChip?.height ? fmtHeight(dbChip.height) : null)
     weightLbs = dbPhys ? dbPhys.weight : (dbChip?.weight ?? null)
   } else if (isTE) {
-    const tePhys = build['size'] ? TE_PHYSICALS[build['size'].qbFull] : null
+    const tePhys = build['size'] ? ALL_TE_PHYS[build['size'].qbFull] : null
     heightStr = tePhys ? fmtHeight(tePhys.height) : null
     weightLbs = tePhys ? tePhys.weight : null
   } else if (isWR) {

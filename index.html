@@ -7,6 +7,10 @@
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <!-- Google explicitly wants a favicon at 48x48 or larger for search results —
+         without one it upscales the tiny 16x16/32x32 icon above, which is what
+         was producing the washed-out/mismatched-white look in search results. -->
+    <link rel="icon" type="image/png" sizes="180x180" href="/apple-touch-icon.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <meta name='impact-site-verification' value='60752290-b288-44f8-b30d-672d1ae0379b'>
     <link rel="manifest" href="/site.webmanifest" />
@@ -15,21 +19,26 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Build-A-Player" />
     <title>Build-A-Player | Build-A-Bucket</title>
-    <meta name="description" content="Build-A-Player and Build-A-Bucket — spin the wheel to build a player or build a bucket. Create your Frankenstein NFL QB or NBA player, simulate a full season, and climb the all-time leaderboard." />
+    <meta name="description" content="Build a player or build a bucket — spin the wheel to create your Frankenstein NFL quarterback or build a basketball player (NBA), simulate a full season, and climb the all-time leaderboard." />
 
     <!-- Open Graph (Discord, Slack, iMessage, etc.) -->
     <meta property="og:title" content="Build-A-Player | Build-A-Bucket" />
-    <meta property="og:description" content="Build-A-Player and Build-A-Bucket — spin the wheel to create your Frankenstein NFL QB or NBA player, simulate a full season, and climb the all-time leaderboard." />
+    <meta property="og:description" content="Spin the wheel to create your Frankenstein NFL quarterback or build a basketball player (NBA), simulate a full season, and climb the all-time leaderboard." />
     <meta property="og:image" content="https://www.build-a-player.com/logo-v2.png" />
-    <meta property="og:url" content="https://build-a-player.com" />
-    <link rel="canonical" href="https://build-a-player.com/" />
+    <meta property="og:url" content="https://www.build-a-player.com/" />
     <meta property="og:type" content="website" />
 
     <!-- Twitter / X card -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Build-A-Player | Build-A-Bucket" />
-    <meta name="twitter:description" content="Build-A-Player and Build-A-Bucket — spin the wheel to create your Frankenstein NFL QB or NBA player, simulate a full season, and climb the all-time leaderboard." />
+    <meta name="twitter:description" content="Spin the wheel to create your Frankenstein NFL quarterback or build a basketball player (NBA), simulate a full season, and climb the all-time leaderboard." />
     <meta name="twitter:image" content="https://www.build-a-player.com/logo-v2.png" />
+
+    <!-- No static <link rel="canonical"> here on purpose — this single index.html
+         is served for every route (/, /bucket, ...) in this client-side SPA, so a
+         hardcoded canonical pointing at "/" told crawlers /bucket was a duplicate
+         of the homepage, before App.jsx's/BucketApp.jsx's own <Helmet> tag could
+         ever override it. Each app now sets its own correct canonical via Helmet. -->
 
     <!-- Structured data: helps Google associate "Build-A-Bucket" with this domain -->
     <script type="application/ld+json">
@@ -49,9 +58,9 @@
         {
           "@type": "WebApplication",
           "name": "Build-A-Bucket",
-          "alternateName": ["Build A Bucket", "BuildABucket", "NBA Player Builder", "NBA Player Creator"],
+          "alternateName": ["Build A Bucket", "BuildABucket", "Build a Basketball Player", "NBA Player Builder", "NBA Player Creator", "Create a Basketball Player"],
           "url": "https://www.build-a-player.com/bucket",
-          "description": "Spin the wheel to build a Frankenstein NBA player, simulate a full season, and climb the all-time GOAT leaderboard.",
+          "description": "Build a basketball player — spin the wheel to create your Frankenstein NBA player, simulate a full season, and climb the all-time GOAT leaderboard.",
           "applicationCategory": "GameApplication",
           "genre": "Sports Game",
           "operatingSystem": "Web"

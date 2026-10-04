@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { ATTR, QB_PHYSICALS } from '../data/qbs'
-import { QB_LEGEND_PHYSICALS } from '../data/legends'
+import { QB_LEGEND_PHYSICALS } from '../data/qb-legends'
 const ALL_QB_PHYS = { ...QB_LEGEND_PHYSICALS, ...QB_PHYSICALS }
 import { calcOVR, getArchetype, valToGrade } from '../utils/simulation'
 import QBAvatar from './QBAvatar'

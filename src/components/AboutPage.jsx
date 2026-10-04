@@ -39,14 +39,6 @@ export default function AboutPage({ onBack, onPrivacy }) {
           </div>
         </section>
 
-        <section className="about-section" style={{ textAlign: 'center' }}>
-          <div className="about-body" style={{ margin: '0 0 4px', fontSize: '12px', textAlign: 'center' }}>Featured on</div>
-          <a href="https://www.sportsdeck.io/" target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignSelf: 'center', flexShrink: 0, width: 'max-content', maxWidth: 'none', alignItems: 'center', gap: '8px', background: 'white', borderRadius: '6px', padding: '6px 10px', textDecoration: 'none' }}>
-            <img src="/sportsdeck-logo.png" alt="Sportsdeck" style={{ height: '24px', width: 'auto', display: 'block', flexShrink: 0 }} />
-            <span style={{ fontSize: '10px', fontWeight: 600, color: '#333', lineHeight: 1.2, textAlign: 'left', whiteSpace: 'nowrap', flexShrink: 0, width: 'max-content' }}>The Home of Sports Apps,<br />Tools &amp; Creators</span>
-          </a>
-        </section>
-
         <section className="about-section">
           <h2 className="about-section-title">Disclaimer</h2>
           <p className="about-disclaimer">
@@ -63,6 +55,9 @@ export default function AboutPage({ onBack, onPrivacy }) {
           <a className="about-text-link" href="/terms">Terms of Service</a>
         </div>
 
+        <a href="https://www.playwire.com/contact-direct-sales" rel="noopener" target="_blank" className="splash-site-footer-playwire" style={{ margin: '20px auto 0' }}>
+          <img src="https://www.playwire.com/hubfs/Powered-by-Playwire-Badges/Ads-Powered-by-playwire-2021-standalone-small-white-300px.png" alt="Ads Powered by Playwire" width="140" height="39" loading="lazy" />
+        </a>
 
       </div>
     </div>

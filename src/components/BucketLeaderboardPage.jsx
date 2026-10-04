@@ -1,11 +1,43 @@
 ﻿import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
-import { BUCKET_ATTR, GUARD_TYPES, BIG_TYPES, NBA_TEAMS } from '../data/nba-players'
+import { BUCKET_ATTR } from '../data/nba-attrs'
+import { GUARD_TYPES } from '../data/nba-guards'
+import { BIG_TYPES } from '../data/nba-bigs'
+import { NBA_TEAMS } from '../data/nba-teams'
 import { valToGrade, HEADSHOT_BASE } from '../utils/simulation'
 import NBA_HEADSHOTS from '../data/nba-headshots.json'
 
 const TEAM_COLOR = Object.fromEntries(NBA_TEAMS.map(t => [t.short, t.color]))
 const SLOTS = 20
+
+// Supabase queries against `simulations` occasionally hit a cold-start statement
+// timeout (Postgres 57014) on the first request after a quiet period — retrying
+// almost always succeeds within a second, so one silent retry avoids a
+// transient timeout permanently blanking the leaderboard for that visitor.
+async function queryWithRetry(buildQuery, retries = 2, delayMs = 700) {
+  let lastError = null
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    const { data, error } = await buildQuery()
+    if (!error && data) return { data, error: null }
+    lastError = error
+    if (attempt < retries) await new Promise(r => setTimeout(r, delayMs))
+  }
+  return { data: null, error: lastError }
+}
+
+// Pre-aggregated per-(game_mode, user_id) snapshot of `simulations`, refreshed
+// hourly by a Postgres cron job — reading this instead of paginating/summing
+// the full (100k+ row) simulations table client-side turns a ~45s leaderboard
+// load into a near-instant one. See leaderboard_user_stats in the DB.
+async function fetchLeaderboardStats(gameMode, isCancelled = () => false) {
+  const { data, error } = await queryWithRetry(() => supabase
+    .from('leaderboard_user_stats')
+    .select('user_id, username, wins, losses, rings, sims_count, total_ovr, total_ppg')
+    .eq('game_mode', gameMode))
+  if (isCancelled()) return []
+  if (error) { console.error('[bucket leaderboard] stats fetch failed:', error); return [] }
+  return data ?? []
+}
 
 // Approximate GOAT rank from stored simulation columns (no mvp/dpoy stored, so approximation)
 function approxGoatRank({ ovr, champion, ppg = 0 }) {
@@ -176,53 +208,40 @@ export default function BucketLeaderboardPage({ onBack, currentUser, adsDisabled
 
   useEffect(() => {
     if (!supabase) { setLoading(false); return }
+    let cancelled = false
+    const isCancelled = () => cancelled
     setLoading(true)
     setRows([])
     setExpanded(null)
 
-    if (view === 'profiles')   fetchProfiles()
-    else if (isGoatView)       fetchGoat()
-    else if (view === 'builds') fetchBuilds()
-    else                       fetchDaily()
+    if (view === 'profiles')   fetchProfiles(isCancelled)
+    else if (isGoatView)       fetchGoat(isCancelled)
+    else if (view === 'builds') fetchBuilds(false, isCancelled)
+    else                       fetchDaily(isCancelled)
+
+    return () => { cancelled = true }
   }, [view, posFilter, sortKey, lbMode])
 
-  async function fetchProfiles() {
+  async function fetchProfiles(isCancelled = () => false) {
     const gameMode = lbMode === 'alltime' ? 'bucket-all-time' : 'bucket-classic'
-    const { data, error } = await supabase
-      .from('simulations')
-      .select('user_id, username, wins, losses, champion, ovr, ppg')
-      .eq('game_mode', gameMode)
-      .not('user_id', 'is', null)
-      .limit(10000)
-    if (error || !data) { setLoading(false); return }
+    const data = await fetchLeaderboardStats(gameMode, isCancelled)
+    if (isCancelled()) return
 
-    const map = {}
-    data.forEach(r => {
-      if (!r.user_id) return
-      if (!map[r.user_id]) map[r.user_id] = { uid: r.user_id, username: r.username, wins: 0, losses: 0, rings: 0, count: 0, totalOvr: 0, totalPpg: 0 }
-      const u = map[r.user_id]
-      u.wins     += Number(r.wins   || 0)
-      u.losses   += Number(r.losses || 0)
-      u.rings    += r.champion ? 1 : 0
-      u.count    += 1
-      u.totalOvr += Number(r.ovr   || 0)
-      u.totalPpg += Number(r.ppg   || 0)
-    })
-
-    let processed = Object.values(map).map(u => {
-      const avgPpg = u.count ? Math.round((u.totalPpg / u.count) * 10) / 10 : 0
+    let processed = data.map(u => {
+      const count  = u.sims_count || 0
+      const avgPpg = count ? Math.round((u.total_ppg / count) * 10) / 10 : 0
       return {
-        uid:       u.uid,
+        uid:       u.user_id,
         username:  u.username,
         wins:      u.wins,
         losses:    u.losses,
         rings:     u.rings,
-        count:     u.count,
-        avgOvr:    u.count ? Math.round(u.totalOvr / u.count) : 0,
+        count,
+        avgOvr:    count ? Math.round(u.total_ovr / count) : 0,
         avgPpg,
         playoffs:  0,
         totalWins: u.wins,
-        totalPts:  Math.round(avgPpg * u.count * 82),
+        totalPts:  Math.round(avgPpg * count * 82),
         winPct:    u.wins + u.losses > 0 ? Math.round((u.wins / (u.wins + u.losses)) * 100) : 0,
       }
     })
@@ -243,21 +262,25 @@ export default function BucketLeaderboardPage({ onBack, currentUser, adsDisabled
 
     const uids = eligible.map(r => r.uid).filter(Boolean)
     if (uids.length) {
-      supabase
+      // A single `.in('id', uids)` with hundreds+ of UUIDs blows past Supabase's
+      // URL length limit and 400s — chunk into batches that stay safely under it.
+      const chunks = []
+      for (let i = 0; i < uids.length; i += 150) chunks.push(uids.slice(i, i + 150))
+      Promise.all(chunks.map(chunk => supabase
         .from('accounts')
         .select('id, ads_disabled, subscription_status')
-        .in('id', uids)
-        .then(({ data: accs }) => {
-          if (accs) {
-            setPlusSet(new Set(accs
-              .filter(a => a.ads_disabled || a.subscription_status === 'active')
-              .map(a => a.id)))
-          }
+        .in('id', chunk)))
+        .then(results => {
+          if (isCancelled()) return
+          const accs = results.flatMap(r => r.data ?? [])
+          setPlusSet(new Set(accs
+            .filter(a => a.ads_disabled || a.subscription_status === 'active')
+            .map(a => a.id)))
         })
     }
   }
 
-  async function fetchBuilds(isDaily = false) {
+  async function fetchBuilds(isDaily = false, isCancelled = () => false) {
     // lowOvr sorts ovr ascending (worst OVR that still wins); rings maps to champion bool
     const colMap = { rings: 'champion', lowOvr: 'ovr' }
     const col = colMap[sortKey] ?? sortKey
@@ -283,7 +306,8 @@ export default function BucketLeaderboardPage({ onBack, currentUser, adsDisabled
       q = q.gte('created_at', midnight.toISOString())
     }
 
-    const { data, error } = await q
+    const { data, error } = await queryWithRetry(() => q)
+    if (isCancelled()) return
     if (error || !data) { setLoading(false); return }
 
     // normalize: expose champion as rings (0/1) for display
@@ -291,17 +315,18 @@ export default function BucketLeaderboardPage({ onBack, currentUser, adsDisabled
     setLoading(false)
   }
 
-  async function fetchDaily() { fetchBuilds(true) }
+  async function fetchDaily(isCancelled = () => false) { fetchBuilds(true, isCancelled) }
 
-  async function fetchGoat() {
-    const { data, error } = await supabase
+  async function fetchGoat(isCancelled = () => false) {
+    const { data, error } = await queryWithRetry(() => supabase
       .from('simulations')
       .select('id, user_id, username, ovr, archetype, position, wins, losses, champion, ppg, rpg, apg, fg_pct, three_pct, team_short, build, created_at')
       .eq('game_mode', 'bucket-classic')
       .gte('ovr', 92)
       .not('build', 'is', null)
       .order('ovr', { ascending: false })
-      .limit(300)
+      .limit(300))
+    if (isCancelled()) return
     if (error || !data) { setLoading(false); return }
     const ranked = data
       .map(r => ({ ...r, goatRank: approxGoatRank(r) }))

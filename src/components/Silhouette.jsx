@@ -3,14 +3,13 @@ import { ATTR, TYPES, CATEGORIES, QB_PHYSICALS } from '../data/qbs'
 import { RB_CATEGORIES, RB_PHYSICALS } from '../data/rbs'
 import { WR_CATEGORIES, WR_PHYSICALS } from '../data/wrs'
 import { TE_PHYSICALS } from '../data/tes'
+import { TE_LEGENDS } from '../data/te-legends'
 import { DBS } from '../data/dbs'
-import { QB_LEGEND_PHYSICALS } from '../data/legends'
+import { DB_LEGENDS } from '../data/db-legends'
+import { QB_LEGEND_PHYSICALS } from '../data/qb-legends'
 import { RB_LEGEND_PHYSICALS } from '../data/rb-legends'
 import { WR_LEGEND_PHYSICALS } from '../data/wr-legends'
-import NBA_MEASUREMENTS from '../data/nba-measurements.json'
-import { NBA_FACE_ADJUSTMENTS } from '../data/nba-face-adjustments'
 import NBA_HEADSHOTS from '../data/nba-headshots.json'
-import { NBA_FACE_CENTERS } from '../data/nba-face-centers'
 const ALL_QB_PHYS = { ...QB_LEGEND_PHYSICALS, ...QB_PHYSICALS }
 const ALL_RB_PHYS = { ...RB_LEGEND_PHYSICALS, ...RB_PHYSICALS }
 const ALL_WR_PHYS = { ...WR_LEGEND_PHYSICALS, ...WR_PHYSICALS }
@@ -30,7 +29,8 @@ import WRFigureOverlay from './WRFigureOverlay'
 import DBFigureOverlay from './DBFigureOverlay'
 import BucketFigureOverlay from './BucketFigureOverlay'
 
-const DB_PHYS = Object.fromEntries(DBS.map(d => [d.name, { height: d.height, weight: d.weight }]))
+const DB_PHYS = Object.fromEntries([...DBS, ...DB_LEGENDS].map(d => [d.name, { height: d.height, weight: d.weight }]))
+const ALL_TE_PHYS = { ...Object.fromEntries(TE_LEGENDS.map(t => [t.name, { height: t.height, weight: t.weight }])), ...TE_PHYSICALS }
 
 // Figure coordinate space (matches QB silhouette dimensions)
 const FIG_W = 622
@@ -199,12 +199,11 @@ function CZCard({ zone, cardY, build, activeDrag, hidden, invisible, isMobile, a
 function HWTracker({ build, isRB = false, isWR = false, isTE = false, isBucket = false, isDB = false }) {
   let ht, wt
   if (isBucket) {
-    const phys = build['size'] ? NBA_MEASUREMENTS[build['size'].qbFull] : null
     const chip = build['size']
-    ht = phys ? fmtHeight(phys.height) : (chip?.height ? fmtHeight(chip.height) : null)
-    wt = phys ? phys.weight : (chip?.weight ?? null)
+    ht = chip?.height ? fmtHeight(chip.height) : null
+    wt = chip?.weight ?? null
   } else if (isTE) {
-    const tePhys = build['size'] ? TE_PHYSICALS[build['size'].qbFull] : null
+    const tePhys = build['size'] ? ALL_TE_PHYS[build['size'].qbFull] : null
     ht = tePhys ? fmtHeight(tePhys.height) : null
     wt = tePhys ? tePhys.weight : null
   } else if (isWR) {
@@ -555,10 +554,9 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
           const chip = build['size'] || build['heightLength']
           const val  = chip.val ?? 5
           const col  = '#ffffff'
-          const phys = NBA_MEASUREMENTS[chip.qbFull]
 
-          const heightIn   = phys?.height ?? chip.height ?? Math.round(72 + (val - 1) * 16 / 9)
-          const wingspanIn = phys?.wingspan ?? Math.round(heightIn + 1 + (val - 1) * 8 / 9)
+          const heightIn   = chip.height ?? Math.round(72 + (val - 1) * 16 / 9)
+          const wingspanIn = chip.wingspan ?? Math.round(heightIn + 1 + (val - 1) * 8 / 9)
 
           // Player boundaries in bucket SVG viewBox coords (42.5 -35.2 850.9 815.5)
           const headY  = -85
@@ -659,8 +657,7 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
           const objPos = `50% ${objPosY}%`
           const clipY = 45
           const faceScale = fc ? Math.max(0.93, Math.min(1.12, 1 + (42 - fc[1]) * 0.014)) : 1
-          const playerName = faceChip?.qbFull || faceChip?.qb || ''
-          const adj = NBA_FACE_ADJUSTMENTS[playerName] || { dx: 0, dy: 0, scale: 1 }
+          const adj = faceChip?.faceAdjust || { dx: 0, dy: 0, scale: 1 }
           const isGeneric = bucketPhoto === '/genericdark.webp' || bucketPhoto === '/genericlight.webp'
           const isGenericLight = bucketPhoto === '/genericlight.webp'
           const genericYAdj = isGenericLight ? 2.5 : isGeneric ? 4.5 : 0

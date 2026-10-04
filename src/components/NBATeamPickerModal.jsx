@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { NBA_TEAMS } from '../data/nba-players'
+import { NBA_TEAMS } from '../data/nba-teams'
 
 const EAST_ORDER = ['BOS','NYK','CLE','MIL','IND','MIA','PHI','ORL','ATL','CHI','BKN','TOR','CHA','DET','WAS']
 const WEST_ORDER = ['OKC','DEN','MIN','GSW','DAL','HOU','SAC','PHX','LAC','LAL','NOP','MEM','SAS','POR','UTA']

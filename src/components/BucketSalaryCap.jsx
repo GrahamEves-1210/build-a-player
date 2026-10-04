@@ -1,8 +1,8 @@
 ﻿import React, { useState, useMemo, useEffect } from 'react'
-import { NBA_GUARD_PLAYERS, NBA_BIG_PLAYERS, NBA_TEAMS } from '../data/nba-players'
+import { NBA_GUARD_PLAYERS } from '../data/nba-guards'
+import { NBA_BIG_PLAYERS } from '../data/nba-bigs'
+import { NBA_TEAMS } from '../data/nba-teams'
 import NBA_HEADSHOTS from '../data/nba-headshots.json'
-import NBA_POSITIONS from '../data/nba-positions.json'
-import { NBA_JERSEY_NUMBERS } from '../data/nba-jersey-numbers'
 import { supabase } from '../lib/supabase'
 import { valToGrade, HEADSHOT_BASE } from '../utils/simulation'
 
@@ -124,7 +124,7 @@ const ALL_PLAYERS = [...NBA_GUARD_PLAYERS, ...NBA_BIG_PLAYERS, ...GOAT_SALARY_PL
   .filter(p => {
     if (!p.attrs) return false
     const vals = Object.values(p.attrs)
-    return vals.reduce((s, v) => s + v, 0) / vals.length >= 4.0
+    return vals.reduce((s, v) => s + v, 0) / vals.length >= 3.0
   })
   .filter((p, i, a) => a.findIndex(q => q.name === p.name) === i)
 
@@ -171,12 +171,15 @@ function budgetForDateStr(dateStr) {
 }
 const TIERS  = [50, 40, 30, 20, 10]
 
+// Non-overlapping quantile slices — tier N's whole pool always outranks
+// tier N+1's whole pool, so price strictly tracks rating with no overlap
+// zone where a cheaper tier could out-score a pricier one.
 const TIER_BANDS = [
-  [0.00, 0.48],
-  [0.22, 0.58],
-  [0.40, 0.70],
-  [0.55, 0.82],
-  [0.68, 1.00],
+  [0.00, 0.20],
+  [0.20, 0.40],
+  [0.40, 0.60],
+  [0.60, 0.80],
+  [0.80, 1.00],
 ]
 
 export const SAL_COLS = [
@@ -189,7 +192,7 @@ export const SAL_COLS = [
 
 function playerPosGroup(player) {
   if (player.posGroup) return player.posGroup
-  const pos = NBA_POSITIONS[player.name]?.pos
+  const pos = player.position
   return (pos === 'C' || pos === 'PF') ? 'big' : 'guard'
 }
 
@@ -228,7 +231,7 @@ function buildHardcodedGrid(nameGrid) {
         teamColor:  TEAM_META[p.team]?.color  ?? '#444',
         teamColor2: TEAM_META[p.team]?.color2 ?? '#222',
         photo:  hsId ? `${HEADSHOT_BASE}/nba/${hsId}.webp` : null,
-        number: NBA_JERSEY_NUMBERS[p.name] ?? null,
+        number: p.number ?? null,
         id:     `${col.key}-${price}-${p.name}`,
       }
     })
@@ -314,10 +317,10 @@ function legendTierFor(legend, col, regulars) {
   const rank = sorted.findIndex(s => s <= legScore)
   // rank === -1 means no player scored as low as the legend → legend is the worst → pct = 1.0
   const pct  = rank === -1 ? 1.0 : rank / sorted.length
-  if (pct < 0.22) return 0  // $50
+  if (pct < 0.20) return 0  // $50
   if (pct < 0.40) return 1  // $40
-  if (pct < 0.55) return 2  // $30
-  if (pct < 0.68) return 3  // $20
+  if (pct < 0.60) return 2  // $30
+  if (pct < 0.80) return 3  // $20
   return 4                   // $10
 }
 
@@ -348,16 +351,26 @@ function pickLegendSlots(rand, cols, legends, regulars, seed) {
   if (leg0) usedLegends.add(leg0.name)
   if (leg1) usedLegends.add(leg1.name)
 
-  // Column placement and tier nudge still use daily rand() for variation
+  // Column placement still uses daily rand() for variation; tier is the
+  // legend's actual rank-based tier — no randomized nudge off of it.
   const li0c = Math.floor(rand() * cols.length)
   const li1c = Math.floor(rand() * cols.length)
 
-  // Tier = correct rank ± 1 (seeded) so salary is close but not perfectly sorted
-  const nudge = ti => Math.min(TIERS.length - 1, Math.max(0, ti + Math.floor(rand() * 3) - 1))
-  const li0t = leg0 ? nudge(legendTierFor(leg0, cols[li0c], regulars)) : 0
-  let   li1t = leg1 ? nudge(legendTierFor(leg1, cols[li1c], regulars)) : 1
-  // If both land in the same (col, tier) slot, shift the second one down
-  if (li1c === li0c && li1t === li0t) li1t = (li1t + 1) % TIERS.length
+  let li0t = leg0 ? legendTierFor(leg0, cols[li0c], regulars) : 0
+  let li1t = leg1 ? legendTierFor(leg1, cols[li1c], regulars) : 1
+  // If both land in the same (col, tier) slot, shift whichever one actually
+  // scores lower to the adjacent tier — toward cheaper, unless it's already
+  // at the cheapest tier (then toward the next-cheapest instead of wrapping
+  // around to the most expensive, which could put the weaker legend at $50).
+  if (leg0 && leg1 && li1c === li0c && li1t === li0t) {
+    const scoreOf = leg => {
+      const ts = typesFor(leg, cols[li0c])
+      return ts.reduce((s, t) => s + (leg.attrs?.[t] ?? 5), 0) / ts.length
+    }
+    const shift = t => t < TIERS.length - 1 ? t + 1 : t - 1
+    if (scoreOf(leg0) <= scoreOf(leg1)) li0t = shift(li0t)
+    else li1t = shift(li1t)
+  }
 
   const map = new Map()
   if (leg0) map.set(`${li0c}-${li0t}`, leg0)
@@ -371,7 +384,6 @@ function getPickedNamesForSeed(seed, cols, players) {
   const regulars = players.filter(p => !p.legend)
   const { map: legendMap, usedLegends } = pickLegendSlots(rand, cols, legends, regulars, seed)
 
-  const playerNoise = new Map(regulars.map(p => [p.name, (rand() - 0.5) * 1.8]))
   const used = new Set([...usedLegends])
 
   for (const [key] of legendMap) used.add(legendMap.get(key).name)
@@ -380,8 +392,7 @@ function getPickedNamesForSeed(seed, cols, players) {
     const scored = regulars
       .map(p => ({
         name: p.name,
-        catScore: (() => { const ts = typesFor(p, col); return ts.reduce((s, t) => s + (p.attrs?.[t] ?? 5), 0) / ts.length })()
-                  + (playerNoise.get(p.name) ?? 0),
+        catScore: (() => { const ts = typesFor(p, col); return ts.reduce((s, t) => s + (p.attrs?.[t] ?? 5), 0) / ts.length })(),
       }))
       .sort((a, b) => b.catScore - a.catScore)
     const n = scored.length
@@ -415,17 +426,16 @@ function generateGrid(cols, players, rand, recentlyUsed = new Set(), seed = 0) {
     const hsId = NBA_HEADSHOTS[p.name]
     return {
       ...p,
-      price, attrs,
+      price, attrs, fullAttrs: p.attrs,
       catScore: pts.reduce((s, t) => s + (p.attrs?.[t] ?? 5), 0) / pts.length,
       teamColor:  TEAM_META[p.team]?.color  ?? '#444',
       teamColor2: TEAM_META[p.team]?.color2 ?? '#222',
       photo:  hsId ? `${HEADSHOT_BASE}/nba/${hsId}.webp` : null,
-      number: NBA_JERSEY_NUMBERS[p.name] ?? null,
+      number: p.number ?? null,
       id:     `${col.key}-${price}-${p.name}`,
     }
   }
 
-  const playerNoise = new Map(regulars.map(p => [p.name, (rand() - 0.5) * 1.8]))
   const used = new Set([...usedLegends])
 
   return cols.map((col, ci) => {
@@ -435,7 +445,6 @@ function generateGrid(cols, players, rand, recentlyUsed = new Set(), seed = 0) {
         teamColor:  TEAM_META[p.team]?.color  ?? '#444',
         teamColor2: TEAM_META[p.team]?.color2 ?? '#222',
         catScore: (() => { const ts = typesFor(p, col); return ts.reduce((s, t) => s + (p.attrs?.[t] ?? 5), 0) / ts.length })()
-                  + (playerNoise.get(p.name) ?? 0)
                   - (recentlyUsed.has(p.name) ? RECENT_PENALTY : 0),
       }))
       .sort((a, b) => b.catScore - a.catScore)
@@ -457,10 +466,10 @@ function generateGrid(cols, players, rand, recentlyUsed = new Set(), seed = 0) {
       const hsId = NBA_HEADSHOTS[player.name]
       return {
         ...player,
-        price, attrs,
+        price, attrs, fullAttrs: player.attrs,
         catScore: player.catScore,
         photo:  hsId ? `${HEADSHOT_BASE}/nba/${hsId}.webp` : null,
-        number: NBA_JERSEY_NUMBERS[player.name] ?? null,
+        number: player.number ?? null,
         id:     `${col.key}-${price}-${player.name}`,
       }
     })
@@ -784,21 +793,15 @@ export default function BucketSalaryCap({ onConfirm, onBack, user, initialDateSt
   useEffect(() => {
     if (mode === 'infinite' || HARDCODED_GRIDS[activeDate.seed] || !supabase) return
     let cancelled = false
-    const isToday = activeDate.str === getESTDate(0).str
     const localGuess = localGenerateGrid(activeDate)
 
-    if (isToday) {
-      // Nobody can have a frozen copy of today yet — our local guess IS the
-      // canonical copy, so just save it (first writer wins; a concurrent
-      // duplicate is fine, both generated the same thing from the same seed).
-      supabase.from('salary_cap_grids')
-        .upsert({ date_str: activeDate.str, grid: localGuess }, { onConflict: 'date_str', ignoreDuplicates: true })
-        .then(({ error }) => { if (error) console.error('[salary-cap] grid save failed:', error) })
-      return
-    }
-
-    // Past date: check whether a frozen copy exists and differs from our
-    // fresh local regeneration (it will, if roster data has changed since).
+    // Always check for an already-frozen copy first, even for today — an
+    // earlier visitor today may have already locked one in using whatever
+    // roster data was live at that moment. Skipping this check for "today"
+    // (the old behavior) let a later visitor's local regeneration diverge
+    // from the actually-frozen board whenever roster data changed mid-day,
+    // so their picker wouldn't show players the leaderboard already had
+    // real picks of (e.g. a player who'd since been re-rated or moved).
     supabase.from('salary_cap_grids')
       .select('grid')
       .eq('date_str', activeDate.str)
@@ -809,8 +812,9 @@ export default function BucketSalaryCap({ onConfirm, onBack, user, initialDateSt
         if (data?.grid) {
           setGrid(data.grid) // swap to the historically-accurate frozen board
         } else {
-          // No frozen record (a date from before this fix shipped) — lock in
-          // our local regeneration now so it's stable from here on.
+          // No frozen record yet (first visitor of the day, or a past date
+          // from before this fix shipped) — lock in our local regeneration
+          // now so it's the stable, shared board from here on.
           supabase.from('salary_cap_grids')
             .upsert({ date_str: activeDate.str, grid: localGuess }, { onConflict: 'date_str', ignoreDuplicates: true })
             .then(({ error }) => { if (error) console.error('[salary-cap] grid save failed:', error) })
@@ -1076,6 +1080,33 @@ export default function BucketSalaryCap({ onConfirm, onBack, user, initialDateSt
         }
       })
     })
+    // basketballIQ and clutch aren't their own draftable category (and
+    // basketballIQ alone is a full 0.14 of a guard's OVR — tied for the
+    // single heaviest weight of any attribute), so approximate them from
+    // the real picked players' actual stats instead of an unrelated proxy.
+    // Anchored visually on the Size pick (sel[4]) to match the existing
+    // "size player = model figure" convention used elsewhere.
+    const anchor = sel[4]
+    const selVals     = Object.values(sel)
+    const iqVals     = selVals.map(p => p.fullAttrs?.basketballIQ).filter(v => v != null)
+    const clutchVals = selVals.map(p => p.fullAttrs?.clutch).filter(v => v != null)
+    // rebounding is big-only and, like basketballIQ, has no SAL_COLS column of
+    // its own — it was previously hardcoded to a flat 6 regardless of who was
+    // picked, even though it's tied for the single heaviest weight for bigs
+    // (0.15). Guards never read this field, so a missing/default average here
+    // is harmless for them.
+    const rebVals    = selVals.map(p => p.fullAttrs?.rebounding).filter(v => v != null)
+    const avg = vals => vals.length ? vals.reduce((s, v) => s + v, 0) / vals.length : 5
+    const anchorFields = {
+      qb: anchor.short ?? anchor.name, qbFull: anchor.name,
+      teamColor: anchor.teamColor, teamColor2: anchor.teamColor2,
+      team: anchor.team, captain: anchor.captain ?? false,
+      photo: anchor.photo, skinColor: anchor.skin ?? null,
+      number: anchor.number ?? null, height: anchor.height ?? null, weight: anchor.weight ?? null,
+    }
+    build['basketballIQ'] = { type: 'basketballIQ', val: avg(iqVals), ...anchorFields }
+    build['clutch']       = { type: 'clutch',       val: avg(clutchVals), ...anchorFields }
+    build['rebounding']   = { type: 'rebounding',   val: avg(rebVals), ...anchorFields }
     return build
   }
 
@@ -1092,7 +1123,7 @@ export default function BucketSalaryCap({ onConfirm, onBack, user, initialDateSt
       })
       const saveData = {
         picks, ppg: stats.ppg, apg: stats.apg, rpg: stats.rpg,
-        userId: user?.id ?? null, username: user?.email?.split('@')[0] ?? null,
+        userId: user?.id ?? null, username: user?.user_metadata?.username || user?.email?.split('@')[0] || null,
         totalCost, infinite: true,
       }
       onConfirm(build, false, null, saveData, effectivePosition)
@@ -1131,7 +1162,7 @@ export default function BucketSalaryCap({ onConfirm, onBack, user, initialDateSt
       apg:      stats.apg,
       rpg:      stats.rpg,
       userId:   user?.id ?? null,
-      username: user?.email?.split('@')[0] ?? null,
+      username: user?.user_metadata?.username || user?.email?.split('@')[0] || null,
       totalCost,
     }
 

@@ -4,8 +4,10 @@ import { RB_TYPES, RB_LITE_TYPES } from '../data/rbs'
 import { WR_TYPES, WR_LITE_TYPES, WR_ATTR } from '../data/wrs'
 import { TE_ATTR, TE_TYPES, TE_LITE_TYPES } from '../data/tes'
 import { DB_ATTR, DB_TYPES, DB_LITE_TYPES } from '../data/dbs'
-import { LEGEND_TYPES } from '../data/legends'
-import { BUCKET_ATTR, GUARD_TYPES, BIG_TYPES } from '../data/nba-players'
+import { LEGEND_TYPES } from '../data/qb-legends'
+import { BUCKET_ATTR } from '../data/nba-attrs'
+import { GUARD_TYPES } from '../data/nba-guards'
+import { BIG_TYPES } from '../data/nba-bigs'
 import { valToGrade } from '../utils/simulation'
 
 const GRADE_COLOR = {
@@ -32,7 +34,7 @@ export default function CustomRatingsModal({ isRB, isWR = false, isTE = false, i
   const modeKey = isBucket
     ? `bucket_${bucketPosition}`
     : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : `${isRB ? 'rb' : 'qb'}${gameMode === 'all-time' ? '_legends' : ''}`
-  const attrMeta = isBucket ? BUCKET_ATTR : isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : ATTR
+  const attrMeta = isBucket ? BUCKET_ATTR : isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : isRB ? RB_ATTR : ATTR
   const buildTypes = (_buildTypesProp && _buildTypesProp.length > 0)
     ? _buildTypesProp
     : isBucket ? (bucketPosition === 'big' ? BIG_TYPES : GUARD_TYPES)

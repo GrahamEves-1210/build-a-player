@@ -2,7 +2,7 @@
 // Grades calibrated against: Dan Marino (arm=11), Tom Brady NE (processing=11, leadership=11), Randall Cunningham PHI (legs=11)
 // Current active QBs mirror qbs.js grades. Multi-team players graded per their tenure (peak team listed first).
 
-import { TEAMS } from './qbs'
+import { TEAMS } from './nfl-teams'
 
 const _raw = [
 

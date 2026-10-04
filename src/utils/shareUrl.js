@@ -1,4 +1,5 @@
-﻿import { TEAMS, QBS, TYPES } from '../data/qbs'
+﻿import { TEAMS } from '../data/nfl-teams'
+import { QBS, TYPES } from '../data/qbs'
 import HEADSHOTS from '../data/headshots.json'
 import { nflHeadshot } from './simulation'
 

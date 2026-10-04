@@ -11,19 +11,20 @@ import BucketLeaderboardPage from './BucketLeaderboardPage'
 import BucketSalaryCap from './BucketSalaryCap'
 import PrivacyPage from './PrivacyPage'
 import {
-  NBA_GUARD_PLAYERS, NBA_BIG_PLAYERS,
-  NBA_ALLTIME_GUARD_PLAYERS, NBA_ALLTIME_BIG_PLAYERS,
-  NBA_TEAMS, BUCKET_ATTR,
+  NBA_GUARD_PLAYERS,
   GUARD_TYPES, GUARD_CATEGORIES,
-  BIG_TYPES, BIG_CATEGORIES,
   VERSUS_GUARD_TYPES, VERSUS_GUARD_CATEGORIES,
+} from '../data/nba-guards'
+import {
+  NBA_BIG_PLAYERS,
+  BIG_TYPES, BIG_CATEGORIES,
   VERSUS_BIG_TYPES, VERSUS_BIG_CATEGORIES,
-} from '../data/nba-players'
+} from '../data/nba-bigs'
+import { NBA_ALLTIME_GUARD_PLAYERS } from '../data/nba-guard-legends'
+import { NBA_ALLTIME_BIG_PLAYERS } from '../data/nba-big-legends'
+import { NBA_TEAMS } from '../data/nba-teams'
+import { BUCKET_ATTR } from '../data/nba-attrs'
 import NBA_HEADSHOTS     from '../data/nba-headshots.json'
-import NBA_POSITIONS     from '../data/nba-positions.json'
-import { NBA_JERSEY_NUMBERS } from '../data/nba-jersey-numbers'
-import { NBA_SKIN_COLORS }   from '../data/nba-skin-colors'
-import { NBA_FACE_CENTERS }  from '../data/nba-face-centers'
 import { supabase, rtSupabase } from '../lib/supabase'
 import { track } from '../lib/track'
 import { HEADSHOT_BASE } from '../utils/simulation'
@@ -99,10 +100,9 @@ function enrichPlayer(p) {
     color:      TEAM_META[p.team]?.color    ?? '#888888',
     color2:     TEAM_META[p.team]?.color2   ?? '#555555',
     teamName:   TEAM_META[p.team]?.teamName ?? p.team,
-    position:   NBA_POSITIONS[p.name]?.pos  ?? '',
-    number:     NBA_JERSEY_NUMBERS[p.name]  ?? p.number ?? null,
-    skin:       NBA_SKIN_COLORS[p.name]     ?? null,
-    faceCenter: NBA_FACE_CENTERS[p.name]    ?? null,
+    position:   p.position ?? '',
+    skin:       p.skin ?? null,
+    faceCenter: p.faceCenter ?? null,
   }
 }
 
@@ -119,7 +119,7 @@ const CUSTOM_MODAL_BIGS   = _dedup([...ENRICHED_BIGS,   ...ENRICHED_ALLTIME_BIGS
 // ─── Bucket Splash ────────────────────────────────────────────────────────────
 const BUCKET_SPLASH_ATTRS = {
   guard: [
-    { label: 'Handles',     col: '#a78bfa', angle:  -35, dist: 1.32, mx: 58, my: 14 },
+    { label: 'Handles',     col: '#a78bfa', angle:  -35, dist: 1.32, mx: 58, my: 14, tall: true },
     { label: 'Jump Shot',   col: '#34d399', angle:   15, dist: 1.28, mx: 62, my: 52 },
     { label: 'Finishing',   col: '#f87171', angle:   55, dist: 1.30, mx: 3,  my: 30 },
     { label: 'Speed',       col: '#fb923c', angle:  210, dist: 1.31, mx: 4,  my: 62 },
@@ -130,7 +130,7 @@ const BUCKET_SPLASH_ATTRS = {
     { label: 'H/L',         col: '#e879f9', angle:   80, dist: 1.31, mx: 58, my: 44, dox: 170, doy: 10 },
   ],
   big: [
-    { label: 'Finishing',    col: '#f87171', angle:  -35, dist: 1.32, mx: 58, my: 14 },
+    { label: 'Finishing',    col: '#f87171', angle:  -35, dist: 1.32, mx: 58, my: 14, tall: true },
     { label: 'Jump Shot',    col: '#34d399', angle:   55, dist: 1.30, mx: 3,  my: 30 },
     { label: 'Playmaking',   col: '#38bdf8', angle:   15, dist: 1.28, mx: 62, my: 52 },
     { label: 'Interior D',   col: '#4ade80', angle:  210, dist: 1.31, mx: 4,  my: 62 },
@@ -157,7 +157,7 @@ function useRevealOnMount(ready) {
   const [visible, setVisible] = useState(false)
   useEffect(() => {
     if (!ready) return
-    const t = setTimeout(() => setVisible(true), 60)
+    const t = setTimeout(() => setVisible(true), 360)
     return () => clearTimeout(t)
   }, [ready])
   return visible
@@ -183,7 +183,7 @@ function BucketStackedSilhouette({ attrs, ready }) {
           className="splash-stack-band"
           style={{
             background: a.col,
-            flex: a.label === 'Jump Shot' || a.label === 'Handles' || a.label === 'Finishing' ? 1.4 : 1,
+            flex: a.tall ? 1.4 : 1,
             opacity: visible ? 1 : 0,
             // Starts stacked at the very top (i band-heights up) and falls
             // down to its own row — lower bands fall further.
@@ -204,7 +204,7 @@ const POS_LABELS = { guard: 'Guard', big: 'Big' }
 
 function BucketSplash({ onStart, onVersus }) {
   const [phase, setPhase]       = useState(0)
-  const [position, setPosition] = useState(() => { const p = localStorage.getItem('bucketPosition'); return (p === 'guard' || p === 'big') ? p : 'guard' })
+  const [position, setPosition] = useState(() => { try { const p = localStorage.getItem('bucketPosition'); return (p === 'guard' || p === 'big') ? p : 'guard' } catch { return 'guard' } })
   const isMobile = useMemo(() => window.innerWidth <= 768, [])
 
   useEffect(() => {
@@ -257,7 +257,7 @@ function BucketSplash({ onStart, onVersus }) {
         <div className="splash-tagline"><span className="splash-tagline-dot" />1M+ Players. Build the Perfect Player.</div>
 
         <div className="splash-modes">
-          <button className="splash-mode-classic" onClick={() => { localStorage.setItem('bucketPosition', position); onStart('classic', position) }}>
+          <button className="splash-mode-classic" onClick={() => { try { localStorage.setItem('bucketPosition', position) } catch {}; onStart('classic', position) }}>
             <div className="smode-title">Current</div>
             <div className="smode-badge">Current NBA</div>
             <div className="smode-cta">
@@ -269,13 +269,13 @@ function BucketSplash({ onStart, onVersus }) {
           </button>
 
           <div className="splash-modes-secondary">
-            <button className="splash-mode-alltime" onClick={() => { localStorage.setItem('bucketPosition', position); onStart('all-time', position) }}>
+            <button className="splash-mode-alltime" onClick={() => { try { localStorage.setItem('bucketPosition', position) } catch {}; onStart('all-time', position) }}>
               <div className="smode-daily-banner" style={{ background: 'linear-gradient(135deg, #ca8a04, #eab308)' }}>NEW</div>
               <div className="smode-title">All-Time</div>
               <div className="smode-badge">NBA Legends</div>
             </button>
 
-            <button className="splash-mode-salarycap" style={{ position: 'relative' }} onClick={() => { localStorage.setItem('bucketPosition', position); onStart('salarycap', position) }}>
+            <button className="splash-mode-salarycap" style={{ position: 'relative' }} onClick={() => { try { localStorage.setItem('bucketPosition', position) } catch {}; onStart('salarycap', position) }}>
               <div className="smode-daily-banner">DAILY</div>
               <div className="smode-title">Salary Cap</div>
               <div className="smode-badge">Build on a budget</div>
@@ -289,18 +289,12 @@ function BucketSplash({ onStart, onVersus }) {
           <div className="splash-mg-sub splash-mg-sub--h2h">1v1</div>
         </button>
 
-        <button className="splash-minigame-btn splash-minigame-btn--player" onClick={() => { localStorage.removeItem('bap_progress'); window.location.href = '/'; }}>
+        <button className="splash-minigame-btn splash-minigame-btn--player" onClick={() => { try { localStorage.removeItem('bap_progress') } catch {}; window.location.href = '/'; }}>
           <div className="splash-xlink-logo">
             BUIL<span className="splash-xlink-d">D</span><em className="splash-xlink-em splash-xlink-em--player">-<span className="splash-xlink-a">A</span>-</em>PLAYER
           </div>
           <div className="splash-mg-sub">FOOTBALL BUILDER</div>
         </button>
-      </div>
-
-      <div className="splash-field-lines">
-        {[...Array(7)].map((_, i) => (
-          <div key={i} className="splash-yard-line" style={{ opacity: phase >= 2 ? 1 : 0, transitionDelay: `${600 + i * 60}ms` }} />
-        ))}
       </div>
     </div>
 
@@ -320,7 +314,7 @@ const VERSUS_POS_CATS  = { guard: VERSUS_GUARD_CATEGORIES, big: VERSUS_BIG_CATEG
 export default function BucketApp() {
   const [page, setPage]               = useState('splash')
   const [gameMode, setGameMode]       = useState(null)
-  const [position, setPosition]       = useState(() => localStorage.getItem('bucketPosition') || 'guard')
+  const [position, setPosition]       = useState(() => { try { return localStorage.getItem('bucketPosition') || 'guard' } catch { return 'guard' } })
   const [build, setBuild]             = useState({})
   const figureRef = useRef(null)
   const captureFigure = useCallback(async () => {
@@ -387,6 +381,28 @@ export default function BucketApp() {
   useEffect(() => {
     if (isBucketCustomMode) sandboxTainted.current = true
   }, [isBucketCustomMode])
+
+  // Blocks the rubber-band bounce only at the bottom of .game-page-scroll,
+  // leaving the top bounce untouched — overscroll-behavior has no directional
+  // (top vs bottom) variant, so this does it by hand: preventDefault only
+  // fires once already scrolled to the very bottom and still dragging up.
+  useEffect(() => {
+    let startY = 0
+    const onTouchStart = (e) => { startY = e.touches[0].clientY }
+    const onTouchMove = (e) => {
+      const el = e.target.closest?.('.game-page-scroll')
+      if (!el) return
+      const draggingUp = e.touches[0].clientY - startY < 0
+      const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight <= 1
+      if (draggingUp && atBottom) e.preventDefault()
+    }
+    document.addEventListener('touchstart', onTouchStart, { passive: true })
+    document.addEventListener('touchmove', onTouchMove, { passive: false })
+    return () => {
+      document.removeEventListener('touchstart', onTouchStart)
+      document.removeEventListener('touchmove', onTouchMove)
+    }
+  }, [])
 
   // Set basketball sport attribute on root
   useEffect(() => {
@@ -630,21 +646,18 @@ export default function BucketApp() {
     activeTypes.forEach(t => {
       if (!fullBuild[t] && fallback) fullBuild[t] = { ...fallback, type: t }
     })
-    // Use size player for model figure (jersey number + headshot come from 'clutch' slot)
-    if (capBuild['size']) {
-      fullBuild['clutch']       = { ...capBuild['size'], type: 'clutch' }
-      fullBuild['basketballIQ'] = { ...capBuild['size'], type: 'basketballIQ' }
-    }
+    // basketballIQ/clutch/rebounding now arrive already filled on capBuild
+    // (real averaged player stats, not a flat default or an unrelated proxy —
+    // see buildFromSel in BucketSalaryCap.jsx), anchored on the Size pick for
+    // the model figure's photo/jersey number.
     // When effective position is big, add big attr keys alongside the guard ones
-    // so getBucketBigArchetype can read interiorDefense, playmaking, rebounding.
+    // so getBucketBigArchetype can read interiorDefense and playmaking.
     // Build always uses guard-key names, so this remap is needed for any big sim.
     if (capPosition === 'big') {
       if (fullBuild.perimeterDefense)
         fullBuild.interiorDefense = { ...fullBuild.perimeterDefense, type: 'interiorDefense' }
       if (!fullBuild.playmaking)
         fullBuild.playmaking = { ...(fullBuild.passing ?? fallback), type: 'playmaking' }
-      if (!fullBuild.rebounding)
-        fullBuild.rebounding = { ...(fallback), type: 'rebounding', val: 6 }
     }
     setBuild(fullBuild)
     // Auto-sim: skip the build screen and go straight to results
@@ -687,7 +700,7 @@ export default function BucketApp() {
   }, [activeTypes, position])
 
   const handleSwitchPosition = useCallback((pos) => {
-    localStorage.setItem('bucketPosition', pos)
+    try { localStorage.setItem('bucketPosition', pos) } catch {}
     setPosition(pos)
     const types = POS_TYPES[pos] ?? GUARD_TYPES
     setBuild(Object.fromEntries(types.map(t => [t, null])))
@@ -727,6 +740,7 @@ export default function BucketApp() {
     sandboxTainted.current = isBucketCustomMode
     setPage('game')
     window.scrollTo({ top: 0, behavior: 'instant' })
+    document.querySelector('.game-page-scroll')?.scrollTo({ top: 0, behavior: 'instant' })
   }, [activeTypes])
 
   const handleTeamPicked = useCallback((team) => {
@@ -804,6 +818,7 @@ export default function BucketApp() {
     })
     setSpinResetKey(k => k + 1)
     window.scrollTo({ top: 0, behavior: 'instant' })
+    document.querySelector('.game-page-scroll')?.scrollTo({ top: 0, behavior: 'instant' })
   }, [activeTypes])
 
   const handleHome = useCallback(() => {
@@ -825,7 +840,7 @@ export default function BucketApp() {
   }, [isBucketCustomMode])
 
   const handleNavPositionSwitch = useCallback((pos) => {
-    localStorage.setItem('bucketPosition', pos)
+    try { localStorage.setItem('bucketPosition', pos) } catch {}
     handleHome()
   }, [handleHome])
 
@@ -1122,7 +1137,7 @@ export default function BucketApp() {
         onStart={handleStart}
         onVersus={(pos) => {
           const p = pos || 'guard'
-          localStorage.setItem('bucketPosition', p)
+          try { localStorage.setItem('bucketPosition', p) } catch {}
           setPosition(p)
           setGameMode('classic')
           setBuild(Object.fromEntries((VERSUS_POS_TYPES[p] ?? VERSUS_GUARD_TYPES).map(t => [t, null])))
@@ -1281,7 +1296,7 @@ export default function BucketApp() {
           build={build}
           types={activeTypes}
           position={position}
-          onBack={() => { setPage(gameMode === 'salarycap' ? 'salarycap' : 'game'); window.scrollTo({ top: 0, behavior: 'instant' }) }}
+          onBack={() => { setPage(gameMode === 'salarycap' ? 'salarycap' : 'game'); window.scrollTo({ top: 0, behavior: 'instant' }); document.querySelector('.game-page-scroll')?.scrollTo({ top: 0, behavior: 'instant' }) }}
           onReset={handleReset}
           adsDisabled={adsDisabled}
           isSalaryMode={gameMode === 'salarycap'}
@@ -1297,7 +1312,7 @@ export default function BucketApp() {
       <>
         <Navbar {...navbarProps} />
         <BucketLeaderboardPage
-          onBack={() => { setPage(simResult ? 'sim' : 'game'); window.scrollTo({ top: 0, behavior: 'instant' }) }}
+          onBack={() => { setPage(simResult ? 'sim' : 'game'); window.scrollTo({ top: 0, behavior: 'instant' }); document.querySelector('.game-page-scroll')?.scrollTo({ top: 0, behavior: 'instant' }) }}
           currentUser={user}
           adsDisabled={adsDisabled}
         />
@@ -1353,6 +1368,7 @@ export default function BucketApp() {
               try { localStorage.setItem('bab_bucket_custom_ratings', JSON.stringify(ratings)) } catch {}
             }}
             onAddToBuild={(p, playerOverrides, slot) => {
+              sandboxTainted.current = true
               const val = playerOverrides?.[slot] ?? p.attrs?.[slot] ?? 5
               setBuild(prev => ({ ...prev, [slot]: {
                 type: slot, val,
@@ -1372,6 +1388,7 @@ export default function BucketApp() {
               setShowBucketCustomModal(false)
             }}
             onAddAllToBuild={(p, playerOverrides) => {
+              sandboxTainted.current = true
               setBuild(prev => {
                 const next = { ...prev }
                 activeTypes.forEach(slot => {
@@ -1409,12 +1426,12 @@ export default function BucketApp() {
   return (
     <>
       <Helmet>
-        <title>Build-A-Bucket: Build a Bucket NBA Game — Player Creator & Simulator</title>
-        <meta name="description" content="Build a bucket — spin the wheel to create your ultimate NBA player, simulate a full season, and compete on the all-time GOAT leaderboard. Play Build-A-Bucket free." />
-        <meta name="keywords" content="build a bucket, build-a-bucket, buildabucket, NBA player creator, basketball simulator, NBA game" />
+        <title>Build-A-Bucket: Build a Basketball Player (NBA) — Player Creator & Simulator</title>
+        <meta name="description" content="Build a basketball player — spin the wheel to create your ultimate NBA player, simulate a full season, and compete on the all-time GOAT leaderboard. Free basketball player creator." />
+        <meta name="keywords" content="build a basketball player, create a basketball player, build a bucket, build-a-bucket, buildabucket, NBA player creator, NBA player builder, basketball player builder, basketball simulator, NBA game" />
         <link rel="canonical" href="https://www.build-a-player.com/bucket" />
-        <meta property="og:title" content="Build-A-Bucket: Build a Bucket NBA Game — Player Creator & Simulator" />
-        <meta property="og:description" content="Build a bucket — spin the wheel to create your ultimate NBA player, simulate a full season, and compete on the all-time GOAT leaderboard. Play Build-A-Bucket free." />
+        <meta property="og:title" content="Build-A-Bucket: Build a Basketball Player (NBA) — Player Creator & Simulator" />
+        <meta property="og:description" content="Build a basketball player — spin the wheel to create your ultimate NBA player, simulate a full season, and compete on the all-time GOAT leaderboard. Free basketball player creator." />
         <meta property="og:url" content="https://www.build-a-player.com/bucket" />
       </Helmet>
       <Navbar {...navbarProps} />
@@ -1539,7 +1556,7 @@ export default function BucketApp() {
                   key={pos}
                   className={`vs-prompt-pos-btn${position === pos ? ' vs-prompt-pos-btn--active' : ''}`}
                   onClick={() => {
-                    localStorage.setItem('bucketPosition', pos)
+                    try { localStorage.setItem('bucketPosition', pos) } catch {}
                     setPosition(pos)
                     const types = VERSUS_POS_TYPES[pos] ?? VERSUS_GUARD_TYPES
                     setBuild(Object.fromEntries(types.map(t => [t, null])))
@@ -1575,7 +1592,7 @@ export default function BucketApp() {
 
       {showTeamSpin && (
         <TeamSpinModal
-          isCustomMode={gameMode === 'custom'}
+          isCustomMode={isBucketCustomMode}
           onTeamSelected={handleTeamPicked}
           build={build}
         />
@@ -1594,6 +1611,7 @@ export default function BucketApp() {
             try { localStorage.setItem('bab_bucket_custom_ratings', JSON.stringify(ratings)) } catch {}
           }}
           onAddToBuild={(p, playerOverrides, slot) => {
+            sandboxTainted.current = true
             const val = playerOverrides?.[slot] ?? p.attrs?.[slot] ?? 5
             setBuild(prev => ({ ...prev, [slot]: {
               type: slot, val,
@@ -1613,6 +1631,7 @@ export default function BucketApp() {
             setShowBucketCustomModal(false)
           }}
           onAddAllToBuild={(p, playerOverrides) => {
+            sandboxTainted.current = true
             setBuild(prev => {
               const next = { ...prev }
               activeTypes.forEach(slot => {
@@ -1645,7 +1664,7 @@ export default function BucketApp() {
       {gameMode !== 'salarycap' && <nav className="mobile-tab-bar">
         <button
           className={`mtab ${mobileView === 'spin' ? 'active' : ''}`}
-          onClick={() => { setMobileView('spin'); window.scrollTo({ top: 0, behavior: 'instant' }) }}
+          onClick={() => { setMobileView('spin'); window.scrollTo({ top: 0, behavior: 'instant' }); document.querySelector('.game-page-scroll')?.scrollTo({ top: 0, behavior: 'instant' }) }}
         >
           <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="23 4 23 10 17 10"/>
@@ -1657,7 +1676,7 @@ export default function BucketApp() {
         <div className="mtab-sep" />
         <button
           className={`mtab ${mobileView === 'build' ? 'active' : ''}`}
-          onClick={() => { setMobileView('build'); window.scrollTo({ top: 0, behavior: 'instant' }) }}
+          onClick={() => { setMobileView('build'); window.scrollTo({ top: 0, behavior: 'instant' }); document.querySelector('.game-page-scroll')?.scrollTo({ top: 0, behavior: 'instant' }) }}
         >
           <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>

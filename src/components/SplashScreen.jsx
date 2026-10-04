@@ -47,7 +47,7 @@ const POS_OPTIONS = [
     ],
   },
   {
-    pos: 'db', label: 'DB', classic: true, alltime: false, disabled: false,
+    pos: 'db', label: 'DB', classic: true, alltime: true, disabled: false,
     players: [
       { id: 'espn_4372012', color: '#fb4f14' },  // Pat Surtain II - DEN
       { id: 'espn_4686772', color: '#0C2340' },  // Christian Gonzalez - NE
@@ -213,17 +213,17 @@ const HoopU = () => (
 const QB_ATTRS = [
   { label: 'Arm',                   col: '#f87171', angle:  -35, dist: 1.32, mx: 58, my: 14 },
   { label: 'Legs',                  col: '#60a5fa', angle:   55, dist: 1.30, mx: 3,  my: 30, dox: 80 },
-  { label: 'Build',                 col: '#fb923c', angle:   15, dist: 1.28, mx: 62, my: 52 },
-  { label: 'Processing',            col: '#e879f9', angle:  210, dist: 1.31, mx: 4,  my: 62 },
+  { label: 'Size',                  col: '#fb923c', angle:   15, dist: 1.28, mx: 62, my: 52 },
+  { label: 'Pre-Snap',              col: '#e879f9', angle:  210, dist: 1.31, mx: 4,  my: 62 },
   { label: 'Accuracy/Touch',        col: '#34d399', angle: -130, dist: 1.30, mx: 55, my: 72 },
   { label: 'Leadership',            col: '#a78bfa', angle:  -70, dist: 1.29, mx: 5,  my: 18, doy: -30, dox: 140 },
   { label: 'Playmaking/Creativity', col: '#fbbf24', angle:  100, dist: 1.32, mx: 68, my: 34, dox: -290 },
   { label: 'Pocket Presence',       col: '#2dd4bf', angle: -160, dist: 1.28, mx: 3,  my: 48, doy: 200 },
-  { label: 'Vision',                col: '#38bdf8', angle:   80, dist: 1.31, mx: 74, my: 44, dox: 270 },
+  { label: 'Post-Snap',             col: '#38bdf8', angle:   80, dist: 1.31, mx: 74, my: 44, dox: 270 },
 ]
 
 const RB_ATTRS = [
-  { label: 'Long Speed',      col: '#f87171', angle:  -35, dist: 1.32, mx: 58, my: 14 },
+  { label: 'Speed',           col: '#f87171', angle:  -35, dist: 1.32, mx: 58, my: 14 },
   { label: 'Burst',           col: '#60a5fa', angle:   55, dist: 1.30, mx: 3,  my: 30 },
   { label: 'Strength',        col: '#fbbf24', angle:   15, dist: 1.28, mx: 62, my: 52 },
   { label: 'Size',            col: '#fb923c', angle:  210, dist: 1.31, mx: 4,  my: 62 },
@@ -235,11 +235,11 @@ const RB_ATTRS = [
 
 const WR_ATTRS = [
   { label: 'Speed',        col: '#f87171', angle:  -35, dist: 1.32, mx: 58, my: 14 },
-  { label: 'Body Control', col: '#60a5fa', angle:   55, dist: 1.30, mx: 3,  my: 30 },
-  { label: 'Vertical',     col: '#a78bfa', angle:   15, dist: 1.28, mx: 62, my: 52 },
   { label: 'Size',         col: '#fb923c', angle:  210, dist: 1.31, mx: 4,  my: 62 },
+  { label: 'Vertical',     col: '#a78bfa', angle:   15, dist: 1.28, mx: 62, my: 52 },
+  { label: 'Release',      col: '#60a5fa', angle:   55, dist: 1.30, mx: 3,  my: 30 },
   { label: 'Route Running',col: '#34d399', angle: -130, dist: 1.30, mx: 55, my: 72 },
-  { label: 'Release',      col: '#2dd4bf', angle:  -70, dist: 1.29, mx: 5,  my: 18, doy: -30, dox: 140 },
+  { label: 'Body Control', col: '#2dd4bf', angle:  -70, dist: 1.29, mx: 5,  my: 18, doy: -30, dox: 140 },
   { label: 'Hands',        col: '#34d399', angle:  100, dist: 1.32, mx: 60, my: 34, dox: -210 },
   { label: 'Awareness',    col: '#e879f9', angle: -160, dist: 1.28, mx: 3,  my: 48, doy: 200 },
   { label: 'After Catch',  col: '#fbbf24', angle:   80, dist: 1.31, mx: 74, my: 44, dox: 270 },
@@ -338,12 +338,12 @@ function StackedSilhouette({ position, attrs, ready }) {
 
 export default function SplashScreen({ onStart, onDepthChart }) {
   const [phase, setPhase] = useState(0)
-  const [position, setPosition] = useState(() => localStorage.getItem('lastPosition') || 'qb')
+  const [position, setPosition] = useState(() => { try { return localStorage.getItem('lastPosition') || 'qb' } catch { return 'qb' } })
   const isMobile  = useMemo(() => window.innerWidth <= 768, [])
   const isDesktop = useMemo(() => window.innerWidth > 768, [])
   const orbitScale = isDesktop ? 0.8 : 1
 
-  const handlePosChange = pos => { setPosition(pos); localStorage.setItem('lastPosition', pos) }
+  const handlePosChange = pos => { setPosition(pos); try { localStorage.setItem('lastPosition', pos) } catch {} }
 
   const [voteCounts, setVoteCounts] = useState(VOTE_SEED)
   const [votedFor, setVotedFor] = useState(() => { try { return localStorage.getItem(VOTE_KEY) } catch { return null } })
@@ -419,7 +419,7 @@ export default function SplashScreen({ onStart, onDepthChart }) {
         <div className="splash-tagline"><span className="splash-tagline-dot" />1M+ Players. Build the Perfect Player.</div>
 
         <div className="splash-modes">
-          <button className="splash-mode-classic" onClick={() => { localStorage.setItem('lastPosition', position); onStart('classic', position) }}>
+          <button className="splash-mode-classic" onClick={() => { try { localStorage.setItem('lastPosition', position) } catch {}; onStart('classic', position) }}>
             <div className="smode-title">Current</div>
             <div className="smode-badge">Current {position === 'rb' ? 'RBs' : position === 'wr' ? 'WRs' : position === 'te' ? 'TEs' : position === 'db' ? 'DBs' : 'QBs'}</div>
             <div className="smode-cta">
@@ -430,7 +430,7 @@ export default function SplashScreen({ onStart, onDepthChart }) {
             </div>
           </button>
 
-          {(position === 'te' || position === 'db') ? (
+          {(position === 'te') ? (
             <button className="splash-mode-alltime splash-mode-alltime--soon" disabled>
               <div className="splash-mode-alltime--soon-banner">COMING SOON</div>
               <div className="smode-title smode-title--alltime">All-Time</div>
@@ -445,11 +445,11 @@ export default function SplashScreen({ onStart, onDepthChart }) {
           ) : (
             <button
               className="splash-mode-alltime"
-              onClick={() => { localStorage.setItem('lastPosition', position); onStart('all-time', position) }}
+              onClick={() => { try { localStorage.setItem('lastPosition', position) } catch {}; onStart('all-time', position) }}
             >
               <div className="smode-title smode-title--alltime">
                 All-Time
-                {position === 'wr' && <span className="splash-alltime-new-tag">NEW</span>}
+                {(position === 'wr' || position === 'db') && <span className="splash-alltime-new-tag">NEW</span>}
               </div>
               <div className="smode-badge smode-badge--alltime">Draft the Greats</div>
               <div className="smode-cta smode-cta--alltime">

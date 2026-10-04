@@ -2561,14 +2561,14 @@ export function getArchetypeDB(ovr, build, types = DB_TYPES) {
   if (ovr >= 95) {
     if (isSafetyBuild) {
       if (hi(prk) && hi(ziq))                        return 'Generational Free Safety'
-      if (hi(rus) && hi(sz) && up(prk))              return 'Box Menace'
+      if (hi(rus) && hi(sz) && up(prk))              return 'Box Safety Thumper'
       if (hi(hnd) && hi(prk))                        return 'Ball Hawk'
       return 'Transcendent Safety'
     }
-    if (hi(man) && hi(flu) && hi(spd))               return 'Matchup Nightmare'
-    if (hi(man) && hi(prs) && hi(prk))               return 'Lockdown Nightmare'
-    if (hi(ziq) && hi(man) && hi(flu))               return 'Coverage Savant'
-    if (hi(hnd) && hi(man))                          return 'Takeaway Menace'
+    if (hi(man) && hi(flu) && hi(spd))               return 'Matchup Eraser'
+    if (hi(man) && hi(prs) && hi(prk))               return 'Lockdown Specialist'
+    if (hi(ziq) && hi(man) && hi(flu))               return 'Coverage Technician'
+    if (hi(hnd) && hi(man))                          return 'Turnover Machine'
     if (spread <= 1)                                  return 'Generational Corner'
     return 'Transcendent Corner'
   }
@@ -2576,8 +2576,8 @@ export function getArchetypeDB(ovr, build, types = DB_TYPES) {
   if (ovr >= 90) {
     if (isSafetyBuild) {
       if (top('prk') && top('ziq') && up(hnd))       return 'Ball Hawk'
-      if (top('rus') && top('sz') && up(prk))        return 'Box General'
-      if (top('prk') && top('man') && up(ziq))       return 'Hybrid Enforcer'
+      if (top('rus') && top('sz') && up(prk))        return 'Box Safety General'
+      if (top('prk') && top('man') && up(ziq))       return 'Two-Way Safety'
       if (top('ziq') && top3('prk') && up(hnd))      return 'Deep Zone Anchor'
       if (top('spd') && top('prk'))                  return 'Range Safety'
       if (spread <= 2)                               return 'All-Pro Safety'
@@ -2668,7 +2668,7 @@ export function getArchetypeDB(ovr, build, types = DB_TYPES) {
 
 const DB_TEAM_BY_SHORT = Object.fromEntries(NFL_TEAMS.map(t => [t.short, t]))
 
-const DPOY_CANDIDATE_POOL = [
+const CLASSIC_DPOY_POOL = [
   { name: 'Myles Garrett',     team: 'LAR', pos: 'EDGE', tier: 'S', weight: 30 },
   { name: 'Will Anderson Jr.', team: 'HOU', pos: 'EDGE', tier: 'A', weight: 18 },
   { name: 'Maxx Crosby',       team: 'LV',  pos: 'EDGE', tier: 'A', weight: 13 },
@@ -2678,6 +2678,18 @@ const DPOY_CANDIDATE_POOL = [
   { name: 'Micah Parsons',     team: 'GB',  pos: 'EDGE', tier: 'B', weight: 20 },
   { name: 'Chris Jones',       team: 'KC',  pos: 'DL',   tier: 'B', weight: 6  },
   { name: 'Fred Warner',       team: 'SF',  pos: 'LB',   tier: 'B', weight: 6  },
+]
+
+// All-Time pool mirrors the real-world skew toward legendary pass rushers —
+// a historic CB/S season still has to beat Lawrence Taylor-tier competition.
+const ALLTIME_DPOY_POOL = [
+  { name: 'Lawrence Taylor',   team: 'NYG', pos: 'EDGE', tier: 'S', weight: 28 },
+  { name: 'Reggie White',      team: 'PHI', pos: 'EDGE', tier: 'S', weight: 22 },
+  { name: 'Aaron Donald',      team: 'LAR', pos: 'DL',   tier: 'A', weight: 18 },
+  { name: 'J.J. Watt',         team: 'HOU', pos: 'DL',   tier: 'A', weight: 14 },
+  { name: 'Ray Lewis',         team: 'BAL', pos: 'LB',   tier: 'B', weight: 10 },
+  { name: 'Mean Joe Greene',   team: 'PIT', pos: 'DL',   tier: 'B', weight: 8  },
+  { name: 'Deacon Jones',      team: 'LAR', pos: 'EDGE', tier: 'B', weight: 8  },
 ]
 
 function pickWeighted(pool) {
@@ -2721,7 +2733,7 @@ function dpoyStatLine(pos, s) {
   return `${s.ints} INT · ${s.tackles} tkl`
 }
 
-export function calcDBDpoyResult(result) {
+export function calcDBDpoyResult(result, isAllTime = false, teamShort = null) {
   const {
     ovr = 60, seasonINTs = 0, seasonPBUs = 0, seasonTackles = 0, seasonPickSixes = 0, minAttrVal = 0,
   } = result
@@ -2755,8 +2767,12 @@ export function calcDBDpoyResult(result) {
     winP = 0.40 + t * 0.55
   }
   // Every single attribute A+ or S (val >= 10) — a build that dedicated is
-  // a guaranteed win, no roll needed.
-  if (minAttrVal >= 10) winP = 1
+  // a guaranteed win, no roll needed, even in All-Time mode.
+  if (minAttrVal >= 10) {
+    const unanimous = seasonINTs >= 7 || seasonPickSixes >= 2
+    return { userWins: true, winner: null, unanimous, winnerStats: null }
+  }
+  if (isAllTime) winP *= 0.75
   const userWins = Math.random() < winP
 
   if (userWins) {
@@ -2764,7 +2780,10 @@ export function calcDBDpoyResult(result) {
     return { userWins: true, winner: null, unanimous, winnerStats: null }
   }
 
-  const candidate = pickWeighted(DPOY_CANDIDATE_POOL)
+  const pool = isAllTime ? ALLTIME_DPOY_POOL : CLASSIC_DPOY_POOL
+  const filteredPool = teamShort ? pool.filter(c => c.team !== teamShort) : pool
+  const activePool = filteredPool.length ? filteredPool : pool
+  const candidate = pickWeighted(activePool)
   const stats = genDPOYCandidateStats(candidate)
   const team = DB_TEAM_BY_SHORT[candidate.team]
   return {
@@ -2786,8 +2805,8 @@ function poissonSample(lambda) {
   return k - 1
 }
 
-export function runDBSimulation(build, team = null) {
-  const oppLookup = TEAM_BY_NAME
+export function runDBSimulation(build, team = null, isAllTime = false) {
+  const oppLookup = isAllTime ? ALLTIME_BY_NAME : TEAM_BY_NAME
   const ovr = calcOVRDB(build) ?? 60
 
   // Anchor on the "size" chip's real position (same anchor the depth chart
@@ -2946,8 +2965,10 @@ export function runDBSimulation(build, team = null) {
 
   if (playoffs) {
     const conf = team?.conf ?? 'AFC'
-    const confPool = PLAYOFF_POOLS[conf].filter(n => n !== team?.name)
-    const sbPool   = SB_POOLS[conf].filter(n => n !== team?.name)
+    const activePlayoffPools = isAllTime ? ALLTIME_PLAYOFF_POOLS : PLAYOFF_POOLS
+    const activeSbPools      = isAllTime ? ALLTIME_SB_POOLS      : SB_POOLS
+    const confPool = activePlayoffPools[conf].filter(n => n !== team?.name)
+    const sbPool   = activeSbPools[conf].filter(n => n !== team?.name)
     const usedOpponents = new Set()
     const pick = pool => {
       const avail = pool.filter(n => !usedOpponents.has(n))

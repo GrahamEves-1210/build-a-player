@@ -160,7 +160,13 @@ export default function TeamPickerModal({ onSelect, isPlus = false, build = {} }
     setTimeout(() => onSelect(team), 800)
   }
 
-  const pickPool = NFL_TEAMS
+  // Sandbox: any of the 32 teams. Normal mode: only the teams actually
+  // represented in the player's build (the 9-10 drafted attribute sources).
+  const draftedTeamsPool = useMemo(() => {
+    const shorts = [...new Set(Object.values(build).filter(Boolean).map(c => c.team))]
+    return shorts.map(s => NFL_TEAMS.find(t => t.short === s)).filter(Boolean)
+  }, [build])
+  const pickPool = isPlus ? NFL_TEAMS : draftedTeamsPool
 
   const filteredTeams = useMemo(() => {
     if (!search) return pickPool
@@ -180,18 +186,16 @@ export default function TeamPickerModal({ onSelect, isPlus = false, build = {} }
         <div className="tpm-eyebrow">Simulate Season</div>
         <div className="tpm-heading">{mode === 'pick' ? 'Pick Your Team' : 'Spin Your Team'}</div>
 
-        {isPlus && (
-          <div className="tpm-mode-tabs">
-            <button
-              className={`tpm-tab${mode === 'spin' ? ' tpm-tab-active' : ''}`}
-              onClick={() => { setMode('spin'); setResult(null); setSearch('') }}
-            >Spin</button>
-            <button
-              className={`tpm-tab${mode === 'pick' ? ' tpm-tab-active' : ''}`}
-              onClick={() => { setMode('pick'); setResult(null); setPhase('idle') }}
-            >Pick</button>
-          </div>
-        )}
+        <div className="tpm-mode-tabs">
+          <button
+            className={`tpm-tab${mode === 'spin' ? ' tpm-tab-active' : ''}`}
+            onClick={() => { setMode('spin'); setResult(null); setSearch('') }}
+          >Spin</button>
+          <button
+            className={`tpm-tab${mode === 'pick' ? ' tpm-tab-active' : ''}`}
+            onClick={() => { setMode('pick'); setResult(null); setPhase('idle') }}
+          >Pick</button>
+        </div>
 
         {mode === 'spin' ? (
           <>

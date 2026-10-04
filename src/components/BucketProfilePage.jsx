@@ -1,6 +1,7 @@
 ﻿import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
-import { BUCKET_ATTR, NBA_TEAMS } from '../data/nba-players'
+import { BUCKET_ATTR } from '../data/nba-attrs'
+import { NBA_TEAMS } from '../data/nba-teams'
 import { calcBucketOVR, getBucketGuardArchetype, getBucketBigArchetype } from '../utils/bucketSimulation'
 import { valToGrade, HEADSHOT_BASE } from '../utils/simulation'
 
@@ -109,6 +110,32 @@ export default function BucketProfilePage({
   })
   const [plusOpen, setPlusOpen] = useState(false)
   const plusRef = useRef(null)
+
+  const [showEmailForm, setShowEmailForm] = useState(false)
+  const [contactEmail, setContactEmail] = useState('')
+  const [emailOnFile, setEmailOnFile] = useState(null)
+  const [emailError, setEmailError] = useState(null)
+  const [emailSuccess, setEmailSuccess] = useState(false)
+  const [emailLoading, setEmailLoading] = useState(false)
+
+  useEffect(() => {
+    if (!supabase || !user) return
+    supabase.from('accounts').select('email').eq('id', user.id).single()
+      .then(({ data }) => { if (data?.email) { setEmailOnFile(data.email); setContactEmail(data.email) } })
+  }, [user])
+
+  const handleSaveEmail = async (e) => {
+    e.preventDefault()
+    setEmailError(null)
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail.trim())) { setEmailError('Please enter a valid email address.'); return }
+    setEmailLoading(true)
+    const { error } = await supabase.from('accounts').update({ email: contactEmail.trim() }).eq('id', user.id)
+    setEmailLoading(false)
+    if (error) { setEmailError(error.message); return }
+    setEmailOnFile(contactEmail.trim())
+    setEmailSuccess(true)
+    setShowEmailForm(false)
+  }
 
   useEffect(() => {
     if (!plusOpen) return
@@ -439,6 +466,37 @@ export default function BucketProfilePage({
 
         {/* Sign out */}
         <div className={`prf-actions ${show ? 'prf-card-in' : ''}`} style={{ animationDelay: '0.4s' }}>
+          {!showEmailForm ? (
+            <>
+              {!emailOnFile && (
+                <div className="prf-email-hint">Add your email for easier account recovery and occasional game updates.</div>
+              )}
+              <button className="prf-changepw-btn" onClick={() => { setShowEmailForm(true); setEmailError(null); setEmailSuccess(false) }}>
+                {emailOnFile ? 'Update Email' : 'Add Email'}
+              </button>
+            </>
+          ) : (
+            <form className="prf-changepw-form" onSubmit={handleSaveEmail}>
+              {!emailOnFile && (
+                <div className="prf-email-hint">Add your email for easier account recovery and occasional game updates.</div>
+              )}
+              <input
+                className="auth-input"
+                type="email"
+                placeholder="you@example.com"
+                value={contactEmail}
+                onChange={e => setContactEmail(e.target.value)}
+                required
+                autoComplete="email"
+              />
+              {emailError && <div className="auth-error">{emailError}</div>}
+              <div className="prf-changepw-btns">
+                <button type="submit" className="prf-changepw-btn" disabled={emailLoading}>{emailLoading ? 'Saving…' : 'Save Email'}</button>
+                <button type="button" className="prf-changepw-cancel" onClick={() => { setShowEmailForm(false); setEmailError(null) }}>Cancel</button>
+              </div>
+            </form>
+          )}
+          {emailSuccess && <div className="prf-pw-success">Email saved.</div>}
           <button className="prf-signout-btn" onClick={handleSignOut}>Sign Out</button>
         </div>
 

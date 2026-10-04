@@ -1,5 +1,5 @@
 import svgRaw from '../assets/bucket-body.svg?raw'
-import { NBA_TEAMS } from '../data/nba-players'
+import { NBA_TEAMS } from '../data/nba-teams'
 
 const TEAM_NICKNAME = Object.fromEntries(
   NBA_TEAMS.map(t => [t.short, t.name.split(' ').slice(-1)[0].toUpperCase()])

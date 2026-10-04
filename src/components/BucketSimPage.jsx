@@ -1,6 +1,9 @@
 ﻿import React, { useState, useEffect, useRef, useMemo, useCallback, useLayoutEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { NBA_TEAMS, NBA_PLAYERS, BUCKET_ATTR } from '../data/nba-players'
+import { NBA_TEAMS } from '../data/nba-teams'
+import { BUCKET_ATTR } from '../data/nba-attrs'
+import { NBA_GUARD_PLAYERS } from '../data/nba-guards'
+import { NBA_BIG_PLAYERS } from '../data/nba-bigs'
 import NBA_HEADSHOTS from '../data/nba-headshots.json'
 import { valToGrade, HEADSHOT_BASE } from '../utils/simulation'
 import { getBucketGuardArchetype, getBucketBigArchetype, TEAM_RATINGS, ALLTIME_TEAM_RATINGS } from '../utils/bucketSimulation'
@@ -113,7 +116,7 @@ const TEAM_VISUAL_RATINGS = {
   MIL: { off: 66, def: 64 }, // Post-Giannis rebuild, major regression
   PHI: { off: 77, def: 73 }, // Embiid availability drives everything
   ATL: { off: 75, def: 66 }, // Jalen Johnson-led offense, no defensive identity
-  MIA: { off: 80, def: 78 }, // Giannis + Spoelstra system — legitimate East contender
+  MIA: { off: 74, def: 82 }, // Giannis + Spoelstra system — legitimate East contender
   CHI: { off: 68, def: 66 }, // Middle-of-road, no clear direction
   TOR: { off: 68, def: 68 }, // Young core, patience mode
   CHA: { off: 66, def: 64 }, // Lottery team, LaMelo health a concern
@@ -495,7 +498,13 @@ export function TeamSpinModal({ isCustomMode, onTeamSelected, build = {} }) {
   const [mode,       setMode]       = useState(isCustomMode ? 'pick' : 'spin')
   const [search,     setSearch]     = useState('')
 
-  const pickPool = NBA_TEAMS
+  // Sandbox: any of the 30 teams. Normal mode: only the teams actually
+  // represented in the player's build (the 9-10 drafted attribute sources).
+  const draftedTeamsPool = useMemo(() => {
+    const shorts = [...new Set(Object.values(build).filter(Boolean).map(c => c.team))]
+    return shorts.map(s => NBA_TEAMS.find(t => t.short === s)).filter(Boolean)
+  }, [build])
+  const pickPool = isCustomMode ? NBA_TEAMS : draftedTeamsPool
 
   const items = useMemo(() => [...NBA_TEAMS].sort(() => Math.random() - 0.5), [spinCount])
 
@@ -2588,7 +2597,7 @@ const TEAM_STARTERS = {
   WAS: ['Trae Young','Bilal Coulibaly','AJ Dybantsa','Khris Middleton','Anthony Davis'],
 }
 
-const PLAYER_INDEX = Object.fromEntries(NBA_PLAYERS.map(p => [p.name, p]))
+const PLAYER_INDEX = Object.fromEntries([...NBA_GUARD_PLAYERS, ...NBA_BIG_PLAYERS].map(p => [p.name, p]))
 
 const SUFFIXES = new Set(['Jr.', 'Jr', 'II', 'III', 'IV'])
 function starterDisplayName(p) {
@@ -2800,9 +2809,6 @@ export default function BucketSimPage({ result, build, types, position, onBack, 
         )}
 
         {screens[screen]}
-        {screens[screen]?.key !== 'final' && (
-          <div className="simp-footer-disclaimer">Fan-made · Not affiliated with the NBA</div>
-        )}
         <SiteFooter sport="bucket" />
       </div>
     </div>

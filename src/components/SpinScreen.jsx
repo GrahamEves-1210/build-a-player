@@ -1,5 +1,6 @@
 ﻿import { useRef, useEffect, useLayoutEffect, useMemo, useCallback, useState } from 'react'
-import { QBS, TEAMS, ATTR, TYPES, CATEGORIES, QB_PHYSICALS, LITE_TYPES } from '../data/qbs'
+import { QBS, ATTR, TYPES, CATEGORIES, QB_PHYSICALS, LITE_TYPES } from '../data/qbs'
+import { TEAMS } from '../data/nfl-teams'
 import { RB_CATEGORIES } from '../data/rbs'
 import { valToGrade, HEADSHOT_BASE } from '../utils/simulation'
 import HEADSHOTS from '../data/headshots.json'

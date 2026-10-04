@@ -5,7 +5,7 @@
 // Size: 75% height + 25% weight, 0–11. Anchor: 66"/155lb≈0 · Mike Evans 77"/231lb≈11
 // Skin: #f0c4a0 white · #b07848 mixed · #7a5030 medium brown · #5e3c22 Black · #3a2010 very dark
 
-import { TEAMS } from './qbs'
+import { TEAMS } from './nfl-teams'
 
 const TEAM_COLOR = Object.fromEntries(TEAMS.map(t => [t.short, { color: t.color, color2: t.color2 }]))
 

@@ -26,6 +26,7 @@ import { Analytics } from '@vercel/analytics/react'
 import './index.css'
 import App from './App.jsx'
 import BucketApp from './components/BucketApp.jsx'
+import ErrorBoundary from './components/ErrorBoundary.jsx'
 
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.getRegistrations().then(regs => {
@@ -39,9 +40,11 @@ const isBucket = window.location.pathname.startsWith('/bucket')
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <HelmetProvider>
-      {isBucket ? <BucketApp /> : <App />}
-    </HelmetProvider>
-    <Analytics />
+    <ErrorBoundary>
+      <HelmetProvider>
+        {isBucket ? <BucketApp /> : <App />}
+      </HelmetProvider>
+      <Analytics />
+    </ErrorBoundary>
   </StrictMode>,
 )

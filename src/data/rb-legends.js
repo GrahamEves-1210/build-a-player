@@ -3,7 +3,7 @@
 // Calibrated: Jim Brown (strength=11), Barry Sanders (elusiveness=11, vision=11), LaDainian Tomlinson (hands=9)
 // Skin tones: #f0c4a0 white Â· #b07848 medium mixed Â· #7a5030 medium brown Â· #5e3c22 dark brown Â· #3a2010 very dark
 
-import { TEAMS } from './qbs'
+import { TEAMS } from './nfl-teams'
 
 const TEAM_COLOR = Object.fromEntries(TEAMS.map(t => [t.short, { color: t.color, color2: t.color2 }]))
 

@@ -4,12 +4,15 @@ import { supabase } from '../lib/supabase'
 // Supabase requires an email internally — we derive one from the username silently
 const toEmail = (username) => `${username.trim().toLowerCase()}@buildaplayer.app`
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
 export default function AuthModal({ onClose, onAuth }) {
-  const [tab, setTab]           = useState('signin')
-  const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError]       = useState(null)
-  const [loading, setLoading]   = useState(false)
+  const [tab, setTab]                 = useState('signin')
+  const [username, setUsername]       = useState('')
+  const [contactEmail, setContactEmail] = useState('')
+  const [password, setPassword]       = useState('')
+  const [error, setError]             = useState(null)
+  const [loading, setLoading]         = useState(false)
 
   const reset = () => setError(null)
 
@@ -19,6 +22,10 @@ export default function AuthModal({ onClose, onAuth }) {
     if (!username.trim()) { setError('Please enter a username.'); return }
     if (!/^[a-zA-Z0-9_-]+$/.test(username.trim())) {
       setError('Username can only contain letters, numbers, underscores, and hyphens.')
+      return
+    }
+    if (tab === 'signup' && !EMAIL_RE.test(contactEmail.trim())) {
+      setError('Please enter a valid email address.')
       return
     }
     setLoading(true)
@@ -44,7 +51,7 @@ export default function AuthModal({ onClose, onAuth }) {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        options: { data: { username: username.trim() } },
+        options: { data: { username: username.trim(), contact_email: contactEmail.trim() } },
       })
       if (error) {
         setError(error.message.includes('already registered')
@@ -52,6 +59,11 @@ export default function AuthModal({ onClose, onAuth }) {
           : error.message)
         setLoading(false)
         return
+      }
+      if (data.user) {
+        const { error: updateError } = await supabase.from('accounts')
+          .update({ email: contactEmail.trim() }).eq('id', data.user.id)
+        if (updateError) console.error('[auth] failed to save contact email:', updateError)
       }
       onAuth(data.user)
       onClose()
@@ -91,6 +103,22 @@ export default function AuthModal({ onClose, onAuth }) {
               style={{ touchAction: 'manipulation' }}
             />
           </div>
+
+          {tab === 'signup' && (
+            <div className="auth-field">
+              <label className="auth-label">Email</label>
+              <input
+                className="auth-input"
+                type="email"
+                placeholder="you@example.com"
+                value={contactEmail}
+                onChange={e => setContactEmail(e.target.value)}
+                required
+                autoComplete="email"
+                style={{ touchAction: 'manipulation' }}
+              />
+            </div>
+          )}
 
           <div className="auth-field">
             <label className="auth-label">Password</label>

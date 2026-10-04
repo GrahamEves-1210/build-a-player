@@ -1,12 +1,15 @@
 ﻿import { useState, useEffect, useRef } from 'react'
-import { ATTR, TYPES, TEAMS } from '../data/qbs'
+import { ATTR, TYPES } from '../data/qbs'
+import { TEAMS } from '../data/nfl-teams'
 import { WR_ATTR, WRS } from '../data/wrs'
 import { WR_LEGENDS } from '../data/wr-legends'
-import { RBS, RB_TYPES } from '../data/rbs'
+import { RBS, RB_TYPES, RB_ATTR } from '../data/rbs'
 import { RB_LEGENDS } from '../data/rb-legends'
 import { valToGrade, getArchetype, getArchetypeRB, getArchetypeWR, getArchetypeTE, getArchetypeDB, readableTextColor, calcMVPResult, calcOPOYResult, calcWROPOYResult, calcTEOPOYResult, calcDBDpoyResult, calcOVRWR, calcOVRTE, calcOVRRB, calcOVRDB, nflHeadshot } from '../utils/simulation'
 import { TE_ATTR, TES } from '../data/tes'
+import { TE_LEGENDS } from '../data/te-legends'
 import { DB_ATTR, DBS, DB_TYPES } from '../data/dbs'
+import { DB_LEGENDS } from '../data/db-legends'
 import HEADSHOTS from '../data/headshots.json'
 import RBFigureOverlay from './RBFigureOverlay'
 import WRFigureOverlay from './WRFigureOverlay'
@@ -88,10 +91,11 @@ function WRDepthChart({ team, build, types, isAllTime = false }) {
   )
 }
 
-function TEDepthChart({ team, build, types }) {
+function TEDepthChart({ team, build, types, isAllTime = false }) {
   const userOVR = calcOVRTE(build, types)
 
-  const teamTEs = TES
+  const pool = isAllTime ? TE_LEGENDS : TES
+  const teamTEs = pool
     .filter(te => te.team === team.short)
     .sort((a, b) => b.ovr - a.ovr)
     .slice(0, 2)
@@ -111,7 +115,7 @@ function TEDepthChart({ team, build, types }) {
 
   return (
     <div className="wr-depth-chart">
-      <div className="wr-dc-header">Depth Chart · {team.short}</div>
+      <div className="wr-dc-header">{isAllTime ? '★ All-Time ' : ''}Depth Chart · {team.short}</div>
       {rows.map((row, i) => (
         <div key={i} className={`wr-dc-row${row.isUser ? ' wr-dc-row--you' : ''}`}>
           <span className="wr-dc-pos">{labels[i]}</span>
@@ -162,7 +166,7 @@ function RBDepthChart({ team, build, types, isAllTime = false }) {
   )
 }
 
-function DBDepthChart({ team, build, types }) {
+function DBDepthChart({ team, build, types, isAllTime = false }) {
   const userOVR = calcOVRDB(build, types)
 
   const g = k => build[k]?.val ?? 0
@@ -188,8 +192,9 @@ function DBDepthChart({ team, build, types }) {
   // Always two starters per position: your build takes one of the two spots in
   // its own group (the team's best player keeps the other), so the chart is
   // always S, S, CB1, CB2 — never a CB3.
-  const teamSafeties = DBS.filter(d => d.team === team.short && d.subpos === 's').map(withOVR).sort((a, b) => b.ovr - a.ovr).slice(0, isUserSafety ? 1 : 2)
-  const teamCorners  = DBS.filter(d => d.team === team.short && d.subpos === 'cb').map(withOVR).sort((a, b) => b.ovr - a.ovr).slice(0, isUserSafety ? 2 : 1)
+  const pool = isAllTime ? DB_LEGENDS : DBS
+  const teamSafeties = pool.filter(d => d.team === team.short && d.subpos === 's').map(withOVR).sort((a, b) => b.ovr - a.ovr).slice(0, isUserSafety ? 1 : 2)
+  const teamCorners  = pool.filter(d => d.team === team.short && d.subpos === 'cb').map(withOVR).sort((a, b) => b.ovr - a.ovr).slice(0, isUserSafety ? 2 : 1)
 
   const safetyRows = (isUserSafety ? [...teamSafeties.map(toRow), userRow] : teamSafeties.map(toRow))
     .sort((a, b) => b.ovr - a.ovr || (a.isUser ? 1 : -1))
@@ -203,7 +208,7 @@ function DBDepthChart({ team, build, types }) {
 
   return (
     <div className="wr-depth-chart">
-      <div className="wr-dc-header">Depth Chart · {team.short}</div>
+      <div className="wr-dc-header">{isAllTime ? '★ All-Time ' : ''}Depth Chart · {team.short}</div>
       {rows.map((row, i) => (
         <div key={i} className={`wr-dc-row${row.isUser ? ' wr-dc-row--you' : ''}`}>
           <span className="wr-dc-pos">{row.label}</span>
@@ -386,7 +391,7 @@ function ScreenBuild({ result, build, types, onNext, isRB, isWR, isTE, isDB }) {
 
       <div className="simp-attr-table">
         {filled.map((t, i) => {
-          const meta = (isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : ATTR)[t]
+          const meta = (isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : isRB ? RB_ATTR : ATTR)[t]
           const data = build[t]
           return (
             <div
@@ -1162,7 +1167,7 @@ function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = fals
           <div className="simp-stat-group-lbl">Your Build</div>
           <div className="simp-attr-table simp-attr-table-sm">
             {types.filter(t => build[t]).map(t => {
-              const meta = (isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : ATTR)[t]
+              const meta = (isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : isRB ? RB_ATTR : ATTR)[t]
               const data = build[t]
               return (
                 <div key={t} className="simp-attr-row simp-row-visible">
@@ -1285,7 +1290,7 @@ export default function SimPage({ result, build, types = TYPES, onBack, onReset,
 
   const triggerMVP = (continuation = null) => {
     const r = isDB
-      ? calcDBDpoyResult(result)
+      ? calcDBDpoyResult(result, isAllTime, result.team?.short)
       : isTE
         ? calcTEOPOYResult(result, isAllTime, result.team?.short)
         : isWR
@@ -1296,7 +1301,7 @@ export default function SimPage({ result, build, types = TYPES, onBack, onReset,
     setMvpResult(r)
     if (r.userWins) {
       setMvpWon(true)
-      if (!isDB) onMVPWon?.(isAllTime, isRB || isWR)
+      onMVPWon?.(isAllTime, isDB ? 'dpoy' : (isRB || isWR || isTE) ? 'opoy' : 'mvp')
     }
     if (continuation) setMvpContinuation(() => continuation)
   }
@@ -1390,19 +1395,16 @@ export default function SimPage({ result, build, types = TYPES, onBack, onReset,
           <WRDepthChart team={team} build={build} types={types} isAllTime={isAllTime} />
         )}
         {isTE && team && build && (
-          <TEDepthChart team={team} build={build} types={types} />
+          <TEDepthChart team={team} build={build} types={types} isAllTime={isAllTime} />
         )}
         {isRB && team && build && (
           <RBDepthChart team={team} build={build} types={types} isAllTime={isAllTime} />
         )}
         {isDB && team && build && (
-          <DBDepthChart team={team} build={build} types={types} />
+          <DBDepthChart team={team} build={build} types={types} isAllTime={isAllTime} />
         )}
 
         {screens[screen]}
-        {screens[screen]?.key !== 'final' && (
-          <div className="simp-footer-disclaimer">Fan-made · Not affiliated with the NFL</div>
-        )}
         <SiteFooter sport="nfl" />
       </div>
 

@@ -1,7 +1,10 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { calcBucketOVR } from '../utils/bucketSimulation'
 import { valToGrade } from '../utils/simulation'
-import { NBA_TEAMS, VERSUS_GUARD_TYPES, VERSUS_BIG_TYPES, BUCKET_ATTR } from '../data/nba-players'
+import { NBA_TEAMS } from '../data/nba-teams'
+import { BUCKET_ATTR } from '../data/nba-attrs'
+import { VERSUS_GUARD_TYPES } from '../data/nba-guards'
+import { VERSUS_BIG_TYPES } from '../data/nba-bigs'
 import QBAvatar from './QBAvatar'
 import { BucketModelFigure } from './BucketSimPage'
 

@@ -44,7 +44,7 @@ const HoopU = () => (
 
 function IconGrid() {
   return (
-    <svg width="20" height="20" viewBox="0 0 15 15" fill="currentColor" aria-hidden="true">
+    <svg width="22" height="22" viewBox="0 0 15 15" fill="currentColor" aria-hidden="true">
       <rect x="0"  y="0"  width="4" height="4" rx="1"/>
       <rect x="5.5" y="0"  width="4" height="4" rx="1"/>
       <rect x="11" y="0"  width="4" height="4" rx="1"/>

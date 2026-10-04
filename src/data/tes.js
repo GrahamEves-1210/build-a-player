@@ -1,4 +1,5 @@
-import { TEAMS, ATTR } from './qbs'
+import { TEAMS } from './nfl-teams'
+import { ATTR } from './qbs'
 const TEAM_COLOR = Object.fromEntries(TEAMS.map(t => [t.short, { color: t.color, color2: t.color2 }]))
 
 export const TE_TYPES      = ['speed', 'blocking', 'vertical', 'routeRunning', 'strength', 'hands', 'awareness', 'size', 'afterCatch']

@@ -7,7 +7,7 @@ export default function PrivacyPage({ onBack }) {
 
         <div className="about-header">
           <div className="about-title">Privacy <em>Policy</em></div>
-          <div className="about-subtitle">Last updated: August 22, 2026</div>
+          <div className="about-subtitle">Last updated: October 3, 2026</div>
         </div>
 
         <section className="about-section">
@@ -16,7 +16,7 @@ export default function PrivacyPage({ onBack }) {
             <strong>Analytics.</strong> We use Google Analytics to collect anonymized data about how visitors use the site — pages visited, session duration, device type, and general location (country/region). This data does not identify you personally.
           </p>
           <p className="about-body">
-            <strong>Accounts.</strong> If you create an account, we store your chosen username, password (hashed), and the simulation results you choose to save (wins, losses, stats, and build data). We do not collect your email address. This information is stored securely via Supabase and is not sold to third parties.
+            <strong>Accounts.</strong> If you create an account, we store your chosen username, password (hashed), your email address, and the simulation results you choose to save (wins, losses, stats, and build data). We use your email to send occasional updates about the game and, if needed, to communicate with you directly about your account — we do not sell it or use it for third-party marketing. This information is stored securely via Supabase and is not sold to third parties.
           </p>
           <p className="about-body">
             <strong>Payments.</strong> If you subscribe to Build-A-Player Plus, payment is processed by Stripe. We do not store your card details. Stripe may collect billing information in accordance with their own privacy policy.

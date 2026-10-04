@@ -1,7 +1,7 @@
 import { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react'
 import { getPlayerPhoto, pickThreeFrom, QB_POOL, RB_POOL, WR_POOL } from '../data/depth-chart-players'
 import { supabase } from '../lib/supabase'
-import { TEAMS } from '../data/qbs'
+import { TEAMS } from '../data/nfl-teams'
 import QBAvatar from './QBAvatar'
 
 const TEAM_COLOR  = Object.fromEntries(TEAMS.map(t => [t.short, t.color]))

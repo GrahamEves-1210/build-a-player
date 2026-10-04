@@ -1,4 +1,5 @@
-import { TEAMS } from './qbs'
+import { TEAMS } from './nfl-teams'
+import { ATTR } from './qbs'
 const TEAM_COLOR = Object.fromEntries(TEAMS.map(t => [t.short, { color: t.color, color2: t.color2 }]))
 
 export const RB_TYPES      = ['speed', 'burst', 'strength', 'size', 'balance', 'elusiveness', 'vision', 'hands', 'carrying']
@@ -8,6 +9,12 @@ export const RB_CATEGORIES = [
   { id: 'physical', label: 'Physical', types: ['speed', 'burst', 'strength', 'size', 'hands'] },
   { id: 'skill',    label: 'Skill',    types: ['balance', 'elusiveness', 'vision', 'carrying'] },
 ]
+
+// QB's shared ATTR table reuses the 'vision' key for its own "Post-Snap"
+// read-and-react attribute — RB's own vision (finding the running lane) is
+// a different concept that happens to share the same key name, so it needs
+// its own label override instead of inheriting QB's.
+export const RB_ATTR = { ...ATTR, 'vision': { ...ATTR['vision'], label: 'Vision', shortLabel: 'VIS' } }
 
 // Skin tone palette:
 //   #f0c4a0 — white (McCaffrey, Shipley, Laube, Saylors, Skattebo)

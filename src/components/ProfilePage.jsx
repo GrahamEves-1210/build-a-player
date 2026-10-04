@@ -52,10 +52,9 @@ function MiniBucketLogo() {
   )
 }
 import { ATTR, TYPES } from '../data/qbs'
-import { BUCKET_ATTR, NBA_TEAMS } from '../data/nba-players'
-import { NBA_SKIN_COLORS } from '../data/nba-skin-colors'
+import { BUCKET_ATTR } from '../data/nba-attrs'
+import { NBA_TEAMS } from '../data/nba-teams'
 import NBA_HEADSHOTS from '../data/nba-headshots.json'
-import { NBA_FACE_CENTERS } from '../data/nba-face-centers'
 import BucketFigureOverlay from './BucketFigureOverlay'
 import { BucketModelFigure } from './BucketSimPage'
 
@@ -71,10 +70,10 @@ function enrichBucketBuild(savedBuild) {
         ...d,
         teamColor:   teamInfo.color  ?? '#ffffff',
         teamColor2:  teamInfo.color2 ?? '#888888',
-        skinColor:   NBA_SKIN_COLORS[d.qb] ?? '#c8956c',
+        skinColor:   d.skin ?? '#c8956c',
         number:      d.number ?? null,
         photo:       hsId ? `${HEADSHOT_BASE}/nba/${hsId}.webp` : null,
-        faceCenter:  NBA_FACE_CENTERS[d.qb] ?? null,
+        faceCenter:  d.faceCenter ?? null,
       }]
     })
   )
@@ -96,7 +95,7 @@ function computeBucketGoatRank(s) {
 import { calcOVR, calcOVRRB, calcOVRWR, calcOVRTE, calcOVRDB, getArchetype, getArchetypeRB, getArchetypeWR, getArchetypeTE, getArchetypeDB, valToGrade, HEADSHOT_BASE } from '../utils/simulation'
 import QBAvatar from './QBAvatar'
 import { supabase } from '../lib/supabase'
-import { RB_TYPES } from '../data/rbs'
+import { RB_TYPES, RB_ATTR } from '../data/rbs'
 import { WR_TYPES, WR_ATTR } from '../data/wrs'
 import { TE_ATTR } from '../data/tes'
 import { DB_ATTR } from '../data/dbs'
@@ -184,6 +183,8 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
   const [rbLegendCareerLoad, setRbLegendCareerLoad] = useState(true)
   const [wrLegendCareer, setWrLegendCareer] = useState(null)
   const [wrLegendCareerLoad, setWrLegendCareerLoad] = useState(true)
+  const [dbLegendCareer, setDbLegendCareer] = useState(null)
+  const [dbLegendCareerLoad, setDbLegendCareerLoad] = useState(true)
   const [bucketCareer, setBucketCareer] = useState(null)
   const [bucketCareerLoad, setBucketCareerLoad] = useState(true)
   const [bucketRingSeasons, setBucketRingSeasons] = useState([])
@@ -214,6 +215,19 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
   const [pwSuccess, setPwSuccess] = useState(false)
   const [pwLoading, setPwLoading] = useState(false)
 
+  const [showEmailForm, setShowEmailForm] = useState(false)
+  const [contactEmail, setContactEmail] = useState('')
+  const [emailOnFile, setEmailOnFile] = useState(null)
+  const [emailError, setEmailError] = useState(null)
+  const [emailSuccess, setEmailSuccess] = useState(false)
+  const [emailLoading, setEmailLoading] = useState(false)
+
+  useEffect(() => {
+    if (!supabase || !user) return
+    supabase.from('accounts').select('email').eq('id', user.id).single()
+      .then(({ data }) => { if (data?.email) { setEmailOnFile(data.email); setContactEmail(data.email) } })
+  }, [user])
+
   useEffect(() => {
     if (!plusOpen) return
     const close = (e) => { if (plusRef.current && !plusRef.current.contains(e.target)) setPlusOpen(false) }
@@ -223,11 +237,11 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
 
   useEffect(() => { const t = setTimeout(() => setShow(true), 120); return () => clearTimeout(t) }, [])
 
-  const [mvpCounts, setMvpCounts] = useState({ classic: 0, alltime: 0, classicOpoy: 0, alltimeOpoy: 0 })
+  const [mvpCounts, setMvpCounts] = useState({ classic: 0, alltime: 0, classicOpoy: 0, alltimeOpoy: 0, classicDpoy: 0, alltimeDpoy: 0 })
 
   useEffect(() => {
     if (!supabase || !user) return
-    supabase.from('accounts').select('ads_disabled,subscription_status,classic_mvps,alltime_mvps,classic_opoys,alltime_opoys').eq('id', user.id).single()
+    supabase.from('accounts').select('ads_disabled,subscription_status,classic_mvps,alltime_mvps,classic_opoys,alltime_opoys,classic_dpoys,alltime_dpoys').eq('id', user.id).single()
       .then(({ data }) => {
         if (data?.ads_disabled) { setAdsDisabled(true); setAdsLifetime(true) }
         else if (data?.subscription_status === 'active') setAdsDisabled(true)
@@ -236,6 +250,8 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
           alltime:     data?.alltime_mvps  ?? 0,
           classicOpoy: data?.classic_opoys ?? 0,
           alltimeOpoy: data?.alltime_opoys ?? 0,
+          classicDpoy: data?.classic_dpoys ?? 0,
+          alltimeDpoy: data?.alltime_dpoys ?? 0,
         })
       })
   }, [user])
@@ -302,12 +318,13 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
         const playoffApps = data.filter(r => r.playoffs).length
         const totalGames  = totalWins + totalLosses
         const winPct      = totalGames > 0 ? ((totalWins / totalGames) * 100).toFixed(1) : '0.0'
-        const avgOVR      = (data.reduce((s, r) => s + (r.ovr ?? 0), 0) / data.length).toFixed(1)
+        const totalOvr    = data.reduce((s, r) => s + (r.ovr ?? 0), 0)
+        const avgOVR      = (totalOvr / data.length).toFixed(1)
         const best        = data.reduce((b, r) => (r.wins ?? 0) > (b.wins ?? 0) ? r : b, data[0])
         const withBuilds  = data.filter(r => r.build && r.ovr)
         const bestBuild   = withBuilds.length ? withBuilds.reduce((b, r) => (r.ovr ?? 0) > (b.ovr ?? 0) ? r : b, withBuilds[0]) : null
         const worstBuild  = withBuilds.length ? withBuilds.reduce((b, r) => (r.ovr ?? 0) < (b.ovr ?? 0) ? r : b, withBuilds[0]) : null
-        setCareer({ count: data.length, totalWins, totalLosses, totalTDs, totalYds, totalINTs, rings, playoffApps, winPct, avgOVR, best, bestBuild, worstBuild })
+        setCareer({ count: data.length, totalWins, totalLosses, totalTDs, totalYds, totalINTs, totalOvr, rings, playoffApps, winPct, avgOVR, best, bestBuild, worstBuild })
         setCareerLoad(false)
       })
   }, [user])
@@ -332,12 +349,13 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
         const playoffApps  = data.filter(r => r.playoffs).length
         const totalGames   = totalWins + totalLosses
         const winPct       = totalGames > 0 ? ((totalWins / totalGames) * 100).toFixed(1) : '0.0'
-        const avgOVR       = (data.reduce((s, r) => s + (r.ovr ?? 0), 0) / data.length).toFixed(1)
+        const totalOvr     = data.reduce((s, r) => s + (r.ovr ?? 0), 0)
+        const avgOVR       = (totalOvr / data.length).toFixed(1)
         const best         = data.reduce((b, r) => (r.wins ?? 0) > (b.wins ?? 0) ? r : b, data[0])
         const withBuilds   = data.filter(r => r.build && r.ovr)
         const bestBuild    = withBuilds.length ? withBuilds.reduce((b, r) => (r.ovr ?? 0) > (b.ovr ?? 0) ? r : b, withBuilds[0]) : null
         const worstBuild   = withBuilds.length ? withBuilds.reduce((b, r) => (r.ovr ?? 0) < (b.ovr ?? 0) ? r : b, withBuilds[0]) : null
-        setWrCareer({ count: data.length, totalWins, totalLosses, totalTDs, totalRecYds, totalRecs, totalTargets, rings, playoffApps, winPct, avgOVR, best, bestBuild, worstBuild })
+        setWrCareer({ count: data.length, totalWins, totalLosses, totalTDs, totalRecYds, totalRecs, totalTargets, totalOvr, rings, playoffApps, winPct, avgOVR, best, bestBuild, worstBuild })
         setWrCareerLoad(false)
       })
   }, [user])
@@ -362,12 +380,13 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
         const playoffApps  = data.filter(r => r.playoffs).length
         const totalGames   = totalWins + totalLosses
         const winPct       = totalGames > 0 ? ((totalWins / totalGames) * 100).toFixed(1) : '0.0'
-        const avgOVR       = (data.reduce((s, r) => s + (r.ovr ?? 0), 0) / data.length).toFixed(1)
+        const totalOvr     = data.reduce((s, r) => s + (r.ovr ?? 0), 0)
+        const avgOVR       = (totalOvr / data.length).toFixed(1)
         const best         = data.reduce((b, r) => (r.wins ?? 0) > (b.wins ?? 0) ? r : b, data[0])
         const withBuilds   = data.filter(r => r.build && r.ovr)
         const bestBuild    = withBuilds.length ? withBuilds.reduce((b, r) => (r.ovr ?? 0) > (b.ovr ?? 0) ? r : b, withBuilds[0]) : null
         const worstBuild   = withBuilds.length ? withBuilds.reduce((b, r) => (r.ovr ?? 0) < (b.ovr ?? 0) ? r : b, withBuilds[0]) : null
-        setTeCareer({ count: data.length, totalWins, totalLosses, totalTDs, totalRecYds, totalRecs, totalTargets, rings, playoffApps, winPct, avgOVR, best, bestBuild, worstBuild })
+        setTeCareer({ count: data.length, totalWins, totalLosses, totalTDs, totalRecYds, totalRecs, totalTargets, totalOvr, rings, playoffApps, winPct, avgOVR, best, bestBuild, worstBuild })
         setTeCareerLoad(false)
       })
   }, [user])
@@ -378,7 +397,7 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
       .from('simulations')
       .select('wins,losses,season_pass_yds,season_tds,season_ints,playoffs,champion,ovr,archetype,build,created_at')
       .eq('user_id', user.id)
-      .ilike('game_mode', 'db-%')
+      .eq('game_mode', 'db-classic')
       .order('created_at', { ascending: false })
       .then(({ data }) => {
         if (!data || data.length === 0) { setDbCareer(null); setDbCareerLoad(false); return }
@@ -391,12 +410,13 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
         const playoffApps  = data.filter(r => r.playoffs).length
         const totalGames   = totalWins + totalLosses
         const winPct       = totalGames > 0 ? ((totalWins / totalGames) * 100).toFixed(1) : '0.0'
-        const avgOVR       = (data.reduce((s, r) => s + (r.ovr ?? 0), 0) / data.length).toFixed(1)
+        const totalOvr     = data.reduce((s, r) => s + (r.ovr ?? 0), 0)
+        const avgOVR       = (totalOvr / data.length).toFixed(1)
         const best         = data.reduce((b, r) => (r.wins ?? 0) > (b.wins ?? 0) ? r : b, data[0])
         const withBuilds   = data.filter(r => r.build && r.ovr)
         const bestBuild    = withBuilds.length ? withBuilds.reduce((b, r) => (r.ovr ?? 0) > (b.ovr ?? 0) ? r : b, withBuilds[0]) : null
         const worstBuild   = withBuilds.length ? withBuilds.reduce((b, r) => (r.ovr ?? 0) < (b.ovr ?? 0) ? r : b, withBuilds[0]) : null
-        setDbCareer({ count: data.length, totalWins, totalLosses, totalTackles, totalInts, totalPbus, rings, playoffApps, winPct, avgOVR, best, bestBuild, worstBuild })
+        setDbCareer({ count: data.length, totalWins, totalLosses, totalTackles, totalInts, totalPbus, totalOvr, rings, playoffApps, winPct, avgOVR, best, bestBuild, worstBuild })
         setDbCareerLoad(false)
       })
   }, [user])
@@ -419,12 +439,13 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
         const playoffApps = data.filter(r => r.playoffs).length
         const totalGames  = totalWins + totalLosses
         const winPct      = totalGames > 0 ? ((totalWins / totalGames) * 100).toFixed(1) : '0.0'
-        const avgOVR      = (data.reduce((s, r) => s + (r.ovr ?? 0), 0) / data.length).toFixed(1)
+        const totalOvr    = data.reduce((s, r) => s + (r.ovr ?? 0), 0)
+        const avgOVR      = (totalOvr / data.length).toFixed(1)
         const best        = data.reduce((b, r) => (r.wins ?? 0) > (b.wins ?? 0) ? r : b, data[0])
         const withBuilds  = data.filter(r => r.build && r.ovr)
         const bestBuild   = withBuilds.length ? withBuilds.reduce((b, r) => (r.ovr ?? 0) > (b.ovr ?? 0) ? r : b, withBuilds[0]) : null
         const worstBuild  = withBuilds.length ? withBuilds.reduce((b, r) => (r.ovr ?? 0) < (b.ovr ?? 0) ? r : b, withBuilds[0]) : null
-        setRbCareer({ count: data.length, totalWins, totalLosses, totalTDs, totalRushYds, rings, playoffApps, winPct, avgOVR, best, bestBuild, worstBuild })
+        setRbCareer({ count: data.length, totalWins, totalLosses, totalTDs, totalRushYds, totalOvr, rings, playoffApps, winPct, avgOVR, best, bestBuild, worstBuild })
         setRbCareerLoad(false)
       })
   }, [user])
@@ -502,6 +523,32 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
         const best        = data.reduce((b, r) => (r.wins ?? 0) > (b.wins ?? 0) ? r : b, data[0])
         setWrLegendCareer({ count: data.length, totalWins, totalLosses, totalTDs, totalRecYds, totalRecs, rings, playoffApps, winPct, avgOVR, best })
         setWrLegendCareerLoad(false)
+      })
+  }, [user])
+
+  useEffect(() => {
+    if (!supabase || !user) { setDbLegendCareerLoad(false); return }
+    supabase
+      .from('simulations')
+      .select('wins,losses,season_pass_yds,season_tds,season_ints,playoffs,champion,ovr,created_at')
+      .eq('user_id', user.id)
+      .eq('game_mode', 'db-all-time')
+      .order('created_at', { ascending: false })
+      .then(({ data }) => {
+        if (!data || data.length === 0) { setDbLegendCareer(null); setDbLegendCareerLoad(false); return }
+        const totalWins    = data.reduce((s, r) => s + (r.wins     ?? 0), 0)
+        const totalLosses  = data.reduce((s, r) => s + (r.losses   ?? 0), 0)
+        const totalTackles = data.reduce((s, r) => s + (r.season_pass_yds ?? 0), 0)
+        const totalInts    = data.reduce((s, r) => s + (r.season_tds      ?? 0), 0)
+        const totalPbus    = data.reduce((s, r) => s + (r.season_ints     ?? 0), 0)
+        const rings        = data.filter(r => r.champion).length
+        const playoffApps  = data.filter(r => r.playoffs).length
+        const totalGames   = totalWins + totalLosses
+        const winPct       = totalGames > 0 ? ((totalWins / totalGames) * 100).toFixed(1) : '0.0'
+        const avgOVR        = (data.reduce((s, r) => s + (r.ovr ?? 0), 0) / data.length).toFixed(1)
+        const best          = data.reduce((b, r) => (r.wins ?? 0) > (b.wins ?? 0) ? r : b, data[0])
+        setDbLegendCareer({ count: data.length, totalWins, totalLosses, totalTackles, totalInts, totalPbus, rings, playoffApps, winPct, avgOVR, best })
+        setDbLegendCareerLoad(false)
       })
   }, [user])
 
@@ -618,6 +665,9 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
   const dbCareerTackles     = useCountUp(dbCareer?.totalTackles, 1400, show && !!dbCareer)
   const dbCareerInts        = useCountUp(dbCareer?.totalInts, 1000, show && !!dbCareer)
   const dbCareerPbus        = useCountUp(dbCareer?.totalPbus, 1200, show && !!dbCareer)
+  const dbLegendCareerTackles = useCountUp(dbLegendCareer?.totalTackles, 1400, show && !!dbLegendCareer)
+  const dbLegendCareerInts    = useCountUp(dbLegendCareer?.totalInts, 1000, show && !!dbLegendCareer)
+  const dbLegendCareerPbus    = useCountUp(dbLegendCareer?.totalPbus, 1200, show && !!dbLegendCareer)
 
   const displayName = user.user_metadata?.username || user.email?.split('@')[0] || 'Player'
   const initials    = getInitials(user)
@@ -626,6 +676,19 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
   const handleSignOut = async () => {
     if (supabase) await supabase.auth.signOut()
     onSignOut?.()
+  }
+
+  const handleSaveEmail = async (e) => {
+    e.preventDefault()
+    setEmailError(null)
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail.trim())) { setEmailError('Please enter a valid email address.'); return }
+    setEmailLoading(true)
+    const { error } = await supabase.from('accounts').update({ email: contactEmail.trim() }).eq('id', user.id)
+    setEmailLoading(false)
+    if (error) { setEmailError(error.message); return }
+    setEmailOnFile(contactEmail.trim())
+    setEmailSuccess(true)
+    setShowEmailForm(false)
   }
 
   const handleChangePassword = async (e) => {
@@ -791,8 +854,8 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
 
         {/* ── Career ── */}
         {(() => {
-          const allReady = !careerLoad && !rbCareerLoad && !wrCareerLoad && !teCareerLoad && !dbCareerLoad && !rbLegendCareerLoad && !wrLegendCareerLoad && !bucketCareerLoad && !bucketAlltimeCareerLoad && !legendCareerLoad && !salaryCareerLoad
-          const hasNFL    = career || rbCareer || wrCareer || teCareer || dbCareer || legendCareer || rbLegendCareer || wrLegendCareer
+          const allReady = !careerLoad && !rbCareerLoad && !wrCareerLoad && !teCareerLoad && !dbCareerLoad && !rbLegendCareerLoad && !wrLegendCareerLoad && !dbLegendCareerLoad && !bucketCareerLoad && !bucketAlltimeCareerLoad && !legendCareerLoad && !salaryCareerLoad
+          const hasNFL    = career || rbCareer || wrCareer || teCareer || dbCareer || legendCareer || rbLegendCareer || wrLegendCareer || dbLegendCareer
           const hasBucket = !!bucketCareer || !!bucketAlltimeCareer
           const hasSalary = !!salaryCareer
 
@@ -809,8 +872,30 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
           const showToggle = !!hasNFL
           const section = showToggle ? gameSection : (hasBucket ? 'bucket' : hasSalary ? 'salary' : 'nfl')
 
+          // Combined across QB/RB/WR/TE/DB classic (build-a-player only — bucket is
+          // tracked entirely separately). Doesn't include best/worst build (the
+          // attribute shapes don't combine) — same limitation the All-Time tabs
+          // already have.
+          const allParts = [career, rbCareer, wrCareer, teCareer, dbCareer].filter(Boolean)
+          const allCareer = allParts.length ? (() => {
+            const totalWins    = allParts.reduce((s, c) => s + (c.totalWins ?? 0), 0)
+            const totalLosses  = allParts.reduce((s, c) => s + (c.totalLosses ?? 0), 0)
+            const count        = allParts.reduce((s, c) => s + (c.count ?? 0), 0)
+            const totalOvr     = allParts.reduce((s, c) => s + (c.totalOvr ?? 0), 0)
+            const rings        = allParts.reduce((s, c) => s + (c.rings ?? 0), 0)
+            const playoffApps  = allParts.reduce((s, c) => s + (c.playoffApps ?? 0), 0)
+            const totalGames   = totalWins + totalLosses
+            return {
+              count, totalWins, totalLosses, rings, playoffApps,
+              winPct: totalGames > 0 ? ((totalWins / totalGames) * 100).toFixed(1) : '0.0',
+              avgOVR: count > 0 ? (totalOvr / count).toFixed(1) : '0.0',
+              mvps: mvpCounts.classic + mvpCounts.classicOpoy + mvpCounts.classicDpoy,
+            }
+          })() : null
+
           // NFL sub-tabs
           const NFL_TABS = [
+            allCareer      ? { id: 'all',        label: 'All',         star: false } : null,
             career         ? { id: 'qb',         label: 'QB',          star: false } : null,
             rbCareer       ? { id: 'rb',         label: 'RB',          star: false } : null,
             wrCareer       ? { id: 'wr',         label: 'WR',          star: false } : null,
@@ -819,17 +904,19 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
             legendCareer   ? { id: 'alltime-qb', label: 'All-Time QB', star: true  } : null,
             rbLegendCareer ? { id: 'alltime-rb', label: 'All-Time RB', star: true  } : null,
             wrLegendCareer ? { id: 'alltime-wr', label: 'All-Time WR', star: true  } : null,
+            dbLegendCareer ? { id: 'alltime-db', label: 'All-Time DB', star: true  } : null,
           ].filter(Boolean)
 
           const activeNFL  = NFL_TABS.find(t => t.id === careerGame)?.id ?? NFL_TABS[0]?.id
-          const dataMap    = { qb: career, rb: rbCareer, wr: wrCareer, te: teCareer, db: dbCareer, 'alltime-qb': legendCareer, 'alltime-rb': rbLegendCareer, 'alltime-wr': wrLegendCareer }
+          const dataMap    = { all: allCareer, qb: career, rb: rbCareer, wr: wrCareer, te: teCareer, db: dbCareer, 'alltime-qb': legendCareer, 'alltime-rb': rbLegendCareer, 'alltime-wr': wrLegendCareer, 'alltime-db': dbLegendCareer }
           const nflData    = dataMap[activeNFL]
-          const isAlltimeView = activeNFL === 'alltime-qb' || activeNFL === 'alltime-rb' || activeNFL === 'alltime-wr'
+          const isAllView      = activeNFL === 'all'
+          const isAlltimeView = activeNFL === 'alltime-qb' || activeNFL === 'alltime-rb' || activeNFL === 'alltime-wr' || activeNFL === 'alltime-db'
           const isRBView      = activeNFL === 'rb' || activeNFL === 'alltime-rb'
           const isWRView      = activeNFL === 'wr' || activeNFL === 'alltime-wr'
           const isTEView      = activeNFL === 'te'
-          const isDBView      = activeNFL === 'db'
-          const positionAttrMap = isDBView ? DB_ATTR : isTEView ? TE_ATTR : isWRView ? WR_ATTR : ATTR
+          const isDBView      = activeNFL === 'db' || activeNFL === 'alltime-db'
+          const positionAttrMap = isDBView ? DB_ATTR : isTEView ? TE_ATTR : isWRView ? WR_ATTR : isRBView ? RB_ATTR : ATTR
 
           return (
             <>
@@ -876,7 +963,26 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
                       <span className="pcr-label">{isAlltimeView ? 'All-Time Record' : 'Career Record'}</span>
                     </div>
                     <div className="prf-career-grid">
-                      {isWRView ? (
+                      {isAllView ? (
+                        <>
+                          <div className="pcg-cell pcg-cell-rings">
+                            <div className="pcg-val pcg-val-rings">{nflData.rings}</div>
+                            <div className="pcg-lbl pcg-lbl-rings">Rings</div>
+                          </div>
+                          <div className="pcg-cell">
+                            <div className="pcg-val">{nflData.mvps}</div>
+                            <div className="pcg-lbl">MVPs/POYs</div>
+                          </div>
+                          <div className="pcg-cell">
+                            <div className="pcg-val">{nflData.count >= 20 ? nflData.avgOVR : '–'}</div>
+                            <div className="pcg-lbl">Avg OVR</div>
+                          </div>
+                          <div className="pcg-cell">
+                            <div className="pcg-val">{nflData.count}</div>
+                            <div className="pcg-lbl">Seasons Played</div>
+                          </div>
+                        </>
+                      ) : isWRView ? (
                         <>
                           <div className={`pcg-cell${isAlltimeView ? ' pcg-cell-legend' : ''}`}>
                             <div className="pcg-val">{isAlltimeView ? (show ? wrLegendCareerRecs.toLocaleString() : '–') : (show ? wrCareerRecs.toLocaleString() : '–')}</div>
@@ -940,8 +1046,12 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
                         </>
                       ) : isDBView ? (
                         <>
+                          <div className={`pcg-cell${isAlltimeView ? ' pcg-cell-legend' : ''}`}>
+                            <div className="pcg-val">{isAlltimeView ? mvpCounts.alltimeDpoy : mvpCounts.classicDpoy}</div>
+                            <div className="pcg-lbl">DPOYs</div>
+                          </div>
                           <div className="pcg-cell">
-                            <div className="pcg-val">{show ? dbCareerTackles.toLocaleString() : '–'}</div>
+                            <div className="pcg-val">{isAlltimeView ? (show ? dbLegendCareerTackles.toLocaleString() : '–') : (show ? dbCareerTackles.toLocaleString() : '–')}</div>
                             <div className="pcg-lbl">Career Tackles</div>
                           </div>
                           <div className="pcg-cell">
@@ -953,11 +1063,11 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
                             <div className="pcg-lbl">Win %</div>
                           </div>
                           <div className="pcg-cell">
-                            <div className="pcg-val">{show ? dbCareerInts.toLocaleString() : '–'}</div>
+                            <div className="pcg-val">{isAlltimeView ? (show ? dbLegendCareerInts.toLocaleString() : '–') : (show ? dbCareerInts.toLocaleString() : '–')}</div>
                             <div className="pcg-lbl">INTs</div>
                           </div>
                           <div className="pcg-cell">
-                            <div className="pcg-val">{show ? dbCareerPbus.toLocaleString() : '–'}</div>
+                            <div className="pcg-val">{isAlltimeView ? (show ? dbLegendCareerPbus.toLocaleString() : '–') : (show ? dbCareerPbus.toLocaleString() : '–')}</div>
                             <div className="pcg-lbl">PBUs</div>
                           </div>
                           <div className="pcg-cell">
@@ -1273,6 +1383,37 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
 
         {/* ── Actions ── */}
         <div className={`prf-actions ${show ? 'prf-card-in' : ''}`} style={{ animationDelay: '0.5s' }}>
+          {!showEmailForm ? (
+            <>
+              {!emailOnFile && (
+                <div className="prf-email-hint">Add your email for easier account recovery and occasional game updates.</div>
+              )}
+              <button className="prf-changepw-btn" onClick={() => { setShowEmailForm(true); setEmailError(null); setEmailSuccess(false) }}>
+                {emailOnFile ? 'Update Email' : 'Add Email'}
+              </button>
+            </>
+          ) : (
+            <form className="prf-changepw-form" onSubmit={handleSaveEmail}>
+              {!emailOnFile && (
+                <div className="prf-email-hint">Add your email for easier account recovery and occasional game updates.</div>
+              )}
+              <input
+                className="auth-input"
+                type="email"
+                placeholder="you@example.com"
+                value={contactEmail}
+                onChange={e => setContactEmail(e.target.value)}
+                required
+                autoComplete="email"
+              />
+              {emailError && <div className="auth-error">{emailError}</div>}
+              <div className="prf-changepw-btns">
+                <button type="submit" className="prf-changepw-btn" disabled={emailLoading}>{emailLoading ? 'Saving…' : 'Save Email'}</button>
+                <button type="button" className="prf-changepw-cancel" onClick={() => { setShowEmailForm(false); setEmailError(null) }}>Cancel</button>
+              </div>
+            </form>
+          )}
+          {emailSuccess && <div className="prf-pw-success">Email saved.</div>}
           {!showPwForm ? (
             <button className="prf-changepw-btn" onClick={() => { setShowPwForm(true); setPwError(null); setPwSuccess(false) }}>Change Password</button>
           ) : (

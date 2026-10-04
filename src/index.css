@@ -521,7 +521,12 @@
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
 
-html { background: #0c0804; scroll-behavior: smooth; }
+/* html's own background is only ever visible during iOS's rubber-band
+   overscroll (dragging past the real page content) — and since that drag
+   distance isn't capped, no fixed-size buffer on body's content can ever
+   fully cover it. Matching body's actual background color here instead
+   means there's no edge to find regardless of how far it's pulled. */
+html { background: #000; scroll-behavior: smooth; }
 
 body {
   /* Grid lives IN the body background â€” the only layer that paints the canvas */
@@ -534,7 +539,14 @@ body {
   background-size: 80px 80px, 80px 80px, 20px 20px, 20px 20px;
   color: var(--text);
   font-family: var(--font);
-  min-height: 100vh;
+  /* 100vh on iOS Safari sizes to the viewport with the address bar collapsed
+     (its largest possible state) — on load the bar is usually still expanded,
+     so this used to request more height than was actually visible, making
+     body itself scrollable by a few dozen px on top of .splash-screen's own
+     intentional inner scroll (a "scrollbar within a scrollbar"). 100dvh
+     tracks the real current viewport instead — matches #root's own fix
+     already in place below. */
+  min-height: 100dvh;
   overflow-x: hidden;
   overflow-y: auto;
   -webkit-font-smoothing: antialiased;
@@ -543,6 +555,42 @@ body {
 }
 
 body::before { display: none; }
+
+@media (max-width: 768px) {
+  /* body's real background-color is var(--bg), a pale green wash meant to
+     only ever peek through in tiny gaps — on mobile, where content is often
+     shorter than one viewport, that gap can be the whole bottom of the
+     screen, which is the green edge seen during the overscroll bounce.
+     Paint body itself dark here so there's no green to expose in the first
+     place, independent of whether the fixed overlay below paints in time. */
+  body { background-color: var(--bg-raised); }
+
+  /* A position:fixed backdrop behind everything, filling the full viewport
+     with the same dark panel tone used throughout (--bg-raised). Fixed
+     elements never contribute to scrollable height, so this extends the
+     themed background to cover the whole screen — including any gap below
+     content that's shorter than one viewport — without adding a single
+     pixel of extra scroll distance. */
+  body::before {
+    display: block;
+    content: '';
+    position: fixed;
+    /* Oversized well past the viewport on every side (not inset:0) — if iOS
+       visually translates fixed layers along with the page during the
+       rubber-band animation itself, an exact viewport-sized box can momentarily
+       uncover a sliver at its trailing edge. The oversized margin means
+       there's still matching color there even if that happens. */
+    top: -50vh; bottom: -50vh; left: -50vw; right: -50vw;
+    z-index: 0;
+    background: var(--bg-raised);
+    pointer-events: none;
+    /* Without its own compositing layer, iOS can lag-paint this during the
+       rubber-band bounce, briefly exposing body's real background-color
+       (the pale green --bg) at the trailing edge. */
+    transform: translateZ(0);
+    will-change: transform;
+  }
+}
 
 /* Grain overlay */
 body::after {
@@ -627,10 +675,9 @@ a:focus-visible {
   .logo-img-full { height: 32px; }
 }
 
-/* QB pill â€” aligned with center of the field column (left panel 272px, right 256px â†’ +8px offset) */
 .tab-pill-qb {
   position: absolute;
-  left: calc(50% + 10px);
+  left: 50%;
   transform: translateX(-50%);
   z-index: 1;
   font-size: 11px;
@@ -649,6 +696,17 @@ a:focus-visible {
   flex-direction: column;
   align-items: center;
   justify-content: center;
+}
+/* .tab-pill-qb's own absolute centering is for when it's a direct navbar
+   child (Salary Cap mode). Nested inside .nav-pos-dropdown, that wrapper
+   is already centered on the navbar — a second independent "center at 50%"
+   on the child centers it relative to the wrapper's own auto-width box
+   instead, compounding into a position that drifts with content width.
+   Let the wrapper's flex centering handle it instead. */
+.nav-pos-dropdown .tab-pill-qb {
+  position: static;
+  left: auto;
+  transform: none;
 }
 .nav-pos-trigger {
   display: flex;
@@ -810,8 +868,8 @@ a:focus-visible {
     border-radius: 12px;
   }
   .waffle-btn svg {
-    width: 24px;
-    height: 24px;
+    width: 26px;
+    height: 26px;
   }
 }
 
@@ -1500,14 +1558,29 @@ a:focus-visible {
 .build-footer-section {
   position: relative;
   margin-top: -40px;
+  /* The glow's vertical radius is a fixed px value, not a percentage —
+     percentage sizing is relative to this box's own total height, so it
+     used to silently stretch taller any time padding-bottom here changed. */
   background:
-    radial-gradient(ellipse 100% 34% at 50% 0%, rgba(149,213,178,0.16) 0%, transparent 70%),
+    radial-gradient(ellipse 100% 280px at 50% 0%, rgba(149,213,178,0.16) 0%, transparent 70%),
     #050705;
+}
+/* Match the orange-tinted glow the Bucket splash page itself uses, instead of
+   bleeding the NFL mint-green treatment through onto the Bucket build screen. */
+[data-sport="bucket"] .build-footer-section {
+  background:
+    radial-gradient(ellipse 100% 280px at 50% 0%, rgba(149,213,178,0.12) 0%, transparent 70%),
+    radial-gradient(ellipse 90% 280px at 50% 0%, rgba(249,115,22,0.16) 0%, transparent 65%),
+    #0a0603;
 }
 /* Taglines only make sense on the desktop build screen — too tall for mobile. */
 .build-footer-section .build-site-features { display: none; }
+@media (max-width: 768px) {
+  .build-footer-section { margin-top: -75px; }
+}
 @media (min-width: 769px) {
   .build-footer-section .build-site-features { display: grid; }
+  .build-footer-section { margin-top: -50px; }
 }
 
 .game-layout {
@@ -2312,6 +2385,8 @@ a:focus-visible {
   .attr-category-section { gap: 5px; }
   .attr-category-hd      { padding-bottom: 1px; }
   .chip-val              { width: 32.5px; height: 32.5px; font-size: 12px; }
+  [data-sport="bucket"] .attr-chip { padding: 0.7px 10px 0.7px 11px; min-height: 36px; }
+  [data-sport="bucket"] .chip-val  { width: 32.5px; height: 32.5px; font-size: 12px; }
 }
 
 /* â”€â”€ CENTER FIELD â”€â”€ */
@@ -2329,6 +2404,8 @@ a:focus-visible {
   background-color: #306699;
   background-image: radial-gradient(circle, rgba(255,255,255,0.08) 1px, transparent 1px);
   background-size: 18px 18px;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* Category tabs */
@@ -2469,7 +2546,7 @@ a:focus-visible {
   }
   .rc-sandbox-tooltip {
     position: fixed;
-    top: 35%;
+    top: 36%;
     left: 50%;
     transform: translate(-50%, -50%);
     text-align: center;
@@ -3049,7 +3126,7 @@ a:focus-visible {
   min-height: calc(100dvh - 56px);
   overflow-y: auto;
   background: var(--bg-raised);
-  padding: 40px 20px calc(40px + var(--ad-h));
+  padding: 40px 20px calc(120px + var(--ad-h));
 }
 
 .about-inner {
@@ -5303,7 +5380,7 @@ a:focus-visible {
   position: relative;
   z-index: 2;
   border-top: 1px solid rgba(149,213,178,0.09);
-  padding: 40px 24px calc(28px + var(--ad-h));
+  padding: 40px 24px calc(70px + var(--ad-h));
 }
 .splash-site-footer-cols {
   display: grid;
@@ -5408,6 +5485,11 @@ a:focus-visible {
   color: var(--text-4, var(--text-3));
   text-align: center;
 }
+/* Sim screens only — a bit more space above the footer's own top border. */
+.simp-page .splash-site-footer {
+  margin-top: 24px;
+}
+
 .splash-site-footer-playwire {
   display: flex;
   align-items: center;
@@ -5432,6 +5514,20 @@ a:focus-visible {
   .splash-site-footer-brand {
     grid-column: 1 / -1;
   }
+}
+
+/* Info/footer section borders are hardcoded to the NFL mint-green accent —
+   override to orange on the Bucket build/sim screens so they match the
+   orange-themed splash branding instead of bleeding the NFL color through. */
+[data-sport="bucket"] .splash-features,
+[data-sport="bucket"] .splash-site-footer {
+  border-top-color: rgba(251,146,60,0.14);
+}
+[data-sport="bucket"] .splash-feature {
+  border-left-color: rgba(251,146,60,0.30);
+}
+[data-sport="bucket"] .splash-site-footer-bottom {
+  border-top-color: rgba(251,146,60,0.12);
 }
 html.is-mac .spin-panel-scroll {
   overflow-y: auto !important;
@@ -5602,7 +5698,7 @@ html.is-mac .spin-panel-scroll {
   display: block;
   object-fit: contain;
   object-position: center bottom;
-  filter: brightness(0) invert(1) opacity(0);
+  filter: brightness(0) invert(1) opacity(0.08);
   outline: none;
   -webkit-tap-highlight-color: transparent;
 }
@@ -5675,7 +5771,7 @@ html.is-mac .spin-panel-scroll {
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.8s ease;
-  background-image: url('/football-routes.svg');
+  background-image: none;
   background-repeat: repeat-y;
   background-size: 100% 85vh;
   background-position: top center;
@@ -5686,7 +5782,24 @@ html.is-mac .spin-panel-scroll {
 }
 .splash-route-field--visible { opacity: 0.11; }
 [data-sport="bucket"] .splash-route-field {
-  background-image: url('/basketball-plays.svg');
+  background-image:
+    repeating-linear-gradient(
+      -52deg,
+      transparent,
+      transparent 58px,
+      rgba(255, 100, 20, 1) 58px,
+      rgba(255, 100, 20, 1) 59px
+    ),
+    repeating-linear-gradient(
+      38deg,
+      transparent 0px,
+      transparent 90px,
+      rgba(255, 80, 10, 1) 90px,
+      rgba(255, 80, 10, 1) 91px,
+      transparent 91px,
+      transparent 180px
+    );
+  background-size: auto;
 }
 [data-sport="bucket"] .splash-route-field--visible { opacity: 0.1; }
 
@@ -6421,7 +6534,6 @@ html.is-mac .spin-panel-scroll {
     -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 48%, transparent 68%);
     mask-image: linear-gradient(to bottom, #000 0%, #000 48%, transparent 68%);
   }
-  [data-sport="bucket"] .splash-route-field { background-size: 135% 50vh; }
   .splash-route-field--visible { opacity: 0.07; }
   [data-sport="bucket"] .splash-route-field--visible { opacity: 0.06; }
   .smode-title { font-size: 20px; }
@@ -7262,6 +7374,41 @@ html.is-mac .spin-panel-scroll {
     min-height: 100dvh;
   }
 
+  /* On the game page specifically, revert to the same self-contained-scroller
+     pattern .splash-screen and desktop already use: body/#root stay fixed to
+     one viewport and .game-page-scroll (flex:1; min-height:0; overflow-y:auto)
+     is the one actual scrolling box. Letting body itself scroll (the rule
+     above, for every other mobile page) meant the iOS rubber-band bounce was
+     happening on the real document — which reveals native WKWebView chrome
+     at the drag edge, not any CSS-controlled color. A nested div's own bounce
+     only ever reveals more of that div's own background. */
+  body:has(.game-page-scroll) {
+    overflow: hidden;
+  }
+  /* Matches .splash-screen's own mechanism exactly: position:fixed directly
+     to the viewport, not a flex child sized off #root's 100dvh. A flex/dvh
+     height can recalculate mid-gesture as Safari's chrome resizes during the
+     drag itself — fixed positioning has no such dependency. */
+  .game-page-scroll {
+    position: fixed;
+    top: calc(54px + env(safe-area-inset-top));
+    left: 0;
+    right: 0;
+    bottom: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    background: var(--bg-raised);
+    -webkit-overflow-scrolling: touch;
+    /* Without this, the bounce gesture "chains" past this element once it
+       hits the end of its own scroll range, handing off to the native
+       document/WebView-level overscroll — which is what was still showing
+       the gray edge even after body itself stopped being scrollable.
+       contain keeps the whole gesture (and its rubber-band) inside this
+       element, painted with its own background, instead of leaking out to
+       whatever Safari shows beyond the page. */
+    overscroll-behavior-y: contain;
+  }
+
   /* â”€â”€ Game grid â†’ full-screen single view â”€â”€ */
   .game-layout {
     display: flex;
@@ -7292,6 +7439,7 @@ html.is-mac .spin-panel-scroll {
     overflow: visible;
     padding-bottom: calc(60px + var(--ad-h));
   }
+
 
   /* â”€â”€ Spin panel â€” full height on mobile â”€â”€ */
   .spin-panel {
@@ -7393,11 +7541,12 @@ html.is-mac .spin-panel-scroll {
   .right-panel-wrap {
     width: 100%;
     flex-shrink: 0;
-    box-shadow: inset 0 2px 0 rgba(149,213,178,0.55);
+    box-shadow: none;
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
   .panel-right {
     border-left: none;
+    border-right: none;
     border-top: 1px solid var(--border-hi);
     overflow: visible;
   }
@@ -7591,7 +7740,6 @@ html.is-mac .spin-panel-scroll {
   .mobile-build .right-panel-wrap {
     overflow: visible;
     background: var(--bg-raised);
-    padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
   }
   .mobile-build .panel-right { overflow: visible; }
   .mobile-build .build-slots { max-height: none; overflow-y: visible; }
@@ -8044,10 +8192,11 @@ html.is-touch .bd-card-main:hover         { background: transparent !important; 
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  padding: 40px 20px calc(180px + var(--ad-h));
+  padding: 40px 20px calc(0px + var(--ad-h));
+  /* Same accent-glow-over-dark treatment as .splash-screen. */
   background:
-    radial-gradient(ellipse 90% 35% at 50% 0%, color-mix(in srgb, var(--team-color, var(--accent)) 9%, transparent) 0%, transparent 100%),
-    var(--bg-raised);
+    radial-gradient(ellipse 100% 34% at 50% 0%, rgba(149,213,178,0.16) 0%, transparent 70%),
+    #050705;
 }
 
 [data-sport="bucket"] .simp-page {
@@ -8621,15 +8770,6 @@ html.is-touch .bd-card-main:hover         { background: transparent !important; 
   flex-shrink: 0;
 }
 
-.simp-footer-disclaimer {
-  font-size: 10px;
-  font-weight: 500;
-  letter-spacing: 1.6px;
-  text-transform: uppercase;
-  color: rgba(255,255,255,0.45);
-  text-align: center;
-  padding: 24px 0 8px;
-}
 .simp-dots {
   display: flex;
   gap: 6px;
@@ -9765,7 +9905,7 @@ html.is-touch .bd-card-main:hover         { background: transparent !important; 
 .sbg-opp  { font-size: 14px; font-weight: 700; color: var(--text); }
 .sbg-line { font-size: 13px; color: var(--text-3); width: 100%; }
 
-.simp-final-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 2px; }
+.simp-final-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 24px; }
 
 .simp-cta {
   width: 100%;
@@ -10207,13 +10347,14 @@ html.is-touch .bd-card-main:hover         { background: transparent !important; 
 .simp-back-btn:hover { color: var(--text-2); }
 
 @media (max-width: 768px) {
-  .simp-page { padding: 12px 16px 120px; height: auto; min-height: calc(100dvh - 54px); overflow-y: visible; }
+  .simp-page { padding: 12px 16px 60px; height: auto; min-height: calc(100dvh - 54px); overflow-y: visible; }
   .simp-ovr-num { font-size: 72px; }
   .simp-big-record { font-size: 44px; }
   .simp-top-bar { margin-bottom: 12px; }
   .simp-team-strip { padding: 8px 14px 8px 16px; margin-bottom: 4px; }
   .simp-screen { gap: 10px; }
   .simp-eyebrow { font-size: 18px; }
+  .simp-page .splash-site-footer { padding: 20px 20px calc(30px + var(--ad-h)); }
 }
 
 /* â”€â”€ Profile Page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
@@ -11390,6 +11531,13 @@ html.is-touch .bd-card-main:hover         { background: transparent !important; 
   text-align: center;
   font-weight: 600;
 }
+.prf-email-hint {
+  font-size: 12px;
+  color: var(--text-3);
+  text-align: center;
+  line-height: 1.4;
+  padding: 0 8px 8px;
+}
 
 @media (max-width: 768px) {
   .prf-page { padding: 28px 14px 60px; height: auto; min-height: calc(100dvh - 54px); overflow-y: auto; overflow-x: hidden; }
@@ -12015,6 +12163,10 @@ html.is-touch .bd-card-main:hover         { background: transparent !important; 
 }
 .lb-main-seg-btn-legends {
   color: rgba(245,200,66,0.65);
+}
+.lb-pos-switcher .lb-main-seg-btn {
+  height: 32px;
+  font-size: 12px;
 }
 .lb-main-seg-btn-daily {
   color: rgba(100,180,255,0.65);
@@ -12718,6 +12870,7 @@ html.is-tablet:has([id^="pw-oop"][data-pw-status="loaded"][style*="bottom"]):not
   border: none !important;
   box-shadow: none !important;
   padding-top: 0 !important;
+  bottom: 50px !important;
 }
 
 /* â”€â”€ Ad-free: hide all Playwire elements â”€â”€ */
@@ -13051,7 +13204,7 @@ html.is-mac [id^="pw-oop-bottom_rail"] > * {
 /* â”€â”€ CUSTOM RATINGS MODAL â”€â”€ */
 .cr-overlay {
   position: fixed; inset: 0; background: rgba(0,0,0,0.7);
-  z-index: var(--z-modal); display: flex; align-items: center; justify-content: center;
+  z-index: 1100; display: flex; align-items: center; justify-content: center;
   padding: 16px;
 }
 .cr-modal {
@@ -15102,13 +15255,13 @@ html.is-mac [id^="pw-oop-bottom_rail"] > * {
 .sc-card--hl-col {
   border-color: rgba(147,197,253,0.65) !important;
   box-shadow: 0 0 10px rgba(147,197,253,0.25);
+  opacity: 1 !important;
 }
 .sc-card--hl-row {
   border-color: rgba(252,165,165,0.65) !important;
   box-shadow: 0 0 10px rgba(252,165,165,0.25);
+  opacity: 1 !important;
 }
-.sc-card--dim.sc-card--hl-col,
-.sc-card--dim.sc-card--hl-row { opacity: 0.9; }
 @keyframes sc-shuffle-target-in {
   from { opacity: 0; transform: scale(0.92); }
   to   { opacity: 1; transform: scale(1); }

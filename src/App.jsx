@@ -1,4 +1,5 @@
 ﻿import { useState, useCallback, useRef, useEffect, useLayoutEffect, lazy, Suspense } from 'react' // v2
+import { Helmet } from 'react-helmet-async'
 import Navbar from './components/Navbar'
 import SpinScreen from './components/SpinScreen'
 import Silhouette from './components/Silhouette'
@@ -20,13 +21,15 @@ const LeaderboardPage= lazy(() => import('./components/LeaderboardPage'))
 const VersusLobby    = lazy(() => import('./components/VersusLobby'))
 const VersusResult   = lazy(() => import('./components/VersusResult'))
 import { TYPES, LITE_TYPES, QBS } from './data/qbs'
-import { RBS, RB_TYPES, RB_LITE_TYPES } from './data/rbs'
+import { RBS, RB_TYPES, RB_LITE_TYPES, RB_ATTR } from './data/rbs'
 import { WRS, WR_TYPES, WR_LITE_TYPES, WR_CATEGORIES, WR_ATTR } from './data/wrs'
 import { WR_LEGENDS } from './data/wr-legends'
 import { TES, TE_TYPES, TE_LITE_TYPES, TE_CATEGORIES, TE_ATTR } from './data/tes'
+import { TE_LEGENDS } from './data/te-legends'
 import { DBS, DB_TYPES, DB_LITE_TYPES, DB_CATEGORIES, DB_ATTR } from './data/dbs'
+import { DB_LEGENDS } from './data/db-legends'
 import { ALLTIME_RATINGS } from './data/nfl-teams'
-import { LEGENDS, LEGEND_TYPES } from './data/legends'
+import { LEGENDS, LEGEND_TYPES } from './data/qb-legends'
 import { RB_LEGENDS } from './data/rb-legends'
 import HEADSHOTS from './data/headshots.json'
 import { runSimulation, getArchetype, calcOVR, runRBSimulation, calcOVRRB, getArchetypeRB, runWRSimulation, calcOVRWR, getArchetypeWR, runTESimulation, calcOVRTE, getArchetypeTE, runDBSimulation, calcOVRDB, getArchetypeDB, HEADSHOT_BASE } from './utils/simulation'
@@ -41,8 +44,8 @@ const _bt = (a, b) => a.team.localeCompare(b.team) || a.name.localeCompare(b.nam
 const CUSTOM_QB_POOL = _dd([...QBS, ...LEGENDS]).sort(_bt)
 const CUSTOM_RB_POOL = _dd([...RBS, ...RB_LEGENDS]).sort(_bt)
 const CUSTOM_WR_POOL = _dd([...WRS, ...WR_LEGENDS]).sort(_bt)
-const CUSTOM_TE_POOL = [...TES].sort(_bt)
-const CUSTOM_DB_POOL = [...DBS].sort(_bt)
+const CUSTOM_TE_POOL = _dd([...TES, ...TE_LEGENDS]).sort(_bt)
+const CUSTOM_DB_POOL = _dd([...DBS, ...DB_LEGENDS]).sort(_bt)
 
 // Detect shared build at module load time — before any React rendering
 let _sharedData = null
@@ -156,6 +159,34 @@ export default function App() {
   useEffect(() => {
     if (isCustomMode) sandboxTainted.current = true
   }, [isCustomMode])
+
+  // Id of the simulations row just inserted — handleMVPWon fires later (after
+  // the MVP/OPOY/DPOY mini-game), so this is how it finds its way back to tag
+  // that same row with which award it won, giving Daily real per-award
+  // timestamps instead of only a lifetime counter on accounts.
+  const lastSimIdRef = useRef(null)
+
+  // Blocks the rubber-band bounce only at the bottom of .game-page-scroll,
+  // leaving the top bounce untouched — overscroll-behavior has no directional
+  // (top vs bottom) variant, so this does it by hand: preventDefault only
+  // fires once already scrolled to the very bottom and still dragging up.
+  useEffect(() => {
+    let startY = 0
+    const onTouchStart = (e) => { startY = e.touches[0].clientY }
+    const onTouchMove = (e) => {
+      const el = e.target.closest?.('.game-page-scroll')
+      if (!el) return
+      const draggingUp = e.touches[0].clientY - startY < 0
+      const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight <= 1
+      if (draggingUp && atBottom) e.preventDefault()
+    }
+    document.addEventListener('touchstart', onTouchStart, { passive: true })
+    document.addEventListener('touchmove', onTouchMove, { passive: false })
+    return () => {
+      document.removeEventListener('touchstart', onTouchStart)
+      document.removeEventListener('touchmove', onTouchMove)
+    }
+  }, [])
 
   useEffect(() => {
     hideVideoAds()
@@ -384,7 +415,7 @@ export default function App() {
   const isTE        = position === 'te'
   const isDB        = position === 'db'
   const activeTypes = isDB ? (gameMode === 'lite' ? DB_LITE_TYPES : DB_TYPES) : isTE ? (gameMode === 'lite' ? TE_LITE_TYPES : TE_TYPES) : isWR ? (gameMode === 'lite' ? WR_LITE_TYPES : WR_TYPES) : gameMode === 'lite' ? (isRB ? RB_LITE_TYPES : LITE_TYPES) : (gameMode === 'all-time' && !isRB) ? LEGEND_TYPES : (isRB ? RB_TYPES : TYPES)
-  const activePool  = isDB ? DBS : isTE ? TES : isWR ? (gameMode === 'all-time' ? WR_LEGENDS : WRS) : gameMode === 'all-time' ? (isRB ? RB_LEGENDS : LEGENDS) : (isRB ? RBS : QBS)
+  const activePool  = isDB ? (gameMode === 'all-time' ? DB_LEGENDS : DBS) : isTE ? (gameMode === 'all-time' ? TE_LEGENDS : TES) : isWR ? (gameMode === 'all-time' ? WR_LEGENDS : WRS) : gameMode === 'all-time' ? (isRB ? RB_LEGENDS : LEGENDS) : (isRB ? RBS : QBS)
   const isPlus      = isSubscribed
 
   // Tracks once per completed build (resets when the build becomes incomplete
@@ -449,18 +480,27 @@ export default function App() {
   }, [])
 
 
-  const handleMVPWon = useCallback(async (isAllTime, isRBMode = false) => {
+  const handleMVPWon = useCallback(async (isAllTime, awardType = 'mvp') => {
     if (!user || !supabase) return
-    const col = isRBMode
+    const col = awardType === 'opoy'
       ? (isAllTime ? 'alltime_opoys' : 'classic_opoys')
-      : (isAllTime ? 'alltime_mvps'  : 'classic_mvps')
+      : awardType === 'dpoy'
+        ? (isAllTime ? 'alltime_dpoys' : 'classic_dpoys')
+        : (isAllTime ? 'alltime_mvps'  : 'classic_mvps')
     const { data } = await supabase.from('accounts')
-      .select('classic_mvps,alltime_mvps,classic_opoys,alltime_opoys').eq('id', user.id).single()
+      .select('classic_mvps,alltime_mvps,classic_opoys,alltime_opoys,classic_dpoys,alltime_dpoys').eq('id', user.id).single()
     const current = data?.[col] ?? 0
     const q = data
       ? supabase.from('accounts').update({ [col]: current + 1 }).eq('id', user.id)
       : supabase.from('accounts').insert({ id: user.id, [col]: 1 })
     q.then(({ error }) => { if (error) console.error('[award] failed to save award:', error) })
+    // Tag the simulation row itself with which award it won — the lifetime
+    // counter above has no timestamp, so this is what lets Daily show real
+    // today-only award counts instead of an all-time total.
+    if (!isAllTime && lastSimIdRef.current) {
+      supabase.from('simulations').update({ season_award: awardType }).eq('id', lastSimIdRef.current)
+        .then(({ error }) => { if (error) console.error('[award] failed to tag simulation row:', error) })
+    }
   }, [user])
 
   const handleReset = useCallback(() => {
@@ -478,6 +518,7 @@ export default function App() {
     sandboxTainted.current = isCustomMode
     setMobileView('spin')
     window.scrollTo({ top: 0, behavior: 'instant' })
+    document.querySelector('.game-page-scroll')?.scrollTo({ top: 0, behavior: 'instant' })
   }, [activeTypes, isCustomMode])
 
   const handleChipTap = useCallback((chipData) => {
@@ -489,6 +530,7 @@ export default function App() {
     })
     setSpinResetKey(k => k + 1)
     window.scrollTo({ top: 0, behavior: 'instant' })
+    document.querySelector('.game-page-scroll')?.scrollTo({ top: 0, behavior: 'instant' })
   }, [activeTypes])
 
   const handleSimulate = useCallback(() => {
@@ -520,7 +562,7 @@ export default function App() {
       ? { ...team, off: atRatings.off, def: atRatings.def, isAllTime: true }
       : team
     const result = isDB
-      ? runDBSimulation(build, effectiveTeam)
+      ? runDBSimulation(build, effectiveTeam, gameMode === 'all-time')
       : isTE
         ? runTESimulation(build, activeTypes, effectiveTeam, gameMode === 'all-time')
         : isWR
@@ -566,12 +608,13 @@ export default function App() {
             qb: build[t].qbFull || build[t].name, team: build[t].team, val: build[t].val,
           }])
         ),
-      }).then(({ error }) => {
+      }).select('id').single().then(({ data, error }) => {
         if (error) {
           console.error('[build-a-player] simulation save failed:', error)
           showSaveToast('error', `Save failed: ${error.message}`)
         } else {
           showSaveToast('saved', 'Saved to profile!')
+          lastSimIdRef.current = data?.id ?? null
         }
       })
     }
@@ -811,12 +854,16 @@ export default function App() {
 
   if (page === 'splash') {
     return (
+      <>
+      <Helmet>
+        <link rel="canonical" href="https://www.build-a-player.com/" />
+      </Helmet>
       <SplashScreen
         onStart={handleStart}
         onDepthChart={() => setPage('depth-chart')}
         onVersus={(pos) => {
           const p = pos || 'qb'
-          localStorage.setItem('lastPosition', p)
+          try { localStorage.setItem('lastPosition', p) } catch {}
           setPosition(p)
           setGameMode('classic')
           setBuild(Object.fromEntries(
@@ -825,6 +872,7 @@ export default function App() {
           setPage('versus-lobby')
         }}
       />
+      </>
     )
   }
 
@@ -896,7 +944,7 @@ export default function App() {
     onSignIn: () => setShowAuth(true),
     onProfile: () => { window.history.pushState({}, '', '/profile'); setPage('profile') },
     onLeaderboard: () => setPage('leaderboard'),
-    onSwitchPosition: (pos) => { localStorage.setItem('lastPosition', pos); handleHome() },
+    onSwitchPosition: (pos) => { try { localStorage.setItem('lastPosition', pos) } catch {}; handleHome() },
     onSubscribe: async () => {
       if (!user) { setShowAuth(true); return }
       try {
@@ -923,7 +971,7 @@ export default function App() {
     return (
       <Suspense fallback={null}>
         <Navbar {...navbarProps} />
-        <LeaderboardPage onBack={() => { setPage(simResult ? 'sim' : 'game'); window.scrollTo({ top: 0, behavior: 'instant' }) }} currentUser={user} adsDisabled={adsDisabled} isRB={isRB} isWR={isWR} isTE={isTE} isDB={isDB} />
+        <LeaderboardPage key={position} onBack={() => { setPage(simResult ? 'sim' : 'game'); window.scrollTo({ top: 0, behavior: 'instant' }) }} currentUser={user} adsDisabled={adsDisabled} isRB={isRB} isWR={isWR} isTE={isTE} isDB={isDB} onPositionChange={setPosition} />
       </Suspense>
     )
   }
@@ -1020,6 +1068,7 @@ export default function App() {
             build={build}
             buildTypes={activeTypes}
             onAddToBuild={(p, playerOverrides, attrType) => {
+              sandboxTainted.current = true
               const photo = HEADSHOTS[p.name] ? `${HEADSHOT_BASE}/${HEADSHOTS[p.name]}.webp` : null
               const chipData = {
                 type: attrType,
@@ -1038,6 +1087,7 @@ export default function App() {
               setShowCustomModal(false)
             }}
             onAddAllToBuild={(p, playerOverrides) => {
+              sandboxTainted.current = true
               const photo = HEADSHOTS[p.name] ? `${HEADSHOT_BASE}/${HEADSHOTS[p.name]}.webp` : null
               setBuild(prev => {
                 const next = { ...prev }
@@ -1083,8 +1133,8 @@ export default function App() {
           isTE={isTE}
           isDB={isDB}
           onMVPWon={handleMVPWon}
-          onBack={() => { setPage('game'); window.scrollTo({ top: 0, behavior: 'instant' }) }}
-          onReset={() => { handleReset(); setPage('game'); window.scrollTo({ top: 0, behavior: 'instant' }) }}
+          onBack={() => { setPage('game'); window.scrollTo({ top: 0, behavior: 'instant' }); document.querySelector('.game-page-scroll')?.scrollTo({ top: 0, behavior: 'instant' }) }}
+          onReset={() => { handleReset(); setPage('game'); window.scrollTo({ top: 0, behavior: 'instant' }); document.querySelector('.game-page-scroll')?.scrollTo({ top: 0, behavior: 'instant' }) }}
         />
         {saveToast && (
           <div className={`save-toast save-toast--${saveToast.type}`} onClick={() => setSaveToast(null)}>
@@ -1130,7 +1180,7 @@ export default function App() {
           isTE={isTE}
           isDB={isDB}
           playerLabel={isDB ? 'DB' : isTE ? 'TE' : isWR ? 'WR' : undefined}
-          attrMap={isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : undefined}
+          attrMap={isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : isRB ? RB_ATTR : undefined}
           categoriesData={isDB ? DB_CATEGORIES : isTE ? TE_CATEGORIES : isWR ? WR_CATEGORIES : undefined}
           onlineCount={onlineCount}
         />
@@ -1148,7 +1198,7 @@ export default function App() {
           isTE={isTE}
           isDB={isDB}
           categoriesData={isDB ? DB_CATEGORIES : isTE ? TE_CATEGORIES : isWR ? WR_CATEGORIES : undefined}
-          attrMap={isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : undefined}
+          attrMap={isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : isRB ? RB_ATTR : undefined}
           isPlus={isPlus}
           isCustomMode={isCustomMode}
           onOpenCustomModal={() => setShowCustomModal(true)}
@@ -1168,7 +1218,7 @@ export default function App() {
             isWR={isWR}
             isTE={isTE}
             isDB={isDB}
-            attrMap={isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : undefined}
+            attrMap={isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : isRB ? RB_ATTR : undefined}
             isPlus={isPlus}
             isCustomMode={isCustomMode}
             onOpenCustomModal={() => setShowCustomModal(true)}
@@ -1217,7 +1267,7 @@ export default function App() {
       <nav className="mobile-tab-bar">
         <button
           className={`mtab ${mobileView === 'spin' ? 'active' : ''}`}
-          onClick={() => { setMobileView('spin'); window.scrollTo({ top: 0, behavior: 'instant' }) }}
+          onClick={() => { setMobileView('spin'); window.scrollTo({ top: 0, behavior: 'instant' }); document.querySelector('.game-page-scroll')?.scrollTo({ top: 0, behavior: 'instant' }) }}
         >
           <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="23 4 23 10 17 10"/>
@@ -1229,7 +1279,7 @@ export default function App() {
         <div className="mtab-sep" />
         <button
           className={`mtab ${mobileView === 'build' ? 'active' : ''}`}
-          onClick={() => { setMobileView('build'); window.scrollTo({ top: 0, behavior: 'instant' }) }}
+          onClick={() => { setMobileView('build'); window.scrollTo({ top: 0, behavior: 'instant' }); document.querySelector('.game-page-scroll')?.scrollTo({ top: 0, behavior: 'instant' }) }}
         >
           <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
@@ -1282,6 +1332,7 @@ export default function App() {
           build={build}
           buildTypes={activeTypes}
           onAddToBuild={(p, playerOverrides, attrType) => {
+            sandboxTainted.current = true
             const photo = HEADSHOTS[p.name] ? `${HEADSHOT_BASE}/${HEADSHOTS[p.name]}.webp` : null
             const chipData = {
               type: attrType,
@@ -1301,6 +1352,7 @@ export default function App() {
             setShowCustomModal(false)
           }}
           onAddAllToBuild={(p, playerOverrides) => {
+            sandboxTainted.current = true
             const photo = HEADSHOTS[p.name] ? `${HEADSHOT_BASE}/${HEADSHOTS[p.name]}.webp` : null
             setBuild(prev => {
               const next = { ...prev }

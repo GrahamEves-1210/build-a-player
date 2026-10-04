@@ -46,12 +46,16 @@ function darkenColor(hex, factor = 0.6) {
 
 // Boosts red in a base skin tone before it's lightened/darkened downstream —
 // matches the warmer, more visibly red skin treatment used elsewhere (Bucket, DB, WR).
+// Must return a #rrggbb hex string, not rgb(...) — lightenColor/darkenColor/
+// reddenSkin downstream all parse their input with hex.slice(1,3) etc., so an
+// rgb() string here silently produces NaN channels (invisible/broken fill).
 function warmSkin(hex, redBoost = 22) {
   if (!hex || hex === 'transparent') return hex
   const r = Math.min(255, parseInt(hex.slice(1, 3), 16) + redBoost)
   const g = parseInt(hex.slice(3, 5), 16)
   const b = Math.max(0, parseInt(hex.slice(5, 7), 16) - 4)
-  return `rgb(${r},${g},${b})`
+  const toHex = v => v.toString(16).padStart(2, '0')
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`
 }
 
 // Subtle lip redness — just slightly warmer than the skin tone
@@ -91,10 +95,15 @@ export default function RBFigureOverlay({ build }) {
   svg = setFill(svg, 'strap right', cgFill)
 
   // ── FACE SKIN (vision slot player) — slightly darkened for shadow depth
-  svg = setFill(svg, 'face1', lightenColor(faceSkin, 20), 'opacity:0.82;')
-  svg = setFill(svg, 'face2', lightenColor(faceSkin, 20), 'opacity:0.82;')
-  svg = setFill(svg, 'face3', lightenColor(faceSkin, 20), 'opacity:0.82;')
-  svg = setFill(svg, 'neck',  darkenColor(faceSkin, 0.85), 'opacity:0.82;')
+  // Lighten amount + opacity kept low on purpose: this whole figure renders
+  // under mixBlendMode:'screen' (see render below), which can only brighten
+  // what's underneath it — stacking a heavy pre-lighten + high opacity on
+  // top of that washes dark skin tones out toward gray instead of reading
+  // as a darker, warmer tone. Matches the calibration DBFigureOverlay uses.
+  svg = setFill(svg, 'face1', lightenColor(faceSkin, 2), 'opacity:0.58;')
+  svg = setFill(svg, 'face2', lightenColor(faceSkin, 2), 'opacity:0.58;')
+  svg = setFill(svg, 'face3', lightenColor(faceSkin, 2), 'opacity:0.58;')
+  svg = setFill(svg, 'neck',  darkenColor(faceSkin, 0.85), 'opacity:0.58;')
   svg = setFillTransform(svg, 'lip',  reddenSkin(faceSkin), 'translate(240,146) scale(0.7) translate(-240,-146)', 'opacity:0.28;')
   svg = setFillTransform(svg, 'lip2', reddenSkin(faceSkin), 'translate(240,146) scale(0.7) translate(-240,-146)', 'opacity:0.28;')
 
@@ -108,9 +117,9 @@ export default function RBFigureOverlay({ build }) {
   svg = setFill(svg, 'undershirt',    has('size') ? WHITE : 'transparent')
 
   // ── STRENGTH: left arm (blocking arm)
-  svg = setFill(svg, 'left arm',  lightenColor(armSkin, 20), 'opacity:0.82;')
+  svg = setFill(svg, 'left arm',  lightenColor(armSkin, 2), 'opacity:0.58;')
   // ── ELUSIVENESS: right arm (stiff-arm / cut arm, slightly shadowed)
-  svg = setFill(svg, 'right arm', lightenColor(armSkin, 20), 'opacity:0.82;')
+  svg = setFill(svg, 'right arm', lightenColor(armSkin, 2), 'opacity:0.58;')
 
   // ── HANDS: left glove (receiving hand)
   svg = setFill(svg, 'left glove',  tc('hands'), 'opacity:0.68;')
