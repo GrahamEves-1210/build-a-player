@@ -16953,3 +16953,37 @@ html.is-mac [id^="pw-oop-bottom_rail"] > * {
   text-transform: uppercase;
   color: var(--text-3);
 }
+
+/* ── iOS/Android app (html.is-app, set in main.jsx) ─────────────────────────
+   The app draws edge to edge (viewport-fit=cover) like a home-screen web app,
+   so backgrounds run up behind the clock/notch and down behind the home bar,
+   while content is pushed into the safe area — where it sits in Safari.
+   The mobile navbar already pads itself by safe-area-inset-top; these cover
+   the screens that don't. */
+html.is-app .splash-screen {
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+html.is-app .sc-screen {
+  padding-top: max(12px, env(safe-area-inset-top, 12px));
+}
+html.is-app .auth-overlay {
+  padding-top: max(env(safe-area-inset-top, 16px), 16px);
+  padding-bottom: max(env(safe-area-inset-bottom, 16px), 16px);
+}
+/* Pages sized as "screen minus the 54px navbar": the navbar is taller by the
+   safe-area inset in the app, so take that off too or their bottoms get cut. */
+html.is-app .simp-page,
+html.is-app .prf-page,
+html.is-app .lb-page,
+html.is-app .bd-screen {
+  height: calc(100dvh - 54px - env(safe-area-inset-top, 0px));
+}
+@media (max-width: 768px) {
+  html.is-app .simp-page,
+  html.is-app .prf-page,
+  html.is-app .bd-screen {
+    height: auto;
+    min-height: calc(100dvh - 54px - env(safe-area-inset-top, 0px));
+  }
+}
