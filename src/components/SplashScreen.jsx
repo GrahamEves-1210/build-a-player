@@ -9,7 +9,7 @@ function hsUrl(id) {
   return id.includes('.') ? `${HEADSHOT_BASE}/${id}` : `${HEADSHOT_BASE}/${id}.webp`
 }
 
-const POS_OPTIONS = [
+export const POS_OPTIONS = [
   {
     pos: 'qb', label: 'QB', classic: true, alltime: true,
     players: [
@@ -85,7 +85,7 @@ function MiniAv({ id, color, size = 28 }) {
   )
 }
 
-function AvatarTrio({ players, size = 26 }) {
+export function AvatarTrio({ players, size = 26 }) {
   return (
     <div className="splash-av-trio">
       {players.map((p, i) => (
@@ -293,7 +293,7 @@ const STACK_MASK = {
 // attribute, using each attribute's real in-game color — clipped to the
 // exact outline of the position's silhouette image via a CSS mask, so it
 // reads as the attributes "stacking up" into the body.
-function StackedSilhouette({ position, attrs, ready }) {
+export function StackedSilhouette({ position, attrs, ready }) {
   const visible = useRevealOnMount(ready)
   const mask = STACK_MASK[position] ?? STACK_MASK.qb
   return (
@@ -326,6 +326,9 @@ function StackedSilhouette({ position, attrs, ready }) {
     </div>
   )
 }
+
+// Attribute bands per position — shared with the app home screen (components/app/AppHome)
+export const SPLASH_ATTRS = { qb: QB_ATTRS, rb: RB_ATTRS, wr: WR_ATTRS, te: TE_ATTRS, db: DB_ATTRS, ol: OL_ATTRS }
 
 export default function SplashScreen({ onStart, onDepthChart }) {
   const [phase, setPhase] = useState(0)

@@ -33,6 +33,7 @@ import CustomRatingsModal from './CustomRatingsModal'
 import SiteFooter from './SiteFooter'
 import SiteFeatures from './SiteFeatures'
 import { IS_APP } from '../lib/platform'
+import AppHome from './app/AppHome'
 import { finishDiscordSignIn, getUsername } from '../lib/discord'
 const VersusLobby        = lazy(() => import('./VersusLobby'))
 const BucketVersusResult = lazy(() => import('./BucketVersusResult'))
@@ -546,9 +547,11 @@ export default function BucketApp() {
     if (!IS_APP) return
     const onNav = e => {
       const to = e.detail
-      if (to === 'play') {
-        if (page === 'game' || page === 'sim' || page === 'splash' || page === 'salarycap') return
-        setPage(gameMode === 'salarycap' ? 'salarycap' : gameMode ? 'game' : 'splash')
+      if (to === 'home') setPage('splash')   // keeps the build in progress — PLAY resumes it
+      else if (to === 'play') {
+        if (page === 'game' || page === 'sim' || page === 'salarycap') return
+        if (gameMode) setPage(gameMode === 'salarycap' ? 'salarycap' : 'game')
+        else { let p = 'guard'; try { p = localStorage.getItem('bucketPosition') || 'guard' } catch {}; handleStart('classic', p) }   // quick play
       } else if (to === 'leaderboard') setPage('leaderboard')
       else if (to === 'profile') { if (user) { window.history.pushState({}, '', '/profile'); setPage('profile') } else setShowAuth(true) }
       else if (to === 'about') { window.location.href = '/?about' }
@@ -1201,17 +1204,32 @@ export default function BucketApp() {
     return (
       <>
         {bucketHead}
-        <BucketSplash
-          onStart={handleStart}
-          onVersus={(pos) => {
+        {(() => {
+          const onVersus = (pos) => {
             const p = pos || 'guard'
             try { localStorage.setItem('bucketPosition', p) } catch {}
             setPosition(p)
             setGameMode('classic')
             setBuild(Object.fromEntries((VERSUS_POS_TYPES[p] ?? VERSUS_GUARD_TYPES).map(t => [t, null])))
             setPage('versus-lobby')
-          }}
-        />
+          }
+          return IS_APP ? (
+            <AppHome
+              sport="bucket"
+              user={user}
+              onStart={handleStart}
+              onVersus={onVersus}
+              renderBucketFigure={(pos, ready) => (
+                <>
+                  <img src="/basketballsilhouette.png" className="splash-figure" alt="" draggable={false} style={{ position: 'absolute', inset: 0 }} />
+                  <BucketStackedSilhouette attrs={BUCKET_SPLASH_ATTRS[pos]} ready={ready} />
+                </>
+              )}
+            />
+          ) : (
+            <BucketSplash onStart={handleStart} onVersus={onVersus} />
+          )
+        })()}
       </>
     )
   }

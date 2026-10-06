@@ -40,6 +40,7 @@ import CustomRatingsModal from './components/CustomRatingsModal'
 import SiteFooter from './components/SiteFooter'
 import SiteFeatures from './components/SiteFeatures'
 import { IS_APP } from './lib/platform'
+import AppHome from './components/app/AppHome'
 import { finishDiscordSignIn, getUsername } from './lib/discord'
 
 const _dd = arr => { const s = new Set(); return arr.filter(p => { const k = `${p.name}|${p.team}`; if (s.has(k)) return false; s.add(k); return true }) }
@@ -283,9 +284,11 @@ export default function App() {
     if (!IS_APP) return
     const onNav = e => {
       const to = e.detail
-      if (to === 'play') {
-        if (page === 'game' || page === 'sim' || page === 'splash') return
-        setPage(gameMode ? (simResult ? 'sim' : 'game') : 'splash')
+      if (to === 'home') setPage('splash')   // keeps the build in progress — PLAY resumes it
+      else if (to === 'play') {
+        if (page === 'game' || page === 'sim') return
+        if (gameMode) setPage(simResult ? 'sim' : 'game')
+        else { let p = 'qb'; try { p = localStorage.getItem('lastPosition') || 'qb' } catch {}; handleStart('classic', p) }   // quick play
       } else if (to === 'leaderboard') setPage('leaderboard')
       else if (to === 'profile') { if (user) { window.history.pushState({}, '', '/profile'); setPage('profile') } else setShowAuth(true) }
       else if (to === 'about') setPage('about')
@@ -910,6 +913,9 @@ export default function App() {
       <Helmet>
         <link rel="canonical" href="https://build-a-player.com/" />
       </Helmet>
+      {IS_APP ? (
+        <AppHome sport="nfl" user={user} onStart={handleStart} onDepthChart={() => setPage('depth-chart')} />
+      ) : (
       <SplashScreen
         onStart={handleStart}
         onDepthChart={() => setPage('depth-chart')}
@@ -924,6 +930,7 @@ export default function App() {
           setPage('versus-lobby')
         }}
       />
+      )}
       </>
     )
   }
