@@ -38,11 +38,8 @@ All of this is switched by `IS_APP` in `src/lib/platform.js`. On the website non
    Choose **App Store Connect** under Distribution, then the App ID `com.buildaplayer.app`, then the Apple Distribution certificate Codemagic just made (it has today's date).
    Name it "Build-A-Player App Store" and click Generate. You don't need to download it.
 5. **Bring the profile into Codemagic.** Go back to Code signing identities → iOS provisioning profiles → **Fetch profiles**, then tick "Build-A-Player App Store" and save it.
-6. **Add environment variables.** Go to the app → Environment variables and add a group called **supabase** containing:
-   - `VITE_SUPABASE_URL`
-   - `VITE_SUPABASE_ANON_KEY`
-
-   Use the same values as the Cloudflare Pages settings.
+No environment variables are needed: the Supabase URL and anon key (public values, already in the
+website's JavaScript) live in `.env.app`, which the app build reads.
 
 ### 3. Website (before submitting to Apple)
 

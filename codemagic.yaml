@@ -13,8 +13,6 @@ workflows:
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.buildaplayer.app
-      groups:
-        - supabase                              # VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY
       node: 22
       xcode: latest
     scripts:
@@ -44,8 +42,6 @@ workflows:
     environment:
       android_signing:
         - build_a_player_upload                 # upload keystore, added in Codemagic → Code signing identities
-      groups:
-        - supabase
       node: 22
       java: 21
     scripts:
