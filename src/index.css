@@ -16954,36 +16954,122 @@ html.is-mac [id^="pw-oop-bottom_rail"] > * {
   color: var(--text-3);
 }
 
-/* ── iOS/Android app (html.is-app, set in main.jsx) ─────────────────────────
-   The app draws edge to edge (viewport-fit=cover) like a home-screen web app,
-   so backgrounds run up behind the clock/notch and down behind the home bar,
-   while content is pushed into the safe area — where it sits in Safari.
-   The mobile navbar already pads itself by safe-area-inset-top; these cover
-   the screens that don't. */
+/* ── iOS/Android app shell (html.is-app, set in main.jsx) ───────────────────
+   Everything below only applies inside the app. The app draws edge to edge
+   (viewport-fit=cover): backgrounds run behind the clock/notch and home bar,
+   content sits in the safe area. --safe-top/--safe-bottom wrap env() so a
+   desktop test can fake an iPhone's insets (html.sim-notch). */
+html.is-app {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --app-tab-h: 56px;
+  --app-bottom: calc(var(--app-tab-h) + var(--safe-bottom));   /* space the tab bar takes */
+}
+html.is-app.sim-notch { --safe-top: 47px; --safe-bottom: 34px; }
+
+/* Website-only furniture: menu button (→ More tab), footer, feature blurbs */
+html.is-app .nav-right,
+html.is-app .build-footer-section,
+html.is-app .splash-site-footer,
+html.is-app .splash-features { display: none !important; }
+
+/* ── Bottom tab bar ── */
+.app-tabbar {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  z-index: 1050;
+  display: flex;
+  height: var(--app-bottom);
+  padding-bottom: var(--safe-bottom);
+  background: rgba(10,11,13,0.94);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  border-top: 1px solid rgba(255,255,255,0.07);
+}
+.app-tab {
+  flex: 1;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  background: none; border: none; padding: 0;
+  color: var(--text-3);
+  font-family: var(--font-inter); font-size: 10px; font-weight: 700; letter-spacing: 0.3px;
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+.app-tab svg { transition: transform 0.15s; }
+.app-tab:active svg { transform: scale(0.88); }
+.app-tab--on { color: #95d5b2; }
+[data-sport="bucket"] .app-tab--on, html.is-app:has(.bucket-splash) .app-tab--on { color: #f97316; }
+
+/* ── More sheet ── */
+.app-sheet-overlay {
+  position: fixed; inset: 0; z-index: 1200;
+  display: flex; align-items: flex-end;
+  background: rgba(0,0,0,0.55);
+  animation: app-fade 0.18s ease both;
+}
+.app-sheet {
+  width: 100%;
+  display: flex; flex-direction: column;
+  padding: 8px 12px calc(12px + var(--safe-bottom));
+  background: #0f1318;
+  border-top: 1px solid rgba(149,213,178,0.14);
+  border-radius: 18px 18px 0 0;
+  animation: app-sheet-up 0.22s cubic-bezier(.2,.8,.2,1) both;
+}
+.app-sheet-grip { width: 36px; height: 4px; margin: 2px auto 10px; border-radius: 2px; background: rgba(255,255,255,0.18); }
+.app-sheet-row {
+  padding: 15px 8px;
+  background: none; border: none; border-bottom: 1px solid rgba(255,255,255,0.05);
+  color: var(--text); text-align: left;
+  font-family: var(--font-inter); font-size: 16px; font-weight: 600;
+  -webkit-tap-highlight-color: transparent;
+}
+.app-sheet-row:last-child { border-bottom: none; }
+.app-sheet-row:active { color: #95d5b2; }
+@keyframes app-fade { from { opacity: 0 } }
+@keyframes app-sheet-up { from { transform: translateY(100%) } }
+@media (prefers-reduced-motion: reduce) { .app-sheet-overlay, .app-sheet { animation: none; } }
+
+/* ── Safe areas + room for the tab bar ── */
+/* Navbar: pad under the clock (mirrors the mobile rule, but through the var) */
+html.is-app .navbar {
+  padding-top: var(--safe-top);
+  height: calc(54px + var(--safe-top));
+}
 html.is-app .splash-screen {
-  padding-top: env(safe-area-inset-top, 0px);
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-top: var(--safe-top);
+  padding-bottom: var(--app-bottom);
 }
-html.is-app .sc-screen {
-  padding-top: max(12px, env(safe-area-inset-top, 12px));
+html.is-app .game-page-scroll {
+  top: calc(54px + var(--safe-top));
+  bottom: var(--app-bottom);
 }
+/* Centered navbar pickers: center in the part of the bar below the clock */
+html.is-app .nav-pos-dropdown { top: var(--safe-top); height: calc(100% - var(--safe-top)); }
+html.is-app .nav-pills-bucket,
+html.is-app .nav-pills-soon { top: calc(50% + var(--safe-top) / 2); }
+/* floating SPIN / BUILD toggle sits just above the tab bar */
+html.is-app .mobile-tab-bar { bottom: calc(var(--app-bottom) + 10px); }
+html.is-app .sc-screen { padding-top: max(12px, var(--safe-top)); padding-bottom: calc(var(--app-bottom) + 12px); }
 html.is-app .auth-overlay {
-  padding-top: max(env(safe-area-inset-top, 16px), 16px);
-  padding-bottom: max(env(safe-area-inset-bottom, 16px), 16px);
+  padding-top: max(var(--safe-top), 16px);
+  padding-bottom: max(var(--app-bottom), 16px);
 }
-/* Pages sized as "screen minus the 54px navbar": the navbar is taller by the
-   safe-area inset in the app, so take that off too or their bottoms get cut. */
+/* Full-height pages: screen minus navbar (+ inset) minus tab bar */
 html.is-app .simp-page,
 html.is-app .prf-page,
 html.is-app .lb-page,
 html.is-app .bd-screen {
-  height: calc(100dvh - 54px - env(safe-area-inset-top, 0px));
+  height: calc(100dvh - 54px - var(--safe-top) - var(--app-bottom));
 }
 @media (max-width: 768px) {
   html.is-app .simp-page,
   html.is-app .prf-page,
+  html.is-app .lb-page,
   html.is-app .bd-screen {
     height: auto;
-    min-height: calc(100dvh - 54px - env(safe-area-inset-top, 0px));
+    min-height: calc(100dvh - 54px - var(--safe-top) - var(--app-bottom));
+    padding-bottom: calc(var(--app-bottom) + 24px);
   }
 }

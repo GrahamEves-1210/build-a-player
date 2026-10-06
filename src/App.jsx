@@ -272,6 +272,29 @@ export default function App() {
     if (meta) meta.setAttribute('content', page === 'splash' ? '#0f1612' : page === 'depth-chart' ? '#111318' : '#090a0d')
   }, [page])
 
+  // iOS/Android app: report the page to the bottom tab bar (AppTabBar) and
+  // follow its taps. No-ops on the website.
+  useEffect(() => {
+    if (!IS_APP) return
+    window.__bapPage = { page, sport: 'nfl' }
+    window.dispatchEvent(new CustomEvent('bap:page', { detail: window.__bapPage }))
+  }, [page])
+  useEffect(() => {
+    if (!IS_APP) return
+    const onNav = e => {
+      const to = e.detail
+      if (to === 'play') {
+        if (page === 'game' || page === 'sim' || page === 'splash') return
+        setPage(gameMode ? (simResult ? 'sim' : 'game') : 'splash')
+      } else if (to === 'leaderboard') setPage('leaderboard')
+      else if (to === 'profile') { if (user) { window.history.pushState({}, '', '/profile'); setPage('profile') } else setShowAuth(true) }
+      else if (to === 'about') setPage('about')
+      window.scrollTo({ top: 0, behavior: 'instant' })
+    }
+    window.addEventListener('bap:nav', onNav)
+    return () => window.removeEventListener('bap:nav', onNav)
+  }, [page, gameMode, simResult, user])
+
   useEffect(() => {
     window.ramp?.que?.push(() => {
       // Same page === 'sim' && simResult check the URL-sync effect below uses

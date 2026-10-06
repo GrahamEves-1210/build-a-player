@@ -28,6 +28,7 @@ import App from './App.jsx'
 import BucketApp from './components/BucketApp.jsx'
 import ErrorBoundary from './components/ErrorBoundary.jsx'
 import { IS_APP } from './lib/platform'
+import AppTabBar from './components/AppTabBar.jsx'
 
 if (IS_APP) document.documentElement.classList.add('is-app')
 
@@ -46,6 +47,7 @@ createRoot(document.getElementById('root')).render(
     <ErrorBoundary>
       <HelmetProvider>
         {isBucket ? <BucketApp /> : <App />}
+        <AppTabBar />
       </HelmetProvider>
       {!IS_APP && <Analytics />}
     </ErrorBoundary>

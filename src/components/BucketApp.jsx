@@ -535,6 +535,29 @@ export default function BucketApp() {
     if (meta) meta.setAttribute('content', page === 'splash' ? '#1b140c' : '#090a0d')
   }, [page])
 
+  // iOS/Android app: report the page to the bottom tab bar (AppTabBar) and
+  // follow its taps. No-ops on the website.
+  useEffect(() => {
+    if (!IS_APP) return
+    window.__bapPage = { page, sport: 'bucket' }
+    window.dispatchEvent(new CustomEvent('bap:page', { detail: window.__bapPage }))
+  }, [page])
+  useEffect(() => {
+    if (!IS_APP) return
+    const onNav = e => {
+      const to = e.detail
+      if (to === 'play') {
+        if (page === 'game' || page === 'sim' || page === 'splash' || page === 'salarycap') return
+        setPage(gameMode === 'salarycap' ? 'salarycap' : gameMode ? 'game' : 'splash')
+      } else if (to === 'leaderboard') setPage('leaderboard')
+      else if (to === 'profile') { if (user) { window.history.pushState({}, '', '/profile'); setPage('profile') } else setShowAuth(true) }
+      else if (to === 'about') { window.location.href = '/?about' }
+      window.scrollTo({ top: 0, behavior: 'instant' })
+    }
+    window.addEventListener('bap:nav', onNav)
+    return () => window.removeEventListener('bap:nav', onNav)
+  }, [page, gameMode, user])
+
   // Initialize Playwire ads on mount and page change
   useEffect(() => {
     window.ramp?.que?.push(() => {
