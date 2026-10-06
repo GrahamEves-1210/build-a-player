@@ -5,6 +5,7 @@ import { NBA_TEAMS } from '../data/nba-teams'
 import NBA_HEADSHOTS from '../data/nba-headshots.json'
 import { supabase } from '../lib/supabase'
 import { valToGrade, HEADSHOT_BASE } from '../utils/simulation'
+import { getUsername } from '../lib/discord'
 
 /*
   Supabase tables required:
@@ -1123,7 +1124,7 @@ export default function BucketSalaryCap({ onConfirm, onBack, user, initialDateSt
       })
       const saveData = {
         picks, ppg: stats.ppg, apg: stats.apg, rpg: stats.rpg,
-        userId: user?.id ?? null, username: user?.user_metadata?.username || user?.email?.split('@')[0] || null,
+        userId: user?.id ?? null, username: getUsername(user) || null,
         totalCost, infinite: true,
       }
       onConfirm(build, false, null, saveData, effectivePosition)
@@ -1162,7 +1163,7 @@ export default function BucketSalaryCap({ onConfirm, onBack, user, initialDateSt
       apg:      stats.apg,
       rpg:      stats.rpg,
       userId:   user?.id ?? null,
-      username: user?.user_metadata?.username || user?.email?.split('@')[0] || null,
+      username: getUsername(user) || null,
       totalCost,
     }
 

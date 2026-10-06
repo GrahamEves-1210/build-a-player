@@ -102,6 +102,8 @@ import { DB_ATTR } from '../data/dbs'
 import { OL_ATTR } from '../data/ols'
 import { CAN_SELL_PLUS } from '../lib/platform'
 import DeleteAccount from './DeleteAccount'
+import ConnectDiscord from './ConnectDiscord'
+import { getUsername } from '../lib/discord'
 
 function useCountUp(target, duration = 900, enabled = true) {
   const [val, setVal] = useState(0)
@@ -122,7 +124,7 @@ function useCountUp(target, duration = 900, enabled = true) {
 }
 
 function getInitials(user) {
-  const name = user.user_metadata?.username || user.email || ''
+  const name = getUsername(user) || ''
   const parts = name.split(/[\s@_.-]+/).filter(Boolean)
   if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase()
   return name.slice(0, 2).toUpperCase()
@@ -743,7 +745,7 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
   const dbLegendCareerInts    = useCountUp(dbLegendCareer?.totalInts, 1000, show && !!dbLegendCareer)
   const dbLegendCareerPbus    = useCountUp(dbLegendCareer?.totalPbus, 1200, show && !!dbLegendCareer)
 
-  const displayName = user.user_metadata?.username || user.email?.split('@')[0] || 'Player'
+  const displayName = getUsername(user) || 'Player'
   const initials    = getInitials(user)
   const since       = formatDate(user.created_at)
 
@@ -1564,6 +1566,7 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
               </div>
             </form>
           )}
+          <ConnectDiscord user={user} />
           <button className="prf-signout-btn" onClick={handleSignOut}>Sign Out</button>
           <DeleteAccount onDeleted={() => onSignOut?.()} />
         </div>

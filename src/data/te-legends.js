@@ -33,7 +33,7 @@ const _raw = [
   {
     name: 'Jackie Smith',      short: 'Jackie Smith', team: 'ARI', teamName: 'Arizona Cardinals',
     skin: '#f0c4a0', height: 76, weight: 235, number: 81, starter: true, captain: true, years: '1963–77',
-    attrs: { speed: 8, blocking: 8, vertical: 7, routeRunning: 8, strength: 9, hands: 10, awareness: 10, size: 1, afterCatch: 8 },
+    attrs: { speed: 8, blocking: 8, vertical: 7, routeRunning: 8, strength: 9, hands: 9, awareness: 9, size: 1, afterCatch: 8 },
   },
   {
     name: 'Trey McBride',      short: 'McBride',      team: 'ARI', teamName: 'Arizona Cardinals',
@@ -55,7 +55,7 @@ const _raw = [
   {
     name: 'Alge Crumpler',     short: 'Crumpler',     team: 'ATL', teamName: 'Atlanta Falcons',
     skin: '#5e3c22', height: 74, weight: 270, number: 83, starter: true, captain: true, years: '2001–07',
-    attrs: { speed: 6, blocking: 6, vertical: 6, routeRunning: 7, strength: 10, hands: 9, awareness: 7, size: 9, afterCatch: 7 },
+    attrs: { speed: 6, blocking: 6, vertical: 6, routeRunning: 7, strength: 10, hands: 8, awareness: 7, size: 9, afterCatch: 7 },
   },
   {
     name: 'Kyle Pitts',        short: 'Pitts',        team: 'ATL', teamName: 'Atlanta Falcons',
@@ -72,12 +72,12 @@ const _raw = [
   {
     name: 'Todd Heap',         short: 'Heap',         team: 'BAL', teamName: 'Baltimore Ravens',
     skin: '#f0c4a0', height: 77, weight: 252, number: 86, starter: true, captain: true, years: '2001–10',
-    attrs: { speed: 7, blocking: 8, vertical: 8, routeRunning: 8, strength: 7, hands: 9, awareness: 7, size: 6, afterCatch: 6 },
+    attrs: { speed: 7, blocking: 8, vertical: 8, routeRunning: 8, strength: 7, hands: 8, awareness: 7, size: 6, afterCatch: 6 },
   },
   {
     name: 'Dennis Pitta',      short: 'Pitta',        team: 'BAL', teamName: 'Baltimore Ravens',
     skin: '#f0c4a0', height: 76, weight: 245, number: 88, starter: true, captain: true, years: '2010–16',
-    attrs: { speed: 5, blocking: 4, vertical: 6, routeRunning: 8, strength: 5, hands: 9, awareness: 7, size: 4, afterCatch: 5 },
+    attrs: { speed: 5, blocking: 4, vertical: 6, routeRunning: 8, strength: 5, hands: 8, awareness: 7, size: 4, afterCatch: 5 },
   },
 
   // ─── BUFFALO BILLS ───────────────────────────────────────────────────────
@@ -106,12 +106,12 @@ const _raw = [
   {
     name: 'Greg Olsen',        short: 'Olsen',        team: 'CAR', teamName: 'Carolina Panthers',
     skin: '#f0c4a0', height: 77, weight: 255, number: 88, starter: true, captain: true, years: '2011–19',
-    attrs: { speed: 7, blocking: 6, vertical: 7, routeRunning: 9, strength: 6, hands: 10, awareness: 8, size: 7, afterCatch: 8 },
+    attrs: { speed: 7, blocking: 6, vertical: 7, routeRunning: 9, strength: 6, hands: 9, awareness: 8, size: 7, afterCatch: 8 },
   },
   {
     name: 'Wesley Walls',      short: 'Walls',        team: 'CAR', teamName: 'Carolina Panthers',
     skin: '#5e3c22', height: 77, weight: 255, number: 82, starter: true, captain: true, years: '1996–02',
-    attrs: { speed: 6, blocking: 6, vertical: 6, routeRunning: 9, strength: 7, hands: 10, awareness: 9, size: 7, afterCatch: 6 },
+    attrs: { speed: 6, blocking: 6, vertical: 6, routeRunning: 9, strength: 7, hands: 9, awareness: 9, size: 7, afterCatch: 6 },
   },
   {
     name: 'Kris Mangum',      short: 'Mangum',      team: 'CAR', teamName: 'Carolina Panthers',
@@ -123,7 +123,7 @@ const _raw = [
   {
     name: 'Mike Ditka',        short: 'Ditka',        team: 'CHI', teamName: 'Chicago Bears',
     skin: '#f0c4a0', height: 75, weight: 225, number: 89, starter: true, captain: true, years: '1961–66',
-    attrs: { speed: 6, blocking: 10, vertical: 6, routeRunning: 8, strength: 10, hands: 10, awareness: 11, size: 0, afterCatch: 10 },
+    attrs: { speed: 6, blocking: 10, vertical: 6, routeRunning: 8, strength: 10, hands: 9, awareness: 10, size: 0, afterCatch: 10 },
   },
   {
     name: 'Martellus Bennett', short: 'Bennett',      team: 'CHI', teamName: 'Chicago Bears',
@@ -145,24 +145,24 @@ const _raw = [
   {
     name: 'Bob Trumpy',        short: 'Trumpy',       team: 'CIN', teamName: 'Cincinnati Bengals',
     skin: '#f0c4a0', height: 78, weight: 230, number: 84, starter: true, captain: true, years: '1968–77',
-    attrs: { speed: 6, blocking: 7, vertical: 8, routeRunning: 9, strength: 7, hands: 10, awareness: 10, size: 3, afterCatch: 7 },
+    attrs: { speed: 6, blocking: 7, vertical: 8, routeRunning: 9, strength: 7, hands: 8, awareness: 9, size: 3, afterCatch: 7 },
   },
   {
     name: 'Rodney Holman',     short: 'Holman',       team: 'CIN', teamName: 'Cincinnati Bengals',
     skin: '#5e3c22', height: 75, weight: 232, number: 82, starter: true, captain: true, years: '1982–92',
-    attrs: { speed: 7, blocking: 8, vertical: 6, routeRunning: 8, strength: 8, hands: 10, awareness: 10, size: 0, afterCatch: 7 },
+    attrs: { speed: 7, blocking: 8, vertical: 6, routeRunning: 8, strength: 8, hands: 8, awareness: 9, size: 0, afterCatch: 7 },
   },
   {
     name: 'Tyler Eifert',      short: 'Eifert',       team: 'CIN', teamName: 'Cincinnati Bengals',
     skin: '#f0c4a0', height: 78, weight: 250, number: 85, starter: true, captain: true, years: '2013–19',
-    attrs: { speed: 5, blocking: 4, vertical: 8, routeRunning: 7, strength: 6, hands: 10, awareness: 7, size: 7, afterCatch: 5 },
+    attrs: { speed: 5, blocking: 4, vertical: 8, routeRunning: 7, strength: 6, hands: 8, awareness: 7, size: 7, afterCatch: 5 },
   },
 
   // ─── CLEVELAND BROWNS ────────────────────────────────────────────────────
   {
     name: 'Ozzie Newsome',     short: 'Newsome',      team: 'CLE', teamName: 'Cleveland Browns',
     skin: '#5e3c22', height: 74, weight: 232, number: 82, starter: true, captain: true, years: '1978–90',
-    attrs: { speed: 7, blocking: 7, vertical: 8, routeRunning: 10, strength: 9, hands: 11, awareness: 10, size: 0, afterCatch: 9 },
+    attrs: { speed: 7, blocking: 7, vertical: 8, routeRunning: 10, strength: 9, hands: 10, awareness: 10, size: 0, afterCatch: 9 },
   },
   {
     name: 'David Njoku',       short: 'Njoku',        team: 'CLE', teamName: 'Cleveland Browns',
@@ -172,7 +172,7 @@ const _raw = [
   {
     name: 'Milt Morin',        short: 'Morin',        team: 'CLE', teamName: 'Cleveland Browns',
     skin: '#5e3c22', height: 76, weight: 235, number: 80, starter: true, captain: true, years: '1966–75',
-    attrs: { speed: 5, blocking: 10, vertical: 5, routeRunning: 7, strength: 10, hands: 9, awareness: 10, size: 1, afterCatch: 5 },
+    attrs: { speed: 5, blocking: 10, vertical: 5, routeRunning: 7, strength: 10, hands: 8, awareness: 9, size: 1, afterCatch: 5 },
   },
   {
     name: 'Kellen Winslow Jr.', short: 'Winslow Jr.', team: 'CLE', teamName: 'Cleveland Browns',
@@ -189,12 +189,12 @@ const _raw = [
   {
     name: 'Jay Novacek',       short: 'Novacek',      team: 'DAL', teamName: 'Dallas Cowboys',
     skin: '#f0c4a0', height: 76, weight: 230, number: 84, starter: true, captain: true, years: '1990–96',
-    attrs: { speed: 8, blocking: 7, vertical: 8, routeRunning: 10, strength: 7, hands: 10, awareness: 10, size: 0, afterCatch: 7 },
+    attrs: { speed: 8, blocking: 7, vertical: 8, routeRunning: 9, strength: 7, hands: 9, awareness: 10, size: 0, afterCatch: 7 },
   },
   {
     name: 'Billy Joe DuPree',  short: 'DuPree',       team: 'DAL', teamName: 'Dallas Cowboys',
     skin: '#5e3c22', height: 76, weight: 230, number: 89, starter: true, captain: true, years: '1973–83',
-    attrs: { speed: 7, blocking: 10, vertical: 7, routeRunning: 8, strength: 8, hands: 8, awareness: 10, size: 0, afterCatch: 7 },
+    attrs: { speed: 7, blocking: 10, vertical: 7, routeRunning: 8, strength: 8, hands: 8, awareness: 9, size: 0, afterCatch: 7 },
   },
 
   // ─── DENVER BRONCOS ──────────────────────────────────────────────────────
@@ -206,19 +206,19 @@ const _raw = [
   {
     name: 'Riley Odoms',       short: 'Odoms',        team: 'DEN', teamName: 'Denver Broncos',
     skin: '#5e3c22', height: 76, weight: 230, number: 88, starter: true, captain: true, years: '1972–83',
-    attrs: { speed: 7, blocking: 10, vertical: 6, routeRunning: 8, strength: 10, hands: 10, awareness: 10, size: 0, afterCatch: 7 },
+    attrs: { speed: 7, blocking: 10, vertical: 6, routeRunning: 8, strength: 10, hands: 8, awareness: 9, size: 0, afterCatch: 7 },
   },
   {
     name: 'Julius Thomas',     short: 'J. Thomas',    team: 'DEN', teamName: 'Denver Broncos',
     skin: '#5e3c22', height: 77, weight: 250, number: 80, starter: true, captain: true, years: '2011–14',
-    attrs: { speed: 7, blocking: 5, vertical: 9, routeRunning: 8, strength: 5, hands: 9, awareness: 8, size: 7, afterCatch: 5 },
+    attrs: { speed: 7, blocking: 5, vertical: 9, routeRunning: 8, strength: 5, hands: 8, awareness: 8, size: 7, afterCatch: 5 },
   },
 
   // ─── DETROIT LIONS ───────────────────────────────────────────────────────
   {
     name: 'Charlie Sanders',   short: 'C. Sanders',   team: 'DET', teamName: 'Detroit Lions',
     skin: '#5e3c22', height: 76, weight: 230, number: 88, starter: true, captain: true, years: '1968–77',
-    attrs: { speed: 6, blocking: 10, vertical: 8, routeRunning: 10, strength: 10, hands: 10, awareness: 10, size: 0, afterCatch: 8 },
+    attrs: { speed: 6, blocking: 10, vertical: 8, routeRunning: 9, strength: 10, hands: 9, awareness: 10, size: 0, afterCatch: 8 },
   },
   {
     name: 'Sam LaPorta',      short: 'LaPorta',     team: 'DET', teamName: 'Detroit Lions',
@@ -235,7 +235,7 @@ const _raw = [
   {
     name: 'Ron Kramer',        short: 'Kramer',       team: 'GB',  teamName: 'Green Bay Packers',
     skin: '#f0c4a0', height: 75, weight: 234, number: 88, starter: true, captain: true, years: '1957–64',
-    attrs: { speed: 8, blocking: 9, vertical: 6, routeRunning: 6, strength: 9, hands: 10, awareness: 10, size: 0, afterCatch: 5 },
+    attrs: { speed: 8, blocking: 9, vertical: 6, routeRunning: 6, strength: 9, hands: 8, awareness: 9, size: 0, afterCatch: 5 },
   },
   {
     name: 'Jermichael Finley', short: 'Finley',       team: 'GB',  teamName: 'Green Bay Packers',
@@ -245,19 +245,19 @@ const _raw = [
   {
     name: 'Paul Coffman',      short: 'Coffman',      team: 'GB',  teamName: 'Green Bay Packers',
     skin: '#f0c4a0', height: 75, weight: 222, number: 82, starter: true, captain: true, years: '1978–85',
-    attrs: { speed: 7, blocking: 9, vertical: 6, routeRunning: 8, strength: 9, hands: 10, awareness: 9, size: 0, afterCatch: 8 },
+    attrs: { speed: 7, blocking: 9, vertical: 6, routeRunning: 8, strength: 9, hands: 8, awareness: 9, size: 0, afterCatch: 8 },
   },
   {
     name: 'Bubba Franks',      short: 'Franks',       team: 'GB',  teamName: 'Green Bay Packers',
     skin: '#5e3c22', height: 78, weight: 265, number: 89, starter: true, captain: true, years: '2000–07',
-    attrs: { speed: 4, blocking: 10, vertical: 4, routeRunning: 4, strength: 8, hands: 9, awareness: 9, size: 11, afterCatch: 5 },
+    attrs: { speed: 4, blocking: 10, vertical: 4, routeRunning: 4, strength: 8, hands: 8, awareness: 9, size: 11, afterCatch: 5 },
   },
 
   // ─── HOUSTON TEXANS ──────────────────────────────────────────────────────
   {
     name: 'Owen Daniels',      short: 'O. Daniels',   team: 'HOU', teamName: 'Houston Texans',
     skin: '#f0c4a0', height: 75, weight: 243, number: 81, starter: true, captain: true, years: '2006–13',
-    attrs: { speed: 6, blocking: 6, vertical: 6, routeRunning: 8, strength: 6, hands: 10, awareness: 8, size: 3, afterCatch: 8 },
+    attrs: { speed: 6, blocking: 6, vertical: 6, routeRunning: 8, strength: 6, hands: 8, awareness: 8, size: 3, afterCatch: 8 },
   },
   {
     name: 'Dalton Schultz',    short: 'Schultz',      team: 'HOU', teamName: 'Houston Texans',
@@ -274,12 +274,12 @@ const _raw = [
   {
     name: 'John Mackey',       short: 'Mackey',       team: 'IND', teamName: 'Indianapolis Colts',
     skin: '#5e3c22', height: 74, weight: 224, number: 88, starter: true, captain: true, years: '1963–71',
-    attrs: { speed: 9, blocking: 10, vertical: 8, routeRunning: 7, strength: 10, hands: 10, awareness: 10, size: 0, afterCatch: 10 },
+    attrs: { speed: 9, blocking: 10, vertical: 8, routeRunning: 7, strength: 10, hands: 9, awareness: 10, size: 0, afterCatch: 10 },
   },
   {
     name: 'Dallas Clark',      short: 'Dallas Clark', team: 'IND', teamName: 'Indianapolis Colts',
     skin: '#f0c4a0', height: 74, weight: 252, number: 44, starter: true, captain: true, years: '2003–11',
-    attrs: { speed: 8, blocking: 5, vertical: 7, routeRunning: 9, strength: 6, hands: 10, awareness: 8, size: 5, afterCatch: 8 },
+    attrs: { speed: 8, blocking: 5, vertical: 7, routeRunning: 9, strength: 6, hands: 9, awareness: 8, size: 5, afterCatch: 8 },
   },
   {
     name: 'Marcus Pollard',    short: 'Pollard',      team: 'IND', teamName: 'Indianapolis Colts',
@@ -289,7 +289,7 @@ const _raw = [
   {
     name: 'Jack Doyle',        short: 'Doyle',        team: 'IND', teamName: 'Indianapolis Colts',
     skin: '#f0c4a0', height: 78, weight: 259, number: 84, starter: true, captain: true, years: '2013–21',
-    attrs: { speed: 4, blocking: 10, vertical: 3, routeRunning: 6, strength: 8, hands: 9, awareness: 9, size: 9, afterCatch: 3 },
+    attrs: { speed: 4, blocking: 10, vertical: 3, routeRunning: 6, strength: 8, hands: 8, awareness: 9, size: 9, afterCatch: 3 },
   },
 
   // ─── JACKSONVILLE JAGUARS ────────────────────────────────────────────────
@@ -323,7 +323,7 @@ const _raw = [
   {
     name: 'Fred Arbanas',      short: 'Arbanas',      team: 'KC',  teamName: 'Kansas City Chiefs',
     skin: '#f0c4a0', height: 75, weight: 240, number: 84, starter: true, captain: true, years: '1963–70',
-    attrs: { speed: 6, blocking: 10, vertical: 6, routeRunning: 7, strength: 10, hands: 9, awareness: 10, size: 2, afterCatch: 6 },
+    attrs: { speed: 6, blocking: 10, vertical: 6, routeRunning: 7, strength: 10, hands: 8, awareness: 9, size: 2, afterCatch: 6 },
   },
 
   // ─── LAS VEGAS RAIDERS ───────────────────────────────────────────────────
@@ -335,7 +335,7 @@ const _raw = [
   {
     name: 'Dave Casper',       short: 'Casper',       team: 'LV',  teamName: 'Las Vegas Raiders',
     skin: '#f0c4a0', height: 76, weight: 240, number: 87, starter: true, captain: true, years: '1974–80, 1984',
-    attrs: { speed: 6, blocking: 10, vertical: 6, routeRunning: 10, strength: 10, hands: 10, awareness: 10, size: 3, afterCatch: 8 },
+    attrs: { speed: 6, blocking: 10, vertical: 6, routeRunning: 9, strength: 10, hands: 9, awareness: 10, size: 3, afterCatch: 8 },
   },
   {
     name: 'Darren Waller',     short: 'Waller',       team: 'LV',  teamName: 'Las Vegas Raiders',
@@ -403,12 +403,12 @@ const _raw = [
   {
     name: 'Kyle Rudolph',      short: 'Rudolph',      team: 'MIN', teamName: 'Minnesota Vikings',
     skin: '#f0c4a0', height: 78, weight: 265, number: 82, starter: true, captain: true, years: '2011–20',
-    attrs: { speed: 5, blocking: 6, vertical: 7, routeRunning: 7, strength: 6, hands: 9, awareness: 8, size: 11, afterCatch: 4 },
+    attrs: { speed: 5, blocking: 6, vertical: 7, routeRunning: 7, strength: 6, hands: 8, awareness: 8, size: 11, afterCatch: 4 },
   },
   {
     name: 'Steve Jordan',      short: 'S. Jordan',    team: 'MIN', teamName: 'Minnesota Vikings',
     skin: '#5e3c22', height: 75, weight: 230, number: 84, starter: true, captain: true, years: '1982–94',
-    attrs: { speed: 6, blocking: 8, vertical: 7, routeRunning: 10, strength: 8, hands: 10, awareness: 10, size: 0, afterCatch: 8 },
+    attrs: { speed: 6, blocking: 8, vertical: 7, routeRunning: 9, strength: 8, hands: 9, awareness: 9, size: 0, afterCatch: 8 },
   },
   {
     name: 'T.J. Hockenson',   short: 'Hockenson',   team: 'MIN', teamName: 'Minnesota Vikings',
@@ -420,12 +420,12 @@ const _raw = [
   {
     name: 'Rob Gronkowski',    short: 'Gronkowski',   team: 'NE',  teamName: 'New England Patriots',
     skin: '#f0c4a0', height: 78, weight: 265, number: 87, starter: true, captain: true, years: '2010–18',
-    attrs: { speed: 7, blocking: 10, vertical: 8, routeRunning: 9, strength: 9, hands: 11, awareness: 10, size: 11, afterCatch: 11 },
+    attrs: { speed: 7, blocking: 10, vertical: 8, routeRunning: 9, strength: 9, hands: 10, awareness: 10, size: 11, afterCatch: 11 },
   },
   {
     name: 'Ben Coates',        short: 'Coates',       team: 'NE',  teamName: 'New England Patriots',
     skin: '#5e3c22', height: 77, weight: 245, number: 87, starter: true, captain: true, years: '1991–99',
-    attrs: { speed: 7, blocking: 8, vertical: 7, routeRunning: 8, strength: 9, hands: 10, awareness: 8, size: 5, afterCatch: 8 },
+    attrs: { speed: 7, blocking: 8, vertical: 7, routeRunning: 8, strength: 9, hands: 9, awareness: 8, size: 5, afterCatch: 8 },
   },
   {
     name: 'Hunter Henry',      short: 'Henry',        team: 'NE',  teamName: 'New England Patriots',
@@ -442,7 +442,7 @@ const _raw = [
   {
     name: 'Hoby Brenner',      short: 'Brenner',      team: 'NO',  teamName: 'New Orleans Saints',
     skin: '#f0c4a0', height: 76, weight: 240, number: 89, starter: true, captain: true, years: '1981–93',
-    attrs: { speed: 5, blocking: 9, vertical: 4, routeRunning: 6, strength: 8, hands: 9, awareness: 9, size: 3, afterCatch: 5 },
+    attrs: { speed: 5, blocking: 9, vertical: 4, routeRunning: 6, strength: 8, hands: 8, awareness: 9, size: 3, afterCatch: 5 },
   },
   {
     name: 'Jeremy Shockey',    short: 'Shockey',      team: 'NO',  teamName: 'New Orleans Saints',
@@ -459,24 +459,24 @@ const _raw = [
   {
     name: 'Mark Bavaro',       short: 'Bavaro',       team: 'NYG', teamName: 'New York Giants',
     skin: '#f0c4a0', height: 76, weight: 245, number: 89, starter: true, captain: true, years: '1985–90',
-    attrs: { speed: 5, blocking: 10, vertical: 5, routeRunning: 7, strength: 10, hands: 9, awareness: 10, size: 4, afterCatch: 8 },
+    attrs: { speed: 5, blocking: 10, vertical: 5, routeRunning: 7, strength: 10, hands: 8, awareness: 10, size: 4, afterCatch: 8 },
   },
   {
     name: 'Bob Tucker',        short: 'B. Tucker',    team: 'NYG', teamName: 'New York Giants',
     skin: '#f0c4a0', height: 75, weight: 230, number: 44, starter: true, captain: true, years: '1968–76',
-    attrs: { speed: 4, blocking: 7, vertical: 5, routeRunning: 8, strength: 7, hands: 10, awareness: 10, size: 0, afterCatch: 8 },
+    attrs: { speed: 4, blocking: 7, vertical: 5, routeRunning: 8, strength: 7, hands: 8, awareness: 9, size: 0, afterCatch: 8 },
   },
 
   // ─── NEW YORK JETS ───────────────────────────────────────────────────────
   {
     name: 'Rich Caster',       short: 'Caster',       team: 'NYJ', teamName: 'New York Jets',
     skin: '#5e3c22', height: 77, weight: 228, number: 88, starter: true, captain: true, years: '1970–77',
-    attrs: { speed: 9, blocking: 5, vertical: 10, routeRunning: 8, strength: 6, hands: 9, awareness: 7, size: 3, afterCatch: 8 },
+    attrs: { speed: 9, blocking: 5, vertical: 10, routeRunning: 8, strength: 6, hands: 8, awareness: 7, size: 3, afterCatch: 8 },
   },
   {
     name: 'Mickey Shuler',     short: 'Shuler',       team: 'NYJ', teamName: 'New York Jets',
     skin: '#f0c4a0', height: 75, weight: 232, number: 82, starter: true, captain: true, years: '1978–89',
-    attrs: { speed: 5, blocking: 8, vertical: 5, routeRunning: 9, strength: 7, hands: 10, awareness: 10, size: 1, afterCatch: 5 },
+    attrs: { speed: 5, blocking: 8, vertical: 5, routeRunning: 9, strength: 7, hands: 8, awareness: 9, size: 1, afterCatch: 5 },
   },
   {
     name: 'Dustin Keller',     short: 'Keller',       team: 'NYJ', teamName: 'New York Jets',
@@ -488,24 +488,24 @@ const _raw = [
   {
     name: 'Zach Ertz',         short: 'Ertz',         team: 'PHI', teamName: 'Philadelphia Eagles',
     skin: '#f0c4a0', height: 77, weight: 250, number: 86, starter: true, captain: true, years: '2013–19',
-    attrs: { speed: 7, blocking: 5, vertical: 5, routeRunning: 10, strength: 7, hands: 10, awareness: 9, size: 8, afterCatch: 7 },
+    attrs: { speed: 7, blocking: 5, vertical: 5, routeRunning: 10, strength: 7, hands: 9, awareness: 9, size: 8, afterCatch: 7 },
   },
   {
     name: 'Pete Retzlaff',    short: 'Retzlaff',    team: 'PHI', teamName: 'Philadelphia Eagles',
     skin: '#f0c4a0', height: 73, weight: 211, number: 44, starter: true, captain: true, years: '1956–66',
-    attrs: { speed: 8, blocking: 6, vertical: 8, routeRunning: 10, strength: 7, hands: 10, awareness: 10, size: 0, afterCatch: 9 },
+    attrs: { speed: 8, blocking: 6, vertical: 8, routeRunning: 9, strength: 7, hands: 9, awareness: 9, size: 0, afterCatch: 9 },
   },
   {
     name: 'Keith Jackson',     short: 'K. Jackson',   team: 'PHI', teamName: 'Philadelphia Eagles',
     skin: '#5e3c22', height: 74, weight: 242, number: 88, starter: true, captain: true, years: '1988–91',
-    attrs: { speed: 7, blocking: 7, vertical: 6, routeRunning: 9, strength: 8, hands: 10, awareness: 10, size: 2, afterCatch: 9 },
+    attrs: { speed: 7, blocking: 7, vertical: 6, routeRunning: 9, strength: 8, hands: 9, awareness: 9, size: 2, afterCatch: 9 },
   },
 
   // ─── PITTSBURGH STEELERS ─────────────────────────────────────────────────
   {
     name: 'Heath Miller',      short: 'H. Miller',    team: 'PIT', teamName: 'Pittsburgh Steelers',
     skin: '#f0c4a0', height: 77, weight: 256, number: 83, starter: true, captain: true, years: '2005–15',
-    attrs: { speed: 5, blocking: 10, vertical: 5, routeRunning: 5, strength: 8, hands: 9, awareness: 10, size: 8, afterCatch: 6 },
+    attrs: { speed: 5, blocking: 10, vertical: 5, routeRunning: 5, strength: 8, hands: 8, awareness: 10, size: 8, afterCatch: 6 },
   },
   {
     name: 'Eric Green',        short: 'E. Green',     team: 'PIT', teamName: 'Pittsburgh Steelers',
@@ -532,7 +532,7 @@ const _raw = [
   {
     name: 'Brent Jones',       short: 'B. Jones',     team: 'SF',  teamName: 'San Francisco 49ers',
     skin: '#f0c4a0', height: 76, weight: 230, number: 86, starter: true, captain: true, years: '1987–97',
-    attrs: { speed: 7, blocking: 7, vertical: 7, routeRunning: 10, strength: 7, hands: 10, awareness: 10, size: 0, afterCatch: 7 },
+    attrs: { speed: 7, blocking: 7, vertical: 7, routeRunning: 9, strength: 7, hands: 9, awareness: 9, size: 0, afterCatch: 7 },
   },
 
   // ─── SEATTLE SEAHAWKS ────────────────────────────────────────────────────
@@ -556,7 +556,7 @@ const _raw = [
   {
     name: 'Jimmie Giles',      short: 'Giles',        team: 'TB',  teamName: 'Tampa Bay Buccaneers',
     skin: '#5e3c22', height: 75, weight: 233, number: 88, starter: true, captain: true, years: '1978–86',
-    attrs: { speed: 7, blocking: 7, vertical: 8, routeRunning: 9, strength: 8, hands: 10, awareness: 10, size: 0, afterCatch: 8 },
+    attrs: { speed: 7, blocking: 7, vertical: 8, routeRunning: 9, strength: 8, hands: 9, awareness: 9, size: 0, afterCatch: 8 },
   },
   {
     name: 'Cameron Brate',     short: 'Brate',        team: 'TB',  teamName: 'Tampa Bay Buccaneers',
@@ -573,12 +573,12 @@ const _raw = [
   {
     name: 'Delanie Walker',    short: 'D. Walker',    team: 'TEN', teamName: 'Tennessee Titans',
     skin: '#5e3c22', height: 75, weight: 248, number: 82, starter: true, captain: true, years: '2013–19',
-    attrs: { speed: 7, blocking: 7, vertical: 7, routeRunning: 9, strength: 7, hands: 9, awareness: 9, size: 4, afterCatch: 8 },
+    attrs: { speed: 7, blocking: 7, vertical: 7, routeRunning: 9, strength: 7, hands: 8, awareness: 9, size: 4, afterCatch: 8 },
   },
   {
     name: 'Frank Wycheck',     short: 'Wycheck',      team: 'TEN', teamName: 'Tennessee Titans',
     skin: '#f0c4a0', height: 75, weight: 248, number: 82, starter: true, captain: true, years: '1995–03',
-    attrs: { speed: 4, blocking: 6, vertical: 5, routeRunning: 9, strength: 6, hands: 10, awareness: 10, size: 4, afterCatch: 7 },
+    attrs: { speed: 4, blocking: 6, vertical: 5, routeRunning: 9, strength: 6, hands: 9, awareness: 9, size: 4, afterCatch: 7 },
   },
   {
     name: 'Bo Scaife',         short: 'Scaife',       team: 'TEN', teamName: 'Tennessee Titans',
@@ -590,17 +590,17 @@ const _raw = [
   {
     name: 'Chris Cooley',      short: 'Cooley',       team: 'WAS', teamName: 'Washington Commanders',
     skin: '#f0c4a0', height: 75, weight: 245, number: 47, starter: true, captain: true, years: '2004–12',
-    attrs: { speed: 5, blocking: 6, vertical: 6, routeRunning: 8, strength: 7, hands: 10, awareness: 9, size: 3, afterCatch: 6 },
+    attrs: { speed: 5, blocking: 6, vertical: 6, routeRunning: 8, strength: 7, hands: 8, awareness: 9, size: 3, afterCatch: 6 },
   },
   {
     name: 'Jordan Reed',       short: 'J. Reed',      team: 'WAS', teamName: 'Washington Commanders',
     skin: '#5e3c22', height: 74, weight: 236, number: 86, starter: true, captain: true, years: '2013–2018',
-    attrs: { speed: 8, blocking: 4, vertical: 6, routeRunning: 10, strength: 5, hands: 10, awareness: 7, size: 0, afterCatch: 10 },
+    attrs: { speed: 8, blocking: 4, vertical: 6, routeRunning: 10, strength: 5, hands: 8, awareness: 7, size: 0, afterCatch: 10 },
   },
   {
     name: 'Jerry Smith',       short: 'Jerry Smith',  team: 'WAS', teamName: 'Washington Commanders',
     skin: '#f0c4a0', height: 76, weight: 215, number: 87, starter: true, captain: true, years: '1965–77',
-    attrs: { speed: 6, blocking: 6, vertical: 6, routeRunning: 9, strength: 6, hands: 10, awareness: 9, size: 0, afterCatch: 8 },
+    attrs: { speed: 6, blocking: 6, vertical: 6, routeRunning: 9, strength: 6, hands: 8, awareness: 9, size: 0, afterCatch: 8 },
   },
 
 ]

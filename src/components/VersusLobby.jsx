@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { supabase, rtSupabase } from '../lib/supabase'
 import Navbar from './Navbar'
+import { getUsername } from '../lib/discord'
 
 const rt = rtSupabase || supabase
 
@@ -78,7 +79,7 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
   function makeChannel(name) {
     return rt.channel(name, { config: { presence: { key: myId } } })
   }
-  const myName = user?.user_metadata?.username || user?.email?.split('@')[0] || null
+  const myName = getUsername(user) || null
 
   useEffect(() => {
     document.documentElement.setAttribute('data-page', 'versus-lobby')
@@ -626,7 +627,7 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
         <div className="vlh-stat-card">
           <div className="vlh-stat-left">
             <div className="vlh-stat-name">
-              {user ? (user.user_metadata?.username || user.email?.split('@')[0]) : 'Sign in to track stats'}
+              {user ? (getUsername(user)) : 'Sign in to track stats'}
             </div>
           </div>
           <div className="vlh-stat-record">

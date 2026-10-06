@@ -1,5 +1,8 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { signInWithDiscord } from '../lib/discord'
+import { IconDiscord } from './Navbar'
+import { IS_APP } from '../lib/platform'
 
 // Supabase requires an email internally — we derive one from the username silently
 const toEmail = (username) => `${username.trim().toLowerCase()}@buildaplayer.app`
@@ -15,6 +18,13 @@ export default function AuthModal({ onClose, onAuth }) {
   const [loading, setLoading]         = useState(false)
 
   const reset = () => setError(null)
+
+  const handleDiscord = async () => {
+    if (!supabase) return
+    setLoading(true); setError(null)
+    const { error } = await signInWithDiscord()   // leaves for Discord on success
+    if (error) { setError('Could not reach Discord. Try again.'); setLoading(false) }
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -86,6 +96,18 @@ export default function AuthModal({ onClose, onAuth }) {
           <button className={`auth-tab ${tab === 'signin' ? 'active' : ''}`} onClick={() => { setTab('signin'); reset() }}>Sign In</button>
           <button className={`auth-tab ${tab === 'signup' ? 'active' : ''}`} onClick={() => { setTab('signup'); reset() }}>Create Account</button>
         </div>
+
+        {/* Discord sign-in returns to a web URL — hidden in the iOS/Android app until it has its own redirect */}
+        {!IS_APP && (
+          <>
+            <button type="button" className="auth-discord" onClick={handleDiscord} disabled={loading}>
+              <IconDiscord />
+              <span>Continue with Discord</span>
+            </button>
+            <div className="auth-discord-note">Also joins you to the Build-A-Player Discord</div>
+            <div className="auth-or"><span>or</span></div>
+          </>
+        )}
 
         <form className="auth-form" onSubmit={handleSubmit}>
           <div className="auth-field">

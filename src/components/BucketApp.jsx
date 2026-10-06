@@ -33,6 +33,7 @@ import CustomRatingsModal from './CustomRatingsModal'
 import SiteFooter from './SiteFooter'
 import SiteFeatures from './SiteFeatures'
 import { IS_APP } from '../lib/platform'
+import { finishDiscordSignIn, getUsername } from '../lib/discord'
 const VersusLobby        = lazy(() => import('./VersusLobby'))
 const BucketVersusResult = lazy(() => import('./BucketVersusResult'))
 const VsPvPLeaderboard   = lazy(() => import('./VsPvPLeaderboard'))
@@ -77,6 +78,7 @@ function enableAdFreeMode() {
 }
 
 // Early call — fires before Ramp initializes so forceUnits takes effect
+const START_ON_SALARY = window.location.pathname === '/bucket/salary'
 // The app has no web ads (Ramp does not serve in-app), so it always runs ad-free here.
 try { if (IS_APP || localStorage.getItem('bap_subscribed') === '1' || localStorage.getItem('bap_ads_off') === '1') enableAdFreeMode() } catch {}
 
@@ -500,6 +502,12 @@ export default function BucketApp() {
         setPage(prev => prev === 'leaderboard' ? 'game' : prev)
         changed = true
       }
+      if (path === '/bucket/salary') {
+        // back from the leaderboard / profile / a sim opened from Salary Cap
+        setPage(prev => prev === 'splash' ? prev : 'salarycap')
+      } else {
+        setPage(prev => prev === 'salarycap' ? 'splash' : prev)
+      }
       if (changed) window.scrollTo({ top: 0, behavior: 'instant' })
     }
     window.addEventListener('popstate', handlePop)
@@ -512,12 +520,12 @@ export default function BucketApp() {
   // whether the path starts with /bucket). Purely a URL sync layer; doesn't
   // touch page state, the existing ramp queue calls, or any nav logic.
   useEffect(() => {
-    const targetPath = page === 'sim' ? '/bucket/simulate' : page === 'leaderboard' ? '/bucket/leaderboard' : null
+    const targetPath = page === 'sim' ? '/bucket/simulate' : page === 'leaderboard' ? '/bucket/leaderboard' : page === 'salarycap' ? '/bucket/salary' : null
     if (targetPath) {
       if (window.location.pathname !== targetPath) {
         window.history.pushState({}, '', targetPath)
       }
-    } else if (window.location.pathname === '/bucket/simulate' || window.location.pathname === '/bucket/leaderboard') {
+    } else if (window.location.pathname === '/bucket/simulate' || window.location.pathname === '/bucket/leaderboard' || window.location.pathname === '/bucket/salary') {
       window.history.replaceState({}, '', '/bucket')
     }
   }, [page])
@@ -532,17 +540,20 @@ export default function BucketApp() {
     window.ramp?.que?.push(() => {
       if (page === 'splash') {
         try { window.ramp.destroyUnits(RAMP_AD_UNITS) } catch {}
+      } else if (page === 'sim' || page === 'salarycap') {
+        // Playwire (2026-10, per TS): one spaAds call re-adds the units, counts
+        // the pageview and sets the path explicitly (this effect runs before the
+        // URL-sync effect pushes the path). Replaces spaNewPage() here.
+        try {
+          window.ramp.spaAds({
+            ads: [{ type: 'corner_ad_video' }, { type: 'left_rail' }, { type: 'bottom_rail' }],
+            countPageview: true,
+            path: page === 'salarycap' ? '/bucket/salary' : '/bucket/simulate',
+          })
+        } catch {}
       } else {
         window.ramp.spaNewPage()
-      }
-      // Playwire left_rail (2026-09, per Abhi/TS): live only on the sim
-      // results page, destroyed the moment the user navigates anywhere else.
-      // corner_ad_video is already showing on every page on Playwire's end
-      // regardless of what we call here, so it's no longer requested/destroyed
-      // from this side.
-      if (page === 'sim') {
-        try { window.ramp.spaAddAds({ type: 'left_rail' }) } catch {}
-      } else if (page !== 'splash') {
+        // left_rail only runs on the sim page and Salary Cap — destroyed everywhere else
         try { window.ramp.destroyUnits(['left_rail']) } catch {}
       }
     })
@@ -603,6 +614,8 @@ export default function BucketApp() {
     })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
       setUser(session?.user ?? null)
+      // Back from Discord sign-in: join the server, and pick up a Discord account's new username
+      finishDiscordSignIn(session).then(u => { if (u) setUser(u) })
     })
     return () => subscription.unsubscribe()
   }, [])
@@ -661,6 +674,12 @@ export default function BucketApp() {
     setPage(mode === 'salarycap' ? 'salarycap' : 'game')
     window.scrollTo(0, 0)
   }, [isBucketCustomMode])
+
+  // Opened (or refreshed) straight on /bucket/salary → go to Salary Cap. Read
+  // at load: the URL-sync effect resets the path to /bucket on the first render.
+  useEffect(() => {
+    if (START_ON_SALARY) handleStart('salarycap')
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSalaryCapConfirm = useCallback((capBuild, skipToEnd = false, dateStr = null, saveData = null, capPosition = null) => {
     if (dateStr) setSalaryReturnDate(dateStr)
@@ -786,7 +805,7 @@ export default function BucketApp() {
     )
     supabase.from('simulations').insert({
       user_id:     user.id,
-      username:    user.user_metadata?.username || user.email?.split('@')[0],
+      username:    getUsername(user),
       ovr:         result.ovr,
       archetype,
       game_mode:   gameMode === 'all-time' ? 'bucket-all-time' : 'bucket-classic',
@@ -933,7 +952,7 @@ export default function BucketApp() {
             const winOvr = calcBucketOVR(b, VERSUS_POS_TYPES[pos] ?? VERSUS_GUARD_TYPES, pos)
             if (winOvr > 0) supabase.from('vs_results').insert({
               user_id:    u.id,
-              username:   u.user_metadata?.username || u.email?.split('@')[0],
+              username:   getUsername(u),
               result:     'win',
               ovr:        winOvr,
               position:   pos,
@@ -987,7 +1006,7 @@ export default function BucketApp() {
           const vsId = sessionStorage.getItem('bap_vs_id')
           const uid  = user?.id
           const vid  = uid ? `${uid}-${vsId}` : vsId
-          const name = user?.user_metadata?.username || user?.email?.split('@')[0] || 'Your Build'
+          const name = getUsername(user) || 'Your Build'
           if (vid) channel.track({ vid, name }).catch?.(() => {})
         }
       } else if ((s === 'TIMED_OUT' || s === 'CHANNEL_ERROR') && !channel._bc && chRetries < 5) {
@@ -1053,7 +1072,7 @@ export default function BucketApp() {
           const winOvr = calcBucketOVR(b, VERSUS_POS_TYPES[pos] ?? VERSUS_GUARD_TYPES, pos)
           if (winOvr > 0) supabase.from('vs_results').insert({
             user_id:    u.id,
-            username:   u.user_metadata?.username || u.email?.split('@')[0],
+            username:   getUsername(u),
             result:     'win',
             ovr:        winOvr,
             position:   pos,
@@ -1100,7 +1119,7 @@ export default function BucketApp() {
         const winOvr = calcBucketOVR(b, VERSUS_POS_TYPES[pos] ?? VERSUS_GUARD_TYPES, pos)
         if (winOvr > 0) supabase.from('vs_results').insert({
           user_id:  u.id,
-          username: u.user_metadata?.username || u.email?.split('@')[0],
+          username: getUsername(u),
           result:   'win',
           ovr:      winOvr,
           position: pos,
@@ -1131,7 +1150,7 @@ export default function BucketApp() {
   function vsResultPayload(result) {
     return {
       user_id:    user.id,
-      username:   user.user_metadata?.username || user.email?.split('@')[0],
+      username:   getUsername(user),
       result,
       ovr:        calcBucketOVR(build, activeTypes, position),
       position,
@@ -1208,7 +1227,7 @@ export default function BucketApp() {
     return (
       <Suspense fallback={null}>
         <BucketVersusResult
-          myData={{ build, player: savedSpinResult, name: user?.user_metadata?.username || user?.email?.split('@')[0] || 'Your Build' }}
+          myData={{ build, player: savedSpinResult, name: getUsername(user) || 'Your Build' }}
           oppData={{ build: oppBuild, player: oppPlayer, name: versusRoom?.oppName || 'Opponent' }}
           position={position}
           oppPosition={oppPosition}
@@ -1556,7 +1575,7 @@ export default function BucketApp() {
             <div className="vs-prompt-eyebrow">HEAD TO HEAD</div>
             <div className="vs-prompt-matchup">
               <div className="vs-prompt-side">
-                <div className="vs-prompt-name">{user?.user_metadata?.username || user?.email?.split('@')[0] || 'You'}</div>
+                <div className="vs-prompt-name">{getUsername(user) || 'You'}</div>
                 <div className="vs-prompt-record">
                   {vsRecord.wins}W – {vsRecord.losses}L
                 </div>
