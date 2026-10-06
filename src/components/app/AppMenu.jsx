@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { supabase } from '../../lib/supabase'
 import FeedbackModal from '../FeedbackModal'
+import { isMuted, setMuted } from '../../lib/juice'
 import { IconQuestion, IconInfo, IconChat, IconDiscord, IconX, IconFootball, IconBasketball, IconClose, IconSpin, IconStar, IconBuild, IconTrophy, IconShield, IconDoc } from './icons'
 
 // App "Menu" panel (from the dock): big colorful tiles + a How to Play view.
@@ -28,6 +29,7 @@ function Tile({ color, Icon, title, sub, onClick, delay }) {
 export default function AppMenu({ sport, onClose }) {
   const [view, setView] = useState('menu')            // 'menu' | 'howto'
   const [feedbackUser, setFeedbackUser] = useState(null) // null = closed
+  const [muted, setMutedState] = useState(isMuted)
   const isBucket = sport === 'bucket'
 
   const openFeedback = async () => {
@@ -77,6 +79,11 @@ export default function AppMenu({ sport, onClose }) {
                 onClick={go(() => { try { localStorage.removeItem('bap_progress') } catch {}; window.location.href = isBucket ? '/' : '/bucket' })} delay="160ms" />
               <Tile color="steel" Icon={IconInfo} title="ABOUT" sub="The game" onClick={go(() => nav('about'))} delay="200ms" />
             </div>
+            <button className={`ag-sound${muted ? ' ag-sound--off' : ''}`} onClick={() => { setMuted(!muted); setMutedState(!muted) }}>
+              <span className="ag-sound-lbl">SOUND</span>
+              <span className="ag-sound-switch"><span className="ag-sound-knob" /></span>
+              <span className="ag-sound-state">{muted ? 'OFF' : 'ON'}</span>
+            </button>
             <div className="ag-menu-links">
               <button onClick={go(() => { window.location.href = '/privacy' })}><IconShield size={15} /> Privacy</button>
               <button onClick={go(() => { window.location.href = '/terms' })}><IconDoc size={15} /> Terms</button>

@@ -32,6 +32,8 @@ import { IS_APP } from './lib/platform'
 import AppTabBar from './components/AppTabBar.jsx'
 
 if (IS_APP) document.documentElement.classList.add('is-app')
+// App: sound effects, haptics and confetti (lib/juice.js)
+if (IS_APP) import('./lib/juice').then(m => m.initJuice()).catch(() => {})
 
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.getRegistrations().then(regs => {
