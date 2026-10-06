@@ -34,8 +34,11 @@ All of this is switched by `IS_APP` in `src/lib/platform.js`. On the website non
    Name the key exactly **Build-A-Player**, then paste the Issuer ID and Key ID and upload the `.p8`.
 3. **Create the signing certificate.** Go to Team settings → codemagic.yaml settings → Code signing identities → iOS certificates → **Generate certificate**.
    Choose Apple Distribution. Codemagic creates and stores it, so no Mac is needed.
-   Then go to iOS provisioning profiles → **Fetch profiles**. If none exist yet, the first build creates an App Store profile for `com.buildaplayer.app`.
-4. **Add environment variables.** Go to the app → Environment variables and add a group called **supabase** containing:
+4. **Create the provisioning profile** on Apple's website, which works without a Mac. Go to [developer.apple.com](https://developer.apple.com/account/resources/profiles/list) → Profiles → **+**.
+   Choose **App Store Connect** under Distribution, then the App ID `com.buildaplayer.app`, then the Apple Distribution certificate Codemagic just made (it has today's date).
+   Name it "Build-A-Player App Store" and click Generate. You don't need to download it.
+5. **Bring the profile into Codemagic.** Go back to Code signing identities → iOS provisioning profiles → **Fetch profiles**, then tick "Build-A-Player App Store" and save it.
+6. **Add environment variables.** Go to the app → Environment variables and add a group called **supabase** containing:
    - `VITE_SUPABASE_URL`
    - `VITE_SUPABASE_ANON_KEY`
 
