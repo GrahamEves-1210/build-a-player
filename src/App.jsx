@@ -290,7 +290,8 @@ export default function App() {
         if (gameMode) setPage(simResult ? 'sim' : 'game')
         else { let p = 'qb'; try { p = localStorage.getItem('lastPosition') || 'qb' } catch {}; handleStart('classic', p) }   // quick play
       } else if (to === 'leaderboard') setPage('leaderboard')
-      else if (to === 'profile') { if (user) { window.history.pushState({}, '', '/profile'); setPage('profile') } else setShowAuth(true) }
+      // signed out: the dock shows sign-in itself, since only some pages render AuthModal
+      else if (to === 'profile') { if (user) { window.history.pushState({}, '', '/profile'); setPage('profile') } else window.dispatchEvent(new CustomEvent('bap:auth')) }
       else if (to === 'about') setPage('about')
       window.scrollTo({ top: 0, behavior: 'instant' })
     }

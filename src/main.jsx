@@ -42,6 +42,7 @@ if ('serviceWorker' in navigator) {
 }
 
 const isBucket = window.location.pathname.startsWith('/bucket')
+if (IS_APP && isBucket) document.documentElement.classList.add('is-bucket')   // app theme: orange accent
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

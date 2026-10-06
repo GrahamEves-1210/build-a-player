@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { IS_APP } from '../lib/platform'
 import AppMenu from './app/AppMenu'
+import AuthModal from './AuthModal'
 import { IconHome, IconTrophy, IconPlay, IconProfile, IconMenu } from './app/icons'
 
 // iOS/Android app only: floating game dock (Home · Leaders · PLAY · Profile ·
@@ -28,11 +29,14 @@ function Tab({ label, Icon, active, onClick }) {
 export default function AppTabBar() {
   const [state, setState]       = useState(() => window.__bapPage ?? { page: 'splash', sport: 'nfl' })
   const [menuOpen, setMenuOpen] = useState(false)
+  const [authOpen, setAuthOpen] = useState(false)
 
   useEffect(() => {
     const onPage = e => setState(e.detail)
+    const onAuth = () => { setMenuOpen(false); setAuthOpen(true) }
     window.addEventListener('bap:page', onPage)
-    return () => window.removeEventListener('bap:page', onPage)
+    window.addEventListener('bap:auth', onAuth)
+    return () => { window.removeEventListener('bap:page', onPage); window.removeEventListener('bap:auth', onAuth) }
   }, [])
 
   if (!IS_APP || HIDE_ON.has(state.page)) return null
@@ -53,6 +57,8 @@ export default function AppTabBar() {
         <Tab label="Menu" Icon={IconMenu} active={active === 'menu'} onClick={() => setMenuOpen(o => !o)} />
       </nav>
       {menuOpen && <AppMenu sport={state.sport} onClose={() => setMenuOpen(false)} />}
+      {/* The games pick up the new session from Supabase's auth listener; then open the profile */}
+      {authOpen && <AuthModal onClose={() => setAuthOpen(false)} onAuth={() => setTimeout(() => nav('profile'), 400)} />}
     </>
   )
 }
