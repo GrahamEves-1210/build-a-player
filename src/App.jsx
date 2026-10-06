@@ -272,21 +272,27 @@ export default function App() {
 
   useEffect(() => {
     window.ramp?.que?.push(() => {
+      // Same page === 'sim' && simResult check the URL-sync effect below uses
+      // to decide the page is actually /simulate.
+      const onSimulate = page === 'sim' && !!simResult
       if (page === 'splash') {
         try { window.ramp.destroyUnits(RAMP_AD_UNITS) } catch {}
+      } else if (onSimulate || page === 'depth-chart') {
+        // Playwire (2026-10, per TS): one spaAds call re-adds the units, counts
+        // the pageview and sets the path explicitly — this effect runs before
+        // the URL-sync effect pushes the path, so Ramp otherwise read the old
+        // one. Replaces spaNewPage() here (it already counts the pageview).
+        // Ad-free players keep forceUnits 'off', which also covers these units.
+        try {
+          window.ramp.spaAds({
+            ads: [{ type: 'corner_ad_video' }, { type: 'left_rail' }, { type: 'bottom_rail' }],
+            countPageview: true,
+            path: onSimulate ? '/simulate' : '/depth-chart',
+          })
+        } catch {}
       } else {
         window.ramp.spaNewPage()
-      }
-      // Playwire left_rail (2026-09, per Abhi/TS): live only on /simulate
-      // (same page === 'sim' && simResult check the URL-sync effect below uses
-      // to decide the page is actually /simulate) — destroyed the moment the
-      // user navigates anywhere else. corner_ad_video is already showing on
-      // every page on Playwire's end regardless of what we call here, so it's
-      // no longer requested/destroyed from this side.
-      const onSimulate = page === 'sim' && !!simResult
-      if (onSimulate) {
-        try { window.ramp.spaAddAds({ type: 'left_rail' }) } catch {}
-      } else if (page !== 'splash') {
+        // left_rail only runs on /simulate and /depth-chart — destroyed everywhere else
         try { window.ramp.destroyUnits(['left_rail']) } catch {}
       }
     })

@@ -47,7 +47,7 @@ export const NBA_BIG_PLAYERS = [
   { name: 'Hannes Steinbach', short: 'Steinbach', team: 'CHA', starter: false, captain: false, number: 17, height: 81, weight: 225, wingspan: 85, skin: '#a67f6b', position: 'PF', faceCenter: [50, 37],
     attrs: { jumpShot: 3, finishing: 5, rebounding: 5, playmaking: 2, interiorDefense: 5, speed: 3, bounce: 3, size: 6, basketballIQ: 3, clutch: 3 } },
   { name: 'Grant Williams', short: 'Williams', team: 'CHA', starter: true, captain: false, number: 2, height: 78, weight: 236, wingspan: 84, skin: '#d29979', position: 'PF', faceCenter: [50, 43],
-    attrs: { jumpShot: 5, finishing: 5, rebounding: 4, playmaking: 3, interiorDefense: 3, speed: 4, bounce: 3, size: 5, basketballIQ: 6, clutch: 3 } },
+    attrs: { jumpShot: 5, finishing: 5, rebounding: 4, playmaking: 3, interiorDefense: 6, speed: 4, bounce: 3, size: 5, basketballIQ: 6, clutch: 3 } },
 
   // ─── CHI ───────────────────────────────────────────────────────
   { name: 'Nic Claxton', short: 'Claxton', team: 'CHI', starter: true, captain: false, number: 33, height: 83, weight: 215, wingspan: 86, skin: '#a26e57', position: 'C', faceCenter: [49, 39], faceAdjust: { dx: 1, dy: 0, scale: 1 },
