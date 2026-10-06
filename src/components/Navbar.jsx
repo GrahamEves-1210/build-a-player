@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { CAN_SELL_PLUS } from '../lib/platform'
 
 const STEPS_DESKTOP = (isRB, isWR, isTE, isDB, isOL) => [
   { n: '1', title: 'Spin',      body: `Pull a random NFL team, then a${isOL ? 'n OL' : isWR ? ' WR' : isRB ? 'n RB' : isTE ? ' TE' : isDB ? ' DB' : 'n QB'} from their roster.` },
@@ -417,7 +418,7 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
               <span className="wm-label">Leaderboard</span>
             </button>
 
-            {!isPlus && (
+            {!isPlus && CAN_SELL_PLUS && (
               <>
                 <div className="wm-divider" />
                 <button

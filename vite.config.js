@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   build: {
     rollupOptions: {
       output: {
@@ -21,5 +21,12 @@ export default defineConfig({
   },
   plugins: [
     react(),
-  ],
-})
+    // The iOS/Android build (npm run build:app) ships without Ramp's web ad
+    // script — web ad units don't serve inside an app. In-app ads come from
+    // Playwire's app SDK instead.
+    mode === 'app' && {
+      name: 'strip-web-ads',
+      transformIndexHtml: html => html.replace(/\s*<script[^>]*ramp\.js[^>]*><\/script>/, ''),
+    },
+  ].filter(Boolean),
+}))

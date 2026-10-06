@@ -32,6 +32,7 @@ import ProfilePage from './ProfilePage'
 import CustomRatingsModal from './CustomRatingsModal'
 import SiteFooter from './SiteFooter'
 import SiteFeatures from './SiteFeatures'
+import { IS_APP } from '../lib/platform'
 const VersusLobby        = lazy(() => import('./VersusLobby'))
 const BucketVersusResult = lazy(() => import('./BucketVersusResult'))
 const VsPvPLeaderboard   = lazy(() => import('./VsPvPLeaderboard'))
@@ -76,7 +77,8 @@ function enableAdFreeMode() {
 }
 
 // Early call — fires before Ramp initializes so forceUnits takes effect
-try { if (localStorage.getItem('bap_subscribed') === '1' || localStorage.getItem('bap_ads_off') === '1') enableAdFreeMode() } catch {}
+// The app has no web ads (Ramp does not serve in-app), so it always runs ad-free here.
+try { if (IS_APP || localStorage.getItem('bap_subscribed') === '1' || localStorage.getItem('bap_ads_off') === '1') enableAdFreeMode() } catch {}
 
 const HoopU = () => (
   <svg className="hoop-u-svg" viewBox="0 0 68 90" fill="none" aria-hidden="true">
@@ -354,7 +356,7 @@ export default function BucketApp() {
   const [gameKey, setGameKey]         = useState(0)
   const [mobileView, setMobileView]   = useState('spin')
   const [user, setUser]               = useState(null)
-  const [adsDisabled, setAdsDisabled] = useState(false)
+  const [adsDisabled, setAdsDisabled] = useState(IS_APP)
   const [isSubscribed, setIsSubscribed] = useState(() => { try { return localStorage.getItem('bap_subscribed') === '1' } catch { return false } })
   const [showAuth, setShowAuth]       = useState(false)
   const [spinPhase, setSpinPhase]     = useState('idle')

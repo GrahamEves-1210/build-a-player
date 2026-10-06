@@ -39,6 +39,7 @@ import { track } from './lib/track'
 import CustomRatingsModal from './components/CustomRatingsModal'
 import SiteFooter from './components/SiteFooter'
 import SiteFeatures from './components/SiteFeatures'
+import { IS_APP } from './lib/platform'
 
 const _dd = arr => { const s = new Set(); return arr.filter(p => { const k = `${p.name}|${p.team}`; if (s.has(k)) return false; s.add(k); return true }) }
 const _bt = (a, b) => a.team.localeCompare(b.team) || a.name.localeCompare(b.name)
@@ -103,7 +104,8 @@ function enableAdFreeMode() {
 }
 
 // Early call — fires before Ramp initializes so forceUnits takes effect
-try { if (localStorage.getItem('bap_subscribed') === '1' || localStorage.getItem('bap_ads_off') === '1') enableAdFreeMode() } catch {}
+// The app has no web ads (Ramp does not serve in-app), so it always runs ad-free here.
+try { if (IS_APP || localStorage.getItem('bap_subscribed') === '1' || localStorage.getItem('bap_ads_off') === '1') enableAdFreeMode() } catch {}
 
 export default function App() {
   const [page, setPage]               = useState(_sharedData ? 'shared' : _isPrivacy ? 'privacy' : _isTerms ? 'terms' : _isProfile ? 'profile' : _isAbout ? 'about' : _isDepthChart ? 'depth-chart' : (_saved?.gameMode ? 'game' : 'splash'))
@@ -127,7 +129,7 @@ export default function App() {
     try { return JSON.parse(localStorage.getItem('bap_spin_result')) } catch { return null }
   })
   const [spinPhase, setSpinPhase] = useState('idle')
-  const [adsDisabled, setAdsDisabled] = useState(false)
+  const [adsDisabled, setAdsDisabled] = useState(IS_APP)
   const [isSubscribed, setIsSubscribed] = useState(() => {
     try { return localStorage.getItem('bap_subscribed') === '1' } catch { return false }
   })

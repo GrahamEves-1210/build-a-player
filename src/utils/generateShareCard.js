@@ -1,4 +1,5 @@
 import { getBucketSVGMarkup } from '../components/BucketFigureOverlay'
+import { IS_APP, shareNative } from '../lib/platform'
 
 // val 0–11 → F D C- C C+ B- B B+ A- A A+ S
 const GRADES = ['F','D','C-','C','C+','B-','B','B+','A-','A','A+','S']
@@ -197,6 +198,7 @@ export async function shareOrDownloadCard(canvas, ovr, arch) {
   return new Promise((resolve) => {
     canvas.toBlob(async (blob) => {
       if (!blob) { resolve('error'); return }
+      if (IS_APP) { resolve(await shareNative({ title: `${ovr} OVR · ${arch}`, blob, filename })); return }
       const file = new File([blob], filename, { type: 'image/png' })
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
         try {

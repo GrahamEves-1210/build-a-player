@@ -27,6 +27,9 @@ import './index.css'
 import App from './App.jsx'
 import BucketApp from './components/BucketApp.jsx'
 import ErrorBoundary from './components/ErrorBoundary.jsx'
+import { IS_APP } from './lib/platform'
+
+if (IS_APP) document.documentElement.classList.add('is-app')
 
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.getRegistrations().then(regs => {
@@ -44,7 +47,7 @@ createRoot(document.getElementById('root')).render(
       <HelmetProvider>
         {isBucket ? <BucketApp /> : <App />}
       </HelmetProvider>
-      <Analytics />
+      {!IS_APP && <Analytics />}
     </ErrorBoundary>
   </StrictMode>,
 )

@@ -100,6 +100,8 @@ import { WR_TYPES, WR_ATTR } from '../data/wrs'
 import { TE_ATTR } from '../data/tes'
 import { DB_ATTR } from '../data/dbs'
 import { OL_ATTR } from '../data/ols'
+import { CAN_SELL_PLUS } from '../lib/platform'
+import DeleteAccount from './DeleteAccount'
 
 function useCountUp(target, duration = 900, enabled = true) {
   const [val, setVal] = useState(0)
@@ -791,14 +793,16 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
         <div className="prf-top-nav">
           <button className="prf-top-back" onClick={onBack}>← Back to Build</button>
           <div className="prf-plus-wrap" ref={plusRef}>
-            <button
-              className={`prf-top-adfree${isPlus ? ' prf-top-adfree--on' : ''}`}
-              onClick={isPlus ? undefined : () => setPlusOpen(o => !o)}
-              style={isPlus ? { cursor: 'default' } : undefined}
-            >
-              {isPlus ? '✦ PLUS Active' : '✦ Build-A-Player Plus'}
-            </button>
-            {!isPlus && plusOpen && (
+            {(isPlus || CAN_SELL_PLUS) && (
+              <button
+                className={`prf-top-adfree${isPlus ? ' prf-top-adfree--on' : ''}`}
+                onClick={isPlus ? undefined : () => setPlusOpen(o => !o)}
+                style={isPlus ? { cursor: 'default' } : undefined}
+              >
+                {isPlus ? '✦ PLUS Active' : '✦ Build-A-Player Plus'}
+              </button>
+            )}
+            {!isPlus && CAN_SELL_PLUS && plusOpen && (
               <div className="prf-plus-dropdown">
                 <div className="wm-plus-body">
                   {[
@@ -916,9 +920,11 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
 
 
 
-              <button className="plus-manage-btn" onClick={handleManageSubscription}>
-                Manage Subscription
-              </button>
+              {CAN_SELL_PLUS && (
+                <button className="plus-manage-btn" onClick={handleManageSubscription}>
+                  Manage Subscription
+                </button>
+              )}
 
             </div>
         </div>
@@ -1559,6 +1565,7 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
             </form>
           )}
           <button className="prf-signout-btn" onClick={handleSignOut}>Sign Out</button>
+          <DeleteAccount onDeleted={() => onSignOut?.()} />
         </div>
 
       </div>

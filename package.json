@@ -6,10 +6,19 @@
   "scripts": {
     "dev": "vite",
     "build": "node scripts/compress-images.mjs && vite build && node scripts/strip-dist-headshots.mjs && node scripts/prerender-bucket.mjs",
+    "build:app": "node scripts/compress-images.mjs && vite build --mode app && node scripts/strip-dist-headshots.mjs && cap sync",
+    "assets:app": "capacitor-assets generate --ios --android --iconBackgroundColor \"#090a0d\" --iconBackgroundColorDark \"#090a0d\" --splashBackgroundColor \"#090a0d\" --splashBackgroundColorDark \"#090a0d\"",
     "preview": "vite preview",
     "headshots": "node scripts/fetch-headshots.js"
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/core": "^8.5.2",
+    "@capacitor/filesystem": "^8.1.4",
+    "@capacitor/ios": "^8.5.2",
+    "@capacitor/share": "^8.0.3",
+    "@capacitor/splash-screen": "^8.0.2",
+    "@capacitor/status-bar": "^8.0.4",
     "@stripe/stripe-js": "^9.8.0",
     "@supabase/supabase-js": "^2.108.2",
     "@vercel/analytics": "^2.0.1",
@@ -21,6 +30,8 @@
     "stripe": "^22.3.0"
   },
   "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^8.5.2",
     "@vitejs/plugin-react": "^4.3.1",
     "jimp": "^1.6.1",
     "sharp": "^0.35.3",

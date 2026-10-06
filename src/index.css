@@ -1577,6 +1577,9 @@ a:focus-visible {
 .build-footer-section .build-site-features { display: none; }
 @media (max-width: 768px) {
   .build-footer-section { margin-top: -75px; }
+  /* The app has no ads, so the 60px ad slot this margin tucks under isn't there —
+     give the space back so the footer clears the floating SPIN/BUILD bar. */
+  html.is-app .build-footer-section { margin-top: -11px; }
 }
 @media (min-width: 769px) {
   .build-footer-section .build-site-features { display: grid; }
@@ -11588,6 +11591,44 @@ html.is-touch .bd-card-main:hover         { background: transparent !important; 
   border-color: rgba(232,25,44,0.45);
   color: #ff4458;
 }
+/* Delete account — quiet link under Sign Out, opens an inline confirmation */
+.prf-delete-link {
+  align-self: center;
+  margin-top: 4px;
+  padding: 6px 10px;
+  background: none;
+  border: none;
+  color: var(--text-3);
+  font-size: 12px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.prf-delete-link:hover { color: #ff4458; }
+.prf-delete-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(232,25,44,0.3);
+  background: rgba(232,25,44,0.06);
+}
+.prf-delete-title { font-size: 14px; font-weight: 800; color: #ff4458; text-align: center; }
+.prf-delete-body  { margin: 0; font-size: 12px; line-height: 1.5; color: var(--text-2); text-align: center; }
+.prf-delete-btn {
+  flex: 1;
+  padding: 13px 0;
+  border-radius: 10px;
+  border: none;
+  background: #d9142a;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  cursor: pointer;
+}
+.prf-delete-btn:disabled, .prf-delete-confirm .prf-changepw-cancel:disabled { opacity: 0.6; cursor: default; }
 .prf-changepw-btn {
   flex: 1;
   padding: 13px 0;

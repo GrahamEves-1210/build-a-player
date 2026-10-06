@@ -1,0 +1,59 @@
+# Cloud builds for the iOS and Android apps (codemagic.io) — no Mac needed.
+# One-time setup in Codemagic is listed in APP.md. Builds start by hand from the Codemagic
+# dashboard (pick the `app` branch).
+
+workflows:
+  ios-release:
+    name: iOS → TestFlight
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    integrations:
+      app_store_connect: Build-A-Player        # App Store Connect API key, added in Codemagic → Team integrations
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.buildaplayer.app
+      groups:
+        - supabase                              # VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY
+      node: 22
+      xcode: latest
+    scripts:
+      - name: Install packages
+        script: npm ci
+      - name: Build the web app and copy it into the native projects
+        script: npm run build:app
+      - name: Apply App Store signing
+        script: xcode-project use-profiles
+      - name: Build the .ipa
+        script: |
+          xcode-project build-ipa \
+            --project ios/App/App.xcodeproj \
+            --scheme App \
+            --archive-xcargs "CURRENT_PROJECT_VERSION=$PROJECT_BUILD_NUMBER"
+    artifacts:
+      - build/ios/ipa/*.ipa
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+
+  android-release:
+    name: Android → Play Store bundle
+    instance_type: linux_x2
+    max_build_duration: 45
+    environment:
+      android_signing:
+        - build_a_player_upload                 # upload keystore, added in Codemagic → Code signing identities
+      groups:
+        - supabase
+      node: 22
+      java: 21
+    scripts:
+      - name: Install packages
+        script: npm ci
+      - name: Build the web app and copy it into the native projects
+        script: npm run build:app
+      - name: Build the signed .aab
+        script: cd android && chmod +x gradlew && ./gradlew bundleRelease
+    artifacts:
+      - android/app/build/outputs/bundle/release/*.aab

@@ -14,6 +14,8 @@ function gradeColor(val) {
   return '#ef4444'
 }
 import NBA_HEADSHOTS from '../data/nba-headshots.json'
+import { CAN_SELL_PLUS } from '../lib/platform'
+import DeleteAccount from './DeleteAccount'
 
 // ─── Shared helpers (mirrors ProfilePage) ────────────────────────────────────
 function PrfSpinner() {
@@ -232,14 +234,16 @@ export default function BucketProfilePage({
         <div className="prf-top-nav">
           <button className="prf-top-back" onClick={onBack}>← Back to Build</button>
           <div className="prf-plus-wrap" ref={plusRef}>
-            <button
-              className={`prf-top-adfree${isPlus ? ' prf-top-adfree--on' : ''}`}
-              onClick={isPlus ? undefined : () => setPlusOpen(o => !o)}
-              style={isPlus ? { cursor: 'default' } : undefined}
-            >
-              {isPlus ? '✦ PLUS Active' : '✦ Build-A-Player Plus'}
-            </button>
-            {!isPlus && plusOpen && (
+            {(isPlus || CAN_SELL_PLUS) && (
+              <button
+                className={`prf-top-adfree${isPlus ? ' prf-top-adfree--on' : ''}`}
+                onClick={isPlus ? undefined : () => setPlusOpen(o => !o)}
+                style={isPlus ? { cursor: 'default' } : undefined}
+              >
+                {isPlus ? '✦ PLUS Active' : '✦ Build-A-Player Plus'}
+              </button>
+            )}
+            {!isPlus && CAN_SELL_PLUS && plusOpen && (
               <div className="prf-plus-dropdown">
                 <div className="wm-plus-body">
                   {['No ads', 'Custom color themes', 'Custom profile icons', 'PLUS badge on leaderboard'].map(label => (
@@ -316,9 +320,11 @@ export default function BucketProfilePage({
                   ))}
                 </div>
               </div>
-              <button className="plus-manage-btn" onClick={handleManageSubscription}>
-                Manage Subscription
-              </button>
+              {CAN_SELL_PLUS && (
+                <button className="plus-manage-btn" onClick={handleManageSubscription}>
+                  Manage Subscription
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -498,6 +504,7 @@ export default function BucketProfilePage({
           )}
           {emailSuccess && <div className="prf-pw-success">Email saved.</div>}
           <button className="prf-signout-btn" onClick={handleSignOut}>Sign Out</button>
+          <DeleteAccount onDeleted={() => onSignOut?.()} />
         </div>
 
       </div>

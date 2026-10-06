@@ -1,0 +1,24 @@
+{
+  "appId": "com.buildaplayer.app",
+  "appName": "Build-A-Player",
+  "webDir": "dist",
+  "backgroundColor": "#090a0d",
+  "ios": {
+    "contentInset": "never"
+  },
+  "android": {
+    "allowMixedContent": false
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 800,
+      "backgroundColor": "#090a0d",
+      "showSpinner": false
+    },
+    "StatusBar": {
+      "style": "DARK",
+      "backgroundColor": "#090a0d",
+      "overlaysWebView": true
+    }
+  }
+}

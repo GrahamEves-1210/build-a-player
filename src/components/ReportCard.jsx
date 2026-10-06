@@ -21,6 +21,7 @@ import { calcBucketOVR, getBucketGuardArchetype, getBucketBigArchetype } from '.
 import { buildShareUrl } from '../utils/shareUrl'
 import { generateBucketShareCard, shareOrDownloadCard } from '../utils/generateShareCard'
 import QBAvatar from './QBAvatar'
+import { IS_APP, shareNative } from '../lib/platform'
 
 function fmtHeight(inches) { return `${Math.floor(inches / 12)}'${inches % 12}"` }
 
@@ -142,6 +143,10 @@ export function ShareModal({ ovr, arch, build, types, onClose, isBucket = false,
   // On desktop: fall back to link-only or download
   const handleNativeShare = async (e) => {
     e?.preventDefault()
+    if (IS_APP) {
+      await shareNative({ title: `${ovr} OVR · ${arch}`, text: shareText, url: shareUrl, blob: cardBlob, filename })
+      return
+    }
     const file = cardBlob ? new File([cardBlob], filename, { type: 'image/png' }) : null
     const shareData = {
       title: `${ovr} OVR · ${arch}`,
@@ -161,7 +166,7 @@ export function ShareModal({ ovr, arch, build, types, onClose, isBucket = false,
   const handleTweet = (e) => {
     e.preventDefault()
     const isMobile = /iPhone|iPad|Android/i.test(navigator.userAgent)
-    if (isMobile && navigator.share) { handleNativeShare(e); return }
+    if (IS_APP || (isMobile && navigator.share)) { handleNativeShare(e); return }
     window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`, '_blank')
   }
 
@@ -178,6 +183,8 @@ export function ShareModal({ ovr, arch, build, types, onClose, isBucket = false,
 
   const handleDownload = () => {
     if (!cardBlob) return
+    // In the app, "Save Image" lives in the share sheet
+    if (IS_APP) { shareNative({ title: `${ovr} OVR · ${arch}`, blob: cardBlob, filename }); return }
     const url = URL.createObjectURL(cardBlob)
     const a = document.createElement('a')
     a.href = url; a.download = filename; a.click()
