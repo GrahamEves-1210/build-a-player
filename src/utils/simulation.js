@@ -27,16 +27,17 @@ const ALLTIME_BY_NAME = Object.fromEntries(
 // offset All-Time seasons ran ~78% wins / ~99% playoffs (QB: 44% titles).
 // `reg` comes off every regular-season win chance and `po` off every playoff
 // win chance in All-Time mode only — tuned against re-simulated real saved
-// builds so All-Time plays about as hard as current mode for each position.
-// (OL All-Time isn't live; it borrows DB's values since the two sims are built the same way.)
-// `po` is set a touch softer than current mode so All-Time titles land ~3 pts higher.
+// builds so All-Time plays a few points easier than current mode for each
+// position: ~4–5 pts more wins and ~4–6 pts more titles (TE/DB catch up from
+// below). (OL All-Time isn't live; it borrows DB's values since the two sims
+// are built the same way.)
 export const AT_DIFFICULTY = {
-  qb: { reg: 0.071, po: 0.215 },
-  rb: { reg: 0.144, po: 0.01 },
-  wr: { reg: 0.167, po: 0.01 },
-  te: { reg: 0.213, po: 0.005 },
-  db: { reg: 0.221, po: -0.01 },
-  ol: { reg: 0.221, po: -0.01 },
+  qb: { reg: 0.03,  po: 0.19 },
+  rb: { reg: 0.104, po: 0.015 },
+  wr: { reg: 0.118, po: 0 },
+  te: { reg: 0.13,  po: 0.013 },
+  db: { reg: 0.17,  po: -0.015 },
+  ol: { reg: 0.17,  po: -0.015 },
 }
 
 // Snap to nearest score expressible as 7a + 3b (no safeties)
@@ -2778,11 +2779,11 @@ export function calcDBDpoyResult(result, isAllTime = false, teamShort = null) {
   // historic one. Clear both and the chance is real and high — a
   // best-ever-caliber year is a legitimate contender, not a lottery ticket.
   const BUILD_OVR_GATE = 96
-  const SEASON_GATE = 0.80
+  const SEASON_GATE = 0.76
   let winP = 0
   if (ovr >= BUILD_OVR_GATE && caseStrength >= SEASON_GATE) {
     const t = (caseStrength - SEASON_GATE) / (1 - SEASON_GATE)
-    winP = 0.40 + t * 0.55
+    winP = 0.45 + t * 0.50
   }
   // Every single attribute A+ or S (val >= 10) — a build that dedicated is
   // a guaranteed win, no roll needed, even in All-Time mode.

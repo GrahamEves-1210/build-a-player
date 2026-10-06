@@ -7,6 +7,7 @@ import { VERSUS_GUARD_TYPES } from '../data/nba-guards'
 import { VERSUS_BIG_TYPES } from '../data/nba-bigs'
 import QBAvatar from './QBAvatar'
 import { BucketModelFigure } from './BucketSimPage'
+import { getUsername } from '../lib/discord'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function clamp(v, lo, hi) { return Math.min(hi, Math.max(lo, v)) }
@@ -740,7 +741,7 @@ export default function BucketVersusResult({ myData, oppData, position, oppPosit
   const myOVR    = calcBucketOVR(myData.build,  myTypes,  position)
   const oppOVR   = calcBucketOVR(oppData.build, oppTypes, oppPosition ?? position)
 
-  const myName  = myData.name  || (user ? (user.user_metadata?.username || user.email?.split('@')[0]) : 'Your Build')
+  const myName  = myData.name  || (user ? (getUsername(user)) : 'Your Build')
   const oppName = oppData.name || 'Opponent'
 
   const myTeamData  = NBA_TEAMS.find(t => t.short === myData.player?.team)

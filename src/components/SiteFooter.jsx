@@ -1,3 +1,7 @@
+import { useState } from 'react'
+import { supabase } from '../lib/supabase'
+import FeedbackModal from './FeedbackModal'
+
 const HoopU = () => (
   <svg className="hoop-u-svg" viewBox="0 0 68 90" fill="none" aria-hidden="true">
     <circle cx="34" cy="14" r="14.4" fill="#f97316"/>
@@ -12,6 +16,12 @@ const HoopU = () => (
 
 export default function SiteFooter({ sport = 'nfl', onDepthChart }) {
   const isBucket = sport === 'bucket'
+  // null = closed; otherwise holds the signed-in user (or false when signed out)
+  const [feedbackUser, setFeedbackUser] = useState(null)
+  const openFeedback = async () => {
+    const { data } = supabase ? await supabase.auth.getSession() : { data: null }
+    setFeedbackUser(data?.session?.user ?? false)
+  }
 
   return (
     <footer className="splash-site-footer">
@@ -43,6 +53,7 @@ export default function SiteFooter({ sport = 'nfl', onDepthChart }) {
           <a className="splash-site-footer-link" href="/?about">About</a>
           <a className="splash-site-footer-link" href="/privacy">Privacy Policy</a>
           <a className="splash-site-footer-link" href="/terms">Terms of Service</a>
+          <button className="splash-site-footer-link splash-site-footer-link--btn" onClick={openFeedback}>Send Feedback</button>
         </div>
         <div className="splash-site-footer-col">
           <div className="splash-site-footer-head">Connect</div>
@@ -67,6 +78,9 @@ export default function SiteFooter({ sport = 'nfl', onDepthChart }) {
           <img src="https://www.playwire.com/hubfs/Powered-by-Playwire-Badges/Ads-Powered-by-playwire-2021-standalone-small-white-300px.png" alt="Ads Powered by Playwire" width="140" height="39" loading="lazy" />
         </a>
       </div>
+      {feedbackUser !== null && (
+        <FeedbackModal user={feedbackUser || null} isBucket={isBucket} onClose={() => setFeedbackUser(null)} />
+      )}
     </footer>
   )
 }

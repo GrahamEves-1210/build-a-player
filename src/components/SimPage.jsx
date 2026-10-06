@@ -1397,7 +1397,9 @@ export default function SimPage({ result, build, types = TYPES, onBack, onReset,
   }
 
   const triggerMVP = (continuation = null) => {
-    const r = isOL
+    // App decides the award when the season is simulated (so it saves with the
+    // season and counts toward lifetime awards there); this only reveals it.
+    const r = result.award ?? (isOL
       ? calcOLAllProResult(result, isAllTime, result.team?.short)
       : isDB
       ? calcDBDpoyResult(result, isAllTime, result.team?.short)
@@ -1407,7 +1409,7 @@ export default function SimPage({ result, build, types = TYPES, onBack, onReset,
           ? calcWROPOYResult(result, isAllTime, result.team?.short)
           : isRB
             ? calcOPOYResult(result, isAllTime, result.team?.short)
-            : calcMVPResult(result, isAllTime, result.team?.short)
+            : calcMVPResult(result, isAllTime, result.team?.short))
     setMvpResult(r)
     if (r.userWins) {
       setMvpWon(true)

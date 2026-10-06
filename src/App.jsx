@@ -33,12 +33,13 @@ import { ALLTIME_RATINGS } from './data/nfl-teams'
 import { LEGENDS, LEGEND_TYPES } from './data/qb-legends'
 import { RB_LEGENDS } from './data/rb-legends'
 import HEADSHOTS from './data/headshots.json'
-import { runSimulation, getArchetype, calcOVR, runRBSimulation, calcOVRRB, getArchetypeRB, runWRSimulation, calcOVRWR, getArchetypeWR, runTESimulation, calcOVRTE, getArchetypeTE, runDBSimulation, calcOVRDB, getArchetypeDB, runOLSimulation, calcOVROL, getArchetypeOL, HEADSHOT_BASE } from './utils/simulation'
+import { runSimulation, getArchetype, calcOVR, runRBSimulation, calcOVRRB, getArchetypeRB, runWRSimulation, calcOVRWR, getArchetypeWR, runTESimulation, calcOVRTE, getArchetypeTE, runDBSimulation, calcOVRDB, getArchetypeDB, runOLSimulation, calcOVROL, getArchetypeOL, HEADSHOT_BASE, calcMVPResult, calcOPOYResult, calcWROPOYResult, calcTEOPOYResult, calcDBDpoyResult, calcOLAllProResult } from './utils/simulation'
 import { supabase, rtSupabase } from './lib/supabase'
 import { track } from './lib/track'
 import CustomRatingsModal from './components/CustomRatingsModal'
 import SiteFooter from './components/SiteFooter'
 import SiteFeatures from './components/SiteFeatures'
+import { finishDiscordSignIn, getUsername } from './lib/discord'
 
 const _dd = arr => { const s = new Set(); return arr.filter(p => { const k = `${p.name}|${p.team}`; if (s.has(k)) return false; s.add(k); return true }) }
 const _bt = (a, b) => a.team.localeCompare(b.team) || a.name.localeCompare(b.name)
@@ -165,12 +166,6 @@ export default function App() {
   useEffect(() => {
     if (isCustomMode) sandboxTainted.current = true
   }, [isCustomMode])
-
-  // Id of the simulations row just inserted — handleMVPWon fires later (after
-  // the MVP/OPOY/DPOY mini-game), so this is how it finds its way back to tag
-  // that same row with which award it won, giving Daily real per-award
-  // timestamps instead of only a lifetime counter on accounts.
-  const lastSimIdRef = useRef(null)
 
   // Blocks the rubber-band bounce only at the bottom of .game-page-scroll,
   // leaving the top bounce untouched — overscroll-behavior has no directional
@@ -355,6 +350,8 @@ export default function App() {
     })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
       setUser(session?.user ?? null)
+      // Back from Discord sign-in: join the server, and pick up a Discord account's new username
+      finishDiscordSignIn(session).then(u => { if (u) setUser(u) })
     })
     return () => subscription.unsubscribe()
   }, [])
@@ -488,36 +485,25 @@ export default function App() {
   }, [])
 
 
-  const handleMVPWon = useCallback(async (isAllTime, awardType = 'mvp') => {
-    if (!user || !supabase) return
-    // All-Pro has no lifetime counter on `accounts` — it's tracked only by the
-    // season_award tag below, which the OL profile tab and leaderboard count.
-    if (awardType !== 'allpro') {
-      const col = awardType === 'opoy'
-        ? (isAllTime ? 'alltime_opoys' : 'classic_opoys')
-        : awardType === 'dpoy'
-          ? (isAllTime ? 'alltime_dpoys' : 'classic_dpoys')
-          : (isAllTime ? 'alltime_mvps'  : 'classic_mvps')
-      // Read only this award's column, so one missing column can't take every
-      // other award's counter down with it.
-      const { data, error: readError } = await supabase.from('accounts').select(col).eq('id', user.id).maybeSingle()
-      if (readError) {
-        console.error('[award] failed to read award count:', readError)
-      } else {
-        const current = data?.[col] ?? 0
-        const q = data
-          ? supabase.from('accounts').update({ [col]: current + 1 }).eq('id', user.id)
-          : supabase.from('accounts').insert({ id: user.id, [col]: 1 })
-        q.then(({ error }) => { if (error) console.error('[award] failed to save award:', error) })
-      }
-    }
-    // Tag the simulation row itself with which award it won — the lifetime
-    // counter above has no timestamp, so this is what lets Daily show real
-    // today-only award counts instead of an all-time total.
-    if (!isAllTime && lastSimIdRef.current) {
-      supabase.from('simulations').update({ season_award: awardType }).eq('id', lastSimIdRef.current)
-        .then(({ error }) => { if (error) console.error('[award] failed to tag simulation row:', error) })
-    }
+  // Bumps the lifetime award counter on `accounts`. Called once the season it
+  // was won in has saved. (All-Pro has no counter — it's counted from the
+  // season_award tag, like Daily's per-day award counts.)
+  const recordAward = useCallback(async (isAllTime, awardType) => {
+    if (!user || !supabase || awardType === 'allpro') return
+    const col = awardType === 'opoy'
+      ? (isAllTime ? 'alltime_opoys' : 'classic_opoys')
+      : awardType === 'dpoy'
+        ? (isAllTime ? 'alltime_dpoys' : 'classic_dpoys')
+        : (isAllTime ? 'alltime_mvps'  : 'classic_mvps')
+    // Read only this award's column, so one missing column can't take every
+    // other award's counter down with it.
+    const { data, error: readError } = await supabase.from('accounts').select(col).eq('id', user.id).maybeSingle()
+    if (readError) { console.error('[award] failed to read award count:', readError); return }
+    const current = data?.[col] ?? 0
+    const q = data
+      ? supabase.from('accounts').update({ [col]: current + 1 }).eq('id', user.id)
+      : supabase.from('accounts').insert({ id: user.id, [col]: 1 })
+    q.then(({ error }) => { if (error) console.error('[award] failed to save award:', error) })
   }, [user])
 
   const handleReset = useCallback(() => {
@@ -574,9 +560,6 @@ export default function App() {
 
   const handleTeamPicked = useCallback((team) => {
     setShowTeamPicker(false)
-    // Forget the last saved season's id — if this season doesn't save (signed
-    // out / sandbox), an award won in it must not get tagged onto that older row.
-    lastSimIdRef.current = null
     const atRatings = ALLTIME_RATINGS[team.short]
     const effectiveTeam = gameMode === 'all-time' && atRatings
       ? { ...team, off: atRatings.off, def: atRatings.def, isAllTime: true }
@@ -592,6 +575,15 @@ export default function App() {
           : isRB
             ? runRBSimulation(build, activeTypes, effectiveTeam, gameMode === 'all-time')
             : runSimulation(build, activeTypes, effectiveTeam, gameMode === 'all-time')
+    // Decide the season's award (MVP / OPOY / DPOY / All-Pro) now and save it
+    // on the season's own row. Players can't edit a saved season afterwards —
+    // the database ignores client updates to `simulations` — so tagging the row
+    // after the reveal never landed. SimPage reveals this same result.
+    const isAllTimeSeason = !!result.team?.isAllTime
+    const awardType = isOL ? 'allpro' : isDB ? 'dpoy' : (isRB || isWR || isTE) ? 'opoy' : 'mvp'
+    const calcAward = isOL ? calcOLAllProResult : isDB ? calcDBDpoyResult : isTE ? calcTEOPOYResult
+      : isWR ? calcWROPOYResult : isRB ? calcOPOYResult : calcMVPResult
+    result.award = calcAward(result, isAllTimeSeason, result.team?.short)
     setSimResult(result)
     track('simulate', { position, gameMode, userId: user?.id ?? null })
     if (!user) {
@@ -614,7 +606,7 @@ export default function App() {
               : getArchetype(result.ovr, build, activeTypes)
       supabase.from('simulations').insert({
         user_id: user.id,
-        username: user.user_metadata?.username || user.email?.split('@')[0] || 'Player',
+        username: getUsername(user) || 'Player',
         ovr: result.ovr,
         archetype: arch,
         // OL reuses the generic stat columns: pancakes / sacks allowed /
@@ -629,25 +621,28 @@ export default function App() {
         season_rating: isOL ? result.seasonPenalties : (isDB || isRB || isWR || isTE) ? null : result.seasonRating,
         playoffs: result.playoffs,
         champion: result.sbResult?.won ?? false,
+        // Daily's per-day award counts and OL All-Pros read this (current-mode seasons only)
+        season_award: !isAllTimeSeason && result.award.userWins ? awardType : null,
         build: Object.fromEntries(
           activeTypes.filter(t => build[t]).map(t => [t, {
             qb: build[t].qbFull || build[t].name, team: build[t].team, val: build[t].val,
           }])
         ),
-      }).select('id').single().then(({ data, error }) => {
+      }).then(({ error }) => {
         if (error) {
           console.error('[build-a-player] simulation save failed:', error)
           showSaveToast('error', `Save failed: ${error.message}`)
         } else {
           showSaveToast('saved', 'Saved to profile!')
-          lastSimIdRef.current = data?.id ?? null
+          // Only seasons that actually saved count toward lifetime awards (not sandbox / signed-out)
+          if (result.award.userWins) recordAward(isAllTimeSeason, awardType)
         }
       })
     }
     setSimReplaying(false)
     setPage('sim')
     window.scrollTo({ top: 0, behavior: 'instant' })
-  }, [build, activeTypes, user, gameMode, position, showSaveToast])
+  }, [build, activeTypes, user, gameMode, position, showSaveToast, recordAward])
 
   const handleHome = useCallback(() => {
     setVersusRoom(prev => {
@@ -682,7 +677,7 @@ export default function App() {
     try {
       await supabase.from('vs_results').insert({
         user_id: user.id,
-        username: user.user_metadata?.username || user.email?.split('@')[0],
+        username: getUsername(user),
         result, ovr: ovr || null, position: pos,
         match_type: versusRoom?.matchType ?? null,
       })
@@ -697,7 +692,7 @@ export default function App() {
     try {
       await supabase.from('vs_results').insert({
         user_id: user.id,
-        username: user.user_metadata?.username || user.email?.split('@')[0],
+        username: getUsername(user),
         result: 'forfeit', ovr: ovr || null, position: pos,
         match_type: versusRoom?.matchType ?? null,
       })
@@ -713,7 +708,7 @@ export default function App() {
       if (ovr > 0) {
         supabase.from('vs_results').insert({
           user_id: user.id,
-          username: user.user_metadata?.username || user.email?.split('@')[0],
+          username: getUsername(user),
           result: 'win', ovr, position: pos,
           match_type: versusRoom?.matchType ?? null,
         }).then(null, () => {})
@@ -798,7 +793,7 @@ export default function App() {
         if (!channel._bc) {
           const vsId = sessionStorage.getItem('bap_vs_id')
           const vid  = user?.id ? `${user.id}-${vsId}` : vsId
-          const name = user?.user_metadata?.username || user?.email?.split('@')[0] || 'Your Build'
+          const name = getUsername(user) || 'Your Build'
           if (vid) channel.track({ vid, name }).catch(() => {})
         }
       } else if ((s === 'TIMED_OUT' || s === 'CHANNEL_ERROR') && !channel._bc && retries < 5) {
@@ -1162,7 +1157,6 @@ export default function App() {
           isTE={isTE}
           isDB={isDB}
           isOL={isOL}
-          onMVPWon={handleMVPWon}
           onBack={() => { setPage('game'); window.scrollTo({ top: 0, behavior: 'instant' }); document.querySelector('.game-page-scroll')?.scrollTo({ top: 0, behavior: 'instant' }) }}
           onReset={() => { handleReset(); setPage('game'); window.scrollTo({ top: 0, behavior: 'instant' }); document.querySelector('.game-page-scroll')?.scrollTo({ top: 0, behavior: 'instant' }) }}
         />

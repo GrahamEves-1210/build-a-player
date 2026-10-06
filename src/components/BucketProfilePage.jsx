@@ -14,6 +14,8 @@ function gradeColor(val) {
   return '#ef4444'
 }
 import NBA_HEADSHOTS from '../data/nba-headshots.json'
+import ConnectDiscord from './ConnectDiscord'
+import { getUsername } from '../lib/discord'
 
 // ─── Shared helpers (mirrors ProfilePage) ────────────────────────────────────
 function PrfSpinner() {
@@ -45,7 +47,7 @@ function useCountUp(target, duration = 900, enabled = true) {
 }
 
 function getInitials(user) {
-  const name = user.user_metadata?.username || user.email || ''
+  const name = getUsername(user) || ''
   const parts = name.split(/[\s@_.-]+/).filter(Boolean)
   if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase()
   return name.slice(0, 2).toUpperCase()
@@ -219,7 +221,7 @@ export default function BucketProfilePage({
     : null
   const complete = filled.length === types.length
 
-  const displayName = user.user_metadata?.username || user.email?.split('@')[0] || 'Player'
+  const displayName = getUsername(user) || 'Player'
   const initials    = getInitials(user)
   const since       = formatDate(user.created_at)
 
@@ -497,6 +499,7 @@ export default function BucketProfilePage({
             </form>
           )}
           {emailSuccess && <div className="prf-pw-success">Email saved.</div>}
+          <ConnectDiscord user={user} />
           <button className="prf-signout-btn" onClick={handleSignOut}>Sign Out</button>
         </div>
 

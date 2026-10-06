@@ -835,6 +835,51 @@ a:focus-visible {
   position: relative;
 }
 
+/* Signed-out nudge under the menu button, arrow pointing up at it */
+.nav-signin-hint {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: -4px;
+  z-index: 199;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 4px 4px 10px;
+  border-radius: 8px;
+  background: #95d5b2;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.45);
+  white-space: nowrap;
+  animation: nav-hint-in 0.35s ease 0.6s both;
+}
+.nav-signin-hint::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  right: 17px;
+  border: 6px solid transparent;
+  border-top: 0;
+  border-bottom-color: #95d5b2;
+}
+.nav-signin-hint-text,
+.nav-signin-hint-x {
+  background: none;
+  border: none;
+  color: #0b1a12;
+  font-family: var(--font-inter);
+  cursor: pointer;
+}
+.nav-signin-hint-text { padding: 0; font-size: 12px; font-weight: 700; }
+.nav-signin-hint-x { padding: 0 5px; font-size: 15px; line-height: 1; opacity: 0.55; }
+.nav-signin-hint-x:hover { opacity: 1; }
+@keyframes nav-hint-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .nav-signin-hint { animation: none; } }
+@media (max-width: 768px) {
+  .nav-signin-hint { top: calc(100% + 7px); padding: 2px 2px 2px 7px; border-radius: 6px; }
+  .nav-signin-hint::before { right: 14px; border-width: 5px; top: -5px; }
+  .nav-signin-hint-text { font-size: 10px; }
+  .nav-signin-hint-x { font-size: 13px; padding: 0 4px; }
+}
+
 /* â”€â”€ WAFFLE MENU â”€â”€ */
 .waffle-btn {
   width: 39px;
@@ -11926,6 +11971,30 @@ html.is-touch .bd-card-main:hover         { background: transparent !important; 
   box-shadow: 0 0 0 3px rgba(149,213,178,0.07), inset 0 1px 3px rgba(0,0,0,0.25);
 }
 .auth-input::placeholder { color: var(--text-4); }
+/* Continue with Discord (AuthModal) + Connect Discord (profile) */
+.auth-discord {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  width: 100%; padding: 12px 0; border: none; border-radius: 10px;
+  background: #5865F2; color: #fff;
+  font-family: var(--font-inter); font-size: 14px; font-weight: 700;
+  cursor: pointer; transition: background 0.15s, transform 0.1s;
+}
+.auth-discord svg { width: 18px; height: 18px; }
+.auth-discord:hover { background: #4752c4; }
+.auth-discord:active { transform: translateY(1px); }
+.auth-discord:disabled { opacity: 0.6; cursor: default; }
+.auth-discord-note { margin-top: 6px; font-size: 11px; color: var(--text-3); text-align: center; }
+.auth-or { display: flex; align-items: center; gap: 10px; margin: 14px 0 4px; color: var(--text-4); font-size: 11px; text-transform: uppercase; letter-spacing: 0.6px; }
+.auth-or::before, .auth-or::after { content: ''; flex: 1; height: 1px; background: rgba(255,255,255,0.08); }
+.prf-discord-linked { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 6px 0; font-size: 12px; font-weight: 600; color: #8b93ff; }
+.prf-discord-linked svg { width: 14px; height: 14px; }
+/* Feedback form (FeedbackModal) — reuses the auth modal shell */
+.fb-kinds { margin-bottom: 4px; }
+.fb-textarea { resize: vertical; min-height: 110px; line-height: 1.45; }
+.fb-count { align-self: flex-end; font-size: 11px; color: var(--text-4); font-variant-numeric: tabular-nums; }
+.fb-sent { display: flex; flex-direction: column; gap: 10px; text-align: center; }
+.fb-sent-title { font-size: 16px; font-weight: 800; color: var(--accent); }
+.fb-sent-body { margin: 0 0 6px; font-size: 13px; color: var(--text-2); }
 
 .auth-error {
   font-size: 12px;

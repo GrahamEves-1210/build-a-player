@@ -32,6 +32,7 @@ import ProfilePage from './ProfilePage'
 import CustomRatingsModal from './CustomRatingsModal'
 import SiteFooter from './SiteFooter'
 import SiteFeatures from './SiteFeatures'
+import { finishDiscordSignIn, getUsername } from '../lib/discord'
 const VersusLobby        = lazy(() => import('./VersusLobby'))
 const BucketVersusResult = lazy(() => import('./BucketVersusResult'))
 const VsPvPLeaderboard   = lazy(() => import('./VsPvPLeaderboard'))
@@ -601,6 +602,8 @@ export default function BucketApp() {
     })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
       setUser(session?.user ?? null)
+      // Back from Discord sign-in: join the server, and pick up a Discord account's new username
+      finishDiscordSignIn(session).then(u => { if (u) setUser(u) })
     })
     return () => subscription.unsubscribe()
   }, [])
@@ -784,7 +787,7 @@ export default function BucketApp() {
     )
     supabase.from('simulations').insert({
       user_id:     user.id,
-      username:    user.user_metadata?.username || user.email?.split('@')[0],
+      username:    getUsername(user),
       ovr:         result.ovr,
       archetype,
       game_mode:   gameMode === 'all-time' ? 'bucket-all-time' : 'bucket-classic',
@@ -931,7 +934,7 @@ export default function BucketApp() {
             const winOvr = calcBucketOVR(b, VERSUS_POS_TYPES[pos] ?? VERSUS_GUARD_TYPES, pos)
             if (winOvr > 0) supabase.from('vs_results').insert({
               user_id:    u.id,
-              username:   u.user_metadata?.username || u.email?.split('@')[0],
+              username:   getUsername(u),
               result:     'win',
               ovr:        winOvr,
               position:   pos,
@@ -985,7 +988,7 @@ export default function BucketApp() {
           const vsId = sessionStorage.getItem('bap_vs_id')
           const uid  = user?.id
           const vid  = uid ? `${uid}-${vsId}` : vsId
-          const name = user?.user_metadata?.username || user?.email?.split('@')[0] || 'Your Build'
+          const name = getUsername(user) || 'Your Build'
           if (vid) channel.track({ vid, name }).catch?.(() => {})
         }
       } else if ((s === 'TIMED_OUT' || s === 'CHANNEL_ERROR') && !channel._bc && chRetries < 5) {
@@ -1051,7 +1054,7 @@ export default function BucketApp() {
           const winOvr = calcBucketOVR(b, VERSUS_POS_TYPES[pos] ?? VERSUS_GUARD_TYPES, pos)
           if (winOvr > 0) supabase.from('vs_results').insert({
             user_id:    u.id,
-            username:   u.user_metadata?.username || u.email?.split('@')[0],
+            username:   getUsername(u),
             result:     'win',
             ovr:        winOvr,
             position:   pos,
@@ -1098,7 +1101,7 @@ export default function BucketApp() {
         const winOvr = calcBucketOVR(b, VERSUS_POS_TYPES[pos] ?? VERSUS_GUARD_TYPES, pos)
         if (winOvr > 0) supabase.from('vs_results').insert({
           user_id:  u.id,
-          username: u.user_metadata?.username || u.email?.split('@')[0],
+          username: getUsername(u),
           result:   'win',
           ovr:      winOvr,
           position: pos,
@@ -1129,7 +1132,7 @@ export default function BucketApp() {
   function vsResultPayload(result) {
     return {
       user_id:    user.id,
-      username:   user.user_metadata?.username || user.email?.split('@')[0],
+      username:   getUsername(user),
       result,
       ovr:        calcBucketOVR(build, activeTypes, position),
       position,
@@ -1206,7 +1209,7 @@ export default function BucketApp() {
     return (
       <Suspense fallback={null}>
         <BucketVersusResult
-          myData={{ build, player: savedSpinResult, name: user?.user_metadata?.username || user?.email?.split('@')[0] || 'Your Build' }}
+          myData={{ build, player: savedSpinResult, name: getUsername(user) || 'Your Build' }}
           oppData={{ build: oppBuild, player: oppPlayer, name: versusRoom?.oppName || 'Opponent' }}
           position={position}
           oppPosition={oppPosition}
@@ -1554,7 +1557,7 @@ export default function BucketApp() {
             <div className="vs-prompt-eyebrow">HEAD TO HEAD</div>
             <div className="vs-prompt-matchup">
               <div className="vs-prompt-side">
-                <div className="vs-prompt-name">{user?.user_metadata?.username || user?.email?.split('@')[0] || 'You'}</div>
+                <div className="vs-prompt-name">{getUsername(user) || 'You'}</div>
                 <div className="vs-prompt-record">
                   {vsRecord.wins}W – {vsRecord.losses}L
                 </div>
