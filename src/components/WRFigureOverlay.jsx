@@ -1,4 +1,5 @@
 import svgRaw from '../assets/wr-figure-color.svg?raw'
+import { warmSkin, warmSkinLight } from '../utils/footballSkin'
 
 const PROCESSED_SVG = (() => {
   let html = svgRaw
@@ -28,22 +29,6 @@ function setFill(html, id, fill, extra = '') {
   )
 }
 
-function lightenColor(hex, amount = 20) {
-  if (!hex || hex === 'transparent') return 'transparent'
-  const r = Math.min(255, parseInt(hex.slice(1, 3), 16) + amount)
-  const g = Math.min(255, parseInt(hex.slice(3, 5), 16) + amount)
-  const b = Math.min(255, parseInt(hex.slice(5, 7), 16) + amount)
-  return `rgb(${r},${g},${b})`
-}
-
-function warmSkin(hex, light = 5, redBoost = 10) {
-  if (!hex || hex === 'transparent') return 'transparent'
-  const r = Math.min(255, parseInt(hex.slice(1, 3), 16) + light + redBoost)
-  const g = Math.min(255, parseInt(hex.slice(3, 5), 16) + light)
-  const b = Math.min(255, parseInt(hex.slice(5, 7), 16) + Math.max(0, light - 6))
-  return `rgb(${r},${g},${b})`
-}
-
 function darkenColor(hex, factor = 0.6) {
   if (!hex || hex === 'transparent') return 'transparent'
   const r = parseInt(hex.slice(1, 3), 16)
@@ -68,8 +53,8 @@ export default function WRFigureOverlay({ build, isTE = false }) {
   // ── AWARENESS: helmet team color; face paths = dark skin shadow
   svg = setFill(svg, 'helmet', tc('awareness'), 'opacity:0.90;')
   if (has('awareness')) {
-    const skinColor   = warmSkin(sk('awareness'), 0, 10)
-    const skinLight   = warmSkin(sk('awareness'), 8, 6)
+    const skinColor   = warmSkin(sk('awareness'))
+    const skinLight   = warmSkinLight(sk('awareness'))
     const shadowColor = darkenColor(sk('awareness'), 0.08)
     svg = setFill(svg, 'face1',   skinColor,   'opacity:0.40;')
     svg = setFill(svg, 'face2',   skinColor,   'opacity:0.40;')
@@ -95,7 +80,7 @@ export default function WRFigureOverlay({ build, isTE = false }) {
 
   // ── AFTER CATCH / STRENGTH (TE): arms (skin color lightened for screen blend)
   const armKey  = isTE ? 'strength' : 'afterCatch'
-  const armSkin = has(armKey) ? warmSkin(sk(armKey), 15, 12) : 'transparent'
+  const armSkin = has(armKey) ? warmSkin(sk(armKey)) : 'transparent'
   svg = setFill(svg, 'left arm',  armSkin, 'opacity:0.72;')
   svg = setFill(svg, 'right arm', armSkin, 'opacity:0.72;')
 
@@ -185,13 +170,6 @@ export default function WRFigureOverlay({ build, isTE = false }) {
               pointerEvents: 'none',
             }}
           >{build?.['size']?.number ?? ''}</text>
-
-          {/* NFL shield */}
-          {has('size') && (
-            <image href="/logos/nfl.png" x="221" y="276" width="14" height="14"
-              transform="rotate(6, 228, 283)"
-              style={{ opacity: 0.85, pointerEvents: 'none' }} />
-          )}
         </g>
 
       </svg>

@@ -74,7 +74,7 @@ export const QBS = [
     attrs: { 'arm': 6, 'legs': 1, 'size': 3, 'processing': 8, 'leadership': 7, 'vision': 7, 'playmaking': 1, 'accuracy': 10, 'pocket-presence': 7 } },
   { name: 'Joshua Dobbs', short: 'Dobbs', team: 'DET', teamName: 'Detroit Lions',     color: '#0076B6', color2: '#B0B7BC', skin: '#9a6840', starter: false, number: 11,
     attrs: { 'arm': 5, 'legs': 7, 'size': 6, 'processing': 5, 'leadership': 7, 'vision': 5, 'playmaking': 6, 'accuracy': 5, 'pocket-presence': 5 } },
-  { name: 'Luke Altmyer',       short: 'Altmyer',     team: 'DET', teamName: 'Detroit Lions',         color: '#0076B6', color2: '#B0B7BC', skin: '#f0c4a0', starter: false, number: 15,
+  { name: 'Luke Altmyer',       short: 'Altmyer',     team: 'DET', teamName: 'Detroit Lions',         color: '#0076B6', color2: '#B0B7BC', skin: '#f0c4a0', starter: false, number: 2,
     attrs: { 'arm': 3, 'legs': 3, 'size': 3, 'processing': 1, 'leadership': 2, 'vision': 2, 'playmaking': 1, 'accuracy': 2, 'pocket-presence': 2 } },
   // GB
   { name: 'Jordan Love',        short: 'Love',        team: 'GB',  teamName: 'Green Bay Packers',     color: '#FFB612', color2: '#203731', skin: '#c09860', starter: true,  captain: true,  number: 10,
@@ -109,7 +109,7 @@ export const QBS = [
     attrs: { 'arm': 10, 'legs': 8, 'size': 8, 'processing': 9, 'leadership': 8, 'vision': 11, 'playmaking': 10, 'accuracy': 8, 'pocket-presence': 10 } },
   { name: 'Justin Fields',      short: 'Fields',      team: 'KC',  teamName: 'Kansas City Chiefs',    color: '#E31837', color2: '#FFB81C', skin: '#7a5030', starter: false, number: 6,
     attrs: { 'arm': 4, 'legs': 10, 'size': 7, 'processing': 1, 'leadership': 5, 'vision': 1, 'playmaking': 4, 'accuracy': 2, 'pocket-presence': 1 } },
-  { name: 'Garrett Nussmeier',  short: 'Nussmeier',   team: 'KC',  teamName: 'Kansas City Chiefs',    color: '#E31837', color2: '#FFB81C', skin: '#f0c4a0', starter: false, number: 19,
+  { name: 'Garrett Nussmeier',  short: 'Nussmeier',   team: 'KC',  teamName: 'Kansas City Chiefs',    color: '#E31837', color2: '#FFB81C', skin: '#f0c4a0', starter: false, number: 14,
     attrs: { 'arm': 4, 'legs': 3, 'size': 5, 'processing': 4, 'leadership': 3, 'vision': 3, 'playmaking': 2, 'accuracy': 4, 'pocket-presence': 3 } },
   // LV
   { name: 'Kirk Cousins',       short: 'Cousins',     team: 'LV',  teamName: 'Las Vegas Raiders',     color: '#000000', color2: '#A5ACAF', skin: '#f0c4a0', starter: true,  captain: true,  number: 8,
@@ -120,7 +120,7 @@ export const QBS = [
     attrs: { 'arm': 4, 'legs': 3, 'size': 4, 'processing': 4, 'leadership': 3, 'vision': 4, 'playmaking': 3, 'accuracy': 5, 'pocket-presence': 3 } },
   // LAC
   { name: 'Justin Herbert',     short: 'Herbert',     team: 'LAC', teamName: 'Los Angeles Chargers',  color: '#0080C6', color2: '#FFC20E', skin: '#f2c8a4', starter: true,  captain: true,  number: 10,
-    attrs: { 'arm': 11, 'legs': 7, 'size': 9, 'processing': 7, 'leadership': 6, 'vision': 8, 'playmaking': 8, 'accuracy': 8, 'pocket-presence': 7 } },
+    attrs: { 'arm': 11, 'legs': 7, 'size': 10, 'processing': 7, 'leadership': 6, 'vision': 6, 'playmaking': 8, 'accuracy': 8, 'pocket-presence': 7 } },
   { name: 'Trey Lance',         short: 'Lance',       team: 'LAC', teamName: 'Los Angeles Chargers',  color: '#0080C6', color2: '#FFC20E', skin: '#9a6840', starter: false, number: 5,
     attrs: { 'arm': 4, 'legs': 6, 'size': 5, 'processing': 2, 'leadership': 2, 'vision': 2, 'playmaking': 3, 'accuracy': 2, 'pocket-presence': 2 } },
   { name: 'D.J. Uiagalelei',    short: 'DJ Uiaga.',   team: 'LAC', teamName: 'Los Angeles Chargers',  color: '#0080C6', color2: '#FFC20E', skin: '#b07848', starter: false, number: 7,

@@ -3,6 +3,7 @@ import { RB_TYPES } from '../data/rbs'
 import { WR_TYPES, WRS } from '../data/wrs'
 import { TE_TYPES, TES } from '../data/tes'
 import { DB_TYPES } from '../data/dbs'
+import { OL_TYPES, OLS, OL_ATTR_WEIGHT, OL_POS_BY_NAME, OL_ALL_PRO_BALLOT } from '../data/ols'
 import { NFL_TEAMS, ALLTIME_RATINGS, RB_RATINGS } from '../data/nfl-teams'
 
 export const HEADSHOT_BASE = import.meta.env.DEV
@@ -20,6 +21,23 @@ const TEAM_BY_NAME = Object.fromEntries(NFL_TEAMS.map(t => [t.name, t]))
 const ALLTIME_BY_NAME = Object.fromEntries(
   NFL_TEAMS.map(t => [t.name, { ...t, ...(ALLTIME_RATINGS[t.short] ?? { off: 8, def: 8 }) }])
 )
+
+// All-Time difficulty. Builds drafted from legends rate ~8–10 OVR higher than
+// current-mode builds and your team gets its all-time rating, so without an
+// offset All-Time seasons ran ~78% wins / ~99% playoffs (QB: 44% titles).
+// `reg` comes off every regular-season win chance and `po` off every playoff
+// win chance in All-Time mode only — tuned against re-simulated real saved
+// builds so All-Time plays about as hard as current mode for each position.
+// (OL All-Time isn't live; it borrows DB's values since the two sims are built the same way.)
+// `po` is set a touch softer than current mode so All-Time titles land ~3 pts higher.
+export const AT_DIFFICULTY = {
+  qb: { reg: 0.071, po: 0.215 },
+  rb: { reg: 0.144, po: 0.01 },
+  wr: { reg: 0.167, po: 0.01 },
+  te: { reg: 0.213, po: 0.005 },
+  db: { reg: 0.221, po: -0.01 },
+  ol: { reg: 0.221, po: -0.01 },
+}
 
 // Snap to nearest score expressible as 7a + 3b (no safeties)
 function snapNFL(n) {
@@ -532,7 +550,7 @@ export function runSimulation(build, types = TYPES, team = null, isAllTime = fal
     // Win chance: base + performance premium (great game = better chance)
     const perfBonus  = (gameTDs >= 3 ? 0.06 : gameTDs >= 2 ? 0.02 : 0)
                      - (gameINTs >= 2 ? 0.07 : gameINTs === 1 ? 0.02 : 0)
-    const gameWinP   = Math.min(0.90, Math.max(0.08, winP + perfBonus + (home ? 0.05 : 0) + v() * 0.05 - oppPenalty))
+    const gameWinP   = Math.min(0.90, Math.max(0.08, winP + perfBonus + (home ? 0.05 : 0) + v() * 0.05 - oppPenalty - (isAllTime ? AT_DIFFICULTY.qb.reg : 0)))
     const won        = Math.random() < gameWinP
     won ? wins++ : losses++
 
@@ -646,7 +664,7 @@ export function runSimulation(build, types = TYPES, team = null, isAllTime = fal
       const pgOvrPenalty = ovr !== null && ovr < 85
         ? (85 - ovr) * 0.011
         : 0
-      const pgWinP     = Math.min(0.90, Math.max(0.10, 0.30 + ovrN * 0.61 + teamN * 0.41 - pgOvrPenalty + (pgHome ? 0.03 : 0) - (isAllTime ? 0.09 : 0)))
+      const pgWinP     = Math.min(0.90, Math.max(0.10, 0.30 + ovrN * 0.61 + teamN * 0.41 - pgOvrPenalty + (pgHome ? 0.03 : 0) - (isAllTime ? AT_DIFFICULTY.qb.po : 0)))
       const won        = Math.random() < pgWinP
 
       // Playoff game stats use similar logic but with higher stakes variance
@@ -1159,7 +1177,7 @@ export function runRBSimulation(build, types = RB_TYPES, team = null, isAllTime 
                     + (rawRushTDs + gameRecTDs >= 2 ? 0.03 : 0)
                     - (gameFumbles ? 0.06 : 0)
     const gameWinP = Math.min(0.92, Math.max(0.08,
-      winP + perfBonus + (home ? 0.04 : 0) + v() * 0.10 - oppPenalty
+      winP + perfBonus + (home ? 0.04 : 0) + v() * 0.10 - oppPenalty - (isAllTime ? AT_DIFFICULTY.rb.reg : 0)
     ))
     const won = Math.random() < gameWinP
     won ? wins++ : losses++
@@ -1282,7 +1300,7 @@ export function runRBSimulation(build, types = RB_TYPES, team = null, isAllTime 
       const pgWinP = Math.min(0.78, Math.max(0.15,
         0.42 + ovrN * 0.22 + teamN * 0.48 - pgOvrPenalty
         + (pgHome ? 0.04 : 0)
-        - (isAllTime ? 0.08 : 0)
+        - (isAllTime ? AT_DIFFICULTY.rb.po : 0)
       ))
       const won = Math.random() < pgWinP
 
@@ -1776,7 +1794,7 @@ export function runWRSimulation(build, types = WR_TYPES, team = null, isAllTime 
 
     const perfBonus = (gameRecYds >= 130 ? 0.04 : gameRecYds >= 90 ? 0.02 : 0)
                     + (gameRecTDs >= 2 ? 0.03 : 0)
-    const gameWinP  = Math.min(0.90, Math.max(0.08, winP + perfBonus + (home ? 0.04 : 0) + v() * 0.09 - oppPenalty))
+    const gameWinP  = Math.min(0.90, Math.max(0.08, winP + perfBonus + (home ? 0.04 : 0) + v() * 0.09 - oppPenalty - (isAllTime ? AT_DIFFICULTY.wr.reg : 0)))
     const won       = Math.random() < gameWinP
     won ? wins++ : losses++
 
@@ -1877,7 +1895,7 @@ export function runWRSimulation(build, types = WR_TYPES, team = null, isAllTime 
       const pgWinP = Math.min(0.78, Math.max(0.15,
         0.42 + ovrN * 0.20 + teamN * 0.46 - pgOvrPenalty
         + (pgHome ? 0.04 : 0)
-        - (isAllTime ? 0.08 : 0)
+        - (isAllTime ? AT_DIFFICULTY.wr.po : 0)
       ))
       const won = Math.random() < pgWinP
 
@@ -2322,7 +2340,7 @@ export function runTESimulation(build, types = TE_TYPES, team = null, isAllTime 
 
     const perfBonus = (gameRecYds >= 100 ? 0.04 : gameRecYds >= 70 ? 0.02 : 0)
                     + (gameRecTDs >= 2 ? 0.03 : 0)
-    const gameWinP  = Math.min(0.90, Math.max(0.08, winP + perfBonus + (home ? 0.04 : 0) + v() * 0.09 - oppPenalty))
+    const gameWinP  = Math.min(0.90, Math.max(0.08, winP + perfBonus + (home ? 0.04 : 0) + v() * 0.09 - oppPenalty - (isAllTime ? AT_DIFFICULTY.te.reg : 0)))
     const won       = Math.random() < gameWinP
     won ? wins++ : losses++
 
@@ -2423,7 +2441,7 @@ export function runTESimulation(build, types = TE_TYPES, team = null, isAllTime 
       const pgWinP = Math.min(0.78, Math.max(0.15,
         0.42 + ovrN * 0.20 + teamN * 0.46 - pgOvrPenalty
         + (pgHome ? 0.04 : 0)
-        - (isAllTime ? 0.08 : 0)
+        - (isAllTime ? AT_DIFFICULTY.te.po : 0)
       ))
       const won = Math.random() < pgWinP
 
@@ -2926,7 +2944,7 @@ export function runDBSimulation(build, team = null, isAllTime = false) {
     // Team result — mostly driven by team quality, nudged by this DB's own big plays
     const perfBonus = (gameInt >= 2 ? 0.05 : gameInt === 1 ? 0.02 : 0) + (gamePbu >= 3 ? 0.02 : 0)
     const winP = Math.min(0.88, Math.max(0.14,
-      0.50 + teamOffN * 0.20 + teamDefBoost * 0.24 + (home ? 0.045 : -0.02) + perfBonus + v() * 0.09 - oppOffN * 0.10 - oppDefN * 0.04
+      0.50 + teamOffN * 0.20 + teamDefBoost * 0.24 + (home ? 0.045 : -0.02) + perfBonus + v() * 0.09 - oppOffN * 0.10 - oppDefN * 0.04 - (isAllTime ? AT_DIFFICULTY.db.reg : 0)
     ))
     const won = Math.random() < winP
     won ? wins++ : losses++
@@ -3015,7 +3033,7 @@ export function runDBSimulation(build, team = null, isAllTime = false) {
       const pgOvrPenalty = ovr < 82 ? (82 - ovr) * 0.007 : 0
 
       const pgWinP = Math.min(0.78, Math.max(0.15,
-        0.42 + ovrN * 0.20 + teamN * 0.46 - pgOvrPenalty + (pgHome ? 0.04 : 0)
+        0.42 + ovrN * 0.20 + teamN * 0.46 - pgOvrPenalty + (pgHome ? 0.04 : 0) - (isAllTime ? AT_DIFFICULTY.db.po : 0)
       ))
       const won = Math.random() < pgWinP
 
@@ -3076,6 +3094,427 @@ export function runDBSimulation(build, team = null, isAllTime = false) {
     games,
     seasonINTs, seasonPBUs, seasonTackles, seasonTFL, seasonFF, seasonPickSixes,
     bestGame, minAttrVal,
+    playoffs, playoffRounds, sbResult, hasBye: playoffs && hasBye,
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ── OL SIMULATION ─────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+
+export function calcOVROL(build, types = OL_TYPES) {
+  const filled = types.filter(t => build[t])
+  if (!filled.length) return null
+
+  const totalW = filled.reduce((s, t) => s + (OL_ATTR_WEIGHT[t] ?? 0.05), 0)
+  const avg    = filled.reduce((s, t) => s + build[t].val * (OL_ATTR_WEIGHT[t] ?? 0.05) / totalW, 0)
+  const vals   = filled.map(t => build[t].val)
+  const base   = 60 + 2.1 * avg + 0.21 * avg * avg
+
+  let bonus = 0
+  if (filled.length === types.length) {
+    const spread = Math.max(...vals) - Math.min(...vals)
+    const minVal = Math.min(...vals)
+    if (spread <= 1) bonus += 2.5
+    else if (spread <= 2) bonus += 1.0
+    else if (spread <= 3) bonus += 0.3
+    if (minVal >= 9) bonus += 2.0
+    else if (minVal >= 8) bonus += 0.5
+  }
+
+  return Math.min(99, Math.max(0, Math.round(base + bonus)))
+}
+
+// The build's spot on the line comes from the Size chip — the same chip that
+// sets its jersey, height and weight — so the archetype name, depth chart and
+// All-Pro ballot all agree on whether this is a tackle, guard or center.
+export function olBuildSpot(build) {
+  const chip = build?.['size']
+  return OL_POS_BY_NAME[chip?.qbFull] ?? chip?.subpos ?? null
+}
+
+function olSpotGroup(spot, fallback = 'tackle') {
+  if (spot === 'C') return 'center'
+  if (spot === 'LG' || spot === 'RG') return 'guard'
+  if (spot === 'LT' || spot === 'RT') return 'tackle'
+  return fallback
+}
+
+const OL_GROUP_NOUN = { tackle: 'Tackle', guard: 'Guard', center: 'Center' }
+
+export function getArchetypeOL(ovr, build, types = OL_TYPES) {
+  const filled = types.filter(t => build[t])
+  if (!filled.length) return 'Spin to start building'
+  const rem = types.length - filled.length
+  if (rem > 0) return `${rem} attribute${rem !== 1 ? 's' : ''} remaining`
+
+  const g   = k => build[k]?.val ?? 0
+  const sz  = g('size'), len = g('length')
+  const anc = g('anchor'), pp = g('passPro'), rb = g('runBlock'), mob = g('mobility')
+  const blz = g('blitzPickup'), pnk = g('pancake')
+
+  // No spot on the chip (old/sandbox build) → light-footed builds read as
+  // tackles, heavier anchor-first builds as guards.
+  const group = olSpotGroup(olBuildSpot(build), mob >= anc ? 'tackle' : 'guard')
+  const noun  = OL_GROUP_NOUN[group]
+
+  // Kept deliberately short — a few real scouting labels, not a name for every
+  // combination. Style is which half of the build clearly leads: protecting
+  // the QB or moving people in the run game, or — when the feet lead both —
+  // a zone blocker. Close builds just get their tier.
+  const pass  = (pp * 2 + len + blz) / 4
+  const power = (rb * 2 + pnk + anc + sz) / 5
+  const style = mob >= 9 && mob - Math.max(pass, power) >= 1 ? 'Zone Blocker'
+    : pass - power >= 1 ? 'Pass Protector'
+    : power - pass >= 1 ? 'Road Grader'
+    : null
+
+  if (ovr >= 95) return style ? `Elite ${style}` : `All-Pro ${noun}`
+  if (ovr >= 86) return style ?? `Pro Bowl ${noun}`
+  if (ovr >= 76) return `Starting ${noun}`
+  if (ovr >= 68) return group === 'tackle' ? 'Swing Tackle' : `Backup ${noun}`
+  return 'Practice Squad Lineman'
+}
+
+// ── First-Team All-Pro ────────────────────────────────────────────────────────
+// Linemen don't win MVP or OPOY — the honor that actually marks an elite OL
+// season is making the First-Team All-Pro line. It's a full five-man line, one
+// per spot (LT, LG, C, RG, RT), and each spot's ballot is three hand-picked
+// names (OL_ALL_PRO_BALLOT in data/ols.js). The build is a fourth name on its
+// own spot's ballot.
+
+const OL_TEAM_BY_SHORT = Object.fromEntries(NFL_TEAMS.map(t => [t.short, t]))
+const OL_SPOTS = ['LT', 'LG', 'C', 'RG', 'RT']
+
+function olAllProStatLine(s) {
+  return `${s.sacks} sack${s.sacks !== 1 ? 's' : ''} allowed · ${s.pressures} pressures · ${s.pancakes} pancakes`
+}
+
+// A spot's ballot: the first three listed names. The real starter on the
+// build's own team at the build's spot is off that ballot — the build took
+// his job — so the listed alternate moves up into his place.
+function olAllProBallot(spot, excludeTeam = null) {
+  return (OL_ALL_PRO_BALLOT[spot] ?? [])
+    .map(name => OLS.find(o => o.name === name))
+    .filter(o => o && o.team !== excludeTeam)
+    .slice(0, 3)
+}
+
+// An All-Pro-caliber line for whoever wins a spot's vote
+function olAllProSeason() {
+  const ri = (lo, hi) => Math.round(lo + Math.random() * (hi - lo))
+  return { sacks: ri(0, 2), pressures: ri(9, 19), pancakes: ri(38, 62), penalties: ri(1, 4) }
+}
+
+export function calcOLAllProResult(result, isAllTime = false, teamShort = null) {
+  const {
+    ovr = 60, seasonSacksAllowed = 0, seasonPressures = 0, seasonPancakes = 0, seasonPenalties = 0,
+    minAttrVal = 0, spot = null,
+  } = result
+
+  // Season "case strength", 0–1, benchmarked against real All-Pro tackle and
+  // guard seasons (Trent Williams / Zack Martin-caliber years: 0-2 sacks,
+  // ~15 pressures, single-digit flags).
+  const sackCase = Math.max(0, Math.min(1, (5 - seasonSacksAllowed) / 5))
+  const prsCase  = Math.max(0, Math.min(1, (42 - seasonPressures) / 26))
+  const pnkCase  = Math.min(1, seasonPancakes / 55)
+  const penCase  = Math.max(0, Math.min(1, (8 - seasonPenalties) / 6))
+  const ovrCase  = Math.max(0, Math.min(1, (ovr - 85) / 12))
+
+  const caseStrength = sackCase * 0.26 + prsCase * 0.24 + pnkCase * 0.18 + penCase * 0.10 + ovrCase * 0.22
+  const unanimous = seasonSacksAllowed === 0 && seasonPressures <= 14
+
+  // Two gates like DPOY — the build has to be truly elite AND the season has
+  // to back it up. Beating three names at one spot is a more reachable honor
+  // than a single league-wide award, so a clear pass is a strong favorite.
+  const BUILD_OVR_GATE = 90
+  const SEASON_GATE = 0.72
+  let winP = 0
+  if (ovr >= BUILD_OVR_GATE && caseStrength >= SEASON_GATE) {
+    const t = (caseStrength - SEASON_GATE) / (1 - SEASON_GATE)
+    winP = 0.45 + t * 0.50
+  }
+  if (isAllTime) winP *= 0.75
+  // Every attribute A+ or S — a lock, no vote needed.
+  const userWins = minAttrVal >= 10 || Math.random() < winP
+
+  const userSpot = OL_SPOTS.includes(spot) ? spot : 'LT'
+  const userStats = { sacks: seasonSacksAllowed, pressures: seasonPressures, pancakes: seasonPancakes, penalties: seasonPenalties }
+
+  // Each spot's vote goes to one of its three names — favoring the best of
+  // them — unless it's the build's spot and the build won it.
+  const line = OL_SPOTS.map(s => {
+    if (s === userSpot && userWins) {
+      return { spot: s, isUser: true, name: 'Your Build', team: teamShort, color: OL_TEAM_BY_SHORT[teamShort]?.color, stats: userStats }
+    }
+    const ballot = olAllProBallot(s, s === userSpot ? teamShort : null)
+    const pick = pickWeighted(ballot.map((o, i) => ({ ...o, weight: [45, 33, 22][i] })))
+    return { spot: s, isUser: false, name: pick.name, team: pick.team, color: OL_TEAM_BY_SHORT[pick.team]?.color, stats: olAllProSeason() }
+  })
+
+  const spotWinner = line.find(p => p.spot === userSpot)
+  return {
+    userWins,
+    unanimous: userWins && unanimous,
+    line,
+    userSpot,
+    userStats,
+    // the three real names the build was up against at its spot
+    ballot: olAllProBallot(userSpot, teamShort).map(o => o.name),
+    winner: userWins ? null : { name: spotWinner.name, team: spotWinner.team, pos: userSpot, color: spotWinner.color },
+    winnerStats: userWins ? null : spotWinner.stats,
+    winnerStatLine: userWins ? null : olAllProStatLine(spotWinner.stats),
+  }
+}
+
+export function runOLSimulation(build, team = null, isAllTime = false) {
+  const oppLookup = isAllTime ? ALLTIME_BY_NAME : TEAM_BY_NAME
+  const ovr = calcOVROL(build) ?? 60
+
+  function statVal(attr) { return build[attr]?.val ?? 5 }
+  const sz  = statVal('size'), len = statVal('length')
+  const anc = statVal('anchor'), pp = statVal('passPro'), rb = statVal('runBlock'), mob = statVal('mobility')
+  const blz = statVal('blitzPickup'), dis = statVal('discipline'), pnk = statVal('pancake')
+
+  const szN  = sz / 11, lenN = len / 11
+  const ancN = anc / 11, ppN = pp / 11, rbN = rb / 11, mobN = mob / 11
+  const blzN = blz / 11, disN = dis / 11, pnkN = pnk / 11
+
+  // Pass protection: hand technique leads, anchor keeps a bull rush from
+  //   walking him back into the QB, feet mirror the speed rush, blitz pickup /
+  //   discipline handle stunts and games up front, and length lets him land
+  //   his punch first and keep rushers off his chest.
+  const passSkill   = ppN * 0.32 + ancN * 0.18 + mobN * 0.12 + blzN * 0.14 + disN * 0.08 + lenN * 0.10 + szN * 0.06
+  // Run blocking: drive and positioning lead, finishing power and anchor
+  //   behind them, mobility for reach and climb blocks in zone schemes, and
+  //   mass to move people off the ball.
+  const runSkill    = rbN * 0.34 + pnkN * 0.18 + ancN * 0.14 + mobN * 0.14 + disN * 0.05 + szN * 0.10 + lenN * 0.05
+  // Pancakes: finishing power first, then run-block drive and sheer mass.
+  const finishSkill = pnkN * 0.40 + rbN * 0.22 + ancN * 0.16 + mobN * 0.08 + szN * 0.14
+
+  // Per-game means, calibrated to a 17-game season of real OL charting:
+  // pressures allowed ≈ 15 elite / 35 average starter / 55+ liability ·
+  // sacks allowed 0-2 elite / 4-5 average / 8+ liability · penalties 1-2
+  // elite / ~5 average / 10+ liability · pancakes 50-60 elite / ~25 average.
+  const prsLambdaBase = 0.75 + 3.4 * Math.pow(1 - passSkill, 1.3)
+  // Share of pressures that finish as sacks — picking up the free rusher and
+  // not collapsing the pocket are what keep a pressure from becoming a sack.
+  const sackRate      = Math.max(0.04, 0.17 - blzN * 0.07 - ancN * 0.03 - szN * 0.01 - ppN * 0.02)
+  const penLambdaBase = 0.05 + 0.70 * Math.pow(1 - disN, 1.5)
+  const pnkLambdaBase = 0.40 + 3.6 * Math.pow(finishSkill, 1.8)
+
+  // Season-long scheme luck: a pass-heavy offense puts him in more pass sets
+  // (more chances to allow pressure), a run-first one gives him more chances
+  // to finish blocks. Applied once so totals swing like real year-to-year lines.
+  const passVol = Math.max(0.80, Math.min(1.25, 1 + randN() * 0.15))
+  const runVol  = Math.max(0.80, Math.min(1.25, 2 - passVol + randN() * 0.05))
+
+  const teamOffN = team ? (team.off - 5) / 5 : 0
+  const teamDefN = team ? (team.def - 5) / 5 : 0
+  const ovrN = (ovr - 78) / 20
+  // An elite lineman lifts the whole offense the way an elite DB lifts the defense.
+  const teamOffBoost = teamOffN + ovrN * 0.12
+  const playerTeamAvg = ((team?.off ?? 5.5) + (team?.def ?? 5.5)) / 2
+
+  let wins = 0, losses = 0
+  let seasonPressures = 0, seasonSacksAllowed = 0, seasonPenalties = 0, seasonPancakes = 0
+
+  const schedule = buildSchedule(team)
+  const games = schedule.map(({ opponent, home }, i) => {
+    const v = () => randN()
+    const oppTeam = oppLookup[opponent]
+    const oppOffN = oppTeam ? (oppTeam.off - 5) / 5 : 0
+    const oppDefN = oppTeam ? (oppTeam.def - 5) / 5 : 0
+
+    const homeShort  = home ? (team?.short ?? '') : (oppTeam?.short ?? '')
+    const badWeather = !DOME_TEAMS.has(homeShort) && COLD_TEAMS.has(homeShort) && Math.random() < 0.15
+
+    // A lineman's bad day shows up as MORE pressure allowed, a lockdown day
+    // as almost none.
+    const gameMood   = Math.random()
+    const isDud      = gameMood < 0.14
+    const isLockdown = gameMood > 0.84
+    const prsMood    = isDud ? (1.5 + Math.random() * 0.6) : isLockdown ? (0.35 + Math.random() * 0.3) : 1.0
+    const pnkMood    = isDud ? (0.5 + Math.random() * 0.3) : isLockdown ? (1.3 + Math.random() * 0.5) : 1.0
+    // A strong opposing front generates more pressure and stuffs more runs.
+    const oppRush    = 1 + oppDefN * 0.30
+
+    const gamePrs = poissonSample(Math.max(0, prsLambdaBase * passVol * prsMood * oppRush * (badWeather ? 0.92 : 1)))
+    let gameSacks = 0
+    for (let k = 0; k < gamePrs; k++) if (Math.random() < sackRate) gameSacks++
+    const gamePen = poissonSample(Math.max(0, penLambdaBase * (home ? 0.92 : 1.08)))
+    const gamePnk = poissonSample(Math.max(0, pnkLambdaBase * runVol * pnkMood * (1 - oppDefN * 0.15) * (badWeather ? 1.1 : 1)))
+
+    seasonPressures    += gamePrs
+    seasonSacksAllowed += gameSacks
+    seasonPenalties    += gamePen
+    seasonPancakes     += gamePnk
+
+    // Team result — mostly team quality, nudged by how this lineman's day went
+    const perfBonus = (gameSacks === 0 && gamePrs <= 1 ? 0.03 : 0) + (gamePnk >= 4 ? 0.02 : 0)
+      - (gameSacks >= 2 ? 0.04 : 0) - (gamePen >= 2 ? 0.02 : 0)
+    const winP = Math.min(0.88, Math.max(0.14,
+      0.50 + teamOffBoost * 0.24 + teamDefN * 0.20 + (home ? 0.045 : -0.02) + perfBonus + v() * 0.09 - oppDefN * 0.10 - oppOffN * 0.04 - (isAllTime ? AT_DIFFICULTY.ol.reg : 0)
+    ))
+    const won = Math.random() < winP
+    won ? wins++ : losses++
+
+    const teamTDs = Math.max(0, Math.round(1.5 + teamOffBoost * 1.1 + v() * 0.9))
+    const teamFGs = Math.max(0, Math.round(1.5 - teamTDs * 0.3 + Math.random() * 1.5))
+    let mySc = Math.max(3, teamTDs * 7 + teamFGs * 3)
+    const oppTDs = Math.max(0, Math.floor(1.2 + Math.random() * 3 + oppOffN * 0.9 - teamDefN * 0.6))
+    const oppFGs = Math.max(0, Math.round(1 - oppTDs * 0.3 + Math.random()))
+    let oppSc = Math.max(0, oppTDs * 7 + oppFGs * 3)
+    if (won  && mySc  <= oppSc) mySc  = oppSc + 1 + Math.ceil(Math.random() * 4)
+    if (!won && oppSc <= mySc)  oppSc = mySc  + 1 + Math.ceil(Math.random() * 4)
+    mySc  = snapNFL(mySc)
+    oppSc = snapNFL(oppSc)
+    if (mySc === oppSc) { if (won) mySc = snapNFL(mySc + 3); else oppSc = snapNFL(oppSc + 3) }
+
+    return {
+      wk: i + 1, opponent, home, mySc, oppSc, won,
+      pressures: gamePrs, sacks: gameSacks, penalties: gamePen, pancakes: gamePnk,
+    }
+  })
+
+  // ESPN-style season win rates (share of pass / run blocking snaps won):
+  // PBWR ≈ 93-95% elite, ~88% average, low 80s liability · RBWR ≈ 78% elite,
+  // ~72% average, ~67% liability. PBWR tracks the pressures he actually gave
+  // up this year, not just the rating.
+  const expPrs = prsLambdaBase * passVol * games.length
+  const prsDev = (seasonPressures - expPrs) / Math.max(expPrs, 1)
+  const seasonPBWR = +Math.max(72, Math.min(97.5, 80 + 15 * Math.pow(passSkill, 0.9) - prsDev * 2.5 + randN() * 0.6)).toFixed(1)
+  const seasonRBWR = +Math.max(60, Math.min(84, 64 + 16 * Math.pow(runSkill, 0.9) + randN() * 1.0)).toFixed(1)
+
+  const bestGame = [...games].sort((a, b) => {
+    const score = g => g.pancakes * 1.5 - g.sacks * 4 - g.pressures * 1.2 - g.penalties * 2 + (g.won ? 1.5 : 0)
+    return score(b) - score(a)
+  })[0]
+
+  // ── Playoffs ──────────────────────────────────────────────────────────────
+  const playoffs = wins >= 10
+    || (wins === 9 && Math.random() < 0.50)
+    || (wins === 8 && Math.random() < 0.06)
+  const playoffRounds = []
+  let sbResult = null
+  let hasBye = false
+
+  if (playoffs) {
+    const conf = team?.conf ?? 'AFC'
+    const activePlayoffPools = isAllTime ? ALLTIME_PLAYOFF_POOLS : PLAYOFF_POOLS
+    const activeSbPools      = isAllTime ? ALLTIME_SB_POOLS      : SB_POOLS
+    const confPool = activePlayoffPools[conf].filter(n => n !== team?.name)
+    const sbPool   = activeSbPools[conf].filter(n => n !== team?.name)
+    const usedOpponents = new Set()
+    const pick = pool => {
+      const avail = pool.filter(n => !usedOpponents.has(n))
+      const chosen = (avail.length > 0 ? avail : pool)[Math.floor(Math.random() * (avail.length || pool.length))]
+      usedOpponents.add(chosen)
+      return chosen
+    }
+
+    hasBye = wins >= 14 ? true : wins >= 13 ? Math.random() < 0.60 : false
+    const bracket = hasBye
+      ? [
+          { round: 'Divisional Round',        pool: confPool },
+          { round: 'Conference Championship', pool: confPool },
+          { round: 'Super Bowl',              pool: sbPool   },
+        ]
+      : [
+          { round: 'Wild Card',               pool: confPool },
+          { round: 'Divisional Round',        pool: confPool },
+          { round: 'Conference Championship', pool: confPool },
+          { round: 'Super Bowl',              pool: sbPool   },
+        ]
+    const winsNeeded = hasBye ? 3 : 4
+    const seed = hasBye && wins >= 14 ? 1 : hasBye ? 2 : wins >= 12 ? 3 : wins >= 11 ? 4 : 5
+
+    const pgHomeProb = round => {
+      if (round === 'Super Bowl') return 0
+      if (seed === 1) return 1.0
+      if (round === 'Wild Card') return seed <= 4 ? 1.0 : 0.0
+      if (round === 'Divisional Round') return seed === 2 ? 0.80 : seed === 3 ? 0.10 : 0.06
+      if (round === 'Conference Championship') return seed === 2 ? 0.60 : seed === 3 ? 0.20 : 0.10
+      return 0
+    }
+
+    let pwins = 0, eliminated = null
+    for (const { round, pool } of bracket) {
+      const opponent  = pick(pool)
+      const pgHome    = Math.random() < pgHomeProb(round)
+      const homeShort = pgHome ? team?.short : TEAM_BY_NAME[opponent]?.short
+      const weather   = playoffWeather(homeShort, round === 'Super Bowl')
+
+      const oppTeam    = oppLookup[opponent]
+      const oppTeamAvg = ((oppTeam?.off ?? 5.5) + (oppTeam?.def ?? 5.5)) / 2
+      const teamN      = (playerTeamAvg - oppTeamAvg) / 9
+      const pgOvrPenalty = ovr < 82 ? (82 - ovr) * 0.007 : 0
+
+      const pgWinP = Math.min(0.78, Math.max(0.15,
+        0.42 + ovrN * 0.20 + teamN * 0.46 - pgOvrPenalty + (pgHome ? 0.04 : 0) - (isAllTime ? AT_DIFFICULTY.ol.po : 0)
+      ))
+      const won = Math.random() < pgWinP
+
+      const oppTeamOffN = oppTeam ? (oppTeam.off - 5) / 5 : 0
+      const oppTeamDefN = oppTeam ? (oppTeam.def - 5) / 5 : 0
+      const wMult = weather === 'snow' ? 0.90 : weather === 'rain' ? 0.94 : 1.0
+
+      // Playoff fronts are better than the regular-season average
+      const pgPrs = poissonSample(Math.max(0, prsLambdaBase * passVol * (1.08 + oppTeamDefN * 0.30)))
+      let pgSacks = 0
+      for (let k = 0; k < pgPrs; k++) if (Math.random() < sackRate) pgSacks++
+      const pgPen = poissonSample(Math.max(0, penLambdaBase))
+      const pgPnk = poissonSample(Math.max(0, pnkLambdaBase * runVol * (weather === 'snow' ? 1.1 : 1) * (1 - oppTeamDefN * 0.15)))
+
+      const pgTmTDs = Math.max(0, Math.round(1.4 + teamOffN * 1.0 + randN() * 0.8))
+      const pgFGs   = Math.max(0, Math.round(1.2 - pgTmTDs * 0.3 + Math.random() * 1.2))
+      const base    = Math.max(3, Math.round((pgTmTDs * 7 + pgFGs * 3) * wMult))
+      const oppPTDs = Math.max(0, Math.floor(1 + Math.random() * 3 + oppTeamOffN * 0.8))
+      const oppPFGs = Math.max(0, Math.round(1 - oppPTDs * 0.3 + Math.random()))
+      const opp     = Math.max(7, Math.round((oppPTDs * 7 + oppPFGs * 3) * wMult))
+      const pgCloseness = 1 - 2 * Math.abs(pgWinP - 0.5)
+      const pgOT = Math.random() < pgCloseness * 0.22
+      let finalMy, finalOpp
+      if (pgOT) {
+        const baseTDs2 = Math.max(pgTmTDs, Math.floor(1 + Math.random() * 3 + oppTeamOffN * 0.8), 1)
+        const tiedSc = snapNFL(Math.max(10, baseTDs2 * 7 + Math.floor(Math.random() * 3) * 3))
+        const otPts  = Math.random() < 0.27 ? 7 : 3
+        finalMy  = won ? tiedSc + otPts : tiedSc
+        finalOpp = won ? tiedSc : tiedSc + otPts
+      } else {
+        const margin = Math.ceil(Math.random() * 7)
+        finalMy  = snapNFL(won ? Math.max(base, opp + margin) : Math.min(base, opp - margin))
+        finalOpp = snapNFL(won ? opp : Math.max(opp, base + margin))
+      }
+
+      seasonPressures    += pgPrs
+      seasonSacksAllowed += pgSacks
+      seasonPenalties    += pgPen
+      seasonPancakes     += pgPnk
+
+      playoffRounds.push({
+        round, opponent, home: pgHome, weather, mySc: finalMy, oppSc: finalOpp, won, overtime: pgOT,
+        pressures: pgPrs, sacks: pgSacks, penalties: pgPen, pancakes: pgPnk,
+      })
+      if (won) pwins++
+      else { eliminated = round; break }
+    }
+
+    if (pwins === winsNeeded) {
+      const sbGame = playoffRounds[playoffRounds.length - 1]
+      sbResult = { won: true, pressures: sbGame.pressures, sacks: sbGame.sacks, pancakes: sbGame.pancakes, penalties: sbGame.penalties }
+    } else {
+      sbResult = { won: false, round: eliminated, pwins }
+    }
+  }
+
+  const minAttrVal = Math.min(sz, len, anc, pp, rb, mob, blz, dis, pnk)
+
+  return {
+    team, ovr, wins, losses,
+    games,
+    seasonPressures, seasonSacksAllowed, seasonPenalties, seasonPancakes, seasonPBWR, seasonRBWR,
+    bestGame, minAttrVal, spot: olBuildSpot(build),
     playoffs, playoffRounds, sbResult, hasBye: playoffs && hasBye,
   }
 }

@@ -7,6 +7,7 @@ import { TE_PHYSICALS } from '../data/tes'
 import { TE_LEGENDS } from '../data/te-legends'
 import { DBS } from '../data/dbs'
 import { DB_LEGENDS } from '../data/db-legends'
+import { OL_PHYSICALS } from '../data/ols'
 import { QB_LEGEND_PHYSICALS } from '../data/qb-legends'
 import { RB_LEGEND_PHYSICALS } from '../data/rb-legends'
 import { WR_LEGEND_PHYSICALS } from '../data/wr-legends'
@@ -15,7 +16,7 @@ const DB_PHYS = Object.fromEntries([...DBS, ...DB_LEGENDS].map(d => [d.name, { h
 const ALL_RB_PHYS = { ...RB_LEGEND_PHYSICALS, ...RB_PHYSICALS }
 const ALL_WR_PHYS = { ...WR_LEGEND_PHYSICALS, ...WR_PHYSICALS }
 const ALL_TE_PHYS = { ...Object.fromEntries(TE_LEGENDS.map(t => [t.name, { height: t.height, weight: t.weight }])), ...TE_PHYSICALS }
-import { calcOVR, calcOVRRB, calcOVRWR, calcOVRTE, calcOVRDB, getArchetype, getArchetypeRB, getArchetypeWR, getArchetypeTE, getArchetypeDB, calcBalance, valToGrade } from '../utils/simulation'
+import { calcOVR, calcOVRRB, calcOVRWR, calcOVRTE, calcOVRDB, calcOVROL, getArchetype, getArchetypeRB, getArchetypeWR, getArchetypeTE, getArchetypeDB, getArchetypeOL, calcBalance, valToGrade } from '../utils/simulation'
 import { calcBucketOVR, getBucketGuardArchetype, getBucketBigArchetype } from '../utils/bucketSimulation'
 import { buildShareUrl } from '../utils/shareUrl'
 import { generateBucketShareCard, shareOrDownloadCard } from '../utils/generateShareCard'
@@ -108,12 +109,12 @@ function BuildSlot({ type, data, attrMap = ATTR, logoDir = '/logos/' }) {
 
 // ── Share Modal ───────────────────────────────────────────────────────────────
 
-export function ShareModal({ ovr, arch, build, types, onClose, isBucket = false, attrMap = {}, position = 'guard', isRB = false, isWR = false, isTE = false, isDB = false, captureFigure }) {
+export function ShareModal({ ovr, arch, build, types, onClose, isBucket = false, attrMap = {}, position = 'guard', isRB = false, isWR = false, isTE = false, isDB = false, isOL = false, captureFigure }) {
   const [copied, setCopied]       = useState(false)
   const [cardDataUrl, setCardDataUrl] = useState(null)
   const [cardBlob, setCardBlob]       = useState(null)
 
-  const posWord    = isDB ? 'defensive back' : isWR ? 'wide receiver' : isRB ? 'running back' : isTE ? 'tight end' : 'quarterback'
+  const posWord    = isOL ? 'offensive lineman' : isDB ? 'defensive back' : isWR ? 'wide receiver' : isRB ? 'running back' : isTE ? 'tight end' : 'quarterback'
   const bucketText = `I built a ${ovr} OVR ${arch}. Think you can do better?`
   const shareText  = isBucket ? bucketText : `I made a ${ovr} overall ${arch} ${posWord}, think you can do better?`
   const shareUrl   = buildShareUrl(build, types)
@@ -288,12 +289,12 @@ export function ShareModal({ ovr, arch, build, types, onClose, isBucket = false,
 
 // ── ReportCard ────────────────────────────────────────────────────────────────
 
-export default function ReportCard({ build, onSimulate, onReset, types = TYPES, hasResult = false, isRB = false, isWR = false, isTE = false, isDB = false, isBucket = false, bucketPosition = 'guard', isPlus = false, isCustomMode = false, onOpenCustomModal, onSandboxToggle, attrMap = ATTR, logoDir = '/logos/', captureFigure, isSalaryMode = false, isVersusMode = false, oppPosition = null, oppFilledCount = 0, oppTotal = null }) {
+export default function ReportCard({ build, onSimulate, onReset, types = TYPES, hasResult = false, isRB = false, isWR = false, isTE = false, isDB = false, isOL = false, isBucket = false, bucketPosition = 'guard', isPlus = false, isCustomMode = false, onOpenCustomModal, onSandboxToggle, attrMap = ATTR, logoDir = '/logos/', captureFigure, isSalaryMode = false, isVersusMode = false, oppPosition = null, oppFilledCount = 0, oppTotal = null }) {
   const filled = types.filter(t => build[t])
-  const ovr = isBucket ? calcBucketOVR(build, types, bucketPosition) : isDB ? calcOVRDB(build, types) : isTE ? calcOVRTE(build, types) : isWR ? calcOVRWR(build, types) : isRB ? calcOVRRB(build, types) : calcOVR(build, types)
+  const ovr = isBucket ? calcBucketOVR(build, types, bucketPosition) : isOL ? calcOVROL(build, types) : isDB ? calcOVRDB(build, types) : isTE ? calcOVRTE(build, types) : isWR ? calcOVRWR(build, types) : isRB ? calcOVRRB(build, types) : calcOVR(build, types)
   const arch = isBucket
     ? (bucketPosition === 'big' ? getBucketBigArchetype(ovr, build, types) : getBucketGuardArchetype(ovr, build, types))
-    : isDB ? getArchetypeDB(ovr, build, types) : isTE ? getArchetypeTE(ovr, build, types) : isWR ? getArchetypeWR(ovr, build, types) : isRB ? getArchetypeRB(ovr, build, types) : getArchetype(ovr, build, types)
+    : isOL ? getArchetypeOL(ovr, build, types) : isDB ? getArchetypeDB(ovr, build, types) : isTE ? getArchetypeTE(ovr, build, types) : isWR ? getArchetypeWR(ovr, build, types) : isRB ? getArchetypeRB(ovr, build, types) : getArchetype(ovr, build, types)
   const balance = calcBalance(build, types)
   const complete = filled.length === types.length
   const [showChevron, setShowChevron] = useState(true)
@@ -318,7 +319,12 @@ export default function ReportCard({ build, onSimulate, onReset, types = TYPES, 
   }, [])
 
   let heightStr, weightLbs
-  if (isBucket) {
+  if (isOL) {
+    const olChip = build['size']
+    const olPhys = olChip ? OL_PHYSICALS[olChip.qbFull] : null
+    heightStr = olPhys ? fmtHeight(olPhys.height) : (olChip?.height ? fmtHeight(olChip.height) : null)
+    weightLbs = olPhys ? olPhys.weight : (olChip?.weight ?? null)
+  } else if (isBucket) {
     const slot = build['size'] || build['heightLength']
     heightStr = slot?.height ? fmtHeight(slot.height) : null
     weightLbs = slot?.weight ?? null
@@ -467,7 +473,7 @@ export default function ReportCard({ build, onSimulate, onReset, types = TYPES, 
 
       {showShare && createPortal(
         <ShareModal ovr={ovr} arch={arch} build={build} types={types} onClose={() => setShowShare(false)}
-          isBucket={isBucket} attrMap={attrMap} position={bucketPosition} isRB={isRB} isWR={isWR} isTE={isTE} isDB={isDB} captureFigure={captureFigure} />,
+          isBucket={isBucket} attrMap={attrMap} position={bucketPosition} isRB={isRB} isWR={isWR} isTE={isTE} isDB={isDB} isOL={isOL} captureFigure={captureFigure} />,
         document.body
       )}
     </aside>

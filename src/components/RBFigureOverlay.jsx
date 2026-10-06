@@ -1,4 +1,5 @@
 import svgRaw from '../assets/rb-figure-color.svg?raw'
+import { warmSkin } from '../utils/footballSkin'
 
 const PROCESSED_SVG = (() => {
   let html = svgRaw
@@ -44,19 +45,6 @@ function darkenColor(hex, factor = 0.6) {
   return `rgb(${Math.round(r * factor)},${Math.round(g * factor)},${Math.round(b * factor)})`
 }
 
-// Boosts red in a base skin tone before it's lightened/darkened downstream —
-// matches the warmer, more visibly red skin treatment used elsewhere (Bucket, DB, WR).
-// Must return a #rrggbb hex string, not rgb(...) — lightenColor/darkenColor/
-// reddenSkin downstream all parse their input with hex.slice(1,3) etc., so an
-// rgb() string here silently produces NaN channels (invisible/broken fill).
-function warmSkin(hex, redBoost = 22) {
-  if (!hex || hex === 'transparent') return hex
-  const r = Math.min(255, parseInt(hex.slice(1, 3), 16) + redBoost)
-  const g = parseInt(hex.slice(3, 5), 16)
-  const b = Math.max(0, parseInt(hex.slice(5, 7), 16) - 4)
-  const toHex = v => v.toString(16).padStart(2, '0')
-  return `#${toHex(r)}${toHex(g)}${toHex(b)}`
-}
 
 // Subtle lip redness — just slightly warmer than the skin tone
 function reddenSkin(hex) {
@@ -214,12 +202,6 @@ export default function RBFigureOverlay({ build }) {
           >{build?.['size']?.number ?? ''}</text>
         </g>
 
-        {/* NFL shield */}
-        {has('size') && (
-          <image href="/logos/nfl.png" x="265" y="206" width="17" height="17"
-            transform="rotate(-10, 273.5, 214.5)"
-            style={{ opacity: 0.85, pointerEvents: 'none' }} />
-        )}
 
         {/* Team logo — left shoulder */}
         {has('size') && (

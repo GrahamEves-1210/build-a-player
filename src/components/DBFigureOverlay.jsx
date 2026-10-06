@@ -1,5 +1,6 @@
 import { useState, useRef, useLayoutEffect } from 'react'
 import svgRaw from '../assets/db-figure-color.svg?raw'
+import { warmSkin, warmSkinLight } from '../utils/footballSkin'
 
 const PROCESSED_SVG = (() => {
   let html = svgRaw
@@ -65,21 +66,8 @@ function setGroupChildFill(html, groupId, idx, fill, extra = '') {
   )
 }
 
-function warmSkin(hex, light = 5, redBoost = 25) {
-  if (!hex || hex === 'transparent') return 'transparent'
-  const clamp = (v) => Math.max(0, Math.min(255, v))
-  const r = clamp(parseInt(hex.slice(1, 3), 16) + light + redBoost)
-  const g = clamp(parseInt(hex.slice(3, 5), 16) + light)
-  const b = clamp(parseInt(hex.slice(5, 7), 16) + light - 6)
-  return `rgb(${r},${g},${b})`
-}
-
-// Shared skin treatment for every bare-skin area (face, neck, arms, knees) so they
-// all read consistently. `light` is kept low — mixBlendMode:'screen' can only
-// brighten what's under it, so too much light washes dark skin tones out toward
-// gray/caucasian-looking instead of reading as a darker, warmer tone.
-const SKIN_LIGHT   = 1
-const SKIN_RED     = 34
+// Every bare-skin area (face, neck, arms, knees) uses the shared football skin
+// treatment (utils/footballSkin) at the same opacity so they all read consistently.
 const SKIN_OPACITY = 0.58
 
 // Lips get their own pink/rose tint instead of reusing warmSkin's "skin + red"
@@ -102,9 +90,24 @@ function lipTint(hex) {
   return `rgb(${r},${g},${b})`
 }
 
+// Which build slot colors each body part. DB's own mapping is the default;
+// OL passes its own (see OLFigureOverlay). `head` = helmet + team logo,
+// `face` = face, neck and lips.
+const DB_PARTS = {
+  jersey:      'size',
+  arms:        'press',
+  gloves:      'hands',
+  shins:       'speed',   // shins + socks
+  shoes:       'speed',
+  knees:       'fluidity',
+  thighs:      'fluidity',
+  leftSleeve:  'manCoverage',
+  rightSleeve: 'runSupport',
+}
+
 // numberNudgePx: screen-pixel offset for the chest jersey number (mobile tweak).
 // The SVG scales to fit its box, so convert px to viewBox units at runtime.
-export default function DBFigureOverlay({ build, numberNudgePx = null }) {
+export default function DBFigureOverlay({ build, numberNudgePx = null, parts = null }) {
   const numSvgRef = useRef(null)
   const [unitsPerPx, setUnitsPerPx] = useState(1)
   useLayoutEffect(() => {
@@ -127,18 +130,21 @@ export default function DBFigureOverlay({ build, numberNudgePx = null }) {
 
   let svg = PROCESSED_SVG
 
+  const P = { ...DB_PARTS, ...parts }
+
   // ── HEAD (zoneIQ, fallback playRecognition): helmet team color, face/neck skin
-  const headKey = has('zoneIQ') ? 'zoneIQ' : 'playRecognition'
+  const headKey = P.head ?? (has('zoneIQ') ? 'zoneIQ' : 'playRecognition')
+  const faceKey = P.face ?? headKey
   svg = setFill(svg, 'helmet', tc(headKey), 'opacity:0.76;')
-  if (has(headKey)) {
-    const skinColor  = warmSkin(sk(headKey), SKIN_LIGHT, SKIN_RED)
+  if (has(faceKey)) {
+    const skinColor  = warmSkin(sk(faceKey))
     // face/face2 sit under the helmet brim — read as shadowed, not a different
     // (blacker/grayer) skin color: same hue, just less light added.
     // Enough opacity to still read as tinted skin, not a flat dark mask —
     // too little opacity here just shows the raw (achromatic) dark base PNG,
     // which looks like a visor instead of shadowed skin.
-    const skinLight  = warmSkin(sk(headKey), SKIN_LIGHT + 8, SKIN_RED - 6)
-    const lipColor   = lipTint(sk(headKey))
+    const skinLight  = warmSkinLight(sk(faceKey))
+    const lipColor   = lipTint(sk(faceKey))
     svg = setFill(svg, 'face',     '#0d0d0d', 'opacity:0.85;')
     svg = setFill(svg, 'face2',    '#0d0d0d', 'opacity:0.85;')
     svg = setFill(svg, 'face3',    skinColor,  `opacity:${SKIN_OPACITY};`)
@@ -161,51 +167,51 @@ export default function DBFigureOverlay({ build, numberNudgePx = null }) {
 
   // ── SIZE: jersey team color; shoulders black (pads showing through, not
   // team-colored); undershirt black; stripe1/3 secondary color, stripe2 white
-  svg = setFill(svg, 'jersey', tc('size'), 'opacity:0.66;')
-  const shoulderFill = has('size') ? '#0d0d0d' : 'transparent'
+  svg = setFill(svg, 'jersey', tc(P.jersey), 'opacity:0.66;')
+  const shoulderFill = has(P.jersey) ? '#0d0d0d' : 'transparent'
   svg = setFill(svg, 'left shoulder', shoulderFill, 'opacity:0.85;')
   svg = setGroupChildFill(svg, 'right shoulder', 1, shoulderFill, 'opacity:0.85;')
-  const undershirtFill = has('size') ? '#0d0d0d' : 'transparent'
+  const undershirtFill = has(P.jersey) ? '#0d0d0d' : 'transparent'
   svg = setFill(svg, 'undershirt', undershirtFill, 'opacity:0.55;')
-  const stripeSecondary = has('size') ? tc2('size') : 'transparent'
-  const stripeWhite     = has('size') ? '#f2f2f2' : 'transparent'
+  const stripeSecondary = has(P.jersey) ? tc2(P.jersey) : 'transparent'
+  const stripeWhite     = has(P.jersey) ? '#f2f2f2' : 'transparent'
   svg = setFill(svg, 'stripe1', stripeSecondary, 'opacity:0.73;')
   svg = setFill(svg, 'stripe2', stripeWhite)
   svg = setFill(svg, 'stripe3', stripeSecondary, 'opacity:0.73;')
 
   // ── PRESS: bare arm skin tone only (sleeves now belong to man coverage / run support)
-  const armSkin = has('press') ? warmSkin(sk('press'), SKIN_LIGHT, SKIN_RED) : 'transparent'
+  const armSkin = has(P.arms) ? warmSkin(sk(P.arms)) : 'transparent'
   svg = setFill(svg, 'left arm',  armSkin, `opacity:${SKIN_OPACITY};`)
   svg = setFill(svg, 'right arm', armSkin, `opacity:${SKIN_OPACITY};`)
 
   // ── HANDS: both gloves (right glove has its own id; left glove is the
   // unlabeled first path bundled into the "right shoulder" group)
-  svg = setFill(svg, 'right glove', tc('hands'), 'opacity:0.63;')
-  svg = setGroupChildFill(svg, 'right shoulder', 0, tc('hands'), 'opacity:0.63;')
+  svg = setFill(svg, 'right glove', tc(P.gloves), 'opacity:0.63;')
+  svg = setGroupChildFill(svg, 'right shoulder', 0, tc(P.gloves), 'opacity:0.63;')
 
   // ── SPEED: shins (black), shoes (team color), socks (white)
-  const shinFill = has('speed') ? '#0d0d0d' : 'transparent'
+  const shinFill = has(P.shins) ? '#0d0d0d' : 'transparent'
   svg = setFill(svg, 'left shin',  shinFill, 'opacity:0.80;')
   svg = setFill(svg, 'right shin', shinFill, 'opacity:0.80;')
-  svg = setFill(svg, 'left shoe',  tc('speed'), 'opacity:0.68;')
-  svg = setFill(svg, 'right shoe', tc('speed'), 'opacity:0.68;')
-  const sockFill = has('speed') ? '#ffffff' : 'transparent'
+  svg = setFill(svg, 'left shoe',  tc(P.shoes), 'opacity:0.68;')
+  svg = setFill(svg, 'right shoe', tc(P.shoes), 'opacity:0.68;')
+  const sockFill = has(P.shins) ? '#ffffff' : 'transparent'
   svg = setFill(svg, 'left sock',  sockFill, 'opacity:0.72;')
   svg = setFill(svg, 'right sock', sockFill, 'opacity:0.72;')
 
   // ── FLUIDITY: knees (skin tone) + thighs/legs (team color)
-  const kneeSkin = has('fluidity') ? warmSkin(sk('fluidity'), SKIN_LIGHT, SKIN_RED) : 'transparent'
+  const kneeSkin = has(P.knees) ? warmSkin(sk(P.knees)) : 'transparent'
   svg = setFill(svg, 'left knee',  kneeSkin, `opacity:${SKIN_OPACITY};`)
   svg = setFill(svg, 'right knee', kneeSkin, `opacity:${SKIN_OPACITY};`)
-  svg = setFill(svg, 'thighs', tc('fluidity'), 'opacity:0.63;')
+  svg = setFill(svg, 'thighs', tc(P.thighs), 'opacity:0.63;')
 
   // ── MAN COVERAGE: left sleeve
-  svg = setFill(svg, 'left sleeve', tc('manCoverage'), 'opacity:0.63;')
+  svg = setFill(svg, 'left sleeve', tc(P.leftSleeve), 'opacity:0.63;')
 
   // ── RUN SUPPORT: right sleeve
-  svg = setFill(svg, 'right sleeve', tc('runSupport'), 'opacity:0.63;')
+  svg = setFill(svg, 'right sleeve', tc(P.rightSleeve), 'opacity:0.63;')
 
-  const sizeChip = build?.['size']
+  const sizeChip = build?.[P.jersey]
   const teamNickname = TEAM_NICKNAMES[sizeChip?.team] ?? sizeChip?.team ?? ''
   const helmetTeam = build?.[headKey]?.team
 
@@ -228,7 +234,7 @@ export default function DBFigureOverlay({ build, numberNudgePx = null }) {
             strokeWidth="2"
             paintOrder="stroke"
             style={{
-              opacity: has('size') ? 0.85 : 0,
+              opacity: has(P.jersey) ?0.85 : 0,
               transition: 'opacity 0.5s ease',
               userSelect: 'none',
               pointerEvents: 'none',
@@ -261,7 +267,7 @@ export default function DBFigureOverlay({ build, numberNudgePx = null }) {
               strokeWidth="5"
               paintOrder="stroke"
               style={{
-                opacity: has('size') ? 0.92 : 0,
+                opacity: has(P.jersey) ?0.92 : 0,
                 transition: 'opacity 0.5s ease',
                 userSelect: 'none',
                 pointerEvents: 'none',
@@ -276,7 +282,7 @@ export default function DBFigureOverlay({ build, numberNudgePx = null }) {
 
         {/* Left shoulder number (viewer left) — sideways, top pointing outward/left */}
         <g transform="translate(121, 190) rotate(90)"
-           style={{ opacity: has('size') ? 0.9 : 0, transition: 'opacity 0.5s ease' }}>
+           style={{ opacity: has(P.jersey) ?0.9 : 0, transition: 'opacity 0.5s ease' }}>
           <text
             x="0" y="0"
             textAnchor="middle"
@@ -292,7 +298,7 @@ export default function DBFigureOverlay({ build, numberNudgePx = null }) {
 
         {/* Right shoulder number (viewer right) — sideways, top pointing outward/right */}
         <g transform="translate(413, 205) rotate(-90)"
-           style={{ opacity: has('size') ? 0.9 : 0, transition: 'opacity 0.5s ease' }}>
+           style={{ opacity: has(P.jersey) ?0.9 : 0, transition: 'opacity 0.5s ease' }}>
           <text
             x="0" y="0"
             textAnchor="middle"

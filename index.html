@@ -24,21 +24,23 @@
     <!-- Open Graph (Discord, Slack, iMessage, etc.) -->
     <meta property="og:title" content="Build-A-Player | Build-A-Bucket" />
     <meta property="og:description" content="Spin the wheel to create your Frankenstein NFL quarterback or build a basketball player (NBA), simulate a full season, and climb the all-time leaderboard." />
-    <meta property="og:image" content="https://www.build-a-player.com/logo-v2.png" />
-    <meta property="og:url" content="https://www.build-a-player.com/" />
+    <meta property="og:image" content="https://build-a-player.com/logo-v2.png" />
+    <meta property="og:url" content="https://build-a-player.com/" />
     <meta property="og:type" content="website" />
 
     <!-- Twitter / X card -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Build-A-Player | Build-A-Bucket" />
     <meta name="twitter:description" content="Spin the wheel to create your Frankenstein NFL quarterback or build a basketball player (NBA), simulate a full season, and climb the all-time leaderboard." />
-    <meta name="twitter:image" content="https://www.build-a-player.com/logo-v2.png" />
+    <meta name="twitter:image" content="https://build-a-player.com/logo-v2.png" />
 
-    <!-- No static <link rel="canonical"> here on purpose — this single index.html
-         is served for every route (/, /bucket, ...) in this client-side SPA, so a
-         hardcoded canonical pointing at "/" told crawlers /bucket was a duplicate
-         of the homepage, before App.jsx's/BucketApp.jsx's own <Helmet> tag could
-         ever override it. Each app now sets its own correct canonical via Helmet. -->
+    <!-- No static canonical tag here on purpose — this index.html is the SPA
+         fallback for every route without its own file, so a hardcoded canonical
+         pointing at "/" would mark those routes as duplicates of the homepage.
+         App.jsx sets "/"'s canonical via Helmet; /bucket is served from its own
+         pre-built bucket.html (scripts/prerender-bucket.mjs). -->
+    <!-- The site's real address is build-a-player.com — www redirects (301) to it,
+         so every absolute URL here, in Helmet tags and in sitemap.xml uses it. -->
 
     <!-- Structured data: helps Google associate "Build-A-Bucket" with this domain -->
     <script type="application/ld+json">
@@ -49,7 +51,7 @@
           "@type": "WebApplication",
           "name": "Build-A-Player",
           "alternateName": "Build A Player",
-          "url": "https://www.build-a-player.com/",
+          "url": "https://build-a-player.com/",
           "description": "Spin the wheel to build a Frankenstein NFL quarterback, simulate a full season, and compare to all-time greats.",
           "applicationCategory": "GameApplication",
           "genre": "Sports Game",
@@ -59,7 +61,7 @@
           "@type": "WebApplication",
           "name": "Build-A-Bucket",
           "alternateName": ["Build A Bucket", "BuildABucket", "Build a Basketball Player", "NBA Player Builder", "NBA Player Creator", "Create a Basketball Player"],
-          "url": "https://www.build-a-player.com/bucket",
+          "url": "https://build-a-player.com/bucket",
           "description": "Build a basketball player — spin the wheel to create your Frankenstein NBA player, simulate a full season, and climb the all-time GOAT leaderboard.",
           "applicationCategory": "GameApplication",
           "genre": "Sports Game",

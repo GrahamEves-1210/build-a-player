@@ -4993,6 +4993,8 @@ a:focus-visible {
   font-variant-numeric: tabular-nums;
 }
 .sgr-unit { color: var(--text-4); font-weight: 500; margin-left: 1px; }
+/* OL game line is written out ("1 sack allowed · 3 pancakes") */
+.sgr-stat--ol { width: 132px; line-height: 1.35; }
 
 /* Totals strip (shared screen 2 + 4) */
 .sim-totals-strip {
@@ -6012,7 +6014,15 @@ html.is-mac .spin-panel-scroll {
 }
 .splash-pos-option--disabled {
   cursor: not-allowed;
-  padding-bottom: 60px;
+  padding: 30px 12px 12px;
+}
+/* Coming Soon modes: compact, all in one row (no vote area anymore) */
+.splash-pos-popup-grid--soon {
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.splash-pos-option--disabled .splash-pos-option-name {
+  font-size: 26px;
 }
 .splash-pos-option--disabled .splash-av-trio {
   opacity: 0.45;
@@ -6092,7 +6102,6 @@ html.is-mac .spin-panel-scroll {
 .splash-pos-soon-banner {
   position: absolute;
   inset: 0;
-  bottom: 44px;
   display: flex;
   align-items: flex-start;
   justify-content: center;
@@ -6224,6 +6233,12 @@ html.is-mac .spin-panel-scroll {
     left: 50%;
   }
   .splash-pos-trigger { zoom: 0.82; }
+  /* 3-across Coming Soon cards are too narrow for avatars + name side by side */
+  .splash-pos-option--disabled .splash-pos-option-top {
+    flex-direction: column;
+    gap: 6px;
+  }
+  .splash-pos-option--disabled .splash-pos-option-name { margin-left: 0; }
 }
 /* ─────────────────────────────────────────────────────────────────────────── */
 
@@ -6327,10 +6342,38 @@ html.is-mac .spin-panel-scroll {
 }
 
 /* Save status toast */
+/* Text for search engines + screen readers only (standard visually-hidden) */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Static /bucket content baked into bucket.html — shown only for the moment
+   before JavaScript loads (React replaces it on mount) and to crawlers that
+   don't run JavaScript. */
+.seo-prerender {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 120px 24px 0;
+  text-align: center;
+  color: var(--text-2, #cbd5d0);
+  font-family: Outfit, sans-serif;
+}
+.seo-prerender h1 { font-size: 26px; font-weight: 800; color: var(--text, #fff); margin: 0 0 12px; }
+.seo-prerender p  { font-size: 15px; line-height: 1.55; margin: 0; }
+
 .save-toast {
   position: fixed;
   bottom: 88px;
-  right: 16px;
+  /* bottom-left — the corner video ad sits bottom-right on desktop */
+  left: 16px;
   z-index: 9000;
   display: flex;
   align-items: center;
@@ -8184,6 +8227,69 @@ html.is-touch .bd-card-main:hover         { background: transparent !important; 
 
 .mvp-continue:hover { filter: brightness(1.1); }
 .mvp-continue:active { filter: brightness(0.95); transform: translateY(1px); }
+
+/* OL: First-Team All-Pro line — one row per spot (LT, LG, C, RG, RT) */
+.mvp-allpro-line {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.mvp-allpro-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+}
+.mvp-allpro-row--you {
+  background: rgba(245,200,66,0.08);
+  border-color: rgba(245,200,66,0.35);
+}
+/* the name who took your build's spot */
+.mvp-allpro-row--beat { border-color: rgba(248,113,113,0.35); }
+.mvp-allpro-spot {
+  width: 24px;
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: #95d5b2;
+  text-align: center;
+}
+.mvp-allpro-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  text-align: left;
+}
+.mvp-allpro-name {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mvp-allpro-row--you .mvp-allpro-name { color: #F5C842; }
+.mvp-allpro-stats {
+  font-size: 10.5px;
+  color: rgba(255,255,255,0.45);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mvp-allpro-note {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  line-height: 1.45;
+  color: rgba(255,255,255,0.45);
+  text-align: center;
+}
 
 /* â”€â”€ Sim Page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .simp-page {
@@ -12857,7 +12963,7 @@ html.is-tablet:has([id^="pw-oop"][data-pw-status="loaded"][style*="bottom"]):not
 /* Corner video ad: nudge down/left, Playwire sets margin-bottom:95px / margin-right:10px inline */
 .pw-corner-ad-video {
   margin-bottom: 6px !important;
-  margin-right: 15px !important;
+  margin-right: 17px !important;
 }
 /* Strip Playwire's injected background/border from the bottom rail container */
 #adBanner,
@@ -16698,6 +16804,14 @@ html.is-mac [id^="pw-oop-bottom_rail"] > * {
   color: var(--text);
 }
 .dbt-table tbody td.dbt-dim { font-weight: 600; color: var(--text-3); }
+/* OL spells its column names out ("Sacks Allowed") — let them wrap onto two lines */
+.dbt--wrap .dbt-table thead th:not(.dbt-name) {
+  white-space: normal;
+  line-height: 1.3;
+  vertical-align: bottom;
+}
+.dbt--wrap .dbt-table th:not(.dbt-name),
+.dbt--wrap .dbt-table td:not(.dbt-name) { padding-left: 7px; padding-right: 7px; }
 .dbt-table .dbt-name {
   position: sticky;
   left: 0;

@@ -4,6 +4,7 @@ import { RB_TYPES, RB_LITE_TYPES } from '../data/rbs'
 import { WR_TYPES, WR_LITE_TYPES, WR_ATTR } from '../data/wrs'
 import { TE_ATTR, TE_TYPES, TE_LITE_TYPES } from '../data/tes'
 import { DB_ATTR, DB_TYPES, DB_LITE_TYPES } from '../data/dbs'
+import { OL_ATTR, OL_TYPES, OL_LITE_TYPES } from '../data/ols'
 import { LEGEND_TYPES } from '../data/qb-legends'
 import { BUCKET_ATTR } from '../data/nba-attrs'
 import { GUARD_TYPES } from '../data/nba-guards'
@@ -29,15 +30,16 @@ const RB_ATTR = {
   carrying:    { label: 'Carrying' },
 }
 
-export default function CustomRatingsModal({ isRB, isWR = false, isTE = false, isDB = false, isBucket = false, bucketPosition = 'guard', gameMode, pool, build = {}, buildTypes: _buildTypesProp, onClose, onSave, onAddToBuild, onAddAllToBuild }) {
+export default function CustomRatingsModal({ isRB, isWR = false, isTE = false, isDB = false, isOL = false, isBucket = false, bucketPosition = 'guard', gameMode, pool, build = {}, buildTypes: _buildTypesProp, onClose, onSave, onAddToBuild, onAddAllToBuild }) {
   const storageKey = isBucket ? 'bab_bucket_custom_ratings' : 'bap_custom_ratings'
   const modeKey = isBucket
     ? `bucket_${bucketPosition}`
-    : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : `${isRB ? 'rb' : 'qb'}${gameMode === 'all-time' ? '_legends' : ''}`
-  const attrMeta = isBucket ? BUCKET_ATTR : isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : isRB ? RB_ATTR : ATTR
+    : isOL ? 'ol' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : `${isRB ? 'rb' : 'qb'}${gameMode === 'all-time' ? '_legends' : ''}`
+  const attrMeta = isBucket ? BUCKET_ATTR : isOL ? OL_ATTR : isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : isRB ? RB_ATTR : ATTR
   const buildTypes = (_buildTypesProp && _buildTypesProp.length > 0)
     ? _buildTypesProp
     : isBucket ? (bucketPosition === 'big' ? BIG_TYPES : GUARD_TYPES)
+    : isOL ? (gameMode === 'lite' ? OL_LITE_TYPES : OL_TYPES)
     : isDB ? (gameMode === 'lite' ? DB_LITE_TYPES : DB_TYPES)
     : isTE ? (gameMode === 'lite' ? TE_LITE_TYPES : TE_TYPES)
     : isWR ? (gameMode === 'lite' ? WR_LITE_TYPES : WR_TYPES)

@@ -116,7 +116,7 @@ const _raw = [
   },
   {
     name: 'DJ Moore',          short: 'DJ Moore',      team: 'CAR', teamName: 'Carolina Panthers',
-    skin: '#3a2010', height: 72, weight: 213, number: 2, starter: true, captain: true, years: '2018–22',
+    skin: '#5e3c22', height: 72, weight: 213, number: 2, starter: true, captain: true, years: '2018–22',
     attrs: { speed: 8, bodyControl: 9, vertical: 8, routeRunning: 7, release: 6, hands: 7, awareness: 8, size: 6, afterCatch: 9 },
   },
 
@@ -642,7 +642,7 @@ const _raw = [
   // ─── TAMPA BAY BUCCANEERS ────────────────────────────────────────────────
   {
     name: 'Mike Evans',        short: 'M. Evans',      team: 'TB',  teamName: 'Tampa Bay Buccaneers',
-    skin: '#5e3c22', height: 77, weight: 231, number: 13, starter: true, captain: true, years: '2014–',
+    skin: '#b07848', height: 77, weight: 231, number: 13, starter: true, captain: true, years: '2014–',
     attrs: { speed: 8, bodyControl: 8, vertical: 10, routeRunning: 7, release: 8, hands: 10, awareness: 9, size: 11, afterCatch: 5 },
   },
   {

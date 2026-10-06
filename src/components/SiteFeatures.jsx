@@ -15,7 +15,11 @@ export default function SiteFeatures({ sport = 'nfl', className = '' }) {
           </svg>
         </div>
         <div className="splash-feature-title">Spin &amp; Build</div>
-        <div className="splash-feature-desc">Spin the wheel of real players, and select an aspect of their game until you have a complete custom player.</div>
+        <div className="splash-feature-desc">
+          {isBucket
+            ? 'Spin the wheel of real NBA players and take one part of each player’s game until you’ve built your own basketball player.'
+            : 'Spin the wheel of real players, and select an aspect of their game until you have a complete custom player.'}
+        </div>
       </div>
       {isBucket ? (
         <div className="splash-feature">

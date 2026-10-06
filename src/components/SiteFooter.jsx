@@ -21,7 +21,7 @@ export default function SiteFooter({ sport = 'nfl', onDepthChart }) {
             {isBucket ? <>BUILD-A-B<HoopU />CKET</> : 'BUILD-A-PLAYER'}
           </div>
           <div className="splash-site-footer-blurb">
-            {isBucket ? 'Fan-made NBA player builder. Not affiliated with the NBA.' : 'Fan-made NFL player builder. Not affiliated with the NFL.'}
+            {isBucket ? 'Fan-made NBA player builder. Not affiliated with the NBA, the NBPA, or any of their members.' : 'Fan-made NFL player builder. Not affiliated with the NFL, the NFLPA, or any of their members.'}
           </div>
         </div>
         <div className="splash-site-footer-col">
@@ -62,7 +62,7 @@ export default function SiteFooter({ sport = 'nfl', onDepthChart }) {
         </div>
       </div>
       <div className="splash-site-footer-bottom">
-        <span>{isBucket ? 'Build-A-Bucket' : 'Build-A-Player'} {new Date().getFullYear()} · Fan-made, not affiliated with the {isBucket ? 'NBA' : 'NFL'}.</span>
+        <span>{isBucket ? 'Build-A-Bucket' : 'Build-A-Player'} {new Date().getFullYear()}</span>
         <a href="https://www.playwire.com/contact-direct-sales" rel="noopener" target="_blank" className="splash-site-footer-playwire">
           <img src="https://www.playwire.com/hubfs/Powered-by-Playwire-Badges/Ads-Powered-by-playwire-2021-standalone-small-white-300px.png" alt="Ads Powered by Playwire" width="140" height="39" loading="lazy" />
         </a>

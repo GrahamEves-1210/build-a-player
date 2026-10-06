@@ -6,6 +6,7 @@ import { TE_PHYSICALS } from '../data/tes'
 import { TE_LEGENDS } from '../data/te-legends'
 import { DBS } from '../data/dbs'
 import { DB_LEGENDS } from '../data/db-legends'
+import { OL_PHYSICALS } from '../data/ols'
 import { QB_LEGEND_PHYSICALS } from '../data/qb-legends'
 import { RB_LEGEND_PHYSICALS } from '../data/rb-legends'
 import { WR_LEGEND_PHYSICALS } from '../data/wr-legends'
@@ -27,6 +28,7 @@ import QBFigureOverlay from './QBFigureOverlay'
 import RBFigureOverlay from './RBFigureOverlay'
 import WRFigureOverlay from './WRFigureOverlay'
 import DBFigureOverlay from './DBFigureOverlay'
+import OLFigureOverlay from './OLFigureOverlay'
 import BucketFigureOverlay from './BucketFigureOverlay'
 
 const DB_PHYS = Object.fromEntries([...DBS, ...DB_LEGENDS].map(d => [d.name, { height: d.height, weight: d.weight }]))
@@ -136,6 +138,30 @@ const DB_ZONES = [
   { type: 'manCoverage',     ax: 45, ay: 555, side: 'left',  cy: 0.68 }, // shoe
 ]
 
+// OL zones — same figure as DB (see OLFigureOverlay). Every dot sits on the
+// body part that OL chip colors, and only on parts that stay visible between
+// the cards (the gloves and left sleeve tuck under the cards on desktop).
+// Where a dot shares DB's exact point it reuses that point and its mobile nudge.
+const OL_ZONES = [
+  { type: 'blitzPickup', ax: 297, ay:  75, side: 'right', cy: 0.12 }, // helmet
+  // Length sits a bit above its dot so its line clears the Size dot on the chest
+  { type: 'length',      ax: 376, ay: 368, side: 'right', cy: 0.29 }, // right upper arm
+  { type: 'passPro',     ax: 400, ay: 490, side: 'right', cy: 0.47 }, // right sleeve
+  { type: 'anchor',      ax: 373, ay: 659, side: 'right', cy: 0.66 }, // right knee
+  { type: 'mobility',    ax: 390, ay: 965, side: 'right', cy: 0.86 }, // right shoe
+  // Discipline / Size use DB's exact card heights for these same two points
+  { type: 'discipline',  ax: 250, ay: 175, side: 'left',  cy: 0.14 }, // face / neck
+  { type: 'size',        ax: 220, ay: 260, side: 'left',  cy: 0.32 }, // jersey chest
+  { type: 'runBlock',    ax: 150, ay: 540, side: 'left',  cy: 0.55 }, // left thigh
+  { type: 'pancake',     ax: 130, ay: 814, side: 'left',  cy: 0.77 }, // left sock / shin
+]
+
+const OL_MOBILE_DOT_NUDGE_PX = {
+  blitzPickup: DB_MOBILE_DOT_NUDGE_PX.zoneIQ,
+  discipline:  DB_MOBILE_DOT_NUDGE_PX.playRecognition,
+  size:        DB_MOBILE_DOT_NUDGE_PX.size,
+}
+
 function useFigureBounds(ref, figW, figH) {
   const [bounds, setBounds] = useState(null)
   useLayoutEffect(() => {
@@ -196,9 +222,14 @@ function CZCard({ zone, cardY, build, activeDrag, hidden, invisible, isMobile, a
   )
 }
 
-function HWTracker({ build, isRB = false, isWR = false, isTE = false, isBucket = false, isDB = false }) {
+function HWTracker({ build, isRB = false, isWR = false, isTE = false, isBucket = false, isDB = false, isOL = false }) {
   let ht, wt
-  if (isBucket) {
+  if (isOL) {
+    const chip = build['size']
+    const olPhys = chip ? (OL_PHYSICALS[chip.qbFull] ?? (chip.height ? { height: chip.height, weight: chip.weight } : null)) : null
+    ht = olPhys?.height ? fmtHeight(olPhys.height) : null
+    wt = olPhys?.weight ?? null
+  } else if (isBucket) {
     const chip = build['size']
     ht = chip?.height ? fmtHeight(chip.height) : null
     wt = chip?.weight ?? null
@@ -285,10 +316,12 @@ function getDominantPlayer(build) {
   return sorted[0]?.[0] ?? null
 }
 
-export default function Silhouette({ build, activeDrag, onDrop, activeCategory, onCategoryChange, types = TYPES, isLite = false, onReset, isRB = false, isWR = false, isTE = false, isDB = false, isBucket = false, isPlus = false, isCustomMode = false, onOpenCustomModal, onSandboxToggle, attrMap = ATTR, categoriesData = CATEGORIES, figureRef }) {
-  const figW   = isBucket ? BUCKET_FIG_W : isDB ? DB_FIG_W : (isRB || isWR || isTE ? RB_FIG_W : FIG_W)
-  const figH   = isBucket ? BUCKET_FIG_H : isDB ? DB_FIG_H : (isRB || isWR || isTE ? RB_FIG_H : FIG_H)
-  const zones  = isBucket ? (types.includes('interiorDefense') ? BUCKET_BIG_ZONES : BUCKET_ZONES) : isDB ? DB_ZONES : isTE ? TE_ZONES : isWR ? WR_ZONES : isRB ? RB_ZONES : ZONES
+export default function Silhouette({ build, activeDrag, onDrop, activeCategory, onCategoryChange, types = TYPES, isLite = false, onReset, isRB = false, isWR = false, isTE = false, isDB = false, isOL = false, isBucket = false, isPlus = false, isCustomMode = false, onOpenCustomModal, onSandboxToggle, attrMap = ATTR, categoriesData = CATEGORIES, figureRef }) {
+  // OL is drawn on the DB figure — everything figure-related follows DB
+  const isDBFig = isDB || isOL
+  const figW   = isBucket ? BUCKET_FIG_W : isDBFig ? DB_FIG_W : (isRB || isWR || isTE ? RB_FIG_W : FIG_W)
+  const figH   = isBucket ? BUCKET_FIG_H : isDBFig ? DB_FIG_H : (isRB || isWR || isTE ? RB_FIG_H : FIG_H)
+  const zones  = isBucket ? (types.includes('interiorDefense') ? BUCKET_BIG_ZONES : BUCKET_ZONES) : isOL ? OL_ZONES : isDB ? DB_ZONES : isTE ? TE_ZONES : isWR ? WR_ZONES : isRB ? RB_ZONES : ZONES
   const silRef = useRef(null)
   const bounds = useFigureBounds(silRef, figW, figH)
   const boundsRef = useRef(bounds)
@@ -414,10 +447,10 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
       dotX = (dotX - 50) * BUCKET_FIGURE_SCALE + 50
       dotY = (dotY - 50) * BUCKET_FIGURE_SCALE + 50
     }
-    if (isDB) {
+    if (isDBFig) {
       dotX = (dotX - 50) * DB_FIGURE_SCALE + 50
       dotY = (dotY - 50) * DB_FIGURE_SCALE + 50
-      const nudge = isMobile ? DB_MOBILE_DOT_NUDGE_PX[zone.type] : null
+      const nudge = isMobile ? (isOL ? OL_MOBILE_DOT_NUDGE_PX : DB_MOBILE_DOT_NUDGE_PX)[zone.type] : null
       if (nudge) {
         dotX += nudge.x / W * 100
         dotY += nudge.y / H * 100
@@ -427,7 +460,7 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
       ? (zone.type === 'passing' || zone.type === 'rebounding' ? -15 : zone.type === 'speed' ? 25 : zone.type === 'size' ? -100 : zone.type === 'handles' || zone.type === 'playmaking' ? -10 : 0)
       : 0
     const cardY = isMobile
-      ? ((zone.cy - 0.5) * (isDB ? 0.98 : 0.92) + 0.5) * 100
+      ? ((zone.cy - 0.5) * (isDBFig ? 0.98 : 0.92) + 0.5) * 100
       : zone.cy * 100 + (zoneCardYNudgePx / H) * 100
     const lineInsetPx = (!isMobile && isBucket) ? 10 : 0
     // Per-zone desktop line X nudge (positive = inward for both sides)
@@ -468,7 +501,7 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
     const map = {}
     zones.forEach(z => { map[z.type] = pos(z) })
     return map
-  }, [bounds, isMobile, isBucket, isRB, isWR, isTE, isDB, zones])
+  }, [bounds, isMobile, isBucket, isRB, isWR, isTE, isDB, isOL, zones])
 
   return (
     <section className="field-center" style={isBucket ? { backgroundColor: '#090a0d' } : undefined}>
@@ -483,7 +516,7 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
         </div>
       )}
       <div className="category-pills">
-        <HWTracker build={build} isRB={isRB} isWR={isWR} isTE={isTE} isDB={isDB} isBucket={isBucket} />
+        <HWTracker build={build} isRB={isRB} isWR={isWR} isTE={isTE} isDB={isDB} isOL={isOL} isBucket={isBucket} />
         {cats.map(cat => (
           <button
             key={cat.id}
@@ -622,7 +655,7 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
           src={
             isBucket
               ? (bucketPhoto ? '/basketballsilhouetteheadless.png' : '/basketballsilhouette.png')
-              : isDB ? '/db-silhouette.png'
+              : isDBFig ? '/db-silhouette.png'
               : (isWR || isTE) ? '/wr-silhouette.png'
               : isRB ? '/rb-silhouette.webp'
               : '/qb-silhouette.webp'
@@ -634,7 +667,7 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
             isBucket   ? { transform: `scale(${BUCKET_FIGURE_SCALE})`, transformOrigin: 'center center' }
             : (isWR || isTE) ? { transform: isMobile ? `translateY(-6px) scale(${WR_FIGURE_SCALE_MOBILE})` : `scale(${WR_FIGURE_SCALE})`, transformOrigin: 'center center', filter: complete ? 'none' : 'brightness(0.55) drop-shadow(0 0 2px rgba(255,255,255,0.60)) drop-shadow(0 0 0.5px rgba(255,255,255,0.92))' }
             : isRB     ? { transform: `scale(${RB_FIGURE_SCALE})`, transformOrigin: 'center center' }
-            : isDB     ? { transform: `scale(${DB_FIGURE_SCALE})`, transformOrigin: 'center center', filter: 'brightness(0.35)' }
+            : isDBFig  ? { transform: `scale(${DB_FIGURE_SCALE})`, transformOrigin: 'center center', filter: 'brightness(0.35)' }
             : undefined
           }
         />
@@ -703,10 +736,15 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
           )
         })()}
         </div>
-        {!isRB && !isWR && !isTE && !isDB && !isBucket && <QBFigureOverlay build={build} className="player-qbfig" />}
+        {!isRB && !isWR && !isTE && !isDBFig && !isBucket && <QBFigureOverlay build={build} className="player-qbfig" />}
         {isDB && (
           <div style={{ position: 'absolute', inset: 0, transform: `scale(${DB_FIGURE_SCALE})`, transformOrigin: 'center center' }}>
             <DBFigureOverlay build={build} numberNudgePx={isMobile ? { x: 7, y: 7 } : null} />
+          </div>
+        )}
+        {isOL && (
+          <div style={{ position: 'absolute', inset: 0, transform: `scale(${DB_FIGURE_SCALE})`, transformOrigin: 'center center' }}>
+            <OLFigureOverlay build={build} numberNudgePx={isMobile ? { x: 7, y: 7 } : null} />
           </div>
         )}
         {isRB && (

@@ -222,6 +222,9 @@ function BucketSplash({ onStart, onVersus }) {
     <div className={`splash-screen bucket-splash ${phase >= 1 ? 'splash-in' : ''}`}>
     <PlayBackground visible={phase >= 3} />
     <div className="splash-hero">
+      {/* The visible logo is styled art (its "U" is a hoop graphic), so give
+          search engines and screen readers the page's real heading in text. */}
+      <h1 className="sr-only">Build-A-Bucket: Build a Basketball Player</h1>
 
       <div className="splash-glow" style={{ opacity: phase >= 2 ? 1 : 0 }} />
 
@@ -304,6 +307,25 @@ function BucketSplash({ onStart, onVersus }) {
     </div>
   )
 }
+
+// /bucket's search/preview tags. Rendered on the splash (the page crawlers
+// actually land on) as well as the game screen — they used to live only on
+// the game screen, so search engines indexed /bucket with the homepage's
+// generic title and no canonical. scripts/prerender-bucket.mjs bakes the same
+// title/description into the static bucket.html — keep the two in sync.
+const BUCKET_TITLE = 'Build-A-Bucket: Build a Basketball Player (NBA) — Player Creator & Simulator'
+const BUCKET_DESC  = 'Build a basketball player — spin the wheel to create your ultimate NBA player, simulate a full season, and compete on the all-time GOAT leaderboard. Free basketball player creator.'
+const bucketHead = (
+  <Helmet>
+    <title>{BUCKET_TITLE}</title>
+    <meta name="description" content={BUCKET_DESC} />
+    <meta name="keywords" content="build a basketball player, create a basketball player, build a bucket, build-a-bucket, buildabucket, NBA player creator, NBA player builder, basketball player builder, basketball simulator, NBA game" />
+    <link rel="canonical" href="https://build-a-player.com/bucket" />
+    <meta property="og:title" content={BUCKET_TITLE} />
+    <meta property="og:description" content={BUCKET_DESC} />
+    <meta property="og:url" content="https://build-a-player.com/bucket" />
+  </Helmet>
+)
 
 const POS_TYPES = { guard: GUARD_TYPES, big: BIG_TYPES }
 const POS_CATS  = { guard: GUARD_CATEGORIES, big: BIG_CATEGORIES }
@@ -1133,17 +1155,20 @@ export default function BucketApp() {
 
   if (page === 'splash') {
     return (
-      <BucketSplash
-        onStart={handleStart}
-        onVersus={(pos) => {
-          const p = pos || 'guard'
-          try { localStorage.setItem('bucketPosition', p) } catch {}
-          setPosition(p)
-          setGameMode('classic')
-          setBuild(Object.fromEntries((VERSUS_POS_TYPES[p] ?? VERSUS_GUARD_TYPES).map(t => [t, null])))
-          setPage('versus-lobby')
-        }}
-      />
+      <>
+        {bucketHead}
+        <BucketSplash
+          onStart={handleStart}
+          onVersus={(pos) => {
+            const p = pos || 'guard'
+            try { localStorage.setItem('bucketPosition', p) } catch {}
+            setPosition(p)
+            setGameMode('classic')
+            setBuild(Object.fromEntries((VERSUS_POS_TYPES[p] ?? VERSUS_GUARD_TYPES).map(t => [t, null])))
+            setPage('versus-lobby')
+          }}
+        />
+      </>
     )
   }
 
@@ -1425,15 +1450,7 @@ export default function BucketApp() {
 
   return (
     <>
-      <Helmet>
-        <title>Build-A-Bucket: Build a Basketball Player (NBA) — Player Creator & Simulator</title>
-        <meta name="description" content="Build a basketball player — spin the wheel to create your ultimate NBA player, simulate a full season, and compete on the all-time GOAT leaderboard. Free basketball player creator." />
-        <meta name="keywords" content="build a basketball player, create a basketball player, build a bucket, build-a-bucket, buildabucket, NBA player creator, NBA player builder, basketball player builder, basketball simulator, NBA game" />
-        <link rel="canonical" href="https://www.build-a-player.com/bucket" />
-        <meta property="og:title" content="Build-A-Bucket: Build a Basketball Player (NBA) — Player Creator & Simulator" />
-        <meta property="og:description" content="Build a basketball player — spin the wheel to create your ultimate NBA player, simulate a full season, and compete on the all-time GOAT leaderboard. Free basketball player creator." />
-        <meta property="og:url" content="https://www.build-a-player.com/bucket" />
-      </Helmet>
+      {bucketHead}
       <Navbar {...navbarProps} />
 
       <div className="game-page-scroll">

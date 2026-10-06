@@ -1,4 +1,5 @@
 import svgRaw from '../assets/qb-figure-color.svg?raw'
+import { warmSkin } from '../utils/footballSkin'
 
 const BASE_SVG = (() => {
   let html = svgRaw
@@ -45,16 +46,6 @@ const NO_HELMET_LOGO = new Set(['CLE', 'CIN', 'LAR'])
 const WHITE_HELMET = new Set(['ARI', 'IND', 'LAC', 'TEN', 'BUF'])
 
 const helmColor = (team, fallback) => HELMET_COLOR_OVERRIDE[team] ?? fallback
-
-// Boosts red in a skin tone — matches the warmer, more visibly red skin
-// treatment used elsewhere (Bucket, DB, WR, RB).
-function warmSkin(hex, redBoost = 22) {
-  if (!hex || hex === 'transparent') return hex
-  const r = Math.min(255, parseInt(hex.slice(1, 3), 16) + redBoost)
-  const g = parseInt(hex.slice(3, 5), 16)
-  const b = Math.max(0, parseInt(hex.slice(5, 7), 16) - 4)
-  return `rgb(${r},${g},${b})`
-}
 
 export default function QBFigureOverlay({ build, className }) {
   const tc  = (s) => build?.[s]?.teamColor  ?? 'transparent'
@@ -233,28 +224,6 @@ export default function QBFigureOverlay({ build, className }) {
             >{build?.['size']?.number ?? ''}</text>
           </g>
 
-          {/* NFL shield — upper left thigh, shows when Legs slot filled */}
-          {has('legs') && (
-            <g transform="rotate(11, 246, 434)" style={{ pointerEvents: 'none' }}>
-              <image
-                href="/logos/nfl.png"
-                x="237" y="425" width="19" height="19"
-                style={{ opacity: 0.85 }}
-              />
-            </g>
-          )}
-
-          {/* Captain C badge — left chest, shows when leadership QB is a captain */}
-
-          {/* Tiny NFL shield — shows when Size/body slot filled */}
-          {has('size') && (
-            <image
-              href="/logos/nfl.png"
-              x="273" y="182" width="14" height="14"
-              style={{ opacity: 0.85, pointerEvents: 'none' }}
-            />
-          )}
-
           {/* Team logo — right shoulder pad (arm-strength team) */}
           {has('arm') && build['arm'].team && (
             <g transform="rotate(-10, 409, 136)" style={{ pointerEvents: 'none' }}>
@@ -312,18 +281,6 @@ export default function QBFigureOverlay({ build, className }) {
 
         </svg>
       </div>
-
-      {/* NFL logo on football */}
-      <svg viewBox="0 0 622 844" preserveAspectRatio="xMidYMid meet"
-           style={{ ...SVG_STYLE, zIndex: 4 }} aria-hidden="true">
-        <g transform="rotate(-60, 157, 243)" style={{ pointerEvents: 'none' }}>
-          <image
-            href="/logos/nfl.png"
-            x="135" y="212" width="32" height="32"
-            style={{ opacity: 0.82 }}
-          />
-        </g>
-      </svg>
 
       {/* Captain badge — outside screen-blend div so it renders at full opacity */}
       {has('leadership') && build['leadership'].captain && (

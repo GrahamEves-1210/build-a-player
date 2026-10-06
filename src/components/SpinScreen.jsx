@@ -236,9 +236,10 @@ const POS_COLORS = {
 }
 
 // ─── SpinScreen ──────────────────────────────────────────────────────────────
-export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, activeCategory, resetKey, onChipTap, types = TYPES, isLite = false, qbPool = QBS, savedResult = null, onSaveResult, onPhaseChange, gameKey, onReset, adsDisabled = false, isRB = false, isWR = false, isTE = false, isDB = false, isBucket = false, isVersusMode = false, attrMap = ATTR, categoriesData = CATEGORIES, teamsPool = TEAMS, logoDir = '/logos/', playerLabel, headshotsMap = HEADSHOTS, headshotsDir = `${HEADSHOT_BASE}/`, hideTeamResult = false, headshotFallback = () => null }) {
+export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, activeCategory, resetKey, onChipTap, types = TYPES, isLite = false, qbPool = QBS, savedResult = null, onSaveResult, onPhaseChange, gameKey, onReset, adsDisabled = false, isRB = false, isWR = false, isTE = false, isDB = false, isOL = false, isAllTime = false, isBucket = false, isVersusMode = false, attrMap = ATTR, categoriesData = CATEGORIES, teamsPool = TEAMS, logoDir = '/logos/', playerLabel, headshotsMap = HEADSHOTS, headshotsDir = `${HEADSHOT_BASE}/`, hideTeamResult = false, headshotFallback = () => null }) {
   const pLabel = playerLabel ?? (isTE ? 'TE' : isWR ? 'WR' : isRB ? 'RB' : 'QB')
-  const maxPlayerRespin = isTE ? 2 : 1
+  // TE (current mode) and OL get a 2nd player respin; All-Time TE gets just 1
+  const maxPlayerRespin = (isTE && !isAllTime) || isOL ? 2 : 1
   const [phase, setPhase]               = useState(() => savedResult?.selectedQB ? 'done' : 'idle')
   const [selectedTeam, setSelectedTeam] = useState(() => savedResult?.selectedTeam ?? null)
   const [selectedQB,   setSelectedQB]   = useState(() => savedResult?.selectedQB ?? null)
@@ -329,10 +330,10 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
     triggerMobileAd()
     track('spin', {
       app: isBucket ? 'bucket' : 'nfl',
-      position: isBucket ? 'bucket' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb',
+      position: isBucket ? 'bucket' : isOL ? 'ol' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb',
       gameMode: isLite ? 'lite' : null,
     })
-  }, [onSaveResult, triggerMobileAd, isBucket, isDB, isTE, isWR, isRB, isLite])
+  }, [onSaveResult, triggerMobileAd, isBucket, isOL, isDB, isTE, isWR, isRB, isLite])
 
   const handleQBRespin = useCallback(() => {
     setExcludedQB(selectedQB)
@@ -356,17 +357,26 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
   const isSpinning     = isSpinningTeam || phase === 'team-done' || isSpinningQB
   const isDone         = phase === 'done'
 
+  // Teams that have someone to draft in this pool, as a string so the reel
+  // memo below only re-runs when that set actually changes (sandbox mode
+  // hands in a freshly mapped pool array on every render).
+  const draftableTeams = [...new Set(qbPool.map(q => q.team))].sort().join(',')
+
   const teamReelItems = useMemo(() => {
+    // Only teams with someone to draft — landing on a team with no players
+    // leaves the player reel empty and the spin stuck.
+    const draftable = new Set(draftableTeams.split(','))
+    const teams = teamsPool.some(t => draftable.has(t.short)) ? teamsPool.filter(t => draftable.has(t.short)) : teamsPool
     const usedShorts = new Set(usedTeamsRef.current.map(t => t.short))
-    const eligible = teamsPool.filter(t => !usedShorts.has(t.short))
-    const pool = eligible.length > 0 ? eligible : [...teamsPool]
+    const eligible = teams.filter(t => !usedShorts.has(t.short))
+    const pool = eligible.length > 0 ? eligible : [...teams]
     const finalPool = [...pool]
     for (let i = finalPool.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1))
       ;[finalPool[i], finalPool[j]] = [finalPool[j], finalPool[i]]
     }
     return finalPool
-  }, [spinCount, teamsPool])
+  }, [spinCount, teamsPool, draftableTeams])
 
   // Stable QB items — minimal placeholder until team is selected (QB reel is blurred/hidden)
   const qbReelItems = useMemo(() => {
@@ -523,6 +533,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
                 <div className="qb-reveal-name">{selectedQB.name}</div>
                 <div className="qb-reveal-meta">
                   {selectedQB.teamName ?? selectedQB.team}
+                  {isOL && selectedQB.pos ? ` · ${selectedQB.pos}` : ''}
                   {!isBucket && !isWR && (selectedQB.starter ? '' : ' · Bench')}
                 </div>
                 {selectedQB.years && (
@@ -586,7 +597,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
 
           {complete && (
             <div className="spin-hint-text" style={{ color: 'var(--accent)', paddingTop: 4 }}>
-              All 9 slots filled — simulate your season
+              All {types.length} slots filled — simulate your season
             </div>
           )}
         </div>

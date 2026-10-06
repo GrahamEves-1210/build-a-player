@@ -3,3 +3,5 @@ Allow: /
 
 User-agent: Googlebot
 Allow: /ads.txt
+
+Sitemap: https://build-a-player.com/sitemap.xml

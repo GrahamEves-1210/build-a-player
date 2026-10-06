@@ -1,11 +1,7 @@
 ﻿import { useEffect, useState, useMemo, useRef } from 'react'
 import { nflHeadshot, HEADSHOT_BASE } from '../utils/simulation'
-import { supabase } from '../lib/supabase'
 import SiteFooter from './SiteFooter'
 import SiteFeatures from './SiteFeatures'
-
-const VOTE_KEY   = 'bap_next_mode_vote'
-const VOTE_SEED  = { lb: 0, dl: 0 }
 
 function hsUrl(id) {
   if (!id) return null
@@ -39,7 +35,7 @@ const POS_OPTIONS = [
     ],
   },
   {
-    pos: 'te', label: 'TE', classic: true, alltime: false,
+    pos: 'te', label: 'TE', classic: true, alltime: true,
     players: [
       { id: '11604', color: '#a5acaf' },      // Brock Bowers - LV
       { id: '4217',  color: '#aa0000' },      // George Kittle - SF
@@ -52,6 +48,14 @@ const POS_OPTIONS = [
       { id: 'espn_4372012', color: '#fb4f14' },  // Pat Surtain II - DEN
       { id: 'espn_4686772', color: '#0C2340' },  // Christian Gonzalez - NE
       { id: 'espn_4575517', color: '#241773' },  // Kyle Hamilton - BAL
+    ],
+  },
+  {
+    pos: 'ol', label: 'OL', classic: false, alltime: false, disabled: true,
+    players: [
+      { id: 'espn_4373825', color: '#0076b6' },  // Penei Sewell - DET
+      { id: 'espn_4241385', color: '#e31837' },  // Creed Humphrey - KC
+      { id: 'espn_4334215', color: '#004c54' },  // Jordan Mailata - PHI
     ],
   },
   {
@@ -93,7 +97,7 @@ function AvatarTrio({ players, size = 26 }) {
   )
 }
 
-function PositionPicker({ position, onChange, voteCounts, votedFor, onVote }) {
+function PositionPicker({ position, onChange }) {
   const [open, setOpen] = useState(false)
   const ref = useRef()
   const current = POS_OPTIONS.find(o => o.pos === position) || POS_OPTIONS[0]
@@ -106,8 +110,6 @@ function PositionPicker({ position, onChange, voteCounts, votedFor, onVote }) {
   }, [open])
 
   const select = pos => { onChange(pos); setOpen(false) }
-
-  const voteTotal = Object.values(voteCounts).reduce((a, b) => a + b, 0)
 
   return (
     <div className="splash-pos-picker" ref={ref}>
@@ -149,11 +151,11 @@ function PositionPicker({ position, onChange, voteCounts, votedFor, onVote }) {
 
         <div className="splash-pos-vote-section-header">
           <div className="splash-pos-vote-section-rule" />
-          <span className="splash-pos-vote-section-label">VOTE FOR NEXT MODE</span>
+          <span className="splash-pos-vote-section-label">COMING SOON</span>
           <div className="splash-pos-vote-section-rule" />
         </div>
 
-        <div className="splash-pos-popup-grid">
+        <div className="splash-pos-popup-grid splash-pos-popup-grid--soon">
           {POS_OPTIONS.filter(o => o.disabled).map(opt => (
             <button
               key={opt.pos}
@@ -163,32 +165,8 @@ function PositionPicker({ position, onChange, voteCounts, votedFor, onVote }) {
             >
               <div className="splash-pos-soon-banner">COMING SOON</div>
               <div className="splash-pos-option-top">
-                <AvatarTrio players={opt.players} size={40} />
+                <AvatarTrio players={opt.players} size={30} />
                 <span className="splash-pos-option-name">{opt.label}</span>
-              </div>
-              <div className="splash-pos-option-modes">
-                <span className="splash-mode-pill splash-mode-pill--alltime-soon">All‑Time</span>
-                <span className="splash-mode-pill splash-mode-pill--classic-soon">Current</span>
-              </div>
-              <div className="splash-pos-vote">
-                {votedFor ? (
-                  <div className={`splash-pos-vote-result${votedFor === opt.pos ? ' splash-pos-vote-result--mine' : ''}`}>
-                    <div
-                      className="splash-pos-vote-fill"
-                      style={{ width: `${Math.round((voteCounts[opt.pos] || 0) / Math.max(voteTotal, 1) * 100)}%` }}
-                    />
-                    <span className="splash-pos-vote-pct">
-                      {Math.round((voteCounts[opt.pos] || 0) / Math.max(voteTotal, 1) * 100)}%
-                    </span>
-                  </div>
-                ) : (
-                  <button
-                    className="splash-pos-vote-btn"
-                    onClick={e => { e.stopPropagation(); onVote(opt.pos) }}
-                  >
-                    VOTE
-                  </button>
-                )}
               </div>
             </button>
           ))}
@@ -269,6 +247,18 @@ const DB_ATTRS = [
   { label: 'Run Support',      col: '#fbbf24', angle:   80, dist: 1.31, mx: 74, my: 44, dox: 270 },
 ]
 
+const OL_ATTRS = [
+  { label: 'Size',         col: '#fb923c' },
+  { label: 'Length',       col: '#34d399' },
+  { label: 'Anchor',       col: '#38bdf8' },
+  { label: 'Pass Pro',     col: '#2dd4bf' },
+  { label: 'Run Block',    col: '#f87171' },
+  { label: 'Mobility',     col: '#60a5fa' },
+  { label: 'Blitz Pickup', col: '#e879f9' },
+  { label: 'Discipline',   col: '#a78bfa' },
+  { label: 'Pancake',      col: '#fbbf24' },
+]
+
 // Football route-tree playbook sketch scattered faintly across the background
 // in place of the old attribute pills.
 function RouteBackground({ visible }) {
@@ -296,6 +286,7 @@ const STACK_MASK = {
   wr: { src: '/wr-silhouette.png',  scale: 1.18 },
   te: { src: '/wr-silhouette.png',  scale: 1.18 },
   db: { src: '/db-silhouette.png',  scale: 1.05 },
+  ol: { src: '/db-silhouette.png',  scale: 1.05 },
 }
 
 // Silhouette body re-rendered as stacked, color-coded bands — one per build
@@ -338,33 +329,17 @@ function StackedSilhouette({ position, attrs, ready }) {
 
 export default function SplashScreen({ onStart, onDepthChart }) {
   const [phase, setPhase] = useState(0)
-  const [position, setPosition] = useState(() => { try { return localStorage.getItem('lastPosition') || 'qb' } catch { return 'qb' } })
+  // A saved position that's since gone to Coming Soon (OL) falls back to QB
+  const [position, setPosition] = useState(() => {
+    let saved = null
+    try { saved = localStorage.getItem('lastPosition') } catch {}
+    return POS_OPTIONS.some(o => o.pos === saved && !o.disabled) ? saved : 'qb'
+  })
   const isMobile  = useMemo(() => window.innerWidth <= 768, [])
   const isDesktop = useMemo(() => window.innerWidth > 768, [])
   const orbitScale = isDesktop ? 0.8 : 1
 
   const handlePosChange = pos => { setPosition(pos); try { localStorage.setItem('lastPosition', pos) } catch {} }
-
-  const [voteCounts, setVoteCounts] = useState(VOTE_SEED)
-  const [votedFor, setVotedFor] = useState(() => { try { return localStorage.getItem(VOTE_KEY) } catch { return null } })
-
-  useEffect(() => {
-    if (!supabase) return
-    supabase.from('mode_votes').select('position,count').then(({ data }) => {
-      if (!data) return
-      const counts = { ...VOTE_SEED }
-      data.forEach(row => { if (counts[row.position] !== undefined) counts[row.position] = row.count })
-      setVoteCounts(counts)
-    }).catch(() => {})
-  }, [])
-
-  const handleVote = async pos => {
-    if (votedFor) return
-    try { localStorage.setItem(VOTE_KEY, pos) } catch {}
-    setVotedFor(pos)
-    setVoteCounts(prev => ({ ...prev, [pos]: (prev[pos] || 0) + 1 }))
-    try { await supabase?.rpc('increment_mode_vote', { p_pos: pos }) } catch {}
-  }
 
   useEffect(() => {
     POS_OPTIONS.forEach(opt => opt.players.forEach(p => {
@@ -380,7 +355,7 @@ export default function SplashScreen({ onStart, onDepthChart }) {
     return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3) }
   }, [])
 
-  const attrs = position === 'db' ? DB_ATTRS : position === 'te' ? TE_ATTRS : position === 'wr' ? WR_ATTRS : position === 'rb' ? RB_ATTRS : QB_ATTRS
+  const attrs = position === 'ol' ? OL_ATTRS : position === 'db' ? DB_ATTRS : position === 'te' ? TE_ATTRS : position === 'wr' ? WR_ATTRS : position === 'rb' ? RB_ATTRS : QB_ATTRS
 
   return (
     <div className={`splash-screen ${phase >= 1 ? 'splash-in' : ''}`}>
@@ -395,7 +370,7 @@ export default function SplashScreen({ onStart, onDepthChart }) {
           BUIL<span className="logo-d">D</span><em>-<span className="logo-a">A</span>-</em>PLAYER
         </div>
         <div className="splash-pos-toggle splash-pos-toggle--picker" style={{ opacity: phase >= 3 ? 1 : 0, transform: phase >= 3 ? (isMobile ? 'translateY(-8px)' : 'none') : 'translateY(8px)' }}>
-          <PositionPicker position={position} onChange={handlePosChange} voteCounts={voteCounts} votedFor={votedFor} onVote={handleVote} />
+          <PositionPicker position={position} onChange={handlePosChange} />
         </div>
       </div>
 
@@ -408,7 +383,7 @@ export default function SplashScreen({ onStart, onDepthChart }) {
           <img src="/wr-silhouette.png" className="splash-figure" alt="" draggable={false}
             style={{ position: 'absolute', inset: 0, opacity: (position === 'wr' || position === 'te') ? 1 : 0, transform: 'scale(1.18)', transformOrigin: 'center center' }} />
           <img src="/db-silhouette.png" className="splash-figure" alt="" draggable={false}
-            style={{ position: 'absolute', inset: 0, opacity: position === 'db' ? 1 : 0, transform: 'scale(1.05)', transformOrigin: 'center center' }} />
+            style={{ position: 'absolute', inset: 0, opacity: (position === 'db' || position === 'ol') ? 1 : 0, transform: 'scale(1.05)', transformOrigin: 'center center' }} />
           <StackedSilhouette key={position} position={position} attrs={attrs} ready={phase >= 3} />
           <div className="splash-figure-glow" />
         </div>
@@ -421,7 +396,7 @@ export default function SplashScreen({ onStart, onDepthChart }) {
         <div className="splash-modes">
           <button className="splash-mode-classic" onClick={() => { try { localStorage.setItem('lastPosition', position) } catch {}; onStart('classic', position) }}>
             <div className="smode-title">Current</div>
-            <div className="smode-badge">Current {position === 'rb' ? 'RBs' : position === 'wr' ? 'WRs' : position === 'te' ? 'TEs' : position === 'db' ? 'DBs' : 'QBs'}</div>
+            <div className="smode-badge">Current {position === 'rb' ? 'RBs' : position === 'wr' ? 'WRs' : position === 'te' ? 'TEs' : position === 'db' ? 'DBs' : position === 'ol' ? 'OLs' : 'QBs'}</div>
             <div className="smode-cta">
               START DRAFTING
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -430,7 +405,7 @@ export default function SplashScreen({ onStart, onDepthChart }) {
             </div>
           </button>
 
-          {(position === 'te') ? (
+          {!POS_OPTIONS.find(o => o.pos === position)?.alltime ? (
             <button className="splash-mode-alltime splash-mode-alltime--soon" disabled>
               <div className="splash-mode-alltime--soon-banner">COMING SOON</div>
               <div className="smode-title smode-title--alltime">All-Time</div>
@@ -449,7 +424,7 @@ export default function SplashScreen({ onStart, onDepthChart }) {
             >
               <div className="smode-title smode-title--alltime">
                 All-Time
-                {(position === 'wr' || position === 'db') && <span className="splash-alltime-new-tag">NEW</span>}
+                {(position === 'wr' || position === 'db' || position === 'te') && <span className="splash-alltime-new-tag">NEW</span>}
               </div>
               <div className="smode-badge smode-badge--alltime">Draft the Greats</div>
               <div className="smode-cta smode-cta--alltime">

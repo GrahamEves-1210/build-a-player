@@ -1,16 +1,16 @@
 import { useState, useRef, useEffect } from 'react'
 
-const STEPS_DESKTOP = (isRB, isWR, isTE, isDB) => [
-  { n: '1', title: 'Spin',      body: `Pull a random NFL team, then a${isWR ? ' WR' : isRB ? 'n RB' : isTE ? ' TE' : isDB ? ' DB' : 'n QB'} from their roster.` },
+const STEPS_DESKTOP = (isRB, isWR, isTE, isDB, isOL) => [
+  { n: '1', title: 'Spin',      body: `Pull a random NFL team, then a${isOL ? 'n OL' : isWR ? ' WR' : isRB ? 'n RB' : isTE ? ' TE' : isDB ? ' DB' : 'n QB'} from their roster.` },
   { n: '2', title: 'Select',    body: 'Click a stat chip to assign it to your build — or drag it onto the matching zone.' },
   { n: '3', title: 'Repeat ×9', body: 'Fill all nine attribute slots — one per spin.' },
-  { n: '4', title: 'Simulate',  body: `Hit Simulate to see how your Frankenstein ${isWR ? 'WR' : isRB ? 'RB' : isTE ? 'TE' : isDB ? 'DB' : 'QB'} performs.` },
+  { n: '4', title: 'Simulate',  body: `Hit Simulate to see how your Frankenstein ${isOL ? 'OL' : isWR ? 'WR' : isRB ? 'RB' : isTE ? 'TE' : isDB ? 'DB' : 'QB'} performs.` },
 ]
-const STEPS_MOBILE = (isRB, isWR, isTE, isDB) => [
-  { n: '1', title: 'Spin',      body: `Pull a random NFL team, then a${isWR ? ' WR' : isRB ? 'n RB' : isTE ? ' TE' : isDB ? ' DB' : 'n QB'} from their roster.` },
+const STEPS_MOBILE = (isRB, isWR, isTE, isDB, isOL) => [
+  { n: '1', title: 'Spin',      body: `Pull a random NFL team, then a${isOL ? 'n OL' : isWR ? ' WR' : isRB ? 'n RB' : isTE ? ' TE' : isDB ? ' DB' : 'n QB'} from their roster.` },
   { n: '2', title: 'Tap',       body: 'Tap a stat chip to instantly assign it to your build.' },
   { n: '3', title: 'Repeat ×9', body: 'Fill all nine attribute slots — one per spin.' },
-  { n: '4', title: 'Simulate',  body: `Hit Simulate to see how your Frankenstein ${isWR ? 'WR' : isRB ? 'RB' : isTE ? 'TE' : isDB ? 'DB' : 'QB'} performs.` },
+  { n: '4', title: 'Simulate',  body: `Hit Simulate to see how your Frankenstein ${isOL ? 'OL' : isWR ? 'WR' : isRB ? 'RB' : isTE ? 'TE' : isDB ? 'DB' : 'QB'} performs.` },
 ]
 
 const BUCKET_STEPS_DESKTOP = [
@@ -26,8 +26,8 @@ const BUCKET_STEPS_MOBILE = [
   { n: '4', title: 'Simulate',   body: 'Spin or pick an NBA team, then run a full 82-game season.' },
 ]
 
-const POS_COLORS = { qb: '#95D5B2', rb: '#fb923c', wr: '#60a5fa', te: '#c084fc', db: '#f87171' }
-const POS_NAMES  = { qb: 'Quarterback', rb: 'Running Back', wr: 'Wide Receiver', te: 'Tight End', db: 'Defensive Back' }
+const POS_COLORS = { qb: '#95D5B2', rb: '#fb923c', wr: '#60a5fa', te: '#c084fc', db: '#f87171', ol: '#fbbf24' }
+const POS_NAMES  = { qb: 'Quarterback', rb: 'Running Back', wr: 'Wide Receiver', te: 'Tight End', db: 'Defensive Back', ol: 'Offensive Line' }
 const BUCKET_POS_SUB    = { guard: 'PG · SG · SF', big: 'PF · C' }
 
 const HoopU = () => (
@@ -171,7 +171,7 @@ const PERKS = [
   'PLUS badge on leaderboard entries',
 ]
 
-export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, onLeaderboard, onSwitchPosition, onSwitchBucketPosition, onSubscribe, onOpenCustomRatings, user, gameMode, isRB, isWR, isTE, isDB, position, isPlus, isBucket, bucketPosition, versusState }) {
+export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, onLeaderboard, onSwitchPosition, onSwitchBucketPosition, onSubscribe, onOpenCustomRatings, user, gameMode, isRB, isWR, isTE, isDB, isOL, position, isPlus, isBucket, bucketPosition, versusState }) {
   const [open,         setOpen]        = useState(false)
   const [htpOpen,      setHtpOpen]     = useState(false)
   const [plusWmOpen,   setPlusWmOpen]  = useState(false)
@@ -181,7 +181,7 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768
   const STEPS = isBucket
     ? (isMobile ? BUCKET_STEPS_MOBILE : BUCKET_STEPS_DESKTOP)
-    : (isMobile ? STEPS_MOBILE(isRB, isWR, isTE, isDB) : STEPS_DESKTOP(isRB, isWR, isTE, isDB))
+    : (isMobile ? STEPS_MOBILE(isRB, isWR, isTE, isDB, isOL) : STEPS_DESKTOP(isRB, isWR, isTE, isDB, isOL))
 
   useEffect(() => {
     if (!open) return
@@ -283,10 +283,10 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
             className="tab-pill tab-pill-qb active nav-pos-trigger"
             onClick={() => setPosDropOpen(o => !o)}
           >
-            <span className="nav-pos-badge" style={{ '--pos-col': POS_COLORS[isWR ? 'wr' : isRB ? 'rb' : isTE ? 'te' : isDB ? 'db' : 'qb'] }}>
-              {isWR ? 'WR' : isRB ? 'RB' : isTE ? 'TE' : isDB ? 'DB' : 'QB'}
+            <span className="nav-pos-badge" style={{ '--pos-col': POS_COLORS[isOL ? 'ol' : isWR ? 'wr' : isRB ? 'rb' : isTE ? 'te' : isDB ? 'db' : 'qb'] }}>
+              {isOL ? 'OL' : isWR ? 'WR' : isRB ? 'RB' : isTE ? 'TE' : isDB ? 'DB' : 'QB'}
             </span>
-            {POS_NAMES[isWR ? 'wr' : isRB ? 'rb' : isTE ? 'te' : isDB ? 'db' : 'qb']}
+            {POS_NAMES[isOL ? 'ol' : isWR ? 'wr' : isRB ? 'rb' : isTE ? 'te' : isDB ? 'db' : 'qb']}
             <IconChevron up={posDropOpen} />
           </button>
           {posDropOpen && (
@@ -315,7 +315,7 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
                   {POS_NAMES.db}
                 </button>
               )}
-              {(isRB || isWR || isTE || isDB) && (
+              {(isRB || isWR || isTE || isDB || isOL) && (
                 <button className="nav-pos-item" onClick={() => { setPosDropOpen(false); onSwitchPosition?.('qb') }}>
                   <span className="nav-pos-badge" style={{ '--pos-col': POS_COLORS.qb }}>QB</span>
                   {POS_NAMES.qb}
