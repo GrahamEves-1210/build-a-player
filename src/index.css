@@ -869,7 +869,7 @@ a:focus-visible {
   cursor: pointer;
 }
 .nav-signin-hint-text { padding: 0; font-size: 12px; font-weight: 700; }
-.nav-signin-hint-x { padding: 0 5px; font-size: 15px; line-height: 1; opacity: 0.55; }
+.nav-signin-hint-x { display: flex; align-items: center; justify-content: center; min-width: 24px; height: 22px; padding: 0 4px; font-size: 20px; line-height: 1; opacity: 0.6; }
 .nav-signin-hint-x:hover { opacity: 1; }
 @keyframes nav-hint-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .nav-signin-hint { animation: none; } }
@@ -877,7 +877,7 @@ a:focus-visible {
   .nav-signin-hint { top: calc(100% + 7px); padding: 2px 2px 2px 7px; border-radius: 6px; }
   .nav-signin-hint::before { right: 14px; border-width: 5px; top: -5px; }
   .nav-signin-hint-text { font-size: 10px; }
-  .nav-signin-hint-x { font-size: 13px; padding: 0 4px; }
+  .nav-signin-hint-x { font-size: 18px; min-width: 22px; height: 20px; padding: 0 3px; }
 }
 
 /* â”€â”€ WAFFLE MENU â”€â”€ */

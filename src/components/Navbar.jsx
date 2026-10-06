@@ -180,6 +180,11 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
   const [posDropOpen,  setPosDropOpen] = useState(false)
   const [feedbackOpen, setFeedbackOpen] = useState(false)
   const [hintDismissed, setHintDismissed] = useState(() => { try { return sessionStorage.getItem('bap_signin_hint_off') === '1' } catch { return false } })
+  // Opening the menu counts as seeing the hint (Sign In is right there) — hide it for this visit
+  const dismissHint = () => {
+    setHintDismissed(true)
+    try { sessionStorage.setItem('bap_signin_hint_off', '1') } catch {}
+  }
   const ref = useRef(null)
   const posDropRef = useRef(null)
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768
@@ -333,7 +338,7 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
       <div className="nav-right" ref={ref}>
         <button
           className={`waffle-btn${open ? ' waffle-open' : ''}`}
-          onClick={() => setOpen(o => !o)}
+          onClick={() => { setOpen(o => !o); dismissHint() }}
           aria-label="Menu"
         >
           <IconGrid />
@@ -343,10 +348,7 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
         {!user && !open && !versusState && !hintDismissed && (
           <div className="nav-signin-hint" role="note">
             <button className="nav-signin-hint-text" onClick={handleSignIn}>Sign in to save your stats</button>
-            <button className="nav-signin-hint-x" aria-label="Dismiss" onClick={() => {
-              setHintDismissed(true)
-              try { sessionStorage.setItem('bap_signin_hint_off', '1') } catch {}
-            }}>×</button>
+            <button className="nav-signin-hint-x" aria-label="Dismiss" onClick={dismissHint}>×</button>
           </div>
         )}
 
