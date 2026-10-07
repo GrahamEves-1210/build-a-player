@@ -31,7 +31,7 @@ import { HEADSHOT_BASE } from '../utils/simulation'
 import ProfilePage from './ProfilePage'
 import CustomRatingsModal from './CustomRatingsModal'
 import SiteFooter from './SiteFooter'
-import SiteFeatures, { WikiCta } from './SiteFeatures'
+import SiteFeatures from './SiteFeatures'
 import { finishDiscordSignIn, getUsername } from '../lib/discord'
 const VersusLobby        = lazy(() => import('./VersusLobby'))
 const BucketVersusResult = lazy(() => import('./BucketVersusResult'))
@@ -309,7 +309,6 @@ function BucketSplash({ onStart, onVersus }) {
     </div>
 
     <SiteFeatures sport="bucket" />
-    <WikiCta sport="bucket" />
 
     <SiteFooter sport="bucket" />
     </div>
