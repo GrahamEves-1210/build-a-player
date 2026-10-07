@@ -13229,9 +13229,9 @@ html.is-mac [id^="pw-oop-bottom_rail"] > * {
 /* â”€â”€ LEADERBOARD PLUS BADGE â”€â”€ */
 .lb-plus-badge {
   display: inline-flex; align-items: center; justify-content: center;
-  width: 14px; height: 14px; border-radius: 3px; margin-left: 5px;
+  height: 14px; padding: 0 4px; border-radius: 3px; margin-left: 5px;
   background: rgba(100,180,255,0.15); color: rgba(100,180,255,0.9);
-  font-size: 9px; font-weight: 800; letter-spacing: 0; vertical-align: middle;
+  font-size: 8.5px; font-weight: 800; letter-spacing: 0.4px; vertical-align: middle; line-height: 1;
   border: 1px solid rgba(100,180,255,0.25);
 }
 

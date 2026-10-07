@@ -468,7 +468,7 @@ export default function BucketLeaderboardPage({ onBack, currentUser, adsDisabled
                     <div className="lb-row-info">
                       <div className="lb-row-name-line">
                         <span className="lb-username">{row.username ?? 'Anonymous'}</span>
-                        {isPlus && <span className="lb-plus-badge">+</span>}
+                        {isPlus && <span className="lb-plus-badge" title="BAP Pro">PRO</span>}
                         {isYou  && <span className="lb-you">you</span>}
                       </div>
                       <div className="lb-row-sub">

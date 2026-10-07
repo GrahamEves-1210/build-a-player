@@ -37,7 +37,7 @@ function MainPage({ go }) {
           <tr><th>Games</th><td>Build-A-Player (NFL)<br />Build-A-Bucket (NBA)</td></tr>
           <tr><th>Positions</th><td>QB, RB, WR, TE, DB<br />Guard, Big</td></tr>
           <tr><th>Modes</th><td>Current, All-Time, Salary Cap, Head-to-Head, Depth Chart</td></tr>
-          <tr><th>Platforms</th><td>Web; iOS and Android app</td></tr>
+          <tr><th>Platform</th><td>Web browser</td></tr>
           <tr><th>Ratings as of</th><td>{fmtDate(RATINGS_AS_OF)}</td></tr>
           <tr><th>Website</th><td><a href="/">build-a-player.com</a></td></tr>
         </tbody>
@@ -204,8 +204,8 @@ function ModesPage({ go }) {
       <p>Three real players, one hidden stat (passing touchdowns, passing or rushing yards for quarterbacks; rushing yards or touchdowns for backs; receiving yards or touchdowns for receivers), ten seconds to order them. Get it right and the streak grows; miss once and it ends. Best streaks go on the board.</p>
       <h2 id="sandbox">Sandbox</h2>
       <p>Flip on Sandbox from the build screen and the game is yours to bend. <b>Custom Ratings</b> opens every player's grades on 0–11 sliders, one player at a time or everyone at once, with a toggle at the top to switch between current players and All-Time legends (it opens on whichever you're playing). You can drop any player straight into a slot of your build, and pick any team for the season. Sandbox seasons are yours to enjoy but never save, rank or count toward lifetime awards.</p>
-      <h2 id="plus">Build-A-Player PLUS <span className="wk-tag">SUBSCRIPTION</span></h2>
-      <p>PLUS is the optional subscription that keeps the lights on. It removes ads across both games, unlocks colour themes for the site and custom profile icons, and puts a PLUS badge next to your name on the leaderboards. It's managed from your profile page.</p>
+      <h2 id="pro">BAP Pro <span className="wk-tag">SUBSCRIPTION</span></h2>
+      <p>BAP Pro is an optional subscription. It removes ads across both games, unlocks colour themes for the site and custom profile icons, and puts a Pro badge next to your name on the leaderboards. It's managed from your profile page.</p>
       <h2 id="leaderboards">Leaderboards and profiles</h2>
       <ul>
         <li><b>Saving.</b> Sign in and every completed season is saved with its build, record, stats and awards. Sandbox seasons and guest seasons are not saved.</li>
@@ -213,8 +213,6 @@ function ModesPage({ go }) {
         <li><b>Career</b> boards total your saved seasons: wins, titles and awards, and they are what the profile page shows.</li>
         <li><b>Share cards</b> render your finished build and season as an image you can post anywhere.</li>
       </ul>
-      <h2 id="app">In the app <span className="wk-tag">iOS · ANDROID</span></h2>
-      <p>The app adds a Daily Challenge with the same spins for everyone, seasons you steer at key moments, cards and XP, TAKEOVER (a road across the US map against progressively better real players) and BLACKTOP (live 3v3 with team chat).</p>
     </>
   )
 }
@@ -314,7 +312,7 @@ function BehindPage() {
       <h2 id="ratings-from">Where the ratings come from</h2>
       <p>Every rating is set by hand on the 0–11 scale, position by position, with anchors at the top: Dan Marino's arm is an 11, Tom Brady's processing and leadership are 11s, Randall Cunningham's legs are an 11, and current players are graded against those same posts. Current rosters are updated through the season; All-Time pools are curated per franchise. Team grades are calibrated to real results: the NFL's 1–10 offense and defense grades, the NBA's ratings out of 100 fitted to the 2025–26 standings.</p>
       <h2 id="random">How random the game is</h2>
-      <p>Spins are random, but daily boards and challenges are <b>seeded</b> from the date so every player faces the same spins, and live games are seeded from the room so both phones play back the identical game. Seasons are Monte Carlo: hundreds of individual coin flips at the probabilities on the <a href="/wiki/seasons">Seasons</a> page, which is why the same build can go 13–4 and 9–8 on different days. The engines never fudge a result after the fact; the stories, awards and box scores are read from what the dice produced.</p>
+      <p>Spins are random, but the daily Salary Cap board is <b>seeded</b> from the date, so everyone plays the same board on the same day. Seasons are Monte Carlo: hundreds of individual coin flips at the probabilities on the <a href="/wiki/seasons">Seasons</a> page, which is why the same build can go 13–4 and 9–8 on different days. The engines never fudge a result after the fact; the stories, awards and box scores are read from what the dice produced.</p>
       <h2 id="stack">What it runs on</h2>
       <p>Build-A-Player is a React app built with Vite, served from Cloudflare Pages, with accounts, saves, leaderboards and the live Head-to-Head rooms on Supabase. The player pools, team grades and headshot references are plain data files, which is how a ratings change can ship the same day, and why this wiki's ratings and dates update with every deploy. It is an independent fan project with no affiliation to the NFL, the NBA, their teams or players.</p>
       <h2 id="this-wiki">About this wiki</h2>
@@ -330,8 +328,8 @@ export const PAGES = [
     toc: [['spinning', 'Spinning', 'spin reel respin team player chips drag'], ['scale', 'The 0–11 scale', 'grades letter F S rating scale'], ['positions', 'Positions and attributes', 'QB RB WR TE DB guard big attributes'], ['overall', 'Overall rating', 'OVR formula weights weighted average balance bonus'], ['overall-nfl', 'Football overall', 'OVR formula'], ['overall-nba', 'Basketball overall', 'OVR formula'], ['archetypes', 'Archetypes', 'gunslinger dual threat franchise cornerstone']] },
   { slug: 'seasons', title: 'Seasons', description: 'How an NFL or NBA season is simulated: team grades, schedules, win chances, stats, playoffs, the Super Bowl, the play-in and awards.', Component: SeasonsPage,
     toc: [['nfl', 'NFL season', 'simulate football'], ['nfl-team', 'Your team matters', 'team offense defense grade'], ['nfl-schedule', 'The schedule', '17 games weather'], ['nfl-winning', 'Win chance', 'win probability stats passing yards'], ['nfl-playoffs', 'NFL playoffs', 'bye wild card super bowl overtime'], ['nfl-awards', 'NFL awards', 'MVP OPOY DPOY'], ['nba', 'NBA season', 'simulate basketball 82 games'], ['nba-team', 'Team strength', 'ratings out of 100'], ['nba-boost', 'Your boost', 'OVR boost win chance'], ['nba-stats', 'Your numbers', 'PPG RPG APG shooting'], ['nba-playoffs', 'Play-in and playoffs', 'seed log5 best of seven finals'], ['nba-awards', 'NBA awards', 'MVP DPOY']] },
-  { slug: 'modes', title: 'Modes', description: 'Current, All-Time, Salary Cap, Head-to-Head, the Depth Chart mini-game, Sandbox and PLUS, leaderboards and the app.', Component: ModesPage,
-    toc: [['current', 'Current'], ['all-time', 'All-Time', 'legends'], ['salary-cap', 'Salary Cap', 'daily budget board shuffle scout'], ['head-to-head', 'Head-to-Head', 'versus 1v1 live'], ['depth-chart', 'The Depth Chart', 'mini game streak'], ['sandbox', 'Sandbox', 'custom ratings edit grades any team'], ['plus', 'Build-A-Player PLUS', 'subscription no ads themes profile icons badge'], ['leaderboards', 'Leaderboards and profiles', 'best builds worst builds career save'], ['app', 'In the app', 'iOS Android daily takeover blacktop']] },
+  { slug: 'modes', title: 'Modes', description: 'Current, All-Time, Salary Cap, Head-to-Head, the Depth Chart mini-game, Sandbox, BAP Pro, and leaderboards.', Component: ModesPage,
+    toc: [['current', 'Current'], ['all-time', 'All-Time', 'legends'], ['salary-cap', 'Salary Cap', 'daily budget board shuffle scout'], ['head-to-head', 'Head-to-Head', 'versus 1v1 live'], ['depth-chart', 'The Depth Chart', 'mini game streak'], ['sandbox', 'Sandbox', 'custom ratings edit grades any team'], ['pro', 'BAP Pro', 'subscription pro no ads themes profile icons badge plus'], ['leaderboards', 'Leaderboards and profiles', 'best builds worst builds career save']] },
   { slug: 'ratings', title: 'Ratings', description: 'Every player rating in Build-A-Player and Build-A-Bucket, current and all-time, sortable and searchable, with the date each pool last changed.', Component: RatingsPage,
     toc: [['table', 'All ratings', 'players table search sort']] },
   { slug: 'creators', title: 'Creators', description: 'YouTubers, podcasters and TikTok creators who have played Build-A-Player and Build-A-Bucket, with their videos and shorts.', Component: CreatorsPage,

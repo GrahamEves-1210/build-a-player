@@ -42,9 +42,9 @@ export default function TermsPage({ onBack }) {
         </section>
 
         <section className="about-section">
-          <h2 className="about-section-title">5. Build-A-Player Plus (Subscription)</h2>
+          <h2 className="about-section-title">5. BAP Pro (Subscription)</h2>
           <p className="about-body">
-            Build-A-Player Plus is an optional subscription at $4.99/month that removes ads and unlocks additional features including custom color themes, custom profile icons, and a PLUS badge on leaderboard entries. Subscriptions are billed monthly and renew automatically unless cancelled. You may cancel at any time through your profile page or by contacting us at <a href="mailto:buildaplayer@outlook.com" className="about-link">buildaplayer@outlook.com</a>. Cancellation takes effect at the end of the current billing period. We do not offer refunds for partial months.
+            BAP Pro is an optional subscription at $4.99/month that removes ads and unlocks additional features including custom color themes, custom profile icons, and a Pro badge on leaderboard entries. Subscriptions are billed monthly and renew automatically unless cancelled. You may cancel at any time through your profile page or by contacting us at <a href="mailto:buildaplayer@outlook.com" className="about-link">buildaplayer@outlook.com</a>. Cancellation takes effect at the end of the current billing period. We do not offer refunds for partial months.
           </p>
           <p className="about-body">
             Payments are processed by Stripe. We do not store your payment card details. Subscription management is available via the billing portal accessible from your profile.

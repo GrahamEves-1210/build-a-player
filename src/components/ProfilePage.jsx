@@ -798,7 +798,7 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
               onClick={isPlus ? undefined : () => setPlusOpen(o => !o)}
               style={isPlus ? { cursor: 'default' } : undefined}
             >
-              {isPlus ? '✦ PLUS Active' : '✦ Build-A-Player Plus'}
+              {isPlus ? '✦ Pro Active' : '✦ BAP Pro'}
             </button>
             {!isPlus && plusOpen && (
               <div className="prf-plus-dropdown">
@@ -807,7 +807,7 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
                     'No ads',
                     'Custom color themes',
                     'Custom profile icons',
-                    'PLUS badge on leaderboard',
+                    'Pro badge on leaderboard',
                   ].map(label => (
                     <div key={label} className="wm-plus-perk">
                       <span className="wm-plus-check">✓</span>
@@ -853,11 +853,11 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
           </div>
         </div>
 
-        {/* ── Build-A-Player Plus ── */}
+        {/* ── BAP Pro ── */}
         {isPlus && (
         <div className={`prf-card ${show ? 'prf-card-in' : ''}`} style={{ animationDelay: '0.1s' }}>
           <div className="prf-card-hd">
-            <span className="prf-card-title">Build-A-Player Plus</span>
+            <span className="prf-card-title">BAP Pro</span>
             <span className="plus-status-badge plus-status-badge--on">Active</span>
           </div>
 
