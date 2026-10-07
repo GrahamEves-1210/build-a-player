@@ -21,8 +21,7 @@ const LeaderboardPage= lazy(() => import('./components/LeaderboardPage'))
 const VersusLobby    = lazy(() => import('./components/VersusLobby'))
 const VersusResult   = lazy(() => import('./components/VersusResult'))
 const AppTakeover    = lazy(() => import('./components/app/AppTakeover'))
-const WikiPage       = lazy(() => import('./components/WikiPage'))
-const CreatorsPage   = lazy(() => import('./components/CreatorsPage'))
+const Wiki           = lazy(() => import('./components/wiki/Wiki'))
 import { TYPES, LITE_TYPES, QBS, ATTR } from './data/qbs'
 import { RBS, RB_TYPES, RB_LITE_TYPES, RB_ATTR } from './data/rbs'
 import { WRS, WR_TYPES, WR_LITE_TYPES, WR_CATEGORIES, WR_ATTR } from './data/wrs'
@@ -70,11 +69,10 @@ const _isTerms   = window.location.pathname === '/terms'
 const _isProfile = !_sharedData && !_isPrivacy && !_isTerms && window.location.pathname === '/profile'
 const _isAbout   = !_sharedData && !_isPrivacy && !_isTerms && !_isProfile && new URLSearchParams(window.location.search).has('about')
 const _isDepthChart = !_sharedData && !_isPrivacy && !_isTerms && !_isProfile && !_isAbout && window.location.pathname === '/depth-chart'
-const _isWiki     = !_sharedData && window.location.pathname === '/wiki'
-const _isCreators = !_sharedData && window.location.pathname === '/creators'
+const _isWiki     = !_sharedData && window.location.pathname.startsWith('/wiki')   // /wiki and /wiki/<page>; the wiki routes its own pages
 
 const _saved = (() => {
-  if (_sharedData || _isPrivacy || _isAbout || _isProfile || _isDepthChart || _isWiki || _isCreators) return null
+  if (_sharedData || _isPrivacy || _isAbout || _isProfile || _isDepthChart || _isWiki) return null
   try {
     const p = JSON.parse(localStorage.getItem('bap_progress'))
     // OL is Coming Soon — don't drop anyone back into an in-progress OL build
@@ -118,7 +116,7 @@ function enableAdFreeMode() {
 try { if (IS_APP || localStorage.getItem('bap_subscribed') === '1' || localStorage.getItem('bap_ads_off') === '1') enableAdFreeMode() } catch {}
 
 export default function App() {
-  const [page, setPage]               = useState(_sharedData ? 'shared' : _isPrivacy ? 'privacy' : _isTerms ? 'terms' : _isProfile ? 'profile' : _isAbout ? 'about' : _isDepthChart ? 'depth-chart' : _isWiki ? 'wiki' : _isCreators ? 'creators' : (_saved?.gameMode ? 'game' : 'splash'))
+  const [page, setPage]               = useState(_sharedData ? 'shared' : _isPrivacy ? 'privacy' : _isTerms ? 'terms' : _isProfile ? 'profile' : _isAbout ? 'about' : _isDepthChart ? 'depth-chart' : _isWiki ? 'wiki' : (_saved?.gameMode ? 'game' : 'splash'))
   const [sharedBuild]                 = useState(_sharedData?.build ?? null)
   const [sharedTypes]                 = useState(_sharedData?.types ?? null)
   const [gameMode, setGameMode]         = useState(_saved?.gameMode ?? null)
@@ -281,7 +279,7 @@ export default function App() {
 
   useEffect(() => {
     const meta = document.querySelector('meta[name="theme-color"]')
-    if (meta) meta.setAttribute('content', page === 'splash' ? '#0f1612' : page === 'depth-chart' ? '#111318' : '#090a0d')
+    if (meta) meta.setAttribute('content', page === 'splash' ? '#0f1612' : page === 'depth-chart' ? '#111318' : page === 'wiki' ? '#ffffff' : '#090a0d')
   }, [page])
 
   // iOS/Android app: report the page to the bottom tab bar (AppTabBar) and
@@ -433,9 +431,9 @@ export default function App() {
         setPage(prev => prev === 'depth-chart' ? 'splash' : prev)
         changed = true
       }
-      // Wiki ↔ Creators: Back lands on the page the URL names, not the splash
-      if (path === '/wiki' || path === '/creators') { setPage(path === '/wiki' ? 'wiki' : 'creators'); changed = true }
-      else { setPage(prev => (prev === 'wiki' || prev === 'creators') ? 'splash' : prev); changed = true }
+      // The wiki owns /wiki/*: Back into it reopens it, Back out of it lands on the splash
+      if (path.startsWith('/wiki')) { setPage(prev => (prev === 'wiki' ? prev : 'wiki')); changed = true }
+      else { setPage(prev => (prev === 'wiki' ? 'splash' : prev)); changed = true }
       if (changed) window.scrollTo({ top: 0, behavior: 'instant' })
     }
     window.addEventListener('popstate', handlePop)
@@ -447,12 +445,13 @@ export default function App() {
   // rules by path. Purely a URL sync layer; doesn't touch page state, the
   // existing ramp.spaNewPage() calls, or any in-app navigation logic.
   useEffect(() => {
-    const targetPath = (page === 'sim' && simResult) ? '/simulate' : page === 'leaderboard' ? '/leaderboard' : page === 'depth-chart' ? '/depth-chart' : page === 'wiki' ? '/wiki' : page === 'creators' ? '/creators' : null
+    const onWikiPath = window.location.pathname.startsWith('/wiki')
+    const targetPath = (page === 'sim' && simResult) ? '/simulate' : page === 'leaderboard' ? '/leaderboard' : page === 'depth-chart' ? '/depth-chart' : page === 'wiki' ? (onWikiPath ? window.location.pathname : '/wiki') : null
     if (targetPath) {
       if (window.location.pathname !== targetPath) {
         window.history.pushState({}, '', targetPath)
       }
-    } else if (['/simulate', '/leaderboard', '/depth-chart', '/wiki', '/creators'].includes(window.location.pathname)) {
+    } else if (['/simulate', '/leaderboard', '/depth-chart'].includes(window.location.pathname) || onWikiPath) {
       window.history.replaceState({}, '', '/')
     }
   }, [page, simResult])
@@ -1042,7 +1041,7 @@ export default function App() {
         onStart={handleStart}
         onDepthChart={() => setPage('depth-chart')}
         onWiki={() => { setPage('wiki'); window.scrollTo({ top: 0, behavior: 'instant' }) }}
-        onCreators={() => { setPage('creators'); window.scrollTo({ top: 0, behavior: 'instant' }) }}
+        onCreators={() => { window.history.pushState({}, '', '/wiki/creators'); setPage('wiki'); window.scrollTo({ top: 0, behavior: 'instant' }) }}
         onVersus={(pos) => {
           const p = pos || 'qb'
           try { localStorage.setItem('lastPosition', p) } catch {}
@@ -1143,7 +1142,6 @@ export default function App() {
     onProfile: () => { window.history.pushState({}, '', '/profile'); setPage('profile') },
     onLeaderboard: () => setPage('leaderboard'),
     onWiki: () => { setPage('wiki'); window.scrollTo({ top: 0, behavior: 'instant' }) },
-    onCreators: () => { setPage('creators'); window.scrollTo({ top: 0, behavior: 'instant' }) },
     onSwitchPosition: (pos) => { try { localStorage.setItem('lastPosition', pos) } catch {}; handleHome() },
     onSubscribe: async () => {
       if (!user) { setShowAuth(true); return }
@@ -1202,14 +1200,11 @@ export default function App() {
     )
   }
 
-  if (page === 'wiki' || page === 'creators') {
-    const back = () => { setPage('splash'); window.scrollTo({ top: 0, behavior: 'instant' }) }
+  // The wiki is its own page: no game chrome, its own header and navigation
+  if (page === 'wiki') {
     return (
       <Suspense fallback={null}>
-        <Navbar {...navbarProps} />
-        {page === 'wiki'
-          ? <WikiPage onBack={back} onCreators={navbarProps.onCreators} />
-          : <CreatorsPage onBack={back} onWiki={navbarProps.onWiki} />}
+        <Wiki onExit={() => { setPage('splash'); window.scrollTo({ top: 0, behavior: 'instant' }) }} />
       </Suspense>
     )
   }

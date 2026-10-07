@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { QBS, ATTR, TYPES } from '../data/qbs'
 import { RBS, RB_ATTR, RB_TYPES } from '../data/rbs'
 import { WRS, WR_ATTR, WR_TYPES } from '../data/wrs'
@@ -18,34 +18,40 @@ import { valToGrade, calcOVR, calcOVRRB, calcOVRWR, calcOVRTE, calcOVRDB } from 
 import { calcBucketOVR } from '../utils/bucketSimulation'
 
 // Every rating in the game, straight from the roster files the spins draw
-// from. "As a build" is the overall a player would score if you took every
-// one of his chips — the same formula your builds are scored with.
+// from, so the table changes whenever the data does. The "as of" dates come
+// from git at build time (vite.config.js) — the last commit that touched each
+// pool. "As a build" is the overall a player would score if you took every one
+// of his chips: the same formula your builds are scored with.
 
-export const RATINGS_AS_OF = 'October 7, 2026'
+const DATES = typeof __RATINGS_DATES__ !== 'undefined' ? __RATINGS_DATES__ : {}
+export const RATINGS_DATES = DATES
+export const RATINGS_AS_OF = DATES.all ?? null
+export const fmtDate = s => (s ? new Date(s + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'the latest update')
 
 const asBuild = (p, types) => Object.fromEntries(types.map(t => [t, { val: p.attrs?.[t] ?? 0 }]))
 export const POOLS = [
-  { id: 'qb',    sport: 'nfl', label: 'QB',     players: QBS, legends: LEGENDS,    types: TYPES,    legendTypes: LEGEND_TYPES,    attr: ATTR,    ovr: (p, t) => calcOVR(asBuild(p, t), t) },
-  { id: 'rb',    sport: 'nfl', label: 'RB',     players: RBS, legends: RB_LEGENDS, types: RB_TYPES, legendTypes: RB_LEGEND_TYPES, attr: RB_ATTR, ovr: (p, t) => calcOVRRB(asBuild(p, t), t) },
-  { id: 'wr',    sport: 'nfl', label: 'WR',     players: WRS, legends: WR_LEGENDS, types: WR_TYPES, legendTypes: WR_LEGEND_TYPES, attr: WR_ATTR, ovr: (p, t) => calcOVRWR(asBuild(p, t), t) },
-  { id: 'te',    sport: 'nfl', label: 'TE',     players: TES, legends: TE_LEGENDS, types: TE_TYPES, legendTypes: TE_LEGEND_TYPES, attr: TE_ATTR, ovr: (p, t) => calcOVRTE(asBuild(p, t), t) },
-  { id: 'db',    sport: 'nfl', label: 'DB',     players: DBS, legends: DB_LEGENDS, types: DB_TYPES, legendTypes: DB_LEGEND_TYPES, attr: DB_ATTR, ovr: (p, t) => calcOVRDB(asBuild(p, t), t) },
-  { id: 'guard', sport: 'nba', label: 'Guards', players: NBA_GUARD_PLAYERS, legends: NBA_ALLTIME_GUARD_PLAYERS, types: GUARD_TYPES, legendTypes: GUARD_TYPES, attr: BUCKET_ATTR, ovr: (p, t) => calcBucketOVR(asBuild(p, t), t, 'guard') },
-  { id: 'big',   sport: 'nba', label: 'Bigs',   players: NBA_BIG_PLAYERS,   legends: NBA_ALLTIME_BIG_PLAYERS,   types: BIG_TYPES,   legendTypes: BIG_TYPES,   attr: BUCKET_ATTR, ovr: (p, t) => calcBucketOVR(asBuild(p, t), t, 'big') },
+  { id: 'qb',    sport: 'nfl', label: 'QB',     plural: 'quarterbacks',   players: QBS, legends: LEGENDS,    types: TYPES,    legendTypes: LEGEND_TYPES,    attr: ATTR,    ovr: (p, t) => calcOVR(asBuild(p, t), t) },
+  { id: 'rb',    sport: 'nfl', label: 'RB',     plural: 'running backs',  players: RBS, legends: RB_LEGENDS, types: RB_TYPES, legendTypes: RB_LEGEND_TYPES, attr: RB_ATTR, ovr: (p, t) => calcOVRRB(asBuild(p, t), t) },
+  { id: 'wr',    sport: 'nfl', label: 'WR',     plural: 'wide receivers', players: WRS, legends: WR_LEGENDS, types: WR_TYPES, legendTypes: WR_LEGEND_TYPES, attr: WR_ATTR, ovr: (p, t) => calcOVRWR(asBuild(p, t), t) },
+  { id: 'te',    sport: 'nfl', label: 'TE',     plural: 'tight ends',     players: TES, legends: TE_LEGENDS, types: TE_TYPES, legendTypes: TE_LEGEND_TYPES, attr: TE_ATTR, ovr: (p, t) => calcOVRTE(asBuild(p, t), t) },
+  { id: 'db',    sport: 'nfl', label: 'DB',     plural: 'defensive backs', players: DBS, legends: DB_LEGENDS, types: DB_TYPES, legendTypes: DB_LEGEND_TYPES, attr: DB_ATTR, ovr: (p, t) => calcOVRDB(asBuild(p, t), t) },
+  { id: 'guard', sport: 'nba', label: 'Guards', plural: 'guards',         players: NBA_GUARD_PLAYERS, legends: NBA_ALLTIME_GUARD_PLAYERS, types: GUARD_TYPES, legendTypes: GUARD_TYPES, attr: BUCKET_ATTR, ovr: (p, t) => calcBucketOVR(asBuild(p, t), t, 'guard') },
+  { id: 'big',   sport: 'nba', label: 'Bigs',   plural: 'bigs',           players: NBA_BIG_PLAYERS,   legends: NBA_ALLTIME_BIG_PLAYERS,   types: BIG_TYPES,   legendTypes: BIG_TYPES,   attr: BUCKET_ATTR, ovr: (p, t) => calcBucketOVR(asBuild(p, t), t, 'big') },
 ]
-export const poolCounts = () => POOLS.map(p => ({ id: p.id, sport: p.sport, label: p.label, current: p.players.length, legends: p.legends.length }))
+export const poolCounts = () => POOLS.map(p => ({ id: p.id, sport: p.sport, label: p.label, plural: p.plural, current: p.players.length, legends: p.legends.length, updated: DATES[p.id] ?? null }))
 
-const gradeColor = v => (v >= 11 ? '#a855f7' : v >= 8 ? '#3b82f6' : v >= 5 ? '#22c55e' : v >= 2 ? '#eab308' : v >= 1 ? '#f97316' : '#ef4444')
+export const gradeColor = v => (v >= 11 ? '#a855f7' : v >= 8 ? '#3b82f6' : v >= 5 ? '#22c55e' : v >= 2 ? '#eab308' : v >= 1 ? '#f97316' : '#ef4444')
 const short = (attr, t) => attr[t]?.shortLabel ?? t.slice(0, 3).toUpperCase()
 const long = (attr, t) => attr[t]?.label ?? t
 
-export default function RatingsTable() {
-  const [sport, setSport] = useState('nfl')
-  const [poolId, setPoolId] = useState('qb')
+export default function RatingsTable({ initialQuery = '', initialPool = 'qb' }) {
+  const [poolId, setPoolId] = useState(POOLS.some(p => p.id === initialPool) ? initialPool : 'qb')
   const [era, setEra] = useState('current')          // current | legends
-  const [q, setQ] = useState('')
+  const [q, setQ] = useState(initialQuery)
   const [team, setTeam] = useState('all')
   const [sort, setSort] = useState({ key: 'ovr', dir: -1 })
+  useEffect(() => { setQ(initialQuery) }, [initialQuery])
+  useEffect(() => { if (POOLS.some(p => p.id === initialPool)) setPoolId(initialPool) }, [initialPool])
 
   const pool = POOLS.find(p => p.id === poolId) ?? POOLS[0]
   const types = era === 'legends' ? pool.legendTypes : pool.types
@@ -58,62 +64,62 @@ export default function RatingsTable() {
     return list.sort((a, b) => { const x = val(a), y = val(b); return (typeof x === 'string' ? x.localeCompare(y) : x - y) * sort.dir })
   }, [source, types, sort, pool])
   const teams = useMemo(() => [...new Set(source.map(p => p.team).filter(Boolean))].sort(), [source])
-  const shown = rows.filter(r => (team === 'all' || r.p.team === team) && (!q || `${r.p.name} ${r.p.team ?? ''} ${r.p.teamName ?? ''}`.toLowerCase().includes(q.toLowerCase())))
+  const needle = q.trim().toLowerCase()
+  const shown = rows.filter(r => (team === 'all' || r.p.team === team) && (!needle || `${r.p.name} ${r.p.team ?? ''} ${r.p.teamName ?? ''}`.toLowerCase().includes(needle)))
 
-  const pick = (s, id) => { setSport(s); setPoolId(id); setTeam('all'); setQ('') }
+  const pick = id => { setPoolId(id); setTeam('all') }
   const header = (key, label, title) => (
-    <th key={key} className={`rt-th${sort.key === key ? ' is-sorted' : ''}`} title={title} onClick={() => setSort(s => ({ key, dir: s.key === key ? -s.dir : -1 }))}>
-      {label}{sort.key === key && <span className="rt-sort">{sort.dir < 0 ? '▾' : '▴'}</span>}
+    <th key={key} className={`wk-rt-th${sort.key === key ? ' is-sorted' : ''}`} title={title} onClick={() => setSort(s => ({ key, dir: s.key === key ? -s.dir : -1 }))} scope="col">
+      {label}{sort.key === key && <span className="wk-rt-sort">{sort.dir < 0 ? ' ▾' : ' ▴'}</span>}
     </th>
   )
 
   return (
-    <div className="rt">
-      <div className="rt-controls">
-        <div className="rt-pills">
-          {POOLS.filter(p => p.sport === 'nfl').map(p => <button key={p.id} className={`rt-pill${poolId === p.id ? ' is-on' : ''}`} onClick={() => pick('nfl', p.id)}>{p.label}</button>)}
-          <span className="rt-pill-sep" />
-          {POOLS.filter(p => p.sport === 'nba').map(p => <button key={p.id} className={`rt-pill rt-pill--nba${poolId === p.id ? ' is-on' : ''}`} onClick={() => pick('nba', p.id)}>{p.label}</button>)}
+    <div className="wk-rt">
+      <div className="wk-rt-controls">
+        <div className="wk-rt-pills" role="tablist" aria-label="Position">
+          {POOLS.filter(p => p.sport === 'nfl').map(p => <button key={p.id} role="tab" aria-selected={poolId === p.id} className={`wk-pill${poolId === p.id ? ' is-on' : ''}`} onClick={() => pick(p.id)}>{p.label}</button>)}
+          <span className="wk-pill-sep" aria-hidden="true" />
+          {POOLS.filter(p => p.sport === 'nba').map(p => <button key={p.id} role="tab" aria-selected={poolId === p.id} className={`wk-pill wk-pill--nba${poolId === p.id ? ' is-on' : ''}`} onClick={() => pick(p.id)}>{p.label}</button>)}
+          <span className="wk-pill-sep" aria-hidden="true" />
+          <button className={`wk-pill${era === 'current' ? ' is-on' : ''}`} onClick={() => { setEra('current'); setTeam('all') }}>Current</button>
+          <button className={`wk-pill wk-pill--gold${era === 'legends' ? ' is-on' : ''}`} onClick={() => { setEra('legends'); setTeam('all') }}>All-Time</button>
         </div>
-        <div className="rt-pills">
-          <button className={`rt-pill${era === 'current' ? ' is-on' : ''}`} onClick={() => { setEra('current'); setTeam('all') }}>Current</button>
-          <button className={`rt-pill rt-pill--gold${era === 'legends' ? ' is-on' : ''}`} onClick={() => { setEra('legends'); setTeam('all') }}>All-Time</button>
-        </div>
-        <div className="rt-filters">
-          <input className="rt-search" value={q} onChange={e => setQ(e.target.value)} placeholder="Search a player or team…" aria-label="Search players" />
-          <select className="rt-select" value={team} onChange={e => setTeam(e.target.value)} aria-label="Team">
+        <div className="wk-rt-filters">
+          <input className="wk-input" value={q} onChange={e => setQ(e.target.value)} placeholder="Filter by player or team" aria-label="Filter players" />
+          <select className="wk-select" value={team} onChange={e => setTeam(e.target.value)} aria-label="Team">
             <option value="all">All teams</option>
             {teams.map(t => <option key={t} value={t}>{t}</option>)}
           </select>
         </div>
       </div>
-      <div className="rt-meta">
-        <span><b>{shown.length}</b> {era === 'legends' ? 'all-time' : 'current'} {pool.label === 'Guards' || pool.label === 'Bigs' ? pool.label.toLowerCase() : `${pool.label}s`} · ratings as of <b>{RATINGS_AS_OF}</b></span>
-        <span className="rt-legend">{[['S', 11], ['A', 9], ['B', 6], ['C', 3], ['D', 1], ['F', 0]].map(([g, v]) => <i key={g} style={{ '--g': gradeColor(v) }}>{g}</i>)} 1–11 scale, F to S</span>
-      </div>
-      <div className="rt-scroll">
-        <table className="rt-table">
+      <p className="wk-rt-meta">
+        <span><b>{shown.length}</b> {era === 'legends' ? 'all-time' : 'current'} {pool.plural} · ratings updated <b>{fmtDate(DATES[pool.id])}</b></span>
+        <span className="wk-rt-legend">{[['S', 11], ['A', 9], ['B', 6], ['C', 3], ['D', 1], ['F', 0]].map(([g, v]) => <i key={g} style={{ '--g': gradeColor(v) }}>{g}</i>)} scale 0–11, F to S</span>
+      </p>
+      <div className="wk-rt-scroll">
+        <table className="wikitable wk-rt-table">
           <thead>
             <tr>
               {header('name', 'Player', 'Sort by name')}
               {types.map(t => header(t, short(pool.attr, t), long(pool.attr, t)))}
-              {header('avg', 'AVG', 'Average rating')}
+              {header('avg', 'Avg', 'Plain average of the ratings')}
               {header('ovr', 'OVR', 'Overall as a full build of this player')}
             </tr>
           </thead>
           <tbody>
             {shown.map(({ p, ovr }) => (
               <tr key={`${p.name}-${p.team}`}>
-                <td className="rt-player">
-                  <span className="rt-name">{p.name}</span>
-                  <span className="rt-team">{p.team}{p.number != null ? ` · #${p.number}` : ''}{p.position ? ` · ${p.position}` : ''}{p.years ? ` · ${p.years}` : ''}</span>
-                </td>
-                {types.map(t => { const v = p.attrs[t]; return <td key={t} className="rt-cell"><span className="rt-grade" style={{ '--g': gradeColor(v ?? 0) }} title={`${long(pool.attr, t)}: ${v ?? '—'}/11`}>{v == null ? '—' : valToGrade(v)}</span></td> })}
-                <td className="rt-cell rt-avg">{(types.reduce((s, t) => s + (p.attrs[t] ?? 0), 0) / types.length).toFixed(1)}</td>
-                <td className="rt-cell rt-ovr"><b>{ovr}</b></td>
+                <th scope="row" className="wk-rt-player">
+                  <span className="wk-rt-name">{p.name}</span>
+                  <span className="wk-rt-team">{p.team}{p.number != null ? ` · #${p.number}` : ''}{p.position ? ` · ${p.position}` : ''}{p.years ? ` · ${p.years}` : ''}</span>
+                </th>
+                {types.map(t => { const v = p.attrs[t]; return <td key={t} className="wk-rt-cell"><span className="wk-grade" style={{ '--g': gradeColor(v ?? 0) }} title={`${long(pool.attr, t)}: ${v ?? '—'} of 11`}>{v == null ? '—' : valToGrade(v)}</span></td> })}
+                <td className="wk-rt-cell wk-rt-avg">{(types.reduce((s, t) => s + (p.attrs[t] ?? 0), 0) / types.length).toFixed(1)}</td>
+                <td className="wk-rt-cell wk-rt-ovr"><b>{ovr}</b></td>
               </tr>
             ))}
-            {shown.length === 0 && <tr><td className="rt-empty" colSpan={types.length + 3}>No players match.</td></tr>}
+            {shown.length === 0 && <tr><td className="wk-rt-empty" colSpan={types.length + 3}>No players match.</td></tr>}
           </tbody>
         </table>
       </div>

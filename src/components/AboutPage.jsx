@@ -18,7 +18,7 @@ export default function AboutPage({ onBack, onPrivacy }) {
 
         <section className="about-section">
           <p className="about-body">
-            Want the details? The <a className="about-link" href="/wiki">Wiki</a> explains every mode and every mechanic — spins, overall ratings, season simulation, Salary Cap, the Daily, Head-to-Head — and lists every player rating in the game. The <a className="about-link" href="/creators">Creators</a> page collects the YouTubers and streamers who have played.
+            Want the details? The <a className="about-link" href="/wiki">Wiki</a> explains every mode and every mechanic — spins, overall ratings, season simulation, Salary Cap, the Daily, Head-to-Head — and lists every player rating in the game. Its <a className="about-link" href="/wiki/creators">Creators</a> page collects the YouTubers and streamers who have played.
           </p>
         </section>
 
