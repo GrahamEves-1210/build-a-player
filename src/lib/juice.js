@@ -148,8 +148,8 @@ const SFX = {
   tap: S => { osc(S, { f: 210, to: 110, dur: 0.06, gain: 0.1 }); noise(S, { hp: 3200, dur: 0.012, gain: 0.05 }) },
   // reel ratchet
   tick: S => { noise(S, { bp: 2300 + Math.random() * 700, q: 7, dur: 0.02, gain: 0.3 }); osc(S, { type: 'square', f: 3000, dur: 0.008, gain: 0.035 }) },
-  // reel lock: ka-chunk + a metal ring
-  lock: S => { const v = verb(S, 0.35); hit(S, { gain: 0.32 }); bell(S, { f: 760, ratio: 3.52, index: 7, dur: 0.38, gain: 0.16, at: 0.015, out: v }); bell(S, { f: 760, ratio: 3.52, index: 7, dur: 0.3, gain: 0.1, at: 0.015 }); noise(S, { bp: 5200, q: 4, dur: 0.03, gain: 0.07, at: 0.012 }) },
+  // reel lock: ka-chunk — a wood knock with a short, soft ring (no bell)
+  lock: S => { hit(S, { gain: 0.3 }); osc(S, { type: 'triangle', f: 540, to: 470, dur: 0.12, gain: 0.11, at: 0.012, lp: 1600, q: 0.9, env: { a: 0.002, d: 0.12 } }); osc(S, { type: 'sine', f: 1080, dur: 0.07, gain: 0.04, at: 0.014, env: { a: 0.002, d: 0.07 } }); noise(S, { bp: 2400, q: 2.5, dur: 0.03, gain: 0.06, at: 0.01 }) },
   // sheet / screen opens: whoosh
   pop: S => noise(S, { bp: 480, to: 2600, q: 1.1, dur: 0.24, gain: 0.26, env: { a: 0.04, d: 0.2 } }),
   // the last trait drops in: rising power-up into a hit
@@ -161,7 +161,7 @@ const SFX = {
     // the rise: a brighter layer fading in over the dark one
     for (const f of [392, 493.9, 587.3]) osc(S, { type: 'sawtooth', f, dur: 0.5, gain: 0.045, at: 0.12, lp: 4200, q: 0.9, out: v, env: { a: 0.3, d: 0.25 } })
     hit(S, { at: 0.56, gain: 0.26 })
-    bell(S, { f: 1568, ratio: 2.0, index: 2.5, dur: 0.6, gain: 0.14, at: 0.56, out: v })
+    bell(S, { f: 1568, ratio: 2.0, index: 1.3, dur: 0.5, gain: 0.11, at: 0.56, out: v })
   },
   // season kicks off
   whistle: S => whistle(S, { gain: 0.11 }),
@@ -171,7 +171,7 @@ const SFX = {
     crowd(S, { dur: 1.8, gain: 0.16, at: 0.1 })
     for (const [f, at] of [[523.3, 0], [659.3, 0.13], [784, 0.26]]) brass(S, { f, dur: 0.18, gain: 0.14, at, out: v })
     brass(S, { f: 1046.5, dur: 0.75, gain: 0.17, at: 0.4, hold: 0.3, out: v })
-    bell(S, { f: 2093, ratio: 2.0, index: 2, dur: 0.7, gain: 0.07, at: 0.42, out: v })
+    bell(S, { f: 2093, ratio: 2.0, index: 1.2, dur: 0.6, gain: 0.06, at: 0.42, out: v })
   },
   // a title: air horn, cymbal, the roar
   champion: S => {
@@ -188,18 +188,18 @@ const SFX = {
     crowd(S, { dur: 1.5, gain: 0.11, at: 0.15 })
     for (const [f, at] of [[698.5, 0], [880, 0.12], [1046.5, 0.24]]) brass(S, { f, dur: 0.16, gain: 0.13, at, out: v })
     brass(S, { f: 1396.9, dur: 0.7, gain: 0.16, at: 0.38, hold: 0.25, out: v })
-    for (const [f, at] of [[2093, 0.5], [2637, 0.58], [3136, 0.66], [4186, 0.74]]) bell(S, { f, ratio: 2.0, index: 1.8, dur: 0.5, gain: 0.06, at, out: v })
+    for (const [f, at] of [[2093, 0.5], [2637, 0.58], [3136, 0.66], [4186, 0.74]]) bell(S, { f, ratio: 2.0, index: 1.1, dur: 0.45, gain: 0.05, at, out: v })
   },
   // reward claimed: ka-ching
   claim: S => {
     const v = verb(S, 0.25)
     noise(S, { bp: 6200, q: 5, dur: 0.03, gain: 0.07 })
-    bell(S, { f: 1318.5, ratio: 3.0, index: 2.2, dur: 0.28, gain: 0.15, at: 0.01, out: v })
-    bell(S, { f: 1760, ratio: 3.0, index: 2.2, dur: 0.42, gain: 0.17, at: 0.1, out: v })
-    bell(S, { f: 1760, dur: 0.3, gain: 0.08, at: 0.1 })
+    bell(S, { f: 1318.5, ratio: 3.0, index: 1.1, dur: 0.24, gain: 0.12, at: 0.01, out: v })
+    bell(S, { f: 1760, ratio: 3.0, index: 1.1, dur: 0.36, gain: 0.13, at: 0.1, out: v })
+    bell(S, { f: 1760, index: 1.2, dur: 0.26, gain: 0.06, at: 0.1 })
   },
   // small good news (streak, mission done)
-  chime: S => { const v = verb(S, 0.3); bell(S, { f: 1760, ratio: 2.0, index: 2, dur: 0.35, gain: 0.12, out: v }); bell(S, { f: 2217, ratio: 2.0, index: 2, dur: 0.45, gain: 0.12, at: 0.09, out: v }) },
+  chime: S => { const v = verb(S, 0.25); osc(S, { f: 1318.5, dur: 0.2, gain: 0.08, lp: 2800, out: v, env: { a: 0.003, d: 0.2 } }); osc(S, { f: 1760, dur: 0.26, gain: 0.08, at: 0.09, lp: 3200, out: v, env: { a: 0.003, d: 0.26 } }) },
   // card reveal — more sparkle the rarer it is (0 common … 3 legend)
   card: (S, rank = 0) => {
     noise(S, { bp: 1100, to: 3200, q: 1.4, dur: 0.13, gain: 0.09 })          // the flip
@@ -207,7 +207,7 @@ const SFX = {
     if (rank < 1) return
     const v = verb(S, 0.28 + rank * 0.07)
     const tones = [1568, 1976, 2637, 3136].slice(0, rank + 1)
-    tones.forEach((f, i) => bell(S, { f, ratio: 2.0, index: 2, dur: 0.35 + rank * 0.08, gain: 0.1, at: 0.1 + i * 0.075, out: v }))
+    tones.forEach((f, i) => bell(S, { f, ratio: 2.0, index: 1.2, dur: 0.32 + rank * 0.08, gain: 0.08, at: 0.1 + i * 0.075, out: v }))
     if (rank >= 2) for (const f of [392, 493.9]) osc(S, { type: 'sawtooth', f, dur: 0.7, gain: 0.035, at: 0.08, lp: 1300, q: 0.8, out: v, env: { a: 0.12, d: 0.6 } })
     if (rank >= 3) {
       for (const f of [261.6, 329.6, 392]) osc(S, { type: 'sawtooth', f, dur: 1.1, gain: 0.04, at: 0.1, lp: 2600, q: 0.8, out: v, env: { a: 0.2, d: 0.9 } })
