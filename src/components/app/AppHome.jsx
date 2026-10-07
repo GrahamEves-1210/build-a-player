@@ -98,7 +98,7 @@ function DailyBanner({ isBucket }) {
   )
 }
 
-export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus, onBlacktop, onTakeover, takeoverRun, user, renderBucketFigure }) {
+export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus, onBlacktop, blacktop, onTakeover, takeoverRun, user, renderBucketFigure }) {
   const isBucket = sport === 'bucket'
   const storeKey = isBucket ? 'bucketPosition' : 'lastPosition'
   const [position, setPosition] = useState(() => {
@@ -120,6 +120,10 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
   const fig = NFL_FIGURE[position] ?? NFL_FIGURE.qb
   const posShort = isBucket ? (position === 'big' ? 'BIG' : 'GUARD') : position.toUpperCase()
   const posName = isBucket ? (position === 'big' ? 'PF · C' : 'PG · SG · SF') : NFL_NAMES[position]
+  const tkOn = !!takeoverRun && !takeoverRun.over
+  const tkStops = takeoverRun?.route?.length ?? 16
+  const tkEndless = tkOn && takeoverRun.idx >= tkStops
+  const btLive = !!blacktop && blacktop.phase !== 'idle'
 
   return (
     <div className={`ag-home ag-home--${sport}`}>
@@ -191,21 +195,21 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
           <DailyBanner isBucket={isBucket} />
           <button className="ag-takeover ag-pop" style={{ '--d': '320ms' }} onClick={onTakeover}>
             <span className="ag-takeover-txt">
-              <span className="ag-eyebrow">{takeoverRun && !takeoverRun.over ? `ON THE ROAD · ${takeoverRun.taken.length}/${isBucket ? 30 : 32} CITIES` : 'ROAD MODE · SOLO OR DUO'}</span>
+              <span className="ag-eyebrow">{tkOn ? (tkEndless ? `ENDLESS ROAD · ${takeoverRun.endlessWins} STRAIGHT` : `ON THE ROAD · ${takeoverRun.taken.length}/${tkStops} CITIES`) : 'ROAD MODE · 16 CITIES · SOLO OR DUO'}</span>
               <span className="ag-takeover-title">TAKEOVER</span>
-              <span className="ag-takeover-sub">{takeoverRun && !takeoverRun.over ? `${takeoverRun.lives} ${takeoverRun.lives === 1 ? 'life' : 'lives'} left — next city is waiting` : `Take every city. Beat their best. Steal their game.`}</span>
+              <span className="ag-takeover-sub">{tkOn ? `${takeoverRun.lives} ${takeoverRun.lives === 1 ? 'life' : 'lives'} left — your next stop is waiting` : 'Cross the map. Beat a better player in every city. Steal their game.'}</span>
             </span>
-            <span className="ag-edge-go">{takeoverRun && !takeoverRun.over ? 'RESUME' : 'START'} <IconArrow size={14} /></span>
+            <span className="ag-edge-go">{tkOn ? 'RESUME' : 'START'} <IconArrow size={14} /></span>
           </button>
           {isBucket && (
-            <button className="ag-blacktop ag-pop" style={{ '--d': '350ms' }} onClick={onBlacktop}>
+            <button className={`ag-blacktop ag-pop${btLive ? ' is-live' : ''}`} style={{ '--d': '350ms' }} onClick={onBlacktop}>
               <span className="ag-live-dot" />
               <span className="ag-takeover-txt">
-                <span className="ag-eyebrow">LIVE · 3V3</span>
+                <span className="ag-eyebrow">{btLive ? (blacktop.phase === 'queue' ? `IN THE QUEUE · ${blacktop.queue}/6` : blacktop.phase === 'build' ? 'LIVE · YOUR SQUAD IS BUILDING' : 'LIVE · GAME ON') : 'LIVE · 3V3'}</span>
                 <span className="ag-takeover-title">BLACKTOP</span>
-                <span className="ag-takeover-sub">Squad up with five others. Team chat, 3:00 to build, first to 21.</span>
+                <span className="ag-takeover-sub">{btLive ? 'You\'re still in. Jump back to your run.' : 'Squad up with five others. Team chat, 3:00 to build, first to 21.'}</span>
               </span>
-              <span className="ag-edge-go">QUEUE <IconArrow size={14} /></span>
+              <span className="ag-edge-go">{btLive ? 'RESUME' : 'QUEUE'} <IconArrow size={14} /></span>
             </button>
           )}
           {isBucket ? (

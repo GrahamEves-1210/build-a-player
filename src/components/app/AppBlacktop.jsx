@@ -1,15 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { ROOM_SIZE, FILL_AFTER_SECS, TEAM_NAMES, ROLES } from '../../lib/blacktop'
+import { ROOM_SIZE, FILL_AFTER_SECS, ROLES, teamName, captainOf } from '../../lib/blacktop'
 import { playDelay } from '../../lib/hoops'
 import { QUICK, block, report } from '../../lib/chat'
 import { sfx, haptic, confetti } from '../../lib/juice'
+import BlacktopCourt from './BlacktopCourt'
 import { IconClose, IconArrow, IconChat, IconProfile, IconStar } from './icons'
 
 // BLACKTOP screens. The match itself lives in lib/blacktop.js (useBlacktop);
-// these only draw it: the queue, the HUD over the build, team chat, the game.
+// these only draw it: the queue, the slim HUD over the build, team chat, and
+// the game on the court.
 
 const fmt = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
+const TEAM_COLORS = ['#e8f0f6', '#ff8a3d']
 const Av = ({ name, bot, team, size = 36 }) => (
   <span className={`bt-av${bot ? ' is-bot' : ''} bt-av--t${team ?? 0}`} style={{ width: size, height: size, fontSize: size * .46 }}>{bot ? 'CPU' : (name || '?').slice(0, 1).toUpperCase()}</span>
 )
@@ -51,7 +54,7 @@ export function BlacktopQueue({ bt, onBack }) {
         <div className="bt-rules ag-pop" style={{ '--d': '120ms' }}>
           <div className="ag-eyebrow">HOUSE RULES</div>
           <ul>
-            <li>Two squads of three, <b>SHIRTS</b> vs <b>SKINS</b>. Teams are dealt — a big on each side when there is one.</li>
+            <li>Two squads of three, named for their captains. Teams are dealt — a big on each side when there is one.</li>
             <li>3:00 to build. Leave or go quiet and the blacktop builds for you — with the ratings off.</li>
             <li>First to <b>21</b>, 1s and 2s, win by 2. Make it, take it.</li>
             <li>Team chat is for your squad. Keep it clean — it's filtered, and anyone can be reported.</li>
@@ -62,40 +65,51 @@ export function BlacktopQueue({ bt, onBack }) {
   )
 }
 
-// ── HUD over the build (sticky under the top bar) ────────────────────────────
+// ── HUD over the build: one slim bar, tap to open the squads ────────────────
 export function BlacktopHud({ bt, onOpenChat, unread }) {
+  const [open, setOpen] = useState(false)
   const squads = [0, 1].map(t => bt.match.players.filter(p => p.team === t))
+  const ready = t => squads[t].filter(p => p.bot || bt.builds[p.vid]?.done).length
   const urgent = bt.clock <= 20
   return (
-    <div className={`bt-hud${urgent ? ' is-urgent' : ''}`}>
-      <div className="bt-hud-top">
+    <div className={`bt-hud${urgent ? ' is-urgent' : ''}${open ? ' is-open' : ''}`}>
+      <button className="bt-hud-bar" onClick={() => setOpen(o => !o)} aria-expanded={open}>
         <span className="bt-hud-clock">{fmt(bt.clock)}</span>
-        <span className="bt-hud-title">BLACKTOP · YOU'RE <b className={`bt-t${bt.myTeam}`}>{TEAM_NAMES[bt.myTeam]}</b></span>
-        <button className="bt-hud-chat" onClick={onOpenChat} aria-label="Team chat"><IconChat size={18} />{unread > 0 && <span className="ag-tab-badge">{unread}</span>}</button>
-      </div>
-      <div className="bt-hud-teams">
-        {squads.map((sq, t) => (
-          <div key={t} className={`bt-hud-team bt-t${t}${t === bt.myTeam ? ' is-mine' : ''}`}>
-            <span className="bt-hud-team-name">{TEAM_NAMES[t]}</span>
-            {sq.map(p => {
-              const b = bt.builds[p.vid]
-              const here = p.bot || bt.present.some(q => q.vid === p.vid)
-              const total = p.pos === 'big' ? 8 : 8
-              return (
-                <span key={p.vid} className={`bt-hud-p${!here ? ' is-gone' : ''}${b?.done ? ' is-done' : ''}`} title={p.name}>
-                  <Av name={p.name} bot={p.bot} team={t} size={24} />
-                  <span className="bt-hud-p-name">{p.vid === bt.me.vid ? 'YOU' : p.name}</span>
-                  <span className="bt-hud-p-bar"><span style={{ width: `${Math.min(100, ((b?.filled ?? 0) / total) * 100)}%` }} /></span>
-                  <span className="bt-hud-p-n">{p.bot ? 'CPU' : !here ? 'AFK' : b?.done ? '✓' : `${b?.filled ?? 0}/${total}`}</span>
-                </span>
-              )
-            })}
+        <span className="bt-hud-mini">
+          <span className="bt-t0"><b>{teamName(bt.match, 0)}</b> {ready(0)}/3</span>
+          <i>vs</i>
+          <span className="bt-t1"><b>{teamName(bt.match, 1)}</b> {ready(1)}/3</span>
+        </span>
+        <span className={`bt-hud-caret${open ? ' is-open' : ''}`}>▾</span>
+      </button>
+      <button className="bt-hud-chat" onClick={onOpenChat} aria-label="Team chat"><IconChat size={18} />{unread > 0 && <span className="ag-tab-badge">{unread}</span>}</button>
+      {open && (
+        <div className="bt-hud-panel">
+          <div className="bt-hud-teams">
+            {squads.map((sq, t) => (
+              <div key={t} className={`bt-hud-team bt-t${t}${t === bt.myTeam ? ' is-mine' : ''}`}>
+                <span className="bt-hud-team-name">{teamName(bt.match, t)}</span>
+                {sq.map(p => {
+                  const b = bt.builds[p.vid]
+                  const here = p.bot || bt.present.some(q => q.vid === p.vid)
+                  return (
+                    <span key={p.vid} className={`bt-hud-p${!here ? ' is-gone' : ''}${b?.done ? ' is-done' : ''}`} title={p.name}>
+                      <Av name={p.name} bot={p.bot} team={t} size={24} />
+                      <span className="bt-hud-p-name">{p.vid === bt.me.vid ? 'YOU' : p.name}</span>
+                      <span className="bt-hud-p-bar"><span style={{ width: `${Math.min(100, ((b?.filled ?? 0) / 8) * 100)}%` }} /></span>
+                      <span className="bt-hud-p-n">{p.bot ? 'CPU' : !here ? 'AFK' : b?.done ? '✓' : `${b?.filled ?? 0}/8`}</span>
+                    </span>
+                  )
+                })}
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
-      <div className="bt-roles">
-        {ROLES.map(r => <button key={r.id} className={`ag-chip${bt.role === r.id ? ' is-on' : ''}`} onClick={() => bt.setRole(r.id)} title={r.sub}>{r.name}</button>)}
-      </div>
+          <div className="bt-roles">
+            <span className="bt-roles-lbl">MY ROLE</span>
+            {ROLES.map(r => <button key={r.id} className={`ag-chip${bt.role === r.id ? ' is-on' : ''}`} onClick={() => bt.setRole(r.id)} title={r.sub}>{r.name}</button>)}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -158,33 +172,6 @@ export function BlacktopChat({ bt, user, onClose, mode = 'blacktop', title = 'TE
   )
 }
 
-// ── Court: 3 on 3, the ball with its handler ────────────────────────────────
-const SPOTS = [[[22, 72], [50, 58], [78, 72]], [[30, 84], [50, 72], [70, 84]]]   // offense, defense (percent of court box)
-function Court({ game, play, poss, photoFor }) {
-  const off = game.teams[poss], def = game.teams[1 - poss]
-  const ballOn = play?.pid && (play.type === 'score' || play.type === 'miss') ? play.pid : play?.pid2 && play.type === 'steal' ? null : play?.pid
-  const rimShot = play?.type === 'score' || play?.type === 'miss' || play?.type === 'block'
-  return (
-    <div className={`bt-court bt-court--poss${poss}`}>
-      <div className="bt-court-key" /><div className="bt-court-arc" /><div className="bt-rim" />
-      {off.map((p, i) => <Chip key={p.id} p={p} team={poss} pos={SPOTS[0][i] ?? SPOTS[0][0]} ball={ballOn === p.id} photoFor={photoFor} shooting={rimShot && play.pid === p.id} />)}
-      {def.map((p, i) => <Chip key={p.id} p={p} team={1 - poss} pos={SPOTS[1][i] ?? SPOTS[1][0]} photoFor={photoFor} act={play?.type === 'block' || play?.type === 'steal' ? play.pid === p.id : false} />)}
-      {rimShot && <span key={play.id} className={`bt-ball-fly${play.type === 'score' ? ' is-in' : ' is-out'}`} />}
-      {play?.type === 'score' && <span key={`f${play.id}`} className={`bt-rim-flash${play.pts === 2 ? ' is-two' : ''}`}>{play.pts === 2 ? '+2' : '+1'}</span>}
-    </div>
-  )
-}
-function Chip({ p, team, pos, ball, shooting, act, photoFor }) {
-  const photo = photoFor?.(p)
-  return (
-    <span className={`bt-chip bt-t${team}${ball ? ' has-ball' : ''}${shooting ? ' is-shooting' : ''}${act ? ' is-act' : ''}`} style={{ left: `${pos[0]}%`, top: `${pos[1]}%` }}>
-      <span className="bt-chip-av">{photo ? <img src={photo} alt="" /> : (p.name || '?').slice(0, 1)}</span>
-      <span className="bt-chip-name">{p.name.split(' ')[0]}</span>
-      {ball && <span className="bt-chip-ball" />}
-    </span>
-  )
-}
-
 // ── Game: reveal → live → result ────────────────────────────────────────────
 export function BlacktopGame({ bt, user, photoFor, onOpenChat, unread }) {
   const { game, match } = bt
@@ -196,6 +183,8 @@ export function BlacktopGame({ bt, user, photoFor, onOpenChat, unread }) {
   const play = plays[idx]
   const mine = match.players.find(p => p.vid === bt.me.vid)
   const myTeam = mine?.team ?? 0
+  const colorFor = t => TEAM_COLORS[t]
+  const names = useMemo(() => [teamName(match, 0), teamName(match, 1)], [match])
 
   useEffect(() => { const t = setTimeout(() => setStage('live'), 4200); return () => clearTimeout(t) }, [])
   useEffect(() => {
@@ -204,7 +193,7 @@ export function BlacktopGame({ bt, user, photoFor, onOpenChat, unread }) {
       if (!fired.current) {
         fired.current = true
         const won = game.winner === myTeam
-        setTimeout(() => { if (won) { sfx('award'); haptic('success'); confetti(160) } else sfx('pop'); setStage('result'); bt.finish() }, 1800)
+        setTimeout(() => { if (won) { sfx('award'); haptic('success'); confetti(160) } else sfx('pop'); setStage('result'); bt.finish() }, 2200)
       }
       return
     }
@@ -213,15 +202,14 @@ export function BlacktopGame({ bt, user, photoFor, onOpenChat, unread }) {
   }, [stage, idx, speed, game, plays.length]) // eslint-disable-line
   useEffect(() => {
     if (!play) return
-    if (play.type === 'score') { sfx(play.pts === 2 ? 'lock' : 'tap'); if (play.team === myTeam) haptic('light') }
-    else if (play.type === 'block' || play.type === 'steal') sfx('pop')
+    if (play.type === 'score') { setTimeout(() => { sfx(play.pts === 2 ? 'lock' : 'tap'); if (play.team === myTeam) haptic('light') }, 900) }
+    else if (play.type === 'block' || play.type === 'steal') setTimeout(() => sfx('pop'), 700)
   }, [idx]) // eslint-disable-line
   if (!game) return null
 
   const score = play?.score ?? [0, 0]
   const feed = plays.slice(0, idx + 1).filter(p => p.type !== 'check').slice(-4).reverse()
   const squads = [0, 1].map(t => game.teams[t])
-  const nameOf = id => match.players.find(p => p.vid === id)?.name ?? '?'
 
   if (stage === 'reveal') {
     return (
@@ -231,11 +219,11 @@ export function BlacktopGame({ bt, user, photoFor, onOpenChat, unread }) {
           <div className="bt-reveal-grid">
             {squads.map((sq, t) => (
               <div key={t} className={`bt-squad bt-t${t} ag-pop`} style={{ '--d': `${t * 160}ms` }}>
-                <span className="bt-squad-name">{TEAM_NAMES[t]}</span>
+                <span className="bt-squad-name">{names[t]}</span>
                 {sq.map(p => (
                   <div key={p.id} className="bt-squad-p">
                     <Av name={p.name} bot={p.bot} team={t} size={34} />
-                    <span className="bt-squad-p-txt"><b>{p.id === bt.me.vid ? 'YOU' : p.name}</b><small>{p.pos === 'big' ? 'BIG' : 'GUARD'} · {ROLES.find(r => r.id === p.role)?.name ?? 'BALANCED'}</small></span>
+                    <span className="bt-squad-p-txt"><b>{p.id === bt.me.vid ? 'YOU' : p.name}{captainOf(match, t)?.vid === p.id ? ' · C' : ''}</b><small>{p.pos === 'big' ? 'BIG' : 'GUARD'} · {ROLES.find(r => r.id === p.role)?.name ?? 'BALANCED'}</small></span>
                   </div>
                 ))}
               </div>
@@ -259,12 +247,12 @@ export function BlacktopGame({ bt, user, photoFor, onOpenChat, unread }) {
             <span className="ag-eyebrow">{won ? 'BLACKTOP · W' : 'BLACKTOP · L'}</span>
             <h1 className="ag-h1">{won ? 'Your squad took it' : 'They took it'}</h1>
             <div className="bt-final"><b className="bt-t0">{game.score[0]}</b><span>–</span><b className="bt-t1">{game.score[1]}</b></div>
-            <div className="bt-final-teams"><span className="bt-t0">{TEAM_NAMES[0]}</span><span className="bt-t1">{TEAM_NAMES[1]}</span></div>
+            <div className="bt-final-teams"><span className="bt-t0">{names[0]}</span><span className="bt-t1">{names[1]}</span></div>
             {mvp && <div className="bt-mvp"><IconStar size={14} /> MVP · {mvp.vid === bt.me.vid ? 'YOU' : mvp.name}</div>}
           </div>
           {[game.winner, 1 - game.winner].map(t => (
             <div key={t} className={`ag-card bt-box bt-t${t} ag-pop`} style={{ '--d': `${120 + t * 80}ms` }}>
-              <div className="bt-box-head"><span>{TEAM_NAMES[t]}</span><span>PTS</span><span>FG</span><span>AST</span><span>REB</span><span>STL</span><span>BLK</span></div>
+              <div className="bt-box-head"><span>{names[t]}</span><span>PTS</span><span>FG</span><span>AST</span><span>REB</span><span>STL</span><span>BLK</span></div>
               {game.teams[t].map(p => { const s = game.stats[p.id]; return (
                 <div key={p.id} className={`bt-box-row${p.id === bt.me.vid ? ' is-me' : ''}${p.id === game.mvp ? ' is-mvp' : ''}`}>
                   <span className="bt-box-name">{p.id === bt.me.vid ? 'YOU' : p.name}</span>
@@ -289,16 +277,15 @@ export function BlacktopGame({ bt, user, photoFor, onOpenChat, unread }) {
   return (
     <div className="ag-screen ag-screen--bucket bt-game bt-live">
       <div className="bt-board">
-        <div className={`bt-board-side bt-t0${score[0] > score[1] ? ' is-lead' : ''}`}><span className="bt-board-name">{TEAM_NAMES[0]}{myTeam === 0 ? ' · YOU' : ''}</span><b>{score[0]}</b></div>
+        <div className={`bt-board-side bt-t0${score[0] > score[1] ? ' is-lead' : ''}`}><span className="bt-board-name">{names[0]}{myTeam === 0 ? ' · YOU' : ''}</span><b>{score[0]}</b></div>
         <div className="bt-board-mid"><span className="ag-eyebrow">FIRST TO 21</span><button className={`ag-chip${speed === 2 ? ' is-on' : ''}`} onClick={() => setSpeed(s => (s === 1 ? 2 : 1))}>{speed}×</button></div>
-        <div className={`bt-board-side bt-t1${score[1] > score[0] ? ' is-lead' : ''}`}><span className="bt-board-name">{TEAM_NAMES[1]}{myTeam === 1 ? ' · YOU' : ''}</span><b>{score[1]}</b></div>
+        <div className={`bt-board-side bt-t1${score[1] > score[0] ? ' is-lead' : ''}`}><span className="bt-board-name">{names[1]}{myTeam === 1 ? ' · YOU' : ''}</span><b>{score[1]}</b></div>
       </div>
-      <Court game={game} play={play} poss={play?.poss ?? 0} photoFor={photoFor} />
+      <BlacktopCourt game={game} play={play} meId={bt.me.vid} photoFor={photoFor} colorFor={colorFor} speed={speed} />
       <div className="bt-feed">
         {feed.map((p, i) => <div key={p.id} className={`bt-feed-line bt-t${p.team}${i === 0 ? ' is-now' : ''}${p.big ? ' is-big' : ''}${p.type === 'milestone' ? ' is-ms' : ''}`}>{p.text}</div>)}
       </div>
       {onOpenChat && <button className="bt-live-chat" onClick={onOpenChat}><IconChat size={18} />{unread > 0 && <span className="ag-tab-badge">{unread}</span>}</button>}
-      <span hidden>{nameOf('')}</span>
     </div>
   )
 }

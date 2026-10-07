@@ -19,7 +19,21 @@ import { getUsername } from './discord'
 export const ROOM_SIZE = 6
 export const BUILD_SECS = 180
 export const FILL_AFTER_SECS = 20
-export const TEAM_NAMES = ['SHIRTS', 'SKINS']
+// Teams are named for their captains: the first human dealt to a side, else its first bot
+export const captainOf = (match, t) => match?.players.find(p => p.team === t && !p.bot) ?? match?.players.find(p => p.team === t) ?? null
+const firstName = p => (p ? p.name.trim().split(/\s+/)[0].toUpperCase().slice(0, 10) : null)
+export function teamNames(match) {
+  const caps = [captainOf(match, 0), captainOf(match, 1)]
+  const names = caps.map((c, t) => firstName(c) ?? (t === 0 ? 'A' : 'B'))
+  if (names[0] === names[1]) {
+    // the same first name on both sides: the second squad goes by its next player
+    const alt = match?.players.find(p => p.team === 1 && p !== caps[1])
+    names[1] = firstName(alt) ?? `${names[1]} II`
+    if (names[0] === names[1]) names[1] = `${names[1]} II`
+  }
+  return names.map(n => `TEAM ${n}`)
+}
+export const teamName = (match, t) => teamNames(match)[t]
 export const ROLES = [
   { id: 'balanced', name: 'BALANCED', sub: 'Play your game' },
   { id: 'score', name: 'SCORER', sub: 'Shoot more, pass less' },
@@ -222,7 +236,7 @@ export function useBlacktop({ enabled, user, position, pools, types, build, play
     if (!final || !match) return null
     const mk = p => ({ id: p.vid, name: p.name, pos: p.pos, role: final.roles[p.vid] ?? 'balanced', build: final.builds[p.vid], bot: p.bot, uid: p.uid })
     const teams = [match.players.filter(p => p.team === 0).map(mk), match.players.filter(p => p.team === 1).map(mk)]
-    return { ...simStreetball({ teams, seed: final.seed, goal: 21, winBy: 2, cap: 25 }), teams }
+    return { ...simStreetball({ teams, seed: final.seed, goal: 21, winBy: 2, cap: 25, names: [teamName(match, 0), teamName(match, 1)] }), teams }
   }, [final, match])
 
   const recorded = useRef(null)

@@ -45,7 +45,7 @@ import AppHome from './components/app/AppHome'
 import { finishDiscordSignIn, getUsername } from './lib/discord'
 import { dailyState, setDailySpins } from './lib/progress'
 import { FlipEdge, BuildComplete, useFlip } from './components/app/AppBuildTray'
-import { loadRun, newRun } from './lib/takeover'
+import { loadRun, newRun, cityList, ratedPool } from './lib/takeover'
 
 const _dd = arr => { const s = new Set(); return arr.filter(p => { const k = `${p.name}|${p.team}`; if (s.has(k)) return false; s.add(k); return true }) }
 const _bt = (a, b) => a.team.localeCompare(b.team) || a.name.localeCompare(b.name)
@@ -286,9 +286,12 @@ export default function App() {
     if (!IS_APP) return
     window.__bapPage = { page, sport: 'nfl' }
     window.dispatchEvent(new CustomEvent('bap:page', { detail: window.__bapPage }))
+    if (['game', 'sim', 'takeover', 'takeover-build'].includes(page)) lastPlayRef.current = page
   }, [page])
   const startDailyRef = useRef(null)
   const openTakeoverRef = useRef(null)
+  const takeoverRunRef = useRef(null); takeoverRunRef.current = takeoverRun
+  const lastPlayRef = useRef(null)           // the last mode page, so PLAY goes back to what you were doing
   useEffect(() => {
     if (!IS_APP) return
     const onNav = e => {
@@ -296,7 +299,10 @@ export default function App() {
       if (to === 'home') setPage('splash')   // keeps the build in progress — PLAY resumes it
       else if (to === 'play') {
         if (page === 'game' || page === 'sim' || page === 'takeover' || page === 'takeover-build') return
-        if (gameMode) setPage(simResult ? 'sim' : 'game')
+        const last = lastPlayRef.current, run = takeoverRunRef.current
+        if (last === 'takeover' && run && !run.over) setPage('takeover')
+        else if (last === 'takeover-build' && gameMode) setPage('takeover-build')
+        else if (gameMode) setPage(simResult ? 'sim' : 'game')
         else { let p = 'qb'; try { p = localStorage.getItem('lastPosition') || 'qb' } catch {}; handleStart('classic', p) }   // quick play
       } else if (to === 'leaderboard') setPage('leaderboard')
       else if (to === 'daily-challenge') startDailyRef.current?.()
@@ -583,7 +589,11 @@ export default function App() {
     if (run && !run.over) { setTakeoverRun(run); setPage('takeover') } else startTakeoverBuild()
   }, [user?.id, startTakeoverBuild])
   const hitTheRoad = useCallback(() => {
-    const run = newRun({ sport: 'nfl', uid: user?.id ?? null, pos: position, build, types: activeTypes })
+    const pools = { qb: QBS, rb: RBS, wr: WRS, te: TES, db: DBS }
+    const ovrOf = b => position === 'db' ? calcOVRDB(b) : position === 'te' ? calcOVRTE(b) : position === 'wr' ? calcOVRWR(b) : position === 'rb' ? calcOVRRB(b) : calcOVR(b)
+    const cities = cityList('nfl', NFL_TEAMS)
+    const rated = ratedPool(pools[position] ?? QBS, activeTypes, ovrOf, cities)
+    const run = newRun({ sport: 'nfl', uid: user?.id ?? null, pos: position, build, types: activeTypes, rated, cities })
     setTakeoverRun(run); setPage('takeover')
     window.scrollTo({ top: 0, behavior: 'instant' })
   }, [user?.id, position, build, activeTypes])
@@ -664,6 +674,7 @@ export default function App() {
     saveToastTimer.current = setTimeout(() => setSaveToast(null), 4500)
   }, [])
 
+  const commitRef = useRef(null)
   const handleTeamPicked = useCallback((team) => {
     setShowTeamPicker(false)
     const atRatings = ALLTIME_RATINGS[team.short]
@@ -681,6 +692,18 @@ export default function App() {
           : isRB
             ? runRBSimulation(build, activeTypes, effectiveTeam, gameMode === 'all-time')
             : runSimulation(build, activeTypes, effectiveTeam, gameMode === 'all-time')
+    // App: the season is steered on the sim page (moments re-simulate the rest of
+    // the year), so it's booked when it ends — SimPage calls commitSeason.
+    if (IS_APP) {
+      setSimResult(result); setSimReplaying(false); setPage('sim')
+      window.scrollTo({ top: 0, behavior: 'instant' })
+      return
+    }
+    commitRef.current?.(result)
+  }, [build, activeTypes, gameMode, isOL, isDB, isTE, isWR, isRB]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Books a finished season: award, save, lifetime counters, XP
+  const commitSeason = useCallback((result) => {
     // Decide the season's award (MVP / OPOY / DPOY / All-Pro) now and save it
     // on the season's own row. Players can't edit a saved season afterwards —
     // the database ignores client updates to `simulations` — so tagging the row
@@ -689,7 +712,7 @@ export default function App() {
     const awardType = isOL ? 'allpro' : isDB ? 'dpoy' : (isRB || isWR || isTE) ? 'opoy' : 'mvp'
     const calcAward = isOL ? calcOLAllProResult : isDB ? calcDBDpoyResult : isTE ? calcTEOPOYResult
       : isWR ? calcWROPOYResult : isRB ? calcOPOYResult : calcMVPResult
-    result.award = calcAward(result, isAllTimeSeason, result.team?.short)
+    result.award = result.award ?? calcAward(result, isAllTimeSeason, result.team?.short)
     setSimResult(result)
     // App: season XP, missions and the Daily Challenge score (lib/progress.js)
     if (IS_APP) {
@@ -759,7 +782,16 @@ export default function App() {
     setSimReplaying(false)
     setPage('sim')
     window.scrollTo({ top: 0, behavior: 'instant' })
-  }, [build, activeTypes, user, gameMode, position, showSaveToast, recordAward, dailyRun, isCustomMode])
+  }, [build, activeTypes, user, gameMode, position, showSaveToast, recordAward, dailyRun, isCustomMode, isOL, isDB, isTE, isWR, isRB])
+
+  commitRef.current = commitSeason
+
+  // The director re-simulates the rest of a season with tweaked inputs
+  const simFor = useCallback((b, t) => {
+    const at = gameMode === 'all-time'
+    return isOL ? runOLSimulation(b, t, at) : isDB ? runDBSimulation(b, t, at) : isTE ? runTESimulation(b, activeTypes, t, at)
+      : isWR ? runWRSimulation(b, activeTypes, t, at) : isRB ? runRBSimulation(b, activeTypes, t, at) : runSimulation(b, activeTypes, t, at)
+  }, [gameMode, isOL, isDB, isTE, isWR, isRB, activeTypes])
 
   const handleHome = useCallback(() => {
     setVersusRoom(prev => {
@@ -1295,6 +1327,10 @@ export default function App() {
           isOL={isOL}
           onBack={() => { setPage('game'); window.scrollTo({ top: 0, behavior: 'instant' }); document.querySelector('.game-page-scroll')?.scrollTo({ top: 0, behavior: 'instant' }) }}
           onReset={() => { handleReset(); setPage('game'); window.scrollTo({ top: 0, behavior: 'instant' }); document.querySelector('.game-page-scroll')?.scrollTo({ top: 0, behavior: 'instant' }) }}
+          simFn={IS_APP ? simFor : null}
+          onFinal={IS_APP ? commitSeason : null}
+          pool={displayPool}
+          userName={getUsername(user) || 'You'}
         />
         {saveToast && (
           <div className={`save-toast save-toast--${saveToast.type}`} onClick={() => setSaveToast(null)}>

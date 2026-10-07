@@ -316,7 +316,10 @@ function getDominantPlayer(build) {
   return sorted[0]?.[0] ?? null
 }
 
-export default function Silhouette({ build, activeDrag, onDrop, activeCategory, onCategoryChange, types = TYPES, isLite = false, onReset, isRB = false, isWR = false, isTE = false, isDB = false, isOL = false, isBucket = false, isPlus = false, isCustomMode = false, onOpenCustomModal, onSandboxToggle, attrMap = ATTR, categoriesData = CATEGORIES, figureRef }) {
+// `modelOnly`: just the player — figure, jersey overlay and face — with no
+// dots, cards, measurement lines or backdrop, sized to its container (the app's
+// Takeover "My build" card). Nothing else changes when it's off.
+export default function Silhouette({ build, activeDrag, onDrop, activeCategory, onCategoryChange, types = TYPES, isLite = false, onReset, isRB = false, isWR = false, isTE = false, isDB = false, isOL = false, isBucket = false, isPlus = false, isCustomMode = false, onOpenCustomModal, onSandboxToggle, attrMap = ATTR, categoriesData = CATEGORIES, figureRef, modelOnly = false }) {
   // OL is drawn on the DB figure — everything figure-related follows DB
   const isDBFig = isDB || isOL
   const figW   = isBucket ? BUCKET_FIG_W : isDBFig ? DB_FIG_W : (isRB || isWR || isTE ? RB_FIG_W : FIG_W)
@@ -379,6 +382,11 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
 
   // Headshot only from basketballIQ slot for bucket builds
   const bucketPhoto = isBucket ? (build['basketballIQ']?.photo || null) : null
+  // the figure scales that make it fill the build screen; a model fits its box as-is
+  const bucketScale = modelOnly ? 1 : BUCKET_FIGURE_SCALE
+  const rbScale = modelOnly ? 1 : RB_FIGURE_SCALE
+  const dbScale = modelOnly ? 1 : DB_FIGURE_SCALE
+  const wrTransform = modelOnly ? 'none' : isMobile ? `translateY(-6px) scale(${WR_FIGURE_SCALE_MOBILE})` : `scale(${WR_FIGURE_SCALE})`
 
   // Sample bottom color + capture aspect ratio for correct objectPosition centering
   const [hsBottomColor, setHsBottomColor] = useState(null)
@@ -505,17 +513,17 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
 
   return (
     <section className="field-center" style={isBucket ? { backgroundColor: '#090a0d' } : undefined}>
-      {isBucket && (
+      {isBucket && !modelOnly && (
         <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', zIndex: -1, pointerEvents: 'none' }}>
           <div style={{ position: 'absolute', inset: '-20px', backgroundImage: "url('/bucketbackground.webp')", backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(4px) brightness(1.4)' }} />
         </div>
       )}
-      {!isBucket && (
+      {!isBucket && !modelOnly && (
         <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', zIndex: -1, pointerEvents: 'none' }}>
           <div style={{ position: 'absolute', inset: '-20px', backgroundImage: "url('/footballbackground.webp')", backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(4px) brightness(0.7)' }} />
         </div>
       )}
-      <div className="category-pills">
+      {!modelOnly && <div className="category-pills">
         <HWTracker build={build} isRB={isRB} isWR={isWR} isTE={isTE} isDB={isDB} isOL={isOL} isBucket={isBucket} />
         {cats.map(cat => (
           <button
@@ -527,7 +535,7 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
             {cat.label}
           </button>
         ))}
-      </div>
+      </div>}
       {!!onSandboxToggle && (
         <div className="sil-sandbox-outer">
           <div className="sil-sandbox-toprow">
@@ -569,8 +577,8 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
         </div>
       )}
 
-      <div className={`sil-wrap${isRB ? ' sil-wrap--rb' : ''}`} ref={silRef}>
-        {isBucket && (
+      <div className={`sil-wrap${isRB ? ' sil-wrap--rb' : ''}${modelOnly ? ' sil-wrap--model' : ''}`} ref={silRef}>
+        {isBucket && !modelOnly && (
           <div style={{
             position: 'absolute',
             left: '50%', top: 'calc(15% + 42px)',
@@ -583,7 +591,7 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
         )}
 
         {/* Measurement outlines — height + wingspan derived from size val */}
-        {isBucket && (build?.['size'] || build?.['heightLength']) && (() => {
+        {isBucket && !modelOnly && (build?.['size'] || build?.['heightLength']) && (() => {
           const chip = build['size'] || build['heightLength']
           const val  = chip.val ?? 5
           const col  = '#ffffff'
@@ -664,10 +672,10 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
           className={`sil-img${(isRB || isWR || isTE) ? ' sil-img--rb' : ''}${isBucket ? ' sil-img--bucket' : ''}${complete ? ' sil-img--done' : ''}`}
           draggable={false}
           style={
-            isBucket   ? { transform: `scale(${BUCKET_FIGURE_SCALE})`, transformOrigin: 'center center' }
-            : (isWR || isTE) ? { transform: isMobile ? `translateY(-6px) scale(${WR_FIGURE_SCALE_MOBILE})` : `scale(${WR_FIGURE_SCALE})`, transformOrigin: 'center center', filter: complete ? 'none' : 'brightness(0.55) drop-shadow(0 0 2px rgba(255,255,255,0.60)) drop-shadow(0 0 0.5px rgba(255,255,255,0.92))' }
-            : isRB     ? { transform: `scale(${RB_FIGURE_SCALE})`, transformOrigin: 'center center' }
-            : isDBFig  ? { transform: `scale(${DB_FIGURE_SCALE})`, transformOrigin: 'center center', filter: 'brightness(0.35)' }
+            isBucket   ? { transform: `scale(${bucketScale})`, transformOrigin: 'center center' }
+            : (isWR || isTE) ? { transform: wrTransform, transformOrigin: 'center center', filter: complete ? 'none' : 'brightness(0.55) drop-shadow(0 0 2px rgba(255,255,255,0.60)) drop-shadow(0 0 0.5px rgba(255,255,255,0.92))' }
+            : isRB     ? { transform: `scale(${rbScale})`, transformOrigin: 'center center' }
+            : isDBFig  ? { transform: `scale(${dbScale})`, transformOrigin: 'center center', filter: 'brightness(0.35)' }
             : undefined
           }
         />
@@ -676,11 +684,11 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
           const { W, H, fx, fy, scale } = bounds
           const hxRaw    = (fx + BUCKET_HEAD.ax    * scale) / W * 100
           const collarYRaw = (fy + BUCKET_COLLAR_AY * scale) / H * 100
-          const hx       = 50 + (hxRaw     - 50) * BUCKET_FIGURE_SCALE
-          const collarY  = 50 + (collarYRaw - 50) * BUCKET_FIGURE_SCALE
+          const hx       = 50 + (hxRaw     - 50) * bucketScale
+          const collarY  = 50 + (collarYRaw - 50) * bucketScale
           const faceChip = build['basketballIQ']
           const fc = faceChip?.faceCenter
-          const hpx = BUCKET_HEAD.r * 2 * scale * 1.805 * BUCKET_FIGURE_SCALE
+          const hpx = BUCKET_HEAD.r * 2 * scale * 1.805 * bucketScale
           const R = hsImgRatio
           // Target face at ~58% of container: with clip bottom (89%) at collar,
           // this places the face near the silhouette head center
@@ -738,28 +746,28 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
         </div>
         {!isRB && !isWR && !isTE && !isDBFig && !isBucket && <QBFigureOverlay build={build} className="player-qbfig" />}
         {isDB && (
-          <div style={{ position: 'absolute', inset: 0, transform: `scale(${DB_FIGURE_SCALE})`, transformOrigin: 'center center' }}>
-            <DBFigureOverlay build={build} numberNudgePx={isMobile ? { x: 7, y: 7 } : null} />
+          <div style={{ position: 'absolute', inset: 0, transform: `scale(${dbScale})`, transformOrigin: 'center center' }}>
+            <DBFigureOverlay build={build} numberNudgePx={isMobile && !modelOnly ? { x: 7, y: 7 } : null} />
           </div>
         )}
         {isOL && (
-          <div style={{ position: 'absolute', inset: 0, transform: `scale(${DB_FIGURE_SCALE})`, transformOrigin: 'center center' }}>
-            <OLFigureOverlay build={build} numberNudgePx={isMobile ? { x: 7, y: 7 } : null} />
+          <div style={{ position: 'absolute', inset: 0, transform: `scale(${dbScale})`, transformOrigin: 'center center' }}>
+            <OLFigureOverlay build={build} numberNudgePx={isMobile && !modelOnly ? { x: 7, y: 7 } : null} />
           </div>
         )}
         {isRB && (
-          <div style={{ position: 'absolute', inset: 0, transform: `scale(${RB_FIGURE_SCALE})`, transformOrigin: 'center center' }}>
+          <div style={{ position: 'absolute', inset: 0, transform: `scale(${rbScale})`, transformOrigin: 'center center' }}>
             <RBFigureOverlay build={build} />
           </div>
         )}
         {(isWR || isTE) && (
-          <div style={{ position: 'absolute', inset: 0, transform: isMobile ? `translateY(-6px) scale(${WR_FIGURE_SCALE_MOBILE})` : `scale(${WR_FIGURE_SCALE})`, transformOrigin: 'center center' }}>
+          <div style={{ position: 'absolute', inset: 0, transform: wrTransform, transformOrigin: 'center center' }}>
             <WRFigureOverlay build={build} isTE={isTE} />
           </div>
         )}
 
         {/* Lines — stretch to fill sil-wrap via preserveAspectRatio="none" */}
-        <svg
+        {!modelOnly && <svg
           viewBox="0 0 100 100"
           preserveAspectRatio="none"
           className="cz-lines-svg"
@@ -786,10 +794,10 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
               />
             )
           })}
-        </svg>
+        </svg>}
 
         {/* Dots + cards */}
-        <div className="cz-layer" style={{ zIndex: 10 }}>
+        {!modelOnly && <div className="cz-layer" style={{ zIndex: 10 }}>
           {zones.filter(z => types.includes(z.type)).map(zone => {
             const hiddenFromTab = !isLite && !complete && (!activeCategory || !categoryTypes?.includes(zone.type))
             const p = zonePosMap[zone.type]
@@ -818,7 +826,7 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
               </div>
             )
           })}
-        </div>
+        </div>}
 
         {onReset && (
           <button className="sil-reset-btn" onClick={onReset}>

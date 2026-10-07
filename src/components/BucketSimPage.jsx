@@ -14,6 +14,8 @@ import { ShareModal } from './ReportCard'
 import SiteFooter from './SiteFooter'
 import { IS_APP } from '../lib/platform'
 import { RingCeremony, SeasonRewards } from './app/AppSeason'
+import { createDirector } from '../lib/seasonDirector'
+import { MomentCard, NowCard, Pulse, Wire, Milestones, RecordOverlay, Leaders, SeasonStory, StretchCard, useDirectedReveal } from './app/AppSeasonPlus'
 
 function gradeColor(val) {
   if (val >= 11) return '#a855f7'
@@ -869,8 +871,9 @@ function ConferenceStandings({ standings, myShort, teamColor, conf }) {
   )
 }
 
-function ScreenSeason({ result, awards, onNext, adsDisabled = false, isAllTime = false }) {
+function ScreenSeason({ result, awards, onNext, adsDisabled = false, isAllTime = false, director = null, onFinal = null, pool = null, userName = 'You' }) {
   const { games = [], madePlayoffs, seed: rawSeed, playoffRounds = [], conference, ppg, rpg, apg, spg, bpg, tov, fgPct, threePct, ftPct, per, ovr = 0, standings, team } = result
+  const dr = useDirectedReveal({ director, pace: 70, onFinal })
   const playinRound = playoffRounds.find(r => r.type === 'playin' && r.advanced)
   const seed = playinRound?.newSeed ?? rawSeed
   const [phase,       setPhase]       = useState('loading')
@@ -878,7 +881,7 @@ function ScreenSeason({ result, awards, onNext, adsDisabled = false, isAllTime =
   const [liveWins,    setLiveWins]    = useState(0)
   const [liveLosses,  setLiveLosses]  = useState(0)
   const [awardsPhase, setAwardsPhase] = useState(0)
-  const allDone = revealed === games.length
+  const allDone = director ? dr.done : revealed === games.length
 
   useEffect(() => {
     if (!allDone || adsDisabled) return
@@ -892,6 +895,7 @@ function ScreenSeason({ result, awards, onNext, adsDisabled = false, isAllTime =
   }, [allDone])
 
   useEffect(() => {
+    if (director) { const t = setTimeout(() => setPhase('playing'), 600); return () => clearTimeout(t) }
     const loadTimer = setTimeout(() => {
       setPhase('playing')
       let i = 0, w = 0, l = 0
@@ -935,15 +939,25 @@ function ScreenSeason({ result, awards, onNext, adsDisabled = false, isAllTime =
         <>
           <div className="simp-eyebrow">{isAllTime ? 'All-Time Regular Season' : 'Regular Season'}</div>
           <div className="simp-live-record">
-            <span className="slr-w">{liveWins}</span>
+            <span className="slr-w">{director ? dr.games.filter(g => g.won).length : liveWins}</span>
             <span className="slr-sep">–</span>
-            <span className="slr-l">{liveLosses}</span>
+            <span className="slr-l">{director ? dr.games.filter(g => !g.won).length : liveLosses}</span>
           </div>
+          {director && <Pulse games={dr.games} total={dr.total} playoffWins={44} />}
+          {director && <Wire items={dr.headlines} />}
+          {director && (dr.moment
+            ? <MomentCard moment={dr.moment} onPick={dr.choose} />
+            : <NowCard game={dr.games[dr.games.length - 1]} pos={result.position} sport="bucket" team={team} logoFor={s => `/logos/nba/${s}.png`} />)}
+          {director && <Milestones items={dr.fresh} />}
+          {director && dr.record && <RecordOverlay record={dr.record} name={userName} onClose={dr.clearRecord} />}
           <div className="bsim-season-dots">
-            {games.slice(0, revealed).map((g, i) => (
+            {(director ? dr.games : games.slice(0, revealed)).map((g, i) => (
               <span key={i} className={`bsim-sdot bsim-sdot--${g.won ? 'w' : 'l'}`} />
             ))}
           </div>
+          {director && dr.k >= 10 && !dr.moment && (
+            <StretchCard games={director.games} from={Math.floor((dr.k - 1) / 10) * 10} to={Math.min(dr.k, Math.floor((dr.k - 1) / 10) * 10 + 10)} pos={result.position} />
+          )}
           {allDone && (
             <ConferenceStandings standings={standings} myShort={team?.short} teamColor={team?.color} conf={conference} />
           )}
@@ -953,6 +967,7 @@ function ScreenSeason({ result, awards, onNext, adsDisabled = false, isAllTime =
           {allDone && (
             <StatCard ppg={ppg} rpg={rpg} apg={apg} spg={spg} bpg={bpg} tov={tov} fgPct={fgPct} threePct={threePct} ftPct={ftPct} per={per} />
           )}
+          {allDone && director && pool && <Leaders sport="bucket" pos={result.position} pool={pool} seed={director.seed} you={{ name: userName, team: team?.short, value: ppg }} />}
 
           {allDone && awards && (
             <>
@@ -2401,6 +2416,7 @@ function ScreenFinal({ result, awards, build, types, attrMap, onReset, onBack, a
   return (
     <div className="simp-screen">
       {IS_APP && <SeasonRewards result={result} />}
+      {IS_APP && result.story && <SeasonStory story={result.story} pos={result.position} sport="bucket" name="You" />}
       <div className={`simp-final-banner ${champion ? 'sfb-champ' : madePlayoffs ? 'sfb-elim' : 'sfb-miss'}`}>
         {champion && <img src="/trophybasketball.webp" alt="NBA Trophy" className="sfb-trophy" />}
         <div className="sfb-outcome">{playoffSummary}</div>
@@ -2682,8 +2698,16 @@ function TeamStarters({ teamShort, teamColor, isBig, iqPhoto, isAllTime = false 
 }
 
 // ─── Main BucketSimPage ───────────────────────────────────────────────────────
-export default function BucketSimPage({ result, build, types, position, onBack, onReset, adsDisabled = false, isSalaryMode = false, initialScreen = 0, gameMode = null }) {
+export default function BucketSimPage({ result: baseResult, build, types, position, onBack, onReset, adsDisabled = false, isSalaryMode = false, initialScreen = 0, gameMode = null, simFn = null, onFinal = null, pool = null, userName = 'You' }) {
   const [screen, setScreen] = useState(initialScreen)
+  // App: the season is steered by a director; `result` is the live version of it
+  const [live, setLive] = useState(baseResult)
+  const result = live
+  const director = useMemo(() => (IS_APP && simFn && !isSalaryMode && initialScreen === 0 && !baseResult?.story && baseResult?.games?.length)
+    ? createDirector({ sport: 'bucket', pos: position, build, team: baseResult.team, simFn, base: baseResult, name: userName, attrMap: BUCKET_ATTR, types })
+    : null, []) // eslint-disable-line
+  const handleFinal = final => { setLive(final); onFinal?.(final) }
+  useEffect(() => () => { if (director && !director.finalized) onFinal?.(director.finalize()) }, []) // eslint-disable-line
 
   // Compute awards once — result is stable after sim runs
   const awards = useMemo(() => {
@@ -2739,7 +2763,7 @@ export default function BucketSimPage({ result, build, types, position, onBack, 
           })()
         : { name: 'Victor Wembanyama', short: 'Wembanyama', team: 'SAS', spg: rb(1.2, 1.6), bpg: rb(3.2, 3.8) }
     return { mvp, dpoy }
-  }, [result]) // eslint-disable-line
+  }, [result?.wins, result?.ppg, result?.story]) // eslint-disable-line
 
   const advancePage = () => {
     document.querySelector('.simp-page')?.scrollTo({ top: 0, behavior: 'instant' })
@@ -2762,7 +2786,7 @@ export default function BucketSimPage({ result, build, types, position, onBack, 
     <ScreenFinal    key="final"    result={result} awards={awards} build={build} types={simTypes} attrMap={simAttrMap} onReset={handleReset} onBack={handleBack} adsDisabled={adsDisabled} isSalaryMode={isSalaryMode} />,
   ] : [
     <ScreenBuild    key="build"    result={result} build={build} types={simTypes} attrMap={simAttrMap} onNext={advancePage} adsDisabled={adsDisabled} isSalaryMode={isSalaryMode} />,
-    <ScreenSeason   key="season"   result={result} awards={awards} onNext={advancePage} adsDisabled={adsDisabled} isAllTime={isAllTime} />,
+    <ScreenSeason   key="season"   result={result} awards={awards} onNext={advancePage} adsDisabled={adsDisabled} isAllTime={isAllTime} director={director} onFinal={handleFinal} pool={pool} userName={userName} />,
     <ScreenPlayoffs key="playoffs" result={result} onNext={advancePage} isAllTime={isAllTime} adsDisabled={adsDisabled} />,
     <ScreenGOAT     key="goat"     result={result} awards={awards} onNext={advancePage} onReset={handleReset} onBack={handleGoatBack} adsDisabled={adsDisabled} />,
     <ScreenFinal    key="final"    result={result} awards={awards} build={build} types={simTypes} attrMap={simAttrMap} onReset={handleReset} onBack={handleBack} adsDisabled={adsDisabled} isSalaryMode={isSalaryMode} />,

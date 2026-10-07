@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef } from 'react'
+﻿import { useState, useEffect, useRef, useMemo } from 'react'
 import { ATTR, TYPES } from '../data/qbs'
 import { TEAMS } from '../data/nfl-teams'
 import { WR_ATTR, WRS } from '../data/wrs'
@@ -22,6 +22,8 @@ import SiteFooter from './SiteFooter'
 import MVPModal from './MVPModal'
 import { IS_APP } from '../lib/platform'
 import { WeekStrip, Bracket, RingCeremony, SeasonRewards } from './app/AppSeason'
+import { createDirector } from '../lib/seasonDirector'
+import { MomentCard, NowCard, Pulse, Wire, Milestones, RecordOverlay, Leaders, SeasonStory, useDirectedReveal } from './app/AppSeasonPlus'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -475,10 +477,59 @@ function ScreenBuild({ result, build, types, onNext, isRB, isWR, isTE, isDB, isO
   )
 }
 
+// ── Screen 2 (app): the season you steer ─────────────────────────────────────
+function DirectedSeason({ dr, result, pos, pool, userName, director, onNext, build, types, isOL, isDB, isTE, isWR, isRB }) {
+  const games = dr.games
+  const wins = games.filter(g => g.won).length, losses = games.length - wins
+  const last = games[games.length - 1]
+  const final = dr.done ? result : null
+  const logoFor = short => `/logos/${short}.png`
+  const youValue = final ? (final[director.leaderKey ?? ''] ?? null) : null
+  return (
+    <>
+      <div className="simp-eyebrow">Regular Season</div>
+      <div className="simp-live-record">
+        <span className="slr-w">{wins}</span>
+        <span className="slr-sep">–</span>
+        <span className="slr-l">{losses}</span>
+      </div>
+      <Pulse games={games} total={dr.total} playoffWins={10} />
+      <Wire items={dr.headlines} />
+      {dr.moment ? <MomentCard moment={dr.moment} onPick={dr.choose} /> : <NowCard game={last} pos={pos} sport="nfl" team={result.team} logoFor={logoFor} />}
+      <Milestones items={dr.fresh} />
+      <WeekStrip games={director.games} revealed={dr.k} />
+      <div className="simp-games-list sm-log">
+        {[...games].reverse().slice(0, 6).map(g => (
+          <div key={g.wk} className={`simp-game-row ${g.won ? 'sgr-w' : 'sgr-l'} sgr-in`}>
+            <span className="sgr-wk">WK {g.wk}</span>
+            <span className={`sgr-badge ${g.won ? 'sgr-badge-w' : 'sgr-badge-l'}`}>{g.won ? 'W' : 'L'}</span>
+            <span className="sgr-opp"><span className="sgr-venue">{g.home ? 'vs' : '@'}</span>{g.opponent}</span>
+            <span className="sgr-score">{g.mySc}–{g.oppSc}</span>
+            <span className="sgr-stat">{g.sat ? 'DNP' : (isOL ? `${g.pancakes} pnk · ${g.sacks} sck` : isDB ? `${g.tackles} tkl · ${g.ints} int` : (isWR || isTE) ? `${g.rec} rec · ${g.recYds} yds` : isRB ? `${g.rushYds} rush · ${g.rushTDs + g.recTDs} td` : `${g.passYds} yds · ${g.tds} td`)}</span>
+          </div>
+        ))}
+      </div>
+      {dr.record && <RecordOverlay record={dr.record} name={userName} onClose={dr.clearRecord} />}
+      {final && (
+        <div className="simp-stat-section simp-totals-in">
+          <div className="simp-eyebrow">Production</div>
+          <StatLineTable result={final} build={build} kind={isOL ? 'ol' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'} />
+          {pool && <Leaders sport="nfl" pos={pos} pool={pool} seed={director.seed} you={{ name: userName, team: result.team?.short, value: leaderValue(final, pos) }} />}
+          <button className="simp-cta simp-cta-in" onClick={onNext}>{final.playoffs ? 'Enter Playoffs' : 'Season Summary'}</button>
+        </div>
+      )}
+    </>
+  )
+}
+const leaderValue = (r, pos) => pos === 'qb' ? r.seasonPassYds : pos === 'rb' ? r.seasonRushYds : pos === 'db' ? r.seasonINTs : pos === 'ol' ? r.seasonPancakes : r.seasonRecYds
+
 // ── Screen 2: Regular Season ──────────────────────────────────────────────────
 
-function ScreenSeason({ result, onNext, isRB = false, isWR = false, isTE = false, isDB = false, isOL = false, adsDisabled = false, build = null, types = [] }) {
+function ScreenSeason({ result, onNext, isRB = false, isWR = false, isTE = false, isDB = false, isOL = false, adsDisabled = false, build = null, types = [], director = null, onFinal = null, pool = null, userName = 'You' }) {
   const { games, playoffs, hasBye } = result
+  const pos = isOL ? 'ol' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'
+  // App: the director reveals the season and pauses on its moments
+  const dr = useDirectedReveal({ director, pace: 240, onFinal })
   const { seasonPassYds, seasonTDs, seasonINTs: qbSeasonINTs, seasonRating, seasonCompPct, seasonRushYds: qbRushYds, seasonRushTDs: qbRushTDs, seasonSacks } = result
   const { seasonRushYds: rbRushYds, seasonRushTDs: rbRushTDs, seasonYPC, seasonFumbles, seasonRecYds, seasonRecTDs, seasonRecs, seasonLong, seasonYPR, seasonTargets } = result
   const { seasonINTs: dbINTs, seasonPBUs, seasonTackles, seasonTFL, seasonPickSixes } = result
@@ -488,7 +539,7 @@ function ScreenSeason({ result, onNext, isRB = false, isWR = false, isTE = false
   const [liveWins, setLiveWins]     = useState(0)
   const [liveLosses, setLiveLosses] = useState(0)
 
-  const allDone = revealed === games.length
+  const allDone = director ? dr.done : revealed === games.length
 
   useEffect(() => {
     if (adsDisabled) return
@@ -505,6 +556,7 @@ function ScreenSeason({ result, onNext, isRB = false, isWR = false, isTE = false
   }, [allDone])
 
   useEffect(() => {
+    if (director) { const t = setTimeout(() => setPhase('playing'), 600); return () => clearTimeout(t) }
     const loadTimer = setTimeout(() => {
       setPhase('playing')
       let i = 0, w = 0, l = 0
@@ -536,7 +588,10 @@ function ScreenSeason({ result, onNext, isRB = false, isWR = false, isTE = false
         </div>
       )}
 
-      {phase !== 'loading' && (
+      {phase !== 'loading' && director && (
+        <DirectedSeason dr={dr} result={result} pos={pos} pool={pool} userName={userName} director={director} onNext={onNext} build={build} types={types} isOL={isOL} isDB={isDB} isTE={isTE} isWR={isWR} isRB={isRB} />
+      )}
+      {phase !== 'loading' && !director && (
         <>
           <div className="simp-eyebrow">Regular Season</div>
           <div className="simp-live-record">
@@ -1041,7 +1096,7 @@ function ScreenPlayoffs({ result, onNext, onPreSuperBowl, adsDisabled = false })
 
 // ── Screen 4: Final Report ────────────────────────────────────────────────────
 
-function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = false, mvpWon = false, isRB = false, isWR = false, isTE = false, isDB = false, isOL = false }) {
+function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = false, mvpWon = false, isRB = false, isWR = false, isTE = false, isDB = false, isOL = false, userName = 'You' }) {
   const { ovr, wins, losses, playoffs, sbResult, bestGame } = result
 
   // QB stats
@@ -1106,6 +1161,7 @@ function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = fals
   return (
     <div className="simp-screen">
       {IS_APP && <SeasonRewards result={result} />}
+      {IS_APP && result.story && <SeasonStory story={result.story} pos={isOL ? 'ol' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'} sport="nfl" name={userName} />}
       <div className={`simp-final-banner ${champion ? 'sfb-champ' : playoffs ? 'sfb-elim' : 'sfb-miss'}`}>
         {champion && <img src="/trophy.webp" alt="Super Bowl Trophy" className="sfb-trophy" />}
         <div className="sfb-outcome">
@@ -1394,11 +1450,22 @@ function ProgressDots({ screen, total }) {
 
 // ── SimPage ───────────────────────────────────────────────────────────────────
 
-export default function SimPage({ result, build, types = TYPES, onBack, onReset, replay = false, adsDisabled = false, isRB = false, isWR = false, isTE = false, isDB = false, isOL = false, onMVPWon }) {
+export default function SimPage({ result: baseResult, build, types = TYPES, onBack, onReset, replay = false, adsDisabled = false, isRB = false, isWR = false, isTE = false, isDB = false, isOL = false, onMVPWon, simFn = null, onFinal = null, pool = null, userName = 'You' }) {
   const [screen, setScreen] = useState(replay ? 3 : 0)
   const [mvpResult, setMvpResult] = useState(null)
   const [mvpWon, setMvpWon] = useState(false)
   const [mvpContinuation, setMvpContinuation] = useState(null)
+  // App: the season is steered by a director; `result` is the live version of it
+  const [live, setLive] = useState(baseResult)
+  const result = live
+  const position = isOL ? 'ol' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'
+  const attrMap = isOL ? OL_ATTR : isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : isRB ? RB_ATTR : ATTR
+  const director = useMemo(() => (IS_APP && simFn && !replay && !baseResult.story && baseResult.games?.length)
+    ? createDirector({ sport: 'nfl', pos: position, build, team: baseResult.team, simFn, base: baseResult, name: userName, attrMap, types })
+    : null, []) // eslint-disable-line
+  const handleFinal = final => { setLive(final); onFinal?.(final) }
+  // leaving mid-season still books the season
+  useEffect(() => () => { if (director && !director.finalized) onFinal?.(director.finalize()) }, []) // eslint-disable-line
   const isAllTime = !!result.team?.isAllTime
   const reachesSB = result.playoffRounds?.some(r => r.round === 'Super Bowl') ?? false
 
@@ -1458,9 +1525,9 @@ export default function SimPage({ result, build, types = TYPES, onBack, onReset,
 
   const screens = [
     <ScreenBuild    key="build"    result={result} build={build} types={types} onNext={next} isRB={isRB} isWR={isWR} isTE={isTE} isDB={isDB} isOL={isOL} />,
-    <ScreenSeason   key="season"   result={result} onNext={next} isRB={isRB} isWR={isWR} isTE={isTE} isDB={isDB} isOL={isOL} adsDisabled={adsDisabled} build={build} types={types} />,
+    <ScreenSeason   key="season"   result={result} onNext={next} isRB={isRB} isWR={isWR} isTE={isTE} isDB={isDB} isOL={isOL} adsDisabled={adsDisabled} build={build} types={types} director={director} onFinal={handleFinal} pool={pool} userName={userName} />,
     <ScreenPlayoffs key="playoffs" result={result} onNext={next} onPreSuperBowl={handlePreSuperBowl} adsDisabled={adsDisabled} />,
-    <ScreenFinal    key="final"    result={result} build={build} types={types} onReset={handleReset} onBack={handleBack} adsDisabled={adsDisabled} mvpWon={mvpWon} isRB={isRB} isWR={isWR} isTE={isTE} isDB={isDB} isOL={isOL} />,
+    <ScreenFinal    key="final"    result={result} build={build} types={types} onReset={handleReset} onBack={handleBack} adsDisabled={adsDisabled} mvpWon={mvpWon} isRB={isRB} isWR={isWR} isTE={isTE} isDB={isDB} isOL={isOL} userName={userName} />,
   ]
 
   const team = result.team

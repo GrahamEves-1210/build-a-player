@@ -37,8 +37,10 @@ import AppHome from './app/AppHome'
 import { FlipEdge, BuildComplete, useFlip } from './app/AppBuildTray'
 import { useBlacktop } from '../lib/blacktop'
 import { BlacktopQueue, BlacktopHud, BlacktopChat, BlacktopGame } from './app/AppBlacktop'
-import { loadRun, newRun } from '../lib/takeover'
+import { loadRun, newRun, cityList, ratedPool } from '../lib/takeover'
 const AppTakeover = lazy(() => import('./app/AppTakeover'))
+// which page a live Blacktop run is on, so Home → Play (or the card) resumes it
+const btPageFor = phase => (phase === 'build' ? 'blacktop-build' : phase === 'game' || phase === 'result' ? 'blacktop-game' : 'blacktop')
 import { finishDiscordSignIn, getUsername } from '../lib/discord'
 const VersusLobby        = lazy(() => import('./VersusLobby'))
 const BucketVersusResult = lazy(() => import('./BucketVersusResult'))
@@ -404,6 +406,9 @@ export default function BucketApp() {
   const [btSeen, setBtSeen] = useState(0)
   const [takeoverRun, setTakeoverRun] = useState(null)
   const openTakeoverRef = useRef(null)
+  const takeoverRunRef = useRef(null); takeoverRunRef.current = takeoverRun
+  const btPhaseRef = useRef('idle')          // the live hook is declared further down; the dock handler reads it through this
+  const lastPlayRef = useRef(null)           // the last mode page, so PLAY goes back to what you were doing
   const [vsCountdown,    setVsCountdown]    = useState(null)
   const vsResultRef      = useRef({ build: {}, user: null, position: 'guard' })
   const faceoffFiredRef  = useRef(false)
@@ -557,6 +562,7 @@ export default function BucketApp() {
     if (!IS_APP) return
     window.__bapPage = { page, sport: 'bucket' }
     window.dispatchEvent(new CustomEvent('bap:page', { detail: window.__bapPage }))
+    if (['game', 'sim', 'salarycap', 'takeover', 'takeover-build', 'blacktop', 'blacktop-build', 'blacktop-game'].includes(page)) lastPlayRef.current = page
   }, [page])
   useEffect(() => {
     if (!IS_APP) return
@@ -565,11 +571,15 @@ export default function BucketApp() {
       if (to === 'home') setPage('splash')   // keeps the build in progress — PLAY resumes it
       else if (to === 'play') {
         if (page === 'game' || page === 'sim' || page === 'salarycap' || page.startsWith('blacktop') || page === 'takeover' || page === 'takeover-build') return
-        if (gameMode) setPage(gameMode === 'salarycap' ? 'salarycap' : 'game')
+        const live = btPhaseRef.current, last = lastPlayRef.current, run = takeoverRunRef.current
+        if (live !== 'idle') setPage(btPageFor(live))                                   // a live run always comes first
+        else if (last === 'takeover' && run && !run.over) setPage('takeover')
+        else if (last === 'takeover-build' && gameMode) setPage('takeover-build')
+        else if (gameMode) setPage(gameMode === 'salarycap' ? 'salarycap' : 'game')
         else { let p = 'guard'; try { p = localStorage.getItem('bucketPosition') || 'guard' } catch {}; handleStart('classic', p) }   // quick play
       } else if (to === 'leaderboard') setPage('leaderboard')
       else if (to === 'salarycap') handleStart('salarycap', position)
-      else if (to === 'blacktop') setPage('blacktop')
+      else if (to === 'blacktop') setPage(btPageFor(btPhaseRef.current))
       else if (to === 'takeover') openTakeoverRef.current?.()
       // signed out: the dock shows sign-in itself, since only some pages render AuthModal
       else if (to === 'profile') { if (user) { window.history.pushState({}, '', '/profile'); setPage('profile') } else window.dispatchEvent(new CustomEvent('bap:auth')) }
@@ -729,10 +739,12 @@ export default function BucketApp() {
 
   // ── BLACKTOP (app): the match lives in the hook; pages follow its phase ──
   const btPage = page === 'blacktop' || page === 'blacktop-build' || page === 'blacktop-game'
+  // The hook stays on across every page: Home never drops you out of a run.
   const bt = useBlacktop({
-    enabled: IS_APP && btPage, user, position, pools: LIVE_POOLS, types: LIVE_TYPES,
+    enabled: IS_APP, user, position, pools: LIVE_POOLS, types: LIVE_TYPES,
     build, player: savedSpinResult, onExit: () => { setPage('splash'); setBtChatOpen(false) },
   })
+  btPhaseRef.current = bt.phase
   const btJoined = useRef(false)
   useEffect(() => {
     if (page === 'blacktop' && bt.phase === 'idle' && !btJoined.current) { btJoined.current = true; bt.join() }
@@ -747,7 +759,7 @@ export default function BucketApp() {
     window.scrollTo({ top: 0, behavior: 'instant' })
   }, [position])
   useEffect(() => {
-    if (!btPage) return
+    // the run moves on wherever you are — you queued for it
     if (bt.phase === 'build') { resetLiveBuild(); setPage('blacktop-build'); setBtChatOpen(false) }
     else if (bt.phase === 'game') { setPage('blacktop-game'); setBtChatOpen(false) }
   }, [bt.phase]) // eslint-disable-line
@@ -768,7 +780,9 @@ export default function BucketApp() {
   }, [user?.id, startTakeoverBuild])
   openTakeoverRef.current = openTakeover
   const hitTheRoad = useCallback(() => {
-    const run = newRun({ sport: 'bucket', uid: user?.id ?? null, pos: position, build, types: activeTypes })
+    const cities = cityList('bucket', NBA_TEAMS)
+    const rated = ratedPool(LIVE_POOLS[position] ?? LIVE_POOLS.guard, activeTypes, b => calcBucketOVR(b, activeTypes, position), cities)
+    const run = newRun({ sport: 'bucket', uid: user?.id ?? null, pos: position, build, types: activeTypes, rated, cities })
     setTakeoverRun(run); setPage('takeover')
     window.scrollTo({ top: 0, behavior: 'instant' })
   }, [user?.id, position, build, activeTypes])
@@ -893,8 +907,17 @@ export default function BucketApp() {
     document.querySelector('.game-page-scroll')?.scrollTo({ top: 0, behavior: 'instant' })
   }, [activeTypes])
 
+  const commitBucketRef = useRef(null)
   const handleTeamPicked = useCallback((team) => {
     const result = runBucketSimulation(build, activeTypes, team, position, null, gameMode)
+    setSimResult(result)
+    setShowTeamSpin(false)
+    // App: the season is steered on the sim page; it's booked when it ends
+    if (IS_APP) { setPage('sim'); window.scrollTo({ top: 0, behavior: 'instant' }); return }
+    commitBucketRef.current?.(result)
+  }, [build, activeTypes, position, gameMode])
+
+  const commitBucketSeason = useCallback((result) => {
     setSimResult(result)
     // App: season XP + missions (lib/progress.js)
     if (IS_APP) {
@@ -945,7 +968,9 @@ export default function BucketApp() {
       team_short:  team.short,
       build:       buildJson,
     }).then(({ error }) => { if (error) console.error('[bucket save]', error.code, error.message, error.details, error.hint) })
-  }, [build, activeTypes, position, user, gameMode])
+  }, [build, activeTypes, position, user, gameMode, isBucketCustomMode])
+  commitBucketRef.current = commitBucketSeason
+  const bucketSimFor = useCallback((b, t) => runBucketSimulation(b, activeTypes, t, position, null, gameMode), [activeTypes, position, gameMode])
 
   const handleDevFill = useCallback(() => {
     const pool = currentPool.filter(p => p.attrs)
@@ -1309,7 +1334,8 @@ export default function BucketApp() {
               user={user}
               onStart={handleStart}
               onVersus={onVersus}
-              onBlacktop={() => setPage('blacktop')}
+              onBlacktop={() => setPage(btPageFor(bt.phase))}
+              blacktop={{ phase: bt.phase, queue: bt.queue.length }}
               onTakeover={openTakeover}
               takeoverRun={takeoverRun}
               renderBucketFigure={(pos, ready) => (
@@ -1505,6 +1531,10 @@ export default function BucketApp() {
           isSalaryMode={gameMode === 'salarycap'}
           gameMode={gameMode}
           initialScreen={simInitialScreen}
+          simFn={IS_APP && gameMode !== 'salarycap' ? bucketSimFor : null}
+          onFinal={IS_APP && gameMode !== 'salarycap' ? commitBucketSeason : null}
+          pool={currentPool}
+          userName={getUsername(user) || 'You'}
         />
       </>
     )
