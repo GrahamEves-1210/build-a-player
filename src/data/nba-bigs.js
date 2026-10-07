@@ -188,7 +188,7 @@ export const NBA_BIG_PLAYERS = [
     attrs: { jumpShot: 5, finishing: 6, rebounding: 8, playmaking: 2, interiorDefense: 8, speed: 3, bounce: 5, size: 7, basketballIQ: 5, clutch: 3 } },
 
   // ─── MIN ───────────────────────────────────────────────────────
-  { name: 'Joan Beringer', short: 'Beringer', team: 'MIN', starter: true, captain: false, number: 19, height: 87, weight: 225, wingspan: 90, skin: '#b67856', position: 'C', faceCenter: [50, 46],
+  { name: 'Joan Beringer', short: 'Beringer', team: 'MIN', starter: true, captain: false, number: 19, height: 83, weight: 225, wingspan: 90, skin: '#b67856', position: 'C', faceCenter: [50, 46],
     attrs: { jumpShot: 0, finishing: 4, rebounding: 6, playmaking: 2, interiorDefense: 5, speed: 6, bounce: 5, size: 10, basketballIQ: 3, clutch: 3 } },
   { name: 'Trey Lyles', short: 'Lyles', team: 'MIN', starter: false, captain: false,
     attrs: { jumpShot: 5, finishing: 4, rebounding: 4, playmaking: 3, interiorDefense: 3, speed: 4, bounce: 4, size: 5, basketballIQ: 4, clutch: 4 } },
