@@ -34,7 +34,7 @@ import SiteFooter from './SiteFooter'
 import SiteFeatures from './SiteFeatures'
 import { IS_APP } from '../lib/platform'
 import AppHome from './app/AppHome'
-import { BuildTray, BuildComplete, useSwipeViews } from './app/AppBuildTray'
+import { FlipEdge, BuildComplete, useFlip } from './app/AppBuildTray'
 import { finishDiscordSignIn, getUsername } from '../lib/discord'
 const VersusLobby        = lazy(() => import('./VersusLobby'))
 const BucketVersusResult = lazy(() => import('./BucketVersusResult'))
@@ -676,9 +676,9 @@ export default function BucketApp() {
 
   // App: Spin and Build are two sides of one card — swipe to flip, and the
   // last pick flips it to Build (drag-and-drop included)
-  useSwipeViews(IS_APP && (page === 'game' || page === 'versus-game'), mobileView, setMobileView)
+  const flip = useFlip(IS_APP && (page === 'game' || page === 'versus-game'), mobileView, setMobileView)
   const buildComplete = activeTypes.length > 0 && activeTypes.every(t => build[t])
-  useEffect(() => { if (IS_APP && buildComplete && page === 'game') setMobileView('build') }, [buildComplete]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (IS_APP && buildComplete && page === 'game') flip('build') }, [buildComplete]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSandboxToggle = useCallback((on) => {
     try { localStorage.setItem('bab_custom_mode', on ? '1' : '0') } catch {}
@@ -909,7 +909,7 @@ export default function BucketApp() {
     setBuild(prev => {
       if (prev[chipData.type] !== undefined && prev[chipData.type]) return prev
       const next = { ...prev, [chipData.type]: chipData }
-      if (activeTypes.every(t => next[t])) setMobileView('build')
+      if (!IS_APP && activeTypes.every(t => next[t])) setMobileView('build')   // the app turns the card itself
       return next
     })
     setSpinResetKey(k => k + 1)
@@ -1543,8 +1543,9 @@ export default function BucketApp() {
       <Navbar {...navbarProps} />
 
       <div className="game-page-scroll">
-      {IS_APP && mobileView === 'spin' && (
-        <BuildTray build={build} types={activeTypes} attrMap={BUCKET_ATTR} onOpen={() => setMobileView('build')} />
+      {IS_APP && (
+        <FlipEdge side={mobileView} build={build} types={activeTypes} attrMap={BUCKET_ATTR} onFlip={flip}
+          waiting={savedSpinResult?.selectedQB?.name ?? null} complete={buildComplete} />
       )}
       <main className={`game-layout mobile-${mobileView}${gameMode === 'all-time' ? ' alltime-mode' : ''}${page === 'versus-game' ? ' versus-active' : ''}`}>
         <SpinScreen

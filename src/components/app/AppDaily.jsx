@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useProgress, dailyState, fetchDailyBoard, msToReset, claimMission, claimStreak, missionDef, STREAK_REWARDS, SPOTLIGHTS } from '../../lib/progress'
 import { sfx, haptic } from '../../lib/juice'
-import { IconFlame, IconTarget, IconCheck, IconGift, IconLock, IconClose, IconClipboard, IconCoin, IconArrow } from './icons'
+import { IconFlame, IconTarget, IconCheck, IconGift, IconLock, IconClose, IconCoin, IconArrow } from './icons'
 
 // Daily hub (dock → Daily): login streak + rewards, the Daily Challenge with
 // its leaderboard, and today's three missions.
@@ -141,18 +141,14 @@ export default function AppDaily({ sport, onClose }) {
         <Challenge p={p} sport={sport} />
         <Missions p={p} />
         <section className="ag-extras ag-pop" style={{ '--d': '190ms', padding: 0 }}>
-          {isBucket ? (
+          {isBucket && (
             <button className="ag-mini ag-mini--purple" onClick={() => { onClose(); window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'salarycap' })) }}>
+              <span className="ag-mini-flag">DAILY</span>
               <span className="ag-mini-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><IconCoin size={17} /> SALARY CAP</span>
               <span className="ag-mini-sub">Today's budget build</span>
             </button>
-          ) : (
-            <button className="ag-mini" onClick={() => { onClose(); window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'depth-chart' })) }}>
-              <span className="ag-mini-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><IconClipboard size={17} /> THE DEPTH CHART</span>
-              <span className="ag-mini-sub" style={{ color: '#fbbf24' }}>Today's mini game</span>
-            </button>
           )}
-          <button className="ag-mini ag-mini--mint" onClick={() => nav('cards')}>
+          <button className="ag-mini ag-mini--mint" style={isBucket ? undefined : { gridColumn: '1 / -1' }} onClick={() => nav('cards')}>
             <span className="ag-mini-title">YOUR CARDS</span>
             <span className="ag-mini-sub">{Object.keys(p.cards).length} collected</span>
           </button>

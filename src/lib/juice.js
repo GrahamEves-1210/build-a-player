@@ -282,7 +282,7 @@ export function confetti(amount = 140) {
 }
 
 // ── Wiring ───────────────────────────────────────────────────────────────────
-const TAP = '.dc-submit-btn, .dc-back-btn, .dc-lb-btn, .ag-btn, .ag-tab, .ag-play, .ag-pos, .ag-mode, .ag-mini, .ag-tile, .ag-chip, .ag-seg button, .ag-set, .ag-tray, .ag-icon-btn, .ag-row-btn, .ag-daily-banner, .ag-milestone, .ag-player-chip, .ag-round-btn, .spin-btn, .spin-respin-half, .spin-reset-circle, .attr-chip, .mtab, .cat-pill, .sim-btn, .simp-cta, .simp-ghost, .mvp-continue, .tpm-tab, .auth-submit, .lb-main-seg-btn, .lb-tab, .lb-view-tab, .lb-metric-tab, .lb-pos-btn'
+const TAP = '.dc-submit-btn, .dc-back-btn, .dc-lb-btn, .ag-btn, .ag-tab, .ag-play, .ag-pos, .ag-mode, .ag-mini, .ag-tile, .ag-chip, .ag-seg button, .ag-set, .ag-edge, .ag-icon-btn, .ag-row-btn, .ag-daily-banner, .ag-milestone, .ag-player-chip, .ag-round-btn, .spin-btn, .spin-respin-half, .spin-reset-circle, .attr-chip, .mtab, .cat-pill, .sim-btn, .simp-cta, .simp-ghost, .mvp-continue, .tpm-tab, .auth-submit, .lb-main-seg-btn, .lb-tab, .lb-view-tab, .lb-metric-tab, .lb-pos-btn'
 
 let ticking = null
 function startTicks() {

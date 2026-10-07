@@ -1,14 +1,19 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { valToGrade } from '../../utils/simulation'
+import { IconArrow } from './icons'
 
-// App: the Spin and Build views as two sides of one card.
-//   <BuildTray>     — your build, slot by slot, pinned above the reels; tap to flip
-//   <BuildComplete> — the moment the last slot fills: OVR counts up, then the build side
-//   useSwipeViews   — swipe left/right on the game to flip between the sides
+// App: Spin and Build are two sides of one card. The card's edge sits at the
+// top of whichever side is showing — tap it, or swipe, and the card turns over.
+//   <FlipEdge>      the edge: on the spin side it carries your build slot by slot,
+//                   on the build side what's waiting back on the spin side
+//   useFlip         the turn itself (swing out → switch → swing in) + the swipe
+//   <BuildComplete> the moment the last slot fills: OVR counts up, then the build side
 
 const gradeColor = v => (v >= 11 ? '#a855f7' : v >= 8 ? '#3b82f6' : v >= 5 ? '#22c55e' : v >= 2 ? '#eab308' : v >= 1 ? '#f97316' : '#ef4444')
+const FLIPS_KEY = 'ag_flips'
+const flipCount = () => { try { return +localStorage.getItem(FLIPS_KEY) || 0 } catch { return 0 } }
 
-export function BuildTray({ build, types, attrMap, onOpen }) {
+export function FlipEdge({ side, build, types, attrMap, onFlip, waiting = null, complete = false }) {
   const filled = types.filter(t => build[t]).length
   const prev = useRef(new Set(types.filter(t => build[t])))
   const [fresh, setFresh] = useState(null)       // the slot that just filled pops
@@ -21,15 +26,32 @@ export function BuildTray({ build, types, attrMap, onOpen }) {
     const id = setTimeout(() => setFresh(null), 700)
     return () => clearTimeout(id)
   }, [build, types])
+  const [flips, setFlips] = useState(flipCount)
+  useEffect(() => { const on = () => setFlips(flipCount()); window.addEventListener('ag:flip', on); return () => window.removeEventListener('ag:flip', on) }, [])
+  const hint = flips < 3                          // the edge lifts now and then until the card has been turned a few times
+  const coach = side === 'spin' && flips < 1 && filled > 0
 
+  if (side === 'build') {
+    return (
+      <button className={`ag-edge ag-edge--build${hint ? ' is-hint' : ''}`} onClick={() => onFlip('spin')} aria-label="Flip the card back to the spin side">
+        <span className="ag-edge-grip" />
+        <span className="ag-edge-row">
+          <span className="ag-edge-go"><IconArrow size={14} style={{ transform: 'rotate(180deg)' }} /> SPIN</span>
+          <span className="ag-edge-status">{complete ? 'Build complete — simulate below' : waiting ? `${waiting} is waiting — pick a trait` : 'Spin for the next trait'}</span>
+          <span className="ag-edge-count"><b>{filled}</b>/{types.length}</span>
+        </span>
+      </button>
+    )
+  }
   return (
-    <button className="ag-tray" onClick={onOpen} aria-label={`Your build, ${filled} of ${types.length} slots filled. Open build view`}>
-      <span className="ag-tray-head">
-        <span className="ag-tray-title">YOUR BUILD</span>
-        <span className="ag-tray-count"><b>{filled}</b>/{types.length}</span>
-        <span className="ag-tray-go">FLIP ›</span>
+    <button className={`ag-edge ag-edge--spin${hint ? ' is-hint' : ''}`} onClick={() => onFlip('build')} aria-label={`Your build, ${filled} of ${types.length} slots filled. Flip the card to the build side`}>
+      <span className="ag-edge-grip" />
+      <span className="ag-edge-row">
+        <span className="ag-edge-title">YOUR BUILD</span>
+        <span className="ag-edge-count"><b>{filled}</b>/{types.length}</span>
+        <span className="ag-edge-go">BUILD <IconArrow size={14} /></span>
       </span>
-      <span className="ag-tray-slots" style={{ gridTemplateColumns: `repeat(${types.length}, 1fr)` }}>
+      <span className="ag-edge-slots" style={{ gridTemplateColumns: `repeat(${types.length}, 1fr)` }}>
         {types.map(t => {
           const chip = build[t]
           const meta = attrMap?.[t]
@@ -41,8 +63,64 @@ export function BuildTray({ build, types, attrMap, onOpen }) {
           )
         })}
       </span>
+      {coach && (
+        <span className="ag-coach">
+          <span className="ag-coach-hand" />
+          Swipe left, or tap this edge, to turn the card over and see your build
+        </span>
+      )}
     </button>
   )
+}
+
+// Turns the card: the showing side swings away to its edge (data-flip="left"/
+// "right"), the view switches, the other side swings in ("in-left"/"in-right").
+// Also the swipe: a short horizontal drag anywhere on the game turns it.
+export function useFlip(enabled, view, setView) {
+  const viewRef = useRef(view); viewRef.current = view
+  const busy = useRef(false)
+  const flip = useCallback(to => {
+    if (to === viewRef.current || busy.current) return
+    if (!enabled) { setView(to); return }
+    busy.current = true
+    const html = document.documentElement
+    const dir = to === 'build' ? 'left' : 'right'
+    html.setAttribute('data-flip', dir)
+    setTimeout(() => {
+      setView(to)
+      document.querySelector('.game-page-scroll')?.scrollTo({ top: 0, behavior: 'instant' })
+      html.setAttribute('data-flip', `in-${dir}`)
+      setTimeout(() => { if (html.getAttribute('data-flip') === `in-${dir}`) html.removeAttribute('data-flip'); busy.current = false }, 480)
+    }, 240)
+    try { localStorage.setItem(FLIPS_KEY, String(flipCount() + 1)) } catch {}
+    window.dispatchEvent(new CustomEvent('ag:flip'))
+  }, [enabled, setView])
+
+  useEffect(() => {
+    if (!enabled) return
+    let sx = 0, sy = 0, st = 0, ok = false
+    const down = e => {
+      const t = e.touches[0]
+      // not from things that scroll sideways or take drags themselves
+      ok = !!e.target.closest?.('.game-page-scroll') && !e.target.closest?.('.cat-pills, .ag-positions, input, textarea')
+      sx = t.clientX; sy = t.clientY; st = Date.now()
+    }
+    const up = e => {
+      if (!ok) return
+      const t = e.changedTouches[0]
+      const dx = t.clientX - sx, dy = t.clientY - sy
+      if (Date.now() - st > 900 || Math.abs(dx) < 36 || Math.abs(dy) > Math.abs(dx) * 0.8) return
+      flip(dx < 0 ? 'build' : 'spin')
+    }
+    document.addEventListener('touchstart', down, { passive: true })
+    document.addEventListener('touchend', up, { passive: true })
+    return () => {
+      document.removeEventListener('touchstart', down); document.removeEventListener('touchend', up)
+      document.documentElement.removeAttribute('data-flip')
+    }
+  }, [enabled, flip])
+
+  return flip
 }
 
 function useCountUp(target, run, ms = 1100) {
@@ -84,31 +162,4 @@ export function BuildComplete({ complete, ovr, label = 'OVR' }) {
       <span className="ag-complete-lbl">{label}</span>
     </div>
   )
-}
-
-// Horizontal swipe on the game area flips Spin ⇄ Build. Ignores gestures that
-// start on things that scroll sideways or take drags.
-export function useSwipeViews(enabled, view, setView) {
-  const viewRef = useRef(view)
-  viewRef.current = view
-  useEffect(() => {
-    if (!enabled) return
-    let sx = 0, sy = 0, st = 0, ok = false
-    const down = e => {
-      const t = e.touches[0]
-      ok = !!e.target.closest?.('.game-layout') && !e.target.closest?.('.cat-pills, .attr-chip, input, [draggable="true"], .ag-tray')
-      sx = t.clientX; sy = t.clientY; st = Date.now()
-    }
-    const up = e => {
-      if (!ok) return
-      const t = e.changedTouches[0]
-      const dx = t.clientX - sx, dy = t.clientY - sy
-      if (Date.now() - st > 650 || Math.abs(dx) < 70 || Math.abs(dy) > Math.abs(dx) * 0.6) return
-      if (dx < 0 && viewRef.current === 'spin') setView('build')
-      else if (dx > 0 && viewRef.current === 'build') setView('spin')
-    }
-    document.addEventListener('touchstart', down, { passive: true })
-    document.addEventListener('touchend', up, { passive: true })
-    return () => { document.removeEventListener('touchstart', down); document.removeEventListener('touchend', up) }
-  }, [enabled, setView])
 }

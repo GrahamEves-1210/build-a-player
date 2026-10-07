@@ -20,10 +20,10 @@ html.is-app {
   --ag-body: 'Outfit', system-ui, -apple-system, sans-serif;
 
   /* identity colours (index.css) */
-  --ag-a1: var(--btn-start, #5EDBD8);
+  --ag-a1: color-mix(in srgb, var(--btn-start, #5EDBD8) 66%, var(--btn-end, #1fc98a));   /* the site's teal, leaned toward its green */
   --ag-a2: var(--btn-end, #1fc98a);
   --ag-on: var(--btn-txt, #07120a);
-  --ag-glow: var(--btn-glow, rgba(94,219,216,.30));
+  --ag-glow: color-mix(in srgb, var(--ag-a1) 32%, transparent);
   --ag-accent: var(--accent, #95D5B2);
   --ag-grad: linear-gradient(135deg, var(--ag-a1) 0%, var(--ag-a2) 100%);
   --ag-gold: #D4AF37;
@@ -801,38 +801,19 @@ html.is-app .spin-btn::after {
 html.is-app .spin-btn:active:not(:disabled) { transform: scale(.97) !important; filter: brightness(.94); }
 html.is-app .spin-btn:disabled { filter: saturate(.25) brightness(.6); box-shadow: none !important; }
 html.is-app .spin-btn:disabled::after { display: none; }
-html.is-app .spin-respin-split {
-  height: 60px !important; min-height: 60px !important;
-  gap: 8px !important;
-  background: none !important; border: 0 !important; box-shadow: none !important; overflow: visible !important;
-}
-html.is-app .spin-respin-divider { display: none !important; }
+html.is-app .spin-respin-split { height: 56px !important; min-height: 56px !important; }
 html.is-app .spin-respin-half {
-  position: relative;
-  border: 1.5px solid color-mix(in srgb, var(--ag-a1) 55%, transparent) !important;
-  border-radius: 12px !important;
-  color: var(--ag-text) !important;
   font-family: var(--ag-font) !important;
-  font-weight: 400 !important;
   font-size: 17px !important;
   letter-spacing: 1.8px !important;
-  background:
-    linear-gradient(145deg, color-mix(in srgb, var(--ag-a1) 20%, transparent), color-mix(in srgb, var(--ag-a2) 8%, transparent)),
-    rgba(6,10,9,.85) !important;
-  box-shadow: none !important;
-  gap: 7px;
-}
-html.is-app .spin-respin-half:active:not(:disabled) { transform: scale(.97) !important; }
-html.is-app .spin-respin-used { opacity: .45; filter: saturate(0); }
-html.is-app .spin-btn-badge {
-  display: inline-grid !important; place-items: center;
-  min-width: 20px !important; height: 20px !important;
-  border-radius: 6px !important;
-  font-family: var(--ag-display) !important; font-size: 13px !important;
-  color: var(--ag-on) !important;
   background: var(--ag-grad) !important;
-  box-shadow: none !important;
+  color: var(--ag-on) !important;
+  box-shadow: 0 0 18px var(--ag-glow), inset 0 1px 0 rgba(255,255,255,.3) !important;
 }
+html.is-app .spin-respin-half:first-child { border-radius: 14px 0 0 14px !important; }
+html.is-app .spin-respin-half:last-child { border-radius: 0 14px 14px 0 !important; }
+html.is-app .spin-respin-divider { width: 3px !important; background: rgba(0,0,0,.4) !important; }
+html.is-app .spin-btn-badge { font-family: var(--ag-display) !important; font-size: 13px !important; width: 22px !important; height: 22px !important; }
 html.is-app .spin-reset-circle {
   width: 56px !important; height: 56px !important;
   border-radius: 14px !important;
@@ -918,57 +899,8 @@ html.is-app .spin-hint-text {
   color: var(--ag-text-2) !important;
 }
 
-/* ── SPIN / BUILD switch (top bar) ── */
-html.is-app .mobile-tab-bar {
-  top: calc(var(--safe-top) + 9px) !important;
-  bottom: auto !important;
-  left: auto !important;
-  right: 10px !important;
-  transform: none !important;
-  z-index: 1060 !important;
-  gap: 0 !important;
-  padding: 3px !important;
-  border-radius: 11px !important;
-  background: rgba(6,9,8,.92) !important;
-  border: 1.5px solid var(--ag-line-hi) !important;
-  box-shadow: 0 8px 22px rgba(0,0,0,.55) !important;
-  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
-  pointer-events: all !important;
-}
-html.is-app .mtab-sep { display: none !important; }
-html.is-app.ag-screen-open .mobile-tab-bar { display: none !important; }
-html.is-app .mtab {
-  position: relative;
-  height: 32px !important;
-  padding: 0 12px !important;
-  gap: 6px !important;
-  border: 0 !important;
-  border-radius: 8px !important;
-  background: none !important;
-  color: var(--ag-muted) !important;
-  font-family: var(--ag-font) !important;
-  font-size: 16px !important;
-  font-weight: 400 !important;
-  letter-spacing: 2px !important;
-  text-transform: uppercase;
-  box-shadow: none !important;
-  transition: color .2s, background .25s;
-}
-html.is-app .mtab svg { width: 15px; height: 15px; }
-html.is-app .mtab.active {
-  color: var(--ag-on) !important;
-  background: var(--ag-grad) !important;
-  box-shadow: 0 0 14px var(--ag-glow) !important;
-}
-html.is-app .mtab-badge {
-  position: absolute !important; top: -8px !important; right: -6px !important;
-  padding: 1px 5px !important; border-radius: 5px !important;
-  font-family: var(--ag-display) !important; font-size: 11px !important; font-weight: 400 !important;
-  color: #1d1503 !important;
-  background: var(--ag-gold-hi) !important;
-  box-shadow: none !important;
-  border: 0 !important;
-}
+/* ── The website's SPIN / BUILD switch: the card edge replaces it ── */
+html.is-app .mobile-tab-bar { display: none !important; }
 
 /* ── Build view ── */
 html.is-app .cat-pill {
@@ -1452,33 +1384,59 @@ html.is-app .tpm-team-btn { border-radius: 12px !important; }
 .ag-levelup-btn { margin-top: 22px; height: 54px; padding: 0 44px; font-size: 21px; }
 
 /* ═══ Spin ⇄ Build: one card, two sides ════════════════════════════════════ */
-/* Each side swings in on its own keyframes, so switching the class replays it */
-html.is-app .game-layout.mobile-spin  { animation: ag-flip-a .42s cubic-bezier(.2,.8,.25,1) backwards; transform-origin: 50% 30%; }
-html.is-app .game-layout.mobile-build { animation: ag-flip-b .42s cubic-bezier(.2,.8,.25,1) backwards; transform-origin: 50% 30%; }
-@keyframes ag-flip-a { from { transform: perspective(1400px) rotateY(75deg) scale(.96); opacity: .15; } }
-@keyframes ag-flip-b { from { transform: perspective(1400px) rotateY(-75deg) scale(.96); opacity: .15; } }
+/* The turn (useFlip): the showing side swings away to its edge, the view
+   switches, the other side swings in. Dark on the way out, a flash on the way in. */
+html.is-app .game-page-scroll { transform-origin: 50% 42%; }
+html.is-app[data-flip] .game-page-scroll { pointer-events: none; will-change: transform, filter; }
+html.is-app[data-flip="left"]     .game-page-scroll { animation: ag-turn-out-l .24s cubic-bezier(.55,0,1,.45) forwards; }
+html.is-app[data-flip="right"]    .game-page-scroll { animation: ag-turn-out-r .24s cubic-bezier(.55,0,1,.45) forwards; }
+html.is-app[data-flip="in-left"]  .game-page-scroll { animation: ag-turn-in-l .46s cubic-bezier(.1,.9,.2,1) both; }
+html.is-app[data-flip="in-right"] .game-page-scroll { animation: ag-turn-in-r .46s cubic-bezier(.1,.9,.2,1) both; }
+@keyframes ag-turn-out-l { to { transform: perspective(1000px) rotateY(-90deg) scale(.9); filter: brightness(.3); } }
+@keyframes ag-turn-out-r { to { transform: perspective(1000px) rotateY(90deg) scale(.9); filter: brightness(.3); } }
+@keyframes ag-turn-in-l { from { transform: perspective(1000px) rotateY(90deg) scale(.9); filter: brightness(.3); } 55% { filter: brightness(1.18); } }
+@keyframes ag-turn-in-r { from { transform: perspective(1000px) rotateY(-90deg) scale(.9); filter: brightness(.3); } 55% { filter: brightness(1.18); } }
 
-/* Build tray — the build side, peeking over the reels */
-.ag-tray {
+/* The card's edge — the other side peeks out underneath it */
+.ag-edge {
   position: sticky; top: 0; z-index: 30;
   display: flex; flex-direction: column; gap: 6px;
-  width: calc(100% - 20px); margin: 8px 10px 2px;
-  padding: 8px 10px 9px;
+  width: calc(100% - 20px); margin: 8px 10px 4px;
+  padding: 6px 10px 9px;
   border-radius: 12px;
   border: 1px solid var(--ag-line-hi);
-  background: rgba(7,11,9,.92);
-  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
-  box-shadow: 0 10px 24px rgba(0,0,0,.45);
+  background: rgba(7,11,9,.95);
+  box-shadow:
+    0 10px 24px rgba(0,0,0,.45),
+    0 4px 0 -1px color-mix(in srgb, var(--ag-a1) 40%, #0a0f0c),
+    0 8px 0 -2px rgba(255,255,255,.07);
   color: var(--ag-text); cursor: pointer; text-align: left;
+  transform-origin: 100% 50%;
 }
-html.is-bucket .ag-tray { background: rgba(12,8,5,.92); }
-.ag-tray:active { transform: scale(.99); }
-.ag-tray-head { display: flex; align-items: baseline; gap: 8px; }
-.ag-tray-title { font-family: var(--ag-font); font-size: 14px; letter-spacing: 2.5px; color: var(--ag-text-2); }
-.ag-tray-count { font-family: var(--ag-body); font-size: 12px; font-weight: 700; color: var(--ag-muted); }
-.ag-tray-count b { color: var(--ag-text); }
-.ag-tray-go { margin-left: auto; font-family: var(--ag-font); font-size: 14px; letter-spacing: 2px; color: var(--ag-a1); }
-.ag-tray-slots { display: grid; gap: 4px; }
+html.is-bucket .ag-edge { background: rgba(12,8,5,.95); }
+.ag-edge:active { transform: scale(.99); }
+.ag-edge-grip { align-self: center; width: 36px; height: 4px; border-radius: 2px; background: color-mix(in srgb, var(--ag-a1) 60%, transparent); }
+.ag-edge-row { display: flex; align-items: center; gap: 10px; }
+.ag-edge-title { font-family: var(--ag-font); font-size: 14px; letter-spacing: 2.5px; color: var(--ag-text-2); }
+.ag-edge-count { font-family: var(--ag-body); font-size: 12px; font-weight: 700; color: var(--ag-muted); }
+.ag-edge-count b { color: var(--ag-text); }
+.ag-edge-go {
+  margin-left: auto;
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 5px 9px 4px; border-radius: 7px;
+  font-family: var(--ag-font); font-size: 14px; letter-spacing: 2px; line-height: 1;
+  color: var(--ag-on); background: var(--ag-grad);
+  box-shadow: 0 0 12px var(--ag-glow);
+}
+.ag-edge--build .ag-edge-go { margin-left: 0; }
+.ag-edge--build { transform-origin: 0 50%; }
+.ag-edge-status { flex: 1; min-width: 0; font-family: var(--ag-body); font-size: 12.5px; font-weight: 600; color: var(--ag-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* until the card has been turned a few times, the edge lifts as if caught by the wind */
+.ag-edge--spin.is-hint  { animation: ag-peek-l 5s ease-in-out 2.5s infinite; }
+.ag-edge--build.is-hint { animation: ag-peek-r 5s ease-in-out 2.5s infinite; }
+@keyframes ag-peek-l { 0%, 84%, 100% { transform: perspective(900px) rotateY(0); } 90% { transform: perspective(900px) rotateY(-10deg) translateX(-5px); } 95% { transform: perspective(900px) rotateY(3deg); } }
+@keyframes ag-peek-r { 0%, 84%, 100% { transform: perspective(900px) rotateY(0); } 90% { transform: perspective(900px) rotateY(10deg) translateX(5px); } 95% { transform: perspective(900px) rotateY(-3deg); } }
+.ag-edge-slots { display: grid; gap: 4px; }
 .ag-slot {
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
   height: 34px; border-radius: 7px;
@@ -1491,6 +1449,18 @@ html.is-bucket .ag-tray { background: rgba(12,8,5,.92); }
 .ag-slot.is-filled .ag-slot-lbl { color: rgba(7,18,10,.75); }
 .ag-slot.is-fresh { animation: ag-slot-pop .6s cubic-bezier(.2,1.6,.4,1); }
 @keyframes ag-slot-pop { 0% { transform: scale(.4); } 60% { transform: scale(1.18); box-shadow: 0 0 22px var(--g); } }
+/* first-time coach: a finger swiping left */
+.ag-coach {
+  display: flex; align-items: center; gap: 10px;
+  margin-top: 2px; padding: 7px 10px; border-radius: 9px;
+  background: color-mix(in srgb, var(--ag-a1) 12%, transparent);
+  border: 1px dashed color-mix(in srgb, var(--ag-a1) 45%, transparent);
+  font-family: var(--ag-body); font-size: 12.5px; font-weight: 600; line-height: 1.3; color: var(--ag-text);
+}
+.ag-coach-hand { position: relative; flex: 0 0 auto; width: 46px; height: 14px; }
+.ag-coach-hand::after { content: ''; position: absolute; left: 0; right: 14px; top: 6px; height: 2px; border-radius: 1px; background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--ag-a1) 60%, transparent)); }
+.ag-coach-hand::before { content: ''; position: absolute; top: 1px; right: 0; width: 12px; height: 12px; border-radius: 50%; background: var(--ag-a1); box-shadow: 0 0 10px var(--ag-glow); animation: ag-swipe-hint 1.7s ease-in-out infinite; }
+@keyframes ag-swipe-hint { 0%, 12% { transform: translateX(0); opacity: 1; } 65% { transform: translateX(-34px); opacity: 1; } 80%, 100% { transform: translateX(-34px); opacity: 0; } }
 
 /* Build complete */
 .ag-complete {
@@ -1917,3 +1887,27 @@ html.is-app .about-section-title { font-family: var(--ag-font) !important; font-
   html.is-app .game-layout.mobile-spin, html.is-app .game-layout.mobile-build,
   html.is-app .spin-btn::after, html.is-app .sim-btn::after, html.is-app .simp-cta::after, html.is-app .qb-reveal-card { animation: none !important; }
 }
+
+/* ═══ Cards: one collection, many ways to complete it ══════════════════════ */
+.ag-coll-ready { display: flex; align-items: center; gap: 6px; margin-top: 2px; font-family: var(--ag-font); font-size: 14px; letter-spacing: 1.8px; color: var(--ag-gold-hi); }
+.ag-row-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.ag-recent { display: flex; gap: 8px; overflow-x: auto; padding: 2px 0 6px; scrollbar-width: none; }
+.ag-recent::-webkit-scrollbar { display: none; }
+.ag-recent .ag-ct { flex: 0 0 74px; animation: none; }
+.ag-recent .ag-ct-name { font-size: 10px; }
+.ag-recent .ag-ct-rar { font-size: 8.5px; letter-spacing: 1px; }
+.ag-chips--scroll { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
+.ag-chips--scroll::-webkit-scrollbar { display: none; }
+.ag-chips--scroll .ag-chip { flex: 0 0 auto; }
+.ag-sets--wide { grid-template-columns: 1fr 1fr; }
+.ag-set--text { align-items: flex-start; text-align: left; padding: 12px 12px 10px; gap: 4px; }
+.ag-set--text .ag-set-tile-bar { width: 100%; margin-top: 4px; }
+.ag-set-kind-title { font-family: var(--ag-font); font-size: 18px; letter-spacing: 2px; line-height: 1; color: #fff; }
+.ag-set-kind-sub { font-family: var(--ag-body); font-size: 11.5px; font-weight: 600; line-height: 1.3; color: var(--ag-muted); }
+.ag-set--gold.is-empty, .ag-set--purple.is-empty { filter: none; opacity: .85; }
+.ag-set-logo--icon { display: grid; place-items: center; color: var(--tc); }
+.ag-set-sub { margin-top: -4px; font-family: var(--ag-body); font-size: 12.5px; font-weight: 600; color: var(--ag-muted); }
+.ag-ct-tag { position: absolute; top: 6px; left: 6px; padding: 2px 5px 1px; border-radius: 4px; font-family: var(--ag-font); font-size: 10px; letter-spacing: 1px; line-height: 1; color: #fff; background: rgba(0,0,0,.55); }
+.ag-ct-tag--at { color: #f2d675; }
+.ag-section-h { grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; margin-top: 8px; font-family: var(--ag-font); font-size: 13px; letter-spacing: 2.5px; color: var(--ag-muted); }
+.ag-section-h i { flex: 1; height: 1px; background: var(--ag-line); }

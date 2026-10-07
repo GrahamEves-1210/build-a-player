@@ -272,7 +272,7 @@ export function claimStreak(days) {
   return r.xp
 }
 // Completing a team's set in the binder (every player on that roster) pays once
-export const setReward = size => 25 * size
+export const setReward = size => Math.min(1500, 25 * size)
 export function claimSet(key, size) {
   S.sets ??= {}
   if (S.sets[key]) return 0
@@ -344,7 +344,10 @@ export async function fetchDailyBoard(key = dayKey()) {
 // ── Events from the games ────────────────────────────────────────────────────
 function onSeason(e) {
   const d = e.detail || {}
-  if (d.sandbox) { lastSeason = null; emit(); return }   // custom ratings: no XP, no rewards panel
+  if (d.sandbox) {   // custom ratings: no XP, no rewards panel
+    if (d.daily) toast({ kind: 'xp', title: 'DAILY NOT COUNTED', sub: 'Custom ratings were on for this build' })
+    lastSeason = null; emit(); return
+  }
   const before = totalXp()
   const lines = seasonLines(d)
   const xp = lines.reduce((a, l) => a + l.xp, 0)

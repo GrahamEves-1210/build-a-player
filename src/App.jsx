@@ -43,7 +43,7 @@ import { IS_APP } from './lib/platform'
 import AppHome from './components/app/AppHome'
 import { finishDiscordSignIn, getUsername } from './lib/discord'
 import { dailyState, setDailySpins } from './lib/progress'
-import { BuildTray, BuildComplete, useSwipeViews } from './components/app/AppBuildTray'
+import { FlipEdge, BuildComplete, useFlip } from './components/app/AppBuildTray'
 
 const _dd = arr => { const s = new Set(); return arr.filter(p => { const k = `${p.name}|${p.team}`; if (s.has(k)) return false; s.add(k); return true }) }
 const _bt = (a, b) => a.team.localeCompare(b.team) || a.name.localeCompare(b.name)
@@ -562,16 +562,20 @@ export default function App() {
 
   // App: Spin and Build are two sides of one card — swipe to flip, and the
   // last pick flips it to Build (drag-and-drop included)
-  useSwipeViews(IS_APP && (page === 'game' || page === 'versus-game'), mobileView, setMobileView)
+  const flip = useFlip(IS_APP && (page === 'game' || page === 'versus-game'), mobileView, setMobileView)
   const buildComplete = activeTypes.length > 0 && activeTypes.every(t => build[t])
-  useEffect(() => { if (IS_APP && buildComplete && page === 'game') setMobileView('build') }, [buildComplete]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (IS_APP && buildComplete && page === 'game') flip('build') }, [buildComplete]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const startDaily = useCallback(() => {
     const dc = dailyState()
     if (dc.done) { window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'daily' })); return }
     if (dailyRun?.key === dc.key && gameMode) { setPage(simResult ? 'sim' : 'game'); return }
     try { localStorage.setItem('lastPosition', dc.pos) } catch {}
+    // Same spins for everyone, so custom ratings are off for the run (on, they'd also stop it counting)
+    try { localStorage.setItem('bap_custom_mode', '0') } catch {}
+    setIsCustomMode(false)
     handleStart(dc.mode, dc.pos)
+    sandboxTainted.current = false
     setDailyRun({ key: dc.key, pos: dc.pos, mode: dc.mode, seed: dc.seed })
   }, [dailyRun, gameMode, simResult, handleStart])
   startDailyRef.current = startDaily
@@ -607,7 +611,7 @@ export default function App() {
     setBuild(prev => {
       if (prev[chipData.type] !== undefined && prev[chipData.type]) return prev
       const next = { ...prev, [chipData.type]: chipData }
-      if (activeTypes.every(t => next[t])) setMobileView('build')
+      if (!IS_APP && activeTypes.every(t => next[t])) setMobileView('build')   // the app turns the card itself
       return next
     })
     setSpinResetKey(k => k + 1)
@@ -1282,8 +1286,9 @@ export default function App() {
       <Navbar {...navbarProps} />
 
       <div className="game-page-scroll">
-      {IS_APP && mobileView === 'spin' && (
-        <BuildTray build={build} types={activeTypes} attrMap={currentAttrMap} onOpen={() => setMobileView('build')} />
+      {IS_APP && (
+        <FlipEdge side={mobileView} build={build} types={activeTypes} attrMap={currentAttrMap} onFlip={flip}
+          waiting={savedSpinResult?.selectedQB?.name ?? null} complete={buildComplete} />
       )}
       <main className={`game-layout mobile-${mobileView}${gameMode === 'all-time' ? ' alltime-mode' : ''}${page === 'versus-game' ? ' versus-active' : ''}`}>
         <SpinScreen
