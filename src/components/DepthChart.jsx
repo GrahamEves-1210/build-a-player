@@ -60,22 +60,50 @@ const STAT_COLORS = {
   rushingTDs: '#fca5a5', receivingYards: '#93c5fd', receivingTDs: '#fca5a5',
 }
 
-// ── Leaderboard dropdown ───────────────────────────────────────────────────
-function LeaderboardDropdown({ onClose }) {
-  const [rows,         setRows]         = useState(null)
-  const [visibleCount, setVisibleCount] = useState(0)
+// ── Leaderboard ───────────────────────────────────────────────────────────
+// The weekly board resets every Monday at 00:00 UTC.
+function weekStartISO() {
+  const d = new Date()
+  const sinceMonday = (d.getUTCDay() + 6) % 7
+  d.setUTCHours(0, 0, 0, 0)
+  d.setUTCDate(d.getUTCDate() - sinceMonday)
+  return d.toISOString()
+}
 
-  useEffect(() => {
-    if (!supabase) { setRows([]); return }
-    supabase
+// Top 10 streaks, all-time or this week.
+async function fetchTopStreaks(period) {
+  if (!supabase) return []
+  try {
+    let q = supabase
       .from('depth_chart_streaks')
       .select('username, streak')
       .order('streak', { ascending: false })
       .order('created_at', { ascending: true })
       .limit(10)
-      .then(({ data }) => setRows(data || []))
-      .catch(() => setRows([]))
-  }, [])
+    if (period === 'week') q = q.gte('created_at', weekStartISO())
+    const { data } = await q
+    return data || []
+  } catch {
+    return []
+  }
+}
+
+const LB_PERIODS = [['all', 'ALL-TIME'], ['week', 'WEEKLY']]
+
+function LeaderboardDropdown({ onClose }) {
+  const [period,       setPeriod]       = useState('all')
+  const [cache,        setCache]        = useState({})
+  const [visibleCount, setVisibleCount] = useState(0)
+  const rows = cache[period] ?? null
+
+  useEffect(() => {
+    if (cache[period]) return
+    let cancelled = false
+    fetchTopStreaks(period).then(data => {
+      if (!cancelled) setCache(prev => ({ ...prev, [period]: data }))
+    })
+    return () => { cancelled = true }
+  }, [period, cache])
 
   useEffect(() => {
     if (!rows || rows.length === 0) return
@@ -97,8 +125,21 @@ function LeaderboardDropdown({ onClose }) {
         <div className="dc-lb-dropdown-header">
           <span className="dc-lb-dropdown-title">TOP STREAKS</span>
         </div>
+        <div className="dc-lb-tabs" role="tablist">
+          {LB_PERIODS.map(([key, label]) => (
+            <button
+              key={key}
+              role="tab"
+              aria-selected={period === key}
+              className={`dc-lb-tab${period === key ? ' dc-lb-tab--on' : ''}`}
+              onClick={() => setPeriod(key)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
         {rows !== null && rows.length === 0 && (
-          <div className="dc-lb-empty">No scores yet — be the first</div>
+          <div className="dc-lb-empty">{period === 'week' ? 'No streaks yet this week' : 'No scores yet. Be the first'}</div>
         )}
         {rows !== null && rows.slice(0, visibleCount).map((r, i) => (
           <div key={i} className={`dc-lb-row${i === 0 ? ' dc-lb-row--top' : ''}`}>
@@ -323,13 +364,10 @@ export default function DepthChart({ onBack, user, onlineCount = 0 }) {
     if (user) {
       submitStreak(s, user.email?.split('@')[0] || 'Anonymous')
     } else if (supabase) {
-      const { data } = await supabase
-        .from('depth_chart_streaks')
-        .select('streak')
-        .order('streak', { ascending: false })
-        .limit(10)
-      const qualifies = !data || data.length < 10 || s > (data[data.length - 1]?.streak ?? 0)
-      if (qualifies) {
+      // Ask for a name when the streak would make either board (all-time or this week).
+      const [allTime, thisWeek] = await Promise.all([fetchTopStreaks('all'), fetchTopStreaks('week')])
+      const makesBoard = data => data.length < 10 || s > (data[data.length - 1]?.streak ?? 0)
+      if (makesBoard(allTime) || makesBoard(thisWeek)) {
         setPromptStreak(s)
         setPromptName('')
       }
