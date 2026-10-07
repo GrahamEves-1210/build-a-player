@@ -103,9 +103,8 @@ const OVR_WEIGHTS = {
     handles:          0.08,
     perimeterDefense: 0.08,
     // T3
-    bounce:           0.04,
-    // T4
-    clutch:           0.02,
+    bounce:           0.03,
+    clutch:           0.03,
   },
   big: {
     // T1

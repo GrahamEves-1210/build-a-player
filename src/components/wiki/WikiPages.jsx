@@ -20,8 +20,8 @@ const QB_W = [['Accuracy', 17], ['Processing', 16], ['Arm', 15], ['Legs', 15], [
 const RB_W = [['Elusiveness', 15], ['Speed', 14], ['Burst', 14], ['Strength', 14], ['Balance', 13], ['Vision', 12], ['Size', 11], ['Hands', 11], ['Carrying', 5]]
 const WR_W = [['Hands', 14], ['Route running', 14], ['Speed', 14], ['Size', 14], ['Awareness', 10], ['After the catch', 10], ['Body control', 8], ['Vertical', 8], ['Release', 8]]
 const TE_W = [['Hands', 16], ['Route running', 15], ['Size', 12], ['Awareness', 11], ['After the catch', 11], ['Blocking', 9], ['Strength', 9], ['Vertical', 9], ['Speed', 8]]
-const DB_W = [['Fluidity', 14], ['Man coverage', 14], ['Speed', 13], ['Play recognition', 13], ['Zone IQ', 12], ['Press', 11], ['Hands', 10], ['Run support', 7], ['Size', 6]]
-const G_W = [['Jump shot', 14], ['Speed', 14], ['Size', 14], ['Finishing', 14], ['Basketball IQ', 14], ['Passing', 8], ['Handles', 8], ['Perimeter defense', 8], ['Bounce', 4], ['Clutch', 2]]
+const DB_W = [['Man coverage', 15], ['Speed', 14], ['Play recognition', 14], ['Zone IQ', 13], ['Press', 11], ['Fluidity', 10], ['Hands', 10], ['Run support', 7], ['Size', 6]]
+const G_W = [['Jump shot', 14], ['Speed', 14], ['Size', 14], ['Finishing', 14], ['Basketball IQ', 14], ['Passing', 8], ['Handles', 8], ['Perimeter defense', 8], ['Bounce', 3], ['Clutch', 3]]
 const B_W = [['Finishing', 15], ['Size', 15], ['Interior defense', 15], ['Rebounding', 15], ['Jump shot', 9], ['Bounce', 7], ['Playmaking', 7], ['Basketball IQ', 7], ['Speed', 7], ['Clutch', 3]]
 
 // ── Main page ────────────────────────────────────────────────────────────────
@@ -82,7 +82,7 @@ function GameplayPage({ go }) {
       <h2 id="spinning">Spinning</h2>
       <ul>
         <li><b>Two reels.</b> The first reel stops on a team; the second stops on one of that team's players at your position. Teams already drawn in this build are skipped, so you see the whole league before anyone repeats.</li>
-        <li><b>Chips.</b> The player's ratings appear as chips, one per attribute. Tap a chip (or drag it onto the matching spot on the silhouette) to lock that rating into your build. The chip carries the player's name, number, team colours and headshot, which is why finished builds look the way they do.</li>
+        <li><b>Chips.</b> The player's ratings appear as chips, one per attribute. Tap a chip to lock that rating into your build. The chip carries the player's name, number, team colours and headshot, which is why finished builds look the way they do.</li>
         <li><b>One attribute per spin.</b> Everything else about that player is gone once you pick. Football builds have <b>nine</b> slots; basketball builds have <b>ten</b>.</li>
         <li><b>Respins.</b> Each spin gives you one team respin and one player respin (tight ends get two player respins in Current mode). A player respin never shows you the same player twice.</li>
         <li><b>Bench players spin too.</b> Backups are in the pool with their real ratings, which is where the hard choices come from.</li>
@@ -112,12 +112,19 @@ function GameplayPage({ go }) {
       <h2 id="overall">Overall rating</h2>
       <p>Your overall is a <b>weighted average</b> of the ratings you locked in, not a plain mean. Each position weights the things that actually win games, and the football formula rewards balance on top.</p>
       <h3 id="overall-nfl">Football</h3>
-      <pre className="wk-pre">{`avg  = weighted average of your nine ratings (weights below)
-base = 58 + 2.2 × avg + 0.24 × avg²
-bonus: spread between best and worst ≤ 1 → +3   ≤ 2 → +1.5   ≤ 3 → +0.5
-       lowest rating ≥ 9 → +2.5   ≥ 8 → +0.8
-OVR  = min(99, round(base + bonus))`}</pre>
-      <p>A build of all 5s (straight B-minuses) scores a 75. All 8s score 93 before the balance bonus. Nine S ratings hit the 99 cap. The bonus only applies to complete builds, and a single F cancels it.</p>
+      <pre className="wk-pre">{`avg = weighted average of your nine ratings (weights below)
+OVR = min(99, round(base + balance bonus + floor bonus))`}</pre>
+      <div className="wk-table-wrap">
+        <table className="wikitable">
+          <thead><tr><th>Position</th><th>Base</th><th>Balance bonus<br />(best minus worst ≤ 1 / ≤ 2 / ≤ 3)</th><th>Floor bonus<br />(lowest ≥ 9 / ≥ 8)</th></tr></thead>
+          <tbody>
+            <tr><td>Quarterback</td><td>58 + 2.2 × avg + 0.24 × avg²</td><td>+3 / +1.5 / +0.5</td><td>+2.5 / +0.8</td></tr>
+            <tr><td>Running back</td><td>62 + 2.0 × avg + 0.19 × avg²</td><td>+2.5 / +1 / +0.3</td><td>+2 / +0.5</td></tr>
+            <tr><td>Wide receiver, tight end, defensive back</td><td>60 + 2.1 × avg + 0.21 × avg²</td><td>+2.5 / +1 / +0.3</td><td>+2 / +0.5</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Bonuses only apply to complete builds, and a quarterback loses his balance bonus if any rating is an F. For reference, a complete build with every rating the same scores: all 3s (C) 70 to 72 depending on position, all 5s (B-) 78 or 79, all 8s (A-) 93 to 95, and nine S ratings hit the 99 cap.</p>
       <div className="wk-weights">
         <Weights title="Quarterback" rows={QB_W} /><Weights title="Running back" rows={RB_W} /><Weights title="Wide receiver" rows={WR_W} /><Weights title="Tight end" rows={TE_W} /><Weights title="Defensive back" rows={DB_W} />
       </div>
@@ -161,7 +168,7 @@ clamped between 15% and 84%        (attributes count as rating ÷ 11)`}</pre>
         <li><b>Weather and overtime.</b> Cold-weather hosts bring snow or rain that lowers scoring; close matchups go to overtime about one game in five.</li>
       </ul>
       <h3 id="nfl-awards">Awards</h3>
-      <p>MVP voting is about production. Combined touchdowns are the biggest factor (50 or more adds 52%; 30 is the floor to be considered at all), total yards next (5,500 adds 32%), then overall, wins, a playoff berth and a Super Bowl. Fewer than ten wins and you are out of the race; All-Time seasons are judged 20% harder, and nobody is ever more than a 90% lock. Lose the vote and a real MVP-calibre player takes it with a stat line built to top yours. Running backs, receivers and tight ends chase Offensive Player of the Year on the same principle; defensive backs chase Defensive Player of the Year.</p>
+      <p>MVP voting is about production. Combined touchdowns are the biggest factor (50 or more adds 52%; 30 is the floor to be considered at all), total yards next (5,500 adds 32%), then overall, wins and a playoff berth. Like the real vote, it's settled on the regular season: nothing that happens in the playoffs counts. Fewer than ten wins and you are out of the race; All-Time seasons are judged 20% harder, and nobody is ever more than a 90% lock. Lose the vote and a real MVP-calibre player takes it with a stat line built to top yours. Running backs, receivers and tight ends chase Offensive Player of the Year on the same principle; defensive backs chase Defensive Player of the Year.</p>
 
       <h2 id="nba">Simulating an NBA season</h2>
       <p>Build-A-Bucket plays 82 games, the play-in, and four best-of-seven rounds. Here your team's strength sets the baseline and your build moves it; in All-Time mode you are one star among legends, so the team counts for more.</p>
@@ -303,13 +310,11 @@ function BehindPage() {
   return (
     <>
       <h2 id="ratings-from">Where the ratings come from</h2>
-      <p>Every rating is set by hand on the 0–11 scale, position by position, with anchors at the top: Dan Marino's arm is an 11, Tom Brady's processing and leadership are 11s, Randall Cunningham's legs are an 11, and current players are graded against those same posts. Current rosters are updated through the season; All-Time pools are curated per franchise. Team grades are calibrated to real results: the NFL's 1–10 offense and defense grades, the NBA's ratings out of 100 fitted to the 2025–26 standings.</p>
+      <p>Every rating is set by hand on the 0–11 scale, position by position, with anchors at the top: Dan Marino's arm is an 11, Tom Brady's processing and leadership are 11s, and current players are graded against those same posts. Current rosters are updated through the season; All-Time pools are curated per franchise. Team grades are calibrated to real results: the NFL's 1–10 offense and defense grades, the NBA's ratings out of 100 fitted to the 2025–26 standings.</p>
       <h2 id="random">How random the game is</h2>
       <p>Spins are random, but the daily Salary Cap board is <b>seeded</b> from the date, so everyone plays the same board on the same day. Seasons are Monte Carlo: hundreds of individual coin flips at the probabilities on the <a href="/wiki/seasons">Seasons</a> page, which is why the same build can go 13–4 and 9–8 on different days. The engines never fudge a result after the fact; the stories, awards and box scores are read from what the dice produced.</p>
       <h2 id="stack">What it runs on</h2>
-      <p>Build-A-Player is a React app built with Vite, served from Cloudflare Pages, with accounts, saves, leaderboards and the live Head-to-Head rooms on Supabase. The player pools, team grades and headshot references are plain data files, which is how a ratings change can ship the same day, and why this wiki's ratings and dates update with every deploy. It is an independent fan project with no affiliation to the NFL, the NBA, their teams or players.</p>
-      <h2 id="this-wiki">About this wiki</h2>
-      <p>The text on these pages was written from the game's source code: the formulas quoted on <a href="/wiki/gameplay">Gameplay</a> and <a href="/wiki/seasons">Seasons</a> are the ones the game runs. When the engines change, the wiki is updated with them.</p>
+      <p>Build-A-Player is a React app built with Vite, served from Cloudflare Pages, with accounts, saves, leaderboards and the live Head-to-Head rooms on Supabase. It is an independent fan project with no affiliation to the NFL, the NBA, their teams or players.</p>
     </>
   )
 }
@@ -318,7 +323,7 @@ export const PAGES = [
   { slug: 'main', title: 'Main Page', heading: 'Build-A-Player Wiki', description: 'How Build-A-Player and Build-A-Bucket work: spins, ratings, overall formulas, season simulation, modes, every player rating, and the creators who play.', Component: MainPage,
     toc: [['start', 'Start here'], ['two-games', 'The two games'], ['numbers', 'By the numbers']] },
   { slug: 'gameplay', title: 'Gameplay', description: 'Spins, chips and respins, the 0–11 rating scale, positions and attributes, and the exact overall formulas and weights per position.', Component: GameplayPage,
-    toc: [['spinning', 'Spinning', 'spin reel respin team player chips drag'], ['scale', 'The 0–11 scale', 'grades letter F S rating scale'], ['positions', 'Positions and attributes', 'QB RB WR TE DB guard big attributes'], ['overall', 'Overall rating', 'OVR formula weights weighted average balance bonus'], ['overall-nfl', 'Football overall', 'OVR formula'], ['overall-nba', 'Basketball overall', 'OVR formula'], ['archetypes', 'Archetypes', 'gunslinger dual threat franchise cornerstone']] },
+    toc: [['spinning', 'Spinning', 'spin reel respin team player chips tap'], ['scale', 'The 0–11 scale', 'grades letter F S rating scale'], ['positions', 'Positions and attributes', 'QB RB WR TE DB guard big attributes'], ['overall', 'Overall rating', 'OVR formula weights weighted average balance bonus'], ['overall-nfl', 'Football overall', 'OVR formula'], ['overall-nba', 'Basketball overall', 'OVR formula'], ['archetypes', 'Archetypes', 'gunslinger dual threat franchise cornerstone']] },
   { slug: 'seasons', title: 'Seasons', description: 'How an NFL or NBA season is simulated: team grades, schedules, win chances, stats, playoffs, the Super Bowl, the play-in and awards.', Component: SeasonsPage,
     toc: [['nfl', 'NFL season', 'simulate football'], ['nfl-team', 'Your team matters', 'team offense defense grade'], ['nfl-schedule', 'The schedule', '17 games weather'], ['nfl-winning', 'Win chance', 'win probability stats passing yards'], ['nfl-playoffs', 'NFL playoffs', 'bye wild card super bowl overtime'], ['nfl-awards', 'NFL awards', 'MVP OPOY DPOY'], ['nba', 'NBA season', 'simulate basketball 82 games'], ['nba-team', 'Team strength', 'ratings out of 100'], ['nba-boost', 'Your boost', 'OVR boost win chance'], ['nba-stats', 'Your numbers', 'PPG RPG APG shooting'], ['nba-playoffs', 'Play-in and playoffs', 'seed log5 best of seven finals'], ['nba-awards', 'NBA awards', 'MVP DPOY']] },
   { slug: 'modes', title: 'Modes', description: 'Current, All-Time, Salary Cap, Head-to-Head, the Depth Chart mini-game, Sandbox, BAP Pro, and leaderboards.', Component: ModesPage,
@@ -328,7 +333,7 @@ export const PAGES = [
   { slug: 'creators', title: 'Creators', description: 'YouTubers, podcasters and TikTok creators who have played Build-A-Player and Build-A-Bucket, with their videos and shorts.', Component: CreatorsPage,
     toc: [['submit', 'Made a video?', 'submit creator youtube tiktok']] },
   { slug: 'behind-the-scenes', title: 'Behind the scenes', description: 'Where the ratings come from, how random the game is, and what Build-A-Player runs on.', Component: BehindPage,
-    toc: [['ratings-from', 'Where the ratings come from', 'anchors Marino Brady Cunningham'], ['random', 'How random the game is', 'seeded Monte Carlo dice'], ['stack', 'What it runs on', 'React Vite Cloudflare Supabase'], ['this-wiki', 'About this wiki']] },
+    toc: [['ratings-from', 'Where the ratings come from', 'anchors Marino Brady'], ['random', 'How random the game is', 'seeded Monte Carlo dice'], ['stack', 'What it runs on', 'React Vite Cloudflare Supabase']] },
 ]
 
 export const SEARCH_INDEX = PAGES.flatMap(p => [
