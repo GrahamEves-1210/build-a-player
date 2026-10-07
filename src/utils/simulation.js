@@ -340,7 +340,7 @@ const ALLTIME_MVP_POOL = [
 ]
 
 export function calcMVPResult(result, isAllTime = false, teamShort = null) {
-  const { wins = 0, seasonTDs = 0, seasonRushTDs = 0, seasonPassYds = 0, seasonRushYds = 0, ovr = 70, playoffs = false, sbResult = null } = result
+  const { wins = 0, seasonTDs = 0, seasonRushTDs = 0, seasonPassYds = 0, seasonRushYds = 0, ovr = 70, playoffs = false } = result
   const totalTDs = seasonTDs + seasonRushTDs
   const totalYds = seasonPassYds + seasonRushYds
 
@@ -372,8 +372,8 @@ export function calcMVPResult(result, isAllTime = false, teamShort = null) {
   else if (wins >= 12) p += 0.03
   else if (wins >= 10) p += 0.01
 
+  // MVP is voted on before the playoffs: a berth counts, playoff and Super Bowl results don't
   if (playoffs) p += 0.02
-  if (sbResult) p += 0.03
 
   // Hard cap: under 30 combined TDs, essentially never wins
   if (totalTDs < 30) p = Math.min(p, 0.03)
@@ -2507,14 +2507,14 @@ export function runTESimulation(build, types = TE_TYPES, team = null, isAllTime 
 // ══════════════════════════════════════════════════════════════════════════════
 
 const DB_ATTR_WEIGHT = {
-  'speed':           0.13,
+  'speed':           0.14,
   'size':            0.06,
-  'fluidity':        0.14,
+  'fluidity':        0.10,
   'press':           0.11,
   'hands':           0.10,
-  'zoneIQ':          0.12,
-  'manCoverage':     0.14,
-  'playRecognition': 0.13,
+  'zoneIQ':          0.13,
+  'manCoverage':     0.15,
+  'playRecognition': 0.14,
   'runSupport':      0.07,
 }
 
