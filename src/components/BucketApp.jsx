@@ -1294,7 +1294,6 @@ export default function BucketApp() {
     onProfile: () => guardedLeave(() => user ? (window.history.pushState({}, '', '/profile'), setPage('profile')) : setShowAuth(true)),
     onAbout: () => guardedLeave(() => { window.location.href = '/?about' }),
     onWiki: () => guardedLeave(() => { window.location.href = '/wiki' }),
-    onCreators: () => guardedLeave(() => { window.location.href = '/creators' }),
     onLeaderboard: () => guardedLeave(() => setPage('leaderboard')),
     onSubscribe: async () => {
       if (!user) { setShowAuth(true); return }

@@ -9,11 +9,6 @@ const IconBook = () => (
     <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
   </svg>
 )
-const IconCreators = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <rect x="2" y="5" width="20" height="14" rx="3"/><path d="M10 9l5 3-5 3z" fill="currentColor" stroke="none"/>
-  </svg>
-)
 
 const STEPS_DESKTOP = (isRB, isWR, isTE, isDB, isOL) => [
   { n: '1', title: 'Spin',      body: `Pull a random NFL team, then a${isOL ? 'n OL' : isWR ? ' WR' : isRB ? 'n RB' : isTE ? ' TE' : isDB ? ' DB' : 'n QB'} from their roster.` },
@@ -186,7 +181,7 @@ const PERKS = [
   'PLUS badge on leaderboard entries',
 ]
 
-export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, onLeaderboard, onWiki, onCreators, onSwitchPosition, onSwitchBucketPosition, onSubscribe, onOpenCustomRatings, user, gameMode, isRB, isWR, isTE, isDB, isOL, position, isPlus, isBucket, bucketPosition, versusState }) {
+export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, onLeaderboard, onWiki, onSwitchPosition, onSwitchBucketPosition, onSubscribe, onOpenCustomRatings, user, gameMode, isRB, isWR, isTE, isDB, isOL, position, isPlus, isBucket, bucketPosition, versusState }) {
   const [open,         setOpen]        = useState(false)
   const [htpOpen,      setHtpOpen]     = useState(false)
   const [plusWmOpen,   setPlusWmOpen]  = useState(false)
@@ -224,9 +219,8 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
   const handleSignIn      = () => { onSignIn?.();      setOpen(false) }
   const handleProfile     = () => { onProfile?.();     setOpen(false) }
   const handleLeaderboard = () => { onLeaderboard?.(); setOpen(false) }
-  // Wiki and Creators live at /wiki and /creators; the NFL app routes to them in place, Build-A-Bucket loads the page
+  // The wiki lives at /wiki (its own page); the NFL shell opens it in place, Build-A-Bucket loads it
   const handleWiki        = () => { setOpen(false); if (onWiki) onWiki(); else window.location.href = '/wiki' }
-  const handleCreators    = () => { setOpen(false); if (onCreators) onCreators(); else window.location.href = '/creators' }
 
   return (
     <header className={`navbar${gameMode === 'all-time' ? ' alltime-mode' : ''}`}>
@@ -352,11 +346,6 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
       )}
 
       <div className="nav-right" ref={ref}>
-        {!IS_APP && !versusState && (
-          <a className="nav-top-tab" href="/creators" onClick={e => { e.preventDefault(); handleCreators() }}>
-            <IconCreators /><span>Creators</span>
-          </a>
-        )}
         <button
           className={`waffle-btn${open ? ' waffle-open' : ''}`}
           onClick={() => { setOpen(o => !o); dismissHint() }}
@@ -400,18 +389,11 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
             )}
 
             {!IS_APP && (
-              <>
-                {/* Wiki — every mode and mechanic, every rating */}
-                <button className="wm-row" onClick={handleWiki}>
-                  <span className="wm-icon"><IconBook /></span>
-                  <span className="wm-label">Wiki</span>
-                </button>
-                {/* Creators who have played */}
-                <button className="wm-row" onClick={handleCreators}>
-                  <span className="wm-icon"><IconCreators /></span>
-                  <span className="wm-label">Creators</span>
-                </button>
-              </>
+              /* Wiki — every mode and mechanic, every rating, the creators who play */
+              <button className="wm-row" onClick={handleWiki}>
+                <span className="wm-icon"><IconBook /></span>
+                <span className="wm-label">Wiki</span>
+              </button>
             )}
 
             {/* About */}

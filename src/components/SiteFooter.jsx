@@ -55,7 +55,7 @@ export default function SiteFooter({ sport = 'nfl', onDepthChart, onWiki, onCrea
             : <a className="splash-site-footer-link" href="/wiki">Wiki</a>}
           {onCreators
             ? <button className="splash-site-footer-link splash-site-footer-link--btn" onClick={onCreators}>Creators</button>
-            : <a className="splash-site-footer-link" href="/creators">Creators</a>}
+            : <a className="splash-site-footer-link" href="/wiki/creators">Creators</a>}
           <a className="splash-site-footer-link" href="/?about">About</a>
           <a className="splash-site-footer-link" href="/privacy">Privacy Policy</a>
           <a className="splash-site-footer-link" href="/terms">Terms of Service</a>
