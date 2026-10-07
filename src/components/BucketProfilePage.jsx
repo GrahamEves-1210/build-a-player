@@ -242,13 +242,13 @@ export default function BucketProfilePage({
                 onClick={isPlus ? undefined : () => setPlusOpen(o => !o)}
                 style={isPlus ? { cursor: 'default' } : undefined}
               >
-                {isPlus ? '✦ PLUS Active' : '✦ Build-A-Player Plus'}
+                {isPlus ? '✦ Pro Active' : '✦ BAP Pro'}
               </button>
             )}
             {!isPlus && CAN_SELL_PLUS && plusOpen && (
               <div className="prf-plus-dropdown">
                 <div className="wm-plus-body">
-                  {['No ads', 'Custom color themes', 'Custom profile icons', 'PLUS badge on leaderboard'].map(label => (
+                  {['No ads', 'Custom color themes', 'Custom profile icons', 'Pro badge on leaderboard'].map(label => (
                     <div key={label} className="wm-plus-perk">
                       <span className="wm-plus-check">✓</span>
                       <span>{label}</span>
@@ -287,7 +287,7 @@ export default function BucketProfilePage({
         {isPlus && (
           <div className={`prf-card ${show ? 'prf-card-in' : ''}`} style={{ animationDelay: '0.1s' }}>
             <div className="prf-card-hd">
-              <span className="prf-card-title">Build-A-Player Plus</span>
+              <span className="prf-card-title">BAP Pro</span>
               <span className="plus-status-badge plus-status-badge--on">Active</span>
             </div>
             <div className="plus-content">

@@ -1261,7 +1261,7 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
                         <div className="lb-row-info">
                           <div className="lb-row-name">
                             {row.username}
-                            {plusUids.has(row.uid) && <span className="lb-plus-badge">+</span>}
+                            {plusUids.has(row.uid) && <span className="lb-plus-badge" title="BAP Pro">PRO</span>}
                             {currentUser && row.uid === currentUser.id && <span className="lb-you">you</span>}
                           </div>
                           <div className="lb-row-sub">
@@ -1327,7 +1327,7 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
                         <div className="lb-row-info">
                           <div className="lb-row-name">
                             {row.username}
-                            {plusUids.has(row.uid) && <span className="lb-plus-badge">+</span>}
+                            {plusUids.has(row.uid) && <span className="lb-plus-badge" title="BAP Pro">PRO</span>}
                             {currentUser && row.uid === currentUser.id && <span className="lb-you">you</span>}
                           </div>
                           <div className="lb-row-sub">
@@ -1396,7 +1396,7 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
                       <div className="lb-row-info">
                         <div className="lb-row-name">
                           {c?.username || row.username}
-                          {plusUids.has(row.uid) && <span className="lb-plus-badge">+</span>}
+                          {plusUids.has(row.uid) && <span className="lb-plus-badge" title="BAP Pro">PRO</span>}
                           {currentUser && row.uid === currentUser.id && <span className="lb-you">you</span>}
                         </div>
                         {c ? <div className="lb-row-sub">{c.wins}W · {c.losses}L · {c.rings} ring{c.rings !== 1 ? 's' : ''} · {c.count} season{c.count !== 1 ? 's' : ''}</div> : null}
@@ -1422,7 +1422,7 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
                       <div className="lb-row-info">
                         <div className="lb-row-name">
                           {row.username}
-                          {plusUids.has(row.uid) && <span className="lb-plus-badge">+</span>}
+                          {plusUids.has(row.uid) && <span className="lb-plus-badge" title="BAP Pro">PRO</span>}
                           {currentUser && row.uid === currentUser.id && <span className="lb-you">you</span>}
                         </div>
                         <div className="lb-row-sub">
@@ -1451,7 +1451,7 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
                       <div className="lb-row-info">
                         <div className="lb-row-name">
                           {myAllEntry.username}
-                          {plusUids.has(myAllEntry.uid) && <span className="lb-plus-badge">+</span>}
+                          {plusUids.has(myAllEntry.uid) && <span className="lb-plus-badge" title="BAP Pro">PRO</span>}
                           <span className="lb-you">you</span>
                         </div>
                         <div className="lb-row-sub">
@@ -1514,7 +1514,7 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
                     <div className="lb-row-info">
                       <div className="lb-row-name">
                         {c?.username || row.username}
-                        {plusUids.has(row.uid) && <span className="lb-plus-badge">+</span>}
+                        {plusUids.has(row.uid) && <span className="lb-plus-badge" title="BAP Pro">PRO</span>}
                         {currentUser && row.uid === currentUser.id && <span className="lb-you">you</span>}
                       </div>
                       {c ? <div className="lb-row-sub">{c.wins}W · {c.losses}L · {c.rings} ring{c.rings !== 1 ? 's' : ''} · {c.count} season{c.count !== 1 ? 's' : ''}</div> : null}
@@ -1540,7 +1540,7 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
                       <div className="lb-row-info">
                         <div className="lb-row-name">
                           {row.username}
-                          {plusUids.has(row.uid) && <span className="lb-plus-badge">+</span>}
+                          {plusUids.has(row.uid) && <span className="lb-plus-badge" title="BAP Pro">PRO</span>}
                           {currentUser && row.uid === currentUser.id && <span className="lb-you">you</span>}
                         </div>
                         <div className="lb-row-sub">
@@ -1569,7 +1569,7 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
                       <div className="lb-row-info">
                         <div className="lb-row-name">
                           {myWREntry.username}
-                          {plusUids.has(myWREntry.uid) && <span className="lb-plus-badge">+</span>}
+                          {plusUids.has(myWREntry.uid) && <span className="lb-plus-badge" title="BAP Pro">PRO</span>}
                           <span className="lb-you">you</span>
                         </div>
                         <div className="lb-row-sub">
@@ -1588,7 +1588,7 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
                       <div className="lb-row-info">
                         <div className="lb-row-name">
                           {myTEEntry.username}
-                          {plusUids.has(myTEEntry.uid) && <span className="lb-plus-badge">+</span>}
+                          {plusUids.has(myTEEntry.uid) && <span className="lb-plus-badge" title="BAP Pro">PRO</span>}
                           <span className="lb-you">you</span>
                         </div>
                         <div className="lb-row-sub">
@@ -1607,7 +1607,7 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
                       <div className="lb-row-info">
                         <div className="lb-row-name">
                           {myDBEntry.username}
-                          {plusUids.has(myDBEntry.uid) && <span className="lb-plus-badge">+</span>}
+                          {plusUids.has(myDBEntry.uid) && <span className="lb-plus-badge" title="BAP Pro">PRO</span>}
                           <span className="lb-you">you</span>
                         </div>
                         <div className="lb-row-sub">
@@ -1626,7 +1626,7 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
                       <div className="lb-row-info">
                         <div className="lb-row-name">
                           {myOLEntry.username}
-                          {plusUids.has(myOLEntry.uid) && <span className="lb-plus-badge">+</span>}
+                          {plusUids.has(myOLEntry.uid) && <span className="lb-plus-badge" title="BAP Pro">PRO</span>}
                           <span className="lb-you">you</span>
                         </div>
                         <div className="lb-row-sub">
@@ -1786,7 +1786,7 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
                       <div className="lb-row-info">
                         <div className="lb-row-name">
                           {row.username}
-                          {plusUids.has(row.uid) && <span className="lb-plus-badge">+</span>}
+                          {plusUids.has(row.uid) && <span className="lb-plus-badge" title="BAP Pro">PRO</span>}
                           {currentUser && row.uid === currentUser.id && <span className="lb-you">you</span>}
                         </div>
                         <div className="lb-row-sub">
@@ -1848,7 +1848,7 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
                       <div className="lb-row-info">
                         <div className="lb-row-name">
                           {row.username}
-                          {plusUids.has(row.uid) && <span className="lb-plus-badge">+</span>}
+                          {plusUids.has(row.uid) && <span className="lb-plus-badge" title="BAP Pro">PRO</span>}
                           {currentUser && row.uid === currentUser.id && <span className="lb-you">you</span>}
                         </div>
                         <div className="lb-row-sub">
@@ -1913,7 +1913,7 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
                       <div className="lb-row-info">
                         <div className="lb-row-name">
                           {row.username}
-                          {plusUids.has(row.uid) && <span className="lb-plus-badge">+</span>}
+                          {plusUids.has(row.uid) && <span className="lb-plus-badge" title="BAP Pro">PRO</span>}
                           {currentUser && row.uid === currentUser.id && <span className="lb-you">you</span>}
                         </div>
                         <div className="lb-row-sub">
@@ -1977,7 +1977,7 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
                       <div className="lb-row-info">
                         <div className="lb-row-name">
                           {row.username}
-                          {plusUids.has(row.uid) && <span className="lb-plus-badge">+</span>}
+                          {plusUids.has(row.uid) && <span className="lb-plus-badge" title="BAP Pro">PRO</span>}
                           {currentUser && row.uid === currentUser.id && <span className="lb-you">you</span>}
                         </div>
                         <div className="lb-row-sub">
@@ -2078,7 +2078,7 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
                       <div className="lb-row-info">
                         <div className="lb-row-name">
                           {row.username}
-                          {plusUids.has(row.uid) && <span className="lb-plus-badge">+</span>}
+                          {plusUids.has(row.uid) && <span className="lb-plus-badge" title="BAP Pro">PRO</span>}
                           {currentUser && row.uid === currentUser.id && <span className="lb-you">you</span>}
                         </div>
                         <div className="lb-row-sub">

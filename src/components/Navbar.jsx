@@ -180,7 +180,7 @@ const PERKS = [
   'No ads',
   'Custom color themes',
   'Custom profile icons',
-  'PLUS badge on leaderboard entries',
+  'Pro badge on leaderboard entries',
 ]
 
 export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, onLeaderboard, onWiki, onSwitchPosition, onSwitchBucketPosition, onSubscribe, onOpenCustomRatings, user, gameMode, isRB, isWR, isTE, isDB, isOL, position, isPlus, isBucket, bucketPosition, versusState }) {
@@ -472,7 +472,7 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
                   onClick={() => { setPlusWmOpen(o => !o); setHtpOpen(false) }}
                 >
                   <span className="wm-plus-icon">✦</span>
-                  <span className="wm-label wm-plus-label">Build-A-Player Plus</span>
+                  <span className="wm-label wm-plus-label">BAP Pro</span>
                   <span className="wm-chevron"><IconChevron up={plusWmOpen} /></span>
                 </button>
                 {plusWmOpen && (
