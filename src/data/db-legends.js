@@ -64,7 +64,7 @@ const _raw = [
     attrs: { speed: 7, size: 9, fluidity: 7, press: 9, hands: 7, zoneIQ: 7, manCoverage: 8, playRecognition: 7, runSupport: 7 } },
   { name: 'Ed Reed',           short: 'E. Reed',     team: 'BAL', teamName: 'Baltimore Ravens',
     skin: '#5e3c22', height: 71, weight: 200, number: 20, starter: true, captain: true, years: '2002–12', subpos: 's',
-    attrs: { speed: 8, size: 6, fluidity: 10, press: 3, hands: 10, zoneIQ: 11, manCoverage: 7, playRecognition: 11, runSupport: 10 } },
+    attrs: { speed: 9, size: 6, fluidity: 10, press: 6, hands: 10, zoneIQ: 11, manCoverage: 7, playRecognition: 11, runSupport: 10 } },
   { name: 'Kyle Hamilton',     short: 'Hamilton',    team: 'BAL', teamName: 'Baltimore Ravens',
     skin: '#5e3c22', height: 76, weight: 220, number: 14, starter: true, captain: true, years: '2022–', subpos: 's',
     attrs: { speed: 7, size: 11, fluidity: 9, press: 7, hands: 9, zoneIQ: 10, manCoverage: 9, playRecognition: 10, runSupport: 10 } },
