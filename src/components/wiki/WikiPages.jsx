@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import RatingsTable, { POOLS, RATINGS_AS_OF, RATINGS_DATES, fmtDate, poolCounts, gradeColor } from '../RatingsTable'
 import { CREATORS, CREATORS_AS_OF } from '../../data/creators'
 
@@ -171,7 +171,7 @@ clamped between 15% and 84%        (attributes count as rating ÷ 11)`}</pre>
       <pre className="wk-pre">{`delta = (OVR − 82) / 17
 boost = delta ≥ 0 ? min(+20%, delta × 20%) : max(−10%, delta × 10%)
 All-Time: boost × 0.45, capped at +9% / −5%
-win chance = team baseline + boost, clamped 12% – 87% (All-Time 91%)`}</pre>
+win chance = team baseline + boost, clamped 12% to 87% (All-Time 91%)`}</pre>
       <p>An 82 build adds nothing. A 99 adds the full 20 points. Below 82 the penalty is gentler than the reward. Then 82 games are played one at a time at that chance, each with a realistic score and your line for the night.</p>
       <h3 id="nba-stats">Your numbers</h3>
       <p>Per-game averages come from composites of your ratings. A guard's scoring is jump shot (32%), finishing (24%), speed (18%), size (12%), handles and clutch; a big's is finishing (50%), jump shot (25%), playmaking and clutch. Rebounding leans on size and bounce, assists on passing or playmaking plus IQ, steals on perimeter defense and IQ, blocks on size and interior defense. Shooting splits follow: a 0 jump shot never attempts a three, an elite one approaches 45% from deep, and free throws track jump shot and IQ.</p>
@@ -254,20 +254,14 @@ function YouTubeEmbed({ item }) {
     </div>
   )
 }
+// Creators appear exactly as listed in data/creators.js: no sorting, no filters
 function CreatorsPage() {
-  const [filter, setFilter] = useState('all')
-  const list = useMemo(() => {
-    const keep = it => filter === 'all' || (filter === 'shorts' ? it.short : it.game === filter)
-    return CREATORS.map(c => ({ ...c, items: c.items.filter(keep) })).filter(c => c.items.length)
-  }, [filter])
+  const list = CREATORS
   const total = CREATORS.reduce((s, c) => s + c.items.length, 0)
   return (
     <>
       <p className="wk-lead">Creators who have built quarterbacks, bigs and running backs on Build-A-Player and Build-A-Bucket on camera: {total} videos and posts from {CREATORS.length} creators, current as of {CREATORS_AS_OF}. Videos play through YouTube's own embedded player and everything links to the creator; nothing is re-hosted.</p>
       <p className="wk-hat">Build-A-Player is not affiliated with any of these creators unless specified. Their videos, channels and opinions are their own.</p>
-      <div className="wk-cr-filters" role="tablist" aria-label="Filter">
-        {[['all', 'All'], ['nfl', 'Football'], ['nba', 'Basketball'], ['shorts', 'Shorts']].map(([k, l]) => <button key={k} role="tab" aria-selected={filter === k} className={`wk-pill${filter === k ? ' is-on' : ''}`} onClick={() => setFilter(k)}>{l}</button>)}
-      </div>
       {list.map(c => (
         <article key={c.id} className="wk-cr">
           <div className="wk-cr-head">
@@ -298,7 +292,6 @@ function CreatorsPage() {
           )}
         </article>
       ))}
-      {list.length === 0 && <p className="wk-hat">Nothing in this filter yet.</p>}
       <h2 id="submit">Made a video?</h2>
       <div className="wk-notice">If you have played Build-A-Player or Build-A-Bucket on YouTube, TikTok, Twitch or anywhere else, send the link to <a href="mailto:buildaplayer@outlook.com">buildaplayer@outlook.com</a> or tag <a href="https://x.com/Build_A_Player" target="_blank" rel="noopener noreferrer">@Build_A_Player</a> and it goes on this page.</div>
     </>
