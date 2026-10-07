@@ -18,7 +18,7 @@ export default function AboutPage({ onBack, onPrivacy }) {
 
         <section className="about-section">
           <p className="about-body">
-            Want the details? The <a className="about-link" href="/wiki">Wiki</a> explains every mode and every mechanic — spins, overall ratings, season simulation, Salary Cap, the Daily, Head-to-Head — and lists every player rating in the game. Its <a className="about-link" href="/wiki/creators">Creators</a> page collects the YouTubers and streamers who have played.
+            Want the details? The <a className="about-link" href="/wiki">Build-A-Player Wiki</a> explains every mode and mechanic, from spins and overall ratings to season simulation, Salary Cap and Head-to-Head, and lists every player rating in the game. Its <a className="about-link" href="/wiki/creators">Creators</a> page collects the YouTubers and streamers who have played.
           </p>
         </section>
 
@@ -56,9 +56,11 @@ export default function AboutPage({ onBack, onPrivacy }) {
         </section>
 
         <div className="about-footer-links">
+          <a className="about-text-link" href="/wiki">Wiki</a>
+          <span style={{ color: 'var(--text-muted, #666)', margin: '0 8px' }}>·</span>
           <a className="about-text-link" href="/privacy">Privacy Policy</a>
           <span style={{ color: 'var(--text-muted, #666)', margin: '0 8px' }}>·</span>
-          <a className="about-text-link" href="/terms">Terms of Service</a>
+          <a className="about-text-link" href="/terms">Terms</a>
         </div>
 
         <a href="https://www.playwire.com/contact-direct-sales" rel="noopener" target="_blank" className="splash-site-footer-playwire" style={{ margin: '20px auto 0' }}>
