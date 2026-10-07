@@ -18,7 +18,7 @@ import { valToGrade } from '../utils/simulation'
 
 // Every rating in the game, straight from the roster files the spins draw
 // from, so the table changes whenever the data does. The "as of" dates come
-// from git at build time (vite.config.js) — the last commit that touched each
+// from git at build time (vite.config.js): the last commit that touched each
 // pool. Ratings only: no derived overall, which the per-attribute grades were
 // never tuned to produce.
 
@@ -111,7 +111,7 @@ export default function RatingsTable({ initialQuery = '', initialPool = 'qb' }) 
                   <span className="wk-rt-name">{p.name}</span>
                   <span className="wk-rt-team">{p.team}{p.number != null ? ` · #${p.number}` : ''}{p.position ? ` · ${p.position}` : ''}{p.years ? ` · ${p.years}` : ''}</span>
                 </th>
-                {types.map(t => { const v = p.attrs[t]; return <td key={t} className="wk-rt-cell"><span className="wk-grade" style={{ '--g': gradeColor(v ?? 0) }} title={`${long(pool.attr, t)}: ${v ?? '—'} of 11`}>{v == null ? '—' : valToGrade(v)}</span></td> })}
+                {types.map(t => { const v = p.attrs[t]; return <td key={t} className="wk-rt-cell"><span className="wk-grade" style={{ '--g': gradeColor(v ?? 0) }} title={`${long(pool.attr, t)}: ${v ?? 'not rated'}${v == null ? '' : ' of 11'}`}>{v == null ? '-' : valToGrade(v)}</span></td> })}
                 <td className="wk-rt-cell wk-rt-avg">{avgOf(p).toFixed(1)}</td>
               </tr>
             ))}
