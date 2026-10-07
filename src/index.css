@@ -6794,14 +6794,27 @@ html.is-mac .spin-panel-scroll {
 
 /* ─── DEPTH CHART GAME ────────────────────────────────────────────────────── */
 .dc-screen {
-  min-height: 100dvh;
+  /* #root is a fixed-height, overflow-hidden box, so this screen has to be
+     its own scroll container or nothing below the fold can ever be reached.
+     --dc-rail is the clearance for the Playwire bottom rail (set below when
+     the rail is on screen) so LOCK IT IN can be scrolled up above it. */
+  --dc-rail: 0px;
+  height: 100dvh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   background: #111318;
   display: flex;
   flex-direction: column;
   align-items: center;
   padding: 0 16px;
   padding-top: env(safe-area-inset-top);
-  padding-bottom: max(env(safe-area-inset-bottom, 0px), 32px);
+  padding-bottom: calc(max(env(safe-area-inset-bottom, 0px), 32px) + var(--dc-rail));
+}
+.dc-screen > * { flex-shrink: 0; }
+html:has([id^="pw-oop"][data-pw-status="loaded"][style*="bottom"]):not(.ads-hidden) .dc-screen {
+  --dc-rail: calc(60px + var(--ad-h));
 }
 
 .dc-topbar {
@@ -6941,6 +6954,34 @@ html.is-mac .spin-panel-scroll {
   transition: background 0.15s, color 0.15s;
 }
 .dc-lb-close:hover { background: rgba(255,255,255,0.15); color: #fff; }
+.dc-lb-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 8px 10px 4px;
+  opacity: 0;
+  animation: dc-lb-row-pop 0.2s cubic-bezier(0.34,1.56,0.64,1) forwards;
+  animation-delay: 0.04s;
+}
+.dc-lb-tab {
+  flex: 1;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  color: rgba(255,255,255,0.5);
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 13px;
+  letter-spacing: 1.5px;
+  line-height: 1;
+  padding: 7px 0 6px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+@media (hover: hover) { .dc-lb-tab:hover { color: #fff; border-color: rgba(255,255,255,0.25); } }
+.dc-lb-tab--on {
+  background: rgba(232,25,44,0.22);
+  border-color: rgba(232,25,44,0.6);
+  color: #fff;
+}
 .dc-lb-loading, .dc-lb-empty {
   padding: 20px 16px;
   font-size: 12px;

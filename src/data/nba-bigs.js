@@ -173,7 +173,7 @@ export const NBA_BIG_PLAYERS = [
   { name: 'Bam Adebayo', short: 'Adebayo', team: 'MIA', starter: true, captain: true, number: 13, height: 81, weight: 255, wingspan: 81, skin: '#a96850', position: 'C', faceCenter: [49, 46], faceAdjust: { dx: 1, dy: -3, scale: 1 },
     attrs: { jumpShot: 5, finishing: 8, rebounding: 8, playmaking: 7, interiorDefense: 10, speed: 7, bounce: 6, size: 7, basketballIQ: 9, clutch: 8 } },
   { name: 'Giannis Antetokounmpo', short: 'Giannis', team: 'MIA', starter: true, captain: true, number: 7, height: 83, weight: 243, wingspan: 87, skin: '#b5785d', position: 'PF', faceCenter: [53, 45], faceAdjust: { dx: -1, dy: -1, scale: 1 },
-    attrs: { jumpShot: 4, finishing: 11, rebounding: 8, playmaking: 8, interiorDefense: 9, speed: 10, bounce: 8, size: 11, basketballIQ: 9, clutch: 10 } },
+    attrs: { jumpShot: 4, finishing: 11, rebounding: 8, playmaking: 8, interiorDefense: 9, speed: 10, bounce: 8, size: 9, basketballIQ: 9, clutch: 10 } },
   { name: 'Bobby Portis', short: 'Portis', team: 'MIA', starter: false, captain: false, number: 95, height: 82, weight: 236, wingspan: 83, skin: '#7d503d', position: 'PF', faceCenter: [50, 41], faceAdjust: { dx: 2, dy: -1, scale: 1 },
     attrs: { jumpShot: 8, finishing: 6, rebounding: 8, playmaking: 3, interiorDefense: 4, speed: 4, bounce: 5, size: 7, basketballIQ: 6, clutch: 5 } },
   { name: 'Nikola Jovic', short: 'N. Jovic', team: 'MIA', starter: false, captain: false, number: 5, height: 82, weight: 215, wingspan: 85, skin: '#c98f78', position: 'PF', faceCenter: [50, 41],
