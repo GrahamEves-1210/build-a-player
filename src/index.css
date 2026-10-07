@@ -16962,5 +16962,7 @@ html.is-mac [id^="pw-oop-bottom_rail"] > * {
 .cr-era-btn.is-on { background: var(--accent); border-color: var(--accent); color: #0f1612; }
 
 /* ═══ Menu: the profile avatar on the account row ═══════════════════════════ */
-.wm-avatar { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: linear-gradient(135deg, var(--g300), var(--g500)); color: #0f1612 !important; font-family: var(--font); font-size: 11px; font-weight: 800; letter-spacing: .3px; }
-.wm-avatar--emoji { background: rgba(255,255,255,0.08); font-size: 15px; }
+/* same colours as the profile page's .prf-avatar: the theme's button gradient (follows Build-A-Bucket and Pro colour themes) */
+.wm-avatar { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: linear-gradient(135deg, var(--btn-start) 0%, var(--btn-end) 100%); color: var(--btn-txt) !important; font-family: Impact, 'Arial Narrow Bold', sans-serif; font-size: 11px; font-weight: 900; letter-spacing: .5px; box-shadow: 0 0 0 2px color-mix(in srgb, var(--btn-start) 20%, transparent); }
+.wm-row:hover .wm-avatar { color: var(--btn-txt) !important; }
+.wm-avatar--emoji { font-size: 14px; letter-spacing: 0; }
