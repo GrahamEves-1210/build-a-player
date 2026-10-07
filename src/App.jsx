@@ -44,12 +44,16 @@ import { finishDiscordSignIn, getUsername } from './lib/discord'
 
 const _dd = arr => { const s = new Set(); return arr.filter(p => { const k = `${p.name}|${p.team}`; if (s.has(k)) return false; s.add(k); return true }) }
 const _bt = (a, b) => a.team.localeCompare(b.team) || a.name.localeCompare(b.name)
-const CUSTOM_QB_POOL = _dd([...QBS, ...LEGENDS]).sort(_bt)
-const CUSTOM_RB_POOL = _dd([...RBS, ...RB_LEGENDS]).sort(_bt)
-const CUSTOM_WR_POOL = _dd([...WRS, ...WR_LEGENDS]).sort(_bt)
-const CUSTOM_TE_POOL = _dd([...TES, ...TE_LEGENDS]).sort(_bt)
-const CUSTOM_DB_POOL = _dd([...DBS, ...DB_LEGENDS]).sort(_bt)
-const CUSTOM_OL_POOL = _dd([...OLS]).sort(_bt)
+// Custom Ratings pools: current players and legends kept apart so the modal's
+// Current / All-Time toggle can show one or the other (OL has no legends)
+const CUSTOM_POOLS = {
+  qb: { current: _dd(QBS).sort(_bt), legends: _dd(LEGENDS).sort(_bt) },
+  rb: { current: _dd(RBS).sort(_bt), legends: _dd(RB_LEGENDS).sort(_bt) },
+  wr: { current: _dd(WRS).sort(_bt), legends: _dd(WR_LEGENDS).sort(_bt) },
+  te: { current: _dd(TES).sort(_bt), legends: _dd(TE_LEGENDS).sort(_bt) },
+  db: { current: _dd(DBS).sort(_bt), legends: _dd(DB_LEGENDS).sort(_bt) },
+  ol: { current: _dd(OLS).sort(_bt), legends: null },
+}
 
 // Detect shared build at module load time — before any React rendering
 let _sharedData = null
@@ -458,6 +462,7 @@ export default function App() {
   }, [isPlus])
 
   const customModeKey = isOL ? 'ol' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : `${isRB ? 'rb' : 'qb'}${gameMode === 'all-time' ? '_legends' : ''}`
+  const customPoolKey = isOL ? 'ol' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'
   const displayPool = (isCustomMode && customRatings[customModeKey])
     ? activePool.map(p => {
         const override = customRatings[customModeKey][`${p.name}|${p.team}`]
@@ -1106,7 +1111,9 @@ export default function App() {
             isDB={isDB}
             isOL={isOL}
             gameMode={gameMode}
-            pool={isOL ? CUSTOM_OL_POOL : isDB ? CUSTOM_DB_POOL : isTE ? CUSTOM_TE_POOL : isWR ? CUSTOM_WR_POOL : isRB ? CUSTOM_RB_POOL : CUSTOM_QB_POOL}
+            pool={CUSTOM_POOLS[customPoolKey].current}
+            poolCurrent={CUSTOM_POOLS[customPoolKey].current}
+            poolLegends={CUSTOM_POOLS[customPoolKey].legends}
             onClose={() => setShowCustomModal(false)}
             onSave={(ratings) => {
               setCustomRatings(ratings)
@@ -1375,7 +1382,9 @@ export default function App() {
           isDB={isDB}
           isOL={isOL}
           gameMode={gameMode}
-          pool={isOL ? CUSTOM_OL_POOL : isDB ? CUSTOM_DB_POOL : isTE ? CUSTOM_TE_POOL : isWR ? CUSTOM_WR_POOL : isRB ? CUSTOM_RB_POOL : CUSTOM_QB_POOL}
+          pool={CUSTOM_POOLS[customPoolKey].current}
+          poolCurrent={CUSTOM_POOLS[customPoolKey].current}
+          poolLegends={CUSTOM_POOLS[customPoolKey].legends}
           onClose={() => setShowCustomModal(false)}
           onSave={(ratings) => {
             setCustomRatings(ratings)

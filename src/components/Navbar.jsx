@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import FeedbackModal from './FeedbackModal'
 import { getUsername } from '../lib/discord'
+import { PROFILE_ICON_EMOJI, initialsOf } from '../data/profile-icons'
 // The mobile app marks <html> with .is-app (see main.jsx there); the website never does
 const IS_APP = typeof document !== 'undefined' && document.documentElement.classList.contains('is-app')
 
@@ -195,6 +196,10 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
   }
   const ref = useRef(null)
   const posDropRef = useRef(null)
+  // the avatar the profile page shows: the PLUS icon if one is set, else initials — read when the menu opens
+  const [profileIcon, setProfileIcon] = useState(null)
+  useEffect(() => { if (open) { try { setProfileIcon(localStorage.getItem('bap_profile_icon')) } catch {} } }, [open])
+  const avatarEmoji = isPlus && profileIcon ? PROFILE_ICON_EMOJI[profileIcon] ?? null : null
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768
   const STEPS = isBucket
     ? (isMobile ? BUCKET_STEPS_MOBILE : BUCKET_STEPS_DESKTOP)
@@ -493,7 +498,7 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
             {/* Sign In / Account */}
             {user ? (
               <button className="wm-row wm-row-user" onClick={handleProfile}>
-                <span className="wm-icon"><IconUser /></span>
+                <span className={`wm-icon wm-avatar${avatarEmoji ? ' wm-avatar--emoji' : ''}`} aria-hidden="true">{avatarEmoji ?? initialsOf(getUsername(user))}</span>
                 <span className="wm-label wm-label-user">{getUsername(user)}</span>
                 <span className="wm-chevron"><IconArrowRight /></span>
               </button>

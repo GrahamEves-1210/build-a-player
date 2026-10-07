@@ -117,6 +117,11 @@ const _dedup = arr => { const s = new Set(); return arr.filter(p => { const k = 
 const _byTeam = (a, b) => a.team.localeCompare(b.team) || a.name.localeCompare(b.name)
 const CUSTOM_MODAL_GUARDS = _dedup([...ENRICHED_GUARDS, ...ENRICHED_ALLTIME_GUARDS]).sort(_byTeam)
 const CUSTOM_MODAL_BIGS   = _dedup([...ENRICHED_BIGS,   ...ENRICHED_ALLTIME_BIGS]).sort(_byTeam)
+// the modal's Current / All-Time toggle shows one pool at a time
+const CUSTOM_POOLS = {
+  guard: { current: _dedup(ENRICHED_GUARDS).sort(_byTeam), legends: _dedup(ENRICHED_ALLTIME_GUARDS).sort(_byTeam) },
+  big:   { current: _dedup(ENRICHED_BIGS).sort(_byTeam),   legends: _dedup(ENRICHED_ALLTIME_BIGS).sort(_byTeam) },
+}
 
 // ─── Bucket Splash ────────────────────────────────────────────────────────────
 const BUCKET_SPLASH_ATTRS = {
@@ -1405,7 +1410,10 @@ export default function BucketApp() {
           <CustomRatingsModal
             isBucket={true}
             bucketPosition={position}
+            gameMode={gameMode}
             pool={position === 'guard' ? CUSTOM_MODAL_GUARDS : CUSTOM_MODAL_BIGS}
+            poolCurrent={CUSTOM_POOLS[position === 'big' ? 'big' : 'guard'].current}
+            poolLegends={CUSTOM_POOLS[position === 'big' ? 'big' : 'guard'].legends}
             build={build}
             buildTypes={activeTypes}
             onClose={() => setShowBucketCustomModal(false)}
@@ -1640,7 +1648,10 @@ export default function BucketApp() {
         <CustomRatingsModal
           isBucket={true}
           bucketPosition={position}
+          gameMode={gameMode}
           pool={position === 'guard' ? CUSTOM_MODAL_GUARDS : CUSTOM_MODAL_BIGS}
+          poolCurrent={CUSTOM_POOLS[position === 'big' ? 'big' : 'guard'].current}
+          poolLegends={CUSTOM_POOLS[position === 'big' ? 'big' : 'guard'].legends}
           build={build}
           buildTypes={activeTypes}
           onClose={() => setShowBucketCustomModal(false)}

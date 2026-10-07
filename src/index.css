@@ -16923,3 +16923,13 @@ html.is-mac [id^="pw-oop-bottom_rail"] > * {
 .splash-wiki-cta-btn:hover { background: #e9f5ee; }
 .splash-wiki-cta-btn:active { transform: scale(.98); }
 @media (max-width: 640px) { .splash-wiki-cta { flex-direction: column; align-items: flex-start; margin-left: 16px; margin-right: 16px; } .splash-wiki-cta-btn { align-self: stretch; text-align: center; } }
+
+/* ═══ Custom Ratings: Current / All-Time toggle ═════════════════════════════ */
+.cr-era { display: flex; gap: 6px; margin-bottom: 8px; }
+.cr-era-btn { flex: 1; padding: 7px 10px; border-radius: 7px; border: 1px solid var(--border); background: rgba(255,255,255,0.04); color: var(--text-3); font-family: var(--font); font-size: 13px; font-weight: 700; cursor: pointer; transition: background .12s, color .12s; }
+.cr-era-btn:hover { background: rgba(255,255,255,0.08); }
+.cr-era-btn.is-on { background: var(--accent); border-color: var(--accent); color: #0f1612; }
+
+/* ═══ Menu: the profile avatar on the account row ═══════════════════════════ */
+.wm-avatar { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: linear-gradient(135deg, var(--g300), var(--g500)); color: #0f1612 !important; font-family: var(--font); font-size: 11px; font-weight: 800; letter-spacing: .3px; }
+.wm-avatar--emoji { background: rgba(255,255,255,0.08); font-size: 15px; }

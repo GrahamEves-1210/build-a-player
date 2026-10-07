@@ -30,11 +30,20 @@ const RB_ATTR = {
   carrying:    { label: 'Carrying' },
 }
 
-export default function CustomRatingsModal({ isRB, isWR = false, isTE = false, isDB = false, isOL = false, isBucket = false, bucketPosition = 'guard', gameMode, pool, build = {}, buildTypes: _buildTypesProp, onClose, onSave, onAddToBuild, onAddAllToBuild }) {
+// Custom Ratings (Sandbox): edit any player's grades. `poolCurrent` and
+// `poolLegends` are the two pools behind the Current / All-Time toggle, which
+// starts on the mode you're playing; `pool` alone (no legends) hides the toggle.
+// Edits made under All-Time save under that mode's key (qb_legends, rb_legends),
+// so each mode's spins pick up its own overrides.
+export default function CustomRatingsModal({ isRB, isWR = false, isTE = false, isDB = false, isOL = false, isBucket = false, bucketPosition = 'guard', gameMode, pool, poolCurrent = null, poolLegends = null, build = {}, buildTypes: _buildTypesProp, onClose, onSave, onAddToBuild, onAddAllToBuild }) {
   const storageKey = isBucket ? 'bab_bucket_custom_ratings' : 'bap_custom_ratings'
-  const modeKey = isBucket
+  const hasToggle = !!(poolLegends && poolLegends.length)
+  const [era, setEra] = useState(() => (hasToggle && gameMode === 'all-time' ? 'all-time' : 'classic'))
+  const keyFor = e => isBucket
     ? `bucket_${bucketPosition}`
-    : isOL ? 'ol' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : `${isRB ? 'rb' : 'qb'}${gameMode === 'all-time' ? '_legends' : ''}`
+    : isOL ? 'ol' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : `${isRB ? 'rb' : 'qb'}${e === 'all-time' ? '_legends' : ''}`
+  const modeKey = keyFor(hasToggle ? era : (gameMode === 'all-time' ? 'all-time' : 'classic'))
+  const list = hasToggle ? (era === 'all-time' ? poolLegends : (poolCurrent || pool)) : (poolCurrent || pool)
   const attrMeta = isBucket ? BUCKET_ATTR : isOL ? OL_ATTR : isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : isRB ? RB_ATTR : ATTR
   const buildTypes = (_buildTypesProp && _buildTypesProp.length > 0)
     ? _buildTypesProp
@@ -55,17 +64,17 @@ export default function CustomRatingsModal({ isRB, isWR = false, isTE = false, i
   }, [])
 
   const [search, setSearch] = useState('')
-  const [overrides, setOverrides] = useState(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem(storageKey) || '{}')
-      return saved[modeKey] || {}
-    } catch { return {} }
+  // every mode's overrides, so switching the toggle never loses unsaved edits
+  const [allOverrides, setAllOverrides] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(storageKey) || '{}') } catch { return {} }
   })
+  const overrides = allOverrides[modeKey] || {}
+  const setOverrides = updater => setAllOverrides(prev => ({ ...prev, [modeKey]: typeof updater === 'function' ? updater(prev[modeKey] || {}) : updater }))
 
   const [expandedKey, setExpandedKey] = useState(null)
   const [slotPickerPlayer, setSlotPickerPlayer] = useState(null)
 
-  const filtered = pool.filter(p =>
+  const filtered = list.filter(p =>
     search === '' ||
     p.name.toLowerCase().includes(search.toLowerCase()) ||
     (p.team || '').toLowerCase().includes(search.toLowerCase())
@@ -88,7 +97,7 @@ export default function CustomRatingsModal({ isRB, isWR = false, isTE = false, i
   const handleSave = () => {
     let all = {}
     try { all = JSON.parse(localStorage.getItem(storageKey) || '{}') } catch {}
-    all[modeKey] = overrides
+    all = { ...all, ...allOverrides }
     localStorage.setItem(storageKey, JSON.stringify(all))
     onSave(all)
     onClose()
@@ -106,6 +115,12 @@ export default function CustomRatingsModal({ isRB, isWR = false, isTE = false, i
         </div>
 
         <div className="cr-search-wrap">
+          {hasToggle && (
+            <div className="cr-era" role="tablist" aria-label="Player pool">
+              <button role="tab" aria-selected={era === 'classic'} className={`cr-era-btn${era === 'classic' ? ' is-on' : ''}`} onClick={() => { setEra('classic'); setExpandedKey(null); setSlotPickerPlayer(null) }}>Current</button>
+              <button role="tab" aria-selected={era === 'all-time'} className={`cr-era-btn${era === 'all-time' ? ' is-on' : ''}`} onClick={() => { setEra('all-time'); setExpandedKey(null); setSlotPickerPlayer(null) }}>All-Time</button>
+            </div>
+          )}
           <input
             className="cr-search"
             placeholder="Search players…"
@@ -123,7 +138,7 @@ export default function CustomRatingsModal({ isRB, isWR = false, isTE = false, i
               <div key={key} className={`cr-row${isModified ? ' cr-row-modified' : ''}`}>
                 <button className="cr-row-header" onClick={() => setExpandedKey(isExpanded ? null : key)}>
                   <span className="cr-row-name">{p.name}</span>
-                  <span className="cr-row-team">{p.team}</span>
+                  <span className="cr-row-team">{p.team}{p.years ? ` · ${p.years}` : ''}</span>
                   {isModified && <span className="cr-mod-dot" />}
                   <span className="cr-row-chevron">{isExpanded ? '▲' : '▼'}</span>
                 </button>
@@ -214,7 +229,7 @@ export default function CustomRatingsModal({ isRB, isWR = false, isTE = false, i
               <button className="cr-quick-btn cr-quick-f" onClick={() => {
                 setOverrides(prev => {
                   const next = {}
-                  pool.forEach(p => {
+                  list.forEach(p => {
                     const k = `${p.name}|${p.team}`
                     const cur = prev[k] || {}
                     next[k] = {}
@@ -226,7 +241,7 @@ export default function CustomRatingsModal({ isRB, isWR = false, isTE = false, i
               <button className="cr-quick-btn cr-quick-s" onClick={() => {
                 setOverrides(prev => {
                   const next = {}
-                  pool.forEach(p => {
+                  list.forEach(p => {
                     const k = `${p.name}|${p.team}`
                     const cur = prev[k] || {}
                     next[k] = {}
