@@ -229,7 +229,7 @@ const _raw = [
   // ─── JACKSONVILLE JAGUARS ────────────────────────────────────────────────
   { name: 'Jalen Ramsey',      short: 'Ramsey',      team: 'JAX', teamName: 'Jacksonville Jaguars',
     skin: '#5e3c22', height: 73, weight: 210, number: 20, starter: true, captain: true, years: '2016–19', subpos: 'cb',
-    attrs: { speed: 5, size: 7, fluidity: 5, press: 7, hands: 7, zoneIQ: 7, manCoverage: 6, playRecognition: 8, runSupport: 7 } },
+    attrs: { speed: 8, size: 8, fluidity: 8, press: 11, hands: 7, zoneIQ: 9, manCoverage: 11, playRecognition: 10, runSupport: 8 } },
   { name: 'Rashean Mathis',    short: 'Mathis',      team: 'JAX', teamName: 'Jacksonville Jaguars',
     skin: '#5e3c22', height: 73, weight: 190, number: 27, starter: true, captain: true, years: '2003–12', subpos: 'cb',
     attrs: { speed: 7, size: 8, fluidity: 8, press: 7, hands: 10, zoneIQ: 9, manCoverage: 8, playRecognition: 9, runSupport: 7 } },

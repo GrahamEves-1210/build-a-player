@@ -483,7 +483,7 @@ const _raw = [
     // PHI Cunningham = peak (young, legs=11, explosive)
     name: 'Randall Cunningham', short: 'Cunningham', team: 'PHI', teamName: 'Philadelphia Eagles',
     skin: '#7a5030', number: 12, starter: true, captain: true, years: '1985–95',
-    attrs: { arm: 9, legs: 11, size: 7, processing: 6, vision: 7, leadership: 7, accuracy: 7, playmaking: 10, 'pocket-presence': 6 }
+    attrs: { arm: 9, legs: 10, size: 7, processing: 6, vision: 7, leadership: 7, accuracy: 7, playmaking: 10, 'pocket-presence': 6 }
   },
   {
     name: 'Donovan McNabb',  short: 'McNabb',     team: 'PHI', teamName: 'Philadelphia Eagles',
