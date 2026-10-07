@@ -31,7 +31,7 @@ import { HEADSHOT_BASE } from '../utils/simulation'
 import ProfilePage from './ProfilePage'
 import CustomRatingsModal from './CustomRatingsModal'
 import SiteFooter from './SiteFooter'
-import SiteFeatures from './SiteFeatures'
+import SiteFeatures, { WikiCta } from './SiteFeatures'
 import { finishDiscordSignIn, getUsername } from '../lib/discord'
 const VersusLobby        = lazy(() => import('./VersusLobby'))
 const BucketVersusResult = lazy(() => import('./BucketVersusResult'))
@@ -304,6 +304,7 @@ function BucketSplash({ onStart, onVersus }) {
     </div>
 
     <SiteFeatures sport="bucket" />
+    <WikiCta sport="bucket" />
 
     <SiteFooter sport="bucket" />
     </div>
@@ -1292,6 +1293,8 @@ export default function BucketApp() {
     onSignIn: () => setShowAuth(true),
     onProfile: () => guardedLeave(() => user ? (window.history.pushState({}, '', '/profile'), setPage('profile')) : setShowAuth(true)),
     onAbout: () => guardedLeave(() => { window.location.href = '/?about' }),
+    onWiki: () => guardedLeave(() => { window.location.href = '/wiki' }),
+    onCreators: () => guardedLeave(() => { window.location.href = '/creators' }),
     onLeaderboard: () => guardedLeave(() => setPage('leaderboard')),
     onSubscribe: async () => {
       if (!user) { setShowAuth(true); return }

@@ -1,7 +1,7 @@
 ﻿import { useEffect, useState, useMemo, useRef } from 'react'
 import { nflHeadshot, HEADSHOT_BASE } from '../utils/simulation'
 import SiteFooter from './SiteFooter'
-import SiteFeatures from './SiteFeatures'
+import SiteFeatures, { WikiCta } from './SiteFeatures'
 
 function hsUrl(id) {
   if (!id) return null
@@ -327,7 +327,7 @@ function StackedSilhouette({ position, attrs, ready }) {
   )
 }
 
-export default function SplashScreen({ onStart, onDepthChart }) {
+export default function SplashScreen({ onStart, onDepthChart, onWiki, onCreators }) {
   const [phase, setPhase] = useState(0)
   // A saved position that's since gone to Coming Soon (OL) falls back to QB
   const [position, setPosition] = useState(() => {
@@ -458,8 +458,9 @@ export default function SplashScreen({ onStart, onDepthChart }) {
     </div>
 
     <SiteFeatures sport="nfl" />
+    <WikiCta sport="nfl" onWiki={onWiki} />
 
-    <SiteFooter sport="nfl" onDepthChart={onDepthChart} />
+    <SiteFooter sport="nfl" onDepthChart={onDepthChart} onWiki={onWiki} onCreators={onCreators} />
     </div>
   )
 }

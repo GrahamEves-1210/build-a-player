@@ -20,6 +20,8 @@ const ProfilePage    = lazy(() => import('./components/ProfilePage'))
 const LeaderboardPage= lazy(() => import('./components/LeaderboardPage'))
 const VersusLobby    = lazy(() => import('./components/VersusLobby'))
 const VersusResult   = lazy(() => import('./components/VersusResult'))
+const WikiPage       = lazy(() => import('./components/WikiPage'))
+const CreatorsPage   = lazy(() => import('./components/CreatorsPage'))
 import { TYPES, LITE_TYPES, QBS } from './data/qbs'
 import { RBS, RB_TYPES, RB_LITE_TYPES, RB_ATTR } from './data/rbs'
 import { WRS, WR_TYPES, WR_LITE_TYPES, WR_CATEGORIES, WR_ATTR } from './data/wrs'
@@ -62,9 +64,11 @@ const _isTerms   = window.location.pathname === '/terms'
 const _isProfile = !_sharedData && !_isPrivacy && !_isTerms && window.location.pathname === '/profile'
 const _isAbout   = !_sharedData && !_isPrivacy && !_isTerms && !_isProfile && new URLSearchParams(window.location.search).has('about')
 const _isDepthChart = !_sharedData && !_isPrivacy && !_isTerms && !_isProfile && !_isAbout && window.location.pathname === '/depth-chart'
+const _isWiki     = !_sharedData && window.location.pathname === '/wiki'
+const _isCreators = !_sharedData && window.location.pathname === '/creators'
 
 const _saved = (() => {
-  if (_sharedData || _isPrivacy || _isAbout || _isProfile || _isDepthChart) return null
+  if (_sharedData || _isPrivacy || _isAbout || _isProfile || _isDepthChart || _isWiki || _isCreators) return null
   try {
     const p = JSON.parse(localStorage.getItem('bap_progress'))
     // OL is Coming Soon — don't drop anyone back into an in-progress OL build
@@ -107,7 +111,7 @@ function enableAdFreeMode() {
 try { if (localStorage.getItem('bap_subscribed') === '1' || localStorage.getItem('bap_ads_off') === '1') enableAdFreeMode() } catch {}
 
 export default function App() {
-  const [page, setPage]               = useState(_sharedData ? 'shared' : _isPrivacy ? 'privacy' : _isTerms ? 'terms' : _isProfile ? 'profile' : _isAbout ? 'about' : _isDepthChart ? 'depth-chart' : (_saved?.gameMode ? 'game' : 'splash'))
+  const [page, setPage]               = useState(_sharedData ? 'shared' : _isPrivacy ? 'privacy' : _isTerms ? 'terms' : _isProfile ? 'profile' : _isAbout ? 'about' : _isDepthChart ? 'depth-chart' : _isWiki ? 'wiki' : _isCreators ? 'creators' : (_saved?.gameMode ? 'game' : 'splash'))
   const [sharedBuild]                 = useState(_sharedData?.build ?? null)
   const [sharedTypes]                 = useState(_sharedData?.types ?? null)
   const [gameMode, setGameMode]         = useState(_saved?.gameMode ?? null)
@@ -382,6 +386,9 @@ export default function App() {
         setPage(prev => prev === 'depth-chart' ? 'splash' : prev)
         changed = true
       }
+      // Wiki ↔ Creators: Back lands on the page the URL names, not the splash
+      if (path === '/wiki' || path === '/creators') { setPage(path === '/wiki' ? 'wiki' : 'creators'); changed = true }
+      else { setPage(prev => (prev === 'wiki' || prev === 'creators') ? 'splash' : prev); changed = true }
       if (changed) window.scrollTo({ top: 0, behavior: 'instant' })
     }
     window.addEventListener('popstate', handlePop)
@@ -393,12 +400,12 @@ export default function App() {
   // rules by path. Purely a URL sync layer; doesn't touch page state, the
   // existing ramp.spaNewPage() calls, or any in-app navigation logic.
   useEffect(() => {
-    const targetPath = (page === 'sim' && simResult) ? '/simulate' : page === 'leaderboard' ? '/leaderboard' : page === 'depth-chart' ? '/depth-chart' : null
+    const targetPath = (page === 'sim' && simResult) ? '/simulate' : page === 'leaderboard' ? '/leaderboard' : page === 'depth-chart' ? '/depth-chart' : page === 'wiki' ? '/wiki' : page === 'creators' ? '/creators' : null
     if (targetPath) {
       if (window.location.pathname !== targetPath) {
         window.history.pushState({}, '', targetPath)
       }
-    } else if (window.location.pathname === '/simulate' || window.location.pathname === '/leaderboard' || window.location.pathname === '/depth-chart') {
+    } else if (['/simulate', '/leaderboard', '/depth-chart', '/wiki', '/creators'].includes(window.location.pathname)) {
       window.history.replaceState({}, '', '/')
     }
   }, [page, simResult])
@@ -888,6 +895,8 @@ export default function App() {
       <SplashScreen
         onStart={handleStart}
         onDepthChart={() => setPage('depth-chart')}
+        onWiki={() => { setPage('wiki'); window.scrollTo({ top: 0, behavior: 'instant' }) }}
+        onCreators={() => { setPage('creators'); window.scrollTo({ top: 0, behavior: 'instant' }) }}
         onVersus={(pos) => {
           const p = pos || 'qb'
           try { localStorage.setItem('lastPosition', p) } catch {}
@@ -971,6 +980,8 @@ export default function App() {
     onSignIn: () => setShowAuth(true),
     onProfile: () => { window.history.pushState({}, '', '/profile'); setPage('profile') },
     onLeaderboard: () => setPage('leaderboard'),
+    onWiki: () => { setPage('wiki'); window.scrollTo({ top: 0, behavior: 'instant' }) },
+    onCreators: () => { setPage('creators'); window.scrollTo({ top: 0, behavior: 'instant' }) },
     onSwitchPosition: (pos) => { try { localStorage.setItem('lastPosition', pos) } catch {}; handleHome() },
     onSubscribe: async () => {
       if (!user) { setShowAuth(true); return }
@@ -1025,6 +1036,18 @@ export default function App() {
       <Suspense fallback={null}>
         <Navbar {...navbarProps} />
         <AboutPage onBack={() => { setPage(simResult ? 'sim' : 'game'); window.scrollTo({ top: 0, behavior: 'instant' }) }} onPrivacy={() => setPage('privacy')} />
+      </Suspense>
+    )
+  }
+
+  if (page === 'wiki' || page === 'creators') {
+    const back = () => { setPage('splash'); window.scrollTo({ top: 0, behavior: 'instant' }) }
+    return (
+      <Suspense fallback={null}>
+        <Navbar {...navbarProps} />
+        {page === 'wiki'
+          ? <WikiPage onBack={back} onCreators={navbarProps.onCreators} />
+          : <CreatorsPage onBack={back} onWiki={navbarProps.onWiki} />}
       </Suspense>
     )
   }
