@@ -12,6 +12,8 @@ import QBAvatar from './QBAvatar'
 import BucketFigureOverlay from './BucketFigureOverlay'
 import { ShareModal } from './ReportCard'
 import SiteFooter from './SiteFooter'
+import { IS_APP } from '../lib/platform'
+import { RingCeremony, SeasonRewards } from './app/AppSeason'
 
 function gradeColor(val) {
   if (val >= 11) return '#a855f7'
@@ -1747,6 +1749,12 @@ function ScreenPlayoffs({ result, onNext, autoSkip = false, isAllTime = false, a
   const [showStatsLog,     setShowStatsLog]     = useState(false)
   const [parallelSeriesMap,  setParallelSeriesMap]  = useState({})
   const [champPopped,        setChampPopped]        = useState(false)
+  const [ringOpen,           setRingOpen]           = useState(false)   // app: title moment after the bottle pops
+  useEffect(() => {
+    if (!IS_APP || !champPopped) return
+    const t = setTimeout(() => setRingOpen(true), 1300)
+    return () => clearTimeout(t)
+  }, [champPopped])
 
   // Ref so autoSkip effect can call handleSkip even though it's defined after early returns
   const handleSkipRef = useRef(null)
@@ -2248,6 +2256,11 @@ function ScreenPlayoffs({ result, onNext, autoSkip = false, isAllTime = false, a
             }
           </div>
           <PlayoffStatsLog log={playoffGameLog} playoffRounds={playoffRounds} />
+          {ringOpen && (
+            <RingCeremony team={{ name: team?.name ?? teamShort, color: teamColor, color2: team?.color2 }} title="NBA Champions"
+              score={`${endScore.myW}–${endScore.oppW} in the ${currentRound.name}`} trophy="/trophybasketball.webp"
+              onClose={() => setRingOpen(false)} />
+          )}
         </>
       )}
 
@@ -2387,6 +2400,7 @@ function ScreenFinal({ result, awards, build, types, attrMap, onReset, onBack, a
 
   return (
     <div className="simp-screen">
+      {IS_APP && <SeasonRewards result={result} />}
       <div className={`simp-final-banner ${champion ? 'sfb-champ' : madePlayoffs ? 'sfb-elim' : 'sfb-miss'}`}>
         {champion && <img src="/trophybasketball.webp" alt="NBA Trophy" className="sfb-trophy" />}
         <div className="sfb-outcome">{playoffSummary}</div>

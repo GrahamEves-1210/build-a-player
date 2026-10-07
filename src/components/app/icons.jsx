@@ -150,3 +150,78 @@ export const IconBuild = p => (
 export const IconStar = p => (
   <S {...p}><path fill="currentColor" d="m12 2.6 2.7 5.6 6.1.9c.6.1.8.8.4 1.2l-4.4 4.3 1 6.1c.1.6-.5 1-1 .7L12 18.6l-5.5 2.8c-.5.3-1.1-.1-1-.7l1-6.1-4.4-4.3c-.4-.4-.2-1.1.4-1.2l6.1-.9z"/></S>
 )
+
+export const IconCalendar = p => (
+  <S {...p}>
+    <rect x="3" y="4.5" width="18" height="16.5" rx="3" fill="currentColor"/>
+    <rect x="6.5" y="2.5" width="2.4" height="4.5" rx="1.2" fill="currentColor"/>
+    <rect x="15.1" y="2.5" width="2.4" height="4.5" rx="1.2" fill="currentColor"/>
+    <rect x="3" y="8.5" width="18" height="1.6" style={INK} opacity=".35"/>
+    <path style={INK} d="m12 11.6 1.3 2.6 2.8.4-2 2 .5 2.8-2.6-1.4-2.6 1.4.5-2.8-2-2 2.8-.4z"/>
+  </S>
+)
+
+export const IconCards = p => (
+  <S {...p}>
+    <rect x="2.6" y="5.4" width="11.5" height="15.6" rx="2.2" transform="rotate(-10 8.4 13.2)" fill="currentColor" opacity=".55"/>
+    <rect x="8.5" y="3" width="12.5" height="17" rx="2.4" fill="currentColor"/>
+    <circle cx="14.75" cy="9.6" r="2.6" style={INK} opacity=".55"/>
+    <path style={INK} opacity=".55" d="M10.8 17c.6-2.2 2-3.4 3.95-3.4s3.35 1.2 3.95 3.4z"/>
+  </S>
+)
+
+export const IconGear = p => (
+  <S {...p}>
+    <path fill="currentColor" d="M10.3 2h3.4l.5 2.6c.6.2 1.2.5 1.7.9l2.5-.9 1.7 2.9-2 1.8c.1.6.1 1.3 0 1.9l2 1.8-1.7 2.9-2.5-.9c-.5.4-1.1.7-1.7.9l-.5 2.6h-3.4l-.5-2.6c-.6-.2-1.2-.5-1.7-.9l-2.5.9-1.7-2.9 2-1.8a6 6 0 0 1 0-1.9l-2-1.8 1.7-2.9 2.5.9c.5-.4 1.1-.7 1.7-.9z" transform="translate(0 2)"/>
+    <circle cx="12" cy="12.5" r="3" style={INK} opacity=".9"/>
+  </S>
+)
+
+export const IconFlame = p => (
+  <S {...p}>
+    <path fill="currentColor" d="M12.6 1.8c.4 3.1 2.4 4.6 4.1 6.6a8.2 8.2 0 0 1 2.1 5.5A6.9 6.9 0 0 1 12 21.2a6.9 6.9 0 0 1-6.8-7c0-2.4 1-4.3 2.6-6 .3 1.6 1 2.7 2.2 3.3-.2-3.6 1-6.9 2.6-9.7z"/>
+    <path fill="rgba(255,255,255,.55)" d="M12.2 11.6c.3 1.6 1.6 2.4 2.1 3.6.7 1.8-.6 3.8-2.4 3.8a2.7 2.7 0 0 1-2.7-2.8c0-1.6 1.2-2.9 3-4.6z"/>
+  </S>
+)
+
+export const IconGift = p => (
+  <S {...p}>
+    <rect x="3" y="9" width="18" height="5" rx="1.6" fill="currentColor"/>
+    <rect x="4.5" y="14" width="15" height="7.5" rx="1.8" fill="currentColor" opacity=".8"/>
+    <rect x="10.8" y="9" width="2.4" height="12.5" style={INK} opacity=".55"/>
+    <path fill="currentColor" d="M12 8.6c-1.4-3-4.8-5-6.2-3.3-1.2 1.5.6 3.4 6.2 3.3zm0 0c1.4-3 4.8-5 6.2-3.3 1.2 1.5-.6 3.4-6.2 3.3z"/>
+  </S>
+)
+
+export const IconTarget = p => (
+  <S {...p}>
+    <circle cx="12" cy="12" r="9.6" fill="currentColor"/>
+    <circle cx="12" cy="12" r="6.2" style={INK} opacity=".35"/>
+    <circle cx="12" cy="12" r="3" fill="currentColor"/>
+  </S>
+)
+
+export const IconCheck = p => (
+  <S {...p}><path fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" d="m5 12.5 4.5 4.5L19 7.5"/></S>
+)
+
+export const IconArrow = p => (
+  <S {...p}><path fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M12.5 5.5 19 12l-6.5 6.5"/></S>
+)
+
+export const IconRing = p => (
+  <S {...p}>
+    <path fill="currentColor" d="M8.4 2.5h7.2l2 3.2-5.6 4.1-5.6-4.1z"/>
+    <path fill="rgba(255,255,255,.55)" d="M9.6 3.7h4.8l.9 1.6L12 7.6 8.7 5.3z"/>
+    <path fill="none" stroke="currentColor" strokeWidth="2.6" d="M12 9.6a6.2 6.2 0 1 0 .01 0z"/>
+  </S>
+)
+
+export const IconPodium = p => (
+  <S {...p}>
+    <rect x="8.6" y="7" width="6.8" height="14" rx="1.4" fill="currentColor"/>
+    <rect x="2" y="11.5" width="6.2" height="9.5" rx="1.4" fill="currentColor" opacity=".72"/>
+    <rect x="15.8" y="14" width="6.2" height="7" rx="1.4" fill="currentColor" opacity=".55"/>
+    <path fill="currentColor" d="m12 1.6 1 2 2.2.3-1.6 1.6.4 2.2-2-1-2 1 .4-2.2-1.6-1.6 2.2-.3z"/>
+  </S>
+)

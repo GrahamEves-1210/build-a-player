@@ -61,7 +61,11 @@ export function confetti(amount = 140) {
   c.width = innerWidth * dpr; c.height = innerHeight * dpr
   document.body.appendChild(c)
   const g = c.getContext('2d'); g.scale(dpr, dpr)
-  const COLORS = ['#ffd43b', '#20c997', '#4dabf7', '#ff6b6b', '#b197fc', '#ff922b', '#ffffff']
+  // Build-A-Player's own colours: the button gradient, the accent, gold and white
+  const css = getComputedStyle(document.documentElement)
+  const a1 = css.getPropertyValue('--btn-start').trim() || '#5EDBD8'
+  const a2 = css.getPropertyValue('--btn-end').trim() || '#1fc98a'
+  const COLORS = [a1, a2, '#D4AF37', '#f2d675', '#ffffff', a1, '#95D5B2']
   const parts = Array.from({ length: amount }, (_, i) => ({
     x: innerWidth / 2 + (Math.random() - 0.5) * 60, y: innerHeight * 0.38,
     vx: (Math.random() - 0.5) * 13, vy: -Math.random() * 15 - 5,
@@ -86,7 +90,7 @@ export function confetti(amount = 140) {
 }
 
 // ── Wiring ───────────────────────────────────────────────────────────────────
-const TAP = '.dc-submit-btn, .dc-back-btn, .dc-lb-btn, .ag-btn, .ag-tab, .ag-play, .ag-pos, .ag-sport, .ag-player-chip, .ag-round-btn, .spin-btn, .spin-respin-half, .spin-reset-circle, .attr-chip, .mtab, .cat-pill, .sim-btn, .simp-cta, .simp-ghost, .mvp-continue, .tpm-tab, .auth-submit, .lb-main-seg-btn, .lb-tab'
+const TAP = '.dc-submit-btn, .dc-back-btn, .dc-lb-btn, .ag-btn, .ag-tab, .ag-play, .ag-pos, .ag-mode, .ag-mini, .ag-tile, .ag-chip, .ag-seg button, .ag-set, .ag-tray, .ag-icon-btn, .ag-row-btn, .ag-daily-banner, .ag-milestone, .ag-player-chip, .ag-round-btn, .spin-btn, .spin-respin-half, .spin-reset-circle, .attr-chip, .mtab, .cat-pill, .sim-btn, .simp-cta, .simp-ghost, .mvp-continue, .tpm-tab, .auth-submit, .lb-main-seg-btn, .lb-tab, .lb-view-tab, .lb-metric-tab, .lb-pos-btn'
 
 let ticking = null
 function startTicks() {
@@ -102,6 +106,9 @@ function startTicks() {
 function stopTicks() { if (ticking) { clearTimeout(ticking); ticking = null } }
 
 export function initJuice() {
+  // The last trait in: a short fanfare (no confetti — that's for rings and awards)
+  window.addEventListener('bap:build-complete', () => { sfx('win'); haptic('success') })
+
   document.addEventListener('pointerdown', e => {
     const el = e.target.closest?.(TAP)
     if (!el || el.disabled) return

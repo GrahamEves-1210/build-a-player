@@ -1,4 +1,4 @@
-import { StrictMode } from 'react'
+import { StrictMode, lazy, Suspense } from 'react'
 
 // Adds touch class on first touch — CSS uses this to kill sticky :hover states
 document.addEventListener('touchstart', function() {
@@ -29,11 +29,14 @@ import App from './App.jsx'
 import BucketApp from './components/BucketApp.jsx'
 import ErrorBoundary from './components/ErrorBoundary.jsx'
 import { IS_APP } from './lib/platform'
-import AppTabBar from './components/AppTabBar.jsx'
+// App-only shell (dock, Daily, Cards, toasts) — never downloaded on the website
+const AppTabBar = IS_APP ? lazy(() => import('./components/AppTabBar.jsx')) : null
 
 if (IS_APP) document.documentElement.classList.add('is-app')
 // App: sound effects, haptics and confetti (lib/juice.js)
 if (IS_APP) import('./lib/juice').then(m => m.initJuice()).catch(() => {})
+// App: XP, streak, missions, cards (lib/progress.js)
+if (IS_APP) import('./lib/progress').then(m => m.initProgress()).catch(() => {})
 
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.getRegistrations().then(regs => {
@@ -51,7 +54,7 @@ createRoot(document.getElementById('root')).render(
     <ErrorBoundary>
       <HelmetProvider>
         {isBucket ? <BucketApp /> : <App />}
-        <AppTabBar />
+        {AppTabBar && <Suspense fallback={null}><AppTabBar /></Suspense>}
       </HelmetProvider>
       {!IS_APP && <Analytics />}
     </ErrorBoundary>

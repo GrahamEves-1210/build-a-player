@@ -34,6 +34,7 @@ import SiteFooter from './SiteFooter'
 import SiteFeatures from './SiteFeatures'
 import { IS_APP } from '../lib/platform'
 import AppHome from './app/AppHome'
+import { BuildTray, BuildComplete, useSwipeViews } from './app/AppBuildTray'
 import { finishDiscordSignIn, getUsername } from '../lib/discord'
 const VersusLobby        = lazy(() => import('./VersusLobby'))
 const BucketVersusResult = lazy(() => import('./BucketVersusResult'))
@@ -553,6 +554,7 @@ export default function BucketApp() {
         if (gameMode) setPage(gameMode === 'salarycap' ? 'salarycap' : 'game')
         else { let p = 'guard'; try { p = localStorage.getItem('bucketPosition') || 'guard' } catch {}; handleStart('classic', p) }   // quick play
       } else if (to === 'leaderboard') setPage('leaderboard')
+      else if (to === 'salarycap') handleStart('salarycap', position)
       // signed out: the dock shows sign-in itself, since only some pages render AuthModal
       else if (to === 'profile') { if (user) { window.history.pushState({}, '', '/profile'); setPage('profile') } else window.dispatchEvent(new CustomEvent('bap:auth')) }
       else if (to === 'about') { window.location.href = '/?about' }
@@ -560,7 +562,7 @@ export default function BucketApp() {
     }
     window.addEventListener('bap:nav', onNav)
     return () => window.removeEventListener('bap:nav', onNav)
-  }, [page, gameMode, user])
+  }, [page, gameMode, user, position])
 
   // Initialize Playwire ads on mount and page change
   useEffect(() => {
@@ -672,6 +674,12 @@ export default function BucketApp() {
     }
   }, [build, activeTypes, isVersusMode, position, gameMode])
 
+  // App: Spin and Build are two sides of one card — swipe to flip, and the
+  // last pick flips it to Build (drag-and-drop included)
+  useSwipeViews(IS_APP && (page === 'game' || page === 'versus-game'), mobileView, setMobileView)
+  const buildComplete = activeTypes.length > 0 && activeTypes.every(t => build[t])
+  useEffect(() => { if (IS_APP && buildComplete && page === 'game') setMobileView('build') }, [buildComplete]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleSandboxToggle = useCallback((on) => {
     try { localStorage.setItem('bab_custom_mode', on ? '1' : '0') } catch {}
     setIsBucketCustomMode(on)
@@ -737,6 +745,15 @@ export default function BucketApp() {
     const randomTeam = NBA_TEAMS[Math.floor(((h >>> 0) / 0x100000000) * NBA_TEAMS.length)]
     const result = runBucketSimulation(fullBuild, activeTypes, randomTeam, capPosition ?? position, dateSeed)
     setSimResult(result)
+    // App: a fresh Salary Cap play earns season XP (kept on the device — it isn't a saved season)
+    if (IS_APP && !skipToEnd) {
+      window.dispatchEvent(new CustomEvent('bap:season', { detail: {
+        sport: 'bucket', pos: capPosition ?? position, mode: 'salarycap', localOnly: true,
+        wins: result.wins, losses: result.losses, playoffs: !!result.madePlayoffs,
+        champion: !!result.champion, award: !!(result.mvp || result.dpoy), awardName: result.mvp ? 'MVP' : 'DPOY',
+        ovr: result.ovr, ref: result,
+      } }))
+    }
     setSimInitialScreen(skipToEnd ? 4 : 0)
     setPage('sim')
     window.scrollTo(0, 0)
@@ -816,6 +833,15 @@ export default function BucketApp() {
   const handleTeamPicked = useCallback((team) => {
     const result = runBucketSimulation(build, activeTypes, team, position, null, gameMode)
     setSimResult(result)
+    // App: season XP + missions (lib/progress.js)
+    if (IS_APP) {
+      window.dispatchEvent(new CustomEvent('bap:season', { detail: {
+        sport: 'bucket', pos: position, mode: gameMode,
+        wins: result.wins, losses: result.losses, playoffs: !!result.madePlayoffs,
+        champion: !!result.champion, award: !!(result.mvp || result.dpoy), awardName: result.mvp ? 'MVP' : 'DPOY',
+        ovr: result.ovr, sandbox: isBucketCustomMode || sandboxTainted.current, ref: result,
+      } }))
+    }
     setShowTeamSpin(false)
     setPage('sim')
     track('simulate', { app: 'bucket', position, gameMode, userId: user?.id ?? null })
@@ -1517,6 +1543,9 @@ export default function BucketApp() {
       <Navbar {...navbarProps} />
 
       <div className="game-page-scroll">
+      {IS_APP && mobileView === 'spin' && (
+        <BuildTray build={build} types={activeTypes} attrMap={BUCKET_ATTR} onOpen={() => setMobileView('build')} />
+      )}
       <main className={`game-layout mobile-${mobileView}${gameMode === 'all-time' ? ' alltime-mode' : ''}${page === 'versus-game' ? ' versus-active' : ''}`}>
         <SpinScreen
           build={build}
@@ -1535,6 +1564,7 @@ export default function BucketApp() {
           gameKey={gameKey}
           onReset={handleReset}
           adsDisabled={adsDisabled}
+          cardMeta={IS_APP && page === 'game' && gameMode !== 'salarycap' ? { sport: 'bucket', pos: position, mode: gameMode } : null}
           isRB={false}
           isBucket={true}
           isVersusMode={page === 'versus-game'}
@@ -1597,6 +1627,8 @@ export default function BucketApp() {
         <SiteFooter sport="bucket" />
       </div>
       </div>
+
+      {IS_APP && page === 'game' && <BuildComplete complete={buildComplete} ovr={buildComplete ? calcBucketOVR(build, activeTypes, position) : 0} />}
 
       {leaveConfirm && (
         <div className="leave-confirm-overlay" onClick={() => setLeaveConfirm(null)}>

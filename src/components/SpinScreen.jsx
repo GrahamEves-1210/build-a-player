@@ -6,6 +6,7 @@ import { valToGrade, HEADSHOT_BASE } from '../utils/simulation'
 import HEADSHOTS from '../data/headshots.json'
 import QBAvatar from './QBAvatar'
 import { track } from '../lib/track'
+import { seededShuffle } from '../lib/progress'
 
 function fmtHeight(inches) {
   return `${Math.floor(inches / 12)}'${inches % 12}"`
@@ -32,7 +33,10 @@ const IDLE_MS = 1200
 const FAST_MS = 36   // ms per item at peak speed — defines MAX_VEL
 
 // ─── Slot Reel ───────────────────────────────────────────────────────────────
-function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, onStop, blurred, fast, durationMs = 1400, jitterMs = 500 }) {
+// Same item on both sides of a reel, even when the pool was re-mapped (custom ratings)
+const reelKey = x => `${x?.name}|${x?.team ?? x?.short}`
+
+function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, onStop, blurred, fast, durationMs = 1400, jitterMs = 500, target = null }) {
   const COPIES = useMemo(() => {
     const loopH  = items.length * ITEM_H
     const needed = Math.ceil(14000 / Math.max(loopH, 1))
@@ -87,7 +91,42 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, on
       if (posRef.current >= initOffset + loopH) posRef.current -= loopH
     }
 
-    if (spinning) {
+    if (spinning && target) {
+      // Fixed outcome (Daily Challenge): same speed curve as a normal spin, but
+      // driven by distance so it always comes to rest on `target`.
+      const duration = fast ? 1000 : durationMs + jitterMs / 2
+      const KICK = 0.45
+      const area = KICK + (1 - KICK) * 0.5                  // ∫ of the velocity curve over 0..1
+      const start = posRef.current
+      const len = items.length
+      const tKey = reelKey(target)
+      let end = Math.ceil((start + (ITEM_H / FAST_MS) * duration * area) / ITEM_H)
+      for (let n = 0; n < len && reelKey(items[((end % len) + len) % len]) !== tKey; n++) end++
+      const dist = end * ITEM_H - start
+      const startTime = performance.now()
+      if (trackRef.current) trackRef.current.style.transition = 'none'
+      const ease = t => {
+        if (t < KICK) return t / area
+        const u = (t - KICK) / (1 - KICK)
+        return (KICK + (1 - KICK) * (u - u * u * u + (u * u * u * u) / 2)) / area
+      }
+      const frame = now => {
+        const t = Math.min((now - startTime) / duration, 1)
+        let pos = start + dist * ease(t)
+        const over = pos - initOffset - loopH
+        if (over >= 0) pos -= Math.ceil((over + 1) / loopH) * loopH
+        posRef.current = pos
+        if (trackRef.current) trackRef.current.style.transform = `translate3d(0,${-(pos - CENTER * ITEM_H)}px,0)`
+        if (t < 1) { rafRef.current = requestAnimationFrame(frame); return }
+        stopRef.current = setTimeout(() => {
+          const idx = Math.round(posRef.current / ITEM_H)
+          const winner = items[((idx % len) + len) % len]
+          if (onStopRef.current) onStopRef.current(winner)
+        }, 150)
+      }
+      rafRef.current = requestAnimationFrame(frame)
+
+    } else if (spinning) {
       const duration = fast
         ? 900 + Math.random() * 200
         : durationMs + Math.random() * jitterMs
@@ -164,7 +203,7 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, on
       cancelAnimationFrame(rafRef.current)
       clearTimeout(stopRef.current)
     }
-  }, [spinning, idle, items, initOffset, fast])
+  }, [spinning, idle, items, initOffset, fast]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className={`reel-outer${locked ? ' reel-locked' : ''}${blurred ? ' reel-blurred' : ''}`}>
@@ -236,7 +275,7 @@ const POS_COLORS = {
 }
 
 // ─── SpinScreen ──────────────────────────────────────────────────────────────
-export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, activeCategory, resetKey, onChipTap, types = TYPES, isLite = false, qbPool = QBS, savedResult = null, onSaveResult, onPhaseChange, gameKey, onReset, adsDisabled = false, isRB = false, isWR = false, isTE = false, isDB = false, isOL = false, isAllTime = false, isBucket = false, isVersusMode = false, attrMap = ATTR, categoriesData = CATEGORIES, teamsPool = TEAMS, logoDir = '/logos/', playerLabel, headshotsMap = HEADSHOTS, headshotsDir = `${HEADSHOT_BASE}/`, hideTeamResult = false, headshotFallback = () => null }) {
+export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, activeCategory, resetKey, onChipTap, types = TYPES, isLite = false, qbPool = QBS, savedResult = null, onSaveResult, onPhaseChange, gameKey, onReset, adsDisabled = false, isRB = false, isWR = false, isTE = false, isDB = false, isOL = false, isAllTime = false, isBucket = false, isVersusMode = false, attrMap = ATTR, categoriesData = CATEGORIES, teamsPool = TEAMS, logoDir = '/logos/', playerLabel, headshotsMap = HEADSHOTS, headshotsDir = `${HEADSHOT_BASE}/`, hideTeamResult = false, headshotFallback = () => null, seedPlan = null, cardMeta = null }) {
   const pLabel = playerLabel ?? (isTE ? 'TE' : isWR ? 'WR' : isRB ? 'RB' : 'QB')
   // TE (current mode) and OL get a 2nd player respin; All-Time TE gets just 1
   const maxPlayerRespin = (isTE && !isAllTime) || isOL ? 2 : 1
@@ -257,6 +296,16 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
   })
   const usedTeamsRef = useRef([])
   const pauseRef = useRef(null)
+  // App: every revealed player goes to the card binder ('bap:spin' → lib/progress.js)
+  const cardMetaRef = useRef(cardMeta)
+  cardMetaRef.current = cardMeta
+  const poolRef = useRef(qbPool)
+  poolRef.current = qbPool
+  // Daily Challenge: team spin #n lands on the nth team of the day's seeded
+  // order (counted across visits, so leaving and coming back can't re-roll it)
+  const spinBase = useRef(seedPlan ? seedPlan.getStart() : 0)
+  const spinCountRef = useRef(0)
+  const [playerDraw, setPlayerDraw] = useState(0)
 
   const complete = types.every(t => build[t])
 
@@ -307,7 +356,17 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
   const handleQBStop = useCallback((qb) => {
     setSelectedQB(qb)
     setPhase('done')
+    if (cardMetaRef.current) {
+      window.dispatchEvent(new CustomEvent('bap:spin', { detail: { ...cardMetaRef.current, player: qb, pool: poolRef.current } }))
+    }
   }, [])
+
+  const countTeamSpin = () => {
+    spinCountRef.current += 1
+    setSpinCount(spinCountRef.current)
+    setPlayerDraw(0)
+    seedPlan?.onSpin(spinBase.current + spinCountRef.current)
+  }
 
   const adInvokedRef = useRef(false)
 
@@ -324,7 +383,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
     setSelectedTeam(null)
     setSelectedQB(null)
     setExcludedQB(null)
-    setSpinCount(c => c + 1)
+    countTeamSpin()
     onSaveResult?.(null)
     setPhase('team')
     triggerMobileAd()
@@ -333,11 +392,12 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
       position: isBucket ? 'bucket' : isOL ? 'ol' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb',
       gameMode: isLite ? 'lite' : null,
     })
-  }, [onSaveResult, triggerMobileAd, isBucket, isOL, isDB, isTE, isWR, isRB, isLite])
+  }, [onSaveResult, triggerMobileAd, isBucket, isOL, isDB, isTE, isWR, isRB, isLite]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleQBRespin = useCallback(() => {
     setExcludedQB(selectedQB)
     setQbRespinUsed(n => n + 1)
+    setPlayerDraw(d => d + 1)
     setSelectedQB(null)
     setPhase('qb')
   }, [selectedQB])
@@ -348,9 +408,9 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
     setSelectedTeam(null)
     setExcludedQB(null)
     setTeamRespinUsed(n => n + 1)
-    setSpinCount(c => c + 1)
+    countTeamSpin()
     setPhase('team')
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const isSpinningTeam = phase === 'team'
   const isSpinningQB   = phase === 'qb'
@@ -367,7 +427,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
     // leaves the player reel empty and the spin stuck.
     const draftable = new Set(draftableTeams.split(','))
     const teams = teamsPool.some(t => draftable.has(t.short)) ? teamsPool.filter(t => draftable.has(t.short)) : teamsPool
-    const usedShorts = new Set(usedTeamsRef.current.map(t => t.short))
+    const usedShorts = new Set(seedPlan ? [] : usedTeamsRef.current.map(t => t.short))
     const eligible = teams.filter(t => !usedShorts.has(t.short))
     const pool = eligible.length > 0 ? eligible : [...teams]
     const finalPool = [...pool]
@@ -389,6 +449,21 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
     }
     return arr
   }, [selectedTeam, excludedQB, spinCount])
+
+  // Daily Challenge outcomes
+  const teamIndex = spinBase.current + spinCount - 1
+  const teamTarget = useMemo(() => {
+    if (!seedPlan || spinCount < 1) return null
+    const order = seededShuffle([...teamReelItems].sort((a, b) => a.short.localeCompare(b.short)), `${seedPlan.seed}:teams`)
+    return order[teamIndex % order.length]
+  }, [seedPlan, spinCount, teamReelItems, teamIndex])
+  const playerTarget = useMemo(() => {
+    if (!seedPlan || !selectedTeam) return null
+    const roster = qbPool.filter(q => q.team === selectedTeam.short).sort((a, b) => a.name.localeCompare(b.name))
+    if (!roster.length) return null
+    const order = seededShuffle(roster, `${seedPlan.seed}:${teamIndex}:${selectedTeam.short}`)
+    return order[playerDraw % order.length]
+  }, [seedPlan, selectedTeam, teamIndex, playerDraw]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const visibleCategories = isRB ? RB_CATEGORIES : categoriesData
   const hasAvailableChips = isDone && selectedQB && visibleCategories.some(cat =>
@@ -447,6 +522,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
                 onStop={handleTeamStop}
                 durationMs={800}
                 jitterMs={1000}
+                target={teamTarget}
               />
               <SlotReel
                 label={pLabel}
@@ -461,6 +537,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
                 jitterMs={400}
                 blurred={phase === 'team' || phase === 'team-done'}
                 fast={qbRespinUsed > 0}
+                target={playerTarget}
               />
             </div>
             <div className="reel-tri reel-tri-r" />

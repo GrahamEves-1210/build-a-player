@@ -100,7 +100,8 @@ import { WR_TYPES, WR_ATTR } from '../data/wrs'
 import { TE_ATTR } from '../data/tes'
 import { DB_ATTR } from '../data/dbs'
 import { OL_ATTR } from '../data/ols'
-import { CAN_SELL_PLUS } from '../lib/platform'
+import { CAN_SELL_PLUS, IS_APP } from '../lib/platform'
+import AppCareerCard from './app/AppCareerCard'
 import DeleteAccount from './DeleteAccount'
 import ConnectDiscord from './ConnectDiscord'
 import { getUsername } from '../lib/discord'
@@ -204,7 +205,7 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
   const [showRings, setShowRings] = useState(false)
   const [salaryCareer, setSalaryCareer] = useState(null)
   const [salaryCareerLoad, setSalaryCareerLoad] = useState(true)
-  const [gameSection, setGameSection] = useState('nfl')
+  const [gameSection, setGameSection] = useState(IS_APP && isBucket ? 'bucket' : 'nfl')
   const [careerGame, setCareerGame] = useState(isOL ? 'ol' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb')
   const [adsDisabled, setAdsDisabled] = useState(false)
   const [adsLifetime, setAdsLifetime] = useState(false)
@@ -840,6 +841,9 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
             )}
           </div>
         </div>
+
+        {/* App: player card with level, XP and spotlights (replaces the hero below) */}
+        {IS_APP && <AppCareerCard user={user} />}
 
         {/* ── Hero header ── */}
         <div className={`prf-hero ${show ? 'prf-hero-in' : ''}`}>

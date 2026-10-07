@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { POS_OPTIONS, AvatarTrio, StackedSilhouette, SPLASH_ATTRS } from '../SplashScreen'
 import { getUsername } from '../../lib/discord'
-import { IconFootball, IconBasketball, IconCrown, IconBolt, IconClipboard, IconCoin, IconVersus, IconLock, IconProfile, IconPlay } from './icons'
+import { useProgress, dailyState } from '../../lib/progress'
+import { IconCrown, IconBolt, IconClipboard, IconCoin, IconVersus, IconLock, IconProfile, IconArrow, IconGear, IconPodium } from './icons'
 
 // iOS/Android app home screen — a game main menu in place of the website
 // splash (App / BucketApp render this instead of SplashScreen / BucketSplash
@@ -15,49 +16,84 @@ const NFL_FIGURE = {
   te: { src: '/wr-silhouette.png', scale: 1.18 },
   db: { src: '/db-silhouette.png', scale: 1.05 },
 }
-const NFL_NAMES = { qb: 'Quarterback', rb: 'Running Back', wr: 'Wide Receiver', te: 'Tight End', db: 'Defensive Back', ol: 'O-Line', lb: 'Linebacker', dl: 'D-Line' }
+const NFL_NAMES = { qb: 'Quarterback', rb: 'Running Back', wr: 'Wide Receiver', te: 'Tight End', db: 'Defensive Back', ol: 'O-Line' }
+const PLURAL = { qb: 'QBs', rb: 'RBs', wr: 'WRs', te: 'TEs', db: 'DBs', guard: 'Guards', big: 'Bigs' }
 const NEW_ALLTIME = new Set(['wr', 'te', 'db'])
 
 const nav = to => window.dispatchEvent(new CustomEvent('bap:nav', { detail: to }))
+const openMenu = () => window.dispatchEvent(new CustomEvent('bap:menu'))
 
-function Hud({ sport, user }) {
+export const HoopU = () => (
+  <svg className="hoop-u-svg" viewBox="0 0 68 90" fill="none" aria-hidden="true">
+    <circle cx="34" cy="14" r="14.4" fill="#f97316"/>
+    <path d="M8 24 L18 88 L50 88 L60 24" stroke="white" strokeWidth="6" strokeLinejoin="round" fill="none"/>
+    <line x1="17" y1="25" x2="38" y2="88" stroke="white" strokeWidth="3.5"/>
+    <line x1="27" y1="25" x2="48" y2="88" stroke="white" strokeWidth="3.5"/>
+    <line x1="41" y1="25" x2="20" y2="88" stroke="white" strokeWidth="3.5"/>
+    <line x1="51" y1="25" x2="30" y2="88" stroke="white" strokeWidth="3.5"/>
+    <line x1="5" y1="26" x2="63" y2="26" stroke="white" strokeWidth="5" strokeLinecap="round"/>
+  </svg>
+)
+
+// Player card: avatar (spotlight colours) with level, name, title and XP bar
+export function PlayerChip({ user, onClick }) {
+  const p = useProgress()
   const name = getUsername(user)
-  const isBucket = sport === 'bucket'
+  return (
+    <button className="ag-player-chip" onClick={onClick}>
+      <span className="ag-avatar">
+        {name ? name.slice(0, 1).toUpperCase() : <IconProfile size={22} />}
+        <span className="ag-avatar-lvl">{p.lvl.level}</span>
+      </span>
+      <span className="ag-player-txt">
+        <span className="ag-player-row">
+          <span className="ag-player-name">{name ?? 'Guest'}</span>
+          <span className="ag-player-title">{p.lvl.title}</span>
+        </span>
+        <span className="ag-xpbar"><span style={{ width: `${Math.max(3, p.lvl.pct * 100)}%` }} /></span>
+        <span className="ag-player-sub">{name ? `${p.lvl.into.toLocaleString()} / ${p.lvl.need.toLocaleString()} XP` : 'Sign in to save your career'}</span>
+      </span>
+    </button>
+  )
+}
+
+function Hud({ user }) {
   return (
     <div className="ag-hud ag-pop" style={{ '--d': '0ms' }}>
-      <button className="ag-player-chip" onClick={() => nav('profile')}>
-        <span className="ag-player-av">
-          {name ? name.slice(0, 1).toUpperCase() : <IconProfile size={20} />}
-        </span>
-        <span className="ag-player-txt">
-          <span className="ag-player-name">{name ?? 'Guest'}</span>
-          <span className="ag-player-sub">{name ? 'View profile' : 'Tap to sign in'}</span>
-        </span>
-      </button>
-      <div className="ag-sport-switch" role="tablist" aria-label="Game">
-        <button role="tab" aria-selected={!isBucket} className={`ag-sport${!isBucket ? ' ag-sport--on ag-sport--nfl' : ''}`}
-          onClick={() => { if (isBucket) window.location.href = '/' }} aria-label="Build-A-Player (football)">
-          <IconFootball size={22} />
-        </button>
-        <button role="tab" aria-selected={isBucket} className={`ag-sport${isBucket ? ' ag-sport--on ag-sport--nba' : ''}`}
-          onClick={() => { if (!isBucket) { try { localStorage.removeItem('bap_progress') } catch {}; window.location.href = '/bucket' } }} aria-label="Build-A-Bucket (basketball)">
-          <IconBasketball size={22} />
-        </button>
-      </div>
+      <PlayerChip user={user} onClick={() => nav('profile')} />
+      <button className="ag-icon-btn" onClick={() => nav('leaderboard')} aria-label="Leaderboards"><IconPodium size={22} /></button>
+      <button className="ag-icon-btn" onClick={openMenu} aria-label="Settings and more"><IconGear size={22} /></button>
     </div>
   )
 }
 
-function ModeButton({ color, icon: Icon, title, sub, badge, onClick, wide, delay, disabled }) {
+function ModeCard({ tone, title, badge, onClick, mark: Mark, isNew, delay }) {
   return (
-    <button className={`ag-btn ag-btn--${color} ag-mode${wide ? ' ag-mode--wide' : ''} ag-pop`} style={{ '--d': delay }} onClick={onClick} disabled={disabled}>
-      {badge && <span className={`ag-ribbon ag-ribbon--${badge.color}`}>{badge.text}</span>}
-      <span className="ag-mode-icon"><Icon size={wide ? 30 : 28} /></span>
-      <span className="ag-mode-txt">
-        <span className={`ag-mode-title${title.length > 10 && !wide ? ' ag-mode-title--long' : ''}`}>{title}</span>
-        <span className="ag-mode-sub">{sub}</span>
+    <button className={`ag-mode${tone ? ` ag-mode--${tone}` : ''} ag-pop`} style={{ '--d': delay }} onClick={onClick}>
+      {Mark && <span className="ag-mode-mark"><Mark size={92} /></span>}
+      {isNew && <span className="ag-mode-new">NEW</span>}
+      <span className="ag-mode-title">{title}</span>
+      <span className="ag-mode-badge">{badge}</span>
+      <span className="ag-mode-cta">START DRAFTING <IconArrow size={15} /></span>
+    </button>
+  )
+}
+
+function DailyBanner({ isBucket }) {
+  useProgress()   // re-render when today's result lands
+  const dc = dailyState()
+  const label = `${dc.pos.toUpperCase()} · ${dc.mode === 'all-time' ? 'All-Time' : 'Current'}`
+  const go = () => { if (isBucket) window.location.href = '/?daily=1'; else nav('daily-challenge') }
+  return (
+    <button className="ag-daily-banner ag-pop" style={{ '--d': '300ms' }} onClick={dc.done ? () => nav('daily') : go}>
+      <span>
+        <span className="ag-eyebrow">DAILY CHALLENGE{isBucket ? ' · FOOTBALL' : ''}</span>
+        <span className="ag-daily-title" style={{ display: 'block' }}>{label}</span>
+        <span className="ag-daily-sub" style={{ display: 'block' }}>Same spins for everyone. One shot.</span>
       </span>
-      {wide && <span className="ag-mode-go"><IconPlay size={18} /></span>}
+      {dc.done
+        ? <span className="ag-daily-score"><b>{dc.ovr}</b><span>OVR · VIEW BOARD</span></span>
+        : <span className="ag-btn ag-daily-go">{dc.spins > 0 ? 'RESUME' : 'PLAY'}</span>}
     </button>
   )
 }
@@ -82,31 +118,27 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
     : POS_OPTIONS
 
   const fig = NFL_FIGURE[position] ?? NFL_FIGURE.qb
-  const posName = isBucket ? (position === 'big' ? 'PF · C' : 'PG · SG · SF') : NFL_NAMES[position]
   const posShort = isBucket ? (position === 'big' ? 'BIG' : 'GUARD') : position.toUpperCase()
+  const posName = isBucket ? (position === 'big' ? 'PF · C' : 'PG · SG · SF') : NFL_NAMES[position]
 
   return (
     <div className={`ag-home ag-home--${sport}`}>
-      <div className="ag-bg" aria-hidden="true">
-        <div className="ag-bg-rays" />
-        <div className="ag-bg-field" />
-        {[...Array(14)].map((_, i) => <span key={i} className="ag-spark" style={{ '--x': `${(i * 37) % 100}%`, '--y': `${(i * 53) % 70}%`, '--t': `${2 + (i % 5) * 0.7}s`, '--dl': `${(i % 7) * 0.4}s` }} />)}
-      </div>
+      <div className="ag-bg" aria-hidden="true"><div className="ag-bg-lines" /></div>
 
       <div className="ag-home-inner">
-        <Hud sport={sport} user={user} />
+        <Hud user={user} />
 
         <div className="ag-brand ag-pop" style={{ '--d': '60ms' }}>
           <img src="/logo-v3.png" alt="" className="ag-brand-mark" draggable={false} />
           <div className="ag-wordmark">
-            BUILD<span className="ag-wordmark-a">-A-</span>{isBucket ? 'BUCKET' : 'PLAYER'}
+            BUILD<em>-A-</em>{isBucket ? <>B<HoopU />CKET</> : 'PLAYER'}
           </div>
         </div>
 
-        {/* Character-select stage */}
+        {/* Character-select stage under stadium lights */}
         <div className="ag-stage ag-pop" style={{ '--d': '120ms' }}>
-          <div className="ag-stage-glow" />
-          <div className="ag-stage-rays" />
+          <div className="ag-stage-photo" />
+          <div className="ag-stage-beam" />
           <div className={`ag-figure${isBucket ? ' ag-figure--nba' : ''}`} key={position}>
             {isBucket
               ? renderBucketFigure?.(position, ready)
@@ -120,7 +152,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
           <div className="ag-platform"><span className="ag-platform-ring" /></div>
           <div className="ag-stage-tag">
             <span className={`ag-stage-pos${posShort.length > 3 ? ' ag-stage-pos--long' : ''}`}>{posShort}</span>
-            <span className="ag-stage-name">{posName}</span>
+            <span className="ag-tag"><span>{posName}</span></span>
           </div>
         </div>
 
@@ -139,7 +171,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
             }
             return (
               <button key={o.pos} role="tab" aria-selected={on} className={`ag-pos${on ? ' ag-pos--on' : ''}`} onClick={() => pick(o.pos)}>
-                {o.players && <span className="ag-pos-avs"><AvatarTrio players={o.players} size={22} /></span>}
+                {o.players && <span className="ag-pos-avs"><AvatarTrio players={o.players} size={20} /></span>}
                 <span className="ag-pos-label">{o.label}</span>
                 {o.sub && <span className="ag-pos-sub">{o.sub}</span>}
               </button>
@@ -147,23 +179,45 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
           })}
         </div>
 
-        {/* Modes */}
+        {/* Modes — the website's cards */}
         <div className="ag-modes">
-          <ModeButton color="gold" icon={IconCrown} title="ALL-TIME" sub={isBucket ? 'NBA legends' : 'Draft the legends'} delay="240ms"
-            badge={(isBucket || NEW_ALLTIME.has(position)) ? { text: 'NEW', color: 'red' } : null}
-            onClick={() => start('all-time')} />
-          <ModeButton color="blue" icon={IconBolt} title="CURRENT" sub={isBucket ? 'Current NBA' : "This season's stars"} delay="290ms"
-            onClick={() => start('classic')} />
+          <ModeCard title="CURRENT" badge={`Current ${PLURAL[position] ?? ''}`} mark={IconBolt} delay="230ms" onClick={() => start('classic')}
+            tone={isBucket ? 'orange' : null} />
+          <ModeCard tone="gold" title="ALL-TIME" badge="Draft the Greats" mark={IconCrown} delay="270ms" onClick={() => start('all-time')}
+            isNew={isBucket || NEW_ALLTIME.has(position)} />
+        </div>
+
+        <div className="ag-extras">
+          <DailyBanner isBucket={isBucket} />
           {isBucket ? (
             <>
-              <ModeButton color="mint" icon={IconCoin} title="SALARY CAP" sub="Build on a budget" delay="340ms"
-                badge={{ text: 'DAILY', color: 'purple' }} onClick={() => start('salarycap')} />
-              <ModeButton color="red" icon={IconVersus} title="HEAD-TO-HEAD" sub="1v1 a friend" delay="390ms"
-                badge={{ text: 'NEW', color: 'gold' }} onClick={() => onVersus?.(position)} />
+              <button className="ag-mini ag-mini--purple ag-pop" style={{ '--d': '340ms' }} onClick={() => start('salarycap')}>
+                <span className="ag-mini-flag">DAILY</span>
+                <span className="ag-mini-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><IconCoin size={17} /> SALARY CAP</span>
+                <span className="ag-mini-sub">Build on a budget</span>
+              </button>
+              <button className="ag-mini ag-pop" style={{ '--d': '370ms' }} onClick={() => onVersus?.(position)}>
+                <span className="ag-mini-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><IconVersus size={17} /> HEAD-TO-HEAD</span>
+                <span className="ag-mini-sub">1v1 a friend</span>
+              </button>
+              <button className="ag-mini ag-mini--mint ag-pop" style={{ '--d': '400ms', gridColumn: '1 / -1' }}
+                onClick={() => { try { localStorage.removeItem('bap_progress') } catch {}; window.location.href = '/' }}>
+                <span className="ag-mini-title">BUILD<em>-A-</em>PLAYER</span>
+                <span className="ag-mini-sub">Football builder</span>
+              </button>
             </>
           ) : (
-            <ModeButton color="purple" icon={IconClipboard} title="THE DEPTH CHART" sub="Daily mini-game" wide delay="340ms"
-              badge={{ text: 'DAILY', color: 'gold' }} onClick={onDepthChart} />
+            <>
+              <button className="ag-mini ag-pop" style={{ '--d': '340ms' }} onClick={onDepthChart}>
+                <span className="ag-mini-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><IconClipboard size={17} /> THE DEPTH CHART</span>
+                <span className="ag-mini-sub" style={{ color: '#fbbf24' }}>Mini game</span>
+              </button>
+              <button className="ag-mini ag-mini--orange ag-pop" style={{ '--d': '370ms' }}
+                onClick={() => { try { localStorage.removeItem('bap_progress') } catch {}; window.location.href = '/bucket' }}>
+                <span className="ag-mini-title">BUILD<em>-A-</em>B<HoopU />CKET</span>
+                <span className="ag-mini-sub">Basketball builder</span>
+              </button>
+            </>
           )}
         </div>
       </div>

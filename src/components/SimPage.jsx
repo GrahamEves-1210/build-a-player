@@ -20,6 +20,8 @@ import QBAvatar from './QBAvatar'
 import QBFigureOverlay from './QBFigureOverlay'
 import SiteFooter from './SiteFooter'
 import MVPModal from './MVPModal'
+import { IS_APP } from '../lib/platform'
+import { WeekStrip, Bracket, RingCeremony, SeasonRewards } from './app/AppSeason'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -542,6 +544,7 @@ function ScreenSeason({ result, onNext, isRB = false, isWR = false, isTE = false
             <span className="slr-sep">–</span>
             <span className="slr-l">{liveLosses}</span>
           </div>
+          {IS_APP && <WeekStrip games={games} revealed={revealed} />}
           {allDone && (
             <div className="simp-record-sub simp-record-sub-in">
               {playoffs ? 'Playoff Bound' : 'Missed the Playoffs'}
@@ -894,6 +897,7 @@ function ScreenPlayoffs({ result, onNext, onPreSuperBowl, adsDisabled = false })
   const [gameIdx, setGameIdx] = useState(0)
   const [status,  setStatus]  = useState('playing')
   const [started, setStarted] = useState(false)
+  const [ringOpen, setRingOpen] = useState(IS_APP)   // app: the title moment, once the Super Bowl is won
 
   useEffect(() => {
     if (!playoffs) return
@@ -1021,9 +1025,16 @@ function ScreenPlayoffs({ result, onNext, onPreSuperBowl, adsDisabled = false })
     )
   }
 
+  const sbRound = playoffRounds[playoffRounds.length - 1]
   return (
     <div className="simp-screen">
+      {IS_APP && <Bracket rounds={playoffRounds} gameIdx={gameIdx} status={status} hasBye={result.hasBye} />}
       {inner}
+      {IS_APP && status === 'champion' && ringOpen && (
+        <RingCeremony team={team} title="Super Bowl Champions"
+          score={`${sbRound.mySc}–${sbRound.oppSc}${sbRound.overtime ? ' OT' : ''} vs ${sbRound.opponent}`}
+          onClose={() => setRingOpen(false)} />
+      )}
     </div>
   )
 }
@@ -1094,6 +1105,7 @@ function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = fals
 
   return (
     <div className="simp-screen">
+      {IS_APP && <SeasonRewards result={result} />}
       <div className={`simp-final-banner ${champion ? 'sfb-champ' : playoffs ? 'sfb-elim' : 'sfb-miss'}`}>
         {champion && <img src="/trophy.webp" alt="Super Bowl Trophy" className="sfb-trophy" />}
         <div className="sfb-outcome">

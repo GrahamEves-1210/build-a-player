@@ -20,7 +20,7 @@ const ProfilePage    = lazy(() => import('./components/ProfilePage'))
 const LeaderboardPage= lazy(() => import('./components/LeaderboardPage'))
 const VersusLobby    = lazy(() => import('./components/VersusLobby'))
 const VersusResult   = lazy(() => import('./components/VersusResult'))
-import { TYPES, LITE_TYPES, QBS } from './data/qbs'
+import { TYPES, LITE_TYPES, QBS, ATTR } from './data/qbs'
 import { RBS, RB_TYPES, RB_LITE_TYPES, RB_ATTR } from './data/rbs'
 import { WRS, WR_TYPES, WR_LITE_TYPES, WR_CATEGORIES, WR_ATTR } from './data/wrs'
 import { WR_LEGENDS } from './data/wr-legends'
@@ -42,6 +42,8 @@ import SiteFeatures from './components/SiteFeatures'
 import { IS_APP } from './lib/platform'
 import AppHome from './components/app/AppHome'
 import { finishDiscordSignIn, getUsername } from './lib/discord'
+import { dailyState, setDailySpins } from './lib/progress'
+import { BuildTray, BuildComplete, useSwipeViews } from './components/app/AppBuildTray'
 
 const _dd = arr => { const s = new Set(); return arr.filter(p => { const k = `${p.name}|${p.team}`; if (s.has(k)) return false; s.add(k); return true }) }
 const _bt = (a, b) => a.team.localeCompare(b.team) || a.name.localeCompare(b.name)
@@ -127,6 +129,8 @@ export default function App() {
   const [user, setUser]                 = useState(null)
   const [showAuth, setShowAuth]         = useState(false)
   const [showTeamPicker, setShowTeamPicker] = useState(false)
+  // App: today's Daily Challenge run ({ key, pos, mode, seed }) — same seeded spins for everyone
+  const [dailyRun, setDailyRun] = useState(() => (IS_APP && _saved?.daily?.key === dailyState().key ? _saved.daily : null))
   const [savedSpinResult, setSavedSpinResult] = useState(() => {
     try { return JSON.parse(localStorage.getItem('bap_spin_result')) } catch { return null }
   })
@@ -280,6 +284,7 @@ export default function App() {
     window.__bapPage = { page, sport: 'nfl' }
     window.dispatchEvent(new CustomEvent('bap:page', { detail: window.__bapPage }))
   }, [page])
+  const startDailyRef = useRef(null)
   useEffect(() => {
     if (!IS_APP) return
     const onNav = e => {
@@ -290,6 +295,8 @@ export default function App() {
         if (gameMode) setPage(simResult ? 'sim' : 'game')
         else { let p = 'qb'; try { p = localStorage.getItem('lastPosition') || 'qb' } catch {}; handleStart('classic', p) }   // quick play
       } else if (to === 'leaderboard') setPage('leaderboard')
+      else if (to === 'daily-challenge') startDailyRef.current?.()
+      else if (to === 'depth-chart') setPage('depth-chart')
       // signed out: the dock shows sign-in itself, since only some pages render AuthModal
       else if (to === 'profile') { if (user) { window.history.pushState({}, '', '/profile'); setPage('profile') } else window.dispatchEvent(new CustomEvent('bap:auth')) }
       else if (to === 'about') setPage('about')
@@ -329,8 +336,8 @@ export default function App() {
 
   useEffect(() => {
     if (!gameMode) return
-    try { localStorage.setItem('bap_progress', JSON.stringify({ gameMode, position, build })) } catch {}
-  }, [build, gameMode, position])
+    try { localStorage.setItem('bap_progress', JSON.stringify({ gameMode, position, build, daily: dailyRun })) } catch {}
+  }, [build, gameMode, position, dailyRun])
 
   useEffect(() => {
     try {
@@ -505,6 +512,13 @@ export default function App() {
     setBuild(Object.fromEntries(types.map(t => [t, null])))
     setActiveCategory('physical')
     setSavedSpinResult(null)
+    setDailyRun(null)
+    if (IS_APP) {   // the app keeps a finished game around (Home → PLAY resumes it), so clear it
+      setSimResult(null)
+      setMobileView('spin')
+      setSpinResetKey(k => k + 1)
+      setGameKey(k => k + 1)
+    }
     sandboxTainted.current = isCustomMode
     setPage('game')
     track('mode_selected', { position: pos, gameMode: mode })
@@ -541,7 +555,37 @@ export default function App() {
     q.then(({ error }) => { if (error) console.error('[award] failed to save award:', error) })
   }, [user])
 
+  // Daily Challenge: no resets until the run has been simulated
+  const dailyLocked = !!dailyRun && !dailyState().done
+  const dailyLockedRef = useRef(dailyLocked)
+  dailyLockedRef.current = dailyLocked
+
+  // App: Spin and Build are two sides of one card — swipe to flip, and the
+  // last pick flips it to Build (drag-and-drop included)
+  useSwipeViews(IS_APP && (page === 'game' || page === 'versus-game'), mobileView, setMobileView)
+  const buildComplete = activeTypes.length > 0 && activeTypes.every(t => build[t])
+  useEffect(() => { if (IS_APP && buildComplete && page === 'game') setMobileView('build') }, [buildComplete]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const startDaily = useCallback(() => {
+    const dc = dailyState()
+    if (dc.done) { window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'daily' })); return }
+    if (dailyRun?.key === dc.key && gameMode) { setPage(simResult ? 'sim' : 'game'); return }
+    try { localStorage.setItem('lastPosition', dc.pos) } catch {}
+    handleStart(dc.mode, dc.pos)
+    setDailyRun({ key: dc.key, pos: dc.pos, mode: dc.mode, seed: dc.seed })
+  }, [dailyRun, gameMode, simResult, handleStart])
+  startDailyRef.current = startDaily
+
+  // Opened from Build-A-Bucket's Daily screen (/?daily=1)
+  useEffect(() => {
+    if (!IS_APP || !new URLSearchParams(window.location.search).has('daily')) return
+    window.history.replaceState({}, '', '/')
+    startDaily()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleReset = useCallback(() => {
+    if (dailyLockedRef.current) return
+    setDailyRun(null)
     setVersusRoom(prev => {
       if (prev) { recordVsForfeiture(); cleanupVersusChannel(prev.channel) }
       return null
@@ -620,6 +664,17 @@ export default function App() {
       : isWR ? calcWROPOYResult : isRB ? calcOPOYResult : calcMVPResult
     result.award = calcAward(result, isAllTimeSeason, result.team?.short)
     setSimResult(result)
+    // App: season XP, missions and the Daily Challenge score (lib/progress.js)
+    if (IS_APP) {
+      window.dispatchEvent(new CustomEvent('bap:season', { detail: {
+        sport: 'nfl', pos: position, mode: gameMode,
+        wins: result.wins, losses: result.losses, playoffs: !!result.playoffs,
+        champion: !!result.sbResult?.won, award: !!result.award?.userWins,
+        awardName: { mvp: 'MVP', opoy: 'OPOY', dpoy: 'DPOY', allpro: 'All-Pro' }[awardType],
+        ovr: result.ovr, sandbox: isCustomMode || sandboxTainted.current, daily: !!dailyRun, ref: result,
+        build: dailyRun ? Object.fromEntries(activeTypes.filter(t => build[t]).map(t => [t, { qb: build[t].qbFull, team: build[t].team, val: build[t].val }])) : undefined,
+      } }))
+    }
     track('simulate', { position, gameMode, userId: user?.id ?? null })
     if (!user) {
       showSaveToast('no-auth', 'Sign in to save your stats')
@@ -677,7 +732,7 @@ export default function App() {
     setSimReplaying(false)
     setPage('sim')
     window.scrollTo({ top: 0, behavior: 'instant' })
-  }, [build, activeTypes, user, gameMode, position, showSaveToast, recordAward])
+  }, [build, activeTypes, user, gameMode, position, showSaveToast, recordAward, dailyRun, isCustomMode])
 
   const handleHome = useCallback(() => {
     setVersusRoom(prev => {
@@ -1214,12 +1269,22 @@ export default function App() {
   }
 
   const filledCount = activeTypes.filter(t => build[t]).length
+  const currentAttrMap = isOL ? OL_ATTR : isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : isRB ? RB_ATTR : ATTR
+  const completeOvr = IS_APP && buildComplete
+    ? (isOL ? calcOVROL(build) : isDB ? calcOVRDB(build) : isTE ? calcOVRTE(build) : isWR ? calcOVRWR(build) : isRB ? calcOVRRB(build) : calcOVR(build))
+    : 0
+  const dailyPlan = dailyRun && dailyLocked && page === 'game'
+    ? { seed: dailyRun.seed, getStart: () => dailyState().spins, onSpin: setDailySpins }
+    : null
 
   return (
     <>
       <Navbar {...navbarProps} />
 
       <div className="game-page-scroll">
+      {IS_APP && mobileView === 'spin' && (
+        <BuildTray build={build} types={activeTypes} attrMap={currentAttrMap} onOpen={() => setMobileView('build')} />
+      )}
       <main className={`game-layout mobile-${mobileView}${gameMode === 'all-time' ? ' alltime-mode' : ''}${page === 'versus-game' ? ' versus-active' : ''}`}>
         <SpinScreen
           build={build}
@@ -1236,8 +1301,10 @@ export default function App() {
           onSaveResult={setSavedSpinResult}
           onPhaseChange={setSpinPhase}
           gameKey={gameKey}
-          onReset={handleReset}
+          onReset={dailyLocked ? undefined : handleReset}
           adsDisabled={adsDisabled}
+          seedPlan={dailyPlan}
+          cardMeta={IS_APP && page === 'game' ? { sport: 'nfl', pos: position, mode: gameMode } : null}
           isRB={isRB}
           isWR={isWR}
           isTE={isTE}
@@ -1364,6 +1431,8 @@ export default function App() {
           onAuth={setUser}
         />
       )}
+
+      {IS_APP && page === 'game' && <BuildComplete complete={buildComplete} ovr={completeOvr} />}
 
       {showTeamPicker && (
         <TeamPickerModal onSelect={handleTeamPicked} isPlus={isCustomMode} build={build} />
