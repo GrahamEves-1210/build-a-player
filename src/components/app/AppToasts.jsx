@@ -16,6 +16,7 @@ export default function AppToasts() {
 
   useEffect(() => {
     const push = t => {
+      if (t.kind === 'streak' || t.kind === 'mission') sfx('chime')
       const id = nextId++
       setItems(list => [...list.slice(-2), { id, ...t }])
       timers.current.set(id, setTimeout(() => setItems(list => list.filter(x => x.id !== id)), t.ms ?? 2600))
@@ -25,7 +26,8 @@ export default function AppToasts() {
       const c = e.detail
       if (!c.isNew && c.rank < 2) return
       push({ kind: 'card', rank: c.rank, title: c.isNew ? `NEW CARD · ${RARITIES[c.rank].toUpperCase()}` : `${RARITIES[c.rank].toUpperCase()} PULL`, sub: c.name, ms: 2200 })
-      if (c.rank >= 2 && c.isNew) { sfx('lock'); haptic('medium') }
+      sfx('card', c.rank)
+      if (c.rank >= 2 && c.isNew) haptic('medium')
     }
     drain()
     window.addEventListener('bap:toast', drain)
@@ -65,7 +67,7 @@ export function LevelUp({ hold }) {
   useEffect(() => {
     if (show && fired.current !== p.lvl.level) {
       fired.current = p.lvl.level
-      setTimeout(() => { sfx('win'); haptic('success'); confetti(120) }, 250)
+      setTimeout(() => { sfx('levelup'); haptic('success'); confetti(120) }, 250)
     }
   }, [show, p.lvl.level])
   if (!show) return null

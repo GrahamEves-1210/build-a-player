@@ -17,7 +17,7 @@ function useCountdown() {
 
 function Streak({ p }) {
   const st = p.streak
-  const claim = days => { if (claimStreak(days)) { sfx('win'); haptic('success') } }
+  const claim = days => { if (claimStreak(days)) { sfx('claim'); haptic('success') } }
   return (
     <section className="ag-card ag-streak ag-pop" style={{ '--d': '40ms' }}>
       <div className="ag-streak-head">
@@ -98,7 +98,7 @@ function Challenge({ p, sport }) {
 }
 
 function Missions({ p }) {
-  const claim = id => { if (claimMission(id)) { sfx('win'); haptic('success') } }
+  const claim = id => { if (claimMission(id)) { sfx('claim'); haptic('success') } }
   return (
     <section className="ag-card ag-missions ag-pop" style={{ '--d': '140ms' }}>
       <div className="ag-card-head"><span className="ag-eyebrow">TODAY'S MISSIONS</span></div>

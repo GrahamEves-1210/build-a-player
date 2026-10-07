@@ -118,7 +118,7 @@ export default function AppCards({ sport: startSport, onClose }) {
   }, [sets])
 
   const open = team && sets.find(s => s.short === team)
-  const claim = s => { if (claimSet(s.setId, s.total)) { sfx('win'); haptic('success') } }
+  const claim = s => { if (claimSet(s.setId, s.total)) { sfx('claim'); haptic('success') } }
 
   return (
     <div className={`ag-screen ag-screen--${startSport}`}>
