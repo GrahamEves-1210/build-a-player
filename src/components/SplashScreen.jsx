@@ -330,7 +330,7 @@ export function StackedSilhouette({ position, attrs, ready }) {
 // Attribute bands per position — shared with the app home screen (components/app/AppHome)
 export const SPLASH_ATTRS = { qb: QB_ATTRS, rb: RB_ATTRS, wr: WR_ATTRS, te: TE_ATTRS, db: DB_ATTRS, ol: OL_ATTRS }
 
-export default function SplashScreen({ onStart, onDepthChart, onWiki, onCreators }) {
+export default function SplashScreen({ onStart, onDepthChart, onWiki }) {
   const [phase, setPhase] = useState(0)
   // A saved position that's since gone to Coming Soon (OL) falls back to QB
   const [position, setPosition] = useState(() => {
@@ -463,7 +463,7 @@ export default function SplashScreen({ onStart, onDepthChart, onWiki, onCreators
     <SiteFeatures sport="nfl" />
     <WikiCta sport="nfl" onWiki={onWiki} />
 
-    <SiteFooter sport="nfl" onDepthChart={onDepthChart} onWiki={onWiki} onCreators={onCreators} />
+    <SiteFooter sport="nfl" onDepthChart={onDepthChart} onWiki={onWiki} />
     </div>
   )
 }

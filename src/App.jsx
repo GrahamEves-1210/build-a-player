@@ -1041,7 +1041,6 @@ export default function App() {
         onStart={handleStart}
         onDepthChart={() => setPage('depth-chart')}
         onWiki={() => { setPage('wiki'); window.scrollTo({ top: 0, behavior: 'instant' }) }}
-        onCreators={() => { window.history.pushState({}, '', '/wiki/creators'); setPage('wiki'); window.scrollTo({ top: 0, behavior: 'instant' }) }}
         onVersus={(pos) => {
           const p = pos || 'qb'
           try { localStorage.setItem('lastPosition', p) } catch {}

@@ -14,7 +14,7 @@ const HoopU = () => (
   </svg>
 )
 
-export default function SiteFooter({ sport = 'nfl', onDepthChart, onWiki, onCreators }) {
+export default function SiteFooter({ sport = 'nfl', onDepthChart, onWiki }) {
   const isBucket = sport === 'bucket'
   // null = closed; otherwise holds the signed-in user (or false when signed out)
   const [feedbackUser, setFeedbackUser] = useState(null)
@@ -50,16 +50,13 @@ export default function SiteFooter({ sport = 'nfl', onDepthChart, onWiki, onCrea
         </div>
         <div className="splash-site-footer-col">
           <div className="splash-site-footer-head">Info</div>
-          {onWiki
-            ? <button className="splash-site-footer-link splash-site-footer-link--btn" onClick={onWiki}>Wiki</button>
-            : <a className="splash-site-footer-link" href="/wiki">Wiki</a>}
-          {onCreators
-            ? <button className="splash-site-footer-link splash-site-footer-link--btn" onClick={onCreators}>Creators</button>
-            : <a className="splash-site-footer-link" href="/wiki/creators">Creators</a>}
           <a className="splash-site-footer-link" href="/?about">About</a>
           <a className="splash-site-footer-link" href="/privacy">Privacy Policy</a>
           <a className="splash-site-footer-link" href="/terms">Terms of Service</a>
           <button className="splash-site-footer-link splash-site-footer-link--btn" onClick={openFeedback}>Send Feedback</button>
+          {onWiki
+            ? <button className="splash-site-footer-link splash-site-footer-link--btn" onClick={onWiki}>Wiki</button>
+            : <a className="splash-site-footer-link" href="/wiki">Wiki</a>}
         </div>
         <div className="splash-site-footer-col">
           <div className="splash-site-footer-head">Connect</div>
