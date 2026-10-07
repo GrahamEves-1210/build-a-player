@@ -70,7 +70,7 @@ export default function Wiki({ onExit }) {
       <header className="wk-top">
         <a className="wk-brand" href="/wiki" onClick={e => { e.preventDefault(); go('main') }}>
           <img src="/logo-v3.png" alt="" />
-          <span><b>Build-A-Player Wiki</b><small>Every mode, every mechanic, every rating</small></span>
+          <span><b>Build-A-Player Wiki</b></span>
         </a>
         <div className="wk-search">
           <input ref={searchRef} value={search} onChange={e => setSearch(e.target.value)} placeholder="Search the wiki" aria-label="Search the wiki"
@@ -118,7 +118,7 @@ export default function Wiki({ onExit }) {
           </div>
           <article className="wk-article">
             <h1 className="wk-h1">{page.heading ?? page.title}</h1>
-            <div className="wk-from">From Build-A-Player Wiki, the guide to the game</div>
+            <div className="wk-from">From Build-A-Player Wiki</div>
             <page.Component go={go} query={loc.query} pool={loc.pool} />
             <footer className="wk-foot">
               <p>This page was last updated on {fmtDate(BUILD_DATE)}. Ratings as of {fmtDate(RATINGS_AS_OF)}; they refresh with every update to the game's data.</p>

@@ -222,7 +222,7 @@ function RatingsPage({ query, pool }) {
   const counts = poolCounts()
   return (
     <>
-      <p className="wk-lead">The full pools the spins draw from. The table reads the game's data files directly, so it changes whenever the ratings do; the dates are the last time each pool's file changed. Tap a column to sort. <b>Avg</b> is the plain average of a player's ratings; <b>OVR</b> is what a build made entirely of that player would score.</p>
+      <p className="wk-lead">The full pools the spins draw from. The table reads the game's data files directly, so it changes whenever the ratings do; the dates are the last time each pool's file changed. Tap a column to sort. <b>Avg</b> is the plain average of a player's ratings.</p>
       <div className="wk-table-wrap">
         <table className="wikitable">
           <thead><tr><th>Pool</th><th className="num">Current</th><th className="num">All-time</th><th>Last changed</th></tr></thead>
@@ -259,12 +259,12 @@ function CreatorsPage() {
   const list = useMemo(() => {
     const keep = it => filter === 'all' || (filter === 'shorts' ? it.short : it.game === filter)
     return CREATORS.map(c => ({ ...c, items: c.items.filter(keep) })).filter(c => c.items.length)
-      .sort((a, b) => Math.max(...b.items.map(i => i.views || 0)) - Math.max(...a.items.map(i => i.views || 0)))
   }, [filter])
   const total = CREATORS.reduce((s, c) => s + c.items.length, 0)
   return (
     <>
-      <p className="wk-lead">Creators who have built quarterbacks, bigs and running backs on Build-A-Player and Build-A-Bucket on camera: {total} videos and posts from {CREATORS.length} creators, sorted by their biggest hit, current as of {CREATORS_AS_OF}. Videos play through YouTube's own embedded player and everything links to the creator; nothing is re-hosted.</p>
+      <p className="wk-lead">Creators who have built quarterbacks, bigs and running backs on Build-A-Player and Build-A-Bucket on camera: {total} videos and posts from {CREATORS.length} creators, current as of {CREATORS_AS_OF}. Videos play through YouTube's own embedded player and everything links to the creator; nothing is re-hosted.</p>
+      <p className="wk-hat">Build-A-Player is not affiliated with any of these creators unless specified. Their videos, channels and opinions are their own.</p>
       <div className="wk-cr-filters" role="tablist" aria-label="Filter">
         {[['all', 'All'], ['nfl', 'Football'], ['nba', 'Basketball'], ['shorts', 'Shorts']].map(([k, l]) => <button key={k} role="tab" aria-selected={filter === k} className={`wk-pill${filter === k ? ' is-on' : ''}`} onClick={() => setFilter(k)}>{l}</button>)}
       </div>
