@@ -20,6 +20,7 @@ const ProfilePage    = lazy(() => import('./components/ProfilePage'))
 const LeaderboardPage= lazy(() => import('./components/LeaderboardPage'))
 const VersusLobby    = lazy(() => import('./components/VersusLobby'))
 const VersusResult   = lazy(() => import('./components/VersusResult'))
+const AppTakeover    = lazy(() => import('./components/app/AppTakeover'))
 import { TYPES, LITE_TYPES, QBS, ATTR } from './data/qbs'
 import { RBS, RB_TYPES, RB_LITE_TYPES, RB_ATTR } from './data/rbs'
 import { WRS, WR_TYPES, WR_LITE_TYPES, WR_CATEGORIES, WR_ATTR } from './data/wrs'
@@ -29,11 +30,11 @@ import { TE_LEGENDS } from './data/te-legends'
 import { DBS, DB_TYPES, DB_LITE_TYPES, DB_CATEGORIES, DB_ATTR } from './data/dbs'
 import { DB_LEGENDS } from './data/db-legends'
 import { OLS, OL_TYPES, OL_LITE_TYPES, OL_CATEGORIES, OL_ATTR } from './data/ols'
-import { ALLTIME_RATINGS } from './data/nfl-teams'
+import { ALLTIME_RATINGS, NFL_TEAMS } from './data/nfl-teams'
 import { LEGENDS, LEGEND_TYPES } from './data/qb-legends'
 import { RB_LEGENDS } from './data/rb-legends'
 import HEADSHOTS from './data/headshots.json'
-import { runSimulation, getArchetype, calcOVR, runRBSimulation, calcOVRRB, getArchetypeRB, runWRSimulation, calcOVRWR, getArchetypeWR, runTESimulation, calcOVRTE, getArchetypeTE, runDBSimulation, calcOVRDB, getArchetypeDB, runOLSimulation, calcOVROL, getArchetypeOL, HEADSHOT_BASE, calcMVPResult, calcOPOYResult, calcWROPOYResult, calcTEOPOYResult, calcDBDpoyResult, calcOLAllProResult } from './utils/simulation'
+import { runSimulation, getArchetype, calcOVR, runRBSimulation, calcOVRRB, getArchetypeRB, runWRSimulation, calcOVRWR, getArchetypeWR, runTESimulation, calcOVRTE, getArchetypeTE, runDBSimulation, calcOVRDB, getArchetypeDB, runOLSimulation, calcOVROL, getArchetypeOL, HEADSHOT_BASE, nflHeadshot, calcMVPResult, calcOPOYResult, calcWROPOYResult, calcTEOPOYResult, calcDBDpoyResult, calcOLAllProResult } from './utils/simulation'
 import { supabase, rtSupabase } from './lib/supabase'
 import { track } from './lib/track'
 import CustomRatingsModal from './components/CustomRatingsModal'
@@ -44,6 +45,7 @@ import AppHome from './components/app/AppHome'
 import { finishDiscordSignIn, getUsername } from './lib/discord'
 import { dailyState, setDailySpins } from './lib/progress'
 import { FlipEdge, BuildComplete, useFlip } from './components/app/AppBuildTray'
+import { loadRun, newRun } from './lib/takeover'
 
 const _dd = arr => { const s = new Set(); return arr.filter(p => { const k = `${p.name}|${p.team}`; if (s.has(k)) return false; s.add(k); return true }) }
 const _bt = (a, b) => a.team.localeCompare(b.team) || a.name.localeCompare(b.name)
@@ -130,6 +132,7 @@ export default function App() {
   const [showAuth, setShowAuth]         = useState(false)
   const [showTeamPicker, setShowTeamPicker] = useState(false)
   // App: today's Daily Challenge run ({ key, pos, mode, seed }) — same seeded spins for everyone
+  const [takeoverRun, setTakeoverRun] = useState(null)   // App: TAKEOVER run (the road)
   const [dailyRun, setDailyRun] = useState(() => (IS_APP && _saved?.daily?.key === dailyState().key ? _saved.daily : null))
   const [savedSpinResult, setSavedSpinResult] = useState(() => {
     try { return JSON.parse(localStorage.getItem('bap_spin_result')) } catch { return null }
@@ -285,17 +288,19 @@ export default function App() {
     window.dispatchEvent(new CustomEvent('bap:page', { detail: window.__bapPage }))
   }, [page])
   const startDailyRef = useRef(null)
+  const openTakeoverRef = useRef(null)
   useEffect(() => {
     if (!IS_APP) return
     const onNav = e => {
       const to = e.detail
       if (to === 'home') setPage('splash')   // keeps the build in progress — PLAY resumes it
       else if (to === 'play') {
-        if (page === 'game' || page === 'sim') return
+        if (page === 'game' || page === 'sim' || page === 'takeover' || page === 'takeover-build') return
         if (gameMode) setPage(simResult ? 'sim' : 'game')
         else { let p = 'qb'; try { p = localStorage.getItem('lastPosition') || 'qb' } catch {}; handleStart('classic', p) }   // quick play
       } else if (to === 'leaderboard') setPage('leaderboard')
       else if (to === 'daily-challenge') startDailyRef.current?.()
+      else if (to === 'takeover') openTakeoverRef.current?.()
       else if (to === 'depth-chart') setPage('depth-chart')
       // signed out: the dock shows sign-in itself, since only some pages render AuthModal
       else if (to === 'profile') { if (user) { window.history.pushState({}, '', '/profile'); setPage('profile') } else window.dispatchEvent(new CustomEvent('bap:auth')) }
@@ -562,9 +567,26 @@ export default function App() {
 
   // App: Spin and Build are two sides of one card — swipe to flip, and the
   // last pick flips it to Build (drag-and-drop included)
-  const flip = useFlip(IS_APP && (page === 'game' || page === 'versus-game'), mobileView, setMobileView)
+  const flip = useFlip(IS_APP && (page === 'game' || page === 'versus-game' || page === 'takeover-build'), mobileView, setMobileView)
   const buildComplete = activeTypes.length > 0 && activeTypes.every(t => build[t])
-  useEffect(() => { if (IS_APP && buildComplete && page === 'game') flip('build') }, [buildComplete]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (IS_APP && buildComplete && (page === 'game' || page === 'takeover-build')) flip('build') }, [buildComplete]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── TAKEOVER (app): a saved run per account, or a fresh build first ──
+  useEffect(() => { if (IS_APP) setTakeoverRun(loadRun('nfl', user?.id)) }, [user?.id])
+  const startTakeoverBuild = useCallback(() => {
+    let p = 'qb'; try { p = localStorage.getItem('lastPosition') || 'qb' } catch {}
+    if (!['qb', 'rb', 'wr', 'te', 'db'].includes(p)) p = 'qb'
+    handleStart('classic', p); setPage('takeover-build')
+  }, [handleStart])
+  const openTakeover = useCallback(() => {
+    const run = loadRun('nfl', user?.id)
+    if (run && !run.over) { setTakeoverRun(run); setPage('takeover') } else startTakeoverBuild()
+  }, [user?.id, startTakeoverBuild])
+  const hitTheRoad = useCallback(() => {
+    const run = newRun({ sport: 'nfl', uid: user?.id ?? null, pos: position, build, types: activeTypes })
+    setTakeoverRun(run); setPage('takeover')
+    window.scrollTo({ top: 0, behavior: 'instant' })
+  }, [user?.id, position, build, activeTypes])
 
   const startDaily = useCallback(() => {
     const dc = dailyState()
@@ -579,6 +601,7 @@ export default function App() {
     setDailyRun({ key: dc.key, pos: dc.pos, mode: dc.mode, seed: dc.seed })
   }, [dailyRun, gameMode, simResult, handleStart])
   startDailyRef.current = startDaily
+  openTakeoverRef.current = openTakeover
 
   // Opened from Build-A-Bucket's Daily screen (/?daily=1)
   useEffect(() => {
@@ -974,7 +997,7 @@ export default function App() {
         <link rel="canonical" href="https://build-a-player.com/" />
       </Helmet>
       {IS_APP ? (
-        <AppHome sport="nfl" user={user} onStart={handleStart} onDepthChart={() => setPage('depth-chart')} />
+        <AppHome sport="nfl" user={user} onStart={handleStart} onDepthChart={() => setPage('depth-chart')} onTakeover={openTakeover} takeoverRun={takeoverRun} />
       ) : (
       <SplashScreen
         onStart={handleStart}
@@ -992,6 +1015,21 @@ export default function App() {
       />
       )}
       </>
+    )
+  }
+
+  if (page === 'takeover' && takeoverRun) {
+    const pos = takeoverRun.pos
+    const pools = { qb: QBS, rb: RBS, wr: WRS, te: TES, db: DBS }
+    const attr = pos === 'db' ? DB_ATTR : pos === 'te' ? TE_ATTR : pos === 'wr' ? WR_ATTR : pos === 'rb' ? RB_ATTR : ATTR
+    const ovrOf = b => pos === 'db' ? calcOVRDB(b) : pos === 'te' ? calcOVRTE(b) : pos === 'wr' ? calcOVRWR(b) : pos === 'rb' ? calcOVRRB(b) : calcOVR(b)
+    return (
+      <Suspense fallback={null}>
+        <AppTakeover sport="nfl" run={takeoverRun} setRun={setTakeoverRun} user={user}
+          pools={pools} types={{}} attrMap={attr} photoFor={p => nflHeadshot(HEADSHOTS[p.name])}
+          calcOvr={ovrOf} teams={NFL_TEAMS} ratings={null}
+          onNewBuild={startTakeoverBuild} onExit={() => setPage('splash')} />
+      </Suspense>
     )
   }
 
@@ -1274,7 +1312,7 @@ export default function App() {
 
   const filledCount = activeTypes.filter(t => build[t]).length
   const currentAttrMap = isOL ? OL_ATTR : isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : isRB ? RB_ATTR : ATTR
-  const completeOvr = IS_APP && buildComplete
+  const completeOvr = IS_APP && buildComplete && (page === 'game' || page === 'takeover-build')
     ? (isOL ? calcOVROL(build) : isDB ? calcOVRDB(build) : isTE ? calcOVRTE(build) : isWR ? calcOVRWR(build) : isRB ? calcOVRRB(build) : calcOVR(build))
     : 0
   const dailyPlan = dailyRun && dailyLocked && page === 'game'
@@ -1290,7 +1328,7 @@ export default function App() {
         <FlipEdge side={mobileView} build={build} types={activeTypes} attrMap={currentAttrMap} onFlip={flip}
           waiting={savedSpinResult?.selectedQB?.name ?? null} complete={buildComplete} />
       )}
-      <main className={`game-layout mobile-${mobileView}${gameMode === 'all-time' ? ' alltime-mode' : ''}${page === 'versus-game' ? ' versus-active' : ''}`}>
+      <main className={`game-layout mobile-${mobileView}${gameMode === 'all-time' ? ' alltime-mode' : ''}${page === 'versus-game' ? ' versus-active' : ''}${page === 'takeover-build' ? ' takeover-build' : ''}`}>
         <SpinScreen
           build={build}
           activeDrag={activeDrag}
@@ -1346,9 +1384,8 @@ export default function App() {
         <div className="right-panel-wrap">
           <ReportCard
             build={build}
-            onSimulate={page === 'versus-game'
-              ? handleFaceoff
-              : handleSimulate}
+            onSimulate={page === 'versus-game' ? handleFaceoff : page === 'takeover-build' ? hitTheRoad : handleSimulate}
+            simLabel={page === 'takeover-build' ? 'HIT THE ROAD' : undefined}
             onReset={handleReset}
             types={activeTypes}
             hasResult={page === 'versus-game' ? false : !!simResult}
@@ -1437,7 +1474,7 @@ export default function App() {
         />
       )}
 
-      {IS_APP && page === 'game' && <BuildComplete complete={buildComplete} ovr={completeOvr} />}
+      {IS_APP && (page === 'game' || page === 'takeover-build') && <BuildComplete complete={buildComplete} ovr={completeOvr} />}
 
       {showTeamPicker && (
         <TeamPickerModal onSelect={handleTeamPicked} isPlus={isCustomMode} build={build} />

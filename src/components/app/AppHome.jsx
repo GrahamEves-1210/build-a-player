@@ -98,7 +98,7 @@ function DailyBanner({ isBucket }) {
   )
 }
 
-export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus, user, renderBucketFigure }) {
+export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus, onBlacktop, onTakeover, takeoverRun, user, renderBucketFigure }) {
   const isBucket = sport === 'bucket'
   const storeKey = isBucket ? 'bucketPosition' : 'lastPosition'
   const [position, setPosition] = useState(() => {
@@ -189,9 +189,28 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
 
         <div className="ag-extras">
           <DailyBanner isBucket={isBucket} />
+          <button className="ag-takeover ag-pop" style={{ '--d': '320ms' }} onClick={onTakeover}>
+            <span className="ag-takeover-txt">
+              <span className="ag-eyebrow">{takeoverRun && !takeoverRun.over ? `ON THE ROAD · ${takeoverRun.taken.length}/${isBucket ? 30 : 32} CITIES` : 'ROAD MODE · SOLO OR DUO'}</span>
+              <span className="ag-takeover-title">TAKEOVER</span>
+              <span className="ag-takeover-sub">{takeoverRun && !takeoverRun.over ? `${takeoverRun.lives} ${takeoverRun.lives === 1 ? 'life' : 'lives'} left — next city is waiting` : `Take every city. Beat their best. Steal their game.`}</span>
+            </span>
+            <span className="ag-edge-go">{takeoverRun && !takeoverRun.over ? 'RESUME' : 'START'} <IconArrow size={14} /></span>
+          </button>
+          {isBucket && (
+            <button className="ag-blacktop ag-pop" style={{ '--d': '350ms' }} onClick={onBlacktop}>
+              <span className="ag-live-dot" />
+              <span className="ag-takeover-txt">
+                <span className="ag-eyebrow">LIVE · 3V3</span>
+                <span className="ag-takeover-title">BLACKTOP</span>
+                <span className="ag-takeover-sub">Squad up with five others. Team chat, 3:00 to build, first to 21.</span>
+              </span>
+              <span className="ag-edge-go">QUEUE <IconArrow size={14} /></span>
+            </button>
+          )}
           {isBucket ? (
             <>
-              <button className="ag-mini ag-mini--purple ag-pop" style={{ '--d': '340ms' }} onClick={() => start('salarycap')}>
+              <button className="ag-mini ag-mini--purple ag-pop" style={{ '--d': '380ms' }} onClick={() => start('salarycap')}>
                 <span className="ag-mini-flag">DAILY</span>
                 <span className="ag-mini-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><IconCoin size={17} /> SALARY CAP</span>
                 <span className="ag-mini-sub">Build on a budget</span>

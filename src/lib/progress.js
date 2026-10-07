@@ -27,23 +27,9 @@ export function msToReset() {
   return Math.max(0, 86400000 - ((+p.hour * 60 + +p.minute) * 60 + +p.second) * 1000)
 }
 
-// ── Seeded randomness (Daily Challenge spins, daily missions) ────────────────
-export function seeded(str) {
-  let h = 1779033703 ^ str.length
-  for (let i = 0; i < str.length; i++) { h = Math.imul(h ^ str.charCodeAt(i), 3432918353); h = (h << 13) | (h >>> 19) }
-  let a = h >>> 0
-  return () => {
-    a = (a + 0x6D2B79F5) | 0
-    let t = Math.imul(a ^ (a >>> 15), 1 | a)
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
-  }
-}
-export function seededShuffle(arr, seed) {
-  const r = seeded(seed), a = [...arr]
-  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]] }
-  return a
-}
+// ── Seeded randomness lives in rng.js (re-exported for the Daily Challenge) ──
+export { seeded, seededShuffle } from './rng'
+import { seeded } from './rng'
 
 // ── Levels, titles, unlocks ──────────────────────────────────────────────────
 // XP to go from level L to L+1 = 150 + 50·(L−1)
@@ -375,6 +361,15 @@ function onSeason(e) {
   emit()
 }
 
+// Live modes hand out XP directly ({ xp, label })
+function onXp(e) {
+  const { xp, label } = e.detail || {}
+  if (!xp) return
+  S.bonusXp += xp
+  toast({ kind: 'xp', title: `+${xp} XP`, sub: label || '' })
+  emit()
+}
+
 function onSpin(e) {
   const { sport, pos, mode, player, pool } = e.detail || {}
   if (!player?.name) return
@@ -475,6 +470,7 @@ export function initProgress() {
   applySpot()
   window.addEventListener('bap:season', onSeason)
   window.addEventListener('bap:spin', onSpin)
+  window.addEventListener('bap:xp', onXp)
   document.addEventListener('visibilitychange', () => {
     if (document.hidden || !loaded) return
     if (rollDay()) emit()

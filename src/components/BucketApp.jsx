@@ -6,7 +6,7 @@ import Silhouette from './Silhouette'
 import ReportCard from './ReportCard'
 import AuthModal from './AuthModal'
 import BucketSimPage, { TeamSpinModal } from './BucketSimPage'
-import { runBucketSimulation, getBucketGuardArchetype, getBucketBigArchetype, calcBucketOVR } from '../utils/bucketSimulation'
+import { runBucketSimulation, getBucketGuardArchetype, getBucketBigArchetype, calcBucketOVR, TEAM_RATINGS } from '../utils/bucketSimulation'
 import BucketLeaderboardPage from './BucketLeaderboardPage'
 import BucketSalaryCap from './BucketSalaryCap'
 import PrivacyPage from './PrivacyPage'
@@ -35,6 +35,10 @@ import SiteFeatures from './SiteFeatures'
 import { IS_APP } from '../lib/platform'
 import AppHome from './app/AppHome'
 import { FlipEdge, BuildComplete, useFlip } from './app/AppBuildTray'
+import { useBlacktop } from '../lib/blacktop'
+import { BlacktopQueue, BlacktopHud, BlacktopChat, BlacktopGame } from './app/AppBlacktop'
+import { loadRun, newRun } from '../lib/takeover'
+const AppTakeover = lazy(() => import('./app/AppTakeover'))
 import { finishDiscordSignIn, getUsername } from '../lib/discord'
 const VersusLobby        = lazy(() => import('./VersusLobby'))
 const BucketVersusResult = lazy(() => import('./BucketVersusResult'))
@@ -116,6 +120,11 @@ const ENRICHED_GUARDS         = NBA_GUARD_PLAYERS.map(enrichPlayer)
 const ENRICHED_BIGS           = NBA_BIG_PLAYERS.map(enrichPlayer)
 const ENRICHED_ALLTIME_GUARDS = NBA_ALLTIME_GUARD_PLAYERS.map(enrichPlayer)
 const ENRICHED_ALLTIME_BIGS   = NBA_ALLTIME_BIG_PLAYERS.map(enrichPlayer)
+
+const withPhoto = p => ({ ...p, photo: NBA_HEADSHOTS[p.name] ? `${HEADSHOT_BASE}/nba/${NBA_HEADSHOTS[p.name]}.webp` : genericHeadshot(p.skin) })
+const LIVE_POOLS = { guard: ENRICHED_GUARDS.map(withPhoto), big: ENRICHED_BIGS.map(withPhoto) }
+const LIVE_TYPES = { guard: VERSUS_GUARD_TYPES, big: VERSUS_BIG_TYPES }
+const livePhoto = p => p?.photo ?? (NBA_HEADSHOTS[p?.name] ? `${HEADSHOT_BASE}/nba/${NBA_HEADSHOTS[p.name]}.webp` : null)
 
 const _dedup = arr => { const s = new Set(); return arr.filter(p => { const k = `${p.name}|${p.team}`; if (s.has(k)) return false; s.add(k); return true }) }
 const _byTeam = (a, b) => a.team.localeCompare(b.team) || a.name.localeCompare(b.name)
@@ -390,6 +399,11 @@ export default function BucketApp() {
   const [showVsPrompt,   setShowVsPrompt]   = useState(false)
   const [oppDisconnected, setOppDisconnected] = useState(false)
   const [versusGame,     setVersusGame]     = useState(null)
+  // App live modes: BLACKTOP (3v3) and TAKEOVER (the road)
+  const [btChatOpen, setBtChatOpen] = useState(false)
+  const [btSeen, setBtSeen] = useState(0)
+  const [takeoverRun, setTakeoverRun] = useState(null)
+  const openTakeoverRef = useRef(null)
   const [vsCountdown,    setVsCountdown]    = useState(null)
   const vsResultRef      = useRef({ build: {}, user: null, position: 'guard' })
   const faceoffFiredRef  = useRef(false)
@@ -550,11 +564,13 @@ export default function BucketApp() {
       const to = e.detail
       if (to === 'home') setPage('splash')   // keeps the build in progress — PLAY resumes it
       else if (to === 'play') {
-        if (page === 'game' || page === 'sim' || page === 'salarycap') return
+        if (page === 'game' || page === 'sim' || page === 'salarycap' || page.startsWith('blacktop') || page === 'takeover' || page === 'takeover-build') return
         if (gameMode) setPage(gameMode === 'salarycap' ? 'salarycap' : 'game')
         else { let p = 'guard'; try { p = localStorage.getItem('bucketPosition') || 'guard' } catch {}; handleStart('classic', p) }   // quick play
       } else if (to === 'leaderboard') setPage('leaderboard')
       else if (to === 'salarycap') handleStart('salarycap', position)
+      else if (to === 'blacktop') setPage('blacktop')
+      else if (to === 'takeover') openTakeoverRef.current?.()
       // signed out: the dock shows sign-in itself, since only some pages render AuthModal
       else if (to === 'profile') { if (user) { window.history.pushState({}, '', '/profile'); setPage('profile') } else window.dispatchEvent(new CustomEvent('bap:auth')) }
       else if (to === 'about') { window.location.href = '/?about' }
@@ -657,7 +673,8 @@ export default function BucketApp() {
     } catch {}
   }, [savedSpinResult])
 
-  const isVersusMode = page === 'versus-lobby' || page === 'versus-game' || page === 'versus-result'
+  const liveBuild = page === 'blacktop-build'
+  const isVersusMode = page === 'versus-lobby' || page === 'versus-game' || page === 'versus-result' || liveBuild
   const activeTypes = (isVersusMode ? VERSUS_POS_TYPES : POS_TYPES)[position] ?? (isVersusMode ? VERSUS_GUARD_TYPES : GUARD_TYPES)
   const activeCategories = (isVersusMode ? VERSUS_POS_CATS : POS_CATS)[position] ?? (isVersusMode ? VERSUS_GUARD_CATEGORIES : GUARD_CATEGORIES)
 
@@ -676,9 +693,9 @@ export default function BucketApp() {
 
   // App: Spin and Build are two sides of one card — swipe to flip, and the
   // last pick flips it to Build (drag-and-drop included)
-  const flip = useFlip(IS_APP && (page === 'game' || page === 'versus-game'), mobileView, setMobileView)
+  const flip = useFlip(IS_APP && (page === 'game' || page === 'versus-game' || page === 'blacktop-build' || page === 'takeover-build'), mobileView, setMobileView)
   const buildComplete = activeTypes.length > 0 && activeTypes.every(t => build[t])
-  useEffect(() => { if (IS_APP && buildComplete && page === 'game') flip('build') }, [buildComplete]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (IS_APP && buildComplete && (page === 'game' || page === 'takeover-build')) flip('build') }, [buildComplete]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSandboxToggle = useCallback((on) => {
     try { localStorage.setItem('bab_custom_mode', on ? '1' : '0') } catch {}
@@ -709,6 +726,52 @@ export default function BucketApp() {
     setPage(mode === 'salarycap' ? 'salarycap' : 'game')
     window.scrollTo(0, 0)
   }, [isBucketCustomMode])
+
+  // ── BLACKTOP (app): the match lives in the hook; pages follow its phase ──
+  const btPage = page === 'blacktop' || page === 'blacktop-build' || page === 'blacktop-game'
+  const bt = useBlacktop({
+    enabled: IS_APP && btPage, user, position, pools: LIVE_POOLS, types: LIVE_TYPES,
+    build, player: savedSpinResult, onExit: () => { setPage('splash'); setBtChatOpen(false) },
+  })
+  const btJoined = useRef(false)
+  useEffect(() => {
+    if (page === 'blacktop' && bt.phase === 'idle' && !btJoined.current) { btJoined.current = true; bt.join() }
+    if (!btPage) btJoined.current = false
+  }, [page, bt.phase]) // eslint-disable-line
+  const resetLiveBuild = useCallback(() => {
+    const types = VERSUS_POS_TYPES[position] ?? VERSUS_GUARD_TYPES
+    setBuild(Object.fromEntries(types.map(t => [t, null])))
+    setActiveCategory((VERSUS_POS_CATS[position] ?? VERSUS_GUARD_CATEGORIES)[0].id)
+    setSavedSpinResult(null); setSimResult(null); setActiveDrag(null)
+    setMobileView('spin'); setSpinResetKey(k => k + 1); setGameKey(k => k + 1)
+    window.scrollTo({ top: 0, behavior: 'instant' })
+  }, [position])
+  useEffect(() => {
+    if (!btPage) return
+    if (bt.phase === 'build') { resetLiveBuild(); setPage('blacktop-build'); setBtChatOpen(false) }
+    else if (bt.phase === 'game') { setPage('blacktop-game'); setBtChatOpen(false) }
+  }, [bt.phase]) // eslint-disable-line
+  useEffect(() => {
+    const on = () => resetLiveBuild()
+    window.addEventListener('bap:blacktop-rebuild', on)
+    return () => window.removeEventListener('bap:blacktop-rebuild', on)
+  }, [resetLiveBuild])
+  const btUnread = Math.max(0, bt.chat.length - btSeen)
+  const openBtChat = () => { setBtChatOpen(true); setBtSeen(bt.chat.length) }
+
+  // ── TAKEOVER (app): a saved run per account, or a fresh build first ──
+  useEffect(() => { if (IS_APP) setTakeoverRun(loadRun('bucket', user?.id)) }, [user?.id])
+  const startTakeoverBuild = useCallback(() => { handleStart('classic', position); setPage('takeover-build') }, [handleStart, position])
+  const openTakeover = useCallback(() => {
+    const run = loadRun('bucket', user?.id)
+    if (run && !run.over) { setTakeoverRun(run); setPage('takeover') } else startTakeoverBuild()
+  }, [user?.id, startTakeoverBuild])
+  openTakeoverRef.current = openTakeover
+  const hitTheRoad = useCallback(() => {
+    const run = newRun({ sport: 'bucket', uid: user?.id ?? null, pos: position, build, types: activeTypes })
+    setTakeoverRun(run); setPage('takeover')
+    window.scrollTo({ top: 0, behavior: 'instant' })
+  }, [user?.id, position, build, activeTypes])
 
   // Opened (or refreshed) straight on /bucket/salary → go to Salary Cap. Read
   // at load: the URL-sync effect resets the path to /bucket on the first render.
@@ -1246,6 +1309,9 @@ export default function BucketApp() {
               user={user}
               onStart={handleStart}
               onVersus={onVersus}
+              onBlacktop={() => setPage('blacktop')}
+              onTakeover={openTakeover}
+              takeoverRun={takeoverRun}
               renderBucketFigure={(pos, ready) => (
                 <>
                   <img src="/basketballsilhouette.png" className="splash-figure" alt="" draggable={false} style={{ position: 'absolute', inset: 0 }} />
@@ -1262,11 +1328,34 @@ export default function BucketApp() {
   }
 
 
+  if (page === 'blacktop') {
+    return <BlacktopQueue bt={bt} onBack={() => setPage('splash')} />
+  }
+  if (page === 'blacktop-game') {
+    return (
+      <>
+        <BlacktopGame bt={bt} user={user} photoFor={p => livePhoto(p.build?.basketballIQ ? { name: p.build.basketballIQ.qbFull, photo: p.build.basketballIQ.photo } : null)} onOpenChat={openBtChat} unread={btUnread} />
+        {btChatOpen && <BlacktopChat bt={bt} user={user} onClose={() => setBtChatOpen(false)} />}
+      </>
+    )
+  }
+  if (page === 'takeover' && takeoverRun) {
+    return (
+      <Suspense fallback={null}>
+        <AppTakeover sport="bucket" run={takeoverRun} setRun={setTakeoverRun} user={user}
+          pools={LIVE_POOLS} types={LIVE_TYPES} attrMap={BUCKET_ATTR} photoFor={livePhoto}
+          calcOvr={b => calcBucketOVR(b, takeoverRun.types, takeoverRun.pos)} teams={NBA_TEAMS} ratings={TEAM_RATINGS}
+          onNewBuild={startTakeoverBuild} onExit={() => setPage('splash')} />
+      </Suspense>
+    )
+  }
+
   if (page === 'versus-lobby') {
     return (
       <>
         <Suspense fallback={null}>
           <VersusLobby
+            on3v3={IS_APP ? () => setPage('blacktop') : null}
             onJoin={handleVersusJoin}
             position={position}
             gameMode="classic"
@@ -1543,11 +1632,12 @@ export default function BucketApp() {
       <Navbar {...navbarProps} />
 
       <div className="game-page-scroll">
+      {liveBuild && bt.match && <BlacktopHud bt={bt} onOpenChat={openBtChat} unread={btUnread} />}
       {IS_APP && (
         <FlipEdge side={mobileView} build={build} types={activeTypes} attrMap={BUCKET_ATTR} onFlip={flip}
           waiting={savedSpinResult?.selectedQB?.name ?? null} complete={buildComplete} />
       )}
-      <main className={`game-layout mobile-${mobileView}${gameMode === 'all-time' ? ' alltime-mode' : ''}${page === 'versus-game' ? ' versus-active' : ''}`}>
+      <main className={`game-layout mobile-${mobileView}${gameMode === 'all-time' ? ' alltime-mode' : ''}${page === 'versus-game' || liveBuild ? ' versus-active' : ''}`}>
         <SpinScreen
           build={build}
           activeDrag={activeDrag}
@@ -1568,7 +1658,7 @@ export default function BucketApp() {
           cardMeta={IS_APP && page === 'game' && gameMode !== 'salarycap' ? { sport: 'bucket', pos: position, mode: gameMode } : null}
           isRB={false}
           isBucket={true}
-          isVersusMode={page === 'versus-game'}
+          isVersusMode={page === 'versus-game' || liveBuild}
           attrMap={BUCKET_ATTR}
           categoriesData={activeCategories}
           teamsPool={NBA_TEAMS}
@@ -1601,7 +1691,8 @@ export default function BucketApp() {
         <div className="right-panel-wrap">
           <ReportCard
             build={build}
-            onSimulate={() => setShowTeamSpin(true)}
+            onSimulate={page === 'takeover-build' ? hitTheRoad : () => setShowTeamSpin(true)}
+            simLabel={page === 'takeover-build' ? 'HIT THE ROAD' : undefined}
             onReset={handleReset}
             types={activeTypes}
             hasResult={false}
@@ -1616,7 +1707,7 @@ export default function BucketApp() {
             logoDir="/logos/nba/"
             captureFigure={captureFigure}
             isSalaryMode={gameMode === 'salarycap'}
-            isVersusMode={page === 'versus-game'}
+            isVersusMode={page === 'versus-game' || liveBuild}
             oppPosition={oppPosition}
             oppFilledCount={(POS_TYPES[oppPosition] ?? GUARD_TYPES).filter(t => oppBuild[t]).length}
             oppTotal={(POS_TYPES[oppPosition] ?? GUARD_TYPES).length}
@@ -1629,7 +1720,8 @@ export default function BucketApp() {
       </div>
       </div>
 
-      {IS_APP && page === 'game' && <BuildComplete complete={buildComplete} ovr={buildComplete ? calcBucketOVR(build, activeTypes, position) : 0} />}
+      {IS_APP && (page === 'game' || page === 'takeover-build') && <BuildComplete complete={buildComplete} ovr={buildComplete ? calcBucketOVR(build, activeTypes, position) : 0} />}
+      {liveBuild && btChatOpen && <BlacktopChat bt={bt} user={user} onClose={() => setBtChatOpen(false)} />}
 
       {leaveConfirm && (
         <div className="leave-confirm-overlay" onClick={() => setLeaveConfirm(null)}>

@@ -34,7 +34,7 @@ export function getVsId() {
   return _vsId
 }
 
-export default function VersusLobby({ onJoin, position, gameMode, onBack, onLeaderboard, onSignIn, onProfile, onAbout, onSwitchBucketPosition, user, vsRecord, channelPrefix = 'bap' }) {
+export default function VersusLobby({ onJoin, position, gameMode, onBack, onLeaderboard, onSignIn, onProfile, onAbout, onSwitchBucketPosition, user, vsRecord, channelPrefix = 'bap', on3v3 = null }) {
   const [screen, setScreen]       = useState('menu')
   const [myCode, setMyCode]       = useState('')
   const [inputCode, setInputCode] = useState('')
@@ -601,10 +601,14 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
           <div className="vlm-spacer" />
           <div className="vlm-pills">
             <button className="vlm-btn vlm-btn--active">1v1</button>
-            <button className="vlm-btn vlm-btn--soon" disabled>
-              <span className="vlm-soon-label">COMING SOON</span>
-              3v3
-            </button>
+            {on3v3 ? (
+              <button className="vlm-btn" onClick={() => { abandon(); on3v3() }}>3v3</button>
+            ) : (
+              <button className="vlm-btn vlm-btn--soon" disabled>
+                <span className="vlm-soon-label">COMING SOON</span>
+                3v3
+              </button>
+            )}
           </div>
           <div className="vlm-right">
             <button className="vlm-friends-btn" onClick={() => setLbOpen(v => !v)} title="Leaderboard">
