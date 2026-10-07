@@ -1,7 +1,7 @@
 ﻿import { useEffect, useState, useMemo, useRef } from 'react'
 import { nflHeadshot, HEADSHOT_BASE } from '../utils/simulation'
 import SiteFooter from './SiteFooter'
-import SiteFeatures, { WikiCta } from './SiteFeatures'
+import SiteFeatures from './SiteFeatures'
 
 function hsUrl(id) {
   if (!id) return null
@@ -461,7 +461,6 @@ export default function SplashScreen({ onStart, onDepthChart, onWiki }) {
     </div>
 
     <SiteFeatures sport="nfl" />
-    <WikiCta sport="nfl" onWiki={onWiki} />
 
     <SiteFooter sport="nfl" onDepthChart={onDepthChart} onWiki={onWiki} />
     </div>

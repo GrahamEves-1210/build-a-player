@@ -16954,16 +16954,6 @@ html.is-mac [id^="pw-oop-bottom_rail"] > * {
   color: var(--text-3);
 }
 
-/* ═══ Wiki strip under the splash features (the wiki itself has its own stylesheet) ═══ */
-.splash-wiki-cta { position: relative; z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: 18px; max-width: 912px; margin: 0 auto 8px; padding: 18px 22px; border-radius: 14px; border: 1px solid rgba(149,213,178,0.14); background: linear-gradient(100deg, rgba(149,213,178,0.08), rgba(149,213,178,0.02)); }
-.splash-wiki-cta--bucket { border-color: rgba(253,186,116,0.16); background: linear-gradient(100deg, rgba(253,186,116,0.08), rgba(253,186,116,0.02)); }
-.splash-wiki-cta-txt { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-.splash-wiki-cta-title { font-family: var(--font); font-size: 17px; font-weight: 800; color: #fff; letter-spacing: -0.2px; }
-.splash-wiki-cta-desc { font-size: 13px; line-height: 1.55; color: rgba(255,255,255,0.68); max-width: 62ch; }
-.splash-wiki-cta-btn { flex: 0 0 auto; padding: 10px 16px; border-radius: 10px; background: #fff; color: #0f1612; font-family: var(--font); font-size: 13px; font-weight: 800; text-decoration: none; white-space: nowrap; transition: transform .12s, background .15s; }
-.splash-wiki-cta-btn:hover { background: #e9f5ee; }
-.splash-wiki-cta-btn:active { transform: scale(.98); }
-@media (max-width: 640px) { .splash-wiki-cta { flex-direction: column; align-items: flex-start; margin-left: 16px; margin-right: 16px; } .splash-wiki-cta-btn { align-self: stretch; text-align: center; } }
 
 /* ═══ Custom Ratings: Current / All-Time toggle ═════════════════════════════ */
 .cr-era { display: flex; gap: 6px; margin-bottom: 8px; }

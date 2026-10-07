@@ -31,7 +31,7 @@ import { HEADSHOT_BASE } from '../utils/simulation'
 import ProfilePage from './ProfilePage'
 import CustomRatingsModal from './CustomRatingsModal'
 import SiteFooter from './SiteFooter'
-import SiteFeatures, { WikiCta } from './SiteFeatures'
+import SiteFeatures from './SiteFeatures'
 import { IS_APP } from '../lib/platform'
 import AppHome from './app/AppHome'
 import { FlipEdge, BuildComplete, useFlip } from './app/AppBuildTray'
@@ -324,7 +324,6 @@ function BucketSplash({ onStart, onVersus }) {
     </div>
 
     <SiteFeatures sport="bucket" />
-    <WikiCta sport="bucket" />
 
     <SiteFooter sport="bucket" />
     </div>
