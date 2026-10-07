@@ -965,7 +965,7 @@ export default function BucketApp() {
       fg_pct:      result.fgPct,
       three_pct:   result.threePct,
       best_pts:    result.bestGame?.pts ?? 0,
-      team_short:  team.short,
+      team_short:  result.team?.short ?? null,     // the result carries the team: this runs when the season ends, not when it's picked
       build:       buildJson,
     }).then(({ error }) => { if (error) console.error('[bucket save]', error.code, error.message, error.details, error.hint) })
   }, [build, activeTypes, position, user, gameMode, isBucketCustomMode])
