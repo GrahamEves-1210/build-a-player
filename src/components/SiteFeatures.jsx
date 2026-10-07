@@ -1,3 +1,17 @@
+// A strip under the features pointing at the Wiki — the long version of how it all works
+export function WikiCta({ sport = 'nfl', onWiki }) {
+  const isBucket = sport === 'bucket'
+  return (
+    <section className={`splash-wiki-cta${isBucket ? ' splash-wiki-cta--bucket' : ''}`}>
+      <div className="splash-wiki-cta-txt">
+        <div className="splash-wiki-cta-title">New here? Read the Wiki.</div>
+        <div className="splash-wiki-cta-desc">Every mode and every mechanic, explained — how spins work, how the overall is scored, how a season is simulated — plus every player rating in the game.</div>
+      </div>
+      <a className="splash-wiki-cta-btn" href="/wiki" onClick={e => { if (onWiki) { e.preventDefault(); onWiki() } }}>Open the Wiki →</a>
+    </section>
+  )
+}
+
 export default function SiteFeatures({ sport = 'nfl', className = '' }) {
   const isBucket = sport === 'bucket'
 

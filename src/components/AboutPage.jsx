@@ -16,6 +16,12 @@ export default function AboutPage({ onBack, onPrivacy }) {
           </p>
         </section>
 
+        <section className="about-section">
+          <p className="about-body">
+            Want the details? The <a className="about-link" href="/wiki">Wiki</a> explains every mode and every mechanic — spins, overall ratings, season simulation, Salary Cap, the Daily, Head-to-Head — and lists every player rating in the game. The <a className="about-link" href="/creators">Creators</a> page collects the YouTubers and streamers who have played.
+          </p>
+        </section>
+
         <section className="about-section" style={{ textAlign: 'center' }}>
           <div style={{ display: 'inline-grid', gridTemplateColumns: '1fr auto', gap: '10px 8px', alignItems: 'center', textAlign: 'left' }}>
             <span className="about-body" style={{ margin: 0 }}>Enjoy Build-A-Player? Check out my college basketball game —{' '}
