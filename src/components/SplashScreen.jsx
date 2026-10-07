@@ -327,7 +327,7 @@ function StackedSilhouette({ position, attrs, ready }) {
   )
 }
 
-export default function SplashScreen({ onStart, onDepthChart, onWiki, onCreators }) {
+export default function SplashScreen({ onStart, onDepthChart, onWiki }) {
   const [phase, setPhase] = useState(0)
   // A saved position that's since gone to Coming Soon (OL) falls back to QB
   const [position, setPosition] = useState(() => {
@@ -460,7 +460,7 @@ export default function SplashScreen({ onStart, onDepthChart, onWiki, onCreators
     <SiteFeatures sport="nfl" />
     <WikiCta sport="nfl" onWiki={onWiki} />
 
-    <SiteFooter sport="nfl" onDepthChart={onDepthChart} onWiki={onWiki} onCreators={onCreators} />
+    <SiteFooter sport="nfl" onDepthChart={onDepthChart} onWiki={onWiki} />
     </div>
   )
 }
