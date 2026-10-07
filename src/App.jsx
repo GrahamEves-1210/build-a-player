@@ -983,7 +983,6 @@ export default function App() {
     onSignIn: () => setShowAuth(true),
     onProfile: () => { window.history.pushState({}, '', '/profile'); setPage('profile') },
     onLeaderboard: () => setPage('leaderboard'),
-    onWiki: () => { setPage('wiki'); window.scrollTo({ top: 0, behavior: 'instant' }) },
     onSwitchPosition: (pos) => { try { localStorage.setItem('lastPosition', pos) } catch {}; handleHome() },
     onSubscribe: async () => {
       if (!user) { setShowAuth(true); return }

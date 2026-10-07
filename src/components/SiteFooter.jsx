@@ -52,7 +52,7 @@ export default function SiteFooter({ sport = 'nfl', onDepthChart, onWiki }) {
           <div className="splash-site-footer-head">Info</div>
           <a className="splash-site-footer-link" href="/?about">About</a>
           <a className="splash-site-footer-link" href="/privacy">Privacy Policy</a>
-          <a className="splash-site-footer-link" href="/terms">Terms of Service</a>
+          <a className="splash-site-footer-link" href="/terms">Terms</a>
           <button className="splash-site-footer-link splash-site-footer-link--btn" onClick={openFeedback}>Send Feedback</button>
           {onWiki
             ? <button className="splash-site-footer-link splash-site-footer-link--btn" onClick={onWiki}>Wiki</button>
