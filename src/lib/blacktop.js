@@ -1,6 +1,8 @@
 // BLACKTOP — live 3v3. One hook owns the whole life of a match so the screens
 // only render:
-//   queue  → 6 players gather (or bots fill after a wait) → the leader deals teams
+//   queue  → the lobby: two squads of 2 guards + 1 big. You tap an open spot to
+//            join that team in that role; when all six are taken (or bots fill
+//            the rest after a wait) the run starts
 //   build  → everyone builds on a shared 3:00 clock, team chat, roles; the leader
 //            finalises: anyone AFK or gone gets an auto-build with ratings off
 //   game   → every client plays back the same seeded streetball game
@@ -15,6 +17,7 @@ import { simStreetball, buildFromPlayer } from './hoops'
 import { clean, blockedIds, MIN_GAP_MS } from './chat'
 import { supabase } from './supabase'
 import { getUsername } from './discord'
+import { myCosmetics } from './progress'
 
 export const ROOM_SIZE = 6
 export const BUILD_SECS = 180
@@ -41,6 +44,23 @@ export const ROLES = [
   { id: 'lock', name: 'LOCKDOWN', sub: 'Guard their best' },
 ]
 const BOT_NAMES = ['Smoke', 'Shifty', 'Glass', 'Sauce', 'Twitch', 'Hammer', 'Ghost', 'Blitz', 'Cash', 'Lefty', 'Rook', 'Stretch']
+
+// The lobby's six spots: every squad is two guards and a big
+export const SLOTS = [
+  { id: '0g0', team: 0, pos: 'guard' }, { id: '0g1', team: 0, pos: 'guard' }, { id: '0b', team: 0, pos: 'big' },
+  { id: '1g0', team: 1, pos: 'guard' }, { id: '1g1', team: 1, pos: 'guard' }, { id: '1b', team: 1, pos: 'big' },
+]
+export const slotById = id => SLOTS.find(x => x.id === id) ?? null
+// Who holds each spot: the earliest claim wins a tie (both see the same answer)
+export function holders(list) {
+  const out = {}
+  for (const p of list) {
+    if (!p.slot || !slotById(p.slot)) continue
+    const cur = out[p.slot]
+    if (!cur || (p.claim ?? 0) < (cur.claim ?? 0) || ((p.claim ?? 0) === (cur.claim ?? 0) && p.vid < cur.vid)) out[p.slot] = p
+  }
+  return out
+}
 
 // Deal six players into two teams: bigs spread first, then guards, snake order
 export function dealTeams(players, seed) {
@@ -75,10 +95,16 @@ export function autoBuild(partial, types, pool, seed) {
 
 const leaderOf = list => [...list].filter(p => !p.bot).map(p => p.vid).sort()[0] ?? null
 
-export function useBlacktop({ enabled, user, position, pools, types, build, player, photoFor, onExit }) {
-  const me = useMemo(() => ({ vid: myVid(), name: user ? (getUsername(user) || 'Player') : 'Guest', uid: user?.id ?? null, pos: position }), [user?.id, position]) // eslint-disable-line
+export function useBlacktop({ enabled, user, position, pools, types, build, player, photoFor, onExit, onSeatPos }) {
+  // your look travels with you (lobby spots, chat): re-read when you change it
+  const [cosV, setCosV] = useState(0)
+  useEffect(() => { const on = () => setCosV(v => v + 1); window.addEventListener('bap:cosmetics', on); return () => window.removeEventListener('bap:cosmetics', on) }, [])
+  const me = useMemo(() => ({ vid: myVid(), name: user ? (getUsername(user) || 'Player') : 'Guest', uid: user?.id ?? null, pos: position, cos: myCosmetics() }), [user?.id, position, cosV]) // eslint-disable-line
   const [phase, setPhase] = useState('idle')          // idle | queue | build | game | result
-  const [queue, setQueue] = useState([])               // presence in the queue
+  const [queue, setQueue] = useState([])               // presence in the lobby
+  const [mySlot, setMySlot] = useState(null)           // the spot I claimed in the lobby
+  const [bumped, setBumped] = useState(false)          // someone beat me to a spot
+  const [lobbyChat, setLobbyChat] = useState([])
   const [waited, setWaited] = useState(0)
   const [match, setMatch] = useState(null)             // { code, seed, created, players:[{vid,name,uid,pos,team,bot}] }
   const [present, setPresent] = useState([])           // presence in the room
@@ -94,12 +120,14 @@ export function useBlacktop({ enabled, user, position, pools, types, build, play
   const lastChat = useRef(0)
   const finalSent = useRef(false)
   const stateRef = useRef({})
+  const onSeatPosRef = useRef(onSeatPos); onSeatPosRef.current = onSeatPos
+  const lastTyping = useRef(0)
   stateRef.current = { match, present, builds, build, position, role, player, final, phase }
 
   const leave = useCallback(() => {
     queueRef.current?.leave(); queueRef.current = null
     roomRef.current?.leave(); roomRef.current = null
-    setPhase('idle'); setMatch(null); setPresent([]); setBuilds({}); setChat([]); setFinal(null); setQueue([]); setRematchVotes(new Set())
+    setPhase('idle'); setMatch(null); setPresent([]); setBuilds({}); setChat([]); setFinal(null); setQueue([]); setRematchVotes(new Set()); setMySlot(null); setLobbyChat([])
     finalSent.current = false
   }, [])
   useEffect(() => { if (!enabled) leave() }, [enabled, leave])
@@ -111,13 +139,14 @@ export function useBlacktop({ enabled, user, position, pools, types, build, play
     setMatch(m); setPhase('build'); setBuilds({}); setChat([]); setFinal(null); setRematchVotes(new Set())
     finalSent.current = false
     const mine = m.players.find(p => p.vid === me.vid)
-    const room = joinRoom(`blacktop-${m.code}`, { ...me, team: mine?.team ?? 0, filled: 0, done: false })
+    if (mine?.pos) onSeatPosRef.current?.(mine.pos)
+    const room = joinRoom(`blacktop-${m.code}`, { ...me, pos: mine?.pos ?? me.pos, team: mine?.team ?? 0, filled: 0, done: false })
     roomRef.current = room
     room.onPresence(setPresent)
     room.on('build', p => setBuilds(b => ({ ...b, [p.from]: { build: p.build, pos: p.pos, role: p.role, player: p.player, filled: p.filled, done: p.done } })))
     room.on('chat', p => {
       if (blockedIds().has(p.uid)) return
-      setChat(c => [...c.slice(-80), { id: `${p.from}-${p.ts}`, from: p.from, uid: p.uid, name: p.name, team: p.team, text: clean(p.text), ts: p.ts, all: !!p.all }])
+      setChat(c => [...c.slice(-80), { id: `${p.from}-${p.ts}`, from: p.from, uid: p.uid, name: p.name, cos: p.cos, team: p.team, text: clean(p.text), ts: p.ts, all: !!p.all }])
     })
     room.on('final', p => { setFinal(f => f ?? { builds: p.builds, roles: p.roles, seed: p.seed }); setPhase('game') })
     room.on('rematch', p => setRematchVotes(s => new Set([...s, p.from])))
@@ -129,42 +158,67 @@ export function useBlacktop({ enabled, user, position, pools, types, build, play
     })
   }, [me])
 
+  // Builds the match from the spots: humans where they sat, bots in the rest
+  const formFrom = useCallback((list, bots) => {
+    const code = genCode()
+    const held = holders(list)
+    const bnames = seededShuffle(BOT_NAMES, code)
+    let bi = 0
+    const players = SLOTS.map(sl => {
+      const h = held[sl.id]
+      if (h) return { vid: h.vid, name: h.name, uid: h.uid ?? null, pos: sl.pos, team: sl.team, bot: false, slot: sl.id }
+      return { vid: `bot-${code}-${sl.id}`, name: bnames[bi++ % bnames.length], uid: null, pos: sl.pos, team: sl.team, bot: true, slot: sl.id }
+    })
+    return { code, seed: code, created: Date.now(), players, bots }
+  }, [])
+  const seatedLeader = list => { const held = holders(list); return [...list].filter(p => p.slot && held[p.slot]?.vid === p.vid).map(p => p.vid).sort()[0] ?? null }
+
   const join = useCallback(() => {
     if (!enabled) return
-    setPhase('queue'); setWaited(0)
-    const q = joinRoom('blacktop-q', { ...me, ts: Date.now() })
+    setPhase('queue'); setWaited(0); setMySlot(null); setLobbyChat([])
+    const q = joinRoom('blacktop-q', { ...me, ts: Date.now(), slot: null, claim: 0 })
     queueRef.current = q
-    const sorted = list => [...list].sort((a, b) => (a.ts ?? 0) - (b.ts ?? 0) || a.vid.localeCompare(b.vid))
-    const form = (list, bots) => {
-      const code = genCode()
-      const humans = sorted(list).slice(0, ROOM_SIZE).map(({ vid, name, uid, pos }) => ({ vid, name, uid, pos, bot: false }))
-      const all = [...humans, ...makeBots(Math.max(0, ROOM_SIZE - humans.length), code, position)].slice(0, ROOM_SIZE)
-      const m = { code, seed: code, created: Date.now(), players: dealTeams(all, code), bots }
-      q.send('match', m)
-      enterRoom(m)
-    }
     q.onPresence(list => {
-      setQueue(sorted(list))
-      if (list.length >= ROOM_SIZE && leaderOf(list) === me.vid) form(list, false)
+      setQueue(list)
+      const held = holders(list)
+      // beaten to my spot: step back out
+      const mine = list.find(p => p.vid === me.vid)
+      if (mine?.slot && held[mine.slot] && held[mine.slot].vid !== me.vid) {
+        q.track({ slot: null, claim: 0 }); setMySlot(null); setBumped(true); setTimeout(() => setBumped(false), 2600)
+        return
+      }
+      if (SLOTS.every(sl => held[sl.id]) && seatedLeader(list) === me.vid && queueRef.current === q) {
+        const m = formFrom(list, false)
+        q.send('match', m); enterRoom(m)
+      }
     })
     q.on('match', m => { if (m.players.some(p => p.vid === me.vid)) enterRoom(m) })
-    q.on('fill', () => { const list = q.presence(); if (leaderOf(list) === me.vid) form(list, true) })
-  }, [enabled, me, position, enterRoom])
+    q.on('fill', () => {
+      const list = q.presence()
+      if (seatedLeader(list) === me.vid && queueRef.current === q) { const m = formFrom(list, true); q.send('match', m); enterRoom(m) }
+    })
+    q.on('chat', p => {
+      if (blockedIds().has(p.uid)) return
+      setLobbyChat(c => [...c.slice(-60), { id: `${p.from}-${p.ts}`, from: p.from, uid: p.uid, name: p.name, cos: p.cos, team: -1, text: clean(p.text), ts: p.ts, all: true }])
+    })
+  }, [enabled, me, enterRoom, formFrom]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // the leader doesn't receive its own broadcast: act locally too
+  // Tap a spot: claim it (null steps back out)
+  const seat = useCallback(slotId => {
+    const q = queueRef.current; if (!q) return
+    const held = holders(q.presence())
+    if (slotId && held[slotId] && held[slotId].vid !== me.vid) return
+    q.track({ slot: slotId, claim: slotId ? Date.now() : 0 })
+    setMySlot(slotId)
+  }, [me.vid])
+
+  // Bots take the open spots: any seated player can ask, the seated leader deals it
   const fillNow = useCallback(() => {
     const q = queueRef.current; if (!q) return
     q.send('fill', {})
     const list = q.presence()
-    if (leaderOf(list) === me.vid) {
-      const code = genCode()
-      const humans = [...list].sort((a, b) => (a.ts ?? 0) - (b.ts ?? 0)).slice(0, ROOM_SIZE).map(({ vid, name, uid, pos }) => ({ vid, name, uid, pos, bot: false }))
-      const all = [...humans, ...makeBots(ROOM_SIZE - humans.length, code, position)]
-      const m = { code, seed: code, created: Date.now(), players: dealTeams(all, code), bots: true }
-      q.send('match', m)
-      enterRoom(m)
-    }
-  }, [me.vid, position, enterRoom])
+    if (seatedLeader(list) === me.vid) { const m = formFrom(list, true); q.send('match', m); enterRoom(m) }
+  }, [me.vid, enterRoom, formFrom]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (phase !== 'queue') return
     const id = setInterval(() => setWaited(w => w + 1), 1000)
@@ -221,15 +275,26 @@ export function useBlacktop({ enabled, user, position, pools, types, build, play
   const setRole = useCallback(r => setRoleState(r), [])
   const sendChat = useCallback((text, all = false) => {
     const now = Date.now()
-    if (!roomRef.current || !user || now - lastChat.current < MIN_GAP_MS) return false
+    const inLobby = phase === 'queue'
+    const room = inLobby ? queueRef.current : roomRef.current
+    if (!room || !user || now - lastChat.current < MIN_GAP_MS) return false
     const t = clean(text); if (!t) return false
     lastChat.current = now
     const mine = match?.players.find(p => p.vid === me.vid)
-    const msg = { uid: me.uid, name: me.name, team: mine?.team ?? 0, text: t, ts: now, all }
-    roomRef.current.send('chat', msg)
-    setChat(c => [...c.slice(-80), { id: `${me.vid}-${now}`, from: me.vid, ...msg }])
+    const msg = { uid: me.uid, name: me.name, cos: me.cos, team: inLobby ? -1 : (mine?.team ?? 0), text: t, ts: now, all: inLobby || all }
+    room.send('chat', msg)
+    room.track({ typing: 0 })
+    const line = { id: `${me.vid}-${now}`, from: me.vid, ...msg }
+    if (inLobby) setLobbyChat(c => [...c.slice(-60), line]); else setChat(c => [...c.slice(-80), line])
     return true
-  }, [user, match, me])
+  }, [user, match, me, phase])
+  // "... is typing" (shared through presence, at most every 2s)
+  const typing = useCallback(() => {
+    const now = Date.now()
+    if (now - lastTyping.current < 2000) return
+    lastTyping.current = now
+    ;(phase === 'queue' ? queueRef.current : roomRef.current)?.track({ typing: now })
+  }, [phase])
 
   // ── Game ───────────────────────────────────────────────────────────────────
   const game = useMemo(() => {
@@ -247,7 +312,9 @@ export function useBlacktop({ enabled, user, position, pools, types, build, play
     const won = mine && game.winner === mine.team
     const mvp = game.mvp === me.vid
     const xp = (won ? 40 : 15) + (mvp ? 20 : 0)
-    window.dispatchEvent(new CustomEvent('bap:xp', { detail: { xp, label: won ? (mvp ? 'Blacktop win · MVP' : 'Blacktop win') : 'Blacktop game' } }))
+    const coins = (won ? 30 : 10) + (mvp ? 15 : 0)
+    window.dispatchEvent(new CustomEvent('bap:xp', { detail: { xp, coins, label: won ? (mvp ? 'Blacktop win · MVP' : 'Blacktop win') : 'Blacktop game' } }))
+    window.dispatchEvent(new CustomEvent('bap:blacktop', { detail: { won: !!won, mvp } }))
     if (user && supabase && !match.bots) {
       const line = game.stats[me.vid]
       supabase.from('vs_results').insert({ user_id: user.id, username: getUsername(user), result: won ? 'win' : 'loss', ovr: null, position: mine?.pos ?? position, match_type: '3v3' }).then(null, () => {})
@@ -279,11 +346,16 @@ export function useBlacktop({ enabled, user, position, pools, types, build, play
   const exit = useCallback(() => { leave(); onExit?.() }, [leave, onExit])
 
   const myTeam = match?.players.find(p => p.vid === me.vid)?.team ?? 0
-  const visibleChat = useMemo(() => chat.filter(m => m.all || m.team === myTeam), [chat, myTeam])
+  const visibleChat = useMemo(() => (phase === 'queue' ? lobbyChat : chat.filter(m => m.all || m.team === myTeam)), [chat, lobbyChat, myTeam, phase])
   const leader = leaderOf(present)
+  const held = useMemo(() => holders(queue), [queue])
+  const seated = Object.keys(held).length
+  const typers = (phase === 'queue' ? queue : present.filter(p => match?.players.find(q => q.vid === p.vid)?.team === myTeam))
+    .filter(p => p.vid !== me.vid && (p.typing ?? 0) > Date.now() - 3500).map(p => p.name)
   return {
-    phase, me, queue, waited, canFill: waited >= FILL_AFTER_SECS && queue.length < ROOM_SIZE, join, fill: fillNow, leave: exit,
-    match, present, builds, clock, role, setRole, chat: visibleChat, sendChat, myTeam, leader, isLeader: leader === me.vid,
+    phase, me, queue, waited, held, seated, mySlot, seat, bumped,
+    canFill: !!mySlot && waited >= FILL_AFTER_SECS && seated < ROOM_SIZE, join, fill: fillNow, leave: exit,
+    match, present, builds, clock, role, setRole, chat: visibleChat, sendChat, typing, typers, myTeam, leader, isLeader: leader === me.vid,
     final, game, finish, rematchVotes, voteRematch, exit,
   }
 }

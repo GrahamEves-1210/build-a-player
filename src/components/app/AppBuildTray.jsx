@@ -140,26 +140,70 @@ function useCountUp(target, run, ms = 1100) {
   return v
 }
 
-export function BuildComplete({ complete, ovr, label = 'OVR' }) {
+// The build-complete moment: the grades pop into the card one by one while the
+// OVR ring fills, then the tier stamps down on the impact of the stinger.
+const TIERS = [
+  { min: 92, name: 'LEGENDARY', tier: 4, color: '#f2c94c' },
+  { min: 87, name: 'ELITE',     tier: 3, color: '#b678ff' },
+  { min: 82, name: 'PRO BOWL',  tier: 2, color: '#4ea8ff' },
+  { min: 76, name: 'STARTER',   tier: 1, color: '#34d399' },
+  { min: 0,  name: 'DEVELOPING', tier: 0, color: '#9fb3a8' },
+]
+export const tierFor = ovr => TIERS.find(t => ovr >= t.min)
+export function BuildComplete({ complete, ovr, label = 'OVR', build = null, types = [], attrMap = null }) {
   const was = useRef(complete)
   const [show, setShow] = useState(false)
+  const [stage, setStage] = useState(0)          // 0 in → 1 landed
+  const timers = useRef([])
+  const tier = tierFor(ovr || 0)
+  const chips = types.filter(t => build?.[t])
   useEffect(() => {
     if (complete && !was.current) {
-      setShow(true)
-      window.dispatchEvent(new CustomEvent('bap:build-complete'))
-      const t = setTimeout(() => setShow(false), 2300)
       was.current = complete
-      return () => clearTimeout(t)
+      setShow(true); setStage(0)
+      window.dispatchEvent(new CustomEvent('bap:build-complete', { detail: { ovr } }))
+      import('../../lib/juice').then(({ sfx, haptic }) => {
+        sfx('complete', tier.tier)
+        chips.forEach((t, i) => timers.current.push(setTimeout(() => sfx('gradepop', build[t].val), 180 + i * 75)))
+        timers.current.push(setTimeout(() => { haptic('heavy') }, 1000))
+      }).catch(() => {})
+      timers.current.push(setTimeout(() => setStage(1), 1000))
+      timers.current.push(setTimeout(() => setShow(false), 3600))
+      return
     }
     was.current = complete
-  }, [complete])
-  const n = useCountUp(ovr, show)
+  }, [complete]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => () => timers.current.forEach(clearTimeout), [])
+  const n = useCountUp(ovr, show, 950)
   if (!show) return null
+  const R = 54, C = 2 * Math.PI * R
+  const pct = Math.min(1, (n || 0) / 99)
   return (
-    <div className="ag-complete" onClick={() => setShow(false)}>
-      <span className="ag-eyebrow">BUILD COMPLETE</span>
-      <span className="ag-complete-num">{n}</span>
-      <span className="ag-complete-lbl">{label}</span>
+    <div className={`ag-bc${stage ? ' is-landed' : ''}`} style={{ '--tier': tier.color }} onClick={() => setShow(false)}>
+      <div className="ag-bc-rays" aria-hidden="true" />
+      <div className="ag-bc-card">
+        <span className="ag-eyebrow ag-bc-eyebrow">BUILD COMPLETE</span>
+        <div className="ag-bc-ring">
+          <svg viewBox="0 0 128 128" aria-hidden="true">
+            <circle cx="64" cy="64" r={R} className="ag-bc-track" />
+            <circle cx="64" cy="64" r={R} className="ag-bc-fill" strokeDasharray={C} strokeDashoffset={C * (1 - pct)} />
+          </svg>
+          <span className="ag-bc-num">{n}</span>
+          <span className="ag-bc-lbl">{label}</span>
+        </div>
+        <div className="ag-bc-tier">{tier.name}</div>
+        {chips.length > 0 && (
+          <div className="ag-bc-grades" style={{ gridTemplateColumns: `repeat(${Math.min(5, chips.length)}, 1fr)` }}>
+            {chips.map((t, i) => (
+              <span key={t} className="ag-bc-g" style={{ '--g': gradeColor(build[t].val), '--d': `${180 + i * 75}ms` }}>
+                <b>{valToGrade(build[t].val)}</b>
+                <small>{attrMap?.[t]?.shortLabel ?? t.slice(0, 3).toUpperCase()}</small>
+              </span>
+            ))}
+          </div>
+        )}
+        <span className="ag-bc-tap">TAP TO CONTINUE</span>
+      </div>
     </div>
   )
 }

@@ -8,6 +8,8 @@ import { IconHome, IconPlay, IconProfile, IconCalendar, IconCards } from './app/
 
 const AppDaily = lazy(() => import('./app/AppDaily'))
 const AppCards = lazy(() => import('./app/AppCards'))
+const AppShop = lazy(() => import('./app/AppShop'))
+const AppAchievements = lazy(() => import('./app/AppAchievements'))
 
 // iOS/Android app only: floating game dock (Home · Daily · PLAY · Cards ·
 // Profile) that replaces the website's menu, plus the app-only screens and
@@ -17,7 +19,7 @@ const AppCards = lazy(() => import('./app/AppCards'))
 // beyond a small listener:
 //   game  → dock:  'bap:page'  { page, sport }   (which tab is lit)
 //   dock  → game:  'bap:nav'   'home' | 'play' | 'leaderboard' | 'profile' | 'about' | 'daily-challenge'
-//   anyone → dock: 'bap:nav' 'daily' | 'cards', 'bap:menu', 'bap:auth'
+//   anyone → dock: 'bap:nav' 'daily' | 'cards' | 'shop' | 'achievements', 'bap:menu', 'bap:auth'
 
 const TAB_FOR_PAGE = { splash: 'home', profile: 'profile', leaderboard: null, 'pvp-leaderboard': null, about: null }
 // Full-screen pages that hide the dock (a head-to-head match in progress)
@@ -47,15 +49,16 @@ export default function AppTabBar() {
   const [state, setState]       = useState(() => window.__bapPage ?? { page: 'splash', sport: 'nfl' })
   const [menuOpen, setMenuOpen] = useState(false)
   const [authOpen, setAuthOpen] = useState(false)
-  const [screen, setScreen]     = useState(null)   // 'daily' | 'cards' | null
+  const [screen, setScreen]     = useState(null)   // 'daily' | 'cards' | 'shop' | 'achievements' | null
   const badge = useDailyBadge()
+  const claimable = useProgress().claimable || 0
 
   useEffect(() => {
     const onPage = e => { setState(e.detail); setScreen(null) }
     const onAuth = () => { setMenuOpen(false); setAuthOpen(true) }
     const onMenu = () => setMenuOpen(true)
     const onNav = e => {
-      if (e.detail === 'daily' || e.detail === 'cards') { setMenuOpen(false); setScreen(e.detail) }
+      if (['daily', 'cards', 'shop', 'achievements'].includes(e.detail)) { setMenuOpen(false); setScreen(e.detail) }
       else setScreen(null)
     }
     window.addEventListener('bap:page', onPage)
@@ -83,7 +86,10 @@ export default function AppTabBar() {
     <>
       {screen && (
         <Suspense fallback={<div className="ag-screen" />}>
-          {screen === 'daily' ? <AppDaily sport={state.sport} onClose={() => setScreen(null)} /> : <AppCards sport={state.sport} onClose={() => setScreen(null)} />}
+          {screen === 'daily' ? <AppDaily sport={state.sport} onClose={() => setScreen(null)} />
+            : screen === 'shop' ? <AppShop onClose={() => setScreen(null)} />
+            : screen === 'achievements' ? <AppAchievements onClose={() => setScreen(null)} />
+            : <AppCards sport={state.sport} onClose={() => setScreen(null)} />}
         </Suspense>
       )}
       {!hidden && (
@@ -96,7 +102,7 @@ export default function AppTabBar() {
             <span className="ag-play-label">PLAY</span>
           </button>
           <Tab label="CARDS" Icon={IconCards} active={active === 'cards'} onClick={open('cards')} />
-          <Tab label="PROFILE" Icon={IconProfile} active={active === 'profile'} onClick={go('profile')} />
+          <Tab label="PROFILE" Icon={IconProfile} active={active === 'profile' || active === 'shop' || active === 'achievements'} onClick={go('profile')} badge={claimable} />
         </nav>
       )}
       {menuOpen && <AppMenu sport={state.sport} onClose={() => setMenuOpen(false)} />}

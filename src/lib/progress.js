@@ -1,5 +1,5 @@
-// App-only progression: XP + levels, the daily login streak, three daily
-// missions, the Daily Challenge and the card collection. Started from main.jsx
+// App-only progression: XP + levels, coins + the shop, achievements, the daily
+// login streak, three daily missions, the Daily Challenge and the card collection. Started from main.jsx
 // when IS_APP; the games only fire window events and this file listens:
 //   'bap:season' { sport, pos, mode, wins, losses, playoffs, champion, award, ovr, sandbox, daily }
 //   'bap:spin'   { sport, pos, mode, player, pool }          (a player was revealed)
@@ -13,6 +13,8 @@
 import { useSyncExternalStore } from 'react'
 import { supabase } from './supabase'
 import { getUsername } from './discord'
+import { itemById, forSale, DEFAULTS, ITEMS } from './cosmetics'
+import { ACHIEVEMENTS, achById } from './achievements'
 
 // ── Days (America/New_York, same as the Salary Cap daily) ────────────────────
 const NY = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' })
@@ -166,11 +168,32 @@ const blank = () => ({
   unlocks: {},
   spot: 'classic',
   seenLevel: 0,
-  stats: { seasons: 0, rings: 0, spins: 0, best: 0 },
+  stats: { ...BLANK_STATS },
+  // coins + the shop (app)
+  coins: 0,
+  coinsEarned: 0,
+  owned: {},                  // itemId → when it was bought / earned
+  equip: { ...DEFAULTS },     // slot → itemId
+  shopFree: null,             // day the free daily coins were claimed
+  levelPaid: 0,               // highest level already paid out in coins
+  // achievements
+  ach: {},                    // id → when it was unlocked
+  achClaimed: {},             // id → when its reward was claimed
+  walletAt: 0,                // last change to coins/items/achievements (server sync)
 })
+const BLANK_STATS = {
+  seasons: 0, rings: 0, spins: 0, best: 0,
+  wins: 0, winning: 0, playoffs: 0, awards: 0, perfect: 0, ovr90: 0, ovr95: 0, allTime: 0,
+  nflSeasons: 0, bucketSeasons: 0, positions: {}, daily: 0, legends: 0,
+  btGames: 0, btWins: 0, btMvp: 0, tkCities: 0, tkRuns: 0, dcBest: 0, purchases: 0,
+}
 const keyFor = id => `bap_prog_${id || 'guest'}`
 function load(id) {
-  try { return { ...blank(), ...JSON.parse(localStorage.getItem(keyFor(id)) || '{}') } } catch { return blank() }
+  try {
+    const saved = JSON.parse(localStorage.getItem(keyFor(id)) || '{}')
+    const b = blank()
+    return { ...b, ...saved, stats: { ...b.stats, ...(saved.stats || {}), positions: { ...(saved.stats?.positions || {}) } }, equip: { ...DEFAULTS, ...(saved.equip || {}) } }
+  } catch { return blank() }
 }
 
 let uid = null
@@ -187,10 +210,15 @@ function totalXp() {
 }
 function makeSnap() {
   const xp = totalXp()
-  return { ...S, xp, lvl: levelInfo(xp), signedIn: !!uid, user, lastSeason }
+  const lvl = levelInfo(xp)
+  const claimable = ACHIEVEMENTS.filter(a => S.ach[a.id] && !S.achClaimed[a.id]).length
+  return { ...S, xp, lvl, signedIn: !!uid, user, lastSeason, pro: isPro(), claimable, freeReady: S.shopFree !== dayKey() }
 }
-function emit() {
+function emit(quiet = false) {
+  payLevels()
+  checkAch(quiet)
   try { localStorage.setItem(keyFor(uid), JSON.stringify(S)) } catch {}
+  if (uid) schedulePush()
   snap = makeSnap()
   listeners.forEach(fn => fn())
   window.dispatchEvent(new CustomEvent('bap:progress'))
@@ -245,14 +273,17 @@ export function claimMission(id) {
   if (!m || m.claimed || m.n < def.goal) return 0
   m.claimed = true
   S.bonusXp += def.xp
+  earn(missionCoins(def.xp), null, true)
   emit()
   return def.xp
 }
+export const missionCoins = xp => Math.round(xp * 0.6)
 export function claimStreak(days) {
   const r = STREAK_REWARDS.find(x => x.days === days)
   if (!r || S.streak.count < days || S.streak.claimed[days]) return 0
   S.streak.claimed[days] = true
   S.bonusXp += r.xp
+  earn(Math.round(r.xp / 2), null, true)
   if (r.unlock) S.unlocks[r.unlock] = true
   emit()
   return r.xp
@@ -264,6 +295,7 @@ export function claimSet(key, size) {
   if (S.sets[key]) return 0
   S.sets[key] = true
   S.bonusXp += setReward(size)
+  earn(Math.round(setReward(size) / 3), null, true)
   emit()
   return setReward(size)
 }
@@ -343,6 +375,19 @@ function onSeason(e) {
   S.stats.seasons++
   if (d.champion) S.stats.rings++
   if (d.ovr > S.stats.best) S.stats.best = d.ovr
+  const st = S.stats
+  st.wins += d.wins ?? 0
+  if (d.sport === 'bucket' ? d.wins >= 50 : d.wins >= 10) st.winning++
+  if (d.playoffs) st.playoffs++
+  if (d.award) st.awards++
+  if (d.losses === 0 && d.wins > 0) st.perfect++
+  if (d.ovr >= 90) st.ovr90++
+  if (d.ovr >= 95) st.ovr95++
+  if (d.mode === 'all-time') st.allTime++
+  if (d.sport === 'bucket') st.bucketSeasons++; else { st.nflSeasons++; if (d.pos) st.positions[d.pos] = 1 }
+  if (d.daily) st.daily++
+  const coins = seasonCoins(d)
+  earn(coins, null, true)
   const missionsBefore = (S.day?.missions ?? []).map(m => m.n)
   bumpMissions('season', d)
   if (d.daily) {
@@ -355,7 +400,7 @@ function onSeason(e) {
     }
   }
   lastSeason = {
-    id: Date.now(), ref: d.ref ?? null, lines, xp, before, after: before + xp,
+    id: Date.now(), ref: d.ref ?? null, lines, xp, before, after: before + xp, coins,
     missions: (S.day?.missions ?? []).map((m, i) => ({ ...m, before: missionsBefore[i] ?? 0, def: MISSIONS[m.id] })),
   }
   emit()
@@ -363,10 +408,11 @@ function onSeason(e) {
 
 // Live modes hand out XP directly ({ xp, label })
 function onXp(e) {
-  const { xp, label } = e.detail || {}
-  if (!xp) return
-  S.bonusXp += xp
-  toast({ kind: 'xp', title: `+${xp} XP`, sub: label || '' })
+  const { xp, label, coins } = e.detail || {}
+  if (!xp && !coins) return
+  S.bonusXp += xp || 0
+  if (coins) earn(coins, null, true)
+  toast({ kind: 'xp', title: `+${xp || 0} XP${coins ? ` · +${coins} COINS` : ''}`, sub: label || '' })
   emit()
 }
 
@@ -380,7 +426,7 @@ function onSpin(e) {
   S.cards[k] = isNew ? [1, Date.now()] : [S.cards[k][0] + 1, S.cards[k][1]]
   const rank = rarityRank(pool, player)
   bumpMissions('card', { isNew, rank })
-  if (isNew) S.bonusXp += 5 + rank * 5
+  if (isNew) { S.bonusXp += 5 + rank * 5; earn([2, 5, 10, 25][rank] ?? 2, null, true); if (rank >= 3) S.stats.legends++ }
   emit()
   window.dispatchEvent(new CustomEvent('bap:card', { detail: { isNew, rank, rarity: RARITIES[rank], name: player.name, team: player.team, sport, pos, mode, count: S.cards[k][0] } }))
 }
@@ -416,7 +462,8 @@ async function sync(force = false) {
     if (after < beforeTotal && S.seenLevel > 0) S.adjust += beforeTotal - after
     // Career import / a new device: no level-up fanfare for XP that was already earned
     S.seenLevel = Math.max(S.seenLevel, levelInfo(totalXp()).level)
-    emit()
+    S.levelPaid = Math.max(S.levelPaid || 0, levelInfo(totalXp()).level)
+    emit(true)
     if (!S.cardsSynced) syncCards(id)
   } finally { syncing = false }
 }
@@ -458,9 +505,11 @@ function switchUser(u) {
   }
   rollDay()
   if (!S.seenLevel) S.seenLevel = levelInfo(totalXp()).level
+  if (!S.levelPaid) S.levelPaid = levelInfo(totalXp()).level
   applySpot()
-  emit()
+  emit(true)                 // achievements already earned unlock quietly (rewards wait in the list)
   sync()
+  pullWallet(id)
 }
 
 let started = false
@@ -471,6 +520,10 @@ export function initProgress() {
   window.addEventListener('bap:season', onSeason)
   window.addEventListener('bap:spin', onSpin)
   window.addEventListener('bap:xp', onXp)
+  window.addEventListener('bap:blacktop', e => { const d = e.detail || {}; S.stats.btGames++; if (d.won) S.stats.btWins++; if (d.mvp) S.stats.btMvp++; emit() })
+  window.addEventListener('bap:takeover', e => { const d = e.detail || {}; if (d.city) S.stats.tkCities++; if (d.run) S.stats.tkRuns++; emit() })
+  window.addEventListener('bap:dc', e => { const n = e.detail?.streak ?? 0; if (n > S.stats.dcBest) { S.stats.dcBest = n; emit() } })
+  window.addEventListener('bap:pro', () => emit(true))
   document.addEventListener('visibilitychange', () => {
     if (document.hidden || !loaded) return
     if (rollDay()) emit()
@@ -480,4 +533,183 @@ export function initProgress() {
   // The session is read from storage, so this settles before anyone can play
   supabase.auth.getSession().then(({ data }) => switchUser(data.session?.user ?? null), () => switchUser(null))
   supabase.auth.onAuthStateChange((_e, session) => switchUser(session?.user ?? null))
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// Coins, the shop and cosmetics
+// ═════════════════════════════════════════════════════════════════════════════
+export const COINS = { season: 25, winNfl: 3, winNba: 0.6, playoffs: 25, ring: 100, award: 50, daily: 40, level: 60, free: 50, freePro: 100 }
+export function seasonCoins(d) {
+  if (d.sandbox) return 0
+  let c = COINS.season + Math.round((d.wins ?? 0) * (d.sport === 'bucket' ? COINS.winNba : COINS.winNfl))
+  if (d.playoffs) c += COINS.playoffs
+  if (d.champion) c += COINS.ring
+  if (d.award) c += COINS.award
+  if (d.daily) c += COINS.daily
+  return c
+}
+function earn(n, label, quiet = false) {
+  n = Math.round(n || 0)
+  if (n <= 0) return
+  S.coins += n
+  S.coinsEarned += n
+  S.walletAt = Date.now()
+  if (!quiet) toast({ kind: 'coins', title: `+${n} COINS`, sub: label || '' })
+  window.dispatchEvent(new CustomEvent('bap:coins', { detail: { n } }))
+}
+// Every level climbed pays coins once
+function payLevels() {
+  const L = levelInfo(totalXp()).level
+  if (!S.levelPaid) { S.levelPaid = L; return }
+  if (L > S.levelPaid) { earn((L - S.levelPaid) * COINS.level, `Level ${L}`, true); S.levelPaid = L }
+}
+
+export const isPro = () => { try { return localStorage.getItem('bap_subscribed') === '1' } catch { return false } }
+export const owns = id => { const i = itemById(id); return !!i && (i.free || !!S.owned[id]) }
+
+// Today's deals: three items, 30% off, the same for everyone
+export function dealsFor(key = dayKey()) {
+  const r = seeded(`deals-${key}`)
+  const pool = ITEMS.filter(i => forSale(i) && !i.pro && i.rarity >= 1)
+  const picks = []
+  while (picks.length < 3 && pool.length) picks.push(pool.splice(Math.floor(r() * pool.length), 1)[0])
+  return picks.map(i => ({ id: i.id, price: Math.max(10, Math.round((i.price * 0.7) / 10) * 10) }))
+}
+export function priceOf(id) {
+  const i = itemById(id)
+  if (!i) return 0
+  return dealsFor().find(d => d.id === id)?.price ?? i.price
+}
+// Why an item can't be bought right now (null = it can)
+export function lockReason(id, level = getProgress().lvl.level) {
+  const i = itemById(id)
+  if (!i) return 'Not found'
+  if (owns(id)) return null
+  if (i.ach) return `Achievement: ${achById(i.ach)?.title ?? 'reward'}`
+  if (i.pro && !isPro()) return 'BAP Pro members only'
+  if (i.level && level < i.level) return `Reach level ${i.level}`
+  return null
+}
+export function buy(id) {
+  const i = itemById(id)
+  if (!i || !forSale(i)) return { ok: false, reason: 'Not for sale' }
+  if (owns(id)) return { ok: false, reason: 'Already yours' }
+  const lock = lockReason(id)
+  if (lock) return { ok: false, reason: lock }
+  const price = priceOf(id)
+  if (S.coins < price) return { ok: false, reason: `Need ${(price - S.coins).toLocaleString()} more coins`, short: price - S.coins }
+  S.coins -= price
+  S.owned[id] = Date.now()
+  S.stats.purchases++
+  S.walletAt = Date.now()
+  emit()
+  window.dispatchEvent(new CustomEvent('bap:purchase', { detail: { id } }))
+  return { ok: true, price }
+}
+export function equip(slot, id) {
+  if (id && (!owns(id) || itemById(id)?.slot !== slot)) return false
+  S.equip = { ...S.equip, [slot]: id ?? DEFAULTS[slot] ?? null }
+  S.walletAt = Date.now()
+  emit()
+  window.dispatchEvent(new CustomEvent('bap:cosmetics', { detail: myCosmetics() }))
+  return true
+}
+// What other players see (chat, lobbies): the look, not the sounds
+export const myCosmetics = () => ({ avatar: S.equip.avatar ?? null, nameColor: S.equip.nameColor ?? null, nameFx: S.equip.nameFx ?? null, plate: S.equip.plate ?? null })
+export const myVictory = () => ({ fx: S.equip.winFx || DEFAULTS.winFx, sound: S.equip.winSound || DEFAULTS.winSound })
+
+export function claimFreeCoins() {
+  if (S.shopFree === dayKey()) return 0
+  S.shopFree = dayKey()
+  const n = isPro() ? COINS.freePro : COINS.free
+  earn(n, 'Daily drop', true)
+  emit()
+  return n
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// Achievements
+// ═════════════════════════════════════════════════════════════════════════════
+export function achStats() {
+  const st = S.stats
+  const pos = st.positions || {}
+  const L = levelInfo(totalXp()).level
+  return {
+    ...st,
+    seasons: Math.max(st.seasons, careerSeasons()), rings: Math.max(st.rings, careerRings()),
+    positions: ['qb', 'rb', 'wr', 'te', 'db'].filter(p => pos[p]).length,
+    twoSport: st.nflSeasons > 0 && st.bucketSeasons > 0 ? 1 : 0,
+    cards: Object.keys(S.cards).length, streak: S.streak.best ?? 0, level: L,
+    owned: Object.keys(S.owned).length,
+    fullFit: S.equip.plate && S.equip.nameColor && S.equip.nameFx ? 1 : 0,
+    coinsEarned: S.coinsEarned,
+  }
+}
+function checkAch(quiet) {
+  const st = achStats()
+  for (const a of ACHIEVEMENTS) {
+    if (S.ach[a.id] || (st[a.metric] ?? 0) < a.goal) continue
+    S.ach[a.id] = Date.now()
+    S.walletAt = Date.now()
+    if (!quiet) {
+      toast({ kind: 'ach', title: 'ACHIEVEMENT UNLOCKED', sub: a.title, ms: 3200 })
+      window.dispatchEvent(new CustomEvent('bap:achievement', { detail: { id: a.id } }))
+    }
+  }
+}
+export function claimAch(id) {
+  const a = achById(id)
+  if (!a || !S.ach[id] || S.achClaimed[id]) return null
+  S.achClaimed[id] = Date.now()
+  S.bonusXp += a.xp
+  earn(a.coins, null, true)
+  if (a.item) S.owned[a.item] = Date.now()
+  S.walletAt = Date.now()
+  emit()
+  return { xp: a.xp, coins: a.coins, item: a.item }
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// The wallet follows the account (accounts.app_profile, see supabase/app_shop.sql).
+// Last change wins; items and achievements are merged, never lost.
+// ═════════════════════════════════════════════════════════════════════════════
+const WALLET_KEYS = ['coins', 'coinsEarned', 'owned', 'equip', 'ach', 'achClaimed', 'stats', 'shopFree', 'levelPaid']
+let pushTimer = null
+function schedulePush() {
+  if (!supabase || !uid) return
+  clearTimeout(pushTimer)
+  const id = uid
+  pushTimer = setTimeout(() => {
+    if (uid !== id) return
+    const app_profile = Object.fromEntries(WALLET_KEYS.map(k => [k, S[k]]))
+    app_profile.at = S.walletAt
+    supabase.from('accounts').update({ app_profile }).eq('id', id).then(null, () => {})
+  }, 2500)
+}
+async function pullWallet(id) {
+  if (!supabase || !id) return
+  try {
+    const { data, error } = await supabase.from('accounts').select('app_profile').eq('id', id).maybeSingle()
+    if (error || uid !== id || !data?.app_profile) return
+    const w = data.app_profile
+    const newer = (w.at ?? 0) > (S.walletAt ?? 0)
+    S.owned = { ...(w.owned || {}), ...S.owned }
+    S.ach = { ...(w.ach || {}), ...S.ach }
+    S.achClaimed = { ...(w.achClaimed || {}), ...S.achClaimed }
+    const st = { ...S.stats }
+    for (const [k, v] of Object.entries(w.stats || {})) {
+      if (k === 'positions') st.positions = { ...(v || {}), ...(st.positions || {}) }
+      else if (typeof v === 'number') st[k] = Math.max(st[k] ?? 0, v)
+    }
+    S.stats = st
+    S.coinsEarned = Math.max(S.coinsEarned, w.coinsEarned ?? 0)
+    if (newer) {
+      S.coins = w.coins ?? S.coins
+      S.equip = { ...DEFAULTS, ...(w.equip || {}) }
+      S.shopFree = w.shopFree ?? S.shopFree
+      S.levelPaid = Math.max(S.levelPaid || 0, w.levelPaid || 0)
+      S.walletAt = w.at
+    }
+    emit(true)
+  } catch {}
 }

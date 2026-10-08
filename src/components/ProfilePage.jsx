@@ -861,8 +861,17 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
           </div>
         </div>
 
+        {/* App: Pro opens the shop's Pro Vault (no color themes or emoji icons here) */}
+        {IS_APP && isPlus && (
+          <div className={`prf-card ag-pro-card ${show ? 'prf-card-in' : ''}`} style={{ animationDelay: '0.1s' }}>
+            <div className="prf-card-hd"><span className="prf-card-title">BAP Pro</span><span className="plus-status-badge plus-status-badge--on">Active</span></div>
+            <div className="ag-pro-card-body">No ads, double the daily coin drop, and the Pro Vault in the shop: exclusive avatars, name styles, plates and victory effects.</div>
+            <button className="ag-career-act ag-career-act--shop" onClick={() => window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'shop' }))}>OPEN THE PRO VAULT</button>
+          </div>
+        )}
+
         {/* ── BAP Pro ── */}
-        {isPlus && (
+        {isPlus && !IS_APP && (
         <div className={`prf-card ${show ? 'prf-card-in' : ''}`} style={{ animationDelay: '0.1s' }}>
           <div className="prf-card-hd">
             <span className="prf-card-title">BAP Pro</span>

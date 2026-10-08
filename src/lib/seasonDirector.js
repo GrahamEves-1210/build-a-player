@@ -9,7 +9,8 @@
 // Along the way it spots milestones and records and writes the headlines.
 
 import { seeded } from './rng'
-import { MILESTONES, RECORDS, headlineFor, momentFor } from './seasonFacts'
+import { MILESTONES, RECORDS, headlineFor } from './seasonFacts'
+import { pickScenario } from './scenarios'
 
 // Per position: which season fields are sums of which game fields, and how a
 // "best game" is scored (same formulas as the engines).
@@ -60,7 +61,8 @@ const NO_MODS = { attr: {}, team: { off: 0, def: 0 } }
 export function createDirector({ sport, pos, build, team, simFn, base, seed = Math.random().toString(36).slice(2, 8), name = 'You', attrMap = {}, types = [] }) {
   const isBucket = sport === 'bucket'
   const total = base.games.length
-  const stops = (isBucket ? [20, 41, 62] : [4, 9, 13]).map((at, i) => ({ i, at, kind: 'season', total }))
+  // four decisions in the regular season, one before the playoffs (only if you're in)
+  const stops = (isBucket ? [16, 34, 52, 70] : [3, 7, 11, 14]).filter(at => at < total).map((at, i) => ({ i, at, kind: 'season', total }))
   stops.push({ i: 3, at: total, kind: 'playoffs', total })
   const teamNick = team?.name?.split(' ').slice(-1)[0] ?? 'Your team'
   const r = seeded(`director-${seed}`)
@@ -123,9 +125,37 @@ export function createDirector({ sport, pos, build, team, simFn, base, seed = Ma
     for (let i = games.length - 1; i >= 0; i--) { if (games[i].won) { if (skid) break; streak++ } else { if (streak) break; skid++ } }
     return { games, wins, losses, streak, skid, last: games[games.length - 1] ?? null }
   }
+  D.used = new Set()
+  // Did this record make the postseason? Decided once, from a run that posted
+  // the same record, and kept: the playoff decision only appears when you're in,
+  // and the final season is drawn to match it.
+  const madeIt = run => (isBucket ? (run?.playoffRounds?.length ?? 0) > 0 : !!run?.playoffs)
+  D.po = null
+  D.qualify = () => {
+    if (D.po != null) return D.po
+    const want = D.games.filter(g => g.won).length
+    let best = null
+    for (let i = 0; i < 40; i++) {
+      const run = runWith(D.cum, `q-${i}`)
+      if (!best || Math.abs(run.wins - want) < Math.abs(best.wins - want)) best = run
+      if (run.wins === want) break
+    }
+    D.poRun = best
+    D.po = madeIt(best)
+    return D.po
+  }
   D.open = stop => {
-    const m = momentFor({ sport, pos, stop, ctx: D.ctxAt(Math.min(stop.at, total)), build: applyMods(build, team, D.cum).build, types, attrMap, seed, teamNick })
-    return m ? { ...m, stop } : null
+    if (stop.kind === 'playoffs' && !D.qualify()) return null
+    const k = Math.min(stop.at, total)
+    const ctx = D.ctxAt(k)
+    const last = ctx.last
+    const m = pickScenario({
+      sport, pos, stop, ctx, build: applyMods(build, team, D.cum).build, types, attrMap, seed, teamNick, name, team,
+      used: D.used, lastBig: !!(last && !last.sat && BIG_GAME[pos]?.(last)), lastBust: !!(last && !last.sat && BUST_GAME[pos]?.(last)),
+    })
+    if (!m) return null
+    D.used.add(m.id)
+    return { ...m, stop }
   }
   D.choose = (moment, option) => {
     const e = option.effect || {}
@@ -209,10 +239,15 @@ export function createDirector({ sport, pos, build, team, simFn, base, seed = Ma
     const t = D.totals()
     const want = t.wins
     const mods = addMods(D.cum, D.playoffMods)
-    let bestRun = D.last, bestGap = Math.abs(D.last.wins - want)
-    for (let i = 0; i < 48 && bestGap > 0; i++) {
+    // the run that books the season: same record and, once decided, the same
+    // playoff fate the season already showed
+    const q = D.po
+    const miss = run => Math.abs(run.wins - want) * 10 + (q != null && madeIt(run) !== q ? 100 : 0)
+    let bestRun = D.last, bestGap = miss(D.last)
+    if (D.poRun && miss(D.poRun) < bestGap) { bestRun = D.poRun; bestGap = miss(D.poRun) }
+    for (let i = 0; i < 80 && bestGap > 0; i++) {
       const run = runWith(mods, `po-${i}`)
-      const gap = Math.abs(run.wins - want)
+      const gap = miss(run)
       if (gap < bestGap) { bestRun = run; bestGap = gap }
     }
     D.final = {

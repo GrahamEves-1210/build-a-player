@@ -3,6 +3,7 @@ import { getPlayerPhoto, pickThreeFrom, QB_POOL, RB_POOL, WR_POOL } from '../dat
 import { supabase } from '../lib/supabase'
 import { TEAMS } from '../data/nfl-teams'
 import QBAvatar from './QBAvatar'
+import { getUsername } from '../lib/discord'
 
 const TEAM_COLOR  = Object.fromEntries(TEAMS.map(t => [t.short, t.color]))
 const SLOT_LABELS = ['STARTER', '2ND STRING', '3RD STRING']
@@ -239,7 +240,7 @@ export default function DepthChart({ onBack, user, onlineCount = 0 }) {
         .order('streak', { ascending: false })
         .limit(1)
         .single()
-        .then(({ data }) => { if (data) setBestStreak(data.streak) })
+        .then(({ data }) => { if (Number.isFinite(data?.streak)) setBestStreak(data.streak) }, () => {})
     } else {
       const saved = localStorage.getItem('dc_best_streak')
       if (saved) setBestStreak(parseInt(saved, 10) || 0)
@@ -327,6 +328,7 @@ export default function DepthChart({ onBack, user, onlineCount = 0 }) {
     if (isCorrect) {
       const newStreak = streak + 1
       setStreak(newStreak)
+      window.dispatchEvent(new CustomEvent('bap:dc', { detail: { streak: newStreak } }))
       if (newStreak > bestStreak) setBestStreak(newStreak)
       setPhase('correct')
       setTimeout(() => loadRound(players.map(p => p.name)), 1500)
@@ -362,7 +364,7 @@ export default function DepthChart({ onBack, user, onlineCount = 0 }) {
   async function handleStreakEnd(s) {
     if (s < 1) return
     if (user) {
-      submitStreak(s, user.email?.split('@')[0] || 'Anonymous')
+      submitStreak(s, getUsername(user) || 'Anonymous')
     } else if (supabase) {
       // Ask for a name when the streak would make either board (all-time or this week).
       const [allTime, thisWeek] = await Promise.all([fetchTopStreaks('all'), fetchTopStreaks('week')])

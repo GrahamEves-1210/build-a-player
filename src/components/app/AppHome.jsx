@@ -2,7 +2,10 @@ import { useEffect, useState } from 'react'
 import { POS_OPTIONS, AvatarTrio, StackedSilhouette, SPLASH_ATTRS } from '../SplashScreen'
 import { getUsername } from '../../lib/discord'
 import { useProgress, dailyState } from '../../lib/progress'
-import { IconCrown, IconBolt, IconClipboard, IconCoin, IconVersus, IconLock, IconProfile, IconArrow, IconGear, IconPodium } from './icons'
+import { IconCrown, IconBolt, IconClipboard, IconCoin, IconVersus, IconLock, IconProfile, IconArrow, IconGear, IconPodium, IconFootball, IconBasketball } from './icons'
+import { sfx } from '../../lib/juice'
+import { NameTag, AvatarBadge } from './NameTag'
+import { CoinPill } from './AppShop'
 
 // iOS/Android app home screen — a game main menu in place of the website
 // splash (App / BucketApp render this instead of SplashScreen / BucketSplash
@@ -41,17 +44,16 @@ export function PlayerChip({ user, onClick }) {
   const name = getUsername(user)
   return (
     <button className="ag-player-chip" onClick={onClick}>
-      <span className="ag-avatar">
-        {name ? name.slice(0, 1).toUpperCase() : <IconProfile size={22} />}
-        <span className="ag-avatar-lvl">{p.lvl.level}</span>
-      </span>
+      {name ? <AvatarBadge self name={name} size={46} level={p.lvl.level} /> : (
+        <span className="ag-avatar"><IconProfile size={22} /><span className="ag-avatar-lvl">{p.lvl.level}</span></span>
+      )}
       <span className="ag-player-txt">
         <span className="ag-player-row">
-          <span className="ag-player-name">{name ?? 'Guest'}</span>
+          <span className="ag-player-name">{name ? <NameTag self name={name} /> : 'Guest'}</span>
           <span className="ag-player-title">{p.lvl.title}</span>
         </span>
         <span className="ag-xpbar"><span style={{ width: `${Math.max(3, p.lvl.pct * 100)}%` }} /></span>
-        <span className="ag-player-sub">{name ? `${p.lvl.into.toLocaleString()} / ${p.lvl.need.toLocaleString()} XP` : 'Sign in to save your career'}</span>
+        <span className="ag-player-sub">{name ? `${p.lvl.title} · ${p.lvl.into.toLocaleString()}/${p.lvl.need.toLocaleString()} XP` : 'Sign in to save your career'}</span>
       </span>
     </button>
   )
@@ -61,8 +63,27 @@ function Hud({ user }) {
   return (
     <div className="ag-hud ag-pop" style={{ '--d': '0ms' }}>
       <PlayerChip user={user} onClick={() => nav('profile')} />
+      <CoinPill className="ag-hud-coins" />
       <button className="ag-icon-btn" onClick={() => nav('leaderboard')} aria-label="Leaderboards"><IconPodium size={22} /></button>
       <button className="ag-icon-btn" onClick={openMenu} aria-label="Settings and more"><IconGear size={22} /></button>
+    </div>
+  )
+}
+
+// Football ⇄ basketball, one tap at the top of Home. The other game opens on its
+// own Home; a build in progress here waits for PLAY.
+export function switchSport(to) {
+  try { sessionStorage.setItem('bap_go_home', '1') } catch {}
+  document.documentElement.classList.add('ag-sport-leaving')
+  setTimeout(() => { window.location.href = to === 'bucket' ? '/bucket' : '/' }, 170)
+}
+function SportSwitch({ sport }) {
+  const go = to => { if (to === sport) return; sfx('swap'); switchSport(to) }
+  return (
+    <div className={`ag-sport ag-sport--${sport} ag-pop`} style={{ '--d': '30ms' }} role="tablist" aria-label="Sport">
+      <span className="ag-sport-thumb" aria-hidden="true" />
+      <button role="tab" aria-selected={sport === 'nfl'} className={`ag-sport-btn${sport === 'nfl' ? ' is-on' : ''}`} onClick={() => go('nfl')}><IconFootball size={18} /> FOOTBALL</button>
+      <button role="tab" aria-selected={sport === 'bucket'} className={`ag-sport-btn${sport === 'bucket' ? ' is-on' : ''}`} onClick={() => go('bucket')}><IconBasketball size={18} /> BASKETBALL</button>
     </div>
   )
 }
@@ -121,7 +142,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
   const posShort = isBucket ? (position === 'big' ? 'BIG' : 'GUARD') : position.toUpperCase()
   const posName = isBucket ? (position === 'big' ? 'PF · C' : 'PG · SG · SF') : NFL_NAMES[position]
   const tkOn = !!takeoverRun && !takeoverRun.over
-  const tkStops = takeoverRun?.route?.length ?? 16
+  const tkStops = takeoverRun?.route?.length ?? 12
   const tkEndless = tkOn && takeoverRun.idx >= tkStops
   const btLive = !!blacktop && blacktop.phase !== 'idle'
 
@@ -131,6 +152,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
 
       <div className="ag-home-inner">
         <Hud user={user} />
+        <SportSwitch sport={sport} />
 
         <div className="ag-brand ag-pop" style={{ '--d': '60ms' }}>
           <img src="/logo-v3.png" alt="" className="ag-brand-mark" draggable={false} />
@@ -195,7 +217,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
           <DailyBanner isBucket={isBucket} />
           <button className="ag-takeover ag-pop" style={{ '--d': '320ms' }} onClick={onTakeover}>
             <span className="ag-takeover-txt">
-              <span className="ag-eyebrow">{tkOn ? (tkEndless ? `ENDLESS ROAD · ${takeoverRun.endlessWins} STRAIGHT` : `ON THE ROAD · ${takeoverRun.taken.length}/${tkStops} CITIES`) : 'ROAD MODE · 16 CITIES · SOLO OR DUO'}</span>
+              <span className="ag-eyebrow">{tkOn ? (tkEndless ? `ENDLESS ROAD · ${takeoverRun.endlessWins} STRAIGHT` : `ON THE ROAD · ${takeoverRun.taken.length}/${tkStops} CITIES`) : 'ROAD MODE · 12 CITIES · SOLO OR DUO'}</span>
               <span className="ag-takeover-title">TAKEOVER</span>
               <span className="ag-takeover-sub">{tkOn ? `${takeoverRun.lives} ${takeoverRun.lives === 1 ? 'life' : 'lives'} left — your next stop is waiting` : 'Cross the map. Beat a better player in every city. Steal their game.'}</span>
             </span>
@@ -205,9 +227,9 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
             <button className={`ag-blacktop ag-pop${btLive ? ' is-live' : ''}`} style={{ '--d': '350ms' }} onClick={onBlacktop}>
               <span className="ag-live-dot" />
               <span className="ag-takeover-txt">
-                <span className="ag-eyebrow">{btLive ? (blacktop.phase === 'queue' ? `IN THE QUEUE · ${blacktop.queue}/6` : blacktop.phase === 'build' ? 'LIVE · YOUR SQUAD IS BUILDING' : 'LIVE · GAME ON') : 'LIVE · 3V3'}</span>
+                <span className="ag-eyebrow">{btLive ? (blacktop.phase === 'queue' ? `IN THE LOBBY · ${blacktop.queue}/6 SPOTS TAKEN` : blacktop.phase === 'build' ? 'LIVE · YOUR SQUAD IS BUILDING' : 'LIVE · GAME ON') : 'LIVE · 3V3'}</span>
                 <span className="ag-takeover-title">BLACKTOP</span>
-                <span className="ag-takeover-sub">{btLive ? 'You\'re still in. Jump back to your run.' : 'Squad up with five others. Team chat, 3:00 to build, first to 21.'}</span>
+                <span className="ag-takeover-sub">{btLive ? 'You\'re still in. Jump back to your run.' : 'Pick a spot on a squad: two guards and a big. 3:00 to build, first to 21.'}</span>
               </span>
               <span className="ag-edge-go">{btLive ? 'RESUME' : 'QUEUE'} <IconArrow size={14} /></span>
             </button>
@@ -223,22 +245,12 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
                 <span className="ag-mini-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><IconVersus size={17} /> HEAD-TO-HEAD</span>
                 <span className="ag-mini-sub">1v1 a friend</span>
               </button>
-              <button className="ag-mini ag-mini--mint ag-pop" style={{ '--d': '400ms', gridColumn: '1 / -1' }}
-                onClick={() => { try { localStorage.removeItem('bap_progress') } catch {}; window.location.href = '/' }}>
-                <span className="ag-mini-title">BUILD<em>-A-</em>PLAYER</span>
-                <span className="ag-mini-sub">Football builder</span>
-              </button>
             </>
           ) : (
             <>
-              <button className="ag-mini ag-pop" style={{ '--d': '340ms' }} onClick={onDepthChart}>
+              <button className="ag-mini ag-pop" style={{ '--d': '340ms', gridColumn: '1 / -1' }} onClick={onDepthChart}>
                 <span className="ag-mini-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><IconClipboard size={17} /> THE DEPTH CHART</span>
-                <span className="ag-mini-sub" style={{ color: '#fbbf24' }}>Mini game</span>
-              </button>
-              <button className="ag-mini ag-mini--orange ag-pop" style={{ '--d': '370ms' }}
-                onClick={() => { try { localStorage.removeItem('bap_progress') } catch {}; window.location.href = '/bucket' }}>
-                <span className="ag-mini-title">BUILD<em>-A-</em>B<HoopU />CKET</span>
-                <span className="ag-mini-sub">Basketball builder</span>
+                <span className="ag-mini-sub" style={{ color: '#fbbf24' }}>Mini game · sort the stars by the stat</span>
               </button>
             </>
           )}

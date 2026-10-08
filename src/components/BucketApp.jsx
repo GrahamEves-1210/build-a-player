@@ -743,11 +743,16 @@ export default function BucketApp() {
   }, [isBucketCustomMode])
 
   // ── BLACKTOP (app): the match lives in the hook; pages follow its phase ──
+  // App: the shop reads Pro from storage; tell it when that changes
+  useEffect(() => { if (IS_APP) window.dispatchEvent(new CustomEvent('bap:pro')) }, [isSubscribed])
+
   const btPage = page === 'blacktop' || page === 'blacktop-build' || page === 'blacktop-game'
   // The hook stays on across every page: Home never drops you out of a run.
   const bt = useBlacktop({
     enabled: IS_APP, user, position, pools: LIVE_POOLS, types: LIVE_TYPES,
     build, player: savedSpinResult, onExit: () => { setPage('splash'); setBtChatOpen(false) },
+    // the spot you took in the lobby decides what you build
+    onSeatPos: pos => { setPosition(pos); try { localStorage.setItem('bucketPosition', pos) } catch {} },
   })
   btPhaseRef.current = bt.phase
   const btJoined = useRef(false)
@@ -1320,8 +1325,347 @@ export default function BucketApp() {
     if (payload.ovr > 0 || result !== 'win') try { await supabase.from('vs_results').insert(payload) } catch {}
   }
 
+  // App: the game screen stays mounted while another tab is open (parked,
+  // display:none) so a spin in flight keeps spinning, keeps its sound and
+  // nothing resets (same shell on both sides of the switch, see App.jsx).
+  const KEEP_GAME_ON = new Set(['splash', 'profile', 'leaderboard', 'pvp-leaderboard', 'privacy'])
+  const gameIsPlay = page === 'game' || (KEEP_GAME_ON.has(page) && lastPlayRef.current === 'game')
+  const filledCount = activeTypes.filter(t => build[t]).length
+
+  const navbarProps = {
+    onReset: () => guardedLeave(handleReset),
+    onHome: () => guardedLeave(handleHome),
+    onSignIn: () => setShowAuth(true),
+    onProfile: () => guardedLeave(() => user ? (window.history.pushState({}, '', '/profile'), setPage('profile')) : setShowAuth(true)),
+    onAbout: () => guardedLeave(() => { window.location.href = '/?about' }),
+    onLeaderboard: () => guardedLeave(() => setPage('leaderboard')),
+    onSubscribe: async () => {
+      if (!user) { setShowAuth(true); return }
+      try {
+        const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/create-checkout`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: user.id, email: user.email }),
+        })
+        const { url } = await res.json()
+        if (url) window.location.href = url
+      } catch {}
+    },
+    onSwitchBucketPosition: (pos) => guardedLeave(() => handleNavPositionSwitch(pos)),
+    user,
+    gameMode,
+    isRB: false,
+    isPlus: isSubscribed,
+    isBucket: true,
+    bucketPosition: position,
+    versusState: page === 'versus-game' && versusRoom ? (() => {
+      const oppTypes = VERSUS_POS_TYPES[oppPosition] ?? VERSUS_GUARD_TYPES
+      const myF  = activeTypes.filter(t => build[t]).length
+      const oppF = oppTypes.filter(t => oppBuild[t]).length
+      return {
+        myFilled: myF, oppFilled: oppF, myTotal: activeTypes.length, oppTotal: oppTypes.length,
+        oppName: versusRoom.oppName,
+        myPosition: position,
+        oppPosition,
+        bothReady: myF === activeTypes.length && oppF === oppTypes.length,
+        countdownSec: vsCountdown,
+        onFaceOff: () => {
+          versusRoom.channel?.send({ type: 'broadcast', event: 'bab_faceoff', payload: {} }).catch?.(() => {})
+          setPage('versus-result')
+        },
+      }
+    })() : null,
+  }
+  const renderGame = parked => (
+    <>
+      {!parked && bucketHead}
+      {!parked && <Navbar {...navbarProps} />}
+
+      <div className="game-page-scroll">
+      {liveBuild && bt.match && <BlacktopHud bt={bt} onOpenChat={openBtChat} unread={btUnread} />}
+      {IS_APP && (
+        <FlipEdge side={mobileView} build={build} types={activeTypes} attrMap={BUCKET_ATTR} onFlip={flip}
+          waiting={savedSpinResult?.selectedQB?.name ?? null} complete={buildComplete} />
+      )}
+      <main className={`game-layout mobile-${mobileView}${gameMode === 'all-time' ? ' alltime-mode' : ''}${page === 'versus-game' || liveBuild ? ' versus-active' : ''}`}>
+        <SpinScreen
+          build={build}
+          activeDrag={activeDrag}
+          onDragStart={setActiveDrag}
+          onDragEnd={() => setActiveDrag(null)}
+          activeCategory={activeCategory}
+          resetKey={spinResetKey}
+          onChipTap={handleChipTap}
+          types={activeTypes}
+          isLite={gameMode === 'lite'}
+          qbPool={currentPool}
+          savedResult={savedSpinResult}
+          onSaveResult={setSavedSpinResult}
+          onPhaseChange={setSpinPhase}
+          gameKey={gameKey}
+          onReset={handleReset}
+          adsDisabled={adsDisabled}
+          cardMeta={IS_APP && gameIsPlay && gameMode !== 'salarycap' ? { sport: 'bucket', pos: position, mode: gameMode } : null}
+          paused={parked}
+          isRB={false}
+          isBucket={true}
+          isVersusMode={page === 'versus-game' || liveBuild}
+          attrMap={BUCKET_ATTR}
+          categoriesData={activeCategories}
+          teamsPool={NBA_TEAMS}
+          logoDir="/logos/nba/"
+          playerLabel="PLAYER"
+          headshotsMap={NBA_HEADSHOTS}
+          headshotsDir={`${HEADSHOT_BASE}/nba/`}
+          headshotFallback={genericHeadshot}
+        />
+        <Silhouette
+          build={build}
+          activeDrag={activeDrag}
+          onDrop={handleDrop}
+          activeCategory={activeCategory}
+          onCategoryChange={setActiveCategory}
+          types={activeTypes}
+          isLite={gameMode === 'lite'}
+          onReset={handleReset}
+          isRB={false}
+          isBucket={true}
+          isPlus={isSubscribed}
+          isCustomMode={isBucketCustomMode}
+          onOpenCustomModal={() => setShowBucketCustomModal(true)}
+          onSandboxToggle={isVersusMode ? undefined : handleSandboxToggle}
+          attrMap={BUCKET_ATTR}
+          categoriesData={activeCategories}
+          figureRef={figureRef}
+        />
+
+        <div className="right-panel-wrap">
+          <ReportCard
+            build={build}
+            onSimulate={page === 'takeover-build' ? hitTheRoad : () => setShowTeamSpin(true)}
+            simLabel={page === 'takeover-build' ? 'HIT THE ROAD' : undefined}
+            onReset={handleReset}
+            types={activeTypes}
+            hasResult={false}
+            isRB={false}
+            isBucket={true}
+            bucketPosition={position}
+            isPlus={isSubscribed}
+            isCustomMode={isBucketCustomMode}
+            onOpenCustomModal={() => setShowBucketCustomModal(true)}
+            onSandboxToggle={isVersusMode ? undefined : handleSandboxToggle}
+            attrMap={BUCKET_ATTR}
+            logoDir="/logos/nba/"
+            captureFigure={captureFigure}
+            isSalaryMode={gameMode === 'salarycap'}
+            isVersusMode={page === 'versus-game' || liveBuild}
+            oppPosition={oppPosition}
+            oppFilledCount={(POS_TYPES[oppPosition] ?? GUARD_TYPES).filter(t => oppBuild[t]).length}
+            oppTotal={(POS_TYPES[oppPosition] ?? GUARD_TYPES).length}
+          />
+        </div>
+      </main>
+      <div className="build-footer-section">
+        <SiteFeatures sport="bucket" className="build-site-features" />
+        <SiteFooter sport="bucket" />
+      </div>
+      </div>
+
+      {!parked && IS_APP && (page === 'game' || page === 'takeover-build') && <BuildComplete complete={buildComplete} ovr={buildComplete ? calcBucketOVR(build, activeTypes, position) : 0} build={build} types={activeTypes} attrMap={BUCKET_ATTR} />}
+      {liveBuild && btChatOpen && <BlacktopChat bt={bt} user={user} onClose={() => setBtChatOpen(false)} />}
+
+      {!parked && leaveConfirm && (
+        <div className="leave-confirm-overlay" onClick={() => setLeaveConfirm(null)}>
+          <div className="leave-confirm-modal" onClick={e => e.stopPropagation()}>
+            <div className="lcm-title">Leave game?</div>
+            <div className="lcm-body">Leaving an active game counts as a loss on your record.</div>
+            <div className="lcm-actions">
+              <button className="lcm-stay" onClick={() => setLeaveConfirm(null)}>Stay in game</button>
+              <button className="lcm-leave" onClick={() => { leaveConfirm.fn(); setLeaveConfirm(null) }}>Leave &amp; take the L</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showVsPrompt && page === 'versus-game' && (
+        <div className="vs-prompt-overlay">
+          <div className="vs-prompt-modal">
+            <div className="vs-prompt-eyebrow">HEAD TO HEAD</div>
+            <div className="vs-prompt-matchup">
+              <div className="vs-prompt-side">
+                <div className="vs-prompt-name">{getUsername(user) || 'You'}</div>
+                <div className="vs-prompt-record">
+                  {vsRecord.wins}W – {vsRecord.losses}L
+                </div>
+              </div>
+              <div className="vs-prompt-vs">VS</div>
+              <div className="vs-prompt-side">
+                <div className="vs-prompt-name">{versusRoom?.oppName || 'Opponent'}</div>
+                <div className="vs-prompt-record">
+                  {oppRecord ? `${oppRecord.wins}W – ${oppRecord.losses}L` : '— W – — L'}
+                </div>
+              </div>
+            </div>
+            <div className="vs-prompt-pos-btns">
+              {['guard', 'big'].map(pos => (
+                <button
+                  key={pos}
+                  className={`vs-prompt-pos-btn${position === pos ? ' vs-prompt-pos-btn--active' : ''}`}
+                  onClick={() => {
+                    try { localStorage.setItem('bucketPosition', pos) } catch {}
+                    setPosition(pos)
+                    const types = VERSUS_POS_TYPES[pos] ?? VERSUS_GUARD_TYPES
+                    setBuild(Object.fromEntries(types.map(t => [t, null])))
+                    setActiveCategory((VERSUS_POS_CATS[pos] ?? VERSUS_GUARD_CATEGORIES)[0].id)
+                    versusRoom?.channel?.send({ type: 'broadcast', event: 'bab_position', payload: { position: pos } }).catch?.(() => {})
+                    setShowVsPrompt(false)
+                  }}
+                >
+                  {pos === 'guard' ? 'GUARD' : 'BIG'}
+                  <span className="vs-ppb-sub">{pos === 'guard' ? 'PG · SG · SF' : 'PF · C'}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {oppDisconnected && (
+        <div className="opp-disconnect-overlay" onClick={() => setOppDisconnected(false)}>
+          <div className="opp-disconnect-modal" onClick={e => e.stopPropagation()}>
+            <div className="odm-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55M5 12.55a10.94 10.94 0 0 1 5.17-2.39M10.71 5.05A16 16 0 0 1 22.56 9M1.42 9a15.91 15.91 0 0 1 4.7-2.88M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01"/>
+              </svg>
+            </div>
+            <div className="odm-title">Your opponent has left</div>
+            <div className="odm-body">You've been given the win.</div>
+            <button className="odm-ok" onClick={() => { setOppDisconnected(false); handleHome(); }}>OK</button>
+          </div>
+        </div>
+      )}
+
+
+      {!parked && showTeamSpin && (
+        <TeamSpinModal
+          isCustomMode={isBucketCustomMode}
+          onTeamSelected={handleTeamPicked}
+          build={build}
+        />
+      )}
+
+      {!parked && showBucketCustomModal && (
+        <CustomRatingsModal
+          isBucket={true}
+          bucketPosition={position}
+          gameMode={gameMode}
+          pool={position === 'guard' ? CUSTOM_MODAL_GUARDS : CUSTOM_MODAL_BIGS}
+          poolCurrent={CUSTOM_POOLS[position === 'big' ? 'big' : 'guard'].current}
+          poolLegends={CUSTOM_POOLS[position === 'big' ? 'big' : 'guard'].legends}
+          build={build}
+          buildTypes={activeTypes}
+          onClose={() => setShowBucketCustomModal(false)}
+          onSave={(ratings) => {
+            setBucketCustomRatings(ratings)
+            try { localStorage.setItem('bab_bucket_custom_ratings', JSON.stringify(ratings)) } catch {}
+          }}
+          onAddToBuild={(p, playerOverrides, slot) => {
+            sandboxTainted.current = true
+            const val = playerOverrides?.[slot] ?? p.attrs?.[slot] ?? 5
+            setBuild(prev => ({ ...prev, [slot]: {
+              type: slot, val,
+              qb: p.short || p.name,
+              qbFull: p.name,
+              team: p.team,
+              teamColor: p.color,
+              teamColor2: p.color2,
+              skinColor: p.skin,
+              number: p.number,
+              faceCenter: p.faceCenter,
+              photo: NBA_HEADSHOTS[p.name] ? `${HEADSHOT_BASE}/nba/${NBA_HEADSHOTS[p.name]}.webp` : genericHeadshot(p.skin),
+              captain: p.captain ?? false,
+              height: p.height ?? parseHtToIn(p.ht) ?? null,
+              weight: p.weight ?? p.wt ?? null,
+            }}))
+            setShowBucketCustomModal(false)
+          }}
+          onAddAllToBuild={(p, playerOverrides) => {
+            sandboxTainted.current = true
+            setBuild(prev => {
+              const next = { ...prev }
+              activeTypes.forEach(slot => {
+                if (!prev[slot]) {
+                  const val = playerOverrides?.[slot] ?? p.attrs?.[slot] ?? 5
+                  next[slot] = {
+                    type: slot, val,
+                    qb: p.short || p.name,
+                    qbFull: p.name,
+                    team: p.team,
+                    teamColor: p.color,
+                    teamColor2: p.color2,
+                    skinColor: p.skin,
+                    number: p.number,
+                    faceCenter: p.faceCenter,
+                    photo: NBA_HEADSHOTS[p.name] ? `${HEADSHOT_BASE}/nba/${NBA_HEADSHOTS[p.name]}.webp` : genericHeadshot(p.skin),
+                    captain: p.captain ?? false,
+                    height: p.height ?? parseHtToIn(p.ht) ?? null,
+                    weight: p.weight ?? p.wt ?? null,
+                  }
+                }
+              })
+              return next
+            })
+            setShowBucketCustomModal(false)
+          }}
+        />
+      )}
+
+      {gameMode !== 'salarycap' && <nav className="mobile-tab-bar">
+        <button
+          className={`mtab ${mobileView === 'spin' ? 'active' : ''}`}
+          onClick={() => { setMobileView('spin'); window.scrollTo({ top: 0, behavior: 'instant' }); document.querySelector('.game-page-scroll')?.scrollTo({ top: 0, behavior: 'instant' }) }}
+        >
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="23 4 23 10 17 10"/>
+            <polyline points="1 20 1 14 7 14"/>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+          </svg>
+          Spin
+        </button>
+        <div className="mtab-sep" />
+        <button
+          className={`mtab ${mobileView === 'build' ? 'active' : ''}`}
+          onClick={() => { setMobileView('build'); window.scrollTo({ top: 0, behavior: 'instant' }); document.querySelector('.game-page-scroll')?.scrollTo({ top: 0, behavior: 'instant' }) }}
+        >
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+          </svg>
+          Build
+          {filledCount > 0 && (
+            <span className="mtab-badge">{filledCount}/{activeTypes.length}</span>
+          )}
+        </button>
+      </nav>}
+
+      {!parked && showAuth && (
+        <AuthModal
+          onClose={() => setShowAuth(false)}
+          onAuth={setUser}
+        />
+      )}
+
+    </>
+  )
+  const shell = overlay => (
+    <>
+      <div className={`ag-game-host${overlay ? ' is-parked' : ''}`}>{renderGame(!!overlay)}</div>
+      {overlay}
+    </>
+  )
+  const withGame = el => (IS_APP && gameMode && gameMode !== 'salarycap' && KEEP_GAME_ON.has(page) ? shell(el) : el)
+
   if (page === 'splash') {
-    return (
+    return withGame(
       <>
         {bucketHead}
         {(() => {
@@ -1340,7 +1684,7 @@ export default function BucketApp() {
               onStart={handleStart}
               onVersus={onVersus}
               onBlacktop={() => setPage(btPageFor(bt.phase))}
-              blacktop={{ phase: bt.phase, queue: bt.queue.length }}
+              blacktop={{ phase: bt.phase, queue: bt.seated }}
               onTakeover={openTakeover}
               takeoverRun={takeoverRun}
               renderBucketFigure={(pos, ready) => (
@@ -1360,7 +1704,7 @@ export default function BucketApp() {
 
 
   if (page === 'blacktop') {
-    return <BlacktopQueue bt={bt} onBack={() => setPage('splash')} />
+    return <BlacktopQueue bt={bt} user={user} onBack={() => setPage('splash')} />
   }
   if (page === 'blacktop-game') {
     return (
@@ -1454,7 +1798,7 @@ export default function BucketApp() {
   }
 
   if (page === 'pvp-leaderboard') {
-    return (
+    return withGame(
       <Suspense fallback={null}>
         <VsPvPLeaderboard
           onBack={() => setPage('versus-game')}
@@ -1476,50 +1820,6 @@ export default function BucketApp() {
     )
   }
 
-  const navbarProps = {
-    onReset: () => guardedLeave(handleReset),
-    onHome: () => guardedLeave(handleHome),
-    onSignIn: () => setShowAuth(true),
-    onProfile: () => guardedLeave(() => user ? (window.history.pushState({}, '', '/profile'), setPage('profile')) : setShowAuth(true)),
-    onAbout: () => guardedLeave(() => { window.location.href = '/?about' }),
-    onLeaderboard: () => guardedLeave(() => setPage('leaderboard')),
-    onSubscribe: async () => {
-      if (!user) { setShowAuth(true); return }
-      try {
-        const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/create-checkout`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: user.id, email: user.email }),
-        })
-        const { url } = await res.json()
-        if (url) window.location.href = url
-      } catch {}
-    },
-    onSwitchBucketPosition: (pos) => guardedLeave(() => handleNavPositionSwitch(pos)),
-    user,
-    gameMode,
-    isRB: false,
-    isPlus: isSubscribed,
-    isBucket: true,
-    bucketPosition: position,
-    versusState: page === 'versus-game' && versusRoom ? (() => {
-      const oppTypes = VERSUS_POS_TYPES[oppPosition] ?? VERSUS_GUARD_TYPES
-      const myF  = activeTypes.filter(t => build[t]).length
-      const oppF = oppTypes.filter(t => oppBuild[t]).length
-      return {
-        myFilled: myF, oppFilled: oppF, myTotal: activeTypes.length, oppTotal: oppTypes.length,
-        oppName: versusRoom.oppName,
-        myPosition: position,
-        oppPosition,
-        bothReady: myF === activeTypes.length && oppF === oppTypes.length,
-        countdownSec: vsCountdown,
-        onFaceOff: () => {
-          versusRoom.channel?.send({ type: 'broadcast', event: 'bab_faceoff', payload: {} }).catch?.(() => {})
-          setPage('versus-result')
-        },
-      }
-    })() : null,
-  }
 
   if (page === 'sim') {
     return (
@@ -1546,7 +1846,7 @@ export default function BucketApp() {
   }
 
   if (page === 'leaderboard') {
-    return (
+    return withGame(
       <>
         <Navbar {...navbarProps} />
         <BucketLeaderboardPage
@@ -1559,7 +1859,7 @@ export default function BucketApp() {
   }
 
   if (page === 'privacy') {
-    return (
+    return withGame(
       <>
         <Navbar {...navbarProps} />
         <PrivacyPage onBack={() => { setPage('game'); window.scrollTo({ top: 0, behavior: 'instant' }) }} />
@@ -1569,7 +1869,7 @@ export default function BucketApp() {
 
 
   if (page === 'profile' && user) {
-    return (
+    return withGame(
       <>
         <ProfilePage
           user={user}
@@ -1662,285 +1962,5 @@ export default function BucketApp() {
     )
   }
 
-  const filledCount = activeTypes.filter(t => build[t]).length
-
-  return (
-    <>
-      {bucketHead}
-      <Navbar {...navbarProps} />
-
-      <div className="game-page-scroll">
-      {liveBuild && bt.match && <BlacktopHud bt={bt} onOpenChat={openBtChat} unread={btUnread} />}
-      {IS_APP && (
-        <FlipEdge side={mobileView} build={build} types={activeTypes} attrMap={BUCKET_ATTR} onFlip={flip}
-          waiting={savedSpinResult?.selectedQB?.name ?? null} complete={buildComplete} />
-      )}
-      <main className={`game-layout mobile-${mobileView}${gameMode === 'all-time' ? ' alltime-mode' : ''}${page === 'versus-game' || liveBuild ? ' versus-active' : ''}`}>
-        <SpinScreen
-          build={build}
-          activeDrag={activeDrag}
-          onDragStart={setActiveDrag}
-          onDragEnd={() => setActiveDrag(null)}
-          activeCategory={activeCategory}
-          resetKey={spinResetKey}
-          onChipTap={handleChipTap}
-          types={activeTypes}
-          isLite={gameMode === 'lite'}
-          qbPool={currentPool}
-          savedResult={savedSpinResult}
-          onSaveResult={setSavedSpinResult}
-          onPhaseChange={setSpinPhase}
-          gameKey={gameKey}
-          onReset={handleReset}
-          adsDisabled={adsDisabled}
-          cardMeta={IS_APP && page === 'game' && gameMode !== 'salarycap' ? { sport: 'bucket', pos: position, mode: gameMode } : null}
-          isRB={false}
-          isBucket={true}
-          isVersusMode={page === 'versus-game' || liveBuild}
-          attrMap={BUCKET_ATTR}
-          categoriesData={activeCategories}
-          teamsPool={NBA_TEAMS}
-          logoDir="/logos/nba/"
-          playerLabel="PLAYER"
-          headshotsMap={NBA_HEADSHOTS}
-          headshotsDir={`${HEADSHOT_BASE}/nba/`}
-          headshotFallback={genericHeadshot}
-        />
-        <Silhouette
-          build={build}
-          activeDrag={activeDrag}
-          onDrop={handleDrop}
-          activeCategory={activeCategory}
-          onCategoryChange={setActiveCategory}
-          types={activeTypes}
-          isLite={gameMode === 'lite'}
-          onReset={handleReset}
-          isRB={false}
-          isBucket={true}
-          isPlus={isSubscribed}
-          isCustomMode={isBucketCustomMode}
-          onOpenCustomModal={() => setShowBucketCustomModal(true)}
-          onSandboxToggle={isVersusMode ? undefined : handleSandboxToggle}
-          attrMap={BUCKET_ATTR}
-          categoriesData={activeCategories}
-          figureRef={figureRef}
-        />
-
-        <div className="right-panel-wrap">
-          <ReportCard
-            build={build}
-            onSimulate={page === 'takeover-build' ? hitTheRoad : () => setShowTeamSpin(true)}
-            simLabel={page === 'takeover-build' ? 'HIT THE ROAD' : undefined}
-            onReset={handleReset}
-            types={activeTypes}
-            hasResult={false}
-            isRB={false}
-            isBucket={true}
-            bucketPosition={position}
-            isPlus={isSubscribed}
-            isCustomMode={isBucketCustomMode}
-            onOpenCustomModal={() => setShowBucketCustomModal(true)}
-            onSandboxToggle={isVersusMode ? undefined : handleSandboxToggle}
-            attrMap={BUCKET_ATTR}
-            logoDir="/logos/nba/"
-            captureFigure={captureFigure}
-            isSalaryMode={gameMode === 'salarycap'}
-            isVersusMode={page === 'versus-game' || liveBuild}
-            oppPosition={oppPosition}
-            oppFilledCount={(POS_TYPES[oppPosition] ?? GUARD_TYPES).filter(t => oppBuild[t]).length}
-            oppTotal={(POS_TYPES[oppPosition] ?? GUARD_TYPES).length}
-          />
-        </div>
-      </main>
-      <div className="build-footer-section">
-        <SiteFeatures sport="bucket" className="build-site-features" />
-        <SiteFooter sport="bucket" />
-      </div>
-      </div>
-
-      {IS_APP && (page === 'game' || page === 'takeover-build') && <BuildComplete complete={buildComplete} ovr={buildComplete ? calcBucketOVR(build, activeTypes, position) : 0} />}
-      {liveBuild && btChatOpen && <BlacktopChat bt={bt} user={user} onClose={() => setBtChatOpen(false)} />}
-
-      {leaveConfirm && (
-        <div className="leave-confirm-overlay" onClick={() => setLeaveConfirm(null)}>
-          <div className="leave-confirm-modal" onClick={e => e.stopPropagation()}>
-            <div className="lcm-title">Leave game?</div>
-            <div className="lcm-body">Leaving an active game counts as a loss on your record.</div>
-            <div className="lcm-actions">
-              <button className="lcm-stay" onClick={() => setLeaveConfirm(null)}>Stay in game</button>
-              <button className="lcm-leave" onClick={() => { leaveConfirm.fn(); setLeaveConfirm(null) }}>Leave &amp; take the L</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showVsPrompt && page === 'versus-game' && (
-        <div className="vs-prompt-overlay">
-          <div className="vs-prompt-modal">
-            <div className="vs-prompt-eyebrow">HEAD TO HEAD</div>
-            <div className="vs-prompt-matchup">
-              <div className="vs-prompt-side">
-                <div className="vs-prompt-name">{getUsername(user) || 'You'}</div>
-                <div className="vs-prompt-record">
-                  {vsRecord.wins}W – {vsRecord.losses}L
-                </div>
-              </div>
-              <div className="vs-prompt-vs">VS</div>
-              <div className="vs-prompt-side">
-                <div className="vs-prompt-name">{versusRoom?.oppName || 'Opponent'}</div>
-                <div className="vs-prompt-record">
-                  {oppRecord ? `${oppRecord.wins}W – ${oppRecord.losses}L` : '— W – — L'}
-                </div>
-              </div>
-            </div>
-            <div className="vs-prompt-pos-btns">
-              {['guard', 'big'].map(pos => (
-                <button
-                  key={pos}
-                  className={`vs-prompt-pos-btn${position === pos ? ' vs-prompt-pos-btn--active' : ''}`}
-                  onClick={() => {
-                    try { localStorage.setItem('bucketPosition', pos) } catch {}
-                    setPosition(pos)
-                    const types = VERSUS_POS_TYPES[pos] ?? VERSUS_GUARD_TYPES
-                    setBuild(Object.fromEntries(types.map(t => [t, null])))
-                    setActiveCategory((VERSUS_POS_CATS[pos] ?? VERSUS_GUARD_CATEGORIES)[0].id)
-                    versusRoom?.channel?.send({ type: 'broadcast', event: 'bab_position', payload: { position: pos } }).catch?.(() => {})
-                    setShowVsPrompt(false)
-                  }}
-                >
-                  {pos === 'guard' ? 'GUARD' : 'BIG'}
-                  <span className="vs-ppb-sub">{pos === 'guard' ? 'PG · SG · SF' : 'PF · C'}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {oppDisconnected && (
-        <div className="opp-disconnect-overlay" onClick={() => setOppDisconnected(false)}>
-          <div className="opp-disconnect-modal" onClick={e => e.stopPropagation()}>
-            <div className="odm-icon">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55M5 12.55a10.94 10.94 0 0 1 5.17-2.39M10.71 5.05A16 16 0 0 1 22.56 9M1.42 9a15.91 15.91 0 0 1 4.7-2.88M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01"/>
-              </svg>
-            </div>
-            <div className="odm-title">Your opponent has left</div>
-            <div className="odm-body">You've been given the win.</div>
-            <button className="odm-ok" onClick={() => { setOppDisconnected(false); handleHome(); }}>OK</button>
-          </div>
-        </div>
-      )}
-
-
-      {showTeamSpin && (
-        <TeamSpinModal
-          isCustomMode={isBucketCustomMode}
-          onTeamSelected={handleTeamPicked}
-          build={build}
-        />
-      )}
-
-      {showBucketCustomModal && (
-        <CustomRatingsModal
-          isBucket={true}
-          bucketPosition={position}
-          gameMode={gameMode}
-          pool={position === 'guard' ? CUSTOM_MODAL_GUARDS : CUSTOM_MODAL_BIGS}
-          poolCurrent={CUSTOM_POOLS[position === 'big' ? 'big' : 'guard'].current}
-          poolLegends={CUSTOM_POOLS[position === 'big' ? 'big' : 'guard'].legends}
-          build={build}
-          buildTypes={activeTypes}
-          onClose={() => setShowBucketCustomModal(false)}
-          onSave={(ratings) => {
-            setBucketCustomRatings(ratings)
-            try { localStorage.setItem('bab_bucket_custom_ratings', JSON.stringify(ratings)) } catch {}
-          }}
-          onAddToBuild={(p, playerOverrides, slot) => {
-            sandboxTainted.current = true
-            const val = playerOverrides?.[slot] ?? p.attrs?.[slot] ?? 5
-            setBuild(prev => ({ ...prev, [slot]: {
-              type: slot, val,
-              qb: p.short || p.name,
-              qbFull: p.name,
-              team: p.team,
-              teamColor: p.color,
-              teamColor2: p.color2,
-              skinColor: p.skin,
-              number: p.number,
-              faceCenter: p.faceCenter,
-              photo: NBA_HEADSHOTS[p.name] ? `${HEADSHOT_BASE}/nba/${NBA_HEADSHOTS[p.name]}.webp` : genericHeadshot(p.skin),
-              captain: p.captain ?? false,
-              height: p.height ?? parseHtToIn(p.ht) ?? null,
-              weight: p.weight ?? p.wt ?? null,
-            }}))
-            setShowBucketCustomModal(false)
-          }}
-          onAddAllToBuild={(p, playerOverrides) => {
-            sandboxTainted.current = true
-            setBuild(prev => {
-              const next = { ...prev }
-              activeTypes.forEach(slot => {
-                if (!prev[slot]) {
-                  const val = playerOverrides?.[slot] ?? p.attrs?.[slot] ?? 5
-                  next[slot] = {
-                    type: slot, val,
-                    qb: p.short || p.name,
-                    qbFull: p.name,
-                    team: p.team,
-                    teamColor: p.color,
-                    teamColor2: p.color2,
-                    skinColor: p.skin,
-                    number: p.number,
-                    faceCenter: p.faceCenter,
-                    photo: NBA_HEADSHOTS[p.name] ? `${HEADSHOT_BASE}/nba/${NBA_HEADSHOTS[p.name]}.webp` : genericHeadshot(p.skin),
-                    captain: p.captain ?? false,
-                    height: p.height ?? parseHtToIn(p.ht) ?? null,
-                    weight: p.weight ?? p.wt ?? null,
-                  }
-                }
-              })
-              return next
-            })
-            setShowBucketCustomModal(false)
-          }}
-        />
-      )}
-
-      {gameMode !== 'salarycap' && <nav className="mobile-tab-bar">
-        <button
-          className={`mtab ${mobileView === 'spin' ? 'active' : ''}`}
-          onClick={() => { setMobileView('spin'); window.scrollTo({ top: 0, behavior: 'instant' }); document.querySelector('.game-page-scroll')?.scrollTo({ top: 0, behavior: 'instant' }) }}
-        >
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="23 4 23 10 17 10"/>
-            <polyline points="1 20 1 14 7 14"/>
-            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
-          </svg>
-          Spin
-        </button>
-        <div className="mtab-sep" />
-        <button
-          className={`mtab ${mobileView === 'build' ? 'active' : ''}`}
-          onClick={() => { setMobileView('build'); window.scrollTo({ top: 0, behavior: 'instant' }); document.querySelector('.game-page-scroll')?.scrollTo({ top: 0, behavior: 'instant' }) }}
-        >
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
-          </svg>
-          Build
-          {filledCount > 0 && (
-            <span className="mtab-badge">{filledCount}/{activeTypes.length}</span>
-          )}
-        </button>
-      </nav>}
-
-      {showAuth && (
-        <AuthModal
-          onClose={() => setShowAuth(false)}
-          onAuth={setUser}
-        />
-      )}
-
-    </>
-  )
+  return IS_APP ? shell(null) : renderGame(false)
 }

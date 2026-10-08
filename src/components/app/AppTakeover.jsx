@@ -6,7 +6,7 @@ import { joinRoom, genCode, myVid } from '../../lib/live'
 import { clean, blockedIds, MIN_GAP_MS } from '../../lib/chat'
 import { valToGrade } from '../../utils/simulation'
 import { getUsername } from '../../lib/discord'
-import { sfx, haptic, confetti } from '../../lib/juice'
+import { sfx, haptic, victory } from '../../lib/juice'
 import { BlacktopChat } from './AppBlacktop'
 import BlacktopCourt from './BlacktopCourt'
 import Silhouette from '../Silhouette'
@@ -14,7 +14,7 @@ import { IconClose, IconArrow, IconCheck, IconFlame, IconChat, IconStar, IconPro
 
 // TAKEOVER — the road across the map. The run (lib/takeover.js) is plain data
 // saved on the device; this screen walks it: the map → the city's player → the
-// duel → the reward → the next city, and on past the sixteenth. Duo: two runs
+// duel → the reward → the next city, and on past the twelfth. Duo: two runs
 // share one road over a live room.
 
 const gradeColor = v => (v >= 11 ? '#a855f7' : v >= 8 ? '#3b82f6' : v >= 5 ? '#22c55e' : v >= 2 ? '#eab308' : v >= 1 ? '#f97316' : '#ef4444')
@@ -79,8 +79,9 @@ export default function AppTakeover({ sport, run, setRun, user, pools, attrMap, 
     const wasEndless = isEndless(run)
     const next = afterDuel(run, at, won)
     if (won) {
-      window.dispatchEvent(new CustomEvent('bap:xp', { detail: { xp: wasEndless ? XP_ENDLESS : XP_CITY, label: wasEndless ? `Endless · ${next.endlessWins} straight` : `${at.city} taken` } }))
-      if (next.justWon) window.dispatchEvent(new CustomEvent('bap:xp', { detail: { xp: XP_RUN, label: 'TAKEOVER complete' } }))
+      window.dispatchEvent(new CustomEvent('bap:xp', { detail: { xp: wasEndless ? XP_ENDLESS : XP_CITY, coins: 20, label: wasEndless ? `Endless · ${next.endlessWins} straight` : `${at.city} taken` } }))
+      window.dispatchEvent(new CustomEvent('bap:takeover', { detail: { city: true } }))
+      if (next.justWon) { window.dispatchEvent(new CustomEvent('bap:xp', { detail: { xp: XP_RUN, coins: 150, label: 'TAKEOVER complete' } })); window.dispatchEvent(new CustomEvent('bap:takeover', { detail: { run: true } })) }
     }
     setRun(next)
     if (run.mode === 'duo') duo.sync(next)
@@ -240,7 +241,7 @@ export default function AppTakeover({ sport, run, setRun, user, pools, attrMap, 
     )
   }
 
-  // ── The sixteenth fell ─────────────────────────────────────────────────────
+  // ── The twelfth fell ─────────────────────────────────────────────────────
   if (screen === 'complete') {
     return (
       <div className={`ag-screen ag-screen--${sport} tk`}>
@@ -248,7 +249,7 @@ export default function AppTakeover({ sport, run, setRun, user, pools, attrMap, 
           <div className="bt-result-hero is-win ag-pop">
             <span className="ag-eyebrow">TAKEOVER COMPLETE · +{XP_RUN} XP</span>
             <h1 className="ag-h1">The map is yours</h1>
-            <p className="tk-reward-sub" style={{ margin: '4px 0 0', textAlign: 'center' }}>Sixteen cities, sixteen better players, one build. From here the road goes endless: random greats, anywhere, with three fresh lives.</p>
+            <p className="tk-reward-sub" style={{ margin: '4px 0 0', textAlign: 'center' }}>Twelve cities, twelve better players, one build. From here the road goes endless: random greats, anywhere, with three fresh lives.</p>
             <div className="tk-over-ovr"><b>{ovr}</b> OVR</div>
           </div>
           <UsMap cities={cities} run={run} here={here} next={null} delay="120ms" />
@@ -366,7 +367,7 @@ function HoopsDuel({ duel, run, city, me, onDone }) {
   const done = useRef(false)
   useEffect(() => {
     if (idx >= plays.length - 1) {
-      if (!done.current) { done.current = true; setTimeout(() => { if (duel.win) { sfx('award'); confetti(120) } else sfx('pop'); onDone(duel.win) }, 2200) }
+      if (!done.current) { done.current = true; setTimeout(() => { if (duel.win) victory(); else sfx('pop'); onDone(duel.win) }, 2200) }
       return
     }
     const t = setTimeout(() => setIdx(i => i + 1), playDelay(play, idx === 0) / speed)
@@ -404,7 +405,7 @@ function FootballDuel({ duel, run, city, onDone }) {
   const done = useRef(false)
   useEffect(() => {
     if (idx >= plays.length - 1) {
-      if (!done.current) { done.current = true; setTimeout(() => { if (duel.win) { sfx('award'); confetti(120) } else sfx('pop'); onDone(duel.win) }, 2200) }
+      if (!done.current) { done.current = true; setTimeout(() => { if (duel.win) victory(); else sfx('pop'); onDone(duel.win) }, 2200) }
       return
     }
     const t = setTimeout(() => setIdx(i => i + 1), play?.kind === 'td' ? 1700 : 1250)

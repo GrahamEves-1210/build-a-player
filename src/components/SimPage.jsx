@@ -477,6 +477,51 @@ function ScreenBuild({ result, build, types, onNext, isRB, isWR, isTE, isDB, isO
   )
 }
 
+// App: every week of the season in one scrolling window. Played weeks show the
+// result, weeks still to come wait as numbered rows, and the window keeps the
+// newest result in view while the season plays out (scroll back any time).
+function GameLog({ games, total, isOL, isDB, isTE, isWR, isRB }) {
+  const boxRef = useRef(null)
+  const follow = useRef(true)
+  useEffect(() => {
+    const el = boxRef.current
+    if (!el || !follow.current) return
+    const row = el.children[Math.max(0, games.length - 1)]
+    if (row) el.scrollTo({ top: Math.max(0, row.offsetTop - el.clientHeight + row.offsetHeight + 4), behavior: 'smooth' })
+  }, [games.length])
+  const statFor = g => g.sat ? 'DNP' : (isOL ? `${g.pancakes} pnk · ${g.sacks} sck` : isDB ? `${g.tackles} tkl · ${g.ints} int` : (isWR || isTE) ? `${g.rec} rec · ${g.recYds} yds` : isRB ? `${g.rushYds} rush · ${g.rushTDs + g.recTDs} td` : `${g.passYds} yds · ${g.tds} td`)
+  return (
+    <div className="sm-log-wrap">
+      <div className="sm-log-head"><span>SCHEDULE</span><span>{games.length}/{total}</span></div>
+      <div
+        ref={boxRef}
+        className="simp-games-list sm-log"
+        onScroll={e => { const el = e.currentTarget; follow.current = el.scrollHeight - el.scrollTop - el.clientHeight < 70 }}
+      >
+        {Array.from({ length: total }, (_, i) => {
+          const g = games[i]
+          if (!g) return (
+            <div key={`up-${i}`} className="simp-game-row sgr-up">
+              <span className="sgr-wk">WK {i + 1}</span>
+              <span className="sgr-badge sgr-badge-up">–</span>
+              <span className="sgr-opp sgr-opp-up">Upcoming</span>
+            </div>
+          )
+          return (
+            <div key={g.wk} className={`simp-game-row ${g.won ? 'sgr-w' : 'sgr-l'} sgr-in`}>
+              <span className="sgr-wk">WK {g.wk}</span>
+              <span className={`sgr-badge ${g.won ? 'sgr-badge-w' : 'sgr-badge-l'}`}>{g.won ? 'W' : 'L'}</span>
+              <span className="sgr-opp"><span className="sgr-venue">{g.home ? 'vs' : '@'}</span>{g.opponent}</span>
+              <span className="sgr-score">{g.mySc}–{g.oppSc}</span>
+              <span className="sgr-stat">{statFor(g)}</span>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 // ── Screen 2 (app): the season you steer ─────────────────────────────────────
 function DirectedSeason({ dr, result, pos, pool, userName, director, onNext, build, types, isOL, isDB, isTE, isWR, isRB }) {
   const games = dr.games
@@ -498,17 +543,7 @@ function DirectedSeason({ dr, result, pos, pool, userName, director, onNext, bui
       {dr.moment ? <MomentCard moment={dr.moment} onPick={dr.choose} /> : <NowCard game={last} pos={pos} sport="nfl" team={result.team} logoFor={logoFor} />}
       <Milestones items={dr.fresh} />
       <WeekStrip games={director.games} revealed={dr.k} />
-      <div className="simp-games-list sm-log">
-        {[...games].reverse().slice(0, 6).map(g => (
-          <div key={g.wk} className={`simp-game-row ${g.won ? 'sgr-w' : 'sgr-l'} sgr-in`}>
-            <span className="sgr-wk">WK {g.wk}</span>
-            <span className={`sgr-badge ${g.won ? 'sgr-badge-w' : 'sgr-badge-l'}`}>{g.won ? 'W' : 'L'}</span>
-            <span className="sgr-opp"><span className="sgr-venue">{g.home ? 'vs' : '@'}</span>{g.opponent}</span>
-            <span className="sgr-score">{g.mySc}–{g.oppSc}</span>
-            <span className="sgr-stat">{g.sat ? 'DNP' : (isOL ? `${g.pancakes} pnk · ${g.sacks} sck` : isDB ? `${g.tackles} tkl · ${g.ints} int` : (isWR || isTE) ? `${g.rec} rec · ${g.recYds} yds` : isRB ? `${g.rushYds} rush · ${g.rushTDs + g.recTDs} td` : `${g.passYds} yds · ${g.tds} td`)}</span>
-          </div>
-        ))}
-      </div>
+      <GameLog games={games} total={dr.total} isOL={isOL} isDB={isDB} isTE={isTE} isWR={isWR} isRB={isRB} />
       {dr.record && <RecordOverlay record={dr.record} name={userName} onClose={dr.clearRecord} />}
       {final && (
         <div className="simp-stat-section simp-totals-in">

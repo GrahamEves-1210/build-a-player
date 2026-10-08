@@ -275,7 +275,7 @@ const POS_COLORS = {
 }
 
 // ─── SpinScreen ──────────────────────────────────────────────────────────────
-export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, activeCategory, resetKey, onChipTap, types = TYPES, isLite = false, qbPool = QBS, savedResult = null, onSaveResult, onPhaseChange, gameKey, onReset, adsDisabled = false, isRB = false, isWR = false, isTE = false, isDB = false, isOL = false, isAllTime = false, isBucket = false, isVersusMode = false, attrMap = ATTR, categoriesData = CATEGORIES, teamsPool = TEAMS, logoDir = '/logos/', playerLabel, headshotsMap = HEADSHOTS, headshotsDir = `${HEADSHOT_BASE}/`, hideTeamResult = false, headshotFallback = () => null, seedPlan = null, cardMeta = null }) {
+export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, activeCategory, resetKey, onChipTap, types = TYPES, isLite = false, qbPool = QBS, savedResult = null, onSaveResult, onPhaseChange, gameKey, onReset, adsDisabled = false, isRB = false, isWR = false, isTE = false, isDB = false, isOL = false, isAllTime = false, isBucket = false, isVersusMode = false, attrMap = ATTR, categoriesData = CATEGORIES, teamsPool = TEAMS, logoDir = '/logos/', playerLabel, headshotsMap = HEADSHOTS, headshotsDir = `${HEADSHOT_BASE}/`, hideTeamResult = false, headshotFallback = () => null, seedPlan = null, cardMeta = null, paused = false }) {
   const pLabel = playerLabel ?? (isTE ? 'TE' : isWR ? 'WR' : isRB ? 'RB' : 'QB')
   // TE (current mode) and OL get a 2nd player respin; All-Time TE gets just 1
   const maxPlayerRespin = (isTE && !isAllTime) || isOL ? 2 : 1
@@ -514,7 +514,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
                 label="TEAM"
                 items={teamReelItems}
                 spinning={isSpinningTeam}
-                idle={!isSpinning && !selectedTeam}
+                idle={!paused && !isSpinning && !selectedTeam}
                 locked={!!selectedTeam}
                 blurred={hideTeamResult && !!selectedTeam}
                 getDisplay={t => t.short}
@@ -528,7 +528,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
                 label={pLabel}
                 items={qbReelItems}
                 spinning={isSpinningQB}
-                idle={!isSpinning && !selectedQB}
+                idle={!paused && !isSpinning && !selectedQB}
                 locked={!!selectedQB && phase === 'done'}
                 getDisplay={q => q.name.split(' ')[0]}
                 getSub={q => q.name.split(' ').slice(1).join(' ')}

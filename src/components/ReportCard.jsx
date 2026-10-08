@@ -22,6 +22,7 @@ import { buildShareUrl } from '../utils/shareUrl'
 import { generateBucketShareCard, shareOrDownloadCard } from '../utils/generateShareCard'
 import QBAvatar from './QBAvatar'
 import { IS_APP, shareNative } from '../lib/platform'
+import AppSandbox from './app/AppSandbox'
 
 function fmtHeight(inches) { return `${Math.floor(inches / 12)}'${inches % 12}"` }
 
@@ -400,7 +401,9 @@ export default function ReportCard({ build, onSimulate, onReset, types = TYPES, 
           </button>
         )}
 
-        {!isVersusMode && ((isBucket && !isSalaryMode) || !!onSandboxToggle) ? (
+        {!isVersusMode && ((isBucket && !isSalaryMode) || !!onSandboxToggle) && IS_APP ? (
+          <AppSandbox on={!!isCustomMode} onToggle={v => onSandboxToggle?.(v)} onCustomize={onOpenCustomModal} />
+        ) : !isVersusMode && ((isBucket && !isSalaryMode) || !!onSandboxToggle) ? (
           <div className="rc-sandbox-outer">
             <div className="rc-sandbox-toprow">
               <div

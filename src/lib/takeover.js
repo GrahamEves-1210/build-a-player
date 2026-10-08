@@ -1,8 +1,8 @@
-// TAKEOVER — the road. Build once, then cross the country: sixteen cities drawn
+// TAKEOVER — the road. Build once, then cross the country: twelve cities drawn
 // across the map, each with a real player at your position who is a little
 // better than the last — the road opens around 70 OVR and ends at the best in
 // the league. Win and you upgrade a trait or steal one of theirs; lose and it
-// costs a life (three). Take all sixteen and the road goes endless: random
+// costs a life (three). Take all twelve and the road goes endless: random
 // greats, anywhere, for as long as the build holds. The run is plain data
 // saved on the device, so Home never loses it. One engine for both games:
 // basketball duels are the streetball sim (1v1 to 11; Duo is 2v2 vs the star
@@ -13,7 +13,7 @@ import { simStreetball, buildFromPlayer } from './hoops'
 import { GEO, project } from './usMap'
 
 export const LIVES = 3
-export const STOPS = 16
+export const STOPS = 12
 export const XP_CITY = 15
 export const XP_RUN = 250
 export const XP_ENDLESS = 30
@@ -42,7 +42,7 @@ export function ratedPool(pool, types, calcOvr, cities) {
   return pool.filter(p => p.attrs && on.has(p.team)).map(p => ({ name: p.name, team: p.team, ovr: Math.round(calcOvr(buildFromPlayer(p, types))) }))
 }
 
-// The road: 16 stops. Each is a little better than the last (never worse), in
+// The road: 12 stops. Each is a little better than the last (never worse), in
 // a city near the one you're in — with a little randomness among the best fits.
 export function planRoute({ rated, cities, seed, stops = STOPS }) {
   const r = seeded(`${seed}-route`)
@@ -52,7 +52,7 @@ export function planRoute({ rated, cities, seed, stops = STOPS }) {
   if (!ovrs.length) return { route: [], start: start?.short ?? null, lo: 70, hi: 99 }
   const hi = ovrs[ovrs.length - 1]
   let lo = Math.max(ovrs[0], Math.min(70, hi - 18))
-  // the floor needs sixteen cities above it (not counting where you start)
+  // the floor needs twelve cities above it (not counting where you start)
   const citiesAbove = floor => new Set(rated.filter(p => p.ovr >= floor && p.team !== start.short).map(p => p.team)).size
   while (lo > ovrs[0] && citiesAbove(lo) < stops) lo -= 1
   // one player per rung of the ladder, each from a new city, leaning toward
@@ -79,7 +79,7 @@ export function planRoute({ rated, cities, seed, stops = STOPS }) {
   return { route, start: start.short, lo, hi }
 }
 
-// After the sixteenth: a random great, anywhere, playing a little harder the longer you last
+// After the twelfth: a random great, anywhere, playing a little harder the longer you last
 export function endlessStop(run, rated) {
   const n = run.endless.length
   const r = seeded(`${run.seed}-endless-${n}`)
@@ -210,7 +210,7 @@ export function applyReward(run, reward, star) {
 }
 
 // A win moves you on (the city is yours, the road's lives refill when the
-// sixteenth falls); a loss costs a life and you run that stop back.
+// twelfth falls); a loss costs a life and you run that stop back.
 export function afterDuel(run, city, won) {
   const log = [...run.log, { city: city.short, won, at: Date.now(), idx: run.idx }]
   if (won) {

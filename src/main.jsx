@@ -32,7 +32,12 @@ import { IS_APP } from './lib/platform'
 // App-only shell (dock, Daily, Cards, toasts) — never downloaded on the website
 const AppTabBar = IS_APP ? lazy(() => import('./components/AppTabBar.jsx')) : null
 
-if (IS_APP) document.documentElement.classList.add('is-app')
+if (IS_APP) {
+  document.documentElement.classList.add('is-app')
+  // No pinch/auto zoom in the app: iOS zooms into any focused field under 16px
+  // (chat, search); a fixed scale keeps the screen still while you type.
+  document.querySelector('meta[name="viewport"]')?.setAttribute('content', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover')
+}
 // App: sound effects, haptics and confetti (lib/juice.js)
 if (IS_APP) import('./lib/juice').then(m => m.initJuice()).catch(() => {})
 // App: XP, streak, missions, cards (lib/progress.js)

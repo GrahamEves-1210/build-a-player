@@ -225,3 +225,60 @@ export const IconPodium = p => (
     <path fill="currentColor" d="m12 1.6 1 2 2.2.3-1.6 1.6.4 2.2-2-1-2 1 .4-2.2-1.6-1.6 2.2-.3z"/>
   </S>
 )
+
+export const IconFlask = p => (
+  <S {...p}>
+    <path fill="currentColor" d="M8.6 2.4h6.8c.6 0 1 .4 1 1s-.4 1-1 1h-.6v4.4l5.3 8.9c1 1.7-.2 3.9-2.2 3.9H6.1c-2 0-3.2-2.2-2.2-3.9l5.3-8.9V4.4h-.6c-.6 0-1-.4-1-1s.4-1 1-1z"/>
+    <path {...INK} opacity=".55" d="M7.2 15.2h9.6l1.6 2.7c.3.5-.1 1.1-.6 1.1H6.2c-.6 0-.9-.6-.6-1.1z"/>
+  </S>
+)
+export const IconSliders = p => (
+  <S {...p}>
+    <rect x="3" y="5" width="18" height="2.6" rx="1.3" fill="currentColor"/><circle cx="15" cy="6.3" r="2.6" fill="currentColor"/>
+    <rect x="3" y="10.7" width="18" height="2.6" rx="1.3" fill="currentColor"/><circle cx="8" cy="12" r="2.6" fill="currentColor"/>
+    <rect x="3" y="16.4" width="18" height="2.6" rx="1.3" fill="currentColor"/><circle cx="16.5" cy="17.7" r="2.6" fill="currentColor"/>
+  </S>
+)
+export const IconBag = p => (
+  <S {...p}>
+    <path fill="currentColor" d="M5.3 7.5h13.4c.6 0 1.1.5 1.2 1.1l1 11.2c.1.9-.6 1.7-1.5 1.7H4.6c-.9 0-1.6-.8-1.5-1.7l1-11.2c.1-.6.6-1.1 1.2-1.1z"/>
+    <path fill="none" {...INK_S} strokeWidth="1.8" strokeLinecap="round" d="M8.6 10V6.4a3.4 3.4 0 0 1 6.8 0V10"/>
+  </S>
+)
+export const IconMedal = p => (
+  <S {...p}>
+    <path fill="currentColor" opacity=".55" d="M7 2h4l2 6H9zM13 2h4l-2 6h-4z"/>
+    <circle cx="12" cy="15" r="6.6" fill="currentColor"/>
+    <path {...INK} d="m12 11.2 1.1 2.3 2.5.3-1.8 1.7.4 2.5-2.2-1.2-2.2 1.2.4-2.5-1.8-1.7 2.5-.3z"/>
+  </S>
+)
+export const IconSwap = p => (
+  <S {...p}>
+    <path fill="currentColor" d="M16.6 3.3a1 1 0 0 1 1.4 0l3 3a1 1 0 0 1 0 1.4l-3 3a1 1 0 0 1-1.7-.7V8H4a1 1 0 1 1 0-2h12.3V4c0-.3.1-.5.3-.7zM7.4 13.3a1 1 0 0 1 .3.7v2h12.3a1 1 0 1 1 0 2H7.7v2a1 1 0 0 1-1.7.7l-3-3a1 1 0 0 1 0-1.4l3-3a1 1 0 0 1 1.4 0z"/>
+  </S>
+)
+export const IconSend = p => (
+  <S {...p}><path fill="currentColor" d="M3.4 11.1 19.3 4.3c1-.4 2 .6 1.6 1.6l-6.8 15.9c-.4 1-1.9 1-2.2-.1l-1.6-5.4a1 1 0 0 0-.7-.7l-5.4-1.6c-1.1-.3-1.1-1.8-.1-2.2z"/></S>
+)
+export const IconWhistle = p => (
+  <S {...p}>
+    <path fill="currentColor" d="M3 11.5a6.5 6.5 0 0 1 11.9-3.6l5.7-1.9c.7-.2 1.4.3 1.4 1v3c0 .5-.3.9-.8 1l-4.1 1A6.5 6.5 0 1 1 3 11.5z"/>
+    <circle cx="9.5" cy="11.5" r="2.6" {...INK} opacity=".55"/>
+    <rect x="6" y="2.5" width="3" height="4" rx="1" fill="currentColor"/>
+  </S>
+)
+export const IconHelmet = p => (
+  <S {...p}>
+    <path fill="currentColor" d="M12.6 3C7.3 3 3 6.9 3 12c0 2 .7 3.9 1.9 5.4.4.5 1 .8 1.6.8h4.2l1.2 2h4.6l-1.3-2.2 2.6-.3V14h3.2c.6 0 1-.4 1-1v-.5C22 7.2 17.9 3 12.6 3z"/>
+    <path fill="none" {...INK_S} strokeWidth="1.6" strokeLinecap="round" d="M15.5 14v3.6M15.5 15.7H21M18.5 14v3.6"/>
+    <circle cx="11" cy="10.5" r="1.6" {...INK} opacity=".55"/>
+  </S>
+)
+export const IconHoop = p => (
+  <S {...p}>
+    <circle cx="12" cy="5.6" r="3.4" fill="currentColor"/>
+    <path fill="none" {...INK_S} strokeWidth=".9" d="M8.8 5.6h6.4M12 2.2v6.8"/>
+    <path fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" d="M5 10.5h14l-2.3 10H7.3z"/>
+    <path fill="none" stroke="currentColor" strokeWidth="1.3" d="m7.5 10.5 6 10M16.5 10.5l-6 10M10.3 10.5l4.2 10M13.7 10.5l-4.2 10"/>
+  </S>
+)

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { GAME_LINE } from '../../lib/seasonDirector'
 import { leaderBoard } from '../../lib/seasonFacts'
-import { sfx, haptic, confetti } from '../../lib/juice'
+import { sfx, haptic, victory } from '../../lib/juice'
 import { IconArrow, IconStar, IconFlame } from './icons'
 
 // Season reveal, the app version: the moment card the season pauses on, the
@@ -35,10 +35,9 @@ export function MomentCard({ moment, onPick }) {
           </button>
         ))}
       </div>
-      {picked && (
-        <div className={`sm-outcome ag-pop${outcome ? (outcome.hit ? ' is-hit' : ' is-miss') : ''}`}>
-          {outcome ? outcome.line : moment.stop.kind === 'playoffs' ? 'Locked in for the postseason.' : 'The rest of the season plays out from here.'}
-        </div>
+      {/* a gamble shows how it landed; a straight choice speaks for itself */}
+      {picked && outcome && (
+        <div className={`sm-outcome ag-pop${outcome.hit ? ' is-hit' : ' is-miss'}`}>{outcome.line}</div>
       )}
     </div>
   )
@@ -116,7 +115,7 @@ export function Milestones({ items }) {
 
 // A record falls: a full-screen beat
 export function RecordOverlay({ record, name, onClose }) {
-  useEffect(() => { sfx('champion'); haptic('success'); confetti(220); const t = setTimeout(onClose, 5200); return () => clearTimeout(t) }, []) // eslint-disable-line
+  useEffect(() => { victory({ big: true }); const t = setTimeout(onClose, 5200); return () => clearTimeout(t) }, []) // eslint-disable-line
   return createPortal(
     <div className="ag-ring sm-record" onClick={onClose}>
       <div className="ag-ring-rays" />
@@ -242,8 +241,8 @@ export function useDirectedReveal({ director, pace, onFinal }) {
 
   const choose = option => {
     const out = director.choose(moment, option)
-    // let the outcome line read, then roll on
-    setTimeout(() => { setMoment(null); setTick(t => t + 1) }, 1900)
+    // let a gamble's outcome line read, then roll on
+    setTimeout(() => { setMoment(null); setTick(t => t + 1) }, out ? 1900 : 700)
     return out
   }
   return { k, games: director ? director.games.slice(0, k) : [], moment, choose, fresh, record, clearRecord: () => setRecord(null), done, headlines: director?.headlines ?? [], total }

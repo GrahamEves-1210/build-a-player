@@ -4,6 +4,8 @@
 // wired into game code, so removing this file removes the whole layer.
 // Sounds are generated with Web Audio — no audio files. Mute: More → Sound.
 
+import { myVictory } from './progress'
+
 const MUTE_KEY = 'bap_sound_off'
 export const isMuted = () => { try { return localStorage.getItem(MUTE_KEY) === '1' } catch { return false } }
 export const setMuted = on => { try { on ? localStorage.setItem(MUTE_KEY, '1') : localStorage.removeItem(MUTE_KEY) } catch {} }
@@ -152,16 +154,21 @@ const SFX = {
   lock: S => { hit(S, { gain: 0.3 }); osc(S, { type: 'triangle', f: 540, to: 470, dur: 0.12, gain: 0.11, at: 0.012, lp: 1600, q: 0.9, env: { a: 0.002, d: 0.12 } }); osc(S, { type: 'sine', f: 1080, dur: 0.07, gain: 0.04, at: 0.014, env: { a: 0.002, d: 0.07 } }); noise(S, { bp: 2400, q: 2.5, dur: 0.03, gain: 0.06, at: 0.01 }) },
   // sheet / screen opens: whoosh
   pop: S => noise(S, { bp: 480, to: 2600, q: 1.1, dur: 0.24, gain: 0.26, env: { a: 0.04, d: 0.2 } }),
-  // the last trait drops in: rising power-up into a hit
-  complete: S => {
-    const v = verb(S, 0.35)
-    for (const [f, d] of [[196, -5], [246.9, 0], [293.7, 5]]) {
-      osc(S, { type: 'sawtooth', f, detune: d, dur: 0.58, gain: 0.05, lp: 320, q: 2, out: v, env: { a: 0.05, d: 0.58 } })
-    }
-    // the rise: a brighter layer fading in over the dark one
-    for (const f of [392, 493.9, 587.3]) osc(S, { type: 'sawtooth', f, dur: 0.5, gain: 0.045, at: 0.12, lp: 4200, q: 0.9, out: v, env: { a: 0.3, d: 0.25 } })
-    hit(S, { at: 0.56, gain: 0.26 })
-    bell(S, { f: 1568, ratio: 2.0, index: 1.3, dur: 0.5, gain: 0.11, at: 0.56, out: v })
+  // the last trait drops in: a filtered riser that lands on an impact; the
+  // tier (0 project … 4 legendary) decides how big the landing is
+  complete: (S, tier = 2) => {
+    const v = verb(S, 0.38)
+    noise(S, { bp: 220, to: 4200, q: 1.1, dur: 0.95, gain: 0.13, env: { a: 0.85, d: 0.1 } })
+    osc(S, { f: 46, to: 74, dur: 0.95, gain: 0.16, env: { a: 0.8, d: 0.15 } })
+    for (const [f, d] of [[146.8, -6], [220, 0], [293.7, 6]]) osc(S, { type: 'sawtooth', f, to: f * 1.5, detune: d, dur: 0.95, gain: 0.03, lp: 1400, q: 1.4, out: v, env: { a: 0.85, d: 0.1 } })
+    const at = 1.0
+    hit(S, { at, gain: 0.42 })
+    osc(S, { f: 110, to: 34, dur: 0.6, gain: 0.32, at })
+    noise(S, { bp: 1800, q: 0.9, dur: 0.14, gain: 0.16, at })
+    const chords = [[220, 261.6, 329.6], [261.6, 329.6, 392], [293.7, 370, 440], [329.6, 415.3, 493.9], [392, 493.9, 587.3]]
+    for (const f of chords[Math.max(0, Math.min(4, tier))]) brass(S, { f, dur: 0.5 + tier * 0.12, gain: 0.08 + tier * 0.01, at, hold: 0.1 + tier * 0.05, out: v })
+    if (tier >= 2) crowd(S, { dur: 1.4 + tier * 0.3, gain: 0.08 + tier * 0.04, at })
+    if (tier >= 4) noise(S, { hp: 5200, dur: 1, gain: 0.08, at, out: v, env: { a: 0.004, d: 1 } })
   },
   // season kicks off
   whistle: S => whistle(S, { gain: 0.11 }),
@@ -171,7 +178,7 @@ const SFX = {
     crowd(S, { dur: 1.8, gain: 0.16, at: 0.1 })
     for (const [f, at] of [[523.3, 0], [659.3, 0.13], [784, 0.26]]) brass(S, { f, dur: 0.18, gain: 0.14, at, out: v })
     brass(S, { f: 1046.5, dur: 0.75, gain: 0.17, at: 0.4, hold: 0.3, out: v })
-    bell(S, { f: 2093, ratio: 2.0, index: 1.2, dur: 0.6, gain: 0.06, at: 0.42, out: v })
+    hit(S, { gain: 0.2, at: 0.4 })
   },
   // a title: air horn, cymbal, the roar
   champion: S => {
@@ -188,15 +195,14 @@ const SFX = {
     crowd(S, { dur: 1.5, gain: 0.11, at: 0.15 })
     for (const [f, at] of [[698.5, 0], [880, 0.12], [1046.5, 0.24]]) brass(S, { f, dur: 0.16, gain: 0.13, at, out: v })
     brass(S, { f: 1396.9, dur: 0.7, gain: 0.16, at: 0.38, hold: 0.25, out: v })
-    for (const [f, at] of [[2093, 0.5], [2637, 0.58], [3136, 0.66], [4186, 0.74]]) bell(S, { f, ratio: 2.0, index: 1.1, dur: 0.45, gain: 0.05, at, out: v })
+    noise(S, { hp: 6000, dur: 0.7, gain: 0.07, at: 0.4, out: v, env: { a: 0.01, d: 0.7 } })
   },
   // reward claimed: ka-ching
   claim: S => {
     const v = verb(S, 0.25)
-    noise(S, { bp: 6200, q: 5, dur: 0.03, gain: 0.07 })
-    bell(S, { f: 1318.5, ratio: 3.0, index: 1.1, dur: 0.24, gain: 0.12, at: 0.01, out: v })
-    bell(S, { f: 1760, ratio: 3.0, index: 1.1, dur: 0.36, gain: 0.13, at: 0.1, out: v })
-    bell(S, { f: 1760, index: 1.2, dur: 0.26, gain: 0.06, at: 0.1 })
+    hit(S, { gain: 0.16 })
+    for (let i = 0; i < 5; i++) osc(S, { type: 'triangle', f: 2000 - i * 120, to: 1600 - i * 120, dur: 0.045, gain: 0.07, at: 0.03 + i * 0.05, env: { a: 0.001, d: 0.045 } })
+    for (const f of [523.3, 659.3, 784]) osc(S, { type: 'sawtooth', f, dur: 0.3, gain: 0.03, at: 0.12, lp: 2600, out: v, env: { a: 0.02, d: 0.28 } })
   },
   // small good news (streak, mission done)
   chime: S => { const v = verb(S, 0.25); osc(S, { f: 1318.5, dur: 0.2, gain: 0.08, lp: 2800, out: v, env: { a: 0.003, d: 0.2 } }); osc(S, { f: 1760, dur: 0.26, gain: 0.08, at: 0.09, lp: 3200, out: v, env: { a: 0.003, d: 0.26 } }) },
@@ -207,12 +213,122 @@ const SFX = {
     if (rank < 1) return
     const v = verb(S, 0.28 + rank * 0.07)
     const tones = [1568, 1976, 2637, 3136].slice(0, rank + 1)
-    tones.forEach((f, i) => bell(S, { f, ratio: 2.0, index: 1.2, dur: 0.32 + rank * 0.08, gain: 0.08, at: 0.1 + i * 0.075, out: v }))
+    tones.forEach((f, i) => osc(S, { type: 'triangle', f: f / 2, dur: 0.12, gain: 0.07, at: 0.1 + i * 0.07, lp: 3200, out: v, env: { a: 0.002, d: 0.12 } }))
     if (rank >= 2) for (const f of [392, 493.9]) osc(S, { type: 'sawtooth', f, dur: 0.7, gain: 0.035, at: 0.08, lp: 1300, q: 0.8, out: v, env: { a: 0.12, d: 0.6 } })
     if (rank >= 3) {
       for (const f of [261.6, 329.6, 392]) osc(S, { type: 'sawtooth', f, dur: 1.1, gain: 0.04, at: 0.1, lp: 2600, q: 0.8, out: v, env: { a: 0.2, d: 0.9 } })
       crowd(S, { dur: 1.3, gain: 0.08, at: 0.2 })
     }
+  },
+
+  // ── UI ───────────────────────────────────────────────────────────────────
+  // sport switch: a quick swoosh that lands
+  swap: S => { noise(S, { bp: 500, to: 2600, q: 1.2, dur: 0.2, gain: 0.2, env: { a: 0.03, d: 0.17 } }); osc(S, { f: 190, to: 95, dur: 0.12, gain: 0.12, at: 0.15 }) },
+  // the card turns over
+  flip: S => { noise(S, { bp: 900, to: 3200, q: 1.4, dur: 0.16, gain: 0.16, env: { a: 0.02, d: 0.14 } }); osc(S, { f: 260, to: 150, dur: 0.05, gain: 0.06, at: 0.13 }) },
+  // something drops into place (a lobby spot, a build slot)
+  slot: S => { osc(S, { type: 'triangle', f: 330, to: 190, dur: 0.08, gain: 0.16 }); noise(S, { hp: 4200, dur: 0.012, gain: 0.07 }); osc(S, { f: 95, to: 60, dur: 0.1, gain: 0.12, at: 0.01 }) },
+  // no: two short muffled buzzes
+  deny: S => { for (const at of [0, 0.09]) osc(S, { type: 'square', f: 150, dur: 0.06, gain: 0.07, at, lp: 900, env: { a: 0.002, d: 0.06 } }) },
+  // chat sent: a soft upward blip
+  send: S => { osc(S, { f: 520, to: 900, dur: 0.07, gain: 0.08, env: { a: 0.004, d: 0.07 } }); noise(S, { hp: 5000, dur: 0.01, gain: 0.03 }) },
+  // coins land: short dull clinks, no ring
+  coin: S => { [0, 0.05, 0.11].forEach((at, i) => { osc(S, { type: 'triangle', f: 1900 - i * 160, to: 1500 - i * 160, dur: 0.045, gain: 0.07, at, env: { a: 0.001, d: 0.045 } }); noise(S, { hp: 6500, dur: 0.012, gain: 0.04, at }) }) },
+  // bought: the register's ka-chunk, a spill of coins, a small swell
+  purchase: S => {
+    const v = verb(S, 0.28)
+    hit(S, { gain: 0.24 })
+    noise(S, { bp: 2400, q: 3, dur: 0.05, gain: 0.08, at: 0.02 })
+    for (let i = 0; i < 7; i++) osc(S, { type: 'triangle', f: 2100 - Math.random() * 600, dur: 0.04, gain: 0.05, at: 0.08 + i * 0.045 + Math.random() * 0.02, env: { a: 0.001, d: 0.04 } })
+    for (const f of [392, 493.9, 587.3]) osc(S, { type: 'sawtooth', f, dur: 0.42, gain: 0.035, at: 0.18, lp: 2400, q: 0.8, out: v, env: { a: 0.04, d: 0.38 } })
+  },
+  // put it on: zip + snap
+  equip: S => { noise(S, { bp: 2800, to: 5200, q: 2, dur: 0.09, gain: 0.1 }); hit(S, { gain: 0.14, at: 0.09 }); noise(S, { hp: 4500, dur: 0.015, gain: 0.06, at: 0.09 }) },
+  // achievement: three rising brass stabs and a small crowd
+  achievement: S => {
+    const v = verb(S, 0.36)
+    crowd(S, { dur: 1.2, gain: 0.08, at: 0.12 })
+    ;[[523.3, 0], [659.3, 0.11], [880, 0.22]].forEach(([f, at]) => brass(S, { f, dur: 0.12, gain: 0.11, at, out: v }))
+    brass(S, { f: 1046.5, dur: 0.45, gain: 0.13, at: 0.34, hold: 0.12, out: v })
+    hit(S, { gain: 0.18, at: 0.34 })
+  },
+  // a grade pops into the build-complete card; higher grade, higher pitch
+  gradepop: (S, val = 5) => { osc(S, { type: 'triangle', f: 380 + val * 42, to: 300 + val * 42, dur: 0.06, gain: 0.08, env: { a: 0.002, d: 0.06 } }); noise(S, { hp: 3800, dur: 0.01, gain: 0.03 }) },
+  // the tier stamps down on the build-complete card
+  stamp: S => { hit(S, { gain: 0.3 }); noise(S, { bp: 1600, q: 1.4, dur: 0.12, gain: 0.12 }); osc(S, { type: 'triangle', f: 220, to: 180, dur: 0.2, gain: 0.07, at: 0.01 }) },
+
+  // ── Victory sounds (the shop's "Victory Sound" slot) ─────────────────────
+  'snd-horn': S => { const v = verb(S, 0.4); hit(S, { gain: 0.34 }); horn(S, { f: 233, dur: 0.8, gain: 0.19, at: 0.04, out: v }); horn(S, { f: 233, dur: 0.48, gain: 0.16, at: 0.98, out: v }); crowd(S, { dur: 2.4, gain: 0.22, at: 0.04 }) },
+  'snd-roar': S => { hit(S, { gain: 0.36 }); noise(S, { hp: 5000, dur: 0.8, gain: 0.08, env: { a: 0.005, d: 0.8 } }); crowd(S, { dur: 3.2, gain: 0.34 }); crowd(S, { dur: 2.2, gain: 0.18, at: 0.4 }) },
+  'snd-fanfare': S => {
+    const v = verb(S, 0.42)
+    crowd(S, { dur: 2, gain: 0.14, at: 0.1 })
+    ;[[392, 0], [523.3, 0.14], [659.3, 0.28], [784, 0.42]].forEach(([f, at]) => brass(S, { f, dur: 0.16, gain: 0.13, at, out: v }))
+    brass(S, { f: 1046.5, dur: 0.9, gain: 0.17, at: 0.56, hold: 0.35, out: v })
+    brass(S, { f: 523.3, dur: 0.9, gain: 0.1, at: 0.56, hold: 0.35, out: v })
+    hit(S, { gain: 0.22, at: 0.56 })
+  },
+  'snd-drumline': S => {
+    const v = verb(S, 0.25)
+    const snare = at => { noise(S, { bp: 1900, q: 0.8, dur: 0.09, gain: 0.2, at, out: v }); osc(S, { type: 'triangle', f: 220, to: 160, dur: 0.05, gain: 0.08, at, out: v }) }
+    const tom = (at, f) => osc(S, { f, to: f * 0.6, dur: 0.18, gain: 0.22, at, out: v })
+    const beat = 0.11
+    ;[0, 1, 2, 3, 4, 6, 7, 8, 9, 10, 12].forEach(i => snare(i * beat))
+    ;[[5, 140], [11, 110], [13, 90], [14, 140], [15, 110]].forEach(([i, f]) => tom(i * beat, f))
+    hit(S, { gain: 0.3, at: 16 * beat })
+    noise(S, { hp: 5500, dur: 1.1, gain: 0.12, at: 16 * beat, out: v, env: { a: 0.004, d: 1.1 } })
+    crowd(S, { dur: 2, gain: 0.16, at: 16 * beat })
+  },
+  'snd-organ': S => {
+    const v = verb(S, 0.45)
+    const organ = (f, at, dur) => [1, 2, 4].forEach((m, i) => osc(S, { f: f * m, dur, gain: [0.08, 0.04, 0.02][i], at, out: v, vib: 3, vibHz: 6, env: { a: 0.012, h: dur * 0.7, d: dur * 0.3, sus: 0.6, r: 0.08 } }))
+    ;[[392, 0, 0.13], [523.3, 0.16, 0.13], [659.3, 0.32, 0.13], [784, 0.48, 0.4], [659.3, 0.95, 0.13], [784, 1.11, 0.6]].forEach(([f, at, d]) => organ(f, at, d))
+    crowd(S, { dur: 1.6, gain: 0.2, at: 1.15 })
+  },
+  'snd-riser': S => {
+    const v = verb(S, 0.3)
+    for (const d of [-8, 0, 7]) osc(S, { type: 'sawtooth', f: 110, to: 440, detune: d, dur: 1.15, gain: 0.04, out: v, lp: 3000, env: { a: 0.9, d: 0.25 } })
+    noise(S, { bp: 300, to: 6000, q: 1.2, dur: 1.15, gain: 0.12, env: { a: 1.0, d: 0.15 } })
+    hit(S, { gain: 0.4, at: 1.15 })
+    for (const f of [220, 277.2, 329.6]) osc(S, { type: 'sawtooth', f, dur: 0.9, gain: 0.05, at: 1.15, lp: 2200, out: v, env: { a: 0.01, d: 0.9 } })
+    crowd(S, { dur: 1.8, gain: 0.18, at: 1.15 })
+  },
+  'snd-cannon': S => {
+    const v = verb(S, 0.5)
+    osc(S, { f: 90, to: 28, dur: 0.9, gain: 0.5, out: v, env: { a: 0.002, d: 0.9 } })
+    noise(S, { lp: 500, dur: 0.7, gain: 0.4, out: v, env: { a: 0.002, d: 0.7 } })
+    noise(S, { hp: 2000, dur: 0.12, gain: 0.12 })
+    osc(S, { f: 70, to: 30, dur: 0.6, gain: 0.18, at: 0.32, out: v })
+    crowd(S, { dur: 2.6, gain: 0.24, at: 0.15 })
+  },
+  'snd-train': S => {
+    const v = verb(S, 0.4)
+    for (const f of [311.1, 370, 466.2]) osc(S, { type: 'sawtooth', f, to: f * 0.97, dur: 1.4, gain: 0.05, out: v, lp: 1800, q: 1.1, env: { a: 0.05, h: 1.0, d: 0.35, sus: 0.6, r: 0.2 } })
+    for (const f of [311.1, 370, 466.2]) osc(S, { type: 'sawtooth', f, to: f * 0.97, dur: 0.5, gain: 0.04, at: 1.55, out: v, lp: 1800, q: 1.1, env: { a: 0.03, h: 0.3, d: 0.2, sus: 0.6, r: 0.15 } })
+    crowd(S, { dur: 2.2, gain: 0.16, at: 0.3 })
+  },
+  'snd-bassdrop': S => {
+    const v = verb(S, 0.25)
+    noise(S, { bp: 400, to: 5000, q: 1.4, dur: 0.8, gain: 0.12, env: { a: 0.7, d: 0.1 } })
+    osc(S, { type: 'sawtooth', f: 220, to: 880, dur: 0.8, gain: 0.04, lp: 2600, env: { a: 0.7, d: 0.1 } })
+    hit(S, { gain: 0.45, at: 0.82 })
+    const t = S.t + 0.82, ac = S.ac
+    const o = ac.createOscillator(), g = ac.createGain(), lfo = ac.createOscillator(), lg = ac.createGain()
+    o.type = 'sine'; o.frequency.setValueAtTime(62, t); o.frequency.exponentialRampToValueAtTime(42, t + 1.3)
+    lfo.frequency.value = 6; lg.gain.value = 0.18
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.3, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 1.4)
+    lfo.connect(lg).connect(g.gain); o.connect(g).connect(S.out)
+    o.start(t); lfo.start(t); o.stop(t + 1.5); lfo.stop(t + 1.5)
+    crowd(S, { dur: 1.8, gain: 0.16, at: 0.85, out: v })
+  },
+  'snd-pro-anthem': S => {
+    const v = verb(S, 0.5)
+    for (let i = 0; i < 10; i++) osc(S, { f: 98, to: 70, dur: 0.12, gain: 0.12 + i * 0.012, at: i * 0.05, out: v })
+    ;[[392, 0.5], [523.3, 0.64], [659.3, 0.78]].forEach(([f, at]) => brass(S, { f, dur: 0.14, gain: 0.13, at, out: v }))
+    brass(S, { f: 784, dur: 1.1, gain: 0.17, at: 0.92, hold: 0.5, out: v })
+    brass(S, { f: 392, dur: 1.1, gain: 0.12, at: 0.92, hold: 0.5, out: v })
+    hit(S, { gain: 0.36, at: 0.92 })
+    crowd(S, { dur: 2.6, gain: 0.24, at: 0.9 })
   },
 }
 export const sfx = (name, arg) => {
@@ -281,6 +397,154 @@ export function confetti(amount = 140) {
   requestAnimationFrame(frame)
 }
 
+// ── Victory: your equipped effect + sound (the shop's Victory slots) ────────
+const VFX_MS = 2900
+function canvasLayer() {
+  const c = document.createElement('canvas')
+  c.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:1300'
+  const dpr = Math.min(2, window.devicePixelRatio || 1)
+  c.width = innerWidth * dpr; c.height = innerHeight * dpr
+  document.body.appendChild(c)
+  const g = c.getContext('2d'); g.scale(dpr, dpr)
+  return { c, g, W: innerWidth, H: innerHeight }
+}
+function runFx(draw, ms = VFX_MS) {
+  if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
+  const L = canvasLayer()
+  const start = performance.now()
+  const state = {}
+  const frame = now => {
+    const t = now - start
+    L.g.clearRect(0, 0, L.W, L.H)
+    draw(L, t, t / ms, state)
+    if (t < ms) requestAnimationFrame(frame); else L.c.remove()
+  }
+  requestAnimationFrame(frame)
+}
+const rnd = (a, b) => a + Math.random() * (b - a)
+const accent = () => { const css = getComputedStyle(document.documentElement); return [css.getPropertyValue('--btn-start').trim() || '#5EDBD8', css.getPropertyValue('--btn-end').trim() || '#1fc98a'] }
+const FX = {
+  'fx-confetti': () => confetti(180),
+  'fx-streamers': () => runFx(({ g, W, H }, t, k, st) => {
+    st.s ??= Array.from({ length: 26 }, (_, i) => ({ x: rnd(0, W), y: rnd(-H * 0.6, -20), w: rnd(5, 9), len: rnd(60, 140), sp: rnd(2.4, 4.5), ph: rnd(0, 6), col: ['#f472b6', '#60a5fa', '#fde047', '#4ade80', '#f2c94c', ...accent()][i % 7] }))
+    g.globalAlpha = Math.max(0, 1 - Math.max(0, k - 0.75) * 4)
+    for (const s of st.s) {
+      s.y += s.sp
+      g.strokeStyle = s.col; g.lineWidth = s.w; g.lineCap = 'round'
+      g.beginPath()
+      for (let i = 0; i <= 12; i++) { const yy = s.y - (i / 12) * s.len; const xx = s.x + Math.sin(s.ph + t / 260 + i * 0.6) * 10; i ? g.lineTo(xx, yy) : g.moveTo(xx, yy) }
+      g.stroke()
+    }
+  }),
+  'fx-snow': () => runFx(({ g, W, H }, t, k, st) => {
+    st.f ??= Array.from({ length: 140 }, () => ({ x: rnd(0, W), y: rnd(-H, 0), r: rnd(1.2, 3.6), sp: rnd(0.8, 2.2), ph: rnd(0, 6) }))
+    g.fillStyle = '#fff'; g.globalAlpha = Math.max(0, 1 - Math.max(0, k - 0.7) * 3.3)
+    for (const f of st.f) { f.y += f.sp; f.x += Math.sin(f.ph + t / 500) * 0.5; g.beginPath(); g.arc(f.x, f.y, f.r, 0, 7); g.fill() }
+  }, 3400),
+  'fx-goldrain': () => runFx(({ g, W, H }, t, k, st) => {
+    st.c ??= Array.from({ length: 70 }, () => ({ x: rnd(0, W), y: rnd(-H, -10), v: rnd(3, 7), r: rnd(7, 12), sp: rnd(0.05, 0.16), a: rnd(0, 6) }))
+    g.globalAlpha = Math.max(0, 1 - Math.max(0, k - 0.8) * 5)
+    for (const c of st.c) {
+      c.y += c.v; c.v += 0.12; c.a += c.sp
+      const sx = Math.abs(Math.cos(c.a))
+      g.save(); g.translate(c.x, c.y); g.scale(Math.max(0.12, sx), 1)
+      const grd = g.createRadialGradient(-c.r * 0.3, -c.r * 0.3, 1, 0, 0, c.r); grd.addColorStop(0, '#fff3c4'); grd.addColorStop(0.5, '#f2c94c'); grd.addColorStop(1, '#a16207')
+      g.fillStyle = grd; g.beginPath(); g.arc(0, 0, c.r, 0, 7); g.fill(); g.restore()
+    }
+  }),
+  'fx-shockwave': () => runFx(({ g, W, H }, t) => {
+    const [a1] = accent()
+    for (let i = 0; i < 4; i++) {
+      const tt = t - i * 260; if (tt < 0) continue
+      const p = tt / 1500; if (p > 1) continue
+      g.strokeStyle = i % 2 ? '#f2c94c' : a1; g.globalAlpha = (1 - p) * 0.9; g.lineWidth = 10 * (1 - p) + 1
+      g.beginPath(); g.arc(W / 2, H * 0.42, p * Math.max(W, H) * 0.8, 0, 7); g.stroke()
+    }
+    if (t < 180) { g.globalAlpha = (1 - t / 180) * 0.35; g.fillStyle = '#fff'; g.fillRect(0, 0, W, H) }
+  }, 2400),
+  'fx-fireworks': () => runFx(({ g, W, H }, t, k, st) => {
+    st.b ??= []; st.n ??= 0
+    if (st.n < 6 && t > st.n * 330) {
+      const x = rnd(W * 0.2, W * 0.8), y = rnd(H * 0.15, H * 0.45), col = ['#f472b6', '#fde047', '#60a5fa', '#4ade80', '#f2c94c', '#c084fc'][st.n % 6]
+      for (let i = 0; i < 46; i++) { const a = (i / 46) * Math.PI * 2, v = rnd(2.2, 4.6); st.b.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 1, col }) }
+      st.n++
+    }
+    g.globalCompositeOperation = 'lighter'
+    for (const p of st.b) { p.x += p.vx; p.y += p.vy; p.vy += 0.05; p.vx *= 0.985; p.life -= 0.012; if (p.life <= 0) continue; g.globalAlpha = p.life; g.fillStyle = p.col; g.beginPath(); g.arc(p.x, p.y, 2.2, 0, 7); g.fill() }
+    g.globalCompositeOperation = 'source-over'
+  }, 3200),
+  'fx-lightning': () => runFx(({ g, W, H }, t, k, st) => {
+    st.bolts ??= [0, 380, 800, 1300].map(at => ({ at, x: rnd(W * 0.15, W * 0.85) }))
+    for (const b of st.bolts) {
+      const d = t - b.at; if (d < 0 || d > 260) continue
+      if (d < 70) { g.globalAlpha = 0.25; g.fillStyle = '#e0f2fe'; g.fillRect(0, 0, W, H) }
+      g.globalAlpha = 1 - d / 260; g.strokeStyle = '#e0f2fe'; g.lineWidth = 3; g.shadowColor = '#67e8f9'; g.shadowBlur = 18
+      g.beginPath(); let x = b.x, y = 0; g.moveTo(x, y)
+      while (y < H * 0.75) { x += rnd(-28, 28); y += rnd(24, 52); g.lineTo(x, y) }
+      g.stroke(); g.shadowBlur = 0
+    }
+  }, 1800),
+  'fx-spotlights': () => runFx(({ g, W, H }, t, k) => {
+    g.globalAlpha = Math.sin(Math.min(1, k * 1.4) * Math.PI) * 0.75
+    for (const [ox, ph] of [[0, 0], [W, 1.6], [W * 0.5, 3]]) {
+      const a = -Math.PI / 2 + Math.sin(t / 420 + ph) * 0.55
+      const len = H * 1.2, spread = 0.13
+      const grd = g.createLinearGradient(ox, H, ox + Math.cos(a) * len, H + Math.sin(a) * len); grd.addColorStop(0, 'rgba(255,255,255,.65)'); grd.addColorStop(1, 'rgba(255,255,255,0)')
+      g.fillStyle = grd; g.beginPath(); g.moveTo(ox, H)
+      g.lineTo(ox + Math.cos(a - spread) * len, H + Math.sin(a - spread) * len); g.lineTo(ox + Math.cos(a + spread) * len, H + Math.sin(a + spread) * len); g.closePath(); g.fill()
+    }
+  }, 2800),
+  'fx-flames': () => runFx(({ g, W, H }, t, k, st) => {
+    st.p ??= []
+    if (k < 0.75) for (let i = 0; i < 9; i++) st.p.push({ x: rnd(0, W), y: H + 10, vx: rnd(-0.6, 0.6), vy: rnd(-7, -3.5), r: rnd(10, 26), life: 1 })
+    g.globalCompositeOperation = 'lighter'
+    for (const p of st.p) {
+      p.x += p.vx; p.y += p.vy; p.life -= 0.018; p.r *= 0.985; if (p.life <= 0) continue
+      const grd = g.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r)
+      grd.addColorStop(0, `rgba(253,224,71,${p.life})`); grd.addColorStop(0.45, `rgba(249,115,22,${p.life * 0.7})`); grd.addColorStop(1, 'rgba(185,28,28,0)')
+      g.fillStyle = grd; g.beginPath(); g.arc(p.x, p.y, p.r, 0, 7); g.fill()
+    }
+    g.globalCompositeOperation = 'source-over'
+  }, 2800),
+  'fx-lasers': () => runFx(({ g, W, H }, t, k) => {
+    g.globalAlpha = Math.sin(Math.min(1, k * 1.3) * Math.PI)
+    g.globalCompositeOperation = 'lighter'
+    const cols = ['#22d3ee', '#e879f9', '#4ade80', '#f2c94c']
+    cols.forEach((col, i) => {
+      for (const side of [0, 1]) {
+        const ox = side ? W : 0, oy = H * (0.3 + i * 0.15)
+        const a = (side ? Math.PI : 0) + Math.sin(t / (300 + i * 60) + i) * 0.7
+        g.strokeStyle = col; g.lineWidth = 2.5; g.shadowColor = col; g.shadowBlur = 14
+        g.beginPath(); g.moveTo(ox, oy); g.lineTo(ox + Math.cos(a) * W * 1.4, oy + Math.sin(a) * W * 1.4); g.stroke()
+      }
+    })
+    g.shadowBlur = 0; g.globalCompositeOperation = 'source-over'
+  }, 3000),
+  'fx-pro-supernova': () => runFx(({ g, W, H }, t, k, st) => {
+    const cx = W / 2, cy = H * 0.42
+    if (t < 220) { g.globalAlpha = 1 - t / 220; g.fillStyle = '#fff'; g.fillRect(0, 0, W, H) }
+    st.p ??= Array.from({ length: 160 }, () => { const a = rnd(0, 7), v = rnd(2, 9); return { x: cx, y: cy, vx: Math.cos(a) * v, vy: Math.sin(a) * v, col: ['#fff', '#fde68a', '#f97316', '#a78bfa', '#67e8f9'][Math.floor(rnd(0, 5))] } })
+    g.globalCompositeOperation = 'lighter'; g.globalAlpha = Math.max(0, 1 - k)
+    const grd = g.createRadialGradient(cx, cy, 0, cx, cy, 60 + k * 260); grd.addColorStop(0, 'rgba(253,230,138,.7)'); grd.addColorStop(1, 'rgba(124,58,237,0)')
+    g.fillStyle = grd; g.beginPath(); g.arc(cx, cy, 60 + k * 260, 0, 7); g.fill()
+    for (const p of st.p) { p.x += p.vx; p.y += p.vy; p.vx *= 0.985; p.vy *= 0.985; g.fillStyle = p.col; g.fillRect(p.x, p.y, 2.5, 2.5) }
+    g.globalCompositeOperation = 'source-over'
+  }, 3000),
+}
+export function previewVictory(fx, sound) {
+  if (fx) (FX[fx] ?? FX['fx-confetti'])()
+  if (sound) sfx(sound)
+}
+// A win: play what the player has equipped. big = a title (a little longer)
+export function victory({ big = false } = {}) {
+  stopTicks()
+  const v = myVictory()
+  ;(FX[v.fx] ?? FX['fx-confetti'])()
+  if (big && v.fx !== 'fx-confetti') setTimeout(() => confetti(90), 600)
+  sfx(SFX[v.sound] ? v.sound : 'snd-horn')
+  haptic('success')
+}
+
 // ── Wiring ───────────────────────────────────────────────────────────────────
 const TAP = '.dc-submit-btn, .dc-back-btn, .dc-lb-btn, .ag-btn, .ag-tab, .ag-play, .ag-pos, .ag-mode, .ag-mini, .ag-tile, .ag-chip, .ag-seg button, .ag-set, .ag-edge, .ag-icon-btn, .ag-row-btn, .ag-daily-banner, .ag-milestone, .ag-player-chip, .ag-round-btn, .spin-btn, .spin-respin-half, .spin-reset-circle, .attr-chip, .mtab, .cat-pill, .sim-btn, .simp-cta, .simp-ghost, .mvp-continue, .tpm-tab, .auth-submit, .lb-main-seg-btn, .lb-tab, .lb-view-tab, .lb-metric-tab, .lb-pos-btn'
 
@@ -300,20 +564,24 @@ function stopTicks() { if (ticking) { clearTimeout(ticking); ticking = null } }
 export function initJuice() {
   window.__bapJuice = { sfx, renderSfx }
   // The last trait in: the power-up stinger (confetti is for rings and awards)
-  window.addEventListener('bap:build-complete', () => { sfx('complete'); haptic('success') })
+  window.addEventListener('bap:purchase', () => { sfx('purchase'); haptic('success') })
+  window.addEventListener('bap:achievement', () => { sfx('achievement'); haptic('success') })
+  window.addEventListener('bap:victory', e => victory(e.detail || {}))
 
   document.addEventListener('pointerdown', e => {
     const el = e.target.closest?.(TAP)
     if (!el || el.disabled) return
     audio()                                   // unlock audio on the first gesture (iOS)
     if (el.matches('.spin-btn, .spin-respin-half')) { sfx('tap'); haptic('medium'); startTicks(); return }
+    if (el.matches('.attr-chip')) { sfx('slot'); haptic('medium'); return }
+    if (el.matches('.ag-edge')) { sfx('flip'); haptic('light'); return }
     // "Simulate Season" — the referee starts the game
     if (el.matches('.simp-cta') && /simulate season/i.test(el.textContent)) { sfx('whistle'); haptic('medium'); return }
     sfx('tap'); haptic('light')
   }, { capture: true, passive: true })
 
   const seen = new WeakSet()
-  const celebrate = big => { stopTicks(); sfx(big ? 'champion' : 'award'); haptic('success'); confetti(big ? 200 : 140) }
+  const celebrate = big => victory({ big })
   new MutationObserver(muts => {
     for (const m of muts) {
       if (m.type === 'attributes') {

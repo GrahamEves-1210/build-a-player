@@ -75,6 +75,9 @@ const _isAbout   = !_sharedData && !_isPrivacy && !_isTerms && !_isProfile && ne
 const _isDepthChart = !_sharedData && !_isPrivacy && !_isTerms && !_isProfile && !_isAbout && window.location.pathname === '/depth-chart'
 const _isWiki     = !_sharedData && window.location.pathname.startsWith('/wiki')   // /wiki and /wiki/<page>; the wiki routes its own pages
 
+// App: switching sport from Home lands on Home (the build in progress waits for PLAY)
+const _goHome = (() => { try { const v = sessionStorage.getItem('bap_go_home') === '1'; sessionStorage.removeItem('bap_go_home'); return v } catch { return false } })()
+
 const _saved = (() => {
   if (_sharedData || _isPrivacy || _isAbout || _isProfile || _isDepthChart || _isWiki) return null
   try {
@@ -120,7 +123,7 @@ function enableAdFreeMode() {
 try { if (IS_APP || localStorage.getItem('bap_subscribed') === '1' || localStorage.getItem('bap_ads_off') === '1') enableAdFreeMode() } catch {}
 
 export default function App() {
-  const [page, setPage]               = useState(_sharedData ? 'shared' : _isPrivacy ? 'privacy' : _isTerms ? 'terms' : _isProfile ? 'profile' : _isAbout ? 'about' : _isDepthChart ? 'depth-chart' : _isWiki ? 'wiki' : (_saved?.gameMode ? 'game' : 'splash'))
+  const [page, setPage]               = useState(_sharedData ? 'shared' : _isPrivacy ? 'privacy' : _isTerms ? 'terms' : _isProfile ? 'profile' : _isAbout ? 'about' : _isDepthChart ? 'depth-chart' : _isWiki ? 'wiki' : (_saved?.gameMode && !_goHome ? 'game' : 'splash'))
   const [sharedBuild]                 = useState(_sharedData?.build ?? null)
   const [sharedTypes]                 = useState(_sharedData?.types ?? null)
   const [gameMode, setGameMode]         = useState(_saved?.gameMode ?? null)
@@ -501,12 +504,15 @@ export default function App() {
   // Theme must be declared after isPlus
   useEffect(() => {
     try {
-      if (!isPlus) { document.documentElement.removeAttribute('data-theme'); return }
+      // the app has no color themes (Pro opens the shop's Pro Vault instead)
+      if (!isPlus || IS_APP) { document.documentElement.removeAttribute('data-theme'); return }
       const t = localStorage.getItem('bap_theme')
       if (t && t !== 'default') document.documentElement.setAttribute('data-theme', t)
       else document.documentElement.removeAttribute('data-theme')
     } catch {}
   }, [isPlus])
+  // App: the shop reads Pro from storage; tell it when that changes
+  useEffect(() => { if (IS_APP) window.dispatchEvent(new CustomEvent('bap:pro')) }, [isPlus])
 
   const customModeKey = isOL ? 'ol' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : `${isRB ? 'rb' : 'qb'}${gameMode === 'all-time' ? '_legends' : ''}`
   const customPoolKey = isOL ? 'ol' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'
@@ -1033,8 +1039,308 @@ export default function App() {
     })
   }, [page, user])
 
+  // App: the game screen stays mounted while another tab is open (parked,
+  // display:none) so a spin in flight keeps spinning, keeps its sound and
+  // nothing resets. Both the game page and the parked pages render the same
+  // shell, so React keeps the spin's state across the switch.
+  const KEEP_GAME_ON = new Set(['splash', 'profile', 'leaderboard', 'about', 'privacy', 'terms', 'depth-chart'])
+  const gameIsPlay = page === 'game' || (KEEP_GAME_ON.has(page) && lastPlayRef.current === 'game')
+  const filledCount = activeTypes.filter(t => build[t]).length
+  const currentAttrMap = isOL ? OL_ATTR : isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : isRB ? RB_ATTR : ATTR
+  const completeOvr = IS_APP && buildComplete && (page === 'game' || page === 'takeover-build')
+    ? (isOL ? calcOVROL(build) : isDB ? calcOVRDB(build) : isTE ? calcOVRTE(build) : isWR ? calcOVRWR(build) : isRB ? calcOVRRB(build) : calcOVR(build))
+    : 0
+  const dailyPlan = dailyRun && dailyLocked && gameIsPlay
+    ? { seed: dailyRun.seed, getStart: () => dailyState().spins, onSpin: setDailySpins }
+    : null
+
+  const navbarProps = {
+    onReset: handleReset,
+    onAbout: () => setPage('about'),
+    onHome: handleHome,
+    onSignIn: () => setShowAuth(true),
+    onProfile: () => { window.history.pushState({}, '', '/profile'); setPage('profile') },
+    onLeaderboard: () => setPage('leaderboard'),
+    onSwitchPosition: (pos) => { try { localStorage.setItem('lastPosition', pos) } catch {}; handleHome() },
+    onSubscribe: async () => {
+      if (!user) { setShowAuth(true); return }
+      try {
+        const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/create-checkout`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: user.id, email: user.email }),
+        })
+        const { url } = await res.json()
+        if (url) window.location.href = url
+      } catch {}
+    },
+    onOpenCustomRatings: () => setShowCustomModal(true),
+    user,
+    gameMode,
+    isRB,
+    isWR,
+    isTE,
+    isDB,
+    isOL,
+    isPlus,
+  }
+
+  const renderGame = parked => (
+    <>
+      {!parked && <Navbar {...navbarProps} />}
+
+      <div className="game-page-scroll">
+      {IS_APP && (
+        <FlipEdge side={mobileView} build={build} types={activeTypes} attrMap={currentAttrMap} onFlip={flip}
+          waiting={savedSpinResult?.selectedQB?.name ?? null} complete={buildComplete} />
+      )}
+      <main className={`game-layout mobile-${mobileView}${gameMode === 'all-time' ? ' alltime-mode' : ''}${page === 'versus-game' ? ' versus-active' : ''}${page === 'takeover-build' ? ' takeover-build' : ''}`}>
+        <SpinScreen
+          build={build}
+          activeDrag={activeDrag}
+          onDragStart={setActiveDrag}
+          onDragEnd={() => setActiveDrag(null)}
+          activeCategory={activeCategory}
+          resetKey={spinResetKey}
+          onChipTap={handleChipTap}
+          types={activeTypes}
+          isLite={gameMode === 'lite'}
+          qbPool={displayPool}
+          savedResult={savedSpinResult}
+          onSaveResult={setSavedSpinResult}
+          onPhaseChange={setSpinPhase}
+          gameKey={gameKey}
+          onReset={dailyLocked ? undefined : handleReset}
+          adsDisabled={adsDisabled}
+          seedPlan={dailyPlan}
+          cardMeta={IS_APP && gameIsPlay ? { sport: 'nfl', pos: position, mode: gameMode } : null}
+          paused={parked}
+          isRB={isRB}
+          isWR={isWR}
+          isTE={isTE}
+          isDB={isDB}
+          isOL={isOL}
+          isAllTime={gameMode === 'all-time'}
+          playerLabel={isOL ? 'OL' : isDB ? 'DB' : isTE ? 'TE' : isWR ? 'WR' : undefined}
+          attrMap={isOL ? OL_ATTR : isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : isRB ? RB_ATTR : undefined}
+          categoriesData={isOL ? OL_CATEGORIES : isDB ? DB_CATEGORIES : isTE ? TE_CATEGORIES : isWR ? WR_CATEGORIES : undefined}
+          onlineCount={onlineCount}
+        />
+        <Silhouette
+          build={build}
+          activeDrag={activeDrag}
+          onDrop={handleDrop}
+          activeCategory={activeCategory}
+          onCategoryChange={setActiveCategory}
+          types={activeTypes}
+          isLite={gameMode === 'lite'}
+          onReset={handleReset}
+          isRB={isRB}
+          isWR={isWR}
+          isTE={isTE}
+          isDB={isDB}
+          isOL={isOL}
+          categoriesData={isOL ? OL_CATEGORIES : isDB ? DB_CATEGORIES : isTE ? TE_CATEGORIES : isWR ? WR_CATEGORIES : undefined}
+          attrMap={isOL ? OL_ATTR : isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : isRB ? RB_ATTR : undefined}
+          isPlus={isPlus}
+          isCustomMode={isCustomMode}
+          onOpenCustomModal={() => setShowCustomModal(true)}
+          onSandboxToggle={handleSandboxToggle}
+        />
+
+        <div className="right-panel-wrap">
+          <ReportCard
+            build={build}
+            onSimulate={page === 'versus-game' ? handleFaceoff : page === 'takeover-build' ? hitTheRoad : handleSimulate}
+            simLabel={page === 'takeover-build' ? 'HIT THE ROAD' : undefined}
+            onReset={handleReset}
+            types={activeTypes}
+            hasResult={page === 'versus-game' ? false : !!simResult}
+            isRB={isRB}
+            isWR={isWR}
+            isTE={isTE}
+            isDB={isDB}
+            isOL={isOL}
+            attrMap={isOL ? OL_ATTR : isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : isRB ? RB_ATTR : undefined}
+            isPlus={isPlus}
+            isCustomMode={isCustomMode}
+            onOpenCustomModal={() => setShowCustomModal(true)}
+            onSandboxToggle={handleSandboxToggle}
+            versusMode={page === 'versus-game'}
+          />
+        </div>
+
+        {/* Versus opponent status overlay */}
+        {page === 'versus-game' && versusRoom && (() => {
+          const oppFilled = activeTypes.filter(t => oppBuild[t]).length
+          const myFilled  = activeTypes.filter(t => build[t]).length
+          return (
+            <div className="versus-hud">
+              <div className="versus-hud-inner">
+                <div className="vhud-side vhud-side--me">
+                  <span className="vhud-label">YOU</span>
+                  <span className="vhud-count">{myFilled}/{activeTypes.length}</span>
+                </div>
+                <div className="vhud-vs">VS</div>
+                <div className="vhud-side vhud-side--opp">
+                  <span className="vhud-label">{versusRoom.oppName}</span>
+                  <span className="vhud-count">{oppFilled}/{activeTypes.length}</span>
+                </div>
+              </div>
+              {myFilled === activeTypes.length && (
+                <button className="vhud-faceoff-btn" onClick={handleFaceoff}>
+                  FACE OFF
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M5 12h14M12 5l7 7-7 7"/>
+                  </svg>
+                </button>
+              )}
+            </div>
+          )
+        })()}
+      </main>
+      <div className="build-footer-section">
+        <SiteFeatures sport="nfl" className="build-site-features" />
+        <SiteFooter sport="nfl" onDepthChart={() => setPage('depth-chart')} />
+      </div>
+      </div>
+
+
+      {/* Mobile bottom tab bar */}
+      <nav className="mobile-tab-bar">
+        <button
+          className={`mtab ${mobileView === 'spin' ? 'active' : ''}`}
+          onClick={() => { setMobileView('spin'); window.scrollTo({ top: 0, behavior: 'instant' }); document.querySelector('.game-page-scroll')?.scrollTo({ top: 0, behavior: 'instant' }) }}
+        >
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="23 4 23 10 17 10"/>
+            <polyline points="1 20 1 14 7 14"/>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+          </svg>
+          Spin
+        </button>
+        <div className="mtab-sep" />
+        <button
+          className={`mtab ${mobileView === 'build' ? 'active' : ''}`}
+          onClick={() => { setMobileView('build'); window.scrollTo({ top: 0, behavior: 'instant' }); document.querySelector('.game-page-scroll')?.scrollTo({ top: 0, behavior: 'instant' }) }}
+        >
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+          </svg>
+          Build
+          {filledCount > 0 && (
+            <span className="mtab-badge">{filledCount}/{activeTypes.length}</span>
+          )}
+        </button>
+      </nav>
+
+      {!parked && showAuth && (
+        <AuthModal
+          onClose={() => setShowAuth(false)}
+          onAuth={setUser}
+        />
+      )}
+
+      {!parked && IS_APP && (page === 'game' || page === 'takeover-build') && <BuildComplete complete={buildComplete} ovr={completeOvr} build={build} types={activeTypes} attrMap={currentAttrMap} />}
+
+      {!parked && showTeamPicker && (
+        <TeamPickerModal onSelect={handleTeamPicked} isPlus={isCustomMode} build={build} />
+      )}
+
+      {!parked && saveToast && (
+        <div
+          className={`save-toast save-toast--${saveToast.type}`}
+          onClick={() => setSaveToast(null)}
+        >
+          {saveToast.type === 'saved' && (
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+          )}
+          {saveToast.msg}
+        </div>
+      )}
+
+      {!parked && showCustomModal && (isPlus || isCustomMode) && (
+        <CustomRatingsModal
+          isRB={isRB}
+          isWR={isWR}
+          isTE={isTE}
+          isDB={isDB}
+          isOL={isOL}
+          gameMode={gameMode}
+          pool={CUSTOM_POOLS[customPoolKey].current}
+          poolCurrent={CUSTOM_POOLS[customPoolKey].current}
+          poolLegends={CUSTOM_POOLS[customPoolKey].legends}
+          onClose={() => setShowCustomModal(false)}
+          onSave={(ratings) => {
+            setCustomRatings(ratings)
+            try { localStorage.setItem('bap_custom_ratings', JSON.stringify(ratings)) } catch {}
+          }}
+          build={build}
+          buildTypes={activeTypes}
+          onAddToBuild={(p, playerOverrides, attrType) => {
+            sandboxTainted.current = true
+            const photo = HEADSHOTS[p.name] ? `${HEADSHOT_BASE}/${HEADSHOTS[p.name]}.webp` : null
+            const chipData = {
+              type: attrType,
+              val: playerOverrides?.[attrType] ?? p.attrs?.[attrType] ?? 5,
+              qb: p.short || p.name,
+              qbFull: p.name,
+              teamColor: p.color,
+              teamColor2: p.color2,
+              skinColor: p.skin,
+              number: p.number,
+              team: p.team,
+              captain: p.captain ?? false,
+              photo,
+            }
+            setBuild(prev => ({ ...prev, [attrType]: chipData }))
+            setMobileView('build')
+            setShowCustomModal(false)
+          }}
+          onAddAllToBuild={(p, playerOverrides) => {
+            sandboxTainted.current = true
+            const photo = HEADSHOTS[p.name] ? `${HEADSHOT_BASE}/${HEADSHOTS[p.name]}.webp` : null
+            setBuild(prev => {
+              const next = { ...prev }
+              activeTypes.forEach(attrType => {
+                if (!prev[attrType]) {
+                  next[attrType] = {
+                    type: attrType,
+                    val: playerOverrides?.[attrType] ?? p.attrs?.[attrType] ?? 5,
+                    qb: p.short || p.name,
+                    qbFull: p.name,
+                    teamColor: p.color,
+                    teamColor2: p.color2,
+                    skinColor: p.skin,
+                    number: p.number,
+                    team: p.team,
+                    captain: p.captain ?? false,
+                    photo,
+                  }
+                }
+              })
+              return next
+            })
+            setMobileView('build')
+            setShowCustomModal(false)
+          }}
+        />
+      )}
+
+    </>
+  )
+  const shell = overlay => (
+    <>
+      <div className={`ag-game-host${overlay ? ' is-parked' : ''}`}>{renderGame(!!overlay)}</div>
+      {overlay}
+    </>
+  )
+  const withGame = el => (IS_APP && gameMode && KEEP_GAME_ON.has(page) ? shell(el) : el)
+
   if (page === 'splash') {
-    return (
+    return withGame(
       <>
       <Helmet>
         <link rel="canonical" href="https://build-a-player.com/" />
@@ -1078,7 +1384,7 @@ export default function App() {
   }
 
   if (page === 'depth-chart') {
-    return (
+    return withGame(
       <Suspense fallback={null}>
         <DepthChart onBack={() => setPage('splash')} user={user} onlineCount={onlineCount} />
       </Suspense>
@@ -1138,39 +1444,8 @@ export default function App() {
     )
   }
 
-  const navbarProps = {
-    onReset: handleReset,
-    onAbout: () => setPage('about'),
-    onHome: handleHome,
-    onSignIn: () => setShowAuth(true),
-    onProfile: () => { window.history.pushState({}, '', '/profile'); setPage('profile') },
-    onLeaderboard: () => setPage('leaderboard'),
-    onSwitchPosition: (pos) => { try { localStorage.setItem('lastPosition', pos) } catch {}; handleHome() },
-    onSubscribe: async () => {
-      if (!user) { setShowAuth(true); return }
-      try {
-        const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/create-checkout`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: user.id, email: user.email }),
-        })
-        const { url } = await res.json()
-        if (url) window.location.href = url
-      } catch {}
-    },
-    onOpenCustomRatings: () => setShowCustomModal(true),
-    user,
-    gameMode,
-    isRB,
-    isWR,
-    isTE,
-    isDB,
-    isOL,
-    isPlus,
-  }
-
   if (page === 'leaderboard') {
-    return (
+    return withGame(
       <Suspense fallback={null}>
         <Navbar {...navbarProps} />
         <LeaderboardPage key={position} onBack={() => { setPage(simResult ? 'sim' : 'game'); window.scrollTo({ top: 0, behavior: 'instant' }) }} currentUser={user} adsDisabled={adsDisabled} isRB={isRB} isWR={isWR} isTE={isTE} isDB={isDB} isOL={isOL} onPositionChange={setPosition} />
@@ -1195,7 +1470,7 @@ export default function App() {
   }
 
   if (page === 'about') {
-    return (
+    return withGame(
       <Suspense fallback={null}>
         <Navbar {...navbarProps} />
         <AboutPage onBack={() => { setPage(simResult ? 'sim' : 'game'); window.scrollTo({ top: 0, behavior: 'instant' }) }} onPrivacy={() => setPage('privacy')} />
@@ -1213,7 +1488,7 @@ export default function App() {
   }
 
   if (page === 'privacy') {
-    return (
+    return withGame(
       <Suspense fallback={null}>
         <Navbar {...navbarProps} />
         <PrivacyPage onBack={() => setPage('about')} />
@@ -1222,7 +1497,7 @@ export default function App() {
   }
 
   if (page === 'terms') {
-    return (
+    return withGame(
       <Suspense fallback={null}>
         <Navbar {...navbarProps} />
         <TermsPage onBack={() => setPage('about')} />
@@ -1231,7 +1506,7 @@ export default function App() {
   }
 
   if (page === 'profile' && user) {
-    return (
+    return withGame(
       <Suspense fallback={null}>
         <ProfilePage
           user={user}
@@ -1369,258 +1644,5 @@ export default function App() {
     )
   }
 
-  const filledCount = activeTypes.filter(t => build[t]).length
-  const currentAttrMap = isOL ? OL_ATTR : isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : isRB ? RB_ATTR : ATTR
-  const completeOvr = IS_APP && buildComplete && (page === 'game' || page === 'takeover-build')
-    ? (isOL ? calcOVROL(build) : isDB ? calcOVRDB(build) : isTE ? calcOVRTE(build) : isWR ? calcOVRWR(build) : isRB ? calcOVRRB(build) : calcOVR(build))
-    : 0
-  const dailyPlan = dailyRun && dailyLocked && page === 'game'
-    ? { seed: dailyRun.seed, getStart: () => dailyState().spins, onSpin: setDailySpins }
-    : null
-
-  return (
-    <>
-      <Navbar {...navbarProps} />
-
-      <div className="game-page-scroll">
-      {IS_APP && (
-        <FlipEdge side={mobileView} build={build} types={activeTypes} attrMap={currentAttrMap} onFlip={flip}
-          waiting={savedSpinResult?.selectedQB?.name ?? null} complete={buildComplete} />
-      )}
-      <main className={`game-layout mobile-${mobileView}${gameMode === 'all-time' ? ' alltime-mode' : ''}${page === 'versus-game' ? ' versus-active' : ''}${page === 'takeover-build' ? ' takeover-build' : ''}`}>
-        <SpinScreen
-          build={build}
-          activeDrag={activeDrag}
-          onDragStart={setActiveDrag}
-          onDragEnd={() => setActiveDrag(null)}
-          activeCategory={activeCategory}
-          resetKey={spinResetKey}
-          onChipTap={handleChipTap}
-          types={activeTypes}
-          isLite={gameMode === 'lite'}
-          qbPool={displayPool}
-          savedResult={savedSpinResult}
-          onSaveResult={setSavedSpinResult}
-          onPhaseChange={setSpinPhase}
-          gameKey={gameKey}
-          onReset={dailyLocked ? undefined : handleReset}
-          adsDisabled={adsDisabled}
-          seedPlan={dailyPlan}
-          cardMeta={IS_APP && page === 'game' ? { sport: 'nfl', pos: position, mode: gameMode } : null}
-          isRB={isRB}
-          isWR={isWR}
-          isTE={isTE}
-          isDB={isDB}
-          isOL={isOL}
-          isAllTime={gameMode === 'all-time'}
-          playerLabel={isOL ? 'OL' : isDB ? 'DB' : isTE ? 'TE' : isWR ? 'WR' : undefined}
-          attrMap={isOL ? OL_ATTR : isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : isRB ? RB_ATTR : undefined}
-          categoriesData={isOL ? OL_CATEGORIES : isDB ? DB_CATEGORIES : isTE ? TE_CATEGORIES : isWR ? WR_CATEGORIES : undefined}
-          onlineCount={onlineCount}
-        />
-        <Silhouette
-          build={build}
-          activeDrag={activeDrag}
-          onDrop={handleDrop}
-          activeCategory={activeCategory}
-          onCategoryChange={setActiveCategory}
-          types={activeTypes}
-          isLite={gameMode === 'lite'}
-          onReset={handleReset}
-          isRB={isRB}
-          isWR={isWR}
-          isTE={isTE}
-          isDB={isDB}
-          isOL={isOL}
-          categoriesData={isOL ? OL_CATEGORIES : isDB ? DB_CATEGORIES : isTE ? TE_CATEGORIES : isWR ? WR_CATEGORIES : undefined}
-          attrMap={isOL ? OL_ATTR : isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : isRB ? RB_ATTR : undefined}
-          isPlus={isPlus}
-          isCustomMode={isCustomMode}
-          onOpenCustomModal={() => setShowCustomModal(true)}
-          onSandboxToggle={handleSandboxToggle}
-        />
-
-        <div className="right-panel-wrap">
-          <ReportCard
-            build={build}
-            onSimulate={page === 'versus-game' ? handleFaceoff : page === 'takeover-build' ? hitTheRoad : handleSimulate}
-            simLabel={page === 'takeover-build' ? 'HIT THE ROAD' : undefined}
-            onReset={handleReset}
-            types={activeTypes}
-            hasResult={page === 'versus-game' ? false : !!simResult}
-            isRB={isRB}
-            isWR={isWR}
-            isTE={isTE}
-            isDB={isDB}
-            isOL={isOL}
-            attrMap={isOL ? OL_ATTR : isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : isRB ? RB_ATTR : undefined}
-            isPlus={isPlus}
-            isCustomMode={isCustomMode}
-            onOpenCustomModal={() => setShowCustomModal(true)}
-            onSandboxToggle={handleSandboxToggle}
-            versusMode={page === 'versus-game'}
-          />
-        </div>
-
-        {/* Versus opponent status overlay */}
-        {page === 'versus-game' && versusRoom && (() => {
-          const oppFilled = activeTypes.filter(t => oppBuild[t]).length
-          const myFilled  = activeTypes.filter(t => build[t]).length
-          return (
-            <div className="versus-hud">
-              <div className="versus-hud-inner">
-                <div className="vhud-side vhud-side--me">
-                  <span className="vhud-label">YOU</span>
-                  <span className="vhud-count">{myFilled}/{activeTypes.length}</span>
-                </div>
-                <div className="vhud-vs">VS</div>
-                <div className="vhud-side vhud-side--opp">
-                  <span className="vhud-label">{versusRoom.oppName}</span>
-                  <span className="vhud-count">{oppFilled}/{activeTypes.length}</span>
-                </div>
-              </div>
-              {myFilled === activeTypes.length && (
-                <button className="vhud-faceoff-btn" onClick={handleFaceoff}>
-                  FACE OFF
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M5 12h14M12 5l7 7-7 7"/>
-                  </svg>
-                </button>
-              )}
-            </div>
-          )
-        })()}
-      </main>
-      <div className="build-footer-section">
-        <SiteFeatures sport="nfl" className="build-site-features" />
-        <SiteFooter sport="nfl" onDepthChart={() => setPage('depth-chart')} />
-      </div>
-      </div>
-
-
-      {/* Mobile bottom tab bar */}
-      <nav className="mobile-tab-bar">
-        <button
-          className={`mtab ${mobileView === 'spin' ? 'active' : ''}`}
-          onClick={() => { setMobileView('spin'); window.scrollTo({ top: 0, behavior: 'instant' }); document.querySelector('.game-page-scroll')?.scrollTo({ top: 0, behavior: 'instant' }) }}
-        >
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="23 4 23 10 17 10"/>
-            <polyline points="1 20 1 14 7 14"/>
-            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
-          </svg>
-          Spin
-        </button>
-        <div className="mtab-sep" />
-        <button
-          className={`mtab ${mobileView === 'build' ? 'active' : ''}`}
-          onClick={() => { setMobileView('build'); window.scrollTo({ top: 0, behavior: 'instant' }); document.querySelector('.game-page-scroll')?.scrollTo({ top: 0, behavior: 'instant' }) }}
-        >
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
-          </svg>
-          Build
-          {filledCount > 0 && (
-            <span className="mtab-badge">{filledCount}/{activeTypes.length}</span>
-          )}
-        </button>
-      </nav>
-
-      {showAuth && (
-        <AuthModal
-          onClose={() => setShowAuth(false)}
-          onAuth={setUser}
-        />
-      )}
-
-      {IS_APP && (page === 'game' || page === 'takeover-build') && <BuildComplete complete={buildComplete} ovr={completeOvr} />}
-
-      {showTeamPicker && (
-        <TeamPickerModal onSelect={handleTeamPicked} isPlus={isCustomMode} build={build} />
-      )}
-
-      {saveToast && (
-        <div
-          className={`save-toast save-toast--${saveToast.type}`}
-          onClick={() => setSaveToast(null)}
-        >
-          {saveToast.type === 'saved' && (
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="20 6 9 17 4 12"/>
-            </svg>
-          )}
-          {saveToast.msg}
-        </div>
-      )}
-
-      {showCustomModal && (isPlus || isCustomMode) && (
-        <CustomRatingsModal
-          isRB={isRB}
-          isWR={isWR}
-          isTE={isTE}
-          isDB={isDB}
-          isOL={isOL}
-          gameMode={gameMode}
-          pool={CUSTOM_POOLS[customPoolKey].current}
-          poolCurrent={CUSTOM_POOLS[customPoolKey].current}
-          poolLegends={CUSTOM_POOLS[customPoolKey].legends}
-          onClose={() => setShowCustomModal(false)}
-          onSave={(ratings) => {
-            setCustomRatings(ratings)
-            try { localStorage.setItem('bap_custom_ratings', JSON.stringify(ratings)) } catch {}
-          }}
-          build={build}
-          buildTypes={activeTypes}
-          onAddToBuild={(p, playerOverrides, attrType) => {
-            sandboxTainted.current = true
-            const photo = HEADSHOTS[p.name] ? `${HEADSHOT_BASE}/${HEADSHOTS[p.name]}.webp` : null
-            const chipData = {
-              type: attrType,
-              val: playerOverrides?.[attrType] ?? p.attrs?.[attrType] ?? 5,
-              qb: p.short || p.name,
-              qbFull: p.name,
-              teamColor: p.color,
-              teamColor2: p.color2,
-              skinColor: p.skin,
-              number: p.number,
-              team: p.team,
-              captain: p.captain ?? false,
-              photo,
-            }
-            setBuild(prev => ({ ...prev, [attrType]: chipData }))
-            setMobileView('build')
-            setShowCustomModal(false)
-          }}
-          onAddAllToBuild={(p, playerOverrides) => {
-            sandboxTainted.current = true
-            const photo = HEADSHOTS[p.name] ? `${HEADSHOT_BASE}/${HEADSHOTS[p.name]}.webp` : null
-            setBuild(prev => {
-              const next = { ...prev }
-              activeTypes.forEach(attrType => {
-                if (!prev[attrType]) {
-                  next[attrType] = {
-                    type: attrType,
-                    val: playerOverrides?.[attrType] ?? p.attrs?.[attrType] ?? 5,
-                    qb: p.short || p.name,
-                    qbFull: p.name,
-                    teamColor: p.color,
-                    teamColor2: p.color2,
-                    skinColor: p.skin,
-                    number: p.number,
-                    team: p.team,
-                    captain: p.captain ?? false,
-                    photo,
-                  }
-                }
-              })
-              return next
-            })
-            setMobileView('build')
-            setShowCustomModal(false)
-          }}
-        />
-      )}
-
-    </>
-  )
+  return IS_APP ? shell(null) : renderGame(false)
 }

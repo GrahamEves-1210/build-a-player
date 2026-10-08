@@ -109,6 +109,7 @@ export function SeasonRewards({ result }) {
     if (stage >= 2 && leveled && !seenRef.current) { seenRef.current = true; markLevelSeen() }
   }, [stage, leveled])
   const total = useCount(s?.xp ?? 0, !!s)
+  const coins = useCount(s?.coins ?? 0, !!s)
   if (!s) return null
   const pct = stage >= 1 ? after.pct : (leveled ? 0 : before.pct)
   const unlocks = leveled ? levelUnlocks(after.level, before.level) : null
@@ -117,7 +118,7 @@ export function SeasonRewards({ result }) {
     <section className="ag-rewards">
       <div className="ag-rewards-head">
         <span className="ag-eyebrow">SEASON REWARDS</span>
-        <span className="ag-rewards-total">+{total} <small>XP</small></span>
+        <span className="ag-rewards-total">+{total} <small>XP</small>{s.coins ? <span className="ag-rewards-coins"><span className="coin-ico coin-ico--sm" /> +{coins}</span> : null}</span>
       </div>
       <div className="ag-rewards-lines">
         {s.lines.map((l, i) => (

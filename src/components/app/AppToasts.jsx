@@ -2,12 +2,12 @@ import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { takeToasts, useProgress, markLevelSeen, levelUnlocks, RARITIES } from '../../lib/progress'
 import { sfx, haptic, confetti } from '../../lib/juice'
-import { IconFlame, IconCards, IconTarget, IconStar } from './icons'
+import { IconFlame, IconCards, IconTarget, IconStar, IconCoin, IconMedal } from './icons'
 
 // Top-of-screen toasts (login streak, mission complete, new card) and the
 // full-screen level-up moment. Fed by lib/progress.js events.
 
-const ICONS = { streak: IconFlame, mission: IconTarget, card: IconCards, xp: IconStar }
+const ICONS = { streak: IconFlame, mission: IconTarget, card: IconCards, xp: IconStar, coins: IconCoin, ach: IconMedal }
 let nextId = 1
 
 export default function AppToasts() {
@@ -17,6 +17,7 @@ export default function AppToasts() {
   useEffect(() => {
     const push = t => {
       if (t.kind === 'streak' || t.kind === 'mission') sfx('chime')
+      else if (t.kind === 'coins') sfx('coin')
       const id = nextId++
       setItems(list => [...list.slice(-2), { id, ...t }])
       timers.current.set(id, setTimeout(() => setItems(list => list.filter(x => x.id !== id)), t.ms ?? 2600))

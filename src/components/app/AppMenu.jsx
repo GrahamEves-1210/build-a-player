@@ -1,3 +1,4 @@
+import { switchSport } from './AppHome'
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { supabase } from '../../lib/supabase'
@@ -76,7 +77,7 @@ export default function AppMenu({ sport, onClose }) {
               <Tile tone="purple" Icon={IconChat} title="FEEDBACK" sub="Ideas & bugs" onClick={openFeedback} delay="120ms" />
               <Tile tone={isBucket ? 'mint' : 'orange'} Icon={isBucket ? IconFootball : IconBasketball}
                 title={isBucket ? 'FOOTBALL' : 'BASKETBALL'} sub={isBucket ? 'Build-A-Player' : 'Build-A-Bucket'}
-                onClick={go(() => { try { localStorage.removeItem('bap_progress') } catch {}; window.location.href = isBucket ? '/' : '/bucket' })} delay="150ms" />
+                onClick={go(() => switchSport(isBucket ? 'nfl' : 'bucket'))} delay="150ms" />
             </div>
             <button className={`ag-row-btn${muted ? ' ag-sound--off' : ''}`} onClick={() => { setMuted(!muted); setMutedState(!muted) }}>
               <span className="ag-sound-lbl">SOUND</span>

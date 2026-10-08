@@ -1,66 +1,113 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { ROOM_SIZE, FILL_AFTER_SECS, ROLES, teamName, captainOf } from '../../lib/blacktop'
+import { ROOM_SIZE, FILL_AFTER_SECS, ROLES, SLOTS, teamName, captainOf } from '../../lib/blacktop'
 import { playDelay } from '../../lib/hoops'
 import { QUICK, block, report } from '../../lib/chat'
-import { sfx, haptic, confetti } from '../../lib/juice'
+import { sfx, haptic, victory } from '../../lib/juice'
+import { calcBucketOVR } from '../../utils/bucketSimulation'
+import { VERSUS_GUARD_TYPES } from '../../data/nba-guards'
+import { VERSUS_BIG_TYPES } from '../../data/nba-bigs'
 import BlacktopCourt from './BlacktopCourt'
-import { IconClose, IconArrow, IconChat, IconProfile, IconStar } from './icons'
+import { IconClose, IconArrow, IconChat, IconStar, IconSend, IconBasketball } from './icons'
+import { NameTag } from './NameTag'
 
 // BLACKTOP screens. The match itself lives in lib/blacktop.js (useBlacktop);
-// these only draw it: the queue, the slim HUD over the build, team chat, and
-// the game on the court.
+// these only draw it: the lobby (pick a spot on a squad), the slim HUD over the
+// build, team chat, and the game on the court.
 
 const fmt = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
 const TEAM_COLORS = ['#e8f0f6', '#ff8a3d']
 const Av = ({ name, bot, team, size = 36 }) => (
   <span className={`bt-av${bot ? ' is-bot' : ''} bt-av--t${team ?? 0}`} style={{ width: size, height: size, fontSize: size * .46 }}>{bot ? 'CPU' : (name || '?').slice(0, 1).toUpperCase()}</span>
 )
+// A live build's overall (partial builds count what's filled)
+export const liveOvr = b => {
+  if (!b?.build) return null
+  const types = b.pos === 'big' ? VERSUS_BIG_TYPES : VERSUS_GUARD_TYPES
+  return types.some(t => b.build[t]) ? calcBucketOVR(b.build, types, b.pos) : null
+}
+const firstName = n => (n || '').trim().split(/\s+/)[0].toUpperCase().slice(0, 10)
 
-// ── Queue ────────────────────────────────────────────────────────────────────
-export function BlacktopQueue({ bt, onBack }) {
-  const slots = Array.from({ length: ROOM_SIZE }, (_, i) => bt.queue[i] ?? null)
-  const others = Math.max(0, bt.queue.length - 1)
+// ── Lobby: two squads, tap an open spot ──────────────────────────────────────
+export function BlacktopQueue({ bt, user, onBack }) {
+  const [chatOpen, setChatOpen] = useState(false)
+  const [seenChat, setSeenChat] = useState(0)
+  const squadName = t => {
+    const first = SLOTS.filter(sl => sl.team === t).map(sl => bt.held[sl.id]).find(Boolean)
+    return first ? `TEAM ${firstName(first.name)}` : t === 0 ? 'TEAM A' : 'TEAM B'
+  }
+  const tap = sl => {
+    const h = bt.held[sl.id]
+    if (h && h.vid !== bt.me.vid) { sfx('deny'); haptic('light'); return }
+    if (bt.mySlot === sl.id) { bt.seat(null); sfx('tap'); return }
+    bt.seat(sl.id); sfx('slot'); haptic('medium')
+  }
+  const waiting = bt.queue.filter(p => !p.slot || bt.held[p.slot]?.vid !== p.vid).length
+  const unread = Math.max(0, bt.chat.length - seenChat)
   return (
-    <div className="ag-screen ag-screen--bucket bt-queue">
+    <div className="ag-screen ag-screen--bucket bt-lobby">
       <div className="ag-screen-head">
         <div>
-          <span className="ag-eyebrow">LIVE · 3V3</span>
+          <span className="ag-eyebrow">LIVE · 3V3 · FIRST TO 21</span>
           <h1 className="ag-h1">Blacktop</h1>
         </div>
-        <button className="ag-round-btn" onClick={() => { bt.leave(); onBack() }} aria-label="Leave queue"><IconClose size={16} /></button>
+        <button className="ag-round-btn" onClick={() => { bt.leave(); onBack() }} aria-label="Leave the lobby"><IconClose size={16} /></button>
       </div>
       <div className="ag-screen-body">
-        <div className="bt-court-bg ag-pop">
-          <span className="ag-eyebrow">FINDING A RUN</span>
-          <div className="bt-queue-count"><b>{bt.queue.length}</b><small>/{ROOM_SIZE}</small></div>
-          <div className="bt-queue-sub">{others === 0 ? 'You\'re first on the court. Others will show up here.' : `${others} other${others > 1 ? 's' : ''} waiting · game starts at ${ROOM_SIZE}`}</div>
-          <div className="bt-slots">
-            {slots.map((p, i) => (
-              <div key={p?.vid ?? `empty-${i}`} className={`bt-slot${p ? ' is-on' : ''}${p?.vid === bt.me.vid ? ' is-me' : ''}`} style={{ '--d': `${i * 60}ms` }}>
-                {p ? <Av name={p.name} size={44} /> : <span className="bt-slot-empty"><IconProfile size={20} /></span>}
-                <span className="bt-slot-name">{p ? (p.vid === bt.me.vid ? 'YOU' : p.name) : 'OPEN'}</span>
-                <span className="bt-slot-pos">{p ? (p.pos === 'big' ? 'BIG' : 'GUARD') : '—'}</span>
+        <div className="bt-run ag-pop">
+          <div className="bt-run-head">
+            <span className="bt-run-count"><b>{bt.seated}</b>/{ROOM_SIZE} <small>SPOTS TAKEN</small></span>
+            <span className="bt-run-timer">{fmt(bt.waited)}</span>
+          </div>
+          <div className="bt-court-lines" aria-hidden="true" />
+          <div className="bt-squads">
+            {[0, 1].map(t => (
+              <div key={t} className={`bt-squad-col bt-t${t}${SLOTS.some(sl => sl.team === t && bt.mySlot === sl.id) ? ' is-mine' : ''}`}>
+                <span className="bt-squad-title">{squadName(t)}</span>
+                {SLOTS.filter(sl => sl.team === t).map((sl, i) => {
+                  const h = bt.held[sl.id]
+                  const me = h?.vid === bt.me.vid
+                  return (
+                    <button key={sl.id} className={`bt-spot${h ? ' is-taken' : ' is-open'}${me ? ' is-me' : ''}${sl.pos === 'big' ? ' is-big' : ''}`} style={{ '--d': `${80 + (t * 3 + i) * 50}ms` }} onClick={() => tap(sl)}>
+                      {h ? <Av name={h.name} team={t} size={34} /> : <span className="bt-spot-plus">+</span>}
+                      <span className="bt-spot-txt">
+                        <span className="bt-spot-name">{h ? (me ? 'YOU' : <NameTag name={h.name} cos={h.cos} />) : `JOIN AS ${sl.pos === 'big' ? 'BIG' : 'GUARD'}`}</span>
+                        <span className="bt-spot-role">{sl.pos === 'big' ? 'BIG · PF · C' : 'GUARD · PG · SG · SF'}{me ? ' · TAP TO LEAVE' : ''}</span>
+                      </span>
+                    </button>
+                  )
+                })}
               </div>
             ))}
+            <span className="bt-squads-vs">VS</span>
           </div>
-          <div className="bt-queue-timer">{fmt(bt.waited)}</div>
+          {bt.bumped && <div className="bt-bumped ag-pop">Someone grabbed that spot first. Pick another.</div>}
+          <div className="bt-run-foot">
+            {!bt.mySlot
+              ? <span className="bt-run-hint">Tap an open spot to join that squad.{waiting > 0 ? ` ${waiting} watching.` : ''}</span>
+              : bt.canFill
+                ? <button className="ag-btn bt-fill" onClick={() => { bt.fill(); sfx('tap') }}>FILL OPEN SPOTS WITH BOTS <IconArrow size={16} /></button>
+                : <span className="bt-run-hint">{bt.seated === ROOM_SIZE ? 'Full run. Lacing up…' : `Starts when all six spots are taken. Bots can fill in ${Math.max(0, FILL_AFTER_SECS - bt.waited)}s.`}</span>}
+          </div>
         </div>
-        {bt.canFill ? (
-          <button className="ag-btn bt-fill ag-pop" onClick={bt.fill}>FILL WITH BOTS <IconArrow size={16} /></button>
-        ) : (
-          <div className="bt-fill-note">{bt.waited < FILL_AFTER_SECS ? `Bots can fill the run in ${FILL_AFTER_SECS - bt.waited}s` : 'Full squad — dealing teams…'}</div>
-        )}
-        <div className="bt-rules ag-pop" style={{ '--d': '120ms' }}>
-          <div className="ag-eyebrow">HOUSE RULES</div>
+
+        <button className="bt-lobby-chat ag-pop" style={{ '--d': '160ms' }} onClick={() => { setChatOpen(true); setSeenChat(bt.chat.length) }}>
+          <IconChat size={18} />
+          <span className="bt-lobby-chat-txt">{bt.chat.length ? <><b>{bt.chat[bt.chat.length - 1].from === bt.me.vid ? 'You' : bt.chat[bt.chat.length - 1].name}:</b> {bt.chat[bt.chat.length - 1].text}</> : 'Lobby chat. Call your spot, find a squad.'}</span>
+          {unread > 0 && <span className="ag-tab-badge">{unread}</span>}
+        </button>
+
+        <details className="bt-rules ag-pop" style={{ '--d': '200ms' }}>
+          <summary className="ag-eyebrow">HOUSE RULES</summary>
           <ul>
-            <li>Two squads of three, named for their captains. Teams are dealt — a big on each side when there is one.</li>
-            <li>3:00 to build. Leave or go quiet and the blacktop builds for you — with the ratings off.</li>
+            <li>Every squad is two guards and a big. The spot you take is the build you make.</li>
+            <li>3:00 to build. Leave or go quiet and the blacktop builds for you, with the ratings off.</li>
             <li>First to <b>21</b>, 1s and 2s, win by 2. Make it, take it.</li>
-            <li>Team chat is for your squad. Keep it clean — it's filtered, and anyone can be reported.</li>
+            <li>Chat is filtered, and anyone can be reported.</li>
           </ul>
-        </div>
+        </details>
       </div>
+      {chatOpen && <BlacktopChat bt={bt} user={user} title="LOBBY CHAT" mode="blacktop-lobby" onClose={() => { setChatOpen(false); setSeenChat(bt.chat.length) }} />}
     </div>
   )
 }
@@ -92,12 +139,13 @@ export function BlacktopHud({ bt, onOpenChat, unread }) {
                 {sq.map(p => {
                   const b = bt.builds[p.vid]
                   const here = p.bot || bt.present.some(q => q.vid === p.vid)
+                  const ovr = t === bt.myTeam ? liveOvr(b) : null
                   return (
                     <span key={p.vid} className={`bt-hud-p${!here ? ' is-gone' : ''}${b?.done ? ' is-done' : ''}`} title={p.name}>
                       <Av name={p.name} bot={p.bot} team={t} size={24} />
-                      <span className="bt-hud-p-name">{p.vid === bt.me.vid ? 'YOU' : p.name}</span>
+                      <span className="bt-hud-p-name">{p.vid === bt.me.vid ? 'YOU' : p.name} <small>{p.pos === 'big' ? 'BIG' : 'G'}</small></span>
                       <span className="bt-hud-p-bar"><span style={{ width: `${Math.min(100, ((b?.filled ?? 0) / 8) * 100)}%` }} /></span>
-                      <span className="bt-hud-p-n">{p.bot ? 'CPU' : !here ? 'AFK' : b?.done ? '✓' : `${b?.filled ?? 0}/8`}</span>
+                      <span className="bt-hud-p-n">{p.bot ? 'CPU' : !here ? 'AFK' : ovr != null ? <><b>{ovr}</b> OVR</> : b?.done ? '✓' : `${b?.filled ?? 0}/8`}</span>
                     </span>
                   )
                 })}
@@ -114,37 +162,70 @@ export function BlacktopHud({ bt, onOpenChat, unread }) {
   )
 }
 
-// ── Team chat sheet ──────────────────────────────────────────────────────────
+// ── Chat: a sheet that slides up; bubbles, typing, your squad's overalls ─────
 export function BlacktopChat({ bt, user, onClose, mode = 'blacktop', title = 'TEAM CHAT' }) {
   const [text, setText] = useState('')
   const [menu, setMenu] = useState(null)      // message with the report/block menu open
   const [note, setNote] = useState('')
+  const [closing, setClosing] = useState(false)
   const listRef = useRef(null)
-  useEffect(() => { listRef.current?.scrollTo({ top: 1e6 }) }, [bt.chat.length])
-  const send = t => { if (bt.sendChat(t)) { setText(''); sfx('tap') } }
+  const inputRef = useRef(null)
+  const first = useRef(true)
+  useEffect(() => {
+    const el = listRef.current; if (!el) return
+    el.scrollTo({ top: el.scrollHeight, behavior: first.current ? 'auto' : 'smooth' })
+    first.current = false
+  }, [bt.chat.length])
+  const close = () => { setClosing(true); setTimeout(onClose, 180) }
+  const send = t => {
+    if (bt.sendChat(t)) { setText(''); sfx('send'); haptic('light'); inputRef.current?.focus() }
+    else if (t.trim()) { sfx('deny') }
+  }
   const act = async kind => {
     const m = menu; setMenu(null)
     if (!m) return
-    if (kind === 'block') { block(m.uid); setNote(`${m.name} blocked — you won't see their messages.`) }
-    else { const ok = await report({ room: bt.match?.code, mode, offender: { name: m.name, uid: m.uid, vid: m.from }, text: m.text, user }); setNote(ok ? 'Reported. Thanks — we review every report.' : 'Could not send the report. Try again.') }
+    if (kind === 'block') { block(m.uid); setNote(`${m.name} blocked. You won't see their messages.`) }
+    else { const ok = await report({ room: bt.match?.code ?? 'lobby', mode, offender: { name: m.name, uid: m.uid, vid: m.from }, text: m.text, user }); setNote(ok ? 'Reported. Thanks, we review every report.' : 'Could not send the report. Try again.') }
     setTimeout(() => setNote(''), 3000)
   }
+  const squad = bt.match && bt.builds ? bt.match.players.filter(p => p.team === bt.myTeam) : null
+  const typers = bt.typers ?? []
   return createPortal(
-    <div className="ag-menu-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="ag-menu bt-chat" role="dialog" aria-label="Team chat">
-        <div className="ag-menu-head">
-          <span />
-          <h2 className="ag-menu-title">{title}</h2>
-          <button className="ag-round-btn" onClick={onClose} aria-label="Close"><IconClose size={16} /></button>
+    <div className={`bt-sheet-overlay${closing ? ' is-closing' : ''}`} onClick={e => e.target === e.currentTarget && close()}>
+      <div className="bt-sheet" role="dialog" aria-label={title}>
+        <div className="bt-sheet-grab" onClick={close} />
+        <div className="bt-sheet-head">
+          <h2 className="bt-sheet-title">{title}</h2>
+          <button className="ag-round-btn" onClick={close} aria-label="Close"><IconClose size={16} /></button>
         </div>
+        {squad && (
+          <div className="bt-squad-strip">
+            {squad.map(p => {
+              const ovr = liveOvr(bt.builds[p.vid])
+              return (
+                <span key={p.vid} className={`bt-sq${p.vid === bt.me.vid ? ' is-me' : ''}`}>
+                  <Av name={p.name} bot={p.bot} team={bt.myTeam} size={30} />
+                  <span className="bt-sq-txt"><b>{p.vid === bt.me.vid ? 'YOU' : firstName(p.name)}</b><small>{p.pos === 'big' ? 'BIG' : 'GUARD'}</small></span>
+                  <span className="bt-sq-ovr">{p.bot ? 'CPU' : ovr ?? '—'}<small>{p.bot || ovr == null ? '' : 'OVR'}</small></span>
+                </span>
+              )
+            })}
+          </div>
+        )}
         <div className="bt-chat-list" ref={listRef}>
-          {bt.chat.length === 0 && <div className="ag-board-empty">Say what's up to your squad.</div>}
-          {bt.chat.map(m => (
-            <div key={m.id} className={`bt-msg${m.from === bt.me.vid ? ' is-me' : ''}`} onContextMenu={e => { e.preventDefault(); if (m.from !== bt.me.vid) setMenu(m) }}>
-              <span className="bt-msg-name" onClick={() => m.from !== bt.me.vid && setMenu(m)}>{m.from === bt.me.vid ? 'YOU' : m.name}{m.all && <i> · ALL</i>}</span>
-              <span className="bt-msg-text">{m.text}</span>
-            </div>
-          ))}
+          {bt.chat.length === 0 && <div className="bt-chat-empty"><IconBasketball size={26} /><span>{mode === 'blacktop-lobby' ? 'Say what\'s up to the lobby.' : 'Say what\'s up to your squad.'}</span></div>}
+          {bt.chat.map((m, i) => {
+            const mine = m.from === bt.me.vid
+            const prev = bt.chat[i - 1]
+            const grouped = prev && prev.from === m.from && m.ts - prev.ts < 60000
+            return (
+              <div key={m.id} className={`bt-msg${mine ? ' is-me' : ''}${grouped ? ' is-grouped' : ''}`} onContextMenu={e => { e.preventDefault(); if (!mine) setMenu(m) }}>
+                {!grouped && !mine && <span className="bt-msg-name" onClick={() => setMenu(m)}><NameTag name={m.name} cos={m.cos} />{m.all && mode !== 'blacktop-lobby' && <i> · ALL</i>}</span>}
+                <span className="bt-msg-text">{m.text}</span>
+              </div>
+            )
+          })}
+          {typers.length > 0 && <div className="bt-typing"><span className="bt-dots"><i /><i /><i /></span>{typers.slice(0, 2).join(', ')} {typers.length > 1 ? 'are' : 'is'} typing</div>}
         </div>
         {note && <div className="bt-chat-note">{note}</div>}
         {menu && (
@@ -159,12 +240,12 @@ export function BlacktopChat({ bt, user, onClose, mode = 'blacktop', title = 'TE
           <>
             <div className="bt-quick">{QUICK.map(q => <button key={q} className="ag-chip" onClick={() => send(q)}>{q}</button>)}</div>
             <form className="bt-chat-form" onSubmit={e => { e.preventDefault(); send(text) }}>
-              <input value={text} onChange={e => setText(e.target.value)} maxLength={120} placeholder="Message your squad…" />
-              <button className="ag-btn" type="submit" disabled={!text.trim()}>SEND</button>
+              <input ref={inputRef} value={text} onChange={e => { setText(e.target.value); bt.typing?.() }} maxLength={120} placeholder={mode === 'blacktop-lobby' ? 'Message the lobby…' : 'Message your squad…'} enterKeyHint="send" autoComplete="off" />
+              <button className="bt-send" type="submit" disabled={!text.trim()} aria-label="Send"><IconSend size={20} /></button>
             </form>
           </>
         ) : (
-          <div className="bt-chat-signin">Sign in to chat with your squad. <button onClick={() => window.dispatchEvent(new CustomEvent('bap:auth'))}>Sign in</button></div>
+          <div className="bt-chat-signin">Sign in to chat. <button onClick={() => window.dispatchEvent(new CustomEvent('bap:auth'))}>Sign in</button></div>
         )}
       </div>
     </div>,
@@ -193,7 +274,7 @@ export function BlacktopGame({ bt, user, photoFor, onOpenChat, unread }) {
       if (!fired.current) {
         fired.current = true
         const won = game.winner === myTeam
-        setTimeout(() => { if (won) { sfx('award'); haptic('success'); confetti(160) } else sfx('pop'); setStage('result'); bt.finish() }, 2200)
+        setTimeout(() => { if (won) victory(); else sfx('pop'); setStage('result'); bt.finish() }, 2200)
       }
       return
     }

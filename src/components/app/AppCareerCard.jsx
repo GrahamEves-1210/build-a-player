@@ -1,6 +1,8 @@
 import { useProgress, SPOTLIGHTS, isUnlocked, setSpotlight, careerRings, careerSeasons, TITLE_LEVELS } from '../../lib/progress'
 import { getUsername } from '../../lib/discord'
-import { IconLock, IconFlame, IconCards, IconRing, IconStar } from './icons'
+import { IconLock, IconFlame, IconCards, IconRing, IconStar, IconBag, IconMedal } from './icons'
+import { NameTag, AvatarBadge } from './NameTag'
+import { CoinPill } from './AppShop'
 
 // App: the top of the Profile page — your player card (level, title, XP) and
 // the locker of stage spotlights unlocked by levels and streaks.
@@ -15,14 +17,16 @@ export default function AppCareerCard({ user }) {
   return (
     <section className="ag-career">
       <div className="ag-career-top">
-        <span className="ag-avatar ag-avatar--xl">
-          {name.slice(0, 1).toUpperCase()}
-          <span className="ag-avatar-lvl">{p.lvl.level}</span>
-        </span>
+        <AvatarBadge self name={name} size={60} level={p.lvl.level} />
         <span className="ag-career-id">
-          <span className="ag-career-name">{name}</span>
-          <span className="ag-career-title">{p.lvl.title}</span>
+          <span className="ag-career-name"><NameTag self name={name} /></span>
+          <span className="ag-career-title">{p.lvl.title}{p.pro ? <i className="ag-pro-tag">PRO</i> : null}</span>
         </span>
+        <CoinPill />
+      </div>
+      <div className="ag-career-actions">
+        <button className="ag-career-act ag-career-act--shop" onClick={() => nav('shop')}><IconBag size={18} /> SHOP</button>
+        <button className="ag-career-act" onClick={() => nav('achievements')}><IconMedal size={18} /> ACHIEVEMENTS{p.claimable ? <span className="ag-tab-badge">{p.claimable}</span> : null}</button>
       </div>
       <div className="ag-career-xp">
         <span className="ag-xpbar ag-xpbar--big"><span style={{ width: `${Math.max(2, p.lvl.pct * 100)}%` }} /></span>
