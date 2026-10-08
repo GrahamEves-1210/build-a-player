@@ -12,6 +12,7 @@ import QBAvatar from './QBAvatar'
 import BucketFigureOverlay from './BucketFigureOverlay'
 import { ShareModal } from './ReportCard'
 import SiteFooter from './SiteFooter'
+import { rampAdd } from '../lib/ads'
 
 function gradeColor(val) {
   if (val >= 11) return '#a855f7'
@@ -880,9 +881,7 @@ function ScreenSeason({ result, awards, onNext, adsDisabled = false, isAllTime =
 
   useEffect(() => {
     if (!allDone || adsDisabled) return
-    window.ramp?.que?.push(() => {
-      window.ramp.spaAddAds([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-square' }])
-    })
+    rampAdd([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-square' }])
   }, [allDone]) // eslint-disable-line
 
   useEffect(() => {
@@ -1176,15 +1175,13 @@ function ScreenGOAT({ result, awards, onNext, onReset, onBack, adsDisabled = fal
 
   useEffect(() => {
     if (!listVisible || adsDisabled || window.innerWidth > 768) return
-    window.ramp?.que?.push(() => {
-      window.ramp.spaAddAds([
+    rampAdd([
         { type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-goat-61' },
         { type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-goat-51' },
         { type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-goat-41' },
         { type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-goat-31' },
         { type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-goat-21' },
       ])
-    })
   }, [listVisible]) // eslint-disable-line
 
   useEffect(() => {
@@ -1754,9 +1751,7 @@ function ScreenPlayoffs({ result, onNext, autoSkip = false, isAllTime = false, a
 
   useEffect(() => {
     if (!showStatsLog || adsDisabled || window.innerWidth > 768) return
-    window.ramp?.que?.push(() => {
-      window.ramp.spaAddAds([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-plf-log' }])
-    })
+    rampAdd([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-plf-log' }])
   }, [showStatsLog]) // eslint-disable-line
 
   const conf = result.conference ?? 'east'
@@ -2364,7 +2359,7 @@ function ScreenFinal({ result, awards, build, types, attrMap, onReset, onBack, a
   useEffect(() => {
     if (adsDisabled) return
     const ads = [{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-sim' }]
-    window.ramp?.que?.push(() => { window.ramp.spaAddAds(ads) })
+    rampAdd(ads)
   }, [])
 
   const fgAnim    = useCountUp(fgPct,    900, show)

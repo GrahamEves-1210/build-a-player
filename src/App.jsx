@@ -41,6 +41,7 @@ import CustomRatingsModal from './components/CustomRatingsModal'
 import SiteFooter from './components/SiteFooter'
 import SiteFeatures from './components/SiteFeatures'
 import { finishDiscordSignIn, getUsername } from './lib/discord'
+import { rampPage, RAIL_UNITS, RAIL_UNITS_WITH_LEFT } from './lib/ads'
 
 const _dd = arr => { const s = new Set(); return arr.filter(p => { const k = `${p.name}|${p.team}`; if (s.has(k)) return false; s.add(k); return true }) }
 const _bt = (a, b) => a.team.localeCompare(b.team) || a.name.localeCompare(b.name)
@@ -97,7 +98,7 @@ function enableAdFreeMode() {
   window.ramp.que = window.ramp.que || []
   window.ramp.que.push(() => {
     window.ramp.forceUnits = RAMP_FORCE_OFF
-    try { window.ramp.destroyUnits(RAMP_AD_UNITS) } catch {}
+    try { window.ramp.destroyUnits('all') } catch {}
   })
   const hide = () => {
     document.querySelectorAll('[id^="pw-"],[id^="ramp-"],[class^="pw-"],[id^="adBanner"],[id*="bottom_rail"],[class*="bottom_rail"],[id*="video-bottom"],[class*="video-bottom"]').forEach(el => {
@@ -276,32 +277,21 @@ export default function App() {
     if (meta) meta.setAttribute('content', page === 'splash' ? '#0f1612' : page === 'depth-chart' ? '#111318' : page === 'wiki' ? '#ffffff' : '#090a0d')
   }, [page])
 
-  useEffect(() => {
-    window.ramp?.que?.push(() => {
-      // Same page === 'sim' && simResult check the URL-sync effect below uses
-      // to decide the page is actually /simulate.
-      const onSimulate = page === 'sim' && !!simResult
-      if (page === 'splash') {
-        try { window.ramp.destroyUnits(RAMP_AD_UNITS) } catch {}
-      } else if (onSimulate || page === 'depth-chart') {
-        // Playwire (2026-10, per TS): one spaAds call re-adds the units, counts
-        // the pageview and sets the path explicitly — this effect runs before
-        // the URL-sync effect pushes the path, so Ramp otherwise read the old
-        // one. Replaces spaNewPage() here (it already counts the pageview).
-        // Ad-free players keep forceUnits 'off', which also covers these units.
-        try {
-          window.ramp.spaAds({
-            ads: [{ type: 'corner_ad_video' }, { type: 'left_rail' }, { type: 'bottom_rail' }],
-            countPageview: true,
-            path: onSimulate ? '/simulate' : '/depth-chart',
-          })
-        } catch {}
-      } else {
-        window.ramp.spaNewPage()
-        // left_rail only runs on /simulate and /depth-chart — destroyed everywhere else
-        try { window.ramp.destroyUnits(['left_rail']) } catch {}
-      }
-    })
+  // Ads on every page change (lib/ads.js): destroy all units, then add this
+  // page's off-page units with the path set explicitly (the URL sync effect
+  // below runs after this). A layout effect, so it's queued before the new
+  // page's own in-page units. The splash page runs none; the left rail only
+  // runs on /simulate and /depth-chart. Ad-free players keep forceUnits 'off'.
+  useLayoutEffect(() => {
+    const onSimulate = page === 'sim' && !!simResult
+    if (page === 'splash') { rampPage(); return }
+    const here = window.location.pathname
+    const path = onSimulate ? '/simulate'
+      : page === 'depth-chart' ? '/depth-chart'
+      : page === 'leaderboard' ? '/leaderboard'
+      : page === 'wiki' ? (here.startsWith('/wiki') ? here : '/wiki')
+      : (['/simulate', '/leaderboard', '/depth-chart'].includes(here) || here.startsWith('/wiki')) ? '/' : here
+    rampPage({ ads: onSimulate || page === 'depth-chart' ? RAIL_UNITS_WITH_LEFT : RAIL_UNITS, path })
   }, [page, simResult])
 
   useEffect(() => {
@@ -400,7 +390,7 @@ export default function App() {
   // Dedicated URLs for the simulate/season/playoffs/final flow, the
   // leaderboard, and the depth chart mini-game — lets Playwire apply ad
   // rules by path. Purely a URL sync layer; doesn't touch page state, the
-  // existing ramp.spaNewPage() calls, or any in-app navigation logic.
+  // ad calls (lib/ads.js), or any in-app navigation logic.
   useEffect(() => {
     const onWikiPath = window.location.pathname.startsWith('/wiki')
     const targetPath = (page === 'sim' && simResult) ? '/simulate' : page === 'leaderboard' ? '/leaderboard' : page === 'depth-chart' ? '/depth-chart' : page === 'wiki' ? (onWikiPath ? window.location.pathname : '/wiki') : null

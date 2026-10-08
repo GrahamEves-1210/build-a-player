@@ -33,6 +33,7 @@ import CustomRatingsModal from './CustomRatingsModal'
 import SiteFooter from './SiteFooter'
 import SiteFeatures from './SiteFeatures'
 import { finishDiscordSignIn, getUsername } from '../lib/discord'
+import { rampPage, RAIL_UNITS, RAIL_UNITS_WITH_LEFT } from '../lib/ads'
 const VersusLobby        = lazy(() => import('./VersusLobby'))
 const BucketVersusResult = lazy(() => import('./BucketVersusResult'))
 const VsPvPLeaderboard   = lazy(() => import('./VsPvPLeaderboard'))
@@ -63,7 +64,7 @@ function enableAdFreeMode() {
   window.ramp.que = window.ramp.que || []
   window.ramp.que.push(() => {
     window.ramp.forceUnits = RAMP_FORCE_OFF
-    try { window.ramp.destroyUnits(RAMP_AD_UNITS) } catch {}
+    try { window.ramp.destroyUnits('all') } catch {}
   })
   // DOM fallback: hide any elements that already loaded or slip through
   const hide = () => {
@@ -538,28 +539,19 @@ export default function BucketApp() {
     if (meta) meta.setAttribute('content', page === 'splash' ? '#1b140c' : '#090a0d')
   }, [page])
 
-  // Initialize Playwire ads on mount and page change
-  useEffect(() => {
-    window.ramp?.que?.push(() => {
-      if (page === 'splash') {
-        try { window.ramp.destroyUnits(RAMP_AD_UNITS) } catch {}
-      } else if (page === 'sim' || page === 'salarycap') {
-        // Playwire (2026-10, per TS): one spaAds call re-adds the units, counts
-        // the pageview and sets the path explicitly (this effect runs before the
-        // URL-sync effect pushes the path). Replaces spaNewPage() here.
-        try {
-          window.ramp.spaAds({
-            ads: [{ type: 'corner_ad_video' }, { type: 'left_rail' }, { type: 'bottom_rail' }],
-            countPageview: true,
-            path: page === 'salarycap' ? '/bucket/salary' : '/bucket/simulate',
-          })
-        } catch {}
-      } else {
-        window.ramp.spaNewPage()
-        // left_rail only runs on the sim page and Salary Cap — destroyed everywhere else
-        try { window.ramp.destroyUnits(['left_rail']) } catch {}
-      }
-    })
+  // Ads on every page change (lib/ads.js): destroy all units, then add this
+  // page's off-page units with the path set explicitly (the URL sync effect
+  // runs after this). A layout effect, so it's queued before the new page's
+  // own in-page units. The splash page runs none; the left rail only runs on
+  // the sim page and Salary Cap. Ad-free players keep forceUnits 'off'.
+  useLayoutEffect(() => {
+    if (page === 'splash') { rampPage(); return }
+    const here = window.location.pathname
+    const path = page === 'sim' ? '/bucket/simulate'
+      : page === 'salarycap' ? '/bucket/salary'
+      : page === 'leaderboard' ? '/bucket/leaderboard'
+      : ['/bucket/simulate', '/bucket/leaderboard', '/bucket/salary'].includes(here) ? '/bucket' : here
+    rampPage({ ads: page === 'sim' || page === 'salarycap' ? RAIL_UNITS_WITH_LEFT : RAIL_UNITS, path })
   }, [page])
 
   // Fetch my W-L record when entering the lobby or game
