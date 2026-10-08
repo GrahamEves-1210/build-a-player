@@ -42,6 +42,8 @@ if (IS_APP) {
 if (IS_APP) import('./lib/juice').then(m => m.initJuice()).catch(() => {})
 // App: XP, streak, missions, cards (lib/progress.js)
 if (IS_APP) import('./lib/progress').then(m => m.initProgress()).catch(() => {})
+// App: Discord sign-in comes back through the app's own link
+if (IS_APP) import('./lib/appAuth').then(m => m.initAppAuth()).catch(() => {})
 
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.getRegistrations().then(regs => {

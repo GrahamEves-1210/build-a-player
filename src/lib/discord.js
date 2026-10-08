@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { IS_APP } from './platform'
 
 // Discord sign-in. `guilds.join` lets functions/api/discord-join.js add the
 // player to the Build-A-Player server right after they sign in.
@@ -7,11 +8,13 @@ const returnTo = () => window.location.origin + window.location.pathname
 
 // Sign in / create an account with Discord (leaves the page, comes back signed in)
 export function signInWithDiscord() {
+  if (IS_APP) return import('./appAuth').then(m => m.appDiscord('signin'))   // in-app browser, back to the app
   return supabase.auth.signInWithOAuth({ provider: 'discord', options: { scopes: SCOPES, redirectTo: returnTo() } })
 }
 
 // Add Discord to an existing username/password account (profile page)
 export function connectDiscord() {
+  if (IS_APP) return import('./appAuth').then(m => m.appDiscord('link'))
   return supabase.auth.linkIdentity({ provider: 'discord', options: { scopes: SCOPES, redirectTo: returnTo() } })
 }
 

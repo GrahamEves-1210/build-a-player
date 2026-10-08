@@ -1,8 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { signInWithDiscord } from '../lib/discord'
 import { IconDiscord } from './Navbar'
-import { IS_APP } from '../lib/platform'
 
 // Supabase requires an email internally — we derive one from the username silently
 const toEmail = (username) => `${username.trim().toLowerCase()}@buildaplayer.app`
@@ -17,13 +16,27 @@ export default function AuthModal({ onClose, onAuth }) {
   const [error, setError]             = useState(null)
   const [loading, setLoading]         = useState(false)
 
+  // App: Discord finishes outside this sheet (in-app browser → back to the app),
+  // so close on the sign-in it brings back, and stop "loading" if the browser is dismissed
+  const discordPending = useRef(false)
+  useEffect(() => {
+    if (!supabase) return
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session?.user && discordPending.current) { discordPending.current = false; onAuth?.(session.user); onClose?.() }
+    })
+    const done = () => setLoading(false)
+    window.addEventListener('bap:oauth-closed', done)
+    return () => { subscription.unsubscribe(); window.removeEventListener('bap:oauth-closed', done) }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
   const reset = () => setError(null)
 
   const handleDiscord = async () => {
     if (!supabase) return
     setLoading(true); setError(null)
+    discordPending.current = true
     const { error } = await signInWithDiscord()   // leaves for Discord on success
-    if (error) { setError('Could not reach Discord. Try again.'); setLoading(false) }
+    if (error) { discordPending.current = false; setError('Could not reach Discord. Try again.'); setLoading(false) }
   }
 
   const handleSubmit = async (e) => {
@@ -97,17 +110,13 @@ export default function AuthModal({ onClose, onAuth }) {
           <button className={`auth-tab ${tab === 'signup' ? 'active' : ''}`} onClick={() => { setTab('signup'); reset() }}>Create Account</button>
         </div>
 
-        {/* Discord sign-in returns to a web URL — hidden in the iOS/Android app until it has its own redirect */}
-        {!IS_APP && (
-          <>
-            <button type="button" className="auth-discord" onClick={handleDiscord} disabled={loading}>
-              <IconDiscord />
-              <span>Continue with Discord</span>
-            </button>
-            <div className="auth-discord-note">Also joins you to the Build-A-Player Discord</div>
-            <div className="auth-or"><span>or</span></div>
-          </>
-        )}
+        {/* In the app, Discord opens in an in-app browser and returns to the app (lib/appAuth.js) */}
+        <button type="button" className="auth-discord" onClick={handleDiscord} disabled={loading}>
+          <IconDiscord />
+          <span>Continue with Discord</span>
+        </button>
+        <div className="auth-discord-note">Also joins you to the Build-A-Player Discord</div>
+        <div className="auth-or"><span>or</span></div>
 
         <form className="auth-form" onSubmit={handleSubmit}>
           <div className="auth-field">
