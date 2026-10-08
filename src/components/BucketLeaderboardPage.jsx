@@ -6,6 +6,7 @@ import { BIG_TYPES } from '../data/nba-bigs'
 import { NBA_TEAMS } from '../data/nba-teams'
 import { valToGrade, HEADSHOT_BASE } from '../utils/simulation'
 import NBA_HEADSHOTS from '../data/nba-headshots.json'
+import { rampAdd } from '../lib/ads'
 
 const TEAM_COLOR = Object.fromEntries(NBA_TEAMS.map(t => [t.short, t.color]))
 const SLOTS = 20
@@ -203,7 +204,7 @@ export default function BucketLeaderboardPage({ onBack, currentUser, adsDisabled
     for (let i = 10; i <= count; i += 10) {
       ads.push({ type: 'standard_iab_cntr1', selectorId: `ramp-cntr1-lb-mob-${i}` })
     }
-    if (ads.length) window.ramp?.que?.push(() => window.ramp.spaAddAds(ads))
+    if (ads.length) rampAdd(ads)
   }, [loading])
 
   useEffect(() => {

@@ -8,6 +8,7 @@ import { VERSUS_BIG_TYPES } from '../data/nba-bigs'
 import QBAvatar from './QBAvatar'
 import { BucketModelFigure } from './BucketSimPage'
 import { getUsername } from '../lib/discord'
+import { rampPage, RAIL_UNITS } from '../lib/ads'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function clamp(v, lo, hi) { return Math.min(hi, Math.max(lo, v)) }
@@ -836,13 +837,13 @@ export default function BucketVersusResult({ myData, oppData, position, oppPosit
     if (phase !== 'reveal') return
     const t = setTimeout(() => {
       setPhase('live')
-      if (!adsDisabled) window.ramp?.que?.push(() => { window.ramp.spaNewPage() })
+      if (!adsDisabled) rampPage({ ads: RAIL_UNITS, path: window.location.pathname })
     }, 5500)
     return () => clearTimeout(t)
   }, [phase])
 
   useEffect(() => {
-    if (phase === 'result' && !adsDisabled) window.ramp?.que?.push(() => { window.ramp.spaNewPage() })
+    if (phase === 'result' && !adsDisabled) rampPage({ ads: RAIL_UNITS, path: window.location.pathname })
   }, [phase])
 
   // Guest: advance to next play when it arrives from channel

@@ -27,6 +27,7 @@ const APP_SIM = IS_APP || APP_LOOK
 import { WeekStrip, Bracket, RingCeremony, SeasonRewards } from './app/AppSeason'
 import { createDirector } from '../lib/seasonDirector'
 import { MomentCard, NowCard, Pulse, Wire, Milestones, RecordOverlay, Leaders, SeasonStory, useDirectedReveal } from './app/AppSeasonPlus'
+import { rampAdd } from '../lib/ads'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -583,16 +584,12 @@ function ScreenSeason({ result, onNext, isRB = false, isWR = false, isTE = false
 
   useEffect(() => {
     if (adsDisabled) return
-    window.ramp?.que?.push(() => {
-      window.ramp.spaAddAds([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-season' }])
-    })
+    rampAdd([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-season' }])
   }, [])
 
   useEffect(() => {
     if (!allDone || adsDisabled) return
-    window.ramp?.que?.push(() => {
-      window.ramp.spaAddAds([{ type: 'standard_iab_cntr1', selectorId: 'ramp-season-prod' }])
-    })
+    rampAdd([{ type: 'standard_iab_cntr1', selectorId: 'ramp-season-prod' }])
   }, [allDone])
 
   useEffect(() => {
@@ -1002,9 +999,7 @@ function ScreenPlayoffs({ result, onNext, onPreSuperBowl, adsDisabled = false })
 
   useEffect(() => {
     if (adsDisabled) return
-    window.ramp?.que?.push(() => {
-      window.ramp.spaAddAds([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-plf' }])
-    })
+    rampAdd([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-plf' }])
   }, [])
 
   const advanceToSB = () => {
@@ -1170,9 +1165,7 @@ function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = fals
 
   useEffect(() => {
     if (adsDisabled) return
-    window.ramp?.que?.push(() => {
-      window.ramp.spaAddAds([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-sim' }])
-    })
+    rampAdd([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-sim' }])
   }, [])
 
   // QB count-ups

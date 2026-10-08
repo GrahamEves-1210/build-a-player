@@ -7,6 +7,7 @@ import HEADSHOTS from '../data/headshots.json'
 import QBAvatar from './QBAvatar'
 import { track } from '../lib/track'
 import { seededShuffle } from '../lib/progress'
+import { rampAdd, rampDestroyType } from '../lib/ads'
 
 function fmtHeight(inches) {
   return `${Math.floor(inches / 12)}'${inches % 12}"`
@@ -320,9 +321,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
     setExcludedQB(null)
     setDraggingType(null)
     adInvokedRef.current = false
-    window.ramp?.que?.push(() => {
-      try { window.ramp.destroyUnits(['standard_iab_cntr1']) } catch {}
-    })
+    rampDestroyType('standard_iab_cntr1')   // destroyUnits wants slot names, not the type
     const panel = document.querySelector('.spin-panel')
     if (panel) panel.scrollTop = 0
   }, [resetKey])
@@ -373,9 +372,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
   const triggerMobileAd = useCallback(() => {
     if (adsDisabled || window.innerWidth > 768 || adInvokedRef.current) return
     adInvokedRef.current = true
-    window.ramp?.que?.push(() => {
-      window.ramp.spaAddAds([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1' }])
-    })
+    rampAdd([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1' }])
   }, [adsDisabled])
 
   const handleSpin = useCallback(() => {
