@@ -416,8 +416,40 @@ const SAMPLED = {
 }
 SYNTH.back = SYNTH.tap
 SYNTH.close = SYNTH.tap
+// ── Sound Lab picks: per moment, a candidate file, 'none' (silent) or nothing
+// (the built-in sound). Set from the Sound Lab screen; read on every play.
+const PICKS_KEY = 'bap_sfx_picks'
+export const getPicks = () => { try { return JSON.parse(localStorage.getItem(PICKS_KEY) || '{}') } catch { return {} } }
+export const setPick = (event, id) => { const p = getPicks(); if (id) p[event] = id; else delete p[event]; try { localStorage.setItem(PICKS_KEY, JSON.stringify(p)) } catch {} }
+const labBufs = new Map()
+function labBuffer(ac, id) {
+  if (labBufs.has(id)) return labBufs.get(id)
+  const pr = fetch(`/sfx-lab/${id}.wav`).then(r => r.arrayBuffer()).then(b => new Promise((res, rej) => ac.decodeAudioData(b, res, rej))).catch(() => null)
+  labBufs.set(id, pr)
+  return pr
+}
+export function playLab(id, gain = 0.9) {
+  if (isMuted()) return
+  const ac = audio(); if (!ac) return
+  labBuffer(ac, id).then(buf => {
+    if (!buf) return
+    const src = ac.createBufferSource(), g = ac.createGain()
+    src.buffer = buf; g.gain.value = gain
+    src.connect(g).connect(bus); src.start()
+  })
+}
+export const LAB_GAIN = { tap: 0.5, tick: 0.4, gradepop: 0.45, back: 0.55, send: 0.6, deny: 0.6, spin: 0.55 }
+export function playBuiltIn(name, arg) {
+  const ac = audio(); if (!ac || !(SYNTH[name] || SAMPLED[name])) return
+  const S = scene(ac, bus, ac.currentTime)
+  try { if (SAMPLED[name]?.(S, arg)) return } catch {}
+  try { SYNTH[name]?.(S, arg) } catch {}
+}
 export const sfx = (name, arg) => {
   if (isMuted()) return
+  const pick = getPicks()[name]
+  if (pick === 'none') return
+  if (pick) { playLab(pick, LAB_GAIN[name] ?? 0.9); return }
   const ac = audio(); if (!ac || !(SYNTH[name] || SAMPLED[name])) return
   const S = scene(ac, bus, ac.currentTime)
   try { if (SAMPLED[name]?.(S, arg)) return } catch {}
@@ -649,7 +681,7 @@ function startTicks() {
 function stopTicks() { if (ticking) { clearTimeout(ticking); ticking = null } }
 
 export function initJuice() {
-  window.__bapJuice = { sfx, renderSfx }
+  window.__bapJuice = { sfx, renderSfx, playLab }
   // The last trait in: the power-up stinger (confetti is for rings and awards)
   window.addEventListener('bap:purchase', () => { sfx('purchase'); haptic('success') })
   window.addEventListener('bap:achievement', () => { sfx('achievement'); haptic('success') })
@@ -659,7 +691,7 @@ export function initJuice() {
     const el = e.target.closest?.(TAP)
     if (!el || el.disabled) return
     audio()                                   // unlock audio on the first gesture (iOS); loads the samples
-    if (el.matches('.spin-btn, .spin-respin-half')) { sfx('tap'); haptic('medium'); startTicks(); return }
+    if (el.matches('.spin-btn, .spin-respin-half')) { sfx('tap'); sfx('spin'); haptic('medium'); startTicks(); return }
     if (el.matches('.attr-chip')) { sfx('slot'); haptic('medium'); return }
     if (el.matches('.ag-round-btn, .cr-close, .prf-top-back, .dc-back-btn')) { sfx('back'); haptic('light'); return }
     if (el.matches('.ag-edge')) { sfx('flip'); haptic('light'); return }

@@ -11,6 +11,7 @@ const AppCards = lazy(() => import('./app/AppCards'))
 const AppShop = lazy(() => import('./app/AppShop'))
 const AppAchievements = lazy(() => import('./app/AppAchievements'))
 const AppLocker = lazy(() => import('./app/AppLocker'))
+const AppSoundLab = lazy(() => import('./app/AppSoundLab'))
 
 // iOS/Android app only: floating game dock (Home · Daily · PLAY · Cards ·
 // Profile) that replaces the website's menu, plus the app-only screens and
@@ -61,7 +62,7 @@ export default function AppTabBar() {
     const onMenu = () => setMenuOpen(true)
     const onNav = e => {
       const [to, arg] = String(e.detail).split(':')
-      if (['daily', 'cards', 'shop', 'achievements', 'locker'].includes(to)) { setMenuOpen(false); if (to === 'shop') setShopTab(arg || 'featured'); setScreen(to) }
+      if (['daily', 'cards', 'shop', 'achievements', 'locker', 'soundlab'].includes(to)) { setMenuOpen(false); if (to === 'shop') setShopTab(arg || 'featured'); setScreen(to) }
       else setScreen(null)
     }
     window.addEventListener('bap:page', onPage)
@@ -92,6 +93,7 @@ export default function AppTabBar() {
           {screen === 'daily' ? <AppDaily sport={state.sport} onClose={() => setScreen(null)} />
             : screen === 'shop' ? <AppShop key={shopTab} tab={shopTab} onClose={() => setScreen(null)} />
             : screen === 'locker' ? <AppLocker onClose={() => setScreen(null)} />
+            : screen === 'soundlab' ? <AppSoundLab onClose={() => setScreen(null)} />
             : screen === 'achievements' ? <AppAchievements onClose={() => setScreen(null)} />
             : <AppCards sport={state.sport} onClose={() => setScreen(null)} />}
         </Suspense>
