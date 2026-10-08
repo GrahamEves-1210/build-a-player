@@ -1,5 +1,5 @@
 import { useEffect, useState, lazy, Suspense } from 'react'
-import { IS_APP } from '../lib/platform'
+import { IS_APP, APP_LOOK } from '../lib/platform'
 import AppMenu from './app/AppMenu'
 import AuthModal from './AuthModal'
 import AppToasts, { LevelUp } from './app/AppToasts'
@@ -26,6 +26,9 @@ const AppSoundLab = lazy(() => import('./app/AppSoundLab'))
 const TAB_FOR_PAGE = { splash: 'home', profile: 'profile', leaderboard: null, 'pvp-leaderboard': null, about: null }
 // Full-screen pages that hide the dock (a head-to-head match in progress)
 const HIDE_ON = new Set(['versus-game', 'versus-result', 'shared'])
+// Website: the game screens keep the site's navbar, so the dock is only on the
+// app-look pages
+const WEB_DOCK_ON = new Set(['splash', 'profile'])
 
 const nav = to => window.dispatchEvent(new CustomEvent('bap:nav', { detail: to }))
 
@@ -79,9 +82,11 @@ export default function AppTabBar() {
 
   // The game's fixed SPIN/BUILD switch would float over an open Daily/Cards screen
   useEffect(() => { document.documentElement.classList.toggle('ag-screen-open', !!screen) }, [screen])
+  // Website: the app-look pages (home, profile) take the app's page styling
+  useEffect(() => { if (!IS_APP) document.documentElement.classList.toggle('ag-page', WEB_DOCK_ON.has(state.page)) }, [state.page])
 
-  if (!IS_APP) return null
-  const hidden = HIDE_ON.has(state.page)
+  if (!IS_APP && !APP_LOOK) return null
+  const hidden = HIDE_ON.has(state.page) || (!IS_APP && !screen && !WEB_DOCK_ON.has(state.page))
   const active = screen ?? (state.page in TAB_FOR_PAGE ? TAB_FOR_PAGE[state.page] : 'play')
   const go = to => () => { setMenuOpen(false); setScreen(null); nav(to) }
   const open = which => () => { setMenuOpen(false); setScreen(s => (s === which ? null : which)) }

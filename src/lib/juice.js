@@ -5,10 +5,13 @@
 // Sounds are generated with Web Audio — no audio files. Mute: More → Sound.
 
 import { myVictory } from './progress'
+import { IS_APP } from './platform'
 
 const MUTE_KEY = 'bap_sound_off'
-export const isMuted = () => { try { return localStorage.getItem(MUTE_KEY) === '1' } catch { return false } }
-export const setMuted = on => { try { on ? localStorage.setItem(MUTE_KEY, '1') : localStorage.removeItem(MUTE_KEY) } catch {} }
+// The website starts muted (a tab that suddenly plays sounds is unwelcome);
+// turning sound on there is saved as '0'
+export const isMuted = () => { try { const v = localStorage.getItem(MUTE_KEY); return v === '1' || (v === null && !IS_APP) } catch { return !IS_APP } }
+export const setMuted = on => { try { on ? localStorage.setItem(MUTE_KEY, '1') : IS_APP ? localStorage.removeItem(MUTE_KEY) : localStorage.setItem(MUTE_KEY, '0') } catch {} }
 
 // ── Sound ────────────────────────────────────────────────────────────────────
 // Everything is layered from oscillators, filtered noise and FM "bells", with a
@@ -470,7 +473,7 @@ export async function renderSfx(name, arg, seconds = 3.5) {
 
 // ── Haptics ──────────────────────────────────────────────────────────────────
 let H = null
-import('@capacitor/haptics').then(m => { H = m }).catch(() => {})
+if (IS_APP) import('@capacitor/haptics').then(m => { H = m }).catch(() => {})   // phones only
 export const haptic = kind => {
   if (!H) return
   try {

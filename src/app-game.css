@@ -14,7 +14,7 @@
 @font-face { font-family: 'BAP Anton'; src: url('/fonts/anton.woff2') format('woff2'); font-display: swap; }
 @font-face { font-family: 'BAP Bebas'; src: url('/fonts/bebas-neue.woff2') format('woff2'); font-display: swap; }
 
-html.is-app {
+html:is(.is-app, .app-look) {
   --ag-display: 'BAP Anton', 'Anton', Impact, 'Arial Narrow Bold', sans-serif;
   --ag-font: 'BAP Bebas', 'Bebas Neue', 'BAP Anton', Impact, sans-serif;
   --ag-body: 'Outfit', system-ui, -apple-system, sans-serif;
@@ -59,7 +59,7 @@ html.is-app {
 html.is-app input, html.is-app textarea { -webkit-user-select: text; user-select: text; }
 /* Desktop testing: fake an iPhone's notch / home-bar insets */
 html.is-app.sim-notch { --safe-top: 47px; --safe-bottom: 34px; }
-html.is-app.is-bucket {
+html:is(.is-app, .app-look).is-bucket {
   --ag-bg: #070504;
   --ag-panel: rgba(20,13,8,.8);
   --ag-panel-2: rgba(32,20,10,.72);
@@ -70,14 +70,14 @@ html.is-app.is-bucket {
   --ag-muted: rgba(255,237,213,.55);
 }
 
-html.is-app[data-spot="gold"]     { --spot1: #f5dc8a; --spot2: #c9a227; }
-html.is-app[data-spot="ice"]      { --spot1: #d6f1ff; --spot2: #4ea8ff; }
-html.is-app[data-spot="crimson"]  { --spot1: #ff8a8a; --spot2: #d4203a; }
-html.is-app[data-spot="onyx"]     { --spot1: #f3e7bd; --spot2: #8a7a4a; }
-html.is-app[data-spot="royal"]    { --spot1: #cdb6ff; --spot2: #7444ff; }
-html.is-app[data-spot="holo"]     { --spot1: #8ff7ff; --spot2: #ff7ad9; }
-html.is-app[data-spot="inferno"]  { --spot1: #ffc35c; --spot2: #ff4d1a; }
-html.is-app[data-spot="platinum"] { --spot1: #ffffff; --spot2: #9fb3c8; }
+html:is(.is-app, .app-look)[data-spot="gold"]     { --spot1: #f5dc8a; --spot2: #c9a227; }
+html:is(.is-app, .app-look)[data-spot="ice"]      { --spot1: #d6f1ff; --spot2: #4ea8ff; }
+html:is(.is-app, .app-look)[data-spot="crimson"]  { --spot1: #ff8a8a; --spot2: #d4203a; }
+html:is(.is-app, .app-look)[data-spot="onyx"]     { --spot1: #f3e7bd; --spot2: #8a7a4a; }
+html:is(.is-app, .app-look)[data-spot="royal"]    { --spot1: #cdb6ff; --spot2: #7444ff; }
+html:is(.is-app, .app-look)[data-spot="holo"]     { --spot1: #8ff7ff; --spot2: #ff7ad9; }
+html:is(.is-app, .app-look)[data-spot="inferno"]  { --spot1: #ffc35c; --spot2: #ff4d1a; }
+html:is(.is-app, .app-look)[data-spot="platinum"] { --spot1: #ffffff; --spot2: #9fb3c8; }
 
 /* Website-only furniture: menu button (→ dock), footer, feature blurbs */
 html.is-app .nav-right,
@@ -661,14 +661,14 @@ html.is-app .nav-pills-soon { top: calc(50% + var(--safe-top) / 2); }
 html.is-app .splash-screen { padding-top: var(--safe-top); padding-bottom: var(--app-bottom); }
 html.is-app .game-page-scroll { top: calc(54px + var(--safe-top)); bottom: var(--app-bottom); }
 html.is-app .sc-screen { padding-top: max(12px, var(--safe-top)); padding-bottom: calc(var(--app-bottom) + 12px); }
-html.is-app .auth-overlay { padding-top: max(var(--safe-top), 16px); padding-bottom: max(var(--app-bottom), 16px); }
+html:is(.is-app, .app-look) .auth-overlay { padding-top: max(var(--safe-top), 16px); padding-bottom: max(var(--app-bottom), 16px); }
 html.is-app .simp-page,
-html.is-app .prf-page,
+html:is(.is-app, .ag-page) .prf-page,
 html.is-app .lb-page,
 html.is-app .bd-screen { height: calc(100dvh - 54px - var(--safe-top) - var(--app-bottom)); }
 @media (max-width: 768px) {
   html.is-app .simp-page,
-  html.is-app .prf-page,
+  html:is(.is-app, .ag-page) .prf-page,
   html.is-app .lb-page,
   html.is-app .bd-screen {
     height: auto;
@@ -697,7 +697,8 @@ html.is-app .panel-right,
 html.is-app .right-panel-wrap {
   background-color: transparent !important;
 }
-html.is-app body {
+html.is-app body,
+html.ag-page body {
   background:
     radial-gradient(ellipse 110% 36% at 50% 0%, color-mix(in srgb, var(--ag-a1) 13%, transparent) 0%, transparent 70%),
     repeating-linear-gradient(180deg, transparent 0 79px, color-mix(in srgb, var(--ag-accent) 4%, transparent) 79px 80px),
@@ -1625,30 +1626,30 @@ html.is-bucket .ag-edge { background: rgba(12,8,5,.95); }
 }
 
 /* ═══ Profile ══════════════════════════════════════════════════════════════ */
-html.is-app .prf-page { padding-top: calc(var(--safe-top) + 4px) !important; background: transparent !important; }
+html:is(.is-app, .ag-page) .prf-page { padding-top: calc(var(--safe-top) + 4px) !important; background: transparent !important; }
 /* The dock covers these: Back (Home tab), the website header (career card) */
-html.is-app .prf-top-back,
+html:is(.is-app, .ag-page) .prf-top-back,
 html.is-app .lb-back-btn,
-html.is-app .prf-top-nav,
-html.is-app .prf-hero { display: none !important; }
-html.is-app .prf-card {
+html:is(.is-app, .ag-page) .prf-top-nav,
+html:is(.is-app, .ag-page) .prf-hero { display: none !important; }
+html:is(.is-app, .ag-page) .prf-card {
   border: 1.5px solid var(--ag-line) !important;
   border-radius: 16px !important;
   background: var(--ag-panel) !important;
   box-shadow: none !important;
 }
-html.is-app .prf-card-title,
-html.is-app .prf-career-count { font-family: var(--ag-font) !important; font-weight: 400 !important; font-size: 17px !important; letter-spacing: 3px !important; text-transform: uppercase; }
-html.is-app .prf-career-record { font-family: var(--ag-display) !important; font-weight: 400 !important; }
-html.is-app .prf-career-record * { font-family: inherit; font-weight: 400 !important; }
+html:is(.is-app, .ag-page) .prf-card-title,
+html:is(.is-app, .ag-page) .prf-career-count { font-family: var(--ag-font) !important; font-weight: 400 !important; font-size: 17px !important; letter-spacing: 3px !important; text-transform: uppercase; }
+html:is(.is-app, .ag-page) .prf-career-record { font-family: var(--ag-display) !important; font-weight: 400 !important; }
+html:is(.is-app, .ag-page) .prf-career-record * { font-family: inherit; font-weight: 400 !important; }
 html.is-app .pcg-cell { border-radius: 12px !important; border: 1px solid var(--ag-line) !important; background: rgba(255,255,255,.025) !important; }
 html.is-app .pcg-val { font-family: var(--ag-display) !important; font-weight: 400 !important; letter-spacing: .3px; }
 html.is-app .pcg-lbl { font-family: var(--ag-font) !important; font-weight: 400 !important; font-size: 13px !important; letter-spacing: 2px !important; }
-html.is-app .prf-game-switch-btn { border-radius: 10px !important; }
-html.is-app .prf-game-switch-btn.active { box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--ag-a1) 55%, transparent) !important; }
-html.is-app .prf-cgame-label { font-family: var(--ag-font) !important; font-weight: 400 !important; font-size: 14px !important; letter-spacing: 1.8px !important; }
-html.is-app .prf-changepw-btn,
-html.is-app .prf-signout-btn {
+html:is(.is-app, .ag-page) .prf-game-switch-btn { border-radius: 10px !important; }
+html:is(.is-app, .ag-page) .prf-game-switch-btn.active { box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--ag-a1) 55%, transparent) !important; }
+html:is(.is-app, .ag-page) .prf-cgame-label { font-family: var(--ag-font) !important; font-weight: 400 !important; font-size: 14px !important; letter-spacing: 1.8px !important; }
+html:is(.is-app, .ag-page) .prf-changepw-btn,
+html:is(.is-app, .ag-page) .prf-signout-btn {
   height: 50px !important;
   border-radius: 12px !important;
   font-family: var(--ag-font) !important;
@@ -1657,7 +1658,7 @@ html.is-app .prf-signout-btn {
   letter-spacing: 2.5px !important;
   text-transform: uppercase;
 }
-html.is-app .prf-signout-btn { color: #ff8a8a !important; border-color: rgba(239,68,68,.4) !important; background: rgba(40,8,8,.5) !important; }
+html:is(.is-app, .ag-page) .prf-signout-btn { color: #ff8a8a !important; border-color: rgba(239,68,68,.4) !important; background: rgba(40,8,8,.5) !important; }
 
 /* App career card (top of Profile) */
 .ag-career {
@@ -1792,7 +1793,7 @@ html.is-app .lb-rank-2 { color: #1a1d21 !important; background: linear-gradient(
 html.is-app .lb-rank-3 { color: #1f1006 !important; background: linear-gradient(135deg, #f1b98a, #b86a34) !important; border: 0 !important; }
 
 /* ═══ Sign-in sheet ════════════════════════════════════════════════════════ */
-html.is-app .auth-modal {
+html:is(.is-app, .app-look) .auth-modal {
   border: 1.5px solid var(--ag-line-hi) !important;
   border-radius: 20px !important;
   background:
@@ -1801,13 +1802,13 @@ html.is-app .auth-modal {
   box-shadow: 0 24px 60px rgba(0,0,0,.65) !important;
   animation: ag-zoom .35s cubic-bezier(.2,.9,.25,1) both;
 }
-html.is-app .auth-logo { font-family: var(--ag-display) !important; font-weight: 400 !important; font-size: 26px !important; letter-spacing: .3px; text-transform: uppercase; }
-html.is-app .auth-tabs { border-radius: 12px !important; padding: 3px !important; background: rgba(0,0,0,.4) !important; border: 1px solid var(--ag-line) !important; }
-html.is-app .auth-tabs button { font-family: var(--ag-font) !important; font-weight: 400 !important; font-size: 17px !important; letter-spacing: 2px !important; border-radius: 9px !important; }
-html.is-app .auth-tabs button.active { color: var(--ag-on) !important; background: var(--ag-grad) !important; }
-html.is-app .auth-label { font-family: var(--ag-font) !important; font-weight: 400 !important; font-size: 14px !important; letter-spacing: 2px !important; }
-html.is-app .auth-input { border-radius: 11px !important; min-height: 48px; }
-html.is-app .auth-submit {
+html:is(.is-app, .app-look) .auth-logo { font-family: var(--ag-display) !important; font-weight: 400 !important; font-size: 26px !important; letter-spacing: .3px; text-transform: uppercase; }
+html:is(.is-app, .app-look) .auth-tabs { border-radius: 12px !important; padding: 3px !important; background: rgba(0,0,0,.4) !important; border: 1px solid var(--ag-line) !important; }
+html:is(.is-app, .app-look) .auth-tabs button { font-family: var(--ag-font) !important; font-weight: 400 !important; font-size: 17px !important; letter-spacing: 2px !important; border-radius: 9px !important; }
+html:is(.is-app, .app-look) .auth-tabs button.active { color: var(--ag-on) !important; background: var(--ag-grad) !important; }
+html:is(.is-app, .app-look) .auth-label { font-family: var(--ag-font) !important; font-weight: 400 !important; font-size: 14px !important; letter-spacing: 2px !important; }
+html:is(.is-app, .app-look) .auth-input { border-radius: 11px !important; min-height: 48px; }
+html:is(.is-app, .app-look) .auth-submit {
   height: 54px !important;
   border: 0 !important;
   border-radius: 13px !important;
@@ -1819,7 +1820,7 @@ html.is-app .auth-submit {
   background: var(--ag-grad) !important;
   box-shadow: 0 0 22px var(--ag-glow), inset 0 1px 0 rgba(255,255,255,.4) !important;
 }
-html.is-app .auth-submit:active { transform: scale(.97); }
+html:is(.is-app, .app-look) .auth-submit:active { transform: scale(.97); }
 
 /* ═══ Depth Chart (the site's red mini-game card) ══════════════════════════ */
 html.is-app .dc-screen {
@@ -2763,9 +2764,62 @@ html.is-app .ag-sandbox { grid-column: 1 / -1; justify-self: stretch; }
 
 /* Profile (app): no top bar, and #root clips the page, so the page itself scrolls */
 @media (max-width: 768px) {
-  html.is-app .prf-page { height: 100dvh !important; min-height: 0 !important; overflow-y: auto !important; overflow-x: hidden; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; padding-bottom: calc(var(--app-bottom) + 24px) !important; }
+  html:is(.is-app, .ag-page) .prf-page { height: 100dvh !important; min-height: 0 !important; overflow-y: auto !important; overflow-x: hidden; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; padding-bottom: calc(var(--app-bottom) + 24px) !important; }
 }
 
 .ag-career-act--wide { grid-column: 1 / -1; }
 
 .ag-career-act .ag-tab-badge { left: auto !important; right: -4px; top: -6px; width: auto; min-width: 20px; }
+
+/* ═══ Website with the app look (html.app-look, lib/platform.js APP_LOOK) ═══
+   Phones get the app layout as is. Wider screens keep the same pieces but lay
+   them out for a monitor: home becomes stage-left / menu-right, the dock and
+   the More sheet stop stretching, and full-screen sheets (shop, locker,
+   achievements, Daily, cards) centre their content. */
+@media (min-width: 1024px) {
+  html.app-look .ag-dock {
+    left: max(10px, calc(50% - 290px));
+    right: max(10px, calc(50% - 290px));
+  }
+  html.app-look .ag-screen { padding-left: max(0px, calc((100% - 980px) / 2)); padding-right: max(0px, calc((100% - 980px) / 2)); }
+  html.app-look .ag-menu-overlay { align-items: center; justify-content: center; }
+  html.app-look .ag-menu { max-width: 540px; border-radius: 22px; border: 1.5px solid var(--ag-line-hi); padding-bottom: 22px; }
+  html.app-look .ag-menu::before { display: none; }
+
+  html.app-look .ag-home-inner {
+    max-width: 1200px; margin: 0 auto; padding: 18px 28px 8px;
+    display: grid;
+    grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr);
+    grid-template-rows: auto auto auto auto auto 1fr;
+    grid-template-areas:
+      "hud    hud"
+      "stage  brand"
+      "stage  sport"
+      "stage  pos"
+      "stage  modes"
+      "stage  extras";
+    column-gap: 26px; row-gap: 14px;
+  }
+  html.app-look .ag-hud { grid-area: hud; padding: 0; }
+  html.app-look .ag-hud .ag-player-chip { flex: 0 1 440px; }
+  html.app-look .ag-hud .ag-hud-coins { margin-left: auto; }
+  html.app-look .ag-brand { grid-area: brand; margin: 6px 0 2px; }
+  html.app-look .ag-brand-mark { height: 64px; }
+  html.app-look .ag-wordmark { font-size: 50px; }
+  html.app-look .ag-sport { grid-area: sport; margin: 0; }
+  html.app-look .ag-positions { grid-area: pos; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; padding: 0; overflow: visible; }
+  html.app-look .ag-positions--two { grid-template-columns: 1fr 1fr; }
+  html.app-look .ag-pos { min-width: 0; }
+  html.app-look .ag-modes { grid-area: modes; padding: 0; }
+  html.app-look .ag-mode { min-height: 128px; }
+  html.app-look .ag-extras { grid-area: extras; align-content: start; padding: 0; }
+  html.app-look .ag-stage { grid-area: stage; height: auto; min-height: 600px; margin: 0; }
+  /* the figure is built at phone size; scale it up from its feet */
+  html.app-look .ag-figure { bottom: 46px; transform: scale(2.15); transform-origin: 50% 100%; }
+  html.app-look .ag-platform { bottom: 22px; transform: scale(2); transform-origin: 50% 50%; }
+  html.app-look .ag-stage-tag { transform: scale(1.35); transform-origin: 0 100%; }
+  html.app-look .ag-home-site { max-width: 1200px; margin: 28px auto 0; }
+
+  /* Profile: the site navbar isn't there, so use the full height */
+  html.app-look.ag-page .prf-page { height: 100dvh; padding-bottom: calc(var(--app-bottom) + 24px); }
+}

@@ -7,10 +7,11 @@ import { sfx } from '../../lib/juice'
 import { NameTag, AvatarBadge } from './NameTag'
 import { CoinPill } from './AppShop'
 
-// iOS/Android app home screen — a game main menu in place of the website
-// splash (App / BucketApp render this instead of SplashScreen / BucketSplash
-// when IS_APP). Same callbacks the website splash uses, so nothing else
-// changes. All styling lives in src/app-game.css (ag-* classes).
+// Home screen — a game main menu. The app and the website (APP_LOOK) both use
+// it in place of the old splash; same callbacks, so nothing else changes.
+// Modes only show when their callback is passed (Takeover and Blacktop are
+// app-only for now; Head-to-Head is website-only for football). `footer` is
+// the website's features + links, under the menu. Styling: src/app-game.css.
 
 const NFL_FIGURE = {
   qb: { src: '/qb-silhouette.webp', scale: 1 },
@@ -119,7 +120,7 @@ function DailyBanner({ isBucket }) {
   )
 }
 
-export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus, onBlacktop, blacktop, onTakeover, takeoverRun, user, renderBucketFigure }) {
+export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus, onBlacktop, blacktop, onTakeover, takeoverRun, user, renderBucketFigure, footer = null }) {
   const isBucket = sport === 'bucket'
   const storeKey = isBucket ? 'bucketPosition' : 'lastPosition'
   const [position, setPosition] = useState(() => {
@@ -215,6 +216,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
 
         <div className="ag-extras">
           <DailyBanner isBucket={isBucket} />
+          {onTakeover && (
           <button className="ag-takeover ag-pop" style={{ '--d': '320ms' }} onClick={onTakeover}>
             <span className="ag-takeover-txt">
               <span className="ag-eyebrow">{tkOn ? (tkEndless ? `ENDLESS ROAD · ${takeoverRun.endlessWins} STRAIGHT` : `ON THE ROAD · ${takeoverRun.taken.length}/${tkStops} CITIES`) : 'ROAD MODE · 12 CITIES · SOLO OR DUO'}</span>
@@ -223,7 +225,8 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
             </span>
             <span className="ag-edge-go">{tkOn ? 'RESUME' : 'START'} <IconArrow size={14} /></span>
           </button>
-          {isBucket && (
+          )}
+          {isBucket && onBlacktop && (
             <button className={`ag-blacktop ag-pop${btLive ? ' is-live' : ''}`} style={{ '--d': '350ms' }} onClick={onBlacktop}>
               <span className="ag-live-dot" />
               <span className="ag-takeover-txt">
@@ -248,14 +251,21 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
             </>
           ) : (
             <>
-              <button className="ag-mini ag-pop" style={{ '--d': '340ms', gridColumn: '1 / -1' }} onClick={onDepthChart}>
+              <button className="ag-mini ag-pop" style={{ '--d': '340ms', gridColumn: onVersus ? undefined : '1 / -1' }} onClick={onDepthChart}>
                 <span className="ag-mini-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><IconClipboard size={17} /> THE DEPTH CHART</span>
-                <span className="ag-mini-sub" style={{ color: '#fbbf24' }}>Mini game · sort the stars by the stat</span>
+                <span className="ag-mini-sub" style={{ color: '#fbbf24' }}>{onVersus ? 'Sort the stars by the stat' : 'Mini game · sort the stars by the stat'}</span>
               </button>
+              {onVersus && (
+                <button className="ag-mini ag-pop" style={{ '--d': '370ms' }} onClick={() => onVersus(position)}>
+                  <span className="ag-mini-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><IconVersus size={17} /> HEAD-TO-HEAD</span>
+                  <span className="ag-mini-sub">1v1 a friend</span>
+                </button>
+              )}
             </>
           )}
         </div>
       </div>
+      {footer && <div className="ag-home-site">{footer}</div>}
     </div>
   )
 }

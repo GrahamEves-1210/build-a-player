@@ -28,9 +28,10 @@ import './app-game.css'
 import App from './App.jsx'
 import BucketApp from './components/BucketApp.jsx'
 import ErrorBoundary from './components/ErrorBoundary.jsx'
-import { IS_APP } from './lib/platform'
-// App-only shell (dock, Daily, Cards, toasts) — never downloaded on the website
-const AppTabBar = IS_APP ? lazy(() => import('./components/AppTabBar.jsx')) : null
+import { IS_APP, APP_LOOK } from './lib/platform'
+// App shell (dock, Daily, Cards, shop, toasts). The website loads it too for
+// the app-look home and profile screens (APP_LOOK in lib/platform.js).
+const AppTabBar = (IS_APP || APP_LOOK) ? lazy(() => import('./components/AppTabBar.jsx')) : null
 
 if (IS_APP) {
   document.documentElement.classList.add('is-app')
@@ -38,10 +39,12 @@ if (IS_APP) {
   // (chat, search); a fixed scale keeps the screen still while you type.
   document.querySelector('meta[name="viewport"]')?.setAttribute('content', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover')
 }
-// App: sound effects, haptics and confetti (lib/juice.js)
-if (IS_APP) import('./lib/juice').then(m => m.initJuice()).catch(() => {})
-// App: XP, streak, missions, cards (lib/progress.js)
-if (IS_APP) import('./lib/progress').then(m => m.initProgress()).catch(() => {})
+// Website with the app look: the app's colours and type (app-game.css)
+if (!IS_APP && APP_LOOK) document.documentElement.classList.add('app-look')
+// Sound effects, haptics and confetti (lib/juice.js); sound starts off on the website
+if (IS_APP || APP_LOOK) import('./lib/juice').then(m => m.initJuice()).catch(() => {})
+// XP, coins, streak, missions, cards (lib/progress.js)
+if (IS_APP || APP_LOOK) import('./lib/progress').then(m => m.initProgress()).catch(() => {})
 // App: Discord sign-in comes back through the app's own link
 if (IS_APP) import('./lib/appAuth').then(m => m.initAppAuth()).catch(() => {})
 
@@ -54,7 +57,7 @@ if ('serviceWorker' in navigator) {
 }
 
 const isBucket = window.location.pathname.startsWith('/bucket')
-if (IS_APP && isBucket) document.documentElement.classList.add('is-bucket')   // app theme: orange accent
+if ((IS_APP || APP_LOOK) && isBucket) document.documentElement.classList.add('is-bucket')   // app theme: orange accent
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

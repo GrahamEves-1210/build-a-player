@@ -41,7 +41,7 @@ import { track } from './lib/track'
 import CustomRatingsModal from './components/CustomRatingsModal'
 import SiteFooter from './components/SiteFooter'
 import SiteFeatures from './components/SiteFeatures'
-import { IS_APP } from './lib/platform'
+import { IS_APP, APP_LOOK } from './lib/platform'
 import AppHome from './components/app/AppHome'
 import { finishDiscordSignIn, getUsername } from './lib/discord'
 import { dailyState, setDailySpins } from './lib/progress'
@@ -142,7 +142,7 @@ export default function App() {
   const [showTeamPicker, setShowTeamPicker] = useState(false)
   // App: today's Daily Challenge run ({ key, pos, mode, seed }) — same seeded spins for everyone
   const [takeoverRun, setTakeoverRun] = useState(null)   // App: TAKEOVER run (the road)
-  const [dailyRun, setDailyRun] = useState(() => (IS_APP && _saved?.daily?.key === dailyState().key ? _saved.daily : null))
+  const [dailyRun, setDailyRun] = useState(() => ((IS_APP || APP_LOOK) && _saved?.daily?.key === dailyState().key ? _saved.daily : null))
   const [savedSpinResult, setSavedSpinResult] = useState(() => {
     try { return JSON.parse(localStorage.getItem('bap_spin_result')) } catch { return null }
   })
@@ -292,7 +292,7 @@ export default function App() {
   // iOS/Android app: report the page to the bottom tab bar (AppTabBar) and
   // follow its taps. No-ops on the website.
   useEffect(() => {
-    if (!IS_APP) return
+    if (!IS_APP && !APP_LOOK) return
     window.__bapPage = { page, sport: 'nfl' }
     window.dispatchEvent(new CustomEvent('bap:page', { detail: window.__bapPage }))
     if (['game', 'sim', 'takeover', 'takeover-build'].includes(page)) lastPlayRef.current = page
@@ -302,7 +302,7 @@ export default function App() {
   const takeoverRunRef = useRef(null); takeoverRunRef.current = takeoverRun
   const lastPlayRef = useRef(null)           // the last mode page, so PLAY goes back to what you were doing
   useEffect(() => {
-    if (!IS_APP) return
+    if (!IS_APP && !APP_LOOK) return
     const onNav = e => {
       const to = e.detail
       if (to === 'home') setPage('splash')   // keeps the build in progress — PLAY resumes it
@@ -320,6 +320,7 @@ export default function App() {
       // signed out: the dock shows sign-in itself, since only some pages render AuthModal
       else if (to === 'profile') { if (user) { window.history.pushState({}, '', '/profile'); setPage('profile') } else window.dispatchEvent(new CustomEvent('bap:auth')) }
       else if (to === 'about') setPage('about')
+      else if (to === 'wiki') setPage('wiki')
       window.scrollTo({ top: 0, behavior: 'instant' })
     }
     window.addEventListener('bap:nav', onNav)
@@ -512,7 +513,7 @@ export default function App() {
     } catch {}
   }, [isPlus])
   // App: the shop reads Pro from storage; tell it when that changes
-  useEffect(() => { if (IS_APP) window.dispatchEvent(new CustomEvent('bap:pro')) }, [isPlus])
+  useEffect(() => { if (IS_APP || APP_LOOK) window.dispatchEvent(new CustomEvent('bap:pro')) }, [isPlus])
 
   const customModeKey = isOL ? 'ol' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : `${isRB ? 'rb' : 'qb'}${gameMode === 'all-time' ? '_legends' : ''}`
   const customPoolKey = isOL ? 'ol' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'
@@ -632,7 +633,7 @@ export default function App() {
 
   // Opened from Build-A-Bucket's Daily screen (/?daily=1)
   useEffect(() => {
-    if (!IS_APP || !new URLSearchParams(window.location.search).has('daily')) return
+    if ((!IS_APP && !APP_LOOK) || !new URLSearchParams(window.location.search).has('daily')) return
     window.history.replaceState({}, '', '/')
     startDaily()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
@@ -731,8 +732,8 @@ export default function App() {
       : isWR ? calcWROPOYResult : isRB ? calcOPOYResult : calcMVPResult
     result.award = result.award ?? calcAward(result, isAllTimeSeason, result.team?.short)
     setSimResult(result)
-    // App: season XP, missions and the Daily Challenge score (lib/progress.js)
-    if (IS_APP) {
+    // Season XP, coins, missions and the Daily Challenge score (lib/progress.js)
+    if (IS_APP || APP_LOOK) {
       window.dispatchEvent(new CustomEvent('bap:season', { detail: {
         sport: 'nfl', pos: position, mode: gameMode,
         wins: result.wins, losses: result.losses, playoffs: !!result.playoffs,
@@ -1113,7 +1114,7 @@ export default function App() {
           onReset={dailyLocked ? undefined : handleReset}
           adsDisabled={adsDisabled}
           seedPlan={dailyPlan}
-          cardMeta={IS_APP && gameIsPlay ? { sport: 'nfl', pos: position, mode: gameMode } : null}
+          cardMeta={(IS_APP || APP_LOOK) && gameIsPlay ? { sport: 'nfl', pos: position, mode: gameMode } : null}
           paused={parked}
           isRB={isRB}
           isWR={isWR}
@@ -1339,6 +1340,18 @@ export default function App() {
   )
   const withGame = el => (IS_APP && gameMode && KEEP_GAME_ON.has(page) ? shell(el) : el)
 
+  const openWiki = () => { setPage('wiki'); window.scrollTo({ top: 0, behavior: 'instant' }) }
+  const startVersus = (pos) => {
+    const p = pos || 'qb'
+    try { localStorage.setItem('lastPosition', p) } catch {}
+    setPosition(p)
+    setGameMode('classic')
+    setBuild(Object.fromEntries(
+      (p === 'rb' ? RB_TYPES : TYPES).map(t => [t, null])
+    ))
+    setPage('versus-lobby')
+  }
+
   if (page === 'splash') {
     return withGame(
       <>
@@ -1347,21 +1360,15 @@ export default function App() {
       </Helmet>
       {IS_APP ? (
         <AppHome sport="nfl" user={user} onStart={handleStart} onDepthChart={() => setPage('depth-chart')} onTakeover={openTakeover} takeoverRun={takeoverRun} />
+      ) : APP_LOOK ? (
+        <AppHome sport="nfl" user={user} onStart={handleStart} onDepthChart={() => setPage('depth-chart')} onVersus={startVersus}
+          footer={<><SiteFeatures sport="nfl" /><SiteFooter sport="nfl" onDepthChart={() => setPage('depth-chart')} onWiki={openWiki} /></>} />
       ) : (
       <SplashScreen
         onStart={handleStart}
         onDepthChart={() => setPage('depth-chart')}
-        onWiki={() => { setPage('wiki'); window.scrollTo({ top: 0, behavior: 'instant' }) }}
-        onVersus={(pos) => {
-          const p = pos || 'qb'
-          try { localStorage.setItem('lastPosition', p) } catch {}
-          setPosition(p)
-          setGameMode('classic')
-          setBuild(Object.fromEntries(
-            (p === 'rb' ? RB_TYPES : TYPES).map(t => [t, null])
-          ))
-          setPage('versus-lobby')
-        }}
+        onWiki={openWiki}
+        onVersus={startVersus}
       />
       )}
       </>

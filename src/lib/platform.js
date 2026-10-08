@@ -5,6 +5,12 @@ export const IS_APP = Capacitor.isNativePlatform()
 // 'ios' | 'android' | 'web'
 export const APP_PLATFORM = Capacitor.getPlatform()
 
+// The website uses the app's look for its home and profile screens: the app's
+// home menu, profile card, shop, achievements, locker and the More sheet.
+// Game screens keep the website's own layout. IS_APP still decides anything
+// that needs the phone itself (in-app browser, haptics, no ads, share sheet).
+export const APP_LOOK = true
+
 // Plus is sold through Stripe on the website. The App Store and Google Play
 // require their own in-app purchase for digital subscriptions, so the app
 // doesn't sell Plus (or link to Stripe) until in-app purchase is wired up.

@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom'
 import { supabase } from '../../lib/supabase'
 import FeedbackModal from '../FeedbackModal'
 import { isMuted, setMuted } from '../../lib/juice'
+import { IS_APP } from '../../lib/platform'
 import { IconQuestion, IconInfo, IconChat, IconDiscord, IconX, IconFootball, IconBasketball, IconClose, IconShield, IconDoc, IconPodium, IconPlay } from './icons'
 
 // App "More" sheet (gear on the home screen): tiles + a How to Play view.
@@ -84,9 +85,16 @@ export default function AppMenu({ sport, onClose }) {
               <span className="ag-sound-switch"><span className="ag-sound-knob" /></span>
               <span className="ag-sound-state">{muted ? 'OFF' : 'ON'}</span>
             </button>
-            <button className="ag-row-btn" onClick={go(() => nav('soundlab'))}>
-              <IconPlay size={18} /><span className="ag-sound-lbl">SOUND LAB · PICK THE SOUNDS</span>
-            </button>
+            {IS_APP && (
+              <button className="ag-row-btn" onClick={go(() => nav('soundlab'))}>
+                <IconPlay size={18} /><span className="ag-sound-lbl">SOUND LAB · PICK THE SOUNDS</span>
+              </button>
+            )}
+            {!IS_APP && (
+              <button className="ag-row-btn" onClick={go(() => nav('wiki'))}>
+                <IconDoc size={19} /><span className="ag-sound-lbl">PLAYER WIKI</span>
+              </button>
+            )}
             <button className="ag-row-btn" onClick={go(() => nav('about'))}>
               <IconInfo size={20} /><span className="ag-sound-lbl">ABOUT THE GAME</span>
             </button>

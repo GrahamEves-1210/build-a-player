@@ -32,7 +32,7 @@ import ProfilePage from './ProfilePage'
 import CustomRatingsModal from './CustomRatingsModal'
 import SiteFooter from './SiteFooter'
 import SiteFeatures from './SiteFeatures'
-import { IS_APP } from '../lib/platform'
+import { IS_APP, APP_LOOK } from '../lib/platform'
 import AppHome from './app/AppHome'
 import { FlipEdge, BuildComplete, useFlip } from './app/AppBuildTray'
 import { useBlacktop } from '../lib/blacktop'
@@ -564,13 +564,13 @@ export default function BucketApp() {
   // iOS/Android app: report the page to the bottom tab bar (AppTabBar) and
   // follow its taps. No-ops on the website.
   useEffect(() => {
-    if (!IS_APP) return
+    if (!IS_APP && !APP_LOOK) return
     window.__bapPage = { page, sport: 'bucket' }
     window.dispatchEvent(new CustomEvent('bap:page', { detail: window.__bapPage }))
     if (['game', 'sim', 'salarycap', 'takeover', 'takeover-build', 'blacktop', 'blacktop-build', 'blacktop-game'].includes(page)) lastPlayRef.current = page
   }, [page])
   useEffect(() => {
-    if (!IS_APP) return
+    if (!IS_APP && !APP_LOOK) return
     const onNav = e => {
       const to = e.detail
       if (to === 'home') setPage('splash')   // keeps the build in progress — PLAY resumes it
@@ -589,6 +589,7 @@ export default function BucketApp() {
       // signed out: the dock shows sign-in itself, since only some pages render AuthModal
       else if (to === 'profile') { if (user) { window.history.pushState({}, '', '/profile'); setPage('profile') } else window.dispatchEvent(new CustomEvent('bap:auth')) }
       else if (to === 'about') { window.location.href = '/?about' }
+      else if (to === 'wiki') { window.location.href = '/wiki' }
       window.scrollTo({ top: 0, behavior: 'instant' })
     }
     window.addEventListener('bap:nav', onNav)
@@ -744,7 +745,7 @@ export default function BucketApp() {
 
   // ── BLACKTOP (app): the match lives in the hook; pages follow its phase ──
   // App: the shop reads Pro from storage; tell it when that changes
-  useEffect(() => { if (IS_APP) window.dispatchEvent(new CustomEvent('bap:pro')) }, [isSubscribed])
+  useEffect(() => { if (IS_APP || APP_LOOK) window.dispatchEvent(new CustomEvent('bap:pro')) }, [isSubscribed])
 
   const btPage = page === 'blacktop' || page === 'blacktop-build' || page === 'blacktop-game'
   // The hook stays on across every page: Home never drops you out of a run.
@@ -929,8 +930,8 @@ export default function BucketApp() {
 
   const commitBucketSeason = useCallback((result) => {
     setSimResult(result)
-    // App: season XP + missions (lib/progress.js)
-    if (IS_APP) {
+    // Season XP, coins + missions (lib/progress.js)
+    if (IS_APP || APP_LOOK) {
       window.dispatchEvent(new CustomEvent('bap:season', { detail: {
         sport: 'bucket', pos: position, mode: gameMode,
         wins: result.wins, losses: result.losses, playoffs: !!result.madePlayoffs,
@@ -1405,7 +1406,7 @@ export default function BucketApp() {
           gameKey={gameKey}
           onReset={handleReset}
           adsDisabled={adsDisabled}
-          cardMeta={IS_APP && gameIsPlay && gameMode !== 'salarycap' ? { sport: 'bucket', pos: position, mode: gameMode } : null}
+          cardMeta={(IS_APP || APP_LOOK) && gameIsPlay && gameMode !== 'salarycap' ? { sport: 'bucket', pos: position, mode: gameMode } : null}
           paused={parked}
           isRB={false}
           isBucket={true}
@@ -1677,16 +1678,17 @@ export default function BucketApp() {
             setBuild(Object.fromEntries((VERSUS_POS_TYPES[p] ?? VERSUS_GUARD_TYPES).map(t => [t, null])))
             setPage('versus-lobby')
           }
-          return IS_APP ? (
+          return (IS_APP || APP_LOOK) ? (
             <AppHome
               sport="bucket"
               user={user}
               onStart={handleStart}
               onVersus={onVersus}
-              onBlacktop={() => setPage(btPageFor(bt.phase))}
+              onBlacktop={IS_APP ? () => setPage(btPageFor(bt.phase)) : null}
               blacktop={{ phase: bt.phase, queue: bt.seated }}
-              onTakeover={openTakeover}
+              onTakeover={IS_APP ? openTakeover : null}
               takeoverRun={takeoverRun}
+              footer={IS_APP ? null : <><SiteFeatures sport="bucket" /><SiteFooter sport="bucket" /></>}
               renderBucketFigure={(pos, ready) => (
                 <>
                   <img src="/basketballsilhouette.png" className="splash-figure" alt="" draggable={false} style={{ position: 'absolute', inset: 0 }} />
