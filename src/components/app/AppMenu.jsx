@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase'
 import FeedbackModal from '../FeedbackModal'
 import { isMuted, setMuted } from '../../lib/juice'
 import { IS_APP } from '../../lib/platform'
+import { railPreviewOn, setRailPreview } from '../../lib/fakeRail'
 import { IconQuestion, IconInfo, IconChat, IconDiscord, IconX, IconClose, IconShield, IconDoc, IconPodium, IconPlay } from './icons'
 
 // App "More" sheet (gear on the home screen): tiles + a How to Play view.
@@ -31,6 +32,7 @@ export default function AppMenu({ sport, onClose }) {
   const [view, setView] = useState('menu')            // 'menu' | 'howto'
   const [feedbackUser, setFeedbackUser] = useState(null) // null = closed
   const [muted, setMutedState] = useState(isMuted)
+  const [rail, setRailState] = useState(railPreviewOn)
   const isBucket = sport === 'bucket'
 
   const openFeedback = async () => {
@@ -80,6 +82,11 @@ export default function AppMenu({ sport, onClose }) {
               <span className="ag-sound-lbl">SOUND</span>
               <span className="ag-sound-switch"><span className="ag-sound-knob" /></span>
               <span className="ag-sound-state">{muted ? 'OFF' : 'ON'}</span>
+            </button>
+            <button className={`ag-row-btn${rail ? '' : ' ag-sound--off'}`} onClick={() => { setRailPreview(!rail); setRailState(!rail) }}>
+              <span className="ag-sound-lbl">AD RAIL PREVIEW</span>
+              <span className="ag-sound-switch"><span className="ag-sound-knob" /></span>
+              <span className="ag-sound-state">{rail ? 'ON' : 'OFF'}</span>
             </button>
             {IS_APP && (
               <button className="ag-row-btn" onClick={go(() => nav('soundlab'))}>

@@ -2858,3 +2858,41 @@ html.is-app .alltime-mode .spin-btn:active:not(:disabled),
 html.is-app .alltime-mode .spin-respin-half:active:not(:disabled) { filter: brightness(.92); }
 html.is-app .alltime-mode .spin-btn:disabled { filter: saturate(.45) brightness(.6); box-shadow: none !important; }
 html.is-app .alltime-mode .spin-btn-badge { background: #1a1000 !important; color: #f2d675 !important; }
+
+/* ═══ Ad rail preview (lib/fakeRail.js) ═════════════════════════════════════
+   A placeholder bottom ad. With it on, --web-rail is its height and every
+   screen, the dock, sheets and overlays sit above it — the same rules the
+   website's real rail uses. Website: 100px phone / 90px desktop. App: a
+   320×50 banner above the home bar (the Playwire SDK banner's spot). */
+html.fake-rail { --fake-rail-h: 100px; --web-rail: var(--fake-rail-h) !important; }
+@media (min-width: 768px) { html.fake-rail { --fake-rail-h: 90px; } }
+html.is-app.fake-rail { --fake-rail-h: calc(50px + var(--safe-bottom)); }
+html.fake-rail { --ag-dock-gap: calc(var(--web-rail) + 8px); }
+#bap-rail-preview {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 2147483000;
+  height: var(--fake-rail-h);
+  display: flex; justify-content: center; align-items: stretch;
+  background: #050505; border-top: 1px solid rgba(255,255,255,.14);
+}
+html.is-app #bap-rail-preview { padding-bottom: var(--safe-bottom); box-sizing: border-box; }
+#bap-rail-preview span {
+  width: min(320px, 100%);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  background: repeating-linear-gradient(45deg, #1b1b1b 0 10px, #232323 10px 20px);
+  outline: 1px dashed rgba(255,255,255,.28); outline-offset: -1px;
+  font-family: var(--ag-font, sans-serif); color: rgba(255,255,255,.6); letter-spacing: 2px;
+}
+@media (min-width: 768px) { #bap-rail-preview span { width: min(728px, 100%); } }
+#bap-rail-preview b { font-size: 18px; font-weight: 400; color: #fff; }
+#bap-rail-preview i { font-style: normal; font-size: 11px; }
+html.fake-rail .ag-menu-overlay,
+html.fake-rail .bt-sheet-overlay,
+html.fake-rail .sh-sheet-overlay,
+html.fake-rail .auth-overlay,
+html.fake-rail .ag-levelup,
+html.fake-rail .ag-ring,
+html.fake-rail .ag-bc { padding-bottom: var(--web-rail); }
+html.fake-rail .ag-menu { max-height: calc(100dvh - var(--web-rail) - 24px); padding-bottom: 22px; }
+html.fake-rail .bt-sheet { height: min(78dvh - var(--web-rail), 640px); padding-bottom: 10px; }
+html.fake-rail .sh-sheet { max-height: calc(88dvh - var(--web-rail)); padding-bottom: 18px; }
+.sm-moment { scroll-margin-bottom: calc(var(--web-rail, 0px) + 24px); }
