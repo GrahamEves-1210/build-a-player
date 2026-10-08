@@ -419,6 +419,17 @@ SYNTH.close = SYNTH.tap
 // ── Sound Lab picks: per moment, a candidate file, 'none' (silent) or nothing
 // (the built-in sound). Set from the Sound Lab screen; read on every play.
 const PICKS_KEY = 'bap_sfx_picks'
+// The sounds picked by ear in the Sound Lab (2026-10-08), built in. A moment
+// not listed keeps its built-in sound; 'none' is silent. Lab picks still
+// override these on the phone they're made on.
+export const BAKED = {
+  tap: 's-plastic', spin: 's-spinwhir', tick: 'none', slot: 's-plastic', complete: 's-boom',
+  back: 's-click33', swap: 'none', claim: 's-feedback', chime: 's-feedback', purchase: 's-feedback',
+  deny: 's-retrobtn', send: 's-plastic', levelup: 's-feedback', achievement: 's-feedback',
+  award: 's-feedback', champion: 's-crowd-arena', 'snd-cannon': 's-explosion',
+}
+// Picks saved before the sounds were built in would shadow them; start fresh once
+try { if (localStorage.getItem('bap_sfx_baked') !== '1') { localStorage.removeItem(PICKS_KEY); localStorage.setItem('bap_sfx_baked', '1') } } catch {}
 export const getPicks = () => { try { return JSON.parse(localStorage.getItem(PICKS_KEY) || '{}') } catch { return {} } }
 export const setPick = (event, id) => { const p = getPicks(); if (id) p[event] = id; else delete p[event]; try { localStorage.setItem(PICKS_KEY, JSON.stringify(p)) } catch {} }
 const labBufs = new Map()
@@ -438,16 +449,10 @@ export function playLab(id, gain = 0.9) {
     src.connect(g).connect(bus); src.start()
   })
 }
-export const LAB_GAIN = { tap: 0.5, tick: 0.4, gradepop: 0.45, back: 0.55, send: 0.6, deny: 0.6, spin: 0.55 }
-export function playBuiltIn(name, arg) {
-  const ac = audio(); if (!ac || !(SYNTH[name] || SAMPLED[name])) return
-  const S = scene(ac, bus, ac.currentTime)
-  try { if (SAMPLED[name]?.(S, arg)) return } catch {}
-  try { SYNTH[name]?.(S, arg) } catch {}
-}
+export const LAB_GAIN = { tap: 0.5, tick: 0.4, gradepop: 0.45, back: 0.55, send: 0.6, deny: 0.6, spin: 0.55, slot: 0.6, champion: 0.8 }
 export const sfx = (name, arg) => {
   if (isMuted()) return
-  const pick = getPicks()[name]
+  const pick = getPicks()[name] ?? BAKED[name]
   if (pick === 'none') return
   if (pick) { playLab(pick, LAB_GAIN[name] ?? 0.9); return }
   const ac = audio(); if (!ac || !(SYNTH[name] || SAMPLED[name])) return
@@ -660,7 +665,10 @@ export function victory({ big = false } = {}) {
   const v = myVictory()
   ;(FX[v.fx] ?? FX['fx-confetti'])()
   if (big && v.fx !== 'fx-confetti') setTimeout(() => confetti(90), 600)
-  sfx(SYNTH[v.sound] || SAMPLED[v.sound] ? v.sound : 'snd-horn')
+  // a title gets the crowd, an award its sting; the equipped victory sound on top
+  sfx(big ? 'champion' : 'award')
+  const own = SYNTH[v.sound] || SAMPLED[v.sound] ? v.sound : 'snd-horn'
+  setTimeout(() => sfx(own), 250)
   haptic('success')
 }
 
@@ -691,7 +699,12 @@ export function initJuice() {
     const el = e.target.closest?.(TAP)
     if (!el || el.disabled) return
     audio()                                   // unlock audio on the first gesture (iOS); loads the samples
-    if (el.matches('.spin-btn, .spin-respin-half')) { sfx('tap'); sfx('spin'); haptic('medium'); startTicks(); return }
+    if (el.matches('.spin-btn, .spin-respin-half')) {
+      sfx('tap'); haptic('medium'); startTicks()
+      // the build's reels play the spin sound as each one starts (below); other spinners here
+      if (!el.closest('.spin-panel')) sfx('spin')
+      return
+    }
     if (el.matches('.attr-chip')) { sfx('slot'); haptic('medium'); return }
     if (el.matches('.ag-round-btn, .cr-close, .prf-top-back, .dc-back-btn')) { sfx('back'); haptic('light'); return }
     if (el.matches('.ag-edge')) { sfx('flip'); haptic('light'); return }
@@ -706,6 +719,7 @@ export function initJuice() {
     for (const m of muts) {
       if (m.type === 'attributes') {
         const el = m.target
+        if (el.classList?.contains('reel-spinning') && !(m.oldValue || '').includes('reel-spinning')) { sfx('spin'); continue }
         if (el.classList?.contains('reel-locked') && !(m.oldValue || '').includes('reel-locked')) {
           // the last reel to lock ends the spin
           const reels = document.querySelectorAll('.reel-outer')

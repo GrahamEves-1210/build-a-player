@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { getPicks, setPick, playLab, playBuiltIn, LAB_GAIN } from '../../lib/juice'
+import { getPicks, setPick, playLab, sfx, LAB_GAIN } from '../../lib/juice'
 import { IconClose, IconPlay, IconCheck } from './icons'
 
 // Sound Lab (app): every sound moment, a row of candidates you can hear and
@@ -12,11 +12,12 @@ const NAMES = {
   's-noisy': 'Noisy impact', 's-hammer': 'Hammer', 's-steamhit': 'Steam hit', 's-punch': 'Punch', 's-zoom': 'Zoom',
   's-slideclose': 'Metal slide', 's-lighter': 'Lighter click', 's-feedback': 'Feedback up', 's-powerup': 'Power-up',
   's-impact': 'Cinematic impact', 's-boom': 'Boom', 's-perc': 'Percussion hit', 's-cannon': 'Cannon', 's-explosion': 'Explosion', 's-stone': 'Stone',
+  's-crowd-arena': 'Arena crowd', 's-crowd-applause': 'Big applause', 's-crowd-shouts': 'Cheers & shouts',
 }
 // [event, label, what it is, candidates, has a built-in sound]
 const ROWS = [
   ['tap', 'Button tap', 'Every button', ['s-click33', 's-plastic', 's-retrobtn', 's-beep', 's-gear']],
-  ['spin', 'Spin starts', 'When you hit SPIN (nothing plays now)', ['s-spinwhir', 's-whoosh', 's-counter'], false],
+  ['spin', 'Spin starts', 'Each reel as it starts spinning', ['s-spinwhir', 's-whoosh', 's-counter']],
   ['tick', 'Reel ticks', 'Rapid ticks while the reels spin', ['s-gear', 's-click33', 's-beep']],
   ['lock', 'Reel locks', 'Team and player reels land', ['s-gearlock', 's-lever', 's-noisy', 's-hammer', 's-steamhit', 's-punch']],
   ['slot', 'Pick a trait', 'A player goes into your build', ['s-lever', 's-gearlock', 's-plastic', 's-noisy', 's-steamhit']],
@@ -38,7 +39,7 @@ const ROWS = [
   ['levelup', 'Level up', 'You level up', ['s-powerup', 's-impact', 's-perc']],
   ['achievement', 'Achievement', 'An achievement unlocks', ['s-feedback', 's-perc', 's-powerup']],
   ['award', 'Season award', 'MVP, OPOY, DPOY…', ['s-impact', 's-perc', 's-boom']],
-  ['champion', 'Title', 'You win it all', ['s-boom', 's-impact', 's-cannon']],
+  ['champion', 'Title', 'You win it all (under your victory sound)', ['s-crowd-arena', 's-crowd-applause', 's-crowd-shouts']],
   ['snd-cannon', 'Cannon Blast', 'The shop\'s Cannon Blast victory sound', ['s-cannon', 's-explosion']],
   ['whistle', 'Season starts', 'Referee whistle on SIMULATE', []],
 ]
@@ -49,7 +50,7 @@ export default function AppSoundLab({ onClose }) {
   const choose = (ev, id) => {
     setPick(ev, id); setPicks(getPicks())
     if (id && id !== 'none') playLab(id, LAB_GAIN[ev] ?? 0.9)
-    else if (!id) playBuiltIn(ev, ev === 'complete' ? 2 : ev === 'gradepop' ? 8 : undefined)
+    else if (!id) sfx(ev, ev === 'complete' ? 2 : ev === 'gradepop' ? 8 : undefined)
   }
   const summary = ROWS.map(([ev, label]) => `${label}: ${picks[ev] === 'none' ? 'Silent' : picks[ev] ? NAMES[picks[ev]] : 'Current'}`).join('\n')
   const copy = async () => {
@@ -61,7 +62,7 @@ export default function AppSoundLab({ onClose }) {
         <div><span className="ag-eyebrow">PICK BY EAR</span><h1 className="ag-h1">Sound Lab</h1></div>
         <button className="ag-round-btn" onClick={onClose} aria-label="Close"><IconClose size={16} /></button>
       </div>
-      <p className="sl-intro">Tap a sound to hear it. Whatever you tap is used in the game right away. <b>Current</b> is what plays now, <b>Silent</b> turns that moment off.</p>
+      <p className="sl-intro">Tap a sound to hear it. Whatever you tap is used in the game right away. <b>Current</b> is the built-in sound, <b>Silent</b> turns that moment off.</p>
       {ROWS.map(([ev, label, sub, cands, builtIn = true], i) => {
         const cur = picks[ev] ?? null
         const Opt = ({ id, name }) => {
