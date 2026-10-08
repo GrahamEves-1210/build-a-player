@@ -2847,3 +2847,14 @@ html.app-look .sh-sheet { max-height: calc(88dvh - var(--web-rail, 0px)); }
 /* a season moment scrolls itself into view; keep it clear of the dock and the ad rail */
 .sm-moment { scroll-margin-bottom: calc(var(--web-rail, 0px) + 24px); scroll-margin-top: 70px; }
 html.is-app .sm-moment { scroll-margin-bottom: calc(var(--app-bottom, 0px) + 12px); }
+/* All-Time: the website's gold SPIN and respin buttons (the app's teal would win otherwise) */
+html.is-app .alltime-mode .spin-btn,
+html.is-app .alltime-mode .spin-respin-half {
+  background: linear-gradient(135deg, #FBF0A0 0%, #D4AF37 55%, #C49A10 100%) !important;
+  color: #1a1000 !important;
+  box-shadow: 0 0 26px rgba(212,175,55,.38), 0 8px 20px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.45) !important;
+}
+html.is-app .alltime-mode .spin-btn:active:not(:disabled),
+html.is-app .alltime-mode .spin-respin-half:active:not(:disabled) { filter: brightness(.92); }
+html.is-app .alltime-mode .spin-btn:disabled { filter: saturate(.45) brightness(.6); box-shadow: none !important; }
+html.is-app .alltime-mode .spin-btn-badge { background: #1a1000 !important; color: #f2d675 !important; }

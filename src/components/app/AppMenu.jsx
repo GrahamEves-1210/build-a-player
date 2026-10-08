@@ -1,11 +1,10 @@
-import { switchSport } from './AppHome'
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { supabase } from '../../lib/supabase'
 import FeedbackModal from '../FeedbackModal'
 import { isMuted, setMuted } from '../../lib/juice'
 import { IS_APP } from '../../lib/platform'
-import { IconQuestion, IconInfo, IconChat, IconDiscord, IconX, IconFootball, IconBasketball, IconClose, IconShield, IconDoc, IconPodium, IconPlay } from './icons'
+import { IconQuestion, IconInfo, IconChat, IconDiscord, IconX, IconClose, IconShield, IconDoc, IconPodium, IconPlay } from './icons'
 
 // App "More" sheet (gear on the home screen): tiles + a How to Play view.
 
@@ -18,9 +17,9 @@ const STEPS = [
   { title: 'SIMULATE', body: 'Play the season. Make the playoffs, win the award, chase the ring.' },
 ]
 
-function Tile({ tone, Icon, title, sub, onClick, delay }) {
+function Tile({ tone, Icon, title, sub, onClick, delay, wide = false }) {
   return (
-    <button className={`ag-tile ag-tile--${tone} ag-pop`} style={{ '--d': delay }} onClick={onClick}>
+    <button className={`ag-tile ag-tile--${tone} ag-pop`} style={{ '--d': delay, ...(wide ? { gridColumn: '1 / -1' } : null) }} onClick={onClick}>
       <span className="ag-tile-icon"><Icon size={26} /></span>
       <span className="ag-tile-title">{title}</span>
       {sub && <span className="ag-tile-sub">{sub}</span>}
@@ -75,10 +74,7 @@ export default function AppMenu({ sport, onClose }) {
               <Tile tone="gold" Icon={IconPodium} title="LEADERBOARDS" sub="Top builds" onClick={go(() => nav('leaderboard'))} delay="30ms" />
               <Tile tone="discord" Icon={IconDiscord} title="DISCORD" sub="Join the community" onClick={go(() => window.open('https://discord.gg/zdZBu2VjUD', '_blank'))} delay="60ms" />
               <Tile tone="ink" Icon={IconX} title="FOLLOW" sub="@Build_A_Player" onClick={go(() => window.open('https://x.com/Build_A_Player', '_blank'))} delay="90ms" />
-              <Tile tone="purple" Icon={IconChat} title="FEEDBACK" sub="Ideas & bugs" onClick={openFeedback} delay="120ms" />
-              <Tile tone={isBucket ? 'mint' : 'orange'} Icon={isBucket ? IconFootball : IconBasketball}
-                title={isBucket ? 'FOOTBALL' : 'BASKETBALL'} sub={isBucket ? 'Build-A-Player' : 'Build-A-Bucket'}
-                onClick={go(() => switchSport(isBucket ? 'nfl' : 'bucket'))} delay="150ms" />
+              <Tile tone="purple" Icon={IconChat} title="FEEDBACK" sub="Ideas & bugs" onClick={openFeedback} delay="120ms" wide />
             </div>
             <button className={`ag-row-btn${muted ? ' ag-sound--off' : ''}`} onClick={() => { setMuted(!muted); setMutedState(!muted) }}>
               <span className="ag-sound-lbl">SOUND</span>

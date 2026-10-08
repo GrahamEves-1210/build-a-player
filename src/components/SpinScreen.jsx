@@ -206,7 +206,7 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, on
   }, [spinning, idle, items, initOffset, fast]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div className={`reel-outer${locked ? ' reel-locked' : ''}${blurred ? ' reel-blurred' : ''}`}>
+    <div className={`reel-outer${spinning ? ' reel-spinning' : ''}${locked ? ' reel-locked' : ''}${blurred ? ' reel-blurred' : ''}`}>
       <div className="reel-label">{label}</div>
       <div className="reel-window">
         <div className="reel-selector" />
