@@ -716,9 +716,9 @@ export default function App() {
           : isRB
             ? runRBSimulation(build, activeTypes, effectiveTeam, gameMode === 'all-time')
             : runSimulation(build, activeTypes, effectiveTeam, gameMode === 'all-time')
-    // App: the season is steered on the sim page (moments re-simulate the rest of
+    // The season is steered on the sim page (moments re-simulate the rest of
     // the year), so it's booked when it ends — SimPage calls commitSeason.
-    if (IS_APP) {
+    if (IS_APP || APP_LOOK) {
       setSimResult(result); setSimReplaying(false); setPage('sim')
       window.scrollTo({ top: 0, behavior: 'instant' })
       return
@@ -1639,8 +1639,8 @@ export default function App() {
           isOL={isOL}
           onBack={() => { setPage('game'); window.scrollTo({ top: 0, behavior: 'instant' }); document.querySelector('.game-page-scroll')?.scrollTo({ top: 0, behavior: 'instant' }) }}
           onReset={() => { handleReset(); setPage('game'); window.scrollTo({ top: 0, behavior: 'instant' }); document.querySelector('.game-page-scroll')?.scrollTo({ top: 0, behavior: 'instant' }) }}
-          simFn={IS_APP ? simFor : null}
-          onFinal={IS_APP ? commitSeason : null}
+          simFn={(IS_APP || APP_LOOK) ? simFor : null}
+          onFinal={(IS_APP || APP_LOOK) ? commitSeason : null}
           pool={displayPool}
           userName={getUsername(user) || 'You'}
         />

@@ -923,8 +923,8 @@ export default function BucketApp() {
     const result = runBucketSimulation(build, activeTypes, team, position, null, gameMode)
     setSimResult(result)
     setShowTeamSpin(false)
-    // App: the season is steered on the sim page; it's booked when it ends
-    if (IS_APP) { setPage('sim'); window.scrollTo({ top: 0, behavior: 'instant' }); return }
+    // The season is steered on the sim page; it's booked when it ends
+    if (IS_APP || APP_LOOK) { setPage('sim'); window.scrollTo({ top: 0, behavior: 'instant' }); return }
     commitBucketRef.current?.(result)
   }, [build, activeTypes, position, gameMode])
 
@@ -1838,8 +1838,8 @@ export default function BucketApp() {
           isSalaryMode={gameMode === 'salarycap'}
           gameMode={gameMode}
           initialScreen={simInitialScreen}
-          simFn={IS_APP && gameMode !== 'salarycap' ? bucketSimFor : null}
-          onFinal={IS_APP && gameMode !== 'salarycap' ? commitBucketSeason : null}
+          simFn={(IS_APP || APP_LOOK) && gameMode !== 'salarycap' ? bucketSimFor : null}
+          onFinal={(IS_APP || APP_LOOK) && gameMode !== 'salarycap' ? commitBucketSeason : null}
           pool={currentPool}
           userName={getUsername(user) || 'You'}
         />

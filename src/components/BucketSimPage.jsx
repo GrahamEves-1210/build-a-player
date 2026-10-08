@@ -12,7 +12,9 @@ import QBAvatar from './QBAvatar'
 import BucketFigureOverlay from './BucketFigureOverlay'
 import { ShareModal } from './ReportCard'
 import SiteFooter from './SiteFooter'
-import { IS_APP } from '../lib/platform'
+import { IS_APP, APP_LOOK } from '../lib/platform'
+// The app's season screen runs on the website too (site ads and promo stay)
+const APP_SIM = IS_APP || APP_LOOK
 import { RingCeremony, SeasonRewards } from './app/AppSeason'
 import { createDirector } from '../lib/seasonDirector'
 import { MomentCard, NowCard, Pulse, Wire, Milestones, RecordOverlay, Leaders, SeasonStory, StretchCard, useDirectedReveal } from './app/AppSeasonPlus'
@@ -1766,7 +1768,7 @@ function ScreenPlayoffs({ result, onNext, autoSkip = false, isAllTime = false, a
   const [champPopped,        setChampPopped]        = useState(false)
   const [ringOpen,           setRingOpen]           = useState(false)   // app: title moment after the bottle pops
   useEffect(() => {
-    if (!IS_APP || !champPopped) return
+    if (!APP_SIM || !champPopped) return
     const t = setTimeout(() => setRingOpen(true), 1300)
     return () => clearTimeout(t)
   }, [champPopped])
@@ -2415,8 +2417,8 @@ function ScreenFinal({ result, awards, build, types, attrMap, onReset, onBack, a
 
   return (
     <div className="simp-screen">
-      {IS_APP && <SeasonRewards result={result} />}
-      {IS_APP && result.story && <SeasonStory story={result.story} pos={result.position} sport="bucket" name="You" />}
+      {APP_SIM && <SeasonRewards result={result} />}
+      {APP_SIM && result.story && <SeasonStory story={result.story} pos={result.position} sport="bucket" name="You" />}
       <div className={`simp-final-banner ${champion ? 'sfb-champ' : madePlayoffs ? 'sfb-elim' : 'sfb-miss'}`}>
         {champion && <img src="/trophybasketball.webp" alt="NBA Trophy" className="sfb-trophy" />}
         <div className="sfb-outcome">{playoffSummary}</div>
@@ -2704,7 +2706,7 @@ export default function BucketSimPage({ result: baseResult, build, types, positi
   // App: the season is steered by a director; `result` is the live version of it
   const [live, setLive] = useState(baseResult)
   const result = live
-  const director = useMemo(() => (IS_APP && simFn && !isSalaryMode && initialScreen === 0 && !baseResult?.story && baseResult?.games?.length)
+  const director = useMemo(() => (APP_SIM && simFn && !isSalaryMode && initialScreen === 0 && !baseResult?.story && baseResult?.games?.length)
     ? createDirector({ sport: 'bucket', pos: position, build, team: baseResult.team, simFn, base: baseResult, name: userName, attrMap: BUCKET_ATTR, types })
     : null, []) // eslint-disable-line
   const handleFinal = final => { setLive(final); onFinal?.(final) }

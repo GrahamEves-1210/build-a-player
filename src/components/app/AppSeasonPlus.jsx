@@ -16,6 +16,9 @@ const nick = opp => (opp || '').split(' ').slice(-1)[0]
 export function MomentCard({ moment, onPick }) {
   const [picked, setPicked] = useState(null)
   const [outcome, setOutcome] = useState(null)
+  // a moment that lands low on the screen comes up into view (clear of the dock / ad rail)
+  const ref = useRef(null)
+  useEffect(() => { ref.current?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' }) }, [])
   const pick = o => {
     if (picked) return
     setPicked(o)
@@ -24,7 +27,7 @@ export function MomentCard({ moment, onPick }) {
     sfx(out ? (out.hit ? 'claim' : 'pop') : 'lock'); haptic('medium')
   }
   return (
-    <div className="sm-moment ag-pop">
+    <div className="sm-moment ag-pop" ref={ref}>
       <span className="ag-eyebrow">{moment.kicker}</span>
       <h2 className="sm-moment-title">{moment.title}</h2>
       <p className="sm-moment-body">{moment.body}</p>
@@ -216,7 +219,8 @@ export function useDirectedReveal({ director, pace, onFinal }) {
         const m = director.open(stop)
         stopIdx.current++
         if (m) { setMoment(m); return }
-        return   // no moment: loop again
+        setTick(t => t + 1)   // no moment at this stop: run again for the next one
+        return
       }
       if (!done) {
         const final = director.finalize()

@@ -50,6 +50,30 @@ function useDailyBadge() {
   return missions + streak
 }
 
+function watchRail() {
+  const root = document.documentElement
+  let last = -1, ro = null, seen = null
+  const measure = () => {
+    const el = document.querySelector('[id^="pw-oop-bottom_rail"], [id^="pw-oop"][data-pw-status="loaded"][style*="bottom"]')
+    if (el !== seen) { ro?.disconnect(); ro = null; seen = el; if (el && window.ResizeObserver) { ro = new ResizeObserver(measure); ro.observe(el) } }
+    let h = 0
+    if (el && !root.classList.contains('ads-hidden')) {
+      const cs = getComputedStyle(el)
+      if (cs.display !== 'none' && cs.visibility !== 'hidden') {
+        h = el.getBoundingClientRect().height
+        for (const c of el.querySelectorAll('iframe, div')) h = Math.max(h, c.getBoundingClientRect().height)
+      }
+    }
+    h = Math.ceil(h)
+    if (h !== last) { last = h; root.style.setProperty('--web-rail', `${h}px`) }
+  }
+  measure()
+  const mo = new MutationObserver(measure)
+  mo.observe(document.body, { childList: true })
+  const t = setInterval(measure, 1500)   // the rail's iframe resizes without DOM changes on the body
+  return () => { mo.disconnect(); ro?.disconnect(); clearInterval(t) }
+}
+
 export default function AppTabBar() {
   const [state, setState]       = useState(() => window.__bapPage ?? { page: 'splash', sport: 'nfl' })
   const [menuOpen, setMenuOpen] = useState(false)
@@ -82,6 +106,10 @@ export default function AppTabBar() {
 
   // The game's fixed SPIN/BUILD switch would float over an open Daily/Cards screen
   useEffect(() => { document.documentElement.classList.toggle('ag-screen-open', !!screen) }, [screen])
+  // Website: the bottom ad rail is there on every page. Measure it into
+  // --web-rail so the dock, screens and sheets sit above it (0 when it's gone,
+  // e.g. ad-free players)
+  useEffect(() => { if (!IS_APP) return watchRail() }, [])
   // Website: the app-look pages (home, profile) take the app's page styling
   useEffect(() => { if (!IS_APP) document.documentElement.classList.toggle('ag-page', WEB_DOCK_ON.has(state.page)) }, [state.page])
 

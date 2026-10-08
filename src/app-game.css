@@ -955,7 +955,7 @@ html.is-app .right-panel-wrap { padding-bottom: 12px !important; }
 
 /* ═══ Sim screens (season / playoffs / awards / final) ═════════════════════ */
 html.is-app .simp-page { background: transparent !important; }
-html.is-app .simp-cta {
+html:is(.is-app, .app-look) .simp-cta {
   position: relative; overflow: hidden;
   height: 58px !important;
   border: 0 !important;
@@ -970,7 +970,7 @@ html.is-app .simp-cta {
   box-shadow: 0 0 26px var(--ag-glow), 0 8px 20px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.4) !important;
   transition: transform .12s !important;
 }
-html.is-app .simp-cta::after {
+html:is(.is-app, .app-look) .simp-cta::after {
   content: '';
   position: absolute; top: 0; bottom: 0; left: -70%; width: 45%;
   background: linear-gradient(100deg, transparent, rgba(255,255,255,.38), transparent);
@@ -978,8 +978,8 @@ html.is-app .simp-cta::after {
   animation: ag-sweep 3.4s ease-in-out infinite;
   pointer-events: none;
 }
-html.is-app .simp-cta:active { transform: scale(.97) !important; }
-html.is-app .simp-back-btn {
+html:is(.is-app, .app-look) .simp-cta:active { transform: scale(.97) !important; }
+html:is(.is-app, .app-look) .simp-back-btn {
   font-family: var(--ag-font) !important;
   font-size: 16px !important;
   letter-spacing: 2px;
@@ -989,7 +989,7 @@ html.is-app .simp-back-btn {
   background: var(--ag-panel) !important;
   box-shadow: none !important;
 }
-html.is-app .simp-ghost {
+html:is(.is-app, .app-look) .simp-ghost {
   height: 50px !important;
   border: 1.5px solid var(--ag-line-hi) !important;
   border-radius: 12px !important;
@@ -1001,22 +1001,22 @@ html.is-app .simp-ghost {
   font-weight: 400 !important;
   letter-spacing: 2px !important;
 }
-html.is-app .simp-ghost:active { transform: scale(.97); }
+html:is(.is-app, .app-look) .simp-ghost:active { transform: scale(.97); }
 
-html.is-app .simp-eyebrow,
-html.is-app .simp-section-lbl,
+html:is(.is-app, .app-look) .simp-eyebrow,
+html:is(.is-app, .app-look) .simp-section-lbl,
 html.is-app .plf-round-lbl,
-html.is-app .simp-record-sub,
-html.is-app .simp-ovr-lbl {
+html:is(.is-app, .app-look) .simp-record-sub,
+html:is(.is-app, .app-look) .simp-ovr-lbl {
   font-family: var(--ag-font) !important;
   font-weight: 400 !important;
   letter-spacing: 3px !important;
 }
-html.is-app .simp-eyebrow { font-size: 20px !important; color: var(--ag-text-2) !important; }
-html.is-app .simp-record-sub { font-size: 18px !important; }
-html.is-app .simp-miss-title,
-html.is-app .simp-archetype,
-html.is-app .simp-final-banner,
+html:is(.is-app, .app-look) .simp-eyebrow { font-size: 20px !important; color: var(--ag-text-2) !important; }
+html:is(.is-app, .app-look) .simp-record-sub { font-size: 18px !important; }
+html:is(.is-app, .app-look) .simp-miss-title,
+html:is(.is-app, .app-look) .simp-archetype,
+html:is(.is-app, .app-look) .simp-final-banner,
 html.is-app .plf-champ-label,
 html.is-app .plf-elim-title {
   font-family: var(--ag-display) !important;
@@ -1024,27 +1024,27 @@ html.is-app .plf-elim-title {
   letter-spacing: .5px !important;
   text-transform: uppercase;
 }
-html.is-app .simp-miss-title { font-size: 32px !important; color: #ff8a8a !important; }
-html.is-app .simp-archetype { font-size: 26px !important; color: #fff !important; }
-html.is-app .simp-ovr-num,
-html.is-app .simp-live-record,
+html:is(.is-app, .app-look) .simp-miss-title { font-size: 32px !important; color: #ff8a8a !important; }
+html:is(.is-app, .app-look) .simp-archetype { font-size: 26px !important; color: #fff !important; }
+html:is(.is-app, .app-look) .simp-ovr-num,
+html:is(.is-app, .app-look) .simp-live-record,
 html.is-app .plf-post-score {
   font-family: var(--ag-display) !important;
   font-weight: 400 !important;
   letter-spacing: 0 !important;
   text-shadow: 0 0 34px color-mix(in srgb, var(--ag-a1) 30%, transparent);
 }
-html.is-app .simp-team-strip {
+html:is(.is-app, .app-look) .simp-team-strip {
   border: 1.5px solid color-mix(in srgb, var(--team-color, #444) 60%, #fff) !important;
   border-radius: 14px !important;
   box-shadow: 0 10px 26px rgba(0,0,0,.4), 0 0 22px color-mix(in srgb, var(--team-color, #444) 30%, transparent) !important;
 }
 html.is-app .sts-nickname { font-family: var(--ag-display) !important; font-weight: 400 !important; text-transform: uppercase; }
-html.is-app .simp-games-list { border-radius: 12px !important; border: 1px solid var(--ag-line) !important; }
-html.is-app .sgr-wk, html.is-app .sgr-badge { font-family: var(--ag-font) !important; letter-spacing: 1.5px; }
+html:is(.is-app, .app-look) .simp-games-list { border-radius: 12px !important; border: 1px solid var(--ag-line) !important; }
+html:is(.is-app, .app-look) .sgr-wk, html:is(.is-app, .app-look) .sgr-badge { font-family: var(--ag-font) !important; letter-spacing: 1.5px; }
 
 /* Award reveal */
-html.is-app .mvp-card {
+html:is(.is-app, .app-look) .mvp-card {
   border: 1.5px solid rgba(212,175,55,.6) !important;
   border-radius: 18px !important;
   background:
@@ -1052,10 +1052,10 @@ html.is-app .mvp-card {
     linear-gradient(180deg, #14130c, #070705) !important;
   box-shadow: 0 20px 60px rgba(0,0,0,.6), 0 0 50px rgba(212,175,55,.2) !important;
 }
-html.is-app .mvp-title { font-family: var(--ag-display) !important; font-weight: 400 !important; letter-spacing: 1px !important; text-transform: uppercase; text-shadow: 0 0 26px rgba(212,175,55,.5) !important; }
-html.is-app .mvp-eyebrow { font-family: var(--ag-font) !important; font-weight: 400 !important; letter-spacing: 3px !important; color: var(--ag-gold) !important; }
-html.is-app .mvp-winner-name { font-family: var(--ag-display) !important; font-weight: 400 !important; font-size: 28px !important; text-transform: uppercase; }
-html.is-app .mvp-continue {
+html:is(.is-app, .app-look) .mvp-title { font-family: var(--ag-display) !important; font-weight: 400 !important; letter-spacing: 1px !important; text-transform: uppercase; text-shadow: 0 0 26px rgba(212,175,55,.5) !important; }
+html:is(.is-app, .app-look) .mvp-eyebrow { font-family: var(--ag-font) !important; font-weight: 400 !important; letter-spacing: 3px !important; color: var(--ag-gold) !important; }
+html:is(.is-app, .app-look) .mvp-winner-name { font-family: var(--ag-display) !important; font-weight: 400 !important; font-size: 28px !important; text-transform: uppercase; }
+html:is(.is-app, .app-look) .mvp-continue {
   position: relative; overflow: hidden;
   height: 56px !important;
   border: 0 !important;
@@ -1068,7 +1068,7 @@ html.is-app .mvp-continue {
   background: linear-gradient(135deg, #f5dc8a, #d4af37) !important;
   box-shadow: 0 0 24px rgba(212,175,55,.35), inset 0 1px 0 rgba(255,255,255,.5) !important;
 }
-html.is-app .mvp-continue:active { transform: scale(.97); }
+html:is(.is-app, .app-look) .mvp-continue:active { transform: scale(.97); }
 
 /* Toasts float above the dock */
 html.is-app .save-toast {
@@ -1642,9 +1642,9 @@ html:is(.is-app, .ag-page) .prf-card-title,
 html:is(.is-app, .ag-page) .prf-career-count { font-family: var(--ag-font) !important; font-weight: 400 !important; font-size: 17px !important; letter-spacing: 3px !important; text-transform: uppercase; }
 html:is(.is-app, .ag-page) .prf-career-record { font-family: var(--ag-display) !important; font-weight: 400 !important; }
 html:is(.is-app, .ag-page) .prf-career-record * { font-family: inherit; font-weight: 400 !important; }
-html.is-app .pcg-cell { border-radius: 12px !important; border: 1px solid var(--ag-line) !important; background: rgba(255,255,255,.025) !important; }
-html.is-app .pcg-val { font-family: var(--ag-display) !important; font-weight: 400 !important; letter-spacing: .3px; }
-html.is-app .pcg-lbl { font-family: var(--ag-font) !important; font-weight: 400 !important; font-size: 13px !important; letter-spacing: 2px !important; }
+html:is(.is-app, .app-look) .pcg-cell { border-radius: 12px !important; border: 1px solid var(--ag-line) !important; background: rgba(255,255,255,.025) !important; }
+html:is(.is-app, .app-look) .pcg-val { font-family: var(--ag-display) !important; font-weight: 400 !important; letter-spacing: .3px; }
+html:is(.is-app, .app-look) .pcg-lbl { font-family: var(--ag-font) !important; font-weight: 400 !important; font-size: 13px !important; letter-spacing: 2px !important; }
 html:is(.is-app, .ag-page) .prf-game-switch-btn { border-radius: 10px !important; }
 html:is(.is-app, .ag-page) .prf-game-switch-btn.active { box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--ag-a1) 55%, transparent) !important; }
 html:is(.is-app, .ag-page) .prf-cgame-label { font-family: var(--ag-font) !important; font-weight: 400 !important; font-size: 14px !important; letter-spacing: 1.8px !important; }
@@ -2826,3 +2826,24 @@ html.is-app .ag-sandbox { grid-column: 1 / -1; justify-self: stretch; }
   /* Profile: the site navbar isn't there, so use the full height */
   html.app-look.ag-page .prf-page { height: 100dvh; padding-bottom: calc(var(--app-bottom) + 24px); }
 }
+
+/* ═══ Website: the bottom ad rail is always there ═══════════════════════════
+   AppTabBar measures Playwire's bottom rail into --web-rail (0 when it's gone
+   or for ad-free players). The dock floats above it, and every screen, sheet
+   and overlay that reaches the bottom keeps clear of it. */
+html.app-look:not(.is-app) {
+  --ag-dock-gap: calc(var(--web-rail, 0px) + 8px);
+}
+html.app-look .ag-menu-overlay,
+html.app-look .bt-sheet-overlay,
+html.app-look .sh-sheet-overlay,
+html.app-look .auth-overlay,
+html.app-look .ag-levelup,
+html.app-look .ag-ring,
+html.app-look .ag-bc { padding-bottom: var(--web-rail, 0px); }
+html.app-look .ag-menu { max-height: calc(100dvh - var(--web-rail, 0px) - 24px); }
+html.app-look .bt-sheet { height: min(78dvh - var(--web-rail, 0px), 640px); }
+html.app-look .sh-sheet { max-height: calc(88dvh - var(--web-rail, 0px)); }
+/* a season moment scrolls itself into view; keep it clear of the dock and the ad rail */
+.sm-moment { scroll-margin-bottom: calc(var(--web-rail, 0px) + 24px); scroll-margin-top: 70px; }
+html.is-app .sm-moment { scroll-margin-bottom: calc(var(--app-bottom, 0px) + 12px); }

@@ -20,7 +20,10 @@ import QBAvatar from './QBAvatar'
 import QBFigureOverlay from './QBFigureOverlay'
 import SiteFooter from './SiteFooter'
 import MVPModal from './MVPModal'
-import { IS_APP } from '../lib/platform'
+import { IS_APP, APP_LOOK } from '../lib/platform'
+// The app's season screen (moments, week strip, bracket, rewards, story) runs
+// on the website too; the site keeps its in-page ads and the 32-0 promo
+const APP_SIM = IS_APP || APP_LOOK
 import { WeekStrip, Bracket, RingCeremony, SeasonRewards } from './app/AppSeason'
 import { createDirector } from '../lib/seasonDirector'
 import { MomentCard, NowCard, Pulse, Wire, Milestones, RecordOverlay, Leaders, SeasonStory, useDirectedReveal } from './app/AppSeasonPlus'
@@ -523,7 +526,7 @@ function GameLog({ games, total, isOL, isDB, isTE, isWR, isRB }) {
 }
 
 // ── Screen 2 (app): the season you steer ─────────────────────────────────────
-function DirectedSeason({ dr, result, pos, pool, userName, director, onNext, build, types, isOL, isDB, isTE, isWR, isRB }) {
+function DirectedSeason({ dr, result, pos, pool, userName, director, onNext, build, types, isOL, isDB, isTE, isWR, isRB, adsDisabled = true }) {
   const games = dr.games
   const wins = games.filter(g => g.won).length, losses = games.length - wins
   const last = games[games.length - 1]
@@ -544,9 +547,11 @@ function DirectedSeason({ dr, result, pos, pool, userName, director, onNext, bui
       <Milestones items={dr.fresh} />
       <WeekStrip games={director.games} revealed={dr.k} />
       <GameLog games={games} total={dr.total} isOL={isOL} isDB={isDB} isTE={isTE} isWR={isWR} isRB={isRB} />
+      {!adsDisabled && <div id="ramp-cntr1-season" className="plf-banner-ad" style={{ minHeight: 0 }} />}
       {dr.record && <RecordOverlay record={dr.record} name={userName} onClose={dr.clearRecord} />}
       {final && (
         <div className="simp-stat-section simp-totals-in">
+          {!adsDisabled && <div id="ramp-season-prod" className="simp-season-ad" />}
           <div className="simp-eyebrow">Production</div>
           <StatLineTable result={final} build={build} kind={isOL ? 'ol' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'} />
           {pool && <Leaders sport="nfl" pos={pos} pool={pool} seed={director.seed} you={{ name: userName, team: result.team?.short, value: leaderValue(final, pos) }} />}
@@ -624,7 +629,7 @@ function ScreenSeason({ result, onNext, isRB = false, isWR = false, isTE = false
       )}
 
       {phase !== 'loading' && director && (
-        <DirectedSeason dr={dr} result={result} pos={pos} pool={pool} userName={userName} director={director} onNext={onNext} build={build} types={types} isOL={isOL} isDB={isDB} isTE={isTE} isWR={isWR} isRB={isRB} />
+        <DirectedSeason dr={dr} result={result} pos={pos} pool={pool} userName={userName} director={director} onNext={onNext} build={build} types={types} isOL={isOL} isDB={isDB} isTE={isTE} isWR={isWR} isRB={isRB} adsDisabled={adsDisabled} />
       )}
       {phase !== 'loading' && !director && (
         <>
@@ -634,7 +639,7 @@ function ScreenSeason({ result, onNext, isRB = false, isWR = false, isTE = false
             <span className="slr-sep">–</span>
             <span className="slr-l">{liveLosses}</span>
           </div>
-          {IS_APP && <WeekStrip games={games} revealed={revealed} />}
+          {APP_SIM && <WeekStrip games={games} revealed={revealed} />}
           {allDone && (
             <div className="simp-record-sub simp-record-sub-in">
               {playoffs ? 'Playoff Bound' : 'Missed the Playoffs'}
@@ -987,7 +992,7 @@ function ScreenPlayoffs({ result, onNext, onPreSuperBowl, adsDisabled = false })
   const [gameIdx, setGameIdx] = useState(0)
   const [status,  setStatus]  = useState('playing')
   const [started, setStarted] = useState(false)
-  const [ringOpen, setRingOpen] = useState(IS_APP)   // app: the title moment, once the Super Bowl is won
+  const [ringOpen, setRingOpen] = useState(APP_SIM)   // app: the title moment, once the Super Bowl is won
 
   useEffect(() => {
     if (!playoffs) return
@@ -1118,9 +1123,9 @@ function ScreenPlayoffs({ result, onNext, onPreSuperBowl, adsDisabled = false })
   const sbRound = playoffRounds[playoffRounds.length - 1]
   return (
     <div className="simp-screen">
-      {IS_APP && <Bracket rounds={playoffRounds} gameIdx={gameIdx} status={status} hasBye={result.hasBye} />}
+      {APP_SIM && <Bracket rounds={playoffRounds} gameIdx={gameIdx} status={status} hasBye={result.hasBye} />}
       {inner}
-      {IS_APP && status === 'champion' && ringOpen && (
+      {APP_SIM && status === 'champion' && ringOpen && (
         <RingCeremony team={team} title="Super Bowl Champions"
           score={`${sbRound.mySc}–${sbRound.oppSc}${sbRound.overtime ? ' OT' : ''} vs ${sbRound.opponent}`}
           onClose={() => setRingOpen(false)} />
@@ -1195,8 +1200,8 @@ function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = fals
 
   return (
     <div className="simp-screen">
-      {IS_APP && <SeasonRewards result={result} />}
-      {IS_APP && result.story && <SeasonStory story={result.story} pos={isOL ? 'ol' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'} sport="nfl" name={userName} />}
+      {APP_SIM && <SeasonRewards result={result} />}
+      {APP_SIM && result.story && <SeasonStory story={result.story} pos={isOL ? 'ol' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'} sport="nfl" name={userName} />}
       <div className={`simp-final-banner ${champion ? 'sfb-champ' : playoffs ? 'sfb-elim' : 'sfb-miss'}`}>
         {champion && <img src="/trophy.webp" alt="Super Bowl Trophy" className="sfb-trophy" />}
         <div className="sfb-outcome">
@@ -1496,7 +1501,7 @@ export default function SimPage({ result: baseResult, build, types = TYPES, onBa
   const result = live
   const position = isOL ? 'ol' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'
   const attrMap = isOL ? OL_ATTR : isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : isRB ? RB_ATTR : ATTR
-  const director = useMemo(() => (IS_APP && simFn && !replay && !baseResult.story && baseResult.games?.length)
+  const director = useMemo(() => (APP_SIM && simFn && !replay && !baseResult.story && baseResult.games?.length)
     ? createDirector({ sport: 'nfl', pos: position, build, team: baseResult.team, simFn, base: baseResult, name: userName, attrMap, types })
     : null, []) // eslint-disable-line
   const handleFinal = final => { setLive(final); onFinal?.(final) }
