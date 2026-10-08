@@ -2521,7 +2521,8 @@ function ScreenFinal({ result, awards, build, types, attrMap, onReset, onBack, a
         }
       </div>
 
-      <div style={{ textAlign: 'center', marginTop: '12px', fontSize: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+      {/* the 32-0 cross-promo stays on the website, not in the app */}
+      {!IS_APP && <div style={{ textAlign: 'center', marginTop: '12px', fontSize: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
         <span style={{ color: 'rgba(255,255,255,0.6)' }}>
           If you are enjoying Build-A-Player, check out my college basketball game —{' '}
           <a href="https://32-0game.com" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>32-0game.com</a>
@@ -2529,7 +2530,7 @@ function ScreenFinal({ result, awards, build, types, attrMap, onReset, onBack, a
         <a href="https://32-0game.com" target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
           <img src="/32-0logocutout.png" alt="32-0" style={{ height: '32px', width: 'auto', background: 'white', borderRadius: '5px', padding: '2px 6px', display: 'block' }} />
         </a>
-      </div>
+      </div>}
     </div>
   )
 }

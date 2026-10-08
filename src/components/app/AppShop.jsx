@@ -186,6 +186,7 @@ export default function AppShop({ onClose, tab: initialTab = 'featured' }) {
           <h1 className="ag-h1">Shop</h1>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <button className="sh-locker-btn" onClick={() => nav('locker')}>LOCKER</button>
           <CoinPill onClick={() => setTab('featured')} />
           <button className="ag-round-btn" onClick={onClose} aria-label="Close"><IconClose size={16} /></button>
         </div>

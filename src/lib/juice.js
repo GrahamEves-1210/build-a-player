@@ -21,10 +21,38 @@ const audio = () => {
   if (!ctx) {
     try { ctx = new (window.AudioContext || window.webkitAudioContext)() } catch { return null }
     bus = makeBus(ctx)
+    loadSamples(ctx)
   }
   if (ctx.state === 'suspended') ctx.resume().catch(() => {})
   return ctx
 }
+// Recorded sounds (public/sfx, Kenney CC0, converted to WAV): loaded once on
+// the first touch. Every effect below layers these; the synth versions stay as
+// the fallback until they've loaded.
+const SAMPLE_NAMES = ['tap', 'tap2', 'tick', 'back', 'open', 'close', 'swoosh', 'deny', 'pluck', 'pluck2', 'drop', 'confirm', 'toggle',
+  'wood', 'woodl', 'punch', 'punchm', 'thud', 'plank', 'chip', 'chips', 'stack', 'stack2', 'handful', 'slide', 'slide2', 'cardout',
+  'hitS', 'hitS2', 'hitM', 'hitM2', 'hitL', 'hitL2', 'hitXL', 'hitXXL', 'sax', 'saxS', 'pizzi']
+const buffers = new Map()
+let loading = null
+function loadSamples(ac) {
+  if (loading) return loading
+  loading = Promise.all(SAMPLE_NAMES.map(n => fetch(`/sfx/${n}.wav`).then(r => r.arrayBuffer()).then(b => new Promise((res, rej) => ac.decodeAudioData(b, res, rej))).then(buf => buffers.set(n, buf)).catch(() => {})))
+  return loading
+}
+// play a sample inside a scene; false when it isn't loaded (callers fall back)
+function smp(S, name, { at = 0, gain = 1, rate = 1, jitter = 0, out = S.out } = {}) {
+  const buf = S.ac === ctx ? buffers.get(name) : null
+  if (!buf) return false
+  const src = S.ac.createBufferSource(), g = S.ac.createGain()
+  src.buffer = buf
+  src.playbackRate.value = rate * (1 + (Math.random() * 2 - 1) * jitter)
+  g.gain.value = gain
+  src.connect(g).connect(out)
+  src.start(S.t + at)
+  return true
+}
+const ready = n => buffers.has(n) && !!ctx
+
 function makeBus(ac) {
   const comp = ac.createDynamicsCompressor()
   comp.threshold.value = -16; comp.knee.value = 12; comp.ratio.value = 5; comp.attack.value = 0.003; comp.release.value = 0.2
@@ -145,7 +173,7 @@ function whistle(S, { at = 0, dur = 0.42, gain = 0.2, out = S.out } = {}) {
   noise(S, { bp: 3300, q: 2, dur, gain: gain * 0.25, at, out, env: { a: 0.01, h: dur * 0.6, d: dur * 0.4, sus: 0.5, r: 0.06 } })
 }
 
-const SFX = {
+const SYNTH = {
   // soft "thock"
   tap: S => { osc(S, { f: 210, to: 110, dur: 0.06, gain: 0.1 }); noise(S, { hp: 3200, dur: 0.012, gain: 0.05 }) },
   // reel ratchet
@@ -321,6 +349,8 @@ const SFX = {
     o.start(t); lfo.start(t); o.stop(t + 1.5); lfo.stop(t + 1.5)
     crowd(S, { dur: 1.8, gain: 0.16, at: 0.85, out: v })
   },
+  'snd-sax': S => { const v = verb(S, 0.4); for (const [f, at] of [[392, 0], [440, 0.12], [523.3, 0.24]]) brass(S, { f, dur: 0.18, gain: 0.12, at, out: v }); brass(S, { f: 659.3, dur: 0.7, gain: 0.14, at: 0.36, hold: 0.25, out: v }) },
+  'snd-pizzi': S => { [523.3, 659.3, 784, 1046.5].forEach((f, i) => osc(S, { type: 'triangle', f, dur: 0.12, gain: 0.1, at: i * 0.11, env: { a: 0.002, d: 0.12 } })) },
   'snd-pro-anthem': S => {
     const v = verb(S, 0.5)
     for (let i = 0; i < 10; i++) osc(S, { f: 98, to: 70, dur: 0.12, gain: 0.12 + i * 0.012, at: i * 0.05, out: v })
@@ -331,17 +361,74 @@ const SFX = {
     crowd(S, { dur: 2.6, gain: 0.24, at: 0.9 })
   },
 }
+// The sampled layer: each entry plays recorded sounds and returns true, or
+// returns false (samples still loading) so the synth version plays instead.
+const pick = (...names) => names[Math.floor(Math.random() * names.length)]
+const SAMPLED = {
+  tap: S => smp(S, pick('tap', 'tap2'), { gain: 0.55, jitter: 0.04 }),
+  tick: S => smp(S, 'tick', { gain: 0.42, jitter: 0.07 }),
+  back: S => smp(S, 'back', { gain: 0.6, jitter: 0.03 }),
+  close: S => smp(S, 'close', { gain: 0.5 }),
+  lock: S => smp(S, 'wood', { gain: 0.95, jitter: 0.03 }) && smp(S, 'stack2', { gain: 0.6, at: 0.012, jitter: 0.04 }),
+  pop: S => smp(S, 'open', { gain: 0.55 }),
+  swap: S => smp(S, 'swoosh', { gain: 0.7 }) && smp(S, 'woodl', { gain: 0.6, at: 0.14 }),
+  flip: S => smp(S, pick('slide', 'slide2'), { gain: 0.8, jitter: 0.04 }),
+  slot: S => smp(S, 'chip', { gain: 0.95, jitter: 0.05 }) && smp(S, 'drop', { gain: 0.35, jitter: 0.04 }),
+  deny: S => smp(S, 'deny', { gain: 0.7 }),
+  send: S => smp(S, 'pluck', { gain: 0.6, jitter: 0.05 }),
+  coin: S => smp(S, 'chips', { gain: 0.9, jitter: 0.05 }) && smp(S, 'stack2', { gain: 0.55, at: 0.07, jitter: 0.05 }),
+  purchase: S => smp(S, 'handful', { gain: 0.9 }) && smp(S, 'stack', { gain: 0.8, at: 0.14 }) && smp(S, 'hitS', { gain: 0.75, at: 0.06 }),
+  equip: S => smp(S, 'toggle', { gain: 0.8 }) && smp(S, 'slide2', { gain: 0.55, at: 0.03 }),
+  claim: S => smp(S, 'stack', { gain: 0.9 }) && smp(S, 'confirm', { gain: 0.45, at: 0.04 }),
+  chime: S => smp(S, 'pluck2', { gain: 0.6 }) && smp(S, 'confirm', { gain: 0.4, at: 0.05 }),
+  gradepop: (S, val = 5) => smp(S, 'stack2', { gain: 0.5, rate: 0.85 + val * 0.03 }),
+  stamp: S => smp(S, 'punchm', { gain: 1 }) && smp(S, 'plank', { gain: 0.6, at: 0.01 }),
+  card: (S, rank = 0) => {
+    if (!smp(S, 'cardout', { gain: 0.8, jitter: 0.03 })) return false
+    if (rank >= 1) smp(S, 'stack2', { gain: 0.5, at: 0.12 })
+    if (rank === 2) smp(S, 'hitS2', { gain: 0.6, at: 0.1 })
+    if (rank >= 3) { smp(S, 'hitM', { gain: 0.85, at: 0.1 }); crowd(S, { dur: 1.3, gain: 0.08, at: 0.2 }) }
+    return true
+  },
+  achievement: S => smp(S, 'hitM', { gain: 0.85 }) && smp(S, 'stack', { gain: 0.6, at: 0.1 }) && (crowd(S, { dur: 1.2, gain: 0.07, at: 0.15 }), true),
+  levelup: S => smp(S, 'hitXL', { gain: 0.9 }) && smp(S, 'handful', { gain: 0.6, at: 0.25 }) && (crowd(S, { dur: 1.6, gain: 0.11, at: 0.1 }), true),
+  award: S => smp(S, 'hitL', { gain: 0.95 }) && (crowd(S, { dur: 1.8, gain: 0.15, at: 0.08 }), true),
+  champion: S => { if (!smp(S, 'hitXXL', { gain: 1 })) return false; const v = verb(S, 0.4); horn(S, { f: 233, dur: 0.6, gain: 0.12, at: 0.9, out: v }); crowd(S, { dur: 2.8, gain: 0.24, at: 0.04 }); return true },
+  // the last trait in: the riser, then a real impact and a stinger sized to the tier
+  complete: (S, tier = 2) => {
+    if (!ready('punch')) return false
+    noise(S, { bp: 260, to: 4200, q: 1.1, dur: 0.95, gain: 0.1, env: { a: 0.85, d: 0.1 } })
+    osc(S, { f: 46, to: 74, dur: 0.95, gain: 0.13, env: { a: 0.8, d: 0.15 } })
+    smp(S, 'punch', { gain: 1, at: 1.0 })
+    smp(S, ['hitS', 'hitS2', 'hitM', 'hitL', 'hitXXL'][Math.max(0, Math.min(4, tier))], { gain: 0.9, at: 1.0 })
+    if (tier >= 2) crowd(S, { dur: 1.4 + tier * 0.3, gain: 0.07 + tier * 0.04, at: 1.0 })
+    return true
+  },
+  // victory sounds that lead with recorded music
+  'snd-horn': S => { if (!smp(S, 'hitL2', { gain: 0.8 })) return false; const v = verb(S, 0.4); horn(S, { f: 233, dur: 0.8, gain: 0.17, at: 0.15, out: v }); horn(S, { f: 233, dur: 0.48, gain: 0.14, at: 1.08, out: v }); crowd(S, { dur: 2.4, gain: 0.22, at: 0.04 }); return true },
+  'snd-roar': S => smp(S, 'thud', { gain: 1 }) && (crowd(S, { dur: 3.2, gain: 0.34 }), crowd(S, { dur: 2.2, gain: 0.18, at: 0.4 }), true),
+  'snd-fanfare': S => smp(S, 'hitXXL', { gain: 1 }) && (crowd(S, { dur: 2, gain: 0.14, at: 0.2 }), true),
+  'snd-riser': S => { if (!ready('hitXL')) return false; noise(S, { bp: 300, to: 6000, q: 1.2, dur: 1.15, gain: 0.12, env: { a: 1.0, d: 0.15 } }); smp(S, 'punch', { gain: 1, at: 1.15 }); smp(S, 'hitXL', { gain: 0.9, at: 1.15 }); crowd(S, { dur: 1.8, gain: 0.16, at: 1.15 }); return true },
+  'snd-cannon': S => smp(S, 'thud', { gain: 1 }) && smp(S, 'punch', { gain: 0.9, rate: 0.7 }) && (osc(S, { f: 90, to: 28, dur: 0.9, gain: 0.35 }), crowd(S, { dur: 2.6, gain: 0.24, at: 0.15 }), true),
+  'snd-pro-anthem': S => { if (!smp(S, 'hitXXL', { gain: 1, at: 0.45 })) return false; for (let i = 0; i < 9; i++) smp(S, 'punchm', { gain: 0.25 + i * 0.06, at: i * 0.05, rate: 0.8 }); crowd(S, { dur: 2.6, gain: 0.24, at: 0.5 }); return true },
+  'snd-sax': S => smp(S, 'sax', { gain: 0.95 }) && (crowd(S, { dur: 2.2, gain: 0.12, at: 0.3 }), true),
+  'snd-pizzi': S => smp(S, 'pizzi', { gain: 0.95 }) && (crowd(S, { dur: 1.8, gain: 0.1, at: 0.4 }), true),
+}
+SYNTH.back = SYNTH.tap
+SYNTH.close = SYNTH.tap
 export const sfx = (name, arg) => {
   if (isMuted()) return
-  const ac = audio(); if (!ac || !SFX[name]) return
-  try { SFX[name](scene(ac, bus, ac.currentTime), arg) } catch {}
+  const ac = audio(); if (!ac || !(SYNTH[name] || SAMPLED[name])) return
+  const S = scene(ac, bus, ac.currentTime)
+  try { if (SAMPLED[name]?.(S, arg)) return } catch {}
+  try { SYNTH[name]?.(S, arg) } catch {}
 }
 
 // Renders one effect offline and reports its level — for checking the mix
 // (window.__bapJuice.renderSfx('champion') in the app's web inspector).
 export async function renderSfx(name, arg, seconds = 3.5) {
   const ac = new OfflineAudioContext(1, Math.ceil(44100 * seconds), 44100)
-  SFX[name](scene(ac, makeBus(ac), 0.02), arg)
+  ;(SYNTH[name] ?? (() => {}))(scene(ac, makeBus(ac), 0.02), arg)
   const buf = await ac.startRendering()
   const d = buf.getChannelData(0)
   let peak = 0, sum = 0, last = 0
@@ -541,7 +628,7 @@ export function victory({ big = false } = {}) {
   const v = myVictory()
   ;(FX[v.fx] ?? FX['fx-confetti'])()
   if (big && v.fx !== 'fx-confetti') setTimeout(() => confetti(90), 600)
-  sfx(SFX[v.sound] ? v.sound : 'snd-horn')
+  sfx(SYNTH[v.sound] || SAMPLED[v.sound] ? v.sound : 'snd-horn')
   haptic('success')
 }
 
@@ -571,9 +658,10 @@ export function initJuice() {
   document.addEventListener('pointerdown', e => {
     const el = e.target.closest?.(TAP)
     if (!el || el.disabled) return
-    audio()                                   // unlock audio on the first gesture (iOS)
+    audio()                                   // unlock audio on the first gesture (iOS); loads the samples
     if (el.matches('.spin-btn, .spin-respin-half')) { sfx('tap'); haptic('medium'); startTicks(); return }
     if (el.matches('.attr-chip')) { sfx('slot'); haptic('medium'); return }
+    if (el.matches('.ag-round-btn, .cr-close, .prf-top-back, .dc-back-btn')) { sfx('back'); haptic('light'); return }
     if (el.matches('.ag-edge')) { sfx('flip'); haptic('light'); return }
     // "Simulate Season" — the referee starts the game
     if (el.matches('.simp-cta') && /simulate season/i.test(el.textContent)) { sfx('whistle'); haptic('medium'); return }
@@ -601,7 +689,7 @@ export function initJuice() {
         if (you && !seen.has(you)) { seen.add(you); setTimeout(() => celebrate(false), 150) }
         const champ = n.matches?.('.plf-champ-label') ? n : n.querySelector?.('.plf-champ-label')
         if (champ && !seen.has(champ)) { seen.add(champ); setTimeout(() => celebrate(true), 250) }
-        if (n.matches?.('.ag-menu-overlay, .auth-overlay, .tpm-overlay, .ag-screen')) sfx('pop')
+        if (n.matches?.('.ag-menu-overlay, .auth-overlay, .tpm-overlay, .ag-screen, .sh-sheet-overlay, .bt-sheet-overlay, .cr-overlay')) sfx('pop')
       }
     }
   }).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'], attributeOldValue: true })

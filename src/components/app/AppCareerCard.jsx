@@ -1,6 +1,6 @@
 import { useProgress, SPOTLIGHTS, isUnlocked, setSpotlight, careerRings, careerSeasons, TITLE_LEVELS } from '../../lib/progress'
 import { getUsername } from '../../lib/discord'
-import { IconLock, IconFlame, IconCards, IconRing, IconStar, IconBag, IconMedal } from './icons'
+import { IconLock, IconFlame, IconCards, IconRing, IconStar, IconBag, IconMedal, IconCrown } from './icons'
 import { NameTag, AvatarBadge } from './NameTag'
 import { CoinPill } from './AppShop'
 
@@ -26,7 +26,8 @@ export default function AppCareerCard({ user }) {
       </div>
       <div className="ag-career-actions">
         <button className="ag-career-act ag-career-act--shop" onClick={() => nav('shop')}><IconBag size={18} /> SHOP</button>
-        <button className="ag-career-act" onClick={() => nav('achievements')}><IconMedal size={18} /> ACHIEVEMENTS{p.claimable ? <span className="ag-tab-badge">{p.claimable}</span> : null}</button>
+        <button className="ag-career-act" onClick={() => nav('locker')}><IconCrown size={18} /> LOCKER</button>
+        <button className="ag-career-act ag-career-act--wide" onClick={() => nav('achievements')}><IconMedal size={18} /> ACHIEVEMENTS{p.claimable ? <span className="ag-tab-badge">{p.claimable}</span> : null}</button>
       </div>
       <div className="ag-career-xp">
         <span className="ag-xpbar ag-xpbar--big"><span style={{ width: `${Math.max(2, p.lvl.pct * 100)}%` }} /></span>

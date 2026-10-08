@@ -159,6 +159,8 @@ const WS = [
   it('winSound', 'snd-organ',     'Organ Charge',  1, 650),
   it('winSound', 'snd-riser',     'Synth Riser',   2, 1000),
   it('winSound', 'snd-cannon',    'Cannon Blast',  2, 1100),
+  it('winSound', 'snd-pizzi',     'String Section', 1, 550),
+  it('winSound', 'snd-sax',       'Sax Solo',      2, 900),
   it('winSound', 'snd-train',     'Train Horn',    2, 1200),
   it('winSound', 'snd-bassdrop',  'Bass Drop',     3, 2200),
   it('winSound', 'snd-pro-anthem','Pro Anthem',    3, 1800, { pro: true }),

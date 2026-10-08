@@ -10,6 +10,7 @@ const AppDaily = lazy(() => import('./app/AppDaily'))
 const AppCards = lazy(() => import('./app/AppCards'))
 const AppShop = lazy(() => import('./app/AppShop'))
 const AppAchievements = lazy(() => import('./app/AppAchievements'))
+const AppLocker = lazy(() => import('./app/AppLocker'))
 
 // iOS/Android app only: floating game dock (Home · Daily · PLAY · Cards ·
 // Profile) that replaces the website's menu, plus the app-only screens and
@@ -48,6 +49,7 @@ function useDailyBadge() {
 export default function AppTabBar() {
   const [state, setState]       = useState(() => window.__bapPage ?? { page: 'splash', sport: 'nfl' })
   const [menuOpen, setMenuOpen] = useState(false)
+  const [shopTab, setShopTab]   = useState('featured')
   const [authOpen, setAuthOpen] = useState(false)
   const [screen, setScreen]     = useState(null)   // 'daily' | 'cards' | 'shop' | 'achievements' | null
   const badge = useDailyBadge()
@@ -58,7 +60,8 @@ export default function AppTabBar() {
     const onAuth = () => { setMenuOpen(false); setAuthOpen(true) }
     const onMenu = () => setMenuOpen(true)
     const onNav = e => {
-      if (['daily', 'cards', 'shop', 'achievements'].includes(e.detail)) { setMenuOpen(false); setScreen(e.detail) }
+      const [to, arg] = String(e.detail).split(':')
+      if (['daily', 'cards', 'shop', 'achievements', 'locker'].includes(to)) { setMenuOpen(false); if (to === 'shop') setShopTab(arg || 'featured'); setScreen(to) }
       else setScreen(null)
     }
     window.addEventListener('bap:page', onPage)
@@ -87,7 +90,8 @@ export default function AppTabBar() {
       {screen && (
         <Suspense fallback={<div className="ag-screen" />}>
           {screen === 'daily' ? <AppDaily sport={state.sport} onClose={() => setScreen(null)} />
-            : screen === 'shop' ? <AppShop onClose={() => setScreen(null)} />
+            : screen === 'shop' ? <AppShop key={shopTab} tab={shopTab} onClose={() => setScreen(null)} />
+            : screen === 'locker' ? <AppLocker onClose={() => setScreen(null)} />
             : screen === 'achievements' ? <AppAchievements onClose={() => setScreen(null)} />
             : <AppCards sport={state.sport} onClose={() => setScreen(null)} />}
         </Suspense>
@@ -102,7 +106,7 @@ export default function AppTabBar() {
             <span className="ag-play-label">PLAY</span>
           </button>
           <Tab label="CARDS" Icon={IconCards} active={active === 'cards'} onClick={open('cards')} />
-          <Tab label="PROFILE" Icon={IconProfile} active={active === 'profile' || active === 'shop' || active === 'achievements'} onClick={go('profile')} badge={claimable} />
+          <Tab label="PROFILE" Icon={IconProfile} active={active === 'profile' || active === 'shop' || active === 'achievements' || active === 'locker'} onClick={go('profile')} badge={claimable} />
         </nav>
       )}
       {menuOpen && <AppMenu sport={state.sport} onClose={() => setMenuOpen(false)} />}
