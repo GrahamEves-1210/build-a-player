@@ -9,9 +9,9 @@ import { CoinPill } from './AppShop'
 
 // Home screen — a game main menu. The app and the website (APP_LOOK) both use
 // it in place of the old splash; same callbacks, so nothing else changes.
-// Modes only show when their callback is passed (Takeover and Blacktop are
-// app-only for now; Head-to-Head is website-only for football). `footer` is
-// the website's features + links, under the menu. Styling: src/app-game.css.
+// Modes only show when their callback is passed (football Head-to-Head is
+// website-only). `footer` is the website's features + links, under the menu.
+// Styling: src/app-game.css.
 
 const NFL_FIGURE = {
   qb: { src: '/qb-silhouette.webp', scale: 1 },

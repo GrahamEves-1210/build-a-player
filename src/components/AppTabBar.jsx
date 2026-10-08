@@ -27,8 +27,8 @@ const TAB_FOR_PAGE = { splash: 'home', profile: 'profile', leaderboard: null, 'p
 // Full-screen pages that hide the dock (a head-to-head match in progress)
 const HIDE_ON = new Set(['versus-game', 'versus-result', 'shared'])
 // Website: the game screens keep the site's navbar, so the dock is only on the
-// app-look pages
-const WEB_DOCK_ON = new Set(['splash', 'profile'])
+// app-look pages (home, profile, the Takeover road, the Blacktop lobby + game)
+const WEB_DOCK_ON = new Set(['splash', 'profile', 'takeover', 'blacktop', 'blacktop-game'])
 
 const nav = to => window.dispatchEvent(new CustomEvent('bap:nav', { detail: to }))
 

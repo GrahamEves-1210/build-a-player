@@ -750,7 +750,7 @@ export default function BucketApp() {
   const btPage = page === 'blacktop' || page === 'blacktop-build' || page === 'blacktop-game'
   // The hook stays on across every page: Home never drops you out of a run.
   const bt = useBlacktop({
-    enabled: IS_APP, user, position, pools: LIVE_POOLS, types: LIVE_TYPES,
+    enabled: IS_APP || APP_LOOK, user, position, pools: LIVE_POOLS, types: LIVE_TYPES,
     build, player: savedSpinResult, onExit: () => { setPage('splash'); setBtChatOpen(false) },
     // the spot you took in the lobby decides what you build
     onSeatPos: pos => { setPosition(pos); try { localStorage.setItem('bucketPosition', pos) } catch {} },
@@ -783,7 +783,7 @@ export default function BucketApp() {
   const openBtChat = () => { setBtChatOpen(true); setBtSeen(bt.chat.length) }
 
   // ── TAKEOVER (app): a saved run per account, or a fresh build first ──
-  useEffect(() => { if (IS_APP) setTakeoverRun(loadRun('bucket', user?.id)) }, [user?.id])
+  useEffect(() => { if (IS_APP || APP_LOOK) setTakeoverRun(loadRun('bucket', user?.id)) }, [user?.id])
   const startTakeoverBuild = useCallback(() => { handleStart('classic', position); setPage('takeover-build') }, [handleStart, position])
   const openTakeover = useCallback(() => {
     const run = loadRun('bucket', user?.id)
@@ -834,7 +834,7 @@ export default function BucketApp() {
     const result = runBucketSimulation(fullBuild, activeTypes, randomTeam, capPosition ?? position, dateSeed)
     setSimResult(result)
     // App: a fresh Salary Cap play earns season XP (kept on the device — it isn't a saved season)
-    if (IS_APP && !skipToEnd) {
+    if ((IS_APP || APP_LOOK) && !skipToEnd) {
       window.dispatchEvent(new CustomEvent('bap:season', { detail: {
         sport: 'bucket', pos: capPosition ?? position, mode: 'salarycap', localOnly: true,
         wins: result.wins, losses: result.losses, playoffs: !!result.madePlayoffs,
@@ -1684,9 +1684,9 @@ export default function BucketApp() {
               user={user}
               onStart={handleStart}
               onVersus={onVersus}
-              onBlacktop={IS_APP ? () => setPage(btPageFor(bt.phase)) : null}
+              onBlacktop={() => setPage(btPageFor(bt.phase))}
               blacktop={{ phase: bt.phase, queue: bt.seated }}
-              onTakeover={IS_APP ? openTakeover : null}
+              onTakeover={openTakeover}
               takeoverRun={takeoverRun}
               footer={IS_APP ? null : <><SiteFeatures sport="bucket" /><SiteFooter sport="bucket" /></>}
               renderBucketFigure={(pos, ready) => (
@@ -1732,7 +1732,7 @@ export default function BucketApp() {
       <>
         <Suspense fallback={null}>
           <VersusLobby
-            on3v3={IS_APP ? () => setPage('blacktop') : null}
+            on3v3={(IS_APP || APP_LOOK) ? () => setPage('blacktop') : null}
             onJoin={handleVersusJoin}
             position={position}
             gameMode="classic"

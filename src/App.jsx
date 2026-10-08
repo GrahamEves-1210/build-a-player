@@ -123,7 +123,7 @@ function enableAdFreeMode() {
 try { if (IS_APP || localStorage.getItem('bap_subscribed') === '1' || localStorage.getItem('bap_ads_off') === '1') enableAdFreeMode() } catch {}
 
 export default function App() {
-  const [page, setPage]               = useState(_sharedData ? 'shared' : _isPrivacy ? 'privacy' : _isTerms ? 'terms' : _isProfile ? 'profile' : _isAbout ? 'about' : _isDepthChart ? 'depth-chart' : _isWiki ? 'wiki' : (_saved?.gameMode && !_goHome ? 'game' : 'splash'))
+  const [page, setPage]               = useState(_sharedData ? 'shared' : _isPrivacy ? 'privacy' : _isTerms ? 'terms' : _isProfile ? 'profile' : _isAbout ? 'about' : _isDepthChart ? 'depth-chart' : _isWiki ? 'wiki' : (_saved?.gameMode && !_goHome ? (_saved.tk === 'build' ? 'takeover-build' : _saved.tk === 'road' ? 'splash' : 'game') : 'splash'))
   const [sharedBuild]                 = useState(_sharedData?.build ?? null)
   const [sharedTypes]                 = useState(_sharedData?.types ?? null)
   const [gameMode, setGameMode]         = useState(_saved?.gameMode ?? null)
@@ -355,10 +355,16 @@ export default function App() {
     })
   }, [page, simResult])
 
+  // Whether the build belongs to a Takeover run: a reload goes back to the
+  // Takeover build, or to Home once the road has started (its card resumes it)
+  const tkRef = useRef(_saved?.tk ?? null)
+  if (page === 'takeover-build') tkRef.current = 'build'
+  else if (page === 'takeover') tkRef.current = 'road'
+  else if (page === 'game') tkRef.current = null
   useEffect(() => {
     if (!gameMode) return
-    try { localStorage.setItem('bap_progress', JSON.stringify({ gameMode, position, build, daily: dailyRun })) } catch {}
-  }, [build, gameMode, position, dailyRun])
+    try { localStorage.setItem('bap_progress', JSON.stringify({ gameMode, position, build, daily: dailyRun, tk: tkRef.current })) } catch {}
+  }, [build, gameMode, position, dailyRun, page])
 
   useEffect(() => {
     try {
@@ -596,7 +602,7 @@ export default function App() {
   useEffect(() => { if (IS_APP && buildComplete && (page === 'game' || page === 'takeover-build')) flip('build') }, [buildComplete]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── TAKEOVER (app): a saved run per account, or a fresh build first ──
-  useEffect(() => { if (IS_APP) setTakeoverRun(loadRun('nfl', user?.id)) }, [user?.id])
+  useEffect(() => { if (IS_APP || APP_LOOK) setTakeoverRun(loadRun('nfl', user?.id)) }, [user?.id])
   const startTakeoverBuild = useCallback(() => {
     let p = 'qb'; try { p = localStorage.getItem('lastPosition') || 'qb' } catch {}
     if (!['qb', 'rb', 'wr', 'te', 'db'].includes(p)) p = 'qb'
@@ -1362,6 +1368,7 @@ export default function App() {
         <AppHome sport="nfl" user={user} onStart={handleStart} onDepthChart={() => setPage('depth-chart')} onTakeover={openTakeover} takeoverRun={takeoverRun} />
       ) : APP_LOOK ? (
         <AppHome sport="nfl" user={user} onStart={handleStart} onDepthChart={() => setPage('depth-chart')} onVersus={startVersus}
+          onTakeover={openTakeover} takeoverRun={takeoverRun}
           footer={<><SiteFeatures sport="nfl" /><SiteFooter sport="nfl" onDepthChart={() => setPage('depth-chart')} onWiki={openWiki} /></>} />
       ) : (
       <SplashScreen

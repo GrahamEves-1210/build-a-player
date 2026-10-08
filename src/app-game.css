@@ -2820,6 +2820,9 @@ html.is-app .ag-sandbox { grid-column: 1 / -1; justify-self: stretch; }
   html.app-look .ag-stage-tag { transform: scale(1.35); transform-origin: 0 100%; }
   html.app-look .ag-home-site { max-width: 1200px; margin: 28px auto 0; }
 
+  /* Blacktop / Takeover court: fit the screen height instead of the width */
+  html.app-look .btc-wrap { max-width: min(100%, calc((100dvh - 300px) * 1.08)); margin: 0 auto; }
+
   /* Profile: the site navbar isn't there, so use the full height */
   html.app-look.ag-page .prf-page { height: 100dvh; padding-bottom: calc(var(--app-bottom) + 24px); }
 }
