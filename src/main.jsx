@@ -44,6 +44,8 @@ if (IS_APP) import('./lib/juice').then(m => m.initJuice()).catch(() => {})
 if (IS_APP) import('./lib/progress').then(m => m.initProgress()).catch(() => {})
 // App: Discord sign-in comes back through the app's own link
 if (IS_APP) import('./lib/appAuth').then(m => m.initAppAuth()).catch(() => {})
+// Ad rail preview (More → Ad rail preview, or ?rail on the website)
+import('./lib/fakeRail').then(m => m.initRailPreview()).catch(() => {})
 
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.getRegistrations().then(regs => {
