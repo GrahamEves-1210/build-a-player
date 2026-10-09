@@ -38,6 +38,9 @@ if ('serviceWorker' in navigator) {
 
 const isBucket = window.location.pathname.startsWith('/bucket')
 
+// the boot guard in index.html: the app's code is running
+window.__bapStarted = true
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <ErrorBoundary>
