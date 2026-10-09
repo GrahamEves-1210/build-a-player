@@ -45,6 +45,22 @@ export const ACHIEVEMENTS = [
   A('tk25',      'Live', 'Frequent Flyer',         'Take 25 Takeover cities',                'versus',   'tkCities',25,   300,  250),
   A('dc10',      'Live', 'Depth Chart Pro',        'Hit a 10 streak in The Depth Chart',     'clipboard','dcBest',  10,   150,  120),
   A('dc25',      'Live', 'Depth Chart Savant',     'Hit a 25 streak in The Depth Chart',     'clipboard','dcBest',  25,   400,  300),
+  // Online (Compete pools, Blacktop, 1v1 — see progress.js rateOnline)
+  A('cp1',       'Online', 'Pool Party',           'Play a Compete pool',                    'podium',   'cpPlayed', 1,   80,   80),
+  A('cp25',      'Online', 'Regular',              'Play 25 Compete pools',                  'podium',   'cpPlayed', 25,  300,  250),
+  A('cpwin1',    'Online', 'Pool Shark',           'Win a Compete pool',                     'trophy',   'cpWins',   1,   150,  150),
+  A('cpwin10',   'Online', 'Top of the Pool',      'Win 10 Compete pools',                   'trophy',   'cpWins',   10,  600,  500, 'nc-compete'),
+  A('cppod10',   'Online', 'Podium Regular',       'Finish top 3 in 10 Compete pools',       'medal',    'cpPodiums',10,  300,  250),
+  A('cpstreak3', 'Online', 'Hot Hand',             'Win 3 Compete pools in a row',           'flame',    'cpStreak', 3,   400,  350),
+  A('cpbeat100', 'Online', 'Field Beater',         'Finish ahead of 100 Compete opponents',  'versus',   'cpBeaten', 100, 400,  300),
+  A('h2h1',      'Online', 'First Blood',          'Win a 1v1 Head-to-Head',                 'versus',   'h2hWins',  1,   100,  100),
+  A('h2h25',     'Online', 'Duelist',              'Win 25 1v1 Head-to-Heads',               'versus',   'h2hWins',  25,  600,  500),
+  A('h2hstreak5','Online', 'Untouchable',          'Win 5 1v1s in a row',                    'flame',    'h2hStreak',5,   400,  350),
+  A('btstreak5', 'Online', 'Court Royalty',        'Win 5 Blacktop games in a row',          'hoop',     'btStreak', 5,   400,  350),
+  A('btpts100',  'Online', 'Bucket Getter',        'Score 100 career Blacktop points',       'hoop',     'btPts',    100, 250,  200),
+  A('online10',  'Online', 'Regular on the Net',   'Play 10 online games',                   'podium',   'onlinePlayed', 10, 200, 150),
+  A('allstar',   'Online', 'All-Star',             'Reach a 1,300 online rating',            'star',     'onlineBest', 1300, 500, 400, 'pl-allstar'),
+  A('legendtier','Online', 'Legend',               'Reach a 1,750 online rating',            'crown',    'onlineBest', 1750, 1500, 1200, 'nfx-legend'),
   // Shop and level
   A('buy1',      'Locker', 'First Purchase',       'Buy your first item in the shop',        'coin',     'purchases', 1,  50,   50),
   A('own10',     'Locker', 'Closet Full',          'Own 10 shop items',                      'coin',     'owned',   10,   200,  200),
@@ -55,5 +71,5 @@ export const ACHIEVEMENTS = [
   A('lvl25',     'Locker', 'All-Pro Career',       'Reach level 25',                         'medal',    'level',   25,   500,  500),
   A('lvl50',     'Locker', 'Hall of Fame Career',  'Reach level 50',                         'trophy',   'level',   50,   1500, 1500),
 ]
-export const ACH_GROUPS = ['Seasons', 'Titles', 'Builds', 'Cards', 'Daily', 'Live', 'Locker']
+export const ACH_GROUPS = ['Seasons', 'Titles', 'Builds', 'Cards', 'Daily', 'Live', 'Online', 'Locker']
 export const achById = id => ACHIEVEMENTS.find(a => a.id === id) ?? null

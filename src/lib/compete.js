@@ -175,7 +175,8 @@ export function useCompete({ enabled, user, sport, pos, botFor }) {
     booked.current = match.code
     const ranked = rankResults(match, results)
     const mine = ranked.find(p => p.vid === me.vid)
-    window.dispatchEvent(new CustomEvent('bap:compete', { detail: { sport: match.sport, pos: match.pos, place: mine.place, of: ranked.length, ovr: results[me.vid].ovr } }))
+    const humans = match.players.filter(p => !p.bot).length
+    window.dispatchEvent(new CustomEvent('bap:compete', { detail: { sport: match.sport, pos: match.pos, place: mine.place, of: ranked.length, ovr: results[me.vid].ovr, humans } }))
   }, [phase, match, results, me.vid])
 
   const ranked = useMemo(() => rankResults(match, results), [match, results])

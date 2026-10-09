@@ -9,6 +9,8 @@ import QBAvatar from './QBAvatar'
 import { BucketModelFigure } from './BucketSimPage'
 import { getUsername } from '../lib/discord'
 import { rampPage, RAIL_UNITS } from '../lib/ads'
+import { IS_APP, APP_LOOK } from '../lib/platform'
+import { RatingLine } from './app/OnlineRecord'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function clamp(v, lo, hi) { return Math.min(hi, Math.max(lo, v)) }
@@ -1176,6 +1178,7 @@ export default function BucketVersusResult({ myData, oppData, position, oppPosit
         <span className={`vr-header-label vr-header-label--result ${isWin ? 'vr-win' : 'vr-loss'}`}>
           {isWin ? 'YOU WIN' : 'YOU LOSE'}
         </span>
+        {(IS_APP || APP_LOOK) && <RatingLine mode="h2h" />}
         <div className="bvr-result-flavor">1v1 · First to 11</div>
       </div>
 

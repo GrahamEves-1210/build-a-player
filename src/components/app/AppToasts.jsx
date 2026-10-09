@@ -2,12 +2,12 @@ import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { takeToasts, useProgress, markLevelSeen, levelUnlocks, RARITIES } from '../../lib/progress'
 import { sfx, haptic, confetti } from '../../lib/juice'
-import { IconFlame, IconCards, IconTarget, IconStar, IconCoin, IconMedal } from './icons'
+import { IconFlame, IconCards, IconTarget, IconStar, IconCoin, IconMedal, IconPodium } from './icons'
 
 // Top-of-screen toasts (login streak, mission complete, new card) and the
 // full-screen level-up moment. Fed by lib/progress.js events.
 
-const ICONS = { streak: IconFlame, mission: IconTarget, card: IconCards, xp: IconStar, coins: IconCoin, ach: IconMedal }
+const ICONS = { streak: IconFlame, mission: IconTarget, card: IconCards, xp: IconStar, coins: IconCoin, ach: IconMedal, online: IconPodium }
 let nextId = 1
 
 export default function AppToasts() {

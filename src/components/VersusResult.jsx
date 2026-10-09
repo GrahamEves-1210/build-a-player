@@ -3,6 +3,8 @@ import Silhouette from './Silhouette'
 import { calcOVR, runSimulation, calcOVRRB, runRBSimulation } from '../utils/simulation'
 import { TYPES } from '../data/qbs'
 import { RB_TYPES } from '../data/rbs'
+import { IS_APP, APP_LOOK } from '../lib/platform'
+import { RatingLine } from './app/OnlineRecord'
 
 // Only the host actually runs runSimulation() (which uses Math.random()
 // internally) and broadcasts the full result over `channel`. The guest never
@@ -102,6 +104,7 @@ export default function VersusResult({ myData, oppData, position, gameMode, role
             {winner === 'me' ? 'YOU WIN' : 'YOU LOSE'}
           </span>
         )}
+        {phase === 'result' && (IS_APP || APP_LOOK) && <RatingLine mode="h2h" />}
       </div>
 
       {/* ── split grid ── */}

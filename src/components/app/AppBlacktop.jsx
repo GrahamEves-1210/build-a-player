@@ -10,6 +10,7 @@ import { VERSUS_BIG_TYPES } from '../../data/nba-bigs'
 import BlacktopCourt from './BlacktopCourt'
 import { IconClose, IconArrow, IconChat, IconStar, IconSend, IconBasketball } from './icons'
 import { NameTag } from './NameTag'
+import OnlineRecord, { RatingLine } from './OnlineRecord'
 
 // BLACKTOP screens. The match itself lives in lib/blacktop.js (useBlacktop);
 // these only draw it: the lobby (pick a spot on a squad), the slim HUD over the
@@ -96,6 +97,8 @@ export function BlacktopQueue({ bt, user, onBack }) {
           <span className="bt-lobby-chat-txt">{bt.chat.length ? <><b>{bt.chat[bt.chat.length - 1].from === bt.me.vid ? 'You' : bt.chat[bt.chat.length - 1].name}:</b> {bt.chat[bt.chat.length - 1].text}</> : 'Lobby chat. Call your spot, find a squad.'}</span>
           {unread > 0 && <span className="ag-tab-badge">{unread}</span>}
         </button>
+
+        <OnlineRecord mode="bt" title="YOUR BLACKTOP" />
 
         <details className="bt-rules ag-pop" style={{ '--d': '200ms' }}>
           <summary className="ag-eyebrow">HOUSE RULES</summary>
@@ -330,6 +333,7 @@ export function BlacktopGame({ bt, user, photoFor, onOpenChat, unread }) {
             <div className="bt-final"><b className="bt-t0">{game.score[0]}</b><span>–</span><b className="bt-t1">{game.score[1]}</b></div>
             <div className="bt-final-teams"><span className="bt-t0">{names[0]}</span><span className="bt-t1">{names[1]}</span></div>
             {mvp && <div className="bt-mvp"><IconStar size={14} /> MVP · {mvp.vid === bt.me.vid ? 'YOU' : mvp.name}</div>}
+            <RatingLine mode="bt" />
           </div>
           {[game.winner, 1 - game.winner].map(t => (
             <div key={t} className={`ag-card bt-box bt-t${t} ag-pop`} style={{ '--d': `${120 + t * 80}ms` }}>

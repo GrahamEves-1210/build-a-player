@@ -873,6 +873,7 @@ export default function App() {
   }
 
   async function recordVsResult(result) {
+    window.dispatchEvent(new CustomEvent('bap:h2h', { detail: { result: result, sport: 'nfl' } }))
     setVsRecord(prev => result === 'win'
       ? { wins: (prev?.wins ?? 0) + 1, losses: prev?.losses ?? 0 }
       : { wins: prev?.wins ?? 0, losses: (prev?.losses ?? 0) + 1 })
@@ -890,6 +891,7 @@ export default function App() {
   }
 
   async function recordVsForfeiture() {
+    window.dispatchEvent(new CustomEvent('bap:h2h', { detail: { result: 'forfeit', sport: 'nfl' } }))
     setVsRecord(prev => ({ wins: prev?.wins ?? 0, losses: (prev?.losses ?? 0) + 1 }))
     if (!supabase || !user) return
     const { build: b, position: pos } = vsResultRef.current
@@ -906,6 +908,7 @@ export default function App() {
 
   // Opponent presumed gone — award the local player a win and bail to the lobby.
   function handleOppGone(ch) {
+    window.dispatchEvent(new CustomEvent('bap:h2h', { detail: { result: 'walkover', sport: 'nfl' } }))
     setVsRecord(prev => ({ wins: (prev?.wins ?? 0) + 1, losses: prev?.losses ?? 0 }))
     if (supabase && user) {
       const { build: b, position: pos } = vsResultRef.current

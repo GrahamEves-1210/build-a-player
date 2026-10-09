@@ -2,6 +2,8 @@ import { useState, useRef, useEffect } from 'react'
 import { supabase, rtSupabase } from '../lib/supabase'
 import Navbar from './Navbar'
 import { getUsername } from '../lib/discord'
+import { IS_APP, APP_LOOK } from '../lib/platform'
+import OnlineRecord from './app/OnlineRecord'
 
 const rt = rtSupabase || supabase
 
@@ -646,6 +648,7 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
             </div>
           </div>
         </div>
+        {(IS_APP || APP_LOOK) && <div className="vlh-online"><OnlineRecord mode="h2h" title="YOUR 1V1" /></div>}
       </div>
 
       {screen === 'menu' && (

@@ -6,6 +6,8 @@ import { IconCrown, IconBolt, IconClipboard, IconCoin, IconVersus, IconLock, Ico
 import { sfx } from '../../lib/juice'
 import { NameTag, AvatarBadge } from './NameTag'
 import { CoinPill } from './AppShop'
+import { TierChip, Form } from './OnlineRecord'
+import { tierFor } from '../../lib/progress'
 
 // Home screen — a game main menu. The app and the website (APP_LOOK) both use
 // it in place of the old splash; same callbacks, so nothing else changes.
@@ -110,6 +112,9 @@ function ModeCard({ tone, title, badge, onClick, mark: Mark, isNew, delay }) {
 export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus, onBlacktop, blacktop, onTakeover, takeoverRun, onCompete, resume = null, user, renderBucketFigure, footer = null }) {
   const prog = useProgress()
   const cs = prog.stats?.compete
+  const ol = prog.stats?.online ?? { rating: 800, played: 0 }
+  const h2h = prog.stats?.h2h ?? {}
+  const btW = prog.stats?.btWins ?? 0, btG = prog.stats?.btGames ?? 0
   const isBucket = sport === 'bucket'
   const storeKey = isBucket ? 'bucketPosition' : 'lastPosition'
   const [position, setPosition] = useState(() => {
@@ -219,11 +224,12 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
             <button className="ag-compete ag-pop" style={{ '--d': '300ms' }} onClick={onCompete}>
               <span className="ag-live-dot" />
               <span className="ag-takeover-txt">
-                <span className="ag-eyebrow">ONLINE · 5-PLAYER POOLS</span>
+                <span className="ag-eyebrow">{ol.played ? <>ONLINE · {tierFor(ol.rating)[1].toUpperCase()} · {ol.rating}</> : 'ONLINE · 5-PLAYER POOLS'}</span>
                 <span className="ag-takeover-title">COMPETE</span>
                 <span className="ag-takeover-sub">{cs?.played
-                  ? `${cs.played} played · ${cs.wins} won · avg place ${(cs.placeSum / cs.played).toFixed(1)}`
+                  ? `${cs.wins} ${cs.wins === 1 ? 'win' : 'wins'} in ${cs.played} · avg place ${(cs.placeSum / cs.played).toFixed(1)}${cs.streak >= 2 ? ` · ${cs.streak} straight` : ''}`
                   : 'Same spins as 4 other players. Highest OVR takes the pool.'}</span>
+                {cs?.played > 0 && <span className="ag-rec"><Form items={cs.recent} mode="compete" /></span>}
               </span>
               <span className="ag-edge-go">QUEUE <IconArrow size={14} /></span>
             </button>
@@ -243,7 +249,8 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
             <div className={`ag-online ag-pop${btLive ? ' is-live' : ''}`} style={{ '--d': '350ms' }}>
               <span className="ag-online-head">
                 <span className="ag-online-badge"><span className="ag-live-dot" />ONLINE</span>
-                <span className="ag-online-note">{btLive ? (blacktop.phase === 'queue' ? `In the lobby · ${blacktop.queue}/6 spots taken` : blacktop.phase === 'build' ? 'Your squad is building' : 'Game on') : 'Live games against real players'}</span>
+                <span className="ag-online-note">{btLive ? (blacktop.phase === 'queue' ? `In the lobby · ${blacktop.queue}/6 spots taken` : blacktop.phase === 'build' ? 'Your squad is building' : 'Game on') : (btG || h2h.played) ? `3v3 ${btW}–${btG - btW} · 1v1 ${h2h.wins ?? 0}–${h2h.losses ?? 0}` : 'Live games against real players'}</span>
+                {ol.played > 0 && <span className="ag-rec" style={{ marginLeft: 'auto' }}><TierChip rating={ol.rating} />{ol.rating}</span>}
               </span>
               <span className="ag-takeover-title">BLACKTOP</span>
               <span className="ag-online-btns">
@@ -277,7 +284,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
               {onVersus && (
                 <button className="ag-mini ag-pop" style={{ '--d': '370ms' }} onClick={() => onVersus(position)}>
                   <span className="ag-mini-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><IconVersus size={17} /> HEAD-TO-HEAD</span>
-                  <span className="ag-mini-sub">1v1 a friend</span>
+                  <span className="ag-mini-sub">{h2h.played ? `${h2h.wins}W–${h2h.losses}L${h2h.streak >= 2 ? ` · ${h2h.streak} straight` : ''}` : '1v1 a friend'}</span>
                 </button>
               )}
             </>

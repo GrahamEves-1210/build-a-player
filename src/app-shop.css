@@ -7,7 +7,7 @@
 /* ── Name text ─────────────────────────────────────────────────────────────── */
 .nt { position: relative; display: inline-block; color: var(--nt-c, inherit); --nt-glow: color-mix(in srgb, var(--nt-c, #fff) 70%, transparent); white-space: nowrap; }
 .nt-colored { background: var(--nt-bg, none); }
-.nt[class*="nc-"].nt-grad, .nt.nc-sunset, .nt.nc-ocean, .nt.nc-aurora, .nt.nc-lava, .nt.nc-turf, .nt.nc-neon, .nt.nc-chrome, .nt.nc-prism, .nt.nc-holo, .nt.nc-pro-blackgold, .nt.nc-pro-platinum, .nt.nc-fivetool {
+.nt[class*="nc-"].nt-grad, .nt.nc-sunset, .nt.nc-ocean, .nt.nc-aurora, .nt.nc-lava, .nt.nc-turf, .nt.nc-neon, .nt.nc-chrome, .nt.nc-prism, .nt.nc-holo, .nt.nc-pro-blackgold, .nt.nc-pro-platinum, .nt.nc-fivetool, .nt.nc-compete {
   background: var(--nt-bg); -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent;
 }
 /* solids */
@@ -33,10 +33,12 @@
 .nc-holo    { --nt-c: #c4b5fd; --nt-bg: linear-gradient(100deg, #a5f3fc, #c4b5fd, #f9a8d4, #fde68a, #a7f3d0, #a5f3fc); background-size: 300% 100% !important; animation: nt-holo 4s linear infinite; }
 .nc-pro-blackgold { --nt-c: #f2c94c; --nt-bg: linear-gradient(180deg, #fff3c4, #f2c94c 45%, #b8860b 55%, #fde68a); filter: drop-shadow(0 1px 0 #000) drop-shadow(0 0 1px #000); }
 .nc-pro-platinum  { --nt-c: #f8fafc; --nt-bg: linear-gradient(110deg, #e2e8f0 30%, #ffffff 45%, #a5b4fc 50%, #ffffff 55%, #e2e8f0 70%); background-size: 260% 100% !important; animation: nt-holo 3.2s linear infinite; }
+.nc-compete  { --nt-c: #5EDBD8; --nt-bg: linear-gradient(90deg, #5EDBD8, #1fc98a 45%, #f5dc8a); }
 .nc-fivetool { --nt-c: #fff; --nt-bg: linear-gradient(90deg, #fb923c 0 20%, #60a5fa 20% 40%, #34d399 40% 60%, #a78bfa 60% 80%, #e879f9 80% 100%); }
 @keyframes nt-holo { to { background-position: 300% 0; } }
 
 /* ── Name effects ──────────────────────────────────────────────────────────── */
+.nfx-legend   { filter: drop-shadow(0 0 4px #f5dc8a) drop-shadow(0 0 12px rgba(212,175,55,.8)); animation: nfx-pulse 2.2s ease-in-out infinite; --nt-glow: #f5dc8a; }
 .nfx-glow     { filter: drop-shadow(0 0 5px var(--nt-glow, rgba(255,255,255,.6))) drop-shadow(0 0 1px var(--nt-glow, #fff)); }
 .nfx-shadow   { filter: drop-shadow(2px 2px 0 rgba(0,0,0,.9)); }
 .nfx-outline  { -webkit-text-stroke: .9px rgba(255,255,255,.95); paint-order: stroke fill; filter: drop-shadow(0 0 1px rgba(0,0,0,.9)); }
@@ -90,6 +92,7 @@
 .np .nt { z-index: 1; }
 .np-shine { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
 .pl-carbon     { background: repeating-linear-gradient(45deg, #191b1f 0 3px, #24272d 3px 6px), #1b1d22; }
+.pl-allstar    { background: radial-gradient(circle at 20% 50%, rgba(255,255,255,.22), transparent 30%), repeating-linear-gradient(135deg, #1b2a4a 0 10px, #223a66 10px 20px), #1b2a4a; border-color: rgba(245,220,138,.6); box-shadow: inset 0 0 0 1px rgba(245,220,138,.35); }
 .pl-hardwood   { background: repeating-linear-gradient(90deg, #a5612d 0 22px, #b8743b 22px 23px, #9b5726 23px 47px, #c07c40 47px 48px), #a5612d; border-color: rgba(255,214,170,.35); }
 .pl-turf       { background: repeating-linear-gradient(90deg, transparent 0 26px, rgba(255,255,255,.55) 26px 28px), linear-gradient(180deg, #2f8f3a, #1f6b2a); border-color: rgba(190,242,100,.4); }
 .pl-chalk      { background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='44' height='24'%3E%3Cg fill='none' stroke='rgba(255,255,255,.35)' stroke-width='1.4'%3E%3Cpath d='M4 5l6 6M10 5l-6 6'/%3E%3Ccircle cx='30' cy='15' r='4'/%3E%3C/g%3E%3C/svg%3E"), linear-gradient(180deg, #2b3a33, #1d2924); }

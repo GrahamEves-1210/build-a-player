@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useProgress, COMPETE_REWARDS } from '../../lib/progress'
 import { POOL_SIZE, FILL_AFTER_SECS } from '../../lib/compete'
 import { IconClose, IconArrow, IconTrophy } from './icons'
+import OnlineRecord, { RatingLine } from './OnlineRecord'
 import { sfx } from '../../lib/juice'
 
 // COMPETE screen: the lobby (your stats, pick a position, find a pool), the
@@ -12,26 +13,6 @@ const ord = n => `${n}${['th', 'st', 'nd', 'rd'][(n % 100 > 10 && n % 100 < 14) 
 const mmss = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
 const initials = name => (name || '?').trim().slice(0, 2).toUpperCase()
 
-function Stats() {
-  const c = useProgress().stats?.compete ?? {}
-  const played = c.played || 0
-  const cells = [
-    ['PLAYED', played],
-    ['WINS', c.wins || 0],
-    ['AVG PLACE', played ? (c.placeSum / played).toFixed(1) : '–'],
-    ['AVG OVR', played ? Math.round(c.ovrSum / played) : '–'],
-    ['BEST OVR', c.best || '–'],
-    ['TOP 3', played ? `${Math.round((c.podiums / played) * 100)}%` : '–'],
-  ]
-  return (
-    <div className="cp-stats ag-pop" style={{ '--d': '60ms' }}>
-      <span className="ag-eyebrow">YOUR COMPETE</span>
-      <div className="cp-stat-grid">
-        {cells.map(([k, v]) => <div key={k} className="cp-stat"><b>{v}</b><span>{k}</span></div>)}
-      </div>
-    </div>
-  )
-}
 
 function Seat({ p, i, me, status }) {
   return (
@@ -81,7 +62,8 @@ export default function AppCompete({ cp, sport, position, positions, onPosition,
             <span className="ag-eyebrow">POOL {cp.match.code} · FINAL</span>
             <b className="cp-place">{mine ? ord(me.place) : 'DNF'}</b>
             <span className="cp-sub">{mine ? (me.place === 1 ? 'You took the pool.' : `of ${cp.ranked.length} · ${mine.ovr} OVR`) : 'Time ran out before you locked in.'}</span>
-            {mine && <span className="cp-reward">+{(COMPETE_REWARDS[me.place] ?? COMPETE_REWARDS[5])[0]} XP · +{(COMPETE_REWARDS[me.place] ?? COMPETE_REWARDS[5])[1]} COINS</span>}
+            {mine && <span className="cp-reward">+{(COMPETE_REWARDS[me.place] ?? COMPETE_REWARDS[5])[0]} XP · +{(COMPETE_REWARDS[me.place] ?? COMPETE_REWARDS[5])[1]} COINS{me.place < cp.ranked.length ? ` · beat ${cp.ranked.length - me.place}` : ''}</span>}
+            {mine && <RatingLine mode="compete" />}
           </div>
         ) : (
           <div className="cp-finding ag-pop">
@@ -120,7 +102,7 @@ export default function AppCompete({ cp, sport, position, positions, onPosition,
           <span className="ag-eyebrow">ONLINE · {POOL_SIZE}-PLAYER POOLS</span>
           <p className="cp-how">You and four other players get <b>the same spins</b>. Respins are your own. Everyone builds, and the <b>highest OVR</b> takes the pool. No sandbox.</p>
         </div>
-        <Stats />
+        <OnlineRecord mode="compete" title="YOUR COMPETE" />
         <div className="cp-pos ag-pop" style={{ '--d': '120ms' }} role="tablist" aria-label="Position">
           {positions.filter(o => !o.disabled).map(o => (
             <button key={o.pos} role="tab" aria-selected={o.pos === position} className={`ag-pos${o.pos === position ? ' ag-pos--on' : ''}`} onClick={() => onPosition(o.pos)}>

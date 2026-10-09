@@ -92,15 +92,24 @@ const MISSIONS = {
   alltime1:  { tier: 0, goal: 1,  xp: 50,  text: 'Play an All-Time season',      on: { season: d => d.mode === 'all-time' ? 1 : 0 } },
   bucket1:   { tier: 0, goal: 1,  xp: 50,  text: 'Play a Build-A-Bucket season', on: { season: d => d.sport === 'bucket' ? 1 : 0 } },
   daily1:    { tier: 0, goal: 1,  xp: 60,  text: 'Play the Daily Challenge',     on: { season: d => d.daily ? 1 : 0 } },
+  compete1:  { tier: 0, goal: 1,  xp: 70,  text: 'Play a Compete pool',          on: { compete: () => 1 } },
+  online1:   { tier: 0, goal: 1,  xp: 60,  text: 'Play any online game',         on: { compete: () => 1, bt: () => 1, h2h: () => 1 } },
   seasons4:  { tier: 1, goal: 4,  xp: 100, text: 'Simulate 4 seasons',           on: { season: () => 1 } },
   playoffs1: { tier: 1, goal: 1,  xp: 80,  text: 'Make the playoffs',            on: { season: d => d.playoffs ? 1 : 0 } },
   ovr85:     { tier: 1, goal: 1,  xp: 90,  text: 'Build an 85+ OVR player',      on: { season: d => d.ovr >= 85 ? 1 : 0 } },
   winning2:  { tier: 1, goal: 2,  xp: 90,  text: 'Post 2 winning seasons',       on: { season: d => (d.sport === 'bucket' ? d.wins >= 50 : d.wins >= 10) ? 1 : 0 } },
   epic1:     { tier: 1, goal: 1,  xp: 80,  text: 'Pull an Epic or Legend card',  on: { card: d => d.rank >= 2 ? 1 : 0 } },
+  top3:      { tier: 1, goal: 1,  xp: 100, text: 'Finish top 3 in a Compete pool', on: { compete: d => d.place <= 3 ? 1 : 0 } },
+  bt1:       { tier: 1, goal: 1,  xp: 90,  text: 'Play a Blacktop game',         on: { bt: () => 1 } },
+  h2h1:      { tier: 1, goal: 1,  xp: 90,  text: 'Play a 1v1 Head-to-Head',      on: { h2h: () => 1 } },
+  compete2:  { tier: 1, goal: 2,  xp: 110, text: 'Play 2 Compete pools',         on: { compete: () => 1 } },
   ring1:     { tier: 2, goal: 1,  xp: 150, text: 'Win a championship',           on: { season: d => d.champion ? 1 : 0 } },
   ovr90:     { tier: 2, goal: 1,  xp: 140, text: 'Build a 90+ OVR player',       on: { season: d => d.ovr >= 90 ? 1 : 0 } },
   award1:    { tier: 2, goal: 1,  xp: 130, text: 'Win a season award',           on: { season: d => d.award ? 1 : 0 } },
   legend1:   { tier: 2, goal: 1,  xp: 120, text: 'Pull a Legend card',           on: { card: d => d.rank >= 3 ? 1 : 0 } },
+  cpwin1:    { tier: 2, goal: 1,  xp: 160, text: 'Win a Compete pool',           on: { compete: d => d.place === 1 ? 1 : 0 } },
+  btwin1:    { tier: 2, goal: 1,  xp: 150, text: 'Win a Blacktop game',          on: { bt: d => d.won ? 1 : 0 } },
+  h2hwin1:   { tier: 2, goal: 1,  xp: 150, text: 'Win a 1v1 Head-to-Head',       on: { h2h: d => d.won ? 1 : 0 } },
 }
 export const missionDef = id => MISSIONS[id]
 // One easy, one medium, one hard — each about something different (seasons / spins / cards)
@@ -189,14 +198,22 @@ const BLANK_STATS = {
   nflSeasons: 0, bucketSeasons: 0, positions: {}, daily: 0, legends: 0,
   btGames: 0, btWins: 0, btMvp: 0, tkCities: 0, tkRuns: 0, dcBest: 0, purchases: 0,
   // Compete pools: places are 1–5; avg place = placeSum / played
-  compete: { played: 0, wins: 0, podiums: 0, placeSum: 0, ovrSum: 0, best: 0 },
+  compete: { played: 0, wins: 0, podiums: 0, placeSum: 0, ovrSum: 0, best: 0, streak: 0, bestStreak: 0, beaten: 0, recent: [] },
+  // Blacktop career line (btGames / btWins / btMvp above are the long-standing counters)
+  bt: { streak: 0, bestStreak: 0, pts: 0, ast: 0, reb: 0, stl: 0, blk: 0, fgm: 0, fga: 0, highPts: 0, recent: [] },
+  // 1v1 Head-to-Head (the website also keeps vs_results; this follows the wallet)
+  h2h: { played: 0, wins: 0, losses: 0, forfeits: 0, streak: 0, bestStreak: 0, recent: [] },
+  // Online rating across the live modes (see rateOnline)
+  online: { rating: 800, best: 800, played: 0 },
 }
+const ONLINE_KEYS = ['compete', 'bt', 'h2h', 'online']
+const fixStats = st => { for (const k of ONLINE_KEYS) st[k] = { ...BLANK_STATS[k], ...(st[k] || {}) }; return st }
 const keyFor = id => `bap_prog_${id || 'guest'}`
 function load(id) {
   try {
     const saved = JSON.parse(localStorage.getItem(keyFor(id)) || '{}')
     const b = blank()
-    return { ...b, ...saved, stats: { ...b.stats, ...(saved.stats || {}), positions: { ...(saved.stats?.positions || {}) }, compete: { ...b.stats.compete, ...(saved.stats?.compete || {}) } }, equip: { ...DEFAULTS, ...(saved.equip || {}) } }
+    return { ...b, ...saved, stats: fixStats({ ...b.stats, ...(saved.stats || {}), positions: { ...(saved.stats?.positions || {}) } }), equip: { ...DEFAULTS, ...(saved.equip || {}) } }
   } catch { return blank() }
 }
 
@@ -420,23 +437,90 @@ function onXp(e) {
   emit()
 }
 
-// A Compete pool finished: your place → stats, XP and coins
+// ═════════════════════════════════════════════════════════════════════════════
+// Online: rating, tiers and the live-mode bookers (Compete, Blacktop, 1v1)
+// ═════════════════════════════════════════════════════════════════════════════
+// One rating across the live modes. Wins against real players move it most;
+// games where bots filled the seats count for less. Tiers are the ladder.
+export const ONLINE_TIERS = [[0, 'Rookie'], [900, 'Starter'], [1100, 'Pro'], [1300, 'All-Star'], [1500, 'MVP'], [1750, 'Legend']]
+export const tierFor = r => ONLINE_TIERS.reduce((t, x) => (r >= x[0] ? x : t), ONLINE_TIERS[0])
+export const nextTier = r => ONLINE_TIERS.find(x => x[0] > r) ?? null
+export const tierIndex = r => ONLINE_TIERS.findIndex(x => x === tierFor(r))
+const ordinal = n => `${n}${['th', 'st', 'nd', 'rd'][(n % 100 > 10 && n % 100 < 14) ? 0 : n % 10] ?? 'th'}`
+const pushRecent = (arr, v, n = 10) => { arr.push(v); while (arr.length > n) arr.shift() }
+// delta → rating; remembers the tier change for the toast / result screens
+function rateOnline(delta, mode, extra = {}) {
+  const o = S.stats.online = { ...BLANK_STATS.online, ...(S.stats.online || {}) }
+  const before = o.rating
+  o.rating = Math.max(100, Math.round(o.rating + delta))
+  o.played++
+  if (o.rating > o.best) o.best = o.rating
+  const was = tierFor(before)[1], now = tierFor(o.rating)[1]
+  const up = tierIndex(o.rating) > tierIndex(before), down = tierIndex(o.rating) < tierIndex(before)
+  S.lastOnline = { mode, delta: o.rating - before, rating: o.rating, tier: now, up, down, at: Date.now(), ...extra }
+  if (up) toast({ kind: 'online', title: `TIER UP · ${now.toUpperCase()}`, sub: `${o.rating} online rating`, ms: 3200 })
+  else if (down) toast({ kind: 'online', title: `DOWN TO ${now.toUpperCase()}`, sub: `${o.rating} online rating`, ms: 2600 })
+  void was
+  return o.rating - before
+}
+
+// A Compete pool finished: your place → stats, rating, XP and coins
 export const COMPETE_REWARDS = { 1: [80, 60], 2: [50, 35], 3: [35, 20], 4: [20, 10], 5: [15, 5] }
+const COMPETE_RATING = { 1: 24, 2: 12, 3: 4, 4: -6, 5: -12 }
 function onCompete(e) {
-  const { place, ovr } = e.detail || {}
+  const { place, ovr, of = 5, humans = 1 } = e.detail || {}
   if (!place) return
   const c = S.stats.compete = { ...BLANK_STATS.compete, ...(S.stats.compete || {}) }
-  c.played++; c.placeSum += place; c.ovrSum += ovr || 0
-  if (place === 1) c.wins++
+  const pbOvr = (ovr || 0) > c.best && c.played > 0
+  c.played++; c.placeSum += place; c.ovrSum += ovr || 0; c.beaten += Math.max(0, of - place)
+  if (place === 1) { c.wins++; c.streak++; if (c.streak > c.bestStreak) c.bestStreak = c.streak } else c.streak = 0
   if (place <= 3) c.podiums++
   if ((ovr || 0) > c.best) c.best = ovr
+  pushRecent(c.recent, place)
+  // real opponents move the rating; a pool of bots counts half
+  const scale = 0.5 + 0.5 * Math.min(1, Math.max(0, humans - 1) / 4)
+  const delta = rateOnline((COMPETE_RATING[place] ?? -12) * scale, 'compete', { place, pbOvr, streak: c.streak })
   const [xp, coins] = COMPETE_REWARDS[place] ?? COMPETE_REWARDS[5]
   S.bonusXp += xp
   earn(coins, null, true)
-  toast({ kind: 'xp', title: `+${xp} XP · +${coins} COINS`, sub: place === 1 ? 'You won the pool' : `Compete · ${ordinal(place)} place` })
+  bumpMissions('compete', { place })
+  toast({ kind: 'xp', title: `+${xp} XP · +${coins} COINS`, sub: `${place === 1 ? 'You won the pool' : `Compete · ${ordinal(place)} place`} · ${delta >= 0 ? '+' : ''}${delta} rating` })
   emit()
 }
-const ordinal = n => `${n}${['th', 'st', 'nd', 'rd'][(n % 100 > 10 && n % 100 < 14) ? 0 : n % 10] ?? 'th'}`
+
+// A Blacktop game finished: W/L, MVP, my box-score line → career line, rating
+function onBlacktop(e) {
+  const d = e.detail || {}
+  S.stats.btGames++
+  if (d.won) S.stats.btWins++
+  if (d.mvp) S.stats.btMvp++
+  const b = S.stats.bt = { ...BLANK_STATS.bt, ...(S.stats.bt || {}) }
+  const line = d.line || {}
+  const highPts = (line.pts || 0) > b.highPts && S.stats.btGames > 1
+  for (const k of ['pts', 'ast', 'reb', 'stl', 'blk', 'fgm', 'fga']) b[k] += line[k] || 0
+  if ((line.pts || 0) > b.highPts) b.highPts = line.pts
+  if (d.won) { b.streak++; if (b.streak > b.bestStreak) b.bestStreak = b.streak } else b.streak = 0
+  pushRecent(b.recent, d.won ? 'W' : 'L')
+  const scale = d.bots ? 0.5 : 1
+  rateOnline(((d.won ? 20 : -12) + (d.mvp ? 5 : 0)) * scale, 'bt', { won: !!d.won, mvp: !!d.mvp, highPts, streak: b.streak })
+  bumpMissions('bt', { won: !!d.won })
+  emit()
+}
+
+// A 1v1 finished: 'win' | 'loss' | 'forfeit' | 'walkover' (they left)
+function onH2H(e) {
+  const { result, sport } = e.detail || {}
+  if (!result) return
+  const h = S.stats.h2h = { ...BLANK_STATS.h2h, ...(S.stats.h2h || {}) }
+  const won = result === 'win' || result === 'walkover'
+  h.played++
+  if (won) { h.wins++; h.streak++; if (h.streak > h.bestStreak) h.bestStreak = h.streak } else { h.losses++; h.streak = 0; if (result === 'forfeit') h.forfeits++ }
+  pushRecent(h.recent, won ? 'W' : 'L')
+  const delta = rateOnline(result === 'win' ? 25 : result === 'walkover' ? 10 : result === 'forfeit' ? -20 : -15, 'h2h', { won, streak: h.streak, sport })
+  if (result !== 'walkover') toast({ kind: 'online', title: won ? 'HEAD-TO-HEAD · W' : 'HEAD-TO-HEAD · L', sub: `${delta >= 0 ? '+' : ''}${delta} rating${h.streak >= 2 ? ` · ${h.streak} straight` : ''}` })
+  bumpMissions('h2h', { won })
+  emit()
+}
 
 function onSpin(e) {
   const { sport, pos, mode, player, pool } = e.detail || {}
@@ -543,7 +627,8 @@ export function initProgress() {
   window.addEventListener('bap:season', onSeason)
   window.addEventListener('bap:spin', onSpin)
   window.addEventListener('bap:xp', onXp)
-  window.addEventListener('bap:blacktop', e => { const d = e.detail || {}; S.stats.btGames++; if (d.won) S.stats.btWins++; if (d.mvp) S.stats.btMvp++; emit() })
+  window.addEventListener('bap:blacktop', onBlacktop)
+  window.addEventListener('bap:h2h', onH2H)
   window.addEventListener('bap:takeover', e => { const d = e.detail || {}; if (d.city) S.stats.tkCities++; if (d.run) S.stats.tkRuns++; emit() })
   window.addEventListener('bap:compete', onCompete)
   window.addEventListener('bap:dc', e => { const n = e.detail?.streak ?? 0; if (n > S.stats.dcBest) { S.stats.dcBest = n; emit() } })
@@ -678,6 +763,9 @@ export function achStats() {
     positions: ['qb', 'rb', 'wr', 'te', 'db'].filter(p => pos[p]).length,
     twoSport: st.nflSeasons > 0 && st.bucketSeasons > 0 ? 1 : 0,
     cards: Object.keys(S.cards).length, streak: S.streak.best ?? 0, level: L,
+    cpPlayed: st.compete?.played ?? 0, cpWins: st.compete?.wins ?? 0, cpPodiums: st.compete?.podiums ?? 0, cpStreak: st.compete?.bestStreak ?? 0, cpBeaten: st.compete?.beaten ?? 0,
+    btStreak: st.bt?.bestStreak ?? 0, btPts: st.bt?.pts ?? 0, h2hWins: st.h2h?.wins ?? 0, h2hStreak: st.h2h?.bestStreak ?? 0,
+    onlineBest: st.online?.best ?? 0, onlinePlayed: st.online?.played ?? 0,
     owned: Object.keys(S.owned).length,
     fullFit: S.equip.plate && S.equip.nameColor && S.equip.nameFx ? 1 : 0,
     coinsEarned: S.coinsEarned,
@@ -737,10 +825,19 @@ async function pullWallet(id) {
     const st = { ...S.stats }
     for (const [k, v] of Object.entries(w.stats || {})) {
       if (k === 'positions') st.positions = { ...(v || {}), ...(st.positions || {}) }
-      else if (k === 'compete' && v) st.compete = Object.fromEntries(Object.keys(BLANK_STATS.compete).map(f => [f, Math.max(st.compete?.[f] ?? 0, v[f] ?? 0)]))
+      else if (ONLINE_KEYS.includes(k) && v) {
+        // counters: the larger; the live streak, the rating and the recent form: the newer side
+        const mine = { ...BLANK_STATS[k], ...(st[k] || {}) }
+        st[k] = Object.fromEntries(Object.keys(BLANK_STATS[k]).map(f => {
+          const a = mine[f], b = v[f]
+          if (Array.isArray(BLANK_STATS[k][f])) return [f, newer ? (b ?? a) : (a ?? b)]
+          if (f === 'streak' || f === 'rating') return [f, newer ? (b ?? a) : (a ?? b)]
+          return [f, Math.max(a ?? 0, b ?? 0)]
+        }))
+      }
       else if (typeof v === 'number') st[k] = Math.max(st[k] ?? 0, v)
     }
-    S.stats = st
+    S.stats = fixStats(st)
     S.coinsEarned = Math.max(S.coinsEarned, w.coinsEarned ?? 0)
     S.discordPaid = !!(S.discordPaid || w.discordPaid)
     if (newer) {

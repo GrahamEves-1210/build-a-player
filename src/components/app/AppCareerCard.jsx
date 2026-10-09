@@ -1,6 +1,7 @@
 import { useProgress, SPOTLIGHTS, isUnlocked, setSpotlight, careerRings, careerSeasons, TITLE_LEVELS } from '../../lib/progress'
 import { getUsername } from '../../lib/discord'
-import { IconLock, IconFlame, IconCards, IconRing, IconStar, IconBag, IconMedal, IconCrown } from './icons'
+import { IconLock, IconFlame, IconCards, IconRing, IconStar, IconBag, IconMedal, IconCrown, IconPodium, IconArrow } from './icons'
+import { TierChip, Form } from './OnlineRecord'
 import { NameTag, AvatarBadge } from './NameTag'
 import { CoinPill } from './AppShop'
 
@@ -42,6 +43,14 @@ export default function AppCareerCard({ user }) {
         <button onClick={() => nav('cards')}><IconCards size={15} /><b>{Object.keys(p.cards).length.toLocaleString()}</b>CARDS</button>
         <button onClick={() => nav('daily')}><IconFlame size={15} /><b>{p.streak.count}</b>STREAK</button>
       </div>
+      <button className="ag-career-online" onClick={() => nav('online')}>
+        <span className="ag-career-online-ico"><IconPodium size={16} /></span>
+        <span className="ag-career-online-txt">
+          <span><b>{p.stats?.online?.rating ?? 800}</b> ONLINE RATING <TierChip rating={p.stats?.online?.rating ?? 800} /></span>
+          <small>{(p.stats?.online?.played ?? 0) ? `${p.stats.online.played} online games · best ${p.stats.online.best}` : 'Compete, Blacktop and 1v1 move it'}</small>
+        </span>
+        <IconArrow size={14} />
+      </button>
       <div className="ag-locker">
         <span className="ag-eyebrow">SPOTLIGHT</span>
         <div className="ag-locker-row">

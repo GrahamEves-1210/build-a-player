@@ -1128,7 +1128,7 @@ export default function BucketApp() {
         oppLeaveTimerRef.current = setTimeout(() => {
           const { build: b, user: u, position: pos, matchType: mt } = vsResultRef.current
           if (u && supabase) {
-            setVsRecord(prev => ({ wins: (prev?.wins ?? 0) + 1, losses: prev?.losses ?? 0 }))
+            window.dispatchEvent(new CustomEvent('bap:h2h', { detail: { result: 'walkover', sport: 'bucket' } })); setVsRecord(prev => ({ wins: (prev?.wins ?? 0) + 1, losses: prev?.losses ?? 0 }))
             const winOvr = calcBucketOVR(b, VERSUS_POS_TYPES[pos] ?? VERSUS_GUARD_TYPES, pos)
             if (winOvr > 0) supabase.from('vs_results').insert({
               user_id:    u.id,
@@ -1248,7 +1248,7 @@ export default function BucketApp() {
         lastOppPingRef.current = Date.now() // prevent double-fire
         const { build: b, user: u, position: pos, matchType: mt } = vsResultRef.current
         if (u && supabase) {
-          setVsRecord(prev => ({ wins: (prev?.wins ?? 0) + 1, losses: prev?.losses ?? 0 }))
+          window.dispatchEvent(new CustomEvent('bap:h2h', { detail: { result: 'walkover', sport: 'bucket' } })); setVsRecord(prev => ({ wins: (prev?.wins ?? 0) + 1, losses: prev?.losses ?? 0 }))
           const winOvr = calcBucketOVR(b, VERSUS_POS_TYPES[pos] ?? VERSUS_GUARD_TYPES, pos)
           if (winOvr > 0) supabase.from('vs_results').insert({
             user_id:    u.id,
@@ -1295,7 +1295,7 @@ export default function BucketApp() {
       // I win — record it, show disconnect overlay (reuses existing win UX)
       const { build: b, user: u, position: pos } = vsResultRef.current
       if (u && supabase) {
-        setVsRecord(prev => ({ wins: (prev?.wins ?? 0) + 1, losses: prev?.losses ?? 0}))
+        window.dispatchEvent(new CustomEvent('bap:h2h', { detail: { result: 'walkover', sport: 'bucket' } })); setVsRecord(prev => ({ wins: (prev?.wins ?? 0) + 1, losses: prev?.losses ?? 0}))
         const winOvr = calcBucketOVR(b, VERSUS_POS_TYPES[pos] ?? VERSUS_GUARD_TYPES, pos)
         if (winOvr > 0) supabase.from('vs_results').insert({
           user_id:  u.id,
@@ -1339,12 +1339,14 @@ export default function BucketApp() {
   }
 
   async function recordVsForfeiture() {
+    window.dispatchEvent(new CustomEvent('bap:h2h', { detail: { result: 'forfeit', sport: 'bucket' } }))
     if (!supabase || !user) return
     setVsRecord(prev => ({ wins: prev?.wins ?? 0, losses: (prev?.losses ?? 0) + 1 }))
     try { await supabase.from('vs_results').insert(vsResultPayload('forfeit')) } catch {}
   }
 
   async function recordVsResult(result) {
+    window.dispatchEvent(new CustomEvent('bap:h2h', { detail: { result: result, sport: 'bucket' } }))
     if (!supabase || !user) return
     setVsRecord(prev => result === 'win'
       ? { wins: (prev?.wins ?? 0) + 1, losses: prev?.losses ?? 0 }

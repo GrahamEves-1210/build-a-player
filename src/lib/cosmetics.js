@@ -90,11 +90,13 @@ const NC = [
   it('nameColor', 'nc-pro-blackgold', 'Black Gold', 2, 700, { pro: true }),
   it('nameColor', 'nc-pro-platinum',  'Platinum',   3, 1500, { pro: true }),
   it('nameColor', 'nc-fivetool', 'Five-Tool',  3, 0, { ach: 'fivetool' }),
+  it('nameColor', 'nc-compete',  'Pool Shark', 3, 0, { ach: 'cpwin10' }),
 ]
 
 // ── Name effects ─────────────────────────────────────────────────────────────
 const NFX = [
   it('nameFx', 'nfx-glow',     'Glow',          0, 250),
+  it('nameFx', 'nfx-legend',   'Legend',        3, 0, { ach: 'legendtier' }),
   it('nameFx', 'nfx-shadow',   'Block Shadow',  0, 250),
   it('nameFx', 'nfx-outline',  'Outline',       0, 280),
   it('nameFx', 'nfx-pulse',    'Pulse',         1, 500),
@@ -133,6 +135,7 @@ const PL = [
   it('plate', 'pl-pro-holo',   'Pro Holo',        3, 1800, { pro: true }),
   it('plate', 'pl-perfect',    'Perfect Season',  3, 0, { ach: 'perfect' }),
   it('plate', 'pl-blacktop',   'Blacktop King',   3, 0, { ach: 'bt25' }),
+  it('plate', 'pl-allstar',    'All-Star',        3, 0, { ach: 'allstar' }),
 ]
 
 // ── Victory animations (season titles, awards, wins in live modes) ─────────

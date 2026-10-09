@@ -314,7 +314,7 @@ export function useBlacktop({ enabled, user, position, pools, types, build, play
     const xp = (won ? 40 : 15) + (mvp ? 20 : 0)
     const coins = (won ? 30 : 10) + (mvp ? 15 : 0)
     window.dispatchEvent(new CustomEvent('bap:xp', { detail: { xp, coins, label: won ? (mvp ? 'Blacktop win · MVP' : 'Blacktop win') : 'Blacktop game' } }))
-    window.dispatchEvent(new CustomEvent('bap:blacktop', { detail: { won: !!won, mvp } }))
+    window.dispatchEvent(new CustomEvent('bap:blacktop', { detail: { won: !!won, mvp, line: game.stats[me.vid] ?? null, bots: !!match.bots, score: game.score, team: mine?.team ?? 0 } }))
     if (user && supabase && !match.bots) {
       const line = game.stats[me.vid]
       supabase.from('vs_results').insert({ user_id: user.id, username: getUsername(user), result: won ? 'win' : 'loss', ovr: null, position: mine?.pos ?? position, match_type: '3v3' }).then(null, () => {})
