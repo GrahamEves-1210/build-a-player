@@ -146,7 +146,7 @@ const CUSTOM_POOLS = {
 const BUCKET_SPLASH_ATTRS = {
   guard: [
     { label: 'Handles',     col: '#a78bfa', angle:  -35, dist: 1.32, mx: 58, my: 14, tall: true },
-    { label: 'Jump Shot',   col: '#34d399', angle:   15, dist: 1.28, mx: 62, my: 52 },
+    { label: 'Jump Shot',   col: '#34d399', angle:   15, dist: 1.28, mx: 62, my: 52, grow: 1.6 },
     { label: 'Finishing',   col: '#f87171', angle:   55, dist: 1.30, mx: 3,  my: 30 },
     { label: 'Speed',       col: '#fb923c', angle:  210, dist: 1.31, mx: 4,  my: 62 },
     { label: 'Bounce',      col: '#fcd34d', angle: -130, dist: 1.30, mx: 55, my: 72 },
@@ -157,7 +157,7 @@ const BUCKET_SPLASH_ATTRS = {
   ],
   big: [
     { label: 'Finishing',    col: '#f87171', angle:  -35, dist: 1.32, mx: 58, my: 14, tall: true },
-    { label: 'Jump Shot',    col: '#34d399', angle:   55, dist: 1.30, mx: 3,  my: 30 },
+    { label: 'Jump Shot',    col: '#34d399', angle:   55, dist: 1.30, mx: 3,  my: 30, grow: 1.6 },
     { label: 'Playmaking',   col: '#38bdf8', angle:   15, dist: 1.28, mx: 62, my: 52 },
     { label: 'Interior D',   col: '#4ade80', angle:  210, dist: 1.31, mx: 4,  my: 62 },
     { label: 'Rebounding',   col: '#a3e635', angle: -130, dist: 1.30, mx: 55, my: 72 },
@@ -209,7 +209,7 @@ function BucketStackedSilhouette({ attrs, ready }) {
           className="splash-stack-band"
           style={{
             background: a.col,
-            flex: a.tall ? 1.4 : 1,
+            flex: a.grow ?? (a.tall ? 1.4 : 1),
             opacity: visible ? 1 : 0,
             // Starts stacked at the very top (i band-heights up) and falls
             // down to its own row — lower bands fall further.
@@ -708,6 +708,8 @@ export default function BucketApp() {
   const flip = useFlip(IS_APP && (page === 'game' || page === 'versus-game' || page === 'blacktop-build' || page === 'takeover-build'), mobileView, setMobileView)
   const buildComplete = activeTypes.length > 0 && activeTypes.every(t => build[t])
   useEffect(() => { if (IS_APP && buildComplete && (page === 'game' || page === 'takeover-build')) flip('build') }, [buildComplete]) // eslint-disable-line react-hooks/exhaustive-deps
+  // Website: the build-complete hit (the app's BuildComplete screen plays its own)
+  useEffect(() => { if (!IS_APP && buildComplete && (page === 'game' || page === 'takeover-build')) window.__bapJuice?.sfx('complete', 2) }, [buildComplete]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSandboxToggle = useCallback((on) => {
     try { localStorage.setItem('bab_custom_mode', on ? '1' : '0') } catch {}

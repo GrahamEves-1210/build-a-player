@@ -3,7 +3,7 @@ import { IS_APP, APP_LOOK } from '../lib/platform'
 import AppMenu from './app/AppMenu'
 import AuthModal from './AuthModal'
 import AppToasts, { LevelUp } from './app/AppToasts'
-import { useProgress, STREAK_REWARDS, missionDef } from '../lib/progress'
+import { useProgress, STREAK_REWARDS, missionDef, walletOpen } from '../lib/progress'
 import { IconBag, IconPlay, IconProfile, IconCalendar, IconCards } from './app/icons'
 
 const AppDaily = lazy(() => import('./app/AppDaily'))
@@ -29,7 +29,7 @@ const TAB_FOR_PAGE = { splash: 'play', profile: 'profile', leaderboard: null, 'p
 const HIDE_ON = new Set(['versus-game', 'versus-result', 'shared'])
 // Website: the game screens keep the site's navbar, so the dock is only on the
 // app-look pages (home, profile, the Takeover road, the Blacktop lobby + game)
-const WEB_DOCK_ON = new Set(['splash', 'profile', 'takeover', 'blacktop', 'blacktop-game', 'compete'])
+const WEB_DOCK_ON = new Set(['splash', 'profile', 'takeover', 'blacktop', 'blacktop-game', 'compete', 'leaderboard', 'pvp-leaderboard'])
 
 const nav = to => window.dispatchEvent(new CustomEvent('bap:nav', { detail: to }))
 
@@ -142,7 +142,8 @@ export default function AppTabBar() {
             <span className="ag-play-core"><IconPlay size={28} /></span>
             <span className="ag-play-label">PLAY</span>
           </button>
-          <Tab label="CARDS" Icon={IconCards} active={active === 'cards'} onClick={open('cards')} />
+          {/* website: cards are saved to an account */}
+          <Tab label="CARDS" Icon={IconCards} active={active === 'cards'} onClick={walletOpen() ? open('cards') : () => { setMenuOpen(false); setAuthOpen(true) }} />
           <Tab label="PROFILE" Icon={IconProfile} active={active === 'profile' || active === 'achievements' || active === 'locker'} onClick={go('profile')} badge={claimable} />
         </nav>
       )}

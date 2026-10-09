@@ -610,6 +610,8 @@ export default function App() {
   const flip = useFlip(IS_APP && (page === 'game' || page === 'versus-game' || page === 'takeover-build'), mobileView, setMobileView)
   const buildComplete = activeTypes.length > 0 && activeTypes.every(t => build[t])
   useEffect(() => { if (IS_APP && buildComplete && (page === 'game' || page === 'takeover-build')) flip('build') }, [buildComplete]) // eslint-disable-line react-hooks/exhaustive-deps
+  // Website: the build-complete hit (the app's BuildComplete screen plays its own)
+  useEffect(() => { if (!IS_APP && buildComplete && (page === 'game' || page === 'takeover-build')) window.__bapJuice?.sfx('complete', 2) }, [buildComplete]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── TAKEOVER (app): a saved run per account, or a fresh build first ──
   useEffect(() => { if (IS_APP || APP_LOOK) setTakeoverRun(loadRun('nfl', user?.id)) }, [user?.id])

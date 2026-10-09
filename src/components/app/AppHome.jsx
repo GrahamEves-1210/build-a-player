@@ -83,8 +83,14 @@ function SportSwitch({ sport }) {
   return (
     <div className={`ag-sport ag-sport--${sport} ag-pop`} style={{ '--d': '30ms' }} role="tablist" aria-label="Sport">
       <span className="ag-sport-thumb" aria-hidden="true" />
-      <button role="tab" aria-selected={sport === 'nfl'} className={`ag-sport-btn${sport === 'nfl' ? ' is-on' : ''}`} onClick={() => go('nfl')}><IconFootball size={18} /> FOOTBALL</button>
-      <button role="tab" aria-selected={sport === 'bucket'} className={`ag-sport-btn${sport === 'bucket' ? ' is-on' : ''}`} onClick={() => go('bucket')}><IconBasketball size={18} /> BASKETBALL</button>
+      <button role="tab" aria-selected={sport === 'nfl'} className={`ag-sport-btn ag-sport-btn--nfl${sport === 'nfl' ? ' is-on' : ''}`} onClick={() => go('nfl')}>
+        <span className="ag-sport-ico"><IconFootball size={17} /></span>
+        <span className="ag-sport-txt"><b>FOOTBALL</b><small>Build-A-Player</small></span>
+      </button>
+      <button role="tab" aria-selected={sport === 'bucket'} className={`ag-sport-btn ag-sport-btn--bucket${sport === 'bucket' ? ' is-on' : ''}`} onClick={() => go('bucket')}>
+        <span className="ag-sport-ico"><IconBasketball size={17} /></span>
+        <span className="ag-sport-txt"><b>BASKETBALL</b><small>Build-A-Bucket</small></span>
+      </button>
     </div>
   )
 }

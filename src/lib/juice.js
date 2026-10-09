@@ -8,10 +8,9 @@ import { myVictory } from './progress'
 import { IS_APP } from './platform'
 
 const MUTE_KEY = 'bap_sound_off'
-// The website starts muted (a tab that suddenly plays sounds is unwelcome);
-// turning sound on there is saved as '0'
-export const isMuted = () => { try { const v = localStorage.getItem(MUTE_KEY); return v === '1' || (v === null && !IS_APP) } catch { return !IS_APP } }
-export const setMuted = on => { try { on ? localStorage.setItem(MUTE_KEY, '1') : IS_APP ? localStorage.removeItem(MUTE_KEY) : localStorage.setItem(MUTE_KEY, '0') } catch {} }
+// Sound is on by default on the website too (More → Sound turns it off)
+export const isMuted = () => { try { return localStorage.getItem(MUTE_KEY) === '1' } catch { return false } }
+export const setMuted = on => { try { on ? localStorage.setItem(MUTE_KEY, '1') : localStorage.setItem(MUTE_KEY, '0') } catch {} }
 
 // ── Sound ────────────────────────────────────────────────────────────────────
 // Everything is layered from oscillators, filtered noise and FM "bells", with a
@@ -452,14 +451,49 @@ export function playLab(id, gain = 0.9) {
     src.connect(g).connect(bus); src.start()
   })
 }
+// ── The shop's victory sounds: recorded layers (public/sfx-lab) ──────────────
+// A real crowd, hits and drums under the synth instruments; each layer is
+// placed `at` seconds after the start. (Cannon Blast keeps its pick: BAKED.)
+function labAt(ac, id, at = 0, gain = 0.9, rate = 1) {
+  const t0 = ac.currentTime
+  labBuffer(ac, id).then(buf => {
+    if (!buf) return
+    const src = ac.createBufferSource(), g = ac.createGain()
+    src.buffer = buf; src.playbackRate.value = rate; g.gain.value = gain
+    src.connect(g).connect(bus)
+    src.start(Math.max(ac.currentTime, t0 + at))
+  })
+}
+const STAGED = {
+  'snd-horn': S => { const v = verb(S, 0.4); horn(S, { f: 233, dur: 0.8, gain: 0.17, at: 0.05, out: v }); horn(S, { f: 233, dur: 0.48, gain: 0.14, at: 0.98, out: v }); labAt(S.ac, 's-boom', 0, 0.55); labAt(S.ac, 's-crowd-shouts', 0.05, 0.6) },
+  'snd-roar': S => { labAt(S.ac, 's-boom', 0, 0.8); labAt(S.ac, 's-crowd-arena', 0.04, 1) },
+  'snd-fanfare': S => { SYNTH['snd-fanfare'](S); labAt(S.ac, 's-perc', 0, 0.7); labAt(S.ac, 's-crowd-applause', 0.35, 0.55) },
+  'snd-drumline': S => { [0, 0.18, 0.36, 0.45, 0.54, 0.72, 0.9, 1.08].forEach((t, i) => labAt(S.ac, 's-perc', t, i === 7 ? 0.95 : 0.42, i % 2 ? 1.18 : 1)); labAt(S.ac, 's-crowd-shouts', 1.1, 0.55) },
+  'snd-organ': S => { SYNTH['snd-organ'](S); labAt(S.ac, 's-crowd-shouts', 0.85, 0.5) },
+  'snd-riser': S => { labAt(S.ac, 's-powerup', 0, 0.85); labAt(S.ac, 's-impact', 0.95, 0.95); labAt(S.ac, 's-crowd-arena', 1.0, 0.6) },
+  'snd-train': S => { SYNTH['snd-train'](S); labAt(S.ac, 's-crowd-arena', 0.45, 0.55) },
+  'snd-bassdrop': S => { labAt(S.ac, 's-whoosh', 0, 0.6); labAt(S.ac, 's-boom', 0.55, 1); osc(S, { f: 62, to: 30, dur: 1.3, gain: 0.38, at: 0.55 }); labAt(S.ac, 's-crowd-shouts', 0.7, 0.6) },
+  'snd-sax': S => { if (!smp(S, 'sax', { gain: 0.95 })) SYNTH['snd-sax'](S); labAt(S.ac, 's-crowd-applause', 0.3, 0.5) },
+  'snd-pizzi': S => { if (!smp(S, 'pizzi', { gain: 0.95 })) SYNTH['snd-pizzi'](S); labAt(S.ac, 's-crowd-applause', 0.4, 0.5) },
+  'snd-pro-anthem': S => { labAt(S.ac, 's-impact', 0, 0.9); labAt(S.ac, 's-perc', 0.42, 0.75); labAt(S.ac, 's-perc', 0.62, 0.6, 1.15); labAt(S.ac, 's-boom', 0.85, 0.8); labAt(S.ac, 's-crowd-arena', 0.2, 0.95) },
+}
+// Load the victory layers ahead of time (a season starting, the shop opening)
+let warmed = false
+export function warmVictory() {
+  if (warmed) return
+  const ac = audio(); if (!ac) return
+  warmed = true
+  ;['s-crowd-arena', 's-crowd-applause', 's-crowd-shouts', 's-boom', 's-impact', 's-perc', 's-powerup', 's-whoosh', 's-explosion'].forEach(id => labBuffer(ac, id))
+}
 export const LAB_GAIN = { tap: 0.5, tick: 0.4, gradepop: 0.45, back: 0.55, send: 0.6, deny: 0.6, spin: 0.55, slot: 0.6, champion: 0.8 }
 export const sfx = (name, arg) => {
   if (isMuted()) return
   const pick = getPicks()[name] ?? BAKED[name]
   if (pick === 'none') return
   if (pick) { playLab(pick, LAB_GAIN[name] ?? 0.9); return }
-  const ac = audio(); if (!ac || !(SYNTH[name] || SAMPLED[name])) return
+  const ac = audio(); if (!ac || !(SYNTH[name] || SAMPLED[name] || STAGED[name])) return
   const S = scene(ac, bus, ac.currentTime)
+  if (STAGED[name]) { try { STAGED[name](S, arg); return } catch {} }
   try { if (SAMPLED[name]?.(S, arg)) return } catch {}
   try { SYNTH[name]?.(S, arg) } catch {}
 }
@@ -728,7 +762,7 @@ export function initJuice() {
     if (el.matches('.ag-round-btn, .cr-close, .prf-top-back, .dc-back-btn')) { sfx('back'); haptic('light'); return }
     if (el.matches('.ag-edge')) { sfx('flip'); haptic('light'); return }
     // "Simulate Season" — the referee starts the game
-    if (el.matches('.simp-cta') && /simulate season/i.test(el.textContent)) { sfx('whistle'); haptic('medium'); return }
+    if (el.matches('.simp-cta') && /simulate season/i.test(el.textContent)) { sfx('whistle'); haptic('medium'); warmVictory(); return }
     sfx('tap'); haptic('light')
   }, { capture: true, passive: true })
 

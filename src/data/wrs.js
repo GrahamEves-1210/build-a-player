@@ -125,7 +125,7 @@ const _WRS = [
   { name: 'Amon-Ra St. Brown',   short: 'St. Brown',   team: 'DET', teamName: 'Detroit Lions',        skin: '#b07848', height: 72, weight: 197, starter: false, captain: true,  number: 14,
     attrs: { speed: 8,  bodyControl: 10, vertical: 7,  routeRunning: 9, release: 9,  hands: 9, awareness: 10,  size: 6,  afterCatch: 7  } },
   { name: 'Isaac TeSlaa',        short: 'TeSlaa',      team: 'DET', teamName: 'Detroit Lions',        skin: '#f0c4a0', height: 77, weight: 220, starter: false, number: 18,
-    attrs: { speed: 6,  bodyControl: 7,  vertical: 8,  routeRunning: 3,  release: 5,  hands: 7,  awareness: 4,  size: 11, afterCatch: 4  } },
+    attrs: { speed: 6,  bodyControl: 7,  vertical: 8,  routeRunning: 3,  release: 5,  hands: 7,  awareness: 4,  size: 10, afterCatch: 4  } },
   { name: 'Tom Kennedy',           short: 'Kennedy',      team: 'DET', teamName: 'Detroit Lions', skin: '#f0c4a0', height: 70, weight: 195, starter: false, number: 85,
     attrs: { speed: 6, bodyControl: 4, vertical: 4, routeRunning: 3, release: 4, hands: 4, awareness: 4, size: 4, afterCatch: 4 } },
   // GB

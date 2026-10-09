@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { useProgress, buy, equip, owns, priceOf, lockReason, dealsFor, claimFreeCoins, msToReset, isPro, COINS, achStats } from '../../lib/progress'
+import { useProgress, buy, equip, owns, priceOf, lockReason, dealsFor, claimFreeCoins, msToReset, isPro, COINS, achStats, walletOpen, hasDiscord, claimDiscordCoins, DISCORD_COINS } from '../../lib/progress'
+import { connectDiscord } from '../../lib/discord'
 import { SLOTS, RARITY, ITEMS, itemById, itemsFor, BLURB, DEFAULTS } from '../../lib/cosmetics'
 import { achById } from '../../lib/achievements'
 import { getUsername } from '../../lib/discord'
-import { sfx, haptic, previewVictory } from '../../lib/juice'
+import { sfx, haptic, previewVictory, warmVictory } from '../../lib/juice'
 import { NameTag, AvatarBadge, ItemPreview } from './NameTag'
-import { IconClose, IconLock, IconGift, IconCrown, IconPlay, IconArrow, IconStar } from './icons'
+import { IconClose, IconLock, IconGift, IconCrown, IconPlay, IconArrow, IconStar, IconDiscord } from './icons'
 
 // The shop (app): coins buy avatars, name colors and effects, nameplates and
 // victory effects/sounds. BAP Pro opens the Pro Vault. Opened from Home (the
@@ -30,9 +31,19 @@ function useCountTo(target, ms = 600) {
   return v
 }
 
+const signIn = () => window.dispatchEvent(new CustomEvent('bap:auth'))
+
 export function CoinPill({ onClick, className = '' }) {
   const p = useProgress()
   const n = useCountTo(p.coins ?? 0)
+  // website: coins need an account
+  if (!walletOpen()) {
+    return (
+      <button className={`coin-pill coin-pill--signin${className ? ` ${className}` : ''}`} onClick={signIn} aria-label="Sign in to earn coins">
+        <span className="coin-ico" aria-hidden="true" />SIGN IN
+      </button>
+    )
+  }
   const [bump, setBump] = useState(false)
   const prev = useRef(p.coins)
   useEffect(() => { if ((p.coins ?? 0) > (prev.current ?? 0)) { setBump(true); setTimeout(() => setBump(false), 520) } prev.current = p.coins }, [p.coins])
@@ -40,6 +51,30 @@ export function CoinPill({ onClick, className = '' }) {
     <button className={`coin-pill${bump ? ' is-bump' : ''}${className ? ` ${className}` : ''}`} onClick={onClick ?? (() => nav('shop'))} aria-label={`${p.coins ?? 0} coins, open the shop`}>
       <span className="coin-ico" aria-hidden="true" />{n.toLocaleString()}
     </button>
+  )
+}
+
+// Join the Discord: one-time coins (linking Discord also joins the server)
+function DiscordCoins({ p }) {
+  const [busy, setBusy] = useState(false)
+  if (p.discordPaid) return null
+  const linked = hasDiscord(p.user)
+  const act = async () => {
+    if (!p.signedIn) { signIn(); return }
+    if (!linked) { setBusy(true); const { error } = await connectDiscord(); if (error) setBusy(false); return }
+    if (claimDiscordCoins()) { sfx('purchase'); haptic('success') }
+  }
+  return (
+    <div className="sh-section">
+      <button className="sh-free sh-discord" onClick={act} disabled={busy}>
+        <span className="sh-chest"><IconDiscord size={26} /></span>
+        <span>
+          <span className="sh-free-title">JOIN THE DISCORD</span>
+          <span className="sh-free-sub">{linked ? `You're in — claim your ${DISCORD_COINS} coins` : `Connect Discord, join the server, get ${DISCORD_COINS} coins`}</span>
+        </span>
+        <span className="sh-free-go">{!p.signedIn ? 'SIGN IN' : linked ? 'CLAIM' : busy ? '…' : 'JOIN'}</span>
+      </button>
+    </div>
   )
 }
 
@@ -157,6 +192,7 @@ function ItemSheet({ id, onClose, name }) {
 }
 
 export default function AppShop({ onClose, tab: initialTab = 'featured' }) {
+  useEffect(() => { warmVictory() }, [])   // victory sounds ready for previews
   const p = useProgress()
   const [tab, setTab] = useState(initialTab)
   const [open, setOpen] = useState(null)
@@ -210,14 +246,27 @@ export default function AppShop({ onClose, tab: initialTab = 'featured' }) {
 
       {tab === 'featured' ? (
         <>
+          {!walletOpen() && (
+            <div className="sh-section">
+              <button className="sh-free sh-signin" onClick={signIn}>
+                <span className="sh-chest"><IconStar size={26} /></span>
+                <span>
+                  <span className="sh-free-title">SIGN IN TO EARN COINS</span>
+                  <span className="sh-free-sub">Coins and cards are saved to your account</span>
+                </span>
+                <span className="sh-free-go">SIGN IN</span>
+              </button>
+            </div>
+          )}
+          <DiscordCoins p={p} />
           <div className="sh-section">
-            <button className={`sh-free${p.freeReady ? '' : ' is-claimed'}`} onClick={claim}>
+            <button className={`sh-free${p.freeReady ? '' : ' is-claimed'}`} onClick={walletOpen() ? claim : signIn}>
               <span className="sh-chest"><IconGift size={28} /></span>
               <span>
                 <span className="sh-free-title">DAILY DROP</span>
                 <span className="sh-free-sub">{p.freeReady ? `${pro ? COINS.freePro : COINS.free} free coins today${pro ? ' (Pro doubles it)' : ''}` : `Next drop in ${fmtLeft(msToReset())}`}</span>
               </span>
-              <span className="sh-free-go">{p.freeReady ? 'CLAIM' : 'CLAIMED'}</span>
+              <span className="sh-free-go">{!walletOpen() ? 'SIGN IN' : p.freeReady ? 'CLAIM' : 'CLAIMED'}</span>
             </button>
           </div>
           <div className="sh-section">

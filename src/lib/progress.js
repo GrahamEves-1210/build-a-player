@@ -15,6 +15,7 @@ import { supabase } from './supabase'
 import { getUsername } from './discord'
 import { itemById, forSale, DEFAULTS, ITEMS } from './cosmetics'
 import { ACHIEVEMENTS, achById } from './achievements'
+import { IS_APP } from './platform'
 
 // ── Days (America/New_York, same as the Salary Cap daily) ────────────────────
 const NY = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' })
@@ -175,6 +176,7 @@ const blank = () => ({
   owned: {},                  // itemId → when it was bought / earned
   equip: { ...DEFAULTS },     // slot → itemId
   shopFree: null,             // day the free daily coins were claimed
+  discordPaid: false,         // the one-time Join the Discord coins
   levelPaid: 0,               // highest level already paid out in coins
   // achievements
   ach: {},                    // id → when it was unlocked
@@ -441,6 +443,7 @@ function onSpin(e) {
   if (!player?.name) return
   S.stats.spins++
   bumpMissions('spin', {})
+  if (!walletOpen()) { emit(); return }
   const k = cardKey(sport, pos, mode, player.name, player.team)
   const isNew = !S.cards[k]
   S.cards[k] = isNew ? [1, Date.now()] : [S.cards[k][0] + 1, S.cards[k][1]]
@@ -569,9 +572,11 @@ export function seasonCoins(d) {
   if (d.daily) c += COINS.daily
   return c
 }
+// Website: coins and cards need an account (the app keeps a guest's on the phone)
+export const walletOpen = () => IS_APP || !!uid
 function earn(n, label, quiet = false) {
   n = Math.round(n || 0)
-  if (n <= 0) return
+  if (n <= 0 || !walletOpen()) return
   S.coins += n
   S.coinsEarned += n
   S.walletAt = Date.now()
@@ -639,8 +644,20 @@ export function equip(slot, id) {
 export const myCosmetics = () => ({ avatar: S.equip.avatar ?? null, nameColor: S.equip.nameColor ?? null, nameFx: S.equip.nameFx ?? null, plate: S.equip.plate ?? null })
 export const myVictory = () => ({ fx: S.equip.winFx || DEFAULTS.winFx, sound: S.equip.winSound || DEFAULTS.winSound })
 
+// Join the Discord: one-time coins once the account has Discord linked
+// (linking it also joins the server — lib/discord.js finishDiscordSignIn)
+export const DISCORD_COINS = 250
+export const hasDiscord = u => !!(u?.identities?.some(i => i.provider === 'discord') || u?.app_metadata?.providers?.includes('discord') || u?.app_metadata?.provider === 'discord')
+export function claimDiscordCoins() {
+  if (!uid || S.discordPaid || !hasDiscord(user)) return 0
+  S.discordPaid = true
+  earn(DISCORD_COINS, 'Joined the Discord', true)
+  emit()
+  return DISCORD_COINS
+}
+
 export function claimFreeCoins() {
-  if (S.shopFree === dayKey()) return 0
+  if (S.shopFree === dayKey() || !walletOpen()) return 0
   S.shopFree = dayKey()
   const n = isPro() ? COINS.freePro : COINS.free
   earn(n, 'Daily drop', true)
@@ -694,7 +711,7 @@ export function claimAch(id) {
 // The wallet follows the account (accounts.app_profile, see supabase/app_shop.sql).
 // Last change wins; items and achievements are merged, never lost.
 // ═════════════════════════════════════════════════════════════════════════════
-const WALLET_KEYS = ['coins', 'coinsEarned', 'owned', 'equip', 'ach', 'achClaimed', 'stats', 'shopFree', 'levelPaid']
+const WALLET_KEYS = ['coins', 'coinsEarned', 'owned', 'equip', 'ach', 'achClaimed', 'stats', 'shopFree', 'levelPaid', 'discordPaid']
 let pushTimer = null
 function schedulePush() {
   if (!supabase || !uid) return
@@ -720,10 +737,12 @@ async function pullWallet(id) {
     const st = { ...S.stats }
     for (const [k, v] of Object.entries(w.stats || {})) {
       if (k === 'positions') st.positions = { ...(v || {}), ...(st.positions || {}) }
+      else if (k === 'compete' && v) st.compete = Object.fromEntries(Object.keys(BLANK_STATS.compete).map(f => [f, Math.max(st.compete?.[f] ?? 0, v[f] ?? 0)]))
       else if (typeof v === 'number') st[k] = Math.max(st[k] ?? 0, v)
     }
     S.stats = st
     S.coinsEarned = Math.max(S.coinsEarned, w.coinsEarned ?? 0)
+    S.discordPaid = !!(S.discordPaid || w.discordPaid)
     if (newer) {
       S.coins = w.coins ?? S.coins
       S.equip = { ...DEFAULTS, ...(w.equip || {}) }
