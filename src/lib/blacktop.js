@@ -102,6 +102,7 @@ export function useBlacktop({ enabled, user, position, pools, types, build, play
   const me = useMemo(() => ({ vid: myVid(), name: user ? (getUsername(user) || 'Player') : 'Guest', uid: user?.id ?? null, pos: position, cos: myCosmetics() }), [user?.id, position, cosV]) // eslint-disable-line
   const [phase, setPhase] = useState('idle')          // idle | queue | build | game | result
   const [queue, setQueue] = useState([])               // presence in the lobby
+  const [link, setLink] = useState('connecting')       // 'connecting' | 'live' | 'local' (this device only)
   const [mySlot, setMySlot] = useState(null)           // the spot I claimed in the lobby
   const [bumped, setBumped] = useState(false)          // someone beat me to a spot
   const [lobbyChat, setLobbyChat] = useState([])
@@ -178,6 +179,7 @@ export function useBlacktop({ enabled, user, position, pools, types, build, play
     setPhase('queue'); setWaited(0); setMySlot(null); setLobbyChat([])
     const q = joinRoom('blacktop-q', { ...me, ts: Date.now(), slot: null, claim: 0 })
     queueRef.current = q
+    setLink('connecting'); q.onStatus(setLink)
     q.onPresence(list => {
       setQueue(list)
       const held = holders(list)
@@ -353,7 +355,7 @@ export function useBlacktop({ enabled, user, position, pools, types, build, play
   const typers = (phase === 'queue' ? queue : present.filter(p => match?.players.find(q => q.vid === p.vid)?.team === myTeam))
     .filter(p => p.vid !== me.vid && (p.typing ?? 0) > Date.now() - 3500).map(p => p.name)
   return {
-    phase, me, queue, waited, held, seated, mySlot, seat, bumped,
+    phase, me, queue, waited, held, seated, mySlot, seat, bumped, link, retry: () => { queueRef.current?.leave(); queueRef.current = null; join() },
     canFill: !!mySlot && waited >= FILL_AFTER_SECS && seated < ROOM_SIZE, join, fill: fillNow, leave: exit,
     match, present, builds, clock, role, setRole, chat: visibleChat, sendChat, typing, typers, myTeam, leader, isLeader: leader === me.vid,
     final, game, finish, rematchVotes, voteRematch, exit,

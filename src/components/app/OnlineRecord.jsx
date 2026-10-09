@@ -164,6 +164,18 @@ export function OnlineTierLadder() {
   )
 }
 
+// Lobbies: are we on the live server, or only this device?
+export function LinkPill({ link, onRetry, room = null }) {
+  if (link === 'live') return <span className="ol-link is-live"><i />LIVE{room ? ` · ${room}` : ''}</span>
+  if (link === 'local') return (
+    <span className="ol-link is-local">
+      <i />NOT ON THE LIVE SERVER · ONLY THIS DEVICE
+      {onRetry && <button onClick={onRetry}>RETRY</button>}
+    </span>
+  )
+  return <span className="ol-link is-connecting"><i />CONNECTING…{room ? ` · ${room}` : ''}</span>
+}
+
 // Result screens: what this game did to your rating, and what you set
 export function RatingLine({ mode }) {
   const p = useProgress()

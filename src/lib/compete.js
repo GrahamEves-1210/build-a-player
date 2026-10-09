@@ -65,6 +65,7 @@ export function useCompete({ enabled, user, sport, pos, botFor }) {
   const me = useMemo(() => ({ vid: myVid(), name: user ? (getUsername(user) || 'Player') : 'Guest', uid: user?.id ?? null, cos: myCosmetics() }), [user?.id]) // eslint-disable-line
   const [phase, setPhase] = useState('idle')        // idle | queue | build | result
   const [queue, setQueue] = useState([])
+  const [link, setLink] = useState('connecting')     // 'connecting' | 'live' | 'local' (this device only)
   const [waited, setWaited] = useState(0)
   const [match, setMatch] = useState(null)          // { code, seed, created, sport, pos, players:[{vid,name,uid,cos,bot,skill}] }
   const [results, setResults] = useState({})        // vid → { ovr, at, build }
@@ -118,6 +119,7 @@ export function useCompete({ enabled, user, sport, pos, botFor }) {
     setPhase('queue'); setWaited(0); setMatch(null); setResults({})
     const q = joinRoom(`compete-q-${sport}-${pos}`, { ...me, ts: Date.now() })
     queueRef.current = q
+    setLink('connecting'); q.onStatus(setLink)
     q.onPresence(list => {
       setQueue(list)
       if (list.length >= POOL_SIZE && leaderOf(list) === me.vid && queueRef.current === q) {
@@ -180,5 +182,6 @@ export function useCompete({ enabled, user, sport, pos, botFor }) {
   }, [phase, match, results, me.vid])
 
   const ranked = useMemo(() => rankResults(match, results), [match, results])
-  return { phase, queue, waited, match, results, ranked, clock, me, join, leave, fillNow, submit, inPool: phase === 'build' || phase === 'result' }
+  const retry = useCallback(() => { queueRef.current?.leave(); queueRef.current = null; join() }, [join])
+  return { phase, queue, waited, match, results, ranked, clock, me, link, retry, join, leave, fillNow, submit, inPool: phase === 'build' || phase === 'result' }
 }

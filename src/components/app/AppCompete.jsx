@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useProgress, COMPETE_REWARDS } from '../../lib/progress'
 import { POOL_SIZE, FILL_AFTER_SECS } from '../../lib/compete'
 import { IconClose, IconArrow, IconTrophy } from './icons'
-import OnlineRecord, { RatingLine } from './OnlineRecord'
+import OnlineRecord, { RatingLine, LinkPill } from './OnlineRecord'
 import { sfx } from '../../lib/juice'
 
 // COMPETE screen: the lobby (your stats, pick a position, find a pool), the
@@ -40,6 +40,8 @@ export default function AppCompete({ cp, sport, position, positions, onPosition,
           <span className="ag-eyebrow">FINDING A POOL · {posName}</span>
           <b className="cp-count">{Math.min(cp.queue.length, POOL_SIZE)}<i>/{POOL_SIZE}</i></b>
           <span className="cp-sub">Bots take the empty seats in {Math.max(0, FILL_AFTER_SECS - cp.waited)}s</span>
+          <LinkPill link={cp.link} onRetry={cp.retry} room={`${isBucket ? 'BASKETBALL' : 'FOOTBALL'} ${posName.toUpperCase()} POOL`} />
+          <span className="cp-sub cp-sub--room">Friends find you by picking the same sport and position.</span>
         </div>
         <div className="cp-seats">{seats.map((p, i) => <Seat key={i} p={p} i={i} me={cp.me.vid} />)}</div>
         <div className="cp-actions">

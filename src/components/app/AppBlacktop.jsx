@@ -10,7 +10,7 @@ import { VERSUS_BIG_TYPES } from '../../data/nba-bigs'
 import BlacktopCourt from './BlacktopCourt'
 import { IconClose, IconArrow, IconChat, IconStar, IconSend, IconBasketball, IconVersus } from './icons'
 import { NameTag } from './NameTag'
-import OnlineRecord, { RatingLine } from './OnlineRecord'
+import OnlineRecord, { RatingLine, LinkPill } from './OnlineRecord'
 
 // BLACKTOP screens. The match itself lives in lib/blacktop.js (useBlacktop);
 // these only draw it: the lobby (pick a spot on a squad), the slim HUD over the
@@ -60,6 +60,7 @@ export function BlacktopQueue({ bt, user, onBack, onVersus = null }) {
             <span className="bt-run-count"><b>{bt.seated}</b>/{ROOM_SIZE} <small>SPOTS TAKEN</small></span>
             <span className="bt-run-timer">{fmt(bt.waited)}</span>
           </div>
+          <div className="bt-run-link"><LinkPill link={bt.link} onRetry={bt.retry} /></div>
           <div className="bt-court-lines" aria-hidden="true" />
           <div className="bt-squads">
             {[0, 1].map(t => (

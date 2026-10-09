@@ -8,6 +8,7 @@
 //   room.send('chat', { text })                        // everyone, including me? no — others only
 //   room.onPresence(list => …)                         // [{ vid, name, pos, … }] everyone, me included
 //   room.track({ ready: true })                        // update my presence fields
+//   room.onStatus(s => …)                              // 'connecting' | 'live' (Supabase) | 'local' (this device only)
 //   room.leave()
 
 import { rtSupabase, supabase } from './supabase'
@@ -66,6 +67,7 @@ function bcRoom(name, me) {
   return {
     _bc: true,
     me: () => mine,
+    onStatus(fn) { try { fn('local') } catch {}; return () => {} },
     on(event, fn) { (handlers[event] ??= []).push(fn); return this },
     send(event, payload = {}) { try { bc.postMessage({ k: 'msg', event, payload, p: mine }) } catch {}; return Promise.resolve() },
     onPresence(fn) { presenceFns.add(fn); fn(list()); return () => presenceFns.delete(fn) },
@@ -80,6 +82,9 @@ function rtRoom(name, me, onFallback) {
   const ch = rt.channel(`bap-live-${name}`, { config: { presence: { key: me.vid }, broadcast: { self: false } } })
   const handlers = {}
   const presenceFns = new Set()
+  const statusFns = new Set()
+  let status = 'connecting'
+  const setStatus = s => { status = s; statusFns.forEach(fn => { try { fn(s) } catch {} }) }
   let mine = { ...me }
   let fell = false, ready = false
   const queued = []
@@ -110,20 +115,33 @@ function rtRoom(name, me, onFallback) {
     onPresence(fn) { presenceFns.add(fn); fn(list()); return () => presenceFns.delete(fn) },
     presence: list,
     track(fields) { mine = { ...mine, ...fields }; if (ready) ch.track(mine).catch(() => {}); emitPresence() },
-    leave() { try { rt.removeChannel(ch) } catch {} },
+    onStatus(fn) { statusFns.add(fn); try { fn(status) } catch {}; return () => statusFns.delete(fn) },
+    leave() { clearTimeout(timeout); try { rt.removeChannel(ch) } catch {} },
+  }
+  // Falling back to the same-device channel is a last resort: nobody on
+  // another device can be seen there. Retry the subscription a few times first
+  // and give a slow connection 20s before giving up.
+  const fallBack = why => {
+    if (fell) return
+    fell = true; clearTimeout(timeout)
+    console.warn(`[live] ${name}: no live connection (${why}) — this device only`)
+    try { rt.removeChannel(ch) } catch {}
+    onFallback(handlers, presenceFns, statusFns, mine)
   }
   let retries = 0
-  const timeout = setTimeout(() => { if (!ready && !fell) { fell = true; onFallback(handlers, presenceFns, mine) } }, 7000)
+  const timeout = setTimeout(() => { if (!ready) fallBack('timeout') }, 20000)
   ch.subscribe(s => {
     if (s === 'SUBSCRIBED') {
       clearTimeout(timeout); ready = true; retries = 0
       ch.track(mine).catch(() => {})
       queued.splice(0).forEach(m => ch.send(m).catch(() => {}))
-    } else if ((s === 'TIMED_OUT' || s === 'CHANNEL_ERROR') && !ready) {
-      if (!fell) { fell = true; clearTimeout(timeout); try { rt.removeChannel(ch) } catch {}; onFallback(handlers, presenceFns, mine) }
-    } else if ((s === 'TIMED_OUT' || s === 'CHANNEL_ERROR') && retries < 5) {
-      retries++; ready = false
-      setTimeout(() => { try { ch.subscribe() } catch {} }, 1000 * retries)
+      setStatus('live')
+    } else if (s === 'TIMED_OUT' || s === 'CHANNEL_ERROR') {
+      ready = false
+      if (retries < 4) { retries++; setStatus('connecting'); setTimeout(() => { if (!fell) { try { ch.subscribe() } catch {} } }, 800 * retries) }
+      else fallBack(s)
+    } else if (s === 'CLOSED' && !fell) {
+      setStatus('connecting')
     }
   })
   return room
@@ -141,14 +159,16 @@ export function joinRoom(name, me) {
     on(event, fn) { inner.on(event, fn); return facade },
     send: (event, payload) => inner.send(event, payload),
     onPresence: fn => inner.onPresence(fn),
+    onStatus: fn => inner.onStatus(fn),
     presence: () => inner.presence(),
     track: fields => inner.track(fields),
     leave: () => inner.leave(),
   }
-  inner = rtRoom(name, base, (handlers, presenceFns, mine) => {
+  inner = rtRoom(name, base, (handlers, presenceFns, statusFns, mine) => {
     const bc = bcRoom(name, mine)
     for (const [event, fns] of Object.entries(handlers)) fns.forEach(fn => bc.on(event, fn))
     presenceFns.forEach(fn => bc.onPresence(fn))
+    statusFns.forEach(fn => bc.onStatus(fn))
     inner = bc
   })
   return facade

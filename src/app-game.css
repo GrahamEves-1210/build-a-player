@@ -3282,3 +3282,19 @@ html.app-look:not(.is-app) .ag-menu::after { content: ''; display: block; width:
   html.app-look:not(.is-app) .ag-menu { max-width: 540px; margin-top: 10px; border-radius: 22px; border: 1.5px solid var(--ag-line-hi); }
 }
 html.app-look .ag-tiles { grid-auto-flow: row; }
+
+/* basketball selected: white on the orange thumb */
+.ag-sport--bucket .ag-sport-btn.is-on { color: #fff; }
+.ag-sport--bucket .ag-sport-btn.is-on .ag-sport-ico { background: rgba(255,255,255,.16); border-color: rgba(255,255,255,.4); }
+.ag-sport--bucket .ag-sport-btn.is-on .ag-sport-txt small { opacity: .9; }
+
+/* lobbies: the live link */
+.ol-link { position: relative; z-index: 1; display: inline-flex; align-items: center; gap: 7px; padding: 4px 10px; border-radius: 999px; font-family: var(--ag-font); font-size: 11.5px; letter-spacing: 1.6px; border: 1px solid var(--ag-line-hi); background: rgba(0,0,0,.4); color: var(--ag-muted); }
+.ol-link i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.ol-link.is-live { color: var(--ag-a2); border-color: color-mix(in srgb, var(--ag-a2) 50%, transparent); }
+.ol-link.is-live i { box-shadow: 0 0 8px var(--ag-a2); animation: ag-livepulse 1.6s ease-out infinite; }
+.ol-link.is-connecting i { animation: ag-float 1s ease-in-out infinite; }
+.ol-link.is-local { color: #ff9b9b; border-color: rgba(239,68,68,.5); flex-wrap: wrap; justify-content: center; }
+.ol-link.is-local button { margin-left: 4px; padding: 2px 9px; border-radius: 999px; border: 0; background: #ef4444; color: #fff; font: inherit; letter-spacing: 1.6px; cursor: pointer; }
+.cp-sub--room { font-size: 11.5px; opacity: .8; }
+.bt-run-link { display: flex; justify-content: center; margin: 2px 0 8px; }
