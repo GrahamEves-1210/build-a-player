@@ -61,6 +61,9 @@ if ('serviceWorker' in navigator) {
 const isBucket = window.location.pathname.startsWith('/bucket')
 if ((IS_APP || APP_LOOK) && isBucket) document.documentElement.classList.add('is-bucket')   // app theme: orange accent
 
+// the boot guard in index.html: the app's code is running
+window.__bapStarted = true
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <ErrorBoundary>

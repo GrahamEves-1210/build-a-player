@@ -2,6 +2,67 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <!-- Boot guard. If the app's files fail to load (a browser holding a bad
+         cached copy, e.g. the HTML fallback stored as a script; an old service
+         worker) or the app never starts, re-download the broken files, clear
+         old caches and service workers, and reload once. If it still fails,
+         offer Reload / Reset. Each case is reported to Analytics (boot_fail). -->
+    <script>
+    (function () {
+      var KEY = 'bap_boot_fix', tried = 0, failed = [], firstErr = null, busy = false
+      try { tried = +sessionStorage.getItem(KEY) || 0 } catch (e) {}
+      function report(reason) { try { window.gtag && window.gtag('event', 'boot_fail', { reason: String(reason).slice(0, 100), retry: tried }) } catch (e) {} }
+      // a repair reloads the page before Analytics can send: carry the reason over
+      try {
+        var pending = sessionStorage.getItem('bap_boot_reason')
+        if (pending) { sessionStorage.removeItem('bap_boot_reason'); setTimeout(function () { report(pending + ' (repaired by reload)') }, 4000) }
+      } catch (e) {}
+      function clearAll() {
+        var jobs = failed.map(function (u) { return fetch(u, { cache: 'reload' }).catch(function () {}) })
+        if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) jobs.push(navigator.serviceWorker.getRegistrations().then(function (rs) { return Promise.all(rs.map(function (r) { return r.unregister() })) }).catch(function () {}))
+        if (window.caches && caches.keys) jobs.push(caches.keys().then(function (ks) { return Promise.all(ks.map(function (k) { return caches.delete(k) })) }).catch(function () {}))
+        return Promise.all(jobs)
+      }
+      function rescue(reason) {
+        if (busy) return
+        busy = true
+        report(reason)
+        if (tried < 1) {
+          try { sessionStorage.setItem(KEY, String(tried + 1)); sessionStorage.setItem('bap_boot_reason', String(reason).slice(0, 100)) } catch (e) {}
+          clearAll().then(function () { location.reload() })
+        } else banner()
+      }
+      function banner() {
+        if (document.getElementById('bap-boot')) return
+        var d = document.createElement('div')
+        d.id = 'bap-boot'
+        d.setAttribute('style', 'position:fixed;left:12px;right:12px;bottom:12px;z-index:2147483647;max-width:460px;margin:0 auto;padding:16px;border-radius:14px;background:#0f1612;border:1px solid #2b4a3a;color:#eef8f1;font:15px/1.45 system-ui,sans-serif;box-shadow:0 12px 40px rgba(0,0,0,.6)')
+        d.innerHTML = '<b style="display:block;font-size:16px;margin-bottom:4px">Build-A-Player didn’t load</b>Your browser is holding an old copy of the site. Reset clears it (you stay signed in).<div style="display:flex;gap:8px;margin-top:12px"><button id="bap-boot-reset" style="flex:1;height:42px;border:0;border-radius:10px;background:#52B788;color:#07120a;font-weight:700;font-size:15px">Reset and reload</button><button id="bap-boot-reload" style="height:42px;padding:0 16px;border:1px solid #2b4a3a;border-radius:10px;background:transparent;color:#eef8f1;font-size:15px">Reload</button></div>'
+        document.body.appendChild(d)
+        document.getElementById('bap-boot-reload').onclick = function () { try { sessionStorage.removeItem(KEY) } catch (e) {}; location.reload() }
+        document.getElementById('bap-boot-reset').onclick = function () {
+          report('reset by user')
+          try { for (var i = localStorage.length - 1; i >= 0; i--) { var k = localStorage.key(i); if (k && k.indexOf('sb-') !== 0) localStorage.removeItem(k) } } catch (e) {}
+          try { sessionStorage.clear() } catch (e) {}
+          clearAll().then(function () { location.replace(location.pathname + '?fresh=' + Date.now()) })
+        }
+      }
+      // a file under /assets/ failed (missing, or served as the HTML page)
+      window.addEventListener('error', function (e) {
+        var t = e.target, u = t && (t.src || t.href)
+        if (u && /\/assets\//.test(u)) { failed.push(u); rescue('asset ' + u.split('/').pop()) }
+        else if (!firstErr && e.message) firstErr = e.message
+      }, true)
+      window.addEventListener('unhandledrejection', function (e) { if (!firstErr) firstErr = String((e.reason && e.reason.message) || e.reason) })
+      // the app never drew anything
+      function booted() { var r = document.getElementById('root'); return !!(r && r.children.length && !r.querySelector('.seo-prerender')) }
+      setTimeout(function () {
+        if (booted()) { try { sessionStorage.removeItem(KEY) } catch (e) {}; return }
+        if (window.__bapStarted) rescue('no render: ' + (firstErr || 'unknown'))
+      }, 15000)
+      setTimeout(function () { if (!booted() && !window.__bapStarted) rescue('never started: ' + (firstErr || 'unknown')) }, 30000)
+    })()
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#090a0d" />
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
