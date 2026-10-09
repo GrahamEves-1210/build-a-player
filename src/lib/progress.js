@@ -646,7 +646,7 @@ export const myVictory = () => ({ fx: S.equip.winFx || DEFAULTS.winFx, sound: S.
 
 // Join the Discord: one-time coins once the account has Discord linked
 // (linking it also joins the server — lib/discord.js finishDiscordSignIn)
-export const DISCORD_COINS = 250
+export const DISCORD_COINS = 500
 export const hasDiscord = u => !!(u?.identities?.some(i => i.provider === 'discord') || u?.app_metadata?.providers?.includes('discord') || u?.app_metadata?.provider === 'discord')
 export function claimDiscordCoins() {
   if (!uid || S.discordPaid || !hasDiscord(user)) return 0
