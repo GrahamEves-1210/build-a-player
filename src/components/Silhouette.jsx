@@ -15,7 +15,7 @@ const ALL_QB_PHYS = { ...QB_LEGEND_PHYSICALS, ...QB_PHYSICALS }
 const ALL_RB_PHYS = { ...RB_LEGEND_PHYSICALS, ...RB_PHYSICALS }
 const ALL_WR_PHYS = { ...WR_LEGEND_PHYSICALS, ...WR_PHYSICALS }
 import QBAvatar from './QBAvatar'
-import { IS_APP } from '../lib/platform'
+import { IS_APP, APP_LOOK } from '../lib/platform'
 
 function fmtHeight(in_) { return `${Math.floor(in_ / 12)}'${in_ % 12}"` }
 function lightenHex(hex, amt) {
@@ -564,7 +564,8 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
           </button>
         ))}
       </div>}
-      {!!onSandboxToggle && (
+      {/* app + app-look website: Sandbox is the card on the build side (AppSandbox) */}
+      {!!onSandboxToggle && !IS_APP && !APP_LOOK && (
         <div className="sil-sandbox-outer">
           <div className="sil-sandbox-toprow">
             <div

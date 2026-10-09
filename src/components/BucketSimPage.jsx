@@ -2804,7 +2804,8 @@ export default function BucketSimPage({ result: baseResult, build, types, positi
     <div className="simp-page" style={teamStyle}>
       <div className="simp-col">
         <div className="simp-top-bar">
-          {screen > 0 && (
+          {/* a steered season can't be backed out of: going back would replay the year and its decisions */}
+          {screen > 0 && !(director && screen <= 2) && (
             <button className="simp-back-btn" onClick={() => setScreen(s => s - 1)}>← Back</button>
           )}
           <ProgressDots screen={screen} total={screens.length} />

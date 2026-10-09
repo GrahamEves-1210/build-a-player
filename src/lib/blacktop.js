@@ -279,7 +279,7 @@ export function useBlacktop({ enabled, user, position, pools, types, build, play
     const now = Date.now()
     const inLobby = phase === 'queue'
     const room = inLobby ? queueRef.current : roomRef.current
-    if (!room || !user || now - lastChat.current < MIN_GAP_MS) return false
+    if (!room || now - lastChat.current < MIN_GAP_MS) return false
     const t = clean(text); if (!t) return false
     lastChat.current = now
     const mine = match?.players.find(p => p.vid === me.vid)
@@ -303,7 +303,7 @@ export function useBlacktop({ enabled, user, position, pools, types, build, play
     if (!final || !match) return null
     const mk = p => ({ id: p.vid, name: p.name, pos: p.pos, role: final.roles[p.vid] ?? 'balanced', build: final.builds[p.vid], bot: p.bot, uid: p.uid })
     const teams = [match.players.filter(p => p.team === 0).map(mk), match.players.filter(p => p.team === 1).map(mk)]
-    return { ...simStreetball({ teams, seed: final.seed, goal: 21, winBy: 2, cap: 25, names: [teamName(match, 0), teamName(match, 1)] }), teams }
+    return { ...simStreetball({ teams, seed: final.seed, goal: 11, winBy: 2, cap: 15, names: [teamName(match, 0), teamName(match, 1)] }), teams }
   }, [final, match])
 
   const recorded = useRef(null)
@@ -314,7 +314,7 @@ export function useBlacktop({ enabled, user, position, pools, types, build, play
     const won = mine && game.winner === mine.team
     const mvp = game.mvp === me.vid
     const xp = (won ? 40 : 15) + (mvp ? 20 : 0)
-    const coins = (won ? 30 : 10) + (mvp ? 15 : 0)
+    const coins = (won ? 15 : 5) + (mvp ? 8 : 0)
     window.dispatchEvent(new CustomEvent('bap:xp', { detail: { xp, coins, label: won ? (mvp ? 'Blacktop win · MVP' : 'Blacktop win') : 'Blacktop game' } }))
     window.dispatchEvent(new CustomEvent('bap:blacktop', { detail: { won: !!won, mvp, line: game.stats[me.vid] ?? null, bots: !!match.bots, score: game.score, team: mine?.team ?? 0 } }))
     if (user && supabase && !match.bots) {

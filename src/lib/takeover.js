@@ -17,6 +17,8 @@ export const STOPS = 12
 export const XP_CITY = 15
 export const XP_RUN = 250
 export const XP_ENDLESS = 30
+export const COINS_CITY = 8
+export const COINS_RUN = 75
 const RUN_V = 2
 
 // ── Cities ────────────────────────────────────────────────────────────────────
@@ -128,6 +130,23 @@ export function loadRun(sport, uid) {
 }
 export function saveRun(run) { try { if (run) localStorage.setItem(key(run.sport, run.uid), JSON.stringify(run)) } catch {} }
 export function clearRun(sport, uid) { try { localStorage.removeItem(key(sport, uid)) } catch {} }
+
+// ── Past runs (the Takeover intro lists them) ────────────────────────────────
+const histKey = sport => `bap_takeover_hist_${sport}`
+export function pastRuns(sport) {
+  try { const l = JSON.parse(localStorage.getItem(histKey(sport)) || '[]'); return Array.isArray(l) ? l : [] } catch { return [] }
+}
+// Book a finished run once (out of lives, or ended by hand); returns it marked
+export function logRun(run, ovr = null) {
+  if (!run || run.logged || !run.log?.length) return run
+  const entry = {
+    at: Date.now(), pos: run.pos, mode: run.mode, taken: run.taken.length, stops: run.route.length,
+    endless: run.endlessWins, won: !!run.won, ovr, games: run.log.length, wins: run.log.filter(l => l.won).length,
+    last: run.log[run.log.length - 1]?.city ?? null,
+  }
+  try { localStorage.setItem(histKey(run.sport), JSON.stringify([entry, ...pastRuns(run.sport)].slice(0, 20))) } catch {}
+  return { ...run, logged: true }
+}
 
 export function newRun({ sport, uid, pos, mode = 'solo', build, types, rated, cities }) {
   const seed = Math.random().toString(36).slice(2, 10)

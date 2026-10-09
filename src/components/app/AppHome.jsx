@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { POS_OPTIONS, AvatarTrio, StackedSilhouette, SPLASH_ATTRS } from '../SplashScreen'
 import { getUsername } from '../../lib/discord'
 import { useProgress } from '../../lib/progress'
-import { IconCrown, IconBolt, IconClipboard, IconCoin, IconVersus, IconLock, IconProfile, IconArrow, IconGear, IconPodium, IconFootball, IconBasketball, IconPlay } from './icons'
+import { IconCrown, IconBolt, IconClipboard, IconCoin, IconLock, IconProfile, IconArrow, IconGear, IconPodium, IconFootball, IconBasketball, IconPlay } from './icons'
 import { sfx } from '../../lib/juice'
 import { NameTag, AvatarBadge } from './NameTag'
 import { CoinPill } from './AppShop'
@@ -32,8 +32,8 @@ function PoolArt() {
 
 // Home screen — a game main menu. The app and the website (APP_LOOK) both use
 // it in place of the old splash; same callbacks, so nothing else changes.
-// Modes only show when their callback is passed (football Head-to-Head is
-// website-only). `footer` is the website's features + links, under the menu.
+// Modes only show when their callback is passed (1v1 lives inside Blacktop).
+// `footer` is the website's features + links, under the menu.
 // Styling: src/app-game.css.
 
 const NFL_FIGURE = {
@@ -289,16 +289,10 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
             </>
           ) : (
             <>
-              <button className="ag-mini ag-pop" style={{ '--d': '340ms', gridColumn: onVersus ? undefined : '1 / -1' }} onClick={onDepthChart}>
+              <button className="ag-mini ag-pop" style={{ '--d': '340ms', gridColumn: '1 / -1' }} onClick={onDepthChart}>
                 <span className="ag-mini-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><IconClipboard size={17} /> THE DEPTH CHART</span>
-                <span className="ag-mini-sub" style={{ color: '#fbbf24' }}>{onVersus ? 'Sort the stars by the stat' : 'Mini game · sort the stars by the stat'}</span>
+                <span className="ag-mini-sub" style={{ color: '#fbbf24' }}>Mini game · sort the stars by the stat</span>
               </button>
-              {onVersus && (
-                <button className="ag-mini ag-pop" style={{ '--d': '370ms' }} onClick={() => onVersus(position)}>
-                  <span className="ag-mini-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><IconVersus size={17} /> HEAD-TO-HEAD</span>
-                  <span className="ag-mini-sub">{h2h.played ? `${h2h.wins}W–${h2h.losses}L${h2h.streak >= 2 ? ` · ${h2h.streak} straight` : ''}` : '1v1 a friend'}</span>
-                </button>
-              )}
             </>
           )}
         </div>

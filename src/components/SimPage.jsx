@@ -1573,7 +1573,8 @@ export default function SimPage({ result: baseResult, build, types = TYPES, onBa
     <div className="simp-page" style={teamStyle}>
       <div className="simp-col">
         <div className="simp-top-bar">
-          {screen > 0 && screen < screens.length - 1 && (
+          {/* a steered season can't be backed out of: going back would replay the year and its decisions */}
+          {screen > 0 && screen < screens.length - 1 && !(director && screen <= 2) && (
             <button className="simp-back-btn" onClick={() => setScreen(s => s - 1)}>← Back</button>
           )}
           <ProgressDots screen={screen} total={screens.length} />

@@ -30,7 +30,7 @@ const TAB_FOR_PAGE = { splash: 'play', profile: 'profile', leaderboard: null, 'p
 const HIDE_ON = new Set(['versus-game', 'versus-result', 'shared'])
 // Website: the game screens keep the site's navbar, so the dock is only on the
 // app-look pages (home, profile, the Takeover road, the Blacktop lobby + game)
-const WEB_DOCK_ON = new Set(['splash', 'profile', 'takeover', 'blacktop', 'blacktop-game', 'compete', 'leaderboard', 'pvp-leaderboard'])
+const WEB_DOCK_ON = new Set(['splash', 'profile', 'takeover', 'takeover-intro', 'blacktop', 'blacktop-game', 'compete', 'leaderboard', 'pvp-leaderboard'])
 
 const nav = to => window.dispatchEvent(new CustomEvent('bap:nav', { detail: to }))
 
@@ -91,6 +91,8 @@ export default function AppTabBar() {
     const onMenu = () => setMenuOpen(true)
     const onNav = e => {
       const [to, arg] = String(e.detail).split(':')
+      // web: cards live on an account, so a guest gets the sign-in sheet (from Daily, Shop, anywhere)
+      if (to === 'cards' && !walletOpen()) { setMenuOpen(false); setAuthOpen(true); return }
       if (['daily', 'cards', 'shop', 'achievements', 'locker', 'soundlab', 'online'].includes(to)) { setMenuOpen(false); if (to === 'shop') setShopTab(arg || 'featured'); setScreen(to) }
       else setScreen(null)
     }

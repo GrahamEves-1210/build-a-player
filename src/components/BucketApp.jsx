@@ -40,6 +40,7 @@ import { useBlacktop } from '../lib/blacktop'
 import { BlacktopQueue, BlacktopHud, BlacktopChat, BlacktopGame } from './app/AppBlacktop'
 import { loadRun, newRun, cityList, ratedPool } from '../lib/takeover'
 const AppTakeover = lazy(() => import('./app/AppTakeover'))
+const TakeoverIntro = lazy(() => import('./app/AppTakeover').then(m => ({ default: m.TakeoverIntro })))
 import CompeteHud from './app/CompeteHud'
 const AppCompete = lazy(() => import('./app/AppCompete'))
 // which page a live Blacktop run is on, so Home → Play (or the card) resumes it
@@ -730,7 +731,7 @@ export default function BucketApp() {
     })
   }, [position, gameMode, isBucketCustomMode, bucketCustomRatings])
 
-  // 1v1 Head-to-Head: from the Blacktop lobby (and the old splash)
+  // Blacktop 1v1: from the Blacktop lobby (and the old splash)
   const startVersus = useCallback((pos) => {
     const p = pos || position || 'guard'
     try { localStorage.setItem('bucketPosition', p) } catch {}
@@ -825,7 +826,7 @@ export default function BucketApp() {
   const startTakeoverBuild = useCallback(() => { handleStart('classic', position); setPage('takeover-build') }, [handleStart, position])
   const openTakeover = useCallback(() => {
     const run = loadRun('bucket', user?.id)
-    if (run && !run.over) { setTakeoverRun(run); setPage('takeover') } else startTakeoverBuild()
+    if (run && !run.over) { setTakeoverRun(run); setPage('takeover') } else { setPage('takeover-intro'); window.scrollTo({ top: 0, behavior: 'instant' }) }
   }, [user?.id, startTakeoverBuild])
   openTakeoverRef.current = openTakeover
   const hitTheRoad = useCallback(() => {
@@ -956,10 +957,20 @@ export default function BucketApp() {
     document.querySelector('.game-page-scroll')?.scrollTo({ top: 0, behavior: 'instant' })
   }, [activeTypes])
 
+  // App look: a build that already played its season goes back to that season
+  // (no fresh team, no fresh year: Back to Build can't re-roll it)
+  const replayOrSpin = useCallback(() => {
+    if ((IS_APP || APP_LOOK) && simResult && gameMode !== 'salarycap') {
+      setSimInitialScreen(4); setPage('sim'); window.scrollTo({ top: 0, behavior: 'instant' }); return
+    }
+    setShowTeamSpin(true)
+  }, [simResult, gameMode])
+
   const commitBucketRef = useRef(null)
   const handleTeamPicked = useCallback((team) => {
     const result = runBucketSimulation(build, activeTypes, team, position, null, gameMode)
     setSimResult(result)
+    setSimInitialScreen(0)
     setShowTeamSpin(false)
     // The season is steered on the sim page; it's booked when it ends
     if (IS_APP || APP_LOOK) { setPage('sim'); window.scrollTo({ top: 0, behavior: 'instant' }); return }
@@ -1486,7 +1497,7 @@ export default function BucketApp() {
         <div className="right-panel-wrap">
           <ReportCard
             build={build}
-            onSimulate={page === 'takeover-build' ? hitTheRoad : competeOn ? lockInCompete : () => setShowTeamSpin(true)}
+            onSimulate={page === 'takeover-build' ? hitTheRoad : competeOn ? lockInCompete : replayOrSpin}
             simLabel={page === 'takeover-build' ? 'HIT THE ROAD' : competeOn ? 'LOCK IN' : undefined}
             onReset={handleReset}
             types={activeTypes}
@@ -1534,7 +1545,7 @@ export default function BucketApp() {
       {showVsPrompt && page === 'versus-game' && (
         <div className="vs-prompt-overlay">
           <div className="vs-prompt-modal">
-            <div className="vs-prompt-eyebrow">HEAD TO HEAD</div>
+            <div className="vs-prompt-eyebrow">{(IS_APP || APP_LOOK) ? 'BLACKTOP 1V1' : 'HEAD TO HEAD'}</div>
             <div className="vs-prompt-matchup">
               <div className="vs-prompt-side">
                 <div className="vs-prompt-name">{getUsername(user) || 'Guest'}</div>
@@ -1762,6 +1773,14 @@ export default function BucketApp() {
         <BlacktopGame bt={bt} user={user} photoFor={p => livePhoto(p.build?.basketballIQ ? { name: p.build.basketballIQ.qbFull, photo: p.build.basketballIQ.photo } : null)} onOpenChat={openBtChat} unread={btUnread} />
         {btChatOpen && <BlacktopChat bt={bt} user={user} onClose={() => setBtChatOpen(false)} />}
       </>
+    )
+  }
+  // No run on the road: what Takeover is + your past runs, then a build
+  if (page === 'takeover-intro') {
+    return (
+      <Suspense fallback={null}>
+        <TakeoverIntro sport="bucket" teams={NBA_TEAMS} onStart={startTakeoverBuild} onClose={() => setPage('splash')} />
+      </Suspense>
     )
   }
   if (page === 'takeover' && takeoverRun) {

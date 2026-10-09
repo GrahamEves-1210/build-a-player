@@ -97,7 +97,7 @@ export default function VersusResult({ myData, oppData, position, gameMode, role
 
       {/* ── header ── */}
       <div className="vr-header">
-        {phase === 'reveal' && <span className="vr-header-label">HEAD TO HEAD</span>}
+        {phase === 'reveal' && <span className="vr-header-label">{(IS_APP || APP_LOOK) ? '1V1' : 'HEAD TO HEAD'}</span>}
         {phase === 'sim'    && <span className="vr-header-label vr-header-label--sim">SIMULATING SEASON…</span>}
         {phase === 'result' && (
           <span className={`vr-header-label vr-header-label--result ${winner === 'me' ? 'vr-win' : 'vr-loss'}`}>

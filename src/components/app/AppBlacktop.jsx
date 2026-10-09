@@ -49,7 +49,7 @@ export function BlacktopQueue({ bt, user, onBack, onVersus = null }) {
     <div className="ag-screen ag-screen--bucket bt-lobby">
       <div className="ag-screen-head">
         <div>
-          <span className="ag-eyebrow">LIVE · 3V3 · FIRST TO 21</span>
+          <span className="ag-eyebrow">LIVE · 3V3 · FIRST TO 11</span>
           <h1 className="ag-h1">Blacktop</h1>
         </div>
         <button className="ag-round-btn" onClick={() => { bt.leave(); onBack() }} aria-label="Leave the lobby"><IconClose size={16} /></button>
@@ -104,20 +104,20 @@ export function BlacktopQueue({ bt, user, onBack, onVersus = null }) {
             <span className="bt-1v1-ico"><IconVersus size={18} /></span>
             <span className="ag-takeover-txt">
               <span className="ag-eyebrow">OR GO ONE ON ONE</span>
-              <span className="bt-1v1-title">HEAD-TO-HEAD · 1V1</span>
-              <span className="ag-takeover-sub">Pick up a random opponent or play a friend. First to 11.</span>
+              <span className="bt-1v1-title">1V1</span>
+              <span className="ag-takeover-sub">Pickup searches for a game, or invite a friend with a code. First to 11.</span>
             </span>
             <IconArrow size={14} />
           </button>
         )}
-        <OnlineRecord mode="bt" title="YOUR BLACKTOP" />
+        <OnlineRecord modes={['bt', 'h2h']} title="YOUR BLACKTOP" />
 
         <details className="bt-rules ag-pop" style={{ '--d': '200ms' }}>
           <summary className="ag-eyebrow">HOUSE RULES</summary>
           <ul>
             <li>Every squad is two guards and a big. The spot you take is the build you make.</li>
             <li>3:00 to build. Leave or go quiet and the blacktop builds for you, with the ratings off.</li>
-            <li>First to <b>21</b>, 1s and 2s, win by 2. Make it, take it.</li>
+            <li>First to <b>11</b>, 1s and 2s, win by 2. Make it, take it.</li>
             <li>Chat is filtered, and anyone can be reported.</li>
           </ul>
         </details>
@@ -251,17 +251,12 @@ export function BlacktopChat({ bt, user, onClose, mode = 'blacktop', title = 'TE
             <button onClick={() => setMenu(null)}>CANCEL</button>
           </div>
         )}
-        {user ? (
-          <>
-            <div className="bt-quick">{QUICK.map(q => <button key={q} className="ag-chip" onClick={() => send(q)}>{q}</button>)}</div>
-            <form className="bt-chat-form" onSubmit={e => { e.preventDefault(); send(text) }}>
-              <input ref={inputRef} value={text} onChange={e => { setText(e.target.value); bt.typing?.() }} maxLength={120} placeholder={mode === 'blacktop-lobby' ? 'Message the lobby…' : 'Message your squad…'} enterKeyHint="send" autoComplete="off" />
-              <button className="bt-send" type="submit" disabled={!text.trim()} aria-label="Send"><IconSend size={20} /></button>
-            </form>
-          </>
-        ) : (
-          <div className="bt-chat-signin">Sign in to chat. <button onClick={() => window.dispatchEvent(new CustomEvent('bap:auth'))}>Sign in</button></div>
-        )}
+        {/* guests chat too (as "Guest"); the filter, report and block cover everyone */}
+        <div className="bt-quick">{QUICK.map(q => <button key={q} className="ag-chip" onClick={() => send(q)}>{q}</button>)}</div>
+        <form className="bt-chat-form" onSubmit={e => { e.preventDefault(); send(text) }}>
+          <input ref={inputRef} value={text} onChange={e => { setText(e.target.value); bt.typing?.() }} maxLength={120} placeholder={mode === 'blacktop-lobby' ? 'Message the lobby…' : mode === 'takeover' ? 'Message your partner…' : 'Message your squad…'} enterKeyHint="send" autoComplete="off" />
+          <button className="bt-send" type="submit" disabled={!text.trim()} aria-label="Send"><IconSend size={20} /></button>
+        </form>
       </div>
     </div>,
     document.body,
@@ -311,7 +306,7 @@ export function BlacktopGame({ bt, user, photoFor, onOpenChat, unread }) {
     return (
       <div className="ag-screen ag-screen--bucket bt-game">
         <div className="bt-reveal">
-          <span className="ag-eyebrow">BLACKTOP · FIRST TO 21</span>
+          <span className="ag-eyebrow">BLACKTOP · FIRST TO 11</span>
           <div className="bt-reveal-grid">
             {squads.map((sq, t) => (
               <div key={t} className={`bt-squad bt-t${t} ag-pop`} style={{ '--d': `${t * 160}ms` }}>
@@ -375,7 +370,7 @@ export function BlacktopGame({ bt, user, photoFor, onOpenChat, unread }) {
     <div className="ag-screen ag-screen--bucket bt-game bt-live">
       <div className="bt-board">
         <div className={`bt-board-side bt-t0${score[0] > score[1] ? ' is-lead' : ''}`}><span className="bt-board-name">{names[0]}{myTeam === 0 ? ' · YOU' : ''}</span><b>{score[0]}</b></div>
-        <div className="bt-board-mid"><span className="ag-eyebrow">FIRST TO 21</span><button className={`ag-chip${speed === 2 ? ' is-on' : ''}`} onClick={() => setSpeed(s => (s === 1 ? 2 : 1))}>{speed}×</button></div>
+        <div className="bt-board-mid"><span className="ag-eyebrow">FIRST TO 11</span><button className={`ag-chip${speed === 2 ? ' is-on' : ''}`} onClick={() => setSpeed(s => (s === 1 ? 2 : 1))}>{speed}×</button></div>
         <div className={`bt-board-side bt-t1${score[1] > score[0] ? ' is-lead' : ''}`}><span className="bt-board-name">{names[1]}{myTeam === 1 ? ' · YOU' : ''}</span><b>{score[1]}</b></div>
       </div>
       <BlacktopCourt game={game} play={play} meId={bt.me.vid} photoFor={photoFor} colorFor={colorFor} speed={speed} />

@@ -3,6 +3,8 @@ import { supabase, rtSupabase } from '../lib/supabase'
 import Navbar from './Navbar'
 import { getUsername } from '../lib/discord'
 import { IS_APP, APP_LOOK } from '../lib/platform'
+// App + app-look website: this is Blacktop's 1v1 (Pickup or Invite a friend), not a separate mode
+const LOOK = IS_APP || APP_LOOK
 import OnlineRecord from './app/OnlineRecord'
 
 const rt = rtSupabase || supabase
@@ -598,10 +600,18 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
       />
 
       <div className="versus-lobby-hero">
+        {LOOK ? (
+          <div className="vl1-head">
+            {on3v3 && <button className="vl1-back" onClick={() => { abandon(); on3v3() }}>← BLACKTOP 3V3</button>}
+            <span className="ag-eyebrow">BLACKTOP · FIRST TO 11</span>
+            <div className="versus-lobby-title vl1-title">1V1</div>
+          </div>
+        ) : (
         <div className="versus-lobby-title">HEAD<span className="h2h-to">-TO-</span>HEAD</div>
-        <div className="versus-lobby-modes">
+        )}
+        <div className={`versus-lobby-modes${LOOK ? ' vl1-modes' : ''}`}>
           <div className="vlm-spacer" />
-          <div className="vlm-pills">
+          {!LOOK && <div className="vlm-pills">
             <button className="vlm-btn vlm-btn--active">1v1</button>
             {on3v3 ? (
               <button className="vlm-btn" onClick={() => { abandon(); on3v3() }}>3v3</button>
@@ -611,7 +621,7 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
                 3v3
               </button>
             )}
-          </div>
+          </div>}
           <div className="vlm-right">
             <button className="vlm-friends-btn" onClick={() => setLbOpen(v => !v)} title="Leaderboard">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -629,8 +639,8 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
             </button>
           </div>
         </div>
-        <div className="versus-lobby-sub">Build your player · Face off</div>
-        <div className="vlh-stat-card">
+        {!LOOK && <div className="versus-lobby-sub">Build your player · Face off</div>}
+        {!LOOK && <div className="vlh-stat-card">
           <div className="vlh-stat-left">
             <div className="vlh-stat-name">
               {user ? (getUsername(user)) : 'Sign in to track stats'}
@@ -647,8 +657,8 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
               <span className="vlh-stat-label">L</span>
             </div>
           </div>
-        </div>
-        {(IS_APP || APP_LOOK) && <div className="vlh-online"><OnlineRecord mode="h2h" title="YOUR 1V1" /></div>}
+        </div>}
+        {LOOK && <div className="vlh-online"><OnlineRecord modes={['h2h', 'bt']} title="YOUR BLACKTOP" /></div>}
       </div>
 
       {screen === 'menu' && (
@@ -657,7 +667,7 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
             <img src="/bbicon.png" alt="" style={{width:42,height:42,objectFit:'contain',flexShrink:0,marginLeft:-9}} />
             <div>
               <div className="vmb-title">PICKUP</div>
-              <div className="vmb-sub">Play a random opponent</div>
+              <div className="vmb-sub">{LOOK ? 'Search for a game' : 'Play a random opponent'}</div>
             </div>
           </button>
 
@@ -667,12 +677,12 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
               <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
             </svg>
             <div style={{marginLeft:10}}>
-              <div className="vmb-title">CREATE ROOM</div>
-              <div className="vmb-sub">Get a code to share</div>
+              <div className="vmb-title">{LOOK ? 'INVITE A FRIEND' : 'CREATE ROOM'}</div>
+              <div className="vmb-sub">{LOOK ? 'Get a code, send it, play them' : 'Get a code to share'}</div>
             </div>
           </button>
 
-          <div className="versus-divider"><span>or join with a code</span></div>
+          <div className="versus-divider"><span>{LOOK ? 'or join a friend with their code' : 'or join with a code'}</span></div>
 
           <div className="versus-join-row">
             <input

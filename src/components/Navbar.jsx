@@ -4,6 +4,7 @@ import { CAN_SELL_PLUS, IS_APP, APP_LOOK } from '../lib/platform'
 const MORE_SHEET = !IS_APP && APP_LOOK
 import FeedbackModal from './FeedbackModal'
 import { getUsername } from '../lib/discord'
+import { IconGear } from './app/icons'
 import { PROFILE_ICON_EMOJI, initialsOf } from '../data/profile-icons'
 
 const STEPS_DESKTOP = (isRB, isWR, isTE, isDB, isOL) => [
@@ -224,7 +225,7 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
     <header className={`navbar${gameMode === 'all-time' ? ' alltime-mode' : ''}`}>
       {versusState ? (
         <div className="logo nav-h2h-logo" onClick={onHome} style={onHome ? { cursor: 'pointer' } : undefined}>
-          HEAD<span className="h2h-to bvr-h2h-to">-TO-</span>HEAD
+          {(IS_APP || APP_LOOK) ? 'BLACKTOP 1V1' : <>HEAD<span className="h2h-to bvr-h2h-to">-TO-</span>HEAD</>}
         </div>
       ) : (
         <div className="logo" onClick={onHome} style={onHome ? { cursor: 'pointer' } : undefined}>
@@ -344,13 +345,20 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
       )}
 
       <div className="nav-right" ref={ref}>
-        <button
-          className={`waffle-btn${open ? ' waffle-open' : ''}`}
-          onClick={() => { dismissHint(); if (MORE_SHEET) window.dispatchEvent(new CustomEvent('bap:menu')); else setOpen(o => !o) }}
-          aria-label="Menu"
-        >
-          <IconGrid />
-        </button>
+        {MORE_SHEET ? (
+          // the app's settings-and-more button (opens the More sheet)
+          <button className="ag-icon-btn nav-more-btn" onClick={() => { dismissHint(); window.dispatchEvent(new CustomEvent('bap:menu')) }} aria-label="Settings and more">
+            <IconGear size={21} />
+          </button>
+        ) : (
+          <button
+            className={`waffle-btn${open ? ' waffle-open' : ''}`}
+            onClick={() => { dismissHint(); setOpen(o => !o) }}
+            aria-label="Menu"
+          >
+            <IconGrid />
+          </button>
+        )}
 
         {/* Signed-out nudge: points at the menu, where Sign In lives */}
         {!user && !open && !versusState && !hintDismissed && (

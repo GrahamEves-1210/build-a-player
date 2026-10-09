@@ -35,8 +35,9 @@ export { seeded, seededShuffle } from './rng'
 import { seeded } from './rng'
 
 // ── Levels, titles, unlocks ──────────────────────────────────────────────────
-// XP to go from level L to L+1 = 150 + 50·(L−1)
-export const xpForLevel = L => 150 * (L - 1) + 25 * (L - 1) * (L - 2)
+// XP to go from level L to L+1 = 200 + 75·(L−1): early levels come in a few
+// sessions, the later ones (and their unlocks) take weeks of regular play
+export const xpForLevel = L => 200 * (L - 1) + 75 * (L - 1) * (L - 2) / 2
 const TITLES = [[60, 'GOAT'], [45, 'Hall of Famer'], [30, 'MVP'], [20, 'All-Pro'], [10, 'Pro Bowler'], [5, 'Starter'], [1, 'Rookie']]
 export const titleFor = L => TITLES.find(([min]) => L >= min)[1]
 export const TITLE_LEVELS = TITLES.map(([lvl, name]) => ({ level: lvl, name })).reverse()
@@ -101,7 +102,7 @@ const MISSIONS = {
   epic1:     { tier: 1, goal: 1,  xp: 80,  text: 'Pull an Epic or Legend card',  on: { card: d => d.rank >= 2 ? 1 : 0 } },
   top3:      { tier: 1, goal: 1,  xp: 100, text: 'Finish top 3 in a Compete pool', on: { compete: d => d.place <= 3 ? 1 : 0 } },
   bt1:       { tier: 1, goal: 1,  xp: 90,  text: 'Play a Blacktop game',         on: { bt: () => 1 } },
-  h2h1:      { tier: 1, goal: 1,  xp: 90,  text: 'Play a 1v1 Head-to-Head',      on: { h2h: () => 1 } },
+  h2h1:      { tier: 1, goal: 1,  xp: 90,  text: 'Play a Blacktop 1v1',      on: { h2h: () => 1 } },
   compete2:  { tier: 1, goal: 2,  xp: 110, text: 'Play 2 Compete pools',         on: { compete: () => 1 } },
   ring1:     { tier: 2, goal: 1,  xp: 150, text: 'Win a championship',           on: { season: d => d.champion ? 1 : 0 } },
   ovr90:     { tier: 2, goal: 1,  xp: 140, text: 'Build a 90+ OVR player',       on: { season: d => d.ovr >= 90 ? 1 : 0 } },
@@ -109,7 +110,7 @@ const MISSIONS = {
   legend1:   { tier: 2, goal: 1,  xp: 120, text: 'Pull a Legend card',           on: { card: d => d.rank >= 3 ? 1 : 0 } },
   cpwin1:    { tier: 2, goal: 1,  xp: 160, text: 'Win a Compete pool',           on: { compete: d => d.place === 1 ? 1 : 0 } },
   btwin1:    { tier: 2, goal: 1,  xp: 150, text: 'Win a Blacktop game',          on: { bt: d => d.won ? 1 : 0 } },
-  h2hwin1:   { tier: 2, goal: 1,  xp: 150, text: 'Win a 1v1 Head-to-Head',       on: { h2h: d => d.won ? 1 : 0 } },
+  h2hwin1:   { tier: 2, goal: 1,  xp: 150, text: 'Win a Blacktop 1v1',       on: { h2h: d => d.won ? 1 : 0 } },
 }
 export const missionDef = id => MISSIONS[id]
 // One easy, one medium, one hard — each about something different (seasons / spins / cards)
@@ -127,9 +128,9 @@ function pickMissions(key) {
 }
 
 export const STREAK_REWARDS = [
-  { days: 3,  xp: 150 },
-  { days: 7,  xp: 400,  unlock: 'inferno' },
-  { days: 30, xp: 1500, unlock: 'platinum' },
+  { days: 3,  xp: 100 },
+  { days: 7,  xp: 250,  unlock: 'inferno' },
+  { days: 30, xp: 750,  unlock: 'platinum' },
 ]
 export const LOGIN_XP = 25
 
@@ -201,7 +202,7 @@ const BLANK_STATS = {
   compete: { played: 0, wins: 0, podiums: 0, placeSum: 0, ovrSum: 0, best: 0, streak: 0, bestStreak: 0, beaten: 0, recent: [] },
   // Blacktop career line (btGames / btWins / btMvp above are the long-standing counters)
   bt: { streak: 0, bestStreak: 0, pts: 0, ast: 0, reb: 0, stl: 0, blk: 0, fgm: 0, fga: 0, highPts: 0, recent: [] },
-  // 1v1 Head-to-Head (the website also keeps vs_results; this follows the wallet)
+  // Blacktop 1v1 (the website also keeps vs_results; this follows the wallet)
   h2h: { played: 0, wins: 0, losses: 0, forfeits: 0, streak: 0, bestStreak: 0, recent: [] },
   // Online rating across the live modes (see rateOnline)
   online: { rating: 800, best: 800, played: 0 },
@@ -302,25 +303,25 @@ export function claimMission(id) {
   emit()
   return def.xp
 }
-export const missionCoins = xp => Math.round(xp * 0.6)
+export const missionCoins = xp => Math.round(xp * 0.3)
 export function claimStreak(days) {
   const r = STREAK_REWARDS.find(x => x.days === days)
   if (!r || S.streak.count < days || S.streak.claimed[days]) return 0
   S.streak.claimed[days] = true
   S.bonusXp += r.xp
-  earn(Math.round(r.xp / 2), null, true)
+  earn(Math.round(r.xp / 4), null, true)
   if (r.unlock) S.unlocks[r.unlock] = true
   emit()
   return r.xp
 }
 // Completing a team's set in the binder (every player on that roster) pays once
-export const setReward = size => Math.min(1500, 25 * size)
+export const setReward = size => Math.min(600, 10 * size)
 export function claimSet(key, size) {
   S.sets ??= {}
   if (S.sets[key]) return 0
   S.sets[key] = true
   S.bonusXp += setReward(size)
-  earn(Math.round(setReward(size) / 3), null, true)
+  earn(Math.round(setReward(size) / 4), null, true)
   emit()
   return setReward(size)
 }
@@ -470,7 +471,7 @@ function rateOnline(delta, mode, extra = {}) {
 }
 
 // A Compete pool finished: your place → stats, rating, XP and coins
-export const COMPETE_REWARDS = { 1: [80, 60], 2: [50, 35], 3: [35, 20], 4: [20, 10], 5: [15, 5] }
+export const COMPETE_REWARDS = { 1: [80, 30], 2: [50, 18], 3: [35, 10], 4: [20, 5], 5: [15, 2] }
 const COMPETE_RATING = { 1: 24, 2: 12, 3: 4, 4: -6, 5: -12 }
 function onCompete(e) {
   const { place, ovr, of = 5, humans = 1 } = e.detail || {}
@@ -522,7 +523,7 @@ function onH2H(e) {
   if (won) { h.wins++; h.streak++; if (h.streak > h.bestStreak) h.bestStreak = h.streak } else { h.losses++; h.streak = 0; if (result === 'forfeit') h.forfeits++ }
   pushRecent(h.recent, won ? 'W' : 'L')
   const delta = rateOnline(result === 'win' ? 25 : result === 'walkover' ? 10 : result === 'forfeit' ? -20 : -15, 'h2h', { won, streak: h.streak, sport })
-  if (result !== 'walkover') toast({ kind: 'online', title: won ? 'HEAD-TO-HEAD · W' : 'HEAD-TO-HEAD · L', sub: `${delta >= 0 ? '+' : ''}${delta} rating${h.streak >= 2 ? ` · ${h.streak} straight` : ''}` })
+  if (result !== 'walkover') toast({ kind: 'online', title: won ? 'BLACKTOP 1V1 · W' : 'BLACKTOP 1V1 · L', sub: `${delta >= 0 ? '+' : ''}${delta} rating${h.streak >= 2 ? ` · ${h.streak} straight` : ''}` })
   bumpMissions('h2h', { won })
   emit()
 }
@@ -538,7 +539,7 @@ function onSpin(e) {
   S.cards[k] = isNew ? [1, Date.now()] : [S.cards[k][0] + 1, S.cards[k][1]]
   const rank = rarityRank(pool, player)
   bumpMissions('card', { isNew, rank })
-  if (isNew) { S.bonusXp += 5 + rank * 5; earn([2, 5, 10, 25][rank] ?? 2, null, true); if (rank >= 3) S.stats.legends++ }
+  if (isNew) { S.bonusXp += 2 + rank * 3; earn([1, 2, 5, 15][rank] ?? 1, null, true); if (rank >= 3) S.stats.legends++ }
   emit()
   window.dispatchEvent(new CustomEvent('bap:card', { detail: { isNew, rank, rarity: RARITIES[rank], name: player.name, team: player.team, sport, pos, mode, count: S.cards[k][0] } }))
 }
@@ -652,7 +653,11 @@ export function initProgress() {
 // ═════════════════════════════════════════════════════════════════════════════
 // Coins, the shop and cosmetics
 // ═════════════════════════════════════════════════════════════════════════════
-export const COINS = { season: 25, winNfl: 3, winNba: 0.6, playoffs: 25, ring: 100, award: 50, daily: 40, level: 60, free: 50, freePro: 100 }
+// Balance: a typical season pays ~25–35, a title run ~100. A regular day of play
+// (a handful of seasons, the missions, the daily drop) is roughly 300–400 coins:
+// commons in a sitting, rares in a few days, epics in about a week, legendaries
+// in a couple of weeks (and their level).
+export const COINS = { season: 10, winNfl: 1, winNba: 0.25, playoffs: 10, ring: 40, award: 25, daily: 20, level: 40, free: 25, freePro: 50 }
 export function seasonCoins(d) {
   if (d.sandbox) return 0
   let c = COINS.season + Math.round((d.wins ?? 0) * (d.sport === 'bucket' ? COINS.winNba : COINS.winNfl))

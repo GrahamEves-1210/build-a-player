@@ -21,7 +21,7 @@ import { calcBucketOVR, getBucketGuardArchetype, getBucketBigArchetype } from '.
 import { buildShareUrl } from '../utils/shareUrl'
 import { generateBucketShareCard, shareOrDownloadCard } from '../utils/generateShareCard'
 import QBAvatar from './QBAvatar'
-import { IS_APP, shareNative } from '../lib/platform'
+import { IS_APP, APP_LOOK, shareNative } from '../lib/platform'
 import AppSandbox from './app/AppSandbox'
 
 function fmtHeight(inches) { return `${Math.floor(inches / 12)}'${inches % 12}"` }
@@ -401,7 +401,7 @@ export default function ReportCard({ build, onSimulate, onReset, types = TYPES, 
           </button>
         )}
 
-        {!isVersusMode && !!onSandboxToggle && IS_APP ? (
+        {!isVersusMode && !!onSandboxToggle && (IS_APP || APP_LOOK) ? (
           <AppSandbox on={!!isCustomMode} onToggle={v => onSandboxToggle?.(v)} onCustomize={onOpenCustomModal} />
         ) : !isVersusMode && !!onSandboxToggle ? (
           <div className="rc-sandbox-outer">

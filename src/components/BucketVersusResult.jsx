@@ -974,7 +974,7 @@ export default function BucketVersusResult({ myData, oppData, position, oppPosit
     return (
       <div className="versus-result bvr-reveal">
         <div className="vr-header">
-          <span className="vr-header-label">HEAD TO HEAD</span>
+          <span className="vr-header-label">{(IS_APP || APP_LOOK) ? 'BLACKTOP 1V1' : 'HEAD TO HEAD'}</span>
         </div>
         <div className="vr-grid">
           <div className="vr-side bvr-reveal-side" style={{ animationDelay: '0.1s' }}>
@@ -1043,7 +1043,7 @@ export default function BucketVersusResult({ myData, oppData, position, oppPosit
             />
           </div>
           <div className="bvr-board-mid">
-            <div className="bvr-h2h-logo">HEAD<span className="h2h-to bvr-h2h-to">-TO-</span>HEAD</div>
+            <div className="bvr-h2h-logo">{(IS_APP || APP_LOOK) ? '1V1' : <>HEAD<span className="h2h-to bvr-h2h-to">-TO-</span>HEAD</>}</div>
             <div className="bvr-eleven-label">FIRST TO 11</div>
           </div>
           <div className="bvr-board-team bvr-board-team--opp">

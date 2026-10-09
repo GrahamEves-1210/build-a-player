@@ -3,7 +3,7 @@ import { ACHIEVEMENTS } from '../../lib/achievements'
 import { IconPodium, IconFlame, IconArrow, IconHoop, IconVersus, IconTrophy, IconStar } from './icons'
 
 // Your online record: one rating across the live modes (Compete pools,
-// Blacktop 3v3, 1v1 Head-to-Head), the ladder of tiers, and each mode's own
+// Blacktop 3v3 and Blacktop 1v1), the ladder of tiers, and each mode's own
 // numbers. `compact` is the card a lobby shows; the full version is the
 // Online screen (AppOnline). Everything comes from lib/progress.js stats.
 
@@ -14,8 +14,8 @@ const ord = n => `${n}${['th', 'st', 'nd', 'rd'][(n % 100 > 10 && n % 100 < 14) 
 
 export const MODES = {
   compete: { label: 'Compete', Icon: IconPodium, sub: '5-player pools' },
-  bt: { label: 'Blacktop', Icon: IconHoop, sub: '3v3 · first to 21' },
-  h2h: { label: 'Head-to-Head', Icon: IconVersus, sub: '1v1 · basketball' },
+  bt: { label: 'Blacktop 3v3', Icon: IconHoop, sub: 'Squads · first to 11' },
+  h2h: { label: 'Blacktop 1v1', Icon: IconVersus, sub: 'One on one · first to 11' },
 }
 
 // Last 10 results as dots: W/L, or a Compete place (1 gold, 2–3 green, 4–5 grey)
@@ -135,18 +135,20 @@ export function NextGoals({ limit = 3 }) {
   )
 }
 
-// The card a lobby shows: tier + rating, this mode's headline numbers, form
-export default function OnlineRecord({ mode, compact = true, title = null }) {
+// The card a lobby shows: tier + rating, then each mode's headline numbers and
+// form, stacked (Blacktop shows its 3v3 and its 1v1 one under the other)
+export default function OnlineRecord({ mode, modes = null, compact = true, title = null }) {
   const p = useProgress()
   const o = p.stats?.online ?? { rating: 800 }
-  if (!compact) return <><RatingHero /><ModeStats mode={mode} full /></>
+  const list = modes ?? [mode]
+  if (!compact) return <><RatingHero />{list.map(m => <ModeStats key={m} mode={m} full />)}</>
   return (
     <div className="ol-card ag-pop" style={{ '--d': '60ms' }}>
       <button className="ol-card-head" onClick={() => nav('online')}>
         <span className="ag-eyebrow">{title ?? 'YOUR RECORD'}</span>
         <span className="ol-card-rating"><TierChip rating={o.rating} /><b>{o.rating}</b><IconArrow size={13} /></span>
       </button>
-      <ModeStats mode={mode} />
+      <div className="ol-stack">{list.map(m => <ModeStats key={m} mode={m} />)}</div>
     </div>
   )
 }

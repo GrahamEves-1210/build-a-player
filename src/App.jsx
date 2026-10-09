@@ -21,6 +21,7 @@ const LeaderboardPage= lazy(() => import('./components/LeaderboardPage'))
 const VersusLobby    = lazy(() => import('./components/VersusLobby'))
 const VersusResult   = lazy(() => import('./components/VersusResult'))
 const AppTakeover    = lazy(() => import('./components/app/AppTakeover'))
+const TakeoverIntro = lazy(() => import('./components/app/AppTakeover').then(m => ({ default: m.TakeoverIntro })))
 import CompeteHud from './components/app/CompeteHud'
 const AppCompete = lazy(() => import('./components/app/AppCompete'))
 const Wiki           = lazy(() => import('./components/wiki/Wiki'))
@@ -622,7 +623,7 @@ export default function App() {
   }, [handleStart])
   const openTakeover = useCallback(() => {
     const run = loadRun('nfl', user?.id)
-    if (run && !run.over) { setTakeoverRun(run); setPage('takeover') } else startTakeoverBuild()
+    if (run && !run.over) { setTakeoverRun(run); setPage('takeover') } else { setPage('takeover-intro'); window.scrollTo({ top: 0, behavior: 'instant' }) }
   }, [user?.id, startTakeoverBuild])
   const hitTheRoad = useCallback(() => {
     const pools = { qb: QBS, rb: RBS, wr: WRS, te: TES, db: DBS }
@@ -1434,6 +1435,14 @@ export default function App() {
     )
   }
 
+  // No run on the road: what Takeover is + your past runs, then a build
+  if (page === 'takeover-intro') {
+    return (
+      <Suspense fallback={null}>
+        <TakeoverIntro sport="nfl" teams={NFL_TEAMS} onStart={startTakeoverBuild} onClose={() => setPage('splash')} />
+      </Suspense>
+    )
+  }
   if (page === 'takeover' && takeoverRun) {
     const pos = takeoverRun.pos
     const pools = { qb: QBS, rb: RBS, wr: WRS, te: TES, db: DBS }

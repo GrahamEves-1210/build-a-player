@@ -2,7 +2,7 @@ import { useProgress } from '../../lib/progress'
 import { RatingHero, ModeStats, NextGoals, OnlineTierLadder } from './OnlineRecord'
 import { IconClose, IconArrow } from './icons'
 
-// Online screen (dock → Compete/Blacktop/1v1 cards → YOUR RECORD): the rating
+// Online screen (Compete / Blacktop cards → YOUR RECORD): the rating
 // and ladder, each live mode's full numbers, and the next goals to chase.
 
 const nav = to => window.dispatchEvent(new CustomEvent('bap:nav', { detail: to }))
@@ -28,14 +28,14 @@ export default function AppOnline({ sport = 'nfl', onClose }) {
         )}
         <NextGoals limit={3} />
         <ModeStats mode="compete" full />
-        <ModeStats mode={sport === 'bucket' ? 'bt' : 'h2h'} full />
-        <ModeStats mode={sport === 'bucket' ? 'h2h' : 'bt'} full />
+        <ModeStats mode="bt" full />
+        <ModeStats mode="h2h" full />
         <div className="ol-how">
           <span className="ag-eyebrow">WHAT MOVES YOUR RATING</span>
           <ul>
             <li><b>Compete</b> · 1st +24 · 2nd +12 · 3rd +4 · 4th −6 · 5th −12</li>
-            <li><b>Blacktop</b> · win +20 · loss −12 · MVP +5</li>
-            <li><b>Head-to-Head</b> · win +25 · loss −15 · forfeit −20</li>
+            <li><b>Blacktop 3v3</b> · win +20 · loss −12 · MVP +5</li>
+            <li><b>Blacktop 1v1</b> · win +25 · loss −15 · forfeit −20</li>
             <li>Pools and runs filled with bots count for half.</li>
           </ul>
         </div>

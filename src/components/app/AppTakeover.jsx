@@ -1,16 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { LIVES, XP_CITY, XP_RUN, XP_ENDLESS, cityList, ratedPool, ensureStop, stopAt, isEndless, whereAmI, opponentOf, nextBestOf, saveRun, clearRun, hoopsDuel, footballDuel, stealOptions, upgradeOptions, applyReward, afterDuel } from '../../lib/takeover'
+import { LIVES, XP_CITY, XP_RUN, XP_ENDLESS, cityList, ratedPool, ensureStop, stopAt, isEndless, whereAmI, opponentOf, nextBestOf, saveRun, clearRun, hoopsDuel, footballDuel, stealOptions, upgradeOptions, applyReward, afterDuel, pastRuns, logRun, STOPS, COINS_CITY, COINS_RUN } from '../../lib/takeover'
 import { W, H, OUTLINE_PATH, miles, heading } from '../../lib/usMap'
 import { playDelay } from '../../lib/hoops'
 import { joinRoom, genCode, myVid } from '../../lib/live'
 import { clean, blockedIds, MIN_GAP_MS } from '../../lib/chat'
 import { valToGrade } from '../../utils/simulation'
+import { useProgress } from '../../lib/progress'
 import { getUsername } from '../../lib/discord'
 import { sfx, haptic, victory } from '../../lib/juice'
 import { BlacktopChat } from './AppBlacktop'
 import BlacktopCourt from './BlacktopCourt'
 import Silhouette from '../Silhouette'
-import { IconClose, IconArrow, IconCheck, IconFlame, IconChat, IconStar, IconProfile } from './icons'
+import { IconClose, IconArrow, IconCheck, IconFlame, IconChat, IconStar, IconProfile, IconTrophy } from './icons'
 
 // TAKEOVER — the road across the map. The run (lib/takeover.js) is plain data
 // saved on the device; this screen walks it: the map → the city's player → the
@@ -79,11 +80,11 @@ export default function AppTakeover({ sport, run, setRun, user, pools, attrMap, 
     const wasEndless = isEndless(run)
     const next = afterDuel(run, at, won)
     if (won) {
-      window.dispatchEvent(new CustomEvent('bap:xp', { detail: { xp: wasEndless ? XP_ENDLESS : XP_CITY, coins: 20, label: wasEndless ? `Endless · ${next.endlessWins} straight` : `${at.city} taken` } }))
+      window.dispatchEvent(new CustomEvent('bap:xp', { detail: { xp: wasEndless ? XP_ENDLESS : XP_CITY, coins: COINS_CITY, label: wasEndless ? `Endless · ${next.endlessWins} straight` : `${at.city} taken` } }))
       window.dispatchEvent(new CustomEvent('bap:takeover', { detail: { city: true } }))
-      if (next.justWon) { window.dispatchEvent(new CustomEvent('bap:xp', { detail: { xp: XP_RUN, coins: 150, label: 'TAKEOVER complete' } })); window.dispatchEvent(new CustomEvent('bap:takeover', { detail: { run: true } })) }
+      if (next.justWon) { window.dispatchEvent(new CustomEvent('bap:xp', { detail: { xp: XP_RUN, coins: COINS_RUN, label: 'TAKEOVER complete' } })); window.dispatchEvent(new CustomEvent('bap:takeover', { detail: { run: true } })) }
     }
-    setRun(next)
+    setRun(next.over ? logRun(next, calcOvr(next.build)) : next)
     if (run.mode === 'duo') duo.sync(next)
     setScreen(won ? 'reward' : next.over ? 'over' : 'map')
   }
@@ -135,7 +136,7 @@ export default function AppTakeover({ sport, run, setRun, user, pools, attrMap, 
           <div className="tk-log ag-pop" style={{ '--d': '140ms' }}>
             {run.log.slice(-8).reverse().map((l, i) => { const c = byShort[l.city]; return <div key={i} className={`tk-log-line${l.won ? ' is-w' : ' is-l'}`}><b>{l.won ? 'W' : 'L'}</b> {c?.city ?? l.city}</div> })}
           </div>
-          <button className="ag-btn ag-btn--ghost tk-quit" onClick={() => { if (confirm('End this run? Your road and your build are gone.')) { clearRun(sport, run.uid); setRun(null); onExit() } }}>END RUN</button>
+          <button className="ag-btn ag-btn--ghost tk-quit" onClick={() => { if (confirm('End this run? Your road and your build are gone.')) { logRun(run, ovr); clearRun(sport, run.uid); setRun(null); onExit() } }}>END RUN</button>
         </div>
         {chatOpen && <BlacktopChat bt={duo.chatApi} user={user} onClose={() => setChatOpen(false)} mode="takeover" title="DUO CHAT" />}
       </div>
@@ -476,7 +477,7 @@ function useDuo({ enabled, run, setRun, me, user, calcOvr, onCity }) {
   const sync = next => { if (host) roomRef.current?.send('state', roadOf(next)) }
   const sendChat = (text) => {
     const now = Date.now()
-    if (!roomRef.current || !user || now - lastChat.current < MIN_GAP_MS) return false
+    if (!roomRef.current || now - lastChat.current < MIN_GAP_MS) return false
     const t = clean(text); if (!t) return false
     lastChat.current = now
     const msg = { uid: me.uid, name: me.name, team: 0, text: t, ts: now, all: true }
@@ -485,4 +486,65 @@ function useDuo({ enabled, run, setRun, me, user, calcOvr, onCity }) {
     return true
   }
   return { partner, partnerPlayer, chat, sync, chatApi: { chat, sendChat, me, match: { code } } }
+}
+
+// ── Intro: what Takeover is, and how your past runs went ─────────────────────
+// Shown when there's no run on the road; START builds the player for a new one.
+const RUN_DATE = { month: 'short', day: 'numeric' }
+export function TakeoverIntro({ sport, teams, onStart, onClose }) {
+  const isBucket = sport === 'bucket'
+  const cities = useMemo(() => cityList(sport, teams), [sport, teams])
+  const runs = useMemo(() => pastRuns(sport), [sport])
+  const st = useProgress().stats ?? {}
+  const best = runs.reduce((b, r) => Math.max(b, r.taken + (r.endless || 0)), 0)
+  const done = runs.filter(r => r.won).length
+  const steps = [
+    ['Build your player', 'One draft, the same spins as a normal game. That build is who you take on the road.'],
+    [`Cross ${STOPS} cities`, `Every stop has ${isBucket ? 'a star' : 'its best player at your position'} who rates higher than you. Beat them to take the city.`],
+    ['Take their game', 'Every win lets you steal one of their ratings or upgrade one of yours. The build grows as you go.'],
+    [`${LIVES} lives`, `A loss costs a life and you run that stop back. Lose all ${LIVES} and the run is over. Take all ${STOPS} and the road keeps going.`],
+  ]
+  return (
+    <div className={`ag-screen ag-screen--${sport} tk tk-intro`}>
+      <div className="ag-screen-head">
+        <div>
+          <span className="ag-eyebrow">ROAD MODE · SOLO OR DUO</span>
+          <h1 className="ag-h1">Takeover</h1>
+        </div>
+        <button className="ag-round-btn" onClick={onClose} aria-label="Home"><IconClose size={16} /></button>
+      </div>
+      <div className="ag-screen-body">
+        <UsMap cities={cities} run={{ start: null, taken: [] }} here={null} next={null} />
+        <ol className="tk-steps ag-pop" style={{ '--d': '80ms' }}>
+          {steps.map(([t, d], i) => (
+            <li key={t}><span className="tk-step-n">{i + 1}</span><span className="tk-step-txt"><b>{t}</b><small>{d}</small></span></li>
+          ))}
+        </ol>
+        <p className="tk-intro-note ag-pop" style={{ '--d': '110ms' }}>Bring a friend with <b>DUO</b> from the road: two builds, one map, and the city falls if either of you wins.</p>
+        <button className="ag-btn tk-intro-go ag-pop" style={{ '--d': '130ms' }} onClick={onStart}>BUILD A PLAYER · START A RUN <IconArrow size={16} /></button>
+
+        <section className="tk-runs ag-pop" style={{ '--d': '160ms' }}>
+          <div className="ag-card-head"><span className="ag-eyebrow">YOUR RUNS</span></div>
+          <div className="tk-runs-stats">
+            <span><b>{runs.length}</b><small>RUNS</small></span>
+            <span><b>{best || '–'}</b><small>BEST RUN</small></span>
+            <span><b>{done}</b><small>COMPLETED</small></span>
+            <span><b>{st.tkCities ?? 0}</b><small>CITIES TAKEN</small></span>
+          </div>
+          {runs.length === 0
+            ? <div className="tk-runs-empty">No runs yet. Your first road starts with a build.</div>
+            : runs.slice(0, 8).map((r, i) => (
+              <div key={r.at + '-' + i} className={`tk-run${r.won ? ' is-won' : ''}`}>
+                <span className="tk-run-pos">{POS_LABEL[r.pos] ?? r.pos?.toUpperCase()}</span>
+                <span className="tk-run-txt">
+                  <b>{r.won ? <><IconTrophy size={13} /> Took all {r.stops}{r.endless ? ` · ${r.endless} more` : ''}</> : `${r.taken} of ${r.stops} cities`}</b>
+                  <small>{new Date(r.at).toLocaleDateString(undefined, RUN_DATE)} · {r.mode === 'duo' ? 'Duo' : 'Solo'} · {r.wins}–{r.games - r.wins}</small>
+                </span>
+                {r.ovr != null && <span className="tk-run-ovr"><b>{r.ovr}</b><small>OVR</small></span>}
+              </div>
+            ))}
+        </section>
+      </div>
+    </div>
+  )
 }
