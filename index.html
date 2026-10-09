@@ -4,18 +4,23 @@
     <meta charset="UTF-8" />
     <!-- Boot guard. If the app's files fail to load (a browser holding a bad
          cached copy, e.g. the HTML fallback stored as a script; an old service
-         worker) or the app never starts, re-download the broken files, clear
-         old caches and service workers, and reload once. If it still fails,
-         offer Reload / Reset. Each case is reported to Analytics (boot_fail). -->
+         worker) or the app never starts, it repairs itself, no clicks:
+           1st try: re-download every app file past the browser cache, clear
+                    old caches and service workers, reload
+           2nd try: the same, plus clear the site's saved data (keeps the
+                    login), reload
+           then:    a short note at the top (something on their end, like an
+                    ad blocker, is blocking the site's files)
+         Each case is reported to Google Analytics as boot_fail. -->
     <script>
     (function () {
-      var KEY = 'bap_boot_fix', tried = 0, failed = [], firstErr = null, busy = false
+      var KEY = 'bap_boot_fix', WHY = 'bap_boot_reason', tried = 0, failed = [], firstErr = null, busy = false
       try { tried = +sessionStorage.getItem(KEY) || 0 } catch (e) {}
       function report(reason) { try { window.gtag && window.gtag('event', 'boot_fail', { reason: String(reason).slice(0, 100), retry: tried }) } catch (e) {} }
-      // a repair reloads the page before Analytics can send: carry the reason over
+      // a repair reloads before Analytics can send: carry the reason over
       try {
-        var pending = sessionStorage.getItem('bap_boot_reason')
-        if (pending) { sessionStorage.removeItem('bap_boot_reason'); setTimeout(function () { report(pending + ' (repaired by reload)') }, 4000) }
+        var pending = sessionStorage.getItem(WHY)
+        if (pending) { sessionStorage.removeItem(WHY); setTimeout(function () { report(pending) }, 4000) }
       } catch (e) {}
       function clearAll() {
         // every app file the page uses, not only the one that reported: a bad
@@ -25,31 +30,29 @@
         var jobs = urls.filter(function (u, i) { return urls.indexOf(u) === i }).map(function (u) { return fetch(u, { cache: 'reload' }).catch(function () {}) })
         if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) jobs.push(navigator.serviceWorker.getRegistrations().then(function (rs) { return Promise.all(rs.map(function (r) { return r.unregister() })) }).catch(function () {}))
         if (window.caches && caches.keys) jobs.push(caches.keys().then(function (ks) { return Promise.all(ks.map(function (k) { return caches.delete(k) })) }).catch(function () {}))
-        return Promise.all(jobs)
+        // never hang on a slow request: reload after 8s either way
+        return Promise.race([Promise.all(jobs), new Promise(function (r) { setTimeout(r, 8000) })])
+      }
+      function clearSaved() {
+        try { for (var i = localStorage.length - 1; i >= 0; i--) { var k = localStorage.key(i); if (k && k.indexOf('sb-') !== 0) localStorage.removeItem(k) } } catch (e) {}
       }
       function rescue(reason) {
         if (busy) return
         busy = true
-        report(reason)
-        if (tried < 1) {
-          try { sessionStorage.setItem(KEY, String(tried + 1)); sessionStorage.setItem('bap_boot_reason', String(reason).slice(0, 100)) } catch (e) {}
-          clearAll().then(function () { location.reload() })
-        } else banner()
+        if (tried >= 2) { report(reason + ' (gave up)'); note(); return }
+        try { sessionStorage.setItem(KEY, String(tried + 1)); sessionStorage.setItem(WHY, String(reason).slice(0, 80) + (tried ? ' (2nd repair)' : ' (1st repair)')) } catch (e) {}
+        if (tried >= 1) clearSaved()
+        clearAll().then(function () { location.reload() })
       }
-      function banner() {
+      // after both repairs: say so, at the top (the bottom is where the ad rail loads)
+      function note() {
         if (document.getElementById('bap-boot')) return
         var d = document.createElement('div')
         d.id = 'bap-boot'
-        d.setAttribute('style', 'position:fixed;left:12px;right:12px;bottom:12px;z-index:2147483647;max-width:460px;margin:0 auto;padding:16px;border-radius:14px;background:#0f1612;border:1px solid #2b4a3a;color:#eef8f1;font:15px/1.45 system-ui,sans-serif;box-shadow:0 12px 40px rgba(0,0,0,.6)')
-        d.innerHTML = '<b style="display:block;font-size:16px;margin-bottom:4px">Build-A-Player didn’t load</b>Your browser is holding an old copy of the site. Reset clears it (you stay signed in).<div style="display:flex;gap:8px;margin-top:12px"><button id="bap-boot-reset" style="flex:1;height:42px;border:0;border-radius:10px;background:#52B788;color:#07120a;font-weight:700;font-size:15px">Reset and reload</button><button id="bap-boot-reload" style="height:42px;padding:0 16px;border:1px solid #2b4a3a;border-radius:10px;background:transparent;color:#eef8f1;font-size:15px">Reload</button></div>'
+        d.setAttribute('style', 'position:fixed;left:12px;right:12px;top:12px;z-index:2147483647;max-width:460px;margin:0 auto;padding:14px 16px;border-radius:14px;background:#0f1612;border:1px solid #2b4a3a;color:#eef8f1;font:14.5px/1.45 system-ui,sans-serif;box-shadow:0 12px 40px rgba(0,0,0,.6)')
+        d.innerHTML = '<b style="display:block;font-size:16px;margin-bottom:4px">Build-A-Player can’t load right now</b>Something on this device is blocking the site’s files — usually an ad blocker or another browser extension, or the network. Turn extensions off for this site or try another browser.'
         document.body.appendChild(d)
-        document.getElementById('bap-boot-reload').onclick = function () { try { sessionStorage.removeItem(KEY) } catch (e) {}; location.reload() }
-        document.getElementById('bap-boot-reset').onclick = function () {
-          report('reset by user')
-          try { for (var i = localStorage.length - 1; i >= 0; i--) { var k = localStorage.key(i); if (k && k.indexOf('sb-') !== 0) localStorage.removeItem(k) } } catch (e) {}
-          try { sessionStorage.clear() } catch (e) {}
-          clearAll().then(function () { location.replace(location.pathname + '?fresh=' + Date.now()) })
-        }
+        try { sessionStorage.removeItem(KEY) } catch (e) {}   // the next visit gets the full repair again
       }
       // a file under /assets/ failed (missing, or served as the HTML page)
       window.addEventListener('error', function (e) {
