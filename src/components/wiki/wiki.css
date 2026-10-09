@@ -169,6 +169,15 @@
   .wk-h1 { font-size: 27px; }
   .wk-infobox { float: none; width: 100%; margin: 0 0 14px; }
 }
+/* Phones and small tablets: the page itself scrolls, not a 100dvh box inside
+   a locked #root. One native scrollbar, the browser bar collapses as usual,
+   and nothing resizes mid-scroll (100dvh changes as the browser bar moves). */
+@media (max-width: 900px) {
+  .wk { height: auto; min-height: 100dvh; overflow: visible; overscroll-behavior: auto; }
+  #root:has(.wk) { height: auto; min-height: 100dvh; overflow: visible; }
+  html:has(.wk), html:has(.wk) body { background: #eef4f0; }
+  html:has(.wk) body { height: auto; }   /* body's overflow passes to the page, so the top bar can stick */
+}
 @media (max-width: 560px) {
   .wk-brand b { font-size: 17px; }
   .wk-brand img { width: 32px; height: 32px; }

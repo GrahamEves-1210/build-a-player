@@ -22,7 +22,7 @@ export default function Wiki({ onExit }) {
   const [search, setSearch] = useState('')
   const [navOpen, setNavOpen] = useState(false)
   const searchRef = useRef(null)
-  const rootRef = useRef(null)                // the wiki is its own scroll container (the site's #root doesn't scroll)
+  const rootRef = useRef(null)                // desktop: the wiki is its own scroll container; phones: the page scrolls (wiki.css)
   const page = PAGES.find(p => p.slug === loc.slug) ?? PAGES[0]
 
   const go = (slug, opts = {}) => {
@@ -33,7 +33,11 @@ export default function Wiki({ onExit }) {
     if (window.location.pathname + window.location.search + window.location.hash !== path) window.history.pushState({}, '', path)
     setLoc({ slug, query: opts.query || '', pool: opts.pool || 'qb' }); setNavOpen(false); setSearch('')
     if (opts.hash) setTimeout(() => document.getElementById(opts.hash)?.scrollIntoView({ block: 'start' }), 60)
-    else rootRef.current?.scrollTo({ top: 0, behavior: 'instant' })
+    else {
+      const el = rootRef.current
+      if (el && el.scrollHeight > el.clientHeight + 1) el.scrollTo({ top: 0, behavior: 'instant' })
+      else window.scrollTo({ top: 0, behavior: 'instant' })
+    }
   }
   useEffect(() => {
     const onPop = () => setLoc(readLocation())
@@ -98,7 +102,7 @@ export default function Wiki({ onExit }) {
           {page.toc.length > 0 && (
             <nav className="wk-nav" aria-label="On this page">
               <h4>On this page</h4>
-              <ol>{page.toc.map(([id, label]) => <li key={id}><a href={`#${id}`} onClick={e => { e.preventDefault(); setNavOpen(false); document.getElementById(id)?.scrollIntoView({ block: 'start' }); window.history.replaceState({}, '', `${wikiPath(page.slug)}#${id}`) }}>{label}</a></li>)}</ol>
+              <ol>{page.toc.map(([id, label]) => <li key={id}><a href={`#${id}`} onClick={e => { e.preventDefault(); setNavOpen(false); setTimeout(() => document.getElementById(id)?.scrollIntoView({ block: 'start' }), 30); window.history.replaceState({}, '', `${wikiPath(page.slug)}#${id}`) }}>{label}</a></li>)}</ol>
             </nav>
           )}
           <nav className="wk-nav" aria-label="Elsewhere">
