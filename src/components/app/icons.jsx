@@ -77,8 +77,9 @@ export const IconClipboard = p => (
 export const IconCoin = p => (
   <S {...p}>
     <circle cx="12" cy="12" r="9.5" fill="currentColor"/>
-    <circle cx="12" cy="12" r="7" fill="none" stroke="rgba(255,255,255,.45)" strokeWidth="1.3"/>
-    <path style={INK} d="M12.8 6.5v1.1c1.2.2 2.1.9 2.4 2l-1.6.5c-.2-.6-.7-1-1.6-1-.9 0-1.4.4-1.4 1 0 .5.4.8 1.6 1.1l.8.2c1.9.5 2.6 1.3 2.6 2.6 0 1.4-1 2.3-2.8 2.5v1.1h-1.4v-1.1c-1.5-.2-2.5-1-2.7-2.3l1.7-.4c.1.8.8 1.2 1.8 1.2s1.6-.4 1.6-1-.4-.8-1.7-1.1l-.8-.2c-1.7-.4-2.5-1.2-2.5-2.5 0-1.3.9-2.2 2.4-2.4V6.5z"/>
+    <circle cx="12" cy="12" r="7.4" fill="none" stroke="rgba(255,255,255,.45)" strokeWidth="1.2"/>
+    {/* "BAP" stamped in the middle */}
+    <text x="12" y="14.6" textAnchor="middle" fontSize="7.4" fontFamily="'BAP Anton', Anton, Impact, 'Arial Narrow Bold', sans-serif" letterSpacing="-.2" style={INK}>BAP</text>
   </S>
 )
 
