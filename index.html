@@ -18,7 +18,11 @@
         if (pending) { sessionStorage.removeItem('bap_boot_reason'); setTimeout(function () { report(pending + ' (repaired by reload)') }, 4000) }
       } catch (e) {}
       function clearAll() {
-        var jobs = failed.map(function (u) { return fetch(u, { cache: 'reload' }).catch(function () {}) })
+        // every app file the page uses, not only the one that reported: a bad
+        // copy of a shared library chunk shows up as the main script failing
+        var urls = failed.slice()
+        try { [].forEach.call(document.querySelectorAll('script[src*="/assets/"],link[href*="/assets/"]'), function (el) { urls.push(el.src || el.href) }) } catch (e) {}
+        var jobs = urls.filter(function (u, i) { return urls.indexOf(u) === i }).map(function (u) { return fetch(u, { cache: 'reload' }).catch(function () {}) })
         if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) jobs.push(navigator.serviceWorker.getRegistrations().then(function (rs) { return Promise.all(rs.map(function (r) { return r.unregister() })) }).catch(function () {}))
         if (window.caches && caches.keys) jobs.push(caches.keys().then(function (ks) { return Promise.all(ks.map(function (k) { return caches.delete(k) })) }).catch(function () {}))
         return Promise.all(jobs)
