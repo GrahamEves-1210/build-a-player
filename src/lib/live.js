@@ -78,22 +78,43 @@ function bcRoom(name, me) {
 }
 
 // ── Supabase Realtime transport ──────────────────────────────────────────────
+// supabase-js 2.108's presence adapter rewrites the presence objects it hands to
+// its join/leave events in place, and those are the same objects it keeps as
+// state: each entry loses the ref a later leave needs to find it. So a player's
+// update (a new lobby spot) piles on top of the old one, and someone who leaves
+// never goes. Hand it copies instead. A no-op if the internals ever change.
+function shieldPresence(ch) {
+  try {
+    const P = ch.presence?.presenceAdapter?.presence
+    const { onJoin, onLeave } = P?.caller ?? {}
+    if (typeof P?.onJoin !== 'function' || !onJoin || !onLeave) return
+    const copy = o => (o ? JSON.parse(JSON.stringify(o)) : o)
+    P.onJoin((key, cur, joined) => onJoin(key, copy(cur), copy(joined)))
+    P.onLeave((key, cur, left) => onLeave(key, copy(cur), copy(left)))
+  } catch {}
+}
+
 function rtRoom(name, me, onFallback) {
   const ch = rt.channel(`bap-live-${name}`, { config: { presence: { key: me.vid }, broadcast: { self: false } } })
+  shieldPresence(ch)
   const handlers = {}
   const presenceFns = new Set()
   const statusFns = new Set()
   let status = 'connecting'
   const setStatus = s => { status = s; statusFns.forEach(fn => { try { fn(s) } catch {} }) }
-  let mine = { ...me }
+  let mine = { ...me, _t: Date.now() }
   let fell = false, ready = false
   const queued = []
   const list = () => {
     const st = ch.presenceState()
-    const others = Object.values(st).flat().filter(p => p.vid && p.vid !== mine.vid)
-    // one entry per vid (a reconnect can briefly show two)
-    const seen = new Set()
-    return [mine, ...others.filter(p => (seen.has(p.vid) ? false : (seen.add(p.vid), true)))]
+    // one entry per player, their newest (a re-track or reconnect can briefly show two)
+    const newest = new Map()
+    for (const p of Object.values(st).flat()) {
+      if (!p.vid || p.vid === mine.vid) continue
+      const had = newest.get(p.vid)
+      if (!had || (p._t ?? 0) >= (had._t ?? 0)) newest.set(p.vid, p)
+    }
+    return [mine, ...newest.values()]
   }
   const emitPresence = () => presenceFns.forEach(fn => { try { fn(list()) } catch {} })
   ch.on('presence', { event: 'sync' }, emitPresence)
@@ -114,7 +135,7 @@ function rtRoom(name, me, onFallback) {
     },
     onPresence(fn) { presenceFns.add(fn); fn(list()); return () => presenceFns.delete(fn) },
     presence: list,
-    track(fields) { mine = { ...mine, ...fields }; if (ready) ch.track(mine).catch(() => {}); emitPresence() },
+    track(fields) { mine = { ...mine, ...fields, _t: Date.now() }; if (ready) ch.track(mine).catch(() => {}); emitPresence() },
     onStatus(fn) { statusFns.add(fn); try { fn(status) } catch {}; return () => statusFns.delete(fn) },
     leave() { clearTimeout(timeout); try { rt.removeChannel(ch) } catch {} },
   }
