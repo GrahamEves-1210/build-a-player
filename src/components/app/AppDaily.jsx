@@ -17,7 +17,7 @@ function useCountdown() {
 
 function Streak({ p }) {
   const st = p.streak
-  const claim = days => { if (claimStreak(days)) { sfx('claim'); haptic('success') } }
+  const claim = days => { if (!p.signedIn) { window.dispatchEvent(new CustomEvent('bap:auth')); return } if (claimStreak(days)) { sfx('claim'); haptic('success') } }
   return (
     <section className="ag-card ag-streak ag-pop" style={{ '--d': '40ms' }}>
       <div className="ag-streak-head">
@@ -38,7 +38,7 @@ function Streak({ p }) {
               disabled={!reached || claimed} onClick={() => claim(r.days)}>
               <span className="ag-milestone-day">DAY {r.days}</span>
               <span className="ag-milestone-icon">{claimed ? <IconCheck size={18} /> : reached ? <IconGift size={20} /> : <IconLock size={16} />}</span>
-              <span className="ag-milestone-xp">+{r.xp} XP</span>
+              <span className="ag-milestone-xp">{p.signedIn ? `+${r.xp} XP` : 'SIGN IN'}</span>
               {spot && <span className="ag-milestone-extra"><i className={`ag-swatch ag-swatch--${spot.id}`} />{spot.name}</span>}
               {reached && !claimed && <span className="ag-milestone-claim">CLAIM</span>}
             </button>
@@ -98,7 +98,8 @@ function Challenge({ p, sport }) {
 }
 
 function Missions({ p }) {
-  const claim = id => { if (claimMission(id)) { sfx('claim'); haptic('success') } }
+  const signIn = () => window.dispatchEvent(new CustomEvent('bap:auth'))
+  const claim = id => { if (!p.signedIn) { signIn(); return } if (claimMission(id)) { sfx('claim'); haptic('success') } }
   return (
     <section className="ag-card ag-missions ag-pop" style={{ '--d': '140ms' }}>
       <div className="ag-card-head"><span className="ag-eyebrow">TODAY'S MISSIONS</span></div>
@@ -114,8 +115,8 @@ function Missions({ p }) {
               <span className="ag-mission-bar"><span style={{ width: `${(m.n / def.goal) * 100}%` }} /></span>
             </span>
             {done && !m.claimed
-              ? <button className="ag-btn ag-mission-claim" onClick={() => claim(m.id)}>+{def.xp}</button>
-              : <span className="ag-mission-xp">{m.claimed ? 'DONE' : `${m.n}/${def.goal} · ${def.xp} XP`}</span>}
+              ? <button className="ag-btn ag-mission-claim" onClick={() => claim(m.id)}>{p.signedIn ? `+${def.xp}` : 'SIGN IN'}</button>
+              : <span className="ag-mission-xp">{m.claimed ? 'DONE' : `${m.n}/${def.goal}${p.signedIn ? ` · ${def.xp} XP` : ''}`}</span>}
           </div>
         )
       })}

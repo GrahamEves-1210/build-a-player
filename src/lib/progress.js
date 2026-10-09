@@ -224,8 +224,12 @@ let snap = null
 let lastSeason = null
 const listeners = new Set()
 
+// XP and levels need an account (app and website): a guest stays unranked
+export const xpOpen = () => !!uid
+// "+60 XP · +40 COINS" with whatever this player can actually earn ('' if nothing)
+export const rewardText = (xp, coins) => [xp && xpOpen() ? `+${xp} XP` : '', coins && walletOpen() ? `+${coins} COINS` : ''].filter(Boolean).join(' · ')
 function totalXp() {
-  if (!uid) return S.bonusXp + S.seasonXp
+  if (!uid) return 0
   const since = S.sync?.at ?? 0
   return S.bonusXp + (S.sync?.xp ?? 0) + S.pending.filter(p => p.at > since).reduce((a, p) => a + p.xp, 0) + S.adjust
 }
@@ -264,7 +268,7 @@ function rollDay() {
     st.last = k
     st.best = Math.max(st.best, st.count)
     S.bonusXp += LOGIN_XP
-    toast({ kind: 'streak', title: st.count > 1 ? `${st.count}-DAY STREAK` : 'DAILY LOGIN', sub: `+${LOGIN_XP} XP` })
+    toast({ kind: 'streak', title: st.count > 1 ? `${st.count}-DAY STREAK` : 'DAILY LOGIN', sub: uid ? `+${LOGIN_XP} XP` : 'Sign in to earn XP' })
     changed = true
   }
   if (S.day?.key !== k) {
@@ -421,7 +425,7 @@ function onSeason(e) {
     }
   }
   lastSeason = {
-    id: Date.now(), ref: d.ref ?? null, lines, xp, before, after: before + xp, coins,
+    id: Date.now(), ref: d.ref ?? null, lines, xp, before, after: before + xp, coins: walletOpen() ? coins : 0,
     missions: (S.day?.missions ?? []).map((m, i) => ({ ...m, before: missionsBefore[i] ?? 0, def: MISSIONS[m.id] })),
   }
   emit()
@@ -433,7 +437,8 @@ function onXp(e) {
   if (!xp && !coins) return
   S.bonusXp += xp || 0
   if (coins) earn(coins, null, true)
-  toast({ kind: 'xp', title: `+${xp || 0} XP${coins ? ` · +${coins} COINS` : ''}`, sub: label || '' })
+  const t = rewardText(xp, coins)
+  if (t) toast({ kind: 'xp', title: t, sub: label || '' })
   emit()
 }
 
@@ -484,7 +489,7 @@ function onCompete(e) {
   S.bonusXp += xp
   earn(coins, null, true)
   bumpMissions('compete', { place })
-  toast({ kind: 'xp', title: `+${xp} XP · +${coins} COINS`, sub: `${place === 1 ? 'You won the pool' : `Compete · ${ordinal(place)} place`} · ${delta >= 0 ? '+' : ''}${delta} rating` })
+  toast({ kind: 'xp', title: rewardText(xp, coins) || (place === 1 ? 'POOL WON' : `${ordinal(place).toUpperCase()} PLACE`), sub: `${place === 1 ? 'You won the pool' : `Compete · ${ordinal(place)} place`} · ${delta >= 0 ? '+' : ''}${delta} rating` })
   emit()
 }
 

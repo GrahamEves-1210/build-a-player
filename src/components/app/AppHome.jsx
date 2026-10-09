@@ -69,15 +69,15 @@ export function PlayerChip({ user, onClick }) {
   return (
     <button className="ag-player-chip" onClick={onClick}>
       {name ? <AvatarBadge self name={name} size={46} level={p.lvl.level} /> : (
-        <span className="ag-avatar"><IconProfile size={22} /><span className="ag-avatar-lvl">{p.lvl.level}</span></span>
+        <span className="ag-avatar"><IconProfile size={22} /></span>
       )}
       <span className="ag-player-txt">
         <span className="ag-player-row">
           <span className="ag-player-name">{name ? <NameTag self name={name} /> : 'Guest'}</span>
-          <span className="ag-player-title">{p.lvl.title}</span>
+          {name && <span className="ag-player-title">{p.lvl.title}</span>}
         </span>
-        <span className="ag-xpbar"><span style={{ width: `${Math.max(3, p.lvl.pct * 100)}%` }} /></span>
-        <span className="ag-player-sub">{name ? `${p.lvl.title} · ${p.lvl.into.toLocaleString()}/${p.lvl.need.toLocaleString()} XP` : 'Sign in to save your career'}</span>
+        {name && <span className="ag-xpbar"><span style={{ width: `${Math.max(3, p.lvl.pct * 100)}%` }} /></span>}
+        <span className="ag-player-sub">{name ? `${p.lvl.title} · ${p.lvl.into.toLocaleString()}/${p.lvl.need.toLocaleString()} XP` : 'Sign in to earn XP and level up'}</span>
       </span>
     </button>
   )

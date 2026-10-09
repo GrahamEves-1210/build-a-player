@@ -1,4 +1,4 @@
-import { useProgress, claimAch, achStats } from '../../lib/progress'
+import { useProgress, claimAch, achStats, rewardText } from '../../lib/progress'
 import { ACHIEVEMENTS, ACH_GROUPS } from '../../lib/achievements'
 import { itemById } from '../../lib/cosmetics'
 import { sfx, haptic } from '../../lib/juice'
@@ -14,11 +14,15 @@ export default function AppAchievements({ onClose }) {
   const st = achStats()
   const done = ACHIEVEMENTS.filter(a => p.ach?.[a.id]).length
   const pct = Math.round((done / ACHIEVEMENTS.length) * 100)
+  // rewards (XP, coins) need an account: a guest's claim asks them to sign in
+  const signIn = () => window.dispatchEvent(new CustomEvent('bap:auth'))
   const claim = a => {
+    if (!p.signedIn) { signIn(); return }
     const r = claimAch(a.id)
     if (r) { sfx('claim'); haptic('success') }
   }
   const claimAll = () => {
+    if (!p.signedIn) { signIn(); return }
     let any = false
     for (const a of ACHIEVEMENTS) if (p.ach?.[a.id] && !p.achClaimed?.[a.id]) { if (claimAch(a.id)) any = true }
     if (any) { sfx('claim'); haptic('success') }
@@ -47,7 +51,7 @@ export default function AppAchievements({ onClose }) {
         <span className="ach-ring" style={{ '--p': pct }}><span>{pct}%</span></span>
         <span>
           <b>{done} OF {ACHIEVEMENTS.length} UNLOCKED</b>
-          <small>{p.claimable ? `${p.claimable} reward${p.claimable > 1 ? 's' : ''} waiting` : 'Rewards: XP, coins and exclusive cosmetics'}</small>
+          <small>{p.claimable ? `${p.claimable} reward${p.claimable > 1 ? 's' : ''} waiting` : (p.signedIn ? 'Rewards: XP, coins and exclusive cosmetics' : 'Sign in to claim XP, coins and cosmetics')}</small>
           {p.claimable > 1 && <button className="ach-claim" style={{ marginTop: 8, display: 'block' }} onClick={claimAll}>CLAIM ALL</button>}
         </span>
       </div>
@@ -65,12 +69,12 @@ export default function AppAchievements({ onClose }) {
                 <span className="ach-ico">{claimed ? <IconCheck size={20} /> : <Glyph size={22} />}</span>
                 <span className="ach-txt">
                   <span className="ach-title">{a.title}</span>
-                  <span className="ach-desc" data-reward={`+${a.xp} XP${a.coins ? ` · +${a.coins} COINS` : ''}`}>{a.desc}{item ? ` · unlocks ${item.name}` : ''}</span>
+                  <span className="ach-desc" data-reward={rewardText(a.xp, a.coins)}>{a.desc}{item ? ` · unlocks ${item.name}` : ''}</span>
                   {!unlocked && <span className="ach-bar"><span style={{ width: `${(now / a.goal) * 100}%` }} /></span>}
                 </span>
                 {unlocked && !claimed
                   ? <button className="ach-claim" onClick={() => claim(a)}>CLAIM</button>
-                  : <span className="ach-reward">{claimed ? <span className="ach-done-tag">CLAIMED</span> : <span>{now.toLocaleString()}/{a.goal.toLocaleString()}</span>}<span><b>+{a.xp}</b> XP{a.coins ? <> · <b>+{a.coins}</b> C</> : null}</span></span>}
+                  : <span className="ach-reward">{claimed ? <span className="ach-done-tag">CLAIMED</span> : <span>{now.toLocaleString()}/{a.goal.toLocaleString()}</span>}{p.signedIn ? <span><b>+{a.xp}</b> XP{a.coins ? <> · <b>+{a.coins}</b> C</> : null}</span> : <span>SIGN IN</span>}</span>}
               </div>
             )
           })}

@@ -41,7 +41,7 @@ export default function AppLocker({ onClose }) {
 
       <div className="lk-hero ag-pop">
         <div className="lk-hero-id">
-          <AvatarBadge self name={name} size={72} level={p.lvl.level} />
+          <AvatarBadge self name={name} size={72} level={p.signedIn ? p.lvl.level : null} />
           <span className="lk-hero-name"><NameTag self name={name} /></span>
         </div>
         <div className="lk-hero-win">

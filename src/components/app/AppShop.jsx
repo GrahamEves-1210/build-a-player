@@ -163,7 +163,7 @@ function ItemSheet({ id, onClose, name }) {
           <>
             <div className="sh-lock"><IconLock size={14} /> {lock.toUpperCase()}</div>
             {ach && <div className="sh-hint">{ach.desc} · {achNow.toLocaleString()}/{ach.goal.toLocaleString()} <button className="ag-chip" style={{ marginLeft: 6 }} onClick={() => { onClose(); nav('achievements') }}>VIEW</button></div>}
-            {item.level && !item.ach && !item.pro && <div className="sh-hint">You're level <b>{p.lvl.level}</b>. Seasons, missions and achievements all give XP.</div>}
+            {item.level && !item.ach && !item.pro && <div className="sh-hint">{p.signedIn ? <>You're level <b>{p.lvl.level}</b>. Seasons, missions and achievements all give XP.</> : <>Levels need an account. <b>Sign in</b> to start earning XP.</>}</div>}
             {item.pro && <div className="sh-hint">The Pro Vault is open to <b>BAP Pro</b> members.</div>}
           </>
         ) : (
@@ -229,10 +229,10 @@ export default function AppShop({ onClose, tab: initialTab = 'featured' }) {
       </div>
 
       <div className="sh-hero ag-pop">
-        <AvatarBadge self name={name} size={58} level={p.lvl.level} />
+        <AvatarBadge self name={name} size={58} level={p.signedIn ? p.lvl.level : null} />
         <span style={{ minWidth: 0 }}>
           <NameTag self name={name} className="sh-hero-name" />
-          <span className="sh-hero-sub">{ownedCount} owned · {p.lvl.title} · {pro ? 'BAP Pro: Vault open' : 'Level ' + p.lvl.level}</span>
+          <span className="sh-hero-sub">{ownedCount} owned · {!p.signedIn ? 'Sign in to level up' : `${p.lvl.title} · ${pro ? 'BAP Pro: Vault open' : 'Level ' + p.lvl.level}`}</span>
         </span>
       </div>
 
