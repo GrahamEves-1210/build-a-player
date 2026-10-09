@@ -8,6 +8,27 @@ import { NameTag, AvatarBadge } from './NameTag'
 import { CoinPill } from './AppShop'
 import { TierChip, Form } from './OnlineRecord'
 import { tierFor } from '../../lib/progress'
+import { W as MAP_W, H as MAP_H, OUTLINE_PATH } from '../../lib/usMap'
+
+// Card art: the road map for Takeover, the pool's podium for Compete
+function MapArt() {
+  return (
+    <svg className="ag-card-art ag-card-art--map" viewBox={`0 0 ${MAP_W} ${MAP_H}`} preserveAspectRatio="xMaxYMid slice" aria-hidden="true">
+      <path d={OUTLINE_PATH} className="ag-map-land" clipRule="evenodd" />
+      <path d="M190 220 L330 260 L470 190 L620 300 L760 240" className="ag-map-route" />
+      {[[190, 220], [470, 190], [760, 240]].map(([x, y], i) => <circle key={i} cx={x} cy={y} r={i === 2 ? 16 : 11} className={`ag-map-pin${i === 2 ? ' is-next' : ''}`} />)}
+    </svg>
+  )
+}
+function PoolArt() {
+  const bars = [[0, 42], [1, 64], [2, 34], [3, 26], [4, 18]]   // 2nd · 1st · 3rd · 4th · 5th
+  return (
+    <svg className="ag-card-art ag-card-art--pool" viewBox="0 0 150 80" preserveAspectRatio="xMaxYMax meet" aria-hidden="true">
+      {bars.map(([i, h]) => <rect key={i} x={8 + i * 28} y={76 - h} width={22} height={h} rx={5} className={`ag-pool-bar${i === 1 ? ' is-first' : ''}`} />)}
+      <path d="M47 6 l2.6 5.3 5.9.9-4.3 4.1 1 5.8L47 19.4 41.8 22l1-5.8-4.3-4.1 5.9-.9z" className="ag-pool-star" />
+    </svg>
+  )
+}
 
 // Home screen — a game main menu. The app and the website (APP_LOOK) both use
 // it in place of the old splash; same callbacks, so nothing else changes.
@@ -222,6 +243,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
           )}
           {onCompete && (
             <button className="ag-compete ag-pop" style={{ '--d': '300ms' }} onClick={onCompete}>
+              <PoolArt />
               <span className="ag-live-dot" />
               <span className="ag-takeover-txt">
                 <span className="ag-eyebrow">{ol.played ? <>ONLINE · {tierFor(ol.rating)[1].toUpperCase()} · {ol.rating}</> : 'ONLINE · 5-PLAYER POOLS'}</span>
@@ -234,38 +256,28 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
               <span className="ag-edge-go">QUEUE <IconArrow size={14} /></span>
             </button>
           )}
+          {/* Basketball: Blacktop is the online hub — 3v3 lobbies, and 1v1 from inside it */}
+          {isBucket && onBlacktop && (
+            <button className={`ag-blacktop ag-pop${btLive ? ' is-live' : ''}`} style={{ '--d': '320ms' }} onClick={onBlacktop}>
+              <span className="ag-live-dot" />
+              <span className="ag-takeover-txt">
+                <span className="ag-eyebrow">{btLive ? (blacktop.phase === 'queue' ? `IN THE LOBBY · ${blacktop.queue}/6 SPOTS TAKEN` : blacktop.phase === 'build' ? 'LIVE · YOUR SQUAD IS BUILDING' : 'LIVE · GAME ON') : 'ONLINE · 3V3 · 1V1'}</span>
+                <span className="ag-takeover-title">BLACKTOP</span>
+                <span className="ag-takeover-sub">{btLive ? 'You\'re still in. Jump back to your run.' : (btG || h2h.played) ? `3v3 ${btW}–${btG - btW} · 1v1 ${h2h.wins ?? 0}–${h2h.losses ?? 0}${ol.played ? ` · ${tierFor(ol.rating)[1]} ${ol.rating}` : ''}` : 'Live games against real players. Squads of three, or one on one.'}</span>
+              </span>
+              <span className="ag-edge-go">{btLive ? 'RESUME' : 'QUEUE'} <IconArrow size={14} /></span>
+            </button>
+          )}
           {onTakeover && (
-          <button className="ag-takeover ag-pop" style={{ '--d': '320ms' }} onClick={onTakeover}>
+          <button className="ag-takeover ag-pop" style={{ '--d': '350ms' }} onClick={onTakeover}>
+            <MapArt />
             <span className="ag-takeover-txt">
-              <span className="ag-eyebrow">{tkOn ? (tkEndless ? `ENDLESS ROAD · ${takeoverRun.endlessWins} STRAIGHT` : `ON THE ROAD · ${takeoverRun.taken.length}/${tkStops} CITIES`) : 'ROAD MODE · 12 CITIES · SOLO OR DUO'}</span>
+              <span className="ag-eyebrow">{tkOn ? (tkEndless ? `ENDLESS ROAD · ${takeoverRun.endlessWins} STRAIGHT` : `ON THE ROAD · ${takeoverRun.taken.length}/${tkStops} CITIES`) : 'ROAD MODE · 12 CITIES'}</span>
               <span className="ag-takeover-title">TAKEOVER</span>
-              <span className="ag-takeover-sub">{tkOn ? `${takeoverRun.lives} ${takeoverRun.lives === 1 ? 'life' : 'lives'} left — your next stop is waiting` : 'Cross the map. Beat a better player in every city. Steal their game.'}</span>
+              <span className="ag-takeover-sub">{tkOn ? `${takeoverRun.lives} ${takeoverRun.lives === 1 ? 'life' : 'lives'} left — your next stop is waiting` : 'Solo or duo. Cross the map, beat a better player in every city, steal their game.'}</span>
             </span>
             <span className="ag-edge-go">{tkOn ? 'RESUME' : 'START'} <IconArrow size={14} /></span>
           </button>
-          )}
-          {/* Basketball's online hub: Blacktop 3v3 lobbies and 1v1 Head-to-Head */}
-          {isBucket && (onBlacktop || onVersus) && (
-            <div className={`ag-online ag-pop${btLive ? ' is-live' : ''}`} style={{ '--d': '350ms' }}>
-              <span className="ag-online-head">
-                <span className="ag-online-badge"><span className="ag-live-dot" />ONLINE</span>
-                <span className="ag-online-note">{btLive ? (blacktop.phase === 'queue' ? `In the lobby · ${blacktop.queue}/6 spots taken` : blacktop.phase === 'build' ? 'Your squad is building' : 'Game on') : (btG || h2h.played) ? `3v3 ${btW}–${btG - btW} · 1v1 ${h2h.wins ?? 0}–${h2h.losses ?? 0}` : 'Live games against real players'}</span>
-                {ol.played > 0 && <span className="ag-rec" style={{ marginLeft: 'auto' }}><TierChip rating={ol.rating} />{ol.rating}</span>}
-              </span>
-              <span className="ag-takeover-title">BLACKTOP</span>
-              <span className="ag-online-btns">
-                {onBlacktop && (
-                  <button className="ag-online-btn ag-online-btn--main" onClick={onBlacktop}>
-                    <b>{btLive ? 'RESUME 3V3' : '3V3 LOBBY'}</b><small>Two guards and a big · first to 21</small>
-                  </button>
-                )}
-                {onVersus && (
-                  <button className="ag-online-btn" onClick={() => onVersus(position)}>
-                    <b><IconVersus size={15} /> 1V1</b><small>Head-to-head a friend</small>
-                  </button>
-                )}
-              </span>
-            </div>
           )}
           {isBucket ? (
             <>

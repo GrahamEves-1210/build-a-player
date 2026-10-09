@@ -18,7 +18,7 @@ function Seat({ p, i, me, status }) {
   return (
     <div className={`cp-seat${p ? '' : ' is-open'}${p?.vid === me ? ' is-me' : ''}`} style={{ '--d': `${i * 50}ms` }}>
       <span className="cp-av">{p ? initials(p.name) : '?'}</span>
-      <span className="cp-seat-name">{p ? (p.vid === me ? `${p.name} (you)` : p.name) : 'Open seat'}</span>
+      <span className="cp-seat-name">{p ? p.name : 'Open seat'}</span>
       {status && <span className="cp-seat-status">{status}</span>}
     </div>
   )
@@ -81,7 +81,7 @@ export default function AppCompete({ cp, sport, position, positions, onPosition,
               <div key={p.vid} className={`cp-row ag-pop${p.vid === cp.me.vid ? ' is-me' : ''}${final && p.place === 1 ? ' is-first' : ''}`} style={{ '--d': `${i * 60}ms` }}>
                 <span className="cp-rank">{final ? (p.place === 1 ? <IconTrophy size={16} /> : p.place) : ''}</span>
                 <span className="cp-av">{initials(p.name)}</span>
-                <span className="cp-row-name">{p.name}{p.vid === cp.me.vid ? ' (you)' : ''}</span>
+                <span className="cp-row-name">{p.name}</span>
                 <span className="cp-row-ovr">{final ? (r ? <><b>{r.ovr}</b> OVR</> : 'DNF') : show ? (p.vid === cp.me.vid ? <><b>{r.ovr}</b> OVR</> : 'LOCKED IN') : <i>building…</i>}</span>
               </div>
             )

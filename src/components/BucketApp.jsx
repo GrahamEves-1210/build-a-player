@@ -730,6 +730,16 @@ export default function BucketApp() {
     })
   }, [position, gameMode, isBucketCustomMode, bucketCustomRatings])
 
+  // 1v1 Head-to-Head: from the Blacktop lobby (and the old splash)
+  const startVersus = useCallback((pos) => {
+    const p = pos || position || 'guard'
+    try { localStorage.setItem('bucketPosition', p) } catch {}
+    setPosition(p)
+    setGameMode('classic')
+    setBuild(Object.fromEntries((VERSUS_POS_TYPES[p] ?? VERSUS_GUARD_TYPES).map(t => [t, null])))
+    setPage('versus-lobby')
+  }, [position])
+
   const handleStart = useCallback((mode, pos = 'guard') => {
     if (IS_APP || APP_LOOK) {   // a finished game is kept around (Home → resume), so clear it
       setSimResult(null); setSavedSpinResult(null); setMobileView('spin'); setSpinResetKey(k => k + 1); setGameKey(k => k + 1)
@@ -1527,7 +1537,7 @@ export default function BucketApp() {
             <div className="vs-prompt-eyebrow">HEAD TO HEAD</div>
             <div className="vs-prompt-matchup">
               <div className="vs-prompt-side">
-                <div className="vs-prompt-name">{getUsername(user) || 'You'}</div>
+                <div className="vs-prompt-name">{getUsername(user) || 'Guest'}</div>
                 <div className="vs-prompt-record">
                   {vsRecord.wins}W – {vsRecord.losses}L
                 </div>
@@ -1703,14 +1713,7 @@ export default function BucketApp() {
       <>
         {bucketHead}
         {(() => {
-          const onVersus = (pos) => {
-            const p = pos || 'guard'
-            try { localStorage.setItem('bucketPosition', p) } catch {}
-            setPosition(p)
-            setGameMode('classic')
-            setBuild(Object.fromEntries((VERSUS_POS_TYPES[p] ?? VERSUS_GUARD_TYPES).map(t => [t, null])))
-            setPage('versus-lobby')
-          }
+          const onVersus = startVersus
           return (IS_APP || APP_LOOK) ? (
             <AppHome
               sport="bucket"
@@ -1751,7 +1754,7 @@ export default function BucketApp() {
   }
 
   if (page === 'blacktop') {
-    return <BlacktopQueue bt={bt} user={user} onBack={() => setPage('splash')} />
+    return <BlacktopQueue bt={bt} user={user} onBack={() => setPage('splash')} onVersus={() => { bt.leave(); startVersus(position) }} />
   }
   if (page === 'blacktop-game') {
     return (
@@ -1886,7 +1889,7 @@ export default function BucketApp() {
           simFn={(IS_APP || APP_LOOK) && gameMode !== 'salarycap' ? bucketSimFor : null}
           onFinal={(IS_APP || APP_LOOK) && gameMode !== 'salarycap' ? commitBucketSeason : null}
           pool={currentPool}
-          userName={getUsername(user) || 'You'}
+          userName={getUsername(user) || 'Guest'}
         />
       </>
     )

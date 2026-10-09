@@ -3228,3 +3228,57 @@ html.app-look:not(.is-app) .spin-respin-half { font-size: 15px !important; lette
 .vlh-online { margin: 10px 0 2px; }
 .vlh-online .ol-card { text-align: left; }
 .vr-header .ol-result { margin: 6px auto 0; }
+
+/* ═══ Home card art: the road map (Takeover), the podium (Compete) ═══════════ */
+.ag-takeover {
+  background: linear-gradient(100deg, rgba(212,175,55,.2), transparent 60%), radial-gradient(ellipse 60% 100% at 100% 50%, rgba(212,175,55,.12), transparent 70%), var(--ag-panel);
+}
+.ag-home--bucket .ag-takeover { background-image: linear-gradient(100deg, rgba(212,175,55,.2), transparent 60%), radial-gradient(ellipse 60% 100% at 100% 50%, rgba(212,175,55,.12), transparent 70%); }
+.ag-takeover::after { background: linear-gradient(90deg, rgba(5,8,6,.55) 38%, transparent 62%); }
+.ag-card-art { position: absolute; top: 0; right: 0; bottom: 0; width: 62%; pointer-events: none; z-index: 0; }
+.ag-takeover > .ag-card-art, .ag-compete > .ag-card-art { z-index: 0; }
+.ag-takeover > .ag-takeover-txt, .ag-takeover > .ag-edge-go, .ag-compete > .ag-takeover-txt, .ag-compete > .ag-edge-go, .ag-compete > .ag-live-dot { z-index: 1; }
+.ag-card-art--map { opacity: .9; }
+.ag-map-land { fill: rgba(212,175,55,.09); stroke: rgba(212,175,55,.5); stroke-width: 3; }
+.ag-map-route { fill: none; stroke: #f5dc8a; stroke-width: 5; stroke-dasharray: 14 12; stroke-linecap: round; opacity: .9; }
+.ag-map-pin { fill: #1a1503; stroke: #f5dc8a; stroke-width: 5; }
+.ag-map-pin.is-next { fill: #f5dc8a; stroke: rgba(245,220,138,.35); stroke-width: 14; animation: ag-pulse 1.6s ease-out infinite; transform-box: fill-box; transform-origin: center; }
+.ag-compete {
+  background: linear-gradient(100deg, color-mix(in srgb, var(--ag-a1) 22%, transparent), transparent 58%), radial-gradient(ellipse 60% 110% at 100% 100%, color-mix(in srgb, var(--ag-a1) 14%, transparent), transparent 70%), var(--ag-panel);
+}
+.ag-card-art--pool { width: 46%; right: 12%; }
+.ag-pool-bar { fill: color-mix(in srgb, var(--ag-a1) 26%, transparent); stroke: color-mix(in srgb, var(--ag-a1) 55%, transparent); stroke-width: 1.5; }
+.ag-pool-bar.is-first { fill: color-mix(in srgb, var(--ag-a1) 55%, transparent); stroke: var(--ag-a1); }
+.ag-pool-star { fill: #f5dc8a; filter: drop-shadow(0 0 6px rgba(245,220,138,.7)); }
+/* the Blacktop card keeps the court, but the records line needs room */
+.ag-blacktop .ag-takeover-sub { position: relative; }
+
+/* Blacktop lobby: the 1v1 door */
+.bt-1v1 {
+  display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px; width: 100%;
+  padding: 11px 14px; border-radius: 14px; border: 1.5px solid rgba(239,68,68,.45);
+  background: linear-gradient(100deg, rgba(239,68,68,.16), transparent 65%), var(--ag-panel); color: var(--ag-text); text-align: left; cursor: pointer;
+}
+.bt-1v1-ico { width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center; background: rgba(239,68,68,.2); border: 1px solid rgba(239,68,68,.5); color: #ff8a8a; }
+.bt-1v1-title { font-family: var(--ag-display); font-size: 20px; line-height: 1; text-transform: uppercase; }
+.bt-1v1 .ag-eyebrow { color: #ff9b9b; font-size: 12px; }
+.bt-1v1 > svg:last-child { color: var(--ag-muted); }
+.bt-1v1:active { transform: scale(.98); }
+
+/* ═══ Website: the More sheet drops from the top (the app's slides up) ═══════ */
+html.app-look:not(.is-app) .ag-menu-overlay { align-items: flex-start; justify-content: center; padding-bottom: 0; }
+html.app-look:not(.is-app) .ag-menu {
+  border-radius: 0 0 22px 22px; border-top: 0; border-bottom: 1.5px solid var(--ag-line-hi);
+  padding-top: 12px; padding-bottom: 18px;
+  max-height: calc(100dvh - var(--web-rail, 0px) - 16px);
+  box-shadow: 0 20px 60px rgba(0,0,0,.6);
+  animation: ag-down .34s cubic-bezier(.2,1,.3,1) both;
+}
+@keyframes ag-down { from { transform: translateY(-100%); } }
+html.app-look:not(.is-app) .ag-menu::before { display: none; }
+html.app-look:not(.is-app) .ag-menu::after { content: ''; display: block; width: 40px; height: 4px; border-radius: 2px; margin: 12px auto 0; background: rgba(255,255,255,.18); }
+@media (min-width: 1024px) {
+  html.app-look:not(.is-app) .ag-menu-overlay { align-items: flex-start; }
+  html.app-look:not(.is-app) .ag-menu { max-width: 540px; margin-top: 10px; border-radius: 22px; border: 1.5px solid var(--ag-line-hi); }
+}
+html.app-look .ag-tiles { grid-auto-flow: row; }

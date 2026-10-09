@@ -14,7 +14,7 @@ const nav = to => window.dispatchEvent(new CustomEvent('bap:nav', { detail: to }
 
 export default function AppLocker({ onClose }) {
   const p = useProgress()
-  const name = getUsername(p.user) || 'You'
+  const name = getUsername(p.user) || 'Guest'
   const v = myVictory()
   const put = (slot, id) => {
     const cur = p.equip?.[slot] ?? null

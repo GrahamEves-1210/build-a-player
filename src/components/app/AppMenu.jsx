@@ -6,7 +6,8 @@ import { isMuted, setMuted } from '../../lib/juice'
 import { IS_APP, CAN_SELL_PLUS } from '../../lib/platform'
 import { isPro } from '../../lib/progress'
 import { railPreviewOn, setRailPreview } from '../../lib/fakeRail'
-import { IconQuestion, IconInfo, IconChat, IconDiscord, IconX, IconClose, IconShield, IconDoc, IconPodium, IconPlay, IconCrown } from './icons'
+import { IconQuestion, IconInfo, IconChat, IconDiscord, IconX, IconClose, IconShield, IconDoc, IconPodium, IconPlay, IconCrown, IconProfile, IconHome } from './icons'
+import { useProgress } from '../../lib/progress'
 
 // App "More" sheet (gear on the home screen): tiles + a How to Play view.
 
@@ -89,6 +90,7 @@ export default function AppMenu({ sport, onClose }) {
   const [feedbackUser, setFeedbackUser] = useState(null) // null = closed
   const [muted, setMutedState] = useState(isMuted)
   const [rail, setRailState] = useState(railPreviewOn)
+  const signedIn = useProgress().signedIn
   const isBucket = sport === 'bucket'
 
   const openFeedback = async () => {
@@ -130,6 +132,9 @@ export default function AppMenu({ sport, onClose }) {
         ) : (
           <>
             <div className="ag-tiles">
+              {/* website: the dock isn't on the game pages, so Home and Profile live here too */}
+              {!IS_APP && <Tile tone="mint" Icon={IconHome} title="HOME" sub="Modes and more" onClick={go(() => nav('home'))} delay="0ms" />}
+              {!IS_APP && <Tile tone="gold" Icon={IconProfile} title={signedIn ? 'PROFILE' : 'SIGN IN'} sub={signedIn ? 'Career, shop, locker' : 'Save your career'} onClick={go(() => nav('profile'))} delay="0ms" />}
               <Tile tone="mint" Icon={IconQuestion} title="HOW TO PLAY" sub="4 quick steps" onClick={() => setView('howto')} delay="0ms" />
               <Tile tone="gold" Icon={IconPodium} title="LEADERBOARDS" sub="Top builds" onClick={go(() => nav('leaderboard'))} delay="30ms" />
               <Tile tone="discord" Icon={IconDiscord} title="DISCORD" sub="Join the community" onClick={go(() => window.open('https://discord.gg/zdZBu2VjUD', '_blank'))} delay="60ms" />

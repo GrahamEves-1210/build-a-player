@@ -61,7 +61,7 @@ export function AvatarBadge({ cos, self = false, name, size = 44, level = null, 
 }
 
 // Item previews for the shop tiles
-export function ItemPreview({ item, name = 'You', big = false }) {
+export function ItemPreview({ item, name = 'Guest', big = false }) {
   if (!item) return null
   if (item.slot === 'avatar') return <AvatarBadge cos={{ avatar: item.id }} name={name} size={big ? 96 : 58} />
   if (item.slot === 'nameColor') return <span className="ip-name"><NameText name={name} color={item.id} /></span>

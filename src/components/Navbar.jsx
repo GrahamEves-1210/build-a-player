@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
-import { CAN_SELL_PLUS } from '../lib/platform'
+import { CAN_SELL_PLUS, IS_APP, APP_LOOK } from '../lib/platform'
+// The website with the app look: the menu button opens the app's More sheet
+const MORE_SHEET = !IS_APP && APP_LOOK
 import FeedbackModal from './FeedbackModal'
 import { getUsername } from '../lib/discord'
 import { PROFILE_ICON_EMOJI, initialsOf } from '../data/profile-icons'
@@ -344,7 +346,7 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
       <div className="nav-right" ref={ref}>
         <button
           className={`waffle-btn${open ? ' waffle-open' : ''}`}
-          onClick={() => { setOpen(o => !o); dismissHint() }}
+          onClick={() => { dismissHint(); if (MORE_SHEET) window.dispatchEvent(new CustomEvent('bap:menu')); else setOpen(o => !o) }}
           aria-label="Menu"
         >
           <IconGrid />

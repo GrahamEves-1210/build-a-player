@@ -196,7 +196,7 @@ export default function AppShop({ onClose, tab: initialTab = 'featured' }) {
   const p = useProgress()
   const [tab, setTab] = useState(initialTab)
   const [open, setOpen] = useState(null)
-  const name = getUsername(p.user) || 'You'
+  const name = getUsername(p.user) || 'Guest'
   const deals = useMemo(() => dealsFor(), [])
   const dealPrice = id => deals.find(d => d.id === id)?.price ?? null
   const pro = isPro()

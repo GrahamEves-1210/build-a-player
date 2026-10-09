@@ -8,7 +8,7 @@ import { calcBucketOVR } from '../../utils/bucketSimulation'
 import { VERSUS_GUARD_TYPES } from '../../data/nba-guards'
 import { VERSUS_BIG_TYPES } from '../../data/nba-bigs'
 import BlacktopCourt from './BlacktopCourt'
-import { IconClose, IconArrow, IconChat, IconStar, IconSend, IconBasketball } from './icons'
+import { IconClose, IconArrow, IconChat, IconStar, IconSend, IconBasketball, IconVersus } from './icons'
 import { NameTag } from './NameTag'
 import OnlineRecord, { RatingLine } from './OnlineRecord'
 
@@ -30,7 +30,7 @@ export const liveOvr = b => {
 const firstName = n => (n || '').trim().split(/\s+/)[0].toUpperCase().slice(0, 10)
 
 // ── Lobby: two squads, tap an open spot ──────────────────────────────────────
-export function BlacktopQueue({ bt, user, onBack }) {
+export function BlacktopQueue({ bt, user, onBack, onVersus = null }) {
   const [chatOpen, setChatOpen] = useState(false)
   const [seenChat, setSeenChat] = useState(0)
   const squadName = t => {
@@ -98,6 +98,17 @@ export function BlacktopQueue({ bt, user, onBack }) {
           {unread > 0 && <span className="ag-tab-badge">{unread}</span>}
         </button>
 
+        {onVersus && (
+          <button className="bt-1v1 ag-pop" style={{ '--d': '180ms' }} onClick={() => { sfx('tap'); onVersus() }}>
+            <span className="bt-1v1-ico"><IconVersus size={18} /></span>
+            <span className="ag-takeover-txt">
+              <span className="ag-eyebrow">OR GO ONE ON ONE</span>
+              <span className="bt-1v1-title">HEAD-TO-HEAD · 1V1</span>
+              <span className="ag-takeover-sub">Pick up a random opponent or play a friend. First to 11.</span>
+            </span>
+            <IconArrow size={14} />
+          </button>
+        )}
         <OnlineRecord mode="bt" title="YOUR BLACKTOP" />
 
         <details className="bt-rules ag-pop" style={{ '--d': '200ms' }}>

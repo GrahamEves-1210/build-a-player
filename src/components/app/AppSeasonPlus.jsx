@@ -144,7 +144,7 @@ export function Leaders({ sport, pos, pool, seed, you }) {
       {board.rows.map((r, i) => (
         <div key={r.name} className={`sm-leader${r.me ? ' is-me' : ''}`}>
           <span className="sm-leader-n">{i + 1}</span>
-          <span className="sm-leader-name">{r.me ? 'YOU' : r.name}<small>{r.team}</small></span>
+          <span className="sm-leader-name">{r.name}<small>{r.team}</small></span>
           <span className="sm-leader-val">{typeof r.value === 'number' && !Number.isInteger(r.value) ? r.value.toFixed(1) : r.value.toLocaleString()}</span>
         </div>
       ))}
