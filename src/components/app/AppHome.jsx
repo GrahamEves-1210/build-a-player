@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { POS_OPTIONS, AvatarTrio, StackedSilhouette, SPLASH_ATTRS } from '../SplashScreen'
 import { getUsername } from '../../lib/discord'
-import { useProgress, dailyState } from '../../lib/progress'
-import { IconCrown, IconBolt, IconClipboard, IconCoin, IconVersus, IconLock, IconProfile, IconArrow, IconGear, IconPodium, IconFootball, IconBasketball } from './icons'
+import { useProgress } from '../../lib/progress'
+import { IconCrown, IconBolt, IconClipboard, IconCoin, IconVersus, IconLock, IconProfile, IconArrow, IconGear, IconPodium, IconFootball, IconBasketball, IconPlay } from './icons'
 import { sfx } from '../../lib/juice'
 import { NameTag, AvatarBadge } from './NameTag'
 import { CoinPill } from './AppShop'
@@ -101,26 +101,9 @@ function ModeCard({ tone, title, badge, onClick, mark: Mark, isNew, delay }) {
   )
 }
 
-function DailyBanner({ isBucket }) {
-  useProgress()   // re-render when today's result lands
-  const dc = dailyState()
-  const label = `${dc.pos.toUpperCase()} · ${dc.mode === 'all-time' ? 'All-Time' : 'Current'}`
-  const go = () => { if (isBucket) window.location.href = '/?daily=1'; else nav('daily-challenge') }
-  return (
-    <button className="ag-daily-banner ag-pop" style={{ '--d': '300ms' }} onClick={dc.done ? () => nav('daily') : go}>
-      <span>
-        <span className="ag-eyebrow">DAILY CHALLENGE{isBucket ? ' · FOOTBALL' : ''}</span>
-        <span className="ag-daily-title" style={{ display: 'block' }}>{label}</span>
-        <span className="ag-daily-sub" style={{ display: 'block' }}>Same spins for everyone. One shot.</span>
-      </span>
-      {dc.done
-        ? <span className="ag-daily-score"><b>{dc.ovr}</b><span>OVR · VIEW BOARD</span></span>
-        : <span className="ag-btn ag-daily-go">{dc.spins > 0 ? 'RESUME' : 'PLAY'}</span>}
-    </button>
-  )
-}
-
-export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus, onBlacktop, blacktop, onTakeover, takeoverRun, user, renderBucketFigure, footer = null }) {
+export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus, onBlacktop, blacktop, onTakeover, takeoverRun, onCompete, resume = null, user, renderBucketFigure, footer = null }) {
+  const prog = useProgress()
+  const cs = prog.stats?.compete
   const isBucket = sport === 'bucket'
   const storeKey = isBucket ? 'bucketPosition' : 'lastPosition'
   const [position, setPosition] = useState(() => {
@@ -215,7 +198,30 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
         </div>
 
         <div className="ag-extras">
-          <DailyBanner isBucket={isBucket} />
+          {/* a build in progress: PLAY is Home now, so it waits here */}
+          {resume && (
+            <button className="ag-resume ag-pop" style={{ '--d': '280ms' }} onClick={resume.onClick}>
+              <span className="ag-resume-icon"><IconPlay size={18} /></span>
+              <span className="ag-takeover-txt">
+                <span className="ag-eyebrow">BUILD IN PROGRESS</span>
+                <span className="ag-resume-title">{resume.label}</span>
+              </span>
+              <span className="ag-edge-go">RESUME <IconArrow size={14} /></span>
+            </button>
+          )}
+          {onCompete && (
+            <button className="ag-compete ag-pop" style={{ '--d': '300ms' }} onClick={onCompete}>
+              <span className="ag-live-dot" />
+              <span className="ag-takeover-txt">
+                <span className="ag-eyebrow">ONLINE · 5-PLAYER POOLS</span>
+                <span className="ag-takeover-title">COMPETE</span>
+                <span className="ag-takeover-sub">{cs?.played
+                  ? `${cs.played} played · ${cs.wins} won · avg place ${(cs.placeSum / cs.played).toFixed(1)}`
+                  : 'Same spins as 4 other players. Highest OVR takes the pool.'}</span>
+              </span>
+              <span className="ag-edge-go">QUEUE <IconArrow size={14} /></span>
+            </button>
+          )}
           {onTakeover && (
           <button className="ag-takeover ag-pop" style={{ '--d': '320ms' }} onClick={onTakeover}>
             <span className="ag-takeover-txt">
@@ -226,27 +232,34 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
             <span className="ag-edge-go">{tkOn ? 'RESUME' : 'START'} <IconArrow size={14} /></span>
           </button>
           )}
-          {isBucket && onBlacktop && (
-            <button className={`ag-blacktop ag-pop${btLive ? ' is-live' : ''}`} style={{ '--d': '350ms' }} onClick={onBlacktop}>
-              <span className="ag-live-dot" />
-              <span className="ag-takeover-txt">
-                <span className="ag-eyebrow">{btLive ? (blacktop.phase === 'queue' ? `IN THE LOBBY · ${blacktop.queue}/6 SPOTS TAKEN` : blacktop.phase === 'build' ? 'LIVE · YOUR SQUAD IS BUILDING' : 'LIVE · GAME ON') : 'LIVE · 3V3'}</span>
-                <span className="ag-takeover-title">BLACKTOP</span>
-                <span className="ag-takeover-sub">{btLive ? 'You\'re still in. Jump back to your run.' : 'Pick a spot on a squad: two guards and a big. 3:00 to build, first to 21.'}</span>
+          {/* Basketball's online hub: Blacktop 3v3 lobbies and 1v1 Head-to-Head */}
+          {isBucket && (onBlacktop || onVersus) && (
+            <div className={`ag-online ag-pop${btLive ? ' is-live' : ''}`} style={{ '--d': '350ms' }}>
+              <span className="ag-online-head">
+                <span className="ag-online-badge"><span className="ag-live-dot" />ONLINE</span>
+                <span className="ag-online-note">{btLive ? (blacktop.phase === 'queue' ? `In the lobby · ${blacktop.queue}/6 spots taken` : blacktop.phase === 'build' ? 'Your squad is building' : 'Game on') : 'Live games against real players'}</span>
               </span>
-              <span className="ag-edge-go">{btLive ? 'RESUME' : 'QUEUE'} <IconArrow size={14} /></span>
-            </button>
+              <span className="ag-takeover-title">BLACKTOP</span>
+              <span className="ag-online-btns">
+                {onBlacktop && (
+                  <button className="ag-online-btn ag-online-btn--main" onClick={onBlacktop}>
+                    <b>{btLive ? 'RESUME 3V3' : '3V3 LOBBY'}</b><small>Two guards and a big · first to 21</small>
+                  </button>
+                )}
+                {onVersus && (
+                  <button className="ag-online-btn" onClick={() => onVersus(position)}>
+                    <b><IconVersus size={15} /> 1V1</b><small>Head-to-head a friend</small>
+                  </button>
+                )}
+              </span>
+            </div>
           )}
           {isBucket ? (
             <>
-              <button className="ag-mini ag-mini--purple ag-pop" style={{ '--d': '380ms' }} onClick={() => start('salarycap')}>
+              <button className="ag-mini ag-mini--purple ag-pop" style={{ '--d': '380ms', gridColumn: '1 / -1' }} onClick={() => start('salarycap')}>
                 <span className="ag-mini-flag">DAILY</span>
                 <span className="ag-mini-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><IconCoin size={17} /> SALARY CAP</span>
                 <span className="ag-mini-sub">Build on a budget</span>
-              </button>
-              <button className="ag-mini ag-pop" style={{ '--d': '370ms' }} onClick={() => onVersus?.(position)}>
-                <span className="ag-mini-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><IconVersus size={17} /> HEAD-TO-HEAD</span>
-                <span className="ag-mini-sub">1v1 a friend</span>
               </button>
             </>
           ) : (

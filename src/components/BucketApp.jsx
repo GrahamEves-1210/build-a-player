@@ -35,10 +35,13 @@ import SiteFeatures from './SiteFeatures'
 import { IS_APP, APP_LOOK } from '../lib/platform'
 import AppHome from './app/AppHome'
 import { FlipEdge, BuildComplete, useFlip } from './app/AppBuildTray'
+import { useCompete, botBuild } from '../lib/compete'
 import { useBlacktop } from '../lib/blacktop'
 import { BlacktopQueue, BlacktopHud, BlacktopChat, BlacktopGame } from './app/AppBlacktop'
 import { loadRun, newRun, cityList, ratedPool } from '../lib/takeover'
 const AppTakeover = lazy(() => import('./app/AppTakeover'))
+import CompeteHud from './app/CompeteHud'
+const AppCompete = lazy(() => import('./app/AppCompete'))
 // which page a live Blacktop run is on, so Home → Play (or the card) resumes it
 const btPageFor = phase => (phase === 'build' ? 'blacktop-build' : phase === 'game' || phase === 'result' ? 'blacktop-game' : 'blacktop')
 import { finishDiscordSignIn, getUsername } from '../lib/discord'
@@ -591,6 +594,7 @@ export default function BucketApp() {
       else if (to === 'profile') { if (user) { window.history.pushState({}, '', '/profile'); setPage('profile') } else window.dispatchEvent(new CustomEvent('bap:auth')) }
       else if (to === 'about') { window.location.href = '/?about' }
       else if (to === 'wiki') { window.location.href = '/wiki' }
+      else if (to === 'compete') setPage('compete')
       window.scrollTo({ top: 0, behavior: 'instant' })
     }
     window.addEventListener('bap:nav', onNav)
@@ -725,6 +729,9 @@ export default function BucketApp() {
   }, [position, gameMode, isBucketCustomMode, bucketCustomRatings])
 
   const handleStart = useCallback((mode, pos = 'guard') => {
+    if (IS_APP || APP_LOOK) {   // a finished game is kept around (Home → resume), so clear it
+      setSimResult(null); setSavedSpinResult(null); setMobileView('spin'); setSpinResetKey(k => k + 1); setGameKey(k => k + 1)
+    }
     setGameMode(mode)
     setPosition(pos)
     const types = POS_TYPES[pos] ?? GUARD_TYPES
@@ -734,6 +741,33 @@ export default function BucketApp() {
     setPage(mode === 'salarycap' ? 'salarycap' : 'game')
     window.scrollTo(0, 0)
   }, [isBucketCustomMode])
+
+  // ── COMPETE: five-player pools on the same spins (lib/compete.js) ──────────
+  const [competePos, setCompetePos] = useState(() => { let p = 'guard'; try { p = localStorage.getItem('bucketPosition') || 'guard' } catch {}; return p === 'big' ? 'big' : 'guard' })
+  const cp = useCompete({
+    enabled: IS_APP || APP_LOOK, user, sport: 'bucket', pos: competePos,
+    botFor: (seed, idx, skill, pos) => {
+      const types = POS_TYPES[pos] ?? GUARD_TYPES
+      return botBuild({ seed, idx, skill, teams: NBA_TEAMS, pool: pos === 'big' ? ENRICHED_BIGS : ENRICHED_GUARDS, types, calcOvr: b => calcBucketOVR(b, types, pos) })
+    },
+  })
+  const competeOn = cp.phase === 'build' && !cp.results[cp.me.vid]
+  const competeKey = useRef(null)
+  useEffect(() => {
+    if (cp.phase !== 'build' || !cp.match || cp.results[cp.me.vid] || competeKey.current === cp.match.code) return
+    competeKey.current = cp.match.code
+    try { localStorage.setItem('bab_custom_mode', '0') } catch {}
+    setIsBucketCustomMode(false)
+    handleStart('classic', cp.match.pos)
+    sandboxTainted.current = false
+  }, [cp.phase, cp.match?.code]) // eslint-disable-line react-hooks/exhaustive-deps
+  const lockInCompete = useCallback(() => {
+    cp.submit(Math.round(calcBucketOVR(build, activeTypes, position) ?? 0), build)
+    setGameMode(null); setBuild({}); setSavedSpinResult(null)
+    setPage('compete')
+    window.scrollTo({ top: 0, behavior: 'instant' })
+  }, [build, activeTypes, position, cp])
+  const competePlan = useMemo(() => (competeOn && cp.match ? { seed: cp.match.seed, getStart: () => 0, onSpin: () => {}, separateRespins: true } : null), [competeOn, cp.match?.code]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── BLACKTOP (app): the match lives in the hook; pages follow its phase ──
   // App: the shop reads Pro from storage; tell it when that changes
@@ -1321,7 +1355,7 @@ export default function BucketApp() {
   // App: the game screen stays mounted while another tab is open (parked,
   // display:none) so a spin in flight keeps spinning, keeps its sound and
   // nothing resets (same shell on both sides of the switch, see App.jsx).
-  const KEEP_GAME_ON = new Set(['splash', 'profile', 'leaderboard', 'pvp-leaderboard', 'privacy'])
+  const KEEP_GAME_ON = new Set(['splash', 'profile', 'leaderboard', 'pvp-leaderboard', 'privacy', 'compete'])
   const gameIsPlay = page === 'game' || (KEEP_GAME_ON.has(page) && lastPlayRef.current === 'game')
   const filledCount = activeTypes.filter(t => build[t]).length
 
@@ -1375,6 +1409,7 @@ export default function BucketApp() {
       {!parked && <Navbar {...navbarProps} />}
 
       <div className="game-page-scroll">
+      {competeOn && <CompeteHud cp={cp} />}
       {liveBuild && bt.match && <BlacktopHud bt={bt} onOpenChat={openBtChat} unread={btUnread} />}
       {IS_APP && (
         <FlipEdge side={mobileView} build={build} types={activeTypes} attrMap={BUCKET_ATTR} onFlip={flip}
@@ -1399,6 +1434,8 @@ export default function BucketApp() {
           onReset={handleReset}
           adsDisabled={adsDisabled}
           cardMeta={(IS_APP || APP_LOOK) && gameIsPlay && gameMode !== 'salarycap' ? { sport: 'bucket', pos: position, mode: gameMode } : null}
+          seedPlan={competePlan}
+          key={competePlan ? `cp-${cp.match.code}` : 'spin'}
           paused={parked}
           isRB={false}
           isBucket={true}
@@ -1426,7 +1463,7 @@ export default function BucketApp() {
           isPlus={isSubscribed}
           isCustomMode={isBucketCustomMode}
           onOpenCustomModal={() => setShowBucketCustomModal(true)}
-          onSandboxToggle={isVersusMode ? undefined : handleSandboxToggle}
+          onSandboxToggle={!isVersusMode && !competeOn && page === 'game' && (gameMode === 'classic' || gameMode === 'all-time') ? handleSandboxToggle : undefined}
           attrMap={BUCKET_ATTR}
           categoriesData={activeCategories}
           figureRef={figureRef}
@@ -1435,8 +1472,8 @@ export default function BucketApp() {
         <div className="right-panel-wrap">
           <ReportCard
             build={build}
-            onSimulate={page === 'takeover-build' ? hitTheRoad : () => setShowTeamSpin(true)}
-            simLabel={page === 'takeover-build' ? 'HIT THE ROAD' : undefined}
+            onSimulate={page === 'takeover-build' ? hitTheRoad : competeOn ? lockInCompete : () => setShowTeamSpin(true)}
+            simLabel={page === 'takeover-build' ? 'HIT THE ROAD' : competeOn ? 'LOCK IN' : undefined}
             onReset={handleReset}
             types={activeTypes}
             hasResult={false}
@@ -1446,7 +1483,7 @@ export default function BucketApp() {
             isPlus={isSubscribed}
             isCustomMode={isBucketCustomMode}
             onOpenCustomModal={() => setShowBucketCustomModal(true)}
-            onSandboxToggle={isVersusMode ? undefined : handleSandboxToggle}
+            onSandboxToggle={!isVersusMode && !competeOn && page === 'game' && (gameMode === 'classic' || gameMode === 'all-time') ? handleSandboxToggle : undefined}
             attrMap={BUCKET_ATTR}
             logoDir="/logos/nba/"
             captureFigure={captureFigure}
@@ -1680,6 +1717,8 @@ export default function BucketApp() {
               blacktop={{ phase: bt.phase, queue: bt.seated }}
               onTakeover={openTakeover}
               takeoverRun={takeoverRun}
+              onCompete={() => setPage('compete')}
+              resume={competeOn ? { label: `Compete · pool ${cp.match.code}`, onClick: () => setPage('game') } : (gameMode && gameMode !== 'salarycap' && (simResult || Object.values(build).some(Boolean))) ? { label: `${position === 'big' ? 'BIG' : 'GUARD'} · ${gameMode === 'all-time' ? 'All-Time' : 'Current'}`, onClick: () => window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'play' })) } : null}
               footer={IS_APP ? null : <><SiteFeatures sport="bucket" /><SiteFooter sport="bucket" /></>}
               renderBucketFigure={(pos, ready) => (
                 <>
@@ -1696,6 +1735,16 @@ export default function BucketApp() {
     )
   }
 
+
+  if (page === 'compete') {
+    return withGame(
+      <Suspense fallback={null}>
+        <AppCompete cp={cp} sport="bucket" position={competePos} positions={[{ pos: 'guard', label: 'GUARD' }, { pos: 'big', label: 'BIG' }]}
+          onPosition={setCompetePos} onHome={() => setPage('splash')} onResumeBuild={() => setPage('game')}
+          onPlayAgain={() => cp.join()} />
+      </Suspense>
+    )
+  }
 
   if (page === 'blacktop') {
     return <BlacktopQueue bt={bt} user={user} onBack={() => setPage('splash')} />

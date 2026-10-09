@@ -186,13 +186,15 @@ const BLANK_STATS = {
   wins: 0, winning: 0, playoffs: 0, awards: 0, perfect: 0, ovr90: 0, ovr95: 0, allTime: 0,
   nflSeasons: 0, bucketSeasons: 0, positions: {}, daily: 0, legends: 0,
   btGames: 0, btWins: 0, btMvp: 0, tkCities: 0, tkRuns: 0, dcBest: 0, purchases: 0,
+  // Compete pools: places are 1–5; avg place = placeSum / played
+  compete: { played: 0, wins: 0, podiums: 0, placeSum: 0, ovrSum: 0, best: 0 },
 }
 const keyFor = id => `bap_prog_${id || 'guest'}`
 function load(id) {
   try {
     const saved = JSON.parse(localStorage.getItem(keyFor(id)) || '{}')
     const b = blank()
-    return { ...b, ...saved, stats: { ...b.stats, ...(saved.stats || {}), positions: { ...(saved.stats?.positions || {}) } }, equip: { ...DEFAULTS, ...(saved.equip || {}) } }
+    return { ...b, ...saved, stats: { ...b.stats, ...(saved.stats || {}), positions: { ...(saved.stats?.positions || {}) }, compete: { ...b.stats.compete, ...(saved.stats?.compete || {}) } }, equip: { ...DEFAULTS, ...(saved.equip || {}) } }
   } catch { return blank() }
 }
 
@@ -416,6 +418,24 @@ function onXp(e) {
   emit()
 }
 
+// A Compete pool finished: your place → stats, XP and coins
+export const COMPETE_REWARDS = { 1: [80, 60], 2: [50, 35], 3: [35, 20], 4: [20, 10], 5: [15, 5] }
+function onCompete(e) {
+  const { place, ovr } = e.detail || {}
+  if (!place) return
+  const c = S.stats.compete = { ...BLANK_STATS.compete, ...(S.stats.compete || {}) }
+  c.played++; c.placeSum += place; c.ovrSum += ovr || 0
+  if (place === 1) c.wins++
+  if (place <= 3) c.podiums++
+  if ((ovr || 0) > c.best) c.best = ovr
+  const [xp, coins] = COMPETE_REWARDS[place] ?? COMPETE_REWARDS[5]
+  S.bonusXp += xp
+  earn(coins, null, true)
+  toast({ kind: 'xp', title: `+${xp} XP · +${coins} COINS`, sub: place === 1 ? 'You won the pool' : `Compete · ${ordinal(place)} place` })
+  emit()
+}
+const ordinal = n => `${n}${['th', 'st', 'nd', 'rd'][(n % 100 > 10 && n % 100 < 14) ? 0 : n % 10] ?? 'th'}`
+
 function onSpin(e) {
   const { sport, pos, mode, player, pool } = e.detail || {}
   if (!player?.name) return
@@ -522,6 +542,7 @@ export function initProgress() {
   window.addEventListener('bap:xp', onXp)
   window.addEventListener('bap:blacktop', e => { const d = e.detail || {}; S.stats.btGames++; if (d.won) S.stats.btWins++; if (d.mvp) S.stats.btMvp++; emit() })
   window.addEventListener('bap:takeover', e => { const d = e.detail || {}; if (d.city) S.stats.tkCities++; if (d.run) S.stats.tkRuns++; emit() })
+  window.addEventListener('bap:compete', onCompete)
   window.addEventListener('bap:dc', e => { const n = e.detail?.streak ?? 0; if (n > S.stats.dcBest) { S.stats.dcBest = n; emit() } })
   window.addEventListener('bap:pro', () => emit(true))
   document.addEventListener('visibilitychange', () => {

@@ -401,9 +401,9 @@ export default function ReportCard({ build, onSimulate, onReset, types = TYPES, 
           </button>
         )}
 
-        {!isVersusMode && ((isBucket && !isSalaryMode) || !!onSandboxToggle) && IS_APP ? (
+        {!isVersusMode && !!onSandboxToggle && IS_APP ? (
           <AppSandbox on={!!isCustomMode} onToggle={v => onSandboxToggle?.(v)} onCustomize={onOpenCustomModal} />
-        ) : !isVersusMode && ((isBucket && !isSalaryMode) || !!onSandboxToggle) ? (
+        ) : !isVersusMode && !!onSandboxToggle ? (
           <div className="rc-sandbox-outer">
             <div className="rc-sandbox-toprow">
               <div

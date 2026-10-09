@@ -4,7 +4,7 @@ import AppMenu from './app/AppMenu'
 import AuthModal from './AuthModal'
 import AppToasts, { LevelUp } from './app/AppToasts'
 import { useProgress, STREAK_REWARDS, missionDef } from '../lib/progress'
-import { IconHome, IconPlay, IconProfile, IconCalendar, IconCards } from './app/icons'
+import { IconBag, IconPlay, IconProfile, IconCalendar, IconCards } from './app/icons'
 
 const AppDaily = lazy(() => import('./app/AppDaily'))
 const AppCards = lazy(() => import('./app/AppCards'))
@@ -23,12 +23,13 @@ const AppSoundLab = lazy(() => import('./app/AppSoundLab'))
 //   dock  → game:  'bap:nav'   'home' | 'play' | 'leaderboard' | 'profile' | 'about' | 'daily-challenge'
 //   anyone → dock: 'bap:nav' 'daily' | 'cards' | 'shop' | 'achievements', 'bap:menu', 'bap:auth'
 
-const TAB_FOR_PAGE = { splash: 'home', profile: 'profile', leaderboard: null, 'pvp-leaderboard': null, about: null }
+// PLAY is Home: it's lit on Home and on the game screens
+const TAB_FOR_PAGE = { splash: 'play', profile: 'profile', leaderboard: null, 'pvp-leaderboard': null, about: null }
 // Full-screen pages that hide the dock (a head-to-head match in progress)
 const HIDE_ON = new Set(['versus-game', 'versus-result', 'shared'])
 // Website: the game screens keep the site's navbar, so the dock is only on the
 // app-look pages (home, profile, the Takeover road, the Blacktop lobby + game)
-const WEB_DOCK_ON = new Set(['splash', 'profile', 'takeover', 'blacktop', 'blacktop-game'])
+const WEB_DOCK_ON = new Set(['splash', 'profile', 'takeover', 'blacktop', 'blacktop-game', 'compete'])
 
 const nav = to => window.dispatchEvent(new CustomEvent('bap:nav', { detail: to }))
 
@@ -133,15 +134,16 @@ export default function AppTabBar() {
       )}
       {!hidden && (
         <nav className={`ag-dock ag-dock--${state.sport}`} aria-label="Main">
-          <Tab label="HOME" Icon={IconHome} active={active === 'home'} onClick={go('home')} />
+          <Tab label="SHOP" Icon={IconBag} active={active === 'shop'} onClick={open('shop')} />
           <Tab label="DAILY" Icon={IconCalendar} active={active === 'daily'} onClick={open('daily')} badge={badge} />
-          <button className={`ag-play${active === 'play' ? ' ag-play--on' : ''}`} onClick={go('play')} aria-label="Play">
+          {/* PLAY takes you Home (pick a mode, or resume a build there) */}
+          <button className={`ag-play${active === 'play' ? ' ag-play--on' : ''}`} onClick={go('home')} aria-label="Play">
             <span className="ag-play-ring" />
             <span className="ag-play-core"><IconPlay size={28} /></span>
             <span className="ag-play-label">PLAY</span>
           </button>
           <Tab label="CARDS" Icon={IconCards} active={active === 'cards'} onClick={open('cards')} />
-          <Tab label="PROFILE" Icon={IconProfile} active={active === 'profile' || active === 'shop' || active === 'achievements' || active === 'locker'} onClick={go('profile')} badge={claimable} />
+          <Tab label="PROFILE" Icon={IconProfile} active={active === 'profile' || active === 'achievements' || active === 'locker'} onClick={go('profile')} badge={claimable} />
         </nav>
       )}
       {menuOpen && <AppMenu sport={state.sport} onClose={() => setMenuOpen(false)} />}

@@ -307,6 +307,12 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
   const spinBase = useRef(seedPlan ? seedPlan.getStart() : 0)
   const spinCountRef = useRef(0)
   const [playerDraw, setPlayerDraw] = useState(0)
+  // Compete (seedPlan.separateRespins): respins are this player's own draw and
+  // don't use up the pool's shared order — the next regular spin is back on it
+  const ownSpins = !!seedPlan?.separateRespins
+  const seedSpinsRef = useRef(0)
+  const [seedSpins, setSeedSpins] = useState(0)
+  const [freeTeam, setFreeTeam] = useState(false)
 
   const complete = types.every(t => build[t])
 
@@ -360,11 +366,14 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
     }
   }, [])
 
-  const countTeamSpin = () => {
+  const countTeamSpin = (respin = false) => {
     spinCountRef.current += 1
     setSpinCount(spinCountRef.current)
     setPlayerDraw(0)
-    seedPlan?.onSpin(spinBase.current + spinCountRef.current)
+    const own = ownSpins && respin
+    setFreeTeam(own)
+    if (!own) { seedSpinsRef.current += 1; setSeedSpins(seedSpinsRef.current) }
+    seedPlan?.onSpin(spinBase.current + (ownSpins ? seedSpinsRef.current : spinCountRef.current))
   }
 
   const adInvokedRef = useRef(false)
@@ -405,7 +414,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
     setSelectedTeam(null)
     setExcludedQB(null)
     setTeamRespinUsed(n => n + 1)
-    countTeamSpin()
+    countTeamSpin(true)
     setPhase('team')
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -448,19 +457,20 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
   }, [selectedTeam, excludedQB, spinCount])
 
   // Daily Challenge outcomes
-  const teamIndex = spinBase.current + spinCount - 1
+  const teamIndex = spinBase.current + (ownSpins ? seedSpins : spinCount) - 1
   const teamTarget = useMemo(() => {
-    if (!seedPlan || spinCount < 1) return null
+    if (!seedPlan || spinCount < 1 || freeTeam) return null
     const order = seededShuffle([...teamReelItems].sort((a, b) => a.short.localeCompare(b.short)), `${seedPlan.seed}:teams`)
     return order[teamIndex % order.length]
-  }, [seedPlan, spinCount, teamReelItems, teamIndex])
+  }, [seedPlan, spinCount, teamReelItems, teamIndex, freeTeam])
   const playerTarget = useMemo(() => {
-    if (!seedPlan || !selectedTeam) return null
+    // a respun team or a player respin is the player's own draw
+    if (!seedPlan || !selectedTeam || (ownSpins && (freeTeam || playerDraw > 0))) return null
     const roster = qbPool.filter(q => q.team === selectedTeam.short).sort((a, b) => a.name.localeCompare(b.name))
     if (!roster.length) return null
     const order = seededShuffle(roster, `${seedPlan.seed}:${teamIndex}:${selectedTeam.short}`)
     return order[playerDraw % order.length]
-  }, [seedPlan, selectedTeam, teamIndex, playerDraw]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [seedPlan, selectedTeam, teamIndex, playerDraw, freeTeam]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const visibleCategories = isRB ? RB_CATEGORIES : categoriesData
   const hasAvailableChips = isDone && selectedQB && visibleCategories.some(cat =>

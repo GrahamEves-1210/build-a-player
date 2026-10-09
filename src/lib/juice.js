@@ -676,7 +676,7 @@ export function victory({ big = false } = {}) {
 }
 
 // ── Wiring ───────────────────────────────────────────────────────────────────
-const TAP = '.dc-submit-btn, .dc-back-btn, .dc-lb-btn, .ag-btn, .ag-tab, .ag-play, .ag-pos, .ag-mode, .ag-mini, .ag-tile, .ag-chip, .ag-seg button, .ag-set, .ag-edge, .ag-icon-btn, .ag-row-btn, .ag-daily-banner, .ag-milestone, .ag-player-chip, .ag-round-btn, .spin-btn, .spin-respin-half, .spin-reset-circle, .attr-chip, .mtab, .cat-pill, .sim-btn, .simp-cta, .simp-ghost, .mvp-continue, .tpm-tab, .auth-submit, .lb-main-seg-btn, .lb-tab, .lb-view-tab, .lb-metric-tab, .lb-pos-btn'
+const TAP = '.dc-submit-btn, .dc-back-btn, .dc-lb-btn, .ag-btn, .ag-takeover, .ag-compete, .ag-resume, .ag-online-btn, .ag-sport-btn, .cp-seat, .ag-tab, .ag-play, .ag-pos, .ag-mode, .ag-mini, .ag-tile, .ag-chip, .ag-seg button, .ag-set, .ag-edge, .ag-icon-btn, .ag-row-btn, .ag-daily-banner, .ag-milestone, .ag-player-chip, .ag-round-btn, .spin-btn, .spin-respin-half, .spin-reset-circle, .attr-chip, .mtab, .cat-pill, .sim-btn, .simp-cta, .simp-ghost, .mvp-continue, .tpm-tab, .auth-submit, .lb-main-seg-btn, .lb-tab, .lb-view-tab, .lb-metric-tab, .lb-pos-btn'
 
 let ticking = null
 function startTicks() {
@@ -698,7 +698,23 @@ export function initJuice() {
   window.addEventListener('bap:achievement', () => { sfx('achievement'); haptic('success') })
   window.addEventListener('bap:victory', e => victory(e.detail || {}))
 
-  document.addEventListener('pointerdown', e => {
+  // Sounds and haptics fire on the tap itself (click), not on touch-down, so a
+  // scroll that starts on a button doesn't click. Touch-down only unlocks audio.
+  document.addEventListener('pointerdown', () => audio(), { capture: true, passive: true })
+  // While a finger is scrolling, buttons under it don't show their pressed look
+  let scrollT = null, startY = 0, startX = 0
+  document.addEventListener('touchstart', e => { const t = e.touches[0]; startX = t.clientX; startY = t.clientY }, { capture: true, passive: true })
+  document.addEventListener('touchmove', e => {
+    const t = e.touches[0]
+    if (Math.abs(t.clientY - startY) + Math.abs(t.clientX - startX) < 8) return
+    document.documentElement.classList.add('ag-scrolling')
+    clearTimeout(scrollT)
+  }, { capture: true, passive: true })
+  const endScroll = () => { clearTimeout(scrollT); scrollT = setTimeout(() => document.documentElement.classList.remove('ag-scrolling'), 120) }
+  document.addEventListener('touchend', endScroll, { capture: true, passive: true })
+  document.addEventListener('touchcancel', endScroll, { capture: true, passive: true })
+
+  document.addEventListener('click', e => {
     const el = e.target.closest?.(TAP)
     if (!el || el.disabled) return
     audio()                                   // unlock audio on the first gesture (iOS); loads the samples

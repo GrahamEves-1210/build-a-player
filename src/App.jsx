@@ -1,4 +1,4 @@
-﻿import { useState, useCallback, useRef, useEffect, useLayoutEffect, lazy, Suspense } from 'react' // v2
+﻿import { useState, useCallback, useRef, useEffect, useLayoutEffect, useMemo, lazy, Suspense } from 'react' // v2
 import { Helmet } from 'react-helmet-async'
 import Navbar from './components/Navbar'
 import SpinScreen from './components/SpinScreen'
@@ -6,7 +6,7 @@ import Silhouette from './components/Silhouette'
 import ReportCard from './components/ReportCard'
 import TeamPickerModal from './components/TeamPickerModal'
 import AuthModal from './components/AuthModal'
-import SplashScreen from './components/SplashScreen'
+import SplashScreen, { POS_OPTIONS } from './components/SplashScreen'
 import { decodeBuild } from './utils/shareUrl'
 
 // Lazy-loaded pages — only downloaded when the user actually navigates there
@@ -21,6 +21,8 @@ const LeaderboardPage= lazy(() => import('./components/LeaderboardPage'))
 const VersusLobby    = lazy(() => import('./components/VersusLobby'))
 const VersusResult   = lazy(() => import('./components/VersusResult'))
 const AppTakeover    = lazy(() => import('./components/app/AppTakeover'))
+import CompeteHud from './components/app/CompeteHud'
+const AppCompete = lazy(() => import('./components/app/AppCompete'))
 const Wiki           = lazy(() => import('./components/wiki/Wiki'))
 import { TYPES, LITE_TYPES, QBS, ATTR } from './data/qbs'
 import { RBS, RB_TYPES, RB_LITE_TYPES, RB_ATTR } from './data/rbs'
@@ -31,7 +33,8 @@ import { TE_LEGENDS } from './data/te-legends'
 import { DBS, DB_TYPES, DB_LITE_TYPES, DB_CATEGORIES, DB_ATTR } from './data/dbs'
 import { DB_LEGENDS } from './data/db-legends'
 import { OLS, OL_TYPES, OL_LITE_TYPES, OL_CATEGORIES, OL_ATTR } from './data/ols'
-import { ALLTIME_RATINGS, NFL_TEAMS } from './data/nfl-teams'
+import { ALLTIME_RATINGS, NFL_TEAMS, TEAMS } from './data/nfl-teams'
+import { useCompete, botBuild } from './lib/compete'
 import { LEGENDS, LEGEND_TYPES } from './data/qb-legends'
 import { RB_LEGENDS } from './data/rb-legends'
 import HEADSHOTS from './data/headshots.json'
@@ -84,7 +87,7 @@ const _saved = (() => {
   try {
     const p = JSON.parse(localStorage.getItem('bap_progress'))
     // OL is Coming Soon — don't drop anyone back into an in-progress OL build
-    return p?.position === 'ol' ? null : p
+    return p?.position === 'ol' || p?.tk === 'compete' ? null : p
   } catch { return null }
 })()
 
@@ -322,6 +325,7 @@ export default function App() {
       else if (to === 'profile') { if (user) { window.history.pushState({}, '', '/profile'); setPage('profile') } else window.dispatchEvent(new CustomEvent('bap:auth')) }
       else if (to === 'about') setPage('about')
       else if (to === 'wiki') setPage('wiki')
+      else if (to === 'compete') setPage('compete')
       window.scrollTo({ top: 0, behavior: 'instant' })
     }
     window.addEventListener('bap:nav', onNav)
@@ -348,9 +352,10 @@ export default function App() {
   // Whether the build belongs to a Takeover run: a reload goes back to the
   // Takeover build, or to Home once the road has started (its card resumes it)
   const tkRef = useRef(_saved?.tk ?? null)
+  const competeRef = useRef(false)   // set once Compete is set up below
   if (page === 'takeover-build') tkRef.current = 'build'
   else if (page === 'takeover') tkRef.current = 'road'
-  else if (page === 'game') tkRef.current = null
+  else if (page === 'game') tkRef.current = competeRef.current ? 'compete' : null
   useEffect(() => {
     if (!gameMode) return
     try { localStorage.setItem('bap_progress', JSON.stringify({ gameMode, position, build, daily: dailyRun, tk: tkRef.current })) } catch {}
@@ -525,6 +530,21 @@ export default function App() {
   const activeDragRef = useRef(activeDrag)
   useLayoutEffect(() => { activeDragRef.current = activeDrag }, [activeDrag])
 
+  // ── COMPETE: five-player pools on the same spins (lib/compete.js) ──────────
+  const [competePos, setCompetePos] = useState(() => { let p = 'qb'; try { p = localStorage.getItem('lastPosition') || 'qb' } catch {}; return ['qb', 'rb', 'wr', 'te', 'db'].includes(p) ? p : 'qb' })
+  const cp = useCompete({
+    enabled: IS_APP || APP_LOOK, user, sport: 'nfl', pos: competePos,
+    botFor: (seed, idx, skill, pos) => botBuild({
+      seed, idx, skill, teams: TEAMS,
+      pool: { qb: QBS, rb: RBS, wr: WRS, te: TES, db: DBS }[pos] ?? QBS,
+      types: pos === 'db' ? DB_TYPES : pos === 'te' ? TE_TYPES : pos === 'wr' ? WR_TYPES : pos === 'rb' ? RB_TYPES : TYPES,
+      calcOvr: b => pos === 'db' ? calcOVRDB(b) : pos === 'te' ? calcOVRTE(b) : pos === 'wr' ? calcOVRWR(b) : pos === 'rb' ? calcOVRRB(b) : calcOVR(b),
+    }),
+  })
+  const competeOn = cp.phase === 'build' && !cp.results[cp.me.vid]
+  competeRef.current = competeOn
+  const competeKey = useRef(null)
+
   const handleStart = useCallback((mode, pos = 'qb') => {
     setPosition(pos)
     const isRBMode = pos === 'rb'
@@ -538,7 +558,7 @@ export default function App() {
     setActiveCategory('physical')
     setSavedSpinResult(null)
     setDailyRun(null)
-    if (IS_APP) {   // the app keeps a finished game around (Home → PLAY resumes it), so clear it
+    if (IS_APP || APP_LOOK) {   // a finished game is kept around (Home → resume), so clear it
       setSimResult(null)
       setMobileView('spin')
       setSpinResetKey(k => k + 1)
@@ -611,6 +631,26 @@ export default function App() {
     setTakeoverRun(run); setPage('takeover')
     window.scrollTo({ top: 0, behavior: 'instant' })
   }, [user?.id, position, build, activeTypes])
+
+  useEffect(() => {
+    if (cp.phase !== 'build' || !cp.match || cp.results[cp.me.vid] || competeKey.current === cp.match.code) return
+    competeKey.current = cp.match.code
+    // same spins for the whole pool: no custom ratings, a fresh spin screen
+    try { localStorage.setItem('bap_custom_mode', '0') } catch {}
+    setIsCustomMode(false)
+    handleStart('classic', cp.match.pos)
+    setSimResult(null); setMobileView('spin'); setSpinResetKey(k => k + 1); setGameKey(k => k + 1)
+    sandboxTainted.current = false
+  }, [cp.phase, cp.match?.code]) // eslint-disable-line react-hooks/exhaustive-deps
+  // LOCK IN: the build's OVR goes to the pool; the game is done with
+  const lockInCompete = useCallback(() => {
+    const ovr = Math.round((isOL ? calcOVROL(build) : isDB ? calcOVRDB(build) : isTE ? calcOVRTE(build) : isWR ? calcOVRWR(build) : isRB ? calcOVRRB(build) : calcOVR(build)) ?? 0)
+    cp.submit(ovr, build)
+    try { localStorage.removeItem('bap_progress') } catch {}
+    setGameMode(null); setBuild({}); setSavedSpinResult(null)
+    setPage('compete')
+    window.scrollTo({ top: 0, behavior: 'instant' })
+  }, [build, cp, isOL, isDB, isTE, isWR, isRB])
 
   const startDaily = useCallback(() => {
     const dc = dailyState()
@@ -1040,7 +1080,7 @@ export default function App() {
   // display:none) so a spin in flight keeps spinning, keeps its sound and
   // nothing resets. Both the game page and the parked pages render the same
   // shell, so React keeps the spin's state across the switch.
-  const KEEP_GAME_ON = new Set(['splash', 'profile', 'leaderboard', 'about', 'privacy', 'terms', 'depth-chart'])
+  const KEEP_GAME_ON = new Set(['splash', 'profile', 'leaderboard', 'about', 'privacy', 'terms', 'depth-chart', 'compete'])
   const gameIsPlay = page === 'game' || (KEEP_GAME_ON.has(page) && lastPlayRef.current === 'game')
   const filledCount = activeTypes.filter(t => build[t]).length
   const currentAttrMap = isOL ? OL_ATTR : isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : isRB ? RB_ATTR : ATTR
@@ -1050,6 +1090,9 @@ export default function App() {
   const dailyPlan = dailyRun && dailyLocked && gameIsPlay
     ? { seed: dailyRun.seed, getStart: () => dailyState().spins, onSpin: setDailySpins }
     : null
+  const competePlan = useMemo(() => (competeOn && cp.match ? { seed: cp.match.seed, getStart: () => 0, onSpin: () => {}, separateRespins: true } : null), [competeOn, cp.match?.code]) // eslint-disable-line react-hooks/exhaustive-deps
+  // Sandbox is only for the plain Current and All-Time modes
+  const sandboxOk = (gameMode === 'classic' || gameMode === 'all-time') && !dailyRun && !competeOn && page !== 'takeover-build' && page !== 'versus-game'
 
   const navbarProps = {
     onReset: handleReset,
@@ -1087,6 +1130,7 @@ export default function App() {
       {!parked && <Navbar {...navbarProps} />}
 
       <div className="game-page-scroll">
+      {competeOn && <CompeteHud cp={cp} />}
       {IS_APP && (
         <FlipEdge side={mobileView} build={build} types={activeTypes} attrMap={currentAttrMap} onFlip={flip}
           waiting={savedSpinResult?.selectedQB?.name ?? null} complete={buildComplete} />
@@ -1109,7 +1153,8 @@ export default function App() {
           gameKey={gameKey}
           onReset={dailyLocked ? undefined : handleReset}
           adsDisabled={adsDisabled}
-          seedPlan={dailyPlan}
+          seedPlan={competePlan ?? dailyPlan}
+          key={competePlan ? `cp-${cp.match.code}` : 'spin'}
           cardMeta={(IS_APP || APP_LOOK) && gameIsPlay ? { sport: 'nfl', pos: position, mode: gameMode } : null}
           paused={parked}
           isRB={isRB}
@@ -1142,14 +1187,14 @@ export default function App() {
           isPlus={isPlus}
           isCustomMode={isCustomMode}
           onOpenCustomModal={() => setShowCustomModal(true)}
-          onSandboxToggle={handleSandboxToggle}
+          onSandboxToggle={sandboxOk ? handleSandboxToggle : undefined}
         />
 
         <div className="right-panel-wrap">
           <ReportCard
             build={build}
-            onSimulate={page === 'versus-game' ? handleFaceoff : page === 'takeover-build' ? hitTheRoad : handleSimulate}
-            simLabel={page === 'takeover-build' ? 'HIT THE ROAD' : undefined}
+            onSimulate={page === 'versus-game' ? handleFaceoff : page === 'takeover-build' ? hitTheRoad : competeOn ? lockInCompete : handleSimulate}
+            simLabel={page === 'takeover-build' ? 'HIT THE ROAD' : competeOn ? 'LOCK IN' : undefined}
             onReset={handleReset}
             types={activeTypes}
             hasResult={page === 'versus-game' ? false : !!simResult}
@@ -1162,7 +1207,7 @@ export default function App() {
             isPlus={isPlus}
             isCustomMode={isCustomMode}
             onOpenCustomModal={() => setShowCustomModal(true)}
-            onSandboxToggle={handleSandboxToggle}
+            onSandboxToggle={sandboxOk ? handleSandboxToggle : undefined}
             versusMode={page === 'versus-game'}
           />
         </div>
@@ -1355,10 +1400,12 @@ export default function App() {
         <link rel="canonical" href="https://build-a-player.com/" />
       </Helmet>
       {IS_APP ? (
-        <AppHome sport="nfl" user={user} onStart={handleStart} onDepthChart={() => setPage('depth-chart')} onTakeover={openTakeover} takeoverRun={takeoverRun} />
+        <AppHome sport="nfl" user={user} onStart={handleStart} onDepthChart={() => setPage('depth-chart')} onTakeover={openTakeover} takeoverRun={takeoverRun}
+          onCompete={() => setPage('compete')} resume={competeOn ? { label: `Compete · pool ${cp.match.code}`, onClick: () => setPage('game') } : (gameMode && (simResult || Object.values(build).some(Boolean))) ? { label: `${position.toUpperCase()} · ${gameMode === 'all-time' ? 'All-Time' : gameMode === 'classic' ? 'Current' : gameMode}`, onClick: () => window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'play' })) } : null} />
       ) : APP_LOOK ? (
         <AppHome sport="nfl" user={user} onStart={handleStart} onDepthChart={() => setPage('depth-chart')} onVersus={startVersus}
           onTakeover={openTakeover} takeoverRun={takeoverRun}
+          onCompete={() => setPage('compete')} resume={competeOn ? { label: `Compete · pool ${cp.match.code}`, onClick: () => setPage('game') } : (gameMode && (simResult || Object.values(build).some(Boolean))) ? { label: `${position.toUpperCase()} · ${gameMode === 'all-time' ? 'All-Time' : gameMode === 'classic' ? 'Current' : gameMode}`, onClick: () => window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'play' })) } : null}
           footer={<><SiteFeatures sport="nfl" /><SiteFooter sport="nfl" onDepthChart={() => setPage('depth-chart')} onWiki={openWiki} /></>} />
       ) : (
       <SplashScreen
@@ -1369,6 +1416,16 @@ export default function App() {
       />
       )}
       </>
+    )
+  }
+
+  if (page === 'compete') {
+    return withGame(
+      <Suspense fallback={null}>
+        <AppCompete cp={cp} sport="nfl" position={competePos} positions={POS_OPTIONS.filter(o => ['qb', 'rb', 'wr', 'te', 'db'].includes(o.pos))}
+          onPosition={setCompetePos} onHome={() => setPage('splash')} onResumeBuild={() => setPage('game')}
+          onPlayAgain={() => cp.join()} />
+      </Suspense>
     )
   }
 
