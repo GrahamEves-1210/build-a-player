@@ -1,5 +1,10 @@
 import { Component } from 'react'
+import { reportError } from '../lib/errorLog'
+import './app/infra.css'
 
+// The last line of defence for a render error anywhere under it: a friendly
+// "Something broke" screen in the app's look (styles in components/app/infra.css)
+// and a report to client_errors (lib/errorLog.js).
 export default class ErrorBoundary extends Component {
   constructor(props) {
     super(props)
@@ -12,27 +17,20 @@ export default class ErrorBoundary extends Component {
 
   componentDidCatch(error, info) {
     console.error('[ErrorBoundary] caught render error:', error, info)
+    reportError(error, 'react', { componentStack: info?.componentStack ?? '' })
   }
 
   render() {
     if (!this.state.hasError) return this.props.children
     return (
-      <div style={{
-        position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center', gap: 16,
-        background: '#050705', color: '#fff', fontFamily: 'system-ui, sans-serif',
-        textAlign: 'center', padding: 24,
-      }}>
-        <div style={{ fontSize: 18, fontWeight: 700 }}>Something went wrong loading the page.</div>
-        <button
-          onClick={() => window.location.reload()}
-          style={{
-            padding: '10px 20px', borderRadius: 8, border: 'none', cursor: 'pointer',
-            background: '#74C69D', color: '#050705', fontWeight: 700, fontSize: 14,
-          }}
-        >
-          Reload
-        </button>
+      <div className="inf-crash" role="alert">
+        <div className="inf-crash-card">
+          <div className="inf-crash-kicker">FUMBLE</div>
+          <div className="inf-crash-title">Something broke</div>
+          <p className="inf-crash-sub">Your progress is saved on this device. A reload usually fixes it.</p>
+          <button className="inf-btn" onClick={() => window.location.reload()}>RELOAD</button>
+          <button className="inf-link" onClick={() => { window.location.href = '/' }}>Back to home</button>
+        </div>
       </div>
     )
   }

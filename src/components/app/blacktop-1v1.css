@@ -1,0 +1,89 @@
+/* BLACKTOP 1V1: the 3v3's classes (bt-*) do the drawing; these only fit a
+   two-player game into them. Everything here is v1g- (1v1 game). */
+
+/* lobby: me and the open spot (or who we found) */
+.v1g-run .v1-code { margin-bottom: 14px; }
+@media (min-width: 1024px) { .v1g-lobby .ag-screen-body { max-width: 720px; margin-inline: auto; } }
+.v1g-run .bt-squads { margin-top: 2px; }
+.bt-spot.is-open.v1g-open .bt-spot-name { font-size: 13px; color: var(--tc); }
+.v1g-run .bt-run-hint { display: inline-flex; align-items: center; gap: 8px; }
+.v1g-found { animation: ag-zoom .35s cubic-bezier(.2,1.2,.3,1) both; }
+
+/* build HUD: no chat in a 1v1, so the bar takes the whole row */
+.bt-hud.v1g-hud { grid-template-columns: 1fr; }
+.bt-hud.v1g-hud .bt-hud-mini { gap: 6px; }
+.v1g-hud-who { display: inline-flex; align-items: center; gap: 5px; min-width: 0; }
+.v1g-hud-who b { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.v1g-hud-who i { margin-left: 4px; font-style: normal; color: var(--ag-muted); }
+.v1g-hud-go { font-family: var(--ag-font); font-size: 12.5px; letter-spacing: 2px; color: var(--ag-a1); animation: ag-glowpulse 1s infinite; }
+.v1g-hud-note { margin-top: 8px; font-family: var(--ag-body); font-size: 12px; font-weight: 600; color: var(--ag-muted); text-align: center; }
+.v1g-hud .bt-hud-p-name .ntag { max-width: 100%; }
+
+/* matchup sheet: who you drew, then take a spot */
+.bt-sheet.v1g-sheet, html.app-look .bt-sheet.v1g-sheet { height: auto; max-height: calc(90dvh - var(--web-rail, 0px)); overflow-y: auto; }
+.v1g-squads { margin: 2px 0 14px; }
+.v1g-pick-lbl { display: block; margin: 0 0 8px; text-align: center; }
+.v1g-pick { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding-bottom: 6px; }
+.v1g-pick .bt-spot { min-height: 60px; }
+
+/* reveal: the two players, then both builds */
+.v1g-reveal-top { position: relative; width: 100%; }
+.v1g-reveal-top .bt-vs { transform: translate(-50%, -50%); }
+.bt-squad.v1g-side { align-items: center; text-align: center; gap: 6px; }
+.v1g-side .bt-squad-p-txt { align-items: center; max-width: 100%; }
+.v1g-side .bt-squad-p-txt b { max-width: 100%; }
+.v1g-ovr { display: flex; align-items: baseline; gap: 4px; font-family: var(--ag-display); font-size: 34px; line-height: 1; color: var(--tc); }
+.v1g-ovr small { font-family: var(--ag-font); font-size: 12px; letter-spacing: 1.5px; color: var(--ag-muted); }
+.ag-card.v1g-builds { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; padding: 10px; }
+.v1g-builds-col { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.v1g-builds-col > .v1g-build-head { padding-bottom: 6px; border-bottom: 1px solid var(--ag-line); }
+.v1g-build-head { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.v1g-build-head .ntag { min-width: 0; max-width: 100%; overflow: hidden; }
+.v1g-build-ovr { margin-left: auto; font-family: var(--ag-display); font-size: 22px; line-height: 1; color: var(--tc); }
+.v1g-build-ovr small { margin-left: 2px; font-family: var(--ag-font); font-size: 10px; letter-spacing: 1px; color: var(--ag-muted); }
+.v1g-game .bvr-build-rows { display: flex; flex-direction: column; gap: 4px; }
+.v1g-game .bvr-attr-row { min-width: 0; }
+
+/* live: the scoreboard's names carry the picture; the builds sit under the feed (nothing shrinks) */
+.bt-live.v1g-game > * { flex-shrink: 0; }
+.v1g-board-who { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; min-width: 0; }
+.v1g-board-who .ntag { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.v1g-poss { font-size: 14px; line-height: 1; opacity: 0; transition: opacity .25s; }
+.v1g-poss.is-on { opacity: 1; }
+.bt-roles.v1g-adj { align-items: center; margin-top: 0; }
+.bt-roles.v1g-adj .ag-chip { display: inline-flex; flex-direction: column; justify-content: center; height: 40px; line-height: 1.05; }
+.bt-roles.v1g-adj .ag-chip small { font-family: var(--ag-body); font-size: 9.5px; font-weight: 700; letter-spacing: .3px; opacity: .7; }
+.v1g-game .btc-ring { border-radius: 32%; }
+.v1g-game .btc-ring .avb { display: grid; }
+
+/* result */
+.v1g-winner { display: flex; flex-direction: column; align-items: center; gap: 8px; margin: 4px 0 2px; }
+.v1g-winner .ag-h1 { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; font-size: 34px; }
+.v1g-winner .ntag { font-size: 30px; }
+.v1g-took { font-family: var(--ag-font); font-size: 15px; letter-spacing: 3px; color: var(--ag-text-2, var(--ag-muted)); }
+.v1g-final-who { display: inline-flex; align-items: center; gap: 6px; max-width: 42vw; min-width: 0; }
+.v1g-final-who .ntag { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.v1g-box .bt-box-head, .v1g-box .bt-box-row { grid-template-columns: 1fr 34px 44px 44px 34px 34px; }
+.v1g-box .bt-box-name { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.v1g-box .bt-box-name .ntag { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.ag-card.v1g-build-card { padding: 10px 12px; border: 1px solid color-mix(in srgb, var(--tc) 35%, transparent); }
+.ag-card.v1g-build-card.is-winner { border-color: color-mix(in srgb, var(--tc) 70%, transparent); box-shadow: 0 0 22px color-mix(in srgb, var(--tc) 14%, transparent); }
+.v1g-build-card .v1g-build-head { margin-bottom: 8px; }
+.v1g-left { padding: 12px; border-radius: 12px; text-align: center; font-family: var(--ag-body); font-size: 14px; font-weight: 600; color: var(--ag-muted); background: rgba(255,255,255,.05); }
+.v1g-left .ntag { margin-right: 4px; }
+
+/* leave / opponent-left sheets */
+.v1g-solo { margin: 2px 0 10px; }
+.v1g-sheet-note { margin: 0 0 12px; font-family: var(--ag-body); font-size: 14px; font-weight: 500; line-height: 1.4; color: var(--ag-muted); text-align: center; }
+.v1g-sheet-note .ntag { color: var(--ag-text); }
+.v1g-sheet-actions { padding-bottom: 6px; }
+.ag-btn.v1g-leave { color: #ff8a8a; border-color: rgba(255,77,77,.45); }
+.v1g-gone { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 16px 12px 14px; margin-bottom: 10px; border-radius: 16px; text-align: center; border: 1.5px solid color-mix(in srgb, var(--tc) 45%, transparent); background: linear-gradient(160deg, color-mix(in srgb, var(--tc) 12%, transparent), transparent 70%), var(--ag-panel); animation: ag-zoom .35s cubic-bezier(.2,1.2,.3,1) both; }
+.v1g-gone-name .ntag { font-size: 22px; }
+.v1g-w { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 12px; margin-bottom: 12px; border-radius: 14px; border: 1px solid var(--ag-line-hi); background: radial-gradient(100% 80% at 50% 0%, color-mix(in srgb, var(--ag-a1) 16%, transparent), transparent 70%), var(--ag-panel); }
+.v1g-w-who { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.v1g-w-txt { font-family: var(--ag-font); font-size: 15px; letter-spacing: 2px; color: var(--ag-muted); }
+
+@media (min-width: 1024px) {
+  .v1g-game .ag-screen-body, .v1g-game .bt-reveal { max-width: 720px; margin-inline: auto; width: 100%; box-sizing: border-box; }
+}

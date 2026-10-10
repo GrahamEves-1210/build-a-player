@@ -276,7 +276,7 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
   if (c.phase === 'retired') return <Legacy c={c} setCareer={setCareer} onNewBuild={onNewBuild} onExit={onExit} />
 
   const L = legacyOf(c)
-  const begin = () => { const [n, d] = startSeason(c); D.current = d; setCareer(n); sfx('launch'); haptic('medium') }
+  const begin = () => { const [n, d] = startSeason(c); D.current = d; setCareer(n); sfx('whistle'); haptic('medium') }
   const advance = () => {
     if (!D.current) D.current = resumeSeason(c)
     const [n, ev] = advanceWeek(c, D.current)
@@ -331,7 +331,7 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
         {tab === 'season' && c.phase === 'preseason' && (
           <section className="ag-card cr-sec ag-pop">
             <div className="ag-card-head"><span className="ag-eyebrow">SEASON {c.season} · {c.fit.status.toUpperCase()}</span></div>
-            {c.aging?.length > 0 && <ul className="cr-list">{c.aging.map((t, i) => <li key={i}><IconFlame size={13} /> {t}</li>)}</ul>}
+            {c.aging?.length > 0 && <ul className="cr-bul">{c.aging.map((t, i) => <li key={i}><IconFlame size={13} /> {t}</li>)}</ul>}
             <div className="cr-goals"><span className="ag-eyebrow">THIS YEAR'S GOALS</span>{goalsFor(c).map(g => <span key={g.k} className="cr-goal">{g.label}</span>)}</div>
             <p className="cr-note">{c.contract.left} {c.contract.left === 1 ? 'year' : 'years'} left on your deal ({money(c.contract.perYear)} a year). {c.contract.left === 1 ? 'Contract year: play for the next one.' : ''}</p>
             <button className="ag-btn ag-btn--gold tk-intro-go" onClick={begin}>START THE SEASON <IconArrow size={16} /></button>
@@ -472,12 +472,12 @@ function CareerTab({ c, L }) {
       </div>
       {c.seasons.length > 0 && (
         <div className="ag-card cr-table ag-pop" style={{ '--d': '60ms' }}>
-          <div className="cr-row cr-row--head"><span>YR</span><span>TEAM</span><span>W–L</span>{keys.map(k => <span key={k}>{STAT_LABEL[k]}</span>)}<span /></div>
+          <div className="cr-yr cr-yr--head"><span>YR</span><span>TEAM</span><span>W–L</span>{keys.map(k => <span key={k}>{STAT_LABEL[k]}</span>)}<span /></div>
           {[...c.seasons].reverse().map(s => (
-            <div key={s.year} className={`cr-row${s.champion ? ' is-ring' : ''}`}>
+            <div key={s.year} className={`cr-yr${s.champion ? ' is-ring' : ''}`}>
               <span>{s.season}</span><span><img src={logoFor(s.team)} alt="" />{s.team}</span><span>{s.wins}–{s.losses}</span>
               {keys.map(k => <span key={k}>{(s.stats[k] ?? 0).toLocaleString()}</span>)}
-              <span className="cr-row-ico">{s.champion && <IconRing size={12} />}{s.award && <IconTrophy size={12} />}{s.allPro ? <IconMedal size={12} /> : s.proBowl ? <IconStar size={12} /> : null}</span>
+              <span className="cr-yr-ico">{s.champion && <IconRing size={12} />}{s.award && <IconTrophy size={12} />}{s.allPro ? <IconMedal size={12} /> : s.proBowl ? <IconStar size={12} /> : null}</span>
             </div>
           ))}
         </div>
@@ -485,7 +485,7 @@ function CareerTab({ c, L }) {
       {(c.decisions.length > 0 || c.events.length > 0) && (
         <div className="ag-card cr-log ag-pop" style={{ '--d': '90ms' }}>
           <div className="ag-card-head"><span className="ag-eyebrow">THE STORY</span></div>
-          <ul className="cr-list">{[...c.decisions.map(d => ({ ...d, kind: 'd' })), ...c.events.map(e => ({ ...e, kind: 'e' }))].sort((a, b) => b.year - a.year).map((x, i) => <li key={i}>{x.kind === 'd' ? <IconShield size={12} /> : <IconHelmet size={12} />} <small>Y{x.year}</small> {x.text}</li>)}</ul>
+          <ul className="cr-bul">{[...c.decisions.map(d => ({ ...d, kind: 'd' })), ...c.events.map(e => ({ ...e, kind: 'e' }))].sort((a, b) => b.year - a.year).map((x, i) => <li key={i}>{x.kind === 'd' ? <IconShield size={12} /> : <IconHelmet size={12} />} <small>Y{x.year}</small> {x.text}</li>)}</ul>
         </div>
       )}
     </section>
@@ -504,7 +504,7 @@ function Legacy({ c, setCareer, onNewBuild, onExit }) {
       const { generateCareerCard, captureSilhouette } = await import('../../utils/generateShareCard')
       const fig = await captureSilhouette('.cr-model .sil-wrap')
       const canvas = await generateCareerCard(card, fig)
-      const url = canvas.toDataURL('image/png'); setImg(url); sfx('share')
+      const url = canvas.toDataURL('image/png'); setImg(url)
       const blob = await new Promise(res => canvas.toBlob(res, 'image/png'))
       const file = blob && new File([blob], `career-${c.name}-${POS_LABEL[c.pos]}.png`, { type: 'image/png' })
       if (file && navigator.canShare?.({ files: [file] })) await navigator.share({ files: [file], title: `${c.name}'s career` }).catch(() => {})

@@ -5,7 +5,7 @@ const MORE_SHEET = !IS_APP && APP_LOOK
 import FeedbackModal from './FeedbackModal'
 import { getUsername } from '../lib/discord'
 import { IconGear } from './app/icons'
-import { isMuted, setMuted } from '../lib/juice'
+import SoundToggle from './app/SoundToggle'
 import { PROFILE_ICON_EMOJI, initialsOf } from '../data/profile-icons'
 
 const STEPS_DESKTOP = (isRB, isWR, isTE, isDB, isOL) => [
@@ -180,7 +180,6 @@ const PERKS = [
 ]
 
 export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, onLeaderboard, onSwitchPosition, onSwitchBucketPosition, onSubscribe, onOpenCustomRatings, user, gameMode, isRB, isWR, isTE, isDB, isOL, position, isPlus, isBucket, bucketPosition, versusState }) {
-  const [muted, setMutedState] = useState(() => isMuted())
   const [open,         setOpen]        = useState(false)
   const [htpOpen,      setHtpOpen]     = useState(false)
   const [plusWmOpen,   setPlusWmOpen]  = useState(false)
@@ -297,6 +296,8 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
             )}
           </div>
         )
+      ) : gameMode === 'salarycap' ? (
+        <button className="tab-pill tab-pill-qb tab-pill-salary active">Salary Cap</button>
       ) : (
         <div className="nav-pos-dropdown" ref={posDropRef}>
           <button
@@ -350,12 +351,7 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
         {MORE_SHEET ? (
           <>
             {/* desktop: sound on / off right here (the phone has it in More) */}
-            <button className={`ag-icon-btn nav-sound-btn${muted ? ' is-off' : ''}`} onClick={() => { setMuted(!muted); setMutedState(!muted) }} aria-label={muted ? 'Turn sound on' : 'Turn sound off'} aria-pressed={!muted}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M4 10v4h4l5 4V6L8 10H4z" fill="currentColor" stroke="none" />
-                {muted ? <path d="M16 9l5 6M21 9l-5 6" /> : <><path d="M16.5 8.5a5 5 0 0 1 0 7" /><path d="M19 6a9 9 0 0 1 0 12" /></>}
-              </svg>
-            </button>
+            <SoundToggle className="nav-sound-btn" />
             {/* the app's settings-and-more button (opens the More sheet) */}
             <button className="ag-icon-btn nav-more-btn" onClick={() => { dismissHint(); window.dispatchEvent(new CustomEvent('bap:menu')) }} aria-label="Settings and more">
               <IconGear size={21} />

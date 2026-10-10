@@ -1068,11 +1068,7 @@ export default function QBSalaryCap({ onConfirm, onBack, user, initialDateStr })
   return (
     <div className="sc-screen">
       <div className="sc-header">
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div className="sc-mode-pill">QB</div>
-          <div className="sc-title">SALARY <span style={{ color: '#a855f7' }}>CAP</span></div>
-          <div className="sc-subtitle">Build a QB under the cap</div>
-        </div>
+        <div className="sc-title">BUILD<span style={{ color: '#a855f7' }}>-A-</span>PLAYER <span style={{ color: '#a855f7' }}>SALARY</span></div>
         <div className="sc-footer-icons">
           {(effectiveShufflesLeft > 0 || effectiveScoutsLeft > 0) && (mode === 'infinite' || !alreadyPlayed) && (
             <div className="sc-power-wrap">

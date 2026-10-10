@@ -102,6 +102,7 @@ import { DB_ATTR } from '../data/dbs'
 import { OL_ATTR } from '../data/ols'
 import { CAN_SELL_PLUS, IS_APP, APP_LOOK } from '../lib/platform'
 import AppCareerCard from './app/AppCareerCard'
+import FriendsSection from './app/FriendsSection'
 import DeleteAccount from './DeleteAccount'
 import ConnectDiscord from './ConnectDiscord'
 import { getUsername } from '../lib/discord'
@@ -844,6 +845,9 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
 
         {/* App look: player card with level, XP and spotlights (replaces the hero below) */}
         {(IS_APP || APP_LOOK) && <AppCareerCard user={user} />}
+
+        {/* App look: friends (tap one for their profile) */}
+        {(IS_APP || APP_LOOK) && <FriendsSection user={user} isBucket={isBucket} />}
 
         {/* ── Hero header ── */}
         <div className={`prf-hero ${show ? 'prf-hero-in' : ''}`}>

@@ -160,7 +160,7 @@ export function BlacktopQueue({ bt, user, onBack }) {
                       {h ? <Av name={h.name} team={t} size={34} cos={h.cos} self={me} /> : <span className="bt-spot-plus">+</span>}
                       <span className="bt-spot-txt">
                         <span className="bt-spot-name">{h ? <NameTag name={h.name} cos={h.cos} self={me} /> : `JOIN AS ${sl.pos === 'big' ? 'BIG' : 'GUARD'}`}</span>
-                        <span className="bt-spot-role">{me ? 'YOU · ' : ''}{sl.pos === 'big' ? 'BIG · PF · C' : 'GUARD · PG · SG · SF'}{me ? ' · TAP TO LEAVE' : ''}</span>
+                        <span className="bt-spot-role">{sl.pos === 'big' ? 'BIG · PF · C' : 'GUARD · PG · SG · SF'}{me ? ' · TAP TO LEAVE' : ''}</span>
                       </span>
                     </button>
                   )
@@ -256,6 +256,9 @@ export function BlacktopChat({ bt, user, onClose, mode = 'blacktop', title = 'TE
     first.current = false
   }, [bt.chat.length])
   const close = () => { setClosing(true); setTimeout(onClose, 180) }
+  // the chat rules, agreed to once before the first message
+  const [rulesOk, setRulesOk] = useState(() => { try { return localStorage.getItem('bap_chat_rules') === '1' } catch { return false } })
+  const agree = () => { try { localStorage.setItem('bap_chat_rules', '1') } catch {} setRulesOk(true); setTimeout(() => inputRef.current?.focus(), 50) }
   const send = t => {
     if (bt.sendChat(t)) { setText(''); sfx('send'); haptic('light'); inputRef.current?.focus() }
     else if (t.trim()) { sfx('deny') }
@@ -316,11 +319,25 @@ export function BlacktopChat({ bt, user, onClose, mode = 'blacktop', title = 'TE
           </div>
         )}
         {/* guests chat too (as "Guest"); the filter, report and block cover everyone */}
+        {!rulesOk ? (
+          <div className="bt-rules" role="region" aria-label="Chat rules">
+            <b>BEFORE YOU CHAT</b>
+            <ul>
+              <li>Keep it about the game. No hate, bullying or threats.</li>
+              <li>Never share your real name, school, address, phone or socials.</li>
+              <li>No links. Messages are filtered.</li>
+              <li>Press and hold (or right-click) a message to report or block someone.</li>
+            </ul>
+            <p>Breaking the rules gets you muted or banned. <a href="/terms" target="_blank" rel="noreferrer">Terms</a> · <button type="button" onClick={() => window.dispatchEvent(new CustomEvent('bap:menu'))}>Contact us</button></p>
+            <button className="ag-btn ag-cta" onClick={agree}>I AGREE · LET ME CHAT</button>
+          </div>
+        ) : <>
         <div className="bt-quick">{QUICK.map(q => <button key={q} className="ag-chip" onClick={() => send(q)}>{q}</button>)}</div>
         <form className="bt-chat-form" onSubmit={e => { e.preventDefault(); send(text) }}>
           <input ref={inputRef} value={text} onChange={e => { setText(e.target.value); bt.typing?.() }} maxLength={120} placeholder={mode === 'blacktop-lobby' ? 'Message the lobby…' : mode === 'takeover' ? 'Message your partner…' : 'Message your squad…'} enterKeyHint="send" autoComplete="off" />
           <button className="bt-send" type="submit" disabled={!text.trim()} aria-label="Send"><IconSend size={20} /></button>
         </form>
+        </>}
       </div>
     </div>,
     document.body,
@@ -435,11 +452,13 @@ export function BlacktopGame({ bt, user, photoFor, onOpenChat, unread }) {
   return (
     <div className="ag-screen ag-screen--bucket bt-game bt-live">
       <div className="bt-board">
-        <div className={`bt-board-side bt-t0${score[0] > score[1] ? ' is-lead' : ''}`}><span className="bt-board-name">{names[0]}{myTeam === 0 ? ' · YOU' : ''}</span><b>{score[0]}</b></div>
+        <div className={`bt-board-side bt-t0${score[0] > score[1] ? ' is-lead' : ''}`}><span className="bt-board-name">{names[0]}{myTeam === 0 ? ' ★' : ''}</span><b>{score[0]}</b></div>
         <div className="bt-board-mid"><span className="ag-eyebrow">FIRST TO 11</span><button className={`ag-chip${speed === 2 ? ' is-on' : ''}`} onClick={() => setSpeed(s => (s === 1 ? 2 : 1))}>{speed}×</button></div>
-        <div className={`bt-board-side bt-t1${score[1] > score[0] ? ' is-lead' : ''}`}><span className="bt-board-name">{names[1]}{myTeam === 1 ? ' · YOU' : ''}</span><b>{score[1]}</b></div>
+        <div className={`bt-board-side bt-t1${score[1] > score[0] ? ' is-lead' : ''}`}><span className="bt-board-name">{names[1]}{myTeam === 1 ? ' ★' : ''}</span><b>{score[1]}</b></div>
       </div>
-      <BlacktopCourt game={game} play={play} meId={bt.me.vid} photoFor={photoFor} colorFor={colorFor} speed={speed} />
+      {/* each player on court is their profile picture and username (the CPU fill-ins say CPU) */}
+      <BlacktopCourt game={game} play={play} meId={bt.me.vid} meLabel={null} colorFor={colorFor} speed={speed}
+        avatarFor={p => <Av name={p.name} bot={p.bot} team={p.team} size={40} cos={p.cos} self={p.id === bt.me.vid} />} />
       <div className="bt-feed">
         {feed.map((p, i) => <div key={p.id} className={`bt-feed-line bt-t${p.team}${i === 0 ? ' is-now' : ''}${p.big ? ' is-big' : ''}${p.type === 'milestone' ? ' is-ms' : ''}`}>{p.text}</div>)}
       </div>

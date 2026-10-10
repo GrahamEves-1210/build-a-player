@@ -171,7 +171,7 @@ export default function AppCards({ sport: startSport, onClose }) {
   const recent = useMemo(() => cards.filter(c => c.owned).sort((a, b) => b.seen - a.seen).slice(0, 10), [cards])
   const shown = sets.filter(s => s.kind === kind)
   const openSet = open && sets.find(s => s.id === open)
-  const claim = s => { if (claimSet(s.id, s.total)) { sfx('strike'); haptic('success') } }
+  const claim = s => { if (claimSet(s.id, s.total)) { sfx('claim'); haptic('success') } }
   const readyToClaim = sets.filter(s => s.owned === s.total && !s.claimed).length
 
   // A big set reads better in sections (a franchise: by position and era)

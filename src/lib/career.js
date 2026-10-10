@@ -7,6 +7,7 @@
 // for basketball. Screens: components/app/AppCareer.jsx.
 
 import { seeded } from './rng'
+import { queueCloudSave, fetchCloudCareer, deleteCloudCareer } from './careerCloud'
 import { createDirector } from './seasonDirector'
 import {
   runSimulation, runRBSimulation, runWRSimulation, runTESimulation,
@@ -50,11 +51,54 @@ const r10 = v => Math.round(v * 10) / 10
 // ── Save ──────────────────────────────────────────────────────────────────────
 const key = (sport, uid) => `bap_career_${sport}_${uid || 'guest'}`
 const histKey = sport => `bap_career_hist_${sport}`
+const validCareer = c => !!(c && c.v === CAREER_V && c.pos)
 export function loadCareer(sport, uid) {
-  try { const c = JSON.parse(localStorage.getItem(key(sport, uid))); return c && c.v === CAREER_V && c.pos ? c : null } catch { return null }
+  try { const c = JSON.parse(localStorage.getItem(key(sport, uid))); return validCareer(c) ? c : null } catch { return null }
 }
-export function saveCareer(c) { try { if (c) localStorage.setItem(key(c.sport, c.uid), JSON.stringify(c)) } catch {} }
-export function clearCareer(sport, uid) { try { localStorage.removeItem(key(sport, uid)) } catch {} }
+// Every save stamps `updatedAt` (local and cloud copies are merged by it) and,
+// for a signed-in player, queues the cloud copy (lib/careerCloud.js). A save
+// that changes nothing (a screen re-saving what it loaded) keeps the old stamp,
+// so an untouched copy never looks newer than real progress on another device.
+const sameCareer = (a, b) => { try { return JSON.stringify({ ...a, updatedAt: 0 }) === JSON.stringify({ ...b, updatedAt: 0 }) } catch { return false } }
+export function saveCareer(c) {
+  if (!c) return
+  try {
+    const prev = loadCareer(c.sport, c.uid)
+    if (prev && prev.updatedAt && sameCareer(prev, c)) return
+    const s = { ...c, updatedAt: Date.now() }
+    localStorage.setItem(key(c.sport, c.uid), JSON.stringify(s))
+    queueCloudSave(s)
+  } catch {}
+}
+export function clearCareer(sport, uid) { try { localStorage.removeItem(key(sport, uid)) } catch {}; deleteCloudCareer(sport, uid) }
+// Signed in: pull the account's cloud copy and keep whichever is newer (by
+// `updatedAt`). A guest career moves onto the account on first sign-in when
+// the account has none. Offline / any failure: the local copy stands.
+export async function syncCareerFromCloud(sport, uid) {
+  if (!uid) return loadCareer(sport, uid)
+  const cloud = await fetchCloudCareer(sport, uid)
+  const local = loadCareer(sport, uid)   // read after the fetch: it may have moved on meanwhile
+  if (cloud === undefined) return local
+  const good = validCareer(cloud) && cloud.sport === sport ? { ...cloud, uid } : null
+  if (good && (!local || (good.updatedAt || 0) > (local.updatedAt || 0))) {
+    try { localStorage.setItem(key(sport, uid), JSON.stringify(good)) } catch {}
+    return good
+  }
+  if (local) {
+    if (!good || (local.updatedAt || 0) > (good.updatedAt || 0)) queueCloudSave(local.updatedAt ? local : { ...local, updatedAt: Date.now() })
+    return local
+  }
+  if (cloud === null) {   // the account has no career anywhere: bring the guest one over
+    const guest = loadCareer(sport, null)
+    if (guest) {
+      const moved = { ...guest, uid, updatedAt: Date.now() }
+      try { localStorage.setItem(key(sport, uid), JSON.stringify(moved)); localStorage.removeItem(key(sport, null)) } catch {}
+      queueCloudSave(moved)
+      return moved
+    }
+  }
+  return null
+}
 export function pastCareers(sport) { try { const l = JSON.parse(localStorage.getItem(histKey(sport)) || '[]'); return Array.isArray(l) ? l : [] } catch { return [] } }
 export function logCareer(c) {
   if (!c || c.logged) return c

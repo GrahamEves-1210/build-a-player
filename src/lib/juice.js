@@ -5,6 +5,7 @@
 // Sounds are generated with Web Audio — no audio files. Mute: More → Sound.
 
 import { myVictory } from './progress'
+import { motionReduced } from './settings'
 import { IS_APP } from './platform'
 
 const MUTE_KEY = 'bap_sound_off'
@@ -291,11 +292,10 @@ const SYNTH = {
   stamp: S => { hit(S, { gain: 0.3 }); noise(S, { bp: 1600, q: 1.4, dur: 0.12, gain: 0.12 }); osc(S, { type: 'triangle', f: 220, to: 180, dur: 0.2, gain: 0.07, at: 0.01 }) },
 
   // ── Victory sounds (the shop's "Victory Sound" slot) ─────────────────────
-  'snd-horn': S => { const v = verb(S, 0.4); hit(S, { gain: 0.34 }); horn(S, { f: 233, dur: 0.8, gain: 0.19, at: 0.04, out: v }); horn(S, { f: 233, dur: 0.48, gain: 0.16, at: 0.98, out: v }); crowd(S, { dur: 2.4, gain: 0.22, at: 0.04 }) },
+  'snd-horn': S => { const v = verb(S, 0.4); hit(S, { gain: 0.34 }); horn(S, { f: 233, dur: 0.8, gain: 0.19, at: 0.04, out: v }); horn(S, { f: 233, dur: 0.48, gain: 0.16, at: 0.98, out: v }) },
   'snd-roar': S => { hit(S, { gain: 0.36 }); noise(S, { hp: 5000, dur: 0.8, gain: 0.08, env: { a: 0.005, d: 0.8 } }); crowd(S, { dur: 3.2, gain: 0.34 }); crowd(S, { dur: 2.2, gain: 0.18, at: 0.4 }) },
   'snd-fanfare': S => {
     const v = verb(S, 0.42)
-    crowd(S, { dur: 2, gain: 0.14, at: 0.1 })
     ;[[392, 0], [523.3, 0.14], [659.3, 0.28], [784, 0.42]].forEach(([f, at]) => brass(S, { f, dur: 0.16, gain: 0.13, at, out: v }))
     brass(S, { f: 1046.5, dur: 0.9, gain: 0.17, at: 0.56, hold: 0.35, out: v })
     brass(S, { f: 523.3, dur: 0.9, gain: 0.1, at: 0.56, hold: 0.35, out: v })
@@ -310,13 +310,11 @@ const SYNTH = {
     ;[[5, 140], [11, 110], [13, 90], [14, 140], [15, 110]].forEach(([i, f]) => tom(i * beat, f))
     hit(S, { gain: 0.3, at: 16 * beat })
     noise(S, { hp: 5500, dur: 1.1, gain: 0.12, at: 16 * beat, out: v, env: { a: 0.004, d: 1.1 } })
-    crowd(S, { dur: 2, gain: 0.16, at: 16 * beat })
   },
   'snd-organ': S => {
     const v = verb(S, 0.45)
     const organ = (f, at, dur) => [1, 2, 4].forEach((m, i) => osc(S, { f: f * m, dur, gain: [0.08, 0.04, 0.02][i], at, out: v, vib: 3, vibHz: 6, env: { a: 0.012, h: dur * 0.7, d: dur * 0.3, sus: 0.6, r: 0.08 } }))
     ;[[392, 0, 0.13], [523.3, 0.16, 0.13], [659.3, 0.32, 0.13], [784, 0.48, 0.4], [659.3, 0.95, 0.13], [784, 1.11, 0.6]].forEach(([f, at, d]) => organ(f, at, d))
-    crowd(S, { dur: 1.6, gain: 0.2, at: 1.15 })
   },
   'snd-riser': S => {
     const v = verb(S, 0.3)
@@ -324,7 +322,6 @@ const SYNTH = {
     noise(S, { bp: 300, to: 6000, q: 1.2, dur: 1.15, gain: 0.12, env: { a: 1.0, d: 0.15 } })
     hit(S, { gain: 0.4, at: 1.15 })
     for (const f of [220, 277.2, 329.6]) osc(S, { type: 'sawtooth', f, dur: 0.9, gain: 0.05, at: 1.15, lp: 2200, out: v, env: { a: 0.01, d: 0.9 } })
-    crowd(S, { dur: 1.8, gain: 0.18, at: 1.15 })
   },
   'snd-cannon': S => {
     const v = verb(S, 0.5)
@@ -332,13 +329,11 @@ const SYNTH = {
     noise(S, { lp: 500, dur: 0.7, gain: 0.4, out: v, env: { a: 0.002, d: 0.7 } })
     noise(S, { hp: 2000, dur: 0.12, gain: 0.12 })
     osc(S, { f: 70, to: 30, dur: 0.6, gain: 0.18, at: 0.32, out: v })
-    crowd(S, { dur: 2.6, gain: 0.24, at: 0.15 })
   },
   'snd-train': S => {
     const v = verb(S, 0.4)
     for (const f of [311.1, 370, 466.2]) osc(S, { type: 'sawtooth', f, to: f * 0.97, dur: 1.4, gain: 0.05, out: v, lp: 1800, q: 1.1, env: { a: 0.05, h: 1.0, d: 0.35, sus: 0.6, r: 0.2 } })
     for (const f of [311.1, 370, 466.2]) osc(S, { type: 'sawtooth', f, to: f * 0.97, dur: 0.5, gain: 0.04, at: 1.55, out: v, lp: 1800, q: 1.1, env: { a: 0.03, h: 0.3, d: 0.2, sus: 0.6, r: 0.15 } })
-    crowd(S, { dur: 2.2, gain: 0.16, at: 0.3 })
   },
   'snd-bassdrop': S => {
     const v = verb(S, 0.25)
@@ -352,7 +347,6 @@ const SYNTH = {
     g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.3, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 1.4)
     lfo.connect(lg).connect(g.gain); o.connect(g).connect(S.out)
     o.start(t); lfo.start(t); o.stop(t + 1.5); lfo.stop(t + 1.5)
-    crowd(S, { dur: 1.8, gain: 0.16, at: 0.85, out: v })
   },
   'snd-sax': S => { const v = verb(S, 0.4); for (const [f, at] of [[392, 0], [440, 0.12], [523.3, 0.24]]) brass(S, { f, dur: 0.18, gain: 0.12, at, out: v }); brass(S, { f: 659.3, dur: 0.7, gain: 0.14, at: 0.36, hold: 0.25, out: v }) },
   'snd-pizzi': S => { [523.3, 659.3, 784, 1046.5].forEach((f, i) => osc(S, { type: 'triangle', f, dur: 0.12, gain: 0.1, at: i * 0.11, env: { a: 0.002, d: 0.12 } })) },
@@ -363,7 +357,6 @@ const SYNTH = {
     brass(S, { f: 784, dur: 1.1, gain: 0.17, at: 0.92, hold: 0.5, out: v })
     brass(S, { f: 392, dur: 1.1, gain: 0.12, at: 0.92, hold: 0.5, out: v })
     hit(S, { gain: 0.36, at: 0.92 })
-    crowd(S, { dur: 2.6, gain: 0.24, at: 0.9 })
   },
 }
 // The sampled layer: each entry plays recorded sounds and returns true, or
@@ -382,15 +375,10 @@ const SAMPLED = {
   deny: S => smp(S, 'deny', { gain: 0.7 }),
   send: S => smp(S, 'pluck', { gain: 0.6, jitter: 0.05 }),
   coin: S => smp(S, 'chips', { gain: 0.9, jitter: 0.05 }) && smp(S, 'stack2', { gain: 0.55, at: 0.07, jitter: 0.05 }),
-  purchase: S => smp(S, 'riser', { gain: 0.9, offset: 1.25 }),
+  purchase: S => smp(S, 'coindrop', { gain: 0.9 }),
   coins: S => smp(S, 'coindrop', { gain: 0.9 }),
-  coinpack: S => smp(S, 'bell', { gain: 0.8 }) && smp(S, 'coindrop', { gain: 0.7, at: 0.45 }),
-  share: S => smp(S, 'shutter', { gain: 0.8 }),
-  sheet: S => smp(S, 'zoom', { gain: 0.45, offset: 0.15 }),
-  launch: S => smp(S, 'rocket', { gain: 0.6, offset: 0.1 }),
-  strike: S => smp(S, 'strike', { gain: 0.85 }),
-  nope: S => smp(S, 'nope', { gain: 0.55 }),
-  equip: S => smp(S, 'badge', { gain: 0.85 }),
+  coinpack: S => smp(S, 'coindrop', { gain: 0.9 }) && smp(S, 'coindrop', { gain: 0.6, at: 0.22, rate: 1.06 }),
+  equip: S => smp(S, 'toggle', { gain: 0.8 }) && smp(S, 'slide2', { gain: 0.55, at: 0.03 }),
   claim: S => smp(S, 'stack', { gain: 0.9 }) && smp(S, 'confirm', { gain: 0.45, at: 0.04 }),
   chime: S => smp(S, 'pluck2', { gain: 0.6 }) && smp(S, 'confirm', { gain: 0.4, at: 0.05 }),
   gradepop: (S, val = 5) => smp(S, 'stack2', { gain: 0.5, rate: 0.85 + val * 0.03 }),
@@ -416,15 +404,23 @@ const SAMPLED = {
     if (tier >= 2) crowd(S, { dur: 1.4 + tier * 0.3, gain: 0.07 + tier * 0.04, at: 1.0 })
     return true
   },
-  // victory sounds that lead with recorded music
-  'snd-horn': S => { if (!smp(S, 'hitL2', { gain: 0.8 })) return false; const v = verb(S, 0.4); horn(S, { f: 233, dur: 0.8, gain: 0.17, at: 0.15, out: v }); horn(S, { f: 233, dur: 0.48, gain: 0.14, at: 1.08, out: v }); crowd(S, { dur: 2.4, gain: 0.22, at: 0.04 }); return true },
+  // victory sounds that lead with recorded music (no crowd under them: Stadium Roar is the crowd)
+  'snd-horn': S => { if (!smp(S, 'hitL2', { gain: 0.8 })) return false; const v = verb(S, 0.4); horn(S, { f: 233, dur: 0.8, gain: 0.17, at: 0.15, out: v }); horn(S, { f: 233, dur: 0.48, gain: 0.14, at: 1.08, out: v }); return true },
   'snd-roar': S => smp(S, 'thud', { gain: 1 }) && (crowd(S, { dur: 3.2, gain: 0.34 }), crowd(S, { dur: 2.2, gain: 0.18, at: 0.4 }), true),
-  'snd-fanfare': S => smp(S, 'hitXXL', { gain: 1 }) && (crowd(S, { dur: 2, gain: 0.14, at: 0.2 }), true),
-  'snd-riser': S => { if (!ready('hitXL')) return false; noise(S, { bp: 300, to: 6000, q: 1.2, dur: 1.15, gain: 0.12, env: { a: 1.0, d: 0.15 } }); smp(S, 'punch', { gain: 1, at: 1.15 }); smp(S, 'hitXL', { gain: 0.9, at: 1.15 }); crowd(S, { dur: 1.8, gain: 0.16, at: 1.15 }); return true },
-  'snd-cannon': S => smp(S, 'thud', { gain: 1 }) && smp(S, 'punch', { gain: 0.9, rate: 0.7 }) && (osc(S, { f: 90, to: 28, dur: 0.9, gain: 0.35 }), crowd(S, { dur: 2.6, gain: 0.24, at: 0.15 }), true),
-  'snd-pro-anthem': S => { if (!smp(S, 'hitXXL', { gain: 1, at: 0.45 })) return false; for (let i = 0; i < 9; i++) smp(S, 'punchm', { gain: 0.25 + i * 0.06, at: i * 0.05, rate: 0.8 }); crowd(S, { dur: 2.6, gain: 0.24, at: 0.5 }); return true },
-  'snd-sax': S => smp(S, 'sax', { gain: 0.95 }) && (crowd(S, { dur: 2.2, gain: 0.12, at: 0.3 }), true),
-  'snd-pizzi': S => smp(S, 'pizzi', { gain: 0.95 }) && (crowd(S, { dur: 1.8, gain: 0.1, at: 0.4 }), true),
+  'snd-fanfare': S => smp(S, 'hitXXL', { gain: 1 }),
+  'snd-riser': S => { if (!ready('hitXL')) return false; noise(S, { bp: 300, to: 6000, q: 1.2, dur: 1.15, gain: 0.12, env: { a: 1.0, d: 0.15 } }); smp(S, 'punch', { gain: 1, at: 1.15 }); smp(S, 'hitXL', { gain: 0.9, at: 1.15 }); return true },
+  'snd-cannon': S => smp(S, 'thud', { gain: 1 }) && smp(S, 'punch', { gain: 0.9, rate: 0.7 }) && (osc(S, { f: 90, to: 28, dur: 0.9, gain: 0.35 }), true),
+  'snd-pro-anthem': S => { if (!smp(S, 'hitXXL', { gain: 1, at: 0.45 })) return false; for (let i = 0; i < 9; i++) smp(S, 'punchm', { gain: 0.25 + i * 0.06, at: i * 0.05, rate: 0.8 }); return true },
+  'snd-sax': S => smp(S, 'sax', { gain: 0.95 }),
+  'snd-bell': S => smp(S, 'bell', { gain: 0.85 }),
+  'snd-strike': S => smp(S, 'strike', { gain: 0.9 }),
+  'snd-rise': S => smp(S, 'riser', { gain: 0.85 }),
+  'snd-rocket': S => smp(S, 'rocket', { gain: 0.75 }),
+  'snd-zoom': S => smp(S, 'zoom', { gain: 0.7 }),
+  'snd-shutter': S => smp(S, 'shutter', { gain: 0.85 }),
+  'snd-badge': S => smp(S, 'badge', { gain: 0.9 }),
+  'snd-nope': S => smp(S, 'nope', { gain: 0.75 }),
+  'snd-pizzi': S => smp(S, 'pizzi', { gain: 0.95 }),
 }
 SYNTH.back = SYNTH.tap
 SYNTH.close = SYNTH.tap
@@ -475,17 +471,17 @@ function labAt(ac, id, at = 0, gain = 0.9, rate = 1) {
   })
 }
 const STAGED = {
-  'snd-horn': S => { const v = verb(S, 0.4); horn(S, { f: 233, dur: 0.8, gain: 0.17, at: 0.05, out: v }); horn(S, { f: 233, dur: 0.48, gain: 0.14, at: 0.98, out: v }); labAt(S.ac, 's-boom', 0, 0.55); labAt(S.ac, 's-crowd-shouts', 0.05, 0.6) },
+  'snd-horn': S => { const v = verb(S, 0.4); horn(S, { f: 233, dur: 0.8, gain: 0.17, at: 0.05, out: v }); horn(S, { f: 233, dur: 0.48, gain: 0.14, at: 0.98, out: v }); labAt(S.ac, 's-boom', 0, 0.55) },
   'snd-roar': S => { labAt(S.ac, 's-boom', 0, 0.8); labAt(S.ac, 's-crowd-arena', 0.04, 1) },
-  'snd-fanfare': S => { SYNTH['snd-fanfare'](S); labAt(S.ac, 's-perc', 0, 0.7); labAt(S.ac, 's-crowd-applause', 0.35, 0.55) },
-  'snd-drumline': S => { [0, 0.18, 0.36, 0.45, 0.54, 0.72, 0.9, 1.08].forEach((t, i) => labAt(S.ac, 's-perc', t, i === 7 ? 0.95 : 0.42, i % 2 ? 1.18 : 1)); labAt(S.ac, 's-crowd-shouts', 1.1, 0.55) },
-  'snd-organ': S => { SYNTH['snd-organ'](S); labAt(S.ac, 's-crowd-shouts', 0.85, 0.5) },
-  'snd-riser': S => { labAt(S.ac, 's-powerup', 0, 0.85); labAt(S.ac, 's-impact', 0.95, 0.95); labAt(S.ac, 's-crowd-arena', 1.0, 0.6) },
-  'snd-train': S => { SYNTH['snd-train'](S); labAt(S.ac, 's-crowd-arena', 0.45, 0.55) },
-  'snd-bassdrop': S => { labAt(S.ac, 's-whoosh', 0, 0.6); labAt(S.ac, 's-boom', 0.55, 1); osc(S, { f: 62, to: 30, dur: 1.3, gain: 0.38, at: 0.55 }); labAt(S.ac, 's-crowd-shouts', 0.7, 0.6) },
-  'snd-sax': S => { if (!smp(S, 'sax', { gain: 0.95 })) SYNTH['snd-sax'](S); labAt(S.ac, 's-crowd-applause', 0.3, 0.5) },
-  'snd-pizzi': S => { if (!smp(S, 'pizzi', { gain: 0.95 })) SYNTH['snd-pizzi'](S); labAt(S.ac, 's-crowd-applause', 0.4, 0.5) },
-  'snd-pro-anthem': S => { labAt(S.ac, 's-impact', 0, 0.9); labAt(S.ac, 's-perc', 0.42, 0.75); labAt(S.ac, 's-perc', 0.62, 0.6, 1.15); labAt(S.ac, 's-boom', 0.85, 0.8); labAt(S.ac, 's-crowd-arena', 0.2, 0.95) },
+  'snd-fanfare': S => { SYNTH['snd-fanfare'](S); labAt(S.ac, 's-perc', 0, 0.7) },
+  'snd-drumline': S => { [0, 0.18, 0.36, 0.45, 0.54, 0.72, 0.9, 1.08].forEach((t, i) => labAt(S.ac, 's-perc', t, i === 7 ? 0.95 : 0.42, i % 2 ? 1.18 : 1)) },
+  'snd-organ': S => { SYNTH['snd-organ'](S) },
+  'snd-riser': S => { labAt(S.ac, 's-powerup', 0, 0.85); labAt(S.ac, 's-impact', 0.95, 0.95) },
+  'snd-train': S => { SYNTH['snd-train'](S) },
+  'snd-bassdrop': S => { labAt(S.ac, 's-whoosh', 0, 0.6); labAt(S.ac, 's-boom', 0.55, 1); osc(S, { f: 62, to: 30, dur: 1.3, gain: 0.38, at: 0.55 }) },
+  'snd-sax': S => { if (!smp(S, 'sax', { gain: 0.95 })) SYNTH['snd-sax'](S) },
+  'snd-pizzi': S => { if (!smp(S, 'pizzi', { gain: 0.95 })) SYNTH['snd-pizzi'](S) },
+  'snd-pro-anthem': S => { labAt(S.ac, 's-impact', 0, 0.9); labAt(S.ac, 's-perc', 0.42, 0.75); labAt(S.ac, 's-perc', 0.62, 0.6, 1.15); labAt(S.ac, 's-boom', 0.85, 0.8) },
 }
 // Load the victory layers ahead of time (a season starting, the shop opening)
 let warmed = false
@@ -523,8 +519,11 @@ export async function renderSfx(name, arg, seconds = 3.5) {
 // ── Haptics ──────────────────────────────────────────────────────────────────
 let H = null
 if (IS_APP) import('@capacitor/haptics').then(m => { H = m }).catch(() => {})   // phones only
+const HAPTICS_KEY = 'bap_haptics_off'
+export const hapticsOff = () => { try { return localStorage.getItem(HAPTICS_KEY) === '1' } catch { return false } }
+export const setHapticsOff = off => { try { off ? localStorage.setItem(HAPTICS_KEY, '1') : localStorage.removeItem(HAPTICS_KEY) } catch {} }
 export const haptic = kind => {
-  if (!H) return
+  if (!H || hapticsOff()) return
   try {
     if (kind === 'success') H.Haptics.notification({ type: H.NotificationType.Success })
     else H.Haptics.impact({ style: kind === 'heavy' ? H.ImpactStyle.Heavy : kind === 'medium' ? H.ImpactStyle.Medium : H.ImpactStyle.Light })
@@ -712,14 +711,14 @@ export function previewVictory(fx, sound) {
 export function victory({ big = false, of = null } = {}) {
   stopTicks()
   const v = of ? { fx: FX[of.winFx] ? of.winFx : 'fx-confetti', sound: of.winSound || 'snd-horn' } : myVictory()
-  ;(FX[v.fx] ?? FX['fx-confetti'])()
-  if (big && v.fx !== 'fx-confetti') setTimeout(() => confetti(90), 600)
+  if (!motionReduced()) {   // reduce motion: the sound, no fireworks
+    ;(FX[v.fx] ?? FX['fx-confetti'])()
+    if (big && v.fx !== 'fx-confetti') setTimeout(() => confetti(90), 600)
+  }
   // the winner's equipped sound is theirs alone: everyone else just sees the effect
   if (of) { haptic('light'); return }
-  // a title gets the crowd, an award its sting; the equipped victory sound on top
-  sfx(big ? 'champion' : 'award')
-  const own = SYNTH[v.sound] || SAMPLED[v.sound] ? v.sound : 'snd-horn'
-  setTimeout(() => sfx(own), 250)
+  // just the equipped victory sound
+  sfx(SYNTH[v.sound] || SAMPLED[v.sound] || STAGED[v.sound] ? v.sound : 'snd-horn')
   haptic('success')
 }
 
@@ -767,6 +766,7 @@ export function initJuice() {
   document.addEventListener('click', e => {
     const el = e.target.closest?.(TAP)
     if (!el || el.disabled) return
+    if (el.matches('[aria-label="Settings and more"]')) { audio(); return }   // More opens silently
     audio()                                   // unlock audio on the first gesture (iOS); loads the samples
     if (el.matches('.spin-btn, .spin-respin-half')) {
       sfx('tap'); haptic('medium'); startTicks()
@@ -804,7 +804,7 @@ export function initJuice() {
         if (you && !seen.has(you)) { seen.add(you); setTimeout(() => celebrate(false), 150) }
         const champ = n.matches?.('.plf-champ-label') ? n : n.querySelector?.('.plf-champ-label')
         if (champ && !seen.has(champ)) { seen.add(champ); setTimeout(() => celebrate(true), 250) }
-        if (n.matches?.('.ag-menu-overlay, .auth-overlay, .tpm-overlay, .ag-screen, .sh-sheet-overlay, .bt-sheet-overlay, .cr-overlay')) sfx('pop')
+        if (n.matches?.('.auth-overlay, .tpm-overlay, .ag-screen, .bt-sheet-overlay, .cr-overlay')) sfx('pop')
       }
     }
   }).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'], attributeOldValue: true })

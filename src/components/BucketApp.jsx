@@ -40,6 +40,7 @@ import { useCompete, botBuild } from '../lib/compete'
 import { useBlacktop } from '../lib/blacktop'
 import { BlacktopQueue, BlacktopHud, BlacktopChat, BlacktopGame, BlacktopHub } from './app/AppBlacktop'
 import { NameTag } from './app/NameTag'
+import { VersusHud, VersusMatchup, VersusLeaveSheet, VersusOppLeftSheet } from './app/Blacktop1v1'
 import { loadRun, newRun, cityList, ratedPool } from '../lib/takeover'
 const AppTakeover = lazy(() => import('./app/AppTakeover'))
 const TakeoverIntro = lazy(() => import('./app/AppTakeover').then(m => ({ default: m.TakeoverIntro })))
@@ -424,6 +425,7 @@ export default function BucketApp() {
   const btPhaseRef = useRef('idle')          // the live hook is declared further down; the dock handler reads it through this
   const lastPlayRef = useRef(null)           // the last mode page, so PLAY goes back to what you were doing
   const [vsCountdown,    setVsCountdown]    = useState(null)
+  const lastOppRef = useRef(null)   // 1v1: who we were playing (kept after the room closes, for the they-left sheet)
   const vsResultRef      = useRef({ build: {}, user: null, position: 'guard' })
   const faceoffFiredRef  = useRef(false)
   const lastOppPingRef   = useRef(0)
@@ -746,6 +748,8 @@ export default function BucketApp() {
     setBuild(Object.fromEntries((VERSUS_POS_TYPES[p] ?? VERSUS_GUARD_TYPES).map(t => [t, null])))
     setPage('versus-lobby')
   }, [position])
+  // a 1v1 invite link (deep link): join that room by its code
+  useEffect(() => { const on = e => e.detail?.code && startVersus(null, { kind: 'join', code: e.detail.code }); window.addEventListener('bap:join', on); return () => window.removeEventListener('bap:join', on) }, [startVersus])
 
   const handleStart = useCallback((mode, pos = 'guard') => {
     if (IS_APP || APP_LOOK) {   // a finished game is kept around (Home → resume), so clear it
@@ -1111,7 +1115,7 @@ export default function BucketApp() {
     return () => window.removeEventListener('popstate', handler)
   }, [versusRoom, handleReset])
 
-  const handleVersusJoin = useCallback(({ code, role, oppId, oppName, channel, matchType }) => {
+  const handleVersusJoin = useCallback(({ code, role, oppId, oppName, oppCos = null, channel, matchType }) => {
     channel.on('broadcast', { event: 'bab_build' }, ({ payload }) => {
       setOppBuild(payload.build || {})
       setOppPlayer(payload.player || null)
@@ -1176,7 +1180,7 @@ export default function BucketApp() {
       })
     }
 
-    setVersusRoom({ code, role, oppId, oppName, channel, matchType })
+    setVersusRoom({ code, role, oppId, oppName, oppCos, channel, matchType })
     setOppBuild({})
     setOppPlayer(null)
     setOppPosition(null)
@@ -1411,12 +1415,12 @@ export default function BucketApp() {
     onSwitchBucketPosition: (pos) => guardedLeave(() => handleNavPositionSwitch(pos)),
     user,
     // the Salary Cap pill only while you're in Salary Cap (not on the board or the profile)
-    gameMode: gameMode === 'salarycap' && page !== 'salarycap' && page !== 'sim' ? null : gameMode,
+    gameMode: (IS_APP || APP_LOOK) && page === 'versus-game' ? 'versus' : gameMode === 'salarycap' && page !== 'salarycap' && page !== 'sim' ? null : gameMode,
     isRB: false,
     isPlus: isSubscribed,
     isBucket: true,
     bucketPosition: position,
-    versusState: page === 'versus-game' && versusRoom ? (() => {
+    versusState: !(IS_APP || APP_LOOK) && page === 'versus-game' && versusRoom ? (() => {
       const oppTypes = VERSUS_POS_TYPES[oppPosition] ?? VERSUS_GUARD_TYPES
       const myF  = activeTypes.filter(t => build[t]).length
       const oppF = oppTypes.filter(t => oppBuild[t]).length
@@ -1434,6 +1438,17 @@ export default function BucketApp() {
       }
     })() : null,
   }
+  if (versusRoom) lastOppRef.current = { name: versusRoom.oppName || 'Guest', cos: versusRoom.oppCos ?? null, uid: uidFromVsId(versusRoom.oppId) }
+  // 1v1: take a spot (guard or big) once matched
+  const pickVsPos = pos => {
+    try { localStorage.setItem('bucketPosition', pos) } catch {}
+    setPosition(pos)
+    const types = VERSUS_POS_TYPES[pos] ?? VERSUS_GUARD_TYPES
+    setBuild(Object.fromEntries(types.map(t => [t, null])))
+    setActiveCategory((VERSUS_POS_CATS[pos] ?? VERSUS_GUARD_CATEGORIES)[0].id)
+    versusRoom?.channel?.send({ type: 'broadcast', event: 'bab_position', payload: { position: pos } }).catch?.(() => {})
+    setShowVsPrompt(false)
+  }
   const renderGame = parked => (
     <>
       {!parked && bucketHead}
@@ -1442,6 +1457,11 @@ export default function BucketApp() {
       <div className="game-page-scroll">
       {competeOn && <CompeteHud cp={cp} />}
       {liveBuild && bt.match && <BlacktopHud bt={bt} onOpenChat={openBtChat} unread={btUnread} />}
+      {(IS_APP || APP_LOOK) && page === 'versus-game' && versusRoom && (
+        <VersusHud clock={vsCountdown}
+          me={{ name: getUsername(user) || 'Guest', self: true, build, types: activeTypes, pos: position }}
+          opp={{ name: versusRoom.oppName || 'Guest', cos: versusRoom.oppCos, uid: uidFromVsId(versusRoom.oppId), build: oppBuild, types: VERSUS_POS_TYPES[oppPosition] ?? VERSUS_GUARD_TYPES, pos: oppPosition }} />
+      )}
       {IS_APP && (
         <FlipEdge side={mobileView} build={build} types={activeTypes} attrMap={BUCKET_ATTR} onFlip={flip}
           waiting={savedSpinResult?.selectedQB?.name ?? null} complete={buildComplete} />
@@ -1535,7 +1555,10 @@ export default function BucketApp() {
       {!parked && IS_APP && (page === 'game' || page === 'takeover-build') && <BuildComplete complete={buildComplete} ovr={buildComplete ? calcBucketOVR(build, activeTypes, position) : 0} build={build} types={activeTypes} attrMap={BUCKET_ATTR} />}
       {liveBuild && btChatOpen && <BlacktopChat bt={bt} user={user} onClose={() => setBtChatOpen(false)} />}
 
-      {!parked && leaveConfirm && (
+      {!parked && leaveConfirm && (IS_APP || APP_LOOK) && (
+        <VersusLeaveSheet opp={lastOppRef.current} onStay={() => setLeaveConfirm(null)} onLeave={() => { leaveConfirm.fn(); setLeaveConfirm(null) }} />
+      )}
+      {!parked && leaveConfirm && !(IS_APP || APP_LOOK) && (
         <div className="leave-confirm-overlay" onClick={() => setLeaveConfirm(null)}>
           <div className="leave-confirm-modal" onClick={e => e.stopPropagation()}>
             <div className="lcm-title">Leave game?</div>
@@ -1548,7 +1571,12 @@ export default function BucketApp() {
         </div>
       )}
 
-      {showVsPrompt && page === 'versus-game' && (
+      {showVsPrompt && page === 'versus-game' && (IS_APP || APP_LOOK) && (
+        <VersusMatchup onPick={pickVsPos} oppPos={oppPosition}
+          me={{ name: getUsername(user) || 'Guest', self: true, record: user ? vsRecord : null }}
+          opp={{ name: versusRoom?.oppName || 'Guest', cos: versusRoom?.oppCos, uid: uidFromVsId(versusRoom?.oppId), record: oppRecord }} />
+      )}
+      {showVsPrompt && page === 'versus-game' && !(IS_APP || APP_LOOK) && (
         <div className="vs-prompt-overlay">
           <div className="vs-prompt-modal">
             <div className="vs-prompt-eyebrow">{(IS_APP || APP_LOOK) ? 'BLACKTOP 1V1' : 'HEAD TO HEAD'}</div>
@@ -1572,15 +1600,7 @@ export default function BucketApp() {
                 <button
                   key={pos}
                   className={`vs-prompt-pos-btn${position === pos ? ' vs-prompt-pos-btn--active' : ''}`}
-                  onClick={() => {
-                    try { localStorage.setItem('bucketPosition', pos) } catch {}
-                    setPosition(pos)
-                    const types = VERSUS_POS_TYPES[pos] ?? VERSUS_GUARD_TYPES
-                    setBuild(Object.fromEntries(types.map(t => [t, null])))
-                    setActiveCategory((VERSUS_POS_CATS[pos] ?? VERSUS_GUARD_CATEGORIES)[0].id)
-                    versusRoom?.channel?.send({ type: 'broadcast', event: 'bab_position', payload: { position: pos } }).catch?.(() => {})
-                    setShowVsPrompt(false)
-                  }}
+                  onClick={() => pickVsPos(pos)}
                 >
                   {pos === 'guard' ? 'GUARD' : 'BIG'}
                   <span className="vs-ppb-sub">{pos === 'guard' ? 'PG · SG · SF' : 'PF · C'}</span>
@@ -1591,7 +1611,10 @@ export default function BucketApp() {
         </div>
       )}
 
-      {oppDisconnected && (
+      {oppDisconnected && (IS_APP || APP_LOOK) && (
+        <VersusOppLeftSheet opp={lastOppRef.current} me={{ name: getUsername(user) || 'Guest', self: true }} onDone={() => { setOppDisconnected(false); handleHome() }} />
+      )}
+      {oppDisconnected && !(IS_APP || APP_LOOK) && (
         <div className="opp-disconnect-overlay" onClick={() => setOppDisconnected(false)}>
           <div className="opp-disconnect-modal" onClick={e => e.stopPropagation()}>
             <div className="odm-icon">
@@ -1843,8 +1866,8 @@ export default function BucketApp() {
     return (
       <Suspense fallback={null}>
         <BucketVersusResult
-          myData={{ build, player: savedSpinResult, name: getUsername(user) || 'Your Build' }}
-          oppData={{ build: oppBuild, player: oppPlayer, name: versusRoom?.oppName || 'Opponent', uid: uidFromVsId(versusRoom?.oppId) }}
+          myData={{ build, player: savedSpinResult, name: getUsername(user) || ((IS_APP || APP_LOOK) ? 'Guest' : 'Your Build') }}
+          oppData={{ build: oppBuild, player: oppPlayer, name: versusRoom?.oppName || ((IS_APP || APP_LOOK) ? 'Guest' : 'Opponent'), uid: uidFromVsId(versusRoom?.oppId), cos: versusRoom?.oppCos ?? null }}
           position={position}
           oppPosition={oppPosition}
           role={versusRoom?.role}

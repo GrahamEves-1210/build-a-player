@@ -1,0 +1,152 @@
+/* App plumbing: the offline strip, the update gate and the crash screen
+   (components/app/OfflineBanner.jsx, UpdateGate.jsx, components/ErrorBoundary.jsx).
+   Uses the app's tokens from app-game.css with fallbacks, so the crash screen
+   still looks right if it renders before (or without) the app look. */
+
+.inf-offline,
+.inf-crash,
+.inf-update-wall,
+.inf-update-card {
+  --inf-a1: var(--ag-a1, #4fd6bf);
+  --inf-a2: var(--ag-a2, #1fc98a);
+  --inf-on: var(--ag-on, #07120a);
+  --inf-grad: var(--ag-grad, linear-gradient(135deg, #4fd6bf 0%, #1fc98a 100%));
+  --inf-bg: var(--ag-bg, #050705);
+  --inf-panel: var(--ag-panel, rgba(12,17,15,.78));
+  --inf-line: var(--ag-line-hi, rgba(149,213,178,.30));
+  --inf-text: var(--ag-text, #EEF8F1);
+  --inf-text-2: var(--ag-text-2, #95D5B2);
+  --inf-muted: var(--ag-muted, rgba(216,243,220,.55));
+  --inf-display: var(--ag-display, 'BAP Anton', 'Anton', Impact, 'Arial Narrow Bold', sans-serif);
+  --inf-label: var(--ag-font, 'BAP Bebas', 'Bebas Neue', Impact, sans-serif);
+  --inf-body: var(--ag-body, 'Outfit', system-ui, -apple-system, sans-serif);
+}
+
+/* ── Offline strip ─────────────────────────────────────────────────────────── */
+.inf-offline {
+  position: fixed; top: 0; left: 0; right: 0;
+  z-index: 2147483000;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: calc(env(safe-area-inset-top, 0px) + 6px) 16px 7px;
+  background: rgba(14,12,8,.94);
+  border-bottom: 1px solid rgba(245,158,11,.35);
+  color: var(--inf-text);
+  font-family: var(--inf-body);
+  font-size: 13px; font-weight: 600; line-height: 1.25; letter-spacing: .1px;
+  text-align: center;
+  pointer-events: none;
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+  animation: inf-drop .28s ease-out both;
+}
+.inf-offline-dot {
+  flex: none; width: 8px; height: 8px; border-radius: 50%;
+  background: #f59e0b;
+  box-shadow: 0 0 8px rgba(245,158,11,.7);
+}
+.inf-offline--back {
+  background: rgba(8,20,14,.94);
+  border-bottom-color: var(--inf-line);
+  color: var(--inf-text-2);
+}
+.inf-offline--back .inf-offline-dot { background: var(--inf-a2); box-shadow: 0 0 8px var(--inf-a2); }
+@keyframes inf-drop { from { transform: translateY(-100%); } to { transform: none; } }
+
+/* ── Buttons ───────────────────────────────────────────────────────────────── */
+.inf-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: 48px; padding: 0 28px;
+  border: 0; border-radius: 12px;
+  background: var(--inf-grad);
+  color: var(--inf-on);
+  font-family: var(--inf-label);
+  font-size: 21px; letter-spacing: 2.5px; line-height: 1;
+  box-shadow: 0 0 22px color-mix(in srgb, var(--inf-a1) 32%, transparent), 0 6px 16px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.35);
+  cursor: pointer;
+  transition: transform .12s ease, filter .15s;
+}
+.inf-btn:active { transform: scale(.97); filter: brightness(.94); }
+.inf-btn--sm { min-height: 36px; padding: 0 14px; font-size: 16px; letter-spacing: 1.8px; border-radius: 10px; }
+.inf-link {
+  margin-top: 4px; padding: 8px;
+  background: none; border: 0;
+  color: var(--inf-muted);
+  font-family: var(--inf-body); font-size: 14px; font-weight: 600;
+  text-decoration: underline; text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+/* ── Crash screen + Update required ────────────────────────────────────────── */
+.inf-crash,
+.inf-update-wall {
+  position: fixed; inset: 0;
+  z-index: 2147483100;
+  display: flex; align-items: center; justify-content: center;
+  padding: calc(env(safe-area-inset-top, 0px) + 24px) 20px calc(env(safe-area-inset-bottom, 0px) + 24px);
+  background:
+    radial-gradient(120% 70% at 50% 0%, color-mix(in srgb, var(--inf-a1) 18%, transparent) 0%, transparent 60%),
+    var(--inf-bg);
+  color: var(--inf-text);
+  font-family: var(--inf-body);
+  text-align: center;
+}
+.inf-crash-card {
+  width: 100%; max-width: 380px;
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+  padding: 30px 22px 24px;
+  border: 1.5px solid var(--inf-line);
+  border-radius: 18px;
+  background: var(--inf-panel);
+  box-shadow: 0 18px 50px rgba(0,0,0,.5);
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+}
+.inf-crash-kicker {
+  font-family: var(--inf-label);
+  font-size: 15px; letter-spacing: 4px;
+  color: var(--inf-text-2);
+}
+.inf-crash-title {
+  font-family: var(--inf-display);
+  font-size: 38px; line-height: 1; letter-spacing: .5px;
+  text-transform: uppercase;
+}
+.inf-crash-sub {
+  margin: 0 0 8px;
+  font-size: 15px; line-height: 1.45;
+  color: var(--inf-muted);
+}
+.inf-crash-card .inf-btn { width: 100%; }
+.inf-update-ver { margin-top: 2px; font-size: 12px; color: var(--inf-muted); }
+
+/* ── Update available card ─────────────────────────────────────────────────── */
+.inf-update-card {
+  position: fixed;
+  left: 12px; right: 12px;
+  bottom: calc(var(--app-bottom, calc(env(safe-area-inset-bottom, 0px) + 12px)) + 10px);
+  z-index: 2147482000;
+  margin: 0 auto; max-width: 460px;
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 10px 12px 14px;
+  border: 1.5px solid var(--inf-line);
+  border-radius: 14px;
+  background: rgba(10,16,13,.95);
+  box-shadow: 0 12px 34px rgba(0,0,0,.5);
+  color: var(--inf-text);
+  font-family: var(--inf-body);
+  animation: inf-rise .3s ease-out both;
+}
+.inf-update-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; text-align: left; }
+.inf-update-text b { font-family: var(--inf-label); font-weight: 400; font-size: 19px; letter-spacing: 1.6px; color: var(--inf-text-2); }
+.inf-update-text span { font-size: 13px; color: var(--inf-muted); }
+.inf-x {
+  flex: none; width: 32px; height: 32px;
+  display: grid; place-items: center;
+  border: 0; border-radius: 50%;
+  background: rgba(255,255,255,.06);
+  color: var(--inf-muted);
+  cursor: pointer;
+}
+@keyframes inf-rise { from { transform: translateY(16px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .inf-offline, .inf-update-card { animation: none; }
+}

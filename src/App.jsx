@@ -45,7 +45,7 @@ import HEADSHOTS from './data/headshots.json'
 import { runSimulation, getArchetype, calcOVR, runRBSimulation, calcOVRRB, getArchetypeRB, runWRSimulation, calcOVRWR, getArchetypeWR, runTESimulation, calcOVRTE, getArchetypeTE, runDBSimulation, calcOVRDB, getArchetypeDB, runOLSimulation, calcOVROL, getArchetypeOL, HEADSHOT_BASE, nflHeadshot, calcMVPResult, calcOPOYResult, calcWROPOYResult, calcTEOPOYResult, calcDBDpoyResult, calcOLAllProResult } from './utils/simulation'
 import { supabase, rtSupabase } from './lib/supabase'
 import { track } from './lib/track'
-import { loadCareer, saveCareer, newCareer, OFFENSE_POS } from './lib/career'
+import { loadCareer, saveCareer, newCareer, OFFENSE_POS, syncCareerFromCloud } from './lib/career'
 import { blockReason, buildSig, markPlayed } from './lib/saveGuard'
 import CustomRatingsModal from './components/CustomRatingsModal'
 import SiteFooter from './components/SiteFooter'
@@ -320,12 +320,13 @@ export default function App() {
       const to = e.detail
       if (to === 'home') setPage('splash')   // keeps the build in progress — PLAY resumes it
       else if (to === 'play') {
-        if (page === 'game' || page === 'sim' || page === 'takeover' || page === 'takeover-build' || page === 'career' || page === 'career-build') return
+        if (page === 'game' || page === 'sim' || page === 'salarycap' || page === 'takeover' || page === 'takeover-build' || page === 'career' || page === 'career-build') return
         const last = lastPlayRef.current, run = takeoverRunRef.current
         if (last === 'takeover' && run && !run.over) setPage('takeover')
         else if (last === 'takeover-build' && gameMode) setPage('takeover-build')
         else if (last === 'career' && careerRef.current) setPage('career')
         else if (last === 'career-build' && gameMode) setPage('career-build')
+        else if (gameMode === 'salarycap') setPage('salarycap')   // back to the board, as basketball's does
         else if (gameMode) setPage(simResult ? 'sim' : 'game')
         else { let p = 'qb'; try { p = localStorage.getItem('lastPosition') || 'qb' } catch {}; handleStart('classic', p) }   // quick play
       } else if (to === 'leaderboard') setPage('leaderboard')
@@ -648,14 +649,22 @@ export default function App() {
   // ── CAREER (app): one saved career per account; a fresh build starts one ──
   const [career, setCareer] = useState(null)
   careerRef.current = career
-  useEffect(() => { if (IS_APP || APP_LOOK) setCareer(loadCareer('nfl', user?.id)) }, [user?.id])
+  useEffect(() => {
+    if (!IS_APP && !APP_LOOK) return
+    setCareer(loadCareer('nfl', user?.id))
+    if (!user?.id) return
+    // signed in: the cloud copy (or a guest career moving onto the account) — lib/career.js
+    let off = false
+    syncCareerFromCloud('nfl', user.id).then(c => { if (!off) setCareer(c) })
+    return () => { off = true }
+  }, [user?.id])
   const startCareerBuild = useCallback(() => {
     let p = 'qb'; try { p = localStorage.getItem('lastPosition') || 'qb' } catch {}
     if (!OFFENSE_POS.includes(p)) p = 'qb'
     handleStart('classic', p); setPage('career-build')
   }, [handleStart])
-  const openCareer = useCallback(() => {
-    const c = loadCareer('nfl', user?.id)
+  const openCareer = useCallback(async () => {
+    const c = await syncCareerFromCloud('nfl', user?.id)   // the newer of this device's copy and the cloud's
     if (c) { setCareer(c); setPage('career') } else setPage('career-intro')
     window.scrollTo({ top: 0, behavior: 'instant' })
   }, [user?.id])
@@ -663,7 +672,6 @@ export default function App() {
   const enterDraft = useCallback(() => {
     const c = newCareer({ sport: 'nfl', uid: user?.id ?? null, pos: position, build, name: getUsername(user) || 'You' })
     saveCareer(c); setCareer(c); setGameMode(null); setBuild({}); setPage('career')
-    window.__bapJuice?.sfx('launch')
     try { localStorage.removeItem('bap_progress') } catch {}   // the build is the career's now: a reload lands on Home, not the build page
     window.scrollTo({ top: 0, behavior: 'instant' })
   }, [user, position, build])
@@ -675,7 +683,6 @@ export default function App() {
     const rated = ratedPool(pools[position] ?? QBS, activeTypes, ovrOf, cities)
     const run = newRun({ sport: 'nfl', uid: user?.id ?? null, pos: position, build, types: activeTypes, rated, cities })
     setTakeoverRun(run); setPage('takeover')
-    window.__bapJuice?.sfx('launch')
     window.scrollTo({ top: 0, behavior: 'instant' })
   }, [user?.id, position, build, activeTypes])
 
@@ -814,8 +821,16 @@ export default function App() {
     const dateSeed = dateStr ? parseInt(dateStr.replace(/-/g, ''), 10) : Date.now()
     let h = dateSeed | 0; h ^= h >>> 16; h = Math.imul(h, 0x45d9f3b) | 0; h ^= h >>> 16
     const team = NFL_TEAMS[Math.floor(((h >>> 0) / 0x100000000) * NFL_TEAMS.length)]
-    const result = runSimulation(fullBuild, TYPES, team, false)
-    result.award = calcMVPResult(result, false, team.short)
+    // ...and the season itself plays on a date-seeded RNG (as basketball's does), so
+    // View Results replays the exact season that was saved, not a fresh roll
+    const realRandom = Math.random
+    let s = dateSeed | 0
+    Math.random = () => { s = (s + 0x6D2B79F5) | 0; let t = Math.imul(s ^ (s >>> 15), 1 | s); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296 }
+    let result
+    try {
+      result = runSimulation(fullBuild, TYPES, team, false)
+      result.award = calcMVPResult(result, false, team.short)
+    } finally { Math.random = realRandom }
     setSimResult(result); setSimReplaying(false); setSalaryResults(!!skipToEnd)
     // a fresh play earns season XP (kept on the device: it isn't a saved season)
     if ((IS_APP || APP_LOOK) && !skipToEnd) {
@@ -840,6 +855,26 @@ export default function App() {
         : supabase.from('qb_salary_cap_plays').insert({ ...row, date_str: dateStr })
       q.then(({ error }) => { if (error) console.error('[qb salary save]', error.code, error.message) })
     }
+  }, [])
+  // Salary Cap has its own URL (/salary), like basketball's /bucket/salary: browser
+  // Back from its season returns to the board, Back from the board goes Home, and
+  // a refresh on /salary reopens it
+  const salaryStartRef = useRef(window.location.pathname === '/salary')
+  const salaryPushedRef = useRef(false)   // the entry under /salary is ours, so its Back button can step back to it
+  useEffect(() => {
+    if (salaryStartRef.current) { salaryStartRef.current = false; handleStart('salarycap', 'qb'); return }
+    if (page === 'salarycap') { if (window.location.pathname !== '/salary') { window.history.pushState({}, '', '/salary'); salaryPushedRef.current = true } }
+    else if (window.location.pathname === '/salary') window.history.replaceState({}, '', '/')
+  }, [page]) // eslint-disable-line react-hooks/exhaustive-deps
+  // a layout effect so this listener is added before the page's general popstate
+  // handler: React renders popstate updates synchronously, so it must see /salary first
+  useLayoutEffect(() => {
+    const onPop = () => {
+      if (window.location.pathname === '/salary') setPage(prev => (prev === 'splash' ? prev : 'salarycap'))
+      else setPage(prev => (prev === 'salarycap' ? 'splash' : prev))
+    }
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
   }, [])
 
   // Books a finished season: award, save, lifetime counters, XP
@@ -1799,7 +1834,7 @@ export default function App() {
     return (
       <Suspense fallback={null}>
         <QBSalaryCap user={user} initialDateStr={salaryReturnDate} onConfirm={handleQBSalaryConfirm}
-          onBack={() => { setGameMode(null); setPage('splash') }} />
+          onBack={() => { setGameMode(null); if (salaryPushedRef.current && window.location.pathname === '/salary') window.history.back(); else setPage('splash') }} />
       </Suspense>
     )
   }
@@ -1819,12 +1854,13 @@ export default function App() {
           isTE={isTE}
           isDB={isDB}
           isOL={isOL}
-          onBack={() => { setPage(gameMode === 'salarycap' ? 'salarycap' : 'game'); window.scrollTo({ top: 0, behavior: 'instant' }); document.querySelector('.game-page-scroll')?.scrollTo({ top: 0, behavior: 'instant' }) }}
-          onReset={() => { if (gameMode === 'salarycap') { setPage('salarycap'); window.scrollTo({ top: 0, behavior: 'instant' }); return } handleReset(); setPage('game'); window.scrollTo({ top: 0, behavior: 'instant' }); document.querySelector('.game-page-scroll')?.scrollTo({ top: 0, behavior: 'instant' }) }}
+          onBack={() => { if (gameMode === 'salarycap' && window.location.pathname === '/simulate') { window.history.back(); return } setPage(gameMode === 'salarycap' ? 'salarycap' : 'game'); window.scrollTo({ top: 0, behavior: 'instant' }); document.querySelector('.game-page-scroll')?.scrollTo({ top: 0, behavior: 'instant' }) }}
+          onReset={() => { if (gameMode === 'salarycap') { if (window.location.pathname === '/simulate') { window.history.back(); return } setPage('salarycap'); window.scrollTo({ top: 0, behavior: 'instant' }); return } handleReset(); setPage('game'); window.scrollTo({ top: 0, behavior: 'instant' }); document.querySelector('.game-page-scroll')?.scrollTo({ top: 0, behavior: 'instant' }) }}
           simFn={(IS_APP || APP_LOOK) && gameMode !== 'salarycap' ? simFor : null}
           onFinal={(IS_APP || APP_LOOK) && gameMode !== 'salarycap' ? commitSeason : null}
           pool={displayPool}
           userName={getUsername(user) || 'Guest'}
+          isSalaryMode={gameMode === 'salarycap'}
         />
         {saveToast && (
           <div className={`save-toast save-toast--${saveToast.type}`} onClick={() => setSaveToast(null)}>

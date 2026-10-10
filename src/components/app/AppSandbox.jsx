@@ -7,7 +7,7 @@ import { IconFlask, IconSliders, IconArrow } from './icons'
 export default function AppSandbox({ on, onToggle, onCustomize, compact = false }) {
   return (
     <div className={`ag-sandbox${on ? ' is-on' : ''}${compact ? ' ag-sandbox--compact' : ''}`}>
-      <button className="ag-sandbox-main" role="switch" aria-checked={on} onClick={() => onToggle?.(!on)}>
+      <button className="ag-sandbox-main" role="switch" aria-checked={on} onClick={e => { const card = e.currentTarget.parentElement; onToggle?.(!on); if (!on) setTimeout(() => card.querySelector('.ag-sandbox-edit')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 60) }}>
         <span className="ag-sandbox-icon"><IconFlask size={22} /></span>
         <span className="ag-sandbox-txt">
           <span className="ag-sandbox-title">SANDBOX{on && <i>ON</i>}</span>
@@ -16,8 +16,8 @@ export default function AppSandbox({ on, onToggle, onCustomize, compact = false 
         <span className={`ag-switch${on ? ' is-on' : ''}`} aria-hidden="true"><span /></span>
       </button>
       {on && (
-        <button className="ag-sandbox-edit" onClick={onCustomize}>
-          <IconSliders size={17} /> EDIT RATINGS <IconArrow size={14} />
+        <button className="ag-sandbox-edit" onClick={onCustomize} aria-label="Edit ratings and build">
+          <IconSliders size={17} /> EDIT RATINGS &amp; BUILD <IconArrow size={14} />
         </button>
       )}
     </div>

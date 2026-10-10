@@ -8,6 +8,9 @@ const LOOK = IS_APP || APP_LOOK
 import OnlineRecord from './app/OnlineRecord'
 import { OneOnOneOptions } from './app/AppBlacktop'
 import { IconClose } from './app/icons'
+import { myCosmetics } from '../lib/progress'
+import { seedCos } from '../lib/peopleCos'
+import { VersusSpot, OpenSpot, uidFromVsId } from './app/Blacktop1v1'
 
 const rt = rtSupabase || supabase
 
@@ -86,6 +89,16 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
     return rt.channel(name, { config: { presence: { key: myId } } })
   }
   const myName = getUsername(user) || null
+  // what the other side sees of me: name and equipped look (avatar, name color/effect, plate, victory)
+  const meP = () => ({ vid: myId, name: myName, cos: myCosmetics() })
+  const [found, setFound] = useState(null)   // the opponent, once matched (shown for the beat before the game)
+  function joinSoon(info, ms) {
+    const uid = uidFromVsId(info.oppId)
+    if (uid && info.oppCos) seedCos(uid, info.oppCos)
+    setFound({ name: info.oppName, cos: info.oppCos ?? null, uid })
+    if (ms) setTimeout(() => onJoin(info), ms)
+    else onJoin(info)
+  }
 
   useEffect(() => {
     document.documentElement.setAttribute('data-page', 'versus-lobby')
@@ -136,10 +149,10 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
     if (bcRef.current) return
     const bc = new BroadcastChannel(chName)
     bcRef.current = bc
-    bc.postMessage({ vid: myId, name: myName })
+    bc.postMessage(meP())
     bc.onmessage = (e) => {
       if (!e.data?.vid || e.data.vid === myId) return
-      bc.postMessage({ vid: myId, name: myName })
+      bc.postMessage(meP())
       onMatch(e.data, bc)
     }
   }
@@ -169,14 +182,14 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
         gameChannel = rt.channel(chName + '-g')
       }
       setStatus('Opponent connected!')
-      setTimeout(() => onJoin({ code, role: 'host', oppId: opp.vid, oppName: opp.name, channel: gameChannel, matchType: 'friend' }), 500)
+      joinSoon({ code, role: 'host', oppId: opp.vid, oppName: opp.name, oppCos: opp.cos ?? null, channel: gameChannel, matchType: 'friend' }, 500)
     }
 
     // Primary: guest explicitly broadcasts bab_joined before removing lobby channel.
     // This fires reliably even if presence sync arrives after guest has left.
     ch.on('broadcast', { event: 'bab_joined' }, ({ payload }) => {
       if (matched || !payload?.vid) return
-      matchWith({ vid: payload.vid, name: payload.name || 'Opponent' }, null)
+      matchWith({ vid: payload.vid, name: payload.name || 'Opponent', cos: payload.cos ?? null }, null)
     })
     // Fallback: presence events in case broadcast fails
     ch.on('presence', { event: 'join' }, ({ newPresences }) => {
@@ -192,7 +205,7 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
 
     ch.subscribe(async s => {
       if (s === 'SUBSCRIBED') {
-        await ch.track({ vid: myId, name: myName })
+        await ch.track(meP())
         if (!matched) {
           const opp = Object.values(ch.presenceState()).flat().find(u => u.vid !== myId)
           if (opp) matchWith(opp, null)
@@ -227,13 +240,13 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
       } else {
         // Broadcast BEFORE removing channel — FIFO WebSocket guarantees host
         // receives bab_joined before the unsubscribe message arrives.
-        ch.send({ type: 'broadcast', event: 'bab_joined', payload: { vid: myId, name: myName } }).catch(() => {})
+        ch.send({ type: 'broadcast', event: 'bab_joined', payload: meP() }).catch(() => {})
         rt.removeChannel(ch)
         chRef.current = null
         gameChannel = rt.channel(chName + '-g')
       }
       setStatus('Connected!')
-      setTimeout(() => onJoin({ code, role: 'guest', oppId: opp.vid, oppName: opp.name, channel: gameChannel, matchType: 'friend' }), 500)
+      joinSoon({ code, role: 'guest', oppId: opp.vid, oppName: opp.name, oppCos: opp.cos ?? null, channel: gameChannel, matchType: 'friend' }, 500)
     }
 
     // Block join/sync until after track is acknowledged — the initial presence events
@@ -252,7 +265,7 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
 
     ch.subscribe(async s => {
       if (s === 'SUBSCRIBED') {
-        await ch.track({ vid: myId, name: myName })
+        await ch.track(meP())
         trackDone = true
         // Check immediately after track — host may already be present
         if (!done) {
@@ -261,7 +274,7 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
         }
       } else if (s === 'TIMED_OUT' || s === 'CHANNEL_ERROR') {
         openBC(chName, matchWith)
-        setTimeout(() => { if (!done && bcRef.current) bcRef.current.postMessage({ vid: myId, name: myName }) }, 500)
+        setTimeout(() => { if (!done && bcRef.current) bcRef.current.postMessage(meP()) }, 500)
       }
     })
 
@@ -313,7 +326,7 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
     let heartbeatTimer = null
     const seen = new Set() // vids we've already tried to match
 
-    async function claimRoom(code, role, oppId, oppName) {
+    async function claimRoom(code, role, oppId, oppName, oppCos = null) {
       done = true
       clearInterval(searchTimerRef.current)
       clearInterval(heartbeatTimer)
@@ -325,7 +338,7 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
       // register .on() handlers first, then subscribe (correct Supabase order).
       // Also don't store in chRef so abandon() can't kill it on VersusLobby unmount.
       const roomCh = rt.channel(`${channelPrefix}-vs-${code}`)
-      setTimeout(() => onJoin({ code, role, oppId, oppName, channel: roomCh, matchType: 'pickup' }), 800)
+      joinSoon({ code, role, oppId, oppName, oppCos, channel: roomCh, matchType: 'pickup' }, 800)
     }
 
     // Guest: receive match packet from host
@@ -334,7 +347,7 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
       const role   = payload.h === myId ? 'host' : 'guest'
       const oppId  = role === 'host' ? payload.g : payload.h
       const oppName = role === 'host' ? payload.gn : payload.hn
-      claimRoom(payload.code, role, oppId, oppName)
+      claimRoom(payload.code, role, oppId, oppName, (role === 'host' ? payload.gc : payload.hc) ?? null)
     })
 
     // Receive heartbeats from other searching players
@@ -348,15 +361,15 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
       // Lower vid becomes host to avoid both sides trying to match simultaneously
       if (myId.localeCompare(payload.vid) < 0) {
         const code = genCode()
-        await ch.send({ type: 'broadcast', event: 'bab_match', payload: { code, h: myId, hn: myName, g: payload.vid, gn: payload.name } })
-        claimRoom(code, 'host', payload.vid, payload.name)
+        await ch.send({ type: 'broadcast', event: 'bab_match', payload: { code, h: myId, hn: myName, hc: myCosmetics(), g: payload.vid, gn: payload.name, gc: payload.cos ?? null } })
+        claimRoom(code, 'host', payload.vid, payload.name, payload.cos ?? null)
       }
     })
 
     ch.subscribe(async s => {
       if (s === 'SUBSCRIBED') {
         // Broadcast presence immediately, then every 3s so late joiners find us
-        const announce = () => { if (!done) ch.send({ type: 'broadcast', event: 'bab_queue', payload: { vid: myId, name: myName, ts: Date.now() } }).catch(() => {}) }
+        const announce = () => { if (!done) ch.send({ type: 'broadcast', event: 'bab_queue', payload: { ...meP(), ts: Date.now() } }).catch(() => {}) }
         announce()
         heartbeatTimer = setInterval(announce, 3000)
       }
@@ -376,7 +389,7 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
             const oppId = role === 'host' ? m.g : m.h
             const oppName = role === 'host' ? m.gn : m.hn
             bcQ.close(); bcRef.current = null
-            onJoin({ code: m.code, role, oppId, oppName, channel: wrapBC(new BroadcastChannel(`${channelPrefix}-vs-${m.code}`)), matchType: 'pickup' })
+            joinSoon({ code: m.code, role, oppId, oppName, oppCos: (role === 'host' ? m.gc : m.hc) ?? null, channel: wrapBC(new BroadcastChannel(`${channelPrefix}-vs-${m.code}`)), matchType: 'pickup' }, 0)
             return
           }
           // Received a "looking" announcement — lower ID is host, higher ID waits for match packet
@@ -384,17 +397,17 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
             if (myId.localeCompare(d.vid) < 0) {
               // I am host: generate code, notify guest, start game
               const code = genCode()
-              const m = { code, h: myId, hn: myName, g: d.vid, gn: d.name }
+              const m = { code, h: myId, hn: myName, hc: myCosmetics(), g: d.vid, gn: d.name, gc: d.cos ?? null }
               done = true
               clearInterval(searchTimerRef.current)
               bcQ.postMessage({ match: m })
               bcQ.close(); bcRef.current = null
-              onJoin({ code, role: 'host', oppId: d.vid, oppName: d.name, channel: wrapBC(new BroadcastChannel(`${channelPrefix}-vs-${code}`)), matchType: 'pickup' })
+              joinSoon({ code, role: 'host', oppId: d.vid, oppName: d.name, oppCos: d.cos ?? null, channel: wrapBC(new BroadcastChannel(`${channelPrefix}-vs-${code}`)), matchType: 'pickup' }, 0)
             }
             // Guest: do nothing here, wait for the match packet the host will send
           }
         }
-        bcQ.postMessage({ vid: myId, name: myName })
+        bcQ.postMessage(meP())
       }
     })
   }
@@ -500,12 +513,12 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
       chRef.current = null
       const gameChannel = rt.channel(chName + '-g')
       setStatus(`${friend.username} joined!`)
-      setTimeout(() => onJoin({ code, role: 'host', oppId: opp.vid, oppName: opp.name, channel: gameChannel, matchType: 'friend' }), 500)
+      joinSoon({ code, role: 'host', oppId: opp.vid, oppName: opp.name, oppCos: opp.cos ?? null, channel: gameChannel, matchType: 'friend' }, 500)
     }
 
     ch.on('broadcast', { event: 'bab_joined' }, ({ payload }) => {
       if (matched || !payload?.vid) return
-      enterGame({ vid: payload.vid, name: payload.name || friend.username })
+      enterGame({ vid: payload.vid, name: payload.name || friend.username, cos: payload.cos ?? null })
     })
     ch.on('presence', { event: 'sync' }, () => {
       const state = Object.values(ch.presenceState()).flat()
@@ -515,7 +528,7 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
     })
     ch.subscribe(async s => {
       if (s === 'SUBSCRIBED') {
-        await ch.track({ vid: myId, name: myName })
+        await ch.track(meP())
         if (!matched) {
           const opp = Object.values(ch.presenceState()).flat().find(u => u.vid !== myId)
           if (opp) enterGame(opp)
@@ -526,7 +539,7 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
         rt.removeChannel(ch)
         chRef.current = null
         const gameChannel = bc ? (bcRef.current = null, wrapBC(bc)) : rt.channel(chName)
-        setTimeout(() => onJoin({ code, role: 'host', oppId: opp.vid, oppName: opp.name, channel: gameChannel, matchType: 'friend' }), 500)
+        joinSoon({ code, role: 'host', oppId: opp.vid, oppName: opp.name, oppCos: opp.cos ?? null, channel: gameChannel, matchType: 'friend' }, 500)
       })
     })
   }
@@ -551,13 +564,13 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
         chRef.current = null
         gameChannel = wrapBC(bc)
       } else {
-        ch.send({ type: 'broadcast', event: 'bab_joined', payload: { vid: myId, name: myName } }).catch(() => {})
+        ch.send({ type: 'broadcast', event: 'bab_joined', payload: meP() }).catch(() => {})
         rt.removeChannel(ch)
         chRef.current = null
         gameChannel = rt.channel(chName + '-g')
       }
       setStatus('Connected!')
-      setTimeout(() => onJoin({ code, role: 'guest', oppId: opp.vid, oppName: opp.name, channel: gameChannel, matchType: 'friend' }), 500)
+      joinSoon({ code, role: 'guest', oppId: opp.vid, oppName: opp.name, oppCos: opp.cos ?? null, channel: gameChannel, matchType: 'friend' }, 500)
     }
     ch.on('presence', { event: 'join' }, ({ newPresences }) => {
       if (done || !trackDone) return
@@ -571,7 +584,7 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
     })
     ch.subscribe(async s => {
       if (s === 'SUBSCRIBED') {
-        await ch.track({ vid: myId, name: myName })
+        await ch.track(meP())
         trackDone = true
         if (!done) {
           const opp = Object.values(ch.presenceState()).flat().find(u => u.vid !== myId)
@@ -579,7 +592,7 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
         }
       } else if (s === 'TIMED_OUT' || s === 'CHANNEL_ERROR') {
         openBC(chName, matchWith)
-        setTimeout(() => { if (!done && bcRef.current) bcRef.current.postMessage({ vid: myId, name: myName }) }, 500)
+        setTimeout(() => { if (!done && bcRef.current) bcRef.current.postMessage(meP()) }, 500)
       }
     })
     setTimeout(() => { if (!done) { setError('Invite expired.'); setScreen('menu'); abandon() } }, 30000)
@@ -614,24 +627,41 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
               <OneOnOneOptions onPickup={findRandom} onFriend={hostFriend} onJoinCode={c => { setInputCode(c); joinFriend(c) }} error={error} />
             </section>
           ) : (
-            <section className="bt-mode v1-wait ag-pop">
-              {screen === 'host' && (
-                <div className="v1-code">
-                  <span className="ag-eyebrow">SEND THIS CODE TO A FRIEND</span>
-                  <b>{myCode}</b>
-                  <button className="ag-btn ag-btn--ghost" onClick={() => navigator.clipboard?.writeText(myCode)}>COPY CODE</button>
+            <>
+              {/* the 3v3 lobby's run card, two spots: me, and the opponent (open until found) */}
+              <section className="bt-run v1g-run ag-pop">
+                <div className="bt-run-head">
+                  <span className="bt-run-count"><b>{found ? 2 : 1}</b>/2 <small>{found ? 'GAME ON' : 'SPOTS TAKEN'}</small></span>
+                  {screen === 'searching' && <span className="bt-run-timer">{Math.floor(searchSecs / 60)}:{String(searchSecs % 60).padStart(2, '0')}</span>}
                 </div>
-              )}
-              {screen === 'searching' && (
-                <div className="v1-search">
-                  <b>{String(Math.floor(searchSecs / 60)).padStart(2, '0')}:{String(searchSecs % 60).padStart(2, '0')}</b>
-                  <small>{etaLabel(searchSecs, queueSize, activityRate)}</small>
+                <div className="bt-court-lines" aria-hidden="true" />
+                {screen === 'host' && !found && (
+                  <div className="v1-code">
+                    <span className="ag-eyebrow">SEND THIS CODE TO A FRIEND</span>
+                    <b>{myCode}</b>
+                    <button className="ag-btn ag-btn--ghost" onClick={() => navigator.clipboard?.writeText(myCode)}>COPY CODE</button>
+                  </div>
+                )}
+                <div className="bt-squads">
+                  <div className="bt-squad-col bt-t0 is-mine">
+                    <VersusSpot who={{ name: myName || 'Guest', self: true }} team={0} d={80}
+                      sub={user ? `${vsRecord?.wins ?? 0}W – ${vsRecord?.losses ?? 0}L · 1V1` : 'GUEST · 1V1'} />
+                  </div>
+                  <div className={`bt-squad-col bt-t1${found ? ' v1g-found' : ''}`}>
+                    {found
+                      ? <VersusSpot who={{ name: found.name || 'Guest', cos: found.cos, uid: found.uid }} team={1} sub="READY · 1V1" />
+                      : <OpenSpot title={screen === 'searching' ? 'SEARCHING…' : screen === 'host' ? 'WAITING ON A FRIEND' : 'CONNECTING…'}
+                          sub={screen === 'searching' ? 'PICKUP · 1V1' : screen === 'host' ? 'FRIEND · 1V1' : 'FRIEND · 1V1'} />}
+                  </div>
+                  <span className="bt-squads-vs">VS</span>
                 </div>
-              )}
-              <span className="v1-status"><span className="bt-dots"><i /><i /><i /></span>{status}</span>
+                <div className="bt-run-foot">
+                  <span className="bt-run-hint"><span className="bt-dots"><i /><i /><i /></span>{screen === 'searching' && !found ? etaLabel(searchSecs, queueSize, activityRate) : status}</span>
+                </div>
+              </section>
               {error && <div className="v1-error">{error}</div>}
-              <button className="ag-btn ag-btn--ghost v1-cancel" onClick={cancel}>CANCEL</button>
-            </section>
+              {!found && <button className="ag-btn ag-btn--ghost v1-cancel" onClick={cancel}>CANCEL</button>}
+            </>
           )}
           <OnlineRecord modes={['h2h']} title="YOUR 1V1" />
         </div>

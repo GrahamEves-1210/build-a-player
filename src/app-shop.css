@@ -426,3 +426,16 @@
 .sh-feedback { border-color: rgba(245,220,138,.55); background: radial-gradient(ellipse 60% 120% at 0% 50%, rgba(245,220,138,.22), transparent 70%), var(--ag-panel); }
 .sh-feedback .sh-chest { background: linear-gradient(180deg, #f5dc8a, #d4af37); color: #1d1503; box-shadow: 0 6px 16px rgba(212,175,55,.4), inset 0 1px 0 rgba(255,255,255,.4); }
 .sh-feedback .sh-free-go { background: linear-gradient(135deg, #f5dc8a, #d4af37); color: #1d1503; }
+/* Watch a video for coins */
+.sh-video { border-color: color-mix(in srgb, var(--ag-a1) 55%, transparent); background: radial-gradient(ellipse 60% 120% at 0% 50%, color-mix(in srgb, var(--ag-a1) 24%, transparent), transparent 70%), var(--ag-panel); }
+.sh-video .sh-chest { background: var(--ag-grad); color: var(--ag-on); box-shadow: 0 6px 16px var(--ag-glow); }
+.sh-video .sh-free-go { background: var(--ag-grad); color: var(--ag-on); }
+.sh-video:disabled { opacity: .75; cursor: progress; }
+/* the tab row: pills keep one line, and the last one clears the edge */
+.sh-tab { white-space: nowrap; }
+.sh-tabs::after { content: ''; flex: 0 0 10px; }
+/* desktop: the item sheet is a centered panel, not the screen's full width */
+@media (min-width: 769px) {
+  .sh-sheet-overlay { justify-content: center; }
+  .sh-sheet { width: min(520px, calc(100% - 32px)); }
+}

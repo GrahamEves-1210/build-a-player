@@ -4,6 +4,9 @@ import { getUsername } from '../../lib/discord'
 import { useProgress } from '../../lib/progress'
 import { IconCrown, IconBolt, IconClipboard, IconCoin, IconLock, IconProfile, IconArrow, IconGear, IconPodium, IconFootball, IconBasketball, IconPlay } from './icons'
 import { sfx } from '../../lib/juice'
+import SoundToggle from './SoundToggle'
+import Tutorial from './Tutorial'
+import { IS_APP } from '../../lib/platform'
 import { NameTag, AvatarBadge } from './NameTag'
 import { CoinPill } from './AppShop'
 import { TierChip, Form } from './OnlineRecord'
@@ -89,6 +92,7 @@ function Hud({ user }) {
       <PlayerChip user={user} onClick={() => nav('profile')} />
       <CoinPill className="ag-hud-coins" />
       <button className="ag-icon-btn" onClick={() => nav('leaderboard')} aria-label="Leaderboards"><IconPodium size={22} /></button>
+      {!IS_APP && <SoundToggle className="ag-hud-sound" />}
       <button className="ag-icon-btn" onClick={openMenu} aria-label="Settings and more"><IconGear size={22} /></button>
     </div>
   )
@@ -137,7 +141,7 @@ function CourtArt() {
 // Career card art: a stadium bowl and a rising legacy line
 function CareerArt() {
   return (
-    <svg className="ag-career-art" viewBox="0 0 220 110" aria-hidden="true" preserveAspectRatio="xMaxYMid slice">
+    <svg className="ag-crmode-art" viewBox="0 0 220 110" aria-hidden="true" preserveAspectRatio="xMaxYMid slice">
       <defs><linearGradient id="crg" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stopColor="#f5dc8a" stopOpacity=".1" /><stop offset="1" stopColor="#f5dc8a" stopOpacity=".55" /></linearGradient></defs>
       <ellipse cx="150" cy="118" rx="120" ry="42" fill="none" stroke="rgba(255,255,255,.14)" strokeWidth="2" />
       <ellipse cx="150" cy="118" rx="92" ry="30" fill="none" stroke="rgba(255,255,255,.1)" strokeWidth="2" />
@@ -262,14 +266,13 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
         <div className="ag-extras">
           {/* the flagship: one player, a whole career */}
           {onCareer && (
-            <button className={`ag-career ag-pop${career ? ' is-live' : ''}`} style={{ '--d': '260ms' }} onClick={onCareer}>
+            <button className={`ag-crmode ag-pop${career ? ' is-live' : ''}`} style={{ '--d': '260ms' }} onClick={onCareer}>
               <CareerArt />
               <span className="ag-takeover-txt">
-                <span className="ag-eyebrow">{career ? `${career.pos.toUpperCase()} · ${career.phase === 'draft' ? 'DRAFT DAY' : career.phase === 'retired' ? 'CAREER OVER' : `YEAR ${career.year + 1} · AGE ${career.age}`}` : 'FLAGSHIP · MULTI-SEASON'}</span>
+                <span className="ag-eyebrow">{career ? `${career.pos.toUpperCase()} · ${career.phase === 'draft' ? 'DRAFT DAY' : career.phase === 'retired' ? 'CAREER OVER' : `YEAR ${career.year + 1} · AGE ${career.age}`}` : 'MULTI-SEASON · SAVES AS YOU GO'}</span>
                 <span className="ag-takeover-title">CAREER</span>
                 <span className="ag-takeover-sub">{career ? (career.phase === 'draft' ? 'The combine is waiting. Go get drafted.' : career.phase === 'season' ? `Week ${(career.active?.k ?? 0) + 1} with the ${career.fit?.name ?? ''}` : career.phase === 'offseason' ? 'Offseason: a point to spend, a contract to sort' : career.phase === 'retired' ? `${career.seasons.length} seasons. See the legacy, or start a new career.` : `${career.fit?.name ?? ''} · ${career.seasons.length} ${career.seasons.length === 1 ? 'season' : 'seasons'} in`) : 'Build a player, get drafted, play a whole career. Legacy on the line.'}</span>
               </span>
-              <span className="ag-edge-go">{career ? (career.phase === 'retired' ? 'LEGACY' : 'CONTINUE') : 'START'} <IconArrow size={14} /></span>
             </button>
           )}
           {/* a build in progress: PLAY is Home now, so it waits here */}
@@ -280,7 +283,6 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
                 <span className="ag-eyebrow">BUILD IN PROGRESS</span>
                 <span className="ag-resume-title">{resume.label}</span>
               </span>
-              <span className="ag-edge-go">RESUME <IconArrow size={14} /></span>
             </button>
           )}
           {onCompete && (
@@ -295,7 +297,6 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
                   : 'Same spins as 4 other players. Highest OVR takes the pool.'}</span>
                 {cs?.played > 0 && <span className="ag-rec"><Form items={cs.recent} mode="compete" /></span>}
               </span>
-              <span className="ag-edge-go">QUEUE <IconArrow size={14} /></span>
             </button>
           )}
           {/* Basketball: Blacktop is the online hub — 3v3 lobbies, and 1v1 from inside it */}
@@ -308,7 +309,6 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
                 <span className="ag-takeover-title">BLACKTOP</span>
                 <span className="ag-takeover-sub">{btLive ? 'You\'re still in. Jump back to your run.' : (btG || h2h.played) ? `3v3 ${btW}–${btG - btW} · 1v1 ${h2h.wins ?? 0}–${h2h.losses ?? 0}${ol.played ? ` · ${tierFor(ol.rating)[1]} ${ol.rating}` : ''}` : 'Live games against real players. Squads of three, or one on one.'}</span>
               </span>
-              <span className="ag-edge-go">{btLive ? 'RESUME' : 'QUEUE'} <IconArrow size={14} /></span>
             </button>
           )}
           {onTakeover && (
@@ -319,7 +319,6 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
               <span className="ag-takeover-title">TAKEOVER</span>
               <span className="ag-takeover-sub">{tkOn ? `${takeoverRun.lives} ${takeoverRun.lives === 1 ? 'life' : 'lives'} left — your next stop is waiting` : 'Solo or duo. Cross the map, beat a better player in every city, steal their game.'}</span>
             </span>
-            <span className="ag-edge-go">{tkOn ? 'RESUME' : 'START'} <IconArrow size={14} /></span>
           </button>
           )}
           {isBucket ? (
@@ -346,6 +345,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
         </div>
       </div>
       {footer && <div className="ag-home-site">{footer}</div>}
+      <Tutorial onGuided={() => onStart('classic', isBucket ? 'guard' : 'qb')} />
     </div>
   )
 }

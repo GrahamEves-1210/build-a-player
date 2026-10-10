@@ -6,22 +6,24 @@ import Stripe from 'stripe'
 // purchase in coin_purchases; the game collects it (claim_coin_purchases).
 // Keep in step with src/lib/coins.js.
 const PACKS = {
-  bap_coins_500:  { coins: 500,  cents: 99 },
-  bap_coins_1200: { coins: 1200, cents: 199 },
-  bap_coins_3200: { coins: 3200, cents: 499 },
-  bap_coins_7000: { coins: 7000, cents: 999 },
+  bap_coins_500:  { coins: 800,   cents: 99 },
+  bap_coins_1200: { coins: 2000,  cents: 199 },
+  bap_coins_3200: { coins: 5500,  cents: 499 },
+  bap_coins_7000: { coins: 12500, cents: 999 },
 }
 
 export async function onRequestPost(context) {
   try {
     const stripe = new Stripe(context.env.STRIPE_SECRET_KEY)
-    const { userId, email, pack } = await context.request.json()
+    const { userId, email, pack, app } = await context.request.json()
     if (!userId) return Response.json({ error: 'userId required' }, { status: 400 })
     const p = PACKS[pack]
     if (!p) return Response.json({ error: 'unknown pack' }, { status: 400 })
 
-    const origin = context.request.headers.get('origin') || 'https://build-a-player.com'
-    const back = context.request.headers.get('referer') || `${origin}/`
+    // the app (capacitor://) checks out in the phone's browser: it comes back to the website
+    const hdr = context.request.headers.get('origin') || ''
+    const origin = !app && hdr.startsWith('http') ? hdr : 'https://build-a-player.com'
+    const back = (!app && context.request.headers.get('referer')) || `${origin}/`
     const returnTo = back.startsWith(origin) ? back.split('#')[0] : `${origin}/`
     const sep = returnTo.includes('?') ? '&' : '?'
 

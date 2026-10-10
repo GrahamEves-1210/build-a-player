@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { useProgress, buy, equip, owns, priceOf, lockReason, dealsFor, claimFreeCoins, msToReset, isPro, COINS, achStats, walletOpen, hasDiscord, claimDiscordCoins, DISCORD_COINS, FEEDBACK_COINS, grantCoins } from '../../lib/progress'
+import { useProgress, buy, equip, owns, priceOf, lockReason, dealsFor, claimFreeCoins, msToReset, isPro, COINS, achStats, walletOpen, hasDiscord, claimDiscordCoins, DISCORD_COINS, FEEDBACK_COINS, AD_COINS, AD_MAX, adsLeft, claimAdCoins } from '../../lib/progress'
+import { openCheckout } from '../../lib/webCheckout'
+import { showRewarded } from '../../lib/rewardedAd'
 import FeedbackModal from '../FeedbackModal'
 import { COIN_PACKS } from '../../lib/coins'
-import { IS_APP } from '../../lib/platform'
 import { connectDiscord } from '../../lib/discord'
 import { SLOTS, RARITY, ITEMS, itemById, itemsFor, BLURB, DEFAULTS } from '../../lib/cosmetics'
 import { achById } from '../../lib/achievements'
@@ -17,7 +18,7 @@ import { IconClose, IconLock, IconGift, IconCrown, IconPlay, IconArrow, IconStar
 // coin pill) and Profile; lives over everything like Daily and Cards.
 
 const nav = to => window.dispatchEvent(new CustomEvent('bap:nav', { detail: to }))
-const TABS = [{ id: 'featured', label: 'Featured' }, { id: 'coins', label: 'Coins' }, ...SLOTS.map(s => ({ id: s.id, label: s.label }))]
+const TABS = [{ id: 'featured', label: 'Featured' }, { id: 'coins', label: 'Get Coins' }, ...SLOTS.map(s => ({ id: s.id, label: s.label }))]
 const fmtLeft = ms => { const h = Math.floor(ms / 3600000), m = Math.floor((ms % 3600000) / 60000); return h ? `${h}h ${m}m` : `${m}m` }
 
 function useCountTo(target, ms = 600) {
@@ -57,34 +58,53 @@ export function CoinPill({ onClick, className = '' }) {
   )
 }
 
-// Coin packs for real money: the app buys through Apple / Google (lib/iap.js),
-// the website through Stripe Checkout (coins are collected when you're back)
+// Watch a video: 100 coins, 3 times a day
+function VideoCoins() {
+  const [busy, setBusy] = useState(false)
+  const [note, setNote] = useState('')
+  const left = adsLeft()
+  const watch = async () => {
+    if (!walletOpen()) { signIn(); return }
+    if (busy || left <= 0) return
+    setBusy(true); setNote('')
+    const r = await showRewarded()
+    setBusy(false)
+    if (r === 'rewarded') { claimAdCoins(); haptic('success') }
+    else if (r === 'closed') setNote('Watch to the end to get the coins.')
+    else setNote('No video right now. Try again in a bit.')
+  }
+  return (
+    <div className="sh-section">
+      <button className={`sh-free sh-video${left <= 0 ? ' is-claimed' : ''}`} onClick={watch} disabled={busy}>
+        <span className="sh-chest"><IconPlay size={24} /></span>
+        <span>
+          <span className="sh-free-title">WATCH A VIDEO</span>
+          <span className="sh-free-sub">{left > 0 ? `${AD_COINS} coins a video · ${left} of ${AD_MAX} left today` : `That's all ${AD_MAX} for today. More tomorrow.`}</span>
+        </span>
+        <span className="sh-free-go">{!walletOpen() ? 'SIGN IN' : busy ? '…' : left > 0 ? `+${AD_COINS}` : 'DONE'}</span>
+      </button>
+      {note && <p className="cpk-note">{note}</p>}
+    </div>
+  )
+}
+
+// Coin packs for real money: Stripe Checkout on the web (the app opens it in the
+// phone's browser and collects the coins when it closes)
 function CoinPacks({ p }) {
-  const [prices, setPrices] = useState({})
   const [busy, setBusy] = useState(null)
   const [note, setNote] = useState('')
-  useEffect(() => { if (IS_APP) import('../../lib/iap').then(m => m.storePrices()).then(setPrices).catch(() => {}) }, [])
   const buyIt = async pack => {
     if (busy) return
-    if (!IS_APP && !p.signedIn) { signIn(); return }
+    if (!p.signedIn) { signIn(); return }
     setBusy(pack.id); setNote(''); sfx('tap')
     try {
-      if (IS_APP) {
-        const r = await (await import('../../lib/iap')).buyPack(pack)
-        if (r === 'ok') { grantCoins(pack.coins); window.dispatchEvent(new CustomEvent('bap:coinpack', { detail: { n: pack.coins } })) }
-        else if (r === 'unavailable') setNote("Purchases aren't available on this device right now.")
-        else if (r === 'error') setNote("The purchase didn't go through. You weren't charged.")
-      } else {
-        const res = await fetch('/api/create-coins-checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: p.user.id, email: p.user.email ?? null, pack: pack.id }) })
-        const { url } = await res.json().catch(() => ({}))
-        if (url) { window.location.href = url; return }
-        setNote("Couldn't open checkout. Try again.")
-      }
+      const r = await openCheckout('coins', { pack: pack.id })
+      if (r === 'error') setNote("Couldn't open checkout. Try again.")
     } finally { setBusy(null) }
   }
   return (
     <div className="sh-section">
-      <div className="sh-section-head"><span className="ag-eyebrow">GET COINS</span></div>
+      <div className="sh-section-head"><span className="sh-section-title">BUY COINS</span><span className="sh-section-note">Secure checkout on build-a-player.com</span></div>
       <div className="cpk-grid">
         {COIN_PACKS.map(pack => (
           <button key={pack.id} className={`cpk${pack.tag ? ' is-tagged' : ''}`} onClick={() => buyIt(pack)} disabled={!!busy}>
@@ -92,12 +112,12 @@ function CoinPacks({ p }) {
             <span className="cpk-stack" aria-hidden="true"><span className="coin-ico" /><span className="coin-ico" /><span className="coin-ico" /></span>
             <b className="cpk-n">{pack.coins.toLocaleString()}</b>
             <span className="cpk-lbl">COINS</span>
-            <span className="cpk-price">{busy === pack.id ? '…' : prices[pack.id] ?? `$${pack.usd.toFixed(2)}`}</span>
+            <span className="cpk-price">{busy === pack.id ? '…' : `$${pack.usd.toFixed(2)}`}</span>
           </button>
         ))}
       </div>
       {note && <p className="cpk-note">{note}</p>}
-      <p className="cpk-fine">{IS_APP ? 'Paid through your App Store or Google Play account. Coins go straight into your wallet.' : p.signedIn ? 'Secure checkout by Stripe. Coins are added to your account when you come back.' : 'Sign in first: bought coins are saved to your account.'}</p>
+      <p className="cpk-fine">{p.signedIn ? 'Paid on the web through Stripe. Coins land in your account when you come back.' : 'Sign in first: bought coins are saved to your account.'}</p>
     </div>
   )
 }
@@ -108,17 +128,17 @@ function FeedbackCoins({ p }) {
   if (p.feedbackPaid) return null
   const isBucket = typeof document !== 'undefined' && document.documentElement.classList.contains('is-bucket')
   return (
-    <>
-      <button className="sh-free sh-feedback" onClick={() => { if (!walletOpen()) { signIn(); return } setOpen(true); sfx('tap') }}>
-        <span className="sh-chest"><IconStar size={24} /></span>
-        <span className="sh-free-txt">
+    <div className="sh-section">
+      <button className="sh-free sh-feedback" onClick={() => { if (!walletOpen()) { signIn(); return } setOpen(true) }}>
+        <span className="sh-chest"><IconStar size={26} /></span>
+        <span>
           <span className="sh-free-title">SEND FEEDBACK</span>
           <span className="sh-free-sub">Tell us one thing to fix or add: {FEEDBACK_COINS} coins, first message only</span>
         </span>
         <span className="sh-free-go">{!walletOpen() ? 'SIGN IN' : `+${FEEDBACK_COINS}`}</span>
       </button>
       {open && <FeedbackModal user={p.user} isBucket={isBucket} onClose={() => setOpen(false)} />}
-    </>
+    </div>
   )
 }
 
@@ -151,7 +171,7 @@ function ItemCard({ item, deal, equipped, onOpen, delay = 0, name }) {
   const lock = mine ? null : lockReason(item.id)
   const price = deal ?? item.price
   return (
-    <button className={`sh-card${mine ? ' is-owned' : ''}${equipped ? ' is-equipped' : ''}${lock ? ' is-locked' : ''}`} style={{ '--rar': RARITY[item.rarity].color, '--d': `${delay}ms` }} onClick={() => { onOpen(item.id); sfx('sheet') }}>
+    <button className={`sh-card${mine ? ' is-owned' : ''}${equipped ? ' is-equipped' : ''}${lock ? ' is-locked' : ''}`} style={{ '--rar': RARITY[item.rarity].color, '--d': `${delay}ms` }} onClick={() => onOpen(item.id)}>
       <span className="sh-card-stage">
         {item.pro && <span className="sh-flag sh-flag--pro"><IconCrown size={11} /> PRO</span>}
         {!item.pro && item.ach && !mine && <span className="sh-flag sh-flag--ach"><IconStar size={10} /> REWARD</span>}
@@ -184,7 +204,7 @@ function DefaultCard({ slot, equipped, onPick, name }) {
   )
 }
 
-function ItemSheet({ id, onClose, name }) {
+function ItemSheet({ id, onClose, name, onNeedCoins }) {
   const p = useProgress()
   const item = itemById(id)
   const [short, setShort] = useState(false)
@@ -199,7 +219,8 @@ function ItemSheet({ id, onClose, name }) {
   const doBuy = () => {
     const r = buy(item.id)
     if (r.ok) { setBought(true); setMsg(''); setTimeout(() => setBought(false), 1500) }
-    else { setShort(true); setMsg(r.reason); sfx('nope'); haptic('light'); setTimeout(() => setShort(false), 450) }
+    else if (r.short) { haptic('light'); onClose(); onNeedCoins() }   // not enough coins: off to Get Coins
+    else { setShort(true); setMsg(r.reason); sfx('deny'); haptic('light'); setTimeout(() => setShort(false), 450) }
   }
   const doEquip = () => {
     if (equipped && !isFx) { equip(item.slot, null); sfx('tap'); return }
@@ -313,7 +334,10 @@ export default function AppShop({ onClose, tab: initialTab = 'featured' }) {
       </div>
 
       {tab === 'coins' ? (
-        <CoinPacks p={p} />
+        <>
+          <VideoCoins />
+          <CoinPacks p={p} />
+        </>
       ) : tab === 'featured' ? (
         <>
           {!walletOpen() && (
@@ -381,7 +405,7 @@ export default function AppShop({ onClose, tab: initialTab = 'featured' }) {
           </div>
         </div>
       )}
-      {open && <ItemSheet id={open} name={name} onClose={() => setOpen(null)} />}
+      {open && <ItemSheet id={open} name={name} onClose={() => setOpen(null)} onNeedCoins={() => setTab('coins')} />}
     </div>
   )
 }

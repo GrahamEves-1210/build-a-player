@@ -3,10 +3,12 @@ import Stripe from 'stripe'
 export async function onRequestPost(context) {
   try {
     const stripe = new Stripe(context.env.STRIPE_SECRET_KEY)
-    const { userId, email } = await context.request.json()
+    const { userId, email, app } = await context.request.json()
     if (!userId) return Response.json({ error: 'userId required' }, { status: 400 })
 
-    const origin = context.request.headers.get('origin') || 'https://build-a-player.com'
+    // the app (capacitor://) checks out in the phone's browser: it comes back to the website
+    const hdr = context.request.headers.get('origin') || ''
+    const origin = !app && hdr.startsWith('http') ? hdr : 'https://build-a-player.com'
 
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',

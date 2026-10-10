@@ -3,17 +3,19 @@ import { createPortal } from 'react-dom'
 import { supabase } from '../../lib/supabase'
 import FeedbackModal from '../FeedbackModal'
 import { isMuted, setMuted } from '../../lib/juice'
-import { IS_APP, CAN_SELL_PLUS } from '../../lib/platform'
+import { IS_APP } from '../../lib/platform'
+import { openCheckout } from '../../lib/webCheckout'
 import { isPro } from '../../lib/progress'
 import { railPreviewOn, setRailPreview } from '../../lib/fakeRail'
-import { IconQuestion, IconInfo, IconChat, IconDiscord, IconX, IconClose, IconShield, IconDoc, IconPodium, IconPlay, IconCrown, IconProfile, IconHome } from './icons'
+import { IconQuestion, IconInfo, IconChat, IconDiscord, IconX, IconClose, IconShield, IconDoc, IconPodium, IconPlay, IconCrown, IconProfile, IconHome, IconGear } from './icons'
 import { useProgress } from '../../lib/progress'
+import AppSettings from './AppSettings'
 
 // App "More" sheet (gear on the home screen): tiles + a How to Play view.
 
 const nav = to => window.dispatchEvent(new CustomEvent('bap:nav', { detail: to }))
 
-// BAP Pro: what it gets you here (the app can't sell it — App Store rules)
+// BAP Pro: Stripe on the web (the app opens the checkout in the phone's browser)
 const PRO_PERKS = [
   ['The Pro Vault', 'Exclusive avatars, name styles, plates and victory effects in the shop'],
   ['Double the daily coins', 'The shop\'s free daily drop is doubled'],
@@ -26,20 +28,10 @@ function ProView({ onVault }) {
   const [err, setErr] = useState(null)
   const pro = isPro()
   const subscribe = async () => {
-    setErr(null)
-    const { data } = supabase ? await supabase.auth.getSession() : { data: null }
-    const user = data?.session?.user
-    if (!user) { window.dispatchEvent(new CustomEvent('bap:auth')); return }
-    setBusy(true)
-    try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/create-checkout`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id, email: user.email }),
-      })
-      const { url } = await res.json()
-      if (url) window.location.href = url
-      else { setBusy(false); setErr('Checkout didn\'t open. Try again.') }
-    } catch { setBusy(false); setErr('Checkout didn\'t open. Try again.') }
+    setErr(null); setBusy(true)
+    const r = await openCheckout('pro')
+    setBusy(false)
+    if (r === 'error') setErr('Checkout didn\'t open. Try again.')
   }
   return (
     <div className="ag-pro-view">
@@ -58,10 +50,11 @@ function ProView({ onVault }) {
       </div>
       {pro ? (
         <button className="ag-btn ag-pro-cta" onClick={onVault}>OPEN THE PRO VAULT</button>
-      ) : CAN_SELL_PLUS ? (
-        <button className="ag-btn ag-pro-cta" onClick={subscribe} disabled={busy}>{busy ? 'OPENING CHECKOUT…' : 'GO PRO — $4.99/MO'}</button>
       ) : (
-        <p className="ag-pro-note">BAP Pro is available on build-a-player.com. Sign in here with the same account and it carries over.</p>
+        <>
+          <button className="ag-btn ag-pro-cta" onClick={subscribe} disabled={busy}>{busy ? 'OPENING CHECKOUT…' : IS_APP ? 'SUBSCRIBE ON THE WEB' : 'GO PRO — $4.99/MO'}</button>
+          {IS_APP && <p className="ag-pro-note">Opens a secure Stripe checkout on build-a-player.com. Pro carries over to the app on this account.</p>}
+        </>
       )}
       {err && <p className="ag-pro-note ag-pro-note--err">{err}</p>}
     </div>
@@ -86,7 +79,7 @@ function Tile({ tone, Icon, title, sub, onClick, delay, wide = false }) {
 }
 
 export default function AppMenu({ sport, onClose }) {
-  const [view, setView] = useState('menu')            // 'menu' | 'howto' | 'pro'
+  const [view, setView] = useState('menu')            // 'menu' | 'howto' | 'pro' | 'settings'
   const [feedbackUser, setFeedbackUser] = useState(null) // null = closed
   const [muted, setMutedState] = useState(isMuted)
   const [rail, setRailState] = useState(railPreviewOn)
@@ -105,16 +98,18 @@ export default function AppMenu({ sport, onClose }) {
 
   return createPortal(
     <div className="ag-menu-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className={`ag-menu ag-menu--${sport}`} role="dialog" aria-label={view === 'howto' ? 'How to play' : view === 'pro' ? 'BAP Pro' : 'More'}>
+      <div className={`ag-menu ag-menu--${sport}`} role="dialog" aria-label={view === 'howto' ? 'How to play' : view === 'pro' ? 'BAP Pro' : view === 'settings' ? 'Settings' : 'More'}>
         <div className="ag-menu-head">
           {view !== 'menu'
             ? <button className="ag-menu-back" onClick={() => setView('menu')}>‹ BACK</button>
             : <span />}
-          <h2 className="ag-menu-title">{view === 'howto' ? 'How to play' : view === 'pro' ? 'BAP Pro' : 'More'}</h2>
+          <h2 className="ag-menu-title">{view === 'howto' ? 'How to play' : view === 'pro' ? 'BAP Pro' : view === 'settings' ? 'Settings' : 'More'}</h2>
           <button className="ag-round-btn" onClick={onClose} aria-label="Close"><IconClose size={16} /></button>
         </div>
 
-        {view === 'pro' ? (
+        {view === 'settings' ? (
+          <AppSettings signedIn={signedIn} onFeedback={openFeedback} onClose={onClose} />
+        ) : view === 'pro' ? (
           <ProView onVault={go(() => nav('shop'))} />
         ) : view === 'howto' ? (
           <div className="ag-steps">
@@ -146,6 +141,9 @@ export default function AppMenu({ sport, onClose }) {
               <span className="ag-sound-lbl">SOUND</span>
               <span className="ag-sound-switch"><span className="ag-sound-knob" /></span>
               <span className="ag-sound-state">{muted ? 'OFF' : 'ON'}</span>
+            </button>
+            <button className="ag-row-btn" onClick={() => setView('settings')}>
+              <IconGear size={18} /><span className="ag-sound-lbl">SETTINGS · HELP · ACCOUNT</span>
             </button>
             <button className={`ag-row-btn${rail ? '' : ' ag-sound--off'}`} onClick={() => { setRailPreview(!rail); setRailState(!rail) }}>
               <span className="ag-sound-lbl">AD RAIL PREVIEW</span>

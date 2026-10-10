@@ -26,6 +26,7 @@
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>com.buildaplayer.app</string>
+				<string>buildaplayer</string>
 			</array>
 		</dict>
 	</array>

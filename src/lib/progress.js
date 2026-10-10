@@ -188,6 +188,7 @@ const blank = () => ({
   shopFree: null,             // day the free daily coins were claimed
   discordPaid: false,         // the one-time Join the Discord coins
   feedbackPaid: false,        // the one-time Send Feedback coins
+  adDay: null, adN: 0,        // videos watched for coins today (3 a day)
   levelPaid: 0,               // highest level already paid out in coins
   // achievements
   ach: {},                    // id → when it was unlocked
@@ -789,6 +790,18 @@ export function watchCoinReturn() {
   let tries = 0
   const tick = async () => { if ((await claimCoinPurchases()) > 0 || ++tries >= 10) return; setTimeout(tick, 3000) }
   setTimeout(tick, 1500)
+}
+
+// Watch a video: 100 coins, up to 3 times a day
+export const AD_COINS = 100, AD_MAX = 3
+export const adsLeft = () => (S.adDay === dayKey() ? Math.max(0, AD_MAX - (S.adN || 0)) : AD_MAX)
+export function claimAdCoins() {
+  if (!walletOpen() || adsLeft() <= 0) return 0
+  if (S.adDay !== dayKey()) { S.adDay = dayKey(); S.adN = 0 }
+  S.adN++
+  earn(AD_COINS, 'Thanks for watching')
+  emit()
+  return AD_COINS
 }
 
 // Send feedback: one-time coins the first time a message goes through

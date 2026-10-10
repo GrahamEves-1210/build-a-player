@@ -1131,7 +1131,7 @@ function ScreenPlayoffs({ result, onNext, onPreSuperBowl, adsDisabled = false })
 
 // ── Screen 4: Final Report ────────────────────────────────────────────────────
 
-function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = false, mvpWon = false, isRB = false, isWR = false, isTE = false, isDB = false, isOL = false, userName = 'You' }) {
+function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = false, mvpWon = false, isRB = false, isWR = false, isTE = false, isDB = false, isOL = false, userName = 'You', isSalaryMode = false }) {
   const { ovr, wins, losses, playoffs, sbResult, bestGame } = result
 
   // QB stats
@@ -1452,8 +1452,12 @@ function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = fals
       <div id="ramp-cntr1-sim" className="ad-cntr1-mobile" />
 
       <div className="simp-final-actions">
-        <button className="simp-cta" onClick={onReset}>New Build</button>
-        <button className="simp-ghost" onClick={onBack}>Back to Build</button>
+        {isSalaryMode
+          ? <button className="simp-cta" onClick={onBack}>← Back to Salary</button>
+          : <>
+              <button className="simp-cta" onClick={onReset}>New Build</button>
+              <button className="simp-ghost" onClick={onBack}>Back to Build</button>
+            </>}
       </div>
 
       {/* the 32-0 cross-promo stays on the website, not in the app */}
@@ -1484,7 +1488,7 @@ function ProgressDots({ screen, total }) {
 
 // ── SimPage ───────────────────────────────────────────────────────────────────
 
-export default function SimPage({ result: baseResult, build, types = TYPES, onBack, onReset, replay = false, adsDisabled = false, isRB = false, isWR = false, isTE = false, isDB = false, isOL = false, onMVPWon, simFn = null, onFinal = null, pool = null, userName = 'You' }) {
+export default function SimPage({ result: baseResult, build, types = TYPES, onBack, onReset, replay = false, adsDisabled = false, isRB = false, isWR = false, isTE = false, isDB = false, isOL = false, onMVPWon, simFn = null, onFinal = null, pool = null, userName = 'You', isSalaryMode = false }) {
   const [screen, setScreen] = useState(replay ? 3 : 0)
   const [mvpResult, setMvpResult] = useState(null)
   const [mvpWon, setMvpWon] = useState(false)
@@ -1561,7 +1565,7 @@ export default function SimPage({ result: baseResult, build, types = TYPES, onBa
     <ScreenBuild    key="build"    result={result} build={build} types={types} onNext={next} isRB={isRB} isWR={isWR} isTE={isTE} isDB={isDB} isOL={isOL} />,
     <ScreenSeason   key="season"   result={result} onNext={next} isRB={isRB} isWR={isWR} isTE={isTE} isDB={isDB} isOL={isOL} adsDisabled={adsDisabled} build={build} types={types} director={director} onFinal={handleFinal} pool={pool} userName={userName} />,
     <ScreenPlayoffs key="playoffs" result={result} onNext={next} onPreSuperBowl={handlePreSuperBowl} adsDisabled={adsDisabled} />,
-    <ScreenFinal    key="final"    result={result} build={build} types={types} onReset={handleReset} onBack={handleBack} adsDisabled={adsDisabled} mvpWon={mvpWon} isRB={isRB} isWR={isWR} isTE={isTE} isDB={isDB} isOL={isOL} userName={userName} />,
+    <ScreenFinal    key="final"    result={result} build={build} types={types} onReset={handleReset} onBack={handleBack} adsDisabled={adsDisabled} mvpWon={mvpWon} isRB={isRB} isWR={isWR} isTE={isTE} isDB={isDB} isOL={isOL} userName={userName} isSalaryMode={isSalaryMode} />,
   ]
 
   const team = result.team

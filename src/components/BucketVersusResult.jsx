@@ -13,8 +13,18 @@ import { IS_APP, APP_LOOK } from '../lib/platform'
 import { RatingLine } from './app/OnlineRecord'
 import { NameTag, AvatarBadge } from './app/NameTag'
 import { cosFor } from '../lib/peopleCos'
-import { victory } from '../lib/juice'
+import { victory, sfx, haptic } from '../lib/juice'
+import { WhoAv, WhoName, firstName } from './app/Blacktop1v1'
 const LOOK = IS_APP || APP_LOOK
+// App + app-look website: Blacktop's 1v1, drawn with the 3v3's screens (bt-*):
+// both players are their profile picture + username, me in the first side's
+// white, the opponent in orange. The live site keeps the head-to-head look.
+const LOOK_COLORS = ['#e8f0f6', '#ff8a3d']
+const ADJ = [
+  { key: 'balanced', label: 'BALANCED', sub: 'Default' },
+  { key: 'drive',    label: 'DRIVE',    sub: 'Force drive' },
+  { key: 'shoot',    label: 'SHOOT',    sub: 'Force jumper' },
+]
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function clamp(v, lo, hi) { return Math.min(hi, Math.max(lo, v)) }
@@ -248,7 +258,7 @@ function ProgressBar({ value, color, reverse = false }) {
 // ─── Half-Court — hardwood SVG + QBAvatar circles ─────────────────────────────
 // SVG viewBox 300×280, basket at top. Player positions as % of court dimensions.
 // State shape: { x, y, dur } — dur drives the CSS transition duration inline.
-function CourtVisual({ play, myColor, oppColor, myName, oppName, possession, dispPossession, mySlot, oppSlot, showCheckup, mySpeed, oppSpeed }) {
+function CourtVisual({ play, myColor, oppColor, myName, oppName, possession, dispPossession, mySlot, oppSlot, showCheckup, mySpeed, oppSpeed, look = false, myAv = null, oppAv = null }) {
   const sdur = s => 0.65 - (clamp(s ?? 6, 1, 11) - 1) * 0.035
   const myMvDur  = sdur(mySpeed)
   const oppMvDur = sdur(oppSpeed)
@@ -659,6 +669,33 @@ function CourtVisual({ play, myColor, oppColor, myName, oppName, possession, dis
     ? `left 0.45s cubic-bezier(0.4,0,0.6,1), top 0.45s cubic-bezier(0.55,0,0.45,1)`
     : `left ${carrierPct.dur}s ${EASE}, top ${carrierPct.dur}s ${EASE}`
 
+  // the 3v3 court (btc-*): each player is their profile picture and username
+  if (look) {
+    const ps = [['me', myPct, myTr, myColor, myAv, myName], ['opp', oppPct, oppTr, oppColor, oppAv, oppName]]
+    return (
+      <div className="btc-wrap">
+        <div className="btc-court">
+          <img src="/court.png" alt="" draggable={false} className="btc-img" />
+          <div className="btc-tint" /><div className="btc-light" />
+          <div className="btc-overlay">
+            <div className="btc-ball" style={{ left: `${ballPct.x}%`, top: `${ballPct.y}%`, transition: ballTr }}>🏀</div>
+            {ps.map(([who, p, tr, col, av, nm]) => {
+              const has = dispPossession === who
+              return (
+                <div key={who} className={`btc-p${has ? ' has-ball' : ''}${who === 'me' ? ' is-me' : ''}`} style={{ left: `${p.x}%`, top: `${p.y}%`, transition: tr, zIndex: has ? 5 : 3, '--pc': col }}>
+                  <div className="btc-ring" style={{ boxShadow: has ? `0 0 0 3px ${col}, 0 0 18px ${col}aa` : `0 0 0 1.5px ${col}99` }}>{av}</div>
+                  <span className="btc-name" style={{ color: col }}>{firstName(nm).slice(0, 9)}</span>
+                </div>
+              )
+            })}
+            {rimPop && <div key={rimPop.key} className={`btc-pop${rimPop.label === 'MISS' ? ' is-miss' : ''}`}>{rimPop.label}</div>}
+            {showCheckup && <div className="btc-tag">CHECK BALL</div>}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="bvr-court-wrap">
       <div className="bvr-court-aspect">
@@ -720,6 +757,37 @@ function CourtVisual({ play, myColor, oppColor, myName, oppName, possession, dis
   )
 }
 
+// ─── App look: both builds side by side, headed by each player ────────────────
+function LookBuilds({ sides, delay = 0 }) {
+  return (
+    <div className="ag-card v1g-builds ag-pop" style={{ '--d': `${delay}ms` }}>
+      {sides.map((s, t) => (
+        <div key={t} className={`v1g-builds-col bt-t${t}`}>
+          <div className="v1g-build-head"><WhoAv who={s.who} team={t} size={22} /><WhoName who={s.who} plate={false} short /></div>
+          <BuildCompact build={s.build} types={s.types} position={s.pos} />
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// The box score from the plays ([me, them]). A block is the shooter's missed
+// shot and the defender's block; points come off the scoreboard (capped at 11).
+function boxStats(plays, myScore, oppScore) {
+  const z = () => ({ pts: 0, fgm: 0, fga: 0, m2: 0, a2: 0, stl: 0, blk: 0 })
+  const s = { me: z(), opp: z() }
+  for (const p of plays) {
+    if (p.who !== 'me' && p.who !== 'opp') continue
+    const x = s[p.who], o = s[p.who === 'me' ? 'opp' : 'me']
+    if (p.pts > 0) { x.fgm++; x.fga++; if (p.pts === 2) { x.m2++; x.a2++ } }
+    else if (p.type === 'miss') { x.fga++; if (p.arcAttempt) x.a2++ }
+    else if (p.type === 'block') { x.blk++; o.fga++ }
+    else if (p.type === 'steal') x.stl++
+  }
+  s.me.pts = myScore; s.opp.pts = oppScore
+  return [s.me, s.opp]
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function BucketVersusResult({ myData, oppData, position, oppPosition, role, channel, versusGame, onRematch, onExit, onResult, user, oppDisconnected, adsDisabled }) {
   const [phase,           setPhase]           = useState('reveal')
@@ -753,8 +821,11 @@ export default function BucketVersusResult({ myData, oppData, position, oppPosit
 
   const myTeamData  = NBA_TEAMS.find(t => t.short === myData.player?.team)
   const oppTeamData = NBA_TEAMS.find(t => t.short === oppData.player?.team)
-  const myColor     = myTeamData?.color  || '#3b82f6'
-  const oppColor    = oppTeamData?.color || '#ef4444'
+  const myColor     = LOOK ? LOOK_COLORS[0] : (myTeamData?.color  || '#3b82f6')
+  const oppColor    = LOOK ? LOOK_COLORS[1] : (oppTeamData?.color || '#ef4444')
+  // who's who (app look): my picture + name live; theirs as they shared it, else by account
+  const meWho  = { name: myName, self: true }
+  const oppWho = { name: oppName, cos: oppData.cos || null, uid: oppData.uid || null }
   const myTeamFull  = myTeamData?.name   || myData.player?.team  || ''
   const oppTeamFull = oppTeamData?.name  || oppData.player?.team || ''
 
@@ -882,7 +953,7 @@ export default function BucketVersusResult({ myData, oppData, position, oppPosit
         resultFired.current = true
         onResult?.(result === 'me' ? 'win' : 'loss')
         // the winner's victory, on both screens (theirs looked up by account)
-        if (LOOK) setTimeout(() => (result === 'me' ? victory() : victory({ of: cosFor(oppData.uid) ?? {} })), 1200)
+        if (LOOK) setTimeout(() => (result === 'me' ? victory() : victory({ of: oppData.cos || cosFor(oppData.uid) || {} })), 1200)
       }
       const t = setTimeout(() => setPhase('result'), 2200)
       return () => clearTimeout(t)
@@ -931,6 +1002,15 @@ export default function BucketVersusResult({ myData, oppData, position, oppPosit
     return () => clearTimeout(t)
   }, [phase, playIdx]) // eslint-disable-line
 
+  // App look: the 3v3's sounds on a make, a block or a steal
+  useEffect(() => {
+    if (!LOOK || phase !== 'live') return
+    const p = plays[playIdx]
+    if (!p) return
+    if (p.pts > 0) setTimeout(() => { sfx(p.pts === 2 ? 'lock' : 'tap'); if (p.who === 'me') haptic('light') }, 900)
+    else if (p.type === 'block' || p.type === 'steal') setTimeout(() => sfx('pop'), 700)
+  }, [playIdx]) // eslint-disable-line
+
   // Lag shownIdx + shownPossession behind playIdx so UI updates AFTER court animation
   useEffect(() => {
     const p = plays[playIdx]
@@ -974,6 +1054,144 @@ export default function BucketVersusResult({ myData, oppData, position, oppPosit
       ? (p.milestoneFor === 'me' ? myName : oppName)
       : (p.who === 'me' ? myName : oppName)
     return p.text.replace('__NAME__', n)
+  }
+
+  // ── App look: the 3v3's reveal → live → result, two players ─────────────────
+  if (LOOK) {
+    const sides = [
+      { who: meWho,  pos: position,                ovr: myOVR,  build: myData.build,  types: myTypes },
+      { who: oppWho, pos: oppPosition ?? position, ovr: oppOVR, build: oppData.build, types: oppTypes },
+    ]
+
+    if (phase === 'reveal') {
+      return (
+        <div key="reveal" className="ag-screen ag-screen--bucket bt-game v1g-game">
+          <div className="bt-reveal">
+            <span className="ag-eyebrow">BLACKTOP · 1V1 · FIRST TO 11</span>
+            <div className="v1g-reveal-top">
+              <div className="bt-reveal-grid">
+                {sides.map((s, t) => (
+                  <div key={t} className={`bt-squad bt-t${t} v1g-side ag-pop`} style={{ '--d': `${t * 160}ms` }}>
+                    <WhoAv who={s.who} team={t} size={58} />
+                    <span className="bt-squad-p-txt"><b><WhoName who={s.who} /></b><small>{s.pos === 'big' ? 'BIG' : 'GUARD'}</small></span>
+                    <span className="v1g-ovr">{s.ovr}<small>OVR</small></span>
+                  </div>
+                ))}
+              </div>
+              <div className="bt-vs">VS</div>
+            </div>
+            <LookBuilds sides={sides} delay={360} />
+          </div>
+        </div>
+      )
+    }
+
+    if (phase === 'live') {
+      const feed = plays.slice(0, shownIdx + 1).filter(p => p.type !== 'checkup').slice(-4).reverse()
+      const sideOf = p => ((p.type === 'milestone' ? p.milestoneFor : p.who) === 'opp' ? 1 : 0)
+      const scores = [myScore, oppScore]
+      const board = t => (
+        <div className={`bt-board-side bt-t${t}${scores[t] > scores[1 - t] ? ' is-lead' : ''}`}>
+          <span className="bt-board-name v1g-board-who">
+            <WhoAv who={sides[t].who} team={t} size={22} />
+            <WhoName who={sides[t].who} plate={false} short />
+            <span className={`v1g-poss${shownPossession === (t === 0 ? 'me' : 'opp') ? ' is-on' : ''}`} aria-hidden="true">🏀</span>
+          </span>
+          <b>{scores[t]}</b>
+        </div>
+      )
+      return (
+        <div key="live" className="ag-screen ag-screen--bucket bt-game bt-live v1g-game">
+          <div className="bt-board">
+            {board(0)}
+            <div className="bt-board-mid"><span className="ag-eyebrow">FIRST TO 11</span><span className="ag-eyebrow">1V1</span></div>
+            {board(1)}
+          </div>
+          <CourtVisual
+            look
+            play={plays[playIdx]}
+            myColor={myColor}     oppColor={oppColor}
+            myName={myName}       oppName={oppName}
+            myAv={<WhoAv who={meWho} team={0} size={40} />}
+            oppAv={<WhoAv who={oppWho} team={1} size={40} />}
+            possession={possession}
+            dispPossession={shownPossession}
+            showCheckup={plays[playIdx]?.type === 'checkup'}
+            mySpeed={myData?.build?.speed?.val ?? 5}
+            oppSpeed={oppData?.build?.speed?.val ?? 5}
+          />
+          <div className="bt-roles v1g-adj">
+            <span className="bt-roles-lbl">OFFENSE</span>
+            {ADJ.map(a => (
+              <button key={a.key} className={`ag-chip${myAdj === a.key ? ' is-on' : ''}`} onClick={() => { if (myAdj !== a.key) { setMyAdj(a.key); sfx('tap') } }} title={a.sub}>
+                {a.label}<small>{a.sub}</small>
+              </button>
+            ))}
+          </div>
+          <div className="bt-feed">
+            {feed.map((p, i) => (
+              <div key={p.id} className={`bt-feed-line bt-t${sideOf(p)}${i === 0 ? ' is-now' : ''}${p.big ? ' is-big' : ''}${p.type === 'milestone' ? ' is-ms' : ''}`}>{resolveText(p)}</div>
+            ))}
+          </div>
+          <LookBuilds sides={sides} delay={0} />
+        </div>
+      )
+    }
+
+    // result
+    const won = winner === 'me'
+    const champ = won ? meWho : oppWho
+    const stats = boxStats(plays.slice(0, playIdx + 1), myScore, oppScore)
+    const votes = (myRematchReady ? 1 : 0) + (oppRematchReady ? 1 : 0)
+    const order = won ? [0, 1] : [1, 0]
+    return (
+      <div key="result" className="ag-screen ag-screen--bucket bt-game v1g-game">
+        <div className="ag-screen-body">
+          <div className={`bt-result-hero ${won ? 'is-win' : 'is-loss'} ag-pop`}>
+            <span className="ag-eyebrow">{won ? 'BLACKTOP · 1V1 · W' : 'BLACKTOP · 1V1 · L'}</span>
+            <div className="v1g-winner">
+              <WhoAv who={champ} team={won ? 0 : 1} size={64} />
+              <h1 className="ag-h1"><WhoName who={champ} /></h1>
+              <span className="v1g-took">{oppExited && won && myScore < 11 ? 'TAKES IT · THE OTHER SIDE LEFT' : 'TAKES IT'}</span>
+            </div>
+            <div className="bt-final"><b className="bt-t0">{myScore}</b><span>–</span><b className="bt-t1">{oppScore}</b></div>
+            <div className="bt-final-teams">
+              {sides.map((s, t) => <span key={t} className={`bt-t${t} v1g-final-who`}><WhoAv who={s.who} team={t} size={20} /><WhoName who={s.who} plate={false} short /></span>)}
+            </div>
+            <RatingLine mode="h2h" />
+          </div>
+          <div className="ag-card bt-box v1g-box ag-pop" style={{ '--d': '120ms' }}>
+            <div className="bt-box-head"><span>BOX SCORE</span><span>PTS</span><span>FG</span><span>2PT</span><span>STL</span><span>BLK</span></div>
+            {order.map(t => { const s = stats[t]; return (
+              <div key={t} className={`bt-box-row bt-t${t}`}>
+                <span className="bt-box-name"><WhoAv who={sides[t].who} team={t} size={20} /><WhoName who={sides[t].who} plate={false} /></span>
+                <span><b>{s.pts}</b></span><span>{s.fgm}/{s.fga}</span><span>{s.m2}/{s.a2}</span><span>{s.stl}</span><span>{s.blk}</span>
+              </div>
+            ) })}
+          </div>
+          {order.map((t, i) => (
+            <div key={t} className={`ag-card v1g-build-card bt-t${t}${i === 0 ? ' is-winner' : ''} ag-pop`} style={{ '--d': `${200 + i * 80}ms` }}>
+              <div className="v1g-build-head">
+                <WhoAv who={sides[t].who} team={t} size={28} />
+                <WhoName who={sides[t].who} />
+                <span className="v1g-build-ovr">{sides[t].ovr}<small>OVR</small></span>
+              </div>
+              <BuildCompact build={sides[t].build} types={sides[t].types} position={sides[t].pos} />
+            </div>
+          ))}
+          <div className="bt-result-actions ag-pop" style={{ '--d': '360ms' }}>
+            {channel && oppExited ? (
+              <div className="v1g-left"><WhoName who={oppWho} plate={false} />left the blacktop. Match over.</div>
+            ) : (
+              <button className="ag-btn" onClick={() => { handleRematch(); sfx('tap') }} disabled={myRematchReady}>
+                {myRematchReady ? `WAITING ON ${firstName(oppName) || 'THEM'} · ${votes}/2` : `RUN IT BACK${votes ? ` · ${votes}/2` : ''}`}
+              </button>
+            )}
+            <button className="ag-btn ag-btn--ghost" onClick={handleExit}>LEAVE THE BLACKTOP</button>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   // ── Reveal ───────────────────────────────────────────────────────────────────

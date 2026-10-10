@@ -28,6 +28,7 @@ import './app-game.css'
 import App from './App.jsx'
 import BucketApp from './components/BucketApp.jsx'
 import ErrorBoundary from './components/ErrorBoundary.jsx'
+import { initAppInfra, AppInfra } from './lib/appInfra'; initAppInfra()   // error log, deep links, notifications, rating, version (lib/appInfra.js)
 import { IS_APP, APP_LOOK } from './lib/platform'
 // App shell (dock, Daily, Cards, shop, toasts). The website loads it too for
 // the app-look home and profile screens (APP_LOOK in lib/platform.js).
@@ -72,6 +73,7 @@ createRoot(document.getElementById('root')).render(
         {AppTabBar && <Suspense fallback={null}><AppTabBar /></Suspense>}
       </HelmetProvider>
       {!IS_APP && <Analytics />}
+      <AppInfra />
     </ErrorBoundary>
   </StrictMode>,
 )
