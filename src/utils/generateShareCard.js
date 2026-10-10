@@ -36,8 +36,8 @@ const VB_W = 850.9, VB_H = 815.5
 
 // Football: the build's silhouette as it's drawn on the game page (figure,
 // colors, numbers), without the drop zones and their lines
-export async function captureSilhouette() {
-  const el = [...document.querySelectorAll('.game-layout .sil-wrap')].find(e => e.offsetParent !== null && e.getBoundingClientRect().width > 40)
+export async function captureSilhouette(sel = '.game-layout .sil-wrap') {
+  const el = [...document.querySelectorAll(sel)].find(e => e.offsetParent !== null && e.getBoundingClientRect().width > 40)
   if (!el) return null
   try {
     const html2canvas = (await import('html2canvas')).default
@@ -235,4 +235,53 @@ export async function shareOrDownloadCard(canvas, ovr, arch) {
       resolve('downloaded')
     }, 'image/png')
   })
+}
+
+// ── Career card: a whole career on one image (lib/career.js careerCard) ──────
+export async function generateCareerCard(card, figure = null) {
+  await document.fonts.ready
+  const W = 1080, H = 1350, PAD = 64
+  const canvas = document.createElement('canvas'); canvas.width = W; canvas.height = H
+  const ctx = canvas.getContext('2d')
+  const gold = '#f5dc8a'
+  ctx.fillStyle = '#07120a'; ctx.fillRect(0, 0, W, H)
+  ctx.strokeStyle = 'rgba(255,255,255,0.022)'; ctx.lineWidth = 1
+  for (let x = 0; x <= W; x += 54) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke() }
+  for (let y = 0; y <= H; y += 54) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke() }
+  const g = ctx.createLinearGradient(0, 0, W, 0); g.addColorStop(0, '#d4af37'); g.addColorStop(1, gold)
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, 6)
+  const sp = (px, s) => { if ('letterSpacing' in ctx) ctx.letterSpacing = `${px}px`; ctx.fillText(s.text, s.x, s.y); if ('letterSpacing' in ctx) ctx.letterSpacing = '0px' }
+  ctx.textAlign = 'center'; ctx.fillStyle = '#fff'; ctx.font = '800 52px Outfit, sans-serif'; ctx.fillText('build-a-player.com', W / 2, 82)
+  ctx.font = '500 22px Outfit, sans-serif'; ctx.fillStyle = 'rgba(255,255,255,0.38)'; sp(3, { text: 'CAREER', x: W / 2, y: 116 })
+  ctx.textAlign = 'right'; ctx.font = '700 18px Outfit, sans-serif'; ctx.fillStyle = 'rgba(255,255,255,0.22)'; ctx.fillText(card.pos, W - PAD, 82)
+  // the player
+  const FT = 140, FH = 430
+  if (figure) { const ar = figure.width / figure.height; const fh = FH, fw = Math.min(W - PAD * 2, fh * ar); ctx.drawImage(figure, (W - fw) / 2, FT, fw, fh) }
+  ctx.textAlign = 'left'
+  ctx.font = '900 64px Outfit, sans-serif'; ctx.fillStyle = '#fff'; ctx.fillText(card.name, PAD, FT + FH + 60)
+  ctx.font = '600 22px Outfit, sans-serif'; ctx.fillStyle = 'rgba(255,255,255,0.6)'
+  ctx.fillText(`${card.pos} · ${card.years}${card.teams.length ? ` · ${card.teams.join(', ')}` : ''}`, PAD, FT + FH + 96)
+  // legacy
+  ctx.textAlign = 'right'; ctx.font = '900 70px Outfit, sans-serif'; ctx.fillStyle = gold; ctx.fillText(String(card.legacy.score), W - PAD, FT + FH + 60)
+  ctx.font = '600 18px Outfit, sans-serif'; ctx.fillStyle = 'rgba(255,255,255,0.45)'; sp(2, { text: `LEGACY · ${card.legacy.tier.toUpperCase()}`, x: W - PAD, y: FT + FH + 92 })
+  ctx.textAlign = 'left'
+  // divider + the big numbers
+  const DY = FT + FH + 130
+  ctx.strokeStyle = 'rgba(245,220,138,.35)'; ctx.beginPath(); ctx.moveTo(PAD, DY); ctx.lineTo(W - PAD, DY); ctx.stroke()
+  const cells = [...card.head, ['RINGS', String(card.rings)], [card.awardName, String(card.awards)], ['PRO BOWLS', String(card.proBowls)]].slice(0, 6)
+  const cw = (W - PAD * 2) / cells.length
+  cells.forEach(([k, v], i) => {
+    const x = PAD + cw * i + cw / 2
+    ctx.textAlign = 'center'; ctx.font = '900 54px Outfit, sans-serif'; ctx.fillStyle = '#fff'; ctx.fillText(v, x, DY + 86)
+    ctx.font = '600 15px Outfit, sans-serif'; ctx.fillStyle = 'rgba(255,255,255,0.4)'; sp(2, { text: k, x, y: DY + 116 })
+  })
+  // ranking + hall of fame
+  const RY = DY + 190
+  ctx.textAlign = 'left'; ctx.font = '600 20px Outfit, sans-serif'; ctx.fillStyle = 'rgba(255,255,255,0.75)'
+  ctx.fillText(`No. ${card.legacy.rank} ${card.pos} of all time${card.legacy.above ? ` · behind ${card.legacy.above.name}` : ''}`, PAD, RY)
+  if (card.hof) { ctx.fillStyle = card.hof.in ? gold : 'rgba(255,255,255,0.5)'; ctx.fillText(card.hof.in ? `HALL OF FAME · ${card.hof.ballot.toUpperCase()} · ${card.hof.pct}%` : `Hall of Fame: ${card.hof.ballot.toLowerCase()} (${card.hof.pct}%)`, PAD, RY + 36) }
+  if (card.draft) { ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.font = '500 18px Outfit, sans-serif'; ctx.fillText(`Drafted round ${card.draft.round}, pick ${card.draft.o} · Career earnings $${Math.round(card.earnings)}M`, PAD, RY + 72) }
+  ctx.strokeStyle = 'rgba(255,255,255,0.07)'; ctx.beginPath(); ctx.moveTo(PAD, H - 48); ctx.lineTo(W - PAD, H - 48); ctx.stroke()
+  ctx.textAlign = 'center'; ctx.font = '500 15px Outfit, sans-serif'; ctx.fillStyle = 'rgba(255,255,255,0.14)'; ctx.fillText('build-a-player.com', W / 2, H - 20)
+  return canvas
 }

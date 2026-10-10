@@ -181,6 +181,21 @@ export function createDirector({ sport, pos, build, team, simFn, base, seed = Ma
     return outcome
   }
 
+  // Sidelined from game `at` for `n` games (Career: an injury): the team plays
+  // on without you, and the rest of the season is re-simulated from there
+  D.sidelined = (at, n) => { for (let i = at; i < Math.min(total, at + n); i++) sitGame(i); resplice(at) }
+  // The director's own data, to save mid-season and pick the season back up
+  D.snapshot = () => ({
+    games: D.games, cum: D.cum, windows: D.windows, playoffMods: D.playoffMods, last: D.last, moments: D.moments,
+    milestones: D.milestones, records: D.records, headlines: D.headlines, sat: D.sat, xp: D.xp, po: D.po, poRun: D.poRun ?? null,
+    seen: [...D.seen], fired: [...D.fired], used: [...D.used], finalized: D.finalized, final: D.final,
+  })
+  D.restore = snap => {
+    Object.assign(D, { games: snap.games, cum: snap.cum, windows: snap.windows, playoffMods: snap.playoffMods, last: snap.last, moments: snap.moments, milestones: snap.milestones, records: snap.records, headlines: snap.headlines, sat: snap.sat, xp: snap.xp, po: snap.po, poRun: snap.poRun ?? null, finalized: snap.finalized, final: snap.final })
+    D.seen = new Set(snap.seen); D.fired = new Set(snap.fired); D.used = new Set(snap.used)
+    return D
+  }
+
   // ── Milestones, records, headlines (called as games reveal) ───────────────
   const mdefs = [...(MILESTONES[sport]?.common ?? []), ...(MILESTONES[sport]?.[pos] ?? [])]
   const recs = RECORDS[sport]?.[pos] ?? []

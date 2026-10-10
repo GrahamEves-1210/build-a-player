@@ -118,6 +118,20 @@ function SportSwitch({ sport }) {
   )
 }
 
+// Career card art: a stadium bowl and a rising legacy line
+function CareerArt() {
+  return (
+    <svg className="ag-career-art" viewBox="0 0 220 110" aria-hidden="true" preserveAspectRatio="xMaxYMid slice">
+      <defs><linearGradient id="crg" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stopColor="#f5dc8a" stopOpacity=".1" /><stop offset="1" stopColor="#f5dc8a" stopOpacity=".55" /></linearGradient></defs>
+      <ellipse cx="150" cy="118" rx="120" ry="42" fill="none" stroke="rgba(255,255,255,.14)" strokeWidth="2" />
+      <ellipse cx="150" cy="118" rx="92" ry="30" fill="none" stroke="rgba(255,255,255,.1)" strokeWidth="2" />
+      <polyline points="20,96 60,84 95,88 130,60 165,48 205,18" fill="none" stroke="url(#crg)" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="205" cy="18" r="6" fill="#f5dc8a" />
+      <circle cx="130" cy="60" r="3.5" fill="rgba(245,220,138,.7)" /><circle cx="60" cy="84" r="3.5" fill="rgba(245,220,138,.5)" />
+    </svg>
+  )
+}
+
 function ModeCard({ tone, title, badge, onClick, mark: Mark, isNew, delay }) {
   return (
     <button className={`ag-mode${tone ? ` ag-mode--${tone}` : ''} ag-pop`} style={{ '--d': delay }} onClick={onClick}>
@@ -130,7 +144,7 @@ function ModeCard({ tone, title, badge, onClick, mark: Mark, isNew, delay }) {
   )
 }
 
-export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus, onBlacktop, blacktop, onTakeover, takeoverRun, onCompete, resume = null, user, renderBucketFigure, footer = null }) {
+export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus, onBlacktop, blacktop, onTakeover, takeoverRun, onCompete, onCareer, career = null, resume = null, user, renderBucketFigure, footer = null }) {
   const prog = useProgress()
   const cs = prog.stats?.compete
   const ol = prog.stats?.online ?? { rating: 800, played: 0 }
@@ -230,6 +244,18 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
         </div>
 
         <div className="ag-extras">
+          {/* the flagship: one player, a whole career */}
+          {onCareer && (
+            <button className={`ag-career ag-pop${career ? ' is-live' : ''}`} style={{ '--d': '260ms' }} onClick={onCareer}>
+              <CareerArt />
+              <span className="ag-takeover-txt">
+                <span className="ag-eyebrow">{career ? `${career.pos.toUpperCase()} · ${career.phase === 'draft' ? 'DRAFT DAY' : career.phase === 'retired' ? 'CAREER OVER' : `YEAR ${career.year + 1} · AGE ${career.age}`}` : 'FLAGSHIP · MULTI-SEASON'}</span>
+                <span className="ag-takeover-title">CAREER</span>
+                <span className="ag-takeover-sub">{career ? (career.phase === 'draft' ? 'The combine is waiting. Go get drafted.' : career.phase === 'season' ? `Week ${(career.active?.k ?? 0) + 1} with the ${career.fit?.name ?? ''}` : career.phase === 'offseason' ? 'Offseason: a point to spend, a contract to sort' : career.phase === 'retired' ? `${career.seasons.length} seasons. See the legacy, or start a new career.` : `${career.fit?.name ?? ''} · ${career.seasons.length} ${career.seasons.length === 1 ? 'season' : 'seasons'} in`) : 'Build a player, get drafted, play a whole career. Legacy on the line.'}</span>
+              </span>
+              <span className="ag-edge-go">{career ? (career.phase === 'retired' ? 'LEGACY' : 'CONTINUE') : 'START'} <IconArrow size={14} /></span>
+            </button>
+          )}
           {/* a build in progress: PLAY is Home now, so it waits here */}
           {resume && (
             <button className="ag-resume ag-pop" style={{ '--d': '280ms' }} onClick={resume.onClick}>
