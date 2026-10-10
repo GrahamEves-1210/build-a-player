@@ -3607,3 +3607,5 @@ html.is-app .rc-sandbox-outer--app { display: flex; }
   .sil-sandbox-outer--app { display: flex; }
   .rc-sandbox-outer--app { display: none !important; }
 }
+/* the phone's build / spin panels end above the raised SPIN / BUILD switch and the ad rail */
+@media (max-width: 768px) { html.app-look .game-page-scroll { padding-bottom: calc(80px + var(--web-rail, 0px) + env(safe-area-inset-bottom, 0px)) !important; } }
