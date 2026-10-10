@@ -670,7 +670,7 @@ export default function App() {
   }, [user?.id])
   openCareerRef.current = openCareer
   const enterDraft = useCallback(() => {
-    const c = newCareer({ sport: 'nfl', uid: user?.id ?? null, pos: position, build, name: getUsername(user) || 'You' })
+    const c = newCareer({ sport: 'nfl', uid: user?.id ?? null, pos: position, build, name: getUsername(user) || 'Guest' })
     saveCareer(c); setCareer(c); setGameMode(null); setBuild({}); setPage('career')
     try { localStorage.removeItem('bap_progress') } catch {}   // the build is the career's now: a reload lands on Home, not the build page
     window.scrollTo({ top: 0, behavior: 'instant' })

@@ -40,12 +40,12 @@ export const GAMES = {
   'jump-route':  { kind: 'reaction', traits: ['playRecognition', 'zoneIQ'], title: 'JUMP THE ROUTE', how: 'Three routes. One breaks. Jump it.', rounds: 2 },
   'tackle-angle':{ kind: 'lanes', traits: ['speed', 'runSupport'], title: 'TACKLE ANGLE', how: 'The back cuts. Take the right angle, three times.' },
   // ── Combine ──
-  'forty':       { kind: 'timing', traits: ['legs', 'speed'], title: '40-YARD DASH', how: 'Explode off the line: tap right on the gun.' },
-  'velo':        { kind: 'power', traits: ['arm'], title: 'THROWING VELOCITY', how: 'Hold to wind up, release at the top.' },
-  'acc':         { kind: 'taps', traits: ['accuracy'], title: 'ACCURACY DRILL', how: 'Three targets. Hit each window.', n: 3 },
-  'cone':        { kind: 'lanes', traits: ['elusiveness', 'routeRunning', 'bodyControl'], title: '3-CONE DRILL', how: 'Change direction on the call, three times.' },
-  'gauntlet':    { kind: 'taps', traits: ['hands'], title: 'GAUNTLET', how: 'Balls from both sides. Catch all three.', n: 3 },
-  'bench':       { kind: 'taps', traits: ['strength'], title: 'BENCH PRESS', how: 'Three reps, each on the beat.', n: 3 },
+  'forty':       { kind: 'dash', traits: ['legs', 'speed'], title: '40-YARD DASH', how: 'Wait for the gun (jump it and that is a false start), then alternate LEFT and RIGHT as fast as you can. Same foot twice is a stumble. Speed makes every step longer.' },
+  'velo':        { kind: 'velo', traits: ['arm'], title: 'THROWING VELOCITY', how: 'Three throws. Hold to wind up and let go inside the small green window. It moves every throw and the wind-up gets faster. A stronger arm gets a bigger window.' },
+  'acc':         { kind: 'aim', traits: ['accuracy'], title: 'ACCURACY DRILL', how: 'Four nets. Tap to lock the throw left to right, then again to lock it up and down. Accuracy makes the nets bigger; the sweeps speed up.' },
+  'cone':        { kind: 'cone', traits: ['elusiveness', 'routeRunning', 'bodyControl'], title: '3-CONE DRILL', how: 'Six cuts. An arrow flashes: hit that direction before the window shuts. Wrong way or late is a slip. The windows get shorter.' },
+  'gauntlet':    { kind: 'gauntlet', traits: ['hands'], title: 'GAUNTLET', how: 'Balls come down two lanes, faster and closer together. Catch each one in the green zone at the bottom. Hands make the zone bigger.' },
+  'bench':       { kind: 'bench', traits: ['strength'], title: 'BENCH PRESS', how: 'Tap fast to drive the bar up to lockout. Every rep gets heavier. As many reps as you can in 12 seconds.' },
 }
 // which games a position plays in the playoffs
 export const PLAYOFF_GAMES = {
