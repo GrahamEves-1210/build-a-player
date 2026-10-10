@@ -65,9 +65,19 @@ export const setMomentsOff = off => { try { localStorage.setItem(MOMENTS_OFF_KEY
 export function createDirector({ sport, pos, build, team, simFn, base, seed = Math.random().toString(36).slice(2, 8), name = 'You', attrMap = {}, types = [], always = false }) {
   const isBucket = sport === 'bucket'
   const total = base.games.length
-  // four decisions in the regular season, one before the playoffs (only if you're in)
-  const stops = (isBucket ? [16, 34, 52, 70] : [3, 7, 11, 14]).filter(at => at < total).map((at, i) => ({ i, at, kind: 'season', total }))
-  stops.push({ i: 3, at: total, kind: 'playoffs', total })
+  // two or three decisions in the regular season, at weeks that change every
+  // season (seeded, so a saved season picks back up the same), kept apart from
+  // each other; one more before the playoffs (only if you're in)
+  const rs = seeded(`stops-${seed}`)
+  const want = 2 + (rs() < 0.4 ? 1 : 0)
+  const lo = isBucket ? 8 : 2, hi = total - (isBucket ? 6 : 2), gap = isBucket ? 14 : 3
+  const weeks = []
+  for (let tries = 0; weeks.length < want && tries < 200 && hi > lo; tries++) {
+    const w = lo + Math.floor(rs() * (hi - lo + 1))
+    if (weeks.every(x => Math.abs(x - w) >= gap)) weeks.push(w)
+  }
+  const stops = weeks.sort((a, b) => a - b).map((at, i) => ({ i, at, kind: 'season', total }))
+  stops.push({ i: stops.length, at: total, kind: 'playoffs', total })
   const teamNick = team?.name?.split(' ').slice(-1)[0] ?? 'Your team'
   const r = seeded(`director-${seed}`)
 

@@ -1,41 +1,24 @@
-/* First-run tutorial (components/app/Tutorial.jsx): the intro popup over Home
+/* First-run tutorial (components/app/Tutorial.jsx): the spotlight tour of Home
    and the coach marks for the guided game. New UI only (html.is-app /
-   html.app-look supply the --ag-* tokens; fallbacks keep it readable anyway). */
+   html.app-look supply the --ag-* tokens; fallbacks keep it readable anyway).
+   Light on purpose: no blur, no looping animations, one moving piece. */
 
 #bap-tutorial { position: relative; z-index: 1400; }
 
-/* ── Intro popup ─────────────────────────────────────────────────────────── */
-.tut-overlay {
-  position: fixed; inset: 0; z-index: 1400;
-  display: flex; align-items: center; justify-content: center;
-  padding: max(16px, env(safe-area-inset-top, 0px)) 16px calc(max(16px, env(safe-area-inset-bottom, 0px)) + var(--web-rail, 0px));
-  background: radial-gradient(ellipse 90% 60% at 50% 30%, color-mix(in srgb, var(--ag-a1, #4fd6b7) 12%, transparent), transparent 70%), rgba(3,6,5,.82);
-  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
-  animation: tut-fade .22s ease both;
-  font-family: var(--ag-body, 'Outfit', system-ui, sans-serif);
-  color: var(--ag-text, #EEF8F1);
-  -webkit-user-select: none; user-select: none;
+/* ── The spotlight ───────────────────────────────────────────────────────── */
+.tut-tour { position: fixed; inset: 0; z-index: 1400; font-family: var(--ag-body, 'Outfit', system-ui, sans-serif); }
+.tut-catch { position: fixed; inset: 0; }                        /* the page underneath waits */
+.tut-dim { position: fixed; inset: 0; background: rgba(3, 6, 5, .74); animation: tut-fade .2s ease both; }
+/* a cut-out: the section stays lit, everything around it dims (its shadow) */
+.tut-hole {
+  position: fixed; top: 0; left: 0; border-radius: 18px; pointer-events: none;
+  box-shadow: 0 0 0 2px var(--ag-a1, #4fd6b7), 0 0 0 200vmax rgba(3, 6, 5, .74);
+  transition: transform .32s cubic-bezier(.2, .8, .2, 1), width .32s cubic-bezier(.2, .8, .2, 1), height .32s cubic-bezier(.2, .8, .2, 1);
+  will-change: transform;
 }
-.tut-modal {
-  position: relative;
-  width: min(400px, 100%);
-  min-height: min(650px, 100%);   /* the same size on every card, so NEXT stays put */
-  max-height: 100%;
-  overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none;
-  display: flex; flex-direction: column; gap: 12px;
-  padding: 14px 16px 16px;
-  border-radius: 20px;
-  border: 1.5px solid var(--ag-line-hi, rgba(149,213,178,.3));
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--ag-a1, #4fd6b7) 9%, transparent), transparent 42%),
-    var(--ag-panel, rgba(12,17,15,.92));
-  box-shadow: 0 24px 60px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.05);
-  animation: tut-zoom .28s cubic-bezier(.2,.9,.3,1.15) both;
-}
-.tut-modal::-webkit-scrollbar { display: none; }
-
-.tut-top { display: flex; align-items: center; justify-content: space-between; min-height: 24px; }
-.tut-count { font-family: var(--ag-font, 'Bebas Neue', Impact, sans-serif); font-size: 15px; letter-spacing: 2.5px; color: var(--ag-muted, rgba(216,243,220,.55)); }
+/* the guided game: a lighter dim, and the page stays playable through it */
+.tut-hole--coach { box-shadow: 0 0 0 2px var(--ag-a1, #4fd6b7), 0 0 0 200vmax rgba(3, 6, 5, .5); }
+.tut-hole--clear { box-shadow: 0 0 0 2px var(--ag-a1, #4fd6b7), 0 0 0 6px color-mix(in srgb, var(--ag-a1, #4fd6b7) 25%, transparent); }
 
 /* the low-key skip */
 .tut-skip {
@@ -46,134 +29,18 @@
   cursor: pointer;
 }
 .tut-skip:hover { color: var(--ag-text, #EEF8F1); }
-.tut-skip:focus-visible, .tut-back:focus-visible, .tut-dot:focus-visible, .tut-next:focus-visible,
-.tut-bubble-ok:focus-visible, .tut-bubble-btn:focus-visible { outline: 2px solid var(--ag-a1, #4fd6b7); outline-offset: 2px; }
+.tut-skip:focus-visible, .tut-bubble-ok:focus-visible, .tut-bubble-btn:focus-visible { outline: 2px solid var(--ag-a1, #4fd6b7); outline-offset: 2px; }
 
-.tut-card { flex: 1 0 auto; display: flex; flex-direction: column; gap: 6px; touch-action: pan-y; animation: tut-slide .26s ease both; }
-.tut-art {
-  position: relative; height: 150px; margin-bottom: 6px;
-  border-radius: 14px; overflow: hidden;
-  border: 1.5px solid var(--tone-line, color-mix(in srgb, var(--ag-a1, #4fd6b7) 40%, transparent));
-  background:
-    radial-gradient(ellipse 70% 90% at 50% 100%, var(--tone-glow, color-mix(in srgb, var(--ag-a1, #4fd6b7) 22%, transparent)), transparent 70%),
-    repeating-linear-gradient(180deg, transparent 0 23px, rgba(255,255,255,.03) 23px 24px),
-    rgba(5,8,6,.6);
-  display: flex; align-items: center; justify-content: center;
-}
-.tut-copy { flex: 1 0 auto; display: flex; flex-direction: column; justify-content: center; gap: 6px; padding-bottom: 4px; }
-.tut-card--gold   { --tone: var(--ag-gold-hi, #f2d675); --tone-line: rgba(212,175,55,.5); --tone-glow: rgba(212,175,55,.2); }
-.tut-card--purple { --tone: #c4a8ff; --tone-line: rgba(167,139,250,.5); --tone-glow: rgba(139,92,246,.22); }
-.tut-card--mint   { --tone: var(--ag-a1, #4fd6b7); }
-
-.tut-eyebrow { font-family: var(--ag-font, 'Bebas Neue', Impact, sans-serif); font-size: 14px; letter-spacing: 2.6px; color: var(--tone, var(--ag-a1, #4fd6b7)); line-height: 1.1; }
-.tut-title {
-  margin: 0; font-family: var(--ag-display, 'Anton', Impact, sans-serif); font-weight: 400;
-  font-size: clamp(28px, 8.4vw, 36px); line-height: 1; letter-spacing: .5px; text-transform: uppercase;
-  color: var(--ag-text, #EEF8F1);
-}
-.tut-body { margin: 2px 0 0; font-size: 15.5px; line-height: 1.45; color: rgba(238,248,241,.86); }
-
-.tut-steps { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 7px; }
-.tut-steps li { display: flex; align-items: flex-start; gap: 10px; }
-.tut-step-n {
-  flex: 0 0 24px; height: 24px; border-radius: 8px; display: grid; place-items: center;
-  font-family: var(--ag-display, 'Anton', Impact, sans-serif); font-size: 14px;
-  color: var(--ag-on, #07120a); background: var(--ag-grad, linear-gradient(135deg, #5EDBD8, #1fc98a));
-}
-.tut-step-txt { font-size: 14.5px; line-height: 1.35; color: rgba(238,248,241,.86); padding-top: 2px; }
-.tut-step-txt b { font-family: var(--ag-font, 'Bebas Neue', Impact, sans-serif); font-weight: 400; font-size: 17px; letter-spacing: 1.6px; color: var(--ag-text, #EEF8F1); margin-right: 3px; }
-.tut-foot {
-  display: flex; gap: 8px; align-items: flex-start; margin: 8px 0 0; padding: 9px 11px;
-  border-radius: 12px; background: rgba(242,214,117,.07); border: 1px solid rgba(242,214,117,.2);
-  font-size: 12.5px; line-height: 1.4; color: rgba(238,248,241,.78);
-}
-.tut-foot svg { flex: 0 0 auto; margin-top: 1px; color: var(--ag-gold-hi, #f2d675); }
-
-.tut-dots { display: flex; justify-content: center; gap: 4px; margin-top: 2px; }
-.tut-dot {
-  width: 22px; height: 22px; padding: 0; border: 0; background: none; cursor: pointer;
-  display: grid; place-items: center;
-}
-.tut-dot::before {
-  content: ''; width: 7px; height: 7px; border-radius: 99px; background: rgba(216,243,220,.25);
-  transition: width .2s ease, background .2s ease;
-}
-.tut-dot.is-on::before { width: 20px; background: var(--ag-grad, linear-gradient(135deg, #5EDBD8, #1fc98a)); }
-
-.tut-nav { display: grid; grid-template-columns: auto 1fr; gap: 10px; }
-.tut-back {
-  min-height: 50px; padding: 0 18px; border-radius: 12px; cursor: pointer;
-  border: 1.5px solid var(--ag-line-hi, rgba(149,213,178,.3)); background: rgba(255,255,255,.03);
-  font-family: var(--ag-font, 'Bebas Neue', Impact, sans-serif); font-size: 18px; letter-spacing: 2.2px;
-  color: var(--ag-text, #EEF8F1);
-}
-.tut-back:disabled { opacity: .35; cursor: default; }
-.tut-next { min-height: 50px; font-size: 19px; letter-spacing: 2.2px; cursor: pointer; }
-.tut-next--go { font-size: 18px; letter-spacing: 1.6px; padding: 0 12px; }
-
-/* card art */
-.tut-svg { width: 92%; height: 88%; }
-.tut-art--compete .tut-svg { width: 66%; height: 82%; margin-top: 12px; }
-.tut-svg--court { color: var(--ag-a1, #4fd6b7); filter: drop-shadow(0 0 6px color-mix(in srgb, var(--ag-a1, #4fd6b7) 50%, transparent)); }
-.tut-court-txt { font-family: var(--ag-font, 'Bebas Neue', Impact, sans-serif); font-size: 15px; letter-spacing: 1.5px; fill: var(--ag-text, #EEF8F1); }
-
-.tut-basics-art { position: relative; width: 100%; height: 100%; }
-.tut-fig { position: absolute; left: 50%; bottom: -6px; height: 118%; transform: translateX(-50%); opacity: .95; filter: drop-shadow(0 0 14px color-mix(in srgb, var(--ag-a1, #4fd6b7) 35%, transparent)); }
-.tut-fig--nba { height: 112%; bottom: -4px; }
-.tut-chip {
-  position: absolute; display: flex; align-items: center; gap: 6px;
-  padding: 4px 6px 4px 9px; border-radius: 8px;
-  background: rgba(8,14,11,.88); border: 1.5px solid color-mix(in srgb, var(--ag-a1, #4fd6b7) 55%, transparent);
-  box-shadow: 0 6px 16px rgba(0,0,0,.45);
-  animation: tut-chip 2.8s ease-in-out infinite;
-}
-.tut-chip b { font-family: var(--ag-font, 'Bebas Neue', Impact, sans-serif); font-weight: 400; font-size: 14px; letter-spacing: 1.4px; color: var(--ag-text, #EEF8F1); }
-.tut-chip i { font-style: normal; font-family: var(--ag-display, 'Anton', Impact, sans-serif); font-size: 12px; min-width: 22px; text-align: center; padding: 1px 4px; border-radius: 5px; color: var(--ag-on, #07120a); background: var(--ag-grad, linear-gradient(135deg, #5EDBD8, #1fc98a)); }
-.tut-chip--0 { left: 8%;  top: 18%; }
-.tut-chip--1 { right: 7%; top: 30%; animation-delay: -.9s; }
-.tut-chip--2 { left: 12%; bottom: 14%; animation-delay: -1.8s; }
-
-.tut-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 86%; }
-.tut-pair-card {
-  display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px 6px 9px;
-  border-radius: 12px; border: 1.5px solid color-mix(in srgb, var(--ag-a1, #4fd6b7) 55%, transparent);
-  background: color-mix(in srgb, var(--ag-a1, #4fd6b7) 10%, rgba(5,8,6,.7)); color: var(--ag-a1, #4fd6b7);
-}
-.tut-pair-card--gold { border-color: rgba(212,175,55,.6); background: rgba(212,175,55,.1); color: var(--ag-gold-hi, #f2d675); }
-.tut-pair-card b { font-family: var(--ag-display, 'Anton', Impact, sans-serif); font-weight: 400; font-size: 19px; color: var(--ag-text, #EEF8F1); line-height: 1.1; margin-top: 2px; }
-.tut-pair-card small { font-family: var(--ag-font, 'Bebas Neue', Impact, sans-serif); font-size: 12.5px; letter-spacing: 1.6px; color: inherit; }
-
-.tut-icons { display: flex; gap: 10px; justify-content: center; padding: 0 10px; }
-.tut-icon-tile {
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
-  width: 92px; height: 84px; border-radius: 12px;
-  border: 1.5px solid color-mix(in srgb, var(--ag-a1, #4fd6b7) 50%, transparent);
-  background: color-mix(in srgb, var(--ag-a1, #4fd6b7) 9%, rgba(5,8,6,.7)); color: var(--ag-a1, #4fd6b7);
-}
-.tut-icon-tile b { font-family: var(--ag-font, 'Bebas Neue', Impact, sans-serif); font-weight: 400; font-size: 14px; letter-spacing: 1.6px; color: var(--ag-text, #EEF8F1); }
-.tut-icon-tile--gold { border-color: rgba(212,175,55,.55); background: rgba(212,175,55,.09); color: var(--ag-gold-hi, #f2d675); }
-.tut-icon-tile--purple { border-color: rgba(167,139,250,.55); background: rgba(139,92,246,.12); color: #c4a8ff; }
-.tut-art--quick .tut-icon-tile { width: 120px; }
-
-/* ── Coach marks ─────────────────────────────────────────────────────────── */
+/* ── The prompt ──────────────────────────────────────────────────────────── */
 .tut-coach { position: fixed; inset: 0; z-index: 1350; pointer-events: none; font-family: var(--ag-body, 'Outfit', system-ui, sans-serif); }
-.tut-ring {
-  position: fixed; border-radius: 16px; pointer-events: none;
-  border: 2px solid var(--ag-a1, #4fd6b7);
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--ag-a1, #4fd6b7) 22%, transparent), 0 0 24px color-mix(in srgb, var(--ag-a1, #4fd6b7) 45%, transparent);
-  transition: top .18s ease, left .18s ease, width .18s ease, height .18s ease;
-  animation: tut-ring 1.8s ease-in-out infinite;
-}
-.tut-ring--dim { box-shadow: 0 0 0 4px color-mix(in srgb, var(--ag-a1, #4fd6b7) 22%, transparent), 0 0 24px color-mix(in srgb, var(--ag-a1, #4fd6b7) 45%, transparent), 0 0 0 200vmax rgba(2,5,4,.42); }
-
 .tut-bubble {
   position: fixed; pointer-events: auto;
   padding: 12px 14px 12px; border-radius: 16px;
   border: 1.5px solid color-mix(in srgb, var(--ag-a1, #4fd6b7) 60%, transparent);
-  background: linear-gradient(160deg, color-mix(in srgb, var(--ag-a1, #4fd6b7) 14%, transparent), transparent 60%), rgba(8,13,11,.96);
+  background: linear-gradient(160deg, color-mix(in srgb, var(--ag-a1, #4fd6b7) 14%, transparent), transparent 60%), rgb(8, 13, 11);
   box-shadow: 0 14px 40px rgba(0,0,0,.55);
   color: var(--ag-text, #EEF8F1);
-  animation: tut-pop .22s cubic-bezier(.2,.9,.3,1.2) both;
+  animation: tut-pop .2s ease-out both;
 }
 .tut-bubble--dock {
   left: 50%; transform: translateX(-50%); width: min(360px, calc(100vw - 24px));
@@ -193,44 +60,34 @@ html.is-app .tut-bubble--dock { bottom: calc(var(--app-bottom, 90px) + 8px); }
 .tut-skip--sm { font-size: 12px; }
 .tut-bubble-title { font-family: var(--ag-display, 'Anton', Impact, sans-serif); font-size: 22px; line-height: 1.05; margin-top: 4px; text-transform: uppercase; }
 .tut-bubble-text { margin: 5px 0 0; font-size: 14px; line-height: 1.4; color: rgba(238,248,241,.86); }
-.tut-bubble-actions { display: flex; justify-content: flex-end; margin-top: 9px; }
+.tut-bubble-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
 .tut-bubble-ok {
-  min-height: 34px; padding: 0 14px; border-radius: 10px; cursor: pointer;
+  min-height: 38px; padding: 0 14px; border-radius: 10px; cursor: pointer;
   border: 1.5px solid var(--ag-line-hi, rgba(149,213,178,.3)); background: rgba(255,255,255,.04);
   font-family: var(--ag-font, 'Bebas Neue', Impact, sans-serif); font-size: 16px; letter-spacing: 2px; color: var(--ag-text, #EEF8F1);
 }
-.tut-bubble-btn { min-height: 40px; font-size: 17px; padding: 0 20px; cursor: pointer; }
+.tut-bubble-back { margin-right: auto; }
+.tut-bubble-btn { min-height: 40px; font-size: 17px; letter-spacing: 1.8px; padding: 0 18px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+.tut-bubble--tour .tut-bubble-btn::after { display: none; }
 
 .tut-skip--pill {
   position: fixed; left: 50%; transform: translateX(-50%); pointer-events: auto;
   bottom: calc(max(12px, env(safe-area-inset-bottom, 0px)) + var(--web-rail, 0px) + 8px);
   margin: 0; padding: 7px 14px; border-radius: 99px;
-  background: rgba(8,13,11,.86); border: 1px solid var(--ag-line-hi, rgba(149,213,178,.3));
+  background: rgba(8,13,11,.94); border: 1px solid var(--ag-line-hi, rgba(149,213,178,.3));
   text-decoration: none; font-size: 12px; white-space: nowrap;
-  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
 }
 html.is-app .tut-skip--pill { bottom: calc(var(--app-bottom, 90px) + 6px); }
 
 /* basketball: the orange accent comes through --ag-a1 already; warm the panels */
-html.is-bucket .tut-bubble { background: linear-gradient(160deg, color-mix(in srgb, var(--ag-a1, #f97316) 14%, transparent), transparent 60%), rgba(16,10,6,.96); }
+html.is-bucket .tut-bubble { background: linear-gradient(160deg, color-mix(in srgb, var(--ag-a1, #f97316) 14%, transparent), transparent 60%), rgb(16,10,6); }
 html.is-bucket .tut-bubble-arrow { background: rgb(24,16,10); }
 html.is-bucket .tut-bubble--above .tut-bubble-arrow { background: rgb(16,10,6); }
 
-@keyframes tut-fade  { from { opacity: 0; } }
-@keyframes tut-zoom  { from { opacity: 0; transform: translateY(10px) scale(.96); } }
-@keyframes tut-slide { from { opacity: 0; transform: translateX(calc(var(--dir, 1) * 22px)); } }
-@keyframes tut-pop   { from { opacity: 0; transform: translateY(6px) scale(.97); } }
-@keyframes tut-chip  { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
-@keyframes tut-ring  { 0%, 100% { border-color: var(--ag-a1, #4fd6b7); } 50% { border-color: color-mix(in srgb, var(--ag-a1, #4fd6b7) 45%, transparent); } }
+@keyframes tut-fade { from { opacity: 0; } }
+@keyframes tut-pop  { from { opacity: 0; transform: translateY(6px); } }
 
 @media (prefers-reduced-motion: reduce) {
-  .tut-overlay, .tut-modal, .tut-card, .tut-chip, .tut-ring, .tut-bubble, .tut-next::after, .tut-bubble-btn::after { animation: none !important; }
-  .tut-ring, .tut-dot::before { transition: none; }
-}
-
-@media (max-height: 700px) {
-  .tut-modal { min-height: 0; }
-  .tut-art { height: 104px; }
-  .tut-modal { gap: 9px; }
-  .tut-steps { gap: 5px; }
+  .tut-bubble, .tut-dim { animation: none !important; }
+  .tut-hole { transition: none; }
 }

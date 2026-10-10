@@ -549,7 +549,10 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
       )}
       {!isBucket && !modelOnly && (
         <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', zIndex: -1, pointerEvents: 'none' }}>
-          <div style={{ position: 'absolute', inset: '-20px', backgroundImage: "url('/footballbackground.webp')", backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(4px) brightness(0.7)' }} />
+          {/* the new UI: the blur and the dimming are baked into the image (a live filter repainted 900px every scroll frame) */}
+          {IS_APP || APP_LOOK
+            ? <div style={{ position: 'absolute', inset: '-20px', backgroundImage: "url('/footballbackground-blur.webp')", backgroundSize: 'cover', backgroundPosition: 'center' }} />
+            : <div style={{ position: 'absolute', inset: '-20px', backgroundImage: "url('/footballbackground.webp')", backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(4px) brightness(0.7)' }} />}
         </div>
       )}
       {!modelOnly && <div className="category-pills">

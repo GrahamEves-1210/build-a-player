@@ -158,7 +158,7 @@ html.is-app .splash-features { display: none !important; }
 .ag-pop { animation: ag-rise .5s cubic-bezier(.2,.9,.25,1) both; animation-delay: var(--d, 0ms); }
 
 @keyframes ag-rise  { from { opacity: 0; transform: translateY(14px); } }
-@keyframes ag-sweep { 0%, 70% { left: -70%; } 100% { left: 130%; } }
+@keyframes ag-sweep { 0%, 70% { transform: translateX(0) skewX(-20deg); } 100% { transform: translateX(444%) skewX(-20deg); } }
 @keyframes ag-spin  { to { transform: rotate(360deg); } }
 @keyframes ag-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
 @keyframes ag-pulse { 0% { transform: scale(1); opacity: .6; } 100% { transform: scale(1.32); opacity: 0; } }
@@ -3836,3 +3836,21 @@ html.bap-reduce-motion .mg-clock span { animation-duration: var(--mg-ms) !import
 .mg-secs { font-family: var(--ag-display); font-size: 30px; line-height: 1; color: var(--ag-text); font-variant-numeric: tabular-nums; }
 /* the games keep a playable size on a wide screen */
 .mg { width: 100%; max-width: 560px; margin-inline: auto; }
+
+/* ═══ Performance: every looping effect is transform / opacity only ═════════ */
+/* the live dot: a ring that scales and fades instead of an animated box-shadow */
+.ag-live-dot { animation: none; box-shadow: none; }
+.ag-live-dot::after { content: ''; position: absolute; inset: 0; border-radius: 50%; background: rgba(255,77,77,.55); animation: ag-ring-out 1.8s ease-out infinite; will-change: transform, opacity; }
+@keyframes ag-ring-out { from { transform: scale(1); opacity: .9; } to { transform: scale(2.6); opacity: 0; } }
+.ol-link.is-live i { animation: none; }
+/* the map's next city: a steady glow (an SVG pulse repaints the whole map every frame) */
+.ag-map-pin.is-next { animation: none; }
+/* the stage beam and the sweeps get their own layers */
+.ag-stage-beam { will-change: opacity; }
+.ag-btn::after, html:is(.is-app, .app-look) :is(.spin-btn, .sim-btn, .simp-cta)::after { will-change: transform; }
+/* the stage beam holds still (its pulse repainted a clipped gradient every frame) */
+.ag-stage-beam { animation: none; opacity: .8; will-change: auto; }
+/* the light sweep stays on the big calls to action only (Spin, Sim, the season) */
+.ag-btn::after { animation: none; display: none; }
+/* the website's dock: a near-solid panel instead of a live blur (re-blurring the page under it on every scroll frame) */
+html.app-look:not(.is-app) .ag-dock { backdrop-filter: none; -webkit-backdrop-filter: none; background: rgba(10, 14, 12, .96); }

@@ -1,12 +1,12 @@
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { createRoot } from 'react-dom/client'
 import { IS_APP, APP_LOOK } from '../../lib/platform'
-import { W as MAP_W, H as MAP_H, OUTLINE_PATH } from '../../lib/usMap'
-import { IconArrow, IconBolt, IconCrown, IconCoin, IconClipboard, IconCalendar, IconBag, IconFlame } from './icons'
+import { IconArrow } from './icons'
 import './tutorial.css'
 
 // First-run tutorial for the new UI (app + APP_LOOK website).
-//   1. Intro: a tap-through popup over Home — the basics, then one card per mode.
+//   1. Tour: Home itself, one section at a time. The rest of the screen dims,
+//      the section is cut out of the dim, and a prompt explains it.
 //   2. Guided game: a Current QB build (Guard on basketball) with coach marks
 //      that read the page (spin button, attribute chips, sim button, the season)
 //      instead of hooking into the game components.
@@ -22,8 +22,9 @@ const NEW_UI = IS_APP || APP_LOOK
 const isDone = () => { try { return localStorage.getItem(TUTORIAL_KEY) === '1' } catch { return true } }
 const markDone = () => { try { localStorage.setItem(TUTORIAL_KEY, '1') } catch {} }
 const sportNow = () => (document.documentElement.classList.contains('is-bucket') || window.location.pathname.startsWith('/bucket') ? 'bucket' : 'nfl')
+const reduced = () => document.documentElement.classList.contains('bap-reduce-motion') || window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
-// ── tiny store: { phase: 'idle' | 'intro' | 'coach', sport, run } ──────────────
+// ── tiny store: { phase: 'idle' | 'tour' | 'coach', sport, run } ───────────────
 let state = { phase: 'idle', sport: 'nfl', run: 0 }
 const subs = new Set()
 const setState = patch => { state = { ...state, ...patch }; subs.forEach(f => f()) }
@@ -32,7 +33,7 @@ const getState = () => state
 
 let host = null          // the tutorial's own React root
 let homeLink = null      // set while Home is mounted: () => starts the guided build
-let autoShown = false    // the first-run popup shows once per page load at most
+let autoShown = false    // the first-run tour shows once per page load at most
 
 function ensureHost() {
   if (host || typeof document === 'undefined') return
@@ -43,18 +44,20 @@ function ensureHost() {
   host.render(<TutorialHost />)
 }
 
-function openIntro() {
+function openTour() {
   if (!NEW_UI) return
   ensureHost()
-  setState({ phase: 'intro', sport: sportNow(), run: state.run + 1 })
+  // replayed away from Home: go Home first, the tour waits for it
+  if (!document.querySelector('.ag-home')) window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'home' }))
+  setState({ phase: 'tour', sport: sportNow(), run: state.run + 1 })
 }
 
-/** Replay the tutorial from anywhere (e.g. a "Replay tutorial" row in settings). */
+/** Replay the tutorial from anywhere (e.g. the "Replay the tutorial" row in Settings). */
 export function startTutorial() {
   window.dispatchEvent(new CustomEvent(TUTORIAL_EVENT))
 }
 
-if (typeof window !== 'undefined') window.addEventListener(TUTORIAL_EVENT, openIntro)
+if (typeof window !== 'undefined') window.addEventListener(TUTORIAL_EVENT, openTour)
 
 function finish() {
   markDone()
@@ -64,7 +67,6 @@ function finish() {
 function launchGuided() {
   setState({ phase: 'coach' })
   if (homeLink) { homeLink(); return }
-  // replayed away from Home: go Home, then start once it has mounted
   window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'home' }))
   let n = 0
   const t = setInterval(() => {
@@ -87,8 +89,8 @@ export default function Tutorial({ onGuided }) {
     const t = setTimeout(() => {
       if (autoShown || isDone() || state.phase !== 'idle') return
       autoShown = true
-      openIntro()
-    }, 700)
+      openTour()
+    }, 900)
     return () => clearTimeout(t)
   }, [])
   return null
@@ -96,231 +98,12 @@ export default function Tutorial({ onGuided }) {
 
 function TutorialHost() {
   const s = useSyncExternalStore(subscribe, getState)
-  if (s.phase === 'intro') return <Intro key={s.run} sport={s.sport} />
+  if (s.phase === 'tour') return <Tour key={s.run} sport={s.sport} />
   if (s.phase === 'coach') return <Coach key={s.run} sport={s.sport} />
   return null
 }
 
-// ── Card art ──────────────────────────────────────────────────────────────────
-function BasicsArt({ sport }) {
-  const nba = sport === 'bucket'
-  const chips = nba
-    ? [['3PT', 'A'], ['HANDLES', 'A-'], ['DUNK', 'B+']]
-    : [['ARM', 'A'], ['SPEED', 'A-'], ['IQ', 'B+']]
-  return (
-    <div className="tut-basics-art" aria-hidden="true">
-      <img src={nba ? '/basketballsilhouette.png' : '/qb-silhouette.webp'} alt="" draggable={false} className={`tut-fig${nba ? ' tut-fig--nba' : ''}`} />
-      {chips.map(([k, g], i) => (
-        <span key={k} className={`tut-chip tut-chip--${i}`}><b>{k}</b><i>{g}</i></span>
-      ))}
-    </div>
-  )
-}
-function PairArt({ sport }) {
-  return (
-    <div className="tut-pair" aria-hidden="true">
-      <span className="tut-pair-card"><IconBolt size={34} /><b>CURRENT</b><small>{sport === 'bucket' ? 'Today’s NBA' : 'Today’s NFL'}</small></span>
-      <span className="tut-pair-card tut-pair-card--gold"><IconCrown size={34} /><b>ALL-TIME</b><small>The legends</small></span>
-    </div>
-  )
-}
-function CareerArt() {
-  return (
-    <svg className="tut-svg" viewBox="0 0 220 110" aria-hidden="true" preserveAspectRatio="xMidYMid meet">
-      <defs><linearGradient id="tut-crg" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stopColor="#f5dc8a" stopOpacity=".15" /><stop offset="1" stopColor="#f5dc8a" stopOpacity=".9" /></linearGradient></defs>
-      <ellipse cx="110" cy="122" rx="120" ry="42" fill="none" stroke="rgba(255,255,255,.16)" strokeWidth="2" />
-      <ellipse cx="110" cy="122" rx="92" ry="30" fill="none" stroke="rgba(255,255,255,.1)" strokeWidth="2" />
-      <polyline points="20,94 60,82 95,86 130,58 165,46 200,16" fill="none" stroke="url(#tut-crg)" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
-      <circle cx="200" cy="16" r="6" fill="#f5dc8a" />
-      <circle cx="130" cy="58" r="3.5" fill="rgba(245,220,138,.75)" /><circle cx="60" cy="82" r="3.5" fill="rgba(245,220,138,.55)" />
-    </svg>
-  )
-}
-function CompeteArt() {
-  const bars = [[0, 42], [1, 64], [2, 34], [3, 26], [4, 18]]
-  return (
-    <svg className="tut-svg" viewBox="0 0 150 80" aria-hidden="true" preserveAspectRatio="xMidYMax meet">
-      {bars.map(([i, h]) => <rect key={i} x={8 + i * 28} y={76 - h} width={22} height={h} rx={5} className={`ag-pool-bar${i === 1 ? ' is-first' : ''}`} />)}
-      <path d="M47 6 l2.6 5.3 5.9.9-4.3 4.1 1 5.8L47 19.4 41.8 22l1-5.8-4.3-4.1 5.9-.9z" className="ag-pool-star" />
-    </svg>
-  )
-}
-function TakeoverArt() {
-  return (
-    <svg className="tut-svg" viewBox={`0 0 ${MAP_W} ${MAP_H}`} aria-hidden="true" preserveAspectRatio="xMidYMid meet">
-      <path d={OUTLINE_PATH} className="ag-map-land" clipRule="evenodd" />
-      <path d="M190 220 L330 260 L470 190 L620 300 L760 240" className="ag-map-route" />
-      {[[190, 220], [470, 190], [760, 240]].map(([x, y], i) => <circle key={i} cx={x} cy={y} r={i === 2 ? 16 : 11} className={`ag-map-pin${i === 2 ? ' is-next' : ''}`} />)}
-    </svg>
-  )
-}
-function CourtArt() {
-  return (
-    <svg className="tut-svg tut-svg--court" viewBox="0 0 220 110" aria-hidden="true" preserveAspectRatio="xMidYMid meet">
-      <g fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-        <rect x="20" y="8" width="180" height="94" rx="3" opacity=".5" />
-        <line x1="110" y1="8" x2="110" y2="102" opacity=".5" />
-        <circle cx="110" cy="55" r="16" opacity=".6" />
-        <rect x="20" y="33" width="38" height="44" opacity=".7" /><rect x="162" y="33" width="38" height="44" opacity=".7" />
-        <circle cx="30" cy="55" r="4.5" /><circle cx="190" cy="55" r="4.5" />
-      </g>
-      <text x="74" y="60" className="tut-court-txt">3v3</text><text x="124" y="60" className="tut-court-txt">1v1</text>
-    </svg>
-  )
-}
-function IconsArt({ items }) {
-  return (
-    <div className="tut-icons" aria-hidden="true">
-      {items.map(([Icon, label, tone], i) => (
-        <span key={i} className={`tut-icon-tile${tone ? ` tut-icon-tile--${tone}` : ''}`}><Icon size={30} /><b>{label}</b></span>
-      ))}
-    </div>
-  )
-}
-
-// ── Cards: the basics, then the modes that are on Home ────────────────────────
-function cardsFor(sport) {
-  const nba = sport === 'bucket'
-  const league = nba ? 'NBA' : 'NFL'
-  const cards = [
-    {
-      id: 'basics', eyebrow: 'HOW IT WORKS', title: nba ? 'BUILD-A-BUCKET' : 'BUILD-A-PLAYER', art: <BasicsArt sport={sport} />,
-      steps: [
-        ['SPIN', `Land a random team, then a real ${league} player.`],
-        ['DRAFT', 'Drag his best trait onto your player. One slot per player.'],
-        ['SIM', 'Fill every slot, then play a full season.'],
-        ['EARN', 'Better build, better season: wins, rings, awards.'],
-      ],
-      foot: 'Every game earns XP and coins. Spend coins in the Shop on name colours, effects, plates and avatars that everyone sees next to your name.',
-    },
-    {
-      id: 'classic', eyebrow: nba ? 'GUARD · BIG' : 'QB · RB · WR · TE · DB', title: 'CURRENT & ALL-TIME', art: <PairArt sport={sport} />,
-      body: nba
-        ? 'The main game. Pick Guard (PG · SG · SF) or Big (PF · C), then draft from today’s rosters in Current, or from the greats in All-Time.'
-        : 'The main game. Pick a position, then draft from this season’s rosters in Current, or from the legends in All-Time.',
-    },
-  ]
-  if (!nba) cards.push({
-    id: 'career', eyebrow: 'MULTI-SEASON · SAVES AS YOU GO', title: 'CAREER', art: <CareerArt />, tone: 'gold',
-    body: 'One player, a whole career. Run the combine, get drafted, play season after season and sort out contracts. Your legacy is on the line.',
-  })
-  cards.push({
-    id: 'compete', eyebrow: 'ONLINE · 5-PLAYER POOLS', title: 'COMPETE', art: <CompeteArt />,
-    body: 'You and four other players get the exact same spins. Highest OVR takes the pool. Win pools to climb the ranks.',
-  })
-  if (nba) cards.push({
-    id: 'blacktop', eyebrow: 'ONLINE · 3V3 · 1V1', title: 'BLACKTOP', art: <CourtArt />,
-    body: 'Live games against real players. Join a 3v3 lobby and build with your squad, or go one on one.',
-  })
-  cards.push({
-    id: 'takeover', eyebrow: 'ROAD MODE · 12 CITIES', title: 'TAKEOVER', art: <TakeoverArt />, tone: 'gold',
-    body: 'Cross the map solo or with a friend. Every city has a better player waiting. Beat him and steal his game.',
-  })
-  cards.push({
-    id: 'quick', eyebrow: 'QUICK GAMES', title: nba ? 'SALARY CAP' : 'SALARY CAP & DEPTH CHART', tone: 'purple',
-    art: <IconsArt items={nba ? [[IconCoin, 'SALARY CAP', 'purple']] : [[IconCoin, 'SALARY CAP', 'purple'], [IconClipboard, 'DEPTH CHART', 'gold']]} />,
-    body: nba
-      ? 'A new puzzle every day: build the best player you can without going over the budget.'
-      : 'Salary Cap is a daily puzzle: build a QB without going over the budget. The Depth Chart: sort the stars by one stat.',
-  })
-  cards.push({
-    id: 'daily', eyebrow: 'EVERY DAY', title: 'DAILY & SHOP',
-    art: <IconsArt items={[[IconCalendar, 'DAILY'], [IconFlame, 'STREAK', 'gold'], [IconBag, 'SHOP']]} />,
-    body: 'The Daily tab has a challenge, missions and a streak to keep alive. They pay coins, and the Shop is where you spend them.',
-  })
-  return cards
-}
-
-// ── Intro popup ───────────────────────────────────────────────────────────────
-const FOCUSABLE = 'button:not([disabled]), [href], [tabindex]:not([tabindex="-1"])'
-
-function Intro({ sport }) {
-  const cards = cardsFor(sport)
-  const [i, setI] = useState(0)
-  const [dir, setDir] = useState(1)
-  const modal = useRef(null)
-  const nextBtn = useRef(null)
-  const last = i === cards.length - 1
-  const card = cards[i]
-
-  const go = to => { if (to < 0 || to >= cards.length) return; setDir(to > i ? 1 : -1); setI(to) }
-  const skip = () => finish()
-  const next = () => (last ? launchGuided() : go(i + 1))
-
-  useEffect(() => {
-    const prev = document.activeElement
-    nextBtn.current?.focus({ preventScroll: true })
-    return () => { if (prev && prev.focus && document.contains(prev)) prev.focus({ preventScroll: true }) }
-  }, [])
-
-  const onKey = e => {
-    if (e.key === 'Escape') { e.preventDefault(); skip(); return }
-    if (e.key === 'ArrowRight') { e.preventDefault(); go(i + 1); return }
-    if (e.key === 'ArrowLeft') { e.preventDefault(); go(i - 1); return }
-    if (e.key !== 'Tab') return
-    const els = [...(modal.current?.querySelectorAll(FOCUSABLE) ?? [])]
-    if (!els.length) return
-    const first = els[0], end = els[els.length - 1]
-    if (e.shiftKey && (document.activeElement === first || !modal.current.contains(document.activeElement))) { e.preventDefault(); end.focus() }
-    else if (!e.shiftKey && document.activeElement === end) { e.preventDefault(); first.focus() }
-  }
-
-  // swipe between cards
-  const touch = useRef(null)
-  const onDown = e => { touch.current = { x: e.clientX, y: e.clientY } }
-  const onUp = e => {
-    const t = touch.current; touch.current = null
-    if (!t) return
-    const dx = e.clientX - t.x, dy = e.clientY - t.y
-    if (Math.abs(dx) > 48 && Math.abs(dx) > Math.abs(dy) * 1.4) go(i + (dx < 0 ? 1 : -1))
-  }
-
-  return (
-    <div className="tut-overlay" onKeyDown={onKey}>
-      <div className={`tut-modal tut-modal--${sport}`} ref={modal} role="dialog" aria-modal="true" aria-labelledby="tut-title" aria-describedby="tut-desc">
-        <div className="tut-top">
-          <span className="tut-count" aria-live="polite">{i + 1} / {cards.length}</span>
-          <button type="button" className="tut-skip" onClick={skip} aria-label="Skip tutorial">Skip tutorial</button>
-        </div>
-
-        <div className={`tut-card tut-card--${card.tone ?? 'mint'}`} key={card.id} style={{ '--dir': dir }} onPointerDown={onDown} onPointerUp={onUp} onPointerCancel={() => { touch.current = null }}>
-          <div className={`tut-art tut-art--${card.id}`}>{card.art}</div>
-          <div className="tut-copy">
-          <span className="tut-eyebrow">{card.eyebrow}</span>
-          <h2 className="tut-title" id="tut-title">{card.title}</h2>
-          <div id="tut-desc">
-            {card.steps ? (
-              <ol className="tut-steps">
-                {card.steps.map(([k, txt], n) => (
-                  <li key={k}><span className="tut-step-n">{n + 1}</span><span className="tut-step-txt"><b>{k}</b> {txt}</span></li>
-                ))}
-              </ol>
-            ) : <p className="tut-body">{card.body}</p>}
-            {card.foot && <p className="tut-foot"><IconCoin size={15} /> <span>{card.foot}</span></p>}
-          </div>
-          </div>
-        </div>
-
-        <div className="tut-dots" role="tablist" aria-label="Tutorial cards">
-          {cards.map((c, n) => (
-            <button key={c.id} type="button" role="tab" aria-selected={n === i} aria-label={`Card ${n + 1}: ${c.title}`}
-              className={`tut-dot${n === i ? ' is-on' : ''}`} onClick={() => go(n)} tabIndex={n === i ? 0 : -1} />
-          ))}
-        </div>
-
-        <div className="tut-nav">
-          <button type="button" className="tut-back" onClick={() => go(i - 1)} disabled={i === 0} aria-label="Previous card">BACK</button>
-          <button type="button" ref={nextBtn} className={`ag-btn tut-next${last ? ' tut-next--go' : ''}`} onClick={next}
-            aria-label={last ? 'Play a guided game' : 'Next card'}>
-            {last ? 'PLAY A GUIDED GAME' : 'NEXT'} <IconArrow size={17} />
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ── Coach marks for the guided game ───────────────────────────────────────────
+// ── Finding things on the page ────────────────────────────────────────────────
 const shown = el => {
   if (!el || !el.getClientRects().length) return null
   const r = el.getBoundingClientRect()
@@ -333,37 +116,168 @@ const firstShown = sel => {
   for (const el of document.querySelectorAll(sel)) { const r = shown(el); if (r) return { el, r } }
   return null
 }
-// The usable bottom of the screen: above the website's ad rail, the phone tab
-// bar (SPIN / BUILD) and the app's dock
+// every match, as one rectangle (the quick-game tiles side by side)
+const unionShown = sel => {
+  const hits = [...document.querySelectorAll(sel)].map(el => ({ el, r: shown(el) })).filter(x => x.r)
+  if (!hits.length) return null
+  const top = Math.min(...hits.map(h => h.r.top)), left = Math.min(...hits.map(h => h.r.left))
+  const right = Math.max(...hits.map(h => h.r.right)), bottom = Math.max(...hits.map(h => h.r.bottom))
+  return { el: hits[0].el, r: { top, left, right, bottom, width: right - left, height: bottom - top } }
+}
+const findTarget = step => {
+  for (const sel of step.sel) { const hit = step.all ? unionShown(sel) : firstShown(sel); if (hit) return hit }
+  return null
+}
+// The usable bottom of the screen: above the website's ad rail and the phone tab bar
 function floorY() {
   const vh = window.innerHeight
   let y = vh - (parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--web-rail')) || 0)
-  for (const sel of ['.mobile-tab-bar', '.ag-dock']) {
-    const r = shown(document.querySelector(sel))
-    if (r && r.top > vh * 0.5) y = Math.min(y, r.top)
-  }
+  const bar = shown(document.querySelector('.mobile-tab-bar'))
+  if (bar && bar.top > vh * 0.5) y = Math.min(y, bar.top)
   return y
 }
+const toRect = r => (r ? { top: r.top, left: r.left, width: r.width, height: r.height, bottom: r.bottom, right: r.right } : null)
+function sameRect(a, b) {
+  if (!a || !b) return a === b
+  return Math.abs(a.top - b.top) < 1 && Math.abs(a.left - b.left) < 1 && Math.abs(a.width - b.width) < 1 && Math.abs(a.height - b.height) < 1
+}
+// a prompt next to a target: its preferred side when it fits, else the side with
+// more room, kept on screen above the usable bottom
+function place(r, floor, h, preferAbove = false) {
+  const vw = window.innerWidth
+  const w = Math.min(340, vw - 24)
+  const left = Math.max(12, Math.min(vw - w - 12, r.left + r.width / 2 - w / 2))
+  const fitsBelow = r.bottom + 18 + h <= floor - 8
+  const fitsAbove = r.top - 18 - h >= 8
+  const below = preferAbove ? !fitsAbove && (fitsBelow || floor - r.bottom > r.top) : fitsBelow || (!fitsAbove && floor - r.bottom > r.top)
+  const top = below ? r.bottom + 18 : r.top - 18 - h
+  return { pos: { left, top: Math.max(8, Math.min(floor - h - 8, top)), width: w }, arrow: Math.max(22, Math.min(w - 22, r.left + r.width / 2 - left)), below }
+}
+// follows a target as the page scrolls or resizes (polls lightly; no per-frame work)
+function useTracked(read, deps) {
+  const [view, setView] = useState({ hit: null, r: null, floor: window.innerHeight })
+  const readRef = useRef(read); readRef.current = read
+  useEffect(() => {
+    let raf = 0, alive = true
+    const tick = () => {
+      if (!alive) return
+      const out = readRef.current()
+      const r = toRect(out?.hit?.r)   // measured fresh on every read
+      const floor = floorY()
+      setView(v => (v.key === out?.key && v.floor === floor && sameRect(v.r, r) ? v : { ...out, r, floor }))
+    }
+    const soon = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(tick) }
+    const iv = setInterval(tick, 220)
+    window.addEventListener('scroll', soon, true)
+    window.addEventListener('resize', soon)
+    tick()
+    return () => { alive = false; clearInterval(iv); cancelAnimationFrame(raf); window.removeEventListener('scroll', soon, true); window.removeEventListener('resize', soon) }
+  }, deps) // eslint-disable-line react-hooks/exhaustive-deps
+  return view
+}
 
+// ── The tour: Home, a section at a time ───────────────────────────────────────
+function tourSteps(sport) {
+  const nba = sport === 'bucket'
+  const league = nba ? 'NBA' : 'NFL'
+  return [
+    { id: 'sport', sel: ['.ag-sport'], title: 'Two games in one', text: 'Football and basketball. Switch here any time: each has its own modes, leaderboards and records.' },
+    { id: 'pos', sel: ['.ag-positions'], title: 'Pick a position', text: nba ? 'Guard (PG · SG · SF) or Big (PF · C). Each one has its own traits.' : 'QB, RB, WR, TE or DB. Each position has its own traits and its own leaderboard.' },
+    { id: 'modes', sel: ['.ag-modes'], title: 'The main game', text: `Spin a team, then a real ${league} player, and tap the trait you want from him. Fill every slot, then play a season. Current uses today's rosters, All-Time the legends.` },
+    { id: 'career', sel: ['.ag-crmode'], title: 'Career', text: 'One player, a whole career: the combine, the draft, season after season, contracts and a legacy.' },
+    { id: 'compete', sel: ['.ag-compete'], title: 'Compete', text: 'Online pools of five. Everyone gets the same spins, and the best build takes the pool.' },
+    { id: 'blacktop', sel: ['.ag-blacktop'], title: 'Blacktop', text: 'Live games against real players: 3v3 squads, or one on one.' },
+    { id: 'takeover', sel: ['.ag-takeover'], title: 'Takeover', text: 'Cross the map, solo or with a friend. Every city has a better player to beat.' },
+    { id: 'quick', sel: ['.ag-mini'], all: true, title: 'Quick games', text: nba ? 'Salary Cap: a new puzzle every day. The best player you can build on a budget.' : 'Salary Cap is a daily puzzle: the best QB you can build on a budget. The Depth Chart: sort the stars by one stat.' },
+    { id: 'coins', sel: ['.ag-dock', '.ag-hud-coins'], title: 'Coins and looks', text: 'Every game pays XP and coins, and Daily missions pay more. The Shop turns coins into name colors, effects and avatars everyone sees.' },
+    { id: 'go', sel: ['.ag-mode'], title: 'Let\'s play one', text: 'A guided Current game: spin, draft, play the season. About two minutes.', last: true },
+  ]
+}
+
+function Tour({ sport }) {
+  const [steps, setSteps] = useState(null)
+  const [i, setI] = useState(0)
+  const bubble = useRef(null)
+  const [bh, setBh] = useState(170)
+  const scrolledFor = useRef(-1)
+  // wait for Home, then keep the steps whose section is on it
+  useEffect(() => {
+    let n = 0
+    const t = setInterval(() => {
+      if (document.querySelector('.ag-home')) {
+        clearInterval(t)
+        const all = tourSteps(sport)
+        setSteps(all.filter(s => findTarget(s)))
+      } else if (++n > 40) { clearInterval(t); finish() }
+    }, 100)
+    return () => clearInterval(t)
+  }, [sport])
+  const step = steps?.[i]
+  const view = useTracked(() => (step ? { key: step.id, hit: findTarget(step) } : null), [step?.id])
+  useLayoutEffect(() => { const h = bubble.current?.offsetHeight; if (h && Math.abs(h - bh) > 1) setBh(h) })
+  // bring each section to the middle of the screen
+  useEffect(() => {
+    if (!step || scrolledFor.current === i) return
+    scrolledFor.current = i
+    const hit = findTarget(step)
+    hit?.el.scrollIntoView({ block: 'center', behavior: reduced() ? 'auto' : 'smooth' })
+  }, [i, step])
+  const next = () => (step?.last ? launchGuided() : setI(k => Math.min((steps?.length ?? 1) - 1, k + 1)))
+  const back = () => setI(k => Math.max(0, k - 1))
+  useEffect(() => {
+    const onKey = e => {
+      if (e.key === 'Escape') { e.preventDefault(); finish() }
+      else if (e.key === 'ArrowRight' || e.key === 'Enter') { e.preventDefault(); next() }
+      else if (e.key === 'ArrowLeft') { e.preventDefault(); back() }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  })
+  if (!steps?.length || !step) return <div className="tut-tour"><div className="tut-dim" /></div>
+  const r = view.key === step.id ? view.r : null
+  const p = r ? place(r, view.floor, bh) : null
+  const pad = 8
+  return (
+    <div className="tut-tour" role="dialog" aria-modal="true" aria-label={`Tutorial: ${step.title}`}>
+      {/* the page underneath stays put: a tap anywhere outside the prompt does nothing */}
+      <div className="tut-catch" />
+      {r
+        ? <div className="tut-hole" aria-hidden="true" style={{ transform: `translate(${r.left - pad}px, ${r.top - pad}px)`, width: r.width + pad * 2, height: r.height + pad * 2 }} />
+        : <div className="tut-dim" />}
+      <div ref={bubble} key={step.id} className={`tut-bubble tut-bubble--tour${p ? (p.below ? ' tut-bubble--below' : ' tut-bubble--above') : ' tut-bubble--dock'}`} style={p?.pos}>
+        {p && <span className="tut-bubble-arrow" style={{ left: p.arrow }} aria-hidden="true" />}
+        <div className="tut-bubble-head">
+          <span className="tut-bubble-step" aria-live="polite">{i + 1} / {steps.length}</span>
+          <button type="button" className="tut-skip tut-skip--sm" onClick={finish}>Skip tutorial</button>
+        </div>
+        <div className="tut-bubble-title">{step.title}</div>
+        <p className="tut-bubble-text">{step.text}</p>
+        <div className="tut-bubble-actions">
+          {i > 0 && <button type="button" className="tut-bubble-ok tut-bubble-back" onClick={back}>BACK</button>}
+          <button type="button" className="ag-btn tut-bubble-btn" onClick={next} autoFocus>{step.last ? 'PLAY A GUIDED GAME' : 'NEXT'} <IconArrow size={15} /></button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Coach marks for the guided game ───────────────────────────────────────────
 const COPY = sport => {
   const who = sport === 'bucket' ? 'NBA' : 'NFL'
   return {
-    spin: { n: 1, title: 'SPIN', text: `Spin for a random team, then a random ${who} player from it.`, dim: true },
-    pick: { n: 2, title: 'DRAFT A TRAIT', text: 'Tap the trait you want, or drag it onto your player. Each player fills one slot, so take his best.' },
-    more: { n: 2, title: 'KEEP GOING', text: 'Spin again for the next slot. Spin, pick, repeat until every slot is filled.' },
-    sim: { n: 3, title: 'SIM YOUR SEASON', text: 'Build complete. Hit this to play a full season.', dim: true },
-    team: { n: 3, title: 'PICK YOUR TEAM', text: 'Spin for a team or pick your own. That’s who you play the season for.', above: true },
-    season: { n: 4, title: 'THE SEASON', text: 'Your grades make your OVR, and your OVR runs the season. Tap through for the record, playoffs and awards, then build again and beat it.', end: true },
+    spin: { n: 1, title: 'Spin', text: `Spin for a random team, then a random ${who} player from it.`, dim: true },
+    pick: { n: 2, title: 'Take a trait', text: 'Tap the trait you want from this player. Each player fills one slot, so take his best.', dim: true },
+    more: { n: 2, title: 'Keep going', text: 'Spin again for the next slot. Spin, pick, repeat until every slot is filled.' },
+    sim: { n: 3, title: 'Play the season', text: 'Build complete. Tap this to play a full season.', dim: true },
+    team: { n: 3, title: 'Pick your team', text: 'Spin for a team or choose your own. That\'s who you play the season for.', above: true },
+    season: { n: 4, title: 'The season', text: 'Your grades make your OVR, and your OVR runs the season. Tap through for the record, playoffs and awards, then build again and beat it.', end: true },
   }
 }
 
 function readStep(m) {
   // the app's BUILD COMPLETE splash and the award reveal play out untouched
   if (firstShown('.ag-bc, .mvp-overlay')) return { step: 'quiet' }
-  if (document.querySelector('.simp-page')) {
-    m.seen = true
-    return { step: 'season', a: firstShown('.simp-page .simp-cta') }
-  }
+  if (document.querySelector('.simp-page')) { m.seen = true; return { step: 'season', a: firstShown('.simp-page .simp-cta') } }
   const tpm = firstShown('.tpm-card')
   if (tpm) { m.seen = true; return { step: 'team', a: firstShown('.tpm-mode-tabs') ?? tpm } }
   // Home (the app keeps a parked game mounted under it) or some other page
@@ -386,99 +300,58 @@ function readStep(m) {
 
 function Coach({ sport }) {
   const copy = COPY(sport)
-  const [view, setView] = useState({ step: 'wait', r: null })
   const [hidden, setHidden] = useState({})
   const bubble = useRef(null)
   const [bh, setBh] = useState(160)
   useLayoutEffect(() => { const h = bubble.current?.offsetHeight; if (h && Math.abs(h - bh) > 1) setBh(h) })
-  const mem = useRef({ t0: Date.now(), seen: false, chips: false, picks: 0, scrolled: {}, last: null })
-
-  useEffect(() => {
-    let raf = 0, alive = true
-    const tick = () => {
-      if (!alive) return
-      const m = mem.current
-      const { step, a } = readStep(m)
-      if (step === 'gone') { finish(); return }
+  const mem = useRef({ t0: Date.now(), seen: false, chips: false, picks: 0, scrolled: {} })
+  const view = useTracked(() => {
+    const m = mem.current
+    const { step, a } = readStep(m)
+    if (step === 'gone') { setTimeout(finish, 0); return { key: 'gone' } }
+    if (a && !m.scrolled[step]) {   // bring the target into view once per step
+      m.scrolled[step] = true
       const floor = floorY()
-      if (a && step !== m.last && !m.scrolled[step]) {   // bring the target into view once per step
-        m.scrolled[step] = true
-        if (a.r.top < 70 || a.r.bottom > floor - 30) {
-          a.el.scrollIntoView({ block: 'center', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })
-        }
-      }
-      m.last = step
-      const r = a ? a.el.getBoundingClientRect() : null
-      setView(v => (v.step === step && v.floor === floor && sameRect(v.r, r) ? v
-        : { step, floor, r: r && { top: r.top, left: r.left, width: r.width, height: r.height, bottom: r.bottom, right: r.right } }))
+      if (a.r.top < 70 || a.r.bottom > floor - 30) a.el.scrollIntoView({ block: 'center', behavior: reduced() ? 'auto' : 'smooth' })
     }
-    const iv = setInterval(tick, 200)
-    const soon = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(tick) }
-    window.addEventListener('scroll', soon, true)
-    window.addEventListener('resize', soon)
-    tick()
-    return () => { alive = false; clearInterval(iv); cancelAnimationFrame(raf); window.removeEventListener('scroll', soon, true); window.removeEventListener('resize', soon) }
+    return { key: step, hit: a }
   }, [])
-
   useEffect(() => {
     const onKey = e => { if (e.key === 'Escape') finish() }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [])
-
-  const c = copy[view.step]
-  const showBubble = c && !hidden[view.step]
+  const step = view.key
+  const c = copy[step]
+  const showBubble = c && !hidden[step]
   const r = view.r
-
-  // place the bubble next to the target, on its preferred side when it fits,
-  // else the side with more room, kept between the top and the usable bottom
-  let pos = null, arrow = null, below = true
-  if (showBubble && r) {
-    const vw = window.innerWidth
-    const floor = view.floor ?? window.innerHeight
-    const w = Math.min(330, vw - 24)
-    const h = bh
-    const left = Math.max(12, Math.min(vw - w - 12, r.left + r.width / 2 - w / 2))
-    const fitsBelow = r.bottom + 16 + h <= floor - 8
-    const fitsAbove = r.top - 16 - h >= 8
-    below = c.above ? !fitsAbove && (fitsBelow || floor - r.bottom > r.top) : fitsBelow || (!fitsAbove && floor - r.bottom > r.top)
-    const top = below ? r.bottom + 16 : r.top - 16 - h
-    pos = { left, top: Math.max(8, Math.min(floor - h - 8, top)), width: w }
-    arrow = Math.max(20, Math.min(w - 20, r.left + r.width / 2 - left))
-  } else if (showBubble) {
-    pos = { bottom: window.innerHeight - (view.floor ?? window.innerHeight) + 12 }
-  }
-
+  const p = showBubble && r ? place(r, view.floor ?? window.innerHeight, bh, c.above) : null
+  const pad = 6
   return (
     <div className="tut-coach" aria-live="polite">
       {showBubble && r && (
-        <div className={`tut-ring${c.dim ? ' tut-ring--dim' : ''}`} aria-hidden="true"
-          style={{ top: r.top - 6, left: r.left - 6, width: r.width + 12, height: r.height + 12 }} />
+        <div className={`tut-hole tut-hole--coach${c.dim ? '' : ' tut-hole--clear'}`} aria-hidden="true"
+          style={{ transform: `translate(${r.left - pad}px, ${r.top - pad}px)`, width: r.width + pad * 2, height: r.height + pad * 2 }} />
       )}
       {showBubble ? (
-        <div ref={bubble} className={`tut-bubble${r ? (below ? ' tut-bubble--below' : ' tut-bubble--above') : ' tut-bubble--dock'}`}
-          style={pos ?? undefined} role="dialog" aria-label={`Tutorial step ${c.n} of 4: ${c.title}`}>
-          {r && <span className="tut-bubble-arrow" style={{ left: arrow }} aria-hidden="true" />}
+        <div ref={bubble} className={`tut-bubble${p ? (p.below ? ' tut-bubble--below' : ' tut-bubble--above') : ' tut-bubble--dock'}`}
+          style={p?.pos} role="dialog" aria-label={`Tutorial step ${c.n} of 4: ${c.title}`}>
+          {p && <span className="tut-bubble-arrow" style={{ left: p.arrow }} aria-hidden="true" />}
           <div className="tut-bubble-head">
             <span className="tut-bubble-step">STEP {c.n} OF 4</span>
-            <button type="button" className="tut-skip tut-skip--sm" onClick={finish} aria-label="Skip tutorial">Skip tutorial</button>
+            <button type="button" className="tut-skip tut-skip--sm" onClick={finish}>Skip tutorial</button>
           </div>
           <div className="tut-bubble-title">{c.title}</div>
           <p className="tut-bubble-text">{c.text}</p>
           <div className="tut-bubble-actions">
             {c.end
-              ? <button type="button" className="ag-btn tut-bubble-btn" onClick={finish} aria-label="Finish tutorial">FINISH</button>
-              : <button type="button" className="tut-bubble-ok" onClick={() => setHidden(h => ({ ...h, [view.step]: true }))} aria-label="Got it, hide this tip">Got it</button>}
+              ? <button type="button" className="ag-btn tut-bubble-btn" onClick={finish}>FINISH</button>
+              : <button type="button" className="tut-bubble-ok" onClick={() => setHidden(h => ({ ...h, [step]: true }))} aria-label="Got it, hide this tip">Got it</button>}
           </div>
         </div>
-      ) : view.step !== 'gone' && (
-        <button type="button" className="tut-skip tut-skip--pill" onClick={finish} aria-label="Skip tutorial">Guided game · Skip tutorial</button>
+      ) : step !== 'gone' && (
+        <button type="button" className="tut-skip tut-skip--pill" onClick={finish}>Guided game · Skip tutorial</button>
       )}
     </div>
   )
-}
-
-function sameRect(a, b) {
-  if (!a || !b) return a === b
-  return Math.abs(a.top - b.top) < 1 && Math.abs(a.left - b.left) < 1 && Math.abs(a.width - b.width) < 1 && Math.abs(a.height - b.height) < 1
 }
