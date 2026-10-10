@@ -9,7 +9,8 @@ import { IS_APP } from './platform'
 
 const MUTE_KEY = 'bap_sound_off'
 // Sound is on by default on the website too (More → Sound turns it off)
-export const isMuted = () => { try { return localStorage.getItem(MUTE_KEY) === '1' } catch { return false } }
+// unset: the website starts quiet, the app starts with sound
+export const isMuted = () => { try { const v = localStorage.getItem(MUTE_KEY); return v == null ? !IS_APP : v === '1' } catch { return !IS_APP } }
 export const setMuted = on => { try { on ? localStorage.setItem(MUTE_KEY, '1') : localStorage.setItem(MUTE_KEY, '0') } catch {} }
 
 // ── Sound ────────────────────────────────────────────────────────────────────
@@ -33,16 +34,18 @@ const audio = () => {
 // the fallback until they've loaded.
 const SAMPLE_NAMES = ['tap', 'tap2', 'tick', 'back', 'open', 'close', 'swoosh', 'deny', 'pluck', 'pluck2', 'drop', 'confirm', 'toggle',
   'wood', 'woodl', 'punch', 'punchm', 'thud', 'plank', 'chip', 'chips', 'stack', 'stack2', 'handful', 'slide', 'slide2', 'cardout',
-  'hitS', 'hitS2', 'hitM', 'hitM2', 'hitL', 'hitL2', 'hitXL', 'hitXXL', 'sax', 'saxS', 'pizzi']
+  'hitS', 'hitS2', 'hitM', 'hitM2', 'hitL', 'hitL2', 'hitXL', 'hitXXL', 'sax', 'saxS', 'pizzi',
+  // the shop's and the coins' sounds (public/sfx/*.mp3)
+  'coindrop.mp3', 'riser.mp3', 'bell.mp3', 'badge.mp3', 'shutter.mp3', 'zoom.mp3', 'rocket.mp3', 'strike.mp3', 'nope.mp3']
 const buffers = new Map()
 let loading = null
 function loadSamples(ac) {
   if (loading) return loading
-  loading = Promise.all(SAMPLE_NAMES.map(n => fetch(`/sfx/${n}.wav`).then(r => r.arrayBuffer()).then(b => new Promise((res, rej) => ac.decodeAudioData(b, res, rej))).then(buf => buffers.set(n, buf)).catch(() => {})))
+  loading = Promise.all(SAMPLE_NAMES.map(n => { const file = n.includes('.') ? n : `${n}.wav`, key = n.replace(/\.\w+$/, ''); return fetch(`/sfx/${file}`).then(r => r.arrayBuffer()).then(b => new Promise((res, rej) => ac.decodeAudioData(b, res, rej))).then(buf => buffers.set(key, buf)).catch(() => {}) }))
   return loading
 }
 // play a sample inside a scene; false when it isn't loaded (callers fall back)
-function smp(S, name, { at = 0, gain = 1, rate = 1, jitter = 0, out = S.out } = {}) {
+function smp(S, name, { at = 0, gain = 1, rate = 1, jitter = 0, out = S.out, offset = 0 } = {}) {
   const buf = S.ac === ctx ? buffers.get(name) : null
   if (!buf) return false
   const src = S.ac.createBufferSource(), g = S.ac.createGain()
@@ -50,7 +53,7 @@ function smp(S, name, { at = 0, gain = 1, rate = 1, jitter = 0, out = S.out } = 
   src.playbackRate.value = rate * (1 + (Math.random() * 2 - 1) * jitter)
   g.gain.value = gain
   src.connect(g).connect(out)
-  src.start(S.t + at)
+  src.start(S.t + at, offset)
   return true
 }
 const ready = n => buffers.has(n) && !!ctx
@@ -379,8 +382,15 @@ const SAMPLED = {
   deny: S => smp(S, 'deny', { gain: 0.7 }),
   send: S => smp(S, 'pluck', { gain: 0.6, jitter: 0.05 }),
   coin: S => smp(S, 'chips', { gain: 0.9, jitter: 0.05 }) && smp(S, 'stack2', { gain: 0.55, at: 0.07, jitter: 0.05 }),
-  purchase: S => smp(S, 'handful', { gain: 0.9 }) && smp(S, 'stack', { gain: 0.8, at: 0.14 }) && smp(S, 'hitS', { gain: 0.75, at: 0.06 }),
-  equip: S => smp(S, 'toggle', { gain: 0.8 }) && smp(S, 'slide2', { gain: 0.55, at: 0.03 }),
+  purchase: S => smp(S, 'riser', { gain: 0.9, offset: 1.25 }),
+  coins: S => smp(S, 'coindrop', { gain: 0.9 }),
+  coinpack: S => smp(S, 'bell', { gain: 0.8 }) && smp(S, 'coindrop', { gain: 0.7, at: 0.45 }),
+  share: S => smp(S, 'shutter', { gain: 0.8 }),
+  sheet: S => smp(S, 'zoom', { gain: 0.45, offset: 0.15 }),
+  launch: S => smp(S, 'rocket', { gain: 0.6, offset: 0.1 }),
+  strike: S => smp(S, 'strike', { gain: 0.85 }),
+  nope: S => smp(S, 'nope', { gain: 0.55 }),
+  equip: S => smp(S, 'badge', { gain: 0.85 }),
   claim: S => smp(S, 'stack', { gain: 0.9 }) && smp(S, 'confirm', { gain: 0.45, at: 0.04 }),
   chime: S => smp(S, 'pluck2', { gain: 0.6 }) && smp(S, 'confirm', { gain: 0.4, at: 0.05 }),
   gradepop: (S, val = 5) => smp(S, 'stack2', { gain: 0.5, rate: 0.85 + val * 0.03 }),
@@ -426,7 +436,7 @@ const PICKS_KEY = 'bap_sfx_picks'
 // override these on the phone they're made on.
 export const BAKED = {
   tap: 's-plastic', spin: 's-spinwhir', tick: 'none', slot: 's-plastic', complete: 's-boom',
-  back: 's-click33', swap: 'none', claim: 's-feedback', chime: 's-feedback', purchase: 's-feedback',
+  back: 's-click33', swap: 'none', claim: 's-feedback', chime: 's-feedback',
   deny: 's-retrobtn', send: 's-plastic', levelup: 's-feedback', achievement: 's-feedback',
   award: 's-feedback', champion: 's-crowd-arena', 'snd-cannon': 's-explosion',
 }
@@ -704,6 +714,8 @@ export function victory({ big = false, of = null } = {}) {
   const v = of ? { fx: FX[of.winFx] ? of.winFx : 'fx-confetti', sound: of.winSound || 'snd-horn' } : myVictory()
   ;(FX[v.fx] ?? FX['fx-confetti'])()
   if (big && v.fx !== 'fx-confetti') setTimeout(() => confetti(90), 600)
+  // the winner's equipped sound is theirs alone: everyone else just sees the effect
+  if (of) { haptic('light'); return }
   // a title gets the crowd, an award its sting; the equipped victory sound on top
   sfx(big ? 'champion' : 'award')
   const own = SYNTH[v.sound] || SAMPLED[v.sound] ? v.sound : 'snd-horn'
@@ -731,6 +743,8 @@ export function initJuice() {
   window.__bapJuice = { sfx, renderSfx, playLab }
   // The last trait in: the power-up stinger (confetti is for rings and awards)
   window.addEventListener('bap:purchase', () => { sfx('purchase'); haptic('success') })
+  window.addEventListener('bap:coins', e => { if (!e.detail?.quiet) sfx('coins') })
+  window.addEventListener('bap:coinpack', () => { sfx('coinpack'); haptic('success') })
   window.addEventListener('bap:achievement', () => { sfx('achievement'); haptic('success') })
   window.addEventListener('bap:victory', e => victory(e.detail || {}))
 

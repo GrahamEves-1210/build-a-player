@@ -50,6 +50,7 @@ export default function FeedbackModal({ user, isBucket, position, onClose }) {
     }
     try { localStorage.setItem('bap_feedback_at', String(Date.now())) } catch {}
     setSent(true)
+    window.dispatchEvent(new CustomEvent('bap:feedback-sent'))
   }
 
   // Portalled to <body> so the navbar's own stacking/blur can't clip the overlay

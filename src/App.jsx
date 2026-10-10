@@ -663,6 +663,7 @@ export default function App() {
   const enterDraft = useCallback(() => {
     const c = newCareer({ sport: 'nfl', uid: user?.id ?? null, pos: position, build, name: getUsername(user) || 'You' })
     saveCareer(c); setCareer(c); setGameMode(null); setBuild({}); setPage('career')
+    window.__bapJuice?.sfx('launch')
     try { localStorage.removeItem('bap_progress') } catch {}   // the build is the career's now: a reload lands on Home, not the build page
     window.scrollTo({ top: 0, behavior: 'instant' })
   }, [user, position, build])
@@ -674,6 +675,7 @@ export default function App() {
     const rated = ratedPool(pools[position] ?? QBS, activeTypes, ovrOf, cities)
     const run = newRun({ sport: 'nfl', uid: user?.id ?? null, pos: position, build, types: activeTypes, rated, cities })
     setTakeoverRun(run); setPage('takeover')
+    window.__bapJuice?.sfx('launch')
     window.scrollTo({ top: 0, behavior: 'instant' })
   }, [user?.id, position, build, activeTypes])
 

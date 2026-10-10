@@ -187,6 +187,7 @@ const blank = () => ({
   equip: { ...DEFAULTS },     // slot → itemId
   shopFree: null,             // day the free daily coins were claimed
   discordPaid: false,         // the one-time Join the Discord coins
+  feedbackPaid: false,        // the one-time Send Feedback coins
   levelPaid: 0,               // highest level already paid out in coins
   // achievements
   ach: {},                    // id → when it was unlocked
@@ -634,6 +635,7 @@ export function initProgress() {
   applySpot()
   watchCoinReturn()
   window.addEventListener('bap:season', onSeason)
+  window.addEventListener('bap:feedback-sent', () => claimFeedbackCoins())
   window.addEventListener('bap:spin', onSpin)
   window.addEventListener('bap:xp', onXp)
   window.addEventListener('bap:blacktop', onBlacktop)
@@ -679,7 +681,7 @@ function earn(n, label, quiet = false) {
   S.coinsEarned += n
   S.walletAt = Date.now()
   if (!quiet) toast({ kind: 'coins', title: `+${n} COINS`, sub: label || '' })
-  window.dispatchEvent(new CustomEvent('bap:coins', { detail: { n } }))
+  window.dispatchEvent(new CustomEvent('bap:coins', { detail: { n, quiet } }))
 }
 // Every level climbed pays coins once
 function payLevels() {
@@ -772,7 +774,7 @@ export async function claimCoinPurchases() {
   try {
     const { data, error } = await supabase.rpc('claim_coin_purchases')
     const n = !error && typeof data === 'number' ? data : 0
-    if (n > 0) grantCoins(n, 'Coins purchased')
+    if (n > 0) { grantCoins(n, 'Coins purchased'); window.dispatchEvent(new CustomEvent('bap:coinpack', { detail: { n } })) }
     return n
   } catch { return 0 } finally { claiming = false }
 }
@@ -787,6 +789,16 @@ export function watchCoinReturn() {
   let tries = 0
   const tick = async () => { if ((await claimCoinPurchases()) > 0 || ++tries >= 10) return; setTimeout(tick, 3000) }
   setTimeout(tick, 1500)
+}
+
+// Send feedback: one-time coins the first time a message goes through
+export const FEEDBACK_COINS = 150
+export function claimFeedbackCoins() {
+  if (S.feedbackPaid || !walletOpen()) return 0
+  S.feedbackPaid = true
+  earn(FEEDBACK_COINS, 'Thanks for the feedback')
+  emit()
+  return FEEDBACK_COINS
 }
 
 export function claimFreeCoins() {
@@ -847,7 +859,7 @@ export function claimAch(id) {
 // The wallet follows the account (accounts.app_profile, see supabase/app_shop.sql).
 // Last change wins; items and achievements are merged, never lost.
 // ═════════════════════════════════════════════════════════════════════════════
-const WALLET_KEYS = ['coins', 'coinsEarned', 'owned', 'equip', 'ach', 'achClaimed', 'stats', 'shopFree', 'levelPaid', 'discordPaid']
+const WALLET_KEYS = ['coins', 'coinsEarned', 'owned', 'equip', 'ach', 'achClaimed', 'stats', 'shopFree', 'levelPaid', 'discordPaid', 'feedbackPaid']
 let pushTimer = null
 function schedulePush() {
   if (!supabase || !uid) return
@@ -899,6 +911,7 @@ async function pullWallet(id) {
     S.stats = fixStats(st)
     S.coinsEarned = Math.max(S.coinsEarned, w.coinsEarned ?? 0)
     S.discordPaid = !!(S.discordPaid || w.discordPaid)
+    S.feedbackPaid = !!(S.feedbackPaid || w.feedbackPaid)
     if (newer) {
       S.coins = w.coins ?? S.coins
       S.equip = { ...DEFAULTS, ...(w.equip || {}) }

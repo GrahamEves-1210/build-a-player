@@ -422,3 +422,7 @@
 .sh-signin .sh-chest { background: var(--ag-grad); color: var(--ag-on); box-shadow: 0 6px 16px var(--ag-glow); }
 .sh-signin .sh-free-go { background: var(--ag-grad); color: var(--ag-on); }
 .coin-pill--signin { font-size: 15px; letter-spacing: 2px; }
+/* Send feedback: one-time coins */
+.sh-feedback { border-color: rgba(245,220,138,.55); background: radial-gradient(ellipse 60% 120% at 0% 50%, rgba(245,220,138,.22), transparent 70%), var(--ag-panel); }
+.sh-feedback .sh-chest { background: linear-gradient(180deg, #f5dc8a, #d4af37); color: #1d1503; box-shadow: 0 6px 16px rgba(212,175,55,.4), inset 0 1px 0 rgba(255,255,255,.4); }
+.sh-feedback .sh-free-go { background: linear-gradient(135deg, #f5dc8a, #d4af37); color: #1d1503; }

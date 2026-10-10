@@ -276,7 +276,7 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
   if (c.phase === 'retired') return <Legacy c={c} setCareer={setCareer} onNewBuild={onNewBuild} onExit={onExit} />
 
   const L = legacyOf(c)
-  const begin = () => { const [n, d] = startSeason(c); D.current = d; setCareer(n); sfx('whistle'); haptic('medium') }
+  const begin = () => { const [n, d] = startSeason(c); D.current = d; setCareer(n); sfx('launch'); haptic('medium') }
   const advance = () => {
     if (!D.current) D.current = resumeSeason(c)
     const [n, ev] = advanceWeek(c, D.current)
@@ -504,7 +504,7 @@ function Legacy({ c, setCareer, onNewBuild, onExit }) {
       const { generateCareerCard, captureSilhouette } = await import('../../utils/generateShareCard')
       const fig = await captureSilhouette('.cr-model .sil-wrap')
       const canvas = await generateCareerCard(card, fig)
-      const url = canvas.toDataURL('image/png'); setImg(url)
+      const url = canvas.toDataURL('image/png'); setImg(url); sfx('share')
       const blob = await new Promise(res => canvas.toBlob(res, 'image/png'))
       const file = blob && new File([blob], `career-${c.name}-${POS_LABEL[c.pos]}.png`, { type: 'image/png' })
       if (file && navigator.canShare?.({ files: [file] })) await navigator.share({ files: [file], title: `${c.name}'s career` }).catch(() => {})

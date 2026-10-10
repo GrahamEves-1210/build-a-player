@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { useProgress, buy, equip, owns, priceOf, lockReason, dealsFor, claimFreeCoins, msToReset, isPro, COINS, achStats, walletOpen, hasDiscord, claimDiscordCoins, DISCORD_COINS, grantCoins } from '../../lib/progress'
+import { useProgress, buy, equip, owns, priceOf, lockReason, dealsFor, claimFreeCoins, msToReset, isPro, COINS, achStats, walletOpen, hasDiscord, claimDiscordCoins, DISCORD_COINS, FEEDBACK_COINS, grantCoins } from '../../lib/progress'
+import FeedbackModal from '../FeedbackModal'
 import { COIN_PACKS } from '../../lib/coins'
 import { IS_APP } from '../../lib/platform'
 import { connectDiscord } from '../../lib/discord'
@@ -70,7 +71,7 @@ function CoinPacks({ p }) {
     try {
       if (IS_APP) {
         const r = await (await import('../../lib/iap')).buyPack(pack)
-        if (r === 'ok') { grantCoins(pack.coins); sfx('purchase'); haptic('success') }
+        if (r === 'ok') { grantCoins(pack.coins); window.dispatchEvent(new CustomEvent('bap:coinpack', { detail: { n: pack.coins } })) }
         else if (r === 'unavailable') setNote("Purchases aren't available on this device right now.")
         else if (r === 'error') setNote("The purchase didn't go through. You weren't charged.")
       } else {
@@ -101,6 +102,26 @@ function CoinPacks({ p }) {
   )
 }
 
+// Send feedback: one-time coins the first time a message goes through
+function FeedbackCoins({ p }) {
+  const [open, setOpen] = useState(false)
+  if (p.feedbackPaid) return null
+  const isBucket = typeof document !== 'undefined' && document.documentElement.classList.contains('is-bucket')
+  return (
+    <>
+      <button className="sh-free sh-feedback" onClick={() => { if (!walletOpen()) { signIn(); return } setOpen(true); sfx('tap') }}>
+        <span className="sh-chest"><IconStar size={24} /></span>
+        <span className="sh-free-txt">
+          <span className="sh-free-title">SEND FEEDBACK</span>
+          <span className="sh-free-sub">Tell us one thing to fix or add: {FEEDBACK_COINS} coins, first message only</span>
+        </span>
+        <span className="sh-free-go">{!walletOpen() ? 'SIGN IN' : `+${FEEDBACK_COINS}`}</span>
+      </button>
+      {open && <FeedbackModal user={p.user} isBucket={isBucket} onClose={() => setOpen(false)} />}
+    </>
+  )
+}
+
 // Join the Discord: one-time coins (linking Discord also joins the server)
 function DiscordCoins({ p }) {
   const [busy, setBusy] = useState(false)
@@ -109,7 +130,7 @@ function DiscordCoins({ p }) {
   const act = async () => {
     if (!p.signedIn) { signIn(); return }
     if (!linked) { setBusy(true); const { error } = await connectDiscord(); if (error) setBusy(false); return }
-    if (claimDiscordCoins()) { sfx('purchase'); haptic('success') }
+    if (claimDiscordCoins()) haptic('success')   // the coins make their own sound
   }
   return (
     <div className="sh-section">
@@ -130,7 +151,7 @@ function ItemCard({ item, deal, equipped, onOpen, delay = 0, name }) {
   const lock = mine ? null : lockReason(item.id)
   const price = deal ?? item.price
   return (
-    <button className={`sh-card${mine ? ' is-owned' : ''}${equipped ? ' is-equipped' : ''}${lock ? ' is-locked' : ''}`} style={{ '--rar': RARITY[item.rarity].color, '--d': `${delay}ms` }} onClick={() => onOpen(item.id)}>
+    <button className={`sh-card${mine ? ' is-owned' : ''}${equipped ? ' is-equipped' : ''}${lock ? ' is-locked' : ''}`} style={{ '--rar': RARITY[item.rarity].color, '--d': `${delay}ms` }} onClick={() => { onOpen(item.id); sfx('sheet') }}>
       <span className="sh-card-stage">
         {item.pro && <span className="sh-flag sh-flag--pro"><IconCrown size={11} /> PRO</span>}
         {!item.pro && item.ach && !mine && <span className="sh-flag sh-flag--ach"><IconStar size={10} /> REWARD</span>}
@@ -178,7 +199,7 @@ function ItemSheet({ id, onClose, name }) {
   const doBuy = () => {
     const r = buy(item.id)
     if (r.ok) { setBought(true); setMsg(''); setTimeout(() => setBought(false), 1500) }
-    else { setShort(true); setMsg(r.reason); sfx('deny'); haptic('light'); setTimeout(() => setShort(false), 450) }
+    else { setShort(true); setMsg(r.reason); sfx('nope'); haptic('light'); setTimeout(() => setShort(false), 450) }
   }
   const doEquip = () => {
     if (equipped && !isFx) { equip(item.slot, null); sfx('tap'); return }
@@ -308,6 +329,7 @@ export default function AppShop({ onClose, tab: initialTab = 'featured' }) {
             </div>
           )}
           <DiscordCoins p={p} />
+          <FeedbackCoins p={p} />
           <div className="sh-section">
             <button className={`sh-free${p.freeReady ? '' : ' is-claimed'}`} onClick={walletOpen() ? claim : signIn}>
               <span className="sh-chest"><IconGift size={28} /></span>

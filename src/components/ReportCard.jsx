@@ -133,6 +133,7 @@ export function ShareModal({ ovr, arch, build, types, onClose, isBucket = false,
       if (!live) return
       setCardDataUrl(canvas.toDataURL('image/png'))
       canvas.toBlob(b => setCardBlob(b), 'image/png')
+      window.__bapJuice?.sfx('share')
     })().catch(console.error)
     return () => { live = false }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
