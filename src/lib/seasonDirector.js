@@ -58,7 +58,11 @@ const addMods = (a, b) => ({
 })
 const NO_MODS = { attr: {}, team: { off: 0, def: 0 } }
 
-export function createDirector({ sport, pos, build, team, simFn, base, seed = Math.random().toString(36).slice(2, 8), name = 'You', attrMap = {}, types = [] }) {
+export const MOMENTS_OFF_KEY = 'bap_moments_off'
+export const momentsOff = () => { try { return localStorage.getItem(MOMENTS_OFF_KEY) === '1' } catch { return false } }
+export const setMomentsOff = off => { try { localStorage.setItem(MOMENTS_OFF_KEY, off ? '1' : '0') } catch {} }
+// always: the moments can't be switched off (Career: they're the mode)
+export function createDirector({ sport, pos, build, team, simFn, base, seed = Math.random().toString(36).slice(2, 8), name = 'You', attrMap = {}, types = [], always = false }) {
   const isBucket = sport === 'bucket'
   const total = base.games.length
   // four decisions in the regular season, one before the playoffs (only if you're in)
@@ -145,6 +149,7 @@ export function createDirector({ sport, pos, build, team, simFn, base, seed = Ma
     return D.po
   }
   D.open = stop => {
+    if (!always && momentsOff()) return null
     if (stop.kind === 'playoffs' && !D.qualify()) return null
     const k = Math.min(stop.at, total)
     const ctx = D.ctxAt(k)

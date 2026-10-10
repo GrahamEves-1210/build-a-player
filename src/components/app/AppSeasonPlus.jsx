@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { GAME_LINE } from '../../lib/seasonDirector'
+import { GAME_LINE, momentsOff, setMomentsOff } from '../../lib/seasonDirector'
 import { leaderBoard } from '../../lib/seasonFacts'
 import { sfx, haptic, victory } from '../../lib/juice'
 import { IconArrow, IconStar, IconFlame } from './icons'
@@ -13,6 +13,17 @@ import { IconArrow, IconStar, IconFlame } from './icons'
 const nick = opp => (opp || '').split(' ').slice(-1)[0]
 
 // ── Moment: the season pauses here ──────────────────────────────────────────
+// Moments on / off (the sim page's team card). Off: the season plays straight
+// through, no decisions; the milestones and records still fire.
+export function MomentsToggle() {
+  const [off, setOff] = useState(() => momentsOff())
+  return (
+    <button className={`sts-moments${off ? ' is-off' : ''}`} onClick={() => { setMomentsOff(!off); setOff(!off); sfx('tap') }} aria-pressed={!off} title={off ? 'Turn the season\'s moments back on' : 'Play the season straight through, no decisions'}>
+      <span className="sts-moments-knob" /><span>MOMENTS {off ? 'OFF' : 'ON'}</span>
+    </button>
+  )
+}
+
 export function MomentCard({ moment, onPick }) {
   const [picked, setPicked] = useState(null)
   const [outcome, setOutcome] = useState(null)

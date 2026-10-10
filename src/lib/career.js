@@ -130,24 +130,30 @@ export const INTERVIEWS = [
     { t: 'Respectfully, my numbers say otherwise.', stock: -1, persona: 'confident' },
     { t: 'Coaches have been saying that since high school.', stock: -2, persona: 'cocky' } ] },
 ]
+// The combine: three quick games (lib/minigames.js, ≤45s). The number comes
+// from the trait and how the game went: a perfect run takes the top of the
+// trait's range, a miss the bottom. pct is where it lands for the scouts.
 export const COMBINE_DRILLS = {
-  qb: [['forty', '40-yard dash', 'legs'], ['velo', 'Throwing velocity', 'arm'], ['acc', 'Accuracy drill', 'accuracy'], ['vert', 'Vertical jump', 'legs']],
-  rb: [['forty', '40-yard dash', 'speed'], ['vert', 'Vertical jump', 'burst'], ['cone', '3-cone drill', 'elusiveness'], ['bench', 'Bench press', 'strength']],
-  wr: [['forty', '40-yard dash', 'speed'], ['vert', 'Vertical jump', 'vertical'], ['cone', '3-cone drill', 'routeRunning'], ['gauntlet', 'Gauntlet drill', 'hands']],
-  te: [['forty', '40-yard dash', 'speed'], ['vert', 'Vertical jump', 'vertical'], ['bench', 'Bench press', 'strength'], ['gauntlet', 'Gauntlet drill', 'hands']],
+  qb: [['forty', '40-yard dash', 'legs'], ['velo', 'Throwing velocity', 'arm'], ['acc', 'Accuracy drill', 'accuracy']],
+  rb: [['forty', '40-yard dash', 'speed'], ['cone', '3-cone drill', 'elusiveness'], ['bench', 'Bench press', 'strength']],
+  wr: [['forty', '40-yard dash', 'speed'], ['cone', '3-cone drill', 'routeRunning'], ['gauntlet', 'Gauntlet drill', 'hands']],
+  te: [['forty', '40-yard dash', 'speed'], ['bench', 'Bench press', 'strength'], ['gauntlet', 'Gauntlet drill', 'hands']],
 }
-const drillValue = (id, v, r) => {
-  const n = (v - 5) / 6, j = (r() - .5) * .08          // −.67…1 across the grades, a little variance
+const drillValue = (id, v, score) => {
+  const n = (v - 5) / 6 + (score - 0.5) * 0.36          // the trait, moved by the game
   switch (id) {
-    case 'forty': return { text: `${(4.85 - n * .42 + j * 1.5).toFixed(2)}s`, pct: n + j }
-    case 'velo': return { text: `${Math.round(52 + n * 9 + j * 20)} mph`, pct: n + j }
-    case 'acc': return { text: `${Math.round(62 + n * 30 + j * 40)}% on target`, pct: n + j }
-    case 'vert': return { text: `${(31 + n * 8 + j * 12).toFixed(1)}"`, pct: n + j }
-    case 'cone': return { text: `${(7.15 - n * .5 + j * 1.2).toFixed(2)}s`, pct: n + j }
-    case 'bench': return { text: `${Math.round(17 + n * 9 + j * 15)} reps`, pct: n + j }
-    case 'gauntlet': return { text: `${Math.round(78 + n * 20 + j * 30)}% caught`, pct: n + j }
+    case 'forty': return { text: `${(4.85 - n * .42).toFixed(2)}s`, pct: n }
+    case 'velo': return { text: `${Math.round(52 + n * 9)} mph`, pct: n }
+    case 'acc': return { text: `${Math.round(62 + n * 30)}% on target`, pct: n }
+    case 'cone': return { text: `${(7.15 - n * .5).toFixed(2)}s`, pct: n }
+    case 'bench': return { text: `${Math.round(17 + n * 9)} reps`, pct: n }
+    case 'gauntlet': return { text: `${Math.round(78 + n * 20)}% caught`, pct: n }
     default: return { text: '—', pct: 0 }
   }
+}
+export function recordCombine(c, id, score) {
+  const combine = c.draft.combine.map(d => (d.id === id ? { ...d, score, ...drillValue(id, c.build[d.trait]?.val ?? 5, score) } : d))
+  return { ...c, draft: { ...c.draft, combine } }
 }
 // where the stock starts: a range of picks from the overall
 function baseStock(ovr) {
@@ -165,7 +171,8 @@ export function stockOf(c) {
   const d = c.draft
   const [lo0, hi0] = baseStock(c.ovr)
   // combine moves the window up to 8 picks each way, trivia 4, the interviews 4
-  const comb = d.combine.length ? d.combine.reduce((s, x) => s + x.pct, 0) / d.combine.length : 0
+  const played = d.combine.filter(x => x.pct != null)
+  const comb = played.length ? played.reduce((s, x) => s + x.pct, 0) / played.length : 0
   const triv = d.trivia.filter(t => t.answer != null).length ? (d.trivia.filter(t => t.answer === t.c).length / d.trivia.length - .6) * 2 : 0
   const inter = d.interviews.reduce((s, x) => s + (x.answer != null ? x.a[x.answer].stock : 0), 0)
   const shift = Math.round(-comb * 8 - triv * 4 - inter * 1.3)
@@ -177,7 +184,7 @@ export function newCareer({ sport = 'nfl', uid = null, pos, build, name = 'You' 
   const r = seeded(`career-${seed}`)
   const types = POS_TYPES[pos]
   const ovr = ovrOf(pos, build)
-  const drills = COMBINE_DRILLS[pos].map(([id, label, trait]) => ({ id, label, trait, ...drillValue(id, build[trait]?.val ?? 5, r) }))
+  const drills = COMBINE_DRILLS[pos].map(([id, label, trait]) => ({ id, label, trait, score: null, text: null, pct: null }))
   const trivia = [...TRIVIA].sort(() => r() - .5).slice(0, 5).map(t => ({ ...t, answer: null }))
   const interviews = INTERVIEWS.map(i => ({ ...i, answer: null }))
   const dur = DURABLE[pos].reduce((s, t) => s + (build[t]?.val ?? 5), 0) / DURABLE[pos].length
@@ -250,14 +257,14 @@ export function startSeason(c) {
   const sim = SIM[c.pos]
   const base = sim(c.build, team)
   const seed = `${c.seed}-y${c.year + 1}`
-  const D = createDirector({ sport: 'nfl', pos: c.pos, build: c.build, team, simFn: (b, t) => sim(b, t), base, seed, name: c.name, attrMap: POS_ATTR[c.pos], types: c.types })
+  const D = createDirector({ sport: 'nfl', pos: c.pos, build: c.build, team, simFn: (b, t) => sim(b, t), base, seed, name: c.name, attrMap: POS_ATTR[c.pos], types: c.types, always: true })
   const next = { ...c, phase: 'season', fit, simTeam: team, goals: goalsFor(c), active: { k: 0, base, snap: D.snapshot(), seed, moment: null, feed: [], injury: null } }
   return [next, D]
 }
 // Picks a saved season back up: the director rebuilt from its own data
 export function resumeSeason(c) {
   const sim = SIM[c.pos]
-  const D = createDirector({ sport: 'nfl', pos: c.pos, build: c.build, team: c.simTeam, simFn: (b, t) => sim(b, t), base: c.active.base, seed: c.active.seed, name: c.name, attrMap: POS_ATTR[c.pos], types: c.types })
+  const D = createDirector({ sport: 'nfl', pos: c.pos, build: c.build, team: c.simTeam, simFn: (b, t) => sim(b, t), base: c.active.base, seed: c.active.seed, name: c.name, attrMap: POS_ATTR[c.pos], types: c.types, always: true })
   D.restore(c.active.snap)
   return D
 }
@@ -318,28 +325,75 @@ export function resolveInjury(c, D, play) {
 // Pro Bowl / All-Pro: the numbers that get a player there
 const PRO_BOWL = { qb: s => s.tds >= 28 || s.passYds >= 4200, rb: s => s.rushYds >= 1150 || s.tds >= 12, wr: s => s.recYds >= 1150 || s.tds >= 10, te: s => s.recYds >= 800 || s.tds >= 8 }
 const ALL_PRO = { qb: s => s.tds >= 36 || s.passYds >= 4800, rb: s => s.rushYds >= 1500 || s.tds >= 16, wr: s => s.recYds >= 1450 || s.tds >= 13, te: s => s.recYds >= 1000 || s.tds >= 11 }
-// The season's over: book it, then the offseason
-export function endSeason(c, D) {
+// The regular season's over: book it, or go into the playoffs (a bracket of
+// our own, one skill moment a round, played on the hub)
+export function finishRegular(c, D) {
   const f = D.finalize()
+  if (!f.playoffs) return bookSeason({ ...c, active: { ...c.active, final: f, po: null } })
+  return { ...c, active: { ...c.active, final: f, po: buildBracket(c, f) } }
+}
+const strength = t => ((t.off ?? 5) + (t.def ?? 5)) / 2
+export const PO_ROUNDS = ['Wild Card', 'Divisional', 'Conference Championship', 'Super Bowl']
+function buildBracket(c, f) {
+  const r = seeded(`${c.seed}-po-${c.year}`)
+  const mine = teamOf(c.team)
+  const pool = conf => [...NFL_TEAMS].filter(t => t.conf === conf && t.short !== c.team).sort((a, b) => (strength(b) + r() * 1.5) - (strength(a) + r() * 1.5))
+  const same = pool(mine.conf), other = pool(mine.conf === 'AFC' ? 'NFC' : 'AFC')
+  const names = f.hasBye ? PO_ROUNDS.slice(1) : PO_ROUNDS
+  const rounds = names.map((name, i) => {
+    const sb = name === 'Super Bowl'
+    const opp = sb ? other[Math.floor(r() * 3)] : same[Math.min(same.length - 1, (f.hasBye ? i : i + 1) * 2 + Math.floor(r() * 2))]
+    const home = sb ? null : f.hasBye ? i === 0 : i === 0 && f.wins >= 11
+    const base = 0.5 + (strength(c.simTeam ?? mine) - strength(opp)) * 0.08 + (home ? 0.06 : home === false ? -0.03 : 0) + ((c.ovr - 76) / 100) * 0.35
+    return { name, opp: opp.short, oppName: opp.name, home, p: clamp(Math.round(base * 100) / 100, 0.18, 0.84), played: false }
+  })
+  return { idx: 0, rounds, line: [], used: [], stage: 'round', won: false, out: false }
+}
+// This round's moment is in: the result, with a stat line sized to the season
+export function playoffRound(c, score, game = null) {
+  const a = c.active, po = a.po, f = a.final
+  const rd = po.rounds[po.idx]
+  const r = seeded(`${c.seed}-por-${c.year}-${po.idx}`)
+  const p = clamp(rd.p + (score - 0.5) * 0.36, 0.08, 0.92)
+  const won = r() < p
+  const g = f.wins + f.losses || 17
+  const k = 0.82 + score * 0.5 + (r() - 0.5) * 0.2             // the moment sets the day: 0.6–1.4× a normal game
+  const n = (sum, mult = 1) => Math.max(0, Math.round(((sum ?? 0) / g) * k * mult))
+  const mySc = Math.round(17 + (c.simTeam?.off ?? 5) * 1.2 + score * 8 + r() * 6), oppSc = won ? Math.max(3, mySc - 3 - Math.floor(r() * 14)) : mySc + 1 + Math.floor(r() * 12)
+  const line = c.pos === 'qb' ? { passYds: n(f.seasonPassYds), tds: n(f.seasonTDs, won ? 1.1 : 0.8), ints: Math.round((1 - score) * 2 * r()), rushYds: n(f.seasonRushYds) }
+    : c.pos === 'rb' ? { rushYds: n(f.seasonRushYds), rushTDs: n(f.seasonRushTDs, won ? 1.2 : 0.7), recTDs: 0, recYds: n(f.seasonRecYds), carries: n(f.seasonCarries) }
+    : { rec: n(f.seasonRecs), recYds: n(f.seasonRecYds), recTDs: n(f.seasonRecTDs, won ? 1.3 : 0.6) }
+  const entry = { ...rd, played: true, won, mySc, oppSc, score, game, ...line }
+  const rounds = po.rounds.map((x, i) => (i === po.idx ? entry : x))
+  const sb = rd.name === 'Super Bowl'
+  const done = !won || sb
+  return { ...c, active: { ...a, po: { ...po, rounds, line: [...po.line, entry], idx: done ? po.idx : po.idx + 1, stage: done ? 'done' : 'round', won: won && sb, out: !won } } }
+}
+// Playoffs over (or none): the season is booked, then the offseason
+export function bookSeason(c) {
+  const f = c.active.final, po = c.active.po
   const stats = seasonStats(c.pos, f)
   const award = AWARD[c.pos](f, false, c.team)
-  const missed = D.sat.length
+  const missed = (f.story?.sat ?? 0)
+  const rounds = (po?.line ?? []).map(x => ({ round: x.name, opponent: x.oppName, won: x.won, mySc: x.mySc, oppSc: x.oppSc }))
+  const sbGame = rounds.find(x => x.round === 'Super Bowl')
   const s = {
     year: c.year + 1, season: c.season, age: c.age, team: c.team, teamName: c.fit.name, ovr: c.ovr,
-    wins: f.wins, losses: f.losses, playoffs: !!f.playoffs, champion: !!f.sbResult?.won, rounds: f.playoffRounds ?? [], sb: f.sbResult ?? null,
+    wins: f.wins, losses: f.losses, playoffs: !!f.playoffs, champion: !!po?.won, rounds, sb: sbGame ? { won: sbGame.won, mySc: sbGame.mySc, oppSc: sbGame.oppSc } : null,
     stats, award: !!award.userWins, awardName: AWARD_NAME[c.pos], proBowl: PRO_BOWL[c.pos](stats) || !!award.userWins, allPro: ALL_PRO[c.pos](stats) || !!award.userWins,
     missed, records: (f.story?.records ?? []).map(x => x.label ?? x.id), milestones: (f.story?.milestones ?? []).filter(m => m.big).map(m => m.label),
     goals: c.goals.map(g => ({ ...g, met: goalMet(g, { stats, wins: f.wins }) })), xp: f.story?.xp ?? 0, bestGame: f.bestGame ?? null,
+    poStats: po ? po.line.reduce((acc, x) => { for (const k of ['passYds', 'tds', 'ints', 'rushYds', 'rushTDs', 'recYds', 'rec', 'recTDs']) if (x[k] != null) acc[k] = (acc[k] ?? 0) + x[k]; return acc }, { games: po.line.length }) : null,
   }
   const contract = { ...c.contract, left: c.contract.left - 1 }
   const perf = seasonScore(c.pos, s)
   // a development point a year; a second for an award or All-Pro season
   const dev = { ...c.dev, points: c.dev.points + 1 + (s.award || s.allPro ? 1 : 0) }
-  const rep = clamp(c.rep + (s.goals.filter(g => g.met).length >= 2 ? 1 : 0) - (perf < 0.25 ? 1 : 0), 1, 10)
-  let next = { ...c, phase: 'offseason', seasons: [...c.seasons, s], contract, dev, rep, active: null, simTeam: null, goals: [], earnings: r10(c.earnings + c.contract.perYear), nextMods: null }
+  const rep = clamp(c.rep + (s.goals.filter(g => g.met).length >= 2 ? 1 : 0) + (s.champion ? 1 : 0) - (perf < 0.25 ? 1 : 0), 1, 10)
+  let next = { ...c, phase: 'offseason', seasons: [...c.seasons, s], contract, dev, rep, active: null, simTeam: null, goals: [], earnings: r10(c.earnings + c.contract.perYear), nextMods: null, talks: null }
   next = offseasonEvents(next)
   next = { ...next, offers: contractSituation(next) }
-  return [next, s, f]
+  return next
 }
 // 0–1: how good a season was for the position
 export function seasonScore(pos, s) {
@@ -411,12 +465,48 @@ function contractSituation(c) {
 }
 export function signOffer(c, o) {
   const change = o.team !== c.team
+  const extras = [o.noTrade ? 'no-trade clause' : null, o.starter ? 'starter guarantee' : null].filter(Boolean)
   return {
-    ...c, team: o.team, fit: o.fit, offers: null, tradeAsked: false,
-    contract: { kind: change ? 'fa' : 'ext', years: o.years, left: o.years, perYear: o.perYear },
-    decisions: [...c.decisions, { year: c.year + 1, text: change ? `Signed with the ${o.fit.name}: ${o.years} yrs, $${o.perYear}M a year` : `Re-signed with the ${o.fit.name}: ${o.years} yrs, $${o.perYear}M a year` }],
+    ...c, team: o.team, fit: o.fit, offers: null, talks: null, tradeAsked: false, role: 'Starter',
+    contract: { kind: change ? 'fa' : 'ext', years: o.years, left: o.years, perYear: o.perYear, noTrade: !!o.noTrade, starter: !!o.starter },
+    decisions: [...c.decisions, { year: c.year + 1, text: `${change ? 'Signed with' : 'Re-signed with'} the ${o.fit.name}: ${o.years} yrs, $${o.perYear}M a year${extras.length ? ` (${extras.join(', ')})` : ''}` }],
   }
 }
+// ── Talks: sit down with one team and push. Leverage (the last two seasons,
+// reputation, age) is how far they'll bend before they walk. ──
+export const ASKS = {
+  money:   { label: 'MORE MONEY', sub: '+8% a year', cost: 1 },
+  years:   { label: 'ANOTHER YEAR', sub: '+1 year, same money', cost: 1 },
+  notrade: { label: 'NO-TRADE CLAUSE', sub: 'They can\'t move you', cost: 2 },
+  starter: { label: 'STARTER GUARANTEE', sub: 'The job is yours in writing', cost: 1 },
+}
+export function leverageOf(c) {
+  const last = c.seasons.slice(-2)
+  const perf = last.length ? last.reduce((s, x) => s + seasonScore(c.pos, x), 0) / last.length : 0.3
+  return clamp(Math.round(perf * 3 + (c.rep >= 7 ? 1 : 0) - (c.age >= 32 ? 1 : 0) - (c.rep <= 3 ? 1 : 0)), 0, 4)
+}
+export function openTalks(c, offer) {
+  const lev = leverageOf(c)
+  return { ...c, talks: { ...offer, base: offer.perYear, patience: 1 + lev, max: 1 + lev, asked: [], noTrade: false, starter: false, walked: false, lines: [] } }
+}
+export function ask(c, kind) {
+  const t = c.talks; if (!t || t.walked) return c
+  const a = ASKS[kind]; if (!a || (kind !== 'money' && t.asked.includes(kind)) || (kind === 'money' && t.asked.filter(k => k === 'money').length >= 3)) return c
+  const r = seeded(`${c.seed}-ask-${c.year}-${t.asked.length}-${kind}`)
+  const patience = t.patience - a.cost
+  if (patience < 0) {
+    // they're done: the offer's gone
+    const offers = (c.offers ?? []).filter(o => o.team !== t.team)
+    const fallback = offers.length ? offers : [{ ...t, perYear: r10(t.base * 0.85), years: Math.max(1, t.years - 1), kind: 'late', pitch: 'Late in free agency. The market moved on; this is what\'s left.', noTrade: false, starter: false }]
+    return { ...c, offers: fallback, talks: { ...t, walked: true, patience: 0, lines: [...t.lines, 'The GM closes the folder. "We\'re done here."'] }, events: [...c.events, { year: c.year + 1, text: `Talks with the ${t.fit.name} collapsed over a ${a.label.toLowerCase()}.` }] }
+  }
+  const pushed = kind === 'money' ? r10(t.perYear * 1.08) : t.perYear
+  const years = kind === 'years' ? t.years + 1 : t.years
+  const tone = patience >= 2 ? 'A nod. "We can do that."' : patience === 1 ? '"…Fine. But that\'s about it."' : 'A long pause. "Last one."'
+  return { ...c, talks: { ...t, patience, perYear: pushed, years, noTrade: t.noTrade || kind === 'notrade', starter: t.starter || kind === 'starter', asked: [...t.asked, kind], lines: [...t.lines, tone] } }
+}
+export const closeTalks = c => ({ ...c, talks: null })
+export const acceptTalks = c => (c.talks && !c.talks.walked ? signOffer(c, c.talks) : c)
 // Mid-contract: ask out. Costs reputation; the team doesn't have to say yes.
 export function demandTrade(c) {
   if (c.tradeAsked) return c

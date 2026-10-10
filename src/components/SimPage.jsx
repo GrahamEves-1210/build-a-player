@@ -26,7 +26,7 @@ import { IS_APP, APP_LOOK } from '../lib/platform'
 const APP_SIM = IS_APP || APP_LOOK
 import { WeekStrip, Bracket, RingCeremony, SeasonRewards } from './app/AppSeason'
 import { createDirector } from '../lib/seasonDirector'
-import { MomentCard, NowCard, Pulse, Wire, Milestones, RecordOverlay, Leaders, SeasonStory, useDirectedReveal } from './app/AppSeasonPlus'
+import { MomentCard, NowCard, Pulse, Wire, Milestones, RecordOverlay, Leaders, SeasonStory, useDirectedReveal, MomentsToggle } from './app/AppSeasonPlus'
 import { rampAdd } from '../lib/ads'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -1582,6 +1582,7 @@ export default function SimPage({ result: baseResult, build, types = TYPES, onBa
 
         {team && (
           <div className="simp-team-strip">
+            {director && <MomentsToggle />}
             <div className="sts-top-row">
               <img src={team.logo} alt={team.short} className="sts-logo" />
               <div className="sts-info">

@@ -17,7 +17,7 @@ import { IS_APP, APP_LOOK } from '../lib/platform'
 const APP_SIM = IS_APP || APP_LOOK
 import { RingCeremony, SeasonRewards } from './app/AppSeason'
 import { createDirector } from '../lib/seasonDirector'
-import { MomentCard, NowCard, Pulse, Wire, Milestones, RecordOverlay, Leaders, SeasonStory, StretchCard, useDirectedReveal } from './app/AppSeasonPlus'
+import { MomentCard, NowCard, Pulse, Wire, Milestones, RecordOverlay, Leaders, SeasonStory, StretchCard, useDirectedReveal, MomentsToggle } from './app/AppSeasonPlus'
 import { rampAdd } from '../lib/ads'
 
 function gradeColor(val) {
@@ -2813,6 +2813,7 @@ export default function BucketSimPage({ result: baseResult, build, types, positi
 
         {team && screens[screen]?.key !== 'goat' && (
           <div className="simp-team-strip">
+            {director && <MomentsToggle />}
             <div className="sts-top-row">
               <img src={`/logos/nba/${team.short}.png`} alt={team.short} className="sts-logo" />
               <div className="sts-info">

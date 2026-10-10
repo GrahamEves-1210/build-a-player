@@ -269,7 +269,7 @@ function rollDay() {
     st.last = k
     st.best = Math.max(st.best, st.count)
     S.bonusXp += LOGIN_XP
-    toast({ kind: 'streak', title: st.count > 1 ? `${st.count}-DAY STREAK` : 'DAILY LOGIN', sub: uid ? `+${LOGIN_XP} XP` : 'Sign in to earn XP' })
+    if (uid) toast({ kind: 'streak', title: st.count > 1 ? `${st.count}-DAY STREAK` : 'DAILY LOGIN', sub: `+${LOGIN_XP} XP` })
     changed = true
   }
   if (S.day?.key !== k) {
@@ -289,7 +289,7 @@ function bumpMissions(kind, d) {
     const add = fn(d)
     if (!add) continue
     m.n = Math.min(def.goal, m.n + add)
-    if (m.n >= def.goal) toast({ kind: 'mission', title: 'MISSION COMPLETE', sub: def.text })
+    if (m.n >= def.goal && uid) toast({ kind: 'mission', title: 'MISSION COMPLETE', sub: def.text })
   }
 }
 
@@ -825,7 +825,7 @@ function checkAch(quiet) {
     if (S.ach[a.id] || (st[a.metric] ?? 0) < a.goal) continue
     S.ach[a.id] = Date.now()
     S.walletAt = Date.now()
-    if (!quiet) {
+    if (!quiet && uid) {   // a guest can't claim it, so there's nothing to announce
       toast({ kind: 'ach', title: 'ACHIEVEMENT UNLOCKED', sub: a.title, ms: 3200 })
       window.dispatchEvent(new CustomEvent('bap:achievement', { detail: { id: a.id } }))
     }

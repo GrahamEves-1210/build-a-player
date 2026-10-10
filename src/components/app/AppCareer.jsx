@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   POS_LABEL, POS_NAME, POS_ATTR, OFFENSE_POS, pastCareers, saveCareer, clearCareer, stockOf, answerTrivia, answerInterview, runDraft,
-  startSeason, resumeSeason, advanceWeek, chooseMoment, resolveInjury, endSeason, spendDev, signOffer, demandTrade, nextSeason,
+  startSeason, resumeSeason, advanceWeek, chooseMoment, resolveInjury, finishRegular, playoffRound, bookSeason, recordCombine, spendDev, demandTrade, nextSeason,
+  openTalks, ask, closeTalks, acceptTalks, ASKS, leverageOf, PO_ROUNDS,
   retire, canRetire, mustRetire, careerTotals, legacyOf, LEGACY_TIERS, STAT_LABEL, HEADLINE_STATS, careerCard, AWARD_NAME, MAX_SEASONS, goalsFor,
 } from '../../lib/career'
 import { GAME_LINE } from '../../lib/seasonDirector'
+import { GAMES, pickPlayoffGame } from '../../lib/minigames'
+import MiniGame from './MiniGame'
 import { valToGrade } from '../../utils/simulation'
 import { sfx, haptic, victory } from '../../lib/juice'
 import { MomentCard, NowCard } from './AppSeasonPlus'
@@ -110,11 +113,15 @@ function LegacyMeter({ c }) {
 
 // ── Draft ───────────────────────────────────────────────────────────────────
 function Draft({ c, setCareer }) {
-  const [step, setStep] = useState(c.step ?? 'combine')
+  const [step, setStep] = useState(c.step ?? 'combine')   // eslint-disable-line
   const [qi, setQi] = useState(0)
   const [shown, setShown] = useState(0)
   const stock = stockOf(c)
+  const range = `${stock.loP.round === stock.hiP.round ? `ROUND ${stock.loP.round}` : `ROUNDS ${stock.loP.round}–${stock.hiP.round}`} · PICKS ${stock.lo}–${stock.hi}`
   const go = s => { setStep(s); setCareer({ ...c, step: s }); sfx('tap') }
+  const head = (kicker, title) => (
+    <div className="ag-screen-head"><div><span className="ag-eyebrow">{kicker}</span><h1 className="ag-h1">{title}</h1></div><span className="cr-stock"><small>PROJECTED</small><b>{range}</b></span></div>
+  )
   // draft day: the picks tick by until yours
   useEffect(() => {
     if (step !== 'day' || !c.draft.picks) return
@@ -122,29 +129,33 @@ function Draft({ c, setCareer }) {
     const id = setTimeout(() => { setShown(n => n + 1); sfx(shown + 1 === c.draft.picks.length ? 'claim' : 'tick') }, shown === 0 ? 600 : 900)
     return () => clearTimeout(id)
   }, [step, shown, c.draft.picks])
-  const range = `${stock.loP.round === stock.hiP.round ? `ROUND ${stock.loP.round}` : `ROUNDS ${stock.loP.round}–${stock.hiP.round}`} · PICKS ${stock.lo}–${stock.hi}`
-  const head = (kicker, title) => (
-    <div className="ag-screen-head"><div><span className="ag-eyebrow">{kicker}</span><h1 className="ag-h1">{title}</h1></div><span className="cr-stock"><small>PROJECTED</small><b>{range}</b></span></div>
-  )
-  if (step === 'combine') return (
-    <div className="ag-screen ag-screen--nfl cr">
-      {head(`THE COMBINE · ${POS_LABEL[c.pos]}`, 'Your numbers')}
-      <div className="ag-screen-body">
-        <Model c={c} />
-        <div className="cr-drills ag-pop" style={{ '--d': '60ms' }}>
-          {c.draft.combine.map((d, i) => (
-            <div key={d.id} className="cr-drill" style={{ '--d': `${80 + i * 70}ms` }}>
-              <span className="cr-drill-txt"><b>{d.label}</b><small>{POS_ATTR[c.pos][d.trait]?.label ?? d.trait}</small></span>
-              <span className="cr-drill-bar"><span style={{ width: `${Math.round(Math.max(6, Math.min(100, 50 + d.pct * 50)))}%`, background: d.pct >= .35 ? '#22c55e' : d.pct >= 0 ? '#eab308' : '#f97316' }} /></span>
-              <b className="cr-drill-n">{d.text}</b>
-            </div>
-          ))}
+  if (step === 'combine') {
+    const next = c.draft.combine.find(d => d.score == null)
+    const allDone = !next
+    return (
+      <div className="ag-screen ag-screen--nfl cr">
+        {head(`THE COMBINE · ${POS_LABEL[c.pos]}`, allDone ? 'Your numbers' : next.label)}
+        <div className="ag-screen-body">
+          {!allDone && <MiniGame key={next.id} game={next.id} build={c.build} seed={`${c.seed}-cb-${next.id}`} onDone={res => setCareer(recordCombine(c, next.id, res.score))} />}
+          <div className="cr-drills ag-pop" style={{ '--d': '60ms' }}>
+            {c.draft.combine.map((d, i) => (
+              <div key={d.id} className={`cr-drill${d.score == null ? ' is-wait' : ''}`} style={{ '--d': `${80 + i * 70}ms` }}>
+                <span className="cr-drill-txt"><b>{d.label}</b><small>{POS_ATTR[c.pos][d.trait]?.label ?? d.trait}</small></span>
+                <span className="cr-drill-bar"><span style={{ width: `${d.pct == null ? 0 : Math.round(Math.max(6, Math.min(100, 50 + d.pct * 50)))}%`, background: (d.pct ?? 0) >= .35 ? '#22c55e' : (d.pct ?? 0) >= 0 ? '#eab308' : '#f97316' }} /></span>
+                <b className="cr-drill-n">{d.text ?? '—'}</b>
+              </div>
+            ))}
+          </div>
+          {allDone ? (
+            <>
+              <p className="cr-note ag-pop">Scouts saw the whole workout. Next: the test and the interviews. Both move your stock.</p>
+              <button className="ag-btn tk-intro-go" onClick={() => go('trivia')}>TAKE THE TEST <IconArrow size={16} /></button>
+            </>
+          ) : <p className="cr-note">Three drills, one go each. The trait sets the window; the run sets the number.</p>}
         </div>
-        <p className="cr-note ag-pop">Scouts saw the whole workout. Next: the test and the interviews. Both move your stock.</p>
-        <button className="ag-btn tk-intro-go" onClick={() => go('trivia')}>TAKE THE TEST <IconArrow size={16} /></button>
       </div>
-    </div>
-  )
+    )
+  }
   if (step === 'trivia') {
     const q = c.draft.trivia[qi]
     const done = c.draft.trivia.every(t => t.answer != null)
@@ -276,17 +287,23 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
   }
   const pick = o => { const [n, out] = chooseMoment(c, D.current, o); setCareer(n); return out }
   const injury = play => { const [n, text] = resolveInjury(c, D.current, play); setCareer(n); sfx('tap') }
+  // the regular season's over: straight to the offseason, or into the bracket
   const wrap = () => {
     if (!D.current) D.current = resumeSeason(c)
-    const [n, s, f] = endSeason(c, D.current); D.current = null
-    window.dispatchEvent(new CustomEvent('bap:season', { detail: { sport: 'nfl', pos: c.pos, mode: 'career', localOnly: true, wins: s.wins, losses: s.losses, playoffs: s.playoffs, champion: s.champion, award: s.award, awardName: s.awardName, ovr: c.ovr, ref: f } }))
+    const n = finishRegular(c, D.current); D.current = null
+    if (n.phase === 'offseason') { afterBook(n) } else { setCareer(n); sfx('whistle') }
+  }
+  const book = () => afterBook(bookSeason(c))
+  const afterBook = n => {
+    const s = n.seasons[n.seasons.length - 1]
+    window.dispatchEvent(new CustomEvent('bap:season', { detail: { sport: 'nfl', pos: c.pos, mode: 'career', localOnly: true, wins: s.wins, losses: s.losses, playoffs: s.playoffs, champion: s.champion, award: s.award, awardName: s.awardName, ovr: c.ovr, ref: c.active?.final ?? null } }))
     setCareer(n); setTab('season')
     if (s.champion || s.award) victory({ big: s.champion }); else sfx('complete')
   }
   const a = c.active
   const total = a?.base?.games?.length ?? 17
   const wins = a ? a.feed.filter(e => e.g).filter(e => e.g.won).length : 0, losses = a ? a.feed.filter(e => e.g && !e.g.won).length : 0
-  const seasonOver = a && a.k >= total && !a.moment && !a.injury
+  const seasonOver = a && a.k >= total && !a.moment && !a.injury && !a.po
   const last = c.seasons[c.seasons.length - 1]
 
   return (
@@ -339,7 +356,8 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
               </div>
             )}
             {a.moment && <MomentCard key={`${a.k}-${a.moment.id}`} moment={a.moment} onPick={pick} />}
-            {!a.moment && !a.injury && !seasonOver && <button className="ag-btn ag-btn--gold tk-intro-go cr-advance" onClick={advance}>ADVANCE WEEK {a.k + 1} <IconArrow size={16} /></button>}
+            {!a.moment && !a.injury && !seasonOver && !a.po && <button className="ag-btn ag-btn--gold tk-intro-go cr-advance" onClick={advance}>ADVANCE WEEK {a.k + 1} <IconArrow size={16} /></button>}
+            {a.po && <Playoffs c={c} setCareer={setCareer} onBook={book} />}
             {seasonOver && (
               <div className="ag-card cr-over ag-pop">
                 <span className="ag-eyebrow">REGULAR SEASON OVER · {wins}–{losses}</span>
@@ -395,13 +413,15 @@ function Offseason({ c, setCareer, last, setTab }) {
       </div>
       {ev.map((e, i) => <div key={i} className="ag-card cr-event ag-pop" style={{ '--d': '60ms' }}><span className="ag-eyebrow">OFFSEASON</span><p>{e.text}</p></div>)}
       {c.dev.points > 0 && <button className="ag-card cr-dev ag-pop" style={{ '--d': '90ms' }} onClick={() => { window.scrollTo({ top: 0, behavior: 'smooth' }) }}><IconStar size={16} /><span><b>{c.dev.points} development {c.dev.points === 1 ? 'point' : 'points'}</b><small>Tap a trait on your player to raise it</small></span></button>}
-      {noCalls ? (
+      {c.talks ? (
+        <Talks c={c} setCareer={setCareer} />
+      ) : noCalls ? (
         <div className="ag-card cr-offer-wrap ag-pop"><span className="ag-eyebrow">FREE AGENCY</span><p className="cr-note">The phone didn't ring. At {c.age}, with last season on tape, nobody's calling. That's a career.</p></div>
       ) : c.offers?.length > 0 && (
         <div className="cr-offers ag-pop" style={{ '--d': '120ms' }}>
-          <span className="ag-eyebrow">CONTRACT'S UP · {c.offers.length} OFFERS</span>
+          <span className="ag-eyebrow">CONTRACT'S UP · {c.offers.length} {c.offers.length === 1 ? 'OFFER' : 'OFFERS'} · TAP ONE TO TALK</span>
           {c.offers.map(o => (
-            <button key={o.team} className={`cr-offer${o.kind === 'contender' ? ' is-contender' : ''}`} onClick={() => { setCareer(signOffer(c, o)); sfx('purchase'); haptic('success') }}>
+            <button key={o.team} className={`cr-offer${o.kind === 'contender' ? ' is-contender' : ''}`} onClick={() => { setCareer(openTalks(c, o)); sfx('tap') }}>
               <img src={logoFor(o.team)} alt="" />
               <span className="cr-offer-txt"><b>{o.fit.name}</b><small>{o.pitch}</small><i>{o.fit.status} · OL {o.fit.ol} · {c.pos === 'qb' ? `weapons ${o.fit.weapons}` : `QB ${o.fit.qb}`}</i></span>
               <span className="cr-offer-money"><b>{money(o.perYear)}</b><small>× {o.years} YRS</small></span>
@@ -519,3 +539,87 @@ function Legacy({ c, setCareer, onNewBuild, onExit }) {
     </div>
   )
 }
+
+// ── Playoffs: a round, its moment, the result ────────────────────────────────
+function Playoffs({ c, setCareer, onBook }) {
+  const po = c.active.po
+  const rd = po.rounds[po.idx]
+  const last = po.line[po.line.length - 1]
+  const [step, setStep] = useState(po.stage === 'done' ? 'result' : last && !rd?.played && po.line.length ? 'result' : 'card')
+  const game = useMemo(() => pickPlayoffGame(c.pos, `${c.seed}-${c.year}-${po.idx}`, po.line.map(x => x.game).filter(Boolean)), [c.seed, c.year, po.idx]) // eslint-disable-line
+  const odds = Math.round((rd?.p ?? 0.5) * 100)
+  if (po.stage === 'done' || step === 'result') {
+    const x = last
+    return (
+      <div className="cr-po">
+        {x && (
+          <div className={`ag-card cr-po-result ag-pop${x.won ? ' is-w' : ' is-l'}`}>
+            <span className="ag-eyebrow">{x.name.toUpperCase()} · {x.won ? 'W' : 'L'} {x.mySc}–{x.oppSc}</span>
+            <b>{x.won ? (x.name === 'Super Bowl' ? 'Champions.' : `Through to the ${PO_ROUNDS[PO_ROUNDS.indexOf(x.name) + 1] ?? 'next round'}.`) : `Season over in the ${x.name}.`}</b>
+            <small>{GAME_LINE[c.pos]?.(x) ?? ''} · the moment went {x.score >= 0.85 ? 'perfectly' : x.score >= 0.5 ? 'your way' : 'wrong'}</small>
+          </div>
+        )}
+        {po.stage === 'done'
+          ? <button className="ag-btn ag-btn--gold tk-intro-go" onClick={onBook}>WRAP THE SEASON <IconArrow size={16} /></button>
+          : <button className="ag-btn ag-btn--gold tk-intro-go" onClick={() => { setStep('card'); sfx('tap') }}>NEXT ROUND <IconArrow size={16} /></button>}
+      </div>
+    )
+  }
+  if (step === 'game') return (
+    <div className="cr-po">
+      <div className="cr-po-head"><span className="ag-eyebrow">{rd.name.toUpperCase()} · vs {rd.oppName.toUpperCase()}</span></div>
+      <MiniGame key={`${po.idx}-${game}`} game={game} build={c.build} seed={`${c.seed}-${c.year}-${po.idx}`} onDone={res => { setCareer(playoffRound(c, res.score, game)); setStep('result') }} />
+    </div>
+  )
+  return (
+    <div className="cr-po">
+      <div className="ag-card cr-po-card ag-pop">
+        <span className="ag-eyebrow">PLAYOFFS · {rd.name.toUpperCase()}</span>
+        <div className="cr-po-match"><img src={logoFor(c.team)} alt="" /><b>{c.team}</b><i>vs</i><b>{rd.opp}</b><img src={logoFor(rd.opp)} alt="" /></div>
+        <small>{rd.home === null ? 'Neutral site' : rd.home ? 'At home' : 'On the road'} · {odds}% to win · the game turns on one moment: <b>{GAMES[game]?.title}</b></small>
+        <button className="ag-btn ag-btn--gold tk-intro-go" onClick={() => { setStep('game'); sfx('whistle') }}>PLAY THE MOMENT <IconArrow size={16} /></button>
+      </div>
+      {po.line.length > 0 && <div className="cr-goals">{po.line.map(x => <span key={x.name} className={`cr-goal${x.won ? ' is-met' : ' is-miss'}`}>{x.name}: {x.won ? 'W' : 'L'} {x.mySc}–{x.oppSc}</span>)}</div>}
+    </div>
+  )
+}
+
+// ── Talks: one offer on the table; push, sign, or walk ───────────────────────
+function Talks({ c, setCareer }) {
+  const t = c.talks
+  const lev = leverageOf(c)
+  const moneyPushes = t.asked.filter(k => k === 'money').length
+  return (
+    <div className="ag-card cr-talks ag-pop">
+      <div className="ag-card-head"><span className="ag-eyebrow">AT THE TABLE · {t.fit.name.toUpperCase()}</span><span className="cr-fit-status">{t.fit.status}</span></div>
+      <div className="cr-talks-terms">
+        <span className="cr-offer-money"><b>{money(t.perYear)}</b><small>A YEAR</small></span>
+        <span className="cr-offer-money"><b>{t.years}</b><small>{t.years === 1 ? 'YEAR' : 'YEARS'}</small></span>
+        <span className="cr-offer-money"><b>{money(r1(t.perYear * t.years))}</b><small>TOTAL</small></span>
+      </div>
+      <div className="cr-badges">{t.noTrade && <span className="cr-badge is-gold"><IconShield size={12} /> NO-TRADE</span>}{t.starter && <span className="cr-badge is-gold"><IconStar size={12} /> STARTER</span>}</div>
+      <div className="cr-patience"><span className="ag-eyebrow">THEIR PATIENCE · LEVERAGE {['NONE', 'LOW', 'SOME', 'REAL', 'ALL OF IT'][lev]}</span><span className="cr-patience-dots">{Array.from({ length: t.max }, (_, i) => <i key={i} className={i < t.patience ? 'is-on' : ''} />)}</span></div>
+      {t.lines.length > 0 && <p className="cr-talks-line">{t.lines[t.lines.length - 1]}</p>}
+      {t.walked ? (
+        <>
+          <p className="cr-note">They pulled the offer. {c.offers?.length ? 'The other teams are still waiting.' : 'What\'s left is whatever the market has late.'}</p>
+          <button className="ag-btn ag-btn--ghost" onClick={() => { setCareer(closeTalks(c)); sfx('tap') }}>BACK TO THE OFFERS</button>
+        </>
+      ) : (
+        <>
+          <div className="cr-asks">
+            {Object.entries(ASKS).map(([k, a]) => {
+              const used = k === 'money' ? moneyPushes >= 3 : t.asked.includes(k)
+              return <button key={k} className="cr-ask" disabled={used} onClick={() => { setCareer(ask(c, k)); sfx(t.patience - a.cost < 0 ? 'deny' : 'tap') }}><b>{a.label}</b><small>{a.sub} · costs {a.cost}</small></button>
+            })}
+          </div>
+          <div className="cr-actions">
+            <button className="ag-btn ag-btn--gold tk-intro-go" onClick={() => { setCareer(acceptTalks(c)); sfx('purchase'); haptic('success') }}>SIGN · {money(t.perYear)} × {t.years} {t.years === 1 ? 'YR' : 'YRS'}</button>
+            <button className="ag-btn ag-btn--ghost" onClick={() => { setCareer(closeTalks(c)); sfx('tap') }}>WALK AWAY</button>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+const r1 = v => Math.round(v * 10) / 10

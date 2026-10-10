@@ -1211,7 +1211,8 @@ export default function App() {
     },
     onOpenCustomRatings: () => setShowCustomModal(true),
     user,
-    gameMode,
+    // the Salary Cap pill only while you're in Salary Cap (not on the board or the profile)
+    gameMode: gameMode === 'salarycap' && page !== 'salarycap' && page !== 'sim' ? null : gameMode,
     isRB,
     isWR,
     isTE,

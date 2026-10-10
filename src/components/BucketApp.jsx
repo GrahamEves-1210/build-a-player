@@ -1410,7 +1410,8 @@ export default function BucketApp() {
     },
     onSwitchBucketPosition: (pos) => guardedLeave(() => handleNavPositionSwitch(pos)),
     user,
-    gameMode,
+    // the Salary Cap pill only while you're in Salary Cap (not on the board or the profile)
+    gameMode: gameMode === 'salarycap' && page !== 'salarycap' && page !== 'sim' ? null : gameMode,
     isRB: false,
     isPlus: isSubscribed,
     isBucket: true,
