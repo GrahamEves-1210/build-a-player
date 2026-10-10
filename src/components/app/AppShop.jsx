@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useProgress, buy, equip, owns, priceOf, lockReason, dealsFor, claimFreeCoins, msToReset, isPro, COINS, achStats, walletOpen, hasDiscord, claimDiscordCoins, DISCORD_COINS, FEEDBACK_COINS, AD_COINS, AD_MAX, adsLeft, claimAdCoins } from '../../lib/progress'
 import { openCheckout } from '../../lib/webCheckout'
-import { showRewarded } from '../../lib/rewardedAd'
+import { showRewarded, rewardedReady } from '../../lib/rewardedAd'
+import { IS_APP } from '../../lib/platform'
 import FeedbackModal from '../FeedbackModal'
 import { COIN_PACKS } from '../../lib/coins'
 import { connectDiscord } from '../../lib/discord'
@@ -335,7 +336,8 @@ export default function AppShop({ onClose, tab: initialTab = 'featured' }) {
 
       {tab === 'coins' ? (
         <>
-          <VideoCoins />
+          {/* videos are an app thing (AdMob); the website shows the card only once it has a rewarded ad unit */}
+          {(IS_APP || rewardedReady()) && <VideoCoins />}
           <CoinPacks p={p} />
         </>
       ) : tab === 'featured' ? (
