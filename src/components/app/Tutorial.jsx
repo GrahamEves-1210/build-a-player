@@ -200,6 +200,7 @@ function Tour({ sport }) {
   const bubble = useRef(null)
   const [bh, setBh] = useState(170)
   const scrolledFor = useRef(-1)
+  const lastRect = useRef(null)     // the outline holds here until the next section is measured
   // wait for Home, then keep the steps whose section is on it
   useEffect(() => {
     let n = 0
@@ -234,8 +235,11 @@ function Tour({ sport }) {
     return () => window.removeEventListener('keydown', onKey)
   })
   if (!steps?.length || !step) return <div className="tut-tour"><div className="tut-dim" /></div>
-  const r = view.key === step.id ? view.r : null
-  const p = r ? place(r, view.floor, bh) : null
+  const fresh = view.key === step.id ? view.r : null
+  if (fresh) lastRect.current = fresh
+  // one outline for the whole tour: it slides from section to section, never from the corner
+  const r = fresh ?? lastRect.current
+  const p = fresh ? place(fresh, view.floor, bh) : null
   const pad = 8
   return (
     <div className="tut-tour" role="dialog" aria-modal="true" aria-label={`Tutorial: ${step.title}`}>
@@ -244,7 +248,7 @@ function Tour({ sport }) {
       {r
         ? <div className="tut-hole" aria-hidden="true" style={{ transform: `translate(${r.left - pad}px, ${r.top - pad}px)`, width: r.width + pad * 2, height: r.height + pad * 2 }} />
         : <div className="tut-dim" />}
-      <div ref={bubble} key={step.id} className={`tut-bubble tut-bubble--tour${p ? (p.below ? ' tut-bubble--below' : ' tut-bubble--above') : ' tut-bubble--dock'}`} style={p?.pos}>
+      <div ref={bubble} key={step.id} className={`tut-bubble tut-bubble--tour${p ? (p.below ? ' tut-bubble--below' : ' tut-bubble--above') : ' tut-bubble--dock'}`} style={p ? p.pos : r ? { visibility: 'hidden' } : undefined}>
         {p && <span className="tut-bubble-arrow" style={{ left: p.arrow }} aria-hidden="true" />}
         <div className="tut-bubble-head">
           <span className="tut-bubble-step" aria-live="polite">{i + 1} / {steps.length}</span>
