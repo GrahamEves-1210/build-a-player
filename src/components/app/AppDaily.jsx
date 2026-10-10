@@ -141,19 +141,15 @@ export default function AppDaily({ sport, onClose }) {
       <div className="ag-screen-body">
         <Streak p={p} />
         <Challenge p={p} sport={sport} />
-        <section className="ag-extras ag-pop" style={{ '--d': '120ms', padding: 0 }}>
-          {isBucket && (
-            <button className="ag-mini ag-mini--purple" onClick={() => { onClose(); window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'salarycap' })) }}>
+        {isBucket && (
+          <section className="ag-extras ag-pop" style={{ '--d': '120ms', padding: 0 }}>
+            <button className="ag-mini ag-mini--purple" style={{ gridColumn: '1 / -1' }} onClick={() => { onClose(); window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'salarycap' })) }}>
               <span className="ag-mini-flag">DAILY</span>
               <span className="ag-mini-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><IconCoin size={17} /> SALARY CAP</span>
               <span className="ag-mini-sub">Today's budget build</span>
             </button>
-          )}
-          <button className="ag-mini ag-mini--mint" style={isBucket ? undefined : { gridColumn: '1 / -1' }} onClick={() => nav('cards')}>
-            <span className="ag-mini-title">YOUR CARDS</span>
-            <span className="ag-mini-sub">{Object.keys(p.cards).length} collected</span>
-          </button>
-        </section>
+          </section>
+        )}
         <Missions p={p} />
       </div>
     </div>
