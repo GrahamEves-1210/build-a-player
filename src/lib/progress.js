@@ -58,7 +58,7 @@ export const SPOTLIGHTS = [
   { id: 'royal',    name: 'Royal',    level: 30 },
   { id: 'holo',     name: 'Holo',     level: 45 },
   { id: 'inferno',  name: 'Inferno',  streak: 7 },
-  { id: 'platinum', name: 'Platinum', streak: 30 },
+  { id: 'platinum', name: 'Platinum', streak: 21 },
 ]
 
 // What climbing from level `from` to `level` brings: titles and spotlights
@@ -128,9 +128,9 @@ function pickMissions(key) {
 }
 
 export const STREAK_REWARDS = [
-  { days: 3,  xp: 100 },
-  { days: 7,  xp: 250,  unlock: 'inferno' },
-  { days: 30, xp: 750,  unlock: 'platinum' },
+  { days: 3,  xp: 200 },
+  { days: 7,  xp: 500,  unlock: 'inferno' },
+  { days: 21, xp: 1200, unlock: 'platinum' },
 ]
 export const LOGIN_XP = 25
 
@@ -622,7 +622,9 @@ function switchUser(u) {
   applySpot()
   emit(true)                 // achievements already earned unlock quietly (rewards wait in the list)
   sync()
-  pullWallet(id)
+  // coins bought on the website land after the wallet is pulled (so a newer remote wallet can't overwrite them)
+  pullWallet(id).then(() => claimCoinPurchases())
+  if (IS_APP) import('./iap').then(m => m.iapUser(id)).catch(() => {})
 }
 
 let started = false
@@ -630,6 +632,7 @@ export function initProgress() {
   if (started) return
   started = true
   applySpot()
+  watchCoinReturn()
   window.addEventListener('bap:season', onSeason)
   window.addEventListener('bap:spin', onSpin)
   window.addEventListener('bap:xp', onXp)
@@ -750,6 +753,40 @@ export function claimDiscordCoins() {
   earn(DISCORD_COINS, 'Joined the Discord', true)
   emit()
   return DISCORD_COINS
+}
+
+// ── Bought coins ─────────────────────────────────────────────────────────────
+// App: the store confirms the purchase and the coins go straight in (lib/iap.js).
+export function grantCoins(n, label = 'Coins purchased') {
+  if (!n) return
+  earn(n, label)
+  emit()
+}
+// Website: Stripe's webhook records the purchase (coin_purchases); the game
+// collects it once through claim_coin_purchases(), which marks it collected in
+// the same step so it can never be collected twice (supabase/coin_purchases.sql).
+let claiming = false
+export async function claimCoinPurchases() {
+  if (!supabase || !uid || claiming) return 0
+  claiming = true
+  try {
+    const { data, error } = await supabase.rpc('claim_coin_purchases')
+    const n = !error && typeof data === 'number' ? data : 0
+    if (n > 0) grantCoins(n, 'Coins purchased')
+    return n
+  } catch { return 0 } finally { claiming = false }
+}
+// Back from Stripe (?coins=1): the webhook can land a moment after us, so ask a few times
+export function watchCoinReturn() {
+  try {
+    const u = new URL(window.location.href)
+    if (!u.searchParams.has('coins')) return
+    u.searchParams.delete('coins')
+    window.history.replaceState({}, '', u.pathname + (u.search ? u.search : '') + u.hash)
+  } catch { return }
+  let tries = 0
+  const tick = async () => { if ((await claimCoinPurchases()) > 0 || ++tries >= 10) return; setTimeout(tick, 3000) }
+  setTimeout(tick, 1500)
 }
 
 export function claimFreeCoins() {

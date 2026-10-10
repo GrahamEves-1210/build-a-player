@@ -289,9 +289,14 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
             </>
           ) : (
             <>
-              <button className="ag-mini ag-pop" style={{ '--d': '340ms', gridColumn: '1 / -1' }} onClick={onDepthChart}>
+              <button className="ag-mini ag-mini--purple ag-pop" style={{ '--d': '330ms' }} onClick={() => start('salarycap')}>
+                <span className="ag-mini-flag">DAILY</span>
+                <span className="ag-mini-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><IconCoin size={17} /> SALARY CAP</span>
+                <span className="ag-mini-sub">Build a QB on a budget</span>
+              </button>
+              <button className="ag-mini ag-pop" style={{ '--d': '360ms' }} onClick={onDepthChart}>
                 <span className="ag-mini-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><IconClipboard size={17} /> THE DEPTH CHART</span>
-                <span className="ag-mini-sub" style={{ color: '#fbbf24' }}>Mini game · sort the stars by the stat</span>
+                <span className="ag-mini-sub" style={{ color: '#fbbf24' }}>Sort the stars by the stat</span>
               </button>
             </>
           )}

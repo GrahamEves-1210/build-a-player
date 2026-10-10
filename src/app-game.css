@@ -3070,7 +3070,7 @@ html.ag-scrolling :active { transform: none !important; filter: none !important;
   html.app-look :is(.ag-mode, .ag-mini, .ag-takeover, .ag-compete, .ag-resume, .ag-tile, .ag-daily-banner, .ag-player-chip, .sh-card, .sh-item, .ag-ach, .cp-seat, .ag-online-btn) {
     transition: transform .18s cubic-bezier(.2,.9,.25,1), box-shadow .18s ease, border-color .18s ease, filter .18s ease;
   }
-  html.app-look :is(.ag-mode, .ag-mini, .ag-takeover, .ag-compete, .ag-resume, .ag-tile, .ag-daily-banner, .sh-card, .sh-item, .ag-ach):hover {
+  html.app-look :is(.ag-mode, .ag-mini, .ag-takeover, .ag-blacktop, .ag-compete, .ag-resume, .ag-tile, .ag-daily-banner, .sh-card, .sh-item, .ag-ach, .bt-mode-go, .cpk):hover {
     transform: translateY(-3px);
     filter: brightness(1.08);
     box-shadow: 0 12px 28px rgba(0,0,0,.45), 0 0 0 1px color-mix(in srgb, var(--ag-a1) 35%, transparent);
@@ -3420,3 +3420,25 @@ html:is(.is-app, .app-look) .vl1-modes { margin-top: 4px; }
 .lb-ntag { font: inherit; max-width: 100%; }
 .lb-ntag.np { padding: 1px 8px; }
 .vr-you-tag { display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; }
+
+/* Sign in with Apple (app only): Apple's black button */
+.auth-apple { width: 100%; height: 48px; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; gap: 10px; border-radius: 12px; border: 1px solid rgba(255,255,255,.22); background: #000; color: #fff; font: 600 16px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; cursor: pointer; }
+.auth-apple:disabled { opacity: .55; }
+.auth-apple:active:not(:disabled) { transform: scale(.98); }
+
+/* ═══ Shop → Coins: packs for real money ════════════════════════════════════ */
+.cpk-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+@media (min-width: 720px) { .cpk-grid { grid-template-columns: repeat(4, 1fr); } }
+.cpk { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 18px 10px 12px; border-radius: 16px; border: 1.5px solid var(--ag-line-hi); background: radial-gradient(90% 70% at 50% 0%, rgba(245,220,138,.16), transparent 70%), var(--ag-panel); color: var(--ag-text); cursor: pointer; transition: transform .14s ease, border-color .15s, box-shadow .15s; }
+.cpk.is-tagged { border-color: rgba(245,220,138,.55); box-shadow: 0 0 18px rgba(212,175,55,.22); }
+.cpk:active:not(:disabled) { transform: scale(.97); }
+.cpk:disabled { opacity: .6; cursor: default; }
+.cpk-tag { position: absolute; top: -9px; left: 50%; transform: translateX(-50%); padding: 3px 8px; border-radius: 6px; font-family: var(--ag-font); font-size: 11px; letter-spacing: 1.5px; color: #1d1503; background: linear-gradient(135deg, #f5dc8a, #d4af37); white-space: nowrap; }
+.cpk-stack { position: relative; width: 52px; height: 34px; margin-bottom: 4px; }
+.cpk-stack .coin-ico { position: absolute; width: 26px; height: 26px; }
+.cpk-stack .coin-ico:nth-child(1) { left: 0; top: 8px; } .cpk-stack .coin-ico:nth-child(2) { left: 13px; top: 2px; } .cpk-stack .coin-ico:nth-child(3) { left: 26px; top: 8px; }
+.cpk-n { font-family: var(--ag-display); font-size: 30px; font-weight: 400; line-height: 1; font-variant-numeric: tabular-nums; }
+.cpk-lbl { font-family: var(--ag-font); font-size: 11px; letter-spacing: 2px; color: var(--ag-muted); }
+.cpk-price { margin-top: 6px; width: 100%; height: 36px; display: grid; place-items: center; border-radius: 10px; font-family: var(--ag-font); font-size: 17px; letter-spacing: 1px; color: #1d1503; background: linear-gradient(135deg, #f5dc8a, #d4af37); }
+.cpk-note { margin: 10px 0 0; font-family: var(--ag-body); font-size: 13px; font-weight: 600; color: #fca5a5; text-align: center; }
+.cpk-fine { margin: 10px 2px 0; font-family: var(--ag-body); font-size: 12px; color: var(--ag-muted); text-align: center; }

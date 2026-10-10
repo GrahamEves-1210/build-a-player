@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { useProgress, buy, equip, owns, priceOf, lockReason, dealsFor, claimFreeCoins, msToReset, isPro, COINS, achStats, walletOpen, hasDiscord, claimDiscordCoins, DISCORD_COINS } from '../../lib/progress'
+import { useProgress, buy, equip, owns, priceOf, lockReason, dealsFor, claimFreeCoins, msToReset, isPro, COINS, achStats, walletOpen, hasDiscord, claimDiscordCoins, DISCORD_COINS, grantCoins } from '../../lib/progress'
+import { COIN_PACKS } from '../../lib/coins'
+import { IS_APP } from '../../lib/platform'
 import { connectDiscord } from '../../lib/discord'
 import { SLOTS, RARITY, ITEMS, itemById, itemsFor, BLURB, DEFAULTS } from '../../lib/cosmetics'
 import { achById } from '../../lib/achievements'
@@ -14,7 +16,7 @@ import { IconClose, IconLock, IconGift, IconCrown, IconPlay, IconArrow, IconStar
 // coin pill) and Profile; lives over everything like Daily and Cards.
 
 const nav = to => window.dispatchEvent(new CustomEvent('bap:nav', { detail: to }))
-const TABS = [{ id: 'featured', label: 'Featured' }, ...SLOTS.map(s => ({ id: s.id, label: s.label }))]
+const TABS = [{ id: 'featured', label: 'Featured' }, { id: 'coins', label: 'Coins' }, ...SLOTS.map(s => ({ id: s.id, label: s.label }))]
 const fmtLeft = ms => { const h = Math.floor(ms / 3600000), m = Math.floor((ms % 3600000) / 60000); return h ? `${h}h ${m}m` : `${m}m` }
 
 function useCountTo(target, ms = 600) {
@@ -48,9 +50,54 @@ export function CoinPill({ onClick, className = '' }) {
   const prev = useRef(p.coins)
   useEffect(() => { if ((p.coins ?? 0) > (prev.current ?? 0)) { setBump(true); setTimeout(() => setBump(false), 520) } prev.current = p.coins }, [p.coins])
   return (
-    <button className={`coin-pill${bump ? ' is-bump' : ''}${className ? ` ${className}` : ''}`} onClick={onClick ?? (() => nav('shop'))} aria-label={`${p.coins ?? 0} coins, open the shop`}>
+    <button className={`coin-pill${bump ? ' is-bump' : ''}${className ? ` ${className}` : ''}`} onClick={onClick ?? (() => nav('shop:coins'))} aria-label={`${p.coins ?? 0} coins, get more`}>
       <span className="coin-ico" aria-hidden="true" />{n.toLocaleString()}
     </button>
+  )
+}
+
+// Coin packs for real money: the app buys through Apple / Google (lib/iap.js),
+// the website through Stripe Checkout (coins are collected when you're back)
+function CoinPacks({ p }) {
+  const [prices, setPrices] = useState({})
+  const [busy, setBusy] = useState(null)
+  const [note, setNote] = useState('')
+  useEffect(() => { if (IS_APP) import('../../lib/iap').then(m => m.storePrices()).then(setPrices).catch(() => {}) }, [])
+  const buyIt = async pack => {
+    if (busy) return
+    if (!IS_APP && !p.signedIn) { signIn(); return }
+    setBusy(pack.id); setNote(''); sfx('tap')
+    try {
+      if (IS_APP) {
+        const r = await (await import('../../lib/iap')).buyPack(pack)
+        if (r === 'ok') { grantCoins(pack.coins); sfx('purchase'); haptic('success') }
+        else if (r === 'unavailable') setNote("Purchases aren't available on this device right now.")
+        else if (r === 'error') setNote("The purchase didn't go through. You weren't charged.")
+      } else {
+        const res = await fetch('/api/create-coins-checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: p.user.id, email: p.user.email ?? null, pack: pack.id }) })
+        const { url } = await res.json().catch(() => ({}))
+        if (url) { window.location.href = url; return }
+        setNote("Couldn't open checkout. Try again.")
+      }
+    } finally { setBusy(null) }
+  }
+  return (
+    <div className="sh-section">
+      <div className="sh-section-head"><span className="ag-eyebrow">GET COINS</span></div>
+      <div className="cpk-grid">
+        {COIN_PACKS.map(pack => (
+          <button key={pack.id} className={`cpk${pack.tag ? ' is-tagged' : ''}`} onClick={() => buyIt(pack)} disabled={!!busy}>
+            {pack.tag && <span className="cpk-tag">{pack.tag}</span>}
+            <span className="cpk-stack" aria-hidden="true"><span className="coin-ico" /><span className="coin-ico" /><span className="coin-ico" /></span>
+            <b className="cpk-n">{pack.coins.toLocaleString()}</b>
+            <span className="cpk-lbl">COINS</span>
+            <span className="cpk-price">{busy === pack.id ? '…' : prices[pack.id] ?? `$${pack.usd.toFixed(2)}`}</span>
+          </button>
+        ))}
+      </div>
+      {note && <p className="cpk-note">{note}</p>}
+      <p className="cpk-fine">{IS_APP ? 'Paid through your App Store or Google Play account. Coins go straight into your wallet.' : p.signedIn ? 'Secure checkout by Stripe. Coins are added to your account when you come back.' : 'Sign in first: bought coins are saved to your account.'}</p>
+    </div>
   )
 }
 
@@ -239,12 +286,14 @@ export default function AppShop({ onClose, tab: initialTab = 'featured' }) {
       <div className="sh-tabs" role="tablist">
         {TABS.map(t => (
           <button key={t.id} role="tab" aria-selected={tab === t.id} className={`sh-tab${tab === t.id ? ' is-on' : ''}`} onClick={() => { setTab(t.id); sfx('tap') }}>
-            {t.label}{t.id !== 'featured' && <b>{itemsFor(t.id).filter(i => owns(i.id)).length}/{itemsFor(t.id).length}</b>}
+            {t.label}{SLOTS.some(s => s.id === t.id) && <b>{itemsFor(t.id).filter(i => owns(i.id)).length}/{itemsFor(t.id).length}</b>}
           </button>
         ))}
       </div>
 
-      {tab === 'featured' ? (
+      {tab === 'coins' ? (
+        <CoinPacks p={p} />
+      ) : tab === 'featured' ? (
         <>
           {!walletOpen() && (
             <div className="sh-section">

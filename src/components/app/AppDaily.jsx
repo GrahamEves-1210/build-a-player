@@ -141,12 +141,12 @@ export default function AppDaily({ sport, onClose }) {
       <div className="ag-screen-body">
         <Streak p={p} />
         <Challenge p={p} sport={sport} />
-        {isBucket && (
+        {(
           <section className="ag-extras ag-pop" style={{ '--d': '120ms', padding: 0 }}>
             <button className="ag-mini ag-mini--purple" style={{ gridColumn: '1 / -1' }} onClick={() => { onClose(); window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'salarycap' })) }}>
               <span className="ag-mini-flag">DAILY</span>
               <span className="ag-mini-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><IconCoin size={17} /> SALARY CAP</span>
-              <span className="ag-mini-sub">Today's budget build</span>
+              <span className="ag-mini-sub">Today's budget build{isBucket ? '' : ' · QB'}</span>
             </button>
           </section>
         )}

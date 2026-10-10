@@ -11,6 +11,7 @@ import { decodeBuild } from './utils/shareUrl'
 
 // Lazy-loaded pages — only downloaded when the user actually navigates there
 const SimPage        = lazy(() => import('./components/SimPage'))
+const QBSalaryCap    = lazy(() => import('./components/QBSalaryCap'))
 const AboutPage      = lazy(() => import('./components/AboutPage'))
 const PrivacyPage    = lazy(() => import('./components/PrivacyPage'))
 const TermsPage      = lazy(() => import('./components/TermsPage'))
@@ -324,6 +325,7 @@ export default function App() {
       else if (to === 'daily-challenge') startDailyRef.current?.()
       else if (to === 'takeover') openTakeoverRef.current?.()
       else if (to === 'depth-chart') setPage('depth-chart')
+      else if (to === 'salarycap') handleStart('salarycap', 'qb')
       // signed out: the dock shows sign-in itself, since only some pages render AuthModal
       else if (to === 'profile') { if (user) { window.history.pushState({}, '', '/profile'); setPage('profile') } else window.dispatchEvent(new CustomEvent('bap:auth')) }
       else if (to === 'about') setPage('about')
@@ -360,7 +362,7 @@ export default function App() {
   else if (page === 'takeover') tkRef.current = 'road'
   else if (page === 'game') tkRef.current = competeRef.current ? 'compete' : null
   useEffect(() => {
-    if (!gameMode) return
+    if (!gameMode || gameMode === 'salarycap') return
     try { localStorage.setItem('bap_progress', JSON.stringify({ gameMode, position, build, daily: dailyRun, tk: tkRef.current, sandbox: sandboxTainted.current || isCustomMode })) } catch {}
   }, [build, gameMode, position, dailyRun, page, isCustomMode])
 
@@ -549,6 +551,13 @@ export default function App() {
   const competeKey = useRef(null)
 
   const handleStart = useCallback((mode, pos = 'qb') => {
+    // Salary Cap (QB): its own page picks the build from the day's grid
+    if (mode === 'salarycap') {
+      setPosition('qb'); setGameMode('salarycap'); setBuild({}); setSimResult(null); setDailyRun(null)
+      setPage('salarycap'); window.scrollTo(0, 0)
+      track('mode_selected', { position: 'qb', gameMode: 'salarycap' })
+      return
+    }
     setPosition(pos)
     const isRBMode = pos === 'rb'
     const isWRMode = pos === 'wr'
@@ -760,6 +769,45 @@ export default function App() {
     }
     commitRef.current?.(result)
   }, [build, activeTypes, gameMode, isOL, isDB, isTE, isWR, isRB]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── SALARY CAP (QB): picks from the day's grid → a season on a date-seeded team ──
+  const [salaryReturnDate, setSalaryReturnDate] = useState(null)
+  const [salaryResults, setSalaryResults] = useState(false)   // View Results: straight to the final screen
+  const handleQBSalaryConfirm = useCallback((fullBuild, skipToEnd, dateStr, saveData) => {
+    setSalaryReturnDate(dateStr ?? null)
+    setPosition('qb'); setGameMode('salarycap')
+    setBuild(fullBuild)
+    // the team is seeded from the date, so "View Results" always returns the same season
+    const dateSeed = dateStr ? parseInt(dateStr.replace(/-/g, ''), 10) : Date.now()
+    let h = dateSeed | 0; h ^= h >>> 16; h = Math.imul(h, 0x45d9f3b) | 0; h ^= h >>> 16
+    const team = NFL_TEAMS[Math.floor(((h >>> 0) / 0x100000000) * NFL_TEAMS.length)]
+    const result = runSimulation(fullBuild, TYPES, team, false)
+    result.award = calcMVPResult(result, false, team.short)
+    setSimResult(result); setSimReplaying(false); setSalaryResults(!!skipToEnd)
+    // a fresh play earns season XP (kept on the device: it isn't a saved season)
+    if ((IS_APP || APP_LOOK) && !skipToEnd) {
+      window.dispatchEvent(new CustomEvent('bap:season', { detail: {
+        sport: 'nfl', pos: 'qb', mode: 'salarycap', localOnly: true,
+        wins: result.wins, losses: result.losses, playoffs: !!result.playoffs,
+        champion: !!result.sbResult?.won, award: !!result.award?.userWins, awardName: 'MVP',
+        ovr: result.ovr, ref: result,
+      } }))
+    }
+    setPage('sim')
+    window.scrollTo(0, 0)
+    // the day's board (or the infinite one) — real sim OVR, fresh plays only
+    if (saveData?.userId && supabase && !skipToEnd) {
+      const row = {
+        user_id: saveData.userId, username: saveData.username, picks: saveData.picks, overall_score: result.ovr,
+        pass_yds: result.seasonPassYds ?? saveData.passYds ?? null, pass_tds: result.seasonTDs ?? saveData.passTds ?? null,
+        ints: result.seasonINTs ?? saveData.ints ?? null, budget_used: saveData.totalCost,
+      }
+      const q = saveData.infinite
+        ? supabase.from('qb_salary_infinite_plays').insert(row)
+        : supabase.from('qb_salary_cap_plays').insert({ ...row, date_str: dateStr })
+      q.then(({ error }) => { if (error) console.error('[qb salary save]', error.code, error.message) })
+    }
+  }, [])
 
   // Books a finished season: award, save, lifetime counters, XP
   const commitSeason = useCallback((result) => {
@@ -1419,11 +1467,11 @@ export default function App() {
       </Helmet>
       {IS_APP ? (
         <AppHome sport="nfl" user={user} onStart={handleStart} onDepthChart={() => setPage('depth-chart')} onTakeover={openTakeover} takeoverRun={takeoverRun}
-          onCompete={() => setPage('compete')} resume={competeOn ? { label: `Compete · pool ${cp.match.code}`, onClick: () => setPage('game') } : (gameMode && (simResult || Object.values(build).some(Boolean))) ? { label: `${position.toUpperCase()} · ${gameMode === 'all-time' ? 'All-Time' : gameMode === 'classic' ? 'Current' : gameMode}`, onClick: () => window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'play' })) } : null} />
+          onCompete={() => setPage('compete')} resume={competeOn ? { label: `Compete · pool ${cp.match.code}`, onClick: () => setPage('game') } : (gameMode && gameMode !== 'salarycap' && (simResult || Object.values(build).some(Boolean))) ? { label: `${position.toUpperCase()} · ${gameMode === 'all-time' ? 'All-Time' : gameMode === 'classic' ? 'Current' : gameMode}`, onClick: () => window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'play' })) } : null} />
       ) : APP_LOOK ? (
         <AppHome sport="nfl" user={user} onStart={handleStart} onDepthChart={() => setPage('depth-chart')}
           onTakeover={openTakeover} takeoverRun={takeoverRun}
-          onCompete={() => setPage('compete')} resume={competeOn ? { label: `Compete · pool ${cp.match.code}`, onClick: () => setPage('game') } : (gameMode && (simResult || Object.values(build).some(Boolean))) ? { label: `${position.toUpperCase()} · ${gameMode === 'all-time' ? 'All-Time' : gameMode === 'classic' ? 'Current' : gameMode}`, onClick: () => window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'play' })) } : null}
+          onCompete={() => setPage('compete')} resume={competeOn ? { label: `Compete · pool ${cp.match.code}`, onClick: () => setPage('game') } : (gameMode && gameMode !== 'salarycap' && (simResult || Object.values(build).some(Boolean))) ? { label: `${position.toUpperCase()} · ${gameMode === 'all-time' ? 'All-Time' : gameMode === 'classic' ? 'Current' : gameMode}`, onClick: () => window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'play' })) } : null}
           footer={<><SiteFeatures sport="nfl" /><SiteFooter sport="nfl" onDepthChart={() => setPage('depth-chart')} onWiki={openWiki} /></>} />
       ) : (
       <SplashScreen
@@ -1697,6 +1745,17 @@ export default function App() {
     )
   }
 
+  // Salary Cap (QB): the day's grid; confirm plays the season
+  if (page === 'salarycap') {
+    return (
+      <Suspense fallback={null}>
+        <Navbar {...navbarProps} />
+        <QBSalaryCap user={user} initialDateStr={salaryReturnDate} onConfirm={handleQBSalaryConfirm}
+          onBack={() => { setGameMode(null); setPage('splash') }} />
+      </Suspense>
+    )
+  }
+
   if (page === 'sim' && simResult) {
     return (
       <Suspense fallback={null}>
@@ -1705,17 +1764,17 @@ export default function App() {
           result={simResult}
           build={build}
           types={activeTypes}
-          replay={simReplaying}
+          replay={simReplaying || (gameMode === 'salarycap' && salaryResults)}
           adsDisabled={adsDisabled}
           isRB={isRB}
           isWR={isWR}
           isTE={isTE}
           isDB={isDB}
           isOL={isOL}
-          onBack={() => { setPage('game'); window.scrollTo({ top: 0, behavior: 'instant' }); document.querySelector('.game-page-scroll')?.scrollTo({ top: 0, behavior: 'instant' }) }}
-          onReset={() => { handleReset(); setPage('game'); window.scrollTo({ top: 0, behavior: 'instant' }); document.querySelector('.game-page-scroll')?.scrollTo({ top: 0, behavior: 'instant' }) }}
-          simFn={(IS_APP || APP_LOOK) ? simFor : null}
-          onFinal={(IS_APP || APP_LOOK) ? commitSeason : null}
+          onBack={() => { setPage(gameMode === 'salarycap' ? 'salarycap' : 'game'); window.scrollTo({ top: 0, behavior: 'instant' }); document.querySelector('.game-page-scroll')?.scrollTo({ top: 0, behavior: 'instant' }) }}
+          onReset={() => { if (gameMode === 'salarycap') { setPage('salarycap'); window.scrollTo({ top: 0, behavior: 'instant' }); return } handleReset(); setPage('game'); window.scrollTo({ top: 0, behavior: 'instant' }); document.querySelector('.game-page-scroll')?.scrollTo({ top: 0, behavior: 'instant' }) }}
+          simFn={(IS_APP || APP_LOOK) && gameMode !== 'salarycap' ? simFor : null}
+          onFinal={(IS_APP || APP_LOOK) && gameMode !== 'salarycap' ? commitSeason : null}
           pool={displayPool}
           userName={getUsername(user) || 'Guest'}
         />

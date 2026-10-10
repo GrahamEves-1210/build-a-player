@@ -1,4 +1,4 @@
-// App-only OAuth (Discord). The website sends you to Discord and back to its
+// App-only OAuth (Discord, Apple). The website sends you to Discord and back to its
 // own URL; the app can't, so it opens Discord in an in-app browser and has
 // Supabase return to the app's own link (com.buildaplayer.app://auth). The
 // app catches that link, closes the browser and trades the one-time code for a
@@ -17,9 +17,19 @@ export const APP_REDIRECT = 'com.buildaplayer.app://auth'
 const SCOPES = 'identify email guilds.join'
 
 // kind: 'signin' (sign in / create an account) or 'link' (add Discord to this account)
-export async function appDiscord(kind = 'signin') {
+export const appDiscord = (kind = 'signin') => appOAuth('discord', kind)
+
+// Sign in with Apple (app only: the App Store asks for it alongside other
+// sign-ins). Same in-app browser round trip as Discord.
+// Setup outside the code: Apple Developer → an App ID with "Sign in with Apple",
+// a Services ID (its return URL = https://<project>.supabase.co/auth/v1/callback)
+// and a Sign in with Apple key; Supabase → Authentication → Providers → Apple:
+// on, with the Services ID, Team ID, Key ID and the key.
+export const appApple = () => appOAuth('apple', 'signin')
+
+async function appOAuth(provider, kind = 'signin') {
   if (!supabase) return { error: new Error('Offline') }
-  const opts = { provider: 'discord', options: { scopes: SCOPES, redirectTo: APP_REDIRECT, skipBrowserRedirect: true } }
+  const opts = { provider, options: { ...(provider === 'discord' ? { scopes: SCOPES } : { scopes: 'name email' }), redirectTo: APP_REDIRECT, skipBrowserRedirect: true } }
   const { data, error } = kind === 'link' ? await supabase.auth.linkIdentity(opts) : await supabase.auth.signInWithOAuth(opts)
   if (error || !data?.url) return { error: error ?? new Error('No sign-in link') }
   await Browser.open({ url: data.url, presentationStyle: 'popover' })
