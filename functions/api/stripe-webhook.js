@@ -18,7 +18,15 @@ export async function onRequestPost(context) {
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object
     const userId = session.metadata?.userId
-    if (userId) {
+    if (userId && session.metadata?.kind === 'coins') {
+      // Coin pack: record it once (ref is unique); the game collects it (claim_coin_purchases)
+      const coins = parseInt(session.metadata.coins, 10) || 0
+      if (coins > 0 && session.payment_status === 'paid') {
+        const { error } = await supabase.from('coin_purchases')
+          .upsert({ user_id: userId, coins, source: 'stripe', pack: session.metadata.pack ?? null, ref: session.id }, { onConflict: 'ref', ignoreDuplicates: true })
+        if (error) console.error('[webhook] coin purchase insert failed:', error)
+      }
+    } else if (userId) {
       if (session.mode === 'subscription') {
         const { error } = await supabase
           .from('accounts')
