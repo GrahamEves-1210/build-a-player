@@ -1795,7 +1795,6 @@ export default function App() {
   if (page === 'salarycap') {
     return (
       <Suspense fallback={null}>
-        <Navbar {...navbarProps} />
         <QBSalaryCap user={user} initialDateStr={salaryReturnDate} onConfirm={handleQBSalaryConfirm}
           onBack={() => { setGameMode(null); setPage('splash') }} />
       </Suspense>

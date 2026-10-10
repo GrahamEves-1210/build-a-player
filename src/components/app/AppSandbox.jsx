@@ -3,9 +3,10 @@ import { IconFlask, IconSliders, IconArrow } from './icons'
 // App: Sandbox on the build side — one game-style card in place of the
 // website's pill + "?" tooltip. Tap the card to switch it; when it's on, the
 // ratings editor is one tap away.
-export default function AppSandbox({ on, onToggle, onCustomize }) {
+// compact: the small version that sits in the silhouette's corner on desktop
+export default function AppSandbox({ on, onToggle, onCustomize, compact = false }) {
   return (
-    <div className={`ag-sandbox${on ? ' is-on' : ''}`}>
+    <div className={`ag-sandbox${on ? ' is-on' : ''}${compact ? ' ag-sandbox--compact' : ''}`}>
       <button className="ag-sandbox-main" role="switch" aria-checked={on} onClick={() => onToggle?.(!on)}>
         <span className="ag-sandbox-icon"><IconFlask size={22} /></span>
         <span className="ag-sandbox-txt">

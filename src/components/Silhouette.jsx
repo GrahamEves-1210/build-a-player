@@ -16,6 +16,7 @@ const ALL_RB_PHYS = { ...RB_LEGEND_PHYSICALS, ...RB_PHYSICALS }
 const ALL_WR_PHYS = { ...WR_LEGEND_PHYSICALS, ...WR_PHYSICALS }
 import QBAvatar from './QBAvatar'
 import { IS_APP, APP_LOOK } from '../lib/platform'
+import AppSandbox from './app/AppSandbox'
 
 function fmtHeight(in_) { return `${Math.floor(in_ / 12)}'${in_ % 12}"` }
 function lightenHex(hex, amt) {
@@ -564,7 +565,12 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
           </button>
         ))}
       </div>}
-      {/* app + app-look website: Sandbox is the card on the build side (AppSandbox) */}
+      {/* app-look website, desktop: the compact Sandbox card in the corner (the phone gets the full card in the report card) */}
+      {!!onSandboxToggle && !IS_APP && APP_LOOK && !modelOnly && (
+        <div className="sil-sandbox-outer sil-sandbox-outer--app">
+          <AppSandbox compact on={!!isCustomMode} onToggle={v => onSandboxToggle?.(v)} onCustomize={onOpenCustomModal} />
+        </div>
+      )}
       {!!onSandboxToggle && !IS_APP && !APP_LOOK && (
         <div className="sil-sandbox-outer">
           <div className="sil-sandbox-toprow">

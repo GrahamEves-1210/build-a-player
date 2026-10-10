@@ -118,6 +118,22 @@ function SportSwitch({ sport }) {
   )
 }
 
+// Blacktop card art: a half court
+function CourtArt() {
+  return (
+    <svg className="ag-court-art" viewBox="0 0 220 110" aria-hidden="true" preserveAspectRatio="xMaxYMid slice">
+      <g fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+        <rect x="120" y="8" width="112" height="94" rx="3" opacity=".55" />
+        <rect x="152" y="30" width="80" height="50" opacity=".75" />
+        <path d="M152 30 a25 25 0 0 0 0 50" opacity=".75" />
+        <path d="M128 8 a86 86 0 0 1 0 94" opacity=".55" />
+        <circle cx="204" cy="55" r="5.5" />
+        <line x1="212" y1="38" x2="212" y2="72" strokeWidth="4" />
+      </g>
+    </svg>
+  )
+}
+
 // Career card art: a stadium bowl and a rising legacy line
 function CareerArt() {
   return (
@@ -285,6 +301,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
           {/* Basketball: Blacktop is the online hub — 3v3 lobbies, and 1v1 from inside it */}
           {isBucket && onBlacktop && (
             <button className={`ag-blacktop ag-pop${btLive ? ' is-live' : ''}`} style={{ '--d': '320ms' }} onClick={onBlacktop}>
+              <CourtArt />
               <span className="ag-live-dot" />
               <span className="ag-takeover-txt">
                 <span className="ag-eyebrow">{btLive ? (blacktop.phase === 'queue' ? `IN THE LOBBY · ${blacktop.queue}/6 SPOTS TAKEN` : blacktop.phase === 'build' ? 'LIVE · YOUR SQUAD IS BUILDING' : 'LIVE · GAME ON') : 'ONLINE · 3V3 · 1V1'}</span>
