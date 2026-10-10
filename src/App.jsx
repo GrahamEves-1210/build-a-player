@@ -42,6 +42,7 @@ import HEADSHOTS from './data/headshots.json'
 import { runSimulation, getArchetype, calcOVR, runRBSimulation, calcOVRRB, getArchetypeRB, runWRSimulation, calcOVRWR, getArchetypeWR, runTESimulation, calcOVRTE, getArchetypeTE, runDBSimulation, calcOVRDB, getArchetypeDB, runOLSimulation, calcOVROL, getArchetypeOL, HEADSHOT_BASE, nflHeadshot, calcMVPResult, calcOPOYResult, calcWROPOYResult, calcTEOPOYResult, calcDBDpoyResult, calcOLAllProResult } from './utils/simulation'
 import { supabase, rtSupabase } from './lib/supabase'
 import { track } from './lib/track'
+import { blockReason, buildSig, markPlayed } from './lib/saveGuard'
 import CustomRatingsModal from './components/CustomRatingsModal'
 import SiteFooter from './components/SiteFooter'
 import SiteFeatures from './components/SiteFeatures'
@@ -185,8 +186,9 @@ export default function App() {
   })
 
   // Once sandbox is ever turned on during a build session, taint it permanently
-  // until reset — prevents toggle-on → edit → toggle-off → simulate exploit
-  const sandboxTainted = useRef(isCustomMode)
+  // until reset — prevents toggle-on → edit → toggle-off → simulate exploit.
+  // The mark is saved with the build (bap_progress), so a refresh can't clear it.
+  const sandboxTainted = useRef(isCustomMode || !!_saved?.sandbox || Object.values(_saved?.build ?? {}).some(c => c?.sandbox))
   useEffect(() => {
     if (isCustomMode) sandboxTainted.current = true
   }, [isCustomMode])
@@ -359,8 +361,8 @@ export default function App() {
   else if (page === 'game') tkRef.current = competeRef.current ? 'compete' : null
   useEffect(() => {
     if (!gameMode) return
-    try { localStorage.setItem('bap_progress', JSON.stringify({ gameMode, position, build, daily: dailyRun, tk: tkRef.current })) } catch {}
-  }, [build, gameMode, position, dailyRun, page])
+    try { localStorage.setItem('bap_progress', JSON.stringify({ gameMode, position, build, daily: dailyRun, tk: tkRef.current, sandbox: sandboxTainted.current || isCustomMode })) } catch {}
+  }, [build, gameMode, position, dailyRun, page, isCustomMode])
 
   useEffect(() => {
     try {
@@ -771,6 +773,9 @@ export default function App() {
       : isWR ? calcWROPOYResult : isRB ? calcOPOYResult : calcMVPResult
     result.award = result.award ?? calcAward(result, isAllTimeSeason, result.team?.short)
     setSimResult(result)
+    // Leaderboard guard (lib/saveGuard.js): sandbox in any form, or a build that
+    // already saved a season. Either way: no save, and no XP or coins either.
+    const saveBlock = blockReason({ mode: gameMode, build, types: activeTypes, pool: activePool, sandboxOn: isCustomMode, tainted: sandboxTainted.current })
     // Season XP, coins, missions and the Daily Challenge score (lib/progress.js)
     if (IS_APP || APP_LOOK) {
       window.dispatchEvent(new CustomEvent('bap:season', { detail: {
@@ -778,15 +783,17 @@ export default function App() {
         wins: result.wins, losses: result.losses, playoffs: !!result.playoffs,
         champion: !!result.sbResult?.won, award: !!result.award?.userWins,
         awardName: { mvp: 'MVP', opoy: 'OPOY', dpoy: 'DPOY', allpro: 'All-Pro' }[awardType],
-        ovr: result.ovr, sandbox: isCustomMode || sandboxTainted.current, daily: !!dailyRun, ref: result,
+        ovr: result.ovr, sandbox: !!saveBlock, daily: !!dailyRun, ref: result,
         build: dailyRun ? Object.fromEntries(activeTypes.filter(t => build[t]).map(t => [t, { qb: build[t].qbFull, team: build[t].team, val: build[t].val }])) : undefined,
       } }))
     }
     track('simulate', { position, gameMode, userId: user?.id ?? null })
     if (!user) {
       showSaveToast('no-auth', 'Sign in to save your stats')
-    } else if (isCustomMode || sandboxTainted.current) {
+    } else if (saveBlock === 'sandbox') {
       showSaveToast('custom', 'Custom mode — results not saved')
+    } else if (saveBlock === 'played') {
+      showSaveToast('custom', 'This build already has a saved season — start a new build to save another')
     } else if (!supabase) {
       console.warn('[build-a-player] sim result not saved — supabase not configured')
     } else {
@@ -801,6 +808,7 @@ export default function App() {
             : isRB
               ? getArchetypeRB(result.ovr, build, activeTypes)
               : getArchetype(result.ovr, build, activeTypes)
+      markPlayed(buildSig(gameMode, build, activeTypes))
       supabase.from('simulations').insert({
         user_id: user.id,
         username: getUsername(user) || 'Player',
@@ -826,7 +834,9 @@ export default function App() {
           }])
         ),
       }).then(({ error }) => {
-        if (error) {
+        if (error?.code === '23505') {
+          showSaveToast('custom', 'This build already has a saved season — start a new build to save another')
+        } else if (error) {
           console.error('[build-a-player] simulation save failed:', error)
           showSaveToast('error', `Save failed: ${error.message}`)
         } else {
@@ -839,7 +849,7 @@ export default function App() {
     setSimReplaying(false)
     setPage('sim')
     window.scrollTo({ top: 0, behavior: 'instant' })
-  }, [build, activeTypes, user, gameMode, position, showSaveToast, recordAward, dailyRun, isCustomMode, isOL, isDB, isTE, isWR, isRB])
+  }, [build, activeTypes, user, gameMode, position, showSaveToast, recordAward, dailyRun, isCustomMode, isOL, isDB, isTE, isWR, isRB, activePool])
 
   commitRef.current = commitSeason
 
@@ -1341,6 +1351,7 @@ export default function App() {
               number: p.number,
               team: p.team,
               captain: p.captain ?? false,
+              sandbox: true,
               photo,
             }
             setBuild(prev => ({ ...prev, [attrType]: chipData }))
@@ -1365,6 +1376,7 @@ export default function App() {
                     number: p.number,
                     team: p.team,
                     captain: p.captain ?? false,
+                    sandbox: true,
                     photo,
                   }
                 }
@@ -1646,6 +1658,7 @@ export default function App() {
                 number: p.number,
                 team: p.team,
                 captain: p.captain ?? false,
+                sandbox: true,
                 photo,
               }
               setBuild(prev => ({ ...prev, [attrType]: chipData }))
@@ -1669,6 +1682,7 @@ export default function App() {
                       number: p.number,
                       team: p.team,
                       captain: p.captain ?? false,
+                      sandbox: true,
                       photo,
                     }
                   }
