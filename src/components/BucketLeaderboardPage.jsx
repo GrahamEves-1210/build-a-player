@@ -7,6 +7,10 @@ import { NBA_TEAMS } from '../data/nba-teams'
 import { valToGrade, HEADSHOT_BASE } from '../utils/simulation'
 import NBA_HEADSHOTS from '../data/nba-headshots.json'
 import { rampAdd } from '../lib/ads'
+import { NameTag } from './app/NameTag'
+import { IS_APP as _LB_APP, APP_LOOK as _LB_LOOK } from '../lib/platform'
+// App look: every name on the board wears that player's look (looked up by account id)
+const LbName = ({ name, uid }) => ((_LB_APP || _LB_LOOK) ? <NameTag name={name} uid={uid} className="lb-ntag" /> : <>{name}</>)
 
 const TEAM_COLOR = Object.fromEntries(NBA_TEAMS.map(t => [t.short, t.color]))
 const SLOTS = 20
@@ -468,7 +472,7 @@ export default function BucketLeaderboardPage({ onBack, currentUser, adsDisabled
                     <RankBadge rank={i + 1} />
                     <div className="lb-row-info">
                       <div className="lb-row-name-line">
-                        <span className="lb-username">{row.username ?? 'Anonymous'}</span>
+                        <span className="lb-username">{<LbName name={row.username ?? 'Anonymous'} uid={row.uid ?? row.user_id} />}</span>
                         {isPlus && <span className="lb-plus-badge" title="BAP Pro">PRO</span>}
                         {isYou  && <span className="lb-you">you</span>}
                       </div>
@@ -497,7 +501,7 @@ export default function BucketLeaderboardPage({ onBack, currentUser, adsDisabled
                       </div>
                       <div className="lb-row-info">
                         <div className="lb-row-name-line">
-                          <span className="lb-username">{row.username ?? 'Anonymous'}</span>
+                          <span className="lb-username">{<LbName name={row.username ?? 'Anonymous'} uid={row.uid ?? row.user_id} />}</span>
                           <PosBadge position={row.position} />
                           {row.champion && <span className="lb-champ-icon">🏆</span>}
                           {isYou && <span className="lb-you">you</span>}
@@ -532,7 +536,7 @@ export default function BucketLeaderboardPage({ onBack, currentUser, adsDisabled
                       <RankBadge rank={i + 1} />
                       <div className="lb-row-info">
                         <div className="lb-row-name-line">
-                          <span className="lb-username">{row.username ?? 'Anonymous'}</span>
+                          <span className="lb-username">{<LbName name={row.username ?? 'Anonymous'} uid={row.uid ?? row.user_id} />}</span>
                           <PosBadge position={row.position} />
                           {row.champion && <span className="lb-champ-icon">🏆</span>}
                           {isYou && <span className="lb-you">you</span>}

@@ -23,7 +23,7 @@ export default function AppOnline({ sport = 'nfl', onClose }) {
         {o.played === 0 && (
           <div className="ol-empty ag-pop">
             <b>No online games yet.</b>
-            <span>Wins against real players move your rating most. Pools and runs filled with bots count for half.</span>
+            <span>Every online game is against real players: Compete pools, Blacktop 3v3 and 1v1.</span>
           </div>
         )}
         <NextGoals limit={3} />
@@ -36,12 +36,11 @@ export default function AppOnline({ sport = 'nfl', onClose }) {
             <li><b>Compete</b> · 1st +24 · 2nd +12 · 3rd +4 · 4th −6 · 5th −12</li>
             <li><b>Blacktop 3v3</b> · win +20 · loss −12 · MVP +5</li>
             <li><b>Blacktop 1v1</b> · win +25 · loss −15 · forfeit −20</li>
-            <li>Pools and runs filled with bots count for half.</li>
           </ul>
         </div>
         <div className="ol-play">
           <button className="ag-btn" onClick={() => { onClose?.(); nav('compete') }}>FIND A COMPETE POOL <IconArrow size={14} /></button>
-          {sport === 'bucket' && <button className="ag-btn ag-btn--ghost" onClick={() => { onClose?.(); nav('blacktop') }}>BLACKTOP LOBBY</button>}
+          {sport === 'bucket' && <button className="ag-btn ag-btn--ghost" onClick={() => { onClose?.(); nav('blacktop') }}>BLACKTOP</button>}
         </div>
       </div>
     </div>

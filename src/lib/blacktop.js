@@ -1,8 +1,8 @@
 // BLACKTOP — live 3v3. One hook owns the whole life of a match so the screens
 // only render:
 //   queue  → the lobby: two squads of 2 guards + 1 big. You tap an open spot to
-//            join that team in that role; when all six are taken (or bots fill
-//            the rest after a wait) the run starts
+//            join that team in that role; when all six are taken the run
+//            starts (real players only, no bots in the lobby)
 //   build  → everyone builds on a shared 3:00 clock, team chat, roles; the leader
 //            finalises: anyone AFK or gone gets an auto-build with ratings off
 //   game   → every client plays back the same seeded streetball game
@@ -167,7 +167,7 @@ export function useBlacktop({ enabled, user, position, pools, types, build, play
     let bi = 0
     const players = SLOTS.map(sl => {
       const h = held[sl.id]
-      if (h) return { vid: h.vid, name: h.name, uid: h.uid ?? null, pos: sl.pos, team: sl.team, bot: false, slot: sl.id }
+      if (h) return { vid: h.vid, name: h.name, uid: h.uid ?? null, cos: h.cos ?? null, pos: sl.pos, team: sl.team, bot: false, slot: sl.id }
       return { vid: `bot-${code}-${sl.id}`, name: bnames[bi++ % bnames.length], uid: null, pos: sl.pos, team: sl.team, bot: true, slot: sl.id }
     })
     return { code, seed: code, created: Date.now(), players, bots }
@@ -195,10 +195,8 @@ export function useBlacktop({ enabled, user, position, pools, types, build, play
       }
     })
     q.on('match', m => { if (m.players.some(p => p.vid === me.vid)) enterRoom(m) })
-    q.on('fill', () => {
-      const list = q.presence()
-      if (seatedLeader(list) === me.vid && queueRef.current === q) { const m = formFrom(list, true); q.send('match', m); enterRoom(m) }
-    })
+    // real players only: the lobby never fills with bots (a player who doesn't
+    // finish their build is built for them once the game is on)
     q.on('chat', p => {
       if (blockedIds().has(p.uid)) return
       setLobbyChat(c => [...c.slice(-60), { id: `${p.from}-${p.ts}`, from: p.from, uid: p.uid, name: p.name, cos: p.cos, team: -1, text: clean(p.text), ts: p.ts, all: true }])
@@ -214,13 +212,6 @@ export function useBlacktop({ enabled, user, position, pools, types, build, play
     setMySlot(slotId)
   }, [me.vid])
 
-  // Bots take the open spots: any seated player can ask, the seated leader deals it
-  const fillNow = useCallback(() => {
-    const q = queueRef.current; if (!q) return
-    q.send('fill', {})
-    const list = q.presence()
-    if (seatedLeader(list) === me.vid) { const m = formFrom(list, true); q.send('match', m); enterRoom(m) }
-  }, [me.vid, enterRoom, formFrom]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (phase !== 'queue') return
     const id = setInterval(() => setWaited(w => w + 1), 1000)
@@ -301,7 +292,7 @@ export function useBlacktop({ enabled, user, position, pools, types, build, play
   // ── Game ───────────────────────────────────────────────────────────────────
   const game = useMemo(() => {
     if (!final || !match) return null
-    const mk = p => ({ id: p.vid, name: p.name, pos: p.pos, role: final.roles[p.vid] ?? 'balanced', build: final.builds[p.vid], bot: p.bot, uid: p.uid })
+    const mk = p => ({ id: p.vid, name: p.name, pos: p.pos, role: final.roles[p.vid] ?? 'balanced', build: final.builds[p.vid], bot: p.bot, uid: p.uid, cos: p.cos ?? null })
     const teams = [match.players.filter(p => p.team === 0).map(mk), match.players.filter(p => p.team === 1).map(mk)]
     return { ...simStreetball({ teams, seed: final.seed, goal: 11, winBy: 2, cap: 15, names: [teamName(match, 0), teamName(match, 1)] }), teams }
   }, [final, match])
@@ -356,7 +347,7 @@ export function useBlacktop({ enabled, user, position, pools, types, build, play
     .filter(p => p.vid !== me.vid && (p.typing ?? 0) > Date.now() - 3500).map(p => p.name)
   return {
     phase, me, queue, waited, held, seated, mySlot, seat, bumped, link, retry: () => { queueRef.current?.leave(); queueRef.current = null; join() },
-    canFill: !!mySlot && waited >= FILL_AFTER_SECS && seated < ROOM_SIZE, join, fill: fillNow, leave: exit,
+    canFill: false, join, leave: exit, leaveLobby: leave,
     match, present, builds, clock, role, setRole, chat: visibleChat, sendChat, typing, typers, myTeam, leader, isLeader: leader === me.vid,
     final, game, finish, rematchVotes, voteRematch, exit,
   }

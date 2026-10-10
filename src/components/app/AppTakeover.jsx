@@ -5,7 +5,8 @@ import { playDelay } from '../../lib/hoops'
 import { joinRoom, genCode, myVid } from '../../lib/live'
 import { clean, blockedIds, MIN_GAP_MS } from '../../lib/chat'
 import { valToGrade } from '../../utils/simulation'
-import { useProgress } from '../../lib/progress'
+import { useProgress, myCosmetics } from '../../lib/progress'
+import { NameTag } from './NameTag'
 import { getUsername } from '../../lib/discord'
 import { sfx, haptic, victory } from '../../lib/juice'
 import { BlacktopChat } from './AppBlacktop'
@@ -42,7 +43,7 @@ export default function AppTakeover({ sport, run, setRun, user, pools, attrMap, 
   const [screen, setScreen] = useState(() => (run?.over ? 'over' : run?.justWon ? 'complete' : 'map'))
   const [duel, setDuel] = useState(null)            // { ...result, city, star, stop } — the stop it was played at
   const [chatOpen, setChatOpen] = useState(false)
-  const me = useMemo(() => ({ vid: myVid(), name: user ? (getUsername(user) || 'Player') : 'Guest', uid: user?.id ?? null }), [user?.id]) // eslint-disable-line
+  const me = useMemo(() => ({ vid: myVid(), name: user ? (getUsername(user) || 'Player') : 'Guest', uid: user?.id ?? null, cos: myCosmetics() }), [user?.id]) // eslint-disable-line
   useEffect(() => { if (run) saveRun(run) }, [run])
   // endless: the next stop is drawn when you get there
   useEffect(() => { if (run && !run.over && !stopAt(run) && rated.length) setRun(r => (r ? ensureStop(r, rated) : r)) }, [run?.idx, run?.endless?.length, rated.length]) // eslint-disable-line
@@ -117,7 +118,7 @@ export default function AppTakeover({ sport, run, setRun, user, pools, attrMap, 
             <span className="tk-ovr"><b>{ovr}</b> OVR</span>
             <button className="ag-chip" onClick={() => setScreen('build')}><IconProfile size={13} /> MY BUILD</button>
             {run.mode !== 'duo' && <button className="ag-chip" onClick={() => setScreen('duo')}>DUO</button>}
-            {run.mode === 'duo' && <button className={`ag-chip${duo.partner ? ' is-on' : ''}`} onClick={() => setChatOpen(true)}><IconChat size={13} /> {duo.partner ? duo.partner.name : 'WAITING'}</button>}
+            {run.mode === 'duo' && <button className={`ag-chip${duo.partner ? ' is-on' : ''}`} onClick={() => setChatOpen(true)}><IconChat size={13} /> {duo.partner ? <NameTag name={duo.partner.name} cos={duo.partner.cos} plate={false} /> : 'WAITING'}</button>}
           </div>
           <UsMap cities={cities} run={run} here={here} next={city} />
           {city && star && stop ? (
@@ -185,7 +186,7 @@ export default function AppTakeover({ sport, run, setRun, user, pools, attrMap, 
           <div className="tk-matchup ag-pop">
             <div className="tk-side">
               <span className="tk-side-av"><IconProfile size={26} /></span>
-              <b>{me.name}</b><small>{ovr} OVR</small>
+              <b><NameTag name={me.name} self plate={false} /></b><small>{ovr} OVR</small>
             </div>
             <span className="tk-vs">{isBucket ? (run.mode === 'duo' ? '2v2' : '1v1') : 'GAME'}</span>
             <div className="tk-side">
@@ -195,7 +196,7 @@ export default function AppTakeover({ sport, run, setRun, user, pools, attrMap, 
           </div>
           {run.mode === 'duo' && duo.partnerPlayer && partnerStar && (
             <div className="tk-duo-line ag-pop" style={{ '--d': '60ms' }}>
-              <span><IconProfile size={14} /> {duo.partnerPlayer.name}</span><i>vs</i><span><Headshot src={partnerStar.build[duo.partnerPlayer.types?.[0]]?.photo} name={partnerStar.player.name} size={22} /> {partnerStar.player.name}</span>
+              <span><IconProfile size={14} /> <NameTag name={duo.partnerPlayer.name} cos={duo.partner?.cos} plate={false} /></span><i>vs</i><span><Headshot src={partnerStar.build[duo.partnerPlayer.types?.[0]]?.photo} name={partnerStar.player.name} size={22} /> {partnerStar.player.name}</span>
             </div>
           )}
           <div className="tk-stakes ag-pop" style={{ '--d': '80ms' }}>

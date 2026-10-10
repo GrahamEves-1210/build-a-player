@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useProgress, dailyState, fetchDailyBoard, msToReset, claimMission, claimStreak, missionDef, STREAK_REWARDS, SPOTLIGHTS } from '../../lib/progress'
 import { sfx, haptic } from '../../lib/juice'
+import { NameTag, AvatarBadge } from './NameTag'
 import { IconFlame, IconTarget, IconCheck, IconGift, IconLock, IconClose, IconCoin, IconArrow } from './icons'
 
 // Daily hub (dock → Daily): login streak + rewards, the Daily Challenge with
@@ -81,14 +82,14 @@ function Challenge({ p, sport }) {
         {board?.rows.slice(0, 10).map((r, i) => (
           <div key={r.user_id} className={`ag-board-row${r.user_id === p.user?.id ? ' is-me' : ''}`}>
             <span className={`ag-board-rank ag-board-rank--${i + 1}`}>{i + 1}</span>
-            <span className="ag-board-name">{r.username || 'Player'}</span>
+            <span className="ag-board-name"><AvatarBadge name={r.username} uid={r.user_id} size={24} /><NameTag name={r.username || 'Player'} uid={r.user_id} plate={false} /></span>
             <span className="ag-board-ovr">{r.ovr}</span>
           </div>
         ))}
         {mine >= 10 && (
           <div className="ag-board-row is-me">
             <span className="ag-board-rank">{mine + 1}</span>
-            <span className="ag-board-name">{board.rows[mine].username}</span>
+            <span className="ag-board-name"><AvatarBadge name={board.rows[mine].username} self size={24} /><NameTag name={board.rows[mine].username} self plate={false} /></span>
             <span className="ag-board-ovr">{board.rows[mine].ovr}</span>
           </div>
         )}
@@ -140,8 +141,7 @@ export default function AppDaily({ sport, onClose }) {
       <div className="ag-screen-body">
         <Streak p={p} />
         <Challenge p={p} sport={sport} />
-        <Missions p={p} />
-        <section className="ag-extras ag-pop" style={{ '--d': '190ms', padding: 0 }}>
+        <section className="ag-extras ag-pop" style={{ '--d': '120ms', padding: 0 }}>
           {isBucket && (
             <button className="ag-mini ag-mini--purple" onClick={() => { onClose(); window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'salarycap' })) }}>
               <span className="ag-mini-flag">DAILY</span>
@@ -154,6 +154,7 @@ export default function AppDaily({ sport, onClose }) {
             <span className="ag-mini-sub">{Object.keys(p.cards).length} collected</span>
           </button>
         </section>
+        <Missions p={p} />
       </div>
     </div>
   )

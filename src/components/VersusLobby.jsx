@@ -6,6 +6,8 @@ import { IS_APP, APP_LOOK } from '../lib/platform'
 // App + app-look website: this is Blacktop's 1v1 (Pickup or Invite a friend), not a separate mode
 const LOOK = IS_APP || APP_LOOK
 import OnlineRecord from './app/OnlineRecord'
+import { OneOnOneOptions } from './app/AppBlacktop'
+import { IconClose } from './app/icons'
 
 const rt = rtSupabase || supabase
 
@@ -38,7 +40,7 @@ export function getVsId() {
   return _vsId
 }
 
-export default function VersusLobby({ onJoin, position, gameMode, onBack, onLeaderboard, onSignIn, onProfile, onAbout, onSwitchBucketPosition, user, vsRecord, channelPrefix = 'bap', on3v3 = null }) {
+export default function VersusLobby({ onJoin, position, gameMode, onBack, onLeaderboard, onSignIn, onProfile, onAbout, onSwitchBucketPosition, user, vsRecord, channelPrefix = 'bap', on3v3 = null, autoStart = null }) {
   const [screen, setScreen]       = useState('menu')
   const [myCode, setMyCode]       = useState('')
   const [inputCode, setInputCode] = useState('')
@@ -202,8 +204,8 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
   }
 
   // ── JOIN friend room ────────────────────────────────────────────────────────
-  async function joinFriend() {
-    const code = inputCode.trim().toUpperCase()
+  async function joinFriend(codeArg) {
+    const code = (typeof codeArg === 'string' ? codeArg : inputCode).trim().toUpperCase()
     if (code.length < 4) { setError('Enter a valid code'); return }
     setError('')
     setScreen('joining')
@@ -585,6 +587,58 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
 
   const notifCount = friendRequests.length + pendingInvites.length
 
+  // Blacktop's hub already picked: Pickup, Play a friend, or a friend's code
+  const autoRan = useRef(false)
+  useEffect(() => {
+    if (!autoStart || autoRan.current) return
+    autoRan.current = true
+    if (autoStart.kind === 'pickup') findRandom()
+    else if (autoStart.kind === 'friend') hostFriend()
+    else if (autoStart.kind === 'join' && autoStart.code) { setInputCode(autoStart.code); joinFriend(autoStart.code) }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── App look: Blacktop's 1v1, in Blacktop's colors (no Head-to-Head page) ──
+  if (LOOK) {
+    const back = () => { clearInterval(searchTimerRef.current); abandon(); (on3v3 ?? onBack)() }
+    const cancel = () => { clearInterval(searchTimerRef.current); abandon(); setError(''); if (autoStart) back(); else setScreen('menu') }
+    const title = screen === 'host' ? 'Play a friend' : screen === 'searching' ? 'Pickup' : screen === 'joining' ? 'Joining' : '1v1'
+    return (
+      <div className="ag-screen ag-screen--bucket v1">
+        <div className="ag-screen-head">
+          <div><span className="ag-eyebrow">BLACKTOP · 1V1 · FIRST TO 11</span><h1 className="ag-h1">{title}</h1></div>
+          <button className="ag-round-btn" onClick={back} aria-label="Back to Blacktop"><IconClose size={16} /></button>
+        </div>
+        <div className="ag-screen-body">
+          {screen === 'menu' ? (
+            <section className="bt-mode ag-pop">
+              <OneOnOneOptions onPickup={findRandom} onFriend={hostFriend} onJoinCode={c => { setInputCode(c); joinFriend(c) }} error={error} />
+            </section>
+          ) : (
+            <section className="bt-mode v1-wait ag-pop">
+              {screen === 'host' && (
+                <div className="v1-code">
+                  <span className="ag-eyebrow">SEND THIS CODE TO A FRIEND</span>
+                  <b>{myCode}</b>
+                  <button className="ag-btn ag-btn--ghost" onClick={() => navigator.clipboard?.writeText(myCode)}>COPY CODE</button>
+                </div>
+              )}
+              {screen === 'searching' && (
+                <div className="v1-search">
+                  <b>{String(Math.floor(searchSecs / 60)).padStart(2, '0')}:{String(searchSecs % 60).padStart(2, '0')}</b>
+                  <small>{etaLabel(searchSecs, queueSize, activityRate)}</small>
+                </div>
+              )}
+              <span className="v1-status"><span className="bt-dots"><i /><i /><i /></span>{status}</span>
+              {error && <div className="v1-error">{error}</div>}
+              <button className="ag-btn ag-btn--ghost v1-cancel" onClick={cancel}>CANCEL</button>
+            </section>
+          )}
+          <OnlineRecord modes={['h2h']} title="YOUR 1V1" />
+        </div>
+      </div>
+    )
+  }
+
   // ── render ──────────────────────────────────────────────────────────────────
   return (
     <div className="versus-lobby">
@@ -693,7 +747,7 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
               onChange={e => setInputCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
               onKeyDown={e => e.key === 'Enter' && joinFriend()}
             />
-            <button className="versus-join-btn" onClick={joinFriend}>JOIN</button>
+            <button className="versus-join-btn" onClick={() => joinFriend()}>JOIN</button>
           </div>
 
           {error && <div className="versus-error">{error}</div>}

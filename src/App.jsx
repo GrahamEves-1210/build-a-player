@@ -1224,7 +1224,7 @@ export default function App() {
             isCustomMode={isCustomMode}
             onOpenCustomModal={() => setShowCustomModal(true)}
             onSandboxToggle={sandboxOk ? handleSandboxToggle : undefined}
-            versusMode={page === 'versus-game'}
+            isVersusMode={page === 'versus-game'}
           />
         </div>
 

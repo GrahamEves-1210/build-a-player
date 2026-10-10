@@ -736,7 +736,8 @@ export function equip(slot, id) {
   return true
 }
 // What other players see (chat, lobbies): the look, not the sounds
-export const myCosmetics = () => ({ avatar: S.equip.avatar ?? null, nameColor: S.equip.nameColor ?? null, nameFx: S.equip.nameFx ?? null, plate: S.equip.plate ?? null })
+// Everything other players see of you: the look and the victory (live rooms send it; accounts.cos keeps it)
+export const myCosmetics = () => ({ avatar: S.equip.avatar ?? null, nameColor: S.equip.nameColor ?? null, nameFx: S.equip.nameFx ?? null, plate: S.equip.plate ?? null, winFx: S.equip.winFx || DEFAULTS.winFx, winSound: S.equip.winSound || DEFAULTS.winSound })
 export const myVictory = () => ({ fx: S.equip.winFx || DEFAULTS.winFx, sound: S.equip.winSound || DEFAULTS.winSound })
 
 // Join the Discord: one-time coins once the account has Discord linked
@@ -820,7 +821,18 @@ function schedulePush() {
     const app_profile = Object.fromEntries(WALLET_KEYS.map(k => [k, S[k]]))
     app_profile.at = S.walletAt
     supabase.from('accounts').update({ app_profile }).eq('id', id).then(null, () => {})
+    pushCos(id)
   }, 2500)
+}
+// The public copy of my look (leaderboards, results: supabase/public_cosmetics.sql).
+// Its own write, so a database without the column never blocks the wallet.
+let cosSent = ''
+function pushCos(id = uid) {
+  if (!supabase || !id) return
+  const cos = myCosmetics(), key = id + JSON.stringify(cos)
+  if (key === cosSent) return
+  cosSent = key
+  supabase.from('accounts').update({ cos }).eq('id', id).then(({ error }) => { if (error) cosSent = '' }, () => { cosSent = '' })
 }
 async function pullWallet(id) {
   if (!supabase || !id) return

@@ -4,7 +4,7 @@ import { getUsername } from '../../lib/discord'
 import { sfx, haptic, previewVictory } from '../../lib/juice'
 import { NameTag, AvatarBadge, ItemPreview } from './NameTag'
 import { CoinPill } from './AppShop'
-import { IconClose, IconCheck, IconPlay, IconBag, IconArrow } from './icons'
+import { IconClose, IconCheck, IconPlay, IconBag } from './icons'
 
 // The Locker (app): everything you own, in one place, one tap to wear it.
 // Your look up top (avatar, name color + effect, nameplate), your victory
@@ -89,10 +89,6 @@ export default function AppLocker({ onClose }) {
           </section>
         )
       })}
-
-      <div className="lk-foot">
-        <button className="ag-career-act ag-career-act--shop" onClick={() => nav('shop')}><IconBag size={18} /> SHOP FOR MORE <IconArrow size={14} /></button>
-      </div>
     </div>
   )
 }

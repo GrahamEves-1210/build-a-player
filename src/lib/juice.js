@@ -696,10 +696,12 @@ export function previewVictory(fx, sound) {
   if (fx) (FX[fx] ?? FX['fx-confetti'])()
   if (sound) sfx(sound)
 }
-// A win: play what the player has equipped. big = a title (a little longer)
-export function victory({ big = false } = {}) {
+// A win: play what the winner has equipped — me, or (of = their look, from a
+// live room) the player who beat me, so everyone sees the winner's victory.
+// big = a title (a little longer)
+export function victory({ big = false, of = null } = {}) {
   stopTicks()
-  const v = myVictory()
+  const v = of ? { fx: FX[of.winFx] ? of.winFx : 'fx-confetti', sound: of.winSound || 'snd-horn' } : myVictory()
   ;(FX[v.fx] ?? FX['fx-confetti'])()
   if (big && v.fx !== 'fx-confetti') setTimeout(() => confetti(90), 600)
   // a title gets the crowd, an award its sting; the equipped victory sound on top

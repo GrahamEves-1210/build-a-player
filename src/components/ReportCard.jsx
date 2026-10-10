@@ -19,7 +19,7 @@ const ALL_TE_PHYS = { ...Object.fromEntries(TE_LEGENDS.map(t => [t.name, { heigh
 import { calcOVR, calcOVRRB, calcOVRWR, calcOVRTE, calcOVRDB, calcOVROL, getArchetype, getArchetypeRB, getArchetypeWR, getArchetypeTE, getArchetypeDB, getArchetypeOL, calcBalance, valToGrade } from '../utils/simulation'
 import { calcBucketOVR, getBucketGuardArchetype, getBucketBigArchetype } from '../utils/bucketSimulation'
 import { buildShareUrl } from '../utils/shareUrl'
-import { generateBucketShareCard, shareOrDownloadCard } from '../utils/generateShareCard'
+import { generateBucketShareCard, shareOrDownloadCard, captureSilhouette } from '../utils/generateShareCard'
 import QBAvatar from './QBAvatar'
 import { IS_APP, APP_LOOK, shareNative } from '../lib/platform'
 import AppSandbox from './app/AppSandbox'
@@ -120,15 +120,21 @@ export function ShareModal({ ovr, arch, build, types, onClose, isBucket = false,
   const bucketText = `I built a ${ovr} OVR ${arch}. Think you can do better?`
   const shareText  = isBucket ? bucketText : `I made a ${ovr} overall ${arch} ${posWord}, think you can do better?`
   const shareUrl   = buildShareUrl(build, types)
-  const filename   = `bucket-build-${ovr}-${arch.toLowerCase().replace(/\s+/g, '-')}.png`
+  const filename   = `${isBucket ? 'bucket' : 'player'}-build-${ovr}-${arch.toLowerCase().replace(/\s+/g, '-')}.png`
 
-  // Auto-generate card on open for bucket builds
+  // The image card, made when the sheet opens (both sports: football's figure
+  // is the silhouette from the game page)
   useEffect(() => {
-    if (!isBucket) return
-    generateBucketShareCard({ build, types, ovr, arch, position, attrMap }).then(canvas => {
+    let live = true
+    ;(async () => {
+      const figure = isBucket ? null : await captureSilhouette()
+      const posLabel = isBucket ? null : isOL ? 'OL' : isDB ? 'DB' : isTE ? 'TE' : isWR ? 'WR' : isRB ? 'RB' : 'QB'
+      const canvas = await generateBucketShareCard({ build, types, ovr, arch, position: isBucket ? position : posLabel, attrMap, figure, brand: isBucket ? 'BUILD-A-BUCKET' : 'BUILD-A-PLAYER', posLabel })
+      if (!live) return
       setCardDataUrl(canvas.toDataURL('image/png'))
       canvas.toBlob(b => setCardBlob(b), 'image/png')
-    }).catch(console.error)
+    })().catch(console.error)
+    return () => { live = false }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   function legacyCopy(text) {
@@ -211,8 +217,8 @@ export function ShareModal({ ovr, arch, build, types, onClose, isBucket = false,
 
         <div className="share-modal-title">Share Your Build</div>
 
-        {/* Card preview — bucket only, auto-generated */}
-        {isBucket && (
+        {/* Card preview, auto-generated (both sports) */}
+        {(
           <div className="share-card-preview-wrap">
             {cardDataUrl
               ? <img src={cardDataUrl} alt="Build card" className="share-card-preview" />
@@ -231,18 +237,6 @@ export function ShareModal({ ovr, arch, build, types, onClose, isBucket = false,
           </div>
         )}
 
-        {!isBucket && (
-          <div className="share-og-card">
-            <div className="share-og-img-wrap">
-              <img src="/logo-v2.png" alt="" className="share-og-img" />
-            </div>
-            <div className="share-og-body">
-              <div className="share-og-domain">build-a-player.com</div>
-              <div className="share-og-title">{ovr} OVR · {arch}</div>
-              <div className="share-og-desc">{shareText}</div>
-            </div>
-          </div>
-        )}
 
         {/* 2×2 share grid */}
         <div className="share-icons-grid">

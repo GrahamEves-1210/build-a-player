@@ -34,7 +34,23 @@ function loadImage(src) {
 // SVG viewBox aspect ratio (matches PROCESSED_SVG in BucketFigureOverlay)
 const VB_W = 850.9, VB_H = 815.5
 
-export async function generateBucketShareCard({ build, types, ovr, arch, position, attrMap }) {
+// Football: the build's silhouette as it's drawn on the game page (figure,
+// colors, numbers), without the drop zones and their lines
+export async function captureSilhouette() {
+  const el = [...document.querySelectorAll('.game-layout .sil-wrap')].find(e => e.offsetParent !== null && e.getBoundingClientRect().width > 40)
+  if (!el) return null
+  try {
+    const html2canvas = (await import('html2canvas')).default
+    return await html2canvas(el, {
+      backgroundColor: null, scale: 2, useCORS: true, allowTaint: true, logging: false,
+      ignoreElements: e => !!e.classList && (e.classList.contains('cz-lines-svg') || e.classList.contains('cz-layer') || e.classList.contains('sil-sandbox-outer')),
+    })
+  } catch { return null }
+}
+
+// The share card, both sports. Basketball draws its figure from the build;
+// football hands in `figure` (captureSilhouette). brand + posLabel head the card.
+export async function generateBucketShareCard({ build, types, ovr, arch, position, attrMap, figure = null, brand = 'BUILD-A-BUCKET', posLabel: posLabelIn = null }) {
   await document.fonts.ready
 
   const W = 1080, H = 1350
@@ -67,10 +83,10 @@ export async function generateBucketShareCard({ build, types, ovr, arch, positio
   ctx.font = '500 22px Outfit, sans-serif'
   ctx.fillStyle = 'rgba(255,255,255,0.38)'
   if ('letterSpacing' in ctx) ctx.letterSpacing = '3px'
-  ctx.fillText('BUILD-A-BUCKET', W / 2, 116)
+  ctx.fillText(brand, W / 2, 116)
   if ('letterSpacing' in ctx) ctx.letterSpacing = '0px'
 
-  const posLabel = position === 'big' ? 'BIG' : 'GUARD'
+  const posLabel = posLabelIn ?? (position === 'big' ? 'BIG' : 'GUARD')
   ctx.font = '700 18px Outfit, sans-serif'
   ctx.fillStyle = 'rgba(255,255,255,0.22)'
   ctx.textAlign = 'right'
@@ -82,8 +98,8 @@ export async function generateBucketShareCard({ build, types, ovr, arch, positio
   const FIGURE_H   = 520
   const FIGURE_BOT = FIGURE_TOP + FIGURE_H
 
-  // SVG aspect ratio from viewBox
-  const svgAR   = VB_W / VB_H   // ≈ 1.043
+  // aspect ratio: the bucket SVG's viewBox, or the captured football figure
+  const svgAR   = figure ? figure.width / figure.height : VB_W / VB_H   // bucket ≈ 1.043
   const maxFigW = W - PAD * 2
   const byH     = { h: FIGURE_H, w: FIGURE_H * svgAR }
   const { fw, fh } = byH.w <= maxFigW
@@ -92,13 +108,17 @@ export async function generateBucketShareCard({ build, types, ovr, arch, positio
   const figX = (W - fw) / 2
   const figY = FIGURE_TOP
 
-  // Draw body SVG
-  const svgMarkup = getBucketSVGMarkup(build)
-  const svgBlob   = new Blob([svgMarkup], { type: 'image/svg+xml;charset=utf-8' })
-  const svgUrl    = URL.createObjectURL(svgBlob)
-  const svgImg    = await loadImage(svgUrl)
-  URL.revokeObjectURL(svgUrl)
-  if (svgImg) ctx.drawImage(svgImg, figX, figY, fw, fh)
+  // Draw the figure: football's capture, or basketball's body SVG
+  if (figure) {
+    ctx.drawImage(figure, figX, figY, fw, fh)
+  } else if (position === 'guard' || position === 'big') {
+    const svgMarkup = getBucketSVGMarkup(build)
+    const svgBlob   = new Blob([svgMarkup], { type: 'image/svg+xml;charset=utf-8' })
+    const svgUrl    = URL.createObjectURL(svgBlob)
+    const svgImg    = await loadImage(svgUrl)
+    URL.revokeObjectURL(svgUrl)
+    if (svgImg) ctx.drawImage(svgImg, figX, figY, fw, fh)
+  }
 
 
 

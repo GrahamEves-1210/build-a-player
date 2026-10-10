@@ -38,13 +38,16 @@ import AppHome from './app/AppHome'
 import { FlipEdge, BuildComplete, useFlip } from './app/AppBuildTray'
 import { useCompete, botBuild } from '../lib/compete'
 import { useBlacktop } from '../lib/blacktop'
-import { BlacktopQueue, BlacktopHud, BlacktopChat, BlacktopGame } from './app/AppBlacktop'
+import { BlacktopQueue, BlacktopHud, BlacktopChat, BlacktopGame, BlacktopHub } from './app/AppBlacktop'
+import { NameTag } from './app/NameTag'
 import { loadRun, newRun, cityList, ratedPool } from '../lib/takeover'
 const AppTakeover = lazy(() => import('./app/AppTakeover'))
 const TakeoverIntro = lazy(() => import('./app/AppTakeover').then(m => ({ default: m.TakeoverIntro })))
 import CompeteHud from './app/CompeteHud'
 const AppCompete = lazy(() => import('./app/AppCompete'))
 // which page a live Blacktop run is on, so Home → Play (or the card) resumes it
+// A 1v1 player's match id starts with their account id when signed in (VersusLobby myId)
+const uidFromVsId = id => (typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}-/i.test(id) ? id.slice(0, 36) : null)
 const btPageFor = phase => (phase === 'build' ? 'blacktop-build' : phase === 'game' || phase === 'result' ? 'blacktop-game' : 'blacktop')
 import { finishDiscordSignIn, getUsername } from '../lib/discord'
 import { rampPage, HOME_UNITS, RAIL_UNITS, RAIL_UNITS_WITH_LEFT } from '../lib/ads'
@@ -732,8 +735,10 @@ export default function BucketApp() {
     })
   }, [position, gameMode, isBucketCustomMode, bucketCustomRatings])
 
-  // Blacktop 1v1: from the Blacktop lobby (and the old splash)
-  const startVersus = useCallback((pos) => {
+  // Blacktop 1v1: from the Blacktop hub (Pickup / Play a friend / a code) and the old splash
+  const [versusAuto, setVersusAuto] = useState(null)
+  const startVersus = useCallback((pos, auto = null) => {
+    setVersusAuto(auto)
     const p = pos || position || 'guard'
     try { localStorage.setItem('bucketPosition', p) } catch {}
     setPosition(p)
@@ -787,7 +792,6 @@ export default function BucketApp() {
   // App: the shop reads Pro from storage; tell it when that changes
   useEffect(() => { if (IS_APP || APP_LOOK) window.dispatchEvent(new CustomEvent('bap:pro')) }, [isSubscribed])
 
-  const btPage = page === 'blacktop' || page === 'blacktop-build' || page === 'blacktop-game'
   // The hook stays on across every page: Home never drops you out of a run.
   const bt = useBlacktop({
     enabled: IS_APP || APP_LOOK, user, position, pools: LIVE_POOLS, types: LIVE_TYPES,
@@ -796,11 +800,6 @@ export default function BucketApp() {
     onSeatPos: pos => { setPosition(pos); try { localStorage.setItem('bucketPosition', pos) } catch {} },
   })
   btPhaseRef.current = bt.phase
-  const btJoined = useRef(false)
-  useEffect(() => {
-    if (page === 'blacktop' && bt.phase === 'idle' && !btJoined.current) { btJoined.current = true; bt.join() }
-    if (!btPage) btJoined.current = false
-  }, [page, bt.phase]) // eslint-disable-line
   const resetLiveBuild = useCallback(() => {
     const types = VERSUS_POS_TYPES[position] ?? VERSUS_GUARD_TYPES
     setBuild(Object.fromEntries(types.map(t => [t, null])))
@@ -1554,14 +1553,14 @@ export default function BucketApp() {
             <div className="vs-prompt-eyebrow">{(IS_APP || APP_LOOK) ? 'BLACKTOP 1V1' : 'HEAD TO HEAD'}</div>
             <div className="vs-prompt-matchup">
               <div className="vs-prompt-side">
-                <div className="vs-prompt-name">{getUsername(user) || 'Guest'}</div>
+                <div className="vs-prompt-name">{(IS_APP || APP_LOOK) ? <NameTag name={getUsername(user) || 'Guest'} self /> : (getUsername(user) || 'Guest')}</div>
                 <div className="vs-prompt-record">
                   {vsRecord.wins}W – {vsRecord.losses}L
                 </div>
               </div>
               <div className="vs-prompt-vs">VS</div>
               <div className="vs-prompt-side">
-                <div className="vs-prompt-name">{versusRoom?.oppName || 'Opponent'}</div>
+                <div className="vs-prompt-name">{(IS_APP || APP_LOOK) ? <NameTag name={versusRoom?.oppName || 'Opponent'} uid={uidFromVsId(versusRoom?.oppId)} /> : (versusRoom?.oppName || 'Opponent')}</div>
                 <div className="vs-prompt-record">
                   {oppRecord ? `${oppRecord.wins}W – ${oppRecord.losses}L` : '— W – — L'}
                 </div>
@@ -1772,8 +1771,14 @@ export default function BucketApp() {
     )
   }
 
+  // Blacktop: the hub (3v3 · 1v1); JOIN LOBBY puts you in the 3v3 lobby on this same page
   if (page === 'blacktop') {
-    return <BlacktopQueue bt={bt} user={user} onBack={() => setPage('splash')} onVersus={() => { bt.leave(); startVersus(position) }} />
+    if (bt.phase === 'idle') {
+      return <BlacktopHub onBack={() => setPage('splash')} onJoin3v3={() => bt.join()}
+        onPickup={() => startVersus(position, { kind: 'pickup' })} onFriend={() => startVersus(position, { kind: 'friend' })}
+        onJoinCode={code => startVersus(position, { kind: 'join', code })} />
+    }
+    return <BlacktopQueue bt={bt} user={user} onBack={() => {}} />
   }
   if (page === 'blacktop-game') {
     return (
@@ -1808,6 +1813,7 @@ export default function BucketApp() {
         <Suspense fallback={null}>
           <VersusLobby
             on3v3={(IS_APP || APP_LOOK) ? () => setPage('blacktop') : null}
+            autoStart={versusAuto}
             onJoin={handleVersusJoin}
             position={position}
             gameMode="classic"
@@ -1837,7 +1843,7 @@ export default function BucketApp() {
       <Suspense fallback={null}>
         <BucketVersusResult
           myData={{ build, player: savedSpinResult, name: getUsername(user) || 'Your Build' }}
-          oppData={{ build: oppBuild, player: oppPlayer, name: versusRoom?.oppName || 'Opponent' }}
+          oppData={{ build: oppBuild, player: oppPlayer, name: versusRoom?.oppName || 'Opponent', uid: uidFromVsId(versusRoom?.oppId) }}
           position={position}
           oppPosition={oppPosition}
           role={versusRoom?.role}

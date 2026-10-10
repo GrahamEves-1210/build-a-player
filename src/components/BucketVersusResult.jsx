@@ -11,6 +11,10 @@ import { getUsername } from '../lib/discord'
 import { rampPage, RAIL_UNITS } from '../lib/ads'
 import { IS_APP, APP_LOOK } from '../lib/platform'
 import { RatingLine } from './app/OnlineRecord'
+import { NameTag, AvatarBadge } from './app/NameTag'
+import { cosFor } from '../lib/peopleCos'
+import { victory } from '../lib/juice'
+const LOOK = IS_APP || APP_LOOK
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function clamp(v, lo, hi) { return Math.min(hi, Math.max(lo, v)) }
@@ -774,6 +778,7 @@ export default function BucketVersusResult({ myData, oppData, position, oppPosit
         onResult?.('win')
         setWinner('me')
         setPhase('result')
+        if (LOOK) setTimeout(() => victory(), 400)
       }
     })
     channel.on('broadcast', { event: 'bab_play' }, ({ payload }) => {
@@ -876,6 +881,8 @@ export default function BucketVersusResult({ myData, oppData, position, oppPosit
       if (!resultFired.current) {
         resultFired.current = true
         onResult?.(result === 'me' ? 'win' : 'loss')
+        // the winner's victory, on both screens (theirs looked up by account)
+        if (LOOK) setTimeout(() => (result === 'me' ? victory() : victory({ of: cosFor(oppData.uid) ?? {} })), 1200)
       }
       const t = setTimeout(() => setPhase('result'), 2200)
       return () => clearTimeout(t)
@@ -984,7 +991,7 @@ export default function BucketVersusResult({ myData, oppData, position, oppPosit
               team={myTeamData}
               className="bvr-reveal-model"
             />
-            <div className="vr-player-name">{myName}</div>
+            <div className="vr-player-name">{LOOK ? <NameTag name={myName} self /> : myName}</div>
             <div className="vr-team-name" style={{ color: myColor }}>{myTeamFull}</div>
             <div className="vr-ovr-badge">{myOVR} <span className="vr-ovr-label">OVR</span></div>
           </div>
@@ -998,7 +1005,7 @@ export default function BucketVersusResult({ myData, oppData, position, oppPosit
               team={oppTeamData}
               className="bvr-reveal-model bvr-reveal-model--flip"
             />
-            <div className="vr-player-name">{oppName}</div>
+            <div className="vr-player-name">{LOOK ? <NameTag name={oppName} uid={oppData.uid} /> : oppName}</div>
             <div className="vr-team-name" style={{ color: oppColor }}>{oppTeamFull}</div>
             <div className="vr-ovr-badge">{oppOVR} <span className="vr-ovr-label">OVR</span></div>
           </div>
@@ -1190,7 +1197,7 @@ export default function BucketVersusResult({ myData, oppData, position, oppPosit
 
       <div className="vr-grid bvr-result-grid">
         <div className={`vr-side ${isWin ? 'vr-side--winner' : 'vr-side--loser'}`}>
-          <div className="vr-you-tag">{myName}</div>
+          <div className="vr-you-tag">{LOOK ? <><AvatarBadge name={myName} self size={40} /><NameTag name={myName} self /></> : myName}</div>
           <div className="vr-ovr-badge" style={{ marginBottom: 8 }}>{myOVR} <span className="vr-ovr-label">OVR</span></div>
           <BuildCompact build={myData.build} types={myTypes} position={position} />
         </div>
@@ -1210,7 +1217,7 @@ export default function BucketVersusResult({ myData, oppData, position, oppPosit
         </div>
 
         <div className={`vr-side ${!isWin ? 'vr-side--winner' : 'vr-side--loser'}`}>
-          <div className="vr-you-tag">{oppName}</div>
+          <div className="vr-you-tag">{LOOK ? <><AvatarBadge name={oppName} uid={oppData.uid} size={40} /><NameTag name={oppName} uid={oppData.uid} /></> : oppName}</div>
           <div className="vr-ovr-badge" style={{ marginBottom: 8 }}>{oppOVR} <span className="vr-ovr-label">OVR</span></div>
           <BuildCompact build={oppData.build} types={oppTypes} position={oppPosition ?? position} />
         </div>

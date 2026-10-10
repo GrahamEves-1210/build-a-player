@@ -2,7 +2,7 @@
 // Daily Challenge's seeded order, but per pool), builds on their own, and the
 // pool is ranked by OVR. Respins are each player's own (they don't use up the
 // shared order); the next regular spin is back on the pool's sequence.
-//   queue  → wait for a pool of 5 (bots take empty seats after a wait)
+//   queue  → wait for a pool of 5 players (after a wait, 2+ can start: no bots)
 //   build  → build on the game page with the pool's seed; LOCK IN sends the OVR
 //   result → everyone's OVR ranked; your place goes to your Compete stats
 // Bots play the very same spins: every client works their builds out from the
@@ -16,9 +16,9 @@ import { getUsername } from './discord'
 import { myCosmetics } from './progress'
 
 export const POOL_SIZE = 5
-export const FILL_AFTER_SECS = 25
+export const FILL_AFTER_SECS = 30
+export const MIN_POOL = 2          // real players only: a pool never fills with bots
 export const BUILD_SECS = 300
-const BOT_NAMES = ['Smoke', 'Shifty', 'Sauce', 'Twitch', 'Hammer', 'Ghost', 'Blitz', 'Cash', 'Lefty', 'Rook', 'Stretch', 'Glass', 'Juice', 'Ice', 'Moose']
 
 // The pool's spin order — the same lookup SpinScreen makes for seeded spins
 export function seededTeams(seed, teams, pool) {
@@ -99,17 +99,10 @@ export function useCompete({ enabled, user, sport, pos, botFor }) {
     setResults(rs => ({ ...out, ...rs }))
   }, [me])
 
-  const form = useCallback((list, fill) => {
+  const form = useCallback(list => {
     const code = genCode()
     const humans = [...list].sort((a, b) => (a.ts ?? 0) - (b.ts ?? 0)).slice(0, POOL_SIZE)
-    const names = seededShuffle(BOT_NAMES, code)
     const players = humans.map(h => ({ vid: h.vid, name: h.name, uid: h.uid ?? null, cos: h.cos ?? null, bot: false }))
-    let bi = 0
-    while (fill && players.length < POOL_SIZE) {
-      const skill = [0.92, 0.75, 0.6, 0.45][bi % 4]
-      players.push({ vid: `bot-${code}-${bi}`, name: names[bi % names.length], uid: null, cos: null, bot: true, skill })
-      bi++
-    }
     return { code, seed: `cp-${code}`, created: Date.now(), sport, pos, players }
   }, [sport, pos])
 
@@ -123,29 +116,30 @@ export function useCompete({ enabled, user, sport, pos, botFor }) {
     q.onPresence(list => {
       setQueue(list)
       if (list.length >= POOL_SIZE && leaderOf(list) === me.vid && queueRef.current === q) {
-        const m = form(list, false); q.send('match', m); enterRoom(m)
+        const m = form(list); q.send('match', m); enterRoom(m)
       }
     })
     q.on('match', m => { if (m.players.some(p => p.vid === me.vid)) enterRoom(m) })
     q.on('fill', () => {
       const list = q.presence()
-      if (leaderOf(list) === me.vid && queueRef.current === q) { const m = form(list, true); q.send('match', m); enterRoom(m) }
+      if (list.length >= MIN_POOL && leaderOf(list) === me.vid && queueRef.current === q) { const m = form(list); q.send('match', m); enterRoom(m) }
     })
   }, [enabled, sport, pos, me, form, enterRoom])
 
-  // Bots take the empty seats: anyone can ask, the leader deals it
+  // Start with who's here (2+ real players): anyone can ask, the leader deals it
   const fillNow = useCallback(() => {
     const q = queueRef.current; if (!q) return
-    q.send('fill', {})
     const list = q.presence()
-    if (leaderOf(list) === me.vid) { const m = form(list, true); q.send('match', m); enterRoom(m) }
+    if (list.length < MIN_POOL) return
+    q.send('fill', {})
+    if (leaderOf(list) === me.vid) { const m = form(list); q.send('match', m); enterRoom(m) }
   }, [me.vid, form, enterRoom])
   useEffect(() => {
     if (phase !== 'queue') return
     const id = setInterval(() => setWaited(w => w + 1), 1000)
     return () => clearInterval(id)
   }, [phase])
-  useEffect(() => { if (phase === 'queue' && waited >= FILL_AFTER_SECS) fillNow() }, [phase, waited, fillNow])
+  useEffect(() => { if (phase === 'queue' && waited >= FILL_AFTER_SECS && queue.length >= MIN_POOL) fillNow() }, [phase, waited, queue.length, fillNow])
 
   // My build is in: send it to the pool
   const submit = useCallback((ovr, build) => {

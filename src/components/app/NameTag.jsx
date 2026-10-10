@@ -1,5 +1,6 @@
 import { useProgress } from '../../lib/progress'
 import { itemById } from '../../lib/cosmetics'
+import { useCosOf } from '../../lib/peopleCos'
 import {
   IconFootball, IconBasketball, IconCrown, IconFlame, IconBolt, IconStar, IconTrophy, IconMedal, IconRing,
   IconTarget, IconShield, IconCoin, IconPodium, IconClipboard, IconVersus, IconWhistle, IconHelmet, IconHoop,
@@ -8,7 +9,17 @@ import '../../app-shop.css'
 
 // Cosmetics, drawn: a username with its color, effect and nameplate, and the
 // avatar badge. `cos` is { avatar, nameColor, nameFx, plate } (item ids) — the
-// player's own when `self`, or what another player shared (chat, lobbies).
+// player's own when `self` (or when `uid` is mine), what another player shared
+// (chat, lobbies), or looked up by their account id (`uid`: leaderboards, results).
+
+// Whose look to draw: mine (live), the one passed in, or theirs by account id
+function useCosFor({ self, cos, uid }) {
+  const mine = useMyCos()
+  const p = useProgress()
+  const theirs = useCosOf(!self && !cos ? uid : null)
+  if (self || (uid && uid === p.user?.id)) return mine
+  return cos || theirs || {}
+}
 
 export const GLYPHS = {
   football: IconFootball, basketball: IconBasketball, crown: IconCrown, flame: IconFlame, bolt: IconBolt, star: IconStar,
@@ -18,7 +29,7 @@ export const GLYPHS = {
 
 export function useMyCos() {
   const p = useProgress()
-  return { avatar: p.equip?.avatar ?? null, nameColor: p.equip?.nameColor ?? null, nameFx: p.equip?.nameFx ?? null, plate: p.equip?.plate ?? null }
+  return { avatar: p.equip?.avatar ?? null, nameColor: p.equip?.nameColor ?? null, nameFx: p.equip?.nameFx ?? null, plate: p.equip?.plate ?? null, winFx: p.equip?.winFx ?? null, winSound: p.equip?.winSound ?? null }
 }
 
 // Only ids the catalog knows are drawn (anything else a peer sends is ignored)
@@ -37,17 +48,15 @@ export function NameText({ name, color, fx, className = '' }) {
 }
 
 // A name with its look. plate: draw the nameplate behind it (cards, chat, lobby)
-export function NameTag({ name, cos, self = false, plate = true, className = '' }) {
-  const mine = useMyCos()
-  const c = self ? mine : cos || {}
+export function NameTag({ name, cos, uid = null, self = false, plate = true, className = '' }) {
+  const c = useCosFor({ self, cos, uid })
   const pl = plate ? known(c.plate, 'plate') : null
   const inner = <NameText name={name} color={c.nameColor} fx={c.nameFx} />
   if (!pl) return <span className={`ntag${className ? ` ${className}` : ''}`}>{inner}</span>
   return <span className={`ntag np ${pl}${className ? ` ${className}` : ''}`}><span className="np-shine" aria-hidden="true" />{inner}</span>
 }
-export function AvatarBadge({ cos, self = false, name, size = 44, level = null, className = '' }) {
-  const mine = useMyCos()
-  const c = self ? mine : cos || {}
+export function AvatarBadge({ cos, uid = null, self = false, name, size = 44, level = null, className = '' }) {
+  const c = useCosFor({ self, cos, uid })
   const av = itemById(known(c.avatar, 'avatar'))
   const initial = (name || '?').trim().slice(0, 1).toUpperCase()
   const Glyph = av && av.glyph !== 'mono' ? GLYPHS[av.glyph] : null

@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useProgress, COMPETE_REWARDS } from '../../lib/progress'
-import { POOL_SIZE, FILL_AFTER_SECS } from '../../lib/compete'
+import { POOL_SIZE, FILL_AFTER_SECS, MIN_POOL } from '../../lib/compete'
 import { IconClose, IconArrow, IconTrophy } from './icons'
 import OnlineRecord, { RatingLine, LinkPill } from './OnlineRecord'
-import { sfx } from '../../lib/juice'
+import { sfx, victory } from '../../lib/juice'
+import { NameTag, AvatarBadge } from './NameTag'
 
 // COMPETE screen: the lobby (your stats, pick a position, find a pool), the
 // queue, the wait for the rest of the pool, and the final ranking. The build
@@ -12,13 +13,16 @@ import { sfx } from '../../lib/juice'
 const ord = n => `${n}${['th', 'st', 'nd', 'rd'][(n % 100 > 10 && n % 100 < 14) ? 0 : n % 10] ?? 'th'}`
 const mmss = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
 const initials = name => (name || '?').trim().slice(0, 2).toUpperCase()
+// A player's picture and name with their look (mine live)
+const Pic = ({ p, me, size = 34 }) => (p.bot ? <span className="cp-av">{initials(p.name)}</span> : <AvatarBadge name={p.name} cos={p.cos} self={p.vid === me} size={size} className="cp-avb" />)
+const Name = ({ p, me }) => (p.bot ? <>{p.name}</> : <NameTag name={p.name} cos={p.cos} self={p.vid === me} plate={false} />)
 
 
 function Seat({ p, i, me, status }) {
   return (
     <div className={`cp-seat${p ? '' : ' is-open'}${p?.vid === me ? ' is-me' : ''}`} style={{ '--d': `${i * 50}ms` }}>
-      <span className="cp-av">{p ? initials(p.name) : '?'}</span>
-      <span className="cp-seat-name">{p ? p.name : 'Open seat'}</span>
+      {p ? <Pic p={p} me={me} /> : <span className="cp-av">?</span>}
+      <span className="cp-seat-name">{p ? <Name p={p} me={me} /> : 'Open seat'}</span>
       {status && <span className="cp-seat-status">{status}</span>}
     </div>
   )
@@ -28,6 +32,15 @@ export default function AppCompete({ cp, sport, position, positions, onPosition,
   const [now, setNow] = useState(Date.now())
   useEffect(() => { const id = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(id) }, [])
   const isBucket = sport === 'bucket'
+  // The pool's over: the winner sees their own victory, everyone else sees the winner's
+  const cheered = useRef(null)
+  useEffect(() => {
+    if (cp.phase !== 'result' || !cp.match || cheered.current === cp.match.code || !cp.ranked.length) return
+    cheered.current = cp.match.code
+    const top = cp.ranked[0]
+    if (!top?.res) return
+    setTimeout(() => (top.vid === cp.me.vid ? victory() : victory({ of: top.cos ?? {} })), 500)
+  }, [cp.phase, cp.match?.code, cp.ranked]) // eslint-disable-line react-hooks/exhaustive-deps
   const posName = positions.find(o => o.pos === position)?.label ?? position.toUpperCase()
 
   let body
@@ -39,13 +52,13 @@ export default function AppCompete({ cp, sport, position, positions, onPosition,
           <span className="cp-pulse" />
           <span className="ag-eyebrow">FINDING A POOL · {posName}</span>
           <b className="cp-count">{Math.min(cp.queue.length, POOL_SIZE)}<i>/{POOL_SIZE}</i></b>
-          <span className="cp-sub">Bots take the empty seats in {Math.max(0, FILL_AFTER_SECS - cp.waited)}s</span>
+          <span className="cp-sub">{cp.queue.length < MIN_POOL ? 'Waiting for another player. Pools are real players only.' : cp.waited < FILL_AFTER_SECS ? `Starts at ${POOL_SIZE}, or with ${cp.queue.length} in ${FILL_AFTER_SECS - cp.waited}s` : 'Starting…'}</span>
           <LinkPill link={cp.link} onRetry={cp.retry} room={`${isBucket ? 'BASKETBALL' : 'FOOTBALL'} ${posName.toUpperCase()} POOL`} />
           <span className="cp-sub cp-sub--room">Friends find you by picking the same sport and position.</span>
         </div>
         <div className="cp-seats">{seats.map((p, i) => <Seat key={i} p={p} i={i} me={cp.me.vid} />)}</div>
         <div className="cp-actions">
-          {cp.waited >= 6 && <button className="ag-btn cp-fill" onClick={cp.fillNow}>START WITH BOTS</button>}
+          {cp.waited >= 6 && cp.queue.length >= MIN_POOL && cp.queue.length < POOL_SIZE && <button className="ag-btn cp-fill" onClick={cp.fillNow}>START NOW · {cp.queue.length} PLAYERS</button>}
           <button className="ag-btn ag-btn--ghost" onClick={() => { cp.leave() }}>CANCEL</button>
         </div>
       </>
@@ -82,8 +95,8 @@ export default function AppCompete({ cp, sport, position, positions, onPosition,
             return (
               <div key={p.vid} className={`cp-row ag-pop${p.vid === cp.me.vid ? ' is-me' : ''}${final && p.place === 1 ? ' is-first' : ''}`} style={{ '--d': `${i * 60}ms` }}>
                 <span className="cp-rank">{final ? (p.place === 1 ? <IconTrophy size={16} /> : p.place) : ''}</span>
-                <span className="cp-av">{initials(p.name)}</span>
-                <span className="cp-row-name">{p.name}</span>
+                <Pic p={p} me={cp.me.vid} />
+                <span className="cp-row-name"><Name p={p} me={cp.me.vid} /></span>
                 <span className="cp-row-ovr">{final ? (r ? <><b>{r.ovr}</b> OVR</> : 'DNF') : show ? (p.vid === cp.me.vid ? <><b>{r.ovr}</b> OVR</> : 'LOCKED IN') : <i>building…</i>}</span>
               </div>
             )
