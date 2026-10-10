@@ -27,6 +27,7 @@ import { BUCKET_ATTR } from '../data/nba-attrs'
 import NBA_HEADSHOTS     from '../data/nba-headshots.json'
 import { supabase, rtSupabase } from '../lib/supabase'
 import { track } from '../lib/track'
+import { blockReason, buildSig, markPlayed } from '../lib/saveGuard'
 import { HEADSHOT_BASE } from '../utils/simulation'
 import ProfilePage from './ProfilePage'
 import CustomRatingsModal from './CustomRatingsModal'
@@ -789,7 +790,11 @@ export default function BucketApp() {
     track('simulate', { app: 'bucket', position, gameMode, userId: user?.id ?? null })
     window.scrollTo({ top: 0, behavior: 'instant' })
 
-    if (!supabase || !user || isBucketCustomMode || sandboxTainted.current) return
+    // Leaderboard guard (lib/saveGuard.js): sandbox in any form, or a build that already saved a season
+    const saveMode = gameMode === 'all-time' ? 'bucket-all-time' : 'bucket-classic'
+    if (!supabase || !user) return
+    if (blockReason({ mode: `${saveMode}-${position}`, build, types: activeTypes, pool: currentPool, sandboxOn: isBucketCustomMode, tainted: sandboxTainted.current })) return
+    markPlayed(buildSig(`${saveMode}-${position}`, build, activeTypes))
     const archetype = position === 'big'
       ? getBucketBigArchetype(result.ovr, build, activeTypes)
       : getBucketGuardArchetype(result.ovr, build, activeTypes)
@@ -823,8 +828,8 @@ export default function BucketApp() {
       best_pts:    result.bestGame?.pts ?? 0,
       team_short:  team.short,
       build:       buildJson,
-    }).then(({ error }) => { if (error) console.error('[bucket save]', error.code, error.message, error.details, error.hint) })
-  }, [build, activeTypes, position, user, gameMode])
+    }).then(({ error }) => { if (error && error.code !== '23505') console.error('[bucket save]', error.code, error.message, error.details, error.hint) })
+  }, [build, activeTypes, position, user, gameMode, isBucketCustomMode, currentPool])
 
   const handleDevFill = useCallback(() => {
     const pool = currentPool.filter(p => p.attrs)
@@ -1426,6 +1431,7 @@ export default function BucketApp() {
                 faceCenter: p.faceCenter,
                 photo: NBA_HEADSHOTS[p.name] ? `${HEADSHOT_BASE}/nba/${NBA_HEADSHOTS[p.name]}.webp` : genericHeadshot(p.skin),
                 captain: p.captain ?? false,
+                sandbox: true,
                 height: p.height ?? parseHtToIn(p.ht) ?? null,
                 weight: p.weight ?? p.wt ?? null,
               }}))
@@ -1450,6 +1456,7 @@ export default function BucketApp() {
                       faceCenter: p.faceCenter,
                       photo: NBA_HEADSHOTS[p.name] ? `${HEADSHOT_BASE}/nba/${NBA_HEADSHOTS[p.name]}.webp` : genericHeadshot(p.skin),
                       captain: p.captain ?? false,
+                      sandbox: true,
                       height: p.height ?? parseHtToIn(p.ht) ?? null,
                       weight: p.weight ?? p.wt ?? null,
                     }
@@ -1664,6 +1671,7 @@ export default function BucketApp() {
               faceCenter: p.faceCenter,
               photo: NBA_HEADSHOTS[p.name] ? `${HEADSHOT_BASE}/nba/${NBA_HEADSHOTS[p.name]}.webp` : genericHeadshot(p.skin),
               captain: p.captain ?? false,
+              sandbox: true,
               height: p.height ?? parseHtToIn(p.ht) ?? null,
               weight: p.weight ?? p.wt ?? null,
             }}))
@@ -1688,6 +1696,7 @@ export default function BucketApp() {
                     faceCenter: p.faceCenter,
                     photo: NBA_HEADSHOTS[p.name] ? `${HEADSHOT_BASE}/nba/${NBA_HEADSHOTS[p.name]}.webp` : genericHeadshot(p.skin),
                     captain: p.captain ?? false,
+                    sandbox: true,
                     height: p.height ?? parseHtToIn(p.ht) ?? null,
                     weight: p.weight ?? p.wt ?? null,
                   }
