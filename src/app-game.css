@@ -3066,14 +3066,16 @@ html.ag-scrolling :active { transform: none !important; filter: none !important;
 
 /* ═══ Website hovers (mouse / trackpad only — never on touch) ════════════════ */
 @media (hover: hover) and (pointer: fine) {
-  html.app-look :is(.ag-mode, .ag-mini, .ag-takeover, .ag-compete, .ag-resume, .ag-tile, .ag-daily-banner, .ag-player-chip, .sh-card, .sh-item, .ag-ach, .cp-seat, .ag-online-btn) {
+  html.app-look :is(.ag-mode, .ag-mini, .ag-takeover, .ag-crmode, .ag-blacktop, .ag-compete, .ag-resume, .ag-tile, .ag-daily-banner, .ag-player-chip, .sh-card, .sh-item, .ag-ach, .cp-seat, .ag-online-btn) {
     transition: transform .18s cubic-bezier(.2,.9,.25,1), box-shadow .18s ease, border-color .18s ease, filter .18s ease;
   }
-  html.app-look :is(.ag-mode, .ag-mini, .ag-takeover, .ag-blacktop, .ag-compete, .ag-resume, .ag-tile, .ag-daily-banner, .sh-card, .sh-item, .ag-ach, .bt-mode-go, .cpk):hover {
+  html.app-look :is(.ag-mode, .ag-mini, .ag-takeover, .ag-crmode, .ag-blacktop, .ag-compete, .ag-resume, .ag-tile, .ag-daily-banner, .sh-card, .sh-item, .ag-ach, .bt-mode-go, .cpk):hover {
     transform: translateY(-3px);
     filter: brightness(1.08);
     box-shadow: 0 12px 28px rgba(0,0,0,.45), 0 0 0 1px color-mix(in srgb, var(--ag-a1) 35%, transparent);
   }
+  /* Career lifts with a gold edge, like its card */
+  html.app-look .ag-crmode:hover { box-shadow: 0 12px 28px rgba(0,0,0,.45), 0 0 0 1px rgba(245,220,138,.55), 0 0 24px rgba(212,175,55,.22); }
   html.app-look .ag-player-chip:hover { border-color: var(--ag-line-hi); filter: brightness(1.08); }
   html.app-look .ag-online-btn:hover { transform: translateY(-2px); filter: brightness(1.1); }
   html.app-look :is(.ag-btn, .ag-edge-go):hover { filter: brightness(1.08); box-shadow: 0 0 26px var(--ag-glow); }
@@ -3086,7 +3088,7 @@ html.ag-scrolling :active { transform: none !important; filter: none !important;
   html.app-look .ag-play:hover .ag-play-core { filter: brightness(1.1); transform: scale(1.05); }
   html.app-look .ag-play-core { transition: transform .18s ease, filter .18s ease; }
   html.app-look .cp-seat:hover, html.app-look .cp-row:hover { border-color: var(--ag-line-hi); }
-  html.app-look :is(.ag-mode, .ag-mini, .ag-takeover, .ag-compete, .ag-tile, .ag-online-btn, .ag-btn, .ag-pos, .ag-tab, .ag-play, .ag-icon-btn, .ag-round-btn, .ag-row-btn, .ag-chip, .ag-sport-btn) { cursor: pointer; }
+  html.app-look :is(.ag-mode, .ag-mini, .ag-takeover, .ag-crmode, .ag-blacktop, .ag-compete, .ag-tile, .ag-online-btn, .ag-btn, .ag-pos, .ag-tab, .ag-play, .ag-icon-btn, .ag-round-btn, .ag-row-btn, .ag-chip, .ag-sport-btn) { cursor: pointer; }
 }
 .cp .cp-go { min-height: 56px; height: 56px; font-size: 24px; letter-spacing: 3px; }
 /* Website: the dock is on the leaderboards too, so their lists clear it */

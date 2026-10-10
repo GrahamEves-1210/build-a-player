@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { NameTag, AvatarBadge } from './NameTag'
 import { IconClose, IconStar, IconRing, IconMedal, IconVersus, IconTrophy } from './icons'
 import { loadPublicProfile, removeFriend, modeLabel } from '../../lib/friends'
+import { tierFor } from '../../lib/progress'
 import './friends.css'
 
 // A friend's profile, as a sheet over Profile: their look (avatar + name
@@ -73,7 +74,12 @@ export default function FriendProfile({ me, friend, isBucket = false, onClose, o
           <AvatarBadge uid={friend.id} name={name} size={76} level={data?.level ?? null} />
           <div className="fr-hero-id">
             <span className="fr-hero-name" id="fr-sheet-name"><NameTag uid={friend.id} name={name} /></span>
-            {data?.level != null && <span className="fr-hero-sub">LEVEL {data.level}</span>}
+            {data && (
+              <span className="fr-hero-badges">
+                <span className="fr-hero-pill"><small>LEVEL</small><b>{data.level ?? '–'}</b></span>
+                <span className={`fr-hero-pill fr-hero-pill--online${data.rating == null ? ' is-none' : ''}`}><small>ONLINE</small><b>{data.rating == null ? 'UNRANKED' : `${tierFor(data.rating)[1].toUpperCase()} · ${data.rating}`}</b></span>
+              </span>
+            )}
           </div>
         </div>
 

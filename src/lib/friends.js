@@ -115,9 +115,10 @@ export async function loadPublicProfile(id) {
   const awards = acct ? ['classic_mvps', 'alltime_mvps', 'classic_opoys', 'alltime_opoys', 'classic_dpoys', 'alltime_dpoys']
     .reduce((s, k) => s + (Number.isFinite(acct[k]) ? acct[k] : 0), 0) : 0
   const level = Number.isFinite(acct?.cos?.level) ? acct.cos.level : null   // only if their game shares it
+  const rating = Number.isFinite(acct?.cos?.rating) ? acct.cos.rating : null   // null: no online games yet
   return {
     username: acct?.username ?? null,
-    seasons, rings, awards, level,
+    seasons, rings, awards, level, rating,
     best,
     vsWins: vs.filter(r => r.result === 'win').length,
     vsLosses: vs.filter(r => r.result === 'loss' || r.result === 'forfeit').length,

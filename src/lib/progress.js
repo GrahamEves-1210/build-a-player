@@ -246,7 +246,7 @@ function emit(quiet = false) {
   payLevels()
   checkAch(quiet)
   try { localStorage.setItem(keyFor(uid), JSON.stringify(S)) } catch {}
-  if (uid) schedulePush()
+  if (uid) { schedulePush(); pushCos() }   // pushCos only sends when the public profile changed
   snap = makeSnap()
   listeners.forEach(fn => fn())
   window.dispatchEvent(new CustomEvent('bap:progress'))
@@ -889,9 +889,12 @@ function schedulePush() {
 // The public copy of my look (leaderboards, results: supabase/public_cosmetics.sql).
 // Its own write, so a database without the column never blocks the wallet.
 let cosSent = ''
+// The public profile (accounts.cos): the looks everyone sees, plus the level and
+// online rating a friend's profile shows
 function pushCos(id = uid) {
   if (!supabase || !id) return
-  const cos = myCosmetics(), key = id + JSON.stringify(cos)
+  const o = S.stats?.online
+  const cos = { ...myCosmetics(), level: levelInfo(totalXp()).level, rating: o?.played ? o.rating : null }, key = id + JSON.stringify(cos)
   if (key === cosSent) return
   cosSent = key
   supabase.from('accounts').update({ cos }).eq('id', id).then(({ error }) => { if (error) cosSent = '' }, () => { cosSent = '' })

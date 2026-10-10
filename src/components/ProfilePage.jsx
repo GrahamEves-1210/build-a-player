@@ -285,7 +285,9 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
         body: JSON.stringify({ userId: user.id }),
       })
       const { url } = await res.json()
-      if (url) window.location.href = url
+      if (!url) return
+      if (IS_APP) { const { Browser } = await import('@capacitor/browser'); await Browser.open({ url, presentationStyle: 'popover' }) }
+      else window.location.href = url
     } catch {}
   }
 
@@ -811,8 +813,8 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
                 <div className="wm-plus-body">
                   {[
                     'No ads',
-                    'Custom color themes',
-                    'Custom profile icons',
+                    'Double the daily coin drop',
+                    'The Pro Vault: exclusive looks in the shop',
                     'Pro badge on leaderboard',
                   ].map(label => (
                     <div key={label} className="wm-plus-perk">
@@ -853,9 +855,7 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
         <div className={`prf-hero ${show ? 'prf-hero-in' : ''}`}>
           <div className="prf-avatar-wrap">
             <div className="prf-avatar">
-              {(isPlus && profileIcon)
-                ? <span className="prf-avatar-emoji">{PROFILE_ICONS.find(i => i.id === profileIcon)?.e ?? initials}</span>
-                : initials}
+              {initials}
             </div>
             <div className="prf-avatar-ring" />
           </div>
@@ -865,88 +865,13 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
           </div>
         </div>
 
-        {/* App: Pro opens the shop's Pro Vault (no color themes or emoji icons here) */}
-        {IS_APP && isPlus && (
+        {/* ── BAP Pro: what it gives, and Manage Subscription (billing is Stripe's portal) ── */}
+        {isPlus && (
           <div className={`prf-card ag-pro-card ${show ? 'prf-card-in' : ''}`} style={{ animationDelay: '0.1s' }}>
             <div className="prf-card-hd"><span className="prf-card-title">BAP Pro</span><span className="plus-status-badge plus-status-badge--on">Active</span></div>
             <div className="ag-pro-card-body">No ads, double the daily coin drop, and the Pro Vault in the shop: exclusive avatars, name styles, plates and victory effects.</div>
-            <button className="ag-career-act ag-career-act--shop" onClick={() => window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'shop' }))}>OPEN THE PRO VAULT</button>
+            <button className="plus-manage-btn" onClick={handleManageSubscription}>Manage Subscription</button>
           </div>
-        )}
-
-        {/* ── BAP Pro ── */}
-        {isPlus && !IS_APP && (
-        <div className={`prf-card ${show ? 'prf-card-in' : ''}`} style={{ animationDelay: '0.1s' }}>
-          <div className="prf-card-hd">
-            <span className="prf-card-title">BAP Pro</span>
-            <span className="plus-status-badge plus-status-badge--on">Active</span>
-          </div>
-
-          <div className="plus-content">
-
-              <div className="plus-adfree-row">
-                <span className="plus-adfree-check">✓</span>
-                <span className="plus-adfree-label">Ad-Free</span>
-              </div>
-
-              <div className="plus-section">
-                <span className="plus-section-label">Color Theme</span>
-                {isBucket ? (
-                  <span className="plus-coming-soon">Not available for Build-A-Bucket yet</span>
-                ) : (
-                  <div className="plus-theme-row">
-                    {THEMES.map(t => (
-                      <button
-                        key={t.id}
-                        className={`plus-theme-swatch${activeTheme === t.id ? ' plus-theme-swatch--on' : ''}`}
-                        onClick={() => {
-                          setActiveTheme(t.id)
-                          try { localStorage.setItem('bap_theme', t.id) } catch {}
-                          onThemeChange?.(t.id)
-                        }}
-                      >
-                        <div
-                          className="plus-theme-bar"
-                          style={{ background: `linear-gradient(135deg, ${t.dots[0]}, ${t.dots[2]})` }}
-                        />
-                        <span className="plus-theme-name">{t.label}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div className="plus-section">
-                <span className="plus-section-label">Profile Icon</span>
-                <div className="plus-icon-grid">
-                  <button
-                    className={`plus-icon-btn${!profileIcon ? ' plus-icon-btn--on' : ''}`}
-                    onClick={() => { setProfileIcon(null); try { localStorage.removeItem('bap_profile_icon') } catch {} }}
-                  >
-                    <span className="plus-icon-initials">{initials}</span>
-                  </button>
-                  {PROFILE_ICONS.map(icon => (
-                    <button
-                      key={icon.id}
-                      className={`plus-icon-btn${profileIcon === icon.id ? ' plus-icon-btn--on' : ''}`}
-                      onClick={() => { setProfileIcon(icon.id); try { localStorage.setItem('bap_profile_icon', icon.id) } catch {} }}
-                    >
-                      {icon.e}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-
-
-              {CAN_SELL_PLUS && (
-                <button className="plus-manage-btn" onClick={handleManageSubscription}>
-                  Manage Subscription
-                </button>
-              )}
-
-            </div>
-        </div>
         )}
 
         {/* ── Career ── */}

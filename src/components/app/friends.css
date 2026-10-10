@@ -196,3 +196,10 @@
 @media (prefers-reduced-motion: reduce) {
   .fr-section, .fr-overlay, .fr-sheet, .fr-loading span { animation: none; }
 }
+/* the top of a friend's profile: level and online rating */
+.fr-hero-badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.fr-hero-pill { display: inline-flex; align-items: baseline; gap: 6px; padding: 4px 10px 3px; border-radius: 8px; background: rgba(255,255,255,.06); border: 1px solid var(--ag-line, rgba(149,213,178,.18)); }
+.fr-hero-pill small { font-family: var(--ag-font, 'Bebas Neue', sans-serif); font-size: 11px; letter-spacing: 1.6px; color: var(--ag-muted, rgba(216,243,220,.55)); }
+.fr-hero-pill b { font-family: var(--ag-font, 'Bebas Neue', sans-serif); font-weight: 400; font-size: 17px; letter-spacing: 1.2px; color: var(--ag-text, #EEF8F1); }
+.fr-hero-pill--online b { color: var(--ag-a1, #4fd6b7); }
+.fr-hero-pill--online.is-none b { color: var(--ag-muted, rgba(216,243,220,.55)); }

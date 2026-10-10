@@ -91,3 +91,14 @@ html.is-bucket .tut-bubble--above .tut-bubble-arrow { background: rgb(16,10,6); 
   .tut-bubble, .tut-dim { animation: none !important; }
   .tut-hole { transition: none; }
 }
+
+/* the first page: centered, before the spotlight starts */
+.tut-bubble--center {
+  left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(380px, calc(100vw - 32px));
+  padding: 16px 18px 16px; text-align: center; animation-name: tut-fade;
+}
+.tut-welcome-logo { display: block; width: 150px; max-width: 60%; height: auto; margin: 10px auto 4px; }
+.tut-welcome-title { font-size: 28px; line-height: 1.05; }
+.tut-welcome-text { font-size: 15px; margin-top: 8px; }
+.tut-bubble--center .tut-bubble-actions { justify-content: stretch; }
+.tut-welcome-go { width: 100%; justify-content: center; min-height: 48px; font-size: 19px; }

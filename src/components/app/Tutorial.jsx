@@ -181,6 +181,9 @@ function tourSteps(sport) {
   const nba = sport === 'bucket'
   const league = nba ? 'NBA' : 'NFL'
   return [
+    // the first page: no spotlight yet, just the game in a sentence
+    { id: 'welcome', sel: [], center: true, title: nba ? 'Welcome to Build-A-Bucket' : 'Welcome to Build-A-Player',
+      text: `Spin real ${league} players, take the best trait from each one, and build a player nobody else has. Then play a season and see how far it goes. Here's a quick look around.` },
     { id: 'sport', sel: ['.ag-sport'], title: 'Two games in one', text: 'Football and basketball. Switch here any time: each has its own modes, leaderboards and records.' },
     { id: 'pos', sel: ['.ag-positions'], title: 'Pick a position', text: nba ? 'Guard (PG · SG · SF) or Big (PF · C). Each one has its own traits.' : 'QB, RB, WR, TE or DB. Each position has its own traits and its own leaderboard.' },
     { id: 'modes', sel: ['.ag-modes'], title: 'The main game', text: `Spin a team, then a real ${league} player, and tap the trait you want from him. Fill every slot, then play a season. Current uses today's rosters, All-Time the legends.` },
@@ -208,7 +211,7 @@ function Tour({ sport }) {
       if (document.querySelector('.ag-home')) {
         clearInterval(t)
         const all = tourSteps(sport)
-        setSteps(all.filter(s => findTarget(s)))
+        setSteps(all.filter(s => s.center || findTarget(s)))
       } else if (++n > 40) { clearInterval(t); finish() }
     }, 100)
     return () => clearInterval(t)
@@ -235,6 +238,27 @@ function Tour({ sport }) {
     return () => window.removeEventListener('keydown', onKey)
   })
   if (!steps?.length || !step) return <div className="tut-tour"><div className="tut-dim" /></div>
+  if (step.center) {
+    lastRect.current = null   // the outline starts fresh at the first section
+    return (
+      <div className="tut-tour" role="dialog" aria-modal="true" aria-labelledby="tut-welcome-title">
+        <div className="tut-catch" />
+        <div className="tut-dim" />
+        <div className="tut-bubble tut-bubble--center" key={step.id}>
+          <div className="tut-bubble-head">
+            <span className="tut-bubble-step">{i + 1} / {steps.length}</span>
+            <button type="button" className="tut-skip tut-skip--sm" onClick={finish}>Skip tutorial</button>
+          </div>
+          <img className="tut-welcome-logo" src="/logo-v3.png" alt="" />
+          <div className="tut-bubble-title tut-welcome-title" id="tut-welcome-title">{step.title}</div>
+          <p className="tut-bubble-text tut-welcome-text">{step.text}</p>
+          <div className="tut-bubble-actions">
+            <button type="button" className="ag-btn tut-bubble-btn tut-welcome-go" onClick={next} autoFocus>SHOW ME AROUND <IconArrow size={15} /></button>
+          </div>
+        </div>
+      </div>
+    )
+  }
   const fresh = view.key === step.id ? view.r : null
   if (fresh) lastRect.current = fresh
   // one outline for the whole tour: it slides from section to section, never from the corner
@@ -246,8 +270,8 @@ function Tour({ sport }) {
       {/* the page underneath stays put: a tap anywhere outside the prompt does nothing */}
       <div className="tut-catch" />
       {r
-        ? <div className="tut-hole" aria-hidden="true" style={{ transform: `translate(${r.left - pad}px, ${r.top - pad}px)`, width: r.width + pad * 2, height: r.height + pad * 2 }} />
-        : <div className="tut-dim" />}
+        ? <div key="hole" className="tut-hole" aria-hidden="true" style={{ transform: `translate(${r.left - pad}px, ${r.top - pad}px)`, width: r.width + pad * 2, height: r.height + pad * 2 }} />
+        : <div key="dim" className="tut-dim" />}   {/* separate keys: the outline is never the dim reused (it would slide in from the corner) */}
       <div ref={bubble} key={step.id} className={`tut-bubble tut-bubble--tour${p ? (p.below ? ' tut-bubble--below' : ' tut-bubble--above') : ' tut-bubble--dock'}`} style={p ? p.pos : r ? { visibility: 'hidden' } : undefined}>
         {p && <span className="tut-bubble-arrow" style={{ left: p.arrow }} aria-hidden="true" />}
         <div className="tut-bubble-head">

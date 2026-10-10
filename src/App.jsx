@@ -521,8 +521,8 @@ export default function App() {
   // Theme must be declared after isPlus
   useEffect(() => {
     try {
-      // the app has no color themes (Pro opens the shop's Pro Vault instead)
-      if (!isPlus || IS_APP) { document.documentElement.removeAttribute('data-theme'); return }
+      // the new UI has no color themes (Pro opens the shop's Pro Vault instead); a theme picked before stays off
+      if (!isPlus || IS_APP || APP_LOOK) { document.documentElement.removeAttribute('data-theme'); return }
       const t = localStorage.getItem('bap_theme')
       if (t && t !== 'default') document.documentElement.setAttribute('data-theme', t)
       else document.documentElement.removeAttribute('data-theme')
