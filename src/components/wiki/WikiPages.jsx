@@ -32,7 +32,7 @@ function MainPage({ go }) {
       <table className="wk-infobox">
         <caption>Build-A-Player</caption>
         <tbody>
-          <tr><td colSpan={2}><img src="/logo-v3.png" alt="Build-A-Player logo" /></td></tr>
+          <tr><td colSpan={2}><img src="/bap-mark.webp" alt="Build-A-Player logo" /></td></tr>
           <tr><th>Type</th><td>Free browser game</td></tr>
           <tr><th>Games</th><td>Build-A-Player (NFL)<br />Build-A-Bucket (NBA)</td></tr>
           <tr><th>Positions</th><td>QB, RB, WR, TE, DB<br />Guard, Big</td></tr>

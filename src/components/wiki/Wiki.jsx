@@ -73,7 +73,7 @@ export default function Wiki({ onExit }) {
 
       <header className="wk-top">
         <a className="wk-brand" href="/wiki" onClick={e => { e.preventDefault(); go('main') }}>
-          <img src="/logo-v3.png" alt="" />
+          <img src="/bap-mark.webp" alt="" />
           <span><b>Build-A-Player Wiki</b></span>
         </a>
         <div className="wk-search">

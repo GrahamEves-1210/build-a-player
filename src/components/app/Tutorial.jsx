@@ -248,7 +248,7 @@ function Tour({ sport }) {
             <span className="tut-bubble-step">{i + 1} / {steps.length}</span>
             <button type="button" className="tut-skip tut-skip--sm" onClick={finish}>Skip tutorial</button>
           </div>
-          <img className="tut-welcome-logo" src="/logo-v3.png" alt="" />
+          <img className="tut-welcome-logo" src="/bap-mark.webp" alt="" />
           <div className="tut-bubble-title tut-welcome-title" id="tut-welcome-title">{step.title}</div>
           <p className="tut-bubble-text tut-welcome-text">{step.text}</p>
           <div className="tut-bubble-actions">

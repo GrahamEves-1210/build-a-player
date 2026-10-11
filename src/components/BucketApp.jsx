@@ -267,7 +267,7 @@ function BucketSplash({ onStart, onVersus }) {
       <div className="splash-glow" style={{ opacity: phase >= 2 ? 1 : 0 }} />
 
       <div className="splash-header" style={{ opacity: phase >= 1 ? 1 : 0, transform: phase >= 1 ? 'none' : 'translateY(-28px)' }}>
-        <img src="/logo-v3.png" alt="Build-A-Bucket" className="splash-logo-mark" draggable={false} />
+        <img src="/bap-mark.webp" alt="Build-A-Bucket" className="splash-logo-mark" draggable={false} />
         <div className="splash-title splash-title--small">
           BUIL<span className="logo-d">D</span><em>-<span className="logo-a">A</span>-</em>B<HoopU />CKET
         </div>

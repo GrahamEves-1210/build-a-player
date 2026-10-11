@@ -106,10 +106,36 @@ const LEADER_STAT = {
   },
 }
 const avgAttr = p => { const v = Object.values(p.attrs || {}); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : 0 }
+// Real scoring for the league's actual scorers (a current season, give or take):
+// the board leans on these, so a 41-year-old LeBron doesn't lead the league at 29
+const REAL_PPG = {
+  'Luka Doncic': 32, 'Shai Gilgeous-Alexander': 31.5, 'Giannis Antetokounmpo': 29.5, 'Tyrese Maxey': 28.5, 'Nikola Jokic': 28,
+  'Anthony Edwards': 28, 'Jaylen Brown': 28, 'Donovan Mitchell': 27.5, 'Jalen Brunson': 27, 'Kawhi Leonard': 27,
+  'Cade Cunningham': 26.5, 'Stephen Curry': 26.5, 'Lauri Markkanen': 26, 'Austin Reaves': 26, 'Kevin Durant': 25.5,
+  'Jamal Murray': 25.5, 'Devin Booker': 25, 'James Harden': 25, 'Victor Wembanyama': 24.5, 'Joel Embiid': 24.5,
+  'Jayson Tatum': 24, 'Karl-Anthony Towns': 23.5, 'Pascal Siakam': 23.5, 'Trae Young': 23, 'Zion Williamson': 22.5,
+  'Paolo Banchero': 22.5, 'Jalen Johnson': 22.5, 'Alperen Sengun': 22, 'Jalen Williams': 22, 'Franz Wagner': 22,
+  'Kyrie Irving': 22, 'Trey Murphy III': 22, 'Anthony Davis': 21.5, 'LaMelo Ball': 21.5, 'LeBron James': 21,
+  'Ja Morant': 21, 'Tyler Herro': 21, 'Damian Lillard': 21, 'Cooper Flagg': 20.5, 'Scottie Barnes': 20.5,
+  'Jaren Jackson Jr.': 20.5, 'Zach LaVine': 20, 'Evan Mobley': 20, 'Brandon Miller': 20, 'Desmond Bane': 19.5,
+  'Jalen Green': 19, 'Darius Garland': 19, 'Bam Adebayo': 18.5, 'Derrick White': 18.5, 'Chet Holmgren': 18,
+  'Josh Giddey': 18, 'Amen Thompson': 18, 'Mikal Bridges': 17.5, 'Domantas Sabonis': 17,
+}
 export function leaderBoard({ sport, pos, pool, seed, you }) {
   const def = LEADER_STAT[sport]?.[pos]
   if (!def) return null
   const r = seeded(`leaders-${seed}`)
+  // basketball: the real scorers in the pool, at their real averages give or take
+  // a point (an all-time pool has none of them, and falls through to the ratings)
+  const real = sport === 'bucket' ? (pool || []).filter(p => REAL_PPG[p.name] != null) : []
+  if (real.length >= 4) {
+    const seen = new Set()
+    const top = real.filter(p => !seen.has(p.name) && seen.add(p.name)).map(p => ({ name: p.name, team: p.team, value: +(REAL_PPG[p.name] + (r() - 0.5) * 2).toFixed(1) }))
+      .sort((a, b) => b.value - a.value).slice(0, 7)
+    const mine = { name: you.name, team: you.team, value: you.value, me: true }
+    const all = [...top, mine].sort((a, b) => b.value - a.value)
+    return { label: def.label, key: def.key, rows: all.slice(0, 6), rank: all.indexOf(mine) + 1, of: all.length }
+  }
   const rows = [...(pool || [])].filter(p => p.attrs).sort((a, b) => avgAttr(b) - avgAttr(a)).slice(0, 7).map(p => {
     let v = def.base + (avgAttr(p) - 5.2) * def.per + (r() - 0.5) * 2 * def.noise
     v = def.int ? Math.max(0, Math.round(v)) : def.dec ? +Math.max(0, v).toFixed(def.dec) : Math.max(0, Math.round(v))

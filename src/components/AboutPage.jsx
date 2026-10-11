@@ -6,7 +6,7 @@ export default function AboutPage({ onBack, onPrivacy }) {
         <button className="prf-top-back" onClick={onBack}>← Back to Game</button>
 
         <div className="about-header about-header--stacked">
-          <img src="/logo-v3.png" alt="Build-A-Player" className="about-logo-mark" />
+          <img src="/bap-mark.webp" alt="Build-A-Player" className="about-logo-mark" />
           <div className="about-title about-title--small">Build<em>-A-</em>Player</div>
         </div>
 

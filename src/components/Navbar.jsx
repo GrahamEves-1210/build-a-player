@@ -231,7 +231,7 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
       ) : (
         <div className="logo" onClick={onHome} style={onHome ? { cursor: 'pointer' } : undefined}>
           <div className="logo-text-stack">
-            <img src="/logo-v3.png" alt="Build-A-Player" className="logo-img-full" draggable={false} />
+            <img src="/bap-mark.webp" alt="Build-A-Player" className="logo-img-full" draggable={false} />
             <div className="logo-text-row">
               <div className="logo-text logo-text--small">
                 Buil<span className="logo-d">d</span><em>-<span className="logo-a">A</span>-</em>{isBucket ? <>B<HoopU />cket</> : 'Player'}

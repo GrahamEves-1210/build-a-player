@@ -4089,3 +4089,7 @@ html.app-look .ag-blacktop:hover .bt-art-cone { opacity: 1; }
 .sm-tag--row { margin-left: 6px; height: 16px; font-size: 10.5px; padding: 1px 5px 0; vertical-align: 1px; }
 .sm-now-tags { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; margin-top: 6px; }
 .sm-now.is-sat .sm-tag { color: #ff9b9b; background: rgba(255,77,77,.1); border-color: rgba(255,77,77,.35); }
+
+/* final report: no hole above New Build (an empty ad slot reserved up to 270px, plus the row margin) */
+html:is(.is-app, .app-look) #ramp-cntr1-sim:empty { display: none !important; min-height: 0 !important; }
+html:is(.is-app, .app-look) .simp-final-actions { margin-top: 12px; }
