@@ -206,7 +206,7 @@ export const RB_POOL = [
 
 // WR_POOL: current WR1 starters + notable WR2s + 2 legends per franchise, career receiving totals.
 export const WR_POOL = [
-  { name: 'Marvin Harrison Jr.',   team: 'ARI', receivingYards: 1578,  receivingTDs: 13  },
+  { name: 'Marvin Harrison Jr.',   team: 'HOU', receivingYards: 1578,  receivingTDs: 13  },
   { name: 'Drake London',          team: 'ATL', receivingYards: 4331,  receivingTDs: 22  },
   { name: 'Zay Flowers',           team: 'BAL', receivingYards: 3480,  receivingTDs: 16  },
   { name: 'DJ Moore',              team: 'BUF', receivingYards: 8391,  receivingTDs: 42  },
