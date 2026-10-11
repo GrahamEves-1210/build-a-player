@@ -35,9 +35,9 @@ const _WRS = [
   { name: 'Kendrick Bourne',     short: 'Bourne',      team: 'ARI', teamName: 'Arizona Cardinals',     skin: '#5e3c22', height: 73, weight: 203, starter: false, number: 17,
     attrs: { speed: 5,  bodyControl: 5,  vertical: 5,  routeRunning: 6,  release: 5,  hands: 4,  awareness: 5,  size: 7,  afterCatch: 3  } },
   { name: 'Jalen Brooks',        short: 'Brooks',      team: 'ARI', teamName: 'Arizona Cardinals',     skin: '#5e3c22', height: 74, weight: 205, starter: false, number: 86,
-    attrs: { speed: 5,  bodyControl: 6,  vertical: 6,  routeRunning: 4,  release: 4,  hands: 6,  awareness: 4,  size: 7,  afterCatch: 4  } },
+    attrs: { speed: 5,  bodyControl: 6,  vertical: 6,  routeRunning: 4,  release: 4,  hands: 5,  awareness: 4,  size: 7,  afterCatch: 3  } },
   { name: 'Simi Fehoko',         short: 'Fehoko',      team: 'ARI', teamName: 'Arizona Cardinals',     skin: '#b07848', height: 76, weight: 225, starter: false, number: 80,
-    attrs: { speed: 3,  bodyControl: 3,  vertical: 6,  routeRunning: 2,  release: 3,  hands: 4,  awareness: 4,  size: 10, afterCatch: 3  } },
+    attrs: { speed: 3,  bodyControl: 3,  vertical: 6,  routeRunning: 2,  release: 3,  hands: 4,  awareness: 4,  size: 10, afterCatch: 4  } },
   // ATL
   { name: 'Drake London',        short: 'London',      team: 'ATL', teamName: 'Atlanta Falcons',       skin: '#b07848', height: 76, weight: 219, starter: true,  captain: true,  number: 5,
     attrs: { speed: 7,  bodyControl: 9,  vertical: 9,  routeRunning: 7,  release: 7,  hands: 9,  awareness: 7,  size: 10, afterCatch: 6  } },
