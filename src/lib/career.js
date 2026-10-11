@@ -27,6 +27,12 @@ import { NBA_TEAMS } from '../data/nba-teams'
 import { NBA_GUARD_PLAYERS, GUARD_TYPES } from '../data/nba-guards'
 import { NBA_BIG_PLAYERS, BIG_TYPES } from '../data/nba-bigs'
 import { BUCKET_ATTR } from '../data/nba-attrs'
+import { LEGENDS } from '../data/qb-legends'
+import { RB_LEGENDS } from '../data/rb-legends'
+import { WR_LEGENDS } from '../data/wr-legends'
+import { TE_LEGENDS } from '../data/te-legends'
+import { NBA_ALLTIME_GUARD_PLAYERS } from '../data/nba-guard-legends'
+import { NBA_ALLTIME_BIG_PLAYERS } from '../data/nba-big-legends'
 
 export const CAREER_V = 1
 const FIRST_SEASON = 2026
@@ -683,8 +689,11 @@ export function advanceWeek(c, D) {
       injury = { kind, games: serious ? D.total - k : games, serious, at: k }
       break
     }
+    // no decisions while you're sitting out (hurt, or not yet the starter): the
+    // next game goes on without you, and a season-ending injury ends them all
     const stop = D.stops.find(s => s.at === k || (s.kind === 'playoffs' && k === D.total && s.at === D.total))
-    if (stop) moment = D.open(stop)
+    const sitting = a.out || (k < D.total ? D.sat.includes(k) : D.sat.includes(D.total - 1))
+    if (stop && !sitting) moment = D.open(stop)
   }
   if (S.step > 1 && chunk.games.length) feed.push({ k, chunk: true, ...chunk, k1: k })
   let next = withSnap(c, D, { k, feed })
@@ -716,13 +725,15 @@ export function resolveInjury(c, D, play) {
   }
   const injuries = [...c.injuries, { year: c.year + 1, at, kind: inj.kind, games: inj.games, played: !!play }]
   const feed = [...c.active.feed, { k: at, injuryText: text }]
-  return [withSnap({ ...c, injuries, durability: r10(Math.max(1, c.durability - 0.4)) }, D, { injury: null, feed }), text]
+  return [withSnap({ ...c, injuries, durability: r10(Math.max(1, c.durability - 0.4)) }, D, { injury: null, feed, ...(inj.serious ? { out: true } : {}) }), text]
 }
 // The regular season's over: book it, or go into the playoffs (a bracket of
 // our own, one skill moment a round, played on the hub)
 export function finishRegular(c, D) {
   const f = D.finalize()
   if (!sportOf(c).made(f)) return bookSeason({ ...c, active: { ...c.active, final: f, po: null } })
+  // out for the season: the team plays the playoffs without you, no moments
+  if (c.active.out) return bookSeason({ ...c, active: { ...c.active, final: f, po: watchBracket(c, buildBracket(c, f)) } })
   return { ...c, active: { ...c.active, final: f, po: buildBracket(c, f) } }
 }
 const strength = t => ((t.off ?? 5) + (t.def ?? 5)) / 2
@@ -746,6 +757,24 @@ function buildBracket(c, f) {
     return { name, opp: opp.short, oppName: opp.name, home, p: clamp(Math.round(base * 100) / 100, 0.18, 0.84), played: false, series: S.series && !playIn }
   })
   return { idx: 0, rounds, line: [], used: [], stage: 'round', won: false, out: false }
+}
+// The bracket played out from the sideline: each round on the team's odds, no stat line
+function watchBracket(c, po) {
+  const S = sportOf(c)
+  const r = seeded(`${c.seed}-pow-${c.year}`)
+  const line = []
+  for (const rd of po.rounds) {
+    const won = r() < clamp(rd.p - 0.12, 0.08, 0.9)
+    let mySc, oppSc
+    if (rd.series) { const o = [0, 1, 1, 2, 2, 3][Math.floor(r() * 6)]; mySc = won ? 4 : o; oppSc = won ? o : 4 }
+    else if (S.isBucket) { mySc = 98 + Math.floor(r() * 18); oppSc = won ? mySc - 1 - Math.floor(r() * 12) : mySc + 1 + Math.floor(r() * 12) }
+    else { mySc = 14 + Math.floor(r() * 18); oppSc = won ? Math.max(3, mySc - 1 - Math.floor(r() * 12)) : mySc + 1 + Math.floor(r() * 12) }
+    line.push({ ...rd, played: true, won, mySc, oppSc, sat: true })
+    if (!won) break
+  }
+  const last = line[line.length - 1]
+  const won = !!last?.won && last.name === S.final
+  return { ...po, rounds: po.rounds.map((x, i) => line[i] ?? x), line, idx: line.length - 1, stage: 'done', won, out: !won }
 }
 // This round's moment is in: the result, with a stat line sized to the season
 export function playoffRound(c, score, game = null) {
@@ -794,7 +823,7 @@ export function bookSeason(c) {
     stats, award, awardName: S.awardName[c.pos], proBowl: S.proBowl[c.pos](stats) || award || allPro, allPro: allPro || (award && S.allProNear[c.pos](stats)),
     missed, benched, records: (f.story?.records ?? []).map(x => x.label ?? x.id), milestones: (f.story?.milestones ?? []).filter(m => m.big).map(m => m.label),
     goals: c.goals.map(g => ({ ...g, met: goalMet(g, { stats, wins: f.wins }) })), xp: f.story?.xp ?? 0, bestGame: f.bestGame ?? null,
-    poStats: po ? po.line.reduce((acc, x) => { for (const k of S.lineKeys) if (x[k] != null) acc[k] = (acc[k] ?? 0) + x[k]; return acc }, { games: po.line.length }) : null,
+    poStats: po && po.line.some(x => !x.sat) ? po.line.filter(x => !x.sat).reduce((acc, x) => { for (const k of S.lineKeys) if (x[k] != null) acc[k] = (acc[k] ?? 0) + x[k]; return acc }, { games: po.line.filter(x => !x.sat).length }) : null,
   }
   const contract = { ...c.contract, left: c.contract.left - 1 }
   const perf = seasonScore(c.pos, s)
@@ -1063,6 +1092,26 @@ export const ALL_TIME = {
   te: greats([['Rob Gronkowski', 330], ['Tony Gonzalez', 320], ['Travis Kelce', 316], ['Antonio Gates', 262], ['Shannon Sharpe', 240], ['Jason Witten', 228], ['Kellen Winslow', 196], ['Mike Ditka', 190], ['Ozzie Newsome', 176], ['Dave Casper', 160], ['Jimmy Graham', 150], ['George Kittle', 148], ['Greg Olsen', 130], ['Dallas Clark', 110], ['Vernon Davis', 104]]),
   guard: greats([['Michael Jordan', 440], ['LeBron James', 436], ['Magic Johnson', 380], ['Kobe Bryant', 372], ['Stephen Curry', 350], ['Larry Bird', 344], ['Oscar Robertson', 320], ['Jerry West', 300], ['Kevin Durant', 296], ['Dwyane Wade', 270], ['Allen Iverson', 250], ['Isiah Thomas', 244], ['John Stockton', 240], ['Steve Nash', 232], ['James Harden', 228], ['Julius Erving', 226], ['Scottie Pippen', 220], ['Luka Doncic', 200], ['Chris Paul', 198], ['Russell Westbrook', 190], ['Kawhi Leonard', 188], ['Clyde Drexler', 180], ['Jason Kidd', 176], ['Reggie Miller', 160], ['Ray Allen', 156]]),
   big: greats([['Kareem Abdul-Jabbar', 440], ['Bill Russell', 420], ['Wilt Chamberlain', 410], ['Shaquille O\'Neal', 380], ['Tim Duncan', 376], ['Hakeem Olajuwon', 350], ['Nikola Jokic', 330], ['Moses Malone', 320], ['Kevin Garnett', 300], ['Dirk Nowitzki', 296], ['Karl Malone', 290], ['Giannis Antetokounmpo', 286], ['Charles Barkley', 270], ['David Robinson', 262], ['Patrick Ewing', 236], ['Anthony Davis', 210], ['Dennis Rodman', 200], ['Joel Embiid', 196], ['Kevin McHale', 190], ['Dwight Howard', 184], ['Bob Pettit', 180], ['Pau Gasol', 170], ['Chris Webber', 150], ['Yao Ming', 140], ['Dikembe Mutombo', 136]]),
+}
+
+// The player comp: the real players (today's and all-time) whose grades sit
+// closest to this build's, trait by trait. A player listed for several teams counts once.
+const ALL_TIME_POOL = { qb: LEGENDS, rb: RB_LEGENDS, wr: WR_LEGENDS, te: TE_LEGENDS, guard: NBA_ALLTIME_GUARD_PLAYERS, big: NBA_ALLTIME_BIG_PLAYERS }
+export function compsFor(c, n = 5) {
+  const S = sportOf(c)
+  const best = new Map()
+  const consider = (p, era) => {
+    if (!p?.attrs || !p.name) return
+    let d = 0, k = 0
+    for (const t of c.types) { const v = p.attrs[t]; if (v == null) continue; d += Math.abs((c.build[t]?.val ?? 5) - v); k++ }
+    if (k < c.types.length - 1) return
+    const dist = d / k
+    const prev = best.get(p.name)
+    if (!prev || dist < prev.dist || (dist === prev.dist && era === 'current')) best.set(p.name, { name: p.name, team: p.team, years: p.years ?? null, era, dist, attrs: p.attrs, photo: S.photo(p.name) })
+  }
+  for (const p of S.pool[c.pos] ?? []) consider(p, 'current')
+  for (const p of ALL_TIME_POOL[c.pos] ?? []) consider(p, 'all-time')
+  return [...best.values()].sort((a, b) => a.dist - b.dist).slice(0, n).map(x => ({ ...x, match: Math.max(0, Math.round(100 - x.dist * 9)) }))
 }
 
 // The card: everything a share needs

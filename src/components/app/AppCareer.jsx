@@ -4,7 +4,7 @@ import {
   startSeason, resumeSeason, advanceWeek, chooseMoment, resolveInjury, finishRegular, playoffRound, bookSeason, recordCombine, spendDev, demandTrade, nextSeason,
   OFF_STEPS, offStep, campDrill, lineup, depthChart, gradeOf, gradeOfOvr, ovrGradeVal, SPORT, sportOf,
   openTalks, ask, closeTalks, acceptTalks, ASKS, leverageOf,
-  retire, canRetire, mustRetire, careerTotals, legacyOf, LEGACY_TIERS, STAT_LABEL, HEADLINE_STATS, careerCard, AWARD_NAME, MAX_SEASONS, goalsFor,
+  retire, canRetire, mustRetire, careerTotals, legacyOf, LEGACY_TIERS, ALL_TIME, STAT_LABEL, HEADLINE_STATS, careerCard, AWARD_NAME, MAX_SEASONS, goalsFor, compsFor,
 } from '../../lib/career'
 import { GAME_LINE } from '../../lib/seasonDirector'
 import { GAMES, pickPlayoffGame } from '../../lib/minigames'
@@ -23,7 +23,8 @@ import { IconClose, IconArrow, IconFlame, IconTrophy, IconStar, IconCrown, IconM
 // differs by sport comes from its SPORT table.
 
 const gradeColor = v => (v >= 11 ? '#a855f7' : v >= 8 ? '#3b82f6' : v >= 5 ? '#22c55e' : v >= 2 ? '#eab308' : v >= 1 ? '#f97316' : '#ef4444')
-const nick = name => (name || '').split(' ').slice(-1)[0]
+// the last name (a suffix rides along: Harrison Jr.)
+const nick = name => { const w = (name || '').split(' '); return w.length > 2 && /^(jr\.?|sr\.?|ii|iii|iv|v)$/i.test(w[w.length - 1]) ? w.slice(-2).join(' ') : w[w.length - 1] }
 const money = n => `$${n}M`
 const RUN_DATE = { month: 'short', day: 'numeric' }
 // a roster photo: a full URL (or, in a football career saved before, the headshot id)
@@ -82,7 +83,6 @@ const inTeamColors = (build, fit) => (fit ? Object.fromEntries(Object.entries(bu
 function Model({ c, devPick }) {
   const attr = POS_ATTR[c.pos]
   const shown = useMemo(() => inTeamColors(c.build, c.fit), [c.build, c.fit])
-  const half = Math.ceil(c.types.length / 2)
   const Card = ({ t }) => {
     const ch = c.build[t]
     const canUp = devPick && c.dev.points > 0 && (ch?.val ?? 11) < 11
@@ -96,12 +96,11 @@ function Model({ c, devPick }) {
   }
   return (
     <div className="cr-model-wrap ag-pop">
-      <div className="cr-traits cr-traits--l">{c.types.slice(0, half).map(t => <Card key={t} t={t} />)}</div>
       <div className="cr-model">
         <Silhouette build={shown} types={c.types} attrMap={attr} isBucket={c.sport === 'bucket'} isRB={c.pos === 'rb'} isWR={c.pos === 'wr'} isTE={c.pos === 'te'} modelOnly />
         <span className="cr-model-ovr"><b>{c.ovr}</b><small>OVR</small></span>
       </div>
-      <div className="cr-traits cr-traits--r">{c.types.slice(half).map(t => <Card key={t} t={t} />)}</div>
+      <div className="cr-traits">{c.types.map(t => <Card key={t} t={t} />)}</div>
     </div>
   )
 }
@@ -147,6 +146,7 @@ function Draft({ c, setCareer }) {
         {head(`THE COMBINE · ${POS_LABEL[c.pos]}`, allDone ? 'Your numbers' : next.label)}
         <div className="ag-screen-body">
           {!allDone && <MiniGame key={next.id} game={next.id} build={c.build} seed={`${c.seed}-cb-${next.id}`} onDone={res => setCareer(recordCombine(c, next.id, res.score))} />}
+          {allDone && <Comp c={c} />}
           <div className="cr-drills ag-pop" style={{ '--d': '60ms' }}>
             {c.draft.combine.map((d, i) => (
               <div key={d.id} className={`cr-drill${d.score == null ? ' is-wait' : ''}`} style={{ '--d': `${80 + i * 70}ms` }}>
@@ -176,6 +176,7 @@ function Draft({ c, setCareer }) {
       <div className={`ag-screen ${S.screen} cr`}>
         {head('THE INTERVIEWS', done ? 'Interviews done' : `Interview ${i + 1} of ${list.length}`)}
         <div className="ag-screen-body">
+          <Comp c={c} />
           {!done ? (
             <div className="cr-q ag-pop" key={i}>
               <div className="cr-q-team"><img src={logoFor(it.team)} alt="" /><span><b>{teamName(it.team)}</b><small>{it.who.toUpperCase()}</small></span></div>
@@ -231,6 +232,38 @@ function Draft({ c, setCareer }) {
   )
 }
 
+// ── The player comp: who this build plays like ──────────────────────────────
+function Comp({ c }) {
+  const S = sportOf(c), attr = POS_ATTR[c.pos]
+  const list = useMemo(() => compsFor(c, 5), [c.build, c.pos]) // eslint-disable-line
+  const top = list[0]
+  if (!top) return null
+  const era = x => (x.era === 'current' ? `TODAY · ${x.team}` : `ALL-TIME${x.years ? ` · ${x.years}` : ''}`)
+  return (
+    <div className="ag-card cr-comp ag-pop">
+      <div className="ag-card-head"><span className="ag-eyebrow">PLAYER COMP · {c.name.toUpperCase()}</span><span className="cr-comp-pct">{top.match}% MATCH</span></div>
+      <div className="cr-comp-top">
+        <span className="crl-face">{top.photo ? <img src={photoSrc(top.photo)} alt="" loading="lazy" /> : <span className="crl-init">{initials(top.name)}</span>}</span>
+        <span className="cr-comp-name"><b>{top.name}</b><small>{era(top)}</small></span>
+      </div>
+      <div className="cr-comp-grid">
+        {[0, 1].map(i => <span key={`h${i}`} className="cr-comp-row cr-comp-row--head"><small /><em className="is-you">{c.name}</em><em>{nick(top.name)}</em></span>)}
+        {c.types.map(t => {
+          const mine = c.build[t]?.val ?? 0, his = top.attrs[t]
+          return (
+            <span key={t} className="cr-comp-row">
+              <small>{attr[t]?.label ?? t}</small>
+              <b style={{ background: gradeColor(mine) }}>{valToGrade(mine)}</b>
+              <b style={{ background: his == null ? 'rgba(255,255,255,.1)' : gradeColor(his) }}>{his == null ? '—' : valToGrade(his)}</b>
+            </span>
+          )
+        })}
+      </div>
+      {list.length > 1 && <div className="cr-comp-more"><span className="ag-eyebrow">ALSO PLAYS LIKE</span>{list.slice(1).map(x => <span key={x.name} className="cr-comp-chip"><b>{x.name}</b><small>{x.era === 'current' ? x.team : 'ALL-TIME'} · {x.match}%</small></span>)}</div>}
+    </div>
+  )
+}
+
 // ── The team around you ──────────────────────────────────────────────────────
 const initials = n => (n || '?').split(' ').map(w => w[0]).slice(0, 2).join('')
 const shortName = n => { const p = (n || '').split(' '); return p.length > 1 ? `${p[0][0]}. ${p.slice(1).join(' ')}` : n }
@@ -249,10 +282,8 @@ function TeamFit({ c }) {
       <div className="ag-card-head"><span className="ag-eyebrow">THE {S.isBucket ? 'TEAM' : 'OFFENSE'} AROUND {c.name.toUpperCase()}</span><span className="cr-fit-status">{f.status}</span></div>
       <div className="cr-fit-grid">
         {groups.map(g => <G key={g.k} k={g.k} v={g.v} sub={g.names?.length === 1 ? nick(g.names[0]) : null} />)}
-        <G k="OFFENSE" v={teamGrade(f.off)} /><G k="DEFENSE" v={teamGrade(f.def)} />
+        <G k="DEFENSE" v={teamGrade(f.def)} />
       </div>
-      <p className="cr-fit-note">{S.fitNote(f.groups ? f : { ...f, ol: f.ol, weapons: f.weapons, qb: f.qb }, c.pos)}
-        {f.status === 'Rebuilding' ? ' Rebuilding team: more early touches, fewer wins.' : f.status === 'Contender' ? ' Contender: a shot at rings, and less patience.' : ''}</p>
       <div className="cr-fit-meta"><span>{f.conf}{f.div && f.div !== f.conf ? ` · ${f.div}` : ''}</span></div>
     </div>
   )
@@ -265,10 +296,10 @@ function Lineup({ c }) {
   const Man = ({ p, slot }) => !p ? <span className="crl-man is-empty" /> : (
     <span className={`crl-man${p.you ? ' is-you' : ''}`}>
       <span className="crl-face">
-        {p.you ? <AvatarBadge self name={c.name} size={46} /> : p.photo ? <img src={photoSrc(p.photo)} alt="" loading="lazy" /> : <span className="crl-init">{initials(p.name)}</span>}
+        {p.you ? <AvatarBadge self name={c.name} size={S.isBucket ? 48 : 34} /> : p.photo ? <img src={photoSrc(p.photo)} alt="" loading="lazy" /> : <span className="crl-init">{initials(p.name)}</span>}
         <i style={{ background: gradeColor(ovrGradeVal(p.ovr)) }}>{gradeOfOvr(p.ovr)}</i>
       </span>
-      <b>{p.you ? c.name : shortName(p.name)}</b>
+      <b>{p.you ? c.name : S.isBucket ? shortName(p.name) : nick(p.name)}</b>
       <small>{slot}{p.rookie ? ' · ROOKIE' : ''}</small>
     </span>
   )
@@ -282,11 +313,17 @@ function Lineup({ c }) {
           <div className="crl-row">{L.big.map(p => <Man key={p.name} p={p} slot={p.slot ?? 'F/C'} />)}</div>
         </div>
       ) : (
-        <div className="crl-field">
-          <div className="crl-row"><Man p={L.wr[0]} slot="WR" /><Man p={L.wr[1]} slot="WR" /><Man p={L.te[0]} slot="TE" /><Man p={L.wr[2]} slot="WR" /></div>
-          <div className="crl-row crl-row--ol">{L.ol.map((p, i) => <Man key={p.name} p={p} slot={p.slot ?? ['LT', 'LG', 'C', 'RG', 'RT'][i]} />)}</div>
-          <div className="crl-row"><Man p={L.qb[0]} slot="QB" /></div>
-          <div className="crl-row"><Man p={L.rb[0]} slot="RB" /></div>
+        // 11 personnel: split end, the line with the tight end on the right,
+        // flanker wide right, slot off the ball, QB under center, back behind him
+        <div className="crl-field crl-field--nfl">
+          <span className="crl-los" aria-hidden="true" />
+          <span className="crl-at" style={{ '--c': 1, '--r': 1 }}><Man p={L.wr[0]} slot="WR" /></span>
+          {L.ol.map((p, i) => <span key={p.name} className="crl-at" style={{ '--c': 3 + i, '--r': 1 }}><Man p={p} slot={p.slot ?? ['LT', 'LG', 'C', 'RG', 'RT'][i]} /></span>)}
+          <span className="crl-at" style={{ '--c': 8, '--r': 1 }}><Man p={L.te[0]} slot="TE" /></span>
+          <span className="crl-at" style={{ '--c': 9, '--r': 1 }}><Man p={L.wr[1]} slot="WR" /></span>
+          <span className="crl-at" style={{ '--c': 2, '--r': 2 }}><Man p={L.wr[2]} slot="SLOT" /></span>
+          <span className="crl-at" style={{ '--c': 5, '--r': 2 }}><Man p={L.qb[0]} slot="QB" /></span>
+          <span className="crl-at" style={{ '--c': 5, '--r': 3 }}><Man p={L.rb[0]} slot="RB" /></span>
         </div>
       )}
       <div className="crl-bench">
@@ -434,7 +471,7 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
         )}
 
         {tab === 'season' && c.phase === 'offseason' && last && <Offseason c={c} setCareer={setCareer} last={last} setTab={setTab} />}
-        {tab === 'player' && <Player c={c} />}
+        {tab === 'player' && <><Comp c={c} /><Player c={c} /></>}
         {tab === 'team' && <><Lineup c={c} /><TeamFit c={c} /></>}
         {tab === 'career' && <CareerTab c={c} L={L} />}
       </div>
@@ -596,6 +633,20 @@ function Player({ c }) {
   )
 }
 
+// The whole all-time list, the player slotted in where the legacy puts them
+function RankList({ c, L }) {
+  const box = useRef(null), me = useRef(null)
+  const list = ALL_TIME[c.pos] ?? []
+  const rows = [...list.slice(0, L.rank - 1).map(x => ({ ...x })), { you: true }, ...list.slice(L.rank - 1).map(x => ({ ...x, rank: x.rank + 1 }))]
+  useEffect(() => { const b = box.current, m = me.current; if (b && m) b.scrollTop = m.offsetTop - b.clientHeight / 2 + m.clientHeight / 2 }, [L.rank])
+  return (
+    <div className="cr-rank-list" ref={box}>
+      {rows.map((x, i) => x.you
+        ? <span key="you" ref={me} className="cr-rank-row is-you"><i>{L.ranked ? L.rank : '—'}</i><b>{c.name}</b><em>{L.score}</em></span>
+        : <span key={x.name} className="cr-rank-row"><i>{x.rank}</i><b>{x.name}</b><em>{x.score}</em></span>)}
+    </div>
+  )
+}
 function CareerTab({ c, L }) {
   const S = sportOf(c), logoFor = S.logo
   const t = careerTotals(c)
@@ -607,9 +658,7 @@ function CareerTab({ c, L }) {
         <div className="cr-kv">{keys.map(k => <span key={k}><b>{fmt(t.stats[k])}</b><small>{STAT_LABEL[k]}</small></span>)}<span><b>{t.rings}</b><small>RINGS</small></span><span><b>{t.awards}</b><small>{AWARD_NAME[c.pos]}</small></span><span><b>{t.proBowls}</b><small>{S.honors}</small></span><span><b>{t.allPros}</b><small>{S.first.toUpperCase()}</small></span></div>
         <div className="cr-rank">
           <div className="cr-rank-head"><span className="ag-eyebrow">ALL-TIME {S.isBucket ? POS_NAME[c.pos].toUpperCase() : POS_LABEL[c.pos]}S · TOP {L.of}</span><small>LEGACY PTS</small></div>
-          {L.above && <span className="cr-rank-row"><i>{L.above.rank}</i><b>{L.above.name}</b><em>{L.above.score}</em></span>}
-          <span className="cr-rank-row is-you"><i>{L.ranked ? L.rank : '—'}</i><b>{c.name}</b><em>{L.score}</em></span>
-          {L.below && <span className="cr-rank-row"><i>{L.rank + 1}</i><b>{L.below.name}</b><em>{L.below.score}</em></span>}
+          <RankList c={c} L={L} />
           {!L.ranked && <small className="cr-rank-note">{L.above.score - L.score + 1} more legacy points to crack the top {L.of}.</small>}
         </div>
       </div>

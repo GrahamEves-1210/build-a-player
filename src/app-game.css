@@ -4201,3 +4201,44 @@ html.app-look .ag-blacktop--menu:hover .ag-bt-tags .bt-mode-tag:last-child { tra
 .bt-court-opt img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 8px; display: block; }
 .bt-court-opt.is-on { border-color: #ea580c; color: var(--ag-text); box-shadow: 0 0 0 1px #ea580c, 0 4px 14px rgba(234,88,12,.25); }
 .bt-court-opt:active { transform: scale(.97); }
+
+/* Career: the traits in one group under the model (beside it on wide screens) */
+@media (min-width: 900px) {
+  .cr-model-wrap { grid-template-columns: 300px 1fr; }
+  .cr-model-wrap .cr-traits { grid-template-columns: repeat(2, 1fr); align-content: center; }
+}
+/* Career: the starting offense in a real formation */
+.crl-field--nfl { position: relative; display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); grid-template-rows: auto auto auto; row-gap: 8px; column-gap: 2px; padding: 14px 6px 12px; background: repeating-linear-gradient(90deg, rgba(34,197,94,.10) 0 11.11%, rgba(34,197,94,.06) 11.11% 22.22%); }
+.crl-field--nfl .crl-at { grid-column: var(--c); grid-row: var(--r); display: flex; justify-content: center; min-width: 0; position: relative; z-index: 1; }
+.crl-field--nfl .crl-man { width: 100%; }
+.crl-field--nfl .crl-face { width: 34px; height: 34px; border-width: 1.5px; }
+.crl-field--nfl .crl-face > i { min-width: 18px; font-size: 9.5px; right: -7px; bottom: -4px; padding: 0 2px; border-radius: 4px; }
+.crl-field--nfl .crl-init { font-size: 11px; }
+.crl-field--nfl .crl-man b { font-size: 9.5px; }
+.crl-field--nfl .crl-man small { font-size: 8.5px; letter-spacing: .8px; }
+.crl-los { grid-column: 1 / -1; grid-row: 1; align-self: end; height: 2px; margin-bottom: -5px; background: rgba(255,255,255,.28); border-radius: 1px; }
+/* the user's avatar is the face itself: no plate or ring behind it */
+.crl-man.is-you .crl-face { background: none; border-color: transparent; box-shadow: none; }
+/* Career: the player comp */
+.cr-comp { display: flex; flex-direction: column; gap: 10px; padding: 12px; }
+.cr-comp-pct { font-family: var(--ag-font); font-size: 12px; letter-spacing: 1.5px; padding: 3px 8px 2px; border-radius: 6px; background: rgba(34,197,94,.18); color: #86efac; }
+.cr-comp-top { display: flex; align-items: center; gap: 12px; }
+.cr-comp-top .crl-face { width: 52px; height: 52px; flex: none; }
+.cr-comp-name { display: flex; flex-direction: column; min-width: 0; }
+.cr-comp-name b { font-family: var(--ag-display); font-weight: 400; font-size: 26px; line-height: 1; }
+.cr-comp-name small { font-family: var(--ag-font); font-size: 12px; letter-spacing: 1.5px; color: var(--ag-muted); }
+.cr-comp-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 10px; }
+.cr-comp-row { display: grid; grid-template-columns: 1fr 30px 30px; align-items: center; gap: 4px; min-width: 0; }
+.cr-comp-row small { font-family: var(--ag-font); font-size: 11.5px; letter-spacing: 1px; color: var(--ag-text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cr-comp-row b { height: 22px; border-radius: 6px; display: grid; place-items: center; font-family: var(--ag-font); font-weight: 400; font-size: 12px; color: #06110d; }
+.cr-comp-legend { display: flex; justify-content: flex-end; gap: 14px; font-family: var(--ag-font); font-size: 10.5px; letter-spacing: 1.2px; color: var(--ag-muted); }
+.cr-comp-legend span:first-child { color: #f5dc8a; }
+.cr-comp-more { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.cr-comp-more .ag-eyebrow { width: 100%; }
+.cr-comp-chip { display: flex; flex-direction: column; padding: 5px 9px; border-radius: 9px; background: rgba(255,255,255,.04); border: 1px solid var(--ag-line); }
+.cr-comp-chip b { font-family: var(--ag-body); font-size: 12.5px; font-weight: 700; }
+.cr-comp-chip small { font-family: var(--ag-font); font-size: 10.5px; letter-spacing: 1px; color: var(--ag-muted); }
+/* Career: the whole all-time list, scrolled to the player */
+.cr-rank-list { display: flex; flex-direction: column; gap: 3px; max-height: 260px; overflow-y: auto; overscroll-behavior: contain; position: relative; padding-right: 2px; }
+.cr-comp-row--head em { font-style: normal; text-align: center; font-family: var(--ag-font); font-size: 9.5px; letter-spacing: .6px; color: var(--ag-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cr-comp-row--head em.is-you { color: #f5dc8a; }
