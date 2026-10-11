@@ -30,8 +30,6 @@ function _wrOVR(a) {
 
 const _WRS = [
   // ARI
-  { name: 'Marvin Harrison Jr.', short: 'Harrison',    team: 'ARI', teamName: 'Arizona Cardinals',     skin: '#5e3c22', height: 76, weight: 205, starter: true,  captain: true,  number: 18,
-    attrs: { speed: 6,  bodyControl: 6,  vertical: 8,  routeRunning: 5,  release: 7,  hands: 4,  awareness: 5,  size: 9,  afterCatch: 5  } },
   { name: 'Michael Wilson',      short: 'Wilson',      team: 'ARI', teamName: 'Arizona Cardinals',     skin: '#b07848', height: 75, weight: 220, starter: false, number: 14,
     attrs: { speed: 6,  bodyControl: 7,  vertical: 6,  routeRunning: 5,  release: 6,  hands: 6,  awareness: 5,  size: 9,  afterCatch: 5  } },
   { name: 'Kendrick Bourne',     short: 'Bourne',      team: 'ARI', teamName: 'Arizona Cardinals',     skin: '#5e3c22', height: 73, weight: 203, starter: false, number: 17,
@@ -140,6 +138,8 @@ const _WRS = [
   // HOU
   { name: 'Nico Collins',        short: 'Collins',     team: 'HOU', teamName: 'Houston Texans',        skin: '#3a2010', height: 76, weight: 215, starter: true,  captain: true,  number: 12,
     attrs: { speed: 9,  bodyControl: 8,  vertical: 6, routeRunning: 7,  release: 7,  hands: 7,  awareness: 7,  size: 10, afterCatch: 5  } },
+  { name: 'Marvin Harrison Jr.', short: 'Harrison',    team: 'HOU', teamName: 'Houston Texans',        skin: '#5e3c22', height: 76, weight: 205, starter: true,  captain: false, number: 18,
+    attrs: { speed: 6,  bodyControl: 6,  vertical: 8,  routeRunning: 5,  release: 7,  hands: 4,  awareness: 5,  size: 9,  afterCatch: 5  } },
   { name: 'Jayden Higgins',      short: 'J. Higgins',  team: 'HOU', teamName: 'Houston Texans',        skin: '#b07848', height: 76, weight: 214, starter: false, number: 81,
     attrs: { speed: 6,  bodyControl: 6,  vertical: 8,  routeRunning: 5,  release: 5,  hands: 5,  awareness: 5,  size: 10, afterCatch: 5  } },
   { name: 'Tank Dell',           short: 'Dell',        team: 'HOU', teamName: 'Houston Texans',        skin: '#5e3c22', height: 68, weight: 165, starter: false, number: 1,
