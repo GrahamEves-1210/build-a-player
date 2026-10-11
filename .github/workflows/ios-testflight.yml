@@ -1,0 +1,57 @@
+# iOS → TestFlight on GitHub's free macOS machines (public repo). Same steps as
+# codemagic.yaml, with Codemagic's open-source CLI tools. Start it by hand:
+# Actions → "iOS → TestFlight" → Run workflow → branch: app.
+#
+# Repository secrets (Settings → Secrets and variables → Actions):
+#   ASC_ISSUER_ID            App Store Connect → Users and Access → Integrations → Issuer ID
+#   ASC_KEY_ID               the API key's Key ID (also in AuthKey_<KEYID>.p8)
+#   ASC_PRIVATE_KEY          the whole .p8 file, BEGIN to END lines included
+#   CERTIFICATE_PRIVATE_KEY  the private key for the iOS distribution certificate
+name: iOS → TestFlight
+on: workflow_dispatch
+permissions:
+  contents: read
+jobs:
+  ios:
+    runs-on: macos-15
+    timeout-minutes: 60
+    env:
+      APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      APP_STORE_CONNECT_KEY_IDENTIFIER: ${{ secrets.ASC_KEY_ID }}
+      APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
+      CERTIFICATE_PRIVATE_KEY: ${{ secrets.CERTIFICATE_PRIVATE_KEY }}
+      BUNDLE_ID: com.buildaplayer.app
+      # above anything Codemagic uploaded, and higher every run
+      PROJECT_BUILD_NUMBER: ${{ 100 + github.run_number }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install packages
+        run: npm ci
+      - name: Build the web app and copy it into the native projects
+        run: npm run build:app
+      - name: Codemagic CLI tools
+        run: pipx install codemagic-cli-tools
+      - name: Apply App Store signing
+        run: |
+          keychain initialize
+          app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
+          keychain add-certificates
+          xcode-project use-profiles
+      - name: Build the .ipa
+        run: |
+          xcode-project build-ipa \
+            --project ios/App/App.xcodeproj \
+            --scheme App \
+            --archive-xcargs "CURRENT_PROJECT_VERSION=$PROJECT_BUILD_NUMBER"
+      - name: Upload to TestFlight
+        run: app-store-connect publish --path build/ios/ipa/*.ipa --testflight
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ios-ipa
+          path: build/ios/ipa/*.ipa
+          if-no-files-found: ignore
