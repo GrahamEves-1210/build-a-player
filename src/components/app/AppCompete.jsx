@@ -135,7 +135,7 @@ export default function AppCompete({ cp, au, sport, position, positions, onPosit
         {showAuction ? (
           <div className="cp-hero ag-pop">
             <span className="ag-eyebrow">ONLINE · UP TO 5 PLAYERS · ${BUDGET} EACH</span>
-            <p className="cp-how">Everyone starts with <b>${BUDGET}</b> and Salary Cap's {isBucket ? 'five' : 'four'} rating slots, empty. The spinner lands on a real player and one of those ratings, and you get <b>{BID_SECS} seconds</b> to bid. High bid takes it. When every slot is filled, the <b>highest OVR</b> wins.</p>
+            <p className="cp-how">Everyone starts with <b>${BUDGET}</b> and Salary Cap's five rating slots, empty. The spinner lands on a real player and one of those ratings, and you get <b>{BID_SECS} seconds</b> to bid. High bid takes it. When every slot is filled, the <b>highest OVR</b> wins.</p>
           </div>
         ) : (
           <div className="cp-hero ag-pop">

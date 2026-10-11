@@ -80,8 +80,7 @@ function getESTDate(daysOffset = 0) {
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-// four picks from the 50/40/30/20/10 tiers (it was 130–170 for five)
-const BUDGET_OPTIONS = [105, 110, 120, 130, 135]
+const BUDGET_OPTIONS = [130, 140, 150, 160, 170]
 
 function budgetForDateStr(dateStr) {
   const [y, m, d] = dateStr.split('-').map(Number)
@@ -108,17 +107,19 @@ function typesFor(player, col) {
 
 // Category accent colors — one per column key (match the QB attribute hues)
 const COL_COLORS = {
-  arm:     ATTR['arm']?.hex        ?? '#f87171',
+  arm:      ATTR['arm']?.hex        ?? '#f87171',
+  accuracy: ATTR['accuracy']?.hex   ?? '#34d399',
   mentals: ATTR['processing']?.hex ?? '#e879f9',
   legs:    ATTR['legs']?.hex       ?? '#60a5fa',
   size:    ATTR['size']?.hex       ?? '#fb923c',
 }
 
 // One representative type per category (for ReportCard / SimPage display)
-export const QB_SAL_REP_TYPES = ['arm', 'processing', 'legs', 'size']
+export const QB_SAL_REP_TYPES = ['arm', 'accuracy', 'processing', 'legs', 'size']
 
 export const QB_SAL_ATTR_MAP = {
-  'arm':        { label: 'ARM',     col: COL_COLORS.arm,     hex: COL_COLORS.arm },
+  'arm':        { label: 'ARM',      col: COL_COLORS.arm,      hex: COL_COLORS.arm },
+  'accuracy':   { label: 'ACCURACY', col: COL_COLORS.accuracy, hex: COL_COLORS.accuracy },
   'processing': { label: 'MENTALS', col: COL_COLORS.mentals, hex: COL_COLORS.mentals },
   'legs':       { label: 'LEGS',    col: COL_COLORS.legs,    hex: COL_COLORS.legs },
   'size':       { label: 'SIZE',    col: COL_COLORS.size,    hex: COL_COLORS.size },
