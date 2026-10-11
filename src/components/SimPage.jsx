@@ -526,7 +526,7 @@ function GameLog({ games, total, isOL, isDB, isTE, isWR, isRB }) {
             <div key={g.wk} className={`simp-game-row ${g.won ? 'sgr-w' : 'sgr-l'} sgr-in`}>
               <span className="sgr-wk">WK {g.wk}</span>
               <span className={`sgr-badge ${g.won ? 'sgr-badge-w' : 'sgr-badge-l'}`}>{g.won ? 'W' : 'L'}</span>
-              <span className="sgr-opp"><span className="sgr-venue">{g.home ? 'vs' : '@'}</span>{g.opponent}</span>
+              <span className="sgr-opp"><span className="sgr-venue">{g.home ? 'vs' : '@'}</span>{g.opponent}{g.tags?.length > 0 && <span className="sm-tag sm-tag--row">{g.tags[0]}</span>}</span>
               <span className="sgr-score">{g.mySc}–{g.oppSc}</span>
               <span className="sgr-stat">{statFor(g)}</span>
             </div>

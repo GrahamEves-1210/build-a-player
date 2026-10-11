@@ -74,6 +74,7 @@ export function NowCard({ game, pos, sport, team, logoFor, idx, total }) {
         <span className="sm-now-side"><img src={logoFor(game.opponent)} alt="" onError={e => { e.currentTarget.style.visibility = 'hidden' }} /><b>{opp}</b></span>
       </div>
       <div className="sm-now-line">{game.sat ? 'Sat out: the team played without them' : line}</div>
+      {game.tags?.length > 0 && <div className="sm-now-tags">{game.tags.map(t => <span key={t} className="sm-tag">{t}</span>)}</div>}
     </div>
   )
 }

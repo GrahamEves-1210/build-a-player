@@ -106,6 +106,8 @@ export function createDirector({ sport, pos, build, team, simFn, base, seed = Ma
     return simFn(b, t, `${seed}-${tag}`)
   }
   // Re-simulate everything from `from` with whatever mods apply in each stretch
+  // the names a game carries from the decisions in force for it (the schedule shows them)
+  const tagsAt = i => [...new Set(D.windows.filter(w => w.tag && i >= w.from && i < w.to).map(w => w.tag))]
   const resplice = from => {
     const edges = new Set([from, total, ...D.windows.flatMap(w => [w.from, w.to])].filter(x => x >= from && x <= total))
     const cuts = [...edges].sort((a, b) => a - b)
@@ -116,19 +118,20 @@ export function createDirector({ sport, pos, build, team, simFn, base, seed = Ma
       D.last = run
       for (let i = a; i < z; i++) {
         if (D.sat.includes(i)) continue
-        D.games[i] = { ...run.games[i], wk: base.games[i].wk, g: base.games[i].g }
+        const tags = tagsAt(i)
+        D.games[i] = { ...run.games[i], wk: base.games[i].wk, g: base.games[i].g, ...(tags.length ? { tags } : {}) }
       }
     }
   }
-  const sitGame = i => {
+  const sitGame = (i, tag = null) => {
     // the team plays without you: a coin weighted by team strength, no stats
     const g = base.games[i]
     const strength = isBucket && !team.career ? ((team.off ?? 68) + (team.def ?? 65)) / 200 : ((team.off ?? 5) + (team.def ?? 5)) / 20
     const won = r() < Math.max(.2, Math.min(.7, strength - .05))
     const zero = Object.fromEntries(Object.keys(g).filter(k => typeof g[k] === 'number' && !['wk', 'g', 'mySc', 'oppSc'].includes(k)).map(k => [k, 0]))
     const my = isBucket ? 96 + Math.floor(r() * 18) : 13 + Math.floor(r() * 14), opp = isBucket ? 96 + Math.floor(r() * 18) : 13 + Math.floor(r() * 14)
-    D.games[i] = { ...g, ...zero, won, mySc: won ? Math.max(my, opp + 1) : Math.min(my, opp - 1), oppSc: opp, sat: true }
-    D.sat.push(i)
+    D.games[i] = { ...g, ...zero, won, mySc: won ? Math.max(my, opp + 1) : Math.min(my, opp - 1), oppSc: opp, sat: true, ...(tag ? { tags: [tag] } : {}) }
+    if (!D.sat.includes(i)) D.sat.push(i)
   }
 
   // ── Moments ────────────────────────────────────────────────────────────────
@@ -185,10 +188,21 @@ export function createDirector({ sport, pos, build, team, simFn, base, seed = Ma
     if (moment.stop.kind === 'playoffs') {
       D.playoffMods = addMods(D.playoffMods, eff)
     } else {
-      if (eff.window) D.windows.push({ from: at, to: Math.min(total, at + eff.window), mods: { attr: eff.attr || {}, team: eff.team || {} } })
-      else if (eff.attr || eff.team) D.cum = addMods(D.cum, eff)
-      if (eff.then) D.windows.push({ from: at, to: Math.min(total, at + (eff.then.window || 2)), mods: { attr: eff.then.attr || {}, team: eff.then.team || {} } })
-      if (eff.sit) for (let i = at; i < Math.min(total, at + eff.sit); i++) sitGame(i)
+      // the first part: a stretch of games, or the rest of the season (playoffs too)
+      if (eff.window) D.windows.push({ from: at, to: Math.min(total, at + eff.window), mods: { attr: eff.attr || {}, team: eff.team || {} }, tag: eff.tag })
+      else if (eff.attr || eff.team) { D.cum = addMods(D.cum, eff); if (eff.tag) D.windows.push({ from: at, to: total, mods: { attr: {}, team: {} }, tag: eff.tag }) }
+      if (eff.sit) for (let i = at; i < Math.min(total, at + eff.sit); i++) sitGame(i, eff.tag)
+      // `then` starts when the first part is over (after the stretch, or after the games missed)
+      const th = eff.then
+      if (th) {
+        const from = Math.min(total, at + (eff.window || 0) + (eff.sit || 0))
+        if (th.sit) for (let i = from; i < Math.min(total, from + th.sit); i++) sitGame(i, th.tag)
+        const after = from + (th.sit || 0)
+        if (th.attr || th.team) {
+          if (th.window) D.windows.push({ from: after, to: Math.min(total, after + th.window), mods: { attr: th.attr || {}, team: th.team || {} }, tag: th.tag })
+          else { D.windows.push({ from: after, to: total, mods: { attr: th.attr || {}, team: th.team || {} }, tag: th.tag }); D.playoffMods = addMods(D.playoffMods, th) }
+        }
+      }
       resplice(at)
     }
     D.moments.push({ stop: moment.stop, moment, option, outcome })
