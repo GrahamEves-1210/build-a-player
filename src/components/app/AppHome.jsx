@@ -313,6 +313,21 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
 
         <div className="ag-extras">
           {/* the flagship: one player, a whole career */}
+          {/* Basketball: Blacktop is the online hub — 3v3 lobbies, and 1v1 from inside it.
+              Styled like the Blacktop menu it opens: the orange 3V3 / 1V1 tags, warm panel, orange go */}
+          {isBucket && onBlacktop && (
+            <button className={`ag-blacktop ag-blacktop--menu ag-pop${btLive ? ' is-live' : ''}`} style={{ '--d': '250ms' }} onClick={onBlacktop}>
+              <BlacktopArt />
+              <span className="ag-live-dot" />
+              <span className="ag-bt-tags" aria-hidden="true"><span className="bt-mode-tag">3V3</span><span className="bt-mode-tag">1V1</span></span>
+              <span className="ag-takeover-txt">
+                <span className="ag-eyebrow">{btLive ? (blacktop.phase === 'queue' ? `IN THE LOBBY · ${blacktop.queue}/6 SPOTS TAKEN` : blacktop.phase === 'build' ? 'LIVE · YOUR SQUAD IS BUILDING' : 'LIVE · GAME ON') : 'LIVE · FIRST TO 11'}</span>
+                <span className="ag-takeover-title">BLACKTOP</span>
+                <span className="ag-takeover-sub">{btLive ? 'You\'re still in. Jump back to your run.' : (btG || h2h.played) ? `3v3 ${btW}–${btG - btW} · 1v1 ${h2h.wins ?? 0}–${h2h.losses ?? 0}${ol.played ? ` · ${tierFor(ol.rating)[1]} ${ol.rating}` : ''}` : 'Squads of three, or one on one. Real players.'}</span>
+              </span>
+              <span className="ag-bt-go" aria-hidden="true"><IconArrow size={18} /></span>
+            </button>
+          )}
           {onCareer && (
             <button className={`ag-crmode ag-pop${career ? ' is-live' : ''}`} style={{ '--d': '260ms' }} onClick={onCareer}>
               <CareerArt />
@@ -344,18 +359,6 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
                   ? `${cs.wins} ${cs.wins === 1 ? 'win' : 'wins'} in ${cs.played} · avg place ${(cs.placeSum / cs.played).toFixed(1)}${cs.streak >= 2 ? ` · ${cs.streak} straight` : ''}`
                   : 'Same spins as 4 other players. Highest OVR takes the pool.'}</span>
                 {cs?.played > 0 && <span className="ag-rec"><Form items={cs.recent} mode="compete" /></span>}
-              </span>
-            </button>
-          )}
-          {/* Basketball: Blacktop is the online hub — 3v3 lobbies, and 1v1 from inside it */}
-          {isBucket && onBlacktop && (
-            <button className={`ag-blacktop ag-pop${btLive ? ' is-live' : ''}`} style={{ '--d': '320ms' }} onClick={onBlacktop}>
-              <BlacktopArt />
-              <span className="ag-live-dot" />
-              <span className="ag-takeover-txt">
-                <span className="ag-eyebrow">{btLive ? (blacktop.phase === 'queue' ? `IN THE LOBBY · ${blacktop.queue}/6 SPOTS TAKEN` : blacktop.phase === 'build' ? 'LIVE · YOUR SQUAD IS BUILDING' : 'LIVE · GAME ON') : 'ONLINE · 3V3 · 1V1'}</span>
-                <span className="ag-takeover-title">BLACKTOP</span>
-                <span className="ag-takeover-sub">{btLive ? 'You\'re still in. Jump back to your run.' : (btG || h2h.played) ? `3v3 ${btW}–${btG - btW} · 1v1 ${h2h.wins ?? 0}–${h2h.losses ?? 0}${ol.played ? ` · ${tierFor(ol.rating)[1]} ${ol.rating}` : ''}` : 'Live games against real players. Squads of three, or one on one.'}</span>
               </span>
             </button>
           )}

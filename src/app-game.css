@@ -4165,3 +4165,28 @@ html.is-app .game-layout.ag-stack .spin-panel-body { padding-bottom: 6px !import
 /* home: the BAP mark, bigger */
 .ag-brand-mark { height: 92px; }
 @media (min-width: 1024px) { html.app-look .ag-brand-mark { height: 118px; } }
+
+/* ═══ Home: the Blacktop button, in the Blacktop menu's own language ═══════
+   the orange 3V3 / 1V1 tags (stacked like two cards), a warm panel, an orange
+   go tile; the night court stays, quieter, behind the right side */
+.ag-blacktop--menu {
+  grid-template-columns: auto 1fr auto; gap: 14px; padding: 14px 14px 14px 12px;
+  border-radius: 18px; border: 1.5px solid color-mix(in srgb, #ea580c 38%, transparent);
+  background: radial-gradient(120% 90% at 0% 0%, rgba(234,88,12,.16), transparent 60%), var(--ag-panel);
+}
+.ag-blacktop--menu::after { background: linear-gradient(90deg, rgba(14,9,6,.94) 45%, rgba(14,9,6,.6) 68%, rgba(14,9,6,.25)); }
+.ag-blacktop--menu > .bt-art { opacity: .55; }
+.ag-blacktop--menu > .ag-bt-tags, .ag-blacktop--menu > .ag-takeover-txt, .ag-blacktop--menu > .ag-bt-go { position: relative; z-index: 2; }
+.ag-bt-tags { position: relative; width: 84px; height: 58px; flex: none; }
+.ag-bt-tags .bt-mode-tag { position: absolute; width: 44px; height: 44px; border-radius: 12px; font-size: 17px; }
+.ag-bt-tags .bt-mode-tag:first-child { left: 0; top: 2px; transform: rotate(-7deg); }
+.ag-bt-tags .bt-mode-tag:last-child { left: 38px; top: 12px; transform: rotate(6deg); z-index: 1; background: linear-gradient(135deg, #fed7aa, #f97316); }
+html.app-look .ag-blacktop--menu:hover .ag-bt-tags .bt-mode-tag:first-child { transform: rotate(-11deg) translate(-2px, -2px); }
+html.app-look .ag-blacktop--menu:hover .ag-bt-tags .bt-mode-tag:last-child { transform: rotate(10deg) translate(2px, 2px); }
+.ag-bt-tags .bt-mode-tag { transition: transform .25s cubic-bezier(.2,1.4,.4,1); }
+.ag-blacktop--menu .ag-eyebrow { color: #fdba74; }
+.ag-blacktop--menu .ag-takeover-sub { color: var(--ag-text-2); }
+.ag-bt-go { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; color: #1c0a02; background: linear-gradient(135deg, #fdba74, #ea580c); box-shadow: 0 6px 16px rgba(234,88,12,.35); }
+.ag-blacktop--menu .ag-live-dot { z-index: 3; }
+@media (max-width: 560px) { .ag-blacktop--menu .ag-takeover-sub { max-width: none; } }
+@media (prefers-reduced-motion: reduce) { .ag-bt-tags .bt-mode-tag { transition: none; } }
