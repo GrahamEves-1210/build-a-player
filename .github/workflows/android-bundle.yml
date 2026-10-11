@@ -22,9 +22,12 @@ jobs:
       CM_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
       CM_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
       CM_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-      PROJECT_BUILD_NUMBER: ${{ 100 + github.run_number }}
     steps:
       - uses: actions/checkout@v4
+      # the build number: above anything Codemagic uploaded, and higher every run
+      # (workflow expressions can't do arithmetic, so the shell does it)
+      - name: Build number
+        run: echo "PROJECT_BUILD_NUMBER=$((100 + GITHUB_RUN_NUMBER))" >> "$GITHUB_ENV"
       - uses: actions/setup-node@v4
         with:
           node-version: 22

@@ -21,10 +21,12 @@ jobs:
       APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
       CERTIFICATE_PRIVATE_KEY: ${{ secrets.CERTIFICATE_PRIVATE_KEY }}
       BUNDLE_ID: com.buildaplayer.app
-      # above anything Codemagic uploaded, and higher every run
-      PROJECT_BUILD_NUMBER: ${{ 100 + github.run_number }}
     steps:
       - uses: actions/checkout@v4
+      # the build number: above anything Codemagic uploaded, and higher every run
+      # (workflow expressions can't do arithmetic, so the shell does it)
+      - name: Build number
+        run: echo "PROJECT_BUILD_NUMBER=$((100 + GITHUB_RUN_NUMBER))" >> "$GITHUB_ENV"
       - uses: actions/setup-node@v4
         with:
           node-version: 22
