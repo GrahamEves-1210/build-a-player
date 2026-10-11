@@ -4340,3 +4340,21 @@ html:is(.is-app, .app-look) .ag-takeover:is(:hover, :focus-visible) .ag-map-pin.
 .tk-prize small { font-family: var(--ag-body); font-size: 12.5px; font-weight: 500; color: var(--ag-muted); line-height: 1.35; }
 .tk-prize:active { transform: scale(.98); }
 @media (prefers-reduced-motion: reduce) { .tk-heat.is-fire { animation: none; } }
+
+/* ═══ Website performance: big animated moments without the frame drops ═══
+   A live backdrop blur re-blurs the whole page under it on every frame anything
+   moves (the home cards, the ad rail, confetti), and a spinning 200vmax ray
+   layer is a texture thousands of pixels square. The app keeps its look; the
+   website trades the blur for a slightly darker backdrop and smaller layers. */
+html.app-look:not(.is-app) :is(.ag-levelup, .ag-menu-overlay, .ag-complete, .ll-overlay, .ag-toast) { -webkit-backdrop-filter: none; backdrop-filter: none; }
+html.app-look:not(.is-app) .ag-levelup { background: radial-gradient(circle at 50% 42%, color-mix(in srgb, var(--spot1) 22%, transparent), rgba(2,4,3,.95) 60%); }
+html.app-look:not(.is-app) .ag-menu-overlay { background: rgba(2,4,3,.85); }
+html.app-look:not(.is-app) .ll-overlay { background: rgba(2,4,3,.88); }
+html.app-look:not(.is-app) .ag-complete { background: radial-gradient(circle at 50% 45%, color-mix(in srgb, var(--ag-a1) 22%, transparent), rgba(2,4,3,.92) 62%); }
+html.app-look:not(.is-app) .ag-glass { -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+/* the rays: only their middle ever shows (the mask), so a smaller layer looks the same */
+html.app-look:not(.is-app) .ag-ring-rays { width: 120vmax; height: 120vmax; margin: -60vmax 0 0 -60vmax; -webkit-mask-image: radial-gradient(circle, #000 10%, transparent 66%); mask-image: radial-gradient(circle, #000 10%, transparent 66%); will-change: transform; }
+html.app-look:not(.is-app) .ag-bc-rays { width: 110vmax; height: 110vmax; margin: -55vmax 0 0 -55vmax; -webkit-mask: radial-gradient(circle, #000 0 26%, transparent 75%); mask: radial-gradient(circle, #000 0 26%, transparent 75%); will-change: transform, opacity; }
+/* the zooming cards and their glowing numbers: drawn once, then moved by the GPU */
+html.app-look:not(.is-app) :is(.ag-levelup-card, .ag-ring-inner, .ag-ring-title, .ag-ring-trophy) { will-change: transform, opacity; }
+html.app-look:not(.is-app) .ag-levelup-num { filter: none; text-shadow: 0 0 34px color-mix(in srgb, var(--spot1) 45%, transparent); }

@@ -532,34 +532,46 @@ export function confetti(amount = 140) {
   if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
   const c = document.createElement('canvas')
   c.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:1300'
-  const dpr = Math.min(2, window.devicePixelRatio || 1)
+  // big screens draw at 1×: a retina-sized full-screen canvas is 4× the pixels to clear every frame
+  const big = innerWidth * innerHeight > 1100 * 800
+  const dpr = big ? 1 : Math.min(2, window.devicePixelRatio || 1)
   c.width = innerWidth * dpr; c.height = innerHeight * dpr
   document.body.appendChild(c)
-  const g = c.getContext('2d'); g.scale(dpr, dpr)
+  const g = c.getContext('2d')
   // Build-A-Player's own colours: the button gradient, the accent, gold and white
   const css = getComputedStyle(document.documentElement)
   const a1 = css.getPropertyValue('--btn-start').trim() || '#5EDBD8'
   const a2 = css.getPropertyValue('--btn-end').trim() || '#1fc98a'
-  const COLORS = [a1, a2, '#D4AF37', '#f2d675', '#ffffff', a1, '#95D5B2']
-  const parts = Array.from({ length: amount }, (_, i) => ({
+  const COLORS = [a1, a2, '#D4AF37', '#f2d675', '#ffffff', '#95D5B2']
+  const n = big ? amount : Math.round(amount * 0.85)
+  // grouped by colour, so the fill changes six times a frame instead of once a piece
+  const groups = COLORS.map(col => ({ col, parts: [] }))
+  for (let i = 0; i < n; i++) groups[i % COLORS.length].parts.push({
     x: innerWidth / 2 + (Math.random() - 0.5) * 60, y: innerHeight * 0.38,
     vx: (Math.random() - 0.5) * 13, vy: -Math.random() * 15 - 5,
     w: 6 + Math.random() * 6, h: 9 + Math.random() * 8,
     r: Math.random() * Math.PI, vr: (Math.random() - 0.5) * 0.35,
-    col: COLORS[i % COLORS.length],
-  }))
+  })
+  const H = innerHeight
   const start = performance.now()
   const frame = now => {
     const t = now - start
-    g.clearRect(0, 0, innerWidth, innerHeight)
-    for (const p of parts) {
-      p.vy += 0.38; p.vx *= 0.99; p.x += p.vx; p.y += p.vy; p.r += p.vr
-      g.save(); g.translate(p.x, p.y); g.rotate(p.r)
-      g.globalAlpha = Math.max(0, 1 - t / 2600)
-      g.fillStyle = p.col; g.fillRect(-p.w / 2, -p.h / 2, p.w, p.h * Math.abs(Math.cos(p.r * 2)) + 2)
-      g.restore()
+    g.setTransform(1, 0, 0, 1, 0, 0)
+    g.clearRect(0, 0, c.width, c.height)
+    g.globalAlpha = Math.max(0, 1 - t / 2600)
+    let alive = 0
+    for (const grp of groups) {
+      g.fillStyle = grp.col
+      for (const p of grp.parts) {
+        p.vy += 0.38; p.vx *= 0.99; p.x += p.vx; p.y += p.vy; p.r += p.vr
+        if (p.y > H + 30) continue
+        alive++
+        const cs = Math.cos(p.r), sn = Math.sin(p.r)
+        g.setTransform(cs * dpr, sn * dpr, -sn * dpr, cs * dpr, p.x * dpr, p.y * dpr)
+        g.fillRect(-p.w / 2, -p.h / 2, p.w, p.h * Math.abs(Math.cos(p.r * 2)) + 2)
+      }
     }
-    if (t < 2600) requestAnimationFrame(frame); else c.remove()
+    if (t < 2600 && alive) requestAnimationFrame(frame); else c.remove()
   }
   requestAnimationFrame(frame)
 }
@@ -569,7 +581,8 @@ const VFX_MS = 2900
 function canvasLayer() {
   const c = document.createElement('canvas')
   c.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:1300'
-  const dpr = Math.min(2, window.devicePixelRatio || 1)
+  // big screens draw at 1× (a retina full-screen canvas is 4× the pixels every frame)
+  const dpr = innerWidth * innerHeight > 1100 * 800 ? 1 : Math.min(2, window.devicePixelRatio || 1)
   c.width = innerWidth * dpr; c.height = innerHeight * dpr
   document.body.appendChild(c)
   const g = c.getContext('2d'); g.scale(dpr, dpr)
