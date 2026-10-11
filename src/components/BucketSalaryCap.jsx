@@ -201,6 +201,10 @@ function calcStats(sel) {
 
 const PLAYED_KEY     = (str, uid) => uid ? `sal_play_${uid}_${str}`     : `sal_play_${str}`
 const SHUFFLED_KEY   = (str, uid) => uid ? `sal_shuffled_${uid}_${str}` : `sal_shuffled_${str}`
+// A day's shuffle as saved: a column ({ ci, players }) or a row ({ ti, row })
+const parseShuffle = saved => {
+  try { const v = JSON.parse(saved); return { col: v?.players ? { [v.ci]: v.players } : {}, row: v?.row ? { [v.ti]: v.row } : {} } } catch { return { col: {}, row: {} } }
+}
 const SCOUTED_KEY    = (str, uid) => uid ? `sal_scouted_${uid}_${str}`  : `sal_scouted_${str}`
 const POWER_SEEN_KEY = 'sal_power_seen'
 
@@ -642,12 +646,14 @@ export default function BucketSalaryCap({ onConfirm, onBack, user, initialDateSt
   const [shufflesLeft,    setShufflesLeft]    = useState(() => localStorage.getItem(SHUFFLED_KEY(getESTDate(0).str, user?.id)) ? 0 : 1)
   const [shuffleOverride, setShuffleOverride] = useState(() => {
     const saved = localStorage.getItem(SHUFFLED_KEY(getESTDate(0).str, user?.id))
-    if (!saved) return {}
-    try { const { ci, players } = JSON.parse(saved); return { [ci]: players } } catch { return {} }
+    return saved ? parseShuffle(saved).col : {}
   })
   const [shufflingCol,    setShufflingCol]    = useState(null)
   const [shufflingRow,    setShufflingRow]    = useState(null)
-  const [rowOverrides,    setRowOverrides]    = useState({})
+  const [rowOverrides,    setRowOverrides]    = useState(() => {
+    const saved = localStorage.getItem(SHUFFLED_KEY(getESTDate(0).str, user?.id))
+    return saved ? parseShuffle(saved).row : {}
+  })
   const [shufflePhase,    setShufflePhase]    = useState(null)
   const [shuffleMode,     setShuffleMode]     = useState(false)
   const [hoveredShuffle,  setHoveredShuffle]  = useState(null)
@@ -824,7 +830,10 @@ export default function BucketSalaryCap({ onConfirm, onBack, user, initialDateSt
         return next
       })
       if (mode === 'infinite') { setInfShufflesLeft(0) }
-      else { setShufflesLeft(0) }
+      else {
+        localStorage.setItem(SHUFFLED_KEY(activeDate.str, user?.id), JSON.stringify({ ti, row: newMap }))
+        setShufflesLeft(0)
+      }
       setShufflePhase('in')
       setTimeout(() => { setShufflingRow(null); setShufflePhase(null) }, 500)
     }, 380)
@@ -850,14 +859,11 @@ export default function BucketSalaryCap({ onConfirm, onBack, user, initialDateSt
     const uid = user?.id
     const savedShuffle = localStorage.getItem(SHUFFLED_KEY(activeDate.str, uid))
     setShufflesLeft(savedShuffle ? 0 : 1)
-    if (savedShuffle) {
-      try {
-        const { ci, players } = JSON.parse(savedShuffle)
-        setShuffleOverride({ [ci]: players })
-      } catch { setShuffleOverride({}) }
-    } else {
-      setShuffleOverride({})
-    }
+    // the day's shuffle comes back with it (column or row), so a played board
+    // shows the picks where they were made
+    const restored = savedShuffle ? parseShuffle(savedShuffle) : { col: {}, row: {} }
+    setShuffleOverride(restored.col)
+    setRowOverrides(restored.row)
     setShuffleMode(false)
     const savedScouted = localStorage.getItem(SCOUTED_KEY(activeDate.str, uid))
     setScoutsLeft(savedScouted ? 0 : 1)
