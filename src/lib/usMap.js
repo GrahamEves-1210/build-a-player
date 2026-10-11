@@ -47,6 +47,21 @@ export function project(lon, lat) {
   const p = albers(lon, lat)
   return { x: (p.x - minX) / (maxX - minX) * 100, y: (maxY - p.y) / (maxY - minY) * 100 }
 }
+// Is a map point (percent) inside the country?
+const POLY = OUTLINE.map(([lon, lat]) => { const p = project(lon, lat); return [p.x, p.y] })
+const inside = (x, y) => { let c = false; for (let i = 0, j = POLY.length - 1; i < POLY.length; j = i++) { const [xi, yi] = POLY[i], [xj, yj] = POLY[j]; if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) c = !c } return c }
+/** lon/lat → a pin's spot: the projected point, pulled just inside the
+ *  country (Toronto, a lakeshore city) and clear of the box's edge */
+export function pinAt(lon, lat) {
+  const p = project(lon, lat)
+  // inside, off the edge, and a little room on every side for the pin
+  const ok = (x, y) => x > 3 && x < 97 && y > 3 && y < 97 && [[0, 0], [1.2, 0], [-1.2, 0], [0, 1.8], [0, -1.8]].every(([dx, dy]) => inside(x + dx, y + dy))
+  if (ok(p.x, p.y)) return p
+  for (let r = 0.4; r <= 10; r += 0.4) {
+    for (let k = 0; k < 24; k++) { const t = k / 24 * Math.PI * 2, x = p.x + Math.cos(t) * r, y = p.y + Math.sin(t) * r * 1.6; if (ok(x, y)) return { x, y } }
+  }
+  return p
+}
 const ring = r => r.map(([lon, lat], i) => { const p = project(lon, lat); return `${i ? 'L' : 'M'}${(p.x / 100 * W).toFixed(1)} ${(p.y / 100 * H).toFixed(1)}` }).join('') + 'Z'
 export const OUTLINE_PATH = ring(OUTLINE) + ring(LAKE_MICHIGAN)
 
@@ -68,11 +83,11 @@ export function heading(a, b) {
 // Arenas and stadiums. Shared-market teams are nudged apart so both pins read.
 export const GEO = {
   nba: {
-    ATL: { city: 'Atlanta', lat: 33.757, lon: -84.396 }, BOS: { city: 'Boston', lat: 42.366, lon: -71.062 }, BKN: { city: 'Brooklyn', lat: 40.2, lon: -73.3 },
+    ATL: { city: 'Atlanta', lat: 33.757, lon: -84.396 }, BOS: { city: 'Boston', lat: 42.366, lon: -71.062 }, BKN: { city: 'Brooklyn', lat: 40.45, lon: -74.6 },
     CHA: { city: 'Charlotte', lat: 35.225, lon: -80.839 }, CHI: { city: 'Chicago', lat: 41.881, lon: -87.674 }, CLE: { city: 'Cleveland', lat: 41.496, lon: -81.688 },
     DAL: { city: 'Dallas', lat: 32.790, lon: -96.810 }, DEN: { city: 'Denver', lat: 39.749, lon: -105.008 }, DET: { city: 'Detroit', lat: 42.341, lon: -83.055 },
     GSW: { city: 'San Francisco', lat: 37.768, lon: -122.388 }, HOU: { city: 'Houston', lat: 29.751, lon: -95.362 }, IND: { city: 'Indianapolis', lat: 39.764, lon: -86.156 },
-    LAC: { city: 'Los Angeles', lat: 33.2, lon: -117.8 }, LAL: { city: 'Los Angeles', lat: 34.5, lon: -118.6 }, MEM: { city: 'Memphis', lat: 35.138, lon: -90.051 },
+    LAC: { city: 'Los Angeles', lat: 33.95, lon: -117.3 }, LAL: { city: 'Los Angeles', lat: 34.5, lon: -118.6 }, MEM: { city: 'Memphis', lat: 35.138, lon: -90.051 },
     MIA: { city: 'Miami', lat: 25.781, lon: -80.187 }, MIL: { city: 'Milwaukee', lat: 43.045, lon: -87.917 }, MIN: { city: 'Minneapolis', lat: 44.979, lon: -93.276 },
     NOP: { city: 'New Orleans', lat: 29.949, lon: -90.082 }, NYK: { city: 'New York', lat: 41.1, lon: -74.5 }, OKC: { city: 'Oklahoma City', lat: 35.463, lon: -97.515 },
     ORL: { city: 'Orlando', lat: 28.539, lon: -81.384 }, PHI: { city: 'Philadelphia', lat: 39.901, lon: -75.172 }, PHX: { city: 'Phoenix', lat: 33.446, lon: -112.071 },
@@ -85,10 +100,10 @@ export const GEO = {
     CIN: { city: 'Cincinnati', lat: 39.095, lon: -84.516 }, CLE: { city: 'Cleveland', lat: 41.506, lon: -81.700 }, DAL: { city: 'Dallas', lat: 32.748, lon: -97.093 },
     DEN: { city: 'Denver', lat: 39.744, lon: -105.020 }, DET: { city: 'Detroit', lat: 42.340, lon: -83.046 }, GB: { city: 'Green Bay', lat: 44.501, lon: -88.062 },
     HOU: { city: 'Houston', lat: 29.685, lon: -95.411 }, IND: { city: 'Indianapolis', lat: 39.760, lon: -86.164 }, JAX: { city: 'Jacksonville', lat: 30.324, lon: -81.637 },
-    KC: { city: 'Kansas City', lat: 39.049, lon: -94.484 }, LV: { city: 'Las Vegas', lat: 36.091, lon: -115.183 }, LAC: { city: 'Los Angeles', lat: 33.2, lon: -117.8 },
+    KC: { city: 'Kansas City', lat: 39.049, lon: -94.484 }, LV: { city: 'Las Vegas', lat: 36.091, lon: -115.183 }, LAC: { city: 'Los Angeles', lat: 33.95, lon: -117.3 },
     LAR: { city: 'Los Angeles', lat: 34.5, lon: -118.6 }, MIA: { city: 'Miami', lat: 25.958, lon: -80.239 }, MIN: { city: 'Minneapolis', lat: 44.974, lon: -93.258 },
     NE: { city: 'Boston', lat: 42.3, lon: -71.3 }, NO: { city: 'New Orleans', lat: 29.951, lon: -90.081 }, NYG: { city: 'New York', lat: 41.1, lon: -74.6 },
-    NYJ: { city: 'New York', lat: 40.1, lon: -73.5 }, PHI: { city: 'Philadelphia', lat: 39.901, lon: -75.168 }, PIT: { city: 'Pittsburgh', lat: 40.447, lon: -80.016 },
+    NYJ: { city: 'New York', lat: 40.5, lon: -74.75 }, PHI: { city: 'Philadelphia', lat: 39.901, lon: -75.168 }, PIT: { city: 'Pittsburgh', lat: 40.447, lon: -80.016 },
     SF: { city: 'San Francisco', lat: 37.5, lon: -122.2 }, SEA: { city: 'Seattle', lat: 47.595, lon: -122.332 }, TB: { city: 'Tampa', lat: 27.976, lon: -82.503 },
     TEN: { city: 'Nashville', lat: 36.166, lon: -86.771 }, WAS: { city: 'Washington', lat: 38.908, lon: -76.864 },
   },

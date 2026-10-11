@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { LIVES, XP_CITY, XP_RUN, XP_ENDLESS, cityList, ratedPool, ensureStop, stopAt, isEndless, whereAmI, opponentOf, nextBestOf, saveRun, clearRun, hoopsDuel, footballDuel, stealOptions, upgradeOptions, applyReward, afterDuel, pastRuns, logRun, STOPS, COINS_CITY, COINS_RUN } from '../../lib/takeover'
+import { LIVES, XP_CITY, XP_RUN, XP_ENDLESS, cityList, ratedPool, ensureStop, stopAt, isEndless, whereAmI, opponentOf, nextBestOf, saveRun, clearRun, hoopsDuel, footballDuel, prizeOptions, applyReward, afterDuel, pastRuns, logRun, STOPS, COINS_CITY, COINS_RUN, HEAT_MAX, PLAN_CUT, CASH_MULT, heatOf, onFire, firing, planFor, duelBuild } from '../../lib/takeover'
 import { W, H, OUTLINE_PATH, miles, heading } from '../../lib/usMap'
 import { playDelay } from '../../lib/hoops'
 import { joinRoom, genCode, myVid } from '../../lib/live'
@@ -41,6 +41,7 @@ export default function AppTakeover({ sport, run, setRun, user, pools, attrMap, 
   const pool = pools[run?.pos] ?? pools.guard ?? []
   const rated = useMemo(() => (run ? ratedPool(pool, run.types, calcOvr, cities) : []), [pool, run?.types, run?.pos, cities]) // eslint-disable-line
   const [screen, setScreen] = useState(() => (run?.over ? 'over' : run?.justWon ? 'complete' : 'map'))
+  const [stealPick, setStealPick] = useState([])     // ON FIRE: the two ratings being stolen
   const [duel, setDuel] = useState(null)            // { ...result, city, star, stop } — the stop it was played at
   const [chatOpen, setChatOpen] = useState(false)
   const me = useMemo(() => ({ vid: myVid(), name: user ? (getUsername(user) || 'Player') : 'Guest', uid: user?.id ?? null, cos: myCosmetics() }), [user?.id]) // eslint-disable-line
@@ -50,7 +51,8 @@ export default function AppTakeover({ sport, run, setRun, user, pools, attrMap, 
 
   const stop = run && !run.over ? stopAt(run) : null
   const city = stop ? byShort[stop.short] ?? null : null
-  const star = useMemo(() => (stop && city ? opponentOf(stop, city, pool, run.types, photoFor) : null), [stop, city, pool, run?.types, photoFor])
+  const planned = !!run && planFor(run)
+  const star = useMemo(() => (stop && city ? opponentOf(stop, city, pool, run.types, photoFor, planned) : null), [stop, city, pool, run?.types, photoFor, planned])
   const here = run ? byShort[whereAmI(run)] ?? null : null
   const endless = !!run && isEndless(run)
 
@@ -66,7 +68,7 @@ export default function AppTakeover({ sport, run, setRun, user, pools, attrMap, 
       d = { kind: 'hoops', ...hoopsDuel({ run, city, star, me: { name: me.name }, partner, partnerStar: partner ? partnerStar : null }) }
       d.win = d.winner === 0
     } else {
-      const ovr = calcOvr(run.build)
+      const ovr = calcOvr(duelBuild(run))
       d = { kind: 'football', ...footballDuel({ run, city, star, myOvr: ovr }) }
       if (run.mode === 'duo' && duo.partnerPlayer) {
         const pd = footballDuel({ run: { ...run, seed: run.seed + 'p' }, city, star, myOvr: duo.partnerPlayer.ovr ?? ovr })
@@ -91,6 +93,7 @@ export default function AppTakeover({ sport, run, setRun, user, pools, attrMap, 
   }
   const reward = (kind, type) => {
     const next = applyReward(run, { kind, type }, duel?.star ?? star)
+    if (kind === 'cash') window.dispatchEvent(new CustomEvent('bap:xp', { detail: { xp: 0, coins: COINS_CITY * CASH_MULT, label: `Cashed in ${duel?.city?.city ?? ''}` } }))
     setRun(next); sfx('claim'); haptic('success')
     if (run.mode === 'duo') duo.sync(next)
     setScreen(next.justWon ? 'complete' : 'map')
@@ -116,6 +119,7 @@ export default function AppTakeover({ sport, run, setRun, user, pools, attrMap, 
           <div className="tk-status ag-pop">
             <span className="tk-lives">{Array.from({ length: LIVES }, (_, i) => <IconFlame key={i} size={18} style={{ opacity: i < run.lives ? 1 : .18 }} />)}</span>
             <span className="tk-ovr"><b>{ovr}</b> OVR</span>
+            <span className={`tk-heat${firing(run) ? ' is-fire' : ''}`} title="Wins in a row. Three and you're on fire.">{firing(run) ? 'ON FIRE' : 'HEAT'} {Array.from({ length: HEAT_MAX }, (_, i) => <i key={i} className={firing(run) || i < heatOf(run) ? 'is-on' : ''} />)}</span>
             <button className="ag-chip" onClick={() => setScreen('build')}><IconProfile size={13} /> MY BUILD</button>
             {run.mode !== 'duo' && <button className="ag-chip" onClick={() => setScreen('duo')}>DUO</button>}
             {run.mode === 'duo' && <button className={`ag-chip${duo.partner ? ' is-on' : ''}`} onClick={() => setChatOpen(true)}><IconChat size={13} /> {duo.partner ? <NameTag name={duo.partner.name} cos={duo.partner.cos} plate={false} /> : 'WAITING'}</button>}
@@ -201,7 +205,11 @@ export default function AppTakeover({ sport, run, setRun, user, pools, attrMap, 
           )}
           <div className="tk-stakes ag-pop" style={{ '--d': '80ms' }}>
             <span className="ag-eyebrow">ON THE LINE</span>
-            <p>{isBucket ? (run.mode === 'duo' ? `You and your partner vs ${lastName(sName)} and the ${city.nick}' next best, first to 15.` : 'First to 11, 1s and 2s, make it take it.') : `One game in ${city.city}. Your build vs their defense.`} Win: <b>upgrade a trait</b> or <b>steal one of {lastName(sName)}'s</b>. Lose: a life.</p>
+            <p>{isBucket ? (run.mode === 'duo' ? `You and your partner vs ${lastName(sName)} and the ${city.nick}' next best, first to 15.` : 'First to 11, 1s and 2s, make it take it.') : `One game in ${city.city}. Your build vs their defense.`} Win: <b>steal one of {lastName(sName)}'s ratings</b>, or take a game plan, a rest or the cash. Lose: a life, and your heat.</p>
+            {(planned || firing(run)) && <div className="tk-edges">
+              {planned && star.cut && <span className="tk-edge is-plan">GAME PLAN · their {(attrMap[star.cut]?.label ?? star.cut).toLowerCase()} −{PLAN_CUT} this game</span>}
+              {firing(run) && <span className="tk-edge is-fire">ON FIRE · +1 to every rating you have, this game</span>}
+            </div>}
             <div className="tk-star-grid">
               {run.types.map(t => { const v = star.build[t]?.val ?? 0, m = run.build[t]?.val ?? 0; return (
                 <span key={t} className={`tk-star-cell${v > m ? ' is-up' : v < m ? ' is-down' : ''}`} style={{ '--g': gradeColor(v) }}>
@@ -225,19 +233,26 @@ export default function AppTakeover({ sport, run, setRun, user, pools, attrMap, 
 
   if (screen === 'reward' && duel?.star) {
     const beaten = duel.star, at = duel.city
-    const ups = upgradeOptions(run), steals = stealOptions(run, beaten)
+    const P = prizeOptions(run, beaten)
+    const picked = stealPick.filter(t => P.steals.some(o => o.type === t))
+    const tap = t => setStealPick(l => (l.includes(t) ? l.filter(x => x !== t) : P.take === 1 ? [t] : [...l, t].slice(-P.take)))
+    const go = (kind, type) => { setStealPick([]); reward(kind, type) }
     return (
       <div className={`ag-screen ag-screen--${sport} tk`}>
-        <div className="ag-screen-head"><div><span className="ag-eyebrow">{at.city.toUpperCase()} TAKEN · +{isEndless(run) && run.idx > total ? XP_ENDLESS : XP_CITY} XP</span><h1 className="ag-h1">Take your prize</h1></div></div>
+        <div className="ag-screen-head"><div><span className="ag-eyebrow">{at.city.toUpperCase()} TAKEN · +{isEndless(run) && run.idx > total ? XP_ENDLESS : XP_CITY} XP{onFire(run) ? ' · ON FIRE' : ''}</span><h1 className="ag-h1">Take your prize</h1></div></div>
         <div className="ag-screen-body">
-          <section className="ag-card ag-pop"><div className="ag-eyebrow">STEAL FROM {beaten.player.name.toUpperCase()}</div>
-            <p className="tk-reward-sub">Take one of their traits where they beat you — their player goes in your build.</p>
-            {steals.length === 0 && <div className="ag-board-empty">Nothing to steal — your build already beats theirs everywhere.</div>}
-            <div className="tk-reward-grid">{steals.map(o => <button key={o.type} className="tk-reward-opt is-steal" style={{ '--g': gradeColor(o.to) }} onClick={() => reward('steal', o.type)}><small>{attrMap[o.type]?.label ?? o.type}</small><b>{valToGrade(o.from)} → {valToGrade(o.to)}</b></button>)}</div>
+          <section className="ag-card ag-pop"><div className="ag-eyebrow">{P.take > 1 ? 'ON FIRE · STEAL TWO' : 'STEAL A RATING'} FROM {beaten.player.name.toUpperCase()}</div>
+            <p className="tk-reward-sub">{P.take > 1 ? 'Three straight: pick two of their ratings where they beat you, and play the next game with +1 on everything. Then heat starts over.' : 'Take one of their ratings where they beat you. Their player goes in your build.'}</p>
+            {P.steals.length === 0 && <div className="ag-board-empty">Nothing to steal. Your build already beats theirs everywhere.</div>}
+            <div className="tk-reward-grid">{P.steals.map(o => <button key={o.type} className={`tk-reward-opt is-steal${picked.includes(o.type) ? ' is-on' : ''}`} style={{ '--g': gradeColor(o.to) }} onClick={() => (P.take === 1 ? go('steal', o.type) : tap(o.type))}><small>{attrMap[o.type]?.label ?? o.type}</small><b>{valToGrade(o.from)} → {valToGrade(o.to)}</b></button>)}</div>
+            {P.take > 1 && P.steals.length > 0 && <button className="ag-btn ag-btn--gold tk-steal-go" disabled={picked.length < P.take} onClick={() => go('steal', picked)}>STEAL {picked.length}/{P.take} <IconArrow size={15} /></button>}
           </section>
-          <section className="ag-card ag-pop" style={{ '--d': '80ms' }}><div className="ag-eyebrow">UPGRADE A TRAIT · +1</div>
-            <div className="tk-reward-grid">{ups.map(o => <button key={o.type} className="tk-reward-opt" style={{ '--g': gradeColor(o.to) }} onClick={() => reward('upgrade', o.type)}><small>{attrMap[o.type]?.label ?? o.type}</small><b>{valToGrade(o.from)} → {valToGrade(o.to)}</b></button>)}</div>
-          </section>
+          <div className="ag-eyebrow tk-or ag-pop" style={{ '--d': '60ms' }}>OR TAKE</div>
+          <div className="tk-prizes ag-pop" style={{ '--d': '80ms' }}>
+            <button className="tk-prize" onClick={() => go('plan')}><b>GAME PLAN</b><small>Film on the next city: their best rating −{PLAN_CUT} for that game.</small></button>
+            {P.rest && <button className="tk-prize" onClick={() => go('rest')}><b>REST UP</b><small>A life back. {run.lives}/{LIVES} now.</small></button>}
+            <button className="tk-prize" onClick={() => go('cash')}><b>CASH IN</b><small>+{COINS_CITY * CASH_MULT} coins instead of a rating.</small></button>
+          </div>
         </div>
       </div>
     )
@@ -502,7 +517,8 @@ export function TakeoverIntro({ sport, teams, onStart, onClose }) {
   const steps = [
     ['Build your player', 'One draft, the same spins as a normal game. That build is who you take on the road.'],
     [`Cross ${STOPS} cities`, `Every stop has ${isBucket ? 'a star' : 'its best player at your position'} who rates higher than you. Beat them to take the city.`],
-    ['Take their game', 'Every win lets you steal one of their ratings or upgrade one of yours. The build grows as you go.'],
+    ['Take their game', 'Every win is a prize: steal one of their ratings, a game plan for the next city, a rest, or the cash.'],
+    ['Heat', 'Wins in a row build heat. Three straight and you\'re ON FIRE: a double steal, then a game with +1 on every rating. A loss puts it out.'],
     [`${LIVES} lives`, `A loss costs a life and you run that stop back. Lose all ${LIVES} and the run is over. Take all ${STOPS} and the road keeps going.`],
   ]
   return (

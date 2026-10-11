@@ -193,8 +193,8 @@ function CareerArt() {
       <defs><linearGradient id="crg" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stopColor="#f5dc8a" stopOpacity=".1" /><stop offset="1" stopColor="#f5dc8a" stopOpacity=".55" /></linearGradient></defs>
       <ellipse cx="150" cy="118" rx="120" ry="42" fill="none" stroke="rgba(255,255,255,.14)" strokeWidth="2" />
       <ellipse cx="150" cy="118" rx="92" ry="30" fill="none" stroke="rgba(255,255,255,.1)" strokeWidth="2" />
-      <polyline points="20,96 60,84 95,88 130,60 165,48 205,18" fill="none" stroke="url(#crg)" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
-      <circle cx="205" cy="18" r="6" fill="#f5dc8a" />
+      <polyline points="20,96 60,84 95,88 130,60 165,48 205,18" fill="none" stroke="url(#crg)" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" className="ag-cr-line" pathLength="100" />
+      <circle cx="205" cy="18" r="6" fill="#f5dc8a" className="ag-cr-peak" />
       <circle cx="130" cy="60" r="3.5" fill="rgba(245,220,138,.7)" /><circle cx="60" cy="84" r="3.5" fill="rgba(245,220,138,.5)" />
     </svg>
   )
@@ -325,7 +325,6 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
                 <span className="ag-takeover-title">BLACKTOP</span>
                 <span className="ag-takeover-sub">{btLive ? 'You\'re still in. Jump back to your run.' : (btG || h2h.played) ? `3v3 ${btW}–${btG - btW} · 1v1 ${h2h.wins ?? 0}–${h2h.losses ?? 0}${ol.played ? ` · ${tierFor(ol.rating)[1]} ${ol.rating}` : ''}` : 'Squads of three, or one on one. Real players.'}</span>
               </span>
-              <span className="ag-bt-go" aria-hidden="true"><IconArrow size={18} /></span>
             </button>
           )}
           {onCareer && (

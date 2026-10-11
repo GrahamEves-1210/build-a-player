@@ -1,8 +1,11 @@
 // TAKEOVER — the road. Build once, then cross the country: twelve cities drawn
 // across the map, each with a real player at your position who is a little
 // better than the last — the road opens around 70 OVR and ends at the best in
-// the league. Win and you upgrade a trait or steal one of theirs; lose and it
-// costs a life (three). Take all twelve and the road goes endless: random
+// the league. Win and you take a prize: steal one of their ratings, a game plan
+// for the next city, a rest (a life back) or the cash. Wins in a row build heat:
+// three straight and you're ON FIRE: that prize is a double steal, and the next
+// game you play with +1 on every rating. Then the fire burns out and heat starts
+// over; a loss puts it out early. A loss costs a life (three). Take all twelve and the road goes endless: random
 // greats, anywhere, for as long as the build holds. The run is plain data
 // saved on the device, so Home never loses it. One engine for both games:
 // basketball duels are the streetball sim (1v1 to 11; Duo is 2v2 vs the star
@@ -10,7 +13,7 @@
 
 import { seeded } from './rng'
 import { simStreetball, buildFromPlayer } from './hoops'
-import { GEO, project } from './usMap'
+import { GEO, pinAt } from './usMap'
 
 export const LIVES = 3
 export const STOPS = 12
@@ -19,6 +22,9 @@ export const XP_RUN = 250
 export const XP_ENDLESS = 30
 export const COINS_CITY = 8
 export const COINS_RUN = 75
+export const HEAT_MAX = 3
+export const PLAN_CUT = 2          // a game plan takes this off their best rating, for that game
+export const CASH_MULT = 3         // cash in: the city's coins, tripled
 const RUN_V = 2
 
 // ── Cities ────────────────────────────────────────────────────────────────────
@@ -26,7 +32,7 @@ export function cityList(sport, teams) {
   const geo = GEO[sport === 'bucket' ? 'nba' : 'nfl']
   return teams.map(t => {
     const g = geo[t.short]
-    const pt = g ? project(g.lon, g.lat) : { x: 50, y: 50 }
+    const pt = g ? pinAt(g.lon, g.lat) : { x: 50, y: 50 }
     return {
       short: t.short, name: t.name, nick: t.name.split(' ').slice(-1)[0],
       city: g?.city ?? t.name.split(' ').slice(0, -1).join(' '),
@@ -106,12 +112,29 @@ export const whereAmI = run => [...run.log].reverse().find(l => l.won)?.city ?? 
 
 // The stop's player as a build (endless form adds a little to every rating).
 // `nextBestOf` is the Duo partner's man: the best on that roster not already on the floor.
-export function opponentOf(stop, city, pool, types, photoFor) {
+// `planned`: you took a game plan for this stop, so their best rating comes down
+export function opponentOf(stop, city, pool, types, photoFor, planned = false) {
   const p = pool.find(x => x.name === stop.name && x.attrs) ?? bestOn(city, pool)
   if (!p) return null
   const boost = stop.boost ?? 0
-  const boosted = boost ? { ...p, attrs: Object.fromEntries(Object.entries(p.attrs).map(([k, v]) => [k, Math.min(11, v + boost)])) } : p
-  return { player: boosted, build: buildFromPlayer(boosted, types, photoFor?.(p) ?? null), ovr: stop.ovr, boost }
+  let attrs = boost ? Object.fromEntries(Object.entries(p.attrs).map(([k, v]) => [k, Math.min(11, v + boost)])) : { ...p.attrs }
+  let cut = null
+  if (planned) {
+    cut = types.filter(t => attrs[t] != null).sort((a, b) => attrs[b] - attrs[a])[0] ?? null
+    if (cut) attrs = { ...attrs, [cut]: Math.max(0, attrs[cut] - PLAN_CUT) }
+  }
+  const player = { ...p, attrs }
+  return { player, build: buildFromPlayer(player, types, photoFor?.(p) ?? null), ovr: stop.ovr - (cut ? 2 : 0), boost, cut }
+}
+// Heat: wins in a row. Three straight → ON FIRE: a double steal on that prize
+// (onFire), then +1 to every rating for one game (run.fire)
+export const heatOf = run => run.heat ?? 0
+export const onFire = run => heatOf(run) >= HEAT_MAX
+export const firing = run => !!run.fire
+export const planFor = run => !!run.plan && run.plan.idx === run.idx
+export function duelBuild(run) {
+  if (!firing(run)) return run.build
+  return Object.fromEntries(Object.entries(run.build).map(([t, ch]) => [t, ch ? { ...ch, val: Math.min(11, (ch.val ?? 0) + 1) } : ch]))
 }
 const bestOn = (city, pool, exclude = null) => {
   const on = pool.filter(p => p.team === city.short && p.attrs && p.name !== exclude)
@@ -154,6 +177,7 @@ export function newRun({ sport, uid, pos, mode = 'solo', build, types, rated, ci
   return {
     v: RUN_V, sport, uid, pos, mode, code: null, build, types, seed, route, start, lo, hi,
     idx: 0, taken: [], endless: [], endlessWins: 0, lives: LIVES, log: [], started: Date.now(), over: false, won: false, justWon: false, attempt: 0,
+    heat: 0, plan: null,
   }
 }
 
@@ -161,7 +185,7 @@ export function newRun({ sport, uid, pos, mode = 'solo', build, types, rated, ci
 export function hoopsDuel({ run, city, star, me, partner = null, partnerStar = null }) {
   const seed = `${run.seed}-${city.short}-${run.idx}-${run.attempt}`
   const last = n => n.split(' ').slice(-1)[0].toUpperCase()
-  const mine = { id: 'me', name: me.name, pos: run.pos, build: run.build }
+  const mine = { id: 'me', name: me.name, pos: run.pos, build: duelBuild(run) }
   const theirs = { id: 'star', name: star.player.name, pos: run.pos, build: star.build, role: star.boost ? 'score' : 'balanced' }
   if (partner && partnerStar) {
     const p2 = { id: 'partner', name: partner.name, pos: partner.pos, build: partner.build }
@@ -215,17 +239,33 @@ export function footballDuel({ run, city, star, myOvr, myTeamShort = 'YOU' }) {
 }
 
 // ── Rewards ──────────────────────────────────────────────────────────────────
+// What a beaten player has that you don't (their real ratings, before any game plan)
 export function stealOptions(run, star) {
-  return run.types.filter(t => (star.build[t]?.val ?? 0) > (run.build[t]?.val ?? 0)).map(t => ({ type: t, from: run.build[t]?.val ?? 0, to: star.build[t].val }))
+  const real = star.cut ? { ...star.build, [star.cut]: { ...star.build[star.cut], val: (star.build[star.cut]?.val ?? 0) + PLAN_CUT } } : star.build
+  return run.types.filter(t => (real[t]?.val ?? 0) > (run.build[t]?.val ?? 0)).map(t => ({ type: t, from: run.build[t]?.val ?? 0, to: real[t].val, chip: real[t] }))
 }
-export function upgradeOptions(run) {
-  return run.types.filter(t => (run.build[t]?.val ?? 0) < 11).map(t => ({ type: t, from: run.build[t]?.val ?? 0, to: (run.build[t]?.val ?? 0) + 1 }))
+// The prizes on offer after a win. ON FIRE: a steal takes two.
+export function prizeOptions(run, star) {
+  const steals = stealOptions(run, star)
+  return {
+    steals, take: onFire(run) ? Math.min(2, steals.length) : 1,
+    plan: true,
+    rest: run.mode !== 'duo' && run.lives < LIVES,       // in Duo the road's lives are the host's
+    cash: true,
+  }
 }
-export function applyReward(run, reward, star) {
-  const build = { ...run.build }
-  if (reward.kind === 'steal') build[reward.type] = { ...star.build[reward.type], stolen: true }
-  else build[reward.type] = { ...(build[reward.type] || { type: reward.type }), val: Math.min(11, (build[reward.type]?.val ?? 0) + 1), upgraded: (build[reward.type]?.upgraded ?? 0) + 1 }
-  return { ...run, build }
+export function applyReward(run0, reward, star) {
+  // the prize that ON FIRE earned: the fire carries into the next game, heat starts over
+  const run = onFire(run0) ? { ...run0, heat: 0, fire: true } : run0
+  if (reward.kind === 'steal') {
+    const build = { ...run.build }
+    const opts = Object.fromEntries(stealOptions(run0, star).map(o => [o.type, o.chip]))
+    for (const t of [].concat(reward.type)) if (opts[t]) build[t] = { ...opts[t], stolen: true }
+    return { ...run, build }
+  }
+  if (reward.kind === 'plan') return { ...run, plan: { idx: run.idx } }
+  if (reward.kind === 'rest') return { ...run, lives: Math.min(LIVES, run.lives + 1) }
+  return run                                            // cash: the coins go out with the prize
 }
 
 // A win moves you on (the city is yours, the road's lives refill when the
@@ -235,14 +275,15 @@ export function afterDuel(run, city, won) {
   if (won) {
     const endless = isEndless(run)
     const idx = run.idx + 1
+    const heat = Math.min(HEAT_MAX, heatOf(run) + 1)
     const justWon = !run.won && idx >= run.route.length
     return {
-      ...run, log, idx, attempt: 0, justWon,
+      ...run, log, idx, attempt: 0, justWon, heat, plan: null, fire: false,
       taken: endless ? run.taken : [...run.taken, city.short],
       won: run.won || justWon, lives: justWon ? LIVES : run.lives,
       endlessWins: endless ? run.endlessWins + 1 : run.endlessWins,
     }
   }
   const lives = run.lives - 1
-  return { ...run, log, lives, attempt: run.attempt + 1, over: lives <= 0, justWon: false }
+  return { ...run, log, lives, attempt: run.attempt + 1, over: lives <= 0, justWon: false, heat: 0, fire: false }      // the plan holds for the rematch
 }
