@@ -972,10 +972,13 @@ export function campDrill(c, score, game) {
   return { ...c, dev: { ...c.dev, points: c.dev.points + bonus }, off: { ...c.off, camp: { score, bonus, game } } }
 }
 const traitName = (c, t) => POS_ATTR[c.pos][t]?.label ?? t
+// A trait is maxed once it shows S (grades are rounded: 10.5 and up is S)
+export const maxedTrait = v => Math.round(v ?? 0) >= 11
 export function spendDev(c, type) {
-  if (c.dev.points <= 0 || !c.build[type] || c.build[type].val >= 11) return c
+  if (c.dev.points <= 0 || !c.build[type] || maxedTrait(c.build[type].val)) return c
   const from = c.build[type].val
-  const build = { ...c.build, [type]: { ...c.build[type], val: from + 1, upgraded: (c.build[type].upgraded ?? 0) + 1 } }
+  // one grade up, exactly: a 9.6 (A) becomes an A+, not a 10.6 that also reads S
+  const build = { ...c.build, [type]: { ...c.build[type], val: Math.min(11, Math.round(from) + 1), upgraded: (c.build[type].upgraded ?? 0) + 1 } }
   return { ...c, build, ovr: ovrOf(c.pos, build, c.sport), dev: { points: c.dev.points - 1, spent: c.dev.spent + 1 }, decisions: [...c.decisions, { year: c.year + 1, text: `Offseason work: ${traitName(c, type)} ${valToGrade(from)} → ${valToGrade(from + 1)}` }] }
 }
 const EVENTS = {
@@ -1112,9 +1115,12 @@ export function nextSeason(c) {
   let build = { ...c.build }
   const notes = []
   const move = (t, d, why) => {
-    const ch = build[t]; if (!ch || ch.val + d > 11 || ch.val + d < 1) return
-    build[t] = { ...ch, val: ch.val + d, ...(d > 0 ? { grew: (ch.grew ?? 0) + 1 } : { faded: (ch.faded ?? 0) + 1 }) }
-    notes.push(`${why}: ${traitName(c, t)} ${valToGrade(ch.val)} → ${valToGrade(ch.val + d)}`)
+    // one visible grade at a time (grades are rounded), never past S or under D
+    const ch = build[t]; if (!ch) return
+    const to = Math.round(ch.val) + d
+    if (to > 11 || to < 1) return
+    build[t] = { ...ch, val: to, ...(d > 0 ? { grew: (ch.grew ?? 0) + 1 } : { faded: (ch.faded ?? 0) + 1 }) }
+    notes.push(`${why}: ${traitName(c, t)} ${valToGrade(ch.val)} → ${valToGrade(to)}`)
   }
   const shift = S.ageShift(c.pos)
   if (age <= 24 && r() < 0.45) move(c.types[Math.floor(r() * c.types.length)], 1, 'Still growing')

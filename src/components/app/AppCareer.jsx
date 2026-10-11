@@ -4,7 +4,7 @@ import {
   startSeason, resumeSeason, advanceWeek, chooseMoment, resolveInjury, finishRegular, playoffRound, bookSeason, recordCombine, spendDev, demandTrade, nextSeason,
   OFF_STEPS, offStep, campDrill, lineup, depthChart, gradeOf, gradeOfOvr, ovrGradeVal, SPORT, sportOf,
   openTalks, ask, closeTalks, acceptTalks, ASKS, leverageOf,
-  retire, canRetire, mustRetire, careerTotals, legacyOf, LEGACY_TIERS, ALL_TIME, STAT_LABEL, HEADLINE_STATS, careerCard, AWARD_NAME, MAX_SEASONS, goalsFor, compsFor, stockText, pickText, loadSlots, CAREER_SLOTS,
+  retire, canRetire, mustRetire, careerTotals, legacyOf, LEGACY_TIERS, ALL_TIME, STAT_LABEL, HEADLINE_STATS, careerCard, AWARD_NAME, MAX_SEASONS, goalsFor, compsFor, stockText, pickText, loadSlots, CAREER_SLOTS, maxedTrait,
 } from '../../lib/career'
 import { GAME_LINE } from '../../lib/seasonDirector'
 import { GAMES, pickPlayoffGame } from '../../lib/minigames'
@@ -137,7 +137,7 @@ function Model({ c, devPick }) {
   const shown = useMemo(() => inTeamColors(c.build, c.fit), [c.build, c.fit])
   const Card = ({ t }) => {
     const ch = c.build[t]
-    const canUp = devPick && c.dev.points > 0 && (ch?.val ?? 11) < 11
+    const canUp = devPick && c.dev.points > 0 && ch && !maxedTrait(ch.val)
     return (
       <div className={`cr-trait${canUp ? ' can-up' : ''}`} onClick={canUp ? () => devPick(t) : undefined} role={canUp ? 'button' : undefined}>
         <span className="cr-trait-av">{ch?.photo ? <img src={ch.photo} alt="" /> : null}</span>
