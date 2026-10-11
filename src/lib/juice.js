@@ -364,9 +364,10 @@ const SYNTH = {
 const pick = (...names) => names[Math.floor(Math.random() * names.length)]
 const SAMPLED = {
   // Blacktop: the ball on the court (no synth fallback: silent until loaded)
-  dribble: S => smp(S, 'bt-dribble', { gain: 0.34, jitter: 0.06 }),
-  catchball: S => smp(S, 'bt-catch', { gain: 0.5, jitter: 0.04 }),
-  make: S => smp(S, 'bt-make', { gain: 0.62, jitter: 0.03 }),
+  // (each file is cropped to the one hit and normalised; these set how loud each sits)
+  dribble: S => smp(S, 'bt-dribble', { gain: 0.22, jitter: 0.06 }),
+  catchball: S => smp(S, 'bt-catch', { gain: 0.26, jitter: 0.04 }),
+  make: S => smp(S, 'bt-make', { gain: 0.3, jitter: 0.03 }),
   tap: S => smp(S, pick('tap', 'tap2'), { gain: 0.55, jitter: 0.04 }),
   tick: S => smp(S, 'tick', { gain: 0.42, jitter: 0.07 }),
   back: S => smp(S, 'back', { gain: 0.6, jitter: 0.03 }),
