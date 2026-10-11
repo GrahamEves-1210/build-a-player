@@ -22,12 +22,20 @@ jobs:
       CERTIFICATE_PRIVATE_KEY: ${{ secrets.CERTIFICATE_PRIVATE_KEY }}
       BUNDLE_ID: com.buildaplayer.app
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       # the build number: above anything Codemagic uploaded, and higher every run
       # (workflow expressions can't do arithmetic, so the shell does it)
       - name: Build number
         run: echo "PROJECT_BUILD_NUMBER=$((100 + GITHUB_RUN_NUMBER))" >> "$GITHUB_ENV"
-      - uses: actions/setup-node@v4
+      # Apple only takes builds from Xcode 26 (the iOS 26 SDK) or later; the
+      # machine's default can be older, so pick the newest Xcode 26 it has
+      - name: Xcode 26
+        run: |
+          X=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)
+          if [ -z "$X" ]; then echo "No Xcode 26 on this machine. Installed:"; ls -d /Applications/Xcode*.app; exit 1; fi
+          sudo xcode-select -s "$X"
+          xcodebuild -version
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -51,7 +59,7 @@ jobs:
             --archive-xcargs "CURRENT_PROJECT_VERSION=$PROJECT_BUILD_NUMBER"
       - name: Upload to TestFlight
         run: app-store-connect publish --path build/ios/ipa/*.ipa --testflight
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         if: always()
         with:
           name: ios-ipa
