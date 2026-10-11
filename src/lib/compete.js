@@ -88,7 +88,7 @@ export function useCompete({ enabled, user, sport, pos, botFor }) {
     setMatch(m); setResults({}); setPhase('build'); booked.current = null
     const room = joinRoom(`compete-${m.code}`, me)
     roomRef.current = room
-    room.on('result', p => setResults(rs => ({ ...rs, [p.from]: { ovr: p.ovr, at: p.at, build: p.build } })))
+    room.on('result', p => setResults(rs => ({ ...rs, [p.from]: { ovr: p.forfeit ? -1 : p.ovr, at: p.at, build: p.build, forfeit: !!p.forfeit } })))
     // bots: worked out locally from the same seed (identical on every client)
     const out = {}
     m.players.forEach((p, i) => {
@@ -175,7 +175,17 @@ export function useCompete({ enabled, user, sport, pos, botFor }) {
     window.dispatchEvent(new CustomEvent('bap:compete', { detail: { sport: match.sport, pos: match.pos, place: mine.place, of: ranked.length, ovr: results[me.vid].ovr, humans } }))
   }, [phase, match, results, me.vid])
 
+  // Leaving mid-pool: the pool sees a DNF, my record takes the forfeit
+  const forfeit = useCallback(() => {
+    if (!match || results[me.vid]) { leave(); return }
+    const humans = match.players.filter(p => !p.bot).length
+    roomRef.current?.send('result', { ovr: 0, at: Date.now(), forfeit: true })
+    window.dispatchEvent(new CustomEvent('bap:compete', { detail: { sport: match.sport, pos: match.pos, place: match.players.length, of: match.players.length, ovr: 0, humans, forfeit: true } }))
+    booked.current = match.code
+    setTimeout(leave, 300)
+  }, [match, results, me.vid, leave])
+
   const ranked = useMemo(() => rankResults(match, results), [match, results])
   const retry = useCallback(() => { queueRef.current?.leave(); queueRef.current = null; join() }, [join])
-  return { phase, queue, waited, match, results, ranked, clock, me, link, retry, join, leave, fillNow, submit, inPool: phase === 'build' || phase === 'result' }
+  return { phase, queue, waited, match, results, ranked, clock, me, link, retry, join, leave, forfeit, fillNow, submit, inPool: phase === 'build' || phase === 'result' }
 }

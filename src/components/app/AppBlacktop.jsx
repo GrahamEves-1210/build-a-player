@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { LiveLeaveButton } from './LiveLeave'
 import { createPortal } from 'react-dom'
 import { ROOM_SIZE, ROLES, SLOTS, teamName, captainOf } from '../../lib/blacktop'
 import { playDelay } from '../../lib/hoops'
@@ -198,7 +199,7 @@ export function BlacktopHud({ bt, onOpenChat, unread }) {
   const ready = t => squads[t].filter(p => p.bot || bt.builds[p.vid]?.done).length
   const urgent = bt.clock <= 20
   return (
-    <div className={`bt-hud${urgent ? ' is-urgent' : ''}${open ? ' is-open' : ''}`}>
+    <div className={`bt-hud has-leave${urgent ? ' is-urgent' : ''}${open ? ' is-open' : ''}`}>
       <button className="bt-hud-bar" onClick={() => setOpen(o => !o)} aria-expanded={open}>
         <span className="bt-hud-clock">{fmt(bt.clock)}</span>
         <span className="bt-hud-mini">
@@ -209,6 +210,7 @@ export function BlacktopHud({ bt, onOpenChat, unread }) {
         <span className={`bt-hud-caret${open ? ' is-open' : ''}`}>▾</span>
       </button>
       <button className="bt-hud-chat" onClick={onOpenChat} aria-label="Team chat"><IconChat size={18} />{unread > 0 && <span className="ag-tab-badge">{unread}</span>}</button>
+      <LiveLeaveButton />
       {open && (
         <div className="bt-hud-panel">
           <div className="bt-hud-teams">

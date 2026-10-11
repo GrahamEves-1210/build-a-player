@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useProgress } from '../../lib/progress'
+import { LiveLeaveButton } from './LiveLeave'
 
 // COMPETE: the bar on the build page — the pool, the clock, who's locked in
 export default function CompeteHud({ cp }) {
@@ -19,6 +20,7 @@ export default function CompeteHud({ cp }) {
         {cp.match.players.map(p => <i key={p.vid} className={inNow(p) ? 'is-in' : ''} />)}
       </span>
       <small>{done}/{cp.match.players.length} IN{myAvg ? ` · YOUR AVG ${myAvg}` : ''}</small>
+      <LiveLeaveButton />
     </div>
   )
 }

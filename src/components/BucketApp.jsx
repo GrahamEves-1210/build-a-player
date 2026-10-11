@@ -37,6 +37,9 @@ import { IS_APP, APP_LOOK } from '../lib/platform'
 import AppHome from './app/AppHome'
 import { FlipEdge, BuildComplete, useFlip } from './app/AppBuildTray'
 import { useCompete, botBuild } from '../lib/compete'
+import { setLiveLock } from '../lib/liveLock'
+import { useAuction } from '../lib/auction'
+import { FORFEIT_RATING } from '../lib/progress'
 import { useBlacktop } from '../lib/blacktop'
 import { BlacktopQueue, BlacktopHud, BlacktopChat, BlacktopGame, BlacktopHub } from './app/AppBlacktop'
 import { NameTag } from './app/NameTag'
@@ -796,6 +799,19 @@ export default function BucketApp() {
     setPage('compete')
     window.scrollTo({ top: 0, behavior: 'instant' })
   }, [build, activeTypes, position, cp])
+
+  // ── TRAIT AUCTION (lib/auction.js): a Compete mode, locked in like a pool ──
+  const au = useAuction({ enabled: IS_APP || APP_LOOK, user, sport: 'bucket', pos: competePos })
+  const auctionLive = au.phase === 'auction'
+  useEffect(() => {
+    if (!auctionLive) return
+    setLiveLock({
+      title: 'Leave the auction?',
+      body: `The auction goes on without you. You finish last: ${FORFEIT_RATING} rating, no XP or coins, and it counts as a loss.`,
+      forfeit: () => au.forfeit(),
+    })
+    return () => setLiveLock(null)
+  }, [auctionLive]) // eslint-disable-line react-hooks/exhaustive-deps
   const competePlan = useMemo(() => (competeOn && cp.match ? { seed: cp.match.seed, getStart: () => 0, onSpin: () => {}, separateRespins: true } : null), [competeOn, cp.match?.code]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── BLACKTOP (app): the match lives in the hook; pages follow its phase ──
@@ -1137,6 +1153,28 @@ export default function BucketApp() {
     fn()
   }, [versusRoom])
 
+  // Live games lock you in: every way out (dock, More, back, reload) asks first
+  // and leaving forfeits (lib/liveLock.js). 1v1 keeps its own sheet and back trap.
+  const versusLive = !!versusRoom && page === 'versus-game'
+  useEffect(() => {
+    if (competeOn) {
+      setLiveLock({
+        title: 'Leave the pool?',
+        body: `The pool plays on without you. You finish last: ${FORFEIT_RATING} rating, no XP or coins, and it counts as a loss.`,
+        forfeit: () => { cp.forfeit(); setGameMode(null); setBuild({}); setSavedSpinResult(null) },
+      })
+    } else if (liveBuild && bt.match) {
+      setLiveLock({
+        title: 'Leave the run?',
+        body: 'Your squad plays the game a player short. It counts as a loss on your Blacktop record and your online rating.',
+        forfeit: () => { window.dispatchEvent(new CustomEvent('bap:blacktop', { detail: { won: false, mvp: false, line: null, bots: !!bt.match?.bots, forfeit: true } })); bt.leave() },
+      })
+    } else if (versusLive) {
+      setLiveLock({ ownBack: true, ask: go => setLeaveConfirm({ fn: () => { handleReset(); go?.() } }) })
+    } else return
+    return () => setLiveLock(null)
+  }, [competeOn, liveBuild && !!bt.match, versusLive]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // Intercept browser back while in an active versus game
   useEffect(() => {
     if (!versusRoom) return
@@ -1428,7 +1466,7 @@ export default function BucketApp() {
   const filledCount = activeTypes.filter(t => build[t]).length
 
   const navbarProps = {
-    onReset: () => guardedLeave(handleReset),
+    onReset: competeOn ? undefined : () => guardedLeave(handleReset),
     onHome: () => guardedLeave(handleHome),
     onSignIn: () => setShowAuth(true),
     onProfile: () => guardedLeave(() => user ? (window.history.pushState({}, '', '/profile'), setPage('profile')) : setShowAuth(true)),
@@ -1486,7 +1524,8 @@ export default function BucketApp() {
   const renderGame = parked => (
     <>
       {!parked && bucketHead}
-      {!parked && <Navbar {...navbarProps} />}
+      {/* live builds have no navbar: the HUD's LEAVE is the only way out */}
+      {!parked && !competeOn && !liveBuild && !((IS_APP || APP_LOOK) && versusLive) && <Navbar {...navbarProps} />}
 
       <div className="game-page-scroll">
       {competeOn && <CompeteHud cp={cp} />}
@@ -1516,7 +1555,7 @@ export default function BucketApp() {
           onSaveResult={setSavedSpinResult}
           onPhaseChange={setSpinPhase}
           gameKey={gameKey}
-          onReset={handleReset}
+          onReset={competeOn ? undefined : handleReset}
           adsDisabled={adsDisabled}
           cardMeta={(IS_APP || APP_LOOK) && gameIsPlay && gameMode !== 'salarycap' ? { sport: 'bucket', pos: position, mode: gameMode } : null}
           seedPlan={competePlan}
@@ -1542,7 +1581,7 @@ export default function BucketApp() {
           onCategoryChange={setActiveCategory}
           types={activeTypes}
           isLite={gameMode === 'lite'}
-          onReset={handleReset}
+          onReset={competeOn ? undefined : handleReset}
           isRB={false}
           isBucket={true}
           isPlus={isSubscribed}
@@ -1559,7 +1598,7 @@ export default function BucketApp() {
             build={build}
             onSimulate={page === 'takeover-build' ? hitTheRoad : page === 'career-build' ? enterDraft : competeOn ? lockInCompete : replayOrSpin}
             simLabel={page === 'takeover-build' ? 'HIT THE ROAD' : page === 'career-build' ? 'ENTER THE DRAFT' : competeOn ? 'LOCK IN' : undefined}
-            onReset={handleReset}
+            onReset={competeOn ? undefined : handleReset}
             types={activeTypes}
             hasResult={false}
             isRB={false}
@@ -1824,7 +1863,7 @@ export default function BucketApp() {
   if (page === 'compete') {
     return withGame(
       <Suspense fallback={null}>
-        <AppCompete cp={cp} sport="bucket" position={competePos} positions={[{ pos: 'guard', label: 'GUARD' }, { pos: 'big', label: 'BIG' }]}
+        <AppCompete cp={cp} au={au} sport="bucket" position={competePos} positions={[{ pos: 'guard', label: 'GUARD' }, { pos: 'big', label: 'BIG' }]}
           onPosition={setCompetePos} onHome={() => setPage('splash')} onResumeBuild={() => setPage('game')}
           onPlayAgain={() => cp.join()} />
       </Suspense>

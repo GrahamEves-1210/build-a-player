@@ -1,4 +1,6 @@
 import { useEffect, useState, lazy, Suspense } from 'react'
+import LiveLeave from './app/LiveLeave'
+import { guardLeave } from '../lib/liveLock'
 import { IS_APP, APP_LOOK } from '../lib/platform'
 import AppMenu from './app/AppMenu'
 import AuthModal from './AuthModal'
@@ -120,8 +122,9 @@ export default function AppTabBar() {
   if (!IS_APP && !APP_LOOK) return null
   const hidden = HIDE_ON.has(state.page) || (!IS_APP && !screen && !WEB_DOCK_ON.has(state.page))
   const active = screen ?? (state.page in TAB_FOR_PAGE ? TAB_FOR_PAGE[state.page] : 'play')
-  const go = to => () => { setMenuOpen(false); setScreen(null); nav(to) }
-  const open = which => () => { setMenuOpen(false); setScreen(s => (s === which ? null : which)) }
+  // in a live game every tab is a way out: it asks first (lib/liveLock.js)
+  const go = to => () => guardLeave(() => { setMenuOpen(false); setScreen(null); nav(to) })
+  const open = which => () => guardLeave(() => { setMenuOpen(false); setScreen(s => (s === which ? null : which)) })
 
   return (
     <>
@@ -147,7 +150,7 @@ export default function AppTabBar() {
             <span className="ag-play-label">PLAY</span>
           </button>
           {/* website: cards are saved to an account */}
-          <Tab label="CARDS" Icon={IconCards} active={active === 'cards'} onClick={walletOpen() ? open('cards') : () => { setMenuOpen(false); setAuthOpen(true) }} />
+          <Tab label="CARDS" Icon={IconCards} active={active === 'cards'} onClick={walletOpen() ? open('cards') : () => guardLeave(() => { setMenuOpen(false); setAuthOpen(true) })} />
           <Tab label="PROFILE" Icon={IconProfile} active={active === 'profile' || active === 'achievements' || active === 'locker'} onClick={go('profile')} badge={claimable} />
         </nav>
       )}
@@ -155,6 +158,7 @@ export default function AppTabBar() {
       {/* The games pick up the new session from Supabase's auth listener; then open the profile */}
       {authOpen && <AuthModal onClose={() => setAuthOpen(false)} onAuth={() => setTimeout(() => nav('profile'), 400)} />}
       <AppToasts />
+      <LiveLeave />
       {/* The season's rewards panel shows its own level-up, so hold this during a sim */}
       <LevelUp hold={state.page === 'sim'} />
     </>

@@ -475,10 +475,21 @@ function rateOnline(delta, mode, extra = {}) {
 // A Compete pool finished: your place → stats, rating, XP and coins
 export const COMPETE_REWARDS = { 1: [80, 30], 2: [50, 18], 3: [35, 10], 4: [20, 5], 5: [15, 2] }
 const COMPETE_RATING = { 1: 24, 2: 12, 3: 4, 4: -6, 5: -12 }
+// Leaving a live pool: last place, a bigger rating hit, nothing earned
+export const FORFEIT_RATING = -20
 function onCompete(e) {
-  const { place, ovr, of = 5, humans = 1 } = e.detail || {}
+  const { place, ovr, of = 5, humans = 1, forfeit = false, mode = 'pool' } = e.detail || {}
   if (!place) return
+  const what = mode === 'auction' ? 'auction' : 'pool'
   const c = S.stats.compete = { ...BLANK_STATS.compete, ...(S.stats.compete || {}) }
+  if (forfeit) {
+    c.played++; c.placeSum += of; c.streak = 0
+    pushRecent(c.recent, of)
+    const scale = 0.5 + 0.5 * Math.min(1, Math.max(0, humans - 1) / 4)
+    rateOnline(FORFEIT_RATING * scale, 'compete', { place: of, forfeit: true, streak: 0 })
+    emit()
+    return
+  }
   const pbOvr = (ovr || 0) > c.best && c.played > 0
   c.played++; c.placeSum += place; c.ovrSum += ovr || 0; c.beaten += Math.max(0, of - place)
   if (place === 1) { c.wins++; c.streak++; if (c.streak > c.bestStreak) c.bestStreak = c.streak } else c.streak = 0
@@ -492,7 +503,7 @@ function onCompete(e) {
   S.bonusXp += xp
   earn(coins, null, true)
   bumpMissions('compete', { place })
-  toast({ kind: 'xp', title: rewardText(xp, coins) || (place === 1 ? 'POOL WON' : `${ordinal(place).toUpperCase()} PLACE`), sub: `${place === 1 ? 'You won the pool' : `Compete · ${ordinal(place)} place`} · ${delta >= 0 ? '+' : ''}${delta} rating` })
+  toast({ kind: 'xp', title: rewardText(xp, coins) || (place === 1 ? `${what.toUpperCase()} WON` : `${ordinal(place).toUpperCase()} PLACE`), sub: `${place === 1 ? `You won the ${what}` : `Compete · ${ordinal(place)} place`} · ${delta >= 0 ? '+' : ''}${delta} rating` })
   emit()
 }
 
@@ -510,8 +521,9 @@ function onBlacktop(e) {
   if (d.won) { b.streak++; if (b.streak > b.bestStreak) b.bestStreak = b.streak } else b.streak = 0
   pushRecent(b.recent, d.won ? 'W' : 'L')
   const scale = d.bots ? 0.5 : 1
-  rateOnline(((d.won ? 20 : -12) + (d.mvp ? 5 : 0)) * scale, 'bt', { won: !!d.won, mvp: !!d.mvp, highPts, streak: b.streak })
-  bumpMissions('bt', { won: !!d.won })
+  // walked out of the run's build: a forfeit's hit, no mission credit
+  rateOnline((d.forfeit ? FORFEIT_RATING : (d.won ? 20 : -12) + (d.mvp ? 5 : 0)) * scale, 'bt', { won: !!d.won, mvp: !!d.mvp, highPts, streak: b.streak, forfeit: !!d.forfeit })
+  if (!d.forfeit) bumpMissions('bt', { won: !!d.won })
   emit()
 }
 

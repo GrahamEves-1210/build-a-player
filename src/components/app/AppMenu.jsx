@@ -10,6 +10,7 @@ import { railPreviewOn, setRailPreview } from '../../lib/fakeRail'
 import { IconQuestion, IconInfo, IconChat, IconDiscord, IconX, IconClose, IconShield, IconDoc, IconPodium, IconPlay, IconCrown, IconProfile, IconHome, IconGear } from './icons'
 import { useProgress } from '../../lib/progress'
 import AppSettings from './AppSettings'
+import { guardLeave } from '../../lib/liveLock'
 
 // App "More" sheet (gear on the home screen): tiles + a How to Play view.
 
@@ -90,7 +91,9 @@ export default function AppMenu({ sport, onClose }) {
     const { data } = supabase ? await supabase.auth.getSession() : { data: null }
     setFeedbackUser(data?.session?.user ?? false)
   }
-  const go = fn => () => { onClose(); fn() }
+  // leaving the page asks first in a live game; links that open a new tab don't leave
+  const go = fn => () => { onClose(); guardLeave(fn) }
+  const goOut = fn => () => { onClose(); fn() }
 
   if (feedbackUser !== null) {
     return <FeedbackModal user={feedbackUser || null} isBucket={isBucket} onClose={() => { setFeedbackUser(null); onClose() }} />
@@ -132,8 +135,8 @@ export default function AppMenu({ sport, onClose }) {
               {!IS_APP && <Tile tone="gold" Icon={IconProfile} title={signedIn ? 'PROFILE' : 'SIGN IN'} sub={signedIn ? 'Career, shop, locker' : 'Save your career'} onClick={go(() => nav('profile'))} delay="0ms" />}
               <Tile tone="mint" Icon={IconQuestion} title="HOW TO PLAY" sub="4 quick steps" onClick={() => setView('howto')} delay="0ms" />
               <Tile tone="gold" Icon={IconPodium} title="LEADERBOARDS" sub="Top builds" onClick={go(() => nav('leaderboard'))} delay="30ms" />
-              <Tile tone="discord" Icon={IconDiscord} title="DISCORD" sub="Join the community" onClick={go(() => window.open('https://discord.gg/zdZBu2VjUD', '_blank'))} delay="60ms" />
-              <Tile tone="ink" Icon={IconX} title="FOLLOW" sub="@Build_A_Player" onClick={go(() => window.open('https://x.com/Build_A_Player', '_blank'))} delay="90ms" />
+              <Tile tone="discord" Icon={IconDiscord} title="DISCORD" sub="Join the community" onClick={goOut(() => window.open('https://discord.gg/zdZBu2VjUD', '_blank'))} delay="60ms" />
+              <Tile tone="ink" Icon={IconX} title="FOLLOW" sub="@Build_A_Player" onClick={goOut(() => window.open('https://x.com/Build_A_Player', '_blank'))} delay="90ms" />
               <Tile tone="purple" Icon={IconChat} title="FEEDBACK" sub="Ideas & bugs" onClick={openFeedback} delay="120ms" />
               <Tile tone="gold" Icon={IconCrown} title="BAP PRO" sub={isPro() ? 'Active · Pro Vault' : 'Vault, coins, no ads'} onClick={() => setView('pro')} delay="150ms" />
             </div>

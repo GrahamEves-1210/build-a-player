@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { LiveLeaveButton } from './LiveLeave'
 import { NameTag, AvatarBadge } from './NameTag'
 import { liveOvr } from './AppBlacktop'
 import { sfx, haptic } from '../../lib/juice'
@@ -58,7 +59,7 @@ export function VersusHud({ me, opp, clock = null }) {
   const urgent = clock != null && clock <= 20
   const bothReady = sides.every(s => s.pos && filled(s) === s.types.length)
   return (
-    <div className={`bt-hud v1g-hud${urgent ? ' is-urgent' : ''}${open ? ' is-open' : ''}`}>
+    <div className={`bt-hud v1g-hud has-leave${urgent ? ' is-urgent' : ''}${open ? ' is-open' : ''}`}>
       <button className="bt-hud-bar" onClick={() => setOpen(o => !o)} aria-expanded={open}>
         <span className="bt-hud-clock">{clock != null ? fmt(clock) : '1V1'}</span>
         <span className="bt-hud-mini">
@@ -72,6 +73,7 @@ export function VersusHud({ me, opp, clock = null }) {
         </span>
         {bothReady ? <span className="v1g-hud-go">TIP-OFF</span> : <span className={`bt-hud-caret${open ? ' is-open' : ''}`}>▾</span>}
       </button>
+      <LiveLeaveButton />
       {open && (
         <div className="bt-hud-panel">
           <div className="bt-hud-teams">

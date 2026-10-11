@@ -39,6 +39,9 @@ import { DB_LEGENDS } from './data/db-legends'
 import { OLS, OL_TYPES, OL_LITE_TYPES, OL_CATEGORIES, OL_ATTR } from './data/ols'
 import { ALLTIME_RATINGS, NFL_TEAMS, TEAMS } from './data/nfl-teams'
 import { useCompete, botBuild } from './lib/compete'
+import { setLiveLock } from './lib/liveLock'
+import { useAuction } from './lib/auction'
+import { FORFEIT_RATING } from './lib/progress'
 import { LEGENDS, LEGEND_TYPES } from './data/qb-legends'
 import { RB_LEGENDS } from './data/rb-legends'
 import HEADSHOTS from './data/headshots.json'
@@ -558,7 +561,30 @@ export default function App() {
   })
   const competeOn = cp.phase === 'build' && !cp.results[cp.me.vid]
   competeRef.current = competeOn
+  // A live pool: locked into the build. Leaving (dock, More, back, reload) asks
+  // first, and forfeits: last place, a rating hit, nothing earned.
+  useEffect(() => {
+    if (!competeOn) return
+    setLiveLock({
+      title: 'Leave the pool?',
+      body: `The pool plays on without you. You finish last: ${FORFEIT_RATING} rating, no XP or coins, and it counts as a loss.`,
+      forfeit: () => { cp.forfeit(); setGameMode(null); setBuild({}); try { localStorage.removeItem('bap_progress') } catch {} },
+    })
+    return () => setLiveLock(null)
+  }, [competeOn]) // eslint-disable-line react-hooks/exhaustive-deps
   const competeKey = useRef(null)
+  // ── TRAIT AUCTION (lib/auction.js): a Compete mode, locked in like a pool ──
+  const au = useAuction({ enabled: IS_APP || APP_LOOK, user, sport: 'nfl', pos: competePos })
+  const auctionLive = au.phase === 'auction'
+  useEffect(() => {
+    if (!auctionLive) return
+    setLiveLock({
+      title: 'Leave the auction?',
+      body: `The auction goes on without you. You finish last: ${FORFEIT_RATING} rating, no XP or coins, and it counts as a loss.`,
+      forfeit: () => au.forfeit(),
+    })
+    return () => setLiveLock(null)
+  }, [auctionLive]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleStart = useCallback((mode, pos = 'qb') => {
     // Salary Cap (QB): its own page picks the build from the day's grid
@@ -1227,7 +1253,7 @@ export default function App() {
   const sandboxOk = (gameMode === 'classic' || gameMode === 'all-time') && !dailyRun && !competeOn && page !== 'takeover-build' && page !== 'career-build' && page !== 'versus-game'
 
   const navbarProps = {
-    onReset: handleReset,
+    onReset: competeOn ? undefined : handleReset,
     onAbout: () => setPage('about'),
     onHome: handleHome,
     onSignIn: () => setShowAuth(true),
@@ -1260,7 +1286,8 @@ export default function App() {
 
   const renderGame = parked => (
     <>
-      {!parked && <Navbar {...navbarProps} />}
+      {/* a live pool has no navbar: no position switch, no way out but LEAVE */}
+      {!parked && !competeOn && <Navbar {...navbarProps} />}
 
       <div className="game-page-scroll">
       {competeOn && <CompeteHud cp={cp} />}
@@ -1284,7 +1311,7 @@ export default function App() {
           onSaveResult={setSavedSpinResult}
           onPhaseChange={setSpinPhase}
           gameKey={gameKey}
-          onReset={dailyLocked ? undefined : handleReset}
+          onReset={dailyLocked || competeOn ? undefined : handleReset}
           adsDisabled={adsDisabled}
           seedPlan={competePlan ?? dailyPlan}
           key={competePlan ? `cp-${cp.match.code}` : 'spin'}
@@ -1309,7 +1336,7 @@ export default function App() {
           onCategoryChange={setActiveCategory}
           types={activeTypes}
           isLite={gameMode === 'lite'}
-          onReset={handleReset}
+          onReset={competeOn ? undefined : handleReset}
           isRB={isRB}
           isWR={isWR}
           isTE={isTE}
@@ -1328,7 +1355,7 @@ export default function App() {
             build={build}
             onSimulate={page === 'versus-game' ? handleFaceoff : page === 'takeover-build' ? hitTheRoad : page === 'career-build' ? enterDraft : competeOn ? lockInCompete : handleSimulate}
             simLabel={page === 'takeover-build' ? 'HIT THE ROAD' : page === 'career-build' ? 'ENTER THE DRAFT' : competeOn ? 'LOCK IN' : undefined}
-            onReset={handleReset}
+            onReset={competeOn ? undefined : handleReset}
             types={activeTypes}
             hasResult={page === 'versus-game' ? false : !!simResult}
             isRB={isRB}
@@ -1557,7 +1584,7 @@ export default function App() {
   if (page === 'compete') {
     return withGame(
       <Suspense fallback={null}>
-        <AppCompete cp={cp} sport="nfl" position={competePos} positions={POS_OPTIONS.filter(o => ['qb', 'rb', 'wr', 'te', 'db'].includes(o.pos))}
+        <AppCompete cp={cp} au={au} sport="nfl" position={competePos} positions={POS_OPTIONS.filter(o => ['qb', 'rb', 'wr', 'te', 'db'].includes(o.pos))}
           onPosition={setCompetePos} onHome={() => setPage('splash')} onResumeBuild={() => setPage('game')}
           onPlayAgain={() => cp.join()} />
       </Suspense>

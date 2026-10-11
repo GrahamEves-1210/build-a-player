@@ -1,10 +1,13 @@
-import { useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { useProgress, COMPETE_REWARDS } from '../../lib/progress'
 import { POOL_SIZE, FILL_AFTER_SECS, MIN_POOL } from '../../lib/compete'
 import { IconClose, IconArrow, IconTrophy } from './icons'
 import OnlineRecord, { RatingLine, LinkPill } from './OnlineRecord'
 import { sfx, victory } from '../../lib/juice'
 import { NameTag, AvatarBadge } from './NameTag'
+import { AUCTION_POS, BUDGET, BID_SECS } from '../../lib/auction'
+import { guardLeave } from '../../lib/liveLock'
+const AppAuction = lazy(() => import('./AppAuction'))
 
 // COMPETE screen: the lobby (your stats, pick a position, find a pool), the
 // queue, the wait for the rest of the pool, and the final ranking. The build
@@ -28,7 +31,15 @@ function Seat({ p, i, me, status }) {
   )
 }
 
-export default function AppCompete({ cp, sport, position, positions, onPosition, onHome, onResumeBuild, onPlayAgain }) {
+export default function AppCompete({ cp, au, sport, position, positions, onPosition, onHome, onResumeBuild, onPlayAgain }) {
+  // two modes: the classic pool (same spins, best OVR) and the Trait Auction
+  const [mode, setModeRaw] = useState(() => { try { return localStorage.getItem('bap_compete_mode') === 'auction' ? 'auction' : 'pool' } catch { return 'pool' } })
+  const setMode = m => { setModeRaw(m); try { localStorage.setItem('bap_compete_mode', m) } catch {} }
+  const auctionOn = !!au && au.phase !== 'idle'
+  const showAuction = auctionOn || (!!au && mode === 'auction' && cp.phase === 'idle')
+  const auPositions = positions.filter(o => (AUCTION_POS[sport === 'bucket' ? 'bucket' : 'nfl'] ?? []).includes(o.pos))
+  // the auction has no DB: switching to it moves you to a position it has
+  useEffect(() => { if (showAuction && !auctionOn && auPositions.length && !auPositions.some(o => o.pos === position)) onPosition(auPositions[0].pos) }, [showAuction, position]) // eslint-disable-line react-hooks/exhaustive-deps
   const [now, setNow] = useState(Date.now())
   useEffect(() => { const id = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(id) }, [])
   const isBucket = sport === 'bucket'
@@ -44,7 +55,9 @@ export default function AppCompete({ cp, sport, position, positions, onPosition,
   const posName = positions.find(o => o.pos === position)?.label ?? position.toUpperCase()
 
   let body
-  if (cp.phase === 'queue') {
+  if (auctionOn) {
+    body = <Suspense fallback={null}><AppAuction au={au} posName={posName} onHome={onHome} onPlayAgain={() => au.join()} /></Suspense>
+  } else if (cp.phase === 'queue') {
     const seats = Array.from({ length: POOL_SIZE }, (_, i) => [...cp.queue].sort((a, b) => (a.ts ?? 0) - (b.ts ?? 0))[i] ?? null)
     body = (
       <>
@@ -97,7 +110,7 @@ export default function AppCompete({ cp, sport, position, positions, onPosition,
                 <span className="cp-rank">{final ? (p.place === 1 ? <IconTrophy size={16} /> : p.place) : ''}</span>
                 <Pic p={p} me={cp.me.vid} />
                 <span className="cp-row-name"><Name p={p} me={cp.me.vid} /></span>
-                <span className="cp-row-ovr">{final ? (r ? <><b>{r.ovr}</b> OVR</> : 'DNF') : show ? (p.vid === cp.me.vid ? <><b>{r.ovr}</b> OVR</> : 'LOCKED IN') : <i>building…</i>}</span>
+                <span className="cp-row-ovr">{r?.forfeit ? 'LEFT' : final ? (r ? <><b>{r.ovr}</b> OVR</> : 'DNF') : show ? (p.vid === cp.me.vid ? <><b>{r.ovr}</b> OVR</> : 'LOCKED IN') : <i>building…</i>}</span>
               </div>
             )
           })}
@@ -113,19 +126,32 @@ export default function AppCompete({ cp, sport, position, positions, onPosition,
   } else {
     body = (
       <>
-        <div className="cp-hero ag-pop">
-          <span className="ag-eyebrow">ONLINE · {POOL_SIZE}-PLAYER POOLS</span>
-          <p className="cp-how">You and four other players get <b>the same spins</b>. Respins are your own. Everyone builds, and the <b>highest OVR</b> takes the pool. No sandbox.</p>
-        </div>
+        {au && (
+          <div className="cp-modes ag-pop" role="tablist" aria-label="Compete mode">
+            <button role="tab" aria-selected={!showAuction} className={`cp-mode${!showAuction ? ' is-on' : ''}`} onClick={() => setMode('pool')}>CLASSIC POOL</button>
+            <button role="tab" aria-selected={showAuction} className={`cp-mode${showAuction ? ' is-on' : ''}`} onClick={() => setMode('auction')}>TRAIT AUCTION</button>
+          </div>
+        )}
+        {showAuction ? (
+          <div className="cp-hero ag-pop">
+            <span className="ag-eyebrow">ONLINE · UP TO 5 PLAYERS · ${BUDGET} EACH</span>
+            <p className="cp-how">Everyone starts with <b>${BUDGET}</b> and four empty trait slots. The spinner lands on a real player and one of their traits, and you get <b>{BID_SECS} seconds</b> to bid. High bid takes it. When every slot is filled, the <b>highest OVR</b> wins.</p>
+          </div>
+        ) : (
+          <div className="cp-hero ag-pop">
+            <span className="ag-eyebrow">ONLINE · {POOL_SIZE}-PLAYER POOLS</span>
+            <p className="cp-how">You and four other players get <b>the same spins</b>. Respins are your own. Everyone builds, and the <b>highest OVR</b> takes the pool. No sandbox.</p>
+          </div>
+        )}
         <OnlineRecord mode="compete" title="YOUR COMPETE" />
         <div className="cp-pos ag-pop" style={{ '--d': '120ms' }} role="tablist" aria-label="Position">
-          {positions.filter(o => !o.disabled).map(o => (
+          {(showAuction ? auPositions : positions).filter(o => !o.disabled).map(o => (
             <button key={o.pos} role="tab" aria-selected={o.pos === position} className={`ag-pos${o.pos === position ? ' ag-pos--on' : ''}`} onClick={() => onPosition(o.pos)}>
               <span className="ag-pos-label">{o.label}</span>
             </button>
           ))}
         </div>
-        <button className="ag-btn cp-go ag-pop" style={{ '--d': '160ms' }} onClick={cp.join}>FIND A POOL <IconArrow size={16} /></button>
+        <button className="ag-btn cp-go ag-pop" style={{ '--d': '160ms' }} onClick={showAuction ? () => au.join() : cp.join}>{showAuction ? 'FIND AN AUCTION' : 'FIND A POOL'} <IconArrow size={16} /></button>
         <div className="cp-rewards ag-pop" style={{ '--d': '200ms' }}>
           {[1, 2, 3, 4, 5].map(n => <span key={n}><b>{ord(n)}</b>+{COMPETE_REWARDS[n][0]} XP · +{COMPETE_REWARDS[n][1]}c</span>)}
         </div>
@@ -136,8 +162,8 @@ export default function AppCompete({ cp, sport, position, positions, onPosition,
   return (
     <div className={`ag-screen cp cp--${isBucket ? 'bucket' : 'nfl'}`}>
       <div className="ag-screen-head">
-        <div><span className="ag-eyebrow">{isBucket ? 'BASKETBALL' : 'FOOTBALL'} · {posName}</span><h1 className="ag-h1">Compete</h1></div>
-        <button className="ag-round-btn" onClick={() => { if (cp.phase === 'queue') cp.leave(); onHome() }} aria-label="Home"><IconClose size={16} /></button>
+        <div><span className="ag-eyebrow">{isBucket ? 'BASKETBALL' : 'FOOTBALL'} · {posName}{showAuction ? ' · TRAIT AUCTION' : ''}</span><h1 className="ag-h1">Compete</h1></div>
+        <button className="ag-round-btn" onClick={() => guardLeave(() => { if (cp.phase === 'queue') cp.leave(); if (au?.phase === 'queue') au.leave(); onHome() })} aria-label="Home"><IconClose size={16} /></button>
       </div>
       {body}
     </div>

@@ -474,7 +474,7 @@ export default function ReportCard({ build, onSimulate, onReset, types = TYPES, 
         <hr className="bs-bottom-line" />
       </div>
 
-      {!isVersusMode && (
+      {!isVersusMode && onReset && (
         <div className="panel-footer">
           <button className="reset-btn" onClick={onReset}>Reset Build</button>
         </div>
