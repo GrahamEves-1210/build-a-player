@@ -1,0 +1,49 @@
+# Android → a signed Play Store bundle (.aab) on GitHub's free Linux machines.
+# Start it by hand: Actions → "Android → Play bundle" → Run workflow → branch: app,
+# then download the .aab from the run and upload it in Play Console.
+#
+# Repository secrets (Settings → Secrets and variables → Actions):
+#   ANDROID_KEYSTORE_BASE64    the upload keystore (.jks), base64 (see APP.md)
+#   ANDROID_KEYSTORE_PASSWORD  its password
+#   ANDROID_KEY_ALIAS          the key's alias
+#   ANDROID_KEY_PASSWORD       the key's password
+name: Android → Play bundle
+on: workflow_dispatch
+permissions:
+  contents: read
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      # the names android/app/build.gradle reads (the same as Codemagic's)
+      CM_KEYSTORE_PATH: ${{ github.workspace }}/android/upload.jks
+      CM_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      CM_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      CM_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+      PROJECT_BUILD_NUMBER: ${{ 100 + github.run_number }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: Install packages
+        run: npm ci
+      - name: Build the web app and copy it into the native projects
+        run: npm run build:app
+      - name: The upload keystore
+        run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > "$CM_KEYSTORE_PATH"
+      - name: Build the signed .aab
+        run: cd android && chmod +x gradlew && ./gradlew bundleRelease
+      - name: Drop the keystore
+        if: always()
+        run: rm -f "$CM_KEYSTORE_PATH"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-aab
+          path: android/app/build/outputs/bundle/release/*.aab
