@@ -3,7 +3,8 @@
 # then download the .aab from the run and upload it in Play Console.
 #
 # Repository secrets (Settings → Secrets and variables → Actions):
-#   ANDROID_KEYSTORE_BASE64    the upload keystore (.jks), base64 (see APP.md)
+#   ANDROID_KEYSTORE_BASE64    the upload keystore (.jks) as base64. In PowerShell:
+#                              [Convert]::ToBase64String([IO.File]::ReadAllBytes('C:\path\upload.jks')) | Set-Clipboard
 #   ANDROID_KEYSTORE_PASSWORD  its password
 #   ANDROID_KEY_ALIAS          the key's alias
 #   ANDROID_KEY_PASSWORD       the key's password
