@@ -1,5 +1,6 @@
 ﻿import { useState, useEffect, useRef, useMemo } from 'react'
 import { ATTR, TYPES } from '../data/qbs'
+import { QB_SAL_COLS } from '../data/qb-salary'
 import { TEAMS } from '../data/nfl-teams'
 import { WR_ATTR, WRS } from '../data/wrs'
 import { WR_LEGENDS } from '../data/wr-legends'
@@ -381,12 +382,24 @@ function gradeColor(val) {
 
 // ── Screen 1: Build Overview ──────────────────────────────────────────────────
 
-function ScreenBuild({ result, build, types, onNext, isRB, isWR, isTE, isDB, isOL }) {
+// The build as rows: one per trait, or for QB Salary Cap one per column you
+// picked (like basketball's), graded on the average of the traits it covers
+function buildRows(build, types, meta, salaryQB) {
+  if (salaryQB) {
+    return QB_SAL_COLS.filter(c => build[c.types[0]]).map(c => {
+      const vals = c.types.map(t => build[t]?.val).filter(v => v != null)
+      return { key: c.key, label: c.label, data: build[c.types[0]], val: vals.reduce((a, b) => a + b, 0) / (vals.length || 1) }
+    })
+  }
+  return types.filter(t => build[t]).map(t => ({ key: t, label: meta[t]?.label ?? t, data: build[t], val: build[t].val }))
+}
+
+function ScreenBuild({ result, build, types, onNext, isRB, isWR, isTE, isDB, isOL, isSalaryMode = false }) {
   const { ovr } = result
   const archetype = isOL ? getArchetypeOL(ovr, build, types) : isDB ? getArchetypeDB(ovr, build, types) : isTE ? getArchetypeTE(ovr, build, types) : isWR ? getArchetypeWR(ovr, build, types) : isRB ? getArchetypeRB(ovr, build, types) : getArchetype(ovr, build, types)
   const ovrDisplay = useCountUp(ovr, 900)
   const [rowsVisible, setRowsVisible] = useState(0)
-  const filled = types.filter(t => build[t])
+  const filled = buildRows(build, types, isOL ? OL_ATTR : isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : isRB ? RB_ATTR : ATTR, isSalaryMode && !isRB && !isWR && !isTE && !isDB && !isOL)
 
   const team = result.team
   const monoTeamBuild = team
@@ -457,21 +470,19 @@ function ScreenBuild({ result, build, types, onNext, isRB, isWR, isTE, isDB, isO
       )}
 
       <div className="simp-attr-table">
-        {filled.map((t, i) => {
-          const meta = (isOL ? OL_ATTR : isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : isRB ? RB_ATTR : ATTR)[t]
-          const data = build[t]
+        {filled.map(({ key, label, data, val }, i) => {
           return (
             <div
-              key={t}
+              key={key}
               className={`simp-attr-row${i < rowsVisible ? ' simp-row-visible' : ''}`}
             >
               <QBAvatar photo={data.photo} team={data.team} color={data.teamColor} size={46} />
               <div className="simp-attr-info">
-                <span className="simp-attr-name">{meta.label}</span>
+                <span className="simp-attr-name">{label}</span>
                 <span className="simp-attr-qb">{data.qbFull}</span>
               </div>
-              <span className="simp-grade-circle" style={{ background: gradeColor(data.val), color: '#07120a' }}>
-                {valToGrade(data.val)}
+              <span className="simp-grade-circle" style={{ background: gradeColor(val), color: '#07120a' }}>
+                {valToGrade(val)}
               </span>
             </div>
           )
@@ -1361,18 +1372,16 @@ function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = fals
         <div className="simp-stat-section">
           <div className="simp-stat-group-lbl">Your Build</div>
           <div className="simp-attr-table simp-attr-table-sm">
-            {types.filter(t => build[t]).map(t => {
-              const meta = (isOL ? OL_ATTR : isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : isRB ? RB_ATTR : ATTR)[t]
-              const data = build[t]
+            {buildRows(build, types, isOL ? OL_ATTR : isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : isRB ? RB_ATTR : ATTR, isSalaryMode && !isRB && !isWR && !isTE && !isDB && !isOL).map(({ key, label, data, val }) => {
               return (
-                <div key={t} className="simp-attr-row simp-row-visible">
+                <div key={key} className="simp-attr-row simp-row-visible">
                   <QBAvatar photo={data.photo} team={data.team} color={data.teamColor} size={36} />
                   <div className="simp-attr-info">
-                    <span className="simp-attr-name">{meta.label}</span>
+                    <span className="simp-attr-name">{label}</span>
                     <span className="simp-attr-qb">{data.qbFull}</span>
                   </div>
-                  <span className="simp-grade-circle" style={{ background: gradeColor(data.val), color: '#07120a' }}>
-                    {valToGrade(data.val)}
+                  <span className="simp-grade-circle" style={{ background: gradeColor(val), color: '#07120a' }}>
+                    {valToGrade(val)}
                   </span>
                 </div>
               )
@@ -1562,7 +1571,7 @@ export default function SimPage({ result: baseResult, build, types = TYPES, onBa
   const handleBack  = () => { setScreen(0); onBack()  }
 
   const screens = [
-    <ScreenBuild    key="build"    result={result} build={build} types={types} onNext={next} isRB={isRB} isWR={isWR} isTE={isTE} isDB={isDB} isOL={isOL} />,
+    <ScreenBuild    key="build"    result={result} build={build} types={types} onNext={next} isRB={isRB} isWR={isWR} isTE={isTE} isDB={isDB} isOL={isOL} isSalaryMode={isSalaryMode} />,
     <ScreenSeason   key="season"   result={result} onNext={next} isRB={isRB} isWR={isWR} isTE={isTE} isDB={isDB} isOL={isOL} adsDisabled={adsDisabled} build={build} types={types} director={director} onFinal={handleFinal} pool={pool} userName={userName} />,
     <ScreenPlayoffs key="playoffs" result={result} onNext={next} onPreSuperBowl={handlePreSuperBowl} adsDisabled={adsDisabled} />,
     <ScreenFinal    key="final"    result={result} build={build} types={types} onReset={handleReset} onBack={handleBack} adsDisabled={adsDisabled} mvpWon={mvpWon} isRB={isRB} isWR={isWR} isTE={isTE} isDB={isDB} isOL={isOL} userName={userName} isSalaryMode={isSalaryMode} />,
