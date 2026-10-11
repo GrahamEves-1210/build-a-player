@@ -17,7 +17,7 @@ import { myCosmetics } from './progress'
 
 export const POOL_SIZE = 5
 export const FILL_AFTER_SECS = 30
-export const MIN_POOL = 2          // real players only: a pool never fills with bots
+export const MIN_POOL = 5          // a full pool of five real players, no bots, no short pools
 export const BUILD_SECS = 300
 
 // The pool's spin order — the same lookup SpinScreen makes for seeded spins

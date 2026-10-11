@@ -82,7 +82,7 @@ export default function AppAuction({ au, posName, onHome, onPlayAgain }) {
           <span className="cp-pulse" />
           <span className="ag-eyebrow">FINDING AN AUCTION · {posName}</span>
           <b className="cp-count">{Math.min(au.queue.length, AUCTION_SIZE)}<i>/{AUCTION_SIZE}</i></b>
-          <span className="cp-sub">{au.queue.length < AUCTION_MIN ? 'Waiting for another player. Auctions are real players only.' : au.waited < AUCTION_FILL_SECS ? `Starts at ${AUCTION_SIZE}, or with ${au.queue.length} in ${AUCTION_FILL_SECS - au.waited}s` : 'Starting…'}</span>
+          <span className="cp-sub">{au.queue.length < AUCTION_SIZE ? `Waiting for ${AUCTION_SIZE - au.queue.length} more. Auctions are five real players.` : 'Starting…'}</span>
           <LinkPill link={au.link} onRetry={au.retry} room={`${kit.sport === 'bucket' ? 'BASKETBALL' : 'FOOTBALL'} ${posName} AUCTION`} />
         </div>
         <div className="cp-seats">
@@ -94,7 +94,6 @@ export default function AppAuction({ au, posName, onHome, onPlayAgain }) {
           ))}
         </div>
         <div className="cp-actions">
-          {au.waited >= 6 && au.queue.length >= AUCTION_MIN && au.queue.length < AUCTION_SIZE && <button className="ag-btn cp-fill" onClick={au.fillNow}>START NOW · {au.queue.length} PLAYERS</button>}
           <button className="ag-btn ag-btn--ghost" onClick={() => au.leave()}>CANCEL</button>
         </div>
       </>

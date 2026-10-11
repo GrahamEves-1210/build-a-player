@@ -29,7 +29,7 @@ import { QB_SAL_COLS, QB_SAL_POOL } from '../data/qb-salary'
 import { SAL_COLS, BUCKET_SAL_POOL } from '../data/nba-salary'
 
 export const AUCTION_SIZE = 5
-export const AUCTION_MIN = 2
+export const AUCTION_MIN = 5         // five real players, like the pools
 export const AUCTION_FILL_SECS = 30
 export const BUDGET = 100
 export const BID_SECS = 10          // the bidding window on each lot

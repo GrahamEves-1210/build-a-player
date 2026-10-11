@@ -65,13 +65,12 @@ export default function AppCompete({ cp, au, sport, position, positions, onPosit
           <span className="cp-pulse" />
           <span className="ag-eyebrow">FINDING A POOL · {posName}</span>
           <b className="cp-count">{Math.min(cp.queue.length, POOL_SIZE)}<i>/{POOL_SIZE}</i></b>
-          <span className="cp-sub">{cp.queue.length < MIN_POOL ? 'Waiting for another player. Pools are real players only.' : cp.waited < FILL_AFTER_SECS ? `Starts at ${POOL_SIZE}, or with ${cp.queue.length} in ${FILL_AFTER_SECS - cp.waited}s` : 'Starting…'}</span>
+          <span className="cp-sub">{cp.queue.length < POOL_SIZE ? `Waiting for ${POOL_SIZE - cp.queue.length} more. Pools are five real players.` : 'Starting…'}</span>
           <LinkPill link={cp.link} onRetry={cp.retry} room={`${isBucket ? 'BASKETBALL' : 'FOOTBALL'} ${posName.toUpperCase()} POOL`} />
           <span className="cp-sub cp-sub--room">Friends find you by picking the same sport and position.</span>
         </div>
         <div className="cp-seats">{seats.map((p, i) => <Seat key={i} p={p} i={i} me={cp.me.vid} />)}</div>
         <div className="cp-actions">
-          {cp.waited >= 6 && cp.queue.length >= MIN_POOL && cp.queue.length < POOL_SIZE && <button className="ag-btn cp-fill" onClick={cp.fillNow}>START NOW · {cp.queue.length} PLAYERS</button>}
           <button className="ag-btn ag-btn--ghost" onClick={() => { cp.leave() }}>CANCEL</button>
         </div>
       </>
@@ -134,7 +133,7 @@ export default function AppCompete({ cp, au, sport, position, positions, onPosit
         )}
         {showAuction ? (
           <div className="cp-hero ag-pop">
-            <span className="ag-eyebrow">ONLINE · UP TO 5 PLAYERS · ${BUDGET} EACH</span>
+            <span className="ag-eyebrow">ONLINE · 5-PLAYER AUCTIONS · ${BUDGET} EACH</span>
             <p className="cp-how">Everyone starts with <b>${BUDGET}</b> and Salary Cap's five rating slots, empty. The spinner lands on a real player and one of those ratings, and you get <b>{BID_SECS} seconds</b> to bid. High bid takes it. When every slot is filled, the <b>highest OVR</b> wins.</p>
           </div>
         ) : (
