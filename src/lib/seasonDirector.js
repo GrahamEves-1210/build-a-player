@@ -62,7 +62,7 @@ export const MOMENTS_OFF_KEY = 'bap_moments_off'
 export const momentsOff = () => { try { return localStorage.getItem(MOMENTS_OFF_KEY) === '1' } catch { return false } }
 export const setMomentsOff = off => { try { localStorage.setItem(MOMENTS_OFF_KEY, off ? '1' : '0') } catch {} }
 // always: the moments can't be switched off (Career: they're the mode)
-export function createDirector({ sport, pos, build, team, simFn, base, seed = Math.random().toString(36).slice(2, 8), name = 'Guest', attrMap = {}, types = [], always = false }) {
+export function createDirector({ sport, pos, build, team, simFn, base, seed = Math.random().toString(36).slice(2, 8), name = 'Guest', attrMap = {}, types = [], always = false, recordBook = null }) {
   const isBucket = sport === 'bucket'
   const total = base.games.length
   // two or three decisions in the regular season, at weeks that change every
@@ -251,7 +251,8 @@ export function createDirector({ sport, pos, build, team, simFn, base, seed = Ma
 
   // ── Milestones, records, headlines (called as games reveal) ───────────────
   const mdefs = [...(MILESTONES[sport]?.common ?? []), ...(MILESTONES[sport]?.[pos] ?? [])]
-  const recs = RECORDS[sport]?.[pos] ?? []
+  // the record book: the league's marks, or a career's own where it already broke them
+  const recs = (RECORDS[sport]?.[pos] ?? []).map(rec => (recordBook?.[rec.id] && recordBook[rec.id].value > rec.value ? { ...rec, value: recordBook[rec.id].value, holder: recordBook[rec.id].holder } : rec))
   D.observe = k => {
     const ctx = D.ctxAt(k)
     const fresh = []
@@ -263,7 +264,7 @@ export function createDirector({ sport, pos, build, team, simFn, base, seed = Ma
     const fmtN = v => (typeof v === 'number' ? v.toLocaleString('en-US') : v)
     const fire = (rec, got) => {
       D.fired.add(`rec-${rec.id}`)
-      const hit = { ...rec, at: k, got: fmtN(got), value: fmtN(rec.value) }
+      const hit = { ...rec, at: k, got: fmtN(got), value: fmtN(rec.value), raw: got }
       D.records.push(hit)
       fresh.push({ id: `rec-${rec.id}`, label: `${rec.label}: ${fmtN(got)} (record was ${fmtN(rec.value)}, ${rec.holder})`, big: true, record: true, at: k })
     }
@@ -353,7 +354,7 @@ export function createDirector({ sport, pos, build, team, simFn, base, seed = Ma
     for (const rec of recs) {
       if (rec.game || D.fired.has(`rec-${rec.id}`)) continue
       const v = rec.get ? rec.get(all) : all[rec.stat]
-      if (v != null && v > rec.value) out.push({ ...rec, got: `${typeof v === 'number' ? v.toLocaleString('en-US') : v}${rec.pct ? '%' : ''}`, value: `${rec.value.toLocaleString('en-US')}${rec.pct ? '%' : ''}` })
+      if (v != null && v > rec.value) out.push({ ...rec, raw: v, got: `${typeof v === 'number' ? v.toLocaleString('en-US') : v}${rec.pct ? '%' : ''}`, value: `${rec.value.toLocaleString('en-US')}${rec.pct ? '%' : ''}` })
     }
     for (const rec of RECORDS[sport]?.team ?? []) if (rec.statFn?.({ ...run, ...t })) out.push({ ...rec, got: `${t.wins}-${t.losses}` })
     return out

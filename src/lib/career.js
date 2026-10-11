@@ -703,7 +703,7 @@ const goalMet = (g, s) => (s.stats[g.k] ?? (g.k === 'wins' ? s.wins : 0)) >= g.n
 
 // ── The season: the director plays it, we steer and keep score ───────────────
 export const seasonStats = (pos, f) => sportForPos(pos).seasonStats(pos, f)
-const director = (c, team, base, seed) => createDirector({ sport: c.sport, pos: c.pos, build: c.build, team, simFn: sportOf(c).sim(c.pos), base, seed, name: c.name, attrMap: POS_ATTR[c.pos], types: c.types, always: true })
+const director = (c, team, base, seed) => createDirector({ sport: c.sport, pos: c.pos, build: c.build, team, simFn: sportOf(c).sim(c.pos), base, seed, name: c.name, attrMap: POS_ATTR[c.pos], types: c.types, always: true, recordBook: c.recordBook ?? null })
 export function startSeason(c) {
   const S = sportOf(c)
   const roster = c.roster ?? rosterOf(c, c.team)
@@ -907,13 +907,16 @@ export function bookSeason(c) {
     goals: c.goals.map(g => ({ ...g, met: goalMet(g, { stats, wins: f.wins }) })), xp: f.story?.xp ?? 0, bestGame: f.bestGame ?? null,
     poStats: po && po.line.some(x => !x.sat) ? po.line.filter(x => !x.sat).reduce((acc, x) => { for (const k of S.lineKeys) if (x[k] != null) acc[k] = (acc[k] ?? 0) + x[k]; return acc }, { games: po.line.filter(x => !x.sat).length }) : null,
   }
+  // records this career set: next season's bar is its own number, not the league's
+  const recordBook = { ...(c.recordBook ?? {}) }
+  for (const x of f.story?.records ?? []) if (x.id && typeof x.raw === 'number' && x.raw > (recordBook[x.id]?.value ?? -Infinity)) recordBook[x.id] = { value: x.raw, holder: `${c.name}, ${c.season}` }
   const contract = { ...c.contract, left: c.contract.left - 1 }
   const perf = seasonScore(c.pos, s)
   // a development point a year; a second for an award or All-Pro / All-NBA season
   const dev = { ...c.dev, points: c.dev.points + 1 + (s.award || s.allPro ? 1 : 0) }
   const rep = clamp(c.rep + (s.goals.filter(g => g.met).length >= 2 ? 1 : 0) + (s.champion ? 1 : 0) - (perf < 0.25 ? 1 : 0), 1, 10)
   const lastRole = benched < (f.wins + f.losses || 17) / 2 ? 'Starter' : 'Backup'
-  let next = { ...c, phase: 'offseason', seasons: [...c.seasons, s], contract, dev, rep, lastRole, active: null, simTeam: null, goals: [], earnings: r10(c.earnings + c.contract.perYear), nextMods: null, talks: null }
+  let next = { ...c, recordBook, phase: 'offseason', seasons: [...c.seasons, s], contract, dev, rep, lastRole, active: null, simTeam: null, goals: [], earnings: r10(c.earnings + c.contract.perYear), nextMods: null, talks: null }
   // the offseason: the league moves, your team's roster turns over, the news
   const r = seeded(`${c.seed}-off-${c.year}`)
   const league = driftLeague(next, r)
