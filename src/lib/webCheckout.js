@@ -14,7 +14,8 @@ export async function openCheckout(kind, extra = {}) {
   try {
     const res = await fetch(`${API}/api/${kind === 'pro' ? 'create-checkout' : 'create-coins-checkout'}`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId: user.id, email: user.email ?? null, app: IS_APP, ...extra }),
+      // table 2: today's coin packs (lib/coins.js); the server keeps the live site's old table for requests without it
+      body: JSON.stringify({ userId: user.id, email: user.email ?? null, app: IS_APP, ...(kind === 'pro' ? {} : { table: 2 }), ...extra }),
     })
     const { url } = await res.json().catch(() => ({}))
     if (!url) return 'error'

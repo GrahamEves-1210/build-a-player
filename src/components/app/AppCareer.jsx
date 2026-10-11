@@ -4,7 +4,7 @@ import {
   startSeason, resumeSeason, advanceWeek, chooseMoment, resolveInjury, finishRegular, playoffRound, bookSeason, recordCombine, spendDev, demandTrade, nextSeason,
   OFF_STEPS, offStep, campDrill, lineup, depthChart, gradeOf, gradeOfOvr, ovrGradeVal, SPORT, sportOf,
   openTalks, ask, closeTalks, acceptTalks, ASKS, leverageOf,
-  retire, canRetire, mustRetire, careerTotals, legacyOf, LEGACY_TIERS, ALL_TIME, STAT_LABEL, HEADLINE_STATS, careerCard, AWARD_NAME, MAX_SEASONS, goalsFor, compsFor,
+  retire, canRetire, mustRetire, careerTotals, legacyOf, LEGACY_TIERS, ALL_TIME, STAT_LABEL, HEADLINE_STATS, careerCard, AWARD_NAME, MAX_SEASONS, goalsFor, compsFor, stockText, pickText, teamPick, REACTION,
 } from '../../lib/career'
 import { GAME_LINE } from '../../lib/seasonDirector'
 import { GAMES, pickPlayoffGame } from '../../lib/minigames'
@@ -40,7 +40,7 @@ export function CareerIntro({ sport = 'nfl', onStart, onClose }) {
     ['Build', 'Draft your player from traits, the same spins as a normal game. That build is who you take into the league.'],
     ['The draft', `Combine drills, then interviews with the teams picking near you. Your stock moves, draft day decides where you land, and the ${S.isBucket ? 'team' : 'offense'} around you matters.`],
     ['The career', `Season after season, ${S.isBucket ? 'game by game' : 'week by week'}: decisions, injuries, a ${S.isBucket ? 'rotation' : 'depth chart'} to win. Every offseason the roster turns over and the league moves.`],
-    ['Legacy', 'Contracts, free agency, trade demands, retirement. Awards, records, the Hall of Fame, and where you rank among the all-time greats.'],
+    ['Legacy', 'Contracts, free agency, trade demands, retirement. Awards, records, the Hall of Fame, and where the career ranks among the greatest ever.'],
   ]
   return (
     <div className={`ag-screen ${S.screen} cr cr-intro`}>
@@ -65,7 +65,7 @@ export function CareerIntro({ sport = 'nfl', onStart, onClose }) {
               <div key={r.at + '-' + i} className={`tk-run${r.hof ? ' is-won' : ''}`}>
                 <span className="tk-run-pos">{POS_LABEL[r.pos] ?? r.pos}</span>
                 <span className="tk-run-txt">
-                  <b>{r.hof ? <><IconCrown size={13} /> Hall of Famer</> : r.tier}{(r.ranked ?? r.rank <= 15) ? ` · No. ${r.rank} all-time` : ''}</b>
+                  <b>{r.hof ? <><IconCrown size={13} /> Hall of Famer</> : r.tier}{(r.ranked ?? r.rank <= 15) ? ` · No. ${r.rank} career all-time` : ''}</b>
                   <small>{new Date(r.at).toLocaleDateString(undefined, RUN_DATE)} · {r.seasons} seasons · {r.rings} {r.rings === 1 ? 'ring' : 'rings'} · {r.awards} {r.awards === 1 ? 'award' : 'awards'}</small>
                 </span>
                 <span className="tk-run-ovr"><b>{r.score}</b><small>LEGACY PTS</small></span>
@@ -112,7 +112,7 @@ function LegacyMeter({ c }) {
     <div className="cr-legacy">
       <div className="cr-legacy-top"><span className="ag-eyebrow">LEGACY TIER · {L.tier.toUpperCase()}</span><b>{L.score}<small> LEGACY PTS</small></b></div>
       <div className="cr-legacy-bar"><span style={{ width: `${Math.max(3, pct)}%` }} /></div>
-      <div className="cr-legacy-foot"><span>{L.next ? `${L.next.at - L.score} more points to reach the ${L.next.name} tier` : 'The top tier'}</span><span>{L.ranked ? `No. ${L.rank} ${POS_LABEL[c.pos]} all-time` : `Outside the all-time top ${L.of}`}</span></div>
+      <div className="cr-legacy-foot"><span>{L.next ? `${L.next.at - L.score} more points to reach the ${L.next.name} tier` : 'The top tier'}</span><span>{L.ranked ? `No. ${L.rank} ${POS_LABEL[c.pos]} career ever` : `Outside the top ${L.of} ${POS_LABEL[c.pos]} careers`}</span></div>
       <p className="cr-legacy-how">Points come from seasons played, {sportOf(c).honor}s, {sportOf(c).first} teams, {AWARD_NAME[c.pos]}s, rings, playoff runs and records.</p>
     </div>
   )
@@ -123,8 +123,7 @@ function Draft({ c, setCareer }) {
   const S = sportOf(c), logoFor = S.logo, teamName = short => S.teamOf(short).name
   const [step, setStep] = useState(c.step === 'trivia' ? 'interview' : c.step ?? 'combine')   // eslint-disable-line
   const [shown, setShown] = useState(0)
-  const stock = stockOf(c)
-  const range = `${stock.loP.round === stock.hiP.round ? `ROUND ${stock.loP.round}` : `ROUNDS ${stock.loP.round}–${stock.hiP.round}`} · PICKS ${stock.lo}–${stock.hi}`
+  const range = stockText(c).toUpperCase()
   const go = s => { setStep(s); setCareer({ ...c, step: s }); sfx('tap') }
   const head = (kicker, title) => (
     <div className="ag-screen-head"><div><span className="ag-eyebrow">{kicker}</span><h1 className="ag-h1">{title}</h1></div><span className="cr-stock"><small>PROJECTED</small><b>{range}</b></span></div>
@@ -158,7 +157,7 @@ function Draft({ c, setCareer }) {
           </div>
           {allDone ? (
             <>
-              <p className="cr-note ag-pop">Scouts saw the whole workout. Next: the teams picking around {c.name}'s projected slot want a sit-down.</p>
+              <p className="cr-note ag-pop">Scouts saw the whole workout, and the projection moved with it. Next: four teams picking near {c.name}'s projected range want a sit-down.</p>
               <button className="ag-btn tk-intro-go" onClick={() => { setCareer(setupInterviews({ ...c, step: 'interview' })); setStep('interview'); sfx('tap') }}>THE INTERVIEWS <IconArrow size={16} /></button>
             </>
           ) : <p className="cr-note">Three drills, one go each. The trait sets the range; how the drill goes sets the number.</p>}
@@ -177,16 +176,28 @@ function Draft({ c, setCareer }) {
         {head('THE INTERVIEWS', done ? 'Interviews done' : `Interview ${i + 1} of ${list.length}`)}
         <div className="ag-screen-body">
           <Comp c={c} />
+          {i === 0 && (
+            <div className="cr-howto ag-pop">
+              <span className="ag-eyebrow">HOW INTERVIEWS WORK</span>
+              <p>Four teams picking near your projected range sit you down, one question each. A good answer raises that team's interest and moves your stock up about two picks; a bad one does the opposite. On draft day, a team that liked you is likelier to take you when you're still on the board at its pick.</p>
+            </div>
+          )}
+          {list.some(x => x.answer != null) && (
+            <div className="cr-reacts ag-pop">
+              {list.filter(x => x.answer != null).map(x => { const st = x.a[x.answer].stock; return (
+                <span key={x.team} className={`cr-react${st > 0 ? ' is-up' : st < 0 ? ' is-down' : ''}`}><img src={logoFor(x.team)} alt="" /><b>{nick(teamName(x.team))}</b><small>{REACTION(st)}{st ? ` · stock ${st > 0 ? 'up' : 'down'} ${Math.abs(st) * (S.isBucket ? 1 : 2)} ${Math.abs(st) * (S.isBucket ? 1 : 2) === 1 ? 'pick' : 'picks'}` : ''}</small></span>
+              ) })}
+            </div>
+          )}
           {!done ? (
             <div className="cr-q ag-pop" key={i}>
-              <div className="cr-q-team"><img src={logoFor(it.team)} alt="" /><span><b>{teamName(it.team)}</b><small>{it.who.toUpperCase()}</small></span></div>
+              <div className="cr-q-team"><img src={logoFor(it.team)} alt="" /><span><b>{teamName(it.team)}</b><small>{it.who.toUpperCase()} · HOLDS {pickText(teamPick(c, it.team), c.sport).toUpperCase()}</small></span></div>
               <p className="cr-q-text">"{it.q}"</p>
               <div className="cr-q-opts">{it.a.map((a, k) => <button key={k} className="cr-q-opt" onClick={() => { setCareer(answerInterview(c, i, k)); sfx('tap') }}>{a.t}</button>)}</div>
             </div>
           ) : (
             <div className="cr-q ag-pop">
-              <div className="cr-q-teams">{list.map(x => <img key={x.team} src={logoFor(x.team)} alt={teamName(x.team)} title={teamName(x.team)} />)}</div>
-              <p className="cr-q-text">{list.map(x => nick(teamName(x.team))).join(', ')}: every room has its notes. The stock is set: <b>{range.toLowerCase()}</b>.</p>
+              <p className="cr-q-text">The interviews are done. {c.name} is projected to go <b>{stockText(c).toLowerCase()}</b>{(() => { const fans = list.filter(x => x.a[x.answer].stock > 0).map(x => nick(teamName(x.team))); return fans.length ? `. The ${fans.length > 1 ? `${fans.slice(0, -1).join(', ')} and ${fans[fans.length - 1]}` : fans[0]} came away the most interested.` : '. No team came away sold, so it comes down to need.' })()}</p>
               <button className="ag-btn ag-btn--gold tk-intro-go" onClick={() => { setCareer(runDraft({ ...c, step: 'day' })); setStep('day'); setShown(0); sfx('whistle') }}>DRAFT DAY <IconArrow size={16} /></button>
             </div>
           )}
@@ -205,19 +216,19 @@ function Draft({ c, setCareer }) {
         <div className="cr-ticker ag-pop">
           {picks.slice(0, shown).map(p => (
             <div key={p.o} className={`cr-pick${p.you ? ' is-you' : ''}`}>
-              <span className="cr-pick-n">{p.round}.{String(p.slot).padStart(2, '0')}</span>
+              <span className="cr-pick-n"><small>RD {p.round}</small>{p.slot}</span>
               <img src={logoFor(p.team)} alt="" />
               <span className="cr-pick-txt">{p.you ? <b>{c.name} · {POS_LABEL[c.pos]}</b> : <><b>{p.player}</b><small>{p.pos}</small></>}</span>
             </div>
           ))}
-          {!landed && <div className="cr-pick is-wait"><span className="bt-dots"><i /><i /><i /></span> pick {picks[shown]?.o ?? ''} is in…</div>}
+          {!landed && <div className="cr-pick is-wait"><span className="bt-dots"><i /><i /><i /></span> {picks[shown] ? `The ${nick(teamName(picks[shown].team))} are on the clock…` : ''}</div>}
         </div>
         {landed && mine && c.fit && (
           <>
             <div className="cr-land ag-pop" style={{ '--tc': c.fit.color }}>
               <img src={logoFor(c.team)} alt="" className="cr-land-logo" />
               <div className="cr-land-txt">
-                <span className="ag-eyebrow">PICK {mine.o} · {c.fit.status.toUpperCase()}</span>
+                <span className="ag-eyebrow">{pickText(mine.o, c.sport).toUpperCase()} · NO. {mine.o} OVERALL</span>
                 <b>{c.fit.name}</b>
                 <small>Rookie deal: {c.contract.years} yrs · {money(c.contract.perYear)} a year{c.contract.option ? (S.isBucket ? ' · team options' : ' · 5th-year option') : ''}</small>
               </div>
@@ -657,7 +668,7 @@ function CareerTab({ c, L }) {
         <div className="ag-card-head"><span className="ag-eyebrow">CAREER · {t.seasons} {t.seasons === 1 ? 'SEASON' : 'SEASONS'}</span></div>
         <div className="cr-kv">{keys.map(k => <span key={k}><b>{fmt(t.stats[k])}</b><small>{STAT_LABEL[k]}</small></span>)}<span><b>{t.rings}</b><small>RINGS</small></span><span><b>{t.awards}</b><small>{AWARD_NAME[c.pos]}</small></span><span><b>{t.proBowls}</b><small>{S.honors}</small></span><span><b>{t.allPros}</b><small>{S.first.toUpperCase()}</small></span></div>
         <div className="cr-rank">
-          <div className="cr-rank-head"><span className="ag-eyebrow">ALL-TIME {S.isBucket ? POS_NAME[c.pos].toUpperCase() : POS_LABEL[c.pos]}S · TOP {L.of}</span><small>LEGACY PTS</small></div>
+          <div className="cr-rank-head"><span className="ag-eyebrow">GREATEST {S.isBucket ? POS_NAME[c.pos].toUpperCase() : POS_LABEL[c.pos]} CAREERS · TOP {L.of}</span><small>LEGACY PTS</small></div>
           <RankList c={c} L={L} />
           {!L.ranked && <small className="cr-rank-note">{L.above.score - L.score + 1} more legacy points to crack the top {L.of}.</small>}
         </div>
@@ -714,7 +725,7 @@ function Legacy({ c, setCareer, onNewBuild, onExit }) {
       <div className="ag-screen-body">
         <div className={`cr-final ag-pop${c.hof?.in ? ' is-hof' : ''}`}>
           <span className="cr-final-score"><b>{L.score}</b><small>LEGACY POINTS</small></span>
-          <span className="cr-final-rank">{L.ranked ? <>No. <b>{L.rank}</b> {S.isBucket ? POS_NAME[c.pos].toLowerCase() : POS_LABEL[c.pos]} of all time{L.above ? <small>behind {L.above.name}, ahead of {L.below?.name ?? 'everyone else'}</small> : <small>Ahead of everyone</small>}</> : <>Outside the all-time top {L.of}<small>{L.above.score - L.score + 1} legacy points short of {L.above.name}</small></>}</span>
+          <span className="cr-final-rank">{L.ranked ? <>No. <b>{L.rank}</b> {S.isBucket ? POS_NAME[c.pos].toLowerCase() : POS_LABEL[c.pos]} career of all time{L.above ? <small>behind {L.above.name}, ahead of {L.below?.name ?? 'everyone else'}</small> : <small>Ahead of everyone</small>}</> : <>Outside the top {L.of} careers<small>{L.above.score - L.score + 1} legacy points short of {L.above.name}</small></>}</span>
           {c.hof && <span className={`cr-hof${c.hof.in ? ' is-in' : ''}`}><IconCrown size={14} /> {c.hof.in ? `HALL OF FAME · ${c.hof.ballot.toUpperCase()}` : c.hof.ballot.toUpperCase()} · {c.hof.pct}%</span>}
         </div>
         <Model c={c} />

@@ -4242,3 +4242,15 @@ html.app-look .ag-blacktop--menu:hover .ag-bt-tags .bt-mode-tag:last-child { tra
 .cr-rank-list { display: flex; flex-direction: column; gap: 3px; max-height: 260px; overflow-y: auto; overscroll-behavior: contain; position: relative; padding-right: 2px; }
 .cr-comp-row--head em { font-style: normal; text-align: center; font-family: var(--ag-font); font-size: 9.5px; letter-spacing: .6px; color: var(--ag-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cr-comp-row--head em.is-you { color: #f5dc8a; }
+/* Career draft: how interviews work, and how each room took it */
+.cr-howto { display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--ag-line); background: var(--ag-panel); }
+.cr-howto p { margin: 0; font-family: var(--ag-body); font-size: 13px; line-height: 1.45; color: var(--ag-text-2); }
+.cr-reacts { display: flex; flex-wrap: wrap; gap: 6px; }
+.cr-react { display: grid; grid-template-columns: 26px auto; grid-template-rows: auto auto; column-gap: 7px; align-items: center; padding: 6px 10px 6px 7px; border-radius: 10px; border: 1px solid var(--ag-line); background: rgba(255,255,255,.03); }
+.cr-react img { grid-row: 1 / 3; width: 26px; height: 26px; object-fit: contain; }
+.cr-react b { font-family: var(--ag-font); font-weight: 400; font-size: 13px; letter-spacing: 1.2px; }
+.cr-react small { font-family: var(--ag-body); font-size: 11px; font-weight: 600; color: var(--ag-muted); }
+.cr-react.is-up { border-color: rgba(34,197,94,.45); } .cr-react.is-up small { color: #86efac; }
+.cr-react.is-down { border-color: rgba(249,115,22,.45); } .cr-react.is-down small { color: #fdba74; }
+.cr-pick-n { display: flex; flex-direction: column; align-items: center; line-height: 1; min-width: 34px; color: var(--ag-text); }
+.cr-pick-n small { font-size: 9px; letter-spacing: 1.2px; color: var(--ag-muted); margin-bottom: 2px; }

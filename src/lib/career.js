@@ -325,14 +325,14 @@ function realAges(c) {
 }
 // Years into a career, the team's real players are that much older; the ones
 // who'd have retired are gone, their spots filled by draft picks.
-export function makeRoster(short, sport = 'nfl', yrs = 0) {
+export function makeRoster(short, sport = 'nfl', yrs = 0, gone = []) {
   const S = SPORT[sport] ?? SPORT.nfl
   const ro = { team: short, sport }
   const r = seeded(`${short}-${sport}-${yrs}-fill`)
   for (const g of S.groups) {
-    const list = S.pool[g].filter(p => p.team === short).map(p => man(S, g, p, yrs)).filter(p => p.age < RETIRE_AT[g])
+    const list = S.pool[g].filter(p => p.team === short && !gone.includes(p.name)).map(p => man(S, g, p, yrs)).filter(p => p.age < RETIRE_AT[g])
     const slots = S.slots[g]
-    if (yrs > 0) {
+    if (yrs > 0 || gone.length) {
       for (const sl of slots ?? []) if (!list.some(p => p.slot === sl)) list.push({ name: rookieName(r), pos: g, ovr: clamp(Math.round(74 + (r() - 0.5) * 10), 64, 84), age: 22 + Math.floor(r() * 4), photo: null, slot: sl, rookie: true })
       while (list.length < S.keep[g]) list.push({ name: rookieName(r), pos: g, ovr: clamp(Math.round(74 + (r() - 0.5) * 10), 64, 84), age: 22 + Math.floor(r() * 4), photo: null, slot: null, rookie: true })
     }
@@ -340,10 +340,12 @@ export function makeRoster(short, sport = 'nfl', yrs = 0) {
   }
   return ro
 }
-const rosterFor = (c, short = c.team) => (c.roster?.team === short ? c.roster : makeRoster(short, c.sport, rosterYrs(c)))
+// a team's roster as this career sees it: years older, and without anyone who's retired
+const rosterOf = (c, short) => makeRoster(short, c.sport, rosterYrs(c), c.gone ?? [])
+const rosterFor = (c, short = c.team) => (c.roster?.team === short ? c.roster : rosterOf(c, short))
 // Where you stand at your spot: the group best-first with you in it. Last
 // year's starter keeps the job in a tie (+2), a starter guarantee keeps it.
-export function depthChart(c, roster = c.roster ?? (c.team ? makeRoster(c.team, c.sport, rosterYrs(c)) : null)) {
+export function depthChart(c, roster = c.roster ?? (c.team ? rosterOf(c, c.team) : null)) {
   const S = sportOf(c)
   const group = (roster?.[c.pos] ?? []).filter(p => p.name !== c.name)
   const me = { name: c.name, pos: c.pos, ovr: c.ovr, age: c.age, you: true }
@@ -353,7 +355,7 @@ export function depthChart(c, roster = c.roster ?? (c.team ? makeRoster(c.team, 
   return { all, idx, starter: idx < S.starters[c.pos], ahead: all.slice(0, idx), label: S.depthLabel(c.pos, idx + 1) }
 }
 // The starters, you in your spot if you've won it
-export function lineup(c, roster = c.roster ?? (c.team ? makeRoster(c.team, c.sport, rosterYrs(c)) : null)) {
+export function lineup(c, roster = c.roster ?? (c.team ? rosterOf(c, c.team) : null)) {
   const S = sportOf(c)
   const dc = depthChart(c, roster)
   const out = {}
@@ -361,10 +363,10 @@ export function lineup(c, roster = c.roster ?? (c.team ? makeRoster(c.team, c.sp
   return { ...out, bench: dc.all.slice(S.starters[c.pos]), depth: dc }
 }
 // Grades (0–11) for the pieces of the team around you, from the roster you'd play with
-export function teamFit(short, pos, { roster = null, league = null, name = null, sport = 'nfl', yrs = 0 } = {}) {
+export function teamFit(short, pos, { roster = null, league = null, name = null, sport = 'nfl', yrs = 0, gone = [] } = {}) {
   const S = SPORT[sport] ?? SPORT.nfl
   const t = S.teamOf(short)
-  const ro = roster?.team === short ? roster : makeRoster(short, sport, yrs)
+  const ro = roster?.team === short ? roster : makeRoster(short, sport, yrs, gone)
   const f = S.fit(ro, pos, p => p.name !== name)
   const drift = league?.[short] ?? { off: 0, def: 0 }
   const off = clamp(r10(t.off + drift.off), 1, 10), def = clamp(r10(t.def + drift.def), 1, 10)
@@ -373,7 +375,7 @@ export function teamFit(short, pos, { roster = null, league = null, name = null,
     ...f, adj: clamp(Math.round(f.adj * 2) / 2, -1.5, 1.5),
   }
 }
-const fitFor = (c, short = c.team) => teamFit(short, c.pos, { roster: c.roster, league: c.league, name: c.name, sport: c.sport, yrs: rosterYrs(c) })
+const fitFor = (c, short = c.team) => teamFit(short, c.pos, { roster: c.roster, league: c.league, name: c.name, sport: c.sport, yrs: rosterYrs(c), gone: c.gone ?? [] })
 function simTeam(c, fit) { const S = sportOf(c); return S.simTeam(S.teamOf(c.team), fit, c.nextMods ?? {}, c) }
 // Every offseason the league moves: good teams slip, bad ones climb, some lurch
 function driftLeague(c, r) {
@@ -418,7 +420,7 @@ function rosterMoves(c, r) {
     while (kept.length < S.keep[g]) {
       const need = slots ? (slots.find(s => !kept.some(p => p.slot === s)) ?? null) : null
       if (r() < 0.55) {
-        const pool = S.pool[g].filter(p => p.team !== ro.team && !taken.has(p.name) && (!need || p.pos === need))
+        const pool = S.pool[g].filter(p => p.team !== ro.team && !taken.has(p.name) && !(c.gone ?? []).includes(p.name) && (!need || p.pos === need))
         const pick = pool[Math.floor(r() * pool.length)]
         if (pick) {
           const p = { ...man(S, g, pick, rosterYrs(c)), slot: need ?? pick.pos ?? null }
@@ -566,10 +568,31 @@ export function stockOf(c) {
   const played = d.combine.filter(x => x.pct != null)
   const comb = played.length ? played.reduce((s, x) => s + x.pct, 0) / played.length : 0
   const inter = (d.interviews ?? []).reduce((s, x) => s + (x.answer != null ? x.a[x.answer].stock : 0), 0)
-  const shift = Math.round(-comb * span - inter * (S.isBucket ? 0.4 : 1))
+  const shift = Math.round(-comb * span - inter * (S.isBucket ? 0.6 : 2))     // a good answer: about two picks earlier
   const lo = clamp(lo0 + shift, 1, maxPick(S)), hi = clamp(hi0 + shift, lo, maxPick(S))
   return { lo, hi, loP: pickLabel(lo, c.sport), hiP: pickLabel(hi, c.sport), shift }
 }
+// The range in draft-room terms: "Late 1st – mid 2nd round"
+const ordinal = n => (n === 1 ? '1st' : n === 2 ? '2nd' : n === 3 ? '3rd' : `${n}th`)
+const band = (o, sport) => { const n = (SPORT[sport] ?? SPORT.nfl).teams.length, { round, slot } = pickLabel(o, sport); return { round, part: slot <= Math.ceil(n / 3) ? 'Early' : slot <= Math.ceil(n * 2 / 3) ? 'Mid' : 'Late' } }
+export function stockText(c) {
+  const { lo, hi } = stockOf(c)
+  const a = band(lo, c.sport), b = band(hi, c.sport)
+  if (a.round === b.round) return a.part === b.part ? `${a.part} ${ordinal(a.round)} round` : `${a.part}–${b.part.toLowerCase()} ${ordinal(a.round)} round`
+  return `${a.part} ${ordinal(a.round)} – ${b.part.toLowerCase()} ${ordinal(b.round)} round`
+}
+export const pickText = (o, sport) => { const { round, slot } = pickLabel(o, sport); return `Round ${round}, Pick ${slot}` }
+// The pick a team holds nearest your projected range (every round runs in the same order)
+export function teamPick(c, team) {
+  const order = draftOrder(c), N = order.length, S = sportOf(c)
+  const { lo, hi } = stockOf(c), mid = (lo + hi) / 2
+  const slot = order.indexOf(team) + 1
+  let best = slot
+  for (let o = slot; o <= maxPick(S); o += N) if (Math.abs(o - mid) < Math.abs(best - mid)) best = o
+  return best
+}
+// How a room took an answer
+export const REACTION = st => (st >= 2 ? 'Loved it' : st >= 1 ? 'Liked it' : st === 0 ? 'No change' : st >= -1 ? 'Not a fan' : 'Turned off')
 // The order: worst teams first, with some noise
 function draftOrder(c) {
   const S = sportOf(c)
@@ -641,7 +664,7 @@ export function runDraft(c) {
   const contract = S.draft.rookie(mine.o)
   const met = (c.draft.interviews ?? []).some(x => x.team === mine.team)
   const lbl = pickLabel(mine.o, c.sport)
-  return { ...c, phase: 'draft', step: 'day', draft: { ...c.draft, picks, pick: picks[picks.length - 1] }, team: mine.team, roster, fit, contract, decisions: [...c.decisions, { year: 1, text: `Drafted ${lbl.round === 1 ? `No. ${mine.o} overall` : `in round ${lbl.round}`} by the ${fit.name}${met ? ' (they interviewed you)' : ''}` }] }
+  return { ...c, phase: 'draft', step: 'day', draft: { ...c.draft, picks, pick: picks[picks.length - 1] }, team: mine.team, roster, fit, contract, decisions: [...c.decisions, { year: 1, text: `Drafted in round ${lbl.round}, pick ${lbl.slot} (No. ${mine.o} overall) by the ${fit.name}${met ? ' (they interviewed you)' : ''}` }] }
 }
 
 // ── Goals for a season ───────────────────────────────────────────────────────
@@ -653,7 +676,7 @@ export const seasonStats = (pos, f) => sportForPos(pos).seasonStats(pos, f)
 const director = (c, team, base, seed) => createDirector({ sport: c.sport, pos: c.pos, build: c.build, team, simFn: sportOf(c).sim(c.pos), base, seed, name: c.name, attrMap: POS_ATTR[c.pos], types: c.types, always: true })
 export function startSeason(c) {
   const S = sportOf(c)
-  const roster = c.roster ?? makeRoster(c.team, c.sport, rosterYrs(c))
+  const roster = c.roster ?? rosterOf(c, c.team)
   const cc = { ...c, roster }
   const fit = fitFor(cc)
   const dc = depthChart(cc)
@@ -864,7 +887,9 @@ export function bookSeason(c) {
   const r = seeded(`${c.seed}-off-${c.year}`)
   const league = driftLeague(next, r)
   const { roster, moves } = rosterMoves(next, r)
-  next = { ...next, league, roster }
+  // the retired stay retired: never signed again, never on another team's roster
+  const gone = [...new Set([...(next.gone ?? []), ...moves.filter(m => m.kind === 'retire').map(m => m.p.name)])]
+  next = { ...next, league, roster, gone }
   const news = leagueNews(c, league)
   next = offseasonEvents(next)
   next = maybeTraded(next, r)
@@ -888,7 +913,7 @@ function maybeTraded(c, r) {
   const p = c.lastRole !== 'Backup' ? 0.04 : before && before.benched >= (before.wins + before.losses) / 2 ? 0.8 : 0.45
   if (r() >= p) return c
   // a team where you'd start
-  const fits = S.teams.filter(t => t.short !== c.team).map(t => ({ t, ro: makeRoster(t.short, c.sport, rosterYrs(c)) }))
+  const fits = S.teams.filter(t => t.short !== c.team).map(t => ({ t, ro: rosterOf(c, t.short) }))
     .filter(x => (x.ro[c.pos][S.starters[c.pos] - 1]?.ovr ?? 0) < c.ovr)
   const pick = fits.length ? fits[Math.floor(r() * fits.length)] : null
   if (!pick) return c
@@ -972,13 +997,13 @@ function contractSituation(c) {
   const perf = seasonScore(c.pos, last)
   if (c.age >= 34 && perf < 0.35) return []
   const years = c.age >= 32 ? 1 + Math.floor(r() * 2) : c.age >= 29 ? 2 + Math.floor(r() * 2) : 3 + Math.floor(r() * 3)
-  const fitAt = short => teamFit(short, c.pos, { roster: c.roster, league: c.league, name: c.name, sport: c.sport, yrs: rosterYrs(c) })
+  const fitAt = short => teamFit(short, c.pos, { roster: c.roster, league: c.league, name: c.name, sport: c.sport, yrs: rosterYrs(c), gone: c.gone ?? [] })
   const others = S.teams.filter(t => t.short !== c.team).sort(() => r() - .5).map(t => fitAt(t.short))
   const good = 7, bad = 6
   const contender = others.find(f => (f.off + f.def) / 2 >= good) ?? others[0]
   const payer = others.find(f => f.short !== contender.short && (f.off + f.def) / 2 < bad) ?? others[1]
   // where you'd stand on each team's depth chart
-  const standAt = short => { const dc = depthChart({ ...c, contract: {}, lastRole: short === c.team ? c.lastRole : null }, short === c.team ? c.roster : makeRoster(short, c.sport, rosterYrs(c))); return { starter: dc.starter, behind: dc.ahead[dc.ahead.length - 1]?.name ?? null, label: dc.label } }
+  const standAt = short => { const dc = depthChart({ ...c, contract: {}, lastRole: short === c.team ? c.lastRole : null }, short === c.team ? c.roster : rosterOf(c, short)); return { starter: dc.starter, behind: dc.ahead[dc.ahead.length - 1]?.name ?? null, label: dc.label } }
   const mk = (fit, perYear, yrs, pitch, kind) => ({ team: fit.short, fit, perYear: r10(perYear), years: yrs, pitch, kind, stand: standAt(fit.short) })
   return [
     mk(fitAt(c.team), value * (0.92 + r() * .1), years, 'Stay. Finish what you started here.', 'stay'),
@@ -989,7 +1014,7 @@ function contractSituation(c) {
 export function signOffer(c, o) {
   const change = o.team !== c.team
   const extras = [o.noTrade ? 'no-trade clause' : null, o.starter ? 'starter guarantee' : null].filter(Boolean)
-  const roster = change ? makeRoster(o.team, c.sport, rosterYrs(c)) : c.roster
+  const roster = change ? rosterOf(c, o.team) : c.roster
   return {
     ...c, team: o.team, roster, fit: teamFit(o.team, c.pos, { roster, league: c.league, name: c.name, sport: c.sport }), offers: null, talks: null, tradeAsked: false, lastRole: change ? null : c.lastRole,
     contract: { kind: change ? 'fa' : 'ext', years: o.years, left: o.years, perYear: o.perYear, noTrade: !!o.noTrade, starter: !!o.starter },
@@ -1040,7 +1065,7 @@ export function demandTrade(c) {
   const rep = Math.max(1, c.rep - 2)
   if (!granted) return { ...c, rep, tradeAsked: true, nextMods: { ...(c.nextMods ?? {}), off: ((c.nextMods?.off) ?? 0) - 0.5 }, events: [...c.events, { year: c.year + 1, text: 'You asked for a trade. The team said no, and the locker room heard about it.' }] }
   const dest = S.teams.map(t => S.teamOf(t.short)).filter(t => t.short !== c.team).sort(() => r() - .5).sort((a, b) => (b.off + b.def) - (a.off + a.def))[Math.floor(r() * 6)]
-  const roster = makeRoster(dest.short, c.sport, rosterYrs(c))
+  const roster = rosterOf(c, dest.short)
   const fit = teamFit(dest.short, c.pos, { roster, league: c.league, name: c.name, sport: c.sport })
   return { ...c, rep, tradeAsked: true, team: dest.short, roster, fit, lastRole: null, events: [...c.events, { year: c.year + 1, text: `Trade request granted: a ${nick(fit.name)} now.` }], decisions: [...c.decisions, { year: c.year + 1, text: `Demanded a trade, dealt to the ${fit.name}` }] }
 }
