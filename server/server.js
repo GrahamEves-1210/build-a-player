@@ -37,6 +37,14 @@ const PACKS = {
   bap_coins_3200: { coins: 5500,  cents: 499 },
   bap_coins_7000: { coins: 12500, cents: 999 },
 }
+// The new app/website shop's packs (web-app-look src/lib/coins.js). It sends
+// table: 2; the live site sends nothing and keeps the table above.
+const PACKS_V2 = {
+  bap_coins_1200:  { coins: 3000,  cents: 199 },
+  bap_coins_3200:  { coins: 8500,  cents: 499 },
+  bap_coins_7000:  { coins: 18000, cents: 999 },
+  bap_coins_15000: { coins: 38000, cents: 1999 },
+}
 
 // Webhook must use raw body — register before express.json()
 app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async (req, res) => {
@@ -116,9 +124,9 @@ app.post('/api/create-checkout', async (req, res) => {
 
 // A coin pack: one-time Stripe Checkout; the webhook records it, the game collects it
 app.post('/api/create-coins-checkout', async (req, res) => {
-  const { userId, email, pack, app: fromApp } = req.body
+  const { userId, email, pack, app: fromApp, table } = req.body
   if (!userId) return res.status(400).json({ error: 'userId required' })
-  const p = PACKS[pack]
+  const p = (table === 2 ? PACKS_V2 : PACKS)[pack]
   if (!p) return res.status(400).json({ error: 'unknown pack' })
   const origin = returnBase(req, fromApp)
 
