@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
+import { useCourt } from './app/BlacktopCourt'
 import { calcBucketOVR } from '../utils/bucketSimulation'
 import { valToGrade } from '../utils/simulation'
 import { NBA_TEAMS } from '../data/nba-teams'
@@ -259,6 +260,7 @@ function ProgressBar({ value, color, reverse = false }) {
 // SVG viewBox 300×280, basket at top. Player positions as % of court dimensions.
 // State shape: { x, y, dur } — dur drives the CSS transition duration inline.
 function CourtVisual({ play, myColor, oppColor, myName, oppName, possession, dispPossession, mySlot, oppSlot, showCheckup, mySpeed, oppSpeed, look = false, myAv = null, oppAv = null }) {
+  const court = useCourt()          // the design picked in the Blacktop menu (new UI)
   const sdur = s => 0.65 - (clamp(s ?? 6, 1, 11) - 1) * 0.035
   const myMvDur  = sdur(mySpeed)
   const oppMvDur = sdur(oppSpeed)
@@ -675,8 +677,8 @@ function CourtVisual({ play, myColor, oppColor, myName, oppName, possession, dis
     return (
       <div className="btc-wrap">
         <div className="btc-court">
-          <img src="/court.png" alt="" draggable={false} className="btc-img" />
-          <div className="btc-tint" /><div className="btc-light" />
+          <img src={court.src} alt="" draggable={false} className="btc-img" />
+          {court.tint && <div className="btc-tint" />}<div className="btc-light" />
           <div className="btc-overlay">
             <div className="btc-ball" style={{ left: `${ballPct.x}%`, top: `${ballPct.y}%`, transition: ballTr }}>🏀</div>
             {ps.map(([who, p, tr, col, av, nm]) => {

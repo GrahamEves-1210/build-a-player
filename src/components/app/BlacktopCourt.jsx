@@ -10,6 +10,22 @@ import QBAvatar from '../QBAvatar'
 // a side. Zones are % of the court image — rim (50, 12), arc ~62–68, top ~78.
 
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v))
+
+// The court designs (same geometry, so every spot lines up on each). The
+// Blacktop menu picks one; it's remembered on this device.
+export const COURTS = [
+  { id: 'classic', label: 'CLASSIC', src: '/court.png', tint: true },
+  { id: 'blacktop1', label: 'DESIGN 1', src: '/court-blacktop1.webp', tint: false },
+  { id: 'blacktop2', label: 'DESIGN 2', src: '/court-blacktop2.webp', tint: false },
+]
+const COURT_KEY = 'bap_court'
+export const courtId = () => { try { return localStorage.getItem(COURT_KEY) || 'classic' } catch { return 'classic' } }
+export const setCourtId = id => { try { localStorage.setItem(COURT_KEY, id) } catch {}; window.dispatchEvent(new CustomEvent('bap:court', { detail: id })) }
+export function useCourt() {
+  const [id, setId] = useState(courtId)
+  useEffect(() => { const on = e => setId(e.detail ?? courtId()); window.addEventListener('bap:court', on); return () => window.removeEventListener('bap:court', on) }, [])
+  return COURTS.find(c => c.id === id) ?? COURTS[0]
+}
 const cl = x => clamp(x, 7, 93)
 const RIM = { x: 50, y: 12 }
 const TOP = { x: 50, y: 78 }
@@ -25,6 +41,7 @@ const near = (p, spots) => spots.reduce((best, s) => (Math.hypot(s.x - p.x, s.y 
 
 // meLabel: what your own player is called on court ('YOU'; null = your username, like everyone else)
 export default function BlacktopCourt({ game, play, meId, photoFor, colorFor, avatarFor, speed = 1, meLabel = 'YOU' }) {
+  const court = useCourt()
   const players = game.sides.flat()
   const byId = Object.fromEntries(players.map(p => [p.id, p]))
   const guards = game.guards || {}
@@ -212,8 +229,8 @@ export default function BlacktopCourt({ game, play, meId, photoFor, colorFor, av
   return (
     <div className="btc-wrap">
       <div className="btc-court">
-        <img src="/court.png" alt="" draggable={false} className="btc-img" />
-        <div className="btc-tint" /><div className="btc-light" />
+        <img src={court.src} alt="" draggable={false} className="btc-img" />
+        {court.tint && <div className="btc-tint" />}<div className="btc-light" />
         <div className="btc-overlay">
           <div className="btc-ball" style={{ left: `${ballPos.x}%`, top: `${ballPos.y}%`, transition: ballTr }}>🏀</div>
           {players.map(p => {

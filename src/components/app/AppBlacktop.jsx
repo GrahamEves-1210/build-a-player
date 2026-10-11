@@ -8,7 +8,7 @@ import { sfx, haptic, victory } from '../../lib/juice'
 import { calcBucketOVR } from '../../utils/bucketSimulation'
 import { VERSUS_GUARD_TYPES } from '../../data/nba-guards'
 import { VERSUS_BIG_TYPES } from '../../data/nba-bigs'
-import BlacktopCourt from './BlacktopCourt'
+import BlacktopCourt, { COURTS, useCourt, setCourtId } from './BlacktopCourt'
 import { IconClose, IconArrow, IconChat, IconStar, IconSend, IconBasketball, IconVersus } from './icons'
 import { NameTag, AvatarBadge } from './NameTag'
 import OnlineRecord, { RatingLine, LinkPill, ModeStats, TierChip } from './OnlineRecord'
@@ -101,6 +101,7 @@ export function BlacktopHub({ onJoin3v3, onPickup, onFriend, onJoinCode, onBack 
           <OneOnOneOptions onPickup={onPickup} onFriend={onFriend} onJoinCode={onJoinCode} />
           <ModeStats mode="h2h" />
         </section>
+        <CourtPicker />
         <details className="bt-rules ag-pop" style={{ '--d': '180ms' }}>
           <summary className="ag-eyebrow">HOUSE RULES</summary>
           <ul>
@@ -113,6 +114,24 @@ export function BlacktopHub({ onJoin3v3, onPickup, onFriend, onJoinCode, onBack 
         </details>
       </div>
     </div>
+  )
+}
+
+// The court your games are played on (a test toggle for the new designs)
+function CourtPicker() {
+  const court = useCourt()
+  return (
+    <section className="bt-courts ag-pop" style={{ '--d': '150ms' }}>
+      <span className="ag-eyebrow">COURT</span>
+      <div className="bt-courts-row" role="radiogroup" aria-label="Court design">
+        {COURTS.map(c => (
+          <button key={c.id} role="radio" aria-checked={court.id === c.id} className={`bt-court-opt${court.id === c.id ? ' is-on' : ''}`} onClick={() => { setCourtId(c.id); sfx('tap') }}>
+            <img src={c.src} alt="" loading="lazy" draggable={false} />
+            <span>{c.label}</span>
+          </button>
+        ))}
+      </div>
+    </section>
   )
 }
 
