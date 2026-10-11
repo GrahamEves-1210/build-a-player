@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import QBAvatar from '../QBAvatar'
 import { sfx } from '../../lib/juice'
+import { useProgress, equip } from '../../lib/progress'
+import { itemsFor, itemById, DEFAULTS } from '../../lib/cosmetics'
 
 // The Blacktop court: six players and a ball, choreographed from the play the
 // engine wrote — who checked it up, each pass, the drive or the pull-up, the
@@ -12,20 +14,14 @@ import { sfx } from '../../lib/juice'
 
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v))
 
-// The court designs (same geometry, so every spot lines up on each). The
-// Blacktop menu picks one; it's remembered on this device.
-export const COURTS = [
-  { id: 'classic', label: 'CLASSIC', src: '/court.png', tint: true },
-  { id: 'blacktop1', label: 'DESIGN 1', src: '/court-blacktop1.webp', tint: false },
-  { id: 'blacktop2', label: 'DESIGN 2', src: '/court-blacktop2.webp', tint: false },
-]
-const COURT_KEY = 'bap_court'
-export const courtId = () => { try { return localStorage.getItem(COURT_KEY) || 'classic' } catch { return 'classic' } }
-export const setCourtId = id => { try { localStorage.setItem(COURT_KEY, id) } catch {}; window.dispatchEvent(new CustomEvent('bap:court', { detail: id })) }
+// The court Blacktop is played on: the one equipped from the shop's Courts
+// (lib/cosmetics.js; every design shares the same lines, so the spots line up)
+export const COURTS = itemsFor('court')
+export const setCourtId = id => equip('court', id)
 export function useCourt() {
-  const [id, setId] = useState(courtId)
-  useEffect(() => { const on = e => setId(e.detail ?? courtId()); window.addEventListener('bap:court', on); return () => window.removeEventListener('bap:court', on) }, [])
-  return COURTS.find(c => c.id === id) ?? COURTS[0]
+  const p = useProgress()
+  const it = itemById(p.equip?.court) ?? itemById(DEFAULTS.court)
+  return { id: it.id, label: it.name.toUpperCase(), src: it.img, tint: false }
 }
 const cl = x => clamp(x, 7, 93)
 const RIM = { x: 50, y: 12 }

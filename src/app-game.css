@@ -1967,7 +1967,7 @@ html.is-app .about-section-title { font-family: var(--ag-font) !important; font-
   padding: 18px 14px 14px;
   border-radius: 16px;
   border: 1.5px solid var(--ag-line);
-  background: linear-gradient(180deg, rgba(3,6,5,.35), rgba(3,6,5,.85)), url('/court.png') center / cover;
+  background: linear-gradient(180deg, rgba(3,6,5,.35), rgba(3,6,5,.85)), url('/court-blacktop1.webp') center / cover;
   text-align: center;
 }
 .bt-queue-count { font-family: var(--ag-display); font-size: 64px; line-height: 1; }
@@ -4368,3 +4368,4 @@ html.is-android .ag-toast { background: rgba(8,12,10,.97); }
 /* Career, basketball: the model keeps the build screen's sizing (so the jersey and
    the face stay on the figure); on narrow screens the whole stack shrinks together */
 @media (max-width: 899px) { .cr-model--bucket { height: 340px; } .cr-model--bucket .sil-wrap { transform: scale(.76); transform-origin: 50% 36%; } }
+.bt-courts-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }

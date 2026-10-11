@@ -222,7 +222,7 @@ function load(id) {
 
 // Items taken out of the shop: owners get the coins back, once per account (the
 // flag syncs with the wallet), and anything equipped goes back to the default
-const RETIRED = { 'snd-roar': 400 }        // Stadium Roar: a crowd, removed with the crowd sounds
+const RETIRED = { 'snd-roar': 400, 'snd-sax': 5400, 'snd-pro-anthem': 18000 }   // Stadium Roar (a crowd), Sax Solo, Pro Anthem
 function retireItems(st) {
   st.retired = st.retired || {}
   for (const [id, refund] of Object.entries(RETIRED)) {

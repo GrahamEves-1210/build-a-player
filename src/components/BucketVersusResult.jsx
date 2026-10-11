@@ -703,7 +703,7 @@ function CourtVisual({ play, myColor, oppColor, myName, oppName, possession, dis
       <div className="bvr-court-aspect">
 
         {/* Court image */}
-        <img src="/court.png" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'fill', borderRadius: 8, display: 'block' }} alt="" draggable={false} />
+        <img src="/court-blacktop1.webp" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'fill', borderRadius: 8, display: 'block' }} alt="" draggable={false} />
         <div style={{ position: 'absolute', inset: 0, borderRadius: 8, background: 'rgba(90, 10, 10, 0.15)', mixBlendMode: 'multiply', pointerEvents: 'none' }} />
         <div style={{ position: 'absolute', inset: 0, borderRadius: 8, background: 'radial-gradient(ellipse 80% 50% at 50% 30%, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.04) 50%, transparent 75%)', pointerEvents: 'none' }} />
 

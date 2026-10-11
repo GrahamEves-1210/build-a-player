@@ -9,6 +9,7 @@ import { calcBucketOVR } from '../../utils/bucketSimulation'
 import { VERSUS_GUARD_TYPES } from '../../data/nba-guards'
 import { VERSUS_BIG_TYPES } from '../../data/nba-bigs'
 import BlacktopCourt, { COURTS, useCourt, setCourtId } from './BlacktopCourt'
+import { owns } from '../../lib/progress'
 import { IconClose, IconArrow, IconChat, IconStar, IconSend, IconBasketball, IconVersus } from './icons'
 import { NameTag, AvatarBadge } from './NameTag'
 import OnlineRecord, { RatingLine, LinkPill, ModeStats, TierChip } from './OnlineRecord'
@@ -117,17 +118,18 @@ export function BlacktopHub({ onJoin3v3, onPickup, onFriend, onJoinCode, onBack 
   )
 }
 
-// The court your games are played on (a test toggle for the new designs)
+// The court your games are played on: the ones you own, the rest in the shop
 function CourtPicker() {
   const court = useCourt()
+  const mine = COURTS.filter(c => owns(c.id))
   return (
     <section className="bt-courts ag-pop" style={{ '--d': '150ms' }}>
-      <span className="ag-eyebrow">COURT</span>
-      <div className="bt-courts-row" role="radiogroup" aria-label="Court design">
-        {COURTS.map(c => (
+      <div className="bt-courts-head"><span className="ag-eyebrow">COURT</span><button className="ag-chip" onClick={() => { sfx('tap'); window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'shop:court' })) }}>{COURTS.length - mine.length} MORE IN THE SHOP</button></div>
+      <div className="bt-courts-row" role="radiogroup" aria-label="Court">
+        {mine.map(c => (
           <button key={c.id} role="radio" aria-checked={court.id === c.id} className={`bt-court-opt${court.id === c.id ? ' is-on' : ''}`} onClick={() => { setCourtId(c.id); sfx('tap') }}>
-            <img src={c.src} alt="" loading="lazy" draggable={false} />
-            <span>{c.label}</span>
+            <img src={c.thumb} alt="" loading="lazy" draggable={false} />
+            <span>{c.name.toUpperCase()}</span>
           </button>
         ))}
       </div>

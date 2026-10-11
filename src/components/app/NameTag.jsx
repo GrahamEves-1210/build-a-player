@@ -75,6 +75,7 @@ export function ItemPreview({ item, name = 'Guest', big = false }) {
   if (item.slot === 'avatar') return <AvatarBadge cos={{ avatar: item.id }} name={name} size={big ? 96 : 58} />
   if (item.slot === 'nameColor') return <span className="ip-name"><NameText name={name} color={item.id} /></span>
   if (item.slot === 'nameFx') return <span className="ip-name"><NameText name={name} color={big ? null : 'nc-ice'} fx={item.id} /></span>
+  if (item.slot === 'court') return <img className={`ip-court${big ? ' is-big' : ''}`} src={big ? item.img : item.thumb} alt={item.name} loading="lazy" draggable={false} />
   if (item.slot === 'plate') return <span className={`ntag np ${item.id} ip-plate`}><span className="np-shine" aria-hidden="true" /><NameText name={name} /></span>
   return <span className={`ip-fx ip-fx--${item.slot}`}><span className={`ip-fx-ico ip-${item.id}`} /></span>
 }

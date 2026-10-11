@@ -35,7 +35,7 @@ const audio = () => {
 // the fallback until they've loaded.
 const SAMPLE_NAMES = ['tap', 'tap2', 'tick', 'back', 'open', 'close', 'swoosh', 'deny', 'pluck', 'pluck2', 'drop', 'confirm', 'toggle',
   'wood', 'woodl', 'punch', 'punchm', 'thud', 'plank', 'chip', 'chips', 'stack', 'stack2', 'handful', 'slide', 'slide2', 'cardout',
-  'hitS', 'hitS2', 'hitM', 'hitM2', 'hitL', 'hitL2', 'hitXL', 'hitXXL', 'sax', 'saxS', 'pizzi',
+  'hitS', 'hitS2', 'hitM', 'hitM2', 'hitL', 'hitL2', 'hitXL', 'hitXXL', 'pizzi',
   // the shop's and the coins' sounds (public/sfx/*.mp3)
   'coindrop.mp3', 'riser.mp3', 'bell.mp3', 'badge.mp3', 'shutter.mp3', 'zoom.mp3', 'rocket.mp3', 'strike.mp3', 'nope.mp3',
   // Blacktop's ball (Mixkit, free licence): a dribble, a pass caught, a make
@@ -348,16 +348,7 @@ const SYNTH = {
     lfo.connect(lg).connect(g.gain); o.connect(g).connect(S.out)
     o.start(t); lfo.start(t); o.stop(t + 1.5); lfo.stop(t + 1.5)
   },
-  'snd-sax': S => { const v = verb(S, 0.4); for (const [f, at] of [[392, 0], [440, 0.12], [523.3, 0.24]]) brass(S, { f, dur: 0.18, gain: 0.12, at, out: v }); brass(S, { f: 659.3, dur: 0.7, gain: 0.14, at: 0.36, hold: 0.25, out: v }) },
   'snd-pizzi': S => { [523.3, 659.3, 784, 1046.5].forEach((f, i) => osc(S, { type: 'triangle', f, dur: 0.12, gain: 0.1, at: i * 0.11, env: { a: 0.002, d: 0.12 } })) },
-  'snd-pro-anthem': S => {
-    const v = verb(S, 0.5)
-    for (let i = 0; i < 10; i++) osc(S, { f: 98, to: 70, dur: 0.12, gain: 0.12 + i * 0.012, at: i * 0.05, out: v })
-    ;[[392, 0.5], [523.3, 0.64], [659.3, 0.78]].forEach(([f, at]) => brass(S, { f, dur: 0.14, gain: 0.13, at, out: v }))
-    brass(S, { f: 784, dur: 1.1, gain: 0.17, at: 0.92, hold: 0.5, out: v })
-    brass(S, { f: 392, dur: 1.1, gain: 0.12, at: 0.92, hold: 0.5, out: v })
-    hit(S, { gain: 0.36, at: 0.92 })
-  },
 }
 // The sampled layer: each entry plays recorded sounds and returns true, or
 // returns false (samples still loading) so the synth version plays instead.
@@ -415,8 +406,6 @@ const SAMPLED = {
   'snd-fanfare': S => smp(S, 'hitXXL', { gain: 1 }),
   'snd-riser': S => { if (!ready('hitXL')) return false; noise(S, { bp: 300, to: 6000, q: 1.2, dur: 1.15, gain: 0.12, env: { a: 1.0, d: 0.15 } }); smp(S, 'punch', { gain: 1, at: 1.15 }); smp(S, 'hitXL', { gain: 0.9, at: 1.15 }); return true },
   'snd-cannon': S => smp(S, 'thud', { gain: 1 }) && smp(S, 'punch', { gain: 0.9, rate: 0.7 }) && (osc(S, { f: 90, to: 28, dur: 0.9, gain: 0.35 }), true),
-  'snd-pro-anthem': S => { if (!smp(S, 'hitXXL', { gain: 1, at: 0.45 })) return false; for (let i = 0; i < 9; i++) smp(S, 'punchm', { gain: 0.25 + i * 0.06, at: i * 0.05, rate: 0.8 }); return true },
-  'snd-sax': S => smp(S, 'sax', { gain: 0.95 }),
   'snd-bell': S => smp(S, 'bell', { gain: 0.85 }),
   'snd-strike': S => smp(S, 'strike', { gain: 0.9 }),
   'snd-rise': S => smp(S, 'riser', { gain: 0.85 }),
@@ -483,9 +472,7 @@ const STAGED = {
   'snd-riser': S => { labAt(S.ac, 's-powerup', 0, 0.85); labAt(S.ac, 's-impact', 0.95, 0.95) },
   'snd-train': S => { SYNTH['snd-train'](S) },
   'snd-bassdrop': S => { labAt(S.ac, 's-whoosh', 0, 0.6); labAt(S.ac, 's-boom', 0.55, 1); osc(S, { f: 62, to: 30, dur: 1.3, gain: 0.38, at: 0.55 }) },
-  'snd-sax': S => { if (!smp(S, 'sax', { gain: 0.95 })) SYNTH['snd-sax'](S) },
   'snd-pizzi': S => { if (!smp(S, 'pizzi', { gain: 0.95 })) SYNTH['snd-pizzi'](S) },
-  'snd-pro-anthem': S => { labAt(S.ac, 's-impact', 0, 0.9); labAt(S.ac, 's-perc', 0.42, 0.75); labAt(S.ac, 's-perc', 0.62, 0.6, 1.15); labAt(S.ac, 's-boom', 0.85, 0.8) },
 }
 // Load the victory layers ahead of time (a season starting, the shop opening)
 let warmed = false

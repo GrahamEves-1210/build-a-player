@@ -3,7 +3,7 @@
 // item looks like (CSS classes in app-shop.css, glyphs in NameTag.jsx, victory
 // effects and sounds in juice.js).
 //
-//   slot     avatar · nameColor · nameFx · plate · winFx · winSound
+//   slot     avatar · nameColor · nameFx · plate · winFx · winSound · court
 //   rarity   0 common · 1 rare · 2 epic · 3 legendary
 //   pro      BAP Pro members only (the Pro Vault)
 //   level    unlocks at a level (still bought with coins)
@@ -16,6 +16,7 @@ export const SLOTS = [
   { id: 'plate',     label: 'Nameplates',   short: 'PLATE' },
   { id: 'winFx',     label: 'Victory FX',   short: 'VICTORY' },
   { id: 'winSound',  label: 'Victory Sound', short: 'SOUND' },
+  { id: 'court',     label: 'Courts',        short: 'COURT' },
 ]
 export const RARITY = [
   { id: 0, name: 'Common',    color: '#9fb3a8' },
@@ -24,7 +25,7 @@ export const RARITY = [
   { id: 3, name: 'Legendary', color: '#f2c94c' },
 ]
 // What everyone starts with (free, always owned)
-export const DEFAULTS = { avatar: null, nameColor: null, nameFx: null, plate: null, winFx: 'fx-confetti', winSound: 'snd-horn' }
+export const DEFAULTS = { avatar: null, nameColor: null, nameFx: null, plate: null, winFx: 'fx-confetti', winSound: 'snd-horn', court: 'ct-blacktop' }
 
 const it = (slot, id, name, rarity, price, extra = {}) => ({ slot, id, name, rarity, price, ...extra })
 
@@ -162,10 +163,8 @@ const WS = [
   it('winSound', 'snd-riser',     'Synth Riser', 2, 6000),
   it('winSound', 'snd-cannon',    'Cannon Blast', 2, 7200),
   it('winSound', 'snd-pizzi',     'String Section', 1, 1400),
-  it('winSound', 'snd-sax',       'Sax Solo', 2, 5400),
   it('winSound', 'snd-train',     'Train Horn', 2, 7800),
   it('winSound', 'snd-bassdrop',  'Bass Drop', 3, 21500),
-  it('winSound', 'snd-pro-anthem','Pro Anthem', 3, 18000, { pro: true }),
   it('winSound', 'snd-badge',     'Badge Pop', 0, 550),
   it('winSound', 'snd-zoom',      'Zoom By', 1, 1700),
   it('winSound', 'snd-shutter',   'Photo Finish', 1, 1800),
@@ -176,7 +175,34 @@ const WS = [
   it('winSound', 'snd-rise',      'The Big Rise', 3, 15500),
 ]
 
-export const ITEMS = [...AV, ...NC, ...NFX, ...PL, ...WF, ...WS]
+// ── Courts: the floor Blacktop is played on (every design shares the same lines,
+// so the players' spots line up on each). img: the court; thumb: the shop card.
+const ct = (id, name, rarity, price) => it('court', id, name, rarity, price, { img: `/courts/${id}.webp`, thumb: `/courts/thumbs/${id}.webp` })
+const CT = [
+  it('court', 'ct-blacktop', 'Blacktop', 0, 0, { free: true, img: '/court-blacktop1.webp', thumb: '/courts/thumbs/ct-blacktop.webp' }),
+  ct('ct-alley', 'Back Alley', 0, 2500),
+  ct('ct-overcast', 'Overcast', 0, 2500),
+  ct('ct-midnight', 'Midnight', 0, 2500),
+  ct('ct-patchwork', 'Patchwork', 0, 2500),
+  ct('ct-ivy', 'Ivy Park', 0, 2500),
+  ct('ct-snow', 'First Snow', 1, 5000),
+  ct('ct-warehouse', 'Warehouse', 1, 5000),
+  ct('ct-nightrain', 'Night Rain', 1, 5000),
+  ct('ct-harbor', 'Harbor Blue', 1, 5000),
+  ct('ct-redzone', 'Red Zone', 1, 5000),
+  ct('ct-autumn', 'Autumn Brick', 1, 5000),
+  ct('ct-carnival', 'Carnival', 2, 9000),
+  ct('ct-goldenhour', 'Golden Hour', 2, 9000),
+  ct('ct-oldstone', 'Old Stone', 2, 9000),
+  ct('ct-tropic', 'Tropic Mural', 2, 9000),
+  ct('ct-checker', 'Checkerboard', 2, 9000),
+  ct('ct-neon', 'Neon Circuit', 3, 16000),
+  ct('ct-marble', 'Emerald Marble', 3, 16000),
+  ct('ct-space', 'Deep Space', 3, 16000),
+  ct('ct-retro', 'Retro Sunset', 3, 16000),
+]
+
+export const ITEMS = [...AV, ...NC, ...NFX, ...PL, ...WF, ...WS, ...CT]
 const BY_ID = Object.fromEntries(ITEMS.map(i => [i.id, i]))
 export const itemById = id => (id ? BY_ID[id] ?? null : null)
 export const itemsFor = slot => ITEMS.filter(i => i.slot === slot)
@@ -191,4 +217,5 @@ export const BLURB = {
   plate: 'A nameplate behind your username on your card, in chat and in lobbies.',
   winFx: 'Plays when you win: titles, awards, Takeover cities and Blacktop games.',
   winSound: 'The sound of your wins, played with your victory effect.',
+  court: 'The court your Blacktop games are played on.',
 }
