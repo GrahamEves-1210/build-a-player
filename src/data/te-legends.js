@@ -522,7 +522,7 @@ const _raw = [
   {
     name: 'George Kittle',     short: 'Kittle',       team: 'SF',  teamName: 'San Francisco 49ers',
     skin: '#f0c4a0', height: 76, weight: 250, number: 85, starter: true, captain: true, years: '2017–',
-    attrs: { speed: 8, blocking: 11, vertical: 6, routeRunning: 9, strength: 10, hands: 9, awareness: 9, size: 6, afterCatch: 11 },
+    attrs: { speed: 9, blocking: 11, vertical: 6, routeRunning: 9, strength: 10, hands: 9, awareness: 9, size: 6, afterCatch: 11 },
   },
   {
     name: 'Vernon Davis',      short: 'V. Davis',     team: 'SF',  teamName: 'San Francisco 49ers',

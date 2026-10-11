@@ -235,7 +235,7 @@ const _TES = [
     attrs: { speed: 6, blocking: 4, vertical: 6, routeRunning: 6, strength: 3, hands: 5, awareness: 4, size: 9, afterCatch: 6 } },
   // SF
   { name: 'George Kittle',     short: 'Kittle',      team: 'SF',  teamName: 'San Francisco 49ers',    skin: '#f0c4a0', height: 76, weight: 250, starter: true,  captain: true,  number: 85,
-    attrs: { speed: 8, blocking: 11, vertical: 6, routeRunning: 9, strength: 10, hands: 9, awareness: 9, size: 6, afterCatch: 11 } },
+    attrs: { speed: 9, blocking: 11, vertical: 6, routeRunning: 9, strength: 10, hands: 9, awareness: 9, size: 6, afterCatch: 11 } },
   { name: 'Jake Tonges',       short: 'Tonges',      team: 'SF',  teamName: 'San Francisco 49ers',    skin: '#f0c4a0', height: 77, weight: 252, starter: false, number: 88,
     attrs: { speed: 4, blocking: 6, vertical: 5, routeRunning: 4, strength: 7, hands: 5, awareness: 4, size: 9, afterCatch: 4 } },
   { name: 'Luke Farrell',      short: 'Farrell',     team: 'SF',  teamName: 'San Francisco 49ers',    skin: '#f0c4a0', height: 77, weight: 249, starter: false, number: 89,
