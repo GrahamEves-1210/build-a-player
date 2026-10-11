@@ -4099,3 +4099,17 @@ html:is(.is-app, .app-look) .simp-final-actions { margin-top: 12px; }
 @media (min-width: 1024px) { html.app-look .ag-brand-mark { height: 86px; } }
 html:is(.is-app, .app-look) .logo-img-full { height: 30px; }
 @media (min-width: 769px) { html:is(.is-app, .app-look) .logo-img-full { height: 40px; } }
+
+/* build complete: full trait names, two to a row (label left, grade right) */
+.ag-bc-grades { grid-template-columns: 1fr 1fr; gap: 5px; }
+.ag-bc-g { flex-direction: row; justify-content: space-between; gap: 6px; padding: 5px 9px; min-width: 0; }
+.ag-bc-g small { font-family: var(--ag-body); font-size: 11.5px; font-weight: 600; letter-spacing: 0; color: var(--ag-text); text-align: left; line-height: 1.15; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ag-bc-g b { font-size: 18px; flex: none; }
+.ag-bc-g:last-child:nth-child(odd) { grid-column: 1 / -1; }
+
+/* sim screens and live game boards: a long press selects text and pops the
+   magnifier (it looked like the game zooming in), a double tap zooms the page;
+   neither belongs on a scoreboard */
+html:is(.is-app, .app-look) :is(.simp-page, .plf-game, .btc-wrap, .bt-board, .bt-feed, .sm-now, .sm-log-wrap) {
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: manipulation;
+}

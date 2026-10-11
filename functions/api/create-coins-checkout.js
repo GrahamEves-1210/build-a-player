@@ -6,10 +6,10 @@ import Stripe from 'stripe'
 // purchase in coin_purchases; the game collects it (claim_coin_purchases).
 // Keep in step with src/lib/coins.js.
 const PACKS = {
-  bap_coins_1200:  { coins: 2500,  cents: 199 },
-  bap_coins_3200:  { coins: 7000,  cents: 499 },
-  bap_coins_7000:  { coins: 15000, cents: 999 },
-  bap_coins_15000: { coins: 32000, cents: 1999 },
+  bap_coins_1200:  { coins: 3000,  cents: 199 },
+  bap_coins_3200:  { coins: 8500,  cents: 499 },
+  bap_coins_7000:  { coins: 18000, cents: 999 },
+  bap_coins_15000: { coins: 38000, cents: 1999 },
 }
 
 export async function onRequestPost(context) {

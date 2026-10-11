@@ -340,44 +340,49 @@ const ALLTIME_MVP_POOL = [
 ]
 
 export function calcMVPResult(result, isAllTime = false, teamShort = null) {
-  const { wins = 0, seasonTDs = 0, seasonRushTDs = 0, seasonPassYds = 0, seasonRushYds = 0, ovr = 70, playoffs = false } = result
+  const { wins = 0, seasonTDs = 0, seasonRushTDs = 0, seasonPassYds = 0, seasonRushYds = 0, seasonINTs = 0, ovr = 70, playoffs = false } = result
   const totalTDs = seasonTDs + seasonRushTDs
   const totalYds = seasonPassYds + seasonRushYds
+  const ints = seasonINTs
 
+  // What MVP seasons actually look like: 40+ touchdowns, single-digit picks,
+  // a top seed. 34 TD / 14 INT on a wild-card team isn't one.
   let p = 0
 
-  // TDs — most important factor
-  if (totalTDs >= 50)      p += 0.52
-  else if (totalTDs >= 45) p += 0.44
-  else if (totalTDs >= 40) p += 0.35
-  else if (totalTDs >= 35) p += 0.25
-  else if (totalTDs >= 30) p += 0.13
-  // <30 TDs contributes nothing — essentially disqualifying
+  // Touchdowns: the headline (under 35 is almost never enough)
+  if (totalTDs >= 50)      p += 0.50
+  else if (totalTDs >= 45) p += 0.38
+  else if (totalTDs >= 40) p += 0.25
+  else if (totalTDs >= 35) p += 0.10
 
-  // Yards — second most important
-  if (totalYds >= 5500)      p += 0.32
-  else if (totalYds >= 5000) p += 0.26
-  else if (totalYds >= 4500) p += 0.20
-  else if (totalYds >= 4000) p += 0.13
-  else if (totalYds >= 3500) p += 0.05
+  // Yards
+  if (totalYds >= 5500)      p += 0.22
+  else if (totalYds >= 5000) p += 0.15
+  else if (totalYds >= 4500) p += 0.08
+
+  // Interceptions: voters don't forgive them
+  if (ints <= 6)       p += 0.05
+  else if (ints >= 12) p -= 0.18
+  else if (ints >= 10) p -= 0.08
 
   // OVR
-  if (ovr >= 95)      p += 0.08
-  else if (ovr >= 90) p += 0.05
-  else if (ovr >= 85) p += 0.02
+  if (ovr >= 95)      p += 0.05
+  else if (ovr >= 90) p += 0.03
 
-  // Wins — tiebreaker only
-  if (wins >= 16)      p += 0.08
-  else if (wins >= 14) p += 0.05
+  // Wins: MVPs come from the top seeds
+  if (wins >= 15)      p += 0.12
+  else if (wins >= 14) p += 0.08
   else if (wins >= 12) p += 0.03
-  else if (wins >= 10) p += 0.01
+  else if (wins === 11) p -= 0.05
 
   // MVP is voted on before the playoffs: a berth counts, playoff and Super Bowl results don't
   if (playoffs) p += 0.02
 
-  // Hard cap: under 30 combined TDs, essentially never wins
-  if (totalTDs < 30) p = Math.min(p, 0.03)
-  if (wins < 10) p = 0
+  // Hard limits
+  if (totalTDs < 35) p = Math.min(p, 0.02)
+  if (ints >= 14) p = Math.min(p, 0.03)
+  if (wins < 11) p = 0
+  p = Math.max(0, p)
 
   if (isAllTime) p *= 0.80
 

@@ -193,11 +193,12 @@ export function BuildComplete({ complete, ovr, label = 'OVR', build = null, type
         </div>
         <div className="ag-bc-tier">{tier.name}</div>
         {chips.length > 0 && (
-          <div className="ag-bc-grades" style={{ gridTemplateColumns: `repeat(${Math.min(5, chips.length)}, 1fr)` }}>
+          // full trait names (no abbreviations), two to a row
+          <div className="ag-bc-grades">
             {chips.map((t, i) => (
               <span key={t} className="ag-bc-g" style={{ '--g': gradeColor(build[t].val), '--d': `${180 + i * 75}ms` }}>
+                <small>{attrMap?.[t]?.label ?? t}</small>
                 <b>{valToGrade(build[t].val)}</b>
-                <small>{attrMap?.[t]?.shortLabel ?? t.slice(0, 3).toUpperCase()}</small>
               </span>
             ))}
           </div>
