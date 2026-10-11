@@ -10,15 +10,16 @@ import { seeded } from './rng'
 import { queueCloudSave, fetchCloudCareer, deleteCloudCareer } from './careerCloud'
 import { createDirector } from './seasonDirector'
 import {
-  runSimulation, runRBSimulation, runWRSimulation, runTESimulation,
-  calcOVR, calcOVRRB, calcOVRWR, calcOVRTE,
-  calcMVPResult, calcOPOYResult, calcWROPOYResult, calcTEOPOYResult, valToGrade, nflHeadshot, HEADSHOT_BASE,
+  runSimulation, runRBSimulation, runWRSimulation, runTESimulation, runDBSimulation,
+  calcOVR, calcOVRRB, calcOVRWR, calcOVRTE, calcOVRDB,
+  calcMVPResult, calcOPOYResult, calcWROPOYResult, calcTEOPOYResult, calcDBDpoyResult, valToGrade, nflHeadshot, HEADSHOT_BASE,
 } from '../utils/simulation'
 import { runBucketSimulation, calcBucketOVR, TEAM_RATINGS as NBA_RATINGS } from '../utils/bucketSimulation'
 import { TYPES, ATTR, QBS } from '../data/qbs'
 import { RB_TYPES, RB_ATTR, RBS } from '../data/rbs'
 import { WR_TYPES, WR_ATTR, WRS } from '../data/wrs'
 import { TE_TYPES, TE_ATTR, TES } from '../data/tes'
+import { DB_TYPES, DB_ATTR, DBS } from '../data/dbs'
 import { OLS, OL_ATTR_WEIGHT, olOVR } from '../data/ols'
 import HEADSHOTS from '../data/headshots.json'
 import NBA_HEADSHOTS from '../data/nba-headshots.json'
@@ -32,6 +33,7 @@ import { LEGENDS } from '../data/qb-legends'
 import { RB_LEGENDS } from '../data/rb-legends'
 import { WR_LEGENDS } from '../data/wr-legends'
 import { TE_LEGENDS } from '../data/te-legends'
+import { DB_LEGENDS } from '../data/db-legends'
 import { NBA_ALLTIME_GUARD_PLAYERS } from '../data/nba-guard-legends'
 import { NBA_ALLTIME_BIG_PLAYERS } from '../data/nba-big-legends'
 
@@ -46,9 +48,9 @@ const nick = name => (name || '').split(' ').slice(-1)[0]
 
 // ── The sports ────────────────────────────────────────────────────────────────
 const NBA_EAST = new Set(['ATL', 'BOS', 'BKN', 'CHA', 'CHI', 'CLE', 'DET', 'IND', 'MIA', 'MIL', 'NYK', 'ORL', 'PHI', 'TOR', 'WAS'])
-const NFL_POS_TYPES = { qb: TYPES, rb: RB_TYPES, wr: WR_TYPES, te: TE_TYPES }
-const NFL_OVR = { qb: b => calcOVR(b, TYPES), rb: b => calcOVRRB(b, RB_TYPES), wr: b => calcOVRWR(b, WR_TYPES), te: b => calcOVRTE(b, TE_TYPES) }
-const NFL_AWARD = { qb: calcMVPResult, rb: calcOPOYResult, wr: calcWROPOYResult, te: calcTEOPOYResult }
+const NFL_POS_TYPES = { qb: TYPES, rb: RB_TYPES, wr: WR_TYPES, te: TE_TYPES, db: DB_TYPES }
+const NFL_OVR = { qb: b => calcOVR(b, TYPES), rb: b => calcOVRRB(b, RB_TYPES), wr: b => calcOVRWR(b, WR_TYPES), te: b => calcOVRTE(b, TE_TYPES), db: b => calcOVRDB(b, DB_TYPES) }
+const NFL_AWARD = { qb: calcMVPResult, rb: calcOPOYResult, wr: calcWROPOYResult, te: calcTEOPOYResult, db: calcDBDpoyResult }
 const olScore = p => Object.entries(OL_ATTR_WEIGHT).reduce((s, [k, w]) => s + (p.attrs?.[k] ?? 5) * w, 0) / Object.values(OL_ATTR_WEIGHT).reduce((a, b) => a + b, 0)
 
 export const SPORT = {
@@ -58,21 +60,36 @@ export const SPORT = {
     // a team as the career sees it: off / def on a 1–10 scale
     teamOf: short => { const t = NFL_TEAMS.find(x => x.short === short) ?? NFL_TEAMS[0]; return { short: t.short, name: t.name, color: t.color, color2: t.color2, off: t.off, def: t.def, conf: t.conf, div: t.div } },
     status: core => (core >= 7 ? 'Contender' : core >= 5.5 ? 'In the mix' : 'Rebuilding'),
-    positions: ['qb', 'rb', 'wr', 'te'],
-    label: { qb: 'QB', rb: 'RB', wr: 'WR', te: 'TE' }, posName: { qb: 'Quarterback', rb: 'Running back', wr: 'Wide receiver', te: 'Tight end' },
-    types: NFL_POS_TYPES, attr: { qb: ATTR, rb: RB_ATTR, wr: WR_ATTR, te: TE_ATTR },
-    pool: { qb: QBS, rb: RBS, wr: WRS, te: TES, ol: OLS },
-    groups: ['qb', 'rb', 'wr', 'te', 'ol'], starters: { qb: 1, rb: 1, wr: 3, te: 1, ol: 5 }, keep: { qb: 2, rb: 2, wr: 4, te: 2, ol: 5 },
+    // the career positions, and which side of the ball each plays (DL and LB join the defense later)
+    positions: ['qb', 'rb', 'wr', 'te', 'db'],
+    side: { qb: 'off', rb: 'off', wr: 'off', te: 'off', db: 'def' },
+    label: { qb: 'QB', rb: 'RB', wr: 'WR', te: 'TE', db: 'DB' }, posName: { qb: 'Quarterback', rb: 'Running back', wr: 'Wide receiver', te: 'Tight end', db: 'Defensive back' },
+    types: NFL_POS_TYPES, attr: { qb: ATTR, rb: RB_ATTR, wr: WR_ATTR, te: TE_ATTR, db: DB_ATTR },
+    pool: { qb: QBS, rb: RBS, wr: WRS, te: TES, ol: OLS, db: DBS },
+    // every roster group a team keeps: the offense, then the defense (dl, lb go here when their data lands)
+    groups: ['qb', 'rb', 'wr', 'te', 'ol', 'db'], starters: { qb: 1, rb: 1, wr: 3, te: 1, ol: 5, db: 4 }, keep: { qb: 2, rb: 2, wr: 4, te: 2, ol: 5, db: 5 },
     slots: { ol: ['LT', 'LG', 'C', 'RG', 'RT'] },
-    depthLabel: (pos, i) => `${({ qb: 'QB', rb: 'RB', wr: 'WR', te: 'TE' })[pos]}${i}`,
+    depthLabel: (pos, i) => `${({ qb: 'QB', rb: 'RB', wr: 'WR', te: 'TE', db: 'DB' })[pos]}${i}`,
     ovr: (pos, b) => NFL_OVR[pos]?.(b) ?? 0,
     realOvr: (pos, p) => Math.round(pos === 'ol' ? (olOVR(p.attrs) ?? 72) : (p.ovr ?? NFL_OVR[pos](buildOf(NFL_POS_TYPES[pos], p)))),
     photo: name => (HEADSHOTS[name] ? nflHeadshot(HEADSHOTS[name]) : null),
-    sim: pos => ({ qb: (b, t) => runSimulation(b, TYPES, t, false), rb: (b, t) => runRBSimulation(b, RB_TYPES, t, false), wr: (b, t) => runWRSimulation(b, WR_TYPES, t, false), te: (b, t) => runTESimulation(b, TE_TYPES, t, false) })[pos],
+    sim: pos => ({ qb: (b, t) => runSimulation(b, TYPES, t, false), rb: (b, t) => runRBSimulation(b, RB_TYPES, t, false), wr: (b, t) => runWRSimulation(b, WR_TYPES, t, false), te: (b, t) => runTESimulation(b, TE_TYPES, t, false), db: (b, t) => runDBSimulation(b, t, false) })[pos],
     // what the sim plays against: the team, its offense moved by the fit and the year's events
-    simTeam: (t, fit, m) => ({ ...t, off: clamp(fit.off + fit.adj + (m.off ?? 0), 1, 10), def: clamp(fit.def + (m.def ?? 0), 1, 10) }),
+    // the pieces around you move your side of the ball: the offense for a skill player, the defense for a DB
+    simTeam: (t, fit, m, c) => {
+      const def = SPORT.nfl.side[c?.pos] === 'def'
+      return { ...t, off: clamp(fit.off + (def ? 0 : fit.adj) + (m.off ?? 0), 1, 10), def: clamp(fit.def + (def ? fit.adj : 0) + (m.def ?? 0), 1, 10) }
+    },
     // the pieces of the offense around you, graded 0–11
     fit: (ro, pos, notMe) => {
+      if (SPORT.nfl.side[pos] === 'def') {
+        // a DB's world: the rest of the secondary (the pass rush and linebackers join when they're in the game)
+        const mates = (ro.db ?? []).filter(notMe).sort((a, b) => b.ovr - a.ovr).slice(0, 3)
+        const secG = r10(ovrGradeVal(avgOvr(mates)))
+        const front = ['dl', 'lb'].filter(g => ro[g]?.length).map(g => ({ k: g === 'dl' ? 'PASS RUSH' : 'LINEBACKERS', v: r10(ovrGradeVal(avgOvr(ro[g].slice(0, g === 'dl' ? 4 : 3)))), names: ro[g].slice(0, 4).map(p => p.name) }))
+        const frontAdj = front.reduce((s, g) => s + (g.v - 6) * 0.15, 0)
+        return { groups: [{ k: 'SECONDARY', v: secG, names: mates.map(p => p.name) }, ...front], adj: (secG - 6) * 0.25 + frontAdj, need: 11 - secG, secondary: secG }
+      }
       const ol = ro.ol.slice(0, 5)
       const weapons = [...ro.wr, ...ro.te, ...ro.rb].filter(p => p.pos !== pos).filter(notMe).sort((a, b) => b.ovr - a.ovr).slice(0, 3)
       const qb = pos === 'qb' ? null : ro.qb.filter(notMe)[0] ?? null
@@ -82,11 +99,11 @@ export const SPORT = {
       const need = pos === 'qb' ? 11 - qbG : 11 - wpG
       return { groups, adj, need, ol: olG, weapons: wpG, qb: qbG }
     },
-    fitNote: (f, pos) => (pos === 'qb'
+    fitNote: (f, pos) => (pos === 'db' ? 'The secondary around him decides how often he is left on an island.' : pos === 'qb'
       ? (f.ol < 4.5 ? 'A bad line hurts a quarterback: sacks, hits, hurried throws.' : f.weapons >= 8 ? 'Elite weapons make a quarterback\'s numbers.' : 'A workable line and honest weapons. The quarterback decides it.')
       : (f.qb >= 8 ? 'A real quarterback feeds his weapons: targets, yards, touchdowns.' : f.qb < 5 ? 'A weak quarterback caps a skill player. Fewer good balls.' : 'A middling quarterback. The plays have to be made after the catch.')),
-    physical: { qb: ['legs', 'arm'], rb: ['speed', 'burst', 'elusiveness'], wr: ['speed', 'vertical', 'afterCatch'], te: ['speed', 'vertical', 'strength'] },
-    durable: { qb: ['size', 'pocket-presence'], rb: ['strength', 'size', 'balance'], wr: ['size', 'bodyControl'], te: ['strength', 'size'] },
+    physical: { qb: ['legs', 'arm'], rb: ['speed', 'burst', 'elusiveness'], wr: ['speed', 'vertical', 'afterCatch'], te: ['speed', 'vertical', 'strength'], db: ['speed', 'fluidity'] },
+    durable: { qb: ['size', 'pocket-presence'], rb: ['strength', 'size', 'balance'], wr: ['size', 'bodyControl'], te: ['strength', 'size'], db: ['size', 'runSupport'] },
     ageShift: pos => (pos === 'qb' ? 2 : 0),
     draft: {
       rounds: 7,
@@ -99,38 +116,42 @@ export const SPORT = {
       rb: [['forty', '40-yard dash', 'speed'], ['cone', '3-cone drill', 'elusiveness'], ['bench', 'Bench press', 'strength']],
       wr: [['forty', '40-yard dash', 'speed'], ['cone', '3-cone drill', 'routeRunning'], ['gauntlet', 'Gauntlet drill', 'hands']],
       te: [['forty', '40-yard dash', 'speed'], ['bench', 'Bench press', 'strength'], ['gauntlet', 'Gauntlet drill', 'hands']],
+      db: [['forty', '40-yard dash', 'speed'], ['cone', '3-cone drill', 'fluidity'], ['gauntlet', 'Ball skills drill', 'hands']],
     },
     goals: {
       qb: ovr => [['passYds', 'Throw for', ovr >= 90 ? 4000 : ovr >= 82 ? 3500 : 3000, 'yards'], ['tds', 'Throw', ovr >= 90 ? 30 : ovr >= 82 ? 24 : 18, 'TDs'], ['wins', 'Win', ovr >= 90 ? 11 : ovr >= 82 ? 9 : 7, 'games']],
       rb: ovr => [['rushYds', 'Rush for', ovr >= 90 ? 1300 : ovr >= 82 ? 1000 : 750, 'yards'], ['tds', 'Score', ovr >= 90 ? 13 : ovr >= 82 ? 9 : 6, 'TDs'], ['wins', 'Win', ovr >= 90 ? 10 : 8, 'games']],
       wr: ovr => [['recYds', 'Catch', ovr >= 90 ? 1300 : ovr >= 82 ? 1000 : 750, 'yards'], ['tds', 'Score', ovr >= 90 ? 11 : ovr >= 82 ? 8 : 5, 'TDs'], ['recs', 'Make', ovr >= 90 ? 95 : ovr >= 82 ? 75 : 55, 'catches']],
+      db: ovr => [['ints', 'Pick off', ovr >= 90 ? 6 : ovr >= 82 ? 4 : 2, 'passes'], ['pbus', 'Defend', ovr >= 90 ? 18 : ovr >= 82 ? 13 : 9, 'passes'], ['tackles', 'Make', ovr >= 90 ? 75 : ovr >= 82 ? 62 : 50, 'tackles']],
       te: ovr => [['recYds', 'Catch', ovr >= 90 ? 1000 : ovr >= 82 ? 750 : 550, 'yards'], ['tds', 'Score', ovr >= 90 ? 9 : ovr >= 82 ? 6 : 4, 'TDs'], ['recs', 'Make', ovr >= 90 ? 80 : ovr >= 82 ? 60 : 45, 'catches']],
     },
     seasonStats: (pos, f) => pos === 'qb'
       ? { passYds: f.seasonPassYds, tds: f.seasonTDs, ints: f.seasonINTs, rating: f.seasonRating, rushYds: f.seasonRushYds, compPct: f.seasonCompPct }
+      : pos === 'db' ? { ints: f.seasonINTs, pbus: f.seasonPBUs, tackles: f.seasonTackles, tfl: f.seasonTFL, ff: f.seasonFF, pickSixes: f.seasonPickSixes }
       : pos === 'rb' ? { rushYds: f.seasonRushYds, tds: (f.seasonRushTDs ?? 0) + (f.seasonRecTDs ?? 0), recYds: f.seasonRecYds, ypc: f.seasonYPC, fumbles: f.seasonFumbles }
       : { recs: f.seasonRecs, recYds: f.seasonRecYds, tds: f.seasonRecTDs, ypr: f.seasonYPR },
     rateKeys: ['rating', 'compPct', 'ypc', 'ypr'],     // per-game rates: never summed into career totals
     averages: null,
-    headline: { qb: ['passYds', 'tds', 'ints'], rb: ['rushYds', 'tds', 'recYds'], wr: ['recs', 'recYds', 'tds'], te: ['recs', 'recYds', 'tds'] },
-    awardName: { qb: 'MVP', rb: 'OPOY', wr: 'OPOY', te: 'OPOY' },
+    headline: { qb: ['passYds', 'tds', 'ints'], rb: ['rushYds', 'tds', 'recYds'], wr: ['recs', 'recYds', 'tds'], te: ['recs', 'recYds', 'tds'], db: ['ints', 'pbus', 'tackles'] },
+    awardName: { qb: 'MVP', rb: 'OPOY', wr: 'OPOY', te: 'OPOY', db: 'DPOY' },
     honor: 'Pro Bowl', honors: 'PRO BOWLS', first: 'All-Pro',
     // the numbers that get a player there
-    proBowl: { qb: s => s.tds >= 30 || s.passYds >= 4300, rb: s => s.rushYds >= 1200 || s.tds >= 12, wr: s => s.recYds >= 1200 || s.tds >= 10, te: s => s.recYds >= 850 || s.tds >= 8 },
-    allPro: { qb: s => s.tds >= 38 || (s.tds >= 34 && s.passYds >= 4600), rb: s => s.rushYds >= 1550 || (s.rushYds >= 1350 && s.tds >= 14), wr: s => s.recYds >= 1500 || (s.recYds >= 1350 && s.tds >= 12), te: s => s.recYds >= 1150 || (s.recYds >= 1000 && s.tds >= 10) },
-    allProNear: { qb: s => s.tds >= 32, rb: s => s.rushYds >= 1300, wr: s => s.recYds >= 1300, te: s => s.recYds >= 950 },
+    proBowl: { qb: s => s.tds >= 30 || s.passYds >= 4300, rb: s => s.rushYds >= 1200 || s.tds >= 12, wr: s => s.recYds >= 1200 || s.tds >= 10, te: s => s.recYds >= 850 || s.tds >= 8, db: s => s.ints >= 5 || (s.ints >= 3 && s.pbus >= 15) },
+    allPro: { db: s => s.ints >= 7 || (s.ints >= 5 && s.pbus >= 18), qb: s => s.tds >= 38 || (s.tds >= 34 && s.passYds >= 4600), rb: s => s.rushYds >= 1550 || (s.rushYds >= 1350 && s.tds >= 14), wr: s => s.recYds >= 1500 || (s.recYds >= 1350 && s.tds >= 12), te: s => s.recYds >= 1150 || (s.recYds >= 1000 && s.tds >= 10) },
+    allProNear: { qb: s => s.tds >= 32, rb: s => s.rushYds >= 1300, wr: s => s.recYds >= 1300, te: s => s.recYds >= 950, db: s => s.ints >= 6 },
     award: (c, f, s) => {
-      const bar = { qb: () => (s.tds ?? 0) + (f.seasonRushTDs ?? 0) >= 36 && s.passYds >= 4400 && f.wins >= 11, rb: () => s.rushYds >= 1700 || (s.rushYds >= 1500 && s.tds >= 16), wr: () => s.recYds >= 1600 && s.tds >= 11, te: () => s.recYds >= 1300 && s.tds >= 10 }
+      const bar = { db: () => s.ints >= 7 || (s.ints >= 6 && (s.pickSixes ?? 0) >= 1), qb: () => (s.tds ?? 0) + (f.seasonRushTDs ?? 0) >= 36 && s.passYds >= 4400 && f.wins >= 11, rb: () => s.rushYds >= 1700 || (s.rushYds >= 1500 && s.tds >= 16), wr: () => s.recYds >= 1600 && s.tds >= 11, te: () => s.recYds >= 1300 && s.tds >= 10 }
       return !!NFL_AWARD[c.pos](f, false, c.team).userWins && bar[c.pos]()
     },
-    seasonScore: (pos, s) => { const st = s.stats; return pos === 'qb' ? st.tds / 40 * .4 + st.passYds / 5000 * .3 + s.wins / 15 * .3 : pos === 'rb' ? st.rushYds / 1700 * .5 + st.tds / 18 * .3 + s.wins / 15 * .2 : st.recYds / 1600 * .5 + st.tds / 14 * .3 + s.wins / 15 * .2 },
-    legacyProd: (pos, st) => (pos === 'qb' ? (st.tds ?? 0) / 10 + (st.passYds ?? 0) / 1000 : pos === 'rb' ? (st.tds ?? 0) / 4 + (st.rushYds ?? 0) / 500 : (st.tds ?? 0) / 4 + (st.recYds ?? 0) / 500),
+    seasonScore: (pos, s) => { const st = s.stats; return pos === 'db' ? (st.ints ?? 0) / 7 * .45 + (st.pbus ?? 0) / 20 * .25 + s.wins / 15 * .3 : pos === 'qb' ? st.tds / 40 * .4 + st.passYds / 5000 * .3 + s.wins / 15 * .3 : pos === 'rb' ? st.rushYds / 1700 * .5 + st.tds / 18 * .3 + s.wins / 15 * .2 : st.recYds / 1600 * .5 + st.tds / 14 * .3 + s.wins / 15 * .2 },
+    // a DB's production: picks and the ones taken back (the greats are scored the same way)
+    legacyProd: (pos, st) => (pos === 'db' ? (st.ints ?? 0) * 1.3 + (st.pickSixes ?? 0) * 2 : pos === 'qb' ? (st.tds ?? 0) / 10 + (st.passYds ?? 0) / 1000 : pos === 'rb' ? (st.tds ?? 0) / 4 + (st.rushYds ?? 0) / 500 : (st.tds ?? 0) / 4 + (st.recYds ?? 0) / 500),
     made: f => !!f.playoffs,
     rounds: ['Wild Card', 'Divisional', 'Conference Championship', 'Super Bowl'], final: 'Super Bowl', series: false,
-    lineKeys: ['passYds', 'tds', 'ints', 'rushYds', 'rushTDs', 'recYds', 'rec', 'recTDs'],
+    lineKeys: ['passYds', 'tds', 'ints', 'rushYds', 'rushTDs', 'recYds', 'rec', 'recTDs', 'tackles', 'pbus'],
     step: 1, gameWord: 'WEEK', snaps: 'snaps', injScale: 1, moneyWord: 'yards',
     injuries: [['hamstring strain', 2, 3], ['high ankle sprain', 3, 5], ['rib cartilage', 1, 2], ['concussion', 1, 2], ['MCL sprain', 4, 6], ['shoulder (AC joint)', 2, 4], ['turf toe', 2, 3]],
-    money: { qb: [8, 58], rb: [2, 18], wr: [4, 34], te: [2, 19] },
+    money: { qb: [8, 58], rb: [2, 18], wr: [4, 34], te: [2, 19], db: [2, 22] },
     primeNote: pos => `Traits grow until about 25, hold through the prime, then the physical ones fade past ${pos === 'qb' ? '33' : '31'}.`,
   },
   bucket: {
@@ -224,7 +245,8 @@ export const SPORT = {
 }
 export const sportOf = c => SPORT[c?.sport] ?? SPORT.nfl
 // merged lookups (position keys never collide between the sports)
-export const OFFENSE_POS = SPORT.nfl.positions
+export const CAREER_POS = SPORT.nfl.positions
+export const OFFENSE_POS = CAREER_POS     // (older name)
 export const POS_LABEL = { ...SPORT.nfl.label, ...SPORT.bucket.label }
 export const POS_NAME = { ...SPORT.nfl.posName, ...SPORT.bucket.posName }
 export const POS_TYPES = { ...SPORT.nfl.types, ...SPORT.bucket.types }
@@ -232,7 +254,7 @@ export const POS_ATTR = { ...SPORT.nfl.attr, ...SPORT.bucket.attr }
 export const AWARD_NAME = { ...SPORT.nfl.awardName, ...SPORT.bucket.awardName }
 export const STARTERS = { ...SPORT.nfl.starters, ...SPORT.bucket.starters }
 export const PO_ROUNDS = SPORT.nfl.rounds
-export const STAT_LABEL = { passYds: 'PASS YDS', tds: 'TD', ints: 'INT', rating: 'RTG', rushYds: 'RUSH YDS', compPct: 'CMP%', recYds: 'REC YDS', ypc: 'YPC', fumbles: 'FUM', recs: 'REC', ypr: 'YPR', ppg: 'PPG', rpg: 'RPG', apg: 'APG', spg: 'SPG', bpg: 'BPG', pts: 'PTS', reb: 'REB', ast: 'AST' }
+export const STAT_LABEL = { passYds: 'PASS YDS', tds: 'TD', ints: 'INT', rating: 'RTG', rushYds: 'RUSH YDS', compPct: 'CMP%', recYds: 'REC YDS', ypc: 'YPC', fumbles: 'FUM', recs: 'REC', ypr: 'YPR', pbus: 'PD', tackles: 'TKL', pickSixes: 'PICK-6', ppg: 'PPG', rpg: 'RPG', apg: 'APG', spg: 'SPG', bpg: 'BPG', pts: 'PTS', reb: 'REB', ast: 'AST' }
 export const HEADLINE_STATS = { ...SPORT.nfl.headline, ...SPORT.bucket.headline }
 export const ovrOf = (pos, build, sport = null) => (sport ? SPORT[sport] : SPORT.bucket.positions.includes(pos) ? SPORT.bucket : SPORT.nfl).ovr(pos, build) ?? 0
 const sportForPos = pos => (SPORT.bucket.positions.includes(pos) ? SPORT.bucket : SPORT.nfl)
@@ -308,7 +330,7 @@ const hashN = s => { let h = 7; for (const ch of String(s)) h = (h * 31 + ch.cha
 const born = (sport, name) => BIRTH[sport === 'bucket' ? 'bucket' : 'nfl'][name]
 const ageOf = (sport, name, yrs = 0) => (born(sport, name) ? FIRST_SEASON - born(sport, name) : 23 + (hashN(name) % 6)) + yrs
 // how long a position lasts: gone at the cap, maybe gone in the two years before it
-const RETIRE_AT = { qb: 41, rb: 33, wr: 35, te: 35, ol: 36, guard: 38, big: 38 }
+const RETIRE_AT = { qb: 41, rb: 33, wr: 35, te: 35, ol: 36, db: 35, dl: 35, lb: 35, guard: 38, big: 38 }
 // how many seasons past the first a roster is for (in the offseason, the one coming up)
 const rosterYrs = c => Math.max(0, (c.season ?? FIRST_SEASON) + (c.phase === 'offseason' ? 1 : 0) - FIRST_SEASON)
 const man = (S, pos, p, yrs = 0) => ({ name: p.name, pos, ovr: S.realOvr(pos, p), age: ageOf(S.id, p.name, yrs), photo: S.photo(p.name), slot: p.pos ?? null, from: p.team })
@@ -847,6 +869,7 @@ export function playoffRound(c, score, game = null) {
     const n = (sum, mult = 1) => Math.max(0, Math.round(((sum ?? 0) / g) * k * mult))
     mySc = Math.round(17 + (c.simTeam?.off ?? 5) * 1.2 + score * 8 + r() * 6); oppSc = won ? Math.max(3, mySc - 3 - Math.floor(r() * 14)) : mySc + 1 + Math.floor(r() * 12)
     line = c.pos === 'qb' ? { passYds: n(f.seasonPassYds), tds: n(f.seasonTDs, won ? 1.1 : 0.8), ints: Math.round((1 - score) * 2 * r()), rushYds: n(f.seasonRushYds) }
+      : c.pos === 'db' ? { tackles: n(f.seasonTackles), ints: n(f.seasonINTs, won ? 1.4 : 0.6), pbus: n(f.seasonPBUs) }
       : c.pos === 'rb' ? { rushYds: n(f.seasonRushYds), rushTDs: n(f.seasonRushTDs, won ? 1.2 : 0.7), recTDs: 0, recYds: n(f.seasonRecYds), carries: n(f.seasonCarries) }
       : { rec: n(f.seasonRecs), recYds: n(f.seasonRecYds), recTDs: n(f.seasonRecTDs, won ? 1.3 : 0.6) }
   }
@@ -1145,13 +1168,14 @@ export const ALL_TIME = {
   rb: greats([['Emmitt Smith', 300], ['Jim Brown', 294], ['Walter Payton', 269], ['Marshall Faulk', 268], ['Barry Sanders', 267], ['Marcus Allen', 234], ['Adrian Peterson', 227], ['O.J. Simpson', 206], ['LaDainian Tomlinson', 204], ['Terrell Davis', 196], ['Earl Campbell', 194], ['Eric Dickerson', 192], ['Thurman Thomas', 188], ['Jerome Bettis', 171], ['Derrick Henry', 151], ['Tony Dorsett', 150], ['Shaun Alexander', 144], ['Curtis Martin', 133], ['Frank Gore', 128], ['Edgerrin James', 124]]),
   wr: greats([['Jerry Rice', 457], ['Lance Alworth', 221], ['Marvin Harrison', 215], ['Terrell Owens', 210], ['Antonio Brown', 198], ['Randy Moss', 195], ['Cris Carter', 190], ['Michael Irvin', 188], ['Larry Fitzgerald', 187], ['Reggie Wayne', 179], ['Davante Adams', 178], ['Tim Brown', 161], ['Torry Holt', 154], ['DeAndre Hopkins', 153], ['Julio Jones', 151], ['Steve Smith Sr.', 147], ['Isaac Bruce', 144], ['Steve Largent', 143], ['Andre Johnson', 142], ['Calvin Johnson', 134]]),
   te: greats([['Travis Kelce', 266], ['Tony Gonzalez', 254], ['Rob Gronkowski', 247], ['Shannon Sharpe', 236], ['Jason Witten', 186], ['Antonio Gates', 184], ['Dave Casper', 153], ['Mike Ditka', 151], ['Jimmy Graham', 128], ['George Kittle', 119], ['Kellen Winslow', 115], ['Dallas Clark', 107], ['Ozzie Newsome', 103], ['Vernon Davis', 103], ['Greg Olsen', 96]]),
+  db: greats([['Ronnie Lott', 350], ['Rod Woodson', 346], ['Herb Adderley', 314], ['Charles Woodson', 302], ['Deion Sanders', 298], ['Emlen Tunnell', 291], ['Ed Reed', 288], ['Mel Blount', 284], ['Willie Brown', 260], ['Paul Krause', 251], ['Troy Polamalu', 243], ['Ty Law', 241], ['Darrell Green', 238], ['Night Train Lane', 231], ['Champ Bailey', 226], ['Ken Houston', 219], ['Aeneas Williams', 214], ['Larry Wilson', 212], ['Brian Dawkins', 207], ['Mike Haynes', 204], ['Steve Atwater', 181], ['Darrelle Revis', 180], ['Richard Sherman', 177], ['Lem Barney', 174], ['Jalen Ramsey', 166]]),
   guard: greats([['LeBron James', 690], ['Michael Jordan', 544], ['Kobe Bryant', 536], ['Julius Erving', 500], ['Magic Johnson', 444], ['Stephen Curry', 413], ['Larry Bird', 405], ['Kevin Durant', 399], ['Scottie Pippen', 365], ['Jerry West', 350], ['Oscar Robertson', 348], ['Dwyane Wade', 343], ['Chris Paul', 331], ['John Stockton', 326], ['James Harden', 309], ['Russell Westbrook', 309], ['Jason Kidd', 288], ['Steve Nash', 275], ['Isiah Thomas', 264], ['Clyde Drexler', 260], ['Allen Iverson', 259], ['Ray Allen', 253], ['Kawhi Leonard', 225], ['Reggie Miller', 195], ['Luka Doncic', 141]]),
   big: greats([['Kareem Abdul-Jabbar', 683], ['Bill Russell', 618], ['Tim Duncan', 543], ['Shaquille O\'Neal', 491], ['Wilt Chamberlain', 450], ['Karl Malone', 445], ['Dirk Nowitzki', 403], ['Hakeem Olajuwon', 400], ['Moses Malone', 397], ['Kevin Garnett', 377], ['Bob Pettit', 341], ['David Robinson', 338], ['Charles Barkley', 329], ['Giannis Antetokounmpo', 305], ['Dwight Howard', 279], ['Nikola Jokic', 273], ['Patrick Ewing', 270], ['Pau Gasol', 248], ['Dennis Rodman', 230], ['Kevin McHale', 218], ['Anthony Davis', 214], ['Dikembe Mutombo', 192], ['Chris Webber', 185], ['Joel Embiid', 179], ['Yao Ming', 149]]),
 }
 
 // The player comp: the real players (today's and all-time) whose grades sit
 // closest to this build's, trait by trait. A player listed for several teams counts once.
-const ALL_TIME_POOL = { qb: LEGENDS, rb: RB_LEGENDS, wr: WR_LEGENDS, te: TE_LEGENDS, guard: NBA_ALLTIME_GUARD_PLAYERS, big: NBA_ALLTIME_BIG_PLAYERS }
+const ALL_TIME_POOL = { qb: LEGENDS, rb: RB_LEGENDS, wr: WR_LEGENDS, te: TE_LEGENDS, db: DB_LEGENDS, guard: NBA_ALLTIME_GUARD_PLAYERS, big: NBA_ALLTIME_BIG_PLAYERS }
 export function compsFor(c, n = 5) {
   const S = sportOf(c)
   const best = new Map()

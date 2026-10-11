@@ -4209,7 +4209,7 @@ html.app-look .ag-blacktop--menu:hover .ag-bt-tags .bt-mode-tag:last-child { tra
 }
 /* Career: the starting offense in a real formation */
 .crl-field--nfl { position: relative; display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); grid-template-rows: auto auto auto; row-gap: 8px; column-gap: 2px; padding: 14px 6px 12px; background: repeating-linear-gradient(90deg, rgba(34,197,94,.10) 0 11.11%, rgba(34,197,94,.06) 11.11% 22.22%); }
-.crl-field--nfl .crl-at { grid-column: var(--c); grid-row: var(--r); display: flex; justify-content: center; min-width: 0; position: relative; z-index: 1; }
+.crl-field--nfl .crl-at { grid-column: var(--c) / span var(--s, 1); grid-row: var(--r); display: flex; justify-content: center; min-width: 0; position: relative; z-index: 1; }
 .crl-field--nfl .crl-man { width: 100%; }
 .crl-field--nfl .crl-face { width: 34px; height: 34px; border-width: 1.5px; }
 .crl-field--nfl .crl-face > i { min-width: 18px; font-size: 9.5px; right: -7px; bottom: -4px; padding: 0 2px; border-radius: 4px; }
@@ -4254,3 +4254,6 @@ html.app-look .ag-blacktop--menu:hover .ag-bt-tags .bt-mode-tag:last-child { tra
 .cr-react.is-down { border-color: rgba(249,115,22,.45); } .cr-react.is-down small { color: #fdba74; }
 .cr-pick-n { display: flex; flex-direction: column; align-items: center; line-height: 1; min-width: 34px; color: var(--ag-text); }
 .cr-pick-n small { font-size: 9px; letter-spacing: 1.2px; color: var(--ag-muted); margin-bottom: 2px; }
+/* Career: a DB's secondary (the front seven is a placeholder until DL and LB are in) */
+.crl-field--def .crl-front { grid-column: 3 / 8; grid-row: 2; align-self: center; text-align: center; padding: 10px 0; border: 1px dashed rgba(255,255,255,.14); border-radius: 10px; font-family: var(--ag-font); font-size: 11px; letter-spacing: 2px; color: var(--ag-muted); }
+.crl-field--def .crl-los { grid-row: 1; align-self: start; margin: -6px 0 0; }

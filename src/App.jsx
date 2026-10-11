@@ -48,7 +48,7 @@ import HEADSHOTS from './data/headshots.json'
 import { runSimulation, getArchetype, calcOVR, runRBSimulation, calcOVRRB, getArchetypeRB, runWRSimulation, calcOVRWR, getArchetypeWR, runTESimulation, calcOVRTE, getArchetypeTE, runDBSimulation, calcOVRDB, getArchetypeDB, runOLSimulation, calcOVROL, getArchetypeOL, HEADSHOT_BASE, nflHeadshot, calcMVPResult, calcOPOYResult, calcWROPOYResult, calcTEOPOYResult, calcDBDpoyResult, calcOLAllProResult } from './utils/simulation'
 import { supabase, rtSupabase } from './lib/supabase'
 import { track } from './lib/track'
-import { loadCareer, saveCareer, newCareer, OFFENSE_POS, syncCareerFromCloud } from './lib/career'
+import { loadCareer, saveCareer, newCareer, CAREER_POS, syncCareerFromCloud } from './lib/career'
 import { blockReason, buildSig, markPlayed } from './lib/saveGuard'
 import CustomRatingsModal from './components/CustomRatingsModal'
 import SiteFooter from './components/SiteFooter'
@@ -699,7 +699,7 @@ export default function App() {
   }, [user?.id])
   const startCareerBuild = useCallback(() => {
     let p = 'qb'; try { p = localStorage.getItem('lastPosition') || 'qb' } catch {}
-    if (!OFFENSE_POS.includes(p)) p = 'qb'
+    if (!CAREER_POS.includes(p)) p = 'qb'
     handleStart('classic', p); setPage('career-build')
   }, [handleStart])
   const openCareer = useCallback(async () => {

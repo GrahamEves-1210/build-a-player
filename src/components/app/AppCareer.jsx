@@ -97,7 +97,7 @@ function Model({ c, devPick }) {
   return (
     <div className="cr-model-wrap ag-pop">
       <div className="cr-model">
-        <Silhouette build={shown} types={c.types} attrMap={attr} isBucket={c.sport === 'bucket'} isRB={c.pos === 'rb'} isWR={c.pos === 'wr'} isTE={c.pos === 'te'} modelOnly />
+        <Silhouette build={shown} types={c.types} attrMap={attr} isBucket={c.sport === 'bucket'} isRB={c.pos === 'rb'} isWR={c.pos === 'wr'} isTE={c.pos === 'te'} isDB={c.pos === 'db'} modelOnly />
         <span className="cr-model-ovr"><b>{c.ovr}</b><small>OVR</small></span>
       </div>
       <div className="cr-traits">{c.types.map(t => <Card key={t} t={t} />)}</div>
@@ -290,10 +290,10 @@ function TeamFit({ c }) {
   const G = ({ k, v, sub }) => <span className="cr-fit-g"><b style={{ color: gradeColor(v) }}>{gradeOf(v)}</b><small>{k}</small>{sub && <i>{sub}</i>}</span>
   return (
     <div className="cr-fit ag-pop" style={{ '--d': '80ms' }}>
-      <div className="ag-card-head"><span className="ag-eyebrow">THE {S.isBucket ? 'TEAM' : 'OFFENSE'} AROUND {c.name.toUpperCase()}</span><span className="cr-fit-status">{f.status}</span></div>
+      <div className="ag-card-head"><span className="ag-eyebrow">THE {S.isBucket ? 'TEAM' : S.side?.[c.pos] === 'def' ? 'DEFENSE' : 'OFFENSE'} AROUND {c.name.toUpperCase()}</span><span className="cr-fit-status">{f.status}</span></div>
       <div className="cr-fit-grid">
         {groups.map(g => <G key={g.k} k={g.k} v={g.v} sub={g.names?.length === 1 ? nick(g.names[0]) : null} />)}
-        <G k="DEFENSE" v={teamGrade(f.def)} />
+        {S.side?.[c.pos] === 'def' && <G k="OFFENSE" v={teamGrade(f.off)} />}<G k="DEFENSE" v={teamGrade(f.def)} />
       </div>
       <div className="cr-fit-meta"><span>{f.conf}{f.div && f.div !== f.conf ? ` · ${f.div}` : ''}</span></div>
     </div>
@@ -317,8 +317,27 @@ function Lineup({ c }) {
   const last = dc.ahead[dc.ahead.length - 1]
   return (
     <div className="ag-card crl ag-pop">
-      <div className="ag-card-head"><span className="ag-eyebrow">{c.fit?.name?.toUpperCase()} · {S.isBucket ? 'STARTING FIVE' : 'STARTING OFFENSE'}</span><span className={`crl-role${dc.starter ? ' is-on' : ''}`}>{dc.starter ? 'STARTER' : 'BACKUP'} · {dc.label}</span></div>
-      {S.isBucket ? (
+      <div className="ag-card-head"><span className="ag-eyebrow">{c.fit?.name?.toUpperCase()} · {S.isBucket ? 'STARTING FIVE' : S.side?.[c.pos] === 'def' ? 'STARTING SECONDARY' : 'STARTING OFFENSE'}</span><span className={`crl-role${dc.starter ? ' is-on' : ''}`}>{dc.starter ? 'STARTER' : 'BACKUP'} · {dc.label}</span></div>
+      {S.side?.[c.pos] === 'def' ? (
+        // the secondary in a base look, offense coming at it from the top: corners
+        // out wide on the line, safeties deep (the front seven fills in when DL and LB arrive)
+        <div className="crl-field crl-field--nfl crl-field--def">
+          <span className="crl-los" aria-hidden="true" />
+          {(() => {
+            const mySlot = c.build?.size?.subpos === 's' ? 's' : 'cb'
+            const db = (L.db ?? []).map(p => ({ ...p, slot: p.you ? mySlot : p.slot === 's' ? 's' : 'cb' }))
+            const cbs = db.filter(p => p.slot === 'cb'), ss = db.filter(p => p.slot === 's')
+            while (cbs.length > 2) ss.push(cbs.pop()); while (ss.length > 2) cbs.push(ss.pop())
+            return <>
+              <span className="crl-at" style={{ '--c': 1, '--r': 1, '--s': 2 }}><Man p={cbs[0]} slot="CB" /></span>
+              <span className="crl-at" style={{ '--c': 8, '--r': 1, '--s': 2 }}><Man p={cbs[1]} slot="CB" /></span>
+              <span className="crl-front" aria-hidden="true">FRONT SEVEN</span>
+              <span className="crl-at" style={{ '--c': 3, '--r': 3 }}><Man p={ss[0]} slot="S" /></span>
+              <span className="crl-at" style={{ '--c': 7, '--r': 3 }}><Man p={ss[1]} slot="S" /></span>
+            </>
+          })()}
+        </div>
+      ) : S.isBucket ? (
         <div className="crl-field crl-field--court">
           <div className="crl-row">{L.guard.map(p => <Man key={p.name} p={p} slot={p.slot ?? 'G'} />)}</div>
           <div className="crl-row">{L.big.map(p => <Man key={p.name} p={p} slot={p.slot ?? 'F/C'} />)}</div>
