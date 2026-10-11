@@ -318,6 +318,4 @@ export const NBA_BIG_PLAYERS = [
     attrs: { jumpShot: 0, finishing: 6, rebounding: 7, playmaking: 1, interiorDefense: 6, speed: 4, bounce: 6, size: 8, basketballIQ: 4, clutch: 3 } },
   { name: 'Georges Niang', short: 'Niang', team: 'GSW', starter: false, captain: false, number: 20, height: 79, weight: 230, wingspan: 80, skin: '#6e4229', position: 'PF', faceCenter: [50, 42],
     attrs: { jumpShot: 7, finishing: 3, rebounding: 4, playmaking: 4, interiorDefense: 2, speed: 3, bounce: 2, size: 5, basketballIQ: 6, clutch: 5 } },
-  { name: 'Allen Graves', short: 'Graves', team: 'TOR', starter: false, captain: false, number: 15, height: 81, weight: 225, wingspan: 85, skin: '#e0b48f', position: 'PF', faceCenter: [50, 42],
-    attrs: { jumpShot: 5, finishing: 5, rebounding: 6, playmaking: 5, interiorDefense: 5, speed: 5, bounce: 5, size: 6, basketballIQ: 6, clutch: 3 } },
 ]
