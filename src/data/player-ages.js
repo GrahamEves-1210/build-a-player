@@ -690,6 +690,7 @@ export const BIRTH_NFL = {
   "Wyatt Teller": 1994,
   "Xavier Legette": 2001,
   "Xavier McKinney": 1999,
+  "Xavier Weaver": 2000,
   "Xavier Watts": 2001,
   "Xavier Woods": 1995,
   "Xavier Worthy": 2003,
