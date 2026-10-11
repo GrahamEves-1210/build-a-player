@@ -179,14 +179,13 @@ function useTracked(read, deps) {
 // ── The tour: Home, a section at a time ───────────────────────────────────────
 function tourSteps(sport) {
   const nba = sport === 'bucket'
-  const league = nba ? 'NBA' : 'NFL'
   return [
     // the first page: no spotlight yet, just the game in a sentence
     { id: 'welcome', sel: [], center: true, title: nba ? 'Welcome to Build-A-Bucket' : 'Welcome to Build-A-Player',
-      text: `Spin real ${league} players, take the best trait from each one, and build a player nobody else has. Then play a season and see how far it goes. Here's a quick look around.` },
+      text: `Spin real football and basketball players, take the best trait from each one, and build a player nobody else has. Then play a season and see how far it goes. Here's a quick look around.` },
     { id: 'sport', sel: ['.ag-sport'], title: 'Two games in one', text: 'Football and basketball. Switch here any time: each has its own modes, leaderboards and records.' },
     { id: 'pos', sel: ['.ag-positions'], title: 'Pick a position', text: nba ? 'Guard (PG · SG · SF) or Big (PF · C). Each one has its own traits.' : 'QB, RB, WR, TE or DB. Each position has its own traits and its own leaderboard.' },
-    { id: 'modes', sel: ['.ag-modes'], title: 'The main game', text: `Spin a team, then a real ${league} player, and tap the trait you want from him. Fill every slot, then play a season. Current uses today's rosters, All-Time the legends.` },
+    { id: 'modes', sel: ['.ag-modes'], title: 'The main game', text: `Spin a team, then a real player from it, and tap the trait you want from him. Fill every slot, then play a season. Current uses today's rosters, All-Time the legends.` },
     { id: 'career', sel: ['.ag-crmode'], title: 'Career', text: 'One player, a whole career: the combine, the draft, season after season, contracts and a legacy.' },
     { id: 'compete', sel: ['.ag-compete'], title: 'Compete', text: 'Online pools of five. Everyone gets the same spins, and the best build takes the pool.' },
     { id: 'blacktop', sel: ['.ag-blacktop'], title: 'Blacktop', text: 'Live games against real players: 3v3 squads, or one on one.' },
@@ -291,9 +290,8 @@ function Tour({ sport }) {
 
 // ── Coach marks for the guided game ───────────────────────────────────────────
 const COPY = sport => {
-  const who = sport === 'bucket' ? 'NBA' : 'NFL'
   return {
-    spin: { n: 1, title: 'Spin', text: `Spin for a random team, then a random ${who} player from it.`, dim: true },
+    spin: { n: 1, title: 'Spin', text: 'Spin for a random team, then a random player from it.', dim: true },
     pick: { n: 2, title: 'Take a trait', text: 'Tap the trait you want from this player. Each player fills one slot, so take his best.', dim: true },
     more: { n: 2, title: 'Keep going', text: 'Spin again for the next slot. Spin, pick, repeat until every slot is filled.' },
     sim: { n: 3, title: 'Play the season', text: 'Build complete. Tap this to play a full season.', dim: true },
