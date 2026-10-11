@@ -41,9 +41,28 @@ export async function captureSilhouette(sel = '.game-layout .sil-wrap') {
   if (!el) return null
   try {
     const html2canvas = (await import('html2canvas')).default
+    // html2canvas ignores object-fit: a "contain" image gets stretched to its
+    // whole box, so the silhouette came out taller than the colored overlay
+    // drawn on it. Measure where each image really draws, and lay the copy out
+    // at exactly that size and offset before the capture.
+    const fits = [...el.querySelectorAll('img')].map(img => {
+      const cs = getComputedStyle(img)
+      if (cs.objectFit !== 'contain' || !img.naturalWidth) return null
+      const bw = img.clientWidth, bh = img.clientHeight
+      const s2 = Math.min(bw / img.naturalWidth, bh / img.naturalHeight)
+      const w = img.naturalWidth * s2, h = img.naturalHeight * s2
+      const [px, py] = cs.objectPosition.split(' ').map(v => (v.endsWith('%') ? parseFloat(v) / 100 : 0.5))
+      return { w, h, x: (bw - w) * (isNaN(px) ? 0.5 : px), y: (bh - h) * (isNaN(py) ? 0.5 : py) }
+    })
     return await html2canvas(el, {
       backgroundColor: null, scale: 2, useCORS: true, allowTaint: true, logging: false,
       ignoreElements: e => !!e.classList && (e.classList.contains('cz-lines-svg') || e.classList.contains('cz-layer') || e.classList.contains('sil-sandbox-outer')),
+      onclone: (doc, clone) => {
+        [...clone.querySelectorAll('img')].forEach((img, i) => {
+          const f = fits[i]; if (!f) return
+          Object.assign(img.style, { objectFit: 'fill', width: `${f.w}px`, height: `${f.h}px`, maxWidth: 'none', maxHeight: 'none', marginLeft: `${f.x}px`, marginTop: `${f.y}px` })
+        })
+      },
     })
   } catch { return null }
 }

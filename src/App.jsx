@@ -1245,6 +1245,10 @@ export default function App() {
   const completeOvr = IS_APP && buildComplete && (page === 'game' || page === 'takeover-build' || page === 'career-build')
     ? (isOL ? calcOVROL(build) : isDB ? calcOVRDB(build) : isTE ? calcOVRTE(build) : isWR ? calcOVRWR(build) : isRB ? calcOVRRB(build) : calcOVR(build))
     : 0
+  // the build's name (the one the season screen shows), not a tier
+  const completeName = completeOvr
+    ? (isOL ? getArchetypeOL(completeOvr, build, activeTypes) : isDB ? getArchetypeDB(completeOvr, build, DB_TYPES) : isTE ? getArchetypeTE(completeOvr, build, activeTypes) : isWR ? getArchetypeWR(completeOvr, build, activeTypes) : isRB ? getArchetypeRB(completeOvr, build, activeTypes) : getArchetype(completeOvr, build, activeTypes))
+    : null
   const dailyPlan = dailyRun && dailyLocked && gameIsPlay
     ? { seed: dailyRun.seed, getStart: () => dailyState().spins, onSpin: setDailySpins }
     : null
@@ -1297,6 +1301,7 @@ export default function App() {
       )}
       <main className={`game-layout ${IS_APP ? 'mobile-build ag-stack' : `mobile-${mobileView}`}${gameMode === 'all-time' ? ' alltime-mode' : ''}${page === 'versus-game' ? ' versus-active' : ''}${page === 'takeover-build' || page === 'career-build' ? ' takeover-build' : ''}`}>
         <SpinScreen
+          gradesHidden={competeOn}
           build={build}
           activeDrag={activeDrag}
           onDragStart={setActiveDrag}
@@ -1444,7 +1449,7 @@ export default function App() {
         />
       )}
 
-      {!parked && IS_APP && (page === 'game' || page === 'takeover-build' || page === 'career-build') && <BuildComplete complete={buildComplete} ovr={completeOvr} build={build} types={activeTypes} attrMap={currentAttrMap} />}
+      {!parked && IS_APP && (page === 'game' || page === 'takeover-build' || page === 'career-build') && <BuildComplete complete={buildComplete} ovr={completeOvr} name={completeName} build={build} types={activeTypes} attrMap={currentAttrMap} />}
 
       {!parked && showTeamPicker && (
         <TeamPickerModal onSelect={handleTeamPicked} isPlus={isCustomMode} build={build} />

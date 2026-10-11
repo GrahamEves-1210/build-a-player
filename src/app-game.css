@@ -4190,3 +4190,5 @@ html.app-look .ag-blacktop--menu:hover .ag-bt-tags .bt-mode-tag:last-child { tra
 .ag-blacktop--menu .ag-live-dot { z-index: 3; }
 @media (max-width: 560px) { .ag-blacktop--menu .ag-takeover-sub { max-width: none; } }
 @media (prefers-reduced-motion: reduce) { .ag-bt-tags .bt-mode-tag { transition: none; } }
+.ag-bc-tier { text-align: center; text-wrap: balance; }
+.ag-bc-tier.is-long { font-size: 26px; }

@@ -1541,6 +1541,7 @@ export default function BucketApp() {
       )}
       <main className={`game-layout ${IS_APP ? 'mobile-build ag-stack' : `mobile-${mobileView}`}${gameMode === 'all-time' ? ' alltime-mode' : ''}${page === 'versus-game' || liveBuild ? ' versus-active' : ''}`}>
         <SpinScreen
+          gradesHidden={competeOn}
           build={build}
           activeDrag={activeDrag}
           onDragStart={setActiveDrag}
@@ -1626,7 +1627,7 @@ export default function BucketApp() {
       </div>
       </div>
 
-      {!parked && IS_APP && (page === 'game' || page === 'takeover-build' || page === 'career-build') && <BuildComplete complete={buildComplete} ovr={buildComplete ? calcBucketOVR(build, activeTypes, position) : 0} build={build} types={activeTypes} attrMap={BUCKET_ATTR} />}
+      {!parked && IS_APP && (page === 'game' || page === 'takeover-build' || page === 'career-build') && <BuildComplete complete={buildComplete} ovr={buildComplete ? calcBucketOVR(build, activeTypes, position) : 0} name={buildComplete ? (position === 'big' ? getBucketBigArchetype : getBucketGuardArchetype)(calcBucketOVR(build, activeTypes, position), build, activeTypes) : null} build={build} types={activeTypes} attrMap={BUCKET_ATTR} />}
       {liveBuild && btChatOpen && <BlacktopChat bt={bt} user={user} onClose={() => setBtChatOpen(false)} />}
 
       {!parked && leaveConfirm && (IS_APP || APP_LOOK) && (

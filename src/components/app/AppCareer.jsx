@@ -50,7 +50,7 @@ export function CareerIntro({ sport = 'nfl', onStart, onClose }) {
       <div className="ag-screen-body">
         <div className="cr-intro-hero ag-pop">
           <span className="cr-intro-kicker">ONE PLAYER. A WHOLE CAREER.</span>
-          <p>Up to {MAX_SEASONS} seasons, about an hour of play, saved every step so you can leave and come back. {S.isBucket ? 'Guard or big.' : 'Offense: QB, RB, WR, TE.'}</p>
+          <p>Up to {MAX_SEASONS} seasons, saved every step so you can leave and come back. {S.isBucket ? 'Guard or big.' : 'Offense: QB, RB, WR, TE.'}</p>
         </div>
         <ol className="tk-steps ag-pop" style={{ '--d': '80ms' }}>
           {steps.map(([t, d], i) => <li key={t}><span className="tk-step-n">{i + 1}</span><span className="tk-step-txt"><b>{t}</b><small>{d}</small></span></li>)}

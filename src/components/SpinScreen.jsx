@@ -276,7 +276,9 @@ const POS_COLORS = {
 }
 
 // ─── SpinScreen ──────────────────────────────────────────────────────────────
-export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, activeCategory, resetKey, onChipTap, types = TYPES, isLite = false, qbPool = QBS, savedResult = null, onSaveResult, onPhaseChange, gameKey, onReset, adsDisabled = false, isRB = false, isWR = false, isTE = false, isDB = false, isOL = false, isAllTime = false, isBucket = false, isVersusMode = false, attrMap = ATTR, categoriesData = CATEGORIES, teamsPool = TEAMS, logoDir = '/logos/', playerLabel, headshotsMap = HEADSHOTS, headshotsDir = `${HEADSHOT_BASE}/`, hideTeamResult = false, headshotFallback = () => null, seedPlan = null, cardMeta = null, paused = false }) {
+export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, activeCategory, resetKey, onChipTap, types = TYPES, isLite = false, qbPool = QBS, savedResult = null, onSaveResult, onPhaseChange, gameKey, onReset, adsDisabled = false, isRB = false, isWR = false, isTE = false, isDB = false, isOL = false, isAllTime = false, isBucket = false, isVersusMode = false, attrMap = ATTR, categoriesData = CATEGORIES, teamsPool = TEAMS, logoDir = '/logos/', playerLabel, headshotsMap = HEADSHOTS, headshotsDir = `${HEADSHOT_BASE}/`, hideTeamResult = false, headshotFallback = () => null, seedPlan = null, cardMeta = null, paused = false, gradesHidden = false }) {
+  // live competitive modes (1v1, Compete pools): the grades stay hidden, no toggle
+  const forceHide = isVersusMode || gradesHidden
   const pLabel = playerLabel ?? (isTE ? 'TE' : isWR ? 'WR' : isRB ? 'RB' : 'QB')
   // TE (current mode) and OL get a 2nd player respin; All-Time TE gets just 1
   const maxPlayerRespin = (isTE && !isAllTime) || isOL ? 2 : 1
@@ -508,7 +510,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
       <div className="spin-panel-body">
         <div className="spin-panel-static">
           <div className="spin-top-row">
-            {!isVersusMode && (
+            {!forceHide && (
               <button className={`grade-toggle-btn${hideGrades ? ' grade-toggle-off' : ' grade-toggle-on'}`} onClick={toggleGrades}>
                 {hideGrades ? 'TURN ON GRADES' : 'TURN OFF GRADES'}
               </button>
@@ -644,7 +646,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
                   ? types.filter(t => !build[t]).map(t => {
                       const meta = attrMap[t]
                       const val  = selectedQB.attrs[t]
-                      return <Chip key={t} type={t} meta={meta} val={val} selectedQB={selectedQB} draggingType={draggingType} onChipTap={onChipTap} onDragStart={onDragStart} onDragEnd={onDragEnd} setDraggingType={setDraggingType} hideGrades={isVersusMode || hideGrades} headshotsMap={headshotsMap} headshotsDir={headshotsDir} isBucket={isBucket} isWR={isWR} headshotFallback={headshotFallback} />
+                      return <Chip key={t} type={t} meta={meta} val={val} selectedQB={selectedQB} draggingType={draggingType} onChipTap={onChipTap} onDragStart={onDragStart} onDragEnd={onDragEnd} setDraggingType={setDraggingType} hideGrades={forceHide || hideGrades} headshotsMap={headshotsMap} headshotsDir={headshotsDir} isBucket={isBucket} isWR={isWR} headshotFallback={headshotFallback} />
                     })
                   : visibleCategories.map((cat, catIdx) => {
                       const available = cat.types.filter(type => types.includes(type) && !build[type])
@@ -659,7 +661,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
                           {available.map(type => {
                             const meta = attrMap[type]
                             const val  = selectedQB.attrs[type]
-                            return <Chip key={type} type={type} meta={meta} val={val} selectedQB={selectedQB} draggingType={draggingType} onChipTap={onChipTap} onDragStart={onDragStart} onDragEnd={onDragEnd} setDraggingType={setDraggingType} hideGrades={isVersusMode || hideGrades} headshotsMap={headshotsMap} headshotsDir={headshotsDir} isBucket={isBucket} isWR={isWR} headshotFallback={headshotFallback} />
+                            return <Chip key={type} type={type} meta={meta} val={val} selectedQB={selectedQB} draggingType={draggingType} onChipTap={onChipTap} onDragStart={onDragStart} onDragEnd={onDragEnd} setDraggingType={setDraggingType} hideGrades={forceHide || hideGrades} headshotsMap={headshotsMap} headshotsDir={headshotsDir} isBucket={isBucket} isWR={isWR} headshotFallback={headshotFallback} />
                           })}
                         </div>
                       )

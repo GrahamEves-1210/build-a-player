@@ -244,7 +244,7 @@ const TIERS = [
   { min: 0,  name: 'DEVELOPING', tier: 0, color: '#9fb3a8' },
 ]
 export const tierFor = ovr => TIERS.find(t => ovr >= t.min)
-export function BuildComplete({ complete, ovr, label = 'OVR', build = null, types = [], attrMap = null }) {
+export function BuildComplete({ complete, ovr, name = null, label = 'OVR', build = null, types = [], attrMap = null }) {
   const was = useRef(complete)
   const [show, setShow] = useState(false)
   const [stage, setStage] = useState(0)          // 0 in → 1 landed
@@ -285,7 +285,8 @@ export function BuildComplete({ complete, ovr, label = 'OVR', build = null, type
           <span className="ag-bc-num">{n}</span>
           <span className="ag-bc-lbl">{label}</span>
         </div>
-        <div className="ag-bc-tier">{tier.name}</div>
+        {/* the build's own name (Boom or Bust, Gunslinger…), colored by its tier */}
+        <div className={`ag-bc-tier${String(name ?? '').length > 14 ? ' is-long' : ''}`}>{name ?? tier.name}</div>
         {chips.length > 0 && (
           // full trait names (no abbreviations), two to a row
           <div className="ag-bc-grades">
