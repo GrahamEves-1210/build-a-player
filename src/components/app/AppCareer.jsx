@@ -4,13 +4,12 @@ import {
   startSeason, resumeSeason, advanceWeek, chooseMoment, resolveInjury, finishRegular, playoffRound, bookSeason, recordCombine, spendDev, demandTrade, nextSeason,
   OFF_STEPS, offStep, campDrill, lineup, depthChart, gradeOf, gradeOfOvr, ovrGradeVal, SPORT, sportOf,
   openTalks, ask, closeTalks, acceptTalks, ASKS, leverageOf,
-  retire, canRetire, mustRetire, careerTotals, legacyOf, LEGACY_TIERS, ALL_TIME, STAT_LABEL, HEADLINE_STATS, careerCard, AWARD_NAME, MAX_SEASONS, goalsFor, compsFor, stockText, pickText, teamPick, REACTION,
+  retire, canRetire, mustRetire, careerTotals, legacyOf, LEGACY_TIERS, ALL_TIME, STAT_LABEL, HEADLINE_STATS, careerCard, AWARD_NAME, MAX_SEASONS, goalsFor, compsFor, stockText, pickText, loadSlots, CAREER_SLOTS,
 } from '../../lib/career'
 import { GAME_LINE } from '../../lib/seasonDirector'
 import { GAMES, pickPlayoffGame } from '../../lib/minigames'
 import MiniGame from './MiniGame'
 import { valToGrade, nflHeadshot } from '../../utils/simulation'
-import { getUsername } from '../../lib/discord'
 import { sfx, haptic, victory } from '../../lib/juice'
 import { MomentCard, NowCard, RecordOverlay } from './AppSeasonPlus'
 import Silhouette from '../Silhouette'
@@ -32,13 +31,59 @@ const photoSrc = p => (p ? (String(p).includes('/') ? p : nflHeadshot(p)) : null
 // per-game averages keep one decimal; counts get commas
 const fmt = v => (typeof v === 'number' && !Number.isInteger(v) ? v.toFixed(1) : (v ?? 0).toLocaleString())
 
-// ── Intro: what Career is, and the careers before this one ──────────────────
-export function CareerIntro({ sport = 'nfl', onStart, onClose }) {
+// ── Career home: what Career is, your three save slots, past careers ────────
+// a player's name: letters, spaces, apostrophes, hyphens, periods
+const cleanName = v => v.replace(/[^A-Za-z\u00C0-\u017F' .-]/g, '').replace(/\s+/g, ' ').slice(0, 14)
+function NewSlot({ onStart, onCancel }) {
+  const [first, setFirst] = useState(''), [last, setLast] = useState('')
+  const ok = first.trim().length >= 2 && last.trim().length >= 2
+  return (
+    <form className="cr-slot cr-slot--new" onSubmit={e => { e.preventDefault(); if (ok) onStart(`${first.trim()} ${last.trim()}`) }}>
+      <span className="ag-eyebrow">NAME YOUR PLAYER</span>
+      <div className="cr-name-row">
+        <input className="cr-name-in" value={first} onChange={e => setFirst(cleanName(e.target.value))} placeholder="First name" autoComplete="off" autoFocus aria-label="First name" />
+        <input className="cr-name-in" value={last} onChange={e => setLast(cleanName(e.target.value))} placeholder="Last name" autoComplete="off" aria-label="Last name" />
+      </div>
+      <div className="cr-slot-acts">
+        <button type="button" className="ag-btn" onClick={onCancel}>CANCEL</button>
+        <button type="submit" className="ag-btn ag-btn--gold" disabled={!ok}>BUILD HIM <IconArrow size={15} /></button>
+      </div>
+    </form>
+  )
+}
+function SlotCard({ c, S, onOpen, onDelete }) {
+  const [ask, setAsk] = useState(false)
+  const L = legacyOf(c)
+  const where = c.phase === 'draft' ? 'Draft prospect' : c.phase === 'retired' ? `Retired · ${L.tier}` : `Year ${c.year + 1} · ${c.season}`
+  if (ask) return (
+    <div className="cr-slot cr-slot--ask">
+      <p>Delete <b>{c.name}</b>'s career? This can't be undone.</p>
+      <div className="cr-slot-acts">
+        <button className="ag-btn" onClick={() => setAsk(false)}>KEEP IT</button>
+        <button className="ag-btn cr-del" onClick={() => { onDelete(); sfx('deny') }}>DELETE</button>
+      </div>
+    </div>
+  )
+  return (
+    <div className="cr-slot">
+      <button className="cr-slot-main" onClick={onOpen}>
+        {c.team ? <img src={S.logo(c.team)} alt="" className="cr-slot-logo" /> : <span className="cr-slot-logo cr-slot-pos">{POS_LABEL[c.pos]}</span>}
+        <span className="cr-slot-txt"><b>{c.name}</b><small>{POS_LABEL[c.pos]}{c.fit ? ` · ${nick(c.fit.name)}` : ''} · {where} · age {c.age}</small></span>
+        <span className="cr-slot-ovr"><b>{c.ovr}</b><small>OVR</small></span>
+      </button>
+      <button className="cr-slot-x" onClick={() => setAsk(true)} aria-label={`Delete ${c.name}'s career`}>DELETE</button>
+    </div>
+  )
+}
+export function CareerIntro({ sport = 'nfl', uid = null, onOpen, onNew, onClose }) {
   const S = SPORT[sport] ?? SPORT.nfl
   const runs = useMemo(() => pastCareers(sport), [sport])
+  const [slots, setSlots] = useState(null)
+  const [naming, setNaming] = useState(null)       // the empty slot being named
+  useEffect(() => { let off = false; loadSlots(sport, uid).then(l => { if (!off) setSlots(l) }); return () => { off = true } }, [sport, uid])
   const steps = [
-    ['Build', 'Draft your player from traits, the same spins as a normal game. That build is who you take into the league.'],
-    ['The draft', `Combine drills, then interviews with the teams picking near you. Your stock moves, draft day decides where you land, and the ${S.isBucket ? 'team' : 'offense'} around you matters.`],
+    ['Build', 'Name your player and draft him from traits, the same spins as a normal game. That build is who you take into the league.'],
+    ['The draft', 'Combine drills, then interviews with the teams picking near you. Your stock moves, draft day decides where you land, and the team around you matters.'],
     ['The career', `Season after season, ${S.isBucket ? 'game by game' : 'week by week'}: decisions, injuries, a ${S.isBucket ? 'rotation' : 'depth chart'} to win. Every offseason the roster turns over and the league moves.`],
     ['Legacy', 'Contracts, free agency, trade demands, retirement. Awards, records, the Hall of Fame, and where the career ranks among the greatest ever.'],
   ]
@@ -49,29 +94,36 @@ export function CareerIntro({ sport = 'nfl', onStart, onClose }) {
         <button className="ag-round-btn" onClick={onClose} aria-label="Home"><IconClose size={16} /></button>
       </div>
       <div className="ag-screen-body">
-        <div className="cr-intro-hero ag-pop">
+        <section className="cr-slots ag-pop">
+          <div className="ag-card-head"><span className="ag-eyebrow">YOUR SAVES · {CAREER_SLOTS} SLOTS</span></div>
+          {!slots ? <div className="tk-runs-empty">Loading your saves…</div> : slots.map((c, i) => (
+            c ? <SlotCard key={`c${i}`} c={c} S={S} onOpen={() => onOpen(c)} onDelete={() => { clearCareer(sport, uid, i); setSlots(l => l.map((x, k) => (k === i ? null : x))) }} />
+              : naming === i ? <NewSlot key={`n${i}`} onStart={name => onNew(i, name)} onCancel={() => setNaming(null)} />
+              : <button key={`e${i}`} className="cr-slot cr-slot--empty" onClick={() => { setNaming(i); sfx('tap') }}><span>+</span> NEW CAREER <small>SLOT {i + 1}</small></button>
+          ))}
+        </section>
+        <div className="cr-intro-hero ag-pop" style={{ '--d': '60ms' }}>
           <span className="cr-intro-kicker">ONE PLAYER. A WHOLE CAREER.</span>
-          <p>Up to {MAX_SEASONS} seasons, saved every step so you can leave and come back. {S.isBucket ? 'Guard or big.' : 'Offense: QB, RB, WR, TE.'}</p>
+          <p>Up to {MAX_SEASONS} seasons, saved every step so you can leave and come back. {S.isBucket ? 'Guard or big.' : 'QB, RB, WR, TE or DB.'}</p>
         </div>
         <ol className="tk-steps ag-pop" style={{ '--d': '80ms' }}>
           {steps.map(([t, d], i) => <li key={t}><span className="tk-step-n">{i + 1}</span><span className="tk-step-txt"><b>{t}</b><small>{d}</small></span></li>)}
         </ol>
-        <button className="ag-btn ag-btn--gold tk-intro-go ag-pop" style={{ '--d': '130ms' }} onClick={onStart}>BUILD A PLAYER · START A CAREER <IconArrow size={16} /></button>
-        <section className="tk-runs ag-pop" style={{ '--d': '160ms' }}>
-          <div className="ag-card-head"><span className="ag-eyebrow">YOUR CAREERS</span></div>
-          {runs.length === 0
-            ? <div className="tk-runs-empty">No careers yet. The first one starts with a build.</div>
-            : runs.map((r, i) => (
+        {runs.length > 0 && (
+          <section className="tk-runs ag-pop" style={{ '--d': '160ms' }}>
+            <div className="ag-card-head"><span className="ag-eyebrow">FINISHED CAREERS</span></div>
+            {runs.map((r, i) => (
               <div key={r.at + '-' + i} className={`tk-run${r.hof ? ' is-won' : ''}`}>
                 <span className="tk-run-pos">{POS_LABEL[r.pos] ?? r.pos}</span>
                 <span className="tk-run-txt">
-                  <b>{r.hof ? <><IconCrown size={13} /> Hall of Famer</> : r.tier}{(r.ranked ?? r.rank <= 15) ? ` · No. ${r.rank} career all-time` : ''}</b>
+                  <b>{r.name ? `${r.name} · ` : ''}{r.hof ? <><IconCrown size={13} /> Hall of Famer</> : r.tier}{(r.ranked ?? r.rank <= 15) ? ` · No. ${r.rank} career all-time` : ''}</b>
                   <small>{new Date(r.at).toLocaleDateString(undefined, RUN_DATE)} · {r.seasons} seasons · {r.rings} {r.rings === 1 ? 'ring' : 'rings'} · {r.awards} {r.awards === 1 ? 'award' : 'awards'}</small>
                 </span>
                 <span className="tk-run-ovr"><b>{r.score}</b><small>LEGACY PTS</small></span>
               </div>
             ))}
-        </section>
+          </section>
+        )}
       </div>
     </div>
   )
@@ -123,6 +175,11 @@ function Draft({ c, setCareer }) {
   const S = sportOf(c), logoFor = S.logo, teamName = short => S.teamOf(short).name
   const [step, setStep] = useState(c.step === 'trivia' ? 'interview' : c.step ?? 'combine')   // eslint-disable-line
   const [shown, setShown] = useState(0)
+  // an answer lands: that team's interest, up or down, for a moment
+  const [flash, setFlash] = useState(null)
+  const flashT = useRef(null)
+  const flashIt = (team, st) => { if (!st) return; clearTimeout(flashT.current); setFlash({ team, up: st > 0, k: Date.now() }); flashT.current = setTimeout(() => setFlash(null), 1300) }
+  useEffect(() => () => clearTimeout(flashT.current), [])
   const range = stockText(c).toUpperCase()
   const go = s => { setStep(s); setCareer({ ...c, step: s }); sfx('tap') }
   const head = (kicker, title) => (
@@ -175,6 +232,7 @@ function Draft({ c, setCareer }) {
       <div className={`ag-screen ${S.screen} cr`}>
         {head('THE INTERVIEWS', done ? 'Interviews done' : `Interview ${i + 1} of ${list.length}`)}
         <div className="ag-screen-body">
+          {flash && <div key={flash.k} className={`cr-flash${flash.up ? ' is-up' : ' is-down'}`} aria-live="polite"><img src={logoFor(flash.team)} alt="" /><span className="cr-flash-arrow">{flash.up ? '▲' : '▼'}</span><small>INTEREST {flash.up ? 'UP' : 'DOWN'}</small></div>}
           <Comp c={c} />
           {i === 0 && (
             <div className="cr-howto ag-pop">
@@ -182,18 +240,11 @@ function Draft({ c, setCareer }) {
               <p>Four teams picking near your projected range sit you down, one question each. A good answer raises that team's interest and moves your stock up about two picks; a bad one does the opposite. On draft day, a team that liked you is likelier to take you when you're still on the board at its pick.</p>
             </div>
           )}
-          {list.some(x => x.answer != null) && (
-            <div className="cr-reacts ag-pop">
-              {list.filter(x => x.answer != null).map(x => { const st = x.a[x.answer].stock; return (
-                <span key={x.team} className={`cr-react${st > 0 ? ' is-up' : st < 0 ? ' is-down' : ''}`}><img src={logoFor(x.team)} alt="" /><b>{nick(teamName(x.team))}</b><small>{REACTION(st)}{st ? ` · stock ${st > 0 ? 'up' : 'down'} ${Math.abs(st) * (S.isBucket ? 1 : 2)} ${Math.abs(st) * (S.isBucket ? 1 : 2) === 1 ? 'pick' : 'picks'}` : ''}</small></span>
-              ) })}
-            </div>
-          )}
           {!done ? (
             <div className="cr-q ag-pop" key={i}>
-              <div className="cr-q-team"><img src={logoFor(it.team)} alt="" /><span><b>{teamName(it.team)}</b><small>{it.who.toUpperCase()} · HOLDS {pickText(teamPick(c, it.team), c.sport).toUpperCase()}</small></span></div>
+              <div className="cr-q-team"><img src={logoFor(it.team)} alt="" /><span><b>{teamName(it.team)}</b><small>{it.who.toUpperCase()}</small></span></div>
               <p className="cr-q-text">"{it.q}"</p>
-              <div className="cr-q-opts">{it.a.map((a, k) => <button key={k} className="cr-q-opt" onClick={() => { setCareer(answerInterview(c, i, k)); sfx('tap') }}>{a.t}</button>)}</div>
+              <div className="cr-q-opts">{it.a.map((a, k) => <button key={k} className="cr-q-opt" onClick={() => { setCareer(answerInterview(c, i, k)); flashIt(it.team, a.stock); sfx(a.stock > 0 ? 'claim' : a.stock < 0 ? 'deny' : 'tap') }}>{a.t}</button>)}</div>
             </div>
           ) : (
             <div className="cr-q ag-pop">
@@ -258,7 +309,7 @@ function Comp({ c }) {
         <span className="cr-comp-name"><b>{top.name}</b><small>{era(top)}</small></span>
       </div>
       <div className="cr-comp-grid">
-        {[0, 1].map(i => <span key={`h${i}`} className="cr-comp-row cr-comp-row--head"><small /><em className="is-you">{c.name}</em><em>{nick(top.name)}</em></span>)}
+        {[0, 1].map(i => <span key={`h${i}`} className="cr-comp-row cr-comp-row--head"><small /><em className="is-you">{nick(c.name)}</em><em>{nick(top.name)}</em></span>)}
         {c.types.map(t => {
           const mine = c.build[t]?.val ?? 0, his = top.attrs[t]
           return (
@@ -372,9 +423,7 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
   const [tab, setTab] = useState('season')
   const [recHit, setRecHit] = useState(null)       // an all-time record just fell
   const D = useRef(null)
-  // the player is the username (Guest when signed out), never "You"
-  const who = getUsername(user) || 'Guest'
-  useEffect(() => { if (c && c.name !== who) setCareer({ ...c, name: who }) }, [who, c?.name]) // eslint-disable-line
+  // the player's own name (picked when the career began); never "You"
   useEffect(() => { if (c) saveCareer(c) }, [c])
   useEffect(() => { if (c?.phase === 'season' && c.active && !D.current) D.current = resumeSeason(c) }, [c?.phase]) // eslint-disable-line
   if (!c) return null
@@ -503,7 +552,7 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
         {tab === 'season' && c.phase === 'offseason' && last && <Offseason c={c} setCareer={setCareer} last={last} setTab={setTab} />}
         {tab === 'player' && <><Comp c={c} /><Player c={c} /></>}
         {tab === 'team' && <><Lineup c={c} /><TeamFit c={c} /></>}
-        {tab === 'career' && <CareerTab c={c} L={L} />}
+        {tab === 'career' && <CareerTab c={c} L={L} onDelete={() => { clearCareer(c.sport, c.uid, c.slot ?? 0); setCareer(null); onExit() }} />}
       </div>
     </div>
   )
@@ -677,7 +726,8 @@ function RankList({ c, L }) {
     </div>
   )
 }
-function CareerTab({ c, L }) {
+function CareerTab({ c, L, onDelete }) {
+  const [ask, setAsk] = useState(false)
   const S = sportOf(c), logoFor = S.logo
   const t = careerTotals(c)
   const keys = HEADLINE_STATS[c.pos]
@@ -710,6 +760,12 @@ function CareerTab({ c, L }) {
           <ul className="cr-bul">{[...c.decisions.map(d => ({ ...d, kind: 'd' })), ...c.events.map(e => ({ ...e, kind: 'e' }))].sort((a, b) => b.year - a.year).map((x, i) => <li key={i}>{x.kind === 'd' ? <IconShield size={12} /> : <IconHelmet size={12} />} <small>Y{x.year}</small> {x.text}</li>)}</ul>
         </div>
       )}
+      <div className="cr-delete ag-pop">
+        {ask ? (
+          <><p>Delete <b>{c.name}</b>'s career? This can't be undone, and the slot opens up for a new one.</p>
+          <div className="cr-slot-acts"><button className="ag-btn" onClick={() => setAsk(false)}>KEEP IT</button><button className="ag-btn cr-del" onClick={onDelete}>DELETE CAREER</button></div></>
+        ) : <button className="cr-delete-btn" onClick={() => setAsk(true)}>Delete this career</button>}
+      </div>
     </section>
   )
 }
@@ -755,7 +811,7 @@ function Legacy({ c, setCareer, onNewBuild, onExit }) {
         {img && <img src={img} alt="Career card" className="cr-card-preview ag-pop" />}
         <div className="cr-actions ag-pop" style={{ '--d': '90ms' }}>
           <button className="ag-btn ag-btn--gold tk-intro-go" onClick={share} disabled={busy}>{busy ? 'MAKING THE CARD…' : 'SHARE THE CAREER CARD'}</button>
-          <button className="ag-btn" onClick={() => { clearCareer(c.sport, c.uid); setCareer(null); onNewBuild() }}>NEW CAREER</button>
+          <button className="ag-btn" onClick={() => { clearCareer(c.sport, c.uid, c.slot ?? 0); setCareer(null); onNewBuild() }}>NEW CAREER</button>
           <button className="ag-btn ag-btn--ghost" onClick={onExit}>HOME</button>
         </div>
       </div>

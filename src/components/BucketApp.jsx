@@ -872,14 +872,16 @@ export default function BucketApp() {
     let p = 'guard'; try { p = localStorage.getItem('bucketPosition') || 'guard' } catch {}
     handleStart('classic', p === 'big' ? 'big' : 'guard'); setPage('career-build')
   }, [handleStart])
-  const openCareer = useCallback(async () => {
-    const c = await syncCareerFromCloud('bucket', user?.id)   // the newer of this device's copy and the cloud's
-    if (c) { setCareer(c); setPage('career') } else setPage('career-intro')
+  // Career opens on its home: the three save slots (CareerIntro)
+  const careerNew = useRef({ slot: 0, name: null })
+  const openCareer = useCallback(() => {
+    setPage('career-intro')
     window.scrollTo({ top: 0, behavior: 'instant' })
-  }, [user?.id])
+  }, [])
   openCareerRef.current = openCareer
   const enterDraft = useCallback(() => {
-    const c = newCareer({ sport: 'bucket', uid: user?.id ?? null, pos: position, build, name: getUsername(user) || 'Guest' })
+    const owner = getUsername(user) || 'Guest'
+    const c = newCareer({ sport: 'bucket', uid: user?.id ?? null, pos: position, build, name: careerNew.current.name || owner, slot: careerNew.current.slot, owner })
     saveCareer(c); setCareer(c); setGameMode(null); setBuild({}); setPage('career')
     window.scrollTo({ top: 0, behavior: 'instant' })
   }, [user, position, build])
@@ -1893,14 +1895,14 @@ export default function BucketApp() {
   if (page === 'career-intro') {
     return (
       <Suspense fallback={null}>
-        <CareerIntro sport="bucket" onStart={startCareerBuild} onClose={() => setPage('splash')} />
+        <CareerIntro sport="bucket" uid={user?.id ?? null} onOpen={c => { setCareer(c); setPage('career'); window.scrollTo({ top: 0, behavior: 'instant' }) }} onNew={(slot, name) => { careerNew.current = { slot, name }; startCareerBuild() }} onClose={() => setPage('splash')} />
       </Suspense>
     )
   }
   if (page === 'career' && career) {
     return (
       <Suspense fallback={null}>
-        <AppCareer career={career} setCareer={setCareer} user={user} onNewBuild={startCareerBuild} onExit={() => setPage('splash')} />
+        <AppCareer career={career} setCareer={setCareer} user={user} onNewBuild={openCareer} onExit={() => setPage('splash')} />
       </Suspense>
     )
   }

@@ -282,6 +282,7 @@ html.is-bucket .ag-tab { color: rgba(255,237,213,.42); }
 .ag-menu-back { justify-self: start; background: none; border: 0; color: var(--ag-a1); font-family: var(--ag-font); font-size: 17px; letter-spacing: 2px; cursor: pointer; }
 .ag-round-btn {
   justify-self: end;
+  flex: none; aspect-ratio: 1;               /* never squeezed into an oval by a long title */
   width: 38px; height: 38px; border-radius: 50%;
   display: grid; place-items: center;
   border: 1.5px solid var(--ag-line-hi); color: var(--ag-text); cursor: pointer;
@@ -4257,3 +4258,41 @@ html.app-look .ag-blacktop--menu:hover .ag-bt-tags .bt-mode-tag:last-child { tra
 /* Career: a DB's secondary (the front seven is a placeholder until DL and LB are in) */
 .crl-field--def .crl-front { grid-column: 3 / 8; grid-row: 2; align-self: center; text-align: center; padding: 10px 0; border: 1px dashed rgba(255,255,255,.14); border-radius: 10px; font-family: var(--ag-font); font-size: 11px; letter-spacing: 2px; color: var(--ag-muted); }
 .crl-field--def .crl-los { grid-row: 1; align-self: start; margin: -6px 0 0; }
+
+/* Career home: three save slots */
+.cr-slots { display: flex; flex-direction: column; gap: 8px; }
+.cr-slot { display: flex; align-items: stretch; gap: 6px; border-radius: 14px; border: 1.5px solid var(--ag-line); background: var(--ag-panel); overflow: hidden; }
+.cr-slot-main { flex: 1; min-width: 0; display: grid; grid-template-columns: 44px 1fr auto; align-items: center; gap: 10px; padding: 10px 12px; background: none; border: 0; color: inherit; text-align: left; cursor: pointer; }
+.cr-slot-main:active { transform: scale(.99); }
+.cr-slot-logo { width: 44px; height: 44px; object-fit: contain; }
+.cr-slot-pos { display: grid; place-items: center; border-radius: 10px; background: rgba(255,255,255,.06); font-family: var(--ag-font); font-size: 14px; letter-spacing: 1px; color: var(--ag-text-2); }
+.cr-slot-txt { display: flex; flex-direction: column; min-width: 0; }
+.cr-slot-txt b { font-family: var(--ag-font); font-weight: 400; font-size: 19px; letter-spacing: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cr-slot-txt small { font-family: var(--ag-body); font-size: 12px; font-weight: 600; color: var(--ag-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cr-slot-ovr { display: flex; flex-direction: column; align-items: center; line-height: 1; }
+.cr-slot-ovr b { font-family: var(--ag-display); font-weight: 400; font-size: 28px; }
+.cr-slot-ovr small { font-family: var(--ag-font); font-size: 10px; letter-spacing: 1.5px; color: var(--ag-muted); }
+.cr-slot-x { flex: none; padding: 0 12px; border: 0; border-left: 1px solid var(--ag-line); background: rgba(255,255,255,.02); color: var(--ag-muted); font-family: var(--ag-font); font-size: 11px; letter-spacing: 1.5px; cursor: pointer; }
+.cr-slot-x:hover { color: #fca5a5; }
+.cr-slot--empty { justify-content: center; align-items: center; gap: 8px; padding: 16px; border-style: dashed; color: var(--ag-text-2); font-family: var(--ag-font); font-size: 16px; letter-spacing: 1.5px; cursor: pointer; }
+.cr-slot--empty span { font-size: 22px; line-height: 1; color: #f5dc8a; }
+.cr-slot--empty small { font-size: 11px; color: var(--ag-muted); letter-spacing: 1.5px; }
+.cr-slot--new, .cr-slot--ask { flex-direction: column; gap: 10px; padding: 12px; }
+.cr-slot--ask p, .cr-delete p { margin: 0; font-family: var(--ag-body); font-size: 14px; color: var(--ag-text-2); }
+.cr-name-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.cr-name-in { min-width: 0; padding: 11px 12px; border-radius: 10px; border: 1.5px solid var(--ag-line-hi); background: rgba(0,0,0,.3); color: var(--ag-text); font-family: var(--ag-body); font-size: 16px; font-weight: 600; }
+.cr-name-in:focus { outline: none; border-color: #f5dc8a; }
+.cr-slot-acts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.cr-slot-acts .ag-btn[disabled] { opacity: .45; }
+.ag-btn.cr-del { background: rgba(239,68,68,.16); border-color: rgba(239,68,68,.5); color: #fca5a5; }
+.cr-delete { display: flex; flex-direction: column; gap: 10px; padding: 4px 2px 8px; }
+.cr-delete-btn { align-self: center; padding: 8px 14px; border: 0; background: none; color: var(--ag-muted); font-family: var(--ag-body); font-size: 13px; font-weight: 600; text-decoration: underline; cursor: pointer; }
+.cr-delete-btn:hover { color: #fca5a5; }
+/* Interviews: that team's interest, up or down, for a moment */
+.cr-flash { position: fixed; left: 50%; top: 38%; z-index: 60; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 14px 22px; border-radius: 18px; background: rgba(6,14,11,.86); border: 1.5px solid currentColor; pointer-events: none; transform: translate(-50%, -50%); animation: cr-flash 1.3s ease forwards; }
+.cr-flash.is-up { color: #22c55e; } .cr-flash.is-down { color: #f97316; }
+.cr-flash img { width: 40px; height: 40px; object-fit: contain; }
+.cr-flash-arrow { font-size: 44px; line-height: 1; }
+.cr-flash small { font-family: var(--ag-font); font-size: 12px; letter-spacing: 2px; }
+@keyframes cr-flash { 0% { opacity: 0; transform: translate(-50%, -40%) scale(.9); } 15% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 75% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -60%); } }
+@media (prefers-reduced-motion: reduce) { .cr-flash { animation-duration: .01s; animation-iteration-count: 1; opacity: 1; } }

@@ -261,11 +261,16 @@ const sportForPos = pos => (SPORT.bucket.positions.includes(pos) ? SPORT.bucket 
 const fmtStat = v => (typeof v === 'number' && !Number.isInteger(v) ? v.toFixed(1) : (v ?? 0).toLocaleString())
 
 // ── Save ──────────────────────────────────────────────────────────────────────
-const key = (sport, uid) => `bap_career_${sport}_${uid || 'guest'}`
+// Three career slots per sport. Slot 0 keeps the original key (careers saved
+// before slots land there); slots 1 and 2 add a suffix. In the cloud a slot is
+// its own row: sport 'nfl', 'nfl#1', 'nfl#2' (same table, no schema change).
+export const CAREER_SLOTS = 3
+const key = (sport, uid, slot = 0) => `bap_career_${sport}_${uid || 'guest'}${slot ? `_s${slot}` : ''}`
+export const cloudSport = (sport, slot = 0) => (slot ? `${sport}#${slot}` : sport)
 const histKey = sport => `bap_career_hist_${sport}`
 const validCareer = c => !!(c && c.v === CAREER_V && c.pos)
-export function loadCareer(sport, uid) {
-  try { const c = JSON.parse(localStorage.getItem(key(sport, uid))); return validCareer(c) ? realAges(c) : null } catch { return null }
+export function loadCareer(sport, uid, slot = 0) {
+  try { const c = JSON.parse(localStorage.getItem(key(sport, uid, slot))); return validCareer(c) ? realAges({ ...c, slot }) : null } catch { return null }
 }
 // Every save stamps `updatedAt` (local and cloud copies are merged by it) and,
 // for a signed-in player, queues the cloud copy (lib/careerCloud.js). A save
@@ -275,42 +280,45 @@ const sameCareer = (a, b) => { try { return JSON.stringify({ ...a, updatedAt: 0 
 export function saveCareer(c) {
   if (!c) return
   try {
-    const prev = loadCareer(c.sport, c.uid)
-    if (prev && prev.updatedAt && sameCareer(prev, c)) return
-    const s = { ...c, updatedAt: Date.now() }
-    localStorage.setItem(key(c.sport, c.uid), JSON.stringify(s))
+    const slot = c.slot ?? 0
+    const prev = loadCareer(c.sport, c.uid, slot)
+    if (prev && prev.updatedAt && sameCareer(prev, { ...c, slot })) return
+    const s = { ...c, slot, updatedAt: Date.now() }
+    localStorage.setItem(key(c.sport, c.uid, slot), JSON.stringify(s))
     queueCloudSave(s)
   } catch {}
 }
-export function clearCareer(sport, uid) { try { localStorage.removeItem(key(sport, uid)) } catch {}; deleteCloudCareer(sport, uid) }
+export function clearCareer(sport, uid, slot = 0) { try { localStorage.removeItem(key(sport, uid, slot)) } catch {}; deleteCloudCareer(sport, uid, slot) }
 // Signed in: pull the account's cloud copy and keep whichever is newer (by
 // `updatedAt`). A guest career moves onto the account on first sign-in when
-// the account has none. Offline / any failure: the local copy stands.
-export async function syncCareerFromCloud(sport, uid) {
-  if (!uid) return loadCareer(sport, uid)
-  const cloud = await fetchCloudCareer(sport, uid)
-  const local = loadCareer(sport, uid)   // read after the fetch: it may have moved on meanwhile
+// the account has none in that slot. Offline / any failure: the local copy stands.
+export async function syncCareerFromCloud(sport, uid, slot = 0) {
+  if (!uid) return loadCareer(sport, uid, slot)
+  const cloud = await fetchCloudCareer(sport, uid, slot)
+  const local = loadCareer(sport, uid, slot)   // read after the fetch: it may have moved on meanwhile
   if (cloud === undefined) return local
-  const good = validCareer(cloud) && cloud.sport === sport ? { ...cloud, uid } : null
+  const good = validCareer(cloud) && cloud.sport === sport ? { ...cloud, uid, slot } : null
   if (good && (!local || (good.updatedAt || 0) > (local.updatedAt || 0))) {
-    try { localStorage.setItem(key(sport, uid), JSON.stringify(good)) } catch {}
+    try { localStorage.setItem(key(sport, uid, slot), JSON.stringify(good)) } catch {}
     return realAges(good)
   }
   if (local) {
     if (!good || (local.updatedAt || 0) > (good.updatedAt || 0)) queueCloudSave(local.updatedAt ? local : { ...local, updatedAt: Date.now() })
     return local
   }
-  if (cloud === null) {   // the account has no career anywhere: bring the guest one over
-    const guest = loadCareer(sport, null)
+  if (cloud === null) {   // the account has no career in this slot: bring the guest one over
+    const guest = loadCareer(sport, null, slot)
     if (guest) {
-      const moved = { ...guest, uid, updatedAt: Date.now() }
-      try { localStorage.setItem(key(sport, uid), JSON.stringify(moved)); localStorage.removeItem(key(sport, null)) } catch {}
+      const moved = { ...guest, uid, slot, updatedAt: Date.now() }
+      try { localStorage.setItem(key(sport, uid, slot), JSON.stringify(moved)); localStorage.removeItem(key(sport, null, slot)) } catch {}
       queueCloudSave(moved)
       return moved
     }
   }
   return null
 }
+// Every slot for the career screen: [career | null, …]
+export const loadSlots = (sport, uid) => Promise.all(Array.from({ length: CAREER_SLOTS }, (_, i) => syncCareerFromCloud(sport, uid, i)))
 export function pastCareers(sport) { try { const l = JSON.parse(localStorage.getItem(histKey(sport)) || '[]'); return Array.isArray(l) ? l : [] } catch { return [] } }
 export function logCareer(c) {
   if (!c || c.logged) return c
@@ -633,7 +641,7 @@ export function setupInterviews(c) {
   const qs = [...(INTERVIEWS[c.sport] ?? INTERVIEWS.nfl)].sort(() => r() - 0.5).slice(0, teams.length)
   return { ...c, draft: { ...c.draft, interviews: qs.map((q, i) => ({ ...q, team: teams[i], answer: null })) } }
 }
-export function newCareer({ sport = 'nfl', uid = null, pos, build, name = 'Guest' }) {
+export function newCareer({ sport = 'nfl', uid = null, pos, build, name = 'Guest', slot = 0, owner = null }) {
   const S = SPORT[sport] ?? SPORT.nfl
   const seed = Math.random().toString(36).slice(2, 10)
   const r = seeded(`career-${seed}`)
@@ -642,7 +650,7 @@ export function newCareer({ sport = 'nfl', uid = null, pos, build, name = 'Guest
   const drills = S.combine[pos].map(([id, label, trait]) => ({ id, label, trait, score: null, text: null, pct: null }))
   const dur = S.durable[pos].reduce((s, t) => s + (build[t]?.val ?? 5), 0) / S.durable[pos].length
   return {
-    v: CAREER_V, sport, uid, seed, pos, types, name, build, base: build, ovr,
+    v: CAREER_V, sport, uid, slot, owner, seed, pos, types, name, build, base: build, ovr,
     age: (S.isBucket ? 19 : 21) + Math.floor(r() * 2), year: 0, season: FIRST_SEASON,
     phase: 'draft', step: 'combine',
     draft: { combine: drills, interviews: [], picks: null, pick: null, persona: null },

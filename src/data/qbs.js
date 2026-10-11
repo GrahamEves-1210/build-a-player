@@ -239,7 +239,7 @@ export const ATTR = {
   'leadership':      { label: 'Leadership',            shortLabel: 'LDR',  category: 'mental',   col: 'var(--c-lead)', hex: '#a78bfa', bodyZone: 'helmet' },
   'vision':          { label: 'Post-Snap',             shortLabel: 'PST',  category: 'mental',   col: 'var(--c-vis)',  hex: '#38bdf8', bodyZone: 'vision' },
   'playmaking':      { label: 'Playmaking/Creativity', shortLabel: 'PLAY', category: 'skill',    col: 'var(--c-comp)', hex: '#fbbf24', bodyZone: 'comp'   },
-  'accuracy':        { label: 'Accuracy/Touch',        shortLabel: 'ACC',  category: 'skill',    col: 'var(--c-acc)',  hex: '#34d399', bodyZone: 'hand'   },
+  'accuracy':        { label: 'Accuracy',              shortLabel: 'ACC',  category: 'skill',    col: 'var(--c-acc)',  hex: '#34d399', bodyZone: 'hand'   },
   'pocket-presence': { label: 'Pocket Presence',       shortLabel: 'PKT',  category: 'skill',    col: 'var(--c-pkt)',  hex: '#2dd4bf', bodyZone: 'pocket' },
   // RB attributes
   'speed':           { label: 'Long Speed',            shortLabel: 'SPD',  category: 'physical', col: 'var(--c-arm)',  hex: '#f87171', bodyZone: 'legs'   },

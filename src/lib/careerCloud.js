@@ -12,9 +12,11 @@ const DEBOUNCE_MS = 3000
 const FETCH_TIMEOUT_MS = 2500
 const pending = new Map()   // `${uid}:${sport}` → { timer, c }
 
+// a slot is its own row: 'nfl', 'nfl#1', 'nfl#2'
+const sportKey = (sport, slot = 0) => (slot ? `${sport}#${slot}` : sport)
 const rowOf = c => ({
   user_id: c.uid,
-  sport: c.sport,
+  sport: sportKey(c.sport, c.slot),
   data: c,
   updated_at: new Date(c.updatedAt || Date.now()).toISOString(),
 })
@@ -30,7 +32,7 @@ async function push(c) {
 // Debounced: a burst of saves (every tap in a season) becomes one upsert
 export function queueCloudSave(c) {
   if (!supabase || !c?.uid || !c.sport) return
-  const k = `${c.uid}:${c.sport}`
+  const k = `${c.uid}:${sportKey(c.sport, c.slot)}`
   const prev = pending.get(k)
   if (prev) clearTimeout(prev.timer)
   const timer = setTimeout(() => { pending.delete(k); push(c) }, DEBOUNCE_MS)
@@ -48,10 +50,10 @@ if (typeof window !== 'undefined') {
 
 // The account's cloud copy: the career object, null when the account has
 // none, or undefined when the cloud couldn't be reached (then local wins).
-export async function fetchCloudCareer(sport, uid) {
+export async function fetchCloudCareer(sport, uid, slot = 0) {
   if (!supabase || !uid) return undefined
   try {
-    const q = supabase.from('careers').select('data').eq('user_id', uid).eq('sport', sport).maybeSingle()
+    const q = supabase.from('careers').select('data').eq('user_id', uid).eq('sport', sportKey(sport, slot)).maybeSingle()
       .then(({ data, error }) => (error ? undefined : (data?.data ?? null)))
     const timeout = new Promise(res => setTimeout(() => res(undefined), FETCH_TIMEOUT_MS))
     return await Promise.race([q, timeout])
@@ -60,13 +62,13 @@ export async function fetchCloudCareer(sport, uid) {
 
 // A finished career cleared for a new one: drop the cloud copy too, so it
 // can't be pulled back down on the next open
-export function deleteCloudCareer(sport, uid) {
+export function deleteCloudCareer(sport, uid, slot = 0) {
   if (!supabase || !uid) return
-  const k = `${uid}:${sport}`
+  const k = `${uid}:${sportKey(sport, slot)}`
   const prev = pending.get(k)
   if (prev) { clearTimeout(prev.timer); pending.delete(k) }
   try {
-    supabase.from('careers').delete().eq('user_id', uid).eq('sport', sport)
+    supabase.from('careers').delete().eq('user_id', uid).eq('sport', sportKey(sport, slot))
       .then(({ error }) => { if (error) console.warn('[career cloud] delete failed:', error.code, error.message) }, () => {})
   } catch {}
 }
