@@ -37,7 +37,9 @@ const SAMPLE_NAMES = ['tap', 'tap2', 'tick', 'back', 'open', 'close', 'swoosh', 
   'wood', 'woodl', 'punch', 'punchm', 'thud', 'plank', 'chip', 'chips', 'stack', 'stack2', 'handful', 'slide', 'slide2', 'cardout',
   'hitS', 'hitS2', 'hitM', 'hitM2', 'hitL', 'hitL2', 'hitXL', 'hitXXL', 'sax', 'saxS', 'pizzi',
   // the shop's and the coins' sounds (public/sfx/*.mp3)
-  'coindrop.mp3', 'riser.mp3', 'bell.mp3', 'badge.mp3', 'shutter.mp3', 'zoom.mp3', 'rocket.mp3', 'strike.mp3', 'nope.mp3']
+  'coindrop.mp3', 'riser.mp3', 'bell.mp3', 'badge.mp3', 'shutter.mp3', 'zoom.mp3', 'rocket.mp3', 'strike.mp3', 'nope.mp3',
+  // Blacktop's ball (Mixkit, free licence): a dribble, a pass caught, a make
+  'bt-dribble', 'bt-catch', 'bt-make']
 const buffers = new Map()
 let loading = null
 function loadSamples(ac) {
@@ -361,6 +363,10 @@ const SYNTH = {
 // returns false (samples still loading) so the synth version plays instead.
 const pick = (...names) => names[Math.floor(Math.random() * names.length)]
 const SAMPLED = {
+  // Blacktop: the ball on the court (no synth fallback: silent until loaded)
+  dribble: S => smp(S, 'bt-dribble', { gain: 0.34, jitter: 0.06 }),
+  catchball: S => smp(S, 'bt-catch', { gain: 0.5, jitter: 0.04 }),
+  make: S => smp(S, 'bt-make', { gain: 0.62, jitter: 0.03 }),
   tap: S => smp(S, pick('tap', 'tap2'), { gain: 0.55, jitter: 0.04 }),
   tick: S => smp(S, 'tick', { gain: 0.42, jitter: 0.07 }),
   back: S => smp(S, 'back', { gain: 0.6, jitter: 0.03 }),

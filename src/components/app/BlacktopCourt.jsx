@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import QBAvatar from '../QBAvatar'
+import { sfx } from '../../lib/juice'
 
 // The Blacktop court: six players and a ball, choreographed from the play the
 // engine wrote — who checked it up, each pass, the drive or the pull-up, the
@@ -55,6 +56,9 @@ export default function BlacktopCourt({ game, play, meId, photoFor, colorFor, av
   const r = useRef({ rnd: (lo, hi) => lo + Math.random() * (hi - lo), pick: a => a[Math.floor(Math.random() * a.length)] }).current
 
   const after = (ms, fn) => { const t = setTimeout(fn, ms / speed); timers.current.push(t) }
+  // the ball's sounds: a pass caught, a few bounces while the handler moves, a make at the rim
+  const caught = () => sfx('catchball')
+  const bounce = (n = 2, gap = 210) => { for (let i = 0; i < n; i++) after(i * gap, () => sfx('dribble')) }
   const move = (id, x, y, dur) => setPos(p => ({ ...p, [id]: { x: cl(x), y: clamp(y, 6, 92), dur: (dur ?? sdur(byId[id]?.R.speed)) / speed } }))
   const moveMany = updates => setPos(p => { const n = { ...p }; for (const [id, x, y, dur] of updates) n[id] = { x: cl(x), y: clamp(y, 6, 92), dur: (dur ?? sdur(byId[id]?.R.speed)) / speed }; return n })
   const flyBall = (x, y, dur = .42) => setBall({ x, y, dur: dur / speed })
@@ -85,9 +89,9 @@ export default function BlacktopCourt({ game, play, meId, photoFor, colorFor, av
       // whoever ended up with it (a board, a steal) brings it to the top
       if (play.carrier && play.carrier !== play.handler && byId[play.carrier]) {
         setHolder(play.carrier)
-        move(play.carrier, 50, 72)
+        move(play.carrier, 50, 72); bounce(2)
         const hf = f[play.handler] ?? TOP
-        after(420, () => { flyBall(hf.x, hf.y, .32); after(300, () => { setHolder(play.handler); setBall(null) }) })
+        after(420, () => { flyBall(hf.x, hf.y, .32); after(300, () => { setHolder(play.handler); setBall(null); caught() }) })
       } else setHolder(play.handler)
       setPos(p => ({ ...p, ...Object.fromEntries(Object.entries(f).map(([id, s]) => [id, { ...s, dur: .8 / speed }])) }))
       return
@@ -102,7 +106,7 @@ export default function BlacktopCourt({ game, play, meId, photoFor, colorFor, av
       move(h, spot.x, spot.y, sp(h) * .9)
       move(s, spot.x + side * 6, spot.y + 4, sp(s) * .8)
       after(520, () => { setHolder(s); move(s, spot.x + side * 10, spot.y + 10, sp(s) * .5); move(h, spot.x - side * 6, spot.y + 6, sp(h) * .7) })
-      after(900, () => { move(s, 50, 80, sp(s)); moveMany(shadowAll(offIds, TOP, s)) })
+      after(900, () => { move(s, 50, 80, sp(s)); moveMany(shadowAll(offIds, TOP, s)); bounce(3, 230) })
       return
     }
 
@@ -112,7 +116,7 @@ export default function BlacktopCourt({ game, play, meId, photoFor, colorFor, av
     setHolder(carrier)
     if (play.entry && play.entry !== play.handler && byId[play.entry]) {
       const hp = at(play.handler)
-      after(0, () => { flyBall(hp.x, hp.y, .36); after(320, () => { setHolder(play.handler); setBall(null) }) })
+      after(0, () => { flyBall(hp.x, hp.y, .36); after(320, () => { setHolder(play.handler); setBall(null); caught() }) })
       t += 420; carrier = play.handler
     }
     // off-ball movement for the possession: one spaces to a corner, a big ducks in
@@ -134,7 +138,7 @@ export default function BlacktopCourt({ game, play, meId, photoFor, colorFor, av
         // receiver relocates a touch as the ball comes
         const cur = at(to); move(to, cur.x + r.rnd(-4, 4), cur.y + r.rnd(-4, 2), sp(to) * .6) })
       after(t - 240, () => { const tp = at(to); flyBall(tp.x, tp.y, .3) })
-      after(t, () => { setHolder(to); setBall(null)
+      after(t, () => { setHolder(to); setBall(null); caught()
         // closeout by the receiver's defender, help sags
         const dId = Object.keys(guards).find(k => guards[k] === to && byId[k]?.team !== byId[to]?.team)
         const tp = at(to)
@@ -158,7 +162,7 @@ export default function BlacktopCourt({ game, play, meId, photoFor, colorFor, av
       return
     }
 
-    const finish = () => { flyBall(RIM.x, RIM.y, .42); after(120, () => popRim(label)) }
+    const finish = () => { flyBall(RIM.x, RIM.y, .42); after(120, () => popRim(label)); if (made) after(400, () => sfx('make')) }
     const shot = play.shot || (play.arc ? 'arc' : 'layup')
     if (shot === 'arc') {
       const cur = at(shooter); const spot = near(cur, ARC3)
@@ -167,23 +171,23 @@ export default function BlacktopCourt({ game, play, meId, photoFor, colorFor, av
         after(start, () => { move(shooter, spot.x, spot.y, od * .3); move(d, spot.x + r.rnd(-6, 6), spot.y - r.rnd(2, 7), dd * .4); finish() })
       } else if (variant === 'stepback') {
         const dir = Math.random() < .5 ? -1 : 1
-        after(start, () => { move(shooter, cl(spot.x + dir * r.rnd(10, 16)), spot.y + 2, od * .5); move(d, cl(spot.x + dir * r.rnd(6, 12)), spot.y - 6, dd * .6) })
+        after(start, () => { move(shooter, cl(spot.x + dir * r.rnd(10, 16)), spot.y + 2, od * .5); move(d, cl(spot.x + dir * r.rnd(6, 12)), spot.y - 6, dd * .6); bounce(2) })
         after(start + 480, () => { move(shooter, spot.x, spot.y, od * .55); move(d, cl(spot.x - dir * r.rnd(4, 10)), spot.y + r.rnd(4, 8), dd); finish() })
       } else {
-        after(start, () => { move(shooter, cl(spot.x + r.rnd(-8, 8)), spot.y + r.rnd(10, 16), od * .8); move(d, spot.x, spot.y - 6, dd * .8) })
+        after(start, () => { move(shooter, cl(spot.x + r.rnd(-8, 8)), spot.y + r.rnd(10, 16), od * .8); move(d, spot.x, spot.y - 6, dd * .8); bounce(2) })
         after(start + 460, () => { move(shooter, spot.x, spot.y, od * .45); move(d, cl(spot.x + r.rnd(-5, 5)), spot.y - r.rnd(2, 6), dd * .5); finish() })
       }
       return
     }
     if (shot === 'mid') {
       const spot = near(at(shooter), MID)
-      after(start, () => { move(shooter, cl(spot.x + r.rnd(-10, 10)), spot.y + r.rnd(12, 18), od * .75); move(d, spot.x + r.rnd(-6, 6), spot.y - r.rnd(4, 10), dd * .85) })
+      after(start, () => { move(shooter, cl(spot.x + r.rnd(-10, 10)), spot.y + r.rnd(12, 18), od * .75); move(d, spot.x + r.rnd(-6, 6), spot.y - r.rnd(4, 10), dd * .85); bounce(2) })
       after(start + 460, () => { move(shooter, spot.x, spot.y, od * .36); move(d, spot.x + r.rnd(-5, 5), spot.y - r.rnd(2, 6), dd * .46); finish() })
       return
     }
     if (shot === 'post') {
       const cur = at(shooter); const block = POST[cur.x < 50 ? 0 : 1]
-      after(start, () => { move(shooter, block.x, block.y + 10, od * 1.1); move(d, block.x + r.rnd(-3, 3), block.y - 6, dd) })
+      after(start, () => { move(shooter, block.x, block.y + 10, od * 1.1); move(d, block.x + r.rnd(-3, 3), block.y - 6, dd); bounce(3, 240) })
       after(start + 560, () => { move(shooter, block.x + r.rnd(-3, 3), block.y, od * .9); move(d, block.x + r.rnd(-3, 3), block.y - 8, dd * .8) })
       after(start + 1000, () => { move(shooter, block.x + (block.x < 50 ? 6 : -6), 15, od * .6); finish() })
       return
@@ -197,12 +201,12 @@ export default function BlacktopCourt({ game, play, meId, photoFor, colorFor, av
     after(start, () => {
       const ups = [[shooter, cl(cur.x + dir * r.rnd(6, 12)), cur.y - r.rnd(8, 14), od * .62], [d, cl(cur.x + dir * r.rnd(2, 8)), cur.y - r.rnd(14, 20), dd * .8]]
       if (helper) ups.push([helper.id, 50 + (cur.x < 50 ? -6 : 6), 30, sp(helper.id) * .9])
-      moveMany(ups)
+      moveMany(ups); bounce(3, 200)
     })
     after(start + 420, () => { move(shooter, lane.x, lane.y, od * .32); move(d, cl(rimSpot.x + dir * r.rnd(2, 8)), rimSpot.y + r.rnd(2, 8), dd * .55) })
     after(start + 700, () => {
       move(shooter, rimSpot.x, rimSpot.y, od * (shot === 'dunk' ? .26 : .3))
-      if (shot === 'dunk') { flyBall(rimSpot.x, rimSpot.y, .25); after(220, () => popRim(label)) } else finish()
+      if (shot === 'dunk') { flyBall(rimSpot.x, rimSpot.y, .25); after(220, () => { popRim(label); if (made) sfx('make') }) } else finish()
     })
     return () => clearAll()
   }, [play?.id]) // eslint-disable-line
@@ -216,7 +220,7 @@ export default function BlacktopCourt({ game, play, meId, photoFor, colorFor, av
     moveMany(everyone.map(id => [id, 50 + r.rnd(-16, 16), 18 + r.rnd(0, 14), sdur(byId[id]?.R.speed) * .8]))
     after(380, () => { flyBall(at(rb).x, 22, .3) })
     after(620, () => { setHolder(rb); setBall(null); move(rb, at(rb).x, 30, sdur(byId[rb]?.R.speed) * .5) })
-    if (play.type === 'dreb') after(1000, () => { move(rb, 50, 76); setTag('OUTLET'); after(700, () => setTag(null)) })
+    if (play.type === 'dreb') after(1000, () => { move(rb, 50, 76); bounce(2, 230); setTag('OUTLET'); after(700, () => setTag(null)) })
     return () => clearAll()
   }, [play?.id]) // eslint-disable-line
 

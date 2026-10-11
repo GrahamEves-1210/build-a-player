@@ -397,7 +397,8 @@ export function BlacktopGame({ bt, user, photoFor, onOpenChat, unread }) {
   }, [stage, idx, speed, game, plays.length]) // eslint-disable-line
   useEffect(() => {
     if (!play) return
-    if (play.type === 'score') { setTimeout(() => { sfx(play.pts === 2 ? 'lock' : 'tap'); if (play.team === myTeam) haptic('light') }, 900) }
+    // the make itself is heard on the court (BlacktopCourt); here just the buzz for your side
+    if (play.type === 'score') { setTimeout(() => { if (play.team === myTeam) haptic('light') }, 900) }
     else if (play.type === 'block' || play.type === 'steal') setTimeout(() => sfx('pop'), 700)
   }, [idx]) // eslint-disable-line
   if (!game) return null

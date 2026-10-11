@@ -391,8 +391,8 @@ function HoopsDuel({ duel, run, city, me, onDone }) {
     return () => clearTimeout(t)
   }, [idx, speed]) // eslint-disable-line
   useEffect(() => {
-    if (play?.type === 'score') setTimeout(() => sfx(play.pts === 2 ? 'lock' : 'tap'), 900)
-    else if (play?.type === 'block' || play?.type === 'steal') setTimeout(() => sfx('pop'), 700)
+    // (a make is heard on the court itself: BlacktopCourt)
+    if (play?.type === 'block' || play?.type === 'steal') setTimeout(() => sfx('pop'), 700)
   }, [idx]) // eslint-disable-line
   const score = play?.score ?? [0, 0]
   const feed = plays.slice(0, idx + 1).filter(p => p.type !== 'check').slice(-4).reverse()
