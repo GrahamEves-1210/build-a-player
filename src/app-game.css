@@ -4093,3 +4093,9 @@ html.app-look .ag-blacktop:hover .bt-art-cone { opacity: 1; }
 /* final report: no hole above New Build (an empty ad slot reserved up to 270px, plus the row margin) */
 html:is(.is-app, .app-look) #ramp-cntr1-sim:empty { display: none !important; min-height: 0 !important; }
 html:is(.is-app, .app-look) .simp-final-actions { margin-top: 12px; }
+
+/* the BAP mark (cut from the app icon): bigger on home and in the navbar */
+.ag-brand-mark { height: 66px; }
+@media (min-width: 1024px) { html.app-look .ag-brand-mark { height: 86px; } }
+html:is(.is-app, .app-look) .logo-img-full { height: 30px; }
+@media (min-width: 769px) { html:is(.is-app, .app-look) .logo-img-full { height: 40px; } }
