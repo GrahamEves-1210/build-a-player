@@ -145,7 +145,7 @@ function Draft({ c, setCareer }) {
       <div className={`ag-screen ${S.screen} cr`}>
         {head(`THE COMBINE · ${POS_LABEL[c.pos]}`, allDone ? 'Your numbers' : next.label)}
         <div className="ag-screen-body">
-          {!allDone && <MiniGame key={next.id} game={next.id} build={c.build} seed={`${c.seed}-cb-${next.id}`} onDone={res => setCareer(recordCombine(c, next.id, res.score))} />}
+          {!allDone && <MiniGame key={next.id} game={next.id} build={c.build} seed={`${c.seed}-cb-${next.id}`} onDone={res => setCareer(recordCombine(c, next.id, res.score, res.raw))} />}
           {allDone && <Comp c={c} />}
           <div className="cr-drills ag-pop" style={{ '--d': '60ms' }}>
             {c.draft.combine.map((d, i) => (

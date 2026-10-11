@@ -27,6 +27,7 @@ import { NBA_TEAMS } from '../data/nba-teams'
 import { NBA_GUARD_PLAYERS, GUARD_TYPES } from '../data/nba-guards'
 import { NBA_BIG_PLAYERS, BIG_TYPES } from '../data/nba-bigs'
 import { BUCKET_ATTR } from '../data/nba-attrs'
+import { BIRTH } from '../data/player-ages'
 import { LEGENDS } from '../data/qb-legends'
 import { RB_LEGENDS } from '../data/rb-legends'
 import { WR_LEGENDS } from '../data/wr-legends'
@@ -242,7 +243,7 @@ const key = (sport, uid) => `bap_career_${sport}_${uid || 'guest'}`
 const histKey = sport => `bap_career_hist_${sport}`
 const validCareer = c => !!(c && c.v === CAREER_V && c.pos)
 export function loadCareer(sport, uid) {
-  try { const c = JSON.parse(localStorage.getItem(key(sport, uid))); return validCareer(c) ? c : null } catch { return null }
+  try { const c = JSON.parse(localStorage.getItem(key(sport, uid))); return validCareer(c) ? realAges(c) : null } catch { return null }
 }
 // Every save stamps `updatedAt` (local and cloud copies are merged by it) and,
 // for a signed-in player, queues the cloud copy (lib/careerCloud.js). A save
@@ -271,7 +272,7 @@ export async function syncCareerFromCloud(sport, uid) {
   const good = validCareer(cloud) && cloud.sport === sport ? { ...cloud, uid } : null
   if (good && (!local || (good.updatedAt || 0) > (local.updatedAt || 0))) {
     try { localStorage.setItem(key(sport, uid), JSON.stringify(good)) } catch {}
-    return good
+    return realAges(good)
   }
   if (local) {
     if (!good || (local.updatedAt || 0) > (good.updatedAt || 0)) queueCloudSave(local.updatedAt ? local : { ...local, updatedAt: Date.now() })
@@ -303,24 +304,46 @@ export const ovrGradeVal = ovr => clamp((ovr - 60) / 3.5, 0, 11)
 export const gradeOfOvr = ovr => valToGrade(ovrGradeVal(ovr))
 export const gradeOf = v => valToGrade(clamp(v, 0, 11))
 const hashN = s => { let h = 7; for (const ch of String(s)) h = (h * 31 + ch.charCodeAt(0)) | 0; return Math.abs(h) }
-const man = (S, pos, p) => ({ name: p.name, pos, ovr: S.realOvr(pos, p), age: 23 + (hashN(p.name) % 9), photo: S.photo(p.name), slot: p.pos ?? null, from: p.team })
+// Real ages: the birth year against the season (yrs = seasons past the first)
+const born = (sport, name) => BIRTH[sport === 'bucket' ? 'bucket' : 'nfl'][name]
+const ageOf = (sport, name, yrs = 0) => (born(sport, name) ? FIRST_SEASON - born(sport, name) : 23 + (hashN(name) % 6)) + yrs
+// how long a position lasts: gone at the cap, maybe gone in the two years before it
+const RETIRE_AT = { qb: 41, rb: 33, wr: 35, te: 35, ol: 36, guard: 38, big: 38 }
+// how many seasons past the first a roster is for (in the offseason, the one coming up)
+const rosterYrs = c => Math.max(0, (c.season ?? FIRST_SEASON) + (c.phase === 'offseason' ? 1 : 0) - FIRST_SEASON)
+const man = (S, pos, p, yrs = 0) => ({ name: p.name, pos, ovr: S.realOvr(pos, p), age: ageOf(S.id, p.name, yrs), photo: S.photo(p.name), slot: p.pos ?? null, from: p.team })
 const byOvr = (a, b) => b.ovr - a.ovr
 const avgOvr = list => (list.length ? list.reduce((s, p) => s + p.ovr, 0) / list.length : 72)
 // A team's real roster (the depth the lineup needs, the five starting linemen in football)
-export function makeRoster(short, sport = 'nfl') {
+// A career saved before real ages: the real players on the roster get theirs
+function realAges(c) {
+  if (!c?.roster) return c
+  const yrs = rosterYrs(c)
+  const ro = { ...c.roster }
+  for (const g of sportOf(c).groups) if (Array.isArray(ro[g])) ro[g] = ro[g].map(p => (born(c.sport, p.name) && !p.rookie ? { ...p, age: ageOf(c.sport, p.name, yrs) } : p))
+  return { ...c, roster: ro }
+}
+// Years into a career, the team's real players are that much older; the ones
+// who'd have retired are gone, their spots filled by draft picks.
+export function makeRoster(short, sport = 'nfl', yrs = 0) {
   const S = SPORT[sport] ?? SPORT.nfl
   const ro = { team: short, sport }
+  const r = seeded(`${short}-${sport}-${yrs}-fill`)
   for (const g of S.groups) {
-    const list = S.pool[g].filter(p => p.team === short).map(p => man(S, g, p))
+    const list = S.pool[g].filter(p => p.team === short).map(p => man(S, g, p, yrs)).filter(p => p.age < RETIRE_AT[g])
     const slots = S.slots[g]
+    if (yrs > 0) {
+      for (const sl of slots ?? []) if (!list.some(p => p.slot === sl)) list.push({ name: rookieName(r), pos: g, ovr: clamp(Math.round(74 + (r() - 0.5) * 10), 64, 84), age: 22 + Math.floor(r() * 4), photo: null, slot: sl, rookie: true })
+      while (list.length < S.keep[g]) list.push({ name: rookieName(r), pos: g, ovr: clamp(Math.round(74 + (r() - 0.5) * 10), 64, 84), age: 22 + Math.floor(r() * 4), photo: null, slot: null, rookie: true })
+    }
     ro[g] = slots ? slots.map(s => list.find(p => p.slot === s)).filter(Boolean).concat(list.filter(p => !slots.includes(p.slot))).slice(0, S.keep[g]) : list.sort(byOvr).slice(0, S.keep[g])
   }
   return ro
 }
-const rosterFor = (c, short = c.team) => (c.roster?.team === short ? c.roster : makeRoster(short, c.sport))
+const rosterFor = (c, short = c.team) => (c.roster?.team === short ? c.roster : makeRoster(short, c.sport, rosterYrs(c)))
 // Where you stand at your spot: the group best-first with you in it. Last
 // year's starter keeps the job in a tie (+2), a starter guarantee keeps it.
-export function depthChart(c, roster = c.roster ?? (c.team ? makeRoster(c.team, c.sport) : null)) {
+export function depthChart(c, roster = c.roster ?? (c.team ? makeRoster(c.team, c.sport, rosterYrs(c)) : null)) {
   const S = sportOf(c)
   const group = (roster?.[c.pos] ?? []).filter(p => p.name !== c.name)
   const me = { name: c.name, pos: c.pos, ovr: c.ovr, age: c.age, you: true }
@@ -330,7 +353,7 @@ export function depthChart(c, roster = c.roster ?? (c.team ? makeRoster(c.team, 
   return { all, idx, starter: idx < S.starters[c.pos], ahead: all.slice(0, idx), label: S.depthLabel(c.pos, idx + 1) }
 }
 // The starters, you in your spot if you've won it
-export function lineup(c, roster = c.roster ?? (c.team ? makeRoster(c.team, c.sport) : null)) {
+export function lineup(c, roster = c.roster ?? (c.team ? makeRoster(c.team, c.sport, rosterYrs(c)) : null)) {
   const S = sportOf(c)
   const dc = depthChart(c, roster)
   const out = {}
@@ -338,10 +361,10 @@ export function lineup(c, roster = c.roster ?? (c.team ? makeRoster(c.team, c.sp
   return { ...out, bench: dc.all.slice(S.starters[c.pos]), depth: dc }
 }
 // Grades (0–11) for the pieces of the team around you, from the roster you'd play with
-export function teamFit(short, pos, { roster = null, league = null, name = null, sport = 'nfl' } = {}) {
+export function teamFit(short, pos, { roster = null, league = null, name = null, sport = 'nfl', yrs = 0 } = {}) {
   const S = SPORT[sport] ?? SPORT.nfl
   const t = S.teamOf(short)
-  const ro = roster?.team === short ? roster : makeRoster(short, sport)
+  const ro = roster?.team === short ? roster : makeRoster(short, sport, yrs)
   const f = S.fit(ro, pos, p => p.name !== name)
   const drift = league?.[short] ?? { off: 0, def: 0 }
   const off = clamp(r10(t.off + drift.off), 1, 10), def = clamp(r10(t.def + drift.def), 1, 10)
@@ -350,7 +373,7 @@ export function teamFit(short, pos, { roster = null, league = null, name = null,
     ...f, adj: clamp(Math.round(f.adj * 2) / 2, -1.5, 1.5),
   }
 }
-const fitFor = (c, short = c.team) => teamFit(short, c.pos, { roster: c.roster, league: c.league, name: c.name, sport: c.sport })
+const fitFor = (c, short = c.team) => teamFit(short, c.pos, { roster: c.roster, league: c.league, name: c.name, sport: c.sport, yrs: rosterYrs(c) })
 function simTeam(c, fit) { const S = sportOf(c); return S.simTeam(S.teamOf(c.team), fit, c.nextMods ?? {}, c) }
 // Every offseason the league moves: good teams slip, bad ones climb, some lurch
 function driftLeague(c, r) {
@@ -383,7 +406,7 @@ function rosterMoves(c, r) {
     const kept = []
     for (const p0 of old[g]) {
       const p = { ...p0, age: p0.age + 1, ovr: clamp(p0.ovr + grow(p0.age + 1), 55, 99) }
-      if (p.age >= 35 || (p.age >= 33 && r() < 0.35)) { moves.push({ kind: 'retire', pos: g, text: `${p.name} retires after ${p.age - 22} seasons.`, p }); continue }
+      if (p.age >= RETIRE_AT[g] || (p.age >= RETIRE_AT[g] - 2 && r() < 0.35)) { moves.push({ kind: 'retire', pos: g, text: `${p.name} retires after ${p.age - 22} seasons.`, p }); continue }
       if (p.age > 25 && r() < 0.11) {   // the young ones are still on rookie deals
         const to = S.teams[Math.floor(r() * S.teams.length)].short
         if (to !== ro.team) { moves.push({ kind: 'leave', pos: g, text: `${p.name} leaves in free agency for the ${nickOf(S, to)}.`, p }); continue }
@@ -398,7 +421,8 @@ function rosterMoves(c, r) {
         const pool = S.pool[g].filter(p => p.team !== ro.team && !taken.has(p.name) && (!need || p.pos === need))
         const pick = pool[Math.floor(r() * pool.length)]
         if (pick) {
-          const p = { ...man(S, g, pick), slot: need ?? pick.pos ?? null }
+          const p = { ...man(S, g, pick, rosterYrs(c)), slot: need ?? pick.pos ?? null }
+          if (p.age >= RETIRE_AT[g] - 1) continue
           taken.add(p.name); kept.push(p)
           moves.push({ kind: 'sign', pos: g, text: `Signed ${gl(g)} ${p.name} from the ${nickOf(S, pick.team)}.`, p })
           continue
@@ -503,29 +527,33 @@ export const INTERVIEWS = {
       { t: 'Not even close. Me, then everyone else.', stock: -1, persona: 'cocky' } ] },
   ],
 }
-// The combine: three quick drills (components/app/MiniGame.jsx). The number
-// comes from the trait and how the drill went: a great run takes the top of the
-// trait's range, a bad one the bottom. pct is where it lands for the scouts.
+// The combine: three quick drills (components/app/MiniGame.jsx). A counted drill
+// (reps, catches, nets, shots) shows exactly what was done in it: the trait already
+// sets how hard the drill plays. A measured one (40, cone, velocity, vertical)
+// starts from the trait's real-world range, and the run moves it inside that.
+// pct (about -1 to 1) is where it lands against a typical prospect, for the scouts.
 export const COMBINE_DRILLS = { ...SPORT.nfl.combine, ...SPORT.bucket.combine }
-const drillValue = (id, v, score) => {
-  const n = (v - 5) / 6 + (score - 0.5) * 0.5          // the trait, moved by the drill
+const drillValue = (id, v, score, raw) => {
+  const t = clamp(v, 0, 11) / 11, run = score - 0.6               // run: a decent go is about 0
+  const cnt = (of, lo = 0) => (raw?.made != null ? raw.made : Math.round(lo + score * (of - lo)))
+  const pc = x => clamp(x, -1, 1)
   switch (id) {
-    case 'forty': return { text: `${(4.85 - n * .42).toFixed(2)}s`, pct: n }
-    case 'velo': return { text: `${Math.round(52 + n * 9)} mph`, pct: n }
-    case 'acc': return { text: `${Math.round(62 + n * 30)}% on target`, pct: n }
-    case 'cone': return { text: `${(7.15 - n * .5).toFixed(2)}s`, pct: n }
-    case 'bench': return { text: `${Math.round(17 + n * 9)} reps`, pct: n }
-    case 'gauntlet': return { text: `${Math.round(78 + n * 20)}% caught`, pct: n }
-    case 'sprint': return { text: `${(3.45 - n * .32).toFixed(2)}s`, pct: n }
-    case 'lane': return { text: `${(11.7 - n * 1.0).toFixed(2)}s`, pct: n }
-    case 'spot': return { text: `${Math.round(58 + n * 30)}% from three`, pct: n }
-    case 'vert': return { text: `${Math.round(31 + n * 11)}" vertical`, pct: n }
-    case 'nbench': return { text: `${Math.round(9 + n * 9)} reps`, pct: n }
+    case 'forty': { const s = 4.95 - t * 0.6 - run * 0.2; return { text: `${s.toFixed(2)}s`, pct: pc((4.62 - s) / 0.22) } }
+    case 'sprint': { const s = 3.55 - t * 0.4 - run * 0.14; return { text: `${s.toFixed(2)}s`, pct: pc((3.33 - s) / 0.15) } }
+    case 'velo': { const m = Math.round(49 + t * 14 + run * 7); return { text: `${m} mph`, pct: pc((m - 56) / 6) } }
+    case 'vert': { const i = r10(26 + t * 16 + run * 7); return { text: `${i}" vertical`, pct: pc((i - 33) / 6) } }
+    case 'cone': { const of = raw?.of ?? 6, slips = of - cnt(of, 2); const s = 7.45 - t * 0.75 + slips * 0.07 - run * 0.08; return { text: `${s.toFixed(2)}s`, pct: pc((7.05 - s) / 0.3) } }
+    case 'lane': { const of = raw?.of ?? 6, slips = of - cnt(of, 2); const s = 11.9 - t * 1.4 + slips * 0.12 - run * 0.15; return { text: `${s.toFixed(2)}s`, pct: pc((11.2 - s) / 0.6) } }
+    case 'acc': { const of = raw?.of ?? 4, m = cnt(of); return { text: `${m} of ${of} in the net`, pct: pc((m / of - 0.55) * 2.2) } }
+    case 'spot': { const of = raw?.of ?? 4, m = cnt(of); return { text: `${m} of ${of} made`, pct: pc((m / of - 0.5) * 2.2) } }
+    case 'gauntlet': { const of = raw?.of ?? 7, m = cnt(of, 2); return { text: `${m} of ${of} caught`, pct: pc((m / of - 0.7) * 3.3) } }
+    case 'bench': { const n = raw?.reps ?? Math.round(8 + score * 22); return { text: `${n} reps`, pct: pc((n - 18) / 8) } }
+    case 'nbench': { const n = raw?.reps ?? Math.round(4 + score * 16); return { text: `${n} reps`, pct: pc((n - 10) / 6) } }
     default: return { text: '—', pct: 0 }
   }
 }
-export function recordCombine(c, id, score) {
-  const combine = c.draft.combine.map(d => (d.id === id ? { ...d, score, ...drillValue(id, c.build[d.trait]?.val ?? 5, score) } : d))
+export function recordCombine(c, id, score, raw = null) {
+  const combine = c.draft.combine.map(d => (d.id === id ? { ...d, score, ...drillValue(id, c.build[d.trait]?.val ?? 5, score, raw) } : d))
   return { ...c, draft: { ...c.draft, combine } }
 }
 const maxPick = S => S.teams.length * S.draft.rounds
@@ -625,7 +653,7 @@ export const seasonStats = (pos, f) => sportForPos(pos).seasonStats(pos, f)
 const director = (c, team, base, seed) => createDirector({ sport: c.sport, pos: c.pos, build: c.build, team, simFn: sportOf(c).sim(c.pos), base, seed, name: c.name, attrMap: POS_ATTR[c.pos], types: c.types, always: true })
 export function startSeason(c) {
   const S = sportOf(c)
-  const roster = c.roster ?? makeRoster(c.team, c.sport)
+  const roster = c.roster ?? makeRoster(c.team, c.sport, rosterYrs(c))
   const cc = { ...c, roster }
   const fit = fitFor(cc)
   const dc = depthChart(cc)
@@ -860,7 +888,7 @@ function maybeTraded(c, r) {
   const p = c.lastRole !== 'Backup' ? 0.04 : before && before.benched >= (before.wins + before.losses) / 2 ? 0.8 : 0.45
   if (r() >= p) return c
   // a team where you'd start
-  const fits = S.teams.filter(t => t.short !== c.team).map(t => ({ t, ro: makeRoster(t.short, c.sport) }))
+  const fits = S.teams.filter(t => t.short !== c.team).map(t => ({ t, ro: makeRoster(t.short, c.sport, rosterYrs(c)) }))
     .filter(x => (x.ro[c.pos][S.starters[c.pos] - 1]?.ovr ?? 0) < c.ovr)
   const pick = fits.length ? fits[Math.floor(r() * fits.length)] : null
   if (!pick) return c
@@ -944,13 +972,13 @@ function contractSituation(c) {
   const perf = seasonScore(c.pos, last)
   if (c.age >= 34 && perf < 0.35) return []
   const years = c.age >= 32 ? 1 + Math.floor(r() * 2) : c.age >= 29 ? 2 + Math.floor(r() * 2) : 3 + Math.floor(r() * 3)
-  const fitAt = short => teamFit(short, c.pos, { roster: c.roster, league: c.league, name: c.name, sport: c.sport })
+  const fitAt = short => teamFit(short, c.pos, { roster: c.roster, league: c.league, name: c.name, sport: c.sport, yrs: rosterYrs(c) })
   const others = S.teams.filter(t => t.short !== c.team).sort(() => r() - .5).map(t => fitAt(t.short))
   const good = 7, bad = 6
   const contender = others.find(f => (f.off + f.def) / 2 >= good) ?? others[0]
   const payer = others.find(f => f.short !== contender.short && (f.off + f.def) / 2 < bad) ?? others[1]
   // where you'd stand on each team's depth chart
-  const standAt = short => { const dc = depthChart({ ...c, contract: {}, lastRole: short === c.team ? c.lastRole : null }, short === c.team ? c.roster : makeRoster(short, c.sport)); return { starter: dc.starter, behind: dc.ahead[dc.ahead.length - 1]?.name ?? null, label: dc.label } }
+  const standAt = short => { const dc = depthChart({ ...c, contract: {}, lastRole: short === c.team ? c.lastRole : null }, short === c.team ? c.roster : makeRoster(short, c.sport, rosterYrs(c))); return { starter: dc.starter, behind: dc.ahead[dc.ahead.length - 1]?.name ?? null, label: dc.label } }
   const mk = (fit, perYear, yrs, pitch, kind) => ({ team: fit.short, fit, perYear: r10(perYear), years: yrs, pitch, kind, stand: standAt(fit.short) })
   return [
     mk(fitAt(c.team), value * (0.92 + r() * .1), years, 'Stay. Finish what you started here.', 'stay'),
@@ -961,7 +989,7 @@ function contractSituation(c) {
 export function signOffer(c, o) {
   const change = o.team !== c.team
   const extras = [o.noTrade ? 'no-trade clause' : null, o.starter ? 'starter guarantee' : null].filter(Boolean)
-  const roster = change ? makeRoster(o.team, c.sport) : c.roster
+  const roster = change ? makeRoster(o.team, c.sport, rosterYrs(c)) : c.roster
   return {
     ...c, team: o.team, roster, fit: teamFit(o.team, c.pos, { roster, league: c.league, name: c.name, sport: c.sport }), offers: null, talks: null, tradeAsked: false, lastRole: change ? null : c.lastRole,
     contract: { kind: change ? 'fa' : 'ext', years: o.years, left: o.years, perYear: o.perYear, noTrade: !!o.noTrade, starter: !!o.starter },
@@ -1012,7 +1040,7 @@ export function demandTrade(c) {
   const rep = Math.max(1, c.rep - 2)
   if (!granted) return { ...c, rep, tradeAsked: true, nextMods: { ...(c.nextMods ?? {}), off: ((c.nextMods?.off) ?? 0) - 0.5 }, events: [...c.events, { year: c.year + 1, text: 'You asked for a trade. The team said no, and the locker room heard about it.' }] }
   const dest = S.teams.map(t => S.teamOf(t.short)).filter(t => t.short !== c.team).sort(() => r() - .5).sort((a, b) => (b.off + b.def) - (a.off + a.def))[Math.floor(r() * 6)]
-  const roster = makeRoster(dest.short, c.sport)
+  const roster = makeRoster(dest.short, c.sport, rosterYrs(c))
   const fit = teamFit(dest.short, c.pos, { roster, league: c.league, name: c.name, sport: c.sport })
   return { ...c, rep, tradeAsked: true, team: dest.short, roster, fit, lastRole: null, events: [...c.events, { year: c.year + 1, text: `Trade request granted: a ${nick(fit.name)} now.` }], decisions: [...c.decisions, { year: c.year + 1, text: `Demanded a trade, dealt to the ${fit.name}` }] }
 }
@@ -1083,15 +1111,17 @@ function hofVote(c, L) {
   const inn = pct >= 80
   return { in: inn, pct, ballot: inn ? (pct >= 93 ? 'First ballot' : pct >= 86 ? 'Second ballot' : 'Inducted in year 4') : L.score >= 140 ? 'Finalist, not inducted' : 'Not on the ballot' }
 }
-// The greats, by this same score: where a career lands among them
+// The greats, scored from their real resumes with this same formula (seasons,
+// Pro Bowls / All-Stars, All-Pro / All-NBA, MVPs, rings, playoff years, production):
+// where a career lands among them
 const greats = list => list.map(([name, score], i) => ({ name, score, rank: i + 1 }))
 export const ALL_TIME = {
-  qb: greats([['Tom Brady', 430], ['Peyton Manning', 382], ['Joe Montana', 352], ['Patrick Mahomes', 344], ['Drew Brees', 318], ['Aaron Rodgers', 312], ['Dan Marino', 296], ['John Elway', 292], ['Brett Favre', 288], ['Johnny Unitas', 276], ['Steve Young', 254], ['Otto Graham', 248], ['Roger Staubach', 232], ['Terry Bradshaw', 224], ['Troy Aikman', 206], ['Ben Roethlisberger', 202], ['Philip Rivers', 184], ['Kurt Warner', 176], ['Jim Kelly', 170], ['Eli Manning', 160], ['Matt Ryan', 152], ['Russell Wilson', 150], ['Warren Moon', 146], ['Fran Tarkenton', 142], ['Donovan McNabb', 126]]),
-  rb: greats([['Jim Brown', 400], ['Walter Payton', 372], ['Barry Sanders', 350], ['Emmitt Smith', 346], ['LaDainian Tomlinson', 318], ['Eric Dickerson', 284], ['Adrian Peterson', 282], ['Marshall Faulk', 270], ['Earl Campbell', 236], ['O.J. Simpson', 230], ['Terrell Davis', 212], ['Curtis Martin', 202], ['Marcus Allen', 200], ['Thurman Thomas', 192], ['Derrick Henry', 190], ['Tony Dorsett', 184], ['Frank Gore', 176], ['Jerome Bettis', 160], ['Edgerrin James', 154], ['Shaun Alexander', 140]]),
-  wr: greats([['Jerry Rice', 440], ['Randy Moss', 330], ['Larry Fitzgerald', 300], ['Terrell Owens', 296], ['Calvin Johnson', 262], ['Marvin Harrison', 258], ['Cris Carter', 236], ['Steve Largent', 222], ['Julio Jones', 214], ['Michael Irvin', 206], ['Antonio Brown', 200], ['Tim Brown', 196], ['Lance Alworth', 190], ['Andre Johnson', 176], ['Reggie Wayne', 170], ['Davante Adams', 168], ['Isaac Bruce', 162], ['Torry Holt', 156], ['Steve Smith Sr.', 150], ['DeAndre Hopkins', 140]]),
-  te: greats([['Rob Gronkowski', 330], ['Tony Gonzalez', 320], ['Travis Kelce', 316], ['Antonio Gates', 262], ['Shannon Sharpe', 240], ['Jason Witten', 228], ['Kellen Winslow', 196], ['Mike Ditka', 190], ['Ozzie Newsome', 176], ['Dave Casper', 160], ['Jimmy Graham', 150], ['George Kittle', 148], ['Greg Olsen', 130], ['Dallas Clark', 110], ['Vernon Davis', 104]]),
-  guard: greats([['Michael Jordan', 440], ['LeBron James', 436], ['Magic Johnson', 380], ['Kobe Bryant', 372], ['Stephen Curry', 350], ['Larry Bird', 344], ['Oscar Robertson', 320], ['Jerry West', 300], ['Kevin Durant', 296], ['Dwyane Wade', 270], ['Allen Iverson', 250], ['Isiah Thomas', 244], ['John Stockton', 240], ['Steve Nash', 232], ['James Harden', 228], ['Julius Erving', 226], ['Scottie Pippen', 220], ['Luka Doncic', 200], ['Chris Paul', 198], ['Russell Westbrook', 190], ['Kawhi Leonard', 188], ['Clyde Drexler', 180], ['Jason Kidd', 176], ['Reggie Miller', 160], ['Ray Allen', 156]]),
-  big: greats([['Kareem Abdul-Jabbar', 440], ['Bill Russell', 420], ['Wilt Chamberlain', 410], ['Shaquille O\'Neal', 380], ['Tim Duncan', 376], ['Hakeem Olajuwon', 350], ['Nikola Jokic', 330], ['Moses Malone', 320], ['Kevin Garnett', 300], ['Dirk Nowitzki', 296], ['Karl Malone', 290], ['Giannis Antetokounmpo', 286], ['Charles Barkley', 270], ['David Robinson', 262], ['Patrick Ewing', 236], ['Anthony Davis', 210], ['Dennis Rodman', 200], ['Joel Embiid', 196], ['Kevin McHale', 190], ['Dwight Howard', 184], ['Bob Pettit', 180], ['Pau Gasol', 170], ['Chris Webber', 150], ['Yao Ming', 140], ['Dikembe Mutombo', 136]]),
+  qb: greats([['Tom Brady', 574], ['Peyton Manning', 489], ['Otto Graham', 421], ['Aaron Rodgers', 392], ['Johnny Unitas', 370], ['Brett Favre', 369], ['Joe Montana', 328], ['Drew Brees', 315], ['Steve Young', 287], ['Dan Marino', 269], ['Patrick Mahomes', 263], ['John Elway', 255], ['Ben Roethlisberger', 254], ['Terry Bradshaw', 233], ['Russell Wilson', 217], ['Fran Tarkenton', 217], ['Philip Rivers', 214], ['Eli Manning', 208], ['Matt Ryan', 201], ['Kurt Warner', 195], ['Troy Aikman', 193], ['Warren Moon', 190], ['Roger Staubach', 166], ['Donovan McNabb', 147], ['Jim Kelly', 145]]),
+  rb: greats([['Emmitt Smith', 300], ['Jim Brown', 294], ['Walter Payton', 269], ['Marshall Faulk', 268], ['Barry Sanders', 267], ['Marcus Allen', 234], ['Adrian Peterson', 227], ['O.J. Simpson', 206], ['LaDainian Tomlinson', 204], ['Terrell Davis', 196], ['Earl Campbell', 194], ['Eric Dickerson', 192], ['Thurman Thomas', 188], ['Jerome Bettis', 171], ['Derrick Henry', 151], ['Tony Dorsett', 150], ['Shaun Alexander', 144], ['Curtis Martin', 133], ['Frank Gore', 128], ['Edgerrin James', 124]]),
+  wr: greats([['Jerry Rice', 457], ['Lance Alworth', 221], ['Marvin Harrison', 215], ['Terrell Owens', 210], ['Antonio Brown', 198], ['Randy Moss', 195], ['Cris Carter', 190], ['Michael Irvin', 188], ['Larry Fitzgerald', 187], ['Reggie Wayne', 179], ['Davante Adams', 178], ['Tim Brown', 161], ['Torry Holt', 154], ['DeAndre Hopkins', 153], ['Julio Jones', 151], ['Steve Smith Sr.', 147], ['Isaac Bruce', 144], ['Steve Largent', 143], ['Andre Johnson', 142], ['Calvin Johnson', 134]]),
+  te: greats([['Travis Kelce', 266], ['Tony Gonzalez', 254], ['Rob Gronkowski', 247], ['Shannon Sharpe', 236], ['Jason Witten', 186], ['Antonio Gates', 184], ['Dave Casper', 153], ['Mike Ditka', 151], ['Jimmy Graham', 128], ['George Kittle', 119], ['Kellen Winslow', 115], ['Dallas Clark', 107], ['Ozzie Newsome', 103], ['Vernon Davis', 103], ['Greg Olsen', 96]]),
+  guard: greats([['LeBron James', 690], ['Michael Jordan', 544], ['Kobe Bryant', 536], ['Julius Erving', 500], ['Magic Johnson', 444], ['Stephen Curry', 413], ['Larry Bird', 405], ['Kevin Durant', 399], ['Scottie Pippen', 365], ['Jerry West', 350], ['Oscar Robertson', 348], ['Dwyane Wade', 343], ['Chris Paul', 331], ['John Stockton', 326], ['James Harden', 309], ['Russell Westbrook', 309], ['Jason Kidd', 288], ['Steve Nash', 275], ['Isiah Thomas', 264], ['Clyde Drexler', 260], ['Allen Iverson', 259], ['Ray Allen', 253], ['Kawhi Leonard', 225], ['Reggie Miller', 195], ['Luka Doncic', 141]]),
+  big: greats([['Kareem Abdul-Jabbar', 683], ['Bill Russell', 618], ['Tim Duncan', 543], ['Shaquille O\'Neal', 491], ['Wilt Chamberlain', 450], ['Karl Malone', 445], ['Dirk Nowitzki', 403], ['Hakeem Olajuwon', 400], ['Moses Malone', 397], ['Kevin Garnett', 377], ['Bob Pettit', 341], ['David Robinson', 338], ['Charles Barkley', 329], ['Giannis Antetokounmpo', 305], ['Dwight Howard', 279], ['Nikola Jokic', 273], ['Patrick Ewing', 270], ['Pau Gasol', 248], ['Dennis Rodman', 230], ['Kevin McHale', 218], ['Anthony Davis', 214], ['Dikembe Mutombo', 192], ['Chris Webber', 185], ['Joel Embiid', 179], ['Yao Ming', 149]]),
 }
 
 // The player comp: the real players (today's and all-time) whose grades sit

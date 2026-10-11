@@ -59,7 +59,7 @@ export const GAMES = {
   'lane':        { kind: 'cone', traits: ['handles', 'speed'], title: 'LANE AGILITY', how: 'Six cuts around the lane. An arrow flashes: hit that direction before the window shuts. Wrong way or late is a slip.' },
   'spot':        { kind: 'aim', traits: ['jumpShot'], title: 'SPOT-UP SHOOTING', how: 'Four spots around the arc. Tap to lock the shot left to right, then again to lock the arc. A better jumper makes the rim bigger.', noun: 'SHOT' },
   'vert':        { kind: 'velo', traits: ['bounce'], title: 'MAX VERTICAL', how: 'Three jumps. Hold to load, and let go inside the small green window. It moves every jump. More bounce, bigger window.', noun: 'JUMP' },
-  'nbench':      { kind: 'bench', traits: ['size'], title: 'BENCH PRESS', how: 'Tap fast to drive the bar up to lockout. Every rep gets heavier. As many reps as you can in 12 seconds.' },
+  'nbench':      { kind: 'bench', load: 0.62, traits: ['size'], title: 'BENCH PRESS', how: 'Tap fast to drive the bar up to lockout. Every rep gets heavier. As many reps as you can in 12 seconds.' },
 }
 // which games a position plays in the playoffs
 export const PLAYOFF_GAMES = {

@@ -45,7 +45,7 @@ export default function MiniGame({ game, build, seed = 'x', onDone, autoStart = 
   const v = traitValue(game, build)
   const done = r => {
     if (result) return
-    const out = { score: clamp(r.score, 0, 1), hit: r.hit ?? r.score >= 0.5, note: r.note ?? null }
+    const out = { score: clamp(r.score, 0, 1), hit: r.hit ?? r.score >= 0.5, note: r.note ?? null, raw: r.raw ?? null }
     setResult(out); setStage('done')
     sfx(out.hit ? 'claim' : 'deny'); haptic(out.hit ? 'success' : 'heavy')
     setTimeout(() => onDone?.(out), 900)
@@ -90,7 +90,7 @@ function Game({ def, v, seed, build, onDone }) {
     case 'aim': return <Aim v={v} seed={seed} onDone={onDone} noun={def.noun} />
     case 'cone': return <Cone v={v} seed={seed} onDone={onDone} />
     case 'gauntlet': return <Gauntlet v={v} seed={seed} onDone={onDone} />
-    case 'bench': return <Bench v={v} onDone={onDone} />
+    case 'bench': return <Bench v={v} load={def.load ?? 1} onDone={onDone} />
     default: return null
   }
 }
@@ -417,7 +417,7 @@ function Aim({ v, seed, onDone, noun = 'NET' }) {
     setShot({ x: X.current, y: Y.current, hit: !!s })
     const next = [...scores, s]
     setTimeout(() => {
-      if (i + 1 >= nets.length) { const avg = next.reduce((a, b) => a + b, 0) / nets.length; onDone({ score: avg, hit: avg >= 0.5, note: `${next.filter(Boolean).length} of ${nets.length} in the net` }) }
+      if (i + 1 >= nets.length) { const avg = next.reduce((a, b) => a + b, 0) / nets.length; onDone({ score: avg, hit: avg >= 0.5, note: `${next.filter(Boolean).length} of ${nets.length} in the net`, raw: { made: next.filter(Boolean).length, of: nets.length } }) }
       else { setScores(next); setI(i + 1); setAxis('x'); setShot(null) }
     }, 450)
   }
@@ -456,7 +456,7 @@ function Cone({ v, seed, onDone }) {
     if (settled.current) return; settled.current = true
     const next = [...scores, s]
     if (s) haptic('light')
-    if (i + 1 >= plan.length) { const avg = next.reduce((a, b) => a + b, 0) / plan.length; onDone({ score: avg, hit: avg >= 0.5, note: `${next.filter(Boolean).length} of ${plan.length} clean cuts` }) }
+    if (i + 1 >= plan.length) { const avg = next.reduce((a, b) => a + b, 0) / plan.length; onDone({ score: avg, hit: avg >= 0.5, note: `${next.filter(Boolean).length} of ${plan.length} clean cuts`, raw: { made: next.filter(Boolean).length, of: plan.length } }) }
     else { setScores(next); setI(i + 1) }
   }
   const go = d => {
@@ -497,7 +497,7 @@ function Gauntlet({ v, seed, onDone }) {
     if (changed) force(x => x + 1)
     if (st.current.every(x => x != null)) {
       const caught = st.current.filter(Boolean)
-      onDone({ score: st.current.reduce((a, b) => a + b, 0) / N, hit: caught.length >= 5, note: `${caught.length} of ${N} caught` })
+      onDone({ score: st.current.reduce((a, b) => a + b, 0) / N, hit: caught.length >= 5, note: `${caught.length} of ${N} caught`, raw: { made: caught.length, of: N } })
       return false
     }
   })
@@ -529,10 +529,12 @@ function Gauntlet({ v, seed, onDone }) {
   )
 }
 // ── Bench press: drive the bar up against gravity, as many reps as you can ──
-function Bench({ v, onDone }) {
+function Bench({ v, load = 1, onDone }) {
   const S = useRef({ h: 0, vel: 0, reps: 0, fatigue: 1, end: 0, done: false })
   const bar = useRef(null), count = useRef(null), secs = useRef(null)
-  const push = 9 + v * 0.7                                      // what one tap lifts (stronger = more)
+  // what one tap lifts (stronger = more): about 5 taps a rep for the weakest, 2 for the strongest,
+  // so a quick set lands where real combine numbers do. load < 1: a lighter player's heavier bar
+  const push = (20 + v * 2.4) * load
   const SECS = 12
   useEffect(() => { S.current.end = now() + SECS * 1000 }, [])
   useLoop(() => {
@@ -546,14 +548,14 @@ function Bench({ v, onDone }) {
     if (left <= 0) {
       s.done = true
       const reps = s.reps
-      onDone({ score: clamp((reps - 3) / 9, 0, 1), hit: reps >= 8, note: `${reps} clean reps` })
+      onDone({ score: clamp((reps - 6) / 22, 0, 1), hit: reps >= 15, note: `${reps} reps`, raw: { reps } })
       return false
     }
   })
   const tap = () => {
     const s = S.current; if (s.done) return
     s.h += push * s.fatigue
-    if (s.h >= 100) { s.h = 0; s.reps++; s.fatigue *= 0.94; sfx('tap'); haptic('medium'); if (count.current) count.current.textContent = `${s.reps} REPS` }
+    if (s.h >= 100) { s.h = 0; s.reps++; s.fatigue *= 0.985; sfx('tap'); haptic('medium'); if (count.current) count.current.textContent = `${s.reps} REPS` }
   }
   useKeys({ ' ': tap, Enter: tap })
   return (
