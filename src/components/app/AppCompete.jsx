@@ -65,7 +65,7 @@ export default function AppCompete({ cp, au, sport, position, positions, onPosit
           <span className="cp-pulse" />
           <span className="ag-eyebrow">FINDING A POOL · {posName}</span>
           <b className="cp-count">{Math.min(cp.queue.length, POOL_SIZE)}<i>/{POOL_SIZE}</i></b>
-          <span className="cp-sub">{cp.queue.length < POOL_SIZE ? `Waiting for ${POOL_SIZE - cp.queue.length} more. Pools are five real players.` : 'Starting…'}</span>
+          <span className="cp-sub">{cp.queue.length >= POOL_SIZE ? 'Starting…' : cp.queue.length < MIN_POOL ? 'Waiting for another player. Pools are real players only.' : `Starts in ${Math.max(0, FILL_AFTER_SECS - cp.waited)}s with ${cp.queue.length}, or as soon as ${POOL_SIZE} are in. Every join resets the clock.`}</span>
           <LinkPill link={cp.link} onRetry={cp.retry} room={`${isBucket ? 'BASKETBALL' : 'FOOTBALL'} ${posName.toUpperCase()} POOL`} />
           <span className="cp-sub cp-sub--room">Friends find you by picking the same sport and position.</span>
         </div>

@@ -16,8 +16,8 @@ import { getUsername } from './discord'
 import { myCosmetics } from './progress'
 
 export const POOL_SIZE = 5
-export const FILL_AFTER_SECS = 30
-export const MIN_POOL = 5          // a full pool of five real players, no bots, no short pools
+export const FILL_AFTER_SECS = 60     // the countdown: starts over every time someone joins
+export const MIN_POOL = 2          // real players only; five starts at once, fewer when the countdown runs out
 export const BUILD_SECS = 300
 
 // The pool's spin order — the same lookup SpinScreen makes for seeded spins
@@ -139,6 +139,9 @@ export function useCompete({ enabled, user, sport, pos, botFor }) {
     const id = setInterval(() => setWaited(w => w + 1), 1000)
     return () => clearInterval(id)
   }, [phase])
+  // someone new joined: the countdown starts over
+  const lastCount = useRef(0)
+  useEffect(() => { if (phase === 'queue' && queue.length > lastCount.current) setWaited(0); lastCount.current = queue.length }, [phase, queue.length])
   useEffect(() => { if (phase === 'queue' && waited >= FILL_AFTER_SECS && queue.length >= MIN_POOL) fillNow() }, [phase, waited, queue.length, fillNow])
 
   // My build is in: send it to the pool

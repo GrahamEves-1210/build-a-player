@@ -29,8 +29,8 @@ import { QB_SAL_COLS, QB_SAL_POOL } from '../data/qb-salary'
 import { SAL_COLS, BUCKET_SAL_POOL } from '../data/nba-salary'
 
 export const AUCTION_SIZE = 5
-export const AUCTION_MIN = 5         // five real players, like the pools
-export const AUCTION_FILL_SECS = 30
+export const AUCTION_MIN = 2         // real players only; five starts at once, fewer when the countdown runs out
+export const AUCTION_FILL_SECS = 60   // the countdown: starts over every time someone joins
 export const BUDGET = 100
 export const BID_SECS = 10          // the bidding window on each lot
 export const SPIN_MS = 2600         // the reel, before bidding opens
@@ -268,6 +268,8 @@ export function useAuction({ enabled, user, sport, pos }) {
     const id = setInterval(() => setWaited(w => w + 1), 1000)
     return () => clearInterval(id)
   }, [phase])
+  const lastCount = useRef(0)
+  useEffect(() => { if (phase === 'queue' && queue.length > lastCount.current) setWaited(0); lastCount.current = queue.length }, [phase, queue.length])
   useEffect(() => { if (phase === 'queue' && waited >= AUCTION_FILL_SECS && queue.length >= AUCTION_MIN) fillNow() }, [phase, waited, queue.length, fillNow])
 
   // ── the clock, and (when I'm the auctioneer) the gavel ──

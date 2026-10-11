@@ -82,7 +82,7 @@ export default function AppAuction({ au, posName, onHome, onPlayAgain }) {
           <span className="cp-pulse" />
           <span className="ag-eyebrow">FINDING AN AUCTION · {posName}</span>
           <b className="cp-count">{Math.min(au.queue.length, AUCTION_SIZE)}<i>/{AUCTION_SIZE}</i></b>
-          <span className="cp-sub">{au.queue.length < AUCTION_SIZE ? `Waiting for ${AUCTION_SIZE - au.queue.length} more. Auctions are five real players.` : 'Starting…'}</span>
+          <span className="cp-sub">{au.queue.length >= AUCTION_SIZE ? 'Starting…' : au.queue.length < AUCTION_MIN ? 'Waiting for another player. Auctions are real players only.' : `Starts in ${Math.max(0, AUCTION_FILL_SECS - au.waited)}s with ${au.queue.length}, or as soon as ${AUCTION_SIZE} are in. Every join resets the clock.`}</span>
           <LinkPill link={au.link} onRetry={au.retry} room={`${kit.sport === 'bucket' ? 'BASKETBALL' : 'FOOTBALL'} ${posName} AUCTION`} />
         </div>
         <div className="cp-seats">
