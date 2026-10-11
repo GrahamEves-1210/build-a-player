@@ -439,3 +439,10 @@
   .sh-sheet-overlay { justify-content: center; }
   .sh-sheet { width: min(520px, calc(100% - 32px)); }
 }
+/* Achievements: everything waiting, collected in one tap (top of the list) */
+.ach-claimall { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; margin: 4px 0 12px; padding: 12px 12px 12px 16px; border-radius: 14px; border: 1.5px solid rgba(242,201,76,.6); background: linear-gradient(135deg, rgba(242,201,76,.16), rgba(242,201,76,.05)), var(--ag-panel); color: var(--ag-text); text-align: left; cursor: pointer; box-shadow: 0 6px 20px rgba(242,201,76,.14); }
+.ach-claimall > span:first-child { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ach-claimall b { font-family: var(--ag-font); font-weight: 400; font-size: 17px; letter-spacing: 1.8px; color: #fde68a; }
+.ach-claimall small { font-family: var(--ag-body); font-size: 12.5px; font-weight: 600; color: var(--ag-text-2); }
+.ach-claimall-go { flex: none; height: 38px; padding: 0 16px; display: grid; place-items: center; border-radius: 10px; font-family: var(--ag-font); font-size: 16px; letter-spacing: 1.8px; color: #1a0f00; background: linear-gradient(135deg, #fde68a, #f2c94c); box-shadow: 0 4px 14px rgba(242,201,76,.35); }
+.ach-claimall:active { transform: scale(.98); }

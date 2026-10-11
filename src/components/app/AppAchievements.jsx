@@ -27,6 +27,9 @@ export default function AppAchievements({ onClose }) {
     for (const a of ACHIEVEMENTS) if (p.ach?.[a.id] && !p.achClaimed?.[a.id]) { if (claimAch(a.id)) any = true }
     if (any) { sfx('claim'); haptic('success') }
   }
+  // everything unlocked and not yet collected: the Claim All bar at the top
+  const waiting = ACHIEVEMENTS.filter(a => p.ach?.[a.id] && !p.achClaimed?.[a.id])
+  const waitXp = waiting.reduce((n, a) => n + (a.xp ?? 0), 0), waitCoins = waiting.reduce((n, a) => n + (a.coins ?? 0), 0)
   // claimable first, then closest to done, then the rest
   const order = list => [...list].sort((a, b) => {
     const ca = p.ach?.[a.id] && !p.achClaimed?.[a.id], cb = p.ach?.[b.id] && !p.achClaimed?.[b.id]
@@ -52,9 +55,14 @@ export default function AppAchievements({ onClose }) {
         <span>
           <b>{done} OF {ACHIEVEMENTS.length} UNLOCKED</b>
           <small>{p.claimable ? `${p.claimable} reward${p.claimable > 1 ? 's' : ''} waiting` : (p.signedIn ? 'Rewards: XP, coins and exclusive cosmetics' : 'Sign in to claim XP, coins and cosmetics')}</small>
-          {p.claimable > 1 && <button className="ach-claim" style={{ marginTop: 8, display: 'block' }} onClick={claimAll}>CLAIM ALL</button>}
         </span>
       </div>
+      {waiting.length > 0 && (
+        <button className="ach-claimall ag-pop" style={{ '--d': '60ms' }} onClick={claimAll}>
+          <span><b>{waiting.length} {waiting.length === 1 ? 'REWARD' : 'REWARDS'} WAITING</b><small>{p.signedIn ? `+${waitXp.toLocaleString()} XP${waitCoins ? ` · +${waitCoins.toLocaleString()} coins` : ''}` : 'Sign in to collect them'}</small></span>
+          <span className="ach-claimall-go">{p.signedIn ? 'CLAIM ALL' : 'SIGN IN'}</span>
+        </button>
+      )}
       {ACH_GROUPS.map(g => (
         <div key={g} className="ach-group">
           <div className="ach-group-title">{g.toUpperCase()}</div>
