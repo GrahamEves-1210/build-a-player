@@ -874,7 +874,7 @@ function ConferenceStandings({ standings, myShort, teamColor, conf }) {
   )
 }
 
-function ScreenSeason({ result, awards, onNext, adsDisabled = false, isAllTime = false, director = null, onFinal = null, pool = null, userName = 'You' }) {
+function ScreenSeason({ result, awards, onNext, adsDisabled = false, isAllTime = false, director = null, onFinal = null, pool = null, userName = 'Guest' }) {
   const { games = [], madePlayoffs, seed: rawSeed, playoffRounds = [], conference, ppg, rpg, apg, spg, bpg, tov, fgPct, threePct, ftPct, per, ovr = 0, standings, team } = result
   const dr = useDirectedReveal({ director, pace: 70, onFinal })
   const playinRound = playoffRounds.find(r => r.type === 'playin' && r.advanced)
@@ -989,7 +989,7 @@ function ScreenSeason({ result, awards, onNext, adsDisabled = false, isAllTime =
                   <div className="sawd-award-winner">
                     <img src={`/logos/nba/${mvp.team}.png`} alt={mvp.team} className="sawd-winner-logo" />
                     <div className="sawd-winner-info">
-                      <div className="sawd-winner-name">{mvp.isPlayer ? 'You' : mvp.name}</div>
+                      <div className="sawd-winner-name">{mvp.name}</div>
                       <div className="sawd-winner-stats">{mvp.ppg} PPG · {mvp.rpg} RPG · {mvp.apg} APG</div>
                     </div>
                   </div>
@@ -1002,7 +1002,7 @@ function ScreenSeason({ result, awards, onNext, adsDisabled = false, isAllTime =
                   <div className="sawd-award-winner">
                     <img src={`/logos/nba/${dpoy.team}.png`} alt={dpoy.team} className="sawd-winner-logo" />
                     <div className="sawd-winner-info">
-                      <div className="sawd-winner-name">{dpoy.isPlayer ? 'You' : dpoy.name}</div>
+                      <div className="sawd-winner-name">{dpoy.name}</div>
                       <div className="sawd-winner-stats">{dpoy.spg} SPG · {dpoy.bpg} BPG</div>
                     </div>
                   </div>
@@ -1057,7 +1057,7 @@ function ScreenAwards({ awards, onNext }) {
           <div className="sawd-award-winner">
             <img src={`/logos/nba/${mvp.team}.png`} alt={mvp.team} className="sawd-winner-logo" />
             <div className="sawd-winner-info">
-              <div className="sawd-winner-name">{mvp.isPlayer ? 'You' : mvp.name}</div>
+              <div className="sawd-winner-name">{mvp.name}</div>
               <div className="sawd-winner-stats">{mvp.ppg} PPG · {mvp.rpg} RPG · {mvp.apg} APG</div>
             </div>
           </div>
@@ -1070,7 +1070,7 @@ function ScreenAwards({ awards, onNext }) {
           <div className="sawd-award-winner">
             <img src={`/logos/nba/${dpoy.team}.png`} alt={dpoy.team} className="sawd-winner-logo" />
             <div className="sawd-winner-info">
-              <div className="sawd-winner-name">{dpoy.isPlayer ? 'You' : dpoy.name}</div>
+              <div className="sawd-winner-name">{dpoy.name}</div>
               <div className="sawd-winner-stats">{dpoy.spg} SPG · {dpoy.bpg} BPG</div>
             </div>
           </div>
@@ -1151,8 +1151,8 @@ function GoatAvatar({ entry, isPlayer, playerTeam, playerTeamColor, size = 56 })
   )
 }
 
-function GoatCard({ rank, entry, isPlayer, playerTeam, playerTeamColor }) {
-  const displayName = isPlayer ? 'Your Player' : (entry?.name ?? '—')
+function GoatCard({ rank, entry, isPlayer, playerTeam, playerTeamColor, userName = 'Guest' }) {
+  const displayName = isPlayer ? userName : (entry?.name ?? '—')
   const teamShort   = isPlayer ? playerTeam : entry?.team
   const teamObj     = TEAM_MAP[teamShort]
   const accentColor = isPlayer ? '#e8a820' : (teamObj?.color ?? 'rgba(255,255,255,0.15)')
@@ -1177,12 +1177,11 @@ function GoatCard({ rank, entry, isPlayer, playerTeam, playerTeamColor }) {
         {teamShort && <span className="goat-card-team">{teamShort}</span>}
       </div>
 
-      {isPlayer && <span className="goat-card-you-badge">YOU</span>}
     </div>
   )
 }
 
-function ScreenGOAT({ result, awards, onNext, onReset, onBack, adsDisabled = false }) {
+function ScreenGOAT({ result, awards, onNext, onReset, onBack, adsDisabled = false, userName = 'Guest' }) {
   const { ovr, team } = result
   const playerRank   = computeGoatRank(result, awards)
   const qualified    = playerRank !== null
@@ -1308,6 +1307,7 @@ function ScreenGOAT({ result, awards, onNext, onReset, onBack, adsDisabled = fal
               return (
                 <React.Fragment key={r}>
                   <GoatCard
+                    userName={userName}
                     rank={r}
                     entry={eff}
                     isPlayer={isMe}
@@ -2377,7 +2377,7 @@ function ScreenPlayoffs({ result, onNext, autoSkip = false, isAllTime = false, a
 }
 
 // ─── Screen 3: Final Report ───────────────────────────────────────────────────
-function ScreenFinal({ result, awards, build, types, attrMap, onReset, onBack, adsDisabled = false, isSalaryMode = false }) {
+function ScreenFinal({ result, awards, build, types, attrMap, onReset, onBack, adsDisabled = false, isSalaryMode = false, userName = 'Guest' }) {
   const {
     ovr, wins, losses, champion, madePlayoffs, playoffRounds = [],
     ppg, rpg, apg, spg, bpg, tov, fgPct, threePct, ftPct, per, bestGame, team,
@@ -2413,7 +2413,7 @@ function ScreenFinal({ result, awards, build, types, attrMap, onReset, onBack, a
   return (
     <div className="simp-screen">
       {APP_SIM && <SeasonRewards result={result} />}
-      {APP_SIM && result.story && <SeasonStory story={result.story} pos={result.position} sport="bucket" name="You" />}
+      {APP_SIM && result.story && <SeasonStory story={result.story} pos={result.position} sport="bucket" name={userName} />}
       <div className={`simp-final-banner ${champion ? 'sfb-champ' : madePlayoffs ? 'sfb-elim' : 'sfb-miss'}`}>
         {champion && <img src="/trophybasketball.webp" alt="NBA Trophy" className="sfb-trophy" />}
         <div className="sfb-outcome">{playoffSummary}</div>
@@ -2484,7 +2484,7 @@ function ScreenFinal({ result, awards, build, types, attrMap, onReset, onBack, a
 
       {filled.length > 0 && (
         <div className="simp-stat-section">
-          <div className="simp-stat-group-lbl">Your Build</div>
+          <div className="simp-stat-group-lbl">{userName}'s Build</div>
           <div className="simp-attr-table simp-attr-table-sm">
             {filled.map(t => {
               const meta = attrMap[t] ?? { label: t, hex: '#888' }
@@ -2641,7 +2641,7 @@ function playerOvr(p) {
 }
 
 // ─── TeamStarters ─────────────────────────────────────────────────────────────
-function TeamStarters({ teamShort, teamColor, isBig, iqPhoto, isAllTime = false }) {
+function TeamStarters({ teamShort, teamColor, isBig, iqPhoto, isAllTime = false, userName = 'Guest' }) {
   if (isAllTime) {
     const names = ALLTIME_STARTERS[teamShort] ?? []
     if (!names.length) return null
@@ -2657,7 +2657,7 @@ function TeamStarters({ teamShort, teamColor, isBig, iqPhoto, isAllTime = false 
             <div key={isMe ? 'you' : name} className={`sts-starter${isMe ? ' sts-starter--you' : ''}`}>
               <QBAvatar photo={photo} team={teamShort} color={isMe ? teamColor : teamColor + '99'} size={42} logoDir="/logos/nba/" />
               <span className="sts-starter-name" style={isMe ? { color: teamColor, fontWeight: 700 } : undefined}>
-                {isMe ? 'YOUR BUILD' : name}
+                {isMe ? userName.toUpperCase() : name}
               </span>
             </div>
           )
@@ -2686,7 +2686,7 @@ function TeamStarters({ teamShort, teamColor, isBig, iqPhoto, isAllTime = false 
           <div key={isMe ? 'you' : p.name} className={`sts-starter${isMe ? ' sts-starter--you' : ''}`}>
             <QBAvatar photo={photo} team={p.team} color={isMe ? teamColor : teamColor + '99'} size={42} logoDir="/logos/nba/" />
             <span className="sts-starter-name" style={isMe ? { color: teamColor, fontWeight: 700 } : undefined}>
-              {isMe ? 'YOUR BUILD' : starterDisplayName(p)}
+              {isMe ? userName.toUpperCase() : starterDisplayName(p)}
             </span>
           </div>
         )
@@ -2696,7 +2696,7 @@ function TeamStarters({ teamShort, teamColor, isBig, iqPhoto, isAllTime = false 
 }
 
 // ─── Main BucketSimPage ───────────────────────────────────────────────────────
-export default function BucketSimPage({ result: baseResult, build, types, position, onBack, onReset, adsDisabled = false, isSalaryMode = false, initialScreen = 0, gameMode = null, simFn = null, onFinal = null, pool = null, userName = 'You' }) {
+export default function BucketSimPage({ result: baseResult, build, types, position, onBack, onReset, adsDisabled = false, isSalaryMode = false, initialScreen = 0, gameMode = null, simFn = null, onFinal = null, pool = null, userName = 'Guest' }) {
   const [screen, setScreen] = useState(initialScreen)
   // App: the season is steered by a director; `result` is the live version of it
   const [live, setLive] = useState(baseResult)
@@ -2736,9 +2736,9 @@ export default function BucketSimPage({ result: baseResult, build, types, positi
     const myScore = mvpScore(ppg, rpg, apg)
     let mvp
     if (myScore >= topScore) {
-      mvp = { name: 'You', short: 'You', team: team?.short, ppg, rpg, apg, isPlayer: true }
+      mvp = { name: userName, short: userName, team: team?.short, ppg, rpg, apg, isPlayer: true }
     } else {
-      const playerEntry = { name: 'You', short: 'You', team: team?.short, ppg, rpg, apg, isPlayer: true }
+      const playerEntry = { name: userName, short: userName, team: team?.short, ppg, rpg, apg, isPlayer: true }
       const allMVP = [...MVP_POOL, playerEntry].map(c => ({ ...c, w: Math.pow(Math.max(0, mvpScore(c.ppg, c.rpg, c.apg)), 2.5) }))
       const totalW = allMVP.reduce((s, c) => s + c.w, 0)
       let rand = Math.random() * totalW; mvp = allMVP[0]
@@ -2746,7 +2746,7 @@ export default function BucketSimPage({ result: baseResult, build, types, positi
     }
     const playerDPOY = ovr >= 80 && bpg >= 2.8 && spg >= 1.5
     const dpoy = playerDPOY
-      ? { name: 'You', short: 'You', team: team?.short, spg, bpg, isPlayer: true }
+      ? { name: userName, short: userName, team: team?.short, spg, bpg, isPlayer: true }
       : isAllTime
         ? (() => {
             const DPOY_POOL = [
@@ -2777,17 +2777,17 @@ export default function BucketSimPage({ result: baseResult, build, types, positi
   const simAttrMap = isSalaryMode ? SAL_ATTR_MAP  : BUCKET_ATTR
   const isAllTime  = gameMode === 'all-time'
   const screens = isSalaryMode ? [
-    <ScreenBuild    key="build"    result={result} build={build} types={simTypes} attrMap={simAttrMap} onNext={advancePage} adsDisabled={adsDisabled} isSalaryMode={isSalaryMode} />,
-    <ScreenSeason   key="season"   result={result} awards={awards} onNext={advancePage} adsDisabled={adsDisabled} isAllTime={isAllTime} />,
+    <ScreenBuild    key="build"    result={result} build={build} types={simTypes} attrMap={simAttrMap} onNext={advancePage} adsDisabled={adsDisabled} isSalaryMode={isSalaryMode} userName={userName} />,
+    <ScreenSeason   key="season"   result={result} awards={awards} onNext={advancePage} adsDisabled={adsDisabled} isAllTime={isAllTime} userName={userName} />,
     <ScreenPlayoffs key="playoffs" result={result} onNext={advancePage} autoSkip={true} isAllTime={isAllTime} adsDisabled={adsDisabled} />,
-    <ScreenGOAT     key="goat"     result={result} awards={awards} onNext={advancePage} onReset={handleReset} onBack={handleGoatBack} adsDisabled={adsDisabled} />,
-    <ScreenFinal    key="final"    result={result} awards={awards} build={build} types={simTypes} attrMap={simAttrMap} onReset={handleReset} onBack={handleBack} adsDisabled={adsDisabled} isSalaryMode={isSalaryMode} />,
+    <ScreenGOAT     key="goat"     result={result} awards={awards} onNext={advancePage} onReset={handleReset} onBack={handleGoatBack} adsDisabled={adsDisabled} userName={userName} />,
+    <ScreenFinal    key="final"    result={result} awards={awards} build={build} types={simTypes} attrMap={simAttrMap} onReset={handleReset} onBack={handleBack} adsDisabled={adsDisabled} isSalaryMode={isSalaryMode} userName={userName} />,
   ] : [
-    <ScreenBuild    key="build"    result={result} build={build} types={simTypes} attrMap={simAttrMap} onNext={advancePage} adsDisabled={adsDisabled} isSalaryMode={isSalaryMode} />,
+    <ScreenBuild    key="build"    result={result} build={build} types={simTypes} attrMap={simAttrMap} onNext={advancePage} adsDisabled={adsDisabled} isSalaryMode={isSalaryMode} userName={userName} />,
     <ScreenSeason   key="season"   result={result} awards={awards} onNext={advancePage} adsDisabled={adsDisabled} isAllTime={isAllTime} director={director} onFinal={handleFinal} pool={pool} userName={userName} />,
     <ScreenPlayoffs key="playoffs" result={result} onNext={advancePage} isAllTime={isAllTime} adsDisabled={adsDisabled} />,
-    <ScreenGOAT     key="goat"     result={result} awards={awards} onNext={advancePage} onReset={handleReset} onBack={handleGoatBack} adsDisabled={adsDisabled} />,
-    <ScreenFinal    key="final"    result={result} awards={awards} build={build} types={simTypes} attrMap={simAttrMap} onReset={handleReset} onBack={handleBack} adsDisabled={adsDisabled} isSalaryMode={isSalaryMode} />,
+    <ScreenGOAT     key="goat"     result={result} awards={awards} onNext={advancePage} onReset={handleReset} onBack={handleGoatBack} adsDisabled={adsDisabled} userName={userName} />,
+    <ScreenFinal    key="final"    result={result} awards={awards} build={build} types={simTypes} attrMap={simAttrMap} onReset={handleReset} onBack={handleBack} adsDisabled={adsDisabled} isSalaryMode={isSalaryMode} userName={userName} />,
   ]
 
   const team      = result?.team
@@ -2811,9 +2811,10 @@ export default function BucketSimPage({ result: baseResult, build, types, positi
           <ProgressDots screen={screen} total={screens.length} />
         </div>
 
+        {/* the moments switch sits above the team card, not on it */}
+        {team && director && screens[screen]?.key !== 'goat' && <div className="sts-moments-row"><MomentsToggle /></div>}
         {team && screens[screen]?.key !== 'goat' && (
           <div className="simp-team-strip">
-            {director && <MomentsToggle />}
             <div className="sts-top-row">
               <img src={`/logos/nba/${team.short}.png`} alt={team.short} className="sts-logo" />
               <div className="sts-info">
@@ -2842,7 +2843,7 @@ export default function BucketSimPage({ result: baseResult, build, types, positi
                 </div>
               )}
             </div>
-            <TeamStarters teamShort={team.short} teamColor={team.color} isBig={myIsBig} iqPhoto={myIQPhoto} isAllTime={isAllTime} />
+            <TeamStarters teamShort={team.short} teamColor={team.color} isBig={myIsBig} iqPhoto={myIQPhoto} isAllTime={isAllTime} userName={userName} />
           </div>
         )}
 

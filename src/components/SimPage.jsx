@@ -65,7 +65,7 @@ function useCountUp(target, duration = 900, enabled = true) {
 
 // ── WR Depth Chart Card ───────────────────────────────────────────────────────
 
-function WRDepthChart({ team, build, types, isAllTime = false }) {
+function WRDepthChart({ team, build, types, isAllTime = false, userName = 'Guest' }) {
   const userOVR = calcOVRWR(build, types)
 
   const pool = isAllTime ? WR_LEGENDS : WRS
@@ -81,7 +81,7 @@ function WRDepthChart({ team, build, types, isAllTime = false }) {
       teamColor: TEAMS.find(t => t.short === w.team)?.color,
       teamShort: w.team,
     })),
-    { name: 'Your Build', ovr: userOVR, isUser: true, photo: build['awareness']?.photo ?? null, teamColor: team.color, teamShort: team.short },
+    { name: userName, ovr: userOVR, isUser: true, photo: build['awareness']?.photo ?? null, teamColor: team.color, teamShort: team.short },
   ].sort((a, b) => b.ovr - a.ovr || (a.isUser ? 1 : -1))
 
   const labels = ['WR1', 'WR2', 'WR3', 'WR4']
@@ -102,7 +102,7 @@ function WRDepthChart({ team, build, types, isAllTime = false }) {
   )
 }
 
-function TEDepthChart({ team, build, types, isAllTime = false }) {
+function TEDepthChart({ team, build, types, isAllTime = false, userName = 'Guest' }) {
   const userOVR = calcOVRTE(build, types)
 
   const pool = isAllTime ? TE_LEGENDS : TES
@@ -118,7 +118,7 @@ function TEDepthChart({ team, build, types, isAllTime = false }) {
       teamColor: TEAMS.find(t => t.short === te.team)?.color,
       teamShort: te.team,
     })),
-    { name: 'Your Build', ovr: userOVR, isUser: true, photo: build['awareness']?.photo ?? null, teamColor: team.color, teamShort: team.short },
+    { name: userName, ovr: userOVR, isUser: true, photo: build['awareness']?.photo ?? null, teamColor: team.color, teamShort: team.short },
   ].sort((a, b) => b.ovr - a.ovr || (a.isUser ? 1 : -1))
 
   const labels = ['TE1', 'TE2', 'TE3']
@@ -139,7 +139,7 @@ function TEDepthChart({ team, build, types, isAllTime = false }) {
   )
 }
 
-function RBDepthChart({ team, build, types, isAllTime = false }) {
+function RBDepthChart({ team, build, types, isAllTime = false, userName = 'Guest' }) {
   const userOVR = calcOVRRB(build, types)
 
   const pool = isAllTime ? RB_LEGENDS : RBS
@@ -156,7 +156,7 @@ function RBDepthChart({ team, build, types, isAllTime = false }) {
       teamColor: TEAMS.find(t => t.short === rb.team)?.color ?? team.color,
       teamShort: rb.team,
     })),
-    { name: 'Your Build', ovr: userOVR, isUser: true, photo: null, teamColor: team.color, teamShort: team.short },
+    { name: userName, ovr: userOVR, isUser: true, photo: null, teamColor: team.color, teamShort: team.short },
   ].sort((a, b) => b.ovr - a.ovr || (a.isUser ? 1 : -1))
 
   const labels = ['RB1', 'RB2', 'RB3']
@@ -177,7 +177,7 @@ function RBDepthChart({ team, build, types, isAllTime = false }) {
   )
 }
 
-function DBDepthChart({ team, build, types, isAllTime = false }) {
+function DBDepthChart({ team, build, types, isAllTime = false, userName = 'Guest' }) {
   const userOVR = calcOVRDB(build, types)
 
   const g = k => build[k]?.val ?? 0
@@ -198,7 +198,7 @@ function DBDepthChart({ team, build, types, isAllTime = false }) {
     teamColor: TEAMS.find(t => t.short === d.team)?.color ?? team.color,
     teamShort: d.team,
   })
-  const userRow = { name: 'Your Build', ovr: userOVR, isUser: true, photo: userPhoto, teamColor: team.color, teamShort: team.short }
+  const userRow = { name: userName, ovr: userOVR, isUser: true, photo: userPhoto, teamColor: team.color, teamShort: team.short }
 
   // Always two starters per position: your build takes one of the two spots in
   // its own group (the team's best player keeps the other), so the chart is
@@ -237,7 +237,7 @@ function DBDepthChart({ team, build, types, isAllTime = false }) {
 // HT/WT), and the team's other four real starters fill out the rest.
 const OL_SPOTS = ['LT', 'LG', 'C', 'RG', 'RT']
 
-function OLDepthChart({ team, build, types }) {
+function OLDepthChart({ team, build, types, userName = 'Guest' }) {
   const userOVR  = calcOVROL(build, types)
   const buildSpot = olBuildSpot(build)
   const userSpot = OL_SPOTS.includes(buildSpot) ? buildSpot : 'LT'
@@ -245,7 +245,7 @@ function OLDepthChart({ team, build, types }) {
 
   const rows = OL_SPOTS.map(spot => {
     if (spot === userSpot) {
-      return { label: spot, name: 'Your Build', ovr: userOVR, isUser: true, photo: userPhoto, teamColor: team.color, teamShort: team.short }
+      return { label: spot, name: userName, ovr: userOVR, isUser: true, photo: userPhoto, teamColor: team.color, teamShort: team.short }
     }
     const o = OLS.find(p => p.team === team.short && p.pos === spot)
     return o ? {
@@ -338,7 +338,7 @@ function statCols(kind, r) {
   }
 }
 
-function StatLineTable({ result, build, kind, values = {}, ready = true }) {
+function StatLineTable({ result, build, kind, values = {}, ready = true, userName = 'Guest' }) {
   const team = result.team
   const pos = kind === 'db' ? (build?.['size']?.subpos === 's' ? 'S' : 'CB') : kind === 'ol' ? (result.spot ?? 'OL') : kind.toUpperCase()
   const cols = statCols(kind, result)
@@ -355,7 +355,7 @@ function StatLineTable({ result, build, kind, values = {}, ready = true }) {
           <tbody>
             <tr>
               <th scope="row" className="dbt-name">
-                <span className="dbt-player">Your Build</span>
+                <span className="dbt-player">{userName}</span>
                 <span className="dbt-meta">{team?.short ?? '—'} · {pos}</span>
               </th>
               {cols.map(c => {
@@ -565,7 +565,7 @@ function DirectedSeason({ dr, result, pos, pool, userName, director, onNext, bui
         <div className="simp-stat-section simp-totals-in">
           {!adsDisabled && <div id="ramp-season-prod" className="simp-season-ad" />}
           <div className="simp-eyebrow">Production</div>
-          <StatLineTable result={final} build={build} kind={isOL ? 'ol' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'} />
+          <StatLineTable result={final} build={build} userName={userName} kind={isOL ? 'ol' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'} />
           {pool && <Leaders sport="nfl" pos={pos} pool={pool} seed={director.seed} you={{ name: userName, team: result.team?.short, value: leaderValue(final, pos) }} />}
           <button className="simp-cta simp-cta-in" onClick={onNext}>{final.playoffs ? 'Enter Playoffs' : 'Season Summary'}</button>
         </div>
@@ -577,7 +577,7 @@ const leaderValue = (r, pos) => pos === 'qb' ? r.seasonPassYds : pos === 'rb' ? 
 
 // ── Screen 2: Regular Season ──────────────────────────────────────────────────
 
-function ScreenSeason({ result, onNext, isRB = false, isWR = false, isTE = false, isDB = false, isOL = false, adsDisabled = false, build = null, types = [], director = null, onFinal = null, pool = null, userName = 'You' }) {
+function ScreenSeason({ result, onNext, isRB = false, isWR = false, isTE = false, isDB = false, isOL = false, adsDisabled = false, build = null, types = [], director = null, onFinal = null, pool = null, userName = 'Guest' }) {
   const { games, playoffs, hasBye } = result
   const pos = isOL ? 'ol' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'
   // App: the director reveals the season and pauses on its moments
@@ -695,7 +695,7 @@ function ScreenSeason({ result, onNext, isRB = false, isWR = false, isTE = false
             <div className="simp-stat-section simp-totals-in">
               {!adsDisabled && <div id="ramp-season-prod" className="simp-season-ad" />}
               <div className="simp-eyebrow">Production</div>
-              <StatLineTable result={result} build={build} kind={isOL ? 'ol' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'} />
+              <StatLineTable result={result} build={build} userName={userName} kind={isOL ? 'ol' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'} />
             </div>
           )}
 
@@ -1142,7 +1142,7 @@ function ScreenPlayoffs({ result, onNext, onPreSuperBowl, adsDisabled = false })
 
 // ── Screen 4: Final Report ────────────────────────────────────────────────────
 
-function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = false, mvpWon = false, isRB = false, isWR = false, isTE = false, isDB = false, isOL = false, userName = 'You', isSalaryMode = false }) {
+function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = false, mvpWon = false, isRB = false, isWR = false, isTE = false, isDB = false, isOL = false, userName = 'Guest', isSalaryMode = false }) {
   const { ovr, wins, losses, playoffs, sbResult, bestGame } = result
 
   // QB stats
@@ -1347,7 +1347,7 @@ function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = fals
         <div className="simp-eyebrow">Production</div>
 
         <StatLineTable
-          result={result} build={build} ready={show} kind={isOL ? 'ol' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'}
+          result={result} build={build} ready={show} userName={userName} kind={isOL ? 'ol' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'}
           values={
             isOL ? { pnk: olPancakesAnim, prs: olPressuresAnim }
             : isDB ? { tkl: dbTacklesAnim, pd: dbPBUsAnim, int: dbINTsAnim }
@@ -1370,7 +1370,7 @@ function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = fals
 
       {build && types && (
         <div className="simp-stat-section">
-          <div className="simp-stat-group-lbl">Your Build</div>
+          <div className="simp-stat-group-lbl">{userName}'s Build</div>
           <div className="simp-attr-table simp-attr-table-sm">
             {buildRows(build, types, isOL ? OL_ATTR : isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : isRB ? RB_ATTR : ATTR, isSalaryMode && !isRB && !isWR && !isTE && !isDB && !isOL).map(({ key, label, data, val }) => {
               return (
@@ -1497,7 +1497,7 @@ function ProgressDots({ screen, total }) {
 
 // ── SimPage ───────────────────────────────────────────────────────────────────
 
-export default function SimPage({ result: baseResult, build, types = TYPES, onBack, onReset, replay = false, adsDisabled = false, isRB = false, isWR = false, isTE = false, isDB = false, isOL = false, onMVPWon, simFn = null, onFinal = null, pool = null, userName = 'You', isSalaryMode = false }) {
+export default function SimPage({ result: baseResult, build, types = TYPES, onBack, onReset, replay = false, adsDisabled = false, isRB = false, isWR = false, isTE = false, isDB = false, isOL = false, onMVPWon, simFn = null, onFinal = null, pool = null, userName = 'Guest', isSalaryMode = false }) {
   const [screen, setScreen] = useState(replay ? 3 : 0)
   const [mvpResult, setMvpResult] = useState(null)
   const [mvpWon, setMvpWon] = useState(false)
@@ -1593,9 +1593,10 @@ export default function SimPage({ result: baseResult, build, types = TYPES, onBa
           <ProgressDots screen={screen} total={screens.length} />
         </div>
 
+        {/* the moments switch sits above the team card, not on it */}
+        {team && director && <div className="sts-moments-row"><MomentsToggle /></div>}
         {team && (
           <div className="simp-team-strip">
-            {director && <MomentsToggle />}
             <div className="sts-top-row">
               <img src={team.logo} alt={team.short} className="sts-logo" />
               <div className="sts-info">
@@ -1632,19 +1633,19 @@ export default function SimPage({ result: baseResult, build, types = TYPES, onBa
         )}
 
         {isWR && team && build && (
-          <WRDepthChart team={team} build={build} types={types} isAllTime={isAllTime} />
+          <WRDepthChart team={team} build={build} types={types} isAllTime={isAllTime} userName={userName} />
         )}
         {isTE && team && build && (
-          <TEDepthChart team={team} build={build} types={types} isAllTime={isAllTime} />
+          <TEDepthChart team={team} build={build} types={types} isAllTime={isAllTime} userName={userName} />
         )}
         {isRB && team && build && (
-          <RBDepthChart team={team} build={build} types={types} isAllTime={isAllTime} />
+          <RBDepthChart team={team} build={build} types={types} isAllTime={isAllTime} userName={userName} />
         )}
         {isDB && team && build && (
-          <DBDepthChart team={team} build={build} types={types} isAllTime={isAllTime} />
+          <DBDepthChart team={team} build={build} types={types} isAllTime={isAllTime} userName={userName} />
         )}
         {isOL && team && build && (
-          <OLDepthChart team={team} build={build} types={types} />
+          <OLDepthChart team={team} build={build} types={types} userName={userName} />
         )}
 
         {screens[screen]}
@@ -1663,6 +1664,7 @@ export default function SimPage({ result: baseResult, build, types = TYPES, onBa
           isDB={isDB}
           isOL={isOL}
           userPhoto={isOL ? (build?.size?.photo ?? null) : null}
+          userName={userName}
         />
       )}
     </div>

@@ -62,7 +62,7 @@ export const MOMENTS_OFF_KEY = 'bap_moments_off'
 export const momentsOff = () => { try { return localStorage.getItem(MOMENTS_OFF_KEY) === '1' } catch { return false } }
 export const setMomentsOff = off => { try { localStorage.setItem(MOMENTS_OFF_KEY, off ? '1' : '0') } catch {} }
 // always: the moments can't be switched off (Career: they're the mode)
-export function createDirector({ sport, pos, build, team, simFn, base, seed = Math.random().toString(36).slice(2, 8), name = 'You', attrMap = {}, types = [], always = false }) {
+export function createDirector({ sport, pos, build, team, simFn, base, seed = Math.random().toString(36).slice(2, 8), name = 'Guest', attrMap = {}, types = [], always = false }) {
   const isBucket = sport === 'bucket'
   const total = base.games.length
   // two or three decisions in the regular season, at weeks that change every

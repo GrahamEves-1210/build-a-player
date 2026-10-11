@@ -3674,8 +3674,6 @@ html.is-app .rc-sandbox-outer--app { display: flex; }
 html.app-look .navbar .nav-sound-btn { width: 40px; height: 40px; border-radius: 12px; color: var(--ag-text); cursor: pointer; margin-right: 8px; }
 html.app-look .navbar .nav-sound-btn.is-off { color: var(--ag-muted); }
 @media (max-width: 768px) { html.app-look .navbar .nav-sound-btn { display: none; } }
-/* the team card makes room for the moments toggle above the grades */
-html:is(.is-app, .app-look) .simp-team-strip:has(.sts-moments) { padding-top: 46px; }
 .sts-moments { top: 10px; right: 12px; }
 /* sound toggle: always full strength (the icon says on or off) */
 html.app-look .navbar .nav-sound-btn.is-off, .ag-sound-btn { opacity: 1 !important; color: var(--ag-text) !important; }
@@ -4078,3 +4076,7 @@ html.app-look:not(.is-app) .ag-dock { backdrop-filter: none; -webkit-backdrop-fi
 html.app-look .ag-blacktop:hover .bt-art-cone { opacity: 1; }
 @media (prefers-reduced-motion: reduce) { .bt-art-shot-x, .bt-art-shot-y, .bt-art-net { animation: none; } }
 @media (max-width: 560px) { .ag-blacktop .ag-takeover-sub { max-width: 60%; } }
+
+/* the moments switch: its own row above the team card (it used to sit on the card) */
+.sts-moments-row { display: flex; justify-content: flex-end; margin: 0 0 8px; }
+.sts-moments-row .sts-moments { position: static; }

@@ -73,7 +73,7 @@ export function NowCard({ game, pos, sport, team, logoFor, idx, total }) {
         <span className="sm-now-score"><b>{game.mySc}</b><i>–</i><b>{game.oppSc}</b></span>
         <span className="sm-now-side"><img src={logoFor(game.opponent)} alt="" onError={e => { e.currentTarget.style.visibility = 'hidden' }} /><b>{opp}</b></span>
       </div>
-      <div className="sm-now-line">{game.sat ? 'Sat out — the team played without you' : line}</div>
+      <div className="sm-now-line">{game.sat ? 'Sat out: the team played without them' : line}</div>
     </div>
   )
 }
@@ -151,7 +151,7 @@ export function Leaders({ sport, pos, pool, seed, you }) {
   if (!board) return null
   return (
     <div className="sm-leaders ag-pop">
-      <div className="sm-leaders-head"><span className="ag-eyebrow">LEAGUE LEADERS · {board.label}</span><span className="sm-leaders-rank">YOU: #{board.rank}</span></div>
+      <div className="sm-leaders-head"><span className="ag-eyebrow">LEAGUE LEADERS · {board.label}</span><span className="sm-leaders-rank">{(you.name || 'Guest').toUpperCase()}: #{board.rank}</span></div>
       {board.rows.map((r, i) => (
         <div key={r.name} className={`sm-leader${r.me ? ' is-me' : ''}`}>
           <span className="sm-leader-n">{i + 1}</span>
