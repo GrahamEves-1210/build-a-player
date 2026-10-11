@@ -211,7 +211,7 @@ const _WRS = [
     attrs: { speed: 6,  bodyControl: 4,  vertical: 5,  routeRunning: 2,  release: 3,  hands: 3,  awareness: 2,  size: 9,  afterCatch: 6  } },
   // MIN
   { name: 'Justin Jefferson',    short: 'Jefferson',   team: 'MIN', teamName: 'Minnesota Vikings',     skin: '#5e3c22', height: 73, weight: 195, starter: true,  captain: true,  number: 18,
-    attrs: { speed: 9,  bodyControl: 10, vertical: 9,  routeRunning: 11, release: 11, hands: 11, awareness: 10,  size: 7,  afterCatch: 8 } },
+    attrs: { speed: 8,  bodyControl: 10, vertical: 10,  routeRunning: 11, release: 11, hands: 11, awareness: 10,  size: 7,  afterCatch: 8 } },
   { name: 'Jordan Addison',      short: 'Addison',     team: 'MIN', teamName: 'Minnesota Vikings',     skin: '#5e3c22', height: 71, weight: 173, starter: false, number: 3,
     attrs: { speed: 8,  bodyControl: 8,  vertical: 7,  routeRunning: 7,  release: 7,  hands: 6,  awareness: 6,  size: 4,  afterCatch: 6  } },
   { name: 'Dillon Bell',         short: 'D. Bell',     team: 'MIN', teamName: 'Minnesota Vikings',     skin: '#3a2010', height: 71, weight: 202, starter: false, number: 89,

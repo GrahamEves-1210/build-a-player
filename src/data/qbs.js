@@ -52,7 +52,7 @@ export const QBS = [
   { name: 'Shedeur Sanders',    short: 'Sanders',     team: 'CLE', teamName: 'Cleveland Browns',      color: '#FF3C00', color2: '#311D00', skin: '#7a5030', starter: false, number: 2,
     attrs: { 'arm': 5, 'legs': 5, 'size': 5, 'processing': 4, 'leadership': 1, 'vision': 3, 'playmaking': 5, 'accuracy': 5, 'pocket-presence': 0 } },
   { name: 'Deshaun Watson',     short: 'Watson',      team: 'CLE', teamName: 'Cleveland Browns',      color: '#FF3C00', color2: '#311D00', skin: '#7a5030', starter: true,  captain: true,  number: 4,
-    attrs: { 'arm': 3, 'legs': 4, 'size': 5, 'processing': 0, 'leadership': 0, 'vision': 2, 'playmaking': 4, 'accuracy': 1, 'pocket-presence': 1 } },
+    attrs: { 'arm': 5, 'legs': 6, 'size': 5, 'processing': 1, 'leadership': 0, 'vision': 3, 'playmaking': 5, 'accuracy': 1, 'pocket-presence': 4 } },
   { name: 'Taylen Green', short: 'Green', team: 'CLE', teamName: 'Cleveland Browns',     color: '#FF3C00', color2: '#311D00', skin: '#7a5030', starter: false, number: 15,
     attrs: { 'arm': 6, 'legs': 8, 'size': 8, 'processing': 2, 'leadership': 2, 'vision': 2, 'playmaking': 5, 'accuracy': 2, 'pocket-presence': 2 } },
   // DAL
