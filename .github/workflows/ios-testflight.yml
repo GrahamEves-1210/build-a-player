@@ -57,8 +57,19 @@ jobs:
             --project ios/App/App.xcodeproj \
             --scheme App \
             --archive-xcargs "CURRENT_PROJECT_VERSION=$PROJECT_BUILD_NUMBER"
+      # Uploads, waits for Apple's processing (internal testers get it then), and
+      # submits it for external beta review. If an earlier build is still in that
+      # review, Apple refuses the submission: that isn't a failure, the build is up.
       - name: Upload to TestFlight
-        run: app-store-connect publish --path build/ios/ipa/*.ipa --testflight
+        run: |
+          set +e
+          out=$(app-store-connect publish --path build/ios/ipa/*.ipa --testflight 2>&1); code=$?
+          echo "$out"
+          if [ $code -ne 0 ] && echo "$out" | grep -qE "Another build is in review|already in beta review"; then
+            echo "::warning::Build uploaded and in internal testing. External beta review is busy with an earlier build; submit this one from App Store Connect once that clears."
+            exit 0
+          fi
+          exit $code
       - uses: actions/upload-artifact@v5
         if: always()
         with:
