@@ -12,7 +12,7 @@ import MiniGame from './MiniGame'
 import { valToGrade, nflHeadshot } from '../../utils/simulation'
 import { getUsername } from '../../lib/discord'
 import { sfx, haptic, victory } from '../../lib/juice'
-import { MomentCard, NowCard } from './AppSeasonPlus'
+import { MomentCard, NowCard, RecordOverlay } from './AppSeasonPlus'
 import Silhouette from '../Silhouette'
 import { NameTag, AvatarBadge } from './NameTag'
 import { IconClose, IconArrow, IconFlame, IconTrophy, IconStar, IconCrown, IconMedal, IconRing, IconCheck, IconShield, IconHelmet } from './icons'
@@ -303,6 +303,7 @@ function Lineup({ c }) {
 // ── Hub ─────────────────────────────────────────────────────────────────────
 export default function AppCareer({ career: c, setCareer, user, onNewBuild, onExit }) {
   const [tab, setTab] = useState('season')
+  const [recHit, setRecHit] = useState(null)       // an all-time record just fell
   const D = useRef(null)
   // the player is the username (Guest when signed out), never "You"
   const who = getUsername(user) || 'Guest'
@@ -322,6 +323,7 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
     setCareer(n)
     if (ev?.injury) { sfx('deny'); haptic('heavy'); return }
     if (ev?.game) { sfx(ev.game.won ? 'lock' : 'pop'); if (ev.hits?.some(h => h.big)) sfx('chime') }
+    if (ev?.hits?.some(h => h.record)) setRecHit(D.current.records[D.current.records.length - 1])
     if (ev?.moment) haptic('medium')
   }
   const pick = o => { const [n, out] = chooseMoment(c, D.current, o); setCareer(n); return out }
@@ -349,6 +351,7 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
 
   return (
     <div className={`ag-screen ${S.screen} cr cr-hub cr--team`} style={teamVars(c.fit)}>
+      {recHit && <RecordOverlay record={recHit} name={c.name || 'Guest'} onClose={() => setRecHit(null)} />}
       <div className="ag-screen-head">
         <div className="cr-head">
           <img src={logoFor(c.team)} alt="" className="cr-head-logo" />

@@ -8,28 +8,41 @@ import { seeded } from './rng'
 // ── Records (real single-season marks) ───────────────────────────────────────
 export const RECORDS = {
   nfl: {
+    // NFL single-season records. Counting stats are checked as the season plays
+    // (the moment you pass one, it's called); rates (completion %, rating) at the end.
+    // `get` reads a stat the season doesn't keep on its own (yards from scrimmage…).
     qb: [
       { id: 'passyds', label: 'Passing yards', stat: 'seasonPassYds', value: 5477, holder: 'Peyton Manning, 2013' },
       { id: 'passtd',  label: 'Passing TDs',   stat: 'seasonTDs',     value: 55,   holder: 'Peyton Manning, 2013' },
+      { id: 'qbrush',  label: 'Rushing yards by a QB', stat: 'seasonRushYds', value: 1206, holder: 'Lamar Jackson, 2019' },
+      { id: 'qbrushtd', label: 'Rushing TDs by a QB',  stat: 'seasonRushTDs', value: 15, holder: 'Jalen Hurts & Josh Allen, 2023', end: true },
+      { id: 'comppct', label: 'Completion percentage', stat: 'seasonCompPct', value: 74.4, holder: 'Drew Brees, 2018', end: true, pct: true },
+      { id: 'rating',  label: 'Passer rating',         stat: 'seasonRating',  value: 122.5, holder: 'Aaron Rodgers, 2011', end: true },
       { id: 'g-passyds', label: 'Passing yards in a game', game: 'passYds', value: 554, holder: 'Norm Van Brocklin, 1951' },
       { id: 'g-passtd',  label: 'TD passes in a game',     game: 'tds',     value: 7,   holder: 'eight players' },
     ],
     rb: [
       { id: 'rushyds', label: 'Rushing yards', stat: 'seasonRushYds', value: 2105, holder: 'Eric Dickerson, 1984' },
       { id: 'rushtd',  label: 'Rushing TDs',   stat: 'seasonRushTDs', value: 28,   holder: 'LaDainian Tomlinson, 2006' },
+      { id: 'scrim',   label: 'Yards from scrimmage', get: t => (t.seasonRushYds ?? 0) + (t.seasonRecYds ?? 0), value: 2509, holder: 'Chris Johnson, 2009' },
+      { id: 'tottd',   label: 'Total touchdowns',     get: t => (t.seasonRushTDs ?? 0) + (t.seasonRecTDs ?? 0), value: 31, holder: 'LaDainian Tomlinson, 2006' },
+      { id: 'rbrec',   label: 'Receptions by a RB',   stat: 'seasonRecs', value: 116, holder: 'Christian McCaffrey, 2019' },
       { id: 'g-rush',  label: 'Rushing yards in a game', game: 'rushYds', value: 296, holder: 'Adrian Peterson, 2007' },
     ],
     wr: [
       { id: 'recyds', label: 'Receiving yards', stat: 'seasonRecYds', value: 1964, holder: 'Calvin Johnson, 2012' },
       { id: 'rectd',  label: 'Receiving TDs',   stat: 'seasonRecTDs', value: 23,   holder: 'Randy Moss, 2007' },
+      { id: 'recs',   label: 'Receptions',      stat: 'seasonRecs',   value: 149,  holder: 'Michael Thomas, 2019' },
       { id: 'g-rec',  label: 'Receiving yards in a game', game: 'recYds', value: 336, holder: 'Flipper Anderson, 1989' },
     ],
     te: [
       { id: 'recyds', label: 'Receiving yards by a TE', stat: 'seasonRecYds', value: 1416, holder: 'Travis Kelce, 2020' },
       { id: 'rectd',  label: 'Receiving TDs by a TE',   stat: 'seasonRecTDs', value: 18,   holder: 'Rob Gronkowski, 2011' },
+      { id: 'terec',  label: 'Receptions by a TE',      stat: 'seasonRecs',   value: 116,  holder: 'Zach Ertz, 2018' },
     ],
     db: [
       { id: 'ints', label: 'Interceptions', stat: 'seasonINTs', value: 14, holder: 'Dick "Night Train" Lane, 1952' },
+      { id: 'pick6', label: 'Pick-sixes',   stat: 'seasonPickSixes', value: 4, holder: 'Ken Houston, Jim Kearney & Eric Allen' },
       { id: 'g-ints', label: 'INTs in a game', game: 'ints', value: 4, holder: 'many' },
     ],
     ol: [],

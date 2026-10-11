@@ -236,10 +236,26 @@ export function createDirector({ sport, pos, build, team, simFn, base, seed = Ma
       try { if (m.test(ctx)) { D.fired.add(m.id); const hit = { id: m.id, label: m.label, big: !!m.big, at: k }; D.milestones.push(hit); fresh.push(hit) } } catch {}
     }
     const g = ctx.last
+    const fmtN = v => (typeof v === 'number' ? v.toLocaleString('en-US') : v)
+    const fire = (rec, got) => {
+      D.fired.add(`rec-${rec.id}`)
+      const hit = { ...rec, at: k, got: fmtN(got), value: fmtN(rec.value) }
+      D.records.push(hit)
+      fresh.push({ id: `rec-${rec.id}`, label: `${rec.label}: ${fmtN(got)} (record was ${fmtN(rec.value)}, ${rec.holder})`, big: true, record: true, at: k })
+    }
     if (g) {
       for (const rec of recs) {
         if (!rec.game || D.fired.has(`rec-${rec.id}`)) continue
-        if ((g[rec.game] ?? 0) > rec.value) { D.fired.add(`rec-${rec.id}`); const hit = { ...rec, at: k, got: g[rec.game] }; D.records.push(hit); fresh.push({ id: `rec-${rec.id}`, label: `${rec.label}: ${hit.got} (record was ${rec.value}, ${rec.holder})`, big: true, record: true, at: k }) }
+        if ((g[rec.game] ?? 0) > rec.value) fire(rec, g[rec.game])
+      }
+    }
+    // season records: a running total passes the mark mid-season
+    const live = recs.filter(rec => !rec.game && !rec.end && !D.fired.has(`rec-${rec.id}`))
+    if (live.length) {
+      const t = D.totals(ctx.games)
+      for (const rec of live) {
+        const v = rec.get ? rec.get(t) : t[rec.stat]
+        if (v != null && v > rec.value) fire(rec, v)
       }
     }
     // headlines for the game just revealed
@@ -296,7 +312,7 @@ export function createDirector({ sport, pos, build, team, simFn, base, seed = Ma
     }
     D.final = {
       ...bestRun, ...t, games: D.games,
-      story: { moments: D.moments, milestones: D.milestones, records: D.records.concat(seasonRecords(bestRun, t)), headlines: D.headlines, xp: D.xp, sat: D.sat.length },
+      story: { moments: D.moments, milestones: D.milestones, records: D.records.concat(D.endRecords = seasonRecords(bestRun, t)), headlines: D.headlines, xp: D.xp, sat: D.sat.length },
     }
     if (!isBucket) D.final.hasBye = D.final.playoffs && bestRun.hasBye
     D.finalized = true
@@ -304,7 +320,13 @@ export function createDirector({ sport, pos, build, team, simFn, base, seed = Ma
   }
   function seasonRecords(run, t) {
     const out = []
-    for (const rec of recs) if (rec.stat && (t[rec.stat] ?? run[rec.stat] ?? 0) > rec.value) out.push({ ...rec, got: t[rec.stat] ?? run[rec.stat] })
+    // the ones not already called live (rates, and anything the live check can't see)
+    const all = { ...run, ...t }
+    for (const rec of recs) {
+      if (rec.game || D.fired.has(`rec-${rec.id}`)) continue
+      const v = rec.get ? rec.get(all) : all[rec.stat]
+      if (v != null && v > rec.value) out.push({ ...rec, got: `${typeof v === 'number' ? v.toLocaleString('en-US') : v}${rec.pct ? '%' : ''}`, value: `${rec.value.toLocaleString('en-US')}${rec.pct ? '%' : ''}` })
+    }
     for (const rec of RECORDS[sport]?.team ?? []) if (rec.statFn?.({ ...run, ...t })) out.push({ ...rec, got: `${t.wins}-${t.losses}` })
     return out
   }

@@ -4156,3 +4156,8 @@ html.is-bucket .ag-seam-chip { background: rgba(12,8,5,.96); }
 html.is-app[data-stack="build"] .ag-seam-chip { opacity: 0; }
 @media (prefers-reduced-motion: reduce) { .ag-seam-chev, .ag-seam-line.is-pulse, .ag-coach--down .ag-coach-hand::before { animation: none; } }
 html.is-app .game-layout.ag-stack .spin-panel-body { padding-bottom: 6px !important; min-height: 0 !important; }
+
+/* cards: the way back from a set is its own button above the set, full size */
+.ag-set-back { align-self: flex-start; display: inline-flex; align-items: center; gap: 8px; height: 42px; padding: 0 16px 0 12px; margin-bottom: 8px; border-radius: 12px; border: 1px solid var(--ag-line-hi); background: var(--ag-panel); color: var(--ag-text); font-family: var(--ag-font); font-size: 17px; letter-spacing: 2px; cursor: pointer; }
+.ag-set-back svg { color: var(--ag-a1); }
+.ag-set-back:active { transform: scale(.97); }

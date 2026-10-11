@@ -2,12 +2,12 @@ import { useEffect, useMemo, useState } from 'react'
 import { useProgress, cardKey, rarityRank, RARITIES, claimSet, setReward } from '../../lib/progress'
 import { HEADSHOT_BASE, nflHeadshot } from '../../utils/simulation'
 import { sfx, haptic } from '../../lib/juice'
-import { IconClose, IconCheck, IconGift, IconCrown, IconStar } from './icons'
+import { IconClose, IconCheck, IconGift, IconCrown, IconStar, IconArrow } from './icons'
 
 // Card binder (dock → Cards). Every player a spin lands on is collected, across
 // every position and both eras, into one collection per sport. Sets are the
 // ways to complete it: a franchise (every player who ever wore the jersey),
-// a position, every Legend, a decade of legends, the captains. Rosters load on
+// a position, every Legend, a decade of legends. Rosters load on
 // demand so the other sport's data only downloads when it's opened.
 
 const NFL_POS = { qb: 'QB', rb: 'RB', wr: 'WR', te: 'TE', db: 'DB' }
@@ -80,7 +80,6 @@ const KINDS = [
   { id: 'pos',     label: 'POSITIONS' },
   { id: 'legends', label: 'LEGENDS' },
   { id: 'decade',  label: 'DECADES' },
-  { id: 'captain', label: 'CAPTAINS' },
 ]
 
 // The sets a collection can be completed by
@@ -111,8 +110,6 @@ function buildSets(cards, data, sport) {
     if (d === 1900) push('decade|pioneers', 'decade', 'THE PIONEERS', 'Legends who broke in before 1960', list, { gold: true })
     else push(`decade|${d}`, 'decade', `THE ${String(d).slice(2)}s`, `Legends who broke in between ${d} and ${d + 9}`, list, { gold: true })
   }
-  // the captains
-  push('captains', 'captain', 'CAPTAINS', 'Every captain, current and all-time', cards.filter(c => c.player.captain))
   return sets
 }
 
@@ -231,8 +228,8 @@ export default function AppCards({ sport: startSport, onClose }) {
 
         {data && openSet ? (
           <section className="ag-set-view ag-pop" style={{ '--d': '0ms' }}>
+            <button className="ag-set-back" onClick={() => setOpen(null)}><IconArrow size={16} style={{ transform: 'rotate(180deg)' }} /> ALL SETS</button>
             <div className="ag-set-head" style={{ '--tc': openSet.color ?? (openSet.gold ? '#D4AF37' : openSet.purple ? '#a855f7' : '#5EDBD8') }}>
-              <button className="ag-menu-back" onClick={() => setOpen(null)}>‹ SETS</button>
               {openSet.logo ? <img src={openSet.logo} alt="" className="ag-set-logo" /> : <span className="ag-set-logo ag-set-logo--icon">{openSet.gold ? <IconCrown size={22} /> : <IconStar size={22} />}</span>}
               <span className="ag-set-name">{openSet.title}</span>
               <span className="ag-set-count">{openSet.owned}/{openSet.total}</span>
