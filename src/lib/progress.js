@@ -385,6 +385,16 @@ export function setDailySpins(n) {
   S.dc.spins = n
   emit()
 }
+// Left the Daily Challenge mid-run: today is over, no score, no second try
+export function forfeitDaily() {
+  const dc = dailyChallenge()
+  if (!S.dc || S.dc.key !== dc.key) S.dc = { key: dc.key, spins: 0, done: false }
+  if (S.dc.done) return
+  S.dc.done = true
+  S.dc.forfeit = true
+  S.dc.ovr = null
+  emit()
+}
 async function postDaily(ovr, pos, mode, build) {
   if (!uid || !supabase) return
   const { error } = await supabase.from('daily_challenge_results').insert({

@@ -56,7 +56,8 @@ import SiteFeatures from './components/SiteFeatures'
 import { IS_APP, APP_LOOK } from './lib/platform'
 import AppHome from './components/app/AppHome'
 import { finishDiscordSignIn, getUsername } from './lib/discord'
-import { dailyState, setDailySpins } from './lib/progress'
+import { dailyState, setDailySpins, forfeitDaily } from './lib/progress'
+import { LiveLeaveButton } from './components/app/LiveLeave'
 import { FlipEdge, BuildComplete, useFlip, StackEdge, StackSeam } from './components/app/AppBuildTray'
 import { loadRun, newRun, cityList, ratedPool } from './lib/takeover'
 import { rampPage, HOME_UNITS, RAIL_UNITS, RAIL_UNITS_WITH_LEFT } from './lib/ads'
@@ -652,6 +653,18 @@ export default function App() {
   const dailyLocked = !!dailyRun && !dailyState().done
   const dailyLockedRef = useRef(dailyLocked)
   dailyLockedRef.current = dailyLocked
+  // The Daily Challenge plays like an online mode: one run, locked in. Leaving
+  // (dock, More, back, reload) asks first, and ends the day with no score.
+  const dailyLive = (IS_APP || APP_LOOK) && dailyLocked && (page === 'game' || page === 'sim')
+  useEffect(() => {
+    if (!dailyLive) return
+    setLiveLock({
+      title: 'Leave the Daily Challenge?',
+      body: 'One run a day. Leave now and today\'s challenge is over: no score on the board, and you can\'t play it again until tomorrow.',
+      forfeit: () => { forfeitDaily(); setDailyRun(null); setGameMode(null); setBuild({}); setSimResult(null); try { localStorage.removeItem('bap_progress') } catch {} },
+    })
+    return () => setLiveLock(null)
+  }, [dailyLive]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // App: Spin and Build are two sides of one card — swipe to flip, and the
   // last pick flips it to Build (drag-and-drop included)
@@ -1291,10 +1304,11 @@ export default function App() {
   const renderGame = parked => (
     <>
       {/* a live pool has no navbar: no position switch, no way out but LEAVE */}
-      {!parked && !competeOn && <Navbar {...navbarProps} />}
+      {!parked && !competeOn && !dailyLive && <Navbar {...navbarProps} />}
 
       <div className="game-page-scroll">
       {competeOn && <CompeteHud cp={cp} />}
+      {dailyLive && page === 'game' && <div className="cp-hud dc-hud" role="status"><span><small>DAILY CHALLENGE · {String(dailyRun.pos).toUpperCase()} · ONE RUN</small></span><LiveLeaveButton /></div>}
       {IS_APP && (
         <StackEdge view={mobileView} build={build} types={activeTypes} attrMap={currentAttrMap} onFlip={flip}
           waiting={savedSpinResult?.selectedQB?.name ?? null} complete={buildComplete} />
@@ -1342,7 +1356,7 @@ export default function App() {
           onCategoryChange={setActiveCategory}
           types={activeTypes}
           isLite={gameMode === 'lite'}
-          onReset={competeOn ? undefined : handleReset}
+          onReset={competeOn || dailyLocked ? undefined : handleReset}
           isRB={isRB}
           isWR={isWR}
           isTE={isTE}
@@ -1361,7 +1375,7 @@ export default function App() {
             build={build}
             onSimulate={page === 'versus-game' ? handleFaceoff : page === 'takeover-build' ? hitTheRoad : page === 'career-build' ? enterDraft : competeOn ? lockInCompete : handleSimulate}
             simLabel={page === 'takeover-build' ? 'HIT THE ROAD' : page === 'career-build' ? 'ENTER THE DRAFT' : competeOn ? 'LOCK IN' : undefined}
-            onReset={competeOn ? undefined : handleReset}
+            onReset={competeOn || dailyLocked ? undefined : handleReset}
             types={activeTypes}
             hasResult={page === 'versus-game' ? false : !!simResult}
             isRB={isRB}

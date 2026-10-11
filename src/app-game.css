@@ -4192,3 +4192,12 @@ html.app-look .ag-blacktop--menu:hover .ag-bt-tags .bt-mode-tag:last-child { tra
 @media (prefers-reduced-motion: reduce) { .ag-bt-tags .bt-mode-tag { transition: none; } }
 .ag-bc-tier { text-align: center; text-wrap: balance; }
 .ag-bc-tier.is-long { font-size: 26px; }
+.dc-hud { justify-content: space-between; }
+
+/* Blacktop menu: the court picker */
+.bt-courts { display: grid; gap: 8px; padding: 12px; border-radius: 16px; border: 1.5px solid var(--ag-line); background: var(--ag-panel); }
+.bt-courts-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.bt-court-opt { display: grid; gap: 5px; padding: 5px; border-radius: 12px; border: 1.5px solid var(--ag-line); background: rgba(255,255,255,.03); color: var(--ag-muted); cursor: pointer; font-family: var(--ag-font); font-size: 13px; letter-spacing: 1.5px; }
+.bt-court-opt img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 8px; display: block; }
+.bt-court-opt.is-on { border-color: #ea580c; color: var(--ag-text); box-shadow: 0 0 0 1px #ea580c, 0 4px 14px rgba(234,88,12,.25); }
+.bt-court-opt:active { transform: scale(.97); }

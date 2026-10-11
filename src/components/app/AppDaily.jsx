@@ -63,16 +63,16 @@ function Challenge({ p, sport }) {
       <div className="ag-challenge-hero">
         <span className="ag-eyebrow">DAILY CHALLENGE</span>
         <span className="ag-challenge-title">{label}</span>
-        <span className="ag-challenge-sub">Everyone gets the same spins today. No resets — your first build counts.</span>
+        <span className="ag-challenge-sub">Everyone gets the same spins today. One run: no resets, and leaving mid-run ends your day.</span>
         {dc.done ? (
           <div className="ag-challenge-result">
-            <span><b>{dc.ovr}</b> OVR</span>
+            {dc.forfeit ? <span><b>LEFT</b> no score today</span> : <span><b>{dc.ovr}</b> OVR</span>}
             {mine >= 0 && <span className="ag-challenge-rank">#{mine + 1} TODAY</span>}
           </div>
         ) : (
           <button className="ag-btn ag-challenge-go" onClick={play}>{dc.spins > 0 ? 'RESUME CHALLENGE' : 'PLAY CHALLENGE'} <IconArrow size={18} /></button>
         )}
-        {dc.done && !p.signedIn && <span className="ag-challenge-note">Sign in to post your score to the board.</span>}
+        {dc.done && !dc.forfeit && !p.signedIn && <span className="ag-challenge-note">Sign in to post your score to the board.</span>}
       </div>
       <div className="ag-board">
         <div className="ag-board-head"><span>TODAY'S TOP BUILDS</span><span>OVR</span></div>
