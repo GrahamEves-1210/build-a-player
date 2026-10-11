@@ -4,7 +4,7 @@ import {
   startSeason, resumeSeason, advanceWeek, chooseMoment, resolveInjury, finishRegular, playoffRound, bookSeason, recordCombine, spendDev, demandTrade, nextSeason,
   OFF_STEPS, offStep, campDrill, lineup, depthChart, gradeOf, gradeOfOvr, ovrGradeVal, SPORT, sportOf,
   openTalks, ask, closeTalks, acceptTalks, ASKS, leverageOf,
-  retire, canRetire, mustRetire, careerTotals, legacyOf, LEGACY_TIERS, ALL_TIME, STAT_LABEL, HEADLINE_STATS, careerCard, AWARD_NAME, MAX_SEASONS, goalsFor, compsFor, stockText, pickText, loadSlots, CAREER_SLOTS, maxedTrait,
+  retire, canRetire, mustRetire, careerTotals, legacyOf, LEGACY_TIERS, ALL_TIME, STAT_LABEL, HEADLINE_STATS, careerCard, AWARD_NAME, MAX_SEASONS, retireReason, goalsFor, compsFor, stockText, pickText, loadSlots, CAREER_SLOTS, maxedTrait,
 } from '../../lib/career'
 import { GAME_LINE } from '../../lib/seasonDirector'
 import { GAMES, pickPlayoffGame } from '../../lib/minigames'
@@ -600,6 +600,9 @@ function Offseason({ c, setCareer, last, setTab }) {
       {steps[idx][0] === 'camp' && <Camp c={c} setCareer={setCareer} />}
       {steps[idx][0] === 'contract' && <Contract c={c} setCareer={setCareer} />}
       {!isLast && <button className="ag-btn ag-btn--gold tk-intro-go" onClick={() => go(nextStep[0])}>NEXT: {nextStep[1]} <IconArrow size={16} /></button>}
+      {isLast && forced && retireReason(c) !== 'nocalls' && (
+        <p className="cr-note ag-pop">{retireReason(c) === 'age' ? `${c.name} is ${c.age}. The body has made the call: this is the end of the road.` : `${c.seasons.length} seasons: as long as a career runs here. Time to hang it up.`}</p>
+      )}
       {isLast && (
         <div className="cr-actions ag-pop" style={{ '--d': '150ms' }}>
           {!forced && !(c.offers?.length) && <button className="ag-btn ag-btn--gold tk-intro-go" onClick={() => { setCareer(nextSeason(c)); setTab('season'); sfx('tap'); document.querySelector('.cr-hub')?.scrollTo({ top: 0, behavior: 'smooth' }) }}>ON TO {c.season + 1} <IconArrow size={16} /></button>}

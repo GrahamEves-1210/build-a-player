@@ -39,7 +39,7 @@ import { NBA_ALLTIME_BIG_PLAYERS } from '../data/nba-big-legends'
 
 export const CAREER_V = 1
 const FIRST_SEASON = 2026
-export const MAX_SEASONS = 18
+export const MAX_SEASONS = 20
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v))
 const r10 = v => Math.round(v * 10) / 10
 const avgAttr = p => { const v = Object.values(p.attrs || {}); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : 0 }
@@ -1028,6 +1028,8 @@ function marketValue(c) {
 function contractSituation(c) {
   const S = sportOf(c)
   if (c.contract.left > 0) return null
+  // the career's over anyway (age, or the most seasons): no free agency to sign into
+  if (c.age >= retireAge(c) || c.seasons.length >= MAX_SEASONS) return null
   const r = seeded(`${c.seed}-fa-${c.year}`)
   const value = marketValue(c)
   const last = c.seasons[c.seasons.length - 1]
@@ -1136,7 +1138,16 @@ export function nextSeason(c) {
   return { ...n, fit: fitFor(n) }
 }
 export const canRetire = c => c.age >= 29 || c.seasons.length >= 8
-export const mustRetire = c => c.age >= 40 || c.seasons.length >= MAX_SEASONS || (Array.isArray(c.offers) && c.offers.length === 0)
+// The end of the road: the body (40, quarterbacks 42), the most seasons a career
+// can run, or a free agency where nobody calls
+export const retireAge = c => 40 + (sportOf(c).ageShift?.(c.pos) ?? 0)
+export function retireReason(c) {
+  if (c.age >= retireAge(c)) return 'age'
+  if (c.seasons.length >= MAX_SEASONS) return 'seasons'
+  if (Array.isArray(c.offers) && c.offers.length === 0) return 'nocalls'
+  return null
+}
+export const mustRetire = c => !!retireReason(c)
 export function retire(c) {
   const L = legacyOf(c)
   const hof = hofVote(c, L)
