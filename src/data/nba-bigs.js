@@ -308,14 +308,14 @@ export const NBA_BIG_PLAYERS = [
     attrs: { jumpShot: 5, finishing: 5, rebounding: 5, playmaking: 2, interiorDefense: 4, speed: 4, bounce: 3, size: 6, basketballIQ: 3, clutch: 3 } },
 
   // 2026-27 additions
-  { name: 'Jonathan Kuminga', short: 'Kuminga', team: 'MIN', starter: false, captain: false, number: 0, height: 79, weight: 225, wingspan: 83, skin: '#5c3a26', position: 'PF', faceCenter: [50, 42],
+  { name: 'Jonathan Kuminga', short: 'Kuminga', team: 'MIN', starter: false, captain: false, number: 24, height: 79, weight: 225, wingspan: 83, skin: '#ab7b63', position: 'PF', faceCenter: [49, 40],
     attrs: { jumpShot: 4, finishing: 8, rebounding: 4, playmaking: 5, interiorDefense: 3, speed: 9, bounce: 9, size: 4, basketballIQ: 5, clutch: 5 } },
-  { name: "Day'Ron Sharpe", short: 'Sharpe', team: 'BKN', starter: false, captain: false, number: 20, height: 81, weight: 265, wingspan: 87, skin: '#6e4229', position: 'C', faceCenter: [50, 42],
+  { name: "Day'Ron Sharpe", short: 'Sharpe', team: 'BKN', starter: false, captain: false, number: 20, height: 82, weight: 265, wingspan: 87, skin: '#885c4d', position: 'C', faceCenter: [49, 42],
     attrs: { jumpShot: 1, finishing: 5, rebounding: 7, playmaking: 3, interiorDefense: 5, speed: 3, bounce: 4, size: 7, basketballIQ: 5, clutch: 3 } },
-  { name: 'Larry Nance Jr.', short: 'Nance Jr.', team: 'IND', starter: false, captain: false, number: 22, height: 80, weight: 245, wingspan: 85, skin: '#8b5a3c', position: 'PF', faceCenter: [50, 42],
+  { name: 'Larry Nance Jr.', short: 'Nance Jr.', team: 'IND', starter: false, captain: false, number: 22, height: 78, weight: 245, wingspan: 85, skin: '#946c58', position: 'PF', faceCenter: [53, 46],
     attrs: { jumpShot: 5, finishing: 6, rebounding: 6, playmaking: 5, interiorDefense: 4, speed: 4, bounce: 7, size: 6, basketballIQ: 5, clutch: 4 } },
-  { name: 'Nick Richards', short: 'Richards', team: 'MIA', starter: false, captain: false, number: 4, height: 84, weight: 245, wingspan: 88, skin: '#5c3a26', position: 'C', faceCenter: [50, 42],
+  { name: 'Nick Richards', short: 'Richards', team: 'MIA', starter: false, captain: false, number: 8, height: 83, weight: 245, wingspan: 88, skin: '#c87b4c', position: 'C', faceCenter: [50, 39],
     attrs: { jumpShot: 0, finishing: 4, rebounding: 7, playmaking: 1, interiorDefense: 6, speed: 4, bounce: 6, size: 8, basketballIQ: 4, clutch: 3 } },
-  { name: 'Georges Niang', short: 'Niang', team: 'GSW', starter: false, captain: false, number: 20, height: 79, weight: 230, wingspan: 80, skin: '#6e4229', position: 'PF', faceCenter: [50, 42],
+  { name: 'Georges Niang', short: 'Niang', team: 'GSW', starter: false, captain: false, number: 32, height: 78, weight: 230, wingspan: 80, skin: '#b98c7c', position: 'PF', faceCenter: [49, 42],
     attrs: { jumpShot: 7, finishing: 2, rebounding: 3, playmaking: 4, interiorDefense: 2, speed: 3, bounce: 2, size: 5, basketballIQ: 5, clutch: 4 } },
 ]
