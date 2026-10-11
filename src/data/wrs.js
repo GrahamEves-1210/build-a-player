@@ -36,6 +36,8 @@ const _WRS = [
     attrs: { speed: 5,  bodyControl: 5,  vertical: 5,  routeRunning: 6,  release: 5,  hands: 4,  awareness: 5,  size: 7,  afterCatch: 3  } },
   { name: 'Simi Fehoko',         short: 'Fehoko',      team: 'ARI', teamName: 'Arizona Cardinals',     skin: '#b07848', height: 76, weight: 225, starter: false, number: 80,
     attrs: { speed: 3,  bodyControl: 3,  vertical: 6,  routeRunning: 2,  release: 3,  hands: 4,  awareness: 4,  size: 10, afterCatch: 3  } },
+  { name: 'Xavier Weaver',       short: 'Weaver',      team: 'ARI', teamName: 'Arizona Cardinals',     skin: '#5e3c22', height: 72, weight: 185, starter: false, number: 89,
+    attrs: { speed: 7,  bodyControl: 5,  vertical: 6,  routeRunning: 4,  release: 4,  hands: 5,  awareness: 4,  size: 5,  afterCatch: 5  } },
   // ATL
   { name: 'Drake London',        short: 'London',      team: 'ATL', teamName: 'Atlanta Falcons',       skin: '#b07848', height: 76, weight: 219, starter: true,  captain: true,  number: 5,
     attrs: { speed: 7,  bodyControl: 9,  vertical: 9,  routeRunning: 7,  release: 7,  hands: 9,  awareness: 7,  size: 10, afterCatch: 6  } },
