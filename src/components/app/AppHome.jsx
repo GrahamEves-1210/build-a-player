@@ -123,17 +123,65 @@ function SportSwitch({ sport }) {
 }
 
 // Blacktop card art: a half court
-function CourtArt() {
+// Blacktop card art: a night run. Chain-link fence, a sodium streetlight, a
+// hoop with a chain net, worn paint on the asphalt, three on three, and a
+// ball that goes up and rattles the chains every few seconds (CSS, transforms only).
+function BlacktopArt() {
+  const squads = [[[150, 99], [178, 104], [214, 100]], [[162, 90], [198, 93], [224, 88]]]
   return (
-    <svg className="ag-court-art" viewBox="0 0 220 110" aria-hidden="true" preserveAspectRatio="xMaxYMid slice">
-      <g fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-        <rect x="120" y="8" width="112" height="94" rx="3" opacity=".55" />
-        <rect x="152" y="30" width="80" height="50" opacity=".75" />
-        <path d="M152 30 a25 25 0 0 0 0 50" opacity=".75" />
-        <path d="M128 8 a86 86 0 0 1 0 94" opacity=".55" />
-        <circle cx="204" cy="55" r="5.5" />
-        <line x1="212" y1="38" x2="212" y2="72" strokeWidth="4" />
+    <svg className="bt-art" viewBox="0 0 240 110" aria-hidden="true" preserveAspectRatio="xMaxYMax meet">
+      <defs>
+        <pattern id="btFence" width="9" height="9" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+          <path d="M0 0V9M0 0H9" stroke="rgba(255,236,214,.16)" strokeWidth=".7" fill="none" />
+        </pattern>
+        <linearGradient id="btFenceFade" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#fff" stopOpacity="1" /><stop offset=".85" stopColor="#fff" stopOpacity="0" />
+        </linearGradient>
+        <mask id="btFenceMask"><rect width="240" height="78" fill="url(#btFenceFade)" /></mask>
+        <radialGradient id="btLamp" cx="62" cy="10" r="150" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor="#ffb661" stopOpacity=".55" /><stop offset=".35" stopColor="#ff9a3d" stopOpacity=".16" /><stop offset="1" stopColor="#ff9a3d" stopOpacity="0" />
+        </radialGradient>
+        <linearGradient id="btCone" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#ffc47a" stopOpacity=".34" /><stop offset="1" stopColor="#ffc47a" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <rect width="240" height="110" fill="url(#btLamp)" className="bt-art-glow" />
+      {/* the fence: mesh, a top rail, posts */}
+      <rect width="240" height="78" fill="url(#btFence)" mask="url(#btFenceMask)" />
+      <path d="M0 3H240M24 3V78M104 3V78M232 3V78" stroke="rgba(255,236,214,.14)" strokeWidth="1.4" fill="none" />
+      {/* the asphalt and its paint: baseline, the lane, the arcs */}
+      <rect y="80" width="240" height="30" fill="rgba(255,236,214,.035)" />
+      <g className="bt-art-paint" fill="none" stroke="rgba(255,244,230,.42)" strokeWidth="1.3" strokeLinecap="round">
+        <path d="M70 80H240" />
+        <path d="M160 80L150 97H200L190 80" strokeDasharray="22 2 9 3 30 2" />
+        <path d="M150 97A25 5.5 0 0 0 200 97" strokeDasharray="12 3 18 2" />
+        <path d="M96 80Q175 128 254 80" strokeDasharray="40 3 26 2 50 4" opacity=".75" />
       </g>
+      {/* the streetlight and its cone */}
+      <polygon points="58,12 66,12 120,110 4,110" fill="url(#btCone)" className="bt-art-cone" />
+      <path d="M48 110V8H63" stroke="rgba(255,236,214,.3)" strokeWidth="2" fill="none" />
+      <rect x="57" y="7" width="12" height="4" rx="2" fill="#ffe2b0" className="bt-art-bulb" />
+      {/* the hoop: pole, backboard, rim, chain net */}
+      <path d="M175 46V80" stroke="rgba(255,236,214,.35)" strokeWidth="2.6" />
+      <rect x="157" y="22" width="36" height="24" rx="1.5" fill="rgba(10,8,8,.55)" stroke="rgba(255,244,230,.7)" strokeWidth="1.4" />
+      <rect x="168" y="31" width="14" height="10" fill="none" stroke="rgba(255,244,230,.55)" strokeWidth="1.1" />
+      <g className="bt-art-net">
+        <path d="M167.5 48L169.5 52L171.5 48L173.5 52L175 48L176.5 52L178.5 48L180.5 52L182.5 48M169.5 52L171 57L173 53L175 57L177 53L179 57L180.5 52M171 57L172.5 62L175 59L177.5 62L179 57"
+          stroke="#c9ccd2" strokeWidth=".9" fill="none" strokeLinejoin="round" />
+      </g>
+      <ellipse cx="175" cy="47.5" rx="8.5" ry="2.2" fill="none" stroke="#ff7a2a" strokeWidth="1.8" />
+      {/* three on three */}
+      {squads.map((sq, t) => sq.map(([x, y], i) => (
+        <g key={`${t}${i}`} className={`bt-art-p bt-art-p--${t}`}>
+          <ellipse cx={x} cy={y + 3.6} rx="4.2" ry="1.2" fill="rgba(0,0,0,.45)" />
+          <circle cx={x} cy={y} r="3.1" />
+        </g>
+      )))}
+      {/* the shot: x runs linear, y rises and falls, so the ball arcs */}
+      <g className="bt-art-shot-x"><g className="bt-art-shot-y">
+        <circle cx="150" cy="93" r="3.3" fill="#ff8a3d" />
+        <path d="M146.8 93H153.2M150 89.7V96.3" stroke="rgba(60,20,0,.55)" strokeWidth=".6" />
+      </g></g>
     </svg>
   )
 }
@@ -302,7 +350,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
           {/* Basketball: Blacktop is the online hub — 3v3 lobbies, and 1v1 from inside it */}
           {isBucket && onBlacktop && (
             <button className={`ag-blacktop ag-pop${btLive ? ' is-live' : ''}`} style={{ '--d': '320ms' }} onClick={onBlacktop}>
-              <CourtArt />
+              <BlacktopArt />
               <span className="ag-live-dot" />
               <span className="ag-takeover-txt">
                 <span className="ag-eyebrow">{btLive ? (blacktop.phase === 'queue' ? `IN THE LOBBY · ${blacktop.queue}/6 SPOTS TAKEN` : blacktop.phase === 'build' ? 'LIVE · YOUR SQUAD IS BUILDING' : 'LIVE · GAME ON') : 'ONLINE · 3V3 · 1V1'}</span>
