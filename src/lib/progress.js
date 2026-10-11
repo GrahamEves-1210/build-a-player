@@ -220,9 +220,23 @@ function load(id) {
   } catch { return blank() }
 }
 
+// Items taken out of the shop: owners get the coins back, once per account (the
+// flag syncs with the wallet), and anything equipped goes back to the default
+const RETIRED = { 'snd-roar': 400 }        // Stadium Roar: a crowd, removed with the crowd sounds
+function retireItems(st) {
+  st.retired = st.retired || {}
+  for (const [id, refund] of Object.entries(RETIRED)) {
+    for (const [slot, on] of Object.entries(st.equip || {})) if (on === id) st.equip[slot] = DEFAULTS[slot] ?? null
+    if (!st.owned?.[id]) continue
+    delete st.owned[id]
+    if (!st.retired[id]) { st.coins = (st.coins || 0) + refund; st.retired[id] = Date.now() }
+  }
+  return st
+}
+
 let uid = null
 let user = null
-let S = load(null)
+let S = retireItems(load(null))
 let snap = null
 let lastSeason = null
 const listeners = new Set()
@@ -625,7 +639,7 @@ function switchUser(u) {
   loaded = true
   const guestCards = id ? load(null).cards : null
   uid = id
-  S = load(id)
+  S = retireItems(load(id))
   if (id && !S.mergedGuest && guestCards) {
     for (const [k, v] of Object.entries(guestCards)) if (!S.cards[k]) S.cards[k] = v
     S.mergedGuest = true
@@ -885,7 +899,7 @@ export function claimAch(id) {
 // The wallet follows the account (accounts.app_profile, see supabase/app_shop.sql).
 // Last change wins; items and achievements are merged, never lost.
 // ═════════════════════════════════════════════════════════════════════════════
-const WALLET_KEYS = ['coins', 'coinsEarned', 'owned', 'equip', 'ach', 'achClaimed', 'stats', 'shopFree', 'levelPaid', 'discordPaid', 'feedbackPaid']
+const WALLET_KEYS = ['coins', 'coinsEarned', 'owned', 'equip', 'ach', 'achClaimed', 'stats', 'shopFree', 'levelPaid', 'discordPaid', 'feedbackPaid', 'retired']
 let pushTimer = null
 function schedulePush() {
   if (!supabase || !uid) return
@@ -920,6 +934,7 @@ async function pullWallet(id) {
     const w = data.app_profile
     const newer = (w.at ?? 0) > (S.walletAt ?? 0)
     S.owned = { ...(w.owned || {}), ...S.owned }
+    S.retired = { ...(w.retired || {}), ...(S.retired || {}) }
     S.ach = { ...(w.ach || {}), ...S.ach }
     S.achClaimed = { ...(w.achClaimed || {}), ...S.achClaimed }
     const st = { ...S.stats }
@@ -948,6 +963,7 @@ async function pullWallet(id) {
       S.levelPaid = Math.max(S.levelPaid || 0, w.levelPaid || 0)
       S.walletAt = w.at
     }
+    retireItems(S)                          // after the merge, so the refund survives a newer cloud wallet
     emit(true)
   } catch {}
 }

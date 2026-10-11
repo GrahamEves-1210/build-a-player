@@ -156,7 +156,6 @@ const WF = [
 // ── Victory sounds ───────────────────────────────────────────────────────────
 const WS = [
   it('winSound', 'snd-horn',      'Air Horn',      0, 0, { free: true }),
-  it('winSound', 'snd-roar',      'Stadium Roar', 0, 400),
   it('winSound', 'snd-fanfare',   'Brass Fanfare', 1, 1300),
   it('winSound', 'snd-drumline',  'Drumline', 1, 1600),
   it('winSound', 'snd-organ',     'Organ Charge', 1, 1700),

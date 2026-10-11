@@ -12,7 +12,7 @@ const NAMES = {
   's-noisy': 'Noisy impact', 's-hammer': 'Hammer', 's-steamhit': 'Steam hit', 's-punch': 'Punch', 's-zoom': 'Zoom',
   's-slideclose': 'Metal slide', 's-lighter': 'Lighter click', 's-feedback': 'Feedback up', 's-powerup': 'Power-up',
   's-impact': 'Cinematic impact', 's-boom': 'Boom', 's-perc': 'Percussion hit', 's-cannon': 'Cannon', 's-explosion': 'Explosion', 's-stone': 'Stone',
-  's-crowd-arena': 'Arena crowd', 's-crowd-applause': 'Big applause', 's-crowd-shouts': 'Cheers & shouts',
+
 }
 // [event, label, what it is, candidates, has a built-in sound]
 const ROWS = [
@@ -39,7 +39,7 @@ const ROWS = [
   ['levelup', 'Level up', 'You level up', ['s-powerup', 's-impact', 's-perc']],
   ['achievement', 'Achievement', 'An achievement unlocks', ['s-feedback', 's-perc', 's-powerup']],
   ['award', 'Season award', 'MVP, OPOY, DPOY…', ['s-impact', 's-perc', 's-boom']],
-  ['champion', 'Title', 'You win it all (under your victory sound)', ['s-crowd-arena', 's-crowd-applause', 's-crowd-shouts']],
+  ['champion', 'Title', 'You win it all (under your victory sound)', ['s-impact', 's-boom', 's-explosion']],
   ['snd-cannon', 'Cannon Blast', 'The shop\'s Cannon Blast victory sound', ['s-cannon', 's-explosion']],
   ['whistle', 'Season starts', 'Referee whistle on SIMULATE', []],
 ]

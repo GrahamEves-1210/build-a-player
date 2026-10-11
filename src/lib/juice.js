@@ -167,11 +167,9 @@ function horn(S, { f = 233, dur = 0.8, gain = 0.18, at = 0, out = S.out }) {
     osc(S, { type: 'sawtooth', f: ff, detune: dt, dur, gain: gain / 3, at, lp: 1500, q: 1.2, out, vib: 5, vibHz: 5.2, env: { a: 0.06, h: dur * 0.65, d: dur * 0.35, sus: 0.5, r: 0.18 } })
   }
 }
-// Crowd: band-limited noise that swells and settles
-function crowd(S, { dur = 1.6, gain = 0.2, at = 0, out = S.out }) {
-  noise(S, { bp: 520, q: 0.5, dur, gain, at, out, env: { a: dur * 0.35, d: dur * 0.65 } })
-  noise(S, { bp: 1800, q: 0.7, dur, gain: gain * 0.35, at: at + 0.05, out, env: { a: dur * 0.3, d: dur * 0.7 } })
-}
+// Crowd: taken out (2026-10-11, it sounded bad). The calls stay so the timing of
+// the sounds around them is unchanged; nothing plays.
+function crowd() {}
 // Referee's whistle: two close sines with the pea rattling the pitch
 function whistle(S, { at = 0, dur = 0.42, gain = 0.2, out = S.out } = {}) {
   osc(S, { type: 'sine', f: 3150, dur, gain, at, out, vib: 110, vibHz: 38, env: { a: 0.015, h: dur * 0.6, d: dur * 0.4, sus: 0.7, r: 0.06 } })
@@ -434,7 +432,7 @@ export const BAKED = {
   tap: 's-plastic', spin: 's-spinwhir', tick: 'none', slot: 's-plastic', complete: 's-boom',
   back: 's-click33', swap: 'none', claim: 's-feedback', chime: 's-feedback',
   deny: 's-retrobtn', send: 's-plastic', levelup: 's-feedback', achievement: 's-feedback',
-  award: 's-feedback', champion: 's-crowd-arena', 'snd-cannon': 's-explosion',
+  award: 's-feedback', champion: 's-impact', 'snd-cannon': 's-explosion',
 }
 // Picks saved before the sounds were built in would shadow them; start fresh once
 try { if (localStorage.getItem('bap_sfx_baked') !== '1') { localStorage.removeItem(PICKS_KEY); localStorage.setItem('bap_sfx_baked', '1') } } catch {}
@@ -458,7 +456,7 @@ export function playLab(id, gain = 0.9) {
   })
 }
 // ── The shop's victory sounds: recorded layers (public/sfx-lab) ──────────────
-// A real crowd, hits and drums under the synth instruments; each layer is
+// Hits and drums under the synth instruments; each layer is
 // placed `at` seconds after the start. (Cannon Blast keeps its pick: BAKED.)
 function labAt(ac, id, at = 0, gain = 0.9, rate = 1) {
   const t0 = ac.currentTime
@@ -472,7 +470,6 @@ function labAt(ac, id, at = 0, gain = 0.9, rate = 1) {
 }
 const STAGED = {
   'snd-horn': S => { const v = verb(S, 0.4); horn(S, { f: 233, dur: 0.8, gain: 0.17, at: 0.05, out: v }); horn(S, { f: 233, dur: 0.48, gain: 0.14, at: 0.98, out: v }); labAt(S.ac, 's-boom', 0, 0.55) },
-  'snd-roar': S => { labAt(S.ac, 's-boom', 0, 0.8); labAt(S.ac, 's-crowd-arena', 0.04, 1) },
   'snd-fanfare': S => { SYNTH['snd-fanfare'](S); labAt(S.ac, 's-perc', 0, 0.7) },
   'snd-drumline': S => { [0, 0.18, 0.36, 0.45, 0.54, 0.72, 0.9, 1.08].forEach((t, i) => labAt(S.ac, 's-perc', t, i === 7 ? 0.95 : 0.42, i % 2 ? 1.18 : 1)) },
   'snd-organ': S => { SYNTH['snd-organ'](S) },
@@ -489,7 +486,7 @@ export function warmVictory() {
   if (warmed) return
   const ac = audio(); if (!ac) return
   warmed = true
-  ;['s-crowd-arena', 's-crowd-applause', 's-crowd-shouts', 's-boom', 's-impact', 's-perc', 's-powerup', 's-whoosh', 's-explosion'].forEach(id => labBuffer(ac, id))
+  ;['s-boom', 's-impact', 's-perc', 's-powerup', 's-whoosh', 's-explosion'].forEach(id => labBuffer(ac, id))
 }
 export const LAB_GAIN = { tap: 0.5, tick: 0.4, gradepop: 0.45, back: 0.55, send: 0.6, deny: 0.6, spin: 0.55, slot: 0.6, champion: 0.8 }
 export const sfx = (name, arg) => {
