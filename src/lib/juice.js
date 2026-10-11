@@ -533,8 +533,10 @@ export function confetti(amount = 140) {
   const c = document.createElement('canvas')
   c.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:1300'
   // big screens draw at 1×: a retina-sized full-screen canvas is 4× the pixels to clear every frame
+  // big screens and Android draw at 1×–1.5×: the canvas is cleared and redrawn every frame
   const big = innerWidth * innerHeight > 1100 * 800
-  const dpr = big ? 1 : Math.min(2, window.devicePixelRatio || 1)
+  const android = document.documentElement.classList.contains('is-android')
+  const dpr = big ? 1 : Math.min(android ? 1.5 : 2, window.devicePixelRatio || 1)
   c.width = innerWidth * dpr; c.height = innerHeight * dpr
   document.body.appendChild(c)
   const g = c.getContext('2d')
@@ -582,7 +584,7 @@ function canvasLayer() {
   const c = document.createElement('canvas')
   c.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:1300'
   // big screens draw at 1× (a retina full-screen canvas is 4× the pixels every frame)
-  const dpr = innerWidth * innerHeight > 1100 * 800 ? 1 : Math.min(2, window.devicePixelRatio || 1)
+  const dpr = innerWidth * innerHeight > 1100 * 800 ? 1 : Math.min(document.documentElement.classList.contains('is-android') ? 1.5 : 2, window.devicePixelRatio || 1)
   c.width = innerWidth * dpr; c.height = innerHeight * dpr
   document.body.appendChild(c)
   const g = c.getContext('2d'); g.scale(dpr, dpr)

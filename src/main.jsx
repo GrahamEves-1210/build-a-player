@@ -29,13 +29,15 @@ import App from './App.jsx'
 import BucketApp from './components/BucketApp.jsx'
 import ErrorBoundary from './components/ErrorBoundary.jsx'
 import { initAppInfra, AppInfra } from './lib/appInfra'; initAppInfra()   // error log, deep links, notifications, rating, version (lib/appInfra.js)
-import { IS_APP, APP_LOOK } from './lib/platform'
+import { IS_APP, APP_LOOK, APP_PLATFORM } from './lib/platform'
 // App shell (dock, Daily, Cards, shop, toasts). The website loads it too for
 // the app-look home and profile screens (APP_LOOK in lib/platform.js).
 const AppTabBar = (IS_APP || APP_LOOK) ? lazy(() => import('./components/AppTabBar.jsx')) : null
 
 if (IS_APP) {
   document.documentElement.classList.add('is-app')
+  // Android's WebView is far slower at live blur and big animated layers than iOS (app-game.css)
+  if (APP_PLATFORM === 'android') document.documentElement.classList.add('is-android')
   // No pinch/auto zoom in the app: iOS zooms into any focused field under 16px
   // (chat, search); a fixed scale keeps the screen still while you type.
   document.querySelector('meta[name="viewport"]')?.setAttribute('content', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover')
