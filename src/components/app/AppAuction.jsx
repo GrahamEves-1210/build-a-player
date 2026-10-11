@@ -122,7 +122,7 @@ export default function AppAuction({ au, posName, onHome, onPlayAgain }) {
               <span className="au-final-who">
                 <span className="cp-row-name"><Name p={p} me={mine} /></span>
                 <span className="au-final-traits">
-                  {m.types.map(t => <i key={t} style={{ '--g': gradeColor(p.build[t].val) }} title={`${kit.attrLabel(t)}: ${p.build[t].qbFull}`}>{kit.attrLabel(t)} <b>{valToGrade(p.build[t].val)}</b></i>)}
+                  {m.types.map(t => <i key={t} style={{ '--g': gradeColor(p.slots[t].val) }} title={`${kit.attrLabel(t)}: ${p.slots[t].name}`}>{kit.attrLabel(t)} <b>{valToGrade(p.slots[t].val)}</b></i>)}
                 </span>
               </span>
               <span className="cp-row-ovr">{p.forfeit ? 'LEFT' : <><b>{p.ovr}</b> OVR<small>${p.left} left</small></>}</span>
@@ -208,10 +208,11 @@ export default function AppAuction({ au, posName, onHome, onPlayAgain }) {
               <span className="au-lot-who"><img src={kit.logo(lot.team)} alt="" /> {lot.name}</span>
               <span className="au-lot-trait">{kit.attrLabel(lot.trait)}</span>
               <b className="au-lot-grade" style={{ '--g': gradeColor(lot.val) }}>{valToGrade(lot.val)}</b>
+              {kit.slotTraits(lot.trait).length > 1 && <span className="au-lot-covers">{kit.slotTraits(lot.trait).map((t, i) => <i key={t}>{t} <b>{valToGrade(Object.values(lot.vals ?? {})[i] ?? lot.val)}</b></i>)}</span>}
             </div>
           </div>
         ) : (
-          <div className="au-lot au-lot--wait"><span className="cp-pulse" /><span className="cp-sub">Everyone has ${BUDGET}. Four slots each.</span></div>
+          <div className="au-lot au-lot--wait"><span className="cp-pulse" /><span className="cp-sub">Everyone has ${BUDGET}. Five slots each.</span></div>
         )}
         {st.stage === 'lot' && (
           <div className="au-clock">

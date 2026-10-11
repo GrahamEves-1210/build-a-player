@@ -1,6 +1,7 @@
-// TRAIT AUCTION — a Compete mode. Up to five real players, $100 each, four
-// empty trait slots each. The spinner lands on a real player and one of their
-// traits; everyone has BID_SECS to bid on it, and the high bid wins the trait.
+// TRAIT AUCTION — a Compete mode. Up to five real players, $100 each, and
+// Salary Cap's five rating slots each (football: QB). The spinner lands on a
+// real player and one of those ratings; everyone has BID_SECS to bid on it,
+// and the high bid wins it: that player's numbers for every trait it covers.
 // It runs until every slot is filled, then the builds are ranked by OVR
 // (money left breaks a tie).
 //   queue   → wait for players (2+ real players, never bots — like the pools)
@@ -18,13 +19,14 @@ import { seeded } from './rng'
 import { getUsername } from './discord'
 import { myCosmetics } from './progress'
 import { SPORT } from './career'
-import { calcOVR, calcOVRRB, calcOVRWR, calcOVRTE } from '../utils/simulation'
+import { calcOVR } from '../utils/simulation'
 import { calcBucketOVR } from '../utils/bucketSimulation'
-import { LITE_TYPES } from '../data/qbs'
-import { RB_LITE_TYPES } from '../data/rbs'
-import { WR_LITE_TYPES } from '../data/wrs'
-import { TE_LITE_TYPES } from '../data/tes'
-import { BUCKET_LITE_TYPES } from '../data/nba-attrs'
+import { TYPES, ATTR } from '../data/qbs'
+import { GUARD_TYPES } from '../data/nba-guards'
+import { BIG_TYPES } from '../data/nba-bigs'
+import { BUCKET_ATTR } from '../data/nba-attrs'
+import { QB_SAL_COLS, QB_SAL_POOL } from '../data/qb-salary'
+import { SAL_COLS, BUCKET_SAL_POOL } from '../data/nba-salary'
 
 export const AUCTION_SIZE = 5
 export const AUCTION_MIN = 2
@@ -36,21 +38,52 @@ export const SOLD_MS = 2400         // the gavel, before the next spin
 const GRACE_MS = 450                // late bids still in flight when the window shuts
 export const FILLER_VAL = 3         // a slot nobody won by the end: a free agent
 
-export const AUCTION_POS = { nfl: ['qb', 'rb', 'wr', 'te'], bucket: ['guard', 'big'] }
-const LITE = { qb: LITE_TYPES, rb: RB_LITE_TYPES, wr: WR_LITE_TYPES, te: TE_LITE_TYPES, guard: BUCKET_LITE_TYPES, big: ['finishing', 'rebounding', 'interiorDefense', 'size'] }
-const NFL_OVR = { qb: calcOVR, rb: calcOVRRB, wr: calcOVRWR, te: calcOVRTE }
+// Football is QB only; basketball has both spots
+export const AUCTION_POS = { nfl: ['qb'], bucket: ['guard', 'big'] }
+const avg = vs => (vs.length ? vs.reduce((x, y) => x + y, 0) / vs.length : 5)
 
-// Everything the auction needs to know about a sport + position
+// Everything the auction needs to know about a sport + position. The slots are
+// Salary Cap's five columns; each covers one to three of the position's traits.
+// Traits no slot covers (basketball's IQ, clutch, rebounding…) come from the
+// average of the players you won, the way Salary Cap fills them.
 export function auctionKit(sport, pos) {
-  const S = SPORT[sport] ?? SPORT.nfl
-  const p = AUCTION_POS[S.id].includes(pos) ? pos : AUCTION_POS[S.id][0]
-  const types = LITE[p]
-  const attr = S.attr[p] ?? {}
-  const ovr = S.isBucket ? b => calcBucketOVR(b, types, p) : b => NFL_OVR[p](b, types)
+  const bucket = sport === 'bucket'
+  const S = SPORT[bucket ? 'bucket' : 'nfl']
+  const p = bucket ? (pos === 'big' ? 'big' : 'guard') : 'qb'
+  const posTypes = bucket ? (p === 'big' ? BIG_TYPES : GUARD_TYPES) : TYPES
+  const attr = bucket ? BUCKET_ATTR : ATTR
+  const slots = bucket
+    ? SAL_COLS.map(c => ({ key: c.key, label: c.label, types: p === 'big' ? c.bigTypes : c.guardTypes, alt: p === 'big' ? c.guardTypes : c.bigTypes }))
+    : QB_SAL_COLS.map(c => ({ key: c.key, label: c.label, types: c.types, alt: [] }))
+  const bySlot = Object.fromEntries(slots.map(sl => [sl.key, sl]))
+  const covered = new Set(slots.flatMap(sl => sl.types))
+  const loose = posTypes.filter(t => !covered.has(t))
+  const valOf = (pl, sl, t) => pl.attrs?.[t] ?? sl.alt.map(a => pl.attrs?.[a]).find(v => v != null) ?? 5
+  const ovr = bucket ? b => calcBucketOVR(b, posTypes, p) : b => calcOVR(b, posTypes)
   return {
-    sport: S.id, pos: p, types, label: S.label[p],
-    pool: S.pool[p].filter(x => x.attrs && types.some(t => x.attrs[t] != null)),
-    attrLabel: t => attr[t]?.label ?? t,
+    sport: S.id, pos: p, label: S.label[p],
+    types: slots.map(sl => sl.key),                       // the auction's slots
+    pool: bucket ? BUCKET_SAL_POOL : QB_SAL_POOL,
+    attrLabel: k => bySlot[k]?.label ?? k,
+    slotTraits: k => (bySlot[k]?.types ?? []).map(t => attr[t]?.label ?? t),
+    // a lot: the player's numbers for the slot's traits (its grade is their average), plus the loose traits
+    lotOf: (pl, k) => {
+      const sl = bySlot[k]
+      const vals = Object.fromEntries(sl.types.map(t => [t, valOf(pl, sl, t)]))
+      const extra = Object.fromEntries(loose.filter(t => pl.attrs?.[t] != null).map(t => [t, pl.attrs[t]]))
+      return { trait: k, name: pl.name, team: pl.team, val: Math.round(avg(Object.values(vals)) * 10) / 10, vals, extra }
+    },
+    // the full build behind a set of won slots (free agents in the empty ones)
+    buildOf: won => {
+      const b = {}
+      for (const sl of slots) {
+        const w = won?.[sl.key]
+        for (const t of sl.types) b[t] = { type: t, val: w ? w.vals?.[t] ?? w.val : FILLER_VAL, qbFull: w?.name ?? 'Free agent', team: w?.team ?? null }
+      }
+      const got = Object.values(won ?? {})
+      for (const t of loose) b[t] = { type: t, val: avg(got.map(w => w.extra?.[t]).filter(v => v != null)), qbFull: 'Team average', team: null }
+      return b
+    },
     photo: S.photo, logo: S.logo,
     calcOvr: b => Math.round(ovr(b) ?? 0),
   }
@@ -86,25 +119,19 @@ export function pickLot(m, L, kit, n) {
   const bag = m.types.filter(t => need[t]).flatMap(t => Array(need[t]).fill(t))
   if (!bag.length) return null
   const trait = bag[Math.floor(r() * bag.length)]
-  const cands = kit.pool.filter(p => p.attrs[trait] != null).sort((a, b) => a.name.localeCompare(b.name))
+  const cands = [...kit.pool].sort((a, b) => a.name.localeCompare(b.name))
   const pl = cands[Math.floor(r() * cands.length)]
-  return { n, trait, name: pl.name, team: pl.team, val: pl.attrs[trait] }
+  return { n, ...kit.lotOf(pl, trait) }
 }
 
-// A build from what you won (free agents in any slot left empty)
-export function buildFrom(L, vid, types) {
-  return Object.fromEntries(types.map(t => {
-    const w = L.won[vid]?.[t]
-    return [t, w ? { type: t, val: w.val, qbFull: w.name, team: w.team, price: w.price } : { type: t, val: FILLER_VAL, qbFull: 'Free agent', team: null, price: 0 }]
-  }))
-}
 export function rankAuction(m, L, kit) {
   if (!m || !L) return []
   return m.players
     .map(p => {
-      const build = buildFrom(L, p.vid, m.types)
+      const won = L.won[p.vid] ?? {}
+      const slots = Object.fromEntries(m.types.map(k => [k, won[k] ?? { val: FILLER_VAL, name: 'Free agent', price: 0 }]))
       const quit = L.out.includes(p.vid)
-      return { ...p, build, ovr: quit ? -1 : kit.calcOvr(build), left: L.wallets[p.vid] ?? 0, forfeit: quit }
+      return { ...p, slots, ovr: quit ? -1 : kit.calcOvr(kit.buildOf(won)), left: L.wallets[p.vid] ?? 0, forfeit: quit }
     })
     .sort((a, b) => b.ovr - a.ovr || b.left - a.left || a.vid.localeCompare(b.vid))
     .map((p, i) => ({ ...p, place: i + 1 }))
@@ -277,7 +304,7 @@ export function useAuction({ enabled, user, sport, pos }) {
       if (s.high) {
         const { vid, amount } = s.high
         L.wallets[vid] -= amount
-        L.won[vid] = { ...L.won[vid], [s.lot.trait]: { val: s.lot.val, name: s.lot.name, team: s.lot.team, price: amount } }
+        L.won[vid] = { ...L.won[vid], [s.lot.trait]: { val: s.lot.val, vals: s.lot.vals, extra: s.lot.extra, name: s.lot.name, team: s.lot.team, price: amount } }
         sold = { vid, amount }
       }
       L.log = [{ n: s.n, trait: s.lot.trait, name: s.lot.name, val: s.lot.val, vid: sold?.vid ?? null, amount: sold?.amount ?? 0 }, ...L.log].slice(0, 30)

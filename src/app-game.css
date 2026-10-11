@@ -4029,3 +4029,11 @@ html.app-look:not(.is-app) .ag-dock { backdrop-filter: none; -webkit-backdrop-fi
 .au-final-row .cp-row-ovr { display: grid; justify-items: end; }
 .au-final-row .cp-row-ovr small { font-size: 11.5px; }
 @media (prefers-reduced-motion: reduce) { .au-reel-strip { animation-duration: 1ms; } .au-bidder.is-high { transform: none; } }
+
+/* five slots: the odd one out spans the row; a lot that covers several traits lists them */
+.au-slot:last-child:nth-child(odd) { grid-column: 1 / -1; }
+.au-lot-covers { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px; }
+.au-lot-covers i { font-style: normal; padding: 1px 6px; border-radius: 6px; font-family: var(--ag-font); font-size: 12px; letter-spacing: 1px; color: var(--ag-muted); background: rgba(255,255,255,.05); }
+.au-lot-covers b { font-weight: 400; color: #fff; }
+.au-lot-trait { font-size: 26px; text-wrap: balance; }
+.au-room, .au-stage, .au-mine, .au-bids, .au-note, .au-top, .au-log { flex-shrink: 0; }
