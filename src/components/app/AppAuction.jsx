@@ -212,7 +212,7 @@ export default function AppAuction({ au, posName, onHome, onPlayAgain }) {
             </div>
           </div>
         ) : (
-          <div className="au-lot au-lot--wait"><span className="cp-pulse" /><span className="cp-sub">Everyone has ${BUDGET}. Five slots each.</span></div>
+          <div className="au-lot au-lot--wait"><span className="cp-pulse" /><span className="cp-sub">Everyone has ${BUDGET}. {m.types.length} slots each.</span></div>
         )}
         {st.stage === 'lot' && (
           <div className="au-clock">

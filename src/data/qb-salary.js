@@ -28,12 +28,11 @@ export const QB_SAL_POOL = [...QBS, ...GOAT_SALARY_PLAYERS]
   })
   .filter((p, i, a) => a.findIndex(q => q.name === p.name) === i)
 
-// One pick per column; together the 5 columns cover all 9 QB attributes.
+// One pick per column; together the 4 columns cover all 9 QB attributes.
 export const QB_SAL_COLS = [
-  { key: 'arm',      label: 'ARM',                 types: ['arm'] },
-  { key: 'accuracy', label: 'ACCURACY',            types: ['accuracy'] },
-  { key: 'mind',     label: 'PRE & POST-SNAP',     types: ['processing', 'vision'] },
-  { key: 'pocket',   label: 'POCKET & LEADERSHIP', types: ['pocket-presence', 'leadership'] },
-  { key: 'athlete',  label: 'LEGS & SIZE',         types: ['legs', 'size', 'playmaking'] },
+  { key: 'arm',     label: 'ARM',     types: ['arm', 'accuracy'] },
+  { key: 'mentals', label: 'MENTALS', types: ['processing', 'vision', 'leadership'] },
+  { key: 'legs',    label: 'LEGS',    types: ['legs', 'playmaking'] },
+  { key: 'size',    label: 'SIZE',    types: ['size', 'pocket-presence'] },
 ]
 
