@@ -4161,3 +4161,7 @@ html.is-app .game-layout.ag-stack .spin-panel-body { padding-bottom: 6px !import
 .ag-set-back { align-self: flex-start; display: inline-flex; align-items: center; gap: 8px; height: 42px; padding: 0 16px 0 12px; margin-bottom: 8px; border-radius: 12px; border: 1px solid var(--ag-line-hi); background: var(--ag-panel); color: var(--ag-text); font-family: var(--ag-font); font-size: 17px; letter-spacing: 2px; cursor: pointer; }
 .ag-set-back svg { color: var(--ag-a1); }
 .ag-set-back:active { transform: scale(.97); }
+
+/* home: the BAP mark, bigger */
+.ag-brand-mark { height: 92px; }
+@media (min-width: 1024px) { html.app-look .ag-brand-mark { height: 118px; } }
