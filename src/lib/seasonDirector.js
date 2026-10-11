@@ -84,6 +84,7 @@ export function createDirector({ sport, pos, build, team, simFn, base, seed = Ma
   const D = {
     sport, pos, total, stops, seed, name, teamNick,
     games: base.games.map(g => ({ ...g })),
+    locked: [],                   // games a moment decided: never re-simulated
     cum: NO_MODS,                 // modifiers in force for the rest of the season
     windows: [],                  // [{ from, to, mods }] temporary ones
     playoffMods: NO_MODS,
@@ -117,7 +118,7 @@ export function createDirector({ sport, pos, build, team, simFn, base, seed = Ma
       const run = runWith(mods, `${a}-${z}-${r().toString(36).slice(2, 6)}`)
       D.last = run
       for (let i = a; i < z; i++) {
-        if (D.sat.includes(i)) continue
+        if (D.sat.includes(i) || D.locked.includes(i)) continue
         const tags = tagsAt(i)
         D.games[i] = { ...run.games[i], wk: base.games[i].wk, g: base.games[i].g, ...(tags.length ? { tags } : {}) }
       }
@@ -168,7 +169,8 @@ export function createDirector({ sport, pos, build, team, simFn, base, seed = Ma
     const ctx = D.ctxAt(k)
     const last = ctx.last
     const m = pickScenario({
-      sport, pos, stop, ctx, build: applyMods(build, team, D.cum).build, types, attrMap, seed, teamNick, name, team,
+      sport, pos, stop, ctx, build: applyMods(build, team, D.cum).build, types, attrMap, seed, teamNick, name, team: applyMods(build, team, D.cum).team,
+      next: stop.kind !== 'playoffs' && k < total ? D.games[k] : null,
       used: D.used, lastBig: !!(last && !last.sat && BIG_GAME[pos]?.(last)), lastBust: !!(last && !last.sat && BUST_GAME[pos]?.(last)),
     })
     if (!m) return null
@@ -179,6 +181,28 @@ export function createDirector({ sport, pos, build, team, simFn, base, seed = Ma
     const e = option.effect || {}
     const at = moment.stop.at
     let outcome = null, eff = e
+    // an in-game moment: roll the play, rewrite the game it happens in
+    if (e.outcomes) {
+      let roll = r(), o = e.outcomes[e.outcomes.length - 1]
+      for (const x of e.outcomes) { roll -= x.p; if (roll <= 0) { o = x; break } }
+      outcome = { hit: !!o.good, line: o.line }
+      const g = D.games[at]
+      if (g && o.game) {
+        const ng = { ...g }
+        for (const [k2, v] of Object.entries(o.game.add || {})) if (v) ng[k2] = Math.max(0, (ng[k2] ?? 0) + v)
+        if (o.game.my != null) ng.mySc = o.game.my
+        if (o.game.opp != null) ng.oppSc = o.game.opp
+        if (o.game.won != null) ng.won = o.game.won
+        ng.tags = [...new Set([...(g.tags || []), o.tag].filter(Boolean))]
+        ng.moment = true
+        D.games[at] = ng
+        if (!D.locked.includes(at)) D.locked.push(at)
+      }
+      if (o.sit) { for (let i = at + 1; i < Math.min(total, at + 1 + o.sit); i++) sitGame(i, o.sitTag || 'INJURED'); resplice(at + 1) }
+      D.moments.push({ stop: moment.stop, moment, option, outcome })
+      D.headlines.push({ at: at + 1, text: headlineFor({ type: 'moment', label: outcome.line }, r) })
+      return outcome
+    }
     if (e.gamble) {
       const hit = r() < e.gamble.p
       eff = hit ? e.gamble.hit : e.gamble.miss
@@ -215,12 +239,12 @@ export function createDirector({ sport, pos, build, team, simFn, base, seed = Ma
   D.sidelined = (at, n) => { for (let i = at; i < Math.min(total, at + n); i++) sitGame(i); resplice(at) }
   // The director's own data, to save mid-season and pick the season back up
   D.snapshot = () => ({
-    games: D.games, cum: D.cum, windows: D.windows, playoffMods: D.playoffMods, last: D.last, moments: D.moments,
+    games: D.games, locked: D.locked, cum: D.cum, windows: D.windows, playoffMods: D.playoffMods, last: D.last, moments: D.moments,
     milestones: D.milestones, records: D.records, headlines: D.headlines, sat: D.sat, xp: D.xp, po: D.po, poRun: D.poRun ?? null,
     seen: [...D.seen], fired: [...D.fired], used: [...D.used], finalized: D.finalized, final: D.final,
   })
   D.restore = snap => {
-    Object.assign(D, { games: snap.games, cum: snap.cum, windows: snap.windows, playoffMods: snap.playoffMods, last: snap.last, moments: snap.moments, milestones: snap.milestones, records: snap.records, headlines: snap.headlines, sat: snap.sat, xp: snap.xp, po: snap.po, poRun: snap.poRun ?? null, finalized: snap.finalized, final: snap.final })
+    Object.assign(D, { games: snap.games, locked: snap.locked ?? [], cum: snap.cum, windows: snap.windows, playoffMods: snap.playoffMods, last: snap.last, moments: snap.moments, milestones: snap.milestones, records: snap.records, headlines: snap.headlines, sat: snap.sat, xp: snap.xp, po: snap.po, poRun: snap.poRun ?? null, finalized: snap.finalized, final: snap.final })
     D.seen = new Set(snap.seen); D.fired = new Set(snap.fired); D.used = new Set(snap.used)
     return D
   }
@@ -286,6 +310,10 @@ export function createDirector({ sport, pos, build, team, simFn, base, seed = Ma
       if (pos === 'qb') out.seasonINTs = Math.max(3, out.seasonINTs)
     } else {
       out.gameLog = games.map(g => (g.won ? 'W' : 'L'))
+      // the averages come from the games (a moment's buzzer-beater counts)
+      const played = games.filter(g => !g.sat)
+      const avg = k => (played.length ? Math.round((played.reduce((s2, g) => s2 + (g[k] ?? 0), 0) / played.length) * 10) / 10 : 0)
+      if (played.length && played.some(g => g.pts != null)) { out.ppg = avg('pts'); out.rpg = avg('reb'); out.apg = avg('ast') }
     }
     const score = BEST[pos] ?? (g => g.won ? 1 : 0)
     out.bestGame = [...games].filter(g => !g.sat).sort((a, b) => score(b) - score(a))[0] ?? games[0]
