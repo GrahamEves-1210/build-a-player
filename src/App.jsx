@@ -57,7 +57,7 @@ import { IS_APP, APP_LOOK } from './lib/platform'
 import AppHome from './components/app/AppHome'
 import { finishDiscordSignIn, getUsername } from './lib/discord'
 import { dailyState, setDailySpins } from './lib/progress'
-import { FlipEdge, BuildComplete, useFlip } from './components/app/AppBuildTray'
+import { FlipEdge, BuildComplete, useFlip, StackEdge, StackSeam } from './components/app/AppBuildTray'
 import { loadRun, newRun, cityList, ratedPool } from './lib/takeover'
 import { rampPage, HOME_UNITS, RAIL_UNITS, RAIL_UNITS_WITH_LEFT } from './lib/ads'
 
@@ -1292,10 +1292,10 @@ export default function App() {
       <div className="game-page-scroll">
       {competeOn && <CompeteHud cp={cp} />}
       {IS_APP && (
-        <FlipEdge side={mobileView} build={build} types={activeTypes} attrMap={currentAttrMap} onFlip={flip}
+        <StackEdge view={mobileView} build={build} types={activeTypes} attrMap={currentAttrMap} onFlip={flip}
           waiting={savedSpinResult?.selectedQB?.name ?? null} complete={buildComplete} />
       )}
-      <main className={`game-layout mobile-${mobileView}${gameMode === 'all-time' ? ' alltime-mode' : ''}${page === 'versus-game' ? ' versus-active' : ''}${page === 'takeover-build' || page === 'career-build' ? ' takeover-build' : ''}`}>
+      <main className={`game-layout ${IS_APP ? 'mobile-build ag-stack' : `mobile-${mobileView}`}${gameMode === 'all-time' ? ' alltime-mode' : ''}${page === 'versus-game' ? ' versus-active' : ''}${page === 'takeover-build' || page === 'career-build' ? ' takeover-build' : ''}`}>
         <SpinScreen
           build={build}
           activeDrag={activeDrag}
@@ -1328,6 +1328,7 @@ export default function App() {
           categoriesData={isOL ? OL_CATEGORIES : isDB ? DB_CATEGORIES : isTE ? TE_CATEGORIES : isWR ? WR_CATEGORIES : undefined}
           onlineCount={onlineCount}
         />
+        {IS_APP && <StackSeam build={build} types={activeTypes} onFlip={flip} />}
         <Silhouette
           build={build}
           activeDrag={activeDrag}

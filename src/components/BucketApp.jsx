@@ -35,7 +35,7 @@ import SiteFooter from './SiteFooter'
 import SiteFeatures from './SiteFeatures'
 import { IS_APP, APP_LOOK } from '../lib/platform'
 import AppHome from './app/AppHome'
-import { FlipEdge, BuildComplete, useFlip } from './app/AppBuildTray'
+import { FlipEdge, BuildComplete, useFlip, StackEdge, StackSeam } from './app/AppBuildTray'
 import { useCompete, botBuild } from '../lib/compete'
 import { setLiveLock } from '../lib/liveLock'
 import { useAuction } from '../lib/auction'
@@ -1536,10 +1536,10 @@ export default function BucketApp() {
           opp={{ name: versusRoom.oppName || 'Guest', cos: versusRoom.oppCos, uid: uidFromVsId(versusRoom.oppId), build: oppBuild, types: VERSUS_POS_TYPES[oppPosition] ?? VERSUS_GUARD_TYPES, pos: oppPosition }} />
       )}
       {IS_APP && (
-        <FlipEdge side={mobileView} build={build} types={activeTypes} attrMap={BUCKET_ATTR} onFlip={flip}
+        <StackEdge view={mobileView} build={build} types={activeTypes} attrMap={BUCKET_ATTR} onFlip={flip}
           waiting={savedSpinResult?.selectedQB?.name ?? null} complete={buildComplete} />
       )}
-      <main className={`game-layout mobile-${mobileView}${gameMode === 'all-time' ? ' alltime-mode' : ''}${page === 'versus-game' || liveBuild ? ' versus-active' : ''}`}>
+      <main className={`game-layout ${IS_APP ? 'mobile-build ag-stack' : `mobile-${mobileView}`}${gameMode === 'all-time' ? ' alltime-mode' : ''}${page === 'versus-game' || liveBuild ? ' versus-active' : ''}`}>
         <SpinScreen
           build={build}
           activeDrag={activeDrag}
@@ -1573,6 +1573,7 @@ export default function BucketApp() {
           headshotsDir={`${HEADSHOT_BASE}/nba/`}
           headshotFallback={genericHeadshot}
         />
+        {IS_APP && <StackSeam build={build} types={activeTypes} onFlip={flip} />}
         <Silhouette
           build={build}
           activeDrag={activeDrag}
