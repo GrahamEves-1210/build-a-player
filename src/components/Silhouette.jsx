@@ -389,7 +389,9 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
   const bucketPhoto = isBucket ? (build['basketballIQ']?.photo || null) : null
   // the figure scales that make it fill the build screen; a model fits its box as-is
   const appBucket = IS_APP && isBucket && isMobile && !modelOnly
-  const bucketScale = modelOnly ? 1 : appBucket ? APP_BKT.scale : BUCKET_FIGURE_SCALE
+  // (the model keeps the build screen's bucket scale: the jersey overlay and the face
+  // are drawn against the figure at that size, so changing it alone splits the layers)
+  const bucketScale = appBucket ? APP_BKT.scale : BUCKET_FIGURE_SCALE
   const rbScale = modelOnly ? 1 : RB_FIGURE_SCALE
   const dbScale = modelOnly ? 1 : DB_FIGURE_SCALE
   const wrTransform = modelOnly ? 'none' : isMobile ? `translateY(-6px) scale(${WR_FIGURE_SCALE_MOBILE})` : `scale(${WR_FIGURE_SCALE})`

@@ -148,7 +148,7 @@ function Model({ c, devPick }) {
   }
   return (
     <div className="cr-model-wrap ag-pop">
-      <div className="cr-model">
+      <div className={`cr-model${c.sport === 'bucket' ? ' cr-model--bucket' : ''}`}>
         <Silhouette build={shown} types={c.types} attrMap={attr} isBucket={c.sport === 'bucket'} isRB={c.pos === 'rb'} isWR={c.pos === 'wr'} isTE={c.pos === 'te'} isDB={c.pos === 'db'} modelOnly />
         <span className="cr-model-ovr"><b>{c.ovr}</b><small>OVR</small></span>
       </div>

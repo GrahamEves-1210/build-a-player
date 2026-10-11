@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { whenStill } from '../../lib/userScroll'
 import { valToGrade } from '../../utils/simulation'
 import { IconArrow } from './icons'
 
@@ -142,7 +143,9 @@ export function useFlip(enabled, view, setView) {
     if (fromScroll.current) { fromScroll.current = false; return }
     const el = stackEls(); if (!el.sc) return
     const atBuild = el.sc.scrollTop > fieldTop(el) / 2
-    if ((view === 'build') !== atBuild) el.sc.scrollTo({ top: view === 'build' ? fieldTop(el) : 0, behavior: view === 'build' ? 'smooth' : 'instant' })
+    if ((view === 'build') === atBuild) return
+    // never under a finger: wait until the page is still, then go
+    return whenStill(() => { const e2 = stackEls(); if (e2.sc && (view === 'build') !== (e2.sc.scrollTop > fieldTop(e2) / 2)) e2.sc.scrollTo({ top: view === 'build' ? fieldTop(e2) : 0, behavior: view === 'build' ? 'smooth' : 'instant' }) })
   }, [view, enabled])
 
   return flip

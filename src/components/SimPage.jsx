@@ -1,4 +1,5 @@
 ﻿import { useState, useEffect, useRef, useMemo } from 'react'
+import { userScrolling } from '../lib/userScroll'
 import { ATTR, TYPES } from '../data/qbs'
 import { QB_SAL_COLS } from '../data/qb-salary'
 import { TEAMS } from '../data/nfl-teams'
@@ -500,10 +501,12 @@ function GameLog({ games, total, isOL, isDB, isTE, isWR, isRB }) {
   const follow = useRef(true)
   useEffect(() => {
     const el = boxRef.current
-    if (!el || !follow.current) return
+    if (!el || !follow.current || userScrolling()) return
     const row = el.children[Math.max(0, games.length - 1)]
     if (row) el.scrollTo({ top: Math.max(0, row.offsetTop - el.clientHeight + row.offsetHeight + 4), behavior: 'smooth' })
   }, [games.length])
+  // the player scrolls it: stop following; scroll back to the bottom to follow again
+  const userMoved = () => { follow.current = false }
   const statFor = g => g.sat ? 'DNP' : (isOL ? `${g.pancakes} pnk · ${g.sacks} sck` : isDB ? `${g.tackles} tkl · ${g.ints} int` : (isWR || isTE) ? `${g.rec} rec · ${g.recYds} yds` : isRB ? `${g.rushYds} rush · ${g.rushTDs + g.recTDs} td` : `${g.passYds} yds · ${g.tds} td`)
   return (
     <div className="sm-log-wrap">
@@ -511,7 +514,8 @@ function GameLog({ games, total, isOL, isDB, isTE, isWR, isRB }) {
       <div
         ref={boxRef}
         className="simp-games-list sm-log"
-        onScroll={e => { const el = e.currentTarget; follow.current = el.scrollHeight - el.scrollTop - el.clientHeight < 70 }}
+        onTouchStart={userMoved} onWheel={userMoved}
+        onScroll={e => { const el = e.currentTarget; if (el.scrollHeight - el.scrollTop - el.clientHeight < 8) follow.current = true }}
       >
         {Array.from({ length: total }, (_, i) => {
           const g = games[i]

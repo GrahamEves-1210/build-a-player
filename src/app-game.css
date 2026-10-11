@@ -4118,11 +4118,11 @@ html:is(.is-app, .app-look) :is(.simp-page, .plf-game, .btc-wrap, .bt-board, .bt
 /* ═══ App game page: Spin and Build as one continuous field ═══════════════
    The spin wheel on top, the player right under it (his head peeks up
    below SPIN), native scrolling that snaps to either side. */
-html.is-app .game-page-scroll:has(> .game-layout.ag-stack) { scroll-snap-type: y proximity; scroll-padding-top: var(--stack-edge-h, 80px); overscroll-behavior-y: contain; }
+/* (no scroll snapping: it pulled the page to the next side mid-scroll; the page stays where you leave it) */
+html.is-app .game-page-scroll:has(> .game-layout.ag-stack) { scroll-padding-top: var(--stack-edge-h, 80px); overscroll-behavior-y: contain; }
 /* the spin side: as tall as its content, at least the screen less the peek of the player */
 html.is-app .game-layout.ag-stack .spin-panel { display: flex !important; flex: none !important; height: auto !important; max-height: none !important; overflow: visible !important; min-height: 0 !important; }
 html.is-app .game-layout.ag-stack .spin-reset-circle { display: inline-flex; }
-html.is-app .game-layout.ag-stack .ag-seam { scroll-snap-align: start; }   /* the container's scroll-padding keeps it under the header */
 
 /* the header: one height, the two states crossfade with the scroll */
 .ag-sedge { --p: var(--stack-p, 0); }
@@ -4365,3 +4365,6 @@ html.is-android *, html.is-android *::before, html.is-android *::after { -webkit
 html.is-android .ag-dock { background: rgba(10, 14, 12, .96); }
 html.is-android .ag-glass { background: color-mix(in srgb, var(--ag-panel) 70%, #0a0e0c); }
 html.is-android .ag-toast { background: rgba(8,12,10,.97); }
+/* Career, basketball: the model keeps the build screen's sizing (so the jersey and
+   the face stay on the figure); on narrow screens the whole stack shrinks together */
+@media (max-width: 899px) { .cr-model--bucket { height: 340px; } .cr-model--bucket .sil-wrap { transform: scale(.76); transform-origin: 50% 36%; } }

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { whenStill } from '../../lib/userScroll'
 import { createPortal } from 'react-dom'
 import { GAME_LINE, momentsOff, setMomentsOff } from '../../lib/seasonDirector'
 import { leaderBoard } from '../../lib/seasonFacts'
@@ -29,7 +30,8 @@ export function MomentCard({ moment, onPick }) {
   const [outcome, setOutcome] = useState(null)
   // a moment that lands low on the screen comes up into view (clear of the dock / ad rail)
   const ref = useRef(null)
-  useEffect(() => { ref.current?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' }) }, [])
+  // (never while the player is scrolling: it waits for the page to be still)
+  useEffect(() => whenStill(() => ref.current?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' })), [])
   const pick = o => {
     if (picked) return
     setPicked(o)
