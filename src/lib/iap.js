@@ -4,7 +4,7 @@
 //
 // Setup outside the code:
 //   1. App Store Connect + Google Play: a consumable in-app product per pack,
-//      ids exactly as in lib/coins.js (bap_coins_500, …), with their prices.
+//      ids exactly as in lib/coins.js (bap_coins_1200, …), with their prices.
 //   2. RevenueCat (free tier): a project with the iOS and Android apps, the
 //      products imported; its public SDK keys go in .env.app as
 //      VITE_RC_IOS_KEY and VITE_RC_ANDROID_KEY.

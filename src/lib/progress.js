@@ -673,8 +673,9 @@ export function initProgress() {
 // ═════════════════════════════════════════════════════════════════════════════
 // Balance: a typical season pays ~25–35, a title run ~100. A regular day of play
 // (a handful of seasons, the missions, the daily drop) is roughly 300–400 coins:
-// commons in a sitting, rares in a few days, epics in about a week, legendaries
-// in a couple of weeks (and their level).
+// commons in a day or two, rares in about a week, epics in a few weeks,
+// legendaries are a long chase (one to two months, or coins). Within a tier the
+// showiest items cost the most (lib/cosmetics.js).
 export const COINS = { season: 10, winNfl: 1, winNba: 0.25, playoffs: 10, ring: 40, award: 25, daily: 20, level: 40, free: 25, freePro: 50 }
 export function seasonCoins(d) {
   if (d.sandbox) return 0
