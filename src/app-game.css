@@ -3856,3 +3856,18 @@ html.bap-reduce-motion .mg-clock span { animation-duration: var(--mg-ms) !import
 .ag-btn::after { animation: none; display: none; }
 /* the website's dock: a near-solid panel instead of a live blur (re-blurring the page under it on every scroll frame) */
 html.app-look:not(.is-app) .ag-dock { backdrop-filter: none; -webkit-backdrop-filter: none; background: rgba(10, 14, 12, .96); }
+
+/* ═══ Career, basketball: runs of games, the starting five on a court ═════ */
+.cr-chunk { display: flex; flex-direction: column; gap: 8px; padding: 12px; }
+.cr-chunk-head { display: flex; justify-content: space-between; align-items: baseline; }
+.cr-chunk-head b { font-family: var(--ag-display); font-weight: 400; font-size: 24px; line-height: 1; }
+.cr-chunk-strip { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; }
+.cr-chunk-strip span { display: grid; place-items: center; height: 26px; border-radius: 6px; font-family: var(--ag-font); font-size: 13px; letter-spacing: .5px; }
+.cr-chunk-strip .is-w { background: rgba(34,197,94,.2); color: #86efac; }
+.cr-chunk-strip .is-l { background: rgba(248,113,113,.15); color: #fca5a5; }
+.cr-chunk-strip .is-sat { opacity: .45; }
+.cr-chunk-line { margin: 0; font-family: var(--ag-body); font-size: 13.5px; color: var(--ag-text-2); }
+.cr-chunk-line b { font-family: var(--ag-font); font-weight: 400; font-size: 18px; letter-spacing: .5px; color: var(--ag-text); }
+.cr-chunk-line small { display: block; margin-top: 2px; font-size: 12px; color: var(--ag-muted); }
+.crl-field--court { background: radial-gradient(ellipse 60% 70% at 50% 100%, rgba(249,115,22,.10), transparent 70%), repeating-linear-gradient(90deg, rgba(249,115,22,.07) 0 26px, rgba(249,115,22,.04) 26px 52px); }
+.crl-field--court .crl-row > .crl-man { flex: 0 1 92px; }

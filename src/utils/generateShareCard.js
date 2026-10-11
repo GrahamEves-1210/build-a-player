@@ -251,7 +251,7 @@ export async function generateCareerCard(card, figure = null) {
   const g = ctx.createLinearGradient(0, 0, W, 0); g.addColorStop(0, '#d4af37'); g.addColorStop(1, gold)
   ctx.fillStyle = g; ctx.fillRect(0, 0, W, 6)
   const sp = (px, s) => { if ('letterSpacing' in ctx) ctx.letterSpacing = `${px}px`; ctx.fillText(s.text, s.x, s.y); if ('letterSpacing' in ctx) ctx.letterSpacing = '0px' }
-  ctx.textAlign = 'center'; ctx.fillStyle = '#fff'; ctx.font = '800 52px Outfit, sans-serif'; ctx.fillText('build-a-player.com', W / 2, 82)
+  ctx.textAlign = 'center'; ctx.fillStyle = '#fff'; ctx.font = '800 52px Outfit, sans-serif'; ctx.fillText(card.site ?? 'build-a-player.com', W / 2, 82)
   ctx.font = '500 22px Outfit, sans-serif'; ctx.fillStyle = 'rgba(255,255,255,0.38)'; sp(3, { text: 'CAREER', x: W / 2, y: 116 })
   ctx.textAlign = 'right'; ctx.font = '700 18px Outfit, sans-serif'; ctx.fillStyle = 'rgba(255,255,255,0.22)'; ctx.fillText(card.pos, W - PAD, 82)
   // the player
@@ -268,7 +268,7 @@ export async function generateCareerCard(card, figure = null) {
   // divider + the big numbers
   const DY = FT + FH + 130
   ctx.strokeStyle = 'rgba(245,220,138,.35)'; ctx.beginPath(); ctx.moveTo(PAD, DY); ctx.lineTo(W - PAD, DY); ctx.stroke()
-  const cells = [...card.head, ['RINGS', String(card.rings)], [card.awardName, String(card.awards)], ['PRO BOWLS', String(card.proBowls)]].slice(0, 6)
+  const cells = [...card.head, ['RINGS', String(card.rings)], [card.awardName, String(card.awards)], [card.honorName ?? 'PRO BOWLS', String(card.proBowls)]].slice(0, 6)
   const cw = (W - PAD * 2) / cells.length
   cells.forEach(([k, v], i) => {
     const x = PAD + cw * i + cw / 2
@@ -278,10 +278,10 @@ export async function generateCareerCard(card, figure = null) {
   // ranking + hall of fame
   const RY = DY + 190
   ctx.textAlign = 'left'; ctx.font = '600 20px Outfit, sans-serif'; ctx.fillStyle = 'rgba(255,255,255,0.75)'
-  ctx.fillText(`No. ${card.legacy.rank} ${card.pos} of all time${card.legacy.above ? ` · behind ${card.legacy.above.name}` : ''}`, PAD, RY)
+  ctx.fillText(card.legacy.ranked === false ? `Outside the all-time top ${card.legacy.of} ${card.pos}s` : `No. ${card.legacy.rank} ${card.pos} of all time${card.legacy.above ? ` · behind ${card.legacy.above.name}` : ''}`, PAD, RY)
   if (card.hof) { ctx.fillStyle = card.hof.in ? gold : 'rgba(255,255,255,0.5)'; ctx.fillText(card.hof.in ? `HALL OF FAME · ${card.hof.ballot.toUpperCase()} · ${card.hof.pct}%` : `Hall of Fame: ${card.hof.ballot.toLowerCase()} (${card.hof.pct}%)`, PAD, RY + 36) }
   if (card.draft) { ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.font = '500 18px Outfit, sans-serif'; ctx.fillText(`Drafted round ${card.draft.round}, pick ${card.draft.o} · Career earnings $${Math.round(card.earnings)}M`, PAD, RY + 72) }
   ctx.strokeStyle = 'rgba(255,255,255,0.07)'; ctx.beginPath(); ctx.moveTo(PAD, H - 48); ctx.lineTo(W - PAD, H - 48); ctx.stroke()
-  ctx.textAlign = 'center'; ctx.font = '500 15px Outfit, sans-serif'; ctx.fillStyle = 'rgba(255,255,255,0.14)'; ctx.fillText('build-a-player.com', W / 2, H - 20)
+  ctx.textAlign = 'center'; ctx.font = '500 15px Outfit, sans-serif'; ctx.fillStyle = 'rgba(255,255,255,0.14)'; ctx.fillText(card.site ?? 'build-a-player.com', W / 2, H - 20)
   return canvas
 }

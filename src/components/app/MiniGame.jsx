@@ -85,9 +85,9 @@ function Game({ def, v, seed, build, onDone }) {
     case 'route': return <Route v={v} seed={seed} onDone={onDone} />
     case 'choice': return <Choice def={def} build={build} seed={seed} onDone={onDone} />
     // the combine
-    case 'dash': return <Dash v={v} seed={seed} onDone={onDone} />
-    case 'velo': return <Velo v={v} seed={seed} onDone={onDone} />
-    case 'aim': return <Aim v={v} seed={seed} onDone={onDone} />
+    case 'dash': return <Dash v={v} seed={seed} onDone={onDone} unit={def.unit} dist={def.dist} />
+    case 'velo': return <Velo v={v} seed={seed} onDone={onDone} noun={def.noun} />
+    case 'aim': return <Aim v={v} seed={seed} onDone={onDone} noun={def.noun} />
     case 'cone': return <Cone v={v} seed={seed} onDone={onDone} />
     case 'gauntlet': return <Gauntlet v={v} seed={seed} onDone={onDone} />
     case 'bench': return <Bench v={v} onDone={onDone} />
@@ -314,13 +314,13 @@ function Choice({ def, build, seed, onDone }) {
 
 // ═══ The combine ═══════════════════════════════════════════════════════════
 // ── 40-yard dash: hold for the gun, then alternate feet as fast as you can ──
-function Dash({ v, seed, onDone }) {
+function Dash({ v, seed, onDone, unit = 'YDS', dist = 40 }) {
   const r = useRng(seed)
   const [phase, setPhase] = useState('set')          // set → go
   const [flag, setFlag] = useState(null)              // 'false start' message
   const S = useRef({ goAt: 0, yards: 0, last: null, taps: 0, stumbles: 0, falses: 0, first: 0, done: false })
   const runner = useRef(null), yd = useRef(null), gun = useRef(null)
-  const stride = 1.0 + v * 0.055                      // a faster player covers more ground a step
+  const stride = (1.0 + v * 0.055) * dist / 40        // a faster player covers more ground a step
   // the gun: a random wait, so it can't be timed (a false start resets it)
   const arm = () => { clearTimeout(gun.current); gun.current = setTimeout(() => { S.current.goAt = now(); setPhase('go'); sfx('whistle'); haptic('medium') }, 900 + r() * 1500) }
   useEffect(() => { arm(); return () => clearTimeout(gun.current) }, []) // eslint-disable-line
@@ -331,7 +331,7 @@ function Dash({ v, seed, onDone }) {
     const secs = (now() - s.goAt) / 1000
     const react = s.first ? (s.first - s.goAt) / 1000 : 1
     const score = clamp((6.0 - secs) / 2.8, 0, 1) - s.falses * 0.12 - Math.min(0.2, s.stumbles * 0.03)
-    onDone({ score, hit: score >= 0.5, note: `${s.yards >= 40 ? 'Through the line' : 'Ran out of time'} · ${react < 0.25 ? 'great jump' : react < 0.45 ? 'clean start' : 'slow start'}${s.falses ? ' · false start' : ''}${s.stumbles ? ` · ${s.stumbles} stumble${s.stumbles > 1 ? 's' : ''}` : ''}` })
+    onDone({ score, hit: score >= 0.5, note: `${s.yards >= dist ? 'Through the line' : 'Ran out of time'} · ${react < 0.25 ? 'great jump' : react < 0.45 ? 'clean start' : 'slow start'}${s.falses ? ' · false start' : ''}${s.stumbles ? ` · ${s.stumbles} stumble${s.stumbles > 1 ? 's' : ''}` : ''}` })
   }
   const foot = side => {
     const s = S.current
@@ -341,17 +341,17 @@ function Dash({ v, seed, onDone }) {
     s.taps++
     if (side === s.last) { s.stumbles++; s.yards += stride * 0.25; haptic('light') } else s.yards += stride
     s.last = side
-    const y = Math.min(40, s.yards)
-    if (runner.current) runner.current.style.transform = `translate3d(${(y / 40) * 100}%,0,0)`
-    if (yd.current) yd.current.textContent = `${Math.round(y)} YDS`
-    if (s.yards >= 40) finish()
+    const y = Math.min(dist, s.yards)
+    if (runner.current) runner.current.style.transform = `translate3d(${(y / dist) * 100}%,0,0)`
+    if (yd.current) yd.current.textContent = `${Math.round(y)} ${unit}`
+    if (s.yards >= dist) finish()
   }
   useKeys({ ArrowLeft: () => foot('L'), ArrowRight: () => foot('R'), f: () => foot('L'), j: () => foot('R') })
   return (
     <div className="mg-play mg-play--dash">
       <div className="mg-lane"><span className="mg-runner-track" ref={runner}><span className="mg-runner" /></span><span className="mg-goal" /></div>
       <span className={`mg-call-out${phase === 'go' ? ' is-go' : ''}`}>{phase === 'set' ? (flag ?? 'SET…') : 'GO!'}</span>
-      <span className="mg-hint" ref={yd}>0 YDS</span>
+      <span className="mg-hint" ref={yd}>0 {unit}</span>
       <div className="mg-feet">
         <button className="mg-foot" onPointerDown={() => foot('L')} aria-label="Left foot">LEFT</button>
         <button className="mg-foot" onPointerDown={() => foot('R')} aria-label="Right foot">RIGHT</button>
@@ -361,7 +361,7 @@ function Dash({ v, seed, onDone }) {
   )
 }
 // ── Throwing velocity: three throws, release on a small moving sweet spot ────
-function Velo({ v, seed, onDone }) {
+function Velo({ v, seed, onDone, noun = 'THROW' }) {
   const r = useRng(seed)
   const spots = useMemo(() => [0, 1, 2].map(() => 66 + r() * 26), [r])
   const half = 2.8 + v * 0.42                                  // a stronger arm is a bigger sweet spot
@@ -387,13 +387,13 @@ function Velo({ v, seed, onDone }) {
         <span className="mg-meter-spot" style={{ bottom: `${spots[i] - half}%`, height: `${half * 2}%` }} />
         <span className="mg-meter-fill" ref={fill} />
       </div>
-      <span className="mg-hint">THROW {i + 1} OF 3 · {held ? 'LET GO IN THE GREEN' : 'HOLD TO WIND UP'}</span>
+      <span className="mg-hint">{noun} {i + 1} OF 3 · {held ? 'LET GO IN THE GREEN' : noun === 'THROW' ? 'HOLD TO WIND UP' : 'HOLD TO LOAD'}</span>
       <span className="mg-dots">{[0, 1, 2].map(k => <i key={k} className={k < scores.length ? (scores[k] >= 0.5 ? 'is-hit' : 'is-miss') : ''} />)}</span>
     </div>
   )
 }
 // ── Accuracy: lock the aim across, then up and down, on four nets ───────────
-function Aim({ v, seed, onDone }) {
+function Aim({ v, seed, onDone, noun = 'NET' }) {
   const r = useRng(seed)
   const nets = useMemo(() => [0, 1, 2, 3].map(() => ({ x: 15 + r() * 70, y: 18 + r() * 64 })), [r])
   const rad = 6 + v * 0.75                                      // the net's size in % of the field
@@ -431,7 +431,7 @@ function Aim({ v, seed, onDone }) {
         {axis === 'y' && <span className={`mg-line-y${!shot ? ' is-live' : ''}`} ref={ly} />}
         {shot && <span className={`mg-ball${shot.hit ? ' is-hit' : ''}`} style={{ left: `${shot.x}%`, top: `${shot.y}%` }} />}
       </div>
-      <span className="mg-hint">NET {i + 1} OF {nets.length} · {axis === 'x' ? 'TAP TO LOCK LEFT–RIGHT' : 'TAP TO LOCK UP–DOWN'}</span>
+      <span className="mg-hint">{noun} {i + 1} OF {nets.length} · {axis === 'x' ? 'TAP TO LOCK LEFT–RIGHT' : noun === 'SHOT' ? 'TAP TO LOCK THE ARC' : 'TAP TO LOCK UP–DOWN'}</span>
       <span className="mg-dots">{nets.map((_, k) => <i key={k} className={k < scores.length ? (scores[k] ? 'is-hit' : 'is-miss') : ''} />)}</span>
     </div>
   )

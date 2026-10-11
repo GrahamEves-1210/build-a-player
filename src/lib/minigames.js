@@ -46,6 +46,20 @@ export const GAMES = {
   'cone':        { kind: 'cone', traits: ['elusiveness', 'routeRunning', 'bodyControl'], title: '3-CONE DRILL', how: 'Six cuts. An arrow flashes: hit that direction before the window shuts. Wrong way or late is a slip. The windows get shorter.' },
   'gauntlet':    { kind: 'gauntlet', traits: ['hands'], title: 'GAUNTLET', how: 'Balls come down two lanes, faster and closer together. Catch each one in the green zone at the bottom. Hands make the zone bigger.' },
   'bench':       { kind: 'bench', traits: ['strength'], title: 'BENCH PRESS', how: 'Tap fast to drive the bar up to lockout. Every rep gets heavier. As many reps as you can in 12 seconds.' },
+  // ── Basketball ──
+  'iso':         { kind: 'lanes', traits: ['handles', 'speed'], title: 'ISO', how: 'Your man shades one way. Cross him up and go the other way, three times.' },
+  'pnr':         { kind: 'reaction', traits: ['basketballIQ', 'passing'], title: 'PICK-AND-ROLL READ', how: 'Roll man, corner, pull-up. One comes open. Hit it before the help recovers.', rounds: 2 },
+  'clutch-shot': { kind: 'timing', traits: ['jumpShot', 'clutch'], title: 'CLUTCH SHOT', how: 'Down one, ball in your hands, clock running out. Hit the release window.' },
+  'free-throws': { kind: 'taps', traits: ['jumpShot', 'clutch'], title: 'FREE THROWS', how: 'Two shots with the game on the line. Hit each window.', n: 2 },
+  'post-up':     { kind: 'lanes', traits: ['finishing', 'size'], title: 'POST MOVE', how: 'The defender leans one way. Spin off him the other way, three times.' },
+  'board':       { kind: 'timing', traits: ['rebounding', 'bounce'], title: 'CRASH THE GLASS', how: 'The shot goes up. Time the jump and take the rebound.' },
+  'rim-protect': { kind: 'reaction', traits: ['interiorDefense', 'bounce'], title: 'PROTECT THE RIM', how: 'Three drivers. One attacks the rim. Meet him there.', rounds: 2 },
+  // ── Basketball combine ──
+  'sprint':      { kind: 'dash', traits: ['speed'], title: '3/4-COURT SPRINT', how: 'Wait for the whistle (go early and it is a false start), then alternate LEFT and RIGHT as fast as you can. Same foot twice is a stumble. Speed makes every step longer.', unit: 'FT', dist: 75 },
+  'lane':        { kind: 'cone', traits: ['handles', 'speed'], title: 'LANE AGILITY', how: 'Six cuts around the lane. An arrow flashes: hit that direction before the window shuts. Wrong way or late is a slip.' },
+  'spot':        { kind: 'aim', traits: ['jumpShot'], title: 'SPOT-UP SHOOTING', how: 'Four spots around the arc. Tap to lock the shot left to right, then again to lock the arc. A better jumper makes the rim bigger.', noun: 'SHOT' },
+  'vert':        { kind: 'velo', traits: ['bounce'], title: 'MAX VERTICAL', how: 'Three jumps. Hold to load, and let go inside the small green window. It moves every jump. More bounce, bigger window.', noun: 'JUMP' },
+  'nbench':      { kind: 'bench', traits: ['size'], title: 'BENCH PRESS', how: 'Tap fast to drive the bar up to lockout. Every rep gets heavier. As many reps as you can in 12 seconds.' },
 }
 // which games a position plays in the playoffs
 export const PLAYOFF_GAMES = {
@@ -54,6 +68,8 @@ export const PLAYOFF_GAMES = {
   wr: ['catch', 'juke-wr', 'release'],
   te: ['catch', 'seal', 'juke-te'],
   db: ['jump-route', 'tackle-angle'],
+  guard: ['iso', 'pnr', 'clutch-shot', 'free-throws'],
+  big: ['post-up', 'board', 'rim-protect', 'free-throws'],
 }
 // the combine: three games a position runs (the test is its own step)
 export const COMBINE_GAMES = { qb: ['forty', 'velo', 'acc'], rb: ['forty', 'cone', 'bench'], wr: ['forty', 'cone', 'gauntlet'], te: ['forty', 'bench', 'gauntlet'] }

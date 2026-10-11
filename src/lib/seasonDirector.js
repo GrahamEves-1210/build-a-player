@@ -123,7 +123,7 @@ export function createDirector({ sport, pos, build, team, simFn, base, seed = Ma
   const sitGame = i => {
     // the team plays without you: a coin weighted by team strength, no stats
     const g = base.games[i]
-    const strength = isBucket ? ((team.off ?? 68) + (team.def ?? 65)) / 200 : ((team.off ?? 5) + (team.def ?? 5)) / 20
+    const strength = isBucket && !team.career ? ((team.off ?? 68) + (team.def ?? 65)) / 200 : ((team.off ?? 5) + (team.def ?? 5)) / 20
     const won = r() < Math.max(.2, Math.min(.7, strength - .05))
     const zero = Object.fromEntries(Object.keys(g).filter(k => typeof g[k] === 'number' && !['wk', 'g', 'mySc', 'oppSc'].includes(k)).map(k => [k, 0]))
     const my = isBucket ? 96 + Math.floor(r() * 18) : 13 + Math.floor(r() * 14), opp = isBucket ? 96 + Math.floor(r() * 18) : 13 + Math.floor(r() * 14)

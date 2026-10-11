@@ -44,6 +44,9 @@ import { VersusHud, VersusMatchup, VersusLeaveSheet, VersusOppLeftSheet } from '
 import { loadRun, newRun, cityList, ratedPool } from '../lib/takeover'
 const AppTakeover = lazy(() => import('./app/AppTakeover'))
 const TakeoverIntro = lazy(() => import('./app/AppTakeover').then(m => ({ default: m.TakeoverIntro })))
+const AppCareer = lazy(() => import('./app/AppCareer'))
+const CareerIntro = lazy(() => import('./app/AppCareer').then(m => ({ default: m.CareerIntro })))
+import { loadCareer, saveCareer, newCareer, syncCareerFromCloud } from '../lib/career'
 import CompeteHud from './app/CompeteHud'
 const AppCompete = lazy(() => import('./app/AppCompete'))
 // which page a live Blacktop run is on, so Home → Play (or the card) resumes it
@@ -578,7 +581,7 @@ export default function BucketApp() {
     if (!IS_APP && !APP_LOOK) return
     window.__bapPage = { page, sport: 'bucket' }
     window.dispatchEvent(new CustomEvent('bap:page', { detail: window.__bapPage }))
-    if (['game', 'sim', 'salarycap', 'takeover', 'takeover-build', 'blacktop', 'blacktop-build', 'blacktop-game'].includes(page)) lastPlayRef.current = page
+    if (['game', 'sim', 'salarycap', 'takeover', 'takeover-build', 'career', 'career-build', 'blacktop', 'blacktop-build', 'blacktop-game'].includes(page)) lastPlayRef.current = page
   }, [page])
   useEffect(() => {
     if (!IS_APP && !APP_LOOK) return
@@ -586,17 +589,20 @@ export default function BucketApp() {
       const to = e.detail
       if (to === 'home') setPage('splash')   // keeps the build in progress — PLAY resumes it
       else if (to === 'play') {
-        if (page === 'game' || page === 'sim' || page === 'salarycap' || page.startsWith('blacktop') || page === 'takeover' || page === 'takeover-build') return
+        if (page === 'game' || page === 'sim' || page === 'salarycap' || page.startsWith('blacktop') || page === 'takeover' || page === 'takeover-build' || page === 'career' || page === 'career-build') return
         const live = btPhaseRef.current, last = lastPlayRef.current, run = takeoverRunRef.current
         if (live !== 'idle') setPage(btPageFor(live))                                   // a live run always comes first
         else if (last === 'takeover' && run && !run.over) setPage('takeover')
         else if (last === 'takeover-build' && gameMode) setPage('takeover-build')
+        else if (last === 'career' && careerRef.current) setPage('career')
+        else if (last === 'career-build' && gameMode) setPage('career-build')
         else if (gameMode) setPage(gameMode === 'salarycap' ? 'salarycap' : 'game')
         else { let p = 'guard'; try { p = localStorage.getItem('bucketPosition') || 'guard' } catch {}; handleStart('classic', p) }   // quick play
       } else if (to === 'leaderboard') setPage('leaderboard')
       else if (to === 'salarycap') handleStart('salarycap', position)
       else if (to === 'blacktop') setPage(btPageFor(btPhaseRef.current))
       else if (to === 'takeover') openTakeoverRef.current?.()
+      else if (to === 'career') openCareerRef.current?.()
       // signed out: the dock shows sign-in itself, since only some pages render AuthModal
       else if (to === 'profile') { if (user) { window.history.pushState({}, '', '/profile'); setPage('profile') } else window.dispatchEvent(new CustomEvent('bap:auth')) }
       else if (to === 'about') { window.location.href = '/?about' }
@@ -712,11 +718,11 @@ export default function BucketApp() {
 
   // App: Spin and Build are two sides of one card — swipe to flip, and the
   // last pick flips it to Build (drag-and-drop included)
-  const flip = useFlip(IS_APP && (page === 'game' || page === 'versus-game' || page === 'blacktop-build' || page === 'takeover-build'), mobileView, setMobileView)
+  const flip = useFlip(IS_APP && (page === 'game' || page === 'versus-game' || page === 'blacktop-build' || page === 'takeover-build' || page === 'career-build'), mobileView, setMobileView)
   const buildComplete = activeTypes.length > 0 && activeTypes.every(t => build[t])
-  useEffect(() => { if (IS_APP && buildComplete && (page === 'game' || page === 'takeover-build')) flip('build') }, [buildComplete]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (IS_APP && buildComplete && (page === 'game' || page === 'takeover-build' || page === 'career-build')) flip('build') }, [buildComplete]) // eslint-disable-line react-hooks/exhaustive-deps
   // Website: the build-complete hit (the app's BuildComplete screen plays its own)
-  useEffect(() => { if (!IS_APP && buildComplete && (page === 'game' || page === 'takeover-build')) window.__bapJuice?.sfx('complete', 2) }, [buildComplete]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (!IS_APP && buildComplete && (page === 'game' || page === 'takeover-build' || page === 'career-build')) window.__bapJuice?.sfx('complete', 2) }, [buildComplete]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSandboxToggle = useCallback((on) => {
     try { localStorage.setItem('bab_custom_mode', on ? '1' : '0') } catch {}
@@ -833,6 +839,34 @@ export default function BucketApp() {
     if (run && !run.over) { setTakeoverRun(run); setPage('takeover') } else { setPage('takeover-intro'); window.scrollTo({ top: 0, behavior: 'instant' }) }
   }, [user?.id, startTakeoverBuild])
   openTakeoverRef.current = openTakeover
+  // ── CAREER: one saved career per account; a fresh build starts one (lib/career.js) ──
+  const [career, setCareer] = useState(null)
+  const careerRef = useRef(null); careerRef.current = career
+  const openCareerRef = useRef(null)
+  useEffect(() => {
+    if (!IS_APP && !APP_LOOK) return
+    setCareer(loadCareer('bucket', user?.id))
+    if (!user?.id) return
+    // signed in: the cloud copy (or a guest career moving onto the account)
+    let off = false
+    syncCareerFromCloud('bucket', user.id).then(c => { if (!off) setCareer(c) })
+    return () => { off = true }
+  }, [user?.id])
+  const startCareerBuild = useCallback(() => {
+    let p = 'guard'; try { p = localStorage.getItem('bucketPosition') || 'guard' } catch {}
+    handleStart('classic', p === 'big' ? 'big' : 'guard'); setPage('career-build')
+  }, [handleStart])
+  const openCareer = useCallback(async () => {
+    const c = await syncCareerFromCloud('bucket', user?.id)   // the newer of this device's copy and the cloud's
+    if (c) { setCareer(c); setPage('career') } else setPage('career-intro')
+    window.scrollTo({ top: 0, behavior: 'instant' })
+  }, [user?.id])
+  openCareerRef.current = openCareer
+  const enterDraft = useCallback(() => {
+    const c = newCareer({ sport: 'bucket', uid: user?.id ?? null, pos: position, build, name: getUsername(user) || 'Guest' })
+    saveCareer(c); setCareer(c); setGameMode(null); setBuild({}); setPage('career')
+    window.scrollTo({ top: 0, behavior: 'instant' })
+  }, [user, position, build])
   const hitTheRoad = useCallback(() => {
     const cities = cityList('bucket', NBA_TEAMS)
     const rated = ratedPool(LIVE_POOLS[position] ?? LIVE_POOLS.guard, activeTypes, b => calcBucketOVR(b, activeTypes, position), cities)
@@ -1523,8 +1557,8 @@ export default function BucketApp() {
         <div className="right-panel-wrap">
           <ReportCard
             build={build}
-            onSimulate={page === 'takeover-build' ? hitTheRoad : competeOn ? lockInCompete : replayOrSpin}
-            simLabel={page === 'takeover-build' ? 'HIT THE ROAD' : competeOn ? 'LOCK IN' : undefined}
+            onSimulate={page === 'takeover-build' ? hitTheRoad : page === 'career-build' ? enterDraft : competeOn ? lockInCompete : replayOrSpin}
+            simLabel={page === 'takeover-build' ? 'HIT THE ROAD' : page === 'career-build' ? 'ENTER THE DRAFT' : competeOn ? 'LOCK IN' : undefined}
             onReset={handleReset}
             types={activeTypes}
             hasResult={false}
@@ -1552,7 +1586,7 @@ export default function BucketApp() {
       </div>
       </div>
 
-      {!parked && IS_APP && (page === 'game' || page === 'takeover-build') && <BuildComplete complete={buildComplete} ovr={buildComplete ? calcBucketOVR(build, activeTypes, position) : 0} build={build} types={activeTypes} attrMap={BUCKET_ATTR} />}
+      {!parked && IS_APP && (page === 'game' || page === 'takeover-build' || page === 'career-build') && <BuildComplete complete={buildComplete} ovr={buildComplete ? calcBucketOVR(build, activeTypes, position) : 0} build={build} types={activeTypes} attrMap={BUCKET_ATTR} />}
       {liveBuild && btChatOpen && <BlacktopChat bt={bt} user={user} onClose={() => setBtChatOpen(false)} />}
 
       {!parked && leaveConfirm && (IS_APP || APP_LOOK) && (
@@ -1766,6 +1800,8 @@ export default function BucketApp() {
               blacktop={{ phase: bt.phase, queue: bt.seated }}
               onTakeover={openTakeover}
               takeoverRun={takeoverRun}
+              onCareer={openCareer}
+              career={career}
               onCompete={() => setPage('compete')}
               resume={competeOn ? { label: `Compete · pool ${cp.match.code}`, onClick: () => setPage('game') } : (gameMode && gameMode !== 'salarycap' && (simResult || Object.values(build).some(Boolean))) ? { label: `${position === 'big' ? 'BIG' : 'GUARD'} · ${gameMode === 'all-time' ? 'All-Time' : 'Current'}`, onClick: () => window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'play' })) } : null}
               footer={IS_APP ? null : <><SiteFeatures sport="bucket" /><SiteFooter sport="bucket" /></>}
@@ -1810,6 +1846,21 @@ export default function BucketApp() {
         <BlacktopGame bt={bt} user={user} photoFor={p => livePhoto(p.build?.basketballIQ ? { name: p.build.basketballIQ.qbFull, photo: p.build.basketballIQ.photo } : null)} onOpenChat={openBtChat} unread={btUnread} />
         {btChatOpen && <BlacktopChat bt={bt} user={user} onClose={() => setBtChatOpen(false)} />}
       </>
+    )
+  }
+  // Career: what it is + your past careers, then a build; or the career itself
+  if (page === 'career-intro') {
+    return (
+      <Suspense fallback={null}>
+        <CareerIntro sport="bucket" onStart={startCareerBuild} onClose={() => setPage('splash')} />
+      </Suspense>
+    )
+  }
+  if (page === 'career' && career) {
+    return (
+      <Suspense fallback={null}>
+        <AppCareer career={career} setCareer={setCareer} user={user} onNewBuild={startCareerBuild} onExit={() => setPage('splash')} />
+      </Suspense>
     )
   }
   // No run on the road: what Takeover is + your past runs, then a build

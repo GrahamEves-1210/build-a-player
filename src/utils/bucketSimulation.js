@@ -307,7 +307,8 @@ export function runBucketSimulation(build, types, team, position = 'guard', rngS
   const isAllTime = gameMode === 'all-time'
   const simRatings  = isAllTime ? ALLTIME_TEAM_RATINGS : TEAM_RATINGS
   const simConfElite = isAllTime ? ALLTIME_CONF_ELITE : CONF_ELITE
-  const tr = simRatings[team.short] ?? { off: 68, def: 65 }
+  // Career passes its own team (1–10 scale, moved by the roster and the year's events)
+  const tr = team.career ? { off: 55 + team.off * 3.3, def: 55 + team.def * 3.3 } : simRatings[team.short] ?? { off: 68, def: 65 }
 
   // Team strength → baseline WP (same formula as standings generator)
   const teamScore = (tr.off + tr.def) / 200
@@ -352,14 +353,16 @@ export function runBucketSimulation(build, types, team, position = 'guard', rngS
 
   // --- per-game stats (calibrated to realistic NBA ranges) ---
   // PPG: guard 4–40+, big 5–32 (A+ build ~33.5, S tier can exceed)
-  const ppg = +(Math.max(isBig ? 5 : 4, (isBig ? -2 : -3.5) + rn(-1, 1, rand) + scoringRaw * (isBig ? 3.5 : 4.0))).toFixed(1)
+  // Career: your share of the offense (a rookie next to a star scores less than the star version of you)
+  const use = team.career && team.usage ? team.usage : 1, useSide = 0.5 + use / 2
+  const ppg = +(use * Math.max(isBig ? 5 : 4, (isBig ? -2 : -3.5) + rn(-1, 1, rand) + scoringRaw * (isBig ? 3.5 : 4.0))).toFixed(1)
   // RPG: guard 1.5–9+, big 6–15 (A+ build ~10, S tier can exceed)
-  const rpg = +(Math.max(isBig ? 5 : 1.5, (isBig ? 4.0 : 0.5) + rn(-0.4, 0.4, rand) + rebRaw * (isBig ? 0.82 : 0.75))).toFixed(1)
+  const rpg = +(useSide * Math.max(isBig ? 5 : 1.5, (isBig ? 4.0 : 0.5) + rn(-0.4, 0.4, rand) + rebRaw * (isBig ? 0.82 : 0.75))).toFixed(1)
   // APG: guard 1–11+, big 0.5–11 (quadratic for steep drop-off — S-tier passer bigs reach Jokic ~11)
   const bigApgBase = astRaw >= 8
     ? Math.max(0.5, 0.125 * astRaw * astRaw - 0.375 * astRaw)
     : (3.8 * astRaw + 4.6) / 7
-  const apg = +(Math.max(isBig ? 0.5 : 1.0, (isBig ? bigApgBase : (-1.0 + astRaw * 1.1)) + rn(-0.3, 0.3, rand))).toFixed(1)
+  const apg = +(useSide * Math.max(isBig ? 0.5 : 1.0, (isBig ? bigApgBase : (-1.0 + astRaw * 1.1)) + rn(-0.3, 0.3, rand))).toFixed(1)
   // SPG: 0.2–2.3+ (A+ build ~2.0, S tier can exceed)
   const spg = +(Math.max(0.2, stlRaw * 0.21 + rn(-0.1, 0.14, rand))).toFixed(1)
   // BPG: guard 0–1.3, big 0.4–3.1
