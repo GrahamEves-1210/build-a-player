@@ -116,7 +116,7 @@ function SportSwitch({ sport }) {
       </button>
       <button role="tab" aria-selected={sport === 'bucket'} className={`ag-sport-btn ag-sport-btn--bucket${sport === 'bucket' ? ' is-on' : ''}`} onClick={() => go('bucket')}>
         <span className="ag-sport-ico"><IconBasketball size={17} /></span>
-        <span className="ag-sport-txt"><b>BASKETBALL</b><small>Build-A-Bucket</small></span>
+        <span className="ag-sport-txt"><b>BASKETBALL</b><small>Build-A-Player</small></span>
       </button>
     </div>
   )
