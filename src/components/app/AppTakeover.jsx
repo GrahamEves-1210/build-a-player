@@ -6,7 +6,7 @@ import { joinRoom, genCode, myVid } from '../../lib/live'
 import { clean, blockedIds, MIN_GAP_MS } from '../../lib/chat'
 import { valToGrade } from '../../utils/simulation'
 import { useProgress, myCosmetics } from '../../lib/progress'
-import { NameTag } from './NameTag'
+import { NameTag, AvatarBadge } from './NameTag'
 import { getUsername } from '../../lib/discord'
 import { sfx, haptic, victory } from '../../lib/juice'
 import { BlacktopChat } from './AppBlacktop'
@@ -69,7 +69,7 @@ export default function AppTakeover({ sport, run, setRun, user, pools, attrMap, 
       d.win = d.winner === 0
     } else {
       const ovr = calcOvr(duelBuild(run))
-      d = { kind: 'football', ...footballDuel({ run, city, star, myOvr: ovr }) }
+      d = { kind: 'football', ...footballDuel({ run, city, star, myOvr: ovr, myTeamShort: me.name.toUpperCase() }) }
       if (run.mode === 'duo' && duo.partnerPlayer) {
         const pd = footballDuel({ run: { ...run, seed: run.seed + 'p' }, city, star, myOvr: duo.partnerPlayer.ovr ?? ovr })
         d.partner = pd
@@ -228,7 +228,7 @@ export default function AppTakeover({ sport, run, setRun, user, pools, attrMap, 
   if (screen === 'duel' && duel) {
     return duel.kind === 'hoops'
       ? <HoopsDuel duel={duel} run={run} city={duel.city} me={me} onDone={settle} />
-      : <FootballDuel duel={duel} run={run} city={duel.city} onDone={settle} />
+      : <FootballDuel duel={duel} run={run} city={duel.city} me={me} onDone={settle} />
   }
 
   if (screen === 'reward' && duel?.star) {
@@ -400,22 +400,23 @@ function HoopsDuel({ duel, run, city, me, onDone }) {
   const goal = duoGame ? 15 : 11
   const opp = lift(city.color)
   const photoFor = p => p.build?.[run.types[0]]?.photo ?? null
-  const avatarFor = p => (p.id === 'me' || p.id === 'partner' ? <span className="btc-you"><IconProfile size={20} /></span> : null)
+  // my own avatar badge and name (the partner keeps the plain icon)
+  const avatarFor = p => (p.id === 'me' ? <AvatarBadge self name={me.name} size={40} /> : p.id === 'partner' ? <span className="btc-you"><IconProfile size={20} /></span> : null)
   return (
     <div className="ag-screen ag-screen--bucket bt-game bt-live tk-duel" style={{ '--tc': city.color }}>
       <div className="bt-board">
-        <div className={`bt-board-side bt-t0${score[0] > score[1] ? ' is-lead' : ''}`}><span className="bt-board-name">{duoGame ? 'YOU TWO' : 'YOU'}</span><b>{score[0]}</b></div>
+        <div className={`bt-board-side bt-t0${score[0] > score[1] ? ' is-lead' : ''}`}><span className="bt-board-name"><NameTag name={me.name} self plate={false} />{duoGame ? ' +1' : ''}</span><b>{score[0]}</b></div>
         <div className="bt-board-mid"><span className="ag-eyebrow">{city.city.toUpperCase()} · TO {goal}</span><button className={`ag-chip${speed === 2 ? ' is-on' : ''}`} onClick={() => setSpeed(s => (s === 1 ? 2 : 1))}>{speed}×</button></div>
         <div className={`bt-board-side bt-t1${score[1] > score[0] ? ' is-lead' : ''}`} style={{ '--tc': opp }}><span className="bt-board-name">{duoGame ? city.nick.toUpperCase() : lastName(duel.sides[1][0].name).toUpperCase()}</span><b>{score[1]}</b></div>
       </div>
-      <BlacktopCourt game={duel} play={play} meId="me" photoFor={photoFor} avatarFor={avatarFor} colorFor={t => (t === 0 ? '#e8f0f6' : opp)} speed={speed} />
-      <div className="bt-feed">{feed.map((p, i) => <div key={p.id} className={`bt-feed-line bt-t${p.team}${i === 0 ? ' is-now' : ''}${p.big ? ' is-big' : ''}${p.type === 'milestone' ? ' is-ms' : ''}`} style={p.team === 1 ? { '--tc': opp } : undefined}>{p.text.replace(me.name, 'You')}</div>)}</div>
+      <BlacktopCourt game={duel} play={play} meId="me" meName={me.name} photoFor={photoFor} avatarFor={avatarFor} colorFor={t => (t === 0 ? '#e8f0f6' : opp)} speed={speed} />
+      <div className="bt-feed">{feed.map((p, i) => <div key={p.id} className={`bt-feed-line bt-t${p.team}${i === 0 ? ' is-now' : ''}${p.big ? ' is-big' : ''}${p.type === 'milestone' ? ' is-ms' : ''}`} style={p.team === 1 ? { '--tc': opp } : undefined}>{p.text}</div>)}</div>
     </div>
   )
 }
 
 // ── Duel playback: football ────────────────────────────────────────────────
-function FootballDuel({ duel, run, city, onDone }) {
+function FootballDuel({ duel, run, city, me, onDone }) {
   const [idx, setIdx] = useState(0)
   const plays = duel.plays
   const play = plays[idx]
@@ -435,7 +436,7 @@ function FootballDuel({ duel, run, city, onDone }) {
   return (
     <div className="ag-screen ag-screen--nfl bt-game bt-live tk-duel tk-duel--nfl" style={{ '--tc': city.color }}>
       <div className="bt-board">
-        <div className={`bt-board-side bt-t0${score[0] > score[1] ? ' is-lead' : ''}`}><span className="bt-board-name">YOU</span><b>{score[0]}</b></div>
+        <div className={`bt-board-side bt-t0${score[0] > score[1] ? ' is-lead' : ''}`}><span className="bt-board-name"><NameTag name={me.name} self plate={false} /></span><b>{score[0]}</b></div>
         <div className="bt-board-mid"><span className="ag-eyebrow">{play?.q ?? 'Q1'}</span><span className="tk-duel-at">@ {city.city.toUpperCase()}</span></div>
         <div className={`bt-board-side bt-t1${score[1] > score[0] ? ' is-lead' : ''}`} style={{ '--tc': opp }}><span className="bt-board-name">{city.short}</span><b>{score[1]}</b></div>
       </div>

@@ -190,9 +190,9 @@ export function hoopsDuel({ run, city, star, me, partner = null, partnerStar = n
   if (partner && partnerStar) {
     const p2 = { id: 'partner', name: partner.name, pos: partner.pos, build: partner.build }
     const s2 = { id: 'star2', name: partnerStar.player.name, pos: partner.pos, build: partnerStar.build }
-    return simStreetball({ teams: [[mine, p2], [theirs, s2]], seed, goal: 15, winBy: 2, cap: 19, names: ['YOU TWO', city.nick.toUpperCase()] })
+    return simStreetball({ teams: [[mine, p2], [theirs, s2]], seed, goal: 15, winBy: 2, cap: 19, names: [`${(me.name || 'GUEST').toUpperCase()} +1`, city.nick.toUpperCase()] })
   }
-  return simStreetball({ teams: [[mine], [theirs]], seed, goal: 11, winBy: 1, cap: 11, names: ['YOU', last(star.player.name)] })
+  return simStreetball({ teams: [[mine], [theirs]], seed, goal: 11, winBy: 1, cap: 11, names: [(me.name || 'GUEST').toUpperCase(), last(star.player.name)] })
 }
 
 // Football: one game vs the city. Your build's OVR against the star's sets the
@@ -212,7 +212,7 @@ const DRIVES = {
 }
 const pick = (r, arr) => arr[Math.floor(r() * arr.length)]
 
-export function footballDuel({ run, city, star, myOvr, myTeamShort = 'YOU' }) {
+export function footballDuel({ run, city, star, myOvr, myTeamShort = 'GUEST' }) {
   const r = seeded(`${run.seed}-${city.short}-${run.idx}-${run.attempt}`)
   const bar = (star.ovr ?? 80) + (star.boost ?? 0) * 2 - 1          // what a build should be to beat this player's city
   const q = Math.max(0, Math.min(1, (myOvr - bar + 10) / 20))         // 0 → 1 quality of your day

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { NameTag } from './NameTag'
 import QBAvatar from '../QBAvatar'
 import { sfx } from '../../lib/juice'
 import { useProgress, equip } from '../../lib/progress'
@@ -37,7 +38,7 @@ const lerp = (a, b, t) => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t 
 const near = (p, spots) => spots.reduce((best, s) => (Math.hypot(s.x - p.x, s.y - p.y) < Math.hypot(best.x - p.x, best.y - p.y) ? s : best), spots[0])
 
 // meLabel: what your own player is called on court ('YOU'; null = your username, like everyone else)
-export default function BlacktopCourt({ game, play, meId, photoFor, colorFor, avatarFor, speed = 1, meLabel = 'YOU' }) {
+export default function BlacktopCourt({ game, play, meId, photoFor, colorFor, avatarFor, speed = 1, meLabel = null, meName = null }) {
   const court = useCourt()
   const players = game.sides.flat()
   const byId = Object.fromEntries(players.map(p => [p.id, p]))
@@ -242,7 +243,8 @@ export default function BlacktopCourt({ game, play, meId, photoFor, colorFor, av
                 <div className="btc-ring" style={{ boxShadow: has ? `0 0 0 3px ${col}, 0 0 18px ${col}aa` : `0 0 0 1.5px ${col}99` }}>
                   {avatarFor?.(p) ?? <QBAvatar photo={photoFor?.(p) ?? null} team={p.build?.basketballIQ?.team ?? null} color={null} size={40} logoDir="/logos/nba/" faceCenter={p.build?.basketballIQ?.faceCenter} />}
                 </div>
-                <span className="btc-name" style={{ color: col }}>{p.id === meId && meLabel ? meLabel : (p.name || '').split(' ')[0].slice(0, 9)}</span>
+                {/* the name in its owner's look (color, effect, plate), same as everywhere else; bots plain */}
+                <span className="btc-name" style={{ color: col }}>{p.id === meId && meLabel ? meLabel : p.bot && p.id !== meId ? (p.name || '').split(' ')[0].slice(0, 9) : <NameTag name={((p.id === meId && meName) || p.name || '').split(' ')[0].slice(0, 12)} self={p.id === meId} cos={p.id === meId ? null : p.cos || null} />}</span>
               </div>
             )
           })}

@@ -260,7 +260,7 @@ function ProgressBar({ value, color, reverse = false }) {
 // ─── Half-Court — hardwood SVG + QBAvatar circles ─────────────────────────────
 // SVG viewBox 300×280, basket at top. Player positions as % of court dimensions.
 // State shape: { x, y, dur } — dur drives the CSS transition duration inline.
-function CourtVisual({ play, myColor, oppColor, myName, oppName, possession, dispPossession, mySlot, oppSlot, showCheckup, mySpeed, oppSpeed, look = false, myAv = null, oppAv = null }) {
+function CourtVisual({ play, myColor, oppColor, myName, oppName, possession, dispPossession, mySlot, oppSlot, showCheckup, mySpeed, oppSpeed, look = false, myAv = null, oppAv = null, myTag = null, oppTag = null }) {
   const court = useCourt()          // the design picked in the Blacktop menu (new UI)
   const sdur = s => 0.65 - (clamp(s ?? 6, 1, 11) - 1) * 0.035
   const myMvDur  = sdur(mySpeed)
@@ -674,7 +674,7 @@ function CourtVisual({ play, myColor, oppColor, myName, oppName, possession, dis
 
   // the 3v3 court (btc-*): each player is their profile picture and username
   if (look) {
-    const ps = [['me', myPct, myTr, myColor, myAv, myName], ['opp', oppPct, oppTr, oppColor, oppAv, oppName]]
+    const ps = [['me', myPct, myTr, myColor, myAv, myName, myTag], ['opp', oppPct, oppTr, oppColor, oppAv, oppName, oppTag]]
     return (
       <div className="btc-wrap">
         <div className="btc-court">
@@ -682,12 +682,12 @@ function CourtVisual({ play, myColor, oppColor, myName, oppName, possession, dis
           {court.tint && <div className="btc-tint" />}<div className="btc-light" />
           <div className="btc-overlay">
             <div className="btc-ball" style={{ left: `${ballPct.x}%`, top: `${ballPct.y}%`, transition: ballTr }}>🏀</div>
-            {ps.map(([who, p, tr, col, av, nm]) => {
+            {ps.map(([who, p, tr, col, av, nm, tagEl]) => {
               const has = dispPossession === who
               return (
                 <div key={who} className={`btc-p${has ? ' has-ball' : ''}${who === 'me' ? ' is-me' : ''}`} style={{ left: `${p.x}%`, top: `${p.y}%`, transition: tr, zIndex: has ? 5 : 3, '--pc': col }}>
                   <div className="btc-ring" style={{ boxShadow: has ? `0 0 0 3px ${col}, 0 0 18px ${col}aa` : `0 0 0 1.5px ${col}99` }}>{av}</div>
-                  <span className="btc-name" style={{ color: col }}>{firstName(nm).slice(0, 9)}</span>
+                  <span className="btc-name" style={{ color: col }}>{tagEl ?? firstName(nm).slice(0, 9)}</span>
                 </div>
               )
             })}
@@ -1117,6 +1117,8 @@ export default function BucketVersusResult({ myData, oppData, position, oppPosit
             myName={myName}       oppName={oppName}
             myAv={<WhoAv who={meWho} team={0} size={40} />}
             oppAv={<WhoAv who={oppWho} team={1} size={40} />}
+            myTag={<WhoName who={meWho} short />}
+            oppTag={<WhoName who={oppWho} short />}
             possession={possession}
             dispPossession={shownPossession}
             showCheckup={plays[playIdx]?.type === 'checkup'}

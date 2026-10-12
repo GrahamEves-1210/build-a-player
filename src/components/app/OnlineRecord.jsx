@@ -22,10 +22,10 @@ export const MODES = {
 export function Form({ items = [], mode }) {
   if (!items.length) return <span className="ol-form ol-form--empty">No games yet</span>
   return (
-    <span className="ol-form" aria-label="Recent form">
+    <span className="ol-form" aria-label={`Last ${items.length} games, oldest first`}>
       {items.map((v, i) => {
         const cls = mode === 'compete' ? (v === 1 ? 'is-gold' : v <= 3 ? 'is-w' : 'is-l') : v === 'W' ? 'is-w' : 'is-l'
-        return <i key={i} className={cls} title={mode === 'compete' ? ord(v) : v}>{mode === 'compete' ? v : ''}</i>
+        return <i key={i} className={cls} title={mode === 'compete' ? ord(v) : v === 'W' ? 'Win' : 'Loss'}>{mode === 'compete' ? v : v === 'W' ? 'W' : 'L'}</i>
       })}
     </span>
   )
@@ -105,7 +105,7 @@ export function ModeStats({ mode, full = false }) {
         <Streak n={streak} best={best} />
       </div>
       <div className="ol-cells">{cells.map(([k, v]) => <span key={k} className="ol-cell"><b>{v}</b><small>{k}</small></span>)}</div>
-      <div className="ol-mode-foot"><small>FORM</small><Form items={form} mode={mode} /></div>
+      <div className="ol-mode-foot"><small>{form?.length ? `LAST ${form.length}${mode === 'compete' ? ' · PLACE' : ''}` : 'LAST GAMES'}</small><Form items={form} mode={mode} /></div>
     </div>
   )
 }

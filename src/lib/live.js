@@ -153,6 +153,20 @@ function rtRoom(name, me, onFallback) {
   let mine = { ...me, _t: Date.now() }
   let fell = false, ready = false
   const queued = []
+  // Sending my presence. ch.track() resolves 'ok' / 'timed out' / 'error' (it
+  // doesn't throw), and a dropped one leaves everyone else on my old state: a
+  // lobby spot I'm sitting in shows empty to them. So: bursts merge into one
+  // send, a send that isn't 'ok' is retried, and the state goes out again every
+  // 20s so anyone who missed an update catches up.
+  let pushT = null, retryT = null
+  const pushNow = (n = 0) => {
+    clearTimeout(retryT)
+    if (!ready || fell) return
+    const again = () => { if (n < 6) retryT = setTimeout(() => pushNow(n + 1), 300 * (n + 1)) }
+    ch.track(mine).then(r => { if (r !== 'ok') again() }, again)
+  }
+  const push = () => { clearTimeout(pushT); pushT = setTimeout(() => pushNow(0), 60) }
+  const beat = setInterval(() => pushNow(0), 20000)
   const list = () => {
     const st = ch.presenceState()
     // one entry per player, their newest (a re-track or reconnect can briefly show two)
@@ -183,16 +197,16 @@ function rtRoom(name, me, onFallback) {
     },
     onPresence(fn) { presenceFns.add(fn); fn(list()); return () => presenceFns.delete(fn) },
     presence: list,
-    track(fields) { mine = { ...mine, ...fields, _t: Date.now() }; if (ready) ch.track(mine).catch(() => {}); emitPresence() },
+    track(fields) { mine = { ...mine, ...fields, _t: Date.now() }; push(); emitPresence() },
     onStatus(fn) { statusFns.add(fn); try { fn(status) } catch {}; return () => statusFns.delete(fn) },
-    leave() { clearTimeout(timeout); try { rt.removeChannel(ch) } catch {} },
+    leave() { clearTimeout(timeout); clearTimeout(pushT); clearTimeout(retryT); clearInterval(beat); try { rt.removeChannel(ch) } catch {} },
   }
   // Falling back to the same-device channel is a last resort: nobody on
   // another device can be seen there. Retry the subscription a few times first
   // and give a slow connection 20s before giving up.
   const fallBack = why => {
     if (fell) return
-    fell = true; clearTimeout(timeout)
+    fell = true; clearTimeout(timeout); clearTimeout(pushT); clearTimeout(retryT); clearInterval(beat)
     console.warn(`[live] ${name}: no live connection (${why}) — this device only`)
     try { rt.removeChannel(ch) } catch {}
     onFallback(handlers, presenceFns, statusFns, mine)
@@ -202,7 +216,7 @@ function rtRoom(name, me, onFallback) {
   ch.subscribe(s => {
     if (s === 'SUBSCRIBED') {
       clearTimeout(timeout); ready = true; retries = 0
-      ch.track(mine).catch(() => {})
+      pushNow(0)
       queued.splice(0).forEach(m => ch.send(m).catch(() => {}))
       setStatus('live')
     } else if (s === 'TIMED_OUT' || s === 'CHANNEL_ERROR') {
