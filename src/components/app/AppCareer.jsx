@@ -148,11 +148,12 @@ function Model({ c, devPick }) {
   const shown = useMemo(() => inTeamColors(c.build, c.fit), [c.build, c.fit])
   const Card = ({ t }) => {
     const ch = c.build[t]
-    const canUp = devPick && c.dev.points > 0 && ch && !maxedTrait(ch.val)
+    const maxed = !!ch && maxedTrait(ch.val, ch, t)
+    const canUp = devPick && c.dev.points > 0 && ch && !maxed
     return (
       <div className={`cr-trait${canUp ? ' can-up' : ''}`} onClick={canUp ? () => devPick(t) : undefined} role={canUp ? 'button' : undefined}>
         <span className="cr-trait-av">{ch?.photo ? <img src={ch.photo} alt="" /> : null}</span>
-        <span className="cr-trait-txt"><b>{(attr[t]?.label ?? t).replace('/', '/\u200b')}</b><small>{nick(ch?.qbFull) || '—'}{ch?.upgraded ? ` +${ch.upgraded}` : ''}{ch?.faded ? ` −${ch.faded}` : ''}</small></span>
+        <span className="cr-trait-txt"><b>{(attr[t]?.label ?? t).replace('/', '/\u200b')}</b><small>{nick(ch?.qbFull) || '—'}{ch?.upgraded ? ` +${ch.upgraded}` : ''}{ch?.faded ? ` −${ch.faded}` : ''}{maxed && <em className="cr-trait-max">MAXED</em>}</small></span>
         <span className="cr-trait-g" style={{ background: gradeColor(ch?.val ?? 0) }}>{canUp ? '+1' : valToGrade(ch?.val ?? 0)}</span>
       </div>
     )

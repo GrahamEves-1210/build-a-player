@@ -1020,9 +1020,13 @@ export function campDrill(c, score, game) {
 }
 const traitName = (c, t) => POS_ATTR[c.pos][t]?.label ?? t
 // A trait is maxed once it shows S (grades are rounded: 10.5 and up is S)
-export const maxedTrait = v => Math.round(v ?? 0) >= 11
+// How far offseason work can take a trait: you can't train much height. Size
+// moves once in a career, the explosive traits (speed, bounce) three times.
+export const UPGRADE_CAP = { size: 1, heightLength: 1, speed: 3, bounce: 3 }
+// at the top of the scale, or out of upgrades for that trait
+export const maxedTrait = (v, ch = null, type = null) => Math.round(v ?? 0) >= 11 || (type != null && UPGRADE_CAP[type] != null && (ch?.upgraded ?? 0) >= UPGRADE_CAP[type])
 export function spendDev(c, type) {
-  if (c.dev.points <= 0 || !c.build[type] || maxedTrait(c.build[type].val)) return c
+  if (c.dev.points <= 0 || !c.build[type] || maxedTrait(c.build[type].val, c.build[type], type)) return c
   const from = c.build[type].val
   // one grade up, exactly: a 9.6 (A) becomes an A+, not a 10.6 that also reads S
   const build = { ...c.build, [type]: { ...c.build[type], val: Math.min(11, Math.round(from) + 1), upgraded: (c.build[type].upgraded ?? 0) + 1 } }
