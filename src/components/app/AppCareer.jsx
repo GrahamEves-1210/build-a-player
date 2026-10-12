@@ -3,7 +3,7 @@ import {
   POS_LABEL, POS_NAME, POS_ATTR, OFFENSE_POS, pastCareers, saveCareer, clearCareer, stockOf, answerInterview, setupInterviews, runDraft,
   startSeason, resumeSeason, advanceWeek, chooseMoment, resolveInjury, finishRegular, playoffRound, bookSeason, recordCombine, spendDev, demandTrade, nextSeason,
   OFF_STEPS, offStep, campDrill, CAMP_LEGACY, lineup, depthChart, gradeOf, gradeOfOvr, ovrGradeVal, SPORT, sportOf,
-  openTalks, ask, closeTalks, acceptTalks, ASKS, leverageOf,
+  openTalks, ask, closeTalks, acceptTalks, ASKS, askOdds, leverageOf,
   retire, canRetire, mustRetire, careerTotals, legacyOf, LEGACY_TIERS, ALL_TIME, STAT_LABEL, HEADLINE_STATS, careerCard, AWARD_NAME, MAX_SEASONS, retireReason, goalsFor, compsFor, stockText, pickText, loadSlots, CAREER_SLOTS, maxedTrait,
 } from '../../lib/career'
 import { GAME_LINE } from '../../lib/seasonDirector'
@@ -11,7 +11,7 @@ import { GAMES, pickPlayoffGame } from '../../lib/minigames'
 import MiniGame from './MiniGame'
 import { valToGrade, nflHeadshot } from '../../utils/simulation'
 import { sfx, haptic, victory } from '../../lib/juice'
-import { MomentCard, NowCard, RecordOverlay } from './AppSeasonPlus'
+import { MomentCard, NowCard, RecordOverlay, HonorOverlay } from './AppSeasonPlus'
 import Silhouette from '../Silhouette'
 import { NameTag, AvatarBadge } from './NameTag'
 import { IconClose, IconArrow, IconFlame, IconTrophy, IconStar, IconCrown, IconMedal, IconRing, IconCheck, IconShield, IconHelmet, IconSpin } from './icons'
@@ -443,6 +443,7 @@ function Lineup({ c }) {
 export default function AppCareer({ career: c, setCareer, user, onNewBuild, onExit }) {
   const [tab, setTab] = useState('season')
   const [recHit, setRecHit] = useState(null)       // an all-time record just fell
+  const [honor, setHonor] = useState(null)         // an award or a title, just won
   const D = useRef(null)
   // the player's own name (picked when the career began); never "You"
   useEffect(() => { if (c) saveCareer(c) }, [c])
@@ -476,7 +477,13 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
     const s = n.seasons[n.seasons.length - 1]
     window.dispatchEvent(new CustomEvent('bap:season', { detail: { sport: c.sport, pos: c.pos, mode: 'career', localOnly: true, wins: s.wins, losses: s.losses, playoffs: s.playoffs, champion: s.champion, award: s.award, awardName: s.awardName, ovr: c.ovr, ref: c.active?.final ?? null } }))
     setCareer(n); setTab('season')
-    if (s.champion || s.award) victory({ big: s.champion }); else sfx('complete')
+    if (s.champion || s.award) setHonor({
+      season: s.season, team: (s.teamName ?? '').toUpperCase(),
+      title: s.award && s.champion ? `${s.awardName} + ${S.isBucket ? 'CHAMPION' : 'SUPER BOWL'}` : s.award ? s.awardName : S.isBucket ? 'NBA CHAMPIONS' : 'SUPER BOWL CHAMPIONS',
+      sub: s.award ? `${{ MVP: 'Most Valuable Player', OPOY: 'Offensive Player of the Year', DPOY: 'Defensive Player of the Year' }[s.awardName] ?? s.awardName}${s.champion ? ', and a ring' : ''}` : `${s.wins}–${s.losses}, then all the way`,
+      line: HEADLINE_STATS[c.pos].map(k => `${fmt(s.stats[k])} ${STAT_LABEL[k]}`).join(' · '),
+    })
+    else sfx('complete')
   }
   const a = c.active
   const total = a?.base?.games?.length ?? 17
@@ -489,6 +496,7 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
   return (
     <div className={`ag-screen ${S.screen} cr cr-hub cr--team`} style={teamVars(c.fit)}>
       {recHit && <RecordOverlay record={recHit} name={c.name || 'Guest'} onClose={() => setRecHit(null)} />}
+      {honor && !recHit && <HonorOverlay honor={honor} name={c.name || 'Guest'} onClose={() => setHonor(null)} />}
       <div className="ag-screen-head">
         <div className="cr-head">
           <img src={logoFor(c.team)} alt="" className="cr-head-logo" />
@@ -601,7 +609,7 @@ function Chunk({ c, e }) {
   )
 }
 
-// ── The offseason, step by step: recap → roster moves → camp → contract ─────
+// ── The offseason, step by step: recap → contract → roster moves → camp ─────
 const MOVE_TAG = { sign: 'SIGNED', draft: 'DRAFTED', retire: 'RETIRED', leave: 'GONE', rival: 'RIVAL' }
 function Offseason({ c, setCareer, last, setTab }) {
   const step = c.off?.step ?? 'recap'
@@ -611,23 +619,25 @@ function Offseason({ c, setCareer, last, setTab }) {
   const isLast = idx === steps.length - 1
   const go = id => { setCareer(offStep(c, id)); sfx('tap'); document.querySelector('.cr-hub')?.scrollTo({ top: 0, behavior: 'smooth' }) }
   const nextStep = steps[idx + 1]
+  // the contract comes first: no moving on until it's signed (or nobody calls)
+  const unsigned = steps[idx][0] === 'contract' && (c.offers?.length > 0 || c.talks || forced)
+  const showActions = isLast || (steps[idx][0] === 'contract' && forced)
   return (
     <section className="cr-sec">
       <div className="cr-steps ag-pop" role="tablist" aria-label="Offseason">
         {steps.map(([id, label], i) => <button key={id} role="tab" aria-selected={i === idx} className={`cr-step${i === idx ? ' is-on' : i < idx ? ' is-done' : ''}`} disabled={i > idx} onClick={() => go(id)}>{i < idx ? <IconCheck size={11} /> : <span>{i + 1}</span>} {label}</button>)}
       </div>
       {steps[idx][0] === 'recap' && <Recap c={c} last={last} />}
-      {steps[idx][0] === 'moves' && <Moves c={c} />}
+      {steps[idx][0] === 'moves' && <Moves c={c} setCareer={setCareer} forced={forced} />}
       {steps[idx][0] === 'camp' && <Camp c={c} setCareer={setCareer} />}
       {steps[idx][0] === 'contract' && <Contract c={c} setCareer={setCareer} />}
-      {!isLast && <button className="ag-btn ag-btn--gold tk-intro-go" onClick={() => go(nextStep[0])}>NEXT: {nextStep[1]} <IconArrow size={16} /></button>}
-      {isLast && forced && retireReason(c) !== 'nocalls' && (
+      {!isLast && !unsigned && <button className="ag-btn ag-btn--gold tk-intro-go" onClick={() => go(nextStep[0])}>NEXT: {nextStep[1]} <IconArrow size={16} /></button>}
+      {showActions && forced && retireReason(c) !== 'nocalls' && (
         <p className="cr-note ag-pop">{retireReason(c) === 'age' ? `${c.name} is ${c.age}. The body has made the call: this is the end of the road.` : `${c.seasons.length} seasons: as long as a career runs here. Time to hang it up.`}</p>
       )}
-      {isLast && (
+      {showActions && (
         <div className="cr-actions ag-pop" style={{ '--d': '150ms' }}>
           {!forced && !(c.offers?.length) && <button className="ag-btn ag-btn--gold tk-intro-go" onClick={() => { setCareer(nextSeason(c)); setTab('season'); sfx('tap'); document.querySelector('.cr-hub')?.scrollTo({ top: 0, behavior: 'smooth' }) }}>ON TO {c.season + 1} <IconArrow size={16} /></button>}
-          {!forced && !c.tradeAsked && c.contract.left > 0 && <button className="ag-btn ag-btn--ghost" onClick={() => { if (confirm('Demand a trade? Reputation takes a hit, and the team can say no.')) { setCareer(demandTrade(c)); sfx('deny') } }}>DEMAND A TRADE</button>}
           {(canRetire(c) || forced) && <button className={`ag-btn${forced ? ' ag-btn--gold tk-intro-go' : ' ag-btn--ghost'}`} onClick={() => { if (forced || confirm('Retire? The career is booked and the legacy is final.')) { setCareer(retire(c)); victory({ big: true }) } }}>{forced ? 'HANG IT UP' : 'RETIRE'}</button>}
         </div>
       )}
@@ -654,7 +664,7 @@ function Recap({ c, last }) {
     </div>
   )
 }
-function Moves({ c }) {
+function Moves({ c, setCareer, forced }) {
   const ev = c.events.filter(e => e.year === c.year + 1)
   const moves = c.off?.moves ?? []
   const dc = depthChart(c)
@@ -674,8 +684,9 @@ function Moves({ c }) {
         </div>
       )}
       <div className={`ag-card cr-depthnote ag-pop${dc.starter ? ' is-on' : ''}`} style={{ '--d': '70ms' }}>
-        <span className="ag-eyebrow">DEPTH CHART · {POS_LABEL[c.pos]}</span>
+        <span className="ag-eyebrow">{c.sport === 'bucket' ? 'ROLE' : `DEPTH CHART · ${POS_LABEL[c.pos]}`}</span>
         <p>{dc.starter ? `${c.name} goes into camp as a starter.` : `${c.name} goes into camp ${c.sport === 'bucket' ? 'coming off the bench' : `as ${dc.label}`}, behind ${dc.ahead[dc.ahead.length - 1].name}.`}</p>
+        {!forced && !c.tradeAsked && c.contract.left > 0 && !c.contract.noTrade && <button className="ag-btn ag-btn--ghost cr-trade-btn" onClick={() => { if (confirm('Demand a trade? Reputation takes a hit, and the team can say no.')) { setCareer(demandTrade(c)); sfx('deny') } }}>DEMAND A TRADE</button>}
       </div>
       {c.off?.news?.length > 0 && <div className="ag-card cr-news ag-pop" style={{ '--d': '90ms' }}><span className="ag-eyebrow">AROUND THE LEAGUE</span><ul className="cr-bul">{c.off.news.map((t, i) => <li key={i}>{t}</li>)}</ul></div>}
       <Lineup c={c} />
@@ -914,7 +925,8 @@ function Talks({ c, setCareer }) {
           <div className="cr-asks">
             {Object.entries(ASKS).map(([k, a]) => {
               const used = k === 'money' ? moneyPushes >= 3 : t.asked.includes(k)
-              return <button key={k} className="cr-ask" disabled={used} onClick={() => { setCareer(ask(c, k)); sfx(t.patience - a.cost < 0 ? 'deny' : 'tap') }}><b>{a.label}</b><small>{a.sub} · costs {a.cost}</small></button>
+              const o = askOdds(c, k)
+              return <button key={k} className="cr-ask" disabled={used} onClick={() => { const n = ask(c, k); setCareer(n); sfx(n.talks?.walked ? 'deny' : 'tap') }}><b>{a.label}</b><small>{a.sub}</small><small className="cr-ask-cost">costs {o.lo} · {Math.round(o.p * 100)}% it's {o.hi}</small></button>
             })}
           </div>
           <div className="cr-actions">

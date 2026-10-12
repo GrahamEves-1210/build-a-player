@@ -182,9 +182,13 @@ export const SPORT = {
     },
     fit: (ro, pos, notMe) => {
       const guards = ro.guard.filter(notMe).sort((a, b) => b.ovr - a.ovr).slice(0, 3), bigs = ro.big.filter(notMe).sort((a, b) => b.ovr - a.ovr).slice(0, 2)
-      const gG = r10(ovrGradeVal(avgOvr(guards))), bG = r10(ovrGradeVal(avgOvr(bigs)))
-      const bench = [...ro.guard, ...ro.big].filter(notMe).sort((a, b) => b.ovr - a.ovr).slice(5, 9)
-      const benchG = r10(ovrGradeVal(avgOvr(bench)))
+      // graded against the league (a median group is a C+, the best an A), not on the raw
+      // overall scale: NBA groups all sit in the 78–90 range and would all read as a B
+      const vs = (list, med, per) => list.length ? r10(clamp(6 + (avgOvr(list) - med) * per, 1, 11)) : 1
+      const gG = vs(guards, 83, 0.75), bG = vs(bigs, 80.5, 0.65)
+      const five = new Set([...guards, ...bigs].map(p => p.name))
+      const bench = [...ro.guard, ...ro.big].filter(notMe).filter(p => !five.has(p.name)).sort((a, b) => b.ovr - a.ovr).slice(0, 4)
+      const benchG = vs(bench, 75.5, 1.6)
       const groups = [{ k: 'BACKCOURT', v: gG, names: guards.map(p => p.name) }, { k: 'FRONTCOURT', v: bG, names: bigs.map(p => p.name) }, { k: 'BENCH', v: benchG, names: bench.map(p => p.name) }]
       const adj = pos === 'guard' ? (bG - 6) * 0.2 + (gG - 6) * 0.15 + (benchG - 6) * 0.1 : (gG - 6) * 0.25 + (bG - 6) * 0.1 + (benchG - 6) * 0.1
       const need = pos === 'guard' ? 11 - gG : 11 - bG
@@ -952,7 +956,7 @@ export function bookSeason(c) {
   const dev = { ...c.dev, points: c.dev.points + 1 + (s.award || s.allPro ? 1 : 0) }
   const rep = clamp(c.rep + (s.goals.filter(g => g.met).length >= 2 ? 1 : 0) + (s.champion ? 1 : 0) - (perf < 0.25 ? 1 : 0), 1, 10)
   const lastRole = benched < (f.wins + f.losses || 17) / 2 ? 'Starter' : 'Backup'
-  let next = { ...c, recordBook, phase: 'offseason', seasons: [...c.seasons, s], contract, dev, rep, lastRole, active: null, simTeam: null, goals: [], earnings: r10(c.earnings + c.contract.perYear), nextMods: null, talks: null }
+  let next = { ...c, recordBook, phase: 'offseason', seasons: [...c.seasons, s], contract, dev, rep, lastRole, active: null, simTeam: null, goals: [], earnings: r10(c.earnings + c.contract.perYear), nextMods: null, talks: null, tradeAsked: false }
   // the offseason: the league moves, your team's roster turns over, the news
   const r = seeded(`${c.seed}-off-${c.year}`)
   const league = driftLeague(next, r)
@@ -1000,7 +1004,7 @@ export function seasonScore(pos, s) {
 }
 
 // ── Offseason: the recap, the roster moves, camp, the contract ───────────────
-export const OFF_STEPS = [['recap', 'RECAP'], ['moves', 'MOVES'], ['camp', 'CAMP'], ['contract', 'CONTRACT']]
+export const OFF_STEPS = [['recap', 'RECAP'], ['contract', 'CONTRACT'], ['moves', 'MOVES'], ['camp', 'CAMP']]
 export const offStep = (c, step) => ({ ...c, off: { ...(c.off ?? {}), step } })
 // Training camp: one hard drill. Win it for legacy points (the coaches remember)
 // and a chance at a development point: better the more cleanly it's won.
@@ -1096,18 +1100,27 @@ export function signOffer(c, o) {
   const extras = [o.noTrade ? 'no-trade clause' : null, o.starter ? 'starter guarantee' : null].filter(Boolean)
   const roster = change ? rosterOf(c, o.team) : c.roster
   return {
-    ...c, team: o.team, roster, fit: teamFit(o.team, c.pos, { roster, league: c.league, name: c.name, sport: c.sport }), offers: null, talks: null, tradeAsked: false, lastRole: change ? null : c.lastRole,
+    ...c, team: o.team, roster, fit: teamFit(o.team, c.pos, { roster, league: c.league, name: c.name, sport: c.sport }), offers: null, talks: null, tradeAsked: false, lastRole: change ? null : c.lastRole, ...(change && c.off ? { off: { ...c.off, moves: [] } } : {}),
     contract: { kind: change ? 'fa' : 'ext', years: o.years, left: o.years, perYear: o.perYear, noTrade: !!o.noTrade, starter: !!o.starter },
     decisions: [...c.decisions, { year: c.year + 1, text: `${change ? 'Signed with' : 'Re-signed with'} the ${o.fit.name}: ${o.years} yrs, $${o.perYear}M a year${extras.length ? ` (${extras.join(', ')})` : ''}` }],
   }
 }
 // ── Talks: sit down with one team and push. Leverage (the last two seasons,
 // reputation, age) is how far they'll bend before they walk. ──
+// Each ask costs a little patience or a lot: `cost` is the range, `hi` the
+// base chance it's the high end (leverage lowers it; pushing money again raises it).
 export const ASKS = {
-  money:   { label: 'MORE MONEY', sub: '+8% a year', cost: 1 },
-  years:   { label: 'ANOTHER YEAR', sub: '+1 year, same money', cost: 1 },
-  notrade: { label: 'NO-TRADE CLAUSE', sub: 'They can\'t move you', cost: 2 },
-  starter: { label: 'STARTER GUARANTEE', sub: 'The job is yours in writing', cost: 1 },
+  money:   { label: 'MORE MONEY', sub: '+8% a year', cost: [1, 2], hi: 0.3 },
+  years:   { label: 'ANOTHER YEAR', sub: '+1 year, same money', cost: [1, 2], hi: 0.35 },
+  notrade: { label: 'NO-TRADE CLAUSE', sub: 'They can\'t move you', cost: [2, 3], hi: 0.4 },
+  starter: { label: 'STARTER GUARANTEE', sub: 'The job is yours in writing', cost: [1, 2], hi: 0.3 },
+}
+// { lo, hi, p }: the cost range and the chance it's the high end, for this ask now
+export function askOdds(c, kind) {
+  const a = ASKS[kind], t = c.talks
+  const again = kind === 'money' ? (t?.asked ?? []).filter(k => k === 'money').length : 0
+  const p = clamp(a.hi + again * 0.2 - leverageOf(c) * 0.05, 0.1, 0.9)
+  return { lo: a.cost[0], hi: a.cost[1], p: Math.round(p * 100) / 100 }
 }
 export function leverageOf(c) {
   const last = c.seasons.slice(-2)
@@ -1122,7 +1135,9 @@ export function ask(c, kind) {
   const t = c.talks; if (!t || t.walked) return c
   const a = ASKS[kind]; if (!a || (kind !== 'money' && t.asked.includes(kind)) || (kind === 'money' && t.asked.filter(k => k === 'money').length >= 3)) return c
   const r = seeded(`${c.seed}-ask-${c.year}-${t.asked.length}-${kind}`)
-  const patience = t.patience - a.cost
+  const odds = askOdds(c, kind)
+  const big = r() < odds.p
+  const patience = t.patience - (big ? odds.hi : odds.lo)
   if (patience < 0) {
     // they're done: the offer's gone
     const offers = (c.offers ?? []).filter(o => o.team !== t.team)
@@ -1131,7 +1146,7 @@ export function ask(c, kind) {
   }
   const pushed = kind === 'money' ? r10(t.perYear * 1.08) : t.perYear
   const years = kind === 'years' ? t.years + 1 : t.years
-  const tone = patience >= 2 ? 'A nod. "We can do that."' : patience === 1 ? '"…Fine. But that\'s about it."' : 'A long pause. "Last one."'
+  const tone = (big ? 'That one stung. ' : '') + (patience >= 2 ? 'A nod. "We can do that."' : patience === 1 ? '"…Fine. But that\'s about it."' : 'A long pause. "Last one."')
   return { ...c, talks: { ...t, patience, perYear: pushed, years, noTrade: t.noTrade || kind === 'notrade', starter: t.starter || kind === 'starter', asked: [...t.asked, kind], lines: [...t.lines, tone] } }
 }
 export const closeTalks = c => ({ ...c, talks: null })
@@ -1143,11 +1158,11 @@ export function demandTrade(c) {
   const r = seeded(`${c.seed}-trade-${c.year}`)
   const granted = r() < 0.7
   const rep = Math.max(1, c.rep - 2)
-  if (!granted) return { ...c, rep, tradeAsked: true, nextMods: { ...(c.nextMods ?? {}), off: ((c.nextMods?.off) ?? 0) - 0.5 }, events: [...c.events, { year: c.year + 1, text: 'You asked for a trade. The team said no, and the locker room heard about it.' }] }
+  if (!granted) return { ...c, rep, tradeAsked: true, nextMods: { ...(c.nextMods ?? {}), off: ((c.nextMods?.off) ?? 0) - 0.5 }, events: [...c.events, { year: c.year + 1, text: `${c.name} asked for a trade. The team said no, and the locker room heard about it.` }] }
   const dest = S.teams.map(t => S.teamOf(t.short)).filter(t => t.short !== c.team).sort(() => r() - .5).sort((a, b) => (b.off + b.def) - (a.off + a.def))[Math.floor(r() * 6)]
   const roster = rosterOf(c, dest.short)
   const fit = teamFit(dest.short, c.pos, { roster, league: c.league, name: c.name, sport: c.sport })
-  return { ...c, rep, tradeAsked: true, team: dest.short, roster, fit, lastRole: null, events: [...c.events, { year: c.year + 1, text: `Trade request granted: a ${nick(fit.name)} now.` }], decisions: [...c.decisions, { year: c.year + 1, text: `Demanded a trade, dealt to the ${fit.name}` }] }
+  return { ...c, rep, tradeAsked: true, team: dest.short, roster, fit, lastRole: null, off: { ...(c.off ?? {}), moves: [] }, events: [...c.events, { year: c.year + 1, text: `Trade request granted: a ${nick(fit.name)} now.` }], decisions: [...c.decisions, { year: c.year + 1, text: `Demanded a trade, dealt to the ${fit.name}` }] }
 }
 // Into the next season: a year older, the body moves with it
 export function nextSeason(c) {

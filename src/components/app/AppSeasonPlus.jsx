@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom'
 import { GAME_LINE, momentsOff, setMomentsOff } from '../../lib/seasonDirector'
 import { leaderBoard } from '../../lib/seasonFacts'
 import { sfx, haptic, victory } from '../../lib/juice'
-import { IconArrow, IconStar, IconFlame } from './icons'
+import { IconArrow, IconStar, IconFlame, IconTrophy } from './icons'
 
 // Season reveal, the app version: the moment card the season pauses on, the
 // matchup card for the game just played, the season pulse, the wire of
@@ -142,6 +142,24 @@ export function RecordOverlay({ record, name, onClose }) {
         <span className="sm-record-num">{record.got}</span>
         <span className="ag-ring-score">was {record.value} · {record.holder}</span>
         <span className="ag-ring-count"><IconStar size={18} /> {name.toUpperCase()}</span>
+      </div>
+    </div>,
+    document.body,
+  )
+}
+
+// An award or a title: the full-screen beat (the confetti says why)
+export function HonorOverlay({ honor, name, onClose }) {
+  useEffect(() => { victory({ big: true }); const t = setTimeout(onClose, 6500); return () => clearTimeout(t) }, []) // eslint-disable-line
+  return createPortal(
+    <div className="ag-ring sm-record sm-honor" onClick={onClose}>
+      <div className="ag-ring-rays" />
+      <div className="ag-ring-inner">
+        <span className="ag-eyebrow">{honor.season} SEASON · {honor.team}</span>
+        <h2 className="ag-ring-title">{honor.title}</h2>
+        {honor.sub && <span className="ag-ring-score">{honor.sub}</span>}
+        <span className="sm-honor-line">{honor.line}</span>
+        <span className="ag-ring-count"><IconTrophy size={18} /> {name.toUpperCase()}</span>
       </div>
     </div>,
     document.body,

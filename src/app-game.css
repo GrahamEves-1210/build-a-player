@@ -4398,3 +4398,13 @@ html.is-android .ag-toast { background: rgba(8,12,10,.97); }
 .crl-field--court .crl-man b { font-size: 13px; }
 .crl-depth--bench { grid-template-columns: 1fr auto auto; }
 .crl-depth--bench em { min-width: 34px; padding: 2px 5px 1px; border-radius: 7px; font-style: normal; font-family: var(--ag-font); font-size: 17px; color: #0b0f0d; text-align: center; }
+
+/* Offseason: the trade demand sits with the depth chart / role */
+.cr-trade-btn { margin-top: 10px; width: 100%; }
+
+/* Contract talks: what an ask may cost */
+.cr-ask .cr-ask-cost { color: #f5dc8a; opacity: .95; }
+
+/* Career: an award or a title, full screen */
+.sm-honor .ag-ring-title { font-size: clamp(34px, 11vw, 56px); }
+.sm-honor-line { font-family: var(--ag-font); font-size: 16px; letter-spacing: 1.2px; color: #fff; text-align: center; }

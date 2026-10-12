@@ -36,6 +36,21 @@
 
 import { seeded } from './rng'
 import { gameMoment } from './gameMoments'
+import { NBA_GUARD_PLAYERS } from '../data/nba-guards'
+import { NBA_BIG_PLAYERS } from '../data/nba-bigs'
+
+// The trade deadline: a real player from another team. A scorer (the best
+// offensive players around the league) or a stopper (the best defenders).
+const NBA_POOL = [...NBA_GUARD_PLAYERS, ...NBA_BIG_PLAYERS]
+const sumOf = (p, keys) => keys.reduce((s, k) => s + (p.attrs?.[k] ?? 0), 0)
+const OFF_KEYS = ['jumpShot', 'finishing', 'handles', 'playmaking', 'clutch']
+const DEF_KEYS = ['perimeterDefense', 'interiorDefense']
+function deadlineTarget(r, mine, keys, top, not) {
+  const seen = new Set()
+  const pool = NBA_POOL.filter(p => p.team !== mine && p.name !== not && !seen.has(p.name) && seen.add(p.name))
+    .sort((a, b) => sumOf(b, keys) - sumOf(a, keys)).slice(0, top)
+  return pool[Math.floor(r() * pool.length)] ?? null
+}
 
 // ── What each kind of event touches, per position ───────────────────────────
 //   legs   conditioning: fatigue, rest, fresh legs
@@ -175,6 +190,7 @@ function context({ sport, pos, stop, ctx, build, types, attrMap, teamNick, name,
   }
   const r = seeded(`scn-${seed}-${stop.at}`)
   return {
+    team: team?.short ?? null,
     sport, pos, isBucket, isDef: pos === 'db', isOL: pos === 'ol', stop, k, total, left, wins, losses, streak, skid, pace,
     rec: `${wins}–${losses}`, nick: teamNick, name, T, R, R1, roleHas: role => traitsOf(role).length > 0, L, val, r,
     alive: wins + left >= needIn, clinched: wins >= lock, eliminated: wins + left < needIn,
@@ -321,12 +337,18 @@ const NFL_PLAYOFFS = [
 // ═════════════════════════════════════════════════════════════════════════════
 const NBA_ALL = [
   { id: 'nba-deadline', at: ['mid', 'late'], w: 3, when: c => c.alive,
-    make: c => ({ kicker: 'TRADE DEADLINE', title: 'The front office calls', body: `${c.nick} can rent a star for the stretch run with next year's picks, or hold the roster.`,
-      options: [
-        o('rental', 'Rent a star', { team: { off: 2 } }, 'A second scorer the rest of the way.'),
-        o('depth', 'Add a defender', { team: { def: 1.5 } }, 'Stops in the fourth quarter.'),
-        o('pat', 'Stand pat', { team: { off: 0.5, def: 0.5 } }, 'Chemistry intact.'),
-      ] }) },
+    make: c => {
+      const star = deadlineTarget(c.r, c.team, OFF_KEYS, 40)
+      const stop = deadlineTarget(c.r, c.team, DEF_KEYS, 30, star?.name)
+      if (!star || !stop) return null
+      return { kicker: 'TRADE DEADLINE', title: 'The front office calls',
+        body: `Two deals on the table. ${star.name} from ${star.team} for next year's picks, or ${stop.name} from ${stop.team} for the bench. Or stand pat.`,
+        options: [
+          o('rental', `Trade for ${star.name}`, { team: { off: 2 } }, `${star.name} is a second scorer the rest of the way.`),
+          o('depth', `Trade for ${stop.name}`, { team: { def: 1.5 } }, `${stop.name} takes the other team's best player in the fourth quarter.`),
+          o('pat', 'Stand pat', { team: { off: 0.5, def: 0.5 } }, 'Chemistry intact.'),
+        ] }
+    } },
   { id: 'nba-clinched', at: ['late', 'stretch'], w: 5, when: c => c.clinched && c.left >= 5,
     make: c => ({ kicker: 'CLINCHED', title: 'Rest for the playoffs?', body: `${c.nick} have a playoff spot. ${c.left} games left.`,
       options: [
