@@ -82,7 +82,7 @@ function Game({ def, v, seed, build, onDone }) {
     case 'power': return <Power v={v} onDone={onDone} />
     case 'reaction': return <Reaction v={v} seed={seed} rounds={def.rounds ?? 2} onDone={onDone} />
     case 'audible': return <Audible v={v} seed={seed} onDone={onDone} />
-    case 'lanes': return <Lanes v={v} seed={seed} onDone={onDone} />
+    case 'lanes': return <Lanes v={v} seed={seed} onDone={onDone} need={def.need ?? 2} />
     case 'sequence': return <Sequence v={v} seed={seed} onDone={onDone} />
     case 'route': return <Route v={v} seed={seed} onDone={onDone} />
     case 'choice': return <Choice def={def} build={build} seed={seed} onDone={onDone} />
@@ -236,7 +236,7 @@ function Audible({ v, seed, onDone }) {
   )
 }
 // ── Lanes: the rush comes from a side; go the other way ─────────────────────
-function Lanes({ v, seed, onDone }) {
+function Lanes({ v, seed, onDone, need = 2 }) {
   const r = useRng(seed)
   const plan = useMemo(() => Array.from({ length: 3 }, () => ({ delay: 450 + r() * 700, from: r() < 0.5 ? 'L' : 'R' })), [r])
   const [i, setI] = useState(0)
@@ -252,7 +252,7 @@ function Lanes({ v, seed, onDone }) {
   }, [i]) // eslint-disable-line
   const settle = s => {
     const next = [...scores, s]
-    if (i + 1 >= 3) { const avg = next.reduce((a, b) => a + b, 0) / 3; onDone({ score: avg, hit: next.filter(Boolean).length >= 2, note: `${next.filter(Boolean).length} of 3` }) }
+    if (i + 1 >= 3) { const avg = next.reduce((a, b) => a + b, 0) / 3; const made = next.filter(Boolean).length; onDone({ score: made >= need ? avg : Math.min(avg, 0.45), hit: made >= need, note: `${made} of 3` }) }
     else { setScores(next); setI(i + 1) }
   }
   const go = side => {

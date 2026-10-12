@@ -910,7 +910,9 @@ export function playoffRound(c, score, game = null) {
     if (rd.series) { const other = won ? [0, 1, 1, 2, 2, 3][Math.floor(r() * 6)] : [0, 1, 1, 2, 2, 3][Math.floor(r() * 6)]; mySc = won ? 4 : other; oppSc = won ? other : 4 }
     else { mySc = Math.round(100 + score * 12 + r() * 10); oppSc = won ? Math.max(85, mySc - 2 - Math.floor(r() * 14)) : mySc + 1 + Math.floor(r() * 12) }
     const st = seasonStats(c.pos, f)
-    line = { pts: r10(st.ppg * k * (won ? 1.05 : 0.9)), reb: r10(st.rpg * k), ast: r10(st.apg * k), perGame: true }
+    // a series is four to seven games: the average barely moves off the season's (0.85–1.15×), never past a real ceiling
+    const kb = clamp(0.9 + score * 0.18 + (r() - 0.5) * 0.08 + (won ? 0.02 : -0.03), 0.84, 1.15)
+    line = { pts: r10(Math.min(st.ppg * kb, 42)), reb: r10(Math.min(st.rpg * kb, 17)), ast: r10(Math.min(st.apg * kb, 13)), perGame: true }
   } else {
     const g = f.wins + f.losses || 17
     const n = (sum, mult = 1) => Math.max(0, Math.round(((sum ?? 0) / g) * k * mult))

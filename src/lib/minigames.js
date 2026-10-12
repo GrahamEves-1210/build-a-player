@@ -47,7 +47,7 @@ export const GAMES = {
   'gauntlet':    { kind: 'gauntlet', traits: ['hands'], title: 'GAUNTLET', how: 'Balls come down two lanes, faster and closer together. Catch each one in the green zone at the bottom. Hands make the zone bigger.' },
   'bench':       { kind: 'bench', traits: ['strength'], title: 'BENCH PRESS', how: 'Tap fast to drive the bar up to lockout. Every rep gets heavier. As many reps as you can in 12 seconds.' },
   // ── Basketball ──
-  'iso':         { kind: 'lanes', traits: ['handles', 'speed'], title: 'ISO', how: 'Your man shades one way. Cross him up and go the other way, three times.' },
+  'iso':         { kind: 'lanes', need: 3, traits: ['handles', 'speed'], title: 'ISO', how: 'Your man shades one way. Cross him up and go the other way, three times. All three or he stays in front.' },
   'pnr':         { kind: 'reaction', traits: ['basketballIQ', 'passing'], title: 'PICK-AND-ROLL READ', how: 'Roll man, corner, pull-up. One comes open. Hit it before the help recovers.', rounds: 2 },
   'clutch-shot': { kind: 'timing', traits: ['jumpShot', 'clutch'], title: 'CLUTCH SHOT', how: 'Down one, ball in your hands, clock running out. Hit the release window.' },
   'free-throws': { kind: 'taps', traits: ['jumpShot', 'clutch'], title: 'FREE THROWS', how: 'Two shots with the game on the line. Hit each window.', n: 2 },
