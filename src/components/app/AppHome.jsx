@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { APP_STORE_URL } from '../../lib/storeLinks'
 import { POS_OPTIONS, AvatarTrio, StackedSilhouette, SPLASH_ATTRS } from '../SplashScreen'
 import { getUsername } from '../../lib/discord'
 import { useProgress } from '../../lib/progress'
@@ -395,6 +396,15 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
           )}
         </div>
       </div>
+      {/* website: get the app (the official badge; hidden until the App Store link is set) */}
+      {!IS_APP && APP_STORE_URL && (
+        <div className="ag-getapp">
+          <span className="ag-eyebrow">PLAY IT ON YOUR PHONE</span>
+          <a href={APP_STORE_URL} target="_blank" rel="noopener noreferrer" aria-label="Download on the App Store">
+            <img src="/badges/app-store.svg" alt="Download on the App Store" width="150" height="50" />
+          </a>
+        </div>
+      )}
       {footer && <div className="ag-home-site">{footer}</div>}
       <Tutorial onGuided={() => onStart('classic', isBucket ? 'guard' : 'qb')} />
     </div>

@@ -4584,3 +4584,7 @@ html.is-app { --drop-chrome: calc(352px + env(safe-area-inset-top) + env(safe-ar
 .nav-grades { flex: none; display: inline-flex; align-items: center; gap: 5px; height: 34px; margin-left: auto; padding: 0 12px; border-radius: 17px; border: 1.5px solid #5edbd8; background: rgba(94,219,216,.12); color: #5edbd8; font-family: var(--ag-font); font-size: 13px; letter-spacing: 1.2px; cursor: pointer; }
 .nav-grades b { font-weight: 400; color: #fff; }
 .nav-grades.is-off { border-color: #f87171; background: rgba(248,113,113,.12); color: #f87171; }
+/* website: the App Store badge under the menu */
+.ag-getapp { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 18px 14px 6px; }
+.ag-getapp img { display: block; height: 50px; width: auto; }
+.ag-getapp a:active { transform: scale(.97); }

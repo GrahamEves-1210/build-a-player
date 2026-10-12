@@ -14,13 +14,14 @@
 
 import { IS_APP, APP_PLATFORM } from './platform'
 import { supabase } from './supabase'
+import { APP_STORE_URL, PLAY_URL } from './storeLinks'
 
 const CACHE_KEY = 'bap_app_config'
 const DISMISS_KEY = 'bap_update_dismissed'
 const RECHECK = 6 * 3600000
 const STORE_DEFAULT = {
-  ios: 'https://apps.apple.com/app/build-a-player/id0000000000',
-  android: 'https://play.google.com/store/apps/details?id=com.buildaplayer.app',
+  ios: APP_STORE_URL || 'https://apps.apple.com/app/build-a-player/id0000000000',
+  android: PLAY_URL,
 }
 
 // 'ok' | 'soft' | 'hard'
