@@ -1088,7 +1088,6 @@ const EVENTS = {
     { id: 'rift', w: 2, bad: true, when: c => c.rep <= 4, text: t => `The ${t} locker room hasn't gotten over last year. Nobody's passing to anybody.`, apply: c => ({ nextMods: { off: -0.5, def: -0.5 }, rep: Math.max(1, c.rep - 1) }) },
     { id: 'camp-tweak', w: 2, bad: true, text: () => `A sprained ankle in a summer run. Nothing serious, but it lingers into the season.`, apply: c => ({ durability: r10(Math.max(1, c.durability - 0.4)) }) },
     { id: 'shooters-gone', w: 2, text: t => `The ${t} lose two shooters in free agency. The floor gets smaller.`, apply: () => ({ nextMods: { off: -0.75 } }) },
-    { id: 'conf-loads', w: 2, text: t => `A conference rival lands a superstar. The road through the playoffs got harder for the ${t}.`, apply: () => ({ nextMods: { def: -0.5 } }) },
     { id: 'quiet', w: 3, text: () => `A quiet summer at the facility. Camp opens, and the grind begins.`, apply: () => ({}) },
   ],
 }
