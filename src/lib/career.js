@@ -728,7 +728,11 @@ export const goalsFor = c => {
   const S = sportOf(c)
   const raw = S.goals[c.pos](c.ovr)
   const full = raw.map(([k, verb, n, unit]) => ({ k, label: `${verb} ${n.toLocaleString()} ${unit}`, n }))
-  if (!c.team || depthChart(c).starter) return full
+  const dc = c.team ? depthChart(c) : null
+  if (!dc || dc.starter) return full
+  // football backup in the rotation (not a QB): the season's goals at his share of the work
+  const u = !S.isBucket ? backupShare(c.pos, dc.idx - S.starters[c.pos]) : 0
+  if (u > 0) return raw.map(([k, verb, n, unit]) => { if (k === 'wins') return full.find(g => g.k === k); const m = Math.max(1, Math.round(n * u / (n >= 100 ? 25 : 1)) * (n >= 100 ? 25 : 1)); return { k, label: `${verb} ${m.toLocaleString()} ${m === 1 ? unit.replace(/(e)?s$/, '') : unit}`, n: m } })
   if (S.isBucket) return raw.map(([k, verb, n, unit]) => k === 'wins' ? full.find(g => g.k === k) : { k, label: `${verb} ${r1(n * 0.6)} ${unit} off the bench`, n: r1(n * 0.6) })
   const per = raw.filter(([k, , n]) => k !== 'wins' && n / 17 >= 1).slice(0, 2).map(([k, verb, n, unit]) => { const m = n / 17 >= 10 ? Math.round(n / 17) : r1(n / 17); return { k, per: 'start', label: `${verb} ${m.toLocaleString()} ${unit} a start`, n: m } })
   return [...per, { k: 'startWins', label: 'Win half the games you start', n: 0.5 }]
@@ -740,7 +744,25 @@ const goalMet = (g, s) => g.k === 'startWins' ? s.starts > 0 && s.startWins / s.
 
 // ── The season: the director plays it, we steer and keep score ───────────────
 export const seasonStats = (pos, f) => sportForPos(pos).seasonStats(pos, f)
-const director = (c, team, base, seed) => createDirector({ sport: c.sport, pos: c.pos, build: c.build, team, simFn: sportOf(c).sim(c.pos), base, seed, name: c.name, attrMap: POS_ATTR[c.pos], types: c.types, always: true, recordBook: c.recordBook ?? null })
+// A backup still plays (except a backup quarterback): RB2 splits the carries,
+// a fourth receiver or second tight end gets packages, the fifth DB plays
+// nickel. Share of a starter's workload, by how far down the depth chart.
+const SHARE = { rb: [0.45, 0.18], wr: [0.35, 0.15], te: [0.35, 0.12], db: [0.5, 0.25] }
+export const backupShare = (pos, beyond) => (SHARE[pos] ? SHARE[pos][beyond] ?? 0.1 : 0)
+const NOT_COUNTS = new Set(['wk', 'g', 'mySc', 'oppSc', 'won', 'long', 'rating', 'compPct', 'ypc', 'ypr', 'catchRate', 'q'])
+const unit = s => { let h = 2166136261; for (const ch of s) h = Math.imul(h ^ ch.charCodeAt(0), 16777619); return (h >>> 0) / 4294967296 }
+// my stat line in a game at a share of the snaps (counts scale; a fraction of a
+// touchdown rounds up or down by a fixed coin, so they don't all vanish)
+function shareGame(g, u, key) {
+  const out = { ...g }
+  for (const [k, v] of Object.entries(g)) if (typeof v === 'number' && !NOT_COUNTS.has(k)) out[k] = Math.floor(v * u + unit(`${key}-${k}`))
+  if (typeof g.long === 'number') out.long = Math.min(g.long, Math.max(out.rushYds ?? 0, out.recYds ?? 0, out.passYds ?? 0, out.long > 0 ? 1 : 0))
+  return out
+}
+// the sim, with my games at a share until I'm the starter (week `weeks` on)
+const shareSim = (sim, u, weeks) => (b, t, seed) => { const r = sim(b, t, seed); return { ...r, games: r.games.map((g, i) => (i < weeks ? shareGame(g, u, `${seed}-${i}`) : g)) } }
+const simFor = c => (c.active?.share ? shareSim(sportOf(c).sim(c.pos), c.active.share.u, c.active.share.weeks) : sportOf(c).sim(c.pos))
+const director = (c, team, base, seed, simFn = simFor(c)) => createDirector({ sport: c.sport, pos: c.pos, build: c.build, team, simFn, base, seed, name: c.name, attrMap: POS_ATTR[c.pos], types: c.types, always: true, recordBook: c.recordBook ?? null })
 export function startSeason(c) {
   const S = sportOf(c)
   const roster = c.roster ?? rosterOf(c, c.team)
@@ -748,9 +770,24 @@ export function startSeason(c) {
   const fit = fitFor(cc)
   const dc = depthChart(cc)
   const team = simTeam({ ...cc, benchRole: !dc.starter }, fit)
-  const base = S.sim(c.pos)(c.build, team)
   const seed = `${c.seed}-y${c.year + 1}`
-  const D = director(cc, team, base, seed)
+  // Football, not the starter: how many weeks until the job comes your way
+  const plain = S.sim(c.pos)
+  let weeks = 0, share = null
+  if (!dc.starter && !S.isBucket) {
+    const rr = seeded(`${c.seed}-bench-${c.year}`)
+    const ahead = dc.ahead[dc.ahead.length - 1]
+    const gap = ahead.ovr - c.ovr
+    const T = plain(c.build, team).games.length
+    const frac = gap <= 2 ? 0.18 + rr() * 0.22 : gap <= 6 ? (rr() < 0.5 ? 0.4 + rr() * 0.35 : 1) : (rr() < 0.45 ? 0.35 + rr() * 0.45 : 1)
+    weeks = Math.max(1, Math.min(T, Math.round(frac * T)))
+    // everyone but a quarterback still plays until then, at a share of the snaps
+    const u = backupShare(c.pos, dc.idx - S.starters[c.pos])
+    if (u > 0) share = { u, weeks }
+  }
+  const simFn = share ? shareSim(plain, share.u, share.weeks) : plain
+  const base = simFn(c.build, team)
+  const D = director(cc, team, base, seed, simFn)
   seasonSwing(cc, D)
   // not the starter. Basketball: off the bench all year, a smaller role.
   // Football: the season opens on the bench, until the job comes your way.
@@ -758,17 +795,12 @@ export function startSeason(c) {
   if (!dc.starter && S.isBucket) {
     benched = { weeks: D.total, behind: dc.ahead[dc.ahead.length - 1].name, label: dc.label, bench: true }
   } else if (!dc.starter) {
-    const rr = seeded(`${c.seed}-bench-${c.year}`)
-    const ahead = dc.ahead[dc.ahead.length - 1]
-    const gap = ahead.ovr - c.ovr
-    const T = D.total
-    const frac = gap <= 2 ? 0.18 + rr() * 0.22 : gap <= 6 ? (rr() < 0.5 ? 0.4 + rr() * 0.35 : 1) : (rr() < 0.45 ? 0.35 + rr() * 0.45 : 1)
-    const weeks = Math.max(1, Math.min(T, Math.round(frac * T)))
-    D.sidelined(0, weeks)
-    benched = { weeks, behind: ahead.name, label: dc.label }
+    // a backup quarterback sits; everyone else is in the rotation
+    if (!share) D.sidelined(0, weeks)
+    benched = { weeks, behind: dc.ahead[dc.ahead.length - 1].name, label: dc.label, rotation: !!share }
   }
-  const feed = benched ? [{ k: 0, note: benched.bench ? `${benched.behind} starts. ${c.name} comes off the bench this season: fewer minutes, a smaller role.` : `${benched.behind} is the starter. ${c.name} opens the season as ${benched.label}.`, noteKind: benched.bench ? 'ROTATION' : 'DEPTH CHART' }] : []
-  const next = { ...cc, phase: 'season', fit, role: dc.starter ? 'Starter' : 'Backup', simTeam: team, goals: goalsFor(cc), active: { k: 0, base, snap: D.snapshot(), seed, moment: null, feed, injury: null, benched } }
+  const feed = benched ? [{ k: 0, note: benched.bench ? `${benched.behind} starts. ${c.name} comes off the bench this season: fewer minutes, a smaller role.` : `${benched.behind} is the starter. ${c.name} opens the season as ${benched.label}${benched.rotation ? ', in the rotation: a share of the snaps' : ''}.`, noteKind: benched.bench ? 'ROTATION' : 'DEPTH CHART' }] : []
+  const next = { ...cc, phase: 'season', fit, role: dc.starter ? 'Starter' : 'Backup', simTeam: team, goals: goalsFor(cc), active: { k: 0, base, snap: D.snapshot(), seed, moment: null, feed, injury: null, benched, share } }
   return [next, D]
 }
 // The unpredictable part of a year. Never shown, only felt:

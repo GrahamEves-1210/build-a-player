@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { setGradesHidden, gradesHiddenNow } from './SpinScreen'
 import { NameTag } from './app/NameTag'
 import { CAN_SELL_PLUS, IS_APP, APP_LOOK } from '../lib/platform'
 // The website with the app look: the menu button opens the app's More sheet
@@ -180,7 +181,17 @@ const PERKS = [
   'Pro badge on leaderboard entries',
 ]
 
-export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, onLeaderboard, onSwitchPosition, onSwitchBucketPosition, onSubscribe, onOpenCustomRatings, user, gameMode, isRB, isWR, isTE, isDB, isOL, position, isPlus, isBucket, bucketPosition, versusState }) {
+// The grades switch in the navbar (phones, where the spin is a drop-down)
+function GradesSwitch() {
+  const [hidden, setHidden] = useState(gradesHiddenNow)
+  useEffect(() => { const on = e => setHidden(!!e.detail); window.addEventListener('bap:grades', on); return () => window.removeEventListener('bap:grades', on) }, [])
+  return (
+    <button className={`nav-grades${hidden ? ' is-off' : ''}`} onClick={() => setGradesHidden(!hidden)} aria-pressed={!hidden} aria-label={hidden ? 'Turn grades on' : 'Turn grades off'}>
+      GRADES <b>{hidden ? 'OFF' : 'ON'}</b>
+    </button>
+  )
+}
+export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, onLeaderboard, onSwitchPosition, onSwitchBucketPosition, onSubscribe, onOpenCustomRatings, user, gameMode, isRB, isWR, isTE, isDB, isOL, position, isPlus, isBucket, bucketPosition, versusState, gradesToggle = false }) {
   const [open,         setOpen]        = useState(false)
   const [htpOpen,      setHtpOpen]     = useState(false)
   const [plusWmOpen,   setPlusWmOpen]  = useState(false)
@@ -348,6 +359,7 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
         </div>
       )}
 
+      {gradesToggle && <GradesSwitch />}
       <div className="nav-right" ref={ref}>
         {MORE_SHEET ? (
           <>

@@ -220,46 +220,48 @@ export function useDropMode(on) {
   }, [])
   return !!on && phone
 }
-// open / closed; a pick closes it (once the chip has landed), so does a reset
+// open / closed
 export function useDropSheet(enabled, build, types, resetKey) {
   const [open, setOpen] = useState(false)
-  const filled = types.filter(t => build[t]).length
-  const last = useRef(filled)
-  useEffect(() => {
-    const grew = filled > last.current
-    last.current = filled
-    if (!enabled || !grew) return
-    const id = setTimeout(() => setOpen(false), 380)
-    return () => clearTimeout(id)
-  }, [filled, enabled])
+  // it stays where you put it (a pick doesn't close it); a reset tucks it away
   useEffect(() => { setOpen(false) }, [resetKey])
+  // the build is complete: nothing left to pick, and SIMULATE is underneath
+  const complete = types.length > 0 && types.every(t => build[t])
+  useEffect(() => { if (enabled && complete) setOpen(false) }, [complete, enabled])
   return [open, setOpen]
 }
-// Dragging the panel: down on the bar opens it, up on the panel closes it. The
-// panel follows the finger, and past 36px (or on a plain tap) it goes the rest
-// of the way.
+// Dragging the panel: it follows the finger the whole way, from the bar or the
+// grip, up or down. Let go and it settles where you were heading (a flick wins,
+// otherwise 30% of the way is enough). A tap toggles it.
 const sheetEl = () => document.querySelector('.drop-sheet')
-function useDrag(open, setOpen, dir) {           // dir: 1 = a pull down opens, -1 = a push up closes
+function useDrag(open, setOpen) {
   const st = useRef(null)
-  const onPointerDown = e => { st.current = { y: e.clientY, dy: 0, moved: false }; e.currentTarget.setPointerCapture?.(e.pointerId) }
+  const place = p => { const el = sheetEl(); if (el) { el.style.transition = 'none'; el.style.transform = `translate3d(0, ${(p - 1) * 101}%, 0)` } }
+  const release = () => { const el = sheetEl(); if (el) { el.style.transition = ''; el.style.transform = '' } }
+  const onPointerDown = e => {
+    const el = sheetEl()
+    st.current = { y: e.clientY, p0: open ? 1 : 0, p: open ? 1 : 0, h: Math.max(1, el?.offsetHeight ?? 400), moved: false, vy: 0, t: performance.now(), ly: e.clientY }
+    e.currentTarget.setPointerCapture?.(e.pointerId)
+  }
   const onPointerMove = e => {
     const d = st.current; if (!d) return
-    d.dy = e.clientY - d.y
-    if (Math.abs(d.dy) > 6) d.moved = true
-    const el = sheetEl(); if (!el || !d.moved) return
-    el.style.transition = 'none'
-    if (dir === 1 && !open) el.style.transform = `translate3d(0, calc(-100% + ${Math.max(0, d.dy)}px), 0)`
-    if (dir === -1 && open) el.style.transform = `translate3d(0, ${Math.min(0, d.dy)}px, 0)`
+    const dy = e.clientY - d.y
+    if (Math.abs(dy) > 6) d.moved = true
+    const now = performance.now(), dt = Math.max(1, now - d.t)
+    d.vy = (e.clientY - d.ly) / dt; d.t = now; d.ly = e.clientY
+    if (!d.moved) return
+    d.p = Math.max(0, Math.min(1, d.p0 + dy / d.h))
+    place(d.p)
   }
   const end = tap => () => {
     const d = st.current; st.current = null
-    const el = sheetEl(); if (el) { el.style.transition = ''; el.style.transform = '' }
+    release()
     if (!d) return
     if (!d.moved) { tap(); return }
-    if (dir === 1 && d.dy > 36) setOpen(true)
-    if (dir === -1 && d.dy < -36) setOpen(false)
+    // a flick wins; otherwise 30% of the way from where it started is enough
+    setOpen(d.vy > 0.35 ? true : d.vy < -0.35 ? false : d.p0 ? d.p > 0.7 : d.p > 0.3)
   }
-  return tap => ({ onPointerDown, onPointerMove, onPointerUp: end(tap), onPointerCancel: () => { st.current = null; const el = sheetEl(); if (el) { el.style.transition = ''; el.style.transform = '' } } })
+  return tap => ({ onPointerDown, onPointerMove, onPointerUp: end(tap), onPointerCancel: () => { st.current = null; release() } })
 }
 // The bar at the top: the build slot by slot. Tap it, or pull it down, and the
 // spin panel drops out from under it; SPIN is in the panel.
@@ -289,7 +291,7 @@ export function DropBar({ open, setOpen, build, types, attrMap, waiting = null, 
     window.addEventListener('scroll', on, true); window.addEventListener('resize', on)
     return () => { ro.disconnect(); window.removeEventListener('scroll', on, true); window.removeEventListener('resize', on); cancelAnimationFrame(raf) }
   }, [])
-  const drag = useDrag(open, setOpen, 1)
+  const drag = useDrag(open, setOpen)
   const toggle = () => { if (complete && !open) return; setOpen(!open) }
   return (
     <div ref={bar} className={`drop-bar${open ? ' is-open' : ''}`} role="button" tabIndex={0} aria-expanded={open} aria-label={open ? 'Hide the spin' : 'Show the spin'}
@@ -318,7 +320,7 @@ export function DropBar({ open, setOpen, build, types, attrMap, waiting = null, 
 // The panel the spin lives in: tucked up under the bar, or dropped down over
 // the top of the player. The page behind it stays live (no overlay).
 export function DropSheet({ open, setOpen, children }) {
-  const drag = useDrag(open, setOpen, -1)
+  const drag = useDrag(open, setOpen)
   return (
     <div className="drop-clip">
       <div className={`drop-sheet${open ? ' is-open' : ''}`} aria-hidden={!open}>

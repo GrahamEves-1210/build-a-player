@@ -1481,6 +1481,7 @@ export default function BucketApp() {
   const filledCount = activeTypes.filter(t => build[t]).length
 
   const navbarProps = {
+    gradesToggle: drop && !competeOn && !liveBuild && page !== 'versus-game',   // phones: the grades switch lives in the navbar
     onReset: competeOn ? undefined : () => guardedLeave(handleReset),
     onHome: () => guardedLeave(handleHome),
     onSignIn: () => setShowAuth(true),

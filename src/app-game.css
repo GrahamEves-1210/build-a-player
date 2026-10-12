@@ -4218,6 +4218,8 @@ html.app-look .ag-blacktop--menu:hover .ag-bt-tags .bt-mode-tag:last-child { tra
   .cr-model-wrap .cr-traits { grid-template-columns: repeat(2, 1fr); align-content: center; }
 }
 /* Career: the starting offense in a real formation */
+/* offense: 10 columns, the tight end a column off the right tackle */
+.crl-field--nfl.crl-field--off { grid-template-columns: repeat(10, minmax(0, 1fr)); background: repeating-linear-gradient(90deg, rgba(34,197,94,.10) 0 10%, rgba(34,197,94,.06) 10% 20%); }
 .crl-field--nfl { position: relative; display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); grid-template-rows: auto auto auto; row-gap: 8px; column-gap: 2px; padding: 14px 6px 12px; background: repeating-linear-gradient(90deg, rgba(34,197,94,.10) 0 11.11%, rgba(34,197,94,.06) 11.11% 22.22%); }
 .crl-field--nfl .crl-at { grid-column: var(--c) / span var(--s, 1); grid-row: var(--r); display: flex; justify-content: center; min-width: 0; position: relative; z-index: 1; }
 .crl-field--nfl .crl-man { width: 100%; }
@@ -4454,7 +4456,7 @@ html.is-android .ag-toast { background: rgba(8,12,10,.97); }
 .game-layout.ag-drop .spin-panel { display: flex !important; flex: none !important; height: auto !important; max-height: none !important; min-height: 0 !important; overflow: visible !important; width: 100% !important; background: none !important; border: 0 !important; }
 .game-layout.ag-drop .spin-panel-body { margin: 0 !important; padding: 10px 12px 0 !important; min-height: 0 !important; overflow: visible !important; }
 .game-layout.ag-drop .spin-panel-static { gap: 8px !important; }
-.game-layout.ag-drop .spin-top-row { display: flex !important; justify-content: center; margin: 0 0 2px !important; }
+.game-layout.ag-drop .spin-top-row { display: none !important; }   /* the grades switch is in the navbar on phones */
 /* the grades switch: right at the top of the sheet, big enough to find */
 .game-layout.ag-drop .grade-toggle-btn { display: inline-flex !important; align-items: center; justify-content: center; height: 38px !important; min-width: 210px !important; padding: 0 18px !important; margin: 0 !important; border-radius: 19px !important; border: 1.5px solid currentColor !important; font-family: var(--ag-font) !important; font-size: 16px !important; letter-spacing: 1.6px !important; }
 .game-layout.ag-drop .grade-toggle-on { color: #5edbd8 !important; background: rgba(94,219,216,.14) !important; }
@@ -4558,3 +4560,27 @@ html.is-app { --drop-chrome: calc(352px + env(safe-area-inset-top) + env(safe-ar
 @keyframes tk-fs-draw { to { stroke-dashoffset: 0; } }
 @keyframes tk-fs-pop { from { opacity: 0; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .tk-fs-arc { animation: none; stroke-dashoffset: 0; } .tk-fs-ball { animation: none; opacity: 1; } }
+
+/* the drop panel: tight enough that it all fits without scrolling inside it */
+.game-layout.ag-drop .spin-panel-body { padding: 6px 12px 0 !important; }
+.game-layout.ag-drop .spin-panel-static { gap: 6px !important; }
+.game-layout.ag-drop .reel-label { margin: 3px auto 1px !important; }
+.game-layout.ag-drop .spin-btn-wrap { gap: 8px !important; }
+.game-layout.ag-drop .spin-btn { min-height: 46px !important; height: 46px !important; }
+.game-layout.ag-drop .spin-respin-half { min-height: 42px !important; height: 42px !important; font-size: 14px !important; }
+.game-layout.ag-drop .spin-reset-circle { width: 46px !important; min-height: 42px !important; height: 42px !important; padding: 0 !important; justify-content: center; }
+.game-layout.ag-drop .spin-reset-circle-lbl { display: none !important; }   /* just the loop */
+.game-layout.ag-drop .spin-reset-circle svg { width: 18px; height: 18px; }
+.game-layout.ag-drop .qb-reveal-card { padding: 5px 10px !important; }
+.game-layout.ag-drop .spin-panel-scroll { gap: 5px !important; padding: 6px 0 0 !important; }
+.game-layout.ag-drop .attr-chip { min-height: 42px !important; padding: 4px 8px !important; }
+.game-layout.ag-drop .attr-chip .chip-name { font-size: 12px !important; }
+.game-layout.ag-drop .attr-chip .chip-val { font-size: 17px !important; }
+.game-layout.ag-drop .spin-hint-text { margin: 2px 0 !important; font-size: 13px !important; }
+.drop-sheet-grip { padding: 6px 0 8px !important; }
+.game-layout.ag-drop .drop-sheet { max-height: calc(100% - var(--app-bottom, 0px) - 16px); }
+
+/* the grades switch in the phone navbar */
+.nav-grades { flex: none; display: inline-flex; align-items: center; gap: 5px; height: 34px; margin-left: auto; padding: 0 12px; border-radius: 17px; border: 1.5px solid #5edbd8; background: rgba(94,219,216,.12); color: #5edbd8; font-family: var(--ag-font); font-size: 13px; letter-spacing: 1.2px; cursor: pointer; }
+.nav-grades b { font-weight: 400; color: #fff; }
+.nav-grades.is-off { border-color: #f87171; background: rgba(248,113,113,.12); color: #f87171; }

@@ -1281,6 +1281,7 @@ export default function App() {
   const sandboxOk = (gameMode === 'classic' || gameMode === 'all-time') && !dailyRun && !competeOn && page !== 'takeover-build' && page !== 'career-build' && page !== 'versus-game'
 
   const navbarProps = {
+    gradesToggle: drop && !competeOn && page !== 'versus-game',   // phones: the grades switch lives in the navbar
     onReset: competeOn ? undefined : handleReset,
     onAbout: () => setPage('about'),
     onHome: handleHome,

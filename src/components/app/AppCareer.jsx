@@ -372,7 +372,7 @@ function Lineup({ c }) {
     <span className={`crl-man${p.you ? ' is-you' : ''}`}>
       <span className="crl-face">
         {p.you ? <AvatarBadge self name={c.name} size={S.isBucket ? 48 : 34} /> : p.photo ? <img src={photoSrc(p.photo)} alt="" loading="lazy" /> : <span className="crl-init">{initials(p.name)}</span>}
-        <i style={{ background: gradeColor(ovrGradeVal(p.ovr)) }}>{S.isBucket ? p.ovr : gradeOfOvr(p.ovr)}</i>
+        <i style={{ background: gradeColor(ovrGradeVal(p.ovr)) }}>{p.ovr}</i>
       </span>
       <b>{p.you ? c.name : S.isBucket ? shortName(p.name) : nick(p.name)}</b>
       {S.isBucket ? p.rookie && <small>ROOKIE</small> : <small>{slot}{p.rookie ? ' · ROOKIE' : ''}</small>}
@@ -409,12 +409,12 @@ function Lineup({ c }) {
       ) : (
         // 11 personnel: split end, the line with the tight end on the right,
         // flanker wide right, slot off the ball, QB under center, back behind him
-        <div className="crl-field crl-field--nfl">
-          <span className="crl-los" aria-hidden="true" />
+        <div className="crl-field crl-field--nfl crl-field--off">
           <span className="crl-at" style={{ '--c': 1, '--r': 1 }}><Man p={L.wr[0]} slot="WR" /></span>
           {L.ol.map((p, i) => <span key={p.name} className="crl-at" style={{ '--c': 3 + i, '--r': 1 }}><Man p={p} slot={p.slot ?? ['LT', 'LG', 'C', 'RG', 'RT'][i]} /></span>)}
-          <span className="crl-at" style={{ '--c': 8, '--r': 1 }}><Man p={L.te[0]} slot="TE" /></span>
-          <span className="crl-at" style={{ '--c': 9, '--r': 1 }}><Man p={L.wr[1]} slot="WR" /></span>
+          {/* a gap between the right tackle and the tight end: he's not part of the line */}
+          <span className="crl-at" style={{ '--c': 9, '--r': 1 }}><Man p={L.te[0]} slot="TE" /></span>
+          <span className="crl-at" style={{ '--c': 10, '--r': 1 }}><Man p={L.wr[1]} slot="WR" /></span>
           <span className="crl-at" style={{ '--c': 2, '--r': 2 }}><Man p={L.wr[2]} slot="SLOT" /></span>
           <span className="crl-at" style={{ '--c': 5, '--r': 2 }}><Man p={L.qb[0]} slot="QB" /></span>
           <span className="crl-at" style={{ '--c': 5, '--r': 3 }}><Man p={L.rb[0]} slot="RB" /></span>
@@ -431,7 +431,7 @@ function Lineup({ c }) {
       <div className="crl-bench">
         <span className="ag-eyebrow">DEPTH CHART · {POS_NAME[c.pos].toUpperCase()}</span>
         {dc.all.map((p, i) => (
-          <span key={p.name + i} className={`crl-depth${p.you ? ' is-you' : ''}`}><i>{S.isBucket ? i + 1 : `${POS_LABEL[c.pos]}${i + 1}`}</i><b>{p.name}</b><small>{gradeOfOvr(p.ovr)} · age {p.age}</small></span>
+          <span key={p.name + i} className={`crl-depth${p.you ? ' is-you' : ''}`}><i>{S.isBucket ? i + 1 : `${POS_LABEL[c.pos]}${i + 1}`}</i><b>{p.name}</b><small>{p.ovr} OVR · age {p.age}</small></span>
         ))}
       </div>
       )}
@@ -678,7 +678,7 @@ function Moves({ c, setCareer, forced }) {
           {moves.map((m, i) => (
             <div key={i} className={`cr-move is-${m.kind}`}>
               <span className="crl-face crl-face--sm">{m.p?.photo ? <img src={photoSrc(m.p.photo)} alt="" loading="lazy" /> : <span className="crl-init">{initials(m.p?.name)}</span>}</span>
-              <span className="cr-move-txt"><b>{m.text}</b><small>{m.pos.toUpperCase()} · {gradeOfOvr(m.p?.ovr ?? 70)} · age {m.p?.age}</small></span>
+              <span className="cr-move-txt"><b>{m.text}</b><small>{m.pos.toUpperCase()} · {m.p?.ovr ?? 70} OVR · age {m.p?.age}</small></span>
               <span className="cr-move-tag">{MOVE_TAG[m.kind]}</span>
             </div>
           ))}

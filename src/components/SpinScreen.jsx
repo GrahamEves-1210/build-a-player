@@ -276,6 +276,13 @@ const POS_COLORS = {
   PG: '#7dd3fc', SG: '#86efac', SF: '#fdba74', PF: '#d8b4fe', C: '#fca5a5',
 }
 
+// Hide or show the grades on the spin's chips. Shared: the spin's own switch and
+// the phone navbar's both set it, and both follow it.
+export const gradesHiddenNow = () => { try { return localStorage.getItem('bap-hide-grades') === 'true' } catch { return false } }
+export function setGradesHidden(v) {
+  try { localStorage.setItem('bap-hide-grades', String(!!v)) } catch {}
+  window.dispatchEvent(new CustomEvent('bap:grades', { detail: !!v }))
+}
 // ─── SpinScreen ──────────────────────────────────────────────────────────────
 export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, activeCategory, resetKey, onChipTap, types = TYPES, isLite = false, qbPool = QBS, savedResult = null, onSaveResult, onPhaseChange, gameKey, onReset, adsDisabled = false, isRB = false, isWR = false, isTE = false, isDB = false, isOL = false, isAllTime = false, isBucket = false, isVersusMode = false, attrMap = ATTR, categoriesData = CATEGORIES, teamsPool = TEAMS, logoDir = '/logos/', playerLabel, headshotsMap = HEADSHOTS, headshotsDir = `${HEADSHOT_BASE}/`, hideTeamResult = false, headshotFallback = () => null, seedPlan = null, cardMeta = null, paused = false, gradesHidden = false }) {
   // live competitive modes (1v1, Compete pools): the grades stay hidden, no toggle
@@ -293,11 +300,9 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
   const [spinCount, setSpinCount]       = useState(0)
   const [hideGrades,   setHideGrades]   = useState(() => localStorage.getItem('bap-hide-grades') === 'true')
 
-  const toggleGrades = () => setHideGrades(prev => {
-    const next = !prev
-    localStorage.setItem('bap-hide-grades', next)
-    return next
-  })
+  const toggleGrades = () => setGradesHidden(!hideGrades)
+  // the switch can also live in the navbar (phones): stay in step with it
+  useEffect(() => { const on = e => setHideGrades(!!e.detail); window.addEventListener('bap:grades', on); return () => window.removeEventListener('bap:grades', on) }, [])
   const usedTeamsRef = useRef([])
   const pauseRef = useRef(null)
   // App: every revealed player goes to the card binder ('bap:spin' → lib/progress.js)
