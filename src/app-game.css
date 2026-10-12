@@ -4412,3 +4412,60 @@ html.is-android .ag-toast { background: rgba(8,12,10,.97); }
 
 /* Career: a trait out of upgrades */
 .cr-trait-max { margin-left: 6px; padding: 1px 5px 0; border-radius: 5px; font-style: normal; font-family: var(--ag-font); font-size: 10px; letter-spacing: 1px; color: #0b0f0d; background: #f5dc8a; vertical-align: 1px; }
+
+/* ── Phones: the player is the screen, the spin drops down from the top ──────
+   (components/app/AppBuildTray.jsx: DropBar, DropSheet; the layout is .ag-drop) */
+.drop-bar { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: rgba(9,12,11,.94); border-bottom: 1px solid var(--ag-line); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+.drop-slots { flex: 1; min-width: 0; display: grid; gap: 3px; }
+.drop-slots .ag-slot { min-width: 0; padding: 3px 0 2px; }
+.drop-slots .ag-slot-lbl { font-size: 9.5px; letter-spacing: .3px; }
+.drop-slots .ag-slot-val { font-size: 13px; min-height: 14px; }
+.drop-bar-spin { flex: none; display: inline-flex; align-items: center; gap: 5px; height: 44px; padding: 0 16px; border: 0; border-radius: 12px; background: linear-gradient(180deg, #52e0b4, #22c08c); color: #04140e; font-family: var(--ag-font); font-size: 19px; letter-spacing: 2px; cursor: pointer; box-shadow: 0 4px 14px rgba(34,192,140,.35); }
+.drop-bar-spin:active { transform: scale(.96); }
+.drop-bar-spin.is-pick { background: linear-gradient(180deg, #ffe39a, #f5c542); color: #1d1503; animation: drop-pick 1.6s ease-in-out infinite; }
+.drop-bar.is-open .drop-bar-spin { background: rgba(255,255,255,.08); color: var(--ag-text); box-shadow: none; font-size: 15px; }
+@keyframes drop-pick { 50% { box-shadow: 0 0 0 5px rgba(245,197,66,.25); } }
+[data-sport="bucket"] .drop-bar-spin:not(.is-pick) { background: linear-gradient(180deg, #ff9a52, #ea6a1c); color: #1a0a02; box-shadow: 0 4px 14px rgba(234,106,28,.35); }
+.drop-bar-done { flex: none; font-family: var(--ag-font); font-size: 16px; letter-spacing: 1px; color: var(--ag-muted); }
+.drop-bar-done b { color: #4ade80; font-size: 20px; }
+
+/* the sheet: out of sight above the screen until SPIN drops it */
+.drop-scrim { position: fixed; inset: 0; z-index: 900; background: rgba(0,0,0,.5); opacity: 0; pointer-events: none; transition: opacity .25s; }
+.drop-scrim.is-open { opacity: 1; pointer-events: auto; }
+.game-layout.ag-drop .drop-sheet { position: fixed; left: 0; right: 0; top: 0; z-index: 901; max-height: 100dvh; overflow-y: auto; overscroll-behavior: contain;
+  padding-top: calc(env(safe-area-inset-top) + var(--drop-nav, 54px)); background: #0b0f0e; border-radius: 0 0 22px 22px; border-bottom: 1px solid var(--ag-line-hi, rgba(255,255,255,.14));
+  box-shadow: 0 18px 40px rgba(0,0,0,.6); transform: translate3d(0, -104%, 0); transition: transform .34s cubic-bezier(.2,.8,.2,1); will-change: transform; }
+.game-layout.ag-drop .drop-sheet.is-open { transform: none; }
+.drop-sheet-grip { display: flex; justify-content: center; width: 100%; padding: 6px 0 9px; border: 0; background: none; cursor: pointer; }
+.drop-sheet-grip span { width: 44px; height: 5px; border-radius: 3px; background: rgba(255,255,255,.28); }
+
+/* inside the sheet: everything compact, the traits a grid you can see at once */
+.game-layout.ag-drop .spin-panel-wrap { display: block !important; position: static; }
+.game-layout.ag-drop .spin-panel-reset-tab { display: none !important; }
+.game-layout.ag-drop .spin-panel { display: flex !important; flex: none !important; height: auto !important; max-height: none !important; min-height: 0 !important; overflow: visible !important; width: 100% !important; background: none !important; border: 0 !important; }
+.game-layout.ag-drop .spin-panel-body { margin: 0 !important; padding: 10px 12px 0 !important; min-height: 0 !important; overflow: visible !important; }
+.game-layout.ag-drop .spin-panel-static { gap: 8px !important; }
+.game-layout.ag-drop .spin-top-row { display: none !important; }
+.game-layout.ag-drop .reels-wrap { zoom: .8; margin: 0 auto !important; }
+.game-layout.ag-drop .ad-cntr1-mobile, .game-layout.ag-drop #ramp-cntr1 { display: none !important; }
+.game-layout.ag-drop .spin-btn-wrap { margin: 0 !important; }
+.game-layout.ag-drop .spin-btn { height: 50px !important; font-size: 26px !important; }
+.game-layout.ag-drop .spin-respin-half { height: 44px !important; font-size: 15px !important; }
+.game-layout.ag-drop .spin-reset-circle { display: inline-flex !important; height: 44px !important; width: 56px !important; }
+.game-layout.ag-drop .qb-reveal-card { padding: 8px 12px !important; min-height: 0 !important; margin: 0 !important; }
+.game-layout.ag-drop .qb-reveal-name { font-size: 20px !important; }
+.game-layout.ag-drop .spin-panel-scroll { display: grid !important; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; padding: 8px 0 2px !important; overflow: visible !important; max-height: none !important; }
+.game-layout.ag-drop .attr-category-section { display: contents !important; }
+.game-layout.ag-drop .attr-category-hd { display: none !important; }
+.game-layout.ag-drop .spin-hint-text { grid-column: 1 / -1; margin: 4px 0 !important; font-size: 14px !important; }
+.game-layout.ag-drop .attr-chip { display: flex !important; flex-direction: column; align-items: flex-start; justify-content: space-between; gap: 2px; min-height: 56px !important; height: auto !important; margin: 0 !important; padding: 7px 9px !important; border-radius: 10px !important; position: relative; }
+.game-layout.ag-drop .attr-chip .chip-photo, .game-layout.ag-drop .attr-chip .chip-hint, .game-layout.ag-drop .attr-chip .chip-qb { display: none !important; }
+.game-layout.ag-drop .attr-chip .chip-text { min-width: 0; width: 100%; }
+.game-layout.ag-drop .attr-chip .chip-name { display: block; font-size: 13px !important; letter-spacing: .6px !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.game-layout.ag-drop .attr-chip .chip-val { position: static !important; font-size: 20px !important; min-width: 0 !important; height: auto !important; padding: 0 !important; background: none !important; color: var(--chip-col) !important; box-shadow: none !important; line-height: 1 !important; }
+
+/* the player: the whole screen under the bar */
+.game-layout.ag-drop .field-center { display: flex !important; flex: none !important; height: calc(100svh - var(--drop-chrome)) !important; min-height: 300px !important; }
+/* what's around the player: the top bar, the build bar, the OVR row under him, the dock (app) or the ad rail (website) */
+html { --drop-chrome: calc(330px + var(--web-rail, 0px)); }
+html.is-app { --drop-chrome: calc(352px + env(safe-area-inset-top) + env(safe-area-inset-bottom)); }

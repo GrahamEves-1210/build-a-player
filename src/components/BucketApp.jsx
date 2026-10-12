@@ -35,7 +35,7 @@ import SiteFooter from './SiteFooter'
 import SiteFeatures from './SiteFeatures'
 import { IS_APP, APP_LOOK } from '../lib/platform'
 import AppHome from './app/AppHome'
-import { FlipEdge, BuildComplete, useFlip, StackEdge, StackSeam } from './app/AppBuildTray'
+import { FlipEdge, BuildComplete, useFlip, StackEdge, StackSeam, useDropMode, useDropSheet, DropBar, DropSheet } from './app/AppBuildTray'
 import { useCompete, botBuild } from '../lib/compete'
 import { setLiveLock, liveLock, guardLeave } from '../lib/liveLock'
 import { useAuction } from '../lib/auction'
@@ -725,7 +725,10 @@ export default function BucketApp() {
 
   // App: Spin and Build are two sides of one card — swipe to flip, and the
   // last pick flips it to Build (drag-and-drop included)
-  const flip = useFlip(IS_APP && (page === 'game' || page === 'versus-game' || page === 'blacktop-build' || page === 'takeover-build' || page === 'career-build'), mobileView, setMobileView)
+  // Phones (app and website): the player is the screen and the spin drops down over it
+  const drop = useDropMode((IS_APP || APP_LOOK) && gameMode !== 'salarycap' && (page === 'game' || page === 'versus-game' || page === 'blacktop-build' || page === 'takeover-build' || page === 'career-build'))
+  const [dropOpen, setDropOpen] = useDropSheet(drop, build, activeTypes, spinResetKey)
+  const flip = useFlip(IS_APP && !drop && (page === 'game' || page === 'versus-game' || page === 'blacktop-build' || page === 'takeover-build' || page === 'career-build'), mobileView, setMobileView)
   const buildComplete = activeTypes.length > 0 && activeTypes.every(t => build[t])
   useEffect(() => { if (IS_APP && buildComplete && (page === 'game' || page === 'takeover-build' || page === 'career-build')) flip('build') }, [buildComplete]) // eslint-disable-line react-hooks/exhaustive-deps
   // Website: the build-complete hit (the app's BuildComplete screen plays its own)
@@ -1547,12 +1550,14 @@ export default function BucketApp() {
           me={{ name: getUsername(user) || 'Guest', self: true, build, types: activeTypes, pos: position }}
           opp={{ name: versusRoom.oppName || 'Guest', cos: versusRoom.oppCos, uid: uidFromVsId(versusRoom.oppId), build: oppBuild, types: VERSUS_POS_TYPES[oppPosition] ?? VERSUS_GUARD_TYPES, pos: oppPosition }} />
       )}
-      {IS_APP && (
+      {IS_APP && !drop && (
         <StackEdge view={mobileView} build={build} types={activeTypes} attrMap={BUCKET_ATTR} onFlip={flip}
           waiting={savedSpinResult?.selectedQB?.name ?? null} complete={buildComplete} />
       )}
-      <main className={`game-layout ${IS_APP ? 'mobile-build ag-stack' : `mobile-${mobileView}`}${gameMode === 'all-time' ? ' alltime-mode' : ''}${page === 'versus-game' || liveBuild ? ' versus-active' : ''}`}>
-        <SpinScreen
+      {drop && <DropBar open={dropOpen} setOpen={setDropOpen} build={build} types={activeTypes} attrMap={BUCKET_ATTR}
+        waiting={savedSpinResult?.selectedQB?.name ?? null} complete={buildComplete} />}
+      <main className={`game-layout ${drop ? 'mobile-build ag-drop' : IS_APP ? 'mobile-build ag-stack' : `mobile-${mobileView}`}${gameMode === 'all-time' ? ' alltime-mode' : ''}${page === 'versus-game' || liveBuild ? ' versus-active' : ''}`}>
+        {(el => (drop ? <DropSheet open={dropOpen} setOpen={setDropOpen}>{el}</DropSheet> : el))(<SpinScreen
           gradesHidden={competeOn}
           build={build}
           activeDrag={activeDrag}
@@ -1585,8 +1590,8 @@ export default function BucketApp() {
           headshotsMap={NBA_HEADSHOTS}
           headshotsDir={`${HEADSHOT_BASE}/nba/`}
           headshotFallback={genericHeadshot}
-        />
-        {IS_APP && <StackSeam build={build} types={activeTypes} onFlip={flip} />}
+        />)}
+        {IS_APP && !drop && <StackSeam build={build} types={activeTypes} onFlip={flip} />}
         <Silhouette
           build={build}
           activeDrag={activeDrag}
@@ -1793,7 +1798,7 @@ export default function BucketApp() {
         />
       )}
 
-      {gameMode !== 'salarycap' && <nav className="mobile-tab-bar">
+      {gameMode !== 'salarycap' && !drop && <nav className="mobile-tab-bar">
         <button
           className={`mtab ${mobileView === 'spin' ? 'active' : ''}`}
           onClick={() => { setMobileView('spin'); window.scrollTo({ top: 0, behavior: 'instant' }); document.querySelector('.game-page-scroll')?.scrollTo({ top: 0, behavior: 'instant' }) }}

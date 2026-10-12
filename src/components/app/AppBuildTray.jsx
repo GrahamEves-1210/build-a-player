@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { whenStill } from '../../lib/userScroll'
 import { valToGrade } from '../../utils/simulation'
 import { IconArrow } from './icons'
+import { IS_APP } from '../../lib/platform'
 
 // App: Spin and Build are one continuous field. The spin wheel sits on top and
 // your player stands right below it (the head peeks up under the SPIN button);
@@ -199,6 +200,93 @@ export function StackEdge({ view, build, types, attrMap, onFlip, waiting = null,
       </span>
       {coach && <span className="ag-coach ag-coach--down"><span className="ag-coach-hand" />Your player is right below. Scroll down, or tap here</span>}
     </button>
+  )
+}
+
+// ── Phones: the player is the screen ─────────────────────────────────────────
+// On the app and on the website at phone width, the build screen is your player.
+// SPIN drops the wheel down from the top, you pick a trait from a compact grid,
+// and the sheet slides back up as the trait lands on the player: no flipping
+// between sides, no scrolling.
+const PHONE_Q = '(max-width: 768px)'
+export function useDropMode(on) {
+  const [phone, setPhone] = useState(() => IS_APP || (typeof window !== 'undefined' && window.matchMedia(PHONE_Q).matches))
+  useEffect(() => {
+    if (IS_APP) return
+    const mq = window.matchMedia(PHONE_Q)
+    const f = () => setPhone(mq.matches)
+    mq.addEventListener('change', f)
+    return () => mq.removeEventListener('change', f)
+  }, [])
+  return !!on && phone
+}
+// open / closed; a pick closes it (once the chip has landed), so does a reset
+export function useDropSheet(enabled, build, types, resetKey) {
+  const [open, setOpen] = useState(false)
+  const filled = types.filter(t => build[t]).length
+  const last = useRef(filled)
+  useEffect(() => {
+    const grew = filled > last.current
+    last.current = filled
+    if (!enabled || !grew) return
+    const id = setTimeout(() => setOpen(false), 380)
+    return () => clearTimeout(id)
+  }, [filled, enabled])
+  useEffect(() => { setOpen(false) }, [resetKey])
+  return [open, setOpen]
+}
+// The bar at the top: the build slot by slot, and the button that drops the spin
+export function DropBar({ open, setOpen, build, types, attrMap, waiting = null, complete = false }) {
+  const filled = types.filter(t => build[t]).length
+  const prev = useRef(new Set(types.filter(t => build[t])))
+  const [fresh, setFresh] = useState(null)
+  useEffect(() => {
+    const now = types.filter(t => build[t])
+    const added = now.find(t => !prev.current.has(t))
+    prev.current = new Set(now)
+    if (!added) return
+    setFresh(added)
+    const id = setTimeout(() => setFresh(null), 700)
+    return () => clearTimeout(id)
+  }, [build, types])
+  const go = () => {
+    if (open) { setOpen(false); return }
+    setOpen(true)
+    // straight into the spin (a waiting pick just shows the traits)
+    if (!waiting && !complete) setTimeout(() => document.querySelector('.drop-sheet .spin-btn:not([disabled])')?.click(), 340)
+  }
+  return (
+    <div className={`drop-bar${open ? ' is-open' : ''}`}>
+      <span className="ag-edge-slots drop-slots" style={{ gridTemplateColumns: `repeat(${types.length}, 1fr)` }}>
+        {types.map(t => {
+          const chip = build[t]
+          return (
+            <span key={t} className={`ag-slot${chip ? ' is-filled' : ''}${fresh === t ? ' is-fresh' : ''}`} style={chip ? { '--g': gradeColor(chip.val) } : undefined}>
+              <span className="ag-slot-lbl">{attrMap?.[t]?.shortLabel ?? t.slice(0, 3).toUpperCase()}</span>
+              <span className="ag-slot-val">{chip ? valToGrade(chip.val) : ''}</span>
+            </span>
+          )
+        })}
+      </span>
+      {!complete && (
+        <button className={`drop-bar-spin${waiting && !open ? ' is-pick' : ''}`} onClick={go} aria-expanded={open}>
+          {open ? <><IconArrow size={14} style={{ transform: 'rotate(-90deg)' }} /> HIDE</> : waiting ? 'PICK' : 'SPIN'}
+        </button>
+      )}
+      {complete && <span className="drop-bar-done"><b>{filled}</b>/{types.length}</span>}
+    </div>
+  )
+}
+// The sheet the spin lives in: up out of sight, or dropped down over the player
+export function DropSheet({ open, setOpen, children }) {
+  return (
+    <>
+      <div className={`drop-scrim${open ? ' is-open' : ''}`} onClick={() => setOpen(false)} aria-hidden="true" />
+      <div className={`drop-sheet${open ? ' is-open' : ''}`} aria-hidden={!open}>
+        {children}
+        <button className="drop-sheet-grip" onClick={() => setOpen(false)} aria-label="Hide the spin"><span /></button>
+      </div>
+    </>
   )
 }
 
