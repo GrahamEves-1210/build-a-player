@@ -279,15 +279,23 @@ export function DropBar({ open, setOpen, build, types, attrMap, waiting = null, 
     const id = setTimeout(() => setFresh(null), 700)
     return () => clearTimeout(id)
   }, [build, types])
-  // where the panel hangs from: the bar's bottom edge
+  // where the panel hangs from: the bar's bottom edge. A live game's status bar
+  // (3v3 squads, 1v1, Compete) is pinned to the top too: sit just under it, never on it.
   useEffect(() => {
     const el = bar.current; if (!el) return
     const html = document.documentElement
     let raf = 0
-    const put = () => { raf = 0; html.style.setProperty('--drop-top', `${Math.round(el.getBoundingClientRect().bottom)}px`) }
+    const hudOf = () => el.parentElement?.querySelector(':scope > .bt-hud > .bt-hud-bar, :scope > .cp-hud')
+    const put = () => {
+      raf = 0
+      const hud = hudOf()
+      el.style.top = hud ? `${Math.round(hud.getBoundingClientRect().height + (hud.classList.contains('bt-hud-bar') ? 12 : 4))}px` : ''
+      html.style.setProperty('--drop-top', `${Math.round(el.getBoundingClientRect().bottom)}px`)
+    }
     const on = () => { if (!raf) raf = requestAnimationFrame(put) }
     put()
     const ro = new ResizeObserver(on); ro.observe(el)
+    const hud0 = hudOf(); if (hud0) ro.observe(hud0)
     window.addEventListener('scroll', on, true); window.addEventListener('resize', on)
     return () => { ro.disconnect(); window.removeEventListener('scroll', on, true); window.removeEventListener('resize', on); cancelAnimationFrame(raf) }
   }, [])

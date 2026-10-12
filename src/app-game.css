@@ -4630,3 +4630,10 @@ html.is-app { --drop-chrome: calc(352px + env(safe-area-inset-top) + env(safe-ar
 .lc-builds-grades { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; }
 .lc-builds-grades i { display: flex; flex-direction: column; align-items: center; padding: 3px 0 2px; border-radius: 7px; background: rgba(255,255,255,.05); font-style: normal; font-family: var(--ag-display); font-size: 16px; line-height: 1.1; color: #fff; }
 .lc-builds-grades i small { font-family: var(--ag-font); font-size: 10px; letter-spacing: .5px; color: var(--ag-muted); }
+
+/* Blacktop: removed from a game (the build clock ran out) */
+.bt-notice { display: flex; flex-direction: column; gap: 4px; width: 100%; padding: 12px 14px; border-radius: 14px; border: 1.5px solid rgba(248,113,113,.55); background: rgba(248,113,113,.1); color: var(--ag-text); font-family: var(--ag-body); font-size: 14px; font-weight: 600; line-height: 1.4; text-align: left; cursor: pointer; }
+.bt-notice small { font-family: var(--ag-font); font-size: 11px; letter-spacing: 1.5px; color: var(--ag-muted); }
+/* the squads panel on a phone: the teams one above the other, and it scrolls if it's long */
+.bt-hud-panel { max-height: calc(100dvh - var(--safe-top) - var(--app-bottom, 0px) - 80px); overflow-y: auto; overscroll-behavior: contain; }
+@media (max-width: 520px) { .bt-hud-teams { grid-template-columns: 1fr !important; } }

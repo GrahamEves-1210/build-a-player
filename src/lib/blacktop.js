@@ -193,14 +193,16 @@ export function useBlacktop({ enabled, user, position, pools, types, build, play
     room.on('final', p => {
       const st = stateRef.current, mm = st.match
       // (the dealer by what I see here, or the lowest id in the game: views of who's here can differ for a moment)
-      if (!mm || ![leaderOf(st.present.length ? st.present : mm.players), leaderOf(mm.players)].includes(p.from) || p.seed !== `${mm.seed}-f`) return
+      // from anyone in the game (the leader first; if the leader's start never comes,
+      // the next in line sends it), on the game's own seed, every build real
+      if (!mm || !mm.players.some(x => !x.bot && x.vid === p.from) || p.seed !== `${mm.seed}-f`) return
       for (const pl of mm.players) {
         const b = p.builds?.[pl.vid]
         if (!buildOk(b, poolOf(pl.pos))) return
         const sent = pl.vid !== me.vid && st.builds[pl.vid]?.done ? st.builds[pl.vid].build : null
         if (sent && !samePicks(sent, Object.fromEntries(Object.entries(b).filter(([t]) => sent[t])))) return
       }
-      setFinal(f => f ?? { builds: p.builds, roles: p.roles, seed: p.seed }); setLocks({}); setMyCalls({}); callsRef.current = {}; setPhase('game')
+      setFinal(f => f ?? { builds: p.builds, roles: p.roles, seed: p.seed, afk: Array.isArray(p.afk) ? p.afk.filter(v => mm.players.some(x => x.vid === v)) : [] }); setLocks({}); setMyCalls({}); callsRef.current = {}; setPhase('game')
     })
     room.on('rematch', p => { if (m.players.some(x => x.vid === p.from)) setRematchVotes(s => new Set([...s, p.from])) })
     // a call: the first one in for a team and possession counts
@@ -310,6 +312,17 @@ export function useBlacktop({ enabled, user, position, pools, types, build, play
   }, [phase, build, role, player, position, types, me.vid])
 
   useEffect(() => {
+    if (phase !== 'build') return
+    const id = setInterval(() => {
+      const { build, position, role, player } = stateRef.current
+      const t = types[position === 'big' ? 'big' : 'guard']
+      const filled = t.filter(k => build?.[k]).length
+      roomRef.current?.send('build', { build, pos: position, role, player, filled, done: filled === t.length })
+    }, 4000)
+    return () => clearInterval(id)
+  }, [phase, types])
+
+  useEffect(() => {
     if (phase !== 'build' || !match) return
     const tick = () => {
       const left = Math.max(0, BUILD_SECS - Math.floor((Date.now() - match.created) / 1000))
@@ -318,7 +331,12 @@ export function useBlacktop({ enabled, user, position, pools, types, build, play
       const humans = match.players.filter(p => !p.bot)
       const here = humans.filter(p => present.some(q => q.vid === p.vid))
       const allDone = here.length > 0 && here.every(p => builds[p.vid]?.done)
-      if ((left <= 0 || allDone) && leaderOf(present) === me.vid && !finalSent.current) {
+      // who starts the game: the leader; if their start doesn't come through, the
+      // next in line takes over 3s later, then the next (views of who's here can differ)
+      const order = [...new Set([leaderOf(present), ...humans.map(p => p.vid).sort()].filter(Boolean))]
+      const rank = Math.max(0, order.indexOf(me.vid))
+      const over = (Date.now() - match.created) / 1000 - BUILD_SECS
+      if (((allDone && rank === 0) || over >= rank * 3) && !finalSent.current) {
         finalSent.current = true
         const seed = `${match.seed}-f`        // the game's own seed: the dealer doesn't pick it
         const out = {}, roles = {}
@@ -328,7 +346,9 @@ export function useBlacktop({ enabled, user, position, pools, types, build, play
           out[p.vid] = autoBuild(have, t, p.pos === 'big' ? pools.big : pools.guard, `${seed}-${p.vid}`)
           roles[p.vid] = builds[p.vid]?.role ?? 'balanced'
         }
-        const f = { builds: out, roles, seed }
+        // anyone who didn't finish in time is out: a CPU takes the spot (the time ran out, not everyone was done)
+        const afk = allDone ? [] : humans.filter(p => !builds[p.vid]?.done).map(p => p.vid)
+        const f = { builds: out, roles, seed, afk }
         roomRef.current?.send('final', f)
         setTimeout(() => roomRef.current?.send('final', f), 1500)   // once more for anyone who blinked
         setFinal(f); setLocks({}); setMyCalls({}); callsRef.current = {}; setPhase('game')
@@ -366,7 +386,12 @@ export function useBlacktop({ enabled, user, position, pools, types, build, play
   // ── Game ───────────────────────────────────────────────────────────────────
   const game = useMemo(() => {
     if (!final || !match) return null
-    const mk = p => ({ id: p.vid, name: p.name, pos: p.pos, role: final.roles[p.vid] ?? 'balanced', build: final.builds[p.vid], bot: p.bot, uid: p.uid, cos: p.cos ?? null })
+    const out = new Set(final.afk ?? [])
+    const cpu = seededShuffle(BOT_NAMES, `${final.seed}-afk`)
+    let ci = 0
+    const mk = p => (out.has(p.vid)
+      ? { id: p.vid, name: cpu[ci++ % cpu.length], pos: p.pos, role: 'balanced', build: final.builds[p.vid], bot: true, uid: null, cos: null }
+      : { id: p.vid, name: p.name, pos: p.pos, role: final.roles[p.vid] ?? 'balanced', build: final.builds[p.vid], bot: p.bot, uid: p.uid, cos: p.cos ?? null })
     const teams = [match.players.filter(p => p.team === 0).map(mk), match.players.filter(p => p.team === 1).map(mk)]
     return { ...simStreetball({ teams, seed: final.seed, goal: 11, winBy: 2, cap: 15, names: [teamName(match, 0), teamName(match, 1)], calls: locks }), teams }
   }, [final, match, locks])
@@ -416,6 +441,16 @@ export function useBlacktop({ enabled, user, position, pools, types, build, play
   }, [phase, rematchVotes, present, match, me.vid, final])
 
   const exit = useCallback(() => { leave(); onExit?.() }, [leave, onExit])
+  // didn't finish in time: a CPU has the spot, and I'm out (it counts as leaving the game)
+  const [kicked, setKicked] = useState(false)
+  useEffect(() => {
+    if (!final?.afk?.includes(me.vid)) return
+    setKicked(true)
+    const mineT = match?.players.find(p => p.vid === me.vid)?.team ?? 0
+    window.dispatchEvent(new CustomEvent('bap:blacktop', { detail: { won: false, mvp: false, line: null, bots: false, score: null, team: mineT, forfeit: true } }))
+    clearEntered(match?.code)
+    exit()
+  }, [final]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const myTeam = match?.players.find(p => p.vid === me.vid)?.team ?? 0
   const visibleChat = useMemo(() => (phase === 'queue' ? lobbyChat : chat.filter(m => m.all || m.team === myTeam)), [chat, lobbyChat, myTeam, phase])
@@ -450,6 +485,6 @@ export function useBlacktop({ enabled, user, position, pools, types, build, play
     canFill: false, join, leave: exit, leaveLobby: leave,
     match, present, builds, clock, role, setRole, chat: visibleChat, sendChat, typing, typers, myTeam, leader, isLeader: leader === me.vid,
     final, game, finish, rematchVotes, voteRematch, exit,
-    locks, myCalls, call, lockCalls, emotes, emote,
+    locks, myCalls, call, lockCalls, emotes, emote, kicked, clearKicked: () => setKicked(false),
   }
 }

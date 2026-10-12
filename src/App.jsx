@@ -1344,7 +1344,7 @@ export default function App() {
           onSaveResult={setSavedSpinResult}
           onPhaseChange={setSpinPhase}
           gameKey={gameKey}
-          onReset={dailyLocked || competeOn ? undefined : handleReset}
+          onReset={dailyLocked || competeOn || page === 'versus-game' ? undefined : handleReset}
           adsDisabled={adsDisabled}
           seedPlan={competePlan ?? dailyPlan}
           key={competePlan ? `cp-${cp.match.code}` : 'spin'}
@@ -1370,7 +1370,7 @@ export default function App() {
           onCategoryChange={setActiveCategory}
           types={activeTypes}
           isLite={gameMode === 'lite'}
-          onReset={competeOn || dailyLocked ? undefined : handleReset}
+          onReset={competeOn || dailyLocked || page === 'versus-game' ? undefined : handleReset}
           isRB={isRB}
           isWR={isWR}
           isTE={isTE}
@@ -1389,7 +1389,7 @@ export default function App() {
             build={build}
             onSimulate={page === 'versus-game' ? handleFaceoff : page === 'takeover-build' ? hitTheRoad : page === 'career-build' ? enterDraft : competeOn ? lockInCompete : handleSimulate}
             simLabel={page === 'takeover-build' ? 'HIT THE ROAD' : page === 'career-build' ? 'ENTER THE DRAFT' : competeOn ? 'LOCK IN' : undefined}
-            onReset={competeOn || dailyLocked ? undefined : handleReset}
+            onReset={competeOn || dailyLocked || page === 'versus-game' ? undefined : handleReset}
             types={activeTypes}
             hasResult={page === 'versus-game' ? false : !!simResult}
             isRB={isRB}

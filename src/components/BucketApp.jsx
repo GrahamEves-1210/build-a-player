@@ -1574,7 +1574,7 @@ export default function BucketApp() {
           onSaveResult={setSavedSpinResult}
           onPhaseChange={setSpinPhase}
           gameKey={gameKey}
-          onReset={competeOn ? undefined : handleReset}
+          onReset={competeOn || liveBuild || page === 'versus-game' ? undefined : handleReset}
           adsDisabled={adsDisabled}
           cardMeta={(IS_APP || APP_LOOK) && gameIsPlay && gameMode !== 'salarycap' ? { sport: 'bucket', pos: position, mode: gameMode } : null}
           seedPlan={competePlan}
@@ -1601,7 +1601,7 @@ export default function BucketApp() {
           onCategoryChange={setActiveCategory}
           types={activeTypes}
           isLite={gameMode === 'lite'}
-          onReset={competeOn ? undefined : handleReset}
+          onReset={competeOn || liveBuild || page === 'versus-game' ? undefined : handleReset}
           isRB={false}
           isBucket={true}
           isPlus={isSubscribed}
@@ -1618,7 +1618,7 @@ export default function BucketApp() {
             build={build}
             onSimulate={page === 'takeover-build' ? hitTheRoad : page === 'career-build' ? enterDraft : competeOn ? lockInCompete : replayOrSpin}
             simLabel={page === 'takeover-build' ? 'HIT THE ROAD' : page === 'career-build' ? 'ENTER THE DRAFT' : competeOn ? 'LOCK IN' : undefined}
-            onReset={competeOn ? undefined : handleReset}
+            onReset={competeOn || liveBuild || page === 'versus-game' ? undefined : handleReset}
             types={activeTypes}
             hasResult={false}
             isRB={false}
@@ -1893,7 +1893,8 @@ export default function BucketApp() {
   // Blacktop: the hub (3v3 · 1v1); JOIN LOBBY puts you in the 3v3 lobby on this same page
   if (page === 'blacktop') {
     if (bt.phase === 'idle') {
-      return <BlacktopHub onBack={() => setPage('splash')} onJoin3v3={() => bt.join()}
+      return <BlacktopHub onBack={() => setPage('splash')} onJoin3v3={() => { bt.clearKicked(); bt.join() }}
+        notice={bt.kicked ? 'The build clock ran out before you finished. A CPU took your spot, and it counts as leaving the game.' : null} onNotice={bt.clearKicked}
         onPickup={() => startVersus(position, { kind: 'pickup' })} onFriend={() => startVersus(position, { kind: 'friend' })}
         onJoinCode={code => startVersus(position, { kind: 'join', code })} />
     }

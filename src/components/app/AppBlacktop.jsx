@@ -74,7 +74,7 @@ export function OneOnOneOptions({ onPickup, onFriend, onJoinCode, error = '' }) 
   )
 }
 
-export function BlacktopHub({ onJoin3v3, onPickup, onFriend, onJoinCode, onBack }) {
+export function BlacktopHub({ onJoin3v3, onPickup, onFriend, onJoinCode, onBack, notice = null, onNotice = null }) {
   const o = useProgress().stats?.online ?? { rating: 800 }
   return (
     <div className="ag-screen ag-screen--bucket bt-hub">
@@ -89,6 +89,7 @@ export function BlacktopHub({ onJoin3v3, onPickup, onFriend, onJoinCode, onBack 
         <button className="bt-hub-rating ag-pop" onClick={() => window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'online' }))}>
           <span className="ag-eyebrow">ONLINE RATING</span><TierChip rating={o.rating} /><b>{o.rating}</b><IconArrow size={13} />
         </button>
+        {notice && <button className="bt-notice ag-pop" onClick={onNotice}>{notice}<small>TAP TO DISMISS</small></button>}
         <section className="bt-mode ag-pop" style={{ '--d': '60ms' }}>
           <div className="bt-mode-head">
             <span className="bt-mode-tag">3V3</span>
