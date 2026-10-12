@@ -1021,8 +1021,8 @@ export function campDrill(c, score, game) {
 const traitName = (c, t) => POS_ATTR[c.pos][t]?.label ?? t
 // A trait is maxed once it shows S (grades are rounded: 10.5 and up is S)
 // How far offseason work can take a trait: you can't train much height. Size
-// moves once in a career, the explosive traits (speed, bounce) three times.
-export const UPGRADE_CAP = { size: 1, heightLength: 1, speed: 3, bounce: 3 }
+// moves twice in a career, the explosive traits (speed, bounce) three times.
+export const UPGRADE_CAP = { size: 2, heightLength: 2, speed: 3, bounce: 3 }
 // at the top of the scale, or out of upgrades for that trait
 export const maxedTrait = (v, ch = null, type = null) => Math.round(v ?? 0) >= 11 || (type != null && UPGRADE_CAP[type] != null && (ch?.upgraded ?? 0) >= UPGRADE_CAP[type])
 export function spendDev(c, type) {
