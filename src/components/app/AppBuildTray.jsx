@@ -235,11 +235,39 @@ export function useDropSheet(enabled, build, types, resetKey) {
   useEffect(() => { setOpen(false) }, [resetKey])
   return [open, setOpen]
 }
-// The bar at the top: the build slot by slot, and the button that drops the spin
+// Dragging the panel: down on the bar opens it, up on the panel closes it. The
+// panel follows the finger, and past 36px (or on a plain tap) it goes the rest
+// of the way.
+const sheetEl = () => document.querySelector('.drop-sheet')
+function useDrag(open, setOpen, dir) {           // dir: 1 = a pull down opens, -1 = a push up closes
+  const st = useRef(null)
+  const onPointerDown = e => { st.current = { y: e.clientY, dy: 0, moved: false }; e.currentTarget.setPointerCapture?.(e.pointerId) }
+  const onPointerMove = e => {
+    const d = st.current; if (!d) return
+    d.dy = e.clientY - d.y
+    if (Math.abs(d.dy) > 6) d.moved = true
+    const el = sheetEl(); if (!el || !d.moved) return
+    el.style.transition = 'none'
+    if (dir === 1 && !open) el.style.transform = `translate3d(0, calc(-100% + ${Math.max(0, d.dy)}px), 0)`
+    if (dir === -1 && open) el.style.transform = `translate3d(0, ${Math.min(0, d.dy)}px, 0)`
+  }
+  const end = tap => () => {
+    const d = st.current; st.current = null
+    const el = sheetEl(); if (el) { el.style.transition = ''; el.style.transform = '' }
+    if (!d) return
+    if (!d.moved) { tap(); return }
+    if (dir === 1 && d.dy > 36) setOpen(true)
+    if (dir === -1 && d.dy < -36) setOpen(false)
+  }
+  return tap => ({ onPointerDown, onPointerMove, onPointerUp: end(tap), onPointerCancel: () => { st.current = null; const el = sheetEl(); if (el) { el.style.transition = ''; el.style.transform = '' } } })
+}
+// The bar at the top: the build slot by slot. Tap it, or pull it down, and the
+// spin panel drops out from under it; SPIN is in the panel.
 export function DropBar({ open, setOpen, build, types, attrMap, waiting = null, complete = false }) {
   const filled = types.filter(t => build[t]).length
   const prev = useRef(new Set(types.filter(t => build[t])))
   const [fresh, setFresh] = useState(null)
+  const bar = useRef(null)
   useEffect(() => {
     const now = types.filter(t => build[t])
     const added = now.find(t => !prev.current.has(t))
@@ -249,14 +277,23 @@ export function DropBar({ open, setOpen, build, types, attrMap, waiting = null, 
     const id = setTimeout(() => setFresh(null), 700)
     return () => clearTimeout(id)
   }, [build, types])
-  const go = () => {
-    if (open) { setOpen(false); return }
-    setOpen(true)
-    // straight into the spin (a waiting pick just shows the traits)
-    if (!waiting && !complete) setTimeout(() => document.querySelector('.drop-sheet .spin-btn:not([disabled])')?.click(), 340)
-  }
+  // where the panel hangs from: the bar's bottom edge
+  useEffect(() => {
+    const el = bar.current; if (!el) return
+    const html = document.documentElement
+    let raf = 0
+    const put = () => { raf = 0; html.style.setProperty('--drop-top', `${Math.round(el.getBoundingClientRect().bottom)}px`) }
+    const on = () => { if (!raf) raf = requestAnimationFrame(put) }
+    put()
+    const ro = new ResizeObserver(on); ro.observe(el)
+    window.addEventListener('scroll', on, true); window.addEventListener('resize', on)
+    return () => { ro.disconnect(); window.removeEventListener('scroll', on, true); window.removeEventListener('resize', on); cancelAnimationFrame(raf) }
+  }, [])
+  const drag = useDrag(open, setOpen, 1)
+  const toggle = () => { if (complete && !open) return; setOpen(!open) }
   return (
-    <div className={`drop-bar${open ? ' is-open' : ''}`}>
+    <div ref={bar} className={`drop-bar${open ? ' is-open' : ''}`} role="button" tabIndex={0} aria-expanded={open} aria-label={open ? 'Hide the spin' : 'Show the spin'}
+      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle() } }} {...drag(toggle)}>
       <span className="ag-edge-slots drop-slots" style={{ gridTemplateColumns: `repeat(${types.length}, 1fr)` }}>
         {types.map(t => {
           const chip = build[t]
@@ -269,24 +306,26 @@ export function DropBar({ open, setOpen, build, types, attrMap, waiting = null, 
         })}
       </span>
       {!complete && (
-        <button className={`drop-bar-spin${waiting && !open ? ' is-pick' : ''}`} onClick={go} aria-expanded={open}>
-          {open ? <><IconArrow size={14} style={{ transform: 'rotate(-90deg)' }} /> HIDE</> : waiting ? 'PICK' : 'SPIN'}
-        </button>
+        <span className={`drop-bar-spin${waiting && !open ? ' is-pick' : ''}`} aria-hidden="true">
+          {waiting && !open ? 'PICK' : 'SPIN'} <IconArrow size={13} style={{ transform: `rotate(${open ? -90 : 90}deg)` }} />
+        </span>
       )}
       {complete && <span className="drop-bar-done"><b>{filled}</b>/{types.length}</span>}
+      <span className="drop-bar-grab" aria-hidden="true" />
     </div>
   )
 }
-// The sheet the spin lives in: up out of sight, or dropped down over the player
+// The panel the spin lives in: tucked up under the bar, or dropped down over
+// the top of the player. The page behind it stays live (no overlay).
 export function DropSheet({ open, setOpen, children }) {
+  const drag = useDrag(open, setOpen, -1)
   return (
-    <>
-      <div className={`drop-scrim${open ? ' is-open' : ''}`} onClick={() => setOpen(false)} aria-hidden="true" />
+    <div className="drop-clip">
       <div className={`drop-sheet${open ? ' is-open' : ''}`} aria-hidden={!open}>
         {children}
-        <button className="drop-sheet-grip" onClick={() => setOpen(false)} aria-label="Hide the spin"><span /></button>
+        <div className="drop-sheet-grip" role="button" aria-label="Hide the spin" {...drag(() => setOpen(false))}><span /></div>
       </div>
-    </>
+    </div>
   )
 }
 

@@ -4435,15 +4435,18 @@ html.is-android .ag-toast { background: rgba(8,12,10,.97); }
 .drop-bar-done { flex: none; font-family: var(--ag-font); font-size: 16px; letter-spacing: 1px; color: var(--ag-muted); }
 .drop-bar-done b { color: #4ade80; font-size: 20px; }
 
-/* the sheet: out of sight above the screen until SPIN drops it */
-.drop-scrim { position: fixed; inset: 0; z-index: 900; background: rgba(0,0,0,.5); opacity: 0; pointer-events: none; transition: opacity .25s; }
-.drop-scrim.is-open { opacity: 1; pointer-events: auto; }
-.game-layout.ag-drop .drop-sheet { position: fixed; left: 0; right: 0; top: 0; z-index: 901; max-height: 100dvh; overflow-y: auto; overscroll-behavior: contain;
-  padding-top: calc(env(safe-area-inset-top) + var(--drop-nav, 54px)); background: #0b0f0e; border-radius: 0 0 22px 22px; border-bottom: 1px solid var(--ag-line-hi, rgba(255,255,255,.14));
-  box-shadow: 0 18px 40px rgba(0,0,0,.6); transform: translate3d(0, -104%, 0); transition: transform .34s cubic-bezier(.2,.8,.2,1); will-change: transform; }
+/* the panel: tucked under the bar (clipped there) until it's dropped. No overlay:
+   the page behind stays live and scrolls. --drop-top is the bar's bottom edge. */
+.game-layout.ag-drop .drop-clip { position: fixed; left: 0; right: 0; top: var(--drop-top, 120px); bottom: 0; z-index: 60; overflow: hidden; pointer-events: none; }
+.game-layout.ag-drop .drop-sheet { position: relative; pointer-events: auto; max-height: calc(100% - var(--app-bottom, 0px) - 70px); overflow-y: auto; overscroll-behavior: contain;
+  background: rgba(10,14,13,.97); border-radius: 0 0 20px 20px; border: 1px solid var(--ag-line); border-top: 0;
+  box-shadow: 0 16px 34px rgba(0,0,0,.55); transform: translate3d(0, -101%, 0); transition: transform .3s cubic-bezier(.2,.8,.2,1); will-change: transform; }
+.game-layout.ag-drop .drop-sheet:not(.is-open) { pointer-events: none; }
 .game-layout.ag-drop .drop-sheet.is-open { transform: none; }
-.drop-sheet-grip { display: flex; justify-content: center; width: 100%; padding: 6px 0 9px; border: 0; background: none; cursor: pointer; }
-.drop-sheet-grip span { width: 44px; height: 5px; border-radius: 3px; background: rgba(255,255,255,.28); }
+.drop-sheet-grip { position: sticky; bottom: 0; display: flex; justify-content: center; padding: 8px 0 10px; background: linear-gradient(0deg, rgba(10,14,13,1) 60%, rgba(10,14,13,0)); cursor: grab; touch-action: none; }
+.drop-sheet-grip span { width: 48px; height: 5px; border-radius: 3px; background: rgba(255,255,255,.32); }
+.drop-bar { cursor: pointer; touch-action: none; user-select: none; -webkit-user-select: none; }
+.drop-bar-grab { position: absolute; left: 50%; bottom: 3px; width: 36px; height: 4px; margin-left: -18px; border-radius: 2px; background: rgba(255,255,255,.22); }
 
 /* inside the sheet: everything compact, the traits a grid you can see at once */
 .game-layout.ag-drop .spin-panel-wrap { display: block !important; position: static; }
@@ -4456,14 +4459,26 @@ html.is-android .ag-toast { background: rgba(8,12,10,.97); }
 .game-layout.ag-drop .grade-toggle-btn { display: inline-flex !important; align-items: center; justify-content: center; height: 38px !important; min-width: 210px !important; padding: 0 18px !important; margin: 0 !important; border-radius: 19px !important; border: 1.5px solid currentColor !important; font-family: var(--ag-font) !important; font-size: 16px !important; letter-spacing: 1.6px !important; }
 .game-layout.ag-drop .grade-toggle-on { color: #5edbd8 !important; background: rgba(94,219,216,.14) !important; }
 .game-layout.ag-drop .grade-toggle-off { color: #f87171 !important; background: rgba(248,113,113,.14) !important; }
-.game-layout.ag-drop .reels-wrap { zoom: .8; margin: 0 auto !important; }
+.game-layout.ag-drop .reels-wrap { width: 100% !important; max-width: 420px; margin: 0 auto !important; }
+.game-layout.ag-drop .reels-row { width: 100%; }
+.game-layout.ag-drop .reel-outer { flex: 1 1 0 !important; min-width: 0; }
+.game-layout.ag-drop .reel-window { height: 132px !important; }
+.game-layout.ag-drop .reel-track { margin-top: -44px; }
+.game-layout.ag-drop .reel-selector { top: 44px !important; }
+.game-layout.ag-drop .reel-tri { top: 93px !important; }
+.game-layout.ag-drop .reel-label { margin: 4px auto 2px !important; font-size: 12px !important; }
 .game-layout.ag-drop .ad-cntr1-mobile, .game-layout.ag-drop #ramp-cntr1 { display: none !important; }
 .game-layout.ag-drop .spin-btn-wrap { margin: 0 !important; }
 .game-layout.ag-drop .spin-btn { height: 50px !important; font-size: 26px !important; }
 .game-layout.ag-drop .spin-respin-half { height: 44px !important; font-size: 15px !important; }
 .game-layout.ag-drop .spin-reset-circle { display: inline-flex !important; height: 44px !important; width: 56px !important; }
-.game-layout.ag-drop .qb-reveal-card { padding: 8px 12px !important; min-height: 0 !important; margin: 0 !important; }
-.game-layout.ag-drop .qb-reveal-name { font-size: 20px !important; }
+.game-layout.ag-drop .qb-reveal-card { display: flex !important; align-items: center !important; gap: 10px !important; padding: 6px 10px !important; min-height: 0 !important; height: auto !important; margin: 0 !important; border-radius: 12px !important; }
+.game-layout.ag-drop .qb-reveal-hero { flex: none !important; width: 48px !important; height: 48px !important; margin: 0 !important; }
+.game-layout.ag-drop .qb-reveal-hero > * { width: 48px !important; height: 48px !important; }
+.game-layout.ag-drop .qb-reveal-text { min-width: 0; flex: 1; }
+.game-layout.ag-drop .qb-reveal-meta { font-size: 12.5px !important; }
+.game-layout.ag-drop .qb-reveal-pos { flex: none; width: 34px !important; height: 34px !important; font-size: 12px !important; }
+.game-layout.ag-drop .qb-reveal-name { font-size: 18px !important; line-height: 1.05 !important; }
 .game-layout.ag-drop .spin-panel-scroll { display: grid !important; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; padding: 8px 0 2px !important; overflow: visible !important; max-height: none !important; }
 .game-layout.ag-drop .attr-category-section { display: contents !important; }
 .game-layout.ag-drop .attr-category-hd { display: none !important; }
@@ -4512,3 +4527,34 @@ html.is-app { --drop-chrome: calc(352px + env(safe-area-inset-top) + env(safe-ar
 .lg-mode span { font-family: var(--ag-body); font-size: 14px; line-height: 1.45; color: var(--ag-text-2); }
 .lg-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 18px; margin-top: 8px !important; }
 .lg-links .about-text-link { font-family: var(--ag-font); font-size: 15px; letter-spacing: 1px; color: var(--ag-a1); }
+/* the drop panel, tightened: one-row player card, shorter buttons and trait boxes */
+.game-layout.ag-drop .qb-reveal-text { padding: 0 !important; }
+.game-layout.ag-drop .grade-toggle-btn { height: 32px !important; min-width: 180px !important; font-size: 14px !important; }
+.game-layout.ag-drop .spin-btn { min-height: 48px !important; height: 48px !important; font-size: 26px !important; }
+.game-layout.ag-drop .spin-respin-half { min-height: 44px !important; }
+.game-layout.ag-drop .spin-reset-circle { min-height: 44px !important; }
+.game-layout.ag-drop .attr-chip { min-height: 46px !important; padding: 5px 9px !important; }
+.game-layout.ag-drop .attr-chip .chip-val { font-size: 18px !important; }
+/* Takeover duo: the code to share, big, until the partner shows up */
+.tk-code { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 14px 14px 12px; border-radius: 16px; border: 1.5px dashed color-mix(in srgb, var(--ag-a1) 60%, transparent); background: color-mix(in srgb, var(--ag-a1) 8%, transparent); text-align: center; }
+.tk-code-val { font-family: var(--ag-display); font-weight: 400; font-size: 44px; line-height: 1; letter-spacing: 6px; color: #fff; user-select: all; -webkit-user-select: all; }
+.tk-code-btn { width: auto !important; padding: 0 22px !important; height: 40px !important; }
+.tk-code small { font-family: var(--ag-body); font-size: 13px; color: var(--ag-muted); }
+/* Takeover football: the drive on a broadcast-style field strip */
+.tk-fs { display: flex; flex-direction: column; gap: 4px; padding: 10px 10px 6px; border-radius: 14px; border: 1px solid var(--ag-line); background: rgba(255,255,255,.04); }
+.tk-fs-head { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 30px; font-family: var(--ag-display); font-size: 24px; letter-spacing: 1px; color: var(--tc); }
+.tk-fs-head span { animation: ag-zoom .4s cubic-bezier(.2,1.3,.3,1) both; }
+.tk-fs-head.is-td { font-size: 30px; text-shadow: 0 0 20px color-mix(in srgb, var(--tc) 55%, transparent); }
+.tk-fs-head img { width: 26px; height: 26px; object-fit: contain; }
+.tk-fs-svg { width: 100%; height: auto; display: block; overflow: visible; }
+.tk-fs-ez-me { fill: color-mix(in srgb, var(--ag-a1) 70%, #0a3d24); }
+.tk-fs-ez-txt { fill: #fff; font-family: var(--ag-font); font-size: 8.5px; letter-spacing: 1px; text-anchor: middle; dominant-baseline: middle; opacity: .92; }
+.tk-fs-line { stroke: rgba(255,255,255,.55); stroke-width: .7; }
+.tk-fs-line.is-goal { stroke: #fff; stroke-width: 1.4; }
+.tk-fs-num { fill: var(--ag-text-2); font-family: var(--ag-font); font-size: 8px; text-anchor: middle; dominant-baseline: hanging; }
+.tk-fs-los { stroke: #facc15; stroke-width: 1.4; opacity: .9; }
+.tk-fs-arc { fill: none; stroke: var(--ag-a1); stroke-width: 2.2; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 1; animation: tk-fs-draw .7s ease-out forwards; }
+.tk-fs-ball { fill: #fff; stroke: #2b1607; stroke-width: 1.2; opacity: 0; animation: tk-fs-pop .2s .65s ease-out forwards; }   /* opacity only: a transform would shift it off the arc */
+@keyframes tk-fs-draw { to { stroke-dashoffset: 0; } }
+@keyframes tk-fs-pop { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .tk-fs-arc { animation: none; stroke-dashoffset: 0; } .tk-fs-ball { animation: none; opacity: 1; } }

@@ -124,6 +124,8 @@ export default function AppTakeover({ sport, run, setRun, user, pools, attrMap, 
             {run.mode !== 'duo' && <button className="ag-chip" onClick={() => setScreen('duo')}>DUO</button>}
             {run.mode === 'duo' && <button className={`ag-chip${duo.partner ? ' is-on' : ''}`} onClick={() => setChatOpen(true)}><IconChat size={13} /> {duo.partner ? <NameTag name={duo.partner.name} cos={duo.partner.cos} plate={false} /> : 'WAITING'}</button>}
           </div>
+          {/* duo, waiting on a partner: the code to share, big */}
+          {run.mode === 'duo' && run.code && !duo.partner && <DuoCode code={run.code} host={run.host} />}
           <UsMap cities={cities} run={run} here={here} next={city} />
           {city && star && stop ? (
             <button className="tk-next ag-pop" style={{ '--tc': city.color, '--d': '80ms' }} onClick={() => setScreen('city')}>
@@ -351,6 +353,25 @@ function UsMap({ cities, run, here, next, delay = '40ms' }) {
   )
 }
 
+// The duo code, waiting on the other player: big, with a copy / share button
+function DuoCode({ code, host }) {
+  const [done, setDone] = useState('')
+  const share = async () => {
+    const text = `Takeover duo on Build-A-Player. Join with code ${code}`
+    try {
+      if (navigator.share) { await navigator.share({ text }); return }
+      await navigator.clipboard.writeText(code); setDone('COPIED'); setTimeout(() => setDone(''), 1800)
+    } catch {}
+  }
+  return (
+    <div className="tk-code ag-pop">
+      <span className="ag-eyebrow">{host ? 'YOUR DUO CODE · SEND IT TO YOUR PARTNER' : 'JOINING · WAITING FOR YOUR PARTNER'}</span>
+      <b className="tk-code-val">{code}</b>
+      {host && <button className="ag-btn ag-btn--ghost tk-code-btn" onClick={share}>{done || 'SHARE CODE'}</button>}
+      <small>{host ? 'They tap DUO, then enter it under JOIN.' : "Hang tight: the road starts when they're here."}</small>
+    </div>
+  )
+}
 function JoinCode({ onJoin }) {
   const [code, setCode] = useState('')
   return (
@@ -416,6 +437,63 @@ function HoopsDuel({ duel, run, city, me, onDone }) {
 }
 
 // ── Duel playback: football ────────────────────────────────────────────────
+// The drive on a field, like a TV broadcast: a 100-yard field with both end
+// zones (yours on the left, the city's on the right), the drive drawn as an arc
+// from where it started to where it ended, the ball at the end. You go left to
+// right, they go right to left. Where a drive starts and stops is drawn from the
+// result (a touchdown reaches the end zone, a punt stalls near midfield).
+const RESULT = { td: 'TOUCHDOWN', fg: 'FIELD GOAL', to: 'TURNOVER', punt: 'PUNT', final: 'FINAL' }
+const hashOf = s => { let h = 2166136261; for (const c of String(s)) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return (h >>> 0) / 4294967296 }
+function driveOf(play) {
+  const r = n => hashOf(`${play.id}-${n}`)
+  const start = Math.round(15 + r(1) * 20)                      // own 15 to 35
+  const end = play.kind === 'td' ? 100 : play.kind === 'fg' ? Math.round(62 + r(2) * 18) : play.kind === 'to' ? Math.round(start + 8 + r(3) * 40) : Math.round(start + 6 + r(4) * 30)
+  // yards from MY goal line (0) to theirs (100): their drives run the other way
+  return play.team === 0 ? { from: start, to: end } : { from: 100 - start, to: 100 - end }
+}
+function FieldStrip({ play, plays, idx, city, opp, myName }) {
+  const W = 360, H = 100, EZ = 26, X = y => EZ + (y / 100) * (W - 2 * EZ)       // yard → x
+  const fieldY = 40, fieldH = 44
+  const d = play && play.kind !== 'final' ? driveOf(play) : null
+  const lastDrive = d ?? [...plays.slice(0, idx)].reverse().filter(p => p.kind !== 'final').map(driveOf)[0] ?? null
+  const x1 = lastDrive ? X(lastDrive.from) : X(50), x2 = lastDrive ? X(lastDrive.to) : X(50)
+  const lift = Math.min(34, 8 + Math.abs(x2 - x1) * 0.18)
+  const arc = `M ${x1} ${fieldY + fieldH / 2} Q ${(x1 + x2) / 2} ${fieldY + fieldH / 2 - lift * 2} ${x2} ${fieldY + fieldH / 2}`
+  const mine = play?.team === 0
+  const label = play ? (RESULT[play.kind] ?? '') : 'KICKOFF'
+  return (
+    <div className="tk-fs ag-pop">
+      <div className={`tk-fs-head${play?.kind === 'td' ? ' is-td' : ''}`} style={{ '--tc': mine ? 'var(--ag-a1)' : opp }}>
+        {play && !mine && <img src={city.logo} alt="" />}<span key={play?.id ?? 'k'}>{label}</span>
+      </div>
+      <svg viewBox={`0 0 ${W} ${H}`} className="tk-fs-svg" role="img" aria-label={`${label}${lastDrive ? `, from the ${Math.round(lastDrive.from)} to the ${Math.round(lastDrive.to)}` : ''}`}>
+        <defs>
+          <pattern id="tkfs-stripes" width={(W - 2 * EZ) / 10} height={fieldH} patternUnits="userSpaceOnUse" x={EZ}>
+            <rect width={(W - 2 * EZ) / 20} height={fieldH} fill="#3f9a4a" /><rect x={(W - 2 * EZ) / 20} width={(W - 2 * EZ) / 20} height={fieldH} fill="#378c42" />
+          </pattern>
+        </defs>
+        <rect x={EZ} y={fieldY} width={W - 2 * EZ} height={fieldH} fill="url(#tkfs-stripes)" />
+        {/* the end zones: mine left, theirs right */}
+        <rect x="0" y={fieldY} width={EZ} height={fieldH} className="tk-fs-ez-me" />
+        <rect x={W - EZ} y={fieldY} width={EZ} height={fieldH} fill={opp} />
+        <text x={EZ / 2} y={fieldY + fieldH / 2} className="tk-fs-ez-txt" transform={`rotate(-90 ${EZ / 2} ${fieldY + fieldH / 2})`}>{(myName || 'GUEST').slice(0, 8).toUpperCase()}</text>
+        <text x={W - EZ / 2} y={fieldY + fieldH / 2} className="tk-fs-ez-txt" transform={`rotate(90 ${W - EZ / 2} ${fieldY + fieldH / 2})`}>{city.short}</text>
+        {/* yard lines every 10, numbers under the field */}
+        {Array.from({ length: 11 }, (_, i) => <line key={i} x1={X(i * 10)} x2={X(i * 10)} y1={fieldY} y2={fieldY + fieldH} className={`tk-fs-line${i === 0 || i === 10 ? ' is-goal' : ''}`} />)}
+        {Array.from({ length: 9 }, (_, i) => <text key={i} x={X((i + 1) * 10)} y={fieldY + fieldH + 7} className="tk-fs-num">{(i + 1) * 10 <= 50 ? (i + 1) * 10 : 100 - (i + 1) * 10}</text>)}
+        <image href={city.logo} x={X(50) - 9} y={fieldY + fieldH / 2 - 9} width="18" height="18" opacity=".55" />
+        {/* the drive */}
+        {lastDrive && (
+          <g key={play?.id} className="tk-fs-drive">
+            <line x1={x1} x2={x1} y1={fieldY} y2={fieldY + fieldH} className="tk-fs-los" />
+            <path d={arc} className={`tk-fs-arc${mine ? ' is-me' : ''}`} style={mine ? undefined : { stroke: opp }} pathLength="1" />
+            <circle cx={x2} cy={fieldY + fieldH / 2} r="4" className="tk-fs-ball" />
+          </g>
+        )}
+      </svg>
+    </div>
+  )
+}
 function FootballDuel({ duel, run, city, me, onDone }) {
   const [idx, setIdx] = useState(0)
   const plays = duel.plays
@@ -440,12 +518,7 @@ function FootballDuel({ duel, run, city, me, onDone }) {
         <div className="bt-board-mid"><span className="ag-eyebrow">{play?.q ?? 'Q1'}</span><span className="tk-duel-at">@ {city.city.toUpperCase()}</span></div>
         <div className={`bt-board-side bt-t1${score[1] > score[0] ? ' is-lead' : ''}`} style={{ '--tc': opp }}><span className="bt-board-name">{city.short}</span><b>{score[1]}</b></div>
       </div>
-      <div className="tk-field">
-        <div className="tk-field-lines" />
-        <img src={city.logo} alt="" className="tk-field-logo" />
-        {duel.star?.build?.[run.types[0]]?.photo && <Headshot src={duel.star.build[run.types[0]].photo} name={duel.star.player.name} size={54} className="tk-field-star" />}
-        {play && <span key={play.id} className={`tk-drive tk-drive--${play.kind} bt-t${play.team}`} style={play.team === 1 ? { '--tc': opp } : undefined}>{play.kind === 'td' ? 'TOUCHDOWN' : play.kind === 'fg' ? 'FIELD GOAL' : play.kind === 'to' ? 'TURNOVER' : play.kind === 'final' ? 'FINAL' : 'PUNT'}</span>}
-      </div>
+      <FieldStrip play={play} plays={plays} idx={idx} city={city} opp={opp} myName={me.name} />
       <div className="bt-feed">{feed.map((p, i) => <div key={p.id} className={`bt-feed-line bt-t${p.team}${i === 0 ? ' is-now' : ''}${p.kind === 'td' || p.kind === 'final' ? ' is-big' : ''}`} style={p.team === 1 ? { '--tc': opp } : undefined}><small>{p.q}</small> {p.text}</div>)}</div>
       {idx >= plays.length - 1 && (
         <div className="tk-line ag-pop">
