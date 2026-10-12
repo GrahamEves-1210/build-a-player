@@ -1002,10 +1002,15 @@ export function seasonScore(pos, s) {
 // ── Offseason: the recap, the roster moves, camp, the contract ───────────────
 export const OFF_STEPS = [['recap', 'RECAP'], ['moves', 'MOVES'], ['camp', 'CAMP'], ['contract', 'CONTRACT']]
 export const offStep = (c, step) => ({ ...c, off: { ...(c.off ?? {}), step } })
-// Training camp: one drill; win it for a bonus development point
+// Training camp: one hard drill. Win it for legacy points (the coaches remember)
+// and a chance at a development point: better the more cleanly it's won.
+export const CAMP_LEGACY = 3
 export function campDrill(c, score, game) {
-  const bonus = score >= 0.6 ? 1 : 0
-  return { ...c, dev: { ...c.dev, points: c.dev.points + bonus }, off: { ...c.off, camp: { score, bonus, game } } }
+  const won = score >= 0.75
+  const chance = won ? clamp(0.25 + (score - 0.75) * 2, 0.25, 0.75) : 0
+  const bonus = won && seeded(`${c.seed}-campdev-${c.year}`)() < chance ? 1 : 0
+  const legacy = won ? CAMP_LEGACY : 0
+  return { ...c, legacyBonus: (c.legacyBonus ?? 0) + legacy, dev: { ...c.dev, points: c.dev.points + bonus }, off: { ...c.off, camp: { score, won, bonus, legacy, chance, game } } }
 }
 const traitName = (c, t) => POS_ATTR[c.pos][t]?.label ?? t
 // A trait is maxed once it shows S (grades are rounded: 10.5 and up is S)
@@ -1210,7 +1215,7 @@ export function legacyOf(c) {
   const S = sportOf(c)
   const t = careerTotals(c)
   const prod = S.legacyProd(c.pos, t.stats)
-  const score = Math.round(t.seasons * 2 + t.proBowls * 6 + t.allPros * 10 + t.awards * 18 + t.rings * 20 + t.playoffs * 3 + prod + t.records * 8)
+  const score = Math.round(t.seasons * 2 + t.proBowls * 6 + t.allPros * 10 + t.awards * 18 + t.rings * 20 + t.playoffs * 3 + prod + t.records * 8 + (c.legacyBonus ?? 0))
   const tier = [...LEGACY_TIERS].reverse().find(([min]) => score >= min)[1]
   const next = LEGACY_TIERS.find(([min]) => score < min)
   const list = ALL_TIME[c.pos]

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   POS_LABEL, POS_NAME, POS_ATTR, OFFENSE_POS, pastCareers, saveCareer, clearCareer, stockOf, answerInterview, setupInterviews, runDraft,
   startSeason, resumeSeason, advanceWeek, chooseMoment, resolveInjury, finishRegular, playoffRound, bookSeason, recordCombine, spendDev, demandTrade, nextSeason,
-  OFF_STEPS, offStep, campDrill, lineup, depthChart, gradeOf, gradeOfOvr, ovrGradeVal, SPORT, sportOf,
+  OFF_STEPS, offStep, campDrill, CAMP_LEGACY, lineup, depthChart, gradeOf, gradeOfOvr, ovrGradeVal, SPORT, sportOf,
   openTalks, ask, closeTalks, acceptTalks, ASKS, leverageOf,
   retire, canRetire, mustRetire, careerTotals, legacyOf, LEGACY_TIERS, ALL_TIME, STAT_LABEL, HEADLINE_STATS, careerCard, AWARD_NAME, MAX_SEASONS, retireReason, goalsFor, compsFor, stockText, pickText, loadSlots, CAREER_SLOTS, maxedTrait,
 } from '../../lib/career'
@@ -689,10 +689,10 @@ function Camp({ c, setCareer }) {
     <div className="ag-card cr-camp ag-pop">
       <span className="ag-eyebrow">TRAINING CAMP · {GAMES[game]?.title}</span>
       {done
-        ? <p className="cr-note">{done.bonus ? 'Won the drill in front of the coaches: +1 development point.' : 'Lost the drill. No bonus point this year.'}</p>
+        ? <p className="cr-note">{(done.won ?? done.bonus) ? `Won the drill in front of the coaches: +${done.legacy ?? 0} legacy${done.bonus ? ', and +1 development point.' : '. No development point this time.'}` : 'Lost the drill. Nothing this year.'}</p>
         : <>
-            <p className="cr-note">One drill in front of the coaching staff. Win it for a bonus development point.</p>
-            <MiniGame key={game} game={game} build={c.build} seed={`${c.seed}-camp-${c.year}`} onDone={res => setCareer(campDrill(c, res.score, game))} />
+            <p className="cr-note">One hard drill in front of the coaching staff. Win it for +{CAMP_LEGACY} legacy and a shot at a development point (the cleaner the win, the better the shot).</p>
+            <MiniGame key={game} game={game} build={c.build} hard seed={`${c.seed}-camp-${c.year}`} onDone={res => setCareer(campDrill(c, res.score, game))} />
           </>}
       {c.dev.points > 0 && <div className="cr-devnote"><IconStar size={14} /> <b>{c.dev.points}</b> development {c.dev.points === 1 ? 'point' : 'points'}: tap a trait on the player above to raise it.</div>}
     </div>

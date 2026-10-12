@@ -38,14 +38,15 @@ function useKeys(map, on = true) {
 }
 const tri = t => { const p = t % 2; return p <= 1 ? p : 2 - p }     // 0→1→0 sweep
 
-export default function MiniGame({ game, build, seed = 'x', onDone, autoStart = false }) {
+export default function MiniGame({ game, build, seed = 'x', onDone, autoStart = false, hard = false }) {
   const def = GAMES[game]
   const [stage, setStage] = useState(autoStart ? 'play' : 'intro')
   const [result, setResult] = useState(null)
-  const v = traitValue(game, build)
+  // hard (training camp): played as if the trait were half as good, so a maxed build still has to earn it
+  const v = hard ? Math.max(1, traitValue(game, build) * 0.5) : traitValue(game, build)
   const done = r => {
     if (result) return
-    const out = { score: clamp(r.score, 0, 1), hit: r.hit ?? r.score >= 0.5, note: r.note ?? null, raw: r.raw ?? null }
+    const out = { score: clamp(r.score, 0, 1), hit: hard ? r.score >= 0.75 : r.hit ?? r.score >= 0.5, note: r.note ?? null, raw: r.raw ?? null }
     setResult(out); setStage('done')
     sfx(out.hit ? 'claim' : 'deny'); haptic(out.hit ? 'success' : 'heavy')
     setTimeout(() => onDone?.(out), 900)
