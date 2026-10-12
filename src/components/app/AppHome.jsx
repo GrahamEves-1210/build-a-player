@@ -127,7 +127,7 @@ function SportSwitch({ sport }) {
 // hoop with a chain net, worn paint on the asphalt, three on three, and a
 // ball that goes up and rattles the chains every few seconds (CSS, transforms only).
 function BlacktopArt() {
-  const squads = [[[150, 99], [178, 104], [214, 100]], [[162, 90], [198, 93], [224, 88]]]
+  const squads = [[[150, 99], [178, 104], [214, 100]], [[198, 93], [224, 88]]]
   return (
     <svg className="bt-art" viewBox="0 0 240 110" aria-hidden="true" preserveAspectRatio="xMaxYMax meet">
       <defs>
