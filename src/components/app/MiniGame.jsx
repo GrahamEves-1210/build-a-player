@@ -89,6 +89,7 @@ function Game({ def, v, seed, build, onDone }) {
     case 'dash': return <Dash v={v} seed={seed} onDone={onDone} unit={def.unit} dist={def.dist} />
     case 'velo': return <Velo v={v} seed={seed} onDone={onDone} noun={def.noun} />
     case 'aim': return <Aim v={v} seed={seed} onDone={onDone} noun={def.noun} />
+    case 'routes': return <Routes v={v} seed={seed} onDone={onDone} />
     case 'cone': return <Cone v={v} seed={seed} onDone={onDone} />
     case 'gauntlet': return <Gauntlet v={v} seed={seed} onDone={onDone} />
     case 'bench': return <Bench v={v} load={def.load ?? 1} onDone={onDone} />
@@ -434,6 +435,99 @@ function Aim({ v, seed, onDone, noun = 'NET' }) {
       </div>
       <span className="mg-hint">{noun} {i + 1} OF {nets.length} · {axis === 'x' ? 'TAP TO LOCK LEFT–RIGHT' : noun === 'SHOT' ? 'TAP TO LOCK THE ARC' : 'TAP TO LOCK UP–DOWN'}</span>
       <span className="mg-dots">{nets.map((_, k) => <i key={k} className={k < scores.length ? (scores[k] ? 'is-hit' : 'is-miss') : ''} />)}</span>
+    </div>
+  )
+}
+// ── QB accuracy: throw to receivers on routes, the way the combine does ─────
+// A receiver runs a route; tap to throw. The ball is in the air a moment, so it
+// has to be thrown early (leading him) to land while he's open: the bright part
+// of the route. Accuracy keeps the window open longer. Four routes, each quicker.
+const QB_SPOT = { x: 50, y: 90 }
+const ROUTES = [
+  { name: 'SLANT', pts: [[28, 72], [28, 62], [56, 36]], open: 0.72, secs: 1.5, air: 0.42 },
+  { name: 'OUT',   pts: [[74, 72], [74, 40], [93, 40]], open: 0.82, secs: 1.7, air: 0.5 },
+  { name: 'POST',  pts: [[24, 72], [24, 46], [50, 16]], open: 0.8, secs: 1.75, air: 0.58 },
+  { name: 'GO',    pts: [[80, 72], [80, 8]],             open: 0.84, secs: 1.8, air: 0.7 },
+]
+// where he is u of the way through the route (by distance)
+function routeAt(pts, u) {
+  const seg = pts.slice(1).map((p, k) => Math.hypot(p[0] - pts[k][0], p[1] - pts[k][1]))
+  const total = seg.reduce((a, b) => a + b, 0)
+  let d = Math.max(0, Math.min(1, u)) * total
+  for (let k = 0; k < seg.length; k++) {
+    if (d <= seg[k] || k === seg.length - 1) { const f = seg[k] ? Math.min(1, d / seg[k]) : 0; return { x: pts[k][0] + (pts[k + 1][0] - pts[k][0]) * f, y: pts[k][1] + (pts[k + 1][1] - pts[k][1]) * f } }
+    d -= seg[k]
+  }
+  return { x: pts[pts.length - 1][0], y: pts[pts.length - 1][1] }
+}
+function Routes({ v, onDone }) {
+  const [i, setI] = useState(0)
+  const [scores, setScores] = useState([])
+  const [thrown, setThrown] = useState(null)        // { at: arrival point, hit, note }
+  const rcv = useRef(null), ball = useRef(null)
+  const st = useRef({ t0: 0, threw: false })
+  const rt = ROUTES[i]
+  const quick = 1 - i * 0.07                        // each route a little quicker
+  const secs = rt.secs * quick
+  const half = 0.07 + (v / 11) * 0.09               // how long he's open (in route fractions), from Accuracy
+  // a beat before the snap so the route can be read; he lines up, then goes
+  useEffect(() => { st.current = { t0: now() + 900, threw: false } }, [i])
+  const finish = (s, note) => {
+    const next = [...scores, s]
+    setTimeout(() => {
+      if (i + 1 >= ROUTES.length) {
+        const made = next.filter(Boolean).length
+        onDone({ score: next.reduce((a, b) => a + b, 0) / ROUTES.length, hit: made >= 3, note: `${made} of ${ROUTES.length} completed`, raw: { made, of: ROUTES.length } })
+      } else { setScores(next); setI(i + 1); setThrown(null) }
+    }, 900)
+  }
+  useLoop(t => {
+    const u = ((now() - st.current.t0) / 1000) / secs
+    const p = routeAt(rt.pts, u)
+    if (rcv.current) rcv.current.style.transform = `translate3d(${p.x}cqw, ${p.y * 0.6}cqw, 0)`
+    // never thrown: the route runs out
+    if (!st.current.threw && u > 1.08) { st.current.threw = true; sfx('pop'); setThrown({ at: p, hit: false, note: 'NO THROW' }); finish(0, 'late') }
+    return u < 1.6
+  }, true, [i])
+  const tap = () => {
+    if (st.current.threw || now() < st.current.t0) return
+    st.current.threw = true
+    const u0 = ((now() - st.current.t0) / 1000) / secs
+    const uArr = u0 + (rt.air * quick) / secs          // where he'll be when it gets there
+    const at = routeAt(rt.pts, uArr)
+    const d = Math.abs(uArr - rt.open) / half
+    const s = d <= 1 ? clamp(1 - d * 0.5, 0.5, 1) : 0
+    const note = s ? (d < 0.35 ? 'ON THE MONEY' : 'COMPLETE') : uArr < rt.open ? 'TOO EARLY: HE WASN\'T OPEN' : 'TOO LATE: COVERED'
+    if (ball.current) {
+      ball.current.style.transition = 'none'
+      ball.current.style.transform = `translate3d(${QB_SPOT.x}cqw, ${QB_SPOT.y * 0.6}cqw, 0)`
+      ball.current.getBoundingClientRect()
+      ball.current.style.transition = `transform ${rt.air * quick}s cubic-bezier(.3,.1,.5,1)`
+      ball.current.style.transform = `translate3d(${at.x}cqw, ${at.y * 0.6}cqw, 0)`
+    }
+    sfx('swoosh')
+    setTimeout(() => { sfx(s ? 'claim' : 'pop'); haptic(s ? 'medium' : 'light'); setThrown({ at, hit: !!s, note }) }, rt.air * quick * 1000)
+    finish(s)
+  }
+  useKeys({ ' ': tap, Enter: tap })
+  // the route drawn, its open stretch brighter
+  const path = rt.pts.map(p => `${p[0]},${p[1] * 0.6}`).join(' ')
+  const openPts = [rt.open - half, rt.open - half / 2, rt.open, rt.open + half / 2, rt.open + half].map(u => routeAt(rt.pts, u)).map(p => `${p.x},${p.y * 0.6}`).join(' ')
+  return (
+    <div className="mg-play mg-play--routes" onPointerDown={tap}>
+      <div className="mg-field mg-field--routes">
+        <svg className="mg-routes-svg" viewBox="0 0 100 60" preserveAspectRatio="none" aria-hidden="true">
+          <line x1="0" y1="43.2" x2="100" y2="43.2" className="mg-los" />
+          <polyline points={path} className="mg-route" />
+          <polyline points={openPts} className="mg-route-open" />
+        </svg>
+        <span className="mg-qb" style={{ transform: `translate3d(${QB_SPOT.x}cqw, ${QB_SPOT.y * 0.6}cqw, 0)` }}>QB</span>
+        <span className="mg-wr" ref={rcv} />
+        <span className={`mg-fb${thrown ? (thrown.hit ? ' is-hit' : ' is-miss') : ''}`} ref={ball} style={{ transform: `translate3d(${QB_SPOT.x}cqw, ${QB_SPOT.y * 0.6}cqw, 0)` }} />
+        {thrown?.note && <span className={`mg-call${thrown.hit ? ' is-hit' : ''}`}>{thrown.note}</span>}
+      </div>
+      <span className="mg-hint">{rt.name} · ROUTE {i + 1} OF {ROUTES.length} · TAP TO THROW</span>
+      <span className="mg-dots">{ROUTES.map((_, k) => <i key={k} className={k < scores.length ? (scores[k] ? 'is-hit' : 'is-miss') : ''} />)}</span>
     </div>
   )
 }

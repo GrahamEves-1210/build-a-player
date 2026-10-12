@@ -183,7 +183,7 @@ export const QBS = [
     attrs: { 'arm': 4, 'legs': 1, 'size': 6, 'processing': 5, 'leadership': 4, 'vision': 3, 'playmaking': 1, 'accuracy': 3, 'pocket-presence': 2 } },
   // PIT
   { name: 'Aaron Rodgers',      short: 'Rodgers',     team: 'PIT', teamName: 'Pittsburgh Steelers',   color: '#FFB612', color2: '#101820', skin: '#f0c0a0', starter: true,  captain: true,  number: 8,
-    attrs: { 'arm': 8, 'legs': 3, 'size': 6, 'processing': 9, 'leadership': 6, 'vision': 8, 'playmaking': 5, 'accuracy': 8, 'pocket-presence': 9 } },
+    attrs: { 'arm': 8, 'legs': 3, 'size': 6, 'processing': 9, 'leadership': 6, 'vision': 8, 'playmaking': 5, 'accuracy': 7, 'pocket-presence': 7 } },
   { name: 'Mason Rudolph',      short: 'Rudolph',     team: 'PIT', teamName: 'Pittsburgh Steelers',   color: '#FFB612', color2: '#101820', skin: '#f0c4a0', starter: false, number: 2,
     attrs: { 'arm': 4, 'legs': 3, 'size': 10, 'processing': 4, 'leadership': 2, 'vision': 3, 'playmaking': 3, 'accuracy': 3, 'pocket-presence': 2 } },
   { name: 'Will Howard',        short: 'W. Howard',   team: 'PIT', teamName: 'Pittsburgh Steelers',   color: '#FFB612', color2: '#101820', skin: '#f0c4a0', starter: false, number: 18,

@@ -350,7 +350,18 @@ function realAges(c) {
   if (!c?.roster) return c
   const yrs = rosterYrs(c)
   const ro = { ...c.roster }
-  for (const g of sportOf(c).groups) if (Array.isArray(ro[g])) ro[g] = ro[g].map(p => (born(c.sport, p.name) && !p.rookie ? { ...p, age: ageOf(c.sport, p.name, yrs) } : p))
+  const S = sportOf(c)
+  for (const g of S.groups) if (Array.isArray(ro[g])) ro[g] = ro[g].map(p => (born(c.sport, p.name) && !p.rookie ? { ...p, age: ageOf(c.sport, p.name, yrs) } : p))
+  // a starting spot left empty by an older save (a veteran dropped too early): a rookie fills it
+  const r = seeded(`${c.seed}-fill-${c.year}`)
+  for (const g of S.groups) {
+    const slots = S.slots[g]; if (!slots || !Array.isArray(ro[g])) continue
+    const missing = slots.filter(sl => !ro[g].some(p => p.slot === sl))
+    if (!missing.length) continue
+    const add = missing.map(sl => ({ name: rookieName(r), pos: g, ovr: clamp(Math.round(74 + (r() - 0.5) * 10), 64, 84), age: 22 + Math.floor(r() * 4), photo: null, slot: sl, rookie: true }))
+    const all = [...ro[g], ...add]
+    ro[g] = slots.map(sl => all.find(p => p.slot === sl)).filter(Boolean).concat(all.filter(p => !slots.includes(p.slot))).slice(0, S.keep[g])
+  }
   return { ...c, roster: ro }
 }
 // Years into a career, the team's real players are that much older; the ones
@@ -360,9 +371,11 @@ export function makeRoster(short, sport = 'nfl', yrs = 0, gone = []) {
   const ro = { team: short, sport }
   const r = seeded(`${short}-${sport}-${yrs}-fill`)
   for (const g of S.groups) {
-    const list = S.pool[g].filter(p => p.team === short && !gone.includes(p.name)).map(p => man(S, g, p, yrs)).filter(p => p.age < RETIRE_AT[g])
+    // year one is today's league as it is (a 36-year-old guard still starts); from then on, age catches up
+    const list = S.pool[g].filter(p => p.team === short && !gone.includes(p.name)).map(p => man(S, g, p, yrs)).filter(p => yrs === 0 || p.age < RETIRE_AT[g])
     const slots = S.slots[g]
-    if (yrs > 0 || gone.length) {
+    // an empty starting spot always gets filled (a rookie), so a lineup never has a hole
+    {
       for (const sl of slots ?? []) if (!list.some(p => p.slot === sl)) list.push({ name: rookieName(r), pos: g, ovr: clamp(Math.round(74 + (r() - 0.5) * 10), 64, 84), age: 22 + Math.floor(r() * 4), photo: null, slot: sl, rookie: true })
       while (list.length < S.keep[g]) list.push({ name: rookieName(r), pos: g, ovr: clamp(Math.round(74 + (r() - 0.5) * 10), 64, 84), age: 22 + Math.floor(r() * 4), photo: null, slot: null, rookie: true })
     }
@@ -576,7 +589,7 @@ const drillValue = (id, v, score, raw) => {
     case 'vert': { const i = r10(26 + t * 16 + run * 7); return { text: `${i}" vertical`, pct: pc((i - 33) / 6) } }
     case 'cone': { const of = raw?.of ?? 6, slips = of - cnt(of, 2); const s = 7.45 - t * 0.75 + slips * 0.07 - run * 0.08; return { text: `${s.toFixed(2)}s`, pct: pc((7.05 - s) / 0.3) } }
     case 'lane': { const of = raw?.of ?? 6, slips = of - cnt(of, 2); const s = 11.9 - t * 1.4 + slips * 0.12 - run * 0.15; return { text: `${s.toFixed(2)}s`, pct: pc((11.2 - s) / 0.6) } }
-    case 'acc': { const of = raw?.of ?? 4, m = cnt(of); return { text: `${m} of ${of} in the net`, pct: pc((m / of - 0.55) * 2.2) } }
+    case 'acc': { const of = raw?.of ?? 4, m = cnt(of); return { text: `${m} of ${of} completed`, pct: pc((m / of - 0.55) * 2.2) } }
     case 'spot': { const of = raw?.of ?? 4, m = cnt(of); return { text: `${m} of ${of} made`, pct: pc((m / of - 0.5) * 2.2) } }
     case 'gauntlet': { const of = raw?.of ?? 7, m = cnt(of, 2); return { text: `${m} of ${of} caught`, pct: pc((m / of - 0.7) * 3.3) } }
     case 'bench': { const n = raw?.reps ?? Math.round(8 + score * 22); return { text: `${n} reps`, pct: pc((n - 18) / 8) } }
@@ -698,8 +711,24 @@ export function runDraft(c) {
 }
 
 // ── Goals for a season ───────────────────────────────────────────────────────
-export const goalsFor = c => sportOf(c).goals[c.pos](c.ovr).map(([k, verb, n, unit]) => ({ k, label: `${verb} ${n.toLocaleString()} ${unit}`, n }))
-const goalMet = (g, s) => (s.stats[g.k] ?? (g.k === 'wins' ? s.wins : 0)) >= g.n
+// The year's goals, from the role. A starter gets the full-season numbers.
+// Off the bench (basketball): the same goals, sized for fewer minutes.
+// A backup (football): judged on the games he does start, per start, and
+// winning those starts.
+const r1 = x => Math.round(x * 10) / 10
+export const goalsFor = c => {
+  const S = sportOf(c)
+  const raw = S.goals[c.pos](c.ovr)
+  const full = raw.map(([k, verb, n, unit]) => ({ k, label: `${verb} ${n.toLocaleString()} ${unit}`, n }))
+  if (!c.team || depthChart(c).starter) return full
+  if (S.isBucket) return raw.map(([k, verb, n, unit]) => k === 'wins' ? full.find(g => g.k === k) : { k, label: `${verb} ${r1(n * 0.6)} ${unit} off the bench`, n: r1(n * 0.6) })
+  const per = raw.filter(([k, , n]) => k !== 'wins' && n / 17 >= 1).slice(0, 2).map(([k, verb, n, unit]) => { const m = n / 17 >= 10 ? Math.round(n / 17) : r1(n / 17); return { k, per: 'start', label: `${verb} ${m.toLocaleString()} ${unit} a start`, n: m } })
+  return [...per, { k: 'startWins', label: 'Win half the games you start', n: 0.5 }]
+}
+// s: { stats, wins, starts, startWins }
+const goalMet = (g, s) => g.k === 'startWins' ? s.starts > 0 && s.startWins / s.starts >= g.n
+  : g.per === 'start' ? s.starts > 0 && (s.stats[g.k] ?? 0) / s.starts >= g.n
+  : (s.stats[g.k] ?? (g.k === 'wins' ? s.wins : 0)) >= g.n
 
 // ── The season: the director plays it, we steer and keep score ───────────────
 export const seasonStats = (pos, f) => sportForPos(pos).seasonStats(pos, f)
@@ -730,7 +759,7 @@ export function startSeason(c) {
     benched = { weeks, behind: ahead.name, label: dc.label }
   }
   const feed = benched ? [{ k: 0, note: benched.bench ? `${benched.behind} starts. ${c.name} comes off the bench this season: fewer minutes, a smaller role.` : `${benched.behind} is the starter. ${c.name} opens the season as ${benched.label}.`, noteKind: benched.bench ? 'ROTATION' : 'DEPTH CHART' }] : []
-  const next = { ...cc, phase: 'season', fit, role: dc.starter ? 'Starter' : 'Backup', simTeam: team, goals: goalsFor(c), active: { k: 0, base, snap: D.snapshot(), seed, moment: null, feed, injury: null, benched } }
+  const next = { ...cc, phase: 'season', fit, role: dc.starter ? 'Starter' : 'Backup', simTeam: team, goals: goalsFor(cc), active: { k: 0, base, snap: D.snapshot(), seed, moment: null, feed, injury: null, benched } }
   return [next, D]
 }
 // Picks a saved season back up: the director rebuilt from its own data
@@ -897,6 +926,7 @@ export function bookSeason(c) {
   const allPro = S.allPro[c.pos](stats)
   const missed = (f.story?.sat ?? 0)
   const benched = c.active.benched?.weeks ?? 0
+  const started = (f.games ?? []).filter(g => !g.sat)     // the games he played (a backup's starts)
   const rounds = (po?.line ?? []).map(x => ({ round: x.name, opponent: x.oppName, won: x.won, mySc: x.mySc, oppSc: x.oppSc, series: !!x.series }))
   const fin = rounds.find(x => x.round === S.final)
   const s = {
@@ -904,7 +934,7 @@ export function bookSeason(c) {
     wins: f.wins, losses: f.losses, playoffs: S.made(f), champion: !!po?.won, rounds, sb: fin ? { won: fin.won, mySc: fin.mySc, oppSc: fin.oppSc, series: fin.series } : null,
     stats, award, awardName: S.awardName[c.pos], proBowl: S.proBowl[c.pos](stats) || award || allPro, allPro: allPro || (award && S.allProNear[c.pos](stats)),
     missed, benched, records: (f.story?.records ?? []).map(x => x.label ?? x.id), milestones: (f.story?.milestones ?? []).filter(m => m.big).map(m => m.label),
-    goals: c.goals.map(g => ({ ...g, met: goalMet(g, { stats, wins: f.wins }) })), xp: f.story?.xp ?? 0, bestGame: f.bestGame ?? null,
+    goals: started.length || c.role !== 'Backup' ? c.goals.map(g => ({ ...g, met: goalMet(g, { stats, wins: f.wins, starts: started.length, startWins: started.filter(x => x.won).length }) })) : [], xp: f.story?.xp ?? 0, bestGame: f.bestGame ?? null,
     poStats: po && po.line.some(x => !x.sat) ? po.line.filter(x => !x.sat).reduce((acc, x) => { for (const k of S.lineKeys) if (x[k] != null) acc[k] = (acc[k] ?? 0) + x[k]; return acc }, { games: po.line.filter(x => !x.sat).length }) : null,
   }
   // records this career set: next season's bar is its own number, not the league's

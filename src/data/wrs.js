@@ -132,9 +132,9 @@ const _WRS = [
   { name: 'Jayden Reed',         short: 'J. Reed',     team: 'GB',  teamName: 'Green Bay Packers',     skin: '#5e3c22', height: 71, weight: 191, starter: true,  captain: true,  number: 11,
     attrs: { speed: 9,  bodyControl: 7,  vertical: 7,  routeRunning: 6,  release: 7,  hands: 6,  awareness: 6,  size: 5,  afterCatch: 6  } },
   { name: 'Christian Watson',    short: 'Watson',      team: 'GB',  teamName: 'Green Bay Packers',     skin: '#b07848', height: 76, weight: 208, starter: false, number: 9,
-    attrs: { speed: 10, bodyControl: 5,  vertical: 7,  routeRunning: 4,  release: 6,  hands: 4,  awareness: 4,  size: 9,  afterCatch: 5  } },
+    attrs: { speed: 10, bodyControl: 8,  vertical: 7,  routeRunning: 6,  release: 7,  hands: 6,  awareness: 7,  size: 9,  afterCatch: 5  } },
   { name: 'Matthew Golden',      short: 'M. Golden',   team: 'GB',  teamName: 'Green Bay Packers',     skin: '#5e3c22', height: 71, weight: 185, starter: false, number: 0,
-    attrs: { speed: 10, bodyControl: 6,  vertical: 6,  routeRunning: 4,  release: 5,  hands: 5,  awareness: 3,  size: 5,  afterCatch: 5  } },
+    attrs: { speed: 10, bodyControl: 7,  vertical: 6,  routeRunning: 6,  release: 5,  hands: 7,  awareness: 6,  size: 5,  afterCatch: 5  } },
   { name: 'Skyy Moore',            short: 'S. Moore',     team: 'GB',  teamName: 'Green Bay Packers', skin: '#b07848', height: 70, weight: 195, starter: true, number: 23,
     attrs: { speed: 7, bodyControl: 4, vertical: 4, routeRunning: 4, release: 4, hands: 4, awareness: 4, size: 4, afterCatch: 5 } },
   // HOU

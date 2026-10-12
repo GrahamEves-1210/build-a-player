@@ -213,7 +213,6 @@ function Draft({ c, setCareer }) {
         {head(`THE COMBINE · ${POS_LABEL[c.pos]}`, allDone ? 'Your numbers' : next.label)}
         <div className="ag-screen-body">
           {!allDone && <MiniGame key={next.id} game={next.id} build={c.build} seed={`${c.seed}-cb-${next.id}`} onDone={res => setCareer(recordCombine(c, next.id, res.score, res.raw))} />}
-          {allDone && <Comp c={c} />}
           <div className="cr-drills ag-pop" style={{ '--d': '60ms' }}>
             {c.draft.combine.map((d, i) => (
               <div key={d.id} className={`cr-drill${d.score == null ? ' is-wait' : ''}`} style={{ '--d': `${80 + i * 70}ms` }}>
@@ -229,6 +228,8 @@ function Draft({ c, setCareer }) {
               <button className="ag-btn tk-intro-go" onClick={() => { setCareer(setupInterviews({ ...c, step: 'interview' })); setStep('interview'); sfx('tap') }}>THE INTERVIEWS <IconArrow size={16} /></button>
             </>
           ) : <p className="cr-note">Three drills, one go each. The trait sets the range; how the drill goes sets the number.</p>}
+          {/* the comp, from the start of the pre-draft: who this build plays like */}
+          <Comp c={c} />
         </div>
       </div>
     )
@@ -640,7 +641,7 @@ function Recap({ c, last }) {
       </div>
       {last.sb && <p className="cr-note">{last.sb.won ? `${S.final} champions${last.sb.series ? `, ${last.sb.mySc}–${last.sb.oppSc} in the series` : `: ${last.sb.mySc ?? ''}${last.sb.oppSc != null ? `–${last.sb.oppSc}` : ''}`}.` : `Lost the ${S.final}${last.sb.series ? ` ${last.sb.mySc}–${last.sb.oppSc}` : ''}. Close.`}</p>}
       {!last.sb && last.rounds?.length > 0 && <p className="cr-note">Playoffs: {last.rounds.map(r => `${r.won ? 'W' : 'L'} ${r.mySc}–${r.oppSc} ${nick(r.opponent)}`).join(' · ')}</p>}
-      <div className="cr-goals"><span className="ag-eyebrow">GOALS · {met}/{last.goals.length}</span>{last.goals.map(g => <span key={g.k} className={`cr-goal${g.met ? ' is-met' : ' is-miss'}`}>{g.met ? <IconCheck size={11} /> : null} {g.label}</span>)}</div>
+      {last.goals.length > 0 && <div className="cr-goals"><span className="ag-eyebrow">GOALS · {met}/{last.goals.length}</span>{last.goals.map(g => <span key={g.k} className={`cr-goal${g.met ? ' is-met' : ' is-miss'}`}>{g.met ? <IconCheck size={11} /> : null} {g.label}</span>)}</div>}
     </div>
   )
 }
