@@ -525,7 +525,7 @@ function Routes({ v, onDone }) {
         <span className="mg-qb" style={{ transform: `translate3d(${QB_SPOT.x}cqw, ${QB_SPOT.y * 0.6}cqw, 0)` }}>QB</span>
         <span className="mg-wr" ref={rcv} />
         <span className={`mg-fb${thrown ? (thrown.hit ? ' is-hit' : ' is-miss') : ''}`} ref={ball} style={{ transform: `translate3d(${QB_SPOT.x}cqw, ${QB_SPOT.y * 0.6}cqw, 0)` }} />
-        {thrown?.note && <span className={`mg-call${thrown.hit ? ' is-hit' : ''}`}>{thrown.note}</span>}
+        {thrown?.note && <span className={`mg-rcall${thrown.hit ? ' is-hit' : ''}`}>{thrown.note}</span>}
       </div>
       <span className="mg-hint">{rt.name} · ROUTE {i + 1} OF {ROUTES.length} · TAP TO THROW</span>
       <span className="mg-dots">{ROUTES.map((_, k) => <i key={k} className={k < scores.length ? (scores[k] ? 'is-hit' : 'is-miss') : ''} />)}</span>

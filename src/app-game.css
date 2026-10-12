@@ -4397,8 +4397,8 @@ html.is-android .ag-toast { background: rgba(8,12,10,.97); }
 .mg-fb { width: 12px; height: 8px; margin: -4px 0 0 -6px; border-radius: 50%; background: #a0522d; box-shadow: 0 0 6px rgba(0,0,0,.6); }
 .mg-fb.is-hit { background: #4ade80; box-shadow: 0 0 10px #4ade80; }
 .mg-fb.is-miss { background: #f87171; box-shadow: 0 0 10px #f87171; }
-.mg-call { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); padding: 3px 10px 2px; border-radius: 8px; font-family: var(--ag-font); font-size: 15px; letter-spacing: 1.5px; color: #fff; background: rgba(239,68,68,.8); white-space: nowrap; }
-.mg-call.is-hit { background: rgba(34,197,94,.85); color: #06110d; }
+.mg-rcall { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); padding: 3px 10px 2px; border-radius: 8px; font-family: var(--ag-font); font-size: 15px; letter-spacing: 1.5px; color: #fff; background: rgba(239,68,68,.8); white-space: nowrap; }
+.mg-rcall.is-hit { background: rgba(34,197,94,.85); color: #06110d; }
 
 /* Career depth chart: the grade and the age, big enough to read at a glance */
 .crl-depth small { font-size: 14px; letter-spacing: 1.2px; color: var(--ag-text); opacity: .9; }
