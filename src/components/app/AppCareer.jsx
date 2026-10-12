@@ -571,7 +571,7 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
         )}
 
         {tab === 'season' && c.phase === 'offseason' && last && <Offseason c={c} setCareer={setCareer} last={last} setTab={setTab} />}
-        {tab === 'player' && <><Comp c={c} /><Player c={c} /></>}
+        {tab === 'player' && <><Player c={c} /><Comp c={c} /></>}
         {tab === 'team' && <><Lineup c={c} /><TeamFit c={c} /></>}
         {tab === 'career' && <CareerTab c={c} L={L} onDelete={() => { clearCareer(c.sport, c.uid, c.slot ?? 0); setCareer(null); onExit() }} />}
       </div>
@@ -640,7 +640,7 @@ function Recap({ c, last }) {
   return (
     <div className={`ag-card cr-wrap ag-pop${last.champion ? ' is-ring' : ''}`}>
       <div className="ag-card-head"><span className="ag-eyebrow">{last.season} · {last.wins}–{last.losses}{last.playoffs ? ' · PLAYOFFS' : ''}</span>{last.champion && <span className="cr-ring"><IconRing size={13} /> CHAMPIONS</span>}</div>
-      <div className="cr-wrap-stats">{HEADLINE_STATS[c.pos].map(k => <span key={k}><b>{fmt(last.stats[k])}</b><small>{STAT_LABEL[k]}</small></span>)}<span><b>{last.missed}</b><small>SAT OUT</small></span></div>
+      <div className="cr-wrap-stats">{HEADLINE_STATS[c.pos].map(k => <span key={k}><b>{fmt(last.stats[k])}</b><small>{STAT_LABEL[k]}</small></span>)}<span><b>{last.missed}</b><small>GAMES MISSED</small></span></div>
       <div className="cr-badges">
         {last.award && <span className="cr-badge is-gold"><IconTrophy size={12} /> {last.awardName}</span>}
         {last.allPro && <span className="cr-badge is-gold"><IconMedal size={12} /> {S.first.toUpperCase()}</span>}
@@ -761,7 +761,7 @@ function CareerTab({ c, L, onDelete }) {
         <div className="ag-card-head"><span className="ag-eyebrow">CAREER · {t.seasons} {t.seasons === 1 ? 'SEASON' : 'SEASONS'}</span></div>
         <div className="cr-kv">{keys.map(k => <span key={k}><b>{fmt(t.stats[k])}</b><small>{STAT_LABEL[k]}</small></span>)}<span><b>{t.rings}</b><small>RINGS</small></span><span><b>{t.awards}</b><small>{AWARD_NAME[c.pos]}</small></span><span><b>{t.proBowls}</b><small>{S.honors}</small></span><span><b>{t.allPros}</b><small>{S.first.toUpperCase()}</small></span></div>
         <div className="cr-rank">
-          <div className="cr-rank-head"><span className="ag-eyebrow">GREATEST {S.isBucket ? POS_NAME[c.pos].toUpperCase() : POS_LABEL[c.pos]} CAREERS · TOP {L.of}</span><small>LEGACY PTS</small></div>
+          <div className="cr-rank-head"><span className="ag-eyebrow">GREATEST {S.isBucket ? '' : `${POS_LABEL[c.pos]} `}CAREERS · TOP {L.of}</span><small>LEGACY PTS</small></div>
           <RankList c={c} L={L} />
           {!L.ranked && <small className="cr-rank-note">{L.above.score - L.score + 1} more legacy points to crack the top {L.of}.</small>}
         </div>

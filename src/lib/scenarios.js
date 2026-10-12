@@ -136,6 +136,7 @@ export function describe(e, c, scope = '') {
   if (s && scope) s += ` ${scope}`
   if (e.sit) s += `${s ? '; ' : ''}miss ${e.sit === 1 ? 'the next game' : `the next ${e.sit} games`}`
   if (e.then) s += `${s ? ', then ' : ''}${lc(describe(e.then, c))}`
+  if (e.dur) s += `${s ? ' · ' : ''}${sign(e.dur)} durability (for good)`
   if (e.xp) s += `${s ? ' · ' : ''}+${e.xp} XP`
   return cap(s || 'Nothing changes.')
 }
@@ -264,8 +265,8 @@ const NFL_ALL = [
     make: c => ({ kicker: 'ELIMINATED', title: 'What the last games are for',
       body: `${c.nick} are out. ${c.left} games left. Play them out for the numbers, or shut it down and get healthy.`,
       options: [
-        o('play', 'Play it out', gam(0.88, {}, 'Every snap, healthy. The stats count.', { sit: Math.min(2, c.left), tag: 'INJURED' }, 'Hurt in a game that meant nothing. Done for the year.')),
-        o('shut', 'Shut it down', { sit: Math.min(c.left, 3), tag: 'SHUT DOWN' }, 'No more games, no more risk.'),
+        o('play', 'Play it out', gam(0.85, { xp: 25 }, 'Every snap, healthy. The stats count.', { sit: c.left, dur: -1, tag: 'INJURED' }, 'Hurt in a game that meant nothing. Done for the year, and it follows you into next season.')),
+        o('shut', 'Shut it down', { sit: c.left, dur: 0.5, tag: 'SHUT DOWN' }, 'No more games, no more risk. A full offseason to heal.'),
       ] }) },
   { id: 'deadline-buy', at: ['mid'], w: 4, when: c => c.alive && !c.struggling,
     make: c => ({ kicker: 'TRADE DEADLINE', title: 'The GM has one pick to spend',
@@ -335,8 +336,8 @@ const NBA_ALL = [
   { id: 'nba-eliminated', at: ['late', 'stretch'], w: 6, when: c => c.eliminated && c.left >= 4,
     make: c => ({ kicker: 'OUT OF IT', title: 'Play out the string', body: `${c.nick} won't make it. ${c.left} games left.`,
       options: [
-        o('play', 'Play it out', gam(0.9, {}, 'Every game, healthy. The numbers count.', { sit: Math.min(8, c.left), tag: 'INJURED' }, 'Hurt in a meaningless game. Done for the year.')),
-        o('shut', 'Shut it down', { sit: Math.min(c.left, 8), tag: 'SHUT DOWN' }, 'Healthy into the summer.'),
+        o('play', 'Play it out', gam(0.85, { xp: 25 }, 'Every game, healthy. The numbers count.', { sit: c.left, dur: -1, tag: 'INJURED' }, 'Hurt in a meaningless game. Done for the year, and it follows you into next season.')),
+        o('shut', 'Shut it down', { sit: c.left, dur: 0.5, tag: 'SHUT DOWN' }, 'Healthy into the summer. A full offseason to heal.'),
       ] }) },
 ]
 const GUARD = [], BIG = []
@@ -371,7 +372,7 @@ const remember = id => { try { localStorage.setItem(RECENT_KEY, JSON.stringify([
 const hollow = e => {
   if (!e) return true
   if (e.gamble) return hollow(e.gamble.hit) && hollow(e.gamble.miss)
-  return !Object.values(e.attr || {}).some(Boolean) && !e.team?.off && !e.team?.def && !e.sit && !e.xp && hollow(e.then)
+  return !Object.values(e.attr || {}).some(Boolean) && !e.team?.off && !e.team?.def && !e.sit && !e.xp && !e.dur && hollow(e.then)
 }
 
 // Picks the scenario for a stop (or null). `used` = ids already shown this season.

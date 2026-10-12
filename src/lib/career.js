@@ -817,7 +817,11 @@ export function chooseMoment(c, D, option) {
   const m = c.active.moment
   const outcome = D.choose(m, option)
   const feed = [...c.active.feed, { k: c.active.k, moment: m, option, outcome }]
-  return [withSnap(c, D, { moment: null, feed }), outcome]
+  // a lasting change to the body (durability), beyond this season
+  const e = option.effect ?? {}
+  const dur = (e.gamble ? (outcome?.hit ? e.gamble.hit : e.gamble.miss) : e)?.dur ?? 0
+  const cc = dur ? { ...c, durability: r10(clamp(c.durability + dur, 1, 10)) } : c
+  return [withSnap(cc, D, { moment: null, feed }), outcome]
 }
 // Injury: sit it out, or play through (traits down for longer, and it can get worse)
 export function resolveInjury(c, D, play) {
@@ -1223,14 +1227,19 @@ function hofVote(c, L) {
 // Pro Bowls / All-Stars, All-Pro / All-NBA, MVPs, rings, playoff years, production):
 // where a career lands among them
 const greats = list => list.map(([name, score], i) => ({ name, score, rank: i + 1 }))
+const NBA_GREATS = greats([
+  ...[['LeBron James', 690], ['Michael Jordan', 544], ['Kobe Bryant', 536], ['Julius Erving', 500], ['Magic Johnson', 444], ['Stephen Curry', 413], ['Larry Bird', 405], ['Kevin Durant', 399], ['Scottie Pippen', 365], ['Jerry West', 350], ['Oscar Robertson', 348], ['Dwyane Wade', 343], ['Chris Paul', 331], ['John Stockton', 326], ['James Harden', 309], ['Russell Westbrook', 309], ['Jason Kidd', 288], ['Steve Nash', 275], ['Isiah Thomas', 264], ['Clyde Drexler', 260], ['Allen Iverson', 259], ['Ray Allen', 253], ['Kawhi Leonard', 225], ['Reggie Miller', 195], ['Luka Doncic', 141]],
+  ...[['Kareem Abdul-Jabbar', 683], ['Bill Russell', 618], ['Tim Duncan', 543], ['Shaquille O\'Neal', 491], ['Wilt Chamberlain', 450], ['Karl Malone', 445], ['Dirk Nowitzki', 403], ['Hakeem Olajuwon', 400], ['Moses Malone', 397], ['Kevin Garnett', 377], ['Bob Pettit', 341], ['David Robinson', 338], ['Charles Barkley', 329], ['Giannis Antetokounmpo', 305], ['Dwight Howard', 279], ['Nikola Jokic', 273], ['Patrick Ewing', 270], ['Pau Gasol', 248], ['Dennis Rodman', 230], ['Kevin McHale', 218], ['Anthony Davis', 214], ['Dikembe Mutombo', 192], ['Chris Webber', 185], ['Joel Embiid', 179], ['Yao Ming', 149]],
+].sort((x, y) => y[1] - x[1]).slice(0, 25))
 export const ALL_TIME = {
   qb: greats([['Tom Brady', 574], ['Peyton Manning', 489], ['Otto Graham', 421], ['Aaron Rodgers', 392], ['Johnny Unitas', 370], ['Brett Favre', 369], ['Joe Montana', 328], ['Drew Brees', 315], ['Steve Young', 287], ['Dan Marino', 269], ['Patrick Mahomes', 263], ['John Elway', 255], ['Ben Roethlisberger', 254], ['Terry Bradshaw', 233], ['Russell Wilson', 217], ['Fran Tarkenton', 217], ['Philip Rivers', 214], ['Eli Manning', 208], ['Matt Ryan', 201], ['Kurt Warner', 195], ['Troy Aikman', 193], ['Warren Moon', 190], ['Roger Staubach', 166], ['Donovan McNabb', 147], ['Jim Kelly', 145]]),
   rb: greats([['Emmitt Smith', 300], ['Jim Brown', 294], ['Walter Payton', 269], ['Marshall Faulk', 268], ['Barry Sanders', 267], ['Marcus Allen', 234], ['Adrian Peterson', 227], ['O.J. Simpson', 206], ['LaDainian Tomlinson', 204], ['Terrell Davis', 196], ['Earl Campbell', 194], ['Eric Dickerson', 192], ['Thurman Thomas', 188], ['Jerome Bettis', 171], ['Derrick Henry', 151], ['Tony Dorsett', 150], ['Shaun Alexander', 144], ['Curtis Martin', 133], ['Frank Gore', 128], ['Edgerrin James', 124]]),
   wr: greats([['Jerry Rice', 457], ['Lance Alworth', 221], ['Marvin Harrison', 215], ['Terrell Owens', 210], ['Antonio Brown', 198], ['Randy Moss', 195], ['Cris Carter', 190], ['Michael Irvin', 188], ['Larry Fitzgerald', 187], ['Reggie Wayne', 179], ['Davante Adams', 178], ['Tim Brown', 161], ['Torry Holt', 154], ['DeAndre Hopkins', 153], ['Julio Jones', 151], ['Steve Smith Sr.', 147], ['Isaac Bruce', 144], ['Steve Largent', 143], ['Andre Johnson', 142], ['Calvin Johnson', 134]]),
   te: greats([['Travis Kelce', 266], ['Tony Gonzalez', 254], ['Rob Gronkowski', 247], ['Shannon Sharpe', 236], ['Jason Witten', 186], ['Antonio Gates', 184], ['Dave Casper', 153], ['Mike Ditka', 151], ['Jimmy Graham', 128], ['George Kittle', 119], ['Kellen Winslow', 115], ['Dallas Clark', 107], ['Ozzie Newsome', 103], ['Vernon Davis', 103], ['Greg Olsen', 96]]),
   db: greats([['Ronnie Lott', 350], ['Rod Woodson', 346], ['Herb Adderley', 314], ['Charles Woodson', 302], ['Deion Sanders', 298], ['Emlen Tunnell', 291], ['Ed Reed', 288], ['Mel Blount', 284], ['Willie Brown', 260], ['Paul Krause', 251], ['Troy Polamalu', 243], ['Ty Law', 241], ['Darrell Green', 238], ['Night Train Lane', 231], ['Champ Bailey', 226], ['Ken Houston', 219], ['Aeneas Williams', 214], ['Larry Wilson', 212], ['Brian Dawkins', 207], ['Mike Haynes', 204], ['Steve Atwater', 181], ['Darrelle Revis', 180], ['Richard Sherman', 177], ['Lem Barney', 174], ['Jalen Ramsey', 166]]),
-  guard: greats([['LeBron James', 690], ['Michael Jordan', 544], ['Kobe Bryant', 536], ['Julius Erving', 500], ['Magic Johnson', 444], ['Stephen Curry', 413], ['Larry Bird', 405], ['Kevin Durant', 399], ['Scottie Pippen', 365], ['Jerry West', 350], ['Oscar Robertson', 348], ['Dwyane Wade', 343], ['Chris Paul', 331], ['John Stockton', 326], ['James Harden', 309], ['Russell Westbrook', 309], ['Jason Kidd', 288], ['Steve Nash', 275], ['Isiah Thomas', 264], ['Clyde Drexler', 260], ['Allen Iverson', 259], ['Ray Allen', 253], ['Kawhi Leonard', 225], ['Reggie Miller', 195], ['Luka Doncic', 141]]),
-  big: greats([['Kareem Abdul-Jabbar', 683], ['Bill Russell', 618], ['Tim Duncan', 543], ['Shaquille O\'Neal', 491], ['Wilt Chamberlain', 450], ['Karl Malone', 445], ['Dirk Nowitzki', 403], ['Hakeem Olajuwon', 400], ['Moses Malone', 397], ['Kevin Garnett', 377], ['Bob Pettit', 341], ['David Robinson', 338], ['Charles Barkley', 329], ['Giannis Antetokounmpo', 305], ['Dwight Howard', 279], ['Nikola Jokic', 273], ['Patrick Ewing', 270], ['Pau Gasol', 248], ['Dennis Rodman', 230], ['Kevin McHale', 218], ['Anthony Davis', 214], ['Dikembe Mutombo', 192], ['Chris Webber', 185], ['Joel Embiid', 179], ['Yao Ming', 149]]),
+  // basketball: one list, the 25 greatest careers at any position
+  guard: NBA_GREATS,
+  big: NBA_GREATS,
 }
 
 // The player comp: the real players (today's and all-time) whose grades sit
