@@ -14,7 +14,7 @@ import { sfx, haptic, victory } from '../../lib/juice'
 import { MomentCard, NowCard, RecordOverlay } from './AppSeasonPlus'
 import Silhouette from '../Silhouette'
 import { NameTag, AvatarBadge } from './NameTag'
-import { IconClose, IconArrow, IconFlame, IconTrophy, IconStar, IconCrown, IconMedal, IconRing, IconCheck, IconShield, IconHelmet } from './icons'
+import { IconClose, IconArrow, IconFlame, IconTrophy, IconStar, IconCrown, IconMedal, IconRing, IconCheck, IconShield, IconHelmet, IconSpin } from './icons'
 
 // CAREER (football and basketball): the intro, the draft, the hub where a
 // career is played (your model and traits, the season, the player, the team,
@@ -34,8 +34,18 @@ const fmt = v => (typeof v === 'number' && !Number.isInteger(v) ? v.toFixed(1) :
 // ── Career home: what Career is, your three save slots, past careers ────────
 // a player's name: letters, spaces, apostrophes, hyphens, periods
 const cleanName = v => v.replace(/[^A-Za-z\u00C0-\u017F' .-]/g, '').replace(/\s+/g, ' ').slice(0, 14)
+// Random names for a new player: athlete-sounding, every combination plausible
+const FIRST_NAMES = ['Marcus', 'Jalen', 'Tre', 'DeShawn', 'Cole', 'Isaiah', 'Brock', 'Malik', 'Darius', 'Kade', 'Xavier', 'Jordan', 'Bryce', 'Tyson', 'Elijah', 'Grant', 'Rashad', 'Mason', 'Caleb', 'Jaylen', 'Devin', 'Trey', 'Andre', 'Dominic', 'Quentin', 'Zion', 'Myles', 'Cam', 'Jace', 'Amari', 'Keon', 'Luca', 'Nico', 'Reggie', 'Terrell', 'Bo', 'Cooper', 'Dante', 'Gavin', 'Hunter', 'Jamal', 'Khalil', 'Lamont', 'Micah', 'Owen', 'Preston', 'Rome', 'Silas', 'Tavon', 'Wyatt']
+const LAST_NAMES = ['Williams', 'Johnson', 'Carter', 'Brooks', 'Mitchell', 'Hayes', 'Coleman', 'Bennett', 'Sanders', 'Reed', 'Washington', 'Harrison', 'Fletcher', 'Dawson', 'Holloway', 'Pierce', 'Sterling', 'Vance', 'Whitfield', 'Graves', 'McKenzie', 'Ellison', 'Booker', 'Calloway', 'Dupree', 'Fontaine', 'Gaines', 'Hollins', 'Jennings', 'Kingsley', 'Lockhart', 'Maddox', 'Norwood', 'Okafor', 'Prescott', 'Quarles', 'Rhodes', 'Stokes', 'Thornton', 'Underwood', 'Varner', 'Whitaker', 'Yates', 'Abernathy', 'Blackwell', 'Crawford', 'Delgado', 'Easley', 'Freeman', 'Gentry']
+const pickName = list => list[Math.floor(Math.random() * list.length)]
 function NewSlot({ onStart, onCancel }) {
   const [first, setFirst] = useState(''), [last, setLast] = useState('')
+  // a new name every tap (never the same one twice in a row)
+  const randomize = () => {
+    let f, l
+    do { f = pickName(FIRST_NAMES); l = pickName(LAST_NAMES) } while (f === first && l === last)
+    setFirst(f); setLast(l); sfx('tap')
+  }
   const ok = first.trim().length >= 2 && last.trim().length >= 2
   return (
     <form className="cr-slot cr-slot--new" onSubmit={e => { e.preventDefault(); if (ok) onStart(`${first.trim()} ${last.trim()}`) }}>
@@ -43,10 +53,11 @@ function NewSlot({ onStart, onCancel }) {
       <div className="cr-name-row">
         <input className="cr-name-in" value={first} onChange={e => setFirst(cleanName(e.target.value))} placeholder="First name" autoComplete="off" autoFocus aria-label="First name" />
         <input className="cr-name-in" value={last} onChange={e => setLast(cleanName(e.target.value))} placeholder="Last name" autoComplete="off" aria-label="Last name" />
+        <button type="button" className="cr-name-rand" onClick={randomize} aria-label="Random name" title="Random name"><IconSpin size={18} /></button>
       </div>
       <div className="cr-slot-acts">
         <button type="button" className="ag-btn" onClick={onCancel}>CANCEL</button>
-        <button type="submit" className="ag-btn ag-btn--gold" disabled={!ok}>BUILD HIM <IconArrow size={15} /></button>
+        <button type="submit" className="ag-btn ag-btn--gold" disabled={!ok}>BUILD PLAYER <IconArrow size={15} /></button>
       </div>
     </form>
   )
@@ -82,7 +93,7 @@ export function CareerIntro({ sport = 'nfl', uid = null, onOpen, onNew, onClose 
   const [naming, setNaming] = useState(null)       // the empty slot being named
   useEffect(() => { let off = false; loadSlots(sport, uid).then(l => { if (!off) setSlots(l) }); return () => { off = true } }, [sport, uid])
   const steps = [
-    ['Build', 'Name your player and draft him from traits, the same spins as a normal game. That build is who you take into the league.'],
+    ['Build', 'Name your player and build them from traits, the same spins as a normal game. That build is who you take into the league.'],
     ['The draft', 'Combine drills, then interviews with the teams picking near you. Your stock moves, draft day decides where you land, and the team around you matters.'],
     ['The career', `Season after season, ${S.isBucket ? 'game by game' : 'week by week'}: decisions, injuries, a ${S.isBucket ? 'rotation' : 'depth chart'} to win. Every offseason the roster turns over and the league moves.`],
     ['Legacy', 'Contracts, free agency, trade demands, retirement. Awards, records, the Hall of Fame, and where the career ranks among the greatest ever.'],

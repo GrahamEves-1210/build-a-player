@@ -4279,7 +4279,9 @@ html.app-look .ag-blacktop--menu:hover .ag-bt-tags .bt-mode-tag:last-child { tra
 .cr-slot--empty small { font-size: 11px; color: var(--ag-muted); letter-spacing: 1.5px; }
 .cr-slot--new, .cr-slot--ask { flex-direction: column; gap: 10px; padding: 12px; }
 .cr-slot--ask p, .cr-delete p { margin: 0; font-family: var(--ag-body); font-size: 14px; color: var(--ag-text-2); }
-.cr-name-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.cr-name-row { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; }
+.cr-name-rand { width: 46px; display: grid; place-items: center; border-radius: 10px; border: 1.5px solid var(--ag-line-hi); background: rgba(255,255,255,.05); color: #f5dc8a; cursor: pointer; }
+.cr-name-rand:active { transform: scale(.94) rotate(-20deg); }
 .cr-name-in { min-width: 0; padding: 11px 12px; border-radius: 10px; border: 1.5px solid var(--ag-line-hi); background: rgba(0,0,0,.3); color: var(--ag-text); font-family: var(--ag-body); font-size: 16px; font-weight: 600; }
 .cr-name-in:focus { outline: none; border-color: #f5dc8a; }
 .cr-slot-acts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
