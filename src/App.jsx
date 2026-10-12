@@ -1752,7 +1752,7 @@ export default function App() {
     return withGame(
       <Suspense fallback={null}>
         <Navbar {...navbarProps} />
-        <AboutPage onBack={() => { setPage(simResult ? 'sim' : 'game'); window.scrollTo({ top: 0, behavior: 'instant' }) }} onPrivacy={() => setPage('privacy')} />
+        <AboutPage onBack={() => { setPage(IS_APP || APP_LOOK ? 'splash' : simResult ? 'sim' : 'game'); window.scrollTo({ top: 0, behavior: 'instant' }) }} onPrivacy={() => setPage('privacy')} />
       </Suspense>
     )
   }

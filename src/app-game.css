@@ -4474,3 +4474,36 @@ html.is-android .ag-toast { background: rgba(8,12,10,.97); }
 /* what's around the player: the top bar, the build bar, the OVR row under him, the dock (app) or the ad rail (website) */
 html { --drop-chrome: calc(330px + var(--web-rail, 0px)); }
 html.is-app { --drop-chrome: calc(352px + env(safe-area-inset-top) + env(safe-area-inset-bottom)); }
+
+/* ── About, Privacy, Terms (components/LegalShell.jsx): an app screen that
+   scrolls on its own, the sections as cards, jump links across the top ── */
+.ag-screen.lg { padding-top: 0; }
+.lg-head { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 12px; padding: calc(var(--safe-top) + 10px) 16px 14px; background: linear-gradient(180deg, #0a0f0d 78%, rgba(10,15,13,0)); }
+.lg-back { flex: none; width: 42px; height: 42px; display: grid; place-items: center; border-radius: 13px; border: 1.5px solid var(--ag-line); background: rgba(255,255,255,.05); color: var(--ag-text); cursor: pointer; }
+.lg-back:active { transform: scale(.94); }
+.lg-head-txt { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.lg-head-txt .ag-eyebrow { font-size: 12px; }
+.lg-head-txt .ag-h1 { font-size: 32px; line-height: 1; margin: 0; }
+.lg-updated { font-family: var(--ag-body); font-size: 13px; color: var(--ag-muted); }
+.lg-toc { display: flex; gap: 6px; overflow-x: auto; padding: 2px 14px 12px; scrollbar-width: none; }
+.lg-toc::-webkit-scrollbar { display: none; }
+.lg-toc a { flex: none; padding: 7px 12px 6px; border-radius: 999px; border: 1px solid var(--ag-line); background: rgba(255,255,255,.04); color: var(--ag-text-2); font-family: var(--ag-font); font-size: 14px; letter-spacing: 1px; text-decoration: none; white-space: nowrap; }
+.lg-toc a:active { background: rgba(255,255,255,.1); }
+.lg-body { display: flex; flex-direction: column; gap: 10px; padding: 0 14px; max-width: 760px; margin: 0 auto; }
+.lg .lg-sec { margin: 0 !important; padding: 16px 16px 6px; border: 1.5px solid var(--ag-line); border-radius: 16px; background: rgba(255,255,255,.03); scroll-margin-top: calc(var(--safe-top) + 80px); }
+.lg .about-section-title { margin: 0 0 10px !important; font-family: var(--ag-font) !important; font-size: 18px !important; letter-spacing: 1.4px !important; color: var(--ag-a1) !important; text-transform: uppercase; }
+.lg .about-body, .lg .about-list li, .lg .about-disclaimer { font-family: var(--ag-body) !important; font-size: 15.5px !important; line-height: 1.6 !important; color: var(--ag-text) !important; opacity: .92; }
+.lg .about-body { margin: 0 0 10px !important; }
+.lg .about-list { margin: 0 0 10px !important; padding-left: 20px !important; display: flex; flex-direction: column; gap: 6px; }
+.lg .about-disclaimer { font-size: 14px !important; color: var(--ag-text-2) !important; margin: 0 0 10px !important; }
+.lg .about-link { color: var(--ag-a1) !important; text-decoration: underline; text-underline-offset: 2px; word-break: break-word; }
+.lg strong { color: #fff; }
+.lg-about-hero { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
+.lg-about-mark { width: min(260px, 70%); height: auto; }
+.lg-modes { display: grid; grid-template-columns: 1fr; gap: 8px; margin-bottom: 10px; }
+@media (min-width: 560px) { .lg-modes { grid-template-columns: 1fr 1fr; } }
+.lg-mode { display: flex; flex-direction: column; gap: 3px; padding: 10px 12px; border-radius: 12px; background: rgba(255,255,255,.04); border: 1px solid var(--ag-line); }
+.lg-mode b { font-family: var(--ag-font); font-weight: 400; font-size: 17px; letter-spacing: 1px; color: #fff; }
+.lg-mode span { font-family: var(--ag-body); font-size: 14px; line-height: 1.45; color: var(--ag-text-2); }
+.lg-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 18px; margin-top: 8px !important; }
+.lg-links .about-text-link { font-family: var(--ag-font); font-size: 15px; letter-spacing: 1px; color: var(--ag-a1); }
