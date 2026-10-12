@@ -396,7 +396,9 @@ export function depthChart(c, roster = c.roster ?? (c.team ? rosterOf(c, c.team)
   const S = sportOf(c)
   const group = (roster?.[c.pos] ?? []).filter(p => p.name !== c.name)
   const me = { name: c.name, pos: c.pos, ovr: c.ovr, age: c.age, you: true }
-  const edge = p => p.ovr + (p.you ? (c.contract?.starter ? 99 : c.lastRole === 'Starter' ? 2 : 0) : 0)
+  // last year's starter keeps it in a tie; the coaches trust a good name (+1) and doubt a bad one (−1)
+  const trust = (c.rep ?? 5) >= 8 ? 1 : (c.rep ?? 5) <= 3 ? -1 : 0
+  const edge = p => p.ovr + (p.you ? (c.contract?.starter ? 99 : (c.lastRole === 'Starter' ? 2 : 0) + trust) : 0)
   const all = [...group, me].sort((a, b) => edge(b) - edge(a))
   const idx = all.findIndex(p => p.you)
   return { all, idx, starter: idx < S.starters[c.pos], ahead: all.slice(0, idx), label: S.depthLabel(c.pos, idx + 1) }
@@ -749,6 +751,7 @@ export function startSeason(c) {
   const base = S.sim(c.pos)(c.build, team)
   const seed = `${c.seed}-y${c.year + 1}`
   const D = director(cc, team, base, seed)
+  seasonSwing(cc, D)
   // not the starter. Basketball: off the bench all year, a smaller role.
   // Football: the season opens on the bench, until the job comes your way.
   let benched = null
@@ -767,6 +770,28 @@ export function startSeason(c) {
   const feed = benched ? [{ k: 0, note: benched.bench ? `${benched.behind} starts. ${c.name} comes off the bench this season: fewer minutes, a smaller role.` : `${benched.behind} is the starter. ${c.name} opens the season as ${benched.label}.`, noteKind: benched.bench ? 'ROTATION' : 'DEPTH CHART' }] : []
   const next = { ...cc, phase: 'season', fit, role: dc.starter ? 'Starter' : 'Backup', simTeam: team, goals: goalsFor(cc), active: { k: 0, base, snap: D.snapshot(), seed, moment: null, feed, injury: null, benched } }
   return [next, D]
+}
+// The unpredictable part of a year. Never shown, only felt:
+// - form: about one season in eight the player is quietly better than the
+//   ratings (a breakout), one in eight quietly worse (a bust). A contract year
+//   leans toward a breakout; the thirties lean toward a bust.
+// - a streak: some seasons have one short stretch running a little hot or cold.
+function seasonSwing(c, D) {
+  const r = seeded(`${c.seed}-swing-${c.year}`)
+  const all = d => ({ attr: Object.fromEntries(c.types.map(t => [t, d])) })
+  const contractYear = c.contract?.left === 1
+  const up = 0.12 + (contractYear ? 0.06 : 0) + (c.age <= 24 ? 0.03 : 0)
+  const down = 0.12 + (c.age >= 32 ? 0.06 : 0) - (contractYear ? 0.03 : 0)
+  const roll = r()
+  if (roll < up) D.nudge(all(1), 0, D.total, null, true)
+  else if (roll < up + down) D.nudge(all(-1), 0, D.total, null, true)
+  // a streak: 35% of seasons, three games (football) or six (basketball), one grade either way
+  if (r() < 0.35) {
+    const len = sportOf(c).isBucket ? 6 : 3
+    const from = 2 + Math.floor(r() * Math.max(1, D.total - len - 3))
+    const hot = r() < 0.55
+    D.nudge(all(hot ? 1 : -1), from, from + len, hot ? 'HOT STREAK' : 'COLD STRETCH')
+  }
 }
 // Picks a saved season back up: the director rebuilt from its own data
 export function resumeSeason(c) {
@@ -1041,6 +1066,12 @@ const EVENTS = {
     { id: 'holdout', w: 1, when: c => c.contract.kind === 'rookie' && c.contract.left === 1 && c.rep >= 6, text: () => `The agent wants an extension now. Talks stall into camp.`, apply: c => ({ nextMods: { off: -0.5 }, rep: Math.max(1, c.rep - 1) }) },
     { id: 'captain', w: 2, when: c => c.rep >= 7, text: t => `The ${t} vote you a team captain. The locker room is yours.`, apply: c => ({ rep: Math.min(10, c.rep + 1) }) },
     { id: 'scheme-fit', w: 2, text: t => `The ${t} redesign the playbook around their best players. More touches are coming.`, apply: () => ({ nextMods: { off: 0.5 } }) },
+    { id: 'mentor', w: 2, good: true, when: c => c.age <= 25, text: (t, c) => `A ten-year veteran on the ${t} takes ${c.name} under his wing. Film every morning, extra reps every night.`, apply: c => ({ dev: { ...c.dev, points: c.dev.points + 1 } }) },
+    { id: 'built-around', w: 2, good: true, when: c => c.rep >= 6, text: (t, c) => `The ${t} coaching staff builds the game plan around ${c.name}. More touches are coming.`, apply: () => ({ nextMods: { off: 0.75 } }) },
+    { id: 'rift', w: 2, bad: true, when: c => c.rep <= 4, text: t => `Teammates haven't forgotten last year. The ${t} locker room is split, and the coaches notice.`, apply: c => ({ nextMods: { off: -0.5, def: -0.5 }, rep: Math.max(1, c.rep - 1) }) },
+    { id: 'camp-tweak', w: 2, bad: true, text: () => `A hamstring tweak in OTAs. Nothing serious, but it lingers into the season.`, apply: c => ({ durability: r10(Math.max(1, c.durability - 0.4)) }) },
+    { id: 'line-rebuilt', w: 2, text: t => `The ${t} lose two starting linemen in free agency. The rebuild up front starts now.`, apply: () => ({ nextMods: { off: -0.75 } }) },
+    { id: 'division-loads', w: 2, text: t => `A division rival goes all in: two stars signed in a week. The road to January got harder for the ${t}.`, apply: () => ({ nextMods: { def: -0.5 } }) },
     { id: 'quiet', w: 3, text: () => `A quiet offseason at the facility. Camp opens, and the grind begins.`, apply: () => ({}) },
   ],
   bucket: [
@@ -1052,16 +1083,25 @@ const EVENTS = {
     { id: 'extension', w: 1, when: c => c.contract.kind === 'rookie' && c.contract.left === 1 && c.rep >= 6, text: () => `The agent wants the extension done now. Talks stall into training camp.`, apply: c => ({ nextMods: { off: -0.5 }, rep: Math.max(1, c.rep - 1) }) },
     { id: 'captain', w: 2, when: c => c.rep >= 7, text: t => `The ${t} name you a captain. The locker room is yours.`, apply: c => ({ rep: Math.min(10, c.rep + 1) }) },
     { id: 'system', w: 2, text: t => `The ${t} rebuild the offense around their best players. More touches are coming.`, apply: () => ({ nextMods: { off: 0.5 } }) },
+    { id: 'mentor', w: 2, good: true, when: c => c.age <= 25, text: (t, c) => `A fifteen-year veteran on the ${t} takes ${c.name} under his wing. Film every morning, extra shots every night.`, apply: c => ({ dev: { ...c.dev, points: c.dev.points + 1 } }) },
+    { id: 'built-around', w: 2, good: true, when: c => c.rep >= 6, text: (t, c) => `The ${t} put the ball in ${c.name}'s hands. More sets, more touches.`, apply: () => ({ nextMods: { off: 0.75 } }) },
+    { id: 'rift', w: 2, bad: true, when: c => c.rep <= 4, text: t => `The ${t} locker room hasn't gotten over last year. Nobody's passing to anybody.`, apply: c => ({ nextMods: { off: -0.5, def: -0.5 }, rep: Math.max(1, c.rep - 1) }) },
+    { id: 'camp-tweak', w: 2, bad: true, text: () => `A sprained ankle in a summer run. Nothing serious, but it lingers into the season.`, apply: c => ({ durability: r10(Math.max(1, c.durability - 0.4)) }) },
+    { id: 'shooters-gone', w: 2, text: t => `The ${t} lose two shooters in free agency. The floor gets smaller.`, apply: () => ({ nextMods: { off: -0.75 } }) },
+    { id: 'conf-loads', w: 2, text: t => `A conference rival lands a superstar. The road through the playoffs got harder for the ${t}.`, apply: () => ({ nextMods: { def: -0.5 } }) },
     { id: 'quiet', w: 3, text: () => `A quiet summer at the facility. Camp opens, and the grind begins.`, apply: () => ({}) },
   ],
 }
 function offseasonEvents(c) {
   const S = sportOf(c)
   const r = seeded(`${c.seed}-ev-${c.year}`)
+  // reputation tilts the summer: a good name draws the good breaks, a bad one the bad
+  const rep = c.rep ?? 5
+  const wOf = e => e.w * (e.good ? (rep >= 7 ? 1.6 : rep <= 3 ? 0.5 : 1) : e.bad ? (rep <= 3 ? 1.8 : rep >= 7 ? 0.6 : 1) : 1)
   const fits = (EVENTS[c.sport] ?? EVENTS.nfl).filter(e => !e.when || e.when(c))
-  const total = fits.reduce((s, e) => s + e.w, 0)
+  const total = fits.reduce((s, e) => s + wOf(e), 0)
   let roll = r() * total, ev = fits[0]
-  for (const e of fits) { roll -= e.w; if (roll <= 0) { ev = e; break } }
+  for (const e of fits) { roll -= wOf(e); if (roll <= 0) { ev = e; break } }
   const text = ev.text(nickOf(S, c.team), c)
   const fx = ev.apply(c)
   return { ...c, ...fx, nextMods: fx.nextMods ? { ...(c.nextMods ?? {}), ...fx.nextMods } : c.nextMods, events: [...c.events, { year: c.year + 1, text }] }
@@ -1072,7 +1112,9 @@ function marketValue(c) {
   const perf = last.length ? last.reduce((s, x) => s + seasonScore(c.pos, x), 0) / last.length : 0.3
   const ageCut = c.age >= 33 ? 0.6 : c.age >= 30 ? 0.8 : 1
   const [lo, hi] = S.money[c.pos]
-  return r10(lo + (hi - lo) * clamp(perf, 0, 1) * ageCut)
+  // reputation moves the number a little: a good name is worth up to +10%, a bad one −8%
+  const repCut = 0.9 + (c.rep ?? 5) * 0.02
+  return r10((lo + (hi - lo) * clamp(perf, 0, 1) * ageCut) * repCut)
 }
 // Contract's up: the team's offer and two from the market; none at all when
 // nobody's calling (that's the end of the road)

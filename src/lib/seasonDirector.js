@@ -237,6 +237,13 @@ export function createDirector({ sport, pos, build, team, simFn, base, seed = Ma
   // Sidelined from game `at` for `n` games (Career: an injury): the team plays
   // on without you, and the rest of the season is re-simulated from there
   D.sidelined = (at, n) => { for (let i = at; i < Math.min(total, at + n); i++) sitGame(i); resplice(at) }
+  // A stretch played a little above or below the ratings (Career: a hidden form
+  // for the year, a hot or cold streak). No tag: nothing on the schedule shows it.
+  D.nudge = (mods, from = 0, to = total, tag = null, playoffs = false) => {
+    D.windows.push({ from, to: Math.min(total, to), mods: { attr: mods.attr || {}, team: mods.team || {} }, tag })
+    if (playoffs) D.playoffMods = addMods(D.playoffMods, mods)
+    resplice(from)
+  }
   // The director's own data, to save mid-season and pick the season back up
   D.snapshot = () => ({
     games: D.games, locked: D.locked, cum: D.cum, windows: D.windows, playoffMods: D.playoffMods, last: D.last, moments: D.moments,
