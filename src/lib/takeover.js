@@ -188,7 +188,7 @@ export function hoopsDuel({ run, city, star, me, partner = null, partnerStar = n
   const mine = { id: 'me', name: me.name, pos: run.pos, build: duelBuild(run) }
   const theirs = { id: 'star', name: star.player.name, pos: run.pos, build: star.build, role: star.boost ? 'score' : 'balanced' }
   if (partner && partnerStar) {
-    const p2 = { id: 'partner', name: partner.name, pos: partner.pos, build: partner.build }
+    const p2 = { id: 'partner', name: partner.name, cos: partner.cos ?? null, pos: partner.pos, build: partner.build }
     const s2 = { id: 'star2', name: partnerStar.player.name, pos: partner.pos, build: partnerStar.build }
     return simStreetball({ teams: [[mine, p2], [theirs, s2]], seed, goal: 15, winBy: 2, cap: 19, names: [`${(me.name || 'GUEST').toUpperCase()} +1`, city.nick.toUpperCase()] })
   }

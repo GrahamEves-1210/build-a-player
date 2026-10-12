@@ -201,7 +201,7 @@ export function BlacktopQueue({ bt, user, onBack }) {
 
         <button className="bt-lobby-chat ag-pop" style={{ '--d': '160ms' }} onClick={() => { setChatOpen(true); setSeenChat(bt.chat.length) }}>
           <IconChat size={18} />
-          <span className="bt-lobby-chat-txt">{bt.chat.length ? <><b>{bt.chat[bt.chat.length - 1].from === bt.me.vid ? 'You' : bt.chat[bt.chat.length - 1].name}:</b> {bt.chat[bt.chat.length - 1].text}</> : 'Lobby chat. Call your spot, find a squad.'}</span>
+          <span className="bt-lobby-chat-txt">{bt.chat.length ? <><b><NameTag name={bt.chat[bt.chat.length - 1].name} self={bt.chat[bt.chat.length - 1].from === bt.me.vid} cos={bt.chat[bt.chat.length - 1].cos || null} plate={false} />:</b> {bt.chat[bt.chat.length - 1].text}</> : 'Lobby chat. Call your spot, find a squad.'}</span>
           {unread > 0 && <span className="ag-tab-badge">{unread}</span>}
         </button>
 
@@ -335,7 +335,7 @@ export function BlacktopChat({ bt, user, onClose, mode = 'blacktop', title = 'TE
         {note && <div className="bt-chat-note">{note}</div>}
         {menu && (
           <div className="bt-msg-menu">
-            <span>{menu.name}</span>
+            <span><NameTag name={menu.name} cos={menu.cos || null} uid={menu.uid || null} plate={false} /></span>
             <button onClick={() => act('report')}>REPORT</button>
             <button onClick={() => act('block')}>BLOCK</button>
             <button onClick={() => setMenu(null)}>CANCEL</button>

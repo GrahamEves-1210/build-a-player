@@ -1,4 +1,5 @@
 import { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react'
+import { NameTag } from './app/NameTag'
 import { getPlayerPhoto, pickThreeFrom, QB_POOL, RB_POOL, WR_POOL } from '../data/depth-chart-players'
 import { supabase } from '../lib/supabase'
 import { TEAMS } from '../data/nfl-teams'
@@ -77,7 +78,7 @@ async function fetchTopStreaks(period) {
   try {
     let q = supabase
       .from('depth_chart_streaks')
-      .select('username, streak')
+      .select('username, user_id, streak')
       .order('streak', { ascending: false })
       .order('created_at', { ascending: true })
       .limit(10)
@@ -145,7 +146,7 @@ function LeaderboardDropdown({ onClose }) {
         {rows !== null && rows.slice(0, visibleCount).map((r, i) => (
           <div key={i} className={`dc-lb-row${i === 0 ? ' dc-lb-row--top' : ''}`}>
             <span className="dc-lb-rank">{i + 1}</span>
-            <span className="dc-lb-name">{r.username || 'Anonymous'}</span>
+            <span className="dc-lb-name">{r.username ? <NameTag name={r.username} uid={r.user_id ?? null} plate={false} /> : 'Anonymous'}</span>
             <span className="dc-lb-streak" style={{ color: streakColor(r.streak) }}>{r.streak}</span>
           </div>
         ))}

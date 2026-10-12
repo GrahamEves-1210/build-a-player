@@ -189,7 +189,7 @@ export default function AppTakeover({ sport, run, setRun, user, pools, attrMap, 
         <div className="ag-screen-body">
           <div className="tk-matchup ag-pop">
             <div className="tk-side">
-              <span className="tk-side-av"><IconProfile size={26} /></span>
+              <span className="tk-side-av"><AvatarBadge self name={me.name} size={40} /></span>
               <b><NameTag name={me.name} self plate={false} /></b><small>{ovr} OVR</small>
             </div>
             <span className="tk-vs">{isBucket ? (run.mode === 'duo' ? '2v2' : '1v1') : 'GAME'}</span>
@@ -200,7 +200,7 @@ export default function AppTakeover({ sport, run, setRun, user, pools, attrMap, 
           </div>
           {run.mode === 'duo' && duo.partnerPlayer && partnerStar && (
             <div className="tk-duo-line ag-pop" style={{ '--d': '60ms' }}>
-              <span><IconProfile size={14} /> <NameTag name={duo.partnerPlayer.name} cos={duo.partner?.cos} plate={false} /></span><i>vs</i><span><Headshot src={partnerStar.build[duo.partnerPlayer.types?.[0]]?.photo} name={partnerStar.player.name} size={22} /> {partnerStar.player.name}</span>
+              <span><AvatarBadge name={duo.partnerPlayer.name} cos={duo.partner?.cos ?? duo.partnerPlayer.cos ?? null} size={22} /> <NameTag name={duo.partnerPlayer.name} cos={duo.partner?.cos ?? duo.partnerPlayer.cos ?? null} plate={false} /></span><i>vs</i><span><Headshot src={partnerStar.build[duo.partnerPlayer.types?.[0]]?.photo} name={partnerStar.player.name} size={22} /> {partnerStar.player.name}</span>
             </div>
           )}
           <div className="tk-stakes ag-pop" style={{ '--d': '80ms' }}>
@@ -400,8 +400,8 @@ function HoopsDuel({ duel, run, city, me, onDone }) {
   const goal = duoGame ? 15 : 11
   const opp = lift(city.color)
   const photoFor = p => p.build?.[run.types[0]]?.photo ?? null
-  // my own avatar badge and name (the partner keeps the plain icon)
-  const avatarFor = p => (p.id === 'me' ? <AvatarBadge self name={me.name} size={40} /> : p.id === 'partner' ? <span className="btc-you"><IconProfile size={20} /></span> : null)
+  // my own avatar badge and name, and my partner's in theirs
+  const avatarFor = p => (p.id === 'me' ? <AvatarBadge self name={me.name} size={40} /> : p.id === 'partner' ? <AvatarBadge name={p.name} cos={p.cos || null} size={40} /> : null)
   return (
     <div className="ag-screen ag-screen--bucket bt-game bt-live tk-duel" style={{ '--tc': city.color }}>
       <div className="bt-board">
@@ -476,21 +476,21 @@ function useDuo({ enabled, run, setRun, me, user, calcOvr, onCity }) {
     if (!enabled || !code) { roomRef.current?.leave(); roomRef.current = null; setPartner(null); setPartnerPlayer(null); return }
     const room = joinRoom(`takeover-${code}`, { ...me, pos: run.pos, host })
     roomRef.current = room
-    const shareBuild = () => room.send('build', { pos: runRef.current.pos, types: runRef.current.types, build: runRef.current.build, name: me.name, ovr: calcOvr(runRef.current.build) })
+    const shareBuild = () => room.send('build', { pos: runRef.current.pos, types: runRef.current.types, build: runRef.current.build, name: me.name, cos: me.cos, ovr: calcOvr(runRef.current.build) })
     room.onPresence(list => {
       const other = list.find(p => p.vid !== me.vid)
       setPartner(other ?? null)
       if (other) shareBuild()
       if (other && host) room.send('state', roadOf(runRef.current))
     })
-    room.on('build', p => setPartnerPlayer({ id: 'partner', name: p.name, pos: p.pos, types: p.types, build: p.build, ovr: p.ovr }))
+    room.on('build', p => setPartnerPlayer({ id: 'partner', name: p.name, cos: p.cos ?? null, pos: p.pos, types: p.types, build: p.build, ovr: p.ovr }))
     room.on('state', p => { if (!host) setRun(r => (r ? { ...r, ...p, over: p.lives <= 0, justWon: false } : r)) })
     room.on('go', () => { if (!host) onCity() })
     room.on('chat', p => { if (!blockedIds().has(p.uid)) setChat(c => [...c.slice(-80), { id: `${p.from}-${p.ts}`, from: p.from, uid: p.uid, name: p.name, team: 0, text: clean(p.text), ts: p.ts, all: true }]) })
     return () => { room.leave(); roomRef.current = null }
   }, [enabled, code]) // eslint-disable-line
   // whenever my build changes (a reward), share it again
-  useEffect(() => { if (roomRef.current && run) roomRef.current.send('build', { pos: run.pos, types: run.types, build: run.build, name: me.name, ovr: calcOvr(run.build) }) }, [run?.build]) // eslint-disable-line
+  useEffect(() => { if (roomRef.current && run) roomRef.current.send('build', { pos: run.pos, types: run.types, build: run.build, name: me.name, cos: me.cos, ovr: calcOvr(run.build) }) }, [run?.build]) // eslint-disable-line
   const sync = next => { if (host) roomRef.current?.send('state', roadOf(next)) }
   const sendChat = (text) => {
     const now = Date.now()

@@ -1178,7 +1178,7 @@ export default function App() {
         if (!channel._bc) {
           const vsId = sessionStorage.getItem('bap_vs_id')
           const vid  = user?.id ? `${user.id}-${vsId}` : vsId
-          const name = getUsername(user) || 'Your Build'
+          const name = getUsername(user) || 'Guest'
           if (vid) channel.track({ vid, name }).catch(() => {})
         }
       } else if ((s === 'TIMED_OUT' || s === 'CHANNEL_ERROR') && !channel._bc && retries < 5) {

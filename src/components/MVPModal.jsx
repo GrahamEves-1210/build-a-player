@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { NameTag } from './app/NameTag'
 import HEADSHOTS from '../data/headshots.json'
 import { nflHeadshot } from '../utils/simulation'
 import QBAvatar from './QBAvatar'
@@ -26,7 +27,7 @@ function OLAllProReveal({ mvpResult, userPhoto, userName = 'Guest' }) {
             <span className="mvp-allpro-spot">{p.spot}</span>
             <QBAvatar photo={p.isUser ? userPhoto : nflHeadshot(HEADSHOTS[p.name])} team={p.team} color={p.color} size={34} />
             <div className="mvp-allpro-info">
-              <span className="mvp-allpro-name">{p.isUser ? userName : p.name}</span>
+              <span className="mvp-allpro-name">{p.isUser ? <NameTag name={userName} self plate={false} /> : p.name}</span>
               <span className="mvp-allpro-stats">{p.team} · {sacksAllowed(p.stats.sacks)} · {p.stats.pancakes} pancakes</span>
             </div>
           </div>
@@ -81,7 +82,6 @@ export default function MVPModal({ result, mvpResult, onDismiss, toSuperBowl = f
   const isOPOY = isRB || isWR || isTE
   const awardLabel    = isOL ? 'All-Pro Team' : isDB ? 'DPOY Award' : isOPOY ? 'OPOY Award'           : 'MVP Award'
   const awardEyebrow  = 'NFL Regular Season'
-  const userWinsLabel = `${userName} Wins ${isDB ? 'DPOY' : isOPOY ? 'OPOY' : 'MVP'}`
   const unanimousLbl  = isDB ? 'Unanimous DPOY' : isOPOY ? 'Unanimous OPOY'       : 'Unanimous MVP'
   const regularLbl    = isDB ? 'Defensive Player of the Year' : isOPOY ? 'Regular Season OPOY'  : 'Regular Season MVP'
 
@@ -185,7 +185,7 @@ export default function MVPModal({ result, mvpResult, onDismiss, toSuperBowl = f
               <OLAllProReveal mvpResult={mvpResult} userPhoto={userPhoto} userName={userName} />
             ) : userWins ? (
               <>
-                <div className="mvp-winner-tag mvp-winner-tag--you">{userWinsLabel}</div>
+                <div className="mvp-winner-tag mvp-winner-tag--you"><NameTag name={userName} self plate={false} /> Wins {isDB ? 'DPOY' : isOPOY ? 'OPOY' : 'MVP'}</div>
                 <img src="/mvp.png" alt="Trophy" className="mvp-trophy-img" draggable={false} />
                 <div className="mvp-winner-name">{unanimous ? unanimousLbl : regularLbl}</div>
                 <div className="mvp-season-stats">

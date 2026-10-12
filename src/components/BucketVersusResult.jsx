@@ -819,7 +819,7 @@ export default function BucketVersusResult({ myData, oppData, position, oppPosit
   const myOVR    = calcBucketOVR(myData.build,  myTypes,  position)
   const oppOVR   = calcBucketOVR(oppData.build, oppTypes, oppPosition ?? position)
 
-  const myName  = myData.name  || (user ? (getUsername(user)) : 'Your Build')
+  const myName  = myData.name  || (user ? (getUsername(user)) : 'Guest')
   const oppName = oppData.name || 'Opponent'
 
   const myTeamData  = NBA_TEAMS.find(t => t.short === myData.player?.team)

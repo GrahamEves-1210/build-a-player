@@ -1303,7 +1303,7 @@ export default function BucketApp() {
           const vsId = sessionStorage.getItem('bap_vs_id')
           const uid  = user?.id
           const vid  = uid ? `${uid}-${vsId}` : vsId
-          const name = getUsername(user) || 'Your Build'
+          const name = getUsername(user) || 'Guest'
           if (vid) channel.track({ vid, name }).catch?.(() => {})
         }
       } else if ((s === 'TIMED_OUT' || s === 'CHANNEL_ERROR') && !channel._bc && chRetries < 5) {

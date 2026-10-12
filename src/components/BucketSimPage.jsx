@@ -1,4 +1,5 @@
 ﻿import React, { useState, useEffect, useRef, useMemo, useCallback, useLayoutEffect } from 'react'
+import { NameTag } from './app/NameTag'
 import { createPortal } from 'react-dom'
 import { NBA_TEAMS } from '../data/nba-teams'
 import { BUCKET_ATTR } from '../data/nba-attrs'
@@ -2485,7 +2486,7 @@ function ScreenFinal({ result, awards, build, types, attrMap, onReset, onBack, a
 
       {filled.length > 0 && (
         <div className="simp-stat-section">
-          <div className="simp-stat-group-lbl">{userName}'s Build</div>
+          <div className="simp-stat-group-lbl"><NameTag name={userName} self plate={false} />'s Build</div>
           <div className="simp-attr-table simp-attr-table-sm">
             {filled.map(t => {
               const meta = attrMap[t] ?? { label: t, hex: '#888' }

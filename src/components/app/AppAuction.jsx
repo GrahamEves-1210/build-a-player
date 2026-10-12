@@ -228,7 +228,7 @@ export default function AppAuction({ au, posName, onHome, onPlayAgain }) {
       {controls}
 
       <div className="au-mine">
-        <div className="au-mine-head"><span className="ag-eyebrow">YOUR BUILD</span><b className="au-cash">${L.wallets[mine]} <small>left · max bid ${myMax}</small></b></div>
+        <div className="au-mine-head"><span className="ag-eyebrow"><NameTag name={me.name} self plate={false} /></span><b className="au-cash">${L.wallets[mine]} <small>left · max bid ${myMax}</small></b></div>
         <div className="au-slots">
           {myBuild.map(([t, w]) => (
             <div key={t} className={`au-slot${w ? ' is-in' : ''}${lot?.trait === t && st.stage === 'lot' ? ' is-up' : ''}`} style={w ? { '--g': gradeColor(w.val) } : undefined}>

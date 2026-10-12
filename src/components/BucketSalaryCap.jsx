@@ -1,4 +1,5 @@
 ﻿import React, { useState, useMemo, useEffect } from 'react'
+import { NameTag } from './app/NameTag'
 import { NBA_GUARD_PLAYERS } from '../data/nba-guards'
 import { NBA_BIG_PLAYERS } from '../data/nba-bigs'
 import { NBA_TEAMS } from '../data/nba-teams'
@@ -515,7 +516,7 @@ function InfiniteLeaderboard({ onClose }) {
     if (!supabase) { setRows([]); return }
     supabase
       .from('salary_infinite_plays')
-      .select('username, picks, overall_score, ppg, apg, rpg')
+      .select('username, user_id, picks, overall_score, ppg, apg, rpg')
       .order('overall_score', { ascending: false })
       .limit(10)
       .then(({ data }) => setRows((data || []).slice(0, 10)))
@@ -534,7 +535,7 @@ function InfiniteLeaderboard({ onClose }) {
           <div key={i} className={`sc-lb-row${i === 0 ? ' sc-lb-row--top' : ''}`} style={{ animationDelay: `${i * 0.04}s` }}>
             <div className="sc-lb-row-main">
               <span className="sc-lb-rank">{i + 1}</span>
-              <span className="sc-lb-name">{r.username || 'Anonymous'}</span>
+              <span className="sc-lb-name">{r.username ? <NameTag name={r.username} uid={r.user_id ?? null} plate={false} /> : 'Anonymous'}</span>
               <span className="sc-lb-ovr">{r.overall_score} OVR</span>
             </div>
             {r.picks && (
@@ -565,7 +566,7 @@ function SalaryLeaderboard({ dateStr, dateLabel, onClose }) {
     if (!supabase) { setRows([]); return }
     supabase
       .from('salary_cap_plays')
-      .select('username, picks, overall_score, ppg, apg, rpg, budget_used')
+      .select('username, user_id, picks, overall_score, ppg, apg, rpg, budget_used')
       .eq('date_str', dateStr)
       .order('overall_score', { ascending: false })
       .limit(200)
@@ -598,7 +599,7 @@ function SalaryLeaderboard({ dateStr, dateLabel, onClose }) {
           >
             <div className="sc-lb-row-main">
               <span className="sc-lb-rank">{i + 1}</span>
-              <span className="sc-lb-name">{r.username || 'Anonymous'}</span>
+              <span className="sc-lb-name">{r.username ? <NameTag name={r.username} uid={r.user_id ?? null} plate={false} /> : 'Anonymous'}</span>
               <span className="sc-lb-ovr">{r.overall_score} OVR</span>
               {r.budget_used != null && budget - r.budget_used > 0 && (
                 <span className="sc-lb-spare">+${budget - r.budget_used}M</span>

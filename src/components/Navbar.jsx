@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { NameTag } from './app/NameTag'
 import { CAN_SELL_PLUS, IS_APP, APP_LOOK } from '../lib/platform'
 // The website with the app look: the menu button opens the app's More sheet
 const MORE_SHEET = !IS_APP && APP_LOOK
@@ -253,7 +254,7 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
             <span>{versusState.oppPosition === 'big' ? 'Big' : versusState.oppPosition === 'guard' ? 'Guard' : '—'}</span>
           </div>
           <div className="nvc-row">
-            <span className="nvc-side">YOU {versusState.myFilled}/{versusState.myTotal}</span>
+            <span className="nvc-side"><NameTag name={getUsername(user) || 'Guest'} self plate={false} /> {versusState.myFilled}/{versusState.myTotal}</span>
             <span className="nvc-vs">VS</span>
             <span className="nvc-side">{versusState.oppName || 'Opponent'} {versusState.oppFilled}/{versusState.oppTotal}</span>
             {versusState.bothReady && !isBucket && (

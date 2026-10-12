@@ -5,6 +5,7 @@ import { GAME_LINE, momentsOff, setMomentsOff } from '../../lib/seasonDirector'
 import { leaderBoard } from '../../lib/seasonFacts'
 import { sfx, haptic, victory } from '../../lib/juice'
 import { IconArrow, IconStar, IconFlame, IconTrophy } from './icons'
+import { NameTag } from './NameTag'
 
 // Season reveal, the app version: the moment card the season pauses on, the
 // matchup card for the game just played, the season pulse, the wire of
@@ -141,7 +142,7 @@ export function RecordOverlay({ record, name, onClose }) {
         <h2 className="ag-ring-title">{record.label}</h2>
         <span className="sm-record-num">{record.got}</span>
         <span className="ag-ring-score">was {record.value} · {record.holder}</span>
-        <span className="ag-ring-count"><IconStar size={18} /> {name.toUpperCase()}</span>
+        <span className="ag-ring-count"><IconStar size={18} /> <NameTag name={name} self plate={false} /></span>
       </div>
     </div>,
     document.body,
@@ -159,7 +160,7 @@ export function HonorOverlay({ honor, name, onClose }) {
         <h2 className="ag-ring-title">{honor.title}</h2>
         {honor.sub && <span className="ag-ring-score">{honor.sub}</span>}
         <span className="sm-honor-line">{honor.line}</span>
-        <span className="ag-ring-count"><IconTrophy size={18} /> {name.toUpperCase()}</span>
+        <span className="ag-ring-count"><IconTrophy size={18} /> <NameTag name={name} self plate={false} /></span>
       </div>
     </div>,
     document.body,
@@ -172,11 +173,11 @@ export function Leaders({ sport, pos, pool, seed, you }) {
   if (!board) return null
   return (
     <div className="sm-leaders ag-pop">
-      <div className="sm-leaders-head"><span className="ag-eyebrow">LEAGUE LEADERS · {board.label}</span><span className="sm-leaders-rank">{(you.name || 'Guest').toUpperCase()}: #{board.rank}</span></div>
+      <div className="sm-leaders-head"><span className="ag-eyebrow">LEAGUE LEADERS · {board.label}</span><span className="sm-leaders-rank"><NameTag name={you.name || 'Guest'} self plate={false} />: #{board.rank}</span></div>
       {board.rows.map((r, i) => (
         <div key={r.name} className={`sm-leader${r.me ? ' is-me' : ''}`}>
           <span className="sm-leader-n">{i + 1}</span>
-          <span className="sm-leader-name">{r.name}<small>{r.team}</small></span>
+          <span className="sm-leader-name">{r.me ? <NameTag name={r.name} self plate={false} /> : r.name}<small>{r.team}</small></span>
           <span className="sm-leader-val">{typeof r.value === 'number' && !Number.isInteger(r.value) ? r.value.toFixed(1) : r.value.toLocaleString()}</span>
         </div>
       ))}
