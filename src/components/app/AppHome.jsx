@@ -112,11 +112,11 @@ function SportSwitch({ sport }) {
       <span className="ag-sport-thumb" aria-hidden="true" />
       <button role="tab" aria-selected={sport === 'nfl'} className={`ag-sport-btn ag-sport-btn--nfl${sport === 'nfl' ? ' is-on' : ''}`} onClick={() => go('nfl')}>
         <span className="ag-sport-ico"><IconFootball size={17} /></span>
-        <span className="ag-sport-txt"><b>FOOTBALL</b><small>Build-A-Player</small></span>
+        <span className="ag-sport-txt"><b>FOOTBALL</b></span>
       </button>
       <button role="tab" aria-selected={sport === 'bucket'} className={`ag-sport-btn ag-sport-btn--bucket${sport === 'bucket' ? ' is-on' : ''}`} onClick={() => go('bucket')}>
         <span className="ag-sport-ico"><IconBasketball size={17} /></span>
-        <span className="ag-sport-txt"><b>BASKETBALL</b><small>Build-A-Player</small></span>
+        <span className="ag-sport-txt"><b>BASKETBALL</b></span>
       </button>
     </div>
   )

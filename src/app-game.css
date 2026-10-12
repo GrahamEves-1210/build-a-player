@@ -443,10 +443,10 @@ html[data-spot="holo"] .ag-avatar { background: linear-gradient(135deg, #8ff7ff,
 .ag-brand-mark { height: 50px; width: auto; filter: drop-shadow(0 4px 18px rgba(0,0,0,.5)); }
 .ag-wordmark {
   font-family: 'BAP Wordmark', var(--ag-display); font-weight: 900; font-size: 21px; line-height: 1.1;
-  letter-spacing: .5px; text-transform: uppercase; color: #fff; white-space: nowrap;
+  letter-spacing: -.5px; text-transform: uppercase; color: #fff; white-space: nowrap;
   text-shadow: 0 2px 40px rgba(149,213,178,.12);
 }
-.ag-wordmark em { font-style: normal; color: var(--ag-accent); letter-spacing: .5px; }
+.ag-wordmark em { font-style: normal; color: var(--ag-accent); letter-spacing: -.5px; }
 .ag-home--bucket .ag-wordmark em { color: #f97316; }
 .ag-wordmark .hoop-u-svg { height: .82em; vertical-align: -.07em; }
 .ag-tagline {
