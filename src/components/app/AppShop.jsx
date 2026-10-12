@@ -41,6 +41,10 @@ const signIn = () => window.dispatchEvent(new CustomEvent('bap:auth'))
 export function CoinPill({ onClick, className = '' }) {
   const p = useProgress()
   const n = useCountTo(p.coins ?? 0)
+  // every hook before the sign-in branch: signing in flips it mid-session
+  const [bump, setBump] = useState(false)
+  const prev = useRef(p.coins)
+  useEffect(() => { if ((p.coins ?? 0) > (prev.current ?? 0)) { setBump(true); setTimeout(() => setBump(false), 520) } prev.current = p.coins }, [p.coins])
   // website: coins need an account
   if (!walletOpen()) {
     return (
@@ -49,9 +53,6 @@ export function CoinPill({ onClick, className = '' }) {
       </button>
     )
   }
-  const [bump, setBump] = useState(false)
-  const prev = useRef(p.coins)
-  useEffect(() => { if ((p.coins ?? 0) > (prev.current ?? 0)) { setBump(true); setTimeout(() => setBump(false), 520) } prev.current = p.coins }, [p.coins])
   return (
     <button className={`coin-pill${bump ? ' is-bump' : ''}${className ? ` ${className}` : ''}`} onClick={onClick ?? (() => nav('shop:coins'))} aria-label={`${p.coins ?? 0} coins, get more`}>
       <span className="coin-ico" aria-hidden="true" />{n.toLocaleString()}
