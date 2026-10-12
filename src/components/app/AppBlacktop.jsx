@@ -74,7 +74,7 @@ export function OneOnOneOptions({ onPickup, onFriend, onJoinCode, error = '' }) 
   )
 }
 
-export function BlacktopHub({ onJoin3v3, onPickup, onFriend, onJoinCode, onBack, notice = null, onNotice = null }) {
+export function BlacktopHub({ onJoin3v3, onPickup, onFriend, onJoinCode, onBack, notice = null, onNotice = null, onPractice = null }) {
   const o = useProgress().stats?.online ?? { rating: 800 }
   return (
     <div className="ag-screen ag-screen--bucket bt-hub">
@@ -96,6 +96,7 @@ export function BlacktopHub({ onJoin3v3, onPickup, onFriend, onJoinCode, onBack,
             <span className="bt-mode-txt"><b>Squads</b><small>Two guards and a big a side. Take a spot, build your role, run it.</small></span>
           </div>
           <button className="ag-btn bt-mode-go" onClick={() => { sfx('tap'); onJoin3v3() }}>JOIN LOBBY <IconArrow size={16} /></button>
+          {onPractice && <button className="ag-btn ag-btn--ghost bt-practice" onClick={() => { sfx('tap'); onPractice() }}>PRACTICE · YOU + 5 CPUS</button>}
           <ModeStats mode="bt" />
         </section>
         <section className="bt-mode ag-pop" style={{ '--d': '120ms' }}>
@@ -425,6 +426,8 @@ export function BlacktopGame({ bt, user, photoFor, onOpenChat, unread }) {
     }
     // a check-up waits for the calls (the leader locks them; anyone else falls back to what they have)
     if (play?.type === 'check' && !bt.locks?.[play.pn]) {
+      // on the server: say I'm here, and the server's lock moves us on
+      if (bt.server) { bt.arrive(play.pn, play.team); return }
       const t = setTimeout(() => bt.lockCalls(play.pn, bt.isLeader), bt.isLeader ? CALL_MS + 150 : CALL_MS + 2600)
       return () => clearTimeout(t)
     }

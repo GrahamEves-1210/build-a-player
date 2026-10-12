@@ -4637,3 +4637,8 @@ html.is-app { --drop-chrome: calc(352px + env(safe-area-inset-top) + env(safe-ar
 /* the squads panel on a phone: the teams one above the other, and it scrolls if it's long */
 .bt-hud-panel { max-height: calc(100dvh - var(--safe-top) - var(--app-bottom, 0px) - 80px); overflow-y: auto; overscroll-behavior: contain; }
 @media (max-width: 520px) { .bt-hud-teams { grid-template-columns: 1fr !important; } }
+
+/* Blacktop: your own player stands out on the court (a gold ring); practice */
+.btc-p.is-me .btc-ring { outline: 2.5px solid #f5dc8a; outline-offset: 3px; border-radius: 50%; }
+.btc-p.is-me .btc-name { color: #f5dc8a !important; }
+.bt-practice { width: 100%; margin-top: 8px; }

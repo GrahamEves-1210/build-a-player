@@ -1,0 +1,19 @@
+# Build-A-Player live server: the Blacktop 3v3 lobby and its game rooms.
+# Its own Worker, separate from the website (Cloudflare Pages): deploy with
+#   cd server && npx wrangler deploy
+name = "bap-live"
+main = "src/index.js"
+compatibility_date = "2025-09-01"
+
+[[durable_objects.bindings]]
+name = "LOBBY"
+class_name = "Lobby"
+
+[[durable_objects.bindings]]
+name = "ROOM"
+class_name = "Room"
+
+# SQLite-backed Durable Objects (the kind the free plan includes)
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Lobby", "Room"]
