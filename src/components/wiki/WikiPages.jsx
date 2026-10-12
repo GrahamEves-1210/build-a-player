@@ -36,7 +36,7 @@ function MainPage({ go }) {
           <tr><th>Type</th><td>Free browser game</td></tr>
           <tr><th>Games</th><td>Build-A-Player (NFL)<br />Build-A-Bucket (NBA)</td></tr>
           <tr><th>Positions</th><td>QB, RB, WR, TE, DB<br />Guard, Big</td></tr>
-          <tr><th>Modes</th><td>Current, All-Time, Salary Cap, Head-to-Head, Depth Chart</td></tr>
+          <tr><th>Modes</th><td>Career, Takeover, Compete, Trait Auction, Blacktop, Current, All-Time, Salary Cap, Head-to-Head, Depth Chart</td></tr>
           <tr><th>Platform</th><td>Web browser</td></tr>
           <tr><th>Ratings as of</th><td>{fmtDate(RATINGS_AS_OF)}</td></tr>
           <tr><th>Website</th><td><a href="/">build-a-player.com</a></td></tr>
@@ -49,7 +49,8 @@ function MainPage({ go }) {
       <ul className="wk-start">
         <li><Link go={go} to="gameplay">Gameplay</Link><span>Spins, chips, respins, the 0–11 scale, and how your overall is scored.</span></li>
         <li><Link go={go} to="seasons">Seasons</Link><span>How an NFL or NBA season is simulated, game by game, through the playoffs and awards.</span></li>
-        <li><Link go={go} to="modes">Modes</Link><span>Current, All-Time, Salary Cap, Head-to-Head, the Depth Chart, Sandbox, leaderboards.</span></li>
+        <li><Link go={go} to="career">Career</Link><span>One player from the combine to the Hall of Fame: the draft, seasons, contracts, legacy.</span></li>
+        <li><Link go={go} to="modes">Modes</Link><span>Takeover, Compete, Trait Auction, Blacktop, Current, All-Time, Salary Cap, Head-to-Head, the Depth Chart, Sandbox.</span></li>
         <li><Link go={go} to="ratings">Ratings</Link><span>Every player in every pool, sortable and searchable, with the date each pool last changed.</span></li>
         <li><Link go={go} to="creators">Creators</Link><span>YouTubers and podcasters who have played the game on camera.</span></li>
         <li><Link go={go} to="behind-the-scenes">Behind the scenes</Link><span>Where the ratings come from, how random the game is, what it runs on.</span></li>
@@ -195,10 +196,77 @@ win chance = team baseline + boost, clamped 12% to 87% (All-Time 91%)`}</pre>
   )
 }
 
+// ── Career ───────────────────────────────────────────────────────────────────
+function CareerPage({ go }) {
+  return (
+    <>
+      <p className="wk-lead"><b>Career</b> follows one player you build from the combine to retirement, in football (QB, RB, WR, TE, DB) or basketball (guard, big). You name him, and every season, contract and decision is his. There are three save slots per sport, and a career runs at most 20 seasons, starting in 2026.</p>
+
+      <h2 id="draft">The combine and the draft</h2>
+      <ul>
+        <li><b>The build.</b> A normal spin-and-pick build becomes the player's starting ratings. His age starts at 21–22 in football and 19–20 in basketball.</li>
+        <li><b>The combine.</b> Three drills played as mini-games, matched to the position (the 40, the 3-cone, the bench, a route-throwing accuracy drill for quarterbacks; sprints, lane agility and spot-up shooting in basketball). The results move the projected pick by up to nine picks in football and three in basketball. A <b>pro comparison</b> (the real player, current or all-time, whose grades sit closest) is shown before the first drill.</li>
+        <li><b>Interviews.</b> Four teams near the projected slot ask questions. Answers raise or lower each team's interest.</li>
+        <li><b>Draft day.</b> Seven rounds in football, two in basketball. Need and interview interest decide where he goes, and the pick sets the rookie deal.</li>
+      </ul>
+
+      <h2 id="seasons">Seasons</h2>
+      <ul>
+        <li><b>Week by week.</b> Football advances one week at a time; basketball ten games at a time. The season is the same engine described on <Link go={go} to="seasons">Seasons</Link>, with the career's own team around the player.</li>
+        <li><b>Decisions.</b> Two or three times a season a moment stops the sim: a game on the line, a trade deadline offer, resting after clinching, playing out a lost year. Each choice lists what it does, and some are gambles with the odds shown.</li>
+        <li><b>The depth chart.</b> A player who isn't the best at his spot starts as a backup. In football he sits until the job comes his way; in basketball he comes off the bench all year in a smaller role.</li>
+        <li><b>Goals.</b> Three goals a year, sized to the overall. A football backup is judged per start and on winning his starts; a basketball reserve's numbers are sized for bench minutes.</li>
+        <li><b>Injuries.</b> The chance rises as durability falls and after age 31. Sit out, or play through it with two physical traits down for a while and a chance it gets worse.</li>
+        <li><b>Seasons vary.</b> No two years play the same: form comes and goes, and short hot and cold stretches happen.</li>
+        <li><b>Playoffs.</b> Football's four rounds to the Super Bowl; basketball's play-in and four best-of-seven series. Each round turns on a mini-game played in the moment.</li>
+      </ul>
+
+      <h2 id="offseason">The offseason</h2>
+      <ul>
+        <li><b>Recap</b> of the year: the record, the numbers, the goals met, awards.</li>
+        <li><b>Contract.</b> When a deal runs out, three teams make offers: the current team, a contender paying less, and a rebuilding team paying more. Sit down with one and push: more money, another year, a no-trade clause, a starter guarantee. Each ask costs the team's patience (shown as a range with the odds of the higher cost); run it out and they walk. Leverage (recent seasons, reputation, age) sets how much patience there is.</li>
+        <li><b>Moves.</b> The roster turns over, one offseason event lands (a new coach, a mentor, a lingering camp tweak, a rival loading up), and the depth chart is set. Once an offseason the player can <b>demand a trade</b>: usually granted, always a reputation hit.</li>
+        <li><b>Camp.</b> One hard drill in front of the coaches. Win it for legacy points and a chance at a development point.</li>
+        <li><b>Development.</b> A point every offseason, two after an award or All-Pro/All-NBA year. Each raises one trait a grade. Size can be raised twice in a career, speed and bounce three times.</li>
+      </ul>
+
+      <h2 id="reputation">Reputation</h2>
+      <p>Reputation runs from 1 to 10. Goals met and titles raise it; bad seasons and trade demands lower it. A good name earns more money and longer contracts, wins depth-chart ties, draws the good offseason breaks, and can land a <b>shoe deal</b> (and later a signature shoe), which pays every year and adds to the legacy. A bad name does the opposite.</p>
+
+      <h2 id="aging">Aging and retirement</h2>
+      <p>Young players can grow a trait on their own; from 31 (33 for quarterbacks) the physical traits start to fade. A player can retire from 29 or after eight seasons. The career ends on its own at 40 (42 for quarterbacks), after 20 seasons, or when free agency brings no offers.</p>
+
+      <h2 id="legacy">Legacy and the Hall of Fame</h2>
+      <pre className="wk-pre">{`legacy = seasons × 2 + Pro Bowls/All-Stars × 6 + All-Pro/All-NBA × 10
+       + awards × 18 + rings × 20 + playoff years × 3
+       + production + records × 8 + camp and shoe-deal bonuses`}</pre>
+      <p>The same formula scores the real greats, so a finished career slots into the all-time list for its position (one top 25 for basketball). Tiers run Starter, Star (80), Superstar (170) and All-Time Great (280). At retirement a Hall of Fame vote is held: 80% gets in, 93% is first ballot. Each career also keeps its own record book: break an all-time record and that number becomes the bar for the rest of the career.</p>
+    </>
+  )
+}
+
 // ── Modes ────────────────────────────────────────────────────────────────────
 function ModesPage({ go }) {
   return (
     <>
+      <h2 id="career">Career</h2>
+      <p>One player from the combine to the Hall of Fame. It has its own page: <Link go={go} to="career">Career</Link>.</p>
+      <h2 id="takeover">Takeover</h2>
+      <p>Build once, then take the build on a road trip of 12 cities across a map of the country. Each city has a real player at your position, rising from about a 70 overall to the best in the league. Basketball is a 1v1 to 11 (or 2v2 to 15 in Duo); football is one game decided by the two overalls.</p>
+      <ul>
+        <li><b>Three lives.</b> A loss costs one and you replay the city.</li>
+        <li><b>The prize.</b> After a win, pick one: steal one of the star's ratings that beats yours, a game plan that knocks two off the next opponent's best rating, rest for an extra life (solo), or cash in for coins.</li>
+        <li><b>On fire.</b> Three straight wins doubles the steal and adds one to every rating for the next game.</li>
+        <li>Clear all twelve for the big reward, then keep going in Endless against random greats.</li>
+      </ul>
+      <h2 id="compete">Compete <span className="wk-tag">ONLINE</span></h2>
+      <p>Up to five real players build at the same time from the <b>same spins</b> (respins are your own). Five minutes on the clock; the highest overall wins, and an earlier submit breaks a tie. Places pay XP and coins and move an online rating through the tiers Rookie, Starter (900), Pro (1100), All-Star (1300), MVP (1500) and Legend (1750).</p>
+      <h2 id="auction">Trait Auction <span className="wk-tag">ONLINE</span></h2>
+      <p>Two to five players and $100 each. A player is spun for one slot at a time and the room bids on his rating for ten seconds; the high bid takes it. You must keep $1 for every empty slot. The best overall wins, money left breaks ties.</p>
+      <h2 id="blacktop">Blacktop <span className="wk-tag">ONLINE · NBA</span></h2>
+      <p>Live 3v3 streetball: two guards and a big a side. Pick a spot in the lobby, build together in three minutes with team chat and a role (Balanced, Scorer, Playmaker, Lockdown), then play to 11, win by 2. Anyone who walks away mid-build gets an automatic build. There is also a 1v1 version.</p>
+      <h2 id="live">Leaving a live game</h2>
+      <p>Compete, Trait Auction and Blacktop lock your build in while the game is live. Leaving (or closing the app) is a forfeit: last place, no rewards, and −20 rating. Only one live game per device at a time.</p>
       <h2 id="current">Current</h2>
       <p>Today's rosters, starters and backups, at real ratings. Ratings move through the season as players do; the <Link go={go} to="ratings">Ratings</Link> page shows every one of them with the date each pool last changed.</p>
       <h2 id="all-time">All-Time</h2>
@@ -211,8 +279,15 @@ function ModesPage({ go }) {
       <p>Three real players, one hidden stat (passing touchdowns, passing or rushing yards for quarterbacks; rushing yards or touchdowns for backs; receiving yards or touchdowns for receivers), ten seconds to order them. Get it right and the streak grows; miss once and it ends. Best streaks go on two boards: all-time, and a weekly board that resets every Monday.</p>
       <h2 id="sandbox">Sandbox</h2>
       <p>Flip on Sandbox from the build screen and the game is yours to bend. <b>Custom Ratings</b> opens every player's grades on 0–11 sliders, one player at a time or everyone at once, with a toggle at the top to switch between current players and All-Time legends (it opens on whichever you're playing). You can drop any player straight into a slot of your build, and pick any team for the season. Sandbox seasons are yours to enjoy but never save, rank or count toward lifetime awards.</p>
+      <h2 id="coins">Coins, the shop and the daily</h2>
+      <ul>
+        <li><b>Coins</b> come from seasons (more for playoffs, rings and awards), levels, online places, Takeover cities, a free daily drop, and achievements.</li>
+        <li><b>The shop</b> sells cosmetics only: avatars, name colours and effects, name plates, victory effects and sounds, and courts. Some are level-locked or earned through achievements. Nothing in the shop changes a rating.</li>
+        <li><b>The daily challenge</b> rotates position and era, with the same spins for everyone. Daily logins build a streak with XP rewards at 3, 7 and 21 days.</li>
+        <li><b>Cards.</b> Every player you spin is collected into binder sets: franchises, positions, legends, decades.</li>
+      </ul>
       <h2 id="pro">BAP Pro <span className="wk-tag">SUBSCRIPTION</span></h2>
-      <p>BAP Pro is an optional subscription. It removes ads across both games, unlocks colour themes for the site and custom profile icons, and puts a Pro badge next to your name on the leaderboards. It's managed from your profile page.</p>
+      <p>BAP Pro is an optional subscription. It removes ads on the website, doubles the free daily coins, opens the Pro Vault in the shop, and puts a Pro badge next to your name on the leaderboards. It's managed from your profile page.</p>
       <h2 id="leaderboards">Leaderboards and profiles</h2>
       <ul>
         <li><b>Saving.</b> Sign in and every completed season is saved with its build, record, stats and awards. Sandbox seasons and guest seasons are not saved.</li>
@@ -326,8 +401,10 @@ export const PAGES = [
     toc: [['spinning', 'Spinning', 'spin reel respin team player chips tap'], ['scale', 'The 0–11 scale', 'grades letter F S rating scale'], ['positions', 'Positions and attributes', 'QB RB WR TE DB guard big attributes'], ['overall', 'Overall rating', 'OVR formula weights weighted average balance bonus'], ['overall-nfl', 'Football overall', 'OVR formula'], ['overall-nba', 'Basketball overall', 'OVR formula'], ['archetypes', 'Archetypes', 'gunslinger dual threat franchise cornerstone']] },
   { slug: 'seasons', title: 'Seasons', description: 'How an NFL or NBA season is simulated: team grades, schedules, win chances, stats, playoffs, the Super Bowl, the play-in and awards.', Component: SeasonsPage,
     toc: [['nfl', 'NFL season', 'simulate football'], ['nfl-team', 'Your team matters', 'team offense defense grade'], ['nfl-schedule', 'The schedule', '17 games weather'], ['nfl-winning', 'Win chance', 'win probability stats passing yards'], ['nfl-playoffs', 'NFL playoffs', 'bye wild card super bowl overtime'], ['nfl-awards', 'NFL awards', 'MVP OPOY DPOY'], ['nba', 'NBA season', 'simulate basketball 82 games'], ['nba-team', 'Team strength', 'ratings out of 100'], ['nba-boost', 'Your boost', 'OVR boost win chance'], ['nba-stats', 'Your numbers', 'PPG RPG APG shooting'], ['nba-playoffs', 'Play-in and playoffs', 'seed log5 best of seven finals'], ['nba-awards', 'NBA awards', 'MVP DPOY']] },
-  { slug: 'modes', title: 'Modes', description: 'Current, All-Time, Salary Cap, Head-to-Head, the Depth Chart mini-game, Sandbox, BAP Pro, and leaderboards.', Component: ModesPage,
-    toc: [['current', 'Current'], ['all-time', 'All-Time', 'legends'], ['salary-cap', 'Salary Cap', 'daily budget board shuffle scout'], ['head-to-head', 'Head-to-Head', 'versus 1v1 live'], ['depth-chart', 'The Depth Chart', 'mini game streak'], ['sandbox', 'Sandbox', 'custom ratings edit grades any team'], ['pro', 'BAP Pro', 'subscription pro no ads themes profile icons badge plus'], ['leaderboards', 'Leaderboards and profiles', 'best builds worst builds career save']] },
+  { slug: 'career', title: 'Career', description: 'Career mode: the combine, interviews and draft, seasons and decisions, the depth chart, contracts and talks, reputation, aging, legacy and the Hall of Fame.', Component: CareerPage,
+    toc: [['draft', 'The combine and the draft', 'combine drills interviews draft rookie deal pro comp'], ['seasons', 'Seasons', 'moments decisions depth chart backup goals injuries playoffs'], ['offseason', 'The offseason', 'contract talks patience trade demand camp development points'], ['reputation', 'Reputation', 'rep shoe deal signature contract'], ['aging', 'Aging and retirement', 'retire age decline'], ['legacy', 'Legacy and the Hall of Fame', 'legacy score all-time greatest hall of fame records']] },
+  { slug: 'modes', title: 'Modes', description: 'Career, Takeover, Compete, Trait Auction, Blacktop, Current, All-Time, Salary Cap, Head-to-Head, the Depth Chart mini-game, Sandbox, coins and the shop, BAP Pro, and leaderboards.', Component: ModesPage,
+    toc: [['career', 'Career'], ['takeover', 'Takeover', 'cities map lives steal prize on fire endless'], ['compete', 'Compete', 'online pool same spins rating tiers'], ['auction', 'Trait Auction', 'bid budget online'], ['blacktop', 'Blacktop', '3v3 streetball online lobby'], ['live', 'Leaving a live game', 'forfeit leave lock'], ['current', 'Current'], ['all-time', 'All-Time', 'legends'], ['salary-cap', 'Salary Cap', 'daily budget board shuffle scout'], ['head-to-head', 'Head-to-Head', 'versus 1v1 live'], ['depth-chart', 'The Depth Chart', 'mini game streak'], ['sandbox', 'Sandbox', 'custom ratings edit grades any team'], ['coins', 'Coins, the shop and the daily', 'coins shop cosmetics daily challenge streak cards'], ['pro', 'BAP Pro', 'subscription pro no ads vault badge'], ['leaderboards', 'Leaderboards and profiles', 'best builds worst builds career save']] },
   { slug: 'ratings', title: 'Ratings', description: 'Every player rating in Build-A-Player and Build-A-Bucket, current and all-time, sortable and searchable, with the date each pool last changed.', Component: RatingsPage,
     toc: [['table', 'All ratings', 'players table search sort']] },
   { slug: 'creators', title: 'Creators', description: 'YouTubers, podcasters and TikTok creators who have played Build-A-Player and Build-A-Bucket, with their videos and shorts.', Component: CreatorsPage,
