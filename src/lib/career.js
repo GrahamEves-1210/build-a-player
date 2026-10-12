@@ -983,7 +983,7 @@ export function bookSeason(c) {
   const dev = { ...c.dev, points: c.dev.points + 1 + (s.award || s.allPro ? 1 : 0) }
   const rep = clamp(c.rep + (s.goals.filter(g => g.met).length >= 2 ? 1 : 0) + (s.champion ? 1 : 0) - (perf < 0.25 ? 1 : 0), 1, 10)
   const lastRole = benched < (f.wins + f.losses || 17) / 2 ? 'Starter' : 'Backup'
-  let next = { ...c, recordBook, phase: 'offseason', seasons: [...c.seasons, s], contract, dev, rep, lastRole, active: null, simTeam: null, goals: [], earnings: r10(c.earnings + c.contract.perYear), nextMods: null, talks: null, tradeAsked: false }
+  let next = { ...c, recordBook, phase: 'offseason', seasons: [...c.seasons, s], contract, dev, rep, lastRole, active: null, simTeam: null, goals: [], earnings: r10(c.earnings + c.contract.perYear + (c.shoe?.perYear ?? 0)), nextMods: null, talks: null, tradeAsked: false }
   // the offseason: the league moves, your team's roster turns over, the news
   const r = seeded(`${c.seed}-off-${c.year}`)
   const league = driftLeague(next, r)
@@ -993,10 +993,34 @@ export function bookSeason(c) {
   next = { ...next, league, roster, gone }
   const news = leagueNews(c, league)
   next = offseasonEvents(next)
+  next = maybeShoeDeal(next)
   next = maybeTraded(next, r)
   const offers = contractSituation(next)
   next = { ...next, fit: fitFor(next), offers, off: { step: 'recap', moves: next.traded ? [] : moves, news, camp: null, contract: Array.isArray(offers) } }
   return next
+}
+// A shoe deal: a big name with a big season gets one; a superstar gets his own
+// signature line. Money every year, and a mark on the legacy.
+export const SHOE = { deal: { legacy: 4, perYear: 2 }, signature: { legacy: 8, perYear: 6 } }
+function maybeShoeDeal(c) {
+  const S = sportOf(c)
+  const r = seeded(`${c.seed}-shoe-${c.year}`)
+  const recent = c.seasons.slice(-2)
+  const last = recent[recent.length - 1]
+  const star = recent.some(s => s.award || s.allPro)
+  const tier = c.shoe?.tier
+  let next = null
+  if (!tier && (c.rep ?? 5) >= 7 && last && (seasonScore(c.pos, last) >= 0.6 || star) && r() < 0.35) next = 'deal'
+  else if (tier === 'deal' && (c.rep ?? 5) >= 9 && star && r() < 0.3) next = 'signature'
+  if (!next) return c
+  const what = next === 'signature' ? (S.isBucket ? 'his own signature shoe' : 'his own signature cleat') : (S.isBucket ? 'a national shoe deal' : 'a national shoe and apparel deal')
+  const bump = SHOE[next].legacy
+  return {
+    ...c, shoe: { tier: next, year: c.year + 1, perYear: SHOE[next].perYear },
+    legacyBonus: (c.legacyBonus ?? 0) + bump,
+    events: [...c.events, { year: c.year + 1, text: `${c.name} signs ${what}. ${next === 'signature' ? 'A face of the league now.' : 'The name travels now.'} +${bump} legacy.` }],
+    decisions: [...c.decisions, { year: c.year + 1, text: `Signed ${what} ($${SHOE[next].perYear}M a year)` }],
+  }
 }
 // the biggest movers around the league this offseason
 function leagueNews(c, league) {
@@ -1127,7 +1151,9 @@ function contractSituation(c) {
   const last = c.seasons[c.seasons.length - 1]
   const perf = seasonScore(c.pos, last)
   if (c.age >= 34 && perf < 0.35) return []
-  const years = c.age >= 32 ? 1 + Math.floor(r() * 2) : c.age >= 29 ? 2 + Math.floor(r() * 2) : 3 + Math.floor(r() * 3)
+  // teams commit longer to a good name (+1 year at 8+), shorter to a bad one (−1 at 3 or less)
+  const repYrs = (c.rep ?? 5) >= 8 ? 1 : (c.rep ?? 5) <= 3 ? -1 : 0
+  const years = clamp((c.age >= 32 ? 1 + Math.floor(r() * 2) : c.age >= 29 ? 2 + Math.floor(r() * 2) : 3 + Math.floor(r() * 3)) + repYrs, 1, 6)
   const fitAt = short => teamFit(short, c.pos, { roster: c.roster, league: c.league, name: c.name, sport: c.sport, yrs: rosterYrs(c), gone: c.gone ?? [] })
   const others = S.teams.filter(t => t.short !== c.team).sort(() => r() - .5).map(t => fitAt(t.short))
   const good = 7, bad = 6
