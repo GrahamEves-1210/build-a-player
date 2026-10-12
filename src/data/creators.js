@@ -1,9 +1,9 @@
 // Creators who have played Build-A-Player / Build-A-Bucket on camera.
-// Verified October 7, 2026: every YouTube entry either links build-a-player.com
+// Verified October 7, 2026 (Bogey's added October 12): every YouTube entry either links build-a-player.com
 // in its description or plays the game by name (Build-A-Bucket is only ours).
 // Videos under 1,000 views are left out.
 // Items: { type: 'youtube' | 'tiktok', id | url, title, date, views, short, game: 'nfl' | 'nba' }
-export const CREATORS_AS_OF = 'October 7, 2026'
+export const CREATORS_AS_OF = 'October 12, 2026'
 
 export const CREATORS = [
   {
@@ -41,7 +41,9 @@ export const CREATORS = [
   {
     id: 'bogey', name: 'Bogey', url: 'https://www.youtube.com/channel/UCCDcpuv13YbO6OTOVsGx9RA', blurb: 'Madden creator (@TheRealBogey)',
     items: [
-      { type: 'youtube', id: '2FXNFCunfA8', title: 'I Played "Build-A-QB" And Created a New Goat', date: '2026-09-04', views: 60017, short: false, game: 'nfl' },
+      { type: 'youtube', id: 'p5MyDJ0QllE', title: 'Building a Perfect WR for Patrick Mahomes', date: '2026-10-06', views: 21692, short: false, game: 'nfl' },
+      { type: 'youtube', id: 'QLU9MsSMPXI', title: 'Building a Perfect WR for Lamar Jackson', date: '2026-09-30', views: 34765, short: false, game: 'nfl' },
+      { type: 'youtube', id: '2FXNFCunfA8', title: 'I Played "Build-A-QB" And Created a New Goat', date: '2026-09-04', views: 64391, short: false, game: 'nfl' },
     ],
   },
   {

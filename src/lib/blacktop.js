@@ -46,7 +46,7 @@ export const ROLES = [
 const BOT_NAMES = ['Smoke', 'Shifty', 'Glass', 'Sauce', 'Twitch', 'Hammer', 'Ghost', 'Blitz', 'Cash', 'Lefty', 'Rook', 'Stretch']
 
 // Quick reactions on the court
-export const EMOTES = ['🔥', '🧊', '💦', '😤', '👏', '😂']
+export const EMOTES = ['🔥', '🧊', '💰', '😤', '👏', '😂']
 
 // The lobby's six spots: every squad is two guards and a big
 export const SLOTS = [
