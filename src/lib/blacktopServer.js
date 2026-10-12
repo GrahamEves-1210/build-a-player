@@ -15,7 +15,8 @@ import { getUsername } from './discord'
 import { myCosmetics, whenProgressReady } from './progress'
 import { SLOTS, BUILD_SECS, BOT_NAMES, teamName, autoBuild, buildOk } from './blacktopCore'
 
-export const LIVE_URL = (import.meta.env.VITE_LIVE_URL || '').replace(/\/$/, '')
+// the live server (live/, deployed on Cloudflare); VITE_LIVE_URL overrides it (a local server: ws://localhost:8787)
+export const LIVE_URL = (import.meta.env.VITE_LIVE_URL || 'wss://bap-live.gre56734.workers.dev').replace(/\/$/, '')
 
 // A socket that reconnects (and says hello again) until it's closed on purpose
 function liveSocket(path, hello, onMsg, onStatus) {

@@ -28,7 +28,7 @@ const OFF_CALLS = ['drive', 'pullup', 'post', 'pass']
 const DEF_CALLS = ['press', 'sag', 'help']
 const EMOTES = ['🔥', '🧊', '💰', '😤', '👏', '😂']
 
-const ORIGINS = [/^https:\/\/(www\.)?build-a-player\.com$/, /^https:\/\/[a-z0-9-]+\.build-a-player\.pages\.dev$/, /^https?:\/\/localhost(:\d+)?$/, /^capacitor:\/\/localhost$/, /^https?:\/\/127\.0\.0\.1(:\d+)?$/]
+const ORIGINS = [/^https:\/\/(www\.)?build-a-player\.com$/, /^https:\/\/([a-z0-9-]+\.)?build-a-player\.pages\.dev$/, /^https:\/\/localhost$/, /^https?:\/\/localhost(:\d+)?$/, /^capacitor:\/\/localhost$/, /^https?:\/\/127\.0\.0\.1(:\d+)?$/]
 const originOk = o => !o || ORIGINS.some(re => re.test(o))
 
 const code6 = () => Array.from(crypto.getRandomValues(new Uint8Array(6)), b => '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'[b % 32]).join('')
