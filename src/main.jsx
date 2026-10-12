@@ -67,6 +67,25 @@ if ((IS_APP || APP_LOOK) && isBucket) document.documentElement.classList.add('is
 // the boot guard in index.html: the app's code is running
 window.__bapStarted = true
 
+// The app's loading screen (index.html, apps only) fades out once the first real
+// screen has drawn: something in #root, a frame later (no blank flash between)
+function dropLoader() {
+  const el = document.getElementById('bap-loader')
+  if (!el) return
+  const root = document.getElementById('root')
+  const t0 = performance.now()
+  const ready = () => root && root.children.length > 0 && root.querySelector('.ag-screen, .ag-home, main, .game-layout, .ag-shell, section, header')
+  const tick = () => {
+    if (!el.parentNode) return
+    if (ready() || performance.now() - t0 > 12000) {
+      requestAnimationFrame(() => { el.classList.add('is-out'); setTimeout(() => el.remove(), 400) })
+      return
+    }
+    requestAnimationFrame(tick)
+  }
+  requestAnimationFrame(tick)
+}
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <ErrorBoundary>
@@ -79,3 +98,7 @@ createRoot(document.getElementById('root')).render(
     </ErrorBoundary>
   </StrictMode>,
 )
+// the native splash waits for the loading screen (capacitor.config.json); index.html
+// lets it go as soon as it paints, and this is the backup once the app's code runs
+if (IS_APP) import('@capacitor/splash-screen').then(m => m.SplashScreen.hide({ fadeOutDuration: 150 })).catch(() => {})
+dropLoader()
