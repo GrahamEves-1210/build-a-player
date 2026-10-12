@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { LiveLeaveButton } from './LiveLeave'
 import { createPortal } from 'react-dom'
-import { ROOM_SIZE, ROLES, SLOTS, teamName, captainOf } from '../../lib/blacktop'
-import { playDelay } from '../../lib/hoops'
+import { ROOM_SIZE, ROLES, SLOTS, teamName, captainOf, EMOTES } from '../../lib/blacktop'
+import { CallBar, CallReveal, EmoteBar, useBubbles, CALL_MS } from './LiveCalls'
+import { BUCKET_ATTR } from '../../data/nba-attrs'
+import { valToGrade } from '../../utils/simulation'
+import { playDelay, OFF_CALLS, DEF_CALLS } from '../../lib/hoops'
 import { QUICK, block, report } from '../../lib/chat'
 import { sfx, haptic, victory } from '../../lib/juice'
 import { calcBucketOVR } from '../../utils/bucketSimulation'
@@ -367,6 +370,31 @@ export function BlacktopChat({ bt, user, onClose, mode = 'blacktop', title = 'TE
   )
 }
 
+// Every player's build in the game, grade by grade (a sheet over the court)
+function SquadBuilds({ game, names, meVid, onClose }) {
+  return (
+    <div className="lc-builds ag-pop" role="dialog" aria-label="Builds">
+      <div className="lc-builds-head"><span className="ag-eyebrow">THE BUILDS</span><button className="ag-round-btn" onClick={onClose} aria-label="Close"><IconClose size={14} /></button></div>
+      {[0, 1].map(t => (
+        <div key={t} className={`lc-builds-team bt-t${t}`}>
+          <span className="lc-builds-name">{names[t]}</span>
+          {game.teams[t].map(p => {
+            const types = p.pos === 'big' ? VERSUS_BIG_TYPES : VERSUS_GUARD_TYPES
+            return (
+              <div key={p.id} className={`lc-builds-p${p.id === meVid ? ' is-me' : ''}`}>
+                <span className="lc-builds-who"><b>{p.bot ? p.name : <NameTag name={p.name} cos={p.cos} self={p.id === meVid} plate={false} />}</b><small>{p.pos === 'big' ? 'BIG' : 'GUARD'} · {liveOvr(p) ?? '–'} OVR</small></span>
+                <span className="lc-builds-grades">
+                  {types.map(k => { const val = p.build?.[k]?.val; return <i key={k} title={BUCKET_ATTR[k]?.label}><small>{BUCKET_ATTR[k]?.shortLabel ?? k.slice(0, 3)}</small>{val != null ? valToGrade(val) : '–'}</i> })}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+      ))}
+    </div>
+  )
+}
+
 // ── Game: reveal → live → result ────────────────────────────────────────────
 export function BlacktopGame({ bt, user, photoFor, onOpenChat, unread }) {
   const { game, match } = bt
@@ -394,17 +422,29 @@ export function BlacktopGame({ bt, user, photoFor, onOpenChat, unread }) {
       }
       return
     }
-    const t = setTimeout(() => setIdx(i => i + 1), playDelay(play, idx === 0) / speed)
+    // a check-up waits for the calls (the leader locks them; anyone else falls back to what they have)
+    if (play?.type === 'check' && !bt.locks?.[play.pn]) {
+      const t = setTimeout(() => bt.lockCalls(play.pn, bt.isLeader), bt.isLeader ? CALL_MS + 150 : CALL_MS + 2600)
+      return () => clearTimeout(t)
+    }
+    const t = setTimeout(() => setIdx(i => i + 1), (play?.type === 'check' ? 450 : playDelay(play, idx === 0)) / speed)
     return () => clearTimeout(t)
-  }, [stage, idx, speed, game, plays.length]) // eslint-disable-line
+  }, [stage, idx, speed, game, plays.length, play?.type === 'check' && !!bt.locks?.[play?.pn]]) // eslint-disable-line
   useEffect(() => {
     if (!play) return
     // the make itself is heard on the court (BlacktopCourt); here just the buzz for your side
     if (play.type === 'score') { setTimeout(() => { if (play.team === myTeam) haptic('light') }, 900) }
     else if (play.type === 'block' || play.type === 'steal') setTimeout(() => sfx('pop'), 700)
   }, [idx]) // eslint-disable-line
+  const bubbles = useBubbles(bt.emotes ?? [])
+  const [showBuilds, setShowBuilds] = useState(false)
   if (!game) return null
 
+  // this possession's calls: the open check-up, and what was called on the one being played
+  const calling = stage === 'live' && play?.type === 'check' && !bt.locks?.[play.pn] ? play : null
+  const lastCheck = [...plays.slice(0, idx + 1)].reverse().find(p => p.type === 'check')
+  const locked = lastCheck ? bt.locks?.[lastCheck.pn] : null
+  const humansOn = t => match.players.some(p => p.team === t && !p.bot)
   const score = play?.score ?? [0, 0]
   const feed = plays.slice(0, idx + 1).filter(p => p.type !== 'check').slice(-4).reverse()
   const squads = [0, 1].map(t => game.teams[t])
@@ -477,12 +517,22 @@ export function BlacktopGame({ bt, user, photoFor, onOpenChat, unread }) {
     <div className="ag-screen ag-screen--bucket bt-game bt-live">
       <div className="bt-board">
         <div className={`bt-board-side bt-t0${score[0] > score[1] ? ' is-lead' : ''}`}><span className="bt-board-name">{names[0]}{myTeam === 0 ? ' ★' : ''}</span><b>{score[0]}</b></div>
-        <div className="bt-board-mid"><span className="ag-eyebrow">FIRST TO 11</span><button className={`ag-chip${speed === 2 ? ' is-on' : ''}`} onClick={() => setSpeed(s => (s === 1 ? 2 : 1))}>{speed}×</button></div>
+        <div className="bt-board-mid"><span className="ag-eyebrow">FIRST TO 11</span><span className="bt-board-btns"><button className={`ag-chip${speed === 2 ? ' is-on' : ''}`} onClick={() => setSpeed(s => (s === 1 ? 2 : 1))}>{speed}×</button><button className={`ag-chip${showBuilds ? ' is-on' : ''}`} onClick={() => setShowBuilds(v => !v)}>BUILDS</button></span></div>
         <div className={`bt-board-side bt-t1${score[1] > score[0] ? ' is-lead' : ''}`}><span className="bt-board-name">{names[1]}{myTeam === 1 ? ' ★' : ''}</span><b>{score[1]}</b></div>
       </div>
       {/* each player on court is their profile picture and username (the CPU fill-ins say CPU) */}
-      <BlacktopCourt game={game} play={play} meId={bt.me.vid} meLabel={null} colorFor={colorFor} speed={speed}
-        avatarFor={p => <Av name={p.name} bot={p.bot} team={p.team} size={40} cos={p.cos} self={p.id === bt.me.vid} />} />
+      {showBuilds && <SquadBuilds game={game} names={names} meVid={bt.me.vid} onClose={() => setShowBuilds(false)} />}
+      <div className="lc-court">
+        <BlacktopCourt game={game} play={play} meId={bt.me.vid} meLabel={null} colorFor={colorFor} speed={speed}
+          ovrFor={p => liveOvr(p)} bubbles={bubbles}
+          avatarFor={p => <Av name={p.name} bot={p.bot} team={p.team} size={40} cos={p.cos} self={p.id === bt.me.vid} />} />
+        {locked && lastCheck && !calling && <CallReveal key={lastCheck.pn} off={locked[lastCheck.team]} def={locked[1 - lastCheck.team]} offense={lastCheck.team === myTeam} />}
+      </div>
+      {calling && humansOn(myTeam) && (
+        <CallBar key={calling.pn} offense={calling.team === myTeam} options={calling.team === myTeam ? OFF_CALLS : DEF_CALLS}
+          picked={bt.myCalls?.[calling.pn] ?? null} onPick={v => bt.call(calling.pn, v)} />
+      )}
+      <EmoteBar emotes={EMOTES} onEmote={bt.emote} />
       <div className="bt-feed">
         {feed.map((p, i) => <div key={p.id} className={`bt-feed-line bt-t${p.team}${i === 0 ? ' is-now' : ''}${p.big ? ' is-big' : ''}${p.type === 'milestone' ? ' is-ms' : ''}`}>{p.text}</div>)}
       </div>

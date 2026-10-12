@@ -38,7 +38,7 @@ const lerp = (a, b, t) => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t 
 const near = (p, spots) => spots.reduce((best, s) => (Math.hypot(s.x - p.x, s.y - p.y) < Math.hypot(best.x - p.x, best.y - p.y) ? s : best), spots[0])
 
 // meLabel: what your own player is called on court ('YOU'; null = your username, like everyone else)
-export default function BlacktopCourt({ game, play, meId, photoFor, colorFor, avatarFor, speed = 1, meLabel = null, meName = null }) {
+export default function BlacktopCourt({ game, play, meId, photoFor, colorFor, avatarFor, speed = 1, meLabel = null, meName = null, ovrFor = null, bubbles = null }) {
   const court = useCourt()
   const players = game.sides.flat()
   const byId = Object.fromEntries(players.map(p => [p.id, p]))
@@ -240,6 +240,9 @@ export default function BlacktopCourt({ game, play, meId, photoFor, colorFor, av
             const col = colorFor(p.team)
             return (
               <div key={p.id} className={`btc-p${has ? ' has-ball' : ''}${p.id === meId ? ' is-me' : ''}`} style={{ left: `${s.x}%`, top: `${s.y}%`, transition: `left ${s.dur}s ${EASE}, top ${s.dur}s ${EASE}`, zIndex: has ? 5 : 3, '--pc': col }}>
+                {/* the overall over the head, and a reaction when they send one */}
+                {ovrFor && <span className="btc-ovr" style={{ background: col }}>{ovrFor(p)}</span>}
+                {bubbles?.[p.id] && <span key={bubbles[p.id]} className="btc-bubble">{bubbles[p.id]}</span>}
                 <div className="btc-ring" style={{ boxShadow: has ? `0 0 0 3px ${col}, 0 0 18px ${col}aa` : `0 0 0 1.5px ${col}99` }}>
                   {avatarFor?.(p) ?? <QBAvatar photo={photoFor?.(p) ?? null} team={p.build?.basketballIQ?.team ?? null} color={null} size={40} logoDir="/logos/nba/" faceCenter={p.build?.basketballIQ?.faceCenter} />}
                 </div>

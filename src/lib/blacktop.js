@@ -45,6 +45,9 @@ export const ROLES = [
 ]
 const BOT_NAMES = ['Smoke', 'Shifty', 'Glass', 'Sauce', 'Twitch', 'Hammer', 'Ghost', 'Blitz', 'Cash', 'Lefty', 'Rook', 'Stretch']
 
+// Quick reactions on the court
+export const EMOTES = ['🔥', '🧊', '💦', '😤', '👏', '😂']
+
 // The lobby's six spots: every squad is two guards and a big
 export const SLOTS = [
   { id: '0g0', team: 0, pos: 'guard' }, { id: '0g1', team: 0, pos: 'guard' }, { id: '0b', team: 0, pos: 'big' },
@@ -130,6 +133,12 @@ export function useBlacktop({ enabled, user, position, pools, types, build, play
   const [waited, setWaited] = useState(0)
   const [match, setMatch] = useState(null)             // { code, seed, created, players:[{vid,name,uid,pos,team,bot}] }
   const [present, setPresent] = useState([])           // presence in the room
+  // the live game's calls: what each team called for possession pn, collected
+  // by the leader and locked for everyone ({ [pn]: { 0: call, 1: call } })
+  const [locks, setLocks] = useState({})
+  const [myCalls, setMyCalls] = useState({})            // { [pn]: call } what I tapped
+  const callsRef = useRef({})                           // the leader's collection
+  const [emotes, setEmotes] = useState([])              // [{ id, from, e, ts }] quick reactions
   const [builds, setBuilds] = useState({})             // vid → { build, pos, role, player, filled, done }
   const [chat, setChat] = useState([])                 // [{ id, from, name, team, text, ts, all }]
   const [role, setRoleState] = useState('balanced')
@@ -191,9 +200,26 @@ export function useBlacktop({ enabled, user, position, pools, types, build, play
         const sent = pl.vid !== me.vid && st.builds[pl.vid]?.done ? st.builds[pl.vid].build : null
         if (sent && !samePicks(sent, Object.fromEntries(Object.entries(b).filter(([t]) => sent[t])))) return
       }
-      setFinal(f => f ?? { builds: p.builds, roles: p.roles, seed: p.seed }); setPhase('game')
+      setFinal(f => f ?? { builds: p.builds, roles: p.roles, seed: p.seed }); setLocks({}); setMyCalls({}); callsRef.current = {}; setPhase('game')
     })
     room.on('rematch', p => { if (m.players.some(x => x.vid === p.from)) setRematchVotes(s => new Set([...s, p.from])) })
+    // a call: the first one in for a team and possession counts
+    room.on('call', p => {
+      const who = m.players.find(x => x.vid === p.from)
+      if (!who || who.team !== p.team || !Number.isInteger(p.pn) || typeof p.v !== 'string') return
+      const c = (callsRef.current[p.pn] ??= {})
+      if (c[p.team] == null) c[p.team] = p.v
+    })
+    // the leader's lock for a possession: everyone plays it with these
+    room.on('lock', p => {
+      const st = stateRef.current, mm = st.match
+      if (!mm || ![leaderOf(st.present.length ? st.present : mm.players), leaderOf(mm.players)].includes(p.from) || !Number.isInteger(p.pn)) return
+      setLocks(l => (l[p.pn] ? l : { ...l, [p.pn]: { 0: p.calls?.[0] ?? null, 1: p.calls?.[1] ?? null } }))
+    })
+    room.on('emote', p => {
+      if (!m.players.some(x => x.vid === p.from) || !EMOTES.includes(p.e)) return
+      setEmotes(list => [...list.slice(-12), { id: `${p.from}-${p.ts}`, from: p.from, e: p.e, ts: Date.now() }])
+    })
     room.on('again', p => {
       const st = stateRef.current, mm = st.match
       if (!mm || ![leaderOf(st.present.length ? st.present : mm.players), leaderOf(mm.players)].includes(p.from) || p.seed !== `${mm.seed}r`) return
@@ -305,7 +331,7 @@ export function useBlacktop({ enabled, user, position, pools, types, build, play
         const f = { builds: out, roles, seed }
         roomRef.current?.send('final', f)
         setTimeout(() => roomRef.current?.send('final', f), 1500)   // once more for anyone who blinked
-        setFinal(f); setPhase('game')
+        setFinal(f); setLocks({}); setMyCalls({}); callsRef.current = {}; setPhase('game')
       }
     }
     tick()
@@ -342,8 +368,8 @@ export function useBlacktop({ enabled, user, position, pools, types, build, play
     if (!final || !match) return null
     const mk = p => ({ id: p.vid, name: p.name, pos: p.pos, role: final.roles[p.vid] ?? 'balanced', build: final.builds[p.vid], bot: p.bot, uid: p.uid, cos: p.cos ?? null })
     const teams = [match.players.filter(p => p.team === 0).map(mk), match.players.filter(p => p.team === 1).map(mk)]
-    return { ...simStreetball({ teams, seed: final.seed, goal: 11, winBy: 2, cap: 15, names: [teamName(match, 0), teamName(match, 1)] }), teams }
-  }, [final, match])
+    return { ...simStreetball({ teams, seed: final.seed, goal: 11, winBy: 2, cap: 15, names: [teamName(match, 0), teamName(match, 1)], calls: locks }), teams }
+  }, [final, match, locks])
 
   const recorded = useRef(null)
   const book = useCallback(() => {
@@ -394,6 +420,27 @@ export function useBlacktop({ enabled, user, position, pools, types, build, play
   const myTeam = match?.players.find(p => p.vid === me.vid)?.team ?? 0
   const visibleChat = useMemo(() => (phase === 'queue' ? lobbyChat : chat.filter(m => m.all || m.team === myTeam)), [chat, lobbyChat, myTeam, phase])
   const leader = leaderOf(present)
+  // my call for possession pn (offense or defense: the screen offers the right ones)
+  const call = useCallback((pn, v) => {
+    if (myCalls[pn] != null) return
+    setMyCalls(c => ({ ...c, [pn]: v }))
+    const c = (callsRef.current[pn] ??= {})
+    if (c[myTeam] == null) c[myTeam] = v
+    roomRef.current?.send('call', { pn, team: myTeam, v })
+  }, [myCalls, myTeam])
+  // lock possession pn: the leader sends what came in; anyone else only if the
+  // leader's lock never arrives (fallback: what I collected)
+  const lockCalls = useCallback((pn, send) => {
+    const calls = { 0: callsRef.current[pn]?.[0] ?? null, 1: callsRef.current[pn]?.[1] ?? null }
+    setLocks(l => (l[pn] ? l : { ...l, [pn]: calls }))
+    if (send) roomRef.current?.send('lock', { pn, calls })
+  }, [])
+  const emote = useCallback(e => {
+    if (!EMOTES.includes(e)) return
+    const ts = Date.now()
+    setEmotes(list => [...list.slice(-12), { id: `${me.vid}-${ts}`, from: me.vid, e, ts }])
+    roomRef.current?.send('emote', { e, ts })
+  }, [me.vid])
   const held = useMemo(() => holders(queue), [queue])
   const seated = Object.keys(held).length
   const typers = (phase === 'queue' ? queue : present.filter(p => match?.players.find(q => q.vid === p.vid)?.team === myTeam))
@@ -403,5 +450,6 @@ export function useBlacktop({ enabled, user, position, pools, types, build, play
     canFill: false, join, leave: exit, leaveLobby: leave,
     match, present, builds, clock, role, setRole, chat: visibleChat, sendChat, typing, typers, myTeam, leader, isLeader: leader === me.vid,
     final, game, finish, rematchVotes, voteRematch, exit,
+    locks, myCalls, call, lockCalls, emotes, emote,
   }
 }

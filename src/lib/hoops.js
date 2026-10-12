@@ -9,6 +9,11 @@
 //   p = { id, name, pos: 'guard' | 'big', build: { attr: { val } }, role?: 'score' | 'play' | 'lock' }
 //   game.plays = [{ id, type, team, pid, pid2, defId, handler, passes, shot, made, pts, text, score, big, poss }]
 //   game.stats[pid] = { pts, fgm, fga, tpm, tpa, ast, reb, oreb, stl, blk, tov }
+//
+// Calls (live games): calls[pn] = { 0: call, 1: call } for possession pn (each
+// check starts one; the check play carries its pn). The team with the ball's
+// call is the play (OFF_CALLS), the other team's the defense (DEF_CALLS). No
+// call, the engine plays it as it always has. Same calls in, same game out.
 
 import { seeded } from './rng'
 
@@ -93,7 +98,15 @@ function shotType(r, R, isArc, assisted) {
   return 'layup'
 }
 
-export function simStreetball({ teams, seed = 'x', goal = 21, winBy = 2, cap = 25, names = null }) {
+export const OFF_CALLS = ['drive', 'pullup', 'post', 'pass']
+export const DEF_CALLS = ['press', 'sag', 'help']
+// who the call goes to: the best driver, shooter, post player
+const callFit = {
+  drive: R => R.speed + R.fin * .8 + R.bounce * .4,
+  pullup: R => R.js * 1.6,
+  post: R => R.size * 1.3 + R.fin * .6 + (R.big ? 4 : 0),
+}
+export function simStreetball({ teams, seed = 'x', goal = 21, winBy = 2, cap = 25, names = null, calls = null }) {
   const r = seeded(`hoops-${seed}`)
   const sides = teams.map((list, ti) => list.map((p, i) => ({ ...p, team: ti, slot: i, R: rate(p) })))
   const stats = {}
@@ -108,13 +121,19 @@ export function simStreetball({ teams, seed = 'x', goal = 21, winBy = 2, cap = 2
   const push = (type, p) => { const play = { id: id++, type, pts: 0, big: false, ...p, score: [...score], poss }; plays.push(play); return play }
   const over = () => (score[0] >= cap || score[1] >= cap) || ((score[0] >= goal || score[1] >= goal) && Math.abs(score[0] - score[1]) >= winBy)
   const milestones = new Set()
-  let check = push('check', { team: poss, text: say(r, 'check', {}) })
+  let pn = -1
+  const checkUp = () => { pn++; return push('check', { team: poss, pn, text: say(r, 'check', {}) }) }
+  let check = checkUp()
   let carrier = null    // who ends up with the ball before the next possession (rebounder / stealer)
 
   let guard = 0
   while (!over() && guard++ < 400) {
     const att = sides[poss], def = sides[1 - poss]
-    const handler = weightedPick(r, att, p => p.R.usage)
+    // this possession's calls (only ones that make sense for the side)
+    const c = calls?.[pn] ?? null
+    const off = OFF_CALLS.includes(c?.[poss]) && !(c[poss] === 'pass' && att.length < 2) ? c[poss] : null
+    const dfc = DEF_CALLS.includes(c?.[1 - poss]) ? c[1 - poss] : null
+    const handler = weightedPick(r, att, p => p.R.usage * (off && callFit[off] ? 1 + callFit[off](p.R) / 6 : 1))
     if (check) { check.handler = handler.id; check.carrier = carrier && att.some(p => p.id === carrier) ? carrier : null; check = null }
     const entry = carrier && att.some(p => p.id === carrier) && carrier !== handler.id ? carrier : null   // rebounder/stealer feeds the handler
     carrier = null
@@ -122,16 +141,18 @@ export function simStreetball({ teams, seed = 'x', goal = 21, winBy = 2, cap = 2
     let d = matchup(def, att, handler)
 
     // steal on the catch / first dribble
-    if (r() < d.R.stl * d.R.lock * (att.length > 1 ? .9 : 1)) {
+    // a press jumps drives and passing lanes; sagging off gives up the ball-pressure steals
+    const stlCall = dfc === 'press' ? (off === 'drive' ? 2.4 : off === 'pass' ? 1.7 : 1.3) : dfc === 'sag' ? .6 : 1
+    if (r() < d.R.stl * d.R.lock * (att.length > 1 ? .9 : 1) * stlCall) {
       stats[d.id].stl++; stats[handler.id].tov++
       push('steal', { team: 1 - poss, pid: d.id, pid2: handler.id, handler: handler.id, entry, text: say(r, 'steal', { n: handler.name, d: d.name }) })
       carrier = d.id
       poss = 1 - poss
-      check = push('check', { team: poss, text: say(r, 'check', {}) })
+      check = checkUp()
       continue
     }
     // pass to a teammate — sometimes two passes around the horn
-    if (att.length > 1 && r() < handler.R.passProb) {
+    if (att.length > 1 && off !== 'drive' && off !== 'pullup' && off !== 'post' && (off === 'pass' || r() < handler.R.passProb)) {
       const mates = att.filter(p => p !== handler)
       let last = handler
       const hops = att.length > 2 && r() < .35 ? 2 : 1
@@ -147,22 +168,31 @@ export function simStreetball({ teams, seed = 'x', goal = 21, winBy = 2, cap = 2
     const assist = passes.length ? att.find(p => p.id === (passes.length > 1 ? passes[passes.length - 2] : handler.id)) : null
     const R = shooter.R
     const sizeEdge = (R.size - d.R.size) / 22, speedEdge = (R.speed - d.R.speed) / 22
-    const isArc = r() < R.arc * (passes.length ? 1.15 : 1)
-    const shot = shotType(r, R, isArc, passes.length > 0)
-    const spArc = clamp(R.sp + (passes.length ? .05 : 0) - Math.max(0, (d.R.lock - 1) * .08), .25, .8)
-    const spIn = clamp(R.sp + Math.max(0, sizeEdge) * (.38 + Math.max(0, sizeEdge) * .7) + Math.max(0, speedEdge) * .18 + (passes.length ? .07 : 0) + (shot === 'dunk' ? .08 : 0) - Math.max(0, (d.R.lock - 1) * .06), .25, .9)
+    const isArc = off === 'drive' || off === 'post' ? false : off === 'pullup' ? r() < Math.max(.4, R.arc * 1.3) : r() < R.arc * (passes.length ? 1.15 : 1)
+    let shot = shotType(r, R, isArc, passes.length > 0)
+    if (off === 'drive' && shot !== 'dunk') shot = 'drive'
+    if (off === 'post') shot = 'post'
+    if (off === 'pullup' && !isArc) shot = 'mid'
+    // the read: how the defense's call meets the play
+    // (tuned so every call has a matchup it wins and one it loses)
+    const arcRead = (dfc === 'sag' ? .07 : dfc === 'press' ? -.13 : dfc === 'help' ? .02 : 0) + (off === 'pullup' ? -.05 : 0)
+    const inRead = (dfc === 'help' ? (off === 'pass' ? .1 : -.16) : dfc === 'sag' ? .1 : dfc === 'press' && off === 'post' ? .08 : 0)
+      + (off === 'drive' ? .24 : off === 'post' ? .2 : off === 'pass' ? .03 : 0)
+    const callFor = off === 'drive' ? (R.speed - d.R.speed) / 30 : off === 'post' ? (R.size - d.R.size) / 18 : off === 'pullup' ? (R.js - 6) / 40 : 0
+    const spArc = clamp(R.sp + (passes.length ? .05 : 0) - Math.max(0, (d.R.lock - 1) * .08) + arcRead + (off === 'pullup' ? callFor : 0), .2, .82)
+    const spIn = clamp(R.sp + Math.max(0, sizeEdge) * (.38 + Math.max(0, sizeEdge) * .7) + Math.max(0, speedEdge) * .18 + (passes.length ? .07 : 0) + (shot === 'dunk' ? .08 : 0) - Math.max(0, (d.R.lock - 1) * .06) + inRead + (off === 'drive' || off === 'post' || off === 'pullup' ? callFor : 0), .2, .95)
     stats[shooter.id].fga++
     if (isArc) stats[shooter.id].tpa++
-    const common = { handler: handler.id, passes, defId: d.id, entry, shot }
+    const common = { handler: handler.id, passes, defId: d.id, entry, shot, call: off, dcall: dfc }
 
     // block
-    if (!isArc && r() < d.R.blk * (1 + Math.max(0, -sizeEdge) * 1.5) * (shot === 'dunk' ? .7 : 1)) {
+    if (!isArc && r() < d.R.blk * (1 + Math.max(0, -sizeEdge) * 1.5) * (shot === 'dunk' ? .7 : 1) * (dfc === 'help' && off !== 'pass' ? 1.6 : 1)) {
       stats[d.id].blk++
       push('block', { team: 1 - poss, pid: d.id, pid2: shooter.id, ...common, text: say(r, 'block', { n: shooter.name, d: d.name }), big: true })
       // the block goes out or is scooped — 50/50 who ends up with it
       const keep = r() < .5
       if (!keep) { carrier = d.id; poss = 1 - poss } else carrier = handler.id
-      check = push('check', { team: poss, text: say(r, 'check', {}) })
+      check = checkUp()
       continue
     }
     if (r() < (isArc ? spArc : spIn)) {
@@ -182,7 +212,7 @@ export function simStreetball({ teams, seed = 'x', goal = 21, winBy = 2, cap = 2
       if (ms) { milestones.add(s >= goal - 1 ? `${poss}-gp` : `${poss}-half`); push('milestone', { team: poss, text: ms, big: s >= goal - 1 }) }
       if (over()) break
       carrier = shooter.id
-      check = push('check', { team: poss, text: say(r, 'check', {}) })      // make it, take it
+      check = checkUp()      // make it, take it
       continue
     }
     // miss → rebound
@@ -199,7 +229,7 @@ export function simStreetball({ teams, seed = 'x', goal = 21, winBy = 2, cap = 2
       poss = 1 - poss
       if (def.length > 1) push('dreb', { team: poss, pid: rb.id, text: say(r, 'dreb', { n: rb.name }) })
       carrier = rb.id
-      check = push('check', { team: poss, text: say(r, 'check', {}) })
+      check = checkUp()
     }
   }
   const winner = score[0] > score[1] ? 0 : 1
