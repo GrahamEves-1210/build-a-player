@@ -55,7 +55,16 @@ export default function AppCompete({ cp, au, sport, position, positions, onPosit
   const posName = positions.find(o => o.pos === position)?.label ?? position.toUpperCase()
 
   let body
-  if (auctionOn) {
+  if (cp.phase === 'busy' || au?.phase === 'busy') {
+    // one live game per device: another tab or window already has one going
+    body = (
+      <div className="cp-finding ag-pop">
+        <span className="ag-eyebrow">ALREADY IN A GAME</span>
+        <span className="cp-sub">You're in a live game in another tab or window. Finish it there first: one game at a time.</span>
+        <button className="ag-btn ag-btn--ghost" onClick={() => { cp.leave(); au?.leave?.() }}>OK</button>
+      </div>
+    )
+  } else if (auctionOn) {
     body = <Suspense fallback={null}><AppAuction au={au} posName={posName} onHome={onHome} onPlayAgain={() => au.join()} /></Suspense>
   } else if (cp.phase === 'queue') {
     const seats = Array.from({ length: POOL_SIZE }, (_, i) => [...cp.queue].sort((a, b) => (a.ts ?? 0) - (b.ts ?? 0))[i] ?? null)

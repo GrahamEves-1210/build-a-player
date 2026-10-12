@@ -10,10 +10,10 @@
 // humans in the queue; nothing is stored server-side.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { joinRoom, genCode, myVid } from './live'
+import { joinRoom, genCode, myVid, myDevice, claimLive, releaseLive, liveElsewhere, markEntered, clearEntered, takeEntered } from './live'
 import { seeded, seededShuffle } from './rng'
 import { getUsername } from './discord'
-import { myCosmetics } from './progress'
+import { myCosmetics, whenProgressReady } from './progress'
 
 export const POOL_SIZE = 5
 export const FILL_AFTER_SECS = 60     // the countdown: starts over every time someone joins
@@ -62,7 +62,12 @@ export function rankResults(match, results) {
 }
 
 export function useCompete({ enabled, user, sport, pos, botFor }) {
-  const me = useMemo(() => ({ vid: myVid(), name: user ? (getUsername(user) || 'Player') : 'Guest', uid: user?.id ?? null, cos: myCosmetics() }), [user?.id]) // eslint-disable-line
+  const me = useMemo(() => ({ vid: myVid(), dev: myDevice(), name: user ? (getUsername(user) || 'Player') : 'Guest', uid: user?.id ?? null, cos: myCosmetics() }), [user?.id]) // eslint-disable-line
+  // a pool this device left mid-game (reload, the app killed): book it as the forfeit it was
+  useEffect(() => {
+    const e = takeEntered('compete'); if (!e) return
+    whenProgressReady(() => window.dispatchEvent(new CustomEvent('bap:compete', { detail: { sport: e.sport, pos: e.pos, place: e.of, of: e.of, ovr: 0, humans: e.humans, forfeit: true } })))
+  }, [])
   const [phase, setPhase] = useState('idle')        // idle | queue | build | result
   const [queue, setQueue] = useState([])
   const [link, setLink] = useState('connecting')     // 'connecting' | 'live' | 'local' (this device only)
@@ -79,6 +84,7 @@ export function useCompete({ enabled, user, sport, pos, botFor }) {
     queueRef.current?.leave(); queueRef.current = null
     roomRef.current?.leave(); roomRef.current = null
     setPhase('idle'); setQueue([]); setMatch(null); setResults({}); setWaited(0)
+    releaseLive()
   }, [])
   useEffect(() => { if (!enabled) leave() }, [enabled, leave])
   useEffect(() => () => leave(), [leave])
@@ -86,9 +92,19 @@ export function useCompete({ enabled, user, sport, pos, botFor }) {
   const enterRoom = useCallback(m => {
     queueRef.current?.leave(); queueRef.current = null
     setMatch(m); setResults({}); setPhase('build'); booked.current = null
+    const humans = m.players.filter(p => !p.bot)
+    markEntered({ kind: 'compete', code: m.code, sport: m.sport, pos: m.pos, of: m.players.length, humans: humans.length })
     const room = joinRoom(`compete-${m.code}`, me)
     roomRef.current = room
-    room.on('result', p => setResults(rs => ({ ...rs, [p.from]: { ovr: p.forfeit ? -1 : p.ovr, at: p.at, build: p.build, forfeit: !!p.forfeit } })))
+    // a player's result: only from someone in the pool, never for me (mine is set
+    // here, not by the room), and the first real one stands (a later message,
+    // forfeit included, can't replace a build that's already in)
+    room.on('result', p => {
+      if (!p?.from || p.from === me.vid || !humans.some(h => h.vid === p.from)) return
+      const ovr = Number(p.ovr)
+      if (!p.forfeit && !(ovr >= 0 && ovr <= 99)) return
+      setResults(rs => (rs[p.from] && !rs[p.from].forfeit ? rs : { ...rs, [p.from]: { ovr: p.forfeit ? -1 : ovr, at: Number(p.at) || Date.now(), build: p.build, forfeit: !!p.forfeit } }))
+    })
     // bots: worked out locally from the same seed (identical on every client)
     const out = {}
     m.players.forEach((p, i) => {
@@ -101,13 +117,22 @@ export function useCompete({ enabled, user, sport, pos, botFor }) {
 
   const form = useCallback(list => {
     const code = genCode()
-    const humans = [...list].sort((a, b) => (a.ts ?? 0) - (b.ts ?? 0)).slice(0, POOL_SIZE)
+    // one seat per device and per account (a second tab or a second login isn't a second player)
+    const seen = new Set()
+    const unique = [...list].sort((a, b) => (a.ts ?? 0) - (b.ts ?? 0)).filter(p => {
+      const keys = [p.dev && `d:${p.dev}`, p.uid && `u:${p.uid}`].filter(Boolean)
+      if (keys.some(k => seen.has(k))) return false
+      keys.forEach(k => seen.add(k)); return true
+    })
+    const humans = unique.slice(0, POOL_SIZE)
     const players = humans.map(h => ({ vid: h.vid, name: h.name, uid: h.uid ?? null, cos: h.cos ?? null, bot: false }))
     return { code, seed: `cp-${code}`, created: Date.now(), sport, pos, players }
   }, [sport, pos])
 
   const join = useCallback(() => {
     if (!enabled) return
+    // one live game per device: another tab or window is already in one
+    if (!claimLive('compete')) { setPhase('busy'); return }
     roomRef.current?.leave(); roomRef.current = null
     setPhase('queue'); setWaited(0); setMatch(null); setResults({})
     const q = joinRoom(`compete-q-${sport}-${pos}`, { ...me, ts: Date.now() })
@@ -116,13 +141,22 @@ export function useCompete({ enabled, user, sport, pos, botFor }) {
     q.onPresence(list => {
       setQueue(list)
       if (list.length >= POOL_SIZE && leaderOf(list) === me.vid && queueRef.current === q) {
-        const m = form(list); q.send('match', m); enterRoom(m)
+        const m = form(list); if (m.players.length < MIN_POOL) return
+        q.send('match', m); enterRoom(m)
       }
     })
-    q.on('match', m => { if (m.players.some(p => p.vid === me.vid)) enterRoom(m) })
+    // a pool deal: only from the player who deals (the lowest id in it), only with
+    // me in it, and only one dealt just now (no backdated or far-off clocks)
+    q.on('match', m => {
+      if (!m?.players?.some(p => p.vid === me.vid)) return
+      const ids = m.players.filter(p => !p.bot).map(p => p.vid).sort()
+      if ((m.from !== ids[0] && m.from !== leaderOf(q.presence())) || Math.abs(Date.now() - Number(m.created)) > 20000) return
+      if (m.seed !== `cp-${m.code}` || m.sport !== sport || m.pos !== pos) return
+      enterRoom(m)
+    })
     q.on('fill', () => {
       const list = q.presence()
-      if (list.length >= MIN_POOL && leaderOf(list) === me.vid && queueRef.current === q) { const m = form(list); q.send('match', m); enterRoom(m) }
+      if (list.length >= MIN_POOL && leaderOf(list) === me.vid && queueRef.current === q) { const m = form(list); if (m.players.length < MIN_POOL) return; q.send('match', m); enterRoom(m) }
     })
   }, [enabled, sport, pos, me, form, enterRoom])
 
@@ -132,7 +166,7 @@ export function useCompete({ enabled, user, sport, pos, botFor }) {
     const list = q.presence()
     if (list.length < MIN_POOL) return
     q.send('fill', {})
-    if (leaderOf(list) === me.vid) { const m = form(list); q.send('match', m); enterRoom(m) }
+    if (leaderOf(list) === me.vid) { const m = form(list); if (m.players.length < MIN_POOL) return; q.send('match', m); enterRoom(m) }
   }, [me.vid, form, enterRoom])
   useEffect(() => {
     if (phase !== 'queue') return
@@ -168,10 +202,20 @@ export function useCompete({ enabled, user, sport, pos, botFor }) {
     return () => clearInterval(id)
   }, [phase, match, results])
 
-  // Book my place once (stats, XP, coins: lib/progress.js)
+  // Book my place once (stats, XP, coins: lib/progress.js). No build in when the
+  // clock ran out: that's a forfeit (sitting it out doesn't dodge a loss)
   useEffect(() => {
-    if (phase !== 'result' || !match || booked.current === match.code || !results[me.vid]) return
+    if (phase !== 'result' || !match || booked.current === match.code) return
+    if (!results[me.vid]) {
+      booked.current = match.code
+      clearEntered(match.code); releaseLive()
+      roomRef.current?.send('result', { ovr: 0, at: Date.now(), forfeit: true })
+      const humans = match.players.filter(p => !p.bot).length
+      window.dispatchEvent(new CustomEvent('bap:compete', { detail: { sport: match.sport, pos: match.pos, place: match.players.length, of: match.players.length, ovr: 0, humans, forfeit: true } }))
+      return
+    }
     booked.current = match.code
+    clearEntered(match.code); releaseLive()
     const ranked = rankResults(match, results)
     const mine = ranked.find(p => p.vid === me.vid)
     const humans = match.players.filter(p => !p.bot).length
@@ -185,10 +229,11 @@ export function useCompete({ enabled, user, sport, pos, botFor }) {
     roomRef.current?.send('result', { ovr: 0, at: Date.now(), forfeit: true })
     window.dispatchEvent(new CustomEvent('bap:compete', { detail: { sport: match.sport, pos: match.pos, place: match.players.length, of: match.players.length, ovr: 0, humans, forfeit: true } }))
     booked.current = match.code
+    clearEntered(match.code)
     setTimeout(leave, 300)
   }, [match, results, me.vid, leave])
 
   const ranked = useMemo(() => rankResults(match, results), [match, results])
   const retry = useCallback(() => { queueRef.current?.leave(); queueRef.current = null; join() }, [join])
-  return { phase, queue, waited, match, results, ranked, clock, me, link, retry, join, leave, forfeit, fillNow, submit, inPool: phase === 'build' || phase === 'result' }
+  return { phase, queue, waited, match, results, ranked, clock, me, link, retry, join, leave, forfeit, fillNow, submit, inPool: phase === 'build' || phase === 'result', elsewhere: liveElsewhere }
 }

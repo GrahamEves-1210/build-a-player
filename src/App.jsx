@@ -39,7 +39,7 @@ import { DB_LEGENDS } from './data/db-legends'
 import { OLS, OL_TYPES, OL_LITE_TYPES, OL_CATEGORIES, OL_ATTR } from './data/ols'
 import { ALLTIME_RATINGS, NFL_TEAMS, TEAMS } from './data/nfl-teams'
 import { useCompete, botBuild } from './lib/compete'
-import { setLiveLock } from './lib/liveLock'
+import { setLiveLock, liveLock, guardLeave } from './lib/liveLock'
 import { useAuction } from './lib/auction'
 import { FORFEIT_RATING } from './lib/progress'
 import { LEGENDS, LEGEND_TYPES } from './data/qb-legends'
@@ -321,6 +321,10 @@ export default function App() {
   useEffect(() => {
     if (!IS_APP && !APP_LOOK) return
     const onNav = e => {
+      // in a live game (Compete, an auction, a Blacktop build, the Daily run) every
+      // way out asks first and forfeits (deep links, the tutorial, after sign-in…);
+      // going back to the game itself doesn't
+      if (liveLock() && String(e.detail).split(':')[0] !== 'play') { guardLeave(() => onNav(e)); return }
       const to = e.detail
       if (to === 'home') setPage('splash')   // keeps the build in progress — PLAY resumes it
       else if (to === 'play') {
@@ -733,6 +737,8 @@ export default function App() {
     // same spins for the whole pool: no custom ratings, a fresh spin screen
     try { localStorage.setItem('bap_custom_mode', '0') } catch {}
     setIsCustomMode(false)
+    // a Daily run in progress ends here (leaving it is a forfeit, as from anywhere)
+    if (dailyLockedRef.current) forfeitDaily()
     handleStart('classic', cp.match.pos)
     setSimResult(null); setMobileView('spin'); setSpinResetKey(k => k + 1); setGameKey(k => k + 1)
     sandboxTainted.current = false

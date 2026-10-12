@@ -11,13 +11,13 @@
 // stored server-side, and if the leader leaves the next vid takes over.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { joinRoom, genCode, myVid } from './live'
+import { joinRoom, genCode, myVid, myDevice, claimLive, releaseLive, markEntered, clearEntered, takeEntered } from './live'
 import { seeded, seededShuffle } from './rng'
 import { simStreetball, buildFromPlayer } from './hoops'
 import { clean, blockedIds, MIN_GAP_MS } from './chat'
 import { supabase } from './supabase'
 import { getUsername } from './discord'
-import { myCosmetics } from './progress'
+import { myCosmetics, whenProgressReady } from './progress'
 
 export const ROOM_SIZE = 6
 export const BUILD_SECS = 180
@@ -95,11 +95,32 @@ export function autoBuild(partial, types, pool, seed) {
 
 const leaderOf = list => [...list].filter(p => !p.bot).map(p => p.vid).sort()[0] ?? null
 
+// A build from the room: every rating is 0-11, and a chip naming a real player
+// carries that player's real number (nobody plays with made-up 11s)
+function buildOk(b, pool) {
+  if (!b || typeof b !== 'object') return false
+  for (const [t, chip] of Object.entries(b)) {
+    if (!chip) continue
+    const v = Number(chip.val)
+    if (!(v >= 0 && v <= 11)) return false
+    const pl = chip.qbFull ? pool.find(x => x.name === chip.qbFull) : null
+    if (pl && pl.attrs?.[t] != null && pl.attrs[t] !== v) return false
+  }
+  return true
+}
+// the same picks (who, at what): the dealer can't swap anyone's build
+const samePicks = (a, b) => Object.keys({ ...a, ...b }).every(t => (a?.[t]?.qbFull ?? null) === (b?.[t]?.qbFull ?? null) && Number(a?.[t]?.val) === Number(b?.[t]?.val))
+
 export function useBlacktop({ enabled, user, position, pools, types, build, player, photoFor, onExit, onSeatPos }) {
   // your look travels with you (lobby spots, chat): re-read when you change it
   const [cosV, setCosV] = useState(0)
   useEffect(() => { const on = () => setCosV(v => v + 1); window.addEventListener('bap:cosmetics', on); return () => window.removeEventListener('bap:cosmetics', on) }, [])
-  const me = useMemo(() => ({ vid: myVid(), name: user ? (getUsername(user) || 'Player') : 'Guest', uid: user?.id ?? null, pos: position, cos: myCosmetics() }), [user?.id, position, cosV]) // eslint-disable-line
+  const me = useMemo(() => ({ vid: myVid(), dev: myDevice(), name: user ? (getUsername(user) || 'Player') : 'Guest', uid: user?.id ?? null, pos: position, cos: myCosmetics() }), [user?.id, position, cosV]) // eslint-disable-line
+  // a game this device left before it was decided (reload, the app killed): it's a loss
+  useEffect(() => {
+    const e = takeEntered('blacktop'); if (!e) return
+    whenProgressReady(() => window.dispatchEvent(new CustomEvent('bap:blacktop', { detail: { won: false, mvp: false, line: null, bots: false, score: null, team: e.team ?? 0, forfeit: true } })))
+  }, [])
   const [phase, setPhase] = useState('idle')          // idle | queue | build | game | result
   const [queue, setQueue] = useState([])               // presence in the lobby
   const [link, setLink] = useState('connecting')       // 'connecting' | 'live' | 'local' (this device only)
@@ -124,12 +145,14 @@ export function useBlacktop({ enabled, user, position, pools, types, build, play
   const onSeatPosRef = useRef(onSeatPos); onSeatPosRef.current = onSeatPos
   const lastTyping = useRef(0)
   stateRef.current = { match, present, builds, build, position, role, player, final, phase }
+  const poolsRef = useRef(pools); poolsRef.current = pools
 
   const leave = useCallback(() => {
     queueRef.current?.leave(); queueRef.current = null
     roomRef.current?.leave(); roomRef.current = null
     setPhase('idle'); setMatch(null); setPresent([]); setBuilds({}); setChat([]); setFinal(null); setQueue([]); setRematchVotes(new Set()); setMySlot(null); setLobbyChat([])
     finalSent.current = false
+    releaseLive()
   }, [])
   useEffect(() => { if (!enabled) leave() }, [enabled, leave])
   useEffect(() => () => leave(), [leave])
@@ -144,15 +167,38 @@ export function useBlacktop({ enabled, user, position, pools, types, build, play
     const room = joinRoom(`blacktop-${m.code}`, { ...me, pos: mine?.pos ?? me.pos, team: mine?.team ?? 0, filled: 0, done: false })
     roomRef.current = room
     room.onPresence(setPresent)
-    room.on('build', p => setBuilds(b => ({ ...b, [p.from]: { build: p.build, pos: p.pos, role: p.role, player: p.player, filled: p.filled, done: p.done } })))
+    if (mine) markEntered({ kind: 'blacktop', code: m.code, team: mine.team ?? 0 })
+    const poolOf = pos => (pos === 'big' ? poolsRef.current?.big : poolsRef.current?.guard) ?? []
+    // a player's build: only from someone in the game, never for me, and only real ratings
+    room.on('build', p => {
+      const who = m.players.find(x => x.vid === p.from)
+      if (!who || p.from === me.vid || !buildOk(p.build, poolOf(who.pos))) return
+      setBuilds(b => ({ ...b, [p.from]: { build: p.build, pos: who.pos, role: p.role, player: p.player, filled: p.filled, done: p.done } }))
+    })
     room.on('chat', p => {
       if (blockedIds().has(p.uid)) return
       setChat(c => [...c.slice(-80), { id: `${p.from}-${p.ts}`, from: p.from, uid: p.uid, name: p.name, cos: p.cos, team: p.team, text: clean(p.text), ts: p.ts, all: !!p.all }])
     })
-    room.on('final', p => { setFinal(f => f ?? { builds: p.builds, roles: p.roles, seed: p.seed }); setPhase('game') })
-    room.on('rematch', p => setRematchVotes(s => new Set([...s, p.from])))
+    // the game: only from the dealer (the lowest id here), on the game's own seed
+    // (nobody picks a lucky one), every build real, and nobody's picks swapped
+    room.on('final', p => {
+      const st = stateRef.current, mm = st.match
+      // (the dealer by what I see here, or the lowest id in the game: views of who's here can differ for a moment)
+      if (!mm || ![leaderOf(st.present.length ? st.present : mm.players), leaderOf(mm.players)].includes(p.from) || p.seed !== `${mm.seed}-f`) return
+      for (const pl of mm.players) {
+        const b = p.builds?.[pl.vid]
+        if (!buildOk(b, poolOf(pl.pos))) return
+        const sent = pl.vid !== me.vid && st.builds[pl.vid]?.done ? st.builds[pl.vid].build : null
+        if (sent && !samePicks(sent, Object.fromEntries(Object.entries(b).filter(([t]) => sent[t])))) return
+      }
+      setFinal(f => f ?? { builds: p.builds, roles: p.roles, seed: p.seed }); setPhase('game')
+    })
+    room.on('rematch', p => { if (m.players.some(x => x.vid === p.from)) setRematchVotes(s => new Set([...s, p.from])) })
     room.on('again', p => {
-      setMatch(mm => ({ ...mm, seed: p.seed, created: p.created }))
+      const st = stateRef.current, mm = st.match
+      if (!mm || ![leaderOf(st.present.length ? st.present : mm.players), leaderOf(mm.players)].includes(p.from) || p.seed !== `${mm.seed}r`) return
+      markEntered({ kind: 'blacktop', code: m.code, team: m.players.find(x => x.vid === me.vid)?.team ?? 0 })
+      setMatch(x => ({ ...x, seed: p.seed, created: Date.now() }))
       setBuilds({}); setFinal(null); setRematchVotes(new Set()); finalSent.current = false
       setPhase('build')
       window.dispatchEvent(new CustomEvent('bap:blacktop-rebuild'))
@@ -176,6 +222,8 @@ export function useBlacktop({ enabled, user, position, pools, types, build, play
 
   const join = useCallback(() => {
     if (!enabled) return
+    // one live game per device: another tab or window is already in one
+    if (!claimLive('blacktop')) { setPhase('busy'); return }
     setPhase('queue'); setWaited(0); setMySlot(null); setLobbyChat([])
     const q = joinRoom('blacktop-q', { ...me, ts: Date.now(), slot: null, claim: 0 })
     queueRef.current = q
@@ -246,7 +294,7 @@ export function useBlacktop({ enabled, user, position, pools, types, build, play
       const allDone = here.length > 0 && here.every(p => builds[p.vid]?.done)
       if ((left <= 0 || allDone) && leaderOf(present) === me.vid && !finalSent.current) {
         finalSent.current = true
-        const seed = `${match.seed}-${Date.now()}`
+        const seed = `${match.seed}-f`        // the game's own seed: the dealer doesn't pick it
         const out = {}, roles = {}
         for (const p of match.players) {
           const t = p.pos === 'big' ? types.big : types.guard
@@ -298,9 +346,10 @@ export function useBlacktop({ enabled, user, position, pools, types, build, play
   }, [final, match])
 
   const recorded = useRef(null)
-  const finish = useCallback(() => {
-    if (!game || !match || recorded.current === final?.seed) return
+  const book = useCallback(() => {
+    if (!game || !match || recorded.current === final?.seed) return false
     recorded.current = final?.seed
+    clearEntered(match.code)
     const mine = match.players.find(p => p.vid === me.vid)
     const won = mine && game.winner === mine.team
     const mvp = game.mvp === me.vid
@@ -313,8 +362,11 @@ export function useBlacktop({ enabled, user, position, pools, types, build, play
       supabase.from('vs_results').insert({ user_id: user.id, username: getUsername(user), result: won ? 'win' : 'loss', ovr: null, position: mine?.pos ?? position, match_type: '3v3' }).then(null, () => {})
       void line
     }
-    setPhase('result')
+    return true
   }, [game, match, final, me.vid, user, position])
+  // the game is decided the moment it's dealt: book it then (the playback is just the show)
+  useEffect(() => { if (game) book() }, [game, book])
+  const finish = useCallback(() => { book(); setPhase('result') }, [book])
 
   const voteRematch = useCallback(() => {
     if (!roomRef.current || !match) return
@@ -329,8 +381,9 @@ export function useBlacktop({ enabled, user, position, pools, types, build, play
     if (!humansHere.length || !humansHere.every(p => rematchVotes.has(p.vid))) return
     if (leaderOf(present) !== me.vid || againSent.current === final?.seed) return
     againSent.current = final?.seed
-    const again = { seed: genCode(), created: Date.now() }
+    const again = { seed: `${match.seed}r`, created: Date.now() }   // the next game's seed follows from this one
     roomRef.current.send('again', again)
+    markEntered({ kind: 'blacktop', code: match.code, team: match.players.find(x => x.vid === me.vid)?.team ?? 0 })
     setMatch(mm => ({ ...mm, ...again })); setBuilds({}); setFinal(null); setRematchVotes(new Set()); finalSent.current = false
     setPhase('build')
     window.dispatchEvent(new CustomEvent('bap:blacktop-rebuild'))

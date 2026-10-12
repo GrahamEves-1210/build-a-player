@@ -642,6 +642,10 @@ async function syncCards(id) {
 }
 
 let loaded = false
+// run once the store is listening and holds the right account (a forfeit booked
+// on page load must land on the player who left, not on a guest store)
+const readyFns = []
+export function whenProgressReady(fn) { if (loaded) setTimeout(fn, 0); else readyFns.push(fn) }
 function switchUser(u) {
   const id = u?.id ?? null
   user = u ?? null
@@ -663,6 +667,7 @@ function switchUser(u) {
   // coins bought on the website land after the wallet is pulled (so a newer remote wallet can't overwrite them)
   pullWallet(id).then(() => claimCoinPurchases())
   if (IS_APP) import('./iap').then(m => m.iapUser(id)).catch(() => {})
+  readyFns.splice(0).forEach(fn => setTimeout(fn, 0))
 }
 
 let started = false

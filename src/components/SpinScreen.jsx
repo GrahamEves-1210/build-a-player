@@ -339,14 +339,19 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
   useEffect(() => {
     if (!onSaveResult) return
     if (phase === 'done' && selectedQB) onSaveResult({ selectedTeam, selectedQB, qbRespinUsed, teamRespinUsed })
-    else if (phase === 'idle') onSaveResult(null)
-  }, [phase, selectedTeam, selectedQB, qbRespinUsed])
+    // between spins the build's re-spins used still count (a reload doesn't hand them back)
+    else if (phase === 'idle') onSaveResult(qbRespinUsed || teamRespinUsed ? { qbRespinUsed, teamRespinUsed } : null)
+  }, [phase, selectedTeam, selectedQB, qbRespinUsed, teamRespinUsed])
 
   useEffect(() => {
     if (onPhaseChange) onPhaseChange(phase)
   }, [phase])
 
+  // a new build gets its re-spins back; loading the same build (a reload) keeps what's used
+  const keyRef = useRef(gameKey)
   useEffect(() => {
+    if (keyRef.current === gameKey) return
+    keyRef.current = gameKey
     setQbRespinUsed(0)
     setTeamRespinUsed(0)
   }, [gameKey])

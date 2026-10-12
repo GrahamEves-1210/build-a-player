@@ -14,10 +14,10 @@
 // lots are picked from the seed and the ledger, so either one picks the same.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { joinRoom, genCode, myVid } from './live'
+import { joinRoom, genCode, myVid, myDevice, claimLive, releaseLive, markEntered, clearEntered, takeEntered } from './live'
 import { seeded } from './rng'
 import { getUsername } from './discord'
-import { myCosmetics } from './progress'
+import { myCosmetics, whenProgressReady } from './progress'
 import { SPORT } from './career'
 import { calcOVR } from '../utils/simulation'
 import { calcBucketOVR } from '../utils/bucketSimulation'
@@ -139,10 +139,41 @@ export function rankAuction(m, L, kit) {
 
 const leaderOf = list => [...list].map(p => p.vid).sort()[0] ?? null
 
+// Every client checks a ledger the room sends before taking it: wallets only go
+// down and never below zero, a trait once won stays won, every won trait is a
+// real player's real numbers for that slot, and each wallet is the budget less
+// exactly what its traits cost. A crafted 'sold' or 'done' can't hand anyone 99s
+// or rewrite who paid for what.
+export function ledgerOk(prev, next, m, kit) {
+  if (!next || !prev || typeof next !== 'object') return false
+  const realLot = (w, t) => {
+    if (!w || !m.types.includes(t)) return false
+    const pl = kit.pool.find(x => x.name === w.name)
+    if (!pl) return false
+    return Math.abs(kit.lotOf(pl, t).val - Number(w.val)) < 0.01
+  }
+  for (const { vid } of m.players) {
+    const wNew = Number(next.wallets?.[vid]), wOld = Number(prev.wallets?.[vid])
+    if (!(wNew >= 0) || wNew > wOld) return false
+    const won = next.won?.[vid] ?? {}, had = prev.won?.[vid] ?? {}
+    let spent = 0
+    for (const [t, w] of Object.entries(won)) { if (!realLot(w, t)) return false; spent += Number(w.price) || 0 }
+    for (const [t, w] of Object.entries(had)) if (!won[t] || won[t].name !== w.name) return false
+    if (BUDGET - wNew !== spent) return false
+  }
+  if ((prev.out ?? []).some(v => !(next.out ?? []).includes(v))) return false
+  return true
+}
+
 // ── The hook ─────────────────────────────────────────────────────────────────
 export function useAuction({ enabled, user, sport, pos }) {
   const kit = useMemo(() => auctionKit(sport, pos), [sport, pos])
-  const me = useMemo(() => ({ vid: myVid(), name: user ? (getUsername(user) || 'Player') : 'Guest', uid: user?.id ?? null, cos: myCosmetics() }), [user?.id]) // eslint-disable-line
+  const me = useMemo(() => ({ vid: myVid(), dev: myDevice(), name: user ? (getUsername(user) || 'Player') : 'Guest', uid: user?.id ?? null, cos: myCosmetics() }), [user?.id]) // eslint-disable-line
+  // an auction this device left mid-way (reload, the app killed): book the forfeit it was
+  useEffect(() => {
+    const e = takeEntered('auction'); if (!e) return
+    whenProgressReady(() => window.dispatchEvent(new CustomEvent('bap:compete', { detail: { sport: e.sport, pos: e.pos, place: e.of, of: e.of, ovr: 0, humans: e.of, forfeit: true, mode: 'auction' } })))
+  }, [])
   const [phase, setPhase] = useState('idle')         // idle | queue | auction | result
   const [queue, setQueue] = useState([])
   const [link, setLink] = useState('connecting')
@@ -165,10 +196,12 @@ export function useAuction({ enabled, user, sport, pos }) {
     queueRef.current?.leave(); queueRef.current = null
     roomRef.current?.leave(); roomRef.current = null
     setPhase('idle'); setQueue([]); setMatch(null); setSt(null); setPresent([]); setWaited(0)
+    releaseLive()
   }, [])
   useEffect(() => { if (!enabled) leave() }, [enabled, leave])
   useEffect(() => () => leave(), [leave])
 
+  const amLeaderRef = useRef(null)
   const amLeader = () => {
     const m = matchRef.current, s = stRef.current
     if (!m || !s) return false
@@ -176,19 +209,46 @@ export function useAuction({ enabled, user, sport, pos }) {
     const here = presentRef.current.filter(p => m.players.some(q => q.vid === p.vid) && !s.L.out.includes(p.vid))
     return leaderOf(here.length ? here : m.players.filter(p => !s.L.out.includes(p.vid))) === me.vid
   }
+  amLeaderRef.current = amLeader
 
   // ── messages from the floor ──
   const onLot = useCallback(p => {
+    const m = matchRef.current, k = kitRef.current
+    // a real player's real numbers for a real slot, and a ledger that adds up
+    if (!m || !p?.lot || !m.types.includes(p.lot.trait)) return
+    const pl = k.pool.find(x => x.name === p.lot.name)
+    if (!pl || Math.abs(k.lotOf(pl, p.lot.trait).val - Number(p.lot.val)) > 0.01) return
+    if (p.L && stRef.current && !ledgerOk(stRef.current.L, p.L, m, k)) return
     setSt(s => {
       if (!s || p.lot.n < s.n || (p.lot.n === s.n && s.stage !== 'wait' && s.stage !== 'sold')) return s
       if (p.lot.n === s.n && s.stage === 'sold') return s
       return { ...s, n: p.lot.n, stage: 'lot', lot: p.lot, t0: Date.now() - (p.el || 0), high: null, passed: [], sold: null, L: p.L ?? s.L }
     })
   }, [])
-  const onHigh = useCallback(p => setSt(s => (s && s.stage === 'lot' && p.n === s.n ? { ...s, high: { vid: p.vid, amount: p.amount } } : s)), [])
+  // the high bid: the auctioneer settles bids itself, so it never takes this from the room;
+  // everyone else shows it if it's a bid that player could actually make
+  const onHigh = useCallback(p => {
+    const m = matchRef.current
+    if (!m || amLeaderRef.current?.()) return
+    setSt(s => {
+      if (!s || s.stage !== 'lot' || p.n !== s.n || !m.players.some(x => x.vid === p.vid)) return s
+      if (!(p.amount >= minNext(s.high) && p.amount <= maxBid(s.L, p.vid, m.types))) return s
+      return { ...s, high: { vid: p.vid, amount: p.amount } }
+    })
+  }, [])
   const onPass = useCallback(p => setSt(s => (s && s.stage === 'lot' && p.n === s.n && !s.passed.includes(p.from) ? { ...s, passed: [...s.passed, p.from] } : s)), [])
-  const onSold = useCallback(p => setSt(s => (s && p.n >= s.n && !(p.n === s.n && s.stage === 'sold') ? { ...s, n: p.n, stage: 'sold', lot: p.lot ?? s.lot, sold: p.sold, soldAt: Date.now(), high: null, L: p.L } : s)), [])
-  const onDone = useCallback(p => { setSt(s => (s ? { ...s, stage: 'done', L: p.L } : s)); setPhase('result') }, [])
+  const onSold = useCallback(p => {
+    const m = matchRef.current, k = kitRef.current, s0 = stRef.current
+    if (!m || !s0 || !ledgerOk(s0.L, p.L, m, k)) return
+    setSt(s => (s && p.n >= s.n && !(p.n === s.n && s.stage === 'sold') ? { ...s, n: p.n, stage: 'sold', lot: p.lot ?? s.lot, sold: p.sold, soldAt: Date.now(), high: null, L: p.L } : s))
+  }, [])
+  // the end: only a ledger that adds up, and only when the auction really is over
+  const onDone = useCallback(p => {
+    const m = matchRef.current, k = kitRef.current, s0 = stRef.current
+    if (!m || !s0 || !ledgerOk(s0.L, p.L, m, k)) return
+    if (!auctionOver(p.L, m, s0.n) && pickLot(m, p.L, k, s0.n + 1)) return
+    setSt(s => (s ? { ...s, stage: 'done', L: p.L } : s)); setPhase('result')
+  }, [])
 
   // the auctioneer: takes a bid if it's good, and tells the room
   const takeBid = useCallback((vid, n, amount) => {
@@ -210,6 +270,7 @@ export function useAuction({ enabled, user, sport, pos }) {
     const s0 = { n: 0, stage: 'wait', lot: null, t0: 0, high: null, passed: [], sold: null, soldAt: 0, L: freshLedger(m.players) }
     setSt(s0); stRef.current = s0
     setPhase('auction'); booked.current = null; entered.current = Date.now()
+    markEntered({ kind: 'auction', code: m.code, sport: m.sport, pos: m.pos, of: m.players.length })
     const room = joinRoom(`auction-${m.code}`, me)
     roomRef.current = room
     room.onPresence(setPresent)
@@ -219,7 +280,7 @@ export function useAuction({ enabled, user, sport, pos }) {
     room.on('sold', onSold)
     room.on('done', onDone)
     room.on('bid', p => { if (amLeader()) takeBid(p.from, p.n, p.amount) })
-    room.on('quit', p => setSt(s => (s && !s.L.out.includes(p.from) ? { ...s, L: { ...s.L, out: [...s.L.out, p.from] } } : s)))
+    room.on('quit', p => { if (!m.players.some(x => x.vid === p.from)) return; setSt(s => (s && !s.L.out.includes(p.from) ? { ...s, L: { ...s.L, out: [...s.L.out, p.from] } } : s)) })
     // someone (re)joined: anyone already on the floor catches them up (they may
     // be the auctioneer now, so it can't wait for the auctioneer to answer)
     room.on('hello', () => {
@@ -233,13 +294,19 @@ export function useAuction({ enabled, user, sport, pos }) {
 
   const form = useCallback(list => {
     const code = genCode()
-    const humans = [...list].sort((a, b) => (a.ts ?? 0) - (b.ts ?? 0)).slice(0, AUCTION_SIZE)
+    const seen = new Set()
+    const humans = [...list].sort((a, b) => (a.ts ?? 0) - (b.ts ?? 0)).filter(p => {
+      const keys = [p.dev && `d:${p.dev}`, p.uid && `u:${p.uid}`].filter(Boolean)
+      if (keys.some(k => seen.has(k))) return false
+      keys.forEach(k => seen.add(k)); return true
+    }).slice(0, AUCTION_SIZE)
     const players = humans.map(h => ({ vid: h.vid, name: h.name, uid: h.uid ?? null, cos: h.cos ?? null }))
     return { code, seed: `au-${code}`, created: Date.now(), sport: kit.sport, pos: kit.pos, types: kit.types, bidSecs: BID_SECS, players }
   }, [kit])
 
   const join = useCallback(() => {
     if (!enabled) return
+    if (!claimLive('auction')) { setPhase('busy'); return }
     roomRef.current?.leave(); roomRef.current = null
     setPhase('queue'); setWaited(0); setMatch(null); setSt(null)
     const q = joinRoom(`auction-q-${kit.sport}-${kit.pos}`, { ...me, ts: Date.now() })
@@ -247,12 +314,17 @@ export function useAuction({ enabled, user, sport, pos }) {
     setLink('connecting'); q.onStatus(setLink)
     q.onPresence(list => {
       setQueue(list)
-      if (list.length >= AUCTION_SIZE && leaderOf(list) === me.vid && queueRef.current === q) { const m = form(list); q.send('match', m); enterRoom(m) }
+      if (list.length >= AUCTION_SIZE && leaderOf(list) === me.vid && queueRef.current === q) { const m = form(list); if (m.players.length < AUCTION_MIN) return; q.send('match', m); enterRoom(m) }
     })
-    q.on('match', m => { if (m.players.some(p => p.vid === me.vid)) enterRoom(m) })
+    q.on('match', m => {
+      if (!m?.players?.some(p => p.vid === me.vid)) return
+      if ((m.from !== m.players.map(p => p.vid).sort()[0] && m.from !== leaderOf(q.presence())) || Math.abs(Date.now() - Number(m.created)) > 20000) return
+      if (m.seed !== `au-${m.code}` || m.sport !== kit.sport || m.pos !== kit.pos || m.bidSecs !== BID_SECS || String(m.types) !== String(kit.types)) return
+      enterRoom(m)
+    })
     q.on('fill', () => {
       const list = q.presence()
-      if (list.length >= AUCTION_MIN && leaderOf(list) === me.vid && queueRef.current === q) { const m = form(list); q.send('match', m); enterRoom(m) }
+      if (list.length >= AUCTION_MIN && leaderOf(list) === me.vid && queueRef.current === q) { const m = form(list); if (m.players.length < AUCTION_MIN) return; q.send('match', m); enterRoom(m) }
     })
   }, [enabled, kit, me, form, enterRoom])
 
@@ -261,7 +333,7 @@ export function useAuction({ enabled, user, sport, pos }) {
     const list = q.presence()
     if (list.length < AUCTION_MIN) return
     q.send('fill', {})
-    if (leaderOf(list) === me.vid) { const m = form(list); q.send('match', m); enterRoom(m) }
+    if (leaderOf(list) === me.vid) { const m = form(list); if (m.players.length < AUCTION_MIN) return; q.send('match', m); enterRoom(m) }
   }, [me.vid, form, enterRoom])
   useEffect(() => {
     if (phase !== 'queue') return
@@ -343,6 +415,7 @@ export function useAuction({ enabled, user, sport, pos }) {
     const mine = ranked.find(p => p.vid === me.vid)
     if (!mine || mine.forfeit) return
     booked.current = match.code
+    clearEntered(match.code); releaseLive()
     window.dispatchEvent(new CustomEvent('bap:compete', { detail: { sport: match.sport, pos: match.pos, place: mine.place, of: ranked.length, ovr: mine.ovr, humans: match.players.length, mode: 'auction' } }))
   }, [phase, match, ranked, me.vid])
 
@@ -353,6 +426,7 @@ export function useAuction({ enabled, user, sport, pos }) {
     roomRef.current?.send('quit', {})
     window.dispatchEvent(new CustomEvent('bap:compete', { detail: { sport: m.sport, pos: m.pos, place: m.players.length, of: m.players.length, ovr: 0, humans: m.players.length, forfeit: true, mode: 'auction' } }))
     booked.current = m.code
+    clearEntered(m.code)
     setTimeout(leave, 300)
   }, [phase, leave])
 

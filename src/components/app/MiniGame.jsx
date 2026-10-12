@@ -50,7 +50,8 @@ export default function MiniGame({ game, build, seed = 'x', onDone, autoStart = 
     sfx(out.hit ? 'claim' : 'deny'); haptic(out.hit ? 'success' : 'heavy')
     setTimeout(() => onDone?.(out), 900)
   }
-  useEffect(() => { window.__bapMini = { finish: s => done({ score: s, hit: s >= 0.5 }) }; return () => { if (window.__bapMini) delete window.__bapMini } }, [result]) // eslint-disable-line
+  // a test hook for the dev server only (a live build has no way to force a score)
+  useEffect(() => { if (!import.meta.env.DEV) return; window.__bapMini = { finish: s => done({ score: s, hit: s >= 0.5 }) }; return () => { if (window.__bapMini) delete window.__bapMini } }, [result]) // eslint-disable-line
   if (!def) return null
   const traitNames = def.traits.slice(0, 2).map(t => t.replace(/([A-Z])/g, ' $1').replace('-', ' ')).join(' · ').toUpperCase()
   return (

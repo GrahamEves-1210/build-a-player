@@ -31,6 +31,54 @@ export function myVid() {
   return _vid
 }
 
+// This device (shared by every tab, unlike the vid): pools drop a second seat
+// from the same device or the same account
+export function myDevice() {
+  try {
+    let d = localStorage.getItem('bap_dev_id')
+    if (!d) { d = crypto?.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36); localStorage.setItem('bap_dev_id', d) }
+    return d
+  } catch { return null }
+}
+
+// One live game per device: a tab claims it while it's in a pool, an auction or
+// a Blacktop game (a heartbeat in localStorage); another tab can't join until it
+// lets go or goes quiet. Stops one player filling a pool with their own tabs.
+const TAB = Math.random().toString(36).slice(2) + Date.now().toString(36)   // this tab (a duplicated tab gets its own)
+const LIVE_KEY = 'bap_live_tab'
+let liveBeat = 0
+const readLive = () => { try { return JSON.parse(localStorage.getItem(LIVE_KEY) || 'null') } catch { return null } }
+export function liveElsewhere() {
+  const c = readLive()
+  return !!c && c.tab !== TAB && Date.now() - (c.at ?? 0) < 6000
+}
+export function claimLive(kind) {
+  if (liveElsewhere()) return false
+  const put = () => { try { localStorage.setItem(LIVE_KEY, JSON.stringify({ tab: TAB, kind, at: Date.now() })) } catch {} }
+  put(); clearInterval(liveBeat); liveBeat = setInterval(put, 2000)
+  return true
+}
+export function releaseLive() {
+  clearInterval(liveBeat); liveBeat = 0
+  const c = readLive()
+  if (c?.tab === TAB) { try { localStorage.removeItem(LIVE_KEY) } catch {} }
+}
+if (typeof window !== 'undefined') window.addEventListener('pagehide', releaseLive)
+
+// A live game this device entered and hasn't booked yet: if the page reloads or
+// the app is killed mid-game, the next load books it as a forfeit (see each mode)
+const ENTERED_KEY = 'bap_live_entered'
+export function markEntered(info) { try { localStorage.setItem(ENTERED_KEY, JSON.stringify({ ...info, at: Date.now() })) } catch {} }
+export function clearEntered(code) { try { const e = JSON.parse(localStorage.getItem(ENTERED_KEY) || 'null'); if (!code || e?.code === code) localStorage.removeItem(ENTERED_KEY) } catch {} }
+export function takeEntered(kind) {
+  try {
+    const e = JSON.parse(localStorage.getItem(ENTERED_KEY) || 'null')
+    if (!e || e.kind !== kind) return null
+    localStorage.removeItem(ENTERED_KEY)
+    return Date.now() - (e.at ?? 0) < 45 * 60 * 1000 ? e : null     // stale (days old): just drop it
+  } catch { return null }
+}
+
 // ── BroadcastChannel transport (same origin, same device) ────────────────────
 function bcRoom(name, me) {
   const bc = new BroadcastChannel(`bap-live-${name}`)
@@ -52,7 +100,7 @@ function bcRoom(name, me) {
     } else if (d.k === 'bye') {
       if (peers.delete(d.p.vid)) emitPresence()
     } else if (d.k === 'msg' && handlers[d.event]) {
-      handlers[d.event].forEach(fn => { try { fn({ from: d.p.vid, ...d.payload }) } catch {} })
+      handlers[d.event].forEach(fn => { try { fn({ ...d.payload, from: d.p.vid }) } catch {} })   // (from last: a payload can't claim to be someone else)
     }
   }
   const hb = setInterval(() => {
@@ -129,7 +177,7 @@ function rtRoom(name, me, onFallback) {
     me: () => mine,
     on(event, fn) { (handlers[event] ??= []).push(fn); return this },
     send(event, payload = {}) {
-      const msg = { type: 'broadcast', event, payload: { from: mine.vid, ...payload } }
+      const msg = { type: 'broadcast', event, payload: { ...payload, from: mine.vid } }   // (from last: never overridden by the payload)
       if (!ready) { queued.push(msg); return Promise.resolve() }
       return ch.send(msg).catch(() => {})
     },

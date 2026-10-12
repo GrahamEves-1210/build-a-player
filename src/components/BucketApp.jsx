@@ -37,7 +37,7 @@ import { IS_APP, APP_LOOK } from '../lib/platform'
 import AppHome from './app/AppHome'
 import { FlipEdge, BuildComplete, useFlip, StackEdge, StackSeam } from './app/AppBuildTray'
 import { useCompete, botBuild } from '../lib/compete'
-import { setLiveLock } from '../lib/liveLock'
+import { setLiveLock, liveLock, guardLeave } from '../lib/liveLock'
 import { useAuction } from '../lib/auction'
 import { FORFEIT_RATING } from '../lib/progress'
 import { useBlacktop } from '../lib/blacktop'
@@ -589,6 +589,10 @@ export default function BucketApp() {
   useEffect(() => {
     if (!IS_APP && !APP_LOOK) return
     const onNav = e => {
+      // in a live game (Compete, an auction, a Blacktop build, the Daily run) every
+      // way out asks first and forfeits (deep links, the tutorial, after sign-in…);
+      // going back to the game itself doesn't
+      if (liveLock() && String(e.detail).split(':')[0] !== 'play') { guardLeave(() => onNav(e)); return }
       const to = e.detail
       if (to === 'home') setPage('splash')   // keeps the build in progress — PLAY resumes it
       else if (to === 'play') {
@@ -838,6 +842,12 @@ export default function BucketApp() {
     // the run moves on wherever you are — you queued for it
     if (bt.phase === 'build') { resetLiveBuild(); setPage('blacktop-build'); setBtChatOpen(false) }
     else if (bt.phase === 'game') { setPage('blacktop-game'); setBtChatOpen(false) }
+  }, [bt.phase]) // eslint-disable-line
+  // one live game per device: another tab or window already has one going
+  useEffect(() => {
+    if (bt.phase !== 'busy') return
+    window.alert("You're already in a live game in another tab or window. Finish it there first: one game at a time.")
+    bt.leave()
   }, [bt.phase]) // eslint-disable-line
   useEffect(() => {
     const on = () => resetLiveBuild()
