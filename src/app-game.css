@@ -14,7 +14,8 @@
 @font-face { font-family: 'BAP Anton'; src: url('/fonts/anton.woff2') format('woff2'); font-display: swap; }
 @font-face { font-family: 'BAP Bebas'; src: url('/fonts/bebas-neue.woff2') format('woff2'); font-display: swap; }
 /* the wordmark under the BAP logo: wide and heavy like the logo's own B and P */
-@font-face { font-family: 'BAP Krona'; src: url('/fonts/krona-one.woff2') format('woff2'); font-display: swap; }
+/* the wordmark under the logo: Archivo Expanded Black, the logo's own heavy, wide letters (only the wordmark's glyphs, 3 KB) */
+@font-face { font-family: 'BAP Wordmark'; src: url('/fonts/archivo-expanded-black.woff2') format('woff2'); font-weight: 900; font-display: swap; }
 
 html:is(.is-app, .app-look) {
   --ag-display: 'BAP Anton', 'Anton', Impact, 'Arial Narrow Bold', sans-serif;
@@ -441,7 +442,7 @@ html[data-spot="holo"] .ag-avatar { background: linear-gradient(135deg, #8ff7ff,
 .ag-brand { display: flex; flex-direction: column; align-items: center; gap: 2px; margin-top: 2px; }
 .ag-brand-mark { height: 50px; width: auto; filter: drop-shadow(0 4px 18px rgba(0,0,0,.5)); }
 .ag-wordmark {
-  font-family: 'BAP Krona', 'Krona One', var(--ag-display); font-weight: 400; font-size: 21px; line-height: 1.1;
+  font-family: 'BAP Wordmark', var(--ag-display); font-weight: 900; font-size: 21px; line-height: 1.1;
   letter-spacing: .5px; text-transform: uppercase; color: #fff; white-space: nowrap;
   text-shadow: 0 2px 40px rgba(149,213,178,.12);
 }
@@ -2813,7 +2814,7 @@ html.is-app .ag-sandbox { grid-column: 1 / -1; justify-self: stretch; }
   html.app-look .ag-hud .ag-hud-coins { margin-left: auto; }
   html.app-look .ag-brand { grid-area: brand; margin: 6px 0 2px; }
   html.app-look .ag-brand-mark { height: 64px; }
-  html.app-look .ag-wordmark { font-size: 30px; }   /* Krona One runs about twice as wide as the old Anton */
+  html.app-look .ag-wordmark { font-size: 30px; }   /* the wide wordmark face runs about twice as wide as the old Anton */
   html.app-look .ag-sport { grid-area: sport; margin: 0; }
   html.app-look .ag-positions { grid-area: pos; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; padding: 0; overflow: visible; }
   html.app-look .ag-positions--two { grid-template-columns: 1fr 1fr; }
