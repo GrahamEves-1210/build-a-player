@@ -4392,3 +4392,9 @@ html.is-android .ag-toast { background: rgba(8,12,10,.97); }
 /* Career depth chart: the grade and the age, big enough to read at a glance */
 .crl-depth small { font-size: 14px; letter-spacing: 1.2px; color: var(--ag-text); opacity: .9; }
 .crl-depth i { font-size: 14px; color: var(--ag-text-2); }
+
+/* Basketball starting five: overalls on the faces, big enough to read; the bench below */
+.crl-field--court .crl-face > i { min-width: 30px; right: -8px; bottom: -6px; padding: 2px 4px 1px; border-radius: 7px; font-size: 16px; letter-spacing: 0; }
+.crl-field--court .crl-man b { font-size: 13px; }
+.crl-depth--bench { grid-template-columns: 1fr auto auto; }
+.crl-depth--bench em { min-width: 34px; padding: 2px 5px 1px; border-radius: 7px; font-style: normal; font-family: var(--ag-font); font-size: 17px; color: #0b0f0d; text-align: center; }

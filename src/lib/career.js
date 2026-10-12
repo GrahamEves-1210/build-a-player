@@ -403,7 +403,9 @@ export function lineup(c, roster = c.roster ?? (c.team ? rosterOf(c, c.team) : n
   const dc = depthChart(c, roster)
   const out = {}
   for (const g of S.groups) out[g] = g === c.pos ? dc.all.slice(0, S.starters[g]) : (roster?.[g] ?? []).slice(0, S.starters[g])
-  return { ...out, bench: dc.all.slice(S.starters[c.pos]), depth: dc }
+  // everyone not starting, all positions, best first (basketball's bench)
+  const reserves = S.groups.flatMap(g => (g === c.pos ? dc.all : roster?.[g] ?? []).slice(S.starters[g])).sort((a, b) => b.ovr - a.ovr)
+  return { ...out, bench: dc.all.slice(S.starters[c.pos]), reserves, depth: dc }
 }
 // Grades (0–11) for the pieces of the team around you, from the roster you'd play with
 export function teamFit(short, pos, { roster = null, league = null, name = null, sport = 'nfl', yrs = 0, gone = [] } = {}) {

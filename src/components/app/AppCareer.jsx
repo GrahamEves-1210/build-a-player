@@ -371,16 +371,16 @@ function Lineup({ c }) {
     <span className={`crl-man${p.you ? ' is-you' : ''}`}>
       <span className="crl-face">
         {p.you ? <AvatarBadge self name={c.name} size={S.isBucket ? 48 : 34} /> : p.photo ? <img src={photoSrc(p.photo)} alt="" loading="lazy" /> : <span className="crl-init">{initials(p.name)}</span>}
-        <i style={{ background: gradeColor(ovrGradeVal(p.ovr)) }}>{gradeOfOvr(p.ovr)}</i>
+        <i style={{ background: gradeColor(ovrGradeVal(p.ovr)) }}>{S.isBucket ? p.ovr : gradeOfOvr(p.ovr)}</i>
       </span>
       <b>{p.you ? c.name : S.isBucket ? shortName(p.name) : nick(p.name)}</b>
-      <small>{slot}{p.rookie ? ' · ROOKIE' : ''}</small>
+      {S.isBucket ? p.rookie && <small>ROOKIE</small> : <small>{slot}{p.rookie ? ' · ROOKIE' : ''}</small>}
     </span>
   )
   const last = dc.ahead[dc.ahead.length - 1]
   return (
     <div className="ag-card crl ag-pop">
-      <div className="ag-card-head"><span className="ag-eyebrow">{c.fit?.name?.toUpperCase()} · {S.isBucket ? 'STARTING FIVE' : S.side?.[c.pos] === 'def' ? 'STARTING SECONDARY' : 'STARTING OFFENSE'}</span><span className={`crl-role${dc.starter ? ' is-on' : ''}`}>{dc.starter ? 'STARTER' : 'BACKUP'} · {dc.label}</span></div>
+      <div className="ag-card-head"><span className="ag-eyebrow">{c.fit?.name?.toUpperCase()} · {S.isBucket ? 'STARTING FIVE' : S.side?.[c.pos] === 'def' ? 'STARTING SECONDARY' : 'STARTING OFFENSE'}</span><span className={`crl-role${dc.starter ? ' is-on' : ''}`}>{S.isBucket ? (dc.starter ? 'STARTER' : 'BENCH') : `${dc.starter ? 'STARTER' : 'BACKUP'} · ${dc.label}`}</span></div>
       {S.side?.[c.pos] === 'def' ? (
         // the secondary in a base look, offense coming at it from the top: corners
         // out wide on the line, safeties deep (the front seven fills in when DL and LB arrive)
@@ -419,12 +419,21 @@ function Lineup({ c }) {
           <span className="crl-at" style={{ '--c': 5, '--r': 3 }}><Man p={L.rb[0]} slot="RB" /></span>
         </div>
       )}
+      {S.isBucket ? (
+      <div className="crl-bench">
+        <span className="ag-eyebrow">BENCH</span>
+        {L.reserves.map((p, i) => (
+          <span key={p.name + i} className={`crl-depth crl-depth--bench${p.you ? ' is-you' : ''}`}><b>{p.you ? c.name : p.name}</b><small>age {p.age}</small><em style={{ background: gradeColor(ovrGradeVal(p.ovr)) }}>{p.ovr}</em></span>
+        ))}
+      </div>
+      ) : (
       <div className="crl-bench">
         <span className="ag-eyebrow">DEPTH CHART · {POS_NAME[c.pos].toUpperCase()}</span>
         {dc.all.map((p, i) => (
           <span key={p.name + i} className={`crl-depth${p.you ? ' is-you' : ''}`}><i>{S.isBucket ? i + 1 : `${POS_LABEL[c.pos]}${i + 1}`}</i><b>{p.name}</b><small>{gradeOfOvr(p.ovr)} · age {p.age}</small></span>
         ))}
       </div>
+      )}
       {!dc.starter && last && <p className="cr-note">Behind {last.name} for now. Outplay him and the job comes to {c.name}: the {S.isBucket ? 'minutes open' : 'starter\'s spot opens'} with injuries, slumps and trades.</p>}
     </div>
   )
