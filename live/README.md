@@ -8,7 +8,7 @@ separate project from the website, and deploying it never touches the site.
 ## First deploy (one time)
 
 ```
-cd server
+cd live
 npm install
 npx wrangler login        # opens the browser: log in to the Cloudflare account that hosts the site
 npx wrangler deploy
@@ -19,17 +19,17 @@ The app uses it as `wss://bap-live.<your-subdomain>.workers.dev` (VITE_LIVE_URL)
 
 ## Later deploys
 
-Only when `server/src/index.js` changes:
+Only when `live/src/index.js` changes:
 
 ```
-cd server
+cd live
 npx wrangler deploy
 ```
 
 ## Run it locally
 
 ```
-cd server
+cd live
 npx wrangler dev          # ws://localhost:8787
 ```
 

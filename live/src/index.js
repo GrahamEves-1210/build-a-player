@@ -1,4 +1,5 @@
-// Build-A-Player live server: Blacktop 3v3.
+// Build-A-Player live server: Blacktop 3v3 (live/, its own Worker; the site's
+// payments API is server/, a different thing).
 //
 // One referee for the whole game, so every phone sees the same one:
 //   Lobby (one, shared)  the six spots, lobby chat; when all six are taken it

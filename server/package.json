@@ -1,12 +1,14 @@
 {
-  "name": "bap-live",
-  "private": true,
+  "name": "build-a-player-api",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "wrangler dev",
-    "deploy": "wrangler deploy"
+    "start": "node server.js"
   },
-  "devDependencies": {
-    "wrangler": "^4.0.0"
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0",
+    "cors": "^2.8.5",
+    "express": "^4.19.0",
+    "stripe": "^16.0.0"
   }
 }

@@ -1,4 +1,4 @@
-// BLACKTOP on the live server (server/src/index.js): the same hook the screens
+// BLACKTOP on the live server (live/src/index.js): the same hook the screens
 // already use (useBlacktop's shape), with the server as the one referee. The
 // lobby and the room are WebSockets; the server decides the start, who's out,
 // and every possession's calls, and this phone plays the game from exactly what
