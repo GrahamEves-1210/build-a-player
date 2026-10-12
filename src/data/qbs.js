@@ -33,7 +33,7 @@ export const QBS = [
   { name: 'Kenny Pickett',      short: 'Pickett',     team: 'CAR', teamName: 'Carolina Panthers',     color: '#0085CA', color2: '#000000', skin: '#f0c4a0', starter: false, number: 12,
     attrs: { 'arm': 3, 'legs': 4, 'size': 7, 'processing': 4, 'leadership': 4, 'vision': 4, 'playmaking': 4, 'accuracy': 5, 'pocket-presence': 3 } },
   { name: 'Haynes King', short: 'King', team: 'CAR', teamName: 'Carolina Panthers',     color: '#0085CA', color2: '#000000', skin: '#7a5030', starter: false, number: 16,
-    attrs: { 'arm': 4, 'legs': 6, 'size': 4, 'processing': 3, 'leadership': 3, 'vision': 3, 'playmaking': 5, 'accuracy': 4, 'pocket-presence': 3 } },
+    attrs: { 'arm': 4, 'legs': 7, 'size': 4, 'processing': 3, 'leadership': 4, 'vision': 4, 'playmaking': 5, 'accuracy': 4, 'pocket-presence': 4 } },
   // CHI
   { name: 'Caleb Williams',     short: 'Williams',    team: 'CHI', teamName: 'Chicago Bears',         color: '#C83803', color2: '#0B162A', skin: '#8a5c30', starter: true,  captain: true,  number: 18,
     attrs: { 'arm': 10, 'legs': 9, 'size': 4, 'processing': 6, 'leadership': 6, 'vision': 8, 'playmaking': 10, 'accuracy': 6, 'pocket-presence': 8 } },
