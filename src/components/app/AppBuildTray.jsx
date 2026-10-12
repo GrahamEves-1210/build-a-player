@@ -14,7 +14,7 @@ import { IconArrow } from './icons'
 //   <FlipEdge>      the old card edge (kept for the website's layout)
 //   <BuildComplete> the moment the last slot fills: OVR counts up, then the build side
 
-const gradeColor = v => (v >= 11 ? '#a855f7' : v >= 8 ? '#3b82f6' : v >= 5 ? '#22c55e' : v >= 2 ? '#eab308' : v >= 1 ? '#f97316' : '#ef4444')
+const gradeColor = v0 => { const v = Math.round(v0 ?? 0); return v >= 11 ? '#a855f7' : v >= 8 ? '#3b82f6' : v >= 5 ? '#22c55e' : v >= 2 ? '#eab308' : v >= 1 ? '#f97316' : '#ef4444' }   // rounded like the letter (valToGrade)
 const FLIPS_KEY = 'ag_flips'
 const flipCount = () => { try { return +localStorage.getItem(FLIPS_KEY) || 0 } catch { return 0 } }
 

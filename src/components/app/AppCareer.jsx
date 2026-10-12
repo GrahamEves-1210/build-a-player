@@ -21,7 +21,7 @@ import { IconClose, IconArrow, IconFlame, IconTrophy, IconStar, IconCrown, IconM
 // the record so far) and the legacy screen. The engine is lib/career.js; what
 // differs by sport comes from its SPORT table.
 
-const gradeColor = v => (v >= 11 ? '#a855f7' : v >= 8 ? '#3b82f6' : v >= 5 ? '#22c55e' : v >= 2 ? '#eab308' : v >= 1 ? '#f97316' : '#ef4444')
+const gradeColor = v0 => { const v = Math.round(v0 ?? 0); return v >= 11 ? '#a855f7' : v >= 8 ? '#3b82f6' : v >= 5 ? '#22c55e' : v >= 2 ? '#eab308' : v >= 1 ? '#f97316' : '#ef4444' }   // rounded like the letter (valToGrade)
 // the last name (a suffix rides along: Harrison Jr.)
 const nick = name => { const w = (name || '').split(' '); return w.length > 2 && /^(jr\.?|sr\.?|ii|iii|iv|v)$/i.test(w[w.length - 1]) ? w.slice(-2).join(' ') : w[w.length - 1] }
 const money = n => `$${n}M`

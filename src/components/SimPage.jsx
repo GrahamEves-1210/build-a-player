@@ -372,7 +372,8 @@ function StatLineTable({ result, build, kind, values = {}, ready = true, userNam
   )
 }
 
-function gradeColor(val) {
+function gradeColor(val0) {
+  const val = Math.round(val0 ?? 0)   // rounded like the letter (valToGrade), so a B- is always green
   if (val >= 11) return '#a855f7'
   if (val >= 8)  return '#3b82f6'
   if (val >= 5)  return '#22c55e'

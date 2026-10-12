@@ -19,7 +19,7 @@ import { IconClose, IconArrow, IconCheck, IconFlame, IconChat, IconStar, IconPro
 // duel → the reward → the next city, and on past the twelfth. Duo: two runs
 // share one road over a live room.
 
-const gradeColor = v => (v >= 11 ? '#a855f7' : v >= 8 ? '#3b82f6' : v >= 5 ? '#22c55e' : v >= 2 ? '#eab308' : v >= 1 ? '#f97316' : '#ef4444')
+const gradeColor = v0 => { const v = Math.round(v0 ?? 0); return v >= 11 ? '#a855f7' : v >= 8 ? '#3b82f6' : v >= 5 ? '#22c55e' : v >= 2 ? '#eab308' : v >= 1 ? '#f97316' : '#ef4444' }   // rounded like the letter (valToGrade)
 const POS_LABEL = { guard: 'GUARD', big: 'BIG', qb: 'QB', rb: 'RB', wr: 'WR', te: 'TE', db: 'DB' }
 // team colours can be near-black: lift them so rings and names read on the court
 function lift(hex, amt = .35) {
