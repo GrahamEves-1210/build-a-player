@@ -303,6 +303,17 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
           })}
         </div>
 
+        {/* a build in progress: PLAY is Home now, so it waits here, right above the modes */}
+        {resume && (
+          <button className="ag-resume ag-resume--top ag-pop" style={{ '--d': '200ms' }} onClick={resume.onClick}>
+            <span className="ag-resume-icon"><IconPlay size={18} /></span>
+            <span className="ag-takeover-txt">
+              <span className="ag-eyebrow">BUILD IN PROGRESS</span>
+              <span className="ag-resume-title">{resume.label}</span>
+            </span>
+          </button>
+        )}
+
         {/* Modes — the website's cards */}
         <div className="ag-modes">
           <ModeCard title="CURRENT" badge={`Current ${PLURAL[position] ?? ''}`} mark={IconBolt} delay="230ms" onClick={() => start('classic')}
@@ -334,16 +345,6 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
                 <span className="ag-eyebrow">{career ? `${career.sport === 'bucket' ? (career.pos === 'big' ? 'BIG' : 'GUARD') : career.pos.toUpperCase()} · ${career.phase === 'draft' ? 'DRAFT DAY' : career.phase === 'retired' ? 'CAREER OVER' : `YEAR ${career.year + 1} · AGE ${career.age}`}` : 'MULTI-SEASON · SAVES AS YOU GO'}</span>
                 <span className="ag-takeover-title">CAREER</span>
                 <span className="ag-takeover-sub">{career ? (career.phase === 'draft' ? 'The combine is waiting. Go get drafted.' : career.phase === 'season' ? `${career.sport === 'bucket' ? 'Game' : 'Week'} ${(career.active?.k ?? 0) + 1} with the ${career.fit?.name ?? ''}` : career.phase === 'offseason' ? 'Offseason: a point to spend, a contract to sort' : career.phase === 'retired' ? `${career.seasons.length} seasons. See the legacy, or start a new career.` : `${career.fit?.name ?? ''} · ${career.seasons.length} ${career.seasons.length === 1 ? 'season' : 'seasons'} in`) : 'Build a player, get drafted, play a whole career. Legacy on the line.'}</span>
-              </span>
-            </button>
-          )}
-          {/* a build in progress: PLAY is Home now, so it waits here */}
-          {resume && (
-            <button className="ag-resume ag-pop" style={{ '--d': '280ms' }} onClick={resume.onClick}>
-              <span className="ag-resume-icon"><IconPlay size={18} /></span>
-              <span className="ag-takeover-txt">
-                <span className="ag-eyebrow">BUILD IN PROGRESS</span>
-                <span className="ag-resume-title">{resume.label}</span>
               </span>
             </button>
           )}

@@ -568,6 +568,7 @@ html[data-spot="holo"] .ag-avatar { background: linear-gradient(135deg, #8ff7ff,
 
 /* Mode cards — the site's splash cards */
 .ag-modes { display: grid; grid-template-columns: 1.15fr 1fr; gap: 10px; padding: 0 14px; }
+.ag-resume--top { margin: 0 14px; width: auto; }   /* sits in the page flow above the modes: their gutter */
 .ag-mode {
   --mc: #5EDBD8; --mc2: #1fc98a;
   position: relative; overflow: hidden;
@@ -4061,9 +4062,9 @@ html.app-look:not(.is-app) .ag-dock { backdrop-filter: none; -webkit-backdrop-fi
    hands, goes up and through the chains, then (out of sight) back to the hands
    and fades in there, so it never jumps */
 .bt-art-net { transform-box: fill-box; transform-origin: 50% 0; }
-html:is(.is-app, .app-look) .ag-blacktop:is(:hover, :focus-visible) .bt-art-shot-x { animation: bt-shot-x 2.4s linear infinite; }
-html:is(.is-app, .app-look) .ag-blacktop:is(:hover, :focus-visible) .bt-art-shot-y { animation: bt-shot-y 2.4s linear infinite; }
-html:is(.is-app, .app-look) .ag-blacktop:is(:hover, :focus-visible) .bt-art-net { animation: bt-swish 2.4s ease-out infinite; }
+html.app-look .ag-blacktop:is(:hover, :focus-visible) .bt-art-shot-x , html.is-app .ag-blacktop .bt-art-shot-x { animation: bt-shot-x 2.4s linear infinite; }
+html.app-look .ag-blacktop:is(:hover, :focus-visible) .bt-art-shot-y , html.is-app .ag-blacktop .bt-art-shot-y { animation: bt-shot-y 2.4s linear infinite; }
+html.app-look .ag-blacktop:is(:hover, :focus-visible) .bt-art-net , html.is-app .ag-blacktop .bt-art-net { animation: bt-swish 2.4s ease-out infinite; }
 @keyframes bt-shot-x { 0% { transform: translateX(0); } 58% { transform: translateX(25px); } 72% { transform: translateX(25px); } 73%, 100% { transform: translateX(0); } }
 @keyframes bt-shot-y {
   0% { transform: translateY(0); opacity: 1; animation-timing-function: cubic-bezier(.25,.6,.45,1); }
@@ -4305,23 +4306,23 @@ html.app-look .ag-blacktop--menu:hover .ag-bt-tags .bt-mode-tag:last-child { tra
 /* Home cards: a quiet hover, each in its own art (Blacktop has its shot) */
 .ag-pool-bar, .ag-pool-star { transform-box: fill-box; transform-origin: 50% 100%; }
 .ag-pool-star { transform-origin: center; }
-html:is(.is-app, .app-look) .ag-compete:is(:hover, :focus-visible) .ag-pool-bar { animation: ag-bar-bob 1.8s ease-in-out infinite; }
-html:is(.is-app, .app-look) .ag-compete:is(:hover, :focus-visible) .ag-pool-bar:nth-child(2) { animation-delay: .12s; }
-html:is(.is-app, .app-look) .ag-compete:is(:hover, :focus-visible) .ag-pool-bar:nth-child(3) { animation-delay: .24s; }
-html:is(.is-app, .app-look) .ag-compete:is(:hover, :focus-visible) .ag-pool-bar:nth-child(4) { animation-delay: .36s; }
-html:is(.is-app, .app-look) .ag-compete:is(:hover, :focus-visible) .ag-pool-bar:nth-child(5) { animation-delay: .48s; }
-html:is(.is-app, .app-look) .ag-compete:is(:hover, :focus-visible) .ag-pool-star { animation: ag-star-tw 1.8s ease-in-out infinite; }
+html.app-look .ag-compete:is(:hover, :focus-visible) .ag-pool-bar , html.is-app .ag-compete .ag-pool-bar { animation: ag-bar-bob 1.8s ease-in-out infinite; }
+html.app-look .ag-compete:is(:hover, :focus-visible) .ag-pool-bar:nth-child(2) , html.is-app .ag-compete .ag-pool-bar:nth-child(2) { animation-delay: .12s; }
+html.app-look .ag-compete:is(:hover, :focus-visible) .ag-pool-bar:nth-child(3) , html.is-app .ag-compete .ag-pool-bar:nth-child(3) { animation-delay: .24s; }
+html.app-look .ag-compete:is(:hover, :focus-visible) .ag-pool-bar:nth-child(4) , html.is-app .ag-compete .ag-pool-bar:nth-child(4) { animation-delay: .36s; }
+html.app-look .ag-compete:is(:hover, :focus-visible) .ag-pool-bar:nth-child(5) , html.is-app .ag-compete .ag-pool-bar:nth-child(5) { animation-delay: .48s; }
+html.app-look .ag-compete:is(:hover, :focus-visible) .ag-pool-star , html.is-app .ag-compete .ag-pool-star { animation: ag-star-tw 1.8s ease-in-out infinite; }
 @keyframes ag-bar-bob { 0%, 100% { transform: scaleY(1); } 45% { transform: scaleY(1.12); } }
 @keyframes ag-star-tw { 0%, 100% { transform: scale(1) rotate(0); } 50% { transform: scale(1.18) rotate(14deg); } }
-html:is(.is-app, .app-look) .ag-crmode:is(:hover, :focus-visible) .ag-cr-line { stroke-dasharray: 100; animation: ag-cr-draw 2.2s ease-in-out infinite; }
+html.app-look .ag-crmode:is(:hover, :focus-visible) .ag-cr-line , html.is-app .ag-crmode .ag-cr-line { stroke-dasharray: 100; animation: ag-cr-draw 2.2s ease-in-out infinite; }
 .ag-cr-peak { transform-box: fill-box; transform-origin: center; }
-html:is(.is-app, .app-look) .ag-crmode:is(:hover, :focus-visible) .ag-cr-peak { animation: ag-cr-peak 2.2s ease-in-out infinite; }
+html.app-look .ag-crmode:is(:hover, :focus-visible) .ag-cr-peak , html.is-app .ag-crmode .ag-cr-peak { animation: ag-cr-peak 2.2s ease-in-out infinite; }
 @keyframes ag-cr-draw { 0% { stroke-dashoffset: 100; } 60%, 100% { stroke-dashoffset: 0; } }
 @keyframes ag-cr-peak { 0%, 55% { transform: scale(.4); opacity: .3; } 70% { transform: scale(1.35); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
 .ag-card-art--map { transition: transform .9s ease; }
-html:is(.is-app, .app-look) .ag-takeover:is(:hover, :focus-visible) .ag-card-art--map { transform: translateX(-6px) scale(1.03); }
-html:is(.is-app, .app-look) .ag-takeover:is(:hover, :focus-visible) .ag-map-route { animation: ag-route-march 1s linear infinite; }
-html:is(.is-app, .app-look) .ag-takeover:is(:hover, :focus-visible) .ag-map-pin.is-next { animation: ag-pulse 1.1s ease-out infinite; }
+html.app-look .ag-takeover:is(:hover, :focus-visible) .ag-card-art--map , html.is-app .ag-takeover .ag-card-art--map { transform: translateX(-6px) scale(1.03); }
+html.app-look .ag-takeover:is(:hover, :focus-visible) .ag-map-route , html.is-app .ag-takeover .ag-map-route { animation: ag-route-march 1s linear infinite; }
+html.app-look .ag-takeover:is(:hover, :focus-visible) .ag-map-pin.is-next , html.is-app .ag-takeover .ag-map-pin.is-next { animation: ag-pulse 1.1s ease-out infinite; }
 @keyframes ag-route-march { to { stroke-dashoffset: -26; } }
 @media (prefers-reduced-motion: reduce) { .ag-pool-bar, .ag-pool-star, .ag-cr-line, .ag-cr-peak, .ag-map-route { animation: none !important; } .ag-card-art--map { transition: none; transform: none !important; } }
 
@@ -4445,7 +4446,11 @@ html.is-android .ag-toast { background: rgba(8,12,10,.97); }
 .game-layout.ag-drop .spin-panel { display: flex !important; flex: none !important; height: auto !important; max-height: none !important; min-height: 0 !important; overflow: visible !important; width: 100% !important; background: none !important; border: 0 !important; }
 .game-layout.ag-drop .spin-panel-body { margin: 0 !important; padding: 10px 12px 0 !important; min-height: 0 !important; overflow: visible !important; }
 .game-layout.ag-drop .spin-panel-static { gap: 8px !important; }
-.game-layout.ag-drop .spin-top-row { display: none !important; }
+.game-layout.ag-drop .spin-top-row { display: flex !important; justify-content: center; margin: 0 0 2px !important; }
+/* the grades switch: right at the top of the sheet, big enough to find */
+.game-layout.ag-drop .grade-toggle-btn { display: inline-flex !important; align-items: center; justify-content: center; height: 38px !important; min-width: 210px !important; padding: 0 18px !important; margin: 0 !important; border-radius: 19px !important; border: 1.5px solid currentColor !important; font-family: var(--ag-font) !important; font-size: 16px !important; letter-spacing: 1.6px !important; }
+.game-layout.ag-drop .grade-toggle-on { color: #5edbd8 !important; background: rgba(94,219,216,.14) !important; }
+.game-layout.ag-drop .grade-toggle-off { color: #f87171 !important; background: rgba(248,113,113,.14) !important; }
 .game-layout.ag-drop .reels-wrap { zoom: .8; margin: 0 auto !important; }
 .game-layout.ag-drop .ad-cntr1-mobile, .game-layout.ag-drop #ramp-cntr1 { display: none !important; }
 .game-layout.ag-drop .spin-btn-wrap { margin: 0 !important; }
