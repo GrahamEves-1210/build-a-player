@@ -237,47 +237,69 @@ export function useDropSheet(enabled, build, types, resetKey) {
 // grip, up or down. Let go and it settles where you were heading (a flick wins,
 // otherwise 30% of the way is enough). A tap toggles it.
 const sheetEl = () => document.querySelector('.drop-sheet')
+// Native touch listeners (touchmove can stop the page from scrolling, which
+// pointer events can't count on in an iPhone web view), and the mouse for desktop.
+// drag(onTap, body) gives a ref for the element: body = the panel itself (anything
+// on it drags it; a tap still picks), else a handle (the bar, the grip).
 function useDrag(open, setOpen) {
+  const live = useRef({}); live.current = { open, setOpen }
   const st = useRef(null)
   const place = p => { const el = sheetEl(); if (el) { el.style.transition = 'none'; el.style.transform = `translate3d(0, ${(p - 1) * 101}%, 0)` } }
   const release = () => { const el = sheetEl(); if (el) { el.style.transition = ''; el.style.transform = '' } }
-  // body: the panel itself (anything on it drags it; a tap still picks). If what's
-  // in it is taller than the room, the drag scrolls it first, then moves the panel.
-  const onPointerDown = (e, body = false) => {
-    if (body && (e.pointerType === 'mouse' && e.button !== 0)) return
-    const el = sheetEl()
-    st.current = { y: e.clientY, p0: open ? 1 : 0, p: open ? 1 : 0, h: Math.max(1, el?.offsetHeight ?? 400), moved: false, vy: 0, t: performance.now(), ly: e.clientY, body, id: e.pointerId, tgt: e.currentTarget, off: 0 }
-    // (the grip sits inside the panel: its own drag, not the panel's too)
-    if (!body) { e.stopPropagation(); e.currentTarget.setPointerCapture?.(e.pointerId) }
+  const begin = (y, body) => {
+    const el = sheetEl(), o = live.current.open
+    st.current = { y, ly: y, p0: o ? 1 : 0, p: o ? 1 : 0, h: Math.max(1, el?.offsetHeight ?? 400), moved: false, vy: 0, t: performance.now(), body, off: 0 }
   }
-  const onPointerMove = e => {
-    const d = st.current; if (!d) return
-    const step = e.clientY - d.ly
-    if (Math.abs(e.clientY - d.y) > 6 && !d.moved) { d.moved = true; if (d.body) d.tgt.setPointerCapture?.(d.id) }
-    const now = performance.now(), dt = Math.max(1, now - d.t)
-    d.vy = step / dt; d.t = now; d.ly = e.clientY
-    if (!d.moved) return
+  // returns true once it's a drag (the caller stops the page scrolling)
+  const move = y => {
+    const d = st.current; if (!d) return false
+    const step = y - d.ly
+    if (!d.moved && Math.abs(y - d.y) > 6) d.moved = true
+    const now = performance.now()
+    d.vy = step / Math.max(1, now - d.t); d.t = now; d.ly = y
+    if (!d.moved) return false
     const el = sheetEl()
-    // scroll the panel's own content while it has room to go that way
+    // taller than the room: the panel's own content scrolls first, then the panel moves
     if (d.body && el && d.p === 1 && el.scrollHeight > el.clientHeight + 1) {
       const before = el.scrollTop
       el.scrollTop = before - step
-      if (el.scrollTop !== before) { d.off += step; return }
+      if (el.scrollTop !== before) { d.off += step; return true }
     }
-    d.p = Math.max(0, Math.min(1, d.p0 + (e.clientY - d.y - d.off) / d.h))
+    d.p = Math.max(0, Math.min(1, d.p0 + (y - d.y - d.off) / d.h))
     place(d.p)
+    return true
   }
-  const end = tap => () => {
+  // let go: it settles where you were heading (a flick wins, otherwise past halfway)
+  const end = () => {
     const d = st.current; st.current = null
     release()
-    if (!d) return
-    if (!d.moved) { if (!d.body) tap(); return }
-    // (a drag that only scrolled the panel leaves it where it is)
-    if (d.body && d.p === 1 && d.p0 === 1) return
-    // a flick wins; otherwise 30% of the way from where it started is enough
-    setOpen(d.vy > 0.35 ? true : d.vy < -0.35 ? false : d.p0 ? d.p > 0.7 : d.p > 0.3)
+    if (!d || !d.moved) return false
+    if (d.body && d.p === 1 && d.p0 === 1) return true
+    live.current.setOpen(d.vy > 0.3 ? true : d.vy < -0.3 ? false : d.p > 0.5)
+    return true
   }
-  return (tap, body = false) => ({ onPointerDown: e => onPointerDown(e, body), onPointerMove, onPointerUp: end(tap), onPointerCancel: () => { st.current = null; release() } })
+  return (onTap, body = false) => node => {
+    if (!node) return
+    node.__onTap = onTap             // (the latest one: it closes over this render's state)
+    if (node.__dragged) return
+    node.__dragged = true
+    let dragged = false
+    node.addEventListener('touchstart', e => { if (e.touches.length !== 1) return; if (!body) e.stopPropagation(); begin(e.touches[0].clientY, body) }, { passive: true })
+    node.addEventListener('touchmove', e => { if (!st.current || (st.current.body !== body)) return; if (move(e.touches[0].clientY) && e.cancelable) e.preventDefault() }, { passive: false })
+    node.addEventListener('touchend', e => { if (!st.current || st.current.body !== body) return; if (end()) { dragged = true; e.cancelable && e.preventDefault() } }, { passive: false })
+    node.addEventListener('touchcancel', () => { st.current = null; release() })
+    // the mouse: drag with the button down anywhere on the page
+    node.addEventListener('mousedown', e => {
+      if (e.button !== 0) return
+      if (!body) e.stopPropagation()
+      begin(e.clientY, body)
+      const mm = ev => move(ev.clientY)
+      const mu = () => { window.removeEventListener('mousemove', mm); window.removeEventListener('mouseup', mu); if (end()) dragged = true }
+      window.addEventListener('mousemove', mm); window.addEventListener('mouseup', mu)
+    })
+    // a tap (not the end of a drag)
+    node.addEventListener('click', e => { if (dragged) { dragged = false; if (!body) e.stopPropagation(); return } if (!body) node.__onTap?.() })
+  }
 }
 // The bar at the top: the build slot by slot. Tap it, or pull it down, and the
 // spin panel drops out from under it; SPIN is in the panel.
@@ -317,9 +339,10 @@ export function DropBar({ open, setOpen, build, types, attrMap, waiting = null, 
   }, [])
   const drag = useDrag(open, setOpen)
   const toggle = () => { if (complete && !open) return; setOpen(!open) }
+  const barRef = el => { bar.current = el; drag(toggle)(el) }
   return (
-    <div ref={bar} className={`drop-bar${open ? ' is-open' : ''}`} role="button" tabIndex={0} aria-expanded={open} aria-label={open ? 'Hide the spin' : 'Show the spin'}
-      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle() } }} {...drag(toggle)}>
+    <div ref={barRef} className={`drop-bar${open ? ' is-open' : ''}`} role="button" tabIndex={0} aria-expanded={open} aria-label={open ? 'Hide the spin' : 'Show the spin'}
+      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle() } }}>
       <span className="ag-edge-slots drop-slots" style={{ gridTemplateColumns: `repeat(${types.length}, 1fr)` }}>
         {types.map(t => {
           const chip = build[t]
@@ -345,6 +368,8 @@ export function DropBar({ open, setOpen, build, types, attrMap, waiting = null, 
 // the top of the player. The page behind it stays live (no overlay).
 export function DropSheet({ open, setOpen, children }) {
   const drag = useDrag(open, setOpen)
+  const sheetRef = drag(null, true)
+  const gripRef = drag(() => setOpen(false))
   // a tap anywhere outside the panel (and its bar) puts it away
   useEffect(() => {
     if (!open) return
@@ -354,9 +379,9 @@ export function DropSheet({ open, setOpen, children }) {
   }, [open, setOpen])
   return (
     <div className="drop-clip">
-      <div className={`drop-sheet${open ? ' is-open' : ''}`} aria-hidden={!open} {...drag(() => {}, true)}>
+      <div className={`drop-sheet${open ? ' is-open' : ''}`} aria-hidden={!open} ref={sheetRef}>
         {children}
-        <div className="drop-sheet-grip" role="button" aria-label="Hide the spin" {...drag(() => setOpen(false))}><span /></div>
+        <div className="drop-sheet-grip" role="button" aria-label="Hide the spin" ref={gripRef}><span /></div>
       </div>
     </div>
   )
