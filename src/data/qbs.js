@@ -211,7 +211,7 @@ export const QBS = [
     attrs: { 'arm': 4, 'legs': 4, 'size': 6, 'processing': 5, 'leadership': 6, 'vision': 4, 'playmaking': 3, 'accuracy': 4, 'pocket-presence': 4 } },
   // TEN
   { name: 'Cam Ward',           short: 'C. Ward',     team: 'TEN', teamName: 'Tennessee Titans',      color: '#0C2340', color2: '#4B92DB', skin: '#9a6840', starter: true,  captain: true,  number: 1,
-    attrs: { 'arm': 8, 'legs': 6, 'size': 5, 'processing': 5, 'leadership': 8, 'vision': 7, 'playmaking': 8, 'accuracy': 6, 'pocket-presence': 6 } },
+    attrs: { 'arm': 8, 'legs': 6, 'size': 5, 'processing': 5, 'leadership': 7, 'vision': 6, 'playmaking': 8, 'accuracy': 5, 'pocket-presence': 5 } },
   { name: 'Mitchell Trubisky',  short: 'Trubisky',    team: 'TEN', teamName: 'Tennessee Titans',      color: '#0C2340', color2: '#4B92DB', skin: '#eec0a0', starter: false, number: 10,
     attrs: { 'arm': 5, 'legs': 4, 'size': 7, 'processing': 3, 'leadership': 4, 'vision': 3, 'playmaking': 2, 'accuracy': 3, 'pocket-presence': 2 } },
   { name: 'Hendon Hooker', short: 'Hooker', team: 'TEN', teamName: 'Tennessee Titans',     color: '#0C2340', color2: '#4B92DB', skin: '#7a5030', starter: false, number: 16,
