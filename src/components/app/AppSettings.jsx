@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { IS_APP } from '../../lib/platform'
 import { isMuted, setMuted, hapticsOff, setHapticsOff, haptic } from '../../lib/juice'
-import { reduceMotion, setReduceMotion } from '../../lib/settings'
+import { reduceMotion, setReduceMotion, dockHidden, setDockHidden } from '../../lib/settings'
 import { NOTIF_KINDS, notifPrefs, setNotifPref } from '../../lib/notify'
 import DeleteAccount from '../DeleteAccount'
 import { supabase } from '../../lib/supabase'
@@ -31,6 +31,7 @@ export default function AppSettings({ signedIn, onFeedback, onClose }) {
   const [sound, setSound] = useState(() => !isMuted())
   const [haptics, setHaptics] = useState(() => !hapticsOff())
   const [motion, setMotion] = useState(reduceMotion)
+  const [dock, setDock] = useState(() => !dockHidden())
   const [notifs, setNotifs] = useState(notifPrefs)
   const [faq, setFaq] = useState(null)
 
@@ -44,6 +45,7 @@ export default function AppSettings({ signedIn, onFeedback, onClose }) {
         <Toggle label="Sound" on={sound} onFlip={v => { setMuted(!v); setSound(v); window.dispatchEvent(new CustomEvent('bap:sound')) }} />
         {IS_APP && <Toggle label="Haptics" sub="Taps and buzzes on the phone" on={haptics} onFlip={v => { setHapticsOff(!v); setHaptics(v); if (v) haptic('medium') }} />}
         <Toggle label="Reduce motion" sub="Fewer animations and effects" on={motion} onFlip={v => { setReduceMotion(v); setMotion(v) }} />
+        <Toggle label="Bottom navigation" sub="Off: more room on screen. The menu button on Home still gets you everywhere" on={dock} onFlip={v => { setDockHidden(!v); setDock(v) }} />
         <button className="sx-row" onClick={replay}>
           <span className="sx-txt"><b>Replay the tutorial</b><small>The basics and every mode, then a guided game</small></span>
           <IconPlay size={16} />

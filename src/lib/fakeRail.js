@@ -5,13 +5,13 @@
 // or on the website with ?rail (?rail=0 turns it off). It only shows a box —
 // no ads load. With it on, html.fake-rail sets --web-rail, which the dock,
 // sheets and screens keep clear of (app-game.css "Ad rail preview").
-// On by default (switch it off in More). On the website it steps aside while a
+// Off by default (switch it on in More). On the website it steps aside while a
 // real Playwire rail is on the page, so it never covers an actual ad.
 
 import { IS_APP } from './platform'
 
 const KEY = 'bap_rail_preview'
-const read = () => { try { return localStorage.getItem(KEY) !== '0' } catch { return true } }
+const read = () => { try { return localStorage.getItem(KEY) === '1' } catch { return false } }
 const realRail = () => !IS_APP && !!document.querySelector('[id^="pw-oop-bottom_rail"][data-pw-status="loaded"]')
 export const railPreviewOn = read
 

@@ -4679,3 +4679,7 @@ html.is-app { --drop-chrome: calc(352px + env(safe-area-inset-top) + env(safe-ar
 /* the 3v3 check-up when it's not your call: who has it, who's on him */
 .lc-wait { padding: 10px 12px; border-radius: 12px; border: 1px dashed var(--ag-line); text-align: center; font-family: var(--ag-font); font-size: 13px; letter-spacing: 1.5px; color: var(--ag-text-2); }
 .crl-out { font-style: normal; color: #fca5a5; letter-spacing: 1px; }
+
+/* Settings → Bottom navigation off: no dock, and content only keeps clear of the home bar */
+html.no-dock .ag-dock { display: none !important; }
+html:is(.is-app, .app-look).no-dock { --app-bottom: calc(var(--safe-bottom) + 12px); }
