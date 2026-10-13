@@ -81,7 +81,7 @@ export class Lobby {
         const left = [...side]
         for (const p of players) { const i = left.findIndex(sl => sl.pos === p.pos); if (i < 0) break; plan.push([left[i], p]); left.splice(i, 1) }
         if (plan.length === players.length) {
-          for (const [sl, p] of plan) this.held[sl.id] = { vid: p.vid, until: now + 60000 }
+          for (const [sl, p] of plan) this.held[sl.id] = { ...pub(p), until: now + 60000 }
           this.broadcast(this.state())
           return new Response(JSON.stringify({ ok: true }))
         }
@@ -98,7 +98,7 @@ export class Lobby {
   state() {
     const now = Date.now()
     // a spot held for a squad on its way shows as taken (it's theirs)
-    const show = sl => (this.spots[sl.id] ? pub(this.spots[sl.id]) : this.held[sl.id] && this.held[sl.id].until > now ? { vid: this.held[sl.id].vid, name: 'Coming back…', uid: null, cos: null } : null)
+    const show = sl => (this.spots[sl.id] ? pub(this.spots[sl.id]) : this.held[sl.id] && this.held[sl.id].until > now ? pub(this.held[sl.id]) : null)
     return { t: 'lobby', size: this.size, spots: Object.fromEntries(this.slots.map(sl => [sl.id, show(sl)])), here: [...this.conns.values()].map(pub) }
   }
   broadcast(msg) { for (const ws of this.conns.keys()) send(ws, msg) }
@@ -327,7 +327,7 @@ export class Room {
         const squad = this.humans().filter(p => p.team === me.team && this.here().includes(p.vid))
         if (!squad.length || !squad.every(p => m.votes.has(p.vid))) return
         if (m.practice) { for (const [w, v] of this.conns) if (squad.some(p => p.vid === v)) send(w, { t: 'requeue', practice: true }); return }
-        const res = await this.env.LOBBY.get(this.env.LOBBY.idFromName(lobbyName(m.size))).fetch(`https://lobby/hold?size=${m.size}`, { method: 'POST', body: JSON.stringify({ players: squad.map(p => ({ vid: p.vid, pos: p.pos })) }) })
+        const res = await this.env.LOBBY.get(this.env.LOBBY.idFromName(lobbyName(m.size))).fetch(`https://lobby/hold?size=${m.size}`, { method: 'POST', body: JSON.stringify({ players: squad.map(p => ({ vid: p.vid, name: p.name, uid: p.uid, cos: p.cos, pos: p.pos })) }) })
         const ok = (await res.json().catch(() => ({}))).ok
         for (const [w, v] of this.conns) if (squad.some(p => p.vid === v)) send(w, { t: 'requeue', held: !!ok })
         return
