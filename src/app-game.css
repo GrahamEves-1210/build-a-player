@@ -4454,6 +4454,8 @@ html.is-android .ag-toast { background: rgba(8,12,10,.97); }
 .drop-sheet-grip { position: sticky; bottom: 0; display: flex; justify-content: center; padding: 8px 0 10px; background: linear-gradient(0deg, rgba(10,14,13,1) 60%, rgba(10,14,13,0)); cursor: grab; touch-action: none; }
 .drop-sheet-grip span { width: 48px; height: 5px; border-radius: 3px; background: rgba(255,255,255,.32); }
 .drop-bar { cursor: pointer; touch-action: none; user-select: none; -webkit-user-select: none; }
+/* the whole panel follows a finger (it scrolls its own content in JS when that's taller than the room) */
+.game-layout.ag-drop .drop-sheet { touch-action: none; }
 .drop-bar-grab { position: absolute; left: 50%; bottom: 3px; width: 36px; height: 4px; margin-left: -18px; border-radius: 2px; background: rgba(255,255,255,.22); }
 
 /* inside the sheet: everything compact, the traits a grid you can see at once */

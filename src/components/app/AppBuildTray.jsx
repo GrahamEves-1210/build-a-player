@@ -241,30 +241,43 @@ function useDrag(open, setOpen) {
   const st = useRef(null)
   const place = p => { const el = sheetEl(); if (el) { el.style.transition = 'none'; el.style.transform = `translate3d(0, ${(p - 1) * 101}%, 0)` } }
   const release = () => { const el = sheetEl(); if (el) { el.style.transition = ''; el.style.transform = '' } }
-  const onPointerDown = e => {
+  // body: the panel itself (anything on it drags it; a tap still picks). If what's
+  // in it is taller than the room, the drag scrolls it first, then moves the panel.
+  const onPointerDown = (e, body = false) => {
+    if (body && (e.pointerType === 'mouse' && e.button !== 0)) return
     const el = sheetEl()
-    st.current = { y: e.clientY, p0: open ? 1 : 0, p: open ? 1 : 0, h: Math.max(1, el?.offsetHeight ?? 400), moved: false, vy: 0, t: performance.now(), ly: e.clientY }
-    e.currentTarget.setPointerCapture?.(e.pointerId)
+    st.current = { y: e.clientY, p0: open ? 1 : 0, p: open ? 1 : 0, h: Math.max(1, el?.offsetHeight ?? 400), moved: false, vy: 0, t: performance.now(), ly: e.clientY, body, id: e.pointerId, tgt: e.currentTarget, off: 0 }
+    // (the grip sits inside the panel: its own drag, not the panel's too)
+    if (!body) { e.stopPropagation(); e.currentTarget.setPointerCapture?.(e.pointerId) }
   }
   const onPointerMove = e => {
     const d = st.current; if (!d) return
-    const dy = e.clientY - d.y
-    if (Math.abs(dy) > 6) d.moved = true
+    const step = e.clientY - d.ly
+    if (Math.abs(e.clientY - d.y) > 6 && !d.moved) { d.moved = true; if (d.body) d.tgt.setPointerCapture?.(d.id) }
     const now = performance.now(), dt = Math.max(1, now - d.t)
-    d.vy = (e.clientY - d.ly) / dt; d.t = now; d.ly = e.clientY
+    d.vy = step / dt; d.t = now; d.ly = e.clientY
     if (!d.moved) return
-    d.p = Math.max(0, Math.min(1, d.p0 + dy / d.h))
+    const el = sheetEl()
+    // scroll the panel's own content while it has room to go that way
+    if (d.body && el && d.p === 1 && el.scrollHeight > el.clientHeight + 1) {
+      const before = el.scrollTop
+      el.scrollTop = before - step
+      if (el.scrollTop !== before) { d.off += step; return }
+    }
+    d.p = Math.max(0, Math.min(1, d.p0 + (e.clientY - d.y - d.off) / d.h))
     place(d.p)
   }
   const end = tap => () => {
     const d = st.current; st.current = null
     release()
     if (!d) return
-    if (!d.moved) { tap(); return }
+    if (!d.moved) { if (!d.body) tap(); return }
+    // (a drag that only scrolled the panel leaves it where it is)
+    if (d.body && d.p === 1 && d.p0 === 1) return
     // a flick wins; otherwise 30% of the way from where it started is enough
     setOpen(d.vy > 0.35 ? true : d.vy < -0.35 ? false : d.p0 ? d.p > 0.7 : d.p > 0.3)
   }
-  return tap => ({ onPointerDown, onPointerMove, onPointerUp: end(tap), onPointerCancel: () => { st.current = null; release() } })
+  return (tap, body = false) => ({ onPointerDown: e => onPointerDown(e, body), onPointerMove, onPointerUp: end(tap), onPointerCancel: () => { st.current = null; release() } })
 }
 // The bar at the top: the build slot by slot. Tap it, or pull it down, and the
 // spin panel drops out from under it; SPIN is in the panel.
@@ -332,9 +345,16 @@ export function DropBar({ open, setOpen, build, types, attrMap, waiting = null, 
 // the top of the player. The page behind it stays live (no overlay).
 export function DropSheet({ open, setOpen, children }) {
   const drag = useDrag(open, setOpen)
+  // a tap anywhere outside the panel (and its bar) puts it away
+  useEffect(() => {
+    if (!open) return
+    const on = e => { if (!e.target.closest?.('.drop-sheet, .drop-bar')) setOpen(false) }
+    const id = setTimeout(() => document.addEventListener('pointerdown', on, true), 0)
+    return () => { clearTimeout(id); document.removeEventListener('pointerdown', on, true) }
+  }, [open, setOpen])
   return (
     <div className="drop-clip">
-      <div className={`drop-sheet${open ? ' is-open' : ''}`} aria-hidden={!open}>
+      <div className={`drop-sheet${open ? ' is-open' : ''}`} aria-hidden={!open} {...drag(() => {}, true)}>
         {children}
         <div className="drop-sheet-grip" role="button" aria-label="Hide the spin" {...drag(() => setOpen(false))}><span /></div>
       </div>
