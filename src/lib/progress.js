@@ -711,11 +711,11 @@ export function initProgress() {
 // ═════════════════════════════════════════════════════════════════════════════
 // Coins, the shop and cosmetics
 // ═════════════════════════════════════════════════════════════════════════════
-// Balance: a typical season pays ~25–35, a title run ~100. A regular day of play
-// (a handful of seasons, the missions, the daily drop) is roughly 300–400 coins:
-// commons in a day or two, rares in about a week, epics in a few weeks,
-// legendaries are a long chase (one to two months, or coins). Within a tier the
-// showiest items cost the most (lib/cosmetics.js).
+// Balance: a typical season pays ~25–35, a title run ~100. A day of play is
+// ~300 coins (20 minutes) to ~600 (an hour), more with the videos. Prices
+// (lib/cosmetics.js) climb gently and overlap across rarities: commons in a day
+// or two, rares within a week, epics in one to two weeks, legendaries (~5,500–
+// 13,000) in two to four.
 export const COINS = { season: 10, winNfl: 1, winNba: 0.25, playoffs: 10, ring: 40, award: 25, daily: 20, level: 40, free: 25, freePro: 50 }
 export function seasonCoins(d) {
   if (d.sandbox) return 0

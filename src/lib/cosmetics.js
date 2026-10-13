@@ -204,13 +204,24 @@ const CT = [
 
 // ── Unlocks: not looks, features. Sandbox in Career and in Takeover, bought one
 // mode at a time (the switch is on the build screen; turning it on asks to buy)
-export const UNLOCK_PRICE = 25000
+export const UNLOCK_PRICE = 7500
 const UL = [
   it('unlock', 'sandbox-career', 'Career Sandbox', 3, UNLOCK_PRICE, { unlock: true, mode: 'Career' }),
   it('unlock', 'sandbox-takeover', 'Takeover Sandbox', 3, UNLOCK_PRICE, { unlock: true, mode: 'Takeover' }),
 ]
 
-export const ITEMS = [...AV, ...NC, ...NFX, ...PL, ...WF, ...WS, ...CT, ...UL]
+// Prices: the numbers above are each item's weight (the showier, the higher).
+// What it costs bends that down (a gentler climb: a top item is ~13x a cheap
+// one, not ~30x) and gives every item its own nudge, -30% to +40%, fixed by its
+// id. So rarity is a look, not a price bracket: a pricey Rare can cost more than
+// a cheap Epic. Unlocks keep their own price.
+const hash01 = s => { let x = 2166136261; for (const c of s) { x ^= c.charCodeAt(0); x = Math.imul(x, 16777619) } return (x >>> 0) / 4294967295 }
+const cost = i => {
+  if (!i.price || i.unlock) return i
+  const v = 400 * Math.pow(i.price / 400, 0.75) * (0.7 + hash01(i.id) * 0.7)
+  return { ...i, weight: i.price, price: Math.max(150, Math.round(v / 50) * 50) }
+}
+export const ITEMS = [...AV, ...NC, ...NFX, ...PL, ...WF, ...WS, ...CT].map(cost).concat(UL)
 const BY_ID = Object.fromEntries(ITEMS.map(i => [i.id, i]))
 export const itemById = id => (id ? BY_ID[id] ?? null : null)
 export const itemsFor = slot => ITEMS.filter(i => i.slot === slot)
