@@ -60,6 +60,7 @@ import { dailyState, setDailySpins, forfeitDaily } from './lib/progress'
 import { LiveLeaveButton } from './components/app/LiveLeave'
 import { FlipEdge, BuildComplete, useFlip, StackEdge, StackSeam, useDropMode, useDropSheet, DropBar, DropSheet } from './components/app/AppBuildTray'
 import { loadRun, newRun, cityList, ratedPool } from './lib/takeover'
+import { setSandboxGate, sandboxItemFor, sandboxLocked } from './components/app/AppSandbox'
 import { rampPage, HOME_UNITS, RAIL_UNITS, RAIL_UNITS_WITH_LEFT } from './lib/ads'
 
 const _dd = arr => { const s = new Set(); return arr.filter(p => { const k = `${p.name}|${p.team}`; if (s.has(k)) return false; s.add(k); return true }) }
@@ -718,21 +719,21 @@ export default function App() {
   openCareerRef.current = openCareer
   const enterDraft = useCallback(() => {
     const owner = getUsername(user) || 'Guest'
-    const c = newCareer({ sport: 'nfl', uid: user?.id ?? null, pos: position, build, name: careerNew.current.name || owner, slot: careerNew.current.slot, owner })
+    const c = { ...newCareer({ sport: 'nfl', uid: user?.id ?? null, pos: position, build, name: careerNew.current.name || owner, slot: careerNew.current.slot, owner }), sandbox: !!isCustomMode }
     saveCareer(c); setCareer(c); setGameMode(null); setBuild({}); setPage('career')
     try { localStorage.removeItem('bap_progress') } catch {}   // the build is the career's now: a reload lands on Home, not the build page
     window.scrollTo({ top: 0, behavior: 'instant' })
-  }, [user, position, build])
+  }, [user, position, build, isCustomMode])
 
   const hitTheRoad = useCallback(() => {
     const pools = { qb: QBS, rb: RBS, wr: WRS, te: TES, db: DBS }
     const ovrOf = b => position === 'db' ? calcOVRDB(b) : position === 'te' ? calcOVRTE(b) : position === 'wr' ? calcOVRWR(b) : position === 'rb' ? calcOVRRB(b) : calcOVR(b)
     const cities = cityList('nfl', NFL_TEAMS)
     const rated = ratedPool(pools[position] ?? QBS, activeTypes, ovrOf, cities)
-    const run = newRun({ sport: 'nfl', uid: user?.id ?? null, pos: position, build, types: activeTypes, rated, cities })
+    const run = { ...newRun({ sport: 'nfl', uid: user?.id ?? null, pos: position, build, types: activeTypes, rated, cities }), sandbox: !!isCustomMode }
     setTakeoverRun(run); setPage('takeover')
     window.scrollTo({ top: 0, behavior: 'instant' })
-  }, [user?.id, position, build, activeTypes])
+  }, [user?.id, position, build, activeTypes, isCustomMode])
 
   useEffect(() => {
     if (cp.phase !== 'build' || !cp.match || cp.results[cp.me.vid] || competeKey.current === cp.match.code) return
@@ -825,6 +826,8 @@ export default function App() {
     try { localStorage.setItem('bap_custom_mode', on ? '1' : '0') } catch {}
     setIsCustomMode(on)
   }, [])
+  // a Career or Takeover build whose Sandbox isn't unlocked: sandbox from the plain modes doesn't carry in
+  useEffect(() => { if (isCustomMode && sandboxLocked(page)) handleSandboxToggle(false) }, [page]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const showSaveToast = useCallback((type, msg) => {
     setSaveToast({ type, msg })
@@ -1278,7 +1281,9 @@ export default function App() {
     : null
   const competePlan = useMemo(() => (competeOn && cp.match ? { seed: cp.match.seed, getStart: () => 0, onSpin: () => {}, separateRespins: true } : null), [competeOn, cp.match?.code]) // eslint-disable-line react-hooks/exhaustive-deps
   // Sandbox is only for the plain Current and All-Time modes
-  const sandboxOk = (gameMode === 'classic' || gameMode === 'all-time') && !dailyRun && !competeOn && page !== 'takeover-build' && page !== 'career-build' && page !== 'versus-game'
+  // (Career and Takeover builds too, once that mode's Sandbox is unlocked: the switch asks)
+  const sandboxOk = (gameMode === 'classic' || gameMode === 'all-time') && !dailyRun && !competeOn && page !== 'versus-game'
+  setSandboxGate(sandboxItemFor(page))
 
   const navbarProps = {
     gradesToggle: drop && !competeOn && page !== 'versus-game',   // phones: the grades switch lives in the navbar

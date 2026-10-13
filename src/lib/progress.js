@@ -750,7 +750,7 @@ export const owns = id => { const i = itemById(id); return !!i && (i.free || !!S
 // Today's deals: three items, 30% off, the same for everyone
 export function dealsFor(key = dayKey()) {
   const r = seeded(`deals-${key}`)
-  const pool = ITEMS.filter(i => forSale(i) && !i.pro && i.rarity >= 1)
+  const pool = ITEMS.filter(i => forSale(i) && !i.pro && !i.unlock && i.rarity >= 1)
   const picks = []
   while (picks.length < 3 && pool.length) picks.push(pool.splice(Math.floor(r() * pool.length), 1)[0])
   return picks.map(i => ({ id: i.id, price: Math.max(10, Math.round((i.price * 0.7) / 10) * 10) }))

@@ -4685,3 +4685,14 @@ html.is-app { --drop-chrome: calc(352px + env(safe-area-inset-top) + env(safe-ar
 /* Settings → Bottom navigation off: no dock, and content only keeps clear of the home bar */
 html.no-dock .ag-dock { display: none !important; }
 html:is(.is-app, .app-look).no-dock { --app-bottom: calc(var(--safe-bottom) + 12px); }
+/* Sandbox unlock (Career / Takeover) */
+.sb-buy .ll-title { display: flex; align-items: center; gap: 8px; }
+.sb-buy-price { display: flex; align-items: baseline; gap: 8px; margin: 2px 0 12px; }
+.sb-buy-price .sb-coin { align-self: center; padding: 2px 6px; border-radius: 999px; background: linear-gradient(180deg, #ffe39a, #d4af37); color: #2a1c02; font-family: var(--ag-font); font-size: 11px; letter-spacing: 1px; }
+.sb-buy-price b { font-family: var(--ag-display); font-weight: 400; font-size: 32px; color: #f5dc8a; }
+.sb-buy-price small { font-family: var(--ag-body); font-size: 12.5px; color: var(--ag-muted); }
+.sb-buy-err { margin: 0 0 8px; color: #fca5a5; font-family: var(--ag-body); font-size: 13px; }
+.ag-sandbox .sb-lock { font-style: normal; margin-left: 6px; padding: 1px 6px; border-radius: 6px; background: rgba(245,220,138,.15); color: #f5dc8a; font-size: 11px; letter-spacing: 1px; }
+.sb-tag { display: inline-block; margin-right: 6px; padding: 1px 6px; border-radius: 5px; background: rgba(232,121,249,.18); color: #f0abfc; font-weight: 400; letter-spacing: 1px; }
+.ll-sheet.sb-buy { background: radial-gradient(120% 70% at 50% 0%, rgba(245,220,138,.12), transparent 60%), #0d1210; border-color: rgba(245,220,138,.4); box-shadow: 0 -10px 40px rgba(0,0,0,.6); }
+.ll-sheet.sb-buy .ag-eyebrow { color: #f5dc8a; }

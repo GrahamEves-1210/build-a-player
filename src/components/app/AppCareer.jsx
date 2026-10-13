@@ -472,7 +472,7 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
   const book = () => afterBook(bookSeason(c))
   const afterBook = n => {
     const s = n.seasons[n.seasons.length - 1]
-    window.dispatchEvent(new CustomEvent('bap:season', { detail: { sport: c.sport, pos: c.pos, mode: 'career', localOnly: true, wins: s.wins, losses: s.losses, playoffs: s.playoffs, champion: s.champion, award: s.award, awardName: s.awardName, ovr: c.ovr, ref: c.active?.final ?? null } }))
+    window.dispatchEvent(new CustomEvent('bap:season', { detail: { sport: c.sport, pos: c.pos, mode: 'career', localOnly: true, sandbox: !!c.sandbox, wins: s.wins, losses: s.losses, playoffs: s.playoffs, champion: s.champion, award: s.award, awardName: s.awardName, ovr: c.ovr, ref: c.active?.final ?? null } }))
     setCareer(n); setTab('season')
     if (s.champion || s.award) setHonor({
       season: s.season, team: (s.teamName ?? '').toUpperCase(),
@@ -498,7 +498,7 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
         <div className="cr-head">
           <img src={logoFor(c.team)} alt="" className="cr-head-logo" />
           <div>
-            <span className="ag-eyebrow">{c.fit?.name?.toUpperCase()} · YEAR {c.year + 1} · AGE {c.age} · {c.season}</span>
+            <span className="ag-eyebrow">{c.sandbox && <b className="sb-tag">SANDBOX</b>}{c.fit?.name?.toUpperCase()} · YEAR {c.year + 1} · AGE {c.age} · {c.season}</span>
             <h1 className="ag-h1"><NameTag name={c.name} self plate={false} /> <small>{POS_LABEL[c.pos]}</small></h1>
           </div>
         </div>

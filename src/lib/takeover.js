@@ -165,7 +165,7 @@ export function logRun(run, ovr = null) {
   const entry = {
     at: Date.now(), pos: run.pos, mode: run.mode, taken: run.taken.length, stops: run.route.length,
     endless: run.endlessWins, won: !!run.won, ovr, games: run.log.length, wins: run.log.filter(l => l.won).length,
-    last: run.log[run.log.length - 1]?.city ?? null,
+    last: run.log[run.log.length - 1]?.city ?? null, sandbox: !!run.sandbox,
   }
   try { localStorage.setItem(histKey(run.sport), JSON.stringify([entry, ...pastRuns(run.sport)].slice(0, 20))) } catch {}
   return { ...run, logged: true }

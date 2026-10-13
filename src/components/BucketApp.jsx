@@ -41,6 +41,7 @@ import { setLiveLock, liveLock, guardLeave } from '../lib/liveLock'
 import { useAuction } from '../lib/auction'
 import { FORFEIT_RATING } from '../lib/progress'
 import { useBlacktop } from '../lib/blacktop'
+import { setSandboxGate, sandboxItemFor, sandboxLocked } from './app/AppSandbox'
 import { BlacktopQueue, BlacktopHud, BlacktopChat, BlacktopGame, BlacktopHub } from './app/AppBlacktop'
 import { NameTag } from './app/NameTag'
 import { VersusHud, VersusMatchup, VersusLeaveSheet, VersusOppLeftSheet } from './app/Blacktop1v1'
@@ -738,6 +739,9 @@ export default function BucketApp() {
     try { localStorage.setItem('bab_custom_mode', on ? '1' : '0') } catch {}
     setIsBucketCustomMode(on)
   }, [])
+  // a Career or Takeover build whose Sandbox isn't unlocked: sandbox from the plain modes doesn't carry in
+  useEffect(() => { if (isBucketCustomMode && sandboxLocked(page)) handleSandboxToggle(false) }, [page]) // eslint-disable-line react-hooks/exhaustive-deps
+  setSandboxGate(sandboxItemFor(page))
 
   const currentPool = useMemo(() => {
     if (gameMode === 'all-time') {
@@ -901,17 +905,17 @@ export default function BucketApp() {
   openCareerRef.current = openCareer
   const enterDraft = useCallback(() => {
     const owner = getUsername(user) || 'Guest'
-    const c = newCareer({ sport: 'bucket', uid: user?.id ?? null, pos: position, build, name: careerNew.current.name || owner, slot: careerNew.current.slot, owner })
+    const c = { ...newCareer({ sport: 'bucket', uid: user?.id ?? null, pos: position, build, name: careerNew.current.name || owner, slot: careerNew.current.slot, owner }), sandbox: !!isBucketCustomMode }
     saveCareer(c); setCareer(c); setGameMode(null); setBuild({}); setPage('career')
     window.scrollTo({ top: 0, behavior: 'instant' })
-  }, [user, position, build])
+  }, [user, position, build, isBucketCustomMode])
   const hitTheRoad = useCallback(() => {
     const cities = cityList('bucket', NBA_TEAMS)
     const rated = ratedPool(LIVE_POOLS[position] ?? LIVE_POOLS.guard, activeTypes, b => calcBucketOVR(b, activeTypes, position), cities)
-    const run = newRun({ sport: 'bucket', uid: user?.id ?? null, pos: position, build, types: activeTypes, rated, cities })
+    const run = { ...newRun({ sport: 'bucket', uid: user?.id ?? null, pos: position, build, types: activeTypes, rated, cities }), sandbox: !!isBucketCustomMode }
     setTakeoverRun(run); setPage('takeover')
     window.scrollTo({ top: 0, behavior: 'instant' })
-  }, [user?.id, position, build, activeTypes])
+  }, [user?.id, position, build, activeTypes, isBucketCustomMode])
 
   // Opened (or refreshed) straight on /bucket/salary → go to Salary Cap. Read
   // at load: the URL-sync effect resets the path to /bucket on the first render.
@@ -1616,7 +1620,7 @@ export default function BucketApp() {
           isPlus={isSubscribed}
           isCustomMode={isBucketCustomMode}
           onOpenCustomModal={() => setShowBucketCustomModal(true)}
-          onSandboxToggle={!isVersusMode && !competeOn && page === 'game' && (gameMode === 'classic' || gameMode === 'all-time') ? handleSandboxToggle : undefined}
+          onSandboxToggle={!isVersusMode && !competeOn && (page === 'game' || page === 'career-build' || page === 'takeover-build') && (gameMode === 'classic' || gameMode === 'all-time') ? handleSandboxToggle : undefined}
           attrMap={BUCKET_ATTR}
           categoriesData={activeCategories}
           figureRef={figureRef}
@@ -1636,7 +1640,7 @@ export default function BucketApp() {
             isPlus={isSubscribed}
             isCustomMode={isBucketCustomMode}
             onOpenCustomModal={() => setShowBucketCustomModal(true)}
-            onSandboxToggle={!isVersusMode && !competeOn && page === 'game' && (gameMode === 'classic' || gameMode === 'all-time') ? handleSandboxToggle : undefined}
+            onSandboxToggle={!isVersusMode && !competeOn && (page === 'game' || page === 'career-build' || page === 'takeover-build') && (gameMode === 'classic' || gameMode === 'all-time') ? handleSandboxToggle : undefined}
             attrMap={BUCKET_ATTR}
             logoDir="/logos/nba/"
             captureFigure={captureFigure}

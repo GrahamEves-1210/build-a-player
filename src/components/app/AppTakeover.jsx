@@ -82,7 +82,8 @@ export default function AppTakeover({ sport, run, setRun, user, pools, attrMap, 
     const at = duel?.city ?? city
     const wasEndless = isEndless(run)
     const next = afterDuel(run, at, won)
-    if (won) {
+    // (a Sandbox run plays the same, but earns nothing)
+    if (won && !run.sandbox) {
       window.dispatchEvent(new CustomEvent('bap:xp', { detail: { xp: wasEndless ? XP_ENDLESS : XP_CITY, coins: COINS_CITY, label: wasEndless ? `Endless · ${next.endlessWins} straight` : `${at.city} taken` } }))
       window.dispatchEvent(new CustomEvent('bap:takeover', { detail: { city: true } }))
       if (next.justWon) { window.dispatchEvent(new CustomEvent('bap:xp', { detail: { xp: XP_RUN, coins: COINS_RUN, label: 'TAKEOVER complete' } })); window.dispatchEvent(new CustomEvent('bap:takeover', { detail: { run: true } })) }
@@ -93,7 +94,7 @@ export default function AppTakeover({ sport, run, setRun, user, pools, attrMap, 
   }
   const reward = (kind, type) => {
     const next = applyReward(run, { kind, type }, duel?.star ?? star)
-    if (kind === 'cash') window.dispatchEvent(new CustomEvent('bap:xp', { detail: { xp: 0, coins: COINS_CITY * CASH_MULT, label: `Cashed in ${duel?.city?.city ?? ''}` } }))
+    if (kind === 'cash' && !run.sandbox) window.dispatchEvent(new CustomEvent('bap:xp', { detail: { xp: 0, coins: COINS_CITY * CASH_MULT, label: `Cashed in ${duel?.city?.city ?? ''}` } }))
     setRun(next); sfx('claim'); haptic('success')
     if (run.mode === 'duo') duo.sync(next)
     setScreen(next.justWon ? 'complete' : 'map')
@@ -110,7 +111,7 @@ export default function AppTakeover({ sport, run, setRun, user, pools, attrMap, 
       <div className={`ag-screen ag-screen--${sport} tk`}>
         <div className="ag-screen-head">
           <div>
-            <span className="ag-eyebrow">{run.mode === 'duo' ? 'TAKEOVER DUO' : 'TAKEOVER'} · {endless ? `ENDLESS · ${run.endlessWins} STRAIGHT` : `STOP ${Math.min(run.idx + 1, total)} OF ${total}`}</span>
+            <span className="ag-eyebrow">{run.sandbox && <b className="sb-tag">SANDBOX</b>}{run.mode === 'duo' ? 'TAKEOVER DUO' : 'TAKEOVER'} · {endless ? `ENDLESS · ${run.endlessWins} STRAIGHT` : `STOP ${Math.min(run.idx + 1, total)} OF ${total}`}</span>
             <h1 className="ag-h1">{endless ? 'The road goes on' : 'The road'}</h1>
           </div>
           <button className="ag-round-btn" onClick={onExit} aria-label="Home"><IconClose size={16} /></button>

@@ -327,7 +327,7 @@ export function pastCareers(sport) { try { const l = JSON.parse(localStorage.get
 export function logCareer(c) {
   if (!c || c.logged) return c
   const L = legacyOf(c), t = careerTotals(c)
-  const entry = { at: Date.now(), pos: c.pos, name: c.name, seasons: c.seasons.length, score: L.score, tier: L.tier, rank: L.rank, ranked: L.ranked, hof: c.hof?.in ?? false, rings: t.rings, awards: t.awards, team: c.team }
+  const entry = { at: Date.now(), pos: c.pos, name: c.name, seasons: c.seasons.length, score: L.score, tier: L.tier, rank: L.rank, ranked: L.ranked, hof: c.hof?.in ?? false, rings: t.rings, awards: t.awards, team: c.team, sandbox: !!c.sandbox }
   try { localStorage.setItem(histKey(c.sport), JSON.stringify([entry, ...pastCareers(c.sport)].slice(0, 20))) } catch {}
   return { ...c, logged: true }
 }

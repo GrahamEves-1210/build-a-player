@@ -292,7 +292,7 @@ export default function AppShop({ onClose, tab: initialTab = 'featured' }) {
   const dealPrice = id => deals.find(d => d.id === id)?.price ?? null
   const pro = isPro()
   const ownedCount = ITEMS.filter(i => owns(i.id) && !i.free).length
-  const reach = useMemo(() => ITEMS.filter(i => !owns(i.id) && !lockReason(i.id) && i.price && !i.ach && priceOf(i.id) <= Math.max(300, (p.coins ?? 0))).sort((a, b) => b.price - a.price).slice(0, 4), [p.coins, p.owned]) // eslint-disable-line react-hooks/exhaustive-deps
+  const reach = useMemo(() => ITEMS.filter(i => !i.unlock && !owns(i.id) && !lockReason(i.id) && i.price && !i.ach && priceOf(i.id) <= Math.max(300, (p.coins ?? 0))).sort((a, b) => b.price - a.price).slice(0, 4), [p.coins, p.owned]) // eslint-disable-line react-hooks/exhaustive-deps
   const claim = () => {
     if (!p.freeReady) return
     const n = claimFreeCoins()

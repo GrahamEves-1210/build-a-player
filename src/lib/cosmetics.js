@@ -202,7 +202,15 @@ const CT = [
   ct('ct-retro', 'Retro Sunset', 3, 16000),
 ]
 
-export const ITEMS = [...AV, ...NC, ...NFX, ...PL, ...WF, ...WS, ...CT]
+// ── Unlocks: not looks, features. Sandbox in Career and in Takeover, bought one
+// mode at a time (the switch is on the build screen; turning it on asks to buy)
+export const UNLOCK_PRICE = 25000
+const UL = [
+  it('unlock', 'sandbox-career', 'Career Sandbox', 3, UNLOCK_PRICE, { unlock: true, mode: 'Career' }),
+  it('unlock', 'sandbox-takeover', 'Takeover Sandbox', 3, UNLOCK_PRICE, { unlock: true, mode: 'Takeover' }),
+]
+
+export const ITEMS = [...AV, ...NC, ...NFX, ...PL, ...WF, ...WS, ...CT, ...UL]
 const BY_ID = Object.fromEntries(ITEMS.map(i => [i.id, i]))
 export const itemById = id => (id ? BY_ID[id] ?? null : null)
 export const itemsFor = slot => ITEMS.filter(i => i.slot === slot)
