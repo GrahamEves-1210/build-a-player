@@ -164,7 +164,7 @@
          progress, not a timer: the page, the app's code, the fonts, then the first
          screen drawn (src/main.jsx reports each). When it's all in, the rest plays
          (the players and the stripes) and it fades out. In the app it shows every
-         launch; on the website only on the first load of a visit. -->
+         launch; on the website only on phones, on the first load of a visit. -->
     <style>
       #bap-loader { position: fixed; inset: 0; z-index: 2147483000; background: radial-gradient(130% 75% at 50% 5%, #5da47f 0%, #3f7a5b 30%, #23432f 58%, #121a16 80%); transition: opacity .35s ease; }
       #bap-loader.is-out { opacity: 0; pointer-events: none; }
@@ -179,7 +179,9 @@
         var KEY = 'bap_loaded'
         var seen = false
         try { seen = !native && sessionStorage.getItem(KEY) === '1' } catch (e) {}
-        if (seen) { el.parentNode.removeChild(el); window.__bapLoad = window.__bapLoaded = function () {}; return }
+        // (desktop website: no loading screen, it's built for a phone screen)
+        var desktop = !native && window.matchMedia && matchMedia('(min-width: 769px)').matches
+        if (seen || desktop) { el.parentNode.removeChild(el); window.__bapLoad = window.__bapLoaded = function () {}; return }
         if (native) requestAnimationFrame(function () { requestAnimationFrame(function () {
           // the loading screen is up: let the native splash go (it waits for this, capacitor.config.json)
           try { window.Capacitor.Plugins.SplashScreen.hide({ fadeOutDuration: 150 }) } catch (e) {}
