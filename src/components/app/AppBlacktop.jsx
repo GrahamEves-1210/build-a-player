@@ -106,6 +106,7 @@ export function BlacktopHub({ onJoin3v3, onJoin2v2 = null, onPickup, onFriend, o
             </div>
             <button className="ag-btn bt-mode-go" onClick={() => { sfx('tap'); onJoin2v2() }}>JOIN LOBBY <IconArrow size={16} /></button>
             {onPractice && <button className="ag-btn ag-btn--ghost bt-practice" onClick={() => { sfx('tap'); onPractice(2) }}>PRACTICE · YOU + 3 CPUS</button>}
+            <ModeStats mode="bt2" />
           </section>
         )}
         <section className="bt-mode ag-pop" style={{ '--d': '140ms' }}>
@@ -223,7 +224,7 @@ export function BlacktopQueue({ bt, user, onBack }) {
           {unread > 0 && <span className="ag-tab-badge">{unread}</span>}
         </button>
 
-        <OnlineRecord modes={['bt']} title="YOUR SQUAD GAMES" />
+        <OnlineRecord modes={[size === 2 ? 'bt2' : 'bt']} title={`YOUR ${size}V${size}`} />
 
       </div>
       {chatOpen && <BlacktopChat bt={bt} user={user} title="LOBBY CHAT" mode="blacktop-lobby" onClose={() => { setChatOpen(false); setSeenChat(bt.chat.length) }} />}

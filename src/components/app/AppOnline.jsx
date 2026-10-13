@@ -28,6 +28,7 @@ export default function AppOnline({ sport = 'nfl', onClose }) {
         )}
         <NextGoals limit={3} />
         <ModeStats mode="compete" full />
+        <ModeStats mode="bt2" full />
         <ModeStats mode="bt" full />
         <ModeStats mode="h2h" full />
         <div className="ol-how">

@@ -14,7 +14,8 @@ const ord = n => `${n}${['th', 'st', 'nd', 'rd'][(n % 100 > 10 && n % 100 < 14) 
 
 export const MODES = {
   compete: { label: 'Compete', Icon: IconPodium, sub: '5-player pools' },
-  bt: { label: 'Blacktop squads', Icon: IconHoop, sub: '2v2 and 3v3 · first to 11' },
+  bt: { label: 'Blacktop 3v3', Icon: IconHoop, sub: 'Squads · first to 11' },
+  bt2: { label: 'Blacktop 2v2', Icon: IconHoop, sub: 'Guard and a big · first to 11' },
   h2h: { label: 'Blacktop 1v1', Icon: IconVersus, sub: 'First to 11' },
 }
 
@@ -81,12 +82,14 @@ export function ModeStats({ mode, full = false }) {
       ['PLAYED', c.played ?? 0], ['WINS', c.wins ?? 0], ['AVG PLACE', avg(c.placeSum, c.played)],
       ...(full ? [['TOP 3', c.played ? `${pct(c.podiums, c.played)}%` : '–'], ['AVG OVR', c.played ? Math.round(c.ovrSum / c.played) : '–'], ['BEST OVR', c.best || '–'], ['BEATEN', c.beaten ?? 0], ['BEST STREAK', c.bestStreak ?? 0]] : []),
     ]
-  } else if (mode === 'bt') {
-    const b = st.bt ?? {}
-    const g = st.btGames ?? 0
+  } else if (mode === 'bt' || mode === 'bt2') {
+    const two = mode === 'bt2'
+    const b = (two ? st.bt2 : st.bt) ?? {}
+    const g = (two ? b.games : st.btGames) ?? 0
+    const w = (two ? b.wins : st.btWins) ?? 0
     streak = b.streak ?? 0; best = b.bestStreak ?? 0; form = b.recent ?? []
     cells = [
-      ['RECORD', `${st.btWins ?? 0}–${g - (st.btWins ?? 0)}`], ['WIN %', g ? `${pct(st.btWins ?? 0, g)}%` : '–'], ['MVPS', st.btMvp ?? 0],
+      ['RECORD', `${w}–${g - w}`], ['WIN %', g ? `${pct(w, g)}%` : '–'], ['MVPS', (two ? b.mvp : st.btMvp) ?? 0],
       ...(full ? [['PPG', avg(b.pts, g)], ['APG', avg(b.ast, g)], ['RPG', avg(b.reb, g)], ['FG %', b.fga ? `${pct(b.fgm, b.fga)}%` : '–'], ['HIGH', b.highPts || '–'], ['STL / BLK', `${b.stl ?? 0} / ${b.blk ?? 0}`], ['BEST STREAK', b.bestStreak ?? 0]] : []),
     ]
   } else {

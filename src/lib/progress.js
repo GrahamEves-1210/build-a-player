@@ -205,6 +205,7 @@ const BLANK_STATS = {
   // Blacktop career line (btGames / btWins / btMvp above are the long-standing counters)
   bt: { streak: 0, bestStreak: 0, pts: 0, ast: 0, reb: 0, stl: 0, blk: 0, fgm: 0, fga: 0, highPts: 0, recent: [] },
   // Blacktop 1v1 (the website also keeps vs_results; this follows the wallet)
+  bt2: { games: 0, wins: 0, mvp: 0, streak: 0, bestStreak: 0, pts: 0, ast: 0, reb: 0, stl: 0, blk: 0, fgm: 0, fga: 0, highPts: 0, recent: [] },
   h2h: { played: 0, wins: 0, losses: 0, forfeits: 0, streak: 0, bestStreak: 0, recent: [] },
   // Online rating across the live modes (see rateOnline)
   online: { rating: 800, best: 800, played: 0 },
@@ -532,14 +533,24 @@ function onCompete(e) {
 }
 
 // A Blacktop game finished: W/L, MVP, my box-score line → career line, rating
+// (a 2v2 keeps its own record, stats.bt2; the rating and missions are shared)
 function onBlacktop(e) {
   const d = e.detail || {}
-  S.stats.btGames++
-  if (d.won) S.stats.btWins++
-  if (d.mvp) S.stats.btMvp++
-  const b = S.stats.bt = { ...BLANK_STATS.bt, ...(S.stats.bt || {}) }
+  const two = d.size === 2
+  let b
+  if (two) {
+    b = S.stats.bt2 = { ...BLANK_STATS.bt2, ...(S.stats.bt2 || {}) }
+    b.games++
+    if (d.won) b.wins++
+    if (d.mvp) b.mvp++
+  } else {
+    S.stats.btGames++
+    if (d.won) S.stats.btWins++
+    if (d.mvp) S.stats.btMvp++
+    b = S.stats.bt = { ...BLANK_STATS.bt, ...(S.stats.bt || {}) }
+  }
   const line = d.line || {}
-  const highPts = (line.pts || 0) > b.highPts && S.stats.btGames > 1
+  const highPts = (line.pts || 0) > b.highPts && (two ? b.games : S.stats.btGames) > 1
   for (const k of ['pts', 'ast', 'reb', 'stl', 'blk', 'fgm', 'fga']) b[k] += line[k] || 0
   if ((line.pts || 0) > b.highPts) b.highPts = line.pts
   if (d.won) { b.streak++; if (b.streak > b.bestStreak) b.bestStreak = b.streak } else b.streak = 0

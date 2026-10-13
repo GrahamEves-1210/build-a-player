@@ -45,7 +45,7 @@ export function useBlacktopServer({ enabled, user, position, pools, types, build
   // a game this device left before it was decided (reload, the app killed): it's a loss
   useEffect(() => {
     const e = takeEntered('blacktop'); if (!e) return
-    whenProgressReady(() => window.dispatchEvent(new CustomEvent('bap:blacktop', { detail: { won: false, mvp: false, line: null, bots: false, score: null, team: e.team ?? 0, forfeit: true } })))
+    whenProgressReady(() => window.dispatchEvent(new CustomEvent('bap:blacktop', { detail: { won: false, mvp: false, line: null, bots: false, score: null, team: e.team ?? 0, forfeit: true, size: e.size ?? 3 } })))
   }, [])
 
   const [phase, setPhase] = useState('idle')          // idle | queue | build | game | result
@@ -96,14 +96,14 @@ export function useBlacktopServer({ enabled, user, position, pools, types, build
     if (mine?.pos) onSeatPosRef.current?.(mine.pos)
     setMatch({ code, seed: code, created: Date.now(), ends: Date.now() + BUILD_SECS * 1000, players, bots: practice })
     setPhase('build'); setBuilds({}); setChat([]); setFinal(null); setLocks({}); setMyCalls({}); setVotes(new Set()); arrived.current = new Set()
-    if (mine) markEntered({ kind: 'blacktop', code, team: mine.team ?? 0 })
+    if (mine) markEntered({ kind: 'blacktop', code, team: mine.team ?? 0, size: sz })
     roomRef.current = liveSocket(`/room/${code}`, () => ({ t: 'hello', vid: meRef.current.vid }), m => {
       if (m.t === 'room') {
         skew.current = (m.now ?? Date.now()) - Date.now()
         const loc = ts => ts - skew.current
         setMatch(prev => {
           const rebuilt = prev && prev.seed !== m.seed
-          if (rebuilt) { window.dispatchEvent(new CustomEvent('bap:blacktop-rebuild')); markEntered({ kind: 'blacktop', code, team: m.players.find(p => p.vid === meRef.current.vid)?.team ?? 0 }) }
+          if (rebuilt) { window.dispatchEvent(new CustomEvent('bap:blacktop-rebuild')); markEntered({ kind: 'blacktop', code, team: m.players.find(p => p.vid === meRef.current.vid)?.team ?? 0, size: sizeRef.current }) }
           return { code: m.code, seed: m.seed, created: loc(m.created), ends: loc(m.ends), players: m.players, bots: m.practice }
         })
         setHere(m.here ?? [])
@@ -228,7 +228,7 @@ export function useBlacktopServer({ enabled, user, position, pools, types, build
     const xp = (won ? 40 : 15) + (mvp ? 20 : 0)
     const coins = (won ? 15 : 5) + (mvp ? 8 : 0)
     window.dispatchEvent(new CustomEvent('bap:xp', { detail: { xp, coins, label: won ? (mvp ? 'Blacktop win · MVP' : 'Blacktop win') : 'Blacktop game' } }))
-    window.dispatchEvent(new CustomEvent('bap:blacktop', { detail: { won: !!won, mvp, line: game.stats[me.vid] ?? null, bots: !!match.bots, score: game.score, team: mine?.team ?? 0 } }))
+    window.dispatchEvent(new CustomEvent('bap:blacktop', { detail: { won: !!won, mvp, line: game.stats[me.vid] ?? null, bots: !!match.bots, score: game.score, team: mine?.team ?? 0, size: sizeRef.current } }))
     if (user && supabase && !match.bots) supabase.from('vs_results').insert({ user_id: user.id, username: getUsername(user), result: won ? 'win' : 'loss', ovr: null, position: mine?.pos ?? position, match_type: `${sizeRef.current}v${sizeRef.current}` }).then(null, () => {})
     return true
   }, [game, match, final, me.vid, user, position])
@@ -241,7 +241,7 @@ export function useBlacktopServer({ enabled, user, position, pools, types, build
     if (!final?.afk?.includes(me.vid)) return
     setKicked(true)
     const mineT = match?.players.find(p => p.vid === me.vid)?.team ?? 0
-    window.dispatchEvent(new CustomEvent('bap:blacktop', { detail: { won: false, mvp: false, line: null, bots: false, score: null, team: mineT, forfeit: true } }))
+    window.dispatchEvent(new CustomEvent('bap:blacktop', { detail: { won: false, mvp: false, line: null, bots: false, score: null, team: mineT, forfeit: true, size: sizeRef.current } }))
     clearEntered(match?.code)
     exit()
   }, [final]) // eslint-disable-line react-hooks/exhaustive-deps

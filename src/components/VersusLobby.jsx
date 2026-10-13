@@ -742,7 +742,7 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
             </div>
           </div>
         </div>}
-        {LOOK && <div className="vlh-online"><OnlineRecord modes={['h2h', 'bt']} title="YOUR BLACKTOP" /></div>}
+        {LOOK && <div className="vlh-online"><OnlineRecord modes={['h2h', 'bt2', 'bt']} title="YOUR BLACKTOP" /></div>}
       </div>
 
       {screen === 'menu' && (

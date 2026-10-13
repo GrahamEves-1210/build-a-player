@@ -1184,7 +1184,7 @@ export default function BucketApp() {
       setLiveLock({
         title: btGameLive ? 'Leave the game?' : 'Leave the run?',
         body: 'Your squad plays the game a player short. It counts as a loss on your Blacktop record and your online rating.',
-        forfeit: () => { window.dispatchEvent(new CustomEvent('bap:blacktop', { detail: { won: false, mvp: false, line: null, bots: !!bt.match?.bots, forfeit: true } })); bt.leave() },
+        forfeit: () => { window.dispatchEvent(new CustomEvent('bap:blacktop', { detail: { won: false, mvp: false, line: null, bots: !!bt.match?.bots, forfeit: true, size: bt.size ?? 3 } })); bt.leave() },
       })
     } else if (versusLive) {
       setLiveLock({ ownBack: true, ask: go => setLeaveConfirm({ fn: () => { handleReset(); go?.() } }) })
