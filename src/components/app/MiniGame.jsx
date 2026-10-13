@@ -46,7 +46,8 @@ export default function MiniGame({ game, build, seed = 'x', onDone, autoStart = 
   const v = hard ? Math.max(1, traitValue(game, build) * 0.5) : traitValue(game, build)
   const done = r => {
     if (result) return
-    const out = { score: clamp(r.score, 0, 1), hit: hard ? r.score >= 0.75 : r.hit ?? r.score >= 0.5, note: r.note ?? null, raw: r.raw ?? null, out: !!r.out }
+    const perfect = !!r.raw && r.raw.of > 0 && r.raw.made === r.raw.of
+    const out = { score: clamp(r.score, 0, 1), hit: perfect || (hard ? r.score >= 0.75 : r.hit ?? r.score >= 0.5), note: r.note ?? null, raw: r.raw ?? null, out: !!r.out }
     setResult(out); setStage('done')
     sfx(out.hit ? 'claim' : 'deny'); haptic(out.hit ? 'success' : 'heavy')
     setTimeout(() => onDone?.(out), 900)
@@ -197,7 +198,7 @@ function Reaction({ v, seed, rounds, quick = 1, onDone }) {
   const settle = (s, note) => {
     const next = [...scores, s]
     // (every miss was the clock running out: it says so)
-    if (i + 1 >= rounds) { const avg = next.reduce((a, b) => a + b, 0) / rounds; onDone({ score: avg, hit: avg >= 0.5, note: avg >= 0.5 ? null : note, out: outs.current > 0 && outs.current >= next.filter(x => !x).length }) }
+    if (i + 1 >= rounds) { const avg = next.reduce((a, b) => a + b, 0) / rounds; onDone({ score: avg, hit: avg >= 0.5, note: avg >= 0.5 ? null : note, out: outs.current > 0 && outs.current >= next.filter(x => !x).length, raw: { made: next.filter(Boolean).length, of: rounds } }) }
     else { setScores(next); setI(i + 1) }
   }
   const tap = k => {
@@ -253,7 +254,7 @@ function Lanes({ v, seed, onDone, need = 2 }) {
   }, [i]) // eslint-disable-line
   const settle = s => {
     const next = [...scores, s]
-    if (i + 1 >= 3) { const avg = next.reduce((a, b) => a + b, 0) / 3; const made = next.filter(Boolean).length; onDone({ score: made >= need ? avg : Math.min(avg, 0.45), hit: made >= need, note: `${made} of 3`, out: outs.current > 0 && outs.current >= 3 - made }) }
+    if (i + 1 >= 3) { const avg = next.reduce((a, b) => a + b, 0) / 3; const made = next.filter(Boolean).length; onDone({ score: made >= need ? avg : Math.min(avg, 0.45), hit: made >= need, note: `${made} of 3`, out: outs.current > 0 && outs.current >= 3 - made, raw: { made, of: 3 } }) }
     else { setScores(next); setI(i + 1) }
   }
   const go = side => {
@@ -281,7 +282,7 @@ function Sequence({ v, seed, onDone }) {
   const step = (ok, late = false) => {
     const n = right + (ok ? 1 : 0)
     if (late) outs.current++
-    if (i + 1 >= calls.length) onDone({ score: n / calls.length, hit: n >= 3, note: `${n} of ${calls.length} right`, out: outs.current > 0 && outs.current >= calls.length - n })
+    if (i + 1 >= calls.length) onDone({ score: n / calls.length, hit: n >= 3, note: `${n} of ${calls.length} right`, out: outs.current > 0 && outs.current >= calls.length - n, raw: { made: n, of: calls.length } })
     else { setRight(n); setI(i + 1); sfx(ok ? 'tap' : 'pop') }
   }
   const c = calls[i]
@@ -555,7 +556,13 @@ function Cone({ v, seed, onDone }) {
     if (settled.current) return; settled.current = true
     const next = [...scores, s]
     if (s) haptic('light')
-    if (i + 1 >= plan.length) { const avg = next.reduce((a, b) => a + b, 0) / plan.length; onDone({ score: avg, hit: avg >= 0.5, note: `${next.filter(Boolean).length} of ${plan.length} clean cuts`, out: outs.current > 0 && outs.current >= next.filter(x => !x).length, raw: { made: next.filter(Boolean).length, of: plan.length } }) }
+    // clean cuts are the drill (70%); how quick they were adds the rest. All six clean is never a fail.
+    if (i + 1 >= plan.length) {
+      const made = next.filter(Boolean).length
+      const quick = made ? next.filter(Boolean).reduce((a, b) => a + b, 0) / made : 0
+      const score = (made / plan.length) * 0.7 + quick * 0.3 * (made / plan.length)
+      onDone({ score, hit: made >= plan.length - 1, note: `${made} of ${plan.length} clean cuts`, out: outs.current > 0 && outs.current >= plan.length - made, raw: { made, of: plan.length } })
+    }
     else { setScores(next); setI(i + 1) }
   }
   const go = d => {
