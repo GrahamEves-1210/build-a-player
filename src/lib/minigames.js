@@ -29,7 +29,6 @@ export const GAMES = {
   // ── RB ──
   'gap':         { kind: 'reaction', traits: ['vision'], title: 'PICK THE GAP', how: 'Three gaps. One opens. Hit it.', rounds: 2 },
   'juke':        { kind: 'lanes', traits: ['elusiveness'], title: 'JUKE', how: 'The tackler commits to a side. Cut the other way, three times.' },
-  'truck-bounce':{ kind: 'choice', traits: ['strength', 'speed'], title: 'TRUCK OR BOUNCE', how: 'Lower the shoulder, or take it outside.', options: [['truck', 'TRUCK IT', 'timing', ['strength']], ['bounce', 'BOUNCE OUTSIDE', 'lanes', ['speed']]] },
   // ── WR / TE ──
   'catch':       { kind: 'taps', traits: ['hands'], title: 'CATCH WINDOW', how: 'Three balls. Tap each one in the window.', n: 3 },
   'juke-wr':     { kind: 'lanes', traits: ['bodyControl', 'afterCatch'], title: 'MAKE A MAN MISS', how: 'The defender commits. Cut the other way, three times.' },
@@ -64,7 +63,7 @@ export const GAMES = {
 // which games a position plays in the playoffs
 export const PLAYOFF_GAMES = {
   qb: ['hot-read', 'bomb', 'escape', 'sneak', 'two-minute', 'third-long', 'audible'],
-  rb: ['gap', 'juke', 'truck-bounce'],
+  rb: ['gap', 'juke'],
   wr: ['catch', 'juke-wr', 'release'],
   te: ['catch', 'seal', 'juke-te'],
   db: ['jump-route', 'tackle-angle'],

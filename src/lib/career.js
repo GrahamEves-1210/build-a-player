@@ -661,6 +661,16 @@ function draftOrder(c) {
   return S.teams.map(t => S.teamOf(t.short)).sort((a, b) => (a.off + a.def + r() * 3) - (b.off + b.def + r() * 3)).map(t => t.short)
 }
 // After the combine: four teams from around your projected slot sit you down
+// One real team from your division (the same one all offseason)
+function divRival(c) {
+  if (c.sport === 'bucket' || !c.team) return null
+  const S = sportOf(c), me = S.teamOf(c.team)
+  if (!me.div) return null
+  const mates = S.teams.map(t => S.teamOf(t.short)).filter(t => t.div === me.div && t.short !== me.short)
+  if (!mates.length) return null
+  const t = mates[Math.floor(seeded(`${c.seed}-div-${c.year}`)() * mates.length)]
+  return { ...t, nick: nick(t.name), div: me.div }
+}
 export function setupInterviews(c) {
   const S = sportOf(c)
   const r = seeded(`int-${c.seed}`)
@@ -809,7 +819,7 @@ export function startSeason(c) {
     if (!share) D.sidelined(0, weeks)
     benched = { weeks, behind: dc.ahead[dc.ahead.length - 1].name, label: dc.label, rotation: !!share }
   }
-  const feed = benched ? [{ k: 0, note: benched.bench ? `${benched.behind} starts. ${c.name} comes off the bench this season: fewer minutes, a smaller role.` : `${benched.behind} is the starter. ${c.name} opens the season as ${benched.label}${benched.rotation ? ', in the rotation: a share of the snaps' : ''}.`, noteKind: benched.bench ? 'ROTATION' : 'DEPTH CHART' }] : []
+  const feed = benched ? [{ k: 0, note: benched.bench ? `${benched.behind} starts. ${c.name} comes off the bench this season: fewer minutes, a smaller role.` : `${benched.behind} is the starter. ${c.name} opens the season as ${benched.label}${benched.rotation ? ', in the rotation' : ''}.`, noteKind: benched.bench ? 'ROTATION' : 'DEPTH CHART' }] : []
   const next = { ...cc, phase: 'season', fit, role: dc.starter ? 'Starter' : 'Backup', simTeam: team, goals: goalsFor(cc), active: { k: 0, base, snap: D.snapshot(), seed, moment: null, feed, injury: null, benched, share } }
   return [next, D]
 }
@@ -1137,7 +1147,7 @@ const EVENTS = {
     { id: 'rift', w: 2, bad: true, when: c => c.rep <= 4, text: t => `Teammates haven't forgotten last year. The ${t} locker room is split, and the coaches notice.`, apply: c => ({ nextMods: { off: -0.5, def: -0.5 }, rep: Math.max(1, c.rep - 1) }) },
     { id: 'camp-tweak', w: 2, bad: true, text: () => `A hamstring tweak in OTAs. Nothing serious, but it lingers into the season.`, apply: c => ({ durability: r10(Math.max(1, c.durability - 0.4)) }) },
     { id: 'line-rebuilt', w: 2, text: t => `The ${t} lose two starting linemen in free agency. The rebuild up front starts now.`, apply: () => ({ nextMods: { off: -0.75 } }) },
-    { id: 'division-loads', w: 2, text: t => `A division rival goes all in: two stars signed in a week. The road to January got harder for the ${t}.`, apply: () => ({ nextMods: { def: -0.5 } }) },
+    { id: 'division-loads', w: 2, when: c => !!divRival(c), text: (t, c) => { const d = divRival(c); return `The ${d.nick} go all in: two stars signed in a week. The ${d.div} got harder, and so did the road to January for the ${t}.` }, apply: () => ({ nextMods: { def: -0.5 } }) },
     { id: 'quiet', w: 3, text: () => `A quiet offseason at the facility. Camp opens, and the grind begins.`, apply: () => ({}) },
   ],
   bucket: [

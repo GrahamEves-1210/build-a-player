@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import {
   POS_LABEL, POS_NAME, POS_ATTR, OFFENSE_POS, pastCareers, saveCareer, clearCareer, stockOf, answerInterview, setupInterviews, runDraft,
   startSeason, resumeSeason, advanceWeek, chooseMoment, resolveInjury, finishRegular, playoffRound, bookSeason, recordCombine, spendDev, demandTrade, nextSeason,
@@ -558,7 +559,7 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
                 <Chunk key={`c${e.k}`} c={c} e={e} />
               ) : e.g ? (
                 <div key={`g${e.k}`} className="cr-feed-game">
-                  <NowCard game={e.g} pos={c.pos} sport={c.sport} team={{ short: c.team }} logoFor={logoFor} idx={e.k - 1} total={total} />
+                  <NowCard game={e.g} pos={c.pos} sport={c.sport} team={{ short: c.team }} logoFor={x => logoFor(S.teams.find(t => t.short === x || t.name === x)?.short ?? x)} idx={e.k - 1} total={total} />
                   {(e.hits?.filter(h => h.big).length > 0 || e.headline?.length > 0) && (
                     <div className="cr-feed-lines">{e.hits?.filter(h => h.big).map(h => <span key={h.id} className="cr-ms"><IconStar size={12} /> {h.label}</span>)}{e.headline?.slice(0, 1).map((t, k) => <span key={k} className="cr-hl">{t}</span>)}</div>
                   )}
@@ -634,7 +635,7 @@ function Offseason({ c, setCareer, last, setTab }) {
       {showActions && (
         <div className="cr-actions ag-pop" style={{ '--d': '150ms' }}>
           {!forced && !(c.offers?.length) && <button className="ag-btn ag-btn--gold tk-intro-go" onClick={() => { setCareer(nextSeason(c)); setTab('season'); sfx('tap'); document.querySelector('.cr-hub')?.scrollTo({ top: 0, behavior: 'smooth' }) }}>ON TO {c.season + 1} <IconArrow size={16} /></button>}
-          {(canRetire(c) || forced) && <button className={`ag-btn${forced ? ' ag-btn--gold tk-intro-go' : ' ag-btn--ghost'}`} onClick={() => { if (forced || confirm('Retire? The career is booked and the legacy is final.')) { setCareer(retire(c)); victory({ big: true }) } }}>{forced ? 'HANG IT UP' : 'RETIRE'}</button>}
+          {(canRetire(c) || forced) && <RetireButton c={c} setCareer={setCareer} forced={forced} />}
         </div>
       )}
     </section>
@@ -660,12 +661,68 @@ function Recap({ c, last }) {
     </div>
   )
 }
+// A yes or no in the app's own look (never the browser's box)
+function AskSheet({ eyebrow, title, body, yes, no = 'NOT NOW', danger = false, onYes, onNo }) {
+  return createPortal(
+    <div className="ll-overlay" onClick={e => e.target === e.currentTarget && onNo()}>
+      <div className="ll-sheet" role="alertdialog" aria-modal="true" aria-labelledby="cr-ask-title">
+        <div className="ll-head"><span className="ag-eyebrow">{eyebrow}</span><button className="ag-round-btn" onClick={onNo} aria-label="Close"><IconClose size={15} /></button></div>
+        <h2 className="ll-title" id="cr-ask-title">{title}</h2>
+        <p className="ll-body">{body}</p>
+        <div className="ll-actions">
+          <button className="ag-btn ag-cta" onClick={onNo} autoFocus>{no}</button>
+          <button className={`ag-btn ${danger ? 'll-leave' : 'ag-btn--ghost'}`} onClick={onYes}>{yes}</button>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  )
+}
+function RetireButton({ c, setCareer, forced }) {
+  const [ask, setAsk] = useState(false)
+  const go = () => { setAsk(false); setCareer(retire(c)); victory({ big: true }) }
+  return <>
+    <button className={`ag-btn${forced ? ' ag-btn--gold tk-intro-go' : ' ag-btn--ghost'}`} onClick={() => { if (forced) go(); else { setAsk(true); sfx('tap') } }}>{forced ? 'HANG IT UP' : 'RETIRE'}</button>
+    {ask && <AskSheet eyebrow="RETIREMENT" title={`Retire ${c.name}?`} body="The career is booked and the legacy is final." yes="RETIRE" no="KEEP PLAYING" onYes={go} onNo={() => setAsk(false)} />}
+  </>
+}
+// The answer to a trade demand, right away: the new team, or a no
+function TradeOverlay({ res, onClose }) {
+  const S = sportOf(res.c)
+  useEffect(() => { if (res.granted) victory({ big: false }); else sfx('deny'); const t = setTimeout(onClose, 6500); return () => clearTimeout(t) }, []) // eslint-disable-line
+  const t = S.teamOf(res.granted ? res.c.team : res.from)
+  return createPortal(
+    <div className={`ag-ring sm-record cr-trade-res${res.granted ? ' is-yes' : ' is-no'}`} onClick={onClose} style={{ '--tc': t.color2 && t.color === '#000000' ? t.color2 : t.color }}>
+      {res.granted && <div className="ag-ring-rays" />}
+      <div className="ag-ring-inner">
+        <span className="ag-eyebrow">TRADE REQUEST · {res.granted ? 'GRANTED' : 'DENIED'}</span>
+        <img className="cr-trade-logo" src={S.logo(t.short)} alt="" />
+        <h2 className="ag-ring-title">{res.granted ? `TRADED TO THE ${t.name.toUpperCase()}` : 'REQUEST DENIED'}</h2>
+        <span className="ag-ring-score">{res.granted ? `${res.c.name} is a ${nick(t.name)} now.` : `The ${nick(t.name)} said no, and the locker room heard about it.`}</span>
+        <span className="sm-honor-line">Reputation −2</span>
+        <span className="ag-ring-count">TAP TO CONTINUE</span>
+      </div>
+    </div>,
+    document.body,
+  )
+}
 function Moves({ c, setCareer, forced }) {
   const ev = c.events.filter(e => e.year === c.year + 1)
   const moves = c.off?.moves ?? []
   const dc = depthChart(c)
+  const [askTrade, setAskTrade] = useState(false)
+  const [tradeRes, setTradeRes] = useState(null)
+  const doTrade = () => {
+    setAskTrade(false)
+    const from = c.team
+    const next = demandTrade(c)
+    setCareer(next)
+    setTradeRes({ granted: next.team !== from, from, c: next })
+  }
   return (
     <>
+      {askTrade && <AskSheet eyebrow="TRADE REQUEST" title="Demand a trade?" body="Reputation takes a hit, and the team can say no." yes="DEMAND IT" no="STAY PUT" danger onYes={doTrade} onNo={() => setAskTrade(false)} />}
+      {tradeRes && <TradeOverlay res={tradeRes} onClose={() => setTradeRes(null)} />}
       {ev.map((e, i) => <div key={i} className="ag-card cr-event ag-pop"><span className="ag-eyebrow">{c.fit?.name?.toUpperCase()}</span><p>{e.text}</p></div>)}
       {moves.length > 0 && (
         <div className="ag-card cr-moves ag-pop" style={{ '--d': '40ms' }}>
@@ -682,7 +739,7 @@ function Moves({ c, setCareer, forced }) {
       <div className={`ag-card cr-depthnote ag-pop${dc.starter ? ' is-on' : ''}`} style={{ '--d': '70ms' }}>
         <span className="ag-eyebrow">{c.sport === 'bucket' ? 'ROLE' : `DEPTH CHART · ${c.pos === 'db' ? (dbSpot(c) === 's' ? 'S' : 'CB') : POS_LABEL[c.pos]}`}</span>
         <p>{dc.starter ? `${c.name} goes into camp as a starter.` : `${c.name} goes into camp ${c.sport === 'bucket' ? 'coming off the bench' : `as ${dc.label}`}, behind ${dc.ahead[dc.ahead.length - 1].name}.`}</p>
-        {!forced && !c.tradeAsked && c.contract.left > 0 && !c.contract.noTrade && <button className="ag-btn ag-btn--ghost cr-trade-btn" onClick={() => { if (confirm('Demand a trade? Reputation takes a hit, and the team can say no.')) { setCareer(demandTrade(c)); sfx('deny') } }}>DEMAND A TRADE</button>}
+        {!forced && !c.tradeAsked && c.contract.left > 0 && !c.contract.noTrade && <button className="ag-btn ag-btn--ghost cr-trade-btn" onClick={() => { setAskTrade(true); sfx('tap') }}>DEMAND A TRADE</button>}
       </div>
       {c.off?.news?.length > 0 && <div className="ag-card cr-news ag-pop" style={{ '--d': '90ms' }}><span className="ag-eyebrow">AROUND THE LEAGUE</span><ul className="cr-bul">{c.off.news.map((t, i) => <li key={i}>{t}</li>)}</ul></div>}
       <Lineup c={c} />
