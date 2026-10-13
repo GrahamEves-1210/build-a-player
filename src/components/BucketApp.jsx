@@ -848,6 +848,11 @@ export default function BucketApp() {
     // ran it back: from the result straight to the lobby (the squad's spots held, names in)
     else if (bt.phase === 'queue' && (page === 'blacktop-game' || page === 'blacktop-build')) { setPage('blacktop'); setBtChatOpen(false) }
   }, [bt.phase]) // eslint-disable-line
+  // left the lobby for another page (home, the menu): that's leaving it, the spot goes back
+  // (game pages are routed to the lobby above, so they don't count)
+  useEffect(() => {
+    if (bt.phase === 'queue' && !['blacktop', 'blacktop-game', 'blacktop-build'].includes(page)) (bt.leaveLobby ?? bt.leave)()
+  }, [page, bt.phase]) // eslint-disable-line
   // one live game per device: another tab or window already has one going
   useEffect(() => {
     if (bt.phase !== 'busy') return
