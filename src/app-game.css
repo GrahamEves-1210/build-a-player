@@ -871,6 +871,10 @@ html:is(.is-app, .app-look) .qb-reveal-card {
 html:is(.is-app, .app-look) .qb-reveal-card::before { display: none !important; }
 html:is(.is-app, .app-look) .qb-reveal-name { font-family: var(--ag-display) !important; font-size: 19px !important; font-weight: 400 !important; letter-spacing: .3px; text-transform: uppercase; line-height: 1 !important; }
 html:is(.is-app, .app-look) .qb-reveal-meta { color: rgba(255,255,255,.8) !important; font-family: var(--ag-body) !important; font-weight: 600 !important; }
+/* desktop: a smaller name that wraps to a second line before it ever cuts off */
+@media (min-width: 769px) {
+  html:is(.is-app, .app-look) .qb-reveal-name { font-size: 15px !important; letter-spacing: .2px; white-space: normal !important; overflow: hidden !important; text-overflow: clip !important; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow-wrap: anywhere; }
+}
 
 /* ── Trait picks ── */
 html:is(.is-app, .app-look) .attr-category-lbl {
