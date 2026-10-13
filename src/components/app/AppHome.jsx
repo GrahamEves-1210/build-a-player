@@ -331,7 +331,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
             <button className={`ag-blacktop ag-blacktop--menu ag-pop${btLive ? ' is-live' : ''}`} style={{ '--d': '250ms' }} onClick={onBlacktop}>
               <BlacktopArt />
               <span className="ag-live-dot" />
-              <span className="ag-bt-tags" aria-hidden="true"><span className="bt-mode-tag">1V1</span><span className="bt-mode-tag">2V2</span><span className="bt-mode-tag">3V3</span></span>
+              <span className="ag-bt-tags" aria-hidden="true"><span className="bt-mode-tag">2V2</span><span className="bt-mode-tag">3V3</span></span>
               <span className="ag-takeover-txt">
                 <span className="ag-eyebrow">{btLive ? (blacktop.phase === 'queue' ? `IN THE LOBBY · ${blacktop.queue}/6 SPOTS TAKEN` : blacktop.phase === 'build' ? 'LIVE · YOUR SQUAD IS BUILDING' : 'LIVE · GAME ON') : 'LIVE · FIRST TO 11'}</span>
                 <span className="ag-takeover-title">BLACKTOP</span>
