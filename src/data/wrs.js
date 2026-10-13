@@ -186,7 +186,7 @@ const _WRS = [
     attrs: { speed: 10, bodyControl: 4,  vertical: 7,  routeRunning: 2,  release: 3,  hands: 2,  awareness: 3,  size: 6,  afterCatch: 2  } },
   // LAR
   { name: 'Puka Nacua',          short: 'Nacua',       team: 'LAR', teamName: 'Los Angeles Rams',      skin: '#b07848', height: 74, weight: 202, starter: true,  captain: true,  number: 12,
-    attrs: { speed: 8,  bodyControl: 10,  vertical: 7,  routeRunning: 6,  release: 8,  hands: 10,  awareness: 9,  size: 8,  afterCatch: 10  } },
+    attrs: { speed: 8,  bodyControl: 10,  vertical: 8,  routeRunning: 8,  release: 9,  hands: 10,  awareness: 9,  size: 8,  afterCatch: 10  } },
   { name: 'Davante Adams',       short: 'Adams',       team: 'LAR', teamName: 'Los Angeles Rams',      skin: '#5e3c22', height: 73, weight: 215, starter: false, captain: true,  number: 17,
     attrs: { speed: 6,  bodyControl: 9, vertical: 6,  routeRunning: 11, release: 10, hands: 8, awareness: 10, size: 7,  afterCatch: 5  } },
   { name: 'Tutu Atwell',         short: 'Atwell',      team: 'LAR', teamName: 'Los Angeles Rams',        skin: '#5e3c22', height: 69, weight: 155, starter: false,  number: 8,
