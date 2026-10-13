@@ -4642,3 +4642,4 @@ html.is-app { --drop-chrome: calc(352px + env(safe-area-inset-top) + env(safe-ar
 .btc-p.is-me .btc-ring { outline: 2.5px solid #f5dc8a; outline-offset: 3px; border-radius: 50%; }
 .btc-p.is-me .btc-name { color: #f5dc8a !important; }
 .bt-practice { width: 100%; margin-top: 8px; }
+.btc-ring .avb-ring { display: none; }   /* no circle behind the icons on court */

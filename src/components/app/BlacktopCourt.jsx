@@ -243,7 +243,7 @@ export default function BlacktopCourt({ game, play, meId, photoFor, colorFor, av
                 {/* the overall over the head, and a reaction when they send one */}
                 {ovrFor && <span className="btc-ovr" style={{ background: col }}>{ovrFor(p)}</span>}
                 {bubbles?.[p.id] && <span key={bubbles[p.id]} className="btc-bubble">{bubbles[p.id]}</span>}
-                <div className="btc-ring" style={{ boxShadow: has ? `0 0 0 3px ${col}, 0 0 18px ${col}aa` : `0 0 0 1.5px ${col}99` }}>
+                <div className="btc-ring" style={{ boxShadow: has ? `0 0 0 3px ${col}, 0 0 18px ${col}aa` : 'none' }}>
                   {avatarFor?.(p) ?? <QBAvatar photo={photoFor?.(p) ?? null} team={p.build?.basketballIQ?.team ?? null} color={null} size={40} logoDir="/logos/nba/" faceCenter={p.build?.basketballIQ?.faceCenter} />}
                 </div>
                 {/* the name in its owner's look (color, effect, plate), same as everywhere else; bots plain */}

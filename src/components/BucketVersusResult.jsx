@@ -698,7 +698,7 @@ function CourtVisual({ play, myColor, oppColor, myName, oppName, possession, dis
                 <div key={who} className={`btc-p${has ? ' has-ball' : ''}${who === 'me' ? ' is-me' : ''}`} style={{ left: `${p.x}%`, top: `${p.y}%`, transition: tr, zIndex: has ? 5 : 3, '--pc': col }}>
                   {ovrs?.[who] != null && <span className="btc-ovr" style={{ background: col }}>{ovrs[who]}</span>}
                   {bubbles?.[who] && <span key={bubbles[who]} className="btc-bubble">{bubbles[who]}</span>}
-                  <div className="btc-ring" style={{ boxShadow: has ? `0 0 0 3px ${col}, 0 0 18px ${col}aa` : `0 0 0 1.5px ${col}99` }}>{av}</div>
+                  <div className="btc-ring" style={{ boxShadow: has ? `0 0 0 3px ${col}, 0 0 18px ${col}aa` : 'none' }}>{av}</div>
                   <span className="btc-name" style={{ color: col }}>{tagEl ?? firstName(nm).slice(0, 9)}</span>
                 </div>
               )
