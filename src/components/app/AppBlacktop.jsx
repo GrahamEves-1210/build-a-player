@@ -402,7 +402,7 @@ export function BlacktopGame({ bt, user, photoFor, onOpenChat, unread }) {
   const { game, match } = bt
   const [stage, setStage] = useState('reveal')
   const [idx, setIdx] = useState(0)
-  const [speed, setSpeed] = useState(1)
+  const speed = 1                            // online: everyone sees it at the same pace (no 2x)
   const fired = useRef(false)
   const plays = game?.plays ?? []
   const play = plays[idx]
@@ -480,8 +480,10 @@ export function BlacktopGame({ bt, user, photoFor, onOpenChat, unread }) {
   if (stage === 'result') {
     const won = game.winner === myTeam
     const mvp = match.players.find(p => p.vid === game.mvp)
-    const votes = bt.rematchVotes.size
-    const humans = match.players.filter(p => !p.bot).length
+    // on the live server, running it back is your squad's call (the other team decides for itself)
+    const pool = bt.server ? match.players.filter(p => !p.bot && p.team === myTeam) : match.players.filter(p => !p.bot)
+    const votes = pool.filter(p => bt.rematchVotes.has(p.vid)).length
+    const humans = pool.length
     return (
       <div className="ag-screen ag-screen--bucket bt-game">
         <div className="ag-screen-body">
@@ -505,9 +507,9 @@ export function BlacktopGame({ bt, user, photoFor, onOpenChat, unread }) {
             </div>
           ))}
           <div className="bt-result-actions ag-pop" style={{ '--d': '300ms' }}>
-            {humans > 1 && (
+            {(bt.server || humans > 1) && (
               <button className="ag-btn" onClick={() => { bt.voteRematch(); sfx('tap') }} disabled={bt.rematchVotes.has(bt.me.vid)}>
-                {bt.rematchVotes.has(bt.me.vid) ? `WAITING FOR SQUADS · ${votes}/${humans}` : `RUN IT BACK${votes ? ` · ${votes}/${humans}` : ''}`}
+                {bt.rematchVotes.has(bt.me.vid) ? `WAITING FOR ${bt.server ? 'YOUR SQUAD' : 'SQUADS'} · ${votes}/${humans}` : `RUN IT BACK${humans > 1 && votes ? ` · ${votes}/${humans}` : ''}`}
               </button>
             )}
             <button className="ag-btn ag-btn--ghost" onClick={bt.exit}>LEAVE THE BLACKTOP</button>
@@ -521,7 +523,7 @@ export function BlacktopGame({ bt, user, photoFor, onOpenChat, unread }) {
     <div className="ag-screen ag-screen--bucket bt-game bt-live">
       <div className="bt-board">
         <div className={`bt-board-side bt-t0${score[0] > score[1] ? ' is-lead' : ''}`}><span className="bt-board-name">{names[0]}{myTeam === 0 ? ' ★' : ''}</span><b>{score[0]}</b></div>
-        <div className="bt-board-mid"><span className="ag-eyebrow">FIRST TO 11</span><span className="bt-board-btns"><button className={`ag-chip${speed === 2 ? ' is-on' : ''}`} onClick={() => setSpeed(s => (s === 1 ? 2 : 1))}>{speed}×</button><button className={`ag-chip${showBuilds ? ' is-on' : ''}`} onClick={() => setShowBuilds(v => !v)}>BUILDS</button></span></div>
+        <div className="bt-board-mid"><span className="ag-eyebrow">FIRST TO 11</span><span className="bt-board-btns"><button className={`ag-chip${showBuilds ? ' is-on' : ''}`} onClick={() => setShowBuilds(v => !v)}>BUILDS</button></span></div>
         <div className={`bt-board-side bt-t1${score[1] > score[0] ? ' is-lead' : ''}`}><span className="bt-board-name">{names[1]}{myTeam === 1 ? ' ★' : ''}</span><b>{score[1]}</b></div>
       </div>
       {/* each player on court is their profile picture and username (the CPU fill-ins say CPU) */}

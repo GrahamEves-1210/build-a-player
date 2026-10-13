@@ -52,7 +52,7 @@ const WR_FIGURE_SCALE_MOBILE = 1.005
 const BUCKET_FIGURE_SCALE = 1.10
 // App, phone, basketball: the T-pose fills the width and the cards stack down
 // both sides below the arms (index.css / app-game.css size the cards to match)
-const APP_BKT = { scale: 1.0, cardIn: 4, cardW: 100, top: 0.34, bottom: 0.97, stub: 10 }
+const APP_BKT = { scale: 0.86, cardIn: 4, cardW: 86, top: 0.36, bottom: 0.95, stub: 8 }   // sized like the football figure's
 const DB_FIGURE_SCALE = 0.86
 
 // QB anchor positions
@@ -388,7 +388,7 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
   // Headshot only from basketballIQ slot for bucket builds
   const bucketPhoto = isBucket ? (build['basketballIQ']?.photo || null) : null
   // the figure scales that make it fill the build screen; a model fits its box as-is
-  const appBucket = IS_APP && isBucket && isMobile && !modelOnly
+  const appBucket = (IS_APP || APP_LOOK) && isBucket && isMobile && !modelOnly
   // (the model keeps the build screen's bucket scale: the jersey overlay and the face
   // are drawn against the figure at that size, so changing it alone splits the layers)
   const bucketScale = appBucket ? APP_BKT.scale : BUCKET_FIGURE_SCALE

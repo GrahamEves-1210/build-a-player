@@ -57,8 +57,29 @@ export class Lobby {
     this.env = env
     this.conns = new Map()     // ws → player
     this.spots = {}            // slotId → { ...player, at }
+    this.held = {}             // slotId → { vid, until } a squad running it back, on its way
   }
   async fetch(req) {
+    const url = new URL(req.url)
+    // a squad running it back: hold a side for them (both guards and the big together)
+    if (url.pathname === '/hold' && req.method === 'POST') {
+      const { players } = await req.json()
+      const now = Date.now()
+      for (const [id, h] of Object.entries(this.held)) if (h.until < now) delete this.held[id]
+      const free = sl => !this.spots[sl.id] && !this.held[sl.id]
+      for (const team of [0, 1]) {
+        const side = SLOTS.filter(sl => sl.team === team && free(sl))
+        const plan = []
+        const left = [...side]
+        for (const p of players) { const i = left.findIndex(sl => sl.pos === p.pos); if (i < 0) break; plan.push([left[i], p]); left.splice(i, 1) }
+        if (plan.length === players.length) {
+          for (const [sl, p] of plan) this.held[sl.id] = { vid: p.vid, until: now + 60000 }
+          this.broadcast(this.state())
+          return new Response(JSON.stringify({ ok: true }))
+        }
+      }
+      return new Response(JSON.stringify({ ok: false }))
+    }
     const [client, server] = Object.values(new WebSocketPair())
     server.accept()
     server.addEventListener('message', e => this.onMessage(server, e.data))
@@ -67,7 +88,10 @@ export class Lobby {
     return new Response(null, { status: 101, webSocket: client })
   }
   state() {
-    return { t: 'lobby', spots: Object.fromEntries(SLOTS.map(sl => [sl.id, this.spots[sl.id] ? pub(this.spots[sl.id]) : null])), here: [...this.conns.values()].map(pub) }
+    const now = Date.now()
+    // a spot held for a squad on its way shows as taken (it's theirs)
+    const show = sl => (this.spots[sl.id] ? pub(this.spots[sl.id]) : this.held[sl.id] && this.held[sl.id].until > now ? { vid: this.held[sl.id].vid, name: 'Coming back…', uid: null, cos: null } : null)
+    return { t: 'lobby', spots: Object.fromEntries(SLOTS.map(sl => [sl.id, show(sl)])), here: [...this.conns.values()].map(pub) }
   }
   broadcast(msg) { for (const ws of this.conns.keys()) send(ws, msg) }
   async onMessage(ws, data) {
@@ -77,12 +101,18 @@ export class Lobby {
       // one connection a player: a reconnect replaces the old one
       for (const [w, q] of this.conns) if (q.vid === p.vid && w !== ws) { this.conns.delete(w); try { w.close(1000, 'replaced') } catch {} }
       this.conns.set(ws, p)
-      return this.broadcast(this.state())
+      // back from a game with the squad: straight into the spot held for them
+      const mine = Object.entries(this.held).find(([, h]) => h.vid === p.vid && h.until > Date.now())
+      if (mine) { delete this.held[mine[0]]; this.spots[mine[0]] = { ...p, at: Date.now() } }
+      this.broadcast(this.state())
+      if (mine && SLOTS.every(sl => this.spots[sl.id])) await this.makeMatch()
+      return
     }
     const me = this.conns.get(ws); if (!me) return
     if (m.t === 'seat') {
       const want = SLOTS.find(sl => sl.id === m.slot) ? m.slot : null
-      if (want && this.spots[want] && this.spots[want].vid !== me.vid) return send(ws, { t: 'bumped' })
+      const heldFor = want && this.held[want] && this.held[want].until > Date.now() ? this.held[want].vid : null
+      if (want && ((this.spots[want] && this.spots[want].vid !== me.vid) || (heldFor && heldFor !== me.vid))) return send(ws, { t: 'bumped' })
       for (const id of Object.keys(this.spots)) if (this.spots[id].vid === me.vid) delete this.spots[id]
       if (want) this.spots[want] = { ...me, at: Date.now() }
       this.broadcast(this.state())
@@ -233,7 +263,7 @@ export class Room {
     if (a) this.clear(a.timer)
     this.broadcast({ t: 'lock', pn, calls: m.locks[pn] })
   }
-  onMessage(ws, data) {
+  async onMessage(ws, data) {
     const msg = parse(data); if (!msg) return
     // a room the server no longer has (everyone left and it was cleared): over
     if (!this.m) { if (msg.t === 'hello') { send(ws, { t: 'gone' }); try { ws.close(1000, 'no game') } catch {} } return }
@@ -281,18 +311,17 @@ export class Room {
       case 'typing': { for (const [w, v] of this.conns) { const p = m.players.find(x => x.vid === v); if (p?.team === me.team && v !== vid) send(w, { t: 'typing', from: vid, name: me.name }) } return }
       case 'done': { if (m.phase === 'game') m.phase = 'result'; return }
       case 'rematch': {
+        // running it back is a squad thing: when everyone on my team who's still
+        // here has voted, the lobby holds a side for us and we go back together
         if (m.phase === 'build') return
         m.votes.add(vid)
         this.broadcast({ t: 'votes', votes: [...m.votes] })
-        const live = this.humans().filter(p => this.here().includes(p.vid))
-        if (live.length && live.every(p => m.votes.has(p.vid))) {
-          m.round++; m.seed = `${m.code}r${m.round}`
-          // the ones who left are CPUs from here on
-          const here = new Set(this.here())
-          m.players = m.players.map(p => (p.bot || here.has(p.vid) ? p : { ...p, bot: true, vid: `bot-${m.code}-${p.slot}-${m.round}`, name: BOT_NAMES[(m.round * 3 + SLOTS.findIndex(s => s.id === p.slot)) % BOT_NAMES.length], uid: null, cos: null }))
-          this.startBuild()
-          this.broadcast(this.snapshot())
-        }
+        const squad = this.humans().filter(p => p.team === me.team && this.here().includes(p.vid))
+        if (!squad.length || !squad.every(p => m.votes.has(p.vid))) return
+        if (m.practice) { for (const [w, v] of this.conns) if (squad.some(p => p.vid === v)) send(w, { t: 'requeue', practice: true }); return }
+        const res = await this.env.LOBBY.get(this.env.LOBBY.idFromName('blacktop')).fetch('https://lobby/hold', { method: 'POST', body: JSON.stringify({ players: squad.map(p => ({ vid: p.vid, pos: p.pos })) }) })
+        const ok = (await res.json().catch(() => ({}))).ok
+        for (const [w, v] of this.conns) if (squad.some(p => p.vid === v)) send(w, { t: 'requeue', held: !!ok })
         return
       }
     }

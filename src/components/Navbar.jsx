@@ -359,10 +359,12 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
         </div>
       )}
 
-      {gradesToggle && <GradesSwitch />}
+      {/* the app has no right-hand group: the switch stands on its own; the website keeps it with the others */}
+      {gradesToggle && IS_APP && <GradesSwitch />}
       <div className="nav-right" ref={ref}>
         {MORE_SHEET ? (
           <>
+            {gradesToggle && !IS_APP && <GradesSwitch />}
             {/* desktop: sound on / off right here (the phone has it in More) */}
             <SoundToggle className="nav-sound-btn" />
             {/* the app's settings-and-more button (opens the More sheet) */}

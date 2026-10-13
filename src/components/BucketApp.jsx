@@ -1171,6 +1171,7 @@ export default function BucketApp() {
   // Live games lock you in: every way out (dock, More, back, reload) asks first
   // and leaving forfeits (lib/liveLock.js). 1v1 keeps its own sheet and back trap.
   const versusLive = !!versusRoom && page === 'versus-game'
+  const btGameLive = page === 'blacktop-game' && bt.phase === 'game'
   useEffect(() => {
     if (competeOn) {
       setLiveLock({
@@ -1178,9 +1179,10 @@ export default function BucketApp() {
         body: `The pool plays on without you. You finish last: ${FORFEIT_RATING} rating, no XP or coins, and it counts as a loss.`,
         forfeit: () => { cp.forfeit(); setGameMode(null); setBuild({}); setSavedSpinResult(null) },
       })
-    } else if (liveBuild && bt.match) {
+    } else if ((liveBuild || btGameLive) && bt.match && !bt.match.bots) {
+      // the build and the game itself (a practice run against CPUs isn't locked)
       setLiveLock({
-        title: 'Leave the run?',
+        title: btGameLive ? 'Leave the game?' : 'Leave the run?',
         body: 'Your squad plays the game a player short. It counts as a loss on your Blacktop record and your online rating.',
         forfeit: () => { window.dispatchEvent(new CustomEvent('bap:blacktop', { detail: { won: false, mvp: false, line: null, bots: !!bt.match?.bots, forfeit: true } })); bt.leave() },
       })
@@ -1188,7 +1190,7 @@ export default function BucketApp() {
       setLiveLock({ ownBack: true, ask: go => setLeaveConfirm({ fn: () => { handleReset(); go?.() } }) })
     } else return
     return () => setLiveLock(null)
-  }, [competeOn, liveBuild && !!bt.match, versusLive]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [competeOn, liveBuild && !!bt.match, btGameLive, versusLive]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Intercept browser back while in an active versus game
   useEffect(() => {

@@ -84,6 +84,7 @@ export function useBlacktopServer({ enabled, user, position, pools, types, build
   useEffect(() => { if (!enabled) leave() }, [enabled, leave])
   useEffect(() => () => closeAll(), [])
 
+  const joinRef = useRef(null)
   // ── The room ───────────────────────────────────────────────────────────────
   const enterRoom = useCallback((code, players, practice) => {
     lobbyRef.current?.close(); lobbyRef.current = null
@@ -121,6 +122,12 @@ export function useBlacktopServer({ enabled, user, position, pools, types, build
       if (m.t === 'typing') return setTypingFrom(t => ({ ...t, [m.from]: { name: m.name, ts: Date.now() } }))
       if (m.t === 'votes') return setVotes(new Set(m.votes ?? []))
       if (m.t === 'gone') { leave(); onExit?.() }
+      // my squad ran it back: back to the lobby, where our spots are held (practice: a new one)
+      if (m.t === 'requeue') {
+        roomRef.current?.close(); roomRef.current = null
+        setFinal(null); setLocks({}); setMyCalls({}); setVotes(new Set()); arrived.current = new Set()
+        joinRef.current?.(!!m.practice)
+      }
     }, setLink)
   }, [leave, onExit])
 
@@ -141,6 +148,7 @@ export function useBlacktopServer({ enabled, user, position, pools, types, build
     }, setLink)
     if (practice) setTimeout(() => lobbyRef.current?.send({ t: 'practice', pos: meRef.current.pos }), 600)
   }, [enabled, enterRoom])
+  joinRef.current = join
   const seat = useCallback(slotId => lobbyRef.current?.send({ t: 'seat', slot: slotId }), [])
 
   useEffect(() => {

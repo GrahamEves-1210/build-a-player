@@ -2406,20 +2406,20 @@ html.is-app .vmb-title { font-family: var(--ag-font) !important; letter-spacing:
 /* ═══ Build side, basketball (app, phone): the figure fills the width, the
    cards stack down both sides below the arms (Silhouette.jsx APP_BKT) ═══════ */
 @media (max-width: 768px) {
-  html.is-app .mobile-build .sil-wrap.sil-wrap--app-bkt { width: 100%; margin: 0; }
-  html.is-app .sil-wrap--app-bkt .cz-card { width: 100px !important; transform: translateY(-50%) scale(1) !important; border-radius: 9px; border: 1px solid rgba(249,115,22,.35); background: rgba(10,7,5,.78); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); box-shadow: 0 6px 18px rgba(0,0,0,.45); }
-  html.is-app .sil-wrap--app-bkt .cz-left  { left: 4px !important; }
-  html.is-app .sil-wrap--app-bkt .cz-right { right: 4px !important; }
-  html.is-app .sil-wrap--app-bkt .cz-left.cz-invisible, html.is-app .sil-wrap--app-bkt .cz-left.cz-hidden { transform: translateY(-50%) translateX(-8px) scale(.96) !important; }
-  html.is-app .sil-wrap--app-bkt .cz-right.cz-invisible, html.is-app .sil-wrap--app-bkt .cz-right.cz-hidden { transform: translateY(-50%) translateX(8px) scale(.96) !important; }
-  html.is-app .sil-wrap--app-bkt .cz-tag { font-family: var(--ag-font) !important; font-size: 12.5px !important; font-weight: 400 !important; letter-spacing: 1.2px !important; padding: 5px 4px 4px !important; line-height: 1 !important; }
-  html.is-app .sil-wrap--app-bkt .cz-type-playmaking .cz-tag { font-size: 12.5px !important; }
-  html.is-app .sil-wrap--app-bkt .cz-drop-hint { height: 24px !important; margin: 4px !important; border-radius: 6px; }
-  html.is-app .sil-wrap--app-bkt .cz-player-drop { display: flex; align-items: center; gap: 6px; padding: 5px 6px !important; }
-  html.is-app .sil-wrap--app-bkt .cz-headshot, html.is-app .sil-wrap--app-bkt .qb-avatar { width: 30px !important; height: 30px !important; flex: 0 0 30px; }
-  html.is-app .sil-wrap--app-bkt .cz-player-drop { padding: 3px 5px !important; }
-  html.is-app .sil-wrap--app-bkt .cz-qb-name { font-size: 11px !important; line-height: 1.15 !important; padding: 0 !important; color: #fdba74 !important; font-weight: 700; }
-  html.is-app .sil-wrap--app-bkt .cz-dot { width: 11px !important; height: 11px !important; }
+  html:is(.is-app, .app-look) .mobile-build .sil-wrap.sil-wrap--app-bkt { width: 100%; margin: 0; }
+  html:is(.is-app, .app-look) .sil-wrap--app-bkt .cz-card { width: 86px !important; transform: translateY(-50%) scale(1) !important; border-radius: 9px; border: 1px solid rgba(249,115,22,.35); background: rgba(10,7,5,.78); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); box-shadow: 0 6px 18px rgba(0,0,0,.45); }
+  html:is(.is-app, .app-look) .sil-wrap--app-bkt .cz-left  { left: 4px !important; }
+  html:is(.is-app, .app-look) .sil-wrap--app-bkt .cz-right { right: 4px !important; }
+  html:is(.is-app, .app-look) .sil-wrap--app-bkt .cz-left.cz-invisible, html:is(.is-app, .app-look) .sil-wrap--app-bkt .cz-left.cz-hidden { transform: translateY(-50%) translateX(-8px) scale(.96) !important; }
+  html:is(.is-app, .app-look) .sil-wrap--app-bkt .cz-right.cz-invisible, html:is(.is-app, .app-look) .sil-wrap--app-bkt .cz-right.cz-hidden { transform: translateY(-50%) translateX(8px) scale(.96) !important; }
+  html:is(.is-app, .app-look) .sil-wrap--app-bkt .cz-tag { font-family: var(--ag-font) !important; font-size: 10.5px !important; font-weight: 400 !important; letter-spacing: 1px !important; padding: 4px 3px 3px !important; line-height: 1 !important; }
+  html:is(.is-app, .app-look) .sil-wrap--app-bkt .cz-type-playmaking .cz-tag { font-size: 10.5px !important; }
+  html:is(.is-app, .app-look) .sil-wrap--app-bkt .cz-drop-hint { height: 20px !important; margin: 4px !important; border-radius: 6px; }
+  html:is(.is-app, .app-look) .sil-wrap--app-bkt .cz-player-drop { display: flex; align-items: center; gap: 6px; padding: 5px 6px !important; }
+  html:is(.is-app, .app-look) .sil-wrap--app-bkt .cz-headshot, html:is(.is-app, .app-look) .sil-wrap--app-bkt .qb-avatar { width: 26px !important; height: 26px !important; flex: 0 0 26px; }
+  html:is(.is-app, .app-look) .sil-wrap--app-bkt .cz-player-drop { padding: 3px 5px !important; }
+  html:is(.is-app, .app-look) .sil-wrap--app-bkt .cz-qb-name { font-size: 10px !important; line-height: 1.15 !important; padding: 0 !important; color: #fdba74 !important; font-weight: 700; }
+  html:is(.is-app, .app-look) .sil-wrap--app-bkt .cz-dot { width: 11px !important; height: 11px !important; }
 }
 
 /* ═══ Position picker (top bar): an app card anchored under the pill — never
