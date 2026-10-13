@@ -345,7 +345,7 @@ const ageOf = (sport, name, yrs = 0) => (born(sport, name) ? FIRST_SEASON - born
 const RETIRE_AT = { qb: 41, rb: 33, wr: 35, te: 35, ol: 36, db: 35, dl: 35, lb: 35, guard: 38, big: 38 }
 // how many seasons past the first a roster is for (in the offseason, the one coming up)
 const rosterYrs = c => Math.max(0, (c.season ?? FIRST_SEASON) + (c.phase === 'offseason' ? 1 : 0) - FIRST_SEASON)
-const man = (S, pos, p, yrs = 0) => ({ name: p.name, pos, ovr: S.realOvr(pos, p), age: ageOf(S.id, p.name, yrs), photo: S.photo(p.name), slot: p.pos ?? null, from: p.team })
+const man = (S, pos, p, yrs = 0) => ({ name: p.name, pos, ovr: S.realOvr(pos, p), age: ageOf(S.id, p.name, yrs), photo: S.photo(p.name), slot: p.pos ?? p.subpos ?? null, from: p.team })
 const byOvr = (a, b) => b.ovr - a.ovr
 const avgOvr = list => (list.length ? list.reduce((s, p) => s + p.ovr, 0) / list.length : 72)
 // A team's real roster (the depth the lineup needs, the five starting linemen in football)
@@ -392,26 +392,36 @@ const rosterOf = (c, short) => makeRoster(short, c.sport, rosterYrs(c), c.gone ?
 const rosterFor = (c, short = c.team) => (c.roster?.team === short ? c.roster : rosterOf(c, short))
 // Where you stand at your spot: the group best-first with you in it. Last
 // year's starter keeps the job in a tie (+2), a starter guarantee keeps it.
+// A DB's spot: a corner or a safety (his build says which); the depth chart is that spot's
+export const dbSpot = c => (c.build?.size?.subpos === 's' ? 's' : 'cb')
+// (a corner or a safety: on the player, else from the DB data by name, for rosters saved before it was kept)
+const DB_SPOT = Object.fromEntries(DBS.map(p => [p.name, p.subpos === 's' ? 's' : 'cb']))
+const spotOf = p => (p.slot === 's' || p.slot === 'cb' ? p.slot : DB_SPOT[p.name] ?? 'cb')
 export function depthChart(c, roster = c.roster ?? (c.team ? rosterOf(c, c.team) : null)) {
   const S = sportOf(c)
-  const group = (roster?.[c.pos] ?? []).filter(p => p.name !== c.name)
+  // DBs: only the players at his spot (corners with corners, safeties with safeties), two start
+  const db = c.pos === 'db'
+  const group = (roster?.[c.pos] ?? []).filter(p => p.name !== c.name && (!db || spotOf(p) === dbSpot(c)))
   const me = { name: c.name, pos: c.pos, ovr: c.ovr, age: c.age, you: true }
   // last year's starter keeps it in a tie; the coaches trust a good name (+1) and doubt a bad one (−1)
   const trust = (c.rep ?? 5) >= 8 ? 1 : (c.rep ?? 5) <= 3 ? -1 : 0
   const edge = p => p.ovr + (p.you ? (c.contract?.starter ? 99 : (c.lastRole === 'Starter' ? 2 : 0) + trust) : 0)
   const all = [...group, me].sort((a, b) => edge(b) - edge(a))
   const idx = all.findIndex(p => p.you)
-  return { all, idx, starter: idx < S.starters[c.pos], ahead: all.slice(0, idx), label: S.depthLabel(c.pos, idx + 1) }
+  const starters = db ? 2 : S.starters[c.pos]
+  return { all, idx, starters, starter: idx < starters, ahead: all.slice(0, idx), label: db ? `${dbSpot(c) === 's' ? 'S' : 'CB'}${idx + 1}` : S.depthLabel(c.pos, idx + 1) }
 }
 // The starters, you in your spot if you've won it
 export function lineup(c, roster = c.roster ?? (c.team ? rosterOf(c, c.team) : null)) {
   const S = sportOf(c)
   const dc = depthChart(c, roster)
   const out = {}
-  for (const g of S.groups) out[g] = g === c.pos ? dc.all.slice(0, S.starters[g]) : (roster?.[g] ?? []).slice(0, S.starters[g])
+  for (const g of S.groups) out[g] = g === c.pos ? dc.all.slice(0, dc.starters) : (roster?.[g] ?? []).slice(0, S.starters[g])
+  // DBs: his spot's two starters (him among them if he's won it) and the other spot's two
+  if (c.pos === 'db') out.db = [...dc.all.slice(0, 2).map(p => ({ ...p, slot: p.you ? dbSpot(c) : spotOf(p) })), ...(roster?.db ?? []).filter(p => p.name !== c.name && spotOf(p) !== dbSpot(c)).slice(0, 2).map(p => ({ ...p, slot: spotOf(p) }))]
   // everyone not starting, all positions, best first (basketball's bench)
   const reserves = S.groups.flatMap(g => (g === c.pos ? dc.all : roster?.[g] ?? []).slice(S.starters[g])).sort((a, b) => b.ovr - a.ovr)
-  return { ...out, bench: dc.all.slice(S.starters[c.pos]), reserves, depth: dc }
+  return { ...out, bench: dc.all.slice(dc.starters), reserves, depth: dc }
 }
 // Grades (0–11) for the pieces of the team around you, from the roster you'd play with
 export function teamFit(short, pos, { roster = null, league = null, name = null, sport = 'nfl', yrs = 0, gone = [] } = {}) {
@@ -731,7 +741,7 @@ export const goalsFor = c => {
   const dc = c.team ? depthChart(c) : null
   if (!dc || dc.starter) return full
   // football backup in the rotation (not a QB): the season's goals at his share of the work
-  const u = !S.isBucket ? backupShare(c.pos, dc.idx - S.starters[c.pos]) : 0
+  const u = !S.isBucket ? backupShare(c.pos, dc.idx - dc.starters) : 0
   if (u > 0) return raw.map(([k, verb, n, unit]) => { if (k === 'wins') return full.find(g => g.k === k); const m = Math.max(1, Math.round(n * u / (n >= 100 ? 25 : 1)) * (n >= 100 ? 25 : 1)); return { k, label: `${verb} ${m.toLocaleString()} ${m === 1 ? unit.replace(/(e)?s$/, '') : unit}`, n: m } })
   if (S.isBucket) return raw.map(([k, verb, n, unit]) => k === 'wins' ? full.find(g => g.k === k) : { k, label: `${verb} ${r1(n * 0.6)} ${unit} off the bench`, n: r1(n * 0.6) })
   const per = raw.filter(([k, , n]) => k !== 'wins' && n / 17 >= 1).slice(0, 2).map(([k, verb, n, unit]) => { const m = n / 17 >= 10 ? Math.round(n / 17) : r1(n / 17); return { k, per: 'start', label: `${verb} ${m.toLocaleString()} ${unit} a start`, n: m } })
@@ -782,7 +792,7 @@ export function startSeason(c) {
     const frac = gap <= 2 ? 0.18 + rr() * 0.22 : gap <= 6 ? (rr() < 0.5 ? 0.4 + rr() * 0.35 : 1) : (rr() < 0.45 ? 0.35 + rr() * 0.45 : 1)
     weeks = Math.max(1, Math.min(T, Math.round(frac * T)))
     // everyone but a quarterback still plays until then, at a share of the snaps
-    const u = backupShare(c.pos, dc.idx - S.starters[c.pos])
+    const u = backupShare(c.pos, dc.idx - dc.starters)
     if (u > 0) share = { u, weeks }
   }
   const simFn = share ? shareSim(plain, share.u, share.weeks) : plain

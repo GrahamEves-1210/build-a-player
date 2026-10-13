@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   POS_LABEL, POS_NAME, POS_ATTR, OFFENSE_POS, pastCareers, saveCareer, clearCareer, stockOf, answerInterview, setupInterviews, runDraft,
   startSeason, resumeSeason, advanceWeek, chooseMoment, resolveInjury, finishRegular, playoffRound, bookSeason, recordCombine, spendDev, demandTrade, nextSeason,
-  OFF_STEPS, offStep, campDrill, CAMP_LEGACY, lineup, depthChart, gradeOf, gradeOfOvr, ovrGradeVal, SPORT, sportOf,
+  OFF_STEPS, offStep, campDrill, CAMP_LEGACY, dbSpot, lineup, depthChart, gradeOf, gradeOfOvr, ovrGradeVal, SPORT, sportOf,
   openTalks, ask, closeTalks, acceptTalks, ASKS, askOdds, leverageOf,
   retire, canRetire, mustRetire, careerTotals, legacyOf, LEGACY_TIERS, ALL_TIME, STAT_LABEL, HEADLINE_STATS, careerCard, AWARD_NAME, MAX_SEASONS, retireReason, goalsFor, compsFor, stockText, pickText, loadSlots, CAREER_SLOTS, maxedTrait,
 } from '../../lib/career'
@@ -383,8 +383,7 @@ function Lineup({ c }) {
     <div className="ag-card crl ag-pop">
       <div className="ag-card-head"><span className="ag-eyebrow">{c.fit?.name?.toUpperCase()} · {S.isBucket ? 'STARTING FIVE' : S.side?.[c.pos] === 'def' ? 'STARTING SECONDARY' : 'STARTING OFFENSE'}</span><span className={`crl-role${dc.starter ? ' is-on' : ''}`}>{S.isBucket ? (dc.starter ? 'STARTER' : 'BENCH') : `${dc.starter ? 'STARTER' : 'BACKUP'} · ${dc.label}`}</span></div>
       {S.side?.[c.pos] === 'def' ? (
-        // the secondary in a base look, offense coming at it from the top: corners
-        // out wide on the line, safeties deep (the front seven fills in when DL and LB arrive)
+        // the secondary: corners out wide on the line, safeties deep
         <div className="crl-field crl-field--nfl crl-field--def">
           <span className="crl-los" aria-hidden="true" />
           {(() => {
@@ -395,7 +394,6 @@ function Lineup({ c }) {
             return <>
               <span className="crl-at" style={{ '--c': 1, '--r': 1, '--s': 2 }}><Man p={cbs[0]} slot="CB" /></span>
               <span className="crl-at" style={{ '--c': 8, '--r': 1, '--s': 2 }}><Man p={cbs[1]} slot="CB" /></span>
-              <span className="crl-front" aria-hidden="true">FRONT SEVEN</span>
               <span className="crl-at" style={{ '--c': 3, '--r': 3 }}><Man p={ss[0]} slot="S" /></span>
               <span className="crl-at" style={{ '--c': 7, '--r': 3 }}><Man p={ss[1]} slot="S" /></span>
             </>
@@ -429,9 +427,9 @@ function Lineup({ c }) {
       </div>
       ) : (
       <div className="crl-bench">
-        <span className="ag-eyebrow">DEPTH CHART · {POS_NAME[c.pos].toUpperCase()}</span>
+        <span className="ag-eyebrow">DEPTH CHART · {c.pos === 'db' ? (dbSpot(c) === 's' ? 'SAFETY' : 'CORNERBACK') : POS_NAME[c.pos].toUpperCase()}</span>
         {dc.all.map((p, i) => (
-          <span key={p.name + i} className={`crl-depth${p.you ? ' is-you' : ''}`}><i>{S.isBucket ? i + 1 : `${POS_LABEL[c.pos]}${i + 1}`}</i><b>{p.name}</b><small>{p.ovr} OVR · age {p.age}</small></span>
+          <span key={p.name + i} className={`crl-depth${p.you ? ' is-you' : ''}`}><i>{S.isBucket ? i + 1 : `${c.pos === 'db' ? (dbSpot(c) === 's' ? 'S' : 'CB') : POS_LABEL[c.pos]}${i + 1}`}</i><b>{p.name}</b><small>{p.ovr} OVR · age {p.age}</small></span>
         ))}
       </div>
       )}
@@ -685,7 +683,7 @@ function Moves({ c, setCareer, forced }) {
         </div>
       )}
       <div className={`ag-card cr-depthnote ag-pop${dc.starter ? ' is-on' : ''}`} style={{ '--d': '70ms' }}>
-        <span className="ag-eyebrow">{c.sport === 'bucket' ? 'ROLE' : `DEPTH CHART · ${POS_LABEL[c.pos]}`}</span>
+        <span className="ag-eyebrow">{c.sport === 'bucket' ? 'ROLE' : `DEPTH CHART · ${c.pos === 'db' ? (dbSpot(c) === 's' ? 'S' : 'CB') : POS_LABEL[c.pos]}`}</span>
         <p>{dc.starter ? `${c.name} goes into camp as a starter.` : `${c.name} goes into camp ${c.sport === 'bucket' ? 'coming off the bench' : `as ${dc.label}`}, behind ${dc.ahead[dc.ahead.length - 1].name}.`}</p>
         {!forced && !c.tradeAsked && c.contract.left > 0 && !c.contract.noTrade && <button className="ag-btn ag-btn--ghost cr-trade-btn" onClick={() => { if (confirm('Demand a trade? Reputation takes a hit, and the team can say no.')) { setCareer(demandTrade(c)); sfx('deny') } }}>DEMAND A TRADE</button>}
       </div>
