@@ -4234,6 +4234,15 @@ html.app-look .ag-blacktop--menu:hover .ag-bt-tags .bt-mode-tag:last-child { tra
 .crl-field--nfl .crl-init { font-size: 11px; }
 .crl-field--nfl .crl-man b { font-size: 11px; }
 .crl-field--nfl .crl-man small { font-size: 10px; letter-spacing: .8px; }
+/* the starting offense: three labelled rows, each man wide enough for his name */
+.crl-field--off3 { gap: 6px; padding: 10px 6px 12px; }
+.crl-field--off3 .crl-grp { font-family: var(--ag-font); font-size: 10.5px; letter-spacing: 2px; color: var(--ag-muted); text-align: center; }
+.crl-field--off3 .crl-grp:not(:first-child) { margin-top: 4px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,.08); }
+.crl-field--off3 .crl-row { gap: 6px; }
+.crl-field--off3 .crl-row > .crl-man { flex: 0 1 72px; }
+.crl-field--off3 .crl-face { width: 40px; height: 40px; }
+.crl-field--off3 .crl-man b { font-size: 11.5px; line-height: 1.15; white-space: normal; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow-wrap: anywhere; }
+.crl-field--off3 .crl-row:has(> :nth-child(2):last-child) > .crl-man { flex-basis: 110px; }
 .crl-los { grid-column: 1 / -1; grid-row: 1; align-self: end; height: 2px; margin-bottom: -5px; background: rgba(255,255,255,.28); border-radius: 1px; }
 /* the user's avatar is the face itself: no plate or ring behind it */
 .crl-man.is-you .crl-face { background: none; border-color: transparent; box-shadow: none; }

@@ -322,7 +322,7 @@ function Comp({ c }) {
         <span className="cr-comp-name"><b>{top.name}</b><small>{era(top)}</small></span>
       </div>
       <div className="cr-comp-grid">
-        {[0, 1].map(i => <span key={`h${i}`} className="cr-comp-row cr-comp-row--head"><small /><em className="is-you">{nick(c.name)}</em><em>{nick(top.name)}</em></span>)}
+        {[0, 1].map(i => <span key={`h${i}`} className="cr-comp-row cr-comp-row--head"><small /><em className="is-you">YOU</em><em>PRO</em></span>)}
         {c.types.map(t => {
           const mine = c.build[t]?.val ?? 0, his = top.attrs[t]
           return (
@@ -383,19 +383,18 @@ function Lineup({ c }) {
     <div className="ag-card crl ag-pop">
       <div className="ag-card-head"><span className="ag-eyebrow">{c.fit?.name?.toUpperCase()} · {S.isBucket ? 'STARTING FIVE' : S.side?.[c.pos] === 'def' ? 'STARTING SECONDARY' : 'STARTING OFFENSE'}</span><span className={`crl-role${dc.starter ? ' is-on' : ''}`}>{S.isBucket ? (dc.starter ? 'STARTER' : 'BENCH') : `${dc.starter ? 'STARTER' : 'BACKUP'} · ${dc.label}`}</span></div>
       {S.side?.[c.pos] === 'def' ? (
-        // the secondary: corners out wide on the line, safeties deep
-        <div className="crl-field crl-field--nfl crl-field--def">
-          <span className="crl-los" aria-hidden="true" />
+        // the secondary: the corners, then the safeties
+        <div className="crl-field crl-field--off3">
           {(() => {
             const mySlot = c.build?.size?.subpos === 's' ? 's' : 'cb'
             const db = (L.db ?? []).map(p => ({ ...p, slot: p.you ? mySlot : p.slot === 's' ? 's' : 'cb' }))
             const cbs = db.filter(p => p.slot === 'cb'), ss = db.filter(p => p.slot === 's')
             while (cbs.length > 2) ss.push(cbs.pop()); while (ss.length > 2) cbs.push(ss.pop())
             return <>
-              <span className="crl-at" style={{ '--c': 1, '--r': 1, '--s': 2 }}><Man p={cbs[0]} slot="CB" /></span>
-              <span className="crl-at" style={{ '--c': 8, '--r': 1, '--s': 2 }}><Man p={cbs[1]} slot="CB" /></span>
-              <span className="crl-at" style={{ '--c': 3, '--r': 3 }}><Man p={ss[0]} slot="S" /></span>
-              <span className="crl-at" style={{ '--c': 7, '--r': 3 }}><Man p={ss[1]} slot="S" /></span>
+              <span className="crl-grp">CORNERBACKS</span>
+              <div className="crl-row"><Man p={cbs[0]} slot="CB" /><Man p={cbs[1]} slot="CB" /></div>
+              <span className="crl-grp">SAFETIES</span>
+              <div className="crl-row"><Man p={ss[0]} slot="S" /><Man p={ss[1]} slot="S" /></div>
             </>
           })()}
         </div>
@@ -405,17 +404,15 @@ function Lineup({ c }) {
           <div className="crl-row">{L.big.map(p => <Man key={p.name} p={p} slot={p.slot ?? 'F/C'} />)}</div>
         </div>
       ) : (
-        // 11 personnel: split end, the line with the tight end on the right,
-        // flanker wide right, slot off the ball, QB under center, back behind him
-        <div className="crl-field crl-field--nfl crl-field--off">
-          <span className="crl-at" style={{ '--c': 1, '--r': 1 }}><Man p={L.wr[0]} slot="WR" /></span>
-          {L.ol.map((p, i) => <span key={p.name} className="crl-at" style={{ '--c': 3 + i, '--r': 1 }}><Man p={p} slot={p.slot ?? ['LT', 'LG', 'C', 'RG', 'RT'][i]} /></span>)}
-          {/* a gap between the right tackle and the tight end: he's not part of the line */}
-          <span className="crl-at" style={{ '--c': 9, '--r': 1 }}><Man p={L.te[0]} slot="TE" /></span>
-          <span className="crl-at" style={{ '--c': 10, '--r': 1 }}><Man p={L.wr[1]} slot="WR" /></span>
-          <span className="crl-at" style={{ '--c': 2, '--r': 2 }}><Man p={L.wr[2]} slot="SLOT" /></span>
-          <span className="crl-at" style={{ '--c': 5, '--r': 2 }}><Man p={L.qb[0]} slot="QB" /></span>
-          <span className="crl-at" style={{ '--c': 5, '--r': 3 }}><Man p={L.rb[0]} slot="RB" /></span>
+        // 11 personnel in three rows, room for every name: the receivers, the
+        // line, then the backfield
+        <div className="crl-field crl-field--off3">
+          <span className="crl-grp">RECEIVERS</span>
+          <div className="crl-row"><Man p={L.wr[0]} slot="WR" /><Man p={L.wr[2]} slot="SLOT" /><Man p={L.te[0]} slot="TE" /><Man p={L.wr[1]} slot="WR" /></div>
+          <span className="crl-grp">THE LINE</span>
+          <div className="crl-row">{L.ol.map((p, i) => <Man key={p.name} p={p} slot={p.slot ?? ['LT', 'LG', 'C', 'RG', 'RT'][i]} />)}</div>
+          <span className="crl-grp">BACKFIELD</span>
+          <div className="crl-row"><Man p={L.qb[0]} slot="QB" /><Man p={L.rb[0]} slot="RB" /></div>
         </div>
       )}
       {S.isBucket ? (
@@ -459,7 +456,7 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
     const [n, ev] = advanceWeek(c, D.current)
     setCareer(n)
     if (ev?.injury) { sfx('deny'); haptic('heavy'); return }
-    if (ev?.game) { sfx(ev.game.won ? 'lock' : 'pop'); if (ev.hits?.some(h => h.big)) sfx('chime') }
+    if (ev?.game) { sfx(ev.game.won ? 'pop' : 'lock'); if (ev.hits?.some(h => h.big)) sfx('chime') }
     if (ev?.hits?.some(h => h.record)) setRecHit(D.current.records[D.current.records.length - 1])
     if (ev?.moment) haptic('medium')
   }
