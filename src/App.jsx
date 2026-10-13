@@ -138,7 +138,7 @@ function enableAdFreeMode() {
 try { if (IS_APP || localStorage.getItem('bap_subscribed') === '1' || localStorage.getItem('bap_ads_off') === '1') enableAdFreeMode() } catch {}
 
 export default function App() {
-  const [page, setPage]               = useState(_sharedData ? 'shared' : _isPrivacy ? 'privacy' : _isTerms ? 'terms' : _isProfile ? 'profile' : _isAbout ? 'about' : _isDepthChart ? 'depth-chart' : _isWiki ? 'wiki' : (_saved?.gameMode && !_goHome ? (_saved.tk === 'build' ? 'takeover-build' : _saved.tk === 'career' ? 'career-build' : _saved.tk === 'road' ? 'splash' : 'game') : 'splash'))
+  const [page, setPage]               = useState(_sharedData ? 'shared' : _isPrivacy ? 'privacy' : _isTerms ? 'terms' : _isProfile ? 'profile' : _isAbout ? 'about' : _isDepthChart ? 'depth-chart' : _isWiki ? 'wiki' : 'splash')   // opening the app lands on the menu; a saved build waits on its Resume card
   const [sharedBuild]                 = useState(_sharedData?.build ?? null)
   const [sharedTypes]                 = useState(_sharedData?.types ?? null)
   const [gameMode, setGameMode]         = useState(_saved?.gameMode ?? null)
