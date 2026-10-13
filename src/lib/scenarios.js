@@ -38,6 +38,9 @@ import { seeded } from './rng'
 import { gameMoment } from './gameMoments'
 import { NBA_GUARD_PLAYERS } from '../data/nba-guards'
 import { NBA_BIG_PLAYERS } from '../data/nba-bigs'
+import { DLS, passRush } from '../data/dls'
+import { WRS } from '../data/wrs'
+import { TES } from '../data/tes'
 
 // The trade deadline: a real player from another team. A scorer (the best
 // offensive players around the league) or a stopper (the best defenders).
@@ -45,6 +48,11 @@ const NBA_POOL = [...NBA_GUARD_PLAYERS, ...NBA_BIG_PLAYERS]
 const sumOf = (p, keys) => keys.reduce((s, k) => s + (p.attrs?.[k] ?? 0), 0)
 const OFF_KEYS = ['jumpShot', 'finishing', 'handles', 'playmaking', 'clutch']
 const DEF_KEYS = ['perimeterDefense', 'interiorDefense']
+// Football deadline targets: a real pass rusher, a real weapon (from another team)
+const NFL_RUSHERS = [...DLS].sort((a, b) => passRush(b) - passRush(a))
+const NFL_WEAPONS = [...WRS.map(p => ({ ...p, role: 'receiver' })), ...TES.map(p => ({ ...p, role: 'tight end' }))].sort((a, b) => b.ovr - a.ovr)
+const nflTarget = (r, list, mine, top) => { const pool = list.filter(p => p.team !== mine).slice(0, top); return pool[Math.floor(r() * pool.length)] ?? null }
+const last = n => n.split(' ').filter(w => !/^(jr\.?|sr\.?|ii|iii|iv|v)$/i.test(w)).pop()
 function deadlineTarget(r, mine, keys, top, not) {
   const seen = new Set()
   const pool = NBA_POOL.filter(p => p.team !== mine && p.name !== not && !seen.has(p.name) && seen.add(p.name))
@@ -285,13 +293,19 @@ const NFL_ALL = [
         o('shut', 'Shut it down', { sit: c.left, dur: 0.5, tag: 'SHUT DOWN' }, 'No more games, no more risk. A full offseason to heal.'),
       ] }) },
   { id: 'deadline-buy', at: ['mid'], w: 4, when: c => c.alive && !c.struggling,
-    make: c => ({ kicker: 'TRADE DEADLINE', title: 'The GM has one pick to spend',
-      body: `${c.nick} are buying. The GM asks the leaders what the roster needs most for the stretch.`,
-      options: [
-        o('rusher', 'A pass rusher', { team: { def: 1.5 } }, 'The defense gets off the field.'),
-        o('help', c.isDef ? 'A playmaker on offense' : 'A weapon on offense', { team: { off: 1.5 } }, 'The offense opens up.'),
-        o('stand', 'Stand pat, keep the chemistry', { team: { off: 0.5, def: 0.5 } }, 'No new faces. Everyone knows their job.'),
-      ] }) },
+    make: c => {
+      // two real players on the table: an edge rusher and a weapon, from other teams
+      const rush = nflTarget(c.r, NFL_RUSHERS, c.team, 14)
+      const gun = nflTarget(c.r, NFL_WEAPONS, c.team, 18)
+      if (!rush || !gun) return null
+      return { kicker: 'TRADE DEADLINE', title: 'The GM has one pick to spend',
+        body: `${c.nick} are buying, and there's one first-round pick to spend. Two calls are live: ${rush.name} from the ${rush.teamName} or ${gun.name} from the ${gun.teamName}. The GM asks the leaders.`,
+        options: [
+          o('rusher', `Trade for ${rush.name}`, { team: { def: 1.5 } }, `${last(rush.name)} (${rush.pos}) lines up off the edge the rest of the way. Quarterbacks feel him.`),
+          o('help', `Trade for ${gun.name}`, { team: { off: 1.5 } }, `${last(gun.name)} is a No. 1 ${gun.role} the rest of the way. The offense opens up.`),
+          o('stand', 'Keep the pick, keep the chemistry', { team: { off: 0.5, def: 0.5 } }, 'No new faces. Everyone knows their job.'),
+        ] }
+    } },
   { id: 'deadline-sell', at: ['mid'], w: 5, when: c => c.struggling,
     make: c => ({ kicker: 'TRADE DEADLINE', title: 'The sell-off',
       body: `${c.nick} are moving veterans for picks. The team gets worse now. Ride it out, or ask to be moved too?`,
