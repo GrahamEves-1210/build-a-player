@@ -53,12 +53,22 @@ export default function BlacktopCourt({ game, play, meId, photoFor, colorFor, av
   const r = useRef({ rnd: (lo, hi) => lo + Math.random() * (hi - lo), pick: a => a[Math.floor(Math.random() * a.length)] }).current
 
   const after = (ms, fn) => { const t = setTimeout(fn, ms / speed); timers.current.push(t) }
-  // the ball's sounds: a pass caught, a few bounces while the handler moves, a make at the rim
+  // the ball's sounds, tied to what the ball is doing: a catch only when a pass
+  // lands, a steady dribble only while the handler is moving with it (never with
+  // the ball in the air), the rim on a make or a miss
   const caught = () => sfx('catchball')
-  const bounce = (n = 2, gap = 210) => { for (let i = 0; i < n; i++) after(i * gap, () => sfx('dribble')) }
-  const move = (id, x, y, dur) => setPos(p => ({ ...p, [id]: { x: cl(x), y: clamp(y, 6, 92), dur: (dur ?? sdur(byId[id]?.R.speed)) / speed } }))
-  const moveMany = updates => setPos(p => { const n = { ...p }; for (const [id, x, y, dur] of updates) n[id] = { x: cl(x), y: clamp(y, 6, 92), dur: (dur ?? sdur(byId[id]?.R.speed)) / speed }; return n })
-  const flyBall = (x, y, dur = .42) => setBall({ x, y, dur: dur / speed })
+  const holderRef = useRef(null), movingUntil = useRef(0), flyingUntil = useRef(0)
+  const bounce = () => {}            // (dribbles come from the dribble clock below)
+  const moving = (id, dur) => { if (id === holderRef.current) movingUntil.current = Math.max(movingUntil.current, performance.now() + dur * 1000) }
+  const move = (id, x, y, dur) => { const d = (dur ?? sdur(byId[id]?.R.speed)) / speed; moving(id, d); setPos(p => ({ ...p, [id]: { x: cl(x), y: clamp(y, 6, 92), dur: d } })) }
+  const moveMany = updates => { for (const [id, , , dur] of updates) moving(id, (dur ?? sdur(byId[id]?.R.speed)) / speed); setPos(p => { const n = { ...p }; for (const [id, x, y, dur] of updates) n[id] = { x: cl(x), y: clamp(y, 6, 92), dur: (dur ?? sdur(byId[id]?.R.speed)) / speed }; return n }) }
+  const flyBall = (x, y, dur = .42) => { flyingUntil.current = performance.now() + (dur / speed) * 1000 + 60; setBall({ x, y, dur: dur / speed }) }
+  useEffect(() => { holderRef.current = holder; movingUntil.current = 0 }, [holder])
+  useEffect(() => {
+    const id = setInterval(() => { const now = performance.now(); if (holderRef.current && now < movingUntil.current && now > flyingUntil.current) sfx('dribble') }, 340 / speed)
+    return () => clearInterval(id)
+  }, [speed])
+  const checkPass = useRef(null)     // the pass a check-up already showed (not played twice)
   const popRim = label => { popKey.current++; setPop({ label, key: popKey.current }); after(900, () => setPop(null)) }
   const clearAll = () => { timers.current.forEach(clearTimeout); timers.current = [] }
   const at = id => pos[id] ?? TOP
@@ -84,6 +94,7 @@ export default function BlacktopCourt({ game, play, meId, photoFor, colorFor, av
       setTag('CHECK BALL'); after(900, () => setTag(null))
       const f = formation(game, play.poss, play.handler)
       // whoever ended up with it (a board, a steal) brings it to the top
+      checkPass.current = play.carrier && play.carrier !== play.handler ? { from: play.carrier, to: play.handler } : null
       if (play.carrier && play.carrier !== play.handler && byId[play.carrier]) {
         setHolder(play.carrier)
         move(play.carrier, 50, 72); bounce(2)
@@ -111,7 +122,10 @@ export default function BlacktopCourt({ game, play, meId, photoFor, colorFor, av
     let t = 0
     let carrier = play.entry && byId[play.entry] ? play.entry : play.handler
     setHolder(carrier)
-    if (play.entry && play.entry !== play.handler && byId[play.entry]) {
+    // the inbound pass, unless the check-up just showed it (a second catch with the ball already there)
+    const shown = checkPass.current && checkPass.current.from === play.entry && checkPass.current.to === play.handler
+    checkPass.current = null
+    if (play.entry && play.entry !== play.handler && byId[play.entry] && !shown) {
       const hp = at(play.handler)
       after(0, () => { flyBall(hp.x, hp.y, .36); after(320, () => { setHolder(play.handler); setBall(null); caught() }) })
       t += 420; carrier = play.handler
@@ -159,7 +173,7 @@ export default function BlacktopCourt({ game, play, meId, photoFor, colorFor, av
       return
     }
 
-    const finish = () => { flyBall(RIM.x, RIM.y, .42); after(120, () => popRim(label)); if (made) after(400, () => sfx('make')) }
+    const finish = () => { flyBall(RIM.x, RIM.y, .42); after(120, () => popRim(label)); after(400, () => sfx(made ? 'make' : 'rimmiss')) }
     const shot = play.shot || (play.arc ? 'arc' : 'layup')
     if (shot === 'arc') {
       const cur = at(shooter); const spot = near(cur, ARC3)
@@ -203,7 +217,7 @@ export default function BlacktopCourt({ game, play, meId, photoFor, colorFor, av
     after(start + 420, () => { move(shooter, lane.x, lane.y, od * .32); move(d, cl(rimSpot.x + dir * r.rnd(2, 8)), rimSpot.y + r.rnd(2, 8), dd * .55) })
     after(start + 700, () => {
       move(shooter, rimSpot.x, rimSpot.y, od * (shot === 'dunk' ? .26 : .3))
-      if (shot === 'dunk') { flyBall(rimSpot.x, rimSpot.y, .25); after(220, () => { popRim(label); if (made) sfx('make') }) } else finish()
+      if (shot === 'dunk') { flyBall(rimSpot.x, rimSpot.y, .25); after(220, () => { popRim(label); sfx(made ? 'make' : 'rimmiss') }) } else finish()
     })
     return () => clearAll()
   }, [play?.id]) // eslint-disable-line

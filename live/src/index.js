@@ -264,7 +264,9 @@ export class Room {
       case 'at': return this.arrive(msg.pn, msg.team, vid)
       case 'call': {
         if (m.phase !== 'game' || !Number.isInteger(msg.pn) || m.locks[msg.pn] || m.final.afk.includes(vid)) return
-        if (!OFF_CALLS.includes(msg.v) && !DEF_CALLS.includes(msg.v)) return
+        // a play, a defense, or a pass to a named teammate ('pass:<vid>', one on the caller's team)
+        const passTo = typeof msg.v === 'string' && msg.v.startsWith('pass:') ? m.players.find(p => p.vid === msg.v.slice(5) && p.team === me.team && p.vid !== vid) : null
+        if (!OFF_CALLS.includes(msg.v) && !DEF_CALLS.includes(msg.v) && !passTo) return
         const c = (m.calls[msg.pn] ??= {})
         if (c[me.team] == null) c[me.team] = msg.v
         return

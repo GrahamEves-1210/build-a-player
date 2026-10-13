@@ -2346,7 +2346,6 @@ html.is-app .vmb-title { font-family: var(--ag-font) !important; letter-spacing:
 .btc-name .ntag { font-size: inherit; }
 .btc-name .ntag.np { padding: 1px 7px 0; border-radius: 6px; }
 .btc-name .nt:not(.nt-colored) { color: inherit; }
-.btc-p.is-me .btc-name::before { content: '★ '; color: var(--ag-a1); }
 .btc-p.has-ball .btc-name { color: #fff !important; }
 .btc-pop { position: absolute; left: 50%; top: 22%; transform: translateX(-50%); font-family: var(--ag-display); font-size: 40px; color: #fff; text-shadow: 0 0 20px var(--ag-a1); animation: bt-flash 1s ease-out .1s both; pointer-events: none; z-index: 7; }
 .btc-pop.is-miss { color: #ff8a8a; text-shadow: 0 0 18px rgba(255,80,80,.6); font-size: 30px; }
@@ -4639,7 +4638,9 @@ html.is-app { --drop-chrome: calc(352px + env(safe-area-inset-top) + env(safe-ar
 @media (max-width: 520px) { .bt-hud-teams { grid-template-columns: 1fr !important; } }
 
 /* Blacktop: your own player stands out on the court (a gold ring); practice */
+/* your player: a gold outline, nothing else (your name keeps its own look) */
 .btc-p.is-me .btc-ring { outline: 2.5px solid #f5dc8a; outline-offset: 3px; border-radius: 50%; }
-.btc-p.is-me .btc-name { color: #f5dc8a !important; }
 .bt-practice { width: 100%; margin-top: 8px; }
 .btc-ring .avb-ring { display: none; }   /* no circle behind the icons on court */
+/* the 3v3 check-up when it's not your call: who has it, who's on him */
+.lc-wait { padding: 10px 12px; border-radius: 12px; border: 1px dashed var(--ag-line); text-align: center; font-family: var(--ag-font); font-size: 13px; letter-spacing: 1.5px; color: var(--ag-text-2); }

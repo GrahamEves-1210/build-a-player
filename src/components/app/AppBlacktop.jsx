@@ -527,15 +527,24 @@ export function BlacktopGame({ bt, user, photoFor, onOpenChat, unread }) {
       {/* each player on court is their profile picture and username (the CPU fill-ins say CPU) */}
       {showBuilds && <SquadBuilds game={game} names={names} meVid={bt.me.vid} onClose={() => setShowBuilds(false)} />}
       <div className="lc-court">
-        <BlacktopCourt game={game} play={play} meId={bt.me.vid} meLabel={null} colorFor={colorFor} speed={speed}
+        <BlacktopCourt game={game} play={play} meId={bt.me.vid} meLabel={bt.me.uid ? null : 'YOU'} colorFor={colorFor} speed={speed}
           ovrFor={p => liveOvr(p)} bubbles={bubbles}
           avatarFor={p => <Av name={p.name} bot={p.bot} team={p.team} size={40} cos={p.cos} self={p.id === bt.me.vid} />} />
-        {locked && lastCheck && !calling && <CallReveal key={lastCheck.pn} off={locked[lastCheck.team]} def={locked[1 - lastCheck.team]} offense={lastCheck.team === myTeam} />}
+        {locked && lastCheck && !calling && <CallReveal key={lastCheck.pn} off={locked[lastCheck.team]} def={locked[1 - lastCheck.team]} offense={lastCheck.team === myTeam} nameOf={id => firstName(game.teams.flat().find(p => p.id === id)?.name)} />}
       </div>
-      {calling && humansOn(myTeam) && (
-        <CallBar key={calling.pn} offense={calling.team === myTeam} options={calling.team === myTeam ? OFF_CALLS : DEF_CALLS}
-          picked={bt.myCalls?.[calling.pn] ?? null} onPick={v => bt.call(calling.pn, v)} />
-      )}
+      {calling && (() => {
+        // the ball decides who calls: the handler calls the play, the man on him the defense
+        const all = game.teams.flat(), nm = id => all.find(p => p.id === id)?.name ?? ''
+        const h = calling.handler, dfd = calling.defender
+        const pick = v => bt.call(calling.pn, v)
+        if (h === bt.me.vid) {
+          const mates = game.teams[myTeam].filter(p => p.id !== h)
+          const opts = ['drive', 'pullup', 'post', ...mates.map(p => ({ v: `pass:${p.id}`, label: `PASS → ${firstName(p.name)}`, sub: `${liveOvr(p) ?? '–'} OVR` }))]
+          return <CallBar key={calling.pn} offense head="BALL IN HAND · CALL IT" options={opts} picked={bt.myCalls?.[calling.pn] ?? null} onPick={pick} />
+        }
+        if (dfd === bt.me.vid) return <CallBar key={calling.pn} offense={false} head={`GUARDING ${firstName(nm(h))} · CALL IT`} options={DEF_CALLS} picked={bt.myCalls?.[calling.pn] ?? null} onPick={pick} />
+        return <div className="lc-wait">{firstName(nm(h))} HAS THE BALL · {firstName(nm(dfd))} IS ON HIM</div>
+      })()}
       <EmoteBar emotes={EMOTES} onEmote={bt.emote} />
       <div className="bt-feed">
         {feed.map((p, i) => <div key={p.id} className={`bt-feed-line bt-t${p.team}${i === 0 ? ' is-now' : ''}${p.big ? ' is-big' : ''}${p.type === 'milestone' ? ' is-ms' : ''}`}>{p.text}</div>)}

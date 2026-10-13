@@ -100,12 +100,6 @@ function shotType(r, R, isArc, assisted) {
 
 export const OFF_CALLS = ['drive', 'pullup', 'post', 'pass']
 export const DEF_CALLS = ['press', 'sag', 'help']
-// who the call goes to: the best driver, shooter, post player
-const callFit = {
-  drive: R => R.speed + R.fin * .8 + R.bounce * .4,
-  pullup: R => R.js * 1.6,
-  post: R => R.size * 1.3 + R.fin * .6 + (R.big ? 4 : 0),
-}
 export function simStreetball({ teams, seed = 'x', goal = 21, winBy = 2, cap = 25, names = null, calls = null }) {
   const r = seeded(`hoops-${seed}`)
   const sides = teams.map((list, ti) => list.map((p, i) => ({ ...p, team: ti, slot: i, R: rate(p) })))
@@ -130,11 +124,16 @@ export function simStreetball({ teams, seed = 'x', goal = 21, winBy = 2, cap = 2
   while (!over() && guard++ < 400) {
     const att = sides[poss], def = sides[1 - poss]
     // this possession's calls (only ones that make sense for the side)
+    // who has it: picked before anyone calls anything (the playstyle decides how
+    // often: a scorer gets it more), so the check-up can say who's making the call
+    const handler = weightedPick(r, att, p => p.R.usage)
+    // the ball handler calls the play, the man guarding him calls the defense
     const c = calls?.[pn] ?? null
-    const off = OFF_CALLS.includes(c?.[poss]) && !(c[poss] === 'pass' && att.length < 2) ? c[poss] : null
+    const rawOff = c?.[poss]
+    const passTo = typeof rawOff === 'string' && rawOff.startsWith('pass:') ? att.find(p => p.id === rawOff.slice(5) && p.id !== handler.id) ?? null : null
+    const off = passTo ? 'pass' : OFF_CALLS.includes(rawOff) && !(rawOff === 'pass' && att.length < 2) ? rawOff : null
     const dfc = DEF_CALLS.includes(c?.[1 - poss]) ? c[1 - poss] : null
-    const handler = weightedPick(r, att, p => p.R.usage * (off && callFit[off] ? 1 + callFit[off](p.R) / 6 : 1))
-    if (check) { check.handler = handler.id; check.carrier = carrier && att.some(p => p.id === carrier) ? carrier : null; check = null }
+    if (check) { check.handler = handler.id; check.defender = matchup(def, att, handler).id; check.carrier = carrier && att.some(p => p.id === carrier) ? carrier : null; check = null }
     const entry = carrier && att.some(p => p.id === carrier) && carrier !== handler.id ? carrier : null   // rebounder/stealer feeds the handler
     carrier = null
     let shooter = handler, passes = []
@@ -155,10 +154,11 @@ export function simStreetball({ teams, seed = 'x', goal = 21, winBy = 2, cap = 2
     if (att.length > 1 && off !== 'drive' && off !== 'pullup' && off !== 'post' && (off === 'pass' || r() < handler.R.passProb)) {
       const mates = att.filter(p => p !== handler)
       let last = handler
-      const hops = att.length > 2 && r() < .35 ? 2 : 1
+      // a called pass goes where it was called; otherwise to the better look (sometimes around the horn)
+      const hops = passTo ? 1 : att.length > 2 && r() < .35 ? 2 : 1
       for (let h = 0; h < hops; h++) {
         const options = att.filter(p => p !== last)
-        const to = weightedPick(r, options, p => p.R.fin + p.R.js + (p.R.big ? 1 : 0) + (p === handler ? -2 : 0))
+        const to = passTo ?? weightedPick(r, options, p => p.R.fin + p.R.js + (p.R.big ? 1 : 0) + (p === handler ? -2 : 0))
         passes.push(to.id); last = to
       }
       shooter = last
@@ -166,6 +166,8 @@ export function simStreetball({ teams, seed = 'x', goal = 21, winBy = 2, cap = 2
       void mates
     }
     const assist = passes.length ? att.find(p => p.id === (passes.length > 1 ? passes[passes.length - 2] : handler.id)) : null
+    // a playmaker's pass sets up a better look
+    const dime = assist && assist.role === 'play' ? .04 : 0
     const R = shooter.R
     const sizeEdge = (R.size - d.R.size) / 22, speedEdge = (R.speed - d.R.speed) / 22
     const isArc = off === 'drive' || off === 'post' ? false : off === 'pullup' ? r() < Math.max(.4, R.arc * 1.3) : r() < R.arc * (passes.length ? 1.15 : 1)
@@ -179,8 +181,8 @@ export function simStreetball({ teams, seed = 'x', goal = 21, winBy = 2, cap = 2
     const inRead = (dfc === 'help' ? (off === 'pass' ? .1 : -.16) : dfc === 'sag' ? .1 : dfc === 'press' && off === 'post' ? .08 : 0)
       + (off === 'drive' ? .24 : off === 'post' ? .2 : off === 'pass' ? .03 : 0)
     const callFor = off === 'drive' ? (R.speed - d.R.speed) / 30 : off === 'post' ? (R.size - d.R.size) / 18 : off === 'pullup' ? (R.js - 6) / 40 : 0
-    const spArc = clamp(R.sp + (passes.length ? .05 : 0) - Math.max(0, (d.R.lock - 1) * .08) + arcRead + (off === 'pullup' ? callFor : 0), .2, .82)
-    const spIn = clamp(R.sp + Math.max(0, sizeEdge) * (.38 + Math.max(0, sizeEdge) * .7) + Math.max(0, speedEdge) * .18 + (passes.length ? .07 : 0) + (shot === 'dunk' ? .08 : 0) - Math.max(0, (d.R.lock - 1) * .06) + inRead + (off === 'drive' || off === 'post' || off === 'pullup' ? callFor : 0), .2, .95)
+    const spArc = clamp(R.sp + (passes.length ? .05 : 0) + dime - Math.max(0, (d.R.lock - 1) * .08) + arcRead + (off === 'pullup' ? callFor : 0), .2, .82)
+    const spIn = clamp(R.sp + Math.max(0, sizeEdge) * (.38 + Math.max(0, sizeEdge) * .7) + Math.max(0, speedEdge) * .18 + (passes.length ? .07 : 0) + dime + (shot === 'dunk' ? .08 : 0) - Math.max(0, (d.R.lock - 1) * .06) + inRead + (off === 'drive' || off === 'post' || off === 'pullup' ? callFor : 0), .2, .95)
     stats[shooter.id].fga++
     if (isArc) stats[shooter.id].tpa++
     const common = { handler: handler.id, passes, defId: d.id, entry, shot, call: off, dcall: dfc }

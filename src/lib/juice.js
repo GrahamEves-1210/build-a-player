@@ -39,7 +39,7 @@ const SAMPLE_NAMES = ['tap', 'tap2', 'tick', 'back', 'open', 'close', 'swoosh', 
   // the shop's and the coins' sounds (public/sfx/*.mp3)
   'coindrop.mp3', 'riser.mp3', 'bell.mp3', 'badge.mp3', 'shutter.mp3', 'zoom.mp3', 'rocket.mp3', 'strike.mp3', 'nope.mp3',
   // Blacktop's ball (Mixkit, free licence): a dribble, a pass caught, a make
-  'bt-dribble', 'bt-catch', 'bt-make']
+  'bt-dribble', 'bt-catch', 'bt-make', 'bt-miss']
 const buffers = new Map()
 let loading = null
 function loadSamples(ac) {
@@ -359,6 +359,7 @@ const SAMPLED = {
   dribble: S => smp(S, 'bt-dribble', { gain: 0.22, jitter: 0.06 }),
   catchball: S => smp(S, 'bt-catch', { gain: 0.26, jitter: 0.04 }),
   make: S => smp(S, 'bt-make', { gain: 0.3, jitter: 0.03 }),
+  rimmiss: S => smp(S, 'bt-miss', { gain: 0.28, jitter: 0.04 }),
   tap: S => smp(S, pick('tap', 'tap2'), { gain: 0.55, jitter: 0.04 }),
   tick: S => smp(S, 'tick', { gain: 0.42, jitter: 0.07 }),
   back: S => smp(S, 'back', { gain: 0.6, jitter: 0.03 }),

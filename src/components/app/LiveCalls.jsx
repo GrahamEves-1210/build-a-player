@@ -12,7 +12,8 @@ export const CALL_LABEL = {
 export const CALL_MS = 2200
 
 // The call buttons, with a bar running down the time
-export function CallBar({ offense, options, picked = null, onPick, ms = CALL_MS, helpLabel = null }) {
+// options: call ids ('drive'), or { v, label, sub } (a pass to a named teammate)
+export function CallBar({ offense, options, picked = null, onPick, ms = CALL_MS, helpLabel = null, head = null }) {
   const [left, setLeft] = useState(1)
   const t0 = useRef(performance.now())
   useEffect(() => {
@@ -24,10 +25,11 @@ export function CallBar({ offense, options, picked = null, onPick, ms = CALL_MS,
   }, [ms])
   return (
     <div className={`lc-bar ${offense ? 'is-off' : 'is-def'}`} role="group" aria-label={offense ? 'Call the play' : 'Call the defense'}>
-      <span className="lc-head">{offense ? 'YOUR BALL · CALL IT' : 'ON D · CALL IT'}<i className="lc-time" style={{ transform: `scaleX(${left})` }} /></span>
-      <div className="lc-opts" style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}>
-        {options.map(o => {
-          const [label, sub] = CALL_LABEL[o]
+      <span className="lc-head">{head ?? (offense ? 'YOUR BALL · CALL IT' : 'ON D · CALL IT')}<i className="lc-time" style={{ transform: `scaleX(${left})` }} /></span>
+      <div className="lc-opts" style={{ gridTemplateColumns: `repeat(${options.length > 4 ? 3 : options.length}, minmax(0, 1fr))` }}>
+        {options.map(opt => {
+          const o = typeof opt === 'string' ? opt : opt.v
+          const [label, sub] = typeof opt === 'string' ? CALL_LABEL[o] : [opt.label, opt.sub]
           return (
             <button key={o} className={`lc-opt${picked === o ? ' is-on' : ''}${picked && picked !== o ? ' is-dim' : ''}`} disabled={!!picked || left <= 0}
               onClick={() => { onPick(o); sfx('tap'); haptic('light') }}>
@@ -41,11 +43,12 @@ export function CallBar({ offense, options, picked = null, onPick, ms = CALL_MS,
 }
 
 // What both sides called, shown for a moment as the possession plays
-export function CallReveal({ off, def, offense }) {
+export function CallReveal({ off, def, offense, nameOf = null }) {
   if (!off && !def) return null
+  const offLabel = off?.startsWith?.('pass:') ? `PASS → ${(nameOf?.(off.slice(5)) ?? '').toUpperCase()}` : off ? CALL_LABEL[off]?.[0] : null
   return (
     <div className="lc-reveal" aria-live="polite">
-      <span className={offense ? 'is-mine' : ''}>{off ? CALL_LABEL[off][0] : 'FREESTYLE'}</span>
+      <span className={offense ? 'is-mine' : ''}>{offLabel ?? 'FREESTYLE'}</span>
       <i>vs</i>
       <span className={offense ? '' : 'is-mine'}>{def ? CALL_LABEL[def][0] : 'STRAIGHT UP'}</span>
     </div>
