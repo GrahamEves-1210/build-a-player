@@ -367,7 +367,7 @@ function TeamFit({ c }) {
 // The starting offense on a field: you in your spot if you've won it
 function Lineup({ c }) {
   const S = sportOf(c)
-  const L = useMemo(() => lineup(c), [c.roster, c.ovr, c.name, c.lastRole, c.contract, c.pos]) // eslint-disable-line
+  const L = useMemo(() => lineup(c), [c.roster, c.ovr, c.name, c.lastRole, c.contract, c.pos, c.active?.k]) // eslint-disable-line
   const dc = L.depth
   const Man = ({ p, slot }) => !p ? <span className="crl-man is-empty" /> : (
     <span className={`crl-man${p.you ? ' is-you' : ''}`}>
@@ -427,7 +427,7 @@ function Lineup({ c }) {
       <div className="crl-bench">
         <span className="ag-eyebrow">DEPTH CHART · {c.pos === 'db' ? (dbSpot(c) === 's' ? 'SAFETY' : 'CORNERBACK') : POS_NAME[c.pos].toUpperCase()}</span>
         {dc.all.map((p, i) => (
-          <span key={p.name + i} className={`crl-depth${p.you ? ' is-you' : ''}`}><i>{S.isBucket ? i + 1 : `${c.pos === 'db' ? (dbSpot(c) === 's' ? 'S' : 'CB') : POS_LABEL[c.pos]}${i + 1}`}</i><b>{p.name}</b><small>{p.ovr} OVR · age {p.age}</small></span>
+          <span key={p.name + i} className={`crl-depth${p.you ? ' is-you' : ''}`}><i>{S.isBucket ? i + 1 : `${c.pos === 'db' ? (dbSpot(c) === 's' ? 'S' : 'CB') : POS_LABEL[c.pos]}${i + 1}`}</i><b>{p.name}</b><small>{p.out ? <em className="crl-out">{p.out}</em> : `${p.ovr} OVR · age ${p.age}`}</small></span>
         ))}
       </div>
       )}

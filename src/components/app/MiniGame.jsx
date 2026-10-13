@@ -46,7 +46,7 @@ export default function MiniGame({ game, build, seed = 'x', onDone, autoStart = 
   const v = hard ? Math.max(1, traitValue(game, build) * 0.5) : traitValue(game, build)
   const done = r => {
     if (result) return
-    const out = { score: clamp(r.score, 0, 1), hit: hard ? r.score >= 0.75 : r.hit ?? r.score >= 0.5, note: r.note ?? null, raw: r.raw ?? null }
+    const out = { score: clamp(r.score, 0, 1), hit: hard ? r.score >= 0.75 : r.hit ?? r.score >= 0.5, note: r.note ?? null, raw: r.raw ?? null, out: !!r.out }
     setResult(out); setStage('done')
     sfx(out.hit ? 'claim' : 'deny'); haptic(out.hit ? 'success' : 'heavy')
     setTimeout(() => onDone?.(out), 900)
@@ -67,7 +67,7 @@ export default function MiniGame({ game, build, seed = 'x', onDone, autoStart = 
       {stage === 'play' && <Game def={def} v={v} seed={seed} build={build} onDone={done} />}
       {stage === 'done' && result && (
         <div className="mg-result">
-          <b>{result.hit ? (result.score >= 0.85 ? 'ELITE' : 'GOOD') : 'NO GOOD'}</b>
+          <b>{result.hit ? (result.score >= 0.85 ? 'ELITE' : 'GOOD') : result.out ? 'OUT OF TIME' : 'NO GOOD'}</b>
           {result.note && <small>{result.note}</small>}
         </div>
       )}
@@ -80,7 +80,7 @@ function Game({ def, v, seed, build, onDone }) {
     case 'timing': return <Timing v={v} seed={seed} onDone={onDone} />
     case 'taps': return <Taps v={v} seed={seed} n={def.n ?? 3} onDone={onDone} />
     case 'power': return <Power v={v} onDone={onDone} />
-    case 'reaction': return <Reaction v={v} seed={seed} rounds={def.rounds ?? 2} onDone={onDone} />
+    case 'reaction': return <Reaction v={v} seed={seed} rounds={def.rounds ?? 2} quick={def.quick ?? 1} onDone={onDone} />
     case 'audible': return <Audible v={v} seed={seed} onDone={onDone} />
     case 'lanes': return <Lanes v={v} seed={seed} onDone={onDone} need={def.need ?? 2} />
     case 'sequence': return <Sequence v={v} seed={seed} onDone={onDone} />
@@ -180,23 +180,24 @@ function Power({ v, onDone }) {
   )
 }
 // ── Reaction: three targets, one opens ──────────────────────────────────────
-function Reaction({ v, seed, rounds, onDone }) {
+function Reaction({ v, seed, rounds, quick = 1, onDone }) {
   const r = useRng(seed)
   const plan = useMemo(() => Array.from({ length: rounds }, () => ({ delay: 500 + r() * 900, open: Math.floor(r() * 3) })), [r, rounds])
   const [i, setI] = useState(0)
   const [open, setOpen] = useState(null)
   const [scores, setScores] = useState([])
-  const openedAt = useRef(0)
-  const T = reactMs(v)
+  const openedAt = useRef(0), outs = useRef(0)
+  const T = reactMs(v) * quick   // (some drills give less time)
   useEffect(() => {
     setOpen(null)
     const t1 = setTimeout(() => { setOpen(plan[i].open); openedAt.current = now(); sfx('tick') }, plan[i].delay)
-    const t2 = setTimeout(() => settle(0, 'Window closed.'), plan[i].delay + T + 60)
+    const t2 = setTimeout(() => { outs.current++; settle(0, 'Window closed.') }, plan[i].delay + T + 60)
     return () => { clearTimeout(t1); clearTimeout(t2) }
   }, [i]) // eslint-disable-line
   const settle = (s, note) => {
     const next = [...scores, s]
-    if (i + 1 >= rounds) { const avg = next.reduce((a, b) => a + b, 0) / rounds; onDone({ score: avg, hit: avg >= 0.5, note: avg >= 0.5 ? null : note }) }
+    // (every miss was the clock running out: it says so)
+    if (i + 1 >= rounds) { const avg = next.reduce((a, b) => a + b, 0) / rounds; onDone({ score: avg, hit: avg >= 0.5, note: avg >= 0.5 ? null : note, out: outs.current > 0 && outs.current >= next.filter(x => !x).length }) }
     else { setScores(next); setI(i + 1) }
   }
   const tap = k => {
@@ -229,7 +230,7 @@ function Audible({ v, seed, onDone }) {
   useKeys({ 1: () => pick(0), 2: () => pick(1), 3: () => pick(2) })
   return (
     <div className="mg-play mg-play--calls">
-      <Clock ms={T} onOut={() => onDone({ score: 0, hit: false, note: 'Delay of game.' })} />
+      <Clock ms={T} onOut={() => onDone({ score: 0, hit: false, note: 'Delay of game.', out: true })} />
       <span className="mg-look">{look.s}</span>
       <div className="mg-calls">{look.a.map((a, k) => <button key={k} className="mg-call" onPointerDown={() => pick(k)}>{a}</button>)}</div>
     </div>
@@ -242,17 +243,17 @@ function Lanes({ v, seed, onDone, need = 2 }) {
   const [i, setI] = useState(0)
   const [from, setFrom] = useState(null)
   const [scores, setScores] = useState([])
-  const at = useRef(0)
+  const at = useRef(0), outs = useRef(0)
   const T = lanesMs(v)
   useEffect(() => {
     setFrom(null)
     const t1 = setTimeout(() => { setFrom(plan[i].from); at.current = now(); sfx('tick') }, plan[i].delay)
-    const t2 = setTimeout(() => settle(0), plan[i].delay + T + 60)
+    const t2 = setTimeout(() => { outs.current++; settle(0) }, plan[i].delay + T + 60)
     return () => { clearTimeout(t1); clearTimeout(t2) }
   }, [i]) // eslint-disable-line
   const settle = s => {
     const next = [...scores, s]
-    if (i + 1 >= 3) { const avg = next.reduce((a, b) => a + b, 0) / 3; const made = next.filter(Boolean).length; onDone({ score: made >= need ? avg : Math.min(avg, 0.45), hit: made >= need, note: `${made} of 3` }) }
+    if (i + 1 >= 3) { const avg = next.reduce((a, b) => a + b, 0) / 3; const made = next.filter(Boolean).length; onDone({ score: made >= need ? avg : Math.min(avg, 0.45), hit: made >= need, note: `${made} of 3`, out: outs.current > 0 && outs.current >= 3 - made }) }
     else { setScores(next); setI(i + 1) }
   }
   const go = side => {
@@ -276,16 +277,18 @@ function Sequence({ v, seed, onDone }) {
   const [i, setI] = useState(0)
   const [right, setRight] = useState(0)
   const T = callMs(v)
-  const step = ok => {
+  const outs = useRef(0)
+  const step = (ok, late = false) => {
     const n = right + (ok ? 1 : 0)
-    if (i + 1 >= calls.length) onDone({ score: n / calls.length, hit: n >= 3, note: `${n} of ${calls.length} right` })
+    if (late) outs.current++
+    if (i + 1 >= calls.length) onDone({ score: n / calls.length, hit: n >= 3, note: `${n} of ${calls.length} right`, out: outs.current > 0 && outs.current >= calls.length - n })
     else { setRight(n); setI(i + 1); sfx(ok ? 'tap' : 'pop') }
   }
   const c = calls[i]
   useKeys({ 1: () => step(c.c === 0), 2: () => step(c.c === 1), 3: () => step(c.c === 2) })
   return (
     <div className="mg-play mg-play--calls" key={i}>
-      <Clock ms={T} onOut={() => step(false)} />
+      <Clock ms={T} onOut={() => step(false, true)} />
       <span className="mg-look">{c.s}</span>
       <div className="mg-calls">{c.a.map((a, k) => <button key={k} className="mg-call" onPointerDown={() => step(k === c.c)}>{a}</button>)}</div>
       <span className="mg-hint">CALL {i + 1} OF {calls.length}</span>
@@ -540,19 +543,19 @@ function Cone({ v, seed, onDone }) {
   const [i, setI] = useState(0)
   const [cue, setCue] = useState(null)
   const [scores, setScores] = useState([])
-  const at = useRef(0), settled = useRef(false)
+  const at = useRef(0), settled = useRef(false), outs = useRef(0)
   const T = (480 + v * 42) * Math.pow(0.93, i)
   useEffect(() => {
     setCue(null); settled.current = false
     const t1 = setTimeout(() => { setCue(plan[i].dir); at.current = now(); sfx('tick') }, plan[i].gap)
-    const t2 = setTimeout(() => settle(0), plan[i].gap + T)
+    const t2 = setTimeout(() => { if (!settled.current) outs.current++; settle(0) }, plan[i].gap + T)
     return () => { clearTimeout(t1); clearTimeout(t2) }
   }, [i]) // eslint-disable-line
   const settle = s => {
     if (settled.current) return; settled.current = true
     const next = [...scores, s]
     if (s) haptic('light')
-    if (i + 1 >= plan.length) { const avg = next.reduce((a, b) => a + b, 0) / plan.length; onDone({ score: avg, hit: avg >= 0.5, note: `${next.filter(Boolean).length} of ${plan.length} clean cuts`, raw: { made: next.filter(Boolean).length, of: plan.length } }) }
+    if (i + 1 >= plan.length) { const avg = next.reduce((a, b) => a + b, 0) / plan.length; onDone({ score: avg, hit: avg >= 0.5, note: `${next.filter(Boolean).length} of ${plan.length} clean cuts`, out: outs.current > 0 && outs.current >= next.filter(x => !x).length, raw: { made: next.filter(Boolean).length, of: plan.length } }) }
     else { setScores(next); setI(i + 1) }
   }
   const go = d => {

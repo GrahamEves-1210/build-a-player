@@ -27,7 +27,7 @@ export const GAMES = {
   'third-long':  { kind: 'route', traits: ['accuracy', 'arm'], title: 'THIRD & LONG', how: 'Pick the route, then hit the throw window. The deeper the route, the tighter the window, the bigger the play.' },
   'audible':     { kind: 'audible', traits: ['processing', 'vision'], title: 'AUDIBLE', how: 'Read the look. Pick the counter before the play clock runs out.' },
   // ── RB ──
-  'gap':         { kind: 'reaction', traits: ['vision'], title: 'PICK THE GAP', how: 'Three gaps. One opens. Hit it.', rounds: 2 },
+  'gap':         { kind: 'reaction', traits: ['vision'], title: 'PICK THE GAP', how: 'Three plays. One gap opens each time. Hit it, fast.', rounds: 3, quick: 0.72 },
   'juke':        { kind: 'lanes', traits: ['elusiveness'], title: 'JUKE', how: 'The tackler commits to a side. Cut the other way, three times.' },
   // ── WR / TE ──
   'catch':       { kind: 'taps', traits: ['hands'], title: 'CATCH WINDOW', how: 'Three balls. Tap each one in the window.', n: 3 },

@@ -242,7 +242,7 @@ const INJURY = [
     make: c => ({ kicker: 'INJURY REPORT', title: 'In the concussion protocol',
       body: 'A helmet-to-helmet hit on Sunday. You cleared the first tests. The doctors can sign off this week, or hold you one more.',
       options: [
-        o('clear', 'Clear it and play', { sit: 1, tag: 'PROTOCOL', then: { attr: c.R('mind', -2), window: 2, tag: 'FOGGY' } }, 'One week out, and the reads come slow for a while.'),
+        o('clear', 'Clear it and play', { sit: 1, tag: 'PROTOCOL', then: { attr: c.R('mind', -2), window: 2, tag: 'CONCUSSION · SLOW READS' } }, 'One week out, and the reads come slow for a while.'),
         o('wait', 'Take the extra week', { sit: 2, tag: 'PROTOCOL' }, 'Two weeks out. You come back clear.'),
       ] }) },
   { id: 'wear', at: ['late', 'stretch'], w: 2, when: c => c.alive && c.roleHas('legs'),

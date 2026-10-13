@@ -406,7 +406,18 @@ export function depthChart(c, roster = c.roster ?? (c.team ? rosterOf(c, c.team)
   // last year's starter keeps it in a tie; the coaches trust a good name (+1) and doubt a bad one (−1)
   const trust = (c.rep ?? 5) >= 8 ? 1 : (c.rep ?? 5) <= 3 ? -1 : 0
   const edge = p => p.ovr + (p.you ? (c.contract?.starter ? 99 : (c.lastRole === 'Starter' ? 2 : 0) + trust) : 0)
-  const all = [...group, me].sort((a, b) => edge(b) - edge(a))
+  let all = [...group, me].sort((a, b) => edge(b) - edge(a))
+  const b = c.phase === 'season' && c.active?.benched
+  if (b && !b.bench && b.weeks < 99 && (c.active.k ?? 0) > b.weeks) {
+    const w = b.why
+    const back = w?.kind === 'hurt' && w.wks && c.active.k > b.weeks + w.wks   // healthy again: your backup now
+    const note = !w || back ? null : w.kind === 'hurt' ? (w.wks ? `INJURED · OUT ${w.wks} WKS` : 'INJURED · OUT FOR THE SEASON') : w.kind === 'traded' ? 'TRADED' : 'BENCHED'
+    const him = all.find(p => p.name === b.behind)
+    all = all.filter(p => !p.you && !(w?.kind === 'traded' && p === him))
+    const at = Math.max(0, him ? all.indexOf(him) : 0)
+    if (him && note) all[all.indexOf(him)] = { ...him, out: note }
+    all.splice(him && w?.kind !== 'traded' ? at : Math.min(at, all.length), 0, me)
+  }
   const idx = all.findIndex(p => p.you)
   const starters = db ? 2 : S.starters[c.pos]
   return { all, idx, starters, starter: idx < starters, ahead: all.slice(0, idx), label: db ? `${dbSpot(c) === 's' ? 'S' : 'CB'}${idx + 1}` : S.depthLabel(c.pos, idx + 1) }
@@ -817,7 +828,20 @@ export function startSeason(c) {
   } else if (!dc.starter) {
     // a backup quarterback sits; everyone else is in the rotation
     if (!share) D.sidelined(0, weeks)
-    benched = { weeks, behind: dc.ahead[dc.ahead.length - 1].name, label: dc.label, rotation: !!share }
+    // (the man whose job it is: the last starter ahead of you, not just the next man up)
+    benched = { weeks, behind: dc.ahead[Math.min(dc.starters, dc.ahead.length) - 1].name, label: dc.label, rotation: !!share }
+    // why the job comes your way (when it does): he gets hurt, he plays his way out, or he's dealt
+    if (weeks < D.total) {
+      const rw = seeded(`${c.seed}-why-${c.year}`)
+      const x = rw(), left = D.total - weeks
+      const HURT = [['tears his ACL', 0], ['breaks his leg', 0], ['ruptures his Achilles', 0], ['breaks his collarbone', 8], ['sprains his knee (MCL)', 5], ['has a high ankle sprain', 4], ['tears his hamstring', 6], ['breaks his hand', 4]]
+      if (x < 0.6) {
+        const [what, wks0] = HURT[Math.floor(rw() * HURT.length)]
+        const wks = wks0 && wks0 < left ? wks0 : 0
+        benched.why = { kind: 'hurt', what, wks }
+      } else if (x < 0.88) benched.why = { kind: 'benched' }
+      else benched.why = { kind: 'traded', to: S.teams.filter(t => t.short !== c.team)[Math.floor(rw() * (S.teams.length - 1))].short }
+    }
   }
   const feed = benched ? [{ k: 0, note: benched.bench ? `${benched.behind} starts. ${c.name} comes off the bench this season: fewer minutes, a smaller role.` : `${benched.behind} is the starter. ${c.name} opens the season as ${benched.label}${benched.rotation ? ', in the rotation' : ''}.`, noteKind: benched.bench ? 'ROTATION' : 'DEPTH CHART' }] : []
   const next = { ...cc, phase: 'season', fit, role: dc.starter ? 'Starter' : 'Backup', simTeam: team, goals: goalsFor(cc), active: { k: 0, base, snap: D.snapshot(), seed, moment: null, feed, injury: null, benched, share } }
@@ -868,7 +892,14 @@ export function advanceWeek(c, D) {
     const hits = D.observe(k)
     const g = D.games[k - 1]
     const headline = D.headlines.filter(h => h.at === k).map(h => h.text)
-    if (a.benched && a.benched.weeks < D.total && k === a.benched.weeks + 1) feed.push({ k, note: `${c.name} is named the starter. ${a.benched.behind} goes to the bench.`, noteKind: 'DEPTH CHART' })
+    if (a.benched && a.benched.weeks < D.total && k === a.benched.weeks + 1) {
+      const b = a.benched, w = b.why
+      const note = !w ? `${c.name} is named the starter. ${b.behind} goes to the bench.`
+        : w.kind === 'hurt' ? `${b.behind} ${w.what}: ${w.wks ? `out ${w.wks} weeks` : 'out for the season'}. ${c.name} is the starter${w.wks ? `, and if he plays well the job stays his when ${b.behind.split(' ').filter(w => !/^(jr\.?|sr\.?|ii|iii|iv|v)$/i.test(w)).pop()} is back` : ''}.`
+        : w.kind === 'traded' ? `The ${nickOf(S, c.team)} trade ${b.behind} to the ${nickOf(S, w.to)}. ${c.name} is the starter.`
+        : `${b.behind} is benched after a rough stretch. ${c.name} is the starter.`
+      feed.push({ k, note, noteKind: w?.kind === 'hurt' ? 'INJURY · DEPTH CHART' : 'DEPTH CHART' })
+    }
     if (S.step === 1) feed.push({ k, g, hits, headline })
     else { chunk.games.push(g); chunk.hits.push(...hits); chunk.headline.push(...headline) }
     last = { g, hits }
