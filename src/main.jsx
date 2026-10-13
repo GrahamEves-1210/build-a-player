@@ -67,20 +67,17 @@ if ((IS_APP || APP_LOOK) && isBucket) document.documentElement.classList.add('is
 // the boot guard in index.html: the app's code is running
 window.__bapStarted = true
 
-// The app's loading screen (index.html, apps only) fades out once the first real
-// screen has drawn: something in #root, a frame later (no blank flash between)
+// The loading screen (index.html) fills with real progress: the code is running
+// now, then the fonts, then the first real screen drawn finishes it
+window.__bapLoad?.(0.6)
+try { document.fonts?.ready?.then(() => window.__bapLoad?.(0.8)) } catch {}
 function dropLoader() {
-  const el = document.getElementById('bap-loader')
-  if (!el) return
+  if (!document.getElementById('bap-loader')) return
   const root = document.getElementById('root')
   const t0 = performance.now()
   const ready = () => root && root.children.length > 0 && root.querySelector('.ag-screen, .ag-home, main, .game-layout, .ag-shell, section, header')
   const tick = () => {
-    if (!el.parentNode) return
-    if (ready() || performance.now() - t0 > 12000) {
-      requestAnimationFrame(() => { el.classList.add('is-out'); setTimeout(() => el.remove(), 400) })
-      return
-    }
+    if (ready() || performance.now() - t0 > 12000) { requestAnimationFrame(() => window.__bapLoaded?.()); return }
     requestAnimationFrame(tick)
   }
   requestAnimationFrame(tick)

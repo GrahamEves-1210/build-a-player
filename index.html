@@ -159,31 +159,74 @@
     </script>
   </head>
   <body>
-    <!-- The app's loading screen (iOS/Android only): the native splash's own logo,
-         in the same spot, with a loading bar under it. It takes over from the
-         native splash as soon as the page paints and fades out once the app has
-         started (src/main.jsx). The website never shows it. -->
+    <!-- The loading screen: the BAP logo filling up (public/loading.json, a Lottie
+         animation played by public/vendor/lottie_light.min.js). The fill is real
+         progress, not a timer: the page, the app's code, the fonts, then the first
+         screen drawn (src/main.jsx reports each). When it's all in, the rest plays
+         (the players and the stripes) and it fades out. In the app it shows every
+         launch; on the website only on the first load of a visit. -->
     <style>
-      #bap-loader { position: fixed; inset: 0; z-index: 2147483000; background: #090a0d; transition: opacity .35s ease; }
+      #bap-loader { position: fixed; inset: 0; z-index: 2147483000; background: radial-gradient(130% 75% at 50% 5%, #5da47f 0%, #3f7a5b 30%, #23432f 58%, #121a16 80%); transition: opacity .35s ease; }
       #bap-loader.is-out { opacity: 0; pointer-events: none; }
-      #bap-loader img { position: absolute; left: 50%; top: 50%; width: 28.2vmax; height: 28.2vmax; transform: translate(-50%, -50%); }   /* the logo as the native splash shows it (aspect-fill): 60% of the old size */
-      #bap-loader .bl-bar { position: absolute; left: 50%; top: calc(50% + 7.6vmax); width: min(140px, 36vw); height: 3px; margin-left: calc(min(140px, 36vw) / -2); border-radius: 3px; background: rgba(255,255,255,.08); overflow: hidden; }
-      #bap-loader .bl-bar::after { content: ''; position: absolute; top: 0; bottom: 0; width: 40%; border-radius: 3px; background: linear-gradient(90deg, #5EDBD8, #1fc98a); animation: bl-run 1.1s ease-in-out infinite; }
-      @keyframes bl-run { 0% { left: -40%; } 100% { left: 100%; } }
-      @media (prefers-reduced-motion: reduce) { #bap-loader .bl-bar::after { animation: none; left: 0; width: 100%; opacity: .5; } }
+      #bap-loader .bl-anim { position: absolute; inset: 0; }
+      #bap-loader .bl-anim svg { display: block; }
     </style>
-    <div id="bap-loader" aria-hidden="true"><img src="/boot-logo.webp" alt="" /><span class="bl-bar"></span></div>
+    <div id="bap-loader" aria-hidden="true"><div class="bl-anim"></div></div>
     <script>
       (function () {
         var el = document.getElementById('bap-loader')
         var native = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform())
-        if (!native) { el.parentNode.removeChild(el); return }
-        // the loading screen is up: let the native splash go (it waits for this, capacitor.config.json)
-        requestAnimationFrame(function () { requestAnimationFrame(function () {
+        var KEY = 'bap_loaded'
+        var seen = false
+        try { seen = !native && sessionStorage.getItem(KEY) === '1' } catch (e) {}
+        if (seen) { el.parentNode.removeChild(el); window.__bapLoad = window.__bapLoaded = function () {}; return }
+        if (native) requestAnimationFrame(function () { requestAnimationFrame(function () {
+          // the loading screen is up: let the native splash go (it waits for this, capacitor.config.json)
           try { window.Capacitor.Plugins.SplashScreen.hide({ fadeOutDuration: 150 }) } catch (e) {}
         }) })
-        // never stuck: if the app hasn't taken it down in 20 s, it goes anyway
-        setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el) }, 20000)
+        var FILL = 89                   // frames 0-89: the logo fills (the progress); 89-150: the finish
+        var target = 0.15, shown = 0, soft = 0, done = false, finishing = false, gone = false, anim = null
+        var calm = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches
+        // a milestone reached (0-1), and everything in
+        window.__bapLoad = function (p) { if (p > target) target = p }
+        window.__bapLoaded = function () { done = true }
+        function out() {
+          if (gone) return; gone = true
+          try { sessionStorage.setItem(KEY, '1') } catch (e) {}
+          el.classList.add('is-out')
+          setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); try { anim && anim.destroy() } catch (e) {} }, 400)
+        }
+        function tick() {
+          if (gone) return
+          // between milestones the bar keeps creeping (never past the next one), so it never looks stuck
+          soft = Math.min(Math.min(0.95, target + 0.2), Math.max(soft, target) + 0.0025)
+          var goal = done ? 1 : Math.max(target, soft)
+          shown += (goal - shown) * (done ? 0.18 : 0.08)
+          if (anim && !finishing) anim.goToAndStop(Math.min(FILL, shown * FILL), true)
+          if (done && shown > 0.985 && !finishing) {
+            finishing = true
+            if (!anim || calm) { out(); return }
+            anim.setSpeed(1.5)
+            anim.addEventListener('complete', out)
+            anim.playSegments([FILL, anim.totalFrames - 1], true)
+            setTimeout(out, 1800)          // the finish never holds the app up
+            return
+          }
+          requestAnimationFrame(tick)
+        }
+        function start() {
+          try {
+            anim = window.lottie.loadAnimation({ container: el.firstChild, renderer: 'svg', loop: false, autoplay: false, path: '/loading.json',
+              rendererSettings: { preserveAspectRatio: 'xMidYMid meet' } })
+          } catch (e) { anim = null }
+        }
+        var s = document.createElement('script')
+        s.src = '/vendor/lottie_light.min.js'
+        s.onload = start
+        document.head.appendChild(s)
+        requestAnimationFrame(tick)
+        // never stuck: if the app hasn't finished in 20 s, it goes anyway
+        setTimeout(out, 20000)
       })()
     </script>
     <div id="root"></div>
