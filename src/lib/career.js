@@ -670,7 +670,7 @@ export function setupInterviews(c) {
   for (let o = Math.max(1, lo - 6); o <= Math.min(maxPick(S), hi + 6) && near.length < N; o++) { const t = order[(o - 1) % N]; if (!near.includes(t)) near.push(t) }
   const teams = near.sort(() => r() - 0.5).slice(0, 4)
   const qs = [...(INTERVIEWS[c.sport] ?? INTERVIEWS.nfl)].sort(() => r() - 0.5).slice(0, teams.length)
-  return { ...c, draft: { ...c.draft, interviews: qs.map((q, i) => ({ ...q, team: teams[i], answer: null })) } }
+  return { ...c, draft: { ...c.draft, interviews: qs.map((q, i) => ({ ...q, a: [...q.a].sort(() => r() - 0.5), team: teams[i], answer: null })) } }   // (the answers in a random order: the best one isn't always first)
 }
 export function newCareer({ sport = 'nfl', uid = null, pos, build, name = 'Guest', slot = 0, owner = null }) {
   const S = SPORT[sport] ?? SPORT.nfl
