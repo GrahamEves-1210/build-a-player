@@ -845,6 +845,8 @@ export default function BucketApp() {
     // the run moves on wherever you are — you queued for it
     if (bt.phase === 'build') { resetLiveBuild(); setPage('blacktop-build'); setBtChatOpen(false) }
     else if (bt.phase === 'game') { setPage('blacktop-game'); setBtChatOpen(false) }
+    // ran it back: from the result straight to the lobby (the squad's spots held, names in)
+    else if (bt.phase === 'queue' && (page === 'blacktop-game' || page === 'blacktop-build')) { setPage('blacktop'); setBtChatOpen(false) }
   }, [bt.phase]) // eslint-disable-line
   // one live game per device: another tab or window already has one going
   useEffect(() => {
