@@ -3077,7 +3077,9 @@ html.fake-rail .sh-sheet { max-height: calc(88dvh - var(--web-rail)); padding-bo
 .ag-pro-note--err { color: #ff8a8a; }
 
 /* A finger scrolling over a button isn't pressing it (lib/juice.js sets ag-scrolling) */
-html.ag-scrolling :active { transform: none !important; filter: none !important; }
+/* (only on things you press: on an iPhone every container around the finger is
+   :active too, and taking their transforms away made scaled cards jump: a "zoom") */
+html.ag-scrolling :is(button, a, [role="button"], .ag-btn, .attr-chip, .ag-chip, .ag-mode, .bt-opt, .lc-opt):active { transform: none !important; filter: none !important; }
 
 /* ═══ Website hovers (mouse / trackpad only — never on touch) ════════════════ */
 @media (hover: hover) and (pointer: fine) {
