@@ -1959,8 +1959,8 @@ html.is-app .about-section-title { font-family: var(--ag-font) !important; font-
 @keyframes ag-livepulse { 70% { box-shadow: 0 0 0 9px rgba(255,77,77,0); } 100% { box-shadow: 0 0 0 0 rgba(255,77,77,0); } }
 
 /* ═══ BLACKTOP ══════════════════════════════════════════════════════════════ */
-.bt-t0 { --tc: #e8f0f6; }
-.bt-t1 { --tc: #ff8a3d; }
+.bt-t0 { --tc: #4da3ff; }
+.bt-t1 { --tc: #ff4d5e; }
 .bt-av {
   display: inline-grid; place-items: center; flex: 0 0 auto;
   border-radius: 10px;
@@ -1968,7 +1968,8 @@ html.is-app .about-section-title { font-family: var(--ag-font) !important; font-
   background: linear-gradient(135deg, #fff, #c9d3dc);
   box-shadow: inset 0 -2px 0 rgba(0,0,0,.15);
 }
-.bt-av.bt-av--t1 { background: linear-gradient(135deg, #ffb27a, #ff6a1a); }
+.bt-av.bt-av--t0 { background: linear-gradient(135deg, #8cc4ff, #2f86f0); }
+.bt-av.bt-av--t1 { background: linear-gradient(135deg, #ff8f99, #e8323f); }
 .bt-av.is-bot { font-size: 11px !important; letter-spacing: .5px; background: linear-gradient(135deg, #4a5560, #2a3139); color: #cfd8e0; }
 
 .bt-court-bg {
@@ -4652,7 +4653,12 @@ html.is-app { --drop-chrome: calc(352px + env(safe-area-inset-top) + env(safe-ar
 
 /* Blacktop: your own player stands out on the court (a gold ring); practice */
 /* your player: a gold outline, nothing else (your name keeps its own look) */
-.btc-p.is-me .btc-ring { outline: 2.5px solid #f5dc8a; outline-offset: 3px; border-radius: 50%; }
+.btc-p.is-me .btc-ring { outline: none; }
+/* every icon wears its team's color as an outline that follows its shape; yours is gold and thicker; the ball handler glows */
+.btc-ring > * { filter: drop-shadow(2px 0 0 var(--pc)) drop-shadow(-2px 0 0 var(--pc)) drop-shadow(0 2px 0 var(--pc)) drop-shadow(0 -2px 0 var(--pc)); }
+.btc-p.is-me .btc-ring > * { filter: drop-shadow(3.5px 0 0 #f5dc8a) drop-shadow(-3.5px 0 0 #f5dc8a) drop-shadow(0 3.5px 0 #f5dc8a) drop-shadow(0 -3.5px 0 #f5dc8a); }
+.btc-p.has-ball .btc-ring > * { filter: drop-shadow(2px 0 0 var(--pc)) drop-shadow(-2px 0 0 var(--pc)) drop-shadow(0 2px 0 var(--pc)) drop-shadow(0 -2px 0 var(--pc)) drop-shadow(0 0 9px var(--pc)); }
+.btc-p.is-me.has-ball .btc-ring > * { filter: drop-shadow(3.5px 0 0 #f5dc8a) drop-shadow(-3.5px 0 0 #f5dc8a) drop-shadow(0 3.5px 0 #f5dc8a) drop-shadow(0 -3.5px 0 #f5dc8a) drop-shadow(0 0 9px #f5dc8a); }
 .bt-practice { width: 100%; margin-top: 8px; }
 .btc-ring .avb-ring { display: none; }   /* no circle behind the icons on court */
 /* the 3v3 check-up when it's not your call: who has it, who's on him */

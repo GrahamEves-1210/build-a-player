@@ -23,7 +23,7 @@ import { useProgress } from '../../lib/progress'
 // build, team chat, and the game on the court.
 
 const fmt = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
-const TEAM_COLORS = ['#e8f0f6', '#ff8a3d']
+const TEAM_COLORS = ['#4da3ff', '#ff4d5e']   // blue vs red
 // A player's picture: their equipped avatar (mine live), or CPU for an auto-build
 const Av = ({ name, bot, team, size = 36, cos = null, self = false }) => (bot
   ? <span className={`bt-av is-bot bt-av--t${team ?? 0}`} style={{ width: size, height: size, fontSize: size * .46 }}>CPU</span>
