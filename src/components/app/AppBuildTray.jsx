@@ -223,8 +223,11 @@ export function useDropMode(on) {
 // open / closed
 export function useDropSheet(enabled, build, types, resetKey) {
   const [open, setOpen] = useState(false)
-  // it stays where you put it (a pick doesn't close it); a reset tucks it away
-  useEffect(() => { setOpen(false) }, [resetKey])
+  // it stays where you put it: a pick never closes it (the spin's own reset after
+  // each pick isn't a reset of the build); clearing the build does
+  const filled = types.filter(t => build[t]).length
+  const prevFilled = useRef(filled)
+  useEffect(() => { if (filled < prevFilled.current) setOpen(false); prevFilled.current = filled }, [filled])
   // the build is complete: nothing left to pick, and SIMULATE is underneath
   const complete = types.length > 0 && types.every(t => build[t])
   useEffect(() => { if (enabled && complete) setOpen(false) }, [complete, enabled])
