@@ -182,10 +182,16 @@
         // (desktop website: no loading screen, it's built for a phone screen)
         var desktop = !native && window.matchMedia && matchMedia('(min-width: 769px)').matches
         if (seen || desktop) { el.parentNode.removeChild(el); window.__bapLoad = window.__bapLoaded = function () {}; return }
-        if (native) requestAnimationFrame(function () { requestAnimationFrame(function () {
-          // the loading screen is up: let the native splash go (it waits for this, capacitor.config.json)
-          try { window.Capacitor.Plugins.SplashScreen.hide({ fadeOutDuration: 150 }) } catch (e) {}
-        }) })
+        // the native splash is the animation's first frame (assets/splash.png): it goes
+        // once that frame is drawn here, so the one becomes the other with no seam
+        var splashGone = false
+        function hideSplash() {
+          if (!native || splashGone) return; splashGone = true
+          requestAnimationFrame(function () { requestAnimationFrame(function () {
+            try { window.Capacitor.Plugins.SplashScreen.hide({ fadeOutDuration: 120 }) } catch (e) {}
+          }) })
+        }
+        setTimeout(hideSplash, 2500)       // (the animation is slow to come: go anyway)
         var FILL = 89                   // frames 0-89: the logo fills (the progress); 89-150: the finish
         var target = 0.15, shown = 0, soft = 0, done = false, finishing = false, gone = false, anim = null
         var calm = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -194,6 +200,7 @@
         window.__bapLoaded = function () { done = true }
         function out() {
           if (gone) return; gone = true
+          hideSplash()
           try { sessionStorage.setItem(KEY, '1') } catch (e) {}
           el.classList.add('is-out')
           setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); try { anim && anim.destroy() } catch (e) {} }, 400)
@@ -220,11 +227,13 @@
           try {
             anim = window.lottie.loadAnimation({ container: el.firstChild, renderer: 'svg', loop: false, autoplay: false, path: '/loading.json',
               rendererSettings: { preserveAspectRatio: 'xMidYMid meet' } })
-          } catch (e) { anim = null }
+            anim.addEventListener('DOMLoaded', function () { anim.goToAndStop(Math.min(FILL, shown * FILL), true); hideSplash() })
+          } catch (e) { anim = null; hideSplash() }
         }
         var s = document.createElement('script')
         s.src = '/vendor/lottie_light.min.js'
         s.onload = start
+        s.onerror = hideSplash
         document.head.appendChild(s)
         requestAnimationFrame(tick)
         // never stuck: if the app hasn't finished in 20 s, it goes anyway
