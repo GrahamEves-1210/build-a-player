@@ -93,7 +93,7 @@ export function BlacktopHub({ onJoin3v3, onJoin2v2 = null, onPickup, onFriend, o
         <section className="bt-mode ag-pop" style={{ '--d': '60ms' }}>
           <div className="bt-mode-head">
             <span className="bt-mode-tag">1V1</span>
-            <span className="bt-mode-txt"><b>One on one</b><small>Pick up a game against anyone, or play a friend.</small></span>
+            <span className="bt-mode-txt"><b>1v1</b><small>Pick up a game against anyone, or play a friend.</small></span>
           </div>
           <OneOnOneOptions onPickup={onPickup} onFriend={onFriend} onJoinCode={onJoinCode} />
           <ModeStats mode="h2h" />
@@ -102,7 +102,7 @@ export function BlacktopHub({ onJoin3v3, onJoin2v2 = null, onPickup, onFriend, o
           <section className="bt-mode ag-pop" style={{ '--d': '100ms' }}>
             <div className="bt-mode-head">
               <span className="bt-mode-tag">2V2</span>
-              <span className="bt-mode-txt"><b>Two on two</b><small>A guard and a big a side. Take a spot, build your role, run it.</small></span>
+              <span className="bt-mode-txt"><b>2v2</b><small>A guard and a big a side. Take a spot, build your role, run it.</small></span>
             </div>
             <button className="ag-btn bt-mode-go" onClick={() => { sfx('tap'); onJoin2v2() }}>JOIN LOBBY <IconArrow size={16} /></button>
             {onPractice && <button className="ag-btn ag-btn--ghost bt-practice" onClick={() => { sfx('tap'); onPractice(2) }}>PRACTICE · YOU + 3 CPUS</button>}

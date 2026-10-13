@@ -188,7 +188,7 @@ function tourSteps(sport) {
     { id: 'modes', sel: ['.ag-modes'], title: 'The main game', text: `Spin a team, then a real player from it, and tap the trait you want from him. Fill every slot, then play a season. Current uses today's rosters, All-Time the legends.` },
     { id: 'career', sel: ['.ag-crmode'], title: 'Career', text: 'One player, a whole career: the combine, the draft, season after season, contracts and a legacy.' },
     { id: 'compete', sel: ['.ag-compete'], title: 'Compete', text: 'Online pools of five. Everyone gets the same spins, and the best build takes the pool.' },
-    { id: 'blacktop', sel: ['.ag-blacktop'], title: 'Blacktop', text: 'Live games against real players: one on one, 2v2 or 3v3.' },
+    { id: 'blacktop', sel: ['.ag-blacktop'], title: 'Blacktop', text: 'Live games against real players: 1v1, 2v2 or 3v3.' },
     { id: 'takeover', sel: ['.ag-takeover'], title: 'Takeover', text: 'Cross the map, solo or with a friend. Every city has a better player to beat.' },
     { id: 'quick', sel: ['.ag-mini'], all: true, title: 'Quick games', text: nba ? 'Salary Cap: a new puzzle every day. The best player you can build on a budget.' : 'Salary Cap is a daily puzzle: the best QB you can build on a budget. The Depth Chart: sort the stars by one stat.' },
     { id: 'coins', sel: ['.ag-dock', '.ag-hud-coins'], title: 'Coins and looks', text: 'Every game pays XP and coins, and Daily missions pay more. The Shop turns coins into name colors, effects and avatars everyone sees.' },

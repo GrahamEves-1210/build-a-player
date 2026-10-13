@@ -335,7 +335,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
               <span className="ag-takeover-txt">
                 <span className="ag-eyebrow">{btLive ? (blacktop.phase === 'queue' ? `IN THE LOBBY · ${blacktop.queue}/6 SPOTS TAKEN` : blacktop.phase === 'build' ? 'LIVE · YOUR SQUAD IS BUILDING' : 'LIVE · GAME ON') : 'LIVE · FIRST TO 11'}</span>
                 <span className="ag-takeover-title">BLACKTOP</span>
-                <span className="ag-takeover-sub">{btLive ? 'You\'re still in. Jump back to your run.' : (btG || h2h.played) ? `Squads ${btW}–${btG - btW} · 1v1 ${h2h.wins ?? 0}–${h2h.losses ?? 0}${ol.played ? ` · ${tierFor(ol.rating)[1]} ${ol.rating}` : ''}` : 'One on one, 2v2 or 3v3. Real players.'}</span>
+                <span className="ag-takeover-sub">{btLive ? 'You\'re still in. Jump back to your run.' : (btG || h2h.played) ? `Squads ${btW}–${btG - btW} · 1v1 ${h2h.wins ?? 0}–${h2h.losses ?? 0}${ol.played ? ` · ${tierFor(ol.rating)[1]} ${ol.rating}` : ''}` : '1v1, 2v2 or 3v3. Real players.'}</span>
               </span>
             </button>
           )}

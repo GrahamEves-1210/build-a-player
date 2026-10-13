@@ -15,7 +15,7 @@ const ord = n => `${n}${['th', 'st', 'nd', 'rd'][(n % 100 > 10 && n % 100 < 14) 
 export const MODES = {
   compete: { label: 'Compete', Icon: IconPodium, sub: '5-player pools' },
   bt: { label: 'Blacktop squads', Icon: IconHoop, sub: '2v2 and 3v3 · first to 11' },
-  h2h: { label: 'Blacktop 1v1', Icon: IconVersus, sub: 'One on one · first to 11' },
+  h2h: { label: 'Blacktop 1v1', Icon: IconVersus, sub: 'First to 11' },
 }
 
 // Last 10 results as dots: W/L, or a Compete place (1 gold, 2–3 green, 4–5 grey)
