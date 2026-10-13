@@ -4596,6 +4596,15 @@ html.is-app { --drop-chrome: calc(352px + env(safe-area-inset-top) + env(safe-ar
 
 /* ── Live streetball: calls, reactions, overalls on court (components/app/LiveCalls.jsx) ── */
 .lc-court { position: relative; }
+.lc-calls:empty { display: none; }
+.lc-calls { margin-top: 8px; }
+@media (min-width: 769px) {
+  .lc-calls { position: absolute; left: 50%; bottom: 14px; z-index: 6; width: min(560px, 92%); margin: 0; transform: translateX(-50%); }
+  .lc-calls .lc-bar { background: rgba(10,14,13,.88); backdrop-filter: blur(6px); box-shadow: 0 10px 28px rgba(0,0,0,.5); }
+  .lc-calls .lc-wait { background: rgba(10,14,13,.78); border-style: solid; }
+  /* the whole court fits on screen (scoreboard above it), so the calls over it are in view too */
+  .bt-live .lc-court { width: 100%; max-width: max(420px, calc((100dvh - 210px) * 4 / 3)); margin: 0 auto; }
+}
 .lc-bar { display: flex; flex-direction: column; gap: 6px; padding: 8px 10px 10px; border-radius: 14px; border: 1.5px solid var(--ag-line-hi, rgba(255,255,255,.16)); background: rgba(10,14,13,.92); animation: ag-zoom .22s cubic-bezier(.2,1.2,.3,1) both; }
 .lc-bar.is-off { border-color: color-mix(in srgb, #f97316 70%, transparent); }
 .lc-bar.is-def { border-color: color-mix(in srgb, #38bdf8 70%, transparent); }
