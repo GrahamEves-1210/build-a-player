@@ -19,7 +19,7 @@ import { supabase } from './supabase'
 import { getUsername } from './discord'
 import { myCosmetics, whenProgressReady } from './progress'
 
-export { ROOM_SIZE, BUILD_SECS, FILL_AFTER_SECS, captainOf, teamNames, teamName, ROLES, BOT_NAMES, EMOTES, SLOTS, slotById, holders, dealTeams, makeBots, autoBuild, buildOk, samePicks, leaderOf } from './blacktopCore'
+export { ROOM_SIZE, BUILD_SECS, FILL_AFTER_SECS, captainOf, teamNames, teamName, ROLES, BOT_NAMES, EMOTES, SLOTS, SLOTS_2, slotsFor, slotById, holders, dealTeams, makeBots, autoBuild, buildOk, samePicks, leaderOf } from './blacktopCore'
 import { BUILD_SECS, BOT_NAMES, EMOTES, SLOTS, teamName, holders, autoBuild, buildOk, samePicks, leaderOf } from './blacktopCore'
 import { LIVE_URL, useBlacktopServer } from './blacktopServer'
 

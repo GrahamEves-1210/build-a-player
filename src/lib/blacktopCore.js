@@ -37,6 +37,9 @@ export const SLOTS = [
   { id: '0g0', team: 0, pos: 'guard' }, { id: '0g1', team: 0, pos: 'guard' }, { id: '0b', team: 0, pos: 'big' },
   { id: '1g0', team: 1, pos: 'guard' }, { id: '1g1', team: 1, pos: 'guard' }, { id: '1b', team: 1, pos: 'big' },
 ]
+// 2v2: a guard and a big a side
+export const SLOTS_2 = SLOTS.filter(sl => sl.id !== '0g1' && sl.id !== '1g1')
+export const slotsFor = size => (size === 2 ? SLOTS_2 : SLOTS)
 export const slotById = id => SLOTS.find(x => x.id === id) ?? null
 // Who holds each spot: the earliest claim wins a tie (both see the same answer)
 export function holders(list) {

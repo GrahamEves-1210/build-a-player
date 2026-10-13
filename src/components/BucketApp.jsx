@@ -1895,9 +1895,10 @@ export default function BucketApp() {
   // Blacktop: the hub (3v3 · 1v1); JOIN LOBBY puts you in the 3v3 lobby on this same page
   if (page === 'blacktop') {
     if (bt.phase === 'idle') {
-      return <BlacktopHub onBack={() => setPage('splash')} onJoin3v3={() => { bt.clearKicked(); bt.join() }}
+      return <BlacktopHub onBack={() => setPage('splash')} onJoin3v3={() => { bt.clearKicked(); bt.join(false, 3) }}
+        onJoin2v2={bt.server ? () => { bt.clearKicked(); bt.join(false, 2) } : null}
         notice={bt.kicked ? 'The build clock ran out before you finished. A CPU took your spot, and it counts as leaving the game.' : null} onNotice={bt.clearKicked}
-        onPractice={bt.practice ? () => { bt.clearKicked(); bt.practice() } : null}
+        onPractice={bt.practice ? sz => { bt.clearKicked(); bt.practice(sz) } : null}
         onPickup={() => startVersus(position, { kind: 'pickup' })} onFriend={() => startVersus(position, { kind: 'friend' })}
         onJoinCode={code => startVersus(position, { kind: 'join', code })} />
     }

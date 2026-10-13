@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { LiveLeaveButton } from './LiveLeave'
 import { createPortal } from 'react-dom'
-import { ROOM_SIZE, ROLES, SLOTS, teamName, captainOf, EMOTES } from '../../lib/blacktop'
+import { ROOM_SIZE as ALL_SIZE, ROLES, SLOTS as ALL_SLOTS, teamName, captainOf, EMOTES } from '../../lib/blacktop'
 import { CallBar, CallReveal, EmoteBar, useBubbles, CALL_MS } from './LiveCalls'
 import { BUCKET_ATTR } from '../../data/nba-attrs'
 import { valToGrade } from '../../utils/simulation'
@@ -49,7 +49,7 @@ export const liveOvr = b => {
 }
 const firstName = n => (n || '').trim().split(/\s+/)[0].toUpperCase().slice(0, 10)
 
-// ── Hub: 3v3 (join the lobby) and 1v1 (pickup or a friend), each with its stats ──
+// ── Hub: 1v1 (pickup or a friend), then the 2v2 and 3v3 lobbies, with stats ──
 export function OneOnOneOptions({ onPickup, onFriend, onJoinCode, error = '' }) {
   const [code, setCode] = useState('')
   return (
@@ -74,7 +74,7 @@ export function OneOnOneOptions({ onPickup, onFriend, onJoinCode, error = '' }) 
   )
 }
 
-export function BlacktopHub({ onJoin3v3, onPickup, onFriend, onJoinCode, onBack, notice = null, onNotice = null, onPractice = null }) {
+export function BlacktopHub({ onJoin3v3, onJoin2v2 = null, onPickup, onFriend, onJoinCode, onBack, notice = null, onNotice = null, onPractice = null }) {
   const o = useProgress().stats?.online ?? { rating: 800 }
   return (
     <div className="ag-screen ag-screen--bucket bt-hub">
@@ -92,27 +92,37 @@ export function BlacktopHub({ onJoin3v3, onPickup, onFriend, onJoinCode, onBack,
         {notice && <button className="bt-notice ag-pop" onClick={onNotice}>{notice}<small>TAP TO DISMISS</small></button>}
         <section className="bt-mode ag-pop" style={{ '--d': '60ms' }}>
           <div className="bt-mode-head">
-            <span className="bt-mode-tag">3V3</span>
-            <span className="bt-mode-txt"><b>Squads</b><small>Two guards and a big a side. Take a spot, build your role, run it.</small></span>
-          </div>
-          <button className="ag-btn bt-mode-go" onClick={() => { sfx('tap'); onJoin3v3() }}>JOIN LOBBY <IconArrow size={16} /></button>
-          {onPractice && <button className="ag-btn ag-btn--ghost bt-practice" onClick={() => { sfx('tap'); onPractice() }}>PRACTICE · YOU + 5 CPUS</button>}
-          <ModeStats mode="bt" />
-        </section>
-        <section className="bt-mode ag-pop" style={{ '--d': '120ms' }}>
-          <div className="bt-mode-head">
             <span className="bt-mode-tag">1V1</span>
             <span className="bt-mode-txt"><b>One on one</b><small>Pick up a game against anyone, or play a friend.</small></span>
           </div>
           <OneOnOneOptions onPickup={onPickup} onFriend={onFriend} onJoinCode={onJoinCode} />
           <ModeStats mode="h2h" />
         </section>
+        {onJoin2v2 && (
+          <section className="bt-mode ag-pop" style={{ '--d': '100ms' }}>
+            <div className="bt-mode-head">
+              <span className="bt-mode-tag">2V2</span>
+              <span className="bt-mode-txt"><b>Two on two</b><small>A guard and a big a side. Take a spot, build your role, run it.</small></span>
+            </div>
+            <button className="ag-btn bt-mode-go" onClick={() => { sfx('tap'); onJoin2v2() }}>JOIN LOBBY <IconArrow size={16} /></button>
+            {onPractice && <button className="ag-btn ag-btn--ghost bt-practice" onClick={() => { sfx('tap'); onPractice(2) }}>PRACTICE · YOU + 3 CPUS</button>}
+          </section>
+        )}
+        <section className="bt-mode ag-pop" style={{ '--d': '140ms' }}>
+          <div className="bt-mode-head">
+            <span className="bt-mode-tag">3V3</span>
+            <span className="bt-mode-txt"><b>Squads</b><small>Two guards and a big a side. Take a spot, build your role, run it.</small></span>
+          </div>
+          <button className="ag-btn bt-mode-go" onClick={() => { sfx('tap'); onJoin3v3() }}>JOIN LOBBY <IconArrow size={16} /></button>
+          {onPractice && <button className="ag-btn ag-btn--ghost bt-practice" onClick={() => { sfx('tap'); onPractice(3) }}>PRACTICE · YOU + 5 CPUS</button>}
+          <ModeStats mode="bt" />
+        </section>
         <CourtPicker />
         <details className="bt-rules ag-pop" style={{ '--d': '180ms' }}>
           <summary className="ag-eyebrow">HOUSE RULES</summary>
           <ul>
-            <li>Real players only. A 3v3 starts when all six spots are taken.</li>
-            <li>Every squad is two guards and a big. The spot you take is the build you make.</li>
+            <li>Real players only. A 2v2 starts when all four spots are taken, a 3v3 when all six are.</li>
+            <li>A 2v2 squad is a guard and a big; a 3v3 squad is two guards and a big. The spot you take is the build you make.</li>
             <li>3:00 to build. Leave or go quiet and the blacktop builds for you, with the ratings off.</li>
             <li>First to <b>11</b>, 1s and 2s, win by 2. Make it, take it.</li>
             <li>Chat is filtered, and anyone can be reported.</li>
@@ -146,6 +156,9 @@ function CourtPicker() {
 export function BlacktopQueue({ bt, user, onBack }) {
   const [chatOpen, setChatOpen] = useState(false)
   const [seenChat, setSeenChat] = useState(0)
+  const SLOTS = bt.slots ?? ALL_SLOTS
+  const ROOM_SIZE = bt.roomSize ?? ALL_SIZE
+  const size = bt.size ?? 3
   const squadName = t => {
     const first = SLOTS.filter(sl => sl.team === t).map(sl => bt.held[sl.id]).find(Boolean)
     return first ? `TEAM ${firstName(first.name)}` : t === 0 ? 'TEAM A' : 'TEAM B'
@@ -163,7 +176,7 @@ export function BlacktopQueue({ bt, user, onBack }) {
       <div className="ag-screen-head">
         <div>
           <span className="ag-eyebrow">BLACKTOP · LIVE · FIRST TO 11</span>
-          <h1 className="ag-h1">3v3 lobby</h1>
+          <h1 className="ag-h1">{size}v{size} lobby</h1>
         </div>
         <button className="ag-round-btn" onClick={() => { (bt.leaveLobby ?? bt.leave)(); onBack() }} aria-label="Leave the lobby"><IconClose size={16} /></button>
       </div>
@@ -200,7 +213,7 @@ export function BlacktopQueue({ bt, user, onBack }) {
           <div className="bt-run-foot">
             {!bt.mySlot
               ? <span className="bt-run-hint">Tap an open spot to join that squad.{waiting > 0 ? ` ${waiting} watching.` : ''}</span>
-              : <span className="bt-run-hint">{bt.seated === ROOM_SIZE ? 'Full run. Lacing up…' : `Starts when all six spots are taken · ${ROOM_SIZE - bt.seated} to go. Real players only.`}</span>}
+              : <span className="bt-run-hint">{bt.seated === ROOM_SIZE ? 'Full run. Lacing up…' : `Starts when all ${size === 2 ? 'four' : 'six'} spots are taken · ${ROOM_SIZE - bt.seated} to go. Real players only.`}</span>}
           </div>
         </div>
 
@@ -210,7 +223,7 @@ export function BlacktopQueue({ bt, user, onBack }) {
           {unread > 0 && <span className="ag-tab-badge">{unread}</span>}
         </button>
 
-        <OnlineRecord modes={['bt']} title="YOUR 3V3" />
+        <OnlineRecord modes={['bt']} title="YOUR SQUAD GAMES" />
 
       </div>
       {chatOpen && <BlacktopChat bt={bt} user={user} title="LOBBY CHAT" mode="blacktop-lobby" onClose={() => { setChatOpen(false); setSeenChat(bt.chat.length) }} />}

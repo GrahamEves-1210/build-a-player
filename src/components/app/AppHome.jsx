@@ -331,11 +331,11 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
             <button className={`ag-blacktop ag-blacktop--menu ag-pop${btLive ? ' is-live' : ''}`} style={{ '--d': '250ms' }} onClick={onBlacktop}>
               <BlacktopArt />
               <span className="ag-live-dot" />
-              <span className="ag-bt-tags" aria-hidden="true"><span className="bt-mode-tag">3V3</span><span className="bt-mode-tag">1V1</span></span>
+              <span className="ag-bt-tags" aria-hidden="true"><span className="bt-mode-tag">1V1</span><span className="bt-mode-tag">2V2</span><span className="bt-mode-tag">3V3</span></span>
               <span className="ag-takeover-txt">
                 <span className="ag-eyebrow">{btLive ? (blacktop.phase === 'queue' ? `IN THE LOBBY · ${blacktop.queue}/6 SPOTS TAKEN` : blacktop.phase === 'build' ? 'LIVE · YOUR SQUAD IS BUILDING' : 'LIVE · GAME ON') : 'LIVE · FIRST TO 11'}</span>
                 <span className="ag-takeover-title">BLACKTOP</span>
-                <span className="ag-takeover-sub">{btLive ? 'You\'re still in. Jump back to your run.' : (btG || h2h.played) ? `3v3 ${btW}–${btG - btW} · 1v1 ${h2h.wins ?? 0}–${h2h.losses ?? 0}${ol.played ? ` · ${tierFor(ol.rating)[1]} ${ol.rating}` : ''}` : 'Squads of three, or one on one. Real players.'}</span>
+                <span className="ag-takeover-sub">{btLive ? 'You\'re still in. Jump back to your run.' : (btG || h2h.played) ? `Squads ${btW}–${btG - btW} · 1v1 ${h2h.wins ?? 0}–${h2h.losses ?? 0}${ol.played ? ` · ${tierFor(ol.rating)[1]} ${ol.rating}` : ''}` : 'One on one, 2v2 or 3v3. Real players.'}</span>
               </span>
             </button>
           )}

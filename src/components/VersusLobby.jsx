@@ -686,7 +686,7 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
       <div className="versus-lobby-hero">
         {LOOK ? (
           <div className="vl1-head">
-            {on3v3 && <button className="vl1-back" onClick={() => { abandon(); on3v3() }}>← BLACKTOP 3V3</button>}
+            {on3v3 && <button className="vl1-back" onClick={() => { abandon(); on3v3() }}>← BLACKTOP</button>}
             <span className="ag-eyebrow">BLACKTOP · FIRST TO 11</span>
             <div className="versus-lobby-title vl1-title">1V1</div>
           </div>

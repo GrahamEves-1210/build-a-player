@@ -7,7 +7,7 @@ const MODES = [
   ['Takeover', 'A road trip through 12 cities, beating the best player in each.'],
   ['Daily Challenge', 'The same spins for everyone, one run a day.'],
   ['Compete and Trait Auction', 'Build live against real players for the best overall.'],
-  ['Blacktop', 'Live 3v3 and 1v1 basketball against real players.'],
+  ['Blacktop', 'Live 1v1, 2v2 and 3v3 basketball against real players.'],
 ]
 
 export default function AboutPage({ onBack }) {

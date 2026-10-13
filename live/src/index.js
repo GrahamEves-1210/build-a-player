@@ -1,4 +1,4 @@
-// Build-A-Player live server: Blacktop 3v3 (live/, its own Worker; the site's
+// Build-A-Player live server: Blacktop 3v3 and 2v2 (live/, its own Worker; the site's
 // payments API is server/, a different thing).
 //
 // One referee for the whole game, so every phone sees the same one:
@@ -23,6 +23,10 @@ const SLOTS = [
   { id: '0g0', team: 0, pos: 'guard' }, { id: '0g1', team: 0, pos: 'guard' }, { id: '0b', team: 0, pos: 'big' },
   { id: '1g0', team: 1, pos: 'guard' }, { id: '1g1', team: 1, pos: 'guard' }, { id: '1b', team: 1, pos: 'big' },
 ]
+// 2v2 (its own lobby): a guard and a big a side
+const SLOTS_2 = SLOTS.filter(sl => sl.id !== '0g1' && sl.id !== '1g1')
+const slotsFor = size => (size === 2 ? SLOTS_2 : SLOTS)
+const lobbyName = size => (size === 2 ? 'blacktop2' : 'blacktop')
 const BOT_NAMES = ['Smoke', 'Shifty', 'Glass', 'Sauce', 'Twitch', 'Hammer', 'Ghost', 'Blitz', 'Cash', 'Lefty', 'Rook', 'Stretch']
 const OFF_CALLS = ['drive', 'pullup', 'post', 'pass']
 const DEF_CALLS = ['press', 'sag', 'help']
@@ -45,6 +49,7 @@ export default {
     if (req.headers.get('Upgrade') !== 'websocket') return new Response('Build-A-Player live server', { status: 426 })
     if (!originOk(req.headers.get('Origin'))) return new Response('forbidden', { status: 403 })
     if (url.pathname === '/lobby') return env.LOBBY.get(env.LOBBY.idFromName('blacktop')).fetch(req)
+    if (url.pathname === '/lobby2') return env.LOBBY.get(env.LOBBY.idFromName('blacktop2')).fetch(req)
     const m = url.pathname.match(/^\/room\/([A-Z0-9]{6})$/)
     if (m) return env.ROOM.get(env.ROOM.idFromName(m[1])).fetch(req)
     return new Response('not found', { status: 404 })
@@ -58,9 +63,12 @@ export class Lobby {
     this.conns = new Map()     // ws → player
     this.spots = {}            // slotId → { ...player, at }
     this.held = {}             // slotId → { vid, until } a squad running it back, on its way
+    this.size = 3              // 3v3, or 2v2 (the /lobby2 one): set by the first request
   }
+  get slots() { return slotsFor(this.size) }
   async fetch(req) {
     const url = new URL(req.url)
+    if (url.pathname === '/lobby2' || url.searchParams.get('size') === '2') this.size = 2
     // a squad running it back: hold a side for them (both guards and the big together)
     if (url.pathname === '/hold' && req.method === 'POST') {
       const { players } = await req.json()
@@ -68,7 +76,7 @@ export class Lobby {
       for (const [id, h] of Object.entries(this.held)) if (h.until < now) delete this.held[id]
       const free = sl => !this.spots[sl.id] && !this.held[sl.id]
       for (const team of [0, 1]) {
-        const side = SLOTS.filter(sl => sl.team === team && free(sl))
+        const side = this.slots.filter(sl => sl.team === team && free(sl))
         const plan = []
         const left = [...side]
         for (const p of players) { const i = left.findIndex(sl => sl.pos === p.pos); if (i < 0) break; plan.push([left[i], p]); left.splice(i, 1) }
@@ -91,7 +99,7 @@ export class Lobby {
     const now = Date.now()
     // a spot held for a squad on its way shows as taken (it's theirs)
     const show = sl => (this.spots[sl.id] ? pub(this.spots[sl.id]) : this.held[sl.id] && this.held[sl.id].until > now ? { vid: this.held[sl.id].vid, name: 'Coming back…', uid: null, cos: null } : null)
-    return { t: 'lobby', spots: Object.fromEntries(SLOTS.map(sl => [sl.id, show(sl)])), here: [...this.conns.values()].map(pub) }
+    return { t: 'lobby', size: this.size, spots: Object.fromEntries(this.slots.map(sl => [sl.id, show(sl)])), here: [...this.conns.values()].map(pub) }
   }
   broadcast(msg) { for (const ws of this.conns.keys()) send(ws, msg) }
   async onMessage(ws, data) {
@@ -105,18 +113,18 @@ export class Lobby {
       const mine = Object.entries(this.held).find(([, h]) => h.vid === p.vid && h.until > Date.now())
       if (mine) { delete this.held[mine[0]]; this.spots[mine[0]] = { ...p, at: Date.now() } }
       this.broadcast(this.state())
-      if (mine && SLOTS.every(sl => this.spots[sl.id])) await this.makeMatch()
+      if (mine && this.slots.every(sl => this.spots[sl.id])) await this.makeMatch()
       return
     }
     const me = this.conns.get(ws); if (!me) return
     if (m.t === 'seat') {
-      const want = SLOTS.find(sl => sl.id === m.slot) ? m.slot : null
+      const want = this.slots.find(sl => sl.id === m.slot) ? m.slot : null
       const heldFor = want && this.held[want] && this.held[want].until > Date.now() ? this.held[want].vid : null
       if (want && ((this.spots[want] && this.spots[want].vid !== me.vid) || (heldFor && heldFor !== me.vid))) return send(ws, { t: 'bumped' })
       for (const id of Object.keys(this.spots)) if (this.spots[id].vid === me.vid) delete this.spots[id]
       if (want) this.spots[want] = { ...me, at: Date.now() }
       this.broadcast(this.state())
-      if (SLOTS.every(sl => this.spots[sl.id])) await this.makeMatch()
+      if (this.slots.every(sl => this.spots[sl.id])) await this.makeMatch()
       return
     }
     if (m.t === 'chat') {
@@ -125,14 +133,14 @@ export class Lobby {
     }
     if (m.t === 'typing') return this.broadcast({ t: 'typing', from: me.vid, name: me.name })
     if (m.t === 'practice') {
-      // you and five CPUs, at once: you take a spot for your position, CPUs the rest
+      // you and CPUs, at once: you take a spot for your position, CPUs the rest
       const pos = m.pos === 'big' ? 'big' : 'guard'
       const code = code6()
-      const mine = SLOTS.find(sl => sl.pos === pos && sl.team === 0)
-      const players = SLOTS.map((sl, i) => (sl === mine
+      const mine = this.slots.find(sl => sl.pos === pos && sl.team === 0)
+      const players = this.slots.map((sl, i) => (sl === mine
         ? { ...me, pos: sl.pos, team: sl.team, slot: sl.id, bot: false }
         : { vid: `bot-${code}-${sl.id}`, name: BOT_NAMES[(i * 5) % BOT_NAMES.length], uid: null, cos: null, pos: sl.pos, team: sl.team, slot: sl.id, bot: true }))
-      await this.env.ROOM.get(this.env.ROOM.idFromName(code)).fetch('https://room/init', { method: 'POST', body: JSON.stringify({ code, players, practice: true }) })
+      await this.env.ROOM.get(this.env.ROOM.idFromName(code)).fetch('https://room/init', { method: 'POST', body: JSON.stringify({ code, players, practice: true, size: this.size }) })
       for (const id of Object.keys(this.spots)) if (this.spots[id].vid === me.vid) delete this.spots[id]
       send(ws, { t: 'match', code, players })
       this.broadcast(this.state())
@@ -140,8 +148,8 @@ export class Lobby {
   }
   async makeMatch() {
     const code = code6()
-    const players = SLOTS.map(sl => ({ ...pub(this.spots[sl.id]), pos: sl.pos, team: sl.team, slot: sl.id, bot: false }))
-    await this.env.ROOM.get(this.env.ROOM.idFromName(code)).fetch('https://room/init', { method: 'POST', body: JSON.stringify({ code, players, practice: false }) })
+    const players = this.slots.map(sl => ({ ...pub(this.spots[sl.id]), pos: sl.pos, team: sl.team, slot: sl.id, bot: false }))
+    await this.env.ROOM.get(this.env.ROOM.idFromName(code)).fetch('https://room/init', { method: 'POST', body: JSON.stringify({ code, players, practice: false, size: this.size }) })
     const vids = new Set(players.map(p => p.vid))
     this.spots = {}
     for (const [ws, p] of this.conns) if (vids.has(p.vid)) send(ws, { t: 'match', code, players })
@@ -171,7 +179,7 @@ export class Room {
     const url = new URL(req.url)
     if (url.pathname === '/init' && req.method === 'POST') {
       const b = await req.json()
-      this.m = { code: b.code, players: b.players, practice: !!b.practice, seed: b.code, round: 0 }
+      this.m = { code: b.code, players: b.players, practice: !!b.practice, size: b.size === 2 ? 2 : 3, seed: b.code, round: 0 }
       this.startBuild()
       return new Response('ok')
     }
@@ -188,7 +196,7 @@ export class Room {
   snapshot() {
     const m = this.m
     return {
-      t: 'room', now: Date.now(), code: m.code, players: m.players, practice: m.practice, seed: m.seed, created: m.created, ends: m.ends, phase: m.phase,
+      t: 'room', now: Date.now(), code: m.code, players: m.players, practice: m.practice, size: m.size, seed: m.seed, created: m.created, ends: m.ends, phase: m.phase,
       here: this.here(), builds: m.builds, final: m.final, locks: m.locks, votes: [...m.votes],
     }
   }
@@ -319,7 +327,7 @@ export class Room {
         const squad = this.humans().filter(p => p.team === me.team && this.here().includes(p.vid))
         if (!squad.length || !squad.every(p => m.votes.has(p.vid))) return
         if (m.practice) { for (const [w, v] of this.conns) if (squad.some(p => p.vid === v)) send(w, { t: 'requeue', practice: true }); return }
-        const res = await this.env.LOBBY.get(this.env.LOBBY.idFromName('blacktop')).fetch('https://lobby/hold', { method: 'POST', body: JSON.stringify({ players: squad.map(p => ({ vid: p.vid, pos: p.pos })) }) })
+        const res = await this.env.LOBBY.get(this.env.LOBBY.idFromName(lobbyName(m.size))).fetch(`https://lobby/hold?size=${m.size}`, { method: 'POST', body: JSON.stringify({ players: squad.map(p => ({ vid: p.vid, pos: p.pos })) }) })
         const ok = (await res.json().catch(() => ({}))).ok
         for (const [w, v] of this.conns) if (squad.some(p => p.vid === v)) send(w, { t: 'requeue', held: !!ok })
         return

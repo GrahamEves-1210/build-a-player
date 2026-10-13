@@ -23,7 +23,7 @@ export default function AppOnline({ sport = 'nfl', onClose }) {
         {o.played === 0 && (
           <div className="ol-empty ag-pop">
             <b>No online games yet.</b>
-            <span>Every online game is against real players: Compete pools, Blacktop 3v3 and 1v1.</span>
+            <span>Every online game is against real players: Compete pools, Blacktop 1v1, 2v2 and 3v3.</span>
           </div>
         )}
         <NextGoals limit={3} />
@@ -34,7 +34,7 @@ export default function AppOnline({ sport = 'nfl', onClose }) {
           <span className="ag-eyebrow">WHAT MOVES YOUR RATING</span>
           <ul>
             <li><b>Compete</b> · 1st +24 · 2nd +12 · 3rd +4 · 4th −6 · 5th −12</li>
-            <li><b>Blacktop 3v3</b> · win +20 · loss −12 · MVP +5</li>
+            <li><b>Blacktop 2v2 / 3v3</b> · win +20 · loss −12 · MVP +5</li>
             <li><b>Blacktop 1v1</b> · win +25 · loss −15 · forfeit −20</li>
           </ul>
         </div>

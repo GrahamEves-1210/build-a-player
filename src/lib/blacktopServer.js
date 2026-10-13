@@ -13,7 +13,7 @@ import { clean, blockedIds, MIN_GAP_MS } from './chat'
 import { supabase } from './supabase'
 import { getUsername } from './discord'
 import { myCosmetics, whenProgressReady } from './progress'
-import { SLOTS, BUILD_SECS, BOT_NAMES, teamName, autoBuild, buildOk } from './blacktopCore'
+import { slotsFor, BUILD_SECS, BOT_NAMES, teamName, autoBuild, buildOk } from './blacktopCore'
 
 // the live server (live/, deployed on Cloudflare); VITE_LIVE_URL overrides it (a local server: ws://localhost:8787)
 export const LIVE_URL = (import.meta.env.VITE_LIVE_URL || 'wss://bap-live.gre56734.workers.dev').replace(/\/$/, '')
@@ -68,6 +68,8 @@ export function useBlacktopServer({ enabled, user, position, pools, types, build
   const [clock, setClock] = useState(BUILD_SECS)
   const [votes, setVotes] = useState(new Set())
   const [kicked, setKicked] = useState(false)
+  const [size, setSize] = useState(3)                 // 3v3 or 2v2
+  const sizeRef = useRef(3)
   const lobbyRef = useRef(null), roomRef = useRef(null)
   const skew = useRef(0)                              // server clock minus this one
   const arrived = useRef(new Set())
@@ -87,6 +89,8 @@ export function useBlacktopServer({ enabled, user, position, pools, types, build
   const joinRef = useRef(null)
   // ── The room ───────────────────────────────────────────────────────────────
   const enterRoom = useCallback((code, players, practice) => {
+    const sz = players.length === 4 ? 2 : 3
+    sizeRef.current = sz; setSize(sz)
     lobbyRef.current?.close(); lobbyRef.current = null
     const mine = players.find(p => p.vid === meRef.current.vid)
     if (mine?.pos) onSeatPosRef.current?.(mine.pos)
@@ -126,17 +130,19 @@ export function useBlacktopServer({ enabled, user, position, pools, types, build
       if (m.t === 'requeue') {
         roomRef.current?.close(); roomRef.current = null
         setFinal(null); setLocks({}); setMyCalls({}); setVotes(new Set()); arrived.current = new Set()
-        joinRef.current?.(!!m.practice)
+        joinRef.current?.(!!m.practice, sizeRef.current)
       }
     }, setLink)
   }, [leave, onExit])
 
   // ── The lobby ──────────────────────────────────────────────────────────────
-  const join = useCallback((practice = false) => {
+  const join = useCallback((practice = false, sz = 3) => {
     if (!enabled) return
     if (!claimLive('blacktop')) { setPhase('busy'); return }
-    setPhase('queue'); setWaited(0); setLobbyChat([]); setKicked(false)
-    lobbyRef.current = liveSocket('/lobby', () => ({ t: 'hello', ...meRef.current }), m => {
+    sz = sz === 2 ? 2 : 3
+    sizeRef.current = sz; setSize(sz)
+    setPhase('queue'); setWaited(0); setLobbyChat([]); setKicked(false); setSpots({})
+    lobbyRef.current = liveSocket(sz === 2 ? '/lobby2' : '/lobby', () => ({ t: 'hello', ...meRef.current }), m => {
       if (m.t === 'lobby') { setSpots(m.spots ?? {}); setLobbyHere(m.here ?? []); return }
       if (m.t === 'bumped') { setBumped(true); setTimeout(() => setBumped(false), 2600); return }
       if (m.t === 'match') return enterRoom(m.code, m.players, !!m.players.filter(p => p.bot).length)
@@ -223,7 +229,7 @@ export function useBlacktopServer({ enabled, user, position, pools, types, build
     const coins = (won ? 15 : 5) + (mvp ? 8 : 0)
     window.dispatchEvent(new CustomEvent('bap:xp', { detail: { xp, coins, label: won ? (mvp ? 'Blacktop win · MVP' : 'Blacktop win') : 'Blacktop game' } }))
     window.dispatchEvent(new CustomEvent('bap:blacktop', { detail: { won: !!won, mvp, line: game.stats[me.vid] ?? null, bots: !!match.bots, score: game.score, team: mine?.team ?? 0 } }))
-    if (user && supabase && !match.bots) supabase.from('vs_results').insert({ user_id: user.id, username: getUsername(user), result: won ? 'win' : 'loss', ovr: null, position: mine?.pos ?? position, match_type: '3v3' }).then(null, () => {})
+    if (user && supabase && !match.bots) supabase.from('vs_results').insert({ user_id: user.id, username: getUsername(user), result: won ? 'win' : 'loss', ovr: null, position: mine?.pos ?? position, match_type: `${sizeRef.current}v${sizeRef.current}` }).then(null, () => {})
     return true
   }, [game, match, final, me.vid, user, position])
   const finish = useCallback(() => { book(); setPhase('result'); roomRef.current?.send({ t: 'done' }) }, [book])
@@ -265,7 +271,8 @@ export function useBlacktopServer({ enabled, user, position, pools, types, build
   return {
     server: true,
     phase, me, queue, waited, held, seated: Object.keys(held).length, mySlot: slotOf(me.vid), seat, bumped, link,
-    retry: () => { closeAll(); join() }, canFill: false, join, practice: () => join(true), leave: exit, leaveLobby: leave,
+    size, slots: slotsFor(size), roomSize: size * 2,
+    retry: () => { closeAll(); join(false, sizeRef.current) }, canFill: false, join, practice: (sz = 3) => join(true, sz), leave: exit, leaveLobby: leave,
     match, present, builds, clock, role, setRole, chat: visibleChat, sendChat, typing, typers, myTeam, leader: null, isLeader: false,
     final, game, finish, rematchVotes: votes, voteRematch, exit,
     locks, myCalls, call, arrive, lockCalls: () => {}, emotes, emote, kicked, clearKicked: () => setKicked(false),
