@@ -19,7 +19,7 @@ import { slotsFor, BUILD_SECS, BOT_NAMES, teamName, autoBuild, buildOk } from '.
 export const LIVE_URL = (import.meta.env.VITE_LIVE_URL || 'wss://bap-live.gre56734.workers.dev').replace(/\/$/, '')
 
 // A socket that reconnects (and says hello again) until it's closed on purpose
-function liveSocket(path, hello, onMsg, onStatus) {
+export function liveSocket(path, hello, onMsg, onStatus) {
   let ws = null, closed = false, tries = 0, timer = null
   const open = () => {
     if (closed) return

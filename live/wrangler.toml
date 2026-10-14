@@ -17,3 +17,20 @@ class_name = "Room"
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["Lobby", "Room"]
+
+# The Trait Auction (src/auction.js): a queue per sport + position, a room per auction
+[[durable_objects.bindings]]
+name = "AUCTION_QUEUE"
+class_name = "AuctionQueue"
+
+[[durable_objects.bindings]]
+name = "AUCTION_ROOM"
+class_name = "AuctionRoom"
+
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["AuctionQueue", "AuctionRoom"]
+
+# the shared game rules come from the app (../src): they read import.meta.env
+[define]
+"import.meta.env" = '{"DEV":false,"PROD":true}'

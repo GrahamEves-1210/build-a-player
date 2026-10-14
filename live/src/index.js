@@ -14,6 +14,12 @@
 // come from here, in one order, so the games can't come apart.
 //
 // Client → server and server → client messages are JSON: { t: type, ...fields }.
+//
+// The Trait Auction lives here too (auction.js): there the server runs the whole
+// auction itself, the auctioneer.
+
+import { AuctionQueue, AuctionRoom, validSportPos } from './auction.js'
+export { AuctionQueue, AuctionRoom }
 
 const BUILD_SECS = 180
 const PRACTICE_BUILD_SECS = 600
@@ -50,6 +56,13 @@ export default {
     if (!originOk(req.headers.get('Origin'))) return new Response('forbidden', { status: 403 })
     if (url.pathname === '/lobby') return env.LOBBY.get(env.LOBBY.idFromName('blacktop')).fetch(req)
     if (url.pathname === '/lobby2') return env.LOBBY.get(env.LOBBY.idFromName('blacktop2')).fetch(req)
+    if (url.pathname === '/auction/q') {
+      const sport = url.searchParams.get('sport'), pos = url.searchParams.get('pos')
+      if (!validSportPos(sport, pos)) return new Response('bad', { status: 400 })
+      return env.AUCTION_QUEUE.get(env.AUCTION_QUEUE.idFromName(`${sport}-${pos}`)).fetch(req)
+    }
+    const au = url.pathname.match(/^\/auction\/room\/([A-Z0-9]{6})$/)
+    if (au) return env.AUCTION_ROOM.get(env.AUCTION_ROOM.idFromName(au[1])).fetch(req)
     const m = url.pathname.match(/^\/room\/([A-Z0-9]{6})$/)
     if (m) return env.ROOM.get(env.ROOM.idFromName(m[1])).fetch(req)
     return new Response('not found', { status: 404 })

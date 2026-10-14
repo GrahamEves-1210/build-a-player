@@ -9,171 +9,28 @@
 //   queue   → wait for players (2+ real players, never bots — like the pools)
 //   auction → lots: spin → bidding → sold
 //   result  → the ranking; your place goes to your Compete record
-// The auctioneer is the leader (lowest vid present): it picks each lot, takes
-// the bids, and calls them sold. Its calls carry the whole ledger (wallets,
-// who won what), so a client that blinked catches up on the next one. If the
-// auctioneer drops, the next-lowest vid finishes the open lot and carries on;
-// lots are picked from the seed and the ledger, so either one picks the same.
+// The live server is the auctioneer (live/src/auction.js): it picks every lot,
+// checks every bid, runs the clock and ranks the builds. This phone sends its
+// bids and passes and shows what the server says. The rules both sides use are
+// lib/auctionCore.js.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { joinRoom, genCode, myVid, myDevice, claimLive, releaseLive, markEntered, clearEntered, takeEntered } from './live'
-import { seeded } from './rng'
+import { myVid, myDevice, claimLive, releaseLive, markEntered, clearEntered, takeEntered } from './live'
+import { liveSocket } from './blacktopServer'
 import { getUsername } from './discord'
 import { myCosmetics, whenProgressReady } from './progress'
 import { SPORT } from './career'
-import { calcOVR } from '../utils/simulation'
-import { calcBucketOVR } from '../utils/bucketSimulation'
-import { TYPES, ATTR } from '../data/qbs'
-import { GUARD_TYPES } from '../data/nba-guards'
-import { BIG_TYPES } from '../data/nba-bigs'
-import { BUCKET_ATTR } from '../data/nba-attrs'
-import { QB_SAL_COLS, QB_SAL_POOL } from '../data/qb-salary'
-import { SAL_COLS, BUCKET_SAL_POOL } from '../data/nba-salary'
+import { auctionCoreKit, AUCTION_FILL_SECS } from './auctionCore'
 
-export const AUCTION_SIZE = 3
-export const AUCTION_MIN = 2         // real players only; three starts at once, two when the countdown runs out
-export const AUCTION_FILL_SECS = 60   // the countdown: starts over every time someone joins
-export const BUDGET = 100
-export const BID_SECS = 8           // the clock when a lot opens, before anyone bids
-export const RESET_SECS = 6         // every bid puts the clock back up to this: going once at 4, twice at 2
-export const SPIN_MS = 3400         // the card shuffle + the reel, before bidding opens
-export const SOLD_MS = 2400         // the gavel, before the next spin
-const GRACE_MS = 450                // late bids still in flight when the window shuts
-export const FILLER_VAL = 3         // a slot nobody won by the end: a free agent
+export * from './auctionCore'
 
-// Football is QB only; basketball has both spots
-export const AUCTION_POS = { nfl: ['qb'], bucket: ['guard', 'big'] }
-const avg = vs => (vs.length ? vs.reduce((x, y) => x + y, 0) / vs.length : 5)
-
-// Everything the auction needs to know about a sport + position. The slots are
-// Salary Cap's five columns; each covers one to three of the position's traits.
-// Traits no slot covers (basketball's IQ, clutch, rebounding…) come from the
-// average of the players you won, the way Salary Cap fills them.
+// the rules' kit, plus what the screens show: the position's name, photos, logos
 export function auctionKit(sport, pos) {
-  const bucket = sport === 'bucket'
-  const S = SPORT[bucket ? 'bucket' : 'nfl']
-  const p = bucket ? (pos === 'big' ? 'big' : 'guard') : 'qb'
-  const posTypes = bucket ? (p === 'big' ? BIG_TYPES : GUARD_TYPES) : TYPES
-  const attr = bucket ? BUCKET_ATTR : ATTR
-  const slots = bucket
-    ? SAL_COLS.map(c => ({ key: c.key, label: c.label, types: p === 'big' ? c.bigTypes : c.guardTypes, alt: p === 'big' ? c.guardTypes : c.bigTypes }))
-    : QB_SAL_COLS.map(c => ({ key: c.key, label: c.label, types: c.types, alt: [] }))
-  const bySlot = Object.fromEntries(slots.map(sl => [sl.key, sl]))
-  const covered = new Set(slots.flatMap(sl => sl.types))
-  const loose = posTypes.filter(t => !covered.has(t))
-  const valOf = (pl, sl, t) => pl.attrs?.[t] ?? sl.alt.map(a => pl.attrs?.[a]).find(v => v != null) ?? 5
-  const ovr = bucket ? b => calcBucketOVR(b, posTypes, p) : b => calcOVR(b, posTypes)
-  return {
-    sport: S.id, pos: p, label: S.label[p],
-    types: slots.map(sl => sl.key),                       // the auction's slots
-    pool: bucket ? BUCKET_SAL_POOL : QB_SAL_POOL,
-    attrLabel: k => bySlot[k]?.label ?? k,
-    slotTraits: k => (bySlot[k]?.types ?? []).map(t => attr[t]?.label ?? t),
-    // a lot: the player's numbers for the slot's traits (its grade is their average), plus the loose traits
-    lotOf: (pl, k) => {
-      const sl = bySlot[k]
-      const vals = Object.fromEntries(sl.types.map(t => [t, valOf(pl, sl, t)]))
-      const extra = Object.fromEntries(loose.filter(t => pl.attrs?.[t] != null).map(t => [t, pl.attrs[t]]))
-      return { trait: k, name: pl.name, team: pl.team, val: Math.round(avg(Object.values(vals)) * 10) / 10, vals, extra }
-    },
-    // the full build behind a set of won slots (free agents in the empty ones)
-    buildOf: won => {
-      const b = {}
-      for (const sl of slots) {
-        const w = won?.[sl.key]
-        for (const t of sl.types) b[t] = { type: t, val: w ? w.vals?.[t] ?? w.val : FILLER_VAL, qbFull: w?.name ?? 'Free agent', team: w?.team ?? null }
-      }
-      const got = Object.values(won ?? {})
-      for (const t of loose) b[t] = { type: t, val: avg(got.map(w => w.extra?.[t]).filter(v => v != null)), qbFull: 'Team average', team: null }
-      return b
-    },
-    photo: S.photo, logo: S.logo,
-    calcOvr: b => Math.round(ovr(b) ?? 0),
-  }
+  const k = auctionCoreKit(sport, pos)
+  const S = SPORT[k.sport]
+  return { ...k, label: S.label[k.pos], photo: S.photo, logo: S.logo }
 }
 
-// ── The ledger (pure: the hook and the tests share it) ──────────────────────
-export const freshLedger = players => ({
-  wallets: Object.fromEntries(players.map(p => [p.vid, BUDGET])),
-  won: Object.fromEntries(players.map(p => [p.vid, {}])),
-  out: [],
-  log: [],
-})
-export const openSlots = (L, vid, types) => types.filter(t => !L.won[vid]?.[t])
-// you always keep $1 for each other empty slot, so you can fill them all
-export function maxBid(L, vid, types) {
-  const open = openSlots(L, vid, types).length
-  return open ? Math.max(0, (L.wallets[vid] ?? 0) - (open - 1)) : 0
-}
-export const canBidOn = (L, vid, types, trait) => !L.out.includes(vid) && !L.won[vid]?.[trait] && maxBid(L, vid, types) >= 1
-export const minNext = high => (high ? high.amount + 1 : 1)
-// a set number of lots, so nobody can stall it by never bidding: whatever's
-// still empty at the end is a free agent
-export const maxLots = m => m.players.length * m.types.length + 10
-export const auctionOver = (L, m, n) => n >= maxLots(m) || m.players.filter(p => !L.out.includes(p.vid)).every(p => openSlots(L, p.vid, m.types).length === 0)
-
-// The next lot: a trait somebody still needs (the ones most of the room needs
-// come up more), on a real player who has it
-export function pickLot(m, L, kit, n) {
-  const r = seeded(`${m.seed}:lot:${n}`)
-  const live = m.players.filter(p => !L.out.includes(p.vid))
-  const need = {}
-  for (const p of live) for (const t of openSlots(L, p.vid, m.types)) need[t] = (need[t] || 0) + 1
-  const bag = m.types.filter(t => need[t]).flatMap(t => Array(need[t]).fill(t))
-  if (!bag.length) return null
-  const trait = bag[Math.floor(r() * bag.length)]
-  const cands = [...kit.pool].sort((a, b) => a.name.localeCompare(b.name))
-  const pl = cands[Math.floor(r() * cands.length)]
-  return { n, ...kit.lotOf(pl, trait) }
-}
-
-export function rankAuction(m, L, kit) {
-  if (!m || !L) return []
-  return m.players
-    .map(p => {
-      const won = L.won[p.vid] ?? {}
-      const slots = Object.fromEntries(m.types.map(k => [k, won[k] ?? { val: FILLER_VAL, name: 'Free agent', price: 0 }]))
-      const quit = L.out.includes(p.vid)
-      return { ...p, slots, ovr: quit ? -1 : kit.calcOvr(kit.buildOf(won)), left: L.wallets[p.vid] ?? 0, forfeit: quit }
-    })
-    .sort((a, b) => b.ovr - a.ovr || b.left - a.left || a.vid.localeCompare(b.vid))
-    .map((p, i) => ({ ...p, place: i + 1 }))
-}
-
-// When the hammer falls: the clock runs from the open, or from the last bid
-export const lotEnd = (s, m) => (s.last ? s.last + (m.reset ?? RESET_SECS) * 1000 : s.t0 + SPIN_MS + m.bidSecs * 1000)
-// what the auctioneer's calling, by the time left
-export const callOf = left => (left > 4000 ? null : left > 2000 ? 'once' : 'twice')
-
-const leaderOf = list => [...list].map(p => p.vid).sort()[0] ?? null
-
-// Every client checks a ledger the room sends before taking it: wallets only go
-// down and never below zero, a trait once won stays won, every won trait is a
-// real player's real numbers for that slot, and each wallet is the budget less
-// exactly what its traits cost. A crafted 'sold' or 'done' can't hand anyone 99s
-// or rewrite who paid for what.
-export function ledgerOk(prev, next, m, kit) {
-  if (!next || !prev || typeof next !== 'object') return false
-  const realLot = (w, t) => {
-    if (!w || !m.types.includes(t)) return false
-    const pl = kit.pool.find(x => x.name === w.name)
-    if (!pl) return false
-    return Math.abs(kit.lotOf(pl, t).val - Number(w.val)) < 0.01
-  }
-  for (const { vid } of m.players) {
-    const wNew = Number(next.wallets?.[vid]), wOld = Number(prev.wallets?.[vid])
-    if (!(wNew >= 0) || wNew > wOld) return false
-    const won = next.won?.[vid] ?? {}, had = prev.won?.[vid] ?? {}
-    let spent = 0
-    for (const [t, w] of Object.entries(won)) { if (!realLot(w, t)) return false; spent += Number(w.price) || 0 }
-    for (const [t, w] of Object.entries(had)) if (!won[t] || won[t].name !== w.name) return false
-    if (BUDGET - wNew !== spent) return false
-  }
-  if ((prev.out ?? []).some(v => !(next.out ?? []).includes(v))) return false
-  return true
-}
-
-// ── The hook ─────────────────────────────────────────────────────────────────
 export function useAuction({ enabled, user, sport, pos }) {
   const kit = useMemo(() => auctionKit(sport, pos), [sport, pos])
   const me = useMemo(() => ({ vid: myVid(), dev: myDevice(), name: user ? (getUsername(user) || 'Player') : 'Guest', uid: user?.id ?? null, cos: myCosmetics() }), [user?.id]) // eslint-disable-line
@@ -182,242 +39,84 @@ export function useAuction({ enabled, user, sport, pos }) {
     const e = takeEntered('auction'); if (!e) return
     whenProgressReady(() => window.dispatchEvent(new CustomEvent('bap:compete', { detail: { sport: e.sport, pos: e.pos, place: e.of, of: e.of, ovr: 0, humans: e.of, forfeit: true, mode: 'auction' } })))
   }, [])
-  const [phase, setPhase] = useState('idle')         // idle | queue | auction | result
+  const [phase, setPhase] = useState('idle')         // idle | busy | queue | auction | result
   const [queue, setQueue] = useState([])
+  const [startsAt, setStartsAt] = useState(null)     // the queue's countdown, on this phone's clock
   const [link, setLink] = useState('connecting')
-  const [waited, setWaited] = useState(0)
-  const [match, setMatch] = useState(null)           // { code, seed, created, sport, pos, types, bidSecs, players }
+  const [match, setMatch] = useState(null)           // { code, seed, created, sport, pos, types, bidSecs, reset, players }
   const [present, setPresent] = useState([])
-  // the floor: lot n, its stage, the high bid, who passed, and the ledger
-  const [st, setSt] = useState(null)                 // { n, stage: 'wait'|'lot'|'sold', lot, t0, high, passed, sold, soldAt, L }
+  const [st, setSt] = useState(null)                 // { n, stage, lot, t0, last, high, passed, sold, soldAt, L }
+  const [ranked, setRanked] = useState([])
   const [now, setNow] = useState(Date.now())
-  const queueRef = useRef(null)
-  const roomRef = useRef(null)
+  const qRef = useRef(null), roomRef = useRef(null)
   const stRef = useRef(null); stRef.current = st
   const matchRef = useRef(null); matchRef.current = match
-  const presentRef = useRef([]); presentRef.current = present
-  const kitRef = useRef(kit); kitRef.current = kit
   const booked = useRef(null)
-  const entered = useRef(0)
 
+  const closeAll = () => { qRef.current?.close(); qRef.current = null; roomRef.current?.close(); roomRef.current = null }
   const leave = useCallback(() => {
-    queueRef.current?.leave(); queueRef.current = null
-    roomRef.current?.leave(); roomRef.current = null
-    setPhase('idle'); setQueue([]); setMatch(null); setSt(null); setPresent([]); setWaited(0)
+    closeAll()
+    setPhase('idle'); setQueue([]); setStartsAt(null); setMatch(null); setSt(null); setPresent([]); setRanked([])
     releaseLive()
   }, [])
   useEffect(() => { if (!enabled) leave() }, [enabled, leave])
   useEffect(() => () => leave(), [leave])
 
-  const amLeaderRef = useRef(null)
-  const amLeader = () => {
-    const m = matchRef.current, s = stRef.current
-    if (!m || !s) return false
-    // before presence lands, the lowest vid in the match is the auctioneer
-    const here = presentRef.current.filter(p => m.players.some(q => q.vid === p.vid) && !s.L.out.includes(p.vid))
-    return leaderOf(here.length ? here : m.players.filter(p => !s.L.out.includes(p.vid))) === me.vid
-  }
-  amLeaderRef.current = amLeader
-
-  // ── messages from the floor ──
-  const onLot = useCallback(p => {
-    const m = matchRef.current, k = kitRef.current
-    // a real player's real numbers for a real slot, and a ledger that adds up
-    if (!m || !p?.lot || !m.types.includes(p.lot.trait)) return
-    const pl = k.pool.find(x => x.name === p.lot.name)
-    if (!pl || Math.abs(k.lotOf(pl, p.lot.trait).val - Number(p.lot.val)) > 0.01) return
-    if (p.L && stRef.current && !ledgerOk(stRef.current.L, p.L, m, k)) return
-    setSt(s => {
-      if (!s || p.lot.n < s.n || (p.lot.n === s.n && s.stage !== 'wait' && s.stage !== 'sold')) return s
-      if (p.lot.n === s.n && s.stage === 'sold') return s
-      return { ...s, n: p.lot.n, stage: 'lot', lot: p.lot, t0: Date.now() - (p.el || 0), last: 0, high: null, passed: [], sold: null, L: p.L ?? s.L }
-    })
-  }, [])
-  // the high bid: the auctioneer settles bids itself, so it never takes this from the room;
-  // everyone else shows it if it's a bid that player could actually make
-  const onHigh = useCallback(p => {
-    const m = matchRef.current
-    if (!m || amLeaderRef.current?.()) return
-    setSt(s => {
-      if (!s || s.stage !== 'lot' || p.n !== s.n || !m.players.some(x => x.vid === p.vid)) return s
-      if (!(p.amount >= minNext(s.high) && p.amount <= maxBid(s.L, p.vid, m.types))) return s
-      return { ...s, high: { vid: p.vid, amount: p.amount }, last: Date.now() - Math.max(0, Math.min(Number(p.ago) || 0, 5000)) }
-    })
-  }, [])
-  const onPass = useCallback(p => setSt(s => (s && s.stage === 'lot' && p.n === s.n && !s.passed.includes(p.from) ? { ...s, passed: [...s.passed, p.from] } : s)), [])
-  const onSold = useCallback(p => {
-    const m = matchRef.current, k = kitRef.current, s0 = stRef.current
-    if (!m || !s0 || !ledgerOk(s0.L, p.L, m, k)) return
-    setSt(s => (s && p.n >= s.n && !(p.n === s.n && s.stage === 'sold') ? { ...s, n: p.n, stage: 'sold', lot: p.lot ?? s.lot, sold: p.sold, soldAt: Date.now(), high: null, L: p.L } : s))
-  }, [])
-  // the end: only a ledger that adds up, and only when the auction really is over
-  const onDone = useCallback(p => {
-    const m = matchRef.current, k = kitRef.current, s0 = stRef.current
-    if (!m || !s0 || !ledgerOk(s0.L, p.L, m, k)) return
-    if (!auctionOver(p.L, m, s0.n) && pickLot(m, p.L, k, s0.n + 1)) return
-    setSt(s => (s ? { ...s, stage: 'done', L: p.L } : s)); setPhase('result')
-  }, [])
-
-  // the auctioneer: takes a bid if it's good, and tells the room
-  const takeBid = useCallback((vid, n, amount) => {
-    const s = stRef.current, m = matchRef.current
-    if (!s || !m || s.stage !== 'lot' || n !== s.n || Date.now() > lotEnd(s, m) + GRACE_MS) return false
-    if (Date.now() < s.t0 + SPIN_MS - 300) return false
-    if (!canBidOn(s.L, vid, m.types, s.lot.trait) || s.high?.vid === vid) return false
-    if (amount < minNext(s.high) || amount > maxBid(s.L, vid, m.types)) return false
-    const high = { vid, amount }, last = Date.now()
-    stRef.current = { ...s, high, last }
-    setSt(x => (x && x.n === n ? { ...x, high, last } : x))
-    roomRef.current?.send('high', { n, vid, amount })
-    return true
-  }, [])
-
-  const enterRoom = useCallback(m => {
-    queueRef.current?.leave(); queueRef.current = null
-    setMatch(m); matchRef.current = m
-    const s0 = { n: 0, stage: 'wait', lot: null, t0: 0, last: 0, high: null, passed: [], sold: null, soldAt: 0, L: freshLedger(m.players) }
-    setSt(s0); stRef.current = s0
-    setPhase('auction'); booked.current = null; entered.current = Date.now()
-    markEntered({ kind: 'auction', code: m.code, sport: m.sport, pos: m.pos, of: m.players.length })
-    const room = joinRoom(`auction-${m.code}`, me)
-    roomRef.current = room
-    room.onPresence(setPresent)
-    room.on('lot', onLot)
-    room.on('high', onHigh)
-    room.on('pass', onPass)
-    room.on('sold', onSold)
-    room.on('done', onDone)
-    room.on('bid', p => { if (amLeader()) takeBid(p.from, p.n, p.amount) })
-    room.on('quit', p => { if (!m.players.some(x => x.vid === p.from)) return; setSt(s => (s && !s.L.out.includes(p.from) ? { ...s, L: { ...s.L, out: [...s.L.out, p.from] } } : s)) })
-    // someone (re)joined: anyone already on the floor catches them up (they may
-    // be the auctioneer now, so it can't wait for the auctioneer to answer)
-    room.on('hello', () => {
-      const s = stRef.current
-      if (!s || s.stage === 'wait') return
-      if (s.stage === 'lot') { room.send('lot', { lot: s.lot, el: Date.now() - s.t0, L: s.L }); if (s.high) room.send('high', { n: s.n, ...s.high, ago: s.last ? Date.now() - s.last : 0 }) }
-      else if (s.stage === 'sold') room.send('sold', { n: s.n, lot: s.lot, sold: s.sold, L: s.L })
-    })
-    setTimeout(() => room.send('hello', {}), 500)
-  }, [me, onLot, onHigh, onPass, onSold, onDone, takeBid]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  const form = useCallback(list => {
-    const code = genCode()
-    const seen = new Set()
-    const humans = [...list].sort((a, b) => (a.ts ?? 0) - (b.ts ?? 0)).filter(p => {
-      const keys = [p.dev && `d:${p.dev}`, p.uid && `u:${p.uid}`].filter(Boolean)
-      if (keys.some(k => seen.has(k))) return false
-      keys.forEach(k => seen.add(k)); return true
-    }).slice(0, AUCTION_SIZE)
-    const players = humans.map(h => ({ vid: h.vid, name: h.name, uid: h.uid ?? null, cos: h.cos ?? null }))
-    return { code, seed: `au-${code}`, created: Date.now(), sport: kit.sport, pos: kit.pos, types: kit.types, bidSecs: BID_SECS, reset: RESET_SECS, players }
-  }, [kit])
+  // the server's word on the room: its times arrive as "how long ago", set on this clock
+  const onRoom = useCallback(msg => {
+    if (msg.t === 'gone') { leave(); return }
+    if (msg.t !== 'state' || !msg.m || !msg.st) return
+    const t = Date.now(), s = msg.st
+    setMatch(msg.m)
+    setPresent((msg.here ?? []).map(vid => ({ vid })))
+    setSt({ ...s, t0: t - (s.el ?? 0), last: s.sinceLast != null ? t - s.sinceLast : 0, soldAt: s.sinceSold != null ? t - s.sinceSold : 0 })
+    if (s.stage === 'done') { setRanked(msg.ranked ?? []); setPhase('result') }
+  }, [leave])
+  const enterRoom = useCallback((code, players) => {
+    qRef.current?.close(); qRef.current = null
+    setMatch({ code, players, types: kit.types, sport: kit.sport, pos: kit.pos }); setPhase('auction'); booked.current = null
+    markEntered({ kind: 'auction', code, sport: kit.sport, pos: kit.pos, of: players.length })
+    roomRef.current = liveSocket(`/auction/room/${code}`, () => ({ t: 'hello', vid: me.vid }), onRoom, setLink)
+  }, [kit, me.vid, onRoom])
 
   const join = useCallback(() => {
     if (!enabled) return
     if (!claimLive('auction')) { setPhase('busy'); return }
-    roomRef.current?.leave(); roomRef.current = null
-    setPhase('queue'); setWaited(0); setMatch(null); setSt(null)
-    const q = joinRoom(`auction3-q-${kit.sport}-${kit.pos}`, { ...me, ts: Date.now() })
-    queueRef.current = q
-    setLink('connecting'); q.onStatus(setLink)
-    q.onPresence(list => {
-      setQueue(list)
-      if (list.length >= AUCTION_SIZE && leaderOf(list) === me.vid && queueRef.current === q) { const m = form(list); if (m.players.length < AUCTION_MIN) return; q.send('match', m); enterRoom(m) }
-    })
-    q.on('match', m => {
-      if (!m?.players?.some(p => p.vid === me.vid)) return
-      if ((m.from !== m.players.map(p => p.vid).sort()[0] && m.from !== leaderOf(q.presence())) || Math.abs(Date.now() - Number(m.created)) > 20000) return
-      if (m.seed !== `au-${m.code}` || m.sport !== kit.sport || m.pos !== kit.pos || m.bidSecs !== BID_SECS || m.reset !== RESET_SECS || m.players.length > AUCTION_SIZE || String(m.types) !== String(kit.types)) return
-      enterRoom(m)
-    })
-    q.on('fill', () => {
-      const list = q.presence()
-      if (list.length >= AUCTION_MIN && leaderOf(list) === me.vid && queueRef.current === q) { const m = form(list); if (m.players.length < AUCTION_MIN) return; q.send('match', m); enterRoom(m) }
-    })
-  }, [enabled, kit, me, form, enterRoom])
+    closeAll()
+    setPhase('queue'); setMatch(null); setSt(null); setQueue([]); setStartsAt(null)
+    qRef.current = liveSocket(`/auction/q?sport=${kit.sport}&pos=${kit.pos}`, () => ({ t: 'hello', ...me }), msg => {
+      if (msg.t === 'queue') { setQueue(msg.list ?? []); setStartsAt(msg.startsIn == null ? null : Date.now() + msg.startsIn) }
+      else if (msg.t === 'match' && msg.players?.some(p => p.vid === me.vid)) enterRoom(msg.code, msg.players)
+    }, setLink)
+  }, [enabled, kit, me, enterRoom])
+  const fillNow = useCallback(() => qRef.current?.send({ t: 'fill' }), [])
+  const retry = useCallback(() => { closeAll(); join() }, [join])
 
-  const fillNow = useCallback(() => {
-    const q = queueRef.current; if (!q) return
-    const list = q.presence()
-    if (list.length < AUCTION_MIN) return
-    q.send('fill', {})
-    if (leaderOf(list) === me.vid) { const m = form(list); if (m.players.length < AUCTION_MIN) return; q.send('match', m); enterRoom(m) }
-  }, [me.vid, form, enterRoom])
+  // the clock the screens read (the bidding bar, going once / twice)
   useEffect(() => {
-    if (phase !== 'queue') return
-    const id = setInterval(() => setWaited(w => w + 1), 1000)
+    if (phase !== 'auction' && phase !== 'queue') return
+    const id = setInterval(() => setNow(Date.now()), 150)
     return () => clearInterval(id)
   }, [phase])
-  const lastCount = useRef(0)
-  useEffect(() => { if (phase === 'queue' && queue.length > lastCount.current) setWaited(0); lastCount.current = queue.length }, [phase, queue.length])
-  useEffect(() => { if (phase === 'queue' && waited >= AUCTION_FILL_SECS && queue.length >= AUCTION_MIN) fillNow() }, [phase, waited, queue.length, fillNow])
+  // the queue countdown, as seconds already waited (the screens count down from AUCTION_FILL_SECS)
+  const waited = startsAt ? Math.max(0, AUCTION_FILL_SECS - Math.ceil((startsAt - now) / 1000)) : 0
 
-  // ── the clock, and (when I'm the auctioneer) the gavel ──
-  useEffect(() => {
-    if (phase !== 'auction') return
-    const id = setInterval(() => {
-      const t = Date.now()
-      setNow(t)
-      const s = stRef.current, m = matchRef.current, room = roomRef.current
-      if (!s || !m || !room || !amLeader()) return
-      const k = kitRef.current
-      const next = () => {
-        if (auctionOver(s.L, m, s.n)) {
-          room.send('done', { L: s.L }); onDone({ L: s.L }); return
-        }
-        const lot = pickLot(m, s.L, k, s.n + 1)
-        if (!lot) { room.send('done', { L: s.L }); onDone({ L: s.L }); return }
-        const ns = { ...s, n: lot.n, stage: 'lot', lot, t0: t, last: 0, high: null, passed: [], sold: null }
-        stRef.current = ns; setSt(ns)
-        room.send('lot', { lot, el: 0, L: s.L })
-      }
-      if (s.stage === 'wait') { if (t - entered.current > 2400) next(); return }
-      if (s.stage === 'sold') { if (t - s.soldAt > SOLD_MS) next(); return }
-      if (s.stage !== 'lot') return
-      const end = lotEnd(s, m)
-      const open = t >= s.t0 + SPIN_MS
-      // everyone who could still bid has passed (or it's down to the high bidder): close early
-      const here = new Set(presentRef.current.map(p => p.vid)); here.add(me.vid)
-      const could = m.players.filter(p => here.has(p.vid) && canBidOn(s.L, p.vid, m.types, s.lot.trait) && p.vid !== s.high?.vid)
-      const settled = open && could.every(p => s.passed.includes(p.vid)) && (s.high || could.length > 0 || t > s.t0 + SPIN_MS + 1200)
-      if (t < end + GRACE_MS && !settled) return
-      const L = { ...s.L, wallets: { ...s.L.wallets }, won: { ...s.L.won }, log: [...s.L.log] }
-      let sold = null
-      if (s.high) {
-        const { vid, amount } = s.high
-        L.wallets[vid] -= amount
-        L.won[vid] = { ...L.won[vid], [s.lot.trait]: { val: s.lot.val, vals: s.lot.vals, extra: s.lot.extra, name: s.lot.name, team: s.lot.team, price: amount } }
-        sold = { vid, amount }
-      }
-      L.log = [{ n: s.n, trait: s.lot.trait, name: s.lot.name, val: s.lot.val, vid: sold?.vid ?? null, amount: sold?.amount ?? 0 }, ...L.log].slice(0, 30)
-      const ns = { ...s, stage: 'sold', sold, soldAt: t, high: null, L }
-      stRef.current = ns; setSt(ns)
-      room.send('sold', { n: s.n, lot: s.lot, sold, L })
-    }, 150)
-    return () => clearInterval(id)
-  }, [phase]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ── my moves ──
+  // my moves: shown at once, the server's next word settles them
   const bid = useCallback(amount => {
-    const s = stRef.current, m = matchRef.current
-    if (!s || !m || s.stage !== 'lot') return false
-    if (amLeader()) return takeBid(me.vid, s.n, amount)
-    if (!canBidOn(s.L, me.vid, m.types, s.lot.trait) || s.high?.vid === me.vid) return false
-    if (amount < minNext(s.high) || amount > maxBid(s.L, me.vid, m.types)) return false
-    roomRef.current?.send('bid', { n: s.n, amount })
-    const high = { vid: me.vid, amount }, last = Date.now()   // shown now; the auctioneer's call settles it
-    stRef.current = { ...s, high, last }; setSt(x => (x && x.n === s.n ? { ...x, high, last } : x))
+    const s = stRef.current
+    if (!s || s.stage !== 'lot' || !roomRef.current) return false
+    roomRef.current.send({ t: 'bid', n: s.n, amount })
+    setSt(x => (x && x.n === s.n ? { ...x, high: { vid: me.vid, amount }, last: Date.now() } : x))
     return true
-  }, [me.vid, takeBid]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [me.vid])
   const pass = useCallback(() => {
     const s = stRef.current
     if (!s || s.stage !== 'lot' || s.passed.includes(me.vid)) return
-    roomRef.current?.send('pass', { n: s.n })
-    onPass({ n: s.n, from: me.vid })
-  }, [me.vid, onPass])
+    roomRef.current?.send({ t: 'pass', n: s.n })
+    setSt(x => (x && x.n === s.n ? { ...x, passed: [...x.passed, me.vid] } : x))
+  }, [me.vid])
 
   // Book my place once
-  const ranked = useMemo(() => rankAuction(match, st?.L, kit), [match, st?.L, kit])
   useEffect(() => {
     if (phase !== 'result' || !match || booked.current === match.code) return
     const mine = ranked.find(p => p.vid === me.vid)
@@ -427,17 +126,16 @@ export function useAuction({ enabled, user, sport, pos }) {
     window.dispatchEvent(new CustomEvent('bap:compete', { detail: { sport: match.sport, pos: match.pos, place: mine.place, of: ranked.length, ovr: mine.ovr, humans: match.players.length, mode: 'auction' } }))
   }, [phase, match, ranked, me.vid])
 
-  // Leaving mid-auction: the room sees you quit, your record takes the forfeit
+  // Leaving mid-auction: the server marks you out, your record takes the forfeit
   const forfeit = useCallback(() => {
     const m = matchRef.current
     if (!m || phase !== 'auction') { leave(); return }
-    roomRef.current?.send('quit', {})
+    roomRef.current?.send({ t: 'quit' })
     window.dispatchEvent(new CustomEvent('bap:compete', { detail: { sport: m.sport, pos: m.pos, place: m.players.length, of: m.players.length, ovr: 0, humans: m.players.length, forfeit: true, mode: 'auction' } }))
     booked.current = m.code
     clearEntered(m.code)
     setTimeout(leave, 300)
   }, [phase, leave])
 
-  const retry = useCallback(() => { queueRef.current?.leave(); queueRef.current = null; join() }, [join])
   return { phase, queue, waited, link, match, st, now, present, ranked, me, kit, join, leave, retry, fillNow, bid, pass, forfeit }
 }
