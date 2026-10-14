@@ -4,6 +4,8 @@
 // the rail one layer under the nav (the tab bar is 200), its close button on top.
 // Nothing moves. Re-applied every couple of seconds and whenever the page's
 // elements change, since Playwire redraws the rail.
+import { rampRail } from './ads'
+
 const RAIL = '[id^="pw-oop-bottom_rail"], [id^="pw-oop"][style*="bottom"]'
 // a second, taller ad Playwire stacks at the bottom (116px, the very top layer): under the nav too
 const STICKY = '.st-adunit-ad'
@@ -32,4 +34,10 @@ export function startRailLayer() {
   apply()
   new MutationObserver(apply).observe(document.body, { childList: true })
   setInterval(apply, 1500)
+  // a tap in the nav (the bottom tabs, the new UI's dock, the top bar) is a
+  // navigation even when the page doesn't change: the rail is requested again
+  // (closed or not; lib/ads.js keeps it to once every 30 s)
+  document.addEventListener('click', e => {
+    if (e.target?.closest?.('.mobile-tab-bar, .ag-dock, .navbar, .ag-hud')) rampRail()
+  }, true)
 }
