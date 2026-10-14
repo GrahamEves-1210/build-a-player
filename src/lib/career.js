@@ -106,8 +106,8 @@ export const SPORT = {
     durable: { qb: ['size', 'pocket-presence'], rb: ['strength', 'size', 'balance'], wr: ['size', 'bodyControl'], te: ['strength', 'size'], db: ['size', 'runSupport'] },
     ageShift: pos => (pos === 'qb' ? 2 : 0),
     // the physical traits train until this age (then the window shuts); the body fades from declineAt
-    trainUntil: pos => ({ qb: 31, rb: 27, wr: 29, te: 29, db: 27 })[pos] ?? 29,
-    declineAt: pos => ({ qb: 33, rb: 28, wr: 30, te: 30, db: 28 })[pos] ?? 31,
+    trainUntil: pos => ({ qb: 31, rb: 26, wr: 29, te: 29, db: 27 })[pos] ?? 29,
+    declineAt: pos => ({ qb: 33, rb: 27, wr: 30, te: 30, db: 28 })[pos] ?? 31,
     bigInjury: 6,
     draft: {
       rounds: 7,
@@ -1073,7 +1073,8 @@ export function bookSeason(c) {
   // offseason work: 2 points while young, 1 through the prime, none once the body
   // turns (an award still earns one, and so does camp)
   const S0 = sportOf(c)
-  const base = c.age <= 25 ? 2 : c.age < S0.declineAt(c.pos) ? 1 : 0
+  // (a running back's career is short and steep: a third point while he's 23 or under)
+  const base = (c.age <= 25 ? 2 : c.age < S0.declineAt(c.pos) ? 1 : 0) + (c.pos === 'rb' && c.age <= 23 ? 1 : 0)
   const dev = { ...c.dev, points: c.dev.points + base + (s.award || s.allPro ? 1 : 0) }
   const rep = clamp(c.rep + (s.goals.filter(g => g.met).length >= 2 ? 1 : 0) + (s.champion ? 1 : 0) - (perf < 0.25 ? 1 : 0), 1, 10)
   const lastRole = benched < (f.wins + f.losses || 17) / 2 ? 'Starter' : 'Backup'

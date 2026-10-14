@@ -221,7 +221,7 @@ const _raw = [
   {
     name: 'Brett Favre',     short: 'Favre',      team: 'GB',  teamName: 'Green Bay Packers',
     skin: '#f0c4a0', number: 4,  starter: true, captain: true, years: '1992–2007',
-    attrs: { arm: 11, legs: 6, size: 7, processing: 7, vision: 6, leadership: 6, accuracy: 9, playmaking: 9, 'pocket-presence': 7 }
+    attrs: { arm: 11, legs: 6, size: 7, processing: 6, vision: 6, leadership: 6, accuracy: 10, playmaking: 9, 'pocket-presence': 8 }
   },
   {
     name: 'Aaron Rodgers',   short: 'A. Rodgers', team: 'GB',  teamName: 'Green Bay Packers',
@@ -231,7 +231,7 @@ const _raw = [
   {
     name: 'Bart Starr',      short: 'Starr',      team: 'GB',  teamName: 'Green Bay Packers',
     skin: '#f0c4a0', number: 15, starter: true, captain: true, years: '1956–71',
-    attrs: { arm: 6, legs: 3, size: 6, processing: 8, vision: 9, leadership: 10, accuracy: 9, playmaking: 7, 'pocket-presence': 9 }
+    attrs: { arm: 7, legs: 4, size: 6, processing: 8, vision: 9, leadership: 10, accuracy: 9, playmaking: 8, 'pocket-presence': 9 }
   },
 
   // ─── HOUSTON TEXANS ──────────────────────────────────────────────────────
@@ -511,7 +511,7 @@ const _raw = [
   {
     name: 'Ben Roethlisberger', short: 'Big Ben',  team: 'PIT', teamName: 'Pittsburgh Steelers',
     skin: '#f0c4a0', number: 7,  starter: true, captain: true, years: '2004–21',
-    attrs: { arm: 9, legs: 4, size: 11, processing: 8, vision: 9, leadership: 8, accuracy: 8, playmaking: 8, 'pocket-presence': 10 }
+    attrs: { arm: 9, legs: 4, size: 11, processing: 8, vision: 9, leadership: 8, accuracy: 9, playmaking: 8, 'pocket-presence': 10 }
   },
   {
     name: 'Kordell Stewart',  short: 'K. Stewart', team: 'PIT', teamName: 'Pittsburgh Steelers',
