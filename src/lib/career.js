@@ -114,7 +114,7 @@ export const SPORT = {
     combine: {
       qb: [['forty', '40-yard dash', 'legs'], ['velo', 'Throwing velocity', 'arm'], ['acc', 'Accuracy drill', 'accuracy']],
       rb: [['forty', '40-yard dash', 'speed'], ['cone', '3-cone drill', 'elusiveness'], ['bench', 'Bench press', 'strength']],
-      wr: [['forty', '40-yard dash', 'speed'], ['cone', '3-cone drill', 'routeRunning'], ['gauntlet', 'Gauntlet drill', 'hands']],
+      wr: [['forty', '40-yard dash', 'speed'], ['cone', '3-cone drill', 'bodyControl'], ['gauntlet', 'Gauntlet drill', 'hands']],
       te: [['forty', '40-yard dash', 'speed'], ['bench', 'Bench press', 'strength'], ['gauntlet', 'Gauntlet drill', 'hands']],
       db: [['forty', '40-yard dash', 'speed'], ['cone', '3-cone drill', 'fluidity'], ['gauntlet', 'Ball skills drill', 'hands']],
     },
@@ -207,7 +207,7 @@ export const SPORT = {
       posList: ['G', 'F', 'C', 'G/F', 'F/C', 'PG', 'SG', 'SF', 'PF', 'C'],
     },
     combine: {
-      guard: [['sprint', '3/4-court sprint', 'speed'], ['lane', 'Lane agility', 'handles'], ['spot', 'Spot-up shooting', 'jumpShot']],
+      guard: [['sprint', '3/4-court sprint', 'speed'], ['lane', 'Lane agility', 'perimeterDefense'], ['spot', 'Spot-up shooting', 'jumpShot']],
       big: [['vert', 'Max vertical', 'bounce'], ['nbench', 'Bench press', 'size'], ['spot', 'Spot-up shooting', 'jumpShot']],
     },
     goals: {

@@ -19,10 +19,10 @@ import { seeded } from './rng'
 
 export const GAMES = {
   // ── QB ──
-  'hot-read':    { kind: 'reaction', traits: ['processing', 'leadership'], title: 'HOT READ', how: 'Three receivers. One comes open. Tap him before the window shuts.', rounds: 2 },
+  'hot-read':    { kind: 'reaction', traits: ['processing', 'vision'], title: 'HOT READ', how: 'Three receivers. One comes open. Tap him before the window shuts.', rounds: 2 },
   'bomb':        { kind: 'power', traits: ['arm'], title: 'BOMB IT', how: 'Hold to load the deep shot. Let go near the top: a stronger arm gets a bigger window.' },
   'escape':      { kind: 'lanes', traits: ['legs'], title: 'ESCAPE', how: 'The rush collapses from one side. Step the other way, three times.' },
-  'sneak':       { kind: 'timing', traits: ['size', 'pocket-presence'], title: 'SNEAK', how: 'Fourth and inches. Hit the snap window and punch it in.' },
+  'sneak':       { kind: 'timing', traits: ['size', 'legs'], title: 'SNEAK', how: 'Fourth and inches. Hit the snap window and punch it in.' },
   'two-minute':  { kind: 'sequence', traits: ['leadership', 'processing'], title: 'TWO-MINUTE DRILL', how: 'Four calls in a row, each on a clock. Composure buys time.' },
   'third-long':  { kind: 'route', traits: ['accuracy', 'arm'], title: 'THIRD & LONG', how: 'Pick the route, then hit the throw window. The deeper the route, the tighter the window, the bigger the play.' },
   'audible':     { kind: 'audible', traits: ['processing', 'vision'], title: 'AUDIBLE', how: 'Read the look. Pick the counter before the play clock runs out.' },
@@ -42,7 +42,7 @@ export const GAMES = {
   'forty':       { kind: 'dash', traits: ['legs', 'speed'], title: '40-YARD DASH', how: 'Wait for the gun (jump it and that is a false start), then alternate LEFT and RIGHT as fast as you can. Same foot twice is a stumble. Speed makes every step longer.' },
   'velo':        { kind: 'velo', traits: ['arm'], title: 'THROWING VELOCITY', how: 'Three throws. Hold to wind up and let go inside the small green window. It moves every throw and the wind-up gets faster. A stronger arm gets a bigger window.' },
   'acc':         { kind: 'routes', traits: ['accuracy'], title: 'ACCURACY DRILL', how: 'Throw to receivers on four routes: slant, out, post, go. Tap to throw. The ball takes a moment to get there, so lead him: it has to land while he\'s open (the bright part of the route). Accuracy keeps him open longer.' },
-  'cone':        { kind: 'cone', traits: ['elusiveness', 'routeRunning', 'bodyControl', 'fluidity'], title: '3-CONE DRILL', how: 'Six cuts. An arrow flashes: hit that direction before the window shuts. Wrong way or late is a slip. The windows get shorter.' },
+  'cone':        { kind: 'cone', traits: ['elusiveness', 'bodyControl', 'fluidity'], title: '3-CONE DRILL', how: 'Six cuts. An arrow flashes: hit that direction before the window shuts. Wrong way or late is a slip. The windows get shorter.' },
   'gauntlet':    { kind: 'gauntlet', traits: ['hands'], title: 'GAUNTLET', how: 'Balls come down two lanes, faster and closer together. Catch each one in the green zone at the bottom. Hands make the zone bigger.' },
   'bench':       { kind: 'bench', traits: ['strength'], title: 'BENCH PRESS', how: 'Tap fast to drive the bar up to lockout. Every rep gets heavier. As many reps as you can in 12 seconds.' },
   // ── Basketball ──
@@ -55,7 +55,7 @@ export const GAMES = {
   'rim-protect': { kind: 'reaction', traits: ['interiorDefense', 'bounce'], title: 'PROTECT THE RIM', how: 'Three drivers. One attacks the rim. Meet him there.', rounds: 2 },
   // ── Basketball combine ──
   'sprint':      { kind: 'dash', traits: ['speed'], title: '3/4-COURT SPRINT', how: 'Wait for the whistle (go early and it is a false start), then alternate LEFT and RIGHT as fast as you can. Same foot twice is a stumble. Speed makes every step longer.', unit: 'FT', dist: 75 },
-  'lane':        { kind: 'cone', traits: ['handles', 'speed'], title: 'LANE AGILITY', how: 'Six cuts around the lane. An arrow flashes: hit that direction before the window shuts. Wrong way or late is a slip.' },
+  'lane':        { kind: 'cone', traits: ['speed', 'perimeterDefense'], title: 'LANE AGILITY', how: 'Six cuts around the lane. An arrow flashes: hit that direction before the window shuts. Wrong way or late is a slip.' },
   'spot':        { kind: 'aim', traits: ['jumpShot'], title: 'SPOT-UP SHOOTING', how: 'Four spots around the arc. Tap to lock the shot left to right, then again to lock the arc. A better jumper makes the rim bigger.', noun: 'SHOT' },
   'vert':        { kind: 'velo', traits: ['bounce'], title: 'MAX VERTICAL', how: 'Three jumps. Hold to load, and let go inside the small green window. It moves every jump. More bounce, bigger window.', noun: 'JUMP' },
   'nbench':      { kind: 'bench', load: 0.62, traits: ['size'], title: 'BENCH PRESS', how: 'Tap fast to drive the bar up to lockout. Every rep gets heavier. As many reps as you can in 12 seconds.' },
