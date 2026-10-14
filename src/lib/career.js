@@ -1382,8 +1382,8 @@ export function nextSeason(c) {
     // the rest slips too, less: hands, ball security, the craft (size never moves)
     const rest = c.types.filter(t => !phys.includes(t) && t !== 'size' && t !== 'heightLength')
     const q = yrs >= 4 ? 0.9 : yrs >= 2 ? 0.65 : 0.4
-    if (rest.length && r() < q) move(rest[Math.floor(r() * rest.length)], -1, 'A step slower')
-    if (rest.length && yrs >= 4 && r() < 0.4) move(rest[Math.floor(r() * rest.length)], -1, 'A step slower')
+    if (rest.length && r() < q) move(rest[Math.floor(r() * rest.length)], -1, 'Father Time')
+    if (rest.length && yrs >= 4 && r() < 0.4) move(rest[Math.floor(r() * rest.length)], -1, 'Father Time')
   }
   // a big injury last season (season-ending, or a long stretch out) can take something with it
   for (const inj of c.injuries.filter(x => x.year === c.year + 1 && (x.serious || x.games >= S.bigInjury))) {

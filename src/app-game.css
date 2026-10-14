@@ -3517,6 +3517,7 @@ html:is(.is-app, .app-look) .vl1-modes { margin-top: 4px; }
 .cr-note { margin: 0; font-family: var(--ag-body); font-size: 13px; line-height: 1.45; color: var(--ag-text-2); }
 .cr-bul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 5px; font-family: var(--ag-body); font-size: 13px; color: var(--ag-text-2); }
 .cr-bul li { display: flex; align-items: center; gap: 6px; } .cr-bul li small { font-family: var(--ag-font); letter-spacing: 1px; color: var(--ag-muted); }
+.cr-bul li .cr-down { flex: none; color: #ff6b6b; transform: rotate(90deg); }
 .cr-goals { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .cr-goals .ag-eyebrow { width: 100%; font-size: 12px; }
 .cr-goal { display: inline-flex; align-items: center; gap: 4px; padding: 4px 9px; border-radius: 8px; font-family: var(--ag-body); font-size: 12px; font-weight: 600; color: var(--ag-text-2); background: rgba(255,255,255,.05); border: 1px solid var(--ag-line); }

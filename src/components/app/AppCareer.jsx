@@ -533,7 +533,7 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
         {tab === 'season' && c.phase === 'preseason' && (
           <section className="ag-card cr-sec ag-pop">
             <div className="ag-card-head"><span className="ag-eyebrow">SEASON {c.season} · {c.fit.status.toUpperCase()}</span></div>
-            {c.aging?.length > 0 && <ul className="cr-bul">{c.aging.map((t, i) => <li key={i}><IconFlame size={13} /> {t}</li>)}</ul>}
+            {c.aging?.length > 0 && <ul className="cr-bul">{c.aging.map((t, i) => <li key={i}>{/^(Still growing|A step forward)/.test(t) ? <IconFlame size={13} /> : <IconArrow size={13} className="cr-down" />} {t.replace(/^A step slower/, 'Father Time')}</li>)}</ul>}
             <div className="cr-goals"><span className="ag-eyebrow">THIS YEAR'S GOALS</span>{goalsFor(c).map(g => <span key={g.k} className="cr-goal">{g.label}</span>)}</div>
             {(() => { const dc = depthChart(c); return <p className={`cr-depthline${dc.starter ? ' is-on' : ''}`}>{dc.starter ? `${dc.label} · the starter` : `${dc.label} · backup behind ${dc.ahead[dc.ahead.length - 1].name}`}</p> })()}
             <p className="cr-note">{c.contract.left} {c.contract.left === 1 ? 'year' : 'years'} left on the deal ({money(c.contract.perYear)} a year). {c.contract.left === 1 ? 'Contract year: play for the next one.' : ''}</p>
