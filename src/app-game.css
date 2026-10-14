@@ -1151,6 +1151,17 @@ html.is-app .tpm-team-btn { border-radius: 12px !important; }
 .ag-streak-num { font-family: var(--ag-display); font-size: 40px; line-height: .9; margin-right: 8px; }
 .ag-streak-lbl { font-family: var(--ag-font); font-size: 18px; letter-spacing: 3px; color: #ffb27a; }
 .ag-streak-best { font-family: var(--ag-font); font-size: 13px; letter-spacing: 2px; color: var(--ag-muted); align-self: start; }
+/* streak freeze (AppDaily) */
+.ag-freeze { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; margin: 2px 0 10px; padding: 8px 10px; border-radius: 12px; background: rgba(110,180,255,.07); border: 1px solid rgba(110,180,255,.28); }
+.ag-freeze-icon { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 9px; color: #9fd0ff; background: rgba(110,180,255,.14); }
+.ag-freeze-txt { display: grid; gap: 1px; min-width: 0; }
+.ag-freeze-txt b { font-family: var(--ag-font); font-weight: 400; font-size: 15px; letter-spacing: 1.4px; color: var(--ag-text); }
+.ag-freeze-txt b i { font-style: normal; color: #9fd0ff; margin-left: 4px; }
+.ag-freeze-txt small { font-family: var(--ag-body); font-size: 12px; color: var(--ag-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ag-freeze-buy { display: inline-flex; align-items: center; gap: 4px; height: 34px; padding: 0 12px; border-radius: 10px; border: 0; cursor: pointer; font-family: var(--ag-display); font-size: 17px; color: #1d1503; background: linear-gradient(135deg, #f5dc8a, #d4af37); transition: transform .1s; }
+.ag-freeze-buy:active { transform: scale(.96); }
+.ag-freeze-buy:disabled { cursor: default; color: var(--ag-muted); background: rgba(255,255,255,.06); }
+.ag-freeze-buy:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
 .ag-streak-track { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 14px; }
 .ag-milestone {
   position: relative;

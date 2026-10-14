@@ -285,17 +285,33 @@ const toast = detail => { toastQueue.push(detail); window.dispatchEvent(new Cust
 export const takeToasts = () => toastQueue.splice(0)
 
 // ── Day roll: streak + missions ──────────────────────────────────────────────
+// Streak freezes: bought with coins, held up to FREEZE_MAX, one used for each missed day
+export const FREEZE_PRICE = 250, FREEZE_MAX = 2
+export function buyFreeze() {
+  const st = S.streak
+  if (!walletOpen()) return { ok: false, reason: 'Sign in to buy one' }
+  if ((st.freezes ?? 0) >= FREEZE_MAX) return { ok: false, reason: `You can hold ${FREEZE_MAX}` }
+  if (S.coins < FREEZE_PRICE) return { ok: false, reason: `Need ${(FREEZE_PRICE - S.coins).toLocaleString()} more coins` }
+  S.coins -= FREEZE_PRICE
+  st.freezes = (st.freezes ?? 0) + 1
+  S.walletAt = Date.now()
+  emit()
+  return { ok: true }
+}
 function rollDay() {
   const k = dayKey()
   const st = S.streak
   let changed = false
   if (st.last !== k) {
-    if (st.last === dayKey(-1)) st.count += 1
+    // missed a day or two: a freeze covers each one, and the streak goes on
+    const missed = [1, 2].find(n => st.last === dayKey(-(n + 1))) ?? 0
+    const saved = missed && st.count > 0 && (st.freezes ?? 0) >= missed ? missed : 0
+    if (st.last === dayKey(-1) || saved) { st.count += 1; if (saved) st.freezes -= saved }
     else { st.count = 1; st.start = k; st.claimed = {} }
     st.last = k
     st.best = Math.max(st.best, st.count)
     S.bonusXp += LOGIN_XP; tally(LOGIN_XP)
-    if (uid) toast({ kind: 'streak', title: st.count > 1 ? `${st.count}-DAY STREAK` : 'DAILY LOGIN', sub: `+${LOGIN_XP} XP` })
+    if (uid) toast({ kind: 'streak', title: st.count > 1 ? `${st.count}-DAY STREAK` : 'DAILY LOGIN', sub: saved ? `Streak freeze used${saved > 1 ? ' ×2' : ''} · +${LOGIN_XP} XP` : `+${LOGIN_XP} XP` })
     changed = true
   }
   if (S.day?.key !== k) {

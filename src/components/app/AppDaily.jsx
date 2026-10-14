@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
-import { useProgress, dailyState, fetchDailyBoard, msToReset, claimMission, claimStreak, missionDef, STREAK_REWARDS, SPOTLIGHTS } from '../../lib/progress'
+import { useProgress, dailyState, fetchDailyBoard, msToReset, claimMission, claimStreak, missionDef, STREAK_REWARDS, SPOTLIGHTS, buyFreeze, FREEZE_PRICE, FREEZE_MAX } from '../../lib/progress'
 import { sfx, haptic } from '../../lib/juice'
 import { NameTag, AvatarBadge } from './NameTag'
-import { IconFlame, IconTarget, IconCheck, IconGift, IconLock, IconClose, IconCoin, IconArrow } from './icons'
+import { IconFlame, IconTarget, IconCheck, IconGift, IconLock, IconClose, IconCoin, IconArrow, IconShield } from './icons'
 
 // Daily hub (dock → Daily): login streak + rewards, the Daily Challenge with
 // its leaderboard, and today's three missions.
@@ -14,6 +14,23 @@ function useCountdown() {
   useEffect(() => { const t = setInterval(() => setMs(msToReset()), 30000); return () => clearInterval(t) }, [])
   const h = Math.floor(ms / 3600000), m = Math.floor((ms % 3600000) / 60000)
   return `${h}h ${String(m).padStart(2, '0')}m`
+}
+
+// Streak freezes: hold up to two; each one covers a missed day
+function Freeze({ p }) {
+  const [err, setErr] = useState('')
+  const n = p.streak.freezes ?? 0, full = n >= FREEZE_MAX
+  const go = () => { const r = buyFreeze(); if (r.ok) { setErr(''); sfx('purchase'); haptic('success') } else { setErr(r.reason); sfx('deny') } }
+  return (
+    <div className="ag-freeze">
+      <span className="ag-freeze-icon"><IconShield size={18} /></span>
+      <span className="ag-freeze-txt">
+        <b>STREAK FREEZE <i>{n}/{FREEZE_MAX}</i></b>
+        <small>{err || (n ? `Miss a day and ${n === 1 ? 'it saves' : 'they save'} your streak.` : 'Covers a missed day so your streak lives.')}</small>
+      </span>
+      <button className="ag-freeze-buy" disabled={full} onClick={go}>{full ? 'FULL' : <><IconCoin size={14} /> {FREEZE_PRICE}</>}</button>
+    </div>
+  )
 }
 
 function Streak({ p }) {
@@ -29,6 +46,7 @@ function Streak({ p }) {
         </span>
         <span className="ag-streak-best">BEST {st.best}</span>
       </div>
+      <Freeze p={p} />
       <div className="ag-streak-track">
         {STREAK_REWARDS.map(r => {
           const reached = st.count >= r.days
