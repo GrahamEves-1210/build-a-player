@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { APP_STORE_URL } from '../../lib/storeLinks'
 import { POS_OPTIONS, AvatarTrio, StackedSilhouette, SPLASH_ATTRS } from '../SplashScreen'
 import { getUsername } from '../../lib/discord'
-import { useProgress, fetchPlayersOfDay, myToday } from '../../lib/progress'
+import { useProgress, fetchPlayersOfDay, cachedPlayersOfDay, myToday } from '../../lib/progress'
 import { IconCrown, IconBolt, IconClipboard, IconCoin, IconLock, IconProfile, IconArrow, IconGear, IconPodium, IconFootball, IconBasketball, IconPlay } from './icons'
 import { sfx } from '../../lib/juice'
 import SoundToggle from './SoundToggle'
@@ -220,8 +220,8 @@ function PlayersOfDay() {
   const [rows, setRows] = useState(null)
   useEffect(() => {
     let live = true
-    const get = () => fetchPlayersOfDay().then(r => { if (live && !r.error) setRows(r.rows) })
-    get()
+    const get = (first = false) => ((first && cachedPlayersOfDay()) || fetchPlayersOfDay()).then(r => { if (live && !r.error) setRows(r.rows) })
+    get(true)
     const id = setInterval(get, 120000)
     return () => { live = false; clearInterval(id) }
   }, [])

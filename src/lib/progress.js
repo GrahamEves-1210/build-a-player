@@ -421,6 +421,10 @@ export async function fetchPlayersOfDay(key = dayKey()) {
   if (error) return { rows: [], error: true }
   return { rows: (data ?? []).filter(r => r.username && r.cos?.today?.xp > 0) }
 }
+// fetched once behind the loading screen, so home opens with the board already in
+let potd = null
+export function prefetchPlayersOfDay() { potd = { at: Date.now(), p: fetchPlayersOfDay() }; return potd.p }
+export const cachedPlayersOfDay = () => (potd && Date.now() - potd.at < 60000 ? potd.p : null)
 export const myToday = () => (S.today?.d === dayKey() ? S.today : { d: dayKey(), xp: 0, g: 0 })
 export async function fetchDailyBoard(key = dayKey()) {
   if (!supabase) return { rows: [], error: true }
@@ -673,6 +677,9 @@ async function syncCards(id) {
 }
 
 let loaded = false
+// the loading screen waits on this (main.jsx): the account read, its wallet and seasons pulled
+let settle
+export const progressSettled = new Promise(r => { settle = r })
 // run once the store is listening and holds the right account (a forfeit booked
 // on page load must land on the player who left, not on a guest store)
 const readyFns = []
@@ -694,9 +701,11 @@ function switchUser(u) {
   if (!S.levelPaid) S.levelPaid = levelInfo(totalXp()).level
   applySpot()
   emit(true)                 // achievements already earned unlock quietly (rewards wait in the list)
-  sync()
+  const synced = sync()
   // coins bought on the website land after the wallet is pulled (so a newer remote wallet can't overwrite them)
-  pullWallet(id).then(() => claimCoinPurchases())
+  const pulled = pullWallet(id)
+  pulled.then(() => claimCoinPurchases())
+  Promise.allSettled([synced, pulled]).then(() => settle())
   if (IS_APP) import('./iap').then(m => m.iapUser(id)).catch(() => {})
   readyFns.splice(0).forEach(fn => setTimeout(fn, 0))
 }

@@ -68,19 +68,37 @@ if ((IS_APP || APP_LOOK) && isBucket) document.documentElement.classList.add('is
 window.__bapStarted = true
 
 // The loading screen (index.html) fills with real progress: the code is running
-// now, then the fonts, then the first real screen drawn finishes it
+// now, then the fonts, the account (who's signed in, their coins, level and
+// seasons, so home doesn't open as a guest and then change), the first real
+// screen drawn and its pictures. A cold start holds it at least BOOT_MIN so the
+// animation gets to play; nothing it waits on can hold it past its cap.
+const BOOT_MIN = 1600
 window.__bapLoad?.(0.6)
-try { document.fonts?.ready?.then(() => window.__bapLoad?.(0.8)) } catch {}
+try { document.fonts?.ready?.then(() => window.__bapLoad?.(0.7)) } catch {}
 function dropLoader() {
   if (!document.getElementById('bap-loader')) return
   const root = document.getElementById('root')
   const t0 = performance.now()
+  const cap = (p, ms) => Promise.race([p, new Promise(r => setTimeout(r, ms))])
   const ready = () => root && root.children.length > 0 && root.querySelector('.ag-screen, .ag-home, main, .game-layout, .ag-shell, section, header')
-  const tick = () => {
-    if (ready() || performance.now() - t0 > 12000) { requestAnimationFrame(() => window.__bapLoaded?.()); return }
+  const account = (IS_APP || APP_LOOK)
+    ? cap(import('./lib/progress').then(m => { m.prefetchPlayersOfDay(); return Promise.all([m.progressSettled, m.cachedPlayersOfDay()]) }), 3000).catch(() => {})
+    : Promise.resolve()
+  account.then(() => window.__bapLoad?.(0.85))
+  const drawn = new Promise(r => {
+    const tick = () => (ready() || performance.now() - t0 > 12000 ? r() : requestAnimationFrame(tick))
     requestAnimationFrame(tick)
-  }
-  requestAnimationFrame(tick)
+  })
+  Promise.all([account, drawn])
+    .then(() => cap(Promise.all([...root.querySelectorAll('img')].filter(img => img.getBoundingClientRect().top < innerHeight).map(img => (img.complete ? 0 : img.decode().catch(() => 0)))), 2000))
+    .then(() => {
+      window.__bapLoad?.(0.95)
+      setTimeout(() => requestAnimationFrame(() => window.__bapLoaded?.()), Math.max(0, BOOT_MIN - performance.now()))
+      // the app's own files are on the phone: warm the screens people open next
+      if (IS_APP) (window.requestIdleCallback ?? (f => setTimeout(f, 1500)))(() => {
+        for (const f of [() => import('./components/SimPage'), () => import('./components/app/AppCareer'), () => import('./components/app/AppCompete'), () => import('./components/app/AppTakeover')]) f().catch(() => {})
+      })
+    })
 }
 
 createRoot(document.getElementById('root')).render(
