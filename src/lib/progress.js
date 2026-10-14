@@ -772,6 +772,7 @@ function switchUser(u) {
   if (!S.levelPaid) S.levelPaid = levelInfo(totalXp()).level
   applySpot()
   emit(true)                 // achievements already earned unlock quietly (rewards wait in the list)
+  syncName(id)
   const synced = sync()
   // coins bought on the website land after the wallet is pulled (so a newer remote wallet can't overwrite them)
   const pulled = pullWallet(id)
@@ -1057,6 +1058,17 @@ function pushCos(id = uid) {
   if (key === cosSent) return
   cosSent = key
   supabase.from('accounts').update({ cos }).eq('id', id).then(({ error }) => { if (error) cosSent = '' }, () => { cosSent = '' })
+}
+// The account row carries the name the game shows, and has to exist for the wallet
+// to save: a Discord sign-in never wrote either (its name lives in the Discord
+// profile). Once a session, the row is made if missing and the name brought up to date;
+// lists that read accounts.username (Players of the Day, friend search) then find it.
+let namedFor = null
+function syncName(id) {
+  const name = getUsername(user)
+  if (!supabase || !id || !name || namedFor === id) return
+  namedFor = id
+  supabase.from('accounts').upsert({ id, username: name }, { onConflict: 'id' }).then(({ error }) => { if (error) namedFor = null }, () => { namedFor = null })
 }
 async function pullWallet(id) {
   if (!supabase || !id) return
