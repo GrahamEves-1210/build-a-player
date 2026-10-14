@@ -13126,8 +13126,16 @@ html.is-tablet:has([id^="pw-oop"][data-pw-status="loaded"][style*="bottom"]):not
   background-color: transparent !important;
   border: none !important;
   box-shadow: none !important;
-  padding-top: 0 !important;
 }
+/* Playwire's close button for the rail: kept above the ad (it sat under it), and
+   their top padding left alone, since that's the room the button sits in */
+[id^="pw-oop-bottom_rail"] [class*="close" i],
+[id^="pw-oop-bottom_rail"] [id*="close" i],
+[id^="pw-oop-bottom_rail"] [aria-label*="close" i],
+[id^="pw-oop-bottom_rail"] button {
+  z-index: 2147483647 !important;
+}
+[id^="pw-oop-bottom_rail"] iframe { position: relative; z-index: 0; }
 
 /* â”€â”€ Ad-free: hide all Playwire elements â”€â”€ */
 html.ads-hidden [id^="pw-"],
