@@ -602,7 +602,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
                 <div className="spin-respin-divider" />
                 {qbRespinUsed >= maxPlayerRespin && canEarn ? (
                   <button className="spin-respin-half spin-respin-player spin-respin-earn" onClick={earnRespin} disabled={adBusy}>
-                    {adBusy ? 'LOADING…' : 'WATCH VIDEO'} <span className="spin-btn-badge">+1</span>
+                    {adBusy ? 'LOADING…' : 'WATCH VIDEO'} <span className="spin-btn-badge">AD · +1</span>
                   </button>
                 ) : <button
                   className={`spin-respin-half spin-respin-player${qbRespinUsed >= maxPlayerRespin ? ' spin-respin-used' : ''}`}

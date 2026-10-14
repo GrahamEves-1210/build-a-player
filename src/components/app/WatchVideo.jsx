@@ -3,7 +3,8 @@ import { watchFor } from '../../lib/rewardedAd'
 import { sfx, haptic } from '../../lib/juice'
 import { IconPlay } from './icons'
 
-// "Watch a video for X": one rewarded video, then onReward(). App only (callers
+// "Watch a video for X": one rewarded video ad, then onReward(). Always labelled as
+// a video ad before the tap (the label starts WATCH VIDEO, and an AD tag). App only (callers
 // decide when it's offered). Shows its own loading state and the reason it
 // didn't pay (skipped, or no video to show).
 export default function WatchVideo({ label, sub, onReward, className = '' }) {
@@ -22,6 +23,7 @@ export default function WatchVideo({ label, sub, onReward, className = '' }) {
       <button className="wv-btn" onClick={go} disabled={busy}>
         <span className="wv-ico"><IconPlay size={18} /></span>
         <span className="wv-txt"><b>{busy ? 'LOADING VIDEO…' : label}</b>{sub && <small>{sub}</small>}</span>
+        <span className="wv-ad">AD</span>
       </button>
       {note && <p className="wv-note" role="status">{note}</p>}
     </div>

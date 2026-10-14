@@ -297,7 +297,7 @@ export default function AppTakeover({ sport, run, setRun, user, pools, attrMap, 
           </div>
           <UsMap cities={cities} run={run} here={here} next={null} delay="100ms" />
           {canRevive(run) && (
-            <WatchVideo className="ag-pop tk-revive" label="ONE MORE LIFE" sub="Watch a video and keep the road going. Once a run."
+            <WatchVideo className="ag-pop tk-revive" label="WATCH VIDEO · ONE MORE LIFE" sub="A short video ad keeps the road going. Once a run."
               onReward={() => { setRun(r => ({ ...r, over: false, lives: 1, revived: true })); setScreen('map') }} />
           )}
           <button className="ag-btn ag-pop" style={{ '--d': '160ms' }} onClick={() => { logRun(run, ovr); clearRun(sport, run.uid); setRun(null); onNewBuild() }}>NEW BUILD · HIT THE ROAD AGAIN</button>

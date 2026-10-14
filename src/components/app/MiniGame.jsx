@@ -81,7 +81,7 @@ export default function MiniGame({ game, build, seed = 'x', onDone, autoStart = 
           {result.note && <small>{result.note}</small>}
           {!result.hit && offerRetry && (
             <div className="mg-retry">
-              <WatchVideo label="WATCH VIDEO · TRY AGAIN" sub="One more shot at it. Once." onReward={() => { setTries(1); setResult(null); setStage('play') }} />
+              <WatchVideo label="WATCH VIDEO · TRY AGAIN" sub="A short video ad, then one more shot at it. Once." onReward={() => { setTries(1); setResult(null); setStage('play') }} />
               <button className="ag-btn ag-btn--ghost" onClick={() => onDone?.(result)}>TAKE THE RESULT</button>
             </div>
           )}

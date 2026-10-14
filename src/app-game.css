@@ -4829,7 +4829,7 @@ html:is(.is-app, .app-look).no-dock { --app-bottom: calc(var(--safe-bottom) + 12
 
 /* Watch a video for a reward (WatchVideo.jsx): Takeover revive, minigame retry, streak restore */
 .wv { display: grid; gap: 6px; }
-.wv-btn { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 10px; width: 100%; padding: 10px 12px; border-radius: 14px; border: 0; cursor: pointer; text-align: left; color: #1d1503; background: linear-gradient(135deg, #f5dc8a, #d4af37); box-shadow: 0 6px 16px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.45); transition: transform .1s; }
+.wv-btn { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; border-radius: 14px; border: 0; cursor: pointer; text-align: left; color: #1d1503; background: linear-gradient(135deg, #f5dc8a, #d4af37); box-shadow: 0 6px 16px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.45); transition: transform .1s; }
 .wv-btn:active { transform: scale(.98); }
 .wv-btn:disabled { cursor: default; opacity: .75; }
 .wv-btn:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
@@ -4837,6 +4837,7 @@ html:is(.is-app, .app-look).no-dock { --app-bottom: calc(var(--safe-bottom) + 12
 .wv-txt { display: grid; gap: 1px; min-width: 0; }
 .wv-txt b { font-family: var(--ag-display); font-weight: 400; font-size: 19px; line-height: 1.05; letter-spacing: .3px; }
 .wv-txt small { font-family: var(--ag-body); font-size: 12px; font-weight: 600; opacity: .75; }
+.wv-ad { align-self: start; padding: 2px 6px; border-radius: 6px; font-family: var(--ag-font); font-size: 11px; letter-spacing: 1.5px; color: #f5dc8a; background: rgba(29,21,3,.72); }
 .wv-note { margin: 0; text-align: center; font-family: var(--ag-body); font-size: 12.5px; font-weight: 600; color: var(--ag-muted); }
 .mg-retry { display: grid; gap: 8px; margin-top: 10px; width: 100%; }
 .ag-streak-restore { margin: 2px 0 10px; }

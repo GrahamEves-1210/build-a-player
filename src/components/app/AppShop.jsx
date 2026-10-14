@@ -81,7 +81,7 @@ function VideoCoins() {
         <span className="sh-chest"><IconPlay size={24} /></span>
         <span>
           <span className="sh-free-title">WATCH A VIDEO</span>
-          <span className="sh-free-sub">{left > 0 ? `${AD_COINS} coins a video · ${left} of ${AD_MAX} left today` : `That's all ${AD_MAX} for today. More tomorrow.`}</span>
+          <span className="sh-free-sub">{left > 0 ? `A short video ad for ${AD_COINS} coins · ${left} of ${AD_MAX} left today` : `That's all ${AD_MAX} for today. More tomorrow.`}</span>
         </span>
         <span className="sh-free-go">{!walletOpen() ? 'SIGN IN' : busy ? '…' : left > 0 ? `+${AD_COINS}` : 'DONE'}</span>
       </button>

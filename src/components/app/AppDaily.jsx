@@ -49,7 +49,7 @@ function Streak({ p }) {
         <span className="ag-streak-best">BEST {st.best}</span>
       </div>
       {IS_APP && p.signedIn && streakLost() && (
-        <WatchVideo className="ag-streak-restore" label={`RESTORE YOUR ${streakLost().count}-DAY STREAK`} sub="It broke. Watch a video and it's back, as if you never missed. Once a week."
+        <WatchVideo className="ag-streak-restore" label={`WATCH VIDEO · SAVE YOUR ${streakLost().count}-DAY STREAK`} sub="It broke. A short video ad brings it back, as if you never missed. Once a week."
           onReward={() => restoreStreak()} />
       )}
       <Freeze p={p} />
