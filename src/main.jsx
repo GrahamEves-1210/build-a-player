@@ -41,6 +41,9 @@ const isBucket = window.location.pathname.startsWith('/bucket')
 // the boot guard in index.html: the app's code is running
 window.__bapStarted = true
 
+// the website's bottom rail: under the nav, its close button on top (lib/railLayer.js)
+import('./lib/railLayer').then(m => m.startRailLayer()).catch(() => {})
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <ErrorBoundary>
