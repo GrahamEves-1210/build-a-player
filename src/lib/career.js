@@ -141,6 +141,8 @@ export const SPORT = {
     headline: { qb: ['passYds', 'tds', 'ints'], rb: ['rushYds', 'tds', 'recYds'], wr: ['recs', 'recYds', 'tds'], te: ['recs', 'recYds', 'tds'], db: ['ints', 'pbus', 'tackles'] },
     awardName: { qb: 'MVP', rb: 'OPOY', wr: 'OPOY', te: 'OPOY', db: 'DPOY' },
     honor: 'Pro Bowl', honors: 'PRO BOWLS', first: 'All-Pro',
+    // games played to be considered (of 17): the award and All-Pro 12, the Pro Bowl 9
+    minGames: { award: 12 / 17, first: 12 / 17, honor: 9 / 17 },
     // the numbers that get a player there
     proBowl: { qb: s => s.tds >= 30 || s.passYds >= 4300, rb: s => s.rushYds >= 1200 || s.tds >= 12, wr: s => s.recYds >= 1200 || s.tds >= 10, te: s => s.recYds >= 850 || s.tds >= 8, db: s => s.ints >= 5 || (s.ints >= 3 && s.pbus >= 15) },
     allPro: { db: s => s.ints >= 7 || (s.ints >= 5 && s.pbus >= 18), qb: s => s.tds >= 38 || (s.tds >= 34 && s.passYds >= 4600), rb: s => s.rushYds >= 1550 || (s.rushYds >= 1350 && s.tds >= 14), wr: s => s.recYds >= 1500 || (s.recYds >= 1350 && s.tds >= 12), te: s => s.recYds >= 1150 || (s.recYds >= 1000 && s.tds >= 10) },
@@ -236,6 +238,8 @@ export const SPORT = {
     headline: { guard: ['ppg', 'apg', 'rpg'], big: ['ppg', 'rpg', 'apg'] },
     awardName: { guard: 'MVP', big: 'MVP' },
     honor: 'All-Star', honors: 'ALL-STARS', first: 'All-NBA',
+    // games played to be considered (of 82): the 65-game rule for MVP and All-NBA, 40 for an All-Star
+    minGames: { award: 65 / 82, first: 65 / 82, honor: 40 / 82 },
     proBowl: { guard: s => s.ppg >= 21 || (s.ppg >= 17 && s.apg >= 7), big: s => s.ppg >= 20 || (s.ppg >= 16 && s.rpg >= 10) },
     allPro: { guard: s => s.ppg >= 25 || (s.ppg >= 22 && s.apg >= 8), big: s => s.ppg >= 24 || (s.ppg >= 20 && s.rpg >= 11) },
     allProNear: { guard: s => s.ppg >= 22, big: s => s.ppg >= 20 },
@@ -1071,17 +1075,20 @@ export function bookSeason(c) {
   const f = c.active.final, po = c.active.po
   const stats = seasonStats(c.pos, f)
   // the award needs a season that would really win it: the voters' pick and the numbers
-  const award = S.award(c, f, stats)
-  const allPro = S.allPro[c.pos](stats)
+  const started = (f.games ?? []).filter(g => !g.sat)     // the games he played (a backup's starts)
+  // and he has to have played enough of the season to be in the conversation
+  const share = started.length / Math.max(1, (f.games ?? []).length)
+  const can = k => share >= S.minGames[k] - 1e-9
+  const award = can('award') && S.award(c, f, stats)
+  const allPro = can('first') && S.allPro[c.pos](stats)
   const missed = (f.story?.sat ?? 0)
   const benched = c.active.benched?.weeks ?? 0
-  const started = (f.games ?? []).filter(g => !g.sat)     // the games he played (a backup's starts)
   const rounds = (po?.line ?? []).map(x => ({ round: x.name, opponent: x.oppName, won: x.won, mySc: x.mySc, oppSc: x.oppSc, series: !!x.series }))
   const fin = rounds.find(x => x.round === S.final)
   const s = {
     year: c.year + 1, season: c.season, age: c.age, team: c.team, teamName: c.fit.name, ovr: c.ovr, role: c.role,
     wins: f.wins, losses: f.losses, playoffs: S.made(f), champion: !!po?.won, rounds, sb: fin ? { won: fin.won, mySc: fin.mySc, oppSc: fin.oppSc, series: fin.series } : null,
-    stats, award, awardName: S.awardName[c.pos], proBowl: S.proBowl[c.pos](stats) || award || allPro, allPro: allPro || (award && S.allProNear[c.pos](stats)),
+    stats, award, awardName: S.awardName[c.pos], proBowl: (can('honor') && S.proBowl[c.pos](stats)) || award || allPro, allPro: allPro || (award && S.allProNear[c.pos](stats)),
     missed, benched, records: (f.story?.records ?? []).map(x => x.label ?? x.id), milestones: (f.story?.milestones ?? []).filter(m => m.big).map(m => m.label),
     goals: started.length || c.role !== 'Backup' ? c.goals.map(g => ({ ...g, met: goalMet(g, { stats, wins: f.wins, starts: started.length, startWins: started.filter(x => x.won).length }) })) : [], xp: f.story?.xp ?? 0, bestGame: f.bestGame ?? null,
     poStats: po && po.line.some(x => !x.sat) ? po.line.filter(x => !x.sat).reduce((acc, x) => { for (const k of S.lineKeys) if (x[k] != null) acc[k] = (acc[k] ?? 0) + x[k]; return acc }, { games: po.line.filter(x => !x.sat).length }) : null,
