@@ -1735,9 +1735,9 @@ export function runWRSimulation(build, types = WR_TYPES, team = null, isAllTime 
     const isBreakout     = !isLimited && gameMood > breakThreshold
     // Legendary: rare sub-tier of breakout — 200+ yard territory is achievable for elite WRs
     const isLegendary    = isBreakout && (
-      ovr >= 99 ? Math.random() < 0.16 :
-      ovr >= 95 ? Math.random() < 0.10 :
-      ovr >= 88 ? Math.random() < 0.045 :
+      ovr >= 99 ? Math.random() < 0.11 :
+      ovr >= 95 ? Math.random() < 0.075 :
+      ovr >= 88 ? Math.random() < 0.04 :
       ovr >= 80 ? Math.random() < 0.020 : false
     )
 
@@ -1750,7 +1750,9 @@ export function runWRSimulation(build, types = WR_TYPES, team = null, isAllTime 
                   : isBreakout  ? (1.12 + Math.random() * 0.30)     // 1.12–1.42×
                   : 1.0
 
-    const rawTargets  = Math.max(1, Math.round((targetBase - defTgtPenalty + v() * 2.5) * tgtMult * lowOvrCurve))
+    // WR volume ran ~10-15% hot (a 99 averaged record seasons): a touch fewer looks, more off the top
+    const wrTame      = ovr >= 95 ? 0.88 : ovr >= 88 ? 0.91 : 0.94
+    const rawTargets  = Math.max(1, Math.round((targetBase - defTgtPenalty + v() * 2.5) * tgtMult * lowOvrCurve * wrTame))
     const gameTargets = isLimited ? Math.max(1, Math.round(1 + Math.random() * 3)) : Math.min(rawTargets, 16)
 
     const gameCatchRate = Math.min(0.88, Math.max(0.28, catchBase - wxCatchHit + v() * 0.09))
@@ -1766,7 +1768,7 @@ export function runWRSimulation(build, types = WR_TYPES, team = null, isAllTime 
     const tdStreakRoll = Math.random()
     const isTDCold    = !isLimited && (isDud || (!isBreakout && tdStreakRoll < 0.25))
     const isTDHot     = !isLimited && (isLegendary || (isBreakout && tdStreakRoll > 0.52) || (!isDud && !isBreakout && tdStreakRoll > 0.87))
-    const baseTdP     = Math.max(0, tdRateBase + szN * 0.007)
+    const baseTdP     = Math.max(0, (tdRateBase + szN * 0.007) * 0.93)
     const gameTdP     = isTDCold ? baseTdP * 0.06
                       : isTDHot  ? baseTdP * 2.5 + v() * 0.018
                       : baseTdP + v() * 0.014

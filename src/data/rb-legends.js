@@ -174,7 +174,7 @@ const _raw = [
   {
     name: 'Emmitt Smith',    short: 'E. Smith',    team: 'DAL', teamName: 'Dallas Cowboys',
     skin: '#7a5030', number: 22, starter: true, captain: true, years: '1990–02',
-    attrs: { speed: 7, burst: 8, strength: 9, size: 6, balance: 9, elusiveness: 8, vision: 11, hands: 8, carrying: 10 }
+    attrs: { speed: 7, burst: 8, strength: 9, size: 7, balance: 10, elusiveness: 10, vision: 11, hands: 8, carrying: 10 }
   },
   {
     name: 'Herschel Walker', short: 'H. Walker',   team: 'DAL', teamName: 'Dallas Cowboys',
@@ -213,7 +213,7 @@ const _raw = [
   {
     name: 'Barry Sanders',   short: 'B. Sanders',  team: 'DET', teamName: 'Detroit Lions',
     skin: '#5e3c22', number: 20, starter: true, captain: true, years: '1989–98',
-    attrs: { speed: 10, burst: 11, strength: 5, size: 3, balance: 11, elusiveness: 11, vision: 11, hands: 7, carrying: 10 }
+    attrs: { speed: 10, burst: 11, strength: 7, size: 4, balance: 11, elusiveness: 11, vision: 11, hands: 7, carrying: 10 }
   },
   {
     name: 'Billy Sims',      short: 'Sims',        team: 'DET', teamName: 'Detroit Lions',
