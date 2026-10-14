@@ -1,5 +1,4 @@
-﻿import { createPortal } from 'react-dom'
-import { useState, useCallback, useRef, useEffect, useLayoutEffect, useMemo, lazy, Suspense } from 'react'
+﻿import { useState, useCallback, useRef, useEffect, useLayoutEffect, useMemo, lazy, Suspense } from 'react'
 import { Helmet } from 'react-helmet-async'
 import Navbar from './Navbar'
 import SpinScreen from './SpinScreen'
@@ -1710,8 +1709,7 @@ export default function BucketApp() {
         />
       )}
 
-      {gameMode !== 'salarycap' && createPortal(
-      <nav className="mobile-tab-bar">
+      {gameMode !== 'salarycap' && <nav className="mobile-tab-bar">
         <button
           className={`mtab ${mobileView === 'spin' ? 'active' : ''}`}
           onClick={() => { setMobileView('spin'); window.scrollTo({ top: 0, behavior: 'instant' }); document.querySelector('.game-page-scroll')?.scrollTo({ top: 0, behavior: 'instant' }) }}
@@ -1736,8 +1734,7 @@ export default function BucketApp() {
             <span className="mtab-badge">{filledCount}/{activeTypes.length}</span>
           )}
         </button>
-      </nav>,
-      document.body)}
+      </nav>}
 
       {showAuth && (
         <AuthModal
