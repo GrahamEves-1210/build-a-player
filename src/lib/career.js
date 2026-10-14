@@ -211,7 +211,7 @@ export const SPORT = {
     bigInjury: 20,
     draft: {
       rounds: 2,
-      stock: ovr => (ovr >= 95 ? [1, 3] : ovr >= 90 ? [2, 8] : ovr >= 86 ? [5, 15] : ovr >= 82 ? [10, 25] : ovr >= 78 ? [18, 35] : ovr >= 74 ? [28, 48] : ovr >= 70 ? [40, 58] : [48, 60]),
+      stock: ovr => (ovr >= 95 ? [1, 3] : ovr >= 90 ? [1, 5] : ovr >= 86 ? [5, 15] : ovr >= 82 ? [10, 25] : ovr >= 78 ? [18, 35] : ovr >= 74 ? [28, 48] : ovr >= 70 ? [40, 58] : [48, 60]),
       rookie: o => ({ kind: 'rookie', years: o <= 30 ? 4 : 2, left: o <= 30 ? 4 : 2, perYear: o <= 1 ? 12.5 : o <= 5 ? 9.5 : o <= 10 ? 6.5 : o <= 14 ? 5 : o <= 30 ? 2.8 : 1.9, option: o <= 30 }),
       posList: ['G', 'F', 'C', 'G/F', 'F/C', 'PG', 'SG', 'SF', 'PF', 'C'],
     },
