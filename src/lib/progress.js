@@ -166,6 +166,7 @@ const blank = () => ({
   v: 1,
   bonusXp: 0,                 // missions, streak, login, new cards (device only)
   seasonXp: 0,                // guest seasons
+  today: null,                // { d: day, xp, g }: today's XP and games (Player of the Day)
   sync: null,                 // { xp, at, ... } rebuilt from saved seasons (signed in)
   pending: [],                // [{ at, xp }] signed-in seasons since the last rebuild
   adjust: 0,                  // keeps the total from dropping when a rebuild lands lower
@@ -246,6 +247,14 @@ const listeners = new Set()
 export const xpOpen = () => !!uid
 // "+60 XP · +40 COINS" with whatever this player can actually earn ('' if nothing)
 export const rewardText = (xp, coins) => [xp && xpOpen() ? `+${xp} XP` : '', coins && walletOpen() ? `+${coins} COINS` : ''].filter(Boolean).join(' · ')
+// Today's tally for Player of the Day (on the public profile, accounts.cos.today):
+// the XP earned today, from anything, and the games finished
+function tally(xp = 0, game = 0) {
+  const k = dayKey()
+  if (S.today?.d !== k) S.today = { d: k, xp: 0, g: 0 }
+  S.today.xp += Math.max(0, Math.round(xp || 0))
+  S.today.g += game
+}
 function totalXp() {
   if (!uid) return 0
   const since = S.sync?.at ?? 0
@@ -285,7 +294,7 @@ function rollDay() {
     else { st.count = 1; st.start = k; st.claimed = {} }
     st.last = k
     st.best = Math.max(st.best, st.count)
-    S.bonusXp += LOGIN_XP
+    S.bonusXp += LOGIN_XP; tally(LOGIN_XP)
     if (uid) toast({ kind: 'streak', title: st.count > 1 ? `${st.count}-DAY STREAK` : 'DAILY LOGIN', sub: `+${LOGIN_XP} XP` })
     changed = true
   }
@@ -315,7 +324,7 @@ export function claimMission(id) {
   const def = MISSIONS[id]
   if (!m || m.claimed || m.n < def.goal) return 0
   m.claimed = true
-  S.bonusXp += def.xp
+  S.bonusXp += def.xp; tally(def.xp)
   earn(missionCoins(def.xp), null, true)
   emit()
   return def.xp
@@ -325,7 +334,7 @@ export function claimStreak(days) {
   const r = STREAK_REWARDS.find(x => x.days === days)
   if (!r || S.streak.count < days || S.streak.claimed[days]) return 0
   S.streak.claimed[days] = true
-  S.bonusXp += r.xp
+  S.bonusXp += r.xp; tally(r.xp)
   earn(Math.round(r.xp / 4), null, true)
   if (r.unlock) S.unlocks[r.unlock] = true
   emit()
@@ -337,7 +346,7 @@ export function claimSet(key, size) {
   S.sets ??= {}
   if (S.sets[key]) return 0
   S.sets[key] = true
-  S.bonusXp += setReward(size)
+  S.bonusXp += setReward(size); tally(setReward(size))
   earn(Math.round(setReward(size) / 4), null, true)
   emit()
   return setReward(size)
@@ -403,6 +412,16 @@ async function postDaily(ovr, pos, mode, build) {
   })
   if (!error || error.code === '23505') { S.dc.posted = true; emit() }   // 23505: already posted today
 }
+// Players of the Day: the most XP earned today, across every mode (accounts.cos.today)
+export async function fetchPlayersOfDay(key = dayKey()) {
+  if (!supabase) return { rows: [], error: true }
+  const { data, error } = await supabase.from('accounts')
+    .select('id,username,cos').eq('cos->today->>d', key)
+    .order('cos->today->xp', { ascending: false }).limit(3)
+  if (error) return { rows: [], error: true }
+  return { rows: (data ?? []).filter(r => r.username && r.cos?.today?.xp > 0) }
+}
+export const myToday = () => (S.today?.d === dayKey() ? S.today : { d: dayKey(), xp: 0, g: 0 })
 export async function fetchDailyBoard(key = dayKey()) {
   if (!supabase) return { rows: [], error: true }
   const { data, error } = await supabase.from('daily_challenge_results')
@@ -425,6 +444,7 @@ function onSeason(e) {
   if (d.localOnly) S.bonusXp += xp                       // modes the database doesn't keep (Salary Cap)
   else if (uid) S.pending.push({ at: Date.now(), xp, ring: !!d.champion })
   else S.seasonXp += xp
+  tally(xp, 1)
   S.stats.seasons++
   if (d.champion) S.stats.rings++
   if (d.ovr > S.stats.best) S.stats.best = d.ovr
@@ -463,7 +483,7 @@ function onSeason(e) {
 function onXp(e) {
   const { xp, label, coins } = e.detail || {}
   if (!xp && !coins) return
-  S.bonusXp += xp || 0
+  S.bonusXp += xp || 0; tally(xp)
   if (coins) earn(coins, null, true)
   const t = rewardText(xp, coins)
   if (t) toast({ kind: 'xp', title: t, sub: label || '' })
@@ -525,7 +545,7 @@ function onCompete(e) {
   const scale = 0.5 + 0.5 * Math.min(1, Math.max(0, humans - 1) / 4)
   const delta = rateOnline((COMPETE_RATING[place] ?? -12) * scale, 'compete', { place, pbOvr, streak: c.streak })
   const [xp, coins] = COMPETE_REWARDS[place] ?? COMPETE_REWARDS[5]
-  S.bonusXp += xp
+  S.bonusXp += xp; tally(xp, 1)
   earn(coins, null, true)
   bumpMissions('compete', { place })
   toast({ kind: 'xp', title: rewardText(xp, coins) || (place === 1 ? `${what.toUpperCase()} WON` : `${ordinal(place).toUpperCase()} PLACE`), sub: `${place === 1 ? `You won the ${what}` : `Compete · ${ordinal(place)} place`} · ${delta >= 0 ? '+' : ''}${delta} rating` })
@@ -558,7 +578,7 @@ function onBlacktop(e) {
   const scale = d.bots ? 0.5 : 1
   // walked out of the run's build: a forfeit's hit, no mission credit
   rateOnline((d.forfeit ? FORFEIT_RATING : (d.won ? 20 : -12) + (d.mvp ? 5 : 0)) * scale, 'bt', { won: !!d.won, mvp: !!d.mvp, highPts, streak: b.streak, forfeit: !!d.forfeit })
-  if (!d.forfeit) bumpMissions('bt', { won: !!d.won })
+  if (!d.forfeit) { bumpMissions('bt', { won: !!d.won }); tally(0, 1) }
   emit()
 }
 
@@ -573,7 +593,7 @@ function onH2H(e) {
   pushRecent(h.recent, won ? 'W' : 'L')
   const delta = rateOnline(result === 'win' ? 25 : result === 'walkover' ? 10 : result === 'forfeit' ? -20 : -15, 'h2h', { won, streak: h.streak, sport })
   if (result !== 'walkover') toast({ kind: 'online', title: won ? 'BLACKTOP 1V1 · W' : 'BLACKTOP 1V1 · L', sub: `${delta >= 0 ? '+' : ''}${delta} rating${h.streak >= 2 ? ` · ${h.streak} straight` : ''}` })
-  bumpMissions('h2h', { won })
+  bumpMissions('h2h', { won }); if (result !== 'forfeit') tally(0, 1)
   emit()
 }
 
@@ -588,7 +608,7 @@ function onSpin(e) {
   S.cards[k] = isNew ? [1, Date.now()] : [S.cards[k][0] + 1, S.cards[k][1]]
   const rank = rarityRank(pool, player)
   bumpMissions('card', { isNew, rank })
-  if (isNew) { S.bonusXp += 2 + rank * 3; earn([1, 2, 5, 15][rank] ?? 1, null, true); if (rank >= 3) S.stats.legends++ }
+  if (isNew) { S.bonusXp += 2 + rank * 3; tally(2 + rank * 3); earn([1, 2, 5, 15][rank] ?? 1, null, true); if (rank >= 3) S.stats.legends++ }
   emit()
   window.dispatchEvent(new CustomEvent('bap:card', { detail: { isNew, rank, rarity: RARITIES[rank], name: player.name, team: player.team, sport, pos, mode, count: S.cards[k][0] } }))
 }
@@ -693,7 +713,7 @@ export function initProgress() {
   window.addEventListener('bap:xp', onXp)
   window.addEventListener('bap:blacktop', onBlacktop)
   window.addEventListener('bap:h2h', onH2H)
-  window.addEventListener('bap:takeover', e => { const d = e.detail || {}; if (d.city) S.stats.tkCities++; if (d.run) S.stats.tkRuns++; emit() })
+  window.addEventListener('bap:takeover', e => { const d = e.detail || {}; if (d.city) { S.stats.tkCities++; tally(0, 1) } if (d.run) S.stats.tkRuns++; emit() })
   window.addEventListener('bap:compete', onCompete)
   window.addEventListener('bap:dc', e => { const n = e.detail?.streak ?? 0; if (n > S.stats.dcBest) { S.stats.dcBest = n; emit() } })
   window.addEventListener('bap:pro', () => emit(true))
@@ -913,7 +933,7 @@ export function claimAch(id) {
   const a = achById(id)
   if (!a || !S.ach[id] || S.achClaimed[id]) return null
   S.achClaimed[id] = Date.now()
-  S.bonusXp += a.xp
+  S.bonusXp += a.xp; tally(a.xp)
   earn(a.coins, null, true)
   if (a.item) S.owned[a.item] = Date.now()
   S.walletAt = Date.now()
@@ -947,7 +967,8 @@ let cosSent = ''
 function pushCos(id = uid) {
   if (!supabase || !id) return
   const o = S.stats?.online
-  const cos = { ...myCosmetics(), level: levelInfo(totalXp()).level, rating: o?.played ? o.rating : null }, key = id + JSON.stringify(cos)
+  const today = S.today?.d === dayKey() ? S.today : null
+  const cos = { ...myCosmetics(), level: levelInfo(totalXp()).level, rating: o?.played ? o.rating : null, today }, key = id + JSON.stringify(cos)
   if (key === cosSent) return
   cosSent = key
   supabase.from('accounts').update({ cos }).eq('id', id).then(({ error }) => { if (error) cosSent = '' }, () => { cosSent = '' })

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { APP_STORE_URL } from '../../lib/storeLinks'
 import { POS_OPTIONS, AvatarTrio, StackedSilhouette, SPLASH_ATTRS } from '../SplashScreen'
 import { getUsername } from '../../lib/discord'
-import { useProgress } from '../../lib/progress'
+import { useProgress, fetchPlayersOfDay, myToday } from '../../lib/progress'
 import { IconCrown, IconBolt, IconClipboard, IconCoin, IconLock, IconProfile, IconArrow, IconGear, IconPodium, IconFootball, IconBasketball, IconPlay } from './icons'
 import { sfx } from '../../lib/juice'
 import SoundToggle from './SoundToggle'
@@ -213,6 +213,52 @@ function ModeCard({ tone, title, badge, onClick, mark: Mark, isNew, delay }) {
   )
 }
 
+// Players of the Day: the three who earned the most XP today, across every mode
+// (fetchPlayersOfDay). Refreshes every couple of minutes while home is open.
+function PlayersOfDay() {
+  const p = useProgress()
+  const [rows, setRows] = useState(null)
+  useEffect(() => {
+    let live = true
+    const get = () => fetchPlayersOfDay().then(r => { if (live && !r.error) setRows(r.rows) })
+    get()
+    const id = setInterval(get, 120000)
+    return () => { live = false; clearInterval(id) }
+  }, [])
+  if (!rows) return null
+  const me = p.user?.id
+  const t = myToday()
+  const inTop = rows.some(r => r.id === me)
+  return (
+    <section className="ag-potd ag-pop" style={{ '--d': '420ms' }} aria-label="Players of the Day">
+      <div className="ag-potd-head">
+        <span className="ag-potd-crown"><IconCrown size={18} /></span>
+        <span className="ag-potd-titles">
+          <span className="ag-eyebrow">TODAY · EVERY MODE</span>
+          <b className="ag-potd-title">PLAYERS OF THE DAY</b>
+        </span>
+      </div>
+      {rows.length ? (
+        <ol className="ag-potd-list">
+          {rows.map((r, i) => (
+            <li key={r.id} className={`ag-potd-row is-${i + 1}${r.id === me ? ' is-me' : ''}`}>
+              <span className="ag-potd-rank">{i + 1}</span>
+              <AvatarBadge cos={r.cos} uid={r.id} self={r.id === me} name={r.username} size={36} />
+              <span className="ag-potd-name"><NameTag name={r.username} cos={r.cos} self={r.id === me} plate={false} /></span>
+              <span className="ag-potd-xp"><span><b>{(r.cos.today.xp ?? 0).toLocaleString()}</b> XP</span><small>{r.cos.today.g ?? 0} {r.cos.today.g === 1 ? 'game' : 'games'}</small></span>
+            </li>
+          ))}
+        </ol>
+      ) : <p className="ag-potd-empty">Nobody's on the board yet today. Play anything to take the top spot.</p>}
+      {!inTop && (
+        <p className="ag-potd-mine">{me
+          ? <>{getUsername(p.user) || 'Player'} today: <b>{t.xp.toLocaleString()} XP</b> · {t.g} {t.g === 1 ? 'game' : 'games'}{rows.length === 3 ? <> · {Math.max(0, (rows[2].cos.today.xp ?? 0) - t.xp + 1).toLocaleString()} XP to make the top 3</> : null}</>
+          : 'Sign in to get on the board.'}</p>
+      )}
+    </section>
+  )
+}
+
 export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus, onBlacktop, blacktop, onTakeover, takeoverRun, onCompete, onCareer, career = null, resume = null, user, renderBucketFigure, footer = null }) {
   const prog = useProgress()
   const cs = prog.stats?.compete
@@ -396,6 +442,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
           )}
         </div>
       </div>
+      <PlayersOfDay />
       {/* website: get the app (the official badge; hidden until the App Store link is set) */}
       {!IS_APP && APP_STORE_URL && (
         <div className="ag-getapp">

@@ -4674,6 +4674,27 @@ html.is-app { --drop-chrome: calc(352px + env(safe-area-inset-top) + env(safe-ar
 .nav-grades b { font-weight: 400; color: #fff; }
 .nav-grades.is-off { border-color: #f87171; background: rgba(248,113,113,.12); color: #f87171; }
 /* website: the App Store badge under the menu */
+/* Players of the Day (AppHome): the top three by XP earned today */
+.ag-potd { display: grid; gap: 10px; margin: 14px 0 4px; padding: 14px; border-radius: 18px; border: 1.5px solid rgba(212,175,55,.45); background: radial-gradient(110% 80% at 0% 0%, rgba(212,175,55,.16), transparent 60%), var(--ag-panel); }
+.ag-potd-head { display: flex; align-items: center; gap: 10px; }
+.ag-potd-crown { display: grid; place-items: center; width: 34px; height: 34px; flex: none; border-radius: 10px; color: #1d1503; background: linear-gradient(135deg, #f5dc8a, #d4af37); box-shadow: 0 4px 12px rgba(212,175,55,.3); }
+.ag-potd-titles { display: grid; gap: 1px; }
+.ag-potd-title { font-family: var(--ag-display); font-weight: 400; font-size: 22px; line-height: 1; letter-spacing: .4px; color: #fff; }
+.ag-potd-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.ag-potd-row { display: grid; grid-template-columns: 22px auto minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 12px; background: rgba(255,255,255,.035); border: 1px solid var(--ag-line); }
+.ag-potd-row.is-1 { border-color: rgba(212,175,55,.6); background: linear-gradient(90deg, rgba(212,175,55,.16), transparent 75%); }
+.ag-potd-row.is-me { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ag-a1) 60%, transparent); }
+.ag-potd-rank { font-family: var(--ag-display); font-weight: 400; font-size: 22px; line-height: 1; text-align: center; color: var(--ag-muted); }
+.ag-potd-row.is-1 .ag-potd-rank { color: var(--ag-gold-hi); }
+.ag-potd-row.is-2 .ag-potd-rank { color: #d6dde3; }
+.ag-potd-row.is-3 .ag-potd-rank { color: #d39a66; }
+.ag-potd-name { min-width: 0; font-family: var(--ag-font); font-size: 17px; letter-spacing: 1px; color: var(--ag-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ag-potd-xp { display: grid; justify-items: end; font-family: var(--ag-font); font-size: 12px; letter-spacing: 1.2px; color: var(--ag-muted); font-variant-numeric: tabular-nums; }
+.ag-potd-xp b { font-family: var(--ag-display); font-weight: 400; font-size: 20px; line-height: 1; color: #fff; }
+.ag-potd-xp small { font-family: var(--ag-body); font-size: 11px; letter-spacing: 0; }
+.ag-potd-empty, .ag-potd-mine { margin: 0; font-family: var(--ag-body); font-size: 13px; font-weight: 600; color: var(--ag-muted); text-wrap: pretty; }
+.ag-potd-mine b { color: var(--ag-gold-hi); font-weight: 700; }
+
 .ag-getapp { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 18px 14px 6px; }
 .ag-getapp img { display: block; height: 50px; width: auto; }
 .ag-getapp a:active { transform: scale(.97); }
