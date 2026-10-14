@@ -17008,3 +17008,14 @@ html.is-mac [id^="pw-oop-bottom_rail"] > * {
 .wm-avatar { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: linear-gradient(135deg, var(--btn-start) 0%, var(--btn-end) 100%); color: var(--btn-txt) !important; font-family: Impact, 'Arial Narrow Bold', sans-serif; font-size: 11px; font-weight: 900; letter-spacing: .5px; box-shadow: 0 0 0 2px color-mix(in srgb, var(--btn-start) 20%, transparent); }
 .wm-row:hover .wm-avatar { color: var(--btn-txt) !important; }
 .wm-avatar--emoji { font-size: 14px; letter-spacing: 0; }
+
+/* Football sim: the playoff run, game by game (SimPage PlayoffLog) */
+.po-glog { margin: 12px 0; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--border, rgba(255,255,255,.1)); background: rgba(255,255,255,.03); display: flex; flex-direction: column; gap: 6px; text-align: left; }
+.po-glog-hd { font-size: 11px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; color: var(--text-3, rgba(255,255,255,.5)); }
+.po-glog-row { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; padding: 7px 9px; border-radius: 9px; background: rgba(255,255,255,.03); border-left: 3px solid rgba(74,222,128,.7); }
+.po-glog-row.is-l { border-left-color: rgba(248,113,113,.75); }
+.po-glog-rd { font-size: 11px; font-weight: 800; letter-spacing: .6px; text-transform: uppercase; color: var(--text-2, rgba(255,255,255,.75)); }
+.po-glog-res { font-size: 12px; color: var(--text-3, rgba(255,255,255,.6)); text-align: right; }
+.po-glog-res b { color: #4ade80; }
+.po-glog-row.is-l .po-glog-res b { color: #f87171; }
+.po-glog-line { grid-column: 1 / -1; font-size: 13px; font-weight: 600; color: var(--text, #fff); font-variant-numeric: tabular-nums; }

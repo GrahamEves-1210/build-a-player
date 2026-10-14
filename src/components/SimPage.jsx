@@ -1001,6 +1001,32 @@ function PlayoffGame({ round, opponent, home, weather, mySc, oppSc, won, overtim
 
 // ── Screen 3: Playoffs ────────────────────────────────────────────────────────
 
+// Your line in a playoff game, whatever the position (the round carries its own stats)
+function poLine(r) {
+  if (r.passYds != null) return `${r.passYds} pass yds · ${r.tds ?? 0} TD · ${r.ints ?? 0} INT${r.rating != null ? ` · ${Math.round(r.rating)} rtg` : ''}`
+  if (r.carries != null) return `${r.carries} car · ${r.rushYds ?? 0} rush yds · ${r.recs ?? 0} rec · ${r.recYds ?? 0} rec yds · ${(r.rushTDs ?? 0) + (r.recTDs ?? 0)} TD`
+  if (r.targets != null) return `${r.rec ?? 0} rec · ${r.recYds ?? 0} yds · ${r.recTDs ?? 0} TD · ${r.targets} tgt`
+  if (r.tackles != null) return `${r.tackles} tkl · ${r.ints ?? 0} INT · ${r.pbus ?? 0} PD${r.ff ? ` · ${r.ff} FF` : ''}`
+  if (r.pancakes != null) return `${r.pancakes} pancakes · ${r.pressures ?? 0} pressures · ${r.sacks ?? 0} sacks allowed`
+  return ''
+}
+// The playoff run, game by game: the round, the result, your line
+function PlayoffLog({ rounds }) {
+  if (!rounds?.length) return null
+  return (
+    <div className="po-glog">
+      <div className="po-glog-hd">Playoff Game Log</div>
+      {rounds.map((r, i) => (
+        <div key={i} className={`po-glog-row${r.won ? ' is-w' : ' is-l'}`}>
+          <span className="po-glog-rd">{r.round}</span>
+          <span className="po-glog-res"><b>{r.won ? 'W' : 'L'}</b> {r.mySc}–{r.oppSc}{r.overtime ? ' OT' : ''} {r.home ? 'vs' : '@'} {r.opponent}</span>
+          <span className="po-glog-line">{poLine(r)}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 function ScreenPlayoffs({ result, onNext, onPreSuperBowl, adsDisabled = false }) {
   const { wins, losses, playoffs, playoffRounds, team } = result
   const [gameIdx, setGameIdx] = useState(0)
@@ -1125,6 +1151,7 @@ function ScreenPlayoffs({ result, onNext, onPreSuperBowl, adsDisabled = false })
             onDone={handleGameDone}
           />
         )}
+        {started && <PlayoffLog rounds={playoffRounds.slice(0, status === 'playing' ? gameIdx : gameIdx + 1)} />}
         {!adsDisabled && (
           <div id="ramp-cntr1-plf" className="plf-banner-ad" style={{ minHeight: 0 }} />
         )}
@@ -1219,6 +1246,7 @@ function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = fals
         </div>
         <div className="sfb-sub">{wins}–{losses} Season · OVR {ovr}</div>
       </div>
+      {playoffs && <PlayoffLog rounds={result.playoffRounds} />}
 
       {champion && (
         <div className="simp-sb-box">
