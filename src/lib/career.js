@@ -111,7 +111,9 @@ export const SPORT = {
     bigInjury: 6,
     draft: {
       rounds: 7,
-      stock: ovr => (ovr >= 95 ? [1, 5] : ovr >= 90 ? [3, 12] : ovr >= 86 ? [8, 24] : ovr >= 82 ? [18, 45] : ovr >= 78 ? [36, 80] : ovr >= 74 ? [70, 130] : ovr >= 70 ? [110, 180] : [160, 224]),
+      // positional value: a quarterback is slotted as if ~4 better (any 90+ goes first),
+      // receivers and DBs at face value, a tight end or running back ~2 worse
+      stock: (ovr0, pos) => { if (pos === 'qb' && ovr0 >= 90) return [1, 1]; const ovr = ovr0 + ({ qb: 4, te: -2, rb: -2 }[pos] ?? 0); return (ovr >= 95 ? [1, 5] : ovr >= 90 ? [3, 12] : ovr >= 86 ? [8, 24] : ovr >= 82 ? [18, 45] : ovr >= 78 ? [36, 80] : ovr >= 74 ? [70, 130] : ovr >= 70 ? [110, 180] : [160, 224]) },
       rookie: o => ({ kind: 'rookie', years: 4, left: 4, perYear: o <= 5 ? 9.5 : o <= 10 ? 6.5 : o <= 16 ? 4.5 : o <= 32 ? 3.2 : o <= 64 ? 1.8 : o <= 100 ? 1.3 : 1.0, option: o <= 32 }),
       posList: ['EDGE', 'OT', 'CB', 'WR', 'QB', 'LB', 'DT', 'S', 'RB', 'TE', 'G', 'C'],
     },
@@ -641,7 +643,7 @@ const maxPick = S => S.teams.length * S.draft.rounds
 export const pickLabel = (overall, sport = 'nfl') => { const n = (SPORT[sport] ?? SPORT.nfl).teams.length; const round = Math.ceil(overall / n); return { round, slot: overall - (round - 1) * n } }
 export function stockOf(c) {
   const S = sportOf(c), d = c.draft
-  const [lo0, hi0] = S.draft.stock(c.ovr)
+  const [lo0, hi0] = S.draft.stock(c.ovr, c.pos)
   // the combine moves the window, the interviews too (less, in a two-round draft)
   const span = S.isBucket ? 3 : 9
   const played = d.combine.filter(x => x.pct != null)
