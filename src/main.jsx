@@ -101,6 +101,9 @@ function dropLoader() {
     })
 }
 
+// the website's bottom rail: under the nav, its close button on top (lib/railLayer.js)
+if (!IS_APP) import('./lib/railLayer').then(m => m.startRailLayer()).catch(() => {})
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <ErrorBoundary>
