@@ -1070,7 +1070,11 @@ export function bookSeason(c) {
   const contract = { ...c.contract, left: c.contract.left - 1 }
   const perf = seasonScore(c.pos, s)
   // a development point a year; a second for an award or All-Pro / All-NBA season
-  const dev = { ...c.dev, points: c.dev.points + 1 + (s.award || s.allPro ? 1 : 0) }
+  // offseason work: 2 points while young, 1 through the prime, none once the body
+  // turns (an award still earns one, and so does camp)
+  const S0 = sportOf(c)
+  const base = c.age <= 25 ? 2 : c.age < S0.declineAt(c.pos) ? 1 : 0
+  const dev = { ...c.dev, points: c.dev.points + base + (s.award || s.allPro ? 1 : 0) }
   const rep = clamp(c.rep + (s.goals.filter(g => g.met).length >= 2 ? 1 : 0) + (s.champion ? 1 : 0) - (perf < 0.25 ? 1 : 0), 1, 10)
   const lastRole = benched < (f.wins + f.losses || 17) / 2 ? 'Starter' : 'Backup'
   let next = { ...c, recordBook, phase: 'offseason', seasons: [...c.seasons, s], contract, dev, rep, lastRole, active: null, simTeam: null, goals: [], earnings: r10(c.earnings + c.contract.perYear + (c.shoe?.perYear ?? 0)), nextMods: null, talks: null, tradeAsked: false }
@@ -1258,7 +1262,8 @@ function contractSituation(c) {
   const value = marketValue(c)
   const last = c.seasons[c.seasons.length - 1]
   const perf = seasonScore(c.pos, last)
-  if (c.age >= 34 && perf < 0.35) return []
+  // past his prime and a bad year: nobody calls (an RB sooner than a QB)
+  if (c.age >= sportOf(c).declineAt(c.pos) + 3 && perf < 0.35) return []
   // teams commit longer to a good name (+1 year at 8+), shorter to a bad one (−1 at 3 or less)
   const repYrs = (c.rep ?? 5) >= 8 ? 1 : (c.rep ?? 5) <= 3 ? -1 : 0
   const years = clamp((c.age >= 32 ? 1 + Math.floor(r() * 2) : c.age >= 29 ? 2 + Math.floor(r() * 2) : 3 + Math.floor(r() * 3)) + repYrs, 1, 6)
@@ -1368,13 +1373,16 @@ export function nextSeason(c) {
   // the body fades from the position's age (an RB first, a QB last)
   const from = S.declineAt(c.pos)
   if (age >= from) {
-    const p = age >= from + 4 ? 1 : age >= from + 2 ? 0.8 : 0.5
-    if (r() < p) move(pickPhys(), -1, 'Father Time')
-    if (age >= from + 4 && r() < 0.4) move(pickPhys(), -1, 'Father Time')
-    // the rest slips too, just less: hands, ball security, the craft (size never moves)
+    // the physical traits: a grade a year at first (sometimes two), then two a year,
+    // then two or three
+    const yrs = age - from
+    const hits = yrs >= 4 ? 2 + (r() < 0.5 ? 1 : 0) : yrs >= 2 ? 2 : 1 + (r() < 0.3 ? 1 : 0)
+    for (let h = 0; h < hits; h++) move(pickPhys(), -1, 'Father Time')
+    // the rest slips too, less: hands, ball security, the craft (size never moves)
     const rest = c.types.filter(t => !phys.includes(t) && t !== 'size' && t !== 'heightLength')
-    const q = age >= from + 4 ? 0.45 : age >= from + 2 ? 0.3 : 0.15
+    const q = yrs >= 4 ? 0.9 : yrs >= 2 ? 0.65 : 0.4
     if (rest.length && r() < q) move(rest[Math.floor(r() * rest.length)], -1, 'A step slower')
+    if (rest.length && yrs >= 4 && r() < 0.4) move(rest[Math.floor(r() * rest.length)], -1, 'A step slower')
   }
   // a big injury last season (season-ending, or a long stretch out) can take something with it
   for (const inj of c.injuries.filter(x => x.year === c.year + 1 && (x.serious || x.games >= S.bigInjury))) {
@@ -1389,7 +1397,12 @@ export function nextSeason(c) {
 export const canRetire = c => c.age >= 29 || c.seasons.length >= 8
 // The end of the road: the body (40, quarterbacks 42), the most seasons a career
 // can run, or a free agency where nobody calls
-export const retireAge = c => 40 + (sportOf(c).ageShift?.(c.pos) ?? 0)
+// The age a career ends, by position; elite (90+) and durable (7+) buys two more years
+export const retireAge = c => {
+  const S = sportOf(c)
+  const base = S.isBucket ? 38 : ({ qb: 42, rb: 33, wr: 36, te: 36, db: 35 })[c.pos] ?? 36
+  return base + ((c.ovr ?? 0) >= 90 && (c.durability ?? 5) >= 7 ? 2 : 0)
+}
 export function retireReason(c) {
   if (c.age >= retireAge(c)) return 'age'
   if (c.seasons.length >= MAX_SEASONS) return 'seasons'

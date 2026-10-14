@@ -17,7 +17,7 @@ function _dbOVR(a) {
   const base   = 60 + 2.1 * avg + 0.21 * avg * avg
   const spread = Math.max(...vals) - Math.min(...vals)
   const minVal = Math.min(...vals)
-  const bonus    = spread <= 1 ? 2.5 : spread <= 2 ? 1.0 : spread <= 3 ? 0.3 : 0
+  const bonus    = 0   // (no bonus for a balanced build)
   const minBonus = minVal >= 9 ? 2.0 : minVal >= 8 ? 0.5 : 0
   return Math.min(99, Math.max(0, Math.round(base + bonus + minBonus)))
 }
