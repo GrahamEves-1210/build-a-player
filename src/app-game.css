@@ -4697,3 +4697,9 @@ html:is(.is-app, .app-look).no-dock { --app-bottom: calc(var(--safe-bottom) + 12
 .ll-sheet.sb-buy { background: radial-gradient(120% 70% at 50% 0%, rgba(245,220,138,.12), transparent 60%), #0d1210; border-color: rgba(245,220,138,.4); box-shadow: 0 -10px 40px rgba(0,0,0,.6); }
 .ll-sheet.sb-buy .ag-eyebrow { color: #f5dc8a; }
 .mg-hard { font-style: normal; margin-left: 6px; padding: 1px 6px; border-radius: 5px; background: rgba(248,113,113,.16); color: #fca5a5; font-size: .85em; letter-spacing: 1px; }
+/* career: the physical traits' training window */
+.cr-trait-win { margin-left: 6px; padding: 1px 5px 0; border-radius: 5px; font-style: normal; font-family: var(--ag-font); font-size: 10px; letter-spacing: 1px; color: #bfe9d6; background: rgba(94,219,216,.14); }
+.cr-trait-win.is-last { color: #1d1503; background: #f5c542; }
+.cr-trait-win.is-closed { color: var(--ag-muted); background: rgba(255,255,255,.07); }
+.cr-train-note { margin: 0 0 8px; padding: 8px 10px; border-radius: 10px; background: rgba(94,219,216,.08); border: 1px solid rgba(94,219,216,.22); font-family: var(--ag-body); font-size: 12.5px; color: var(--ag-text-2); line-height: 1.35; }
+.cr-train-note.is-last { background: rgba(245,197,66,.1); border-color: rgba(245,197,66,.45); color: #f5dc8a; }

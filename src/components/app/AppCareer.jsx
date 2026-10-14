@@ -5,7 +5,7 @@ import {
   startSeason, resumeSeason, advanceWeek, chooseMoment, resolveInjury, finishRegular, playoffRound, bookSeason, recordCombine, spendDev, demandTrade, nextSeason,
   OFF_STEPS, offStep, campDrill, CAMP_LEGACY, dbSpot, lineup, depthChart, gradeOf, gradeOfOvr, ovrGradeVal, SPORT, sportOf,
   openTalks, ask, closeTalks, acceptTalks, ASKS, askOdds, leverageOf,
-  retire, canRetire, mustRetire, careerTotals, legacyOf, LEGACY_TIERS, ALL_TIME, STAT_LABEL, HEADLINE_STATS, careerCard, AWARD_NAME, MAX_SEASONS, retireReason, goalsFor, compsFor, stockText, pickText, loadSlots, CAREER_SLOTS, maxedTrait,
+  retire, canRetire, mustRetire, careerTotals, legacyOf, LEGACY_TIERS, ALL_TIME, STAT_LABEL, HEADLINE_STATS, careerCard, AWARD_NAME, MAX_SEASONS, retireReason, goalsFor, compsFor, stockText, pickText, loadSlots, CAREER_SLOTS, maxedTrait, trainWindow, canUpgrade, upgradeCost,
 } from '../../lib/career'
 import { GAME_LINE } from '../../lib/seasonDirector'
 import { GAMES, pickPlayoffGame } from '../../lib/minigames'
@@ -150,12 +150,16 @@ function Model({ c, devPick }) {
   const Card = ({ t }) => {
     const ch = c.build[t]
     const maxed = !!ch && maxedTrait(ch.val, ch, t)
-    const canUp = devPick && c.dev.points > 0 && ch && !maxed
+    const canUp = !!devPick && canUpgrade(c, t)
+    const cost = upgradeCost(ch?.val)
+    // the physical traits' training window, out in the open: train them before it shuts
+    const w = !maxed ? trainWindow(c, t) : null
+    const winTag = !w ? null : !w.open ? <em className="cr-trait-win is-closed">CLOSED</em> : w.left <= 1 ? <em className="cr-trait-win is-last">LAST CHANCE</em> : <em className="cr-trait-win">TRAIN TO {w.until}</em>
     return (
       <div className={`cr-trait${canUp ? ' can-up' : ''}`} onClick={canUp ? () => devPick(t) : undefined} role={canUp ? 'button' : undefined}>
         <span className="cr-trait-av">{ch?.photo ? <img src={ch.photo} alt="" /> : null}</span>
-        <span className="cr-trait-txt"><b>{(attr[t]?.label ?? t).replace('/', '/\u200b')}</b><small>{nick(ch?.qbFull) || '—'}{ch?.upgraded ? ` +${ch.upgraded}` : ''}{ch?.faded ? ` −${ch.faded}` : ''}{maxed && <em className="cr-trait-max">MAXED</em>}</small></span>
-        <span className="cr-trait-g" style={{ background: gradeColor(ch?.val ?? 0) }}>{canUp ? '+1' : valToGrade(ch?.val ?? 0)}</span>
+        <span className="cr-trait-txt"><b>{(attr[t]?.label ?? t).replace('/', '/\u200b')}</b><small>{nick(ch?.qbFull) || '—'}{ch?.upgraded ? ` +${ch.upgraded}` : ''}{ch?.faded ? ` −${ch.faded}` : ''}{maxed && <em className="cr-trait-max">MAXED</em>}{winTag}</small></span>
+        <span className="cr-trait-g" style={{ background: gradeColor(ch?.val ?? 0) }}>{canUp ? (cost > 1 ? `+1 · ${cost} PTS` : '+1') : valToGrade(ch?.val ?? 0)}</span>
       </div>
     )
   }
@@ -165,6 +169,13 @@ function Model({ c, devPick }) {
         <Silhouette build={shown} types={c.types} attrMap={attr} isBucket={c.sport === 'bucket'} isRB={c.pos === 'rb'} isWR={c.pos === 'wr'} isTE={c.pos === 'te'} isDB={c.pos === 'db'} modelOnly />
         <span className="cr-model-ovr"><b>{c.ovr}</b><small>OVR</small></span>
       </div>
+      {devPick && (() => {
+        const phys = c.types.filter(t => trainWindow(c, t))
+        const w = phys.length ? trainWindow(c, phys[0]) : null
+        const names = phys.map(t => attr[t]?.label ?? t)
+        const list = names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}` : names[0]
+        return w && <p className={`cr-train-note${w.open && w.left <= 1 ? ' is-last' : ''}`}>{!w.open ? `${list} can't be trained any more (past ${w.until}). Skills and reads still can.` : w.left <= 1 ? `Last offseason to train ${list}: the window shuts after ${w.until}.` : `${list} can be trained until ${w.until}: ${w.left} offseasons left. Skills and reads, any time. A+ to S costs 2 points.`}</p>
+      })()}
       <div className="cr-traits">{c.types.map(t => <Card key={t} t={t} />)}</div>
     </div>
   )

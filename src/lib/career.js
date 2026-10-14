@@ -105,6 +105,10 @@ export const SPORT = {
     physical: { qb: ['legs', 'arm'], rb: ['speed', 'burst', 'elusiveness'], wr: ['speed', 'vertical', 'afterCatch'], te: ['speed', 'vertical', 'strength'], db: ['speed', 'fluidity'] },
     durable: { qb: ['size', 'pocket-presence'], rb: ['strength', 'size', 'balance'], wr: ['size', 'bodyControl'], te: ['strength', 'size'], db: ['size', 'runSupport'] },
     ageShift: pos => (pos === 'qb' ? 2 : 0),
+    // the physical traits train until this age (then the window shuts); the body fades from declineAt
+    trainUntil: pos => ({ qb: 31, rb: 27, wr: 29, te: 29, db: 29 })[pos] ?? 29,
+    declineAt: pos => ({ qb: 33, rb: 28, wr: 30, te: 30, db: 30 })[pos] ?? 31,
+    bigInjury: 6,
     draft: {
       rounds: 7,
       stock: ovr => (ovr >= 95 ? [1, 5] : ovr >= 90 ? [3, 12] : ovr >= 86 ? [8, 24] : ovr >= 82 ? [18, 45] : ovr >= 78 ? [36, 80] : ovr >= 74 ? [70, 130] : ovr >= 70 ? [110, 180] : [160, 224]),
@@ -152,7 +156,7 @@ export const SPORT = {
     step: 1, gameWord: 'WEEK', snaps: 'snaps', injScale: 1, moneyWord: 'yards',
     injuries: [['hamstring strain', 2, 3], ['high ankle sprain', 3, 5], ['rib cartilage', 1, 2], ['concussion', 1, 2], ['MCL sprain', 4, 6], ['shoulder (AC joint)', 2, 4], ['turf toe', 2, 3]],
     money: { qb: [8, 58], rb: [2, 18], wr: [4, 34], te: [2, 19], db: [2, 22] },
-    primeNote: pos => `Traits grow until about 25, hold through the prime, then the physical ones fade past ${pos === 'qb' ? '33' : '31'}.`,
+    primeNote: pos => { const S = SPORT.nfl; return `Physical traits can be trained until ${S.trainUntil(pos)} and start to fade at ${S.declineAt(pos)}; skills and reads can be trained any time. Big injuries and a fragile body can cost you a grade.` },
   },
   bucket: {
     id: 'bucket', league: 'NBA', isBucket: true, screen: 'ag-screen--bucket',
@@ -200,6 +204,9 @@ export const SPORT = {
     physical: { guard: ['speed', 'bounce'], big: ['bounce', 'speed'] },
     durable: { guard: ['size', 'basketballIQ'], big: ['size', 'basketballIQ'] },
     ageShift: () => 0,
+    trainUntil: () => 29,
+    declineAt: () => 31,
+    bigInjury: 20,
     draft: {
       rounds: 2,
       stock: ovr => (ovr >= 95 ? [1, 3] : ovr >= 90 ? [2, 8] : ovr >= 86 ? [5, 15] : ovr >= 82 ? [10, 25] : ovr >= 78 ? [18, 35] : ovr >= 74 ? [28, 48] : ovr >= 70 ? [40, 58] : [48, 60]),
@@ -244,7 +251,7 @@ export const SPORT = {
     step: 10, gameWord: 'GAME', snaps: 'minutes', injScale: 17 / 82, moneyWord: 'points',
     injuries: [['ankle sprain', 3, 8], ['knee soreness', 4, 10], ['hamstring strain', 6, 14], ['concussion', 2, 5], ['back spasms', 3, 7], ['wrist sprain', 5, 12], ['calf strain', 8, 16]],
     money: { guard: [2, 55], big: [2, 52] },
-    primeNote: () => 'Traits grow until about 25, hold through the prime, then speed and bounce fade past 31.',
+    primeNote: () => 'Speed and bounce can be trained until 29 and start to fade at 31; skills can be trained any time. Big injuries and a fragile body can cost you a grade.',
   },
 }
 export const sportOf = c => SPORT[c?.sport] ?? SPORT.nfl
@@ -951,7 +958,7 @@ export function resolveInjury(c, D, play) {
     D.sidelined(at, inj.games)
     text = inj.serious ? `${inj.kind}: season over.` : `Out ${inj.games} games with the ${inj.kind}.`
   }
-  const injuries = [...c.injuries, { year: c.year + 1, at, kind: inj.kind, games: inj.games, played: !!play }]
+  const injuries = [...c.injuries, { year: c.year + 1, at, kind: inj.kind, games: inj.games, played: !!play, serious: !!inj.serious }]
   const feed = [...c.active.feed, { k: at, injuryText: text }]
   return [withSnap({ ...c, injuries, durability: r10(Math.max(1, c.durability - 0.4)) }, D, { injury: null, feed, ...(inj.serious ? { out: true } : {}) }), text]
 }
@@ -1157,12 +1164,30 @@ const traitName = (c, t) => POS_ATTR[c.pos][t]?.label ?? t
 export const UPGRADE_CAP = { size: 2, heightLength: 2, speed: 3, bounce: 3 }
 // at the top of the scale, or out of upgrades for that trait
 export const maxedTrait = (v, ch = null, type = null) => Math.round(v ?? 0) >= 11 || (type != null && UPGRADE_CAP[type] != null && (ch?.upgraded ?? 0) >= UPGRADE_CAP[type])
+// The last step costs more: A+ to S takes 2 points, everything else 1
+export const upgradeCost = v => (Math.round(v ?? 0) >= 10 ? 2 : 1)
+// Physical traits can only be trained while young (the position's window); skill
+// and mental traits any time. { open, left (offseasons incl. this one), until } or null (no window)
+export function trainWindow(c, type) {
+  const S = sportOf(c)
+  if (!S.physical[c.pos]?.includes(type)) return null
+  const until = S.trainUntil(c.pos)
+  return { open: c.age <= until, left: Math.max(0, until - c.age + 1), until }
+}
+export function canUpgrade(c, type) {
+  const ch = c.build[type]
+  if (!ch || maxedTrait(ch.val, ch, type)) return false
+  const w = trainWindow(c, type)
+  if (w && !w.open) return false
+  return c.dev.points >= upgradeCost(ch.val)
+}
 export function spendDev(c, type) {
-  if (c.dev.points <= 0 || !c.build[type] || maxedTrait(c.build[type].val, c.build[type], type)) return c
+  if (!canUpgrade(c, type)) return c
+  const cost = upgradeCost(c.build[type].val)
   const from = c.build[type].val
   // one grade up, exactly: a 9.6 (A) becomes an A+, not a 10.6 that also reads S
   const build = { ...c.build, [type]: { ...c.build[type], val: Math.min(11, Math.round(from) + 1), upgraded: (c.build[type].upgraded ?? 0) + 1 } }
-  return { ...c, build, ovr: ovrOf(c.pos, build, c.sport), dev: { points: c.dev.points - 1, spent: c.dev.spent + 1 }, decisions: [...c.decisions, { year: c.year + 1, text: `Offseason work: ${traitName(c, type)} ${valToGrade(from)} → ${valToGrade(from + 1)}` }] }
+  return { ...c, build, ovr: ovrOf(c.pos, build, c.sport), dev: { points: c.dev.points - cost, spent: c.dev.spent + cost }, decisions: [...c.decisions, { year: c.year + 1, text: `Offseason work: ${traitName(c, type)} ${valToGrade(from)} → ${valToGrade(from + 1)}` }] }
 }
 const EVENTS = {
   nfl: [
@@ -1336,15 +1361,23 @@ export function nextSeason(c) {
     build[t] = { ...ch, val: to, ...(d > 0 ? { grew: (ch.grew ?? 0) + 1 } : { faded: (ch.faded ?? 0) + 1 }) }
     notes.push(`${why}: ${traitName(c, t)} ${valToGrade(ch.val)} → ${valToGrade(to)}`)
   }
-  const shift = S.ageShift(c.pos)
   if (age <= 24 && r() < 0.45) move(c.types[Math.floor(r() * c.types.length)], 1, 'Still growing')
   else if (age <= 28 && r() < 0.2) move(c.types[Math.floor(r() * c.types.length)], 1, 'A step forward')
-  if (age >= 31 + shift) {
-    const phys = S.physical[c.pos]
-    const p = age >= 35 + shift ? 1 : age >= 33 + shift ? 0.8 : 0.5
-    if (r() < p) move(phys[Math.floor(r() * phys.length)], -1, 'Father Time')
-    if (age >= 35 + shift && r() < 0.4) move(phys[Math.floor(r() * phys.length)], -1, 'Father Time')
+  const phys = S.physical[c.pos]
+  const pickPhys = () => phys[Math.floor(r() * phys.length)]
+  // the body fades from the position's age (an RB first, a QB last)
+  const from = S.declineAt(c.pos)
+  if (age >= from) {
+    const p = age >= from + 4 ? 1 : age >= from + 2 ? 0.8 : 0.5
+    if (r() < p) move(pickPhys(), -1, 'Father Time')
+    if (age >= from + 4 && r() < 0.4) move(pickPhys(), -1, 'Father Time')
   }
+  // a big injury last season (season-ending, or a long stretch out) can take something with it
+  for (const inj of c.injuries.filter(x => x.year === c.year + 1 && (x.serious || x.games >= S.bigInjury))) {
+    if (r() < 0.6) move(pickPhys(), -1, `The ${inj.kind}`)
+  }
+  // a body that keeps breaking down wears down
+  if (age >= 26 && c.durability <= 4 && r() < (c.durability <= 3 ? 0.4 : 0.25)) move(pickPhys(), -1, 'Wear and tear')
   const ovr = ovrOf(c.pos, build, c.sport)
   const n = { ...c, age, year: c.year + 1, season: c.season + 1, build, ovr, phase: 'preseason', offers: null, aging: notes, off: null, traded: false }
   return { ...n, fit: fitFor(n) }
