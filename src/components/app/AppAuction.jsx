@@ -188,6 +188,8 @@ export default function AppAuction({ au, posName, onHome, onPlayAgain }) {
   const mayBid = lot && canBidOn(L, mine, m.types, lot.trait)
   const passed = st.passed.includes(mine)
   const nextBid = minNext(high)
+  // a bigger step when you want it: three over the high bid, if you can afford it
+  const jumpBid = (high?.amount ?? 0) + 3 <= myMax ? (high?.amount ?? 0) + 3 : null
   const myBuild = m.types.map(t => [t, L.won[mine]?.[t]])
   const here = new Set(au.present.map(p => p.vid))
   const soldTo = st.sold && m.players.find(p => p.vid === st.sold.vid)
@@ -202,10 +204,15 @@ export default function AppAuction({ au, posName, onHome, onPlayAgain }) {
   else if (high?.vid === mine) controls = <p className="au-note au-note--lead">You're high at ${high.amount}. Hold on…</p>
   else if (passed) controls = <p className="au-note">You're out on this one.</p>
   else controls = (
-    <div className="au-bids">
+    <div className={`au-bids${jumpBid ? ' has-jump' : ''}`}>
       <button className="au-bid" disabled={nextBid > myMax} onClick={() => { if (au.bid(nextBid)) { sfx('tap'); haptic('light') } }}>
         <small>{high ? 'BID +1' : 'OPEN AT'}</small><b>${nextBid}</b>
       </button>
+      {jumpBid && (
+        <button className="au-bid au-bid--jump" onClick={() => { if (au.bid(jumpBid)) { sfx('tap'); haptic('medium') } }}>
+          <small>+3</small><b>${jumpBid}</b>
+        </button>
+      )}
       <button className="au-pass" onClick={() => { au.pass(); sfx('tap') }}>I'M OUT</button>
     </div>
   )
