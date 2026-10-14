@@ -165,8 +165,8 @@
          animation played by public/vendor/lottie_light.min.js). The fill is real
          progress, not a timer: the page, the app's code, the fonts, then the first
          screen drawn (src/main.jsx reports each). When it's all in, the rest plays
-         (the players and the stripes) and it fades out. In the app it shows every
-         launch; on the website only on phones, on the first load of a visit. -->
+         (the players and the stripes) and it fades out. In the app it shows when
+         it opens (not on later page loads: switching sports, the Daily link); on the website only on phones, on the first load of a visit. -->
     <style>
       #bap-loader { position: fixed; inset: 0; z-index: 2147483000; background: radial-gradient(130% 75% at 50% 5%, #5da47f 0%, #3f7a5b 30%, #23432f 58%, #121a16 80%); transition: opacity .35s ease; }
       #bap-loader.is-out { opacity: 0; pointer-events: none; }
@@ -180,10 +180,13 @@
         var native = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform())
         var KEY = 'bap_loaded'
         var seen = false
-        try { seen = !native && sessionStorage.getItem(KEY) === '1' } catch (e) {}
+        // once a session: the app shows it when it opens (a fresh launch starts a fresh
+        // session), not on its later page loads (switching sports, the Daily link)
+        try { seen = sessionStorage.getItem(KEY) === '1' } catch (e) {}
         // (desktop website: no loading screen, it's built for a phone screen)
         var desktop = !native && window.matchMedia && matchMedia('(min-width: 769px)').matches
         if (seen || desktop) { el.parentNode.removeChild(el); window.__bapLoad = window.__bapLoaded = function () {}; return }
+        try { sessionStorage.setItem(KEY, '1') } catch (e) {}   // shown now: no later page load this session shows it again
         // the native splash is the animation's first frame (assets/splash.png): it goes
         // once that frame is drawn here, so the one becomes the other with no seam
         var splashGone = false
