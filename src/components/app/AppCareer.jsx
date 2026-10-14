@@ -125,13 +125,18 @@ export function CareerIntro({ sport = 'nfl', uid = null, onOpen, onNew, onClose 
           <section className="tk-runs ag-pop" style={{ '--d': '160ms' }}>
             <div className="ag-card-head"><span className="ag-eyebrow">FINISHED CAREERS</span></div>
             {runs.map((r, i) => (
-              <div key={r.at + '-' + i} className={`tk-run${r.hof ? ' is-won' : ''}`}>
-                <span className="tk-run-pos">{POS_LABEL[r.pos] ?? r.pos}</span>
-                <span className="tk-run-txt">
-                  <b>{r.name ? `${r.name} · ` : ''}{r.hof ? <><IconCrown size={13} /> Hall of Famer</> : r.tier}{(r.ranked ?? r.rank <= 15) ? ` · No. ${r.rank} career all-time` : ''}</b>
-                  <small>{new Date(r.at).toLocaleDateString(undefined, RUN_DATE)} · {r.seasons} seasons · {r.rings} {r.rings === 1 ? 'ring' : 'rings'} · {r.awards} {r.awards === 1 ? 'award' : 'awards'}</small>
+              // a finished career: who and what at a glance, three tidy rows (no wrapping run-on line)
+              <div key={r.at + '-' + i} className={`cr-run${r.hof ? ' is-hof' : ''}`}>
+                <span className="cr-run-logo">{r.team ? <img src={S.logo(r.team)} alt="" loading="lazy" /> : <b>{POS_LABEL[r.pos] ?? r.pos}</b>}</span>
+                <span className="cr-run-name">{r.name || 'Unnamed'}</span>
+                <span className="cr-run-pts"><b>{r.score}</b><small>LEGACY</small></span>
+                <span className="cr-run-chips">
+                  <i>{POS_LABEL[r.pos] ?? r.pos}</i>
+                  {r.hof ? <i className="is-hof"><IconCrown size={11} /> HALL OF FAME</i> : <i>{String(r.tier).toUpperCase()}</i>}
+                  {(r.ranked ?? r.rank <= 15) && <i className="is-rank">NO. {r.rank} ALL-TIME</i>}
+                  {r.sandbox && <i className="is-sb">SANDBOX</i>}
                 </span>
-                <span className="tk-run-ovr"><b>{r.score}</b><small>LEGACY PTS</small></span>
+                <span className="cr-run-meta">{r.seasons} {r.seasons === 1 ? 'season' : 'seasons'} · {r.rings} {r.rings === 1 ? 'ring' : 'rings'} · {r.awards} {r.awards === 1 ? 'award' : 'awards'} · {new Date(r.at).toLocaleDateString(undefined, RUN_DATE)}</span>
               </div>
             ))}
           </section>

@@ -4703,3 +4703,20 @@ html:is(.is-app, .app-look).no-dock { --app-bottom: calc(var(--safe-bottom) + 12
 .cr-trait-win.is-closed { color: var(--ag-muted); background: rgba(255,255,255,.07); }
 .cr-train-note { margin: 0 0 8px; padding: 8px 10px; border-radius: 10px; background: rgba(94,219,216,.08); border: 1px solid rgba(94,219,216,.22); font-family: var(--ag-body); font-size: 12.5px; color: var(--ag-text-2); line-height: 1.35; }
 .cr-train-note.is-last { background: rgba(245,197,66,.1); border-color: rgba(245,197,66,.45); color: #f5dc8a; }
+/* Career intro: a finished career. Logo | name ... legacy, then chips, then one quiet line */
+.cr-run { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; grid-template-areas: "logo name pts" "logo chips pts" "meta meta meta"; gap: 4px 10px; align-items: center; padding: 10px 12px; border-radius: 12px; background: rgba(255,255,255,.035); border: 1px solid transparent; }
+.cr-run.is-hof { border-color: color-mix(in srgb, #f2c94c 45%, transparent); background: color-mix(in srgb, #f2c94c 7%, transparent); }
+.cr-run-logo { grid-area: logo; width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center; background: rgba(255,255,255,.05); }
+.cr-run-logo img { width: 32px; height: 32px; object-fit: contain; }
+.cr-run-logo b { font-family: var(--ag-font); font-weight: 400; font-size: 13px; letter-spacing: 1px; }
+.cr-run-name { grid-area: name; min-width: 0; font-family: var(--ag-font); font-size: 17px; letter-spacing: 1px; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cr-run.is-hof .cr-run-name { color: #f2c94c; }
+.cr-run-pts { grid-area: pts; display: flex; flex-direction: column; align-items: flex-end; line-height: 1; }
+.cr-run-pts b { font-family: var(--ag-display); font-weight: 400; font-size: 24px; font-variant-numeric: tabular-nums; }
+.cr-run-pts small { font-family: var(--ag-font); font-size: 10px; letter-spacing: 1.2px; color: var(--ag-muted); }
+.cr-run-chips { grid-area: chips; display: flex; flex-wrap: wrap; gap: 4px; min-width: 0; }
+.cr-run-chips i { font-style: normal; display: inline-flex; align-items: center; gap: 3px; padding: 2px 6px 1px; border-radius: 5px; background: rgba(255,255,255,.07); font-family: var(--ag-font); font-size: 10.5px; letter-spacing: 1px; color: var(--ag-text-2); white-space: nowrap; }
+.cr-run-chips i.is-hof { background: rgba(242,201,76,.18); color: #f2c94c; }
+.cr-run-chips i.is-rank { background: rgba(94,219,216,.14); color: #bfe9d6; }
+.cr-run-chips i.is-sb { background: rgba(232,121,249,.16); color: #f0abfc; }
+.cr-run-meta { grid-area: meta; font-family: var(--ag-body); font-size: 12px; font-weight: 600; color: var(--ag-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
