@@ -90,7 +90,7 @@ const NC = [
   it('nameColor', 'nc-holo',    'Holo', 3, 19000, { level: 15 }),
   it('nameColor', 'nc-pro-blackgold', 'Black Gold', 2, 4800, { pro: true }),
   it('nameColor', 'nc-pro-platinum',  'Platinum', 3, 15500, { pro: true }),
-  it('nameColor', 'nc-fivetool', 'Positionless',  3, 0, { ach: 'fivetool' }),
+  it('nameColor', 'nc-fivetool', 'Color Block',  3, 0, { ach: 'fivetool' }),
   it('nameColor', 'nc-compete',  'Pool Shark', 3, 0, { ach: 'cpwin10' }),
 ]
 
