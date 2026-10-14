@@ -246,7 +246,7 @@ const INJURY = [
         body: `The trainers say ${c.isBucket ? `${out} games` : out === 1 ? 'a week' : `${out} weeks`} and it heals clean. You can play on it, but it won't be right, and it could get worse.`,
         options: [
           o('sit', 'Sit until it heals', { sit: out, tag }, `The ${c.nick} play without you.`),
-          o('play', 'Play through it', gam(0.65, { attr: inj.hit, window: hurt, tag: `PLAYING HURT` }, 'It held. Not right, but you played every snap.',
+          o('play', 'Play through it', gam(0.65, { attr: inj.hit, window: hurt, tag: `PLAYING HURT` }, `It held. Not right, but you played every ${c.isBucket ? 'minute' : 'snap'}.`,
             { attr: inj.hit, window: 1, tag: 'PLAYING HURT', then: { sit: out + (c.isBucket ? 3 : 1), tag } }, 'It gave out. Now you\'re out longer than if you\'d sat.')),
         ],
       }
