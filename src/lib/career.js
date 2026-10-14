@@ -112,8 +112,8 @@ export const SPORT = {
     draft: {
       rounds: 7,
       // positional value: a quarterback is slotted as if ~4 better (any 90+ goes first),
-      // receivers and DBs at face value, a tight end or running back ~2 worse
-      stock: (ovr0, pos) => { if (pos === 'qb' && ovr0 >= 90) return [1, 1]; const ovr = ovr0 + ({ qb: 4, te: -2, rb: -2 }[pos] ?? 0); return (ovr >= 95 ? [1, 5] : ovr >= 90 ? [3, 12] : ovr >= 86 ? [8, 24] : ovr >= 82 ? [18, 45] : ovr >= 78 ? [36, 80] : ovr >= 74 ? [70, 130] : ovr >= 70 ? [110, 180] : [160, 224]) },
+      // receivers and DBs at face value, a tight end ~2 worse, a running back ~3 worse
+      stock: (ovr0, pos) => { if (pos === 'qb' && ovr0 >= 90) return [1, 1]; const ovr = ovr0 + ({ qb: 4, te: -2, rb: -3 }[pos] ?? 0); return (ovr >= 95 ? [1, 5] : ovr >= 90 ? [3, 12] : ovr >= 86 ? [8, 24] : ovr >= 82 ? [18, 45] : ovr >= 78 ? [36, 80] : ovr >= 74 ? [70, 130] : ovr >= 70 ? [110, 180] : [160, 224]) },
       rookie: o => ({ kind: 'rookie', years: 4, left: 4, perYear: o <= 5 ? 9.5 : o <= 10 ? 6.5 : o <= 16 ? 4.5 : o <= 32 ? 3.2 : o <= 64 ? 1.8 : o <= 100 ? 1.3 : 1.0, option: o <= 32 }),
       posList: ['EDGE', 'OT', 'CB', 'WR', 'QB', 'LB', 'DT', 'S', 'RB', 'TE', 'G', 'C'],
     },
