@@ -377,22 +377,36 @@ function realAges(c) {
   }
   return { ...c, roster: ro }
 }
-// Years into a career, the team's real players are that much older; the ones
-// who'd have retired are gone, their spots filled by draft picks.
+// Years into a career the league has lived those years: every season each
+// player is a year older and better or worse for it (the young ones grow, the
+// old ones fade), the ones at the end retire, and their spots go to draft picks
+// who develop the same way. Seeded by team, so a roster for year N always
+// comes out the same, and year N+1 follows from it.
+// A year's change by age, one roll 0-1: the young climb, the prime holds, the thirties slide
+const ageStep = (age, x) => (age <= 24 ? 1 + Math.floor(x * 4) : age <= 27 ? Math.floor(x * 3) : age <= 30 ? Math.floor(x * 3) - 1 : age <= 32 ? Math.floor(x * 3) - 2 : -1 - Math.floor(x * 4))
+// a pick who'll grow into the job: about 73 at 21-22, a starter by 25, now and then a star
+const genPick = (r, g, slot) => ({ name: rookieName(r), pos: g, ovr: clamp(Math.round(73 + (r() + r() + r() - 1.5) * 12), 58, 88), age: 21 + Math.floor(r() * 2), photo: null, slot, rookie: true })
 export function makeRoster(short, sport = 'nfl', yrs = 0, gone = []) {
   const S = SPORT[sport] ?? SPORT.nfl
   const ro = { team: short, sport }
-  const r = seeded(`${short}-${sport}-${yrs}-fill`)
-  for (const g of S.groups) {
-    // year one is today's league as it is (a 36-year-old guard still starts); from then on, age catches up
-    const list = S.pool[g].filter(p => p.team === short && !gone.includes(p.name)).map(p => man(S, g, p, yrs)).filter(p => yrs === 0 || p.age < RETIRE_AT[g])
+  const r = seeded(`${short}-${sport}-fill`)
+  const place = (g, list) => {
     const slots = S.slots[g]
-    // an empty starting spot always gets filled (a rookie), so a lineup never has a hole
-    {
-      for (const sl of slots ?? []) if (!list.some(p => p.slot === sl)) list.push({ name: rookieName(r), pos: g, ovr: clamp(Math.round(74 + (r() - 0.5) * 10), 64, 84), age: 22 + Math.floor(r() * 4), photo: null, slot: sl, rookie: true })
-      while (list.length < S.keep[g]) list.push({ name: rookieName(r), pos: g, ovr: clamp(Math.round(74 + (r() - 0.5) * 10), 64, 84), age: 22 + Math.floor(r() * 4), photo: null, slot: null, rookie: true })
+    // an empty starting spot always gets filled (a draft pick), so a lineup never has a hole
+    for (const sl of slots ?? []) if (!list.some(p => p.slot === sl)) list.push(genPick(r, g, sl))
+    while (list.length < S.keep[g]) list.push(genPick(r, g, null))
+    return slots ? slots.map(s => list.find(p => p.slot === s)).filter(Boolean).concat(list.filter(p => !slots.includes(p.slot)).sort(byOvr)).slice(0, S.keep[g]) : list.sort(byOvr).slice(0, S.keep[g])
+  }
+  for (const g of S.groups) {
+    // year one is today's league as it is (a 36-year-old guard still starts)
+    let list = place(g, S.pool[g].filter(p => p.team === short && !gone.includes(p.name)).map(p => man(S, g, p, 0)))
+    for (let y = 1; y <= yrs; y++) {
+      list = list
+        .map(p => ({ ...p, age: p.age + 1, ovr: clamp(p.ovr + ageStep(p.age + 1, r()), 55, 99) }))
+        .filter(p => p.age < RETIRE_AT[g] && !(p.age >= RETIRE_AT[g] - 2 && r() < 0.35))
+      list = place(g, list)
     }
-    ro[g] = slots ? slots.map(s => list.find(p => p.slot === s)).filter(Boolean).concat(list.filter(p => !slots.includes(p.slot))).slice(0, S.keep[g]) : list.sort(byOvr).slice(0, S.keep[g])
+    ro[g] = list
   }
   return ro
 }
@@ -483,7 +497,7 @@ function rosterMoves(c, r) {
   const ro = { team: old.team, sport: c.sport }
   const moves = []
   const taken = new Set(S.groups.flatMap(g => old[g].map(p => p.name)))
-  const grow = age => age <= 24 ? 1 + Math.floor(r() * 4) : age <= 28 ? Math.floor(r() * 4) - 1 : age <= 31 ? Math.floor(r() * 4) - 3 : -1 - Math.floor(r() * 5)
+  const grow = age => ageStep(age, r())   // the same curve as the rest of the league (makeRoster)
   const gl = g => (S.isBucket ? (g === 'guard' ? 'G' : 'F/C') : g.toUpperCase())
   for (const g of S.groups) {
     const kept = []
@@ -512,7 +526,7 @@ function rosterMoves(c, r) {
         }
       }
       const rd = 1 + Math.floor(r() * S.draft.rounds)
-      const p = { name: rookieName(r), pos: g, ovr: clamp(Math.round(80 - rd * (S.isBucket ? 5 : 2.5) + (r() - 0.5) * 8), 62, 86), age: 22, photo: null, slot: need, rookie: true }
+      const p = { name: rookieName(r), pos: g, ovr: clamp(Math.round(79 - rd * (S.isBucket ? 3 : 1.5) + (r() + r() - 1) * 8), 60, 88), age: 22, photo: null, slot: need, rookie: true }
       kept.push(p)
       moves.push({ kind: 'draft', pos: g, text: `Drafted ${gl(g)} ${p.name} in round ${rd}.`, p })
     }
