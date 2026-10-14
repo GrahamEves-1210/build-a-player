@@ -10326,6 +10326,14 @@ html.is-touch .bd-card-main:hover         { background: transparent !important; 
   line-height: 1.2;
   max-width: 52px;
 }
+/* the spot each starter plays (PG SG SF PF C): yours follows your build (BucketSimPage buildSpot) */
+.sts-starter-pos {
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  color: rgba(255,255,255,0.32);
+  line-height: 1;
+}
 .sts-starter-you-label {
   display: flex;
   align-items: center;

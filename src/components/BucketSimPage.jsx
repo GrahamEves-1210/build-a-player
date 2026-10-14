@@ -3,11 +3,11 @@ import { NameTag } from './app/NameTag'
 import { createPortal } from 'react-dom'
 import { NBA_TEAMS } from '../data/nba-teams'
 import { BUCKET_ATTR } from '../data/nba-attrs'
-import { NBA_GUARD_PLAYERS } from '../data/nba-guards'
-import { NBA_BIG_PLAYERS } from '../data/nba-bigs'
+import { NBA_GUARD_PLAYERS, GUARD_TYPES } from '../data/nba-guards'
+import { NBA_BIG_PLAYERS, BIG_TYPES } from '../data/nba-bigs'
 import NBA_HEADSHOTS from '../data/nba-headshots.json'
 import { valToGrade, HEADSHOT_BASE } from '../utils/simulation'
-import { getBucketGuardArchetype, getBucketBigArchetype, TEAM_RATINGS, ALLTIME_TEAM_RATINGS } from '../utils/bucketSimulation'
+import { getBucketGuardArchetype, getBucketBigArchetype, TEAM_RATINGS, ALLTIME_TEAM_RATINGS, calcBucketOVR } from '../utils/bucketSimulation'
 import { SAL_REP_TYPES, SAL_ATTR_MAP } from './BucketSalaryCap'
 import QBAvatar from './QBAvatar'
 import BucketFigureOverlay from './BucketFigureOverlay'
@@ -2637,59 +2637,82 @@ function starterDisplayName(p) {
   return nameParts[nameParts.length - 1]
 }
 
+// a real starter's OVR, the way the game rates a guard or a big
+const GUARD_NAMES = new Set(NBA_GUARD_PLAYERS.map(p => p.name))
 function playerOvr(p) {
   if (!p?.attrs) return 0
-  return Object.values(p.attrs).reduce((s, v) => s + (v || 0), 0)
+  const guard = GUARD_NAMES.has(p.name), types = guard ? GUARD_TYPES : BIG_TYPES
+  return calcBucketOVR(Object.fromEntries(types.map(t => [t, { val: p.attrs[t] ?? 5 }])), types, guard ? 'guard' : 'big')
 }
 
+// Your spot in the five, from your build. Each position leans on its own ratings,
+// measured against the build's own average (a flat build lands in the middle: SG, or C):
+//   PG passing, handles, IQ, speed (not size) | SG jump shot, finishing, clutch
+//   SF size, perimeter D, bounce, finishing   | PF jump shot, playmaking, speed
+//   C  size, rebounding, interior D (not speed)
+const SPOT_LEANS = {
+  guard: [
+    { passing: 1.3, handles: 1.1, basketballIQ: 0.7, speed: 0.4, size: -0.5 },
+    { jumpShot: 1.4, finishing: 0.6, clutch: 0.5, handles: 0.3, size: -0.1 },
+    { size: 1.0, perimeterDefense: 0.9, bounce: 0.6, finishing: 0.5, passing: -0.3 },
+  ],
+  big: [
+    { jumpShot: 1.2, playmaking: 0.8, speed: 0.7, bounce: 0.4, size: -0.4 },
+    { size: 1.1, rebounding: 1.0, interiorDefense: 1.1, speed: -0.5, jumpShot: -0.3 },
+  ],
+}
+export function buildSpot(build, isBig) {
+  const leans = SPOT_LEANS[isBig ? 'big' : 'guard']
+  const vals = Object.values(build ?? {}).map(c => c?.val).filter(v => typeof v === 'number')
+  if (!vals.length) return 1
+  const mean = vals.reduce((a, b) => a + b, 0) / vals.length
+  const scores = leans.map(l => Object.entries(l).reduce((sum, [t, w]) => sum + w * ((build?.[t]?.val ?? mean) - mean), 0))
+  const best = Math.max(...scores)
+  return scores.filter(x => Math.abs(x - best) < 1e-9).length > 1 ? 1 : scores.indexOf(best)   // a tie: SG, or C
+}
+// The five with you in it: the weakest starter in your group (guards 1-3, bigs 4-5)
+// comes out, you go in at your spot, and the rest of your group keep their order
+// and slide over to fill (a PG on a team whose SF is the weakest: the PG moves to
+// SG, the SG to SF)
+function withYou(five, worstIdx, isBig, spot) {
+  const [lo, hi] = isBig ? [3, 5] : [0, 3]
+  const group = five.slice(lo, hi).filter((_, i) => lo + i !== worstIdx)
+  group.splice(Math.min(spot, group.length), 0, { you: true })
+  return [...five.slice(0, lo), ...group, ...five.slice(hi)]
+}
+const SPOT_LABELS = ['PG', 'SG', 'SF', 'PF', 'C']
+
 // ─── TeamStarters ─────────────────────────────────────────────────────────────
-function TeamStarters({ teamShort, teamColor, isBig, iqPhoto, isAllTime = false, userName = 'Guest' }) {
+function TeamStarters({ teamShort, teamColor, isBig, iqPhoto, isAllTime = false, userName = 'Guest', build = null }) {
+  const spot = buildSpot(build, isBig)
+  let five
   if (isAllTime) {
+    // the all-time fives: the weakest in each group is picked by hand (ALLTIME_REPLACE_IDX)
     const names = ALLTIME_STARTERS[teamShort] ?? []
-    if (!names.length) return null
+    if (names.length < 5) return null
     const ri = ALLTIME_REPLACE_IDX[teamShort] ?? { g: 2, b: 3 }
-    const replaceIdx = isBig ? ri.b : ri.g
-    return (
-      <div className="sts-starters">
-        {names.map((name, i) => {
-          const isMe  = i === replaceIdx
-          const hid   = !isMe && NBA_HEADSHOTS[name]
-          const photo = isMe ? iqPhoto : (hid ? `${HEADSHOT_BASE}/nba/${hid}.webp` : null)
-          return (
-            <div key={isMe ? 'you' : name} className={`sts-starter${isMe ? ' sts-starter--you' : ''}`}>
-              <QBAvatar photo={photo} team={teamShort} color={isMe ? teamColor : teamColor + '99'} size={42} logoDir="/logos/nba/" />
-              <span className="sts-starter-name" style={isMe ? { color: teamColor, fontWeight: 700 } : undefined}>
-                {isMe ? userName.toUpperCase() : name}
-              </span>
-            </div>
-          )
-        })}
-      </div>
-    )
+    five = withYou(names.map(name => ({ name, label: name, team: teamShort })), isBig ? ri.b : ri.g, isBig, spot)
+  } else {
+    const starters = (TEAM_STARTERS[teamShort] ?? []).map(n => PLAYER_INDEX[n]).filter(Boolean)
+    if (starters.length < 5) return null
+    // the weakest real starter in your group, by OVR
+    const mine = isBig ? [3, 4] : [0, 1, 2]
+    const worst = mine.reduce((w, k) => (playerOvr(starters[k]) < playerOvr(starters[w]) ? k : w), mine[0])
+    five = withYou(starters.map(p => ({ name: p.name, label: starterDisplayName(p), team: p.team })), worst, isBig, spot)
   }
-
-  const names    = TEAM_STARTERS[teamShort] ?? []
-  const starters = names.map(n => PLAYER_INDEX[n]).filter(Boolean)
-  if (!starters.length) return null
-
-  const mySlots    = isBig ? [3, 4] : [0, 1, 2]
-  const validSlots = mySlots.filter(i => starters[i])
-  const replaceIdx = validSlots.reduce((weakIdx, i) =>
-    playerOvr(starters[i]) < playerOvr(starters[weakIdx]) ? i : weakIdx
-  , validSlots[0] ?? 0)
-
   return (
     <div className="sts-starters">
-      {starters.map((p, i) => {
-        const isMe  = i === replaceIdx
+      {five.map((p, k) => {
+        const isMe  = !!p.you
         const hid   = !isMe && NBA_HEADSHOTS[p.name]
         const photo = isMe ? iqPhoto : (hid ? `${HEADSHOT_BASE}/nba/${hid}.webp` : null)
         return (
           <div key={isMe ? 'you' : p.name} className={`sts-starter${isMe ? ' sts-starter--you' : ''}`}>
-            <QBAvatar photo={photo} team={p.team} color={isMe ? teamColor : teamColor + '99'} size={42} logoDir="/logos/nba/" />
+            <QBAvatar photo={photo} team={isMe ? teamShort : p.team} color={isMe ? teamColor : teamColor + '99'} size={42} logoDir="/logos/nba/" />
             <span className="sts-starter-name" style={isMe ? { color: teamColor, fontWeight: 700 } : undefined}>
-              {isMe ? userName.toUpperCase() : starterDisplayName(p)}
+              {isMe ? userName.toUpperCase() : p.label}
             </span>
+            <span className="sts-starter-pos" style={isMe ? { color: teamColor } : undefined}>{SPOT_LABELS[k]}</span>
           </div>
         )
       })}
@@ -2845,7 +2868,7 @@ export default function BucketSimPage({ result: baseResult, build, types, positi
                 </div>
               )}
             </div>
-            <TeamStarters teamShort={team.short} teamColor={team.color} isBig={myIsBig} iqPhoto={myIQPhoto} isAllTime={isAllTime} userName={userName} />
+            <TeamStarters teamShort={team.short} teamColor={team.color} isBig={myIsBig} iqPhoto={myIQPhoto} isAllTime={isAllTime} userName={userName} build={build} />
           </div>
         )}
 
