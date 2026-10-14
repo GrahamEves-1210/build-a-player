@@ -390,32 +390,45 @@ function realAges(c) {
 const ageStep = (age, x) => (age <= 24 ? 1 + Math.floor(x * 4) : age <= 27 ? Math.floor(x * 3) : age <= 30 ? Math.floor(x * 3) - 1 : age <= 32 ? Math.floor(x * 3) - 2 : -1 - Math.floor(x * 4))
 // a pick who'll grow into the job: about 73 at 21-22, a starter by 25, now and then a star
 const genPick = (r, g, slot) => ({ name: rookieName(r), pos: g, ovr: clamp(Math.round(73 + (r() + r() + r() - 1.5) * 12), 58, 88), age: 21 + Math.floor(r() * 2), photo: null, slot, rookie: true })
+// a group's spots filled and in order: an empty starting spot always gets a draft pick, so a lineup never has a hole
+function placeGroup(S, g, list, r) {
+  const slots = S.slots[g]
+  for (const sl of slots ?? []) if (!list.some(p => p.slot === sl)) list.push(genPick(r, g, sl))
+  while (list.length < S.keep[g]) list.push(genPick(r, g, null))
+  return slots ? slots.map(s => list.find(p => p.slot === s)).filter(Boolean).concat(list.filter(p => !slots.includes(p.slot)).sort(byOvr)).slice(0, S.keep[g]) : list.sort(byOvr).slice(0, S.keep[g])
+}
+// a group one season on: older, better or worse for it, the ones at the end retired, the gaps drafted
+const ageGroup = (S, g, list, r) => placeGroup(S, g, list
+  .map(p => ({ ...p, age: p.age + 1, ovr: clamp(p.ovr + ageStep(p.age + 1, r()), 55, 99) }))
+  .filter(p => p.age < RETIRE_AT[g] && !(p.age >= RETIRE_AT[g] - 2 && r() < 0.35)), r)
 export function makeRoster(short, sport = 'nfl', yrs = 0, gone = []) {
   const S = SPORT[sport] ?? SPORT.nfl
   const ro = { team: short, sport }
   const r = seeded(`${short}-${sport}-fill`)
-  const place = (g, list) => {
-    const slots = S.slots[g]
-    // an empty starting spot always gets filled (a draft pick), so a lineup never has a hole
-    for (const sl of slots ?? []) if (!list.some(p => p.slot === sl)) list.push(genPick(r, g, sl))
-    while (list.length < S.keep[g]) list.push(genPick(r, g, null))
-    return slots ? slots.map(s => list.find(p => p.slot === s)).filter(Boolean).concat(list.filter(p => !slots.includes(p.slot)).sort(byOvr)).slice(0, S.keep[g]) : list.sort(byOvr).slice(0, S.keep[g])
-  }
   for (const g of S.groups) {
     // year one is today's league as it is (a 36-year-old guard still starts)
-    let list = place(g, S.pool[g].filter(p => p.team === short && !gone.includes(p.name)).map(p => man(S, g, p, 0)))
-    for (let y = 1; y <= yrs; y++) {
-      list = list
-        .map(p => ({ ...p, age: p.age + 1, ovr: clamp(p.ovr + ageStep(p.age + 1, r()), 55, 99) }))
-        .filter(p => p.age < RETIRE_AT[g] && !(p.age >= RETIRE_AT[g] - 2 && r() < 0.35))
-      list = place(g, list)
-    }
+    let list = placeGroup(S, g, S.pool[g].filter(p => p.team === short && !gone.includes(p.name)).map(p => man(S, g, p, 0)), r)
+    for (let y = 1; y <= yrs; y++) list = ageGroup(S, g, list, r)
     ro[g] = list
   }
   return ro
 }
+// A team you played for, as you left it (c.kept[short] = { roster, yrs }), carried forward to now:
+// coming back years later finds the same people, older, not a roster made fresh
+function keptRoster(c, short) {
+  const k = c.kept?.[short]
+  if (!k?.roster || k.roster.team !== short) return null
+  const S = sportOf(c), years = rosterYrs(c) - k.yrs
+  if (years <= 0) return k.roster
+  const r = seeded(`${c.seed}-back-${short}-${k.yrs}`)
+  const ro = { team: short, sport: k.roster.sport ?? c.sport }
+  for (const g of S.groups) { let list = [...(k.roster[g] ?? [])]; for (let y = 0; y < years; y++) list = ageGroup(S, g, list, r); ro[g] = list }
+  return ro
+}
+// leaving c.team: its roster is kept for the day you come back
+const keepRoster = c => (c.team && c.roster?.team === c.team ? { ...(c.kept ?? {}), [c.team]: { roster: c.roster, yrs: rosterYrs(c) } } : c.kept)
 // a team's roster as this career sees it: years older, and without anyone who's retired
-const rosterOf = (c, short) => makeRoster(short, c.sport, rosterYrs(c), c.gone ?? [])
+const rosterOf = (c, short) => keptRoster(c, short) ?? makeRoster(short, c.sport, rosterYrs(c), c.gone ?? [])
 const rosterFor = (c, short = c.team) => (c.roster?.team === short ? c.roster : rosterOf(c, short))
 // Where you stand at your spot: the group best-first with you in it. Last
 // year's starter keeps the job in a tie (+2), a starter guarantee keeps it.
@@ -1167,7 +1180,7 @@ function maybeTraded(c, r) {
   const pick = fits.length ? fits[Math.floor(r() * fits.length)] : null
   if (!pick) return c
   return {
-    ...c, team: pick.t.short, roster: pick.ro, traded: true, tradeAsked: false,
+    ...c, team: pick.t.short, roster: pick.ro, kept: keepRoster(c), traded: true, tradeAsked: false,
     events: [...c.events, { year: c.year + 1, text: `Traded to the ${pick.t.name}. A fresh start, and a starting job.` }],
     decisions: [...c.decisions, { year: c.year + 1, text: `Traded to the ${nick(pick.t.name)}` }],
   }
@@ -1316,7 +1329,7 @@ export function signOffer(c, o) {
   const extras = [o.noTrade ? 'no-trade clause' : null, o.starter ? 'starter guarantee' : null].filter(Boolean)
   const roster = change ? rosterOf(c, o.team) : c.roster
   return {
-    ...c, team: o.team, roster, fit: teamFit(o.team, c.pos, { roster, league: c.league, name: c.name, sport: c.sport }), offers: null, talks: null, tradeAsked: false, lastRole: change ? null : c.lastRole, ...(change && c.off ? { off: { ...c.off, moves: [] } } : {}),
+    ...c, team: o.team, roster, ...(change ? { kept: keepRoster(c) } : {}), fit: teamFit(o.team, c.pos, { roster, league: c.league, name: c.name, sport: c.sport }), offers: null, talks: null, tradeAsked: false, lastRole: change ? null : c.lastRole, ...(change && c.off ? { off: { ...c.off, moves: [] } } : {}),
     contract: { kind: change ? 'fa' : 'ext', years: o.years, left: o.years, perYear: o.perYear, noTrade: !!o.noTrade, starter: !!o.starter },
     decisions: [...c.decisions, { year: c.year + 1, text: `${change ? 'Signed with' : 'Re-signed with'} the ${o.fit.name}: ${o.years} yrs, $${o.perYear}M a year${extras.length ? ` (${extras.join(', ')})` : ''}` }],
   }
@@ -1378,7 +1391,7 @@ export function demandTrade(c) {
   const dest = S.teams.map(t => S.teamOf(t.short)).filter(t => t.short !== c.team).sort(() => r() - .5).sort((a, b) => (b.off + b.def) - (a.off + a.def))[Math.floor(r() * 6)]
   const roster = rosterOf(c, dest.short)
   const fit = teamFit(dest.short, c.pos, { roster, league: c.league, name: c.name, sport: c.sport })
-  return { ...c, rep, tradeAsked: true, team: dest.short, roster, fit, lastRole: null, off: { ...(c.off ?? {}), moves: [] }, events: [...c.events, { year: c.year + 1, text: `Trade request granted: a ${nick(fit.name)} now.` }], decisions: [...c.decisions, { year: c.year + 1, text: `Demanded a trade, dealt to the ${fit.name}` }] }
+  return { ...c, rep, tradeAsked: true, team: dest.short, roster, kept: keepRoster(c), fit, lastRole: null, off: { ...(c.off ?? {}), moves: [] }, events: [...c.events, { year: c.year + 1, text: `Trade request granted: a ${nick(fit.name)} now.` }], decisions: [...c.decisions, { year: c.year + 1, text: `Demanded a trade, dealt to the ${fit.name}` }] }
 }
 // Into the next season: a year older, the body moves with it
 export function nextSeason(c) {
