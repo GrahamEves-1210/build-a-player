@@ -5,7 +5,7 @@ import { IconClose, IconArrow, IconTrophy } from './icons'
 import OnlineRecord, { RatingLine, LinkPill } from './OnlineRecord'
 import { sfx, victory } from '../../lib/juice'
 import { NameTag, AvatarBadge } from './NameTag'
-import { AUCTION_POS, BUDGET, BID_SECS } from '../../lib/auction'
+import { AUCTION_POS, BUDGET, RESET_SECS } from '../../lib/auction'
 import { guardLeave } from '../../lib/liveLock'
 const AppAuction = lazy(() => import('./AppAuction'))
 
@@ -143,7 +143,7 @@ export default function AppCompete({ cp, au, sport, position, positions, onPosit
         {showAuction ? (
           <div className="cp-hero ag-pop">
             <span className="ag-eyebrow">ONLINE · 5-PLAYER AUCTIONS · ${BUDGET} EACH</span>
-            <p className="cp-how">Everyone starts with <b>${BUDGET}</b> and Salary Cap's five rating slots, empty. The spinner lands on a real player and one of those ratings, and you get <b>{BID_SECS} seconds</b> to bid. High bid takes it. When every slot is filled, the <b>highest OVR</b> wins.</p>
+            <p className="cp-how">Up to three players, <b>${BUDGET}</b> each and Salary Cap's five rating slots, empty. A slot card is pulled, the spinner lands on a real player, and their grade stays <b>face down</b> until the gavel. Bid <b>+$1</b> or sit out: going once, going twice, and every bid puts the clock back to <b>{RESET_SECS} seconds</b>. When every slot is filled, the <b>highest OVR</b> wins.</p>
           </div>
         ) : (
           <div className="cp-hero ag-pop">

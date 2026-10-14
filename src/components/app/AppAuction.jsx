@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { AUCTION_SIZE, AUCTION_MIN, AUCTION_FILL_SECS, BUDGET, SPIN_MS, openSlots, maxBid, minNext, canBidOn, maxLots } from '../../lib/auction'
+import { AUCTION_SIZE, AUCTION_MIN, AUCTION_FILL_SECS, BUDGET, SPIN_MS, RESET_SECS, openSlots, maxBid, minNext, canBidOn, lotEnd, callOf } from '../../lib/auction'
 import { COMPETE_REWARDS } from '../../lib/progress'
 import { valToGrade } from '../../utils/simulation'
 import { seededShuffle } from '../../lib/rng'
@@ -10,8 +10,9 @@ import { NameTag, AvatarBadge } from './NameTag'
 import { LiveLeaveButton } from './LiveLeave'
 
 // TRAIT AUCTION (lib/auction.js): the queue, the floor, the results.
-// The floor: who's bidding and what they've got left, the spinner landing on
-// a player and one of their traits, the bidding window, your four slots.
+// The floor: who's bidding and what they've got left, a card pulled from the
+// five-slot deck, the spinner landing on a player, the grade face down until
+// the gavel, going once / going twice, your five slots.
 
 const ord = n => `${n}${['th', 'st', 'nd', 'rd'][(n % 100 > 10 && n % 100 < 14) ? 0 : n % 10] ?? 'th'}`
 const gradeColor = v0 => { const v = Math.round(v0 ?? 0); return v >= 11 ? '#a855f7' : v >= 8 ? '#3b82f6' : v >= 5 ? '#22c55e' : v >= 2 ? '#eab308' : v >= 1 ? '#f97316' : '#ef4444' }   // rounded like the letter (valToGrade)
@@ -32,7 +33,34 @@ function Drain({ end, total }) {
   return <i className="is-run" style={{ '--ms': `${ms}ms`, '--from': Math.min(1, ms / total) }} />
 }
 
-// The reel: a strip of real players that lands on the lot's
+// The deck: the five slot cards shuffle, then the lot's is pulled and flips over
+const DECK_MS = 1500
+function Deck({ kit, types, lot, seed }) {
+  // the pulled card ends on top; the rest sit behind it in a seeded order
+  const order = useMemo(() => [...seededShuffle(types.filter(t => t !== lot.trait), `${seed}:deck:${lot.n}`), lot.trait], [types, lot.trait, lot.n, seed])
+  return (
+    <div className="au-deck" aria-hidden="true" style={{ '--deck': `${DECK_MS}ms` }}>
+      {order.map((t, i) => (
+        <div key={t} className={`au-card${t === lot.trait ? ' is-pull' : ''}`} style={{ '--i': i, '--s': i % 2 ? 1 : -1 }}>
+          <div className="au-card-in">
+            <div className="au-card-back"><span>BAP</span></div>
+            <div className="au-card-face"><SlotFace kit={kit} t={t} /></div>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+const longWord = s => Math.max(...s.split(/\s+/).map(w => w.length))
+const SlotFace = ({ kit, t }) => (
+  <>
+    <small>SLOT</small>
+    <b style={{ fontSize: longWord(kit.attrLabel(t)) > 9 ? 14 : longWord(kit.attrLabel(t)) > 7 ? 16 : undefined }}>{kit.attrLabel(t)}</b>
+    {kit.slotTraits(t).length > 1 && <span>{kit.slotTraits(t).map(x => <i key={x}>{x.replace('/', ' / ')}</i>)}</span>}
+  </>
+)
+
+// The reel: a strip of real players that lands on the lot's (once the card is pulled)
 function Reel({ kit, lot, seed }) {
   const strip = useMemo(() => {
     const others = seededShuffle(kit.pool.filter(p => p.name !== lot.name), `${seed}:reel:${lot.n}`).slice(0, 13)
@@ -40,7 +68,7 @@ function Reel({ kit, lot, seed }) {
   }, [kit, lot.n, lot.name, lot.team, seed])
   return (
     <div className="au-reel" aria-hidden="true">
-      <div className="au-reel-strip" style={{ '--n': strip.length - 1, '--ms': `${SPIN_MS - 250}ms` }}>
+      <div className="au-reel-strip" style={{ '--n': strip.length - 1, '--ms': `${SPIN_MS - DECK_MS - 250}ms`, '--delay': `${DECK_MS}ms` }}>
         {strip.map((p, i) => (
           <div key={i} className="au-reel-row">
             <Headshot kit={kit} name={p.name} />
@@ -66,6 +94,16 @@ export default function AppAuction({ au, posName, onHome, onPlayAgain }) {
     lastSold.current = st.n
     if (st.sold?.vid === mine) { sfx('stamp'); haptic('heavy') } else sfx(st.sold ? 'tap' : 'deny')
   }, [st?.stage, st?.n]) // eslint-disable-line react-hooks/exhaustive-deps
+  // the deck: a shuffle, then the pulled card flips; the auctioneer's calls tick
+  const lotN = st?.stage === 'lot' ? st.n : 0
+  useEffect(() => {
+    if (!lotN) return
+    sfx('swap')
+    const t = setTimeout(() => sfx('flip'), 1500)
+    return () => clearTimeout(t)
+  }, [lotN])
+  const nowCall = st?.stage === 'lot' && m && au.now >= st.t0 + SPIN_MS ? callOf(Math.max(0, lotEnd(st, m) - au.now)) : null
+  useEffect(() => { if (nowCall) { sfx('tick'); haptic('light') } }, [nowCall])
   useEffect(() => {
     if (au.phase !== 'result' || !m || cheered.current === m.code || !au.ranked.length) return
     cheered.current = m.code
@@ -139,46 +177,43 @@ export default function AppAuction({ au, posName, onHome, onPlayAgain }) {
   // ── the floor ──
   const L = st.L
   const lot = st.lot
-  const bidEnd = st.t0 + SPIN_MS + m.bidSecs * 1000
+  const bidEnd = lotEnd(st, m)
   const spinning = st.stage === 'lot' && au.now < st.t0 + SPIN_MS
   const bidding = st.stage === 'lot' && !spinning
-  const secs = bidding ? Math.max(0, Math.ceil((bidEnd - au.now) / 1000)) : m.bidSecs
+  const left = bidding ? Math.max(0, bidEnd - au.now) : 0
+  const call = bidding ? callOf(left) : null
   const high = st.high
   const highP = high && m.players.find(p => p.vid === high.vid)
   const myMax = maxBid(L, mine, m.types)
   const mayBid = lot && canBidOn(L, mine, m.types, lot.trait)
   const passed = st.passed.includes(mine)
-  const floorBid = minNext(high)
-  const offers = [...new Set([floorBid, (high?.amount ?? 0) + 5, (high?.amount ?? 0) + 10].filter(a => a >= floorBid && a <= myMax))]
+  const nextBid = minNext(high)
   const myBuild = m.types.map(t => [t, L.won[mine]?.[t]])
   const here = new Set(au.present.map(p => p.vid))
   const soldTo = st.sold && m.players.find(p => p.vid === st.sold.vid)
+  const sold = st.stage === 'sold'
+  const shown = sold && st.sold   // the grade turns over at the gavel
 
   let controls
-  if (!lot || st.stage === 'wait') controls = <p className="au-note">The auctioneer's spinning up the first lot…</p>
-  else if (st.stage === 'sold') controls = <p className="au-note">{L.won[mine] && openSlots(L, mine, m.types).length === 0 ? 'Your build is done. Watching the rest of the room.' : 'Next lot coming up…'}</p>
+  if (!lot || st.stage === 'wait') controls = <p className="au-note">The auctioneer's shuffling the deck…</p>
+  else if (sold) controls = <p className="au-note">{L.won[mine] && openSlots(L, mine, m.types).length === 0 ? 'Your build is done. Watching the rest of the room.' : 'Shuffling the next card…'}</p>
   else if (!mayBid) controls = <p className="au-note">{L.won[mine]?.[lot.trait] ? `Your ${kit.attrLabel(lot.trait)} slot is filled. Watching this one.` : 'Out of money for this one.'}</p>
   else if (spinning) controls = <p className="au-note">Bidding opens when the spinner stops.</p>
-  else if (high?.vid === mine) controls = <p className="au-note au-note--lead">You're the high bidder at ${high.amount}.</p>
-  else if (passed) controls = <p className="au-note">You passed on this one.</p>
+  else if (high?.vid === mine) controls = <p className="au-note au-note--lead">You're high at ${high.amount}. Hold on…</p>
+  else if (passed) controls = <p className="au-note">You're out on this one.</p>
   else controls = (
     <div className="au-bids">
-      {offers.map(a => (
-        <button key={a} className="au-bid" onClick={() => { if (au.bid(a)) { sfx('tap'); haptic('light') } }}>
-          <small>{a === floorBid ? (high ? 'RAISE' : 'OPEN') : `+${a - (high?.amount ?? 0)}`}</small><b>${a}</b>
-        </button>
-      ))}
-      {myMax > (offers.at(-1) ?? 0) && myMax >= floorBid && (
-        <button className="au-bid au-bid--max" onClick={() => { if (au.bid(myMax)) { sfx('tap'); haptic('medium') } }}><small>ALL IN</small><b>${myMax}</b></button>
-      )}
-      <button className="au-pass" onClick={() => { au.pass(); sfx('tap') }}>PASS</button>
+      <button className="au-bid" disabled={nextBid > myMax} onClick={() => { if (au.bid(nextBid)) { sfx('tap'); haptic('light') } }}>
+        <small>{high ? 'BID +1' : 'OPEN AT'}</small><b>${nextBid}</b>
+      </button>
+      <button className="au-pass" onClick={() => { au.pass(); sfx('tap') }}>I'M OUT</button>
     </div>
   )
 
   return (
     <>
       <div className="au-top">
-        <span className="ag-eyebrow">AUCTION {m.code} · LOT {st.n || 1} OF {maxLots(m)}</span>
+        <span className="ag-eyebrow">AUCTION {m.code} · LOT {st.n || 1}</span>
         <LiveLeaveButton />
       </div>
 
@@ -190,38 +225,46 @@ export default function AppAuction({ au, posName, onHome, onPlayAgain }) {
               <Pic p={p} me={mine} size={30} />
               <span className="au-bidder-name"><Name p={p} me={mine} /></span>
               <b className="au-cash">${L.wallets[p.vid]}</b>
-              <span className="au-dots">{m.types.map(t => <i key={t} className={L.won[p.vid]?.[t] ? 'is-in' : ''} style={L.won[p.vid]?.[t] ? { '--g': gradeColor(L.won[p.vid][t].val) } : undefined} />)}</span>
-              {out ? <em>LEFT</em> : st.stage === 'lot' && st.passed.includes(p.vid) ? <em>PASS</em> : null}
+              <span className="au-dots">{m.types.map(t => <i key={t} className={L.won[p.vid]?.[t] ? 'is-in' : ''} />)}</span>
+              {out ? <em>LEFT</em> : st.stage === 'lot' && st.passed.includes(p.vid) ? <em>OUT</em> : null}
             </div>
           )
         })}
       </div>
 
-      <div className={`au-stage${st.stage === 'sold' ? (st.sold ? ' is-sold' : ' is-pass') : ''}${bidding && secs <= 3 ? ' is-urgent' : ''}`}>
+      <div className={`au-stage${sold ? (st.sold ? ' is-sold' : ' is-pass') : ''}${call ? ` is-${call}` : ''}`}>
         {lot && spinning ? (
-          <Reel kit={kit} lot={lot} seed={m.seed} />
+          <div className="au-pulling" key={`pull${lot.n}`}>
+            <Deck kit={kit} types={m.types} lot={lot} seed={m.seed} />
+            <Reel kit={kit} lot={lot} seed={m.seed} />
+          </div>
         ) : lot ? (
           <div className="au-lot" key={lot.n}>
-            <Headshot kit={kit} name={lot.name} className="au-lot-shot" />
+            <div className="au-card au-card--lot"><div className="au-card-face"><SlotFace kit={kit} t={lot.trait} /></div></div>
             <div className="au-lot-info">
-              <span className="au-lot-who"><img src={kit.logo(lot.team)} alt="" /> {lot.name}</span>
-              <span className="au-lot-trait">{kit.attrLabel(lot.trait)}</span>
-              <b className="au-lot-grade" style={{ '--g': gradeColor(lot.val) }}>{valToGrade(lot.val)}</b>
-              {kit.slotTraits(lot.trait).length > 1 && <span className="au-lot-covers">{kit.slotTraits(lot.trait).map((t, i) => <i key={t}>{t} <b>{valToGrade(Object.values(lot.vals ?? {})[i] ?? lot.val)}</b></i>)}</span>}
+              <Headshot kit={kit} name={lot.name} className="au-lot-shot" />
+              <span className="au-lot-who">{lot.name}</span>
+              <span className="au-lot-team"><img src={kit.logo(lot.team)} alt="" /> {lot.team}</span>
+            </div>
+            <div className={`au-grade${shown ? ' is-open' : ''}`} aria-label={shown ? `Grade ${valToGrade(lot.val)}` : 'Grade hidden'}>
+              <div className="au-grade-in">
+                <span className="au-grade-back">?</span>
+                <b className="au-grade-face" style={{ '--g': gradeColor(lot.val) }}>{valToGrade(lot.val)}</b>
+              </div>
             </div>
           </div>
         ) : (
-          <div className="au-lot au-lot--wait"><span className="cp-pulse" /><span className="cp-sub">Everyone has ${BUDGET}. {m.types.length} slots each.</span></div>
+          <div className="au-lot au-lot--wait"><span className="cp-pulse" /><span className="cp-sub">Everyone has ${BUDGET} and {m.types.length} slots. Grades stay face down until the gavel.</span></div>
         )}
         {st.stage === 'lot' && (
           <div className="au-clock">
-            <div className="au-bar">{bidding ? <Drain key={st.n} end={bidEnd} total={m.bidSecs * 1000} /> : <i />}</div>
-            <span className="au-high">{high ? <>HIGH <b>${high.amount}</b> · {highP ? <Name p={highP} me={mine} /> : '—'}</> : bidding ? <>OPENING BID <b>$1</b></> : 'SPINNING…'}</span>
-            <b className="au-secs">{bidding ? secs : ''}</b>
+            <div className="au-bar">{bidding ? <Drain key={`${st.n}:${st.last}`} end={bidEnd} total={(st.last ? RESET_SECS : m.bidSecs) * 1000} /> : <i />}</div>
+            <span className="au-high">{high ? <>HIGH <b>${high.amount}</b> · {highP ? <Name p={highP} me={mine} /> : '—'}</> : bidding ? <>OPENING BID <b>$1</b></> : 'SHUFFLING…'}</span>
+            <b className={`au-call${call ? ' is-on' : ''}`} key={call ?? 'tick'}>{call === 'once' ? 'GOING ONCE' : call === 'twice' ? 'GOING TWICE' : bidding ? Math.ceil(left / 1000) : ''}</b>
           </div>
         )}
-        {st.stage === 'sold' && (
-          <div className="au-gavel ag-pop">{st.sold ? <>SOLD · {soldTo ? <Name p={soldTo} me={mine} /> : '—'} · <b>${st.sold.amount}</b></> : 'NO BIDS · NEXT LOT'}</div>
+        {sold && (
+          <div className="au-gavel">{st.sold ? <>SOLD · {soldTo ? <Name p={soldTo} me={mine} /> : '—'} · <b>${st.sold.amount}</b></> : 'NO BIDS · BACK IN THE DECK'}</div>
         )}
       </div>
 
@@ -243,7 +286,7 @@ export default function AppAuction({ au, posName, onHome, onPlayAgain }) {
         <div className="au-log" aria-label="Recent lots">
           {L.log.slice(0, 4).map(e => {
             const who = e.vid && m.players.find(p => p.vid === e.vid)
-            return <span key={e.n}>{kit.attrLabel(e.trait)} {valToGrade(e.val)} · {e.name} → {who ? <><Name p={who} me={mine} /> ${e.amount}</> : 'no bids'}</span>
+            return <span key={e.n}>{kit.attrLabel(e.trait)}{e.vid ? ` ${valToGrade(e.val)}` : ''} · {e.name} → {who ? <><Name p={who} me={mine} /> ${e.amount}</> : 'no bids'}</span>
           })}
         </div>
       )}
