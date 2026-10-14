@@ -644,8 +644,11 @@ export const pickLabel = (overall, sport = 'nfl') => { const n = (SPORT[sport] ?
 export function stockOf(c) {
   const S = sportOf(c), d = c.draft
   const [lo0, hi0] = S.draft.stock(c.ovr, c.pos)
-  // the combine moves the window, the interviews too (less, in a two-round draft)
-  const span = S.isBucket ? 3 : 9
+  // the combine moves the window, the interviews too (less, in a two-round draft).
+  // A combine can be worth about a round, more the later you're projected
+  // (a top-5 pick has less room to climb; a mid-rounder can jump a round)
+  const mid = (lo0 + hi0) / 2
+  const span = S.isBucket ? 5 + mid * 0.12 : 14 + mid * 0.25
   const played = d.combine.filter(x => x.pct != null)
   const comb = played.length ? played.reduce((s, x) => s + x.pct, 0) / played.length : 0
   const inter = (d.interviews ?? []).reduce((s, x) => s + (x.answer != null ? x.a[x.answer].stock : 0), 0)
