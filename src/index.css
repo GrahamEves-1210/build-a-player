@@ -581,7 +581,7 @@ body::before { display: none; }
        uncover a sliver at its trailing edge. The oversized margin means
        there's still matching color there even if that happens. */
     top: -50vh; bottom: -50vh; left: -50vw; right: -50vw;
-    z-index: 0;
+    z-index: -1;
     background: var(--bg-raised);
     pointer-events: none;
     /* Without its own compositing layer, iOS can lag-paint this during the
@@ -608,7 +608,10 @@ body::after {
 
 #root {
   position: relative;
-  z-index: 1;
+  /* no layer of its own (it was 1): with one, everything inside it, the bottom nav
+     included, sat under any ad on the page. The backdrop (body::before) sits at -1
+     instead, so the page still draws over it */
+  z-index: auto;
   display: flex;
   flex-direction: column;
   height: 100dvh;

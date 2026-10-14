@@ -5,6 +5,8 @@
 // Nothing moves. Re-applied every couple of seconds and whenever the page's
 // elements change, since Playwire redraws the rail.
 const RAIL = '[id^="pw-oop-bottom_rail"], [id^="pw-oop"][style*="bottom"]'
+// a second, taller ad Playwire stacks at the bottom (116px, the very top layer): under the nav too
+const STICKY = '.st-adunit-ad'
 const CLOSE = '[id*="close" i], [class*="close" i], [aria-label*="close" i], button'
 const isClose = el => /close/i.test(`${el.id} ${el.className} ${el.getAttribute?.('aria-label') ?? ''}`)
 const force = (el, z) => { if (el.style.getPropertyValue('z-index') !== String(z) || el.style.getPropertyPriority('z-index') !== 'important') el.style.setProperty('z-index', String(z), 'important') }
@@ -12,6 +14,10 @@ const force = (el, z) => { if (el.style.getPropertyValue('z-index') !== String(z
 function apply() {
   for (const el of document.querySelectorAll(RAIL)) {
     if (isClose(el)) { force(el, 2147483647); continue }
+    force(el, 199)
+    for (const c of el.querySelectorAll(CLOSE)) force(c, 2147483647)
+  }
+  for (const el of document.querySelectorAll(STICKY)) {
     force(el, 199)
     for (const c of el.querySelectorAll(CLOSE)) force(c, 2147483647)
   }
