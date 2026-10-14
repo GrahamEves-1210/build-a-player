@@ -3,237 +3,123 @@
 // pool is ranked by OVR. Respins are each player's own (they don't use up the
 // shared order); the next regular spin is back on the pool's sequence.
 //   queue  → wait for a pool of 5 players (after a wait, 2+ can start: no bots)
-//   build  → build on the game page with the pool's seed; LOCK IN sends the OVR
+//   build  → build on the game page with the pool's seed; LOCK IN sends the build
 //   result → everyone's OVR ranked; your place goes to your Compete stats
-// Bots play the very same spins: every client works their builds out from the
-// seed, so nothing is sent for them. "Leader" is the lowest vid among the
-// humans in the queue; nothing is stored server-side.
+// The live server runs the pool (live/src/compete.js): the queue, the seed, the
+// clock, and the scoring: it works each OVR out from the real ratings of the
+// players in the build (lib/competeCore.js), never from what a phone claims.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { joinRoom, genCode, myVid, myDevice, claimLive, releaseLive, liveElsewhere, markEntered, clearEntered, takeEntered } from './live'
-import { seeded, seededShuffle } from './rng'
+import { myVid, myDevice, claimLive, releaseLive, liveElsewhere, markEntered, clearEntered, takeEntered } from './live'
+import { liveSocket } from './blacktopServer'
 import { getUsername } from './discord'
 import { myCosmetics, whenProgressReady } from './progress'
+import { BUILD_SECS, FILL_AFTER_SECS, rankResults } from './competeCore'
 
-export const POOL_SIZE = 5
-export const FILL_AFTER_SECS = 60     // the countdown: starts over every time someone joins
-export const MIN_POOL = 2          // real players only; five starts at once, fewer when the countdown runs out
-export const BUILD_SECS = 300
+export * from './competeCore'
 
-// The pool's spin order — the same lookup SpinScreen makes for seeded spins
-export function seededTeams(seed, teams, pool) {
-  const draftable = new Set(pool.map(p => p.team))
-  const list = teams.some(t => draftable.has(t.short)) ? teams.filter(t => draftable.has(t.short)) : teams
-  return seededShuffle([...list].sort((a, b) => a.short.localeCompare(b.short)), `${seed}:teams`)
-}
-export function seededPlayer(seed, i, team, pool) {
-  const roster = pool.filter(q => q.team === team.short).sort((a, b) => a.name.localeCompare(b.name))
-  return roster.length ? seededShuffle(roster, `${seed}:${i}:${team.short}`)[0] : null
-}
-
-// A bot's build from the pool's spins: on each spin it takes the open slot
-// where this player is best — with some judgment noise, more for weaker bots
-export function botBuild({ seed, idx, skill, teams, pool, types, calcOvr }) {
-  const r = seeded(`${seed}:bot:${idx}`)
-  const order = seededTeams(seed, teams, pool)
-  const build = {}
-  for (let i = 0; i < 40 && types.some(t => !build[t]); i++) {
-    const team = order[i % order.length]
-    const p = seededPlayer(seed, i, team, pool)
-    if (!p?.attrs) continue
-    const open = types.filter(t => !build[t] && p.attrs[t] != null)
-    if (!open.length) continue
-    const pick = open
-      .map(t => ({ t, score: p.attrs[t] + (r() - 0.5) * (1 - skill) * 6 }))
-      .sort((a, b) => b.score - a.score)[0].t
-    build[pick] = { type: pick, val: p.attrs[pick], qbFull: p.name, team: p.team }
-  }
-  return { build, ovr: Math.round(calcOvr(build) ?? 0) }
-}
-
-const leaderOf = list => [...list].map(p => p.vid).sort()[0] ?? null
-
-export function rankResults(match, results) {
-  if (!match) return []
-  return match.players
-    .map(p => ({ ...p, res: results[p.vid] ?? null }))
-    .sort((a, b) => (b.res?.ovr ?? -1) - (a.res?.ovr ?? -1) || (a.res?.at ?? 9e15) - (b.res?.at ?? 9e15))
-    .map((p, i) => ({ ...p, place: i + 1 }))
-}
-
-export function useCompete({ enabled, user, sport, pos, botFor }) {
+export function useCompete({ enabled, user, sport, pos }) {
   const me = useMemo(() => ({ vid: myVid(), dev: myDevice(), name: user ? (getUsername(user) || 'Player') : 'Guest', uid: user?.id ?? null, cos: myCosmetics() }), [user?.id]) // eslint-disable-line
   // a pool this device left mid-game (reload, the app killed): book it as the forfeit it was
   useEffect(() => {
     const e = takeEntered('compete'); if (!e) return
     whenProgressReady(() => window.dispatchEvent(new CustomEvent('bap:compete', { detail: { sport: e.sport, pos: e.pos, place: e.of, of: e.of, ovr: 0, humans: e.humans, forfeit: true } })))
   }, [])
-  const [phase, setPhase] = useState('idle')        // idle | queue | build | result
+  const [phase, setPhase] = useState('idle')        // idle | busy | queue | build | result
   const [queue, setQueue] = useState([])
-  const [link, setLink] = useState('connecting')     // 'connecting' | 'live' | 'local' (this device only)
-  const [waited, setWaited] = useState(0)
-  const [match, setMatch] = useState(null)          // { code, seed, created, sport, pos, players:[{vid,name,uid,cos,bot,skill}] }
-  const [results, setResults] = useState({})        // vid → { ovr, at, build }
-  const [clock, setClock] = useState(BUILD_SECS)
-  const queueRef = useRef(null)
-  const roomRef = useRef(null)
+  const [startsAt, setStartsAt] = useState(null)
+  const [link, setLink] = useState('connecting')
+  const [match, setMatch] = useState(null)          // { code, seed, created, sport, pos, players }
+  const [results, setResults] = useState({})        // vid → { ovr, at, build, forfeit }
+  const [now, setNow] = useState(Date.now())
+  const qRef = useRef(null), roomRef = useRef(null)
   const booked = useRef(null)
-  const botForRef = useRef(botFor); botForRef.current = botFor
+  const matchRef = useRef(null); matchRef.current = match
 
+  const closeAll = () => { qRef.current?.close(); qRef.current = null; roomRef.current?.close(); roomRef.current = null }
   const leave = useCallback(() => {
-    queueRef.current?.leave(); queueRef.current = null
-    roomRef.current?.leave(); roomRef.current = null
-    setPhase('idle'); setQueue([]); setMatch(null); setResults({}); setWaited(0)
+    closeAll()
+    setPhase('idle'); setQueue([]); setStartsAt(null); setMatch(null); setResults({})
     releaseLive()
   }, [])
   useEffect(() => { if (!enabled) leave() }, [enabled, leave])
   useEffect(() => () => leave(), [leave])
 
-  const enterRoom = useCallback(m => {
-    queueRef.current?.leave(); queueRef.current = null
-    setMatch(m); setResults({}); setPhase('build'); booked.current = null
-    const humans = m.players.filter(p => !p.bot)
-    markEntered({ kind: 'compete', code: m.code, sport: m.sport, pos: m.pos, of: m.players.length, humans: humans.length })
-    const room = joinRoom(`compete-${m.code}`, me)
-    roomRef.current = room
-    // a player's result: only from someone in the pool, never for me (mine is set
-    // here, not by the room), and the first real one stands (a later message,
-    // forfeit included, can't replace a build that's already in)
-    room.on('result', p => {
-      if (!p?.from || p.from === me.vid || !humans.some(h => h.vid === p.from)) return
-      const ovr = Number(p.ovr)
-      if (!p.forfeit && !(ovr >= 0 && ovr <= 99)) return
-      setResults(rs => (rs[p.from] && !rs[p.from].forfeit ? rs : { ...rs, [p.from]: { ovr: p.forfeit ? -1 : ovr, at: Number(p.at) || Date.now(), build: p.build, forfeit: !!p.forfeit } }))
-    })
-    // bots: worked out locally from the same seed (identical on every client)
-    const out = {}
-    m.players.forEach((p, i) => {
-      if (!p.bot) return
-      const b = botForRef.current?.(m.seed, i, p.skill, m.pos)
-      if (b) out[p.vid] = { ovr: b.ovr, at: m.created + 60000 + i * 9000, build: b.build }
-    })
-    setResults(rs => ({ ...out, ...rs }))
-  }, [me])
-
-  const form = useCallback(list => {
-    const code = genCode()
-    // one seat per device and per account (a second tab or a second login isn't a second player)
-    const seen = new Set()
-    const unique = [...list].sort((a, b) => (a.ts ?? 0) - (b.ts ?? 0)).filter(p => {
-      const keys = [p.dev && `d:${p.dev}`, p.uid && `u:${p.uid}`].filter(Boolean)
-      if (keys.some(k => seen.has(k))) return false
-      keys.forEach(k => seen.add(k)); return true
-    })
-    const humans = unique.slice(0, POOL_SIZE)
-    const players = humans.map(h => ({ vid: h.vid, name: h.name, uid: h.uid ?? null, cos: h.cos ?? null, bot: false }))
-    return { code, seed: `cp-${code}`, created: Date.now(), sport, pos, players }
-  }, [sport, pos])
+  // the server's word on the pool (its clock arrives as "how long ago")
+  const onRoom = useCallback(msg => {
+    if (msg.t === 'gone') { leave(); return }
+    if (msg.t !== 'state' || !msg.m) return
+    const { sinceCreated, ...m } = msg.m
+    setMatch(prev => ({ ...m, created: prev?.code === m.code && prev.created ? prev.created : Date.now() - (sinceCreated ?? 0) }))
+    setResults(msg.results ?? {})
+    if (msg.phase === 'result') setPhase('result')
+  }, [leave])
+  const enterRoom = useCallback((code, players) => {
+    qRef.current?.close(); qRef.current = null
+    // the seed is the pool's code: the build can start at once, before the room's first word
+    setMatch({ code, seed: `cp-${code}`, created: Date.now(), sport, pos, players }); setResults({}); setPhase('build'); booked.current = null
+    markEntered({ kind: 'compete', code, sport, pos, of: players.length, humans: players.length })
+    roomRef.current = liveSocket(`/compete/room/${code}`, () => ({ t: 'hello', vid: me.vid }), onRoom, setLink)
+  }, [sport, pos, me.vid, onRoom])
 
   const join = useCallback(() => {
     if (!enabled) return
     // one live game per device: another tab or window is already in one
     if (!claimLive('compete')) { setPhase('busy'); return }
-    roomRef.current?.leave(); roomRef.current = null
-    setPhase('queue'); setWaited(0); setMatch(null); setResults({})
-    const q = joinRoom(`compete-q-${sport}-${pos}`, { ...me, ts: Date.now() })
-    queueRef.current = q
-    setLink('connecting'); q.onStatus(setLink)
-    q.onPresence(list => {
-      setQueue(list)
-      if (list.length >= POOL_SIZE && leaderOf(list) === me.vid && queueRef.current === q) {
-        const m = form(list); if (m.players.length < MIN_POOL) return
-        q.send('match', m); enterRoom(m)
-      }
-    })
-    // a pool deal: only from the player who deals (the lowest id in it), only with
-    // me in it, and only one dealt just now (no backdated or far-off clocks)
-    q.on('match', m => {
-      if (!m?.players?.some(p => p.vid === me.vid)) return
-      const ids = m.players.filter(p => !p.bot).map(p => p.vid).sort()
-      if ((m.from !== ids[0] && m.from !== leaderOf(q.presence())) || Math.abs(Date.now() - Number(m.created)) > 20000) return
-      if (m.seed !== `cp-${m.code}` || m.sport !== sport || m.pos !== pos) return
-      enterRoom(m)
-    })
-    q.on('fill', () => {
-      const list = q.presence()
-      if (list.length >= MIN_POOL && leaderOf(list) === me.vid && queueRef.current === q) { const m = form(list); if (m.players.length < MIN_POOL) return; q.send('match', m); enterRoom(m) }
-    })
-  }, [enabled, sport, pos, me, form, enterRoom])
+    closeAll()
+    setPhase('queue'); setMatch(null); setResults({}); setQueue([]); setStartsAt(null)
+    qRef.current = liveSocket(`/compete/q?sport=${sport}&pos=${pos}`, () => ({ t: 'hello', ...me }), msg => {
+      if (msg.t === 'queue') { setQueue(msg.list ?? []); setStartsAt(msg.startsIn == null ? null : Date.now() + msg.startsIn) }
+      else if (msg.t === 'match' && msg.players?.some(p => p.vid === me.vid)) enterRoom(msg.code, msg.players)
+    }, setLink)
+  }, [enabled, sport, pos, me, enterRoom])
+  // start with who's here (2+): anyone can ask
+  const fillNow = useCallback(() => qRef.current?.send({ t: 'fill' }), [])
+  const retry = useCallback(() => { closeAll(); join() }, [join])
 
-  // Start with who's here (2+ real players): anyone can ask, the leader deals it
-  const fillNow = useCallback(() => {
-    const q = queueRef.current; if (!q) return
-    const list = q.presence()
-    if (list.length < MIN_POOL) return
-    q.send('fill', {})
-    if (leaderOf(list) === me.vid) { const m = form(list); if (m.players.length < MIN_POOL) return; q.send('match', m); enterRoom(m) }
-  }, [me.vid, form, enterRoom])
   useEffect(() => {
-    if (phase !== 'queue') return
-    const id = setInterval(() => setWaited(w => w + 1), 1000)
+    if (phase !== 'queue' && phase !== 'build') return
+    const id = setInterval(() => setNow(Date.now()), 1000)
     return () => clearInterval(id)
   }, [phase])
-  // someone new joined: the countdown starts over
-  const lastCount = useRef(0)
-  useEffect(() => { if (phase === 'queue' && queue.length > lastCount.current) setWaited(0); lastCount.current = queue.length }, [phase, queue.length])
-  useEffect(() => { if (phase === 'queue' && waited >= FILL_AFTER_SECS && queue.length >= MIN_POOL) fillNow() }, [phase, waited, queue.length, fillNow])
+  const waited = startsAt ? Math.max(0, FILL_AFTER_SECS - Math.ceil((startsAt - now) / 1000)) : 0
+  const clock = match ? Math.max(0, BUILD_SECS - Math.floor((now - match.created) / 1000)) : BUILD_SECS
 
-  // My build is in: send it to the pool
+  // My build is in: the server scores it (shown here at the phone's number until its word comes back)
   const submit = useCallback((ovr, build) => {
     if (!match || results[me.vid]) return
-    const at = Date.now()
     const slim = Object.fromEntries(Object.entries(build || {}).filter(([, v]) => v).map(([t, v]) => [t, { val: v.val, qbFull: v.qbFull, team: v.team }]))
-    roomRef.current?.send('result', { ovr, at, build: slim })
-    setTimeout(() => roomRef.current?.send('result', { ovr, at, build: slim }), 1500)   // once more for anyone who blinked
-    setResults(rs => ({ ...rs, [me.vid]: { ovr, at, build: slim } }))
+    roomRef.current?.send({ t: 'submit', build: slim })
+    setResults(rs => ({ ...rs, [me.vid]: { ovr, at: Date.now(), build: slim } }))
   }, [match, results, me.vid])
 
-  // The clock, and the pool is over once every human is in (or time's up)
-  useEffect(() => {
-    if (phase !== 'build' || !match) return
-    const tick = () => {
-      const left = Math.max(0, BUILD_SECS - Math.floor((Date.now() - match.created) / 1000))
-      setClock(left)
-      const humans = match.players.filter(p => !p.bot)
-      if (left <= 0 || humans.every(p => results[p.vid])) setPhase('result')
-    }
-    tick()
-    const id = setInterval(tick, 1000)
-    return () => clearInterval(id)
-  }, [phase, match, results])
-
-  // Book my place once (stats, XP, coins: lib/progress.js). No build in when the
-  // clock ran out: that's a forfeit (sitting it out doesn't dodge a loss)
+  // Book my place once, from the server's result (stats, XP, coins: lib/progress.js).
+  // No build in when the clock ran out: that's a forfeit (sitting it out doesn't dodge a loss)
   useEffect(() => {
     if (phase !== 'result' || !match || booked.current === match.code) return
-    if (!results[me.vid]) {
-      booked.current = match.code
-      clearEntered(match.code); releaseLive()
-      roomRef.current?.send('result', { ovr: 0, at: Date.now(), forfeit: true })
-      const humans = match.players.filter(p => !p.bot).length
-      window.dispatchEvent(new CustomEvent('bap:compete', { detail: { sport: match.sport, pos: match.pos, place: match.players.length, of: match.players.length, ovr: 0, humans, forfeit: true } }))
-      return
-    }
     booked.current = match.code
     clearEntered(match.code); releaseLive()
+    const mine = results[me.vid]
+    if (!mine || mine.forfeit) {
+      window.dispatchEvent(new CustomEvent('bap:compete', { detail: { sport: match.sport, pos: match.pos, place: match.players.length, of: match.players.length, ovr: 0, humans: match.players.length, forfeit: true } }))
+      return
+    }
     const ranked = rankResults(match, results)
-    const mine = ranked.find(p => p.vid === me.vid)
-    const humans = match.players.filter(p => !p.bot).length
-    window.dispatchEvent(new CustomEvent('bap:compete', { detail: { sport: match.sport, pos: match.pos, place: mine.place, of: ranked.length, ovr: results[me.vid].ovr, humans } }))
+    const me2 = ranked.find(p => p.vid === me.vid)
+    window.dispatchEvent(new CustomEvent('bap:compete', { detail: { sport: match.sport, pos: match.pos, place: me2.place, of: ranked.length, ovr: mine.ovr, humans: match.players.length } }))
   }, [phase, match, results, me.vid])
 
-  // Leaving mid-pool: the pool sees a DNF, my record takes the forfeit
+  // Leaving mid-pool: the server marks the DNF, my record takes the forfeit
   const forfeit = useCallback(() => {
-    if (!match || results[me.vid]) { leave(); return }
-    const humans = match.players.filter(p => !p.bot).length
-    roomRef.current?.send('result', { ovr: 0, at: Date.now(), forfeit: true })
-    window.dispatchEvent(new CustomEvent('bap:compete', { detail: { sport: match.sport, pos: match.pos, place: match.players.length, of: match.players.length, ovr: 0, humans, forfeit: true } }))
-    booked.current = match.code
-    clearEntered(match.code)
+    const m = matchRef.current
+    if (!m || results[me.vid]) { leave(); return }
+    roomRef.current?.send({ t: 'quit' })
+    window.dispatchEvent(new CustomEvent('bap:compete', { detail: { sport: m.sport, pos: m.pos, place: m.players.length, of: m.players.length, ovr: 0, humans: m.players.length, forfeit: true } }))
+    booked.current = m.code
+    clearEntered(m.code)
     setTimeout(leave, 300)
-  }, [match, results, me.vid, leave])
+  }, [results, me.vid, leave])
 
   const ranked = useMemo(() => rankResults(match, results), [match, results])
-  const retry = useCallback(() => { queueRef.current?.leave(); queueRef.current = null; join() }, [join])
   return { phase, queue, waited, match, results, ranked, clock, me, link, retry, join, leave, forfeit, fillNow, submit, inPool: phase === 'build' || phase === 'result', elsewhere: liveElsewhere }
 }

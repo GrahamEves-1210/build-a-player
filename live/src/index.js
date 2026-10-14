@@ -15,11 +15,12 @@
 //
 // Client → server and server → client messages are JSON: { t: type, ...fields }.
 //
-// The Trait Auction lives here too (auction.js): there the server runs the whole
-// auction itself, the auctioneer.
+// The Trait Auction (auction.js) and Compete pools (compete.js) live here too:
+// there the server runs the whole thing itself (the auctioneer; the scorer).
 
 import { AuctionQueue, AuctionRoom, validSportPos } from './auction.js'
-export { AuctionQueue, AuctionRoom }
+import { CompeteQueue, CompeteRoom, validCompete } from './compete.js'
+export { AuctionQueue, AuctionRoom, CompeteQueue, CompeteRoom }
 
 const BUILD_SECS = 180
 const PRACTICE_BUILD_SECS = 600
@@ -61,6 +62,13 @@ export default {
       if (!validSportPos(sport, pos)) return new Response('bad', { status: 400 })
       return env.AUCTION_QUEUE.get(env.AUCTION_QUEUE.idFromName(`${sport}-${pos}`)).fetch(req)
     }
+    if (url.pathname === '/compete/q') {
+      const sport = url.searchParams.get('sport'), pos = url.searchParams.get('pos')
+      if (!validCompete(sport, pos)) return new Response('bad', { status: 400 })
+      return env.COMPETE_QUEUE.get(env.COMPETE_QUEUE.idFromName(`${sport}-${pos}`)).fetch(req)
+    }
+    const cp = url.pathname.match(/^\/compete\/room\/([A-Z0-9]{6})$/)
+    if (cp) return env.COMPETE_ROOM.get(env.COMPETE_ROOM.idFromName(cp[1])).fetch(req)
     const au = url.pathname.match(/^\/auction\/room\/([A-Z0-9]{6})$/)
     if (au) return env.AUCTION_ROOM.get(env.AUCTION_ROOM.idFromName(au[1])).fetch(req)
     const m = url.pathname.match(/^\/room\/([A-Z0-9]{6})$/)

@@ -11,88 +11,16 @@ import {
   AUCTION_SIZE, AUCTION_MIN, AUCTION_FILL_SECS, BID_SECS, RESET_SECS, SPIN_MS, SOLD_MS, GRACE_MS,
   AUCTION_POS, auctionCoreKit, freshLedger, canBidOn, minNext, maxBid, auctionOver, pickLot, rankAuction, lotEnd,
 } from '../../src/lib/auctionCore.js'
+import { BaseQueue, str, send, parse, accept } from './queue.js'
 
 const WAIT_MS = 2400            // the room opens, then the first card is pulled
 const EMPTY_MS = 90000          // everyone gone this long: the auction is called off
-// one seat a device (and one an account). OFF while the user tests in several tabs
-// (src/lib/live.js liveElsewhere is off too); turn both back on before release
-const ONE_PER_DEVICE = false
 
-const code6 = () => Array.from(crypto.getRandomValues(new Uint8Array(6)), b => '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'[b % 32]).join('')
-const str = (v, n = 40) => (typeof v === 'string' ? v.slice(0, n) : '')
-const send = (ws, msg) => { try { ws.send(JSON.stringify(msg)) } catch {} }
-const parse = data => { try { const m = JSON.parse(data); return m && typeof m === 'object' ? m : null } catch { return null } }
-const pub = h => ({ vid: str(h.vid), name: str(h.name, 24) || 'Guest', uid: str(h.uid, 64) || null, cos: h.cos && typeof h.cos === 'object' ? h.cos : null })
 export const validSportPos = (sport, pos) => !!AUCTION_POS[sport]?.includes(pos)
 
 // ── The queue ─────────────────────────────────────────────────────────────────
-export class AuctionQueue {
-  constructor(state, env) {
-    this.env = env
-    this.conns = new Map()      // ws → { ...pub, dev, ts }
-    this.sport = null; this.pos = null
-    this.timer = null; this.startsAt = null
-  }
-  async fetch(req) {
-    const url = new URL(req.url)
-    this.sport ??= url.searchParams.get('sport'); this.pos ??= url.searchParams.get('pos')
-    const [client, server] = Object.values(new WebSocketPair())
-    server.accept()
-    server.addEventListener('message', e => this.onMessage(server, e.data))
-    const bye = () => this.onClose(server)
-    server.addEventListener('close', bye); server.addEventListener('error', bye)
-    return new Response(null, { status: 101, webSocket: client })
-  }
-  // the players waiting, oldest first, one a device/account
-  waiting() {
-    const seen = new Set()
-    return [...this.conns.values()].sort((a, b) => a.ts - b.ts).filter(p => {
-      const keys = [p.uid && `u:${p.uid}`, ONE_PER_DEVICE && p.dev && `d:${p.dev}`].filter(Boolean)
-      if (keys.some(k => seen.has(k))) return false
-      keys.forEach(k => seen.add(k)); return true
-    })
-  }
-  state() { return { t: 'queue', list: this.waiting().map(pub), startsIn: this.startsAt ? Math.max(0, this.startsAt - Date.now()) : null, size: AUCTION_SIZE } }
-  broadcast() { const s = this.state(); for (const ws of this.conns.keys()) send(ws, s) }
-  // the countdown: on with two or more, back to the full count every time someone joins
-  rearm(joined) {
-    const n = this.waiting().length
-    if (n < AUCTION_MIN) { clearTimeout(this.timer); this.timer = null; this.startsAt = null; return }
-    if (joined || !this.timer) {
-      clearTimeout(this.timer)
-      this.startsAt = Date.now() + AUCTION_FILL_SECS * 1000
-      this.timer = setTimeout(() => this.makeMatch(), AUCTION_FILL_SECS * 1000)
-    }
-  }
-  async onMessage(ws, data) {
-    const m = parse(data); if (!m) return
-    if (m.t === 'hello') {
-      const p = { ...pub(m), dev: str(m.dev, 64), ts: Date.now() }
-      if (!p.vid) return
-      for (const [w, q] of this.conns) if (q.vid === p.vid && w !== ws) { p.ts = q.ts; this.conns.delete(w); try { w.close(1000, 'replaced') } catch {} }
-      this.conns.set(ws, p)
-      if (this.waiting().length >= AUCTION_SIZE) return this.makeMatch()
-      this.rearm(true); this.broadcast()
-      return
-    }
-    // anyone waiting can start it now, with two or more
-    if (m.t === 'fill' && this.conns.has(ws) && this.waiting().length >= AUCTION_MIN) return this.makeMatch()
-  }
-  async makeMatch() {
-    clearTimeout(this.timer); this.timer = null; this.startsAt = null
-    const list = this.waiting().slice(0, AUCTION_SIZE)
-    if (list.length < AUCTION_MIN) return this.broadcast()
-    const code = code6()
-    const players = list.map(pub)
-    await this.env.AUCTION_ROOM.get(this.env.AUCTION_ROOM.idFromName(code)).fetch('https://auction/init', { method: 'POST', body: JSON.stringify({ code, sport: this.sport, pos: this.pos, players }) })
-    const vids = new Set(players.map(p => p.vid))
-    for (const [ws, p] of this.conns) if (vids.has(p.vid)) { send(ws, { t: 'match', code, players }); this.conns.delete(ws); try { ws.close(1000, 'matched') } catch {} }
-    this.rearm(false); this.broadcast()
-  }
-  onClose(ws) {
-    if (!this.conns.delete(ws)) return
-    this.rearm(false); this.broadcast()
-  }
+export class AuctionQueue extends BaseQueue {
+  constructor(state, env) { super(state, env, { size: AUCTION_SIZE, min: AUCTION_MIN, fillSecs: AUCTION_FILL_SECS, room: 'AUCTION_ROOM' }) }
 }
 
 // ── The room: one auction ─────────────────────────────────────────────────────
@@ -118,12 +46,7 @@ export class AuctionRoom {
       this.at(WAIT_MS, () => this.nextLot())
       return new Response('ok')
     }
-    const [client, server] = Object.values(new WebSocketPair())
-    server.accept()
-    server.addEventListener('message', e => this.onMessage(server, e.data))
-    const bye = () => this.onClose(server)
-    server.addEventListener('close', bye); server.addEventListener('error', bye)
-    return new Response(null, { status: 101, webSocket: client })
+    return accept(this)
   }
   at(ms, fn) { clearTimeout(this.timer); this.timer = setTimeout(fn, Math.max(0, ms)) }
   here() { return [...new Set(this.conns.values())] }

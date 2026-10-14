@@ -31,6 +31,19 @@ class_name = "AuctionRoom"
 tag = "v2"
 new_sqlite_classes = ["AuctionQueue", "AuctionRoom"]
 
+# Compete pools (src/compete.js): a queue per sport + position, a room per pool
+[[durable_objects.bindings]]
+name = "COMPETE_QUEUE"
+class_name = "CompeteQueue"
+
+[[durable_objects.bindings]]
+name = "COMPETE_ROOM"
+class_name = "CompeteRoom"
+
+[[migrations]]
+tag = "v3"
+new_sqlite_classes = ["CompeteQueue", "CompeteRoom"]
+
 # the shared game rules come from the app (../src): they read import.meta.env
 [define]
 "import.meta.env" = '{"DEV":false,"PROD":true}'
