@@ -1106,7 +1106,7 @@ export function runRBSimulation(build, types = RB_TYPES, team = null, isAllTime 
     const wxFumble   = badWeather ? 0.022 : 0
 
     // Limited game: injury, illness, load management, coach's decision (~7%)
-    const isLimited = Math.random() < 0.07
+    const isLimited = Math.random() < 0.05
 
     // Opponent defense directly suppresses touches and efficiency (60% weight in classic)
     const statScale       = isAllTime ? 1.0 : 0.65
@@ -1115,7 +1115,9 @@ export function runRBSimulation(build, types = RB_TYPES, team = null, isAllTime 
 
     // Game mood — four tiers; legendary tier gated by elite OVR (88+)
     const gameMood       = Math.random()
-    const dudThreshold   = 0.16 + oppDefN * 0.12   // elite D (~0.8): ~26% duds; weak D (~-0.8): ~6%
+    // a star gets shut down less: the dud odds shrink from 80 OVR up (half at 94, 40% at 97+)
+    const dudScale       = ovr != null && ovr > 80 ? Math.max(0.4, 1 - (ovr - 80) * 0.036) : 1
+    const dudThreshold   = (0.16 + oppDefN * 0.12) * dudScale   // elite D (~0.8): ~26% duds; weak D (~-0.8): ~6% (before the star scale)
     const breakThreshold = 0.78 + oppDefN * 0.08   // elite D: breakout starts at 86%; weak D: 70%
     const isDud          = !isLimited && gameMood < dudThreshold
     const isBreakout     = !isLimited && gameMood > breakThreshold
@@ -1125,11 +1127,13 @@ export function runRBSimulation(build, types = RB_TYPES, team = null, isAllTime 
       ovr >= 88 ? Math.random() < 0.025 : false
     )
 
-    const carryMult = isDud       ? (0.42 + Math.random() * 0.22)
+    // and when a star does have an off day, it's less of one
+    const dudFloor  = ovr != null && ovr >= 88 ? 0.12 : 0
+    const carryMult = isDud       ? (0.42 + dudFloor + Math.random() * 0.22)
                     : isLegendary ? (1.22 + Math.random() * 0.32)   // 1.22–1.54×
                     : isBreakout  ? (1.08 + Math.random() * 0.22)   // 1.08–1.30×
                     : 1.0
-    const ypcMult   = isDud       ? (0.46 + Math.random() * 0.26)
+    const ypcMult   = isDud       ? (0.46 + dudFloor + Math.random() * 0.26)
                     : isLegendary ? (1.42 + Math.random() * 0.50)   // 1.42–1.92× — record pace
                     : isBreakout  ? (1.10 + Math.random() * 0.28)   // 1.10–1.38×
                     : 1.0
