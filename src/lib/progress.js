@@ -208,10 +208,14 @@ const BLANK_STATS = {
   // Blacktop 1v1 (the website also keeps vs_results; this follows the wallet)
   bt2: { games: 0, wins: 0, mvp: 0, streak: 0, bestStreak: 0, pts: 0, ast: 0, reb: 0, stl: 0, blk: 0, fgm: 0, fga: 0, highPts: 0, recent: [] },
   h2h: { played: 0, wins: 0, losses: 0, forfeits: 0, streak: 0, bestStreak: 0, recent: [] },
+  // 1v1 by sport (h2h above is both together: achievements and the rating read it).
+  // Basketball's is a game, so it keeps a line: points, shots, steals, blocks (games = games with a line)
+  h2hN: { played: 0, wins: 0, losses: 0, forfeits: 0, streak: 0, bestStreak: 0, recent: [] },
+  h2hB: { played: 0, wins: 0, losses: 0, forfeits: 0, streak: 0, bestStreak: 0, recent: [], games: 0, pts: 0, fgm: 0, fga: 0, stl: 0, blk: 0, highPts: 0 },
   // Online rating across the live modes (see rateOnline)
   online: { rating: 800, best: 800, played: 0 },
 }
-const ONLINE_KEYS = ['compete', 'bt', 'h2h', 'online']
+const ONLINE_KEYS = ['compete', 'bt', 'bt2', 'h2h', 'h2hN', 'h2hB', 'online']
 const fixStats = st => { for (const k of ONLINE_KEYS) st[k] = { ...BLANK_STATS[k], ...(st[k] || {}) }; return st }
 const keyFor = id => `bap_prog_${id || 'guest'}`
 function load(id) {
@@ -659,15 +663,27 @@ function onBlacktop(e) {
 
 // A 1v1 finished: 'win' | 'loss' | 'forfeit' | 'walkover' (they left)
 function onH2H(e) {
-  const { result, sport } = e.detail || {}
+  const { result, sport, line } = e.detail || {}
   if (!result) return
-  const h = S.stats.h2h = { ...BLANK_STATS.h2h, ...(S.stats.h2h || {}) }
   const won = result === 'win' || result === 'walkover'
-  h.played++
-  if (won) { h.wins++; h.streak++; if (h.streak > h.bestStreak) h.bestStreak = h.streak } else { h.losses++; h.streak = 0; if (result === 'forfeit') h.forfeits++ }
-  pushRecent(h.recent, won ? 'W' : 'L')
+  // the record both ways: all 1v1s together, and this sport's own
+  const k = sport === 'bucket' ? 'h2hB' : 'h2hN'
+  for (const key of ['h2h', k]) {
+    const r = S.stats[key] = { ...BLANK_STATS[key], ...(S.stats[key] || {}) }
+    r.played++
+    if (won) { r.wins++; r.streak++; if (r.streak > r.bestStreak) r.bestStreak = r.streak } else { r.losses++; r.streak = 0; if (result === 'forfeit') r.forfeits++ }
+    pushRecent(r.recent, won ? 'W' : 'L')
+  }
+  // a basketball 1v1 played out: its line
+  if (k === 'h2hB' && line && typeof line === 'object') {
+    const b = S.stats.h2hB
+    b.games++
+    for (const f of ['pts', 'fgm', 'fga', 'stl', 'blk']) b[f] += Math.max(0, Math.round(Number(line[f]) || 0))
+    b.highPts = Math.max(b.highPts, Math.round(Number(line.pts) || 0))
+  }
+  const h = S.stats.h2h
   const delta = rateOnline(result === 'win' ? 25 : result === 'walkover' ? 10 : result === 'forfeit' ? -20 : -15, 'h2h', { won, streak: h.streak, sport })
-  if (result !== 'walkover') toast({ kind: 'online', title: won ? 'BLACKTOP 1V1 · W' : 'BLACKTOP 1V1 · L', sub: `${delta >= 0 ? '+' : ''}${delta} rating${h.streak >= 2 ? ` · ${h.streak} straight` : ''}` })
+  if (result !== 'walkover') toast({ kind: 'online', title: `${sport === 'bucket' ? 'BLACKTOP' : 'FOOTBALL'} 1V1 · ${won ? 'W' : 'L'}`, sub: `${delta >= 0 ? '+' : ''}${delta} rating${h.streak >= 2 ? ` · ${h.streak} straight` : ''}` })
   bumpMissions('h2h', { won }); if (result !== 'forfeit') tally(0, 1)
   emit()
 }

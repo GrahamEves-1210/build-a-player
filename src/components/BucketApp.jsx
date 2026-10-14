@@ -1475,8 +1475,8 @@ export default function BucketApp() {
     try { await supabase.from('vs_results').insert(vsResultPayload('forfeit')) } catch {}
   }
 
-  async function recordVsResult(result) {
-    window.dispatchEvent(new CustomEvent('bap:h2h', { detail: { result: result, sport: 'bucket' } }))
+  async function recordVsResult(result, line = null) {
+    window.dispatchEvent(new CustomEvent('bap:h2h', { detail: { result: result, sport: 'bucket', line } }))
     if (!supabase || !user) return
     setVsRecord(prev => result === 'win'
       ? { wins: (prev?.wins ?? 0) + 1, losses: prev?.losses ?? 0 }

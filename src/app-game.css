@@ -3215,6 +3215,12 @@ html.app-look:not(.is-app) .spin-respin-half { font-size: 15px !important; lette
 .ol-streak.is-hot { color: #ffb86b; }
 .ol-streak.is-hot svg { color: #ff7a1a; filter: drop-shadow(0 0 5px rgba(255,122,26,.7)); }
 .ol-cells { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+/* the per-game line (Blacktop modes): one strip, every number the same width */
+.ol-line { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; margin-top: 6px; border-radius: 10px; border: 1px solid var(--ag-line); background: rgba(255,255,255,.03); }
+.ol-line > span { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 7px 2px; min-width: 0; }
+.ol-line > span + span { border-left: 1px solid var(--ag-line); }
+.ol-line b { font-family: var(--ag-display); font-weight: 400; font-size: 19px; line-height: 1; color: #fff; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ol-line small { font-family: var(--ag-font); font-size: 10.5px; letter-spacing: 1.2px; color: var(--ag-muted); white-space: nowrap; }
 .ol-mode.is-full .ol-cells { grid-template-columns: repeat(4, 1fr); }
 .ol-cell { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 8px 4px; border-radius: 10px; background: rgba(255,255,255,.03); border: 1px solid var(--ag-line); min-width: 0; }
 .ol-cell b { font-family: var(--ag-display); font-weight: 400; font-size: 21px; line-height: 1; color: #fff; white-space: nowrap; }
@@ -4087,6 +4093,10 @@ html.app-look:not(.is-app) .ag-dock { backdrop-filter: none; -webkit-backdrop-fi
 .au-stage.is-pass .au-gavel { color: var(--ag-muted); font-size: 21px; }
 
 .au-bids { display: grid; grid-template-columns: 2fr 1fr; gap: 8px; }
+.au-bids.has-jump { grid-template-columns: 2fr 1fr 1fr; }
+/* +3: the second choice, a size down and outlined */
+.au-bid--jump { height: 64px; color: var(--ag-text) !important; background: color-mix(in srgb, var(--ag-a1) 14%, transparent) !important; box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--ag-a1) 60%, transparent) !important; }
+.au-bid--jump b { font-size: 22px; }
 .au-bid {
   height: 64px; border-radius: 14px; cursor: pointer;
   display: grid; place-content: center; gap: 0;

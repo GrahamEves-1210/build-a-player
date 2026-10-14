@@ -663,7 +663,7 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
               {!found && <button className="ag-btn ag-btn--ghost v1-cancel" onClick={cancel}>CANCEL</button>}
             </>
           )}
-          <OnlineRecord modes={['h2h']} title="YOUR 1V1" />
+          <OnlineRecord modes={[channelPrefix === 'bab' ? 'h2hB' : 'h2hN']} title="YOUR 1V1" />
         </div>
       </div>
     )
@@ -742,7 +742,7 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
             </div>
           </div>
         </div>}
-        {LOOK && <div className="vlh-online"><OnlineRecord modes={['h2h', 'bt2', 'bt']} title="YOUR BLACKTOP" /></div>}
+        {LOOK && <div className="vlh-online"><OnlineRecord modes={['h2hB', 'bt2', 'bt']} title="YOUR BLACKTOP" /></div>}
       </div>
 
       {screen === 'menu' && (

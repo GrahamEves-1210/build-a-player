@@ -30,7 +30,8 @@ export default function AppOnline({ sport = 'nfl', onClose }) {
         <ModeStats mode="compete" full />
         <ModeStats mode="bt2" full />
         <ModeStats mode="bt" full />
-        <ModeStats mode="h2h" full />
+        <ModeStats mode="h2hB" full />
+        <ModeStats mode="h2hN" full />
         <div className="ol-how">
           <span className="ag-eyebrow">WHAT MOVES YOUR RATING</span>
           <ul>

@@ -985,7 +985,9 @@ export default function BucketVersusResult({ myData, oppData, position, oppPosit
       setWinner(result)
       if (!resultFired.current) {
         resultFired.current = true
-        onResult?.(result === 'me' ? 'win' : 'loss')
+        // my line from the game's plays (the box score), for the 1v1 stats
+        const [mine] = boxStats(playsRef.current.slice(0, playIdx + 1), cur.myPts, cur.oppPts)
+        onResult?.(result === 'me' ? 'win' : 'loss', mine)
         // the winner's victory, on both screens (theirs looked up by account)
         if (LOOK) setTimeout(() => (result === 'me' ? victory() : victory({ of: oppData.cos || cosFor(oppData.uid) || {} })), 1200)
       }

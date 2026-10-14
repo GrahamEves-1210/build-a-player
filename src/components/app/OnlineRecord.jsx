@@ -16,7 +16,9 @@ export const MODES = {
   compete: { label: 'Compete', Icon: IconPodium, sub: '5-player pools' },
   bt: { label: 'Blacktop 3v3', Icon: IconHoop, sub: 'Squads · first to 11' },
   bt2: { label: 'Blacktop 2v2', Icon: IconHoop, sub: 'Guard and a big · first to 11' },
-  h2h: { label: 'Blacktop 1v1', Icon: IconVersus, sub: 'First to 11' },
+  h2h: { label: '1v1', Icon: IconVersus, sub: 'Football and basketball' },
+  h2hB: { label: 'Blacktop 1v1', Icon: IconVersus, sub: 'One on one · first to 11' },
+  h2hN: { label: 'Football 1v1', Icon: IconVersus, sub: 'Your season against theirs' },
 }
 
 // Last 10 results as dots: W/L, or a Compete place (1 gold, 2–3 green, 4–5 grey)
@@ -74,7 +76,7 @@ export function ModeStats({ mode, full = false }) {
   const p = useProgress()
   const st = p.stats ?? {}
   const M = MODES[mode]
-  let cells = [], form = [], streak = 0, best = 0
+  let cells = [], form = [], streak = 0, best = 0, line = null
   if (mode === 'compete') {
     const c = st.compete ?? {}
     streak = c.streak ?? 0; best = c.bestStreak ?? 0; form = c.recent ?? []
@@ -88,16 +90,28 @@ export function ModeStats({ mode, full = false }) {
     const g = (two ? b.games : st.btGames) ?? 0
     const w = (two ? b.wins : st.btWins) ?? 0
     streak = b.streak ?? 0; best = b.bestStreak ?? 0; form = b.recent ?? []
+    // the record, then the per-game line (points, boards, assists, steals, blocks)
+    line = [['PPG', avg(b.pts, g)], ['RPG', avg(b.reb, g)], ['APG', avg(b.ast, g)], ['SPG', avg(b.stl, g)], ['BPG', avg(b.blk, g)], ['FG %', b.fga ? `${pct(b.fgm, b.fga)}%` : '–']]
+    // (the best streak is in the header)
     cells = [
       ['RECORD', `${w}–${g - w}`], ['WIN %', g ? `${pct(w, g)}%` : '–'], ['MVPS', (two ? b.mvp : st.btMvp) ?? 0],
-      ...(full ? [['PPG', avg(b.pts, g)], ['APG', avg(b.ast, g)], ['RPG', avg(b.reb, g)], ['FG %', b.fga ? `${pct(b.fgm, b.fga)}%` : '–'], ['HIGH', b.highPts || '–'], ['STL / BLK', `${b.stl ?? 0} / ${b.blk ?? 0}`], ['BEST STREAK', b.bestStreak ?? 0]] : []),
+      ...(full ? [['HIGH', b.highPts || '–']] : []),
+    ]
+  } else if (mode === 'h2hB') {
+    const h = st.h2hB ?? {}, g = h.games ?? 0
+    streak = h.streak ?? 0; best = h.bestStreak ?? 0; form = h.recent ?? []
+    // one on one: no boards or assists to keep, just buckets, steals and blocks
+    line = [['PPG', avg(h.pts, g)], ['FG %', h.fga ? `${pct(h.fgm, h.fga)}%` : '–'], ['SPG', avg(h.stl, g)], ['BPG', avg(h.blk, g)]]
+    cells = [
+      ['RECORD', `${h.wins ?? 0}–${h.losses ?? 0}`], ['WIN %', h.played ? `${pct(h.wins ?? 0, h.played)}%` : '–'], ['HIGH', h.highPts || '–'],
+      ...(full ? [['FORFEITS', h.forfeits ?? 0]] : []),
     ]
   } else {
-    const h = st.h2h ?? {}
+    const h = (mode === 'h2hN' ? st.h2hN : st.h2h) ?? {}
     streak = h.streak ?? 0; best = h.bestStreak ?? 0; form = h.recent ?? []
     cells = [
       ['RECORD', `${h.wins ?? 0}–${h.losses ?? 0}`], ['WIN %', h.played ? `${pct(h.wins ?? 0, h.played)}%` : '–'], ['PLAYED', h.played ?? 0],
-      ...(full ? [['BEST STREAK', h.bestStreak ?? 0], ['FORFEITS', h.forfeits ?? 0]] : []),
+      ...(full ? [['FORFEITS', h.forfeits ?? 0]] : []),
     ]
   }
   return (
@@ -108,6 +122,7 @@ export function ModeStats({ mode, full = false }) {
         <Streak n={streak} best={best} />
       </div>
       <div className="ol-cells">{cells.map(([k, v]) => <span key={k} className="ol-cell"><b>{v}</b><small>{k}</small></span>)}</div>
+      {line && <div className="ol-line" aria-label="Per game">{line.map(([k, v]) => <span key={k}><b>{v}</b><small>{k}</small></span>)}</div>}
       <div className="ol-mode-foot"><small>{form?.length ? `LAST ${form.length}${mode === 'compete' ? ' · PLACE' : ''}` : 'LAST GAMES'}</small><Form items={form} mode={mode} /></div>
     </div>
   )

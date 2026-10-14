@@ -96,7 +96,7 @@ export function BlacktopHub({ onJoin3v3, onJoin2v2 = null, onPickup, onFriend, o
             <span className="bt-mode-txt"><b>1v1</b><small>Pick up a game against anyone, or play a friend.</small></span>
           </div>
           <OneOnOneOptions onPickup={onPickup} onFriend={onFriend} onJoinCode={onJoinCode} />
-          <ModeStats mode="h2h" />
+          <ModeStats mode="h2hB" />
         </section>
         {onJoin2v2 && (
           <section className="bt-mode ag-pop" style={{ '--d': '100ms' }}>
