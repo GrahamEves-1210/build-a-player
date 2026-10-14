@@ -852,6 +852,10 @@ html.is-app .spin-btn-wrap .spin-respin-split { flex: 1 1 auto; width: auto !imp
 html.is-app .spin-reset-circle { position: relative !important; top: auto !important; right: auto !important; transform: none; flex: 0 0 auto; }
 html.is-app .spin-respin-half { padding: 0 8px !important; white-space: nowrap; }
 html.is-app .spin-respin-split { min-width: 0; }
+/* the app's watch-a-video respin (SpinScreen) */
+html.is-app .spin-btn-wrap { position: relative; }
+html.is-app .spin-respin-earn { background: linear-gradient(135deg, #f5dc8a, #d4af37) !important; color: #1d1503 !important; }
+.spin-ad-note { position: absolute; left: 0; right: 0; bottom: calc(100% + 6px); margin: 0; padding: 6px 10px; border-radius: 10px; text-align: center; font-family: var(--ag-body, inherit); font-size: 12.5px; font-weight: 600; color: #fff; background: rgba(10,16,15,.92); z-index: 5; }
 html.is-app .spin-respin-half { min-width: 0; flex: 1 1 0; overflow: hidden; }
 html:is(.is-app, .app-look).is-bucket .spin-respin-half { font-size: 15px !important; letter-spacing: 1px !important; }
 

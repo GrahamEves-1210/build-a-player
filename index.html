@@ -194,7 +194,7 @@
           }) })
         }
         setTimeout(hideSplash, 2500)       // (the animation is slow to come: go anyway)
-        var FILL = 89                   // frames 0-89: the logo fills (the progress); 89-150: the finish
+        var FILL = 74                   // frames 0-74: the logo fills (the progress; full by 70); 74-150: the players swoop in (from ~80) once it's all loaded
         var target = 0.15, shown = 0, soft = 0, done = false, finishing = false, gone = false, anim = null
         var calm = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches
         // a milestone reached (0-1), and everything in

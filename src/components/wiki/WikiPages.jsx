@@ -85,7 +85,7 @@ function GameplayPage({ go }) {
         <li><b>Two reels.</b> The first reel stops on a team; the second stops on one of that team's players at your position. Teams already drawn in this build are skipped, so you see the whole league before anyone repeats.</li>
         <li><b>Chips.</b> The player's ratings appear as chips, one per attribute. Tap a chip to lock that rating into your build. The chip carries the player's name, number, team colours and headshot, which is why finished builds look the way they do.</li>
         <li><b>One attribute per spin.</b> Everything else about that player is gone once you pick. Football builds have <b>nine</b> slots; basketball builds have <b>ten</b>.</li>
-        <li><b>Respins.</b> Each spin gives you one team respin and one player respin (tight ends get two player respins in Current mode). A player respin never shows you the same player twice.</li>
+        <li><b>Respins.</b> Each spin gives you one team respin and one player respin (offensive line gets two). In the app, once your player respin is used you can watch a short video for one more, once per build. A player respin never shows you the same player twice.</li>
         <li><b>Bench players spin too.</b> Backups are in the pool with their real ratings, which is where the hard choices come from.</li>
       </ul>
 

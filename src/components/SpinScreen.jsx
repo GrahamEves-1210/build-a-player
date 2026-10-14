@@ -6,8 +6,10 @@ import { valToGrade, HEADSHOT_BASE } from '../utils/simulation'
 import HEADSHOTS from '../data/headshots.json'
 import QBAvatar from './QBAvatar'
 import { track } from '../lib/track'
-import { seededShuffle } from '../lib/progress'
+import { seededShuffle, isPro } from '../lib/progress'
 import { rampAdd, rampDestroyType } from '../lib/ads'
+import { IS_APP } from '../lib/platform'
+import { showRewarded } from '../lib/rewardedAd'
 
 function fmtHeight(inches) {
   return `${Math.floor(inches / 12)}'${inches % 12}"`
@@ -288,8 +290,9 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
   // live competitive modes (1v1, Compete pools): the grades stay hidden, no toggle
   const forceHide = isVersusMode || gradesHidden
   const pLabel = playerLabel ?? (isTE ? 'TE' : isWR ? 'WR' : isRB ? 'RB' : 'QB')
-  // TE (current mode) and OL get a 2nd player respin; All-Time TE gets just 1
-  const maxPlayerRespin = (isTE && !isAllTime) || isOL ? 2 : 1
+  // one player respin (OL gets a 2nd); the app can earn one more with a video
+  const [qbRespinBonus, setQbRespinBonus] = useState(() => savedResult?.qbRespinBonus ?? 0)
+  const maxPlayerRespin = (isOL ? 2 : 1) + qbRespinBonus
   const [phase, setPhase]               = useState(() => savedResult?.selectedQB ? 'done' : 'idle')
   const [selectedTeam, setSelectedTeam] = useState(() => savedResult?.selectedTeam ?? null)
   const [selectedQB,   setSelectedQB]   = useState(() => savedResult?.selectedQB ?? null)
@@ -344,10 +347,10 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
 
   useEffect(() => {
     if (!onSaveResult) return
-    if (phase === 'done' && selectedQB) onSaveResult({ selectedTeam, selectedQB, qbRespinUsed, teamRespinUsed })
+    if (phase === 'done' && selectedQB) onSaveResult({ selectedTeam, selectedQB, qbRespinUsed, teamRespinUsed, qbRespinBonus })
     // between spins the build's re-spins used still count (a reload doesn't hand them back)
-    else if (phase === 'idle') onSaveResult(qbRespinUsed || teamRespinUsed ? { qbRespinUsed, teamRespinUsed } : null)
-  }, [phase, selectedTeam, selectedQB, qbRespinUsed, teamRespinUsed])
+    else if (phase === 'idle') onSaveResult(qbRespinUsed || teamRespinUsed || qbRespinBonus ? { qbRespinUsed, teamRespinUsed, qbRespinBonus } : null)
+  }, [phase, selectedTeam, selectedQB, qbRespinUsed, teamRespinUsed, qbRespinBonus])
 
   useEffect(() => {
     if (onPhaseChange) onPhaseChange(phase)
@@ -360,6 +363,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
     keyRef.current = gameKey
     setQbRespinUsed(0)
     setTeamRespinUsed(0)
+    setQbRespinBonus(0)
   }, [gameKey])
 
   // Team reel calls this when it naturally halts
@@ -420,6 +424,22 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
     setSelectedQB(null)
     setPhase('qb')
   }, [selectedQB])
+
+  // Out of player respins (app only, never in a live competitive mode): a video
+  // earns one more, once a build. Pro: no video, it's just there for the tap.
+  const [adBusy, setAdBusy] = useState(false)
+  const [adNote, setAdNote] = useState('')
+  const canEarn = IS_APP && !isVersusMode && !seedPlan && qbRespinBonus === 0
+  const earnRespin = async () => {
+    if (adBusy) return
+    if (isPro()) { setQbRespinBonus(1); return }
+    setAdBusy(true); setAdNote('')
+    const r = await showRewarded()
+    setAdBusy(false)
+    if (r === 'rewarded') setQbRespinBonus(1)
+    else setAdNote(r === 'closed' ? 'Watch to the end for the respin.' : 'No video right now. Try again in a bit.')
+    setTimeout(() => setAdNote(''), 3500)
+  }
 
   const handleTeamRespin = useCallback(() => {
     clearAll()
@@ -564,6 +584,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
           </div>
 
           <div className="spin-btn-wrap">
+            {adNote && <p className="spin-ad-note" role="status">{adNote}</p>}
             {isDone && !complete ? (
               <div className="spin-respin-split">
                 <button
@@ -580,7 +601,11 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
                   RESPIN TEAM <span className="spin-btn-badge">{Math.max(0, 1 - teamRespinUsed)}</span>
                 </button>
                 <div className="spin-respin-divider" />
-                <button
+                {qbRespinUsed >= maxPlayerRespin && canEarn ? (
+                  <button className="spin-respin-half spin-respin-player spin-respin-earn" onClick={earnRespin} disabled={adBusy}>
+                    {adBusy ? 'LOADING…' : isPro() ? `RESPIN ${pLabel}` : 'WATCH VIDEO'} <span className="spin-btn-badge">+1</span>
+                  </button>
+                ) : <button
                   className={`spin-respin-half spin-respin-player${qbRespinUsed >= maxPlayerRespin ? ' spin-respin-used' : ''}`}
                   onClick={qbRespinUsed < maxPlayerRespin ? handleQBRespin : undefined}
                   disabled={qbRespinUsed >= maxPlayerRespin}
@@ -592,7 +617,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
                   }}
                 >
                   RESPIN {pLabel} <span className="spin-btn-badge">{Math.max(0, maxPlayerRespin - qbRespinUsed)}</span>
-                </button>
+                </button>}
               </div>
             ) : (
               <button
