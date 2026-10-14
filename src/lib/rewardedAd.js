@@ -12,6 +12,13 @@ const AD_UNIT_APP = APP_PLATFORM === 'ios' ? import.meta.env.VITE_ADMOB_REWARDED
 
 export const rewardedReady = () => !!(IS_APP ? AD_UNIT_APP : AD_UNIT_WEB)
 
+// One video for an in-game reward (respin, revive, retry...): { ok } when it was
+// watched to the end, else the line to show the player
+export async function watchFor() {
+  const r = await showRewarded()
+  return r === 'rewarded' ? { ok: true } : { ok: false, note: r === 'closed' ? 'Watch to the end to get it.' : 'No video right now. Try again in a bit.' }
+}
+
 export function showRewarded() {
   if (!rewardedReady()) return Promise.resolve('unavailable')
   return IS_APP ? appRewarded() : webRewarded()

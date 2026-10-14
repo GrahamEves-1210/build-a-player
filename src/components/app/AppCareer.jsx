@@ -230,7 +230,7 @@ function Draft({ c, setCareer }) {
       <div className={`ag-screen ${S.screen} cr`}>
         {head(`THE COMBINE · ${POS_LABEL[c.pos]}`, allDone ? 'Your numbers' : next.label)}
         <div className="ag-screen-body">
-          {!allDone && <MiniGame key={next.id} game={next.id} build={c.build} seed={`${c.seed}-cb-${next.id}`} onDone={res => setCareer(recordCombine(c, next.id, res.score, res.raw))} />}
+          {!allDone && <MiniGame retry key={next.id} game={next.id} build={c.build} seed={`${c.seed}-cb-${next.id}`} onDone={res => setCareer(recordCombine(c, next.id, res.score, res.raw))} />}
           <div className="cr-drills ag-pop" style={{ '--d': '60ms' }}>
             {c.draft.combine.map((d, i) => (
               <div key={d.id} className={`cr-drill${d.score == null ? ' is-wait' : ''}`} style={{ '--d': `${80 + i * 70}ms` }}>
@@ -772,7 +772,7 @@ function Camp({ c, setCareer }) {
         ? <p className="cr-note">{(done.won ?? done.bonus) ? `Won the drill in front of the coaches: +${done.legacy ?? 0} legacy${done.bonus ? ', and +1 development point.' : '. No development point this time.'}` : 'Lost the drill. Nothing this year.'}</p>
         : <>
             <p className="cr-note">One hard drill in front of the coaching staff. Win it for +{CAMP_LEGACY} legacy and a shot at a development point (the cleaner the win, the better the shot).</p>
-            <MiniGame key={game} game={game} build={c.build} hard seed={`${c.seed}-camp-${c.year}`} onDone={res => setCareer(campDrill(c, res.score, game))} />
+            <MiniGame retry key={game} game={game} build={c.build} hard seed={`${c.seed}-camp-${c.year}`} onDone={res => setCareer(campDrill(c, res.score, game))} />
           </>}
       {c.dev.points > 0 && <div className="cr-devnote"><IconStar size={14} /> <b>{c.dev.points}</b> development {c.dev.points === 1 ? 'point' : 'points'}: tap a trait on the player above to raise it.</div>}
     </div>
@@ -952,7 +952,7 @@ function Playoffs({ c, setCareer, onBook }) {
   if (step === 'game') return (
     <div className="cr-po">
       <div className="cr-po-head"><span className="ag-eyebrow">{rd.name.toUpperCase()} · vs {rd.oppName.toUpperCase()}</span></div>
-      <MiniGame key={`${po.idx}-${game}`} game={game} build={c.build} seed={`${c.seed}-${c.year}-${po.idx}`} onDone={res => { setCareer(playoffRound(c, res.score, game)); setStep('result') }} />
+      <MiniGame retry key={`${po.idx}-${game}`} game={game} build={c.build} seed={`${c.seed}-${c.year}-${po.idx}`} onDone={res => { setCareer(playoffRound(c, res.score, game)); setStep('result') }} />
     </div>
   )
   return (

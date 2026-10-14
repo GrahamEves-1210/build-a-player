@@ -6,10 +6,10 @@ import { valToGrade, HEADSHOT_BASE } from '../utils/simulation'
 import HEADSHOTS from '../data/headshots.json'
 import QBAvatar from './QBAvatar'
 import { track } from '../lib/track'
-import { seededShuffle, isPro } from '../lib/progress'
+import { seededShuffle } from '../lib/progress'
 import { rampAdd, rampDestroyType } from '../lib/ads'
 import { IS_APP } from '../lib/platform'
-import { showRewarded } from '../lib/rewardedAd'
+import { watchFor } from '../lib/rewardedAd'
 
 function fmtHeight(inches) {
   return `${Math.floor(inches / 12)}'${inches % 12}"`
@@ -426,18 +426,17 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
   }, [selectedQB])
 
   // Out of player respins (app only, never in a live competitive mode): a video
-  // earns one more, once a build. Pro: no video, it's just there for the tap.
+  // earns one more, once a build
   const [adBusy, setAdBusy] = useState(false)
   const [adNote, setAdNote] = useState('')
   const canEarn = IS_APP && !isVersusMode && !seedPlan && qbRespinBonus === 0
   const earnRespin = async () => {
     if (adBusy) return
-    if (isPro()) { setQbRespinBonus(1); return }
     setAdBusy(true); setAdNote('')
-    const r = await showRewarded()
+    const r = await watchFor()
     setAdBusy(false)
-    if (r === 'rewarded') setQbRespinBonus(1)
-    else setAdNote(r === 'closed' ? 'Watch to the end for the respin.' : 'No video right now. Try again in a bit.')
+    if (r.ok) setQbRespinBonus(1)
+    else setAdNote(r.note)
     setTimeout(() => setAdNote(''), 3500)
   }
 
@@ -603,7 +602,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
                 <div className="spin-respin-divider" />
                 {qbRespinUsed >= maxPlayerRespin && canEarn ? (
                   <button className="spin-respin-half spin-respin-player spin-respin-earn" onClick={earnRespin} disabled={adBusy}>
-                    {adBusy ? 'LOADING…' : isPro() ? `RESPIN ${pLabel}` : 'WATCH VIDEO'} <span className="spin-btn-badge">+1</span>
+                    {adBusy ? 'LOADING…' : 'WATCH VIDEO'} <span className="spin-btn-badge">+1</span>
                   </button>
                 ) : <button
                   className={`spin-respin-half spin-respin-player${qbRespinUsed >= maxPlayerRespin ? ' spin-respin-used' : ''}`}

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { APP_STORE_URL } from '../../lib/storeLinks'
 import { POS_OPTIONS, AvatarTrio, StackedSilhouette, SPLASH_ATTRS } from '../SplashScreen'
 import { getUsername } from '../../lib/discord'
-import { useProgress, fetchPlayersOfDay, cachedPlayersOfDay, myToday } from '../../lib/progress'
+import { useProgress, fetchPlayersOfDay, cachedPlayersOfDay, myToday, POTD_COINS } from '../../lib/progress'
 import { IconCrown, IconBolt, IconClipboard, IconCoin, IconLock, IconProfile, IconArrow, IconGear, IconPodium, IconFootball, IconBasketball, IconPlay } from './icons'
 import { sfx } from '../../lib/juice'
 import SoundToggle from './SoundToggle'
@@ -236,6 +236,7 @@ function PlayersOfDay() {
         <span className="ag-potd-titles">
           <span className="ag-eyebrow">TODAY · EVERY MODE</span>
           <b className="ag-potd-title">PLAYERS OF THE DAY</b>
+          <small className="ag-potd-pay">Top 3 at midnight ET win {POTD_COINS.map(n => n.toLocaleString()).join(' / ')} coins</small>
         </span>
       </div>
       {rows.length ? (
@@ -441,8 +442,8 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
             </>
           )}
         </div>
+        <PlayersOfDay />
       </div>
-      <PlayersOfDay />
       {/* website: get the app (the official badge; hidden until the App Store link is set) */}
       {!IS_APP && APP_STORE_URL && (
         <div className="ag-getapp">

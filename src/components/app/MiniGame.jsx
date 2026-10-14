@@ -3,6 +3,8 @@ import { GAMES, traitValue, zoneWidth, powerZone, reactMs, lanesMs, callMs, rout
 import { valToGrade } from '../../utils/simulation'
 import { seeded } from '../../lib/rng'
 import { sfx, haptic } from '../../lib/juice'
+import { IS_APP } from '../../lib/platform'
+import WatchVideo from './WatchVideo'
 
 // The quick skill games (lib/minigames.js). <MiniGame game build seed onDone />
 // shows the card, runs the game and reports { score, hit }. A test can finish
@@ -38,10 +40,13 @@ function useKeys(map, on = true) {
 }
 const tri = t => { const p = t % 2; return p <= 1 ? p : 2 - p }     // 0→1→0 sweep
 
-export default function MiniGame({ game, build, seed = 'x', onDone, autoStart = false, hard = false }) {
+// retry (Career, app): a miss can be played again for a video, once
+export default function MiniGame({ game, build, seed = 'x', onDone, autoStart = false, hard = false, retry = false }) {
   const def = GAMES[game]
   const [stage, setStage] = useState(autoStart ? 'play' : 'intro')
   const [result, setResult] = useState(null)
+  const [tries, setTries] = useState(0)          // replays bought with a video (one at most)
+  const offerRetry = retry && IS_APP && tries === 0
   // hard (training camp): played as if the trait were a notch or two lower (70%), so a
   // maxed build still has to earn it. The header shows the real grade, never the handicap.
   const real = traitValue(game, build)
@@ -52,6 +57,8 @@ export default function MiniGame({ game, build, seed = 'x', onDone, autoStart = 
     const out = { score: clamp(r.score, 0, 1), hit: perfect || (hard ? r.score >= 0.75 : r.hit ?? r.score >= 0.5), note: r.note ?? null, raw: r.raw ?? null, out: !!r.out }
     setResult(out); setStage('done')
     sfx(out.hit ? 'claim' : 'deny'); haptic(out.hit ? 'success' : 'heavy')
+    // a miss that can still be replayed waits for the player's call
+    if (!out.hit && offerRetry) return
     setTimeout(() => onDone?.(out), 900)
   }
   // a test hook for the dev server only (a live build has no way to force a score)
@@ -67,11 +74,17 @@ export default function MiniGame({ game, build, seed = 'x', onDone, autoStart = 
           <button className="ag-btn ag-btn--gold" onClick={() => { setStage('play'); sfx('whistle') }}>READY</button>
         </div>
       )}
-      {stage === 'play' && <Game def={def} v={v} seed={seed} build={build} onDone={done} />}
+      {stage === 'play' && <Game key={tries} def={def} v={v} seed={tries ? `${seed}-again` : seed} build={build} onDone={done} />}
       {stage === 'done' && result && (
         <div className="mg-result">
           <b>{result.hit ? (result.score >= 0.85 ? 'ELITE' : 'GOOD') : result.out ? 'OUT OF TIME' : 'NO GOOD'}</b>
           {result.note && <small>{result.note}</small>}
+          {!result.hit && offerRetry && (
+            <div className="mg-retry">
+              <WatchVideo label="WATCH VIDEO · TRY AGAIN" sub="One more shot at it. Once." onReward={() => { setTries(1); setResult(null); setStage('play') }} />
+              <button className="ag-btn ag-btn--ghost" onClick={() => onDone?.(result)}>TAKE THE RESULT</button>
+            </div>
+          )}
         </div>
       )}
     </div>

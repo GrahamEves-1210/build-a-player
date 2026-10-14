@@ -251,7 +251,7 @@ export const rewardText = (xp, coins) => [xp && xpOpen() ? `+${xp} XP` : '', coi
 // the XP earned today, from anything, and the games finished
 function tally(xp = 0, game = 0) {
   const k = dayKey()
-  if (S.today?.d !== k) S.today = { d: k, xp: 0, g: 0 }
+  if (S.today?.d !== k) { if (S.today?.xp) S.prevDay = S.today; S.today = { d: k, xp: 0, g: 0 } }
   S.today.xp += Math.max(0, Math.round(xp || 0))
   S.today.g += game
 }
@@ -298,6 +298,22 @@ export function buyFreeze() {
   emit()
   return { ok: true }
 }
+// A broken streak, today only, once a week (app): a video puts it back as if no day was missed
+export const RESTORE_EVERY = 7 * 86400000
+export function streakLost() {
+  const st = S.streak, l = st.lost
+  if (!l || l.day !== dayKey() || st.count > 1 || (st.restoredAt && Date.now() - st.restoredAt < RESTORE_EVERY)) return null
+  return l
+}
+export function restoreStreak() {
+  const st = S.streak, l = streakLost()
+  if (!l) return false
+  st.count = l.count + 1; st.start = l.start; st.claimed = { ...(l.claimed || {}) }
+  st.best = Math.max(st.best, st.count)
+  st.lost = null; st.restoredAt = Date.now()
+  emit()
+  return true
+}
 function rollDay() {
   const k = dayKey()
   const st = S.streak
@@ -307,11 +323,15 @@ function rollDay() {
     const missed = [1, 2].find(n => st.last === dayKey(-(n + 1))) ?? 0
     const saved = missed && st.count > 0 && (st.freezes ?? 0) >= missed ? missed : 0
     if (st.last === dayKey(-1) || saved) { st.count += 1; if (saved) st.freezes -= saved }
-    else { st.count = 1; st.start = k; st.claimed = {} }
+    else {
+      // a real streak just broke: remember it for today, so a video can bring it back (restoreStreak)
+      st.lost = st.count >= 3 ? { day: k, count: st.count, start: st.start, claimed: st.claimed } : null
+      st.count = 1; st.start = k; st.claimed = {}
+    }
     st.last = k
     st.best = Math.max(st.best, st.count)
     S.bonusXp += LOGIN_XP; tally(LOGIN_XP)
-    if (uid) toast({ kind: 'streak', title: st.count > 1 ? `${st.count}-DAY STREAK` : 'DAILY LOGIN', sub: saved ? `Streak freeze used${saved > 1 ? ' ×2' : ''} · +${LOGIN_XP} XP` : `+${LOGIN_XP} XP` })
+    if (uid) toast({ kind: 'streak', title: st.count > 1 ? `${st.count}-DAY STREAK` : st.lost && IS_APP ? `${st.lost.count}-DAY STREAK BROKE` : 'DAILY LOGIN', sub: saved ? `Streak freeze used${saved > 1 ? ' ×2' : ''} · +${LOGIN_XP} XP` : st.lost && IS_APP && streakLost() ? 'Bring it back on the Daily tab' : `+${LOGIN_XP} XP` })
     changed = true
   }
   if (S.day?.key !== k) {
@@ -436,6 +456,39 @@ export async function fetchPlayersOfDay(key = dayKey()) {
     .order('cos->today->xp', { ascending: false }).limit(3)
   if (error) return { rows: [], error: true }
   return { rows: (data ?? []).filter(r => r.username && r.cos?.today?.xp > 0) }
+}
+// Yesterday's board, for the payout: a player's tally for that day is either still
+// "today" on their profile (they haven't played since) or moved to "yday"
+export const POTD_COINS = [500, 300, 200]
+export async function fetchPlayersOfDayFor(day) {
+  if (!supabase) return { rows: [], error: true }
+  const q = f => supabase.from('accounts').select('id,username,cos').eq(`cos->${f}->>d`, day).order(`cos->${f}->xp`, { ascending: false }).limit(10)
+  const [a, b] = await Promise.all([q('today'), q('yday')])
+  if (a.error && b.error) return { rows: [], error: true }
+  const byId = new Map()
+  for (const [r, f] of [...(a.data ?? []).map(r => [r, 'today']), ...(b.data ?? []).map(r => [r, 'yday'])]) {
+    const t = r.cos?.[f]
+    if (r.username && t?.d === day && t.xp > 0 && !byId.has(r.id)) byId.set(r.id, { ...r, day: t })
+  }
+  return { rows: [...byId.values()].sort((x, y) => y.day.xp - x.day.xp || x.id.localeCompare(y.id)).slice(0, 3) }
+}
+// The morning after: a top-3 finish yesterday pays once
+let potdChecking = false
+async function payPlayersOfDay() {
+  const y = dayKey(-1)
+  if (!uid || !supabase || S.potdPaid === y || potdChecking) return
+  potdChecking = true
+  try {
+    const r = await fetchPlayersOfDayFor(y)
+    if (r.error || !uid) return
+    S.potdPaid = y
+    const i = r.rows.findIndex(x => x.id === uid)
+    if (i >= 0) {
+      earn(POTD_COINS[i], null, true)
+      toast({ kind: 'coins', title: `PLAYER OF THE DAY · ${['1ST', '2ND', '3RD'][i]}`, sub: `+${POTD_COINS[i]} coins for yesterday` })
+    }
+    emit()
+  } finally { potdChecking = false }
 }
 // fetched once behind the loading screen, so home opens with the board already in
 let potd = null
@@ -720,7 +773,7 @@ function switchUser(u) {
   const synced = sync()
   // coins bought on the website land after the wallet is pulled (so a newer remote wallet can't overwrite them)
   const pulled = pullWallet(id)
-  pulled.then(() => claimCoinPurchases())
+  pulled.then(() => { claimCoinPurchases(); payPlayersOfDay() })
   Promise.allSettled([synced, pulled]).then(() => settle())
   if (IS_APP) import('./iap').then(m => m.iapUser(id)).catch(() => {})
   readyFns.splice(0).forEach(fn => setTimeout(fn, 0))
@@ -745,6 +798,7 @@ export function initProgress() {
   document.addEventListener('visibilitychange', () => {
     if (document.hidden || !loaded) return
     if (rollDay()) emit()
+    payPlayersOfDay()
     sync()
   })
   if (!supabase) { switchUser(null); return }
@@ -996,8 +1050,8 @@ let cosSent = ''
 function pushCos(id = uid) {
   if (!supabase || !id) return
   const o = S.stats?.online
-  const today = S.today?.d === dayKey() ? S.today : null
-  const cos = { ...myCosmetics(), level: levelInfo(totalXp()).level, rating: o?.played ? o.rating : null, today }, key = id + JSON.stringify(cos)
+  // today's tally and the day before (yesterday's board pays out the morning after: payPlayersOfDay)
+  const cos = { ...myCosmetics(), level: levelInfo(totalXp()).level, rating: o?.played ? o.rating : null, today: S.today ?? null, yday: S.prevDay ?? null }, key = id + JSON.stringify(cos)
   if (key === cosSent) return
   cosSent = key
   supabase.from('accounts').update({ cos }).eq('id', id).then(({ error }) => { if (error) cosSent = '' }, () => { cosSent = '' })

@@ -13,6 +13,11 @@ import { BlacktopChat } from './AppBlacktop'
 import BlacktopCourt from './BlacktopCourt'
 import Silhouette from '../Silhouette'
 import { IconClose, IconArrow, IconCheck, IconFlame, IconChat, IconStar, IconProfile, IconTrophy } from './icons'
+import WatchVideo from './WatchVideo'
+import { IS_APP } from '../../lib/platform'
+
+// out of lives on a solo road (app): one video brings one life back, once a run
+const canRevive = run => IS_APP && !!run?.over && !run.logged && !run.revived && run.mode !== 'duo'
 
 // TAKEOVER — the road across the map. The run (lib/takeover.js) is plain data
 // saved on the device; this screen walks it: the map → the city's player → the
@@ -88,7 +93,8 @@ export default function AppTakeover({ sport, run, setRun, user, pools, attrMap, 
       window.dispatchEvent(new CustomEvent('bap:takeover', { detail: { city: true } }))
       if (next.justWon) { window.dispatchEvent(new CustomEvent('bap:xp', { detail: { xp: XP_RUN, coins: COINS_RUN, label: 'TAKEOVER complete' } })); window.dispatchEvent(new CustomEvent('bap:takeover', { detail: { run: true } })) }
     }
-    setRun(next.over ? logRun(next, calcOvr(next.build)) : next)
+    // (a run that can still be revived isn't booked until the player passes on it)
+    setRun(next.over && !canRevive(next) ? logRun(next, calcOvr(next.build)) : next)
     if (run.mode === 'duo') duo.sync(next)
     setScreen(won ? 'reward' : next.over ? 'over' : 'map')
   }
@@ -290,8 +296,12 @@ export default function AppTakeover({ sport, run, setRun, user, pools, attrMap, 
             <div className="tk-over-ovr"><b>{ovr}</b> FINAL OVR</div>
           </div>
           <UsMap cities={cities} run={run} here={here} next={null} delay="100ms" />
-          <button className="ag-btn ag-pop" style={{ '--d': '160ms' }} onClick={() => { clearRun(sport, run.uid); setRun(null); onNewBuild() }}>NEW BUILD · HIT THE ROAD AGAIN</button>
-          <button className="ag-btn ag-btn--ghost" onClick={() => { clearRun(sport, run.uid); setRun(null); onExit() }}>HOME</button>
+          {canRevive(run) && (
+            <WatchVideo className="ag-pop tk-revive" label="ONE MORE LIFE" sub="Watch a video and keep the road going. Once a run."
+              onReward={() => { setRun(r => ({ ...r, over: false, lives: 1, revived: true })); setScreen('map') }} />
+          )}
+          <button className="ag-btn ag-pop" style={{ '--d': '160ms' }} onClick={() => { logRun(run, ovr); clearRun(sport, run.uid); setRun(null); onNewBuild() }}>NEW BUILD · HIT THE ROAD AGAIN</button>
+          <button className="ag-btn ag-btn--ghost" onClick={() => { logRun(run, ovr); clearRun(sport, run.uid); setRun(null); onExit() }}>HOME</button>
         </div>
       </div>
     )

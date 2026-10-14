@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
-import { useProgress, dailyState, fetchDailyBoard, msToReset, claimMission, claimStreak, missionDef, STREAK_REWARDS, SPOTLIGHTS, buyFreeze, FREEZE_PRICE, FREEZE_MAX } from '../../lib/progress'
+import { useProgress, dailyState, fetchDailyBoard, msToReset, claimMission, claimStreak, missionDef, STREAK_REWARDS, SPOTLIGHTS, buyFreeze, FREEZE_PRICE, FREEZE_MAX, streakLost, restoreStreak } from '../../lib/progress'
 import { sfx, haptic } from '../../lib/juice'
+import { IS_APP } from '../../lib/platform'
+import WatchVideo from './WatchVideo'
 import { NameTag, AvatarBadge } from './NameTag'
 import { IconFlame, IconTarget, IconCheck, IconGift, IconLock, IconClose, IconCoin, IconArrow, IconShield } from './icons'
 
@@ -46,6 +48,10 @@ function Streak({ p }) {
         </span>
         <span className="ag-streak-best">BEST {st.best}</span>
       </div>
+      {IS_APP && p.signedIn && streakLost() && (
+        <WatchVideo className="ag-streak-restore" label={`RESTORE YOUR ${streakLost().count}-DAY STREAK`} sub="It broke. Watch a video and it's back, as if you never missed. Once a week."
+          onReward={() => restoreStreak()} />
+      )}
       <Freeze p={p} />
       <div className="ag-streak-track">
         {STREAK_REWARDS.map(r => {

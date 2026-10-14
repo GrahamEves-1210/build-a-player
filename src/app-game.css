@@ -2825,14 +2825,15 @@ html.is-app .ag-sandbox { grid-column: 1 / -1; justify-self: stretch; }
     max-width: 1200px; margin: 0 auto; padding: 18px 28px 8px;
     display: grid;
     grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr);
-    grid-template-rows: auto auto auto auto auto 1fr;
+    grid-template-rows: auto auto auto auto auto 1fr auto;
     grid-template-areas:
       "hud    hud"
       "stage  brand"
       "stage  sport"
       "stage  pos"
       "stage  modes"
-      "stage  extras";
+      "stage  extras"
+      "stage  potd";
     column-gap: 26px; row-gap: 14px;
   }
   html.app-look .ag-hud { grid-area: hud; padding: 0; }
@@ -2848,6 +2849,7 @@ html.is-app .ag-sandbox { grid-column: 1 / -1; justify-self: stretch; }
   html.app-look .ag-modes { grid-area: modes; padding: 0; }
   html.app-look .ag-mode { min-height: 128px; }
   html.app-look .ag-extras { grid-area: extras; align-content: start; padding: 0; }
+  html.app-look .ag-potd { grid-area: potd; margin: 6px 0 0; align-self: start; }   /* Players of the Day: under the modes, beside the (sticky) stage */
   /* the stage stays in view beside the longer card column, sized to the screen */
   html.app-look .ag-stage { grid-area: stage; align-self: start; position: sticky; top: 16px; height: clamp(440px, calc(100dvh - var(--app-bottom) - 96px), 660px); min-height: 0; margin: 0; }
   /* the figure is built at phone size; scale it up from its feet */
@@ -4696,6 +4698,7 @@ html.is-app { --drop-chrome: calc(352px + env(safe-area-inset-top) + env(safe-ar
 .ag-potd-crown { display: grid; place-items: center; width: 34px; height: 34px; flex: none; border-radius: 10px; color: #1d1503; background: linear-gradient(135deg, #f5dc8a, #d4af37); box-shadow: 0 4px 12px rgba(212,175,55,.3); }
 .ag-potd-titles { display: grid; gap: 1px; }
 .ag-potd-title { font-family: var(--ag-display); font-weight: 400; font-size: 22px; line-height: 1; letter-spacing: .4px; color: #fff; }
+.ag-potd-pay { font-family: var(--ag-body); font-size: 11.5px; font-weight: 600; color: var(--ag-gold-hi); }
 .ag-potd-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
 .ag-potd-row { display: grid; grid-template-columns: 22px auto minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 12px; background: rgba(255,255,255,.035); border: 1px solid var(--ag-line); }
 .ag-potd-row.is-1 { border-color: rgba(212,175,55,.6); background: linear-gradient(90deg, rgba(212,175,55,.16), transparent 75%); }
@@ -4823,3 +4826,17 @@ html:is(.is-app, .app-look).no-dock { --app-bottom: calc(var(--safe-bottom) + 12
 .cr-run-chips i.is-rank { background: rgba(94,219,216,.14); color: #bfe9d6; }
 .cr-run-chips i.is-sb { background: rgba(232,121,249,.16); color: #f0abfc; }
 .cr-run-meta { grid-area: meta; font-family: var(--ag-body); font-size: 12px; font-weight: 600; color: var(--ag-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Watch a video for a reward (WatchVideo.jsx): Takeover revive, minigame retry, streak restore */
+.wv { display: grid; gap: 6px; }
+.wv-btn { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 10px; width: 100%; padding: 10px 12px; border-radius: 14px; border: 0; cursor: pointer; text-align: left; color: #1d1503; background: linear-gradient(135deg, #f5dc8a, #d4af37); box-shadow: 0 6px 16px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.45); transition: transform .1s; }
+.wv-btn:active { transform: scale(.98); }
+.wv-btn:disabled { cursor: default; opacity: .75; }
+.wv-btn:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.wv-ico { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; background: rgba(29,21,3,.14); }
+.wv-txt { display: grid; gap: 1px; min-width: 0; }
+.wv-txt b { font-family: var(--ag-display); font-weight: 400; font-size: 19px; line-height: 1.05; letter-spacing: .3px; }
+.wv-txt small { font-family: var(--ag-body); font-size: 12px; font-weight: 600; opacity: .75; }
+.wv-note { margin: 0; text-align: center; font-family: var(--ag-body); font-size: 12.5px; font-weight: 600; color: var(--ag-muted); }
+.mg-retry { display: grid; gap: 8px; margin-top: 10px; width: 100%; }
+.ag-streak-restore { margin: 2px 0 10px; }
