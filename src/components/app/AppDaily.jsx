@@ -106,14 +106,14 @@ function Challenge({ p, sport }) {
         {board?.rows.slice(0, 10).map((r, i) => (
           <div key={r.user_id} className={`ag-board-row${r.user_id === p.user?.id ? ' is-me' : ''}`}>
             <span className={`ag-board-rank ag-board-rank--${i + 1}`}>{i + 1}</span>
-            <span className="ag-board-name"><AvatarBadge name={r.username} uid={r.user_id} size={24} /><NameTag name={r.username || 'Player'} uid={r.user_id} plate={false} /></span>
+            <span className="ag-board-name"><AvatarBadge name={r.username} uid={r.user_id} size={24} /><NameTag name={r.username || 'Player'} uid={r.user_id} /></span>
             <span className="ag-board-ovr">{r.ovr}</span>
           </div>
         ))}
         {mine >= 10 && (
           <div className="ag-board-row is-me">
             <span className="ag-board-rank">{mine + 1}</span>
-            <span className="ag-board-name"><AvatarBadge name={board.rows[mine].username} self size={24} /><NameTag name={board.rows[mine].username} self plate={false} /></span>
+            <span className="ag-board-name"><AvatarBadge name={board.rows[mine].username} self size={24} /><NameTag name={board.rows[mine].username} self /></span>
             <span className="ag-board-ovr">{board.rows[mine].ovr}</span>
           </div>
         )}

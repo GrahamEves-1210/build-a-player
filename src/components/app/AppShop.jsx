@@ -199,7 +199,7 @@ function DefaultCard({ slot, equipped, onPick, name }) {
   return (
     <button className={`sh-card is-owned${equipped ? ' is-equipped' : ''}`} style={{ '--rar': '#6ee7b7' }} onClick={onPick}>
       <span className="sh-card-stage">
-        {slot === 'avatar' ? <AvatarBadge name={name} size={58} cos={{}} /> : slot === 'plate' ? <NameTag name={name} cos={{}} className="ip-name" /> : <span className="ip-name"><NameTag name={name} cos={{}} plate={false} /></span>}
+        {slot === 'avatar' ? <AvatarBadge name={name} size={58} cos={{}} /> : slot === 'plate' ? <NameTag name={name} cos={{}} className="ip-name" /> : <span className="ip-name"><NameTag name={name} cos={{}} /></span>}
       </span>
       <span className="sh-card-body"><span className="sh-card-name">{label}</span><span className="sh-card-meta"><span className="sh-rar">Default</span><span className="sh-owned">{equipped ? 'EQUIPPED' : 'FREE'}</span></span></span>
     </button>
@@ -402,7 +402,7 @@ export default function AppShop({ onClose, tab: initialTab = 'featured' }) {
           <div className="sh-section-head"><span className="sh-section-title">{SLOTS.find(s => s.id === tab)?.label.toUpperCase()}</span><span className="sh-section-note">{BLURB[tab]}</span></div>
           <div className="sh-grid">
             {DEFAULTS[tab] === null && <DefaultCard slot={tab} equipped={!p.equip?.[tab]} onPick={() => pickDefault(tab)} name={name} />}
-            {itemsFor(tab).sort((a, b) => (a.pro - b.pro) || (!!a.ach - !!b.ach) || (a.rarity - b.rarity) || (a.price - b.price)).map((i, k) => (
+            {(tab === 'court' ? itemsFor(tab) : itemsFor(tab).sort((a, b) => (a.pro - b.pro) || (!!a.ach - !!b.ach) || (a.rarity - b.rarity) || (a.price - b.price))).map((i, k) => (   // courts: the catalog's order (cities, seasons, the rest)
               <ItemCard key={i.id} item={i} deal={dealPrice(i.id)} equipped={p.equip?.[i.slot] === i.id} onOpen={setOpen} delay={k * 25} name={name} />
             ))}
           </div>

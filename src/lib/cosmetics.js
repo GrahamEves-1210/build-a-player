@@ -90,7 +90,7 @@ const NC = [
   it('nameColor', 'nc-holo',    'Holo', 3, 19000, { level: 15 }),
   it('nameColor', 'nc-pro-blackgold', 'Black Gold', 2, 4800, { pro: true }),
   it('nameColor', 'nc-pro-platinum',  'Platinum', 3, 15500, { pro: true }),
-  it('nameColor', 'nc-fivetool', 'Five-Tool',  3, 0, { ach: 'fivetool' }),
+  it('nameColor', 'nc-fivetool', 'Positionless',  3, 0, { ach: 'fivetool' }),
   it('nameColor', 'nc-compete',  'Pool Shark', 3, 0, { ach: 'cpwin10' }),
 ]
 
@@ -162,7 +162,6 @@ const WS = [
   it('winSound', 'snd-organ',     'Organ Charge', 1, 2000),
   it('winSound', 'snd-riser',     'Synth Riser', 2, 6000),
   it('winSound', 'snd-cannon',    'Cannon Blast', 2, 7200),
-  it('winSound', 'snd-pizzi',     'String Section', 1, 1400),
   it('winSound', 'snd-train',     'Train Horn', 2, 7800),
   it('winSound', 'snd-bassdrop',  'Bass Drop', 3, 21500),
   it('winSound', 'snd-badge',     'Badge Pop', 0, 550),
@@ -171,7 +170,7 @@ const WS = [
   it('winSound', 'snd-strike',    'Strike', 1, 2200),
   it('winSound', 'snd-nope',      'Not In My House', 1, 2400),
   it('winSound', 'snd-bell',      "Winner's Bell", 2, 4800),
-  it('winSound', 'snd-rocket',    'Liftoff', 2, 6600),
+  it('winSound', 'snd-rocket',    'Thunderclap', 2, 6600),
   it('winSound', 'snd-rise',      'The Big Rise', 3, 15500),
 ]
 
@@ -179,27 +178,27 @@ const WS = [
 // so the players' spots line up on each). img: the court; thumb: the shop card.
 const ct = (id, name, rarity, price) => it('court', id, name, rarity, price, { img: `/courts/${id}.webp`, thumb: `/courts/thumbs/${id}.webp` })
 const CT = [
+  // cities, then seasons, then the rest (the free Blacktop leads the rest)
+  ct('ct-overcast', 'NYC', 0, 2500),
+  ct('ct-midnight', 'London', 0, 2500),
+  ct('ct-autumn', 'Chicago', 1, 5000),
+  ct('ct-nightrain', 'Tokyo', 1, 5000),
+  ct('ct-redzone', 'Shanghai', 1, 5000),
+  ct('ct-harbor', 'Pier', 1, 5000),
+  ct('ct-carnival', 'Rio', 2, 9000),
+  ct('ct-goldenhour', 'Honolulu', 2, 9000),
+  ct('ct-tropic', 'Miami', 2, 9000),
+  ct('ct-oldstone', 'Olympus', 2, 9000),
+  ct('ct-retro', 'Los Angeles', 3, 16000),
+  ct('ct-alley', 'Spring', 0, 2500),
+  ct('ct-ivy', 'Summer', 0, 2500),
+  ct('ct-snow', 'Winter', 1, 5000),
   it('court', 'ct-blacktop', 'Blacktop', 0, 0, { free: true, img: '/court-blacktop1.webp', thumb: '/courts/thumbs/ct-blacktop.webp' }),
-  ct('ct-alley', 'Back Alley', 0, 2500),
-  ct('ct-overcast', 'Overcast', 0, 2500),
-  ct('ct-midnight', 'Midnight', 0, 2500),
-  ct('ct-patchwork', 'Patchwork', 0, 2500),
-  ct('ct-ivy', 'Ivy Park', 0, 2500),
-  ct('ct-snow', 'First Snow', 1, 5000),
   ct('ct-warehouse', 'Warehouse', 1, 5000),
-  ct('ct-nightrain', 'Night Rain', 1, 5000),
-  ct('ct-harbor', 'Harbor Blue', 1, 5000),
-  ct('ct-redzone', 'Red Zone', 1, 5000),
-  ct('ct-autumn', 'Autumn Brick', 1, 5000),
-  ct('ct-carnival', 'Carnival', 2, 9000),
-  ct('ct-goldenhour', 'Golden Hour', 2, 9000),
-  ct('ct-oldstone', 'Old Stone', 2, 9000),
-  ct('ct-tropic', 'Tropic Mural', 2, 9000),
   ct('ct-checker', 'Checkerboard', 2, 9000),
   ct('ct-neon', 'Neon Circuit', 3, 16000),
   ct('ct-marble', 'Emerald Marble', 3, 16000),
   ct('ct-space', 'Deep Space', 3, 16000),
-  ct('ct-retro', 'Retro Sunset', 3, 16000),
 ]
 
 // ── Unlocks: not looks, features. Sandbox in Career and in Takeover, bought one

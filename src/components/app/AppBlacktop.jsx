@@ -220,7 +220,7 @@ export function BlacktopQueue({ bt, user, onBack }) {
 
         <button className="bt-lobby-chat ag-pop" style={{ '--d': '160ms' }} onClick={() => { setChatOpen(true); setSeenChat(bt.chat.length) }}>
           <IconChat size={18} />
-          <span className="bt-lobby-chat-txt">{bt.chat.length ? <><b><NameTag name={bt.chat[bt.chat.length - 1].name} self={bt.chat[bt.chat.length - 1].from === bt.me.vid} cos={bt.chat[bt.chat.length - 1].cos || null} plate={false} />:</b> {bt.chat[bt.chat.length - 1].text}</> : 'Lobby chat. Call your spot, find a squad.'}</span>
+          <span className="bt-lobby-chat-txt">{bt.chat.length ? <><b><NameTag name={bt.chat[bt.chat.length - 1].name} self={bt.chat[bt.chat.length - 1].from === bt.me.vid} cos={bt.chat[bt.chat.length - 1].cos || null} />:</b> {bt.chat[bt.chat.length - 1].text}</> : 'Lobby chat. Call your spot, find a squad.'}</span>
           {unread > 0 && <span className="ag-tab-badge">{unread}</span>}
         </button>
 
@@ -354,7 +354,7 @@ export function BlacktopChat({ bt, user, onClose, mode = 'blacktop', title = 'TE
         {note && <div className="bt-chat-note">{note}</div>}
         {menu && (
           <div className="bt-msg-menu">
-            <span><NameTag name={menu.name} cos={menu.cos || null} uid={menu.uid || null} plate={false} /></span>
+            <span><NameTag name={menu.name} cos={menu.cos || null} uid={menu.uid || null} /></span>
             <button onClick={() => act('report')}>REPORT</button>
             <button onClick={() => act('block')}>BLOCK</button>
             <button onClick={() => setMenu(null)}>CANCEL</button>
@@ -398,7 +398,7 @@ function SquadBuilds({ game, names, meVid, onClose }) {
             const types = p.pos === 'big' ? VERSUS_BIG_TYPES : VERSUS_GUARD_TYPES
             return (
               <div key={p.id} className={`lc-builds-p${p.id === meVid ? ' is-me' : ''}`}>
-                <span className="lc-builds-who"><b>{p.bot ? p.name : <NameTag name={p.name} cos={p.cos} self={p.id === meVid} plate={false} />}</b><small>{p.pos === 'big' ? 'BIG' : 'GUARD'} · {liveOvr(p) ?? '–'} OVR</small></span>
+                <span className="lc-builds-who"><b>{p.bot ? p.name : <NameTag name={p.name} cos={p.cos} self={p.id === meVid} />}</b><small>{p.pos === 'big' ? 'BIG' : 'GUARD'} · {liveOvr(p) ?? '–'} OVR</small></span>
                 <span className="lc-builds-grades">
                   {types.map(k => { const val = p.build?.[k]?.val; return <i key={k} title={BUCKET_ATTR[k]?.label}><small>{BUCKET_ATTR[k]?.shortLabel ?? k.slice(0, 3)}</small>{val != null ? valToGrade(val) : '–'}</i> })}
                 </span>

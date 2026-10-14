@@ -2486,7 +2486,7 @@ function ScreenFinal({ result, awards, build, types, attrMap, onReset, onBack, a
 
       {filled.length > 0 && (
         <div className="simp-stat-section">
-          <div className="simp-stat-group-lbl"><NameTag name={userName} self plate={false} />'s Build</div>
+          <div className="simp-stat-group-lbl"><NameTag name={userName} self />'s Build</div>
           <div className="simp-attr-table simp-attr-table-sm">
             {filled.map(t => {
               const meta = attrMap[t] ?? { label: t, hex: '#888' }

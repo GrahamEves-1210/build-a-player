@@ -25,7 +25,7 @@ export const ACHIEVEMENTS = [
   // Builds
   A('ovr90',     'Builds', 'Elite Build',          'Play a season with a 90+ OVR build',     'bolt',     'ovr90',   1,    90,   60),
   A('ovr95',     'Builds', 'Generational Talent',  'Play a season with a 95+ OVR build',     'crown',    'ovr95',   1,    240,  160),
-  A('fivetool',  'Builds', 'Five-Tool Star',       'Play a season at QB, RB, WR, TE and DB',  'helmet',   'positions', 5,  180,  120, 'nc-fivetool'),
+  A('fivetool',  'Builds', 'Positionless',       'Play a season at QB, RB, WR, TE and DB',  'helmet',   'positions', 5,  180,  120, 'nc-fivetool'),
   A('twosport',  'Builds', 'Two-Sport Star',       'Play a season in both sports',           'basketball','twoSport', 1,   90,   60),
   A('alltime10', 'Builds', 'History Buff',         'Play 10 All-Time seasons',               'crown',    'allTime', 10,   120,  60),
   // Cards

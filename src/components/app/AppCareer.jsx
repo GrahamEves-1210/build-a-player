@@ -515,7 +515,7 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
           <img src={logoFor(c.team)} alt="" className="cr-head-logo" />
           <div>
             <span className="ag-eyebrow">{c.sandbox && <b className="sb-tag">SANDBOX</b>}{c.fit?.name?.toUpperCase()} · YEAR {c.year + 1} · AGE {c.age} · {c.season}</span>
-            <h1 className="ag-h1"><NameTag name={c.name} self plate={false} /> <small>{POS_LABEL[c.pos]}</small></h1>
+            <h1 className="ag-h1"><NameTag name={c.name} self /> <small>{POS_LABEL[c.pos]}</small></h1>
           </div>
         </div>
         <button className="ag-round-btn" onClick={onExit} aria-label="Home"><IconClose size={16} /></button>

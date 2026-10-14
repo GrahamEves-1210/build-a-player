@@ -66,7 +66,7 @@ export function VersusHud({ me, opp, clock = null }) {
           {sides.map((s, t) => (
             <span key={t} className={`bt-t${t} v1g-hud-who`}>
               <WhoAv who={s} team={t} size={20} />
-              <b><WhoName who={s} plate={false} short /></b> {filled(s)}/{s.types.length}
+              <b><WhoName who={s} short /></b> {filled(s)}/{s.types.length}
               {t === 0 && <i>vs</i>}
             </span>
           ))}
@@ -86,7 +86,7 @@ export function VersusHud({ me, opp, clock = null }) {
                   <span className="bt-hud-team-name">{s.pos ? posLabel(s.pos) : 'PICKING A SPOT'}</span>
                   <span className={`bt-hud-p${done ? ' is-done' : ''}`} title={s.name}>
                     <WhoAv who={s} team={t} size={24} />
-                    <span className="bt-hud-p-name"><WhoName who={s} plate={false} /></span>
+                    <span className="bt-hud-p-name"><WhoName who={s} /></span>
                     <span className="bt-hud-p-bar"><span style={{ width: `${Math.min(100, (n / s.types.length) * 100)}%` }} /></span>
                     <span className="bt-hud-p-n">{ovr != null ? <><b>{ovr}</b> OVR</> : done ? '✓' : `${n}/${s.types.length}`}</span>
                   </span>
@@ -147,7 +147,7 @@ export function VersusLeaveSheet({ opp, onStay, onLeave }) {
           <button className="ag-round-btn" onClick={onStay} aria-label="Stay in the game"><IconClose size={16} /></button>
         </div>
         <div className="bt-t1 v1g-solo"><VersusSpot who={who} team={1} sub="STILL ON THE COURT" /></div>
-        <p className="v1g-sheet-note">Leaving mid-game counts as a loss on your record, and <WhoName who={who} plate={false} /> takes the W.</p>
+        <p className="v1g-sheet-note">Leaving mid-game counts as a loss on your record, and <WhoName who={who} /> takes the W.</p>
         <div className="bt-result-actions v1g-sheet-actions">
           <button className="ag-btn" onClick={() => { sfx('tap'); onStay() }}>STAY IN THE GAME</button>
           <button className="ag-btn ag-btn--ghost v1g-leave" onClick={() => { sfx('tap'); onLeave() }}>LEAVE &amp; TAKE THE L</button>

@@ -779,7 +779,7 @@ function LookBuilds({ sides, delay = 0 }) {
     <div className="ag-card v1g-builds ag-pop" style={{ '--d': `${delay}ms` }}>
       {sides.map((s, t) => (
         <div key={t} className={`v1g-builds-col bt-t${t}`}>
-          <div className="v1g-build-head"><WhoAv who={s.who} team={t} size={22} /><WhoName who={s.who} plate={false} short /></div>
+          <div className="v1g-build-head"><WhoAv who={s.who} team={t} size={22} /><WhoName who={s.who} short /></div>
           <BuildCompact build={s.build} types={s.types} position={s.pos} />
         </div>
       ))}
@@ -1136,7 +1136,7 @@ export default function BucketVersusResult({ myData, oppData, position, oppPosit
         <div className={`bt-board-side bt-t${t}${scores[t] > scores[1 - t] ? ' is-lead' : ''}`}>
           <span className="bt-board-name v1g-board-who">
             <WhoAv who={sides[t].who} team={t} size={22} />
-            <WhoName who={sides[t].who} plate={false} short />
+            <WhoName who={sides[t].who} short />
             <span className={`v1g-poss${shownPossession === (t === 0 ? 'me' : 'opp') ? ' is-on' : ''}`} aria-hidden="true">🏀</span>
           </span>
           <b>{scores[t]}</b>
@@ -1201,7 +1201,7 @@ export default function BucketVersusResult({ myData, oppData, position, oppPosit
             </div>
             <div className="bt-final"><b className="bt-t0">{myScore}</b><span>–</span><b className="bt-t1">{oppScore}</b></div>
             <div className="bt-final-teams">
-              {sides.map((s, t) => <span key={t} className={`bt-t${t} v1g-final-who`}><WhoAv who={s.who} team={t} size={20} /><WhoName who={s.who} plate={false} short /></span>)}
+              {sides.map((s, t) => <span key={t} className={`bt-t${t} v1g-final-who`}><WhoAv who={s.who} team={t} size={20} /><WhoName who={s.who} short /></span>)}
             </div>
             <RatingLine mode="h2h" />
           </div>
@@ -1209,7 +1209,7 @@ export default function BucketVersusResult({ myData, oppData, position, oppPosit
             <div className="bt-box-head"><span>BOX SCORE</span><span>PTS</span><span>FG</span><span>2PT</span><span>STL</span><span>BLK</span></div>
             {order.map(t => { const s = stats[t]; return (
               <div key={t} className={`bt-box-row bt-t${t}`}>
-                <span className="bt-box-name"><WhoAv who={sides[t].who} team={t} size={20} /><WhoName who={sides[t].who} plate={false} /></span>
+                <span className="bt-box-name"><WhoAv who={sides[t].who} team={t} size={20} /><WhoName who={sides[t].who} /></span>
                 <span><b>{s.pts}</b></span><span>{s.fgm}/{s.fga}</span><span>{s.m2}/{s.a2}</span><span>{s.stl}</span><span>{s.blk}</span>
               </div>
             ) })}
@@ -1226,7 +1226,7 @@ export default function BucketVersusResult({ myData, oppData, position, oppPosit
           ))}
           <div className="bt-result-actions ag-pop" style={{ '--d': '360ms' }}>
             {channel && oppExited ? (
-              <div className="v1g-left"><WhoName who={oppWho} plate={false} />left the blacktop. Match over.</div>
+              <div className="v1g-left"><WhoName who={oppWho} />left the blacktop. Match over.</div>
             ) : (
               <button className="ag-btn" onClick={() => { handleRematch(); sfx('tap') }} disabled={myRematchReady}>
                 {myRematchReady ? `WAITING ON ${firstName(oppName) || 'THEM'} · ${votes}/2` : `RUN IT BACK${votes ? ` · ${votes}/2` : ''}`}

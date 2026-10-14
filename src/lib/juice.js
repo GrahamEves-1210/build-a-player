@@ -407,7 +407,7 @@ const SAMPLED = {
   'snd-fanfare': S => smp(S, 'hitXXL', { gain: 1 }),
   'snd-riser': S => { if (!ready('hitXL')) return false; noise(S, { bp: 300, to: 6000, q: 1.2, dur: 1.15, gain: 0.12, env: { a: 1.0, d: 0.15 } }); smp(S, 'punch', { gain: 1, at: 1.15 }); smp(S, 'hitXL', { gain: 0.9, at: 1.15 }); return true },
   'snd-cannon': S => smp(S, 'thud', { gain: 1 }) && smp(S, 'punch', { gain: 0.9, rate: 0.7 }) && (osc(S, { f: 90, to: 28, dur: 0.9, gain: 0.35 }), true),
-  'snd-bell': S => smp(S, 'bell', { gain: 0.85 }),
+  'snd-bell': S => smp(S, 'bell', { gain: 0.85, rate: 0.94 }),   // a touch lower than the recording
   'snd-strike': S => smp(S, 'strike', { gain: 0.9 }),
   'snd-rise': S => smp(S, 'riser', { gain: 0.85 }),
   'snd-rocket': S => smp(S, 'rocket', { gain: 0.75 }),
@@ -472,7 +472,30 @@ const STAGED = {
   'snd-organ': S => { SYNTH['snd-organ'](S) },
   'snd-riser': S => { labAt(S.ac, 's-powerup', 0, 0.85); labAt(S.ac, 's-impact', 0.95, 0.95) },
   'snd-train': S => { SYNTH['snd-train'](S) },
-  'snd-bassdrop': S => { labAt(S.ac, 's-whoosh', 0, 0.6); labAt(S.ac, 's-boom', 0.55, 1); osc(S, { f: 62, to: 30, dur: 1.3, gain: 0.38, at: 0.55 }) },
+  // Legendary: a build with a snare roll that speeds up, then the drop: a boom, a growl that wobbles, the sub
+  'snd-bassdrop': S => {
+    const v = verb(S, 0.3), D = 0.92
+    noise(S, { bp: 400, to: 6000, q: 1.4, dur: D, gain: 0.12, env: { a: D * 0.9, d: 0.08 } })
+    for (const d of [-9, 0, 8]) osc(S, { type: 'sawtooth', f: 196, to: 784, detune: d, dur: D, gain: 0.035, lp: 3200, out: v, env: { a: D * 0.85, d: 0.1 } })
+    ;[0, 0.26, 0.46, 0.6, 0.7, 0.77, 0.82, 0.86, 0.89].forEach((t, i) => labAt(S.ac, 's-perc', t, 0.25 + i * 0.05, 1.1 + i * 0.02))
+    labAt(S.ac, 's-boom', D, 1)
+    hit(S, { gain: 0.4, at: D })
+    osc(S, { f: 62, to: 38, dur: 1.6, gain: 0.36, at: D, env: { a: 0.01, d: 1.6 } })
+    for (let i = 0; i < 7; i++) for (const d of [-12, 0, 11]) osc(S, { type: 'sawtooth', f: 55, detune: d, dur: 0.15, gain: 0.05, at: D + 0.04 + i * 0.19, lp: i % 2 ? 1500 : 650, q: 3, out: v, env: { a: 0.01, d: 0.15 } })
+    for (const f of [440, 523.3, 659.3]) osc(S, { type: 'square', f, dur: 0.5, gain: 0.025, at: D + 1.38, lp: 2600, out: v, env: { a: 0.005, d: 0.5 } })
+  },
+  // Legendary: the riser climbs, lands on an impact, a brass chord rings out and bells sparkle over it
+  'snd-rise': S => {
+    const v = verb(S, 0.45), L = 1.55
+    smp(S, 'riser', { gain: 0.55 })
+    for (const [f, d] of [[130.8, -7], [164.8, 0], [196, 6]]) osc(S, { type: 'sawtooth', f, to: f * 2, detune: d, dur: L, gain: 0.03, lp: 2400, out: v, env: { a: L * 0.92, d: 0.08 } })
+    noise(S, { bp: 300, to: 7000, q: 1.2, dur: L, gain: 0.09, env: { a: L * 0.95, d: 0.05 } })
+    labAt(S.ac, 's-impact', L, 0.95)
+    hit(S, { gain: 0.35, at: L })
+    for (const f of [261.6, 329.6, 392, 523.3]) brass(S, { f, dur: 1.3, gain: 0.07, at: L, hold: 0.7, out: v })
+    osc(S, { f: 65.4, dur: 1.2, gain: 0.2, at: L, env: { a: 0.01, d: 1.2 } })
+    ;[1046.5, 1318.5, 1568, 2093, 2637].forEach((f, i) => bell(S, { f, dur: 0.6, gain: 0.07, at: L + 0.12 + i * 0.085, out: v }))
+  },
   'snd-pizzi': S => { if (!smp(S, 'pizzi', { gain: 0.95 })) SYNTH['snd-pizzi'](S) },
 }
 // Load the victory layers ahead of time (a season starting, the shop opening)

@@ -1404,7 +1404,7 @@ function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = fals
 
       {build && types && (
         <div className="simp-stat-section">
-          <div className="simp-stat-group-lbl"><NameTag name={userName} self plate={false} />'s Build</div>
+          <div className="simp-stat-group-lbl"><NameTag name={userName} self />'s Build</div>
           <div className="simp-attr-table simp-attr-table-sm">
             {buildRows(build, types, isOL ? OL_ATTR : isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : isRB ? RB_ATTR : ATTR, isSalaryMode && !isRB && !isWR && !isTE && !isDB && !isOL).map(({ key, label, data, val }) => {
               return (

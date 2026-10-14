@@ -265,7 +265,7 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
             <span>{versusState.oppPosition === 'big' ? 'Big' : versusState.oppPosition === 'guard' ? 'Guard' : '—'}</span>
           </div>
           <div className="nvc-row">
-            <span className="nvc-side"><NameTag name={getUsername(user) || 'Guest'} self plate={false} /> {versusState.myFilled}/{versusState.myTotal}</span>
+            <span className="nvc-side"><NameTag name={getUsername(user) || 'Guest'} self /> {versusState.myFilled}/{versusState.myTotal}</span>
             <span className="nvc-vs">VS</span>
             <span className="nvc-side">{versusState.oppName || 'Opponent'} {versusState.oppFilled}/{versusState.oppTotal}</span>
             {versusState.bothReady && !isBucket && (

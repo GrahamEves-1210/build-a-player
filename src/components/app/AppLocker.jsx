@@ -52,7 +52,7 @@ export default function AppLocker({ onClose }) {
       </div>
 
       {SLOTS.map(sl => {
-        const mine = ITEMS.filter(i => i.slot === sl.id && owns(i.id)).sort((a, b) => b.rarity - a.rarity)
+        const mine = ITEMS.filter(i => i.slot === sl.id && owns(i.id)).sort((a, b) => (sl.id === 'court' ? 0 : b.rarity - a.rarity))
         const cur = p.equip?.[sl.id] ?? DEFAULTS[sl.id]
         const hasNone = DEFAULTS[sl.id] === null
         return (
@@ -65,7 +65,7 @@ export default function AppLocker({ onClose }) {
               {hasNone && (
                 <button className={`lk-tile${!cur ? ' is-on' : ''}`} style={{ '--rar': '#6ee7b7' }} onClick={() => put(sl.id, null)}>
                   <span className="lk-tile-stage">
-                    {sl.id === 'avatar' ? <AvatarBadge name={name} size={50} cos={{}} /> : <span className="ip-name"><NameTag name={name} cos={{}} plate={false} /></span>}
+                    {sl.id === 'avatar' ? <AvatarBadge name={name} size={50} cos={{}} /> : <span className="ip-name"><NameTag name={name} cos={{}} /></span>}
                   </span>
                   <span className="lk-tile-name">{sl.id === 'avatar' ? 'Initial' : 'None'}</span>
                   {!cur && <span className="lk-tile-check"><IconCheck size={12} /></span>}

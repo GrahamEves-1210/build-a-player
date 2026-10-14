@@ -501,7 +501,7 @@ function InfiniteLeaderboard({ onClose }) {
           <div key={i} className={`sc-lb-row${i === 0 ? ' sc-lb-row--top' : ''}`} style={{ animationDelay: `${i * 0.04}s` }}>
             <div className="sc-lb-row-main">
               <span className="sc-lb-rank">{i + 1}</span>
-              <span className="sc-lb-name">{r.username ? <NameTag name={r.username} uid={r.user_id ?? null} plate={false} /> : 'Anonymous'}</span>
+              <span className="sc-lb-name">{r.username ? <NameTag name={r.username} uid={r.user_id ?? null} /> : 'Anonymous'}</span>
               <span className="sc-lb-ovr">{r.overall_score} OVR</span>
             </div>
             <LbStatLine row={r} />
@@ -568,7 +568,7 @@ function SalaryLeaderboard({ dateStr, dateLabel, onClose }) {
           >
             <div className="sc-lb-row-main">
               <span className="sc-lb-rank">{i + 1}</span>
-              <span className="sc-lb-name">{r.username ? <NameTag name={r.username} uid={r.user_id ?? null} plate={false} /> : 'Anonymous'}</span>
+              <span className="sc-lb-name">{r.username ? <NameTag name={r.username} uid={r.user_id ?? null} /> : 'Anonymous'}</span>
               <span className="sc-lb-ovr">{r.overall_score} OVR</span>
               {r.budget_used != null && budget - r.budget_used > 0 && (
                 <span className="sc-lb-spare">+${budget - r.budget_used}M</span>

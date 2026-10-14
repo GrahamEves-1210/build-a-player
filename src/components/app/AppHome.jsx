@@ -245,7 +245,7 @@ function PlayersOfDay() {
             <li key={r.id} className={`ag-potd-row is-${i + 1}${r.id === me ? ' is-me' : ''}`}>
               <span className="ag-potd-rank">{i + 1}</span>
               <AvatarBadge cos={r.cos} uid={r.id} self={r.id === me} name={r.username} size={36} />
-              <span className="ag-potd-name"><NameTag name={r.username} cos={r.cos} self={r.id === me} plate={false} /></span>
+              <span className="ag-potd-name"><NameTag name={r.username} cos={r.cos} self={r.id === me} /></span>
               <span className="ag-potd-xp"><span><b>{(r.cos.today.xp ?? 0).toLocaleString()}</b> XP</span><small>{r.cos.today.g ?? 0} {r.cos.today.g === 1 ? 'game' : 'games'}</small></span>
             </li>
           ))}

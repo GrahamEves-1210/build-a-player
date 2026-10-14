@@ -118,7 +118,7 @@ export default function FriendsSection({ user, isBucket = false }) {
           {results.map(p => (
             <div key={p.id} className="fr-row">
               <AvatarBadge uid={p.id} name={p.username} size={34} />
-              <span className="fr-row-name"><NameTag uid={p.id} name={p.username} plate={false} /></span>
+              <span className="fr-row-name"><NameTag uid={p.id} name={p.username} /></span>
               {p.state === 'none' && <button className="fr-pill fr-pill--go" onClick={() => add(p)} disabled={busy === p.id} aria-label={`Send ${p.username} a friend request`}><IconSend size={14} /> ADD</button>}
               {p.state === 'sent' && <span className="fr-pill">SENT</span>}
               {p.state === 'friends' && <span className="fr-pill">FRIENDS</span>}
@@ -137,7 +137,7 @@ export default function FriendsSection({ user, isBucket = false }) {
               <div key={r.id} className="fr-row fr-row--req">
                 <AvatarBadge uid={r.from_id} name={r.from_username} size={34} />
                 <span className="fr-row-name">
-                  <NameTag uid={r.from_id} name={r.from_username || 'Player'} plate={false} />
+                  <NameTag uid={r.from_id} name={r.from_username || 'Player'} />
                   <small>wants to be friends</small>
                 </span>
                 <button className="fr-icon-btn fr-icon-btn--yes" onClick={() => respond(r.id, true)} disabled={busy === r.id} aria-label={`Accept friend request from ${r.from_username || 'player'}`}><IconCheck size={16} /></button>

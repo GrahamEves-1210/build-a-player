@@ -129,7 +129,7 @@ export default function AppTakeover({ sport, run, setRun, user, pools, attrMap, 
             <span className={`tk-heat${firing(run) ? ' is-fire' : ''}`} title="Wins in a row. Three and you're on fire.">{firing(run) ? 'ON FIRE' : 'HEAT'} {Array.from({ length: HEAT_MAX }, (_, i) => <i key={i} className={firing(run) || i < heatOf(run) ? 'is-on' : ''} />)}</span>
             <button className="ag-chip" onClick={() => setScreen('build')}><IconProfile size={13} /> MY BUILD</button>
             {run.mode !== 'duo' && <button className="ag-chip" onClick={() => setScreen('duo')}>DUO</button>}
-            {run.mode === 'duo' && <button className={`ag-chip${duo.partner ? ' is-on' : ''}`} onClick={() => setChatOpen(true)}><IconChat size={13} /> {duo.partner ? <NameTag name={duo.partner.name} cos={duo.partner.cos} plate={false} /> : 'WAITING'}</button>}
+            {run.mode === 'duo' && <button className={`ag-chip${duo.partner ? ' is-on' : ''}`} onClick={() => setChatOpen(true)}><IconChat size={13} /> {duo.partner ? <NameTag name={duo.partner.name} cos={duo.partner.cos} /> : 'WAITING'}</button>}
           </div>
           {/* duo, waiting on a partner: the code to share, big */}
           {run.mode === 'duo' && run.code && !duo.partner && <DuoCode code={run.code} host={run.host} />}
@@ -199,7 +199,7 @@ export default function AppTakeover({ sport, run, setRun, user, pools, attrMap, 
           <div className="tk-matchup ag-pop">
             <div className="tk-side">
               <span className="tk-side-av"><AvatarBadge self name={me.name} size={40} /></span>
-              <b><NameTag name={me.name} self plate={false} /></b><small>{ovr} OVR</small>
+              <b><NameTag name={me.name} self /></b><small>{ovr} OVR</small>
             </div>
             <span className="tk-vs">{isBucket ? (run.mode === 'duo' ? '2v2' : '1v1') : 'GAME'}</span>
             <div className="tk-side">
@@ -209,7 +209,7 @@ export default function AppTakeover({ sport, run, setRun, user, pools, attrMap, 
           </div>
           {run.mode === 'duo' && duo.partnerPlayer && partnerStar && (
             <div className="tk-duo-line ag-pop" style={{ '--d': '60ms' }}>
-              <span><AvatarBadge name={duo.partnerPlayer.name} cos={duo.partner?.cos ?? duo.partnerPlayer.cos ?? null} size={22} /> <NameTag name={duo.partnerPlayer.name} cos={duo.partner?.cos ?? duo.partnerPlayer.cos ?? null} plate={false} /></span><i>vs</i><span><Headshot src={partnerStar.build[duo.partnerPlayer.types?.[0]]?.photo} name={partnerStar.player.name} size={22} /> {partnerStar.player.name}</span>
+              <span><AvatarBadge name={duo.partnerPlayer.name} cos={duo.partner?.cos ?? duo.partnerPlayer.cos ?? null} size={22} /> <NameTag name={duo.partnerPlayer.name} cos={duo.partner?.cos ?? duo.partnerPlayer.cos ?? null} /></span><i>vs</i><span><Headshot src={partnerStar.build[duo.partnerPlayer.types?.[0]]?.photo} name={partnerStar.player.name} size={22} /> {partnerStar.player.name}</span>
             </div>
           )}
           <div className="tk-stakes ag-pop" style={{ '--d': '80ms' }}>
@@ -437,7 +437,7 @@ function HoopsDuel({ duel, run, city, me, onDone }) {
   return (
     <div className="ag-screen ag-screen--bucket bt-game bt-live tk-duel" style={{ '--tc': city.color }}>
       <div className="bt-board">
-        <div className={`bt-board-side bt-t0${score[0] > score[1] ? ' is-lead' : ''}`}><span className="bt-board-name"><NameTag name={me.name} self plate={false} />{duoGame ? ' +1' : ''}</span><b>{score[0]}</b></div>
+        <div className={`bt-board-side bt-t0${score[0] > score[1] ? ' is-lead' : ''}`}><span className="bt-board-name"><NameTag name={me.name} self />{duoGame ? ' +1' : ''}</span><b>{score[0]}</b></div>
         <div className="bt-board-mid"><span className="ag-eyebrow">{city.city.toUpperCase()} · TO {goal}</span><button className={`ag-chip${speed === 2 ? ' is-on' : ''}`} onClick={() => setSpeed(s => (s === 1 ? 2 : 1))}>{speed}×</button></div>
         <div className={`bt-board-side bt-t1${score[1] > score[0] ? ' is-lead' : ''}`} style={{ '--tc': opp }}><span className="bt-board-name">{duoGame ? city.nick.toUpperCase() : lastName(duel.sides[1][0].name).toUpperCase()}</span><b>{score[1]}</b></div>
       </div>
@@ -525,7 +525,7 @@ function FootballDuel({ duel, run, city, me, onDone }) {
   return (
     <div className="ag-screen ag-screen--nfl bt-game bt-live tk-duel tk-duel--nfl" style={{ '--tc': city.color }}>
       <div className="bt-board">
-        <div className={`bt-board-side bt-t0${score[0] > score[1] ? ' is-lead' : ''}`}><span className="bt-board-name"><NameTag name={me.name} self plate={false} /></span><b>{score[0]}</b></div>
+        <div className={`bt-board-side bt-t0${score[0] > score[1] ? ' is-lead' : ''}`}><span className="bt-board-name"><NameTag name={me.name} self /></span><b>{score[0]}</b></div>
         <div className="bt-board-mid"><span className="ag-eyebrow">{play?.q ?? 'Q1'}</span><span className="tk-duel-at">@ {city.city.toUpperCase()}</span></div>
         <div className={`bt-board-side bt-t1${score[1] > score[0] ? ' is-lead' : ''}`} style={{ '--tc': opp }}><span className="bt-board-name">{city.short}</span><b>{score[1]}</b></div>
       </div>

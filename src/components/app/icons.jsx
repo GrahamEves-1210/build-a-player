@@ -85,8 +85,8 @@ export const IconCoin = p => (
 
 export const IconVersus = p => (
   <S {...p}>
-    <path fill="currentColor" d="M4.2 3.4 9 4l7.8 7.8-2.7 2.7L6.3 6.7zM19.8 3.4 15 4l-3.1 3.1 2.7 2.7 3.1-3.1z"/>
-    <path fill="currentColor" d="m5.6 13.3 2.1 2.1-2.8 2.8 1 1 2.8-2.8 2.1 2.1 1.4-1.4-5.2-5.2zM18.4 13.3l-2.1 2.1 2.8 2.8-1 1-2.8-2.8-2.1 2.1-1.4-1.4 5.2-5.2z" opacity=".8"/>
+    <path fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" d="M2.8 6.2 6.6 18l3.8-11.8"/>
+    <path fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" d="M20.4 7.6c-.9-1.2-2.1-1.7-3.4-1.7-1.8 0-3.1 1.1-3.1 2.6 0 3.3 6.9 2.3 6.9 6.6 0 1.9-1.5 3.2-3.6 3.2-1.5 0-2.9-.7-3.7-1.9"/>
   </S>
 )
 
@@ -270,16 +270,17 @@ export const IconWhistle = p => (
 )
 export const IconHelmet = p => (
   <S {...p}>
-    <path fill="currentColor" d="M12.6 3C7.3 3 3 6.9 3 12c0 2 .7 3.9 1.9 5.4.4.5 1 .8 1.6.8h4.2l1.2 2h4.6l-1.3-2.2 2.6-.3V14h3.2c.6 0 1-.4 1-1v-.5C22 7.2 17.9 3 12.6 3z"/>
-    <path fill="none" {...INK_S} strokeWidth="1.6" strokeLinecap="round" d="M15.5 14v3.6M15.5 15.7H21M18.5 14v3.6"/>
-    <circle cx="11" cy="10.5" r="1.6" {...INK} opacity=".55"/>
+    <path fill="currentColor" d="M13 3.2C7.6 3.2 3.4 7.2 3.4 12.4c0 2.8 1.2 5.2 3.2 6.7h3.8c.6 0 1-.4 1.2-.9l.8-2.2h3.2v-3.4h5.2c.1-.5.2-1 .2-1.6 0-4.3-3.6-7.8-8-7.8z"/>
+    <path fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" d="M15.6 12.6h5.8v4.6h-5.8M18.5 12.6v4.6"/>
+    <path fill="none" {...INK_S} strokeWidth="1.4" strokeLinecap="round" opacity=".4" d="M12.8 3.5C9.1 3.9 6.4 6.6 5.9 10"/>
+    <circle cx="10" cy="12.2" r="1.5" {...INK} opacity=".5"/>
   </S>
 )
 export const IconHoop = p => (
   <S {...p}>
-    <circle cx="12" cy="5.6" r="3.4" fill="currentColor"/>
-    <path fill="none" {...INK_S} strokeWidth=".9" d="M8.8 5.6h6.4M12 2.2v6.8"/>
-    <path fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" d="M5 10.5h14l-2.3 10H7.3z"/>
-    <path fill="none" stroke="currentColor" strokeWidth="1.3" d="m7.5 10.5 6 10M16.5 10.5l-6 10M10.3 10.5l4.2 10M13.7 10.5l-4.2 10"/>
+    <rect x="4" y="2.4" width="16" height="6.6" rx="1.4" fill="currentColor"/>
+    <rect x="9.3" y="4.4" width="5.4" height="3.4" rx=".4" fill="none" {...INK_S} strokeWidth="1"/>
+    <rect x="6.3" y="9.6" width="11.4" height="2.2" rx="1.1" fill="currentColor"/>
+    <path fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" d="M7.6 11.8 9.1 21h5.8l1.5-9.2M7.6 11.8l4.4 4.9 4.4-4.9M9.1 21l2.9-4.3 2.9 4.3M10.3 11.8 12 14l1.7-2.2"/>
   </S>
 )
