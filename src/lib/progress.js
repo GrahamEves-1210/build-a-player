@@ -248,7 +248,9 @@ export const xpOpen = () => !!uid
 // "+60 XP · +40 COINS" with whatever this player can actually earn ('' if nothing)
 export const rewardText = (xp, coins) => [xp && xpOpen() ? `+${xp} XP` : '', coins && walletOpen() ? `+${coins} COINS` : ''].filter(Boolean).join(' · ')
 // Today's tally for Player of the Day (on the public profile, accounts.cos.today):
-// the XP earned today, from anything, and the games finished
+// the XP earned today playing (games, live play, missions, the login), and the games
+// finished. One-time claims (achievements, streak milestones, sets) don't count.
+// supabase/score_guards.sql caps what a save can claim.
 function tally(xp = 0, game = 0) {
   const k = dayKey()
   if (S.today?.d !== k) { if (S.today?.xp) S.prevDay = S.today; S.today = { d: k, xp: 0, g: 0 } }
@@ -370,7 +372,7 @@ export function claimStreak(days) {
   const r = STREAK_REWARDS.find(x => x.days === days)
   if (!r || S.streak.count < days || S.streak.claimed[days]) return 0
   S.streak.claimed[days] = true
-  S.bonusXp += r.xp; tally(r.xp)
+  S.bonusXp += r.xp
   earn(Math.round(r.xp / 4), null, true)
   if (r.unlock) S.unlocks[r.unlock] = true
   emit()
@@ -382,7 +384,7 @@ export function claimSet(key, size) {
   S.sets ??= {}
   if (S.sets[key]) return 0
   S.sets[key] = true
-  S.bonusXp += setReward(size); tally(setReward(size))
+  S.bonusXp += setReward(size)
   earn(Math.round(setReward(size) / 4), null, true)
   emit()
   return setReward(size)
@@ -1016,7 +1018,7 @@ export function claimAch(id) {
   const a = achById(id)
   if (!a || !S.ach[id] || S.achClaimed[id]) return null
   S.achClaimed[id] = Date.now()
-  S.bonusXp += a.xp; tally(a.xp)
+  S.bonusXp += a.xp
   earn(a.coins, null, true)
   if (a.item) S.owned[a.item] = Date.now()
   S.walletAt = Date.now()
