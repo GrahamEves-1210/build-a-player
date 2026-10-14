@@ -13095,6 +13095,9 @@ html.is-tablet:has([id^="pw-oop"][data-pw-status="loaded"][style*="bottom"]):not
   z-index: 2147483647 !important;
 }
 [id^="pw-oop-bottom_rail"] iframe { position: relative; z-index: 0; }
+/* The bottom nav stays on top of the rail where they meet: the rail sits one layer
+   under the mobile tab bar (z 200). Nothing moves; the nav just wins an overlap. */
+[id^="pw-oop-bottom_rail"] { z-index: 199 !important; }
 
 /* â”€â”€ Ad-free: hide all Playwire elements â”€â”€ */
 html.ads-hidden [id^="pw-"],
