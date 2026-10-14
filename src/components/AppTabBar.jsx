@@ -5,7 +5,7 @@ import { IS_APP, APP_LOOK } from '../lib/platform'
 import AppMenu from './app/AppMenu'
 import AuthModal from './AuthModal'
 import AppToasts, { LevelUp } from './app/AppToasts'
-import { useProgress, STREAK_REWARDS, missionDef, walletOpen } from '../lib/progress'
+import { useProgress, STREAK_REWARDS, missionDef, cardsOpen } from '../lib/progress'
 import { IconBag, IconPlay, IconProfile, IconCalendar, IconCards } from './app/icons'
 
 const AppDaily = lazy(() => import('./app/AppDaily'))
@@ -94,7 +94,7 @@ export default function AppTabBar() {
     const onNav = e => {
       const [to, arg] = String(e.detail).split(':')
       // web: cards live on an account, so a guest gets the sign-in sheet (from Daily, Shop, anywhere)
-      if (to === 'cards' && !walletOpen()) { setMenuOpen(false); setAuthOpen(true); return }
+      if (to === 'cards' && !cardsOpen()) { setMenuOpen(false); setAuthOpen(true); return }
       if (['daily', 'cards', 'shop', 'achievements', 'locker', 'soundlab', 'online'].includes(to)) { setMenuOpen(false); if (to === 'shop') setShopTab(arg || 'featured'); setScreen(to) }
       else setScreen(null)
     }
@@ -150,7 +150,7 @@ export default function AppTabBar() {
             <span className="ag-play-label">PLAY</span>
           </button>
           {/* website: cards are saved to an account */}
-          <Tab label="CARDS" Icon={IconCards} active={active === 'cards'} onClick={walletOpen() ? open('cards') : () => guardLeave(() => { setMenuOpen(false); setAuthOpen(true) })} />
+          <Tab label="CARDS" Icon={IconCards} active={active === 'cards'} onClick={cardsOpen() ? open('cards') : () => guardLeave(() => { setMenuOpen(false); setAuthOpen(true) })} />
           <Tab label="PROFILE" Icon={IconProfile} active={active === 'profile' || active === 'achievements' || active === 'locker'} onClick={go('profile')} badge={claimable} />
         </nav>
       )}

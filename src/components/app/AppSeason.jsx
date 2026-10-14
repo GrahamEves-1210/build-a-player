@@ -116,9 +116,8 @@ export function SeasonRewards({ result }) {
       <section className="ag-rewards ag-rewards--guest">
         <div className="ag-rewards-head">
           <span className="ag-eyebrow">SEASON REWARDS</span>
-          {s.coins ? <span className="ag-rewards-total"><span className="ag-rewards-coins"><span className="coin-ico coin-ico--sm" /> +{coins}</span></span> : null}
         </div>
-        <div className="ag-rewards-note">This season would have earned <b>{s.xp} XP</b>. <button onClick={() => window.dispatchEvent(new CustomEvent('bap:auth'))}>Sign in</button> to earn XP, level up and keep your career.</div>
+        <div className="ag-rewards-note">This season would have earned <b>{s.xp} XP</b>{s.missedCoins ? <> and <b>{s.missedCoins} coins</b></> : null}. <button onClick={() => window.dispatchEvent(new CustomEvent('bap:auth'))}>Sign in</button> to earn XP and coins, level up and keep your career.</div>
       </section>
     )
   }

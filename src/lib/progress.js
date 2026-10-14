@@ -493,7 +493,7 @@ function onSeason(e) {
     }
   }
   lastSeason = {
-    id: Date.now(), ref: d.ref ?? null, lines, xp, before, after: before + xp, coins: walletOpen() ? coins : 0,
+    id: Date.now(), ref: d.ref ?? null, lines, xp, before, after: before + xp, coins: walletOpen() ? coins : 0, missedCoins: walletOpen() ? 0 : coins,
     missions: (S.day?.missions ?? []).map((m, i) => ({ ...m, before: missionsBefore[i] ?? 0, def: MISSIONS[m.id] })),
   }
   emit()
@@ -622,7 +622,7 @@ function onSpin(e) {
   if (!player?.name) return
   S.stats.spins++
   bumpMissions('spin', {})
-  if (!walletOpen()) { emit(); return }
+  if (!cardsOpen()) { emit(); return }
   const k = cardKey(sport, pos, mode, player.name, player.team)
   const isNew = !S.cards[k]
   S.cards[k] = isNew ? [1, Date.now()] : [S.cards[k][0] + 1, S.cards[k][1]]
@@ -772,7 +772,10 @@ export function seasonCoins(d) {
   return c
 }
 // Website: coins and cards need an account (the app keeps a guest's on the phone)
-export const walletOpen = () => IS_APP || !!uid
+// Coins (and XP) are for accounts only; a guest earns neither, anywhere
+export const walletOpen = () => !!uid
+// the card binder: the app keeps a guest's on the phone (merged in at sign-in); the website needs an account
+export const cardsOpen = () => IS_APP || !!uid
 function earn(n, label, quiet = false) {
   n = Math.round(n || 0)
   if (n <= 0 || !walletOpen()) return
@@ -816,6 +819,7 @@ export function lockReason(id, level = getProgress().lvl.level) {
   return null
 }
 export function buy(id) {
+  if (!walletOpen()) return { ok: false, reason: 'Sign in to use coins' }
   const i = itemById(id)
   if (!i || !forSale(i)) return { ok: false, reason: 'Not for sale' }
   if (owns(id)) return { ok: false, reason: 'Already yours' }
