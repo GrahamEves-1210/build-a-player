@@ -106,8 +106,8 @@ export const SPORT = {
     durable: { qb: ['size', 'pocket-presence'], rb: ['strength', 'size', 'balance'], wr: ['size', 'bodyControl'], te: ['strength', 'size'], db: ['size', 'runSupport'] },
     ageShift: pos => (pos === 'qb' ? 2 : 0),
     // the physical traits train until this age (then the window shuts); the body fades from declineAt
-    trainUntil: pos => ({ qb: 31, rb: 27, wr: 29, te: 29, db: 29 })[pos] ?? 29,
-    declineAt: pos => ({ qb: 33, rb: 28, wr: 30, te: 30, db: 30 })[pos] ?? 31,
+    trainUntil: pos => ({ qb: 31, rb: 27, wr: 29, te: 29, db: 27 })[pos] ?? 29,
+    declineAt: pos => ({ qb: 33, rb: 28, wr: 30, te: 30, db: 28 })[pos] ?? 31,
     bigInjury: 6,
     draft: {
       rounds: 7,
@@ -1371,6 +1371,10 @@ export function nextSeason(c) {
     const p = age >= from + 4 ? 1 : age >= from + 2 ? 0.8 : 0.5
     if (r() < p) move(pickPhys(), -1, 'Father Time')
     if (age >= from + 4 && r() < 0.4) move(pickPhys(), -1, 'Father Time')
+    // the rest slips too, just less: hands, ball security, the craft (size never moves)
+    const rest = c.types.filter(t => !phys.includes(t) && t !== 'size' && t !== 'heightLength')
+    const q = age >= from + 4 ? 0.45 : age >= from + 2 ? 0.3 : 0.15
+    if (rest.length && r() < q) move(rest[Math.floor(r() * rest.length)], -1, 'A step slower')
   }
   // a big injury last season (season-ending, or a long stretch out) can take something with it
   for (const inj of c.injuries.filter(x => x.year === c.year + 1 && (x.serious || x.games >= S.bigInjury))) {
