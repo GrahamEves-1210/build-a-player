@@ -4696,3 +4696,4 @@ html:is(.is-app, .app-look).no-dock { --app-bottom: calc(var(--safe-bottom) + 12
 .sb-tag { display: inline-block; margin-right: 6px; padding: 1px 6px; border-radius: 5px; background: rgba(232,121,249,.18); color: #f0abfc; font-weight: 400; letter-spacing: 1px; }
 .ll-sheet.sb-buy { background: radial-gradient(120% 70% at 50% 0%, rgba(245,220,138,.12), transparent 60%), #0d1210; border-color: rgba(245,220,138,.4); box-shadow: 0 -10px 40px rgba(0,0,0,.6); }
 .ll-sheet.sb-buy .ag-eyebrow { color: #f5dc8a; }
+.mg-hard { font-style: normal; margin-left: 6px; padding: 1px 6px; border-radius: 5px; background: rgba(248,113,113,.16); color: #fca5a5; font-size: .85em; letter-spacing: 1px; }

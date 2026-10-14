@@ -42,8 +42,10 @@ export default function MiniGame({ game, build, seed = 'x', onDone, autoStart = 
   const def = GAMES[game]
   const [stage, setStage] = useState(autoStart ? 'play' : 'intro')
   const [result, setResult] = useState(null)
-  // hard (training camp): played as if the trait were half as good, so a maxed build still has to earn it
-  const v = hard ? Math.max(1, traitValue(game, build) * 0.5) : traitValue(game, build)
+  // hard (training camp): played as if the trait were a notch or two lower (70%), so a
+  // maxed build still has to earn it. The header shows the real grade, never the handicap.
+  const real = traitValue(game, build)
+  const v = hard ? Math.max(1, real * 0.7) : real
   const done = r => {
     if (result) return
     const perfect = !!r.raw && r.raw.of > 0 && r.raw.made === r.raw.of
@@ -58,7 +60,7 @@ export default function MiniGame({ game, build, seed = 'x', onDone, autoStart = 
   const traitNames = def.traits.slice(0, 2).map(t => t.replace(/([A-Z])/g, ' $1').replace('-', ' ')).join(' · ').toUpperCase()
   return (
     <div className={`mg mg--${def.kind}${result ? (result.hit ? ' is-hit' : ' is-miss') : ''}`}>
-      <div className="mg-head"><span className="ag-eyebrow">{def.title}</span><span className="mg-trait">{traitNames} · {valToGrade(v)}</span></div>
+      <div className="mg-head"><span className="ag-eyebrow">{def.title}</span><span className="mg-trait">{traitNames} · {valToGrade(real)}{hard && <i className="mg-hard">CAMP · TOUGHER</i>}</span></div>
       {stage === 'intro' && (
         <div className="mg-intro">
           <p>{def.how}</p>
