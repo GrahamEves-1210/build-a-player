@@ -1,4 +1,5 @@
-﻿import { useState, useCallback, useRef, useEffect, useLayoutEffect, lazy, Suspense } from 'react' // v2
+﻿import { createPortal } from 'react-dom'
+import { useState, useCallback, useRef, useEffect, useLayoutEffect, lazy, Suspense } from 'react' // v2
 import { Helmet } from 'react-helmet-async'
 import Navbar from './components/Navbar'
 import SpinScreen from './components/SpinScreen'
@@ -1321,7 +1322,9 @@ export default function App() {
       </div>
 
 
-      {/* Mobile bottom tab bar */}
+      {/* Mobile bottom tab bar: drawn at the top of the page (a portal), not inside #root,
+          so it stays above the bottom ads (lib/railLayer.js) */}
+      {createPortal(
       <nav className="mobile-tab-bar">
         <button
           className={`mtab ${mobileView === 'spin' ? 'active' : ''}`}
@@ -1347,7 +1350,8 @@ export default function App() {
             <span className="mtab-badge">{filledCount}/{activeTypes.length}</span>
           )}
         </button>
-      </nav>
+      </nav>,
+      document.body)}
 
       {showAuth && (
         <AuthModal
