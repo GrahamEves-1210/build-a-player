@@ -648,7 +648,7 @@ export function stockOf(c) {
   // A combine barely moves a top pick (the tape already decided it) and can be
   // worth a round or more to a mid-rounder
   const mid = (lo0 + hi0) / 2
-  const span = S.isBucket ? 2 + mid * 0.18 : 4 + mid * 0.4
+  const span = S.isBucket ? 0.5 + mid * 0.08 : 4 + mid * 0.4   // (the NBA combine barely matters)
   const played = d.combine.filter(x => x.pct != null)
   const comb = played.length ? played.reduce((s, x) => s + x.pct, 0) / played.length : 0
   const inter = (d.interviews ?? []).reduce((s, x) => s + (x.answer != null ? x.a[x.answer].stock : 0), 0)
