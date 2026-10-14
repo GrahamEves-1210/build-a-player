@@ -100,11 +100,7 @@ export function calcOVR(build, types = TYPES) {
   if (filled.length === types.length) {
     const spread = Math.max(...vals) - Math.min(...vals)
     const minVal = Math.min(...vals)
-    if (minVal > 0) {
-      if (spread <= 1) bonus += 3
-      else if (spread <= 2) bonus += 1.5
-      else if (spread <= 3) bonus += 0.5
-    }
+    // (no bonus for a balanced build: raising a rating must never lower the OVR)
     if (minVal >= 9) bonus += 2.5
     else if (minVal >= 8) bonus += 0.8
   }
@@ -767,9 +763,7 @@ export function calcOVRRB(build, types = RB_TYPES) {
   if (filled.length === types.length) {
     const spread = Math.max(...vals) - Math.min(...vals)
     const minVal = Math.min(...vals)
-    if (spread <= 1) bonus += 2.5
-    else if (spread <= 2) bonus += 1.0
-    else if (spread <= 3) bonus += 0.3
+    // (no bonus for a balanced build: raising a rating must never lower the OVR)
     if (minVal >= 9) bonus += 2.0
     else if (minVal >= 8) bonus += 0.5
   }
@@ -1399,9 +1393,7 @@ export function calcOVRWR(build, types = WR_TYPES) {
   if (filled.length === types.length) {
     const spread = Math.max(...vals) - Math.min(...vals)
     const minVal = Math.min(...vals)
-    if (spread <= 1) bonus += 2.5
-    else if (spread <= 2) bonus += 1.0
-    else if (spread <= 3) bonus += 0.3
+    // (no bonus for a balanced build: raising a rating must never lower the OVR)
     if (minVal >= 9) bonus += 2.0
     else if (minVal >= 8) bonus += 0.5
   }
@@ -1984,9 +1976,7 @@ export function calcOVRTE(build, types = TE_TYPES) {
   if (filled.length === types.length) {
     const spread = Math.max(...vals) - Math.min(...vals)
     const minVal = Math.min(...vals)
-    if (spread <= 1) bonus += 2.5
-    else if (spread <= 2) bonus += 1.0
-    else if (spread <= 3) bonus += 0.3
+    // (no bonus for a balanced build: raising a rating must never lower the OVR)
     if (minVal >= 9) bonus += 2.0
     else if (minVal >= 8) bonus += 0.5
   }
@@ -2531,9 +2521,7 @@ export function calcOVRDB(build, types = DB_TYPES) {
   if (filled.length === types.length) {
     const spread = Math.max(...vals) - Math.min(...vals)
     const minVal = Math.min(...vals)
-    if (spread <= 1) bonus += 2.5
-    else if (spread <= 2) bonus += 1.0
-    else if (spread <= 3) bonus += 0.3
+    // (no bonus for a balanced build: raising a rating must never lower the OVR)
     if (minVal >= 9) bonus += 2.0
     else if (minVal >= 8) bonus += 0.5
   }
@@ -3116,9 +3104,7 @@ export function calcOVROL(build, types = OL_TYPES) {
   if (filled.length === types.length) {
     const spread = Math.max(...vals) - Math.min(...vals)
     const minVal = Math.min(...vals)
-    if (spread <= 1) bonus += 2.5
-    else if (spread <= 2) bonus += 1.0
-    else if (spread <= 3) bonus += 0.3
+    // (no bonus for a balanced build: raising a rating must never lower the OVR)
     if (minVal >= 9) bonus += 2.0
     else if (minVal >= 8) bonus += 0.5
   }

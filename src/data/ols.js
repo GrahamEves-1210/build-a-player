@@ -256,9 +256,7 @@ export function olOVR(vals) {
     const v = filled.map(t => vals[t])
     const spread = Math.max(...v) - Math.min(...v)
     const minVal = Math.min(...v)
-    if (spread <= 1) bonus += 2.5
-    else if (spread <= 2) bonus += 1.0
-    else if (spread <= 3) bonus += 0.3
+    // (no bonus for a balanced build: raising a rating must never lower the OVR)
     if (minVal >= 9) bonus += 2.0
     else if (minVal >= 8) bonus += 0.5
   }
