@@ -25,6 +25,17 @@ export const HOME_UNITS = [OOP('bottom_rail')]
 export const RAIL_UNITS = [OOP('corner_ad_video'), OOP('bottom_rail')]
 export const RAIL_UNITS_WITH_LEFT = [OOP('corner_ad_video'), OOP('left_rail'), OOP('bottom_rail')]
 
+// The bottom rail's slots, by name. A rail the player closed isn't always
+// cleared by destroyUnits('all'), and then it's never requested again: it's
+// removed by name too, so every request brings it back
+const railSlots = () => Object.entries(window.ramp?.settings?.slots ?? {})
+  .filter(([, s]) => s?.type === 'bottom_rail')
+  .map(([name]) => name)
+// Requests of the rail are kept at least this far apart (refreshing faster is
+// what ad networks police)
+export const RAIL_GAP_MS = 30000
+let lastRail = 0
+
 // ads: units to add after the destroy ([] = none)
 export function rampPage({ ads = [], path } = {}) {
   ready = new Promise(resolve => {
@@ -33,8 +44,11 @@ export function rampPage({ ads = [], path } = {}) {
       try { destroyed = window.ramp.destroyUnits('all') } catch { destroyed = null }
       Promise.resolve(destroyed)
         .catch(() => {})
+        .then(() => { const left = railSlots(); return left.length ? window.ramp.destroyUnits(left) : null })
+        .catch(() => {})
         .then(() => {
           if (!ads.length) return
+          if (ads.some(a => a.type === 'bottom_rail')) lastRail = Date.now()
           return window.ramp.spaAds({ ads, countPageview: true, ...(path ? { path } : {}) })
         })
         .catch(() => {})
@@ -63,5 +77,22 @@ export function rampDestroyType(type) {
         .filter(([, s]) => s?.type === type)
         .map(([name]) => name)
       if (slots.length) { try { window.ramp.destroyUnits(slots) } catch {} }
+    }))
+}
+
+// The bottom rail on its own, between page changes (a tab in the nav, a spin):
+// its slots removed, then requested again, closed or not. At most once every
+// RAIL_GAP_MS; never for ad-free players
+export function rampRail() {
+  if (Date.now() - lastRail < RAIL_GAP_MS) return
+  if (document.documentElement.classList.contains('ads-hidden')) return
+  lastRail = Date.now()
+  Promise.resolve()
+    .then(() => ready)
+    .then(() => queue(() => {
+      const slots = railSlots()
+      let gone
+      try { gone = slots.length ? window.ramp.destroyUnits(slots) : null } catch { gone = null }
+      Promise.resolve(gone).catch(() => {}).then(() => { try { window.ramp.spaAddAds([{ type: 'bottom_rail' }]) } catch {} })
     }))
 }

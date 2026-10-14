@@ -7,7 +7,7 @@ import HEADSHOTS from '../data/headshots.json'
 import QBAvatar from './QBAvatar'
 import { track } from '../lib/track'
 import { seededShuffle } from '../lib/progress'
-import { rampAdd, rampDestroyType } from '../lib/ads'
+import { rampRail } from '../lib/ads'
 import { IS_APP } from '../lib/platform'
 import { watchFor } from '../lib/rewardedAd'
 
@@ -338,7 +338,6 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
     setExcludedQB(null)
     setDraggingType(null)
     adInvokedRef.current = false
-    rampDestroyType('standard_iab_cntr1')   // destroyUnits wants slot names, not the type
     const panel = document.querySelector('.spin-panel')
     if (panel) panel.scrollTop = 0
   }, [resetKey])
@@ -395,10 +394,11 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
 
   const adInvokedRef = useRef(false)
 
+  // a spin brings the bottom rail back (it replaced the banner that sat under the
+  // player card): requested again, closed or not, at most every 30 s (lib/ads.js)
   const triggerMobileAd = useCallback(() => {
-    if (adsDisabled || window.innerWidth > 768 || adInvokedRef.current) return
-    adInvokedRef.current = true
-    rampAdd([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1' }])
+    if (adsDisabled) return
+    rampRail()
   }, [adsDisabled])
 
   const handleSpin = useCallback(() => {
@@ -667,9 +667,6 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
                 </div>
               )}
             </div>
-          )}
-          {!adsDisabled && window.innerWidth <= 768 && (
-            <div id="ramp-cntr1" className="ad-cntr1-mobile" style={{ minHeight: 60 }} />
           )}
         </div>
 
