@@ -14,10 +14,11 @@ import { BUCKET_ATTR } from '../data/nba-attrs'
 import { QB_SAL_COLS, QB_SAL_POOL } from '../data/qb-salary'
 import { SAL_COLS, BUCKET_SAL_POOL } from '../data/nba-salary'
 
-export const AUCTION_SIZE = 3
-export const AUCTION_MIN = 2         // real players only; three starts at once, two when the countdown runs out
+export const AUCTION_SIZE = 2       // 1v1
+export const AUCTION_MIN = 2         // real players only: the pair starts as soon as two are in
 export const AUCTION_FILL_SECS = 60   // the countdown: starts over every time someone joins
-export const BUDGET = 100
+export const BUDGET = 20            // every dollar counts: you always keep $1 for each other empty slot
+const BETTER_ODDS = 0.6           // how often a lot is the better of two players drawn (pickLot)
 export const BID_SECS = 8           // the clock when a lot opens, before anyone bids
 export const RESET_SECS = 6         // every bid puts the clock back up to this: going once at 4, twice at 2
 export const SPIN_MS = 3400         // the card shuffle + the reel, before bidding opens
@@ -105,8 +106,11 @@ export function pickLot(m, L, kit, n) {
   if (!bag.length) return null
   const trait = bag[Math.floor(r() * bag.length)]
   const cands = [...kit.pool].sort((a, b) => a.name.localeCompare(b.name))
-  const pl = cands[Math.floor(r() * cands.length)]
-  return { n, ...kit.lotOf(pl, trait) }
+  // a slightly better field than pure chance: a second player is drawn, and
+  // the better of the two at this slot is the lot most of the time
+  const one = cands[Math.floor(r() * cands.length)], two = cands[Math.floor(r() * cands.length)]
+  const a = kit.lotOf(one, trait), b = kit.lotOf(two, trait)
+  return { n, ...(r() < BETTER_ODDS && b.val > a.val ? b : a) }
 }
 
 export function rankAuction(m, L, kit) {

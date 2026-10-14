@@ -1,4 +1,4 @@
-// TRAIT AUCTION — a Compete mode. Up to three real players, $100 each, and
+// TRAIT AUCTION — a Compete mode. 1v1: two real players, $20 each, and
 // Salary Cap's five rating slots each (football: QB). A card is pulled from
 // the five-slot deck and the spinner lands on a real player; the grade stays
 // hidden until the gavel. Bidding is +$1 at a time, going once, going twice:

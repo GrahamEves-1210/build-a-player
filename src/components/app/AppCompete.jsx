@@ -142,8 +142,8 @@ export default function AppCompete({ cp, au, sport, position, positions, onPosit
         )}
         {showAuction ? (
           <div className="cp-hero ag-pop">
-            <span className="ag-eyebrow">ONLINE · 5-PLAYER AUCTIONS · ${BUDGET} EACH</span>
-            <p className="cp-how">Up to three players, <b>${BUDGET}</b> each and Salary Cap's five rating slots, empty. A slot card is pulled, the spinner lands on a real player, and their grade stays <b>face down</b> until the gavel. Bid <b>+$1</b> or sit out: going once, going twice, and every bid puts the clock back to <b>{RESET_SECS} seconds</b>. When every slot is filled, the <b>highest OVR</b> wins.</p>
+            <span className="ag-eyebrow">ONLINE · 1V1 · ${BUDGET} EACH</span>
+            <p className="cp-how">You against one other player, <b>${BUDGET}</b> each and Salary Cap's five rating slots, empty. You always keep $1 for each of your other empty slots, and a slot still empty at the end gets a free agent (a C). A slot card is pulled, the spinner lands on a real player, and their grade stays <b>face down</b> until the gavel. Bid <b>+$1</b> or sit out: going once, going twice, and every bid puts the clock back to <b>{RESET_SECS} seconds</b>. When every slot is filled, the <b>highest OVR</b> wins.</p>
           </div>
         ) : (
           <div className="cp-hero ag-pop">

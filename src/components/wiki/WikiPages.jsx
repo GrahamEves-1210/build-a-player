@@ -262,7 +262,7 @@ function ModesPage({ go }) {
       <h2 id="compete">Compete <span className="wk-tag">ONLINE</span></h2>
       <p>Up to five real players build at the same time from the <b>same spins</b> (respins are your own). Five minutes on the clock; the highest overall wins, and an earlier submit breaks a tie. Places pay XP and coins and move an online rating through the tiers Rookie, Starter (900), Pro (1100), All-Star (1300), MVP (1500) and Legend (1750).</p>
       <h2 id="auction">Trait Auction <span className="wk-tag">ONLINE</span></h2>
-      <p>Two to five players and $100 each. A player is spun for one slot at a time and the room bids on his rating for ten seconds; the high bid takes it. You must keep $1 for every empty slot. The best overall wins, money left breaks ties.</p>
+      <p>1v1: two players, $20 each. A slot card is pulled and a real player is spun for it, his grade face down until the gavel. Bids go up $1 at a time: going once, going twice, and every bid puts the clock back up. You always keep $1 for each of your other empty slots, and a slot still empty when the auction ends gets a free agent (a C). The best overall wins; money left breaks ties.</p>
       <h2 id="blacktop">Blacktop <span className="wk-tag">ONLINE · NBA</span></h2>
       <p>Live 3v3 streetball: two guards and a big a side. Pick a spot in the lobby, build together in three minutes with team chat and a role (Balanced, Scorer, Playmaker, Lockdown), then play to 11, win by 2. Anyone who walks away mid-build gets an automatic build. There is also a 1v1 version.</p>
       <h2 id="live">Leaving a live game</h2>
