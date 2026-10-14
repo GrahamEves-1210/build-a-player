@@ -645,15 +645,18 @@ export function stockOf(c) {
   const S = sportOf(c), d = c.draft
   const [lo0, hi0] = S.draft.stock(c.ovr, c.pos)
   // the combine moves the window, the interviews too (less, in a two-round draft).
-  // A combine can be worth about a round, more the later you're projected
-  // (a top-5 pick has less room to climb; a mid-rounder can jump a round)
+  // A combine barely moves a top pick (the tape already decided it) and can be
+  // worth a round or more to a mid-rounder
   const mid = (lo0 + hi0) / 2
-  const span = S.isBucket ? 5 + mid * 0.12 : 14 + mid * 0.25
+  const span = S.isBucket ? 2 + mid * 0.18 : 4 + mid * 0.4
   const played = d.combine.filter(x => x.pct != null)
   const comb = played.length ? played.reduce((s, x) => s + x.pct, 0) / played.length : 0
   const inter = (d.interviews ?? []).reduce((s, x) => s + (x.answer != null ? x.a[x.answer].stock : 0), 0)
   const shift = Math.round(-comb * span - inter * (S.isBucket ? 0.6 : 2))     // a good answer: about two picks earlier
-  const lo = clamp(lo0 + shift, 1, maxPick(S)), hi = clamp(hi0 + shift, lo, maxPick(S))
+  // football: the top two picks are a quarterback's. Anyone else goes 3rd at
+  // best (2nd for a 95+ who forces it), never 1st
+  const top = S.isBucket || c.pos === 'qb' ? 1 : c.ovr >= 95 ? 2 : 3
+  const lo = clamp(lo0 + shift, top, maxPick(S)), hi = clamp(hi0 + shift, lo, maxPick(S))
   return { lo, hi, loP: pickLabel(lo, c.sport), hiP: pickLabel(hi, c.sport), shift }
 }
 // The range in draft-room terms: "Late 1st – mid 2nd round"
