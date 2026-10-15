@@ -268,12 +268,14 @@ export const IconWhistle = p => (
     <rect x="6" y="2.5" width="3" height="4" rx="1" fill="currentColor"/>
   </S>
 )
+// a football helmet, side on, facing right: the shell with its jaw, the ear hole,
+// a highlight on the crown and the face mask (the Lid and Chrome Dome avatars)
 export const IconHelmet = p => (
   <S {...p}>
-    <path fill="currentColor" d="M13 3.2C7.6 3.2 3.4 7.2 3.4 12.4c0 2.8 1.2 5.2 3.2 6.7h3.8c.6 0 1-.4 1.2-.9l.8-2.2h3.2v-3.4h5.2c.1-.5.2-1 .2-1.6 0-4.3-3.6-7.8-8-7.8z"/>
-    <path fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" d="M15.6 12.6h5.8v4.6h-5.8M18.5 12.6v4.6"/>
-    <path fill="none" {...INK_S} strokeWidth="1.4" strokeLinecap="round" opacity=".4" d="M12.8 3.5C9.1 3.9 6.4 6.6 5.9 10"/>
-    <circle cx="10" cy="12.2" r="1.5" {...INK} opacity=".5"/>
+    <path fill="currentColor" d="M2.6 12.9C2.6 7.5 6.8 3.6 12.1 3.6c4.9 0 8.4 3.2 8.8 7.4l-5.5.9c-.8.1-1.3.8-1.3 1.6v3.1c0 .9-.6 1.6-1.5 1.7l-4.6.7C4.8 18.3 2.6 15.9 2.6 12.9z"/>
+    <path fill="none" {...INK_S} strokeWidth="1.3" strokeLinecap="round" opacity=".38" d="M5.2 9.4c1.3-2.8 3.8-4.4 6.9-4.5"/>
+    <circle cx="9.3" cy="12.4" r="1.45" {...INK} opacity=".55"/>
+    <path fill="none" stroke="currentColor" strokeWidth="1.55" strokeLinecap="round" strokeLinejoin="round" d="M14.8 13.2h6.6M14.8 16h6.1M18.2 13.2v5.3M21.4 13.2c.3 2.3-.1 4.1-1.2 5.3h-5"/>
   </S>
 )
 export const IconHoop = p => (
