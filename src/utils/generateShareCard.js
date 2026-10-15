@@ -3,7 +3,8 @@ import { getBucketSVGMarkup } from '../components/BucketFigureOverlay'
 // val 0–11 → F D C- C C+ B- B B+ A- A A+ S
 const GRADES = ['F','D','C-','C','C+','B-','B','B+','A-','A','A+','S']
 
-function gradeColor(val) {
+function gradeColor(val0) {
+  const val = Math.round(val0 ?? 0)   // rounded like the letter (valToGrade), so an S is always purple
   if (val >= 11) return '#a855f7'
   if (val >= 8)  return '#3b82f6'
   if (val >= 5)  return '#22c55e'

@@ -13,7 +13,8 @@ import { rampPage, RAIL_UNITS } from '../lib/ads'
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function clamp(v, lo, hi) { return Math.min(hi, Math.max(lo, v)) }
 function pick(arr) { return arr[Math.floor(Math.random() * arr.length)] }
-function gradeColor(val) {
+function gradeColor(val0) {
+  const val = Math.round(val0 ?? 0)   // rounded like the letter (valToGrade), so an S is always purple
   if (val >= 11) return '#a855f7'
   if (val >= 8)  return '#3b82f6'
   if (val >= 5)  return '#22c55e'
