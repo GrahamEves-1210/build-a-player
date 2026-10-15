@@ -382,8 +382,9 @@ const SAMPLED = {
   stamp: S => smp(S, 'punchm', { gain: 1 }) && smp(S, 'plank', { gain: 0.6, at: 0.01 }),
   card: (S, rank = 0) => {
     if (!smp(S, 'cardout', { gain: 0.8, jitter: 0.03 })) return false
+    // an Epic: the flip, then Career's good-news chime (the old hit was harsh)
+    if (rank === 2) { smp(S, 'pluck2', { gain: 0.6, at: 0.12 }); smp(S, 'confirm', { gain: 0.4, at: 0.17 }); return true }
     if (rank >= 1) smp(S, 'stack2', { gain: 0.5, at: 0.12 })
-    if (rank === 2) smp(S, 'hitS2', { gain: 0.6, at: 0.1 })
     if (rank >= 3) { smp(S, 'hitM', { gain: 0.85, at: 0.1 }); crowd(S, { dur: 1.3, gain: 0.08, at: 0.2 }) }
     return true
   },

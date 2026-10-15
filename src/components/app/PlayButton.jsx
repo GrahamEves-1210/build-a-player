@@ -6,8 +6,8 @@ import { switchSport } from './AppHome'
 import { IconPlay, IconHome, IconBolt, IconCrown, IconTrophy, IconTarget, IconCalendar, IconHoop, IconFootball, IconBasketball } from './icons'
 
 // The dock's centre button.
-//   Home (and the profile, leaderboards): PLAY. On Home a tap picks up where you
-//     left off (or starts a quick build); elsewhere it takes you Home.
+//   Home (and the profile, leaderboards): PLAY. On Home a tap opens the modes (it
+//     never drops you straight into a game); elsewhere it takes you Home.
 //   Inside a game mode: HOME, and a tap takes you there (the build waits).
 //   Hold it anywhere: the modes fan out above it (and the other sport); tap one,
 //     or slide onto one and let go. A live game still asks before it lets you out.
@@ -30,7 +30,7 @@ const fanFor = sport => [
     : { id: 'sport', label: 'BASKETBALL', Icon: IconBasketball, sport: true, go: () => switchSport('bucket') },
 ]
 
-export default function PlayButton({ page, sport, onTap, lit }) {
+export default function PlayButton({ page, sport, onTap, lit, tapOpensFan = false }) {
   const inMode = !NOT_A_MODE.has(page)
   const [fan, setFan] = useState(false)
   const [hot, setHot] = useState(null)
@@ -71,6 +71,7 @@ export default function PlayButton({ page, sport, onTap, lit }) {
       return
     }
     if (fan) { setFan(false); return }
+    if (tapOpensFan) { setFan(true); haptic('light'); sfx('tap'); return }
     onTap(inMode)
   }
   const cancel = () => { clearTimeout(timer.current) }
@@ -94,7 +95,7 @@ export default function PlayButton({ page, sport, onTap, lit }) {
         aria-label={inMode ? 'Home (hold for modes)' : 'Play (hold for modes)'} aria-haspopup="menu" aria-expanded={fan}
         onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={cancel} onPointerLeave={e => { if (!opened.current && e.pointerType === 'mouse') cancel() }}
         onContextMenu={e => { e.preventDefault(); if (!fan) { opened.current = true; setFan(true) } }}
-        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTap(inMode) } else if (e.key === 'ArrowUp') { e.preventDefault(); setFan(true) } else if (e.key === 'Escape') setFan(false) }}>
+        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (tapOpensFan) setFan(true); else onTap(inMode) } else if (e.key === 'ArrowUp') { e.preventDefault(); setFan(true) } else if (e.key === 'Escape') setFan(false) }}>
         <span className="ag-play-core">
           <span className="ag-play-glyph is-play"><IconPlay size={26} /></span>
           <span className="ag-play-glyph is-home"><IconHome size={24} /></span>

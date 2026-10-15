@@ -149,9 +149,9 @@ export default function AppTabBar() {
         <nav className={`ag-dock ag-dock--${state.sport}`} aria-label="Main">
           <Tab label="SHOP" Icon={IconBag} active={active === 'shop'} onClick={open('shop')} />
           <Tab label="DAILY" Icon={IconCalendar} active={active === 'daily'} onClick={open('daily')} badge={badge} />
-          {/* PLAY on Home (picks up where you left off), HOME inside a mode; hold for the modes */}
-          <PlayButton page={state.page} sport={state.sport} lit={active === 'play'}
-            onTap={inMode => (inMode || state.page !== 'splash' ? go('home')() : guardLeave(() => { setMenuOpen(false); setScreen(null); nav('play') }))} />
+          {/* PLAY on Home (a tap opens the modes), HOME inside a mode; hold for the modes anywhere */}
+          <PlayButton page={state.page} sport={state.sport} lit={active === 'play'} tapOpensFan={state.page === 'splash' && !screen}
+            onTap={() => go('home')()} />
           {/* website: cards are saved to an account */}
           <Tab label="CARDS" Icon={IconCards} active={active === 'cards'} onClick={cardsOpen() ? open('cards') : () => guardLeave(() => { setMenuOpen(false); setAuthOpen(true) })} />
           <Tab label="PROFILE" Icon={IconProfile} active={active === 'profile' || active === 'achievements' || active === 'locker'} onClick={state.page === 'profile' && !screen ? undefined : go('profile')} badge={claimable} />
