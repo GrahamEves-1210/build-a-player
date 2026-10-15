@@ -156,7 +156,7 @@ function LeaderboardDropdown({ onClose }) {
 }
 
 // ── Main component ──────────────────────────────────────────────────────────
-export default function DepthChart({ onBack, user, onlineCount = 0 }) {
+export default function DepthChart({ onBack, user }) {
   const [players,        setPlayers]        = useState(null)
   const [order,          setOrder]          = useState([0, 1, 2])
   const [revealed,       setRevealed]       = useState([false, false, false])
