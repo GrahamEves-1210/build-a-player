@@ -4929,6 +4929,8 @@ html:is(.is-app, .app-look) .nav-signin-hint { display: none !important; }
    (it kept the navbar's 54px as an empty band above the HUD); the bar gives way so CHAT and
    LEAVE always fit on the row (a plain 1fr wouldn't shrink below the bar's text) */
 html:is(.is-app, .app-look) .game-page-scroll:has(> .bt-hud) { top: var(--safe-top, 0px); }
+/* the same for the Daily Challenge and Compete builds (their bar is .cp-hud) */
+html:is(.is-app, .app-look) .game-page-scroll:has(> .cp-hud) { top: var(--safe-top, 0px); }
 .bt-hud.has-leave { grid-template-columns: minmax(0, 1fr) 40px auto; }
 .bt-hud-bar { min-width: 0; }
 
