@@ -30,9 +30,8 @@ const fanFor = sport => [
     : { id: 'sport', label: 'BASKETBALL', Icon: IconBasketball, sport: true, go: () => switchSport('bucket') },
 ]
 
-export default function PlayButton({ page, sport, onTap, lit, tapOpensFan = false, overlay = false }) {
-  // HOME inside a mode, and while Shop / Daily / Cards is open (a tap goes Home)
-  const inMode = overlay || !NOT_A_MODE.has(page)
+export default function PlayButton({ page, sport, onTap, lit, tapOpensFan = false }) {
+  const inMode = !NOT_A_MODE.has(page)
   const [fan, setFan] = useState(false)
   const [hot, setHot] = useState(null)
   const timer = useRef(0)
