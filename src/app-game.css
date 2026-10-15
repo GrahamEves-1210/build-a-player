@@ -3623,7 +3623,7 @@ html:is(.is-app, .app-look) .vl1-modes { margin-top: 4px; }
 
 /* ═══ Polish: website app look ══════════════════════════════════════════════ */
 /* the phone's SPIN / BUILD switch sits above the bottom ad rail, not under it */
-html.app-look .mobile-tab-bar { bottom: calc(12px + env(safe-area-inset-bottom, 0px) + var(--web-rail, 0px)) !important; }
+html.app-look .mobile-tab-bar { bottom: calc(22px + env(safe-area-inset-bottom, 0px) + var(--web-rail, 0px)) !important; }
 /* the spin reels: the window stays inside the rounded outline (its tighter corners were painting over the border) */
 html:is(.is-app, .app-look) .reel-outer { overflow: hidden !important; }
 html:is(.is-app, .app-look) .reel-window { border-radius: 10px 10px 12px 12px !important; }

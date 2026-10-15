@@ -7934,7 +7934,7 @@ html:has([id^="pw-oop"][data-pw-status="loaded"][style*="bottom"]):not(.ads-hidd
 
 /* X.com in-app browser has a persistent bottom toolbar â€” push tab bar up */
 html.is-x-browser .mobile-tab-bar {
-  bottom: calc(74px + env(safe-area-inset-bottom, 0px) + var(--ad-h));
+  bottom: calc(84px + env(safe-area-inset-bottom, 0px) + var(--ad-h));
 }
 
 @media (max-width: 768px) {
@@ -7948,7 +7948,7 @@ html.is-x-browser .mobile-tab-bar {
   .mobile-tab-bar {
     display: flex;
     position: fixed;
-    bottom: calc(54px + env(safe-area-inset-bottom, 0px) + var(--ad-h));
+    bottom: calc(64px + env(safe-area-inset-bottom, 0px) + var(--ad-h));
     left: 50%;
     transform: translateX(-50%);
     width: auto;
