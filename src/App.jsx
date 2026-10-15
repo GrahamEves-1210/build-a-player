@@ -337,6 +337,9 @@ export default function App() {
         else if (gameMode === 'salarycap') setPage('salarycap')   // back to the board, as basketball's does
         else if (gameMode) setPage(simResult ? 'sim' : 'game')
         else { let p = 'qb'; try { p = localStorage.getItem('lastPosition') || 'qb' } catch {}; handleStart('classic', p) }   // quick play
+      } else if (String(to).startsWith('mode:')) {   // the PLAY fan: straight into Current or All-Time
+        let p = 'qb'; try { p = localStorage.getItem('lastPosition') || 'qb' } catch {}
+        handleStart(String(to).slice(5), p)
       } else if (to === 'leaderboard') setPage('leaderboard')
       else if (to === 'daily-challenge') startDailyRef.current?.()
       else if (to === 'takeover') openTakeoverRef.current?.()

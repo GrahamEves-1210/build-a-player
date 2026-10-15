@@ -606,6 +606,9 @@ export default function BucketApp() {
         else if (last === 'career-build' && gameMode) setPage('career-build')
         else if (gameMode) setPage(gameMode === 'salarycap' ? 'salarycap' : 'game')
         else { let p = 'guard'; try { p = localStorage.getItem('bucketPosition') || 'guard' } catch {}; handleStart('classic', p) }   // quick play
+      } else if (String(to).startsWith('mode:')) {   // the PLAY fan: straight into Current or All-Time
+        let p = 'guard'; try { p = localStorage.getItem('bucketPosition') || 'guard' } catch {}
+        handleStart(String(to).slice(5), p)
       } else if (to === 'leaderboard') setPage('leaderboard')
       else if (to === 'salarycap') handleStart('salarycap', position)
       else if (to === 'blacktop') setPage(btPageFor(btPhaseRef.current))

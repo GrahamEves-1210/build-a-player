@@ -4952,18 +4952,6 @@ html:is(.is-app, .app-look) .sil-wrap--app-bkt .cz-player-drop { gap: 5px; }
   .game-layout { background-image: linear-gradient(rgba(10,14,12,.80), rgba(10,14,12,.80)), url('/footballbackground-soft.webp'); background-size: cover; background-position: center; }
 }
 
-/* PLAY, the ball: the sport's seams embossed on the disc, a highlight so it reads
-   round, a stitched ring turning slowly around it, and a press snaps the ball a
-   quarter turn (components/AppTabBar.jsx: PlaySeams) */
-.ag-play-core { overflow: hidden; background: radial-gradient(circle at 32% 24%, rgba(255,255,255,.38), transparent 44%), var(--ag-grad); }
-.ag-play-core > svg:not(.ag-play-seams) { position: relative; z-index: 1; filter: drop-shadow(0 1px 0 rgba(255,255,255,.35)); }
-.ag-play-seams { position: absolute; inset: 0; width: 100%; height: 100%; color: var(--ag-on); opacity: .2; pointer-events: none; transition: transform .45s cubic-bezier(.2, 1.4, .4, 1); }
-.ag-play:hover .ag-play-seams { transform: rotate(-20deg); }
-.ag-play:active .ag-play-seams { transform: rotate(-90deg); transition-duration: .2s; }
-.ag-play::before { content: ''; position: absolute; inset: -8px; border-radius: 50%; border: 2px dashed color-mix(in srgb, var(--ag-a1) 45%, transparent); animation: ag-stitch 16s linear infinite; pointer-events: none; }
-.ag-play--on::before { border-color: color-mix(in srgb, var(--ag-a1) 80%, transparent); animation-duration: 7s; }
-@keyframes ag-stitch { to { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) { .ag-play::before { animation: none; } .ag-play-seams { transition: none; } }
 
 /* Reward marks beside the coin (components/app/GainIcons.jsx): XP a mint hexagon
    stamped XP, legacy a purple shield with a gold star; --sm sits inline in text */
@@ -4983,3 +4971,37 @@ html:is(.is-app, .app-look) .sil-wrap--app-bkt .cz-player-drop { gap: 5px; }
 html.app-look:not(.is-app):not(.ag-page) .game-layout.ag-drop .drop-sheet { max-height: calc(100% - var(--web-rail, 0px) - 12px); }
 /* More: an odd last tile takes the full row */
 .ag-tiles > :last-child:nth-child(odd) { grid-column: 1 / -1; }
+
+/* The dock's centre button (components/app/PlayButton.jsx): a clean disc, no
+   pulse; its glyph turns from play to home inside a mode. Hold: the modes fan out
+   above it in an arc (the other sport last, set apart in its colour). */
+.ag-play { -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; touch-action: none; }
+.ag-play-ring { display: none; }
+.ag-play-core { background: var(--ag-grad); border: 4px solid #070b09; padding-left: 0; box-shadow: 0 10px 22px rgba(0,0,0,.55), 0 0 18px color-mix(in srgb, var(--ag-a1) 28%, transparent), inset 0 0 0 1.5px rgba(255,255,255,.22); transition: transform .14s ease, box-shadow .2s ease; }
+.ag-play--on .ag-play-core { box-shadow: 0 10px 22px rgba(0,0,0,.55), 0 0 26px color-mix(in srgb, var(--ag-a1) 45%, transparent), inset 0 0 0 1.5px rgba(255,255,255,.3); }
+.ag-play-glyph { position: absolute; inset: 0; display: grid; place-items: center; color: var(--ag-on); transition: opacity .22s ease, transform .3s cubic-bezier(.2, 1.3, .4, 1); }
+.ag-play-glyph.is-play { padding-left: 3px; }
+.ag-play-glyph.is-home { opacity: 0; transform: scale(.6) rotate(-30deg); }
+.ag-play.is-home .ag-play-glyph.is-play { opacity: 0; transform: scale(.6) rotate(30deg); }
+.ag-play.is-home .ag-play-glyph.is-home { opacity: 1; transform: none; }
+.ag-play.is-fan .ag-play-core { transform: scale(.92); }
+.ag-play-label { transition: color .2s ease; }
+
+.ag-fan-back { position: fixed; inset: 0; z-index: 1150; background: linear-gradient(0deg, rgba(3,5,4,.9), rgba(3,5,4,.62) 60%); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); animation: ag-fade .18s ease both; }
+.ag-fan { position: fixed; left: 50%; bottom: calc(var(--ag-dock-gap, 8px) + 64px); width: 0; height: 0; z-index: 1160; }
+.ag-fan-item {
+  --a: calc((140deg / (var(--n) - 1)) * var(--i));   /* a 140° arc, 20° clear of the dock at each end */
+  position: absolute; left: 0; top: 0; width: 72px; display: flex; flex-direction: column; align-items: center; gap: 5px;
+  background: none; border: 0; padding: 0; cursor: pointer; color: var(--ag-text);
+  transform: translate(-50%, -50%) rotate(calc(-160deg + var(--a))) translateX(158px) rotate(calc(160deg - var(--a)));
+  animation: ag-fan-in .32s cubic-bezier(.2, 1.4, .4, 1) both; animation-delay: calc(var(--i) * 28ms);
+}
+@keyframes ag-fan-in { from { opacity: 0; transform: translate(-50%, -50%) scale(.4); } }
+.ag-fan-dot { width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; background: linear-gradient(180deg, rgba(30,38,34,.98), rgba(12,16,14,.98)); border: 1.5px solid var(--ag-line-hi); color: var(--ag-a1); box-shadow: 0 8px 18px rgba(0,0,0,.5); transition: transform .14s ease, background .14s ease, color .14s ease; }
+.ag-fan-lbl { font-family: var(--ag-font); font-size: 11.5px; letter-spacing: 1.2px; text-shadow: 0 1px 6px rgba(0,0,0,.9); white-space: nowrap; }
+.ag-fan-item.is-hot .ag-fan-dot, .ag-fan-item:hover .ag-fan-dot { transform: scale(1.12); background: var(--ag-grad); color: var(--ag-on); border-color: transparent; }
+.ag-fan-item.is-sport .ag-fan-dot { color: #fb923c; border-color: rgba(251,146,60,.5); }
+.ag-dock--bucket .ag-fan-item.is-sport .ag-fan-dot, html.is-bucket .ag-fan-item.is-sport .ag-fan-dot { color: #5edbd8; border-color: rgba(94,219,216,.5); }
+@media (prefers-reduced-motion: reduce) { .ag-fan-item, .ag-fan-back { animation: none; } .ag-play-glyph { transition: none; } }
+html.ag-fan-open .ag-dock { z-index: 1170; }
+.ag-fan { z-index: 1180; }
