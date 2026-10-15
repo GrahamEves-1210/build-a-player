@@ -370,10 +370,11 @@ export function DropSheet({ open, setOpen, children }) {
   const drag = useDrag(open, setOpen)
   const sheetRef = drag(null, true)
   const gripRef = drag(() => setOpen(false))
-  // a tap anywhere outside the panel (and its bar) puts it away
+  // a tap anywhere outside the panel (and its bar) puts it away (the GRADES ON/OFF
+  // switch up in the bar doesn't: you flip it to see the open spin with or without)
   useEffect(() => {
     if (!open) return
-    const on = e => { if (!e.target.closest?.('.drop-sheet, .drop-bar')) setOpen(false) }
+    const on = e => { if (!e.target.closest?.('.drop-sheet, .drop-bar, .grade-toggle-btn, .nav-grades')) setOpen(false) }
     const id = setTimeout(() => document.addEventListener('pointerdown', on, true), 0)
     return () => { clearTimeout(id); document.removeEventListener('pointerdown', on, true) }
   }, [open, setOpen])

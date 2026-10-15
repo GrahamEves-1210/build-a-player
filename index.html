@@ -197,7 +197,23 @@
           }) })
         }
         setTimeout(hideSplash, 2500)       // (the animation is slow to come: go anyway)
-        var FILL = 74                   // frames 0-74: the logo fills (the progress; full by 70); 74-150: the players swoop in (from ~80) once it's all loaded
+        var FILL = 74                   // frames 0-74: the logo fills (the progress; full by 66); 74-150: the players swoop in (from ~80) once it's all loaded
+        // How full the logo looks at each frame (measured): it eases out, fast up to
+        // frame 40 and slow after, so frames can't follow the progress straight or the
+        // bar would crawl at the end. Progress goes through this curve instead: equal
+        // progress, equal fill.
+        var CURVE = [[10, 0], [12, 2], [14, 5], [16, 9], [18, 13], [20, 18], [22, 24], [24, 29], [26, 36], [28, 42], [30, 49], [32, 56], [34, 62], [36, 68], [38, 73], [40, 78], [42, 82], [44, 85], [46, 88], [48, 91], [50, 93], [52, 95], [54, 96], [56, 97], [58, 98], [62, 99], [66, 100]]
+        function frameFor(p) {
+          var v = Math.max(0, Math.min(1, p)) * 100
+          for (var i = 1; i < CURVE.length; i++) {
+            var a = CURVE[i - 1], b = CURVE[i]
+            if (v <= b[1]) return a[0] + (b[0] - a[0]) * (b[1] === a[1] ? 1 : (v - a[1]) / (b[1] - a[1]))
+          }
+          return CURVE[CURVE.length - 1][0]
+        }
+        // the fill moves at a steady pace: a full logo in PACE ms (the app keeps the
+        // screen up at least 1.6 s), never faster than the real progress allows
+        var PACE = 1500, t0 = performance.now(), last = t0
         var target = 0.15, shown = 0, soft = 0, done = false, finishing = false, gone = false, anim = null
         var calm = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches
         // a milestone reached (0-1), and everything in
@@ -212,12 +228,15 @@
         }
         function tick() {
           if (gone) return
+          var now = performance.now(), dt = Math.min(64, now - last); last = now
           // between milestones the bar keeps creeping (never past the next one), so it never looks stuck
-          soft = Math.min(Math.min(0.95, target + 0.2), Math.max(soft, target) + 0.0025)
-          var goal = done ? 1 : Math.max(target, soft)
-          shown += (goal - shown) * (done ? 0.18 : 0.08)
-          if (anim && !finishing) anim.goToAndStop(Math.min(FILL, shown * FILL), true)
-          if (done && shown > 0.985 && !finishing) {
+          soft = Math.min(Math.min(0.95, target + 0.2), Math.max(soft, target) + dt * 0.00015)
+          // where it may be: the real progress, but no further than the steady pace has got
+          var goal = Math.min(done ? 1 : Math.max(target, soft), (now - t0) / PACE)
+          // and it gets there at a constant speed (no easing in: that's what crawled)
+          shown = Math.min(Math.max(shown, goal), shown + dt / (done ? 900 : PACE))
+          if (anim && !finishing) anim.goToAndStop(frameFor(shown), true)
+          if (done && shown >= 1 && !finishing) {
             finishing = true
             if (!anim || calm) { out(); return }
             anim.setSpeed(1.5)
@@ -232,7 +251,7 @@
           try {
             anim = window.lottie.loadAnimation({ container: el.firstChild, renderer: 'svg', loop: false, autoplay: false, path: '/loading.json',
               rendererSettings: { preserveAspectRatio: 'xMidYMid meet' } })
-            anim.addEventListener('DOMLoaded', function () { anim.goToAndStop(Math.min(FILL, shown * FILL), true); hideSplash() })
+            anim.addEventListener('DOMLoaded', function () { anim.goToAndStop(frameFor(shown), true); hideSplash() })
           } catch (e) { anim = null; hideSplash() }
         }
         var s = document.createElement('script')
