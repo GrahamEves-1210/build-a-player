@@ -170,9 +170,19 @@ export class Lobby {
       const pos = m.pos === 'big' ? 'big' : 'guard'
       const code = code6()
       const mine = this.slots.find(sl => (sl.pos === pos || sl.pos === 'any') && sl.team === 0)
-      const players = this.slots.map((sl, i) => (sl === mine
-        ? { ...me, pos, team: sl.team, slot: sl.id, bot: false }
-        : { vid: `bot-${code}-${sl.id}`, name: BOT_NAMES[(i * 5) % BOT_NAMES.length], uid: null, cos: null, pos: posFor(sl, code.charCodeAt(0) % 2 ? 'big' : 'guard'), team: sl.team, slot: sl.id, bot: true }))
+      // a test fill (the lobby's TEST button): the CPUs come dressed as players, with
+      // the usernames and looks the client made up (still CPUs underneath: they build
+      // and call like any CPU, and nothing they do is recorded)
+      const mimic = Array.isArray(m.mimic) ? m.mimic.slice(0, 6).map(x => ({
+        name: str(x?.name, 20).replace(/[^a-zA-Z0-9_-]/g, '') || null,
+        cos: x?.cos && typeof x.cos === 'object' ? Object.fromEntries(['avatar', 'nameColor', 'nameFx', 'plate'].filter(k => typeof x.cos[k] === 'string').map(k => [k, x.cos[k].slice(0, 40)])) : null,
+      })) : null
+      let b = 0
+      const players = this.slots.map((sl, i) => {
+        if (sl === mine) return { ...me, pos, team: sl.team, slot: sl.id, bot: false }
+        const look = mimic?.[b++]
+        return { vid: `bot-${code}-${sl.id}`, name: look?.name || BOT_NAMES[(i * 5) % BOT_NAMES.length], uid: null, cos: look?.cos ?? null, pos: posFor(sl, code.charCodeAt(0) % 2 ? 'big' : 'guard'), team: sl.team, slot: sl.id, bot: true, ...(look?.name ? { mimic: true } : {}) }
+      })
       await this.env.ROOM.get(this.env.ROOM.idFromName(code)).fetch('https://room/init', { method: 'POST', body: JSON.stringify({ code, players, practice: true, size: this.size }) })
       for (const id of Object.keys(this.spots)) if (this.spots[id].vid === me.vid) delete this.spots[id]
       send(ws, { t: 'match', code, players })

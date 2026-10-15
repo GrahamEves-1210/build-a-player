@@ -136,7 +136,8 @@ export function useBlacktopServer({ enabled, user, position, pools, types, build
   }, [leave, onExit])
 
   // ── The lobby ──────────────────────────────────────────────────────────────
-  const join = useCallback((practice = false, sz = 3) => {
+  // mimic: a TEST fill's made-up players (lib/mimic.js) for the CPUs to wear
+  const join = useCallback((practice = false, sz = 3, mimic = null) => {
     if (!enabled) return
     if (!claimLive('blacktop')) { setPhase('busy'); return }
     sz = sz === 1 || sz === 2 ? sz : 3
@@ -152,7 +153,7 @@ export function useBlacktopServer({ enabled, user, position, pools, types, build
       }
       if (m.t === 'typing') setTypingFrom(t => ({ ...t, [m.from]: { name: m.name, ts: Date.now() } }))
     }, setLink)
-    if (practice) setTimeout(() => lobbyRef.current?.send({ t: 'practice', pos: meRef.current.pos }), 600)
+    if (practice) setTimeout(() => lobbyRef.current?.send({ t: 'practice', pos: meRef.current.pos, ...(mimic ? { mimic } : {}) }), 600)
   }, [enabled, enterRoom])
   joinRef.current = join
   // pos: a 1v1 spot takes either position, so the tap says which
@@ -211,7 +212,7 @@ export function useBlacktopServer({ enabled, user, position, pools, types, build
       const b = autoBuild(sent && buildOk(sent, poolOf(p.pos)) ? sent : null, t, poolOf(p.pos), `${final.seed}-${p.vid}`)
       return out.has(p.vid)
         ? { id: p.vid, name: cpu[ci++ % cpu.length], pos: p.pos, role: 'balanced', build: b, bot: true, uid: null, cos: null }
-        : { id: p.vid, name: p.name, pos: p.pos, role: final.roles?.[p.vid] ?? 'balanced', build: b, bot: p.bot, uid: p.uid, cos: p.cos ?? null }
+        : { id: p.vid, name: p.name, pos: p.pos, role: final.roles?.[p.vid] ?? 'balanced', build: b, bot: p.bot, mimic: !!p.mimic, uid: p.uid, cos: p.cos ?? null }
     }
     const teams = [match.players.filter(p => p.team === 0).map(mk), match.players.filter(p => p.team === 1).map(mk)]
     return { ...simStreetball({ teams, seed: final.seed, goal: 11, winBy: 2, cap: 15, names: [teamName(match, 0), teamName(match, 1)], calls: locks }), teams }
@@ -273,7 +274,7 @@ export function useBlacktopServer({ enabled, user, position, pools, types, build
     server: true,
     phase, me, queue, waited, held, seated: Object.keys(held).length, mySlot: slotOf(me.vid), seat, bumped, link,
     size, slots: slotsFor(size), roomSize: size * 2,
-    retry: () => { closeAll(); join(false, sizeRef.current) }, canFill: false, join, practice: (sz = 3) => join(true, sz), leave: exit, leaveLobby: leave,
+    retry: () => { closeAll(); join(false, sizeRef.current) }, canFill: false, join, practice: (sz = 3) => join(true, sz), testFill: (sz, mimic) => { lobbyRef.current?.send({ t: 'practice', pos: meRef.current.pos, mimic }) }, leave: exit, leaveLobby: leave,
     match, present, builds, clock, role, setRole, chat: visibleChat, sendChat, typing, typers, myTeam, leader: null, isLeader: false,
     final, game, finish, rematchVotes: votes, voteRematch, exit,
     locks, myCalls, call, arrive, lockCalls: () => {}, emotes, emote, kicked, clearKicked: () => setKicked(false),

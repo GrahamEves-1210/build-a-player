@@ -264,7 +264,7 @@ export default function BlacktopCourt({ game, play, meId, photoFor, colorFor, av
                   {avatarFor?.(p) ?? <QBAvatar photo={photoFor?.(p) ?? null} team={p.build?.basketballIQ?.team ?? null} color={null} size={34} logoDir="/logos/nba/" faceCenter={p.build?.basketballIQ?.faceCenter} />}
                 </div>
                 {/* the name in its owner's look (color, effect, plate), same as everywhere else; bots plain */}
-                <span className="btc-name" style={{ color: col }}>{p.id === meId && meLabel ? meLabel : p.bot && p.id !== meId ? (p.name || '').split(' ')[0].slice(0, 9) : <NameTag name={((p.id === meId && meName) || p.name || '').split(' ')[0].slice(0, 12)} self={p.id === meId} cos={p.id === meId ? null : p.cos || null} />}</span>
+                <span className="btc-name" style={{ color: col }}>{p.id === meId && meLabel ? meLabel : p.bot && !p.mimic && p.id !== meId ? (p.name || '').split(' ')[0].slice(0, 9) : <NameTag name={((p.id === meId && meName) || p.name || '').split(' ')[0].slice(0, 12)} self={p.id === meId} cos={p.id === meId ? null : p.cos || null} />}</span>
               </div>
             )
           })}

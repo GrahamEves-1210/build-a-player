@@ -18,6 +18,8 @@ import { IconClose, IconArrow, IconChat, IconStar, IconSend, IconBasketball, Ico
 import { NameTag, AvatarBadge } from './NameTag'
 import OnlineRecord, { RatingLine, LinkPill, ModeStats, TierChip } from './OnlineRecord'
 import { useProgress } from '../../lib/progress'
+import { makeMimics } from '../../lib/mimic'
+import { getUsername } from '../../lib/discord'
 
 // BLACKTOP screens. The match itself lives in lib/blacktop.js (useBlacktop);
 // these only draw it: the lobby (pick a spot on a squad), the slim HUD over the
@@ -30,8 +32,16 @@ const Av = ({ name, bot, team, size = 36, cos = null, self = false }) => (bot
   ? <span className={`bt-av is-bot bt-av--t${team ?? 0}`} style={{ width: size, height: size, fontSize: size * .46 }}>CPU</span>
   : <AvatarBadge name={name} cos={cos} self={self} size={size} className={`bt-avb bt-av--t${team ?? 0}`} />
 )
+// A TEST fill's CPUs wear made-up players (lib/mimic.js): they show as players, not CPUs
+const asBot = p => !!p.bot && !p.mimic
+// ...and look like they're building: a trait every 4-7 s (each at its own pace) from the start
+const fakeBuild = (p, created) => {
+  const spt = 4 + ([...String(p.vid)].reduce((a, c) => a + c.charCodeAt(0), 0) % 4)
+  const filled = Math.max(0, Math.min(8, Math.floor((Date.now() - (created ?? Date.now())) / 1000 / spt)))
+  return { filled, done: filled >= 8 }
+}
 // A player's name with their look (plate: the full nameplate where there's room)
-const Who = ({ p, meVid, plate = false, short = false }) => (p.bot
+const Who = ({ p, meVid, plate = false, short = false }) => (asBot(p)
   ? <>{short ? firstName(p.name) : p.name}</>
   : <NameTag name={short ? firstName(p.name) : p.name} cos={p.cos} self={(p.vid ?? p.id) === meVid} plate={plate} />
 )
@@ -172,14 +182,39 @@ function CourtPicker() {
 }
 
 // ── Lobby: two squads, tap an open spot ──────────────────────────────────────
+// The lobby's TEST fill: who sees it (the demo account, and local dev builds)
+const TESTERS = new Set(['GOATmaker'])
+
 export function BlacktopQueue({ bt, user, onBack }) {
   const [chatOpen, setChatOpen] = useState(false)
   const [seenChat, setSeenChat] = useState(0)
   const SLOTS = bt.slots ?? ALL_SLOTS
   const ROOM_SIZE = bt.roomSize ?? ALL_SIZE
   const size = bt.size ?? 3
+  // TEST: made-up players (lib/mimic.js) take the open spots one by one, as if a real
+  // lobby were filling, then the run starts: a practice game whose CPUs wear them
+  const tester = import.meta.env.DEV || TESTERS.has(getUsername(user))
+  const [fill, setFill] = useState({})            // slot id → a made-up player shown there
+  const filling = useRef(false)
+  const heldAt = id => bt.held[id] ?? fill[id]
+  const testFill = () => {
+    if (filling.current || !bt.testFill) return
+    filling.current = true; sfx('tap')
+    // the server seats you in the first team-A spot for your position and dresses the
+    // rest in order: fill the same spots, in the same order, so the names match
+    const mine = SLOTS.find(sl => sl.team === 0 && (sl.pos === (bt.me.pos === 'big' ? 'big' : 'guard') || sl.pos === 'any'))
+    const others = SLOTS.filter(sl => sl !== mine)
+    const people = makeMimics(others.length)
+    let wait = 350
+    others.forEach((sl, k) => {
+      if (bt.held[sl.id]) return               // someone (you) already holds it: leave it showing
+      wait += 420 + Math.round(Math.random() * 380)
+      setTimeout(() => { setFill(f => ({ ...f, [sl.id]: { vid: `test-${sl.id}`, ...people[k], pos: sl.pos === 'any' ? 'guard' : sl.pos } })); sfx('slot'); haptic('light') }, wait)
+    })
+    setTimeout(() => bt.testFill(size, people), wait + 700)
+  }
   const squadName = t => {
-    const first = SLOTS.filter(sl => sl.team === t).map(sl => bt.held[sl.id]).find(Boolean)
+    const first = SLOTS.filter(sl => sl.team === t).map(sl => heldAt(sl.id)).find(Boolean)
     return first ? `TEAM ${firstName(first.name)}` : t === 0 ? 'TEAM A' : 'TEAM B'
   }
   const tap = (sl, pos = null) => {
@@ -203,7 +238,7 @@ export function BlacktopQueue({ bt, user, onBack }) {
       <div className="ag-screen-body">
         <div className="bt-run ag-pop">
           <div className="bt-run-head">
-            <span className="bt-run-count"><b>{bt.seated}</b>/{ROOM_SIZE} <small>SPOTS TAKEN</small></span>
+            <span className="bt-run-count"><b>{Math.min(ROOM_SIZE, bt.seated + Object.keys(fill).length)}</b>/{ROOM_SIZE} <small>SPOTS TAKEN</small></span>
             <span className="bt-run-timer">{fmt(bt.waited)}</span>
           </div>
           <div className="bt-run-link"><LinkPill link={bt.link} onRetry={bt.retry} /></div>
@@ -213,7 +248,7 @@ export function BlacktopQueue({ bt, user, onBack }) {
               <div key={t} className={`bt-squad-col bt-t${t}${SLOTS.some(sl => sl.team === t && bt.mySlot === sl.id) ? ' is-mine' : ''}`}>
                 <span className="bt-squad-title">{squadName(t)}</span>
                 {SLOTS.filter(sl => sl.team === t).map((sl, i) => {
-                  const h = bt.held[sl.id]
+                  const h = heldAt(sl.id)
                   const me = h?.vid === bt.me.vid
                   // a 1v1 spot: open, you take it as a guard or a big
                   if (sl.pos === 'any' && !h) return (
@@ -238,6 +273,7 @@ export function BlacktopQueue({ bt, user, onBack }) {
             <span className="bt-squads-vs">VS</span>
           </div>
           {bt.bumped && <div className="bt-bumped ag-pop">Someone grabbed that spot first. Pick another.</div>}
+          {tester && <button className="ag-btn ag-btn--ghost bt-test-fill" onClick={testFill} disabled={filling.current}>TEST · FILL WITH PLAYERS</button>}
           <div className="bt-run-foot">
             {!bt.mySlot
               ? <span className="bt-run-hint">Tap an open spot to join that squad.{waiting > 0 ? ` ${waiting} watching.` : ''}</span>
@@ -285,15 +321,15 @@ export function BlacktopHud({ bt, onOpenChat, unread }) {
               <div key={t} className={`bt-hud-team bt-t${t}${t === bt.myTeam ? ' is-mine' : ''}`}>
                 <span className="bt-hud-team-name">{teamName(bt.match, t)}</span>
                 {sq.map(p => {
-                  const b = bt.builds[p.vid]
+                  const b = bt.builds[p.vid] ?? (p.mimic ? fakeBuild(p, bt.match?.created) : undefined)
                   const here = p.bot || bt.present.some(q => q.vid === p.vid)
                   const ovr = t === bt.myTeam ? liveOvr(b) : null
                   return (
                     <span key={p.vid} className={`bt-hud-p${!here ? ' is-gone' : ''}${b?.done ? ' is-done' : ''}`} title={p.name}>
-                      <Av name={p.name} bot={p.bot} team={t} size={24} cos={p.cos} self={p.vid === bt.me.vid} />
+                      <Av name={p.name} bot={asBot(p)} team={t} size={24} cos={p.cos} self={p.vid === bt.me.vid} />
                       <span className="bt-hud-p-name"><Who p={p} meVid={bt.me.vid} /> <small>{p.pos === 'big' ? 'BIG' : 'G'}</small></span>
                       <span className="bt-hud-p-bar"><span style={{ width: `${Math.min(100, ((b?.filled ?? 0) / 8) * 100)}%` }} /></span>
-                      <span className="bt-hud-p-n">{p.bot ? 'CPU' : !here ? 'AFK' : ovr != null ? <><b>{ovr}</b> OVR</> : b?.done ? '✓' : `${b?.filled ?? 0}/8`}</span>
+                      <span className="bt-hud-p-n">{asBot(p) ? 'CPU' : !here ? 'AFK' : ovr != null ? <><b>{ovr}</b> OVR</> : b?.done ? '✓' : `${b?.filled ?? 0}/8`}</span>
                     </span>
                   )
                 })}
@@ -355,9 +391,9 @@ export function BlacktopChat({ bt, user, onClose, mode = 'blacktop', title = 'TE
               const ovr = liveOvr(bt.builds[p.vid])
               return (
                 <span key={p.vid} className={`bt-sq${p.vid === bt.me.vid ? ' is-me' : ''}`}>
-                  <Av name={p.name} bot={p.bot} team={bt.myTeam} size={30} cos={p.cos} self={p.vid === bt.me.vid} />
+                  <Av name={p.name} bot={asBot(p)} team={bt.myTeam} size={30} cos={p.cos} self={p.vid === bt.me.vid} />
                   <span className="bt-sq-txt"><b><Who p={p} meVid={bt.me.vid} short /></b><small>{p.pos === 'big' ? 'BIG' : 'GUARD'}</small></span>
-                  <span className="bt-sq-ovr">{p.bot ? 'CPU' : ovr ?? '—'}<small>{p.bot || ovr == null ? '' : 'OVR'}</small></span>
+                  <span className="bt-sq-ovr">{asBot(p) ? 'CPU' : ovr ?? '—'}<small>{asBot(p) || ovr == null ? '' : 'OVR'}</small></span>
                 </span>
               )
             })}
@@ -427,7 +463,7 @@ function SquadBuilds({ game, names, meVid, onClose }) {
             return (
               <div key={p.id} className={`lc-builds-p${p.id === meVid ? ' is-me' : ''}`}>
                 <span className="lc-builds-who">
-                  <span className="lc-builds-id"><b>{p.bot ? p.name : <NameTag name={p.name} cos={p.cos} self={p.id === meVid} />}</b>{archOf(p) && <em className="bt-arch">{archOf(p)}</em>}<small>{p.pos === 'big' ? 'BIG' : 'GUARD'}</small></span>
+                  <span className="lc-builds-id"><b>{asBot(p) ? p.name : <NameTag name={p.name} cos={p.cos} self={p.id === meVid} />}</b>{archOf(p) && <em className="bt-arch">{archOf(p)}</em>}<small>{p.pos === 'big' ? 'BIG' : 'GUARD'}</small></span>
                   <span className="lc-builds-ovr"><b>{ovr ?? '–'}</b><small>OVR</small></span>
                 </span>
                 {/* each trait's grade in its color, so a build reads at a glance */}
@@ -515,7 +551,7 @@ export function BlacktopGame({ bt, user, photoFor, onOpenChat, unread }) {
                 <span className="bt-squad-name">{names[t]}</span>
                 {sq.map(p => (
                   <div key={p.id} className="bt-squad-p">
-                    <Av name={p.name} bot={p.bot} team={t} size={34} cos={p.cos} self={p.id === bt.me.vid} />
+                    <Av name={p.name} bot={asBot(p)} team={t} size={34} cos={p.cos} self={p.id === bt.me.vid} />
                     <span className="bt-squad-p-txt"><b><Who p={p} meVid={bt.me.vid} plate />{captainOf(match, t)?.vid === p.id ? ' · C' : ''}</b>{archOf(p) && <em className="bt-arch">{archOf(p)}</em>}<small>{p.pos === 'big' ? 'BIG' : 'GUARD'} · {liveOvr(p) ?? '–'} OVR</small></span>
                   </div>
                 ))}
@@ -582,7 +618,7 @@ export function BlacktopGame({ bt, user, photoFor, onOpenChat, unread }) {
       <div className="lc-court">
         <BlacktopCourt game={game} play={play} meId={bt.me.vid} colorFor={colorFor} speed={speed}
           ovrFor={p => liveOvr(p)} bubbles={bubbles}
-          avatarFor={p => <Av name={p.name} bot={p.bot} team={p.team} size={28} cos={p.cos} self={p.id === bt.me.vid} />} />
+          avatarFor={p => <Av name={p.name} bot={asBot(p)} team={p.team} size={28} cos={p.cos} self={p.id === bt.me.vid} />} />
         {locked && lastCheck && !calling && <CallReveal key={lastCheck.pn} off={fitOff(locked[lastCheck.team])} def={fitDef(locked[1 - lastCheck.team])} offense={lastCheck.team === myTeam} nameOf={id => firstName(game.teams.flat().find(p => p.id === id)?.name)} />}
         {/* the calls: under the court on phones, over its lower edge on desktop (court and buttons in one view) */}
         <div className="lc-calls">
