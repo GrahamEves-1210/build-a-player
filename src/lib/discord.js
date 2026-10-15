@@ -12,6 +12,14 @@ export function signInWithDiscord() {
   return supabase.auth.signInWithOAuth({ provider: 'discord', options: { scopes: SCOPES, redirectTo: returnTo() } })
 }
 
+// Sign in with Apple: the website goes to Apple and comes back here (like
+// Discord); the app uses its in-app browser (lib/appAuth.js). Both use the
+// Apple provider set up in Supabase.
+export function signInWithApple() {
+  if (IS_APP) return import('./appAuth').then(m => m.appApple())
+  return supabase.auth.signInWithOAuth({ provider: 'apple', options: { scopes: 'name email', redirectTo: returnTo() } })
+}
+
 // Add Discord to an existing username/password account (profile page)
 export function connectDiscord() {
   if (IS_APP) return import('./appAuth').then(m => m.appDiscord('link'))
