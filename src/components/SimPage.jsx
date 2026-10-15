@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef, useMemo } from 'react'
+﻿import { Fragment, useState, useEffect, useRef, useMemo } from 'react'
 import { NameTag } from './app/NameTag'
 import { userScrolling } from '../lib/userScroll'
 import { ATTR, TYPES } from '../data/qbs'
@@ -15,6 +15,7 @@ import { DB_ATTR, DBS, DB_TYPES } from '../data/dbs'
 import { DB_LEGENDS } from '../data/db-legends'
 import { OL_ATTR, OLS } from '../data/ols'
 import HEADSHOTS from '../data/headshots.json'
+import { NFL_GOAT } from '../data/nfl-goat'
 import RBFigureOverlay from './RBFigureOverlay'
 import WRFigureOverlay from './WRFigureOverlay'
 import DBFigureOverlay from './DBFigureOverlay'
@@ -1027,7 +1028,7 @@ function PlayoffLog({ rounds }) {
   )
 }
 
-function ScreenPlayoffs({ result, onNext, onPreSuperBowl, adsDisabled = false }) {
+function ScreenPlayoffs({ result, onNext, onPreSuperBowl, adsDisabled = false, nextLabel = 'Final Report' }) {
   const { wins, losses, playoffs, playoffRounds, team } = result
   const [gameIdx, setGameIdx] = useState(0)
   const [status,  setStatus]  = useState('playing')
@@ -1096,7 +1097,7 @@ function ScreenPlayoffs({ result, onNext, onPreSuperBowl, adsDisabled = false })
         <img src="/trophy.webp" alt="" className="sfb-trophy" />
         <div className="plf-champ-label">Super Bowl Champions</div>
         <div className="plf-champ-sub">{sb.mySc}–{sb.oppSc}{sb.overtime ? ' OT' : ''} vs {sb.opponent}</div>
-        <button className="simp-cta simp-cta-in" onClick={onNext}>Final Report</button>
+        <button className="simp-cta simp-cta-in" onClick={onNext}>{nextLabel}</button>
       </div>
     )
   } else if (status === 'eliminated') {
@@ -1107,7 +1108,7 @@ function ScreenPlayoffs({ result, onNext, onPreSuperBowl, adsDisabled = false })
         <div className="plf-elim-title">{r.round === 'Super Bowl' ? 'Lost Super Bowl' : 'Eliminated'}</div>
         <div className="plf-elim-round">{r.round === 'Super Bowl' ? '' : r.round}</div>
         <div className="plf-elim-score">{r.mySc} – {r.oppSc}{r.overtime ? ' OT' : ''} · vs {r.opponent}</div>
-        <button className="simp-cta" onClick={onNext}>Final Report</button>
+        <button className="simp-cta" onClick={onNext}>{nextLabel}</button>
       </div>
     )
   } else if (status === 'between') {
@@ -1174,6 +1175,138 @@ function ScreenPlayoffs({ result, onNext, onPreSuperBowl, adsDisabled = false })
 }
 
 // ── Screen 4: Final Report ────────────────────────────────────────────────────
+
+// ─── GOAT Status: where this season ranks among the all-time top 25 ──────────
+// (football's version of basketball's GOAT screen; the lists are data/nfl-goat.js)
+const GOAT_POS = { qb: 'QBs', rb: 'Running Backs', wr: 'Wide Receivers', te: 'Tight Ends', db: 'Defensive Backs' }
+const GOAT_N = 25
+
+// Your season's spot: OVR sets it (90 just makes the list, 99 is near the top), a
+// monster stat line moves it up a few, the season award and a ring more. The top
+// spots need the hardware: no ring, no top 4; #1 takes a 99, the award and a ring.
+function nflGoatRank(kind, result, wonAward) {
+  const { ovr = 0, sbResult } = result
+  if (ovr < 90) return null
+  const ring = !!sbResult?.won
+  const r = result
+  const pts = (v, steps) => steps.filter(x => (v ?? 0) >= x).length
+  const stat = kind === 'qb' ? pts(r.seasonPassYds, [4500, 5200]) + pts(r.seasonTDs, [38, 48])
+    : kind === 'rb' ? pts(r.seasonRushYds, [1600, 2000]) + pts((r.seasonRushTDs ?? 0) + (r.seasonRecTDs ?? 0), [16, 22]) + pts(r.seasonRecYds, [600])
+    : kind === 'wr' ? pts(r.seasonRecYds, [1500, 1800]) + pts(r.seasonRecTDs, [13, 17])
+    : kind === 'te' ? pts(r.seasonRecYds, [1200, 1500]) + pts(r.seasonRecTDs, [11, 15])
+    : pts(r.seasonINTs, [7, 10]) + pts(r.seasonPickSixes, [2]) + pts(r.seasonPBUs, [18])
+  let rank = Math.round(GOAT_N - ((ovr - 90) / 9) * 21) - Math.min(4, stat) - (wonAward ? 3 : 0) - (ring ? 2 : 0)
+  if (!ring) rank = Math.max(rank, 5)
+  if (rank <= 3 && !(ring && ovr >= 97)) rank = 4
+  if (rank <= 2 && !(ring && wonAward && ovr >= 97)) rank = 3
+  if (rank <= 1 && !(ring && wonAward && ovr >= 99)) rank = 2
+  rank = Math.max(1, rank)
+  return rank <= GOAT_N ? rank : null
+}
+
+const NFL_TEAM = Object.fromEntries(TEAMS.map(t => [t.short, t]))
+
+function NflGoatCard({ rank, entry, isPlayer, team, userName }) {
+  const short = isPlayer ? team?.short : entry?.team
+  const color = isPlayer ? team?.color : NFL_TEAM[short]?.color
+  const photo = !isPlayer && entry ? nflHeadshot(HEADSHOTS[entry.name]) : null
+  const isGoat = !isPlayer && rank === 1
+  return (
+    <div className={`goat-card${isPlayer ? ' goat-card--you' : ''}${isGoat ? ' goat-card--rank1' : ''}`} style={{ '--accent': isPlayer ? '#e8a820' : (color ?? 'rgba(255,255,255,0.15)') }}>
+      {isGoat && <span className="goat-card-watermark" aria-hidden="true">G.O.A.T.</span>}
+      <span className="goat-card-rank">{rank}</span>
+      <QBAvatar photo={photo} team={short} color={color} size={isPlayer ? 56 : 44} />
+      <div className="goat-card-info">
+        <span className="goat-card-name">{isPlayer ? userName : (entry?.name ?? '—')}</span>
+        {short && <span className="goat-card-team">{short}{!isPlayer && entry?.years ? ` · ${entry.years}` : ''}</span>}
+      </div>
+    </div>
+  )
+}
+
+function GoatRows({ withYou, rank, byRank, team, userName, listIn, listRef }) {
+  // with you in the list, everyone from your spot down moves down one
+  const entryAt = r => (r < rank ? byRank[r] : r === rank ? null : byRank[r - 1] ?? null)
+  return (
+    <div ref={listRef} className={`goat-full-list${listIn ? ' goat-list-in' : ''}`}>
+      {Array.from({ length: GOAT_N }, (_, i) => GOAT_N - i).map(r => (
+        <Fragment key={r}>
+          <NflGoatCard rank={r} entry={withYou ? entryAt(r) : byRank[r]} isPlayer={withYou && r === rank} team={team} userName={userName} />
+          {(r === 21 || r === 11) && <div id={`ramp-cntr1-nflgoat-${r}`} className="ad-cntr1-mobile" />}
+        </Fragment>
+      ))}
+    </div>
+  )
+}
+
+function ScreenGOAT({ kind, result, wonAward, onNext, adsDisabled = false, userName = 'Guest' }) {
+  const byRank = useMemo(() => Object.fromEntries((NFL_GOAT[kind] ?? []).map(g => [g.rank, g])), [kind])
+  const playerRank = useMemo(() => nflGoatRank(kind, result, wonAward), [kind, result, wonAward])
+  const qualified = playerRank != null
+  const team = result.team
+  const [phase, setPhase] = useState('checking')
+  const [tick, setTick] = useState(GOAT_N + 1)
+  const [listIn, setListIn] = useState(false)
+  const listRef = useRef(null)
+
+  useEffect(() => {
+    const t = setTimeout(() => { setPhase(qualified ? 'ticker' : 'miss'); if (!qualified) setListIn(true) }, 2000)
+    return () => clearTimeout(t)
+  }, [qualified])
+  // the countdown from #25 to your spot (it never shows who's at your spot)
+  useEffect(() => {
+    if (phase !== 'ticker') return
+    if (tick <= playerRank) {
+      const t = setTimeout(() => {
+        setPhase('revealed')
+        setTimeout(() => { setListIn(true); setTimeout(() => listRef.current?.querySelector('.goat-card--you')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 500) }, 500)
+      }, 1000)
+      return () => clearTimeout(t)
+    }
+    const dist = tick - playerRank
+    const t = setTimeout(() => setTick(r => r - 1), dist > 10 ? 80 : dist > 4 ? 160 : 280)
+    return () => clearTimeout(t)
+  }, [phase, tick, playerRank])
+  // phones: a banner every ten rows (after 21 and 11), like basketball's list
+  useEffect(() => {
+    if (!listIn || adsDisabled || window.innerWidth > 768) return
+    rampAdd([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-nflgoat-21' }, { type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-nflgoat-11' }])
+  }, [listIn]) // eslint-disable-line
+
+  const tickEntry = tick > GOAT_N ? null : tick > playerRank ? byRank[tick - 1] : byRank[tick]
+  const rowProps = { rank: playerRank, byRank, team, userName, listIn, listRef }
+
+  return (
+    <div className="simp-screen goat-screen">
+      <div className="goat-screen-title">GOAT STATUS</div>
+      <div className="goat-page-title">Top 25 {GOAT_POS[kind]}</div>
+      <div className="goat-eyebrow">OF ALL TIME</div>
+      {phase === 'checking' && (
+        <div className="goat-checking"><div className="goat-check-ring" /><div className="goat-check-lbl">Checking the resume…</div></div>
+      )}
+      {phase === 'ticker' && (
+        <div className="goat-ticker" onClick={() => { setPhase('revealed'); setListIn(true) }}>
+          <div className="goat-ticker-rank">#{Math.min(tick, GOAT_N)}</div>
+          <QBAvatar photo={tickEntry ? nflHeadshot(HEADSHOTS[tickEntry.name]) : null} team={tickEntry?.team} color={NFL_TEAM[tickEntry?.team]?.color} size={120} />
+          <div className="goat-ticker-name">{tickEntry?.name ?? '…'}</div>
+          <div className="goat-ticker-team">{tickEntry?.team ?? ''}</div>
+        </div>
+      )}
+      {phase === 'miss' && <>
+        <div className="goat-miss-card"><div className="goat-miss-title">Missed the Cut</div><div className="goat-miss-ovr">OVR {result.ovr}</div></div>
+        <button className="simp-cta simp-cta-in" onClick={onNext} style={{ marginBottom: 8 }}>Final Report →</button>
+        <GoatRows withYou={false} {...rowProps} />
+        <button className="simp-cta simp-cta-in" onClick={onNext} style={{ marginTop: 12 }}>Final Report →</button>
+      </>}
+      {phase === 'revealed' && <>
+        <div className="goat-reveal-banner"><div className="goat-reveal-you">{userName} is ranked</div><div className="goat-reveal-rank">#{playerRank}</div></div>
+        <button className="simp-cta simp-cta-in" onClick={onNext} style={{ marginBottom: 8 }}>Final Report →</button>
+        <GoatRows withYou {...rowProps} />
+        <button className="simp-cta simp-cta-in" onClick={onNext} style={{ marginTop: 12 }}>Final Report →</button>
+      </>}
+    </div>
+  )
+}
 
 function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = false, mvpWon = false, isRB = false, isWR = false, isTE = false, isDB = false, isOL = false, userName = 'Guest', isSalaryMode = false }) {
   const { ovr, wins, losses, playoffs, sbResult, bestGame } = result
@@ -1532,7 +1665,7 @@ function ProgressDots({ screen, total }) {
 // ── SimPage ───────────────────────────────────────────────────────────────────
 
 export default function SimPage({ result: baseResult, build, types = TYPES, onBack, onReset, replay = false, adsDisabled = false, isRB = false, isWR = false, isTE = false, isDB = false, isOL = false, onMVPWon, simFn = null, onFinal = null, pool = null, userName = 'Guest', isSalaryMode = false }) {
-  const [screen, setScreen] = useState(replay ? 3 : 0)
+  const [screen, setScreen] = useState(replay ? (isOL ? 3 : 4) : 0)   // a replay opens on the final report (after the GOAT screen; OL has none)
   useRailOn(screen)   // each screen of the season brings the bottom rail back
   const [mvpResult, setMvpResult] = useState(null)
   const [mvpWon, setMvpWon] = useState(false)
@@ -1608,7 +1741,9 @@ export default function SimPage({ result: baseResult, build, types = TYPES, onBa
   const screens = [
     <ScreenBuild    key="build"    result={result} build={build} types={types} onNext={next} isRB={isRB} isWR={isWR} isTE={isTE} isDB={isDB} isOL={isOL} isSalaryMode={isSalaryMode} />,
     <ScreenSeason   key="season"   result={result} onNext={next} isRB={isRB} isWR={isWR} isTE={isTE} isDB={isDB} isOL={isOL} adsDisabled={adsDisabled} build={build} types={types} director={director} onFinal={handleFinal} pool={pool} userName={userName} />,
-    <ScreenPlayoffs key="playoffs" result={result} onNext={next} onPreSuperBowl={handlePreSuperBowl} adsDisabled={adsDisabled} />,
+    <ScreenPlayoffs key="playoffs" result={result} onNext={next} onPreSuperBowl={handlePreSuperBowl} adsDisabled={adsDisabled} nextLabel={isOL ? 'Final Report' : 'GOAT Status'} />,
+    // where the season ranks among the all-time top 25 at the position (no OL list)
+    ...(isOL ? [] : [<ScreenGOAT key="goat" kind={isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'} result={result} wonAward={mvpWon} onNext={next} adsDisabled={adsDisabled} userName={userName} />]),
     <ScreenFinal    key="final"    result={result} build={build} types={types} onReset={handleReset} onBack={handleBack} adsDisabled={adsDisabled} mvpWon={mvpWon} isRB={isRB} isWR={isWR} isTE={isTE} isDB={isDB} isOL={isOL} userName={userName} isSalaryMode={isSalaryMode} />,
   ]
 
@@ -1689,6 +1824,7 @@ export default function SimPage({ result: baseResult, build, types = TYPES, onBa
 
       {mvpResult && (
         <MVPModal
+          nextLabel={isOL ? 'Continue to Final Report' : 'Continue to GOAT Status'}
           result={result}
           mvpResult={mvpResult}
           onDismiss={handleMVPDismiss}

@@ -43,7 +43,7 @@ function OLAllProReveal({ mvpResult, userPhoto, userName = 'Guest' }) {
   )
 }
 
-export default function MVPModal({ result, mvpResult, onDismiss, toSuperBowl = false, isRB = false, isWR = false, isTE = false, isDB = false, isOL = false, userPhoto = null, userName = 'Guest' }) {
+export default function MVPModal({ result, mvpResult, onDismiss, toSuperBowl = false, nextLabel = 'Continue to Final Report', isRB = false, isWR = false, isTE = false, isDB = false, isOL = false, userPhoto = null, userName = 'Guest' }) {
   const [phase, setPhase] = useState('loading')
   const [barWidth, setBarWidth] = useState(0)
   const [visible, setVisible] = useState(false)
@@ -490,7 +490,7 @@ export default function MVPModal({ result, mvpResult, onDismiss, toSuperBowl = f
               </>
             )}
             <button className="mvp-continue" onClick={onDismiss}>
-              {toSuperBowl ? 'Continue to Super Bowl' : 'Continue to Final Report'}
+              {toSuperBowl ? 'Continue to Super Bowl' : nextLabel}
             </button>
           </div>
         )}
