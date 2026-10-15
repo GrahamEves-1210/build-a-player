@@ -748,6 +748,9 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
           // Desktop-only nudge for the two generic (no-headshot) placeholders
           const genericDesktopX = isGeneric && !isMobile ? 2.5 : 0
           const genericDesktopY = isGeneric && !isMobile ? 16 : 0
+          // the px nudges were tuned on the website build screen (a ~131px head); a model
+          // is drawn smaller, so scale them with it or the head sinks into the collar
+          const k = modelOnly ? hpx / 131 : 1
           return (
             <div
               key={bucketPhoto}
@@ -757,7 +760,7 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
                 top: `${collarY}%`,
                 width: `${hpx}px`,
                 height: `${hpx}px`,
-                transform: `translate(calc(-50% + 0.75px + ${adj.dx + (isGeneric ? 0.75 : 0) + genericDesktopX}px), calc(-89% + 4px + ${adj.dy + genericYAdj + genericDesktopY}px))`,
+                transform: `translate(calc(-50% + ${k * (0.75 + adj.dx + (isGeneric ? 0.75 : 0) + genericDesktopX)}px), calc(-89% + ${k * (4 + adj.dy + genericYAdj + genericDesktopY)}px))`,
                 overflow: 'hidden',
                 borderRadius: '50%',
                 pointerEvents: 'none',
