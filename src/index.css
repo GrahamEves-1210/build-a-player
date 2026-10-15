@@ -17037,3 +17037,9 @@ html:has([id^="pw-oop"][data-pw-status="loaded"][style*="bottom"]):not(.ads-hidd
 .auth-apple { width: 100%; height: 48px; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; gap: 10px; border-radius: 12px; border: 1px solid rgba(255,255,255,.22); background: #000; color: #fff; font: 600 16px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; cursor: pointer; }
 .auth-apple:disabled { opacity: .55; }
 .auth-apple:active:not(:disabled) { transform: scale(.98); }
+
+/* Pick your username (after a sign-in that came back without one): over everything */
+.un-overlay { z-index: 1400; }
+.un-sub { margin: -4px 0 16px; font-size: 13px; line-height: 1.45; color: rgba(255,255,255,.6); }
+.un-pick { display: block; width: 100%; margin-top: 10px; padding: 10px; background: none; border: 0; color: rgba(255,255,255,.55); font: inherit; font-size: 13px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.un-pick:disabled { opacity: .5; }
