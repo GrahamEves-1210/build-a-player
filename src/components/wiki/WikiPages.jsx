@@ -240,7 +240,7 @@ function CareerPage({ go }) {
       <pre className="wk-pre">{`legacy = seasons × 2 + Pro Bowls/All-Stars × 6 + All-Pro/All-NBA × 10
        + awards × 18 + rings × 20 + playoff years × 3
        + production + records × 8 + camp and shoe-deal bonuses`}</pre>
-      <p>The same formula scores the real greats, so a finished career slots into the all-time list for its position (one top 25 for basketball). Tiers run Starter, Star (80), Superstar (170) and All-Time Great (280). At retirement a Hall of Fame vote is held: 80% gets in, 93% is first ballot. Each career also keeps its own record book: break an all-time record and that number becomes the bar for the rest of the career.</p>
+      <p>The same formula scores the real greats from their real careers (seasons, Pro Bowls or All-Star picks, AP First-Team All-Pro or All-NBA teams, the position's award counted once a season, rings, playoff years, career stats and the all-time records they hold), so a finished career slots into the all-time list for its position (one top 25 for basketball). Records count once each, however many times a career raises its own. Camp and shoe-deal bonuses are the only points the greats don't get. Tiers run Starter, Star (80), Superstar (170) and All-Time Great (280). At retirement a Hall of Fame vote is held: 80% gets in, 93% is first ballot. Each career also keeps its own record book: break an all-time record and that number becomes the bar for the rest of the career.</p>
     </>
   )
 }

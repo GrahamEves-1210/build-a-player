@@ -203,7 +203,7 @@ const CT = [
 
 // ── Unlocks: not looks, features. Sandbox in Career and in Takeover, bought one
 // mode at a time (the switch is on the build screen; turning it on asks to buy)
-export const UNLOCK_PRICE = 7500
+export const UNLOCK_PRICE = 10000
 const UL = [
   it('unlock', 'sandbox-career', 'Career Sandbox', 3, UNLOCK_PRICE, { unlock: true, mode: 'Career' }),
   it('unlock', 'sandbox-takeover', 'Takeover Sandbox', 3, UNLOCK_PRICE, { unlock: true, mode: 'Takeover' }),

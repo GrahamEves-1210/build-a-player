@@ -1,4 +1,5 @@
 import { useProgress, claimAch, achStats, rewardText } from '../../lib/progress'
+import { XpIco } from './GainIcons'
 import { ACHIEVEMENTS, ACH_GROUPS } from '../../lib/achievements'
 import { itemById } from '../../lib/cosmetics'
 import { sfx, haptic } from '../../lib/juice'
@@ -59,7 +60,7 @@ export default function AppAchievements({ onClose }) {
       </div>
       {waiting.length > 0 && (
         <button className="ach-claimall ag-pop" style={{ '--d': '60ms' }} onClick={claimAll}>
-          <span><b>{waiting.length} {waiting.length === 1 ? 'REWARD' : 'REWARDS'} WAITING</b><small>{p.signedIn ? `+${waitXp.toLocaleString()} XP${waitCoins ? ` · +${waitCoins.toLocaleString()} coins` : ''}` : 'Sign in to collect them'}</small></span>
+          <span><b>{waiting.length} {waiting.length === 1 ? 'REWARD' : 'REWARDS'} WAITING</b><small>{p.signedIn ? <><span className="gain"><XpIco /> +{waitXp.toLocaleString()}</span>{waitCoins ? <> · <span className="gain"><span className="coin-ico coin-ico--sm" /> +{waitCoins.toLocaleString()}</span></> : null}</> : 'Sign in to collect them'}</small></span>
           <span className="ach-claimall-go">{p.signedIn ? 'CLAIM ALL' : 'SIGN IN'}</span>
         </button>
       )}
@@ -82,7 +83,7 @@ export default function AppAchievements({ onClose }) {
                 </span>
                 {unlocked && !claimed
                   ? <button className="ach-claim" onClick={() => claim(a)}>CLAIM</button>
-                  : <span className="ach-reward">{claimed ? <span className="ach-done-tag">CLAIMED</span> : <span>{now.toLocaleString()}/{a.goal.toLocaleString()}</span>}{p.signedIn ? <span><b>+{a.xp}</b> XP{a.coins ? <> · <b>+{a.coins}</b> C</> : null}</span> : <span>SIGN IN</span>}</span>}
+                  : <span className="ach-reward">{claimed ? <span className="ach-done-tag">CLAIMED</span> : <span>{now.toLocaleString()}/{a.goal.toLocaleString()}</span>}{p.signedIn ? <span className="gain"><XpIco /> <b>+{a.xp}</b>{a.coins ? <> · <span className="coin-ico coin-ico--sm" /> <b>+{a.coins}</b></> : null}</span> : <span>SIGN IN</span>}</span>}
               </div>
             )
           })}

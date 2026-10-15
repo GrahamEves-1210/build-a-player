@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { XpIco } from './GainIcons'
 import { useProgress, cardKey, rarityRank, RARITIES, claimSet, setReward } from '../../lib/progress'
 import { HEADSHOT_BASE, nflHeadshot } from '../../utils/simulation'
 import { sfx, haptic } from '../../lib/juice'
@@ -236,7 +237,7 @@ export default function AppCards({ sport: startSport, onClose }) {
             </div>
             <div className="ag-set-sub">{openSet.sub} · worth {setReward(openSet.total)} XP</div>
             {openSet.owned === openSet.total && !openSet.claimed && (
-              <button className="ag-btn ag-btn--gold ag-set-claim" onClick={() => claim(openSet)}><IconGift size={18} /> SET COMPLETE · CLAIM +{setReward(openSet.total)} XP</button>
+              <button className="ag-btn ag-btn--gold ag-set-claim" onClick={() => claim(openSet)}><IconGift size={18} /> SET COMPLETE · CLAIM <span className="gain"><XpIco /> +{setReward(openSet.total)}</span></button>
             )}
             <div className="ag-ct-grid">
               {sections.map(sec => (

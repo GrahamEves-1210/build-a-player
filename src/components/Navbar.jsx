@@ -289,7 +289,7 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
               onClick={() => setPosDropOpen(o => !o)}
             >
               <span className="nav-pos-sub">{BUCKET_POS_SUB[bucketPosition]}</span>
-              {bucketPosition.charAt(0).toUpperCase() + bucketPosition.slice(1)}
+              <span className="nav-pos-name">{bucketPosition.charAt(0).toUpperCase() + bucketPosition.slice(1)}</span>
               <IconChevron up={posDropOpen} />
             </button>
             {posDropOpen && (
@@ -319,7 +319,7 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
             <span className="nav-pos-badge" style={{ '--pos-col': POS_COLORS[isOL ? 'ol' : isWR ? 'wr' : isRB ? 'rb' : isTE ? 'te' : isDB ? 'db' : 'qb'] }}>
               {isOL ? 'OL' : isWR ? 'WR' : isRB ? 'RB' : isTE ? 'TE' : isDB ? 'DB' : 'QB'}
             </span>
-            {POS_NAMES[isOL ? 'ol' : isWR ? 'wr' : isRB ? 'rb' : isTE ? 'te' : isDB ? 'db' : 'qb']}
+            <span className="nav-pos-name">{POS_NAMES[isOL ? 'ol' : isWR ? 'wr' : isRB ? 'rb' : isTE ? 'te' : isDB ? 'db' : 'qb']}</span>
             <IconChevron up={posDropOpen} />
           </button>
           {posDropOpen && (

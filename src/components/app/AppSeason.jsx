@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { XpIco } from './GainIcons'
 import { createPortal } from 'react-dom'
 import { useProgress, levelInfo, markLevelSeen, missionDef, careerRings, levelUnlocks } from '../../lib/progress'
 import { IconRing, IconTarget, IconCheck, IconArrow } from './icons'
@@ -128,7 +129,7 @@ export function SeasonRewards({ result }) {
     <section className="ag-rewards">
       <div className="ag-rewards-head">
         <span className="ag-eyebrow">SEASON REWARDS</span>
-        <span className="ag-rewards-total">+{total} <small>XP</small>{s.coins ? <span className="ag-rewards-coins"><span className="coin-ico coin-ico--sm" /> +{coins}</span> : null}</span>
+        <span className="ag-rewards-total"><span className="gain"><XpIco sm={false} /> +{total}</span>{s.coins ? <span className="ag-rewards-coins"><span className="coin-ico coin-ico--sm" /> +{coins}</span> : null}</span>
       </div>
       <div className="ag-rewards-lines">
         {s.lines.map((l, i) => (

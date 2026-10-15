@@ -941,7 +941,8 @@ export default function App() {
     }
     track('simulate', { position, gameMode, userId: user?.id ?? null })
     if (!user) {
-      showSaveToast('no-auth', 'Sign in to save your stats')
+      // the new look doesn't nag guests after every season (Sign in is on Home)
+      if (!IS_APP && !APP_LOOK) showSaveToast('no-auth', 'Sign in to save your stats')
     } else if (saveBlock === 'sandbox') {
       showSaveToast('custom', 'Custom mode — results not saved')
     } else if (saveBlock === 'played') {

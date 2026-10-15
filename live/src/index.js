@@ -42,6 +42,8 @@ const posFor = (sl, asked) => (sl.pos === 'any' ? (asked === 'big' ? 'big' : 'gu
 const BOT_NAMES = ['Smoke', 'Shifty', 'Glass', 'Sauce', 'Twitch', 'Hammer', 'Ghost', 'Blitz', 'Cash', 'Lefty', 'Rook', 'Stretch']
 const OFF_CALLS = ['drive', 'pullup', 'post', 'pass']
 const DEF_CALLS = ['press', 'sag', 'help']
+// a 1v1 has nobody to pass to and nobody to help (src/lib/hoops.js offCallsFor/defCallsFor)
+const callsFor = (size, offense) => (offense ? OFF_CALLS : DEF_CALLS).filter(c => size > 1 || (c !== 'pass' && c !== 'help'))
 const EMOTES = ['🔥', '🧊', '💰', '😤', '👏', '😂']
 
 const ORIGINS = [/^https:\/\/(www\.)?build-a-player\.com$/, /^https:\/\/([a-z0-9-]+\.)?build-a-player\.pages\.dev$/, /^https:\/\/localhost$/, /^https?:\/\/localhost(:\d+)?$/, /^capacitor:\/\/localhost$/, /^https?:\/\/127\.0\.0\.1(:\d+)?$/]
@@ -296,7 +298,7 @@ export class Room {
     for (const t of [0, 1]) {
       if (c[t] != null) continue
       const anyone = this.humans().some(p => p.team === t && !m.final.afk.includes(p.vid) && this.here().includes(p.vid))
-      if (!anyone && Math.random() < 0.55) { const opts = (a?.team ?? 0) === t ? OFF_CALLS : DEF_CALLS; c[t] = opts[Math.floor(Math.random() * opts.length)] }
+      if (!anyone && Math.random() < 0.55) { const opts = callsFor(m.size, (a?.team ?? 0) === t); c[t] = opts[Math.floor(Math.random() * opts.length)] }
     }
     m.locks[pn] = { 0: c[0] ?? null, 1: c[1] ?? null }
     if (a) this.clear(a.timer)
@@ -335,7 +337,7 @@ export class Room {
         if (m.phase !== 'game' || !Number.isInteger(msg.pn) || m.locks[msg.pn] || m.final.afk.includes(vid)) return
         // a play, a defense, or a pass to a named teammate ('pass:<vid>', one on the caller's team)
         const passTo = typeof msg.v === 'string' && msg.v.startsWith('pass:') ? m.players.find(p => p.vid === msg.v.slice(5) && p.team === me.team && p.vid !== vid) : null
-        if (!OFF_CALLS.includes(msg.v) && !DEF_CALLS.includes(msg.v) && !passTo) return
+        if (!callsFor(m.size, true).includes(msg.v) && !callsFor(m.size, false).includes(msg.v) && !passTo) return
         const c = (m.calls[msg.pn] ??= {})
         if (c[me.team] == null) c[me.team] = msg.v
         return

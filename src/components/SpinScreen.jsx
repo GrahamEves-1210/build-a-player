@@ -9,7 +9,7 @@ import { track } from '../lib/track'
 import { seededShuffle } from '../lib/progress'
 import { rampRail } from '../lib/ads'
 import { IS_APP } from '../lib/platform'
-import { watchFor } from '../lib/rewardedAd'
+import { watchFor, REWARDED_ON } from '../lib/rewardedAd'
 
 function fmtHeight(inches) {
   return `${Math.floor(inches / 12)}'${inches % 12}"`
@@ -429,7 +429,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
   // earns one more, once a build
   const [adBusy, setAdBusy] = useState(false)
   const [adNote, setAdNote] = useState('')
-  const canEarn = IS_APP && !isVersusMode && !seedPlan && qbRespinBonus === 0
+  const canEarn = REWARDED_ON && IS_APP && !isVersusMode && !seedPlan && qbRespinBonus === 0
   const earnRespin = async () => {
     if (adBusy) return
     setAdBusy(true); setAdNote('')

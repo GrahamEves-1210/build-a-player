@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import { XpIco } from './GainIcons'
 import { useProgress, COMPETE_REWARDS } from '../../lib/progress'
 import { POOL_SIZE, FILL_AFTER_SECS, MIN_POOL } from '../../lib/compete'
 import { IconClose, IconArrow, IconTrophy } from './icons'
@@ -98,7 +99,7 @@ export default function AppCompete({ cp, au, sport, position, positions, onPosit
             <span className="ag-eyebrow">POOL {cp.match.code} · FINAL</span>
             <b className="cp-place">{mine ? ord(me.place) : 'DNF'}</b>
             <span className="cp-sub">{mine ? (me.place === 1 ? 'You took the pool.' : `of ${cp.ranked.length} · ${mine.ovr} OVR`) : 'Time ran out before you locked in.'}</span>
-            {mine && <span className="cp-reward">+{(COMPETE_REWARDS[me.place] ?? COMPETE_REWARDS[5])[0]} XP · +{(COMPETE_REWARDS[me.place] ?? COMPETE_REWARDS[5])[1]} COINS{me.place < cp.ranked.length ? ` · beat ${cp.ranked.length - me.place}` : ''}</span>}
+            {mine && <span className="cp-reward"><span className="gain"><XpIco /> +{(COMPETE_REWARDS[me.place] ?? COMPETE_REWARDS[5])[0]}</span> · <span className="gain"><span className="coin-ico coin-ico--sm" /> +{(COMPETE_REWARDS[me.place] ?? COMPETE_REWARDS[5])[1]}</span>{me.place < cp.ranked.length ? ` · beat ${cp.ranked.length - me.place}` : ''}</span>}
             {mine && <RatingLine mode="compete" />}
           </div>
         ) : (
@@ -161,7 +162,7 @@ export default function AppCompete({ cp, au, sport, position, positions, onPosit
         </div>
         <button className="ag-btn cp-go ag-pop" style={{ '--d': '160ms' }} onClick={showAuction ? () => au.join() : cp.join}>{showAuction ? 'FIND AN AUCTION' : 'FIND A POOL'} <IconArrow size={16} /></button>
         <div className="cp-rewards ag-pop" style={{ '--d': '200ms' }}>
-          {[1, 2, 3, 4, 5].map(n => <span key={n}><b>{ord(n)}</b>+{COMPETE_REWARDS[n][0]} XP · +{COMPETE_REWARDS[n][1]}c</span>)}
+          {[1, 2, 3, 4, 5].map(n => <span key={n}><b>{ord(n)}</b><span className="gain"><XpIco /> +{COMPETE_REWARDS[n][0]}</span> · <span className="gain"><span className="coin-ico coin-ico--sm" /> +{COMPETE_REWARDS[n][1]}</span></span>)}
         </div>
       </>
     )

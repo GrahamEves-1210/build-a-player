@@ -10,6 +10,10 @@ import { IS_APP, APP_PLATFORM } from './platform'
 const AD_UNIT_WEB = import.meta.env.VITE_REWARDED_AD_UNIT || ''
 const AD_UNIT_APP = APP_PLATFORM === 'ios' ? import.meta.env.VITE_ADMOB_REWARDED_IOS : import.meta.env.VITE_ADMOB_REWARDED_ANDROID
 
+// Rewarded videos are switched off everywhere (the respin, revive, retry, streak
+// and shop-coins offers) until the ad units are actually live; flip this back on then
+export const REWARDED_ON = false
+
 export const rewardedReady = () => !!(IS_APP ? AD_UNIT_APP : AD_UNIT_WEB)
 
 // One video for an in-game reward (respin, revive, retry...): { ok } when it was

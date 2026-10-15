@@ -41,29 +41,55 @@ import { NBA_BIG_PLAYERS } from '../data/nba-bigs'
 import { DLS, passRush } from '../data/dls'
 import { WRS } from '../data/wrs'
 import { TES } from '../data/tes'
+import { OLS, olOVR } from '../data/ols'
+import { DBS } from '../data/dbs'
+import { GUARD_TYPES } from '../data/nba-guards'
+import { BIG_TYPES } from '../data/nba-bigs'
+import { calcBucketOVR } from '../utils/bucketSimulation'
 
 // The trade deadline: a real player from another team. A scorer (the best
 // offensive players around the league) or a stopper (the best defenders).
-const NBA_POOL = [...NBA_GUARD_PLAYERS, ...NBA_BIG_PLAYERS]
+// Every player carries his group (where he'd go on a Career roster) and overall.
+const nbaOvr = (p, g) => { const types = g === 'big' ? BIG_TYPES : GUARD_TYPES; return Math.round(p.ovr ?? calcBucketOVR(Object.fromEntries(types.map(t => [t, { val: p.attrs?.[t] ?? 5 }])), types, g)) }
+const nbaSeen = new Set()
+const NBA_POOL = [...NBA_GUARD_PLAYERS.map(p => [p, 'guard']), ...NBA_BIG_PLAYERS.map(p => [p, 'big'])]
+  .filter(([p]) => !nbaSeen.has(p.name) && nbaSeen.add(p.name)).map(([p, g]) => ({ ...p, group: g, ovr: nbaOvr(p, g) }))
 const sumOf = (p, keys) => keys.reduce((s, k) => s + (p.attrs?.[k] ?? 0), 0)
 const OFF_KEYS = ['jumpShot', 'finishing', 'handles', 'playmaking', 'clutch']
 const DEF_KEYS = ['perimeterDefense', 'interiorDefense']
-// Football deadline targets: a real pass rusher, a real weapon (from another team)
+const NBA_SCORERS = [...NBA_POOL].sort((a, b) => sumOf(b, OFF_KEYS) - sumOf(a, OFF_KEYS)).slice(0, 80)
+const NBA_STOPPERS = [...NBA_POOL].sort((a, b) => sumOf(b, DEF_KEYS) - sumOf(a, DEF_KEYS)).slice(0, 60)
+// Football deadline targets: a real pass rusher, a real weapon (from another team);
+// in a Career, a weapon and a lineman (offense) or a corner and a safety (a DB):
+// the groups a Career roster keeps, so the man traded for is really on it
 const NFL_RUSHERS = [...DLS].sort((a, b) => passRush(b) - passRush(a))
-const NFL_WEAPONS = [...WRS.map(p => ({ ...p, role: 'receiver' })), ...TES.map(p => ({ ...p, role: 'tight end' }))].sort((a, b) => b.ovr - a.ovr)
-// usually a very good player (ranked past the elite tier); an elite one only rarely (6%)
+const NFL_WEAPONS = [...WRS.map(p => ({ ...p, group: 'wr', role: 'receiver' })), ...TES.map(p => ({ ...p, group: 'te', role: 'tight end' }))].sort((a, b) => b.ovr - a.ovr)
+const NFL_LINE = OLS.map(p => ({ ...p, group: 'ol', role: 'lineman', ovr: Math.round(olOVR(p.attrs) ?? 72) })).sort((a, b) => b.ovr - a.ovr)
+// the pass rushers have no overall: usually one past the elite tier, an elite one only rarely (6%)
 const nflTarget = (r, list, mine, elite, top) => {
   const pool = list.filter(p => p.team !== mine)
   const from = r() < 0.06 ? pool.slice(0, elite) : pool.slice(elite, top)
   return from[Math.floor(r() * from.length)] ?? null
 }
-const last = n => n.split(' ').filter(w => !/^(jr\.?|sr\.?|ii|iii|iv|v)$/i.test(w)).pop()
-function deadlineTarget(r, mine, keys, top, not) {
-  const seen = new Set()
-  const pool = NBA_POOL.filter(p => p.team !== mine && p.name !== not && !seen.has(p.name) && seen.add(p.name))
-    .sort((a, b) => sumOf(b, keys) - sumOf(a, keys)).slice(0, top)
-  return pool[Math.floor(r() * pool.length)] ?? null
+// Who's on the table: a good player (80-89) most of the time; a superstar (90+)
+// only 1 call in 20 (stars rarely move at the deadline). In a Career, `ok` keeps
+// out anyone who can't come (already here, retired, no upgrade, or he'd take the job).
+const STAR = 90
+function dealTarget(r, list, mine, { lo = 80, ok = null, not = null } = {}) {
+  const pool = list.filter(p => p.team !== mine && p.name !== not && (!ok || ok(p, p.group)))
+  const stars = pool.filter(p => p.ovr >= STAR), good = pool.filter(p => p.ovr >= lo && p.ovr < STAR)
+  // (no good player who'd help: no call, rather than a star by default)
+  const from = r() < 0.05 && stars.length ? stars : good
+  return from[Math.floor(r() * from.length)] ?? null
 }
+// A deal's effect. Career: the player joins the roster and the team is graded again
+// from it (what that does to the team, and which grades move). Elsewhere: a set bump.
+const dealFx = (d, p, flat) => {
+  if (!d) return { team: flat }
+  const fx = d.fx(p, p.group)
+  return { team: { off: fx.off, def: fx.def }, trade: { name: p.name, group: p.group, from: p.team, grades: fx.grades } }
+}
+const last = n => n.split(' ').filter(w => !/^(jr\.?|sr\.?|ii|iii|iv|v)$/i.test(w)).pop()
 
 // ── What each kind of event touches, per position ───────────────────────────
 //   legs   conditioning: fatigue, rest, fresh legs
@@ -155,10 +181,13 @@ export function describe(e, c, scope = '') {
     return `${p}%: ${lc(describe(e.gamble.hit, c, scope))} · ${100 - p}%: ${lc(describe(e.gamble.miss, c, scope))}`
   }
   const parts = []
+  // a Career deal: the team's grades, recalculated with him on the roster
+  if (e.trade) for (const g of e.trade.grades ?? []) parts.push(`${g.k.toLowerCase()} ${g.from} → ${g.to}`)
   for (const [t, d] of Object.entries(e.attr || {})) if (d) parts.push(`${sign(d)} ${c.L(t)}`)
   if (e.team?.off) parts.push(`team offense ${sign(e.team.off)}`)
   if (e.team?.def) parts.push(`team defense ${sign(e.team.def)}`)
   let s = parts.join(', ')
+  if (e.trade && !s) s = 'joins the roster; the team grades hold'
   if (s && e.window) s += ` for ${e.window} ${e.window === 1 ? 'game' : 'games'}`
   else if (s && !scope) s += ' for the rest of the season'
   if (s && scope) s += ` ${scope}`
@@ -178,7 +207,7 @@ export function phaseOf(stop) {
   return f < 0.3 ? 'early' : f < 0.55 ? 'mid' : f < 0.8 ? 'late' : 'stretch'
 }
 
-function context({ sport, pos, stop, ctx, build, types, attrMap, teamNick, name, seed, team, lastBig, lastBust }) {
+function context({ sport, pos, stop, ctx, build, types, attrMap, teamNick, name, seed, team, lastBig, lastBust, deals = null }) {
   const isBucket = sport === 'bucket'
   const k = ctx.games.length, total = stop.total, left = total - k
   const { wins, losses, streak, skid } = ctx
@@ -204,6 +233,7 @@ function context({ sport, pos, stop, ctx, build, types, attrMap, teamNick, name,
   const r = seeded(`scn-${seed}-${stop.at}`)
   return {
     team: team?.short ?? null,
+    deals,                       // Career: () => who the front office can trade for (see career.js dealsFor)
     sport, pos, isBucket, isDef: pos === 'db', isOL: pos === 'ol', stop, k, total, left, wins, losses, streak, skid, pace,
     rec: `${wins}–${losses}`, nick: teamNick, name, T, R, R1, roleHas: role => traitsOf(role).length > 0, L, val, r,
     alive: wins + left >= needIn, clinched: wins >= lock, eliminated: wins + left < needIn,
@@ -299,9 +329,11 @@ const NFL_ALL = [
       ] }) },
   { id: 'deadline-buy', at: ['mid'], w: 4, when: c => c.alive && !c.struggling,
     make: c => {
+      const d = c.deals?.()
+      if (d) return careerDeadline(c, d)
       // two real players on the table: an edge rusher and a weapon, from other teams
       const rush = nflTarget(c.r, NFL_RUSHERS, c.team, 10, 36)
-      const gun = nflTarget(c.r, NFL_WEAPONS, c.team, 12, 45)
+      const gun = dealTarget(c.r, NFL_WEAPONS, c.team)
       if (!rush || !gun) return null
       return { kicker: 'TRADE DEADLINE', title: 'The GM has one pick to spend',
         body: `${c.nick} are buying, and there's one pick to spend. Two calls are live: ${rush.name} from the ${rush.teamName} or ${gun.name} from the ${gun.teamName}. The GM asks the leaders.`,
@@ -336,6 +368,26 @@ const QB = [
       ] }) },
 ]
 const RB = [], WR = [], TE = [], DB = [], OL = []
+// A Career's deadline (football): two real players who'd start, from other teams,
+// a weapon and a lineman for an offense, a corner and a safety for a DB. The one
+// picked joins the roster (career.js), and the fine print is what that does to the team.
+function careerDeadline(c, d) {
+  const lists = c.isDef
+    ? ['cb', 's'].map(sp => DBS.filter(p => (p.subpos === 's' ? 's' : 'cb') === sp).map(p => ({ ...p, group: 'db', role: sp === 's' ? 'safety' : 'corner', ovr: d.ovr('db', p) })).sort((a, b) => b.ovr - a.ovr))
+    : [NFL_WEAPONS, NFL_LINE]
+  const a = dealTarget(c.r, lists[0], c.team, { ok: d.ok })
+  const b = dealTarget(c.r, lists[1], c.team, { ok: d.ok, not: a?.name })
+  if (!a || !b) return null
+  const from = p => p.teamName ?? p.team
+  const joins = p => (p.group === 'ol' ? `${last(p.name)} takes over at ${p.pos} the rest of the way.` : p.group === 'db' ? `${last(p.name)} lines up at ${p.role} the rest of the way.` : `${last(p.name)} is a new target at ${p.role} the rest of the way.`)
+  return { kicker: 'TRADE DEADLINE', title: 'The GM has one pick to spend',
+    body: `${c.nick} are buying, and there's one pick to spend. Two calls are live: ${a.name} from the ${from(a)} or ${b.name} from the ${from(b)}. The GM asks the leaders.`,
+    options: [
+      o('deal-a', `Trade for ${a.name}`, dealFx(d, a), joins(a)),
+      o('deal-b', `Trade for ${b.name}`, dealFx(d, b), joins(b)),
+      o('stand', 'Keep the pick, keep the chemistry', { team: { off: 0.5, def: 0.5 } }, 'No new faces. Everyone knows their job.'),
+    ] }
+}
 
 // ═════════════════════════════════════════════════════════════════════════════
 // FOOTBALL — playoffs (only when you're in)
@@ -357,14 +409,15 @@ const NFL_PLAYOFFS = [
 const NBA_ALL = [
   { id: 'nba-deadline', at: ['mid', 'late'], w: 3, when: c => c.alive,
     make: c => {
-      const star = deadlineTarget(c.r, c.team, OFF_KEYS, 40)
-      const stop = deadlineTarget(c.r, c.team, DEF_KEYS, 30, star?.name)
+      const d = c.deals?.()
+      const star = dealTarget(c.r, NBA_SCORERS, c.team, { ok: d?.ok })
+      const stop = dealTarget(c.r, NBA_STOPPERS, c.team, { lo: 76, ok: d?.ok, not: star?.name })
       if (!star || !stop) return null
       return { kicker: 'TRADE DEADLINE', title: 'The front office calls',
         body: `Two deals on the table. ${star.name} from ${star.team} for next year's picks, or ${stop.name} from ${stop.team} for the bench. Or stand pat.`,
         options: [
-          o('rental', `Trade for ${star.name}`, { team: { off: 2 } }, `${star.name} is a second scorer the rest of the way.`),
-          o('depth', `Trade for ${stop.name}`, { team: { def: 1.5 } }, `${stop.name} takes the other team's best player in the fourth quarter.`),
+          o('rental', `Trade for ${star.name}`, dealFx(d, star, { off: 2 }), `${star.name} is a second scorer the rest of the way.`),
+          o('depth', `Trade for ${stop.name}`, dealFx(d, stop, { def: 1.5 }), `${stop.name} takes the other team's best player in the fourth quarter.`),
           o('pat', 'Stand pat', { team: { off: 0.5, def: 0.5 } }, 'Chemistry intact.'),
         ] }
     } },
@@ -413,7 +466,7 @@ const remember = id => { try { localStorage.setItem(RECENT_KEY, JSON.stringify([
 const hollow = e => {
   if (!e) return true
   if (e.gamble) return hollow(e.gamble.hit) && hollow(e.gamble.miss)
-  return !Object.values(e.attr || {}).some(Boolean) && !e.team?.off && !e.team?.def && !e.sit && !e.xp && !e.dur && hollow(e.then)
+  return !e.trade && !Object.values(e.attr || {}).some(Boolean) && !e.team?.off && !e.team?.def && !e.sit && !e.xp && !e.dur && hollow(e.then)
 }
 
 // Picks the scenario for a stop (or null). `used` = ids already shown this season.
@@ -442,6 +495,7 @@ export function pickScenario(args) {
   for (const s of usable) { roll -= weight(s); if (roll <= 0) { pick = s; break } }
   let card
   try { card = pick.make(c) } catch { return null }
+  if (!card) return null
   const scope = ph === 'playoffs' ? 'for the playoffs' : ''
   remember(pick.id)
   return {

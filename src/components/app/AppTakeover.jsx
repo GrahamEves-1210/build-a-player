@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { XpIco } from './GainIcons'
 import { useRailOn } from '../../lib/ads'
 import { LIVES, XP_CITY, XP_RUN, XP_ENDLESS, cityList, ratedPool, ensureStop, stopAt, isEndless, whereAmI, opponentOf, nextBestOf, saveRun, clearRun, hoopsDuel, footballDuel, prizeOptions, applyReward, afterDuel, pastRuns, logRun, STOPS, COINS_CITY, COINS_RUN, HEAT_MAX, PLAN_CUT, CASH_MULT, heatOf, onFire, firing, planFor, duelBuild } from '../../lib/takeover'
 import { W, H, OUTLINE_PATH, miles, heading } from '../../lib/usMap'
@@ -250,7 +251,7 @@ export default function AppTakeover({ sport, run, setRun, user, pools, attrMap, 
     const go = (kind, type) => { setStealPick([]); reward(kind, type) }
     return (
       <div className={`ag-screen ag-screen--${sport} tk`}>
-        <div className="ag-screen-head"><div><span className="ag-eyebrow">{at.city.toUpperCase()} TAKEN · +{isEndless(run) && run.idx > total ? XP_ENDLESS : XP_CITY} XP{onFire(run) ? ' · ON FIRE' : ''}</span><h1 className="ag-h1">Take your prize</h1></div></div>
+        <div className="ag-screen-head"><div><span className="ag-eyebrow">{at.city.toUpperCase()} TAKEN · <span className="gain"><XpIco /> +{isEndless(run) && run.idx > total ? XP_ENDLESS : XP_CITY}</span>{onFire(run) ? ' · ON FIRE' : ''}</span><h1 className="ag-h1">Take your prize</h1></div></div>
         <div className="ag-screen-body">
           <section className="ag-card ag-pop"><div className="ag-eyebrow">{P.take > 1 ? 'ON FIRE · STEAL TWO' : 'STEAL A RATING'} FROM {beaten.player.name.toUpperCase()}</div>
             <p className="tk-reward-sub">{P.take > 1 ? 'Three straight: pick two of their ratings where they beat you, and play the next game with +1 on everything. Then heat starts over.' : 'Take one of their ratings where they beat you. Their player goes in your build.'}</p>
@@ -275,7 +276,7 @@ export default function AppTakeover({ sport, run, setRun, user, pools, attrMap, 
       <div className={`ag-screen ag-screen--${sport} tk`}>
         <div className="ag-screen-body">
           <div className="bt-result-hero is-win ag-pop">
-            <span className="ag-eyebrow">TAKEOVER COMPLETE · +{XP_RUN} XP</span>
+            <span className="ag-eyebrow">TAKEOVER COMPLETE · <span className="gain"><XpIco /> +{XP_RUN}</span></span>
             <h1 className="ag-h1">The map is yours</h1>
             <p className="tk-reward-sub" style={{ margin: '4px 0 0', textAlign: 'center' }}>Twelve cities, twelve better players, one build. From here the road goes endless: random greats, anywhere, with three fresh lives.</p>
             <div className="tk-over-ovr"><b>{ovr}</b> OVR</div>

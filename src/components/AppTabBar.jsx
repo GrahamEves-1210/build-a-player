@@ -78,6 +78,23 @@ function watchRail() {
   return () => { mo.disconnect(); ro?.disconnect(); clearInterval(t) }
 }
 
+// PLAY is the ball of the sport you're in: its seams (football laces, basketball
+// lines) embossed on the disc behind the triangle; a press snaps it a quarter turn
+function PlaySeams({ sport }) {
+  return (
+    <svg className="ag-play-seams" viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
+      {sport === 'bucket' ? <>
+        <path d="M32 2v60M2 32h60" />
+        <path d="M13 8c9 11 9 37 0 48M51 8c-9 11-9 37 0 48" />
+      </> : <g transform="rotate(-35 32 32)">
+        <ellipse cx="32" cy="32" rx="27" ry="16" />
+        <path d="M19 32h26M23 28.5v7M27.5 28.5v7M32 28.5v7M36.5 28.5v7M41 28.5v7" />
+        <path d="M9 24.5c1.5 4.5 1.5 10.5 0 15M55 24.5c-1.5 4.5-1.5 10.5 0 15" />
+      </g>}
+    </svg>
+  )
+}
+
 export default function AppTabBar() {
   const [state, setState]       = useState(() => window.__bapPage ?? { page: 'splash', sport: 'nfl' })
   const [menuOpen, setMenuOpen] = useState(false)
@@ -146,7 +163,7 @@ export default function AppTabBar() {
           {/* PLAY takes you Home (pick a mode, or resume a build there) */}
           <button className={`ag-play${active === 'play' ? ' ag-play--on' : ''}`} onClick={go('home')} aria-label="Play">
             <span className="ag-play-ring" />
-            <span className="ag-play-core"><IconPlay size={28} /></span>
+            <span className="ag-play-core"><PlaySeams sport={state.sport} /><IconPlay size={28} /></span>
             <span className="ag-play-label">PLAY</span>
           </button>
           {/* website: cards are saved to an account */}

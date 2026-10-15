@@ -36,6 +36,8 @@ import { TE_LEGENDS } from '../data/te-legends'
 import { DB_LEGENDS } from '../data/db-legends'
 import { NBA_ALLTIME_GUARD_PLAYERS } from '../data/nba-guard-legends'
 import { NBA_ALLTIME_BIG_PLAYERS } from '../data/nba-big-legends'
+import { RESUMES } from '../data/legacy-resumes'
+import { RECORDS } from './seasonFacts'
 
 export const CAREER_V = 1
 const FIRST_SEASON = 2026
@@ -48,6 +50,11 @@ const nick = name => (name || '').split(' ').slice(-1)[0]
 
 // ── The sports ────────────────────────────────────────────────────────────────
 const NBA_EAST = new Set(['ATL', 'BOS', 'BKN', 'CHA', 'CHI', 'CLE', 'DET', 'IND', 'MIA', 'MIL', 'NYK', 'ORL', 'PHI', 'TOR', 'WAS'])
+// the NBA's six divisions (2024-25): only a label, the schedule doesn't use them
+const NBA_DIV = Object.fromEntries(Object.entries({
+  Atlantic: ['BOS', 'BKN', 'NYK', 'PHI', 'TOR'], Central: ['CHI', 'CLE', 'DET', 'IND', 'MIL'], Southeast: ['ATL', 'CHA', 'MIA', 'ORL', 'WAS'],
+  Northwest: ['DEN', 'MIN', 'OKC', 'POR', 'UTA'], Pacific: ['GSW', 'LAC', 'LAL', 'PHX', 'SAC'], Southwest: ['DAL', 'HOU', 'MEM', 'NOP', 'SAS'],
+}).flatMap(([d, list]) => list.map(t => [t, d])))
 const NFL_POS_TYPES = { qb: TYPES, rb: RB_TYPES, wr: WR_TYPES, te: TE_TYPES, db: DB_TYPES }
 const NFL_OVR = { qb: b => calcOVR(b, TYPES), rb: b => calcOVRRB(b, RB_TYPES), wr: b => calcOVRWR(b, WR_TYPES), te: b => calcOVRTE(b, TE_TYPES), db: b => calcOVRDB(b, DB_TYPES) }
 const NFL_AWARD = { qb: calcMVPResult, rb: calcOPOYResult, wr: calcWROPOYResult, te: calcTEOPOYResult, db: calcDBDpoyResult }
@@ -166,7 +173,7 @@ export const SPORT = {
     id: 'bucket', league: 'NBA', isBucket: true, screen: 'ag-screen--bucket',
     teams: NBA_TEAMS, logo: s => `/logos/nba/${s}.png`,
     // NBA ratings (about 60–85) mapped onto football's 1–10 scale, so the league's moves have the same weight
-    teamOf: short => { const t = NBA_TEAMS.find(x => x.short === short) ?? NBA_TEAMS[0]; const R = NBA_RATINGS[t.short] ?? { off: 68, def: 65 }; return { short: t.short, name: t.name, color: t.color, color2: t.color2, off: clamp(r10((R.off - 55) / 3.3), 1, 10), def: clamp(r10((R.def - 55) / 3.3), 1, 10), conf: NBA_EAST.has(t.short) ? 'East' : 'West', div: NBA_EAST.has(t.short) ? 'Eastern Conference' : 'Western Conference' } },
+    teamOf: short => { const t = NBA_TEAMS.find(x => x.short === short) ?? NBA_TEAMS[0]; const R = NBA_RATINGS[t.short] ?? { off: 68, def: 65 }; return { short: t.short, name: t.name, color: t.color, color2: t.color2, off: clamp(r10((R.off - 55) / 3.3), 1, 10), def: clamp(r10((R.def - 55) / 3.3), 1, 10), conf: NBA_EAST.has(t.short) ? 'East' : 'West', div: NBA_DIV[t.short] ?? null } },
     status: core => (core >= 7 ? 'Contender' : core >= 5.5 ? 'In the mix' : 'Rebuilding'),
     positions: ['guard', 'big'],
     label: { guard: 'GUARD', big: 'BIG' }, posName: { guard: 'Guard', big: 'Big' },
@@ -428,7 +435,9 @@ function keptRoster(c, short) {
 // leaving c.team: its roster is kept for the day you come back
 const keepRoster = c => (c.team && c.roster?.team === c.team ? { ...(c.kept ?? {}), [c.team]: { roster: c.roster, yrs: rosterYrs(c) } } : c.kept)
 // a team's roster as this career sees it: years older, and without anyone who's retired
-const rosterOf = (c, short) => keptRoster(c, short) ?? makeRoster(short, c.sport, rosterYrs(c), c.gone ?? [])
+// who's gone from a team's real roster: the retired, and anyone the front office dealt for (he's on the career's team now)
+const outOf = (c, short = null) => [...(c.gone ?? []), ...Object.entries(c.dealt ?? {}).filter(([, t]) => t !== short).map(([n]) => n)]
+const rosterOf = (c, short) => keptRoster(c, short) ?? makeRoster(short, c.sport, rosterYrs(c), outOf(c, short))
 const rosterFor = (c, short = c.team) => (c.roster?.team === short ? c.roster : rosterOf(c, short))
 // Where you stand at your spot: the group best-first with you in it. Last
 // year's starter keeps the job in a tie (+2), a starter guarantee keeps it.
@@ -487,8 +496,70 @@ export function teamFit(short, pos, { roster = null, league = null, name = null,
     ...f, adj: clamp(Math.round(f.adj * 2) / 2, -1.5, 1.5),
   }
 }
-const fitFor = (c, short = c.team) => teamFit(short, c.pos, { roster: c.roster, league: c.league, name: c.name, sport: c.sport, yrs: rosterYrs(c), gone: c.gone ?? [] })
+const fitFor = (c, short = c.team) => teamFit(short, c.pos, { roster: c.roster, league: c.league, name: c.name, sport: c.sport, yrs: rosterYrs(c), gone: outOf(c, short) })
 function simTeam(c, fit) { const S = sportOf(c); return S.simTeam(S.teamOf(c.team), fit, c.nextMods ?? {}, c) }
+// ── The front office deals for a player (the trade deadline) ─────────────────
+// He joins the roster for real: in his own spot (a lineman) or by his overall,
+// and whoever falls off the end goes the other way. The team is graded again
+// from the new roster with the same teamFit every season uses; the change the
+// sim feels is the change in the team that grading produces.
+function rosterWith(c, p, g) {
+  const S = sportOf(c)
+  const ro = { ...(c.roster ?? rosterOf(c, c.team)) }
+  const add = man(S, g, p, rosterYrs(c))
+  const slots = S.slots[g]
+  let list = (ro[g] ?? []).filter(x => x.name !== p.name)
+  if (slots && slots.includes(add.slot)) list = list.map(x => (x.slot === add.slot ? { ...x, slot: null } : x))
+  else if (slots) add.slot = null
+  list = [...list, add]
+  ro[g] = slots ? slots.map(sl => list.find(x => x.slot === sl)).filter(Boolean).concat(list.filter(x => !slots.includes(x.slot)).sort(byOvr)).slice(0, S.keep[g]) : list.sort(byOvr).slice(0, S.keep[g])
+  return ro
+}
+// the team the sim plays, and its grades, with a given roster
+const teamWith = (c, roster) => { const cc = { ...c, roster }; const fit = fitFor(cc); return { fit, t: simTeam({ ...cc, benchRole: !depthChart(cc).starter }, fit) } }
+// What Career hands the deadline cards (scenarios.js): who can come, and what he does to the team
+function dealsFor(c) {
+  const S = sportOf(c)
+  const ro = c.roster ?? rosterOf(c, c.team)
+  const mine = new Set(S.groups.flatMap(g => (ro[g] ?? []).map(p => p.name)))
+  const out = new Set(outOf(c))
+  const startsNow = depthChart({ ...c, roster: ro }).starter
+  const before = teamWith(c, ro)
+  const was = Object.fromEntries((before.fit.groups ?? []).map(x => [x.k, x.v]))
+  // the team graded again with him on it: the change to its offense / defense, and every grade that moved
+  const fx = (p, g) => {
+    const after = teamWith(c, rosterWith({ ...c, roster: ro }, p, g))
+    const grades = (after.fit.groups ?? []).filter(x => was[x.k] != null && gradeOf(x.v) !== gradeOf(was[x.k])).map(x => ({ k: x.k, from: gradeOf(was[x.k]), to: gradeOf(x.v) }))
+    return { off: r10(after.t.off - before.t.off), def: r10(after.t.def - before.t.def), grades }
+  }
+  return {
+    ovr: (g, p) => S.realOvr(g, p),
+    // not already here, not retired, an upgrade where he'd play that moves a grade or the team,
+    // and never one who takes the career's own starting job
+    ok: (p, g) => {
+      if (!S.groups.includes(g) || mine.has(p.name) || out.has(p.name) || p.name === c.name) return false
+      const o = S.realOvr(g, p), list = ro[g] ?? []
+      const vs = S.slots[g] ? list.find(x => x.slot === (p.pos ?? p.subpos)) : list[Math.min(list.length, S.starters[g]) - 1]
+      if (vs && o <= vs.ovr) return false
+      if (g === c.pos && startsNow && !depthChart({ ...c, roster: rosterWith({ ...c, roster: ro }, p, g) }).starter) return false
+      const f = fx(p, g)
+      return f.off >= 0 && f.def >= 0 && (f.off > 0 || f.def > 0 || f.grades.length > 0)
+    },
+    fx,
+  }
+}
+// The deal is done: he's on the roster (and off his old team's), the team regraded
+function signDeal(c, tr) {
+  const S = sportOf(c)
+  const p = (S.pool[tr.group] ?? []).find(x => x.name === tr.name)
+  if (!p) return c
+  const ro = c.roster ?? rosterOf(c, c.team)
+  const roster = rosterWith({ ...c, roster: ro }, p, tr.group)
+  const left = (ro[tr.group] ?? []).filter(x => !roster[tr.group].some(y => y.name === x.name)).map(x => x.name)
+  const next = { ...c, roster, dealt: { ...(c.dealt ?? {}), [p.name]: c.team } }
+  const text = `The ${nickOf(S, c.team)} trade for ${p.name} from the ${nickOf(S, p.team)}${left.length ? `. ${left.join(' and ')} ${left.length > 1 ? 'go' : 'goes'} the other way` : ''}.`
+  return { ...next, fit: fitFor(next), events: [...c.events, { year: c.year + 1, text }] }
+}
 // Every offseason the league moves: good teams slip, bad ones climb, some lurch
 function driftLeague(c, r) {
   const S = sportOf(c)
@@ -532,7 +603,7 @@ function rosterMoves(c, r) {
     while (kept.length < S.keep[g]) {
       const need = slots ? (slots.find(s => !kept.some(p => p.slot === s)) ?? null) : null
       if (r() < 0.55) {
-        const pool = S.pool[g].filter(p => p.team !== ro.team && !taken.has(p.name) && !(c.gone ?? []).includes(p.name) && (!need || p.pos === need))
+        const pool = S.pool[g].filter(p => p.team !== ro.team && !taken.has(p.name) && !outOf(c).includes(p.name) && (!need || p.pos === need))
         const pick = pool[Math.floor(r() * pool.length)]
         if (pick) {
           const p = { ...man(S, g, pick, rosterYrs(c)), slot: need ?? pick.pos ?? null }
@@ -839,7 +910,7 @@ function shareGame(g, u, key) {
 // the sim, with my games at a share until I'm the starter (week `weeks` on)
 const shareSim = (sim, u, weeks) => (b, t, seed) => { const r = sim(b, t, seed); return { ...r, games: r.games.map((g, i) => (i < weeks ? shareGame(g, u, `${seed}-${i}`) : g)) } }
 const simFor = c => (c.active?.share ? shareSim(sportOf(c).sim(c.pos), c.active.share.u, c.active.share.weeks) : sportOf(c).sim(c.pos))
-const director = (c, team, base, seed, simFn = simFor(c)) => createDirector({ sport: c.sport, pos: c.pos, build: c.build, team, simFn, base, seed, name: c.name, attrMap: POS_ATTR[c.pos], types: c.types, always: true, recordBook: c.recordBook ?? null })
+const director = (c, team, base, seed, simFn = simFor(c)) => createDirector({ sport: c.sport, pos: c.pos, build: c.build, team, simFn, base, seed, name: c.name, attrMap: POS_ATTR[c.pos], types: c.types, always: true, recordBook: c.recordBook ?? null, deals: () => dealsFor(c) })
 export function startSeason(c) {
   const S = sportOf(c)
   const roster = c.roster ?? rosterOf(c, c.team)
@@ -978,7 +1049,9 @@ export function chooseMoment(c, D, option) {
   // a lasting change to the body (durability), beyond this season
   const e = option.effect ?? {}
   const dur = (e.gamble ? (outcome?.hit ? e.gamble.hit : e.gamble.miss) : e)?.dur ?? 0
-  const cc = dur ? { ...c, durability: r10(clamp(c.durability + dur, 1, 10)) } : c
+  let cc = dur ? { ...c, durability: r10(clamp(c.durability + dur, 1, 10)) } : c
+  // a deadline deal: the player joins the roster (the team's grades follow from it)
+  if (e.trade) { cc = signDeal(cc, e.trade); D.deals = () => dealsFor(cc) }
   return [withSnap(cc, D, { moment: null, feed }), outcome]
 }
 // Injury: sit it out, or play through (traits down for longer, and it can get worse)
@@ -1202,7 +1275,7 @@ export function campDrill(c, score, game) {
   const chance = won ? clamp(0.25 + (score - 0.75) * 2, 0.25, 0.75) : 0
   const bonus = won && seeded(`${c.seed}-campdev-${c.year}`)() < chance ? 1 : 0
   const legacy = won ? CAMP_LEGACY : 0
-  return { ...c, legacyBonus: (c.legacyBonus ?? 0) + legacy, dev: { ...c.dev, points: c.dev.points + bonus }, off: { ...c.off, camp: { score, won, bonus, legacy, chance, game } } }
+  return { ...c, legacyBonus: (c.legacyBonus ?? 0) + legacy, legacyCamp: (c.legacyCamp ?? 0) + legacy, dev: { ...c.dev, points: c.dev.points + bonus }, off: { ...c.off, camp: { score, won, bonus, legacy, chance, game } } }
 }
 const traitName = (c, t) => POS_ATTR[c.pos][t]?.label ?? t
 // A trait is maxed once it shows S (grades are rounded: 10.5 and up is S)
@@ -1310,7 +1383,7 @@ function contractSituation(c) {
   // teams commit longer to a good name (+1 year at 8+), shorter to a bad one (−1 at 3 or less)
   const repYrs = (c.rep ?? 5) >= 8 ? 1 : (c.rep ?? 5) <= 3 ? -1 : 0
   const years = clamp((c.age >= 32 ? 1 + Math.floor(r() * 2) : c.age >= 29 ? 2 + Math.floor(r() * 2) : 3 + Math.floor(r() * 3)) + repYrs, 1, 6)
-  const fitAt = short => teamFit(short, c.pos, { roster: c.roster, league: c.league, name: c.name, sport: c.sport, yrs: rosterYrs(c), gone: c.gone ?? [] })
+  const fitAt = short => teamFit(short, c.pos, { roster: c.roster, league: c.league, name: c.name, sport: c.sport, yrs: rosterYrs(c), gone: outOf(c, short) })
   const others = S.teams.filter(t => t.short !== c.team).sort(() => r() - .5).map(t => fitAt(t.short))
   const good = 7, bad = 6
   const contender = others.find(f => (f.off + f.def) / 2 >= good) ?? others[0]
@@ -1470,16 +1543,37 @@ export function careerTotals(c) {
   return {
     seasons: Ss.length, games, wins: Ss.reduce((a, s) => a + s.wins, 0), losses: Ss.reduce((a, s) => a + s.losses, 0),
     playoffs: Ss.filter(s => s.playoffs).length, rings: Ss.filter(s => s.champion).length, awards: Ss.filter(s => s.award).length,
-    proBowls: Ss.filter(s => s.proBowl).length, allPros: Ss.filter(s => s.allPro).length, records: Ss.reduce((a, s) => a + (s.records?.length ?? 0), 0),
+    // records: the all-time records he holds (one each, however many times he raised his own)
+    proBowls: Ss.filter(s => s.proBowl).length, allPros: Ss.filter(s => s.allPro).length, records: new Set(Ss.flatMap(s => s.records ?? [])).size,
     teams: [...new Set(Ss.map(s => s.team))], stats, earnings: c.earnings,
   }
+}
+// One formula for every career, played or real. A resume: seasons, honors (Pro
+// Bowls / All-Stars), firsts (All-Pro / All-NBA), awards (the position's award,
+// one a season), rings, playoff years, the all-time records held, and the
+// career's totals (production, by position: S.legacyProd). The greats' resumes
+// are their real ones (data/legacy-resumes.js); a career's is booked season by
+// season. Same weights for both.
+export const LEGACY_W = { seasons: 2, honors: 6, firsts: 10, awards: 18, rings: 20, playoffs: 3, records: 8 }
+export function legacyScore(S, pos, r) {
+  return Math.round(Object.entries(LEGACY_W).reduce((sum, [k, w]) => sum + (r[k] ?? 0) * w, 0) + S.legacyProd(pos, r.stats ?? {}) + (r.bonus ?? 0))
+}
+// Money earned is worth a little legacy too: a point every $25M of career
+// earnings (contracts and shoe money), never more than 10
+export const EARN_LEGACY = { per: 25, max: 10 }
+export const earnLegacy = c => Math.min(EARN_LEGACY.max, Math.floor((c.earnings ?? 0) / EARN_LEGACY.per))
+// the small extras on top of the resume: camp wins, shoe deals and earnings
+export const legacyExtras = c => ({ camp: c.legacyCamp ?? 0, shoe: (c.legacyBonus ?? 0) - (c.legacyCamp ?? 0), earnings: earnLegacy(c) })
+// a career's resume, from its booked seasons (bonus: camp wins, shoe deals and
+// earnings, the legacy points with no real-career counterpart; all kept minor)
+export function resumeOf(c) {
+  const t = careerTotals(c)
+  return { seasons: t.seasons, honors: t.proBowls, firsts: t.allPros, awards: t.awards, rings: t.rings, playoffs: t.playoffs, records: t.records, stats: t.stats, bonus: (c.legacyBonus ?? 0) + earnLegacy(c) }
 }
 export const LEGACY_TIERS = [[0, 'Starter'], [80, 'Star'], [170, 'Superstar'], [280, 'All-Time Great']]
 export function legacyOf(c) {
   const S = sportOf(c)
-  const t = careerTotals(c)
-  const prod = S.legacyProd(c.pos, t.stats)
-  const score = Math.round(t.seasons * 2 + t.proBowls * 6 + t.allPros * 10 + t.awards * 18 + t.rings * 20 + t.playoffs * 3 + prod + t.records * 8 + (c.legacyBonus ?? 0))
+  const score = legacyScore(S, c.pos, resumeOf(c))
   const tier = [...LEGACY_TIERS].reverse().find(([min]) => score >= min)[1]
   const next = LEGACY_TIERS.find(([min]) => score < min)
   const list = ALL_TIME[c.pos]
@@ -1492,21 +1586,17 @@ function hofVote(c, L) {
   const inn = pct >= 80
   return { in: inn, pct, ballot: inn ? (pct >= 93 ? 'First ballot' : pct >= 86 ? 'Second ballot' : 'Inducted in year 4') : L.score >= 140 ? 'Finalist, not inducted' : 'Not on the ballot' }
 }
-// The greats, scored from their real resumes with this same formula (seasons,
-// Pro Bowls / All-Stars, All-Pro / All-NBA, MVPs, rings, playoff years, production):
-// where a career lands among them
-const greats = list => list.map(([name, score], i) => ({ name, score, rank: i + 1 }))
-const NBA_GREATS = greats([
-  ...[['LeBron James', 690], ['Michael Jordan', 544], ['Kobe Bryant', 536], ['Julius Erving', 500], ['Magic Johnson', 444], ['Stephen Curry', 413], ['Larry Bird', 405], ['Kevin Durant', 399], ['Scottie Pippen', 365], ['Jerry West', 350], ['Oscar Robertson', 348], ['Dwyane Wade', 343], ['Chris Paul', 331], ['John Stockton', 326], ['James Harden', 309], ['Russell Westbrook', 309], ['Jason Kidd', 288], ['Steve Nash', 275], ['Isiah Thomas', 264], ['Clyde Drexler', 260], ['Allen Iverson', 259], ['Ray Allen', 253], ['Kawhi Leonard', 225], ['Reggie Miller', 195], ['Luka Doncic', 141]],
-  ...[['Kareem Abdul-Jabbar', 683], ['Bill Russell', 618], ['Tim Duncan', 543], ['Shaquille O\'Neal', 491], ['Wilt Chamberlain', 450], ['Karl Malone', 445], ['Dirk Nowitzki', 403], ['Hakeem Olajuwon', 400], ['Moses Malone', 397], ['Kevin Garnett', 377], ['Bob Pettit', 341], ['David Robinson', 338], ['Charles Barkley', 329], ['Giannis Antetokounmpo', 305], ['Dwight Howard', 279], ['Nikola Jokic', 273], ['Patrick Ewing', 270], ['Pau Gasol', 248], ['Dennis Rodman', 230], ['Kevin McHale', 218], ['Anthony Davis', 214], ['Dikembe Mutombo', 192], ['Chris Webber', 185], ['Joel Embiid', 179], ['Yao Ming', 149]],
-].sort((x, y) => y[1] - x[1]).slice(0, 25))
+// The greats, scored from their real resumes (data/legacy-resumes.js) with the
+// same legacyScore a career gets: where a career lands among them. Records: the
+// ones in the game's own record book (seasonFacts.js) that name him as holder.
+const words = s => s.toLowerCase().split(/[^a-z0-9']+/).filter(Boolean)
+const heldBy = (sport, pos, name) => (RECORDS[sport]?.[pos] ?? []).filter(x => { const h = new Set(words(x.holder)); return words(name).every(w => h.has(w)) }).length
+const scored = (sport, pos) => RESUMES[pos].map(r => ({ name: r.name, score: legacyScore(SPORT[sport], pos, { ...r, records: heldBy(sport, pos, r.name) }) }))
+const greats = list => list.sort((a, b) => b.score - a.score).map((x, i) => ({ ...x, rank: i + 1 }))
+// basketball: one list, the 25 greatest careers at any position
+const NBA_GREATS = greats([...scored('bucket', 'guard'), ...scored('bucket', 'big')]).slice(0, 25)
 export const ALL_TIME = {
-  qb: greats([['Tom Brady', 574], ['Peyton Manning', 489], ['Otto Graham', 421], ['Aaron Rodgers', 392], ['Johnny Unitas', 370], ['Brett Favre', 369], ['Joe Montana', 328], ['Drew Brees', 315], ['Steve Young', 287], ['Dan Marino', 269], ['Patrick Mahomes', 263], ['John Elway', 255], ['Ben Roethlisberger', 254], ['Terry Bradshaw', 233], ['Russell Wilson', 217], ['Fran Tarkenton', 217], ['Philip Rivers', 214], ['Eli Manning', 208], ['Matt Ryan', 201], ['Kurt Warner', 195], ['Troy Aikman', 193], ['Warren Moon', 190], ['Roger Staubach', 166], ['Donovan McNabb', 147], ['Jim Kelly', 145]]),
-  rb: greats([['Emmitt Smith', 300], ['Jim Brown', 294], ['Walter Payton', 269], ['Marshall Faulk', 268], ['Barry Sanders', 267], ['Marcus Allen', 234], ['Adrian Peterson', 227], ['O.J. Simpson', 206], ['LaDainian Tomlinson', 204], ['Terrell Davis', 196], ['Earl Campbell', 194], ['Eric Dickerson', 192], ['Thurman Thomas', 188], ['Jerome Bettis', 171], ['Derrick Henry', 151], ['Tony Dorsett', 150], ['Shaun Alexander', 144], ['Curtis Martin', 133], ['Frank Gore', 128], ['Edgerrin James', 124]]),
-  wr: greats([['Jerry Rice', 457], ['Lance Alworth', 221], ['Marvin Harrison', 215], ['Terrell Owens', 210], ['Antonio Brown', 198], ['Randy Moss', 195], ['Cris Carter', 190], ['Michael Irvin', 188], ['Larry Fitzgerald', 187], ['Reggie Wayne', 179], ['Davante Adams', 178], ['Tim Brown', 161], ['Torry Holt', 154], ['DeAndre Hopkins', 153], ['Julio Jones', 151], ['Steve Smith Sr.', 147], ['Isaac Bruce', 144], ['Steve Largent', 143], ['Andre Johnson', 142], ['Calvin Johnson', 134]]),
-  te: greats([['Travis Kelce', 266], ['Tony Gonzalez', 254], ['Rob Gronkowski', 247], ['Shannon Sharpe', 236], ['Jason Witten', 186], ['Antonio Gates', 184], ['Dave Casper', 153], ['Mike Ditka', 151], ['Jimmy Graham', 128], ['George Kittle', 119], ['Kellen Winslow', 115], ['Dallas Clark', 107], ['Ozzie Newsome', 103], ['Vernon Davis', 103], ['Greg Olsen', 96]]),
-  db: greats([['Ronnie Lott', 350], ['Rod Woodson', 346], ['Herb Adderley', 314], ['Charles Woodson', 302], ['Deion Sanders', 298], ['Emlen Tunnell', 291], ['Ed Reed', 288], ['Mel Blount', 284], ['Willie Brown', 260], ['Paul Krause', 251], ['Troy Polamalu', 243], ['Ty Law', 241], ['Darrell Green', 238], ['Night Train Lane', 231], ['Champ Bailey', 226], ['Ken Houston', 219], ['Aeneas Williams', 214], ['Larry Wilson', 212], ['Brian Dawkins', 207], ['Mike Haynes', 204], ['Steve Atwater', 181], ['Darrelle Revis', 180], ['Richard Sherman', 177], ['Lem Barney', 174], ['Jalen Ramsey', 166]]),
-  // basketball: one list, the 25 greatest careers at any position
+  qb: greats(scored('nfl', 'qb')), rb: greats(scored('nfl', 'rb')), wr: greats(scored('nfl', 'wr')), te: greats(scored('nfl', 'te')), db: greats(scored('nfl', 'db')),
   guard: NBA_GREATS,
   big: NBA_GREATS,
 }

@@ -5,6 +5,7 @@ import { seeded } from '../../lib/rng'
 import { sfx, haptic } from '../../lib/juice'
 import { IS_APP } from '../../lib/platform'
 import WatchVideo from './WatchVideo'
+import { REWARDED_ON } from '../../lib/rewardedAd'
 
 // The quick skill games (lib/minigames.js). <MiniGame game build seed onDone />
 // shows the card, runs the game and reports { score, hit }. A test can finish
@@ -46,7 +47,7 @@ export default function MiniGame({ game, build, seed = 'x', onDone, autoStart = 
   const [stage, setStage] = useState(autoStart ? 'play' : 'intro')
   const [result, setResult] = useState(null)
   const [tries, setTries] = useState(0)          // replays bought with a video (one at most)
-  const offerRetry = retry && IS_APP && tries === 0
+  const offerRetry = REWARDED_ON && retry && IS_APP && tries === 0
   // hard (training camp): played as if the trait were a notch or two lower (70%), so a
   // maxed build still has to earn it. The header shows the real grade, never the handicap.
   const real = traitValue(game, build)
@@ -98,7 +99,7 @@ function Game({ def, v, seed, build, onDone }) {
     case 'power': return <Power v={v} onDone={onDone} />
     case 'reaction': return <Reaction v={v} seed={seed} rounds={def.rounds ?? 2} quick={def.quick ?? 1} onDone={onDone} />
     case 'audible': return <Audible v={v} seed={seed} onDone={onDone} />
-    case 'lanes': return <Lanes v={v} seed={seed} onDone={onDone} need={def.need ?? 2} />
+    case 'lanes': return <Lanes v={v} seed={seed} onDone={onDone} need={def.need ?? 2} cue={def.cue} />
     case 'sequence': return <Sequence v={v} seed={seed} onDone={onDone} />
     case 'route': return <Route v={v} seed={seed} onDone={onDone} />
     case 'choice': return <Choice def={def} build={build} seed={seed} onDone={onDone} />
@@ -124,10 +125,12 @@ function Bar({ markRef, zone, width, label }) {
     </div>
   )
 }
-// sweeps the marker; returns a ref with the current position (0–1)
-function useSweep(markRef, speed = 1.15, on = true) {
+// sweeps the marker; returns a ref with the current position (0–1).
+// wobble (0–1): the marker surges and stalls instead of a steady sweep, so it
+// can't be timed off the rhythm alone (it never stops or runs backwards)
+function useSweep(markRef, speed = 1.15, on = true, wobble = 0) {
   const pos = useRef(0)
-  useLoop(t => { pos.current = tri(t * speed); if (markRef.current) markRef.current.style.transform = `translate3d(${pos.current * 100}%,0,0)` }, on)
+  useLoop(t => { pos.current = tri(t * speed + wobble * 0.11 * Math.sin(t * 5.3)); if (markRef.current) markRef.current.style.transform = `translate3d(${pos.current * 100}%,0,0)` }, on, [speed, wobble])
   return pos
 }
 function Timing({ v, seed, onDone, mult = 1, value = 1, label = null }) {
@@ -135,7 +138,7 @@ function Timing({ v, seed, onDone, mult = 1, value = 1, label = null }) {
   const zone = useMemo(() => 30 + r() * 40, [r])
   const width = zoneWidth(v) * mult
   const mark = useRef(null)
-  const pos = useSweep(mark)
+  const pos = useSweep(mark, 1.4, true, 0.45)
   const tap = () => {
     const d = Math.abs(pos.current * 100 - zone)
     const hit = d <= width / 2
@@ -157,7 +160,8 @@ function Taps({ v, seed, n, onDone }) {
   const zones = useMemo(() => Array.from({ length: n }, () => 25 + r() * 50), [r, n])
   const width = zoneWidth(v)
   const mark = useRef(null)
-  const pos = useSweep(mark, 1.25 + i * 0.12)
+  // each one quicker, and from the second on it wobbles (nerves)
+  const pos = useSweep(mark, 1.45 + i * 0.22, true, i ? 0.55 + i * 0.2 : 0)
   const tap = () => {
     const d = Math.abs(pos.current * 100 - zones[i])
     const s = d <= width / 2 ? clamp(1 - d / width, 0.5, 1) : 0
@@ -196,27 +200,55 @@ function Power({ v, onDone }) {
   )
 }
 // ── Reaction: three targets, one opens ──────────────────────────────────────
+// A red decoy (covered, the help is there) baits the tap: it flashes during the
+// wait, or opens beside the green one. Tapping red is a miss. Every attempt has
+// at least one, never on the first rep; it wears an X so it isn't colour alone.
+const FLASH = { 'Took the bait: red is covered.': 'RED · TOOK THE BAIT', 'Jumped early.': 'TOO EARLY', 'Wrong read.': 'WRONG READ', 'Window closed.': 'TOO SLOW' }
 function Reaction({ v, seed, rounds, quick = 1, onDone }) {
   const r = useRng(seed)
-  const plan = useMemo(() => Array.from({ length: rounds }, () => ({ delay: 500 + r() * 900, open: Math.floor(r() * 3) })), [r, rounds])
+  const plan = useMemo(() => {
+    const p = Array.from({ length: rounds }, (_, k) => {
+      const delay = 650 + r() * 900, open = Math.floor(r() * 3)
+      const other = (open + 1 + Math.floor(r() * 2)) % 3
+      const early = r() < 0.5
+      return { delay, open, decoy: k > 0 && r() < 0.6 ? { k: other, early, at: early ? delay * (0.3 + r() * 0.25) : delay } : null }
+    })
+    if (rounds > 1 && !p.some(x => x.decoy)) { const x = p[rounds - 1]; x.decoy = { k: (x.open + 1) % 3, early: false, at: x.delay } }
+    return p
+  }, [r, rounds])
   const [i, setI] = useState(0)
   const [open, setOpen] = useState(null)
+  const [decoy, setDecoy] = useState(null)
+  const [flash, setFlash] = useState(null)       // what went wrong on the last rep, for a beat
   const [scores, setScores] = useState([])
-  const openedAt = useRef(0), outs = useRef(0)
+  const openedAt = useRef(0), outs = useRef(0), baited = useRef(false)
   const T = reactMs(v) * quick   // (some drills give less time)
   useEffect(() => {
-    setOpen(null)
-    const t1 = setTimeout(() => { setOpen(plan[i].open); openedAt.current = now(); sfx('tick') }, plan[i].delay)
-    const t2 = setTimeout(() => { outs.current++; settle(0, 'Window closed.') }, plan[i].delay + T + 60)
-    return () => { clearTimeout(t1); clearTimeout(t2) }
+    setOpen(null); setDecoy(null)
+    const { delay, open: o, decoy: d } = plan[i]
+    const ts = [
+      setTimeout(() => { setOpen(o); openedAt.current = now(); sfx('tick') }, delay),
+      setTimeout(() => { outs.current++; settle(0, 'Window closed.') }, delay + T + 60),
+    ]
+    // (the early flash makes the same tick as the real one: watch, don't listen)
+    if (d) ts.push(setTimeout(() => { setDecoy(d.k); if (d.early) sfx('tick') }, d.at))
+    if (d?.early) ts.push(setTimeout(() => setDecoy(null), d.at + 420))
+    return () => ts.forEach(clearTimeout)
   }, [i]) // eslint-disable-line
+  useEffect(() => { if (!flash) return; const t = setTimeout(() => setFlash(null), 900); return () => clearTimeout(t) }, [flash])
   const settle = (s, note) => {
     const next = [...scores, s]
-    // (every miss was the clock running out: it says so)
-    if (i + 1 >= rounds) { const avg = next.reduce((a, b) => a + b, 0) / rounds; onDone({ score: avg, hit: avg >= 0.5, note: avg >= 0.5 ? null : note, out: outs.current > 0 && outs.current >= next.filter(x => !x).length, raw: { made: next.filter(Boolean).length, of: rounds } }) }
+    if (!s) { setFlash(FLASH[note] ?? 'MISSED'); haptic('heavy') }
+    // one slip allowed; two and the read is lost (every miss the clock: it says so)
+    if (i + 1 >= rounds) {
+      const avg = next.reduce((a, b) => a + b, 0) / rounds, made = next.filter(Boolean).length
+      const hit = made >= rounds - 1
+      onDone({ score: hit ? Math.max(avg, 0.5) : Math.min(avg, 0.45), hit, note: hit ? `${made} of ${rounds} reads` : baited.current ? `${made} of ${rounds} · bit on the red` : note, out: outs.current > 0 && outs.current >= next.filter(x => !x).length, raw: { made, of: rounds } })
+    }
     else { setScores(next); setI(i + 1) }
   }
   const tap = k => {
+    if (k === decoy) { baited.current = true; settle(0, 'Took the bait: red is covered.'); return }
     if (open == null) { settle(0, 'Jumped early.'); return }
     if (k !== open) { settle(0, 'Wrong read.'); return }
     settle(clamp(1 - (now() - openedAt.current) / T, 0.35, 1), null)
@@ -224,8 +256,8 @@ function Reaction({ v, seed, rounds, quick = 1, onDone }) {
   useKeys({ 1: () => tap(0), 2: () => tap(1), 3: () => tap(2), ArrowLeft: () => tap(0), ArrowUp: () => tap(1), ArrowRight: () => tap(2) })
   return (
     <div className="mg-play mg-play--targets">
-      <div className="mg-targets">{[0, 1, 2].map(k => <button key={k} className={`mg-target${open === k ? ' is-open' : ''}`} onPointerDown={() => tap(k)} aria-label={`Target ${k + 1}`}><span /></button>)}</div>
-      <span className="mg-hint">{open == null ? 'WAIT FOR IT…' : 'NOW'}</span>
+      <div className="mg-targets">{[0, 1, 2].map(k => <button key={k} className={`mg-target${open === k ? ' is-open' : decoy === k ? ' is-decoy' : ''}`} onPointerDown={() => tap(k)} aria-label={`Target ${k + 1}`}><span /></button>)}</div>
+      <span className={`mg-hint${flash ? ' is-bad' : ''}`}>{flash ?? (open == null ? 'WAIT FOR GREEN…' : 'NOW')}</span>
       <span className="mg-dots">{Array.from({ length: rounds }, (_, k) => <i key={k} className={k < scores.length ? (scores[k] ? 'is-hit' : 'is-miss') : ''} />)}</span>
     </div>
   )
@@ -253,7 +285,8 @@ function Audible({ v, seed, onDone }) {
   )
 }
 // ── Lanes: the rush comes from a side; go the other way ─────────────────────
-function Lanes({ v, seed, onDone, need = 2 }) {
+// (cue names the pressure: football's RUSH, basketball's DEFENDER)
+function Lanes({ v, seed, onDone, need = 2, cue = 'RUSH' }) {
   const r = useRng(seed)
   const plan = useMemo(() => Array.from({ length: 3 }, () => ({ delay: 450 + r() * 700, from: r() < 0.5 ? 'L' : 'R' })), [r])
   const [i, setI] = useState(0)
@@ -280,7 +313,7 @@ function Lanes({ v, seed, onDone, need = 2 }) {
   useKeys({ ArrowLeft: () => go('L'), ArrowRight: () => go('R'), a: () => go('L'), d: () => go('R') })
   return (
     <div className="mg-play mg-play--lanes">
-      <div className={`mg-rush${from ? ` is-${from}` : ''}`}><i>{from === 'L' ? '◀ RUSH' : from === 'R' ? 'RUSH ▶' : '…'}</i></div>
+      <div className={`mg-rush${from ? ` is-${from}` : ''}`}><i>{from === 'L' ? `◀ ${cue}` : from === 'R' ? `${cue} ▶` : '…'}</i></div>
       <div className="mg-sides"><button className="mg-side" onPointerDown={() => go('L')}>◀ LEFT</button><button className="mg-side" onPointerDown={() => go('R')}>RIGHT ▶</button></div>
       <span className="mg-dots">{[0, 1, 2].map(k => <i key={k} className={k < scores.length ? (scores[k] ? 'is-hit' : 'is-miss') : ''} />)}</span>
     </div>

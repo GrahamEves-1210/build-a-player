@@ -62,7 +62,7 @@ export const MOMENTS_OFF_KEY = 'bap_moments_off'
 export const momentsOff = () => { try { return localStorage.getItem(MOMENTS_OFF_KEY) === '1' } catch { return false } }
 export const setMomentsOff = off => { try { localStorage.setItem(MOMENTS_OFF_KEY, off ? '1' : '0') } catch {} }
 // always: the moments can't be switched off (Career: they're the mode)
-export function createDirector({ sport, pos, build, team, simFn, base, seed = Math.random().toString(36).slice(2, 8), name = 'Guest', attrMap = {}, types = [], always = false, recordBook = null }) {
+export function createDirector({ sport, pos, build, team, simFn, base, seed = Math.random().toString(36).slice(2, 8), name = 'Guest', attrMap = {}, types = [], always = false, recordBook = null, deals = null }) {
   const isBucket = sport === 'bucket'
   const total = base.games.length
   // two or three decisions in the regular season, at weeks that change every
@@ -94,6 +94,7 @@ export function createDirector({ sport, pos, build, team, simFn, base, seed = Ma
     seen: new Set(), fired: new Set(),
     finalized: false, final: null,
     xp: 0, sat: [],
+    deals,                        // Career: who the front office can trade for, and what he does to the team
   }
 
   const fixedRunMods = at => {
@@ -169,7 +170,7 @@ export function createDirector({ sport, pos, build, team, simFn, base, seed = Ma
     const ctx = D.ctxAt(k)
     const last = ctx.last
     const m = pickScenario({
-      sport, pos, stop, ctx, build: applyMods(build, team, D.cum).build, types, attrMap, seed, teamNick, name, team: applyMods(build, team, D.cum).team,
+      sport, pos, stop, ctx, build: applyMods(build, team, D.cum).build, types, attrMap, seed, teamNick, name, team: applyMods(build, team, D.cum).team, deals: D.deals,
       next: stop.kind !== 'playoffs' && k < total ? D.games[k] : null,
       used: D.used, lastBig: !!(last && !last.sat && BIG_GAME[pos]?.(last)), lastBust: !!(last && !last.sat && BUST_GAME[pos]?.(last)),
     })

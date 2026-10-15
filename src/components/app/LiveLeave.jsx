@@ -48,7 +48,7 @@ export default function LiveLeave() {
         <p className="ll-body" id="ll-body">{lock.body ?? 'Leaving now counts as a loss.'}</p>
         <div className="ll-actions">
           <button className="ag-btn ag-cta" onClick={stay} autoFocus>STAY IN THE GAME</button>
-          <button className="ll-leave" onClick={leave}>LEAVE &amp; TAKE THE LOSS</button>
+          <button className="ll-leave" onClick={leave}>{lock.leaveLabel ?? 'LEAVE & TAKE THE LOSS'}</button>
         </div>
       </div>
     </div>,

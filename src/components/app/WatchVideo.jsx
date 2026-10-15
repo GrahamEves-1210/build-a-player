@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { watchFor } from '../../lib/rewardedAd'
+import { watchFor, REWARDED_ON } from '../../lib/rewardedAd'
 import { sfx, haptic } from '../../lib/juice'
 import { IconPlay } from './icons'
 
@@ -18,6 +18,7 @@ export default function WatchVideo({ label, sub, onReward, className = '' }) {
     if (r.ok) { sfx('claim'); haptic('success'); onReward() }
     else { setNote(r.note); sfx('deny') }
   }
+  if (!REWARDED_ON) return null   // no video offers until the ads are live
   return (
     <div className={`wv ${className}`}>
       <button className="wv-btn" onClick={go} disabled={busy}>

@@ -177,7 +177,8 @@ export default function BlacktopCourt({ game, play, meId, photoFor, colorFor, av
     const shot = play.shot || (play.arc ? 'arc' : 'layup')
     if (shot === 'arc') {
       const cur = at(shooter); const spot = near(cur, ARC3)
-      const variant = passes.length ? 'catch' : Math.random() < .5 ? 'stepback' : 'pullup'
+      // off a pass it's a catch-and-shoot (the engine's cs); never without one
+      const variant = play.cs ? 'catch' : Math.random() < .5 ? 'stepback' : 'pullup'
       if (variant === 'catch') {
         after(start, () => { move(shooter, spot.x, spot.y, od * .3); move(d, spot.x + r.rnd(-6, 6), spot.y - r.rnd(2, 7), dd * .4); finish() })
       } else if (variant === 'stepback') {
@@ -192,6 +193,8 @@ export default function BlacktopCourt({ game, play, meId, photoFor, colorFor, av
     }
     if (shot === 'mid') {
       const spot = near(at(shooter), MID)
+      // catch-and-shoot from the elbow: set his feet as it arrives and let it go, the closeout late
+      if (play.cs) { after(start, () => { move(shooter, spot.x, spot.y, od * .35); move(d, spot.x + r.rnd(-5, 5), spot.y - r.rnd(2, 6), dd * .45); finish() }); return }
       after(start, () => { move(shooter, cl(spot.x + r.rnd(-10, 10)), spot.y + r.rnd(12, 18), od * .75); move(d, spot.x + r.rnd(-6, 6), spot.y - r.rnd(4, 10), dd * .85); bounce(2) })
       after(start + 460, () => { move(shooter, spot.x, spot.y, od * .36); move(d, spot.x + r.rnd(-5, 5), spot.y - r.rnd(2, 6), dd * .46); finish() })
       return

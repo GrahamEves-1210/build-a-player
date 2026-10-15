@@ -52,7 +52,7 @@ const WR_FIGURE_SCALE_MOBILE = 1.005
 const BUCKET_FIGURE_SCALE = 1.10
 // App, phone, basketball: the T-pose fills the width and the cards stack down
 // both sides below the arms (index.css / app-game.css size the cards to match)
-const APP_BKT = { scale: 0.86, cardIn: 4, cardW: 86, top: 0.36, bottom: 0.95, stub: 8 }   // sized like the football figure's
+const APP_BKT = { scale: 1.0, cardIn: 4, cardW: 100, top: 0.42, bottom: 0.95, stub: 8 }   // sized like the football figure's
 const DB_FIGURE_SCALE = 0.86
 
 // QB anchor positions
@@ -436,14 +436,22 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
     img.src = bucketPhoto
   }, [bucketPhoto])
 
-  // App basketball: each side's cards spaced evenly down the body, in their usual order
+  // App basketball: each side's cards spaced evenly down the body. The arm dots
+  // (out past the body) take the top cards, outermost first, and the rest follow
+  // top to bottom, so the lines fan out and never cross; the top card's line runs
+  // from its top edge (its dot is out on the hand, past the card's side).
   const appRows = useMemo(() => {
     if (!appBucket) return null
-    const rows = {}
+    const rows = {}, top = new Set()
+    const arm = z => (z.side === 'left' ? z.ax < 300 : z.ax > BUCKET_FIG_W - 300)
     for (const side of ['left', 'right']) {
-      const list = zones.filter(z => z.side === side && types.includes(z.type)).sort((a, b) => a.cy - b.cy)
+      const out = z => (side === 'left' ? z.ax : -z.ax)   // smaller = further out
+      const list = zones.filter(z => z.side === side && types.includes(z.type))
+        .sort((a, b) => (arm(a) !== arm(b) ? (arm(a) ? -1 : 1) : arm(a) ? out(a) - out(b) : a.ay - b.ay))
       list.forEach((z, i) => { rows[z.type] = APP_BKT.top + (APP_BKT.bottom - APP_BKT.top) * (list.length > 1 ? i / (list.length - 1) : 0.5) })
+      if (list[0] && arm(list[0]) && !list[0].noDot) top.add(list[0].type)
     }
+    rows.top = top
     return rows
   }, [appBucket, zones, types])
 
@@ -460,7 +468,9 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
       const stub = APP_BKT.stub / W * 100
       const stubX = zone.side === 'left' ? lineX + stub : lineX - stub
       const cardCenterX = zone.side === 'left' ? (APP_BKT.cardIn + APP_BKT.cardW / 2) / W * 100 : 100 - (APP_BKT.cardIn + APP_BKT.cardW / 2) / W * 100
-      return { dotX, dotY, cardY, lineX, stubX, cardCenterX, cardHalfH: 0, anchorNudgeX: 0, anchorNudgeY: 0, side: true }
+      // the top card's line leaves from its top edge (half a card, ~27px, above its middle)
+      const topY = appRows?.top?.has(zone.type) ? cardY - 27 / H * 100 : null
+      return { dotX, dotY, cardY, lineX, stubX, cardCenterX, cardHalfH: 0, anchorNudgeX: 0, anchorNudgeY: 0, side: true, topY }
     }
     const { W, H, fx, fy, scale } = bounds
     const bucketCardScale = 0.88
@@ -721,7 +731,9 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
         />
         {isBucket && (appBucket
           // the overlay's viewBox is cropped for the website's 1.1× figure; match the app's scale
-          ? <div style={{ position: 'absolute', inset: 0, transform: `scale(${bucketScale / BUCKET_FIGURE_SCALE})`, transformOrigin: 'center center' }}><BucketFigureOverlay build={build} /></div>
+          // (zIndex 5: the scale makes this its own layer, which would otherwise sit under
+          // the silhouette png (z 4) and hide the jersey colours)
+          ? <div style={{ position: 'absolute', inset: 0, zIndex: 5, transform: `scale(${bucketScale / BUCKET_FIGURE_SCALE})`, transformOrigin: 'center center' }}><BucketFigureOverlay build={build} /></div>
           : <BucketFigureOverlay build={build} />)}
         {isBucket && bucketPhoto && bounds && (() => {
           const { W, H, fx, fy, scale } = bounds
@@ -826,7 +838,9 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
             const cardTopY = p.cardY - p.cardHalfH
             const anchorX = p.cardCenterX - 25 + (zone.lineAnchorOffsetX ?? 0) + (p.anchorNudgeX ?? 0)
             const anchorY = cardTopY + 10 + (p.anchorNudgeY ?? 0)
-            const d = zone.lineAnchor === 'top' && !p.side
+            const d = p.topY != null
+              ? `M ${p.cardCenterX} ${p.topY} L ${p.dotX} ${p.dotY}`
+              : zone.lineAnchor === 'top' && !p.side
               ? `M ${anchorX} ${anchorY} L ${anchorX} ${anchorY - 8} L ${p.dotX} ${p.dotY}`
               : `M ${p.lineX} ${p.cardY} L ${p.stubX} ${p.cardY} L ${p.dotX} ${p.dotY}`
             return (

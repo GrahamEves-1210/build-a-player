@@ -2427,7 +2427,7 @@ html.is-app .vmb-title { font-family: var(--ag-font) !important; letter-spacing:
    cards stack down both sides below the arms (Silhouette.jsx APP_BKT) ═══════ */
 @media (max-width: 768px) {
   html:is(.is-app, .app-look) .mobile-build .sil-wrap.sil-wrap--app-bkt { width: 100%; margin: 0; }
-  html:is(.is-app, .app-look) .sil-wrap--app-bkt .cz-card { width: 86px !important; transform: translateY(-50%) scale(1) !important; border-radius: 9px; border: 1px solid rgba(249,115,22,.35); background: rgba(10,7,5,.78); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); box-shadow: 0 6px 18px rgba(0,0,0,.45); }
+  html:is(.is-app, .app-look) .sil-wrap--app-bkt .cz-card { width: 100px !important; transform: translateY(-50%) scale(1) !important; border-radius: 9px; border: 1px solid rgba(249,115,22,.35); background: rgba(10,7,5,.78); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); box-shadow: 0 6px 18px rgba(0,0,0,.45); }
   html:is(.is-app, .app-look) .sil-wrap--app-bkt .cz-left  { left: 4px !important; }
   html:is(.is-app, .app-look) .sil-wrap--app-bkt .cz-right { right: 4px !important; }
   html:is(.is-app, .app-look) .sil-wrap--app-bkt .cz-left.cz-invisible, html:is(.is-app, .app-look) .sil-wrap--app-bkt .cz-left.cz-hidden { transform: translateY(-50%) translateX(-8px) scale(.96) !important; }
@@ -4869,3 +4869,111 @@ html:is(.is-app, .app-look).no-dock { --app-bottom: calc(var(--safe-bottom) + 12
 .bt-spot-half:active { transform: scale(.98); }
 .bt-spot-half:focus-visible { outline: 2px solid var(--ag-a1); outline-offset: 2px; }
 .bt-spot-half .bt-spot-name { font-size: 13px; }
+
+/* minigames: the read's red decoy (covered: never tap it; an X so it isn't colour alone) and the miss callout */
+.mg-target.is-decoy { border-color: #f87171; background: rgba(248,113,113,.2); transform: scale(1.04); }
+.mg-target.is-decoy span { position: relative; background: #f87171; box-shadow: 0 0 18px #f87171; }
+.mg-target.is-decoy span::before, .mg-target.is-decoy span::after { content: ''; position: absolute; left: 50%; top: 50%; width: 18px; height: 3px; margin: -1.5px 0 0 -9px; border-radius: 2px; background: #3b0a0a; transform: rotate(45deg); }
+.mg-target.is-decoy span::after { transform: rotate(-45deg); }
+.mg-hint.is-bad { color: #fca5a5; }
+
+/* Spin drop-down, tighter (phones, app and website): less room above the wheels
+   and around the player card, shorter trait buttons */
+.game-layout.ag-drop .spin-panel-body { padding-top: 2px !important; gap: 8px !important; }
+.game-layout.ag-drop .spin-panel-static { padding-top: 2px !important; gap: 6px !important; }
+.game-layout.ag-drop .spin-respin-split { height: auto !important; min-height: 0 !important; }
+.game-layout.ag-drop .spin-respin-divider { height: auto !important; align-self: stretch; }
+.game-layout.ag-drop .spin-panel-scroll { padding-top: 0 !important; }
+.game-layout.ag-drop .attr-chip { min-height: 38px !important; padding: 3px 8px !important; }
+
+/* The website on a phone: the position picker sits between the logo and the
+   grades switch, so it's smaller there and never runs into GRADES ON */
+@media (max-width: 480px) {
+  html.app-look:not(.is-app) .nav-pos-trigger { padding: 5px 8px !important; gap: 6px !important; }
+  html.app-look:not(.is-app) .nav-pos-trigger .nav-pos-name { display: none; }   /* the badge says the position */
+}
+
+
+/* Blacktop court: the team outline is a box-shadow ring, not four stacked drop-shadow filters. The
+   filters also painted the avatar's own soft shadow (and any glowing or pulsing avatar style) in the
+   team color, which smeared out from the icon and streaked as players moved. No glow on anyone */
+.btc-ring > * { filter: none !important; box-shadow: 0 0 0 2px var(--pc), 0 2px 5px rgba(0,0,0,.5) !important; }
+.btc-p.is-me .btc-ring::after { inset: -5px; }
+
+/* Blacktop BUILDS sheet: each player's overall on the right, every grade a chip in its color */
+.lc-builds-who { align-items: center; }
+.lc-builds-id { display: flex; flex-direction: column; min-width: 0; }
+.lc-builds-ovr { flex: none; display: flex; flex-direction: column; align-items: center; min-width: 46px; padding: 4px 8px 3px; border-radius: 10px; background: rgba(255,255,255,.07); line-height: 1; }
+.lc-builds-who .lc-builds-ovr b { font-family: var(--ag-display); font-weight: 400; font-size: 22px; color: #fff; }
+.lc-builds-who .lc-builds-ovr small { font-size: 10px; }
+.lc-builds-grades i.is-g { color: var(--g); background: color-mix(in srgb, var(--g) 16%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--g) 50%, transparent); }
+.lc-builds-grades i.is-g small { color: color-mix(in srgb, var(--g) 40%, #d5dde4); }
+
+/* Home on the website: a small How to play button under the wordmark (the
+   tutorial doesn't open by itself there) */
+.ag-howto { display: inline-flex; align-items: center; gap: 7px; margin: 8px auto 0; padding: 5px 12px 4px 6px; border-radius: 999px; border: 1px solid var(--ag-line-hi); background: rgba(255,255,255,.04); color: var(--ag-text-2); font-family: var(--ag-font); font-size: 13px; letter-spacing: 1.6px; cursor: pointer; transition: background .15s, color .15s; }
+.ag-howto span { display: grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: var(--ag-a1); color: #06110d; font-size: 12px; letter-spacing: 0; }
+.ag-howto:hover { background: rgba(255,255,255,.08); color: var(--ag-text); }
+.ag-howto:active { transform: scale(.97); }
+/* the "Sign in to save your stats" bubble: gone on the new look (it came back
+   every visit and sat on SPIN; Sign in is on Home's player card and the menu) */
+html:is(.is-app, .app-look) .nav-signin-hint { display: none !important; }
+
+/* Home's mode cards on a phone: the pill under the title stays on one line
+   ("DRAFT THE GREATS" was wrapping) */
+.ag-mode-badge { white-space: nowrap; max-width: 100%; }
+@media (max-width: 480px) { .ag-mode-badge { letter-spacing: .9px; padding: 2px 7px; font-size: 10.5px; } }
+@media (max-width: 380px) { .ag-mode-cta { letter-spacing: 1.8px; gap: 5px; } }
+
+/* Blacktop build on a phone: there's no navbar over a live build, so the page starts at the top
+   (it kept the navbar's 54px as an empty band above the HUD); the bar gives way so CHAT and
+   LEAVE always fit on the row (a plain 1fr wouldn't shrink below the bar's text) */
+html:is(.is-app, .app-look) .game-page-scroll:has(> .bt-hud) { top: var(--safe-top, 0px); }
+.bt-hud.has-leave { grid-template-columns: minmax(0, 1fr) 40px auto; }
+.bt-hud-bar { min-width: 0; }
+
+/* Career: a trait's training-window / MAXED tag sits on its own line under the player's
+   name (inline it was cut off with an ellipsis on a phone); the starters' ages on the lineup */
+.cr-trait-txt > .cr-trait-win, .cr-trait-txt > .cr-trait-max { align-self: flex-start; margin: 3px 0 0; max-width: 100%; white-space: normal; line-height: 1.2; }
+.crl-man small.crl-age { margin-top: -3px; font-size: 10px; letter-spacing: .8px; color: var(--ag-muted); opacity: .9; white-space: nowrap; }
+
+/* App basketball build: long last names (Edgecombe, Sensabaugh) fit the card */
+html:is(.is-app, .app-look) .sil-wrap--app-bkt .cz-qb-name { font-size: 9.5px !important; letter-spacing: 0 !important; overflow: hidden; }
+html:is(.is-app, .app-look) .sil-wrap--app-bkt .cz-player-drop { gap: 5px; }
+
+/* Basketball build on the website: the stage keeps the app's height (the ad rail
+   was squeezing it, and five cards a side piled up); the page scrolls a little more */
+[data-sport="bucket"] .game-layout.ag-drop .field-center { min-height: 500px !important; }
+
+/* Football's game page on a phone: the stadium photo behind it, dimmed the same
+   as basketball's arena ([data-sport="bucket"] .game-layout, index.css), so the
+   report card under the player sits on the field like basketball's on the court */
+@media (max-width: 768px) {
+  .game-layout { background-image: linear-gradient(rgba(10,14,12,.80), rgba(10,14,12,.80)), url('/footballbackground-soft.webp'); background-size: cover; background-position: center; }
+}
+
+/* PLAY, the ball: the sport's seams embossed on the disc, a highlight so it reads
+   round, a stitched ring turning slowly around it, and a press snaps the ball a
+   quarter turn (components/AppTabBar.jsx: PlaySeams) */
+.ag-play-core { overflow: hidden; background: radial-gradient(circle at 32% 24%, rgba(255,255,255,.38), transparent 44%), var(--ag-grad); }
+.ag-play-core > svg:not(.ag-play-seams) { position: relative; z-index: 1; filter: drop-shadow(0 1px 0 rgba(255,255,255,.35)); }
+.ag-play-seams { position: absolute; inset: 0; width: 100%; height: 100%; color: var(--ag-on); opacity: .2; pointer-events: none; transition: transform .45s cubic-bezier(.2, 1.4, .4, 1); }
+.ag-play:hover .ag-play-seams { transform: rotate(-20deg); }
+.ag-play:active .ag-play-seams { transform: rotate(-90deg); transition-duration: .2s; }
+.ag-play::before { content: ''; position: absolute; inset: -8px; border-radius: 50%; border: 2px dashed color-mix(in srgb, var(--ag-a1) 45%, transparent); animation: ag-stitch 16s linear infinite; pointer-events: none; }
+.ag-play--on::before { border-color: color-mix(in srgb, var(--ag-a1) 80%, transparent); animation-duration: 7s; }
+@keyframes ag-stitch { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .ag-play::before { animation: none; } .ag-play-seams { transition: none; } }
+
+/* Reward marks beside the coin (components/app/GainIcons.jsx): XP a mint hexagon
+   stamped XP, legacy a purple shield with a gold star; --sm sits inline in text */
+.xp-ico, .lg-ico { display: inline-grid; place-items: center; width: 22px; height: 22px; flex: none; vertical-align: -5px; position: relative; }
+.xp-ico { clip-path: polygon(25% 3%, 75% 3%, 100% 50%, 75% 97%, 25% 97%, 0 50%); background: radial-gradient(circle at 35% 28%, #d8fff6, #5edbd8 45%, #0f766e); }
+.xp-ico::before { content: 'XP'; font-family: var(--ag-display); font-size: 9.5px; letter-spacing: -.2px; color: #053b36; text-shadow: 0 1px 0 rgba(216,255,246,.5); }
+.lg-ico { clip-path: polygon(50% 0, 100% 14%, 94% 62%, 50% 100%, 6% 62%, 0 14%); background: radial-gradient(circle at 35% 25%, #e9d5ff, #a855f7 45%, #4c1d95); }
+.lg-ico::before { content: '★'; font-size: 11px; line-height: 1; color: #fde68a; text-shadow: 0 1px 1px rgba(76,29,149,.8); transform: translateY(-1px); }
+.xp-ico--sm, .lg-ico--sm { width: 15px; height: 15px; vertical-align: -3px; }
+.xp-ico--sm::before { font-size: 6.6px; }
+.lg-ico--sm::before { font-size: 8px; }
+.gain { white-space: nowrap; }
+.cr-legacy-extras { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 6px 0 0; font-size: 12px; color: var(--ag-muted); }

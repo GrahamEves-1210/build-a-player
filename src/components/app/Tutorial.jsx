@@ -84,8 +84,11 @@ export default function Tutorial({ onGuided }) {
     homeLink = link
     return () => { if (homeLink === link) homeLink = null }
   }, [])
+  // the app opens it once by itself; the website doesn't (people clear their
+  // browser data, and it would come back every time): it has a How to play
+  // button on Home instead
   useEffect(() => {
-    if (!NEW_UI || autoShown || isDone() || state.phase !== 'idle') return
+    if (!IS_APP || autoShown || isDone() || state.phase !== 'idle') return
     const t = setTimeout(() => {
       if (autoShown || isDone() || state.phase !== 'idle') return
       autoShown = true

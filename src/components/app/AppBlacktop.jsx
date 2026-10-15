@@ -6,7 +6,7 @@ import { ROOM_SIZE as ALL_SIZE, ROLES, SLOTS as ALL_SLOTS, teamName, captainOf, 
 import { CallBar, CallReveal, EmoteBar, useBubbles, CALL_MS } from './LiveCalls'
 import { BUCKET_ATTR } from '../../data/nba-attrs'
 import { valToGrade } from '../../utils/simulation'
-import { playDelay, OFF_CALLS, DEF_CALLS } from '../../lib/hoops'
+import { playDelay, offCallsFor, defCallsFor, catchPlay } from '../../lib/hoops'
 import { QUICK, block, report } from '../../lib/chat'
 import { sfx, haptic, victory } from '../../lib/juice'
 import { calcBucketOVR, getBucketGuardArchetype, getBucketBigArchetype } from '../../utils/bucketSimulation'
@@ -57,6 +57,8 @@ export const archOf = b => {
   return /remaining|Spin to/.test(a) ? null : a
 }
 const firstName = n => (n || '').trim().split(/\s+/)[0].toUpperCase().slice(0, 10)
+// a grade's color, rounded like its letter (valToGrade): S purple, A blue, B green, C yellow, D orange, F red
+const gradeColor = v0 => { const v = Math.round(v0 ?? 0); return v >= 11 ? '#a855f7' : v >= 8 ? '#3b82f6' : v >= 5 ? '#22c55e' : v >= 2 ? '#eab308' : v >= 1 ? '#f97316' : '#ef4444' }
 
 // ── Hub: 1v1 (pickup or a friend), then the 2v2 and 3v3 lobbies, with stats ──
 export function OneOnOneOptions({ onPickup, onFriend, onJoinCode, error = '' }) {
@@ -421,11 +423,16 @@ function SquadBuilds({ game, names, meVid, onClose }) {
           <span className="lc-builds-name">{names[t]}</span>
           {game.teams[t].map(p => {
             const types = p.pos === 'big' ? VERSUS_BIG_TYPES : VERSUS_GUARD_TYPES
+            const ovr = liveOvr(p)
             return (
               <div key={p.id} className={`lc-builds-p${p.id === meVid ? ' is-me' : ''}`}>
-                <span className="lc-builds-who"><b>{p.bot ? p.name : <NameTag name={p.name} cos={p.cos} self={p.id === meVid} />}</b>{archOf(p) && <em className="bt-arch">{archOf(p)}</em>}<small>{p.pos === 'big' ? 'BIG' : 'GUARD'} · {liveOvr(p) ?? '–'} OVR</small></span>
+                <span className="lc-builds-who">
+                  <span className="lc-builds-id"><b>{p.bot ? p.name : <NameTag name={p.name} cos={p.cos} self={p.id === meVid} />}</b>{archOf(p) && <em className="bt-arch">{archOf(p)}</em>}<small>{p.pos === 'big' ? 'BIG' : 'GUARD'}</small></span>
+                  <span className="lc-builds-ovr"><b>{ovr ?? '–'}</b><small>OVR</small></span>
+                </span>
+                {/* each trait's grade in its color, so a build reads at a glance */}
                 <span className="lc-builds-grades">
-                  {types.map(k => { const val = p.build?.[k]?.val; return <i key={k} title={BUCKET_ATTR[k]?.label}><small>{BUCKET_ATTR[k]?.shortLabel ?? k.slice(0, 3)}</small>{val != null ? valToGrade(val) : '–'}</i> })}
+                  {types.map(k => { const val = p.build?.[k]?.val; return <i key={k} title={BUCKET_ATTR[k]?.label} className={val != null ? 'is-g' : ''} style={val != null ? { '--g': gradeColor(val) } : undefined}><small>{BUCKET_ATTR[k]?.shortLabel ?? k.slice(0, 3)}</small>{val != null ? valToGrade(val) : '–'}</i> })}
                 </span>
               </div>
             )
@@ -492,6 +499,10 @@ export function BlacktopGame({ bt, user, photoFor, onOpenChat, unread }) {
   const score = play?.score ?? [0, 0]
   const feed = plays.slice(0, idx + 1).filter(p => p.type !== 'check').slice(-4).reverse()
   const squads = [0, 1].map(t => game.teams[t])
+  // only the calls that fit this game: a 1v1 has no pass and no help (a CPU's call included)
+  const size = game.teams[myTeam]?.length ?? 1
+  const fitOff = v => (typeof v === 'string' && v.startsWith('pass:') ? (size > 1 ? v : null) : offCallsFor(size).includes(v) ? v : null)
+  const fitDef = v => (defCallsFor(size).includes(v) ? v : null)
 
   if (stage === 'reveal') {
     return (
@@ -569,10 +580,10 @@ export function BlacktopGame({ bt, user, photoFor, onOpenChat, unread }) {
       {/* each player on court is their profile picture and username (the CPU fill-ins say CPU) */}
       {showBuilds && <SquadBuilds game={game} names={names} meVid={bt.me.vid} onClose={() => setShowBuilds(false)} />}
       <div className="lc-court">
-        <BlacktopCourt game={game} play={play} meId={bt.me.vid} meLabel={bt.me.uid ? null : 'YOU'} colorFor={colorFor} speed={speed}
+        <BlacktopCourt game={game} play={play} meId={bt.me.vid} colorFor={colorFor} speed={speed}
           ovrFor={p => liveOvr(p)} bubbles={bubbles}
-          avatarFor={p => <Av name={p.name} bot={p.bot} team={p.team} size={34} cos={p.cos} self={p.id === bt.me.vid} />} />
-        {locked && lastCheck && !calling && <CallReveal key={lastCheck.pn} off={locked[lastCheck.team]} def={locked[1 - lastCheck.team]} offense={lastCheck.team === myTeam} nameOf={id => firstName(game.teams.flat().find(p => p.id === id)?.name)} />}
+          avatarFor={p => <Av name={p.name} bot={p.bot} team={p.team} size={28} cos={p.cos} self={p.id === bt.me.vid} />} />
+        {locked && lastCheck && !calling && <CallReveal key={lastCheck.pn} off={fitOff(locked[lastCheck.team])} def={fitDef(locked[1 - lastCheck.team])} offense={lastCheck.team === myTeam} nameOf={id => firstName(game.teams.flat().find(p => p.id === id)?.name)} />}
         {/* the calls: under the court on phones, over its lower edge on desktop (court and buttons in one view) */}
         <div className="lc-calls">
           {calling && (() => {
@@ -582,10 +593,11 @@ export function BlacktopGame({ bt, user, photoFor, onOpenChat, unread }) {
             const pick = v => bt.call(calling.pn, v)
             if (h === bt.me.vid) {
               const mates = game.teams[myTeam].filter(p => p.id !== h)
-              const opts = ['drive', 'pullup', 'post', ...mates.map(p => ({ v: `pass:${p.id}`, label: `PASS → ${firstName(p.name)}`, sub: `${liveOvr(p) ?? '–'} OVR` }))]
+              // a pass says what the teammate does with it (the engine plays exactly that): a shooter catches and shoots
+              const opts = [...offCallsFor(size).filter(c => c !== 'pass'), ...mates.map(p => ({ v: `pass:${p.id}`, label: `PASS → ${firstName(p.name)}`, sub: catchPlay(p) === 'shoot' ? 'Catch & shoot' : 'Catch & attack' }))]
               return <CallBar key={calling.pn} offense head="BALL IN HAND · CALL IT" options={opts} picked={bt.myCalls?.[calling.pn] ?? null} onPick={pick} />
             }
-            if (dfd === bt.me.vid) return <CallBar key={calling.pn} offense={false} head={`GUARDING ${firstName(nm(h))} · CALL IT`} options={DEF_CALLS} picked={bt.myCalls?.[calling.pn] ?? null} onPick={pick} />
+            if (dfd === bt.me.vid) return <CallBar key={calling.pn} offense={false} head={`GUARDING ${firstName(nm(h))} · CALL IT`} options={defCallsFor(size)} picked={bt.myCalls?.[calling.pn] ?? null} onPick={pick} />
             return <div className="lc-wait">{firstName(nm(h))} HAS THE BALL · {firstName(nm(dfd))} IS ON HIM</div>
           })()}
         </div>

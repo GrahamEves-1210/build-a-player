@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { LegacyIco, withLegacy } from './GainIcons'
 import { useRailOn } from '../../lib/ads'
 import { createPortal } from 'react-dom'
 import {
@@ -6,8 +7,7 @@ import {
   startSeason, resumeSeason, advanceWeek, chooseMoment, resolveInjury, finishRegular, playoffRound, bookSeason, recordCombine, spendDev, demandTrade, nextSeason,
   OFF_STEPS, offStep, campDrill, CAMP_LEGACY, dbSpot, lineup, depthChart, gradeOf, gradeOfOvr, ovrGradeVal, SPORT, sportOf,
   openTalks, ask, closeTalks, acceptTalks, ASKS, askOdds, leverageOf,
-  retire, canRetire, mustRetire, careerTotals, legacyOf, LEGACY_TIERS, ALL_TIME, STAT_LABEL, HEADLINE_STATS, careerCard, AWARD_NAME, MAX_SEASONS, retireReason, goalsFor, compsFor, stockText, pickText, loadSlots, CAREER_SLOTS, maxedTrait, trainWindow, canUpgrade, upgradeCost,
-} from '../../lib/career'
+  retire, canRetire, mustRetire, careerTotals, legacyOf, LEGACY_TIERS, ALL_TIME, STAT_LABEL, HEADLINE_STATS, careerCard, AWARD_NAME, MAX_SEASONS, retireReason, goalsFor, compsFor, stockText, pickText, loadSlots, CAREER_SLOTS, maxedTrait, trainWindow, canUpgrade, upgradeCost, legacyExtras } from '../../lib/career'
 import { GAME_LINE } from '../../lib/seasonDirector'
 import { GAMES, pickPlayoffGame } from '../../lib/minigames'
 import MiniGame from './MiniGame'
@@ -159,12 +159,13 @@ function Model({ c, devPick }) {
     const canUp = !!devPick && canUpgrade(c, t)
     const cost = upgradeCost(ch?.val)
     // the physical traits' training window, out in the open: train them before it shuts
+    // (its own line under the player's name, so a phone never cuts it off)
     const w = !maxed ? trainWindow(c, t) : null
-    const winTag = !w ? null : !w.open ? <em className="cr-trait-win is-closed">CLOSED</em> : w.left <= 1 ? <em className="cr-trait-win is-last">LAST CHANCE</em> : <em className="cr-trait-win">TRAIN TO {w.until}</em>
+    const winTag = !w ? null : !w.open ? <em className="cr-trait-win is-closed">CLOSED</em> : w.left <= 1 ? <em className="cr-trait-win is-last">LAST CHANCE</em> : <em className="cr-trait-win">TRAIN TO AGE {w.until}</em>
     return (
       <div className={`cr-trait${canUp ? ' can-up' : ''}`} onClick={canUp ? () => devPick(t) : undefined} role={canUp ? 'button' : undefined}>
         <span className="cr-trait-av">{ch?.photo ? <img src={ch.photo} alt="" /> : null}</span>
-        <span className="cr-trait-txt"><b>{(attr[t]?.label ?? t).replace('/', '/\u200b')}</b><small>{nick(ch?.qbFull) || '—'}{ch?.upgraded ? ` +${ch.upgraded}` : ''}{ch?.faded ? ` −${ch.faded}` : ''}{maxed && <em className="cr-trait-max">MAXED</em>}{winTag}</small></span>
+        <span className="cr-trait-txt"><b>{(attr[t]?.label ?? t).replace('/', '/\u200b')}</b><small>{nick(ch?.qbFull) || '—'}{ch?.upgraded ? ` +${ch.upgraded}` : ''}{ch?.faded ? ` −${ch.faded}` : ''}</small>{maxed ? <em className="cr-trait-max">MAXED</em> : winTag}</span>
         <span className="cr-trait-g" style={{ background: gradeColor(ch?.val ?? 0) }}>{canUp ? (cost > 1 ? `+1 · ${cost} PTS` : '+1') : valToGrade(ch?.val ?? 0)}</span>
       </div>
     )
@@ -186,16 +187,25 @@ function Model({ c, devPick }) {
     </div>
   )
 }
+// the small extras on top of the resume: camp wins, shoe deals, money earned
+function Extras({ c }) {
+  const x = legacyExtras(c)
+  const rows = [['Camp', x.camp], ['Shoe deals', x.shoe], ['Earnings', x.earnings]].filter(([, n]) => n > 0)
+  if (!rows.length) return null
+  return <p className="cr-legacy-extras">{rows.map(([k, n]) => <span key={k} className="gain">{k} +{n} <LegacyIco /></span>)}</p>
+}
+
 function LegacyMeter({ c }) {
   const L = legacyOf(c)
   const tierMin = [...LEGACY_TIERS].reverse().find(([m]) => L.score >= m)[0]
   const pct = L.next ? Math.min(100, Math.round(((L.score - tierMin) / (L.next.at - tierMin)) * 100)) : 100
   return (
     <div className="cr-legacy">
-      <div className="cr-legacy-top"><span className="ag-eyebrow">LEGACY TIER · {L.tier.toUpperCase()}</span><b>{L.score}<small> LEGACY PTS</small></b></div>
+      <div className="cr-legacy-top"><span className="ag-eyebrow">LEGACY TIER · {L.tier.toUpperCase()}</span><b><LegacyIco sm={false} /> {L.score}<small> LEGACY PTS</small></b></div>
       <div className="cr-legacy-bar"><span style={{ width: `${Math.max(3, pct)}%` }} /></div>
       <div className="cr-legacy-foot"><span>{L.next ? `${L.next.at - L.score} more points to reach the ${L.next.name} tier` : 'The top tier'}</span><span>{L.ranked ? `No. ${L.rank} ${POS_LABEL[c.pos]} career ever` : `Outside the top ${L.of} ${POS_LABEL[c.pos]} careers`}</span></div>
-      <p className="cr-legacy-how">Points come from seasons played, {sportOf(c).honor}s, {sportOf(c).first} teams, {AWARD_NAME[c.pos]}s, rings, playoff runs and records.</p>
+      <p className="cr-legacy-how">Points come from seasons played, {sportOf(c).honor}s, {sportOf(c).first} teams, {AWARD_NAME[c.pos]}s, rings, playoff runs, records and the career's numbers: the same formula that scores the all-time greats' real careers.</p>
+      <Extras c={c} />
     </div>
   )
 }
@@ -369,6 +379,8 @@ function TeamFit({ c }) {
   const S = sportOf(c), f = c.fit
   // (a football career saved before the groups: rebuild them from the old fields)
   const groups = f.groups ?? [...(c.pos !== 'qb' ? [{ k: 'QB', v: f.qb, names: [f.qbName] }] : []), { k: 'O-LINE', v: f.ol, names: [] }, { k: 'WEAPONS', v: f.weapons, names: [] }]
+  // the division from the team itself (a career saved before the NBA had divisions read "Western Conference")
+  const div = S.teamOf(f.short)?.div ?? f.div
   const G = ({ k, v, sub }) => <span className="cr-fit-g"><b style={{ color: gradeColor(v) }}>{gradeOf(v)}</b><small>{k}</small>{sub && <i>{sub}</i>}</span>
   return (
     <div className="cr-fit ag-pop" style={{ '--d': '80ms' }}>
@@ -377,7 +389,7 @@ function TeamFit({ c }) {
         {groups.map(g => <G key={g.k} k={g.k} v={g.v} sub={g.names?.length === 1 ? nick(g.names[0]) : null} />)}
         {S.side?.[c.pos] === 'def' && <G k="OFFENSE" v={teamGrade(f.off)} />}<G k="DEFENSE" v={teamGrade(f.def)} />
       </div>
-      <div className="cr-fit-meta"><span>{f.conf}{f.div && f.div !== f.conf ? ` · ${f.div}` : ''}</span></div>
+      <div className="cr-fit-meta"><span>{f.conf}{div && div !== f.conf ? ` · ${div}` : ''}</span></div>
     </div>
   )
 }
@@ -386,16 +398,18 @@ function Lineup({ c }) {
   const S = sportOf(c)
   const L = useMemo(() => lineup(c), [c.roster, c.ovr, c.name, c.lastRole, c.contract, c.pos, c.active?.k]) // eslint-disable-line
   const dc = L.depth
-  const Man = ({ p, slot }) => !p ? <span className="crl-man is-empty" /> : (
+  const Man = ({ p, slot }) => { if (!p) return <span className="crl-man is-empty" />; const age = p.you ? c.age : p.age; return (
     <span className={`crl-man${p.you ? ' is-you' : ''}`}>
       <span className="crl-face">
         {p.you ? <AvatarBadge self name={c.name} size={S.isBucket ? 48 : 34} /> : p.photo ? <img src={photoSrc(p.photo)} alt="" loading="lazy" /> : <span className="crl-init">{initials(p.name)}</span>}
         <i style={{ background: gradeColor(ovrGradeVal(p.ovr)) }}>{p.ovr}</i>
       </span>
       <b>{p.you ? c.name : S.isBucket ? shortName(p.name) : nick(p.name)}</b>
-      {S.isBucket ? p.rookie && <small>ROOKIE</small> : <small>{slot}{p.rookie ? ' · ROOKIE' : ''}</small>}
+      {!S.isBucket && <small>{slot}{p.rookie ? ' · ROOKIE' : ''}</small>}
+      {/* the starters' ages, like the bench's */}
+      {age != null && <small className="crl-age">{S.isBucket && p.rookie ? 'ROOKIE · ' : ''}AGE {age}</small>}
     </span>
-  )
+  ) }
   const last = dc.ahead[dc.ahead.length - 1]
   return (
     <div className="ag-card crl ag-pop">
@@ -741,7 +755,7 @@ function Moves({ c, setCareer, forced }) {
     <>
       {askTrade && <AskSheet eyebrow="TRADE REQUEST" title="Demand a trade?" body="Reputation takes a hit, and the team can say no." yes="DEMAND IT" no="STAY PUT" danger onYes={doTrade} onNo={() => setAskTrade(false)} />}
       {tradeRes && <TradeOverlay res={tradeRes} onClose={() => setTradeRes(null)} />}
-      {ev.map((e, i) => <div key={i} className="ag-card cr-event ag-pop"><span className="ag-eyebrow">{c.fit?.name?.toUpperCase()}</span><p>{e.text}</p></div>)}
+      {ev.map((e, i) => <div key={i} className="ag-card cr-event ag-pop"><span className="ag-eyebrow">{c.fit?.name?.toUpperCase()}</span><p>{withLegacy(e.text)}</p></div>)}
       {moves.length > 0 && (
         <div className="ag-card cr-moves ag-pop" style={{ '--d': '40ms' }}>
           <span className="ag-eyebrow">ROSTER MOVES</span>
@@ -771,9 +785,9 @@ function Camp({ c, setCareer }) {
     <div className="ag-card cr-camp ag-pop">
       <span className="ag-eyebrow">TRAINING CAMP · {GAMES[game]?.title}</span>
       {done
-        ? <p className="cr-note">{(done.won ?? done.bonus) ? `Won the drill in front of the coaches: +${done.legacy ?? 0} legacy${done.bonus ? ', and +1 development point.' : '. No development point this time.'}` : 'Lost the drill. Nothing this year.'}</p>
+        ? <p className="cr-note">{(done.won ?? done.bonus) ? <>Won the drill in front of the coaches: <span className="gain">+{done.legacy ?? 0} <LegacyIco /> legacy</span>{done.bonus ? ', and +1 development point.' : '. No development point this time.'}</> : 'Lost the drill. Nothing this year.'}</p>
         : <>
-            <p className="cr-note">One hard drill in front of the coaching staff. Win it for +{CAMP_LEGACY} legacy and a shot at a development point (the cleaner the win, the better the shot).</p>
+            <p className="cr-note">One hard drill in front of the coaching staff. Win it for <span className="gain">+{CAMP_LEGACY} <LegacyIco /> legacy</span> and a shot at a development point (the cleaner the win, the better the shot).</p>
             <MiniGame retry key={game} game={game} build={c.build} hard seed={`${c.seed}-camp-${c.year}`} onDone={res => setCareer(campDrill(c, res.score, game))} />
           </>}
       {c.dev.points > 0 && <div className="cr-devnote"><IconStar size={14} /> <b>{c.dev.points}</b> development {c.dev.points === 1 ? 'point' : 'points'}: tap a trait on the player above to raise it.</div>}
@@ -863,7 +877,7 @@ function CareerTab({ c, L, onDelete }) {
       {(c.decisions.length > 0 || c.events.length > 0) && (
         <div className="ag-card cr-log ag-pop" style={{ '--d': '90ms' }}>
           <div className="ag-card-head"><span className="ag-eyebrow">THE STORY</span></div>
-          <ul className="cr-bul">{[...c.decisions.map(d => ({ ...d, kind: 'd' })), ...c.events.map(e => ({ ...e, kind: 'e' }))].sort((a, b) => b.year - a.year).map((x, i) => <li key={i}>{x.kind === 'd' ? <IconShield size={12} /> : <IconHelmet size={12} />} <small>Y{x.year}</small> {x.text}</li>)}</ul>
+          <ul className="cr-bul">{[...c.decisions.map(d => ({ ...d, kind: 'd' })), ...c.events.map(e => ({ ...e, kind: 'e' }))].sort((a, b) => b.year - a.year).map((x, i) => <li key={i}>{x.kind === 'd' ? <IconShield size={12} /> : <IconHelmet size={12} />} <small>Y{x.year}</small> {withLegacy(x.text)}</li>)}</ul>
         </div>
       )}
       <div className="cr-delete ag-pop">

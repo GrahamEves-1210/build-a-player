@@ -7,13 +7,17 @@
 //
 //   const game = simStreetball({ teams: [[p, p, p], [p, p, p]], seed, goal: 21 })
 //   p = { id, name, pos: 'guard' | 'big', build: { attr: { val } }, role?: 'score' | 'play' | 'lock' }
-//   game.plays = [{ id, type, team, pid, pid2, defId, handler, passes, shot, made, pts, text, score, big, poss }]
+//   game.plays = [{ id, type, team, pid, pid2, defId, handler, passes, shot, cs, made, pts, text, score, big, poss }]
+//   (cs: a catch-and-shoot, a jumper straight off a pass; only ever after a pass)
 //   game.stats[pid] = { pts, fgm, fga, tpm, tpa, ast, reb, oreb, stl, blk, tov }
 //
 // Calls (live games): calls[pn] = { 0: call, 1: call } for possession pn (each
 // check starts one; the check play carries its pn). The team with the ball's
 // call is the play (OFF_CALLS), the other team's the defense (DEF_CALLS). No
 // call, the engine plays it as it always has. Same calls in, same game out.
+// Only calls that fit the game count: no pass and no help in a 1v1 (nobody to
+// pass to, nobody to help), and a pass called to a teammate is caught and
+// played the way that teammate plays off the catch (catchPlay).
 
 import { seeded } from './rng'
 
@@ -22,8 +26,11 @@ const v = (b, k, d = 5) => (b?.[k]?.val ?? d)
 
 // ── Play text ────────────────────────────────────────────────────────────────
 const T = {
-  arc:      ['{n} pulls up — TWO!', '{n} step-back — SPLASH!', '{n} fires — GOOD!', '{n} spots up — TWO!', '{n} lets it fly — WET!'],
-  arca:     ['{a} finds {n} — TWO!', '{a} kicks it out, {n} — SPLASH!', '{a} swings it, {n} fires — GOOD!', '{n} off the dish from {a} — TWO!'],
+  arc:      ['{n} pulls up — TWO!', '{n} step-back — SPLASH!', '{n} fires — GOOD!', '{n} rises up — TWO!', '{n} lets it fly — WET!'],
+  // catch-and-shoot: the jumper straight off a pass (only ever with a passer)
+  arca:     ['{a} kicks it out, {n} catch and shoot — SPLASH!', '{a} finds {n} spotting up — TWO!', '{a} swings it, {n} fires off the catch — GOOD!', '{n} catches from {a} and lets it go — TWO!'],
+  mida:     ['{a} to {n} — catch and shoot, one.', '{n} off the catch from {a} — one.', '{a} finds {n} at the elbow — knocks it down.'],
+  missc:    ['{n} off the catch — no good.', '{d} closes out on {n} — off the rim.', '{n} catch and shoot — rattles out.', '{d} runs at {n} — short.'],
   dunk:     ['{n} SLAMS it home!', '{n} THROWS IT DOWN!', '{n} skies — FINISH!', '{n} HAMMERS IT!'],
   dunka:    ['{a} lobs it — {n} THROWS IT DOWN!', '{a} drops it off, {n} SLAMS!', '{a} to {n} — ALLEY-OOP!'],
   post:     ['{n} backs it down — bucket.', '{n} hook shot — one.', '{n} drop step — one.', '{n} fadeaway — ONE.'],
@@ -105,6 +112,14 @@ function shotType(r, R, isArc, assisted) {
 
 export const OFF_CALLS = ['drive', 'pullup', 'post', 'pass']
 export const DEF_CALLS = ['press', 'sag', 'help']
+// the calls that make sense for a side this size: a 1v1 has nobody to pass to or help from
+export const offCallsFor = size => (size > 1 ? OFF_CALLS : OFF_CALLS.filter(c => c !== 'pass'))
+export const defCallsFor = size => (size > 1 ? DEF_CALLS : DEF_CALLS.filter(c => c !== 'help'))
+// What a teammate does with a pass called to him: a shooter catches and shoots,
+// anyone else catches and goes to the rim. The call bar says it, the engine plays it.
+export const catchPlay = p => (v(p?.build, 'jumpShot') >= (p?.pos === 'big' ? 8 : 6) ? 'shoot' : 'finish')
+// the extra a jumper off the catch gets (a good shooter's feet are already set)
+const csBonus = R => .02 + clamp((R.js - 5) / 6, 0, 1) * .06
 export function simStreetball({ teams, seed = 'x', goal = 21, winBy = 2, cap = 25, names = null, calls = null }) {
   const r = seeded(`hoops-${seed}`)
   const sides = teams.map((list, ti) => list.map((p, i) => ({ ...p, team: ti, slot: i, R: rate(p) })))
@@ -136,8 +151,8 @@ export function simStreetball({ teams, seed = 'x', goal = 21, winBy = 2, cap = 2
     const c = calls?.[pn] ?? null
     const rawOff = c?.[poss]
     const passTo = typeof rawOff === 'string' && rawOff.startsWith('pass:') ? att.find(p => p.id === rawOff.slice(5) && p.id !== handler.id) ?? null : null
-    const off = passTo ? 'pass' : OFF_CALLS.includes(rawOff) && !(rawOff === 'pass' && att.length < 2) ? rawOff : null
-    const dfc = DEF_CALLS.includes(c?.[1 - poss]) ? c[1 - poss] : null
+    const off = passTo ? 'pass' : offCallsFor(att.length).includes(rawOff) ? rawOff : null
+    const dfc = defCallsFor(def.length).includes(c?.[1 - poss]) ? c[1 - poss] : null
     if (check) { check.handler = handler.id; check.defender = matchup(def, att, handler).id; check.carrier = carrier && att.some(p => p.id === carrier) ? carrier : null; check = null }
     const entry = carrier && att.some(p => p.id === carrier) && carrier !== handler.id ? carrier : null   // rebounder/stealer feeds the handler
     carrier = null
@@ -175,25 +190,32 @@ export function simStreetball({ teams, seed = 'x', goal = 21, winBy = 2, cap = 2
     const dime = assist && assist.role === 'play' ? .04 : 0
     const R = shooter.R
     const sizeEdge = (R.size - d.R.size) / 22, speedEdge = (R.speed - d.R.speed) / 22
-    const isArc = off === 'drive' || off === 'post' ? false : off === 'pullup' ? r() < Math.max(.4, R.arc * 1.3) : r() < R.arc * (passes.length ? 1.15 : 1)
-    let shot = shotType(r, R, isArc, passes.length > 0)
+    // a called pass is played the way the receiver plays off the catch (catchPlay):
+    // a shooter catches and shoots (from the arc, or the elbow), anyone else goes to the rim
+    const caught = passTo ? catchPlay(shooter) : null
+    const isArc = off === 'drive' || off === 'post' || caught === 'finish' ? false : off === 'pullup' ? r() < Math.max(.4, R.arc * 1.3) : caught === 'shoot' ? r() < Math.max(.55, R.arc * 1.5) : r() < R.arc * (passes.length ? 1.15 : 1)
+    let shot = caught === 'shoot' && !isArc ? 'mid' : shotType(r, R, isArc, passes.length > 0)
+    if (caught === 'finish' && shot === 'mid') shot = 'layup'
     if (off === 'drive' && shot !== 'dunk') shot = 'drive'
     if (off === 'post') shot = 'post'
     if (off === 'pullup' && !isArc) shot = 'mid'
+    // catch-and-shoot: a jumper straight off a pass, never without one
+    const cs = passes.length > 0 && (shot === 'arc' || shot === 'mid')
     // the read: how the defense's call meets the play
     // (tuned so every call has a matchup it wins and one it loses)
     const arcRead = (dfc === 'sag' ? .07 : dfc === 'press' ? -.13 : dfc === 'help' ? .02 : 0) + (off === 'pullup' ? -.05 : 0)
     const inRead = (dfc === 'help' ? (off === 'pass' ? .1 : -.16) : dfc === 'sag' ? .1 : dfc === 'press' && off === 'post' ? .08 : 0)
       + (off === 'drive' ? .24 : off === 'post' ? .2 : off === 'pass' ? .03 : 0)
     const callFor = off === 'drive' ? (R.speed - d.R.speed) / 30 : off === 'post' ? (R.size - d.R.size) / 18 : off === 'pullup' ? (R.js - 6) / 40 : 0
-    const spArc = clamp(R.sp + (passes.length ? .05 : 0) + dime - Math.max(0, (d.R.lock - 1) * .08) + arcRead + (off === 'pullup' ? callFor : 0), .2, .82)
-    const spIn = clamp(R.sp + Math.max(0, sizeEdge) * (.38 + Math.max(0, sizeEdge) * .7) + Math.max(0, speedEdge) * .18 + (passes.length ? .07 : 0) + dime + (shot === 'dunk' ? .08 : 0) - Math.max(0, (d.R.lock - 1) * .06) + inRead + (off === 'drive' || off === 'post' || off === 'pullup' ? callFor : 0), .2, .95)
+    const spArc = clamp(R.sp + (cs ? csBonus(R) : 0) + dime - Math.max(0, (d.R.lock - 1) * .08) + arcRead + (off === 'pullup' ? callFor : 0), .2, .82)
+    const spIn = clamp(R.sp + Math.max(0, sizeEdge) * (.38 + Math.max(0, sizeEdge) * .7) + Math.max(0, speedEdge) * .18 + (cs ? csBonus(R) : passes.length ? .07 : 0) + dime + (shot === 'dunk' ? .08 : 0) - Math.max(0, (d.R.lock - 1) * .06) + inRead + (off === 'drive' || off === 'post' || off === 'pullup' ? callFor : 0), .2, .95)
     stats[shooter.id].fga++
     if (isArc) stats[shooter.id].tpa++
-    const common = { handler: handler.id, passes, defId: d.id, entry, shot, call: off, dcall: dfc }
+    const common = { handler: handler.id, passes, defId: d.id, entry, shot, cs, call: off, dcall: dfc }
 
     // block
-    if (!isArc && r() < d.R.blk * (1 + Math.max(0, -sizeEdge) * 1.5) * (shot === 'dunk' ? .7 : 1) * (dfc === 'help' && off !== 'pass' ? 1.6 : 1)) {
+    // (a catch-and-shoot is a quick release: half as easy to get to)
+    if (!isArc && r() < d.R.blk * (1 + Math.max(0, -sizeEdge) * 1.5) * (shot === 'dunk' ? .7 : 1) * (cs ? .5 : 1) * (dfc === 'help' && off !== 'pass' ? 1.6 : 1)) {
       stats[d.id].blk++
       push('block', { team: 1 - poss, pid: d.id, pid2: shooter.id, ...common, text: say(r, 'block', { n: shooter.name, d: d.name }), big: true })
       // the block goes out or is scooped — 50/50 who ends up with it
@@ -208,7 +230,7 @@ export function simStreetball({ teams, seed = 'x', goal = 21, winBy = 2, cap = 2
       stats[shooter.id].pts += pts; stats[shooter.id].fgm++
       if (isArc) stats[shooter.id].tpm++
       if (assist && assist.id !== shooter.id) stats[assist.id].ast++
-      const key = assist ? (T[`${shot}a`] ? `${shot}a` : shot) : shot
+      const key = assist ? (T[`${shot}a`] ? `${shot}a` : shot) : shot   // an assisted jumper is always off the catch (arca, mida)
       const big = shot === 'dunk' || shot === 'post'
       push('score', { team: poss, pid: shooter.id, pid2: assist?.id, ...common, made: true, pts, text: say(r, key, { n: shooter.name, a: assist?.name, d: d.name }), big, arc: isArc })
       // milestones
@@ -223,7 +245,7 @@ export function simStreetball({ teams, seed = 'x', goal = 21, winBy = 2, cap = 2
       continue
     }
     // miss → rebound
-    push('miss', { team: poss, pid: shooter.id, pid2: assist?.id, ...common, made: false, text: say(r, isArc ? 'miss2' : 'miss', { n: shooter.name, d: d.name }), arc: isArc })
+    push('miss', { team: poss, pid: shooter.id, pid2: assist?.id, ...common, made: false, text: say(r, cs ? 'missc' : isArc ? 'miss2' : 'miss', { n: shooter.name, d: d.name }), arc: isArc })
     const offReb = att.reduce((s, p) => s + p.R.reb, 0), defReb = def.reduce((s, p) => s + p.R.reb * 1.35, 0)
     if (att.length > 1 && r() < offReb / (offReb + defReb) * .9) {
       const rb = weightedPick(r, att, p => p.R.reb)

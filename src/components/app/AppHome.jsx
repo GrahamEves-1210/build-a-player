@@ -6,7 +6,7 @@ import { useProgress, fetchPlayersOfDay, cachedPlayersOfDay, myToday, POTD_COINS
 import { IconCrown, IconBolt, IconClipboard, IconCoin, IconLock, IconProfile, IconArrow, IconGear, IconPodium, IconFootball, IconBasketball, IconPlay } from './icons'
 import { sfx } from '../../lib/juice'
 import SoundToggle from './SoundToggle'
-import Tutorial from './Tutorial'
+import Tutorial, { startTutorial } from './Tutorial'
 import { IS_APP } from '../../lib/platform'
 import { NameTag, AvatarBadge } from './NameTag'
 import { CoinPill } from './AppShop'
@@ -305,6 +305,9 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
           <div className="ag-wordmark">
             BUILD<em>-A-</em>{isBucket ? <>B<HoopU />CKET</> : 'PLAYER'}
           </div>
+          {/* the website doesn't open the tutorial by itself (cleared browser data
+              would bring it back every visit): it's here when someone wants it */}
+          {!IS_APP && <button className="ag-howto" onClick={() => { sfx('tap'); startTutorial() }}><span aria-hidden="true">?</span> HOW TO PLAY</button>}
         </div>
 
         {/* Character-select stage under stadium lights */}

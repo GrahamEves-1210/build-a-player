@@ -8,9 +8,11 @@
 //   timing     a marker sweeps a bar; tap it inside the zone
 //   taps       timing, n times in a row (a gauntlet)
 //   power      hold to build, release near the top
-//   reaction   three targets; one opens; tap it before the window closes
+//   reaction   three targets; one opens green; tap it before the window closes.
+//              A red decoy (covered) flashes or opens beside it: never tap red
 //   audible    a defensive look; pick the right counter before the clock runs out
-//   lanes      a rush comes from one side; move the other way (3 times)
+//   lanes      a rush comes from one side; move the other way (3 times).
+//              cue: what the pressure is called (basketball: DEFENDER)
 //   sequence   3–4 calls in a row, each on its own clock
 //   route      pick a route (easy to hard), then hit its window
 //   choice     two ways to play it, each its own game
@@ -19,7 +21,7 @@ import { seeded } from './rng'
 
 export const GAMES = {
   // ── QB ──
-  'hot-read':    { kind: 'reaction', traits: ['processing', 'vision'], title: 'HOT READ', how: 'Three receivers. One comes open. Tap him before the window shuts.', rounds: 2 },
+  'hot-read':    { kind: 'reaction', traits: ['processing', 'vision'], title: 'HOT READ', how: 'Four snaps, three receivers. One comes open in green: tap him before the window shuts. Red is covered: never throw it there.', rounds: 4 },
   'bomb':        { kind: 'power', traits: ['arm'], title: 'BOMB IT', how: 'Hold to load the deep shot. Let go near the top: a stronger arm gets a bigger window.' },
   'escape':      { kind: 'lanes', traits: ['legs'], title: 'ESCAPE', how: 'The rush collapses from one side. Step the other way, three times.' },
   'sneak':       { kind: 'timing', traits: ['size', 'legs'], title: 'SNEAK', how: 'Fourth and inches. Hit the snap window and punch it in.' },
@@ -27,16 +29,16 @@ export const GAMES = {
   'third-long':  { kind: 'route', traits: ['accuracy', 'arm'], title: 'THIRD & LONG', how: 'Pick the route, then hit the throw window. The deeper the route, the tighter the window, the bigger the play.' },
   'audible':     { kind: 'audible', traits: ['processing', 'vision'], title: 'AUDIBLE', how: 'Read the look. Pick the counter before the play clock runs out.' },
   // ── RB ──
-  'gap':         { kind: 'reaction', traits: ['vision'], title: 'PICK THE GAP', how: 'Three plays. One gap opens each time. Hit it, fast.', rounds: 3, quick: 0.72 },
+  'gap':         { kind: 'reaction', traits: ['vision'], title: 'PICK THE GAP', how: 'Four plays. One gap opens green each time: hit it, fast. Red is a linebacker filling it: stay out.', rounds: 4, quick: 0.72 },
   'juke':        { kind: 'lanes', traits: ['elusiveness'], title: 'JUKE', how: 'The tackler commits to a side. Cut the other way, three times.' },
   // ── WR / TE ──
-  'catch':       { kind: 'taps', traits: ['hands'], title: 'CATCH WINDOW', how: 'Three balls. Tap each one in the window.', n: 3 },
+  'catch':       { kind: 'taps', traits: ['hands'], title: 'CATCH WINDOW', how: 'Three balls. Tap each one in the window. Each one comes in hotter.', n: 3 },
   'juke-wr':     { kind: 'lanes', traits: ['bodyControl', 'afterCatch'], title: 'MAKE A MAN MISS', how: 'The defender commits. Cut the other way, three times.' },
   'release':     { kind: 'timing', traits: ['release'], title: 'BEAT THE PRESS', how: 'The corner jams at the line. Hit the window to get a clean release.' },
   'seal':        { kind: 'timing', traits: ['blocking', 'strength'], title: 'SEAL THE EDGE', how: 'Hit the snap window and wall off the edge.' },
   'juke-te':     { kind: 'lanes', traits: ['afterCatch'], title: 'RUN AFTER THE CATCH', how: 'A tackler commits. Cut the other way, three times.' },
   // ── DB (for when the position comes to Career) ──
-  'jump-route':  { kind: 'reaction', traits: ['playRecognition', 'zoneIQ'], title: 'JUMP THE ROUTE', how: 'Three routes. One breaks. Jump it.', rounds: 2 },
+  'jump-route':  { kind: 'reaction', traits: ['playRecognition', 'zoneIQ'], title: 'JUMP THE ROUTE', how: 'Four snaps, three routes. One breaks green: jump it. Red is a double move: let it go.', rounds: 4 },
   'tackle-angle':{ kind: 'lanes', traits: ['speed', 'runSupport'], title: 'TACKLE ANGLE', how: 'The back cuts. Take the right angle, three times.' },
   // ── Combine ──
   'forty':       { kind: 'dash', traits: ['legs', 'speed'], title: '40-YARD DASH', how: 'Wait for the gun (jump it and that is a false start), then alternate LEFT and RIGHT as fast as you can. Same foot twice is a stumble. Speed makes every step longer.' },
@@ -46,13 +48,13 @@ export const GAMES = {
   'gauntlet':    { kind: 'gauntlet', traits: ['hands'], title: 'GAUNTLET', how: 'Balls come down two lanes, faster and closer together. Catch each one in the green zone at the bottom. Hands make the zone bigger.' },
   'bench':       { kind: 'bench', traits: ['strength'], title: 'BENCH PRESS', how: 'Tap fast to drive the bar up to lockout. Every rep gets heavier. As many reps as you can in 12 seconds.' },
   // ── Basketball ──
-  'iso':         { kind: 'lanes', need: 3, traits: ['handles', 'speed'], title: 'ISO', how: 'Your man shades one way. Cross him up and go the other way, three times. All three or he stays in front.' },
-  'pnr':         { kind: 'reaction', traits: ['basketballIQ', 'passing'], title: 'PICK-AND-ROLL READ', how: 'Roll man, corner, pull-up. One comes open. Hit it before the help recovers.', rounds: 2 },
+  'iso':         { kind: 'lanes', need: 3, traits: ['handles', 'speed'], title: 'ISO', how: 'Your man cuts off one side. Cross him up and go the other way, three times. All three or he stays in front.', cue: 'DEFENDER' },
+  'pnr':         { kind: 'reaction', traits: ['basketballIQ', 'passing'], title: 'PICK-AND-ROLL READ', how: 'Four trips. Roll man, corner, pull-up: one comes open in green. Hit it before the help recovers. Red is a trap: the help is already there.', rounds: 4 },
   'clutch-shot': { kind: 'timing', traits: ['jumpShot', 'clutch'], title: 'CLUTCH SHOT', how: 'Down one, ball in your hands, clock running out. Hit the release window.' },
-  'free-throws': { kind: 'taps', traits: ['jumpShot', 'clutch'], title: 'FREE THROWS', how: 'Two shots with the game on the line. Hit each window.', n: 2 },
-  'post-up':     { kind: 'lanes', traits: ['finishing', 'size'], title: 'POST MOVE', how: 'The defender leans one way. Spin off him the other way, three times.' },
+  'free-throws': { kind: 'taps', traits: ['jumpShot', 'clutch'], title: 'FREE THROWS', how: 'Two shots with the game on the line. Hit each window. Nerves: the second one wobbles.', n: 2 },
+  'post-up':     { kind: 'lanes', traits: ['finishing', 'size'], title: 'POST MOVE', how: 'The defender cuts off one side. Spin off him the other way, three times.', cue: 'DEFENDER' },
   'board':       { kind: 'timing', traits: ['rebounding', 'bounce'], title: 'CRASH THE GLASS', how: 'The shot goes up. Time the jump and take the rebound.' },
-  'rim-protect': { kind: 'reaction', traits: ['interiorDefense', 'bounce'], title: 'PROTECT THE RIM', how: 'Three drivers. One attacks the rim. Meet him there.', rounds: 2 },
+  'rim-protect': { kind: 'reaction', traits: ['interiorDefense', 'bounce'], title: 'PROTECT THE RIM', how: 'Four trips, three drivers. One attacks the rim in green: meet him there. Red is a pump fake: stay down.', rounds: 4 },
   // ── Basketball combine ──
   'sprint':      { kind: 'dash', traits: ['speed'], title: '3/4-COURT SPRINT', how: 'Wait for the whistle (go early and it is a false start), then alternate LEFT and RIGHT as fast as you can. Same foot twice is a stumble. Speed makes every step longer.', unit: 'FT', dist: 75 },
   'lane':        { kind: 'cone', traits: ['speed', 'perimeterDefense'], title: 'LANE AGILITY', how: 'Six cuts around the lane. An arrow flashes: hit that direction before the window shuts. Wrong way or late is a slip.' },
@@ -79,9 +81,9 @@ export function traitValue(game, build, traits = null) {
   return list.length ? list.reduce((s, t) => s + (build[t].val ?? 5), 0) / list.length : 5
 }
 // forgiveness from the trait (1–11): a window, in % of the bar, or a time in ms
-export const zoneWidth = v => 12 + v * 2.4                 // 14–38% of the bar
+export const zoneWidth = v => 8 + v * 1.8                  // 10–28% of the bar
 export const powerZone = v => 7 + v * 2.4                  // the top 9–33% of the meter
-export const reactMs = v => 620 + v * 85                   // 0.7–1.55s to tap the open man
+export const reactMs = v => 560 + v * 72                   // 0.63–1.35s to tap the open man
 export const lanesMs = v => 560 + v * 70                   // 0.6–1.3s to cut
 export const callMs = v => 1500 + v * 230                  // 1.7–4s per call
 export const routes = v => [                               // zone multiplier, value if hit

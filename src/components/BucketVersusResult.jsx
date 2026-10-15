@@ -84,7 +84,8 @@ function BuildCompact({ build, types, position = 'guard' }) {
 
 // ─── Play text templates ───────────────────────────────────────────────────────
 const T = {
-  score2Arc:   n => pick([`${n} pulls up — TWO!`, `${n} step-back — SPLASH!`, `${n} fires — GOOD!`, `${n} spots up — TWO!`, `${n} catch and shoot — GOOD!`]),
+  // (1v1: nobody to pass, so never a catch-and-shoot or a spot-up)
+  score2Arc:   n => pick([`${n} pulls up — TWO!`, `${n} step-back — SPLASH!`, `${n} fires — GOOD!`, `${n} jab step, rises — TWO!`, `${n} off the dribble — GOOD!`]),
   score1Post:  n => pick([`${n} backs it down — bucket.`, `${n} hook shot — one.`, `${n} fadeaway — ONE.`, `${n} drop step — one.`]),
   score1Ath:   n => pick([`${n} SLAMS it home!`, `${n} THROWS IT DOWN!`, `${n} skies — FINISH!`, `${n} DUNKS IT!`]),
   score1Mid:   n => pick([`${n} — mid range.`, `${n} pull-up — one.`, `${n} hits the mid.`, `${n} step-back mid.`]),
@@ -191,7 +192,7 @@ function generateNextPlay(consts, gsRef, myAdj, oppAdj, idRef, myCall = null, op
   const defStl  = isMe ? consts.oppStlR  : consts.myStlR
   // the calls: the shooter's play, the defender's read (live 1v1)
   const off = ['drive', 'pullup', 'post'].includes(isMe ? myCall : oppCall) ? (isMe ? myCall : oppCall) : null
-  const dfc = ['press', 'sag', 'help'].includes(isMe ? oppCall : myCall) ? (isMe ? oppCall : myCall) : null
+  const dfc = ['press', 'sag'].includes(isMe ? oppCall : myCall) ? (isMe ? oppCall : myCall) : null   // no help in a 1v1: nobody to help from
   const callTag = off || dfc ? { call: off, dcall: dfc, offWho: turn } : {}
 
   let newMyPts = myPts, newOppPts = oppPts, newTurn = turn
@@ -375,7 +376,7 @@ function CourtVisual({ play, myColor, oppColor, myName, oppName, possession, dis
           after(120, () => popRim(scored ? '+2' : 'MISS'))
         })
       } else if (arcVar === 1) {
-        // Catch-and-shoot — player spots up, quick release
+        // Jab step into a quick jumper (1v1: no pass, so no catch-and-shoot)
         const spotApproach = { x: cl(finalOff.x + rnd(-10, 10)), y: clY(finalOff.y + rnd(5, 10)) }
         mv(setOff, spotApproach.x, spotApproach.y, od * 0.82)
         mv(setDef, cl(finalOff.x + rnd(-8, 8)), finalOff.y - rnd(4, 10), dd * 0.78)
@@ -698,7 +699,7 @@ function CourtVisual({ play, myColor, oppColor, myName, oppName, possession, dis
                 <div key={who} className={`btc-p${has ? ' has-ball' : ''}${who === 'me' ? ' is-me' : ''}`} style={{ left: `${p.x}%`, top: `${p.y}%`, transition: tr, zIndex: has ? 5 : 3, '--pc': col }}>
                   {ovrs?.[who] != null && <span className="btc-ovr" style={{ background: col }}>{ovrs[who]}</span>}
                   {bubbles?.[who] && <span key={bubbles[who]} className="btc-bubble">{bubbles[who]}</span>}
-                  <div className="btc-ring" style={{ boxShadow: has ? `0 0 0 3px ${col}, 0 0 18px ${col}aa` : 'none' }}>{av}</div>
+                  <div className="btc-ring">{av}</div>
                   <span className="btc-name" style={{ color: col }}>{tagEl ?? firstName(nm).slice(0, 9)}</span>
                 </div>
               )
@@ -1019,7 +1020,7 @@ export default function BucketVersusResult({ myData, oppData, position, oppPosit
         // the CPU makes calls too (online, the other player's tap came in on bab_call)
         if (!channel && oppCallRef.current == null && Math.random() < .65) {
           const theirBall = gameStateRef.current.turn === 'opp'
-          const opts = theirBall ? ['drive', 'pullup', 'post'] : ['press', 'sag', 'help']
+          const opts = theirBall ? ['drive', 'pullup', 'post'] : ['press', 'sag']
           oppCallRef.current = { call: opts[Math.floor(Math.random() * opts.length)], at: cur?.id }
         }
         const theirs = oppCallRef.current?.at === cur?.id ? oppCallRef.current.call : null
@@ -1156,8 +1157,8 @@ export default function BucketVersusResult({ myData, oppData, position, oppPosit
             play={plays[playIdx]}
             myColor={myColor}     oppColor={oppColor}
             myName={myName}       oppName={oppName}
-            myAv={<WhoAv who={meWho} team={0} size={40} />}
-            oppAv={<WhoAv who={oppWho} team={1} size={40} />}
+            myAv={<WhoAv who={meWho} team={0} size={28} />}
+            oppAv={<WhoAv who={oppWho} team={1} size={28} />}
             myTag={<WhoName who={meWho} short />}
             oppTag={<WhoName who={oppWho} short />}
             possession={possession}
@@ -1170,8 +1171,8 @@ export default function BucketVersusResult({ myData, oppData, position, oppPosit
             reveal={(() => { const p = plays[playIdx]; return p && (p.call || p.dcall) ? <CallReveal key={p.id} off={p.call} def={p.dcall} offense={p.offWho === 'me'} /> : null })()}
           />
           {plays[playIdx]?.type === 'checkup' && (
-            <CallBar key={playIdx} offense={shownPossession === 'me'} options={shownPossession === 'me' ? ['drive', 'pullup', 'post'] : ['press', 'sag', 'help']}
-              picked={myPick} helpLabel="Protect the rim"
+            <CallBar key={playIdx} offense={shownPossession === 'me'} options={shownPossession === 'me' ? ['drive', 'pullup', 'post'] : ['press', 'sag']}
+              picked={myPick}
               onPick={v => { setMyPick(v); myCallRef.current = v; if (role === 'guest' && channel) channel.send({ type: 'broadcast', event: 'bab_call', payload: { call: v, at: plays[playIdx]?.id } }).catch?.(() => {}) }} />
           )}
           <EmoteBar emotes={EMOTES} onEmote={e => { setEmotes(l => [...l.slice(-8), { id: `me-${Date.now()}`, from: 'me', e, ts: Date.now() }]); channel?.send({ type: 'broadcast', event: 'bab_emote', payload: { e } }).catch?.(() => {}) }} />

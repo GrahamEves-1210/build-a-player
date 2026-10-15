@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { XpIco } from './GainIcons'
 import { useRailOn } from '../../lib/ads'
 import { AUCTION_SIZE, AUCTION_MIN, AUCTION_FILL_SECS, BUDGET, SPIN_MS, RESET_SECS, openSlots, maxBid, minNext, canBidOn, lotEnd, callOf } from '../../lib/auction'
 import { COMPETE_REWARDS } from '../../lib/progress'
@@ -151,7 +152,7 @@ export default function AppAuction({ au, posName, onHome, onPlayAgain }) {
           <span className="ag-eyebrow">AUCTION {m.code} · FINAL</span>
           <b className="cp-place">{meR ? ord(meR.place) : '—'}</b>
           <span className="cp-sub">{meR ? (meR.place === 1 ? `Best build in the room · ${meR.ovr} OVR` : `of ${au.ranked.length} · ${meR.ovr} OVR · $${meR.left} left`) : ''}</span>
-          {meR && <span className="cp-reward">+{xp} XP · +{coins} COINS</span>}
+          {meR && <span className="cp-reward gain"><XpIco /> +{xp} · <span className="coin-ico coin-ico--sm" /> +{coins}</span>}
         </div>
         <div className="au-final">
           {au.ranked.map((p, i) => (

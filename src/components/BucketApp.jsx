@@ -1197,6 +1197,14 @@ export default function BucketApp() {
         body: 'Your squad plays the game a player short. It counts as a loss on your Blacktop record and your online rating.',
         forfeit: () => { window.dispatchEvent(new CustomEvent('bap:blacktop', { detail: { won: false, mvp: false, line: null, bots: !!bt.match?.bots, forfeit: true, size: bt.size ?? 3 } })); bt.leave() },
       })
+    } else if ((liveBuild || btGameLive) && bt.match) {
+      // practice against CPUs asks too (like every online game), but nothing is on the line
+      setLiveLock({
+        title: 'Leave practice?',
+        body: 'Your build and this practice game end here. It\'s only practice: nothing goes on your record.',
+        leaveLabel: 'LEAVE PRACTICE',
+        forfeit: () => bt.leave(),
+      })
     } else if (versusLive) {
       setLiveLock({ ownBack: true, ask: go => setLeaveConfirm({ fn: () => { handleReset(); go?.() } }) })
     } else return

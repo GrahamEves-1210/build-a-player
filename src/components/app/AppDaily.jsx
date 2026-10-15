@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { XpIco } from './GainIcons'
 import { useProgress, dailyState, fetchDailyBoard, msToReset, claimMission, claimStreak, missionDef, STREAK_REWARDS, SPOTLIGHTS, buyFreeze, FREEZE_PRICE, FREEZE_MAX, streakLost, restoreStreak } from '../../lib/progress'
 import { sfx, haptic } from '../../lib/juice'
 import { IS_APP } from '../../lib/platform'
@@ -63,7 +64,7 @@ function Streak({ p }) {
               disabled={!reached || claimed} onClick={() => claim(r.days)}>
               <span className="ag-milestone-day">DAY {r.days}</span>
               <span className="ag-milestone-icon">{claimed ? <IconCheck size={18} /> : reached ? <IconGift size={20} /> : <IconLock size={16} />}</span>
-              <span className="ag-milestone-xp">{p.signedIn ? `+${r.xp} XP` : 'SIGN IN'}</span>
+              <span className="ag-milestone-xp">{p.signedIn ? <span className="gain"><XpIco /> +{r.xp}</span> : 'SIGN IN'}</span>
               {spot && <span className="ag-milestone-extra"><i className={`ag-swatch ag-swatch--${spot.id}`} />{spot.name}</span>}
               {reached && !claimed && <span className="ag-milestone-claim">CLAIM</span>}
             </button>
@@ -140,8 +141,8 @@ function Missions({ p }) {
               <span className="ag-mission-bar"><span style={{ width: `${(m.n / def.goal) * 100}%` }} /></span>
             </span>
             {done && !m.claimed
-              ? <button className="ag-btn ag-mission-claim" onClick={() => claim(m.id)}>{p.signedIn ? `+${def.xp}` : 'SIGN IN'}</button>
-              : <span className="ag-mission-xp">{m.claimed ? 'DONE' : `${m.n}/${def.goal}${p.signedIn ? ` · ${def.xp} XP` : ''}`}</span>}
+              ? <button className="ag-btn ag-mission-claim" onClick={() => claim(m.id)}>{p.signedIn ? <span className="gain"><XpIco /> +{def.xp}</span> : 'SIGN IN'}</button>
+              : <span className="ag-mission-xp">{m.claimed ? 'DONE' : <>{m.n}/{def.goal}{p.signedIn ? <> · <span className="gain"><XpIco /> {def.xp}</span></> : ''}</>}</span>}
           </div>
         )
       })}

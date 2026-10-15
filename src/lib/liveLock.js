@@ -2,7 +2,7 @@
 // build): you're locked in. Every way out — the dock, the More sheet, the
 // browser's back button, a reload — asks first, and leaving forfeits the game.
 //
-//   setLiveLock({ title, body, forfeit })   while the game is live (null to clear)
+//   setLiveLock({ title, body, forfeit, leaveLabel? })   while the game is live (null to clear)
 //   guardLeave(go)                          run `go` now, or (locked) ask first:
 //                                           confirming forfeits, then goes
 // A mode with its own leave sheet passes { ask: go => … } instead, and
