@@ -150,7 +150,7 @@ export default function AppTabBar() {
           <Tab label="SHOP" Icon={IconBag} active={active === 'shop'} onClick={open('shop')} />
           <Tab label="DAILY" Icon={IconCalendar} active={active === 'daily'} onClick={open('daily')} badge={badge} />
           {/* a tap goes Home (PLAY, or HOME inside a game mode); hold for the modes anywhere */}
-          <PlayButton page={state.page} sport={state.sport} lit={active === 'play'}
+          <PlayButton page={state.page} sport={state.sport} lit={active === 'play'} here={state.page === 'splash' && !screen}
             onTap={() => { if (state.page === 'splash' && !screen) return; go('home')() }} />
           {/* website: cards are saved to an account */}
           <Tab label="CARDS" Icon={IconCards} active={active === 'cards'} onClick={cardsOpen() ? open('cards') : () => guardLeave(() => { setMenuOpen(false); setAuthOpen(true) })} />

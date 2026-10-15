@@ -30,7 +30,7 @@ const fanFor = sport => [
     : { id: 'sport', label: 'BASKETBALL', Icon: IconBasketball, sport: true, go: () => switchSport('bucket') },
 ]
 
-export default function PlayButton({ page, sport, onTap, lit }) {
+export default function PlayButton({ page, sport, onTap, lit, here = false }) {
   const inMode = !NOT_A_MODE.has(page)
   const [fan, setFan] = useState(false)
   const [hot, setHot] = useState(null)
@@ -90,7 +90,7 @@ export default function PlayButton({ page, sport, onTap, lit }) {
         </div>,
         document.body,
       )}
-      <button className={`ag-play${lit ? ' ag-play--on' : ''}${inMode ? ' is-home' : ''}${fan ? ' is-fan' : ''}`}
+      <button className={`ag-play${lit ? ' ag-play--on' : ''}${inMode ? ' is-home' : ''}${fan ? ' is-fan' : ''}${here && !fan ? ' is-here' : ''}`}
         aria-label={inMode ? 'Home (hold for modes)' : 'Play (hold for modes)'} aria-haspopup="menu" aria-expanded={fan}
         onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={cancel} onPointerLeave={e => { if (!opened.current && e.pointerType === 'mouse') cancel() }}
         onContextMenu={e => { e.preventDefault(); if (!fan) { opened.current = true; setFan(true) } }}
