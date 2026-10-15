@@ -36,6 +36,11 @@ const T = {
   miss2:    ['{n} — step-back no good.', '{n} from deep — off.', '{n} pull-up rattles out.', '{n} fires — no.', '{d} runs {n} off the line — miss.'],
   block:    ['{d} REJECTS {n}!', '{d} PINS IT on {n}!', '{d} — MASSIVE SWAT!', '{d} STUFFS {n}!'],
   steal:    ['{d} picks {n}\'s pocket!', '{d} reads it — STEAL!', '{d} swipes it from {n}!', '{d} jumps the lane!'],
+  // a steal that cut off the play that was called: the feed says what it was
+  steal_drive:  ['{n} drives — {d} strips him!', '{n} attacks, {d} pokes it loose!', '{n} puts it on the floor — {d} picks him clean!'],
+  steal_pullup: ['{n} rises — {d} swipes it on the way up!', '{n} sets to shoot, {d} gets a hand on it!'],
+  steal_post:   ['{n} backs in — {d} digs it out!', '{n} posts up, {d} reaches in and takes it!'],
+  steal_pass:   ['{n} looks to pass — {d} jumps the lane!', 'The pass from {n} is picked off by {d}!'],
   oreb:     ['{n} cleans the glass — second chance.', '{n} tips it out — ball stays.', '{n} skies for the board.'],
   dreb:     ['{n} grabs the rebound.', '{n} boxes out and secures it.', '{n} pulls it down.'],
   check:    ['Check ball.', 'Ball checked up.', 'Back to the top.', 'Check.'],
@@ -144,7 +149,7 @@ export function simStreetball({ teams, seed = 'x', goal = 21, winBy = 2, cap = 2
     const stlCall = dfc === 'press' ? (off === 'drive' ? 2.4 : off === 'pass' ? 1.7 : 1.3) : dfc === 'sag' ? .6 : 1
     if (r() < d.R.stl * d.R.lock * (att.length > 1 ? .9 : 1) * stlCall) {
       stats[d.id].stl++; stats[handler.id].tov++
-      push('steal', { team: 1 - poss, pid: d.id, pid2: handler.id, handler: handler.id, entry, text: say(r, 'steal', { n: handler.name, d: d.name }) })
+      push('steal', { team: 1 - poss, pid: d.id, pid2: handler.id, handler: handler.id, entry, call: off, dcall: dfc, text: say(r, off ? `steal_${off}` : 'steal', { n: handler.name, d: d.name }) })
       carrier = d.id
       poss = 1 - poss
       check = checkUp()

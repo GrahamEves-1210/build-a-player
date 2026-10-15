@@ -8,7 +8,7 @@ import { valToGrade } from '../../utils/simulation'
 import { playDelay, OFF_CALLS, DEF_CALLS } from '../../lib/hoops'
 import { QUICK, block, report } from '../../lib/chat'
 import { sfx, haptic, victory } from '../../lib/juice'
-import { calcBucketOVR } from '../../utils/bucketSimulation'
+import { calcBucketOVR, getBucketGuardArchetype, getBucketBigArchetype } from '../../utils/bucketSimulation'
 import { VERSUS_GUARD_TYPES } from '../../data/nba-guards'
 import { VERSUS_BIG_TYPES } from '../../data/nba-bigs'
 import BlacktopCourt, { COURTS, useCourt, setCourtId } from './BlacktopCourt'
@@ -46,6 +46,14 @@ export const liveOvr = b => {
   if (!b?.build) return null
   const types = b.pos === 'big' ? VERSUS_BIG_TYPES : VERSUS_GUARD_TYPES
   return types.some(t => b.build[t]) ? calcBucketOVR(b.build, types, b.pos) : null
+}
+// the build's own name (Untouchable Shot Creator, Rim Protector…), once it's complete
+export const archOf = b => {
+  if (!b?.build) return null
+  const types = b.pos === 'big' ? VERSUS_BIG_TYPES : VERSUS_GUARD_TYPES
+  if (!types.every(t => b.build[t])) return null
+  const a = (b.pos === 'big' ? getBucketBigArchetype : getBucketGuardArchetype)(liveOvr(b) ?? 0, b.build, types)
+  return /remaining|Spin to/.test(a) ? null : a
 }
 const firstName = n => (n || '').trim().split(/\s+/)[0].toUpperCase().slice(0, 10)
 
@@ -398,7 +406,7 @@ function SquadBuilds({ game, names, meVid, onClose }) {
             const types = p.pos === 'big' ? VERSUS_BIG_TYPES : VERSUS_GUARD_TYPES
             return (
               <div key={p.id} className={`lc-builds-p${p.id === meVid ? ' is-me' : ''}`}>
-                <span className="lc-builds-who"><b>{p.bot ? p.name : <NameTag name={p.name} cos={p.cos} self={p.id === meVid} />}</b><small>{p.pos === 'big' ? 'BIG' : 'GUARD'} · {liveOvr(p) ?? '–'} OVR</small></span>
+                <span className="lc-builds-who"><b>{p.bot ? p.name : <NameTag name={p.name} cos={p.cos} self={p.id === meVid} />}</b>{archOf(p) && <em className="bt-arch">{archOf(p)}</em>}<small>{p.pos === 'big' ? 'BIG' : 'GUARD'} · {liveOvr(p) ?? '–'} OVR</small></span>
                 <span className="lc-builds-grades">
                   {types.map(k => { const val = p.build?.[k]?.val; return <i key={k} title={BUCKET_ATTR[k]?.label}><small>{BUCKET_ATTR[k]?.shortLabel ?? k.slice(0, 3)}</small>{val != null ? valToGrade(val) : '–'}</i> })}
                 </span>
@@ -416,7 +424,7 @@ export function BlacktopGame({ bt, user, photoFor, onOpenChat, unread }) {
   const { game, match } = bt
   const [stage, setStage] = useState('reveal')
   const [idx, setIdx] = useState(0)
-  const speed = 1                            // online: everyone sees it at the same pace (no 2x)
+  const speed = 0.85                         // online: everyone sees it at the same pace (a touch slower than real time, so the moves are easy to follow)
   const fired = useRef(false)
   const plays = game?.plays ?? []
   const play = plays[idx]
@@ -479,7 +487,7 @@ export function BlacktopGame({ bt, user, photoFor, onOpenChat, unread }) {
                 {sq.map(p => (
                   <div key={p.id} className="bt-squad-p">
                     <Av name={p.name} bot={p.bot} team={t} size={34} cos={p.cos} self={p.id === bt.me.vid} />
-                    <span className="bt-squad-p-txt"><b><Who p={p} meVid={bt.me.vid} plate />{captainOf(match, t)?.vid === p.id ? ' · C' : ''}</b><small>{p.pos === 'big' ? 'BIG' : 'GUARD'} · {ROLES.find(r => r.id === p.role)?.name ?? 'BALANCED'}</small></span>
+                    <span className="bt-squad-p-txt"><b><Who p={p} meVid={bt.me.vid} plate />{captainOf(match, t)?.vid === p.id ? ' · C' : ''}</b>{archOf(p) && <em className="bt-arch">{archOf(p)}</em>}<small>{p.pos === 'big' ? 'BIG' : 'GUARD'} · {liveOvr(p) ?? '–'} OVR</small></span>
                   </div>
                 ))}
               </div>
@@ -545,7 +553,7 @@ export function BlacktopGame({ bt, user, photoFor, onOpenChat, unread }) {
       <div className="lc-court">
         <BlacktopCourt game={game} play={play} meId={bt.me.vid} meLabel={bt.me.uid ? null : 'YOU'} colorFor={colorFor} speed={speed}
           ovrFor={p => liveOvr(p)} bubbles={bubbles}
-          avatarFor={p => <Av name={p.name} bot={p.bot} team={p.team} size={40} cos={p.cos} self={p.id === bt.me.vid} />} />
+          avatarFor={p => <Av name={p.name} bot={p.bot} team={p.team} size={34} cos={p.cos} self={p.id === bt.me.vid} />} />
         {locked && lastCheck && !calling && <CallReveal key={lastCheck.pn} off={locked[lastCheck.team]} def={locked[1 - lastCheck.team]} offense={lastCheck.team === myTeam} nameOf={id => firstName(game.teams.flat().find(p => p.id === id)?.name)} />}
         {/* the calls: under the court on phones, over its lower edge on desktop (court and buttons in one view) */}
         <div className="lc-calls">

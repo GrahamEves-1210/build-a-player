@@ -2419,7 +2419,7 @@ html.is-app .vmb-title { font-family: var(--ag-font) !important; letter-spacing:
 .tk-model-stat { font-family: var(--ag-body); font-size: 12.5px; font-weight: 600; color: var(--ag-muted); }
 .tk-model-stat b { color: var(--ag-text); font-family: var(--ag-font); font-weight: 400; font-size: 15px; letter-spacing: 1px; }
 .tk-model-stat--hot b { color: var(--ag-gold-hi); }
-.btc-you { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; color: var(--ag-on); background: var(--ag-grad); }
+.btc-you { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: var(--ag-on); background: var(--ag-grad); }
 .tk-field-star { position: absolute; right: 10px; top: 10px; border-radius: 12px; border: 1.5px solid var(--tc); }
 .ag-blacktop.is-live { border-color: var(--ag-a1); box-shadow: 0 0 22px var(--ag-glow); }
 
@@ -4787,11 +4787,11 @@ html.is-app { --drop-chrome: calc(352px + env(safe-area-inset-top) + env(safe-ar
 /* Blacktop: your own player stands out on the court (a gold ring); practice */
 /* your player: a gold outline, nothing else (your name keeps its own look) */
 .btc-p.is-me .btc-ring { outline: none; }
-/* every icon wears its team's color as an outline that follows its shape; yours is gold and thicker; the ball handler glows */
+/* every icon wears its team's color as an outline that follows its shape */
 .btc-ring > * { filter: drop-shadow(2px 0 0 var(--pc)) drop-shadow(-2px 0 0 var(--pc)) drop-shadow(0 2px 0 var(--pc)) drop-shadow(0 -2px 0 var(--pc)); }
-.btc-p.is-me .btc-ring > * { filter: drop-shadow(3.5px 0 0 #f5dc8a) drop-shadow(-3.5px 0 0 #f5dc8a) drop-shadow(0 3.5px 0 #f5dc8a) drop-shadow(0 -3.5px 0 #f5dc8a); }
-.btc-p.has-ball .btc-ring > * { filter: drop-shadow(2px 0 0 var(--pc)) drop-shadow(-2px 0 0 var(--pc)) drop-shadow(0 2px 0 var(--pc)) drop-shadow(0 -2px 0 var(--pc)) drop-shadow(0 0 9px var(--pc)); }
-.btc-p.is-me.has-ball .btc-ring > * { filter: drop-shadow(3.5px 0 0 #f5dc8a) drop-shadow(-3.5px 0 0 #f5dc8a) drop-shadow(0 3.5px 0 #f5dc8a) drop-shadow(0 -3.5px 0 #f5dc8a) drop-shadow(0 0 9px #f5dc8a); }
+/* yours wears your team's color like everyone else, with a thin yellow ring around it; no glow on the ball */
+.btc-p.is-me .btc-ring { position: relative; }
+.btc-p.is-me .btc-ring::after { content: ''; position: absolute; inset: -6px; border-radius: 50%; border: 1.5px solid rgba(245,220,138,.75); pointer-events: none; }
 .bt-practice { width: 100%; margin-top: 8px; }
 .btc-ring .avb-ring { display: none; }   /* no circle behind the icons on court */
 /* the 3v3 check-up when it's not your call: who has it, who's on him */
@@ -4859,3 +4859,6 @@ html:is(.is-app, .app-look).no-dock { --app-bottom: calc(var(--safe-bottom) + 12
 .ag-bc-grades.is-list .ag-bc-g b { font-size: 16px; }
 .cr-traits.is-list, .cr-model-wrap .cr-traits.is-list { grid-template-columns: 1fr; }
 .cr-comp-grid.is-list { grid-template-columns: 1fr; }
+
+/* Blacktop: a build's own name, where the role used to be (the reveal, the builds sheet) */
+.bt-arch { display: block; margin: 1px 0; font-style: normal; font-family: var(--ag-display); font-weight: 400; font-size: 15px; line-height: 1.05; letter-spacing: .3px; color: var(--ag-gold-hi, #f5dc8a); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

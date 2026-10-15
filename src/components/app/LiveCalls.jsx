@@ -9,7 +9,7 @@ export const CALL_LABEL = {
   drive: ['DRIVE', 'Attack the rim'], pullup: ['PULL UP', 'Shoot it'], post: ['POST', 'Back him down'], pass: ['PASS', 'Find the open man'],
   press: ['PRESS', 'Jump the drive'], sag: ['SAG OFF', 'Give him room'], help: ['HELP', 'Protect the rim'],
 }
-export const CALL_MS = 2200
+export const CALL_MS = 3200
 
 // The call buttons, with a bar running down the time
 // options: call ids ('drive'), or { v, label, sub } (a pass to a named teammate)

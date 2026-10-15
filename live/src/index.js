@@ -24,7 +24,7 @@ export { AuctionQueue, AuctionRoom, CompeteQueue, CompeteRoom }
 
 const BUILD_SECS = 180
 const PRACTICE_BUILD_SECS = 600
-const CALL_MS = 2200
+const CALL_MS = 3200
 const CALL_WAIT_MAX = 4500         // the call window opens when everyone's at the check-up, or after this
 const SLOTS = [
   { id: '0g0', team: 0, pos: 'guard' }, { id: '0g1', team: 0, pos: 'guard' }, { id: '0b', team: 0, pos: 'big' },
