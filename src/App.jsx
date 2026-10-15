@@ -128,7 +128,6 @@ export default function App() {
   const [spinResetKey, setSpinResetKey] = useState(0)
   const [gameKey, setGameKey]           = useState(0)
   const [mobileView, setMobileView]     = useState('spin')
-  const [onlineCount, setOnlineCount]   = useState(0)
   const [user, setUser]                 = useState(null)
   const [showAuth, setShowAuth]         = useState(false)
   const [showTeamPicker, setShowTeamPicker] = useState(false)
@@ -404,22 +403,6 @@ export default function App() {
       window.history.replaceState({}, '', '/')
     }
   }, [page, simResult])
-
-  useEffect(() => {
-    if (!supabase) return
-    const uid = Math.random().toString(36).slice(2)
-    const ch = supabase.channel('online', { config: { presence: { key: uid } } })
-    let lastUpdate = 0
-    ch.on('presence', { event: 'sync' }, () => {
-      const now = Date.now()
-      if (now - lastUpdate < 3000) return
-      lastUpdate = now
-      setOnlineCount(Math.round(Object.keys(ch.presenceState()).length * 3))
-    }).subscribe(async (status) => {
-      if (status === 'SUBSCRIBED') await ch.track({ t: Date.now() })
-    })
-    return () => supabase.removeChannel(ch)
-  }, [])
 
   const isRB        = position === 'rb'
   const isWR        = position === 'wr'
@@ -917,7 +900,7 @@ export default function App() {
   if (page === 'depth-chart') {
     return (
       <Suspense fallback={null}>
-        <DepthChart onBack={() => setPage('splash')} user={user} onlineCount={onlineCount} />
+        <DepthChart onBack={() => setPage('splash')} user={user} />
       </Suspense>
     )
   }
@@ -1238,7 +1221,6 @@ export default function App() {
           playerLabel={isOL ? 'OL' : isDB ? 'DB' : isTE ? 'TE' : isWR ? 'WR' : undefined}
           attrMap={isOL ? OL_ATTR : isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : isRB ? RB_ATTR : undefined}
           categoriesData={isOL ? OL_CATEGORIES : isDB ? DB_CATEGORIES : isTE ? TE_CATEGORIES : isWR ? WR_CATEGORIES : undefined}
-          onlineCount={onlineCount}
         />
         <Silhouette
           build={build}
