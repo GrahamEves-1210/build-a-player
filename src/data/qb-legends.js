@@ -190,7 +190,7 @@ const _raw = [
     // DEN Manning — mind still elite but arm significantly diminished vs IND prime
     name: 'Peyton Manning',  short: 'P. Manning', team: 'DEN', teamName: 'Denver Broncos',
     skin: '#f0c4a0', number: 18, starter: true, captain: true, years: '2012–15',
-    attrs: { arm: 5, legs: 1, size: 7, processing: 11, vision: 10, leadership: 10, accuracy: 9, playmaking: 6, 'pocket-presence': 10 }
+    attrs: { arm: 5, legs: 1, size: 7, processing: 11, vision: 10, leadership: 10, accuracy: 10, playmaking: 6, 'pocket-presence': 10 }
   },
   {
     name: 'Jake Plummer',    short: 'Plummer',    team: 'DEN', teamName: 'Denver Broncos',
