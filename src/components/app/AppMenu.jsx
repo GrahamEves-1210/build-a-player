@@ -133,7 +133,8 @@ export default function AppMenu({ sport, onClose }) {
               {/* website: the dock isn't on the game pages, so Home lives here too (Sign in and
                   BAP Pro are on Home's player card and the profile, not here: too many buttons) */}
               {!IS_APP && <Tile tone="mint" Icon={IconHome} title="HOME" sub="Modes and more" onClick={go(() => nav('home'))} delay="0ms" />}
-              <Tile tone="mint" Icon={IconQuestion} title="HOW TO PLAY" sub="4 quick steps" onClick={() => setView('howto')} delay="0ms" />
+              {/* the same guided tour as Home's How to play (it opens on Home) */}
+              <Tile tone="mint" Icon={IconQuestion} title="HOW TO PLAY" sub="The guided tour" onClick={() => { onClose(); setTimeout(() => window.dispatchEvent(new CustomEvent('bap:tutorial')), 250) }} delay="0ms" />
               <Tile tone="gold" Icon={IconPodium} title="LEADERBOARDS" sub="Top builds" onClick={go(() => nav('leaderboard'))} delay="30ms" />
               <Tile tone="discord" Icon={IconDiscord} title="DISCORD" sub="Join the community" onClick={goOut(() => window.open('https://discord.gg/zdZBu2VjUD', '_blank'))} delay="60ms" />
               <Tile tone="ink" Icon={IconX} title="FOLLOW" sub="@Build_A_Player" onClick={goOut(() => window.open('https://x.com/Build_A_Player', '_blank'))} delay="90ms" />
