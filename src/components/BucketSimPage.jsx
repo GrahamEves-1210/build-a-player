@@ -12,7 +12,7 @@ import QBAvatar from './QBAvatar'
 import BucketFigureOverlay from './BucketFigureOverlay'
 import { ShareModal } from './ReportCard'
 import SiteFooter from './SiteFooter'
-import { rampAdd } from '../lib/ads'
+import { rampAdd, useRailOn } from '../lib/ads'
 
 function gradeColor(val0) {
   const val = Math.round(val0 ?? 0)   // rounded like the letter (valToGrade), so an S is always purple
@@ -2666,6 +2666,7 @@ function TeamStarters({ teamShort, teamColor, isBig, iqPhoto, isAllTime = false 
 // ─── Main BucketSimPage ───────────────────────────────────────────────────────
 export default function BucketSimPage({ result, build, types, position, onBack, onReset, adsDisabled = false, isSalaryMode = false, initialScreen = 0, gameMode = null }) {
   const [screen, setScreen] = useState(initialScreen)
+  useRailOn(screen)   // each screen of the season brings the bottom rail back
 
   // Compute awards once — result is stable after sim runs
   const awards = useMemo(() => {

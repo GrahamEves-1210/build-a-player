@@ -20,7 +20,7 @@ import QBAvatar from './QBAvatar'
 import QBFigureOverlay from './QBFigureOverlay'
 import SiteFooter from './SiteFooter'
 import MVPModal from './MVPModal'
-import { rampAdd } from '../lib/ads'
+import { rampAdd, useRailOn } from '../lib/ads'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -1378,6 +1378,7 @@ function ProgressDots({ screen, total }) {
 
 export default function SimPage({ result, build, types = TYPES, onBack, onReset, replay = false, adsDisabled = false, isRB = false, isWR = false, isTE = false, isDB = false, isOL = false, onMVPWon }) {
   const [screen, setScreen] = useState(replay ? 3 : 0)
+  useRailOn(screen)   // each screen of the season brings the bottom rail back
   const [mvpResult, setMvpResult] = useState(null)
   const [mvpWon, setMvpWon] = useState(false)
   const [mvpContinuation, setMvpContinuation] = useState(null)

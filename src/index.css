@@ -17009,3 +17009,26 @@ html:has([id^="pw-oop"][data-pw-status="loaded"][style*="bottom"]):not(.ads-hidd
 .cr-slot-btn { padding: 7px 6px; }
 .cr-slot-cancel, .cr-add-all-btn { padding: 7px 12px; }
 .cr-save, .cr-reset-all { padding: 7px 12px; }
+
+/* ── Sandbox ratings editor on a phone: one step tighter ─────────────────────
+   Current / All-Time and the search share a row, the title and player rows are
+   shorter, and the attribute rows sit closer, so more of the list is in view */
+@media (max-width: 768px) {
+  .cr-overlay { padding: 8px 8px 10px; }
+  .cr-header { padding: 8px 12px 6px; }
+  .cr-title { font-size: 13px; }
+  .cr-close { font-size: 20px; padding: 0 4px; }
+  .cr-search-wrap { display: flex; align-items: center; gap: 6px; padding: 6px 10px; }
+  .cr-era { flex: 0 0 auto; margin: 0; gap: 4px; }
+  .cr-era-btn { flex: 0 0 auto; padding: 6px 9px; font-size: 12px; }
+  .cr-search { flex: 1; min-width: 0; padding: 6px 10px; }
+  .cr-row-header { padding: 7px 12px; }
+  .cr-row-name { font-size: 12.5px; }
+  .cr-row-team { font-size: 10px; padding: 1px 6px; }
+  .cr-attrs { padding: 4px 12px 8px; }
+  .cr-attr-row { margin-bottom: 1px; gap: 8px; min-height: 22px; }
+  .cr-attr-label { width: 82px; font-size: 9.5px; letter-spacing: .3px; line-height: 1.1; overflow-wrap: anywhere; }
+  .cr-attr-val { font-size: 12px; width: 24px; }
+  .cr-quick-btns { margin-top: 4px; gap: 5px; }
+  .cr-footer { padding: 6px 10px; }
+}
