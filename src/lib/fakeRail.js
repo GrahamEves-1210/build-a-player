@@ -11,7 +11,8 @@
 import { IS_APP } from './platform'
 
 const KEY = 'bap_rail_preview'
-const read = () => { try { return localStorage.getItem(KEY) === '1' } catch { return false } }
+// (the More switch is dev builds only now: a release app never shows it, even if it was left on)
+const read = () => { if (IS_APP && !import.meta.env.DEV) return false; try { return localStorage.getItem(KEY) === '1' } catch { return false } }
 const realRail = () => !IS_APP && !!document.querySelector('[id^="pw-oop-bottom_rail"][data-pw-status="loaded"]')
 export const railPreviewOn = read
 

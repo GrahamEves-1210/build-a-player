@@ -147,12 +147,13 @@ export default function AppMenu({ sport, onClose }) {
             <button className="ag-row-btn" onClick={() => setView('settings')}>
               <IconGear size={18} /><span className="ag-sound-lbl">SETTINGS · HELP · ACCOUNT</span>
             </button>
-            <button className={`ag-row-btn${rail ? '' : ' ag-sound--off'}`} onClick={() => { setRailPreview(!rail); setRailState(!rail) }}>
+            {/* testing tools: only in a local dev build, never for players */}
+            {import.meta.env.DEV && <button className={`ag-row-btn${rail ? '' : ' ag-sound--off'}`} onClick={() => { setRailPreview(!rail); setRailState(!rail) }}>
               <span className="ag-sound-lbl">AD RAIL PREVIEW</span>
               <span className="ag-sound-switch"><span className="ag-sound-knob" /></span>
               <span className="ag-sound-state">{rail ? 'ON' : 'OFF'}</span>
-            </button>
-            {IS_APP && (
+            </button>}
+            {import.meta.env.DEV && IS_APP && (
               <button className="ag-row-btn" onClick={go(() => nav('soundlab'))}>
                 <IconPlay size={18} /><span className="ag-sound-lbl">SOUND LAB · PICK THE SOUNDS</span>
               </button>
