@@ -127,7 +127,7 @@ export default function FriendProfile({ me, friend, isBucket = false, onClose, o
           {isBucket && <p className="fr-hint">On the Blacktop, pick Play a friend and send {name} your code.</p>}
           {err && <p className="fr-note fr-note--err" role="alert">{err}</p>}
           <button className={`fr-remove${confirm ? ' is-confirm' : ''}`} onClick={remove} disabled={busy}>
-            {busy ? 'REMOVING…' : confirm ? `TAP AGAIN TO REMOVE ${name.toUpperCase()}` : 'REMOVE FRIEND'}
+            {busy ? 'REMOVING…' : confirm ? <>TAP AGAIN TO REMOVE <span className="un-keep">{name}</span></> : 'REMOVE FRIEND'}
           </button>
         </div>
       </div>

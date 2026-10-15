@@ -5011,3 +5011,6 @@ html.ag-fan-open .ag-dock { z-index: 1170; }
    lit tab, it says you're here); it comes back up everywhere else and while held */
 .ag-play.is-here .ag-play-core { filter: saturate(.45) brightness(.62); box-shadow: inset 0 3px 10px rgba(0,0,0,.55), inset 0 0 0 1.5px rgba(255,255,255,.1); transform: scale(.94); }
 .ag-play.is-here .ag-play-label { color: var(--ag-muted); }
+/* A username is shown exactly as it was typed, never forced into capitals, even
+   inside an all-caps label or scoreboard (NameTag is how every name is drawn) */
+.ntag, .ntag *, .un-keep, .goat-card--you .goat-card-name, .goat-reveal-you, .sts-starter--you .sts-starter-name, .bvr-board-name { text-transform: none !important; }

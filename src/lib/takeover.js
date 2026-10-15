@@ -212,7 +212,7 @@ const DRIVES = {
 }
 const pick = (r, arr) => arr[Math.floor(r() * arr.length)]
 
-export function footballDuel({ run, city, star, myOvr, myTeamShort = 'GUEST' }) {
+export function footballDuel({ run, city, star, myOvr, myTeamShort = 'Guest' }) {
   const r = seeded(`${run.seed}-${city.short}-${run.idx}-${run.attempt}`)
   const bar = (star.ovr ?? 80) + (star.boost ?? 0) * 2 - 1          // what a build should be to beat this player's city
   const q = Math.max(0, Math.min(1, (myOvr - bar + 10) / 20))         // 0 → 1 quality of your day

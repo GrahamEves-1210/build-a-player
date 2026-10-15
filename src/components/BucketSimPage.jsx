@@ -2710,7 +2710,7 @@ function TeamStarters({ teamShort, teamColor, isBig, iqPhoto, isAllTime = false,
           <div key={isMe ? 'you' : p.name} className={`sts-starter${isMe ? ' sts-starter--you' : ''}`}>
             <QBAvatar photo={photo} team={isMe ? teamShort : p.team} color={isMe ? teamColor : teamColor + '99'} size={42} logoDir="/logos/nba/" />
             <span className="sts-starter-name" style={isMe ? { color: teamColor, fontWeight: 700 } : undefined}>
-              {isMe ? userName.toUpperCase() : p.label}
+              {isMe ? userName : p.label}
             </span>
             <span className="sts-starter-pos" style={isMe ? { color: teamColor } : undefined}>{SPOT_LABELS[k]}</span>
           </div>

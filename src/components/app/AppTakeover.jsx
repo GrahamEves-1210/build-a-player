@@ -77,7 +77,7 @@ export default function AppTakeover({ sport, run, setRun, user, pools, attrMap, 
       d.win = d.winner === 0
     } else {
       const ovr = calcOvr(duelBuild(run))
-      d = { kind: 'football', ...footballDuel({ run, city, star, myOvr: ovr, myTeamShort: me.name.toUpperCase() }) }
+      d = { kind: 'football', ...footballDuel({ run, city, star, myOvr: ovr, myTeamShort: me.name }) }
       if (run.mode === 'duo' && duo.partnerPlayer) {
         const pd = footballDuel({ run: { ...run, seed: run.seed + 'p' }, city, star, myOvr: duo.partnerPlayer.ovr ?? ovr })
         d.partner = pd
