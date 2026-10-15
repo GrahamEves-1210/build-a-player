@@ -17,7 +17,8 @@
 // call, the engine plays it as it always has. Same calls in, same game out.
 // Only calls that fit the game count: no pass and no help in a 1v1 (nobody to
 // pass to, nobody to help), and a pass called to a teammate is caught and
-// played the way that teammate plays off the catch (catchPlay).
+// played off the catch (catchPlay): a shooter sometimes catches and shoots,
+// otherwise he catches and drives.
 
 import { seeded } from './rng'
 
@@ -115,9 +116,16 @@ export const DEF_CALLS = ['press', 'sag', 'help']
 // the calls that make sense for a side this size: a 1v1 has nobody to pass to or help from
 export const offCallsFor = size => (size > 1 ? OFF_CALLS : OFF_CALLS.filter(c => c !== 'pass'))
 export const defCallsFor = size => (size > 1 ? DEF_CALLS : DEF_CALLS.filter(c => c !== 'help'))
-// What a teammate does with a pass called to him: a shooter catches and shoots,
-// anyone else catches and goes to the rim. The call bar says it, the engine plays it.
-export const catchPlay = p => (v(p?.build, 'jumpShot') >= (p?.pos === 'big' ? 8 : 6) ? 'shoot' : 'finish')
+// What a teammate does with a pass called to him (the call bar doesn't say; the
+// play decides it). A shooter (jump shot 6+ for a guard, 7+ for a big) catches and
+// shoots some of the time: 45% right at the bar, up to 85% for the best jumpers.
+// Otherwise he catches and drives.
+const csBar = p => (p?.pos === 'big' ? 7 : 6)
+export const catchPlay = (p, r) => {
+  const js = v(p?.build, 'jumpShot')
+  if (js < csBar(p)) return 'drive'
+  return r() < clamp(.45 + (js - csBar(p)) * .1, .45, .85) ? 'shoot' : 'drive'
+}
 // the extra a jumper off the catch gets (a good shooter's feet are already set)
 const csBonus = R => .02 + clamp((R.js - 5) / 6, 0, 1) * .06
 export function simStreetball({ teams, seed = 'x', goal = 21, winBy = 2, cap = 25, names = null, calls = null }) {
@@ -191,11 +199,11 @@ export function simStreetball({ teams, seed = 'x', goal = 21, winBy = 2, cap = 2
     const R = shooter.R
     const sizeEdge = (R.size - d.R.size) / 22, speedEdge = (R.speed - d.R.speed) / 22
     // a called pass is played the way the receiver plays off the catch (catchPlay):
-    // a shooter catches and shoots (from the arc, or the elbow), anyone else goes to the rim
-    const caught = passTo ? catchPlay(shooter) : null
-    const isArc = off === 'drive' || off === 'post' || caught === 'finish' ? false : off === 'pullup' ? r() < Math.max(.4, R.arc * 1.3) : caught === 'shoot' ? r() < Math.max(.55, R.arc * 1.5) : r() < R.arc * (passes.length ? 1.15 : 1)
+    // a catch and shoot (from the arc, or the elbow), or a catch and drive to the rim
+    const caught = passTo ? catchPlay(shooter, r) : null
+    const isArc = off === 'drive' || off === 'post' || caught === 'drive' ? false : off === 'pullup' ? r() < Math.max(.4, R.arc * 1.3) : caught === 'shoot' ? r() < Math.max(.55, R.arc * 1.5) : r() < R.arc * (passes.length ? 1.15 : 1)
     let shot = caught === 'shoot' && !isArc ? 'mid' : shotType(r, R, isArc, passes.length > 0)
-    if (caught === 'finish' && shot === 'mid') shot = 'layup'
+    if (caught === 'drive' && shot === 'mid') shot = 'layup'
     if (off === 'drive' && shot !== 'dunk') shot = 'drive'
     if (off === 'post') shot = 'post'
     if (off === 'pullup' && !isArc) shot = 'mid'

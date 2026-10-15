@@ -493,7 +493,7 @@ function CourtVisual({ play, myColor, oppColor, myName, oppName, possession, dis
           after(110, () => popRim('+1'))
         })
         } else {
-        // Baseline cut to mid — player runs from the baseline side, catches and fires
+        // Baseline drift to mid — he dribbles in from the baseline side and fires (1v1: his own ball, no catch)
         const cutDir   = Math.random() < 0.5 ? -1 : 1
         const cutStart = { x: cl(50 + cutDir * rnd(18, 28)), y: midSpot.y + rnd(18, 28) }
         mv(setOff, cutStart.x, cutStart.y, od * 0.78)

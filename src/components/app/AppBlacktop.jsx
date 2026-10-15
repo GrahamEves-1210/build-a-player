@@ -6,7 +6,7 @@ import { ROOM_SIZE as ALL_SIZE, ROLES, SLOTS as ALL_SLOTS, teamName, captainOf, 
 import { CallBar, CallReveal, EmoteBar, useBubbles, CALL_MS } from './LiveCalls'
 import { BUCKET_ATTR } from '../../data/nba-attrs'
 import { valToGrade } from '../../utils/simulation'
-import { playDelay, offCallsFor, defCallsFor, catchPlay } from '../../lib/hoops'
+import { playDelay, offCallsFor, defCallsFor } from '../../lib/hoops'
 import { QUICK, block, report } from '../../lib/chat'
 import { sfx, haptic, victory } from '../../lib/juice'
 import { calcBucketOVR, getBucketGuardArchetype, getBucketBigArchetype } from '../../utils/bucketSimulation'
@@ -594,7 +594,7 @@ export function BlacktopGame({ bt, user, photoFor, onOpenChat, unread }) {
             if (h === bt.me.vid) {
               const mates = game.teams[myTeam].filter(p => p.id !== h)
               // a pass says what the teammate does with it (the engine plays exactly that): a shooter catches and shoots
-              const opts = [...offCallsFor(size).filter(c => c !== 'pass'), ...mates.map(p => ({ v: `pass:${p.id}`, label: `PASS → ${firstName(p.name)}`, sub: catchPlay(p) === 'shoot' ? 'Catch & shoot' : 'Catch & attack' }))]
+              const opts = [...offCallsFor(size).filter(c => c !== 'pass'), ...mates.map(p => ({ v: `pass:${p.id}`, label: `PASS → ${firstName(p.name)}` }))]   // what he does with it, the play decides
               return <CallBar key={calling.pn} offense head="BALL IN HAND · CALL IT" options={opts} picked={bt.myCalls?.[calling.pn] ?? null} onPick={pick} />
             }
             if (dfd === bt.me.vid) return <CallBar key={calling.pn} offense={false} head={`GUARDING ${firstName(nm(h))} · CALL IT`} options={defCallsFor(size)} picked={bt.myCalls?.[calling.pn] ?? null} onPick={pick} />
