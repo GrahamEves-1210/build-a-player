@@ -476,8 +476,8 @@ export function BuildComplete({ complete, ovr, name = null, label = 'OVR', build
         {/* the build's own name (Boom or Bust, Gunslinger…), colored by its tier */}
         <div className={`ag-bc-tier${String(name ?? '').length > 14 ? ' is-long' : ''}`}>{name ?? tier.name}</div>
         {chips.length > 0 && (
-          // full trait names (no abbreviations), two to a row
-          <div className="ag-bc-grades">
+          // full trait names (no abbreviations), two to a row; an odd count (football's 9) as one list
+          <div className={`ag-bc-grades${chips.length % 2 ? ' is-list' : ''}`}>
             {chips.map((t, i) => (
               <span key={t} className="ag-bc-g" style={{ '--g': gradeColor(build[t].val), '--d': `${180 + i * 75}ms` }}>
                 <small>{attrMap?.[t]?.label ?? t}</small>

@@ -4851,3 +4851,11 @@ html:is(.is-app, .app-look).no-dock { --app-bottom: calc(var(--safe-bottom) + 12
 .wv-note { margin: 0; text-align: center; font-family: var(--ag-body); font-size: 12.5px; font-weight: 600; color: var(--ag-muted); }
 .mg-retry { display: grid; gap: 8px; margin-top: 10px; width: 100%; }
 .ag-streak-restore { margin: 2px 0 10px; }
+
+/* an odd number of traits (football's 9) reads as one list, not two columns with a lone last one:
+   the build reveal, Career's traits and its player comp */
+.ag-bc-grades.is-list { grid-template-columns: 1fr; gap: 3px; }
+.ag-bc-grades.is-list .ag-bc-g { padding: 4px 10px; }
+.ag-bc-grades.is-list .ag-bc-g b { font-size: 16px; }
+.cr-traits.is-list, .cr-model-wrap .cr-traits.is-list { grid-template-columns: 1fr; }
+.cr-comp-grid.is-list { grid-template-columns: 1fr; }

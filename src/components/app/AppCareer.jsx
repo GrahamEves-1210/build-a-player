@@ -181,7 +181,7 @@ function Model({ c, devPick }) {
         const list = names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}` : names[0]
         return w && <p className={`cr-train-note${w.open && w.left <= 1 ? ' is-last' : ''}`}>{!w.open ? `${list} can't be trained any more (past ${w.until}). Skills and reads still can.` : w.left <= 1 ? `Last offseason to train ${list}: the window shuts after ${w.until}.` : `${list} can be trained until ${w.until}: ${w.left} offseasons left. Skills and reads, any time. A+ to S costs 2 points.`}</p>
       })()}
-      <div className="cr-traits">{c.types.map(t => <Card key={t} t={t} />)}</div>
+      <div className={`cr-traits${c.types.length % 2 ? ' is-list' : ''}`}>{c.types.map(t => <Card key={t} t={t} />)}</div>
     </div>
   )
 }
@@ -338,8 +338,8 @@ function Comp({ c }) {
         <span className="crl-face">{top.photo ? <img src={photoSrc(top.photo)} alt="" loading="lazy" /> : <span className="crl-init">{initials(top.name)}</span>}</span>
         <span className="cr-comp-name"><b>{top.name}</b><small>{era(top)}</small></span>
       </div>
-      <div className="cr-comp-grid">
-        {[0, 1].map(i => <span key={`h${i}`} className="cr-comp-row cr-comp-row--head"><small /><em className="is-you">YOU</em><em>PRO</em></span>)}
+      <div className={`cr-comp-grid${c.types.length % 2 ? ' is-list' : ''}`}>
+        {(c.types.length % 2 ? [0] : [0, 1]).map(i => <span key={`h${i}`} className="cr-comp-row cr-comp-row--head"><small /><em className="is-you">YOU</em><em>PRO</em></span>)}
         {c.types.map(t => {
           const mine = c.build[t]?.val ?? 0, his = top.attrs[t]
           return (
