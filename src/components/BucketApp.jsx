@@ -1908,6 +1908,7 @@ export default function BucketApp() {
     if (bt.phase === 'idle') {
       return <BlacktopHub onBack={() => setPage('splash')} onJoin3v3={() => { bt.clearKicked(); bt.join(false, 3) }}
         onJoin2v2={bt.server ? () => { bt.clearKicked(); bt.join(false, 2) } : null}
+        onJoin1v1={bt.server ? () => { bt.clearKicked(); bt.join(false, 1) } : null}
         notice={bt.kicked ? 'The build clock ran out before you finished. A CPU took your spot, and it counts as leaving the game.' : null} onNotice={bt.clearKicked}
         onPractice={bt.practice ? sz => { bt.clearKicked(); bt.practice(sz) } : null}
         onPickup={() => startVersus(position, { kind: 'pickup' })} onFriend={() => startVersus(position, { kind: 'friend' })}

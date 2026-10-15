@@ -17,7 +17,8 @@ export const MODES = {
   bt: { label: 'Blacktop 3v3', Icon: IconHoop, sub: 'Squads · first to 11' },
   bt2: { label: 'Blacktop 2v2', Icon: IconHoop, sub: 'Guard and a big · first to 11' },
   h2h: { label: '1v1', Icon: IconVersus, sub: 'Football and basketball' },
-  h2hB: { label: 'Blacktop 1v1', Icon: IconVersus, sub: 'One on one · first to 11' },
+  bt1: { label: 'Blacktop 1v1', Icon: IconVersus, sub: 'One on one · first to 11' },
+  h2hB: { label: 'Friend 1v1', Icon: IconVersus, sub: 'With a code · first to 11' },
   h2hN: { label: 'Football 1v1', Icon: IconVersus, sub: 'Your season against theirs' },
 }
 
@@ -84,19 +85,19 @@ export function ModeStats({ mode, full = false }) {
       ['PLAYED', c.played ?? 0], ['WINS', c.wins ?? 0], ['AVG PLACE', avg(c.placeSum, c.played)],
       ...(full ? [['TOP 3', c.played ? `${pct(c.podiums, c.played)}%` : '–'], ['AVG OVR', c.played ? Math.round(c.ovrSum / c.played) : '–'], ['BEST OVR', c.best || '–'], ['BEATEN', c.beaten ?? 0], ['BEST STREAK', c.bestStreak ?? 0]] : []),
     ]
-  } else if (mode === 'bt' || mode === 'bt2') {
-    const two = mode === 'bt2'
-    const b = (two ? st.bt2 : st.bt) ?? {}
+  } else if (mode === 'bt' || mode === 'bt2' || mode === 'bt1') {
+    const two = mode !== 'bt'
+    const b = (two ? st[mode] : st.bt) ?? {}
     const g = (two ? b.games : st.btGames) ?? 0
     const w = (two ? b.wins : st.btWins) ?? 0
     streak = b.streak ?? 0; best = b.bestStreak ?? 0; form = b.recent ?? []
     // the record, then the per-game line (points, boards, assists, steals, blocks)
-    line = [['PPG', avg(b.pts, g)], ['RPG', avg(b.reb, g)], ['APG', avg(b.ast, g)], ['SPG', avg(b.stl, g)], ['BPG', avg(b.blk, g)], ['FG %', b.fga ? `${pct(b.fgm, b.fga)}%` : '–']]
+    const solo = mode === 'bt1'   // one on one: no one to assist, and the MVP is just the winner
+    line = [['PPG', avg(b.pts, g)], ['RPG', avg(b.reb, g)], ...(solo ? [] : [['APG', avg(b.ast, g)]]), ['SPG', avg(b.stl, g)], ['BPG', avg(b.blk, g)], ['FG %', b.fga ? `${pct(b.fgm, b.fga)}%` : '–']]
     // (the best streak is in the header)
-    cells = [
-      ['RECORD', `${w}–${g - w}`], ['WIN %', g ? `${pct(w, g)}%` : '–'], ['MVPS', (two ? b.mvp : st.btMvp) ?? 0],
-      ...(full ? [['HIGH', b.highPts || '–']] : []),
-    ]
+    cells = solo
+      ? [['RECORD', `${w}–${g - w}`], ['WIN %', g ? `${pct(w, g)}%` : '–'], ['HIGH', b.highPts || '–'], ...(full ? [['PLAYED', g]] : [])]
+      : [['RECORD', `${w}–${g - w}`], ['WIN %', g ? `${pct(w, g)}%` : '–'], ['MVPS', (two ? b.mvp : st.btMvp) ?? 0], ...(full ? [['HIGH', b.highPts || '–']] : [])]
   } else if (mode === 'h2hB') {
     const h = st.h2hB ?? {}, g = h.games ?? 0
     streak = h.streak ?? 0; best = h.bestStreak ?? 0; form = h.recent ?? []

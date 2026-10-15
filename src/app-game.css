@@ -4862,3 +4862,10 @@ html:is(.is-app, .app-look).no-dock { --app-bottom: calc(var(--safe-bottom) + 12
 
 /* Blacktop: a build's own name, where the role used to be (the reveal, the builds sheet) */
 .bt-arch { display: block; margin: 1px 0; font-style: normal; font-family: var(--ag-display); font-weight: 400; font-size: 15px; line-height: 1.05; letter-spacing: .3px; color: var(--ag-gold-hi, #f5dc8a); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Blacktop 1v1 lobby: an open spot is two halves, guard or big */
+.bt-spot--pick { display: grid; grid-template-columns: 1fr; gap: 6px; padding: 6px; }
+.bt-spot-half { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 8px; border-radius: 10px; border: 1px dashed var(--ag-line-hi); background: rgba(255,255,255,.03); color: inherit; cursor: pointer; text-align: left; }
+.bt-spot-half:active { transform: scale(.98); }
+.bt-spot-half:focus-visible { outline: 2px solid var(--ag-a1); outline-offset: 2px; }
+.bt-spot-half .bt-spot-name { font-size: 13px; }

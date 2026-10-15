@@ -30,6 +30,7 @@ export default function AppOnline({ sport = 'nfl', onClose }) {
         <ModeStats mode="compete" full />
         <ModeStats mode="bt2" full />
         <ModeStats mode="bt" full />
+        <ModeStats mode="bt1" full />
         <ModeStats mode="h2hB" full />
         <ModeStats mode="h2hN" full />
         <div className="ol-how">

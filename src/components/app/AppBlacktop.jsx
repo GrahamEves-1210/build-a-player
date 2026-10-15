@@ -62,11 +62,11 @@ export function OneOnOneOptions({ onPickup, onFriend, onJoinCode, error = '' }) 
   const [code, setCode] = useState('')
   return (
     <div className="v1-opts">
-      <button className="bt-opt" onClick={() => { sfx('tap'); onPickup() }}>
+      {onPickup && <button className="bt-opt" onClick={() => { sfx('tap'); onPickup() }}>
         <span className="bt-opt-ico"><IconBasketball size={20} /></span>
         <span className="bt-opt-txt"><b>PICKUP</b><small>Search for a game</small></span>
         <IconArrow size={14} />
-      </button>
+      </button>}
       <button className="bt-opt" onClick={() => { sfx('tap'); onFriend() }}>
         <span className="bt-opt-ico"><IconVersus size={20} /></span>
         <span className="bt-opt-txt"><b>PLAY A FRIEND</b><small>Get a code and send it to them</small></span>
@@ -82,7 +82,7 @@ export function OneOnOneOptions({ onPickup, onFriend, onJoinCode, error = '' }) 
   )
 }
 
-export function BlacktopHub({ onJoin3v3, onJoin2v2 = null, onPickup, onFriend, onJoinCode, onBack, notice = null, onNotice = null, onPractice = null }) {
+export function BlacktopHub({ onJoin3v3, onJoin2v2 = null, onJoin1v1 = null, onPickup, onFriend, onJoinCode, onBack, notice = null, onNotice = null, onPractice = null }) {
   const o = useProgress().stats?.online ?? { rating: 800 }
   return (
     <div className="ag-screen ag-screen--bucket bt-hub">
@@ -101,10 +101,17 @@ export function BlacktopHub({ onJoin3v3, onJoin2v2 = null, onPickup, onFriend, o
         <section className="bt-mode ag-pop" style={{ '--d': '60ms' }}>
           <div className="bt-mode-head">
             <span className="bt-mode-tag">1V1</span>
-            <span className="bt-mode-txt"><b>1v1</b><small>Pick up a game against anyone, or play a friend.</small></span>
+            <span className="bt-mode-txt"><b>1v1</b><small>One on one. Take a spot as a guard or a big, build, run it.</small></span>
           </div>
-          <OneOnOneOptions onPickup={onPickup} onFriend={onFriend} onJoinCode={onJoinCode} />
-          <ModeStats mode="h2hB" />
+          {onJoin1v1 ? <>
+            <button className="ag-btn bt-mode-go" onClick={() => { sfx('tap'); onJoin1v1() }}>JOIN LOBBY <IconArrow size={16} /></button>
+            {onPractice && <button className="ag-btn ag-btn--ghost bt-practice" onClick={() => { sfx('tap'); onPractice(1) }}>PRACTICE · YOU + 1 CPU</button>}
+            <OneOnOneOptions onFriend={onFriend} onJoinCode={onJoinCode} />
+            <ModeStats mode="bt1" />
+          </> : <>
+            <OneOnOneOptions onPickup={onPickup} onFriend={onFriend} onJoinCode={onJoinCode} />
+            <ModeStats mode="h2hB" />
+          </>}
         </section>
         {onJoin2v2 && (
           <section className="bt-mode ag-pop" style={{ '--d': '100ms' }}>
@@ -130,8 +137,8 @@ export function BlacktopHub({ onJoin3v3, onJoin2v2 = null, onPickup, onFriend, o
         <details className="bt-rules ag-pop" style={{ '--d': '180ms' }}>
           <summary className="ag-eyebrow">HOUSE RULES</summary>
           <ul>
-            <li>Real players only. A 2v2 starts when all four spots are taken, a 3v3 when all six are.</li>
-            <li>A 2v2 squad is a guard and a big; a 3v3 squad is two guards and a big. The spot you take is the build you make.</li>
+            <li>Real players only. A 1v1 starts when both spots are taken, a 2v2 when all four are, a 3v3 when all six are. Practice puts you against CPUs right away.</li>
+            <li>In a 1v1 you take your spot as a guard or a big. A 2v2 squad is a guard and a big; a 3v3 squad is two guards and a big. The spot you take is the build you make.</li>
             <li>3:00 to build. Leave or go quiet and the blacktop builds for you, with the ratings off.</li>
             <li>First to <b>11</b>, 1s and 2s, win by 2. Make it, take it.</li>
             <li>Chat is filtered, and anyone can be reported.</li>
@@ -172,12 +179,13 @@ export function BlacktopQueue({ bt, user, onBack }) {
     const first = SLOTS.filter(sl => sl.team === t).map(sl => bt.held[sl.id]).find(Boolean)
     return first ? `TEAM ${firstName(first.name)}` : t === 0 ? 'TEAM A' : 'TEAM B'
   }
-  const tap = sl => {
+  const tap = (sl, pos = null) => {
     const h = bt.held[sl.id]
     if (h && h.vid !== bt.me.vid) { sfx('deny'); haptic('light'); return }
-    if (bt.mySlot === sl.id) { bt.seat(null); sfx('tap'); return }
-    bt.seat(sl.id); sfx('slot'); haptic('medium')
+    if (bt.mySlot === sl.id && !pos) { bt.seat(null); sfx('tap'); return }
+    bt.seat(sl.id, pos); sfx('slot'); haptic('medium')
   }
+  const posLine = pos => (pos === 'big' ? 'BIG · PF · C' : 'GUARD · PG · SG · SF')
   const waiting = bt.queue.filter(p => !p.slot || bt.held[p.slot]?.vid !== p.vid).length
   const unread = Math.max(0, bt.chat.length - seenChat)
   return (
@@ -204,12 +212,20 @@ export function BlacktopQueue({ bt, user, onBack }) {
                 {SLOTS.filter(sl => sl.team === t).map((sl, i) => {
                   const h = bt.held[sl.id]
                   const me = h?.vid === bt.me.vid
+                  // a 1v1 spot: open, you take it as a guard or a big
+                  if (sl.pos === 'any' && !h) return (
+                    <div key={sl.id} className="bt-spot is-open bt-spot--pick" style={{ '--d': `${80 + (t * 3 + i) * 50}ms` }}>
+                      <button className="bt-spot-half" onClick={() => tap(sl, 'guard')}><span className="bt-spot-plus">+</span><span className="bt-spot-txt"><span className="bt-spot-name">GUARD</span><span className="bt-spot-role">PG · SG · SF</span></span></button>
+                      <button className="bt-spot-half is-big" onClick={() => tap(sl, 'big')}><span className="bt-spot-plus">+</span><span className="bt-spot-txt"><span className="bt-spot-name">BIG</span><span className="bt-spot-role">PF · C</span></span></button>
+                    </div>
+                  )
+                  const pos = sl.pos === 'any' ? h?.pos : sl.pos
                   return (
-                    <button key={sl.id} className={`bt-spot${h ? ' is-taken' : ' is-open'}${me ? ' is-me' : ''}${sl.pos === 'big' ? ' is-big' : ''}`} style={{ '--d': `${80 + (t * 3 + i) * 50}ms` }} onClick={() => tap(sl)}>
+                    <button key={sl.id} className={`bt-spot${h ? ' is-taken' : ' is-open'}${me ? ' is-me' : ''}${pos === 'big' ? ' is-big' : ''}`} style={{ '--d': `${80 + (t * 3 + i) * 50}ms` }} onClick={() => tap(sl)}>
                       {h ? <Av name={h.name} team={t} size={34} cos={h.cos} self={me} /> : <span className="bt-spot-plus">+</span>}
                       <span className="bt-spot-txt">
-                        <span className="bt-spot-name">{h ? <NameTag name={h.name} cos={h.cos} self={me} /> : `JOIN AS ${sl.pos === 'big' ? 'BIG' : 'GUARD'}`}</span>
-                        <span className="bt-spot-role">{sl.pos === 'big' ? 'BIG · PF · C' : 'GUARD · PG · SG · SF'}{me ? ' · TAP TO LEAVE' : ''}</span>
+                        <span className="bt-spot-name">{h ? <NameTag name={h.name} cos={h.cos} self={me} /> : `JOIN AS ${pos === 'big' ? 'BIG' : 'GUARD'}`}</span>
+                        <span className="bt-spot-role">{posLine(pos)}{me ? ' · TAP TO LEAVE' : ''}</span>
                       </span>
                     </button>
                   )
@@ -222,7 +238,7 @@ export function BlacktopQueue({ bt, user, onBack }) {
           <div className="bt-run-foot">
             {!bt.mySlot
               ? <span className="bt-run-hint">Tap an open spot to join that squad.{waiting > 0 ? ` ${waiting} watching.` : ''}</span>
-              : <span className="bt-run-hint">{bt.seated === ROOM_SIZE ? 'Full run. Lacing up…' : `Starts when all ${size === 2 ? 'four' : 'six'} spots are taken · ${ROOM_SIZE - bt.seated} to go. Real players only.`}</span>}
+              : <span className="bt-run-hint">{bt.seated === ROOM_SIZE ? 'Full run. Lacing up…' : `Starts when ${size === 1 ? 'both' : `all ${size === 2 ? 'four' : 'six'}`} spots are taken · ${ROOM_SIZE - bt.seated} to go. Real players only.`}</span>}
           </div>
         </div>
 
@@ -232,7 +248,7 @@ export function BlacktopQueue({ bt, user, onBack }) {
           {unread > 0 && <span className="ag-tab-badge">{unread}</span>}
         </button>
 
-        <OnlineRecord modes={[size === 2 ? 'bt2' : 'bt']} title={`YOUR ${size}V${size}`} />
+        <OnlineRecord modes={[size === 1 ? 'bt1' : size === 2 ? 'bt2' : 'bt']} title={`YOUR ${size}V${size}`} />
 
       </div>
       {chatOpen && <BlacktopChat bt={bt} user={user} title="LOBBY CHAT" mode="blacktop-lobby" onClose={() => { setChatOpen(false); setSeenChat(bt.chat.length) }} />}

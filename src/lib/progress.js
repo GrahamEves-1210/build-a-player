@@ -207,6 +207,8 @@ const BLANK_STATS = {
   bt: { streak: 0, bestStreak: 0, pts: 0, ast: 0, reb: 0, stl: 0, blk: 0, fgm: 0, fga: 0, highPts: 0, recent: [] },
   // Blacktop 1v1 (the website also keeps vs_results; this follows the wallet)
   bt2: { games: 0, wins: 0, mvp: 0, streak: 0, bestStreak: 0, pts: 0, ast: 0, reb: 0, stl: 0, blk: 0, fgm: 0, fga: 0, highPts: 0, recent: [] },
+  // Blacktop 1v1 (the lobby and practice, on the Blacktop engine)
+  bt1: { games: 0, wins: 0, mvp: 0, streak: 0, bestStreak: 0, pts: 0, ast: 0, reb: 0, stl: 0, blk: 0, fgm: 0, fga: 0, highPts: 0, recent: [] },
   h2h: { played: 0, wins: 0, losses: 0, forfeits: 0, streak: 0, bestStreak: 0, recent: [] },
   // 1v1 by sport (h2h above is both together: achievements and the rating read it).
   // Basketball's is a game, so it keeps a line: points, shots, steals, blocks (games = games with a line)
@@ -215,7 +217,7 @@ const BLANK_STATS = {
   // Online rating across the live modes (see rateOnline)
   online: { rating: 800, best: 800, played: 0 },
 }
-const ONLINE_KEYS = ['compete', 'bt', 'bt2', 'h2h', 'h2hN', 'h2hB', 'online']
+const ONLINE_KEYS = ['compete', 'bt', 'bt2', 'bt1', 'h2h', 'h2hN', 'h2hB', 'online']
 const fixStats = st => { for (const k of ONLINE_KEYS) st[k] = { ...BLANK_STATS[k], ...(st[k] || {}) }; return st }
 const keyFor = id => `bap_prog_${id || 'guest'}`
 function load(id) {
@@ -635,10 +637,10 @@ function onCompete(e) {
 // (a 2v2 keeps its own record, stats.bt2; the rating and missions are shared)
 function onBlacktop(e) {
   const d = e.detail || {}
-  const two = d.size === 2
+  const two = d.size === 2 || d.size === 1, key = d.size === 1 ? 'bt1' : 'bt2'
   let b
   if (two) {
-    b = S.stats.bt2 = { ...BLANK_STATS.bt2, ...(S.stats.bt2 || {}) }
+    b = S.stats[key] = { ...BLANK_STATS[key], ...(S.stats[key] || {}) }
     b.games++
     if (d.won) b.wins++
     if (d.mvp) b.mvp++

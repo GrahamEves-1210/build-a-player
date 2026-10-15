@@ -32,8 +32,13 @@ const SLOTS = [
 ]
 // 2v2 (its own lobby): a guard and a big a side
 const SLOTS_2 = SLOTS.filter(sl => sl.id !== '0g1' && sl.id !== '1g1')
-const slotsFor = size => (size === 2 ? SLOTS_2 : SLOTS)
-const lobbyName = size => (size === 2 ? 'blacktop2' : 'blacktop')
+// 1v1 (its own lobby): one spot a side, and you say guard or big as you take it
+const SLOTS_1 = [{ id: '0x', team: 0, pos: 'any' }, { id: '1x', team: 1, pos: 'any' }]
+const slotsFor = size => (size === 1 ? SLOTS_1 : size === 2 ? SLOTS_2 : SLOTS)
+const lobbyName = size => (size === 1 ? 'blacktop1' : size === 2 ? 'blacktop2' : 'blacktop')
+const sizeOf = v => (v === 1 || v === 2 ? v : 3)
+// the position a spot plays: its own, or (a 1v1 spot) the one asked for
+const posFor = (sl, asked) => (sl.pos === 'any' ? (asked === 'big' ? 'big' : 'guard') : sl.pos)
 const BOT_NAMES = ['Smoke', 'Shifty', 'Glass', 'Sauce', 'Twitch', 'Hammer', 'Ghost', 'Blitz', 'Cash', 'Lefty', 'Rook', 'Stretch']
 const OFF_CALLS = ['drive', 'pullup', 'post', 'pass']
 const DEF_CALLS = ['press', 'sag', 'help']
@@ -57,6 +62,7 @@ export default {
     if (!originOk(req.headers.get('Origin'))) return new Response('forbidden', { status: 403 })
     if (url.pathname === '/lobby') return env.LOBBY.get(env.LOBBY.idFromName('blacktop')).fetch(req)
     if (url.pathname === '/lobby2') return env.LOBBY.get(env.LOBBY.idFromName('blacktop2')).fetch(req)
+    if (url.pathname === '/lobby1') return env.LOBBY.get(env.LOBBY.idFromName('blacktop1')).fetch(req)
     if (url.pathname === '/auction/q') {
       const sport = url.searchParams.get('sport'), pos = url.searchParams.get('pos')
       if (!validSportPos(sport, pos)) return new Response('bad', { status: 400 })
@@ -90,6 +96,7 @@ export class Lobby {
   async fetch(req) {
     const url = new URL(req.url)
     if (url.pathname === '/lobby2' || url.searchParams.get('size') === '2') this.size = 2
+    if (url.pathname === '/lobby1' || url.searchParams.get('size') === '1') this.size = 1
     // a squad running it back: hold a side for them (both guards and the big together)
     if (url.pathname === '/hold' && req.method === 'POST') {
       const { players } = await req.json()
@@ -100,9 +107,9 @@ export class Lobby {
         const side = this.slots.filter(sl => sl.team === team && free(sl))
         const plan = []
         const left = [...side]
-        for (const p of players) { const i = left.findIndex(sl => sl.pos === p.pos); if (i < 0) break; plan.push([left[i], p]); left.splice(i, 1) }
+        for (const p of players) { const i = left.findIndex(sl => sl.pos === p.pos || sl.pos === 'any'); if (i < 0) break; plan.push([left[i], p]); left.splice(i, 1) }
         if (plan.length === players.length) {
-          for (const [sl, p] of plan) this.held[sl.id] = { ...pub(p), until: now + 60000 }
+          for (const [sl, p] of plan) this.held[sl.id] = { ...pub(p), pos: p.pos === 'big' ? 'big' : 'guard', until: now + 60000 }
           this.broadcast(this.state())
           return new Response(JSON.stringify({ ok: true }))
         }
@@ -119,7 +126,10 @@ export class Lobby {
   state() {
     const now = Date.now()
     // a spot held for a squad on its way shows as taken (it's theirs)
-    const show = sl => (this.spots[sl.id] ? pub(this.spots[sl.id]) : this.held[sl.id] && this.held[sl.id].until > now ? pub(this.held[sl.id]) : null)
+    const show = sl => {
+      const h = this.spots[sl.id] ?? (this.held[sl.id] && this.held[sl.id].until > now ? this.held[sl.id] : null)
+      return h ? { ...pub(h), pos: h.pos ?? sl.pos } : null
+    }
     return { t: 'lobby', size: this.size, spots: Object.fromEntries(this.slots.map(sl => [sl.id, show(sl)])), here: [...this.conns.values()].map(pub) }
   }
   broadcast(msg) { for (const ws of this.conns.keys()) send(ws, msg) }
@@ -132,7 +142,7 @@ export class Lobby {
       this.conns.set(ws, p)
       // back from a game with the squad: straight into the spot held for them
       const mine = Object.entries(this.held).find(([, h]) => h.vid === p.vid && h.until > Date.now())
-      if (mine) { delete this.held[mine[0]]; this.spots[mine[0]] = { ...p, at: Date.now() } }
+      if (mine) { const h = this.held[mine[0]]; delete this.held[mine[0]]; this.spots[mine[0]] = { ...p, at: Date.now(), pos: h.pos } }
       this.broadcast(this.state())
       if (mine && this.slots.every(sl => this.spots[sl.id])) await this.makeMatch()
       return
@@ -143,7 +153,7 @@ export class Lobby {
       const heldFor = want && this.held[want] && this.held[want].until > Date.now() ? this.held[want].vid : null
       if (want && ((this.spots[want] && this.spots[want].vid !== me.vid) || (heldFor && heldFor !== me.vid))) return send(ws, { t: 'bumped' })
       for (const id of Object.keys(this.spots)) if (this.spots[id].vid === me.vid) delete this.spots[id]
-      if (want) this.spots[want] = { ...me, at: Date.now() }
+      if (want) this.spots[want] = { ...me, at: Date.now(), pos: posFor(this.slots.find(sl => sl.id === want), m.pos) }
       this.broadcast(this.state())
       if (this.slots.every(sl => this.spots[sl.id])) await this.makeMatch()
       return
@@ -157,10 +167,10 @@ export class Lobby {
       // you and CPUs, at once: you take a spot for your position, CPUs the rest
       const pos = m.pos === 'big' ? 'big' : 'guard'
       const code = code6()
-      const mine = this.slots.find(sl => sl.pos === pos && sl.team === 0)
+      const mine = this.slots.find(sl => (sl.pos === pos || sl.pos === 'any') && sl.team === 0)
       const players = this.slots.map((sl, i) => (sl === mine
-        ? { ...me, pos: sl.pos, team: sl.team, slot: sl.id, bot: false }
-        : { vid: `bot-${code}-${sl.id}`, name: BOT_NAMES[(i * 5) % BOT_NAMES.length], uid: null, cos: null, pos: sl.pos, team: sl.team, slot: sl.id, bot: true }))
+        ? { ...me, pos, team: sl.team, slot: sl.id, bot: false }
+        : { vid: `bot-${code}-${sl.id}`, name: BOT_NAMES[(i * 5) % BOT_NAMES.length], uid: null, cos: null, pos: posFor(sl, code.charCodeAt(0) % 2 ? 'big' : 'guard'), team: sl.team, slot: sl.id, bot: true }))
       await this.env.ROOM.get(this.env.ROOM.idFromName(code)).fetch('https://room/init', { method: 'POST', body: JSON.stringify({ code, players, practice: true, size: this.size }) })
       for (const id of Object.keys(this.spots)) if (this.spots[id].vid === me.vid) delete this.spots[id]
       send(ws, { t: 'match', code, players })
@@ -169,7 +179,7 @@ export class Lobby {
   }
   async makeMatch() {
     const code = code6()
-    const players = this.slots.map(sl => ({ ...pub(this.spots[sl.id]), pos: sl.pos, team: sl.team, slot: sl.id, bot: false }))
+    const players = this.slots.map(sl => ({ ...pub(this.spots[sl.id]), pos: this.spots[sl.id].pos ?? posFor(sl, 'guard'), team: sl.team, slot: sl.id, bot: false }))
     await this.env.ROOM.get(this.env.ROOM.idFromName(code)).fetch('https://room/init', { method: 'POST', body: JSON.stringify({ code, players, practice: false, size: this.size }) })
     const vids = new Set(players.map(p => p.vid))
     this.spots = {}
@@ -200,7 +210,7 @@ export class Room {
     const url = new URL(req.url)
     if (url.pathname === '/init' && req.method === 'POST') {
       const b = await req.json()
-      this.m = { code: b.code, players: b.players, practice: !!b.practice, size: b.size === 2 ? 2 : 3, seed: b.code, round: 0 }
+      this.m = { code: b.code, players: b.players, practice: !!b.practice, size: sizeOf(b.size), seed: b.code, round: 0 }
       this.startBuild()
       return new Response('ok')
     }

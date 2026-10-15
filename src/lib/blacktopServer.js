@@ -89,7 +89,7 @@ export function useBlacktopServer({ enabled, user, position, pools, types, build
   const joinRef = useRef(null)
   // ── The room ───────────────────────────────────────────────────────────────
   const enterRoom = useCallback((code, players, practice) => {
-    const sz = players.length === 4 ? 2 : 3
+    const sz = players.length === 2 ? 1 : players.length === 4 ? 2 : 3
     sizeRef.current = sz; setSize(sz)
     lobbyRef.current?.close(); lobbyRef.current = null
     const mine = players.find(p => p.vid === meRef.current.vid)
@@ -139,10 +139,10 @@ export function useBlacktopServer({ enabled, user, position, pools, types, build
   const join = useCallback((practice = false, sz = 3) => {
     if (!enabled) return
     if (!claimLive('blacktop')) { setPhase('busy'); return }
-    sz = sz === 2 ? 2 : 3
+    sz = sz === 1 || sz === 2 ? sz : 3
     sizeRef.current = sz; setSize(sz)
     setPhase('queue'); setWaited(0); setLobbyChat([]); setKicked(false); setSpots({})
-    lobbyRef.current = liveSocket(sz === 2 ? '/lobby2' : '/lobby', () => ({ t: 'hello', ...meRef.current }), m => {
+    lobbyRef.current = liveSocket(sz === 1 ? '/lobby1' : sz === 2 ? '/lobby2' : '/lobby', () => ({ t: 'hello', ...meRef.current }), m => {
       if (m.t === 'lobby') { setSpots(m.spots ?? {}); setLobbyHere(m.here ?? []); return }
       if (m.t === 'bumped') { setBumped(true); setTimeout(() => setBumped(false), 2600); return }
       if (m.t === 'match') return enterRoom(m.code, m.players, !!m.players.filter(p => p.bot).length)
@@ -155,7 +155,8 @@ export function useBlacktopServer({ enabled, user, position, pools, types, build
     if (practice) setTimeout(() => lobbyRef.current?.send({ t: 'practice', pos: meRef.current.pos }), 600)
   }, [enabled, enterRoom])
   joinRef.current = join
-  const seat = useCallback(slotId => lobbyRef.current?.send({ t: 'seat', slot: slotId }), [])
+  // pos: a 1v1 spot takes either position, so the tap says which
+  const seat = useCallback((slotId, pos = null) => lobbyRef.current?.send({ t: 'seat', slot: slotId, pos }), [])
 
   useEffect(() => {
     if (phase !== 'queue') return
