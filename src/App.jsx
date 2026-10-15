@@ -361,7 +361,7 @@ export default function App() {
   // page's off-page units with the path set explicitly (the URL sync effect
   // below runs after this). A layout effect, so it's queued before the new
   // page's own in-page units. Home runs the bottom rail only; the left rail only
-  // runs on /simulate and /depth-chart. Ad-free players keep forceUnits 'off'.
+  // runs on /simulate, Salary Cap and /depth-chart. Ad-free players keep forceUnits 'off'.
   useLayoutEffect(() => {
     const onSimulate = page === 'sim' && !!simResult
     if (page === 'splash') { rampPage({ ads: HOME_UNITS, path: '/' }); return }
@@ -371,7 +371,7 @@ export default function App() {
       : page === 'leaderboard' ? '/leaderboard'
       : page === 'wiki' ? (here.startsWith('/wiki') ? here : '/wiki')
       : (['/simulate', '/leaderboard', '/depth-chart'].includes(here) || here.startsWith('/wiki')) ? '/' : here
-    rampPage({ ads: onSimulate || page === 'depth-chart' ? RAIL_UNITS_WITH_LEFT : RAIL_UNITS, path })
+    rampPage({ ads: onSimulate || page === 'depth-chart' || page === 'salarycap' ? RAIL_UNITS_WITH_LEFT : RAIL_UNITS, path })
   }, [page, simResult])
 
   // Whether the build belongs to a Takeover run: a reload goes back to the
