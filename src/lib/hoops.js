@@ -65,7 +65,7 @@ function rate(p) {
   const def = g ? v(b, 'perimeterDefense') : v(b, 'interiorDefense')
   return {
     pass, def, handles,
-    arc:   clamp((v(b, 'jumpShot') - 3) / 8 * .44 + .08, .03, .52),            // how often they shoot from the arc
+    arc:   clamp((v(b, 'jumpShot') - 3) / 8 * .62 + .08, .03, .72),            // how often they shoot from the arc (a great shooter lives out there)
     // how often he has the ball (a big's playmaking counts for less than a guard's handles)
     usage: (g
       ? handles * .28 + v(b, 'finishing') * .27 + v(b, 'jumpShot') * .25 + v(b, 'bounce') * .1 + v(b, 'speed') * .1
@@ -219,21 +219,25 @@ export function simStreetball({ teams, seed = 'x', goal = 21, winBy = 2, cap = 2
     const inRead = (dfc === 'help' ? (off === 'pass' ? .1 : -.16) : dfc === 'sag' ? .1 : dfc === 'press' && off === 'post' ? .08 : 0)
       + (off === 'drive' ? .24 : off === 'post' ? .2 : off === 'pass' ? .03 : 0)
     const callFor = off === 'drive' ? (R.speed - d.R.speed) / 30 : off === 'post' ? (R.size - d.R.size) / 18 : off === 'pullup' ? (R.js - 6) / 40 : 0
-    // the make rate by shot: a jumper on his Jump Shot, a layup/drive/dunk on his
-    // Finishing, a post shot (hook or fade) half and half
-    const jumper = .28 + R.js * .036 + (shot === 'mid' ? .05 : 0)
-    const finish = .40 + R.fin * .03
-    const base = shot === 'arc' || shot === 'mid' ? jumper : shot === 'post' ? (jumper + finish) / 2 : finish
+    // How good a look it is, on one scale for every shot: a jumper on his Jump Shot, a
+    // layup/drive/dunk on his Finishing, a post shot (hook or fade) half and half.
+    // The curve climbs faster at the top, so a 10 or 11 is absurd. A 1-point shot
+    // (inside, the mid-range jumper, the post) goes in at that rate; a 2 from outside at
+    // a bit over half of it (guards .65, bigs .58: tuned so the same Jump Shot and the
+    // same Finishing win about as often; make it, take it rewards the surer shot).
+    const look = x => .36 + x * .019 + x * x * .0022
     const inside = !isArc && shot !== 'mid'
+    const q0 = shot === 'arc' || shot === 'mid' ? look(R.js) : shot === 'post' ? (look(R.js) + look(R.fin)) / 2 : look(R.fin)
     // his man's defense contests it: Perimeter D mostly jumpers, Interior D mostly the rim
     const dRate = (d.R.def - 5) / 6
-    const contest = inside ? dRate * (d.R.big ? .07 : .04) : dRate * (d.R.big ? .03 : .06)
+    const contest = inside ? dRate * (d.R.big ? .10 : .06) : dRate * (d.R.big ? .045 : .09)
     const edge = inside ? sizeEdge * (shot === 'post' ? .14 : .12) + (shot === 'post' ? 0 : speedEdge * .08) : sizeEdge * .04 + speedEdge * .03
     const iq = (R.iq - 5) / 6 * .015
     const handle = shot === 'drive' ? (R.handles - 5) / 6 * .03 : 0
-    const sp = base + edge - contest + iq + handle
-    const spArc = clamp(sp + (cs ? csBonus(R) : 0) + dime - Math.max(0, (d.R.lock - 1) * .08) + arcRead + (off === 'pullup' ? callFor : 0), .15, .8)
-    const spIn = clamp(sp + (cs ? csBonus(R) : passes.length ? .07 : 0) + dime + (shot === 'dunk' ? .06 : 0) - Math.max(0, (d.R.lock - 1) * .06) + inRead + (off === 'drive' || off === 'post' || off === 'pullup' ? callFor : 0), .2, .92)
+    const q = q0 + edge - contest + iq + handle
+    const lockPen = Math.max(0, (d.R.lock - 1) * .08)
+    const spArc = clamp((q + (cs ? csBonus(R) : 0) + dime - lockPen + arcRead * 1.6 + (off === 'pullup' ? callFor : 0)) * (R.big ? .58 : .65), .08, .6)
+    const spIn = clamp(q + (cs ? csBonus(R) : passes.length ? .07 : 0) + dime + (shot === 'dunk' ? .06 : 0) - lockPen * .75 + inRead + (off === 'drive' || off === 'post' || off === 'pullup' ? callFor : 0), .2, .95)
     stats[shooter.id].fga++
     if (isArc) stats[shooter.id].tpa++
     const common = { handler: handler.id, passes, defId: d.id, entry, shot, cs, call: off, dcall: dfc }
