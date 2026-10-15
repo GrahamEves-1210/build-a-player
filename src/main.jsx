@@ -21,6 +21,7 @@ if (/iPad/.test(navigator.userAgent) || (/Mac/.test(navigator.platform) && navig
   document.documentElement.classList.add('is-tablet')
 }
 import { createRoot } from 'react-dom/client'
+import UsernamePrompt from './components/UsernamePrompt'
 import { HelmetProvider } from 'react-helmet-async'
 import { Analytics } from '@vercel/analytics/react'
 import './index.css'
@@ -109,6 +110,7 @@ createRoot(document.getElementById('root')).render(
     <ErrorBoundary>
       <HelmetProvider>
         {isBucket ? <BucketApp /> : <App />}
+        <UsernamePrompt />
         {AppTabBar && <Suspense fallback={null}><AppTabBar /></Suspense>}
       </HelmetProvider>
       {!IS_APP && <Analytics />}
