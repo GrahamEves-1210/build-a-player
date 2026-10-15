@@ -151,7 +151,8 @@ export default function CustomRatingsModal({ isRB, isWR = false, isTE = false, i
                       return (
                         <div key={attr} className="cr-attr-row">
                           <span className={`cr-attr-label${isOverridden ? ' cr-attr-modified' : ''}`}>
-                            {attrMeta[attr]?.label || attrMeta[attr]?.shortLabel || attr}
+                            {/* a long label (Playmaking/Creativity) breaks after its slash, not mid-word */}
+                            {String(attrMeta[attr]?.label || attrMeta[attr]?.shortLabel || attr).replace(/\//g, '/\u200B')}
                           </span>
                           <input
                             type="range" min="0" max="11"

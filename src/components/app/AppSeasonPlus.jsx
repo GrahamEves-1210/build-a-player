@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { whenStill } from '../../lib/userScroll'
+import { useRailOn } from '../../lib/ads'
 import { createPortal } from 'react-dom'
 import { GAME_LINE, momentsOff, setMomentsOff } from '../../lib/seasonDirector'
 import { leaderBoard } from '../../lib/seasonFacts'
@@ -234,6 +235,7 @@ export function SeasonStory({ story, pos, sport, name }) {
 // needs to draw. `pace` ms per game; the reveal pauses at each stop.
 export function useDirectedReveal({ director, pace, onFinal }) {
   const [k, setK] = useState(0)               // games revealed
+  useRailOn(k)                                // a game played brings the bottom rail back (at most every 30 s)
   const [moment, setMoment] = useState(null)
   const [fresh, setFresh] = useState([])
   const [record, setRecord] = useState(null)

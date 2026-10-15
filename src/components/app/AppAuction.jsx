@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useRailOn } from '../../lib/ads'
 import { AUCTION_SIZE, AUCTION_MIN, AUCTION_FILL_SECS, BUDGET, SPIN_MS, RESET_SECS, openSlots, maxBid, minNext, canBidOn, lotEnd, callOf } from '../../lib/auction'
 import { COMPETE_REWARDS } from '../../lib/progress'
 import { valToGrade } from '../../utils/simulation'
@@ -86,6 +87,7 @@ export default function AppAuction({ au, posName, onHome, onPlayAgain }) {
   const { kit, match: m, st, me } = au
   const mine = me.vid
   const cheered = useRef(null)
+  useRailOn(st?.n ?? 0)   // each lot brings the bottom rail back
 
   // the gavel: a sound when a lot sells, a cheer at the end
   const lastSold = useRef(0)

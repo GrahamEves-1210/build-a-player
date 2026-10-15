@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useRailOn } from '../../lib/ads'
 import { LIVES, XP_CITY, XP_RUN, XP_ENDLESS, cityList, ratedPool, ensureStop, stopAt, isEndless, whereAmI, opponentOf, nextBestOf, saveRun, clearRun, hoopsDuel, footballDuel, prizeOptions, applyReward, afterDuel, pastRuns, logRun, STOPS, COINS_CITY, COINS_RUN, HEAT_MAX, PLAN_CUT, CASH_MULT, heatOf, onFire, firing, planFor, duelBuild } from '../../lib/takeover'
 import { W, H, OUTLINE_PATH, miles, heading } from '../../lib/usMap'
 import { playDelay } from '../../lib/hoops'
@@ -49,6 +50,7 @@ export default function AppTakeover({ sport, run, setRun, user, pools, attrMap, 
   const [stealPick, setStealPick] = useState([])     // ON FIRE: the two ratings being stolen
   const [duel, setDuel] = useState(null)            // { ...result, city, star, stop } — the stop it was played at
   const [chatOpen, setChatOpen] = useState(false)
+  useRailOn(`${screen}|${run?.taken?.length ?? 0}`)   // a new city or result brings the bottom rail back
   const me = useMemo(() => ({ vid: myVid(), name: user ? (getUsername(user) || 'Player') : 'Guest', uid: user?.id ?? null, cos: myCosmetics() }), [user?.id]) // eslint-disable-line
   useEffect(() => { if (run) saveRun(run) }, [run])
   // endless: the next stop is drawn when you get there

@@ -1,3 +1,5 @@
+import { useEffect, useRef } from 'react'
+
 // Playwire (Ramp) ads for the single-page site.
 //
 // Every page change goes through rampPage(): destroy every unit ('all'), wait
@@ -95,4 +97,17 @@ export function rampRail() {
       try { gone = slots.length ? window.ramp.destroyUnits(slots) : null } catch { gone = null }
       Promise.resolve(gone).catch(() => {}).then(() => { try { window.ramp.spaAddAds([{ type: 'bottom_rail' }]) } catch {} })
     }))
+}
+
+// The rail again when a mode moves on without a page change (the next screen of
+// a season, a Career game, a Takeover city, a Blacktop game, an auction lot):
+// whenever `key` changes after the first render. rampRail keeps it to once
+// every RAIL_GAP_MS, so a fast-changing key costs nothing extra.
+export function useRailOn(key) {
+  const seen = useRef(key)
+  useEffect(() => {
+    if (seen.current === key) return
+    seen.current = key
+    rampRail()
+  }, [key])
 }

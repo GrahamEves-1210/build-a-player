@@ -17041,3 +17041,56 @@ html.is-mac [id^="pw-oop-bottom_rail"] > * {
 .po-glog-res b { color: #4ade80; }
 .po-glog-row.is-l .po-glog-res b { color: #f87171; }
 .po-glog-line { grid-column: 1 / -1; font-size: 13px; font-weight: 600; color: var(--text, #fff); font-variant-numeric: tabular-nums; }
+
+/* ── Sandbox ratings editor: compact, and clear of the bottom ad rail ──────────
+   The rail (Playwire, 90-100px) covered the slot buttons and Save at the bottom.
+   The editor now sits up top, shrinks to the room above the rail, and everything
+   in it is tighter so the footer stays in view. */
+.cr-overlay { align-items: flex-start; padding: 10px 10px 12px; }
+html:has([id^="pw-oop"][data-pw-status="loaded"][style*="bottom"]):not(.ads-hidden) .cr-overlay { padding-bottom: 112px; }
+.cr-modal { height: auto; max-height: 100%; }
+@media (min-width: 769px) {
+  .cr-overlay { padding-top: 24px; }
+  .cr-modal { transform: none; margin-bottom: 0; }
+}
+.cr-header { padding: 10px 14px 8px; }
+.cr-search-wrap { padding: 7px 12px; }
+.cr-search { padding: 6px 10px; }
+.cr-row-header { padding: 9px 12px; }
+.cr-attrs { padding: 6px 12px 10px; }
+.cr-attr-row { margin-bottom: 3px; gap: 8px; }
+.cr-slider::-webkit-slider-thumb { width: 18px; height: 18px; }
+.cr-slider::-moz-range-thumb { width: 18px; height: 18px; }
+.cr-quick-btns { margin-top: 6px; }
+.cr-quick-btn, .cr-add-build-btn { padding: 6px 10px; }
+.cr-footer { padding: 8px 12px; gap: 6px; }
+.cr-slot-label { margin-bottom: 0; }
+.cr-slot-picker { gap: 4px; }
+.cr-slot-btn { padding: 7px 6px; }
+.cr-slot-cancel, .cr-add-all-btn { padding: 7px 12px; }
+.cr-save, .cr-reset-all { padding: 7px 12px; }
+/* the new web UI measures the rail itself (--web-rail): the editor ends above it */
+html.app-look .cr-overlay { padding-bottom: calc(12px + var(--web-rail, 0px)) !important; }
+
+/* ── Sandbox ratings editor on a phone: one step tighter ─────────────────────
+   Current / All-Time and the search share a row, the title and player rows are
+   shorter, and the attribute rows sit closer, so more of the list is in view */
+@media (max-width: 768px) {
+  .cr-overlay { padding: 8px 8px 10px; }
+  .cr-header { padding: 8px 12px 6px; }
+  .cr-title { font-size: 13px; }
+  .cr-close { font-size: 20px; padding: 0 4px; }
+  .cr-search-wrap { display: flex; align-items: center; gap: 6px; padding: 6px 10px; }
+  .cr-era { flex: 0 0 auto; margin: 0; gap: 4px; }
+  .cr-era-btn { flex: 0 0 auto; padding: 6px 9px; font-size: 12px; }
+  .cr-search { flex: 1; min-width: 0; padding: 6px 10px; }
+  .cr-row-header { padding: 7px 12px; }
+  .cr-row-name { font-size: 12.5px; }
+  .cr-row-team { font-size: 10px; padding: 1px 6px; }
+  .cr-attrs { padding: 4px 12px 8px; }
+  .cr-attr-row { margin-bottom: 1px; gap: 8px; min-height: 22px; }
+  .cr-attr-label { width: 82px; font-size: 9.5px; letter-spacing: .3px; line-height: 1.1; overflow-wrap: anywhere; }
+  .cr-attr-val { font-size: 12px; width: 24px; }
+  .cr-quick-btns { margin-top: 4px; gap: 5px; }
+  .cr-footer { padding: 6px 10px; }
+}

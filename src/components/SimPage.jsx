@@ -30,7 +30,7 @@ const APP_SIM = IS_APP || APP_LOOK
 import { WeekStrip, Bracket, RingCeremony, SeasonRewards } from './app/AppSeason'
 import { createDirector } from '../lib/seasonDirector'
 import { MomentCard, NowCard, Pulse, Wire, Milestones, RecordOverlay, Leaders, SeasonStory, useDirectedReveal, MomentsToggle } from './app/AppSeasonPlus'
-import { rampAdd } from '../lib/ads'
+import { rampAdd, useRailOn } from '../lib/ads'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -1533,6 +1533,7 @@ function ProgressDots({ screen, total }) {
 
 export default function SimPage({ result: baseResult, build, types = TYPES, onBack, onReset, replay = false, adsDisabled = false, isRB = false, isWR = false, isTE = false, isDB = false, isOL = false, onMVPWon, simFn = null, onFinal = null, pool = null, userName = 'Guest', isSalaryMode = false }) {
   const [screen, setScreen] = useState(replay ? 3 : 0)
+  useRailOn(screen)   // each screen of the season brings the bottom rail back
   const [mvpResult, setMvpResult] = useState(null)
   const [mvpWon, setMvpWon] = useState(false)
   const [mvpContinuation, setMvpContinuation] = useState(null)

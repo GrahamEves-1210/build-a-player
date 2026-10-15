@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useRailOn } from '../../lib/ads'
 import { createPortal } from 'react-dom'
 import {
   POS_LABEL, POS_NAME, POS_ATTR, OFFENSE_POS, pastCareers, saveCareer, clearCareer, stockOf, answerInterview, setupInterviews, runDraft,
@@ -455,6 +456,7 @@ function Lineup({ c }) {
 // ── Hub ─────────────────────────────────────────────────────────────────────
 export default function AppCareer({ career: c, setCareer, user, onNewBuild, onExit }) {
   const [tab, setTab] = useState('season')
+  useRailOn(`${c.phase}|${c.year}|${tab}`)   // a new phase, season or tab brings the bottom rail back
   const [recHit, setRecHit] = useState(null)       // an all-time record just fell
   const [honor, setHonor] = useState(null)         // an award or a title, just won
   const D = useRef(null)

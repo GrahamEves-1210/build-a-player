@@ -19,7 +19,7 @@ const APP_SIM = IS_APP || APP_LOOK
 import { RingCeremony, SeasonRewards } from './app/AppSeason'
 import { createDirector } from '../lib/seasonDirector'
 import { MomentCard, NowCard, Pulse, Wire, Milestones, RecordOverlay, Leaders, SeasonStory, StretchCard, useDirectedReveal, MomentsToggle } from './app/AppSeasonPlus'
-import { rampAdd } from '../lib/ads'
+import { rampAdd, useRailOn } from '../lib/ads'
 
 function gradeColor(val0) {
   const val = Math.round(val0 ?? 0)   // rounded like the letter (valToGrade), so a B- is always green
@@ -2723,6 +2723,7 @@ function TeamStarters({ teamShort, teamColor, isBig, iqPhoto, isAllTime = false,
 // ─── Main BucketSimPage ───────────────────────────────────────────────────────
 export default function BucketSimPage({ result: baseResult, build, types, position, onBack, onReset, adsDisabled = false, isSalaryMode = false, initialScreen = 0, gameMode = null, simFn = null, onFinal = null, pool = null, userName = 'Guest' }) {
   const [screen, setScreen] = useState(initialScreen)
+  useRailOn(screen)   // each screen of the season brings the bottom rail back
   // App: the season is steered by a director; `result` is the live version of it
   const [live, setLive] = useState(baseResult)
   const result = live
