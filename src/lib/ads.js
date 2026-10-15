@@ -38,8 +38,14 @@ const railSlots = () => Object.entries(window.ramp?.settings?.slots ?? {})
 export const RAIL_GAP_MS = 30000
 let lastRail = 0
 
+// Phones skip the corner video: there it sat on top of half the bottom rail (an
+// ad covering an ad), so a phone runs the rail alone. Desktop keeps it.
+const onPhone = () => !!window.matchMedia?.('(max-width: 768px)').matches
+const forScreen = ads => (onPhone() ? ads.filter(a => a.type !== 'corner_ad_video') : ads)
+
 // ads: units to add after the destroy ([] = none)
-export function rampPage({ ads = [], path } = {}) {
+export function rampPage({ ads: wanted = [], path } = {}) {
+  const ads = forScreen(wanted)
   ready = new Promise(resolve => {
     queue(() => {
       let destroyed
