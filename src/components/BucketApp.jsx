@@ -2122,7 +2122,8 @@ export default function BucketApp() {
           types={activeTypes}
           isPlus={isSubscribed}
           isBucket={true}
-          onBack={() => { window.history.back() }}
+          // the new look: back always means Home (history could land anywhere)
+          onBack={() => { if (IS_APP || APP_LOOK) { window.history.pushState({}, '', '/bucket'); setPage('splash') } else window.history.back() }}
           onSignOut={() => { setUser(null); window.location.href = '/bucket' }}
           onAdsDisabled={() => { setAdsDisabled(true); setIsSubscribed(true); enableAdFreeMode() }}
           onThemeChange={(themeId) => {

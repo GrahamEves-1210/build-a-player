@@ -125,19 +125,24 @@ export default function AppTabBar() {
   const active = screen ?? (state.page in TAB_FOR_PAGE ? TAB_FOR_PAGE[state.page] : 'play')
   // in a live game every tab is a way out: it asks first (lib/liveLock.js)
   const go = to => () => guardLeave(() => { setMenuOpen(false); setScreen(null); nav(to) })
-  const open = which => () => guardLeave(() => { setMenuOpen(false); setScreen(s => (s === which ? null : which)) })
+  // a tab for the screen that's already open does nothing (it used to close it and
+  // drop you on whatever page was underneath, often the profile)
+  const open = which => () => { if (screen === which) return; guardLeave(() => { setMenuOpen(false); setScreen(which) }) }
+  // Daily, Shop and Cards: the X always goes Home (not back to whatever page was under
+  // it); the profile's own screens (achievements, locker…) close back to the profile
+  const closeHome = () => { setScreen(null); nav('home') }
 
   return (
     <>
       {screen && (
         <Suspense fallback={<div className="ag-screen" />}>
-          {screen === 'daily' ? <AppDaily sport={state.sport} onClose={() => setScreen(null)} />
-            : screen === 'shop' ? <AppShop key={shopTab} tab={shopTab} onClose={() => setScreen(null)} />
+          {screen === 'daily' ? <AppDaily sport={state.sport} onClose={closeHome} />
+            : screen === 'shop' ? <AppShop key={shopTab} tab={shopTab} onClose={closeHome} />
             : screen === 'locker' ? <AppLocker onClose={() => setScreen(null)} />
             : screen === 'soundlab' ? <AppSoundLab onClose={() => setScreen(null)} />
             : screen === 'online' ? <AppOnline sport={state.sport} onClose={() => setScreen(null)} />
             : screen === 'achievements' ? <AppAchievements onClose={() => setScreen(null)} />
-            : <AppCards sport={state.sport} onClose={() => setScreen(null)} />}
+            : <AppCards sport={state.sport} onClose={closeHome} />}
         </Suspense>
       )}
       {!hidden && (
@@ -149,7 +154,7 @@ export default function AppTabBar() {
             onTap={inMode => (inMode || state.page !== 'splash' ? go('home')() : guardLeave(() => { setMenuOpen(false); setScreen(null); nav('play') }))} />
           {/* website: cards are saved to an account */}
           <Tab label="CARDS" Icon={IconCards} active={active === 'cards'} onClick={cardsOpen() ? open('cards') : () => guardLeave(() => { setMenuOpen(false); setAuthOpen(true) })} />
-          <Tab label="PROFILE" Icon={IconProfile} active={active === 'profile' || active === 'achievements' || active === 'locker'} onClick={go('profile')} badge={claimable} />
+          <Tab label="PROFILE" Icon={IconProfile} active={active === 'profile' || active === 'achievements' || active === 'locker'} onClick={state.page === 'profile' && !screen ? undefined : go('profile')} badge={claimable} />
         </nav>
       )}
       {menuOpen && <AppMenu sport={state.sport} onClose={() => setMenuOpen(false)} />}

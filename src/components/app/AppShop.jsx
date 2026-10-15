@@ -152,7 +152,7 @@ function DiscordCoins({ p }) {
   const act = async () => {
     if (!p.signedIn) { signIn(); return }
     if (!linked) { setBusy(true); const { error } = await connectDiscord(); if (error) setBusy(false); return }
-    if (claimDiscordCoins()) haptic('success')   // the coins make their own sound
+    if (claimDiscordCoins()) { sfx('coins'); haptic('success') }   // the payout is quiet: the coin drop here
   }
   return (
     <div className="sh-section">
@@ -296,7 +296,7 @@ export default function AppShop({ onClose, tab: initialTab = 'featured' }) {
   const claim = () => {
     if (!p.freeReady) return
     const n = claimFreeCoins()
-    if (n) { sfx('coin'); haptic('success') }
+    if (n) { sfx('coins'); haptic('success') }
   }
   const pickDefault = slot => { equip(slot, null); sfx('tap') }
   const grid = (list, cls = '') => (

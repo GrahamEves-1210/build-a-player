@@ -17,7 +17,7 @@ export default function AppToasts() {
   useEffect(() => {
     const push = t => {
       if (t.kind === 'streak' || t.kind === 'mission') sfx('chime')
-      else if (t.kind === 'coins') sfx('coin')
+      else if (t.kind === 'coins') sfx('coins')   // the coin drop, like every coin claim
       const id = nextId++
       setItems(list => [...list.slice(-2), { id, ...t }])
       timers.current.set(id, setTimeout(() => setItems(list => list.filter(x => x.id !== id)), t.ms ?? 2600))

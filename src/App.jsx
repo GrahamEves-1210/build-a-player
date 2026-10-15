@@ -1805,7 +1805,8 @@ export default function App() {
             if (themeId === 'default') document.documentElement.removeAttribute('data-theme')
             else document.documentElement.setAttribute('data-theme', themeId)
           }}
-          onBack={() => { window.history.back() }}
+          // the new look: back always means Home (history could land anywhere)
+          onBack={() => { if (IS_APP || APP_LOOK) { window.history.pushState({}, '', '/'); setPage('splash') } else window.history.back() }}
           onSignOut={() => { setUser(null); window.location.href = '/' }}
           onAdsDisabled={() => { setAdsDisabled(true); setIsSubscribed(true); enableAdFreeMode() }}
           onOpenCustomModal={() => setShowCustomModal(true)}

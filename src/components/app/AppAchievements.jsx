@@ -20,13 +20,13 @@ export default function AppAchievements({ onClose }) {
   const claim = a => {
     if (!p.signedIn) { signIn(); return }
     const r = claimAch(a.id)
-    if (r) { sfx('claim'); haptic('success') }
+    if (r) { sfx('coins'); haptic('success') }   // achievements pay coins: the coin drop
   }
   const claimAll = () => {
     if (!p.signedIn) { signIn(); return }
     let any = false
     for (const a of ACHIEVEMENTS) if (p.ach?.[a.id] && !p.achClaimed?.[a.id]) { if (claimAch(a.id)) any = true }
-    if (any) { sfx('claim'); haptic('success') }
+    if (any) { sfx('coins'); haptic('success') }
   }
   // everything unlocked and not yet collected: the Claim All bar at the top
   const waiting = ACHIEVEMENTS.filter(a => p.ach?.[a.id] && !p.achClaimed?.[a.id])

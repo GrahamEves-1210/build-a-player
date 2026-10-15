@@ -38,7 +38,7 @@ function Freeze({ p }) {
 
 function Streak({ p }) {
   const st = p.streak
-  const claim = days => { if (!p.signedIn) { window.dispatchEvent(new CustomEvent('bap:auth')); return } if (claimStreak(days)) { sfx('claim'); haptic('success') } }
+  const claim = days => { if (!p.signedIn) { window.dispatchEvent(new CustomEvent('bap:auth')); return } if (claimStreak(days)) { sfx('coins'); haptic('success') } }   // streak rewards pay coins
   return (
     <section className="ag-card ag-streak ag-pop" style={{ '--d': '40ms' }}>
       <div className="ag-streak-head">
@@ -125,7 +125,7 @@ function Challenge({ p, sport }) {
 
 function Missions({ p }) {
   const signIn = () => window.dispatchEvent(new CustomEvent('bap:auth'))
-  const claim = id => { if (!p.signedIn) { signIn(); return } if (claimMission(id)) { sfx('claim'); haptic('success') } }
+  const claim = id => { if (!p.signedIn) { signIn(); return } if (claimMission(id)) { sfx('coins'); haptic('success') } }   // missions pay coins
   return (
     <section className="ag-card ag-missions ag-pop" style={{ '--d': '140ms' }}>
       <div className="ag-card-head"><span className="ag-eyebrow">TODAY'S MISSIONS</span></div>
