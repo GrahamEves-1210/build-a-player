@@ -62,15 +62,15 @@ function rate(p) {
   const role = p.role || 'balanced'
   const handles = g ? v(b, 'handles') : v(b, 'playmaking')
   const pass = g ? (v(b, 'basketballIQ') + handles) / 2 : (v(b, 'playmaking') + v(b, 'basketballIQ')) / 2
-  const off = g
-    ? v(b, 'finishing') * .24 + handles * .22 + v(b, 'speed') * .18 + v(b, 'jumpShot') * .16 + v(b, 'bounce') * .12 + v(b, 'basketballIQ') * .08
-    : v(b, 'finishing') * .28 + v(b, 'size') * .20 + v(b, 'playmaking') * .18 + v(b, 'bounce') * .16 + v(b, 'jumpShot') * .10 + v(b, 'speed') * .04 + v(b, 'interiorDefense') * .02 + v(b, 'basketballIQ') * .02
   const def = g ? v(b, 'perimeterDefense') : v(b, 'interiorDefense')
   return {
-    off, pass,
-    sp:    clamp((off - 1) / 10 * .38 + .33, .30, .72),                        // base make rate
+    pass, def, handles,
     arc:   clamp((v(b, 'jumpShot') - 3) / 8 * .44 + .08, .03, .52),            // how often they shoot from the arc
-    usage: (handles * .3 + v(b, 'finishing') * .3 + v(b, 'jumpShot') * .2 + v(b, 'bounce') * .1 + v(b, 'speed') * .1) * (role === 'score' ? 1.35 : role === 'play' ? .8 : role === 'lock' ? .85 : 1),
+    // how often he has the ball (a big's playmaking counts for less than a guard's handles)
+    usage: (g
+      ? handles * .28 + v(b, 'finishing') * .27 + v(b, 'jumpShot') * .25 + v(b, 'bounce') * .1 + v(b, 'speed') * .1
+      : handles * .15 + v(b, 'finishing') * .35 + v(b, 'size') * .15 + v(b, 'jumpShot') * .15 + v(b, 'bounce') * .1 + v(b, 'speed') * .1)
+      * (role === 'score' ? 1.35 : role === 'play' ? .8 : role === 'lock' ? .85 : 1),
     passProb: clamp(.16 + (pass - 4) / 7 * .26 + (role === 'play' ? .18 : role === 'score' ? -.08 : 0), .08, .62),
     stl:   g ? clamp(def / 11 * .07, 0, .07) : clamp((v(b, 'speed') + def) / 22 * .05, 0, .05),
     blk:   clamp((v(b, 'size') + def) / 22 * .10, 0, .14),
@@ -152,7 +152,7 @@ export function simStreetball({ teams, seed = 'x', goal = 21, winBy = 2, cap = 2
   while (!over() && guard++ < 400) {
     const att = sides[poss], def = sides[1 - poss]
     // this possession's calls (only ones that make sense for the side)
-    // who has it: picked before anyone calls anything (the playstyle decides how
+    // who has it: picked before anyone calls anything (the role decides how
     // often: a scorer gets it more), so the check-up can say who's making the call
     const handler = weightedPick(r, att, p => p.R.usage)
     // the ball handler calls the play, the man guarding him calls the defense
@@ -170,7 +170,9 @@ export function simStreetball({ teams, seed = 'x', goal = 21, winBy = 2, cap = 2
     // steal on the catch / first dribble
     // a press jumps drives and passing lanes; sagging off gives up the ball-pressure steals
     const stlCall = dfc === 'press' ? (off === 'drive' ? 2.4 : off === 'pass' ? 1.7 : 1.3) : dfc === 'sag' ? .6 : 1
-    if (r() < d.R.stl * d.R.lock * (att.length > 1 ? .9 : 1) * stlCall) {
+    // (good handles protect it: up to about a third fewer at the top)
+    const secure = clamp(1 - (handler.R.handles - 5) / 18, .65, 1.3)
+    if (r() < d.R.stl * d.R.lock * (att.length > 1 ? .9 : 1) * stlCall * secure) {
       stats[d.id].stl++; stats[handler.id].tov++
       push('steal', { team: 1 - poss, pid: d.id, pid2: handler.id, handler: handler.id, entry, call: off, dcall: dfc, text: say(r, off ? `steal_${off}` : 'steal', { n: handler.name, d: d.name }) })
       carrier = d.id
@@ -197,7 +199,9 @@ export function simStreetball({ teams, seed = 'x', goal = 21, winBy = 2, cap = 2
     // a playmaker's pass sets up a better look
     const dime = assist && assist.role === 'play' ? .04 : 0
     const R = shooter.R
-    const sizeEdge = (R.size - d.R.size) / 22, speedEdge = (R.speed - d.R.speed) / 22
+    // the matchup: taller and quicker than his man helps, shorter and slower hurts
+    // (a taller defender contests and walls off the rim, a quicker one closes out and cuts off drives)
+    const sizeEdge = (R.size - d.R.size) / 11, speedEdge = (R.speed - d.R.speed) / 11
     // a called pass is played the way the receiver plays off the catch (catchPlay):
     // a catch and shoot (from the arc, or the elbow), or a catch and drive to the rim
     const caught = passTo ? catchPlay(shooter, r) : null
@@ -215,15 +219,28 @@ export function simStreetball({ teams, seed = 'x', goal = 21, winBy = 2, cap = 2
     const inRead = (dfc === 'help' ? (off === 'pass' ? .1 : -.16) : dfc === 'sag' ? .1 : dfc === 'press' && off === 'post' ? .08 : 0)
       + (off === 'drive' ? .24 : off === 'post' ? .2 : off === 'pass' ? .03 : 0)
     const callFor = off === 'drive' ? (R.speed - d.R.speed) / 30 : off === 'post' ? (R.size - d.R.size) / 18 : off === 'pullup' ? (R.js - 6) / 40 : 0
-    const spArc = clamp(R.sp + (cs ? csBonus(R) : 0) + dime - Math.max(0, (d.R.lock - 1) * .08) + arcRead + (off === 'pullup' ? callFor : 0), .2, .82)
-    const spIn = clamp(R.sp + Math.max(0, sizeEdge) * (.38 + Math.max(0, sizeEdge) * .7) + Math.max(0, speedEdge) * .18 + (cs ? csBonus(R) : passes.length ? .07 : 0) + dime + (shot === 'dunk' ? .08 : 0) - Math.max(0, (d.R.lock - 1) * .06) + inRead + (off === 'drive' || off === 'post' || off === 'pullup' ? callFor : 0), .2, .95)
+    // the make rate by shot: a jumper on his Jump Shot, a layup/drive/dunk on his
+    // Finishing, a post shot (hook or fade) half and half
+    const jumper = .28 + R.js * .036 + (shot === 'mid' ? .05 : 0)
+    const finish = .40 + R.fin * .03
+    const base = shot === 'arc' || shot === 'mid' ? jumper : shot === 'post' ? (jumper + finish) / 2 : finish
+    const inside = !isArc && shot !== 'mid'
+    // his man's defense contests it: Perimeter D mostly jumpers, Interior D mostly the rim
+    const dRate = (d.R.def - 5) / 6
+    const contest = inside ? dRate * (d.R.big ? .07 : .04) : dRate * (d.R.big ? .03 : .06)
+    const edge = inside ? sizeEdge * (shot === 'post' ? .14 : .12) + (shot === 'post' ? 0 : speedEdge * .08) : sizeEdge * .04 + speedEdge * .03
+    const iq = (R.iq - 5) / 6 * .015
+    const handle = shot === 'drive' ? (R.handles - 5) / 6 * .03 : 0
+    const sp = base + edge - contest + iq + handle
+    const spArc = clamp(sp + (cs ? csBonus(R) : 0) + dime - Math.max(0, (d.R.lock - 1) * .08) + arcRead + (off === 'pullup' ? callFor : 0), .15, .8)
+    const spIn = clamp(sp + (cs ? csBonus(R) : passes.length ? .07 : 0) + dime + (shot === 'dunk' ? .06 : 0) - Math.max(0, (d.R.lock - 1) * .06) + inRead + (off === 'drive' || off === 'post' || off === 'pullup' ? callFor : 0), .2, .92)
     stats[shooter.id].fga++
     if (isArc) stats[shooter.id].tpa++
     const common = { handler: handler.id, passes, defId: d.id, entry, shot, cs, call: off, dcall: dfc }
 
     // block
     // (a catch-and-shoot is a quick release: half as easy to get to)
-    if (!isArc && r() < d.R.blk * (1 + Math.max(0, -sizeEdge) * 1.5) * (shot === 'dunk' ? .7 : 1) * (cs ? .5 : 1) * (dfc === 'help' && off !== 'pass' ? 1.6 : 1)) {
+    if (!isArc && r() < d.R.blk * (1 + Math.max(0, -sizeEdge / 2) * 1.5) * (shot === 'dunk' ? .7 : 1) * (cs ? .5 : 1) * (dfc === 'help' && off !== 'pass' ? 1.6 : 1)) {
       stats[d.id].blk++
       push('block', { team: 1 - poss, pid: d.id, pid2: shooter.id, ...common, text: say(r, 'block', { n: shooter.name, d: d.name }), big: true })
       // the block goes out or is scooped — 50/50 who ends up with it

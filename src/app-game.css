@@ -4977,3 +4977,9 @@ html:is(.is-app, .app-look) .sil-wrap--app-bkt .cz-player-drop { gap: 5px; }
 .lg-ico--sm::before { font-size: 8px; }
 .gain { white-space: nowrap; }
 .cr-legacy-extras { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 6px 0 0; font-size: 12px; color: var(--ag-muted); }
+
+/* The spin drop-down on the website: the build page has no bottom bar there, so the
+   panel can hang down to just above the ad rail instead of scrolling inside */
+html.app-look:not(.is-app):not(.ag-page) .game-layout.ag-drop .drop-sheet { max-height: calc(100% - var(--web-rail, 0px) - 12px); }
+/* More: an odd last tile takes the full row */
+.ag-tiles > :last-child:nth-child(odd) { grid-column: 1 / -1; }

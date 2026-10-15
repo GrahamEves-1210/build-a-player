@@ -7,7 +7,7 @@ import { IS_APP } from '../../lib/platform'
 import { openCheckout } from '../../lib/webCheckout'
 import { isPro } from '../../lib/progress'
 import { railPreviewOn, setRailPreview } from '../../lib/fakeRail'
-import { IconQuestion, IconInfo, IconChat, IconDiscord, IconX, IconClose, IconShield, IconDoc, IconPodium, IconPlay, IconCrown, IconProfile, IconHome, IconGear } from './icons'
+import { IconQuestion, IconInfo, IconChat, IconDiscord, IconX, IconClose, IconShield, IconDoc, IconPodium, IconPlay, IconCrown, IconHome, IconGear } from './icons'
 import { useProgress } from '../../lib/progress'
 import AppSettings from './AppSettings'
 import { guardLeave } from '../../lib/liveLock'
@@ -130,15 +130,14 @@ export default function AppMenu({ sport, onClose }) {
         ) : (
           <>
             <div className="ag-tiles">
-              {/* website: the dock isn't on the game pages, so Home and Profile live here too */}
+              {/* website: the dock isn't on the game pages, so Home lives here too (Sign in and
+                  BAP Pro are on Home's player card and the profile, not here: too many buttons) */}
               {!IS_APP && <Tile tone="mint" Icon={IconHome} title="HOME" sub="Modes and more" onClick={go(() => nav('home'))} delay="0ms" />}
-              {!IS_APP && <Tile tone="gold" Icon={IconProfile} title={signedIn ? 'PROFILE' : 'SIGN IN'} sub={signedIn ? 'Career, shop, locker' : 'Save your career'} onClick={go(() => nav('profile'))} delay="0ms" />}
               <Tile tone="mint" Icon={IconQuestion} title="HOW TO PLAY" sub="4 quick steps" onClick={() => setView('howto')} delay="0ms" />
               <Tile tone="gold" Icon={IconPodium} title="LEADERBOARDS" sub="Top builds" onClick={go(() => nav('leaderboard'))} delay="30ms" />
               <Tile tone="discord" Icon={IconDiscord} title="DISCORD" sub="Join the community" onClick={goOut(() => window.open('https://discord.gg/zdZBu2VjUD', '_blank'))} delay="60ms" />
               <Tile tone="ink" Icon={IconX} title="FOLLOW" sub="@Build_A_Player" onClick={goOut(() => window.open('https://x.com/Build_A_Player', '_blank'))} delay="90ms" />
               <Tile tone="purple" Icon={IconChat} title="FEEDBACK" sub="Ideas & bugs" onClick={openFeedback} delay="120ms" />
-              <Tile tone="gold" Icon={IconCrown} title="BAP PRO" sub={isPro() ? 'Active · Pro Vault' : 'Vault, coins, no ads'} onClick={() => setView('pro')} delay="150ms" />
             </div>
             <button className={`ag-row-btn${muted ? ' ag-sound--off' : ''}`} onClick={() => { setMuted(!muted); setMutedState(!muted) }}>
               <span className="ag-sound-lbl">SOUND</span>
