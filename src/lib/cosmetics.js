@@ -178,24 +178,25 @@ const WS = [
 // so the players' spots line up on each). img: the court; thumb: the shop card.
 const ct = (id, name, rarity, price) => it('court', id, name, rarity, price, { img: `/courts/${id}.webp`, thumb: `/courts/thumbs/${id}.webp` })
 const CT = [
-  // cities, then seasons, then the rest (the free Blacktop leads the rest)
-  ct('ct-overcast', 'NYC', 0, 2500),
-  ct('ct-midnight', 'London', 0, 2500),
-  ct('ct-autumn', 'Chicago', 1, 5000),
-  ct('ct-nightrain', 'Tokyo', 1, 5000),
-  ct('ct-redzone', 'Shanghai', 1, 5000),
-  ct('ct-harbor', 'Pier', 1, 5000),
+  // cities (Epic), then seasons (Rare), then the rest (Legendary; the free Blacktop leads them):
+  // one rarity a group, so the colours group them in the shop
+  ct('ct-overcast', 'NYC', 2, 9000),
+  ct('ct-midnight', 'London', 2, 9000),
+  ct('ct-autumn', 'Chicago', 2, 9000),
+  ct('ct-nightrain', 'Tokyo', 2, 9000),
+  ct('ct-redzone', 'Shanghai', 2, 9000),
+  ct('ct-harbor', 'Pier', 2, 9000),
   ct('ct-carnival', 'Rio', 2, 9000),
   ct('ct-goldenhour', 'Honolulu', 2, 9000),
   ct('ct-tropic', 'Miami', 2, 9000),
   ct('ct-oldstone', 'Olympus', 2, 9000),
-  ct('ct-retro', 'Los Angeles', 3, 16000),
-  ct('ct-alley', 'Spring', 0, 2500),
-  ct('ct-ivy', 'Summer', 0, 2500),
+  ct('ct-retro', 'Los Angeles', 2, 9000),
+  ct('ct-alley', 'Spring', 1, 5000),
+  ct('ct-ivy', 'Summer', 1, 5000),
   ct('ct-snow', 'Winter', 1, 5000),
   it('court', 'ct-blacktop', 'Blacktop', 0, 0, { free: true, img: '/court-blacktop1.webp', thumb: '/courts/thumbs/ct-blacktop.webp' }),
-  ct('ct-warehouse', 'Warehouse', 1, 5000),
-  ct('ct-checker', 'Checkerboard', 2, 9000),
+  ct('ct-warehouse', 'Warehouse', 3, 16000),
+  ct('ct-checker', 'Checkerboard', 3, 16000),
   ct('ct-neon', 'Neon Circuit', 3, 16000),
   ct('ct-marble', 'Emerald Marble', 3, 16000),
   ct('ct-space', 'Deep Space', 3, 16000),
