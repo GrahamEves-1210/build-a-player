@@ -17043,3 +17043,8 @@ html:has([id^="pw-oop"][data-pw-status="loaded"][style*="bottom"]):not(.ads-hidd
 .un-sub { margin: -4px 0 16px; font-size: 13px; line-height: 1.45; color: rgba(255,255,255,.6); }
 .un-pick { display: block; width: 100%; margin-top: 10px; padding: 10px; background: none; border: 0; color: rgba(255,255,255,.55); font: inherit; font-size: 13px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 .un-pick:disabled { opacity: .5; }
+
+/* Ratings editor search: a comfortable height to tap (the tightening above made it thin);
+   the Current / All-Time buttons beside it match it on a phone */
+.cr-search { min-height: 40px; padding: 9px 12px; }
+@media (max-width: 768px) { .cr-search { min-height: 38px; padding: 8px 12px; } .cr-era-btn { min-height: 38px; } }
