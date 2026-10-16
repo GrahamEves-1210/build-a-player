@@ -342,6 +342,8 @@ function Comp({ c }) {
   const top = list[0]
   if (!top) return null
   const era = x => (x.era === 'current' ? `TODAY · ${x.team}` : `ALL-TIME${x.years ? ` · ${x.years}` : ''}`)
+  // the columns go by last name (Jr., III and the like skipped): your player's, then the comp's
+  const last = n => { const w = String(n || '').trim().split(/\s+/).filter(x => !/^(jr|sr|ii|iii|iv|v)\.?$/i.test(x)); return (w[w.length - 1] || n || '').toUpperCase() }
   return (
     <div className="ag-card cr-comp ag-pop">
       <div className="ag-card-head"><span className="ag-eyebrow">PLAYER COMP · {c.name.toUpperCase()}</span><span className="cr-comp-pct">{top.match}% MATCH</span></div>
@@ -350,7 +352,7 @@ function Comp({ c }) {
         <span className="cr-comp-name"><b>{top.name}</b><small>{era(top)}</small></span>
       </div>
       <div className={`cr-comp-grid${c.types.length % 2 ? ' is-list' : ''}`}>
-        {(c.types.length % 2 ? [0] : [0, 1]).map(i => <span key={`h${i}`} className="cr-comp-row cr-comp-row--head"><small /><em className="is-you">YOU</em><em>PRO</em></span>)}
+        {(c.types.length % 2 ? [0] : [0, 1]).map(i => <span key={`h${i}`} className="cr-comp-row cr-comp-row--head"><small /><em className={`is-you${last(c.name).length > 6 ? ' is-long' : ''}`}>{last(c.name)}</em><em className={last(top.name).length > 6 ? 'is-long' : ''}>{last(top.name)}</em></span>)}
         {c.types.map(t => {
           const mine = c.build[t]?.val ?? 0, his = top.attrs[t]
           return (
