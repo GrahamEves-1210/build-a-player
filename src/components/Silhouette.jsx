@@ -52,7 +52,7 @@ const WR_FIGURE_SCALE_MOBILE = 1.005
 const BUCKET_FIGURE_SCALE = 1.10
 // App, phone, basketball: the T-pose fills the width and the cards stack down
 // both sides below the arms (index.css / app-game.css size the cards to match)
-const APP_BKT = { scale: 1.0, cardIn: 4, cardW: 100, top: 0.42, bottom: 0.95, stub: 8 }   // sized like the football figure's
+const APP_BKT = { scale: 0.86, cardIn: 4, cardW: 100, top: 0.36, bottom: 0.9, stub: 8, noDotRow: 0.13 }   // sized like the football figure's; Size (no dot) sits top right, above the hand
 const DB_FIGURE_SCALE = 0.86
 
 // QB anchor positions
@@ -446,7 +446,10 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
     const arm = z => (z.side === 'left' ? z.ax < 300 : z.ax > BUCKET_FIG_W - 300)
     for (const side of ['left', 'right']) {
       const out = z => (side === 'left' ? z.ax : -z.ax)   // smaller = further out
-      const list = zones.filter(z => z.side === side && types.includes(z.type))
+      // a trait with no dot (Size: the height and wingspan read off the whole body) takes
+      // its own spot up top, like the live site; the rest stack down the side
+      zones.filter(z => z.side === side && types.includes(z.type) && z.noDot).forEach(z => { rows[z.type] = APP_BKT.noDotRow })
+      const list = zones.filter(z => z.side === side && types.includes(z.type) && !z.noDot)
         .sort((a, b) => (arm(a) !== arm(b) ? (arm(a) ? -1 : 1) : arm(a) ? out(a) - out(b) : a.ay - b.ay))
       list.forEach((z, i) => { rows[z.type] = APP_BKT.top + (APP_BKT.bottom - APP_BKT.top) * (list.length > 1 ? i / (list.length - 1) : 0.5) })
       if (list[0] && arm(list[0]) && !list[0].noDot) top.add(list[0].type)
@@ -673,7 +676,9 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
             <svg
               viewBox="42.5 -35.2 850.9 815.5"
               preserveAspectRatio="xMidYMid meet"
-              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', overflow: 'visible' }}
+              // drawn for the website's figure (scaled BUCKET_FIGURE_SCALE); the app's phone
+              // figure is scaled differently, so the brackets follow it (like the jersey overlay)
+              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', overflow: 'visible', ...(bucketScale !== BUCKET_FIGURE_SCALE ? { transform: `scale(${bucketScale / BUCKET_FIGURE_SCALE})`, transformOrigin: 'center center' } : {}) }}
               aria-hidden="true"
             >
               {/* HEIGHT: right-side vertical bracket */}
