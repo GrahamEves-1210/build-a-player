@@ -447,17 +447,54 @@ function Velo({ v, seed, onDone, noun = 'THROW' }) {
     </div>
   )
 }
-// ── Accuracy: lock the aim across, then up and down, on four nets ───────────
+// What you aim at, drawn: a hoop for a shot (backboard, rim, net), a receiver's
+// two hands for a throw. The box is the hit zone's width; the drawing is laid out
+// on a -60..60 grid with the zone (rx 50) centred at 0,0.
+const HOOP = (
+  <svg viewBox="-60 -60 120 120" aria-hidden="true">
+    <rect x="-56" y="-58" width="112" height="44" rx="3" fill="rgba(255,255,255,.1)" stroke="#e8edf2" strokeWidth="3" />
+    <rect x="-20" y="-40" width="40" height="26" fill="none" stroke="#e8edf2" strokeWidth="2.5" />
+    <rect x="-4" y="-14" width="8" height="10" fill="#9aa4ae" />
+    <ellipse cx="0" cy="0" rx="50" ry="30" className="mg-zone" />
+    <g fill="none" stroke="rgba(255,255,255,.85)" strokeWidth="1.6">
+      <path d="M-48 2 L-30 48 M-28 4 L-16 50 M-8 5 L-4 51 M8 5 L4 51 M28 4 L16 50 M48 2 L30 48" />
+      <path d="M-42 18 Q0 30 42 18 M-36 34 Q0 44 36 34 M-30 48 Q0 56 30 48" />
+    </g>
+    <ellipse cx="0" cy="0" rx="50" ry="10" fill="none" stroke="#f97316" strokeWidth="5" />
+  </svg>
+)
+const HAND = (
+  <g fill="#f4efe6" stroke="#1d232a" strokeWidth="2" strokeLinejoin="round">
+    <rect x="14" y="-30" width="8" height="34" rx="4" />
+    <rect x="23" y="-36" width="8" height="40" rx="4" />
+    <rect x="32" y="-33" width="8" height="37" rx="4" />
+    <rect x="41" y="-25" width="7" height="29" rx="3.5" />
+    <rect x="12" y="-6" width="37" height="36" rx="10" />
+    <rect x="-2" y="2" width="22" height="9" rx="4.5" transform="rotate(28 18 6)" />
+  </g>
+)
+const HANDS = (
+  <svg viewBox="-60 -60 120 120" aria-hidden="true">
+    <circle cx="0" cy="0" r="50" className="mg-zone" />
+    <g transform="translate(0 2)">{HAND}<g transform="scale(-1 1)">{HAND}</g></g>
+  </svg>
+)
+
+// ── Accuracy: lock the aim across, then up and down, on four targets ────────
+// A shot is aimed at a hoop: the rim is wide but shallow, so the arc (up–down)
+// is the tight part. A throw goes to a receiver's hands.
 function Aim({ v, seed, onDone, noun = 'NET' }) {
   const r = useRng(seed)
-  const nets = useMemo(() => [0, 1, 2, 3].map(() => ({ x: 15 + r() * 70, y: 18 + r() * 64 })), [r])
-  const rad = 6 + v * 0.75                                      // the net's size in % of the field
+  const hoop = noun === 'SHOT'
+  const nets = useMemo(() => [0, 1, 2, 3].map(() => ({ x: 15 + r() * 70, y: 22 + r() * 58 })), [r])
+  const rad = 4 + v * 0.5                                       // the zone's half-width in % of the field (4.5–9.5)
+  const tall = hoop ? 0.6 : 1                                   // its height against its width (the rim is flat)
   const [i, setI] = useState(0)
   const [axis, setAxis] = useState('x')
   const [scores, setScores] = useState([])
   const [shot, setShot] = useState(null)
   const X = useRef(50), Y = useRef(50), lx = useRef(null), ly = useRef(null)
-  const speed = 0.75 + i * 0.18
+  const speed = 0.95 + i * 0.2
   useLoop(t => {
     if (axis === 'x') { X.current = tri(t * speed) * 100; if (lx.current) lx.current.style.transform = `translate3d(${X.current}%,0,0)` }
     else { Y.current = tri(t * speed * 1.15) * 100; if (ly.current) ly.current.style.transform = `translate3d(0,${Y.current}%,0)` }
@@ -466,8 +503,9 @@ function Aim({ v, seed, onDone, noun = 'NET' }) {
     if (shot) return
     if (axis === 'x') { setAxis('y'); sfx('tick'); return }
     const n = nets[i]
-    const d = Math.hypot(X.current - n.x, (Y.current - n.y) * 0.6)
-    const s = d <= rad ? clamp(1 - (d / rad) * 0.5, 0.5, 1) : 0
+    // how far off, in zone radii (the field is 5:3, so a % down is 0.6 of a % across)
+    const d = Math.hypot((X.current - n.x) / rad, ((Y.current - n.y) * 0.6) / (rad * tall))
+    const s = d <= 1 ? clamp(1 - d * 0.5, 0.5, 1) : 0
     sfx(s ? 'claim' : 'pop'); haptic(s ? 'medium' : 'light')
     setShot({ x: X.current, y: Y.current, hit: !!s })
     const next = [...scores, s]
@@ -481,7 +519,7 @@ function Aim({ v, seed, onDone, noun = 'NET' }) {
   return (
     <div className="mg-play mg-play--aim" onPointerDown={tap}>
       <div className="mg-field">
-        <span className="mg-net" style={{ left: `${n.x}%`, top: `${n.y}%`, width: `${rad * 2}%` }} />
+        <span className={`mg-aimat mg-aimat--${hoop ? 'hoop' : 'hands'}`} style={{ left: `${n.x}%`, top: `${n.y}%`, width: `${rad * 2}%` }}>{hoop ? HOOP : HANDS}</span>
         <span className={`mg-line-x${axis === 'x' && !shot ? ' is-live' : ''}`} ref={lx} />
         {axis === 'y' && <span className={`mg-line-y${!shot ? ' is-live' : ''}`} ref={ly} />}
         {shot && <span className={`mg-ball${shot.hit ? ' is-hit' : ''}`} style={{ left: `${shot.x}%`, top: `${shot.y}%` }} />}

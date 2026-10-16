@@ -113,7 +113,7 @@ export const SPORT = {
     durable: { qb: ['size', 'pocket-presence'], rb: ['strength', 'size', 'balance'], wr: ['size', 'bodyControl'], te: ['strength', 'size'], db: ['size', 'runSupport'] },
     ageShift: pos => (pos === 'qb' ? 2 : 0),
     // the physical traits train until this age (then the window shuts); the body fades from declineAt
-    trainUntil: pos => ({ qb: 31, rb: 26, wr: 29, te: 29, db: 27 })[pos] ?? 29,
+    trainUntil: pos => ({ qb: 28, rb: 24, wr: 26, te: 26, db: 25 })[pos] ?? 26,
     declineAt: pos => ({ qb: 33, rb: 27, wr: 30, te: 30, db: 28 })[pos] ?? 31,
     bigInjury: 6,
     draft: {
@@ -215,7 +215,7 @@ export const SPORT = {
     physical: { guard: ['speed', 'bounce'], big: ['bounce', 'speed'] },
     durable: { guard: ['size', 'basketballIQ'], big: ['size', 'basketballIQ'] },
     ageShift: () => 0,
-    trainUntil: () => 29,
+    trainUntil: () => 25,                     // speed and bounce train only while young (drafted at 19–20)
     declineAt: () => 31,
     bigInjury: 20,
     draft: {
