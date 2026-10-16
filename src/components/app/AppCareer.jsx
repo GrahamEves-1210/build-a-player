@@ -159,8 +159,9 @@ function Model({ c, devPick }) {
     const canUp = !!devPick && canUpgrade(c, t)
     const cost = upgradeCost(ch?.val)
     // the physical traits' training window, out in the open: train them before it shuts
-    // (its own line under the player's name, so a phone never cuts it off)
-    const w = !maxed ? trainWindow(c, t) : null
+    // (its own line under the player's name, so a phone never cuts it off). Only while
+    // there's a point to spend: otherwise there's nothing to do about it
+    const w = !maxed && (c.dev?.points ?? 0) > 0 ? trainWindow(c, t) : null
     const winTag = !w ? null : !w.open ? <em className="cr-trait-win is-closed">CLOSED</em> : w.left <= 1 ? <em className="cr-trait-win is-last">LAST CHANCE</em> : <em className="cr-trait-win">TRAIN TO AGE {w.until}</em>
     return (
       <div className={`cr-trait${canUp ? ' can-up' : ''}`} onClick={canUp ? () => devPick(t) : undefined} role={canUp ? 'button' : undefined}>
