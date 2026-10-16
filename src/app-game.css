@@ -4000,8 +4000,7 @@ html.app-look:not(.is-app) .ag-dock { backdrop-filter: none; -webkit-backdrop-fi
 .au-stage.is-pass { border-color: var(--ag-line); }
 
 /* the deck and the lot share one row: card · player · grade */
-.au-pulling, .au-lot { display: grid; grid-template-columns: 84px minmax(0, 1fr) auto; align-items: center; gap: 12px; min-height: 124px; }
-.au-pulling { grid-template-columns: 84px minmax(0, 1fr); }
+.au-lot { display: grid; grid-template-columns: 84px minmax(0, 1fr) auto; align-items: center; gap: 12px; min-height: 124px; }
 
 /* a slot card: mint face, dark back */
 .au-card { position: relative; width: 84px; height: 116px; perspective: 700px; }
@@ -4045,15 +4044,6 @@ html.app-look:not(.is-app) .ag-dock { backdrop-filter: none; -webkit-backdrop-fi
 @keyframes au-turn { from { transform: rotateY(0); } to { transform: rotateY(180deg); } }
 
 /* the reel: rows slide up under a window and stop on the lot, once the card's out */
-.au-reel { --row: 58px; position: relative; height: calc(var(--row) * 1.8); overflow: hidden; border-radius: 12px; background: rgba(0,0,0,.25); mask-image: linear-gradient(transparent, #000 26%, #000 74%, transparent); -webkit-mask-image: linear-gradient(transparent, #000 26%, #000 74%, transparent); }
-.au-pulling .au-reel { animation: ag-rise .3s 1.3s both; }
-.au-reel-strip { position: absolute; left: 0; right: 0; top: calc(var(--row) * .4); animation: au-reel var(--ms) cubic-bezier(.12,.75,.18,1) var(--delay, 0ms) both; will-change: transform; }
-@keyframes au-reel { from { transform: translateY(0); } to { transform: translateY(calc(var(--row) * var(--n) * -1)); } }
-.au-reel-row { height: var(--row); display: flex; align-items: center; gap: 10px; padding: 0 10px; font-family: var(--ag-font); font-size: 18px; letter-spacing: 1px; color: #fff; }
-.au-reel-row span { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.au-reel-row .au-shot { width: 42px; height: 42px; }
-.au-reel-logo { width: 24px; height: 24px; object-fit: contain; }
-.au-reel-window { position: absolute; left: 4px; right: 4px; top: calc(var(--row) * .4); height: var(--row); border-radius: 10px; border: 1.5px solid color-mix(in srgb, var(--ag-a1) 70%, transparent); pointer-events: none; }
 
 .au-shot { display: grid; place-items: center; flex: none; border-radius: 50%; object-fit: cover; object-position: 50% 15%; background: rgba(255,255,255,.06); }
 .au-shot--none { font-family: var(--ag-font); font-size: 18px; color: var(--ag-muted); }
@@ -4115,7 +4105,7 @@ html.app-look:not(.is-app) .ag-dock { backdrop-filter: none; -webkit-backdrop-fi
 .au-note--lead { color: var(--ag-gold-hi); border-color: rgba(212,175,55,.5); border-style: solid; }
 
 @media (prefers-reduced-motion: reduce) {
-  .au-deck .au-card, .au-deck .au-card.is-pull, .au-reel-strip, .au-call.is-on, .au-gavel, .au-grade-back { animation-duration: 1ms !important; animation-delay: 0ms !important; }
+  .au-deck .au-card, .au-deck .au-card.is-pull, .au-call.is-on, .au-gavel, .au-grade-back { animation-duration: 1ms !important; animation-delay: 0ms !important; }
   .au-deck .au-card.is-pull .au-card-in { animation-duration: 1ms; animation-delay: calc(var(--deck) - 1ms); }
 }
 
@@ -4145,7 +4135,7 @@ html.app-look:not(.is-app) .ag-dock { backdrop-filter: none; -webkit-backdrop-fi
 .au-final-traits b { font-weight: 400; color: #fff; }
 .au-final-row .cp-row-ovr { display: grid; justify-items: end; }
 .au-final-row .cp-row-ovr small { font-size: 11.5px; }
-@media (prefers-reduced-motion: reduce) { .au-reel-strip { animation-duration: 1ms; } .au-bidder.is-high { transform: none; } }
+@media (prefers-reduced-motion: reduce) { .au-bidder.is-high { transform: none; } }
 
 /* five slots: the odd one out spans the row; a lot that covers several traits lists them */
 .au-slot:last-child:nth-child(odd) { grid-column: 1 / -1; }
@@ -5027,4 +5017,34 @@ html.ag-fan-open .ag-dock { z-index: 1170; }
 .mg-aimat { position: absolute; aspect-ratio: 1; transform: translate(-50%, -50%); pointer-events: none; }
 .mg-aimat svg { position: absolute; left: -10%; top: -10%; width: 120%; height: 120%; overflow: visible; }
 .mg-aimat .mg-zone { fill: rgba(245,220,138,.16); stroke: rgba(245,220,138,.45); stroke-width: 1.5; stroke-dasharray: 4 4; }
+
+/* ── Auction floor, redone: no slot-machine reel. The deck shuffles and its top card
+   turns over on the player; the slot he's up for is a heading beside the card, not a
+   button. Empty slots and notes are plain panels (no dashed outlines). ── */
+.au-lot { grid-template-columns: 104px minmax(0, 1fr) 62px; min-height: 146px; gap: 14px; }
+.au-card, .au-deck { width: 104px; height: 142px; }
+/* the card's face: a player card, not a button */
+.au-card-face { padding: 0; color: #fff; background: linear-gradient(170deg, #17302d, #0b1514 70%); box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.14), 0 8px 18px rgba(0,0,0,.45); overflow: hidden; display: block; }
+.au-pcard { position: absolute; inset: 0; display: grid; grid-template-rows: minmax(0, 1fr) auto; }
+.au-pcard-pic { position: relative; overflow: hidden; }
+.au-pcard-logo { position: absolute; left: 50%; top: 46%; width: 86%; transform: translate(-50%, -50%); opacity: .13; object-fit: contain; pointer-events: none; }
+.au-pcard-shot { position: absolute !important; inset: auto 0 0 0; width: 100% !important; height: 100% !important; border-radius: 0 !important; object-fit: cover; object-position: 50% 0%; background: none !important; }
+.au-pcard-shot.au-shot--none { display: grid; place-items: center; font-family: var(--ag-display); font-size: 40px; color: rgba(255,255,255,.9); text-shadow: 0 2px 10px rgba(0,0,0,.6); }
+.au-pcard-name { padding: 6px 6px 7px; text-align: center; font-family: var(--ag-font); font-size: 13px; letter-spacing: .8px; line-height: 1.1; color: #fff; background: rgba(0,0,0,.55); border-top: 1px solid rgba(255,255,255,.1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* beside it: what he's up for */
+.au-lot-info { justify-items: start; text-align: left; gap: 2px; }
+.au-lot-for { font-family: var(--ag-font); font-size: 12px; letter-spacing: 2.2px; color: var(--ag-muted); }
+.au-lot-trait { font-family: var(--ag-display); font-weight: 400; font-size: 28px; line-height: 1; letter-spacing: .3px; color: #fff; text-wrap: balance; overflow-wrap: anywhere; }
+.au-lot-covers { font-family: var(--ag-body); font-size: 12px; font-weight: 600; color: var(--ag-muted); }
+.au-lot-team { margin-top: 6px; }
+.au-lot.is-pulling .au-lot-info, .au-lot.is-pulling .au-grade { animation: ag-rise .35s cubic-bezier(.2,.9,.25,1) calc(var(--deck) + 250ms) both; }
+/* the deck: four backs and the pulled card on top */
+.au-deck .au-card.is-pull { z-index: 9; }
+/* notes and empty slots: plain, no dashes */
+.au-note { border: 1px solid transparent; background: rgba(255,255,255,.035); }
+.au-slot { border: 1px solid rgba(255,255,255,.07); background: rgba(255,255,255,.035); }
+.au-slot:not(.is-in) small { color: rgba(255,255,255,.35); }
+.au-slot.is-up:not(.is-in) { border-color: color-mix(in srgb, var(--ag-a1) 75%, transparent); background: color-mix(in srgb, var(--ag-a1) 9%, transparent); }
+.au-slot.is-up:not(.is-in) small { color: var(--ag-a1); font-weight: 700; }
+@media (prefers-reduced-motion: reduce) { .au-lot.is-pulling .au-lot-info, .au-lot.is-pulling .au-grade { animation-duration: 1ms; animation-delay: 0ms; } }
 
