@@ -11,7 +11,8 @@ import { itemsFor, itemById, DEFAULTS } from '../../lib/cosmetics'
 // head-to-head court (players are positioned elements that glide between
 // court spots on CSS transitions, the ball rides its carrier or flies on an
 // override), with help defense, cuts and closeouts now that there are three
-// a side. Zones are % of the court image — rim (50, 12), arc ~62–68, top ~78.
+// a side. Zones are % of the court image — rim (50, 12); the 3-point line runs
+// straight up the sides at x ≈ 12.5 to y ≈ 37, then curves to its top at (50, 73).
 
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v))
 
@@ -27,10 +28,11 @@ export function useCourt() {
 const cl = x => clamp(x, 7, 93)
 const RIM = { x: 50, y: 12 }
 const TOP = { x: 50, y: 78 }
-const WING = [{ x: 24, y: 64 }, { x: 76, y: 64 }]
-const CORNER = [{ x: 11, y: 58 }, { x: 89, y: 58 }]
+const WING = [{ x: 18, y: 69 }, { x: 82, y: 69 }]
+const CORNER = [{ x: 8, y: 30 }, { x: 92, y: 30 }]
 const POST = [{ x: 37, y: 25 }, { x: 63, y: 25 }]
-const ARC3 = [{ x: 12, y: 62 }, { x: 88, y: 62 }, { x: 24, y: 66 }, { x: 76, y: 66 }, { x: 50, y: 68 }]
+// every 3 is a step behind the line (corners, wings, slots, the top)
+const ARC3 = [{ x: 8, y: 28 }, { x: 92, y: 28 }, { x: 16, y: 67 }, { x: 84, y: 67 }, { x: 30, y: 77 }, { x: 70, y: 77 }, { x: 50, y: 80 }]
 const MID = [{ x: 30, y: 42 }, { x: 70, y: 42 }, { x: 36, y: 50 }, { x: 64, y: 50 }, { x: 50, y: 54 }]
 const PAINT = [{ x: 38, y: 14 }, { x: 62, y: 14 }, { x: 44, y: 15 }, { x: 56, y: 15 }]
 const sdur = s => 0.65 - (clamp(s ?? 6, 1, 11) - 1) * 0.035                  // move time from the speed rating
@@ -60,8 +62,12 @@ export default function BlacktopCourt({ game, play, meId, photoFor, colorFor, av
   const holderRef = useRef(null), movingUntil = useRef(0), flyingUntil = useRef(0)
   const bounce = () => {}            // (dribbles come from the dribble clock below)
   const moving = (id, dur) => { if (id === holderRef.current) movingUntil.current = Math.max(movingUntil.current, performance.now() + dur * 1000) }
-  const move = (id, x, y, dur) => { const d = (dur ?? sdur(byId[id]?.R.speed)) / speed; moving(id, d); setPos(p => ({ ...p, [id]: { x: cl(x), y: clamp(y, 6, 92), dur: d } })) }
-  const moveMany = updates => { for (const [id, , , dur] of updates) moving(id, (dur ?? sdur(byId[id]?.R.speed)) / speed); setPos(p => { const n = { ...p }; for (const [id, x, y, dur] of updates) n[id] = { x: cl(x), y: clamp(y, 6, 92), dur: (dur ?? sdur(byId[id]?.R.speed)) / speed }; return n }) }
+  const move = (id, x, y, dur) => { const d = (dur ?? sdur(byId[id]?.R.speed)) / speed; moving(id, d); const s = { x: cl(x), y: clamp(y, 6, 92), dur: d }; live.current = { ...live.current, [id]: s }; setPos(p => ({ ...p, [id]: s })) }
+  const moveMany = updates => {
+    const n = { ...live.current }
+    for (const [id, x, y, dur] of updates) { const d = (dur ?? sdur(byId[id]?.R.speed)) / speed; moving(id, d); n[id] = { x: cl(x), y: clamp(y, 6, 92), dur: d } }
+    live.current = n; setPos(p => ({ ...p, ...Object.fromEntries(updates.map(([id]) => [id, n[id]])) }))
+  }
   const flyBall = (x, y, dur = .42) => { flyingUntil.current = performance.now() + (dur / speed) * 1000 + 60; setBall({ x, y, dur: dur / speed }) }
   useEffect(() => { holderRef.current = holder; movingUntil.current = 0 }, [holder])
   useEffect(() => {
@@ -71,7 +77,10 @@ export default function BlacktopCourt({ game, play, meId, photoFor, colorFor, av
   const checkPass = useRef(null)     // the pass a check-up already showed (not played twice)
   const popRim = label => { popKey.current++; setPop({ label, key: popKey.current }); after(900, () => setPop(null)) }
   const clearAll = () => { timers.current.forEach(clearTimeout); timers.current = [] }
-  const at = id => pos[id] ?? TOP
+  // where each player is headed now (kept as moves happen, so a pass or a shot later
+  // in the play goes from where he actually is, not where he stood when it began)
+  const live = useRef(pos); live.current = pos
+  const at = id => live.current[id] ?? TOP
   // a defender sits between his man and the rim, a step toward the ball
   const shadow = (manPos, ballPos, tight = .32) => { const base = lerp(manPos, RIM, tight); const toBall = lerp(base, ballPos, .12); return { x: toBall.x + r.rnd(-2, 2), y: toBall.y + r.rnd(-1, 1) } }
   const shadowAll = (offIds, ballPos, except = null) => offIds.flatMap(id => {
@@ -101,7 +110,8 @@ export default function BlacktopCourt({ game, play, meId, photoFor, colorFor, av
         const hf = f[play.handler] ?? TOP
         after(420, () => { flyBall(hf.x, hf.y, .32); after(300, () => { setHolder(play.handler); setBall(null); caught() }) })
       } else setHolder(play.handler)
-      setPos(p => ({ ...p, ...Object.fromEntries(Object.entries(f).map(([id, s]) => [id, { ...s, dur: .8 / speed }])) }))
+      const set = Object.fromEntries(Object.entries(f).map(([id, s]) => [id, { ...s, dur: .8 / speed }]))
+      live.current = { ...live.current, ...set }; setPos(p => ({ ...p, ...set }))
       return
     }
 
@@ -143,11 +153,20 @@ export default function BlacktopCourt({ game, play, meId, photoFor, colorFor, av
       moveMany([...ups, ...shadowAll(offIds, at(play.handler), null)])
     })
     const passes = play.passes || []
-    passes.forEach(to => {
+    const shot = play.shot || (play.arc ? 'arc' : 'layup')
+    const jumper = play.type !== 'block' && (shot === 'arc' || shot === 'mid')
+    // a catch-and-shoot's spot, picked when the last pass is thrown (from where he is then)
+    let csSpot = null
+    passes.forEach((to, k) => {
       t += 520
-      after(t - 300, () => { const tp = at(to); const d = guards[Object.keys(guards).find(k => guards[k] === to && byId[k]?.team !== byId[to]?.team)] ? null : null; void d
-        // receiver relocates a touch as the ball comes
-        const cur = at(to); move(to, cur.x + r.rnd(-4, 4), cur.y + r.rnd(-4, 2), sp(to) * .6) })
+      const last = k === passes.length - 1 && to === play.pid && play.cs && jumper
+      after(t - 300, () => {
+        const cur = at(to)
+        // the shooter gets to his spot as the ball comes (behind the line for a 3,
+        // inside it for a jumper); anyone else relocates a touch
+        if (last) { csSpot = near(cur, shot === 'arc' ? ARC3 : MID); move(to, csSpot.x, csSpot.y, sp(to) * .55) }
+        else move(to, cur.x + r.rnd(-4, 4), cur.y + r.rnd(-4, 2), sp(to) * .6)
+      })
       after(t - 240, () => { const tp = at(to); flyBall(tp.x, tp.y, .3) })
       after(t, () => { setHolder(to); setBall(null); caught()
         // closeout by the receiver's defender, help sags
@@ -157,12 +176,34 @@ export default function BlacktopCourt({ game, play, meId, photoFor, colorFor, av
         moveMany([...ups, ...shadowAll(offIds.filter(id => id !== to), tp, dId)])
       })
     })
-    const shooter = play.pid, d = play.defId
+    // (a block is written from the shot-blocker's side: he's pid, the shooter pid2)
+    const shooter = play.type === 'block' ? (play.pid2 ?? play.pid) : play.pid, d = play.defId
     const od = sp(shooter), dd = sp(d)
     const start = t + 120
     const made = play.type === 'score'
     const label = play.type === 'block' ? 'BLOCK' : !made ? 'MISS' : play.pts === 2 ? '+2' : '+1'
+    // the ball leaves his hands once he's set (when a move of `dur` seconds lands)
+    const setThen = (dur, fn) => after(dur * 1000 + 40, fn)
+    // a swat: the ball knocked away to one side, the shot-blocker following it
+    const swat = (from, dx = 24) => { const side = from.x < 50 ? -1 : 1; flyBall(cl(from.x + side * dx * r.rnd(.7, 1.1)), from.y + r.rnd(4, 12), .45); popRim('BLOCK') }
 
+    // a blocked jumper: he rises from the spot, his man closes out from the rim side and gets a hand on it
+    if (play.type === 'block' && shot === 'mid') {
+      const spot = near(at(shooter), MID)
+      after(start, () => { move(shooter, cl(spot.x + r.rnd(-8, 8)), spot.y + r.rnd(8, 13), od * .75); move(d, spot.x + r.rnd(-5, 5), spot.y - r.rnd(8, 12), dd * .85); bounce(2) })
+      after(start + 460, () => { move(shooter, spot.x, spot.y, od * .36); move(d, spot.x + r.rnd(-2, 2), spot.y - 3, dd * .36) })
+      after(start + 460 + od * 360 + 120, () => { swat(spot); move(d, spot.x + (spot.x < 50 ? -6 : 6), spot.y + 2, dd * .5) })
+      return
+    }
+    // a blocked post shot: backed down to the block, his man behind him (rim side) swats the hook
+    if (play.type === 'block' && shot === 'post') {
+      const block = POST[at(shooter).x < 50 ? 0 : 1]
+      after(start, () => { move(shooter, block.x, block.y + 10, od * 1.1); move(d, block.x + r.rnd(-3, 3), block.y + 2, dd); bounce(3, 240) })
+      after(start + 560, () => { move(shooter, block.x + r.rnd(-3, 3), block.y, od * .9); move(d, block.x + r.rnd(-2, 2), block.y - 6, dd * .8) })
+      after(start + 1000, () => { const hook = { x: block.x + (block.x < 50 ? 5 : -5), y: 18 }; move(shooter, hook.x, hook.y, od * .5); move(d, hook.x + (block.x < 50 ? 2 : -2), hook.y - 4, dd * .5) })
+      after(start + 1250, () => swat(block, 20))
+      return
+    }
     if (play.type === 'block') {
       after(start, () => {
         const cur = at(shooter); const lane = { x: cl(50 + (cur.x < 50 ? -1 : 1) * r.rnd(4, 10)), y: r.rnd(28, 36) }
@@ -174,29 +215,37 @@ export default function BlacktopCourt({ game, play, meId, photoFor, colorFor, av
     }
 
     const finish = () => { flyBall(RIM.x, RIM.y, .42); after(120, () => popRim(label)); after(400, () => sfx(made ? 'make' : 'rimmiss')) }
-    const shot = play.shot || (play.arc ? 'arc' : 'layup')
     if (shot === 'arc') {
-      const cur = at(shooter); const spot = near(cur, ARC3)
+      const spot = csSpot ?? near(at(shooter), ARC3)
       // off a pass it's a catch-and-shoot (the engine's cs); never without one
       const variant = play.cs ? 'catch' : Math.random() < .5 ? 'stepback' : 'pullup'
       if (variant === 'catch') {
-        after(start, () => { move(shooter, spot.x, spot.y, od * .3); move(d, spot.x + r.rnd(-6, 6), spot.y - r.rnd(2, 7), dd * .4); finish() })
+        // caught on the spot (the last pass took him there): straight up, the closeout late
+        after(start, () => { move(shooter, spot.x, spot.y, od * .2); move(d, spot.x + r.rnd(-6, 6), spot.y - r.rnd(2, 7), dd * .4) })
+        after(start + 200, finish)
       } else if (variant === 'stepback') {
+        // in a step, then back behind the line and up
         const dir = Math.random() < .5 ? -1 : 1
-        after(start, () => { move(shooter, cl(spot.x + dir * r.rnd(10, 16)), spot.y + 2, od * .5); move(d, cl(spot.x + dir * r.rnd(6, 12)), spot.y - 6, dd * .6); bounce(2) })
-        after(start + 480, () => { move(shooter, spot.x, spot.y, od * .55); move(d, cl(spot.x - dir * r.rnd(4, 10)), spot.y + r.rnd(4, 8), dd); finish() })
+        after(start, () => { move(shooter, cl(spot.x + dir * r.rnd(6, 10)), spot.y - r.rnd(5, 8), od * .5); move(d, cl(spot.x + dir * r.rnd(6, 10)), spot.y - 12, dd * .6); bounce(2) })
+        after(start + 480, () => { move(shooter, spot.x, spot.y, od * .55); move(d, cl(spot.x - dir * r.rnd(2, 6)), spot.y - r.rnd(4, 7), dd); setThen(od * .55, finish) })
       } else {
-        after(start, () => { move(shooter, cl(spot.x + r.rnd(-8, 8)), spot.y + r.rnd(10, 16), od * .8); move(d, spot.x, spot.y - 6, dd * .8); bounce(2) })
-        after(start + 460, () => { move(shooter, spot.x, spot.y, od * .45); move(d, cl(spot.x + r.rnd(-5, 5)), spot.y - r.rnd(2, 6), dd * .5); finish() })
+        // a pull-up: comes into it from deeper, rises behind the line
+        after(start, () => { move(shooter, cl(spot.x + r.rnd(-8, 8)), spot.y + r.rnd(6, 10), od * .8); move(d, spot.x, spot.y - 6, dd * .8); bounce(2) })
+        after(start + 460, () => { move(shooter, spot.x, spot.y, od * .45); move(d, cl(spot.x + r.rnd(-5, 5)), spot.y - r.rnd(2, 6), dd * .5); setThen(od * .45, finish) })
       }
       return
     }
     if (shot === 'mid') {
-      const spot = near(at(shooter), MID)
-      // catch-and-shoot from the elbow: set his feet as it arrives and let it go, the closeout late
-      if (play.cs) { after(start, () => { move(shooter, spot.x, spot.y, od * .35); move(d, spot.x + r.rnd(-5, 5), spot.y - r.rnd(2, 6), dd * .45); finish() }); return }
-      after(start, () => { move(shooter, cl(spot.x + r.rnd(-10, 10)), spot.y + r.rnd(12, 18), od * .75); move(d, spot.x + r.rnd(-6, 6), spot.y - r.rnd(4, 10), dd * .85); bounce(2) })
-      after(start + 460, () => { move(shooter, spot.x, spot.y, od * .36); move(d, spot.x + r.rnd(-5, 5), spot.y - r.rnd(2, 6), dd * .46); finish() })
+      const spot = csSpot ?? near(at(shooter), MID)
+      // catch-and-shoot at the elbow: caught on the spot, feet set, let it go, the closeout late
+      if (play.cs) {
+        after(start, () => { move(shooter, spot.x, spot.y, od * .25); move(d, spot.x + r.rnd(-5, 5), spot.y - r.rnd(2, 6), dd * .45) })
+        after(start + 220, finish)
+        return
+      }
+      // a pull-up: a dribble in from inside the arc, then up from the spot
+      after(start, () => { move(shooter, cl(spot.x + r.rnd(-8, 8)), spot.y + r.rnd(8, 13), od * .75); move(d, spot.x + r.rnd(-6, 6), spot.y - r.rnd(4, 10), dd * .85); bounce(2) })
+      after(start + 460, () => { move(shooter, spot.x, spot.y, od * .36); move(d, spot.x + r.rnd(-5, 5), spot.y - r.rnd(2, 6), dd * .46); setThen(od * .36, finish) })
       return
     }
     if (shot === 'post') {
