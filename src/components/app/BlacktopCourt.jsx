@@ -288,6 +288,7 @@ export default function BlacktopCourt({ game, play, meId, photoFor, colorFor, av
   }, [play?.id]) // eslint-disable-line
 
   const EASE = 'cubic-bezier(0.25,0.82,0.42,1)'
+  // overlaps: the ball handler on top, then the team with the ball, then the defense
   const hp = holder ? at(holder) : TOP
   const holderSide = holder && byId[holder] ? (byId[holder].team === 0 ? 1 : -1) : 1
   const ballPos = ball ?? { x: hp.x + holderSide * 6, y: hp.y - 6 }
@@ -305,7 +306,7 @@ export default function BlacktopCourt({ game, play, meId, photoFor, colorFor, av
             const has = holder === p.id
             const col = colorFor(p.team)
             return (
-              <div key={p.id} className={`btc-p${has ? ' has-ball' : ''}${p.id === meId ? ' is-me' : ''}`} style={{ left: `${s.x}%`, top: `${s.y}%`, transition: `left ${s.dur}s ${EASE}, top ${s.dur}s ${EASE}`, zIndex: has ? 5 : 3, '--pc': col }}>
+              <div key={p.id} className={`btc-p${has ? ' has-ball' : ''}${p.id === meId ? ' is-me' : ''}`} style={{ left: `${s.x}%`, top: `${s.y}%`, transition: `left ${s.dur}s ${EASE}, top ${s.dur}s ${EASE}`, zIndex: has ? 5 : p.team === play?.poss ? 4 : 3, '--pc': col }}>
                 {/* the overall over the head, and a reaction when they send one */}
                 {ovrFor && <span className="btc-ovr" style={{ background: col }}>{ovrFor(p)}</span>}
                 {bubbles?.[p.id] && <span key={bubbles[p.id]} className="btc-bubble">{bubbles[p.id]}</span>}
