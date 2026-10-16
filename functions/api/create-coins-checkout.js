@@ -5,19 +5,29 @@ import Stripe from 'stripe'
 // browser can't change them). The webhook (stripe-webhook.js) records the
 // purchase in coin_purchases; the game collects it (claim_coin_purchases).
 // Keep in step with src/lib/coins.js.
-const PACKS = {
-  bap_coins_1200:  { coins: 3000,  cents: 199 },
-  bap_coins_3200:  { coins: 8500,  cents: 499 },
-  bap_coins_7000:  { coins: 18000, cents: 999 },
-  bap_coins_15000: { coins: 38000, cents: 1999 },
+// Two tables: 1 is the live site's shop, 2 today's packs (the new look and the app,
+// which send table: 2 and check out here). A request without a table gets 1.
+const TABLES = {
+  1: {
+    bap_coins_500:  { coins: 800,   cents: 99 },
+    bap_coins_1200: { coins: 2000,  cents: 199 },
+    bap_coins_3200: { coins: 5500,  cents: 499 },
+    bap_coins_7000: { coins: 12500, cents: 999 },
+  },
+  2: {
+    bap_coins_1200:  { coins: 3000,  cents: 199 },
+    bap_coins_3200:  { coins: 8500,  cents: 499 },
+    bap_coins_7000:  { coins: 18000, cents: 999 },
+    bap_coins_15000: { coins: 38000, cents: 1999 },
+  },
 }
 
 export async function onRequestPost(context) {
   try {
     const stripe = new Stripe(context.env.STRIPE_SECRET_KEY)
-    const { userId, email, pack, app } = await context.request.json()
+    const { userId, email, pack, app, table } = await context.request.json()
     if (!userId) return Response.json({ error: 'userId required' }, { status: 400 })
-    const p = PACKS[pack]
+    const p = (TABLES[table] ?? TABLES[1])[pack]
     if (!p) return Response.json({ error: 'unknown pack' }, { status: 400 })
 
     // the app (capacitor://) checks out in the phone's browser: it comes back to the website
