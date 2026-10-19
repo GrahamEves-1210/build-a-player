@@ -18,8 +18,7 @@ import { IconClose, IconArrow, IconChat, IconStar, IconSend, IconBasketball, Ico
 import { NameTag, AvatarBadge } from './NameTag'
 import OnlineRecord, { RatingLine, LinkPill, ModeStats, TierChip } from './OnlineRecord'
 import { useProgress } from '../../lib/progress'
-import { makeMimics } from '../../lib/mimic'
-import { getUsername } from '../../lib/discord'
+import { makeMimics, isTester } from '../../lib/mimic'
 
 // BLACKTOP screens. The match itself lives in lib/blacktop.js (useBlacktop);
 // these only draw it: the lobby (pick a spot on a squad), the slim HUD over the
@@ -183,9 +182,6 @@ function CourtPicker() {
 }
 
 // ── Lobby: two squads, tap an open spot ──────────────────────────────────────
-// The lobby's TEST fill: who sees it (the demo account, and local dev builds)
-const TESTERS = new Set(['GOATmaker'])
-
 export function BlacktopQueue({ bt, user, onBack }) {
   const [chatOpen, setChatOpen] = useState(false)
   const [seenChat, setSeenChat] = useState(0)
@@ -194,7 +190,7 @@ export function BlacktopQueue({ bt, user, onBack }) {
   const size = bt.size ?? 3
   // TEST: made-up players (lib/mimic.js) take the open spots one by one, as if a real
   // lobby were filling, then the run starts: a practice game whose CPUs wear them
-  const tester = import.meta.env.DEV || TESTERS.has(getUsername(user))
+  const tester = isTester(user)
   const [fill, setFill] = useState({})            // slot id → a made-up player shown there
   const filling = useRef(false)
   const heldAt = id => bt.held[id] ?? fill[id]

@@ -58,6 +58,7 @@ const AppCompete = lazy(() => import('./app/AppCompete'))
 const uidFromVsId = id => (typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}-/i.test(id) ? id.slice(0, 36) : null)
 const btPageFor = phase => (phase === 'build' ? 'blacktop-build' : phase === 'game' || phase === 'result' ? 'blacktop-game' : 'blacktop')
 import { finishDiscordSignIn, getUsername } from '../lib/discord'
+import { isTester } from '../lib/mimic'
 import { rampPage, HOME_UNITS, RAIL_UNITS, RAIL_UNITS_WITH_LEFT } from '../lib/ads'
 const VersusLobby        = lazy(() => import('./VersusLobby'))
 const BucketVersusResult = lazy(() => import('./BucketVersusResult'))
@@ -1120,6 +1121,34 @@ export default function BucketApp() {
   commitBucketRef.current = commitBucketSeason
   const bucketSimFor = useCallback((b, t) => runBucketSimulation(b, activeTypes, t, position, null, gameMode), [activeTypes, position, gameMode])
 
+  // TEST (testers only, a Blacktop build): fill the open traits with a believable build for
+  // screen recordings: a different real player for each trait, picked from the good-not-elite
+  // part of the pool (the top 5–45% at that trait), so it lands where real players' builds do
+  const handleTestFill = useCallback(() => {
+    const pool = currentPool.filter(p => p.attrs)
+    if (!pool.length) return
+    const used = new Set(Object.values(build).filter(Boolean).map(c => c.qbFull))
+    const next = { ...build }
+    for (const type of activeTypes) {
+      if (next[type]) continue
+      const ranked = pool.filter(p => p.attrs[type] != null && !used.has(p.name)).sort((a, b) => b.attrs[type] - a.attrs[type])
+      if (!ranked.length) continue
+      const lo = Math.floor(ranked.length * 0.05), hi = Math.max(lo + 1, Math.floor(ranked.length * 0.45))
+      const p = ranked[Math.min(ranked.length - 1, lo + Math.floor(Math.random() * (hi - lo)))]
+      used.add(p.name)
+      const photo = NBA_HEADSHOTS[p.name] ? `${HEADSHOT_BASE}/nba/${NBA_HEADSHOTS[p.name]}.webp` : genericHeadshot(p.skin)
+      next[type] = {
+        type, val: p.attrs[type] ?? 5,
+        qb: p.short, qbFull: p.name,
+        teamColor: p.color, teamColor2: p.color2,
+        skinColor: p.skin, number: p.number,
+        team: p.team, captain: p.captain ?? false, photo,
+        height: p.height ?? null, weight: p.weight ?? null,
+      }
+    }
+    setBuild(next)
+  }, [currentPool, activeTypes, build])
+
   const handleDevFill = useCallback(() => {
     const pool = currentPool.filter(p => p.attrs)
     if (!pool.length) return
@@ -1570,6 +1599,10 @@ export default function BucketApp() {
       <div className="game-page-scroll">
       {competeOn && <CompeteHud cp={cp} />}
       {liveBuild && bt.match && <BlacktopHud bt={bt} onOpenChat={openBtChat} unread={btUnread} />}
+      {/* testers: fill the build in one tap (gone once it's complete, so it stays out of recordings) */}
+      {liveBuild && bt.match && isTester(user) && activeTypes.some(t => !build[t]) && (
+        <button type="button" className="bt-test-autofill" onClick={handleTestFill}>TEST · AUTO FILL</button>
+      )}
       {(IS_APP || APP_LOOK) && page === 'versus-game' && versusRoom && (
         <VersusHud clock={vsCountdown}
           me={{ name: getUsername(user) || 'Guest', self: true, build, types: activeTypes, pos: position }}

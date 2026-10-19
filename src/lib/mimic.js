@@ -5,6 +5,12 @@
 // nothing about the game is recorded.
 
 import { itemsFor } from './cosmetics'
+import { getUsername } from './discord'
+
+// Who sees the testing shortcuts (the lobby's TEST fill, the build's AUTO FILL): the demo
+// account, and local dev builds
+const TESTERS = new Set(['GOATmaker'])
+export const isTester = user => import.meta.env.DEV || TESTERS.has(getUsername(user))
 
 const NAMES = [
   'jaylen_hoops', 'Mikey2Smooth', 'buckets4days', 'TreyWay', 'AnkleTaker7', 'dimeDropper', 'CourtKing',
