@@ -240,19 +240,19 @@ const SYNTH = {
   },
   // small good news (streak, mission done)
   chime: S => { const v = verb(S, 0.25); osc(S, { f: 1318.5, dur: 0.2, gain: 0.08, lp: 2800, out: v, env: { a: 0.003, d: 0.2 } }); osc(S, { f: 1760, dur: 0.26, gain: 0.08, at: 0.09, lp: 3200, out: v, env: { a: 0.003, d: 0.26 } }) },
-  // card reveal — more sparkle the rarer it is (0 common … 3 legend)
+  // card reveal: the flip; a Rare adds a soft tick, an Epic or a Legendary the good-news
+  // chime (no sparkle runs, no chords, no crowd)
   card: (S, rank = 0) => {
     noise(S, { bp: 1100, to: 3200, q: 1.4, dur: 0.13, gain: 0.09 })          // the flip
     osc(S, { f: 240, to: 130, dur: 0.05, gain: 0.07 })
     if (rank < 1) return
-    const v = verb(S, 0.28 + rank * 0.07)
-    const tones = [1568, 1976, 2637, 3136].slice(0, rank + 1)
-    tones.forEach((f, i) => osc(S, { type: 'triangle', f: f / 2, dur: 0.12, gain: 0.07, at: 0.1 + i * 0.07, lp: 3200, out: v, env: { a: 0.002, d: 0.12 } }))
-    if (rank >= 2) for (const f of [392, 493.9]) osc(S, { type: 'sawtooth', f, dur: 0.7, gain: 0.035, at: 0.08, lp: 1300, q: 0.8, out: v, env: { a: 0.12, d: 0.6 } })
-    if (rank >= 3) {
-      for (const f of [261.6, 329.6, 392]) osc(S, { type: 'sawtooth', f, dur: 1.1, gain: 0.04, at: 0.1, lp: 2600, q: 0.8, out: v, env: { a: 0.2, d: 0.9 } })
-      crowd(S, { dur: 1.3, gain: 0.08, at: 0.2 })
+    const v = verb(S, 0.25)
+    if (rank >= 2) {
+      osc(S, { f: 1318.5, dur: 0.2, gain: 0.08, at: 0.12, lp: 2800, out: v, env: { a: 0.003, d: 0.2 } })
+      osc(S, { f: 1760, dur: 0.26, gain: 0.08, at: 0.21, lp: 3200, out: v, env: { a: 0.003, d: 0.26 } })
+      return
     }
+    osc(S, { type: 'triangle', f: 784, dur: 0.12, gain: 0.06, at: 0.1, lp: 3200, out: v, env: { a: 0.002, d: 0.12 } })
   },
 
   // ── UI ───────────────────────────────────────────────────────────────────
@@ -382,13 +382,14 @@ const SAMPLED = {
   stamp: S => smp(S, 'punchm', { gain: 1 }) && smp(S, 'plank', { gain: 0.6, at: 0.01 }),
   card: (S, rank = 0) => {
     if (!smp(S, 'cardout', { gain: 0.8, jitter: 0.03 })) return false
-    // an Epic: the flip, then Career's good-news chime (the old hit was harsh)
-    if (rank === 2) { smp(S, 'pluck2', { gain: 0.6, at: 0.12 }); smp(S, 'confirm', { gain: 0.4, at: 0.17 }); return true }
+    // an Epic or a Legendary: the flip, then Career's good-news chime. No impacts, no crowd
+    // (the old hit on Epics and Legendaries sounded awful)
+    if (rank >= 2) { smp(S, 'pluck2', { gain: 0.6, at: 0.12 }); smp(S, 'confirm', { gain: 0.4, at: 0.17 }); return true }
     if (rank >= 1) smp(S, 'stack2', { gain: 0.5, at: 0.12 })
-    if (rank >= 3) { smp(S, 'hitM', { gain: 0.85, at: 0.1 }); crowd(S, { dur: 1.3, gain: 0.08, at: 0.2 }) }
     return true
   },
-  achievement: S => smp(S, 'hitM', { gain: 0.85 }) && smp(S, 'stack', { gain: 0.6, at: 0.1 }) && (crowd(S, { dur: 1.2, gain: 0.07, at: 0.15 }), true),
+  // (no impact hit or crowd: the stack and the good-news chime)
+  achievement: S => smp(S, 'stack', { gain: 0.6 }) && smp(S, 'pluck2', { gain: 0.6, at: 0.08 }) && smp(S, 'confirm', { gain: 0.4, at: 0.13 }),
   levelup: S => smp(S, 'hitXL', { gain: 0.9 }) && smp(S, 'handful', { gain: 0.6, at: 0.25 }) && (crowd(S, { dur: 1.6, gain: 0.11, at: 0.1 }), true),
   award: S => smp(S, 'hitL', { gain: 0.95 }) && (crowd(S, { dur: 1.8, gain: 0.15, at: 0.08 }), true),
   champion: S => { if (!smp(S, 'hitXXL', { gain: 1 })) return false; const v = verb(S, 0.4); horn(S, { f: 233, dur: 0.6, gain: 0.12, at: 0.9, out: v }); crowd(S, { dur: 2.8, gain: 0.24, at: 0.04 }); return true },
