@@ -5069,4 +5069,7 @@ html.ag-fan-open .ag-dock { z-index: 1170; }
 /* Blacktop build: the bar at the top (clock and teams, chat, LEAVE) is one solid strip down
    to the trait strip, so the build doesn't show through between its buttons when you scroll */
 .bt-hud.has-leave::before { content: ''; position: absolute; z-index: -1; left: -10px; right: -10px; top: -6px; bottom: -6px; background: rgba(9,12,11,.94); pointer-events: none; }
+/* Call buttons: the small line can hold a teammate's full username (PASS → / name), up to
+   two lines, as typed, never cut to ten letters */
+.lc-opt small { max-width: 100%; text-align: center; line-height: 1.15; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 

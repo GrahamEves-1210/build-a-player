@@ -66,7 +66,8 @@ export const archOf = b => {
   const a = (b.pos === 'big' ? getBucketBigArchetype : getBucketGuardArchetype)(liveOvr(b) ?? 0, b.build, types)
   return /remaining|Spin to/.test(a) ? null : a
 }
-const firstName = n => (n || '').trim().split(/\s+/)[0].toUpperCase().slice(0, 10)
+// a CPU's first name, or a username whole: never cut short or capitalized (usernames show as typed)
+const firstName = n => (n || '').trim().split(/\s+/)[0]
 // a grade's color, rounded like its letter (valToGrade): S purple, A blue, B green, C yellow, D orange, F red
 const gradeColor = v0 => { const v = Math.round(v0 ?? 0); return v >= 11 ? '#a855f7' : v >= 8 ? '#3b82f6' : v >= 5 ? '#22c55e' : v >= 2 ? '#eab308' : v >= 1 ? '#f97316' : '#ef4444' }
 
@@ -630,7 +631,7 @@ export function BlacktopGame({ bt, user, photoFor, onOpenChat, unread }) {
             if (h === bt.me.vid) {
               const mates = game.teams[myTeam].filter(p => p.id !== h)
               // a pass says what the teammate does with it (the engine plays exactly that): a shooter catches and shoots
-              const opts = [...offCallsFor(size).filter(c => c !== 'pass'), ...mates.map(p => ({ v: `pass:${p.id}`, label: `PASS → ${firstName(p.name)}` }))]   // what he does with it, the play decides
+              const opts = [...offCallsFor(size).filter(c => c !== 'pass'), ...mates.map(p => ({ v: `pass:${p.id}`, label: 'PASS →', sub: firstName(p.name) }))]   // what he does with it, the play decides
               return <CallBar key={calling.pn} offense head="BALL IN HAND · CALL IT" options={opts} picked={bt.myCalls?.[calling.pn] ?? null} onPick={pick} />
             }
             if (dfd === bt.me.vid) return <CallBar key={calling.pn} offense={false} head={`GUARDING ${firstName(nm(h))} · CALL IT`} options={defCallsFor(size)} picked={bt.myCalls?.[calling.pn] ?? null} onPick={pick} />
