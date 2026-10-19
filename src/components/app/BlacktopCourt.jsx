@@ -272,7 +272,8 @@ export default function BlacktopCourt({ game, play, meId, photoFor, colorFor, av
       // the hoop); a layup goes up from his spot in the paint
       if (shot === 'dunk') {
         move(shooter, RIM.x + (cur.x < 50 ? -1 : 1) * r.rnd(2, 5), RIM.y + r.rnd(3, 6), od * .26)
-        flyBall(RIM.x, RIM.y, .25); after(220, () => { popRim(label); sfx(made ? 'make' : 'rimmiss') })
+        // the rim takes the hit, then the net (a miss is just the rim)
+        flyBall(RIM.x, RIM.y, .25); after(220, () => { popRim(label); sfx('rimmiss'); if (made) after(110, () => sfx('make')) })
       } else { move(shooter, rimSpot.x, rimSpot.y, od * .3); finish() }
     })
     return () => clearAll()
