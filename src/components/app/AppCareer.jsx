@@ -7,10 +7,11 @@ import {
   startSeason, resumeSeason, advanceWeek, chooseMoment, resolveInjury, finishRegular, playoffRound, bookSeason, recordCombine, spendDev, demandTrade, nextSeason,
   OFF_STEPS, offStep, campDrill, CAMP_LEGACY, dbSpot, lineup, depthChart, gradeOf, gradeOfOvr, ovrGradeVal, SPORT, sportOf,
   openTalks, ask, closeTalks, acceptTalks, ASKS, askOdds, leverageOf,
-  retire, canRetire, mustRetire, careerTotals, legacyOf, LEGACY_TIERS, ALL_TIME, STAT_LABEL, HEADLINE_STATS, careerCard, AWARD_NAME, MAX_SEASONS, retireReason, goalsFor, compsFor, stockText, pickText, loadSlots, CAREER_SLOTS, maxedTrait, trainWindow, canUpgrade, upgradeCost, legacyExtras } from '../../lib/career'
+  retire, canRetire, mustRetire, careerTotals, legacyOf, LEGACY_TIERS, ALL_TIME, STAT_LABEL, HEADLINE_STATS, careerCard, AWARD_NAME, MAX_SEASONS, retireReason, goalsFor, stockText, pickText, loadSlots, CAREER_SLOTS, maxedTrait, trainWindow, canUpgrade, upgradeCost, legacyExtras } from '../../lib/career'
 import { GAME_LINE } from '../../lib/seasonDirector'
 import { GAMES, pickPlayoffGame } from '../../lib/minigames'
 import MiniGame from './MiniGame'
+import PlayerComp from './PlayerComp'
 import { valToGrade, nflHeadshot } from '../../utils/simulation'
 import { sfx, haptic, victory } from '../../lib/juice'
 import { MomentCard, NowCard, RecordOverlay, HonorOverlay } from './AppSeasonPlus'
@@ -336,39 +337,8 @@ function Draft({ c, setCareer }) {
   )
 }
 
-// ── The player comp: who this build plays like ──────────────────────────────
-function Comp({ c }) {
-  const S = sportOf(c), attr = POS_ATTR[c.pos]
-  const list = useMemo(() => compsFor(c, 5), [c.build, c.pos]) // eslint-disable-line
-  const top = list[0]
-  if (!top) return null
-  const era = x => (x.era === 'current' ? `TODAY · ${x.team}` : `ALL-TIME${x.years ? ` · ${x.years}` : ''}`)
-  // the columns go by last name (Jr., III and the like skipped): your player's, then the comp's
-  const last = n => { const w = String(n || '').trim().split(/\s+/).filter(x => !/^(jr|sr|ii|iii|iv|v)\.?$/i.test(x)); return (w[w.length - 1] || n || '').toUpperCase() }
-  return (
-    <div className="ag-card cr-comp ag-pop">
-      <div className="ag-card-head"><span className="ag-eyebrow">PLAYER COMP · {c.name.toUpperCase()}</span><span className="cr-comp-pct">{top.match}% MATCH</span></div>
-      <div className="cr-comp-top">
-        <span className="crl-face">{top.photo ? <img src={photoSrc(top.photo)} alt="" loading="lazy" /> : <span className="crl-init">{initials(top.name)}</span>}</span>
-        <span className="cr-comp-name"><b>{top.name}</b><small>{era(top)}</small></span>
-      </div>
-      <div className={`cr-comp-grid${c.types.length % 2 ? ' is-list' : ''}`}>
-        {(c.types.length % 2 ? [0] : [0, 1]).map(i => <span key={`h${i}`} className="cr-comp-row cr-comp-row--head"><small /><em className={`is-you${last(c.name).length > 6 ? ' is-long' : ''}`}>{last(c.name)}</em><em className={last(top.name).length > 6 ? 'is-long' : ''}>{last(top.name)}</em></span>)}
-        {c.types.map(t => {
-          const mine = c.build[t]?.val ?? 0, his = top.attrs[t]
-          return (
-            <span key={t} className="cr-comp-row">
-              <small>{attr[t]?.label ?? t}</small>
-              <b style={{ background: gradeColor(mine) }}>{valToGrade(mine)}</b>
-              <b style={{ background: his == null ? 'rgba(255,255,255,.1)' : gradeColor(his) }}>{his == null ? '—' : valToGrade(his)}</b>
-            </span>
-          )
-        })}
-      </div>
-      {list.length > 1 && <div className="cr-comp-more"><span className="ag-eyebrow">ALSO PLAYS LIKE</span>{list.slice(1).map(x => <span key={x.name} className="cr-comp-chip"><b>{x.name}</b><small>{x.era === 'current' ? x.team : 'ALL-TIME'} · {x.match}%</small></span>)}</div>}
-    </div>
-  )
-}
+// ── The player comp: who this build plays like (the build screen shows the same card) ──
+const Comp = ({ c }) => <PlayerComp c={c} who={c.name.toUpperCase()} />
 
 // ── The team around you ──────────────────────────────────────────────────────
 const initials = n => (n || '?').split(' ').map(w => w[0]).slice(0, 2).join('')

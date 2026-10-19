@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { ATTR, TYPES, QB_PHYSICALS } from '../data/qbs'
 import { RB_PHYSICALS } from '../data/rbs'
@@ -23,6 +23,10 @@ import { generateBucketShareCard, shareOrDownloadCard, captureSilhouette } from 
 import QBAvatar from './QBAvatar'
 import { IS_APP, APP_LOOK, shareNative } from '../lib/platform'
 import AppSandbox from './app/AppSandbox'
+import PlayerComp from './app/PlayerComp'
+import { compsFor } from '../lib/career'
+import { useProgress } from '../lib/progress'
+import { getUsername } from '../lib/discord'
 
 function fmtHeight(inches) { return `${Math.floor(inches / 12)}'${inches % 12}"` }
 
@@ -300,6 +304,18 @@ export default function ReportCard({ build, onSimulate, onReset, types = TYPES, 
     : isOL ? getArchetypeOL(ovr, build, types) : isDB ? getArchetypeDB(ovr, build, types) : isTE ? getArchetypeTE(ovr, build, types) : isWR ? getArchetypeWR(ovr, build, types) : isRB ? getArchetypeRB(ovr, build, types) : getArchetype(ovr, build, types)
   const balance = calcBalance(build, types)
   const complete = filled.length === types.length
+  // The player comp: once the build is complete, who it plays like. A phone shows it under
+  // the OVR; on a desktop the report card gets a switch that flips its list over to it.
+  const prog = useProgress()
+  const who = getUsername(prog.user) || 'Guest'
+  const compPos = isBucket ? (bucketPosition === 'big' ? 'big' : 'guard') : isOL ? 'ol' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'
+  const comp = useMemo(() => {
+    if (!complete) return null
+    const c = { sport: isBucket ? 'bucket' : 'nfl', pos: compPos, types, build }
+    return compsFor(c, 1).length ? c : null
+  }, [complete, isBucket, compPos, types, build])
+  const [view, setView] = useState('card')   // desktop: 'card' (the trait list) or 'comp'
+  useEffect(() => { if (!comp) setView('card') }, [comp])
   const [showChevron, setShowChevron] = useState(true)
   const [showShare, setShowShare]     = useState(false)
   const [showSandboxInfo, setShowSandboxInfo] = useState(false)
@@ -355,7 +371,7 @@ export default function ReportCard({ build, onSimulate, onReset, types = TYPES, 
   }
 
   return (
-    <aside className="panel-right" ref={panelRef}>
+    <aside className={`panel-right${comp && view === 'comp' ? ' rc-view--comp' : ''}`} ref={panelRef}>
       {/* solo: no Simulate button beside the ring (Blacktop, Versus); a phone sets height and weight either side of it */}
       <div className={`ovr-block${isVersusMode ? ' ovr-block--solo' : ''}`}>
         <div className="ovr-ring-row">
@@ -468,6 +484,14 @@ export default function ReportCard({ build, onSimulate, onReset, types = TYPES, 
           </button>
         )}
       </div>
+
+      {comp && (
+        <div className="rc-comp-switch" role="tablist" aria-label="Report card or player comp">
+          <button type="button" role="tab" aria-selected={view === 'card'} className={view === 'card' ? 'is-on' : ''} onClick={() => setView('card')}>REPORT CARD</button>
+          <button type="button" role="tab" aria-selected={view === 'comp'} className={view === 'comp' ? 'is-on' : ''} onClick={() => setView('comp')}>PLAYER COMP</button>
+        </div>
+      )}
+      {comp && <PlayerComp c={comp} who={who} col={who} className="rc-comp" />}
 
       <div className="build-slots">
         {types.map(t => (

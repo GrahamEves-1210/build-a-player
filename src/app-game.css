@@ -5072,4 +5072,23 @@ html.ag-fan-open .ag-dock { z-index: 1170; }
 /* Call buttons: the small line can hold a teammate's full username (PASS → / name), up to
    two lines, as typed, never cut to ten letters */
 .lc-opt small { max-width: 100%; text-align: center; line-height: 1.15; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+/* ── Player comp on the build screen's report card (PlayerComp, once a build is complete) ──
+   A phone: the comp card under the OVR. A desktop: a switch on the report card flips
+   its trait list over to the comp and back. */
+.rc-comp-switch { display: none; }
+.panel-right > .rc-comp { margin: 12px 14px 4px; text-align: left; }
+@media (min-width: 769px) {
+  .rc-comp-switch { display: flex; gap: 4px; margin: 12px 13px 2px; padding: 3px; border-radius: 11px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.1); flex-shrink: 0; }
+  .rc-comp-switch button { flex: 1; height: 32px; border: 0; border-radius: 8px; background: transparent; color: rgba(255,255,255,.62); font-family: var(--ag-font, 'Bebas Neue', sans-serif); font-size: 15px; letter-spacing: 1.6px; cursor: pointer; transition: background .15s, color .15s; }
+  .rc-comp-switch button:hover:not(.is-on) { color: #fff; background: rgba(255,255,255,.06); }
+  .rc-comp-switch button.is-on { color: #04130c; background: linear-gradient(135deg, var(--btn-start, #5EDBD8), var(--btn-end, #1fc98a)); }
+  [data-sport="bucket"] .rc-comp-switch button.is-on { color: #1a0a02; background: linear-gradient(135deg, #ff9a52, #ea6a1c); }
+  .rc-comp-switch button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+  .panel-right:not(.rc-view--comp) > .rc-comp { display: none; }
+  .panel-right.rc-view--comp > .build-slots { display: none; }
+  .panel-right > .rc-comp { margin: 10px 13px; overflow-y: auto; }
+  .panel-right > .rc-comp .cr-comp-grid { grid-template-columns: 1fr; }
+  .panel-right > .rc-comp .cr-comp-pct { white-space: nowrap; flex: none; }
+  .panel-right > .rc-comp .ag-card-head { gap: 8px; align-items: flex-start; }
+}
 
