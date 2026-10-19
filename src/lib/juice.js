@@ -201,7 +201,6 @@ const SYNTH = {
     noise(S, { bp: 1800, q: 0.9, dur: 0.14, gain: 0.16, at })
     const chords = [[220, 261.6, 329.6], [261.6, 329.6, 392], [293.7, 370, 440], [329.6, 415.3, 493.9], [392, 493.9, 587.3]]
     for (const f of chords[Math.max(0, Math.min(4, tier))]) brass(S, { f, dur: 0.5 + tier * 0.12, gain: 0.08 + tier * 0.01, at, hold: 0.1 + tier * 0.05, out: v })
-    if (tier >= 2) crowd(S, { dur: 1.4 + tier * 0.3, gain: 0.08 + tier * 0.04, at })
     if (tier >= 4) noise(S, { hp: 5200, dur: 1, gain: 0.08, at, out: v, env: { a: 0.004, d: 1 } })
   },
   // season kicks off
@@ -209,7 +208,6 @@ const SYNTH = {
   // award reveal: short brass fanfare, crowd behind it
   award: S => {
     const v = verb(S, 0.4)
-    crowd(S, { dur: 1.8, gain: 0.16, at: 0.1 })
     for (const [f, at] of [[523.3, 0], [659.3, 0.13], [784, 0.26]]) brass(S, { f, dur: 0.18, gain: 0.14, at, out: v })
     brass(S, { f: 1046.5, dur: 0.75, gain: 0.17, at: 0.4, hold: 0.3, out: v })
     hit(S, { gain: 0.2, at: 0.4 })
@@ -221,12 +219,10 @@ const SYNTH = {
     noise(S, { hp: 5000, dur: 0.9, gain: 0.11, at: 0.02, out: v, env: { a: 0.005, d: 0.9 } })
     horn(S, { f: 233, dur: 0.85, gain: 0.2, at: 0.05, out: v })
     horn(S, { f: 233, dur: 0.5, gain: 0.17, at: 1.05, out: v })
-    crowd(S, { dur: 2.8, gain: 0.26, at: 0.04 })
   },
   // level up: fanfare a fourth higher, with a shimmer on top
   levelup: S => {
     const v = verb(S, 0.42)
-    crowd(S, { dur: 1.5, gain: 0.11, at: 0.15 })
     for (const [f, at] of [[698.5, 0], [880, 0.12], [1046.5, 0.24]]) brass(S, { f, dur: 0.16, gain: 0.13, at, out: v })
     brass(S, { f: 1396.9, dur: 0.7, gain: 0.16, at: 0.38, hold: 0.25, out: v })
     noise(S, { hp: 6000, dur: 0.7, gain: 0.07, at: 0.4, out: v, env: { a: 0.01, d: 0.7 } })
@@ -281,7 +277,6 @@ const SYNTH = {
   // achievement: three rising brass stabs and a small crowd
   achievement: S => {
     const v = verb(S, 0.36)
-    crowd(S, { dur: 1.2, gain: 0.08, at: 0.12 })
     ;[[523.3, 0], [659.3, 0.11], [880, 0.22]].forEach(([f, at]) => brass(S, { f, dur: 0.12, gain: 0.11, at, out: v }))
     brass(S, { f: 1046.5, dur: 0.45, gain: 0.13, at: 0.34, hold: 0.12, out: v })
     hit(S, { gain: 0.18, at: 0.34 })
@@ -390,9 +385,9 @@ const SAMPLED = {
   },
   // (no impact hit or crowd: the stack and the good-news chime)
   achievement: S => smp(S, 'stack', { gain: 0.6 }) && smp(S, 'pluck2', { gain: 0.6, at: 0.08 }) && smp(S, 'confirm', { gain: 0.4, at: 0.13 }),
-  levelup: S => smp(S, 'hitXL', { gain: 0.9 }) && smp(S, 'handful', { gain: 0.6, at: 0.25 }) && (crowd(S, { dur: 1.6, gain: 0.11, at: 0.1 }), true),
-  award: S => smp(S, 'hitL', { gain: 0.95 }) && (crowd(S, { dur: 1.8, gain: 0.15, at: 0.08 }), true),
-  champion: S => { if (!smp(S, 'hitXXL', { gain: 1 })) return false; const v = verb(S, 0.4); horn(S, { f: 233, dur: 0.6, gain: 0.12, at: 0.9, out: v }); crowd(S, { dur: 2.8, gain: 0.24, at: 0.04 }); return true },
+  levelup: S => smp(S, 'hitXL', { gain: 0.9 }) && smp(S, 'handful', { gain: 0.6, at: 0.25 }),
+  award: S => smp(S, 'hitL', { gain: 0.95 }),
+  champion: S => { if (!smp(S, 'hitXXL', { gain: 1 })) return false; const v = verb(S, 0.4); horn(S, { f: 233, dur: 0.6, gain: 0.12, at: 0.9, out: v }); return true },
   // the last trait in: the riser, then a real impact and a stinger sized to the tier
   complete: (S, tier = 2) => {
     if (!ready('punch')) return false
@@ -400,7 +395,6 @@ const SAMPLED = {
     osc(S, { f: 46, to: 74, dur: 0.95, gain: 0.13, env: { a: 0.8, d: 0.15 } })
     smp(S, 'punch', { gain: 1, at: 1.0 })
     smp(S, ['hitS', 'hitS2', 'hitM', 'hitL', 'hitXXL'][Math.max(0, Math.min(4, tier))], { gain: 0.9, at: 1.0 })
-    if (tier >= 2) crowd(S, { dur: 1.4 + tier * 0.3, gain: 0.07 + tier * 0.04, at: 1.0 })
     return true
   },
   // victory sounds that lead with recorded music (no crowd under them: Stadium Roar is the crowd)
