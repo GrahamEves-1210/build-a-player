@@ -40,7 +40,9 @@ const lerp = (a, b, t) => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t 
 const near = (p, spots) => spots.reduce((best, s) => (Math.hypot(s.x - p.x, s.y - p.y) < Math.hypot(best.x - p.x, best.y - p.y) ? s : best), spots[0])
 
 // meLabel: what your own player is called on court ('YOU'; null = your username, like everyone else)
-export default function BlacktopCourt({ game, play, meId, photoFor, colorFor, avatarFor, speed = 1, meLabel = null, meName = null, ovrFor = null, bubbles = null }) {
+// onReveal(playId): called when that play's result happens on the court (the ball reaches the
+// rim, the swat, the steal, the board), so the play-by-play and the score can wait for it
+export default function BlacktopCourt({ game, play, meId, photoFor, colorFor, avatarFor, speed = 1, meLabel = null, meName = null, ovrFor = null, bubbles = null, onReveal = null }) {
   const court = useCourt()
   const players = game.sides.flat()
   const byId = Object.fromEntries(players.map(p => [p.id, p]))
@@ -75,7 +77,10 @@ export default function BlacktopCourt({ game, play, meId, photoFor, colorFor, av
     return () => clearInterval(id)
   }, [speed])
   const checkPass = useRef(null)     // the pass a check-up already showed (not played twice)
-  const popRim = label => { popKey.current++; setPop({ label, key: popKey.current }); after(900, () => setPop(null)) }
+  const revealTo = useRef(onReveal); revealTo.current = onReveal
+  const playId = useRef(null)
+  const reveal = () => revealTo.current?.(playId.current)
+  const popRim = label => { reveal(); popKey.current++; setPop({ label, key: popKey.current }); after(900, () => setPop(null)) }
   const clearAll = () => { timers.current.forEach(clearTimeout); timers.current = [] }
   // where each player is headed now (kept as moves happen, so a pass or a shot later
   // in the play goes from where he actually is, not where he stood when it began)
@@ -93,10 +98,12 @@ export default function BlacktopCourt({ game, play, meId, photoFor, colorFor, av
   useEffect(() => {
     if (!play) return
     clearAll()
+    playId.current = play.id
     const off = game.sides[play.poss], def = game.sides[1 - play.poss]
     const offIds = off.map(p => p.id)
     const sp = id => sdur(byId[id]?.R.speed)
 
+    if (play.type === 'milestone' || play.type === 'check') reveal()
     if (play.type === 'milestone') return
     if (play.type === 'check') {
       setBall(null)
@@ -123,18 +130,21 @@ export default function BlacktopCourt({ game, play, meId, photoFor, colorFor, av
       const spot = { x: cl(hp.x + side * r.rnd(8, 14)), y: hp.y - r.rnd(6, 12) }
       move(h, spot.x, spot.y, sp(h) * .9)
       move(s, spot.x + side * 6, spot.y + 4, sp(s) * .8)
-      after(520, () => { setHolder(s); move(s, spot.x + side * 10, spot.y + 10, sp(s) * .5); move(h, spot.x - side * 6, spot.y + 6, sp(h) * .7) })
+      after(520, () => { reveal(); setHolder(s); move(s, spot.x + side * 10, spot.y + 10, sp(s) * .5); move(h, spot.x - side * 6, spot.y + 6, sp(h) * .7) })
       after(900, () => { move(s, 50, 80, sp(s)); moveMany(shadowAll(offIds, TOP, s)); bounce(3, 230) })
       return
     }
 
     // a possession: entry pass → passes → the shot
     let t = 0
-    let carrier = play.entry && byId[play.entry] ? play.entry : play.handler
-    setHolder(carrier)
     // the inbound pass, unless the check-up just showed it (a second catch with the ball already there)
     const shown = checkPass.current && checkPass.current.from === play.entry && checkPass.current.to === play.handler
     checkPass.current = null
+    // who has it as the play starts: the passer when the inbound pass is still to come; the
+    // handler when the check-up already gave it to him (it went back to the passer and stayed
+    // there: the handler drove and shot while the ball sat with his teammate)
+    let carrier = play.entry && byId[play.entry] && !shown ? play.entry : play.handler
+    setHolder(carrier); setBall(null)
     if (play.entry && play.entry !== play.handler && byId[play.entry] && !shown) {
       const hp = at(play.handler)
       after(0, () => { flyBall(hp.x, hp.y, .36); after(320, () => { setHolder(play.handler); setBall(null); caught() }) })
@@ -283,11 +293,12 @@ export default function BlacktopCourt({ game, play, meId, photoFor, colorFor, av
   useEffect(() => {
     if (!play || (play.type !== 'oreb' && play.type !== 'dreb')) return
     clearAll()
+    playId.current = play.id
     const rb = play.pid
     const everyone = players.map(p => p.id)
     moveMany(everyone.map(id => [id, 50 + r.rnd(-16, 16), 18 + r.rnd(0, 14), sdur(byId[id]?.R.speed) * .8]))
     after(380, () => { flyBall(at(rb).x, 22, .3) })
-    after(620, () => { setHolder(rb); setBall(null); move(rb, at(rb).x, 30, sdur(byId[rb]?.R.speed) * .5) })
+    after(620, () => { reveal(); setHolder(rb); setBall(null); move(rb, at(rb).x, 30, sdur(byId[rb]?.R.speed) * .5) })
     if (play.type === 'dreb') after(1000, () => { move(rb, 50, 76); bounce(2, 230); setTag('OUTLET'); after(700, () => setTag(null)) })
     return () => clearAll()
   }, [play?.id]) // eslint-disable-line

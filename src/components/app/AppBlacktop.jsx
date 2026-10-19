@@ -489,6 +489,17 @@ export function BlacktopGame({ bt, user, photoFor, onOpenChat, unread }) {
   const fired = useRef(false)
   const plays = game?.plays ?? []
   const play = plays[idx]
+  // a play's line in the feed (and its points on the board) show once it happens on the
+  // court, not as it starts: the court reports it (onReveal); a timer near the end of the
+  // play is the backstop. Everything before the current play is out already.
+  const [shown, setShown] = useState(-1)
+  useEffect(() => {
+    if (!play) return
+    const t = setTimeout(() => setShown(s => Math.max(s, idx)), (playDelay(play, idx === 0) * 0.85) / speed)
+    return () => clearTimeout(t)
+  }, [idx]) // eslint-disable-line
+  const onReveal = id => { const i = plays.findIndex(p => p.id === id); if (i >= 0) setShown(s => Math.max(s, i)) }
+  const outTo = shown >= idx ? idx : idx - 1
   const mine = match.players.find(p => p.vid === bt.me.vid)
   const myTeam = mine?.team ?? 0
   const colorFor = t => TEAM_COLORS[t]
@@ -533,8 +544,8 @@ export function BlacktopGame({ bt, user, photoFor, onOpenChat, unread }) {
   const lastCheck = [...plays.slice(0, idx + 1)].reverse().find(p => p.type === 'check')
   const locked = lastCheck ? bt.locks?.[lastCheck.pn] : null
   const humansOn = t => match.players.some(p => p.team === t && !p.bot)
-  const score = play?.score ?? [0, 0]
-  const feed = plays.slice(0, idx + 1).filter(p => p.type !== 'check').slice(-4).reverse()
+  const score = plays[outTo]?.score ?? [0, 0]
+  const feed = plays.slice(0, outTo + 1).filter(p => p.type !== 'check').slice(-4).reverse()
   const squads = [0, 1].map(t => game.teams[t])
   // only the calls that fit this game: a 1v1 has no pass and no help (a CPU's call included)
   const size = game.teams[myTeam]?.length ?? 1
@@ -617,7 +628,7 @@ export function BlacktopGame({ bt, user, photoFor, onOpenChat, unread }) {
       {/* each player on court is their profile picture and username (the CPU fill-ins say CPU) */}
       {showBuilds && <SquadBuilds game={game} names={names} meVid={bt.me.vid} onClose={() => setShowBuilds(false)} />}
       <div className="lc-court">
-        <BlacktopCourt game={game} play={play} meId={bt.me.vid} colorFor={colorFor} speed={speed}
+        <BlacktopCourt game={game} play={play} meId={bt.me.vid} colorFor={colorFor} speed={speed} onReveal={onReveal}
           ovrFor={p => liveOvr(p)} bubbles={bubbles}
           avatarFor={p => <Av name={p.name} bot={asBot(p)} team={p.team} size={28} cos={p.cos} self={p.id === bt.me.vid} />} />
         {locked && lastCheck && !calling && <CallReveal key={lastCheck.pn} off={fitOff(locked[lastCheck.team])} def={fitDef(locked[1 - lastCheck.team])} offense={lastCheck.team === myTeam} nameOf={id => firstName(game.teams.flat().find(p => p.id === id)?.name)} />}

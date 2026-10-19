@@ -417,6 +417,15 @@ function HoopsDuel({ duel, run, city, me, onDone }) {
   const plays = duel.plays
   const play = plays[idx]
   const done = useRef(false)
+  // the feed and the score wait for the court (BlacktopCourt's onReveal; a timer is the backstop)
+  const [shown, setShown] = useState(-1)
+  useEffect(() => {
+    if (!play) return
+    const t = setTimeout(() => setShown(s => Math.max(s, idx)), (playDelay(play, idx === 0) * 0.85) / speed)
+    return () => clearTimeout(t)
+  }, [idx, speed]) // eslint-disable-line
+  const onReveal = id => { const i = plays.findIndex(p => p.id === id); if (i >= 0) setShown(s => Math.max(s, i)) }
+  const outTo = shown >= idx ? idx : idx - 1
   useEffect(() => {
     if (idx >= plays.length - 1) {
       if (!done.current) { done.current = true; setTimeout(() => { if (duel.win) victory(); else sfx('pop'); onDone(duel.win) }, 2200) }
@@ -429,8 +438,8 @@ function HoopsDuel({ duel, run, city, me, onDone }) {
     // (a make is heard on the court itself: BlacktopCourt)
     if (play?.type === 'block' || play?.type === 'steal') setTimeout(() => sfx('pop'), 700)
   }, [idx]) // eslint-disable-line
-  const score = play?.score ?? [0, 0]
-  const feed = plays.slice(0, idx + 1).filter(p => p.type !== 'check').slice(-4).reverse()
+  const score = plays[outTo]?.score ?? [0, 0]
+  const feed = plays.slice(0, outTo + 1).filter(p => p.type !== 'check').slice(-4).reverse()
   const duoGame = duel.sides[0].length > 1
   const goal = duoGame ? 15 : 11
   const opp = lift(city.color)
@@ -444,7 +453,7 @@ function HoopsDuel({ duel, run, city, me, onDone }) {
         <div className="bt-board-mid"><span className="ag-eyebrow">{city.city.toUpperCase()} · TO {goal}</span><button className={`ag-chip${speed === 2 ? ' is-on' : ''}`} onClick={() => setSpeed(s => (s === 1 ? 2 : 1))}>{speed}×</button></div>
         <div className={`bt-board-side bt-t1${score[1] > score[0] ? ' is-lead' : ''}`} style={{ '--tc': opp }}><span className="bt-board-name">{duoGame ? city.nick.toUpperCase() : lastName(duel.sides[1][0].name).toUpperCase()}</span><b>{score[1]}</b></div>
       </div>
-      <BlacktopCourt game={duel} play={play} meId="me" meName={me.name} photoFor={photoFor} avatarFor={avatarFor} colorFor={t => (t === 0 ? '#e8f0f6' : opp)} speed={speed} />
+      <BlacktopCourt game={duel} play={play} meId="me" meName={me.name} photoFor={photoFor} avatarFor={avatarFor} colorFor={t => (t === 0 ? '#e8f0f6' : opp)} speed={speed} onReveal={onReveal} />
       <div className="bt-feed">{feed.map((p, i) => <div key={p.id} className={`bt-feed-line bt-t${p.team}${i === 0 ? ' is-now' : ''}${p.big ? ' is-big' : ''}${p.type === 'milestone' ? ' is-ms' : ''}`} style={p.team === 1 ? { '--tc': opp } : undefined}>{p.text}</div>)}</div>
     </div>
   )
