@@ -268,8 +268,12 @@ export default function BlacktopCourt({ game, play, meId, photoFor, colorFor, av
     })
     after(start + 420, () => { move(shooter, lane.x, lane.y, od * .32); move(d, cl(rimSpot.x + dir * r.rnd(2, 8)), rimSpot.y + r.rnd(2, 8), dd * .55) })
     after(start + 700, () => {
-      move(shooter, rimSpot.x, rimSpot.y, od * (shot === 'dunk' ? .26 : .3))
-      if (shot === 'dunk') { flyBall(rimSpot.x, rimSpot.y, .25); after(220, () => { popRim(label); sfx(made ? 'make' : 'rimmiss') }) } else finish()
+      // a dunk is finished at the rim itself (he goes up under it and the ball goes through
+      // the hoop); a layup goes up from his spot in the paint
+      if (shot === 'dunk') {
+        move(shooter, RIM.x + (cur.x < 50 ? -1 : 1) * r.rnd(2, 5), RIM.y + r.rnd(3, 6), od * .26)
+        flyBall(RIM.x, RIM.y, .25); after(220, () => { popRim(label); sfx(made ? 'make' : 'rimmiss') })
+      } else { move(shooter, rimSpot.x, rimSpot.y, od * .3); finish() }
     })
     return () => clearAll()
   }, [play?.id]) // eslint-disable-line

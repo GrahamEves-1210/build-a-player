@@ -424,7 +424,7 @@ function CourtVisual({ play, myColor, oppColor, myName, oppName, possession, dis
         after(Math.round(480 * od / 0.52), () => {
           mv(setOff, rimSpot.x, rimSpot.y, od * 0.32)
           mv(setDef, cl(rimSpot.x + wing * rnd(4, 10)), rimSpot.y + rnd(8, 14), dd * 0.65)
-          setBallOverride({ x: rimSpot.x, y: rimSpot.y })
+          setBallOverride({ x: 50, y: 12 })   // through the hoop (he finishes under it)
           after(Math.round(od * 0.32 * 1000 * 0.85), () => popRim('+1'))
         })
         } else {
@@ -441,7 +441,7 @@ function CourtVisual({ play, myColor, oppColor, myName, oppName, possession, dis
         after(Math.round(640 * od / 0.52), () => {
           mv(setOff, rimSpot.x, rimSpot.y, od * 0.26)
           mv(setDef, cl(rimSpot.x + wing * rnd(4, 10)), rimSpot.y + rnd(6, 12), dd * 0.60)
-          setBallOverride({ x: rimSpot.x, y: rimSpot.y })
+          setBallOverride({ x: 50, y: 12 })   // through the hoop (he finishes under it)
           after(Math.round(od * 0.26 * 1000 * 0.85), () => popRim('+1'))
         })
         }
