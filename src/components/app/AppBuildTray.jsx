@@ -355,8 +355,9 @@ export function DropBar({ open, setOpen, build, types, attrMap, waiting = null, 
         })}
       </span>
       {!complete && (
-        <span className={`drop-bar-spin${waiting && !open ? ' is-pick' : ''}`} aria-hidden="true">
-          {waiting && !open ? 'PICK' : 'SPIN'} <IconArrow size={13} style={{ transform: `rotate(${open ? -90 : 90}deg)` }} />
+        // open or shut, the button stays the same: only its arrow turns
+        <span className={`drop-bar-spin${waiting ? ' is-pick' : ''}`} aria-hidden="true">
+          {waiting ? 'PICK' : 'SPIN'} <IconArrow size={13} style={{ transform: `rotate(${open ? -90 : 90}deg)`, transition: 'transform .22s ease' }} />
         </span>
       )}
       {complete && <span className="drop-bar-done"><b>{filled}</b>/{types.length}</span>}
