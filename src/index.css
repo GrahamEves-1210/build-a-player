@@ -12088,6 +12088,8 @@ html.is-touch .bd-card-main:hover         { background: transparent !important; 
 .fb-sent { display: flex; flex-direction: column; gap: 10px; text-align: center; }
 .fb-sent-title { font-size: 16px; font-weight: 800; color: var(--accent); }
 .fb-sent-body { margin: 0 0 6px; font-size: 13px; color: var(--text-2); }
+.fb-email { margin: 14px 0 0; text-align: center; font-size: 13px; color: var(--text-3, rgba(255,255,255,.6)); }
+.fb-email a { color: var(--accent); font-weight: 700; text-decoration: underline; text-underline-offset: 2px; overflow-wrap: anywhere; }
 
 .auth-error {
   font-size: 12px;

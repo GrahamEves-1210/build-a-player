@@ -11,6 +11,8 @@ const KINDS = [
   { id: 'other',   label: 'Other' },
 ]
 const MAX = 1500
+// shown under the form too, for anyone who'd rather write (Contact us and Feedback both open this)
+const EMAIL = 'buildaplayer@outlook.com'
 const COOLDOWN_MS = 60_000
 
 export default function FeedbackModal({ user, isBucket, position, onClose }) {
@@ -106,6 +108,7 @@ export default function FeedbackModal({ user, isBucket, position, onClose }) {
             <button className="auth-submit" type="submit" disabled={sending}>{sending ? 'Sending…' : 'Send Feedback'}</button>
           </form>
         )}
+        <p className="fb-email">Or email us at <a href={`mailto:${EMAIL}`}>{EMAIL}</a></p>
       </div>
     </div>,
     document.body,
