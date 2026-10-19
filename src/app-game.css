@@ -5047,4 +5047,27 @@ html.ag-fan-open .ag-dock { z-index: 1170; }
 .au-slot.is-up:not(.is-in) { border-color: color-mix(in srgb, var(--ag-a1) 75%, transparent); background: color-mix(in srgb, var(--ag-a1) 9%, transparent); }
 .au-slot.is-up:not(.is-in) small { color: var(--ag-a1); font-weight: 700; }
 @media (prefers-reduced-motion: reduce) { .au-lot.is-pulling .au-lot-info, .au-lot.is-pulling .au-grade { animation-duration: 1ms; animation-delay: 0ms; } }
+/* ── The report card under the build on a phone (app + new-look website, both sports) ──
+   Plain: no lined-paper stripes, no faded dashed rows for traits not picked yet (the strip
+   up top already shows those) and no rule under the list; the picked traits list as they
+   come in. The panel runs to the bottom (no strip of the page behind it above the dock).
+   No Simulate button (Blacktop, Versus): height and weight sit either side of the ring. */
+@media (max-width: 768px) {
+  html.is-app .game-layout.mobile-build { padding-bottom: 0 !important; }   /* the app only: the website's page needs its padding (the footer follows) */
+  html.app-look:not(.is-app) .game-layout.mobile-build .panel-right { padding-bottom: 20px !important; }   /* the website: room before the footer */
+  html:is(.is-app, .app-look) .game-layout.mobile-build .right-panel-wrap::before { display: none !important; }
+  html:is(.is-app, .app-look) .game-layout.mobile-build .build-slot.empty,
+  html:is(.is-app, .app-look) .game-layout.mobile-build .bs-bottom-line { display: none !important; }
+  html:is(.is-app, .app-look) .game-layout.mobile-build .build-slots:not(:has(.simp-attr-row)) { display: none !important; }
+  html:is(.is-app, .app-look) .ovr-block--solo .ovr-ring-row { gap: 22px; grid-column: 1 / -1; margin-left: 0 !important; }
+  html:is(.is-app, .app-look) .ovr-block--solo .ovr-hw-mobile { display: contents !important; }
+  html:is(.is-app, .app-look) .ovr-block--solo .ohm-stat { margin-top: -18px; }
+  html:is(.is-app, .app-look) .ovr-block--solo .ohm-stat:first-child { order: 0; align-items: flex-end; min-width: 58px; }
+  /* the ring's drawing runs ~17px past its box on the right: the margin evens the gaps and centers it */
+  html:is(.is-app, .app-look) .ovr-block--solo .ovr-ring-wrap { order: 1; margin-right: 17px !important; }
+  html:is(.is-app, .app-look) .ovr-block--solo .ohm-stat:last-child { order: 2; align-items: flex-start; min-width: 58px; }
+}
+/* Blacktop build: the bar at the top (clock and teams, chat, LEAVE) is one solid strip down
+   to the trait strip, so the build doesn't show through between its buttons when you scroll */
+.bt-hud.has-leave::before { content: ''; position: absolute; z-index: -1; left: -10px; right: -10px; top: -6px; bottom: -6px; background: rgba(9,12,11,.94); pointer-events: none; }
 

@@ -356,7 +356,8 @@ export default function ReportCard({ build, onSimulate, onReset, types = TYPES, 
 
   return (
     <aside className="panel-right" ref={panelRef}>
-      <div className="ovr-block">
+      {/* solo: no Simulate button beside the ring (Blacktop, Versus); a phone sets height and weight either side of it */}
+      <div className={`ovr-block${isVersusMode ? ' ovr-block--solo' : ''}`}>
         <div className="ovr-ring-row">
           <div className="ovr-hw-mobile">
             <div className="ohm-stat">
