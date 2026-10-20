@@ -28,7 +28,7 @@
   text-decoration: underline; text-decoration-color: rgba(216,243,220,.25); text-underline-offset: 3px;
   cursor: pointer;
 }
-.tut-skip:hover { color: var(--ag-text, #EEF8F1); }
+@media (hover: hover) { .tut-skip:hover { color: var(--ag-text, #EEF8F1); } }
 .tut-skip:focus-visible, .tut-bubble-ok:focus-visible, .tut-bubble-btn:focus-visible { outline: 2px solid var(--ag-a1, #4fd6b7); outline-offset: 2px; }
 
 /* ── The prompt ──────────────────────────────────────────────────────────── */

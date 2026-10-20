@@ -20,7 +20,7 @@
 .v1g-hud .bt-hud-p-name .ntag { max-width: 100%; }
 
 /* matchup sheet: who you drew, then take a spot */
-.bt-sheet.v1g-sheet, html.app-look .bt-sheet.v1g-sheet { height: auto; max-height: calc(90dvh - var(--web-rail, 0px)); overflow-y: auto; }
+.bt-sheet.v1g-sheet, html.app-look .bt-sheet.v1g-sheet { height: auto; max-height: calc(90dvh - var(--web-rail, 0px)); overflow-y: auto; overscroll-behavior: contain; }
 .v1g-squads { margin: 2px 0 14px; }
 .v1g-pick-lbl { display: block; margin: 0 0 8px; text-align: center; }
 .v1g-pick { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding-bottom: 6px; }
