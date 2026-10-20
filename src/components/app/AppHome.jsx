@@ -8,6 +8,7 @@ import { sfx } from '../../lib/juice'
 import SoundToggle from './SoundToggle'
 import Tutorial, { startTutorial } from './Tutorial'
 import { IS_APP } from '../../lib/platform'
+import { rampAdd } from '../../lib/ads'
 import { NameTag, AvatarBadge } from './NameTag'
 import { CoinPill } from './AppShop'
 import { TierChip, Form } from './OnlineRecord'
@@ -276,6 +277,11 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
   })
   const [ready, setReady] = useState(false)
   useEffect(() => { const t = setTimeout(() => setReady(true), 450); return () => clearTimeout(t) }, [])
+  // the website: an in-page ad under Salary Cap / The Depth Chart (never in the app, never ad-free)
+  useEffect(() => {
+    if (IS_APP || document.documentElement.classList.contains('ads-hidden')) return
+    rampAdd([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-home' }])
+  }, [sport])
 
   const pick = pos => { setPosition(pos); try { localStorage.setItem(storeKey, pos) } catch {} }
   const start = mode => { try { localStorage.setItem(storeKey, position) } catch {}; onStart(mode, position) }
@@ -444,6 +450,8 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
               </button>
             </>
           )}
+          {/* website: an ad right under those, the full width, no margins of its own (collapses when there's none) */}
+          {!IS_APP && <div key={`home-ad-${sport}`} id="ramp-cntr1-home" className="ag-home-ad" />}
         </div>
         <PlayersOfDay />
       </div>

@@ -5118,4 +5118,14 @@ html.ag-fan-open .ag-dock { z-index: 1170; }
 /* Takeover Duo: back out of a code nobody's joined yet */
 .tk-code-cancel { margin-top: 6px; padding: 8px 14px; border: 0; background: none; color: var(--ag-muted); font-family: var(--ag-font); font-size: 13px; letter-spacing: 1.6px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 .tk-code-cancel:hover { color: #fff; }
+/* The website's home ad: under Salary Cap / The Depth Chart, the modes grid's full width, no margins */
+.ag-home-ad { grid-column: 1 / -1; margin: 0; padding: 0; display: flex; flex-direction: column; align-items: center; overflow: hidden; }
+.ag-home-ad:empty, html.ads-hidden .ag-home-ad { display: none; }
+/* Every in-page ad (not the sticky rails): a small ADVERTISEMENT label over it, once an ad is
+   actually in the slot (an empty slot shows nothing) */
+:is([id^="ramp-cntr1"], [id^="ramp-season"]):has(iframe) { flex-direction: column; align-items: center; }
+:is([id^="ramp-cntr1"], [id^="ramp-season"]):has(iframe)::before {
+  content: 'ADVERTISEMENT'; display: block; width: 100%; margin: 0 0 3px; text-align: center;
+  font-family: system-ui, -apple-system, sans-serif; font-size: 8.5px; font-weight: 600; letter-spacing: 1.6px; line-height: 1.2; color: rgba(255,255,255,.38);
+}
 
