@@ -726,9 +726,9 @@ function Bench({ v, load = 1, onDone }) {
   const bar = useRef(null), count = useRef(null), secs = useRef(null)
   // Realistic numbers: strength sets how many reps the set can hold (football: the 225 lb
   // combine bar, about 18 for the weakest to 35 for the strongest; basketball (load < 1): the
-  // 185 lb bar, about 8 to 22), and the bar fails the way a real set does: every rep near that
+  // 185 lb bar, about 3 to 22), and the bar fails the way a real set does: every rep near that
   // ceiling lifts less and sinks faster, so fast tapping gets you close to it, never past it
-  const ceil = load < 1 ? 7 + v * 1.4 : 16 + v * 1.7
+  const ceil = load < 1 ? 1 + v * 1.9 : 16 + v * 1.7   // basketball: the weakest can put up 1-3 (Kevin Durant did 0), the best about 22
   const fail = () => Math.min(0.97, (S.current.reps / ceil) ** 2.2)
   const push = 34 * (1 + v * 0.06) * load
   const SECS = 12

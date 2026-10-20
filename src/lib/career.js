@@ -725,7 +725,8 @@ const drillValue = (id, v, score, raw) => {
   switch (id) {
     case 'forty': { const s = 4.95 - t * 0.6 - run * 0.2; return { text: `${s.toFixed(2)}s`, pct: pc((4.62 - s) / 0.22) } }
     case 'sprint': { const s = 3.55 - t * 0.4 - run * 0.14; return { text: `${s.toFixed(2)}s`, pct: pc((3.33 - s) / 0.15) } }
-    case 'velo': { const m = Math.round(49 + t * 14 + run * 7); return { text: `${m} mph`, pct: pc((m - 56) / 6) } }
+    // real combine throws run about 50-62 mph (Josh Allen's 62 among the best)
+    case 'velo': { const m = Math.round(48 + t * 12 + run * 6); return { text: `${m} mph`, pct: pc((m - 55) / 5) } }
     case 'vert': { const i = r10(26 + t * 16 + run * 7); return { text: `${i}" vertical`, pct: pc((i - 33) / 6) } }
     case 'cone': { const of = raw?.of ?? 6, slips = of - cnt(of, 2); const s = 7.45 - t * 0.75 + slips * 0.07 - run * 0.08; return { text: `${s.toFixed(2)}s`, pct: pc((7.05 - s) / 0.3) } }
     case 'lane': { const of = raw?.of ?? 6, slips = of - cnt(of, 2); const s = 11.9 - t * 1.4 + slips * 0.12 - run * 0.15; return { text: `${s.toFixed(2)}s`, pct: pc((11.2 - s) / 0.6) } }
