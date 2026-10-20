@@ -673,6 +673,38 @@ export default function BucketSalaryCap({ onConfirm, onBack, user, initialDateSt
   // under players who already submitted picks for it — regenerating on the
   // fly (the old behavior) breaks the moment the underlying roster data
   // changes, since the same seed then picks different actual players.
+  // A stored board is only as good as whoever wrote it (any signed-in player can), so it's
+  // taken only if it's a real one: every price its tier's, every player real at their real
+  // ratings, and most cells the same as the board this phone makes from the day's seed.
+  // Photos are always our own. Anything else: the phone's own board.
+  const trustedFrozen = (frozen) => {
+    if (!Array.isArray(frozen) || frozen.length !== SAL_COLS.length || !frozen.every(col => Array.isArray(col) && col.length === TIERS.length)) return null
+    // the generator's own ranking (yesterday's players marked down the same way), so a
+    // re-rate since the freeze still passes but a star dropped into a cheap tier doesn't
+    const recent = recentFor(activeDate)
+    const regulars = ALL_PLAYERS.filter(p => !p.legend)
+    let legends = 0
+    for (let ci = 0; ci < frozen.length; ci++) {
+      const col = SAL_COLS[ci]
+      const score = p => { const ts = typesFor(p, col); return ts.reduce((s, x) => s + (p.attrs?.[x] ?? 5), 0) / ts.length - (recent.has(p.name) ? 3.5 : 0) }
+      const ranked = regulars.map(p => [p.name, score(p)]).sort((x, y) => y[1] - x[1]).map(x => x[0])
+      for (let ti = 0; ti < TIERS.length; ti++) {
+        const cell = frozen[ci][ti]
+        if (!cell || cell.price !== TIERS[ti] || typeof cell.name !== 'string') return null
+        const real = ALL_PLAYERS.find(p => p.name === cell.name && p.team === cell.team) ?? ALL_PLAYERS.find(p => p.name === cell.name)
+        if (!real || Object.entries(cell.attrs || {}).some(([k, v]) => v !== (real.attrs?.[k] ?? 5))) return null
+        if (real.legend) { if (++legends > 2) return null; continue }
+        const at = ranked.indexOf(real.name) / Math.max(1, ranked.length)
+        if (at < TIER_BANDS[ti][0] - 0.2) return null
+      }
+    }
+    return frozen.map(col => col.map(cell => { const hs = NBA_HEADSHOTS[cell.name]; return { ...cell, photo: hs ? `${HEADSHOT_BASE}/nba/${hs}.webp` : null } }))
+  }
+  const recentFor = (date) => {
+    const yesterday = new Date(date.y, date.m - 1, date.day - 1)
+    const yy = yesterday.getFullYear(), ym = yesterday.getMonth() + 1, yd = yesterday.getDate()
+    return getPickedNamesForSeed(yy * 10000 + ym * 100 + yd, SAL_COLS, ALL_PLAYERS)
+  }
   const localGenerateGrid = (date) => {
     const rand = seededRandom(date.seed)
     const yesterday = new Date(date.y, date.m - 1, date.day - 1)
@@ -717,8 +749,10 @@ export default function BucketSalaryCap({ onConfirm, onBack, user, initialDateSt
       .then(({ data, error }) => {
         if (cancelled) return
         if (error) { console.error('[salary-cap] grid fetch failed:', error); return }
-        if (data?.grid) {
-          setGrid(data.grid) // swap to the historically-accurate frozen board
+        const frozen = data?.grid ? trustedFrozen(data.grid) : null
+        if (data?.grid && !frozen) { console.warn(`[${'salary-cap'}] the stored board for ${activeDate.str} didn't check out; using this phone's own`); return }
+        if (frozen) {
+          setGrid(frozen) // swap to the historically-accurate frozen board
         } else {
           // No frozen record yet (first visitor of the day, or a past date
           // from before this fix shipped) — lock in our local regeneration

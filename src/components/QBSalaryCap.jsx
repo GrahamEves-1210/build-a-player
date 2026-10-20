@@ -638,11 +638,45 @@ export default function QBSalaryCap({ onConfirm, onBack, user, initialDateStr })
   const [infShufflesLeft, setInfShufflesLeft] = useState(1)
   const [infScoutsLeft,   setInfScoutsLeft]   = useState(1)
 
+  // A stored board is only as good as whoever wrote it (any signed-in player can), so it's
+  // taken only if it's a real one: every price its tier's, every player real at their real
+  // ratings, and most cells the same as the board this phone makes from the day's seed
+  // (a re-rate since it was frozen moves a few, a made-up board moves most). Photos are
+  // always our own. Anything else: the phone's own board.
+  const trustedFrozen = (frozen) => {
+    if (!Array.isArray(frozen) || frozen.length !== QB_SAL_COLS.length || !frozen.every(col => Array.isArray(col) && col.length === TIERS.length)) return null
+    // the generator's own ranking (yesterday's players marked down the same way), so a
+    // re-rate since the freeze still passes but a star dropped into a cheap tier doesn't
+    const recent = recentFor(activeDate)
+    const regulars = ALL_PLAYERS.filter(p => !p.legend)
+    let legends = 0
+    for (let ci = 0; ci < frozen.length; ci++) {
+      const col = QB_SAL_COLS[ci]
+      const score = p => { const ts = typesFor(p, col); return ts.reduce((s, x) => s + (p.attrs?.[x] ?? 5), 0) / ts.length - (recent.has(p.name) ? 3.5 : 0) }
+      const ranked = regulars.map(p => [p.name, score(p)]).sort((x, y) => y[1] - x[1]).map(x => x[0])
+      for (let ti = 0; ti < TIERS.length; ti++) {
+        const cell = frozen[ci][ti]
+        if (!cell || cell.price !== TIERS[ti] || typeof cell.name !== 'string') return null
+        const real = ALL_PLAYERS.find(p => p.name === cell.name && p.team === cell.team) ?? ALL_PLAYERS.find(p => p.name === cell.name)
+        if (!real || Object.entries(cell.attrs || {}).some(([k, v]) => v !== (real.attrs?.[k] ?? 5))) return null
+        if (real.legend) { if (++legends > 2) return null; continue }
+        const at = ranked.indexOf(real.name) / Math.max(1, ranked.length)
+        if (at < TIER_BANDS[ti][0] - 0.2) return null
+      }
+    }
+    return frozen.map(col => col.map(cell => ({ ...cell, photo: photoFor(cell.name) })))
+  }
+
   // Daily grids are frozen server-side the first time each date is generated
   // (in qb_salary_cap_grids), so a day's board can never quietly drift out from
   // under players who already submitted picks for it — regenerating on the
   // fly (the old behavior) breaks the moment the underlying roster data
   // changes, since the same seed then picks different actual players.
+  const recentFor = (date) => {
+    const yesterday = new Date(date.y, date.m - 1, date.day - 1)
+    const yy = yesterday.getFullYear(), ym = yesterday.getMonth() + 1, yd = yesterday.getDate()
+    return getPickedNamesForSeed(yy * 10000 + ym * 100 + yd, QB_SAL_COLS, ALL_PLAYERS)
+  }
   const localGenerateGrid = (date) => {
     const rand = seededRandom(date.seed)
     const yesterday = new Date(date.y, date.m - 1, date.day - 1)
@@ -687,10 +721,9 @@ export default function QBSalaryCap({ onConfirm, onBack, user, initialDateStr })
         if (cancelled) return
         // Table missing / network error → keep the locally generated board.
         if (error) { console.warn('[qb-salary-cap] grid fetch failed, using local grid:', error); return }
-        const frozen = data?.grid
-        const validFrozen = Array.isArray(frozen) && frozen.length === QB_SAL_COLS.length
-          && frozen.every(col => Array.isArray(col) && col.length === TIERS.length)
-        if (validFrozen) {
+        const frozen = trustedFrozen(data?.grid)
+        if (data?.grid && !frozen) { console.warn(`[${'qb-salary-cap'}] the stored board for ${activeDate.str} didn't check out; using this phone's own`); return }
+        if (frozen) {
           setGrid(frozen) // swap to the historically-accurate frozen board
         } else {
           // No frozen record yet (first visitor of the day, or a past date
