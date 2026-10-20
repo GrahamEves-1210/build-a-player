@@ -185,7 +185,7 @@ export function newRun({ sport, uid, pos, mode = 'solo', build, types, rated, ci
 export function hoopsDuel({ run, city, star, me, partner = null, partnerStar = null }) {
   const seed = `${run.seed}-${city.short}-${run.idx}-${run.attempt}`
   const last = n => n.split(' ').slice(-1)[0].toUpperCase()
-  const mine = { id: 'me', name: me.name, pos: run.pos, build: duelBuild(run) }
+  const mine = { id: 'me', name: me.name, cos: me.cos ?? null, pos: run.pos, build: duelBuild(run) }
   const theirs = { id: 'star', name: star.player.name, pos: run.pos, build: star.build, role: star.boost ? 'score' : 'balanced' }
   if (partner && partnerStar) {
     const p2 = { id: 'partner', name: partner.name, cos: partner.cos ?? null, pos: partner.pos, build: partner.build }

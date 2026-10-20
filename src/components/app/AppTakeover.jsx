@@ -66,27 +66,81 @@ export default function AppTakeover({ sport, run, setRun, user, pools, attrMap, 
 
   // ── Duo (two runs, one road) ────────────────────────────────────────────────
   const duo = useDuo({ enabled: !!run && run.mode === 'duo', run, setRun, me, user, calcOvr, onCity: () => setScreen('city') })
-  const partnerStar = run?.mode === 'duo' && duo.partnerPlayer && city && star ? nextBestOf(city, pools[duo.partnerPlayer.pos] ?? pool, duo.partnerPlayer.types, photoFor, star.player.name) : null
+  const duoOn = run?.mode === 'duo'
+  const isHost = !!run?.host
+  const pp = duo.partnerPlayer
+  // Who guards whom, the same on both phones. Basketball: the host takes the city's star, the
+  // partner its next best. Football: each plays the city's best at their own position.
+  const partnerStar = duoOn && pp && city && star
+    ? (isBucket && isHost ? nextBestOf(city, pools[pp.pos] ?? pool, pp.types, photoFor, star.player.name) : opponentOf(stop, city, pools[pp.pos] ?? pool, pp.types, photoFor, false))
+    : null
+  const myOpp = duoOn && isBucket && !isHost && partnerStar ? (nextBestOf(city, pool, run.types, photoFor, partnerStar.player.name) ?? star) : star
+  // The ready check: a game starts when both have tapped in for this stop (the stop and the
+  // attempt name it), then the host's phone plays it and sends it, and both watch the same game
+  const stopKey = run ? `${run.idx}-${run.attempt}` : ''
+  const [iReady, setIReady] = useState(null)
+  const startedKey = useRef(null)
+  const readyUp = () => { setIReady(stopKey); duo.ready(stopKey); sfx('tap'); haptic('light') }
+  // keep saying so until the game starts (a message can drop); the host resends a game already sent
+  useEffect(() => {
+    if (!duoOn || iReady !== stopKey || startedKey.current === stopKey) return
+    const id = setInterval(() => duo.ready(stopKey), 3000)
+    return () => clearInterval(id)
+  }, [duoOn, iReady, stopKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const startDuel = () => {
     if (!run || !city || !star) return
     let d
     if (isBucket) {
-      const partner = run.mode === 'duo' ? duo.partnerPlayer : null
-      d = { kind: 'hoops', ...hoopsDuel({ run, city, star, me: { name: me.name }, partner, partnerStar: partner ? partnerStar : null }) }
+      const partner = duoOn ? pp : null
+      d = { kind: 'hoops', ...hoopsDuel({ run, city, star, me: { name: me.name, cos: me.cos }, partner, partnerStar: partner ? partnerStar : null }) }
       d.win = d.winner === 0
     } else {
       const ovr = calcOvr(duelBuild(run))
       d = { kind: 'football', ...footballDuel({ run, city, star, myOvr: ovr, myTeamShort: me.name }) }
-      if (run.mode === 'duo' && duo.partnerPlayer) {
-        const pd = footballDuel({ run: { ...run, seed: run.seed + 'p' }, city, star, myOvr: duo.partnerPlayer.ovr ?? ovr })
+      d.ownWin = d.win
+      if (duoOn && pp && partnerStar) {
+        // the partner's own game: their position, against their position's best
+        const pd = footballDuel({ run: { ...run, seed: run.seed + 'p', pos: pp.pos }, city, star: partnerStar, myOvr: pp.ovr ?? ovr, myTeamShort: pp.name })
         d.partner = pd
         d.win = d.win || pd.win         // the city falls if either of you wins
       }
     }
+    if (duoOn) { startedKey.current = stopKey; duo.sendDuel({ key: stopKey, duel: d, city: city.short, stop, partnerStar }) }
     setDuel({ ...d, city, star, stop }); setScreen('duel'); sfx('whistle'); haptic('medium')
   }
+  // host: both in → play it (and send it)
+  useEffect(() => {
+    if (!duoOn || !isHost || !pp || !city || !star) return
+    if (iReady === stopKey && duo.partnerReady === stopKey && startedKey.current !== stopKey && (screen === 'city' || screen === 'map')) startDuel()
+  }, [duoOn, isHost, iReady, duo.partnerReady, stopKey, screen, !!pp, !!city, !!star]) // eslint-disable-line react-hooks/exhaustive-deps
+  // partner: the host's game arrives → watch it from my side (I'm the one called "me")
+  useEffect(() => {
+    const m = duo.incoming
+    if (!duoOn || isHost || !m || m.key !== stopKey || startedKey.current === m.key) return
+    startedKey.current = m.key
+    const at = byShort[m.city] ?? city
+    const d = m.duel
+    const mine = d.kind === 'hoops'
+      ? mirrorDuel(d)
+      : { ...d.partner, kind: 'football', win: d.win, ownWin: d.partner?.win, partner: { win: d.ownWin } }
+    setDuel({ ...mine, city: at, star: m.partnerStar ?? myOpp, stop: m.stop })
+    setScreen('duel'); sfx('whistle'); haptic('medium')
+  }, [duo.incoming, stopKey]) // eslint-disable-line react-hooks/exhaustive-deps
+  // partner: the host's phone keeps the road; when it says the lives ran out, the run is over here too
+  useEffect(() => { if (duoOn && !isHost && run?.over && (screen === 'map' || screen === 'city')) setScreen('over') }, [run?.over, screen]) // eslint-disable-line react-hooks/exhaustive-deps
   const settle = won => {
+    // the partner: the road is the host's (its phone books the win or the loss and sends the
+    // road); here, my heat, my XP and coins, and on a win my own prize
+    if (duoOn && !isHost) {
+      if (won && !run.sandbox) {
+        window.dispatchEvent(new CustomEvent('bap:xp', { detail: { xp: isEndless(run) ? XP_ENDLESS : XP_CITY, coins: COINS_CITY, label: `${(duel?.city ?? city)?.city ?? ''} taken` } }))
+        window.dispatchEvent(new CustomEvent('bap:takeover', { detail: { city: true } }))
+      }
+      setRun(r => (r ? { ...r, heat: won ? Math.min(HEAT_MAX, heatOf(r) + 1) : 0, fire: false } : r))
+      setScreen(won ? 'reward' : run.over ? 'over' : 'map')
+      return
+    }
     const at = duel?.city ?? city
     const wasEndless = isEndless(run)
     const next = afterDuel(run, at, won)
@@ -189,7 +243,9 @@ export default function AppTakeover({ sport, run, setRun, user, pools, attrMap, 
 
   // ── City matchup ────────────────────────────────────────────────────────────
   if (screen === 'city' && city && star && stop) {
-    const sName = star.player.name
+    const opp = myOpp ?? star
+    const sName = opp.player.name
+    const oppOvr = opp === star ? stop.ovr : calcOvr(opp.build)
     return (
       <div className={`ag-screen ag-screen--${sport} tk tk-city`} style={{ '--tc': city.color, '--tc2': city.color2 }}>
         <div className="tk-city-hero">
@@ -206,8 +262,8 @@ export default function AppTakeover({ sport, run, setRun, user, pools, attrMap, 
             </div>
             <span className="tk-vs">{isBucket ? (run.mode === 'duo' ? '2v2' : '1v1') : 'GAME'}</span>
             <div className="tk-side">
-              <Headshot src={star.build[run.types[0]]?.photo} name={sName} size={64} className="tk-side-hs" />
-              <b>{sName}</b><small>{stop.ovr} OVR{star.boost ? ` · +${star.boost} form` : ''}</small>
+              <Headshot src={opp.build[run.types[0]]?.photo} name={sName} size={64} className="tk-side-hs" />
+              <b>{sName}</b><small>{oppOvr} OVR{opp.boost ? ` · +${opp.boost} form` : ''}</small>
             </div>
           </div>
           {run.mode === 'duo' && duo.partnerPlayer && partnerStar && (
@@ -217,13 +273,13 @@ export default function AppTakeover({ sport, run, setRun, user, pools, attrMap, 
           )}
           <div className="tk-stakes ag-pop" style={{ '--d': '80ms' }}>
             <span className="ag-eyebrow">ON THE LINE</span>
-            <p>{isBucket ? (run.mode === 'duo' ? `You and your partner vs ${lastName(sName)} and the ${city.nick}' next best, first to 15.` : 'First to 11, 1s and 2s, make it take it.') : `One game in ${city.city}. Your build vs their defense.`} Win: <b>steal one of {lastName(sName)}'s ratings</b>, or take a game plan, a rest or the cash. Lose: a life, and your heat.</p>
+            <p>{isBucket ? (run.mode === 'duo' ? `A 2v2 against the ${city.nick}, first to 15: ${isHost ? `you take ${lastName(sName)}, your partner their next best` : `your partner takes ${lastName(partnerStar?.player.name ?? '')}, you take ${lastName(sName)}`}.` : 'First to 11, 1s and 2s, make it take it.') : run.mode === 'duo' ? `You both play ${city.city}, each against their best at your position. It falls if either of you wins.` : `One game in ${city.city}. Your build vs their defense.`} Win: <b>steal one of {lastName(sName)}'s ratings</b>, or take a game plan, a rest or the cash. Lose: a life, and your heat.</p>
             {(planned || firing(run)) && <div className="tk-edges">
-              {planned && star.cut && <span className="tk-edge is-plan">GAME PLAN · their {(attrMap[star.cut]?.label ?? star.cut).toLowerCase()} −{PLAN_CUT} this game</span>}
+              {planned && opp.cut && <span className="tk-edge is-plan">GAME PLAN · their {(attrMap[opp.cut]?.label ?? opp.cut).toLowerCase()} −{PLAN_CUT} this game</span>}
               {firing(run) && <span className="tk-edge is-fire">ON FIRE · +1 to every rating you have, this game</span>}
             </div>}
             <div className="tk-star-grid">
-              {run.types.map(t => { const v = star.build[t]?.val ?? 0, m = run.build[t]?.val ?? 0; return (
+              {run.types.map(t => { const v = opp.build[t]?.val ?? 0, m = run.build[t]?.val ?? 0; return (
                 <span key={t} className={`tk-star-cell${v > m ? ' is-up' : v < m ? ' is-down' : ''}`} style={{ '--g': gradeColor(v) }}>
                   <small>{attrMap[t]?.shortLabel ?? t.slice(0, 3).toUpperCase()}</small><b>{valToGrade(v)}</b>
                 </span>
@@ -231,7 +287,15 @@ export default function AppTakeover({ sport, run, setRun, user, pools, attrMap, 
             </div>
           </div>
           {run.mode === 'duo' && !duo.partnerPlayer && <div className="ag-board-empty">Waiting for your partner to join…</div>}
-          <button className="ag-btn tk-play ag-pop" style={{ '--d': '140ms' }} onClick={startDuel} disabled={run.mode === 'duo' && !duo.partnerPlayer}>{isBucket ? 'CHECK BALL' : 'KICKOFF'} <IconArrow size={18} /></button>
+          {run.mode === 'duo' ? <>
+            {/* the ready check: the game starts when you're both in */}
+            {pp && <div className={`tk-ready ag-pop${duo.partnerReady === stopKey ? ' is-in' : ''}`} style={{ '--d': '120ms' }}>
+              <AvatarBadge name={pp.name} cos={duo.partner?.cos ?? pp.cos ?? null} size={22} /> <NameTag name={pp.name} cos={duo.partner?.cos ?? pp.cos ?? null} /> {duo.partnerReady === stopKey ? 'is ready' : 'isn\u2019t ready yet'}
+            </div>}
+            <button className="ag-btn tk-play ag-pop" style={{ '--d': '140ms' }} onClick={readyUp} disabled={!pp || iReady === stopKey}>
+              {iReady === stopKey ? 'WAITING…' : <>{isBucket ? 'CHECK BALL' : 'KICKOFF'} <IconArrow size={18} /></>}
+            </button>
+          </> : <button className="ag-btn tk-play ag-pop" style={{ '--d': '140ms' }} onClick={startDuel}>{isBucket ? 'CHECK BALL' : 'KICKOFF'} <IconArrow size={18} /></button>}
         </div>
       </div>
     )
@@ -261,7 +325,7 @@ export default function AppTakeover({ sport, run, setRun, user, pools, attrMap, 
           </section>
           <div className="ag-eyebrow tk-or ag-pop" style={{ '--d': '60ms' }}>OR TAKE</div>
           <div className="tk-prizes ag-pop" style={{ '--d': '80ms' }}>
-            <button className="tk-prize" onClick={() => go('plan')}><b>GAME PLAN</b><small>Film on the next city: their best rating −{PLAN_CUT} for that game.</small></button>
+            {!(duoOn && !isHost) && <button className="tk-prize" onClick={() => go('plan')}><b>GAME PLAN</b><small>Film on the next city: their best rating −{PLAN_CUT} for that game.</small></button>}
             {P.rest && <button className="tk-prize" onClick={() => go('rest')}><b>REST UP</b><small>A life back. {run.lives}/{LIVES} now.</small></button>}
             <button className="tk-prize" onClick={() => go('cash')}><b>CASH IN</b><small>+{COINS_CITY * CASH_MULT} coins instead of a rating.</small></button>
           </div>
@@ -553,6 +617,15 @@ function FootballDuel({ duel, run, city, me, onDone }) {
   )
 }
 
+// The host's game on the partner's phone: 'me' and 'partner' swap everywhere (ids, keys), so
+// the court, the avatars and "+1" read from the partner's side
+const swapId = v => (v === 'me' ? 'partner' : v === 'partner' ? 'me' : v)
+function mirrorDuel(x) {
+  if (Array.isArray(x)) return x.map(mirrorDuel)
+  if (x && typeof x === 'object') return Object.fromEntries(Object.entries(x).map(([k, v]) => [swapId(k), mirrorDuel(v)]))
+  return swapId(x)
+}
+
 // ── Duo room ─────────────────────────────────────────────────────────────────
 // The host's run is the road. The partner mirrors the road (route, idx, lives,
 // taken…) from it and keeps their own build and rewards. Builds are exchanged on
@@ -564,6 +637,9 @@ function useDuo({ enabled, run, setRun, me, user, calcOvr, onCity }) {
   const [partner, setPartner] = useState(null)        // presence
   const [partnerPlayer, setPartnerPlayer] = useState(null)
   const [chat, setChat] = useState([])
+  const [partnerReady, setPartnerReady] = useState(null)   // the stop (idx-attempt) the partner is ready for
+  const [incoming, setIncoming] = useState(null)           // partner: the game the host sent
+  const lastDuel = useRef(null)                              // host: the last game sent (resent if the partner missed it)
   const lastChat = useRef(0)
   const code = run?.code
   const host = !!run?.host
@@ -572,7 +648,8 @@ function useDuo({ enabled, run, setRun, me, user, calcOvr, onCity }) {
     if (!enabled || !code) { roomRef.current?.leave(); roomRef.current = null; setPartner(null); setPartnerPlayer(null); return }
     const room = joinRoom(`takeover-${code}`, { ...me, pos: run.pos, host })
     roomRef.current = room
-    const shareBuild = () => room.send('build', { pos: runRef.current.pos, types: runRef.current.types, build: runRef.current.build, name: me.name, cos: me.cos, ovr: calcOvr(runRef.current.build) })
+    // the build the game uses (ON FIRE's +1 included), so the host's phone plays it right
+    const shareBuild = () => { const b = duelBuild(runRef.current); room.send('build', { pos: runRef.current.pos, types: runRef.current.types, build: b, name: me.name, cos: me.cos, ovr: calcOvr(b) }) }
     room.onPresence(list => {
       const other = list.find(p => p.vid !== me.vid)
       setPartner(other ?? null)
@@ -582,11 +659,13 @@ function useDuo({ enabled, run, setRun, me, user, calcOvr, onCity }) {
     room.on('build', p => setPartnerPlayer({ id: 'partner', name: p.name, cos: p.cos ?? null, pos: p.pos, types: p.types, build: p.build, ovr: p.ovr }))
     room.on('state', p => { if (!host) setRun(r => (r ? { ...r, ...p, over: p.lives <= 0, justWon: false } : r)) })
     room.on('go', () => { if (!host) onCity() })
+    room.on('ready', p => { setPartnerReady(p?.key ?? null); if (host && lastDuel.current && lastDuel.current.key === p?.key) room.send('duel', lastDuel.current) })
+    room.on('duel', p => { if (!host && p?.key) setIncoming(p) })
     room.on('chat', p => { if (!blockedIds().has(p.uid)) setChat(c => [...c.slice(-80), { id: `${p.from}-${p.ts}`, from: p.from, uid: p.uid, name: p.name, team: 0, text: clean(p.text), ts: p.ts, all: true }]) })
     return () => { room.leave(); roomRef.current = null }
   }, [enabled, code]) // eslint-disable-line
   // whenever my build changes (a reward), share it again
-  useEffect(() => { if (roomRef.current && run) roomRef.current.send('build', { pos: run.pos, types: run.types, build: run.build, name: me.name, cos: me.cos, ovr: calcOvr(run.build) }) }, [run?.build]) // eslint-disable-line
+  useEffect(() => { if (roomRef.current && run) { const b = duelBuild(run); roomRef.current.send('build', { pos: run.pos, types: run.types, build: b, name: me.name, cos: me.cos, ovr: calcOvr(b) }) } }, [run?.build, run?.fire]) // eslint-disable-line
   const sync = next => { if (host) roomRef.current?.send('state', roadOf(next)) }
   const sendChat = (text) => {
     const now = Date.now()
@@ -598,7 +677,9 @@ function useDuo({ enabled, run, setRun, me, user, calcOvr, onCity }) {
     setChat(c => [...c.slice(-80), { id: `${me.vid}-${now}`, from: me.vid, ...msg }])
     return true
   }
-  return { partner, partnerPlayer, chat, sync, chatApi: { chat, sendChat, me, match: { code } } }
+  const ready = key => roomRef.current?.send('ready', { key })
+  const sendDuel = msg => { lastDuel.current = msg; roomRef.current?.send('duel', msg) }
+  return { partner, partnerPlayer, chat, sync, partnerReady, incoming, ready, sendDuel, chatApi: { chat, sendChat, me, match: { code } } }
 }
 
 // ── Intro: what Takeover is, and how your past runs went ─────────────────────
