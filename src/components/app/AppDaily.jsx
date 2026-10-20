@@ -86,7 +86,7 @@ function Challenge({ p, sport }) {
   return (
     <section className="ag-card ag-challenge ag-pop" style={{ '--d': '90ms' }}>
       <div className="ag-challenge-hero">
-        <span className="ag-eyebrow">DAILY CHALLENGE</span>
+        <span className="ag-eyebrow">DAILY CHALLENGE{sport === 'bucket' ? ' · FOOTBALL' : ''}</span>   {/* (one challenge a day, always football: basketball's Daily sends you over) */}
         <span className="ag-challenge-title">{label}</span>
         <span className="ag-challenge-sub">Everyone gets the same spins today. One run: no resets, and leaving mid-run ends your day.</span>
         {dc.done ? (

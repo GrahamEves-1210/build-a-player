@@ -1439,13 +1439,18 @@ function generateConfBracket(standings, myShort, playoffRounds) {
   if (myPlayin) {
     const myTeamObj = [get(7), get(8), get(9), get(10)].find(t => t.short === myShort)
     if (myTeamObj) {
+      // the other team in the 7-vs-8 game (when we were in it): it takes the seed we didn't.
+      // (Taking it from the standings put our own team in both slots when we started 7th and
+      // came through as the 8, or started 8th and won the 7.)
+      const pair = [get(7), get(8)]
+      const other = pair.some(t => t.short === myShort) ? pair.find(t => t.short !== myShort) : null
       if (myPlayin.newSeed === 7) {
         playin7 = { ...myTeamObj, seed: 7 }
-        if (playin8.short === myShort) playin8 = { ...get(8), seed: 8 }
+        playin8 = { ...(other ?? get(8)), seed: 8 }
       }
       if (myPlayin.newSeed === 8) {
         playin8 = { ...myTeamObj, seed: 8 }
-        if (playin7.short === myShort) playin7 = { ...get(7), seed: 7 }
+        playin7 = { ...(other ?? get(7)), seed: 7 }
       }
     }
   }

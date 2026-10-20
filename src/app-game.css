@@ -5140,4 +5140,9 @@ html.ag-fan-open .ag-dock { z-index: 1170; }
 .rc-sandbox-ad { margin: 0 0 10px; display: flex; flex-direction: column; align-items: center; overflow: hidden; }
 .rc-sandbox-ad:empty, html.ads-hidden .rc-sandbox-ad { display: none; }
 @media (min-width: 769px) { .rc-sandbox-ad { display: none !important; } }
+/* No dashed outlines anywhere in the new look (the app and the new website): empty slots, open
+   spots and notes get a plain, faint solid edge instead. The testers' TEST buttons keep theirs. */
+html:is(.is-app, .app-look) :is(.ag-slot, .ag-coach, .bt-slot, .bt-spot, .cp-seat.is-open, .ol-empty, .cr-feed-moment, .crl-field--def .crl-front, .cr-slot--empty, .lc-wait, .bt-spot-half) { border-style: solid !important; }
+html:is(.is-app, .app-look) .cz-drop-hint { border-style: solid !important; border-color: rgba(232, 25, 44, .3) !important; }
+html:is(.is-app, .app-look) [data-sport="bucket"] .cz-drop-hint { border-color: rgba(249, 115, 22, .32) !important; }
 
