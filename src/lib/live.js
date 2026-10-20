@@ -49,7 +49,6 @@ const LIVE_KEY = 'bap_live_tab'
 let liveBeat = 0
 const readLive = () => { try { return JSON.parse(localStorage.getItem(LIVE_KEY) || 'null') } catch { return null } }
 export function liveElsewhere() {
-  return false                            // TEMPORARILY OFF for testing in several tabs: put the one-game-per-device rule back before release
   const c = readLive()
   return !!c && c.tab !== TAB && Date.now() - (c.at ?? 0) < 6000
 }

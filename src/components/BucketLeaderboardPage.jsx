@@ -244,7 +244,6 @@ export default function BucketLeaderboardPage({ onBack, currentUser, adsDisabled
         count,
         avgOvr:    count ? Math.round(u.total_ovr / count) : 0,
         avgPpg,
-        playoffs:  0,
         totalWins: u.wins,
         totalPts:  Math.round(avgPpg * count * 82),
         winPct:    u.wins + u.losses > 0 ? Math.round((u.wins / (u.wins + u.losses)) * 100) : 0,
@@ -477,8 +476,8 @@ export default function BucketLeaderboardPage({ onBack, currentUser, adsDisabled
                         {isYou  && <span className="lb-you">you</span>}
                       </div>
                       <div className="lb-row-sub">
+                        {/* (basketball seasons don't record playoff trips: no playoffs count here) */}
                         {row.wins}W · {row.losses}L · {row.rings} ring{row.rings !== 1 ? 's' : ''}
-                        · {row.playoffs} playoff{row.playoffs !== 1 ? 's' : ''}
                         · {row.count} season{row.count !== 1 ? 's' : ''}
                       </div>
                     </div>
