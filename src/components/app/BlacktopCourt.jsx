@@ -105,6 +105,8 @@ export default function BlacktopCourt({ game, play, meId, photoFor, colorFor, av
 
     if (play.type === 'milestone' || play.type === 'check') reveal()
     if (play.type === 'milestone') return
+    // a board is its own animation (below): the ball goes from the rim to whoever got it
+    if (play.type === 'oreb' || play.type === 'dreb') return
     if (play.type === 'check') {
       setBall(null)
       setTag('CHECK BALL'); after(900, () => setTag(null))
@@ -297,7 +299,8 @@ export default function BlacktopCourt({ game, play, meId, photoFor, colorFor, av
     const rb = play.pid
     const everyone = players.map(p => p.id)
     moveMany(everyone.map(id => [id, 50 + r.rnd(-16, 16), 18 + r.rnd(0, 14), sdur(byId[id]?.R.speed) * .8]))
-    after(380, () => { flyBall(at(rb).x, 22, .3) })
+    // off the rim straight into his hands (where the ball sits when he holds it)
+    after(380, () => { const p = at(rb), side = byId[rb]?.team === 0 ? 1 : -1; flyBall(p.x + side * 6, p.y - 6, .3) })
     after(620, () => { reveal(); setHolder(rb); setBall(null); move(rb, at(rb).x, 30, sdur(byId[rb]?.R.speed) * .5) })
     if (play.type === 'dreb') after(1000, () => { move(rb, 50, 76); bounce(2, 230); setTag('OUTLET'); after(700, () => setTag(null)) })
     return () => clearAll()
