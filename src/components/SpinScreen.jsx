@@ -329,7 +329,13 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
 
   const clearAll = () => clearTimeout(pauseRef.current)
 
+  // a reset (a new build) clears the reels. Only a change of resetKey: opening the screen again
+  // (out to Profile, Shop… and back) must not, or the spin you saved is wiped and you get a
+  // free reroll (people were using that to throw away a bad spin)
+  const resetRef = useRef(resetKey)
   useEffect(() => {
+    if (resetRef.current === resetKey) return
+    resetRef.current = resetKey
     usedTeamsRef.current = []
     clearAll()
     setPhase('idle')
