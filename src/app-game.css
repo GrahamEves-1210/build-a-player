@@ -5253,3 +5253,10 @@ html.is-app .dc-submit-btn { transition: filter .15s, transform .15s ease-out, b
 .sl-opt { transition: transform .15s ease-out; }
 .ach-claimall { transition: transform .15s ease-out; }
 .fr-icon-btn { transition: transform .15s ease-out; }
+
+/* Reduce Motion: no movement, but screens and cards still fade in instead of popping */
+@keyframes ag-rm-in { from { opacity: 0; } }
+@keyframes ag-rm-out { to { opacity: 0; } }
+html.bap-reduce-motion .ag-pop { animation: ag-rm-in .2s ease-out both !important; animation-delay: 0ms !important; }
+html.bap-reduce-motion.is-app:is([data-flip="left"], [data-flip="right"]) .game-page-scroll { animation: ag-rm-out .15s ease-out forwards !important; }
+html.bap-reduce-motion.is-app:is([data-flip="in-left"], [data-flip="in-right"]) .game-page-scroll { animation: ag-rm-in .2s ease-out both !important; }
