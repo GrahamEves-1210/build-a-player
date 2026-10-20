@@ -425,7 +425,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
             <span className="ag-takeover-txt">
               <span className="ag-eyebrow">{tkOn ? (tkEndless ? `ENDLESS ROAD · ${takeoverRun.endlessWins} STRAIGHT` : `ON THE ROAD · ${takeoverRun.taken.length}/${tkStops} CITIES`) : 'ROAD MODE · 12 CITIES'}</span>
               <span className="ag-takeover-title">TAKEOVER</span>
-              <span className="ag-takeover-sub">{tkOn ? `${takeoverRun.lives} ${takeoverRun.lives === 1 ? 'life' : 'lives'} left — your next stop is waiting` : 'Solo or duo. Cross the map, beat a better player in every city, steal their game.'}</span>
+              <span className="ag-takeover-sub">{tkOn ? `${takeoverRun.lives} ${takeoverRun.lives === 1 ? 'life' : 'lives'} left — your next stop is waiting` : 'Solo or duo. Cross the map, beat the star in every city, steal their game.'}</span>
             </span>
           </button>
           )}

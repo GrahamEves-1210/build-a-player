@@ -198,7 +198,8 @@ export function LinkPill({ link, onRetry, room = null }) {
 }
 
 // Result screens: what this game did to your rating, and what you set
-export function RatingLine({ mode }) {
+// noMvp: the screen already shows the MVP (Blacktop's result), so no second MVP tag here
+export function RatingLine({ mode, noMvp = false }) {
   const p = useProgress()
   const lo = p.lastOnline
   if (!lo || lo.mode !== mode || Date.now() - lo.at > 10 * 60 * 1000) return null
@@ -206,13 +207,13 @@ export function RatingLine({ mode }) {
   return (
     <div className="ol-result">
       <span className={`ol-delta ${up ? 'is-up' : 'is-down'}`}><b>{up ? '+' : ''}{lo.delta}</b> RATING · {lo.rating} <TierChip rating={lo.rating} /></span>
-      {(lo.up || lo.streak >= 2 || lo.pbOvr || lo.highPts || lo.mvp) && (
+      {(lo.up || lo.streak >= 2 || lo.pbOvr || lo.highPts || (lo.mvp && !noMvp)) && (
         <span className="ol-callouts">
           {lo.up && <span className="ol-callout ol-callout--tier"><IconStar size={12} /> TIER UP · {lo.tier.toUpperCase()}</span>}
           {lo.streak >= 2 && <span className="ol-callout ol-callout--hot"><IconFlame size={12} /> {lo.streak} STRAIGHT</span>}
           {lo.pbOvr && <span className="ol-callout"><IconTrophy size={12} /> NEW BEST OVR</span>}
           {lo.highPts && <span className="ol-callout"><IconTrophy size={12} /> CAREER HIGH</span>}
-          {lo.mvp && <span className="ol-callout"><IconStar size={12} /> MVP</span>}
+          {lo.mvp && !noMvp && <span className="ol-callout"><IconStar size={12} /> MVP</span>}
         </span>
       )}
     </div>

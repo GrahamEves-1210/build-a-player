@@ -342,7 +342,7 @@ export default function AppTakeover({ sport, run, setRun, user, pools, attrMap, 
           <div className="bt-result-hero is-win ag-pop">
             <span className="ag-eyebrow">TAKEOVER COMPLETE · <span className="gain"><XpIco /> +{XP_RUN}</span></span>
             <h1 className="ag-h1">The map is yours</h1>
-            <p className="tk-reward-sub" style={{ margin: '4px 0 0', textAlign: 'center' }}>Twelve cities, twelve better players, one build. From here the road goes endless: random greats, anywhere, with three fresh lives.</p>
+            <p className="tk-reward-sub" style={{ margin: '4px 0 0', textAlign: 'center' }}>Twelve cities, twelve stars, one build. From here the road goes endless: random greats, anywhere, with three fresh lives.</p>
             <div className="tk-over-ovr"><b>{ovr}</b> OVR</div>
           </div>
           <UsMap cities={cities} run={run} here={here} next={null} delay="120ms" />
@@ -696,7 +696,7 @@ export function TakeoverIntro({ sport, teams, onStart, onClose }) {
   const done = runs.filter(r => r.won).length
   const steps = [
     ['Build your player', 'One draft, the same spins as a normal game. That build is who you take on the road.'],
-    [`Cross ${STOPS} cities`, `Every stop has ${isBucket ? 'a star' : 'its best player at your position'} who rates higher than you. Beat them to take the city.`],
+    [`Cross ${STOPS} cities`, `Every stop has ${isBucket ? 'a star' : 'its best player at your position'} and they get tougher every stop. Beat them to take the city.`],
     ['Take their game', 'Every win is a prize: steal one of their ratings, a game plan for the next city, a rest, or the cash.'],
     ['Heat', 'Wins in a row build heat. Three straight and you\'re ON FIRE: a double steal, then a game with +1 on every rating. A loss puts it out.'],
     [`${LIVES} lives`, `A loss costs a life and you run that stop back. Lose all ${LIVES} and the run is over. Take all ${STOPS} and the road keeps going.`],

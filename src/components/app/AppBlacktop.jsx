@@ -588,7 +588,7 @@ export function BlacktopGame({ bt, user, photoFor, onOpenChat, unread }) {
             <div className="bt-final"><b className="bt-t0">{game.score[0]}</b><span>–</span><b className="bt-t1">{game.score[1]}</b></div>
             <div className="bt-final-teams"><span className="bt-t0">{names[0]}</span><span className="bt-t1">{names[1]}</span></div>
             {mvp && <div className="bt-mvp"><IconStar size={14} /> MVP · <Who p={mvp} meVid={bt.me.vid} plate /></div>}
-            <RatingLine mode="bt" />
+            <RatingLine mode="bt" noMvp={!!mvp} />
           </div>
           {[game.winner, 1 - game.winner].map(t => (
             <div key={t} className={`ag-card bt-box bt-t${t} ag-pop`} style={{ '--d': `${120 + t * 80}ms` }}>
