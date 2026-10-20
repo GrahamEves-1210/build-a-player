@@ -2356,9 +2356,10 @@ html.is-app .vmb-title { font-family: var(--ag-font) !important; letter-spacing:
 .btc-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; display: block; }
 .btc-tint { position: absolute; inset: 0; background: rgba(90,10,10,.15); mix-blend-mode: multiply; pointer-events: none; }
 .btc-light { position: absolute; inset: 0; background: radial-gradient(ellipse 80% 50% at 50% 30%, rgba(255,255,255,.18) 0%, rgba(255,255,255,.04) 50%, transparent 75%); pointer-events: none; }
-.btc-overlay { position: absolute; inset: 0; }
+.btc-overlay { position: absolute; inset: 0; container-type: size; }
 .btc-ball { position: absolute; transform: translate(-50%, -50%); font-size: max(16px, 3.6cqw); z-index: 6; filter: drop-shadow(0 2px 3px rgba(0,0,0,.6)); pointer-events: none; }
-.btc-p { position: absolute; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 2px; }
+/* players move on the compositor: translate in the overlay's own units (cqw/cqh), not left/top */
+.btc-p { position: absolute; transform: translate(-50%, -50%); will-change: translate; display: flex; flex-direction: column; align-items: center; gap: 2px; }
 .btc-ring { border-radius: 50%; transition: box-shadow .25s; }
 .btc-ring > * { display: block; }
 .btc-name { font-family: var(--ag-font); font-size: 11.5px; letter-spacing: 1px; text-shadow: 0 1px 3px rgba(0,0,0,.9); white-space: nowrap; }
