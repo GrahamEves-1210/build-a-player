@@ -5184,4 +5184,6 @@ html:is(.is-app, .app-look) [data-sport="bucket"] .cz-drop-hint { border-color: 
 .cr-comp-grid.is-wide .cr-comp-row--head em.is-long { justify-self: center; width: auto; max-width: 76px; white-space: normal; overflow-wrap: anywhere; text-align: center; line-height: 1.05; font-size: 10px; letter-spacing: .3px; }
 .cr-comp .cr-comp-pct { white-space: nowrap; flex: none; }
 .cr-comp .ag-card-head { gap: 8px; align-items: flex-start; }
+/* screen titles that wrap split evenly ("INTERVIEW 1 / OF 4", not "INTERVIEW 1 OF / 4") */
+.ag-h1 { text-wrap: balance; }
 
