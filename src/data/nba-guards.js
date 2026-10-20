@@ -313,7 +313,7 @@ export const NBA_GUARD_PLAYERS = [
   { name: 'Dru Smith', short: 'Smith', team: 'MIA', starter: false, captain: false, number: 12, height: 75, weight: 195, wingspan: 79, skin: '#b6664a', position: 'PG', faceCenter: [49, 43],
     attrs: { jumpShot: 4, finishing: 4, passing: 4, handles: 3, perimeterDefense: 3, speed: 5, bounce: 4, size: 4, basketballIQ: 4, clutch: 3 } },
   { name: 'Andrew Wiggins', short: 'Wiggins', team: 'MIA', starter: true, captain: false, number: 22, height: 79, weight: 197, wingspan: 84, skin: '#904e35', position: 'SF', faceCenter: [49, 44], faceAdjust: { dx: 1, dy: -1, scale: 1 },
-    attrs: { jumpShot: 6, finishing: 6, passing: 4, handles: 4, perimeterDefense: 6, speed: 7, bounce: 7, size: 5, basketballIQ: 4, clutch: 4 } },
+    attrs: { jumpShot: 6, finishing: 6, passing: 4, handles: 4, perimeterDefense: 6, speed: 7, bounce: 9, size: 5, basketballIQ: 4, clutch: 4 } },
 
   // ─── MIL ───────────────────────────────────────────────────────
   { name: 'Brayden Burries', short: 'Burries', team: 'MIL', starter: false, captain: false, number: 13, height: 75, weight: 190, wingspan: 78, skin: '#ba816a', position: 'SG', faceCenter: [50, 40],
@@ -369,7 +369,7 @@ export const NBA_GUARD_PLAYERS = [
   { name: 'Jeremiah Fears', short: 'Fears', team: 'NOP', starter: true, captain: false, number: 0, height: 75, weight: 180, wingspan: 77, skin: '#a06244', position: 'PG', faceCenter: [50, 48],
     attrs: { jumpShot: 5, finishing: 5, passing: 5, handles: 7, perimeterDefense: 3, speed: 9, bounce: 5, size: 2, basketballIQ: 4, clutch: 3 } },
   { name: 'Jordan Hawkins', short: 'Hawkins', team: 'CHI', starter: false, captain: false, number: 24, height: 77, weight: 195, wingspan: 79, skin: '#9f674a', position: 'SG', faceCenter: [50, 41],
-    attrs: { jumpShot: 4, finishing: 3, passing: 3, handles: 4, perimeterDefense: 4, speed: 6, bounce: 6, size: 4, basketballIQ: 3, clutch: 3 } },
+    attrs: { jumpShot: 6, finishing: 3, passing: 3, handles: 4, perimeterDefense: 4, speed: 6, bounce: 6, size: 4, basketballIQ: 3, clutch: 3 } },
   { name: 'Herbert Jones', short: 'Jones', team: 'NOP', starter: true, captain: false, number: 2, height: 79, weight: 200, wingspan: 84, skin: '#724635', position: 'SF', faceCenter: [50, 39],
     attrs: { jumpShot: 5, finishing: 3, passing: 3, handles: 3, perimeterDefense: 9, speed: 6, bounce: 6, size: 6, basketballIQ: 4, clutch: 4 } },
   { name: 'Bryce McGowens', short: 'McGowens', team: 'NOP', starter: false, captain: false, number: 11, height: 79, weight: 195, wingspan: 80, skin: '#a2694d', position: 'SG', faceCenter: [50, 40],
@@ -483,7 +483,7 @@ export const NBA_GUARD_PLAYERS = [
   { name: 'Luke Kennard', short: 'Kennard', team: 'PHX', starter: false, captain: false, number: 3, height: 77, weight: 206, wingspan: 77, skin: '#b28376', position: 'SG', faceCenter: [54, 43],
     attrs: { jumpShot: 10, finishing: 2, passing: 4, handles: 2, perimeterDefense: 0, speed: 2, bounce: 2, size: 5, basketballIQ: 4, clutch: 4 } },
   { name: 'Koa Peat', short: 'Peat', team: 'PHX', starter: false, captain: false, number: 6, height: 80, weight: 235, wingspan: 83, skin: '#a87761', position: 'SF', faceCenter: [51, 41],
-    attrs: { jumpShot: 4, finishing: 6, passing: 3, handles: 3, perimeterDefense: 4, speed: 5, bounce: 5, size: 9, basketballIQ: 3, clutch: 3 } },
+    attrs: { jumpShot: 4, finishing: 6, passing: 3, handles: 3, perimeterDefense: 4, speed: 5, bounce: 7, size: 9, basketballIQ: 3, clutch: 3 } },
   { name: 'Pat Spencer', short: 'Spencer', team: 'PHX', starter: false, captain: false, number: 19, height: 74, weight: 190, wingspan: 76, skin: '#b88a7a', position: 'PG', faceCenter: [50, 39],
     attrs: { jumpShot: 5, finishing: 4, passing: 4, handles: 4, perimeterDefense: 3, speed: 5, bounce: 4, size: 3, basketballIQ: 4, clutch: 3 } },
 
@@ -507,7 +507,7 @@ export const NBA_GUARD_PLAYERS = [
 
   // ─── SAC ───────────────────────────────────────────────────────
   { name: 'Darius Acuff Jr.', short: 'Jr.', team: 'SAC', starter: false, captain: false, number: 5, height: 73, weight: 175, wingspan: 79, skin: '#bf8660', position: 'PG', faceCenter: [52, 40],
-    attrs: { jumpShot: 5, finishing: 6, passing: 4, handles: 6, perimeterDefense: 1, speed: 9, bounce: 6, size: 2, basketballIQ: 5, clutch: 3 } },
+    attrs: { jumpShot: 5, finishing: 6, passing: 4, handles: 8, perimeterDefense: 1, speed: 9, bounce: 6, size: 2, basketballIQ: 5, clutch: 5 } },
   { name: 'Nique Clifford', short: 'Clifford', team: 'SAC', starter: false, captain: false, number: 5, height: 77, weight: 200, wingspan: 80, skin: '#b47a60', position: 'SG', faceCenter: [50, 44],
     attrs: { jumpShot: 5, finishing: 4, passing: 3, handles: 3, perimeterDefense: 4, speed: 5, bounce: 5, size: 5, basketballIQ: 3, clutch: 3 } },
   { name: 'De\'Andre Hunter', short: 'Hunter', team: 'SAC', starter: false, captain: false, number: 15, height: 79, weight: 224, wingspan: 86, skin: '#9a6455', position: 'SF', faceCenter: [49, 43],
@@ -566,7 +566,7 @@ export const NBA_GUARD_PLAYERS = [
 
   // ─── UTA ───────────────────────────────────────────────────────
   { name: 'Ace Bailey', short: 'Bailey', team: 'UTA', starter: false, captain: false, number: 19, height: 80, weight: 200, wingspan: 85, skin: '#9b664b', position: 'SF', faceCenter: [50, 43],
-    attrs: { jumpShot: 5, finishing: 4, passing: 3, handles: 3, perimeterDefense: 4, speed: 7, bounce: 5, size: 6, basketballIQ: 3, clutch: 3 } },
+    attrs: { jumpShot: 6, finishing: 6, passing: 3, handles: 5, perimeterDefense: 4, speed: 7, bounce: 5, size: 7, basketballIQ: 4, clutch: 3 } },
   { name: 'Isaiah Collier', short: 'Collier', team: 'UTA', starter: false, captain: false, number: 8, height: 75, weight: 185, wingspan: 77, skin: '#916450', position: 'PG', faceCenter: [49, 42],
     attrs: { jumpShot: 2, finishing: 5, passing: 8, handles: 6, perimeterDefense: 3, speed: 9, bounce: 4, size: 3, basketballIQ: 5, clutch: 3 } },
   { name: 'Keyonte George', short: 'K. George', team: 'UTA', starter: true, captain: false, number: 3, height: 76, weight: 195, wingspan: 77, skin: '#bb8a6c', position: 'PG', faceCenter: [49, 40], faceAdjust: { dx: 1, dy: 0, scale: 1 },
