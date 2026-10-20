@@ -5093,3 +5093,9 @@ html.ag-fan-open .ag-dock { z-index: 1170; }
 }
 /* the Blacktop build's AUTO FILL (testers only): a small pill above the dock */
 .bt-test-autofill { position: fixed; z-index: 40; right: 12px; bottom: calc(var(--dock-h, 96px) + env(safe-area-inset-bottom) + 14px); height: 36px; padding: 0 14px; border-radius: 18px; border: 1.5px dashed rgba(255,255,255,.45); background: rgba(10,8,6,.88); color: #fff; font-family: var(--ag-font); font-size: 14px; letter-spacing: 1.4px; cursor: pointer; box-shadow: 0 6px 18px rgba(0,0,0,.45); }
+/* The marks' letters (XP on the hexagon, BAP on the coin) centred on the letters themselves:
+   text-box trims the font's space above the capitals and below the baseline, so the grid
+   centres the caps (the display font's caps sat about half a pixel low) */
+.xp-ico::before, .coin-ico.coin-ico::before { line-height: 1; text-box: trim-both cap alphabetic; }   /* (doubled class: app-shop.css loads later) */
+.coin-ico.coin-ico::before { transform: none; }   /* (app-shop.css nudged it half a pixel down) */
+
