@@ -13,7 +13,7 @@ export async function openCheckout(kind, extra = {}) {
   if (!user) { window.dispatchEvent(new CustomEvent('bap:auth')); return 'signin' }
   try {
     const res = await fetch(`${API}/api/${kind === 'pro' ? 'create-checkout' : 'create-coins-checkout'}`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${data.session.access_token}` },
       // table 2: today's coin packs (lib/coins.js); the server keeps the live site's old table for requests without it
       body: JSON.stringify({ userId: user.id, email: user.email ?? null, app: IS_APP, ...(kind === 'pro' ? {} : { table: 2 }), ...extra }),
     })

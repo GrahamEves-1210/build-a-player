@@ -1,5 +1,5 @@
 ﻿import { useState, useEffect, useRef } from 'react'
-import { supabase } from '../lib/supabase'
+import { supabase, apiHeaders } from '../lib/supabase'
 import { BUCKET_ATTR } from '../data/nba-attrs'
 import { NBA_TEAMS } from '../data/nba-teams'
 import { calcBucketOVR, getBucketGuardArchetype, getBucketBigArchetype } from '../utils/bucketSimulation'
@@ -153,10 +153,8 @@ export default function BucketProfilePage({
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
-    if (params.get('ad_free') === '1') {
-      onAdsDisabled?.()
-      window.history.replaceState({}, '', window.location.pathname)
-    }
+    // the app confirms the purchase with the account row (App / BucketApp); the address alone proves nothing
+    if (params.get('ad_free') === '1') window.history.replaceState({}, '', window.location.pathname)
   }, [])
 
   // ── Career fetch ────────────────────────────────────────────────────────────
@@ -191,7 +189,7 @@ export default function BucketProfilePage({
   const handleManageSubscription = async () => {
     try {
       const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/create-portal`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: await apiHeaders(),
         body: JSON.stringify({ userId: user.id }),
       })
       const { url } = await res.json()
@@ -204,7 +202,7 @@ export default function BucketProfilePage({
     setAdFreeLoading(true)
     try {
       const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/create-checkout`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: await apiHeaders(),
         body: JSON.stringify({ userId: user.id, email: user.email }),
       })
       const { url } = await res.json()

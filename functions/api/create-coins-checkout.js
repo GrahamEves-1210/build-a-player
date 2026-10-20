@@ -1,4 +1,14 @@
 import Stripe from 'stripe'
+import { createClient } from '@supabase/supabase-js'
+
+// Who's asking, from their Supabase session token (never from an id in the body)
+async function sessionUser(request, env) {
+  const token = (request.headers.get('authorization') || '').replace(/^Bearer\s+/i, '')
+  if (!token) return null
+  const sb = createClient(env.VITE_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } })
+  const { data: { user } = {}, error } = await sb.auth.getUser(token)
+  return error ? null : user ?? null
+}
 
 // Website coin packs → a one-time Stripe Checkout. No Stripe products to set up:
 // each pack's price is made right here (prices live on the server, so the
@@ -25,7 +35,11 @@ const TABLES = {
 export async function onRequestPost(context) {
   try {
     const stripe = new Stripe(context.env.STRIPE_SECRET_KEY)
-    const { userId, email, pack, app, table } = await context.request.json()
+    const body = await context.request.json()
+    const { pack, app, table } = body
+    // the session decides whose purchase it is; older app builds without one still send their id
+    const me = await sessionUser(context.request, context.env)
+    const userId = me?.id ?? body.userId, email = me?.email ?? body.email
     if (!userId) return Response.json({ error: 'userId required' }, { status: 400 })
     const p = (TABLES[table] ?? TABLES[1])[pack]
     if (!p) return Response.json({ error: 'unknown pack' }, { status: 400 })

@@ -484,7 +484,8 @@ export async function fetchPlayersOfDayFor(day) {
 let potdChecking = false
 async function payPlayersOfDay() {
   const y = dayKey(-1)
-  if (!uid || !supabase || S.potdPaid === y || potdChecking) return
+  // only once the account's wallet is in: a cleared device would otherwise pay again
+  if (!uid || !supabase || S.potdPaid === y || potdChecking || pulledFor !== uid) return
   potdChecking = true
   try {
     const r = await fetchPlayersOfDayFor(y)
@@ -1049,7 +1050,8 @@ export function claimAch(id) {
 // The wallet follows the account (accounts.app_profile, see supabase/app_shop.sql).
 // Last change wins; items and achievements are merged, never lost.
 // ═════════════════════════════════════════════════════════════════════════════
-const WALLET_KEYS = ['coins', 'coinsEarned', 'owned', 'equip', 'ach', 'achClaimed', 'stats', 'shopFree', 'levelPaid', 'discordPaid', 'feedbackPaid', 'retired']
+// potdPaid, dc, day and sets ride along so clearing the device (or a second one) can't pay a reward twice
+const WALLET_KEYS = ['coins', 'coinsEarned', 'owned', 'equip', 'ach', 'achClaimed', 'stats', 'shopFree', 'levelPaid', 'discordPaid', 'feedbackPaid', 'retired', 'potdPaid', 'dc', 'day', 'sets']
 let pushTimer = null
 function schedulePush() {
   if (!supabase || !uid) return
@@ -1088,11 +1090,15 @@ function syncName(id) {
   namedFor = id
   supabase.from('accounts').upsert({ id, username: name }, { onConflict: 'id' }).then(({ error }) => { if (error) namedFor = null }, () => { namedFor = null })
 }
+// the same day on both sides: merge it; otherwise the later day wins
+const mergeDay = (a, b, both) => (!b ? a : !a ? b : a.key === b.key ? both(a, b) : (String(a.key) > String(b.key) ? a : b))
+let pulledFor = null
 async function pullWallet(id) {
   if (!supabase || !id) return
   try {
     const { data, error } = await supabase.from('accounts').select('app_profile').eq('id', id).maybeSingle()
-    if (error || uid !== id || !data?.app_profile) return
+    if (error || uid !== id) return
+    if (!data?.app_profile) { pulledFor = id; return }
     const w = data.app_profile
     const newer = (w.at ?? 0) > (S.walletAt ?? 0)
     S.owned = { ...(w.owned || {}), ...S.owned }
@@ -1118,6 +1124,14 @@ async function pullWallet(id) {
     S.coinsEarned = Math.max(S.coinsEarned, w.coinsEarned ?? 0)
     S.discordPaid = !!(S.discordPaid || w.discordPaid)
     S.feedbackPaid = !!(S.feedbackPaid || w.feedbackPaid)
+    if (String(w.potdPaid ?? '') > String(S.potdPaid ?? '')) S.potdPaid = w.potdPaid
+    S.sets = { ...(w.sets || {}), ...(S.sets || {}) }
+    S.dc = mergeDay(S.dc, w.dc, (a, b) => ({ ...b, ...a, spins: Math.max(a.spins || 0, b.spins || 0), done: !!(a.done || b.done),
+      forfeit: !!(a.forfeit || b.forfeit), posted: !!(a.posted || b.posted), ovr: a.ovr ?? b.ovr ?? null }))
+    S.day = mergeDay(S.day, w.day, (a, b) => ({ ...a, missions: (a.missions || []).map(m => {
+      const o = (b.missions || []).find(x => x.id === m.id)
+      return o ? { ...m, n: Math.max(m.n || 0, o.n || 0), claimed: !!(m.claimed || o.claimed) } : m
+    }) }))
     if (newer) {
       S.coins = w.coins ?? S.coins
       S.equip = { ...DEFAULTS, ...(w.equip || {}) }
@@ -1126,6 +1140,8 @@ async function pullWallet(id) {
       S.walletAt = w.at
     }
     retireItems(S)                          // after the merge, so the refund survives a newer cloud wallet
+    rollDay()
+    pulledFor = id
     emit(true)
   } catch {}
 }

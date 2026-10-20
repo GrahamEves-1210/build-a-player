@@ -25,3 +25,14 @@ export const rtSupabase = valid
       },
     })
   : null
+
+// Headers for our own /api endpoints: the server reads who the player is from
+// their session token, never from an id in the body
+export async function apiHeaders() {
+  const h = { 'Content-Type': 'application/json' }
+  try {
+    const { data } = supabase ? await supabase.auth.getSession() : { data: null }
+    if (data?.session?.access_token) h.Authorization = `Bearer ${data.session.access_token}`
+  } catch {}
+  return h
+}
