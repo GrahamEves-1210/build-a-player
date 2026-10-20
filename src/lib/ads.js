@@ -16,8 +16,17 @@ const queue = fn => {
   window.ramp.que.push(fn)
 }
 
-// The latest page change's destroy + re-add; in-page units wait on it
+// Every ad operation runs one at a time, in order, each finishing (its destroys and adds)
+// before the next starts: two that overlapped (a rail refresh mid page change, e.g. NEW
+// BUILD right after a spin) each added a bottom rail, and two rails stacked
 let ready = Promise.resolve()
+let pageGen = 0                       // bumped by every page change
+const serial = job => {
+  ready = ready.then(() => new Promise(resolve => {
+    queue(() => { Promise.resolve().then(job).catch(() => {}).finally(resolve) })
+  }))
+  return ready
+}
 
 const OOP = type => ({ type })
 // Off-page units by page kind. Home runs the bottom rail only (the app-look
@@ -46,46 +55,38 @@ const forScreen = ads => (onPhone() ? ads.filter(a => a.type !== 'corner_ad_vide
 // ads: units to add after the destroy ([] = none)
 export function rampPage({ ads: wanted = [], path } = {}) {
   const ads = forScreen(wanted)
-  ready = new Promise(resolve => {
-    queue(() => {
-      let destroyed
-      try { destroyed = window.ramp.destroyUnits('all') } catch { destroyed = null }
-      Promise.resolve(destroyed)
-        .catch(() => {})
-        .then(() => { const left = railSlots(); return left.length ? window.ramp.destroyUnits(left) : null })
-        .catch(() => {})
-        .then(() => {
-          if (!ads.length) return
-          if (ads.some(a => a.type === 'bottom_rail')) lastRail = Date.now()
-          return window.ramp.spaAds({ ads, countPageview: true, ...(path ? { path } : {}) })
-        })
-        .catch(() => {})
-        .finally(resolve)
-    })
+  pageGen++
+  return serial(() => {
+    let destroyed
+    try { destroyed = window.ramp.destroyUnits('all') } catch { destroyed = null }
+    return Promise.resolve(destroyed)
+      .catch(() => {})
+      .then(() => { const left = railSlots(); return left.length ? window.ramp.destroyUnits(left) : null })
+      .catch(() => {})
+      .then(() => {
+        if (!ads.length) return
+        if (ads.some(a => a.type === 'bottom_rail')) lastRail = Date.now()
+        return window.ramp.spaAds({ ads, countPageview: true, ...(path ? { path } : {}) })
+      })
   })
-  return ready
 }
 
 // In-page units (e.g. { type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-sim' })
 export function rampAdd(ads) {
   // read `ready` after the current render's effects, so a page change in the
   // same commit is waited for too
-  Promise.resolve()
-    .then(() => ready)
-    .then(() => queue(() => { try { window.ramp.spaAddAds(ads) } catch {} }))
+  Promise.resolve().then(() => serial(() => window.ramp.spaAddAds(ads)))
 }
 
 // Destroy every slot of one unit type (destroyUnits wants slot names)
 // (after any page change in progress, which may already have removed them)
 export function rampDestroyType(type) {
-  Promise.resolve()
-    .then(() => ready)
-    .then(() => queue(() => {
-      const slots = Object.entries(window.ramp?.settings?.slots ?? {})
-        .filter(([, s]) => s?.type === type)
-        .map(([name]) => name)
-      if (slots.length) { try { window.ramp.destroyUnits(slots) } catch {} }
-    }))
+  Promise.resolve().then(() => serial(() => {
+    const slots = Object.entries(window.ramp?.settings?.slots ?? {})
+      .filter(([, s]) => s?.type === type)
+      .map(([name]) => name)
+    return slots.length ? window.ramp.destroyUnits(slots) : null
+  }))
 }
 
 // The bottom rail on its own, between page changes (a tab in the nav, a spin):
@@ -95,14 +96,17 @@ export function rampRail() {
   if (Date.now() - lastRail < RAIL_GAP_MS) return
   if (document.documentElement.classList.contains('ads-hidden')) return
   lastRail = Date.now()
-  Promise.resolve()
-    .then(() => ready)
-    .then(() => queue(() => {
-      const slots = railSlots()
-      let gone
-      try { gone = slots.length ? window.ramp.destroyUnits(slots) : null } catch { gone = null }
-      Promise.resolve(gone).catch(() => {}).then(() => { try { window.ramp.spaAddAds([{ type: 'bottom_rail' }]) } catch {} })
-    }))
+  const gen = pageGen
+  Promise.resolve().then(() => serial(() => {
+    if (gen !== pageGen) return                 // a page change came in: it brings its own rail
+    const slots = railSlots()
+    let gone
+    try { gone = slots.length ? window.ramp.destroyUnits(slots) : null } catch { gone = null }
+    return Promise.resolve(gone).catch(() => {}).then(() => {
+      if (gen !== pageGen || document.querySelector('[id^="pw-oop-bottom_rail"]')) return   // never a second rail on the page
+      return window.ramp.spaAddAds([{ type: 'bottom_rail' }])
+    })
+  }))
 }
 
 // The rail again when a mode moves on without a page change (the next screen of

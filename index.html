@@ -183,9 +183,8 @@
         // once a session: the app shows it when it opens (a fresh launch starts a fresh
         // session), not on its later page loads (switching sports, the Daily link)
         try { seen = sessionStorage.getItem(KEY) === '1' } catch (e) {}
-        // (desktop website: no loading screen, it's built for a phone screen)
-        var desktop = !native && window.matchMedia && matchMedia('(min-width: 769px)').matches
-        if (seen || desktop) { el.parentNode.removeChild(el); window.__bapLoad = window.__bapLoaded = function () {}; return }
+        // the loading screen is the app's (it covers the native launch); the website never shows it
+        if (seen || !native) { el.parentNode.removeChild(el); window.__bapLoad = window.__bapLoaded = function () {}; return }
         try { sessionStorage.setItem(KEY, '1') } catch (e) {}   // shown now: no later page load this session shows it again
         // the native splash is the animation's first frame (assets/splash.png): it goes
         // once that frame is drawn here, so the one becomes the other with no seam
