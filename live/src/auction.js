@@ -11,7 +11,7 @@ import {
   AUCTION_SIZE, AUCTION_MIN, AUCTION_FILL_SECS, BID_SECS, RESET_SECS, SPIN_MS, SOLD_MS, GRACE_MS,
   AUCTION_POS, auctionCoreKit, freshLedger, canBidOn, minNext, maxBid, auctionOver, pickLot, rankAuction, lotEnd,
 } from '../../src/lib/auctionCore.js'
-import { BaseQueue, str, send, parse, accept } from './queue.js'
+import { BaseQueue, str, send, parse, accept, key, keyOk, reject } from './queue.js'
 
 const WAIT_MS = 2400            // the room opens, then the first card is pulled
 const EMPTY_MS = 90000          // everyone gone this long: the auction is called off
@@ -42,6 +42,7 @@ export class AuctionRoom {
       if (!validSportPos(b.sport, b.pos)) return new Response('bad', { status: 400 })
       this.kit = auctionCoreKit(b.sport, b.pos)
       this.m = { code: b.code, seed: `au-${b.code}`, created: Date.now(), sport: this.kit.sport, pos: this.kit.pos, types: this.kit.types, bidSecs: BID_SECS, reset: RESET_SECS, players: b.players }
+      this.keys = b.keys || {}
       this.st = { n: 0, stage: 'wait', lot: null, t0: Date.now(), last: 0, high: null, passed: [], sold: null, soldAt: 0, L: freshLedger(b.players) }
       this.at(WAIT_MS, () => this.nextLot())
       return new Response('ok')
@@ -124,6 +125,7 @@ export class AuctionRoom {
     if (msg.t === 'hello') {
       const vid = str(msg.vid)
       if (!this.m.players.some(p => p.vid === vid)) { send(ws, { t: 'gone' }); try { ws.close(1000, 'not in this auction') } catch {} return }
+      if (!keyOk(this.keys, vid, key(msg))) return reject(ws)
       for (const [w, v] of this.conns) if (v === vid && w !== ws) { this.conns.delete(w); try { w.close(1000, 'replaced') } catch {} }
       this.conns.set(ws, vid); this.emptySince = null
       return this.broadcast()

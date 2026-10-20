@@ -88,7 +88,7 @@ export function useCompete({ enabled, user, sport, pos }) {
   // My build is in: the server scores it (shown here at the phone's number until its word comes back)
   const submit = useCallback((ovr, build) => {
     if (!match || results[me.vid]) return
-    const slim = Object.fromEntries(Object.entries(build || {}).filter(([, v]) => v).map(([t, v]) => [t, { val: v.val, qbFull: v.qbFull, team: v.team }]))
+    const slim = Object.fromEntries(Object.entries(build || {}).filter(([, v]) => v).map(([t, v]) => [t, { val: v.val, qbFull: v.qbFull, team: v.team, ...(v.spin ? { spin: v.spin } : {}) }]))
     roomRef.current?.send({ t: 'submit', build: slim })
     setResults(rs => ({ ...rs, [me.vid]: { ovr, at: Date.now(), build: slim } }))
   }, [match, results, me.vid])

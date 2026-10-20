@@ -2,6 +2,10 @@
 // versions of the 3v3 (the live server's and the phones-only one).
 import { seeded, seededShuffle } from './rng'
 import { buildFromPlayer } from './hoops'
+import { legalSlots } from './competeCore'
+import { NBA_GUARD_PLAYERS, VERSUS_GUARD_TYPES } from '../data/nba-guards'
+import { NBA_BIG_PLAYERS, VERSUS_BIG_TYPES } from '../data/nba-bigs'
+import { NBA_TEAMS } from '../data/nba-teams'
 
 export const ROOM_SIZE = 6
 export const BUILD_SECS = 180
@@ -103,3 +107,25 @@ export function buildOk(b, pool) {
 // the same picks (who, at what): the dealer can't swap anyone's build
 export const samePicks = (a, b) => Object.keys({ ...a, ...b }).every(t => (a?.[t]?.qbFull ?? null) === (b?.[t]?.qbFull ?? null) && Number(a?.[t]?.val) === Number(b?.[t]?.val))
 
+
+// ── A build the server trusts (live/src/index.js, at the tip-off) ─────────────
+// Each seat spins its own seeded spins (BucketApp blacktopPlan: `${code}:${vid}`, respins
+// `${code}:${vid}:r`), so the server can redo every draw: a chip the seat's spins never
+// dealt plays as a free agent, and every rating is the player's real one.
+export const FREE_AGENT_VAL = 3
+export const seatSeed = (code, vid) => `${code}:${vid}`
+export const seatRespinSeed = (code, vid) => `${code}:${vid}:r`
+export function cleanBuild(build, pos, code, vid) {
+  if (!build || typeof build !== 'object') return null
+  const big = pos === 'big', types = big ? VERSUS_BIG_TYPES : VERSUS_GUARD_TYPES, pool = big ? NBA_BIG_PLAYERS : NBA_GUARD_PLAYERS
+  const ok = legalSlots({ seed: seatSeed(code, vid), rs: seatRespinSeed(code, vid), types, pool, teams: NBA_TEAMS, sent: build })
+  const out = {}
+  for (const t of types) {
+    const c = build[t]
+    const p = ok.has(t) ? pool.find(x => x.name === c.qbFull && (!c.team || x.team === c.team)) ?? pool.find(x => x.name === c.qbFull) : null
+    out[t] = p && typeof p.attrs?.[t] === 'number'
+      ? { ...c, type: t, val: p.attrs[t] }
+      : { type: t, val: FREE_AGENT_VAL, qbFull: 'Free agent', team: null }
+  }
+  return out
+}

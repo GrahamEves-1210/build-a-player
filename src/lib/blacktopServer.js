@@ -6,7 +6,7 @@
 // the same game).
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { myVid, claimLive, releaseLive, markEntered, clearEntered, takeEntered } from './live'
+import { myVid, myVidKey, claimLive, releaseLive, markEntered, clearEntered, takeEntered } from './live'
 import { seededShuffle } from './rng'
 import { simStreetball } from './hoops'
 import { clean, blockedIds, MIN_GAP_MS } from './chat'
@@ -25,7 +25,8 @@ export function liveSocket(path, hello, onMsg, onStatus) {
     if (closed) return
     onStatus?.('connecting')
     ws = new WebSocket(`${LIVE_URL}${path}`)
-    ws.onopen = () => { tries = 0; onStatus?.('live'); ws.send(JSON.stringify(hello())) }
+    // every hello carries this tab's seat key (live/src/queue.js): nobody else can take the seat
+    ws.onopen = () => { tries = 0; onStatus?.('live'); ws.send(JSON.stringify({ ...hello(), key: myVidKey() })) }
     ws.onmessage = e => { try { onMsg(JSON.parse(e.data)) } catch {} }
     ws.onclose = () => { if (closed) return; onStatus?.('connecting'); timer = setTimeout(open, Math.min(8000, 500 * 2 ** tries++)) }
     ws.onerror = () => { try { ws.close() } catch {} }

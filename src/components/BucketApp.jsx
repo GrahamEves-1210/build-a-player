@@ -37,6 +37,8 @@ import { IS_APP, APP_LOOK } from '../lib/platform'
 import AppHome from './app/AppHome'
 import { FlipEdge, BuildComplete, useFlip, StackEdge, StackSeam, useDropMode, useDropSheet, DropBar, DropSheet } from './app/AppBuildTray'
 import { useCompete, botBuild } from '../lib/compete'
+import { seededTeams, seededPlayer } from '../lib/competeCore'
+import { seatSeed, seatRespinSeed } from '../lib/blacktopCore'
 import { setLiveLock, liveLock, guardLeave } from '../lib/liveLock'
 import { useAuction } from '../lib/auction'
 import { FORFEIT_RATING } from '../lib/progress'
@@ -820,7 +822,10 @@ export default function BucketApp() {
     })
     return () => setLiveLock(null)
   }, [auctionLive]) // eslint-disable-line react-hooks/exhaustive-deps
-  const competePlan = useMemo(() => (competeOn && cp.match ? { seed: cp.match.seed, getStart: () => 0, onSpin: () => {}, separateRespins: true } : null), [competeOn, cp.match?.code]) // eslint-disable-line react-hooks/exhaustive-deps
+  // a seeded build picks up after the last spin it placed (a reload never deals spin 0 again)
+  const seedBuildRef = useRef(null); seedBuildRef.current = build
+  const nextSeedSpin = useCallback(() => 1 + Math.max(-1, ...Object.values(seedBuildRef.current || {}).filter(Boolean).map(c => (Number.isInteger(c.spin?.i) ? c.spin.i : -1))), [])
+  const competePlan = useMemo(() => (competeOn && cp.match ? { seed: cp.match.seed, getStart: nextSeedSpin, onSpin: () => {}, separateRespins: true, respinSeed: `${cp.match.seed}:${cp.me.vid}` } : null), [competeOn, cp.match?.code]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── BLACKTOP (app): the match lives in the hook; pages follow its phase ──
   // App: the shop reads Pro from storage; tell it when that changes
@@ -834,6 +839,11 @@ export default function BucketApp() {
     onSeatPos: pos => { setPosition(pos); try { localStorage.setItem('bucketPosition', pos) } catch {} },
   })
   btPhaseRef.current = bt.phase
+  // Blacktop: each seat spins its own seeded spins (respins too), so the server can check
+  // every pick at the tip-off (blacktopCore cleanBuild). Different seats, different spins.
+  const blacktopPlan = useMemo(() => (liveBuild && bt.match?.code
+    ? { seed: seatSeed(bt.match.code, bt.me.vid), getStart: nextSeedSpin, onSpin: () => {}, separateRespins: true, respinSeed: seatRespinSeed(bt.match.code, bt.me.vid) }
+    : null), [liveBuild, bt.match?.code, bt.me.vid])
   const resetLiveBuild = useCallback(() => {
     const types = VERSUS_POS_TYPES[position] ?? VERSUS_GUARD_TYPES
     setBuild(Object.fromEntries(types.map(t => [t, null])))
@@ -1117,18 +1127,18 @@ export default function BucketApp() {
   // TEST (testers only, a Blacktop build): fill the open traits with a believable build for
   // screen recordings: a different real player for each trait, picked from the good-not-elite
   // part of the pool (the top 5–45% at that trait), so it lands where real players' builds do
+  // Testers: finish the build from this seat's own seeded spins (what spinning would have
+  // dealt, each player to their best open slot), so the server takes it like any build
   const handleTestFill = useCallback(() => {
     const pool = currentPool.filter(p => p.attrs)
-    if (!pool.length) return
-    const used = new Set(Object.values(build).filter(Boolean).map(c => c.qbFull))
+    if (!pool.length || !blacktopPlan) return
     const next = { ...build }
-    for (const type of activeTypes) {
-      if (next[type]) continue
-      const ranked = pool.filter(p => p.attrs[type] != null && !used.has(p.name)).sort((a, b) => b.attrs[type] - a.attrs[type])
-      if (!ranked.length) continue
-      const lo = Math.floor(ranked.length * 0.05), hi = Math.max(lo + 1, Math.floor(ranked.length * 0.45))
-      const p = ranked[Math.min(ranked.length - 1, lo + Math.floor(Math.random() * (hi - lo)))]
-      used.add(p.name)
+    const order = seededTeams(blacktopPlan.seed, NBA_TEAMS, pool)
+    let i = 1 + Math.max(-1, ...Object.values(build).filter(Boolean).map(c => (Number.isInteger(c.spin?.i) ? c.spin.i : -1)))
+    for (; activeTypes.some(t => !next[t]) && order.length; i++) {
+      const p = seededPlayer(blacktopPlan.seed, i, order[i % order.length], pool)
+      if (!p) continue
+      const type = activeTypes.filter(t => !next[t]).sort((a, b) => (p.attrs[b] ?? -1) - (p.attrs[a] ?? -1))[0]
       const photo = NBA_HEADSHOTS[p.name] ? `${HEADSHOT_BASE}/nba/${NBA_HEADSHOTS[p.name]}.webp` : genericHeadshot(p.skin)
       next[type] = {
         type, val: p.attrs[type] ?? 5,
@@ -1137,10 +1147,11 @@ export default function BucketApp() {
         skinColor: p.skin, number: p.number,
         team: p.team, captain: p.captain ?? false, photo,
         height: p.height ?? null, weight: p.weight ?? null,
+        spin: { i, how: 'spin', d: 0 },
       }
     }
     setBuild(next)
-  }, [currentPool, activeTypes, build])
+  }, [currentPool, activeTypes, build, blacktopPlan])
 
   const handleDevFill = useCallback(() => {
     const pool = currentPool.filter(p => p.attrs)
@@ -1627,8 +1638,8 @@ export default function BucketApp() {
           onReset={competeOn || liveBuild || page === 'versus-game' ? undefined : handleReset}
           adsDisabled={adsDisabled}
           cardMeta={(IS_APP || APP_LOOK) && gameIsPlay && gameMode !== 'salarycap' ? { sport: 'bucket', pos: position, mode: gameMode } : null}
-          seedPlan={competePlan}
-          key={competePlan ? `cp-${cp.match.code}` : 'spin'}
+          seedPlan={competePlan ?? blacktopPlan}
+          key={competePlan ? `cp-${cp.match.code}` : blacktopPlan ? `bt-${bt.match.code}` : 'spin'}
           paused={parked}
           isRB={false}
           isBucket={true}

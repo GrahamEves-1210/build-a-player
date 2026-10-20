@@ -31,6 +31,21 @@ export function myVid() {
   return _vid
 }
 
+// The vid's secret: everyone sees a seat's vid, only this tab knows its key. The live
+// server takes a seat back (a reconnect, a reload) only with the key it was taken with.
+let _vkey = null
+export function myVidKey() {
+  if (_vkey) return _vkey
+  try {
+    _vkey = sessionStorage.getItem('bap_vs_key')
+    if (!_vkey) {
+      _vkey = crypto?.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36)
+      sessionStorage.setItem('bap_vs_key', _vkey)
+    }
+  } catch { _vkey = Math.random().toString(36).slice(2) }
+  return _vkey
+}
+
 // This device (shared by every tab, unlike the vid): pools drop a second seat
 // from the same device or the same account
 export function myDevice() {

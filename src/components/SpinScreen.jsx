@@ -229,7 +229,7 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, on
 }
 
 // ─── Chip ────────────────────────────────────────────────────────────────────
-function Chip({ type, meta, val, selectedQB, draggingType, onChipTap, onDragStart, onDragEnd, setDraggingType, hideGrades, headshotsMap, headshotsDir, isBucket, isWR, headshotFallback = () => null }) {
+function Chip({ type, spin = null, meta, val, selectedQB, draggingType, onChipTap, onDragStart, onDragEnd, setDraggingType, hideGrades, headshotsMap, headshotsDir, isBucket, isWR, headshotFallback = () => null }) {
   const photo = headshotsMap[selectedQB.name] ? `${headshotsDir}${headshotsMap[selectedQB.name]}.webp` : headshotFallback(selectedQB.skin)
   const chipData = {
     type, val,
@@ -240,6 +240,7 @@ function Chip({ type, meta, val, selectedQB, draggingType, onChipTap, onDragStar
     height: selectedQB.height ?? parseHtToIn(selectedQB.ht), weight: selectedQB.weight ?? selectedQB.wt ?? null,
     attrs: selectedQB.attrs ?? null,
     subpos: selectedQB.subpos ?? null,
+    ...(spin ? { spin } : {}),
   }
   return (
     <div
@@ -497,18 +498,26 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
   // Daily Challenge outcomes
   const teamIndex = spinBase.current + (ownSpins ? seedSpins : spinCount) - 1
   const teamTarget = useMemo(() => {
-    if (!seedPlan || spinCount < 1 || freeTeam) return null
-    const order = seededShuffle([...teamReelItems].sort((a, b) => a.short.localeCompare(b.short)), `${seedPlan.seed}:teams`)
+    if (!seedPlan || spinCount < 1) return null
+    const sorted = [...teamReelItems].sort((a, b) => a.short.localeCompare(b.short))
+    // Compete: a respin is this seat's own draw, seeded too (respinSeed) so the server can check it
+    if (freeTeam) return seedPlan.respinSeed ? seededShuffle(sorted, `${seedPlan.respinSeed}:teams:${teamIndex}`)[0] ?? null : null
+    const order = seededShuffle(sorted, `${seedPlan.seed}:teams`)
     return order[teamIndex % order.length]
   }, [seedPlan, spinCount, teamReelItems, teamIndex, freeTeam])
   const playerTarget = useMemo(() => {
-    // a respun team or a player respin is the player's own draw
-    if (!seedPlan || !selectedTeam || (ownSpins && (freeTeam || playerDraw > 0))) return null
+    // a respun team or a player respin is the player's own draw (seeded by the seat in Compete)
+    const own = ownSpins && (freeTeam || playerDraw > 0)
+    if (!seedPlan || !selectedTeam || (own && !seedPlan.respinSeed)) return null
     const roster = qbPool.filter(q => q.team === selectedTeam.short).sort((a, b) => a.name.localeCompare(b.name))
     if (!roster.length) return null
-    const order = seededShuffle(roster, `${seedPlan.seed}:${teamIndex}:${selectedTeam.short}`)
+    const order = seededShuffle(roster, `${own ? seedPlan.respinSeed : seedPlan.seed}:${teamIndex}:${selectedTeam.short}`)
     return order[playerDraw % order.length]
   }, [seedPlan, selectedTeam, teamIndex, playerDraw, freeTeam]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Compete: which seeded draw this player came from, so the server can check it
+  // (competeCore dealtBy): spin #i, a regular spin, a player respin or a team respin
+  const chipSpin = seedPlan?.respinSeed ? { i: teamIndex, how: freeTeam ? 'tr' : playerDraw > 0 ? 'pr' : 'spin', d: playerDraw } : null
 
   const visibleCategories = isRB ? RB_CATEGORIES : categoriesData
   const hasAvailableChips = isDone && selectedQB && visibleCategories.some(cat =>
@@ -684,7 +693,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
                   ? types.filter(t => !build[t]).map(t => {
                       const meta = attrMap[t]
                       const val  = selectedQB.attrs[t]
-                      return <Chip key={t} type={t} meta={meta} val={val} selectedQB={selectedQB} draggingType={draggingType} onChipTap={onChipTap} onDragStart={onDragStart} onDragEnd={onDragEnd} setDraggingType={setDraggingType} hideGrades={forceHide || hideGrades} headshotsMap={headshotsMap} headshotsDir={headshotsDir} isBucket={isBucket} isWR={isWR} headshotFallback={headshotFallback} />
+                      return <Chip key={t} spin={chipSpin} type={t} meta={meta} val={val} selectedQB={selectedQB} draggingType={draggingType} onChipTap={onChipTap} onDragStart={onDragStart} onDragEnd={onDragEnd} setDraggingType={setDraggingType} hideGrades={forceHide || hideGrades} headshotsMap={headshotsMap} headshotsDir={headshotsDir} isBucket={isBucket} isWR={isWR} headshotFallback={headshotFallback} />
                     })
                   : visibleCategories.map((cat, catIdx) => {
                       const available = cat.types.filter(type => types.includes(type) && !build[type])
@@ -699,7 +708,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
                           {available.map(type => {
                             const meta = attrMap[type]
                             const val  = selectedQB.attrs[type]
-                            return <Chip key={type} type={type} meta={meta} val={val} selectedQB={selectedQB} draggingType={draggingType} onChipTap={onChipTap} onDragStart={onDragStart} onDragEnd={onDragEnd} setDraggingType={setDraggingType} hideGrades={forceHide || hideGrades} headshotsMap={headshotsMap} headshotsDir={headshotsDir} isBucket={isBucket} isWR={isWR} headshotFallback={headshotFallback} />
+                            return <Chip key={type} spin={chipSpin} type={type} meta={meta} val={val} selectedQB={selectedQB} draggingType={draggingType} onChipTap={onChipTap} onDragStart={onDragStart} onDragEnd={onDragEnd} setDraggingType={setDraggingType} hideGrades={forceHide || hideGrades} headshotsMap={headshotsMap} headshotsDir={headshotsDir} isBucket={isBucket} isWR={isWR} headshotFallback={headshotFallback} />
                           })}
                         </div>
                       )

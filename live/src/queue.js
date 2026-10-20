@@ -7,6 +7,13 @@ export const str = (v, n = 40) => (typeof v === 'string' ? v.slice(0, n) : '')
 export const send = (ws, msg) => { try { ws.send(JSON.stringify(msg)) } catch {} }
 export const parse = data => { try { const m = JSON.parse(data); return m && typeof m === 'object' ? m : null } catch { return null } }
 export const pub = h => ({ vid: str(h.vid), name: str(h.name, 24) || 'Guest', uid: str(h.uid, 64) || null, cos: h.cos && typeof h.cos === 'object' ? h.cos : null })
+// A seat's key: a secret only the device holding the seat knows (src/lib/blacktopServer.js
+// liveSocket sends it with every hello). Seat ids (vids) are shown to everyone, so without it
+// anyone could say hello as you, push you out of your seat and quit for you. A seat taken
+// without a key (an older app) has none to check.
+export const key = m => str(m?.key, 64) || null
+export const keyOk = (keys, vid, k) => !keys?.[vid] || keys[vid] === k
+export const reject = (ws, why = 'seat') => { send(ws, { t: 'taken', why }); try { ws.close(1000, 'seat taken') } catch {} }
 export const accept = (self) => {
   const [client, server] = Object.values(new WebSocketPair())
   server.accept()
@@ -54,8 +61,10 @@ export class BaseQueue {
   async onMessage(ws, data) {
     const m = parse(data); if (!m) return
     if (m.t === 'hello') {
-      const p = { ...pub(m), dev: str(m.dev, 64), ts: Date.now() }
+      const p = { ...pub(m), dev: str(m.dev, 64), key: key(m), ts: Date.now() }
       if (!p.vid) return
+      // a reconnect replaces the old connection, but only with the same key
+      for (const [w, q] of this.conns) if (q.vid === p.vid && w !== ws && q.key && q.key !== p.key) return reject(ws)
       for (const [w, q] of this.conns) if (q.vid === p.vid && w !== ws) { p.ts = q.ts; this.conns.delete(w); try { w.close(1000, 'replaced') } catch {} }
       this.conns.set(ws, p)
       if (this.waiting().length >= this.cfg.size) return this.makeMatch()
@@ -70,8 +79,9 @@ export class BaseQueue {
     if (list.length < this.cfg.min) return this.broadcast()
     const code = code6()
     const players = list.map(pub)
+    const keys = Object.fromEntries(list.map(p => [p.vid, p.key || null]))
     const ns = this.env[this.cfg.room]
-    await ns.get(ns.idFromName(code)).fetch('https://live/init', { method: 'POST', body: JSON.stringify({ code, sport: this.sport, pos: this.pos, players }) })
+    await ns.get(ns.idFromName(code)).fetch('https://live/init', { method: 'POST', body: JSON.stringify({ code, sport: this.sport, pos: this.pos, players, keys }) })
     const vids = new Set(players.map(p => p.vid))
     for (const [ws, p] of this.conns) if (vids.has(p.vid)) { send(ws, { t: 'match', code, players }); this.conns.delete(ws); try { ws.close(1000, 'matched') } catch {} }
     this.rearm(false); this.broadcast()

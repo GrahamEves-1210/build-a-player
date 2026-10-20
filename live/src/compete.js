@@ -7,7 +7,7 @@
 //   CompeteRoom  (one per pool)               the clock, the builds, the result
 
 import { POOL_SIZE, MIN_POOL, FILL_AFTER_SECS, BUILD_SECS, COMPETE_POS, scoreBuild } from '../../src/lib/competeCore.js'
-import { BaseQueue, str, send, parse, accept } from './queue.js'
+import { BaseQueue, str, send, parse, accept, key, keyOk, reject } from './queue.js'
 
 const GRACE_MS = 3000           // a build sent just as the clock hits zero still counts
 const EMPTY_MS = 90000          // everyone gone this long: the pool is closed
@@ -34,6 +34,7 @@ export class CompeteRoom {
       const b = await req.json()
       if (!validCompete(b.sport, b.pos)) return new Response('bad', { status: 400 })
       this.m = { code: b.code, seed: `cp-${b.code}`, created: Date.now(), sport: b.sport, pos: b.pos, players: b.players.map(p => ({ ...p, bot: false })) }
+      this.keys = b.keys || {}
       this.results = {}; this.phase = 'build'
       this.timer = setTimeout(() => this.finish(), BUILD_SECS * 1000 + GRACE_MS)
       return new Response('ok')
@@ -61,6 +62,7 @@ export class CompeteRoom {
     if (msg.t === 'hello') {
       const vid = str(msg.vid)
       if (!this.m.players.some(p => p.vid === vid)) { send(ws, { t: 'gone' }); try { ws.close(1000, 'not in this pool') } catch {} return }
+      if (!keyOk(this.keys, vid, key(msg))) return reject(ws)
       for (const [w, v] of this.conns) if (v === vid && w !== ws) { this.conns.delete(w); try { w.close(1000, 'replaced') } catch {} }
       this.conns.set(ws, vid); this.emptySince = null
       return this.broadcast()
@@ -69,7 +71,8 @@ export class CompeteRoom {
     if (msg.t === 'submit') {
       // the first build in stands; one after the clock (and its grace) doesn't count
       if (this.results[vid] || Date.now() > this.m.created + BUILD_SECS * 1000 + GRACE_MS) return
-      const { ovr, build } = scoreBuild(this.m.sport, this.m.pos, msg.build)
+      // only the players this pool's spins could have dealt count (the seed is the pool's)
+      const { ovr, build } = scoreBuild(this.m.sport, this.m.pos, msg.build, this.m.seed, vid)
       this.results[vid] = { ovr, at: Date.now(), build }
       this.broadcast()
       return this.maybeDone()
