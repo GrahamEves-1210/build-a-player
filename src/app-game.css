@@ -4404,7 +4404,8 @@ html.app-look .ag-blacktop--menu:hover .ag-bt-tags .bt-mode-tag:last-child { tra
 .cr-name-rand:active { transform: scale(.94) rotate(-20deg); }
 .cr-name-in { min-width: 0; padding: 11px 12px; border-radius: 10px; border: 1.5px solid var(--ag-line-hi); background: rgba(0,0,0,.3); color: var(--ag-text); font-family: var(--ag-body); font-size: 16px; font-weight: 600; }
 .cr-name-in:focus { outline: none; border-color: #f5dc8a; }
-.cr-slot-acts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.cr-slot-acts { display: grid; grid-template-columns: 1fr 1.6fr; gap: 8px; }   /* Cancel quiet and narrower, Build the main one */
+.cr-slot-go { white-space: nowrap; }
 .cr-slot-acts .ag-btn[disabled] { opacity: .45; }
 .ag-btn.cr-del { background: rgba(239,68,68,.16); border-color: rgba(239,68,68,.5); color: #fca5a5; }
 .cr-delete { display: flex; flex-direction: column; gap: 10px; padding: 4px 2px 8px; }
@@ -5175,4 +5176,12 @@ html:is(.is-app, .app-look) [data-sport="bucket"] .cz-drop-hint { border-color: 
 @media (min-width: 769px) and (max-width: 1259px) {
   html.app-look .hw-tracker-pills { top: 58px; }   /* no room beside the tabs: just under them */
 }
+/* Player comp with a long last name: one column, the two grade columns wide enough for the name
+   (a hyphenated one breaks at the hyphen), the grades centred in them */
+.cr-comp-grid.is-wide .cr-comp-row { grid-template-columns: minmax(0, 1fr) 76px 76px; }
+.cr-comp-grid.is-wide .cr-comp-row b { width: 34px; justify-self: center; }
+.cr-comp-grid.is-wide .cr-comp-row--head em,
+.cr-comp-grid.is-wide .cr-comp-row--head em.is-long { justify-self: center; width: auto; max-width: 76px; white-space: normal; overflow-wrap: anywhere; text-align: center; line-height: 1.05; font-size: 10px; letter-spacing: .3px; }
+.cr-comp .cr-comp-pct { white-space: nowrap; flex: none; }
+.cr-comp .ag-card-head { gap: 8px; align-items: flex-start; }
 

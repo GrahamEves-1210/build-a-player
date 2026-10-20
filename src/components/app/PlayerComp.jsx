@@ -22,7 +22,9 @@ export default function PlayerComp({ c, who, col = null, list = false, className
   const era = x => (x.era === 'current' ? `TODAY · ${x.team}` : `ALL-TIME${x.years ? ` · ${x.years}` : ''}`)
   const mine = col ?? lastName(who).toUpperCase()
   const his = lastName(top.name).toUpperCase()
-  const oneCol = list || c.types.length % 2
+  // a long last name (Gilgeous-Alexander, Antetokounmpo) needs the one-column table with wide columns
+  const wide = mine.length > 9 || his.length > 9
+  const oneCol = list || c.types.length % 2 || wide
   return (
     <div className={`ag-card cr-comp ag-pop${className ? ` ${className}` : ''}`}>
       <div className="ag-card-head"><span className="ag-eyebrow">PLAYER COMP{who ? <> · <span className="un-keep">{who}</span></> : null}</span><span className="cr-comp-pct">{top.match}% MATCH</span></div>
@@ -30,7 +32,7 @@ export default function PlayerComp({ c, who, col = null, list = false, className
         <span className="crl-face">{top.photo ? <img src={photoSrc(top.photo)} alt="" loading="lazy" /> : <span className="crl-init">{initials(top.name)}</span>}</span>
         <span className="cr-comp-name"><b>{top.name}</b><small>{era(top)}</small></span>
       </div>
-      <div className={`cr-comp-grid${oneCol ? ' is-list' : ''}`}>
+      <div className={`cr-comp-grid${oneCol ? ' is-list' : ''}${wide ? ' is-wide' : ''}`}>
         {(oneCol ? [0] : [0, 1]).map(i => <span key={`h${i}`} className="cr-comp-row cr-comp-row--head"><small /><em className={`is-you un-keep${mine.length > 6 ? ' is-long' : ''}`}>{mine}</em><em className={his.length > 6 ? 'is-long' : ''}>{his}</em></span>)}
         {c.types.map(t => {
           const v = c.build[t]?.val ?? 0, p = top.attrs[t]

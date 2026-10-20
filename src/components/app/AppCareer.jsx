@@ -59,8 +59,8 @@ function NewSlot({ onStart, onCancel }) {
         <button type="button" className="cr-name-rand" onClick={randomize} aria-label="Random name" title="Random name"><IconSpin size={18} /></button>
       </div>
       <div className="cr-slot-acts">
-        <button type="button" className="ag-btn" onClick={onCancel}>CANCEL</button>
-        <button type="submit" className="ag-btn ag-btn--gold" disabled={!ok}>BUILD PLAYER <IconArrow size={15} /></button>
+        <button type="button" className="ag-btn ag-btn--ghost" onClick={onCancel}>CANCEL</button>
+        <button type="submit" className="ag-btn ag-btn--gold cr-slot-go" disabled={!ok}>BUILD <IconArrow size={15} /></button>
       </div>
     </form>
   )
