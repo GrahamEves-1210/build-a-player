@@ -722,32 +722,37 @@ function Gauntlet({ v, seed, onDone }) {
 }
 // ── Bench press: drive the bar up against gravity, as many reps as you can ──
 function Bench({ v, load = 1, onDone }) {
-  const S = useRef({ h: 0, vel: 0, reps: 0, fatigue: 1, end: 0, done: false })
+  const S = useRef({ h: 0, reps: 0, end: 0, done: false })
   const bar = useRef(null), count = useRef(null), secs = useRef(null)
-  // what one tap lifts (stronger = more): about 5 taps a rep for the weakest, 2 for the strongest,
-  // so a quick set lands where real combine numbers do. load < 1: a lighter player's heavier bar
-  const push = (20 + v * 2.4) * load
+  // Realistic numbers: strength sets how many reps the set can hold (football: the 225 lb
+  // combine bar, about 18 for the weakest to 35 for the strongest; basketball (load < 1): the
+  // 185 lb bar, about 8 to 22), and the bar fails the way a real set does: every rep near that
+  // ceiling lifts less and sinks faster, so fast tapping gets you close to it, never past it
+  const ceil = load < 1 ? 7 + v * 1.4 : 16 + v * 1.7
+  const fail = () => Math.min(0.97, (S.current.reps / ceil) ** 2.2)
+  const push = 34 * (1 + v * 0.06) * load
   const SECS = 12
   useEffect(() => { S.current.end = now() + SECS * 1000 }, [])
   useLoop(() => {
     const s = S.current; if (s.done) return false
     const t = now(), dt = Math.min(0.05, (t - (s.last ?? t)) / 1000); s.last = t
     const left = (s.end - t) / 1000
-    // gravity grows as the arms tire
-    s.h = Math.max(0, s.h - (34 + (1 - s.fatigue) * 60) * dt)
+    // the bar sinks between taps, faster as the arms give out
+    s.h = Math.max(0, s.h - (30 + fail() * 70) * dt)
     if (bar.current) bar.current.style.transform = `translate3d(0,${-s.h}%,0)`
     const shown = Math.max(0, left).toFixed(1); if (secs.current && secs.current.textContent !== shown) secs.current.textContent = shown
     if (left <= 0) {
       s.done = true
-      const reps = s.reps
-      onDone({ score: clamp((reps - 6) / 22, 0, 1), hit: reps >= 15, note: `${reps} reps`, raw: { reps } })
+      const reps = s.reps, lo = ceil * 0.35
+      // judged against what this player can lift: most of his ceiling is a great set
+      onDone({ score: clamp((reps - lo) / (ceil - lo), 0, 1), hit: reps >= ceil * 0.6, note: `${reps} reps`, raw: { reps } })
       return false
     }
   })
   const tap = () => {
     const s = S.current; if (s.done) return
-    s.h += push * s.fatigue
-    if (s.h >= 100) { s.h = 0; s.reps++; s.fatigue *= 0.985; sfx('tap'); haptic('medium'); if (count.current) count.current.textContent = `${s.reps} REPS` }
+    s.h += push * (1 - fail())
+    if (s.h >= 100) { s.h = 0; s.reps++; sfx('tap'); haptic('medium'); if (count.current) count.current.textContent = `${s.reps} REPS` }
   }
   useKeys({ ' ': tap, Enter: tap })
   return (
