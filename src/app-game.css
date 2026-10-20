@@ -4648,7 +4648,7 @@ html.is-app { --drop-chrome: calc(352px + env(safe-area-inset-top) + env(safe-ar
 .game-layout.ag-drop .attr-chip { min-height: 46px !important; padding: 5px 9px !important; }
 .game-layout.ag-drop .attr-chip .chip-val { font-size: 18px !important; }
 /* Takeover duo: the code to share, big, until the partner shows up */
-.tk-code { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 14px 14px 12px; border-radius: 16px; border: 1.5px dashed color-mix(in srgb, var(--ag-a1) 60%, transparent); background: color-mix(in srgb, var(--ag-a1) 8%, transparent); text-align: center; }
+.tk-code { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 14px 14px 12px; border-radius: 16px; border: 1.5px solid color-mix(in srgb, var(--ag-a1) 45%, transparent); background: color-mix(in srgb, var(--ag-a1) 8%, transparent); text-align: center; }
 .tk-code-val { font-family: var(--ag-display); font-weight: 400; font-size: 44px; line-height: 1; letter-spacing: 6px; color: #fff; user-select: all; -webkit-user-select: all; }
 .tk-code-btn { width: auto !important; padding: 0 22px !important; height: 40px !important; }
 .tk-code small { font-family: var(--ag-body); font-size: 13px; color: var(--ag-muted); }
@@ -5115,4 +5115,7 @@ html.ag-fan-open .ag-dock { z-index: 1170; }
 /* Takeover Duo's ready check under the matchup */
 .tk-ready { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 4px 0 -2px; font-family: var(--ag-body); font-size: 13px; font-weight: 600; color: var(--ag-muted); }
 .tk-ready.is-in { color: #4ade80; }
+/* Takeover Duo: back out of a code nobody's joined yet */
+.tk-code-cancel { margin-top: 6px; padding: 8px 14px; border: 0; background: none; color: var(--ag-muted); font-family: var(--ag-font); font-size: 13px; letter-spacing: 1.6px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.tk-code-cancel:hover { color: #fff; }
 

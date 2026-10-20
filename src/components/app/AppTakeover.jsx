@@ -189,7 +189,7 @@ export default function AppTakeover({ sport, run, setRun, user, pools, attrMap, 
             {run.mode === 'duo' && <button className={`ag-chip${duo.partner ? ' is-on' : ''}`} onClick={() => setChatOpen(true)}><IconChat size={13} /> {duo.partner ? <NameTag name={duo.partner.name} cos={duo.partner.cos} /> : 'WAITING'}</button>}
           </div>
           {/* duo, waiting on a partner: the code to share, big */}
-          {run.mode === 'duo' && run.code && !duo.partner && <DuoCode code={run.code} host={run.host} />}
+          {run.mode === 'duo' && run.code && !duo.partner && <DuoCode code={run.code} host={run.host} onCancel={() => { setRun(r => (r ? { ...r, mode: 'solo', code: null, host: false } : r)); sfx('tap') }} />}
           <UsMap cities={cities} run={run} here={here} next={city} />
           {city && star && stop ? (
             <button className="tk-next ag-pop" style={{ '--tc': city.color, '--d': '80ms' }} onClick={() => setScreen('city')}>
@@ -432,7 +432,7 @@ function UsMap({ cities, run, here, next, delay = '40ms' }) {
 }
 
 // The duo code, waiting on the other player: big, with a copy / share button
-function DuoCode({ code, host }) {
+function DuoCode({ code, host, onCancel }) {
   const [done, setDone] = useState('')
   const share = async () => {
     const text = `Takeover duo on Build-A-Player. Join with code ${code}`
@@ -447,6 +447,8 @@ function DuoCode({ code, host }) {
       <b className="tk-code-val">{code}</b>
       {host && <button className="ag-btn ag-btn--ghost tk-code-btn" onClick={share}>{done || 'SHARE CODE'}</button>}
       <small>{host ? 'They tap DUO, then enter it under JOIN.' : "Hang tight: the road starts when they're here."}</small>
+      {/* back to a solo road: the road and the build carry on as they are */}
+      <button className="tk-code-cancel" onClick={onCancel}>CANCEL DUO · PLAY SOLO</button>
     </div>
   )
 }
