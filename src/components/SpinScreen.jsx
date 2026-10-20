@@ -287,7 +287,7 @@ export function setGradesHidden(v) {
   window.dispatchEvent(new CustomEvent('bap:grades', { detail: !!v }))
 }
 // ─── SpinScreen ──────────────────────────────────────────────────────────────
-export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, activeCategory, resetKey, onChipTap, types = TYPES, isLite = false, qbPool = QBS, savedResult = null, onSaveResult, onPhaseChange, gameKey, onReset, adsDisabled = false, isRB = false, isWR = false, isTE = false, isDB = false, isOL = false, isAllTime = false, isBucket = false, isVersusMode = false, attrMap = ATTR, categoriesData = CATEGORIES, teamsPool = TEAMS, logoDir = '/logos/', playerLabel, headshotsMap = HEADSHOTS, headshotsDir = `${HEADSHOT_BASE}/`, hideTeamResult = false, headshotFallback = () => null, seedPlan = null, cardMeta = null, paused = false, gradesHidden = false }) {
+export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, activeCategory, resetKey, onChipTap, types = TYPES, isLite = false, qbPool = QBS, savedResult = null, onSaveResult, onPhaseChange, gameKey, onReset, adsDisabled = false, isRB = false, isWR = false, isTE = false, isDB = false, isOL = false, isAllTime = false, isBucket = false, isVersusMode = false, attrMap = ATTR, categoriesData = CATEGORIES, teamsPool = TEAMS, logoDir = '/logos/', playerLabel, headshotsMap = HEADSHOTS, headshotsDir = `${HEADSHOT_BASE}/`, hideTeamResult = false, headshotFallback = () => null, seedPlan: seedPlanProp = null, cardMeta = null, paused = false, gradesHidden = false }) {
   // live competitive modes (1v1, Compete pools): the grades stay hidden, no toggle
   const forceHide = isVersusMode || gradesHidden
   const pLabel = playerLabel ?? (isTE ? 'TE' : isWR ? 'WR' : isRB ? 'RB' : 'QB')
@@ -314,9 +314,16 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
   cardMetaRef.current = cardMeta
   const poolRef = useRef(qbPool)
   poolRef.current = qbPool
+  // Every other build deals from its own seed too (a fresh one each build, kept with the
+  // build's saved spin), so a reload in the middle of a spin deals the same player again:
+  // reloading used to be a free reroll of any spin you didn't like
+  const newSeed = () => `b-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
+  const [autoSeed, setAutoSeed] = useState(() => (!seedPlanProp && savedResult?.seed) || newSeed())
+  const autoPlan = useMemo(() => (seedPlanProp ? null : { seed: autoSeed, getStart: () => 0, onSpin: () => {}, separateRespins: true, respinSeed: `${autoSeed}:r` }), [seedPlanProp, autoSeed])
+  const seedPlan = seedPlanProp ?? autoPlan
   // Daily Challenge: team spin #n lands on the nth team of the day's seeded
   // order (counted across visits, so leaving and coming back can't re-roll it)
-  const spinBase = useRef(seedPlan ? seedPlan.getStart() : 0)
+  const spinBase = useRef(seedPlanProp ? seedPlanProp.getStart() : (savedResult?.si ?? 0))
   const spinCountRef = useRef(0)
   const [playerDraw, setPlayerDraw] = useState(0)
   // Compete (seedPlan.separateRespins): respins are this player's own draw and
@@ -353,10 +360,15 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
 
   useEffect(() => {
     if (!onSaveResult) return
-    if (phase === 'done' && selectedQB) onSaveResult({ selectedTeam, selectedQB, qbRespinUsed, teamRespinUsed, qbRespinBonus })
+    // a build's own seed, and the spin to deal next (si): what a reload picks up from
+    const at = spinBase.current + seedSpins
+    const own = autoPlan ? { seed: autoPlan.seed } : {}
+    if (phase === 'done' && selectedQB) onSaveResult({ selectedTeam, selectedQB, qbRespinUsed, teamRespinUsed, qbRespinBonus, ...own, ...(autoPlan ? { si: at } : {}) })
     // between spins the build's re-spins used still count (a reload doesn't hand them back)
-    else if (phase === 'idle') onSaveResult(qbRespinUsed || teamRespinUsed || qbRespinBonus ? { qbRespinUsed, teamRespinUsed, qbRespinBonus } : null)
-  }, [phase, selectedTeam, selectedQB, qbRespinUsed, teamRespinUsed, qbRespinBonus])
+    else if (phase === 'idle') onSaveResult(qbRespinUsed || teamRespinUsed || qbRespinBonus || autoPlan ? { qbRespinUsed, teamRespinUsed, qbRespinBonus, ...own, ...(autoPlan ? { si: at } : {}) } : null)
+    // mid-spin: this spin is already dealt (a reload deals it again) and a respin is spent
+    else onSaveResult({ qbRespinUsed, teamRespinUsed, qbRespinBonus, ...own, ...(autoPlan ? { si: Math.max(0, at - 1) } : {}) })
+  }, [phase, selectedTeam, selectedQB, qbRespinUsed, teamRespinUsed, qbRespinBonus, seedSpins, autoPlan]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (onPhaseChange) onPhaseChange(phase)
@@ -370,6 +382,8 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
     setQbRespinUsed(0)
     setTeamRespinUsed(0)
     setQbRespinBonus(0)
+    // a new build: a new seed, dealt from its first spin
+    if (!seedPlanProp) { setAutoSeed(newSeed()); spinBase.current = 0; seedSpinsRef.current = 0; setSeedSpins(0) }
   }, [gameKey])
 
   // Team reel calls this when it naturally halts
@@ -414,7 +428,6 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
     setSelectedQB(null)
     setExcludedQB(null)
     countTeamSpin()
-    onSaveResult?.(null)
     setPhase('team')
     triggerMobileAd()
     track('spin', {
@@ -436,7 +449,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
   // earns one more, once a build
   const [adBusy, setAdBusy] = useState(false)
   const [adNote, setAdNote] = useState('')
-  const canEarn = REWARDED_ON && IS_APP && !isVersusMode && !seedPlan && qbRespinBonus === 0
+  const canEarn = REWARDED_ON && IS_APP && !isVersusMode && !seedPlanProp && qbRespinBonus === 0
   const earnRespin = async () => {
     if (adBusy) return
     setAdBusy(true); setAdNote('')
@@ -511,7 +524,16 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
     if (!seedPlan || !selectedTeam || (own && !seedPlan.respinSeed)) return null
     const roster = qbPool.filter(q => q.team === selectedTeam.short).sort((a, b) => a.name.localeCompare(b.name))
     if (!roster.length) return null
-    const order = seededShuffle(roster, `${own ? seedPlan.respinSeed : seedPlan.seed}:${teamIndex}:${selectedTeam.short}`)
+    if (own) {
+      const mine = seededShuffle(roster, `${seedPlan.respinSeed}:${teamIndex}:${selectedTeam.short}`)
+      // a respun team: its own draws in order
+      if (freeTeam) return mine[playerDraw % mine.length]
+      // a player respin: never the player this spin dealt
+      const dealt = seededShuffle(roster, `${seedPlan.seed}:${teamIndex}:${selectedTeam.short}`)[0]
+      const rest = mine.filter(p => p.name !== dealt?.name)
+      return rest.length ? rest[(playerDraw - 1) % rest.length] : mine[0]
+    }
+    const order = seededShuffle(roster, `${seedPlan.seed}:${teamIndex}:${selectedTeam.short}`)
     return order[playerDraw % order.length]
   }, [seedPlan, selectedTeam, teamIndex, playerDraw, freeTeam]) // eslint-disable-line react-hooks/exhaustive-deps
 

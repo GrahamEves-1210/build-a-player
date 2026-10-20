@@ -137,6 +137,11 @@ function enableAdFreeMode() {
 // The app has no web ads (Ramp does not serve in-app), so it always runs ad-free here.
 try { if (IS_APP || localStorage.getItem('bap_subscribed') === '1' || localStorage.getItem('bap_ads_off') === '1') enableAdFreeMode() } catch {}
 
+// A season that was running when the app last closed (a reload, a killed app) never got
+// booked: its build counts as played, so simulating it again saves nothing and pays nothing
+const SEASON_PENDING = 'bap_season_pending'
+try { const s = localStorage.getItem(SEASON_PENDING); if (s) { markPlayed(s); localStorage.removeItem(SEASON_PENDING) } } catch {}
+
 export default function App() {
   const [page, setPage]               = useState(_sharedData ? 'shared' : _isPrivacy ? 'privacy' : _isTerms ? 'terms' : _isProfile ? 'profile' : _isAbout ? 'about' : _isDepthChart ? 'depth-chart' : _isWiki ? 'wiki' : 'splash')   // opening the app lands on the menu; a saved build waits on its Resume card
   const [sharedBuild]                 = useState(_sharedData?.build ?? null)
@@ -842,6 +847,9 @@ export default function App() {
     // The season is steered on the sim page (moments re-simulate the rest of
     // the year), so it's booked when it ends — SimPage calls commitSeason.
     if (IS_APP || APP_LOOK) {
+      // until it's booked, the build is a season in progress: a reload or a killed app
+      // before the end makes it a played build (no second run at a season by reloading)
+      if (!dailyRun) { try { localStorage.setItem(SEASON_PENDING, buildSig(gameMode, build, activeTypes)) } catch {} }
       setSimResult(result); setSimReplaying(false); setPage('sim')
       window.scrollTo({ top: 0, behavior: 'instant' })
       return
@@ -931,6 +939,7 @@ export default function App() {
     // Leaderboard guard (lib/saveGuard.js): sandbox in any form, or a build that
     // already saved a season. Either way: no save, and no XP or coins either.
     const saveBlock = blockReason({ mode: gameMode, build, types: activeTypes, pool: activePool, sandboxOn: isCustomMode, tainted: sandboxTainted.current })
+    try { localStorage.removeItem(SEASON_PENDING) } catch {}
     // Season XP, coins, missions and the Daily Challenge score (lib/progress.js)
     if (IS_APP || APP_LOOK) {
       window.dispatchEvent(new CustomEvent('bap:season', { detail: {

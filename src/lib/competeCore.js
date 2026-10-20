@@ -84,7 +84,13 @@ export function legalSlots({ seed, rs = null, types, pool, teams, sent }) {
       const team = order[i % order.length]
       let p = null
       if (s.how === 'spin' && d === 0) p = seededPlayer(seed, i, team, pool)
-      else if (s.how === 'pr' && d === 1 && pr < 1) { p = drawOf(respinPlayers(rs, i, team, pool), 1); if (p?.name === name) pr++ }
+      else if (s.how === 'pr' && d === 1 && pr < 1) {
+        // a player respin never deals the player the spin did (SpinScreen playerTarget)
+        const dealt = seededPlayer(seed, i, team, pool), mine = respinPlayers(rs, i, team, pool)
+        const rest = mine.filter(x => x.name !== dealt?.name)
+        p = rest.length ? rest[0] : mine[0] ?? null
+        if (p?.name === name) pr++
+      }
       else if (s.how === 'tr' && tr < 1 && (d === 0 || pr < 1)) {
         const rt = respinTeam(rs, i, teams, pool)
         p = rt ? drawOf(respinPlayers(rs, i, rt, pool), d) : null
