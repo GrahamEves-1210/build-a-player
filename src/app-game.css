@@ -1356,8 +1356,8 @@ html.is-app .tpm-team-btn { border-radius: 12px !important; }
 .ag-ct.is-locked .ag-ct-photo { background: linear-gradient(170deg, #1a1f25, #0a0c0e); }
 .ag-ct.is-locked .ag-ct-photo img { filter: brightness(0) opacity(.55); }
 .ag-ct.is-locked .ag-ct-photo::after { display: none; }
-.ag-ct.is-locked .ag-ct-name { color: rgba(255,255,255,.35); }
-.ag-ct.is-locked .ag-ct-rar { color: rgba(255,255,255,.25); }
+.ag-ct.is-locked .ag-ct-name { color: rgba(255,255,255,.62); }
+.ag-ct.is-locked .ag-ct-rar { color: rgba(255,255,255,.55); }
 .ag-ct-q { position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--ag-display); font-size: 34px; color: rgba(255,255,255,.18); }
 
 /* ═══ Toasts + level-up ════════════════════════════════════════════════════ */
@@ -1543,7 +1543,7 @@ html.is-bucket .ag-edge { background: rgba(12,8,5,.95); }
   text-align: center;
 }
 .ag-bk-lbl { font-family: var(--ag-font); font-size: 11px; letter-spacing: 1.2px; line-height: 1; color: var(--ag-muted); white-space: nowrap; }
-.ag-bk-val { font-family: var(--ag-display); font-size: 14px; line-height: 1; color: rgba(255,255,255,.45); }
+.ag-bk-val { font-family: var(--ag-display); font-size: 14px; line-height: 1; color: rgba(255,255,255,.62); }
 .ag-bk-link { position: absolute; right: -6px; top: 50%; width: 6px; height: 2px; background: rgba(255,255,255,.12); }
 .ag-bk.is-won { border-color: color-mix(in srgb, var(--ag-a1) 60%, transparent); background: color-mix(in srgb, var(--ag-a1) 13%, transparent); }
 .ag-bk.is-won .ag-bk-val { color: var(--ag-a1); }
@@ -2008,7 +2008,7 @@ html.is-app .about-section-title { font-family: var(--ag-font) !important; font-
 }
 .bt-slot.is-on { border: 1px solid var(--ag-line-hi); background: rgba(8,12,10,.8); }
 .bt-slot.is-me { border-color: var(--ag-a1); box-shadow: 0 0 14px var(--ag-glow); }
-.bt-slot-empty { width: 44px; height: 44px; border-radius: 10px; display: grid; place-items: center; color: rgba(255,255,255,.3); background: rgba(255,255,255,.05); }
+.bt-slot-empty { width: 44px; height: 44px; border-radius: 10px; display: grid; place-items: center; color: rgba(255,255,255,.55); background: rgba(255,255,255,.05); }
 .bt-slot-name { font-family: var(--ag-font); font-size: 14px; letter-spacing: 1.5px; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bt-slot-pos { font-family: var(--ag-body); font-size: 11.5px; font-weight: 700; color: var(--ag-muted); }
 .bt-queue-timer { margin-top: 10px; font-family: var(--ag-font); font-size: 18px; letter-spacing: 3px; color: var(--ag-muted); font-variant-numeric: tabular-nums; }
@@ -5046,7 +5046,7 @@ html.ag-fan-open .ag-dock { z-index: 1170; }
 /* notes and empty slots: plain, no dashes */
 .au-note { border: 1px solid transparent; background: rgba(255,255,255,.035); }
 .au-slot { border: 1px solid rgba(255,255,255,.07); background: rgba(255,255,255,.035); }
-.au-slot:not(.is-in) small { color: rgba(255,255,255,.35); }
+.au-slot:not(.is-in) small { color: rgba(255,255,255,.58); }
 .au-slot.is-up:not(.is-in) { border-color: color-mix(in srgb, var(--ag-a1) 75%, transparent); background: color-mix(in srgb, var(--ag-a1) 9%, transparent); }
 .au-slot.is-up:not(.is-in) small { color: var(--ag-a1); font-weight: 700; }
 @media (prefers-reduced-motion: reduce) { .au-lot.is-pulling .au-lot-info, .au-lot.is-pulling .au-grade { animation-duration: 1ms; animation-delay: 0ms; } }
@@ -5126,7 +5126,7 @@ html.ag-fan-open .ag-dock { z-index: 1170; }
 :is([id^="ramp-cntr1"], [id^="ramp-season"]):has(iframe) { flex-direction: column; align-items: center; }
 :is([id^="ramp-cntr1"], [id^="ramp-season"]):has(iframe)::before {
   content: 'ADVERTISEMENT'; display: block; width: 100%; margin: 0 0 3px; text-align: center;
-  font-family: system-ui, -apple-system, sans-serif; font-size: 8.5px; font-weight: 600; letter-spacing: 1.6px; line-height: 1.2; color: rgba(255,255,255,.38);
+  font-family: system-ui, -apple-system, sans-serif; font-size: 8.5px; font-weight: 600; letter-spacing: 1.6px; line-height: 1.2; color: rgba(255,255,255,.55);
 }
 /* Home figure: the trait names sit on their own unmasked layer, each on a tag in its band's
    colour (the same colour inside the body, so it only shows where a long name runs past it) */
