@@ -16,7 +16,7 @@ import { valToGrade, nflHeadshot } from '../../utils/simulation'
 import { sfx, haptic, victory } from '../../lib/juice'
 import { MomentCard, NowCard, RecordOverlay, HonorOverlay } from './AppSeasonPlus'
 import Silhouette from '../Silhouette'
-import { NameTag, AvatarBadge } from './NameTag'
+import { AvatarBadge } from './NameTag'
 import { IconClose, IconArrow, IconFlame, IconTrophy, IconStar, IconCrown, IconMedal, IconRing, IconCheck, IconShield, IconHelmet, IconSpin } from './icons'
 
 // CAREER (football and basketball): the intro, the draft, the hub where a
@@ -502,9 +502,11 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
       <div className="ag-screen-head">
         <div className="cr-head">
           <img src={logoFor(c.team)} alt="" className="cr-head-logo" />
-          <div>
-            <span className="ag-eyebrow">{c.sandbox && <b className="sb-tag">SANDBOX</b>}{c.fit?.name?.toUpperCase()} · YEAR {c.year + 1} · AGE {c.age} · {c.season}</span>
-            <h1 className="ag-h1"><NameTag name={c.name} self /> <small>{POS_LABEL[c.pos]}</small></h1>
+          {/* the team, the player (his name, not the account's look), then where he is in it */}
+          <div className="cr-head-txt">
+            <span className="ag-eyebrow cr-head-team">{c.sandbox && <b className="sb-tag">SANDBOX</b>}{c.fit?.name?.toUpperCase()}</span>
+            <h1 className="ag-h1 cr-head-name" style={{ fontSize: (c.name ?? '').length > 14 ? 26 : (c.name ?? '').length > 10 ? 31 : 36 }}>{c.name} <small>{POS_LABEL[c.pos]}</small></h1>
+            <span className="cr-head-meta">YEAR {c.year + 1} · AGE {c.age} · {c.season}</span>
           </div>
         </div>
         <button className="ag-round-btn" onClick={onExit} aria-label="Home"><IconClose size={16} /></button>

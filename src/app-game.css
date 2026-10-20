@@ -5098,4 +5098,14 @@ html.ag-fan-open .ag-dock { z-index: 1170; }
    centres the caps (the display font's caps sat about half a pixel low) */
 .xp-ico::before, .coin-ico.coin-ico::before { line-height: 1; text-box: trim-both cap alphabetic; }   /* (doubled class: app-shop.css loads later) */
 .coin-ico.coin-ico::before { transform: none; }   /* (app-shop.css nudged it half a pixel down) */
+/* Career's header: the team, the name (plain: the player's, not the account's nameplate),
+   then year · age · season on its own line, so nothing breaks mid-phrase */
+.cr-head { align-items: flex-start; }
+.cr-head-logo { margin-top: 6px; }
+.cr-head-txt { display: grid; gap: 3px; min-width: 0; }
+.cr-head-team { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 0; white-space: nowrap; }
+.cr-head-team .sb-tag { margin-right: 8px; }
+.cr .cr-head-name { line-height: 1; text-wrap: balance; overflow-wrap: anywhere; }
+.cr .cr-head-name small { font-size: 15px; vertical-align: .18em; }
+.cr-head-meta { font-family: var(--ag-font); font-size: 14px; letter-spacing: 1.8px; color: var(--ag-muted); white-space: nowrap; }
 
