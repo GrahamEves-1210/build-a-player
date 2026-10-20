@@ -296,34 +296,27 @@ const STACK_MASK = {
 export function StackedSilhouette({ position, attrs, ready }) {
   const visible = useRevealOnMount(ready)
   const mask = STACK_MASK[position] ?? STACK_MASK.qb
+  const scale = mask.scale !== 1 ? `scale(${mask.scale})` : undefined
+  const band = (a, i) => ({
+    opacity: visible ? 1 : 0,
+    // Starts stacked at the very top (i band-heights up) and falls
+    // down to its own row — lower bands fall further.
+    transform: visible ? 'translateY(0)' : `translateY(-${i * 100}%)`,
+    // Fully sequential — each band only starts once the previous one
+    // has completely finished falling (delay = full fall duration).
+    transitionDelay: visible ? `${(attrs.length - 1 - i) * 170}ms` : '0ms',
+  })
   return (
-    <div
-      className="splash-stack-figure"
-      style={{
-        WebkitMaskImage: `url(${mask.src})`,
-        maskImage: `url(${mask.src})`,
-        transform: mask.scale !== 1 ? `scale(${mask.scale})` : undefined,
-      }}
-    >
-      {attrs.map((a, i) => (
-        <div
-          key={a.label}
-          className="splash-stack-band"
-          style={{
-            background: a.col,
-            opacity: visible ? 1 : 0,
-            // Starts stacked at the very top (i band-heights up) and falls
-            // down to its own row — lower bands fall further.
-            transform: visible ? 'translateY(0)' : `translateY(-${i * 100}%)`,
-            // Fully sequential — each band only starts once the previous one
-            // has completely finished falling (delay = full fall duration).
-            transitionDelay: visible ? `${(attrs.length - 1 - i) * 170}ms` : '0ms',
-          }}
-        >
-          <span className="splash-stack-band-label">{a.label}</span>
-        </div>
-      ))}
-    </div>
+    <>
+      <div className="splash-stack-figure" style={{ WebkitMaskImage: `url(${mask.src})`, maskImage: `url(${mask.src})`, transform: scale }}>
+        {attrs.map((a, i) => <div key={a.label} className="splash-stack-band" style={{ background: a.col, ...band(a, i) }} />)}
+      </div>
+      {/* the names on their own layer, outside the body's mask: a long one (Playmaking/Creativity
+          at the legs) is never cut by the outline; its tag in the band's colour carries on past it */}
+      <div className="splash-stack-figure splash-stack-labels" style={{ transform: scale }} aria-hidden="true">
+        {attrs.map((a, i) => <div key={a.label} className="splash-stack-band" style={band(a, i)}><span className="splash-stack-band-label" style={{ background: a.col }}>{a.label}</span></div>)}
+      </div>
+    </>
   )
 }
 

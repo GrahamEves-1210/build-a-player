@@ -24,6 +24,7 @@ import QBAvatar from './QBAvatar'
 import { IS_APP, APP_LOOK, shareNative } from '../lib/platform'
 import AppSandbox from './app/AppSandbox'
 import PlayerComp from './app/PlayerComp'
+import { rampAdd } from '../lib/ads'
 import { compsFor } from '../lib/career'
 import { useProgress } from '../lib/progress'
 import { getUsername } from '../lib/discord'
@@ -316,6 +317,12 @@ export default function ReportCard({ build, onSimulate, onReset, types = TYPES, 
   }, [complete, isBucket, compPos, types, build])
   const [view, setView] = useState('card')   // desktop: 'card' (the trait list) or 'comp'
   useEffect(() => { if (!comp) setView('card') }, [comp])
+  // the website on a phone: an in-page ad above the Sandbox card (never in the app or ad-free)
+  const sandboxAd = !IS_APP && APP_LOOK && !isVersusMode && !!onSandboxToggle
+  useEffect(() => {
+    if (!sandboxAd || window.innerWidth > 768 || document.documentElement.classList.contains('ads-hidden')) return
+    rampAdd([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-sandbox' }])
+  }, [sandboxAd])
   const [showChevron, setShowChevron] = useState(true)
   const [showShare, setShowShare]     = useState(false)
   const [showSandboxInfo, setShowSandboxInfo] = useState(false)
@@ -418,6 +425,7 @@ export default function ReportCard({ build, onSimulate, onReset, types = TYPES, 
         ) : !isVersusMode && !!onSandboxToggle && APP_LOOK ? (
           // website: the card on a phone (full width); on desktop Silhouette shows the compact one in its corner
           <div className="rc-sandbox-outer rc-sandbox-outer--app">
+            <div id="ramp-cntr1-sandbox" className="rc-sandbox-ad" />
             <AppSandbox on={!!isCustomMode} onToggle={v => onSandboxToggle?.(v)} onCustomize={onOpenCustomModal} />
           </div>
         ) : !isVersusMode && !!onSandboxToggle ? (
