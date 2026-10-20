@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useProgress, buy, equip, owns, priceOf, lockReason, dealsFor, claimFreeCoins, msToReset, isPro, COINS, achStats, walletOpen, hasDiscord, claimDiscordCoins, DISCORD_COINS, FEEDBACK_COINS, AD_COINS, AD_MAX, adsLeft, claimAdCoins } from '../../lib/progress'
 import { openCheckout } from '../../lib/webCheckout'
+import { sellsHere, onStorefront } from '../../lib/storefront'
 import { showRewarded, rewardedReady, REWARDED_ON } from '../../lib/rewardedAd'
 import { IS_APP } from '../../lib/platform'
 import FeedbackModal from '../FeedbackModal'
@@ -92,6 +93,13 @@ function VideoCoins() {
 
 // Coin packs for real money: Stripe Checkout on the web (the app opens it in the
 // phone's browser and collects the coins when it closes)
+// the app outside the US App Store: no buying and no Pro Vault (lib/storefront.js)
+function useSells() {
+  const [sells, setSells] = useState(sellsHere)
+  useEffect(() => onStorefront(() => setSells(sellsHere())), [])
+  return sells
+}
+
 function CoinPacks({ p }) {
   const [busy, setBusy] = useState(null)
   const [note, setNote] = useState('')
@@ -291,6 +299,8 @@ export default function AppShop({ onClose, tab: initialTab = 'featured' }) {
   const deals = useMemo(() => dealsFor(), [])
   const dealPrice = id => deals.find(d => d.id === id)?.price ?? null
   const pro = isPro()
+  const sells = useSells()
+  const tabs = sells ? TABS : TABS.filter(t => t.id !== 'coins')
   const ownedCount = ITEMS.filter(i => owns(i.id) && !i.free).length
   const reach = useMemo(() => ITEMS.filter(i => !i.unlock && !owns(i.id) && !lockReason(i.id) && i.price && !i.ach && priceOf(i.id) <= Math.max(300, (p.coins ?? 0))).sort((a, b) => b.price - a.price).slice(0, 4), [p.coins, p.owned]) // eslint-disable-line react-hooks/exhaustive-deps
   const claim = () => {
@@ -301,7 +311,7 @@ export default function AppShop({ onClose, tab: initialTab = 'featured' }) {
   const pickDefault = slot => { equip(slot, null); sfx('tap') }
   const grid = (list, cls = '') => (
     <div className={`sh-grid${cls}`}>
-      {list.map((i, k) => <ItemCard key={i.id} item={i} deal={dealPrice(i.id)} equipped={p.equip?.[i.slot] === i.id} onOpen={setOpen} delay={k * 30} name={name} />)}
+      {list.filter(i => sells || !i.pro || owns(i.id)).map((i, k) => <ItemCard key={i.id} item={i} deal={dealPrice(i.id)} equipped={p.equip?.[i.slot] === i.id} onOpen={setOpen} delay={k * 30} name={name} />)}
     </div>
   )
 
@@ -328,7 +338,7 @@ export default function AppShop({ onClose, tab: initialTab = 'featured' }) {
       </div>
 
       <div className="sh-tabs" role="tablist">
-        {TABS.map(t => (
+        {tabs.map(t => (
           <button key={t.id} role="tab" aria-selected={tab === t.id} className={`sh-tab${tab === t.id ? ' is-on' : ''}`} onClick={() => { setTab(t.id); sfx('tap') }}>
             {t.label}{SLOTS.some(s => s.id === t.id) && <b>{itemsFor(t.id).filter(i => owns(i.id)).length}/{itemsFor(t.id).length}</b>}
           </button>
@@ -339,7 +349,7 @@ export default function AppShop({ onClose, tab: initialTab = 'featured' }) {
         <>
           {/* videos are an app thing (AdMob); the website shows the card only once it has a rewarded ad unit */}
           {REWARDED_ON && (IS_APP || rewardedReady()) && <VideoCoins />}
-          <CoinPacks p={p} />
+          {sells && <CoinPacks p={p} />}
         </>
       ) : tab === 'featured' ? (
         <>
@@ -377,7 +387,7 @@ export default function AppShop({ onClose, tab: initialTab = 'featured' }) {
               {grid(reach)}
             </div>
           )}
-          <div className="sh-section">
+          {(sells || pro) && <div className="sh-section">
             <div className="sh-vault">
               <div className="sh-vault-head">
                 <span>
@@ -387,7 +397,7 @@ export default function AppShop({ onClose, tab: initialTab = 'featured' }) {
               </div>
               {grid(ITEMS.filter(i => i.pro))}
             </div>
-          </div>
+          </div>}
           <div className="sh-section">
             <div className="sh-section-head"><span className="sh-section-title">EARNING COINS</span></div>
             <div className="ag-card" style={{ padding: 12, fontFamily: 'var(--ag-body)', fontSize: 13, lineHeight: 1.6, color: 'var(--ag-text-2)' }}>
@@ -408,7 +418,7 @@ export default function AppShop({ onClose, tab: initialTab = 'featured' }) {
           </div>
         </div>
       )}
-      {open && <ItemSheet id={open} name={name} onClose={() => setOpen(null)} onNeedCoins={() => setTab('coins')} />}
+      {open && <ItemSheet id={open} name={name} onClose={() => setOpen(null)} onNeedCoins={() => setTab(sells ? 'coins' : 'featured')} />}
     </div>
   )
 }

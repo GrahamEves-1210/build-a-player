@@ -51,6 +51,8 @@ if (IS_APP || APP_LOOK) import('./lib/juice').then(m => m.initJuice()).catch(() 
 if (IS_APP || APP_LOOK) import('./lib/progress').then(m => m.initProgress()).catch(() => {})
 // App: Discord sign-in comes back through the app's own link
 if (IS_APP) import('./lib/appAuth').then(m => m.initAppAuth()).catch(() => {})
+// which App Store the phone shops in (buying is offered only on the US one: lib/storefront.js)
+if (IS_APP) import('./lib/storefront').then(m => m.loadStorefront()).catch(() => {})
 // Ad rail preview (More → Ad rail preview, or ?rail on the website)
 import('./lib/fakeRail').then(m => m.initRailPreview()).catch(() => {})
 
