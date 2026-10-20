@@ -1,13 +1,16 @@
 // Player settings that change the whole page (applied on load)
 const MOTION_KEY = 'bap_reduce_motion'
 export const reduceMotion = () => { try { return localStorage.getItem(MOTION_KEY) === '1' } catch { return false } }
+// the phone's own Reduce Motion setting does everything the in-app switch does (and follows it live)
+const systemReduced = () => typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches
+const applyMotion = () => { if (typeof document !== 'undefined') document.documentElement.classList.toggle('bap-reduce-motion', reduceMotion() || systemReduced()) }
 export function setReduceMotion(on) {
   try { on ? localStorage.setItem(MOTION_KEY, '1') : localStorage.removeItem(MOTION_KEY) } catch {}
-  document.documentElement.classList.toggle('bap-reduce-motion', !!on)
+  applyMotion()
 }
-// the phone's own "reduce motion" setting counts too (CSS handles that one)
-export const motionReduced = () => reduceMotion() || (typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches)
-if (typeof document !== 'undefined' && reduceMotion()) document.documentElement.classList.add('bap-reduce-motion')
+export const motionReduced = () => reduceMotion() || systemReduced()
+applyMotion()
+try { matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', applyMotion) } catch {}
 // The bottom nav (the dock) can be switched off; the menu button on Home and the top bar still get you everywhere
 const DOCK_KEY = 'bap_hide_dock'
 export const dockHidden = () => { try { return localStorage.getItem(DOCK_KEY) === '1' } catch { return false } }
