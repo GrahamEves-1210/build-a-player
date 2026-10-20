@@ -1665,7 +1665,9 @@ function ProgressDots({ screen, total }) {
 // ── SimPage ───────────────────────────────────────────────────────────────────
 
 export default function SimPage({ result: baseResult, build, types = TYPES, onBack, onReset, replay = false, adsDisabled = false, isRB = false, isWR = false, isTE = false, isDB = false, isOL = false, onMVPWon, simFn = null, onFinal = null, pool = null, userName = 'Guest', isSalaryMode = false }) {
-  const [screen, setScreen] = useState(replay ? (isOL ? 3 : 4) : 0)   // a replay opens on the final report (after the GOAT screen; OL has none)
+  // a replay opens on the final report (after the GOAT screen; OL has none), and so does coming back
+  // to a season that was already played and booked (it has its story): never a second run at it
+  const [screen, setScreen] = useState(replay || baseResult.story ? (isOL ? 3 : 4) : 0)
   useRailOn(screen)   // each screen of the season brings the bottom rail back
   const [mvpResult, setMvpResult] = useState(null)
   const [mvpWon, setMvpWon] = useState(false)

@@ -2727,7 +2727,8 @@ function TeamStarters({ teamShort, teamColor, isBig, iqPhoto, isAllTime = false,
 
 // ─── Main BucketSimPage ───────────────────────────────────────────────────────
 export default function BucketSimPage({ result: baseResult, build, types, position, onBack, onReset, adsDisabled = false, isSalaryMode = false, initialScreen = 0, gameMode = null, simFn = null, onFinal = null, pool = null, userName = 'Guest' }) {
-  const [screen, setScreen] = useState(initialScreen)
+  // a season already played and booked (it has its story) opens on its final report: never a second run at it
+  const [screen, setScreen] = useState(initialScreen === 0 && baseResult?.story && !isSalaryMode ? 4 : initialScreen)
   useRailOn(screen)   // each screen of the season brings the bottom rail back
   // App: the season is steered by a director; `result` is the live version of it
   const [live, setLive] = useState(baseResult)
@@ -2836,7 +2837,8 @@ export default function BucketSimPage({ result: baseResult, build, types, positi
       <div className="simp-col">
         <div className="simp-top-bar">
           {/* a steered season can't be backed out of: going back would replay the year and its decisions */}
-          {screen > 0 && !(director && screen <= 2) && (
+          {/* (and a season reopened on its final report, already booked, stays there: no stepping back into it) */}
+          {screen > 0 && !(director && screen <= 2) && !(baseResult?.story && initialScreen !== 0 || baseResult?.story && !director && screen >= 4) && (
             <button className="simp-back-btn" onClick={() => setScreen(s => s - 1)}>← Back</button>
           )}
           <ProgressDots screen={screen} total={screens.length} />
