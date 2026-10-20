@@ -50,6 +50,7 @@ export default function BlacktopCourt({ game, play, meId, photoFor, colorFor, av
   const [pos, setPos] = useState(() => formation(game, play?.poss ?? 0, play?.handler ?? null))
   const [ball, setBall] = useState(null)                 // { x, y, dur } override, else rides `holder`
   const [holder, setHolder] = useState(play?.handler ?? null)
+  const [hand, setHand] = useState(null)                 // which side of him the ball is on (-1 left, 1 right); null: his team's side
   const [pop, setPop] = useState(null)
   const [tag, setTag] = useState(null)                   // 'CHECK BALL' etc.
   const timers = useRef([])
@@ -99,6 +100,7 @@ export default function BlacktopCourt({ game, play, meId, photoFor, colorFor, av
     if (!play) return
     clearAll()
     playId.current = play.id
+    setHand(null)
     const off = game.sides[play.poss], def = game.sides[1 - play.poss]
     const offIds = off.map(p => p.id)
     const sp = id => sdur(byId[id]?.R.speed)
@@ -267,19 +269,33 @@ export default function BlacktopCourt({ game, play, meId, photoFor, colorFor, av
       after(start + 1000, () => { move(shooter, block.x + (block.x < 50 ? 6 : -6), 15, od * .6); finish() })
       return
     }
-    // drive / layup / dunk: attack the rim from where he stands; help defense steps in
+    // drive / layup / dunk: attack the rim from where he stands; help defense steps in.
+    // From the middle he goes either way; from a wing, at the rim on his side. The ball is in
+    // the hand he's driving with, and a good ball handler often crosses over first: a jab the
+    // other way with the ball in that hand, his man bites, then it comes across and he goes
     const cur = at(shooter)
-    const dir = cur.x < 50 ? 1 : -1
-    const rimSpot = r.pick(PAINT)
-    const lane = { x: cl(rimSpot.x + -dir * r.rnd(4, 10)), y: rimSpot.y + r.rnd(14, 24) }
+    const middle = Math.abs(cur.x - 50) < 10
+    const dir = middle ? (Math.random() < .5 ? -1 : 1) : cur.x < 50 ? 1 : -1
+    const finishSide = middle ? dir : Math.sign(cur.x - 50)
+    const rimSpot = r.pick(PAINT.filter(s => Math.sign(s.x - 50) === finishSide))
+    // his first step, then the lane halfway from there to the rim spot: one steady line in
+    const firstX = cl(cur.x + dir * r.rnd(6, 12))
+    const lane = { x: (firstX + rimSpot.x) / 2, y: rimSpot.y + r.rnd(14, 24) }
     const helper = def.find(p => p.id !== d) ?? null
-    after(start, () => {
-      const ups = [[shooter, cl(cur.x + dir * r.rnd(6, 12)), cur.y - r.rnd(8, 14), od * .62], [d, cl(cur.x + dir * r.rnd(2, 8)), cur.y - r.rnd(14, 20), dd * .8]]
+    const handles = byId[shooter]?.R?.handles ?? 5
+    const cross = Math.random() < clamp(.3 + (handles - 5) * .06, .15, .75)
+    const go = cross ? 260 : 0
+    if (cross) {
+      after(start, () => { setHand(-dir); move(shooter, cl(cur.x - dir * r.rnd(3, 5)), cur.y - r.rnd(1, 3), .16); move(d, cl(cur.x - dir * r.rnd(4, 7)), at(d).y, .22); bounce(1) })
+      after(start + 190, () => setHand(dir))
+    } else after(start, () => setHand(dir))
+    after(start + go, () => {
+      const ups = [[shooter, firstX, cur.y - r.rnd(8, 14), od * .62], [d, cl(cur.x + dir * r.rnd(2, 8)), cur.y - r.rnd(14, 20), dd * (cross ? 1.05 : .8)]]
       if (helper) ups.push([helper.id, 50 + (cur.x < 50 ? -6 : 6), 30, sp(helper.id) * .9])
       moveMany(ups); bounce(3, 200)
     })
-    after(start + 420, () => { move(shooter, lane.x, lane.y, od * .32); move(d, cl(rimSpot.x + dir * r.rnd(2, 8)), rimSpot.y + r.rnd(2, 8), dd * .55) })
-    after(start + 700, () => {
+    after(start + go + 420, () => { move(shooter, lane.x, lane.y, od * .32); move(d, cl(rimSpot.x + dir * r.rnd(2, 8)), rimSpot.y + r.rnd(2, 8), dd * .55) })
+    after(start + go + 700, () => {
       // a dunk is finished at the rim itself (he goes up under it and the ball goes through
       // the hoop); a layup goes up from his spot in the paint
       if (shot === 'dunk') {
@@ -296,6 +312,7 @@ export default function BlacktopCourt({ game, play, meId, photoFor, colorFor, av
     if (!play || (play.type !== 'oreb' && play.type !== 'dreb')) return
     clearAll()
     playId.current = play.id
+    setHand(null)
     const rb = play.pid
     const everyone = players.map(p => p.id)
     moveMany(everyone.map(id => [id, 50 + r.rnd(-16, 16), 18 + r.rnd(0, 14), sdur(byId[id]?.R.speed) * .8]))
@@ -310,7 +327,7 @@ export default function BlacktopCourt({ game, play, meId, photoFor, colorFor, av
   // overlaps: the ball handler on top, then the team with the ball, then the defense
   const hp = holder ? at(holder) : TOP
   const holderSide = holder && byId[holder] ? (byId[holder].team === 0 ? 1 : -1) : 1
-  const ballPos = ball ?? { x: hp.x + holderSide * 6, y: hp.y - 6 }
+  const ballPos = ball ?? { x: hp.x + (hand ?? holderSide) * 6, y: hp.y - 6 }
   const ballTr = ball ? `left ${ball.dur}s cubic-bezier(0.4,0,0.6,1), top ${ball.dur}s cubic-bezier(0.55,0,0.45,1)` : `left ${hp.dur ?? .5}s ${EASE}, top ${hp.dur ?? .5}s ${EASE}`
 
   return (
