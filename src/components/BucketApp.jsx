@@ -962,7 +962,7 @@ export default function BucketApp() {
     // App: a fresh Salary Cap play earns season XP (kept on the device — it isn't a saved season)
     if ((IS_APP || APP_LOOK) && !skipToEnd) {
       window.dispatchEvent(new CustomEvent('bap:season', { detail: {
-        sport: 'bucket', pos: capPosition ?? position, mode: 'salarycap', localOnly: true,
+        sport: 'bucket', pos: capPosition ?? position, mode: 'salarycap', localOnly: true, infinite: !!saveData?.infinite,
         wins: result.wins, losses: result.losses, playoffs: !!result.madePlayoffs,
         champion: !!result.champion, award: !!(result.mvp || result.dpoy), awardName: result.mvp ? 'MVP' : 'DPOY',
         ovr: result.ovr, ref: result,
@@ -972,7 +972,7 @@ export default function BucketApp() {
     setPage('sim')
     window.scrollTo(0, 0)
     // Save to leaderboard with the real sim OVR (only on fresh plays, not View Results)
-    if (saveData && supabase && !skipToEnd) {
+    if (saveData?.userId && !saveData.noPost && supabase && !skipToEnd) {
       if (saveData.infinite) {
         supabase.from('salary_infinite_plays').insert({
           user_id:       saveData.userId,

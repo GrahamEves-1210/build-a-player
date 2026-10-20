@@ -22,9 +22,9 @@ export const accept = (self) => {
   server.addEventListener('close', bye); server.addEventListener('error', bye)
   return new Response(null, { status: 101, webSocket: client })
 }
-// one seat a device (and one an account). OFF while the user tests in several tabs
-// (src/lib/live.js liveElsewhere is off too); turn both back on before release
-export const ONE_PER_DEVICE = false
+// one seat a device (and one an account): a second tab or an alt on the same phone can't
+// fill a pool to farm it (src/lib/live.js liveElsewhere does the same on the device)
+export const ONE_PER_DEVICE = true
 
 // cfg: { size, min, fillSecs, room: env binding name of the room class }
 export class BaseQueue {

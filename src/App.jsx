@@ -882,7 +882,7 @@ export default function App() {
     // a fresh play earns season XP (kept on the device: it isn't a saved season)
     if ((IS_APP || APP_LOOK) && !skipToEnd) {
       window.dispatchEvent(new CustomEvent('bap:season', { detail: {
-        sport: 'nfl', pos: 'qb', mode: 'salarycap', localOnly: true,
+        sport: 'nfl', pos: 'qb', mode: 'salarycap', localOnly: true, infinite: !!saveData?.infinite,
         wins: result.wins, losses: result.losses, playoffs: !!result.playoffs,
         champion: !!result.sbResult?.won, award: !!result.award?.userWins, awardName: 'MVP',
         ovr: result.ovr, ref: result,
@@ -891,7 +891,7 @@ export default function App() {
     setPage('sim')
     window.scrollTo(0, 0)
     // the day's board (or the infinite one) — real sim OVR, fresh plays only
-    if (saveData?.userId && supabase && !skipToEnd) {
+    if (saveData?.userId && !saveData.noPost && supabase && !skipToEnd) {
       const row = {
         user_id: saveData.userId, username: saveData.username, picks: saveData.picks, overall_score: result.ovr,
         pass_yds: result.seasonPassYds ?? saveData.passYds ?? null, pass_tds: result.seasonTDs ?? saveData.passTds ?? null,

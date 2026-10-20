@@ -432,9 +432,21 @@ export function dailyState() {
   if (!S.dc || S.dc.key !== dc.key) return { ...dc, spins: 0, done: false }
   return { ...dc, ...S.dc }
 }
+// Who played today's Daily first on this device (any account, or a guest). Everyone
+// gets the same spins, so a run as a guest (or another account) shows the whole day's
+// order: a score from someone else on this device afterwards doesn't post.
+const DC_DEVICE = 'bap_dc_device'
+const dcDevice = () => { try { return JSON.parse(localStorage.getItem(DC_DEVICE) || 'null') } catch { return null } }
+function claimDailyDevice(key) {
+  const c = dcDevice()
+  if (c?.key === key) return
+  try { localStorage.setItem(DC_DEVICE, JSON.stringify({ key, by: uid || 'guest' })) } catch {}
+}
+const dailyScouted = key => { const c = dcDevice(); return !!c && c.key === key && c.by !== (uid || 'guest') }
 export function setDailySpins(n) {
   const dc = dailyChallenge()
   if (!S.dc || S.dc.key !== dc.key) S.dc = { key: dc.key, spins: 0, done: false }
+  claimDailyDevice(dc.key)
   if (S.dc.done || n <= S.dc.spins) return
   S.dc.spins = n
   emit()
@@ -451,6 +463,11 @@ export function forfeitDaily() {
 }
 async function postDaily(ovr, pos, mode, build) {
   if (!uid || !supabase) return
+  if (dailyScouted(S.dc.key)) {
+    S.dc.posted = false
+    toast({ kind: 'xp', title: 'DAILY NOT POSTED', sub: "Today's Daily was already played on this device" })
+    return emit()
+  }
   const { error } = await supabase.from('daily_challenge_results').insert({
     day: S.dc.key, user_id: uid, username: getUsername(user) || 'Player', ovr, position: pos, mode, build,
   })
@@ -514,11 +531,22 @@ export async function fetchDailyBoard(key = dayKey()) {
 }
 
 // ── Events from the games ────────────────────────────────────────────────────
+const INFINITE_PAID = 10
 function onSeason(e) {
   const d = e.detail || {}
   if (d.sandbox) {   // custom ratings: no XP, no rewards panel
     if (d.daily) toast({ kind: 'xp', title: 'DAILY NOT COUNTED', sub: 'Custom ratings were on for this build' })
     lastSeason = null; emit(); return
+  }
+  // Infinite Salary Cap replays without end: only so many plays a day pay out
+  if (d.mode === 'salarycap' && d.infinite) {
+    const k = dayKey(0)
+    if (S.salInf?.key !== k) S.salInf = { key: k, n: 0 }
+    if (S.salInf.n >= INFINITE_PAID) {
+      toast({ kind: 'xp', title: 'INFINITE · JUST FOR FUN', sub: `XP and coins pay on your first ${INFINITE_PAID} Infinite plays a day` })
+      lastSeason = null; emit(); return
+    }
+    S.salInf.n++
   }
   const before = totalXp()
   const lines = seasonLines(d)
@@ -657,7 +685,8 @@ function onBlacktop(e) {
   if ((line.pts || 0) > b.highPts) b.highPts = line.pts
   if (d.won) { b.streak++; if (b.streak > b.bestStreak) b.bestStreak = b.streak } else b.streak = 0
   pushRecent(b.recent, d.won ? 'W' : 'L')
-  const scale = d.bots ? 0.5 : 1
+  // practice against CPUs: no rating either way (CPU builds are random, so it was a rating farm)
+  const scale = d.bots ? 0 : 1
   // walked out of the run's build: a forfeit's hit, no mission credit
   rateOnline((d.forfeit ? FORFEIT_RATING : (d.won ? 20 : -12) + (d.mvp ? 5 : 0)) * scale, 'bt', { won: !!d.won, mvp: !!d.mvp, highPts, streak: b.streak, forfeit: !!d.forfeit })
   if (!d.forfeit) { bumpMissions('bt', { won: !!d.won }); tally(0, 1) }
@@ -1051,7 +1080,7 @@ export function claimAch(id) {
 // Last change wins; items and achievements are merged, never lost.
 // ═════════════════════════════════════════════════════════════════════════════
 // potdPaid, dc, day and sets ride along so clearing the device (or a second one) can't pay a reward twice
-const WALLET_KEYS = ['coins', 'coinsEarned', 'owned', 'equip', 'ach', 'achClaimed', 'stats', 'shopFree', 'levelPaid', 'discordPaid', 'feedbackPaid', 'retired', 'potdPaid', 'dc', 'day', 'sets']
+const WALLET_KEYS = ['coins', 'coinsEarned', 'owned', 'equip', 'ach', 'achClaimed', 'stats', 'shopFree', 'levelPaid', 'discordPaid', 'feedbackPaid', 'retired', 'potdPaid', 'dc', 'day', 'sets', 'salInf']
 let pushTimer = null
 function schedulePush() {
   if (!supabase || !uid) return
@@ -1128,6 +1157,7 @@ async function pullWallet(id) {
     S.sets = { ...(w.sets || {}), ...(S.sets || {}) }
     S.dc = mergeDay(S.dc, w.dc, (a, b) => ({ ...b, ...a, spins: Math.max(a.spins || 0, b.spins || 0), done: !!(a.done || b.done),
       forfeit: !!(a.forfeit || b.forfeit), posted: !!(a.posted || b.posted), ovr: a.ovr ?? b.ovr ?? null }))
+    S.salInf = mergeDay(S.salInf, w.salInf, (a, b) => ({ ...a, n: Math.max(a.n || 0, b.n || 0) }))
     S.day = mergeDay(S.day, w.day, (a, b) => ({ ...a, missions: (a.missions || []).map(m => {
       const o = (b.missions || []).find(x => x.id === m.id)
       return o ? { ...m, n: Math.max(m.n || 0, o.n || 0), claimed: !!(m.claimed || o.claimed) } : m

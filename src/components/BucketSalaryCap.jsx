@@ -1094,6 +1094,11 @@ export default function BucketSalaryCap({ onConfirm, onBack, user, initialDateSt
     })
     const playData = { picks, overall: stats.overall, ppg: stats.ppg, apg: stats.apg, rpg: stats.rpg }
 
+    // the day's board was already played on this device by someone else (a guest, another
+    // account): they've seen every pick on the board, so this play doesn't post
+    const devKey = `sal_dev_${activeDate.str}`, me = user?.id || 'guest'
+    let scouted = false
+    if (mode !== 'infinite') { try { const by = localStorage.getItem(devKey); if (by && by !== me) scouted = true; else if (!by) localStorage.setItem(devKey, me) } catch {} }
     localStorage.setItem(PLAYED_KEY(activeDate.str, user?.id), JSON.stringify(playData))
     setAlreadyPlayed(playData)
 
@@ -1104,6 +1109,7 @@ export default function BucketSalaryCap({ onConfirm, onBack, user, initialDateSt
       apg:      stats.apg,
       rpg:      stats.rpg,
       userId:   user?.id ?? null,
+      noPost:   scouted,
       username: getUsername(user) || null,
       totalCost,
     }

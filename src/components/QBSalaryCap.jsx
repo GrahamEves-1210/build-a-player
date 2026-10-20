@@ -1044,6 +1044,11 @@ export default function QBSalaryCap({ onConfirm, onBack, user, initialDateStr })
     })
     const playData = { picks, overall: stats.overall, passYds: stats.passYds, passTds: stats.passTds, ints: stats.ints }
 
+    // the day's board was already played on this device by someone else (a guest, another
+    // account): they've seen every pick on the board, so this play doesn't post
+    const devKey = `qbsal_dev_${activeDate.str}`, me = user?.id || 'guest'
+    let scouted = false
+    if (mode !== 'infinite') { try { const by = localStorage.getItem(devKey); if (by && by !== me) scouted = true; else if (!by) localStorage.setItem(devKey, me) } catch {} }
     localStorage.setItem(PLAYED_KEY(activeDate.str, user?.id), JSON.stringify(playData))
     setAlreadyPlayed(playData)
 
@@ -1054,6 +1059,7 @@ export default function QBSalaryCap({ onConfirm, onBack, user, initialDateStr })
       passTds:  stats.passTds,
       ints:     stats.ints,
       userId:   user?.id ?? null,
+      noPost:   scouted,
       username: getUsername(user) || null,
       totalCost,
     }
