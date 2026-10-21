@@ -17,12 +17,11 @@
 ## Launch day (when the new version goes live)
 1. `npm run build` passes on the branch you ship.
 2. Push it so the website and Railway run the new code (Railway: check which branch it deploys from in its settings).
-3. **After** the new site is live, deploy the live server:
+3. Deploy the live server (any time: the live website on main doesn't use it, and the App Review build already speaks its language; deploying early lets review and you test against the current server):
    - `cd live`
    - `npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY` (paste the service_role key from Supabase → Project Settings → API; once, it stays)
    - `npx wrangler secret put RESEND_API_KEY` (your Resend key: forgot-password emails; once, it stays)
    - `npx wrangler deploy`
-   Not before: older versions of the game don't send spin info, and the new server scores their Compete / Blacktop builds as free agents.
    Check it: open `https://bap-live.gre56734.workers.dev/health` (says ok).
 4. Supabase SQL: `supabase/private_email.sql` (moves reset emails off the public accounts row; not before launch: the old site's profile still saves emails to that column; afterwards `select count(*) from public.accounts where email is not null;` should say 0), then `supabase/launch_lockdown.sql` (devices can no longer write seasons, Daily scores or Salary Cap plays themselves; only the live server, which checks them). If the live server ever goes down, the undo is at the top of that file.
    The live server deploy also brings Blacktop spectating (a new Durable Object, `Games`: the migration is in `live/wrangler.toml`, `wrangler deploy` applies it) and the server-booked rating.
