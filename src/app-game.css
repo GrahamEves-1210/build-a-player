@@ -5254,11 +5254,15 @@ html.bap-reduce-motion .ag-pop { animation: ag-rm-in .2s ease-out both !importan
 html.bap-reduce-motion.is-app:is([data-flip="left"], [data-flip="right"]) .game-page-scroll { animation: ag-rm-out .15s ease-out forwards !important; }
 html.bap-reduce-motion.is-app:is([data-flip="in-left"], [data-flip="in-right"]) .game-page-scroll { animation: ag-rm-in .2s ease-out both !important; }
 
-/* Website Salary Cap: Back / Lock In stay in reach above the bottom ad rail while the board scrolls */
-html.app-look:not(.is-app) .sc-footer {
-  position: sticky; bottom: var(--web-rail, 0px); z-index: 6;
-  padding-bottom: 12px; margin-bottom: 0;
-  background: #0b0c0f; box-shadow: 0 -14px 14px -4px #0b0c0f;
+/* Website Salary Cap on a phone: Back / Lock In stay in reach above the bottom ad rail
+   (the board fits above them there; on a laptop they'd cover the bottom row, so they
+   sit under the board and the page scrolls them clear of the rail) */
+@media (max-width: 767px) {
+  html.app-look:not(.is-app) .sc-footer {
+    position: sticky; bottom: var(--web-rail, 0px); z-index: 6;
+    padding-bottom: 12px; margin-bottom: 0;
+    background: #0b0c0f;
+  }
 }
 
 /* the fan-project line under the home and build screens */

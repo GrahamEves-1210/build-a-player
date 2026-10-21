@@ -219,21 +219,27 @@ export function footballDuel({ run, city, star, myOvr, myTeamShort = 'Guest' }) 
   const pWin = 1 / (1 + Math.exp(-(myOvr - bar) / 5.5))
   const win = r() < pWin
   const my = Math.round(13 + q * 22 + r() * 10), opp = Math.round(13 + (1 - q) * 18 + r() * 10)
-  const score = win ? [Math.max(my, opp + 3 + Math.round(r() * 7)), opp] : [my, Math.max(opp, my + 3 + Math.round(r() * 7))]
+  // the shape of the day (how lopsided): it weights each drive; the drives make the score
+  const target = win ? [Math.max(my, opp + 3 + Math.round(r() * 7)), opp] : [my, Math.max(opp, my + 3 + Math.round(r() * 7))]
   const line = POS_LINE[run.pos]?.(r, win, q) ?? POS_LINE.qb(r, win, q)
   const plays = []
   let s = [0, 0], id = 0
+  const drive = (q, mine, kind) => {
+    const pts = kind === 'td' ? 7 : kind === 'fg' ? 3 : 0
+    s = mine ? [s[0] + pts, s[1]] : [s[0], s[1] + pts]
+    plays.push({ id: id++, q, team: mine ? 0 : 1, kind, pts, text: pick(r, DRIVES[kind]).replace('{t}', mine ? `${myTeamShort}` : city.nick.toUpperCase()).replace('{y}', 8 + Math.round(r() * 60)), score: [...s] })
+  }
   const quarters = ['Q1', 'Q1', 'Q2', 'Q2', 'Q2', 'Q3', 'Q3', 'Q4', 'Q4', 'Q4']
   for (let i = 0; i < quarters.length; i++) {
     const mine = i % 2 === 0
-    const lead = mine ? score[0] : score[1]
-    const share = lead / Math.max(1, score[0] + score[1])
+    const share = (mine ? target[0] : target[1]) / Math.max(1, target[0] + target[1])
     const roll = r()
-    const kind = roll < share * .75 ? 'td' : roll < share * .75 + .18 ? 'fg' : roll < .9 ? 'punt' : 'to'
-    const pts = kind === 'td' ? 7 : kind === 'fg' ? 3 : 0
-    s = mine ? [s[0] + pts, s[1]] : [s[0], s[1] + pts]
-    plays.push({ id: id++, q: quarters[i], team: mine ? 0 : 1, kind, pts, text: pick(r, DRIVES[kind]).replace('{t}', mine ? `${myTeamShort}` : city.nick.toUpperCase()).replace('{y}', 8 + Math.round(r() * 60)), score: [...s] })
+    drive(quarters[i], mine, roll < share * .75 ? 'td' : roll < share * .75 + .18 ? 'fg' : roll < .9 ? 'punt' : 'to')
   }
+  // the winner isn't ahead yet: late drives until they are (three if that's enough)
+  const w = win ? 0 : 1
+  while (s[w] <= s[1 - w]) drive('Q4', win, s[1 - w] - s[w] <= 2 ? 'fg' : 'td')
+  const score = [...s]
   plays.push({ id: id++, q: 'FINAL', team: win ? 0 : 1, kind: 'final', pts: 0, text: win ? `FINAL — you take ${city.city}.` : `FINAL — ${city.nick} hold serve.`, score: [...score] })
   return { win, score, line, plays, pWin: +pWin.toFixed(2), star }
 }
