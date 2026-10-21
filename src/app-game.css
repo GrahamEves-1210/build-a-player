@@ -5148,14 +5148,6 @@ html.ag-fan-open .ag-dock { z-index: 1170; }
   content: 'ADVERTISEMENT'; display: block; width: 100%; margin: 0 0 3px; text-align: center;
   font-family: system-ui, -apple-system, sans-serif; font-size: 8.5px; font-weight: 600; letter-spacing: 1.6px; line-height: 1.2; color: rgba(255,255,255,.55);
 }
-/* Home figure: the trait names sit on their own unmasked layer, each on a tag in its band's
-   colour (the same colour inside the body, so it only shows where a long name runs past it) */
-.splash-stack-labels { -webkit-mask-image: none !important; mask-image: none !important; z-index: 1; }
-.splash-stack-labels .splash-stack-band { overflow: visible; }
-.splash-stack-labels .splash-stack-band-label { padding: 0 4px; border-radius: 3px; line-height: 1.25; }
-/* basketball (Home): the figure's box is taller than the picture, which sits at its bottom; the
-   bands span the picture itself (936 x 897), so the top one (Handles, Finishing) is the head */
-.ag-figure .splash-stack-figure--bucket { inset: auto 0 0 0; aspect-ratio: 936 / 897; }
 /* the website on a phone: an ad above the Sandbox card (gone when empty, on desktop, ad-free) */
 .rc-sandbox-ad { margin: 0 0 10px; display: flex; flex-direction: column; align-items: center; overflow: hidden; }
 .rc-sandbox-ad:empty, html.ads-hidden .rc-sandbox-ad { display: none; }
