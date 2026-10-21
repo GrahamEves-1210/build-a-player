@@ -50,6 +50,7 @@ import { supabase, rtSupabase, apiHeaders } from './lib/supabase'
 import { track } from './lib/track'
 import { loadCareer, saveCareer, newCareer, CAREER_POS, syncCareerFromCloud } from './lib/career'
 import { blockReason, buildSig, markPlayed } from './lib/saveGuard'
+import { saveSeason } from './lib/submit'
 import CustomRatingsModal from './components/CustomRatingsModal'
 import SiteFooter from './components/SiteFooter'
 import SiteFeatures from './components/SiteFeatures'
@@ -974,7 +975,8 @@ export default function App() {
               ? getArchetypeRB(result.ovr, build, activeTypes)
               : getArchetype(result.ovr, build, activeTypes)
       markPlayed(buildSig(gameMode, build, activeTypes))
-      supabase.from('simulations').insert({
+      // checked by the live server on its way to the boards (lib/submit.js)
+      saveSeason('nfl', isOL ? 'ol' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb', gameMode || 'classic', {
         user_id: user.id,
         username: getUsername(user) || 'Player',
         ovr: result.ovr,

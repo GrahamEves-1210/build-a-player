@@ -16,7 +16,8 @@ import { myCosmetics, whenProgressReady } from './progress'
 import { slotsFor, BUILD_SECS, BOT_NAMES, teamName, autoBuild, buildOk } from './blacktopCore'
 
 // the live server (live/, deployed on Cloudflare); VITE_LIVE_URL overrides it (a local server: ws://localhost:8787)
-export const LIVE_URL = (import.meta.env.VITE_LIVE_URL || 'wss://bap-live.gre56734.workers.dev').replace(/\/$/, '')
+import { LIVE_URL } from './liveUrl'
+export { LIVE_URL }
 
 // A socket that reconnects (and says hello again) until it's closed on purpose
 export function liveSocket(path, hello, onMsg, onStatus) {

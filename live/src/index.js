@@ -21,6 +21,7 @@
 import { AuctionQueue, AuctionRoom, validSportPos } from './auction.js'
 import { CompeteQueue, CompeteRoom, validCompete } from './compete.js'
 import { cleanBuild } from '../../src/lib/blacktopCore.js'
+import { handleSubmit } from './submit.js'
 export { AuctionQueue, AuctionRoom, CompeteQueue, CompeteRoom }
 
 const BUILD_SECS = 180
@@ -65,6 +66,9 @@ export default {
   async fetch(req, env) {
     const url = new URL(req.url)
     if (url.pathname === '/health') return new Response('ok')
+    // results for the boards, checked before they're saved (submit.js)
+    const sub = url.pathname.match(/^\/api\/submit\/([a-z]+)$/)
+    if (sub) return handleSubmit(req, env, sub[1])
     if (req.headers.get('Upgrade') !== 'websocket') return new Response('Build-A-Player live server', { status: 426 })
     if (!originOk(req.headers.get('Origin'))) return new Response('forbidden', { status: 403 })
     if (url.pathname === '/lobby') return env.LOBBY.get(env.LOBBY.idFromName('blacktop')).fetch(req)

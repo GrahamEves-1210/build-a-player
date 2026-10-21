@@ -18,7 +18,9 @@
 --     midnight), once per player per day
 --   • rows can't be edited by players at all, or deleted by anyone but their owner
 --   • Salary Cap boards can only be frozen for today (or yesterday), never ahead
--- The server (service role) and SQL run in the dashboard aren't limited.
+-- The live server (live/src/submit.js) saves checked results with the service key and
+-- names the player in an x-bap-user header: those rows get the same per-player checks.
+-- Anything else from the server (webhooks) and SQL run in the dashboard aren't limited.
 -- Columns a table doesn't have are simply skipped, so this is safe on every table.
 -- Run once in the Supabase SQL editor. Safe to run again.
 
@@ -26,6 +28,7 @@ create or replace function public.guard_result_row() returns trigger
 language plpgsql security definer set search_path = public as $$
 declare
   me uuid := auth.uid();
+  hdr text := (nullif(current_setting('request.headers', true), '')::json) ->> 'x-bap-user';
   r jsonb;
   fix jsonb := '{}'::jsonb;
   today date := (now() at time zone 'America/New_York')::date;
@@ -35,7 +38,11 @@ declare
   games int;
 begin
   if coalesce(auth.role(), '') = 'service_role' then
-    return case when tg_op = 'DELETE' then old else new end;
+    -- the live server saving a checked result for a player: that player's checks apply
+    if tg_op <> 'INSERT' or hdr is null or hdr !~ '^[0-9a-f-]{36}$' then
+      return case when tg_op = 'DELETE' then old else new end;
+    end if;
+    me := hdr::uuid;
   end if;
 
   -- edits: never from a device; deletes: only your own rows

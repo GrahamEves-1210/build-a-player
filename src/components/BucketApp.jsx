@@ -37,6 +37,7 @@ import { IS_APP, APP_LOOK } from '../lib/platform'
 import AppHome from './app/AppHome'
 import { FlipEdge, BuildComplete, useFlip, StackEdge, StackSeam, useDropMode, useDropSheet, DropBar, DropSheet } from './app/AppBuildTray'
 import { useCompete, botBuild } from '../lib/compete'
+import { saveSeason } from '../lib/submit'
 import { seededTeams, seededPlayer } from '../lib/competeCore'
 import { seatSeed, seatRespinSeed } from '../lib/blacktopCore'
 import { setLiveLock, liveLock, guardLeave } from '../lib/liveLock'
@@ -1094,7 +1095,8 @@ export default function BucketApp() {
         .filter(t => build[t])
         .map(t => [t, { qb: build[t].qbFull, team: build[t].team, val: build[t].val, number: build[t].number ?? null }])
     )
-    supabase.from('simulations').insert({
+    // checked by the live server on its way to the boards (lib/submit.js)
+    saveSeason('bucket', position, gameMode || 'classic', {
       user_id:     user.id,
       username:    getUsername(user),
       ovr:         result.ovr,

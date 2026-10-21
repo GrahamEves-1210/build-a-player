@@ -32,6 +32,8 @@ export function msToReset() {
 
 // ── Seeded randomness lives in rng.js (re-exported for the Daily Challenge) ──
 export { seeded, seededShuffle } from './rng'
+import { dailyFor } from './verifyCore'
+import { saveDaily } from './submit'
 import { seeded } from './rng'
 
 // ── Levels, titles, unlocks ──────────────────────────────────────────────────
@@ -136,11 +138,8 @@ export const LOGIN_XP = 25
 
 // ── Daily Challenge ──────────────────────────────────────────────────────────
 // Everyone gets the same position, mode and spins for the day.
-const DC_POS = ['qb', 'wr', 'rb', 'db', 'te']
-export function dailyChallenge(key = dayKey()) {
-  const i = dayIndex(key)
-  return { key, pos: DC_POS[i % DC_POS.length], mode: Math.floor(i / DC_POS.length) % 2 ? 'all-time' : 'classic', seed: `bap-daily-${key}` }
-}
+// the day's position, mode and seed: one definition, shared with the live server's check (verifyCore)
+export function dailyChallenge(key = dayKey()) { return dailyFor(key) }
 
 // ── Card rarity (a player's rank within their own pool) ──────────────────────
 export const RARITIES = ['Common', 'Rare', 'Epic', 'Legend']
@@ -468,7 +467,8 @@ async function postDaily(ovr, pos, mode, build) {
     toast({ kind: 'xp', title: 'DAILY NOT POSTED', sub: "Today's Daily was already played on this device" })
     return emit()
   }
-  const { error } = await supabase.from('daily_challenge_results').insert({
+  // checked by the live server (the day's own spins, the real OVR) on its way to the board
+  const { error } = await saveDaily({
     day: S.dc.key, user_id: uid, username: getUsername(user) || 'Player', ovr, position: pos, mode, build,
   })
   if (!error || error.code === '23505') { S.dc.posted = true; emit() }   // 23505: already posted today
