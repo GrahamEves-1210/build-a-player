@@ -758,6 +758,7 @@ export default function App() {
 
   const startDaily = useCallback(() => {
     const dc = dailyState()
+    if (dc.sport === 'bucket') { window.location.href = '/bucket?daily=1'; return }   // a basketball day
     if (dc.done) { window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'daily' })); return }
     if (dailyRun?.key === dc.key && gameMode) { setPage(simResult ? 'sim' : 'game'); return }
     try { localStorage.setItem('lastPosition', dc.pos) } catch {}

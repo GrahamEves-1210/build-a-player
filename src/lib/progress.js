@@ -546,6 +546,49 @@ async function payPlayersOfDay() {
     emit()
   } finally { potdChecking = false }
 }
+// ── The Weekly Cup: every Daily posted Monday to Sunday (New York) adds its OVR; the top 10
+// win coins and the Cup Contender avatar, paid the next time they open the game
+// (supabase/weekly_cup.sql weekly_cup). The board falls back to adding up the rows here.
+export const CUP_COINS = [2000, 1200, 800, 500, 500, 500, 500, 500, 500, 500]
+export const CUP_ITEM = 'av-cup'
+const keyOfIndex = i => new Date(i * 86400000).toISOString().slice(0, 10)
+export const weekOf = (key = dayKey()) => { const i = dayIndex(key); return keyOfIndex(i - ((i + 3) % 7)) }   // its Monday
+export const weekEnds = (key = dayKey()) => keyOfIndex(dayIndex(weekOf(key)) + 6)
+export async function fetchWeeklyCup(week = weekOf()) {
+  if (!supabase) return { rows: [], error: true }
+  const { data, error } = await supabase.rpc('weekly_cup', { p_start: week })
+  if (!error) return { rows: data ?? [] }
+  const end = keyOfIndex(dayIndex(week) + 6)
+  const r = await supabase.from('daily_challenge_results').select('user_id,username,ovr,created_at').gte('day', week).lte('day', end).limit(5000)
+  if (r.error) return { rows: [], error: true }
+  const by = new Map()
+  for (const x of r.data ?? []) {
+    const o = by.get(x.user_id) ?? { user_id: x.user_id, username: x.username, total: 0, days: 0, best: 0, first: x.created_at }
+    o.total += x.ovr; o.days++; o.best = Math.max(o.best, x.ovr); if (x.created_at < o.first) o.first = x.created_at
+    by.set(x.user_id, o)
+  }
+  return { rows: [...by.values()].sort((a, b) => b.total - a.total || a.days - b.days || String(a.first).localeCompare(String(b.first))).slice(0, 50) }
+}
+let cupChecking = false
+async function payWeeklyCup() {
+  const last = weekOf(keyOfIndex(dayIndex(weekOf()) - 7))
+  if (!uid || !supabase || S.cupPaid === last || cupChecking || pulledFor !== uid) return
+  cupChecking = true
+  try {
+    const r = await fetchWeeklyCup(last)
+    if (r.error || !uid) return
+    S.cupPaid = last
+    const i = r.rows.findIndex(x => x.user_id === uid)
+    if (i >= 0 && i < CUP_COINS.length) {
+      earn(CUP_COINS[i], null, true)
+      if (!S.owned[CUP_ITEM]) S.owned[CUP_ITEM] = Date.now()
+      S.cupWon = { week: last, place: i + 1 }
+      toast({ kind: 'coins', title: `WEEKLY CUP · #${i + 1}`, sub: `+${CUP_COINS[i].toLocaleString()} coins and the Cup Contender avatar` })
+    }
+    S.walletAt = Date.now()
+    emit()
+  } finally { cupChecking = false }
+}
 // fetched once behind the loading screen, so home opens with the board already in
 let potd = null
 export function prefetchPlayersOfDay() { potd = { at: Date.now(), p: fetchPlayersOfDay() }; return potd.p }
@@ -870,7 +913,7 @@ function switchUser(u) {
   const synced = sync()
   // coins bought on the website land after the wallet is pulled (so a newer remote wallet can't overwrite them)
   const pulled = pullWallet(id)
-  pulled.then(() => { claimCoinPurchases(); payPlayersOfDay(); loadPassOwners(id) })
+  pulled.then(() => { claimCoinPurchases(); payPlayersOfDay(); payWeeklyCup(); loadPassOwners(id) })
   Promise.allSettled([synced, pulled]).then(() => settle())
   if (IS_APP) import('./iap').then(m => m.iapUser(id)).catch(() => {})
   readyFns.splice(0).forEach(fn => setTimeout(fn, 0))
@@ -897,6 +940,7 @@ export function initProgress() {
     if (document.hidden || !loaded) return
     if (rollDay()) emit()
     payPlayersOfDay()
+    payWeeklyCup()
     sync()
     // back on this tab or app: what the account did elsewhere comes in first
     if (uid) pullWallet(uid)
@@ -969,6 +1013,7 @@ export function lockReason(id, level = getProgress().lvl.level) {
   if (owns(id)) return null
   if (i.ach) return `Achievement: ${achById(i.ach)?.title ?? 'reward'}`
   if (i.streak) return `Login streak: ${i.streak} days in a row`
+  if (i.cup) return 'Weekly Cup: finish a week in the top 10'
   if (i.pass) return `Builder Pass · ${seasonById(i.pass.season)?.name ?? 'Season'} · tier ${i.pass.tier}`
   if (i.pro && !isPro()) return 'BAP Pro members only'
   if (i.level && level < i.level) return `Reach level ${i.level}`
@@ -1279,7 +1324,7 @@ export function claimAch(id) {
 // Last change wins; items and achievements are merged, never lost.
 // ═════════════════════════════════════════════════════════════════════════════
 // potdPaid, dc, day and sets ride along so clearing the device (or a second one) can't pay a reward twice
-const WALLET_KEYS = ['coins', 'coinsEarned', 'owned', 'equip', 'ach', 'achClaimed', 'stats', 'shopFree', 'levelPaid', 'discordPaid', 'feedbackPaid', 'retired', 'potdPaid', 'dc', 'day', 'sets', 'salInf', 'streak', 'unlocks', 'cards', 'pass', 'inv']
+const WALLET_KEYS = ['coins', 'coinsEarned', 'owned', 'equip', 'ach', 'achClaimed', 'stats', 'shopFree', 'levelPaid', 'discordPaid', 'feedbackPaid', 'retired', 'potdPaid', 'dc', 'day', 'sets', 'salInf', 'streak', 'unlocks', 'cards', 'pass', 'inv', 'cupPaid', 'cupWon']
 let pushTimer = null, pushing = false, pushAgain = false
 function schedulePush() {
   if (!supabase || !uid) return
@@ -1396,6 +1441,7 @@ function mergeRemote(w) {
   S.discordPaid = !!(S.discordPaid || w.discordPaid)
   S.feedbackPaid = !!(S.feedbackPaid || w.feedbackPaid)
   if (String(w.potdPaid ?? '') > String(S.potdPaid ?? '')) S.potdPaid = w.potdPaid
+  if (String(w.cupPaid ?? '') > String(S.cupPaid ?? '')) { S.cupPaid = w.cupPaid; S.cupWon = w.cupWon ?? S.cupWon }
   S.sets = { ...(w.sets || {}), ...(S.sets || {}) }
   S.dc = mergeDay(S.dc, w.dc, (a, b) => ({ ...b, ...a, spins: Math.max(a.spins || 0, b.spins || 0), done: !!(a.done || b.done),
     forfeit: !!(a.forfeit || b.forfeit), posted: !!(a.posted || b.posted), ovr: a.ovr ?? b.ovr ?? null }))

@@ -25,12 +25,20 @@ import { TEAMS } from '../data/nfl-teams'
 import { NBA_TEAMS } from '../data/nba-teams'
 
 // ── The Daily Challenge (lib/progress.js uses these too) ─────────────────────
-// Everyone gets the same seeded spins each day; the position and mode follow the date
+// Everyone gets the same seeded spins each day; the sport, position and mode follow the
+// date. From DC_BOTH on, the days alternate football and basketball (football's positions
+// and basketball's guard / big each take their turn, Current then All-Time); before it,
+// every day was football.
 export const DC_POS = ['qb', 'wr', 'rb', 'db', 'te']
+export const DC_BUCKET_POS = ['guard', 'big']
+export const DC_BOTH = '2026-10-23'
 export const dayIndex = key => Math.round(Date.UTC(+key.slice(0, 4), +key.slice(5, 7) - 1, +key.slice(8, 10)) / 86400000)
 export function dailyFor(key) {
-  const i = dayIndex(key)
-  return { key, pos: DC_POS[i % DC_POS.length], mode: Math.floor(i / DC_POS.length) % 2 ? 'all-time' : 'classic', seed: `bap-daily-${key}` }
+  const i = dayIndex(key), seed = `bap-daily-${key}`
+  if (key < DC_BOTH) return { key, sport: 'nfl', pos: DC_POS[i % DC_POS.length], mode: Math.floor(i / DC_POS.length) % 2 ? 'all-time' : 'classic', seed }
+  const j = Math.floor((i - dayIndex(DC_BOTH)) / 2)
+  if ((i - dayIndex(DC_BOTH)) % 2) return { key, sport: 'bucket', pos: DC_BUCKET_POS[j % 2], mode: Math.floor(j / 2) % 2 ? 'all-time' : 'classic', seed }
+  return { key, sport: 'nfl', pos: DC_POS[j % DC_POS.length], mode: Math.floor(j / DC_POS.length) % 2 ? 'all-time' : 'classic', seed }
 }
 
 // ── A season's pool, traits and OVR, as App.jsx / BucketApp.jsx pick them ─────
@@ -91,7 +99,7 @@ export function checkSeason({ sport, pos, mode, build }) {
 const DAILY_SLACK = 6     // spins past one a trait: a team respin, a reload mid-spin, a spin never placed
 export function checkDaily(day, sent) {
   const dc = dailyFor(day)
-  const kit = seasonKit('nfl', dc.pos, dc.mode)
+  const kit = seasonKit(dc.sport, dc.pos, dc.mode)
   const r = realBuild(kit, sent)
   if (r.error) return r
   const draftable = new Set(kit.pool.map(p => p.team))
@@ -122,7 +130,7 @@ export function checkDaily(day, sent) {
     return false
   }
   if (!fit(0, 0)) return { error: 'not the day\'s spins' }
-  return { ovr: Math.max(0, Math.min(99, Math.round(kit.ovr(r.build) ?? 0))), build: r.build, pos: dc.pos, mode: dc.mode }
+  return { ovr: Math.max(0, Math.min(99, Math.round(kit.ovr(r.build) ?? 0))), build: r.build, pos: dc.pos, mode: dc.mode, sport: dc.sport }
 }
 
 // ── Takeover Duo: the partner's build, as the host's phone will play it ───────

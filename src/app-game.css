@@ -5379,3 +5379,14 @@ html:is(.is-app, .app-look) .reels-wrap.rs-holo .reel-outer { border-width: 2px 
 .sx-email-form input:focus-visible { outline: 2px solid var(--ag-a1); outline-offset: 1px; }
 .sx-email-err, .sx-email-note { grid-column: 1 / -1; margin: 0; font-family: var(--ag-body); font-size: 12.5px; line-height: 1.4; color: var(--ag-muted); }
 .sx-email-err { color: #ff8a8a; }
+
+/* Daily → the Weekly Cup */
+.ag-cup { border-color: rgba(212,175,55,.35); background: radial-gradient(ellipse 80% 60% at 0% 0%, rgba(212,175,55,.14), transparent 70%), var(--ag-panel); }
+.ag-cup-head { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; align-items: center; margin-bottom: 12px; }
+.ag-cup-trophy { display: grid; place-items: center; width: 58px; height: 58px; }
+.ag-cup-titles { display: grid; gap: 3px; min-width: 0; }
+.ag-cup-titles .ag-eyebrow { color: var(--ag-gold-hi); font-size: 12px; }
+.ag-cup-titles b { font-family: var(--ag-display); font-weight: 400; font-size: 24px; line-height: 1; text-transform: uppercase; color: #fff; }
+.ag-cup-titles small { font-family: var(--ag-body); font-size: 12.5px; line-height: 1.4; color: var(--ag-muted); text-wrap: pretty; }
+.ag-cup-won { margin: 0 0 10px; padding: 8px 10px; border-radius: 10px; font-family: var(--ag-body); font-size: 13px; font-weight: 600; color: #fde68a; background: rgba(212,175,55,.12); border: 1px solid rgba(212,175,55,.35); }
+.ag-cup-days { margin-left: 6px; font-family: var(--ag-body); font-size: 11px; font-weight: 700; color: var(--ag-muted); }

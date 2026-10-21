@@ -12,6 +12,7 @@ import { PASS_ITEMS } from './pass'
 //   level    unlocks at a level (still bought with coins)
 //   ach      an achievement reward — never sold
 //   streak   a login-streak reward (days) — never sold
+//   cup      a Weekly Cup reward (a top-10 week) — never sold
 
 export const SLOTS = [
   { id: 'avatar',    label: 'Avatars',      short: 'AVATAR' },
@@ -72,6 +73,7 @@ const AV = [
   it('avatar', 'av-dynasty',   'Dynasty',        3, 0, { glyph: 'ring', pal: 'holo', anim: 'holo', ach: 'rings5' }),
   it('avatar', 'av-perfect',   'Perfect Season', 3, 0, { glyph: 'shield', pal: 'gold', anim: 'shine', ach: 'perfect' }),
   it('avatar', 'av-streak',    'Lit',            2, 0, { glyph: 'flame', pal: 'gold', anim: 'flicker', streak: 7 }),
+  it('avatar', 'av-cup',       'Cup Contender',  3, 0, { glyph: 'trophy', pal: 'holo', anim: 'holo', cup: true }),
 ]
 
 // ── Name colors ──────────────────────────────────────────────────────────────
@@ -260,7 +262,7 @@ const BY_ID = Object.fromEntries(ITEMS.map(i => [i.id, i]))
 export const itemById = id => (id ? BY_ID[id] ?? null : null)
 export const itemsFor = slot => ITEMS.filter(i => i.slot === slot)
 export const isFree = i => !!i?.free
-export const forSale = i => !!i && !i.ach && !i.free && !i.pass && !i.streak
+export const forSale = i => !!i && !i.ach && !i.free && !i.pass && !i.streak && !i.cup
 
 // One line of copy for the detail sheet
 export const BLURB = {

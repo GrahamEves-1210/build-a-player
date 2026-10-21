@@ -232,6 +232,7 @@ function ItemCard({ item, deal, equipped, onOpen, delay = 0, name }) {
         {item.pro && <span className="sh-flag sh-flag--pro"><IconCrown size={11} /> PRO</span>}
         {item.pass && !mine && <span className="sh-flag sh-flag--pass"><IconStar size={10} /> PASS</span>}
         {item.streak && !mine && <span className="sh-flag sh-flag--ach"><IconFlame size={10} /> STREAK</span>}
+        {item.cup && !mine && <span className="sh-flag sh-flag--ach"><IconStar size={10} /> CUP</span>}
         {!item.pro && item.ach && !mine && <span className="sh-flag sh-flag--ach"><IconStar size={10} /> REWARD</span>}
         {!item.pro && !item.ach && item.level && !mine && lock && <span className="sh-flag sh-flag--lvl"><IconLock size={10} /> LVL {item.level}</span>}
         {deal != null && !mine && <span className="sh-flag sh-flag--deal">-30%</span>}
@@ -245,6 +246,7 @@ function ItemCard({ item, deal, equipped, onOpen, delay = 0, name }) {
             : item.ach ? <span className="sh-owned" style={{ color: 'var(--ag-muted)' }}>EARN IT</span>
             : item.pass ? <span className="sh-owned" style={{ color: 'var(--ag-muted)' }}>TIER {item.pass.tier}</span>
             : item.streak ? <span className="sh-owned" style={{ color: 'var(--ag-muted)' }}>DAY {item.streak}</span>
+            : item.cup ? <span className="sh-owned" style={{ color: 'var(--ag-muted)' }}>TOP 10</span>
             : <span className="sh-price"><span className="coin-ico coin-ico--sm" />{price.toLocaleString()}{deal != null && <s>{item.price.toLocaleString()}</s>}</span>}
         </span>
       </span>
@@ -314,6 +316,7 @@ function ItemSheet({ id, onClose, name, onNeedCoins }) {
             {ach && <div className="sh-hint">{ach.desc} · {achNow.toLocaleString()}/{ach.goal.toLocaleString()} <button className="ag-chip" style={{ marginLeft: 6 }} onClick={() => { onClose(); nav('achievements') }}>VIEW</button></div>}
             {item.level && !item.ach && !item.pro && <div className="sh-hint">{p.signedIn ? <>You're level <b>{p.lvl.level}</b>. Seasons, missions and achievements all give XP.</> : <>Levels need an account. <b>Sign in</b> to start earning XP.</>}</div>}
             {item.pro && <div className="sh-hint">The Pro Vault is open to <b>BAP Pro</b> members. <button className="ag-chip" style={{ marginLeft: 6 }} onClick={() => { onClose(); nav('pro') }}>SEE PRO</button></div>}
+            {item.cup && <div className="sh-hint">Finish a week of Daily Challenges in the Weekly Cup's top 10. <button className="ag-chip" style={{ marginLeft: 6 }} onClick={() => { onClose(); nav('daily') }}>DAILY</button></div>}
             {item.streak && <div className="sh-hint">Log in {item.streak} days in a row, then claim it on the Daily tab. <button className="ag-chip" style={{ marginLeft: 6 }} onClick={() => { onClose(); nav('daily') }}>DAILY</button></div>}
             {item.pass && <div className="sh-hint">On the Builder Pass {item.pass.track === 'premium' ? 'premium track' : 'free track'}, tier {item.pass.tier}. Not sold for coins. <button className="ag-chip" style={{ marginLeft: 6 }} onClick={() => { onClose(); nav('pass') }}>OPEN THE PASS</button></div>}
           </>
@@ -470,7 +473,7 @@ export default function AppShop({ onClose, tab: initialTab = 'featured' }) {
           <div className="sh-section-head"><span className="sh-section-title">{SLOTS.find(s => s.id === tab)?.label.toUpperCase()}</span><span className="sh-section-note">{BLURB[tab]}</span></div>
           <div className="sh-grid">
             {DEFAULTS[tab] === null && <DefaultCard slot={tab} equipped={!p.equip?.[tab]} onPick={() => pickDefault(tab)} name={name} />}
-            {(tab === 'court' ? itemsFor(tab) : itemsFor(tab).sort((a, b) => (a.pro - b.pro) || (!!a.pass - !!b.pass) || (!!(a.ach || a.streak) - !!(b.ach || b.streak)) || (a.rarity - b.rarity) || (a.price - b.price))).map((i, k) => (   // courts: the catalog's order (cities, seasons, the rest)
+            {(tab === 'court' ? itemsFor(tab) : itemsFor(tab).sort((a, b) => (a.pro - b.pro) || (!!a.pass - !!b.pass) || (!!(a.ach || a.streak || a.cup) - !!(b.ach || b.streak || b.cup)) || (a.rarity - b.rarity) || (a.price - b.price))).map((i, k) => (   // courts: the catalog's order (cities, seasons, the rest)
               <ItemCard key={i.id} item={i} deal={dealPrice(i.id)} equipped={p.equip?.[i.slot] === i.id} onOpen={setOpen} delay={k * 25} name={name} />
             ))}
           </div>

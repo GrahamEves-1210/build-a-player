@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { XpIco } from './GainIcons'
-import { useProgress, dailyState, fetchDailyBoard, msToReset, claimMission, claimStreak, claimStreakEvery, streakEveryReady, STREAK_EVERY, missionDef, STREAK_REWARDS, SPOTLIGHTS, buyFreeze, FREEZE_PRICE, FREEZE_MAX, streakLost, restoreStreak } from '../../lib/progress'
+import { useProgress, dailyState, fetchDailyBoard, fetchWeeklyCup, weekOf, weekEnds, CUP_COINS, CUP_ITEM, msToReset, claimMission, claimStreak, claimStreakEvery, streakEveryReady, STREAK_EVERY, missionDef, STREAK_REWARDS, SPOTLIGHTS, buyFreeze, FREEZE_PRICE, FREEZE_MAX, streakLost, restoreStreak } from '../../lib/progress'
 import { sfx, haptic } from '../../lib/juice'
 import { IS_APP } from '../../lib/platform'
 import WatchVideo from './WatchVideo'
@@ -97,13 +97,15 @@ function Challenge({ p, sport }) {
   const [board, setBoard] = useState(null)
   useEffect(() => { fetchDailyBoard(dc.key).then(setBoard) }, [dc.key, dc.done, dc.posted])
   const mine = board?.rows.findIndex(r => r.user_id === p.user?.id) ?? -1
-  const play = () => { if (sport === 'bucket') window.location.href = '/?daily=1'; else nav('daily-challenge') }
+  // the day's sport: the side that plays it (the other side sends the player over)
+  const daySport = dc.sport === 'bucket' ? 'bucket' : 'nfl'
+  const play = () => { if (daySport === sport) nav('daily-challenge'); else window.location.href = daySport === 'bucket' ? '/bucket?daily=1' : '/?daily=1' }
   const label = `${dc.pos.toUpperCase()} · ${dc.mode === 'all-time' ? 'ALL-TIME' : 'CURRENT'}`
 
   return (
     <section className="ag-card ag-challenge ag-pop" style={{ '--d': '90ms' }}>
       <div className="ag-challenge-hero">
-        <span className="ag-eyebrow">DAILY CHALLENGE{sport === 'bucket' ? ' · FOOTBALL' : ''}</span>   {/* (one challenge a day, always football: basketball's Daily sends you over) */}
+        <span className="ag-eyebrow">DAILY CHALLENGE · {daySport === 'bucket' ? 'BASKETBALL' : 'FOOTBALL'}</span>   {/* (one challenge a day: football and basketball days take turns) */}
         <span className="ag-challenge-title">{label}</span>
         <span className="ag-challenge-sub">Everyone gets the same spins today. One run: no resets, and leaving mid-run ends your day.</span>
         {dc.done ? (
@@ -133,6 +135,51 @@ function Challenge({ p, sport }) {
             <span className="ag-board-rank">{mine + 1}</span>
             <span className="ag-board-name"><AvatarBadge name={board.rows[mine].username} self size={24} /><NameTag name={board.rows[mine].username} self /></span>
             <span className="ag-board-ovr">{board.rows[mine].ovr}</span>
+          </div>
+        )}
+      </div>
+    </section>
+  )
+}
+
+// The Weekly Cup: this week's Daily scores added up; the top 10 win coins and an avatar
+const fmtDay = k => new Date(`${k}T12:00:00Z`).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+function WeeklyCup({ p }) {
+  const week = weekOf()
+  const [board, setBoard] = useState(null)
+  const dc = dailyState()
+  useEffect(() => { let live = true; fetchWeeklyCup(week).then(b => { if (live) setBoard(b) }); return () => { live = false } }, [week, dc.posted])
+  const mine = board?.rows.findIndex(r => r.user_id === p.user?.id) ?? -1
+  const won = p.cupWon && p.cupWon.week === weekOf(new Date(Date.parse(`${week}T12:00:00Z`) - 7 * 86400000).toISOString().slice(0, 10)) ? p.cupWon : null
+  const cup = itemById(CUP_ITEM)
+  return (
+    <section className="ag-card ag-cup ag-pop" style={{ '--d': '115ms' }}>
+      <div className="ag-cup-head">
+        <span className="ag-cup-trophy" aria-hidden="true">{cup && <ItemPreview item={cup} name={getUsername(p.user) || 'Guest'} />}</span>
+        <span className="ag-cup-titles">
+          <span className="ag-eyebrow">WEEKLY CUP · ENDS {fmtDay(weekEnds()).toUpperCase()}</span>
+          <b>Every Daily counts</b>
+          <small>Each Daily's OVR adds up, Monday to Sunday. The top 10 win {CUP_COINS[0].toLocaleString()}–{CUP_COINS[9].toLocaleString()} coins and the Cup Contender avatar.</small>
+        </span>
+      </div>
+      {won && <p className="ag-cup-won">Last week: #{won.place}. The Cup Contender avatar is in the Locker.</p>}
+      <div className="ag-board">
+        <div className="ag-board-head"><span>THIS WEEK</span><span>TOTAL</span></div>
+        {board == null && <div className="ag-board-empty">Loading…</div>}
+        {board?.error && <div className="ag-board-empty">The Cup board opens soon.</div>}
+        {board && !board.error && board.rows.length === 0 && <div className="ag-board-empty">No Dailies this week yet. Today's counts.</div>}
+        {board?.rows.slice(0, 10).map((r, i) => (
+          <div key={r.user_id} className={`ag-board-row${r.user_id === p.user?.id ? ' is-me' : ''}`}>
+            <span className={`ag-board-rank ag-board-rank--${i + 1}`}>{i + 1}</span>
+            <span className="ag-board-name"><AvatarBadge name={r.username} uid={r.user_id} size={24} /><NameTag name={r.username || 'Player'} uid={r.user_id} /><small className="ag-cup-days">{r.days}/7</small></span>
+            <span className="ag-board-ovr">{r.total}</span>
+          </div>
+        ))}
+        {mine >= 10 && (
+          <div className="ag-board-row is-me">
+            <span className="ag-board-rank">{mine + 1}</span>
+            <span className="ag-board-name"><AvatarBadge name={board.rows[mine].username} self size={24} /><NameTag name={board.rows[mine].username} self /><small className="ag-cup-days">{board.rows[mine].days}/7</small></span>
+            <span className="ag-board-ovr">{board.rows[mine].total}</span>
           </div>
         )}
       </div>
@@ -183,6 +230,7 @@ export default function AppDaily({ sport, onClose }) {
       <div className="ag-screen-body">
         <Streak p={p} />
         <Challenge p={p} sport={sport} />
+        <WeeklyCup p={p} />
         {(
           <section className="ag-extras ag-pop" style={{ '--d': '120ms', padding: 0 }}>
             <button className="ag-mini ag-mini--purple" style={{ gridColumn: '1 / -1' }} onClick={() => { onClose(); window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'salarycap' })) }}>

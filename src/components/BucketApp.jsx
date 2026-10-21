@@ -42,7 +42,7 @@ import { seededTeams, seededPlayer } from '../lib/competeCore'
 import { seatSeed, seatRespinSeed } from '../lib/blacktopCore'
 import { setLiveLock, liveLock, guardLeave } from '../lib/liveLock'
 import { useAuction } from '../lib/auction'
-import { FORFEIT_RATING } from '../lib/progress'
+import { FORFEIT_RATING, dailyState, setDailySpins, forfeitDaily } from '../lib/progress'
 import { useBlacktop } from '../lib/blacktop'
 import { setSandboxGate, sandboxItemFor, sandboxLocked } from './app/AppSandbox'
 import { BlacktopQueue, BlacktopHud, BlacktopChat, BlacktopGame, BlacktopHub } from './app/AppBlacktop'
@@ -623,6 +623,7 @@ export default function BucketApp() {
       else if (to === 'about') { window.location.href = '/?about' }
       else if (to === 'wiki') { window.location.href = '/wiki' }
       else if (to === 'compete') setPage('compete')
+      else if (to === 'daily-challenge') startDailyRef.current?.()
       window.scrollTo({ top: 0, behavior: 'instant' })
     }
     window.addEventListener('bap:nav', onNav)
@@ -780,6 +781,7 @@ export default function BucketApp() {
   useEffect(() => { const on = e => e.detail?.code && startVersus(null, { kind: 'join', code: e.detail.code }); window.addEventListener('bap:join', on); return () => window.removeEventListener('bap:join', on) }, [startVersus])
 
   const handleStart = useCallback((mode, pos = 'guard') => {
+    setDailyRun(null)
     if (IS_APP || APP_LOOK) {   // a finished game is kept around (Home → resume), so clear it
       setSimResult(null); setSavedSpinResult(null); setMobileView('spin'); setSpinResetKey(k => k + 1); setGameKey(k => k + 1)
     }
@@ -902,6 +904,46 @@ export default function BucketApp() {
     if (run && !run.over) { setTakeoverRun(run); setPage('takeover') } else { setPage('takeover-intro'); window.scrollTo({ top: 0, behavior: 'instant' }) }
   }, [user?.id, startTakeoverBuild])
   openTakeoverRef.current = openTakeover
+
+  // ── DAILY CHALLENGE (basketball days; lib/verifyCore.js dailyFor) ──────────
+  // One run on the day's shared spins, locked in like an online game: leaving ends the
+  // day with no score. Football days send players to the football side.
+  const [dailyRun, setDailyRun] = useState(() => {
+    try { const r = JSON.parse(localStorage.getItem('bab_daily_run') || 'null'); const dc = dailyState(); return r && r.key === dc.key && dc.sport === 'bucket' && !dc.done ? r : null } catch { return null }
+  })
+  useEffect(() => { try { if (dailyRun) localStorage.setItem('bab_daily_run', JSON.stringify(dailyRun)); else localStorage.removeItem('bab_daily_run') } catch {} }, [dailyRun])
+  const dailyLocked = !!dailyRun && !dailyState().done
+  const dailyLockedRef = useRef(dailyLocked)
+  dailyLockedRef.current = dailyLocked
+  const dailyLive = (IS_APP || APP_LOOK) && dailyLocked && (page === 'game' || page === 'sim')
+  useEffect(() => {
+    if (!dailyLive) return
+    setLiveLock({
+      title: 'Leave the Daily Challenge?',
+      body: 'One run a day. Leave now and today\'s challenge is over: no score on the board, and you can\'t play it again until tomorrow.',
+      forfeit: () => { forfeitDaily(); setDailyRun(null); setGameMode(null); setBuild({}); setSimResult(null) },
+    })
+    return () => setLiveLock(null)
+  }, [dailyLive]) // eslint-disable-line react-hooks/exhaustive-deps
+  const startDaily = useCallback(() => {
+    const dc = dailyState()
+    if (dc.sport !== 'bucket') { window.location.href = '/?daily=1'; return }
+    if (dc.done) { window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'daily' })); return }
+    if (dailyRun?.key === dc.key && gameMode) { setPage(simResult ? 'sim' : 'game'); return }
+    try { localStorage.setItem('bucketPosition', dc.pos); localStorage.setItem('bab_custom_mode', '0') } catch {}
+    setIsBucketCustomMode(false)   // same spins for everyone: no custom ratings
+    handleStart(dc.mode, dc.pos)
+    sandboxTainted.current = false
+    setDailyRun({ key: dc.key, pos: dc.pos, mode: dc.mode, seed: dc.seed })
+  }, [dailyRun, gameMode, simResult, handleStart])
+  const startDailyRef = useRef(null)
+  startDailyRef.current = startDaily
+  // opened from the Daily screen on the football side (/bucket?daily=1)
+  useEffect(() => {
+    if ((!IS_APP && !APP_LOOK) || !new URLSearchParams(window.location.search).has('daily')) return
+    window.history.replaceState({}, '', '/bucket')
+    startDaily()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
   // ── CAREER: one saved career per account; a fresh build starts one (lib/career.js) ──
   const [career, setCareer] = useState(null)
   const careerRef = useRef(null); careerRef.current = career
@@ -1037,6 +1079,7 @@ export default function BucketApp() {
   }, [])
 
   const handleReset = useCallback(() => {
+    if (dailyLockedRef.current) return
     faceoffFiredRef.current = false
     setVersusGame(null)
     setVersusRoom(prev => {
@@ -1092,7 +1135,8 @@ export default function BucketApp() {
         sport: 'bucket', pos: position, mode: gameMode,
         wins: result.wins, losses: result.losses, playoffs: !!result.madePlayoffs,
         champion: !!result.champion, award: !!(result.mvp || result.dpoy), awardName: result.mvp ? 'MVP' : 'DPOY',
-        ovr: result.ovr, sandbox: !!saveBlock, ref: result,
+        ovr: result.ovr, sandbox: !!saveBlock, ref: result, daily: !!dailyRun,
+        build: dailyRun ? Object.fromEntries(activeTypes.filter(t => build[t]).map(t => [t, { qb: build[t].qbFull, team: build[t].team, val: build[t].val }])) : undefined,
       } }))
     }
     setShowTeamSpin(false)
@@ -1137,7 +1181,7 @@ export default function BucketApp() {
       team_short:  result.team?.short ?? null,     // the result carries the team: this runs when the season ends, not when it's picked
       build:       buildJson,
     }).then(({ error }) => { if (error && error.code !== '23505') console.error('[bucket save]', error.code, error.message, error.details, error.hint) })
-  }, [build, activeTypes, position, user, gameMode, isBucketCustomMode, currentPool])
+  }, [build, activeTypes, position, user, gameMode, isBucketCustomMode, currentPool, dailyRun])
   commitBucketRef.current = commitBucketSeason
   const bucketSimFor = useCallback((b, t) => runBucketSimulation(b, activeTypes, t, position, null, gameMode), [activeTypes, position, gameMode])
 
@@ -1552,6 +1596,7 @@ export default function BucketApp() {
   // nothing resets (same shell on both sides of the switch, see App.jsx).
   const KEEP_GAME_ON = new Set(['splash', 'profile', 'leaderboard', 'pvp-leaderboard', 'privacy', 'compete'])
   const gameIsPlay = page === 'game' || (KEEP_GAME_ON.has(page) && lastPlayRef.current === 'game')
+  const dailyPlan = dailyRun && dailyLocked && gameIsPlay ? { seed: dailyRun.seed, getStart: () => dailyState().spins, onSpin: setDailySpins } : null
   const filledCount = activeTypes.filter(t => build[t]).length
 
   const navbarProps = {
@@ -1655,8 +1700,8 @@ export default function BucketApp() {
           onReset={competeOn || liveBuild || page === 'versus-game' ? undefined : handleReset}
           adsDisabled={adsDisabled}
           cardMeta={(IS_APP || APP_LOOK) && gameIsPlay && gameMode !== 'salarycap' ? { sport: 'bucket', pos: position, mode: gameMode } : null}
-          seedPlan={competePlan ?? blacktopPlan}
-          key={competePlan ? `cp-${cp.match.code}` : blacktopPlan ? `bt-${bt.match.code}` : 'spin'}
+          seedPlan={competePlan ?? blacktopPlan ?? dailyPlan}
+          key={competePlan ? `cp-${cp.match.code}` : blacktopPlan ? `bt-${bt.match.code}` : dailyPlan ? `dc-${dailyRun.key}` : 'spin'}
           paused={parked}
           isRB={false}
           isBucket={true}
