@@ -4,6 +4,7 @@ import { NameTag, AvatarBadge } from './NameTag'
 import { IconClose, IconStar, IconRing, IconMedal, IconVersus, IconTrophy } from './icons'
 import { loadPublicProfile, removeFriend, modeLabel } from '../../lib/friends'
 import { tierFor } from '../../lib/progress'
+import { TrophyShelf } from './TrophyArt'
 import './friends.css'
 
 // A player's profile, as a sheet: their look (avatar + name decal), what's already
@@ -102,6 +103,8 @@ export default function FriendProfile({ me, friend, isBucket = false, onClose, o
                 <span><IconMedal size={15} /><b>{data.awards.toLocaleString()}</b>AWARDS</span>
                 <span><IconVersus size={15} /><b>{data.vsWins}-{data.vsLosses}</b>1V1</span>
               </div>
+
+              <TrophyShelf uid={friend.id} />
 
               <div className="fr-sub-head"><span className="ag-eyebrow">BEST BUILDS</span></div>
               {data.best.length === 0 && <p className="fr-note">No saved seasons yet.</p>}
