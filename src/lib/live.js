@@ -73,6 +73,11 @@ export function claimLive(kind) {
   put(); clearInterval(liveBeat); liveBeat = setInterval(put, 2000)
   return true
 }
+// the live game this tab is in right now ('compete', 'auction', 'blacktop'…), or null
+export function liveKind() {
+  const c = readLive()
+  return c && c.tab === TAB && Date.now() - (c.at ?? 0) < 6000 ? c.kind ?? null : null
+}
 export function releaseLive() {
   clearInterval(liveBeat); liveBeat = 0
   const c = readLive()

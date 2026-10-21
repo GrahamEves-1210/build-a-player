@@ -5498,3 +5498,13 @@ html:is(.is-app, .app-look) .reels-wrap.rs-holo .reel-outer { border-width: 2px 
   .ss-overlay, .ss-sheet, .ss-img, .ss-skel { animation: none; }
 }
 html.bap-reduce-motion :is(.ss-overlay, .ss-sheet, .ss-img, .ss-skel) { animation: none !important; }
+
+/* Home: players online right now (lib/presence.js) */
+.ag-online { display: inline-flex !important; flex-direction: row !important; align-items: center; gap: 6px; height: 30px; padding: 0 10px; border-radius: 999px; font-family: var(--ag-font); font-size: 13px; letter-spacing: 1.5px; color: var(--ag-text); background: rgba(0,0,0,.35); border: 1px solid var(--ag-line); white-space: nowrap; }
+.ag-online i { width: 8px; height: 8px; border-radius: 50%; background: #34d399; box-shadow: 0 0 8px #34d399; }
+@media (prefers-reduced-motion: no-preference) { html:not(.bap-reduce-motion) .ag-online i { animation: ag-online-pulse 2s ease-in-out infinite; } }
+@keyframes ag-online-pulse { 50% { opacity: .45; } }
+.ag-online-row { display: flex; justify-content: center; margin: 8px 0 -4px; min-height: 0; }
+.ag-online-row:empty { display: none; }
+.ag-online-row .ag-online { height: 26px; font-size: 12px; background: rgba(0,0,0,.25); }
+.ag-online i { position: static !important; display: block; flex: 0 0 8px; margin: 0 !important; transform: none !important; }

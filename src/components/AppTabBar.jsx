@@ -8,6 +8,7 @@ import AppToasts, { LevelUp } from './app/AppToasts'
 import { useProgress, STREAK_REWARDS, streakEveryReady, missionDef, cardsOpen } from '../lib/progress'
 import { IconBag, IconProfile, IconCalendar, IconTrophy } from './app/icons'
 import PlayButton from './app/PlayButton'
+import { startPresence } from '../lib/presence'
 
 const AppDaily = lazy(() => import('./app/AppDaily'))
 const AppHall = lazy(() => import('./app/AppHall'))
@@ -80,6 +81,8 @@ function watchRail() {
   const t = setInterval(measure, 1500)   // the rail's iframe resizes without DOM changes on the body
   return () => { mo.disconnect(); ro?.disconnect(); clearInterval(t) }
 }
+
+startPresence()   // players online (lib/presence.js): once, for the app and the new website
 
 export default function AppTabBar() {
   const [state, setState]       = useState(() => window.__bapPage ?? { page: 'splash', sport: 'nfl' })

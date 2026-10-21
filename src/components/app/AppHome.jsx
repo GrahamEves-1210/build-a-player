@@ -12,6 +12,7 @@ import Disclaimer from '../Disclaimer'
 import { rampAdd } from '../../lib/ads'
 import { NameTag, AvatarBadge } from './NameTag'
 import { PassCard, ProCard } from './Promos'
+import { usePresence, fmtCount } from '../../lib/presence'
 import { CoinPill } from './AppShop'
 import { TierChip, Form } from './OnlineRecord'
 import { tierFor } from '../../lib/progress'
@@ -88,6 +89,13 @@ export function PlayerChip({ user, onClick }) {
       </span>
     </button>
   )
+}
+
+// players online right now, website and app (lib/presence.js); nothing until a real count is in
+function OnlineNow() {
+  const c = usePresence()
+  if (!c?.total) return null
+  return <span className="ag-online" aria-label={`${c.total} players online`}><i aria-hidden="true" />{fmtCount(c.total)} ONLINE</span>
 }
 
 function Hud({ user }) {
@@ -265,6 +273,7 @@ function PlayersOfDay() {
 
 export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus, onBlacktop, blacktop, onTakeover, takeoverRun, onCompete, onCareer, career = null, resume = null, user, renderBucketFigure, footer = null }) {
   const prog = useProgress()
+  const here = usePresence()?.areas ?? {}   // how many are in each online mode right now
   const cs = prog.stats?.compete
   const ol = prog.stats?.online ?? { rating: 800, played: 0 }
   const h2h = prog.stats?.h2h ?? {}
@@ -307,6 +316,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
       <div className="ag-home-inner">
         <Hud user={user} />
         <SportSwitch sport={sport} />
+        <div className="ag-online-row"><OnlineNow /></div>
 
         <div className="ag-brand ag-pop" style={{ '--d': '60ms' }}>
           <img src="/bap-mark.webp" alt="" className="ag-brand-mark" draggable={false} />
@@ -391,7 +401,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
               <span className="ag-live-dot" />
               <span className="ag-bt-tags" aria-hidden="true"><span className="bt-mode-tag">2V2</span><span className="bt-mode-tag">3V3</span></span>
               <span className="ag-takeover-txt">
-                <span className="ag-eyebrow">{btLive ? (blacktop.phase === 'queue' ? `IN THE LOBBY · ${blacktop.queue}/6 SPOTS TAKEN` : blacktop.phase === 'build' ? 'LIVE · YOUR SQUAD IS BUILDING' : 'LIVE · GAME ON') : 'LIVE · FIRST TO 11'}</span>
+                <span className="ag-eyebrow">{btLive ? (blacktop.phase === 'queue' ? `IN THE LOBBY · ${blacktop.queue}/6 SPOTS TAKEN` : blacktop.phase === 'build' ? 'LIVE · YOUR SQUAD IS BUILDING' : 'LIVE · GAME ON') : here.blacktop ? `LIVE · ${fmtCount(here.blacktop)} ON THE BLACKTOP` : 'LIVE · FIRST TO 11'}</span>
                 <span className="ag-takeover-title">BLACKTOP</span>
                 <span className="ag-takeover-sub">{btLive ? 'You\'re still in. Jump back to your run.' : (btG || h2h.played) ? `Squads ${btW}–${btG - btW} · 1v1 ${h2h.wins ?? 0}–${h2h.losses ?? 0}${ol.played ? ` · ${tierFor(ol.rating)[1]} ${ol.rating}` : ''}` : '1v1, 2v2 or 3v3. Real players.'}</span>
               </span>
@@ -412,7 +422,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
               <PoolArt />
               <span className="ag-live-dot" />
               <span className="ag-takeover-txt">
-                <span className="ag-eyebrow">{ol.played ? <>ONLINE · {tierFor(ol.rating)[1].toUpperCase()} · {ol.rating}</> : 'ONLINE · 5-PLAYER POOLS'}</span>
+                <span className="ag-eyebrow">{here.compete ? <>ONLINE · {fmtCount(here.compete)} IN COMPETE</> : ol.played ? <>ONLINE · {tierFor(ol.rating)[1].toUpperCase()} · {ol.rating}</> : 'ONLINE · 5-PLAYER POOLS'}</span>
                 <span className="ag-takeover-title">COMPETE</span>
                 <span className="ag-takeover-sub">{cs?.played
                   ? `${cs.wins} ${cs.wins === 1 ? 'win' : 'wins'} in ${cs.played} · avg place ${(cs.placeSum / cs.played).toFixed(1)}${cs.streak >= 2 ? ` · ${cs.streak} straight` : ''}`
