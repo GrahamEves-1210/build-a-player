@@ -312,12 +312,17 @@ export function runBucketSimulation(build, types, team, position = 'guard', rngS
 
   // Team strength → baseline WP (same formula as standings generator)
   const teamScore = (tr.off + tr.def) / 200
-  const teamWP    = Math.max(0.13, Math.min(0.77, 0.20 + (teamScore - 0.59) / 0.24 * 0.57))
+  const baseWP    = Math.max(0.13, Math.min(0.77, 0.20 + (teamScore - 0.59) / 0.24 * 0.57))
+  // Current mode: one star carries a team further than the roster alone says (the worst
+  // team's floor and the best team's ceiling both pull in a little, and a high OVR lifts
+  // more). All-Time (a role player among legends) and Career keep the roster's weight.
+  const starMode  = !isAllTime && !team.career
+  const teamWP    = starMode ? 0.5 + (baseWP - 0.5) * 0.8 : baseWP
   // OVR boost: in all-time you're one role player among legends — team strength dominates
   const rawDelta  = (ovr - 82) / 17
   const boostMult = isAllTime ? 0.45 : 1.0
   const ovrBoost  = rawDelta >= 0
-    ? Math.min(isAllTime ? 0.09 : 0.20, rawDelta * 0.20 * boostMult)
+    ? Math.min(isAllTime ? 0.09 : starMode ? 0.30 : 0.20, rawDelta * (starMode ? 0.32 : 0.20) * boostMult)
     : Math.max(isAllTime ? -0.05 : -0.10, rawDelta * 0.10 * boostMult)
   const winProb   = Math.min(isAllTime ? 0.91 : 0.87, Math.max(0.12, teamWP + ovrBoost))
 
