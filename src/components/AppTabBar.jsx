@@ -16,6 +16,8 @@ const AppAchievements = lazy(() => import('./app/AppAchievements'))
 const AppLocker = lazy(() => import('./app/AppLocker'))
 const AppSoundLab = lazy(() => import('./app/AppSoundLab'))
 const AppOnline = lazy(() => import('./app/AppOnline'))
+const AppPass = lazy(() => import('./app/AppPass'))
+const PlayerSheet = lazy(() => import('./app/PlayerSheet'))
 
 // iOS/Android app only: floating game dock (Home · Daily · PLAY · Cards ·
 // Profile) that replaces the website's menu, plus the app-only screens and
@@ -25,7 +27,8 @@ const AppOnline = lazy(() => import('./app/AppOnline'))
 // beyond a small listener:
 //   game  → dock:  'bap:page'  { page, sport }   (which tab is lit)
 //   dock  → game:  'bap:nav'   'home' | 'play' | 'leaderboard' | 'profile' | 'about' | 'daily-challenge'
-//   anyone → dock: 'bap:nav' 'daily' | 'cards' | 'shop' | 'achievements', 'bap:menu', 'bap:auth'
+//   anyone → dock: 'bap:nav' 'daily' | 'cards' | 'shop' | 'achievements' | 'pass' | 'pro', 'bap:menu', 'bap:auth'
+//   anyone → dock: 'bap:player' { id, username }  (a player's profile, from a name anywhere)
 
 // PLAY is Home: it's lit on Home and on the game screens
 const TAB_FOR_PAGE = { splash: 'play', profile: 'profile', leaderboard: null, 'pvp-leaderboard': null, about: null }
@@ -81,7 +84,8 @@ function watchRail() {
 
 export default function AppTabBar() {
   const [state, setState]       = useState(() => window.__bapPage ?? { page: 'splash', sport: 'nfl' })
-  const [menuOpen, setMenuOpen] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)   // false | true (More) | 'pro' (More → BAP Pro)
+  const [player, setPlayer]     = useState(null)    // { id, username }: their profile sheet
   const [shopTab, setShopTab]   = useState('featured')
   const [authOpen, setAuthOpen] = useState(false)
   const [screen, setScreen]     = useState(null)   // 'daily' | 'cards' | 'shop' | 'achievements' | null
@@ -96,14 +100,18 @@ export default function AppTabBar() {
       const [to, arg] = String(e.detail).split(':')
       // web: cards live on an account, so a guest gets the sign-in sheet (from Daily, Shop, anywhere)
       if (to === 'cards' && !cardsOpen()) { setMenuOpen(false); setAuthOpen(true); return }
-      if (['daily', 'cards', 'shop', 'achievements', 'locker', 'soundlab', 'online'].includes(to)) { setMenuOpen(false); if (to === 'shop') setShopTab(arg || 'featured'); setScreen(to) }
+      if (to === 'pro') { setMenuOpen('pro'); return }
+      if (['daily', 'cards', 'shop', 'achievements', 'locker', 'soundlab', 'online', 'pass'].includes(to)) { setMenuOpen(false); if (to === 'shop') setShopTab(arg || 'featured'); setScreen(to) }
       else setScreen(null)
     }
     window.addEventListener('bap:page', onPage)
     window.addEventListener('bap:auth', onAuth)
     window.addEventListener('bap:menu', onMenu)
     window.addEventListener('bap:nav', onNav)
+    const onPlayer = e => { if (e.detail?.id) setPlayer(e.detail) }
+    window.addEventListener('bap:player', onPlayer)
     return () => {
+      window.removeEventListener('bap:player', onPlayer)
       window.removeEventListener('bap:page', onPage)
       window.removeEventListener('bap:auth', onAuth)
       window.removeEventListener('bap:menu', onMenu)
@@ -142,6 +150,7 @@ export default function AppTabBar() {
             : screen === 'soundlab' ? <AppSoundLab onClose={() => setScreen(null)} />
             : screen === 'online' ? <AppOnline sport={state.sport} onClose={() => setScreen(null)} />
             : screen === 'achievements' ? <AppAchievements onClose={() => setScreen(null)} />
+            : screen === 'pass' ? <AppPass onClose={() => setScreen(null)} />
             : <AppCards sport={state.sport} onClose={closeHome} />}
         </Suspense>
       )}
@@ -157,7 +166,8 @@ export default function AppTabBar() {
           <Tab label="PROFILE" Icon={IconProfile} active={active === 'profile' || active === 'achievements' || active === 'locker'} onClick={state.page === 'profile' && !screen ? undefined : go('profile')} badge={claimable} />
         </nav>
       )}
-      {menuOpen && <AppMenu sport={state.sport} onClose={() => setMenuOpen(false)} />}
+      {menuOpen && <AppMenu sport={state.sport} initialView={menuOpen === 'pro' ? 'pro' : 'menu'} onClose={() => setMenuOpen(false)} />}
+      {player && <Suspense fallback={null}><PlayerSheet player={player} isBucket={state.sport === 'bucket'} onClose={() => setPlayer(null)} /></Suspense>}
       {/* The games pick up the new session from Supabase's auth listener; then open the profile */}
       {authOpen && <AuthModal onClose={() => setAuthOpen(false)} onAuth={() => setTimeout(() => nav('profile'), 400)} />}
       <AppToasts />

@@ -45,6 +45,17 @@ export async function onRequestPost({ request, env }) {
     }
   }
 
+  // BAP Pro members get the Pro role (the bot needs Manage Roles; DISCORD_PRO_ROLE_ID)
+  if (joined && env.DISCORD_BOT_TOKEN && env.DISCORD_GUILD_ID && env.DISCORD_PRO_ROLE_ID) {
+    const { data: acc } = await supabase.from('accounts').select('subscription_status').eq('id', user.id).maybeSingle()
+    if (acc?.subscription_status === 'active') {
+      const r = await fetch(`${DISCORD_API}/guilds/${env.DISCORD_GUILD_ID}/members/${discordId}/roles/${env.DISCORD_PRO_ROLE_ID}`, {
+        method: 'PUT', headers: { Authorization: `Bot ${env.DISCORD_BOT_TOKEN}`, 'X-Audit-Log-Reason': 'BAP Pro' },
+      })
+      if (!r.ok) console.error('[discord-join] pro role failed', r.status)
+    }
+  }
+
   // ── 2. Username for accounts created through Discord ────────────────────────
   let username = user.user_metadata?.username ?? null
   if (!username) {

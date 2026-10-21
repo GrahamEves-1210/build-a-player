@@ -799,7 +799,7 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
             {(isPlus || CAN_SELL_PLUS) && (
               <button
                 className={`prf-top-adfree${isPlus ? ' prf-top-adfree--on' : ''}`}
-                onClick={isPlus ? undefined : () => setPlusOpen(o => !o)}
+                onClick={isPlus ? undefined : (IS_APP || APP_LOOK) ? () => window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'pro' })) : () => setPlusOpen(o => !o)}
                 style={isPlus ? { cursor: 'default' } : undefined}
               >
                 {isPlus ? '✦ Pro Active' : '✦ BAP Pro'}
@@ -866,7 +866,7 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
         {isPlus && (
           <div className={`prf-card ag-pro-card ${show ? 'prf-card-in' : ''}`} style={{ animationDelay: '0.1s' }}>
             <div className="prf-card-hd"><span className="prf-card-title">BAP Pro</span><span className="plus-status-badge plus-status-badge--on">Active</span></div>
-            <div className="ag-pro-card-body">No ads, double the daily coin drop, and the Pro Vault in the shop: exclusive avatars, name styles, plates and victory effects.</div>
+            <div className="ag-pro-card-body">No ads, double the daily coin drop, the Pro Vault in the shop, and the Pro role in the Discord once your Discord is linked.</div>
             <button className="plus-manage-btn" onClick={handleManageSubscription}>Manage Subscription</button>
           </div>
         )}

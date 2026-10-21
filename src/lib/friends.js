@@ -64,6 +64,17 @@ export async function searchPlayers(q, uid) {
   })
 }
 
+// Where I stand with one player: none | friends | sent | incoming (+ reqId)
+export async function relationWith(me, id) {
+  if (!supabase || !me || !id) return { state: 'none', reqId: null }
+  const { data, error } = await supabase.from('friend_requests').select('id, from_id, to_id, status').or(pair(me, id))
+  if (error) throw error
+  const acc = (data ?? []).find(x => x.status === 'accepted')
+  const inc = (data ?? []).find(x => x.status === 'pending' && x.from_id === id)
+  const out = (data ?? []).find(x => x.status === 'pending' && x.from_id === me)
+  return { state: acc ? 'friends' : inc ? 'incoming' : out ? 'sent' : 'none', reqId: (acc || inc || out)?.id ?? null }
+}
+
 export async function sendFriendRequest(me, myName, target) {
   const row = { from_id: me, from_username: myName || 'Player', to_id: target.id, to_username: target.username, status: 'pending' }
   const { error } = await supabase.from('friend_requests').insert(row)

@@ -11,6 +11,7 @@ import { IS_APP } from '../../lib/platform'
 import Disclaimer from '../Disclaimer'
 import { rampAdd } from '../../lib/ads'
 import { NameTag, AvatarBadge } from './NameTag'
+import { PassCard, ProCard } from './Promos'
 import { CoinPill } from './AppShop'
 import { TierChip, Form } from './OnlineRecord'
 import { tierFor } from '../../lib/progress'
@@ -247,7 +248,7 @@ function PlayersOfDay() {
             <li key={r.id} className={`ag-potd-row is-${i + 1}${r.id === me ? ' is-me' : ''}`}>
               <span className="ag-potd-rank">{i + 1}</span>
               <AvatarBadge cos={r.cos} uid={r.id} self={r.id === me} name={r.username} size={36} />
-              <span className="ag-potd-name"><NameTag name={r.username} cos={r.cos} self={r.id === me} /></span>
+              <span className="ag-potd-name"><NameTag name={r.username} cos={r.cos} uid={r.id} self={r.id === me} /></span>
               <span className="ag-potd-xp"><span><b>{(r.cos.today.xp ?? 0).toLocaleString()}</b> XP</span><small>{r.cos.today.g ?? 0} {r.cos.today.g === 1 ? 'game' : 'games'}</small></span>
             </li>
           ))}
@@ -453,6 +454,10 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
           )}
           {/* website: an ad right under those, the full width, no margins of its own (collapses when there's none) */}
           {!IS_APP && <div key={`home-ad-${sport}`} id="ramp-cntr1-home" className="ag-home-ad" />}
+        </div>
+        <div className="ag-promos">
+          <PassCard delay="400ms" />
+          <ProCard delay="410ms" />
         </div>
         <PlayersOfDay />
       </div>

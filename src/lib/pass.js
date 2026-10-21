@@ -1,0 +1,66 @@
+// The Builder Pass: a two-month season of rewards on the XP everyone already earns.
+// Pure data (lib/progress.js keeps each player's place in it and pays the claims).
+//
+//   free     every other tier, for every signed-in player
+//   premium  every tier, for players who bought this season's pass ($8.99, Stripe;
+//            the webhook writes supabase pass_owners, see supabase/builder_pass.sql)
+//
+// A tier opens every TIER_XP of XP earned since the season started (missions, seasons,
+// live games, the login: the same XP as levels). Rewards: coins, streak freezes,
+// 2x XP boosts (the next N seasons count double), card packs and cosmetics. The
+// cosmetics in a pass are pass-only (cosmetics.js marks them; never sold for coins).
+// Keep the season ids and prices in step with server/server.js and functions/api.
+
+export const TIER_XP = 400
+export const TIERS = 50
+export const PASS_PRICE = '$8.99'
+
+const c = n => ({ coins: n })
+const fz = () => ({ freeze: 1 })
+const bx = n => ({ boost: n })
+const pk = (n, min = 0) => ({ pack: n, min })
+const i = id => ({ item: id })
+
+// tier → reward (tiers missing from the free track have nothing there)
+const S1_FREE = {
+  2: c(100), 4: i('av-whistle'), 6: c(150), 8: fz(), 10: i('pl-chalk'), 12: c(150), 14: pk(3), 16: c(200),
+  18: i('snd-badge'), 20: bx(3), 22: c(200), 24: i('fx-streamers'), 26: c(250), 28: fz(), 30: i('nc-turf'),
+  32: c(250), 34: pk(3), 36: c(300), 38: bx(3), 40: i('pl-scoreboard'), 42: c(300), 44: fz(), 46: pk(3, 1),
+  48: c(400), 50: i('av-rivalry'),
+}
+const S1_PREMIUM = {
+  1: i('av-storm'), 2: c(300), 3: i('nc-aurora'), 4: bx(3), 5: i('snd-nope'), 6: c(300), 7: pk(3, 1),
+  8: i('nfx-frost'), 9: c(350), 10: i('pl-neongrid'), 11: fz(), 12: c(350), 13: i('fx-shockwave'), 14: pk(3, 1),
+  15: i('nc-pro-blackgold'), 16: c(400), 17: bx(5), 18: i('snd-train'), 19: c(400), 20: i('av-pro-blackgold'),
+  21: fz(), 22: c(450), 23: i('nfx-glitch'), 24: pk(5, 1), 25: i('pl-pro-blackgold'), 26: c(450),
+  27: i('fx-lightning'), 28: bx(5), 29: c(500), 30: i('nc-prism'), 31: pk(3, 2), 32: c(500), 33: fz(),
+  34: i('snd-bassdrop'), 35: c(550), 36: i('nfx-spotlight'), 37: bx(5), 38: c(550), 39: pk(5, 2),
+  40: i('fx-flames'), 41: c(600), 42: i('nc-pro-platinum'), 43: fz(), 44: c(600), 45: i('pl-galaxy'),
+  46: pk(5, 2), 47: c(700), 48: i('av-galaxy'), 49: c(800), 50: i('ct-space'),
+}
+
+// start / end: days in New York time; the season runs from start up to (not including) end.
+// Rewards already reached can still be claimed for CLAIM_DAYS after it ends.
+export const SEASONS = [
+  { id: 's1', name: 'Season 1', title: 'Opening Drive', start: '2026-10-21', end: '2026-12-21', free: S1_FREE, premium: S1_PREMIUM },
+]
+export const CLAIM_DAYS = 7
+
+const addDays = (key, n) => { const d = new Date(`${key}T12:00:00Z`); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10) }
+export const seasonById = id => SEASONS.find(s => s.id === id) ?? null
+// The season on now, or the one just ended while its claims are still open
+export function passSeason(day) {
+  return SEASONS.find(s => day >= s.start && day < addDays(s.end, CLAIM_DAYS)) ?? null
+}
+export const seasonOver = (s, day) => !!s && day >= s.end
+export const nextSeason = day => SEASONS.find(s => s.start > day) ?? null
+export const tierAt = xp => Math.min(TIERS, 1 + Math.floor(Math.max(0, xp) / TIER_XP))
+export const xpForTier = t => (t - 1) * TIER_XP
+// Every pass cosmetic, with the season and tier it's on
+export const PASS_ITEMS = Object.fromEntries(SEASONS.flatMap(s => ['free', 'premium'].flatMap(track =>
+  Object.entries(s[track]).filter(([, r]) => r.item).map(([t, r]) => [r.item, { season: s.id, track, tier: +t }]))))
+// What a season's premium track adds up to (the pitch on the buy button)
+export function passValue(s) {
+  const all = Object.values(s.premium)
+  return { coins: all.reduce((a, r) => a + (r.coins || 0), 0), items: all.filter(r => r.item).length }
+}

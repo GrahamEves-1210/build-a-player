@@ -6,13 +6,15 @@ import { loadPublicProfile, removeFriend, modeLabel } from '../../lib/friends'
 import { tierFor } from '../../lib/progress'
 import './friends.css'
 
-// A friend's profile, as a sheet over Profile: their look (avatar + name
-// decal), what's already public about them (seasons, rings, awards, 1v1 record,
-// best saved builds), a way to play them, and Remove friend.
+// A player's profile, as a sheet: their look (avatar + name decal), what's already
+// public about them (seasons, rings, awards, 1v1 record, best saved builds), a way to
+// play them, and the friend button for where we stand: Remove friend (from Profile →
+// Friends), or Add / Accept / Request sent (PlayerSheet: a name tapped anywhere).
 
 const nav = to => window.dispatchEvent(new CustomEvent('bap:nav', { detail: to }))
 
-export default function FriendProfile({ me, friend, isBucket = false, onClose, onRemoved }) {
+// relation: 'friends' | 'none' | 'sent' | 'incoming' | 'guest' (signed out) | 'self' | null (still checking)
+export default function FriendProfile({ me, friend, isBucket = false, onClose, onRemoved, relation = 'friends', onAdd, onAccept }) {
   const [data, setData] = useState(null)
   const [failed, setFailed] = useState(false)
   const [confirm, setConfirm] = useState(false)
@@ -45,6 +47,12 @@ export default function FriendProfile({ me, friend, isBucket = false, onClose, o
 
   const name = data?.username || friend.username || 'Player'
 
+  async function act(fn, fail) {
+    setBusy(true); setErr('')
+    try { await fn() } catch { setErr(fail) }
+    setBusy(false)
+  }
+
   async function remove() {
     if (!confirm) { setConfirm(true); return }
     setBusy(true); setErr('')
@@ -66,14 +74,14 @@ export default function FriendProfile({ me, friend, isBucket = false, onClose, o
       <div className="fr-sheet" role="dialog" aria-modal="true" aria-labelledby="fr-sheet-name" onClick={e => e.stopPropagation()}>
         <div className="fr-grab" aria-hidden="true" />
         <div className="fr-sheet-head">
-          <span className="ag-eyebrow">FRIEND</span>
+          <span className="ag-eyebrow">{relation === 'friends' ? 'FRIEND' : relation === 'self' ? 'YOUR PROFILE' : 'PLAYER'}</span>
           <button ref={closeRef} className="fr-icon-btn" onClick={onClose} aria-label="Close friend profile"><IconClose size={18} /></button>
         </div>
 
         <div className="fr-hero">
           <AvatarBadge uid={friend.id} name={name} size={76} level={data?.level ?? null} />
           <div className="fr-hero-id">
-            <span className="fr-hero-name" id="fr-sheet-name"><NameTag uid={friend.id} name={name} /></span>
+            <span className="fr-hero-name" id="fr-sheet-name"><NameTag uid={friend.id} name={name} link={false} /></span>
             {data && (
               <span className="fr-hero-badges">
                 <span className="fr-hero-pill"><small>LEVEL</small><b>{data.level ?? '–'}</b></span>
@@ -121,14 +129,20 @@ export default function FriendProfile({ me, friend, isBucket = false, onClose, o
         </div>
 
         <div className="fr-sheet-actions">
-          {isBucket && (
+          {isBucket && relation === 'friends' && (
             <button className="ag-btn fr-play" onClick={play}><IconVersus size={18} /> PLAY 1V1</button>
           )}
-          {isBucket && <p className="fr-hint">On the Blacktop, pick Play a friend and send {name} your code.</p>}
+          {isBucket && relation === 'friends' && <p className="fr-hint">On the Blacktop, pick Play a friend and send {name} your code.</p>}
           {err && <p className="fr-note fr-note--err" role="alert">{err}</p>}
-          <button className={`fr-remove${confirm ? ' is-confirm' : ''}`} onClick={remove} disabled={busy}>
-            {busy ? 'REMOVING…' : confirm ? <>TAP AGAIN TO REMOVE <span className="un-keep">{name}</span></> : 'REMOVE FRIEND'}
-          </button>
+          {relation === 'friends' && (
+            <button className={`fr-remove${confirm ? ' is-confirm' : ''}`} onClick={remove} disabled={busy}>
+              {busy ? 'REMOVING…' : confirm ? <>TAP AGAIN TO REMOVE <span className="un-keep">{name}</span></> : 'REMOVE FRIEND'}
+            </button>
+          )}
+          {relation === 'none' && <button className="ag-btn fr-play" onClick={() => act(onAdd, "Couldn't send the request. Try again in a moment.")} disabled={busy}>{busy ? 'SENDING…' : 'ADD FRIEND'}</button>}
+          {relation === 'incoming' && <button className="ag-btn fr-play" onClick={() => act(onAccept, "Couldn't accept. Try again in a moment.")} disabled={busy}>{busy ? 'ACCEPTING…' : `ACCEPT ${name}'S REQUEST`}</button>}
+          {relation === 'sent' && <p className="fr-hint">Friend request sent. It shows on {name}'s profile.</p>}
+          {relation === 'guest' && <button className="ag-btn fr-play" onClick={() => { onClose(); window.dispatchEvent(new CustomEvent('bap:auth')) }}>SIGN IN TO ADD FRIENDS</button>}
         </div>
       </div>
     </div>,

@@ -14,6 +14,7 @@ import { getUsername } from '../../lib/discord'
 import { sfx, haptic, previewVictory, warmVictory } from '../../lib/juice'
 import { NameTag, AvatarBadge, ItemPreview } from './NameTag'
 import { IconClose, IconLock, IconGift, IconCrown, IconPlay, IconArrow, IconStar, IconDiscord } from './icons'
+import { PassCard, ProCard } from './Promos'
 
 // The shop (app): coins buy avatars, name colors and effects, nameplates and
 // victory effects/sounds. BAP Pro opens the Pro Vault. Opened from Home (the
@@ -184,6 +185,7 @@ function ItemCard({ item, deal, equipped, onOpen, delay = 0, name }) {
     <button className={`sh-card${mine ? ' is-owned' : ''}${equipped ? ' is-equipped' : ''}${lock ? ' is-locked' : ''}`} style={{ '--rar': RARITY[item.rarity].color, '--d': `${delay}ms` }} onClick={() => onOpen(item.id)}>
       <span className="sh-card-stage">
         {item.pro && <span className="sh-flag sh-flag--pro"><IconCrown size={11} /> PRO</span>}
+        {item.pass && !mine && <span className="sh-flag sh-flag--pass"><IconStar size={10} /> PASS</span>}
         {!item.pro && item.ach && !mine && <span className="sh-flag sh-flag--ach"><IconStar size={10} /> REWARD</span>}
         {!item.pro && !item.ach && item.level && !mine && lock && <span className="sh-flag sh-flag--lvl"><IconLock size={10} /> LVL {item.level}</span>}
         {deal != null && !mine && <span className="sh-flag sh-flag--deal">-30%</span>}
@@ -195,6 +197,7 @@ function ItemCard({ item, deal, equipped, onOpen, delay = 0, name }) {
           <span className="sh-rar">{RARITY[item.rarity].name}</span>
           {mine ? <span className="sh-owned">{equipped ? 'EQUIPPED' : 'OWNED'}</span>
             : item.ach ? <span className="sh-owned" style={{ color: 'var(--ag-muted)' }}>EARN IT</span>
+            : item.pass ? <span className="sh-owned" style={{ color: 'var(--ag-muted)' }}>TIER {item.pass.tier}</span>
             : <span className="sh-price"><span className="coin-ico coin-ico--sm" />{price.toLocaleString()}{deal != null && <s>{item.price.toLocaleString()}</s>}</span>}
         </span>
       </span>
@@ -250,7 +253,7 @@ function ItemSheet({ id, onClose, name, onNeedCoins }) {
               ? <span style={{ display: 'flex', alignItems: 'center', gap: 14 }}><AvatarBadge cos={{ avatar: item.id }} name={name} size={96} /><NameTag self name={name} className="sh-hero-name" /></span>
               : <ItemPreview item={item} name={name} big />}
         </div>
-        <span className="sh-sheet-rar">{RARITY[item.rarity].name.toUpperCase()}{item.pro ? ' · PRO VAULT' : ''}{item.ach ? ' · ACHIEVEMENT REWARD' : ''}</span>
+        <span className="sh-sheet-rar">{RARITY[item.rarity].name.toUpperCase()}{item.pro ? ' · PRO VAULT' : ''}{item.pass ? ' · BUILDER PASS' : ''}{item.ach ? ' · ACHIEVEMENT REWARD' : ''}</span>
         <h2 className="sh-sheet-name">{item.name}</h2>
         <p className="sh-sheet-blurb">{BLURB[item.slot]}</p>
         {mine ? (
@@ -263,7 +266,8 @@ function ItemSheet({ id, onClose, name, onNeedCoins }) {
             <div className="sh-lock"><IconLock size={14} /> {lock.toUpperCase()}</div>
             {ach && <div className="sh-hint">{ach.desc} · {achNow.toLocaleString()}/{ach.goal.toLocaleString()} <button className="ag-chip" style={{ marginLeft: 6 }} onClick={() => { onClose(); nav('achievements') }}>VIEW</button></div>}
             {item.level && !item.ach && !item.pro && <div className="sh-hint">{p.signedIn ? <>You're level <b>{p.lvl.level}</b>. Seasons, missions and achievements all give XP.</> : <>Levels need an account. <b>Sign in</b> to start earning XP.</>}</div>}
-            {item.pro && <div className="sh-hint">The Pro Vault is open to <b>BAP Pro</b> members.</div>}
+            {item.pro && <div className="sh-hint">The Pro Vault is open to <b>BAP Pro</b> members. <button className="ag-chip" style={{ marginLeft: 6 }} onClick={() => { onClose(); nav('pro') }}>SEE PRO</button></div>}
+            {item.pass && <div className="sh-hint">On the Builder Pass {item.pass.track === 'premium' ? 'premium track' : 'free track'}, tier {item.pass.tier}. Not sold for coins. <button className="ag-chip" style={{ marginLeft: 6 }} onClick={() => { onClose(); nav('pass') }}>OPEN THE PASS</button></div>}
           </>
         ) : (
           <>
@@ -365,6 +369,9 @@ export default function AppShop({ onClose, tab: initialTab = 'featured' }) {
               </button>
             </div>
           )}
+          <div className="sh-section ag-promos" style={{ marginTop: 0 }}>
+            <PassCard />
+          </div>
           <DiscordCoins p={p} />
           <FeedbackCoins p={p} />
           <div className="sh-section">
@@ -395,6 +402,7 @@ export default function AppShop({ onClose, tab: initialTab = 'featured' }) {
                   <span className="sh-vault-sub" style={{ display: 'block' }}>{pro ? 'Your BAP Pro membership opens these.' : 'Exclusive items for BAP Pro members.'}</span>
                 </span>
               </div>
+              {!pro && <div style={{ marginBottom: 10 }}><ProCard /></div>}
               {grid(ITEMS.filter(i => i.pro))}
             </div>
           </div>}
@@ -412,7 +420,7 @@ export default function AppShop({ onClose, tab: initialTab = 'featured' }) {
           <div className="sh-section-head"><span className="sh-section-title">{SLOTS.find(s => s.id === tab)?.label.toUpperCase()}</span><span className="sh-section-note">{BLURB[tab]}</span></div>
           <div className="sh-grid">
             {DEFAULTS[tab] === null && <DefaultCard slot={tab} equipped={!p.equip?.[tab]} onPick={() => pickDefault(tab)} name={name} />}
-            {(tab === 'court' ? itemsFor(tab) : itemsFor(tab).sort((a, b) => (a.pro - b.pro) || (!!a.ach - !!b.ach) || (a.rarity - b.rarity) || (a.price - b.price))).map((i, k) => (   // courts: the catalog's order (cities, seasons, the rest)
+            {(tab === 'court' ? itemsFor(tab) : itemsFor(tab).sort((a, b) => (a.pro - b.pro) || (!!a.pass - !!b.pass) || (!!a.ach - !!b.ach) || (a.rarity - b.rarity) || (a.price - b.price))).map((i, k) => (   // courts: the catalog's order (cities, seasons, the rest)
               <ItemCard key={i.id} item={i} deal={dealPrice(i.id)} equipped={p.equip?.[i.slot] === i.id} onOpen={setOpen} delay={k * 25} name={name} />
             ))}
           </div>

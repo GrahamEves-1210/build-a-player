@@ -14,6 +14,7 @@ import { useSyncExternalStore } from 'react'
 import { supabase } from './supabase'
 import { getUsername } from './discord'
 import { itemById, forSale, DEFAULTS, ITEMS } from './cosmetics'
+import { SEASONS, passSeason, seasonById, seasonOver, tierAt, xpForTier } from './pass'
 import { ACHIEVEMENTS, achById } from './achievements'
 import { IS_APP } from './platform'
 
@@ -197,6 +198,10 @@ const blank = () => ({
   achClaimed: {},             // id → when its reward was claimed
   walletAt: 0,                // last change to coins/items/achievements (server sync)
   coinsSynced: null,          // the account's coins as of the last sync: coins move by what changed here since
+  // the Builder Pass (lib/pass.js): season id → { base: the account's XP when it first saw the
+  // season, final: the season's XP once it ended, f / p: free / premium tiers claimed }
+  pass: {},
+  boostUsed: 0,               // 2x XP boost seasons used (the pass hands them out)
 })
 const BLANK_STATS = {
   seasons: 0, rings: 0, spins: 0, best: 0,
@@ -275,9 +280,10 @@ function makeSnap() {
   const xp = totalXp()
   const lvl = levelInfo(xp)
   const claimable = ACHIEVEMENTS.filter(a => S.ach[a.id] && !S.achClaimed[a.id]).length
-  return { ...S, xp, lvl, signedIn: !!uid, user, lastSeason, pro: isPro(), claimable, freeReady: S.shopFree !== dayKey() }
+  return { ...S, xp, lvl, signedIn: !!uid, user, lastSeason, pro: isPro(), claimable, freeReady: S.shopFree !== dayKey(), bp: passInfo(), boosts: boostsLeft() }
 }
 function emit(quiet = false) {
+  startPass()
   payLevels()
   checkAch(quiet)
   try { localStorage.setItem(keyFor(uid), JSON.stringify(S)) } catch {}
@@ -561,6 +567,14 @@ function onSeason(e) {
   else if (uid) S.pending.push({ at: Date.now(), xp, ring: !!d.champion })
   else S.seasonXp += xp
   tally(xp, 1)
+  // a 2x XP boost from the Builder Pass: the season's XP again
+  let boost = 0
+  if (uid && xp > 0 && boostsLeft() > 0) {
+    boost = xp
+    S.boostUsed = (S.boostUsed || 0) + 1
+    S.bonusXp += boost; tally(boost)
+    lines.push({ label: '2x XP boost', xp: boost })
+  }
   S.stats.seasons++
   if (d.champion) S.stats.rings++
   if (d.ovr > S.stats.best) S.stats.best = d.ovr
@@ -589,7 +603,7 @@ function onSeason(e) {
     }
   }
   lastSeason = {
-    id: Date.now(), ref: d.ref ?? null, lines, xp, before, after: before + xp, coins: walletOpen() ? coins : 0, missedCoins: walletOpen() ? 0 : coins,
+    id: Date.now(), ref: d.ref ?? null, lines, xp: xp + boost, before, after: before + xp + boost, coins: walletOpen() ? coins : 0, missedCoins: walletOpen() ? 0 : coins,
     missions: (S.day?.missions ?? []).map((m, i) => ({ ...m, before: missionsBefore[i] ?? 0, def: MISSIONS[m.id] })),
   }
   emit()
@@ -727,11 +741,15 @@ function onH2H(e) {
 }
 
 function onSpin(e) {
-  const { sport, pos, mode, player, pool } = e.detail || {}
-  if (!player?.name) return
+  const d = e.detail || {}
+  if (!d.player?.name) return
   S.stats.spins++
   bumpMissions('spin', {})
   if (!cardsOpen()) { emit(); return }
+  addCard(d)
+}
+// A card into the binder (a spin, or a pack from the Builder Pass)
+function addCard({ sport, pos, mode, player, pool, pack = false }) {
   const k = cardKey(sport, pos, mode, player.name, player.team)
   const isNew = !S.cards[k]
   S.cards[k] = isNew ? [1, Date.now()] : [S.cards[k][0] + 1, S.cards[k][1]]
@@ -739,7 +757,7 @@ function onSpin(e) {
   bumpMissions('card', { isNew, rank })
   if (isNew) { S.bonusXp += 2 + rank * 3; tally(2 + rank * 3); earn([1, 2, 5, 15][rank] ?? 1, null, true); if (rank >= 3) S.stats.legends++ }
   emit()
-  window.dispatchEvent(new CustomEvent('bap:card', { detail: { isNew, rank, rarity: RARITIES[rank], name: player.name, team: player.team, sport, pos, mode, count: S.cards[k][0] } }))
+  window.dispatchEvent(new CustomEvent('bap:card', { detail: { isNew, rank, rarity: RARITIES[rank], name: player.name, team: player.team, sport, pos, mode, count: S.cards[k][0], pack } }))
 }
 
 // ── Rebuild season XP + cards from saved seasons (signed in) ─────────────────
@@ -817,6 +835,7 @@ function switchUser(u) {
   const guestCards = id ? load(null).cards : null
   uid = id
   S = retireItems(load(id))
+  passOwn = new Set(cachedPassOwn(id))
   if (id && !S.mergedGuest && guestCards) {
     for (const [k, v] of Object.entries(guestCards)) if (!S.cards[k]) S.cards[k] = v
     S.mergedGuest = true
@@ -830,7 +849,7 @@ function switchUser(u) {
   const synced = sync()
   // coins bought on the website land after the wallet is pulled (so a newer remote wallet can't overwrite them)
   const pulled = pullWallet(id)
-  pulled.then(() => { claimCoinPurchases(); payPlayersOfDay() })
+  pulled.then(() => { claimCoinPurchases(); payPlayersOfDay(); loadPassOwners(id) })
   Promise.allSettled([synced, pulled]).then(() => settle())
   if (IS_APP) import('./iap').then(m => m.iapUser(id)).catch(() => {})
   readyFns.splice(0).forEach(fn => setTimeout(fn, 0))
@@ -842,6 +861,7 @@ export function initProgress() {
   started = true
   applySpot()
   watchCoinReturn()
+  watchPassReturn()
   window.addEventListener('bap:season', onSeason)
   window.addEventListener('bap:feedback-sent', () => claimFeedbackCoins())
   window.addEventListener('bap:spin', onSpin)
@@ -927,6 +947,7 @@ export function lockReason(id, level = getProgress().lvl.level) {
   if (!i) return 'Not found'
   if (owns(id)) return null
   if (i.ach) return `Achievement: ${achById(i.ach)?.title ?? 'reward'}`
+  if (i.pass) return `Builder Pass · ${seasonById(i.pass.season)?.name ?? 'Season'} · tier ${i.pass.tier}`
   if (i.pro && !isPro()) return 'BAP Pro members only'
   if (i.level && level < i.level) return `Reach level ${i.level}`
   return null
@@ -1039,6 +1060,129 @@ export function claimFreeCoins() {
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
+// The Builder Pass (lib/pass.js)
+// ═════════════════════════════════════════════════════════════════════════════
+// A player's place in the season is the XP earned since it started: the account's XP
+// total when it first saw the season is kept (pass[id].base; the lowest any device saw),
+// set only once the account's wallet and its season rebuild are in, so XP earned before
+// the season never counts. Once the season ends its XP is frozen (final).
+// Who bought the premium track comes from pass_owners (the Stripe webhook writes it).
+let passOwn = new Set()
+const passOwnKey = id => `bap_pass_${id}`
+const cachedPassOwn = id => { try { return id ? JSON.parse(localStorage.getItem(passOwnKey(id)) || '[]') : [] } catch { return [] } }
+const passOf = s => ((S.pass ||= {})[s.id] ||= { base: null, f: {}, p: {} })
+function passXp(s) {
+  const ps = S.pass?.[s.id]
+  if (!uid || ps?.base == null) return 0
+  return Math.max(0, ps.final ?? (totalXp() - ps.base))
+}
+// Mark where this season starts (and ends) for the account; runs on every change
+function startPass() {
+  const day = dayKey(), s = passSeason(day)
+  if (!uid || !s || pulledFor !== uid || !S.sync) return
+  const ps = S.pass?.[s.id]
+  if (ps?.base == null) { if (!seasonOver(s, day)) passOf(s).base = totalXp(); return }
+  if (ps.final == null && seasonOver(s, day)) ps.final = Math.max(0, totalXp() - ps.base)
+}
+export const ownsPass = sid => passOwn.has(sid)
+export function passInfo() {
+  const day = dayKey(), s = passSeason(day)
+  if (!s) return null
+  const ps = S.pass?.[s.id] ?? {}
+  const xp = passXp(s), tier = tierAt(xp), owned = passOwn.has(s.id)
+  const waiting = (tr, key) => Object.keys(s[key]).filter(t => +t <= tier && !ps[tr]?.[t]).length
+  return {
+    season: s, xp, tier, into: xp - xpForTier(tier), owned, over: seasonOver(s, day), started: ps.base != null,
+    claimed: { f: ps.f || {}, p: ps.p || {} }, ready: !uid || ps.base == null ? 0 : waiting('f', 'free') + (owned ? waiting('p', 'premium') : 0),
+  }
+}
+// 2x XP boost seasons claimed on any pass, less the ones used
+export function boostsLeft() {
+  let got = 0
+  for (const s of SEASONS) {
+    const ps = S.pass?.[s.id]
+    if (!ps) continue
+    for (const t of Object.keys(ps.f || {})) got += s.free[t]?.boost || 0
+    for (const t of Object.keys(ps.p || {})) got += s.premium[t]?.boost || 0
+  }
+  return Math.max(0, got - (S.boostUsed || 0))
+}
+// An item already owned (bought before it moved to the pass) pays coins instead
+const DUP_COINS = [150, 400, 800, 1500]
+// Claim one reward: track 'f' (free) or 'p' (premium), and the tier. Returns what it paid, or null
+export function claimPass(track, tier) {
+  const s = passSeason(dayKey())
+  if (!uid || !s || (track !== 'f' && track !== 'p')) return null
+  const r = (track === 'p' ? s.premium : s.free)[tier]
+  const ps = passOf(s)
+  if (!r || ps.base == null || ps[track]?.[tier] || tierAt(passXp(s)) < tier) return null
+  if (track === 'p' && !passOwn.has(s.id)) return null
+  ps[track] = { ...(ps[track] || {}), [tier]: Date.now() }
+  let got
+  if (r.coins) { earn(r.coins, 'Builder Pass', true); got = { coins: r.coins } }
+  else if (r.freeze) {
+    const st = S.streak
+    if ((st.freezes ?? 0) < FREEZE_MAX) { st.freezes = (st.freezes ?? 0) + 1; got = { freeze: 1 } }
+    else { earn(FREEZE_PRICE, 'Builder Pass', true); got = { coins: FREEZE_PRICE, full: true } }
+  }
+  else if (r.boost) got = { boost: r.boost }          // boostsLeft() counts it from the claim
+  else if (r.pack) { got = { pack: r.pack, min: r.min }; openPack(r.pack, r.min) }
+  else if (r.item) {
+    if (S.owned[r.item]) { const n = DUP_COINS[itemById(r.item)?.rarity ?? 0]; earn(n, 'Builder Pass', true); got = { item: r.item, dup: n } }
+    else { S.owned[r.item] = Date.now(); got = { item: r.item } }
+  }
+  S.walletAt = Date.now()
+  emit()
+  return got
+}
+// A card pack: random players from the game's pools (football and basketball, current and
+// all-time); `min` is the lowest rarity of the first card (1 Rare, 2 Epic, 3 Legend)
+const PACK_POS = { nfl: ['qb', 'rb', 'wr', 'te', 'db'], bucket: ['guard', 'big'] }
+async function openPack(n, min = 0) {
+  const { seasonKit } = await import('./verifyCore')
+  const pick = list => list[Math.floor(Math.random() * list.length)]
+  for (let k = 0; k < n; k++) {
+    const sport = Math.random() < 0.7 ? 'nfl' : 'bucket'
+    const pos = pick(PACK_POS[sport])
+    const mode = Math.random() < 0.3 ? 'all-time' : 'classic'
+    const pool = seasonKit(sport, pos, mode)?.pool ?? []
+    const fits = k === 0 && min ? pool.filter(p => rarityRank(pool, p) >= min) : pool
+    const player = pick(fits.length ? fits : pool)
+    if (player) addCard({ sport, pos, mode, player, pool, pack: true })
+  }
+}
+// Who bought which season's pass (pass_owners: a player can read their own rows)
+async function loadPassOwners(id = uid) {
+  if (!supabase || !id) return false
+  try {
+    const { data, error } = await supabase.from('pass_owners').select('season').eq('user_id', id)
+    if (error || uid !== id) return false
+    const had = passOwn.size
+    passOwn = new Set((data ?? []).map(r => r.season))
+    try { localStorage.setItem(passOwnKey(id), JSON.stringify([...passOwn])) } catch {}
+    emit(true)
+    return passOwn.size > had
+  } catch { return false }
+}
+export const refreshPass = () => loadPassOwners(uid)
+// Back from Stripe (?pass=1): the webhook can land a moment after us, so ask a few times
+export function watchPassReturn() {
+  try {
+    const u = new URL(window.location.href)
+    if (!u.searchParams.has('pass')) return
+    u.searchParams.delete('pass')
+    window.history.replaceState({}, '', u.pathname + (u.search ? u.search : '') + u.hash)
+  } catch { return }
+  let tries = 0
+  const tick = async () => {
+    const s = passSeason(dayKey())
+    if (uid && ((await loadPassOwners(uid)) || (s && passOwn.has(s.id)))) { window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'pass' })); return }
+    if (++tries < 10) setTimeout(tick, 3000)
+  }
+  setTimeout(tick, 1500)
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
 // Achievements
 // ═════════════════════════════════════════════════════════════════════════════
 export function achStats() {
@@ -1088,7 +1232,7 @@ export function claimAch(id) {
 // Last change wins; items and achievements are merged, never lost.
 // ═════════════════════════════════════════════════════════════════════════════
 // potdPaid, dc, day and sets ride along so clearing the device (or a second one) can't pay a reward twice
-const WALLET_KEYS = ['coins', 'coinsEarned', 'owned', 'equip', 'ach', 'achClaimed', 'stats', 'shopFree', 'levelPaid', 'discordPaid', 'feedbackPaid', 'retired', 'potdPaid', 'dc', 'day', 'sets', 'salInf', 'streak', 'unlocks', 'cards']
+const WALLET_KEYS = ['coins', 'coinsEarned', 'owned', 'equip', 'ach', 'achClaimed', 'stats', 'shopFree', 'levelPaid', 'discordPaid', 'feedbackPaid', 'retired', 'potdPaid', 'dc', 'day', 'sets', 'salInf', 'streak', 'unlocks', 'cards', 'pass', 'boostUsed']
 let pushTimer = null, pushing = false, pushAgain = false
 function schedulePush() {
   if (!supabase || !uid) return
@@ -1237,6 +1381,18 @@ function mergeRemote(w) {
       freezes: a.last === b.last ? Math.max(a.freezes || 0, b.freezes || 0) : (keep.freezes || 0) }
   }
   S.unlocks = { ...(w.unlocks || {}), ...(S.unlocks || {}) }
+  // the Builder Pass: the lowest starting XP any device saw, tiers claimed on either side
+  if (w.pass && typeof w.pass === 'object') {
+    const lo = (a, b) => (a == null ? b ?? null : b == null ? a : Math.min(a, b))
+    const out = { ...(S.pass || {}) }
+    for (const [k, b] of Object.entries(w.pass)) {
+      if (!b || typeof b !== 'object') continue
+      const a = out[k] || {}
+      out[k] = { base: lo(a.base, b.base), final: lo(a.final, b.final), f: { ...(b.f || {}), ...(a.f || {}) }, p: { ...(b.p || {}), ...(a.p || {}) } }
+    }
+    S.pass = out
+  }
+  S.boostUsed = Math.max(S.boostUsed || 0, w.boostUsed || 0)
   // the card binder: everything collected on any device, the most copies, the first time seen
   if (w.cards && typeof w.cards === 'object') {
     const c = { ...(S.cards || {}) }

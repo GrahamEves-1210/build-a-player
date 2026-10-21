@@ -14,7 +14,10 @@ export async function onRequestPost(context) {
   try {
     const stripe = new Stripe(context.env.STRIPE_SECRET_KEY)
     const body = await context.request.json()
-    const { app } = body
+    const { app, plan } = body
+    // BAP Pro: monthly (STRIPE_PRICE_ID) or yearly (STRIPE_PRICE_ID_YEARLY, same product in Stripe)
+    const price = plan === 'year' ? context.env.STRIPE_PRICE_ID_YEARLY : context.env.STRIPE_PRICE_ID
+    if (!price) return Response.json({ error: 'That plan is not available yet' }, { status: 400 })
     // the session decides whose purchase it is; older app builds without one still send their id
     const me = await sessionUser(context.request, context.env)
     const userId = me?.id ?? body.userId, email = me?.email ?? body.email
@@ -27,7 +30,7 @@ export async function onRequestPost(context) {
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       payment_method_types: ['card'],
-      line_items: [{ price: context.env.STRIPE_PRICE_ID, quantity: 1 }],
+      line_items: [{ price, quantity: 1 }],
       customer_email: email || undefined,
       metadata: { userId },
       subscription_data: { metadata: { userId } },

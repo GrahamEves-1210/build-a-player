@@ -47,13 +47,23 @@ export function NameText({ name, color, fx, className = '' }) {
   )
 }
 
-// A name with its look. plate: draw the nameplate behind it (cards, chat, lobby)
-export function NameTag({ name, cos, uid = null, self = false, plate = true, className = '' }) {
+// A name with its look. plate: draw the nameplate behind it (cards, chat, lobby).
+// Another player's name with their account id opens their profile when tapped
+// (AppTabBar's PlayerSheet); link={false} where a tap already opens it.
+export function NameTag({ name, cos, uid = null, self = false, plate = true, className = '', link = true }) {
   const c = useCosFor({ self, cos, uid })
+  const me = useProgress().user?.id
   const pl = plate ? known(c.plate, 'plate') : null
   const inner = <NameText name={name} color={c.nameColor} fx={c.nameFx} />
-  if (!pl) return <span className={`ntag${className ? ` ${className}` : ''}`}>{inner}</span>
-  return <span className={`ntag np ${pl}${className ? ` ${className}` : ''}`}><span className="np-shine" aria-hidden="true" />{inner}</span>
+  const tag = !pl
+    ? <span className={`ntag${className ? ` ${className}` : ''}`}>{inner}</span>
+    : <span className={`ntag np ${pl}${className ? ` ${className}` : ''}`}><span className="np-shine" aria-hidden="true" />{inner}</span>
+  if (!link || self || !uid || uid === me) return tag
+  const open = e => { e.preventDefault(); e.stopPropagation(); window.dispatchEvent(new CustomEvent('bap:player', { detail: { id: uid, username: name } })) }
+  return (
+    <span className="ntag-link" role="button" tabIndex={0} aria-label={`${name || 'Player'}'s profile`} onClick={open}
+      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') open(e) }}>{tag}</span>
+  )
 }
 export function AvatarBadge({ cos, uid = null, self = false, name, size = 44, level = null, className = '' }) {
   const c = useCosFor({ self, cos, uid })

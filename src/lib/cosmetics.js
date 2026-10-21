@@ -1,11 +1,14 @@
+import { PASS_ITEMS } from './pass'
+
 // The shop's catalog (app): everything you can buy with coins, earn from
-// achievements, or unlock with BAP Pro. Pure data — prices, rarity, what each
+// achievements, or unlock with BAP Pro or the Builder Pass. Pure data — prices, rarity, what each
 // item looks like (CSS classes in app-shop.css, glyphs in NameTag.jsx, victory
 // effects and sounds in juice.js).
 //
 //   slot     avatar · nameColor · nameFx · plate · winFx · winSound · court
 //   rarity   0 common · 1 rare · 2 epic · 3 legendary
 //   pro      BAP Pro members only (the Pro Vault)
+//   pass     on a Builder Pass track (lib/pass.js PASS_ITEMS): claimed there, never sold
 //   level    unlocks at a level (still bought with coins)
 //   ach      an achievement reward — never sold
 
@@ -62,7 +65,7 @@ const AV = [
   it('avatar', 'av-galaxy',    'Galaxy Brain', 3, 26500, { glyph: 'star', pal: 'galaxy', anim: 'spin' }),
   it('avatar', 'av-trophy-gold', 'Lombardi Gold', 3, 23000, { glyph: 'trophy', pal: 'gold', anim: 'shine', level: 30 }),
   it('avatar', 'av-pro-diamond', 'Diamond', 3, 17000, { glyph: 'mono', pal: 'diamond', anim: 'shine', pro: true }),
-  it('avatar', 'av-pro-blackgold', 'Black & Gold', 2, 5000, { glyph: 'crown', pal: 'blackgold', pro: true }),
+  it('avatar', 'av-pro-blackgold', 'Black & Gold', 2, 5000, { glyph: 'crown', pal: 'blackgold' }),
   it('avatar', 'av-dynasty',   'Dynasty',        3, 0, { glyph: 'ring', pal: 'holo', anim: 'holo', ach: 'rings5' }),
   it('avatar', 'av-perfect',   'Perfect Season', 3, 0, { glyph: 'shield', pal: 'gold', anim: 'shine', ach: 'perfect' }),
 ]
@@ -88,8 +91,8 @@ const NC = [
   it('nameColor', 'nc-chrome',  'Chrome', 2, 6200),
   it('nameColor', 'nc-prism',   'Prism', 2, 7200),
   it('nameColor', 'nc-holo',    'Holo', 3, 19000, { level: 15 }),
-  it('nameColor', 'nc-pro-blackgold', 'Black Gold', 2, 4800, { pro: true }),
-  it('nameColor', 'nc-pro-platinum',  'Platinum', 3, 15500, { pro: true }),
+  it('nameColor', 'nc-pro-blackgold', 'Black Gold', 2, 4800),
+  it('nameColor', 'nc-pro-platinum',  'Platinum', 3, 15500),
   it('nameColor', 'nc-fivetool', 'Color Block',  3, 0, { ach: 'fivetool' }),
   it('nameColor', 'nc-compete',  'Pool Shark', 3, 0, { ach: 'cpwin10' }),
 ]
@@ -132,7 +135,7 @@ const PL = [
   it('plate', 'pl-stadium',    'Stadium Lights', 2, 8200),
   it('plate', 'pl-galaxy',     'Galaxy', 3, 21500),
   it('plate', 'pl-hof',        'Hall of Fame', 3, 29000, { level: 40 }),
-  it('plate', 'pl-pro-blackgold', 'Pro Black Gold', 2, 5000, { pro: true }),
+  it('plate', 'pl-pro-blackgold', 'Black Gold', 2, 5000),
   it('plate', 'pl-pro-holo',   'Pro Holo', 3, 17000, { pro: true }),
   it('plate', 'pl-perfect',    'Perfect Season',  3, 0, { ach: 'perfect' }),
   it('plate', 'pl-blacktop',   'Blacktop King',   3, 0, { ach: 'bt25' }),
@@ -221,12 +224,13 @@ const cost = i => {
   const v = 400 * Math.pow(i.price / 400, 0.75) * (0.7 + hash01(i.id) * 0.7)
   return { ...i, weight: i.price, price: Math.max(150, Math.round(v / 50) * 50) }
 }
-export const ITEMS = [...AV, ...NC, ...NFX, ...PL, ...WF, ...WS, ...CT].map(cost).concat(UL)
+const onPass = i => (PASS_ITEMS[i.id] ? { ...i, pass: PASS_ITEMS[i.id] } : i)
+export const ITEMS = [...AV, ...NC, ...NFX, ...PL, ...WF, ...WS, ...CT].map(cost).map(onPass).concat(UL)
 const BY_ID = Object.fromEntries(ITEMS.map(i => [i.id, i]))
 export const itemById = id => (id ? BY_ID[id] ?? null : null)
 export const itemsFor = slot => ITEMS.filter(i => i.slot === slot)
 export const isFree = i => !!i?.free
-export const forSale = i => !!i && !i.ach && !i.free
+export const forSale = i => !!i && !i.ach && !i.free && !i.pass
 
 // One line of copy for the detail sheet
 export const BLURB = {

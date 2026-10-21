@@ -4,7 +4,8 @@ import { createClient } from '@supabase/supabase-js'
 import cors from 'cors'
 
 // The site's API (Railway). The website and the app call it through VITE_API_URL:
-// Pro checkout + billing portal, coin packs, account deletion, and Stripe's webhook.
+// Pro checkout (monthly / yearly) + billing portal, coin packs, the Builder Pass, account
+// deletion, and Stripe's webhook.
 
 const app = express()
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
@@ -38,6 +39,32 @@ const PACKS = {
   bap_coins_15000: { coins: 38000, cents: 1999 },
 }
 
+// The Builder Pass: one season at a time, $8.99 (src/lib/pass.js). A season sells until it ends.
+// Keep in step with SEASONS there.
+const PASS_SEASONS = {
+  s1: { name: 'Builder Pass · Season 1', cents: 899, end: '2026-12-21' },
+}
+const nyDay = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date())
+
+// BAP Pro's Discord role: given while Pro is on, taken off when it ends. Needs the bot
+// (DISCORD_BOT_TOKEN, in DISCORD_GUILD_ID, with Manage Roles and its role above the Pro
+// role) and DISCORD_PRO_ROLE_ID. Players without Discord linked are skipped; linking
+// it later gives the role then (functions/api/discord-join.js).
+async function setProRole(userId, on) {
+  const { DISCORD_BOT_TOKEN: bot, DISCORD_GUILD_ID: guild, DISCORD_PRO_ROLE_ID: role } = process.env
+  if (!bot || !guild || !role || !userId) return
+  try {
+    const { data: { user } = {} } = await supabase.auth.admin.getUserById(userId)
+    const identity = user?.identities?.find(i => i.provider === 'discord')
+    const discordId = identity?.identity_data?.provider_id ?? identity?.id
+    if (!discordId) return
+    const r = await fetch(`https://discord.com/api/v10/guilds/${guild}/members/${discordId}/roles/${role}`, {
+      method: on ? 'PUT' : 'DELETE', headers: { Authorization: `Bot ${bot}`, 'X-Audit-Log-Reason': on ? 'BAP Pro' : 'BAP Pro ended' },
+    })
+    if (!r.ok && r.status !== 404) console.error('[discord role]', r.status, await r.text().catch(() => ''))
+  } catch (e) { console.error('[discord role]', e?.message) }
+}
+
 // Who's asking, from their Supabase session token (never from an id in the body)
 async function sessionUser(req) {
   const token = (req.headers.authorization || '').replace(/^Bearer\s+/i, '')
@@ -67,12 +94,21 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
           .upsert({ user_id: userId, coins, source: 'stripe', pack: session.metadata.pack ?? null, ref: session.id }, { onConflict: 'ref', ignoreDuplicates: true })
         if (error) console.error('[webhook] coin purchase insert failed:', error)
       }
+    } else if (userId && session.metadata?.kind === 'pass') {
+      // Builder Pass: the season's premium track (supabase/builder_pass.sql); the game reads it
+      const season = session.metadata.season
+      if (PASS_SEASONS[season] && session.payment_status === 'paid') {
+        const { error } = await supabase.from('pass_owners')
+          .upsert({ user_id: userId, season, ref: session.id }, { onConflict: 'user_id,season', ignoreDuplicates: true })
+        if (error) console.error('[webhook] pass insert failed:', error)
+      }
     } else if (userId) {
       if (session.mode === 'subscription') {
         const { error } = await supabase
           .from('accounts')
           .upsert({ id: userId, subscription_status: 'active', subscription_id: session.subscription }, { onConflict: 'id' })
         if (error) console.error('[webhook] subscription upsert failed:', error)
+        await setProRole(userId, true)
       } else {
         const { error } = await supabase
           .from('accounts')
@@ -107,6 +143,9 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
             }
           }
         }
+      } else if (session && userId && session.metadata?.kind === 'pass') {
+        const { error } = await supabase.from('pass_owners').delete().eq('ref', session.id)
+        if (error) console.error('[webhook] pass refund failed:', error)
       } else if (session && userId && session.mode === 'payment') {
         const { error } = await supabase.from('accounts').update({ ads_disabled: false }).eq('id', userId)
         if (error) console.error('[webhook] ad-free refund failed:', error)
@@ -124,6 +163,7 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
         .update({ subscription_status: live ? 'active' : sub.status, subscription_id: sub.id })
         .eq('id', userId)
       if (error) console.error('[webhook] subscription update failed:', error)
+      await setProRole(userId, live)
     }
   }
 
@@ -136,6 +176,7 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
         .update({ subscription_status: null, subscription_id: null })
         .eq('id', userId)
       if (error) console.error('[webhook] subscription cancel failed:', error)
+      await setProRole(userId, false)
     }
   }
 
@@ -144,8 +185,11 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
 
 app.use(express.json())
 
+// BAP Pro: monthly (STRIPE_PRICE_ID) or yearly (STRIPE_PRICE_ID_YEARLY, same product in Stripe)
 app.post('/api/create-checkout', async (req, res) => {
-  const { app: fromApp } = req.body
+  const { app: fromApp, plan } = req.body
+  const price = plan === 'year' ? process.env.STRIPE_PRICE_ID_YEARLY : process.env.STRIPE_PRICE_ID
+  if (!price) return res.status(400).json({ error: 'That plan is not available yet' })
   // the session decides whose purchase it is; older app builds without one still send their id
   const me = await sessionUser(req)
   const userId = me?.id ?? req.body.userId, email = me?.email ?? req.body.email
@@ -156,7 +200,7 @@ app.post('/api/create-checkout', async (req, res) => {
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       payment_method_types: ['card'],
-      line_items: [{ price: process.env.STRIPE_PRICE_ID, quantity: 1 }],
+      line_items: [{ price, quantity: 1 }],
       customer_email: email || undefined,
       metadata: { userId },
       subscription_data: { metadata: { userId } },
@@ -208,6 +252,33 @@ app.post('/api/create-coins-checkout', async (req, res) => {
   }
 })
 
+// The Builder Pass: one-time Stripe Checkout for a season; the webhook records it (pass_owners)
+app.post('/api/create-pass-checkout', async (req, res) => {
+  const { season, app: fromApp } = req.body
+  const me = await sessionUser(req)
+  if (!me) return res.status(401).json({ error: 'Sign in again.' })
+  const p = PASS_SEASONS[season]
+  if (!p || nyDay() >= p.end) return res.status(400).json({ error: 'That season is over' })
+  const { data: owned } = await supabase.from('pass_owners').select('season').eq('user_id', me.id).eq('season', season).maybeSingle()
+  if (owned) return res.status(400).json({ error: 'You already have this pass' })
+  const origin = returnBase(req, fromApp)
+  try {
+    const session = await stripe.checkout.sessions.create({
+      mode: 'payment',
+      line_items: [{ quantity: 1, price_data: { currency: 'usd', unit_amount: p.cents, product_data: { name: p.name } } }],
+      customer_email: me.email || undefined,
+      metadata: { userId: me.id, kind: 'pass', season },
+      payment_intent_data: { metadata: { userId: me.id, kind: 'pass', season } },
+      success_url: `${origin}/?pass=1`,
+      cancel_url: `${origin}/`,
+    })
+    res.json({ url: session.url })
+  } catch (err) {
+    console.error('[pass checkout]', err)
+    res.status(500).json({ error: err.message })
+  }
+})
+
 app.post('/api/create-portal', async (req, res) => {
   // the billing portal shows the customer's email, card and invoices and can cancel the
   // subscription: only the signed-in player, for their own account
@@ -240,7 +311,7 @@ app.post('/api/create-portal', async (req, res) => {
 const USER_ROWS = [
   ['simulations', 'user_id'], ['vs_results', 'user_id'], ['salary_cap_plays', 'user_id'],
   ['salary_infinite_plays', 'user_id'], ['depth_chart_streaks', 'user_id'], ['analytics_events', 'user_id'],
-  ['careers', 'user_id'], ['coin_purchases', 'user_id'],
+  ['careers', 'user_id'], ['coin_purchases', 'user_id'], ['pass_owners', 'user_id'],
   ['friend_requests', 'from_id'], ['friend_requests', 'to_id'],
   ['vs_invites', 'from_id'], ['vs_invites', 'to_id'],
   ['accounts', 'id'],

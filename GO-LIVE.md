@@ -28,6 +28,15 @@
 ## Testing in several tabs later
 One-seat-per-device is ON: `ONE_PER_DEVICE` in `live/src/queue.js` and `liveElsewhere()` in `src/lib/live.js`. Turn both off to test with several tabs, and back on before shipping.
 
+## BAP Pro yearly + Builder Pass + Discord Pro role (one-time setup)
+1. Supabase → SQL Editor: run `supabase/builder_pass.sql` (the `pass_owners` table).
+2. Stripe → Product catalog → your BAP Pro product → Add another price: $49.99, Recurring, Yearly. Copy its price id (`price_…`).
+3. Set `STRIPE_PRICE_ID_YEARLY` = that id on Railway (Variables) and on Cloudflare Pages (Settings → Variables and Secrets, Production).
+4. Discord: Server Settings → Roles → create "BAP Pro". Drag the bot's role above it, and make sure the bot's role has Manage Roles. Right-click the BAP Pro role → Copy Role ID (Developer Mode on).
+5. Set `DISCORD_PRO_ROLE_ID` = that id on Railway and Cloudflare Pages. Railway also needs `DISCORD_BOT_TOKEN` and `DISCORD_GUILD_ID` (the same values Cloudflare already has).
+6. Nothing to add to the webhook: the pass uses `checkout.session.completed` and `charge.refunded` / `charge.dispute.created`, which are already on.
+The pass's price ($8.99) and seasons live in code (`src/lib/pass.js`, `server/server.js`, `functions/api/create-pass-checkout.js`, `functions/api/stripe-webhook.js`): add Season 2 to all of them before Dec 21.
+
 ## Forgot password (one-time setup)
 - Resend → Domains: add and verify `build-a-player.com` (the reset email comes from `noreply@build-a-player.com`). Until it's verified, Resend refuses to send from it.
 - Supabase → Authentication → URL Configuration → Redirect URLs: make sure `https://build-a-player.com/**` is listed (the reset link lands on `https://build-a-player.com/?reset=1`).

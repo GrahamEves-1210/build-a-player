@@ -4,33 +4,37 @@ import { supabase } from '../../lib/supabase'
 import FeedbackModal from '../FeedbackModal'
 import { isMuted, setMuted } from '../../lib/juice'
 import { IS_APP } from '../../lib/platform'
-import { openCheckout } from '../../lib/webCheckout'
+import { openCheckout, PRO_PRICE } from '../../lib/webCheckout'
+import { sellsHere } from '../../lib/storefront'
 import { isPro } from '../../lib/progress'
 import { railPreviewOn, setRailPreview } from '../../lib/fakeRail'
-import { IconQuestion, IconInfo, IconChat, IconDiscord, IconX, IconClose, IconShield, IconDoc, IconPodium, IconPlay, IconCrown, IconHome, IconGear } from './icons'
+import { IconQuestion, IconInfo, IconChat, IconDiscord, IconX, IconClose, IconShield, IconDoc, IconPodium, IconPlay, IconCrown, IconHome, IconGear, IconStar } from './icons'
 import { useProgress } from '../../lib/progress'
 import AppSettings from './AppSettings'
 import { guardLeave } from '../../lib/liveLock'
+import './pass.css'
 
 // App "More" sheet (gear on the home screen): tiles + a How to Play view.
 
 const nav = to => window.dispatchEvent(new CustomEvent('bap:nav', { detail: to }))
 
-// BAP Pro: Stripe on the web (the app opens the checkout in the phone's browser)
+// BAP Pro: Stripe on the web (the app opens the checkout in the phone's browser),
+// monthly or yearly. The Builder Pass is its own thing (lib/pass.js)
 const PRO_PERKS = [
-  ['The Pro Vault', 'Exclusive avatars, name styles, plates and victory effects in the shop'],
-  ['Double the daily coins', 'The shop\'s free daily drop is doubled'],
   ['No ads', 'Every page, on the website'],
-  ['Pro badge', 'On the leaderboards next to your name'],
+  ['The Pro Vault', 'Four members-only looks in the shop: Diamond, Pro Aura, Pro Holo and Supernova'],
+  ['Double the daily coins', 'The shop\'s free daily drop is doubled'],
+  ['Pro badge and Discord role', 'Next to your name on the leaderboards, and a Pro role in the Discord (link Discord on your profile)'],
 ]
 
 function ProView({ onVault }) {
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState(null)
+  const [plan, setPlan] = useState('year')
   const pro = isPro()
   const subscribe = async () => {
     setErr(null); setBusy(true)
-    const r = await openCheckout('pro')
+    const r = await openCheckout('pro', { plan })
     setBusy(false)
     if (r === 'error') setErr('Checkout didn\'t open. Try again.')
   }
@@ -39,8 +43,18 @@ function ProView({ onVault }) {
       <div className={`ag-pro-hero ag-pop${pro ? ' is-on' : ''}`}>
         <span className="ag-pro-crown"><IconCrown size={30} /></span>
         <b>BAP PRO</b>
-        <span>{pro ? 'Active — thanks for backing the game.' : '$4.99 / month · cancel anytime'}</span>
+        <span>{pro ? 'Active — thanks for backing the game.' : 'Cancel anytime'}</span>
       </div>
+      {!pro && sellsHere() && (
+        <div className="ag-pro-plans" role="radiogroup" aria-label="Plan">
+          <button role="radio" aria-checked={plan === 'month'} className={`ag-pro-plan${plan === 'month' ? ' is-on' : ''}`} onClick={() => setPlan('month')}>
+            <small>MONTHLY</small><b>{PRO_PRICE.month}</b><span>a month</span>
+          </button>
+          <button role="radio" aria-checked={plan === 'year'} className={`ag-pro-plan${plan === 'year' ? ' is-on' : ''}`} onClick={() => setPlan('year')}>
+            <i>SAVE {PRO_PRICE.save}</i><small>YEARLY</small><b>{PRO_PRICE.year}</b><span>a year</span>
+          </button>
+        </div>
+      )}
       <div className="ag-pro-perks">
         {PRO_PERKS.map(([t, d], i) => (
           <div key={t} className="ag-pro-perk ag-pop" style={{ '--d': `${60 + i * 40}ms` }}>
@@ -51,12 +65,12 @@ function ProView({ onVault }) {
       </div>
       {pro ? (
         <button className="ag-btn ag-pro-cta" onClick={onVault}>OPEN THE PRO VAULT</button>
-      ) : (
+      ) : sellsHere() ? (
         <>
-          <button className="ag-btn ag-pro-cta" onClick={subscribe} disabled={busy}>{busy ? 'OPENING CHECKOUT…' : IS_APP ? 'SUBSCRIBE ON THE WEB' : 'GO PRO — $4.99/MO'}</button>
-          {IS_APP && <p className="ag-pro-note">Opens a secure Stripe checkout on build-a-player.com. Pro carries over to the app on this account.</p>}
+          <button className="ag-btn ag-pro-cta" onClick={subscribe} disabled={busy}>{busy ? 'OPENING CHECKOUT…' : `GO PRO — ${plan === 'year' ? `${PRO_PRICE.year}/YR` : `${PRO_PRICE.month}/MO`}`}</button>
+          <p className="ag-pro-note">{IS_APP ? 'Opens a secure Stripe checkout on build-a-player.com. Pro carries over to the app on this account. ' : ''}If Build-A-Player ever shuts down, the unused part of a yearly plan is refunded.</p>
         </>
-      )}
+      ) : null}
       {err && <p className="ag-pro-note ag-pro-note--err">{err}</p>}
     </div>
   )
@@ -79,8 +93,8 @@ function Tile({ tone, Icon, title, sub, onClick, delay, wide = false }) {
   )
 }
 
-export default function AppMenu({ sport, onClose }) {
-  const [view, setView] = useState('menu')            // 'menu' | 'howto' | 'pro' | 'settings'
+export default function AppMenu({ sport, onClose, initialView = 'menu' }) {
+  const [view, setView] = useState(initialView)       // 'menu' | 'howto' | 'pro' | 'settings'
   const [feedbackUser, setFeedbackUser] = useState(null) // null = closed
   const [muted, setMutedState] = useState(isMuted)
   const [rail, setRailState] = useState(railPreviewOn)
@@ -103,7 +117,7 @@ export default function AppMenu({ sport, onClose }) {
     <div className="ag-menu-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className={`ag-menu ag-menu--${sport}`} role="dialog" aria-label={view === 'howto' ? 'How to play' : view === 'pro' ? 'BAP Pro' : view === 'settings' ? 'Settings' : 'More'}>
         <div className="ag-menu-head">
-          {view !== 'menu'
+          {view !== 'menu' && !(view === 'pro' && initialView === 'pro')
             ? <button className="ag-menu-back" onClick={() => setView('menu')}>‹ BACK</button>
             : <span />}
           <h2 className="ag-menu-title">{view === 'howto' ? 'How to play' : view === 'pro' ? 'BAP Pro' : view === 'settings' ? 'Settings' : 'More'}</h2>
@@ -139,6 +153,8 @@ export default function AppMenu({ sport, onClose }) {
               <Tile tone="discord" Icon={IconDiscord} title="DISCORD" sub="Join the community" onClick={goOut(() => window.open('https://discord.gg/zdZBu2VjUD', '_blank'))} delay="60ms" />
               <Tile tone="ink" Icon={IconX} title="FOLLOW" sub="@Build_A_Player" onClick={goOut(() => window.open('https://x.com/Build_A_Player', '_blank'))} delay="90ms" />
               <Tile tone="purple" Icon={IconChat} title="FEEDBACK" sub="Ideas & bugs" onClick={openFeedback} delay="120ms" />
+              <Tile tone="mint" Icon={IconStar} title="BUILDER PASS" sub="This season's rewards" onClick={go(() => nav('pass'))} delay="150ms" />
+              {(isPro() || sellsHere()) && <Tile tone="gold" Icon={IconCrown} title="BAP PRO" sub={isPro() ? 'Active' : 'No ads · Pro Vault'} onClick={() => setView('pro')} delay="180ms" />}
             </div>
             <button className={`ag-row-btn${muted ? ' ag-sound--off' : ''}`} onClick={() => { setMuted(!muted); setMutedState(!muted) }}>
               <span className="ag-sound-lbl">SOUND</span>
