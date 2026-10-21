@@ -4,6 +4,7 @@ import { QBS, ATTR, TYPES } from '../data/qbs'
 import { LEGENDS } from '../data/qb-legends'
 import { TEAMS } from '../data/nfl-teams'
 import HEADSHOTS from '../data/headshots.json'
+import { salaryKit } from '../lib/salaryCore'
 import { supabase } from '../lib/supabase'
 import { valToGrade, nflHeadshot } from '../utils/simulation'
 import { getUsername } from '../lib/discord'
@@ -172,171 +173,13 @@ const POWER_SEEN_KEY = 'qbsal_power_seen'
 // detect back-to-back appearances and apply a penalty the following day).
 // Compute the correct salary tier for a legend in a given column by ranking
 // their catScore against the regular player pool (no rand needed — deterministic).
-function legendTierFor(legend, col, regulars) {
-  const legTypes  = typesFor(legend, col)
-  const legScore  = legTypes.reduce((s, t) => s + (legend.attrs?.[t] ?? 5), 0) / legTypes.length
-  const sorted    = regulars
-    .map(p => { const ts = typesFor(p, col); return ts.reduce((s, t) => s + (p.attrs?.[t] ?? 5), 0) / ts.length })
-    .sort((a, b) => b - a)
-  const rank = sorted.findIndex(s => s <= legScore)
-  // rank === -1 means no player scored as low as the legend → legend is the worst → pct = 1.0
-  const pct  = rank === -1 ? 1.0 : rank / sorted.length
-  if (pct < 0.20) return 0  // $50
-  if (pct < 0.40) return 1  // $40
-  if (pct < 0.60) return 2  // $30
-  if (pct < 0.80) return 3  // $20
-  return 4                   // $10
-}
+// the board itself: lib/salaryCore.js (the live server checks plays against the same board)
+const { legendTierFor, pickLegendSlots, getPickedNamesForSeed, generateGrid } = salaryKit({ typesFor, look: p => ({ teamColor: teamColorOf(p), teamColor2: teamColor2Of(p), photo: photoFor(p.name) }) })
 
 // Pick 2 deterministic legend slots — cycles through all legends before repeating.
 // rand() still used for column and tier nudge so placement varies day-to-day.
-function pickLegendSlots(rand, cols, legends, regulars, seed) {
-  // Compute sequential day index from seed (yyyymmdd format)
-  const y   = Math.floor(seed / 10000)
-  const m   = Math.floor((seed % 10000) / 100)
-  const day = seed % 100
-  const epochMs = new Date(2026, 0, 1).getTime()
-  const dayIdx  = Math.round((new Date(y, m - 1, day).getTime() - epochMs) / 86400000)
 
-  // Fixed shuffle of legend list so pair order isn't biased toward list order
-  const fixedR = seededRandom(0xBADC0FFE)
-  const shuffled = [...legends]
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(fixedR() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
-  }
 
-  // Pick pair based on day index — all legends appear before any repeats
-  const n = shuffled.length
-  const leg0 = shuffled[((dayIdx * 2)     % n + n) % n]
-  const leg1 = shuffled[((dayIdx * 2 + 1) % n + n) % n]
-
-  const usedLegends = new Set()
-  if (leg0) usedLegends.add(leg0.name)
-  if (leg1) usedLegends.add(leg1.name)
-
-  // Column placement still uses daily rand() for variation; tier is the
-  // legend's actual rank-based tier — no randomized nudge off of it.
-  const li0c = Math.floor(rand() * cols.length)
-  const li1c = Math.floor(rand() * cols.length)
-
-  let li0t = leg0 ? legendTierFor(leg0, cols[li0c], regulars) : 0
-  let li1t = leg1 ? legendTierFor(leg1, cols[li1c], regulars) : 1
-  // If both land in the same (col, tier) slot, shift whichever one actually
-  // scores lower to the adjacent tier — toward cheaper, unless it's already
-  // at the cheapest tier (then toward the next-cheapest instead of wrapping
-  // around to the most expensive, which could put the weaker legend at $50).
-  if (leg0 && leg1 && li1c === li0c && li1t === li0t) {
-    const scoreOf = leg => {
-      const ts = typesFor(leg, cols[li0c])
-      return ts.reduce((s, t) => s + (leg.attrs?.[t] ?? 5), 0) / ts.length
-    }
-    const shift = t => t < TIERS.length - 1 ? t + 1 : t - 1
-    if (scoreOf(leg0) <= scoreOf(leg1)) li0t = shift(li0t)
-    else li1t = shift(li1t)
-  }
-
-  const map = new Map()
-  if (leg0) map.set(`${li0c}-${li0t}`, leg0)
-  if (leg1) map.set(`${li1c}-${li1t}`, leg1)
-  return { map, usedLegends }
-}
-
-function getPickedNamesForSeed(seed, cols, players) {
-  const rand     = seededRandom(seed)
-  const legends  = players.filter(p => p.legend)
-  const regulars = players.filter(p => !p.legend)
-  const { map: legendMap, usedLegends } = pickLegendSlots(rand, cols, legends, regulars, seed)
-
-  const used = new Set([...usedLegends])
-
-  for (const [key] of legendMap) used.add(legendMap.get(key).name)
-
-  cols.forEach((col, ci) => {
-    const scored = regulars
-      .map(p => ({
-        name: p.name,
-        catScore: (() => { const ts = typesFor(p, col); return ts.reduce((s, t) => s + (p.attrs?.[t] ?? 5), 0) / ts.length })(),
-      }))
-      .sort((a, b) => b.catScore - a.catScore)
-    const n = scored.length
-    for (let ti = 0; ti < TIERS.length; ti++) {
-      if (legendMap.has(`${ci}-${ti}`)) continue
-      const [lo, hi] = TIER_BANDS[ti]
-      let pool = scored
-        .slice(Math.floor(lo * n), Math.max(Math.floor(lo * n) + 1, Math.floor(hi * n)))
-        .filter(p => !used.has(p.name))
-      if (!pool.length) pool = scored.filter(p => !used.has(p.name))
-      if (!pool.length) pool = scored
-      const player = pool[Math.floor(rand() * pool.length)]
-      used.add(player.name)
-    }
-  })
-  return used
-}
-
-function generateGrid(cols, players, rand, recentlyUsed = new Set(), seed = 0) {
-  const RECENT_PENALTY = 3.5
-  const legends  = players.filter(p => p.legend)
-  const regulars = players.filter(p => !p.legend)
-
-  // 2 rand() calls to place exactly 2 legends — same for all users on the same day
-  const { map: legendMap, usedLegends } = pickLegendSlots(rand, cols, legends, regulars, seed)
-
-  function buildCard(p, col, price) {
-    const attrs = {}
-    const pts = typesFor(p, col)
-    pts.forEach(t => { attrs[t] = p.attrs?.[t] ?? 5 })
-    return {
-      ...p,
-      price, attrs, fullAttrs: p.attrs,
-      catScore: pts.reduce((s, t) => s + (p.attrs?.[t] ?? 5), 0) / pts.length,
-      teamColor:  teamColorOf(p),
-      teamColor2: teamColor2Of(p),
-      photo:  photoFor(p.name),
-      number: p.number ?? null,
-      id:     `${col.key}-${price}-${p.name}`,
-    }
-  }
-
-  const used = new Set([...usedLegends])
-
-  return cols.map((col, ci) => {
-    const scored = regulars
-      .map(p => ({
-        ...p,
-        teamColor:  teamColorOf(p),
-        teamColor2: teamColor2Of(p),
-        catScore: (() => { const ts = typesFor(p, col); return ts.reduce((s, t) => s + (p.attrs?.[t] ?? 5), 0) / ts.length })()
-                  - (recentlyUsed.has(p.name) ? RECENT_PENALTY : 0),
-      }))
-      .sort((a, b) => b.catScore - a.catScore)
-    const n = scored.length
-    return TIERS.map((price, ti) => {
-      const legKey = `${ci}-${ti}`
-      if (legendMap.has(legKey)) return buildCard(legendMap.get(legKey), col, price)
-
-      const [lo, hi] = TIER_BANDS[ti]
-      let pool = scored
-        .slice(Math.floor(lo * n), Math.max(Math.floor(lo * n) + 1, Math.floor(hi * n)))
-        .filter(p => !used.has(p.name))
-      if (!pool.length) pool = scored.filter(p => !used.has(p.name))
-      if (!pool.length) pool = scored
-      const player = pool[Math.floor(rand() * pool.length)]
-      used.add(player.name)
-      const attrs = {}
-      typesFor(player, col).forEach(t => { attrs[t] = player.attrs?.[t] ?? 5 })
-      return {
-        ...player,
-        price, attrs, fullAttrs: player.attrs,
-        catScore: player.catScore,
-        photo:  photoFor(player.name),
-        number: player.number ?? null,
-        id:     `${col.key}-${price}-${player.name}`,
-      }
-    })
-  })
-}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function isNearBlack(hex) {

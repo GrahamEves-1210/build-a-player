@@ -35,6 +35,14 @@ export async function saveSeason(sport, pos, mode, row) {
   return supabase.from('simulations').insert(row)
 }
 
+// Salary Cap: the server checks the picks against the day's board (or an Infinite board's
+// prices) and works out the score itself
+export async function saveSalary({ sport, infinite, date, picks, pos, sent }, row, table) {
+  const r = await viaServer('salary', { sport, infinite: !!infinite, date, picks, pos, sent })
+  if (r) return asInsert(r)
+  return supabase.from(table).insert(row)
+}
+
 export async function saveDaily(row) {
   const r = await viaServer('daily', { day: row.day, build: row.build })
   if (r) return asInsert(r)

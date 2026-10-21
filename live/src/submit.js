@@ -9,7 +9,7 @@
 //   SUPABASE_SERVICE_ROLE_KEY            a secret: npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
 // Without the secret every submit answers 503 and the game saves the old way.
 
-import { checkDaily, checkSeason } from '../../src/lib/verifyCore.js'
+import { checkDaily, checkSeason, checkSalaryCap } from '../../src/lib/verifyCore.js'
 
 const ORIGINS = [/^https:\/\/(www\.)?build-a-player\.com$/, /^https:\/\/([a-z0-9-]+\.)?build-a-player\.pages\.dev$/, /^https?:\/\/localhost(:\d+)?$/, /^capacitor:\/\/localhost$/, /^https?:\/\/127\.0\.0\.1(:\d+)?$/]
 const corsFor = req => {
@@ -76,6 +76,24 @@ export async function handleSubmit(req, env, kind) {
     if (r.error) return json({ error: r.error }, 422, cors)
     const keep = sport === 'bucket' ? t => ({ number: row.build?.[t]?.number ?? null }) : () => ({})
     const res = await insert(env, 'simulations', { ...row, user_id: user.id, ovr: r.ovr, build: slim(r.build, keep) }, user.id)
+    return json(res, res.ok || res.code === '23505' ? 200 : 502, cors)
+  }
+
+  // Salary Cap: a daily play (today's board, or yesterday's just after midnight) or an
+  // Infinite one; the day's frozen board is read here and only trusted if it checks out
+  if (kind === 'salary') {
+    const { sport, infinite, date, picks, pos, sent } = body
+    const bucket = sport === 'bucket'
+    if (!infinite && date !== nyDay(0) && date !== nyDay(-1)) return json({ error: 'not today\'s board' }, 422, cors)
+    let frozen = null
+    if (!infinite) {
+      const g = await fetch(`${env.SUPABASE_URL}/rest/v1/${bucket ? 'salary_cap_grids' : 'qb_salary_cap_grids'}?date_str=eq.${date}&select=grid&limit=1`, { headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}` } }).catch(() => null)
+      frozen = g?.ok ? ((await g.json().catch(() => null))?.[0]?.grid ?? null) : null
+    }
+    const r = checkSalaryCap({ sport: bucket ? 'bucket' : 'nfl', date, infinite: !!infinite, picks, pos: pos === 'big' ? 'big' : 'guard', frozen, sent: sent || {} })
+    if (r.error) return json({ error: r.error }, 422, cors)
+    const table = bucket ? (infinite ? 'salary_infinite_plays' : 'salary_cap_plays') : (infinite ? 'qb_salary_infinite_plays' : 'qb_salary_cap_plays')
+    const res = await insert(env, table, { ...r.row, user_id: user.id, ...(infinite ? {} : { date_str: date }) }, user.id)
     return json(res, res.ok || res.code === '23505' ? 200 : 502, cors)
   }
 

@@ -50,7 +50,7 @@ import { supabase, rtSupabase, apiHeaders } from './lib/supabase'
 import { track } from './lib/track'
 import { loadCareer, saveCareer, newCareer, CAREER_POS, syncCareerFromCloud } from './lib/career'
 import { blockReason, buildSig, markPlayed } from './lib/saveGuard'
-import { saveSeason } from './lib/submit'
+import { saveSeason, saveSalary } from './lib/submit'
 import CustomRatingsModal from './components/CustomRatingsModal'
 import SiteFooter from './components/SiteFooter'
 import SiteFeatures from './components/SiteFeatures'
@@ -906,10 +906,10 @@ export default function App() {
         pass_yds: result.seasonPassYds ?? saveData.passYds ?? null, pass_tds: result.seasonTDs ?? saveData.passTds ?? null,
         ints: result.seasonINTs ?? saveData.ints ?? null, budget_used: saveData.totalCost,
       }
-      const q = saveData.infinite
-        ? supabase.from('qb_salary_infinite_plays').insert(row)
-        : supabase.from('qb_salary_cap_plays').insert({ ...row, date_str: dateStr })
-      q.then(({ error }) => { if (error) console.error('[qb salary save]', error.code, error.message) })
+      // checked by the live server on its way to the board (lib/submit.js)
+      saveSalary({ sport: 'nfl', infinite: !!saveData.infinite, date: dateStr, picks: saveData.picks, sent: row },
+        saveData.infinite ? row : { ...row, date_str: dateStr }, saveData.infinite ? 'qb_salary_infinite_plays' : 'qb_salary_cap_plays')
+        .then(({ error }) => { if (error) console.error('[qb salary save]', error.code, error.message) })
     }
   }, [])
   // Salary Cap has its own URL (/salary), like basketball's /bucket/salary: browser

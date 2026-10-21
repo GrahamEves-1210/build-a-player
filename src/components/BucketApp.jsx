@@ -37,7 +37,7 @@ import { IS_APP, APP_LOOK } from '../lib/platform'
 import AppHome from './app/AppHome'
 import { FlipEdge, BuildComplete, useFlip, StackEdge, StackSeam, useDropMode, useDropSheet, DropBar, DropSheet } from './app/AppBuildTray'
 import { useCompete, botBuild } from '../lib/compete'
-import { saveSeason } from '../lib/submit'
+import { saveSeason, saveSalary } from '../lib/submit'
 import { seededTeams, seededPlayer } from '../lib/competeCore'
 import { seatSeed, seatRespinSeed } from '../lib/blacktopCore'
 import { setLiveLock, liveLock, guardLeave } from '../lib/liveLock'
@@ -1031,30 +1031,14 @@ export default function BucketApp() {
     window.scrollTo(0, 0)
     // Save to leaderboard with the real sim OVR (only on fresh plays, not View Results)
     if (saveData?.userId && !saveData.noPost && supabase && !skipToEnd) {
-      if (saveData.infinite) {
-        supabase.from('salary_infinite_plays').insert({
-          user_id:       saveData.userId,
-          username:      saveData.username,
-          picks:         saveData.picks,
-          overall_score: result.ovr,
-          ppg:           saveData.ppg,
-          apg:           saveData.apg,
-          rpg:           saveData.rpg,
-          budget_used:   saveData.totalCost,
-        }).then(({ error }) => { if (error) console.error('[salary-infinite] save failed:', error) })
-      } else {
-        supabase.from('salary_cap_plays').insert({
-          date_str:      dateStr,
-          user_id:       saveData.userId,
-          username:      saveData.username,
-          picks:         saveData.picks,
-          overall_score: result.ovr,
-          ppg:           saveData.ppg,
-          apg:           saveData.apg,
-          rpg:           saveData.rpg,
-          budget_used:   saveData.totalCost,
-        }).then(({ error }) => { if (error) console.error('[salary-cap] save failed:', error) })
+      // checked by the live server on its way to the board (lib/submit.js)
+      const row = {
+        user_id: saveData.userId, username: saveData.username, picks: saveData.picks, overall_score: result.ovr,
+        ppg: saveData.ppg, apg: saveData.apg, rpg: saveData.rpg, budget_used: saveData.totalCost,
       }
+      saveSalary({ sport: 'bucket', infinite: !!saveData.infinite, date: dateStr, picks: saveData.picks, pos: position, sent: row },
+        saveData.infinite ? row : { ...row, date_str: dateStr }, saveData.infinite ? 'salary_infinite_plays' : 'salary_cap_plays')
+        .then(({ error }) => { if (error) console.error('[salary-cap] save failed:', error) })
     }
   }, [activeTypes, position])
 
