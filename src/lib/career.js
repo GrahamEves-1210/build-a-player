@@ -1055,8 +1055,29 @@ export function chooseMoment(c, D, option) {
   if (e.trade) { cc = signDeal(cc, e.trade); D.deals = () => dealsFor(cc) }
   return [withSnap(cc, D, { moment: null, feed }), outcome]
 }
-// Injury: sit it out, or play through (traits down for longer, and it can get worse)
-export function resolveInjury(c, D, play) {
+// ── Career boosts (lib/progress.js BOOSTS; the hub spends them) ──
+// Hot Hand: two grades up in every trait for the next 3 games (6 in basketball), twice
+// a hot streak's lift. Not while hurt, out, sitting the next game (a backup),
+// at a decision, or once it's running.
+export const hotGames = c => (sportOf(c).isBucket ? 6 : 3)
+export const hotHandOn = c => !!c.active?.hot && c.active.k < c.active.hot.to
+export const canHotHand = (c, D) => {
+  const a = c.active
+  return !!a && !!D && !a.moment && !a.injury && !a.po && !a.out && a.k < D.total && !(D.sat ?? []).includes(a.k) && !hotHandOn(c)
+}
+export function hotHand(c, D) {
+  const a = c.active
+  if (!canHotHand(c, D)) return c
+  const from = a.k, to = Math.min(D.total, a.k + hotGames(c)), n = to - from
+  D.nudge({ attr: Object.fromEntries(c.types.map(t => [t, 2])) }, from, to, 'HOT HAND')
+  const S = sportOf(c)
+  const feed = [...a.feed, { k: a.k, note: `${c.name} is feeling it: two grades up in every trait for the next ${n} ${n === 1 ? S.gameWord.toLowerCase() : `${S.gameWord.toLowerCase()}s`}.`, noteKind: 'HOT HAND' }]
+  return withSnap(c, D, { hot: { from, to }, feed })
+}
+
+// Injury: sit it out, or play through (traits down for longer, and it can get worse).
+// heal (Quick Heal): sit out half as long
+export function resolveInjury(c, D, play, heal = false) {
   const S = sportOf(c)
   const inj = c.active.injury, at = c.active.k
   const r = seeded(`${c.seed}-injres-${c.year}-${at}`)
@@ -1067,6 +1088,10 @@ export function resolveInjury(c, D, play) {
     D.choose({ id: 'injury', stop: { at, kind: 'season' }, title: inj.kind }, { label: 'play through it', effect: { window: inj.games + 2, attr } })
     if (worse) { D.sidelined(at + 1, inj.games); text = `Played through the ${inj.kind}, then it got worse. Out ${inj.games} games.` }
     else text = `Playing through the ${inj.kind}. Not yourself for ${inj.games + 2} games.`
+  } else if (heal && !inj.serious) {
+    const games = Math.max(1, Math.ceil(inj.games / 2))
+    D.sidelined(at, games)
+    text = `Quick Heal: out ${games} ${games === 1 ? 'game' : 'games'} with the ${inj.kind}, not ${inj.games}.`
   } else {
     D.sidelined(at, inj.games)
     text = inj.serious ? `${inj.kind}: season over.` : `Out ${inj.games} games with the ${inj.kind}.`

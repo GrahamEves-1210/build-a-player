@@ -159,3 +159,10 @@
   .bp-bar > span, .bp-cell, .bp-card, .pro-card, .ag-pro-plan { transition: none; }
   .bp-cell.is-ready:active, .bp-card:active, .pro-card:active, .ag-pro-plan:active { transform: none; }
 }
+
+.bp-art--rush { position: relative; background: rgba(242,201,76,.12); }
+.bp-art--rush .coin-ico { width: 20px; height: 20px; }
+.bp-art--rush i { position: absolute; right: 2px; bottom: 1px; font-style: normal; font-family: var(--ag-display); font-size: 11px; color: #fde68a; text-shadow: 0 1px 2px rgba(0,0,0,.8); }
+.bp-art--hot { color: #ff8a3d; background: rgba(255,120,40,.14); }
+.bp-art--heal { color: #6ee7b7; background: rgba(110,231,183,.12); }
+.bp-art--heal b { font-family: var(--ag-display); font-weight: 400; font-size: 24px; line-height: 1; }

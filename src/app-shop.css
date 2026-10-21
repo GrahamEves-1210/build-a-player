@@ -486,3 +486,83 @@
 .ntag-link { display: inline-flex; max-width: 100%; cursor: pointer; border-radius: 6px; -webkit-tap-highlight-color: transparent; }
 .ntag-link:focus-visible { outline: 2px solid var(--ag-a1, #5EDBD8); outline-offset: 2px; }
 @media (hover: hover) { .ntag-link:hover .nt { text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; } }
+
+/* Shop → Boosts */
+.bst-list { display: flex; flex-direction: column; gap: 8px; }
+.bst-row { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 12px; border-radius: 14px; border: 1px solid var(--ag-line); background: var(--ag-panel); transition: border-color .15s; }
+.bst-row.is-got { border-color: var(--ag-a1); }
+.bst-txt { display: grid; gap: 2px; min-width: 0; }
+.bst-txt b { font-family: var(--ag-font); font-weight: 400; font-size: 18px; letter-spacing: 1.4px; line-height: 1.05; }
+.bst-txt small { font-family: var(--ag-body); font-size: 12px; line-height: 1.4; color: var(--ag-muted); text-wrap: pretty; }
+.bst-txt em { font-style: normal; font-family: var(--ag-font); font-size: 12px; letter-spacing: 1.4px; color: var(--ag-text-2); }
+.bst-buy { display: inline-flex; align-items: center; gap: 4px; min-height: 40px; padding: 8px 12px 6px; border: 0; border-radius: 10px; cursor: pointer; font-family: var(--ag-font); font-size: 16px; letter-spacing: 1.4px; color: #1a0f00; background: linear-gradient(135deg, #fde68a, #f2c94c); -webkit-tap-highlight-color: transparent; transition: transform .15s ease-out; }
+.bst-buy.is-pass { color: var(--ag-on); background: var(--ag-grad); }
+.bst-buy:not(:disabled):active { transform: scale(.96); }
+.bst-buy:disabled { color: var(--ag-muted); background: rgba(255,255,255,.06); cursor: default; }
+
+/* ═══ Lobby entrances (shop: Entrances). NameTag.jsx <Entrance> plays one on a seat
+   (.ent-host) once, when a player takes it; the shop's preview replays it ═══ */
+.ent-host { position: relative; }
+.ent { position: absolute; inset: -3px; z-index: 3; border-radius: inherit; pointer-events: none; animation: ent-fade 1.6s ease-out both; }
+.ent::before, .ent::after { content: ''; position: absolute; pointer-events: none; }
+@keyframes ent-fade { 0% { opacity: 0; } 12% { opacity: 1; } 70% { opacity: 1; } 100% { opacity: 0; } }
+
+/* Confetti Cannon: a burst of colored flecks falling through the seat */
+.ent-confetti::before { inset: -10px 0 0; background:
+  radial-gradient(circle, #f472b6 2px, transparent 2.6px) 0 0 / 18px 16px,
+  radial-gradient(circle, #60a5fa 2px, transparent 2.6px) 9px 5px / 22px 18px,
+  radial-gradient(circle, #fde047 2px, transparent 2.6px) 4px 11px / 16px 20px,
+  radial-gradient(circle, #6ee7b7 1.6px, transparent 2.2px) 13px 2px / 20px 14px;
+  animation: ent-fall 1.6s ease-in both; }
+@keyframes ent-fall { from { transform: translateY(-14px); } to { transform: translateY(16px); } }
+/* Smoke Machine: two clouds roll in from the sides */
+.ent-smoke::before, .ent-smoke::after { top: 10%; bottom: 10%; width: 60%; border-radius: 50%; background: radial-gradient(ellipse, rgba(226,232,240,.75), rgba(226,232,240,0) 70%); filter: blur(6px); animation: ent-cloud 1.6s ease-out both; }
+.ent-smoke::before { left: -14%; }
+.ent-smoke::after { right: -14%; animation-name: ent-cloud-r; }
+@keyframes ent-cloud { from { transform: translateX(-30%) scale(.6); } to { transform: translateX(20%) scale(1.4); } }
+@keyframes ent-cloud-r { from { transform: translateX(30%) scale(.6); } to { transform: translateX(-20%) scale(1.4); } }
+/* Spotlight: a beam sweeps across, the seat lights up */
+.ent-spot { overflow: hidden; box-shadow: 0 0 0 1.5px rgba(255,255,255,.7), 0 0 18px rgba(255,255,255,.35); }
+.ent-spot::before { top: 0; bottom: 0; left: 0; width: 60%; background: linear-gradient(100deg, transparent, rgba(255,255,255,.5) 50%, transparent); animation: ent-sweep 1.4s ease-in-out both; }
+@keyframes ent-sweep { from { transform: translateX(-110%); } to { transform: translateX(190%); } }
+/* Cold Front: frost creeps in round the edge */
+.ent-frost { background: radial-gradient(ellipse at center, transparent 45%, rgba(186,230,253,.35)); box-shadow: inset 0 0 18px rgba(186,230,253,.7), 0 0 16px rgba(125,211,252,.55); }
+.ent-frost::before { inset: 0; background: radial-gradient(circle, #fff 1.2px, transparent 1.8px) 0 0 / 14px 12px; opacity: .7; animation: ent-twinkle 1.6s ease-out both; }
+@keyframes ent-twinkle { from { transform: scale(1.3); opacity: 0; } 40% { opacity: .8; } to { transform: scale(1); opacity: 0; } }
+/* Pyro: sparks shoot up from both ends */
+.ent-pyro { box-shadow: 0 0 20px rgba(251,146,60,.45); }
+.ent-pyro::before, .ent-pyro::after { bottom: 0; width: 18px; height: 140%; background: radial-gradient(circle, #fed7aa 1.6px, transparent 2.2px) 0 0 / 6px 9px, radial-gradient(circle, #fb923c 2px, transparent 2.6px) 3px 4px / 9px 12px; animation: ent-rise 1.3s ease-out both; }
+.ent-pyro::before { left: 6px; }
+.ent-pyro::after { right: 6px; animation-delay: .12s; }
+@keyframes ent-rise { from { transform: translateY(40%); opacity: 1; } to { transform: translateY(-45%); opacity: 0; } }
+/* Thunder: two flashes and a blue charge */
+.ent-thunder { box-shadow: 0 0 0 1.5px #93c5fd, 0 0 24px rgba(96,165,250,.7); animation: ent-flash 1.4s ease-out both; }
+@keyframes ent-flash { 0% { opacity: 0; background: rgba(255,255,255,.9); } 8% { opacity: 1; } 16% { background: rgba(255,255,255,0); } 26% { background: rgba(219,234,254,.7); } 36% { background: rgba(255,255,255,0); } 75% { opacity: 1; } 100% { opacity: 0; background: transparent; } }
+/* Glitch In: red and cyan bars jump about */
+.ent-glitch::before, .ent-glitch::after { left: 0; right: 0; height: 22%; mix-blend-mode: screen; animation: ent-jitter 1.2s steps(1, end) both; }
+.ent-glitch::before { top: 22%; background: rgba(239,68,68,.55); }
+.ent-glitch::after { top: 58%; background: rgba(34,211,238,.55); animation-delay: .08s; }
+@keyframes ent-jitter { 0% { transform: translateX(-6px); } 15% { transform: translateX(5px) scaleY(.5); } 30% { transform: translateX(-3px) translateY(-6px); } 45% { transform: translateX(7px); } 60% { transform: translateX(-5px) scaleY(1.4); } 75% { transform: translateX(2px); opacity: .6; } 100% { transform: none; opacity: 0; } }
+/* Ring of Fire: the seat's edge burns, twice */
+.ent-fire { animation: ent-burn 1.6s ease-out both; }
+@keyframes ent-burn { 0% { opacity: 0; box-shadow: 0 0 0 0 rgba(249,115,22,0); } 20% { opacity: 1; box-shadow: 0 0 0 2px #fb923c, 0 0 22px 4px rgba(249,115,22,.75), inset 0 0 14px rgba(249,115,22,.5); } 45% { box-shadow: 0 0 0 1px #fdba74, 0 0 10px 1px rgba(249,115,22,.4), inset 0 0 6px rgba(249,115,22,.25); } 65% { box-shadow: 0 0 0 2px #fb923c, 0 0 22px 4px rgba(249,115,22,.75), inset 0 0 14px rgba(249,115,22,.5); } 100% { opacity: 0; } }
+/* Red Carpet: a carpet rolls out under the seat, a gold glint runs along it */
+.ent-carpet { box-shadow: 0 0 0 1.5px rgba(242,201,76,.8), 0 0 18px rgba(242,201,76,.35); }
+.ent-carpet::before { left: 4%; right: 4%; bottom: -6px; height: 6px; border-radius: 3px; background: linear-gradient(90deg, #7f1d1d, #dc2626 50%, #7f1d1d); box-shadow: 0 -1px 0 #f2c94c, 0 1px 0 #f2c94c; transform-origin: center; animation: ent-roll 1.5s ease-out both; }
+.ent-carpet::after { top: 0; bottom: 0; left: 0; width: 40%; background: linear-gradient(100deg, transparent, rgba(253,230,138,.45), transparent); animation: ent-sweep 1.5s .3s ease-in-out both; }
+@keyframes ent-roll { from { transform: scaleX(0); } 40% { transform: scaleX(1); } to { transform: scaleX(1); } }
+
+/* Reduce Motion: a soft glow that fades, nothing moving */
+@media (prefers-reduced-motion: reduce) {
+  .ent { animation: ent-fade 1.2s ease-out both !important; box-shadow: 0 0 0 1.5px rgba(255,255,255,.5), 0 0 14px rgba(255,255,255,.25); }
+  .ent::before, .ent::after { display: none; }
+}
+html.bap-reduce-motion .ent { animation: ent-fade 1.2s ease-out both !important; box-shadow: 0 0 0 1.5px rgba(255,255,255,.5), 0 0 14px rgba(255,255,255,.25); }
+html.bap-reduce-motion .ent::before, html.bap-reduce-motion .ent::after { display: none; }
+
+/* the shop's entrance preview: a small seat */
+.ip-ent { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px 6px 6px; border-radius: 10px; border: 1px solid var(--ag-line-hi, rgba(255,255,255,.14)); background: rgba(255,255,255,.04); max-width: 100%; }
+.ip-ent-name { font-family: var(--ag-font); font-size: 15px; letter-spacing: 1.2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 90px; }
+.ip-ent.is-big { padding: 10px 16px 10px 10px; border-radius: 14px; gap: 10px; }
+.ip-ent.is-big .ip-ent-name { font-size: 22px; max-width: 180px; }
+.bp-art--entrance .ip-ent { transform: scale(.42); }

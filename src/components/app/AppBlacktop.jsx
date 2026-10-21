@@ -15,7 +15,7 @@ import { VERSUS_BIG_TYPES } from '../../data/nba-bigs'
 import BlacktopCourt, { COURTS, useCourt, setCourtId } from './BlacktopCourt'
 import { owns } from '../../lib/progress'
 import { IconClose, IconArrow, IconChat, IconStar, IconSend, IconBasketball, IconVersus } from './icons'
-import { NameTag, AvatarBadge } from './NameTag'
+import { NameTag, AvatarBadge, Entrance } from './NameTag'
 import OnlineRecord, { RatingLine, LinkPill, ModeStats, TierChip } from './OnlineRecord'
 import { useProgress } from '../../lib/progress'
 import { makeMimics, isTester } from '../../lib/mimic'
@@ -256,10 +256,11 @@ export function BlacktopQueue({ bt, user, onBack }) {
                   )
                   const pos = sl.pos === 'any' ? h?.pos : sl.pos
                   return (
-                    <button key={sl.id} className={`bt-spot${h ? ' is-taken' : ' is-open'}${me ? ' is-me' : ''}${pos === 'big' ? ' is-big' : ''}`} style={{ '--d': `${80 + (t * 3 + i) * 50}ms` }} onClick={() => tap(sl)}>
+                    <button key={sl.id} className={`bt-spot ent-host${h ? ' is-taken' : ' is-open'}${me ? ' is-me' : ''}${pos === 'big' ? ' is-big' : ''}`} style={{ '--d': `${80 + (t * 3 + i) * 50}ms` }} onClick={() => tap(sl)}>
+                      {h && <Entrance key={h.vid} cos={h.cos} />}
                       {h ? <Av name={h.name} team={t} size={34} cos={h.cos} self={me} /> : <span className="bt-spot-plus">+</span>}
                       <span className="bt-spot-txt">
-                        <span className="bt-spot-name">{h ? <NameTag name={h.name} cos={h.cos} self={me} /> : `JOIN AS ${pos === 'big' ? 'BIG' : 'GUARD'}`}</span>
+                        <span className="bt-spot-name">{h ? <NameTag name={h.name} cos={h.cos} uid={h.uid ?? null} self={me} /> : `JOIN AS ${pos === 'big' ? 'BIG' : 'GUARD'}`}</span>
                         <span className="bt-spot-role">{posLine(pos)}{me ? ' · TAP TO LEAVE' : ''}</span>
                       </span>
                     </button>

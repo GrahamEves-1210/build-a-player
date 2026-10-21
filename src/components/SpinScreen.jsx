@@ -6,7 +6,8 @@ import { valToGrade, HEADSHOT_BASE } from '../utils/simulation'
 import HEADSHOTS from '../data/headshots.json'
 import QBAvatar from './QBAvatar'
 import { track } from '../lib/track'
-import { seededShuffle } from '../lib/progress'
+import { seededShuffle, useProgress } from '../lib/progress'
+import { itemById } from '../lib/cosmetics'
 import { rampRail } from '../lib/ads'
 import { IS_APP } from '../lib/platform'
 import { watchFor, REWARDED_ON } from '../lib/rewardedAd'
@@ -288,6 +289,9 @@ export function setGradesHidden(v) {
 }
 // ─── SpinScreen ──────────────────────────────────────────────────────────────
 export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, activeCategory, resetKey, onChipTap, types = TYPES, isLite = false, qbPool = QBS, savedResult = null, onSaveResult, onPhaseChange, gameKey, onReset, adsDisabled = false, isRB = false, isWR = false, isTE = false, isDB = false, isOL = false, isAllTime = false, isBucket = false, isVersusMode = false, attrMap = ATTR, categoriesData = CATEGORIES, teamsPool = TEAMS, logoDir = '/logos/', playerLabel, headshotsMap = HEADSHOTS, headshotsDir = `${HEADSHOT_BASE}/`, hideTeamResult = false, headshotFallback = () => null, seedPlan: seedPlanProp = null, cardMeta = null, paused = false, gradesHidden = false }) {
+  // the player's reel skin (the shop's Reel Skins: app-shop.css .rs-*)
+  const equippedReel = useProgress().equip?.reel
+  const reelSkin = itemById(equippedReel)?.slot === 'reel' ? equippedReel : null
   // live competitive modes (1v1, Compete pools): the grades stay hidden, no toggle
   const forceHide = isVersusMode || gradesHidden
   const pLabel = playerLabel ?? (isTE ? 'TE' : isWR ? 'WR' : isRB ? 'RB' : 'QB')
@@ -583,7 +587,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
               </button>
             )}
           </div>
-          <div className="reels-wrap">
+          <div className={`reels-wrap${reelSkin ? ` rs-on ${reelSkin}` : ''}`}>
             <div className="reel-tri reel-tri-l" />
             <div className="reels-row">
               <SlotReel

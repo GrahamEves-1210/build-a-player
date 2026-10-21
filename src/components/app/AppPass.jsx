@@ -8,7 +8,7 @@ import { IS_APP } from '../../lib/platform'
 import { getUsername } from '../../lib/discord'
 import { sfx, haptic } from '../../lib/juice'
 import { AvatarBadge, ItemPreview } from './NameTag'
-import { IconClose, IconLock, IconCheck, IconShield, IconBolt, IconCards, IconCrown } from './icons'
+import { IconClose, IconLock, IconCheck, IconShield, IconBolt, IconCards, IconCrown, IconFlame } from './icons'
 import './pass.css'
 
 // The Builder Pass (lib/pass.js): the season's two reward tracks on the XP a player
@@ -30,6 +30,9 @@ export function rewardLabel(r) {
   if (r.coins) return `${r.coins.toLocaleString()} coins`
   if (r.freeze) return 'Streak freeze'
   if (r.boost) return `2x XP · ${r.boost} seasons`
+  if (r.rush) return `Coin Rush · ${r.rush} seasons`
+  if (r.hot) return `Hot Hand${r.hot > 1 ? ` ×${r.hot}` : ''}`
+  if (r.heal) return `Quick Heal${r.heal > 1 ? ` ×${r.heal}` : ''}`
   if (r.pack) return `${r.pack} cards${r.min ? ` · ${['', 'Rare', 'Epic', 'Legend'][r.min]}+` : ''}`
   return itemById(r.item)?.name ?? 'Item'
 }
@@ -38,6 +41,9 @@ function RewardArt({ r, name }) {
   if (r.coins) return <span className="bp-art bp-art--coins"><span className="coin-ico" /></span>
   if (r.freeze) return <span className="bp-art bp-art--freeze"><IconShield size={20} /></span>
   if (r.boost) return <span className="bp-art bp-art--boost"><IconBolt size={20} /></span>
+  if (r.rush) return <span className="bp-art bp-art--rush"><span className="coin-ico" /><i>2x</i></span>
+  if (r.hot) return <span className="bp-art bp-art--hot"><IconFlame size={20} /></span>
+  if (r.heal) return <span className="bp-art bp-art--heal"><b>+</b></span>
   if (r.pack) return <span className="bp-art bp-art--pack"><IconCards size={20} /></span>
   const item = itemById(r.item)
   if (!item) return <span className="bp-art" />
@@ -59,7 +65,7 @@ function Cell({ r, tier, track, reached, claimed, locked, name, onClaim, flash }
       <RewardArt r={r} name={name} />
       <span className="bp-cell-txt">
         <span className="bp-cell-name">{rewardLabel(r)}</span>
-        {item ? <span className="bp-cell-sub">{RARITY[item.rarity].name}</span> : r.pack ? <span className="bp-cell-sub">Card pack</span> : null}
+        {item ? <span className="bp-cell-sub">{RARITY[item.rarity].name}</span> : r.pack ? <span className="bp-cell-sub">Card pack</span> : r.hot || r.heal ? <span className="bp-cell-sub">Career boost</span> : null}
       </span>
       <span className="bp-cell-state">
         {claimed ? <IconCheck size={14} /> : ready ? 'CLAIM' : locked ? <IconLock size={13} /> : null}
@@ -147,7 +153,8 @@ export default function AppPass({ onClose }) {
             <span className="bp-hero-chips">
               <span className="ag-chip">{bp.over ? 'SEASON OVER · CLAIM BY ' + new Date(`${s.end}T12:00:00Z`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : `${daysLeft} ${daysLeft === 1 ? 'DAY' : 'DAYS'} LEFT`}</span>
               {bp.owned && <span className="ag-chip ag-chip--gold is-on"><IconCrown size={12} /> PREMIUM</span>}
-              {p.boosts > 0 && <span className="ag-chip is-on"><IconBolt size={12} /> 2X XP · {p.boosts} {p.boosts === 1 ? 'SEASON' : 'SEASONS'}</span>}
+              {p.boosts?.xp > 0 && <span className="ag-chip is-on"><IconBolt size={12} /> 2X XP · {p.boosts.xp}</span>}
+              {p.boosts?.rush > 0 && <span className="ag-chip is-on"><span className="coin-ico coin-ico--sm" /> COIN RUSH · {p.boosts.rush}</span>}
             </span>
           </div>
           <div className="bp-bar" role="progressbar" aria-valuemin={0} aria-valuemax={TIER_XP} aria-valuenow={maxed ? TIER_XP : bp.into} aria-label="XP to the next tier">
@@ -184,7 +191,7 @@ export default function AppPass({ onClose }) {
             )
           })}
         </div>
-        <p className="bp-note">A tier opens every {TIER_XP} XP you earn this season. Pass items are only on the pass; one you already bought pays coins instead. 2x XP boosts double your next seasons' XP.</p>
+        <p className="bp-note">A tier opens every {TIER_XP} XP you earn this season. Pass items are only on the pass; one you already bought pays coins instead. 2x XP and Coin Rush double your next seasons' XP or coins; Hot Hand and Quick Heal are for Career.</p>
       </div>
 
       {got && (

@@ -4,7 +4,7 @@ import { useRailOn } from '../../lib/ads'
 import { createPortal } from 'react-dom'
 import {
   POS_LABEL, POS_NAME, POS_ATTR, OFFENSE_POS, pastCareers, saveCareer, clearCareer, stockOf, answerInterview, setupInterviews, runDraft,
-  startSeason, resumeSeason, advanceWeek, chooseMoment, resolveInjury, finishRegular, playoffRound, bookSeason, recordCombine, spendDev, demandTrade, nextSeason,
+  startSeason, resumeSeason, advanceWeek, chooseMoment, resolveInjury, hotHand, canHotHand, hotHandOn, hotGames, finishRegular, playoffRound, bookSeason, recordCombine, spendDev, demandTrade, nextSeason,
   OFF_STEPS, offStep, campDrill, CAMP_LEGACY, dbSpot, lineup, depthChart, gradeOf, gradeOfOvr, ovrGradeVal, SPORT, sportOf,
   openTalks, ask, closeTalks, acceptTalks, ASKS, askOdds, leverageOf,
   retire, canRetire, mustRetire, careerTotals, legacyOf, LEGACY_TIERS, ALL_TIME, STAT_LABEL, HEADLINE_STATS, careerCard, AWARD_NAME, MAX_SEASONS, retireReason, goalsFor, stockText, pickText, loadSlots, CAREER_SLOTS, maxedTrait, trainWindow, canUpgrade, upgradeCost, legacyExtras } from '../../lib/career'
@@ -14,6 +14,7 @@ import MiniGame from './MiniGame'
 import PlayerComp from './PlayerComp'
 import { valToGrade, nflHeadshot } from '../../utils/simulation'
 import { sfx, haptic, victory } from '../../lib/juice'
+import { useProgress, spendBoost } from '../../lib/progress'
 import { MomentCard, NowCard, RecordOverlay, HonorOverlay } from './AppSeasonPlus'
 import Silhouette from '../Silhouette'
 import { AvatarBadge } from './NameTag'
@@ -447,6 +448,7 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
   const [recHit, setRecHit] = useState(null)       // an all-time record just fell
   const [honor, setHonor] = useState(null)         // an award or a title, just won
   const D = useRef(null)
+  const boosts = useProgress().boosts ?? {}
   // the player's own name (picked when the career began); never "You"
   useEffect(() => { if (c) saveCareer(c) }, [c])
   useEffect(() => { if (c?.phase === 'season' && c.active && !D.current) D.current = resumeSeason(c) }, [c?.phase]) // eslint-disable-line
@@ -467,7 +469,16 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
     if (ev?.moment) haptic('medium')
   }
   const pick = o => { const [n, out] = chooseMoment(c, D.current, o); setCareer(n); return out }
-  const injury = play => { const [n, text] = resolveInjury(c, D.current, play); setCareer(n); sfx('tap') }
+  const injury = (play, heal = false) => {
+    if (heal && !spendBoost('heal')) return
+    const [n] = resolveInjury(c, D.current, play, heal); setCareer(n); sfx(heal ? 'claim' : 'tap')
+  }
+  // Hot Hand: spend one, then the next few games run a grade up
+  const goHot = () => {
+    if (!D.current) D.current = resumeSeason(c)
+    if (!canHotHand(c, D.current) || !spendBoost('hot')) return
+    setCareer(hotHand(c, D.current)); sfx('claim'); haptic('success')
+  }
   // the regular season's over: straight to the offseason, or into the bracket
   const wrap = () => {
     if (!D.current) D.current = resumeSeason(c)
@@ -546,10 +557,15 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
                 <div className="sm-options">
                   <button className="sm-option" onClick={() => injury(false)}><b>{a.injury.serious ? 'Shut it down' : `Sit out ${a.injury.games} ${a.injury.games === 1 ? 'game' : 'games'}`}</b><small>Heal up. The team plays on without you.</small></button>
                   {!a.injury.serious && <button className="sm-option" onClick={() => injury(true)}><b>Play through it</b><small>Two traits down for {a.injury.games + 2} games. 35% it gets worse.</small></button>}
+                  {!a.injury.serious && boosts.heal > 0 && <button className="sm-option cr-boost-opt" onClick={() => injury(false, true)}><b>Quick Heal: out {Math.max(1, Math.ceil(a.injury.games / 2))} {Math.ceil(a.injury.games / 2) <= 1 ? 'game' : 'games'}</b><small>Uses 1 of your {boosts.heal} Quick Heal{boosts.heal === 1 ? '' : 's'}. Back twice as fast.</small></button>}
                 </div>
               </div>
             )}
             {a.moment && <MomentCard key={`${a.k}-${a.moment.id}`} moment={a.moment} onPick={pick} />}
+            {hotHandOn(c) && <div className="cr-hot ag-pop"><IconFlame size={15} /> HOT HAND · two grades up through {S.gameWord.toLowerCase()} {a.hot.to}</div>}
+            {!hotHandOn(c) && boosts.hot > 0 && canHotHand(c, D.current) && (
+              <button className="cr-hot cr-hot--go ag-pop" onClick={goHot}><IconFlame size={15} /> USE HOT HAND <small>+2 every trait, next {Math.min(hotGames(c), total - a.k)} {S.gameWord.toLowerCase()}s · {boosts.hot} left</small></button>
+            )}
             {!a.moment && !a.injury && !seasonOver && !a.po && <button className="ag-btn ag-btn--gold tk-intro-go cr-advance" onClick={advance}>{S.step > 1 ? `PLAY GAMES ${a.k + 1}–${Math.min(total, a.k + S.step)}` : `ADVANCE WEEK ${a.k + 1}`} <IconArrow size={16} /></button>}
             {a.po && <Playoffs c={c} setCareer={setCareer} onBook={book} />}
             {seasonOver && (

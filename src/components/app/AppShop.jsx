@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { useProgress, buy, equip, owns, priceOf, lockReason, dealsFor, claimFreeCoins, msToReset, isPro, COINS, achStats, walletOpen, hasDiscord, claimDiscordCoins, DISCORD_COINS, FEEDBACK_COINS, AD_COINS, AD_MAX, adsLeft, claimAdCoins } from '../../lib/progress'
+import { useProgress, buy, equip, owns, priceOf, lockReason, dealsFor, claimFreeCoins, msToReset, isPro, COINS, achStats, walletOpen, hasDiscord, claimDiscordCoins, DISCORD_COINS, FEEDBACK_COINS, AD_COINS, AD_MAX, adsLeft, claimAdCoins, BOOSTS, buyBoost, buyFreeze, FREEZE_PRICE, FREEZE_MAX } from '../../lib/progress'
 import { openCheckout } from '../../lib/webCheckout'
 import { sellsHere, onStorefront } from '../../lib/storefront'
 import { showRewarded, rewardedReady, REWARDED_ON } from '../../lib/rewardedAd'
@@ -13,7 +13,7 @@ import { achById } from '../../lib/achievements'
 import { getUsername } from '../../lib/discord'
 import { sfx, haptic, previewVictory, warmVictory } from '../../lib/juice'
 import { NameTag, AvatarBadge, ItemPreview } from './NameTag'
-import { IconClose, IconLock, IconGift, IconCrown, IconPlay, IconArrow, IconStar, IconDiscord } from './icons'
+import { IconClose, IconLock, IconGift, IconCrown, IconPlay, IconArrow, IconStar, IconDiscord, IconBolt, IconFlame, IconShield } from './icons'
 import { PassCard, ProCard } from './Promos'
 
 // The shop (app): coins buy avatars, name colors and effects, nameplates and
@@ -21,7 +21,7 @@ import { PassCard, ProCard } from './Promos'
 // coin pill) and Profile; lives over everything like Daily and Cards.
 
 const nav = to => window.dispatchEvent(new CustomEvent('bap:nav', { detail: to }))
-const TABS = [{ id: 'featured', label: 'Featured' }, { id: 'coins', label: 'Get Coins' }, ...SLOTS.map(s => ({ id: s.id, label: s.label }))]
+const TABS = [{ id: 'featured', label: 'Featured' }, { id: 'coins', label: 'Get Coins' }, { id: 'boosts', label: 'Boosts' }, ...SLOTS.map(s => ({ id: s.id, label: s.label }))]
 const fmtLeft = ms => { const h = Math.floor(ms / 3600000), m = Math.floor((ms % 3600000) / 60000); return h ? `${h}h ${m}m` : `${m}m` }
 
 function useCountTo(target, ms = 600) {
@@ -177,6 +177,51 @@ function DiscordCoins({ p }) {
   )
 }
 
+// Boosts: consumables for coins (Coin Rush is on the Builder Pass only), and streak freezes
+const BOOST_ART = {
+  xp: <span className="bp-art bp-art--boost"><IconBolt size={20} /></span>,
+  rush: <span className="bp-art bp-art--rush"><span className="coin-ico" /><i>2x</i></span>,
+  hot: <span className="bp-art bp-art--hot"><IconFlame size={20} /></span>,
+  heal: <span className="bp-art bp-art--heal"><b>+</b></span>,
+  freeze: <span className="bp-art bp-art--freeze"><IconShield size={20} /></span>,
+}
+function Boosts({ p, onNeedCoins }) {
+  const [msg, setMsg] = useState('')
+  const [got, setGot] = useState(null)
+  const rows = [
+    ...Object.entries(BOOSTS).map(([k, b]) => ({ k, name: b.per > 1 ? `${b.name} · ${b.per} ${b.unit}s` : b.name, desc: b.desc, price: b.price, passOnly: b.passOnly, have: p.boosts?.[k] ?? 0, unit: b.unit })),
+    { k: 'freeze', name: 'Streak Freeze', desc: `Covers one missed day of your login streak. Hold up to ${FREEZE_MAX}.`, price: FREEZE_PRICE, have: p.streak?.freezes ?? 0, unit: 'freeze', full: (p.streak?.freezes ?? 0) >= FREEZE_MAX },
+  ]
+  const buyIt = k => {
+    if (!walletOpen()) { signIn(); return }
+    const r = k === 'freeze' ? buyFreeze() : buyBoost(k)
+    if (r.ok) { sfx('equip'); haptic('success'); setMsg(''); setGot(k); setTimeout(() => setGot(g => (g === k ? null : g)), 900) }
+    else if (r.short || /more coins/.test(r.reason || '')) { haptic('light'); onNeedCoins() }
+    else { sfx('deny'); setMsg(r.reason) }
+  }
+  return (
+    <div className="sh-section">
+      <div className="sh-section-head"><span className="sh-section-title">BOOSTS</span><span className="sh-section-note">Used up as you play</span></div>
+      <div className="bst-list">
+        {rows.map((r, i) => (
+          <div key={r.k} className={`bst-row ag-pop${got === r.k ? ' is-got' : ''}`} style={{ '--d': `${i * 40}ms` }}>
+            {BOOST_ART[r.k]}
+            <span className="bst-txt">
+              <b>{r.name}</b>
+              <small>{r.desc}</small>
+              {p.signedIn && <em>{r.have > 0 ? `You have ${r.have} ${r.unit === 'season' ? `boosted season${r.have === 1 ? '' : 's'}` : r.have === 1 ? r.unit : `${r.unit}s`}` : 'None yet'}</em>}
+            </span>
+            {r.passOnly
+              ? <button className="bst-buy is-pass" onClick={() => nav('pass')}>PASS</button>
+              : <button className="bst-buy" onClick={() => buyIt(r.k)} disabled={r.full}>{r.full ? 'FULL' : <><span className="coin-ico coin-ico--sm" />{r.price.toLocaleString()}</>}</button>}
+          </div>
+        ))}
+      </div>
+      {msg && <p className="cpk-note">{msg}</p>}
+    </div>
+  )
+}
+
 function ItemCard({ item, deal, equipped, onOpen, delay = 0, name }) {
   const mine = owns(item.id)
   const lock = mine ? null : lockReason(item.id)
@@ -210,7 +255,7 @@ function DefaultCard({ slot, equipped, onPick, name }) {
   return (
     <button className={`sh-card is-owned${equipped ? ' is-equipped' : ''}`} style={{ '--rar': '#6ee7b7' }} onClick={onPick}>
       <span className="sh-card-stage">
-        {slot === 'avatar' ? <AvatarBadge name={name} size={58} cos={{}} /> : slot === 'plate' ? <NameTag name={name} cos={{}} className="ip-name" /> : <span className="ip-name"><NameTag name={name} cos={{}} /></span>}
+        {slot === 'reel' || slot === 'entrance' ? <ItemPreview item={{ slot, id: null }} name={name} /> : slot === 'avatar' ? <AvatarBadge name={name} size={58} cos={{}} /> : slot === 'plate' ? <NameTag name={name} cos={{}} className="ip-name" /> : <span className="ip-name"><NameTag name={name} cos={{}} /></span>}
       </span>
       <span className="sh-card-body"><span className="sh-card-name">{label}</span><span className="sh-card-meta"><span className="sh-rar">Default</span><span className="sh-owned">{equipped ? 'EQUIPPED' : 'FREE'}</span></span></span>
     </button>
@@ -349,7 +394,9 @@ export default function AppShop({ onClose, tab: initialTab = 'featured' }) {
         ))}
       </div>
 
-      {tab === 'coins' ? (
+      {tab === 'boosts' ? (
+        <Boosts p={p} onNeedCoins={() => setTab(sells ? 'coins' : 'featured')} />
+      ) : tab === 'coins' ? (
         <>
           {/* videos are an app thing (AdMob); the website shows the card only once it has a rewarded ad unit */}
           {REWARDED_ON && (IS_APP || rewardedReady()) && <VideoCoins />}

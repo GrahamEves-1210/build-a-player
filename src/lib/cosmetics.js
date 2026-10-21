@@ -5,7 +5,7 @@ import { PASS_ITEMS } from './pass'
 // item looks like (CSS classes in app-shop.css, glyphs in NameTag.jsx, victory
 // effects and sounds in juice.js).
 //
-//   slot     avatar · nameColor · nameFx · plate · winFx · winSound · court
+//   slot     avatar · nameColor · nameFx · plate · winFx · winSound · court · reel · entrance
 //   rarity   0 common · 1 rare · 2 epic · 3 legendary
 //   pro      BAP Pro members only (the Pro Vault)
 //   pass     on a Builder Pass track (lib/pass.js PASS_ITEMS): claimed there, never sold
@@ -20,6 +20,8 @@ export const SLOTS = [
   { id: 'winFx',     label: 'Victory FX',   short: 'VICTORY' },
   { id: 'winSound',  label: 'Victory Sound', short: 'SOUND' },
   { id: 'court',     label: 'Courts',        short: 'COURT' },
+  { id: 'reel',      label: 'Reel Skins',    short: 'REEL' },
+  { id: 'entrance',  label: 'Entrances',     short: 'ENTRANCE' },
 ]
 export const RARITY = [
   { id: 0, name: 'Common',    color: '#9fb3a8' },
@@ -28,7 +30,7 @@ export const RARITY = [
   { id: 3, name: 'Legendary', color: '#f2c94c' },
 ]
 // What everyone starts with (free, always owned)
-export const DEFAULTS = { avatar: null, nameColor: null, nameFx: null, plate: null, winFx: 'fx-confetti', winSound: 'snd-horn', court: 'ct-blacktop' }
+export const DEFAULTS = { avatar: null, nameColor: null, nameFx: null, plate: null, winFx: 'fx-confetti', winSound: 'snd-horn', court: 'ct-blacktop', reel: null, entrance: null }
 
 const it = (slot, id, name, rarity, price, extra = {}) => ({ slot, id, name, rarity, price, ...extra })
 
@@ -205,6 +207,33 @@ const CT = [
   ct('ct-space', 'Deep Space', 3, 16000),
 ]
 
+// ── Reel skins: the look of the spin reels on the build screen (app-shop.css .rs-*)
+const RS = [
+  it('reel', 'rs-carbon',   'Carbon', 0, 450),
+  it('reel', 'rs-hardwood', 'Hardwood', 0, 500),
+  it('reel', 'rs-ice',      'Frostbite', 1, 1600),
+  it('reel', 'rs-ember',    'Ember', 1, 1800),
+  it('reel', 'rs-chrome',   'Chrome', 1, 2000),
+  it('reel', 'rs-gold',     'Gold Rush', 2, 6000),
+  it('reel', 'rs-neon',     'Neon Arcade', 2, 6600),
+  it('reel', 'rs-vegas',    'Vegas Lights', 3, 18000),
+  it('reel', 'rs-holo',     'Holo', 3, 21000),
+]
+
+// ── Lobby entrances: plays once on your seat when you join a Compete or Blacktop
+// lobby, for everyone in it (app-shop.css .ent-*)
+const EN = [
+  it('entrance', 'ent-confetti', 'Confetti Cannon', 0, 600),
+  it('entrance', 'ent-smoke',    'Smoke Machine', 1, 1600),
+  it('entrance', 'ent-spot',     'Spotlight', 1, 1900),
+  it('entrance', 'ent-frost',    'Cold Front', 1, 2000),
+  it('entrance', 'ent-pyro',     'Pyro', 2, 6200),
+  it('entrance', 'ent-thunder',  'Thunder', 2, 7000),
+  it('entrance', 'ent-glitch',   'Glitch In', 2, 7200),
+  it('entrance', 'ent-fire',     'Ring of Fire', 3, 19000),
+  it('entrance', 'ent-carpet',   'Red Carpet', 3, 20000),
+]
+
 // ── Unlocks: not looks, features. Sandbox in Career and in Takeover, bought one
 // mode at a time (the switch is on the build screen; turning it on asks to buy)
 export const UNLOCK_PRICE = 10000
@@ -225,7 +254,7 @@ const cost = i => {
   return { ...i, weight: i.price, price: Math.max(150, Math.round(v / 50) * 50) }
 }
 const onPass = i => (PASS_ITEMS[i.id] ? { ...i, pass: PASS_ITEMS[i.id] } : i)
-export const ITEMS = [...AV, ...NC, ...NFX, ...PL, ...WF, ...WS, ...CT].map(cost).map(onPass).concat(UL)
+export const ITEMS = [...AV, ...NC, ...NFX, ...PL, ...WF, ...WS, ...CT, ...RS, ...EN].map(cost).map(onPass).concat(UL)
 const BY_ID = Object.fromEntries(ITEMS.map(i => [i.id, i]))
 export const itemById = id => (id ? BY_ID[id] ?? null : null)
 export const itemsFor = slot => ITEMS.filter(i => i.slot === slot)
@@ -241,4 +270,6 @@ export const BLURB = {
   winFx: 'Plays when you win: titles, awards, Takeover cities and Blacktop games.',
   winSound: 'The sound of your wins, played with your victory effect.',
   court: 'The court your Blacktop games are played on.',
+  reel: 'The look of your spin reels when you build a player.',
+  entrance: 'Plays on your seat when you join a Compete or Blacktop lobby. Everyone in the lobby sees it.',
 }

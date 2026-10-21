@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { useProgress } from '../../lib/progress'
 import { itemById } from '../../lib/cosmetics'
 import { useCosOf } from '../../lib/peopleCos'
@@ -79,9 +80,36 @@ export function AvatarBadge({ cos, uid = null, self = false, name, size = 44, le
   )
 }
 
-// Item previews for the shop tiles
+// A lobby entrance (Compete, Blacktop): plays once on the seat it's in when a player
+// takes it (keyed by the player, so it replays only for someone new). The seat needs
+// the ent-host class (position: relative).
+export function Entrance({ cos }) {
+  const id = known(cos?.entrance, 'entrance')
+  return id ? <span className={`ent ${id}`} aria-hidden="true" /> : null
+}
+// The shop's look at one: a seat that plays it every few seconds
+function EntrancePreview({ id, name, big }) {
+  const [n, setN] = useState(0)
+  useEffect(() => { if (!id) return; const t = setInterval(() => setN(x => x + 1), 2600); return () => clearInterval(t) }, [id])
+  return (
+    <span className={`ip-ent ent-host${big ? ' is-big' : ''}`}>
+      <AvatarBadge self name={name} size={big ? 34 : 24} />
+      <span className="ip-ent-name"><NameText name={name} /></span>
+      {id && <span key={n} className={`ent ${id}`} aria-hidden="true" />}
+    </span>
+  )
+}
+
+// Item previews for the shop tiles (a default of a slot: { slot, id: null })
 export function ItemPreview({ item, name = 'Guest', big = false }) {
   if (!item) return null
+  if (item.slot === 'entrance') return <EntrancePreview id={item.id} name={name} big={big} />
+  if (item.slot === 'reel') return (
+    <span className={`ip-reel${item.id ? ` rs-on ${item.id}` : ''}${big ? ' is-big' : ''}`}>
+      <span className="ip-reel-lbl">TEAM</span>
+      <span className="ip-reel-win"><span className="ip-reel-row">DAL</span><span className="ip-reel-row is-sel">KC</span><span className="ip-reel-row">LAR</span></span>
+    </span>
+  )
   if (item.slot === 'avatar') return <AvatarBadge cos={{ avatar: item.id }} name={name} size={big ? 96 : 58} />
   if (item.slot === 'nameColor') return <span className="ip-name"><NameText name={name} color={item.id} /></span>
   if (item.slot === 'nameFx') return <span className="ip-name"><NameText name={name} color={big ? null : 'nc-ice'} fx={item.id} /></span>

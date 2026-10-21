@@ -5,7 +5,7 @@ import { POOL_SIZE, FILL_AFTER_SECS, MIN_POOL } from '../../lib/compete'
 import { IconClose, IconArrow, IconTrophy } from './icons'
 import OnlineRecord, { RatingLine, LinkPill } from './OnlineRecord'
 import { sfx, victory } from '../../lib/juice'
-import { NameTag, AvatarBadge } from './NameTag'
+import { NameTag, AvatarBadge, Entrance } from './NameTag'
 import { AUCTION_POS, BUDGET, RESET_SECS } from '../../lib/auction'
 import { guardLeave } from '../../lib/liveLock'
 const AppAuction = lazy(() => import('./AppAuction'))
@@ -19,12 +19,13 @@ const mmss = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
 const initials = name => (name || '?').trim().slice(0, 2).toUpperCase()
 // A player's picture and name with their look (mine live)
 const Pic = ({ p, me, size = 34 }) => (p.bot ? <span className="cp-av">{initials(p.name)}</span> : <AvatarBadge name={p.name} cos={p.cos} self={p.vid === me} size={size} className="cp-avb" />)
-const Name = ({ p, me }) => (p.bot ? <>{p.name}</> : <NameTag name={p.name} cos={p.cos} self={p.vid === me} />)
+const Name = ({ p, me }) => (p.bot ? <>{p.name}</> : <NameTag name={p.name} cos={p.cos} uid={p.uid ?? null} self={p.vid === me} />)
 
 
 function Seat({ p, i, me, status }) {
   return (
-    <div className={`cp-seat${p ? '' : ' is-open'}${p?.vid === me ? ' is-me' : ''}`} style={{ '--d': `${i * 50}ms` }}>
+    <div className={`cp-seat ent-host${p ? '' : ' is-open'}${p?.vid === me ? ' is-me' : ''}`} style={{ '--d': `${i * 50}ms` }}>
+      {p && !p.bot && <Entrance key={p.vid} cos={p.cos} />}
       {p ? <Pic p={p} me={me} /> : <span className="cp-av">?</span>}
       <span className="cp-seat-name">{p ? <Name p={p} me={me} /> : 'Open seat'}</span>
       {status && <span className="cp-seat-status">{status}</span>}

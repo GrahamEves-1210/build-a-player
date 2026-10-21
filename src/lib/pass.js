@@ -6,8 +6,9 @@
 //            the webhook writes supabase pass_owners, see supabase/builder_pass.sql)
 //
 // A tier opens every TIER_XP of XP earned since the season started (missions, seasons,
-// live games, the login: the same XP as levels). Rewards: coins, streak freezes,
-// 2x XP boosts (the next N seasons count double), card packs and cosmetics. The
+// live games, the login: the same XP as levels). Rewards: coins, streak freezes, boosts
+// (2x XP and Coin Rush for the next N seasons; Hot Hand and Quick Heal for Career;
+// lib/progress.js BOOSTS), card packs and cosmetics. The
 // cosmetics in a pass are pass-only (cosmetics.js marks them; never sold for coins).
 // Keep the season ids and prices in step with server/server.js and functions/api.
 
@@ -20,23 +21,26 @@ const fz = () => ({ freeze: 1 })
 const bx = n => ({ boost: n })
 const pk = (n, min = 0) => ({ pack: n, min })
 const i = id => ({ item: id })
+const cr = n => ({ rush: n })      // Coin Rush: the next n seasons pay double coins
+const hh = n => ({ hot: n })       // Hot Hand (Career)
+const qh = n => ({ heal: n })      // Quick Heal (Career)
 
 // tier → reward (tiers missing from the free track have nothing there)
 const S1_FREE = {
-  2: c(100), 4: i('av-whistle'), 6: c(150), 8: fz(), 10: i('pl-chalk'), 12: c(150), 14: pk(3), 16: c(200),
-  18: i('snd-badge'), 20: bx(3), 22: c(200), 24: i('fx-streamers'), 26: c(250), 28: fz(), 30: i('nc-turf'),
-  32: c(250), 34: pk(3), 36: c(300), 38: bx(3), 40: i('pl-scoreboard'), 42: c(300), 44: fz(), 46: pk(3, 1),
+  2: c(100), 4: i('av-whistle'), 6: c(150), 8: fz(), 10: i('pl-chalk'), 12: cr(3), 14: pk(3), 16: c(200),
+  18: i('snd-badge'), 20: bx(3), 22: hh(1), 24: i('fx-streamers'), 26: c(250), 28: i('rs-chrome'), 30: i('nc-turf'),
+  32: qh(1), 34: pk(3), 36: c(300), 38: bx(3), 40: i('pl-scoreboard'), 42: i('ent-frost'), 44: fz(), 46: pk(3, 1),
   48: c(400), 50: i('av-rivalry'),
 }
 const S1_PREMIUM = {
   1: i('av-storm'), 2: c(300), 3: i('nc-aurora'), 4: bx(3), 5: i('snd-nope'), 6: c(300), 7: pk(3, 1),
-  8: i('nfx-frost'), 9: c(350), 10: i('pl-neongrid'), 11: fz(), 12: c(350), 13: i('fx-shockwave'), 14: pk(3, 1),
-  15: i('nc-pro-blackgold'), 16: c(400), 17: bx(5), 18: i('snd-train'), 19: c(400), 20: i('av-pro-blackgold'),
-  21: fz(), 22: c(450), 23: i('nfx-glitch'), 24: pk(5, 1), 25: i('pl-pro-blackgold'), 26: c(450),
-  27: i('fx-lightning'), 28: bx(5), 29: c(500), 30: i('nc-prism'), 31: pk(3, 2), 32: c(500), 33: fz(),
-  34: i('snd-bassdrop'), 35: c(550), 36: i('nfx-spotlight'), 37: bx(5), 38: c(550), 39: pk(5, 2),
-  40: i('fx-flames'), 41: c(600), 42: i('nc-pro-platinum'), 43: fz(), 44: c(600), 45: i('pl-galaxy'),
-  46: pk(5, 2), 47: c(700), 48: i('av-galaxy'), 49: c(800), 50: i('ct-space'),
+  8: i('nfx-frost'), 9: cr(3), 10: i('pl-neongrid'), 11: fz(), 12: c(350), 13: i('fx-shockwave'), 14: pk(3, 1),
+  15: i('nc-pro-blackgold'), 16: hh(2), 17: i('ent-glitch'), 18: i('snd-train'), 19: c(400), 20: i('av-pro-blackgold'),
+  21: qh(2), 22: c(450), 23: i('nfx-glitch'), 24: pk(5, 1), 25: i('pl-pro-blackgold'), 26: c(450),
+  27: i('fx-lightning'), 28: bx(5), 29: cr(5), 30: i('nc-prism'), 31: pk(3, 2), 32: c(500), 33: i('rs-vegas'),
+  34: i('snd-bassdrop'), 35: c(550), 36: i('nfx-spotlight'), 37: bx(5), 38: i('ent-fire'), 39: pk(5, 2),
+  40: i('fx-flames'), 41: c(600), 42: i('nc-pro-platinum'), 43: fz(), 44: hh(3), 45: i('pl-galaxy'),
+  46: i('rs-holo'), 47: c(700), 48: i('av-galaxy'), 49: c(800), 50: i('ct-space'),
 }
 
 // start / end: days in New York time; the season runs from start up to (not including) end.

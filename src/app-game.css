@@ -5274,3 +5274,67 @@ html.is-app .ag-home > .bap-disclaimer { margin-bottom: calc(var(--app-bottom, 9
 .auth-forgot { display: block; margin: 12px auto 0; padding: 6px 10px; background: none; border: 0; color: var(--ag-text-2, rgba(238, 248, 241, .78)); font: 600 13px var(--ag-body, system-ui, sans-serif); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 .auth-forgot-title { font-family: var(--ag-font, 'Bebas Neue', sans-serif); font-size: 22px; letter-spacing: 1.5px; margin-bottom: 6px; }
 .auth-forgot-note { margin: 0 0 12px; font: 400 14px/1.45 var(--ag-body, system-ui, sans-serif); color: var(--ag-text-2, rgba(238, 248, 241, .8)); }
+
+/* Career boosts: Hot Hand on the season screen, Quick Heal on an injury */
+.cr-hot { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 6px; width: 100%; margin: 0 0 10px; padding: 10px 12px; border-radius: 12px; font-family: var(--ag-font); font-size: 16px; letter-spacing: 1.6px; color: #ffb27a; background: rgba(255,120,40,.1); border: 1px solid rgba(255,140,60,.35); }
+.cr-hot small { font-family: var(--ag-body); font-size: 12px; font-weight: 600; letter-spacing: 0; color: var(--ag-muted); }
+button.cr-hot--go { cursor: pointer; -webkit-tap-highlight-color: transparent; transition: transform .15s ease-out, background-color .15s; }
+button.cr-hot--go:active { transform: scale(.96); }
+@media (hover: hover) { button.cr-hot--go:hover { background: rgba(255,120,40,.18); } }
+.sm-option.cr-boost-opt { border-color: rgba(110,231,183,.45) !important; }
+.sm-option.cr-boost-opt b { color: #6ee7b7; }
+
+/* ═══ Reel skins (shop: Reel Skins). SpinScreen puts `rs-on rs-<id>` on .reels-wrap; the
+   shop's preview (.ip-reel, NameTag.jsx ItemPreview) reads the same tokens ═══ */
+.rs-carbon   { --rs-edge: #6b7280; --rs-body: repeating-linear-gradient(45deg, #15171a 0 4px, #1e2125 4px 8px); --rs-window: linear-gradient(180deg, #040506, #0d0f11 50%, #040506); --rs-sel: #cbd5e1; --rs-glow: rgba(203,213,225,.22); --rs-label: #e5e7eb; --rs-ink: #0b0c0f; --rs-text: #f1f5f9; }
+.rs-hardwood { --rs-edge: #c0844a; --rs-body: repeating-linear-gradient(90deg, #7a4a22 0 7px, #8d5629 7px 15px, #9c6232 15px 22px); --rs-window: linear-gradient(180deg, #120a04, #1f1208 50%, #120a04); --rs-sel: #f4b26b; --rs-glow: rgba(244,178,107,.3); --rs-label: #f4b26b; --rs-ink: #2a1406; --rs-text: #ffe8cc; }
+.rs-ice      { --rs-edge: #7dd3fc; --rs-body: linear-gradient(180deg, #0c2a3d, #071823); --rs-window: linear-gradient(180deg, #010b12, #06202e 50%, #010b12); --rs-sel: #bae6fd; --rs-glow: rgba(125,211,252,.35); --rs-label: linear-gradient(135deg, #e0f2fe, #7dd3fc); --rs-ink: #062030; --rs-text: #e0f2fe; }
+.rs-ember    { --rs-edge: #f97316; --rs-body: linear-gradient(180deg, #2a0d03, #140601); --rs-window: linear-gradient(180deg, #080200, #1c0801 50%, #080200); --rs-sel: #fb923c; --rs-glow: rgba(249,115,22,.4); --rs-label: linear-gradient(135deg, #fdba74, #ea580c); --rs-ink: #2a0a00; --rs-text: #ffedd5; }
+.rs-chrome   { --rs-edge: #e5e7eb; --rs-body: linear-gradient(180deg, #f3f4f6 0%, #9ca3af 42%, #4b5563 58%, #d1d5db 100%); --rs-window: linear-gradient(180deg, #050608, #14171c 50%, #050608); --rs-sel: #f9fafb; --rs-glow: rgba(255,255,255,.28); --rs-label: linear-gradient(180deg, #ffffff, #9ca3af); --rs-ink: #111827; --rs-text: #ffffff; }
+.rs-gold     { --rs-edge: #f2c94c; --rs-body: linear-gradient(180deg, #3a2a06, #1a1203); --rs-window: linear-gradient(180deg, #0a0700, #1d1503 50%, #0a0700); --rs-sel: #fde68a; --rs-glow: rgba(242,201,76,.42); --rs-label: linear-gradient(135deg, #fde68a, #d4af37); --rs-ink: #1a1000; --rs-text: #fff7d6; }
+.rs-neon     { --rs-edge: #e879f9; --rs-body: linear-gradient(180deg, #1a0124, #0a000f); --rs-window: linear-gradient(180deg, #05000a, #12001c 50%, #05000a); --rs-sel: #22d3ee; --rs-glow: rgba(217,70,239,.5); --rs-label: linear-gradient(90deg, #d946ef, #22d3ee); --rs-ink: #ffffff; --rs-text: #f5d0fe; }
+.rs-vegas    { --rs-edge: #ffd34d; --rs-body: linear-gradient(180deg, #5b0a0a, #2a0303); --rs-window: linear-gradient(180deg, #0a0101, #1f0404 50%, #0a0101); --rs-sel: #ffd34d; --rs-glow: rgba(255,211,77,.45); --rs-label: linear-gradient(135deg, #ff5a5a, #b91c1c); --rs-ink: #fff7d6; --rs-text: #ffffff; }
+.rs-holo     { --rs-edge: transparent; --rs-body: linear-gradient(180deg, #160c26, #0a0612) padding-box, linear-gradient(90deg, #f0abfc, #93c5fd, #86efac, #fde68a, #f0abfc) border-box; --rs-window: linear-gradient(180deg, #06030c, #140a22 50%, #06030c); --rs-sel: #ffffff; --rs-glow: rgba(167,139,250,.45); --rs-label: linear-gradient(90deg, #f0abfc, #93c5fd, #86efac, #fde68a); --rs-ink: #120a1f; --rs-text: #ffffff; }
+
+html:is(.is-app, .app-look) .reels-wrap.rs-on .reel-outer { border-color: var(--rs-edge) !important; background: var(--rs-body) !important; box-shadow: 0 10px 26px rgba(0,0,0,.45), 0 0 22px var(--rs-glow) !important; }
+html:is(.is-app, .app-look) .reels-wrap.rs-on .reel-outer.reel-locked { border-color: var(--rs-sel) !important; }
+html:is(.is-app, .app-look) .reels-wrap.rs-on .reel-window { background: var(--rs-window) !important; }
+html:is(.is-app, .app-look) .reels-wrap.rs-on .reel-selector { border-color: var(--rs-sel) !important; background: color-mix(in srgb, var(--rs-sel) 10%, transparent) !important; box-shadow: 0 0 16px var(--rs-glow), inset 0 0 10px color-mix(in srgb, var(--rs-sel) 14%, transparent) !important; }
+html:is(.is-app, .app-look) .reels-wrap.rs-on .reel-label { background: var(--rs-label) !important; color: var(--rs-ink) !important; box-shadow: 0 2px 10px var(--rs-glow) !important; }
+html:is(.is-app, .app-look) .reels-wrap.rs-on .reel-primary { color: var(--rs-text) !important; }
+html:is(.is-app, .app-look) .reels-wrap.rs-on .reel-secondary { color: color-mix(in srgb, var(--rs-sel) 75%, #fff) !important; }
+html:is(.is-app, .app-look) .reels-wrap.rs-on .reel-tri-l { border-left-color: var(--rs-sel) !important; filter: drop-shadow(0 0 6px var(--rs-glow)); }
+html:is(.is-app, .app-look) .reels-wrap.rs-on .reel-tri-r { border-right-color: var(--rs-sel) !important; filter: drop-shadow(0 0 6px var(--rs-glow)); }
+html:is(.is-app, .app-look) .reels-wrap.rs-on .reel-locked-pip { background: var(--rs-sel) !important; box-shadow: 0 0 10px var(--rs-sel) !important; }
+html:is(.is-app, .app-look) .reels-wrap.rs-neon .reel-primary { text-shadow: 0 0 8px rgba(232,121,249,.7); }
+/* Vegas: marquee bulbs round the frame; Holo: the frame's colors run */
+html:is(.is-app, .app-look) .reels-wrap.rs-vegas .reel-outer { border-style: dotted !important; border-width: 3px !important; }
+html:is(.is-app, .app-look) .reels-wrap.rs-holo .reel-outer { border-width: 2px !important; background-size: 100% 100%, 300% 100% !important; }
+@keyframes rs-bulbs { 50% { border-color: #fff1b8; } }
+@keyframes rs-holo { to { background-position: 0 0, 300% 0; } }
+@media (prefers-reduced-motion: no-preference) {
+  html:is(.is-app, .app-look):not(.bap-reduce-motion) .reels-wrap.rs-vegas .reel-outer, .ip-reel.rs-vegas { animation: rs-bulbs 1.2s steps(1, end) infinite; }
+  html:is(.is-app, .app-look):not(.bap-reduce-motion) .reels-wrap.rs-holo .reel-outer, .ip-reel.rs-holo { animation: rs-holo 6s linear infinite; }
+}
+
+/* the shop's reel preview: a frame, its label and three rows (the middle one selected) */
+/* (the plain reel's tokens, at no specificity: a skin's own win) */
+:where(.ip-reel) {
+  --rs-edge: color-mix(in srgb, var(--ag-a1) 42%, transparent); --rs-body: linear-gradient(180deg, rgba(18,26,22,.95), rgba(7,10,9,.95));
+  --rs-window: linear-gradient(180deg, #020403, #0a100d 50%, #020403); --rs-sel: var(--ag-a1); --rs-glow: var(--ag-glow);
+  --rs-label: var(--ag-grad); --rs-ink: var(--ag-on); --rs-text: #fff;
+}
+.ip-reel {
+  display: inline-grid; justify-items: center; gap: 4px; width: 70px; padding: 5px 5px 6px; border-radius: 10px;
+  border: 1.5px solid var(--rs-edge); background: var(--rs-body); box-shadow: 0 0 14px var(--rs-glow);
+}
+.ip-reel.rs-vegas { border-style: dotted; border-width: 3px; }
+.ip-reel.rs-holo { border-width: 2px; background-size: 100% 100%, 300% 100%; }
+.ip-reel-lbl { font-family: var(--ag-font); font-size: 9px; letter-spacing: 1.5px; line-height: 1; padding: 2px 5px 1px; border-radius: 3px; color: var(--rs-ink); background: var(--rs-label); }
+.ip-reel-win { position: relative; display: grid; width: 100%; padding: 2px 0; border-radius: 6px; background: var(--rs-window); text-align: center; }
+.ip-reel-row { font-family: var(--ag-display); font-size: 12px; line-height: 15px; color: var(--rs-text); opacity: .35; }
+.ip-reel-row.is-sel { opacity: 1; margin: 0 3px; border-radius: 4px; border: 1px solid var(--rs-sel); background: color-mix(in srgb, var(--rs-sel) 10%, transparent); box-shadow: 0 0 8px var(--rs-glow); }
+.ip-reel.is-big { width: 120px; gap: 6px; padding: 8px; border-radius: 14px; }
+.ip-reel.is-big .ip-reel-lbl { font-size: 12px; }
+.ip-reel.is-big .ip-reel-row { font-size: 20px; line-height: 26px; }
+.bp-art--reel .ip-reel { transform: scale(.48); }

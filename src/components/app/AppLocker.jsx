@@ -65,7 +65,7 @@ export default function AppLocker({ onClose }) {
               {hasNone && (
                 <button className={`lk-tile${!cur ? ' is-on' : ''}`} style={{ '--rar': '#6ee7b7' }} onClick={() => put(sl.id, null)}>
                   <span className="lk-tile-stage">
-                    {sl.id === 'avatar' ? <AvatarBadge name={name} size={50} cos={{}} /> : <span className="ip-name"><NameTag name={name} cos={{}} /></span>}
+                    {sl.id === 'reel' || sl.id === 'entrance' ? <ItemPreview item={{ slot: sl.id, id: null }} name={name} /> : sl.id === 'avatar' ? <AvatarBadge name={name} size={50} cos={{}} /> : <span className="ip-name"><NameTag name={name} cos={{}} /></span>}
                   </span>
                   <span className="lk-tile-name">{sl.id === 'avatar' ? 'Initial' : 'None'}</span>
                   {!cur && <span className="lk-tile-check"><IconCheck size={12} /></span>}
