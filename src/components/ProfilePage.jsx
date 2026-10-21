@@ -105,6 +105,7 @@ import AppCareerCard from './app/AppCareerCard'
 import FriendsSection from './app/FriendsSection'
 import PassStrip from './app/PassStrip'
 import { contactEmailOf, saveContactEmail } from '../lib/contactEmail'
+import TrophyCase from './app/TrophyCase'
 import DeleteAccount from './DeleteAccount'
 import ConnectDiscord from './ConnectDiscord'
 import { getUsername } from '../lib/discord'
@@ -852,6 +853,8 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
 
         {/* App look: the Builder Pass, a strip of tiers to scroll through */}
         {(IS_APP || APP_LOOK) && <PassStrip />}
+        {/* App look: trophy case (hardware won, best build at each position) */}
+        {(IS_APP || APP_LOOK) && <TrophyCase user={user} />}
 
         {/* App look: friends (tap one for their profile) */}
         {(IS_APP || APP_LOOK) && <FriendsSection user={user} isBucket={isBucket} />}
