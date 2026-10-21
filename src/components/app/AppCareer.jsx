@@ -7,7 +7,8 @@ import {
   startSeason, resumeSeason, advanceWeek, chooseMoment, resolveInjury, hotHand, canHotHand, hotHandOn, hotGames, finishRegular, playoffRound, bookSeason, recordCombine, spendDev, demandTrade, nextSeason,
   OFF_STEPS, offStep, campDrill, CAMP_LEGACY, dbSpot, lineup, depthChart, gradeOf, gradeOfOvr, ovrGradeVal, SPORT, sportOf,
   openTalks, ask, closeTalks, acceptTalks, ASKS, askOdds, leverageOf,
-  retire, canRetire, mustRetire, careerTotals, legacyOf, LEGACY_TIERS, ALL_TIME, STAT_LABEL, HEADLINE_STATS, careerCard, AWARD_NAME, MAX_SEASONS, retireReason, goalsFor, stockText, pickText, loadSlots, CAREER_SLOTS, maxedTrait, trainWindow, canUpgrade, upgradeCost, legacyExtras } from '../../lib/career'
+  retire, canRetire, mustRetire, careerTotals, legacyOf, LEGACY_TIERS, ALL_TIME, STAT_LABEL, HEADLINE_STATS, AWARD_NAME, MAX_SEASONS, retireReason, goalsFor, stockText, pickText, loadSlots, CAREER_SLOTS, maxedTrait, trainWindow, canUpgrade, upgradeCost, legacyExtras,
+  compsFor, seasonScore, unretire, canUnretire, comebackYear, COMEBACK_SEASONS } from '../../lib/career'
 import { GAME_LINE } from '../../lib/seasonDirector'
 import { GAMES, pickPlayoffGame } from '../../lib/minigames'
 import MiniGame from './MiniGame'
@@ -18,7 +19,10 @@ import { useProgress, spendBoost } from '../../lib/progress'
 import { MomentCard, NowCard, RecordOverlay, HonorOverlay } from './AppSeasonPlus'
 import Silhouette from '../Silhouette'
 import { AvatarBadge } from './NameTag'
+import { getUsername } from '../../lib/discord'
+import { sellsHere, onStorefront } from '../../lib/storefront'
 import { IconClose, IconArrow, IconFlame, IconTrophy, IconStar, IconCrown, IconMedal, IconRing, IconCheck, IconShield, IconHelmet, IconSpin } from './icons'
+import './career-legacy.css'
 
 // CAREER (football and basketball): the intro, the draft, the hub where a
 // career is played (your model and traits, the season, the player, the team,
@@ -137,6 +141,7 @@ export function CareerIntro({ sport = 'nfl', uid = null, onOpen, onNew, onClose 
                   <i>{POS_LABEL[r.pos] ?? r.pos}</i>
                   {r.hof ? <i className="is-hof"><IconCrown size={11} /> HALL OF FAME</i> : <i>{String(r.tier).toUpperCase()}</i>}
                   {(r.ranked ?? r.rank <= 15) && <i className="is-rank">NO. {r.rank} ALL-TIME</i>}
+                  {r.comeback && <i>COMEBACK</i>}
                   {r.sandbox && <i className="is-sb">SANDBOX</i>}
                 </span>
                 <span className="cr-run-meta">{r.seasons} {r.seasons === 1 ? 'season' : 'seasons'} · {r.rings} {r.rings === 1 ? 'ring' : 'rings'} · {r.awards} {r.awards === 1 ? 'award' : 'awards'} · {new Date(r.at).toLocaleDateString(undefined, RUN_DATE)}</span>
@@ -455,7 +460,8 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
   if (!c) return null
   const S = sportOf(c), logoFor = S.logo
   if (c.phase === 'draft') return <Draft c={c} setCareer={setCareer} />
-  if (c.phase === 'retired') return <Legacy c={c} setCareer={setCareer} onNewBuild={onNewBuild} onExit={onExit} />
+  // the comeback (BAP Pro): back into the offseason he retired in, on the season tab
+  if (c.phase === 'retired') return <Legacy c={c} setCareer={setCareer} user={user} onUnretire={() => { setCareer(unretire(c)); setTab('season'); sfx('whistle'); haptic('success') }} onNewBuild={onNewBuild} onExit={onExit} />
 
   const L = legacyOf(c)
   const begin = () => { const [n, d] = startSeason(c); D.current = d; setCareer(n); sfx('whistle'); haptic('medium') }
@@ -505,6 +511,7 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
   const wins = played.filter(g => g.won).length, losses = played.length - wins
   const seasonOver = a && a.k >= total && !a.moment && !a.injury && !a.po
   const last = c.seasons[c.seasons.length - 1]
+  const cb = comebackYear(c)
 
   return (
     <div className={`ag-screen ${S.screen} cr cr-hub cr--team`} style={teamVars(c.fit)}>
@@ -518,6 +525,7 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
             <span className="ag-eyebrow cr-head-team">{c.sandbox && <b className="sb-tag">SANDBOX</b>}{c.fit?.name?.toUpperCase()}</span>
             <h1 className="ag-h1 cr-head-name" style={{ fontSize: (c.name ?? '').length > 14 ? 26 : (c.name ?? '').length > 10 ? 31 : 36 }}>{c.name} <small>{POS_LABEL[c.pos]}</small></h1>
             <span className="cr-head-meta">YEAR {c.year + 1} · AGE {c.age} · {c.season}</span>
+            {cb && <span className="cr-head-cb">{cb.done ? 'COMEBACK · ALL SEASONS PLAYED' : `COMEBACK · YEAR ${cb.n} OF ${cb.of}`}</span>}
           </div>
         </div>
         <button className="ag-round-btn" onClick={onExit} aria-label="Home"><IconClose size={16} /></button>
@@ -598,7 +606,7 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
           </section>
         )}
 
-        {tab === 'season' && c.phase === 'offseason' && last && <Offseason c={c} setCareer={setCareer} last={last} setTab={setTab} />}
+        {tab === 'season' && c.phase === 'offseason' && last && <Offseason c={c} setCareer={setCareer} last={last} setTab={setTab} user={user} />}
         {tab === 'player' && <><Player c={c} /><Comp c={c} /></>}
         {tab === 'team' && <><Lineup c={c} /><TeamFit c={c} /></>}
         {tab === 'career' && <CareerTab c={c} L={L} onDelete={() => { clearCareer(c.sport, c.uid, c.slot ?? 0); setCareer(null); onExit() }} />}
@@ -631,7 +639,7 @@ function Chunk({ c, e }) {
 
 // ── The offseason, step by step: recap → contract → roster moves → camp ─────
 const MOVE_TAG = { sign: 'SIGNED', draft: 'DRAFTED', retire: 'RETIRED', leave: 'GONE', rival: 'RIVAL' }
-function Offseason({ c, setCareer, last, setTab }) {
+function Offseason({ c, setCareer, last, setTab, user }) {
   const step = c.off?.step ?? 'recap'
   const forced = mustRetire(c)
   const steps = OFF_STEPS.filter(([id]) => id !== 'contract' || c.off?.contract || Array.isArray(c.offers))
@@ -647,13 +655,13 @@ function Offseason({ c, setCareer, last, setTab }) {
       <div className="cr-steps ag-pop" role="tablist" aria-label="Offseason">
         {steps.map(([id, label], i) => <button key={id} role="tab" aria-selected={i === idx} className={`cr-step${i === idx ? ' is-on' : i < idx ? ' is-done' : ''}`} disabled={i > idx} onClick={() => go(id)}>{i < idx ? <IconCheck size={11} /> : <span>{i + 1}</span>} {label}</button>)}
       </div>
-      {steps[idx][0] === 'recap' && <Recap c={c} last={last} />}
+      {steps[idx][0] === 'recap' && <Recap c={c} last={last} user={user} />}
       {steps[idx][0] === 'moves' && <Moves c={c} setCareer={setCareer} forced={forced} />}
       {steps[idx][0] === 'camp' && <Camp c={c} setCareer={setCareer} />}
       {steps[idx][0] === 'contract' && <Contract c={c} setCareer={setCareer} />}
       {!isLast && !unsigned && <button className="ag-btn ag-btn--gold tk-intro-go" onClick={() => go(nextStep[0])}>NEXT: {nextStep[1]} <IconArrow size={16} /></button>}
       {showActions && forced && retireReason(c) !== 'nocalls' && (
-        <p className="cr-note ag-pop">{retireReason(c) === 'age' ? `${c.name} is ${c.age}. The body has made the call: this is the end of the road.` : `${c.seasons.length} seasons: as long as a career runs here. Time to hang it up.`}</p>
+        <p className="cr-note ag-pop">{retireReason(c) === 'comeback' ? `${COMEBACK_SEASONS} more seasons, as promised. ${c.name} hangs it up for good.` : retireReason(c) === 'age' ? `${c.name} is ${c.age}. The body has made the call: this is the end of the road.` : `${c.seasons.length} seasons: as long as a career runs here. Time to hang it up.`}</p>
       )}
       {showActions && (
         <div className="cr-actions ag-pop" style={{ '--d': '150ms' }}>
@@ -664,9 +672,11 @@ function Offseason({ c, setCareer, last, setTab }) {
     </section>
   )
 }
-function Recap({ c, last }) {
+function Recap({ c, last, user }) {
   const S = sportOf(c)
   const met = last.goals.filter(g => g.met).length
+  const card = useCardShare()
+  const shareSeason = () => card.run(m => m.seasonShareCanvas(c, last, { username: getUsername(user) || c.owner || 'Guest' }), { title: `${c.name}'s ${last.season} season`, filename: `season-${last.season}-${String(c.name).toLowerCase().replace(/[^a-z0-9]+/g, '-')}.png` })
   return (
     <div className={`ag-card cr-wrap ag-pop${last.champion ? ' is-ring' : ''}`}>
       <div className="ag-card-head"><span className="ag-eyebrow">{last.season} · {last.wins}–{last.losses}{last.playoffs ? ' · PLAYOFFS' : ''}</span>{last.champion && <span className="cr-ring"><IconRing size={13} /> CHAMPIONS</span>}</div>
@@ -681,6 +691,7 @@ function Recap({ c, last }) {
       {last.sb && <p className="cr-note">{last.sb.won ? `${S.final} champions${last.sb.series ? `, ${last.sb.mySc}–${last.sb.oppSc} in the series` : `: ${last.sb.mySc ?? ''}${last.sb.oppSc != null ? `–${last.sb.oppSc}` : ''}`}.` : `Lost the ${S.final}${last.sb.series ? ` ${last.sb.mySc}–${last.sb.oppSc}` : ''}. Close.`}</p>}
       {!last.sb && last.rounds?.length > 0 && <p className="cr-note">Playoffs: {last.rounds.map(r => `${r.won ? 'W' : 'L'} ${r.mySc}–${r.oppSc} ${nick(r.opponent)}`).join(' · ')}</p>}
       {last.goals.length > 0 && <div className="cr-goals"><span className="ag-eyebrow">GOALS · {met}/{last.goals.length}</span>{last.goals.map(g => <span key={g.k} className={`cr-goal${g.met ? ' is-met' : ' is-miss'}`}>{g.met ? <IconCheck size={11} /> : null} {g.label}</span>)}</div>}
+      <button className="ag-btn ag-btn--ghost cl-season-share" onClick={shareSeason} disabled={card.busy}>{card.busy ? 'MAKING THE CARD…' : `SHARE THE ${last.season} SEASON`}</button>
     </div>
   )
 }
@@ -706,7 +717,7 @@ function RetireButton({ c, setCareer, forced }) {
   const go = () => { setAsk(false); setCareer(retire(c)); victory({ big: true }) }
   return <>
     <button className={`ag-btn${forced ? ' ag-btn--gold tk-intro-go' : ' ag-btn--ghost'}`} onClick={() => { if (forced) go(); else { setAsk(true); sfx('tap') } }}>{forced ? 'HANG IT UP' : 'RETIRE'}</button>
-    {ask && <AskSheet eyebrow="RETIREMENT" title={`Retire ${c.name}?`} body="The career is booked and the legacy is final." yes="RETIRE" no="KEEP PLAYING" onYes={go} onNo={() => setAsk(false)} />}
+    {ask && <AskSheet eyebrow="RETIREMENT" title={`Retire ${c.name}?`} body={c.unretired ? 'This time it\'s for good: there\'s no second comeback. The legacy and the Hall of Fame vote are final.' : 'The career is booked and the legacy is final.'} yes="RETIRE" no="KEEP PLAYING" onYes={go} onNo={() => setAsk(false)} />}
   </>
 }
 // The answer to a trade demand, right away: the new team, or a no
@@ -798,7 +809,7 @@ function Contract({ c, setCareer }) {
         <button key={o.team} className={`cr-offer${o.kind === 'contender' ? ' is-contender' : ''}`} onClick={() => { setCareer(openTalks(c, o)); sfx('tap') }}>
           <img src={logoFor(o.team)} alt="" />
           <span className="cr-offer-txt"><b>{o.fit.name}</b><small>{o.pitch}</small><i>{o.stand ? (o.stand.starter ? 'Would start' : `Backup behind ${o.stand.behind}`) : o.fit.status} · {(o.fit.groups ?? [{ k: 'O-LINE', v: o.fit.ol }, { k: c.pos === 'qb' ? 'WEAPONS' : 'QB', v: c.pos === 'qb' ? o.fit.weapons : o.fit.qb }]).slice(0, 2).map(g => `${g.k.toLowerCase()} ${gradeOf(g.v)}`).join(' · ')}</i></span>
-          <span className="cr-offer-money"><b>{money(o.perYear)}</b><small>× {o.years} YRS</small></span>
+          <span className="cr-offer-money"><b>{money(o.perYear)}</b><small>× {o.years} {o.years === 1 ? 'YR' : 'YRS'}</small></span>
         </button>
       ))}
     </div>
@@ -881,50 +892,214 @@ function CareerTab({ c, L, onDelete }) {
   )
 }
 
-// ── Legacy: the career, booked ───────────────────────────────────────────────
-function Legacy({ c, setCareer, onNewBuild, onExit }) {
-  const S = sportOf(c)
-  const L = legacyOf(c), t = careerTotals(c), card = careerCard(c)
+// ── Share cards (lib/careerShare.js): make the image, then the share sheet ──
+function useCardShare() {
   const [img, setImg] = useState(null)
   const [busy, setBusy] = useState(false)
-  const share = async () => {
+  const run = async (make, opts) => {
     if (busy) return
-    setBusy(true)
+    setBusy(true); sfx('tap')
     try {
-      const { generateCareerCard, captureSilhouette } = await import('../../utils/generateShareCard')
-      const fig = await captureSilhouette('.cr-model .sil-wrap')
-      const canvas = await generateCareerCard(card, fig)
-      const url = canvas.toDataURL('image/png'); setImg(url)
-      const blob = await new Promise(res => canvas.toBlob(res, 'image/png'))
-      const file = blob && new File([blob], `career-${c.name}-${POS_LABEL[c.pos]}.png`, { type: 'image/png' })
-      if (file && navigator.canShare?.({ files: [file] })) await navigator.share({ files: [file], title: `${c.name}'s career` }).catch(() => {})
-      else { const a = document.createElement('a'); a.href = url; a.download = file?.name ?? 'career.png'; a.click() }
-      sfx('claim')
-    } finally { setBusy(false) }
+      const m = await import('../../lib/careerShare')
+      const canvas = await make(m)
+      setImg(canvas.toDataURL('image/png'))
+      const res = await m.shareCanvas(canvas, opts)
+      if (res === 'shared' || res === 'downloaded') sfx('claim')
+    } catch {} finally { setBusy(false) }
   }
+  return { img, busy, run }
+}
+// the store can sell Pro here (the app outside the US App Store can't: lib/storefront.js)
+function useSells() {
+  const [sells, setSells] = useState(sellsHere)
+  useEffect(() => onStorefront(() => setSells(sellsHere())), [])
+  return sells
+}
+const nav = to => window.dispatchEvent(new CustomEvent('bap:nav', { detail: to }))
+
+// ── Legacy: the career, booked ───────────────────────────────────────────────
+// One page, top to bottom: the tier and the Hall of Fame call, the big numbers,
+// the trophy case, every season as a tile, the best one, where the career sits
+// among the real greats; then the card to share, the comeback (BAP Pro), what's next.
+const tcOf = (S, short) => { const t = S.teamOf(short); return lum(t.color) < 0.12 ? t.color2 : t.color }
+const MARKS = { ring: IconRing, award: IconTrophy, first: IconMedal, honor: IconStar }
+// a season's marks, the biggest first (a tile has room for two)
+const marksOf = s => [s.champion && 'ring', s.award && 'award', s.allPro && 'first', s.proBowl && !s.allPro && 'honor'].filter(Boolean)
+function Legacy({ c, setCareer, user, onUnretire, onNewBuild, onExit }) {
+  const S = sportOf(c), logoFor = S.logo
+  const L = legacyOf(c), t = careerTotals(c)
+  const keys = HEADLINE_STATS[c.pos]
+  const pro = useProgress().pro
+  const sells = useSells()
+  const card = useCardShare()
+  const [askBack, setAskBack] = useState(false)
+  const cb = comebackYear(c)
+  const username = getUsername(user) || c.owner || 'Guest'
+  const best = useMemo(() => (c.seasons.length > 1 ? c.seasons.reduce((b, s) => (seasonScore(c.pos, s) > seasonScore(c.pos, b) ? s : b)) : null), [c.seasons, c.pos])
+  // who the build plays like: an all-time great first, else the closest today
+  const comp = useMemo(() => { const l = compsFor(c, 6); return l.find(x => x.era === 'all-time') ?? l[0] ?? null }, [c.build, c.pos, c.sport]) // eslint-disable-line react-hooks/exhaustive-deps
+  // the all-time list around him: two above, two below
+  const greats = ALL_TIME[c.pos] ?? []
+  const at = L.rank - 1
+  const rows = [...greats.slice(Math.max(0, at - 2), at), { me: true }, ...greats.slice(at, at + 2).map(x => ({ ...x, rank: x.rank + 1 }))]
+  const years = c.seasons.length ? `${c.seasons[0].season}–${c.seasons[c.seasons.length - 1].season}` : ''
+  const teams = t.teams.map(s => ({ s, n: c.seasons.filter(x => x.team === s).length }))
+  const pick = c.draft?.pick
+  const story = [
+    pick ? `Drafted No. ${pick.o} overall in ${c.seasons[0]?.season ?? c.season}.` : null,
+    teams.length === 1 ? `One team, start to finish: the ${S.teamOf(teams[0].s).name}.` : `${teams.length} teams.`,
+    c.unretired && cb ? `Came out of retirement at ${c.unretired.age} for ${cb.played} more ${cb.played === 1 ? 'season' : 'seasons'}.` : null,
+    `Retired${c.unretired ? ' for good' : ''} at ${c.age}.`,
+  ].filter(Boolean).join(' ')
+  const hardware = [
+    [t.rings, t.rings === 1 ? 'RING' : 'RINGS', IconRing, true],
+    [t.awards, t.awards === 1 ? AWARD_NAME[c.pos] : `${AWARD_NAME[c.pos]}S`, IconTrophy, true],
+    [t.allPros, S.first.toUpperCase(), IconMedal, false],
+    [t.proBowls, t.proBowls === 1 ? S.honor.toUpperCase() : S.honors, IconStar, false],
+    [t.records, t.records === 1 ? 'RECORD' : 'RECORDS', IconFlame, false],
+  ].filter(([n]) => n > 0)
+  const marks = [...new Set(c.seasons.flatMap(s => marksOf(s).slice(0, 2)))]
+  const markName = { ring: S.isBucket ? 'TITLE' : 'SUPER BOWL', award: AWARD_NAME[c.pos], first: S.first.toUpperCase(), honor: S.honor.toUpperCase() }
+  const share = () => card.run(m => m.careerShareCanvas(c, { username }), { title: `${c.name}'s career`, filename: `career-${String(c.name).toLowerCase().replace(/[^a-z0-9]+/g, '-')}.png` })
+  // the staged entrance: each section in turn, 100ms apart
+  let n = 0
+  const st = () => ({ '--i': n++ })
   return (
-    <div className={`ag-screen ${S.screen} cr cr-legacy-screen cr--team`} style={teamVars(c.fit)}>
-      <div className="ag-screen-head">
-        <div><span className="ag-eyebrow">{c.seasons.length} SEASONS · {POS_NAME[c.pos].toUpperCase()}</span><h1 className="ag-h1">{c.hof?.in ? 'Hall of Famer' : L.tier}</h1></div>
+    <div className={`ag-screen ${S.screen} cr cr-legacy-screen cr--team cl`} style={teamVars(c.fit)}>
+      {askBack && <AskSheet eyebrow="BAP PRO · THE COMEBACK" title={`Bring ${c.name} back?`} body={`Out of retirement for up to ${COMEBACK_SEASONS} more seasons, a year older. Once per career: the legacy and the Hall of Fame vote are redone when he retires for good.`} yes="UNRETIRE" no="STAY RETIRED" onYes={() => { setAskBack(false); onUnretire() }} onNo={() => setAskBack(false)} />}
+      <div className="ag-screen-head cl-in" style={st()}>
+        <div className="cl-head">
+          <span className="ag-eyebrow">{c.unretired ? 'RETIRED FOR GOOD' : 'CAREER OVER'} · {years}</span>
+          <h1 className="ag-h1" style={{ fontSize: (c.name ?? '').length > 14 ? 30 : (c.name ?? '').length > 10 ? 36 : 42 }}>{c.name}</h1>
+          <span className="cl-tags"><i>{POS_NAME[c.pos].toUpperCase()}</i><i>{t.seasons} {t.seasons === 1 ? 'SEASON' : 'SEASONS'}</i>{c.unretired && <i className="is-cb">COMEBACK</i>}{c.sandbox && <i>SANDBOX</i>}</span>
+        </div>
         <button className="ag-round-btn" onClick={onExit} aria-label="Home"><IconClose size={16} /></button>
       </div>
       <div className="ag-screen-body">
-        <div className={`cr-final ag-pop${c.hof?.in ? ' is-hof' : ''}`}>
-          <span className="cr-final-score"><b>{L.score}</b><small>LEGACY POINTS</small></span>
-          <span className="cr-final-rank">{L.ranked ? <>No. <b>{L.rank}</b> {S.isBucket ? POS_NAME[c.pos].toLowerCase() : POS_LABEL[c.pos]} career of all time{L.above ? <small>behind {L.above.name}, ahead of {L.below?.name ?? 'everyone else'}</small> : <small>Ahead of everyone</small>}</> : <>Outside the top {L.of} careers<small>{L.above.score - L.score + 1} legacy points short of {L.above.name}</small></>}</span>
-          {c.hof && <span className={`cr-hof${c.hof.in ? ' is-in' : ''}`}><IconCrown size={14} /> {c.hof.in ? `HALL OF FAME · ${c.hof.ballot.toUpperCase()}` : c.hof.ballot.toUpperCase()} · {c.hof.pct}%</span>}
-        </div>
-        <Model c={c} />
-        <div className="ag-card cr-totals ag-pop" style={{ '--d': '60ms' }}>
-          <div className="cr-kv">{HEADLINE_STATS[c.pos].map(k => <span key={k}><b>{fmt(t.stats[k])}</b><small>{STAT_LABEL[k]}</small></span>)}<span><b>{t.rings}</b><small>RINGS</small></span><span><b>{t.awards}</b><small>{AWARD_NAME[c.pos]}</small></span><span><b>{t.proBowls}</b><small>{S.honors}</small></span><span><b>{t.allPros}</b><small>{S.first.toUpperCase()}</small></span><span><b>{t.records}</b><small>RECORDS</small></span><span><b>{money(Math.round(t.earnings))}</b><small>EARNED</small></span></div>
-          <p className="cr-note">{t.teams.length === 1 ? `One team, start to finish: the ${c.fit?.name}.` : `${t.teams.length} teams: ${t.teams.join(', ')}.`} Drafted {c.draft.pick ? `pick ${c.draft.pick.o}` : ''}, retired at {c.age}.</p>
-        </div>
-        {img && <img src={img} alt="Career card" className="cr-card-preview ag-pop" />}
-        <div className="cr-actions ag-pop" style={{ '--d': '90ms' }}>
-          <button className="ag-btn ag-btn--gold tk-intro-go" onClick={share} disabled={busy}>{busy ? 'MAKING THE CARD…' : 'SHARE THE CAREER CARD'}</button>
-          <button className="ag-btn" onClick={() => { clearCareer(c.sport, c.uid, c.slot ?? 0); setCareer(null); onNewBuild() }}>NEW CAREER</button>
+        <section className={`ag-card cl-hero cl-in${c.hof?.in ? ' is-hof' : ''}`} style={st()}>
+          <div className="cl-tier-row">
+            <span className="cl-tier"><small>LEGACY TIER</small><b>{L.tier}</b></span>
+            <span className="cl-score"><b>{L.score}</b><small>LEGACY PTS</small></span>
+          </div>
+          <div className="cl-ladder" role="img" aria-label={`Legacy tier: ${L.tier}`}>
+            {LEGACY_TIERS.map(([min, name]) => <span key={name} className={`${L.score >= min ? 'is-on' : ''}${L.tier === name ? ' is-cur' : ''}`}><i /><small>{name}</small></span>)}
+          </div>
+          {c.hof && (
+            <div className={`cl-hof${c.hof.in ? ' is-in' : ''}`}>
+              <IconCrown size={17} />
+              <b>{c.hof.in ? `HALL OF FAME · ${c.hof.ballot.toUpperCase()}` : c.hof.ballot.toUpperCase()}</b>
+              {(c.hof.in || L.score >= 140) && <em>{c.hof.pct}%<small>OF THE VOTE</small></em>}
+            </div>
+          )}
+          <p className="cl-story">{story}</p>
+        </section>
+
+        <section className="ag-card cl-in" style={st()}>
+          <span className="ag-eyebrow cl-label">THE CAREER IN NUMBERS</span>
+          <div className="cl-big">{keys.map(k => <span key={k}><b>{fmt(t.stats[k])}</b><small>{STAT_LABEL[k]}{S.averages?.[k] ? ' · CAREER' : ''}</small></span>)}</div>
+          <div className="cl-small">
+            <span><b>{t.seasons}</b><small>SEASONS</small></span>
+            <span><b>{t.wins}–{t.losses}</b><small>RECORD</small></span>
+            <span><b>{t.playoffs}</b><small>PLAYOFF YEARS</small></span>
+            <span><b>{money(Math.round(t.earnings))}</b><small>EARNED</small></span>
+          </div>
+        </section>
+
+        {hardware.length > 0 && (
+          <section className="ag-card cl-in" style={st()}>
+            <span className="ag-eyebrow cl-label">THE TROPHY CASE</span>
+            <div className="cl-case">{hardware.map(([v, k, Ico, gold]) => <span key={k} className={`cl-trophy${gold ? ' is-gold' : ''}`}><Ico size={18} /><b>{v}</b><small>{k}</small></span>)}</div>
+          </section>
+        )}
+
+        <section className="ag-card cl-in" style={st()}>
+          <span className="ag-eyebrow cl-label">SEASON BY SEASON</span>
+          <div className="cl-strip">
+            {c.seasons.map(s => {
+              const ms = marksOf(s).slice(0, 2)
+              const back = c.unretired && s.year >= c.unretired.year
+              return (
+                <span key={s.year} className={`cl-yr${s === best ? ' is-best' : ''}${s.champion ? ' is-ring' : ''}${back ? ' is-cb' : ''}`} style={{ '--yc': tcOf(S, s.team) }} title={`${s.season} · ${s.teamName ?? s.team} · ${s.wins}–${s.losses}${s.champion ? ' · champions' : ''}${s.award ? ` · ${s.awardName}` : ''}`}>
+                  <small>{s.season}</small>
+                  <img src={logoFor(s.team)} alt={s.team} loading="lazy" />
+                  <b>{s.wins}–{s.losses}</b>
+                  <i>{ms.length ? ms.map(k => { const Ico = MARKS[k]; return <Ico key={k} size={13} className={`is-${k}`} /> }) : <em />}</i>
+                </span>
+              )
+            })}
+          </div>
+          {(marks.length > 0 || best || c.unretired) && (
+            <div className="cl-legend">
+              {['ring', 'award', 'first', 'honor'].filter(k => marks.includes(k)).map(k => { const Ico = MARKS[k]; return <span key={k}><Ico size={12} className={`is-${k}`} /> {markName[k]}</span> })}
+              {best && <span><i className="is-best" /> BEST SEASON</span>}
+              {c.unretired && <span><i className="is-cb" /> COMEBACK</span>}
+            </div>
+          )}
+        </section>
+
+        {best && (
+          <section className="ag-card cl-best cl-in" style={{ ...st(), '--yc': tcOf(S, best.team) }}>
+            <div className="cl-best-head">
+              <img src={logoFor(best.team)} alt="" />
+              <span><small>BEST SEASON · {best.season}</small><b>{best.teamName ?? S.teamOf(best.team).name}</b><em>Age {best.age} · {best.ovr} OVR · {best.champion ? `${S.final} champions` : best.playoffs ? 'Playoffs' : 'No playoffs'}</em></span>
+              <span className="cl-best-rec"><b>{best.wins}–{best.losses}</b><small>RECORD</small></span>
+            </div>
+            <div className="cl-big cl-big--sm">{keys.map(k => <span key={k}><b>{fmt(best.stats[k])}</b><small>{STAT_LABEL[k]}</small></span>)}</div>
+            {(best.award || best.allPro || best.proBowl || best.champion) && (
+              <div className="cr-badges">
+                {best.champion && <span className="cr-badge is-gold"><IconRing size={12} /> CHAMPIONS</span>}
+                {best.award && <span className="cr-badge is-gold"><IconTrophy size={12} /> {best.awardName}</span>}
+                {best.allPro && <span className="cr-badge is-gold"><IconMedal size={12} /> {S.first.toUpperCase()}</span>}
+                {best.proBowl && !best.allPro && <span className="cr-badge"><IconStar size={12} /> {S.honor.toUpperCase()}</span>}
+              </div>
+            )}
+          </section>
+        )}
+
+        <section className="ag-card cl-greats cl-in" style={st()}>
+          <div className="cl-greats-head">
+            <span className="ag-eyebrow cl-label">AMONG THE GREATS</span>
+            <span className="cl-rank">{L.ranked ? <>NO. <b>{L.rank}</b> {S.isBucket ? 'CAREER' : `${POS_LABEL[c.pos]} CAREER`} EVER</> : <>OUTSIDE THE TOP {L.of}</>}</span>
+          </div>
+          <div className="cl-rows">
+            {rows.map(x => x.me ? (
+              <span key="me" className="cl-row is-me"><i>{L.ranked ? L.rank : '—'}</i><span className="cl-face"><AvatarBadge self name={c.name} size={34} /></span><b>{c.name}</b><em>{L.score}</em></span>
+            ) : (
+              <span key={x.name} className="cl-row"><i>{x.rank}</i><span className="cl-face">{S.photo(x.name) ? <img src={S.photo(x.name)} alt="" loading="lazy" /> : <span className="crl-init">{initials(x.name)}</span>}</span><b>{x.name}</b><em>{x.score}</em></span>
+            ))}
+          </div>
+          <p className="cl-note">{L.ranked ? (L.above ? `${L.above.score - L.score + 1} legacy points from passing ${L.above.name}.` : 'Ahead of every real career at the position.') : `${L.above.score - L.score + 1} legacy points short of the list.`} The greats are scored from their real careers with the same formula.</p>
+          {comp && (
+            <div className="cl-comp">
+              <span className="cl-face">{comp.photo ? <img src={photoSrc(comp.photo)} alt="" loading="lazy" /> : <span className="crl-init">{initials(comp.name)}</span>}</span>
+              <span><small>BUILT LIKE</small><b>{comp.name}</b></span>
+              <em>{comp.match}%<small>MATCH</small></em>
+            </div>
+          )}
+        </section>
+
+        <section className="cl-acts cl-in" style={st()}>
+          <button className="ag-btn ag-btn--gold tk-intro-go" onClick={share} disabled={card.busy}>{card.busy ? 'MAKING THE CARD…' : 'SHARE THE CAREER CARD'}</button>
+          {card.img && <img src={card.img} alt={`${c.name}'s career card`} className="cl-preview" />}
+        </section>
+
+        {canUnretire(c) && (pro || sells) && (
+          <section className="ag-card cl-back cl-in" style={st()}>
+            <span className="cl-back-txt">
+              <span className="ag-eyebrow"><IconCrown size={13} /> BAP PRO · THE COMEBACK</span>
+              <b>One more run?</b>
+              <small>{c.name} comes out of retirement for up to {COMEBACK_SEASONS} more seasons, a year older. Once per career.{pro ? '' : ' A BAP Pro feature.'}</small>
+            </span>
+            {pro
+              ? <button className="ag-btn ag-btn--gold" onClick={() => { setAskBack(true); sfx('tap') }}>UNRETIRE</button>
+              : <button className="ag-btn ag-btn--ghost cl-back-pro" onClick={() => { nav('pro'); sfx('tap') }}><IconCrown size={15} /> SEE PRO</button>}
+          </section>
+        )}
+
+        <section className="cl-nav cl-in" style={st()}>
+          <button className="ag-btn ag-btn--ghost" onClick={() => { clearCareer(c.sport, c.uid, c.slot ?? 0); setCareer(null); onNewBuild() }}>NEW CAREER</button>
           <button className="ag-btn ag-btn--ghost" onClick={onExit}>HOME</button>
-        </div>
+        </section>
       </div>
     </div>
   )
