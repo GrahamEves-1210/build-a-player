@@ -32,6 +32,8 @@ import { WeekStrip, Bracket, RingCeremony, SeasonRewards } from './app/AppSeason
 import { createDirector } from '../lib/seasonDirector'
 import { MomentCard, NowCard, Pulse, Wire, Milestones, RecordOverlay, Leaders, SeasonStory, useDirectedReveal, MomentsToggle } from './app/AppSeasonPlus'
 import { rampAdd, useRailOn } from '../lib/ads'
+import { ShareSeasonButton } from './app/SeasonShare'
+import { nflSeasonCard } from '../utils/seasonCard'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -1328,6 +1330,21 @@ function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = fals
   const champion = sbResult?.won
   const [show, setShow] = useState(false)
 
+  // the season as a share card (Share Season)
+  const kind = isOL ? 'ol' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'
+  const shareCard = useMemo(() => {
+    if (!build || !types) return null
+    const meta = isOL ? OL_ATTR : isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : isRB ? RB_ATTR : ATTR
+    const archFn = { ol: getArchetypeOL, db: getArchetypeDB, te: getArchetypeTE, wr: getArchetypeWR, rb: getArchetypeRB, qb: getArchetype }[kind]
+    let arch = null
+    try { arch = archFn(ovr, build, types) } catch {}
+    return nflSeasonCard({
+      result, pos: kind, name: userName, arch, salary: isSalaryMode,
+      award: mvpWon || !!result.award?.userWins,
+      rows: buildRows(build, types, meta, isSalaryMode && kind === 'qb'),
+    })
+  }, [result, build, types, kind, ovr, userName, isSalaryMode, mvpWon])
+
   const team = result.team
   const monoTeamBuild = team
     ? Object.fromEntries(
@@ -1379,6 +1396,7 @@ function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = fals
         </div>
         <div className="sfb-sub">{wins}–{losses} Season · OVR {ovr}</div>
       </div>
+      <ShareSeasonButton card={shareCard} />
       {playoffs && <PlayoffLog rounds={result.playoffRounds} />}
 
       {champion && (

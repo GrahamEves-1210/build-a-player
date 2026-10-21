@@ -5426,3 +5426,75 @@ html:is(.is-app, .app-look) .reels-wrap.rs-holo .reel-outer { border-width: 2px 
 /* Leaderboards: Everyone | Friends */
 .lb-friends-seg { margin-bottom: 10px; }
 .lb-friends-empty { margin: 0 0 12px; font-family: var(--ag-body, system-ui, sans-serif); font-size: 13px; line-height: 1.45; color: var(--ag-muted, rgba(216,243,220,.78)); text-align: center; }
+/* ═══ Share Season: the button on the final report and its sheet ═══════════
+   The sheet clears the website's bottom ad rail (--web-rail); a phone gets a
+   bottom sheet, a desktop a centered card. */
+.ss-btn { width: 100%; height: 56px; font-size: 22px; letter-spacing: 3px; border-radius: 14px; }
+.ss-btn svg { flex: 0 0 auto; margin-top: -2px; }
+.ss-overlay {
+  position: fixed; left: 0; right: 0; top: 0; bottom: var(--web-rail, 0px); z-index: 1300;
+  display: flex; align-items: flex-end; justify-content: center;
+  background: rgba(0,0,0,.62); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
+  animation: ag-fade .18s ease both;
+}
+.ss-sheet {
+  width: 100%; max-width: 440px; max-height: 100%; overflow-y: auto; overscroll-behavior: contain;
+  padding: 14px 16px calc(var(--safe-bottom, 0px) + 16px);
+  border-radius: 22px 22px 0 0; border-top: 1.5px solid var(--ag-line-hi);
+  background: radial-gradient(ellipse 90% 40% at 50% 0%, color-mix(in srgb, var(--ag-a1) 16%, transparent), transparent 70%), var(--ag-bg, #050705);
+  box-shadow: 0 -20px 60px rgba(0,0,0,.6);
+  font-family: var(--ag-body); color: var(--ag-text);
+  animation: ag-sheet-up .28s cubic-bezier(.2,1,.3,1) both;
+}
+@media (min-width: 769px) {
+  .ss-overlay { align-items: center; padding: 16px; }
+  .ss-sheet { border-radius: 22px; border: 1.5px solid var(--ag-line-hi); padding-bottom: 18px; }
+}
+.ss-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.ss-title { margin: 0; font-family: var(--ag-font); font-weight: 400; font-size: 25px; letter-spacing: 3px; line-height: 1; color: var(--ag-text); }
+.ss-close {
+  flex: 0 0 auto; width: 38px; height: 38px; display: grid; place-items: center; padding: 0;
+  border-radius: 12px; border: 1px solid var(--ag-line-hi); background: var(--ag-panel); color: var(--ag-text);
+  cursor: pointer; transition: transform .15s ease-out;
+}
+.ss-seg {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; margin-bottom: 12px;
+  border-radius: 13px; border: 1px solid var(--ag-line); background: rgba(255,255,255,.03);
+}
+.ss-seg button {
+  height: 38px; display: flex; align-items: center; justify-content: center; gap: 8px;
+  border: 0; border-radius: 10px; background: transparent; cursor: pointer;
+  font-family: var(--ag-font); font-size: 18px; letter-spacing: 2.5px; line-height: 1; color: var(--ag-muted);
+  transition: transform .15s ease-out, background-color .15s, color .15s;
+}
+.ss-seg button.is-on { color: var(--ag-on); background: var(--ag-grad); box-shadow: 0 0 14px var(--ag-glow); }
+.ss-seg-shape { display: inline-block; border: 2px solid currentColor; border-radius: 3px; }
+.ss-seg-shape--story { width: 10px; height: 16px; }
+.ss-seg-shape--square { width: 14px; height: 14px; }
+.ss-close:not(:disabled):active, .ss-seg button:not(:disabled):active { transform: scale(.96); }
+@media (hover: hover) {
+  .ss-close:hover { border-color: var(--ag-a1); }
+  .ss-seg button:not(.is-on):hover { color: var(--ag-text); background: rgba(255,255,255,.05); }
+}
+.ss-preview { height: min(54dvh, 480px); display: flex; align-items: center; justify-content: center; margin-bottom: 14px; }
+.ss-img {
+  display: block; flex: 0 1 auto; min-width: 0; min-height: 0; max-width: 100%; max-height: 100%; border-radius: 14px;
+  box-shadow: 0 18px 40px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.08);
+  animation: ss-in .25s ease-out both;
+}
+.ss-skel {
+  height: 100%; max-width: 100%; border-radius: 14px; aspect-ratio: 9 / 16;
+  background: linear-gradient(110deg, rgba(255,255,255,.04) 25%, rgba(255,255,255,.09) 50%, rgba(255,255,255,.04) 75%) 0 0 / 200% 100%;
+  animation: ss-shimmer 1.4s linear infinite;
+}
+.ss-preview--square .ss-skel { aspect-ratio: 1; height: auto; width: min(100%, 54dvh, 480px); }
+.ss-preview--story .ss-skel { width: auto; }
+@keyframes ss-in { from { opacity: 0; transform: scale(.98); } }
+@keyframes ss-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+.ss-actions { display: flex; gap: 8px; }
+.ss-go { flex: 1; height: 54px; font-size: 21px; letter-spacing: 2.5px; border-radius: 14px; }
+.ss-note { min-height: 18px; margin: 8px 0 0; text-align: center; font-size: 13px; font-weight: 600; color: var(--ag-muted); }
+@media (prefers-reduced-motion: reduce) {
+  .ss-overlay, .ss-sheet, .ss-img, .ss-skel { animation: none; }
+}
+html.bap-reduce-motion :is(.ss-overlay, .ss-sheet, .ss-img, .ss-skel) { animation: none !important; }
