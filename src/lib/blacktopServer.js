@@ -39,6 +39,27 @@ export function liveSocket(path, hello, onMsg, onStatus) {
   }
 }
 
+// The game from the server's inputs (the builds and seed at the tip-off, the calls as
+// they lock): every phone in the game, and anyone watching it, plays this same game
+export function playOut({ final, match, locks, pools, types }) {
+  if (!final || !match) return null
+  const out = new Set(final.afk ?? [])
+  const cpu = seededShuffle(BOT_NAMES, `${final.seed}-afk`)
+  let ci = 0
+  const poolOf = pos => (pos === 'big' ? pools?.big : pools?.guard) ?? []
+  const mk = p => {
+    const t = p.pos === 'big' ? types.big : types.guard
+    const sent = final.builds?.[p.vid]
+    // a build that isn't real is treated as empty: the same answer on every phone
+    const b = autoBuild(sent && buildOk(sent, poolOf(p.pos)) ? sent : null, t, poolOf(p.pos), `${final.seed}-${p.vid}`)
+    return out.has(p.vid)
+      ? { id: p.vid, name: cpu[ci++ % cpu.length], pos: p.pos, role: 'balanced', build: b, bot: true, uid: null, cos: null }
+      : { id: p.vid, name: p.name, pos: p.pos, role: final.roles?.[p.vid] ?? 'balanced', build: b, bot: p.bot, mimic: !!p.mimic, uid: p.uid, cos: p.cos ?? null }
+  }
+  const teams = [match.players.filter(p => p.team === 0).map(mk), match.players.filter(p => p.team === 1).map(mk)]
+  return { ...simStreetball({ teams, seed: final.seed, goal: 11, winBy: 2, cap: 15, names: [teamName(match, 0), teamName(match, 1)], calls: locks }), teams }
+}
+
 export function useBlacktopServer({ enabled, user, position, pools, types, build, player, onExit, onSeatPos }) {
   const [cosV, setCosV] = useState(0)
   useEffect(() => { const on = () => setCosV(v => v + 1); window.addEventListener('bap:cosmetics', on); return () => window.removeEventListener('bap:cosmetics', on) }, [])
@@ -201,24 +222,7 @@ export function useBlacktopServer({ enabled, user, position, pools, types, build
   }, [phase])
 
   // ── The game: the engine on the server's inputs ───────────────────────────
-  const game = useMemo(() => {
-    if (!final || !match) return null
-    const out = new Set(final.afk ?? [])
-    const cpu = seededShuffle(BOT_NAMES, `${final.seed}-afk`)
-    let ci = 0
-    const poolOf = pos => (pos === 'big' ? pools?.big : pools?.guard) ?? []
-    const mk = p => {
-      const t = p.pos === 'big' ? types.big : types.guard
-      const sent = final.builds?.[p.vid]
-      // a build that isn't real is treated as empty: the same answer on every phone
-      const b = autoBuild(sent && buildOk(sent, poolOf(p.pos)) ? sent : null, t, poolOf(p.pos), `${final.seed}-${p.vid}`)
-      return out.has(p.vid)
-        ? { id: p.vid, name: cpu[ci++ % cpu.length], pos: p.pos, role: 'balanced', build: b, bot: true, uid: null, cos: null }
-        : { id: p.vid, name: p.name, pos: p.pos, role: final.roles?.[p.vid] ?? 'balanced', build: b, bot: p.bot, mimic: !!p.mimic, uid: p.uid, cos: p.cos ?? null }
-    }
-    const teams = [match.players.filter(p => p.team === 0).map(mk), match.players.filter(p => p.team === 1).map(mk)]
-    return { ...simStreetball({ teams, seed: final.seed, goal: 11, winBy: 2, cap: 15, names: [teamName(match, 0), teamName(match, 1)], calls: locks }), teams }
-  }, [final, match, locks, pools, types])
+  const game = useMemo(() => playOut({ final, match, locks, pools, types }), [final, match, locks, pools, types])
 
   const recorded = useRef(null)
   const book = useCallback(() => {
@@ -251,10 +255,11 @@ export function useBlacktopServer({ enabled, user, position, pools, types, build
   }, [final]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // the calls: I'm at check-up pn (the server opens the window when everyone is), my call, reactions
-  const arrive = useCallback((pn, team) => {
+  // (the score as of the check-up goes too: it's the line the Blacktop menu shows for the game)
+  const arrive = useCallback((pn, team, score = null) => {
     if (arrived.current.has(pn)) return
     arrived.current.add(pn)
-    roomRef.current?.send({ t: 'at', pn, team })
+    roomRef.current?.send({ t: 'at', pn, team, ...(score ? { score } : {}) })
   }, [])
   const call = useCallback((pn, v) => {
     if (myCalls[pn] != null) return

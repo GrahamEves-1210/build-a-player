@@ -14,15 +14,17 @@ import { VERSUS_GUARD_TYPES } from '../../data/nba-guards'
 import { VERSUS_BIG_TYPES } from '../../data/nba-bigs'
 import BlacktopCourt, { COURTS, useCourt, setCourtId } from './BlacktopCourt'
 import { owns } from '../../lib/progress'
-import { IconClose, IconArrow, IconChat, IconStar, IconSend, IconBasketball, IconVersus } from './icons'
+import { IconClose, IconArrow, IconChat, IconStar, IconSend, IconBasketball, IconVersus, IconEye } from './icons'
 import { NameTag, AvatarBadge, Entrance } from './NameTag'
 import OnlineRecord, { RatingLine, LinkPill, ModeStats, TierChip } from './OnlineRecord'
 import { useProgress } from '../../lib/progress'
 import { makeMimics, isTester } from '../../lib/mimic'
+import { useLiveGames, useBlacktopWatch } from '../../lib/blacktopWatch'
 
 // BLACKTOP screens. The match itself lives in lib/blacktop.js (useBlacktop);
 // these only draw it: the lobby (pick a spot on a squad), the slim HUD over the
-// build, team chat, and the game on the court.
+// build, team chat, and the game on the court. The menu also lists the games being
+// played, and the same game screen shows one from the stands (lib/blacktopWatch.js).
 
 const fmt = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
 const TEAM_COLORS = ['#4da3ff', '#ff4d5e']   // blue vs red
@@ -39,10 +41,11 @@ const fakeBuild = (p, created) => {
   const filled = Math.max(0, Math.min(8, Math.floor((Date.now() - (created ?? Date.now())) / 1000 / spt)))
   return { filled, done: filled >= 8 }
 }
-// A player's name with their look (plate: the full nameplate where there's room)
-const Who = ({ p, meVid, plate = false, short = false }) => (asBot(p)
+// A player's name with their look (plate: the full nameplate where there's room;
+// link: a tap opens their profile, where nothing else is going on: a spectator's final)
+const Who = ({ p, meVid, plate = false, short = false, link = false }) => (asBot(p)
   ? <>{short ? firstName(p.name) : p.name}</>
-  : <NameTag name={short ? firstName(p.name) : p.name} cos={p.cos} self={(p.vid ?? p.id) === meVid} plate={plate} />
+  : <NameTag name={short ? firstName(p.name) : p.name} cos={p.cos} uid={link ? p.uid ?? null : null} self={(p.vid ?? p.id) === meVid} plate={plate} />
 )
 // The winning team's star (MVP if they're on it, else their top scorer): whose
 // victory everyone else sees
@@ -95,8 +98,10 @@ export function OneOnOneOptions({ onPickup, onFriend, onJoinCode, error = '' }) 
   )
 }
 
-export function BlacktopHub({ onJoin3v3, onJoin2v2 = null, onJoin1v1 = null, onPickup, onFriend, onJoinCode, onBack, notice = null, onNotice = null, onPractice = null }) {
+export function BlacktopHub({ onJoin3v3, onJoin2v2 = null, onJoin1v1 = null, onPickup, onFriend, onJoinCode, onBack, notice = null, onNotice = null, onPractice = null, onWatch = null }) {
   const o = useProgress().stats?.online ?? { rating: 800 }
+  // the games being played right now, under each mode (only with the live server)
+  const live = useLiveGames(!!onWatch)
   return (
     <div className="ag-screen ag-screen--bucket bt-hub">
       <div className="ag-screen-head">
@@ -120,6 +125,7 @@ export function BlacktopHub({ onJoin3v3, onJoin2v2 = null, onJoin1v1 = null, onP
             <button className="ag-btn bt-mode-go" onClick={() => { sfx('tap'); onJoin1v1() }}>JOIN LOBBY <IconArrow size={16} /></button>
             {onPractice && <button className="ag-btn ag-btn--ghost bt-practice" onClick={() => { sfx('tap'); onPractice(1) }}>PRACTICE · VS 1 CPU</button>}
             <OneOnOneOptions onFriend={onFriend} onJoinCode={onJoinCode} />
+            <LiveGames list={live[1]} size={1} onWatch={onWatch} />
             <ModeStats mode="bt1" />
           </> : <>
             <OneOnOneOptions onPickup={onPickup} onFriend={onFriend} onJoinCode={onJoinCode} />
@@ -134,6 +140,7 @@ export function BlacktopHub({ onJoin3v3, onJoin2v2 = null, onJoin1v1 = null, onP
             </div>
             <button className="ag-btn bt-mode-go" onClick={() => { sfx('tap'); onJoin2v2() }}>JOIN LOBBY <IconArrow size={16} /></button>
             {onPractice && <button className="ag-btn ag-btn--ghost bt-practice" onClick={() => { sfx('tap'); onPractice(2) }}>PRACTICE · WITH 3 CPUS</button>}
+            <LiveGames list={live[2]} size={2} onWatch={onWatch} />
             <ModeStats mode="bt2" />
           </section>
         )}
@@ -144,6 +151,7 @@ export function BlacktopHub({ onJoin3v3, onJoin2v2 = null, onJoin1v1 = null, onP
           </div>
           <button className="ag-btn bt-mode-go" onClick={() => { sfx('tap'); onJoin3v3() }}>JOIN LOBBY <IconArrow size={16} /></button>
           {onPractice && <button className="ag-btn ag-btn--ghost bt-practice" onClick={() => { sfx('tap'); onPractice(3) }}>PRACTICE · WITH 5 CPUS</button>}
+          <LiveGames list={live[3]} size={3} onWatch={onWatch} />
           <ModeStats mode="bt" />
         </section>
         <CourtPicker />
@@ -178,6 +186,46 @@ function CourtPicker() {
         ))}
       </div>
     </section>
+  )
+}
+
+// ── Live games under a mode: tap WATCH for a seat in the stands ──────────────
+const SHOW_LIVE = 3
+function LiveGames({ list, size, onWatch }) {
+  const [all, setAll] = useState(false)
+  const [now, setNow] = useState(Date.now())
+  const on = !!onWatch && list?.length > 0
+  useEffect(() => { if (!on) return; const id = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(id) }, [on])
+  if (!on) return null
+  const shown = all ? list : list.slice(0, SHOW_LIVE)
+  return (
+    <div className="bt-watch-list" role="list" aria-label={`Live ${size}v${size} games`}>
+      <span className="bt-watch-head"><i className="bt-live-dot" aria-hidden="true" />LIVE NOW <b>{list.length}</b></span>
+      {shown.map(g => <LiveRow key={g.code} g={g} now={now} onWatch={onWatch} />)}
+      {list.length > SHOW_LIVE && <button className="ag-chip bt-watch-more" onClick={() => { sfx('tap'); setAll(v => !v) }}>{all ? 'SHOW FEWER' : `${list.length - SHOW_LIVE} MORE LIVE`}</button>}
+    </div>
+  )
+}
+// One game: each side's players, the score as of the last check-up, how long it's been on
+function LiveRow({ g, now, onWatch }) {
+  const score = g.score ?? [0, 0]
+  const on = t => g.players.filter(p => p.team === t)
+  const said = t => on(t).map(p => (p.cpu ? 'CPU' : p.name)).join(', ')
+  const side = t => (
+    <span className={`bt-watch-side bt-t${t}`}>
+      {on(t).map((p, i) => <span key={i} className="bt-watch-name">{p.cpu ? 'CPU' : <NameTag name={p.name} cos={p.cos} uid={p.uid} plate={false} />}</span>)}
+    </span>
+  )
+  return (
+    <div className="bt-watch-row" role="listitem">
+      {side(0)}
+      <span className="bt-watch-mid">
+        <span className="bt-watch-score"><b className={`bt-t0${score[0] > score[1] ? ' is-lead' : ''}`}>{score[0]}</b><i>–</i><b className={`bt-t1${score[1] > score[0] ? ' is-lead' : ''}`}>{score[1]}</b></span>
+        <span className="bt-watch-time">{fmt(Math.max(0, Math.floor((now - g.started) / 1000)))}{g.watchers > 0 && <><IconEye size={11} />{g.watchers}</>}</span>
+      </span>
+      {side(1)}
+      <button className="bt-watch-go" onClick={() => { sfx('tap'); onWatch(g) }} aria-label={`Watch ${said(0)} against ${said(1)}`}><IconEye size={16} />WATCH</button>
+    </div>
   )
 }
 
@@ -477,11 +525,42 @@ function SquadBuilds({ game, names, meVid, onClose }) {
   )
 }
 
+// ── Watching from the menu: the stands' bar, and the game itself ────────────
+// (a spectator plays from the same component as the players, with no seat: bt.watch)
+const WATCH_STATE = { joining: 'FINDING A SEAT…', full: 'STANDS FULL', gone: 'NOT LIVE', ended: 'FEED ENDED' }
+function WatchBar({ bt }) {
+  return (
+    <div className="bt-watchbar">
+      <span className="bt-watchbar-tag"><i className="bt-live-dot" aria-hidden="true" />SPECTATING</span>
+      <span className="bt-watchbar-n">{bt.state !== 'live' ? WATCH_STATE[bt.state] ?? '' : bt.link === 'live' ? <><IconEye size={14} />{Math.max(1, bt.watchers ?? 1)} WATCHING</> : 'RECONNECTING…'}</span>
+      <button className="ag-round-btn" onClick={() => { sfx('tap'); bt.exit() }} aria-label="Stop watching"><IconClose size={16} /></button>
+    </div>
+  )
+}
+export function BlacktopWatch({ code, pools, types, onClose }) {
+  const w = useBlacktopWatch({ code, pools, types })
+  const bt = { ...w, exit: onClose }
+  if (w.game) return <BlacktopGame bt={bt} onOpenChat={null} unread={0} />
+  const why = w.state === 'joining' ? null : w.state === 'full' ? 'The stands are full for this one. Try another game.' : 'This game is over, or it can\'t be watched right now.'
+  return (
+    <div className="ag-screen ag-screen--bucket bt-game">
+      <div className="ag-screen-body">
+        <WatchBar bt={bt} />
+        {why && <div className="bt-watch-none ag-pop">{why}<button className="ag-btn ag-btn--ghost" onClick={onClose}>BACK TO BLACKTOP</button></div>}
+      </div>
+    </div>
+  )
+}
+
 // ── Game: reveal → live → result ────────────────────────────────────────────
 export function BlacktopGame({ bt, user, photoFor, onOpenChat, unread }) {
   const { game, match } = bt
-  const [stage, setStage] = useState('reveal')
-  const [idx, setIdx] = useState(0)
+  // watching (the menu's live games): no seat, so no calls, no reactions, no record;
+  // joined after the tip-off, it picks up on the last possession called (bt.startAt)
+  const watch = !!bt.watch
+  const joined = watch ? bt.startAt : null
+  const [stage, setStage] = useState(joined != null ? 'live' : 'reveal')
+  const [idx, setIdx] = useState(joined ?? 0)
   const speed = 0.85                         // online: everyone sees it at the same pace (a touch slower than real time, so the moves are easy to follow)
   const fired = useRef(false)
   const plays = game?.plays ?? []
@@ -489,7 +568,7 @@ export function BlacktopGame({ bt, user, photoFor, onOpenChat, unread }) {
   // a play's line in the feed (and its points on the board) show once it happens on the
   // court, not as it starts: the court reports it (onReveal); a timer near the end of the
   // play is the backstop. Everything before the current play is out already.
-  const [shown, setShown] = useState(-1)
+  const [shown, setShown] = useState((joined ?? 0) - 1)
   useEffect(() => {
     if (!play) return
     const t = setTimeout(() => setShown(s => Math.max(s, idx)), (playDelay(play, idx === 0) * 0.85) / speed)
@@ -498,12 +577,12 @@ export function BlacktopGame({ bt, user, photoFor, onOpenChat, unread }) {
   const onReveal = id => { const i = plays.findIndex(p => p.id === id); if (i >= 0) setShown(s => Math.max(s, i)) }
   const outTo = shown >= idx ? idx : idx - 1
   const mine = match.players.find(p => p.vid === bt.me.vid)
-  const myTeam = mine?.team ?? 0
+  const myTeam = watch ? -1 : mine?.team ?? 0
   const colorFor = t => TEAM_COLORS[t]
   const names = useMemo(() => [teamName(match, 0), teamName(match, 1)], [match])
   useRailOn(`${stage}|${idx >= plays.length - 1}`)   // tip-off and the final buzzer bring the bottom rail back
 
-  useEffect(() => { const t = setTimeout(() => setStage('live'), 4200); return () => clearTimeout(t) }, [])
+  useEffect(() => { const t = setTimeout(() => setStage(s => (s === 'reveal' ? 'live' : s)), 4200); return () => clearTimeout(t) }, [])
   useEffect(() => {
     if (stage !== 'live' || !game) return
     if (idx >= plays.length - 1) {
@@ -518,8 +597,9 @@ export function BlacktopGame({ bt, user, photoFor, onOpenChat, unread }) {
     }
     // a check-up waits for the calls (the leader locks them; anyone else falls back to what they have)
     if (play?.type === 'check' && !bt.locks?.[play.pn]) {
-      // on the server: say I'm here, and the server's lock moves us on
-      if (bt.server) { bt.arrive(play.pn, play.team); return }
+      // on the server: say I'm here (and the score as of now), and the server's lock moves us on
+      // (watching: just wait for it)
+      if (bt.server) { bt.arrive(play.pn, play.team, play.score); return }
       const t = setTimeout(() => bt.lockCalls(play.pn, bt.isLeader), bt.isLeader ? CALL_MS + 150 : CALL_MS + 2600)
       return () => clearTimeout(t)
     }
@@ -545,13 +625,14 @@ export function BlacktopGame({ bt, user, photoFor, onOpenChat, unread }) {
   const feed = plays.slice(0, outTo + 1).filter(p => p.type !== 'check').slice(-4).reverse()
   const squads = [0, 1].map(t => game.teams[t])
   // only the calls that fit this game: a 1v1 has no pass and no help (a CPU's call included)
-  const size = game.teams[myTeam]?.length ?? 1
+  const size = game.teams[watch ? 0 : myTeam]?.length ?? 1
   const fitOff = v => (typeof v === 'string' && v.startsWith('pass:') ? (size > 1 ? v : null) : offCallsFor(size).includes(v) ? v : null)
   const fitDef = v => (defCallsFor(size).includes(v) ? v : null)
 
   if (stage === 'reveal') {
     return (
       <div className="ag-screen ag-screen--bucket bt-game">
+        {watch && <WatchBar bt={bt} />}
         <div className="bt-reveal">
           <span className="ag-eyebrow">BLACKTOP · FIRST TO 11</span>
           <div className="bt-reveal-grid">
@@ -583,32 +664,35 @@ export function BlacktopGame({ bt, user, photoFor, onOpenChat, unread }) {
     return (
       <div className="ag-screen ag-screen--bucket bt-game">
         <div className="ag-screen-body">
-          <div className={`bt-result-hero ${won ? 'is-win' : 'is-loss'} ag-pop`}>
-            <span className="ag-eyebrow">{won ? 'BLACKTOP · W' : 'BLACKTOP · L'}</span>
-            <h1 className="ag-h1">{won ? 'Your squad took it' : 'They took it'}</h1>
+          {watch && <WatchBar bt={bt} />}
+          {/* watching: the final, the winners named; nothing of it is anyone's but theirs */}
+          <div className={`bt-result-hero ${won || watch ? 'is-win' : 'is-loss'} ag-pop`}>
+            <span className="ag-eyebrow">{watch ? 'BLACKTOP · FINAL' : won ? 'BLACKTOP · W' : 'BLACKTOP · L'}</span>
+            <h1 className="ag-h1">{watch ? `${names[game.winner]} took it` : won ? 'Your squad took it' : 'They took it'}</h1>
             <div className="bt-final"><b className="bt-t0">{game.score[0]}</b><span>–</span><b className="bt-t1">{game.score[1]}</b></div>
             <div className="bt-final-teams"><span className="bt-t0">{names[0]}</span><span className="bt-t1">{names[1]}</span></div>
-            {mvp && <div className="bt-mvp"><IconStar size={14} /> MVP · <Who p={mvp} meVid={bt.me.vid} plate /></div>}
-            <RatingLine mode="bt" noMvp={!!mvp} />
+            {mvp && <div className="bt-mvp"><IconStar size={14} /> MVP · <Who p={mvp} meVid={bt.me.vid} plate link={watch} /></div>}
+            {!watch && <RatingLine mode="bt" noMvp={!!mvp} />}
           </div>
           {[game.winner, 1 - game.winner].map(t => (
             <div key={t} className={`ag-card bt-box bt-t${t} ag-pop`} style={{ '--d': `${120 + t * 80}ms` }}>
               <div className="bt-box-head"><span>{names[t]}</span><span>PTS</span><span>FG</span><span>AST</span><span>REB</span><span>STL</span><span>BLK</span></div>
               {game.teams[t].map(p => { const s = game.stats[p.id]; return (
                 <div key={p.id} className={`bt-box-row${p.id === bt.me.vid ? ' is-me' : ''}${p.id === game.mvp ? ' is-mvp' : ''}`}>
-                  <span className="bt-box-name"><Who p={p} meVid={bt.me.vid} /></span>
+                  <span className="bt-box-name"><Who p={p} meVid={bt.me.vid} link={watch} /></span>
                   <span><b>{s.pts}</b></span><span>{s.fgm}/{s.fga}</span><span>{s.ast}</span><span>{s.reb}</span><span>{s.stl}</span><span>{s.blk}</span>
                 </div>
               ) })}
             </div>
           ))}
           <div className="bt-result-actions ag-pop" style={{ '--d': '300ms' }}>
-            {(bt.server || humans > 1) && (
+            {watch && <button className="ag-btn" onClick={() => { sfx('tap'); bt.exit() }}>BACK TO BLACKTOP</button>}
+            {!watch && (bt.server || humans > 1) && (
               <button className="ag-btn" onClick={() => { bt.voteRematch(); sfx('tap') }} disabled={bt.rematchVotes.has(bt.me.vid)}>
                 {bt.rematchVotes.has(bt.me.vid) ? `WAITING FOR ${bt.server ? 'THE SQUAD' : 'SQUADS'} · ${votes}/${humans}` : `RUN IT BACK${humans > 1 && votes ? ` · ${votes}/${humans}` : ''}`}
               </button>
             )}
-            <button className="ag-btn ag-btn--ghost" onClick={bt.exit}>LEAVE THE BLACKTOP</button>
+            {!watch && <button className="ag-btn ag-btn--ghost" onClick={bt.exit}>LEAVE THE BLACKTOP</button>}
           </div>
         </div>
       </div>
@@ -616,7 +700,8 @@ export function BlacktopGame({ bt, user, photoFor, onOpenChat, unread }) {
   }
 
   return (
-    <div className="ag-screen ag-screen--bucket bt-game bt-live">
+    <div className={`ag-screen ag-screen--bucket bt-game bt-live${watch ? ' is-watch' : ''}`}>
+      {watch && <WatchBar bt={bt} />}
       <div className="bt-board">
         <div className={`bt-board-side bt-t0${score[0] > score[1] ? ' is-lead' : ''}`}><span className="bt-board-name">{names[0]}{myTeam === 0 ? ' ★' : ''}</span><b>{score[0]}</b></div>
         <div className="bt-board-mid"><span className="ag-eyebrow">FIRST TO 11</span><span className="bt-board-btns"><button className={`ag-chip${showBuilds ? ' is-on' : ''}`} onClick={() => setShowBuilds(v => !v)}>BUILDS</button></span></div>
@@ -628,7 +713,7 @@ export function BlacktopGame({ bt, user, photoFor, onOpenChat, unread }) {
         <BlacktopCourt game={game} play={play} meId={bt.me.vid} colorFor={colorFor} speed={speed} onReveal={onReveal}
           ovrFor={p => liveOvr(p)} bubbles={bubbles}
           avatarFor={p => <Av name={p.name} bot={asBot(p)} team={p.team} size={28} cos={p.cos} self={p.id === bt.me.vid} />} />
-        {locked && lastCheck && !calling && <CallReveal key={lastCheck.pn} off={fitOff(locked[lastCheck.team])} def={fitDef(locked[1 - lastCheck.team])} offense={lastCheck.team === myTeam} nameOf={id => firstName(game.teams.flat().find(p => p.id === id)?.name)} />}
+        {locked && lastCheck && !calling && <CallReveal key={lastCheck.pn} off={fitOff(locked[lastCheck.team])} def={fitDef(locked[1 - lastCheck.team])} offense={watch ? null : lastCheck.team === myTeam} nameOf={id => firstName(game.teams.flat().find(p => p.id === id)?.name)} />}
         {/* the calls: under the court on phones, over its lower edge on desktop (court and buttons in one view) */}
         <div className="lc-calls">
           {calling && (() => {
@@ -647,7 +732,7 @@ export function BlacktopGame({ bt, user, photoFor, onOpenChat, unread }) {
           })()}
         </div>
       </div>
-      <EmoteBar emotes={EMOTES} onEmote={bt.emote} />
+      {!watch && <EmoteBar emotes={EMOTES} onEmote={bt.emote} />}
       <div className="bt-feed">
         {feed.map((p, i) => <div key={p.id} className={`bt-feed-line bt-t${p.team}${i === 0 ? ' is-now' : ''}${p.big ? ' is-big' : ''}${p.type === 'milestone' ? ' is-ms' : ''}`}>{p.text}</div>)}
       </div>

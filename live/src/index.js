@@ -17,14 +17,19 @@
 //
 // The Trait Auction (auction.js) and Compete pools (compete.js) live here too:
 // there the server runs the whole thing itself (the auctioneer; the scorer).
+//
+// Watching: the Blacktop menu lists the games being played (games.js), and anyone
+// can take a seat in the stands of one (Room.watch). A spectator only ever gets
+// what everyone in the game already sees, and nothing they send does anything.
 
 import { AuctionQueue, AuctionRoom, validSportPos } from './auction.js'
 import { CompeteQueue, CompeteRoom, validCompete } from './compete.js'
+import { Games } from './games.js'
 import { cleanBuild } from '../../src/lib/blacktopCore.js'
 import { handleSubmit } from './submit.js'
 import { whoIs } from './auth.js'
 import { handleReset } from './reset.js'
-export { AuctionQueue, AuctionRoom, CompeteQueue, CompeteRoom }
+export { AuctionQueue, AuctionRoom, CompeteQueue, CompeteRoom, Games }
 
 const BUILD_SECS = 180
 const PRACTICE_BUILD_SECS = 600
@@ -49,6 +54,7 @@ const DEF_CALLS = ['press', 'sag', 'help']
 // a 1v1 has nobody to pass to and nobody to help (src/lib/hoops.js offCallsFor/defCallsFor)
 const callsFor = (size, offense) => (offense ? OFF_CALLS : DEF_CALLS).filter(c => size > 1 || (c !== 'pass' && c !== 'help'))
 const EMOTES = ['🔥', '🧊', '💰', '😤', '👏', '😂']
+const MAX_WATCHERS = 50
 
 const ORIGINS = [/^https:\/\/(www\.)?build-a-player\.com$/, /^https:\/\/([a-z0-9-]+\.)?build-a-player\.pages\.dev$/, /^https:\/\/localhost$/, /^https?:\/\/localhost(:\d+)?$/, /^capacitor:\/\/localhost$/, /^https?:\/\/127\.0\.0\.1(:\d+)?$/]
 const originOk = o => !o || ORIGINS.some(re => re.test(o))
@@ -78,6 +84,8 @@ export default {
     if (url.pathname === '/lobby') return env.LOBBY.get(env.LOBBY.idFromName('blacktop')).fetch(req)
     if (url.pathname === '/lobby2') return env.LOBBY.get(env.LOBBY.idFromName('blacktop2')).fetch(req)
     if (url.pathname === '/lobby1') return env.LOBBY.get(env.LOBBY.idFromName('blacktop1')).fetch(req)
+    // the live games, for the Blacktop menu (games.js)
+    if (url.pathname === '/games') return env.GAMES ? env.GAMES.get(env.GAMES.idFromName('blacktop')).fetch(req) : new Response('not found', { status: 404 })
     if (url.pathname === '/auction/q') {
       const sport = url.searchParams.get('sport'), pos = url.searchParams.get('pos')
       if (!validSportPos(sport, pos)) return new Response('bad', { status: 400 })
@@ -231,11 +239,67 @@ export class Room {
   constructor(state, env) {
     this.env = env
     this.conns = new Map()      // ws → vid
+    this.watchers = new Set()   // spectators' sockets: never players, never in `here`
     this.m = null               // { code, players, practice, seed, created, phase, builds, final, locks, ... }
     this.timers = new Set()
   }
   later(fn, ms) { const id = setTimeout(() => { this.timers.delete(id); fn() }, ms); this.timers.add(id); return id }
   clear(id) { if (id) { clearTimeout(id); this.timers.delete(id) } }
+  // ── Watching ──
+  // A game can be watched once it's tipped off (every build is out in the open by then)
+  // between real players whose seats are all locked to their own phones (a seat taken
+  // without a key, by an older app, could be said hello to by anyone who knows the code,
+  // and watching hands out the code with the seed). Never a practice run.
+  watchable() {
+    const m = this.m
+    return !!m && !m.practice && m.phase !== 'build' && this.humans().every(p => this.keys?.[p.vid])
+  }
+  watch(ws) {
+    const m = this.m
+    if (this.conns.has(ws)) return
+    const why = !m || m.practice ? 'gone' : m.phase === 'build' ? 'early' : !this.watchable() ? 'closed' : this.watchers.size >= MAX_WATCHERS ? 'full' : null
+    if (why) { send(ws, { t: 'nowatch', why }); try { ws.close(1000, 'no watching') } catch {} return }
+    this.watchers.add(ws)
+    // what every player has had since the tip-off: who's playing, the seed, the builds, the calls so far
+    send(ws, { t: 'watching', players: m.players, size: m.size, seed: m.seed, final: m.final, locks: m.locks, n: this.watchers.size })
+    this.watchCount()
+  }
+  // to the stands: only what goes to both teams at once (the calls as they lock, reactions)
+  show(msg) { for (const ws of this.watchers) send(ws, msg) }
+  watchCount() {
+    this.show({ t: 'watchers', n: this.watchers.size })
+    // the menu's count catches up a moment later (one post for a crowd coming in)
+    if (!this.m?.listed || this.watchPost) return
+    this.watchPost = setTimeout(() => { this.watchPost = null; if (this.m?.listed && this.m.phase === 'game') this.post() }, 3000)
+  }
+  // this game on the menu's list (games.js), or off it (over: done, or everyone's gone)
+  async post(over = false) {
+    const m = this.m, ns = this.env.GAMES
+    if (!m || !ns || m.practice) return
+    if (over && !m.listed) return
+    if (!over && !this.watchable()) return
+    m.listed = !over
+    const body = over ? { code: m.code, over: true } : {
+      code: m.code, size: m.size, started: m.started, score: m.shown ?? [0, 0], pn: m.seenPn ?? 0, watchers: this.watchers.size,
+      players: m.players.map(p => ({ name: p.name, uid: p.uid ?? null, cos: p.cos ?? null, team: p.team, pos: p.pos, cpu: !!p.bot || !!m.final?.afk?.includes(p.vid) })),
+    }
+    try { await ns.get(ns.idFromName('blacktop')).fetch('https://games/update', { method: 'POST', body: JSON.stringify(body) }) } catch {}
+  }
+  // The score for the list, as the players' phones see it at each check-up (the server
+  // doesn't play the game, and a spectator plays it out themselves: this is only the
+  // menu's line, posted as each possession is called). A check-up only counts once the
+  // one before it is called, and the most phones agreeing wins, so one phone can't put
+  // a made-up score up for long.
+  noteScore(pn, score, vid) {
+    const m = this.m
+    if (m.phase !== 'game' || !Number.isInteger(pn) || pn < (m.seenPn ?? 0) || (pn > 0 && !m.locks[pn - 1])) return
+    if (!Array.isArray(score) || score.length !== 2 || !score.every(n => Number.isInteger(n) && n >= 0 && n <= 99)) return
+    if (pn > (m.seenPn ?? 0) || !m.tally) { m.seenPn = pn; m.tally = {} }
+    m.tally[vid] = `${score[0]}-${score[1]}`
+    const votes = {}
+    for (const k of Object.values(m.tally)) votes[k] = (votes[k] ?? 0) + 1
+    m.shown = Object.entries(votes).sort((a, b) => b[1] - a[1])[0][0].split('-').map(Number)
+  }
   async fetch(req) {
     const url = new URL(req.url)
     if (url.pathname === '/init' && req.method === 'POST') {
@@ -270,6 +334,9 @@ export class Room {
     const m = this.m
     for (const id of this.timers) clearTimeout(id)
     this.timers.clear()
+    // nobody watches a build (the builds are hidden from the other team until the tip-off)
+    for (const ws of this.watchers) { send(ws, { t: 'nowatch', why: 'early' }); try { ws.close(1000, 'no watching') } catch {} }
+    this.watchers.clear()
     m.phase = 'build'
     m.created = Date.now()
     m.ends = m.created + (m.practice ? PRACTICE_BUILD_SECS : BUILD_SECS) * 1000
@@ -297,7 +364,10 @@ export class Room {
       afk,
     }
     m.phase = 'game'
+    m.started = Date.now()
     this.broadcast({ t: 'final', final: m.final })
+    // tipped off: on the menu's list of games to watch
+    this.post()
   }
   maybeStartEarly() {
     const m = this.m
@@ -337,9 +407,15 @@ export class Room {
     m.locks[pn] = { 0: c[0] ?? null, 1: c[1] ?? null }
     if (a) this.clear(a.timer)
     this.broadcast({ t: 'lock', pn, calls: m.locks[pn] })
+    this.show({ t: 'lock', pn, calls: m.locks[pn] })
+    // the menu's line: still going, and the score as of this check-up
+    if (m.phase === 'game') this.post()
   }
   async onMessage(ws, data) {
     const msg = parse(data); if (!msg) return
+    // someone watching: nothing they send does anything (they leave by closing)
+    if (this.watchers.has(ws)) return
+    if (msg.t === 'watch') return this.watch(ws)
     // a room the server no longer has (everyone left and it was cleared): over
     if (!this.m) { if (msg.t === 'hello') { send(ws, { t: 'gone' }); try { ws.close(1000, 'no game') } catch {} } return }
     const m = this.m
@@ -371,7 +447,7 @@ export class Room {
         }
         return this.maybeStartEarly()
       }
-      case 'at': return this.arrive(msg.pn, msg.team, vid)
+      case 'at': this.noteScore(msg.pn, msg.score, vid); return this.arrive(msg.pn, msg.team, vid)
       case 'call': {
         if (m.phase !== 'game' || !Number.isInteger(msg.pn) || m.locks[msg.pn] || m.final.afk.includes(vid)) return
         // a play, a defense, or a pass to a named teammate ('pass:<vid>', one on the caller's team)
@@ -381,7 +457,12 @@ export class Room {
         if (c[me.team] == null) c[me.team] = msg.v
         return
       }
-      case 'emote': if (EMOTES.includes(msg.e)) this.broadcast({ t: 'emote', from: vid, e: msg.e, ts: Date.now() }); return
+      case 'emote': {
+        if (!EMOTES.includes(msg.e)) return
+        const e = { t: 'emote', from: vid, e: msg.e, ts: Date.now() }
+        this.broadcast(e); this.show(e)
+        return
+      }
       case 'chat': {
         const text = str(msg.text, 120).trim(); if (!text) return
         const line = { t: 'chat', from: vid, name: me.name, uid: me.uid, cos: me.cos, team: me.team, text, ts: Date.now(), all: !!msg.all }
@@ -389,7 +470,7 @@ export class Room {
         return
       }
       case 'typing': { for (const [w, v] of this.conns) { const p = m.players.find(x => x.vid === v); if (p?.team === me.team && v !== vid) send(w, { t: 'typing', from: vid, name: me.name }) } return }
-      case 'done': { if (m.phase === 'game') m.phase = 'result'; return }
+      case 'done': { if (m.phase === 'game') { m.phase = 'result'; this.post(true) } return }
       case 'rematch': {
         // running it back is a squad thing: when everyone on my team who's still
         // here has voted, the lobby holds a side for us and we go back together
@@ -407,6 +488,8 @@ export class Room {
     }
   }
   onClose(ws) {
+    // someone leaving the stands: just one less watching
+    if (this.watchers.delete(ws)) { this.watchCount(); return }
     const vid = this.conns.get(ws); this.conns.delete(ws)
     if (!vid || !this.m) return
     if (this.here().includes(vid)) return
@@ -416,7 +499,7 @@ export class Room {
     if (this.m.phase === 'build') this.later(() => this.maybeStartEarly(), 20500)
     // the rest are done building: no need to wait on someone who left
     this.maybeStartEarly()
-    // nobody left at all: stop the clocks
-    if (!this.conns.size) { for (const id of this.timers) clearTimeout(id); this.timers.clear() }
+    // nobody left at all: stop the clocks (and the game comes off the menu's list)
+    if (!this.conns.size) { for (const id of this.timers) clearTimeout(id); this.timers.clear(); this.post(true) }
   }
 }

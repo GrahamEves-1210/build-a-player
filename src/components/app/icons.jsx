@@ -286,3 +286,11 @@ export const IconHoop = p => (
     <path fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" d="M7.6 11.8 9.1 21h5.8l1.5-9.2M7.6 11.8l4.4 4.9 4.4-4.9M9.1 21l2.9-4.3 2.9 4.3M10.3 11.8 12 14l1.7-2.2"/>
   </S>
 )
+// an eye: watching a live game (Blacktop's spectators)
+export const IconEye = p => (
+  <S {...p}>
+    <path fill="currentColor" d="M12 4.8c-4.6 0-8.3 3-9.8 6.4a1.9 1.9 0 0 0 0 1.6c1.5 3.4 5.2 6.4 9.8 6.4s8.3-3 9.8-6.4a1.9 1.9 0 0 0 0-1.6C20.3 7.8 16.6 4.8 12 4.8z"/>
+    <circle cx="12" cy="12" r="3.9" {...INK} opacity=".9"/>
+    <circle cx="12" cy="12" r="1.8" fill="currentColor"/>
+  </S>
+)

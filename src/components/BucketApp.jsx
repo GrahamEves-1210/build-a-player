@@ -45,7 +45,7 @@ import { useAuction } from '../lib/auction'
 import { FORFEIT_RATING } from '../lib/progress'
 import { useBlacktop } from '../lib/blacktop'
 import { setSandboxGate, sandboxItemFor, sandboxLocked } from './app/AppSandbox'
-import { BlacktopQueue, BlacktopHud, BlacktopChat, BlacktopGame, BlacktopHub } from './app/AppBlacktop'
+import { BlacktopQueue, BlacktopHud, BlacktopChat, BlacktopGame, BlacktopHub, BlacktopWatch } from './app/AppBlacktop'
 import { NameTag } from './app/NameTag'
 import { VersusHud, VersusMatchup, VersusLeaveSheet, VersusOppLeftSheet } from './app/Blacktop1v1'
 import { loadRun, newRun, cityList, ratedPool } from '../lib/takeover'
@@ -873,6 +873,10 @@ export default function BucketApp() {
   useEffect(() => {
     if (bt.phase === 'queue' && !['blacktop', 'blacktop-game', 'blacktop-build'].includes(page)) (bt.leaveLobby ?? bt.leave)()
   }, [page, bt.phase]) // eslint-disable-line
+  // watching a live game from the Blacktop menu (lib/blacktopWatch.js): a seat in the
+  // stands, not in the game, so nothing locks and leaving is free. Off the menu, it's over.
+  const [btWatch, setBtWatch] = useState(null)
+  useEffect(() => { if (page !== 'blacktop' || bt.phase !== 'idle') setBtWatch(null) }, [page, bt.phase])
   // one live game per device: another tab or window already has one going
   useEffect(() => {
     if (bt.phase !== 'busy') return
@@ -1964,7 +1968,9 @@ export default function BucketApp() {
   // Blacktop: the hub (3v3 · 1v1); JOIN LOBBY puts you in the 3v3 lobby on this same page
   if (page === 'blacktop') {
     if (bt.phase === 'idle') {
+      if (btWatch) return <BlacktopWatch code={btWatch} pools={LIVE_POOLS} types={LIVE_TYPES} onClose={() => setBtWatch(null)} />
       return <BlacktopHub onBack={() => setPage('splash')} onJoin3v3={() => { bt.clearKicked(); bt.join(false, 3) }}
+        onWatch={bt.server ? g => { setBtWatch(g.code); window.scrollTo({ top: 0, behavior: 'instant' }) } : null}
         onJoin2v2={bt.server ? () => { bt.clearKicked(); bt.join(false, 2) } : null}
         onJoin1v1={bt.server ? () => { bt.clearKicked(); bt.join(false, 1) } : null}
         notice={bt.kicked ? 'The build clock ran out before you finished. A CPU took your spot, and it counts as leaving the game.' : null} onNotice={bt.clearKicked}
