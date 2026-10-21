@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { REWARDED_ON } from '../../lib/rewardedAd'
 import { XpIco } from './GainIcons'
 import { useRailOn } from '../../lib/ads'
 import { LIVES, XP_CITY, XP_RUN, XP_ENDLESS, cityList, ratedPool, ensureStop, stopAt, isEndless, whereAmI, opponentOf, nextBestOf, saveRun, clearRun, hoopsDuel, footballDuel, prizeOptions, applyReward, afterDuel, pastRuns, logRun, STOPS, COINS_CITY, COINS_RUN, HEAT_MAX, PLAN_CUT, CASH_MULT, heatOf, onFire, firing, planFor, duelBuild } from '../../lib/takeover'
@@ -19,7 +20,8 @@ import WatchVideo from './WatchVideo'
 import { IS_APP } from '../../lib/platform'
 
 // out of lives on a solo road (app): one video brings one life back, once a run
-const canRevive = run => IS_APP && !!run?.over && !run.logged && !run.revived && run.mode !== 'duo'
+// a revive is a rewarded video: none to offer while those are off
+const canRevive = run => REWARDED_ON && IS_APP && !!run?.over && !run.logged && !run.revived && run.mode !== 'duo'
 
 // TAKEOVER — the road across the map. The run (lib/takeover.js) is plain data
 // saved on the device; this screen walks it: the map → the city's player → the

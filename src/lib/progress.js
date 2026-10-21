@@ -887,8 +887,8 @@ export function seasonCoins(d) {
 // Website: coins and cards need an account (the app keeps a guest's on the phone)
 // Coins (and XP) are for accounts only; a guest earns neither, anywhere
 export const walletOpen = () => !!uid
-// the card binder: the app keeps a guest's on the phone (merged in at sign-in); the website needs an account
-export const cardsOpen = () => IS_APP || !!uid
+// the card binder: a guest's is kept on the device (app and website alike) and merged in at sign-in
+export const cardsOpen = () => true
 function earn(n, label, quiet = false) {
   n = Math.round(n || 0)
   if (n <= 0 || !walletOpen()) return
@@ -1088,7 +1088,7 @@ export function claimAch(id) {
 // Last change wins; items and achievements are merged, never lost.
 // ═════════════════════════════════════════════════════════════════════════════
 // potdPaid, dc, day and sets ride along so clearing the device (or a second one) can't pay a reward twice
-const WALLET_KEYS = ['coins', 'coinsEarned', 'owned', 'equip', 'ach', 'achClaimed', 'stats', 'shopFree', 'levelPaid', 'discordPaid', 'feedbackPaid', 'retired', 'potdPaid', 'dc', 'day', 'sets', 'salInf', 'streak', 'unlocks']
+const WALLET_KEYS = ['coins', 'coinsEarned', 'owned', 'equip', 'ach', 'achClaimed', 'stats', 'shopFree', 'levelPaid', 'discordPaid', 'feedbackPaid', 'retired', 'potdPaid', 'dc', 'day', 'sets', 'salInf', 'streak', 'unlocks', 'cards']
 let pushTimer = null, pushing = false, pushAgain = false
 function schedulePush() {
   if (!supabase || !uid) return
@@ -1112,13 +1112,20 @@ async function runPush(id) {
   if (pushing) { pushAgain = true; return }
   pushing = true
   try {
-    if (uid !== id) return
-    const { data, error } = await supabase.from('accounts').select('app_profile').eq('id', id).maybeSingle()
-    if (error || uid !== id) return
-    if (data?.app_profile) mergeRemote(data.app_profile)
-    const app_profile = walletOut()
-    const { error: wErr } = await supabase.from('accounts').update({ app_profile }).eq('id', id)
-    if (!wErr) S.coinsSynced = app_profile.coins
+    // a save only lands if nobody saved since we read (rev): otherwise read, merge and try again,
+    // so two devices saving at the same moment can't erase each other's coins
+    for (let tries = 0; tries < 4 && uid === id; tries++) {
+      const { data, error } = await supabase.from('accounts').select('app_profile').eq('id', id).maybeSingle()
+      if (error || uid !== id) return
+      const w = data?.app_profile
+      if (w) mergeRemote(w)
+      const app_profile = { ...walletOut(), rev: `${DEV.slice(0, 8)}-${Date.now().toString(36)}-${tries}` }
+      let q = supabase.from('accounts').update({ app_profile }).eq('id', id)
+      if (w?.rev) q = q.eq('app_profile->>rev', w.rev)
+      const { data: saved, error: wErr } = await q.select('id')
+      if (wErr) break
+      if (saved?.length) { S.coinsSynced = app_profile.coins; break }
+    }
     settleLocal()
     pushCos(id)
   } catch {} finally {
@@ -1230,6 +1237,15 @@ function mergeRemote(w) {
       freezes: a.last === b.last ? Math.max(a.freezes || 0, b.freezes || 0) : (keep.freezes || 0) }
   }
   S.unlocks = { ...(w.unlocks || {}), ...(S.unlocks || {}) }
+  // the card binder: everything collected on any device, the most copies, the first time seen
+  if (w.cards && typeof w.cards === 'object') {
+    const c = { ...(S.cards || {}) }
+    for (const [k, v] of Object.entries(w.cards)) {
+      if (!Array.isArray(v)) continue
+      c[k] = c[k] ? [Math.max(c[k][0] || 0, v[0] || 0), Math.min(c[k][1] || v[1], v[1] || c[k][1])] : v
+    }
+    S.cards = c
+  }
   // a level's coins are paid once for the account, whichever device got there first
   S.levelPaid = Math.max(S.levelPaid || 0, w.levelPaid || 0)
   if (newer) {
