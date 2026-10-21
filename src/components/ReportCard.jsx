@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
+import Disclaimer from './Disclaimer'
 import { createPortal } from 'react-dom'
 import { ATTR, TYPES, QB_PHYSICALS } from '../data/qbs'
 import { RB_PHYSICALS } from '../data/rbs'
@@ -514,6 +515,9 @@ export default function ReportCard({ build, onSimulate, onReset, types = TYPES, 
           <button className="reset-btn" onClick={onReset}>Reset Build</button>
         </div>
       )}
+
+      {/* the fan-project line, at the foot of the build screen */}
+      <Disclaimer sport={isBucket ? 'bucket' : 'nfl'} className="bap-disclaimer--build" />
 
       {showShare && createPortal(
         <ShareModal ovr={ovr} arch={arch} build={build} types={types} onClose={() => setShowShare(false)}

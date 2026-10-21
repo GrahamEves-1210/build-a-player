@@ -22,7 +22,6 @@ const NEW_UI = IS_APP || APP_LOOK
 const isDone = () => { try { return localStorage.getItem(TUTORIAL_KEY) === '1' } catch { return true } }
 const markDone = () => { try { localStorage.setItem(TUTORIAL_KEY, '1') } catch {} }
 const sportNow = () => (document.documentElement.classList.contains('is-bucket') || window.location.pathname.startsWith('/bucket') ? 'bucket' : 'nfl')
-const reduced = () => document.documentElement.classList.contains('bap-reduce-motion') || window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
 // ── tiny store: { phase: 'idle' | 'tour' | 'coach', sport, run } ───────────────
 let state = { phase: 'idle', sport: 'nfl', run: 0 }
@@ -167,7 +166,9 @@ function useTracked(read, deps) {
       const out = readRef.current()
       const r = toRect(out?.hit?.r)   // measured fresh on every read
       const floor = floorY()
-      setView(v => (v.key === out?.key && v.floor === floor && sameRect(v.r, r) ? v : { ...out, r, floor }))
+      // slide only when the step changes; otherwise stick to the target exactly (a scroll used to
+      // leave the highlight chasing it, overshooting and springing back)
+      setView(v => (v.key === out?.key && v.floor === floor && sameRect(v.r, r) ? v : { ...out, r, floor, animate: v.key !== out?.key }))
     }
     const soon = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(tick) }
     const iv = setInterval(tick, 220)
@@ -226,7 +227,8 @@ function Tour({ sport }) {
     if (!step || scrolledFor.current === i) return
     scrolledFor.current = i
     const hit = findTarget(step)
-    hit?.el.scrollIntoView({ block: 'center', behavior: reduced() ? 'auto' : 'smooth' })
+    // straight there, so the highlight slides once to where the target ends up
+    hit?.el.scrollIntoView({ block: 'center', behavior: 'auto' })
   }, [i, step])
   const next = () => (step?.last ? launchGuided() : setI(k => Math.min((steps?.length ?? 1) - 1, k + 1)))
   const back = () => setI(k => Math.max(0, k - 1))
@@ -272,7 +274,7 @@ function Tour({ sport }) {
       {/* the page underneath stays put: a tap anywhere outside the prompt does nothing */}
       <div className="tut-catch" />
       {r
-        ? <div key="hole" className="tut-hole" aria-hidden="true" style={{ transform: `translate(${r.left - pad}px, ${r.top - pad}px)`, width: r.width + pad * 2, height: r.height + pad * 2 }} />
+        ? <div key="hole" className="tut-hole" aria-hidden="true" style={{ transform: `translate(${r.left - pad}px, ${r.top - pad}px)`, width: r.width + pad * 2, height: r.height + pad * 2, ...(view.animate ? {} : { transition: 'none' }) }} />
         : <div key="dim" className="tut-dim" />}   {/* separate keys: the outline is never the dim reused (it would slide in from the corner) */}
       <div ref={bubble} key={step.id} className={`tut-bubble tut-bubble--tour${p ? (p.below ? ' tut-bubble--below' : ' tut-bubble--above') : ' tut-bubble--dock'}`} style={p ? p.pos : r ? { visibility: 'hidden' } : undefined}>
         {p && <span className="tut-bubble-arrow" style={{ left: p.arrow }} aria-hidden="true" />}
@@ -349,7 +351,7 @@ function Coach({ sport }) {
     if (a && !m.scrolled[step]) {   // bring the target into view once per step
       m.scrolled[step] = true
       const floor = floorY()
-      if (a.r.top < 70 || a.r.bottom > floor - 30) a.el.scrollIntoView({ block: 'center', behavior: reduced() ? 'auto' : 'smooth' })
+      if (a.r.top < 70 || a.r.bottom > floor - 30) a.el.scrollIntoView({ block: 'center', behavior: 'auto' })
     }
     return { key: step, hit: a }
   }, [])
@@ -368,7 +370,7 @@ function Coach({ sport }) {
     <div className="tut-coach" aria-live="polite">
       {showBubble && r && (
         <div className={`tut-hole tut-hole--coach${c.dim ? '' : ' tut-hole--clear'}`} aria-hidden="true"
-          style={{ transform: `translate(${r.left - pad}px, ${r.top - pad}px)`, width: r.width + pad * 2, height: r.height + pad * 2 }} />
+          style={{ transform: `translate(${r.left - pad}px, ${r.top - pad}px)`, width: r.width + pad * 2, height: r.height + pad * 2, ...(view.animate ? {} : { transition: 'none' }) }} />
       )}
       {showBubble ? (
         <div ref={bubble} className={`tut-bubble${p ? (p.below ? ' tut-bubble--below' : ' tut-bubble--above') : ' tut-bubble--dock'}`}

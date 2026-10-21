@@ -8,6 +8,7 @@ import { sfx } from '../../lib/juice'
 import SoundToggle from './SoundToggle'
 import Tutorial, { startTutorial } from './Tutorial'
 import { IS_APP } from '../../lib/platform'
+import Disclaimer from '../Disclaimer'
 import { rampAdd } from '../../lib/ads'
 import { NameTag, AvatarBadge } from './NameTag'
 import { CoinPill } from './AppShop'
@@ -465,6 +466,8 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
         </div>
       )}
       {footer && <div className="ag-home-site">{footer}</div>}
+      {/* the app has no site footer: the fan-project line on its own */}
+      {IS_APP && <Disclaimer sport={isBucket ? 'bucket' : 'nfl'} />}
       <Tutorial onGuided={() => onStart('classic', isBucket ? 'guard' : 'qb')} />
     </div>
   )
