@@ -94,7 +94,7 @@ function computeBucketGoatRank(s) {
 
 import { calcOVR, calcOVRRB, calcOVRWR, calcOVRTE, calcOVRDB, calcOVROL, getArchetype, getArchetypeRB, getArchetypeWR, getArchetypeTE, getArchetypeDB, getArchetypeOL, valToGrade, HEADSHOT_BASE } from '../utils/simulation'
 import QBAvatar from './QBAvatar'
-import { supabase } from '../lib/supabase'
+import { supabase, apiHeaders } from '../lib/supabase'
 import { RB_TYPES, RB_ATTR } from '../data/rbs'
 import { WR_TYPES, WR_ATTR } from '../data/wrs'
 import { TE_ATTR } from '../data/tes'
@@ -266,18 +266,15 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
   // Check for successful Stripe return
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
-    if (params.get('ad_free') === '1') {
-      setAdsDisabled(true)
-      onAdsDisabled?.()
-      window.history.replaceState({}, '', window.location.pathname)
-    }
+    // the app confirms the purchase with the account row (App / BucketApp); the address alone proves nothing
+    if (params.get('ad_free') === '1') window.history.replaceState({}, '', window.location.pathname)
   }, [])
 
   const handleManageSubscription = async () => {
     try {
       const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/create-portal`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await apiHeaders(),
         body: JSON.stringify({ userId: user.id }),
       })
       const { url } = await res.json()
@@ -291,7 +288,7 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
     try {
       const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/create-checkout`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await apiHeaders(),
         body: JSON.stringify({ userId: user.id, email: user.email }),
       })
       const { url } = await res.json()

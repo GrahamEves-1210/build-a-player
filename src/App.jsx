@@ -35,7 +35,7 @@ import { LEGENDS, LEGEND_TYPES } from './data/qb-legends'
 import { RB_LEGENDS } from './data/rb-legends'
 import HEADSHOTS from './data/headshots.json'
 import { runSimulation, getArchetype, calcOVR, runRBSimulation, calcOVRRB, getArchetypeRB, runWRSimulation, calcOVRWR, getArchetypeWR, runTESimulation, calcOVRTE, getArchetypeTE, runDBSimulation, calcOVRDB, getArchetypeDB, runOLSimulation, calcOVROL, getArchetypeOL, HEADSHOT_BASE, calcMVPResult, calcOPOYResult, calcWROPOYResult, calcTEOPOYResult, calcDBDpoyResult, calcOLAllProResult } from './utils/simulation'
-import { supabase, rtSupabase } from './lib/supabase'
+import { supabase, rtSupabase, apiHeaders } from './lib/supabase'
 import { track } from './lib/track'
 import { blockReason, buildSig, markPlayed } from './lib/saveGuard'
 import CustomRatingsModal from './components/CustomRatingsModal'
@@ -310,12 +310,9 @@ export default function App() {
   useEffect(() => {
     if (!supabase) return
     const adFreeReturn = new URLSearchParams(window.location.search).get('ad_free') === '1'
-    if (adFreeReturn) {
-      enableAdFreeMode()
-      setIsSubscribed(true)
-      try { localStorage.setItem('bap_subscribed', '1') } catch {}
-      window.history.replaceState({}, '', window.location.pathname)
-    }
+    // Back from Stripe: the address alone proves nothing (anyone can type ?ad_free=1),
+    // so nothing turns on until the account row says the purchase landed (below)
+    if (adFreeReturn) window.history.replaceState({}, '', window.location.pathname)
     supabase.auth.getSession().then(({ data }) => {
       const u = data.session?.user ?? null
       setUser(u)
@@ -331,8 +328,11 @@ export default function App() {
           supabase.from('accounts').select('ads_disabled,subscription_status').eq('id', u.id).single()
             .then(({ data: p }) => {
               if (p?.ads_disabled || p?.subscription_status === 'active') { setAdsDisabled(true); enableAdFreeMode() }
+              if (p?.ads_disabled) { try { localStorage.setItem('bap_ads_off', '1') } catch {} }
               if (p?.subscription_status === 'active') { setIsSubscribed(true); try { localStorage.setItem('bap_subscribed', '1') } catch {} }
+              else if (p?.ads_disabled) { /* the ad-free purchase landed */ }
               else if (++attempts < 10) setTimeout(poll, 2000)
+              else { try { localStorage.removeItem('bap_subscribed'); localStorage.removeItem('bap_ads_off') } catch {} }
             })
         }
         poll()
@@ -971,7 +971,7 @@ export default function App() {
       try {
         const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/create-checkout`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: await apiHeaders(),
           body: JSON.stringify({ userId: user.id, email: user.email }),
         })
         const { url } = await res.json()

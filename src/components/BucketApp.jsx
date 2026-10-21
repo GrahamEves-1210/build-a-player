@@ -25,7 +25,7 @@ import { NBA_ALLTIME_BIG_PLAYERS } from '../data/nba-big-legends'
 import { NBA_TEAMS } from '../data/nba-teams'
 import { BUCKET_ATTR } from '../data/nba-attrs'
 import NBA_HEADSHOTS     from '../data/nba-headshots.json'
-import { supabase, rtSupabase } from '../lib/supabase'
+import { supabase, rtSupabase, apiHeaders } from '../lib/supabase'
 import { track } from '../lib/track'
 import { blockReason, buildSig, markPlayed } from '../lib/saveGuard'
 import { HEADSHOT_BASE } from '../utils/simulation'
@@ -589,24 +589,25 @@ export default function BucketApp() {
   useEffect(() => {
     if (!supabase) return
     const adFreeReturn = new URLSearchParams(window.location.search).get('ad_free') === '1'
-    if (adFreeReturn) {
-      enableAdFreeMode()
-      setIsSubscribed(true)
-      try { localStorage.setItem('bap_subscribed', '1') } catch {}
-      window.history.replaceState({}, '', window.location.pathname)
-    }
+    // Back from Stripe: the address alone proves nothing (anyone can type ?ad_free=1),
+    // so nothing turns on until the account row says the purchase landed (below)
+    if (adFreeReturn) window.history.replaceState({}, '', window.location.pathname)
     supabase.auth.getSession().then(({ data }) => {
       const u = data.session?.user ?? null
       setUser(u)
       if (!u) { try { localStorage.removeItem('bap_subscribed') } catch {}; try { localStorage.removeItem('bap_ads_off') } catch {}; return }
-      supabase.from('accounts').select('ads_disabled,subscription_status').eq('id', u.id).single()
+      // back from Stripe: the webhook can land a few seconds after us, so ask again until it has
+      let attempts = 0
+      const check = () => supabase.from('accounts').select('ads_disabled,subscription_status').eq('id', u.id).single()
         .then(({ data: p }) => {
+          if (adFreeReturn && !p?.ads_disabled && p?.subscription_status !== 'active' && ++attempts < 10) setTimeout(check, 2000)
           if (p?.ads_disabled || p?.subscription_status === 'active') { setAdsDisabled(true); enableAdFreeMode() }
           if (p?.ads_disabled) { try { localStorage.setItem('bap_ads_off', '1') } catch {} }
           else { try { localStorage.removeItem('bap_ads_off') } catch {} }
           if (p?.subscription_status === 'active') { setIsSubscribed(true); try { localStorage.setItem('bap_subscribed', '1') } catch {} }
           else { try { localStorage.removeItem('bap_subscribed') } catch {} }
         })
+      check()
     })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
       setUser(session?.user ?? null)
@@ -1300,7 +1301,7 @@ export default function BucketApp() {
       try {
         const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/create-checkout`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: await apiHeaders(),
           body: JSON.stringify({ userId: user.id, email: user.email }),
         })
         const { url } = await res.json()

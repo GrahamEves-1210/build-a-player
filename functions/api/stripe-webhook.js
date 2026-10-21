@@ -41,6 +41,51 @@ export async function onRequestPost(context) {
     }
   }
 
+  // A refund or a chargeback takes back what it paid for: a coin pack's coins (the
+  // wallet's coin budget goes negative by the same amount, so an old copy of the
+  // wallet on a phone can't write them back), or the ad-free purchase
+  if (event.type === 'charge.refunded' || event.type === 'charge.dispute.created') {
+    const obj = event.data.object
+    const pi = typeof obj.payment_intent === 'string' ? obj.payment_intent : obj.payment_intent?.id
+    if (pi) {
+      const { data: [session] = [] } = await stripe.checkout.sessions.list({ payment_intent: pi, limit: 1 })
+      const userId = session?.metadata?.userId
+      if (session && userId && session.metadata?.kind === 'coins') {
+        const { data: row } = await supabase.from('coin_purchases').select('id, coins, claimed_at, refunded_at').eq('ref', session.id).maybeSingle()
+        if (row && !row.refunded_at) {
+          // unclaimed: it can never be collected now; claimed: take the coins back
+          await supabase.from('coin_purchases').update({ refunded_at: new Date().toISOString(), claimed_at: row.claimed_at ?? new Date().toISOString() }).eq('id', row.id)
+          if (row.claimed_at) {
+            const { data: acc } = await supabase.from('accounts').select('app_profile, coin_guard').eq('id', userId).maybeSingle()
+            const wallet = acc?.app_profile && typeof acc.app_profile === 'object' ? acc.app_profile : null
+            if (wallet) {
+              const coins = Math.max(0, (Number(wallet.coins) || 0) - row.coins)
+              const guard = { ...(acc.coin_guard || {}), t: Date.now() / 1000, b: -row.coins }
+              const { error } = await supabase.from('accounts').update({ app_profile: { ...wallet, coins, at: Date.now() }, coin_guard: guard }).eq('id', userId)
+              if (error) console.error('[webhook] coin refund failed:', error)
+            }
+          }
+        }
+      } else if (session && userId && session.mode === 'payment') {
+        const { error } = await supabase.from('accounts').update({ ads_disabled: false }).eq('id', userId)
+        if (error) console.error('[webhook] ad-free refund failed:', error)
+      }
+    }
+  }
+
+  // A renewal that fails (past_due, unpaid) ends Pro until it's paid; paying turns it back on
+  if (event.type === 'customer.subscription.updated') {
+    const sub = event.data.object
+    const userId = sub.metadata?.userId
+    if (userId) {
+      const live = sub.status === 'active' || sub.status === 'trialing'
+      const { error } = await supabase.from('accounts')
+        .update({ subscription_status: live ? 'active' : sub.status, subscription_id: sub.id, is_plus: live })
+        .eq('id', userId)
+      if (error) console.error('[webhook] subscription update failed:', error)
+    }
+  }
+
   if (event.type === 'customer.subscription.deleted') {
     const sub = event.data.object
     const userId = sub.metadata?.userId
