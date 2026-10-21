@@ -317,12 +317,20 @@ function readStep(m) {
   m.seen = true
   const sim = firstShown('.sim-btn:not(.sim-btn-locked):not([disabled])')
   if (sim) return { step: 'sim', a: sim }
+  // the app's spin lives in a sheet: while it's closed, the bar's SPIN / PICK button is the one to tap
+  const sheet = document.querySelector('.drop-sheet')
+  const closed = !!sheet && !sheet.classList.contains('is-open')
+  const bar = closed ? firstShown('.drop-bar-spin') : null
   const chip = firstShown('.attr-chip')
-  if (chip) { m.chips = true; return { step: m.picks === 0 ? 'pick' : 'quiet', a: chip } }
+  if (chip) {
+    m.chips = true
+    // all the chips as one target, so the tip sits beside them rather than on them
+    return { step: m.picks === 0 ? 'pick' : 'quiet', a: bar ?? unionShown('.attr-chip') ?? chip }
+  }
   const spin = firstShown('.spin-btn')
   if (spin && !spin.el.disabled) {
     if (m.chips) { m.picks++; m.chips = false }   // the chips went away and SPIN is back: a slot was filled
-    return { step: m.picks === 0 ? 'spin' : m.picks === 1 ? 'more' : 'quiet', a: spin }
+    return { step: m.picks === 0 ? 'spin' : m.picks === 1 ? 'more' : 'quiet', a: bar ?? spin }
   }
   return { step: 'quiet' }   // spinning
 }

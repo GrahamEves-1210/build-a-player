@@ -375,7 +375,8 @@ export function DropSheet({ open, setOpen, children }) {
   // switch up in the bar doesn't: you flip it to see the open spin with or without)
   useEffect(() => {
     if (!open) return
-    const on = e => { if (!e.target.closest?.('.drop-sheet, .drop-bar, .grade-toggle-btn, .nav-grades')) setOpen(false) }
+    // (the tutorial's tips sit over the sheet: tapping them isn't tapping away)
+    const on = e => { if (!e.target.closest?.('.drop-sheet, .drop-bar, .grade-toggle-btn, .nav-grades, .tut-coach')) setOpen(false) }
     const id = setTimeout(() => document.addEventListener('pointerdown', on, true), 0)
     return () => { clearTimeout(id); document.removeEventListener('pointerdown', on, true) }
   }, [open, setOpen])
