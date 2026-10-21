@@ -23,6 +23,7 @@ import { CompeteQueue, CompeteRoom, validCompete } from './compete.js'
 import { cleanBuild } from '../../src/lib/blacktopCore.js'
 import { handleSubmit } from './submit.js'
 import { whoIs } from './auth.js'
+import { handleReset } from './reset.js'
 export { AuctionQueue, AuctionRoom, CompeteQueue, CompeteRoom }
 
 const BUILD_SECS = 180
@@ -70,6 +71,8 @@ export default {
     // results for the boards, checked before they're saved (submit.js)
     const sub = url.pathname.match(/^\/api\/submit\/([a-z]+)$/)
     if (sub) return handleSubmit(req, env, sub[1])
+    // forgot password: the reset link goes to the account's contact email (reset.js)
+    if (url.pathname === '/api/reset-request') return handleReset(req, env)
     if (req.headers.get('Upgrade') !== 'websocket') return new Response('Build-A-Player live server', { status: 426 })
     if (!originOk(req.headers.get('Origin'))) return new Response('forbidden', { status: 403 })
     if (url.pathname === '/lobby') return env.LOBBY.get(env.LOBBY.idFromName('blacktop')).fetch(req)

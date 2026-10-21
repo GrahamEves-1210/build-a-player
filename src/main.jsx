@@ -22,6 +22,7 @@ if (/iPad/.test(navigator.userAgent) || (/Mac/.test(navigator.platform) && navig
 }
 import { createRoot } from 'react-dom/client'
 import UsernamePrompt from './components/UsernamePrompt'
+import PasswordReset from './components/PasswordReset'
 import { HelmetProvider } from 'react-helmet-async'
 import { Analytics } from '@vercel/analytics/react'
 import './index.css'
@@ -113,6 +114,7 @@ createRoot(document.getElementById('root')).render(
       <HelmetProvider>
         {isBucket ? <BucketApp /> : <App />}
         <UsernamePrompt />
+        <PasswordReset />
         {AppTabBar && <Suspense fallback={null}><AppTabBar /></Suspense>}
       </HelmetProvider>
       {!IS_APP && <Analytics />}

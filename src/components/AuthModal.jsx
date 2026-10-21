@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { signInWithDiscord, signInWithApple } from '../lib/discord'
 import { IconDiscord } from './Navbar'
+import { LIVE_HTTP } from '../lib/liveUrl'
 
 // Supabase requires an email internally — we derive one from the username silently
 const toEmail = (username) => `${username.trim().toLowerCase()}@buildaplayer.app`
@@ -29,7 +30,21 @@ export default function AuthModal({ onClose, onAuth }) {
     return () => { subscription.unsubscribe(); window.removeEventListener('bap:oauth-closed', done) }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const reset = () => setError(null)
+  const reset = () => { setError(null); setSent(false) }
+  // forgot password: the live server emails a reset link to the account's contact email
+  const [forgot, setForgot] = useState(false)
+  const [sent, setSent] = useState(false)
+  const sendReset = async e => {
+    e.preventDefault()
+    if (!/^[a-zA-Z0-9_-]+$/.test(username.trim())) { setError('Enter your username.'); return }
+    setLoading(true); setError(null)
+    try {
+      const r = await fetch(`${LIVE_HTTP}/api/reset-request`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: username.trim() }) })
+      if (!r.ok) throw new Error()
+      setSent(true)
+    } catch { setError("Couldn't send that right now. Try again in a minute.") }
+    setLoading(false)
+  }
 
   const handleDiscord = async () => {
     if (!supabase) return
@@ -116,8 +131,8 @@ export default function AuthModal({ onClose, onAuth }) {
         <div className="auth-logo">Build<em>-A-</em>Player</div>
 
         <div className="auth-tabs">
-          <button className={`auth-tab ${tab === 'signin' ? 'active' : ''}`} onClick={() => { setTab('signin'); reset() }}>Sign In</button>
-          <button className={`auth-tab ${tab === 'signup' ? 'active' : ''}`} onClick={() => { setTab('signup'); reset() }}>Create Account</button>
+          <button className={`auth-tab ${tab === 'signin' ? 'active' : ''}`} onClick={() => { setTab('signin'); setForgot(false); reset() }}>Sign In</button>
+          <button className={`auth-tab ${tab === 'signup' ? 'active' : ''}`} onClick={() => { setTab('signup'); setForgot(false); reset() }}>Create Account</button>
         </div>
 
         <button type="button" className="auth-apple" onClick={handleApple} disabled={loading}>
@@ -132,6 +147,26 @@ export default function AuthModal({ onClose, onAuth }) {
         <div className="auth-discord-note">Also joins you to the Build-A-Player Discord</div>
         <div className="auth-or"><span>or</span></div>
 
+        {forgot ? (
+          <form className="auth-form" onSubmit={sendReset}>
+            <div className="auth-forgot-title">Reset your password</div>
+            {sent ? (
+              <p className="auth-forgot-note">If <b>{username.trim()}</b> has an email on file, a reset link is on its way. Check your inbox (and spam) for an email from Build-A-Player.</p>
+            ) : (
+              <>
+                <p className="auth-forgot-note">Enter your username. We'll email a reset link to the address you signed up with.</p>
+                <div className="auth-field">
+                  <label className="auth-label">Username</label>
+                  <input className="auth-input" type="text" placeholder="YourUsername" value={username} onChange={e => setUsername(e.target.value)}
+                    required autoComplete="username" autoCapitalize="none" inputMode="text" style={{ touchAction: 'manipulation' }} />
+                </div>
+                {error && <div className="auth-error">{error}</div>}
+                <button className="auth-submit" type="submit" disabled={loading}>{loading ? 'Please wait…' : 'Email me a reset link'}</button>
+              </>
+            )}
+            <button type="button" className="auth-forgot" onClick={() => { setForgot(false); reset() }}>Back to sign in</button>
+          </form>
+        ) : (
         <form className="auth-form" onSubmit={handleSubmit}>
           <div className="auth-field">
             <label className="auth-label">Username</label>
@@ -185,7 +220,11 @@ export default function AuthModal({ onClose, onAuth }) {
           <button className="auth-submit" type="submit" disabled={loading}>
             {loading ? 'Please wait…' : tab === 'signin' ? 'Sign In' : 'Create Account'}
           </button>
+          {tab === 'signin' && (
+            <button type="button" className="auth-forgot" onClick={() => { setForgot(true); reset() }}>Forgot password?</button>
+          )}
         </form>
+        )}
       </div>
     </div>
   )

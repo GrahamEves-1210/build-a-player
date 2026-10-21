@@ -16,6 +16,7 @@
 3. **After** the new site is live, deploy the live server:
    - `cd live`
    - `npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY` (paste the service_role key from Supabase → Project Settings → API; once, it stays)
+   - `npx wrangler secret put RESEND_API_KEY` (your Resend key: forgot-password emails; once, it stays)
    - `npx wrangler deploy`
    Not before: older versions of the game don't send spin info, and the new server scores their Compete / Blacktop builds as free agents.
    Check it: open `https://bap-live.gre56734.workers.dev/health` (says ok).
@@ -26,3 +27,9 @@
 
 ## Testing in several tabs later
 One-seat-per-device is ON: `ONE_PER_DEVICE` in `live/src/queue.js` and `liveElsewhere()` in `src/lib/live.js`. Turn both off to test with several tabs, and back on before shipping.
+
+## Forgot password (one-time setup)
+- Resend → Domains: add and verify `build-a-player.com` (the reset email comes from `noreply@build-a-player.com`). Until it's verified, Resend refuses to send from it.
+- Supabase → Authentication → URL Configuration → Redirect URLs: make sure `https://build-a-player.com/**` is listed (the reset link lands on `https://build-a-player.com/?reset=1`).
+- Accounts made before sign-up asked for an email have no address on file: they get the same "if it has an email…" answer and no email. Those players can reach you through Feedback.
+

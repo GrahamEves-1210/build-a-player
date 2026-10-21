@@ -5273,3 +5273,8 @@ html.app-look:not(.is-app) .sc-footer {
 .bap-disclaimer { margin: 18px auto 0; padding: 0 20px; max-width: 520px; text-align: center; font-family: var(--ag-body, system-ui, sans-serif); font-size: 11px; line-height: 1.45; color: var(--ag-muted, rgba(216, 243, 220, .55)); text-wrap: balance; }
 /* the app's home ends with it: room to scroll it clear of the dock */
 html.is-app .ag-home > .bap-disclaimer { margin-bottom: calc(var(--app-bottom, 96px) + 12px); }
+
+/* forgot password (AuthModal) and the new-password step (PasswordReset) */
+.auth-forgot { display: block; margin: 12px auto 0; padding: 6px 10px; background: none; border: 0; color: var(--ag-text-2, rgba(238, 248, 241, .78)); font: 600 13px var(--ag-body, system-ui, sans-serif); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.auth-forgot-title { font-family: var(--ag-font, 'Bebas Neue', sans-serif); font-size: 22px; letter-spacing: 1.5px; margin-bottom: 6px; }
+.auth-forgot-note { margin: 0 0 12px; font: 400 14px/1.45 var(--ag-body, system-ui, sans-serif); color: var(--ag-text-2, rgba(238, 248, 241, .8)); }
