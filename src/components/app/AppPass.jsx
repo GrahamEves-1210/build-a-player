@@ -37,7 +37,7 @@ export function rewardLabel(r) {
   return itemById(r.item)?.name ?? 'Item'
 }
 
-function RewardArt({ r, name }) {
+export function RewardArt({ r, name }) {
   if (r.coins) return <span className="bp-art bp-art--coins"><span className="coin-ico" /></span>
   if (r.freeze) return <span className="bp-art bp-art--freeze"><IconShield size={20} /></span>
   if (r.boost) return <span className="bp-art bp-art--boost"><IconBolt size={20} /></span>

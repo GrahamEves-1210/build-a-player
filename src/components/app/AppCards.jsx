@@ -148,7 +148,7 @@ function SetTile({ s, onOpen, i }) {
   )
 }
 
-export default function AppCards({ sport: startSport, onClose }) {
+export default function AppCards({ sport: startSport, onClose, hall = null }) {
   const p = useProgress()
   const saved = (() => { try { return JSON.parse(localStorage.getItem('ag_cards_view')) || {} } catch { return {} } })()
   const [sport, setSport] = useState(saved.sport ?? (startSport === 'bucket' ? 'bucket' : 'nfl'))
@@ -192,10 +192,11 @@ export default function AppCards({ sport: startSport, onClose }) {
       <div className="ag-screen-head">
         <div>
           <span className="ag-eyebrow">COLLECTION · {Object.keys(p.cards).length} CARDS</span>
-          <h1 className="ag-h1">Cards</h1>
+          <h1 className="ag-h1">{hall ? 'The Hall' : 'Cards'}</h1>
         </div>
         <button className="ag-round-btn" onClick={onClose} aria-label="Close"><IconClose size={16} /></button>
       </div>
+      {hall}
 
       <div className="ag-screen-body">
         <div className="ag-seg ag-pop" style={{ '--d': '0ms' }}>

@@ -5,14 +5,13 @@ import { IS_APP, APP_LOOK } from '../lib/platform'
 import AppMenu from './app/AppMenu'
 import AuthModal from './AuthModal'
 import AppToasts, { LevelUp } from './app/AppToasts'
-import { useProgress, STREAK_REWARDS, missionDef, cardsOpen } from '../lib/progress'
-import { IconBag, IconProfile, IconCalendar, IconCards } from './app/icons'
+import { useProgress, STREAK_REWARDS, streakEveryReady, missionDef, cardsOpen } from '../lib/progress'
+import { IconBag, IconProfile, IconCalendar, IconTrophy } from './app/icons'
 import PlayButton from './app/PlayButton'
 
 const AppDaily = lazy(() => import('./app/AppDaily'))
-const AppCards = lazy(() => import('./app/AppCards'))
+const AppHall = lazy(() => import('./app/AppHall'))
 const AppShop = lazy(() => import('./app/AppShop'))
-const AppAchievements = lazy(() => import('./app/AppAchievements'))
 const AppLocker = lazy(() => import('./app/AppLocker'))
 const AppSoundLab = lazy(() => import('./app/AppSoundLab'))
 const AppOnline = lazy(() => import('./app/AppOnline'))
@@ -54,7 +53,7 @@ function Tab({ label, Icon, active, onClick, badge }) {
 function useDailyBadge() {
   const p = useProgress()
   const missions = (p.day?.missions ?? []).filter(m => !m.claimed && m.n >= (missionDef(m.id)?.goal ?? Infinity)).length
-  const streak = STREAK_REWARDS.filter(r => p.streak.count >= r.days && !p.streak.claimed?.[r.days]).length
+  const streak = STREAK_REWARDS.filter(r => p.streak.count >= r.days && !p.streak.claimed?.[r.days]).length + (p.signedIn && streakEveryReady(p.streak) ? 1 : 0)
   return missions + streak
 }
 
@@ -87,6 +86,8 @@ export default function AppTabBar() {
   const [menuOpen, setMenuOpen] = useState(false)   // false | true (More) | 'pro' (More → BAP Pro)
   const [player, setPlayer]     = useState(null)    // { id, username }: their profile sheet
   const [shopTab, setShopTab]   = useState('featured')
+  const [hallTab, setHallTab]   = useState('cards')     // the Hall: 'cards' | 'achievements'
+  const [hallFrom, setHallFrom] = useState('dock')      // where the Hall was opened: its X goes back there
   const [authOpen, setAuthOpen] = useState(false)
   const [screen, setScreen]     = useState(null)   // 'daily' | 'cards' | 'shop' | 'achievements' | null
   const badge = useDailyBadge()
@@ -101,7 +102,9 @@ export default function AppTabBar() {
       // web: cards live on an account, so a guest gets the sign-in sheet (from Daily, Shop, anywhere)
       if (to === 'cards' && !cardsOpen()) { setMenuOpen(false); setAuthOpen(true); return }
       if (to === 'pro') { setMenuOpen('pro'); return }
-      if (['daily', 'cards', 'shop', 'achievements', 'locker', 'soundlab', 'online', 'pass'].includes(to)) { setMenuOpen(false); if (to === 'shop') setShopTab(arg || 'featured'); setScreen(to) }
+      // Cards and Achievements live together in the Hall
+      if (to === 'cards' || to === 'achievements' || to === 'hall') { setMenuOpen(false); setHallTab(to === 'achievements' ? 'achievements' : arg || 'cards'); setHallFrom(arg === 'dock' ? 'dock' : 'page'); setScreen('hall'); return }
+      if (['daily', 'shop', 'locker', 'soundlab', 'online', 'pass'].includes(to)) { setMenuOpen(false); if (to === 'shop') setShopTab(arg || 'featured'); setScreen(to) }
       else setScreen(null)
     }
     window.addEventListener('bap:page', onPage)
@@ -149,9 +152,9 @@ export default function AppTabBar() {
             : screen === 'locker' ? <AppLocker onClose={() => setScreen(null)} />
             : screen === 'soundlab' ? <AppSoundLab onClose={() => setScreen(null)} />
             : screen === 'online' ? <AppOnline sport={state.sport} onClose={() => setScreen(null)} />
-            : screen === 'achievements' ? <AppAchievements onClose={() => setScreen(null)} />
+            : screen === 'hall' ? <AppHall key={hallTab} tab={hallTab} sport={state.sport} onClose={hallFrom === 'dock' ? closeHome : () => setScreen(null)} />
             : screen === 'pass' ? <AppPass onClose={() => setScreen(null)} />
-            : <AppCards sport={state.sport} onClose={closeHome} />}
+            : null}
         </Suspense>
       )}
       {!hidden && (
@@ -162,8 +165,9 @@ export default function AppTabBar() {
           <PlayButton page={state.page} sport={state.sport} lit={active === 'play'} here={state.page === 'splash' && !screen}
             onTap={() => { if (state.page === 'splash' && !screen) return; go('home')() }} />
           {/* website: cards are saved to an account */}
-          <Tab label="CARDS" Icon={IconCards} active={active === 'cards'} onClick={cardsOpen() ? open('cards') : () => guardLeave(() => { setMenuOpen(false); setAuthOpen(true) })} />
-          <Tab label="PROFILE" Icon={IconProfile} active={active === 'profile' || active === 'achievements' || active === 'locker'} onClick={state.page === 'profile' && !screen ? undefined : go('profile')} badge={claimable} />
+          <Tab label="HALL" Icon={IconTrophy} active={active === 'hall'} badge={claimable}
+            onClick={screen === 'hall' ? undefined : cardsOpen() ? () => guardLeave(() => { setMenuOpen(false); setHallTab(claimable ? 'achievements' : 'cards'); setHallFrom('dock'); setScreen('hall') }) : () => guardLeave(() => { setMenuOpen(false); setAuthOpen(true) })} />
+          <Tab label="PROFILE" Icon={IconProfile} active={active === 'profile' || active === 'locker'} onClick={state.page === 'profile' && !screen ? undefined : go('profile')} />
         </nav>
       )}
       {menuOpen && <AppMenu sport={state.sport} initialView={menuOpen === 'pro' ? 'pro' : 'menu'} onClose={() => setMenuOpen(false)} />}

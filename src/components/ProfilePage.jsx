@@ -103,6 +103,7 @@ import { OL_ATTR } from '../data/ols'
 import { CAN_SELL_PLUS, IS_APP, APP_LOOK } from '../lib/platform'
 import AppCareerCard from './app/AppCareerCard'
 import FriendsSection from './app/FriendsSection'
+import PassStrip from './app/PassStrip'
 import DeleteAccount from './DeleteAccount'
 import ConnectDiscord from './ConnectDiscord'
 import { getUsername } from '../lib/discord'
@@ -844,6 +845,9 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
 
         {/* App look: player card with level, XP and spotlights (replaces the hero below) */}
         {(IS_APP || APP_LOOK) && <AppCareerCard user={user} />}
+
+        {/* App look: the Builder Pass, a strip of tiers to scroll through */}
+        {(IS_APP || APP_LOOK) && <PassStrip />}
 
         {/* App look: friends (tap one for their profile) */}
         {(IS_APP || APP_LOOK) && <FriendsSection user={user} isBucket={isBucket} />}

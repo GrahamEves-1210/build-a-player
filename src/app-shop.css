@@ -566,3 +566,15 @@ html.bap-reduce-motion .ent::before, html.bap-reduce-motion .ent::after { displa
 .ip-ent.is-big { padding: 10px 16px 10px 10px; border-radius: 14px; gap: 10px; }
 .ip-ent.is-big .ip-ent-name { font-size: 22px; max-width: 180px; }
 .bp-art--entrance .ip-ent { transform: scale(.42); }
+
+/* Eternal Flame (an entrance, 60-day streak): flames climb the seat's edges and settle into a glow */
+.ent-eternal { animation: ent-burn 1.8s ease-out both; }
+.ent-eternal::before, .ent-eternal::after { bottom: -2px; width: 46%; height: 120%; background:
+  radial-gradient(ellipse 30% 45% at 20% 100%, rgba(255,214,102,.95), transparent 70%),
+  radial-gradient(ellipse 26% 60% at 55% 100%, rgba(255,120,30,.9), transparent 70%),
+  radial-gradient(ellipse 22% 40% at 85% 100%, rgba(255,70,0,.85), transparent 70%);
+  filter: blur(1.5px); transform-origin: bottom; animation: ent-flame 1.8s ease-out both; }
+.ent-eternal::before { left: 0; }
+.ent-eternal::after { right: 0; transform: scaleX(-1); animation-name: ent-flame-r; }
+@keyframes ent-flame { 0% { transform: scaleY(0); opacity: 0; } 25% { transform: scaleY(1.05); opacity: 1; } 50% { transform: scaleY(.85); } 75% { transform: scaleY(1); opacity: .9; } 100% { transform: scaleY(.6); opacity: 0; } }
+@keyframes ent-flame-r { 0% { transform: scaleX(-1) scaleY(0); opacity: 0; } 25% { transform: scaleX(-1) scaleY(1.05); opacity: 1; } 50% { transform: scaleX(-1) scaleY(.85); } 75% { transform: scaleX(-1) scaleY(1); opacity: .9; } 100% { transform: scaleX(-1) scaleY(.6); opacity: 0; } }

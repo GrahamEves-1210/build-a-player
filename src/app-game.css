@@ -5338,3 +5338,35 @@ html:is(.is-app, .app-look) .reels-wrap.rs-holo .reel-outer { border-width: 2px 
 .ip-reel.is-big .ip-reel-lbl { font-size: 12px; }
 .ip-reel.is-big .ip-reel-row { font-size: 20px; line-height: 26px; }
 .bp-art--reel .ip-reel { transform: scale(.48); }
+
+/* Daily → streak: the every-3-days XP row, and the milestones' prizes */
+.ag-streak-every { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; width: 100%; margin-top: 12px; padding: 9px 10px; border-radius: 12px; border: 1px solid var(--ag-line); background: rgba(0,0,0,.25); color: var(--ag-text); font: inherit; text-align: left; cursor: default; -webkit-tap-highlight-color: transparent; transition: transform .15s ease-out, border-color .15s; }
+.ag-streak-every.is-ready { cursor: pointer; border-color: rgba(255,140,60,.55); background: rgba(255,120,40,.12); }
+.ag-streak-every.is-ready:active { transform: scale(.98); }
+.ag-streak-every-ico { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 9px; background: rgba(255,120,40,.14); }
+.ag-streak-every-txt { display: grid; gap: 1px; min-width: 0; }
+.ag-streak-every-txt b { font-family: var(--ag-font); font-weight: 400; font-size: 15px; letter-spacing: 1.5px; }
+.ag-streak-every-txt small { font-family: var(--ag-body); font-size: 12px; color: var(--ag-muted); }
+.ag-streak-every-go { font-family: var(--ag-font); font-size: 14px; letter-spacing: 1.5px; color: var(--ag-muted); }
+.ag-streak-every.is-ready .ag-streak-every-go { color: #1d0f03; background: #ffb27a; padding: 5px 9px 3px; border-radius: 8px; }
+.ag-milestone-prize { display: grid; place-items: center; height: 48px; width: 100%; overflow: hidden; }
+.ag-milestone-prize .avb { --avs: 40px; width: 40px !important; height: 40px !important; }
+.ag-milestone-prize .ip-reel { transform: scale(.62); }
+.ag-milestone-prize .ip-ent { transform: scale(.62); }
+.ag-milestone-name { font-family: var(--ag-font); font-size: 13px; letter-spacing: 1.2px; color: var(--rar, var(--ag-text)); line-height: 1; }
+.ag-milestone-state { display: grid; place-items: center; height: 16px; }
+.ag-milestone:not(.is-reached) .ag-milestone-prize { filter: saturate(.5) brightness(.75); }
+
+/* streak-only looks: Wildfire (a reel skin, 21 days) */
+.rs-wildfire { --rs-edge: #ff6a00; --rs-body: linear-gradient(180deg, #3a0a00, #160300); --rs-window: linear-gradient(180deg, #090100, #220700 50%, #090100); --rs-sel: #ffb347; --rs-glow: rgba(255,106,0,.5); --rs-label: linear-gradient(135deg, #ffd166, #ff4d00); --rs-ink: #2a0700; --rs-text: #fff1dc; }
+@keyframes rs-wildfire { 50% { box-shadow: 0 10px 26px rgba(0,0,0,.45), 0 0 30px rgba(255,90,0,.65); } }
+@media (prefers-reduced-motion: no-preference) {
+  html:is(.is-app, .app-look):not(.bap-reduce-motion) .reels-wrap.rs-wildfire .reel-outer { animation: rs-wildfire 1.6s ease-in-out infinite; }
+}
+
+/* The Hall: Cards | Achievements */
+.hall-tabs { margin: 0 14px 12px; }
+.hall-tabs button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; position: relative; }
+.hall-tabs button small { font-family: var(--ag-body); font-size: 11px; font-weight: 700; letter-spacing: 0; opacity: .7; }
+.hall-tabs button.is-on { color: var(--ag-on); background: var(--ag-grad); }
+.hall-badge { position: static !important; transform: none !important; }

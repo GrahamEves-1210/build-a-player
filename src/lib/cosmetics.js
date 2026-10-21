@@ -11,6 +11,7 @@ import { PASS_ITEMS } from './pass'
 //   pass     on a Builder Pass track (lib/pass.js PASS_ITEMS): claimed there, never sold
 //   level    unlocks at a level (still bought with coins)
 //   ach      an achievement reward — never sold
+//   streak   a login-streak reward (days) — never sold
 
 export const SLOTS = [
   { id: 'avatar',    label: 'Avatars',      short: 'AVATAR' },
@@ -70,6 +71,7 @@ const AV = [
   it('avatar', 'av-pro-blackgold', 'Black & Gold', 2, 5000, { glyph: 'crown', pal: 'blackgold' }),
   it('avatar', 'av-dynasty',   'Dynasty',        3, 0, { glyph: 'ring', pal: 'holo', anim: 'holo', ach: 'rings5' }),
   it('avatar', 'av-perfect',   'Perfect Season', 3, 0, { glyph: 'shield', pal: 'gold', anim: 'shine', ach: 'perfect' }),
+  it('avatar', 'av-streak',    'Lit',            2, 0, { glyph: 'flame', pal: 'gold', anim: 'flicker', streak: 7 }),
 ]
 
 // ── Name colors ──────────────────────────────────────────────────────────────
@@ -165,18 +167,15 @@ const WS = [
   it('winSound', 'snd-fanfare',   'Brass Fanfare', 1, 1600),
   it('winSound', 'snd-drumline',  'Drumline', 1, 1900),
   it('winSound', 'snd-organ',     'Organ Charge', 1, 2000),
-  it('winSound', 'snd-riser',     'Synth Riser', 2, 6000),
   it('winSound', 'snd-cannon',    'Cannon Blast', 2, 7200),
   it('winSound', 'snd-train',     'Train Horn', 2, 7800),
-  it('winSound', 'snd-bassdrop',  'Bass Drop', 3, 21500),
   it('winSound', 'snd-badge',     'Badge Pop', 0, 550),
   it('winSound', 'snd-zoom',      'Zoom By', 1, 1700),
   it('winSound', 'snd-shutter',   'Photo Finish', 1, 1800),
   it('winSound', 'snd-strike',    'Strike', 1, 2200),
   it('winSound', 'snd-nope',      'Not In My House', 1, 2400),
   it('winSound', 'snd-bell',      "Winner's Bell", 2, 4800),
-  it('winSound', 'snd-rocket',    'Thunderclap', 2, 6600),
-  it('winSound', 'snd-rise',      'The Big Rise', 3, 15500),
+  it('winSound', 'snd-rocket',    'Free Fall', 2, 6600),
 ]
 
 // ── Courts: the floor Blacktop is played on (every design shares the same lines,
@@ -218,6 +217,7 @@ const RS = [
   it('reel', 'rs-neon',     'Neon Arcade', 2, 6600),
   it('reel', 'rs-vegas',    'Vegas Lights', 3, 18000),
   it('reel', 'rs-holo',     'Holo', 3, 21000),
+  it('reel', 'rs-wildfire', 'Wildfire', 3, 0, { streak: 21 }),
 ]
 
 // ── Lobby entrances: plays once on your seat when you join a Compete or Blacktop
@@ -232,6 +232,7 @@ const EN = [
   it('entrance', 'ent-glitch',   'Glitch In', 2, 7200),
   it('entrance', 'ent-fire',     'Ring of Fire', 3, 19000),
   it('entrance', 'ent-carpet',   'Red Carpet', 3, 20000),
+  it('entrance', 'ent-eternal',  'Eternal Flame', 3, 0, { streak: 60 }),
 ]
 
 // ── Unlocks: not looks, features. Sandbox in Career and in Takeover, bought one
@@ -259,7 +260,7 @@ const BY_ID = Object.fromEntries(ITEMS.map(i => [i.id, i]))
 export const itemById = id => (id ? BY_ID[id] ?? null : null)
 export const itemsFor = slot => ITEMS.filter(i => i.slot === slot)
 export const isFree = i => !!i?.free
-export const forSale = i => !!i && !i.ach && !i.free && !i.pass
+export const forSale = i => !!i && !i.ach && !i.free && !i.pass && !i.streak
 
 // One line of copy for the detail sheet
 export const BLURB = {

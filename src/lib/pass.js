@@ -38,7 +38,7 @@ const S1_PREMIUM = {
   15: i('nc-pro-blackgold'), 16: hh(2), 17: i('ent-glitch'), 18: i('snd-train'), 19: c(400), 20: i('av-pro-blackgold'),
   21: qh(2), 22: c(450), 23: i('nfx-glitch'), 24: pk(5, 1), 25: i('pl-pro-blackgold'), 26: c(450),
   27: i('fx-lightning'), 28: bx(5), 29: cr(5), 30: i('nc-prism'), 31: pk(3, 2), 32: c(500), 33: i('rs-vegas'),
-  34: i('snd-bassdrop'), 35: c(550), 36: i('nfx-spotlight'), 37: bx(5), 38: i('ent-fire'), 39: pk(5, 2),
+  34: i('snd-cannon'), 35: c(550), 36: i('nfx-spotlight'), 37: bx(5), 38: i('ent-fire'), 39: pk(5, 2),
   40: i('fx-flames'), 41: c(600), 42: i('nc-pro-platinum'), 43: fz(), 44: hh(3), 45: i('pl-galaxy'),
   46: i('rs-holo'), 47: c(700), 48: i('av-galaxy'), 49: c(800), 50: i('ct-space'),
 }

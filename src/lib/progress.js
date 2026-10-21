@@ -130,10 +130,13 @@ function pickMissions(key) {
   })
 }
 
+// Login streak: every 3 days pays XP (as long as it lasts); 7, 21 and 60 days each unlock
+// a look only streak keepers have (and the spotlights)
+export const STREAK_EVERY = { days: 3, xp: 150 }
 export const STREAK_REWARDS = [
-  { days: 3,  xp: 200 },
-  { days: 7,  xp: 500,  unlock: 'inferno' },
-  { days: 21, xp: 1200, unlock: 'platinum' },
+  { days: 7,  xp: 500,  unlock: 'inferno', item: 'av-streak' },
+  { days: 21, xp: 1200, unlock: 'platinum', item: 'rs-wildfire' },
+  { days: 60, xp: 3000, item: 'ent-eternal' },
 ]
 export const LOGIN_XP = 25
 
@@ -237,7 +240,7 @@ function load(id) {
 
 // Items taken out of the shop: owners get the coins back, once per account (the
 // flag syncs with the wallet), and anything equipped goes back to the default
-const RETIRED = { 'snd-roar': 400, 'snd-sax': 5400, 'snd-pro-anthem': 18000, 'snd-pizzi': 1400, 'ct-patchwork': 1900 }   // Stadium Roar (a crowd), Sax Solo, Pro Anthem, String Section, the Patchwork court
+const RETIRED = { 'snd-roar': 400, 'snd-sax': 5400, 'snd-pro-anthem': 18000, 'snd-pizzi': 1400, 'ct-patchwork': 1900, 'snd-riser': 6000, 'snd-bassdrop': 21500, 'snd-rise': 15500 }   // Stadium Roar (a crowd), Sax Solo, Pro Anthem, String Section, the Patchwork court, Synth Riser, Bass Drop, The Big Rise
 function retireItems(st) {
   st.retired = st.retired || {}
   for (const [id, refund] of Object.entries(RETIRED)) {
@@ -392,8 +395,23 @@ export function claimStreak(days) {
   S.bonusXp += r.xp
   earn(Math.round(r.xp / 4), null, true)
   if (r.unlock) S.unlocks[r.unlock] = true
+  if (r.item && !S.owned[r.item]) S.owned[r.item] = Date.now()
+  S.walletAt = Date.now()
   emit()
   return r.xp
+}
+// Every 3 days of the streak: the XP for each block reached and not yet claimed
+export const streakEveryReady = (st = S.streak) => Math.max(0, Math.floor((st.count || 0) / STREAK_EVERY.days) - (st.claimed?.every || 0))
+export function claimStreakEvery() {
+  const n = streakEveryReady()
+  if (!n || !uid) return 0
+  S.streak.claimed = { ...(S.streak.claimed || {}), every: Math.floor(S.streak.count / STREAK_EVERY.days) }
+  const xp = n * STREAK_EVERY.xp
+  S.bonusXp += xp
+  earn(Math.round(xp / 4), null, true)
+  S.walletAt = Date.now()
+  emit()
+  return xp
 }
 // Completing a team's set in the binder (every player on that roster) pays once
 export const setReward = size => Math.min(600, 10 * size)
@@ -950,6 +968,7 @@ export function lockReason(id, level = getProgress().lvl.level) {
   if (!i) return 'Not found'
   if (owns(id)) return null
   if (i.ach) return `Achievement: ${achById(i.ach)?.title ?? 'reward'}`
+  if (i.streak) return `Login streak: ${i.streak} days in a row`
   if (i.pass) return `Builder Pass · ${seasonById(i.pass.season)?.name ?? 'Season'} · tier ${i.pass.tier}`
   if (i.pro && !isPro()) return 'BAP Pro members only'
   if (i.level && level < i.level) return `Reach level ${i.level}`
@@ -1409,7 +1428,7 @@ function mergeRemote(w) {
     const a = S.streak, b = w.streak
     const keep = String(b.last ?? '') > String(a.last ?? '') ? b : a
     const same = a.start && a.start === b.start   // the same streak on both: rewards claimed on either stay claimed
-    S.streak = { ...keep, best: Math.max(a.best || 0, b.best || 0), claimed: same ? { ...(b.claimed || {}), ...(a.claimed || {}) } : { ...(keep.claimed || {}) },
+    S.streak = { ...keep, best: Math.max(a.best || 0, b.best || 0), claimed: same ? { ...(b.claimed || {}), ...(a.claimed || {}), every: Math.max(a.claimed?.every || 0, b.claimed?.every || 0) } : { ...(keep.claimed || {}) },
       freezes: a.last === b.last ? Math.max(a.freezes || 0, b.freezes || 0) : (keep.freezes || 0) }
   }
   S.unlocks = { ...(w.unlocks || {}), ...(S.unlocks || {}) }
