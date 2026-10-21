@@ -13,7 +13,6 @@
    1. `supabase/builder_pass.sql` (who bought the Builder Pass)
    2. `supabase/weekly_cup.sql` (basketball Daily days + the Weekly Cup board)
    3. `supabase/online_rating.sql` (the rating the live server books)
-   4. `supabase/private_email.sql` (moves reset emails off the public accounts row; then `select count(*) from public.accounts where email is not null;` should say 0)
 
 ## Launch day (when the new version goes live)
 1. `npm run build` passes on the branch you ship.
@@ -25,7 +24,7 @@
    - `npx wrangler deploy`
    Not before: older versions of the game don't send spin info, and the new server scores their Compete / Blacktop builds as free agents.
    Check it: open `https://bap-live.gre56734.workers.dev/health` (says ok).
-4. Supabase SQL: run `supabase/result_guards.sql` again (it changed: it now applies each player's checks to results the live server saves for them), then `supabase/launch_lockdown.sql` (devices can no longer write seasons, Daily scores or Salary Cap plays themselves; only the live server, which checks them). If the live server ever goes down, the undo is at the top of that file.
+4. Supabase SQL: `supabase/private_email.sql` (moves reset emails off the public accounts row; not before launch: the old site's profile still saves emails to that column; afterwards `select count(*) from public.accounts where email is not null;` should say 0), then `supabase/launch_lockdown.sql` (devices can no longer write seasons, Daily scores or Salary Cap plays themselves; only the live server, which checks them). If the live server ever goes down, the undo is at the top of that file.
    The live server deploy also brings Blacktop spectating (a new Durable Object, `Games`: the migration is in `live/wrangler.toml`, `wrangler deploy` applies it) and the server-booked rating.
 5. App: `git fetch . web-app-look:app`, `git push origin app`, run the "iOS TestFlight" workflow, then submit build in App Store Connect.
 6. Add the App Store ID `6819866400` to `src/lib/storeLinks.js` (APP_STORE_ID) once the app is live.
