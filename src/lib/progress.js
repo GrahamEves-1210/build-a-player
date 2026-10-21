@@ -163,7 +163,9 @@ export const cardKey = (sport, pos, mode, name, team) => `${sport}|${pos}|${mode
 // ── Store ────────────────────────────────────────────────────────────────────
 const blank = () => ({
   v: 1,
-  bonusXp: 0,                 // missions, streak, login, new cards (device only)
+  bonusXp: 0,                 // missions, streak, login, new cards: earned on this device
+  bonusOther: {},             // the same from the account's other devices (device id → XP)
+  todayOther: {},             // today's tally on the account's other devices (device id → { d, xp, g })
   seasonXp: 0,                // guest seasons
   today: null,                // { d: day, xp, g }: today's XP and games (Player of the Day)
   sync: null,                 // { xp, at, ... } rebuilt from saved seasons (signed in)
@@ -194,6 +196,7 @@ const blank = () => ({
   ach: {},                    // id → when it was unlocked
   achClaimed: {},             // id → when its reward was claimed
   walletAt: 0,                // last change to coins/items/achievements (server sync)
+  coinsSynced: null,          // the account's coins as of the last sync: coins move by what changed here since
 })
 const BLANK_STATS = {
   seasons: 0, rings: 0, spins: 0, best: 0,
@@ -265,7 +268,8 @@ function tally(xp = 0, game = 0) {
 function totalXp() {
   if (!uid) return 0
   const since = S.sync?.at ?? 0
-  return S.bonusXp + (S.sync?.xp ?? 0) + S.pending.filter(p => p.at > since).reduce((a, p) => a + p.xp, 0) + S.adjust
+  const others = Object.values(S.bonusOther || {}).reduce((a, x) => a + (+x || 0), 0)
+  return S.bonusXp + others + (S.sync?.xp ?? 0) + S.pending.filter(p => p.at > since).reduce((a, p) => a + p.xp, 0) + S.adjust
 }
 function makeSnap() {
   const xp = totalXp()
@@ -325,7 +329,9 @@ function rollDay() {
   const k = dayKey()
   const st = S.streak
   let changed = false
-  if (st.last !== k) {
+  // signed in: the login streak waits for the account's wallet (another device may already
+  // have counted today), then pullWallet rolls it
+  if (st.last !== k && !(uid && pulledFor !== uid)) {
     // missed a day or two: a freeze covers each one, and the streak goes on
     const missed = [1, 2].find(n => st.last === dayKey(-(n + 1))) ?? 0
     const saved = missed && st.count > 0 && (st.freezes ?? 0) >= missed ? missed : 0
@@ -851,6 +857,8 @@ export function initProgress() {
     if (rollDay()) emit()
     payPlayersOfDay()
     sync()
+    // back on this tab or app: what the account did elsewhere comes in first
+    if (uid) pullWallet(uid)
   })
   if (!supabase) { switchUser(null); return }
   // The session is read from storage, so this settles before anyone can play
@@ -1080,19 +1088,50 @@ export function claimAch(id) {
 // Last change wins; items and achievements are merged, never lost.
 // ═════════════════════════════════════════════════════════════════════════════
 // potdPaid, dc, day and sets ride along so clearing the device (or a second one) can't pay a reward twice
-const WALLET_KEYS = ['coins', 'coinsEarned', 'owned', 'equip', 'ach', 'achClaimed', 'stats', 'shopFree', 'levelPaid', 'discordPaid', 'feedbackPaid', 'retired', 'potdPaid', 'dc', 'day', 'sets', 'salInf']
-let pushTimer = null
+const WALLET_KEYS = ['coins', 'coinsEarned', 'owned', 'equip', 'ach', 'achClaimed', 'stats', 'shopFree', 'levelPaid', 'discordPaid', 'feedbackPaid', 'retired', 'potdPaid', 'dc', 'day', 'sets', 'salInf', 'streak', 'unlocks']
+let pushTimer = null, pushing = false, pushAgain = false
 function schedulePush() {
   if (!supabase || !uid) return
   clearTimeout(pushTimer)
   const id = uid
-  pushTimer = setTimeout(() => {
+  pushTimer = setTimeout(() => runPush(id), 2500)
+}
+// This device's id: XP and today's tally are kept per device and added up across the account
+const DEV = (() => { try { let d = localStorage.getItem('bap_dev_id'); if (!d) { d = (crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2)); localStorage.setItem('bap_dev_id', d) } return d } catch { return 'dev' } })()
+function walletOut() {
+  const app_profile = Object.fromEntries(WALLET_KEYS.map(k => [k, S[k]]))
+  app_profile.at = S.walletAt
+  app_profile.bonus = { ...(S.bonusOther || {}), [DEV]: S.bonusXp }
+  const tday = Object.fromEntries(Object.entries(S.todayOther || {}).filter(([, v]) => v?.d === dayKey()))
+  if (S.today?.d === dayKey()) tday[DEV] = S.today
+  app_profile.todayBy = tday
+  return app_profile
+}
+// Pull, merge, push: the account's wallet as it is now, plus what changed here
+async function runPush(id) {
+  if (pushing) { pushAgain = true; return }
+  pushing = true
+  try {
     if (uid !== id) return
-    const app_profile = Object.fromEntries(WALLET_KEYS.map(k => [k, S[k]]))
-    app_profile.at = S.walletAt
-    supabase.from('accounts').update({ app_profile }).eq('id', id).then(null, () => {})
+    const { data, error } = await supabase.from('accounts').select('app_profile').eq('id', id).maybeSingle()
+    if (error || uid !== id) return
+    if (data?.app_profile) mergeRemote(data.app_profile)
+    const app_profile = walletOut()
+    const { error: wErr } = await supabase.from('accounts').update({ app_profile }).eq('id', id)
+    if (!wErr) S.coinsSynced = app_profile.coins
+    settleLocal()
     pushCos(id)
-  }, 2500)
+  } catch {} finally {
+    pushing = false
+    if (pushAgain) { pushAgain = false; schedulePush() }
+  }
+}
+// Store and show the merged wallet without starting another push
+function settleLocal() {
+  try { localStorage.setItem(keyFor(uid), JSON.stringify(S)) } catch {}
+  snap = makeSnap()
+  listeners.forEach(fn => fn())
+  window.dispatchEvent(new CustomEvent('bap:progress'))
 }
 // The public copy of my look (leaderboards, results: supabase/public_cosmetics.sql).
 // Its own write, so a database without the column never blocks the wallet.
@@ -1103,7 +1142,10 @@ function pushCos(id = uid) {
   if (!supabase || !id) return
   const o = S.stats?.online
   // today's tally and the day before (yesterday's board pays out the morning after: payPlayersOfDay)
-  const cos = { ...myCosmetics(), level: levelInfo(totalXp()).level, rating: o?.played ? o.rating : null, today: S.today ?? null, yday: S.prevDay ?? null }, key = id + JSON.stringify(cos)
+  // today's tally: this device's plus the account's other devices' (Players of the Day)
+  const others = Object.values(S.todayOther || {}).filter(v => v?.d === S.today?.d)
+  const today = S.today ? { ...S.today, xp: S.today.xp + others.reduce((a, v) => a + (v.xp || 0), 0), g: S.today.g + others.reduce((a, v) => a + (v.g || 0), 0) } : null
+  const cos = { ...myCosmetics(), level: levelInfo(totalXp()).level, rating: o?.played ? o.rating : null, today, yday: S.prevDay ?? null }, key = id + JSON.stringify(cos)
   if (key === cosSent) return
   cosSent = key
   supabase.from('accounts').update({ cos }).eq('id', id).then(({ error }) => { if (error) cosSent = '' }, () => { cosSent = '' })
@@ -1122,56 +1164,90 @@ function syncName(id) {
 // the same day on both sides: merge it; otherwise the later day wins
 const mergeDay = (a, b, both) => (!b ? a : !a ? b : a.key === b.key ? both(a, b) : (String(a.key) > String(b.key) ? a : b))
 let pulledFor = null
+// The account's wallet merged into this device's: items, achievements and counters are
+// combined (never lost), coins move by what changed on each side since the last sync,
+// XP and today's tally add up per device, the login streak follows the latest day
+function mergeRemote(w) {
+  if (!w || typeof w !== 'object') return
+  const newer = (w.at ?? 0) > (S.walletAt ?? 0)
+  S.owned = { ...(w.owned || {}), ...S.owned }
+  S.retired = { ...(w.retired || {}), ...(S.retired || {}) }
+  S.ach = { ...(w.ach || {}), ...S.ach }
+  S.achClaimed = { ...(w.achClaimed || {}), ...S.achClaimed }
+  const st = { ...S.stats }
+  for (const [k, v] of Object.entries(w.stats || {})) {
+    if (k === 'positions') st.positions = { ...(v || {}), ...(st.positions || {}) }
+    else if (ONLINE_KEYS.includes(k) && v) {
+      // counters: the larger; the live streak, the rating and the recent form: the newer side
+      const mine = { ...BLANK_STATS[k], ...(st[k] || {}) }
+      st[k] = Object.fromEntries(Object.keys(BLANK_STATS[k]).map(f => {
+        const a = mine[f], b = v[f]
+        if (Array.isArray(BLANK_STATS[k][f])) return [f, newer ? (b ?? a) : (a ?? b)]
+        if (f === 'streak' || f === 'rating') return [f, newer ? (b ?? a) : (a ?? b)]
+        return [f, Math.max(a ?? 0, b ?? 0)]
+      }))
+    }
+    else if (typeof v === 'number') st[k] = Math.max(st[k] ?? 0, v)
+  }
+  S.stats = fixStats(st)
+  S.coinsEarned = Math.max(S.coinsEarned, w.coinsEarned ?? 0)
+  S.discordPaid = !!(S.discordPaid || w.discordPaid)
+  S.feedbackPaid = !!(S.feedbackPaid || w.feedbackPaid)
+  if (String(w.potdPaid ?? '') > String(S.potdPaid ?? '')) S.potdPaid = w.potdPaid
+  S.sets = { ...(w.sets || {}), ...(S.sets || {}) }
+  S.dc = mergeDay(S.dc, w.dc, (a, b) => ({ ...b, ...a, spins: Math.max(a.spins || 0, b.spins || 0), done: !!(a.done || b.done),
+    forfeit: !!(a.forfeit || b.forfeit), posted: !!(a.posted || b.posted), ovr: a.ovr ?? b.ovr ?? null }))
+  S.salInf = mergeDay(S.salInf, w.salInf, (a, b) => ({ ...a, n: Math.max(a.n || 0, b.n || 0) }))
+  S.day = mergeDay(S.day, w.day, (a, b) => ({ ...a, missions: (a.missions || []).map(m => {
+    const o = (b.missions || []).find(x => x.id === m.id)
+    return o ? { ...m, n: Math.max(m.n || 0, o.n || 0), claimed: !!(m.claimed || o.claimed) } : m
+  }) }))
+  if (typeof w.coins === 'number') {
+    // what this device earned or spent since the last sync, on top of the account's coins now
+    if (S.coinsSynced != null) S.coins = Math.max(0, w.coins + (S.coins - S.coinsSynced))
+    else if (newer) S.coins = w.coins
+    S.coinsSynced = w.coins
+  }
+  // XP from missions, logins, cards…: each device's own count, added up
+  S.bonusOther = { ...(S.bonusOther || {}) }
+  for (const [d, xp] of Object.entries(w.bonus || {})) {
+    if (d === DEV) S.bonusXp = Math.max(S.bonusXp, +xp || 0)
+    else S.bonusOther[d] = Math.max(S.bonusOther[d] || 0, +xp || 0)
+  }
+  // today's tally (Players of the Day): each device's own, added up when it's shown
+  S.todayOther = Object.fromEntries(Object.entries({ ...(S.todayOther || {}), ...(w.todayBy || {}) })
+    .filter(([d, v]) => d !== DEV && v?.d === dayKey())
+    .map(([d, v]) => [d, (S.todayOther?.[d]?.xp ?? 0) > (v.xp ?? 0) ? S.todayOther[d] : v]))
+  if (w.todayBy?.[DEV]?.d === dayKey() && S.today?.d === dayKey()) {
+    S.today = { ...S.today, xp: Math.max(S.today.xp, w.todayBy[DEV].xp || 0), g: Math.max(S.today.g, w.todayBy[DEV].g || 0) }
+  }
+  // the login streak: the side that saw the latest day; rewards claimed on either side stay claimed
+  if (w.streak && typeof w.streak === 'object') {
+    const a = S.streak, b = w.streak
+    const keep = String(b.last ?? '') > String(a.last ?? '') ? b : a
+    const same = a.start && a.start === b.start   // the same streak on both: rewards claimed on either stay claimed
+    S.streak = { ...keep, best: Math.max(a.best || 0, b.best || 0), claimed: same ? { ...(b.claimed || {}), ...(a.claimed || {}) } : { ...(keep.claimed || {}) },
+      freezes: a.last === b.last ? Math.max(a.freezes || 0, b.freezes || 0) : (keep.freezes || 0) }
+  }
+  S.unlocks = { ...(w.unlocks || {}), ...(S.unlocks || {}) }
+  // a level's coins are paid once for the account, whichever device got there first
+  S.levelPaid = Math.max(S.levelPaid || 0, w.levelPaid || 0)
+  if (newer) {
+    S.equip = { ...DEFAULTS, ...(w.equip || {}) }
+    S.shopFree = w.shopFree ?? S.shopFree
+    S.walletAt = w.at
+  }
+  retireItems(S)                          // after the merge, so the refund survives a newer cloud wallet
+}
 async function pullWallet(id) {
   if (!supabase || !id) return
   try {
     const { data, error } = await supabase.from('accounts').select('app_profile').eq('id', id).maybeSingle()
     if (error || uid !== id) return
-    if (!data?.app_profile) { pulledFor = id; return }
-    const w = data.app_profile
-    const newer = (w.at ?? 0) > (S.walletAt ?? 0)
-    S.owned = { ...(w.owned || {}), ...S.owned }
-    S.retired = { ...(w.retired || {}), ...(S.retired || {}) }
-    S.ach = { ...(w.ach || {}), ...S.ach }
-    S.achClaimed = { ...(w.achClaimed || {}), ...S.achClaimed }
-    const st = { ...S.stats }
-    for (const [k, v] of Object.entries(w.stats || {})) {
-      if (k === 'positions') st.positions = { ...(v || {}), ...(st.positions || {}) }
-      else if (ONLINE_KEYS.includes(k) && v) {
-        // counters: the larger; the live streak, the rating and the recent form: the newer side
-        const mine = { ...BLANK_STATS[k], ...(st[k] || {}) }
-        st[k] = Object.fromEntries(Object.keys(BLANK_STATS[k]).map(f => {
-          const a = mine[f], b = v[f]
-          if (Array.isArray(BLANK_STATS[k][f])) return [f, newer ? (b ?? a) : (a ?? b)]
-          if (f === 'streak' || f === 'rating') return [f, newer ? (b ?? a) : (a ?? b)]
-          return [f, Math.max(a ?? 0, b ?? 0)]
-        }))
-      }
-      else if (typeof v === 'number') st[k] = Math.max(st[k] ?? 0, v)
-    }
-    S.stats = fixStats(st)
-    S.coinsEarned = Math.max(S.coinsEarned, w.coinsEarned ?? 0)
-    S.discordPaid = !!(S.discordPaid || w.discordPaid)
-    S.feedbackPaid = !!(S.feedbackPaid || w.feedbackPaid)
-    if (String(w.potdPaid ?? '') > String(S.potdPaid ?? '')) S.potdPaid = w.potdPaid
-    S.sets = { ...(w.sets || {}), ...(S.sets || {}) }
-    S.dc = mergeDay(S.dc, w.dc, (a, b) => ({ ...b, ...a, spins: Math.max(a.spins || 0, b.spins || 0), done: !!(a.done || b.done),
-      forfeit: !!(a.forfeit || b.forfeit), posted: !!(a.posted || b.posted), ovr: a.ovr ?? b.ovr ?? null }))
-    S.salInf = mergeDay(S.salInf, w.salInf, (a, b) => ({ ...a, n: Math.max(a.n || 0, b.n || 0) }))
-    S.day = mergeDay(S.day, w.day, (a, b) => ({ ...a, missions: (a.missions || []).map(m => {
-      const o = (b.missions || []).find(x => x.id === m.id)
-      return o ? { ...m, n: Math.max(m.n || 0, o.n || 0), claimed: !!(m.claimed || o.claimed) } : m
-    }) }))
-    if (newer) {
-      S.coins = w.coins ?? S.coins
-      S.equip = { ...DEFAULTS, ...(w.equip || {}) }
-      S.shopFree = w.shopFree ?? S.shopFree
-      S.levelPaid = Math.max(S.levelPaid || 0, w.levelPaid || 0)
-      S.walletAt = w.at
-    }
-    retireItems(S)                          // after the merge, so the refund survives a newer cloud wallet
-    rollDay()
+    // a new account's wallet is empty: nothing to merge, but today is rolled here (the login streak waited for this)
+    if (data?.app_profile) mergeRemote(data.app_profile)
     pulledFor = id
+    rollDay()
     emit(true)
   } catch {}
 }
