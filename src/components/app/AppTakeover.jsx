@@ -713,7 +713,7 @@ export function TakeoverIntro({ sport, teams, onStart, onClose }) {
   const done = runs.filter(r => r.won).length
   const steps = [
     ['Build your player', 'One draft, the same spins as a normal game. That build is who you take on the road.'],
-    [`Cross ${STOPS} cities`, `Every stop has ${isBucket ? 'a star' : 'its best player at your position'} and they get tougher every stop. Beat them to take the city.`],
+    [`Cross ${STOPS} cities`, `Every stop has ${isBucket ? 'a star' : 'a player at your position'} waiting, and they get tougher every stop. Beat them to take the city.`],
     ['Take their game', 'Every win is a prize: steal one of their ratings, a game plan for the next city, a rest, or the cash.'],
     ['Heat', 'Wins in a row build heat. Three straight and you\'re ON FIRE: a double steal, then a game with +1 on every rating. A loss puts it out.'],
     [`${LIVES} lives`, `A loss costs a life and you run that stop back. Lose all ${LIVES} and the run is over. Take all ${STOPS} and the road keeps going.`],

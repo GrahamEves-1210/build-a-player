@@ -1294,7 +1294,8 @@ export default function App() {
     onSignIn: () => setShowAuth(true),
     onProfile: () => { window.history.pushState({}, '', '/profile'); setPage('profile') },
     onLeaderboard: () => setPage('leaderboard'),
-    onSwitchPosition: (pos) => { try { localStorage.setItem('lastPosition', pos) } catch {}; handleHome() },
+    // switching position leaves the game: a live one (the Daily, a pool, an auction) asks first and forfeits
+    onSwitchPosition: (pos) => guardLeave(() => { try { localStorage.setItem('lastPosition', pos) } catch {}; handleHome() }),
     onSubscribe: async () => {
       if (!user) { setShowAuth(true); return }
       try {

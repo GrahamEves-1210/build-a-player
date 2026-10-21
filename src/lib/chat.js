@@ -9,6 +9,11 @@ import { getUsername } from './discord'
 const BAD = ['fuck', 'shit', 'bitch', 'cunt', 'dick', 'pussy', 'asshole', 'bastard', 'slut', 'whore', 'fag', 'nigg', 'retard', 'kys', 'kill yourself', 'rape', 'nazi', 'porn', 'sex']
 const LEET = { 0: 'o', 1: 'i', 3: 'e', 4: 'a', 5: 's', 7: 't', '@': 'a', $: 's', '!': 'i' }
 const norm = s => s.toLowerCase().replace(/[01345 7@$!]/g, c => LEET[c] ?? c).replace(/[^a-z]/g, '')
+// real words and names that happen to contain one (Eric Dickerson, Essex, grapes): taken out
+// before the check, so they aren't starred
+const ALLOW = ['dickerson', 'dickens', 'dickinson', 'dickey', 'essex', 'sussex', 'middlesex', 'sexton', 'grape', 'drape', 'scrape',
+  'trapeze', 'therapist', 'skyscraper', 'skys', 'scunthorpe', 'retardant', 'shiitake', 'fagan', 'pushit', 'cockpit']
+const flagged = w => { let n = norm(w); for (const a of ALLOW) n = n.split(a).join('_'); return BAD.some(b => n.includes(b)) }
 
 export const MAX_LEN = 120
 export const MIN_GAP_MS = 1500
@@ -18,7 +23,7 @@ export function clean(text) {
   // strip urls / contact details: no off-platform contact between kids
   out = out.replace(/\b(https?:\/\/|www\.)\S+/gi, '[link]').replace(/\b[\w.+-]+@[\w-]+\.[\w.]+\b/g, '[email]').replace(/\b\d{3}[-.\s]?\d{3}[-.\s]?\d{4}\b/g, '[number]')
   const words = out.split(' ')
-  return words.map(w => (BAD.some(b => norm(w).includes(b)) ? '*'.repeat(Math.max(3, w.length)) : w)).join(' ')
+  return words.map(w => (flagged(w) ? '*'.repeat(Math.max(3, w.length)) : w)).join(' ')
 }
 
 const BLOCK_KEY = 'bap_blocked'

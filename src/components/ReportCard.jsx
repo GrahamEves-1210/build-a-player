@@ -411,7 +411,8 @@ export default function ReportCard({ build, onSimulate, onReset, types = TYPES, 
         </div>
 
         <div className="ovr-arch-row">
-          <div className={`ovr-arch${!filled.length ? ' ovr-arch-idle' : ''}`}>{arch}</div>
+          {/* until the build is done the archetype is just "N attributes remaining": the slots box says it already */}
+          {!/remaining$/.test(arch || '') && <div className={`ovr-arch${!filled.length ? ' ovr-arch-idle' : ''}`}>{arch}</div>}
         </div>
 
         {complete && !isVersusMode && (

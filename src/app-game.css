@@ -4212,7 +4212,8 @@ html:is(.is-app, .app-look) .simp-final-actions { margin-top: 12px; }
 .ag-brand-mark { height: 66px; }
 @media (min-width: 1024px) { html.app-look .ag-brand-mark { height: 86px; } }
 html:is(.is-app, .app-look) .logo-img-full { height: 30px; }
-@media (min-width: 769px) { html:is(.is-app, .app-look) .logo-img-full { height: 40px; } }
+/* (34px with the wordmark under it fits the navbar; 40px poked out over the top) */
+@media (min-width: 769px) { html:is(.is-app, .app-look) .logo-img-full { height: 34px; } }
 
 /* build complete: full trait names, two to a row (label left, grade right) */
 .ag-bc-grades { grid-template-columns: 1fr 1fr; gap: 5px; }
@@ -5260,3 +5261,10 @@ html.is-app .dc-submit-btn { transition: filter .15s, transform .15s ease-out, b
 html.bap-reduce-motion .ag-pop { animation: ag-rm-in .2s ease-out both !important; animation-delay: 0ms !important; }
 html.bap-reduce-motion.is-app:is([data-flip="left"], [data-flip="right"]) .game-page-scroll { animation: ag-rm-out .15s ease-out forwards !important; }
 html.bap-reduce-motion.is-app:is([data-flip="in-left"], [data-flip="in-right"]) .game-page-scroll { animation: ag-rm-in .2s ease-out both !important; }
+
+/* Website Salary Cap: Back / Lock In stay in reach above the bottom ad rail while the board scrolls */
+html.app-look:not(.is-app) .sc-footer {
+  position: sticky; bottom: var(--web-rail, 0px); z-index: 6;
+  padding-bottom: 12px; margin-bottom: 0;
+  background: #0b0c0f; box-shadow: 0 -14px 14px -4px #0b0c0f;
+}

@@ -2707,6 +2707,9 @@ function TeamStarters({ teamShort, teamColor, isBig, iqPhoto, isAllTime = false,
     const worst = mine.reduce((w, k) => (playerOvr(starters[k]) < playerOvr(starters[w]) ? k : w), mine[0])
     five = withYou(starters.map(p => ({ name: p.name, label: starterDisplayName(p), team: p.team })), worst, isBig, spot)
   }
+  // the team's color for my name, unless it's too dark to read on the dark card (Pacers navy)
+  const lum = h => { const m = /^#?([0-9a-f]{6})$/i.exec(h || ''); if (!m) return 1; const n = parseInt(m[1], 16); return (0.2126 * (n >> 16) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255)) / 255 }
+  const meColor = lum(teamColor) < 0.32 ? '#f1f5f9' : teamColor
   return (
     <div className="sts-starters">
       {five.map((p, k) => {
@@ -2716,10 +2719,10 @@ function TeamStarters({ teamShort, teamColor, isBig, iqPhoto, isAllTime = false,
         return (
           <div key={isMe ? 'you' : p.name} className={`sts-starter${isMe ? ' sts-starter--you' : ''}`}>
             <QBAvatar photo={photo} team={isMe ? teamShort : p.team} color={isMe ? teamColor : teamColor + '99'} size={42} logoDir="/logos/nba/" />
-            <span className="sts-starter-name" style={isMe ? { color: teamColor, fontWeight: 700 } : undefined}>
+            <span className="sts-starter-name" style={isMe ? { color: meColor, fontWeight: 700 } : undefined}>
               {isMe ? userName : p.label}
             </span>
-            <span className="sts-starter-pos" style={isMe ? { color: teamColor } : undefined}>{SPOT_LABELS[k]}</span>
+            <span className="sts-starter-pos" style={isMe ? { color: meColor } : undefined}>{SPOT_LABELS[k]}</span>
           </div>
         )
       })}
