@@ -42,7 +42,7 @@ function useKeys(map, on = true) {
 const tri = t => { const p = t % 2; return p <= 1 ? p : 2 - p }     // 0→1→0 sweep
 
 // retry (Career, app): a miss can be played again for a video, once
-export default function MiniGame({ game, build, seed = 'x', onDone, autoStart = false, hard = false, retry = false }) {
+export default function MiniGame({ game, build, seed = 'x', onDone, autoStart = false, hard = false, retry = false, lock = null }) {
   const def = GAMES[game]
   const [stage, setStage] = useState(autoStart ? 'play' : 'intro')
   const [result, setResult] = useState(null)
@@ -60,8 +60,19 @@ export default function MiniGame({ game, build, seed = 'x', onDone, autoStart = 
     sfx(out.hit ? 'claim' : 'deny'); haptic(out.hit ? 'success' : 'heavy')
     // a miss that can still be replayed waits for the player's call
     if (!out.hit && offerRetry) return
-    setTimeout(() => onDone?.(out), 900)
+    setTimeout(() => { unlock(); onDone?.(out) }, 900)
   }
+  // Career (lock): a drill that was started and never finished (a reload, a closed app) is a
+  // miss. The game is seeded, so replaying it after a reload was a free practice run
+  const lockKey = lock ? `bap_mg_${lock}` : null
+  const unlock = () => { if (lockKey) try { localStorage.removeItem(lockKey) } catch {} }
+  useEffect(() => {
+    if (!lockKey) return
+    let left = false
+    try { left = !!localStorage.getItem(lockKey) } catch {}
+    if (left) { unlock(); onDone?.({ score: 0, hit: false, note: 'Left before it finished: counted as a miss', raw: null, out: false }) }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (lockKey && stage === 'play') try { localStorage.setItem(lockKey, '1') } catch {} }, [stage]) // eslint-disable-line react-hooks/exhaustive-deps
   // a test hook for the dev server only (a live build has no way to force a score)
   useEffect(() => { if (!import.meta.env.DEV) return; window.__bapMini = { finish: s => done({ score: s, hit: s >= 0.5 }) }; return () => { if (window.__bapMini) delete window.__bapMini } }, [result]) // eslint-disable-line
   if (!def) return null
