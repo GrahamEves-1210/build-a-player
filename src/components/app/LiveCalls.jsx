@@ -43,14 +43,15 @@ export function CallBar({ offense, options, picked = null, onPick, ms = CALL_MS,
 }
 
 // What both sides called, shown for a moment as the possession plays
+// (offense: whether my side has the ball; null when watching, so neither side is mine)
 export function CallReveal({ off, def, offense, nameOf = null }) {
   if (!off && !def) return null
   const offLabel = off?.startsWith?.('pass:') ? `PASS → ${nameOf?.(off.slice(5)) ?? ''}` : off ? CALL_LABEL[off]?.[0] : null
   return (
     <div className="lc-reveal" aria-live="polite">
-      <span className={offense ? 'is-mine' : ''}>{offLabel ?? 'FREESTYLE'}</span>
+      <span className={offense === true ? 'is-mine' : ''}>{offLabel ?? 'FREESTYLE'}</span>
       <i>vs</i>
-      <span className={offense ? '' : 'is-mine'}>{def ? CALL_LABEL[def][0] : 'STRAIGHT UP'}</span>
+      <span className={offense === false ? 'is-mine' : ''}>{def ? CALL_LABEL[def][0] : 'STRAIGHT UP'}</span>
     </div>
   )
 }

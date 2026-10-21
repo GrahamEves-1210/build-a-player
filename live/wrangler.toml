@@ -44,6 +44,15 @@ class_name = "CompeteRoom"
 tag = "v3"
 new_sqlite_classes = ["CompeteQueue", "CompeteRoom"]
 
+# The Blacktop games anyone can watch (src/games.js): one list, every live 1v1, 2v2 and 3v3
+[[durable_objects.bindings]]
+name = "GAMES"
+class_name = "Games"
+
+[[migrations]]
+tag = "v4"
+new_sqlite_classes = ["Games"]
+
 # the shared game rules come from the app (../src): they read import.meta.env
 [define]
 "import.meta.env" = '{"DEV":false,"PROD":true}'
