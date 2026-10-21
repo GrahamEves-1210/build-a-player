@@ -347,10 +347,17 @@ export function pastCareers(sport) { try { const l = JSON.parse(localStorage.get
 export function logCareer(c) {
   if (!c || c.logged) return c
   const L = legacyOf(c), t = careerTotals(c)
-  const entry = { at: Date.now(), pos: c.pos, name: c.name, seasons: c.seasons.length, score: L.score, tier: L.tier, rank: L.rank, ranked: L.ranked, hof: c.hof?.in ?? false, rings: t.rings, awards: t.awards, team: c.team, sandbox: !!c.sandbox }
-  try { localStorage.setItem(histKey(c.sport), JSON.stringify([entry, ...pastCareers(c.sport)].slice(0, 20))) } catch {}
-  return { ...c, logged: true }
+  const at = Date.now()
+  const entry = { at, pos: c.pos, name: c.name, seasons: c.seasons.length, score: L.score, tier: L.tier, rank: L.rank, ranked: L.ranked, hof: c.hof?.in ?? false, rings: t.rings, awards: t.awards, team: c.team, sandbox: !!c.sandbox, comeback: !!c.unretired }
+  // a comeback retiring for good: the line from the first retirement is replaced, not doubled
+  const was = c.unretired?.logAt
+  const rest = pastCareers(c.sport).filter(x => !(was && x.at === was))
+  try { localStorage.setItem(histKey(c.sport), JSON.stringify([entry, ...rest].slice(0, 20))) } catch {}
+  return { ...c, logged: true, logAt: at }
 }
+// the past-careers line a retired career wrote (careers retired before logAt was kept: by name and numbers)
+const loggedLine = c => (c.logAt ? pastCareers(c.sport).find(x => x.at === c.logAt) : null)
+  ?? pastCareers(c.sport).find(x => x.name === c.name && x.pos === c.pos && x.seasons === c.seasons.length && x.score === legacyOf(c).score) ?? null
 
 // ── Teams: the real roster around you, and how it moves year to year ─────────
 // OVR → the 0–11 grade scale (F … S) the rest of the game uses
@@ -1395,19 +1402,23 @@ function marketValue(c) {
 }
 // Contract's up: the team's offer and two from the market; none at all when
 // nobody's calling (that's the end of the road)
-function contractSituation(c) {
+// fresh: the day a comeback is announced (every phone rings, and every deal is for one year)
+function contractSituation(c, fresh = false) {
   const S = sportOf(c)
   if (c.contract.left > 0) return null
-  // the career's over anyway (age, or the most seasons): no free agency to sign into
-  if (c.age >= retireAge(c) || c.seasons.length >= MAX_SEASONS) return null
-  const r = seeded(`${c.seed}-fa-${c.year}`)
+  // the career's over anyway (age, the most seasons, or a comeback that's run its course): no free agency to sign into
+  const left = comebackLeft(c)
+  if (left != null ? left <= 0 : c.age >= retireAge(c) || c.seasons.length >= MAX_SEASONS) return null
+  const r = seeded(`${c.seed}-fa-${c.year}${fresh ? '-back' : ''}`)
   const value = marketValue(c)
   const last = c.seasons[c.seasons.length - 1]
   const perf = seasonScore(c.pos, last)
   // past his prime and a bad year: nobody calls (an RB sooner than a QB)
-  if (c.age >= sportOf(c).declineAt(c.pos) + 3 && perf < 0.35) return []
+  if (!fresh && c.age >= sportOf(c).declineAt(c.pos) + 3 && perf < 0.35) return []
   // teams commit longer to a good name (+1 year at 8+), shorter to a bad one (−1 at 3 or less)
   const repYrs = (c.rep ?? 5) >= 8 ? 1 : (c.rep ?? 5) <= 3 ? -1 : 0
+  // a comeback's deals never run past its last season
+  const cap = y => (fresh ? 1 : left != null ? Math.min(y, left) : y)
   const years = clamp((c.age >= 32 ? 1 + Math.floor(r() * 2) : c.age >= 29 ? 2 + Math.floor(r() * 2) : 3 + Math.floor(r() * 3)) + repYrs, 1, 6)
   const fitAt = short => teamFit(short, c.pos, { roster: c.roster, league: c.league, name: c.name, sport: c.sport, yrs: rosterYrs(c), gone: outOf(c, short) })
   const others = S.teams.filter(t => t.short !== c.team).sort(() => r() - .5).map(t => fitAt(t.short))
@@ -1418,9 +1429,9 @@ function contractSituation(c) {
   const standAt = short => { const dc = depthChart({ ...c, contract: {}, lastRole: short === c.team ? c.lastRole : null }, short === c.team ? c.roster : rosterOf(c, short)); return { starter: dc.starter, behind: dc.ahead[dc.ahead.length - 1]?.name ?? null, label: dc.label } }
   const mk = (fit, perYear, yrs, pitch, kind) => ({ team: fit.short, fit, perYear: r10(perYear), years: yrs, pitch, kind, stand: standAt(fit.short) })
   return [
-    mk(fitAt(c.team), value * (0.92 + r() * .1), years, 'Stay. Finish what you started here.', 'stay'),
-    mk(contender, value * (0.68 + r() * .12), Math.max(1, years - 1), 'Less money. A real shot at a ring.', 'contender'),
-    mk(payer, value * (1.12 + r() * .2), years + (c.age < 29 ? 1 : 0), 'Top of the market. A rebuild wants a face.', 'payer'),
+    mk(fitAt(c.team), value * (0.92 + r() * .1), cap(years), fresh ? 'Back where he left off. One more run here.' : 'Stay. Finish what you started here.', 'stay'),
+    mk(contender, value * (0.68 + r() * .12), cap(Math.max(1, years - 1)), fresh ? 'A year on a contender. One more shot at a ring.' : 'Less money. A real shot at a ring.', 'contender'),
+    mk(payer, value * (1.12 + r() * .2), cap(years + (c.age < 29 ? 1 : 0)), fresh ? 'Top dollar for the comeback. They want the name.' : 'Top of the market. A rebuild wants a face.', 'payer'),
   ]
 }
 export function signOffer(c, o) {
@@ -1546,8 +1557,11 @@ export const retireAge = c => {
   return base + ((c.ovr ?? 0) >= 90 && (c.durability ?? 5) >= 7 ? 2 : 0)
 }
 export function retireReason(c) {
-  if (c.age >= retireAge(c)) return 'age'
-  if (c.seasons.length >= MAX_SEASONS) return 'seasons'
+  // a comeback: the age and the season cap don't apply until its seasons are played
+  const left = comebackLeft(c)
+  if (left != null && left <= 0) return 'comeback'
+  if (left == null && c.age >= retireAge(c)) return 'age'
+  if (left == null && c.seasons.length >= MAX_SEASONS) return 'seasons'
   if (Array.isArray(c.offers) && c.offers.length === 0) return 'nocalls'
   return null
 }
@@ -1555,7 +1569,43 @@ export const mustRetire = c => !!retireReason(c)
 export function retire(c) {
   const L = legacyOf(c)
   const hof = hofVote(c, L)
-  return logCareer({ ...c, phase: 'retired', retired: true, hof, offers: null, active: null, decisions: [...c.decisions, { year: c.year + 1, text: `Retired at ${c.age} after ${c.seasons.length} seasons` }] })
+  const text = `Retired${c.unretired ? ' for good' : ''} at ${c.age} after ${c.seasons.length} seasons`
+  return logCareer({ ...c, phase: 'retired', retired: true, hof, offers: null, talks: null, active: null, decisions: [...c.decisions, { year: c.year + 1, text }] })
+}
+
+// ── The comeback (BAP Pro): a retired career comes back once ─────────────────
+// Back into the offseason he retired in: his deal if it still runs, else free
+// agency (one-year offers, and the phone always rings the day he announces it).
+// He plays the next season a year older and Father Time keeps working; the age
+// and the season cap are off for up to COMEBACK_SEASONS more seasons, then he
+// retires for good. The legacy and the Hall of Fame vote are redone then, and
+// the past-careers line from the first retirement is replaced, not doubled.
+// c.unretired = { year (the first comeback season), until (the last), age, season, logAt }
+export const COMEBACK_SEASONS = 3
+// seasons left in a comeback (null: never came back)
+const comebackLeft = c => (c?.unretired ? c.unretired.until - c.seasons.length : null)
+export const canUnretire = c => c?.phase === 'retired' && !c.unretired && (c.seasons?.length ?? 0) > 0
+export function unretire(c) {
+  if (!canUnretire(c)) return c
+  const n = c.seasons.length
+  const back = {
+    ...c, phase: 'offseason', retired: false, hof: null, logged: false, talks: null, active: null,
+    unretired: { year: n + 1, until: n + COMEBACK_SEASONS, age: c.age, season: c.season + 1, logAt: loggedLine(c)?.at ?? null },
+    contract: c.contract?.left > 0 ? { ...c.contract, left: Math.min(c.contract.left, COMEBACK_SEASONS) } : c.contract,
+    events: [...c.events, { year: c.year + 1, text: `${c.name} comes out of retirement at ${c.age}. Up to ${COMEBACK_SEASONS} more seasons.` }],
+    decisions: [...c.decisions, { year: c.year + 1, text: `Came out of retirement (up to ${COMEBACK_SEASONS} more seasons)` }],
+  }
+  const offers = contractSituation(back, true)
+  // his deal still runs: back to his team on it. Else the contract step, with the offers
+  return { ...back, offers, fit: fitFor(back), off: { ...(c.off ?? {}), step: offers ? 'contract' : (c.off?.step ?? 'camp'), contract: !!offers || !!c.off?.contract, moves: c.off?.moves ?? [], news: c.off?.news ?? [] } }
+}
+// where a comeback stands, for the screens: { n, of, done } (n: the season being
+// played or coming up; done: its seasons are all played), or null
+export function comebackYear(c) {
+  if (!c?.unretired) return null
+  const played = c.seasons.length - c.unretired.year + 1
+  const done = played >= COMEBACK_SEASONS
+  return { n: Math.min(COMEBACK_SEASONS, played + (c.phase === 'retired' ? 0 : 1)), played, of: COMEBACK_SEASONS, done }
 }
 
 // ── Legacy ───────────────────────────────────────────────────────────────────
