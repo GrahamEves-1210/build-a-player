@@ -11,7 +11,8 @@ import { getBucketGuardArchetype, getBucketBigArchetype, TEAM_RATINGS, ALLTIME_T
 import { SAL_REP_TYPES, SAL_ATTR_MAP } from './BucketSalaryCap'
 import QBAvatar from './QBAvatar'
 import BucketFigureOverlay from './BucketFigureOverlay'
-import { ShareModal } from './ReportCard'
+import { ShareSeasonButton } from './app/SeasonShare'
+import { bucketSeasonCard } from '../utils/seasonCard'
 import SiteFooter from './SiteFooter'
 import { IS_APP, APP_LOOK } from '../lib/platform'
 // The app's season screen runs on the website too (site ads and promo stay)
@@ -2386,13 +2387,24 @@ function ScreenPlayoffs({ result, onNext, autoSkip = false, isAllTime = false, a
 }
 
 // ─── Screen 3: Final Report ───────────────────────────────────────────────────
-function ScreenFinal({ result, awards, build, types, attrMap, onReset, onBack, adsDisabled = false, isSalaryMode = false, userName = 'Guest' }) {
+function ScreenFinal({ result, awards, build, types, attrMap, onReset, onBack, adsDisabled = false, isSalaryMode = false, isAllTime = false, userName = 'Guest' }) {
   const {
     ovr, wins, losses, champion, madePlayoffs, playoffRounds = [],
     ppg, rpg, apg, spg, bpg, tov, fgPct, threePct, ftPct, per, bestGame, team,
   } = result
   const goatRank = computeGoatRank(result, awards)
   const [show, setShow] = useState(false)
+
+  // the season as a share card (Share Season); the awards as this report shows them
+  const shareCard = useMemo(() => {
+    let arch = null
+    try { arch = result.position === 'big' ? getBucketBigArchetype(ovr, build, types) : getBucketGuardArchetype(ovr, build, types) } catch {}
+    return bucketSeasonCard({
+      result, build, types, attrMap, name: userName, arch, allTime: isAllTime, salary: isSalaryMode,
+      mvp: awards ? !!awards.mvp?.isPlayer : !!result.mvp,
+      dpoy: awards ? !!awards.dpoy?.isPlayer : !!result.dpoy,
+    })
+  }, [result, awards, build, types, attrMap, ovr, userName, isAllTime, isSalaryMode])
   useEffect(() => { const t = setTimeout(() => setShow(true), 200); return () => clearTimeout(t) }, [])
 
   useEffect(() => {
@@ -2428,6 +2440,7 @@ function ScreenFinal({ result, awards, build, types, attrMap, onReset, onBack, a
         <div className="sfb-outcome">{playoffSummary}</div>
         <div className="sfb-sub">{wins}–{losses} Season · OVR {ovr}</div>
       </div>
+      <ShareSeasonButton card={shareCard} />
 
       {team && <BucketModelFigure build={build} team={team} className="simp-team-model--final" />}
 
@@ -2818,13 +2831,13 @@ export default function BucketSimPage({ result: baseResult, build, types, positi
     <ScreenSeason   key="season"   result={result} awards={awards} onNext={advancePage} adsDisabled={adsDisabled} isAllTime={isAllTime} userName={userName} />,
     <ScreenPlayoffs key="playoffs" result={result} onNext={advancePage} autoSkip={true} isAllTime={isAllTime} adsDisabled={adsDisabled} />,
     <ScreenGOAT     key="goat"     result={result} awards={awards} onNext={advancePage} onReset={handleReset} onBack={handleGoatBack} adsDisabled={adsDisabled} userName={userName} />,
-    <ScreenFinal    key="final"    result={result} awards={awards} build={build} types={simTypes} attrMap={simAttrMap} onReset={handleReset} onBack={handleBack} adsDisabled={adsDisabled} isSalaryMode={isSalaryMode} userName={userName} />,
+    <ScreenFinal    key="final"    result={result} awards={awards} build={build} types={simTypes} attrMap={simAttrMap} onReset={handleReset} onBack={handleBack} adsDisabled={adsDisabled} isSalaryMode={isSalaryMode} isAllTime={isAllTime} userName={userName} />,
   ] : [
     <ScreenBuild    key="build"    result={result} build={build} types={simTypes} attrMap={simAttrMap} onNext={advancePage} adsDisabled={adsDisabled} isSalaryMode={isSalaryMode} userName={userName} />,
     <ScreenSeason   key="season"   result={result} awards={awards} onNext={advancePage} adsDisabled={adsDisabled} isAllTime={isAllTime} director={director} onFinal={handleFinal} pool={pool} userName={userName} />,
     <ScreenPlayoffs key="playoffs" result={result} onNext={advancePage} isAllTime={isAllTime} adsDisabled={adsDisabled} />,
     <ScreenGOAT     key="goat"     result={result} awards={awards} onNext={advancePage} onReset={handleReset} onBack={handleGoatBack} adsDisabled={adsDisabled} userName={userName} />,
-    <ScreenFinal    key="final"    result={result} awards={awards} build={build} types={simTypes} attrMap={simAttrMap} onReset={handleReset} onBack={handleBack} adsDisabled={adsDisabled} isSalaryMode={isSalaryMode} userName={userName} />,
+    <ScreenFinal    key="final"    result={result} awards={awards} build={build} types={simTypes} attrMap={simAttrMap} onReset={handleReset} onBack={handleBack} adsDisabled={adsDisabled} isSalaryMode={isSalaryMode} isAllTime={isAllTime} userName={userName} />,
   ]
 
   const team      = result?.team
