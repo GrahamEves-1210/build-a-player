@@ -108,11 +108,8 @@ export default function AuthModal({ onClose, onAuth }) {
         setLoading(false)
         return
       }
-      if (data.user) {
-        const { error: updateError } = await supabase.from('accounts')
-          .update({ email: contactEmail.trim() }).eq('id', data.user.id)
-        if (updateError) console.error('[auth] failed to save contact email:', updateError)
-      }
+      // (the contact email is saved with the account's own sign-in data above: private to the
+      // player and the server, never on the public accounts row; lib/contactEmail.js)
       onAuth(data.user)
       onClose()
     }

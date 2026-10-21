@@ -48,7 +48,7 @@ import { setSandboxGate, sandboxItemFor, sandboxLocked } from './app/AppSandbox'
 import { BlacktopQueue, BlacktopHud, BlacktopChat, BlacktopGame, BlacktopHub } from './app/AppBlacktop'
 import { NameTag } from './app/NameTag'
 import { VersusHud, VersusMatchup, VersusLeaveSheet, VersusOppLeftSheet } from './app/Blacktop1v1'
-import { loadRun, newRun, cityList, ratedPool } from '../lib/takeover'
+import { loadRun, newRun, cityList, ratedPool, syncRunFromCloud } from '../lib/takeover'
 const AppTakeover = lazy(() => import('./app/AppTakeover'))
 const TakeoverIntro = lazy(() => import('./app/AppTakeover').then(m => ({ default: m.TakeoverIntro })))
 const AppCareer = lazy(() => import('./app/AppCareer'))
@@ -888,7 +888,14 @@ export default function BucketApp() {
   const openBtChat = () => { setBtChatOpen(true); setBtSeen(bt.chat.length) }
 
   // ── TAKEOVER (app): a saved run per account, or a fresh build first ──
-  useEffect(() => { if (IS_APP || APP_LOOK) setTakeoverRun(loadRun('bucket', user?.id)) }, [user?.id])
+  // (the account's run from the cloud comes in a moment later: lib/takeoverCloud.js)
+  useEffect(() => {
+    if (!(IS_APP || APP_LOOK)) return
+    setTakeoverRun(loadRun('bucket', user?.id))
+    let live = true
+    if (user?.id) syncRunFromCloud('bucket', user.id).then(r => { if (live) setTakeoverRun(cur => (cur && cur.seed === r?.seed && (cur.log?.length ?? 0) > (r?.log?.length ?? 0) ? cur : r)) })
+    return () => { live = false }
+  }, [user?.id])
   const startTakeoverBuild = useCallback(() => { handleStart('classic', position); setPage('takeover-build') }, [handleStart, position])
   const openTakeover = useCallback(() => {
     const run = loadRun('bucket', user?.id)

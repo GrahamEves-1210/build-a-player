@@ -5,6 +5,8 @@ import { reduceMotion, setReduceMotion, dockHidden, setDockHidden } from '../../
 import { NOTIF_KINDS, notifPrefs, setNotifPref } from '../../lib/notify'
 import DeleteAccount from '../DeleteAccount'
 import { supabase } from '../../lib/supabase'
+import { contactEmailOf, saveContactEmail, maskEmail } from '../../lib/contactEmail'
+import { useProgress } from '../../lib/progress'
 import { IconChat, IconDiscord, IconPlay } from './icons'
 
 // More → Settings: sound, haptics, motion, notifications, the tutorial again,
@@ -17,6 +19,40 @@ const FAQ = [
   ['How do I cancel BAP Pro?', 'Pro is billed through Stripe on build-a-player.com. Sign in there, open your profile and choose Manage subscription.'],
   ['Something broke. What do I do?', 'Send us a message below with what you tapped and what happened. Screenshots help in the Discord.'],
 ]
+
+// Account → the email password resets go to (lib/contactEmail.js)
+function ResetEmail() {
+  const user = useProgress().user
+  const [saved, setSaved] = useState(() => contactEmailOf(user))
+  const [open, setOpen] = useState(false)
+  const [val, setVal] = useState('')
+  const [err, setErr] = useState('')
+  const [busy, setBusy] = useState(false)
+  const save = async e => {
+    e.preventDefault()
+    setBusy(true); setErr('')
+    const problem = await saveContactEmail(val)
+    setBusy(false)
+    if (problem) { setErr(problem); return }
+    setSaved(val.trim()); setOpen(false); haptic('success')
+  }
+  return (
+    <div className={`sx-email${!saved ? ' is-missing' : ''}`}>
+      <button className="sx-row" onClick={() => { setOpen(o => !o); setVal(saved || ''); setErr('') }} aria-expanded={open}>
+        <span className="sx-txt"><b>Email for password resets</b><small>{saved ? maskEmail(saved) : 'None yet: add one so a forgotten password can be reset'}</small></span>
+        <span className="sx-chev" aria-hidden="true">{open ? '−' : saved ? 'EDIT' : 'ADD'}</span>
+      </button>
+      {open && (
+        <form className="sx-email-form" onSubmit={save}>
+          <input type="email" value={val} onChange={e => setVal(e.target.value)} placeholder="name@example.com" autoComplete="email" inputMode="email" aria-label="Email for password resets" />
+          <button className="ag-btn" type="submit" disabled={busy}>{busy ? 'SAVING…' : 'SAVE'}</button>
+          {err && <p className="sx-email-err" role="alert">{err}</p>}
+          <p className="sx-email-note">Only the account can see it. It's used for password resets, nothing public.</p>
+        </form>
+      )}
+    </div>
+  )
+}
 
 function Toggle({ label, sub, on, onFlip }) {
   return (
@@ -79,6 +115,7 @@ export default function AppSettings({ signedIn, onFeedback, onClose }) {
       {signedIn && (
         <div className="sx-group">
           <span className="ag-eyebrow">ACCOUNT</span>
+          <ResetEmail />
           <button className="sx-row" onClick={async () => { await supabase?.auth.signOut().catch(() => {}); onClose() }}><span className="sx-txt"><b>Sign out</b></span></button>
           <div className="sx-delete"><DeleteAccount onDeleted={onClose} /></div>
         </div>

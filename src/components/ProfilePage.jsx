@@ -104,6 +104,7 @@ import { CAN_SELL_PLUS, IS_APP, APP_LOOK } from '../lib/platform'
 import AppCareerCard from './app/AppCareerCard'
 import FriendsSection from './app/FriendsSection'
 import PassStrip from './app/PassStrip'
+import { contactEmailOf, saveContactEmail } from '../lib/contactEmail'
 import DeleteAccount from './DeleteAccount'
 import ConnectDiscord from './ConnectDiscord'
 import { getUsername } from '../lib/discord'
@@ -234,10 +235,14 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
   const [emailSuccess, setEmailSuccess] = useState(false)
   const [emailLoading, setEmailLoading] = useState(false)
 
+  // the reset email: private sign-in data (lib/contactEmail.js); older accounts may still
+  // have it on the accounts row until supabase/private_email.sql moves it
   useEffect(() => {
-    if (!supabase || !user) return
-    supabase.from('accounts').select('email').eq('id', user.id).single()
-      .then(({ data }) => { if (data?.email) { setEmailOnFile(data.email); setContactEmail(data.email) } })
+    if (!user) return
+    const own = contactEmailOf(user)
+    if (own) { setEmailOnFile(own); setContactEmail(own); return }
+    supabase?.from('accounts').select('email').eq('id', user.id).maybeSingle()
+      .then(({ data }) => { if (data?.email) { setEmailOnFile(data.email); setContactEmail(data.email) } }, () => {})
   }, [user])
 
   useEffect(() => {
@@ -759,11 +764,10 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
   const handleSaveEmail = async (e) => {
     e.preventDefault()
     setEmailError(null)
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail.trim())) { setEmailError('Please enter a valid email address.'); return }
     setEmailLoading(true)
-    const { error } = await supabase.from('accounts').update({ email: contactEmail.trim() }).eq('id', user.id)
+    const error = await saveContactEmail(contactEmail)
     setEmailLoading(false)
-    if (error) { setEmailError(error.message); return }
+    if (error) { setEmailError(error); return }
     setEmailOnFile(contactEmail.trim())
     setEmailSuccess(true)
     setShowEmailForm(false)
@@ -1449,7 +1453,7 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
           {!showEmailForm ? (
             <>
               {!emailOnFile && (
-                <div className="prf-email-hint">Add your email for easier account recovery and occasional game updates.</div>
+                <div className="prf-email-hint">Add an email so a forgotten password can be reset. Only the account can see it.</div>
               )}
               <button className="prf-changepw-btn" onClick={() => { setShowEmailForm(true); setEmailError(null); setEmailSuccess(false) }}>
                 {emailOnFile ? 'Update Email' : 'Add Email'}

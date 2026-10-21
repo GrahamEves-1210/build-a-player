@@ -14,6 +14,7 @@
 import { seeded } from './rng'
 import { simStreetball, buildFromPlayer } from './hoops'
 import { GEO, pinAt } from './usMap'
+import { queueRunSave, deleteCloudRun, fetchCloudRun, mergeRuns } from './takeoverCloud'
 
 export const LIVES = 3
 export const STOPS = 12
@@ -151,8 +152,34 @@ const key = (sport, uid) => `bap_takeover_${sport}_${uid || 'guest'}`
 export function loadRun(sport, uid) {
   try { const run = JSON.parse(localStorage.getItem(key(sport, uid))); return run && run.v === RUN_V && Array.isArray(run.route) ? run : null } catch { return null }
 }
-export function saveRun(run) { try { if (run) localStorage.setItem(key(run.sport, run.uid), JSON.stringify(run)) } catch {} }
-export function clearRun(sport, uid) { try { localStorage.removeItem(key(sport, uid)) } catch {} }
+// Every save that changes something stamps `updatedAt` and (signed in, solo) queues the
+// account's copy (lib/takeoverCloud.js)
+const sameRun = (a, b) => { try { return JSON.stringify({ ...a, updatedAt: 0 }) === JSON.stringify({ ...b, updatedAt: 0 }) } catch { return false } }
+export function saveRun(run) {
+  if (!run) return
+  try {
+    const prev = loadRun(run.sport, run.uid)
+    if (prev?.updatedAt && sameRun(prev, run)) return
+    const s = { ...run, updatedAt: Date.now() }
+    localStorage.setItem(key(run.sport, run.uid), JSON.stringify(s))
+    queueRunSave(s)
+  } catch {}
+}
+export function clearRun(sport, uid) { try { localStorage.removeItem(key(sport, uid)) } catch {}; deleteCloudRun(sport, uid) }
+// Signed in: the account's run merged with this device's (never giving back lives, a
+// revive or beaten cities); offline, the device's copy stands
+export async function syncRunFromCloud(sport, uid) {
+  if (!uid) return loadRun(sport, uid)
+  const cloud = await fetchCloudRun(sport, uid)
+  const local = loadRun(sport, uid)
+  if (cloud === undefined) return local
+  const good = cloud && cloud.v === RUN_V && Array.isArray(cloud.route) && cloud.sport === sport ? { ...cloud, uid } : null
+  const merged = mergeRuns(local, good)
+  if (!merged) return null
+  try { localStorage.setItem(key(sport, uid), JSON.stringify(merged)) } catch {}
+  if (!good || !sameRun(merged, good)) queueRunSave({ ...merged, updatedAt: Date.now() })
+  return merged
+}
 
 // ── Past runs (the Takeover intro lists them) ────────────────────────────────
 const histKey = sport => `bap_takeover_hist_${sport}`

@@ -59,7 +59,8 @@ export async function handleReset(req, env) {
     if (!acc?.id) return json(SAME, 200, cors)
     const u = await fetch(`${env.SUPABASE_URL}/auth/v1/admin/users/${acc.id}`, { headers: svc })
     const user = u.ok ? await u.json() : null
-    const to = (acc.email || user?.user_metadata?.contact_email || '').trim()
+    // the private copy (lib/contactEmail.js), then the old accounts column for accounts not yet moved
+    const to = (user?.user_metadata?.contact_email || acc.email || '').trim()
     if (!user?.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) return json(SAME, 200, cors)
 
     const g = await fetch(`${env.SUPABASE_URL}/auth/v1/admin/generate_link`, {

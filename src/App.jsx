@@ -60,7 +60,7 @@ import { finishDiscordSignIn, getUsername } from './lib/discord'
 import { dailyState, setDailySpins, forfeitDaily } from './lib/progress'
 import { LiveLeaveButton } from './components/app/LiveLeave'
 import { FlipEdge, BuildComplete, useFlip, StackEdge, StackSeam, useDropMode, useDropSheet, DropBar, DropSheet } from './components/app/AppBuildTray'
-import { loadRun, newRun, cityList, ratedPool } from './lib/takeover'
+import { loadRun, newRun, cityList, ratedPool, syncRunFromCloud } from './lib/takeover'
 import { setSandboxGate, sandboxItemFor, sandboxLocked } from './components/app/AppSandbox'
 import { rampPage, HOME_UNITS, RAIL_UNITS, RAIL_UNITS_WITH_LEFT } from './lib/ads'
 
@@ -675,7 +675,14 @@ export default function App() {
   useEffect(() => { if (!IS_APP && buildComplete && (page === 'game' || page === 'takeover-build' || page === 'career-build')) window.__bapJuice?.sfx('complete', 2) }, [buildComplete]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── TAKEOVER (app): a saved run per account, or a fresh build first ──
-  useEffect(() => { if (IS_APP || APP_LOOK) setTakeoverRun(loadRun('nfl', user?.id)) }, [user?.id])
+  // (the account's run from the cloud comes in a moment later: lib/takeoverCloud.js)
+  useEffect(() => {
+    if (!(IS_APP || APP_LOOK)) return
+    setTakeoverRun(loadRun('nfl', user?.id))
+    let live = true
+    if (user?.id) syncRunFromCloud('nfl', user.id).then(r => { if (live) setTakeoverRun(cur => (cur && cur.seed === r?.seed && (cur.log?.length ?? 0) > (r?.log?.length ?? 0) ? cur : r)) })
+    return () => { live = false }
+  }, [user?.id])
   const startTakeoverBuild = useCallback(() => {
     let p = 'qb'; try { p = localStorage.getItem('lastPosition') || 'qb' } catch {}
     if (!['qb', 'rb', 'wr', 'te', 'db'].includes(p)) p = 'qb'
