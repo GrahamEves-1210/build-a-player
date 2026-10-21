@@ -7,13 +7,12 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { myVid, myVidKey, claimLive, releaseLive, markEntered, clearEntered, takeEntered } from './live'
-import { seededShuffle } from './rng'
-import { simStreetball } from './hoops'
 import { clean, blockedIds, MIN_GAP_MS } from './chat'
 import { supabase, currentToken } from './supabase'
 import { getUsername } from './discord'
 import { myCosmetics, whenProgressReady } from './progress'
-import { slotsFor, BUILD_SECS, BOT_NAMES, teamName, autoBuild, buildOk } from './blacktopCore'
+import { slotsFor, BUILD_SECS } from './blacktopCore'
+import { playOut } from './blacktopPlay'
 
 // the live server (live/, deployed on Cloudflare); VITE_LIVE_URL overrides it (a local server: ws://localhost:8787)
 import { LIVE_URL } from './liveUrl'
@@ -39,26 +38,9 @@ export function liveSocket(path, hello, onMsg, onStatus) {
   }
 }
 
-// The game from the server's inputs (the builds and seed at the tip-off, the calls as
-// they lock): every phone in the game, and anyone watching it, plays this same game
-export function playOut({ final, match, locks, pools, types }) {
-  if (!final || !match) return null
-  const out = new Set(final.afk ?? [])
-  const cpu = seededShuffle(BOT_NAMES, `${final.seed}-afk`)
-  let ci = 0
-  const poolOf = pos => (pos === 'big' ? pools?.big : pools?.guard) ?? []
-  const mk = p => {
-    const t = p.pos === 'big' ? types.big : types.guard
-    const sent = final.builds?.[p.vid]
-    // a build that isn't real is treated as empty: the same answer on every phone
-    const b = autoBuild(sent && buildOk(sent, poolOf(p.pos)) ? sent : null, t, poolOf(p.pos), `${final.seed}-${p.vid}`)
-    return out.has(p.vid)
-      ? { id: p.vid, name: cpu[ci++ % cpu.length], pos: p.pos, role: 'balanced', build: b, bot: true, uid: null, cos: null }
-      : { id: p.vid, name: p.name, pos: p.pos, role: final.roles?.[p.vid] ?? 'balanced', build: b, bot: p.bot, mimic: !!p.mimic, uid: p.uid, cos: p.cos ?? null }
-  }
-  const teams = [match.players.filter(p => p.team === 0).map(mk), match.players.filter(p => p.team === 1).map(mk)]
-  return { ...simStreetball({ teams, seed: final.seed, goal: 11, winBy: 2, cap: 15, names: [teamName(match, 0), teamName(match, 1)], calls: locks }), teams }
-}
+// The game from the server's inputs: lib/blacktopPlay.js (the live server replays it too,
+// to book the result and the ratings)
+export { playOut }
 
 export function useBlacktopServer({ enabled, user, position, pools, types, build, player, onExit, onSeatPos }) {
   const [cosV, setCosV] = useState(0)
@@ -237,7 +219,7 @@ export function useBlacktopServer({ enabled, user, position, pools, types, build
     const coins = (won ? 15 : 5) + (mvp ? 8 : 0)
     window.dispatchEvent(new CustomEvent('bap:xp', { detail: { xp, coins, label: won ? (mvp ? 'Blacktop win · MVP' : 'Blacktop win') : 'Blacktop game' } }))
     window.dispatchEvent(new CustomEvent('bap:blacktop', { detail: { won: !!won, mvp, line: game.stats[me.vid] ?? null, bots: !!match.bots, score: game.score, team: mine?.team ?? 0, size: sizeRef.current } }))
-    if (user && supabase && !match.bots) supabase.from('vs_results').insert({ user_id: user.id, username: getUsername(user), result: won ? 'win' : 'loss', ovr: null, position: mine?.pos ?? position, match_type: `${sizeRef.current}v${sizeRef.current}` }).then(null, () => {})
+    // (the game's record, vs_results, is booked by the live server: it replays the game itself)
     return true
   }, [game, match, final, me.vid, user, position])
   const finish = useCallback(() => { book(); setPhase('result'); roomRef.current?.send({ t: 'done' }) }, [book])

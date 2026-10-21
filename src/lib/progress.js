@@ -15,6 +15,7 @@ import { supabase } from './supabase'
 import { getUsername } from './discord'
 import { itemById, forSale, DEFAULTS, ITEMS } from './cosmetics'
 import { passSeason, seasonById, seasonOver, tierAt, xpForTier } from './pass'
+import { competeDelta, blacktopDelta, FORFEIT_RATING } from './rating'
 import { ACHIEVEMENTS, achById } from './achievements'
 import { IS_APP } from './platform'
 
@@ -711,11 +712,26 @@ function rateOnline(delta, mode, extra = {}) {
   return o.rating - before
 }
 
+// The rating the live server booked (supabase/online_rating.sql online_ratings): it's
+// the real one. A game's change shows here the moment it ends; this brings in the
+// server's number a few seconds later (and at sign-in). No table yet: the device's stands.
+export async function syncRating(id = uid) {
+  if (!supabase || !id) return
+  try {
+    const { data, error } = await supabase.from('online_ratings').select('rating,best,played').eq('user_id', id).maybeSingle()
+    if (error || !data || uid !== id) return
+    const o = S.stats.online = { ...BLANK_STATS.online, ...(S.stats.online || {}) }
+    if (o.rating === data.rating && o.best === data.best && o.played === data.played) return
+    Object.assign(o, { rating: data.rating, best: data.best, played: data.played })
+    emit(true)
+  } catch {}
+}
+function syncRatingSoon() { setTimeout(() => syncRating(), 4000); setTimeout(() => syncRating(), 12000) }
+
 // A Compete pool finished: your place → stats, rating, XP and coins
 export const COMPETE_REWARDS = { 1: [80, 30], 2: [50, 18], 3: [35, 10], 4: [20, 5], 5: [15, 2] }
-const COMPETE_RATING = { 1: 24, 2: 12, 3: 4, 4: -6, 5: -12 }
-// Leaving a live pool: last place, a bigger rating hit, nothing earned
-export const FORFEIT_RATING = -20
+// (the amounts: lib/rating.js; the live server books the real rating and syncRating brings it in)
+export { FORFEIT_RATING }
 function onCompete(e) {
   const { place, ovr, of = 5, humans = 1, forfeit = false, mode = 'pool' } = e.detail || {}
   if (!place) return
@@ -724,9 +740,8 @@ function onCompete(e) {
   if (forfeit) {
     c.played++; c.placeSum += of; c.streak = 0
     pushRecent(c.recent, of)
-    const scale = 0.5 + 0.5 * Math.min(1, Math.max(0, humans - 1) / 4)
-    rateOnline(FORFEIT_RATING * scale, 'compete', { place: of, forfeit: true, streak: 0 })
-    emit()
+    rateOnline(competeDelta({ humans, forfeit: true }), 'compete', { place: of, forfeit: true, streak: 0 })
+    emit(); syncRatingSoon()
     return
   }
   const pbOvr = (ovr || 0) > c.best && c.played > 0
@@ -736,14 +751,13 @@ function onCompete(e) {
   if ((ovr || 0) > c.best) c.best = ovr
   pushRecent(c.recent, place)
   // real opponents move the rating; a pool of bots counts half
-  const scale = 0.5 + 0.5 * Math.min(1, Math.max(0, humans - 1) / 4)
-  const delta = rateOnline((COMPETE_RATING[place] ?? -12) * scale, 'compete', { place, pbOvr, streak: c.streak })
+  const delta = rateOnline(competeDelta({ place, humans }), 'compete', { place, pbOvr, streak: c.streak })
   const [xp, coins] = COMPETE_REWARDS[place] ?? COMPETE_REWARDS[5]
   S.bonusXp += xp; tally(xp, 1)
   earn(coins, null, true)
   bumpMissions('compete', { place })
-  toast({ kind: 'xp', title: rewardText(xp, coins) || (place === 1 ? `${what.toUpperCase()} WON` : `${ordinal(place).toUpperCase()} PLACE`), sub: `${place === 1 ? `You won the ${what}` : `Compete · ${ordinal(place)} place`} · ${delta >= 0 ? '+' : ''}${delta} rating` })
-  emit()
+  toast({ kind: 'xp', title: rewardText(xp, coins) || (place === 1 ? `${what.toUpperCase()} WON` : `${ordinal(place).toUpperCase()} PLACE`), sub: `${place === 1 ? `Won the ${what}` : `Compete · ${ordinal(place)} place`} · ${delta >= 0 ? '+' : ''}${delta} rating` })
+  emit(); syncRatingSoon()
 }
 
 // A Blacktop game finished: W/L, MVP, my box-score line → career line, rating
@@ -769,12 +783,11 @@ function onBlacktop(e) {
   if ((line.pts || 0) > b.highPts) b.highPts = line.pts
   if (d.won) { b.streak++; if (b.streak > b.bestStreak) b.bestStreak = b.streak } else b.streak = 0
   pushRecent(b.recent, d.won ? 'W' : 'L')
-  // practice against CPUs: no rating either way (CPU builds are random, so it was a rating farm)
-  const scale = d.bots ? 0 : 1
+  // practice against CPUs: no rating either way (CPU builds are random, so it was a rating farm);
   // walked out of the run's build: a forfeit's hit, no mission credit
-  rateOnline((d.forfeit ? FORFEIT_RATING : (d.won ? 20 : -12) + (d.mvp ? 5 : 0)) * scale, 'bt', { won: !!d.won, mvp: !!d.mvp, highPts, streak: b.streak, forfeit: !!d.forfeit })
+  rateOnline(blacktopDelta({ won: !!d.won, mvp: !!d.mvp, forfeit: !!d.forfeit, bots: !!d.bots }), 'bt', { won: !!d.won, mvp: !!d.mvp, highPts, streak: b.streak, forfeit: !!d.forfeit })
   if (!d.forfeit) { bumpMissions('bt', { won: !!d.won }); tally(0, 1) }
-  emit()
+  emit(); if (!d.bots) syncRatingSoon()
 }
 
 // A 1v1 finished: 'win' | 'loss' | 'forfeit' | 'walkover' (they left)
@@ -797,9 +810,10 @@ function onH2H(e) {
     for (const f of ['pts', 'fgm', 'fga', 'stl', 'blk']) b[f] += Math.max(0, Math.round(Number(line[f]) || 0))
     b.highPts = Math.max(b.highPts, Math.round(Number(line.pts) || 0))
   }
+  // (a head-to-head played phone to phone: the live server never sees it, so it's on the
+  // record but doesn't move the online rating, which only the server books)
   const h = S.stats.h2h
-  const delta = rateOnline(result === 'win' ? 25 : result === 'walkover' ? 10 : result === 'forfeit' ? -20 : -15, 'h2h', { won, streak: h.streak, sport })
-  if (result !== 'walkover') toast({ kind: 'online', title: `${sport === 'bucket' ? 'BLACKTOP' : 'FOOTBALL'} 1V1 · ${won ? 'W' : 'L'}`, sub: `${delta >= 0 ? '+' : ''}${delta} rating${h.streak >= 2 ? ` · ${h.streak} straight` : ''}` })
+  if (result !== 'walkover') toast({ kind: 'online', title: `${sport === 'bucket' ? 'BLACKTOP' : 'FOOTBALL'} 1V1 · ${won ? 'W' : 'L'}`, sub: h.streak >= 2 ? `${h.streak} straight` : won ? 'On the 1v1 record' : 'Run it back' })
   bumpMissions('h2h', { won }); if (result !== 'forfeit') tally(0, 1)
   emit()
 }
@@ -913,7 +927,7 @@ function switchUser(u) {
   const synced = sync()
   // coins bought on the website land after the wallet is pulled (so a newer remote wallet can't overwrite them)
   const pulled = pullWallet(id)
-  pulled.then(() => { claimCoinPurchases(); payPlayersOfDay(); payWeeklyCup(); loadPassOwners(id) })
+  pulled.then(() => { claimCoinPurchases(); payPlayersOfDay(); payWeeklyCup(); loadPassOwners(id); syncRating(id) })
   Promise.allSettled([synced, pulled]).then(() => settle())
   if (IS_APP) import('./iap').then(m => m.iapUser(id)).catch(() => {})
   readyFns.splice(0).forEach(fn => setTimeout(fn, 0))

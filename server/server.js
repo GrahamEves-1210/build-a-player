@@ -311,7 +311,7 @@ app.post('/api/create-portal', async (req, res) => {
 const USER_ROWS = [
   ['simulations', 'user_id'], ['vs_results', 'user_id'], ['salary_cap_plays', 'user_id'],
   ['salary_infinite_plays', 'user_id'], ['depth_chart_streaks', 'user_id'], ['analytics_events', 'user_id'],
-  ['careers', 'user_id'], ['coin_purchases', 'user_id'], ['pass_owners', 'user_id'],
+  ['careers', 'user_id'], ['coin_purchases', 'user_id'], ['pass_owners', 'user_id'], ['online_ratings', 'user_id'], ['daily_challenge_results', 'user_id'],
   ['friend_requests', 'from_id'], ['friend_requests', 'to_id'],
   ['vs_invites', 'from_id'], ['vs_invites', 'to_id'],
   ['accounts', 'id'],

@@ -10,7 +10,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { LIVE_URL } from './liveUrl'
-import { playOut } from './blacktopServer'
+import { playOut } from './blacktopPlay'
 
 const STALE_MS = 2 * 60 * 1000     // a game that hasn't checked in for two minutes is over
 const NONE = new Set()

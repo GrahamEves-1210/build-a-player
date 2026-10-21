@@ -12,6 +12,8 @@ import {
   AUCTION_POS, auctionCoreKit, freshLedger, canBidOn, minNext, maxBid, auctionOver, pickLot, rankAuction, lotEnd,
 } from '../../src/lib/auctionCore.js'
 import { BaseQueue, str, send, parse, accept, key, keyOk, reject } from './queue.js'
+import { competeDelta } from '../../src/lib/rating.js'
+import { bookRatings } from './rating.js'
 
 const WAIT_MS = 2400            // the room opens, then the first card is pulled
 const EMPTY_MS = 90000          // everyone gone this long: the auction is called off
@@ -106,6 +108,16 @@ export class AuctionRoom {
     this.st.stage = 'done'
     this.ranked = rankAuction(this.m, this.st.L, this.kit)
     this.broadcast()
+    this.rate()
+  }
+  // the ratings, as a pool's: by place (an auction is real players only)
+  async rate() {
+    if (this.rated || !Array.isArray(this.ranked)) return
+    this.rated = true
+    const humans = this.m.players.length
+    const uidOf = vid => this.m.players.find(p => p.vid === vid)?.uid ?? null
+    const ratings = await bookRatings(this.env, this.ranked.map(p => ({ vid: p.vid, uid: p.uid ?? uidOf(p.vid), delta: competeDelta({ place: p.place, humans, forfeit: !!p.forfeit }) })))
+    if (Object.keys(ratings).length) for (const ws of this.conns.keys()) send(ws, { t: 'rated', ratings })
   }
   bid(vid, n, amount) {
     const { m, st } = this

@@ -26,6 +26,11 @@ import { AuctionQueue, AuctionRoom, validSportPos } from './auction.js'
 import { CompeteQueue, CompeteRoom, validCompete } from './compete.js'
 import { Games } from './games.js'
 import { cleanBuild } from '../../src/lib/blacktopCore.js'
+import { playOut } from '../../src/lib/blacktopPlay.js'
+import { blacktopDelta } from '../../src/lib/rating.js'
+import { NBA_GUARD_PLAYERS, VERSUS_GUARD_TYPES } from '../../src/data/nba-guards.js'
+import { NBA_BIG_PLAYERS, VERSUS_BIG_TYPES } from '../../src/data/nba-bigs.js'
+import { bookRatings, bookVs } from './rating.js'
 import { handleSubmit } from './submit.js'
 import { whoIs } from './auth.js'
 import { handleReset } from './reset.js'
@@ -410,6 +415,25 @@ export class Room {
     this.show({ t: 'lock', pn, calls: m.locks[pn] })
     // the menu's line: still going, and the score as of this check-up
     if (m.phase === 'game') this.post()
+    this.settle()
+  }
+  // The game's over once every possession it plays has its calls locked: the server
+  // plays it out the same way the phones do (lib/blacktopPlay.js) and books the result:
+  // each player's rating and the 1v1 / 2v2 / 3v3 record. A player who was out (a CPU took
+  // the spot) takes a forfeit. Practice books nothing.
+  async settle() {
+    const m = this.m
+    if (!m || m.practice || m.settled || !m.final || (m.phase !== 'game' && m.phase !== 'result')) return
+    const g = playOut({ final: m.final, match: m, locks: m.locks, pools: { guard: NBA_GUARD_PLAYERS, big: NBA_BIG_PLAYERS }, types: { guard: VERSUS_GUARD_TYPES, big: VERSUS_BIG_TYPES } })
+    if (!g) return
+    const last = Math.max(-1, ...g.plays.filter(p => p.type === 'check').map(p => p.pn))
+    for (let pn = 0; pn <= last; pn++) if (!m.locks[pn]) return    // still being played
+    m.settled = true
+    const people = this.humans().filter(p => p.uid)
+    const out = new Set(m.final.afk ?? [])
+    const ratings = await bookRatings(this.env, people.map(p => ({ vid: p.vid, uid: p.uid, delta: blacktopDelta({ won: g.winner === p.team, mvp: g.mvp === p.vid, forfeit: out.has(p.vid) }) })))
+    await bookVs(this.env, people.map(p => ({ uid: p.uid, result: out.has(p.vid) ? 'forfeit' : g.winner === p.team ? 'win' : 'loss', position: p.pos, match_type: `${m.size}v${m.size}` })))
+    if (Object.keys(ratings).length) this.broadcast({ t: 'rated', ratings })
   }
   async onMessage(ws, data) {
     const msg = parse(data); if (!msg) return
@@ -470,7 +494,7 @@ export class Room {
         return
       }
       case 'typing': { for (const [w, v] of this.conns) { const p = m.players.find(x => x.vid === v); if (p?.team === me.team && v !== vid) send(w, { t: 'typing', from: vid, name: me.name }) } return }
-      case 'done': { if (m.phase === 'game') { m.phase = 'result'; this.post(true) } return }
+      case 'done': { if (m.phase === 'game') { m.phase = 'result'; this.post(true) } this.settle(); return }
       case 'rematch': {
         // running it back is a squad thing: when everyone on my team who's still
         // here has voted, the lobby holds a side for us and we go back together

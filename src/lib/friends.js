@@ -108,10 +108,12 @@ const countOf = q => q.then(r => (r.error ? null : r.count ?? 0), () => null)
 
 // What anyone can already see of a player (leaderboards, award boards, 1v1):
 // name, look, seasons, rings, awards, 1v1 record and best saved builds.
+// The online rating the live server booked (online_ratings), or the player's own copy
+const ratingOf = id => supabase.from('online_ratings').select('rating').eq('user_id', id).maybeSingle().then(r => (r.error ? undefined : r.data?.rating ?? null), () => undefined)
 export async function loadPublicProfile(id) {
   if (!supabase || !id) return null
   const base = () => supabase.from('simulations').select('id', { count: 'exact', head: true }).eq('user_id', id)
-  const [acct, seasons, rings, best, vs] = await Promise.all([
+  const [acct, seasons, rings, best, vs, booked] = await Promise.all([
     supabase.from('accounts').select('username, cos, classic_mvps, alltime_mvps, classic_opoys, alltime_opoys, classic_dpoys, alltime_dpoys').eq('id', id).maybeSingle()
       .then(r => r.data ?? null, () => null),
     countOf(base()),
@@ -121,12 +123,14 @@ export async function loadPublicProfile(id) {
       .order('ovr', { ascending: false }).order('wins', { ascending: false }).limit(3)
       .then(r => r.data ?? [], () => []),
     supabase.from('vs_results').select('result').eq('user_id', id).then(r => r.data ?? [], () => []),
+    ratingOf(id),
   ])
   if (acct?.cos) seedCos(id, acct.cos)
   const awards = acct ? ['classic_mvps', 'alltime_mvps', 'classic_opoys', 'alltime_opoys', 'classic_dpoys', 'alltime_dpoys']
     .reduce((s, k) => s + (Number.isFinite(acct[k]) ? acct[k] : 0), 0) : 0
   const level = Number.isFinite(acct?.cos?.level) ? acct.cos.level : null   // only if their game shares it
-  const rating = Number.isFinite(acct?.cos?.rating) ? acct.cos.rating : null   // null: no online games yet
+  // the server's rating; before it books any (or without its table), what their game shares
+  const rating = booked !== undefined && booked !== null ? booked : Number.isFinite(acct?.cos?.rating) ? acct.cos.rating : null   // null: no online games yet
   return {
     username: acct?.username ?? null,
     seasons, rings, awards, level, rating,

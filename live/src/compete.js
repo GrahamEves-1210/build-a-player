@@ -6,7 +6,9 @@
 //   CompeteQueue (one per sport + position)   up to five, two start on the countdown
 //   CompeteRoom  (one per pool)               the clock, the builds, the result
 
-import { POOL_SIZE, MIN_POOL, FILL_AFTER_SECS, BUILD_SECS, COMPETE_POS, scoreBuild } from '../../src/lib/competeCore.js'
+import { POOL_SIZE, MIN_POOL, FILL_AFTER_SECS, BUILD_SECS, COMPETE_POS, scoreBuild, rankResults } from '../../src/lib/competeCore.js'
+import { competeDelta } from '../../src/lib/rating.js'
+import { bookRatings } from './rating.js'
 import { BaseQueue, str, send, parse, accept, key, keyOk, reject } from './queue.js'
 
 const GRACE_MS = 3000           // a build sent just as the clock hits zero still counts
@@ -55,6 +57,16 @@ export class CompeteRoom {
     for (const p of this.m.players) if (!this.results[p.vid]) this.results[p.vid] = { ovr: -1, at: Date.now(), forfeit: true }
     this.phase = 'result'
     this.broadcast()
+    this.rate()
+  }
+  // the ratings: the server's own ranking of the pool (every player in a pool is a real one)
+  async rate() {
+    if (this.rated) return
+    this.rated = true
+    const humans = this.m.players.length
+    const list = rankResults(this.m, this.results).map(p => ({ vid: p.vid, uid: p.uid, delta: competeDelta({ place: p.place, humans, forfeit: !!p.res?.forfeit }) }))
+    const ratings = await bookRatings(this.env, list)
+    if (Object.keys(ratings).length) for (const ws of this.conns.keys()) send(ws, { t: 'rated', ratings })
   }
   onMessage(ws, data) {
     const msg = parse(data); if (!msg) return
