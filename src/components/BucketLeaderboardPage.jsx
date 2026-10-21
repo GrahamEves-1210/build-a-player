@@ -1,4 +1,5 @@
 ﻿import { useState, useEffect, useRef } from 'react'
+import { loadFriends } from '../lib/friends'
 import { supabase } from '../lib/supabase'
 import { BUCKET_ATTR } from '../data/nba-attrs'
 import { GUARD_TYPES } from '../data/nba-guards'
@@ -178,6 +179,14 @@ function BucketBuildExpand({ build, position, row }) {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function BucketLeaderboardPage({ onBack, currentUser, adsDisabled = false }) {
+  // Everyone or Friends: the same boards, only friends and the player (app look)
+  const [friendsOnly, setFriendsOnly] = useState(false)
+  const [friendIds, setFriendIds] = useState(null)
+  useEffect(() => {
+    if (!friendsOnly || friendIds || !currentUser?.id) return
+    loadFriends(currentUser.id).then(l => setFriendIds(new Set([currentUser.id, ...l.friends.map(f => f.id)])), () => setFriendIds(new Set([currentUser.id])))
+  }, [friendsOnly, friendIds, currentUser?.id])
+  const fo = list => (friendsOnly && friendIds ? (list ?? []).filter(r => friendIds.has(r?.uid ?? r?.user_id)) : list)
   const [view,      setView]      = useState('profiles')
   const [lbMode,    setLbMode]    = useState('classic')
   const [posFilter, setPosFilter] = useState('guard')
@@ -346,9 +355,10 @@ export default function BucketLeaderboardPage({ onBack, currentUser, adsDisabled
   }
 
   const meId    = currentUser?.id
+  const shown   = fo(rows)
   const display = isGoatView
-    ? rows
-    : Array.from({ length: SLOTS }, (_, i) => rows[i] ?? null)
+    ? shown
+    : Array.from({ length: SLOTS }, (_, i) => shown[i] ?? null)
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
@@ -361,6 +371,14 @@ export default function BucketLeaderboardPage({ onBack, currentUser, adsDisabled
           <h2 className="lb-title">Leaderboard</h2>
         </div>
 
+
+        {(_LB_APP || _LB_LOOK) && currentUser && (
+          <div className="lb-main-seg lb-friends-seg" role="tablist" aria-label="Whose scores">
+            <button role="tab" aria-selected={!friendsOnly} className={`lb-main-seg-btn ${!friendsOnly ? 'lb-main-seg-active' : ''}`} onClick={() => setFriendsOnly(false)}>Everyone</button>
+            <button role="tab" aria-selected={friendsOnly} className={`lb-main-seg-btn ${friendsOnly ? 'lb-main-seg-active' : ''}`} onClick={() => setFriendsOnly(true)}>Friends</button>
+          </div>
+        )}
+        {friendsOnly && friendIds && friendIds.size <= 1 && <p className="lb-friends-empty">No friends yet: add some from Profile → Friends, or tap a name on any board.</p>}
 
         {/* View tabs */}
         <div className="lb-view-tabs">
