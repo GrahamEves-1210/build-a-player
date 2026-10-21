@@ -10,7 +10,7 @@ import { myVid, myVidKey, claimLive, releaseLive, markEntered, clearEntered, tak
 import { seededShuffle } from './rng'
 import { simStreetball } from './hoops'
 import { clean, blockedIds, MIN_GAP_MS } from './chat'
-import { supabase } from './supabase'
+import { supabase, currentToken } from './supabase'
 import { getUsername } from './discord'
 import { myCosmetics, whenProgressReady } from './progress'
 import { slotsFor, BUILD_SECS, BOT_NAMES, teamName, autoBuild, buildOk } from './blacktopCore'
@@ -27,7 +27,7 @@ export function liveSocket(path, hello, onMsg, onStatus) {
     onStatus?.('connecting')
     ws = new WebSocket(`${LIVE_URL}${path}`)
     // every hello carries this tab's seat key (live/src/queue.js): nobody else can take the seat
-    ws.onopen = () => { tries = 0; onStatus?.('live'); ws.send(JSON.stringify({ ...hello(), key: myVidKey() })) }
+    ws.onopen = () => { tries = 0; onStatus?.('live'); ws.send(JSON.stringify({ ...hello(), key: myVidKey(), token: currentToken() })) }
     ws.onmessage = e => { try { onMsg(JSON.parse(e.data)) } catch {} }
     ws.onclose = () => { if (closed) return; onStatus?.('connecting'); timer = setTimeout(open, Math.min(8000, 500 * 2 ** tries++)) }
     ws.onerror = () => { try { ws.close() } catch {} }

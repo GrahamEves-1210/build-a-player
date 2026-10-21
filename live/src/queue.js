@@ -14,6 +14,7 @@ export const pub = h => ({ vid: str(h.vid), name: str(h.name, 24) || 'Guest', ui
 export const key = m => str(m?.key, 64) || null
 export const keyOk = (keys, vid, k) => !keys?.[vid] || keys[vid] === k
 export const reject = (ws, why = 'seat') => { send(ws, { t: 'taken', why }); try { ws.close(1000, 'seat taken') } catch {} }
+import { whoIs } from './auth.js'
 export const accept = (self) => {
   const [client, server] = Object.values(new WebSocketPair())
   server.accept()
@@ -61,7 +62,9 @@ export class BaseQueue {
   async onMessage(ws, data) {
     const m = parse(data); if (!m) return
     if (m.t === 'hello') {
-      const p = { ...pub(m), dev: str(m.dev, 64), key: key(m), ts: Date.now() }
+      // the name and account come from the player's session, not from what the phone says
+      const who = await whoIs(m.token, this.env)
+      const p = { ...pub(m), uid: who.uid, name: who.name, dev: str(m.dev, 64), key: key(m), ts: Date.now() }
       if (!p.vid) return
       // a reconnect replaces the old connection, but only with the same key
       for (const [w, q] of this.conns) if (q.vid === p.vid && w !== ws && q.key && q.key !== p.key) return reject(ws)

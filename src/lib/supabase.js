@@ -26,6 +26,15 @@ export const rtSupabase = valid
     })
   : null
 
+// The current session's token, kept up to date: the live server reads who a player is
+// from it (live/src/auth.js), since a WebSocket hello can't wait for an async lookup
+let _token = null
+if (supabase) {
+  supabase.auth.getSession().then(({ data }) => { _token = data?.session?.access_token ?? null }).catch(() => {})
+  supabase.auth.onAuthStateChange((_e, s) => { _token = s?.access_token ?? null })
+}
+export const currentToken = () => _token
+
 // Headers for our own /api endpoints: the server reads who the player is from
 // their session token, never from an id in the body
 export async function apiHeaders() {

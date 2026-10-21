@@ -22,6 +22,7 @@ import { AuctionQueue, AuctionRoom, validSportPos } from './auction.js'
 import { CompeteQueue, CompeteRoom, validCompete } from './compete.js'
 import { cleanBuild } from '../../src/lib/blacktopCore.js'
 import { handleSubmit } from './submit.js'
+import { whoIs } from './auth.js'
 export { AuctionQueue, AuctionRoom, CompeteQueue, CompeteRoom }
 
 const BUILD_SECS = 180
@@ -147,7 +148,9 @@ export class Lobby {
   async onMessage(ws, data) {
     const m = parse(data); if (!m) return
     if (m.t === 'hello') {
-      const p = { ...pub(m), key: key(m) }; if (!p.vid) return
+      // the name and account come from the player's session, not from what the phone says
+      const who = await whoIs(m.token, this.env)
+      const p = { ...pub(m), uid: who.uid, name: who.name, key: key(m) }; if (!p.vid) return
       // one connection a player: a reconnect replaces the old one (with the same key only)
       for (const [w, q] of this.conns) if (q.vid === p.vid && w !== ws && q.key && q.key !== p.key) return reject(ws)
       if (Object.values(this.spots).some(s => s.vid === p.vid && s.key && s.key !== p.key)) return reject(ws)
