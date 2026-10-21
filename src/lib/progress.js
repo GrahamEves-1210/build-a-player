@@ -14,7 +14,7 @@ import { useSyncExternalStore } from 'react'
 import { supabase } from './supabase'
 import { getUsername } from './discord'
 import { itemById, forSale, DEFAULTS, ITEMS } from './cosmetics'
-import { SEASONS, passSeason, seasonById, seasonOver, tierAt, xpForTier } from './pass'
+import { passSeason, seasonById, seasonOver, tierAt, xpForTier } from './pass'
 import { ACHIEVEMENTS, achById } from './achievements'
 import { IS_APP } from './platform'
 
@@ -201,7 +201,7 @@ const blank = () => ({
   // the Builder Pass (lib/pass.js): season id → { base: the account's XP when it first saw the
   // season, final: the season's XP once it ended, f / p: free / premium tiers claimed }
   pass: {},
-  boostUsed: 0,               // 2x XP boost seasons used (the pass hands them out)
+  inv: {},                    // boosts (BOOSTS): device id → { got: { kind: n }, used: { kind: n } }
 })
 const BLANK_STATS = {
   seasons: 0, rings: 0, spins: 0, best: 0,
@@ -280,7 +280,7 @@ function makeSnap() {
   const xp = totalXp()
   const lvl = levelInfo(xp)
   const claimable = ACHIEVEMENTS.filter(a => S.ach[a.id] && !S.achClaimed[a.id]).length
-  return { ...S, xp, lvl, signedIn: !!uid, user, lastSeason, pro: isPro(), claimable, freeReady: S.shopFree !== dayKey(), bp: passInfo(), boosts: boostsLeft() }
+  return { ...S, xp, lvl, signedIn: !!uid, user, lastSeason, pro: isPro(), claimable, freeReady: S.shopFree !== dayKey(), bp: passInfo(), boosts: Object.fromEntries(Object.keys(BOOSTS).map(k => [k, boostLeft(k)])) }
 }
 function emit(quiet = false) {
   startPass()
@@ -567,11 +567,11 @@ function onSeason(e) {
   else if (uid) S.pending.push({ at: Date.now(), xp, ring: !!d.champion })
   else S.seasonXp += xp
   tally(xp, 1)
-  // a 2x XP boost from the Builder Pass: the season's XP again
+  // a 2x XP boost: the season's XP again
   let boost = 0
-  if (uid && xp > 0 && boostsLeft() > 0) {
+  if (uid && xp > 0 && boostLeft('xp') > 0) {
     boost = xp
-    S.boostUsed = (S.boostUsed || 0) + 1
+    invAdd('xp', 'used', 1)
     S.bonusXp += boost; tally(boost)
     lines.push({ label: '2x XP boost', xp: boost })
   }
@@ -589,8 +589,11 @@ function onSeason(e) {
   if (d.mode === 'all-time') st.allTime++
   if (d.sport === 'bucket') st.bucketSeasons++; else { st.nflSeasons++; if (d.pos) st.positions[d.pos] = 1 }
   if (d.daily) st.daily++
+  // Coin Rush: the season's coins again
   const coins = seasonCoins(d)
-  earn(coins, null, true)
+  let rush = 0
+  if (walletOpen() && coins > 0 && boostLeft('rush') > 0) { rush = coins; invAdd('rush', 'used', 1) }
+  earn(coins + rush, null, true)
   const missionsBefore = (S.day?.missions ?? []).map(m => m.n)
   bumpMissions('season', d)
   if (d.daily) {
@@ -603,7 +606,7 @@ function onSeason(e) {
     }
   }
   lastSeason = {
-    id: Date.now(), ref: d.ref ?? null, lines, xp: xp + boost, before, after: before + xp + boost, coins: walletOpen() ? coins : 0, missedCoins: walletOpen() ? 0 : coins,
+    id: Date.now(), ref: d.ref ?? null, lines, xp: xp + boost, before, after: before + xp + boost, coins: walletOpen() ? coins + rush : 0, rush, missedCoins: walletOpen() ? 0 : coins,
     missions: (S.day?.missions ?? []).map((m, i) => ({ ...m, before: missionsBefore[i] ?? 0, def: MISSIONS[m.id] })),
   }
   emit()
@@ -979,7 +982,7 @@ export function equip(slot, id) {
 }
 // What other players see (chat, lobbies): the look, not the sounds
 // Everything other players see of you: the look and the victory (live rooms send it; accounts.cos keeps it)
-export const myCosmetics = () => ({ avatar: S.equip.avatar ?? null, nameColor: S.equip.nameColor ?? null, nameFx: S.equip.nameFx ?? null, plate: S.equip.plate ?? null, winFx: S.equip.winFx || DEFAULTS.winFx, winSound: S.equip.winSound || DEFAULTS.winSound })
+export const myCosmetics = () => ({ avatar: S.equip.avatar ?? null, nameColor: S.equip.nameColor ?? null, nameFx: S.equip.nameFx ?? null, plate: S.equip.plate ?? null, winFx: S.equip.winFx || DEFAULTS.winFx, winSound: S.equip.winSound || DEFAULTS.winSound, entrance: S.equip.entrance ?? null })
 export const myVictory = () => ({ fx: S.equip.winFx || DEFAULTS.winFx, sound: S.equip.winSound || DEFAULTS.winSound })
 
 // Join the Discord: one-time coins once the account has Discord linked
@@ -1096,16 +1099,38 @@ export function passInfo() {
     claimed: { f: ps.f || {}, p: ps.p || {} }, ready: !uid || ps.base == null ? 0 : waiting('f', 'free') + (owned ? waiting('p', 'premium') : 0),
   }
 }
-// 2x XP boost seasons claimed on any pass, less the ones used
-export function boostsLeft() {
-  let got = 0
-  for (const s of SEASONS) {
-    const ps = S.pass?.[s.id]
-    if (!ps) continue
-    for (const t of Object.keys(ps.f || {})) got += s.free[t]?.boost || 0
-    for (const t of Object.keys(ps.p || {})) got += s.premium[t]?.boost || 0
-  }
-  return Math.max(0, got - (S.boostUsed || 0))
+// ── Boosts: consumables from the pass and the shop. Each device counts what it got
+// and used (inv[device]), added up across the account (two devices can't erase each other's)
+export const BOOSTS = {
+  xp:   { name: '2x XP', short: '2x XP', desc: 'Your next seasons count double XP.', unit: 'season', price: 350, per: 3 },
+  rush: { name: 'Coin Rush', short: 'Coin Rush', desc: 'Your next seasons pay double coins.', unit: 'season', per: 3, passOnly: true },
+  hot:  { name: 'Hot Hand', short: 'Hot Hand', desc: 'Career: +2 to every grade for your next 3 games (6 in basketball). Use it from the season screen.', unit: 'use', price: 400, per: 1 },
+  heal: { name: 'Quick Heal', short: 'Quick Heal', desc: 'Career: an injury keeps you out half as long. Offered when you get hurt.', unit: 'use', price: 300, per: 1 },
+}
+const invSum = (k, f) => Object.values(S.inv || {}).reduce((a, d) => a + (+d?.[f]?.[k] || 0), 0)
+export const boostLeft = k => (uid ? Math.max(0, invSum(k, 'got') - invSum(k, 'used')) : 0)
+function invAdd(k, f, n) {
+  const me = ((S.inv ||= {})[DEV] ||= { got: {}, used: {} })
+  me[f] = { ...(me[f] || {}), [k]: (+me[f]?.[k] || 0) + n }
+}
+// Spend one (Career's Hot Hand / Quick Heal); false if there's none
+export function spendBoost(k) {
+  if (!BOOSTS[k] || boostLeft(k) <= 0) return false
+  invAdd(k, 'used', 1)
+  S.walletAt = Date.now()
+  emit()
+  return true
+}
+export function buyBoost(k) {
+  const b = BOOSTS[k]
+  if (!walletOpen()) return { ok: false, reason: 'Sign in to buy boosts' }
+  if (!b || b.passOnly || !b.price) return { ok: false, reason: 'Not for sale' }
+  if (S.coins < b.price) return { ok: false, reason: `Need ${(b.price - S.coins).toLocaleString()} more coins`, short: b.price - S.coins }
+  S.coins -= b.price
+  invAdd(k, 'got', b.per)
+  S.walletAt = Date.now()
+  emit()
+  return { ok: true }
 }
 // An item already owned (bought before it moved to the pass) pays coins instead
 const DUP_COINS = [150, 400, 800, 1500]
@@ -1125,7 +1150,10 @@ export function claimPass(track, tier) {
     if ((st.freezes ?? 0) < FREEZE_MAX) { st.freezes = (st.freezes ?? 0) + 1; got = { freeze: 1 } }
     else { earn(FREEZE_PRICE, 'Builder Pass', true); got = { coins: FREEZE_PRICE, full: true } }
   }
-  else if (r.boost) got = { boost: r.boost }          // boostsLeft() counts it from the claim
+  else if (r.boost) { invAdd('xp', 'got', r.boost); got = { boost: r.boost } }
+  else if (r.rush) { invAdd('rush', 'got', r.rush); got = { rush: r.rush } }
+  else if (r.hot) { invAdd('hot', 'got', r.hot); got = { hot: r.hot } }
+  else if (r.heal) { invAdd('heal', 'got', r.heal); got = { heal: r.heal } }
   else if (r.pack) { got = { pack: r.pack, min: r.min }; openPack(r.pack, r.min) }
   else if (r.item) {
     if (S.owned[r.item]) { const n = DUP_COINS[itemById(r.item)?.rarity ?? 0]; earn(n, 'Builder Pass', true); got = { item: r.item, dup: n } }
@@ -1232,7 +1260,7 @@ export function claimAch(id) {
 // Last change wins; items and achievements are merged, never lost.
 // ═════════════════════════════════════════════════════════════════════════════
 // potdPaid, dc, day and sets ride along so clearing the device (or a second one) can't pay a reward twice
-const WALLET_KEYS = ['coins', 'coinsEarned', 'owned', 'equip', 'ach', 'achClaimed', 'stats', 'shopFree', 'levelPaid', 'discordPaid', 'feedbackPaid', 'retired', 'potdPaid', 'dc', 'day', 'sets', 'salInf', 'streak', 'unlocks', 'cards', 'pass', 'boostUsed']
+const WALLET_KEYS = ['coins', 'coinsEarned', 'owned', 'equip', 'ach', 'achClaimed', 'stats', 'shopFree', 'levelPaid', 'discordPaid', 'feedbackPaid', 'retired', 'potdPaid', 'dc', 'day', 'sets', 'salInf', 'streak', 'unlocks', 'cards', 'pass', 'inv']
 let pushTimer = null, pushing = false, pushAgain = false
 function schedulePush() {
   if (!supabase || !uid) return
@@ -1321,6 +1349,10 @@ let pulledFor = null
 function mergeRemote(w) {
   if (!w || typeof w !== 'object') return
   const newer = (w.at ?? 0) > (S.walletAt ?? 0)
+  // this device's first merge with the account: its own copy can look newer only because
+  // something was stamped here before the account's wallet arrived (achievements unlocked
+  // from the season rebuild): the account's coins and look still win, never a blank device's
+  const first = S.coinsSynced == null
   S.owned = { ...(w.owned || {}), ...S.owned }
   S.retired = { ...(w.retired || {}), ...(S.retired || {}) }
   S.ach = { ...(w.ach || {}), ...S.ach }
@@ -1356,7 +1388,7 @@ function mergeRemote(w) {
   if (typeof w.coins === 'number') {
     // what this device earned or spent since the last sync, on top of the account's coins now
     if (S.coinsSynced != null) S.coins = Math.max(0, w.coins + (S.coins - S.coinsSynced))
-    else if (newer) S.coins = w.coins
+    else S.coins = newer ? w.coins : Math.max(w.coins, S.coins || 0)
     S.coinsSynced = w.coins
   }
   // XP from missions, logins, cards…: each device's own count, added up
@@ -1392,7 +1424,17 @@ function mergeRemote(w) {
     }
     S.pass = out
   }
-  S.boostUsed = Math.max(S.boostUsed || 0, w.boostUsed || 0)
+  // boosts: each device's own counts, the larger of the two copies
+  if (w.inv && typeof w.inv === 'object') {
+    const out = { ...(S.inv || {}) }
+    for (const [d, b] of Object.entries(w.inv)) {
+      if (!b || typeof b !== 'object') continue
+      const a = out[d] || {}
+      const mx = f => Object.fromEntries([...new Set([...Object.keys(a[f] || {}), ...Object.keys(b[f] || {})])].map(k => [k, Math.max(+a[f]?.[k] || 0, +b[f]?.[k] || 0)]))
+      out[d] = { got: mx('got'), used: mx('used') }
+    }
+    S.inv = out
+  }
   // the card binder: everything collected on any device, the most copies, the first time seen
   if (w.cards && typeof w.cards === 'object') {
     const c = { ...(S.cards || {}) }
@@ -1404,10 +1446,10 @@ function mergeRemote(w) {
   }
   // a level's coins are paid once for the account, whichever device got there first
   S.levelPaid = Math.max(S.levelPaid || 0, w.levelPaid || 0)
-  if (newer) {
+  if (newer || first) {
     S.equip = { ...DEFAULTS, ...(w.equip || {}) }
     S.shopFree = w.shopFree ?? S.shopFree
-    S.walletAt = w.at
+    S.walletAt = w.at ?? S.walletAt
   }
   retireItems(S)                          // after the merge, so the refund survives a newer cloud wallet
 }
