@@ -30,7 +30,7 @@ One-seat-per-device is ON: `ONE_PER_DEVICE` in `live/src/queue.js` and `liveElse
 
 ## BAP Pro yearly + Builder Pass + Discord Pro role (one-time setup)
 1. Supabase → SQL Editor: run `supabase/builder_pass.sql` (the `pass_owners` table).
-2. Stripe → Product catalog → your BAP Pro product → Add another price: $49.99, Recurring, Yearly. Copy its price id (`price_…`).
+2. Stripe → Product catalog → your BAP Pro product → Add another price: $34.99, Recurring, Yearly. Copy its price id (`price_…`).
 3. Set `STRIPE_PRICE_ID_YEARLY` = that id on Railway (Variables) and on Cloudflare Pages (Settings → Variables and Secrets, Production).
 4. Discord: Server Settings → Roles → create "BAP Pro". Drag the bot's role above it, and make sure the bot's role has Manage Roles. Right-click the BAP Pro role → Copy Role ID (Developer Mode on).
 5. Set `DISCORD_PRO_ROLE_ID` = that id on Railway and Cloudflare Pages. Railway also needs `DISCORD_BOT_TOKEN` and `DISCORD_GUILD_ID` (the same values Cloudflare already has).

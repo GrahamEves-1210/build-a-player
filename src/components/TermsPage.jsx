@@ -54,7 +54,7 @@ export default function TermsPage({ onBack }) {
       </Sec>
 
       <Sec id="t-pro" title="7. BAP Pro and the Builder Pass">
-        <P>BAP Pro is an optional subscription: $4.99 a month or $49.99 a year. It removes ads on the website, doubles your free daily coins, opens the Pro Vault in the Shop, shows a Pro badge next to your name, and gives you the Pro role in our Discord server while your Discord account is linked. It renews at the end of each month or year until you cancel.</P>
+        <P>BAP Pro is an optional subscription: $4.99 a month or $34.99 a year. It removes ads on the website, doubles your free daily coins, opens the Pro Vault in the Shop, shows a Pro badge next to your name, and gives you the Pro role in our Discord server while your Discord account is linked. It renews at the end of each month or year until you cancel.</P>
         <P>Cancel at any time from the billing portal on your profile, or by emailing <Mail />. Pro stays on until the end of the period you've paid for. We don't refund partial periods, except where the law requires it. If the price changes, we'll tell you before your next renewal.</P>
         <P>If we shut the Service down for good, we'll refund the unused part of any yearly plan, counted in whole months.</P>
         <P>The Builder Pass is a season of rewards (about two months) unlocked by XP. Its free track is open to every signed-in player. Its premium track is a one-time $8.99 purchase for that season only; it doesn't renew. Rewards you reach can be claimed until a week after the season ends. Pass items are cosmetic and follow the rules for items in section 6. A refunded or charged-back pass is removed from your account.</P>

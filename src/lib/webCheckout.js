@@ -8,7 +8,7 @@ import { claimCoinPurchases, refreshPass } from './progress'
 // what was bought when the sheet closes. Resolves 'opened' | 'signin' | 'error'.
 const API = import.meta.env.VITE_API_URL || ''
 // What BAP Pro costs (the prices themselves live in Stripe: STRIPE_PRICE_ID, STRIPE_PRICE_ID_YEARLY)
-export const PRO_PRICE = { month: '$4.99', year: '$49.99', save: '17%' }
+export const PRO_PRICE = { month: '$4.99', year: '$34.99', save: '42%' }
 const ENDPOINT = { pro: 'create-checkout', pass: 'create-pass-checkout', coins: 'create-coins-checkout' }
 
 export async function openCheckout(kind, extra = {}) {

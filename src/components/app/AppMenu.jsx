@@ -51,7 +51,7 @@ function ProView({ onVault }) {
             <small>MONTHLY</small><b>{PRO_PRICE.month}</b><span>a month</span>
           </button>
           <button role="radio" aria-checked={plan === 'year'} className={`ag-pro-plan${plan === 'year' ? ' is-on' : ''}`} onClick={() => setPlan('year')}>
-            <i>SAVE {PRO_PRICE.save}</i><small>YEARLY</small><b>{PRO_PRICE.year}</b><span>a year</span>
+            <i>MOST POPULAR</i><small>YEARLY</small><b>{PRO_PRICE.year}</b><span>a year · save {PRO_PRICE.save}</span>
           </button>
         </div>
       )}
