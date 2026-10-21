@@ -118,7 +118,7 @@ export function BlacktopHub({ onJoin3v3, onJoin2v2 = null, onJoin1v1 = null, onP
           </div>
           {onJoin1v1 ? <>
             <button className="ag-btn bt-mode-go" onClick={() => { sfx('tap'); onJoin1v1() }}>JOIN LOBBY <IconArrow size={16} /></button>
-            {onPractice && <button className="ag-btn ag-btn--ghost bt-practice" onClick={() => { sfx('tap'); onPractice(1) }}>PRACTICE · YOU + 1 CPU</button>}
+            {onPractice && <button className="ag-btn ag-btn--ghost bt-practice" onClick={() => { sfx('tap'); onPractice(1) }}>PRACTICE · VS 1 CPU</button>}
             <OneOnOneOptions onFriend={onFriend} onJoinCode={onJoinCode} />
             <ModeStats mode="bt1" />
           </> : <>
@@ -133,7 +133,7 @@ export function BlacktopHub({ onJoin3v3, onJoin2v2 = null, onJoin1v1 = null, onP
               <span className="bt-mode-txt"><b>2v2</b><small>A guard and a big a side. Take a spot, build your role, run it.</small></span>
             </div>
             <button className="ag-btn bt-mode-go" onClick={() => { sfx('tap'); onJoin2v2() }}>JOIN LOBBY <IconArrow size={16} /></button>
-            {onPractice && <button className="ag-btn ag-btn--ghost bt-practice" onClick={() => { sfx('tap'); onPractice(2) }}>PRACTICE · YOU + 3 CPUS</button>}
+            {onPractice && <button className="ag-btn ag-btn--ghost bt-practice" onClick={() => { sfx('tap'); onPractice(2) }}>PRACTICE · WITH 3 CPUS</button>}
             <ModeStats mode="bt2" />
           </section>
         )}
@@ -143,7 +143,7 @@ export function BlacktopHub({ onJoin3v3, onJoin2v2 = null, onJoin1v1 = null, onP
             <span className="bt-mode-txt"><b>Squads</b><small>Two guards and a big a side. Take a spot, build your role, run it.</small></span>
           </div>
           <button className="ag-btn bt-mode-go" onClick={() => { sfx('tap'); onJoin3v3() }}>JOIN LOBBY <IconArrow size={16} /></button>
-          {onPractice && <button className="ag-btn ag-btn--ghost bt-practice" onClick={() => { sfx('tap'); onPractice(3) }}>PRACTICE · YOU + 5 CPUS</button>}
+          {onPractice && <button className="ag-btn ag-btn--ghost bt-practice" onClick={() => { sfx('tap'); onPractice(3) }}>PRACTICE · WITH 5 CPUS</button>}
           <ModeStats mode="bt" />
         </section>
         <CourtPicker />
@@ -604,7 +604,7 @@ export function BlacktopGame({ bt, user, photoFor, onOpenChat, unread }) {
           <div className="bt-result-actions ag-pop" style={{ '--d': '300ms' }}>
             {(bt.server || humans > 1) && (
               <button className="ag-btn" onClick={() => { bt.voteRematch(); sfx('tap') }} disabled={bt.rematchVotes.has(bt.me.vid)}>
-                {bt.rematchVotes.has(bt.me.vid) ? `WAITING FOR ${bt.server ? 'YOUR SQUAD' : 'SQUADS'} · ${votes}/${humans}` : `RUN IT BACK${humans > 1 && votes ? ` · ${votes}/${humans}` : ''}`}
+                {bt.rematchVotes.has(bt.me.vid) ? `WAITING FOR ${bt.server ? 'THE SQUAD' : 'SQUADS'} · ${votes}/${humans}` : `RUN IT BACK${humans > 1 && votes ? ` · ${votes}/${humans}` : ''}`}
               </button>
             )}
             <button className="ag-btn ag-btn--ghost" onClick={bt.exit}>LEAVE THE BLACKTOP</button>

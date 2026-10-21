@@ -30,7 +30,7 @@ export default function AppLocker({ onClose }) {
     <div className="ag-screen lk">
       <div className="ag-screen-head">
         <div>
-          <span className="ag-eyebrow">YOUR LOOK</span>
+          <span className="ag-eyebrow">THE LOOK</span>
           <h1 className="ag-h1">Locker</h1>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>

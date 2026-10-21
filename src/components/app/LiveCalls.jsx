@@ -25,7 +25,7 @@ export function CallBar({ offense, options, picked = null, onPick, ms = CALL_MS,
   }, [ms])
   return (
     <div className={`lc-bar ${offense ? 'is-off' : 'is-def'}`} role="group" aria-label={offense ? 'Call the play' : 'Call the defense'}>
-      <span className="lc-head">{head ?? (offense ? 'YOUR BALL · CALL IT' : 'ON D · CALL IT')}<i className="lc-time" style={{ transform: `scaleX(${left})` }} /></span>
+      <span className="lc-head">{head ?? (offense ? 'ON O · CALL IT' : 'ON D · CALL IT')}<i className="lc-time" style={{ transform: `scaleX(${left})` }} /></span>
       <div className="lc-opts" style={{ gridTemplateColumns: `repeat(${options.length > 4 ? 3 : options.length}, minmax(0, 1fr))` }}>
         {options.map(opt => {
           const o = typeof opt === 'string' ? opt : opt.v

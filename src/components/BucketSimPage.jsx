@@ -551,7 +551,7 @@ export function TeamSpinModal({ isCustomMode, onTeamSelected, build = {} }) {
     <div className="tpm-overlay">
       <div className={`tpm-card${mode === 'pick' ? ' tpm-card-pick' : ''}`} style={cardStyle}>
         <div className="tpm-eyebrow">Simulate Season</div>
-        <div className="tpm-heading">{mode === 'pick' ? 'Pick Your Team' : 'Spin Your Team'}</div>
+        <div className="tpm-heading">{mode === 'pick' ? 'Pick a Team' : 'Spin a Team'}</div>
 
         <div className="tpm-mode-tabs">
           <button
@@ -841,6 +841,7 @@ const CONF_LABEL = { east: 'Eastern', west: 'Western' }
 function ConferenceStandings({ standings, myShort, teamColor, conf }) {
   if (!standings?.length) return null
   const topWins = standings[0].wins
+  const topLosses = standings[0].losses ?? 82 - topWins
   return (
     <div className="bsim-standings">
       <div className="bsim-std-header">
@@ -851,7 +852,8 @@ function ConferenceStandings({ standings, myShort, teamColor, conf }) {
         </span>
       </div>
       {standings.map((row, i) => {
-        const gb = i === 0 ? '-' : ((topWins - row.wins) / 2).toFixed(1).replace('.0', '')
+        // games behind: half of (the wins gap + the losses gap), as the NBA counts it
+        const gb = i === 0 ? '-' : (((topWins - row.wins) + ((row.losses ?? 82 - row.wins) - topLosses)) / 2).toFixed(1).replace('.0', '')
         const isMe = row.short === myShort
         const isPlayoffLine = i === 6
         const isPlayinLine = i === 10
@@ -1257,7 +1259,7 @@ function ScreenGOAT({ result, awards, onNext, onReset, onBack, adsDisabled = fal
       {phase === 'checking' && (
         <div className="goat-checking">
           <div className="goat-check-ring" />
-          <div className="goat-check-lbl">Checking your credentials…</div>
+          <div className="goat-check-lbl">Checking the credentials…</div>
         </div>
       )}
 

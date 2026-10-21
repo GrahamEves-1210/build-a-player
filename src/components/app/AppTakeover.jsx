@@ -738,7 +738,7 @@ export function TakeoverIntro({ sport, teams, onStart, onClose }) {
         <button className="ag-btn tk-intro-go ag-pop" style={{ '--d': '130ms' }} onClick={onStart}>BUILD A PLAYER · START A RUN <IconArrow size={16} /></button>
 
         <section className="tk-runs ag-pop" style={{ '--d': '160ms' }}>
-          <div className="ag-card-head"><span className="ag-eyebrow">YOUR RUNS</span></div>
+          <div className="ag-card-head"><span className="ag-eyebrow">PAST RUNS</span></div>
           <div className="tk-runs-stats">
             <span><b>{runs.length}</b><small>RUNS</small></span>
             <span><b>{best || '–'}</b><small>BEST RUN</small></span>

@@ -184,7 +184,7 @@ export default function TeamPickerModal({ onSelect, isPlus = false, build = {} }
     <div className="tpm-overlay">
       <div className={`tpm-card${mode === 'pick' ? ' tpm-card-pick' : ''}`} style={cardStyle}>
         <div className="tpm-eyebrow">Simulate Season</div>
-        <div className="tpm-heading">{mode === 'pick' ? 'Pick Your Team' : 'Spin Your Team'}</div>
+        <div className="tpm-heading">{mode === 'pick' ? 'Pick a Team' : 'Spin a Team'}</div>
 
         <div className="tpm-mode-tabs">
           <button

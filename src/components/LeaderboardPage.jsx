@@ -1,4 +1,5 @@
 ﻿import { useState, useEffect, useRef } from 'react'
+import { getUsername } from '../lib/discord'
 import { supabase } from '../lib/supabase'
 import { ATTR, TYPES } from '../data/qbs'
 import { TEAMS } from '../data/nfl-teams'
@@ -1449,7 +1450,7 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
                 )}
                 {myAllEntry && !myAllInTop20 && (
                   <>
-                    <div className="lb-you-sep">YOUR RANK · #{myAllRank}</div>
+                    <div className="lb-you-sep"><span className="un-keep">{(getUsername(currentUser) || 'Guest').toUpperCase()}</span> · RANK #{myAllRank}</div>
                     <div className="lb-row lb-row-me">
                       <RankBadge rank={myAllRank} />
                       <div className="lb-row-info">
@@ -1567,7 +1568,7 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
                 )}
                 {isWR && myWREntry && !myWRInTop20 && (
                   <>
-                    <div className="lb-you-sep">YOUR RANK · #{myWRRank}</div>
+                    <div className="lb-you-sep"><span className="un-keep">{(getUsername(currentUser) || 'Guest').toUpperCase()}</span> · RANK #{myWRRank}</div>
                     <div className="lb-row lb-row-wr lb-row-me">
                       <RankBadge rank={myWRRank} />
                       <div className="lb-row-info">
@@ -1586,7 +1587,7 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
                 )}
                 {isTE && myTEEntry && !myTEInTop20 && (
                   <>
-                    <div className="lb-you-sep">YOUR RANK · #{myTERank}</div>
+                    <div className="lb-you-sep"><span className="un-keep">{(getUsername(currentUser) || 'Guest').toUpperCase()}</span> · RANK #{myTERank}</div>
                     <div className="lb-row lb-row-wr lb-row-me">
                       <RankBadge rank={myTERank} />
                       <div className="lb-row-info">
@@ -1605,7 +1606,7 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
                 )}
                 {isDB && myDBEntry && !myDBInTop20 && (
                   <>
-                    <div className="lb-you-sep">YOUR RANK · #{myDBRank}</div>
+                    <div className="lb-you-sep"><span className="un-keep">{(getUsername(currentUser) || 'Guest').toUpperCase()}</span> · RANK #{myDBRank}</div>
                     <div className="lb-row lb-row-wr lb-row-me">
                       <RankBadge rank={myDBRank} />
                       <div className="lb-row-info">
@@ -1624,7 +1625,7 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
                 )}
                 {isOL && myOLEntry && !myOLInTop20 && (
                   <>
-                    <div className="lb-you-sep">YOUR RANK · #{myOLRank}</div>
+                    <div className="lb-you-sep"><span className="un-keep">{(getUsername(currentUser) || 'Guest').toUpperCase()}</span> · RANK #{myOLRank}</div>
                     <div className="lb-row lb-row-wr lb-row-me">
                       <RankBadge rank={myOLRank} />
                       <div className="lb-row-info">

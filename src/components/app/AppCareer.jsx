@@ -109,7 +109,7 @@ export function CareerIntro({ sport = 'nfl', uid = null, onOpen, onNew, onClose 
       </div>
       <div className="ag-screen-body">
         <section className="cr-slots ag-pop">
-          <div className="ag-card-head"><span className="ag-eyebrow">YOUR SAVES · {CAREER_SLOTS} SLOTS</span></div>
+          <div className="ag-card-head"><span className="ag-eyebrow">SAVES · {CAREER_SLOTS} SLOTS</span></div>
           {!slots ? <div className="tk-runs-empty">Loading your saves…</div> : slots.map((c, i) => (
             c ? <SlotCard key={`c${i}`} c={c} S={S} onOpen={() => onOpen(c)} onDelete={() => { clearCareer(sport, uid, i); setSlots(l => l.map((x, k) => (k === i ? null : x))) }} />
               : naming === i ? <NewSlot key={`n${i}`} onStart={name => onNew(i, name)} onCancel={() => setNaming(null)} />

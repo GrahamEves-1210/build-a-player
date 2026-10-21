@@ -1,4 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useProgress } from '../../lib/progress'
+import { getUsername } from '../../lib/discord'
+// the player is their username (Guest when signed out), never "you"
+const useName = () => (getUsername(useProgress().user) || 'Guest').toUpperCase()
 import { whenStill } from '../../lib/userScroll'
 import { valToGrade } from '../../utils/simulation'
 import { IconArrow } from './icons'
@@ -20,6 +24,7 @@ const FLIPS_KEY = 'ag_flips'
 const flipCount = () => { try { return +localStorage.getItem(FLIPS_KEY) || 0 } catch { return 0 } }
 
 export function FlipEdge({ side, build, types, attrMap, onFlip, waiting = null, complete = false }) {
+  const name = useName()
   const filled = types.filter(t => build[t]).length
   const prev = useRef(new Set(types.filter(t => build[t])))
   const [fresh, setFresh] = useState(null)       // the slot that just filled pops
@@ -50,10 +55,10 @@ export function FlipEdge({ side, build, types, attrMap, onFlip, waiting = null, 
     )
   }
   return (
-    <button className={`ag-edge ag-edge--spin${hint ? ' is-hint' : ''}`} onClick={() => onFlip('build')} aria-label={`Your build, ${filled} of ${types.length} slots filled. Flip the card to the build side`}>
+    <button className={`ag-edge ag-edge--spin${hint ? ' is-hint' : ''}`} onClick={() => onFlip('build')} aria-label={`The build, ${filled} of ${types.length} slots filled. Flip the card to the build side`}>
       <span className="ag-edge-grip" />
       <span className="ag-edge-row">
-        <span className="ag-edge-title">YOUR BUILD</span>
+        <span className="ag-edge-title un-keep">{name}</span>
         <span className="ag-edge-count"><b>{filled}</b>/{types.length}</span>
         <span className="ag-edge-go">BUILD <IconArrow size={14} /></span>
       </span>
@@ -156,6 +161,7 @@ export function useFlip(enabled, view, setView) {
 // on the build side a "back to spin" bar. One height, the two crossfade with
 // the scroll (--stack-p), so nothing below it jumps.
 export function StackEdge({ view, build, types, attrMap, onFlip, waiting = null, complete = false }) {
+  const name = useName()
   const filled = types.filter(t => build[t]).length
   const prev = useRef(new Set(types.filter(t => build[t])))
   const [fresh, setFresh] = useState(null)
@@ -177,7 +183,7 @@ export function StackEdge({ view, build, types, attrMap, onFlip, waiting = null,
       aria-label={onBuild ? 'Scroll back up to the spin' : `Your build, ${filled} of ${types.length} slots filled. Scroll down to your player`}>
       <span className="ag-edge-row">
         <span className="ag-sedge-title">
-          <span className="ag-sedge-a">YOUR BUILD</span>
+          <span className="ag-sedge-a un-keep">{name}</span>
           <span className="ag-sedge-b">{complete ? 'Build complete: simulate below' : waiting ? `${waiting} is waiting: pick a trait` : 'Spin for the next trait'}</span>
         </span>
         <span className="ag-edge-count"><b>{filled}</b>/{types.length}</span>
@@ -393,6 +399,7 @@ export function DropSheet({ open, setOpen, children }) {
 // The seam between the wheel and the player: a lip you can pull on. It names
 // the player, counts the slots, and pulses when a pick lands in the build.
 export function StackSeam({ build, types, onFlip }) {
+  const name = useName()
   const filled = types.filter(t => build[t]).length
   const [pulse, setPulse] = useState(0)
   const last = useRef(filled)
@@ -402,7 +409,7 @@ export function StackSeam({ build, types, onFlip }) {
       <span key={pulse} className={`ag-seam-line${pulse ? ' is-pulse' : ''}`} />
       <span className="ag-seam-chip">
         <span className="ag-seam-chev" aria-hidden="true" />
-        <span>YOUR PLAYER · <b>{filled}</b>/{types.length}</span>
+        <span><span className="un-keep">{name}</span> · <b>{filled}</b>/{types.length}</span>
       </span>
     </button>
   )

@@ -164,7 +164,7 @@ export default function OnlineRecord({ mode, modes = null, compact = true, title
   return (
     <div className="ol-card ag-pop" style={{ '--d': '60ms' }}>
       <button className="ol-card-head" onClick={() => nav('online')}>
-        <span className="ag-eyebrow">{title ?? 'YOUR RECORD'}</span>
+        <span className="ag-eyebrow">{title ?? 'ONLINE RECORD'}</span>
         <span className="ol-card-rating"><TierChip rating={o.rating} /><b>{o.rating}</b><IconArrow size={13} /></span>
       </button>
       <div className="ol-stack">{list.map(m => <ModeStats key={m} mode={m} />)}</div>

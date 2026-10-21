@@ -152,7 +152,7 @@ export default function AppCompete({ cp, au, sport, position, positions, onPosit
             <p className="cp-how">You and four other players get <b>the same spins</b>. Respins are your own. Everyone builds, and the <b>highest OVR</b> takes the pool. No sandbox.</p>
           </div>
         )}
-        <OnlineRecord mode="compete" title="YOUR COMPETE" />
+        <OnlineRecord mode="compete" title="COMPETE RECORD" />
         <div className="cp-pos ag-pop" style={{ '--d': '120ms' }} role="tablist" aria-label="Position">
           {(showAuction ? auPositions : positions).filter(o => !o.disabled).map(o => (
             <button key={o.pos} role="tab" aria-selected={o.pos === position} className={`ag-pos${o.pos === position ? ' ag-pos--on' : ''}`} onClick={() => onPosition(o.pos)}>
