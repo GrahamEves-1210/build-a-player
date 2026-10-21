@@ -103,7 +103,7 @@ export default function AppTabBar() {
       if (to === 'cards' && !cardsOpen()) { setMenuOpen(false); setAuthOpen(true); return }
       if (to === 'pro') { setMenuOpen('pro'); return }
       // Cards and Achievements live together in the Hall
-      if (to === 'cards' || to === 'achievements' || to === 'hall') { setMenuOpen(false); setHallTab(to === 'achievements' ? 'achievements' : arg || 'cards'); setHallFrom(arg === 'dock' ? 'dock' : 'page'); setScreen('hall'); return }
+      if (to === 'cards' || to === 'achievements' || to === 'hall') { setMenuOpen(false); setHallTab(to === 'achievements' || arg === 'achievements' ? 'achievements' : 'cards'); setHallFrom(arg === 'dock' ? 'dock' : 'page'); setScreen('hall'); return }
       if (['daily', 'shop', 'locker', 'soundlab', 'online', 'pass'].includes(to)) { setMenuOpen(false); if (to === 'shop') setShopTab(arg || 'featured'); setScreen(to) }
       else setScreen(null)
     }
