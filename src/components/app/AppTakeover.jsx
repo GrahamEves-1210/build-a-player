@@ -6,6 +6,7 @@ import { LIVES, XP_CITY, XP_RUN, XP_ENDLESS, cityList, ratedPool, ensureStop, st
 import { W, H, OUTLINE_PATH, miles, heading } from '../../lib/usMap'
 import { playDelay } from '../../lib/hoops'
 import { joinRoom, genCode, myVid } from '../../lib/live'
+import { cleanPartnerBuild } from '../../lib/verifyCore'
 import { clean, blockedIds, MIN_GAP_MS } from '../../lib/chat'
 import { valToGrade } from '../../utils/simulation'
 import { useProgress, myCosmetics } from '../../lib/progress'
@@ -67,7 +68,7 @@ export default function AppTakeover({ sport, run, setRun, user, pools, attrMap, 
   const endless = !!run && isEndless(run)
 
   // ── Duo (two runs, one road) ────────────────────────────────────────────────
-  const duo = useDuo({ enabled: !!run && run.mode === 'duo', run, setRun, me, user, calcOvr, onCity: () => setScreen('city') })
+  const duo = useDuo({ enabled: !!run && run.mode === 'duo', run, setRun, me, user, calcOvr, sport: sport === 'bucket' ? 'bucket' : 'nfl', onCity: () => setScreen('city') })
   const duoOn = run?.mode === 'duo'
   const isHost = !!run?.host
   const pp = duo.partnerPlayer
@@ -135,11 +136,12 @@ export default function AppTakeover({ sport, run, setRun, user, pools, attrMap, 
     // the partner: the road is the host's (its phone books the win or the loss and sends the
     // road); here, my heat, my XP and coins, and on a win my own prize
     if (duoOn && !isHost) {
-      if (won && !run.sandbox) {
+      const paid = !!run.paidKeys?.[stopKey]
+      if (won && !run.sandbox && !paid) {
         window.dispatchEvent(new CustomEvent('bap:xp', { detail: { xp: isEndless(run) ? XP_ENDLESS : XP_CITY, coins: COINS_CITY, label: `${(duel?.city ?? city)?.city ?? ''} taken` } }))
         window.dispatchEvent(new CustomEvent('bap:takeover', { detail: { city: true } }))
       }
-      setRun(r => (r ? { ...r, heat: won ? Math.min(HEAT_MAX, heatOf(r) + 1) : 0, fire: false } : r))
+      setRun(r => (r ? { ...r, heat: won ? Math.min(HEAT_MAX, heatOf(r) + 1) : 0, fire: false, paidKeys: { ...(r.paidKeys || {}), [stopKey]: true } } : r))
       setScreen(won ? 'reward' : run.over ? 'over' : 'map')
       return
     }
@@ -636,7 +638,7 @@ function mirrorDuel(x) {
 // join so the 2v2 (or the two football games) simulate identically on both phones.
 const ROAD_KEYS = ['idx', 'taken', 'lives', 'seed', 'attempt', 'log', 'route', 'endless', 'start', 'lo', 'hi', 'won', 'endlessWins']
 const roadOf = run => Object.fromEntries(ROAD_KEYS.map(k => [k, run[k]]))
-function useDuo({ enabled, run, setRun, me, user, calcOvr, onCity }) {
+function useDuo({ enabled, run, setRun, me, user, calcOvr, onCity, sport = 'nfl' }) {
   const roomRef = useRef(null)
   const [partner, setPartner] = useState(null)        // presence
   const [partnerPlayer, setPartnerPlayer] = useState(null)
@@ -645,6 +647,8 @@ function useDuo({ enabled, run, setRun, me, user, calcOvr, onCity }) {
   const [incoming, setIncoming] = useState(null)           // partner: the game the host sent
   const lastDuel = useRef(null)                              // host: the last game sent (resent if the partner missed it)
   const lastChat = useRef(0)
+  const partnerVid = useRef(null)                            // the partner, once seen: nobody else's messages count
+  const partnerHost = useRef(false)
   const code = run?.code
   const host = !!run?.host
   const runRef = useRef(run); runRef.current = run
@@ -655,16 +659,27 @@ function useDuo({ enabled, run, setRun, me, user, calcOvr, onCity }) {
     // the build the game uses (ON FIRE's +1 included), so the host's phone plays it right
     const shareBuild = () => { const b = duelBuild(runRef.current); room.send('build', { pos: runRef.current.pos, types: runRef.current.types, build: b, name: me.name, cos: me.cos, ovr: calcOvr(b) }) }
     room.onPresence(list => {
-      const other = list.find(p => p.vid !== me.vid)
+      // the partner is the first other player in the room; anyone else who wanders in is ignored
+      const other = (partnerVid.current && list.find(p => p.vid === partnerVid.current)) || list.find(p => p.vid !== me.vid)
+      if (other && !partnerVid.current) partnerVid.current = other.vid
+      partnerHost.current = !!other?.host
       setPartner(other ?? null)
       if (other) shareBuild()
       if (other && host) room.send('state', roadOf(runRef.current))
     })
-    room.on('build', p => setPartnerPlayer({ id: 'partner', name: p.name, cos: p.cos ?? null, pos: p.pos, types: p.types, build: p.build, ovr: p.ovr }))
-    room.on('state', p => { if (!host) setRun(r => (r ? { ...r, ...p, over: p.lives <= 0, justWon: false } : r)) })
-    room.on('go', () => { if (!host) onCity() })
-    room.on('ready', p => { setPartnerReady(p?.key ?? null); if (host && lastDuel.current && lastDuel.current.key === p?.key) room.send('duel', lastDuel.current) })
-    room.on('duel', p => { if (!host && p?.key) setIncoming(p) })
+    // only my partner's messages count, and the road's moves only from the host
+    const fromPartner = p => !!p?.from && p.from === partnerVid.current
+    const fromHost = p => fromPartner(p) && partnerHost.current
+    room.on('build', p => {
+      if (!fromPartner(p)) return
+      // real players at their real ratings (ON FIRE's +1 at most): a phone can't send made-up 11s
+      const clean = cleanPartnerBuild(sport, p.pos, p.build, 1)
+      setPartnerPlayer({ id: 'partner', name: p.name, cos: p.cos ?? null, pos: p.pos, types: p.types, build: clean.build, ovr: clean.ovr ?? p.ovr })
+    })
+    room.on('state', p => { if (!host && fromHost(p)) setRun(r => (r ? { ...r, ...p, over: p.lives <= 0, justWon: false } : r)) })
+    room.on('go', p => { if (!host && fromHost(p)) onCity() })
+    room.on('ready', p => { if (!fromPartner(p)) return; setPartnerReady(p?.key ?? null); if (host && lastDuel.current && lastDuel.current.key === p?.key) room.send('duel', lastDuel.current) })
+    room.on('duel', p => { if (!host && p?.key && fromHost(p)) setIncoming(p) })
     room.on('chat', p => { if (!blockedIds().has(p.uid)) setChat(c => [...c.slice(-80), { id: `${p.from}-${p.ts}`, from: p.from, uid: p.uid, name: p.name, team: 0, text: clean(p.text), ts: p.ts, all: true }]) })
     return () => { room.leave(); roomRef.current = null }
   }, [enabled, code]) // eslint-disable-line

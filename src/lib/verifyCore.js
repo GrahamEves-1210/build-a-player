@@ -124,3 +124,25 @@ export function checkDaily(day, sent) {
   if (!fit(0, 0)) return { error: 'not the day\'s spins' }
   return { ovr: Math.max(0, Math.min(99, Math.round(kit.ovr(r.build) ?? 0))), build: r.build, pos: dc.pos, mode: dc.mode }
 }
+
+// ── Takeover Duo: the partner's build, as the host's phone will play it ───────
+// Real players only, at no more than their real rating plus a bonus (ON FIRE's +1);
+// anything else plays at the real rating, an unknown name as a free agent (3).
+export function cleanPartnerBuild(sport, pos, build, bonus = 1) {
+  if (!build || typeof build !== 'object') return { build: {}, changed: true }
+  const kits = ['classic', 'all-time'].map(m => seasonKit(sport, pos, m)).filter(Boolean)
+  const pool = kits.flatMap(k => k.pool)
+  let changed = false
+  const out = {}
+  for (const [t, c] of Object.entries(build)) {
+    if (!c) { out[t] = c; continue }
+    const name = nameOf(c)
+    const p = name ? findIn(pool, name, c.team) : null
+    const real = p?.attrs?.[t]
+    const v = Number(c.val)
+    const ok = typeof real === 'number' ? Math.max(0, Math.min(11, Math.min(Number.isFinite(v) ? v : real, real + bonus))) : 3
+    if (ok !== v) changed = true
+    out[t] = { ...c, val: ok, ...(typeof real === 'number' ? {} : { qbFull: 'Free agent' }) }
+  }
+  return { build: out, changed, ovr: changed && kits[0] ? Math.round(kits[0].ovr(out) ?? 0) : null }
+}
