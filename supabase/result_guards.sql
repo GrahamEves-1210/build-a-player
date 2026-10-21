@@ -81,7 +81,9 @@ begin
     games := case when coalesce(r ->> 'game_mode', '') like 'bucket%' then 82 else 17 end;
     if coalesce((r ->> 'wins')::numeric, 0) < 0 or coalesce((r ->> 'losses')::numeric, 0) < 0
        or coalesce((r ->> 'wins')::numeric, 0) + coalesce((r ->> 'losses')::numeric, 0) > games then return null; end if;
-    if coalesce((r ->> 'champion')::boolean, false) and not coalesce((r ->> 'playoffs')::boolean, (r ->> 'playoffs') is not null) then return null; end if;
+    -- (only rows that say whether they made the playoffs: basketball seasons don't, and a
+    -- basketball title must save)
+    if coalesce((r ->> 'champion')::boolean, false) and (r ->> 'playoffs') is not null and not (r ->> 'playoffs')::boolean then return null; end if;
   end if;
 
   -- a daily Salary Cap play: today's (or yesterday's) board, once a day
