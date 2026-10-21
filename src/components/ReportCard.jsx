@@ -20,7 +20,8 @@ const ALL_TE_PHYS = { ...Object.fromEntries(TE_LEGENDS.map(t => [t.name, { heigh
 import { calcOVR, calcOVRRB, calcOVRWR, calcOVRTE, calcOVRDB, calcOVROL, getArchetype, getArchetypeRB, getArchetypeWR, getArchetypeTE, getArchetypeDB, getArchetypeOL, calcBalance, valToGrade } from '../utils/simulation'
 import { calcBucketOVR, getBucketGuardArchetype, getBucketBigArchetype } from '../utils/bucketSimulation'
 import { buildShareUrl } from '../utils/shareUrl'
-import { generateBucketShareCard, shareOrDownloadCard, captureSilhouette } from '../utils/generateShareCard'
+import { shareOrDownloadCard } from '../utils/generateShareCard'
+import { drawSeasonCard } from '../utils/seasonCard'
 import QBAvatar from './QBAvatar'
 import { IS_APP, APP_LOOK, shareNative } from '../lib/platform'
 import AppSandbox from './app/AppSandbox'
@@ -122,6 +123,7 @@ export function ShareModal({ ovr, arch, build, types, onClose, isBucket = false,
   const [copied, setCopied]       = useState(false)
   const [cardDataUrl, setCardDataUrl] = useState(null)
   const [cardBlob, setCardBlob]       = useState(null)
+  const who = getUsername(useProgress().user) || 'Guest'
 
   const posWord    = isOL ? 'offensive lineman' : isDB ? 'defensive back' : isWR ? 'wide receiver' : isRB ? 'running back' : isTE ? 'tight end' : 'quarterback'
   const bucketText = `I built a ${ovr} OVR ${arch}. Think you can do better?`
@@ -129,14 +131,17 @@ export function ShareModal({ ovr, arch, build, types, onClose, isBucket = false,
   const shareUrl   = buildShareUrl(build, types)
   const filename   = `${isBucket ? 'bucket' : 'player'}-build-${ovr}-${arch.toLowerCase().replace(/\s+/g, '-')}.png`
 
-  // The image card, made when the sheet opens (both sports: football's figure
-  // is the silhouette from the game page)
+  // The image card, made when the sheet opens: the same look as the season card
+  // (utils/seasonCard.js), without a season: the OVR, the build and who made it
   useEffect(() => {
     let live = true
     ;(async () => {
-      const figure = isBucket ? null : await captureSilhouette()
-      const posLabel = isBucket ? null : isOL ? 'OL' : isDB ? 'DB' : isTE ? 'TE' : isWR ? 'WR' : isRB ? 'RB' : 'QB'
-      const canvas = await generateBucketShareCard({ build, types, ovr, arch, position: isBucket ? position : posLabel, attrMap, figure, brand: isBucket ? 'BUILD-A-BUCKET' : 'BUILD-A-PLAYER', posLabel })
+      const posLabel = isBucket ? (position === 'big' ? 'BIG' : 'GUARD') : isOL ? 'OL' : isDB ? 'DB' : isTE ? 'TE' : isWR ? 'WR' : isRB ? 'RB' : 'QB'
+      const canvas = await drawSeasonCard({
+        sport: isBucket ? 'bucket' : 'nfl', name: who, tag: isBucket ? posLabel : posWord.toUpperCase(),
+        hero: { value: ovr, label: 'OVR' }, sub: arch && !/remaining$/.test(arch) ? arch : null,
+        chips: types.filter(t => build[t]).map(t => ({ label: attrMap[t]?.label ?? t, name: build[t].qbFull || build[t].qb || build[t].name, photo: build[t].photo, faceCenter: build[t].faceCenter, val: build[t].val })),
+      }, { format: 'story' })
       if (!live) return
       setCardDataUrl(canvas.toDataURL('image/png'))
       canvas.toBlob(b => setCardBlob(b), 'image/png')
