@@ -1,6 +1,7 @@
 import { IS_APP } from './platform'
 import { supabase } from './supabase'
 import { claimCoinPurchases, refreshPass } from './progress'
+import { track } from './track'
 
 // Coins, BAP Pro (monthly or yearly: extra { plan: 'year' }) and the Builder Pass
 // (extra { season }) are bought on the web through Stripe Checkout, in the app
@@ -15,6 +16,7 @@ export async function openCheckout(kind, extra = {}) {
   const { data } = supabase ? await supabase.auth.getSession() : { data: null }
   const user = data?.session?.user
   if (!user) { window.dispatchEvent(new CustomEvent('bap:auth')); return 'signin' }
+  track('checkout_open', { userId: user.id, meta: { kind, ...extra, app: IS_APP } })
   try {
     const res = await fetch(`${API}/api/${ENDPOINT[kind] ?? ENDPOINT.coins}`, {
       method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${data.session.access_token}` },
@@ -38,12 +40,13 @@ function collect(kind, uid) {
     if (kind === 'pro') {
       const { data: p } = await supabase.from('accounts').select('subscription_status').eq('id', uid).single()
       if (p?.subscription_status === 'active') {
+        track('purchase', { userId: uid, meta: { kind: 'pro' } })
         try { localStorage.setItem('bap_subscribed', '1') } catch {}
         window.dispatchEvent(new CustomEvent('bap:pro'))
         return
       }
     } else if (kind === 'pass') {
-      if (await refreshPass()) { window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'pass' })); return }
+      if (await refreshPass()) { track('purchase', { userId: uid, meta: { kind: 'pass' } }); window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'pass' })); return }
     } else if ((await claimCoinPurchases()) > 0) return
     if (++tries < 8) setTimeout(tick, 2500)
   }

@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { track } from '../../lib/track'
 import { createPortal } from 'react-dom'
 import { supabase } from '../../lib/supabase'
 import FeedbackModal from '../FeedbackModal'
@@ -32,6 +33,7 @@ function ProView({ onVault }) {
   const [err, setErr] = useState(null)
   const [plan, setPlan] = useState('year')
   const pro = isPro()
+  useEffect(() => { if (!pro) track('pro_view') }, []) // eslint-disable-line react-hooks/exhaustive-deps
   const subscribe = async () => {
     setErr(null); setBusy(true)
     const r = await openCheckout('pro', { plan })

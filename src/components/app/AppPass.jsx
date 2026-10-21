@@ -3,6 +3,7 @@ import { useProgress, claimPass, dayKey, walletOpen } from '../../lib/progress'
 import { TIERS, TIER_XP, PASS_PRICE, passValue, nextSeason } from '../../lib/pass'
 import { itemById, RARITY } from '../../lib/cosmetics'
 import { openCheckout } from '../../lib/webCheckout'
+import { track } from '../../lib/track'
 import { sellsHere, onStorefront } from '../../lib/storefront'
 import { IS_APP } from '../../lib/platform'
 import { getUsername } from '../../lib/discord'
@@ -84,6 +85,7 @@ export default function AppPass({ onClose }) {
   const [flash, setFlash] = useState(null)
   const [got, setGot] = useState(null)
   const listRef = useRef(null)
+  useEffect(() => { track('pass_view', { meta: { owned: !!bp?.owned, tier: bp?.tier ?? null } }) }, []) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (!got) return; const t = setTimeout(() => setGot(null), 1800); return () => clearTimeout(t) }, [got])
 
   // open on the tier you're on

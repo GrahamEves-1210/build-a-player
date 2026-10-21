@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { track } from '../lib/track'
 import { supabase } from '../lib/supabase'
 import { signInWithDiscord, signInWithApple } from '../lib/discord'
 import { IconDiscord } from './Navbar'
@@ -93,6 +94,7 @@ export default function AuthModal({ onClose, onAuth }) {
         setLoading(false)
         return
       }
+      track('signin', { userId: data.user?.id ?? null })
       onAuth(data.user)
       onClose()
     } else {
@@ -108,6 +110,7 @@ export default function AuthModal({ onClose, onAuth }) {
         setLoading(false)
         return
       }
+      track('signup', { userId: data.user?.id ?? null })
       // (the contact email is saved with the account's own sign-in data above: private to the
       // player and the server, never on the public accounts row; lib/contactEmail.js)
       onAuth(data.user)

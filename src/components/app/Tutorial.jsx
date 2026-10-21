@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { track } from '../../lib/track'
 import { createRoot } from 'react-dom/client'
 import { IS_APP, APP_LOOK } from '../../lib/platform'
 import { IconArrow } from './icons'
@@ -59,6 +60,7 @@ export function startTutorial() {
 if (typeof window !== 'undefined') window.addEventListener(TUTORIAL_EVENT, openTour)
 
 function finish() {
+  if (!isDone()) track('tutorial_done')
   markDone()
   setState({ phase: 'idle' })
 }

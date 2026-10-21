@@ -16,6 +16,7 @@ import { getUsername } from './discord'
 import { itemById, forSale, DEFAULTS, ITEMS } from './cosmetics'
 import { passSeason, seasonById, seasonOver, tierAt, xpForTier } from './pass'
 import { competeDelta, blacktopDelta, FORFEIT_RATING } from './rating'
+import { track } from './track'
 import { ACHIEVEMENTS, achById } from './achievements'
 import { IS_APP } from './platform'
 
@@ -273,6 +274,15 @@ function tally(xp = 0, game = 0) {
   if (S.today?.d !== k) { if (S.today?.xp) S.prevDay = S.today; S.today = { d: k, xp: 0, g: 0 } }
   S.today.xp += Math.max(0, Math.round(xp || 0))
   S.today.g += game
+}
+// Analytics (lib/track.js): the player's events, and one 'app_open' a day per device
+const ev = (event, meta = {}, app = meta.sport === 'bucket' ? 'bucket' : 'nfl') => track(event, { app, userId: uid, meta })
+let openedFor = null
+function markOpen() {
+  const k = `${dayKey()}|${uid || 'guest'}`
+  if (openedFor === k) return
+  openedFor = k
+  ev('app_open', { signedIn: !!uid, level: uid ? levelInfo(totalXp()).level : null, app: IS_APP })
 }
 function totalXp() {
   if (!uid) return 0
@@ -629,6 +639,7 @@ function onSeason(e) {
   else if (uid) S.pending.push({ at: Date.now(), xp, ring: !!d.champion })
   else S.seasonXp += xp
   tally(xp, 1)
+  ev('season_done', { sport: d.sport, pos: d.pos, mode: d.mode, daily: !!d.daily, ovr: d.ovr, wins: d.wins, champion: !!d.champion })
   // a 2x XP boost: the season's XP again
   let boost = 0
   if (uid && xp > 0 && boostLeft('xp') > 0) {
@@ -735,6 +746,7 @@ export { FORFEIT_RATING }
 function onCompete(e) {
   const { place, ovr, of = 5, humans = 1, forfeit = false, mode = 'pool' } = e.detail || {}
   if (!place) return
+  ev(mode === 'auction' ? 'auction_done' : 'compete_done', { place, forfeit, humans, sport: e.detail?.sport })
   const what = mode === 'auction' ? 'auction' : 'pool'
   const c = S.stats.compete = { ...BLANK_STATS.compete, ...(S.stats.compete || {}) }
   if (forfeit) {
@@ -764,6 +776,7 @@ function onCompete(e) {
 // (a 2v2 keeps its own record, stats.bt2; the rating and missions are shared)
 function onBlacktop(e) {
   const d = e.detail || {}
+  ev('blacktop_done', { size: d.size ?? 3, won: !!d.won, bots: !!d.bots, forfeit: !!d.forfeit, sport: 'bucket' })
   const two = d.size === 2 || d.size === 1, key = d.size === 1 ? 'bt1' : 'bt2'
   let b
   if (two) {
@@ -794,6 +807,7 @@ function onBlacktop(e) {
 function onH2H(e) {
   const { result, sport, line } = e.detail || {}
   if (!result) return
+  ev('h2h_done', { result, sport })
   const won = result === 'win' || result === 'walkover'
   // the record both ways: all 1v1s together, and this sport's own
   const k = sport === 'bucket' ? 'h2hB' : 'h2hN'
@@ -919,6 +933,7 @@ function switchUser(u) {
     S.mergedGuest = true
   }
   rollDay()
+  markOpen()
   if (!S.seenLevel) S.seenLevel = levelInfo(totalXp()).level
   if (!S.levelPaid) S.levelPaid = levelInfo(totalXp()).level
   applySpot()
@@ -946,13 +961,14 @@ export function initProgress() {
   window.addEventListener('bap:xp', onXp)
   window.addEventListener('bap:blacktop', onBlacktop)
   window.addEventListener('bap:h2h', onH2H)
-  window.addEventListener('bap:takeover', e => { const d = e.detail || {}; if (d.city) { S.stats.tkCities++; tally(0, 1) } if (d.run) S.stats.tkRuns++; emit() })
+  window.addEventListener('bap:takeover', e => { const d = e.detail || {}; if (d.city) { S.stats.tkCities++; tally(0, 1); ev('takeover_city') } if (d.run) { S.stats.tkRuns++; ev('takeover_run') } emit() })
   window.addEventListener('bap:compete', onCompete)
   window.addEventListener('bap:dc', e => { const n = e.detail?.streak ?? 0; if (n > S.stats.dcBest) { S.stats.dcBest = n; emit() } })
   window.addEventListener('bap:pro', () => emit(true))
   document.addEventListener('visibilitychange', () => {
     if (document.hidden || !loaded) return
     if (rollDay()) emit()
+    markOpen()
     payPlayersOfDay()
     payWeeklyCup()
     sync()
@@ -1045,6 +1061,7 @@ export function buy(id) {
   S.coins -= price
   S.owned[id] = Date.now()
   S.stats.purchases++
+  ev('shop_buy', { id, price, slot: i.slot })
   S.walletAt = Date.now()
   emit()
   window.dispatchEvent(new CustomEvent('bap:purchase', { detail: { id } }))
@@ -1206,6 +1223,7 @@ export function buyBoost(k) {
   if (S.coins < b.price) return { ok: false, reason: `Need ${(b.price - S.coins).toLocaleString()} more coins`, short: b.price - S.coins }
   S.coins -= b.price
   invAdd(k, 'got', b.per)
+  ev('boost_buy', { kind: k, price: b.price })
   S.walletAt = Date.now()
   emit()
   return { ok: true }
@@ -1221,6 +1239,7 @@ export function claimPass(track, tier) {
   if (!r || ps.base == null || ps[track]?.[tier] || tierAt(passXp(s)) < tier) return null
   if (track === 'p' && !passOwn.has(s.id)) return null
   ps[track] = { ...(ps[track] || {}), [tier]: Date.now() }
+  ev('pass_claim', { season: s.id, track, tier, premium: track === 'p' })
   let got
   if (r.coins) { earn(r.coins, 'Builder Pass', true); got = { coins: r.coins } }
   else if (r.freeze) {
@@ -1282,7 +1301,7 @@ export function watchPassReturn() {
   let tries = 0
   const tick = async () => {
     const s = passSeason(dayKey())
-    if (uid && ((await loadPassOwners(uid)) || (s && passOwn.has(s.id)))) { window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'pass' })); return }
+    if (uid && ((await loadPassOwners(uid)) || (s && passOwn.has(s.id)))) { ev('purchase', { kind: 'pass', season: s?.id }); window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'pass' })); return }
     if (++tries < 10) setTimeout(tick, 3000)
   }
   setTimeout(tick, 1500)
