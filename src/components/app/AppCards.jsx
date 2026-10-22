@@ -3,13 +3,14 @@ import { XpIco } from './GainIcons'
 import { useProgress, cardKey, rarityRank, RARITIES, claimSet, setReward } from '../../lib/progress'
 import { HEADSHOT_BASE, nflHeadshot } from '../../utils/simulation'
 import { sfx, haptic } from '../../lib/juice'
-import { IconClose, IconCheck, IconGift, IconCrown, IconStar, IconArrow } from './icons'
+import { IconClose, IconCheck, IconGift, IconCrown, IconStar, IconArrow, IconFootball, IconBasketball } from './icons'
 
 // Card binder (dock → Cards). Every player a spin lands on is collected, across
-// every position and both eras, into one collection per sport. Sets are the
+// every position, both eras and both sports, into one collection. Sets are the
 // ways to complete it: a franchise (every player who ever wore the jersey),
-// a position, every Legend, a decade of legends. Rosters load on
-// demand so the other sport's data only downloads when it's opened.
+// a position, every Legend, a decade of legends. Sets stay per sport (their ids
+// carry the sport, so claimed sets stay claimed) and each set kind lists the
+// football sets, then the basketball sets. Both rosters load in parallel.
 
 const NFL_POS = { qb: 'QB', rb: 'RB', wr: 'WR', te: 'TE', db: 'DB' }
 const NBA_POS = { guard: 'GUARD', big: 'BIG' }
@@ -52,6 +53,11 @@ async function loadNba() {
 }
 const cache = {}
 const loadSport = s => (cache[s] ??= (s === 'bucket' ? loadNba() : loadNfl()))
+const SPORTS = [
+  { id: 'nfl',    label: 'FOOTBALL',   Icon: IconFootball },
+  { id: 'bucket', label: 'BASKETBALL', Icon: IconBasketball },
+]
+const loadAll = () => Promise.all(SPORTS.map(s => loadSport(s.id))).then(list => Object.fromEntries(SPORTS.map((s, i) => [s.id, list[i]])))
 
 const generic = skin => {
   if (!skin) return '/genericdark.webp'
@@ -69,7 +75,7 @@ function allCards(data, sport, owned) {
       for (const player of pool) {
         const key = cardKey(sport, pos, mode, player.name, player.team)
         const o = owned[key]
-        out.push({ key, player, pos, mode, team: player.team, rank: rarityRank(pool, player), owned: !!o, count: o?.[0] ?? 0, seen: o?.[1] ?? 0 })
+        out.push({ key, sport, player, pos, mode, team: player.team, rank: rarityRank(pool, player), owned: !!o, count: o?.[0] ?? 0, seen: o?.[1] ?? 0 })
       }
     }
   }
@@ -86,7 +92,7 @@ const KINDS = [
 // The sets a collection can be completed by
 function buildSets(cards, data, sport) {
   const sets = []
-  const push = (id, kind, title, sub, list, extra = {}) => { if (list.length) sets.push({ id: `${sport}|${id}`, kind, title, sub, cards: list, owned: list.filter(c => c.owned).length, total: list.length, ...extra }) }
+  const push = (id, kind, title, sub, list, extra = {}) => { if (list.length) sets.push({ id: `${sport}|${id}`, sport, kind, title, sub, cards: list, owned: list.filter(c => c.owned).length, total: list.length, ...extra }) }
   // franchises — every player who wore the jersey, any position, any era
   const byTeam = new Map()
   for (const c of cards) { if (!byTeam.has(c.team)) byTeam.set(c.team, []); byTeam.get(c.team).push(c) }
@@ -114,7 +120,7 @@ function buildSets(cards, data, sport) {
   return sets
 }
 
-function Card({ c, data, color, i, small = false }) {
+function Card({ c, data, color, i, small = false, mark = false }) {
   const { player, rank, owned, count, pos, mode } = c
   const photo = data.photo(player.name) ?? generic(player.skin)
   return (
@@ -129,8 +135,14 @@ function Card({ c, data, color, i, small = false }) {
       </div>
       {!small && <span className={`ag-ct-tag${mode === 'all-time' ? ' ag-ct-tag--at' : ''}`}>{mode === 'all-time' ? '★ ' : ''}{data.posLabel[pos]}</span>}
       {owned && count > 1 && <span className="ag-ct-count">×{count}</span>}
+      {mark && <SportMark sport={c.sport} className="ag-ct-sport" />}
     </div>
   )
+}
+
+function SportMark({ sport, className, size = 12 }) {
+  const S = SPORTS.find(x => x.id === sport) ?? SPORTS[0]
+  return <span className={className} role="img" aria-label={S.label.toLowerCase()}><S.Icon size={size} /></span>
 }
 
 function SetTile({ s, onOpen, i }) {
@@ -151,24 +163,33 @@ function SetTile({ s, onOpen, i }) {
 export default function AppCards({ sport: startSport, onClose, hall = null }) {
   const p = useProgress()
   const saved = (() => { try { return JSON.parse(localStorage.getItem('ag_cards_view')) || {} } catch { return {} } })()
-  const [sport, setSport] = useState(saved.sport ?? (startSport === 'bucket' ? 'bucket' : 'nfl'))
-  const [kind, setKind] = useState(saved.kind ?? 'team')
-  const [data, setData] = useState(null)
+  const [kind, setKind] = useState(KINDS.some(k => k.id === saved.kind) ? saved.kind : 'team')
+  const [data, setData] = useState(null)        // { nfl, bucket }
   const [open, setOpen] = useState(null)        // set id
 
-  useEffect(() => { try { localStorage.setItem('ag_cards_view', JSON.stringify({ sport, kind })) } catch {} }, [sport, kind])
-  useEffect(() => { let live = true; setData(null); setOpen(null); loadSport(sport).then(d => live && setData(d)); return () => { live = false } }, [sport])
+  useEffect(() => { try { localStorage.setItem('ag_cards_view', JSON.stringify({ kind })) } catch {} }, [kind])
+  useEffect(() => { let live = true; loadAll().then(d => live && setData(d)); return () => { live = false } }, [])
 
-  const cards = useMemo(() => (data ? allCards(data, sport, p.cards) : []), [data, sport, p.cards])
-  const sets = useMemo(() => (data ? buildSets(cards, data, sport).map(s => ({ ...s, claimed: !!p.sets?.[s.id] })) : []), [cards, data, sport, p.sets])
+  const cards = useMemo(() => (data ? SPORTS.flatMap(s => allCards(data[s.id], s.id, p.cards)) : []), [data, p.cards])
+  const sets = useMemo(() => (data
+    ? SPORTS.flatMap(S => buildSets(cards.filter(c => c.sport === S.id), data[S.id], S.id)).map(s => ({ ...s, claimed: !!p.sets?.[s.id] }))
+    : []), [cards, data, p.sets])
   const totals = useMemo(() => {
-    const t = { owned: 0, total: cards.length, rar: [0, 0, 0, 0], rarTotal: [0, 0, 0, 0] }
-    for (const c of cards) { t.rarTotal[c.rank]++; if (c.owned) { t.owned++; t.rar[c.rank]++ } }
+    const t = { owned: 0, total: cards.length, rar: [0, 0, 0, 0], rarTotal: [0, 0, 0, 0], sport: Object.fromEntries(SPORTS.map(S => [S.id, { owned: 0, total: 0 }])) }
+    for (const c of cards) {
+      t.rarTotal[c.rank]++; t.sport[c.sport].total++
+      if (c.owned) { t.owned++; t.rar[c.rank]++; t.sport[c.sport].owned++ }
+    }
     return t
   }, [cards])
-  const recent = useMemo(() => cards.filter(c => c.owned).sort((a, b) => b.seen - a.seen).slice(0, 10), [cards])
-  const shown = sets.filter(s => s.kind === kind)
+  const recent = useMemo(() => cards.filter(c => c.owned).sort((a, b) => b.seen - a.seen).slice(0, 12), [cards])
+  // Each set kind: the football sets, then the basketball sets, under their own heading
+  const shown = useMemo(() => SPORTS.map(S => {
+    const list = sets.filter(s => s.kind === kind && s.sport === S.id)
+    return { ...S, sets: list, done: list.filter(s => s.owned === s.total).length }
+  }).filter(g => g.sets.length), [sets, kind])
   const openSet = open && sets.find(s => s.id === open)
+  const openData = openSet ? data[openSet.sport] : null
   const claim = s => { if (claimSet(s.id, s.total)) { sfx('coins'); haptic('success') } }   // a set pays coins too
   const readyToClaim = sets.filter(s => s.owned === s.total && !s.claimed).length
 
@@ -177,15 +198,15 @@ export default function AppCards({ sport: startSport, onClose, hall = null }) {
     if (!openSet) return []
     const sorted = [...openSet.cards].sort((a, b) => b.rank - a.rank || a.player.name.localeCompare(b.player.name))
     if (openSet.kind !== 'team' || sorted.length <= 12) return [{ label: null, cards: sorted }]
-    const posOrder = Object.keys(data.pools)
+    const posOrder = Object.keys(openData.pools)
     const groups = new Map()
     for (const c of sorted) {
-      const k = `${data.posLabel[c.pos]} · ${c.mode === 'all-time' ? 'ALL-TIME' : 'CURRENT'}`
+      const k = `${openData.posLabel[c.pos]} · ${c.mode === 'all-time' ? 'ALL-TIME' : 'CURRENT'}`
       if (!groups.has(k)) groups.set(k, { cards: [], order: posOrder.indexOf(c.pos) * 2 + (c.mode === 'all-time' ? 1 : 0) })
       groups.get(k).cards.push(c)
     }
     return [...groups.entries()].sort((a, b) => a[1].order - b[1].order).map(([label, g]) => ({ label, cards: g.cards }))
-  }, [openSet, data])
+  }, [openSet, openData])
 
   return (
     <div className={`ag-screen ag-screen--${startSport}`}>
@@ -199,16 +220,20 @@ export default function AppCards({ sport: startSport, onClose, hall = null }) {
       {hall}
 
       <div className="ag-screen-body">
-        <div className="ag-seg ag-pop" style={{ '--d': '0ms' }}>
-          <button className={sport === 'nfl' ? 'is-on' : ''} onClick={() => setSport('nfl')}>FOOTBALL</button>
-          <button className={sport === 'bucket' ? 'is-on' : ''} onClick={() => setSport('bucket')}>BASKETBALL</button>
-        </div>
-
-        <div className="ag-card ag-coll-sum ag-pop" style={{ '--d': '40ms' }}>
+        <div className="ag-card ag-coll-sum ag-pop" style={{ '--d': '0ms' }}>
           <div className="ag-coll-main">
             <span className="ag-coll-num">{totals.owned}<small>/{totals.total}</small></span>
             <span className="ag-coll-bar"><span style={{ width: `${totals.total ? (totals.owned / totals.total) * 100 : 0}%` }} /></span>
           </div>
+          {data && (
+            <div className="ag-coll-sports">
+              {SPORTS.map(S => (
+                <span key={S.id} className="ag-coll-sport">
+                  <S.Icon size={13} /> {S.label} <b>{totals.sport[S.id].owned}</b><small>/{totals.sport[S.id].total}</small>
+                </span>
+              ))}
+            </div>
+          )}
           <div className="ag-coll-rar">
             {[3, 2, 1, 0].map(r => (
               <span key={r} className={`ag-rar-pill ag-rar-${r}`}><b>{totals.rar[r]}</b>/{totals.rarTotal[r]} {RARITIES[r]}</span>
@@ -220,10 +245,10 @@ export default function AppCards({ sport: startSport, onClose, hall = null }) {
         {!data && <div className="ag-board-empty">Loading cards…</div>}
 
         {data && !openSet && recent.length > 0 && (
-          <section className="ag-pop" style={{ '--d': '70ms' }}>
+          <section className="ag-pop" style={{ '--d': '40ms' }}>
             <div className="ag-row-head"><span className="ag-eyebrow">RECENT PULLS</span></div>
             <div className="ag-recent">
-              {recent.map((c, i) => <Card key={c.key} c={c} data={data} i={i} small />)}
+              {recent.map((c, i) => <Card key={c.key} c={c} data={data[c.sport]} i={i} small mark />)}
             </div>
           </section>
         )}
@@ -236,24 +261,29 @@ export default function AppCards({ sport: startSport, onClose, hall = null }) {
               <span className="ag-set-name">{openSet.title}</span>
               <span className="ag-set-count">{openSet.owned}/{openSet.total}</span>
             </div>
-            <div className="ag-set-sub">{openSet.sub} · worth {setReward(openSet.total)} XP</div>
+            <div className="ag-set-sub">{openSet.sport === 'bucket' ? 'Basketball' : 'Football'} · {openSet.sub} · worth {setReward(openSet.total)} XP</div>
             {openSet.owned === openSet.total && !openSet.claimed && (
               <button className="ag-btn ag-btn--gold ag-set-claim" onClick={() => claim(openSet)}><IconGift size={18} /> SET COMPLETE · CLAIM <span className="gain"><XpIco /> +{setReward(openSet.total)}</span></button>
             )}
             <div className="ag-ct-grid">
               {sections.map(sec => (
-                <SectionCards key={sec.label ?? 'all'} sec={sec} data={data} color={openSet.color} />
+                <SectionCards key={sec.label ?? 'all'} sec={sec} data={openData} color={openSet.color} />
               ))}
             </div>
           </section>
         ) : data && (
           <>
-            <div className="ag-chips ag-chips--scroll ag-pop" style={{ '--d': '100ms' }}>
+            <div className="ag-chips ag-chips--scroll ag-pop" style={{ '--d': '70ms' }}>
               {KINDS.map(k => <button key={k.id} className={`ag-chip${kind === k.id ? ' is-on' : ''}`} onClick={() => setKind(k.id)}>{k.label}</button>)}
             </div>
-            <div className={`ag-sets${kind === 'team' ? '' : ' ag-sets--wide'}`}>
-              {shown.map((s, i) => <SetTile key={s.id} s={s} i={i} onOpen={() => setOpen(s.id)} />)}
-            </div>
+            {shown.map(g => (
+              <section key={`${kind}|${g.id}`} className="ag-sets-group" aria-label={g.label}>
+                <div className="ag-sets-h"><g.Icon size={14} /><span>{g.label}</span><i /><small>{g.done}/{g.sets.length} COMPLETE</small></div>
+                <div className={`ag-sets${kind === 'team' ? '' : ' ag-sets--wide'}`}>
+                  {g.sets.map((s, i) => <SetTile key={s.id} s={s} i={i} onOpen={() => setOpen(s.id)} />)}
+                </div>
+              </section>
+            ))}
           </>
         )}
       </div>
