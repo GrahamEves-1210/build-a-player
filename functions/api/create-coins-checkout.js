@@ -1,6 +1,10 @@
 import Stripe from 'stripe'
 import { createClient } from '@supabase/supabase-js'
 
+// The email Stripe pre-fills: the contact email the player saved in their profile, else the
+// sign-in email, never the hidden name@buildaplayer.app one username accounts sign in with
+const payEmail = u => { const e = (u?.user_metadata?.contact_email || '').trim() || u?.email || ''; return e && !/@buildaplayer\.app$/i.test(e) ? e : null }
+
 // Who's asking, from their Supabase session token (never from an id in the body)
 async function sessionUser(request, env) {
   const token = (request.headers.get('authorization') || '').replace(/^Bearer\s+/i, '')
@@ -39,7 +43,7 @@ export async function onRequestPost(context) {
     const { pack, app, table } = body
     // the session decides whose purchase it is; older app builds without one still send their id
     const me = await sessionUser(context.request, context.env)
-    const userId = me?.id ?? body.userId, email = me?.email ?? body.email
+    const userId = me?.id ?? body.userId, email = payEmail(me) ?? body.email
     if (!userId) return Response.json({ error: 'userId required' }, { status: 400 })
     const p = (TABLES[table] ?? TABLES[1])[pack]
     if (!p) return Response.json({ error: 'unknown pack' }, { status: 400 })

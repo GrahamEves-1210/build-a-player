@@ -1,6 +1,10 @@
 import Stripe from 'stripe'
 import { createClient } from '@supabase/supabase-js'
 
+// The email Stripe pre-fills: the contact email the player saved in their profile, else the
+// sign-in email, never the hidden name@buildaplayer.app one username accounts sign in with
+const payEmail = u => { const e = (u?.user_metadata?.contact_email || '').trim() || u?.email || ''; return e && !/@buildaplayer\.app$/i.test(e) ? e : null }
+
 // The Builder Pass: a one-time Stripe Checkout for a season's premium track ($8.99).
 // No Stripe product to set up: the price is made here. The webhook (stripe-webhook.js)
 // records it in pass_owners; the game reads that. A season sells until it ends.
@@ -31,7 +35,7 @@ export async function onRequestPost({ request, env }) {
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       line_items: [{ quantity: 1, price_data: { currency: 'usd', unit_amount: p.cents, product_data: { name: p.name } } }],
-      customer_email: me.email || undefined,
+      customer_email: payEmail(me) || undefined,
       metadata: { userId: me.id, kind: 'pass', season },
       payment_intent_data: { metadata: { userId: me.id, kind: 'pass', season } },
       success_url: `${origin}/?pass=1`,
