@@ -84,7 +84,7 @@ export function LevelUp({ hold }) {
     <div className="ag-levelup" onClick={markLevelSeen}>
       <div className="ag-levelup-card" onClick={e => e.stopPropagation()}>
         <span className="ag-eyebrow">LEVEL UP</span>
-        <span className="ag-levelup-num">{p.lvl.level}</span>
+        <span className="ag-levelup-numwrap"><img className="ag-levelup-star" src="/fx/star.webp" alt="" aria-hidden="true" draggable={false} /><span className="ag-levelup-num">{p.lvl.level}</span></span>
         <span className="ag-levelup-title">{p.lvl.title}</span>
         {(title || spots.length > 0) && (
           <div className="ag-levelup-unlocks">

@@ -5683,3 +5683,17 @@ html.bap-reduce-motion .pl-fb { offset-distance: 50%; }
 
 /* compact nameplates keep the All-Star plate's room on the left for its stars */
 :is(.btc-name, .ag-player-name, .ag-career-name, .fr-row-name, .fr-hero-name) .np.pl-allstar, .lb-ntag.np.pl-allstar { padding-left: 1.5em; }
+
+/* the gold star (public/fx/star.webp): behind a new level, and the #1 spot on the boards */
+.ag-levelup-numwrap { position: relative; display: grid; place-items: center; }
+.ag-levelup-numwrap > * { grid-area: 1 / 1; }
+.ag-levelup-star { width: 190px; height: auto; opacity: .9; filter: drop-shadow(0 0 30px rgba(242,201,76,.45)); }
+.ag-levelup-numwrap .ag-levelup-num { position: relative; z-index: 1; }
+@media (prefers-reduced-motion: no-preference) {
+  html:not(.bap-reduce-motion) .ag-levelup-star { animation: lv-star-in .7s .1s cubic-bezier(.34, 1.56, .64, 1) both, lv-star-turn 14s .8s linear infinite; }
+}
+@keyframes lv-star-in { from { opacity: 0; transform: scale(.2) rotate(-200deg); } }
+@keyframes lv-star-turn { to { transform: rotate(360deg); } }
+.ag-board-rank--1, .ag-potd-row.is-1 .ag-potd-rank { display: grid; place-items: center; color: #3b2604; background: url(/fx/star.webp) center / contain no-repeat; text-shadow: 0 1px 0 rgba(255,243,196,.6); }
+.ag-board-rank--1 { width: 30px; height: 30px; font-size: 15px; padding-top: 3px; justify-self: center; }
+.ag-potd-row.is-1 .ag-potd-rank { width: 36px; height: 36px; font-size: 17px; padding-top: 4px; justify-self: center; }
