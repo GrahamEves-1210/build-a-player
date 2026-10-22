@@ -1,6 +1,26 @@
 import Stripe from 'stripe'
 import { createClient } from '@supabase/supabase-js'
 
+// BAP Pro's Discord role: given while Pro is on, taken off when it ends (the bot needs
+// Manage Roles, its role above the Pro role; DISCORD_PRO_ROLE_ID). No Discord linked: skipped.
+async function setProRole(supabase, env, userId, on) {
+  const { DISCORD_BOT_TOKEN: bot, DISCORD_GUILD_ID: guild, DISCORD_PRO_ROLE_ID: role } = env
+  if (!bot || !guild || !role || !userId) return
+  try {
+    const { data: { user } = {} } = await supabase.auth.admin.getUserById(userId)
+    const identity = user?.identities?.find(i => i.provider === 'discord')
+    const discordId = identity?.identity_data?.provider_id ?? identity?.id
+    if (!discordId) return
+    const r = await fetch(`https://discord.com/api/v10/guilds/${guild}/members/${discordId}/roles/${role}`, {
+      method: on ? 'PUT' : 'DELETE', headers: { Authorization: `Bot ${bot}`, 'X-Audit-Log-Reason': on ? 'BAP Pro' : 'BAP Pro ended' },
+    })
+    if (!r.ok && r.status !== 404) console.error('[discord role]', r.status, await r.text().catch(() => ''))
+  } catch (e) { console.error('[discord role]', e?.message) }
+}
+
+// The Builder Pass seasons on sale (keep in step with src/lib/pass.js and create-pass-checkout.js)
+const PASS_SEASONS = new Set(['s1'])
+
 export async function onRequestPost(context) {
   const stripe = new Stripe(context.env.STRIPE_SECRET_KEY)
   const sig = context.request.headers.get('stripe-signature')
@@ -26,12 +46,21 @@ export async function onRequestPost(context) {
           .upsert({ user_id: userId, coins, source: 'stripe', pack: session.metadata.pack ?? null, ref: session.id }, { onConflict: 'ref', ignoreDuplicates: true })
         if (error) console.error('[webhook] coin purchase insert failed:', error)
       }
+    } else if (userId && session.metadata?.kind === 'pass') {
+      // Builder Pass: the season's premium track (supabase/builder_pass.sql); the game reads it
+      const season = session.metadata.season
+      if (PASS_SEASONS.has(season) && session.payment_status === 'paid') {
+        const { error } = await supabase.from('pass_owners')
+          .upsert({ user_id: userId, season, ref: session.id }, { onConflict: 'user_id,season', ignoreDuplicates: true })
+        if (error) console.error('[webhook] pass insert failed:', error)
+      }
     } else if (userId) {
       if (session.mode === 'subscription') {
         const { error } = await supabase
           .from('accounts')
           .upsert({ id: userId, subscription_status: 'active', subscription_id: session.subscription, is_plus: true }, { onConflict: 'id' })
         if (error) console.error('[webhook] subscription upsert failed:', error)
+        await setProRole(supabase, context.env, userId, true)
       } else {
         const { error } = await supabase
           .from('accounts')
@@ -66,6 +95,9 @@ export async function onRequestPost(context) {
             }
           }
         }
+      } else if (session && userId && session.metadata?.kind === 'pass') {
+        const { error } = await supabase.from('pass_owners').delete().eq('ref', session.id)
+        if (error) console.error('[webhook] pass refund failed:', error)
       } else if (session && userId && session.mode === 'payment') {
         const { error } = await supabase.from('accounts').update({ ads_disabled: false }).eq('id', userId)
         if (error) console.error('[webhook] ad-free refund failed:', error)
@@ -83,6 +115,7 @@ export async function onRequestPost(context) {
         .update({ subscription_status: live ? 'active' : sub.status, subscription_id: sub.id, is_plus: live })
         .eq('id', userId)
       if (error) console.error('[webhook] subscription update failed:', error)
+      await setProRole(supabase, context.env, userId, live)
     }
   }
 
@@ -95,6 +128,7 @@ export async function onRequestPost(context) {
         .update({ subscription_status: null, subscription_id: null, is_plus: false })
         .eq('id', userId)
       if (error) console.error('[webhook] subscription cancel failed:', error)
+      await setProRole(supabase, context.env, userId, false)
     }
   }
 
