@@ -52,5 +52,8 @@ export function startPresence() {
 export function usePresence() {
   return useSyncExternalStore(fn => { listeners.add(fn); return () => listeners.delete(fn) }, () => counts)
 }
+// a count worth showing: a few players, not just this one; null below that
+export const CROWD = 5
+export const crowd = n => (n >= CROWD ? n : null)
 // "1.2K"
 export const fmtCount = n => (n >= 10000 ? `${Math.round(n / 1000)}K` : n >= 1000 ? `${(n / 1000).toFixed(1).replace(/\.0$/, '')}K` : String(n))

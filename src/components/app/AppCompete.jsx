@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
-import { usePresence, fmtCount } from '../../lib/presence'
+import { usePresence, fmtCount, crowd } from '../../lib/presence'
 import { XpIco } from './GainIcons'
 import { useProgress, COMPETE_REWARDS } from '../../lib/progress'
 import { POOL_SIZE, FILL_AFTER_SECS, MIN_POOL } from '../../lib/compete'
@@ -171,11 +171,11 @@ export default function AppCompete({ cp, au, sport, position, positions, onPosit
   }
 
   const areas = usePresence()?.areas ?? {}
-  const inMode = (areas.compete ?? 0) + (areas.auction ?? 0)
+  const inMode = crowd((areas.compete ?? 0) + (areas.auction ?? 0))
   return (
     <div className={`ag-screen cp cp--${isBucket ? 'bucket' : 'nfl'}`}>
       <div className="ag-screen-head">
-        <div><span className="ag-eyebrow">{isBucket ? 'BASKETBALL' : 'FOOTBALL'} · {posName}{showAuction ? ' · TRAIT AUCTION' : ''}{inMode ? ` · ${fmtCount(inMode)} HERE NOW` : ''}</span><h1 className="ag-h1">Compete</h1></div>
+        <div><span className="ag-eyebrow">{isBucket ? 'BASKETBALL' : 'FOOTBALL'} · {posName}{showAuction ? ' · TRAIT AUCTION' : ''}{inMode ? ` · ${fmtCount(inMode)} PLAYING NOW` : ''}</span><h1 className="ag-h1">Compete</h1></div>
         <button className="ag-round-btn" onClick={() => guardLeave(() => { if (cp.phase === 'queue') cp.leave(); if (au?.phase === 'queue') au.leave(); onHome() })} aria-label="Home"><IconClose size={16} /></button>
       </div>
       {body}
