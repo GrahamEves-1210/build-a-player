@@ -33,8 +33,9 @@ export default function AppCareerCard({ user }) {
       <div className="ag-career-xp">
         <span className="ag-xpbar ag-xpbar--big"><span style={{ width: `${Math.max(2, p.lvl.pct * 100)}%` }} /></span>
         <span className="ag-career-xpn">
-          <b>LVL {p.lvl.level}</b> · {p.lvl.into.toLocaleString()} / {p.lvl.need.toLocaleString()} XP
+          <b>LVL {p.lvl.level}</b> · {p.lvl.max ? 'MAX for this season' : `${p.lvl.into.toLocaleString()} / ${p.lvl.need.toLocaleString()} XP`}
           {next && <em> · {next.name} at {next.level}</em>}
+          {p.bp && <em> · starts over next season</em>}
         </span>
       </div>
       <div className="ag-career-stats">

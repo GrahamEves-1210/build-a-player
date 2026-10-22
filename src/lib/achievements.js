@@ -67,9 +67,9 @@ export const ACHIEVEMENTS = [
   A('own25',     'Locker', 'Collector\'s Edition', 'Own 25 shop items',                      'crown',    'owned',   25,   300,  160),
   A('fullfit',   'Locker', 'Fresh Fit',            'Wear a nameplate, name color and name effect at once', 'star', 'fullFit', 1, 60,  40),
   A('coins10k',  'Locker', 'Coin Hoarder',         'Earn 10,000 coins',                      'coin',     'coinsEarned', 10000, 300, 0),
-  A('lvl10',     'Locker', 'Pro Bowler',           'Reach level 10',                         'medal',    'level',   10,   120,  80),
-  A('lvl25',     'Locker', 'All-Pro Career',       'Reach level 25',                         'medal',    'level',   25,   300,  200),
-  A('lvl50',     'Locker', 'Hall of Fame Career',  'Reach level 50',                         'trophy',   'level',   50,   900,  600),
+  A('lvl10',     'Locker', 'Pro Bowler',           'Reach level 10 in a season',             'medal',    'level',   10,   120,  80),
+  A('lvl25',     'Locker', 'MVP Season',           'Reach level 20 in a season',             'medal',    'level',   20,   300,  200),
+  A('lvl50',     'Locker', 'GOAT Season',          'Reach level 30 in a season',             'trophy',   'level',   30,   900,  600),
 ]
 export const ACH_GROUPS = ['Seasons', 'Titles', 'Builds', 'Cards', 'Daily', 'Live', 'Online', 'Locker']
 export const achById = id => ACHIEVEMENTS.find(a => a.id === id) ?? null

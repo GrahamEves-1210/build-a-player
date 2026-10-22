@@ -1166,7 +1166,7 @@ html.is-app .tpm-team-btn { border-radius: 12px !important; }
 .ag-freeze-buy:not(:disabled):active { transform: scale(.96); }
 .ag-freeze-buy:disabled { cursor: default; color: var(--ag-muted); background: rgba(255,255,255,.06); }
 .ag-freeze-buy:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
-.ag-streak-track { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 14px; }
+.ag-streak-track { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-top: 12px; }
 .ag-milestone {
   position: relative;
   display: flex; flex-direction: column; align-items: center; gap: 4px;
@@ -4747,7 +4747,7 @@ html.is-app { --drop-chrome: calc(352px + env(safe-area-inset-top) + env(safe-ar
 .nav-grades.is-off { border-color: #f87171; background: rgba(248,113,113,.12); color: #f87171; }
 /* website: the App Store badge under the menu */
 /* Players of the Day (AppHome): the top three by XP earned today */
-.ag-potd { display: grid; gap: 10px; margin: 14px 0 4px; padding: 14px; border-radius: 18px; border: 1.5px solid rgba(212,175,55,.45); background: radial-gradient(110% 80% at 0% 0%, rgba(212,175,55,.16), transparent 60%), var(--ag-panel); }
+.ag-potd { display: grid; gap: 10px; margin: 14px 14px 4px; padding: 14px; border-radius: 18px; border: 1.5px solid rgba(212,175,55,.45); background: radial-gradient(110% 80% at 0% 0%, rgba(212,175,55,.16), transparent 60%), var(--ag-panel); }
 .ag-potd-head { display: flex; align-items: center; gap: 10px; }
 .ag-potd-crown { display: grid; place-items: center; width: 34px; height: 34px; flex: none; border-radius: 10px; color: #1d1503; background: linear-gradient(135deg, #f5dc8a, #d4af37); box-shadow: 0 4px 12px rgba(212,175,55,.3); }
 .ag-potd-titles { display: grid; gap: 1px; }
@@ -5372,19 +5372,10 @@ html:is(.is-app, .app-look) .reels-wrap.rs-holo .reel-outer { border-width: 2px 
 .bp-art--reel .ip-reel { transform: scale(.48); }
 
 /* Daily → streak: the every-3-days XP row, and the milestones' prizes */
-.ag-streak-every { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; width: 100%; margin-top: 12px; padding: 9px 10px; border-radius: 12px; border: 1px solid var(--ag-line); background: rgba(0,0,0,.25); color: var(--ag-text); font: inherit; text-align: left; cursor: default; -webkit-tap-highlight-color: transparent; transition: transform .15s ease-out, border-color .15s; }
-.ag-streak-every.is-ready { cursor: pointer; border-color: rgba(255,140,60,.55); background: rgba(255,120,40,.12); }
-.ag-streak-every.is-ready:active { transform: scale(.98); }
-.ag-streak-every-ico { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 9px; background: rgba(255,120,40,.14); }
-.ag-streak-every-txt { display: grid; gap: 1px; min-width: 0; }
-.ag-streak-every-txt b { font-family: var(--ag-font); font-weight: 400; font-size: 15px; letter-spacing: 1.5px; }
-.ag-streak-every-txt small { font-family: var(--ag-body); font-size: 12px; color: var(--ag-muted); }
-.ag-streak-every-go { font-family: var(--ag-font); font-size: 14px; letter-spacing: 1.5px; color: var(--ag-muted); }
-.ag-streak-every.is-ready .ag-streak-every-go { color: #1d0f03; background: #ffb27a; padding: 5px 9px 3px; border-radius: 8px; }
 .ag-milestone-prize { display: grid; place-items: center; height: 48px; width: 100%; overflow: hidden; }
 .ag-milestone-prize .avb { --avs: 40px; width: 40px !important; height: 40px !important; }
-.ag-milestone-prize .ip-reel { transform: scale(.62); }
-.ag-milestone-prize .ip-ent { transform: scale(.62); }
+.ag-milestone-prize { position: relative; }
+.ag-milestone-prize .ip-reel, .ag-milestone-prize .ip-ent { max-width: none; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%) scale(.62); }
 .ag-milestone-name { font-family: var(--ag-font); font-size: 13px; letter-spacing: 1.2px; color: var(--rar, var(--ag-text)); line-height: 1; }
 .ag-milestone-state { display: grid; place-items: center; height: 16px; }
 .ag-milestone:not(.is-reached) .ag-milestone-prize { filter: saturate(.5) brightness(.75); }
@@ -5508,3 +5499,24 @@ html.bap-reduce-motion :is(.ss-overlay, .ss-sheet, .ss-img, .ss-skel) { animatio
 .ag-online-row:empty { display: none; }
 .ag-online-row .ag-online { height: 26px; font-size: 12px; background: rgba(0,0,0,.25); }
 .ag-online i { position: static !important; display: block; flex: 0 0 8px; margin: 0 !important; transform: none !important; }
+
+/* Daily: the streak ladder (3 / 7 / 21 / 60) */
+.ag-streak-next { margin: 10px 0 0; display: grid; gap: 2px; font-family: var(--ag-body); font-size: 14px; color: var(--ag-text); }
+.ag-streak-next b { color: #ffb27a; font-weight: 700; }
+.ag-streak-next small { font-size: 12px; color: var(--ag-muted); }
+.ag-streak-track .ag-milestone { padding-inline: 4px; min-width: 0; }
+.ag-streak-track .ag-milestone-day { font-size: 13px; letter-spacing: 1.5px; }
+.ag-streak-track .ag-milestone-name { font-size: 11.5px; letter-spacing: .8px; text-align: center; overflow-wrap: anywhere; }
+.ag-streak-track .ag-milestone-prize .ip-reel, .ag-streak-track .ag-milestone-prize .ip-ent { transform: translate(-50%, -50%) scale(.5); }
+.ag-milestone-xpbig { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: rgba(255,120,40,.14); }
+.ag-milestone-xpbig svg, .ag-milestone-xpbig img { width: 24px; height: 24px; }
+.ag-streak .ag-freeze { margin: 12px 0 0; }
+
+/* Weekly Cup: the prize per place */
+.ag-cup-prizes { display: grid; grid-template-columns: 1fr 1fr 1fr 1.35fr; gap: 6px; margin: 12px 0 2px; }
+.ag-cup-prizes > span { display: grid; justify-items: center; gap: 2px; padding: 7px 4px 6px; border-radius: 10px; background: rgba(0,0,0,.25); border: 1px solid var(--ag-line); }
+.ag-cup-prizes small { font-family: var(--ag-font); font-size: 12px; letter-spacing: 1.5px; color: var(--ag-muted); white-space: nowrap; }
+.ag-cup-prizes b { display: inline-flex; align-items: center; gap: 4px; font-family: var(--ag-font); font-weight: 400; font-size: 16px; letter-spacing: 1px; font-variant-numeric: tabular-nums; }
+.ag-cup-prizes > span:first-child { border-color: rgba(255,200,80,.45); background: rgba(255,200,80,.08); }
+
+.ag-levelup-pass { display: block; margin-top: 12px; font-family: var(--ag-body); font-size: 13px; font-weight: 600; color: var(--ag-a1); }

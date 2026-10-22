@@ -85,6 +85,7 @@ export function LevelUp({ hold }) {
             {spots.map(s => <span key={s.id} className="ag-unlock"><b>NEW SPOTLIGHT</b><i className={`ag-swatch ag-swatch--${s.id}`} />{s.name}</span>)}
           </div>
         )}
+        {p.bp?.ready > 0 && <span className="ag-levelup-pass">{p.bp.ready === 1 ? 'A reward is' : `${p.bp.ready} rewards are`} waiting on the Builder Pass</span>}
         <button className="ag-btn ag-levelup-btn" onClick={markLevelSeen}>CONTINUE</button>
       </div>
     </div>,

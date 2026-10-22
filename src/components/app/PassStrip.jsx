@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
-import { useProgress, claimPass } from '../../lib/progress'
-import { TIERS, TIER_XP } from '../../lib/pass'
+import { useProgress, claimPass, dayKey } from '../../lib/progress'
+import { TIERS, TIER_XP, daysLeft, daysLeftText } from '../../lib/pass'
 import { getUsername } from '../../lib/discord'
 import { sfx, haptic } from '../../lib/juice'
 import { RewardArt, rewardLabel } from './AppPass'
@@ -46,8 +46,8 @@ export default function PassStrip() {
     <section className="ps ag-pop" aria-label="Builder Pass">
       <button className="ps-head" onClick={() => nav('pass')}>
         <span className="ps-head-txt">
-          <span className="ag-eyebrow">BUILDER PASS · {s.name.toUpperCase()}</span>
-          <b>TIER {bp.tier}<small> / {TIERS}</small>{bp.owned && <i><IconCrown size={11} /> PREMIUM</i>}</b>
+          <span className="ag-eyebrow">BUILDER PASS · {s.name.toUpperCase()}{bp.over ? ' · OVER' : ` · ${daysLeftText(daysLeft(s, dayKey()))}`}</span>
+          <b>LEVEL {bp.tier}<small> / {TIERS}</small>{bp.owned && <i><IconCrown size={11} /> PREMIUM</i>}</b>
         </span>
         <span className="ps-head-go">{bp.ready > 0 ? `${bp.ready} TO CLAIM` : 'OPEN'} <IconArrow size={12} /></span>
       </button>

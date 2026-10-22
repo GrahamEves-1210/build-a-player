@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { useProgress, buy, equip, owns, priceOf, lockReason, dealsFor, claimFreeCoins, msToReset, isPro, COINS, achStats, walletOpen, hasDiscord, claimDiscordCoins, DISCORD_COINS, FEEDBACK_COINS, AD_COINS, AD_MAX, adsLeft, claimAdCoins, BOOSTS, buyBoost, buyFreeze, FREEZE_PRICE, FREEZE_MAX } from '../../lib/progress'
+import { useProgress, buy, equip, owns, priceOf, lockReason, dealsFor, claimFreeCoins, msToReset, isPro, COINS, achStats, walletOpen, hasDiscord, claimDiscordCoins, DISCORD_COINS, FEEDBACK_COINS, AD_COINS, AD_MAX, adsLeft, claimAdCoins, BOOSTS, buyBoost, buyFreeze, startRush, rushLeftMs, FREEZE_PRICE, FREEZE_MAX } from '../../lib/progress'
 import { openCheckout } from '../../lib/webCheckout'
 import { sellsHere, onStorefront } from '../../lib/storefront'
 import { showRewarded, rewardedReady, REWARDED_ON } from '../../lib/rewardedAd'
 import { IS_APP } from '../../lib/platform'
 import FeedbackModal from '../FeedbackModal'
 import { COIN_PACKS } from '../../lib/coins'
-import { connectDiscord } from '../../lib/discord'
+import { connectDiscord, discordError } from '../../lib/discord'
 import { SLOTS, RARITY, ITEMS, itemById, itemsFor, BLURB, DEFAULTS } from '../../lib/cosmetics'
 import { achById } from '../../lib/achievements'
 import { getUsername } from '../../lib/discord'
@@ -156,11 +156,12 @@ function FeedbackCoins({ p }) {
 // Join the Discord: one-time coins (linking Discord also joins the server)
 function DiscordCoins({ p }) {
   const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
   if (p.discordPaid) return null
   const linked = hasDiscord(p.user)
   const act = async () => {
     if (!p.signedIn) { signIn(); return }
-    if (!linked) { setBusy(true); const { error } = await connectDiscord(); if (error) setBusy(false); return }
+    if (!linked) { setBusy(true); setErr(''); const { error } = await connectDiscord(); if (error) { setBusy(false); setErr(discordError(error)) } return }
     if (claimDiscordCoins()) { sfx('coins'); haptic('success') }   // the payout is quiet: the coin drop here
   }
   return (
@@ -173,11 +174,12 @@ function DiscordCoins({ p }) {
         </span>
         <span className="sh-free-go">{!p.signedIn ? 'SIGN IN' : linked ? 'CLAIM' : busy ? '…' : 'JOIN'}</span>
       </button>
+      {err && <p className="cpk-note">{err}</p>}
     </div>
   )
 }
 
-// Boosts: consumables for coins (Coin Rush is on the Builder Pass only), and streak freezes
+// Boosts: consumables for coins (Coin Rush comes from the Builder Pass and is used here), and streak freezes
 const BOOST_ART = {
   xp: <span className="bp-art bp-art--boost"><IconBolt size={20} /></span>,
   rush: <span className="bp-art bp-art--rush"><span className="coin-ico" /><i>2x</i></span>,
@@ -185,9 +187,16 @@ const BOOST_ART = {
   heal: <span className="bp-art bp-art--heal"><b>+</b></span>,
   freeze: <span className="bp-art bp-art--freeze"><IconShield size={20} /></span>,
 }
+// a slot's items in the shop: vaulted ones (kept for future rewards) only once owned
+const shown = slot => itemsFor(slot).filter(i => !i.vault || owns(i.id))
+
 function Boosts({ p, onNeedCoins }) {
   const [msg, setMsg] = useState('')
   const [got, setGot] = useState(null)
+  const [, tick] = useState(0)
+  useEffect(() => { const t = setInterval(() => tick(n => n + 1), 30000); return () => clearInterval(t) }, [])
+  const rushMs = rushLeftMs()
+  const useRush = () => { if (startRush()) { sfx('coins'); haptic('success'); setGot('rush'); setTimeout(() => setGot(g => (g === 'rush' ? null : g)), 900) } }
   const rows = [
     ...Object.entries(BOOSTS).map(([k, b]) => ({ k, name: b.per > 1 ? `${b.name} · ${b.per} ${b.unit}s` : b.name, desc: b.desc, price: b.price, passOnly: b.passOnly, have: p.boosts?.[k] ?? 0, unit: b.unit })),
     { k: 'freeze', name: 'Streak Freeze', desc: `Covers one missed day of your login streak. Hold up to ${FREEZE_MAX}.`, price: FREEZE_PRICE, have: p.streak?.freezes ?? 0, unit: 'freeze', full: (p.streak?.freezes ?? 0) >= FREEZE_MAX },
@@ -209,9 +218,12 @@ function Boosts({ p, onNeedCoins }) {
             <span className="bst-txt">
               <b>{r.name}</b>
               <small>{r.desc}</small>
-              {p.signedIn && <em>{r.have > 0 ? `You have ${r.have} ${r.unit === 'season' ? `boosted season${r.have === 1 ? '' : 's'}` : r.have === 1 ? r.unit : `${r.unit}s`}` : 'None yet'}</em>}
+              {r.k === 'rush' && rushMs > 0 && <em className="bst-on">ON · {fmtLeft(rushMs)} left</em>}
+              {p.signedIn && !(r.k === 'rush' && rushMs > 0 && !r.have) && <em>{r.have > 0 ? `You have ${r.have} ${r.unit === 'season' ? `boosted season${r.have === 1 ? '' : 's'}` : r.unit === 'rush' ? `Coin Rush${r.have === 1 ? '' : 'es'}` : r.have === 1 ? r.unit : `${r.unit}s`}` : 'None yet'}</em>}
             </span>
-            {r.passOnly
+            {r.k === 'rush' && r.have > 0
+              ? <button className="bst-buy is-use" onClick={useRush}>{rushMs > 0 ? '+3 HRS' : 'USE'}</button>
+              : r.passOnly
               ? <button className="bst-buy is-pass" onClick={() => nav('pass')}>PASS</button>
               : <button className="bst-buy" onClick={() => buyIt(r.k)} disabled={r.full}>{r.full ? 'FULL' : <><span className="coin-ico coin-ico--sm" />{r.price.toLocaleString()}</>}</button>}
           </div>
@@ -234,7 +246,6 @@ function ItemCard({ item, deal, equipped, onOpen, delay = 0, name }) {
         {item.streak && !mine && <span className="sh-flag sh-flag--ach"><IconFlame size={10} /> STREAK</span>}
         {item.cup && !mine && <span className="sh-flag sh-flag--ach"><IconStar size={10} /> CUP</span>}
         {!item.pro && item.ach && !mine && <span className="sh-flag sh-flag--ach"><IconStar size={10} /> REWARD</span>}
-        {!item.pro && !item.ach && item.level && !mine && lock && <span className="sh-flag sh-flag--lvl"><IconLock size={10} /> LVL {item.level}</span>}
         {deal != null && !mine && <span className="sh-flag sh-flag--deal">-30%</span>}
         <ItemPreview item={item} name={name} />
       </span>
@@ -314,7 +325,6 @@ function ItemSheet({ id, onClose, name, onNeedCoins }) {
           <>
             <div className="sh-lock"><IconLock size={14} /> {lock.toUpperCase()}</div>
             {ach && <div className="sh-hint">{ach.desc} · {achNow.toLocaleString()}/{ach.goal.toLocaleString()} <button className="ag-chip" style={{ marginLeft: 6 }} onClick={() => { onClose(); nav('achievements') }}>VIEW</button></div>}
-            {item.level && !item.ach && !item.pro && <div className="sh-hint">{p.signedIn ? <>You're level <b>{p.lvl.level}</b>. Seasons, missions and achievements all give XP.</> : <>Levels need an account. <b>Sign in</b> to start earning XP.</>}</div>}
             {item.pro && <div className="sh-hint">The Pro Vault is open to <b>BAP Pro</b> members. <button className="ag-chip" style={{ marginLeft: 6 }} onClick={() => { onClose(); nav('pro') }}>SEE PRO</button></div>}
             {item.cup && <div className="sh-hint">Finish a week of Daily Challenges in the Weekly Cup's top 10. <button className="ag-chip" style={{ marginLeft: 6 }} onClick={() => { onClose(); nav('daily') }}>DAILY</button></div>}
             {item.streak && <div className="sh-hint">Log in {item.streak} days in a row, then claim it on the Daily tab. <button className="ag-chip" style={{ marginLeft: 6 }} onClick={() => { onClose(); nav('daily') }}>DAILY</button></div>}
@@ -357,7 +367,7 @@ export default function AppShop({ onClose, tab: initialTab = 'featured' }) {
   const sells = useSells()
   const tabs = sells ? TABS : TABS.filter(t => t.id !== 'coins')
   const ownedCount = ITEMS.filter(i => owns(i.id) && !i.free).length
-  const reach = useMemo(() => ITEMS.filter(i => !i.unlock && !owns(i.id) && !lockReason(i.id) && i.price && !i.ach && priceOf(i.id) <= Math.max(300, (p.coins ?? 0))).sort((a, b) => b.price - a.price).slice(0, 4), [p.coins, p.owned]) // eslint-disable-line react-hooks/exhaustive-deps
+  const reach = useMemo(() => ITEMS.filter(i => !i.unlock && !owns(i.id) && !lockReason(i.id) && i.price && !i.ach && !i.vault && priceOf(i.id) <= Math.max(300, (p.coins ?? 0))).sort((a, b) => b.price - a.price).slice(0, 4), [p.coins, p.owned]) // eslint-disable-line react-hooks/exhaustive-deps
   const claim = () => {
     if (!p.freeReady) return
     const n = claimFreeCoins()
@@ -395,7 +405,7 @@ export default function AppShop({ onClose, tab: initialTab = 'featured' }) {
       <div className="sh-tabs" role="tablist">
         {tabs.map(t => (
           <button key={t.id} role="tab" aria-selected={tab === t.id} className={`sh-tab${tab === t.id ? ' is-on' : ''}`} onClick={() => { setTab(t.id); sfx('tap') }}>
-            {t.label}{SLOTS.some(s => s.id === t.id) && <b>{itemsFor(t.id).filter(i => owns(i.id)).length}/{itemsFor(t.id).length}</b>}
+            {t.label}{SLOTS.some(s => s.id === t.id) && <b>{shown(t.id).filter(i => owns(i.id)).length}/{shown(t.id).length}</b>}
           </button>
         ))}
       </div>
@@ -473,7 +483,7 @@ export default function AppShop({ onClose, tab: initialTab = 'featured' }) {
           <div className="sh-section-head"><span className="sh-section-title">{SLOTS.find(s => s.id === tab)?.label.toUpperCase()}</span><span className="sh-section-note">{BLURB[tab]}</span></div>
           <div className="sh-grid">
             {DEFAULTS[tab] === null && <DefaultCard slot={tab} equipped={!p.equip?.[tab]} onPick={() => pickDefault(tab)} name={name} />}
-            {(tab === 'court' ? itemsFor(tab) : itemsFor(tab).sort((a, b) => (a.pro - b.pro) || (!!a.pass - !!b.pass) || (!!(a.ach || a.streak || a.cup) - !!(b.ach || b.streak || b.cup)) || (a.rarity - b.rarity) || (a.price - b.price))).map((i, k) => (   // courts: the catalog's order (cities, seasons, the rest)
+            {(tab === 'court' ? shown(tab) : shown(tab).sort((a, b) => (a.pro - b.pro) || (!!a.pass - !!b.pass) || (!!(a.ach || a.streak || a.cup) - !!(b.ach || b.streak || b.cup)) || (a.rarity - b.rarity) || (a.price - b.price))).map((i, k) => (   // courts: the catalog's order (cities, seasons, the rest)
               <ItemCard key={i.id} item={i} deal={dealPrice(i.id)} equipped={p.equip?.[i.slot] === i.id} onOpen={setOpen} delay={k * 25} name={name} />
             ))}
           </div>

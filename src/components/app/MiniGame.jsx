@@ -588,7 +588,7 @@ function Routes({ v, onDone }) {
     const p = routeAt(rt.pts, u)
     if (rcv.current) rcv.current.style.transform = `translate3d(${p.x}cqw, ${p.y * 0.6}cqw, 0)`
     // never thrown: the route runs out
-    if (!st.current.threw && u > 1.08) { st.current.threw = true; sfx('pop'); setThrown({ at: p, hit: false, note: 'NO THROW' }); finish(0, 'late') }
+    if (!st.current.threw && u > 1.08) { st.current.threw = true; sfx('deny'); setThrown({ at: p, hit: false, note: 'NO THROW' }); finish(0, 'late') }
     return u < 1.6
   }, true, [i])
   const tap = () => {
@@ -709,7 +709,7 @@ function Gauntlet({ v, seed, onDone }) {
     // the lowest ball in the air in this lane
     let best = -1, bp = -1
     balls.forEach((b, k) => { const p = posOf(b, t); if (b.lane === lane && st.current[k] == null && p >= 0 && p > bp) { best = k; bp = p } })
-    if (best < 0) { sfx('pop'); return }
+    if (best < 0) { sfx('deny'); return }
     const d = Math.abs(bp - (100 - zone / 2))
     st.current[best] = d <= zone / 2 + 2 ? clamp(1 - d / zone, 0.5, 1) : 0
     sfx(st.current[best] ? 'tap' : 'pop'); haptic(st.current[best] ? 'light' : 'heavy')

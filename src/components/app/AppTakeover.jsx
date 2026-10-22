@@ -498,7 +498,7 @@ function HoopsDuel({ duel, run, city, me, onDone }) {
   const outTo = shown >= idx ? idx : idx - 1
   useEffect(() => {
     if (idx >= plays.length - 1) {
-      if (!done.current) { done.current = true; setTimeout(() => { if (duel.win) victory(); else sfx('pop'); onDone(duel.win) }, 2200) }
+      if (!done.current) { done.current = true; setTimeout(() => { if (duel.win) victory(); else sfx('deny'); onDone(duel.win) }, 2200) }
       return
     }
     const t = setTimeout(() => setIdx(i => i + 1), playDelay(play, idx === 0) / speed)
@@ -594,13 +594,13 @@ function FootballDuel({ duel, run, city, me, onDone }) {
   const done = useRef(false)
   useEffect(() => {
     if (idx >= plays.length - 1) {
-      if (!done.current) { done.current = true; setTimeout(() => { if (duel.win) victory(); else sfx('pop'); onDone(duel.win) }, 2200) }
+      if (!done.current) { done.current = true; setTimeout(() => { if (duel.win) victory(); else sfx('deny'); onDone(duel.win) }, 2200) }
       return
     }
     const t = setTimeout(() => setIdx(i => i + 1), play?.kind === 'td' ? 1700 : 1250)
     return () => clearTimeout(t)
   }, [idx]) // eslint-disable-line
-  useEffect(() => { if (play?.kind === 'td') sfx(play.team === 0 ? 'lock' : 'pop'); else if (play?.kind === 'to') sfx('pop') }, [idx]) // eslint-disable-line
+  useEffect(() => { if (play?.kind === 'td') sfx(play.team === 0 ? 'lock' : 'deny'); else if (play?.kind === 'to') sfx('deny') }, [idx]) // eslint-disable-line
   const score = play?.score ?? [0, 0]
   const feed = plays.slice(0, idx + 1).slice(-5).reverse()
   const opp = lift(city.color)

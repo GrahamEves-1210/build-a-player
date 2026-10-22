@@ -9,7 +9,7 @@ import { PASS_ITEMS } from './pass'
 //   rarity   0 common · 1 rare · 2 epic · 3 legendary
 //   pro      BAP Pro members only (the Pro Vault)
 //   pass     on a Builder Pass track (lib/pass.js PASS_ITEMS): claimed there, never sold
-//   level    unlocks at a level (still bought with coins)
+//   vault    kept back for a future season's rewards: not sold (owners keep theirs)
 //   ach      an achievement reward — never sold
 //   streak   a login-streak reward (days) — never sold
 //   cup      a Weekly Cup reward (a top-10 week) — never sold
@@ -65,9 +65,9 @@ const AV = [
   it('avatar', 'av-chrome',    'Chrome Dome', 2, 6200, { glyph: 'helmet', pal: 'chrome', anim: 'shine' }),
   it('avatar', 'av-mono-neon', 'Neon Monogram', 2, 7200, { glyph: 'mono', pal: 'neon', anim: 'pulse' }),
   it('avatar', 'av-glacier',   'Glacier', 2, 6000, { glyph: 'star', pal: 'glacier', anim: 'shine' }),
-  it('avatar', 'av-goat',      'G.O.A.T.', 3, 19000, { glyph: 'crown', pal: 'holo', anim: 'holo', level: 20 }),
-  it('avatar', 'av-galaxy',    'Galaxy Brain', 3, 26500, { glyph: 'star', pal: 'galaxy', anim: 'spin' }),
-  it('avatar', 'av-trophy-gold', 'Lombardi Gold', 3, 23000, { glyph: 'trophy', pal: 'gold', anim: 'shine', level: 30 }),
+  it('avatar', 'av-goat',      'G.O.A.T.', 3, 19000, { glyph: 'crown', pal: 'holo', anim: 'holo', vault: true }),
+  it('avatar', 'av-galaxy',    'Galaxy Brain', 3, 26500, { glyph: 'star', pal: 'galaxy', anim: 'spin', vault: true }),
+  it('avatar', 'av-trophy-gold', 'Lombardi Gold', 3, 23000, { glyph: 'trophy', pal: 'gold', anim: 'shine', vault: true }),
   it('avatar', 'av-pro-diamond', 'Diamond', 3, 17000, { glyph: 'mono', pal: 'diamond', anim: 'shine', pro: true }),
   it('avatar', 'av-pro-blackgold', 'Black & Gold', 2, 5000, { glyph: 'crown', pal: 'blackgold' }),
   it('avatar', 'av-dynasty',   'Dynasty',        3, 0, { glyph: 'ring', pal: 'holo', anim: 'holo', ach: 'rings5' }),
@@ -96,7 +96,7 @@ const NC = [
   it('nameColor', 'nc-neon',    'Neon', 2, 5400),
   it('nameColor', 'nc-chrome',  'Chrome', 2, 6200),
   it('nameColor', 'nc-prism',   'Prism', 2, 7200),
-  it('nameColor', 'nc-holo',    'Holo', 3, 19000, { level: 15 }),
+  it('nameColor', 'nc-holo',    'Holo', 3, 19000, { vault: true }),
   it('nameColor', 'nc-pro-blackgold', 'Black Gold', 2, 4800),
   it('nameColor', 'nc-pro-platinum',  'Platinum', 3, 15500),
   it('nameColor', 'nc-fivetool', 'Color Block',  3, 0, { ach: 'fivetool' }),
@@ -116,8 +116,8 @@ const NFX = [
   it('nameFx', 'nfx-neon',     'Neon Flicker', 2, 6000),
   it('nameFx', 'nfx-glitch',   'Glitch', 2, 7200),
   it('nameFx', 'nfx-heat',     'Heat Haze', 2, 6600),
-  it('nameFx', 'nfx-electric', 'Electric', 3, 21500, { level: 25 }),
-  it('nameFx', 'nfx-spotlight','Spotlight', 3, 24000),
+  it('nameFx', 'nfx-electric', 'Electric', 3, 21500, { vault: true }),
+  it('nameFx', 'nfx-spotlight','Spotlight', 3, 24000, { vault: true }),
   it('nameFx', 'nfx-pro-aura', 'Pro Aura', 3, 17000, { pro: true }),
 ]
 
@@ -140,7 +140,7 @@ const PL = [
   it('plate', 'pl-lava',       'Lava Flow', 2, 7200),
   it('plate', 'pl-stadium',    'Stadium Lights', 2, 8200),
   it('plate', 'pl-galaxy',     'Galaxy', 3, 21500),
-  it('plate', 'pl-hof',        'Hall of Fame', 3, 29000, { level: 40 }),
+  it('plate', 'pl-hof',        'Hall of Fame', 3, 29000, { vault: true }),
   it('plate', 'pl-pro-blackgold', 'Black Gold', 2, 5000),
   it('plate', 'pl-pro-holo',   'Pro Holo', 3, 17000, { pro: true }),
   it('plate', 'pl-perfect',    'Perfect Season',  3, 0, { ach: 'perfect' }),
@@ -158,8 +158,8 @@ const WF = [
   it('winFx', 'fx-fireworks', 'Fireworks', 2, 6000),
   it('winFx', 'fx-lightning', 'Lightning', 2, 7800),
   it('winFx', 'fx-spotlights','Spotlights', 2, 7000),
-  it('winFx', 'fx-flames',    'Flame Burst', 3, 21500),
-  it('winFx', 'fx-lasers',    'Laser Show', 3, 30000, { level: 35 }),
+  it('winFx', 'fx-flames',    'Flame Burst', 3, 21500, { vault: true }),
+  it('winFx', 'fx-lasers',    'Laser Show', 3, 30000, { vault: true }),
   it('winFx', 'fx-pro-supernova', 'Supernova', 3, 19000, { pro: true }),
 ]
 
@@ -218,7 +218,7 @@ const RS = [
   it('reel', 'rs-gold',     'Gold Rush', 2, 6000),
   it('reel', 'rs-neon',     'Neon Arcade', 2, 6600),
   it('reel', 'rs-vegas',    'Vegas Lights', 3, 18000),
-  it('reel', 'rs-holo',     'Holo', 3, 21000),
+  it('reel', 'rs-holo',     'Holo', 3, 21000, { vault: true }),
   it('reel', 'rs-wildfire', 'Wildfire', 3, 0, { streak: 21 }),
 ]
 
@@ -262,7 +262,7 @@ const BY_ID = Object.fromEntries(ITEMS.map(i => [i.id, i]))
 export const itemById = id => (id ? BY_ID[id] ?? null : null)
 export const itemsFor = slot => ITEMS.filter(i => i.slot === slot)
 export const isFree = i => !!i?.free
-export const forSale = i => !!i && !i.ach && !i.free && !i.pass && !i.streak && !i.cup
+export const forSale = i => !!i && !i.ach && !i.free && !i.pass && !i.streak && !i.cup && !i.vault
 
 // One line of copy for the detail sheet
 export const BLURB = {

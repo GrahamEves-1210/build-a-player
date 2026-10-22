@@ -5,7 +5,7 @@ import { IS_APP, APP_LOOK } from '../lib/platform'
 import AppMenu from './app/AppMenu'
 import AuthModal from './AuthModal'
 import AppToasts, { LevelUp } from './app/AppToasts'
-import { useProgress, STREAK_REWARDS, streakEveryReady, missionDef, cardsOpen } from '../lib/progress'
+import { useProgress, STREAK_REWARDS, missionDef, cardsOpen } from '../lib/progress'
 import { IconBag, IconProfile, IconCalendar, IconTrophy } from './app/icons'
 import PlayButton from './app/PlayButton'
 import { startPresence } from '../lib/presence'
@@ -54,7 +54,7 @@ function Tab({ label, Icon, active, onClick, badge }) {
 function useDailyBadge() {
   const p = useProgress()
   const missions = (p.day?.missions ?? []).filter(m => !m.claimed && m.n >= (missionDef(m.id)?.goal ?? Infinity)).length
-  const streak = STREAK_REWARDS.filter(r => p.streak.count >= r.days && !p.streak.claimed?.[r.days]).length + (p.signedIn && streakEveryReady(p.streak) ? 1 : 0)
+  const streak = STREAK_REWARDS.filter(r => p.streak.count >= r.days && !p.streak.claimed?.[r.days]).length
   return missions + streak
 }
 

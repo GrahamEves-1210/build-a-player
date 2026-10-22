@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { XpIco } from './GainIcons'
-import { useProgress, dailyState, fetchDailyBoard, fetchWeeklyCup, weekOf, weekEnds, CUP_COINS, CUP_ITEM, msToReset, claimMission, claimStreak, claimStreakEvery, streakEveryReady, STREAK_EVERY, missionDef, STREAK_REWARDS, SPOTLIGHTS, buyFreeze, FREEZE_PRICE, FREEZE_MAX, streakLost, restoreStreak } from '../../lib/progress'
+import { useProgress, dailyState, fetchDailyBoard, fetchWeeklyCup, weekOf, weekEnds, CUP_COINS, CUP_ITEM, msToReset, claimMission, claimStreak, missionDef, STREAK_REWARDS, SPOTLIGHTS, buyFreeze, FREEZE_PRICE, FREEZE_MAX, streakLost, restoreStreak } from '../../lib/progress'
 import { sfx, haptic } from '../../lib/juice'
 import { IS_APP } from '../../lib/platform'
 import WatchVideo from './WatchVideo'
@@ -40,6 +40,8 @@ function Freeze({ p }) {
 
 function Streak({ p }) {
   const st = p.streak
+  const next = STREAK_REWARDS.find(r => st.count < r.days)
+  const waiting = STREAK_REWARDS.filter(r => st.count >= r.days && !st.claimed?.[r.days]).length
   const claim = days => { if (!p.signedIn) { window.dispatchEvent(new CustomEvent('bap:auth')); return } if (claimStreak(days)) { sfx('coins'); haptic('success') } }   // streak rewards pay coins
   return (
     <section className="ag-card ag-streak ag-pop" style={{ '--d': '40ms' }}>
@@ -51,24 +53,16 @@ function Streak({ p }) {
         </span>
         <span className="ag-streak-best">BEST {st.best}</span>
       </div>
+      <p className="ag-streak-next">
+        {waiting ? <b>{waiting === 1 ? 'A reward is' : `${waiting} rewards are`} ready to claim</b>
+          : next ? <>Day {next.days} reward in <b>{next.days - st.count} day{next.days - st.count === 1 ? '' : 's'}</b></>
+          : <b>Every reward claimed. Keep it alive.</b>}
+        <small>Miss a day without a freeze and it starts over at day 1.</small>
+      </p>
       {IS_APP && p.signedIn && streakLost() && (
         <WatchVideo className="ag-streak-restore" label={`WATCH VIDEO · SAVE YOUR ${streakLost().count}-DAY STREAK`} sub="It broke. A short video ad brings it back, as if you never missed. Once a week."
           onReward={() => restoreStreak()} />
       )}
-      <Freeze p={p} />
-      {/* every 3 days: XP, for as long as the streak lasts */}
-      {(() => {
-        const ready = p.signedIn ? streakEveryReady(st) : 0
-        const next = (Math.floor(st.count / STREAK_EVERY.days) + 1) * STREAK_EVERY.days
-        return (
-          <button className={`ag-streak-every${ready ? ' is-ready' : ''}`} disabled={!ready && p.signedIn}
-            onClick={() => { if (!p.signedIn) { window.dispatchEvent(new CustomEvent('bap:auth')); return } if (claimStreakEvery()) { sfx('coins'); haptic('success') } }}>
-            <span className="ag-streak-every-ico"><XpIco /></span>
-            <span className="ag-streak-every-txt"><b>EVERY {STREAK_EVERY.days} DAYS · +{STREAK_EVERY.xp} XP</b><small>{ready ? `${ready * STREAK_EVERY.xp} XP waiting` : `Next at day ${next}`}</small></span>
-            <span className="ag-streak-every-go">{!p.signedIn ? 'SIGN IN' : ready ? 'CLAIM' : `${next - st.count}d`}</span>
-          </button>
-        )
-      })()}
       <div className="ag-streak-track">
         {STREAK_REWARDS.map(r => {
           const reached = st.count >= r.days
@@ -79,8 +73,8 @@ function Streak({ p }) {
             <button key={r.days} className={`ag-milestone${reached ? ' is-reached' : ''}${claimed ? ' is-claimed' : ''}`} style={item ? { '--rar': RARITY[item.rarity].color } : undefined}
               disabled={!reached || claimed} onClick={() => claim(r.days)}>
               <span className="ag-milestone-day">DAY {r.days}</span>
-              <span className="ag-milestone-prize">{item && <ItemPreview item={item} name={getUsername(p.user) || 'Guest'} />}</span>
-              <span className="ag-milestone-name">{item?.name}</span>
+              <span className="ag-milestone-prize">{item ? <ItemPreview item={item} name={getUsername(p.user) || 'Guest'} /> : <span className="ag-milestone-xpbig"><XpIco /></span>}</span>
+              <span className="ag-milestone-name">{item?.name ?? 'XP Bonus'}</span>
               <span className="ag-milestone-xp">{p.signedIn ? <span className="gain"><XpIco /> +{r.xp}</span> : 'SIGN IN'}</span>
               {spot && <span className="ag-milestone-extra"><i className={`ag-swatch ag-swatch--${spot.id}`} />{spot.name}</span>}
               <span className="ag-milestone-state">{claimed ? <IconCheck size={16} /> : reached ? <span className="ag-milestone-claim">CLAIM</span> : <IconLock size={14} />}</span>
@@ -88,6 +82,7 @@ function Streak({ p }) {
           )
         })}
       </div>
+      <Freeze p={p} />
     </section>
   )
 }
@@ -159,8 +154,13 @@ function WeeklyCup({ p }) {
         <span className="ag-cup-titles">
           <span className="ag-eyebrow">WEEKLY CUP · ENDS {fmtDay(weekEnds()).toUpperCase()}</span>
           <b>Every Daily counts</b>
-          <small>Each Daily's OVR adds up, Monday to Sunday. The top 10 win {CUP_COINS[0].toLocaleString()}–{CUP_COINS[9].toLocaleString()} coins and the Cup Contender avatar.</small>
+          <small>Your Daily OVRs add up, Monday to Sunday. Finish top 10 for coins and the Cup Contender avatar.</small>
         </span>
+      </div>
+      <div className="ag-cup-prizes">
+        {[['1ST', CUP_COINS[0]], ['2ND', CUP_COINS[1]], ['3RD', CUP_COINS[2]], ['4TH–10TH', CUP_COINS[3]]].map(([place, n]) => (
+          <span key={place}><small>{place}</small><b><span className="coin-ico coin-ico--sm" />{n.toLocaleString()}</b></span>
+        ))}
       </div>
       {won && <p className="ag-cup-won">Last week: #{won.place}. The Cup Contender avatar is in the Locker.</p>}
       <div className="ag-board">

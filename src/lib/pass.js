@@ -12,8 +12,8 @@
 // cosmetics in a pass are pass-only (cosmetics.js marks them; never sold for coins).
 // Keep the season ids and prices in step with server/server.js and functions/api.
 
-export const TIER_XP = 400
-export const TIERS = 50
+export const TIER_XP = 500
+export const TIERS = 30
 export const PASS_PRICE = '$8.99'
 
 const c = n => ({ coins: n })
@@ -21,26 +21,21 @@ const fz = () => ({ freeze: 1 })
 const bx = n => ({ boost: n })
 const pk = (n, min = 0) => ({ pack: n, min })
 const i = id => ({ item: id })
-const cr = n => ({ rush: n })      // Coin Rush: the next n seasons pay double coins
+const cr = n => ({ rush: n })      // Coin Rush: n × 3 hours of double coins from games, started when used
 const hh = n => ({ hot: n })       // Hot Hand (Career)
 const qh = n => ({ heal: n })      // Quick Heal (Career)
 
 // tier → reward (tiers missing from the free track have nothing there)
 const S1_FREE = {
-  2: c(100), 4: i('av-whistle'), 6: c(150), 8: fz(), 10: i('pl-chalk'), 12: cr(3), 14: pk(3), 16: c(200),
-  18: i('snd-badge'), 20: bx(3), 22: hh(1), 24: i('fx-streamers'), 26: c(250), 28: i('rs-chrome'), 30: i('nc-turf'),
-  32: qh(1), 34: pk(3), 36: c(300), 38: bx(3), 40: i('pl-scoreboard'), 42: i('ent-frost'), 44: fz(), 46: pk(3, 1),
-  48: c(400), 50: i('av-rivalry'),
+  2: c(150), 4: i('av-whistle'), 6: fz(), 8: cr(1), 10: i('pl-chalk'), 12: pk(3), 14: c(250), 16: i('rs-chrome'),
+  18: bx(3), 20: i('nc-turf'), 22: hh(1), 24: c(350), 26: i('ent-frost'), 28: pk(3, 1), 30: i('av-rivalry'),
 }
 const S1_PREMIUM = {
-  1: i('av-storm'), 2: c(300), 3: i('nc-aurora'), 4: bx(3), 5: i('snd-nope'), 6: c(300), 7: pk(3, 1),
-  8: i('nfx-frost'), 9: cr(3), 10: i('pl-neongrid'), 11: fz(), 12: c(350), 13: i('fx-shockwave'), 14: pk(3, 1),
-  15: i('nc-pro-blackgold'), 16: hh(2), 17: i('ent-glitch'), 18: i('snd-train'), 19: c(400), 20: i('av-pro-blackgold'),
-  21: qh(2), 22: c(450), 23: i('nfx-glitch'), 24: pk(5, 1), 25: i('pl-pro-blackgold'), 26: c(450),
-  27: i('fx-lightning'), 28: bx(5), 29: cr(5), 30: i('nc-prism'), 31: pk(3, 2), 32: c(500), 33: i('rs-vegas'),
-  34: i('snd-cannon'), 35: c(550), 36: i('nfx-spotlight'), 37: bx(5), 38: i('ent-fire'), 39: pk(5, 2),
-  40: i('fx-flames'), 41: c(600), 42: i('nc-pro-platinum'), 43: fz(), 44: hh(3), 45: i('pl-galaxy'),
-  46: i('rs-holo'), 47: c(700), 48: i('av-galaxy'), 49: c(800), 50: i('ct-space'),
+  1: i('av-storm'), 2: c(300), 3: i('nc-aurora'), 4: cr(1), 5: i('snd-nope'), 6: pk(3, 1), 7: i('nfx-frost'), 8: c(400),
+  9: i('pl-neongrid'), 10: bx(3), 11: i('fx-shockwave'), 12: hh(2), 13: i('nc-pro-blackgold'), 14: c(500), 15: i('ent-glitch'),
+  16: i('av-pro-blackgold'), 17: qh(2), 18: i('snd-train'), 19: pk(5, 2), 20: i('nfx-glitch'), 21: c(600), 22: i('pl-pro-blackgold'),
+  23: cr(2), 24: i('fx-lightning'), 25: i('rs-vegas'), 26: c(700), 27: i('ent-fire'), 28: i('nc-pro-platinum'), 29: i('pl-galaxy'),
+  30: i('ct-space'),
 }
 
 // start / end: days in New York time; the season runs from start up to (not including) end.
@@ -57,6 +52,9 @@ export function passSeason(day) {
   return SEASONS.find(s => day >= s.start && day < addDays(s.end, CLAIM_DAYS)) ?? null
 }
 export const seasonOver = (s, day) => !!s && day >= s.end
+// whole days until the season ends (it ends the morning of `end`)
+export const daysLeft = (s, day) => Math.max(0, Math.round((Date.parse(`${s.end}T12:00:00Z`) - Date.parse(`${day}T12:00:00Z`)) / 86400000))
+export const daysLeftText = n => `${n} ${n === 1 ? 'DAY' : 'DAYS'} LEFT`
 export const nextSeason = day => SEASONS.find(s => s.start > day) ?? null
 export const tierAt = xp => Math.min(TIERS, 1 + Math.floor(Math.max(0, xp) / TIER_XP))
 export const xpForTier = t => (t - 1) * TIER_XP

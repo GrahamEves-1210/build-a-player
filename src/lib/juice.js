@@ -789,12 +789,9 @@ export function initJuice() {
   document.addEventListener('touchend', endScroll, { capture: true, passive: true })
   document.addEventListener('touchcancel', endScroll, { capture: true, passive: true })
 
-  // a screen opened from the dock (Shop, Daily, Cards) ticks like the other tabs: no whoosh
-  let dockAt = 0
   document.addEventListener('click', e => {
     const el = e.target.closest?.(TAP)
     if (!el || el.disabled) return
-    if (el.matches('.ag-tab')) dockAt = Date.now()
     if (el.matches('[aria-label="Settings and more"]')) { audio(); return }   // More opens silently
     audio()                                   // unlock audio on the first gesture (iOS); loads the samples
     if (el.matches('.spin-btn, .spin-respin-half')) {
@@ -833,8 +830,8 @@ export function initJuice() {
         if (you && !seen.has(you)) { seen.add(you); setTimeout(() => celebrate(false), 150) }
         const champ = n.matches?.('.plf-champ-label') ? n : n.querySelector?.('.plf-champ-label')
         if (champ && !seen.has(champ)) { seen.add(champ); setTimeout(() => celebrate(true), 250) }
-        if (n.matches?.('.ag-screen') && Date.now() - dockAt < 1500) continue
-        if (n.matches?.('.auth-overlay, .tpm-overlay, .ag-screen, .bt-sheet-overlay, .cr-overlay')) sfx('pop')
+        // the whoosh is for sheets sliding up; screens (and tabs inside them, like the Hall's) just tick
+        if (n.matches?.('.auth-overlay, .tpm-overlay, .bt-sheet-overlay, .cr-overlay')) sfx('pop')
       }
     }
   }).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'], attributeOldValue: true })

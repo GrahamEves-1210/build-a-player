@@ -26,6 +26,15 @@ export function connectDiscord() {
   return supabase.auth.linkIdentity({ provider: 'discord', options: { scopes: SCOPES, redirectTo: returnTo() } })
 }
 
+// What went wrong linking Discord, in words a player can act on (the real reason, not "try again")
+export function discordError(error) {
+  const m = String(error?.message || error || '')
+  if (/manual linking/i.test(m)) return 'Linking Discord is switched off right now. Sign out and use "Continue with Discord" instead.'
+  if (/already.*(linked|exists|registered)|identity_already_exists/i.test(m)) return 'That Discord is already on another Build-A-Player account. Sign in with Discord to use that one.'
+  if (/session|jwt|not authenticated|missing/i.test(m)) return 'Your sign-in expired. Sign in again, then connect Discord.'
+  return m ? `Could not connect Discord: ${m}` : 'Could not connect Discord. Try again.'
+}
+
 export const hasDiscord = user => !!user?.identities?.some(i => i.provider === 'discord')
 
 // The name to show / save for a player — never their real email. Username

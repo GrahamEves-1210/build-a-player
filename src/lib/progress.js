@@ -14,7 +14,7 @@ import { useSyncExternalStore } from 'react'
 import { supabase } from './supabase'
 import { getUsername } from './discord'
 import { itemById, forSale, DEFAULTS, ITEMS } from './cosmetics'
-import { passSeason, seasonById, seasonOver, tierAt, xpForTier } from './pass'
+import { passSeason, seasonById, seasonOver, tierAt, xpForTier, TIER_XP, TIERS } from './pass'
 import { competeDelta, blacktopDelta, FORFEIT_RATING } from './rating'
 import { track } from './track'
 import { ACHIEVEMENTS, achById } from './achievements'
@@ -39,29 +39,29 @@ import { dailyFor } from './verifyCore'
 import { saveDaily } from './submit'
 import { seeded } from './rng'
 
-// ── Levels, titles, unlocks ──────────────────────────────────────────────────
-// XP to go from level L to L+1 = 200 + 75·(L−1): early levels come in a few
-// sessions, the later ones (and their unlocks) take weeks of regular play
-export const xpForLevel = L => 200 * (L - 1) + 75 * (L - 1) * (L - 2) / 2
-const TITLES = [[60, 'GOAT'], [45, 'Hall of Famer'], [30, 'MVP'], [20, 'All-Pro'], [10, 'Pro Bowler'], [5, 'Starter'], [1, 'Rookie']]
+// ── Levels = Builder Pass tiers ──────────────────────────────────────────────
+// A player's level is their tier in this season's pass (lib/pass.js): it starts
+// over at 1 every season. Titles go by tier; spotlights stay once reached.
+const TITLES = [[30, 'GOAT'], [25, 'Hall of Famer'], [20, 'MVP'], [15, 'All-Pro'], [10, 'Pro Bowler'], [5, 'Starter'], [1, 'Rookie']]
 export const titleFor = L => TITLES.find(([min]) => L >= min)[1]
 export const TITLE_LEVELS = TITLES.map(([lvl, name]) => ({ level: lvl, name })).reverse()
+// the level for an account XP total (only this season's part of it counts)
 export function levelInfo(xp) {
-  let L = 1
-  while (xpForLevel(L + 1) <= xp) L++
-  const base = xpForLevel(L), need = xpForLevel(L + 1) - base
-  return { level: L, into: xp - base, need, pct: (xp - base) / need, title: titleFor(L) }
+  const sx = seasonPart(xp), L = tierAt(sx), into = sx - xpForTier(L)
+  return { level: L, into: Math.min(into, TIER_XP), need: TIER_XP, pct: Math.min(1, into / TIER_XP), title: titleFor(L), max: L >= TIERS }
 }
+// the old lifetime level curve: only to carry over spotlights reached before levels were pass tiers
+const lifetimeLevel = xp => { let L = 1; while (200 * L + 75 * L * (L - 1) / 2 <= xp) L++; return L }
 
-// Stage spotlight colours (home stage, avatar ring, player card)
+// Stage spotlight colours (home stage, avatar ring, player card); `was` is the old lifetime level
 export const SPOTLIGHTS = [
   { id: 'classic',  name: 'Classic',  level: 1 },
-  { id: 'gold',     name: 'Gold',     level: 5 },
-  { id: 'ice',      name: 'Ice',      level: 10 },
-  { id: 'crimson',  name: 'Crimson',  level: 15 },
-  { id: 'onyx',     name: 'Onyx',     level: 20 },
-  { id: 'royal',    name: 'Royal',    level: 30 },
-  { id: 'holo',     name: 'Holo',     level: 45 },
+  { id: 'gold',     name: 'Gold',     level: 3,  was: 5 },
+  { id: 'ice',      name: 'Ice',      level: 6,  was: 10 },
+  { id: 'crimson',  name: 'Crimson',  level: 10, was: 15 },
+  { id: 'onyx',     name: 'Onyx',     level: 15, was: 20 },
+  { id: 'royal',    name: 'Royal',    level: 20, was: 30 },
+  { id: 'holo',     name: 'Holo',     level: 30, was: 45 },
   { id: 'inferno',  name: 'Inferno',  streak: 7 },
   { id: 'platinum', name: 'Platinum', streak: 21 },
 ]
@@ -72,7 +72,8 @@ export function levelUnlocks(level, from = level - 1) {
   const inRange = l => l > Math.max(1, from) && l <= level
   return {
     title: TITLE_LEVELS.filter(t => inRange(t.level)).at(-1)?.name ?? null,
-    spots: SPOTLIGHTS.filter(s => s.level && inRange(s.level)),
+    // new this season (a spotlight already kept from before isn't news)
+    spots: SPOTLIGHTS.filter(s => s.level && inRange(s.level) && [undefined, passSeason(dayKey())?.id].includes(S.unlocks?.[s.id])),
   }
 }
 
@@ -132,10 +133,10 @@ function pickMissions(key) {
   })
 }
 
-// Login streak: every 3 days pays XP (as long as it lasts); 7, 21 and 60 days each unlock
-// a look only streak keepers have (and the spotlights)
-export const STREAK_EVERY = { days: 3, xp: 150 }
+// Login streak: 3, 7, 21 and 60 days in a row each pay once per streak (a broken streak
+// starts the ladder over); 7, 21 and 60 also unlock a look only streak keepers have
 export const STREAK_REWARDS = [
+  { days: 3,  xp: 200 },
   { days: 7,  xp: 500,  unlock: 'inferno', item: 'av-streak' },
   { days: 21, xp: 1200, unlock: 'platinum', item: 'rs-wildfire' },
   { days: 60, xp: 3000, item: 'ent-eternal' },
@@ -284,6 +285,12 @@ function markOpen() {
   openedFor = k
   ev('app_open', { signedIn: !!uid, level: uid ? levelInfo(totalXp()).level : null, app: IS_APP })
 }
+// this season's share of an account XP total (0 until the season has started for the account)
+function seasonPart(total) {
+  const s = passSeason(dayKey()), ps = s && S.pass?.[s.id]
+  if (!uid || ps?.base == null) return 0
+  return Math.max(0, ps.final ?? (total - ps.base))
+}
 function totalXp() {
   if (!uid) return 0
   const since = S.sync?.at ?? 0
@@ -298,7 +305,8 @@ function makeSnap() {
 }
 function emit(quiet = false) {
   startPass()
-  payLevels()
+  keepSpots()
+  seenForSeason()
   checkAch(quiet)
   try { localStorage.setItem(keyFor(uid), JSON.stringify(S)) } catch {}
   if (uid) { schedulePush(); pushCos() }   // pushCos only sends when the public profile changed
@@ -411,19 +419,6 @@ export function claimStreak(days) {
   emit()
   return r.xp
 }
-// Every 3 days of the streak: the XP for each block reached and not yet claimed
-export const streakEveryReady = (st = S.streak) => Math.max(0, Math.floor((st.count || 0) / STREAK_EVERY.days) - (st.claimed?.every || 0))
-export function claimStreakEvery() {
-  const n = streakEveryReady()
-  if (!n || !uid) return 0
-  S.streak.claimed = { ...(S.streak.claimed || {}), every: Math.floor(S.streak.count / STREAK_EVERY.days) }
-  const xp = n * STREAK_EVERY.xp
-  S.bonusXp += xp
-  earn(Math.round(xp / 4), null, true)
-  S.walletAt = Date.now()
-  emit()
-  return xp
-}
 // Completing a team's set in the binder (every player on that roster) pays once
 export const setReward = size => Math.min(600, 10 * size)
 export function claimSet(key, size) {
@@ -437,7 +432,21 @@ export function claimSet(key, size) {
 }
 export function isUnlocked(spot, level = getProgress().lvl.level) {
   if (spot.streak) return !!S.unlocks[spot.id]
-  return level >= spot.level
+  return level >= spot.level || !!S.unlocks[spot.id]
+}
+// Spotlights reached stay unlocked when the tier starts over; levels reached before
+// levels were pass tiers (the XP before Season 1) carry over by the old curve
+function keepSpots() {
+  if (!uid) return
+  const L = levelInfo(totalXp()).level, before = S.pass?.s1?.base
+  const old = before != null ? lifetimeLevel(before) : 0
+  const sid = passSeason(dayKey())?.id ?? true
+  for (const sp of SPOTLIGHTS) if (sp.level > 1 && !S.unlocks[sp.id] && (L >= sp.level || old >= sp.was)) S.unlocks[sp.id] = L >= sp.level ? sid : true
+}
+// the level-up screen shows once per tier, and starts over with the season
+function seenForSeason() {
+  const sid = passSeason(dayKey())?.id ?? null
+  if (S.seenSeason !== sid) { S.seenSeason = sid; S.seenLevel = levelInfo(totalXp()).level }
 }
 export function setSpotlight(id) {
   S.spot = id
@@ -664,8 +673,7 @@ function onSeason(e) {
   if (d.daily) st.daily++
   // Coin Rush: the season's coins again
   const coins = seasonCoins(d)
-  let rush = 0
-  if (walletOpen() && coins > 0 && boostLeft('rush') > 0) { rush = coins; invAdd('rush', 'used', 1) }
+  const rush = walletOpen() && rushOn() ? coins : 0
   earn(coins + rush, null, true)
   const missionsBefore = (S.day?.missions ?? []).map(m => m.n)
   bumpMissions('season', d)
@@ -690,8 +698,8 @@ function onXp(e) {
   const { xp, label, coins } = e.detail || {}
   if (!xp && !coins) return
   S.bonusXp += xp || 0; tally(xp)
-  if (coins) earn(coins, null, true)
-  const t = rewardText(xp, coins)
+  if (coins) earn(rushed(coins), null, true)
+  const t = rewardText(xp, rushed(coins))
   if (t) toast({ kind: 'xp', title: t, sub: label || '' })
   emit()
 }
@@ -764,7 +772,8 @@ function onCompete(e) {
   pushRecent(c.recent, place)
   // real opponents move the rating; a pool of bots counts half
   const delta = rateOnline(competeDelta({ place, humans }), 'compete', { place, pbOvr, streak: c.streak })
-  const [xp, coins] = COMPETE_REWARDS[place] ?? COMPETE_REWARDS[5]
+  const [xp, base] = COMPETE_REWARDS[place] ?? COMPETE_REWARDS[5]
+  const coins = rushed(base)
   S.bonusXp += xp; tally(xp, 1)
   earn(coins, null, true)
   bumpMissions('compete', { place })
@@ -883,7 +892,6 @@ async function sync(force = false) {
     if (after < beforeTotal && S.seenLevel > 0) S.adjust += beforeTotal - after
     // Career import / a new device: no level-up fanfare for XP that was already earned
     S.seenLevel = Math.max(S.seenLevel, levelInfo(totalXp()).level)
-    S.levelPaid = Math.max(S.levelPaid || 0, levelInfo(totalXp()).level)
     emit(true)
     if (!S.cardsSynced) syncCards(id)
   } finally { syncing = false }
@@ -935,7 +943,6 @@ function switchUser(u) {
   rollDay()
   markOpen()
   if (!S.seenLevel) S.seenLevel = levelInfo(totalXp()).level
-  if (!S.levelPaid) S.levelPaid = levelInfo(totalXp()).level
   applySpot()
   emit(true)                 // achievements already earned unlock quietly (rewards wait in the list)
   syncName(id)
@@ -989,7 +996,7 @@ export function initProgress() {
 // (lib/cosmetics.js) climb gently and overlap across rarities: commons in a day
 // or two, rares within a week, epics in one to two weeks, legendaries (~5,500–
 // 13,000) in two to four.
-export const COINS = { season: 10, winNfl: 1, winNba: 0.25, playoffs: 10, ring: 40, award: 25, daily: 20, level: 40, free: 25, freePro: 50 }
+export const COINS = { season: 10, winNfl: 1, winNba: 0.25, playoffs: 10, ring: 40, award: 25, daily: 20, free: 25, freePro: 50 }
 export function seasonCoins(d) {
   if (d.sandbox) return 0
   let c = COINS.season + Math.round((d.wins ?? 0) * (d.sport === 'bucket' ? COINS.winNba : COINS.winNfl))
@@ -1013,12 +1020,6 @@ function earn(n, label, quiet = false) {
   if (!quiet) toast({ kind: 'coins', title: `+${n} COINS`, sub: label || '' })
   window.dispatchEvent(new CustomEvent('bap:coins', { detail: { n, quiet } }))
 }
-// Every level climbed pays coins once
-function payLevels() {
-  const L = levelInfo(totalXp()).level
-  if (!S.levelPaid) { S.levelPaid = L; return }
-  if (L > S.levelPaid) { earn((L - S.levelPaid) * COINS.level, `Level ${L}`, true); S.levelPaid = L }
-}
 
 export const isPro = () => { try { return localStorage.getItem('bap_subscribed') === '1' } catch { return false } }
 export const owns = id => { const i = itemById(id); return !!i && (i.free || !!S.owned[id]) }
@@ -1037,7 +1038,7 @@ export function priceOf(id) {
   return dealsFor().find(d => d.id === id)?.price ?? i.price
 }
 // Why an item can't be bought right now (null = it can)
-export function lockReason(id, level = getProgress().lvl.level) {
+export function lockReason(id) {
   const i = itemById(id)
   if (!i) return 'Not found'
   if (owns(id)) return null
@@ -1046,7 +1047,7 @@ export function lockReason(id, level = getProgress().lvl.level) {
   if (i.cup) return 'Weekly Cup: finish a week in the top 10'
   if (i.pass) return `Builder Pass · ${seasonById(i.pass.season)?.name ?? 'Season'} · tier ${i.pass.tier}`
   if (i.pro && !isPro()) return 'BAP Pro members only'
-  if (i.level && level < i.level) return `Reach level ${i.level}`
+  if (i.vault) return 'Not available right now'
   return null
 }
 export function buy(id) {
@@ -1198,7 +1199,7 @@ export function passInfo() {
 // and used (inv[device]), added up across the account (two devices can't erase each other's)
 export const BOOSTS = {
   xp:   { name: '2x XP', short: '2x XP', desc: 'Your next seasons count double XP.', unit: 'season', price: 350, per: 3 },
-  rush: { name: 'Coin Rush', short: 'Coin Rush', desc: 'Your next seasons pay double coins.', unit: 'season', per: 3, passOnly: true },
+  rush: { name: 'Coin Rush', short: 'Coin Rush', desc: '3 hours of double coins from every game. The clock starts when you use it.', unit: 'rush', per: 1, passOnly: true },
   hot:  { name: 'Hot Hand', short: 'Hot Hand', desc: 'Career: +2 to every grade for your next 3 games (6 in basketball). Use it from the season screen.', unit: 'use', price: 400, per: 1 },
   heal: { name: 'Quick Heal', short: 'Quick Heal', desc: 'Career: an injury keeps you out half as long. Offered when you get hurt.', unit: 'use', price: 300, per: 1 },
 }
@@ -1212,6 +1213,20 @@ function invAdd(k, f, n) {
 export function spendBoost(k) {
   if (!BOOSTS[k] || boostLeft(k) <= 0) return false
   invAdd(k, 'used', 1)
+  S.walletAt = Date.now()
+  emit()
+  return true
+}
+// Coin Rush: each one is 3 hours of double coins from games, started by hand (they stack)
+export const RUSH_MS = 3 * 3600 * 1000
+export const rushLeftMs = () => Math.max(0, (S.rushUntil || 0) - Date.now())
+const rushOn = () => rushLeftMs() > 0
+const rushed = n => (n && walletOpen() && rushOn() ? n * 2 : n)
+export function startRush() {
+  if (!walletOpen() || boostLeft('rush') <= 0) return false
+  invAdd('rush', 'used', 1)
+  S.rushUntil = Math.max(Date.now(), S.rushUntil || 0) + RUSH_MS
+  ev('boost_use', { kind: 'rush' })
   S.walletAt = Date.now()
   emit()
   return true
@@ -1313,7 +1328,7 @@ export function watchPassReturn() {
 export function achStats() {
   const st = S.stats
   const pos = st.positions || {}
-  const L = levelInfo(totalXp()).level
+  const L = Math.max(levelInfo(totalXp()).level, ...Object.values(S.pass || {}).map(ps => (ps?.final != null ? tierAt(ps.final) : 0)))
   return {
     ...st,
     seasons: Math.max(st.seasons, careerSeasons()), rings: Math.max(st.rings, careerRings()),
@@ -1357,7 +1372,7 @@ export function claimAch(id) {
 // Last change wins; items and achievements are merged, never lost.
 // ═════════════════════════════════════════════════════════════════════════════
 // potdPaid, dc, day and sets ride along so clearing the device (or a second one) can't pay a reward twice
-const WALLET_KEYS = ['coins', 'coinsEarned', 'owned', 'equip', 'ach', 'achClaimed', 'stats', 'shopFree', 'levelPaid', 'discordPaid', 'feedbackPaid', 'retired', 'potdPaid', 'dc', 'day', 'sets', 'salInf', 'streak', 'unlocks', 'cards', 'pass', 'inv', 'cupPaid', 'cupWon']
+const WALLET_KEYS = ['coins', 'coinsEarned', 'owned', 'equip', 'ach', 'achClaimed', 'stats', 'shopFree', 'levelPaid', 'discordPaid', 'feedbackPaid', 'retired', 'potdPaid', 'dc', 'day', 'sets', 'salInf', 'streak', 'unlocks', 'cards', 'pass', 'inv', 'cupPaid', 'cupWon', 'rushUntil']
 let pushTimer = null, pushing = false, pushAgain = false
 function schedulePush() {
   if (!supabase || !uid) return
@@ -1507,10 +1522,11 @@ function mergeRemote(w) {
     const a = S.streak, b = w.streak
     const keep = String(b.last ?? '') > String(a.last ?? '') ? b : a
     const same = a.start && a.start === b.start   // the same streak on both: rewards claimed on either stay claimed
-    S.streak = { ...keep, best: Math.max(a.best || 0, b.best || 0), claimed: same ? { ...(b.claimed || {}), ...(a.claimed || {}), every: Math.max(a.claimed?.every || 0, b.claimed?.every || 0) } : { ...(keep.claimed || {}) },
+    S.streak = { ...keep, best: Math.max(a.best || 0, b.best || 0), claimed: same ? { ...(b.claimed || {}), ...(a.claimed || {}) } : { ...(keep.claimed || {}) },
       freezes: a.last === b.last ? Math.max(a.freezes || 0, b.freezes || 0) : (keep.freezes || 0) }
   }
   S.unlocks = { ...(w.unlocks || {}), ...(S.unlocks || {}) }
+  S.rushUntil = Math.max(S.rushUntil || 0, +w.rushUntil || 0)   // a Coin Rush started on any device
   // the Builder Pass: the lowest starting XP any device saw, tiers claimed on either side
   if (w.pass && typeof w.pass === 'object') {
     const lo = (a, b) => (a == null ? b ?? null : b == null ? a : Math.min(a, b))
