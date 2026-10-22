@@ -80,6 +80,21 @@ const ART = {
   ),
 }
 
+// Loading: a football thrown across and caught again, its nose following the arc like a
+// real pass (CSS offset-path); basketball side: the ball bounces
+export function PassLoader({ label = 'Loading' }) {
+  return (
+    <div className="pl" role="status" aria-label={label}>
+      <span className="pl-field" aria-hidden="true">
+        <img className="pl-fb" src="/fx/football.webp" alt="" draggable={false} />
+        <svg className="pl-bb" viewBox="-12 -12 24 24" width="26" height="26"><circle r="9.6" fill="#e8742a" /><path fill="none" stroke="#5a250a" strokeWidth="1.4" d="M-9.6 0h19.2M0-9.6v19.2M-6.7-6.8c3.4 3 3.4 10.6 0 13.6M6.7-6.8c-3.4 3-3.4 10.6 0 13.6" /></svg>
+        <i className="pl-shadow" />
+      </span>
+      <span className="pl-label">{label}</span>
+    </div>
+  )
+}
+
 export default function EmptyState({ kind = 'podium', title, children, mid, small = false }) {
   return (
     <div className={`ea ea--${kind}${small ? ' ea--small' : ''}`}>

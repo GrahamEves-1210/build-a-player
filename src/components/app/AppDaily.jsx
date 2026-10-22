@@ -7,8 +7,8 @@ import WatchVideo from './WatchVideo'
 import { NameTag, AvatarBadge, ItemPreview } from './NameTag'
 import { itemById, RARITY } from '../../lib/cosmetics'
 import { getUsername } from '../../lib/discord'
-import { IconFlame, IconTarget, IconCheck, IconGift, IconLock, IconClose, IconCoin, IconArrow, IconShield } from './icons'
-import EmptyState from './EmptyState'
+import { IconFlame, IconTarget, IconCheck, IconGift, IconLock, IconClose, IconCoin, IconArrow } from './icons'
+import EmptyState, { PassLoader } from './EmptyState'
 
 // Daily hub (dock → Daily): login streak + rewards, the Daily Challenge with
 // its leaderboard, and today's three missions.
@@ -25,11 +25,12 @@ function useCountdown() {
 // Streak freezes: hold up to two; each one covers a missed day
 function Freeze({ p }) {
   const [err, setErr] = useState('')
+  const [got, setGot] = useState(0)   // a freeze just bought: the shield frosts over
   const n = p.streak.freezes ?? 0, full = n >= FREEZE_MAX
-  const go = () => { const r = buyFreeze(); if (r.ok) { setErr(''); sfx('purchase'); haptic('success') } else { setErr(r.reason); sfx('deny') } }
+  const go = () => { const r = buyFreeze(); if (r.ok) { setErr(''); sfx('purchase'); haptic('success'); setGot(Date.now()) } else { setErr(r.reason); sfx('deny') } }
   return (
     <div className="ag-freeze">
-      <span className="ag-freeze-icon"><IconShield size={18} /></span>
+      <span key={got} className={`ag-freeze-icon${n ? ' is-armed' : ''}${got ? ' is-got' : ''}`}><img src="/fx/freeze-shield.webp" alt="" draggable={false} /><i className="ag-freeze-frost" /></span>
       <span className="ag-freeze-txt">
         <b>STREAK FREEZE <i>{n}/{FREEZE_MAX}</i></b>
         <small>{err || (n ? `Miss a day and ${n === 1 ? 'it saves' : 'they save'} your streak.` : 'Covers a missed day so your streak lives.')}</small>
@@ -116,7 +117,7 @@ function Challenge({ p, sport }) {
       </div>
       <div className="ag-board">
         <div className="ag-board-head"><span>TODAY'S TOP BUILDS</span><span>OVR</span></div>
-        {board == null && <div className="ag-board-empty">Loading…</div>}
+        {board == null && <PassLoader />}
         {board?.error && <div className="ag-board-empty">The board opens soon — your score is kept on this device.</div>}
         {board && !board.error && board.rows.length === 0 && <EmptyState kind="podium" title="No scores yet">The first Daily finished today takes #1.</EmptyState>}
         {board?.rows.slice(0, 10).map((r, i) => (
@@ -166,7 +167,7 @@ function WeeklyCup({ p }) {
       {won && <p className="ag-cup-won">Last week: #{won.place}. The Cup Contender avatar is in the Locker.</p>}
       <div className="ag-board">
         <div className="ag-board-head"><span>THIS WEEK</span><span>TOTAL</span></div>
-        {board == null && <div className="ag-board-empty">Loading…</div>}
+        {board == null && <PassLoader />}
         {board?.error && <div className="ag-board-empty">The Cup board opens soon.</div>}
         {board && !board.error && board.rows.length === 0 && <EmptyState kind="podium" title="Nobody on the Cup yet">Today's Daily starts the week's count.</EmptyState>}
         {board?.rows.slice(0, 10).map((r, i) => (

@@ -5605,3 +5605,76 @@ html.bap-reduce-motion :is(.ss-overlay, .ss-sheet, .ss-img, .ss-skel) { animatio
 .ag-tab:not(.ag-tab--on) .ag-tab-icon { color: rgb(216, 243, 220); opacity: .42; }
 html.is-bucket .ag-tab:not(.ag-tab--on) .ag-tab-icon { color: rgb(255, 237, 213); }
 @media (hover: hover) { html.app-look .ag-tab:not(.ag-tab--on):hover .ag-tab-icon { opacity: .9; } }
+
+/* ═══ Animated cut-outs (public/fx) ═══════════════════════════════════════════ */
+/* Trait Auction SOLD: the gavel winds back, comes down on the block (0.44s), bounces, lifts
+   away; the block gives, sparks fly, then the line stamps in. The two pictures share a frame. */
+.au-gavel:has(.au-hammer) { display: flex; align-items: center; justify-content: center; gap: 10px; animation: none; }
+.au-hammer { position: relative; flex: 0 0 auto; width: 54px; height: 70px; margin: -14px 0 -6px; }
+.au-hammer img { position: absolute; inset: 0; width: 100%; height: 100%; }
+.au-hammer-head { transform-origin: 4.8% 47.6%; }
+.au-hammer-block { transform-origin: 70% 92%; }
+.au-hammer-hit { position: absolute; left: 70%; top: 84%; width: 0; height: 0; opacity: 0; }
+.au-hammer-hit::before, .au-hammer-hit::after { content: ''; position: absolute; width: 34px; height: 2px; left: -17px; top: -1px; border-radius: 2px; background: linear-gradient(90deg, #fde68a 0 30%, transparent 30% 70%, #fde68a 70%); }
+.au-hammer-hit::after { width: 26px; left: -13px; top: -9px; transform: rotate(0); background: linear-gradient(90deg, #fde68a 0 25%, transparent 25% 75%, #fde68a 75%); }
+.au-gavel-txt { display: inline-block; }
+@media (prefers-reduced-motion: no-preference) {
+  html:not(.bap-reduce-motion) .au-hammer-head { animation: au-hammer 1.1s both; }
+  html:not(.bap-reduce-motion) .au-hammer-block { animation: au-block .3s .44s ease-out both; }
+  html:not(.bap-reduce-motion) .au-hammer-hit { animation: au-hit .4s .44s ease-out both; }
+  html:not(.bap-reduce-motion) .au-gavel-txt { animation: au-stamp .34s .46s cubic-bezier(.2, .9, .3, 1.3) both; }
+  html:not(.bap-reduce-motion) .au-stage.is-sold { animation: au-thud .26s .44s ease-out; }
+}
+@keyframes au-hammer {
+  0%   { transform: rotate(0); animation-timing-function: cubic-bezier(.2, .7, .3, 1); }
+  20%  { transform: rotate(-12deg); animation-timing-function: cubic-bezier(.75, 0, .9, .5); }
+  40%  { transform: rotate(45deg); animation-timing-function: cubic-bezier(.2, .8, .3, 1); }
+  49%  { transform: rotate(37deg); animation-timing-function: cubic-bezier(.5, 0, .5, 1); }
+  57%  { transform: rotate(45deg); }
+  66%  { transform: rotate(43deg); animation-timing-function: cubic-bezier(.45, 0, .25, 1); }
+  100% { transform: rotate(0); }
+}
+@keyframes au-block { 0% { transform: scale(1); } 35% { transform: scale(1.06, .9); } 100% { transform: scale(1); } }
+@keyframes au-hit { 0% { opacity: 1; transform: scale(.6); } 100% { opacity: 0; transform: scale(1.5); } }
+@keyframes au-stamp { from { opacity: 0; transform: scale(1.35); filter: blur(3px); } }
+@keyframes au-thud { 30% { translate: 0 3px; } 60% { translate: 0 -1px; } 100% { translate: 0 0; } }
+
+/* Streak freeze: the shield. Holding one, a frost glint passes over it every few seconds;
+   buying one, it pops and frosts over. The glint is masked to the shield's own shape. */
+.ag-freeze-icon { position: relative; width: 38px; height: 38px; background: none; }
+.ag-freeze-icon img { width: 30px; height: auto; filter: drop-shadow(0 2px 6px rgba(80,160,255,.35)); }
+.ag-freeze-icon:not(.is-armed) img { filter: grayscale(.6) brightness(.75); }
+.ag-freeze-frost { position: absolute; inset: 0; margin: auto; width: 30px; height: 38px; pointer-events: none; opacity: 0;
+  -webkit-mask: url(/fx/freeze-shield.webp) center / contain no-repeat; mask: url(/fx/freeze-shield.webp) center / contain no-repeat;
+  background: linear-gradient(115deg, transparent 35%, rgba(255,255,255,.85) 48%, rgba(190,230,255,.6) 54%, transparent 66%) no-repeat; background-size: 260% 100%; }
+@media (prefers-reduced-motion: no-preference) {
+  html:not(.bap-reduce-motion) .ag-freeze-icon.is-armed .ag-freeze-frost { animation: fz-glint 5s 1s ease-in-out infinite; }
+  html:not(.bap-reduce-motion) .ag-freeze-icon.is-got img { animation: fz-pop .5s cubic-bezier(.34, 1.56, .64, 1); }
+  html:not(.bap-reduce-motion) .ag-freeze-icon.is-got .ag-freeze-frost { animation: fz-glint 1s ease-out, fz-glint 5s 2s ease-in-out infinite; }
+  html:not(.bap-reduce-motion) .ag-freeze-icon.is-got::after { content: ''; position: absolute; inset: -6px; border-radius: 50%; border: 2px solid #9fd0ff; animation: fz-ring .6s ease-out both; }
+}
+@keyframes fz-glint { 0% { opacity: 1; background-position: 130% 0; } 30%, 100% { opacity: 1; background-position: -40% 0; } }
+@keyframes fz-pop { 0% { transform: scale(.6) rotate(-8deg); } 60% { transform: scale(1.15) rotate(3deg); } 100% { transform: scale(1) rotate(0); } }
+@keyframes fz-ring { from { opacity: .9; transform: scale(.6); } to { opacity: 0; transform: scale(1.4); } }
+
+/* Loading: a pass. The football flies an arc and its nose follows it (offset-rotate: the
+   picture's ball points about 22° up, so that's taken back out); basketball: a bounce */
+.pl { display: grid; justify-items: center; gap: 6px; padding: 14px 0 10px; }
+.pl-field { position: relative; width: 150px; height: 58px; }
+.pl-fb { position: absolute; left: 0; top: 0; width: 40px; height: auto; offset-path: path('M 8 46 Q 75 -26 142 46'); offset-rotate: auto 22deg; offset-distance: 0%; filter: drop-shadow(0 3px 4px rgba(0,0,0,.5)); }
+.pl-bb { position: absolute; left: 50%; bottom: 6px; margin-left: -13px; display: none; }
+html.is-bucket .pl-fb { display: none; }
+html.is-bucket .pl-bb { display: block; }
+.pl-shadow { position: absolute; left: 50%; bottom: 2px; width: 26px; height: 4px; margin-left: -13px; border-radius: 50%; background: rgba(0,0,0,.45); }
+html:not(.is-bucket) .pl-shadow { display: none; }
+.pl-label { font-family: var(--ag-font); font-size: 13px; letter-spacing: 2px; color: var(--ag-muted); text-transform: uppercase; }
+@media (prefers-reduced-motion: no-preference) {
+  html:not(.bap-reduce-motion) .pl-fb { animation: pl-pass 1.2s cubic-bezier(.45, .05, .55, .95) infinite; }
+  html:not(.bap-reduce-motion) .pl-bb { animation: pl-bounce .7s infinite; }
+  html:not(.bap-reduce-motion) .pl-shadow { animation: pl-shadow .7s infinite; }
+}
+@media (prefers-reduced-motion: reduce) { .pl-fb { offset-distance: 50%; } }
+html.bap-reduce-motion .pl-fb { offset-distance: 50%; }
+@keyframes pl-pass { 0% { offset-distance: 0%; opacity: 0; } 10%, 90% { opacity: 1; } 100% { offset-distance: 100%; opacity: 0; } }
+@keyframes pl-bounce { 0%, 100% { transform: translateY(-26px); animation-timing-function: cubic-bezier(.55, 0, 1, .45); } 50% { transform: translateY(0) scale(1.1, .88); animation-timing-function: cubic-bezier(0, .55, .45, 1); } }
+@keyframes pl-shadow { 0%, 100% { transform: scale(.5); opacity: .4; } 50% { transform: scale(1.05); opacity: 1; } }

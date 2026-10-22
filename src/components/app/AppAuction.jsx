@@ -68,6 +68,18 @@ function Deck({ kit, lot, seed }) {
   )
 }
 
+// The gavel (public/fx: the hammer and its block, cut from one picture so they line up):
+// it winds back, comes down on the block, bounces, and lifts away again
+function Gavel() {
+  return (
+    <span className="au-hammer" aria-hidden="true">
+      <img className="au-hammer-block" src="/fx/gavel-block.webp" alt="" draggable={false} />
+      <img className="au-hammer-head" src="/fx/gavel-hammer.webp" alt="" draggable={false} />
+      <i className="au-hammer-hit" />
+    </span>
+  )
+}
+
 export default function AppAuction({ au, posName, onHome, onPlayAgain }) {
   const { kit, match: m, st, me } = au
   const mine = me.vid
@@ -79,7 +91,9 @@ export default function AppAuction({ au, posName, onHome, onPlayAgain }) {
   useEffect(() => {
     if (st?.stage !== 'sold' || lastSold.current === st.n) return
     lastSold.current = st.n
-    if (st.sold?.vid === mine) { sfx('stamp'); haptic('heavy') } else sfx(st.sold ? 'tap' : 'deny')
+    // a sale: the sound lands with the gavel's hit (0.44s into its swing)
+    const t = setTimeout(() => { if (st.sold?.vid === mine) { sfx('stamp'); haptic('heavy') } else sfx(st.sold ? 'tap' : 'deny') }, st.sold ? 440 : 0)
+    return () => clearTimeout(t)
   }, [st?.stage, st?.n]) // eslint-disable-line react-hooks/exhaustive-deps
   // the deck: a shuffle, then the pulled card flips; the auctioneer's calls tick
   const lotN = st?.stage === 'lot' ? st.n : 0
@@ -257,7 +271,9 @@ export default function AppAuction({ au, posName, onHome, onPlayAgain }) {
           </div>
         )}
         {sold && (
-          <div className="au-gavel">{st.sold ? <>SOLD · {soldTo ? <Name p={soldTo} me={mine} /> : '—'} · <b>${st.sold.amount}</b></> : 'NO BIDS · BACK IN THE DECK'}</div>
+          <div className="au-gavel">{st.sold
+            ? <><Gavel key={st.n} /><span className="au-gavel-txt" key={`t${st.n}`}>SOLD · {soldTo ? <Name p={soldTo} me={mine} /> : '—'} · <b>${st.sold.amount}</b></span></>
+            : 'NO BIDS · BACK IN THE DECK'}</div>
         )}
       </div>
 
