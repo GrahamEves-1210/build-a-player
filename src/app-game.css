@@ -5409,7 +5409,7 @@ html:is(.is-app, .app-look) .reels-wrap.rs-holo .reel-outer { border-width: 2px 
 
 /* Daily → streak: the every-3-days XP row, and the milestones' prizes */
 .ag-milestone-prize { display: grid; place-items: center; height: 48px; width: 100%; overflow: hidden; }
-.ag-milestone-prize .avb { --avs: 40px; width: 40px !important; height: 40px !important; }
+.ag-milestone-prize > .avb { --avs: 40px; width: 40px !important; height: 40px !important; }
 .ag-milestone-prize { position: relative; }
 .ag-milestone-prize .ip-reel, .ag-milestone-prize .ip-ent { max-width: none; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%) scale(.62); }
 .ag-milestone-name { font-family: var(--ag-font); font-size: 13px; letter-spacing: 1.2px; color: var(--rar, var(--ag-text)); line-height: 1; }
@@ -5697,3 +5697,21 @@ html.bap-reduce-motion .pl-fb { offset-distance: 50%; }
 .ag-board-rank--1, .ag-potd-row.is-1 .ag-potd-rank { display: grid; place-items: center; color: #3b2604; background: url(/fx/star.webp) center / contain no-repeat; text-shadow: 0 1px 0 rgba(255,243,196,.6); }
 .ag-board-rank--1 { width: 30px; height: 30px; font-size: 15px; padding-top: 3px; justify-self: center; }
 .ag-potd-row.is-1 .ag-potd-rank { width: 36px; height: 36px; font-size: 17px; padding-top: 4px; justify-self: center; }
+
+/* streak rewards: the preview grows with its tile (phones keep the small one; desktop tiles are wide) */
+.ag-streak-track .ag-milestone { container-type: inline-size; }
+@container (min-width: 140px) {
+  .ag-milestone-prize { height: 70px; }
+  .ag-streak-track .ag-milestone-prize .ip-reel, .ag-streak-track .ag-milestone-prize .ip-ent { transform: translate(-50%, -50%) scale(.9); }
+  .ag-milestone-prize > .avb { --avs: 56px; width: 56px !important; height: 56px !important; }
+  .ag-milestone-xpbig { width: 56px; height: 56px; }
+  .ag-milestone-xpbig .xp-ico { transform: scale(1.4); }
+  .ag-streak-track .ag-milestone-name { font-size: 14px; }
+}
+@container (min-width: 200px) {
+  .ag-milestone-prize { height: 84px; }
+  .ag-streak-track .ag-milestone-prize .ip-reel, .ag-streak-track .ag-milestone-prize .ip-ent { transform: translate(-50%, -50%) scale(1.05); }
+  .ag-milestone-prize > .avb { --avs: 66px; width: 66px !important; height: 66px !important; }
+  .ag-milestone-xpbig { width: 66px; height: 66px; }
+  .ag-streak-track .ag-milestone-name { font-size: 15px; }
+}
