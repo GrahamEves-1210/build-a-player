@@ -12092,6 +12092,7 @@ html.is-x-browser .mobile-tab-bar {
 .fb-sent-title { font-size: 16px; font-weight: 800; color: var(--accent); }
 .fb-sent-body { margin: 0 0 6px; font-size: 13px; color: var(--text-2); }
 .fb-email { margin: 14px 0 0; text-align: center; font-size: 13px; color: var(--text-3, rgba(255,255,255,.6)); }
+.fb-public { margin: 10px 0 0; text-align: center; font-size: 12px; line-height: 1.4; color: var(--text-3, rgba(255,255,255,.55)); }
 .fb-email a { color: var(--accent); font-weight: 700; text-decoration: underline; text-underline-offset: 2px; overflow-wrap: anywhere; }
 
 .auth-error {
