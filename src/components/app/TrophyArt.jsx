@@ -323,15 +323,15 @@ export function TrophyArt({ kind, tier = 0, gem, shine = 0, className = '' }) {
 }
 
 // A player's hardware, compact and read-only (a profile sheet): only what they've won
+// (the season and award trophies of the Trophy Case, same counts and names)
 const SHELF = [
-  ['rings', 'RINGS', h => h.rings],
+  ['rings', 'RINGS', h => h.rings.total],
+  ['perfect', 'PERFECT', h => h.perfect],
+  [h => (h.ovr95 > 0 ? 'ovr95' : 'ovr90'), '90+ CLUB', h => h.ovr90],
   ['mvp', 'MVP', h => h.mvp.total],
   ['opoy', 'OPOY', h => h.opoy.total],
   ['dpoy', 'DPOY', h => h.dpoy.total],
   ['allpro', 'ALL-PRO', h => h.allpro],
-  ['perfect', 'PERFECT', h => h.perfect],
-  ['ovr95', '95+ OVR', h => h.ovr95],
-  ['ovr90', '90+ OVR', h => h.ovr90],
 ]
 export function TrophyShelf({ uid }) {
   const [h, setH] = useState(null)
@@ -341,15 +341,15 @@ export function TrophyShelf({ uid }) {
     loadHardware(uid).then(d => { if (live) setH(d) }, () => {})
     return () => { live = false }
   }, [uid])
-  const won = h ? SHELF.map(([kind, label, n]) => ({ kind, label, n: n(h) })).filter(t => t.n > 0) : []
+  const won = h ? SHELF.map(([kind, label, n]) => ({ kind: typeof kind === 'function' ? kind(h) : kind, label, n: n(h) })).filter(t => t.n > 0) : []
   if (!won.length) return null
   return (
-    <div className="tc-mini" aria-label="Hardware">
+    <div className="tc-mini" aria-label="Trophies">
       <TrophyDefs />
-      <div className="fr-sub-head"><span className="ag-eyebrow">HARDWARE</span></div>
+      <div className="fr-sub-head"><span className="ag-eyebrow">TROPHIES</span></div>
       <div className="tc-mini-row">
         {won.map((t, i) => (
-          <span key={t.kind} className="tc-mini-item" style={{ '--i': i }}>
+          <span key={t.label} className="tc-mini-item" style={{ '--i': i }}>
             <TrophyArt kind={t.kind} />
             <b>{t.n.toLocaleString()}</b>
             <small>{t.label}</small>

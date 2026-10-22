@@ -66,7 +66,7 @@ html.is-bucket .tc-cab { background: radial-gradient(70% 38% at 50% 0%, rgba(255
 
 .tc-shelf { position: relative; margin-bottom: 12px; }
 .tc-shelf:last-child { margin-bottom: 0; }
-.tc-row { position: relative; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.tc-row { position: relative; display: grid; grid-template-columns: repeat(var(--cols, 4), minmax(0, 1fr)); }
 /* the shelf: a lit top surface, then its lip where the plates go */
 .tc-row::before {
   content: ''; position: absolute; z-index: 0; left: -8px; right: -8px; top: var(--stage); height: 42px;
@@ -308,16 +308,15 @@ html.is-bucket .tc-sheet { background: radial-gradient(90% 46% at 50% 0%, rgba(2
 .tc-hero-n b.is-none { font-size: 30px; color: rgba(255,255,255,.4); text-shadow: none; }
 .tc-hero-n h3 { margin: 0; font-family: var(--ag-font, sans-serif); font-weight: 400; font-size: 21px; letter-spacing: 2.6px; line-height: 1.1; color: #fff; text-transform: uppercase; }
 .tc-desc { margin: 10px 4px 0; text-align: center; font-size: 13.5px; line-height: 1.45; color: var(--ag-text-2, #95D5B2); }
-.tc-desc--how { margin-top: 6px; color: var(--ag-muted, rgba(216,243,220,.78)); }
-.tc-facts { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: 14px; }
-.tc-facts > span {
-  flex: 1 1 0; min-width: 84px; max-width: 140px;
-  display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 8px 6px 7px; border-radius: 11px;
+/* the facts: compact stat rows, label left, value right */
+.tc-stats {
+  margin: 14px 0 0; border-radius: 12px; overflow: hidden;
   border: 1px solid var(--ag-line, rgba(149,213,178,.12)); background: rgba(0,0,0,.28);
 }
-.tc-facts small { font-family: var(--ag-font, sans-serif); font-size: 11px; letter-spacing: 1.4px; color: var(--ag-muted, rgba(216,243,220,.78)); white-space: nowrap; }
-.tc-facts b { font-family: var(--ag-display, Impact, sans-serif); font-weight: 400; font-size: 20px; line-height: 1.05; color: #fff; }
-.tc-when { margin: 12px 4px 0; text-align: center; font-family: var(--ag-font, sans-serif); font-size: 14px; letter-spacing: 1.5px; color: var(--ag-gold-hi, #f2d675); }
+.tc-stats > div { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 12px 7px; }
+.tc-stats > div + div { border-top: 1px solid var(--ag-line, rgba(149,213,178,.12)); }
+.tc-stats dt { font-family: var(--ag-font, sans-serif); font-size: 12px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--ag-muted, rgba(216,243,220,.78)); white-space: nowrap; }
+.tc-stats dd { margin: 0; min-width: 0; text-align: right; font-family: var(--ag-display, Impact, sans-serif); font-weight: 400; font-size: 19px; line-height: 1.05; color: #fff; }
 
 /* a season in a trophy's list */
 .tc-srows { display: flex; flex-direction: column; gap: 6px; }
