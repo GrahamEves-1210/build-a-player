@@ -547,6 +547,36 @@ export const haptic = kind => {
 // from the right. The next .ag-screen / profile page to mount reads --ag-in-x.
 export const slideIn = dir => document.documentElement.style.setProperty('--ag-in-x', dir > 0 ? '32px' : dir < 0 ? '-32px' : '0px')
 
+// ── Paying: coins leave the coin counter and land on what's being bought ─────
+// A few coins, 45ms apart, each on an arc (up first, then down onto the target),
+// shrinking a touch as they land. Resolves when the last one lands, so the next
+// step (the unlock) follows them. No counter on screen, or reduced motion: resolves now.
+export function flyCoins(toEl, { from = '.coin-pill', n = 5 } = {}) {
+  // the counter that's on top: an open screen's own, else the page's
+  const shown = [...document.querySelectorAll(from)].filter(e => e.getBoundingClientRect().width > 0)
+  const src = shown.filter(e => e.closest('.ag-screen')).at(-1) ?? shown[0]
+  if (!src || !toEl?.getBoundingClientRect || reduced() || !Element.prototype.animate) return Promise.resolve()
+  const a = src.getBoundingClientRect(), b = toEl.getBoundingClientRect()
+  const x0 = a.left + 18, y0 = a.top + a.height / 2, x1 = b.left + b.width / 2, y1 = b.top + b.height / 2
+  const dx = x1 - x0, dy = y1 - y0
+  const lands = []
+  for (let i = 0; i < n; i++) {
+    const c = document.createElement('span')
+    c.className = 'coin-ico fx-coin'
+    c.style.cssText = `left:${x0 - 12}px;top:${y0 - 12}px`
+    document.body.appendChild(c)
+    const spread = (i - (n - 1) / 2) * 9
+    const anim = c.animate([
+      { transform: 'translate(0, 0) scale(.6)', opacity: 0 },
+      { transform: `translate(${dx * .35 + spread}px, ${Math.min(dy, 0) * .35 - 46}px) scale(1.05)`, opacity: 1, offset: .4 },
+      { transform: `translate(${dx}px, ${dy}px) scale(.7)`, opacity: 1, offset: .92 },
+      { transform: `translate(${dx}px, ${dy}px) scale(.4)`, opacity: 0 },
+    ], { duration: 560, delay: i * 45, easing: 'cubic-bezier(.45, 0, .25, 1)', fill: 'both' })
+    lands.push(anim.finished.then(() => c.remove(), () => c.remove()))
+  }
+  return Promise.all(lands)
+}
+
 // ── Claim: one tap, a short sequence drawn over the button ──────────────────
 // The button itself re-renders as claimed straight away; this layer sits on top
 // of where it is (fixed, on the body) so a re-render can't cut it short:

@@ -11,7 +11,7 @@ import { connectDiscord, discordError } from '../../lib/discord'
 import { SLOTS, RARITY, ITEMS, itemById, itemsFor, BLURB, DEFAULTS } from '../../lib/cosmetics'
 import { achById } from '../../lib/achievements'
 import { getUsername } from '../../lib/discord'
-import { sfx, haptic, previewVictory, warmVictory } from '../../lib/juice'
+import { sfx, haptic, previewVictory, warmVictory, flyCoins } from '../../lib/juice'
 import { NameTag, AvatarBadge, ItemPreview } from './NameTag'
 import { IconClose, IconLock, IconGift, IconCrown, IconPlay, IconArrow, IconStar, IconDiscord, IconBolt, IconFlame, IconShield } from './icons'
 import { PassCard, ProCard } from './Promos'
@@ -45,8 +45,14 @@ export function CoinPill({ onClick, className = '' }) {
   const n = useCountTo(p.coins ?? 0)
   // every hook before the sign-in branch: signing in flips it mid-session
   const [bump, setBump] = useState(false)
+  const [spent, setSpent] = useState(null)   // { n, at }: a spend, shown as "−n" dropping off the pill
   const prev = useRef(p.coins)
-  useEffect(() => { if ((p.coins ?? 0) > (prev.current ?? 0)) { setBump(true); setTimeout(() => setBump(false), 520) } prev.current = p.coins }, [p.coins])
+  useEffect(() => {
+    const was = prev.current ?? 0, now = p.coins ?? 0
+    if (now > was) { setBump(true); setTimeout(() => setBump(false), 520) }
+    else if (now < was && prev.current != null) { const s = { n: was - now, at: Date.now() }; setSpent(s); setTimeout(() => setSpent(x => (x === s ? null : x)), 1000) }
+    prev.current = p.coins
+  }, [p.coins])
   // website: coins need an account
   if (!walletOpen()) {
     return (
@@ -58,6 +64,7 @@ export function CoinPill({ onClick, className = '' }) {
   return (
     <button className={`coin-pill${bump ? ' is-bump' : ''}${className ? ` ${className}` : ''}`} onClick={onClick ?? (() => nav('shop:coins'))} aria-label={`${p.coins ?? 0} coins, get more`}>
       <span className="coin-ico" aria-hidden="true" />{n.toLocaleString()}
+      {spent && <span key={spent.at} className="coin-pill-spend" aria-hidden="true">−{spent.n.toLocaleString()}</span>}
     </button>
   )
 }
@@ -283,6 +290,8 @@ function ItemSheet({ id, onClose, name, onNeedCoins }) {
   const [short, setShort] = useState(false)
   const [msg, setMsg] = useState('')
   const [bought, setBought] = useState(false)
+  const [justEquipped, setJustEquipped] = useState(false)
+  const buyRef = useRef(null)
   if (!item) return null
   const mine = owns(item.id)
   const lock = mine ? null : lockReason(item.id)
@@ -290,14 +299,16 @@ function ItemSheet({ id, onClose, name, onNeedCoins }) {
   const equipped = p.equip?.[item.slot] === item.id
   const isFx = item.slot === 'winFx' || item.slot === 'winSound'
   const doBuy = () => {
+    const target = buyRef.current
     const r = buy(item.id)
-    if (r.ok) { setBought(true); setMsg(''); setTimeout(() => setBought(false), 1500) }
+    // the coins leave the counter for the button, then the item unlocks
+    if (r.ok) { setMsg(''); flyCoins(target).then(() => { setBought(true); setTimeout(() => setBought(false), 1700) }) }
     else if (r.short) { haptic('light'); onClose(); onNeedCoins() }   // not enough coins: off to Get Coins
     else { setShort(true); setMsg(r.reason); sfx('deny'); haptic('light'); setTimeout(() => setShort(false), 450) }
   }
   const doEquip = () => {
     if (equipped && !isFx) { equip(item.slot, null); sfx('tap'); return }
-    if (equip(item.slot, item.id)) { sfx('equip'); haptic('medium') }
+    if (equip(item.slot, item.id)) { sfx('equip'); haptic('medium'); setJustEquipped(true); setTimeout(() => setJustEquipped(false), 900) }
   }
   const preview = () => (item.slot === 'winFx' ? previewVictory(item.id, null) : item.slot === 'winSound' ? sfx(item.id) : null)
   const ach = item.ach ? achById(item.ach) : null
@@ -306,7 +317,7 @@ function ItemSheet({ id, onClose, name, onNeedCoins }) {
     <div className="sh-sheet-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="sh-sheet" style={{ '--rar': RARITY[item.rarity].color }} role="dialog" aria-label={item.name}>
         <div className="sh-grab" onClick={onClose} />
-        <div className="sh-sheet-stage" onClick={isFx ? preview : undefined}>
+        <div className={`sh-sheet-stage${justEquipped ? ' is-flash' : ''}`} onClick={isFx ? preview : undefined}>
           {isFx
             ? <span style={{ display: 'grid', placeItems: 'center', gap: 10 }}><ItemPreview item={item} big /><span className="ag-chip"><IconPlay size={12} /> TAP TO {item.slot === 'winSound' ? 'PLAY' : 'PREVIEW'}</span></span>
             : item.slot === 'avatar'
@@ -319,7 +330,10 @@ function ItemSheet({ id, onClose, name, onNeedCoins }) {
         {mine ? (
           <div className="sh-sheet-row">
             {isFx && <button className="sh-ghost" onClick={preview}>{item.slot === 'winSound' ? 'PLAY' : 'PREVIEW'}</button>}
-            <button className={`sh-equip${equipped ? ' is-on' : ''}`} onClick={doEquip}>{equipped ? (isFx ? 'EQUIPPED' : 'TAKE IT OFF') : 'EQUIP'}</button>
+            <button className={`sh-equip${equipped ? ' is-on' : ''}${justEquipped ? ' is-just' : ''}`} onClick={doEquip}>
+              {justEquipped && <svg className="sh-equip-check" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.6l4.3 4.3L19 7.2" /></svg>}
+              {justEquipped ? 'EQUIPPED' : equipped ? (isFx ? 'EQUIPPED' : 'TAKE IT OFF') : 'EQUIP'}
+            </button>
           </div>
         ) : lock ? (
           <>
@@ -334,7 +348,7 @@ function ItemSheet({ id, onClose, name, onNeedCoins }) {
           <>
             <div className="sh-sheet-row">
               {isFx && <button className="sh-ghost" onClick={preview}>{item.slot === 'winSound' ? 'PLAY' : 'PREVIEW'}</button>}
-              <button className={`sh-buy${short ? ' is-short' : ''}`} onClick={doBuy}>BUY · <span className="coin-ico" />{price.toLocaleString()}</button>
+              <button ref={buyRef} className={`sh-buy${short ? ' is-short' : ''}`} onClick={doBuy}>BUY · <span className="coin-ico" />{price.toLocaleString()}</button>
             </div>
             {msg ? <div className="sh-hint">{msg}. Seasons, missions, achievements and the daily drop all pay <b>coins</b>.</div>
               : <div className="sh-hint">You have <b>{(p.coins ?? 0).toLocaleString()}</b> coins.</div>}
@@ -343,10 +357,11 @@ function ItemSheet({ id, onClose, name, onNeedCoins }) {
       </div>
       {bought && (
         <div className="sh-bought" style={{ '--rar': RARITY[item.rarity].color }}>
+          <span className="sh-bought-rays" aria-hidden="true" />
           <div className="sh-bought-card">
-            <span className="ag-eyebrow">UNLOCKED</span>
-            {item.slot === 'avatar' ? <AvatarBadge cos={{ avatar: item.id }} name={name} size={72} /> : <ItemPreview item={item} name={name} />}
-            <span className="sh-bought-name">{item.name}</span>
+            <span className="ag-eyebrow sh-bought-in" style={{ '--i': 0 }}>UNLOCKED</span>
+            <span className="sh-bought-in" style={{ '--i': 1 }}>{item.slot === 'avatar' ? <AvatarBadge cos={{ avatar: item.id }} name={name} size={72} /> : <ItemPreview item={item} name={name} />}</span>
+            <span className="sh-bought-name sh-bought-in" style={{ '--i': 2 }}>{item.name}</span>
           </div>
         </div>
       )}

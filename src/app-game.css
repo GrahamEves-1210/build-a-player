@@ -5562,3 +5562,17 @@ html.bap-reduce-motion :is(.ss-overlay, .ss-sheet, .ss-img, .ss-skel) { animatio
 .fx-claim.is-still .fx-claim-check { stroke-dashoffset: 0; animation: fx-claim-fade .9s ease both; }
 .fx-claim.is-still .fx-claim-gain { transform: translate(-50%, -6px); animation: fx-claim-fade .95s ease both; }
 @keyframes fx-claim-fade { 0% { opacity: 0; } 25%, 70% { opacity: 1; } 100% { opacity: 0; } }
+
+/* ═══ A reel locking in (SpinScreen / BucketSimPage): thunk, the dot pops, a light sweeps it ═══ */
+@media (prefers-reduced-motion: no-preference) {
+  html:is(.is-app, .app-look):not(.bap-reduce-motion) .reel-outer.reel-locked { animation: reel-thunk .36s cubic-bezier(.3, 1.5, .5, 1); }
+  html:is(.is-app, .app-look):not(.bap-reduce-motion) .reel-locked-pip { animation: reel-pip .42s cubic-bezier(.34, 1.56, .64, 1) both; }
+  html:is(.is-app, .app-look):not(.bap-reduce-motion) .reel-outer.reel-locked::after {
+    content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+    background: linear-gradient(100deg, transparent 35%, color-mix(in srgb, var(--ag-a1) 28%, transparent) 50%, transparent 65%) no-repeat;
+    background-size: 220% 100%; animation: reel-sweep .7s .05s ease-out both;
+  }
+}
+@keyframes reel-thunk { 0% { scale: 1; } 35% { scale: .965; } 70% { scale: 1.012; } 100% { scale: 1; } }
+@keyframes reel-pip { from { scale: 0; } }
+@keyframes reel-sweep { from { background-position: 120% 0; opacity: 1; } to { background-position: -20% 0; opacity: 0; } }
