@@ -19,6 +19,7 @@ import Silhouette from '../Silhouette'
 import { IconClose, IconArrow, IconCheck, IconFlame, IconChat, IconStar, IconProfile, IconTrophy } from './icons'
 import WatchVideo from './WatchVideo'
 import { IS_APP } from '../../lib/platform'
+import EmptyState from './EmptyState'
 
 // out of lives on a solo road (app): one video brings one life back, once a run
 // a revive is a rewarded video: none to offer while those are off
@@ -746,7 +747,7 @@ export function TakeoverIntro({ sport, teams, onStart, onClose }) {
             <span><b>{st.tkCities ?? 0}</b><small>CITIES TAKEN</small></span>
           </div>
           {runs.length === 0
-            ? <div className="tk-runs-empty">No runs yet. Your first road starts with a build.</div>
+            ? <EmptyState kind="road" title="No runs yet">The first road starts with a build.</EmptyState>
             : runs.slice(0, 8).map((r, i) => (
               <div key={r.at + '-' + i} className={`tk-run${r.won ? ' is-won' : ''}`}>
                 <span className="tk-run-pos">{POS_LABEL[r.pos] ?? r.pos?.toUpperCase()}</span>

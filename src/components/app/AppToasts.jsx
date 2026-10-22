@@ -63,7 +63,14 @@ export default function AppToasts() {
 
 export function LevelUp({ hold }) {
   const p = useProgress()
-  const show = !hold && p.seenLevel > 0 && p.lvl.level > p.seenLevel
+  const due = !hold && p.seenLevel > 0 && p.lvl.level > p.seenLevel
+  // a claim's own animation (juice.js claimFx) plays out first, then the level-up
+  const [show, setShow] = useState(false)
+  useEffect(() => {
+    if (!due) { setShow(false); return }
+    const t = setTimeout(() => setShow(true), 950)
+    return () => clearTimeout(t)
+  }, [due])
   const fired = useRef(0)
   useEffect(() => {
     if (show && fired.current !== p.lvl.level) {
@@ -71,7 +78,7 @@ export function LevelUp({ hold }) {
       setTimeout(() => { sfx('levelup'); haptic('success'); confetti(120) }, 250)
     }
   }, [show, p.lvl.level])
-  if (!show) return null
+  if (!show || !due) return null
   const { title, spots } = levelUnlocks(p.lvl.level, p.seenLevel)
   return createPortal(
     <div className="ag-levelup" onClick={markLevelSeen}>

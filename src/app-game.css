@@ -1134,6 +1134,16 @@ html.is-app .tpm-team-btn { border-radius: 12px !important; }
   color: var(--ag-text);
   animation: ag-fade .18s ease both;
 }
+/* a screen slides in from the side it's on (juice.js slideIn sets --ag-in-x) */
+@keyframes ag-screen-in { from { opacity: 0; transform: translate3d(var(--ag-in-x, 0px), 0, 0); } }
+@media (prefers-reduced-motion: no-preference) {
+  html:not(.bap-reduce-motion) .ag-screen,
+  html:not(.bap-reduce-motion):is(.is-app, .ag-page) .prf-page { animation: ag-screen-in .3s cubic-bezier(.2, .8, .2, 1) both; }
+  /* the lit tab's (now filled) icon lands with a little overshoot */
+  html:not(.bap-reduce-motion) .ag-tab--on .ag-tab-icon svg { animation: ag-tab-land .34s cubic-bezier(.34, 1.56, .64, 1) both; }
+}
+@keyframes ag-tab-land { from { transform: scale(.78) translateY(2px); } }
+.ag-screen.ag-screen--wait { animation: none; }
 .ag-screen-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; padding: 10px 16px 12px; }
 .ag-screen-head .ag-eyebrow { display: block; margin-bottom: 6px; }
 .ag-screen-head .ag-h1 { font-size: 40px; }
@@ -5534,3 +5544,21 @@ html.bap-reduce-motion :is(.ss-overlay, .ss-sheet, .ss-img, .ss-skel) { animatio
 .ag-cup-prizes > span:first-child { border-color: rgba(255,200,80,.45); background: rgba(255,200,80,.08); }
 
 .ag-levelup-pass { display: block; margin-top: 12px; font-family: var(--ag-body); font-size: 13px; font-weight: 600; color: var(--ag-a1); }
+
+/* ═══ Claim (juice.js claimFx): ring out, check turns in and draws, the win floats up ═══ */
+.fx-claim { position: fixed; z-index: 1100; pointer-events: none; display: grid; place-items: center; }
+.fx-claim::before { content: ''; position: absolute; inset: 0; border-radius: inherit; background: color-mix(in srgb, var(--ag-a1) 34%, rgba(5,8,6,.55)); animation: fx-claim-wash .7s ease-out both; }
+.fx-claim-ring { position: absolute; inset: 0; border-radius: inherit; border: 2px solid var(--ag-a1); box-shadow: 0 0 18px var(--ag-glow); animation: fx-claim-ring .55s cubic-bezier(.2, .8, .2, 1) both; }
+.fx-claim-check { position: relative; width: 26px; height: 26px; fill: none; stroke: #fff; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 22; stroke-dashoffset: 22; filter: drop-shadow(0 2px 5px rgba(0,0,0,.55)); animation: fx-claim-turn .42s cubic-bezier(.34, 1.56, .64, 1) .06s both, fx-claim-draw .3s ease-out .1s both, fx-claim-out .2s ease-out .72s forwards; }
+.fx-claim-gain { position: absolute; left: 50%; bottom: calc(100% + 2px); font-family: var(--ag-font); font-size: 17px; letter-spacing: 1.2px; line-height: 1; color: #fde68a; white-space: nowrap; text-shadow: 0 2px 8px rgba(0,0,0,.8); animation: fx-claim-gain .95s cubic-bezier(.2, .8, .2, 1) .12s both; }
+@keyframes fx-claim-wash { 0% { opacity: 0; } 20% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes fx-claim-ring { from { transform: scale(.9); opacity: .95; } to { transform: scale(1.32); opacity: 0; } }
+@keyframes fx-claim-turn { from { transform: rotate(-90deg) scale(.4); opacity: 0; } to { transform: rotate(0) scale(1); opacity: 1; } }
+@keyframes fx-claim-draw { to { stroke-dashoffset: 0; } }
+@keyframes fx-claim-out { to { opacity: 0; transform: scale(.9); } }
+@keyframes fx-claim-gain { 0% { opacity: 0; transform: translate(-50%, 8px) scale(.9); } 22% { opacity: 1; transform: translate(-50%, -2px) scale(1.04); } 70% { opacity: 1; transform: translate(-50%, -10px) scale(1); } 100% { opacity: 0; transform: translate(-50%, -18px); } }
+/* reduced motion: nothing moves, the check and the label fade */
+.fx-claim.is-still .fx-claim-ring { display: none; }
+.fx-claim.is-still .fx-claim-check { stroke-dashoffset: 0; animation: fx-claim-fade .9s ease both; }
+.fx-claim.is-still .fx-claim-gain { transform: translate(-50%, -6px); animation: fx-claim-fade .95s ease both; }
+@keyframes fx-claim-fade { 0% { opacity: 0; } 25%, 70% { opacity: 1; } 100% { opacity: 0; } }

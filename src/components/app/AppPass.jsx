@@ -7,7 +7,7 @@ import { track } from '../../lib/track'
 import { sellsHere, onStorefront } from '../../lib/storefront'
 import { IS_APP } from '../../lib/platform'
 import { getUsername } from '../../lib/discord'
-import { sfx, haptic } from '../../lib/juice'
+import { sfx, haptic, claimFx } from '../../lib/juice'
 import { AvatarBadge, ItemPreview } from './NameTag'
 import { IconClose, IconLock, IconCheck, IconShield, IconBolt, IconCards, IconCrown, IconFlame } from './icons'
 import './pass.css'
@@ -49,6 +49,8 @@ export function rewardKind(r) {
   if (r.pack) return 'Card pack'
   return ''
 }
+// what a claim paid, for the label that floats off the button (an item has its own reveal)
+export const gotLabel = g => (g?.coins ? `+${g.coins.toLocaleString()} COINS` : g?.item ? '' : g?.pack ? `+${g.pack} CARDS` : g?.freeze ? '+1 FREEZE' : g?.boost ? '2X XP' : g?.rush ? 'COIN RUSH' : g?.hot ? 'HOT HAND' : g?.heal ? 'QUICK HEAL' : '')
 // "2h 14m"
 const fmtLeft = ms => { const m = Math.ceil(ms / 60000); return m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m}m` }
 
@@ -75,7 +77,7 @@ function Cell({ r, tier, track, reached, claimed, locked, name, onClaim, flash }
   const state = claimed ? 'is-claimed' : ready ? 'is-ready' : locked ? 'is-locked' : 'is-ahead'
   return (
     <button className={`bp-cell bp-cell--${track} ${state}${flash ? ' is-flash' : ''}`} style={item ? { '--rar': RARITY[item.rarity].color } : undefined}
-      onClick={ready ? () => onClaim(track, tier) : undefined} aria-disabled={!ready}
+      onClick={ready ? e => onClaim(track, tier, e.currentTarget) : undefined} aria-disabled={!ready}
       aria-label={`Tier ${tier} ${track === 'p' ? 'premium' : 'free'}: ${rewardLabel(r)}${claimed ? ', claimed' : ready ? ', claim' : locked ? ', premium' : ''}`}>
       <RewardArt r={r} name={name} />
       <span className="bp-cell-txt">
@@ -129,9 +131,10 @@ export default function AppPass({ onClose }) {
   const ends = new Date(`${s.end}T12:00:00Z`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
   const useRush = () => { if (startRush()) { sfx('coins'); haptic('success') } }
 
-  const claim = (track, tier) => {
+  const claim = (track, tier, el) => {
     const r = claimPass(track, tier)
     if (!r) { sfx('deny'); return }
+    claimFx(el, gotLabel(r))
     setFlash(`${track}${tier}`); setTimeout(() => setFlash(null), 700)
     sfx(r.coins ? 'coins' : 'equip'); haptic('success')
     if (r.item && !r.dup) setGot(r.item)

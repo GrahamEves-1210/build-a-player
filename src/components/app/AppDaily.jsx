@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react'
 import { XpIco } from './GainIcons'
 import { useProgress, dailyState, fetchDailyBoard, fetchWeeklyCup, weekOf, weekEnds, CUP_COINS, CUP_ITEM, msToReset, claimMission, claimStreak, missionDef, STREAK_REWARDS, SPOTLIGHTS, buyFreeze, FREEZE_PRICE, FREEZE_MAX, streakLost, restoreStreak } from '../../lib/progress'
-import { sfx, haptic } from '../../lib/juice'
+import { sfx, haptic, claimFx } from '../../lib/juice'
 import { IS_APP } from '../../lib/platform'
 import WatchVideo from './WatchVideo'
 import { NameTag, AvatarBadge, ItemPreview } from './NameTag'
 import { itemById, RARITY } from '../../lib/cosmetics'
 import { getUsername } from '../../lib/discord'
 import { IconFlame, IconTarget, IconCheck, IconGift, IconLock, IconClose, IconCoin, IconArrow, IconShield } from './icons'
+import EmptyState from './EmptyState'
 
 // Daily hub (dock → Daily): login streak + rewards, the Daily Challenge with
 // its leaderboard, and today's three missions.
@@ -42,7 +43,7 @@ function Streak({ p }) {
   const st = p.streak
   const next = STREAK_REWARDS.find(r => st.count < r.days)
   const waiting = STREAK_REWARDS.filter(r => st.count >= r.days && !st.claimed?.[r.days]).length
-  const claim = days => { if (!p.signedIn) { window.dispatchEvent(new CustomEvent('bap:auth')); return } if (claimStreak(days)) { sfx('coins'); haptic('success') } }   // streak rewards pay coins
+  const claim = (days, el) => { if (!p.signedIn) { window.dispatchEvent(new CustomEvent('bap:auth')); return } const xp = claimStreak(days); if (xp) { sfx('coins'); haptic('success'); claimFx(el, `+${xp} XP`) } }   // streak rewards pay coins
   return (
     <section className="ag-card ag-streak ag-pop" style={{ '--d': '40ms' }}>
       <div className="ag-streak-head">
@@ -71,7 +72,7 @@ function Streak({ p }) {
           const item = itemById(r.item)
           return (
             <button key={r.days} className={`ag-milestone${reached ? ' is-reached' : ''}${claimed ? ' is-claimed' : ''}`} style={item ? { '--rar': RARITY[item.rarity].color } : undefined}
-              disabled={!reached || claimed} onClick={() => claim(r.days)}>
+              disabled={!reached || claimed} onClick={e => claim(r.days, e.currentTarget)}>
               <span className="ag-milestone-day">DAY {r.days}</span>
               <span className="ag-milestone-prize">{item ? <ItemPreview item={item} name={getUsername(p.user) || 'Guest'} /> : <span className="ag-milestone-xpbig"><XpIco /></span>}</span>
               <span className="ag-milestone-name">{item?.name ?? 'XP Bonus'}</span>
@@ -117,7 +118,7 @@ function Challenge({ p, sport }) {
         <div className="ag-board-head"><span>TODAY'S TOP BUILDS</span><span>OVR</span></div>
         {board == null && <div className="ag-board-empty">Loading…</div>}
         {board?.error && <div className="ag-board-empty">The board opens soon — your score is kept on this device.</div>}
-        {board && !board.error && board.rows.length === 0 && <div className="ag-board-empty">No scores yet. Be the first on the board.</div>}
+        {board && !board.error && board.rows.length === 0 && <EmptyState kind="podium" title="No scores yet">The first Daily finished today takes #1.</EmptyState>}
         {board?.rows.slice(0, 10).map((r, i) => (
           <div key={r.user_id} className={`ag-board-row${r.user_id === p.user?.id ? ' is-me' : ''}`}>
             <span className={`ag-board-rank ag-board-rank--${i + 1}`}>{i + 1}</span>
@@ -167,7 +168,7 @@ function WeeklyCup({ p }) {
         <div className="ag-board-head"><span>THIS WEEK</span><span>TOTAL</span></div>
         {board == null && <div className="ag-board-empty">Loading…</div>}
         {board?.error && <div className="ag-board-empty">The Cup board opens soon.</div>}
-        {board && !board.error && board.rows.length === 0 && <div className="ag-board-empty">No Dailies this week yet. Today's counts.</div>}
+        {board && !board.error && board.rows.length === 0 && <EmptyState kind="podium" title="Nobody on the Cup yet">Today's Daily starts the week's count.</EmptyState>}
         {board?.rows.slice(0, 10).map((r, i) => (
           <div key={r.user_id} className={`ag-board-row${r.user_id === p.user?.id ? ' is-me' : ''}`}>
             <span className={`ag-board-rank ag-board-rank--${i + 1}`}>{i + 1}</span>
@@ -189,7 +190,7 @@ function WeeklyCup({ p }) {
 
 function Missions({ p }) {
   const signIn = () => window.dispatchEvent(new CustomEvent('bap:auth'))
-  const claim = id => { if (!p.signedIn) { signIn(); return } if (claimMission(id)) { sfx('coins'); haptic('success') } }   // missions pay coins
+  const claim = (id, el) => { if (!p.signedIn) { signIn(); return } const xp = claimMission(id); if (xp) { sfx('coins'); haptic('success'); claimFx(el, `+${xp} XP`) } }   // missions pay coins
   return (
     <section className="ag-card ag-missions ag-pop" style={{ '--d': '140ms' }}>
       <div className="ag-card-head"><span className="ag-eyebrow">TODAY'S MISSIONS</span></div>
@@ -205,7 +206,7 @@ function Missions({ p }) {
               <span className="ag-mission-bar"><span style={{ width: `${(m.n / def.goal) * 100}%` }} /></span>
             </span>
             {done && !m.claimed
-              ? <button className="ag-btn ag-mission-claim" onClick={() => claim(m.id)}>{p.signedIn ? <span className="gain"><XpIco /> +{def.xp}</span> : 'SIGN IN'}</button>
+              ? <button className="ag-btn ag-mission-claim" onClick={e => claim(m.id, e.currentTarget)}>{p.signedIn ? <span className="gain"><XpIco /> +{def.xp}</span> : 'SIGN IN'}</button>
               : <span className="ag-mission-xp">{m.claimed ? 'DONE' : <>{m.n}/{def.goal}{p.signedIn ? <> · <span className="gain"><XpIco /> {def.xp}</span></> : ''}</>}</span>}
           </div>
         )

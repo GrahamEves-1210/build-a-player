@@ -2,8 +2,8 @@ import { useEffect, useRef } from 'react'
 import { useProgress, claimPass, dayKey } from '../../lib/progress'
 import { TIERS, TIER_XP, daysLeft, daysLeftText } from '../../lib/pass'
 import { getUsername } from '../../lib/discord'
-import { sfx, haptic } from '../../lib/juice'
-import { RewardArt, rewardLabel } from './AppPass'
+import { sfx, haptic, claimFx } from '../../lib/juice'
+import { RewardArt, rewardLabel, gotLabel } from './AppPass'
 import { IconCheck, IconLock, IconCrown, IconArrow } from './icons'
 import './pass.css'
 
@@ -24,9 +24,10 @@ export default function PassStrip() {
   if (!bp) return null
   const s = bp.season
   const live = p.signedIn && bp.started
-  const tap = (track, t, ready) => {
+  const tap = (track, t, ready, el) => {
     if (!ready) { nav('pass'); return }
-    if (claimPass(track, t)) { sfx('coins'); haptic('success') }
+    const g = claimPass(track, t)
+    if (g) { sfx('coins'); haptic('success'); claimFx(el, gotLabel(g)) }
   }
   const tile = (track, t) => {
     const r = (track === 'p' ? s.premium : s.free)[t]
@@ -34,7 +35,7 @@ export default function PassStrip() {
     const claimed = !!bp.claimed[track][t], locked = track === 'p' && !bp.owned
     const ready = live && t <= bp.tier && !claimed && !locked
     return (
-      <button className={`ps-tile ps-tile--${track}${ready ? ' is-ready' : claimed ? ' is-claimed' : locked ? ' is-locked' : ''}`} onClick={() => tap(track, t, ready)}
+      <button className={`ps-tile ps-tile--${track}${ready ? ' is-ready' : claimed ? ' is-claimed' : locked ? ' is-locked' : ''}`} onClick={e => tap(track, t, ready, e.currentTarget)}
         aria-label={`Tier ${t} ${track === 'p' ? 'premium' : 'free'}: ${rewardLabel(r)}${claimed ? ', claimed' : ready ? ', claim' : ''}`}>
         <RewardArt r={r} name={name} />
         <span className="ps-tile-name">{rewardLabel(r)}</span>

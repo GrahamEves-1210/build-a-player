@@ -2,7 +2,7 @@ import { useProgress, claimAch, achStats, rewardText } from '../../lib/progress'
 import { XpIco } from './GainIcons'
 import { ACHIEVEMENTS, ACH_GROUPS } from '../../lib/achievements'
 import { itemById } from '../../lib/cosmetics'
-import { sfx, haptic } from '../../lib/juice'
+import { sfx, haptic, claimFx } from '../../lib/juice'
 import { GLYPHS } from './NameTag'
 import { IconClose, IconCheck } from './icons'
 import { CoinPill } from './AppShop'
@@ -17,10 +17,10 @@ export default function AppAchievements({ onClose, hall = null }) {
   const pct = Math.round((done / ACHIEVEMENTS.length) * 100)
   // rewards (XP, coins) need an account: a guest's claim asks them to sign in
   const signIn = () => window.dispatchEvent(new CustomEvent('bap:auth'))
-  const claim = a => {
+  const claim = (a, el) => {
     if (!p.signedIn) { signIn(); return }
     const r = claimAch(a.id)
-    if (r) { sfx('coins'); haptic('success') }   // achievements pay coins: the coin drop
+    if (r) { sfx('coins'); haptic('success'); claimFx(el, a.xp ? `+${a.xp} XP` : '') }   // achievements pay coins: the coin drop
   }
   const claimAll = () => {
     if (!p.signedIn) { signIn(); return }
@@ -83,7 +83,7 @@ export default function AppAchievements({ onClose, hall = null }) {
                   {!unlocked && <span className="ach-bar"><span style={{ width: `${(now / a.goal) * 100}%` }} /></span>}
                 </span>
                 {unlocked && !claimed
-                  ? <button className="ach-claim" onClick={() => claim(a)}>CLAIM</button>
+                  ? <button className="ach-claim" onClick={e => claim(a, e.currentTarget)}>CLAIM</button>
                   : <span className="ach-reward">{claimed ? <span className="ach-done-tag">CLAIMED</span> : <span>{now.toLocaleString()}/{a.goal.toLocaleString()}</span>}{p.signedIn ? <span className="gain"><XpIco /> <b>+{a.xp}</b>{a.coins ? <> · <span className="coin-ico coin-ico--sm" /> <b>+{a.coins}</b></> : null}</span> : <span>SIGN IN</span>}</span>}
               </div>
             )

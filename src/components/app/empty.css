@@ -1,0 +1,84 @@
+/* ═══ Empty states (EmptyState.jsx): a small drawing in the game's line style ═══
+   Lines are the panel line colour, the one lit thing is the accent; the ball is the
+   sport's. Everything moves only with motion allowed; still, it's a finished drawing. */
+
+.ea { display: grid; justify-items: center; gap: 4px; padding: 14px 8px 12px; text-align: center; }
+.ea-art { display: grid; place-items: center; width: 160px; height: 96px; margin-bottom: 4px; }
+.ea-svg { width: 100%; height: 100%; overflow: visible; }
+.ea-title { font-family: var(--ag-font); font-weight: 400; font-size: 18px; letter-spacing: 1.5px; color: var(--ag-text); line-height: 1.1; }
+.ea-text { max-width: 30ch; font-family: var(--ag-body); font-size: 13px; line-height: 1.45; color: var(--ag-muted); text-wrap: pretty; }
+.ea--small { grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto auto; align-content: center; justify-items: start; align-items: center; column-gap: 12px; row-gap: 3px; padding: 4px 0; text-align: left; }
+.ea--small .ea-title { align-self: end; }
+.ea--small .ea-text { align-self: start; }
+.ea--small .ea-art { grid-row: span 2; width: 96px; height: 58px; margin: 0; }
+.ea--small .ea-title { font-size: 16px; }
+
+/* the sport's ball */
+.ea-bb { display: none; }
+html.is-bucket .ea-bb { display: inline; }
+html.is-bucket .ea-fb { display: none; }
+
+/* podium */
+.ea-floor { stroke: var(--ag-line-hi, rgba(255,255,255,.14)); stroke-width: 1.5; stroke-linecap: round; }
+.ea-block { fill: rgba(255,255,255,.035); stroke: var(--ag-line-hi, rgba(255,255,255,.14)); stroke-width: 1.5; }
+.ea-block--top { fill: color-mix(in srgb, var(--ag-a1) 10%, transparent); stroke: color-mix(in srgb, var(--ag-a1) 70%, transparent); }
+.ea-num { font-family: var(--ag-display); font-size: 15px; fill: var(--ag-muted); text-anchor: middle; }
+.ea-num--top { fill: var(--ag-a1); font-size: 17px; }
+.ea-shadow { fill: rgba(0,0,0,.5); transform-box: fill-box; transform-origin: center; }
+.ea-bounce { transform-box: fill-box; transform-origin: 50% 100%; }
+
+/* duo */
+.ea-p1 { fill: color-mix(in srgb, var(--ag-a1) 75%, transparent); }
+.ea-p2 { fill: none; stroke: var(--ag-line-hi, rgba(255,255,255,.2)); stroke-width: 1.6; stroke-dasharray: 4 3.5; }
+.ea-plus circle { fill: var(--ag-bg, #050806); stroke: var(--ag-a1); stroke-width: 1.6; }
+.ea-plus path { stroke: var(--ag-a1); stroke-width: 1.8; stroke-linecap: round; }
+.ea-plus-in { transform-box: fill-box; transform-origin: center; }
+.ea-vs { font-family: var(--ag-display); font-size: 16px; letter-spacing: 1px; fill: var(--ag-muted); text-anchor: middle; }
+.ea-hold { transform-box: fill-box; transform-origin: center; }
+
+/* road */
+.ea-route { fill: none; stroke: var(--ag-line-hi, rgba(255,255,255,.16)); stroke-width: 2; stroke-dasharray: 2 5; stroke-linecap: round; }
+.ea-route-run { fill: none; stroke: var(--ag-a1); stroke-width: 2.4; stroke-linecap: round; stroke-dasharray: 100; stroke-dashoffset: 0; filter: drop-shadow(0 0 4px var(--ag-glow)); }
+.ea-start { fill: var(--ag-a1); }
+.ea-pin { fill: var(--ag-a1); }
+.ea-pin-dot { fill: var(--ag-bg, #050806); }
+.ea-pin-ring { fill: none; stroke: var(--ag-a1); stroke-width: 1.5; opacity: 0; transform-box: fill-box; transform-origin: center; }
+
+/* cards: two behind, the front one flips between its back and a pulled card */
+.ea-cards { position: relative; width: 120px; height: 92px; perspective: 400px; }
+.ea-c { position: absolute; left: 50%; bottom: 2px; width: 50px; height: 70px; margin-left: -25px; border-radius: 8px; border: 1.5px solid var(--ag-line-hi, rgba(255,255,255,.16)); background: rgba(255,255,255,.04); transform-origin: 50% 100%; }
+.ea-c--l { transform: rotate(-14deg) translateX(-10px); }
+.ea-c--r { transform: rotate(14deg) translateX(10px); }
+.ea-c--f { border: 0; background: none; transform-style: preserve-3d; }
+.ea-face { position: absolute; inset: 0; display: grid; place-items: center; border-radius: 8px; backface-visibility: hidden; -webkit-backface-visibility: hidden; font-style: normal; }
+.ea-face--back { border: 1.5px solid color-mix(in srgb, var(--ag-a1) 70%, transparent); background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--ag-a1) 16%, transparent) 0 4px, transparent 4px 9px), #0b1310; font-family: var(--ag-display); font-size: 26px; color: var(--ag-a1); }
+.ea-face--front { transform: rotateY(180deg); border: 1.5px solid #f2c94c; background: radial-gradient(circle at 50% 40%, rgba(242,201,76,.25), transparent 70%), #14110a; }
+
+@media (prefers-reduced-motion: no-preference) {
+  html:not(.bap-reduce-motion) .ea-beam { animation: ea-beam 3.2s ease-in-out infinite; }
+  html:not(.bap-reduce-motion) .ea-bounce { animation: ea-bounce 1.5s infinite; }
+  html:not(.bap-reduce-motion) .ea-shadow { animation: ea-shadow 1.5s infinite; }
+  html:not(.bap-reduce-motion) .ea-plus-in { animation: ea-plus 2.4s cubic-bezier(.34,1.56,.64,1) infinite; }
+  html:not(.bap-reduce-motion) .ea-hold { animation: ea-hold 2.4s ease-in-out infinite; }
+  html:not(.bap-reduce-motion) .ea-route-run { animation: ea-route 3.4s cubic-bezier(.4,0,.2,1) infinite; }
+  html:not(.bap-reduce-motion) .ea-pin-ring { animation: ea-ring 3.4s ease-out infinite; }
+  html:not(.bap-reduce-motion) .ea-c--f { animation: ea-flip 4s cubic-bezier(.5,0,.2,1) infinite; }
+}
+@keyframes ea-beam { 50% { opacity: .55; } }
+/* drop (ease in), squash on the block, stretch on the way up (ease out) */
+@keyframes ea-bounce {
+  0%   { transform: translateY(-24px); animation-timing-function: cubic-bezier(.55, 0, 1, .45); }
+  44%  { transform: translateY(0) scale(1, 1); }
+  50%  { transform: translateY(1px) scale(1.14, .82); animation-timing-function: cubic-bezier(.2, .9, .3, 1); }
+  58%  { transform: translateY(-4px) scale(.95, 1.06); animation-timing-function: cubic-bezier(0, .55, .45, 1); }
+  100% { transform: translateY(-24px); }
+}
+@keyframes ea-shadow {
+  0%, 100% { transform: scale(.45); opacity: .35; animation-timing-function: cubic-bezier(.55, 0, 1, .45); }
+  44%, 52% { transform: scale(1.05); opacity: 1; animation-timing-function: cubic-bezier(0, .55, .45, 1); }
+}
+@keyframes ea-plus { 0%, 60%, 100% { transform: scale(1); } 70% { transform: scale(1.22); } 80% { transform: scale(.94); } }
+@keyframes ea-hold { 50% { transform: translateY(-3px) rotate(-6deg); } }
+@keyframes ea-route { 0% { stroke-dashoffset: 100; opacity: 1; } 62% { stroke-dashoffset: 0; opacity: 1; } 88% { stroke-dashoffset: 0; opacity: 1; } 100% { stroke-dashoffset: 0; opacity: 0; } }
+@keyframes ea-ring { 0%, 58% { opacity: 0; transform: scale(.6); } 64% { opacity: .9; } 90%, 100% { opacity: 0; transform: scale(1.7); } }
+@keyframes ea-flip { 0%, 30% { transform: rotateY(0); } 45%, 80% { transform: rotateY(180deg); } 95%, 100% { transform: rotateY(360deg); } }

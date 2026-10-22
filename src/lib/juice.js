@@ -541,6 +541,33 @@ export const haptic = kind => {
   } catch {}
 }
 
+// ── Screens slide in from the side they're on ────────────────────────────────
+// A tab to the right of the one that's lit comes in from the right, one to the left
+// from the left; a screen opened from inside another (the pass, the locker) pushes in
+// from the right. The next .ag-screen / profile page to mount reads --ag-in-x.
+export const slideIn = dir => document.documentElement.style.setProperty('--ag-in-x', dir > 0 ? '32px' : dir < 0 ? '-32px' : '0px')
+
+// ── Claim: one tap, a short sequence drawn over the button ──────────────────
+// The button itself re-renders as claimed straight away; this layer sits on top
+// of where it is (fixed, on the body) so a re-render can't cut it short:
+//   1. a ring in the accent grows out of the button and fades (0–550ms)
+//   2. a check turns in from −90° with a little overshoot while its stroke draws (60–480ms)
+//   3. what was won floats up off the button (120–1000ms)
+// With reduced motion it's the check and the label fading, nothing moving.
+export function claimFx(el, label = '') {
+  if (!el?.getBoundingClientRect) return
+  const r = el.getBoundingClientRect()
+  if (!r.width) return
+  const fx = document.createElement('div')
+  fx.className = `fx-claim${reduced() ? ' is-still' : ''}`
+  fx.style.cssText = `left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px;border-radius:${getComputedStyle(el).borderRadius}`
+  fx.innerHTML = '<span class="fx-claim-ring"></span><svg class="fx-claim-check" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.6l4.3 4.3L19 7.2"/></svg>'
+  if (label) { const g = document.createElement('span'); g.className = 'fx-claim-gain'; g.textContent = label; fx.appendChild(g) }
+  document.body.appendChild(fx)
+  setTimeout(() => fx.remove(), 1150)
+}
+const reduced = () => document.documentElement.classList.contains('bap-reduce-motion') || !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+
 // ── Confetti ─────────────────────────────────────────────────────────────────
 export function confetti(amount = 140) {
   if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
@@ -802,6 +829,9 @@ export function initJuice() {
     }
     if (el.matches('.attr-chip')) { sfx('slot'); haptic('medium'); return }
     if (el.matches('.ag-round-btn, .cr-close, .prf-top-back, .dc-back-btn')) { sfx('back'); haptic('light'); return }
+    // haptics by weight: the dock and the main buttons land heavier than chips and rows
+    if (el.matches('.ag-tab, .ag-play')) { sfx('tap'); haptic('medium'); return }
+    if (el.matches('.ag-btn, .sh-buy, .bst-buy, .bp-buy-btn, .ag-pro-cta')) { sfx('tap'); haptic('medium'); return }
     if (el.matches('.ag-edge')) { sfx('flip'); haptic('light'); return }
     // "Simulate Season" — the referee starts the game
     if (el.matches('.simp-cta') && /simulate season/i.test(el.textContent)) { sfx('whistle'); haptic('medium'); warmVictory(); return }

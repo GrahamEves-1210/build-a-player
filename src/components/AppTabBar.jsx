@@ -1,4 +1,4 @@
-import { useEffect, useState, lazy, Suspense } from 'react'
+import { useEffect, useRef, useState, lazy, Suspense } from 'react'
 import LiveLeave from './app/LiveLeave'
 import { guardLeave } from '../lib/liveLock'
 import { IS_APP, APP_LOOK } from '../lib/platform'
@@ -6,7 +6,8 @@ import AppMenu from './app/AppMenu'
 import AuthModal from './AuthModal'
 import AppToasts, { LevelUp } from './app/AppToasts'
 import { useProgress, STREAK_REWARDS, missionDef, cardsOpen } from '../lib/progress'
-import { IconBag, IconProfile, IconCalendar, IconTrophy } from './app/icons'
+import { IconBag, IconProfile, IconCalendar, IconTrophy, IconBagLine, IconProfileLine, IconCalendarLine, IconTrophyLine } from './app/icons'
+import { slideIn } from '../lib/juice'
 import PlayButton from './app/PlayButton'
 import { startPresence } from '../lib/presence'
 
@@ -40,10 +41,16 @@ const WEB_DOCK_ON = new Set(['splash', 'profile', 'career', 'career-intro', 'tak
 
 const nav = to => window.dispatchEvent(new CustomEvent('bap:nav', { detail: to }))
 
-function Tab({ label, Icon, active, onClick, badge }) {
+// the dock's order, for which way a screen slides in (Home is PLAY, in the middle)
+const TAB_ORDER = { shop: 0, daily: 1, play: 2, hall: 3, profile: 4, locker: 4 }
+const DOCK_TABS = new Set(['shop', 'daily', 'hall'])
+
+// outline when it's not lit, filled when it is
+function Tab({ label, Icon, Line, active, onClick, badge }) {
+  const Glyph = active ? Icon : Line
   return (
     <button className={`ag-tab${active ? ' ag-tab--on' : ''}`} aria-current={active ? 'page' : undefined} onClick={onClick}>
-      <span className="ag-tab-icon"><Icon size={23} /></span>
+      <span className="ag-tab-icon"><Glyph size={23} /></span>
       <span className="ag-tab-label">{label}</span>
       {badge ? <span className="ag-tab-badge">{badge}</span> : null}
     </button>
@@ -95,6 +102,10 @@ export default function AppTabBar() {
   const [screen, setScreen]     = useState(null)   // 'daily' | 'cards' | 'shop' | 'achievements' | null
   const badge = useDailyBadge()
   const claimable = useProgress().claimable || 0
+  const activeRef = useRef('play')   // the lit tab, for the nav listener (set every render)
+  const slideTo = to => slideIn(DOCK_TABS.has(to) || to === 'profile' || to === 'play' || to === 'home'
+    ? Math.sign((TAB_ORDER[to === 'home' ? 'play' : to] ?? 2) - (TAB_ORDER[activeRef.current] ?? 2))
+    : 1)
 
   useEffect(() => {
     const onPage = e => { setState(e.detail); setScreen(null) }
@@ -106,6 +117,7 @@ export default function AppTabBar() {
       if (to === 'cards' && !cardsOpen()) { setMenuOpen(false); setAuthOpen(true); return }
       if (to === 'pro') { setMenuOpen('pro'); return }
       // Cards and Achievements live together in the Hall
+      slideTo(to === 'cards' || to === 'achievements' ? 'hall' : to)
       if (to === 'cards' || to === 'achievements' || to === 'hall') { setMenuOpen(false); setHallTab(to === 'achievements' || arg === 'achievements' ? 'achievements' : 'cards'); setHallFrom(arg === 'dock' ? 'dock' : 'page'); setScreen('hall'); return }
       if (['daily', 'shop', 'locker', 'soundlab', 'online', 'pass'].includes(to)) { setMenuOpen(false); if (to === 'shop') setShopTab(arg || 'featured'); setScreen(to) }
       else setScreen(null)
@@ -137,11 +149,12 @@ export default function AppTabBar() {
   if (!IS_APP && !APP_LOOK) return null
   const hidden = HIDE_ON.has(state.page) || (!IS_APP && !screen && !WEB_DOCK_ON.has(state.page))
   const active = screen ?? (state.page in TAB_FOR_PAGE ? TAB_FOR_PAGE[state.page] : 'play')
+  activeRef.current = active
   // in a live game every tab is a way out: it asks first (lib/liveLock.js)
-  const go = to => () => guardLeave(() => { setMenuOpen(false); setScreen(null); nav(to) })
+  const go = to => () => guardLeave(() => { setMenuOpen(false); setScreen(null); slideTo(to); nav(to) })
   // a tab for the screen that's already open does nothing (it used to close it and
   // drop you on whatever page was underneath, often the profile)
-  const open = which => () => { if (screen === which) return; guardLeave(() => { setMenuOpen(false); setScreen(which) }) }
+  const open = which => () => { if (screen === which) return; guardLeave(() => { setMenuOpen(false); slideTo(which); setScreen(which) }) }
   // Daily, Shop and Cards: the X always goes Home (not back to whatever page was under
   // it); the profile's own screens (achievements, locker…) close back to the profile
   const closeHome = () => { setScreen(null); nav('home') }
@@ -149,7 +162,7 @@ export default function AppTabBar() {
   return (
     <>
       {screen && (
-        <Suspense fallback={<div className="ag-screen" />}>
+        <Suspense fallback={<div className="ag-screen ag-screen--wait" />}>
           {screen === 'daily' ? <AppDaily sport={state.sport} onClose={closeHome} />
             : screen === 'shop' ? <AppShop key={shopTab} tab={shopTab} onClose={closeHome} />
             : screen === 'locker' ? <AppLocker onClose={() => setScreen(null)} />
@@ -162,15 +175,15 @@ export default function AppTabBar() {
       )}
       {!hidden && (
         <nav className={`ag-dock ag-dock--${state.sport}`} aria-label="Main">
-          <Tab label="SHOP" Icon={IconBag} active={active === 'shop'} onClick={open('shop')} />
-          <Tab label="DAILY" Icon={IconCalendar} active={active === 'daily'} onClick={open('daily')} badge={badge} />
+          <Tab label="SHOP" Icon={IconBag} Line={IconBagLine} active={active === 'shop'} onClick={open('shop')} />
+          <Tab label="DAILY" Icon={IconCalendar} Line={IconCalendarLine} active={active === 'daily'} onClick={open('daily')} badge={badge} />
           {/* a tap goes Home (PLAY, or HOME inside a game mode); hold for the modes anywhere */}
           <PlayButton page={state.page} sport={state.sport} lit={active === 'play'} here={state.page === 'splash' && !screen}
             onTap={() => { if (state.page === 'splash' && !screen) return; go('home')() }} />
           {/* website: cards are saved to an account */}
-          <Tab label="HALL" Icon={IconTrophy} active={active === 'hall'} badge={claimable}
-            onClick={screen === 'hall' ? undefined : cardsOpen() ? () => guardLeave(() => { setMenuOpen(false); setHallTab(claimable ? 'achievements' : 'cards'); setHallFrom('dock'); setScreen('hall') }) : () => guardLeave(() => { setMenuOpen(false); setAuthOpen(true) })} />
-          <Tab label="PROFILE" Icon={IconProfile} active={active === 'profile' || active === 'locker'} onClick={state.page === 'profile' && !screen ? undefined : go('profile')} />
+          <Tab label="HALL" Icon={IconTrophy} Line={IconTrophyLine} active={active === 'hall'} badge={claimable}
+            onClick={screen === 'hall' ? undefined : cardsOpen() ? () => guardLeave(() => { setMenuOpen(false); slideTo('hall'); setHallTab(claimable ? 'achievements' : 'cards'); setHallFrom('dock'); setScreen('hall') }) : () => guardLeave(() => { setMenuOpen(false); setAuthOpen(true) })} />
+          <Tab label="PROFILE" Icon={IconProfile} Line={IconProfileLine} active={active === 'profile' || active === 'locker'} onClick={state.page === 'profile' && !screen ? undefined : go('profile')} />
         </nav>
       )}
       {menuOpen && <AppMenu sport={state.sport} initialView={menuOpen === 'pro' ? 'pro' : 'menu'} onClose={() => setMenuOpen(false)} />}

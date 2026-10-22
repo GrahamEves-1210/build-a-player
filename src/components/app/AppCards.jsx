@@ -4,6 +4,7 @@ import { useProgress, cardKey, rarityRank, RARITIES, claimSet, setReward } from 
 import { HEADSHOT_BASE, nflHeadshot } from '../../utils/simulation'
 import { sfx, haptic } from '../../lib/juice'
 import { IconClose, IconCheck, IconGift, IconCrown, IconStar, IconArrow, IconFootball, IconBasketball } from './icons'
+import EmptyState from './EmptyState'
 
 // Card binder (dock → Cards). Every player a spin lands on is collected, across
 // every position, both eras and both sports, into one collection. Sets are the
@@ -243,6 +244,8 @@ export default function AppCards({ sport: startSport, onClose, hall = null }) {
         </div>
 
         {!data && <div className="ag-board-empty">Loading cards…</div>}
+
+        {data && !openSet && recent.length === 0 && <EmptyState kind="cards" title="No cards yet">Every player revealed in a spin lands here.</EmptyState>}
 
         {data && !openSet && recent.length > 0 && (
           <section className="ag-pop" style={{ '--d': '40ms' }}>

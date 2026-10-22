@@ -5,6 +5,7 @@ import { getUsername } from '../../lib/discord'
 import { loadFriends, searchPlayers, sendFriendRequest, respondToRequest } from '../../lib/friends'
 import FriendProfile from './FriendProfile'
 import './friends.css'
+import EmptyState from './EmptyState'
 
 // Profile → Friends: your friends (tap one for their profile), requests waiting
 // on you, and adding someone by username. Same friend list as the Blacktop 1v1
@@ -153,7 +154,7 @@ export default function FriendsSection({ user, isBucket = false }) {
         {loading && <div className="fr-loading" aria-label="Loading friends"><span /><span /><span /></div>}
         {!loading && loadErr && <p className="fr-note">Couldn't load your friends. <button className="fr-link" onClick={refresh}>Retry</button></p>}
         {!loading && !loadErr && friends.length === 0 && (
-          <p className="fr-empty">No friends yet. Find someone by their username above, or add them from the 1v1 lobby.</p>
+          <EmptyState kind="duo" title="No friends yet">Find someone by their username above, or add them from the 1v1 lobby.</EmptyState>
         )}
         {friends.map(f => (
           <button key={f.id} className="fr-row fr-row--friend" onClick={() => setOpen(f)} aria-label={`Open ${f.username}'s profile`}>

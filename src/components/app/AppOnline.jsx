@@ -1,6 +1,7 @@
 import { useProgress } from '../../lib/progress'
 import { RatingHero, ModeStats, NextGoals, OnlineTierLadder } from './OnlineRecord'
 import { IconClose, IconArrow } from './icons'
+import EmptyState from './EmptyState'
 
 // Online screen (Compete / Blacktop cards → YOUR RECORD): the rating
 // and ladder, each live mode's full numbers, and the next goals to chase.
@@ -21,10 +22,7 @@ export default function AppOnline({ sport = 'nfl', onClose }) {
         <OnlineTierLadder />
         {!p.signedIn && <p className="ol-note">Playing as a guest — <button onClick={() => window.dispatchEvent(new CustomEvent('bap:auth'))}>sign in</button> and your record follows your account.</p>}
         {o.played === 0 && (
-          <div className="ol-empty ag-pop">
-            <b>No online games yet.</b>
-            <span>Every online game is against real players: Compete pools, Blacktop 1v1, 2v2 and 3v3.</span>
-          </div>
+          <div className="ag-pop"><EmptyState kind="duo" mid="vs" title="No online games yet">Every online game is against real players: Compete pools, Blacktop 1v1, 2v2 and 3v3.</EmptyState></div>
         )}
         <NextGoals limit={3} />
         <ModeStats mode="compete" full />

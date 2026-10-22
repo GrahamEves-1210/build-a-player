@@ -17,6 +17,7 @@ import { CoinPill } from './AppShop'
 import { TierChip, Form } from './OnlineRecord'
 import { tierFor } from '../../lib/progress'
 import { W as MAP_W, H as MAP_H, OUTLINE_PATH } from '../../lib/usMap'
+import EmptyState from './EmptyState'
 
 // Card art: the road map for Takeover, the pool's podium for Compete
 function MapArt() {
@@ -261,7 +262,7 @@ function PlayersOfDay() {
             </li>
           ))}
         </ol>
-      ) : <p className="ag-potd-empty">Nobody's on the board yet today. Play anything to take the top spot.</p>}
+      ) : <EmptyState kind="podium" small title="Nobody on the board yet">Play anything today to take #1.</EmptyState>}
       {!inTop && (
         <p className="ag-potd-mine">{me
           ? <>{getUsername(p.user) || 'Player'} today: <b>{t.xp.toLocaleString()} XP</b> · {t.g} {t.g === 1 ? 'game' : 'games'}{rows.length === 3 ? <> · {Math.max(0, (rows[2].cos.today.xp ?? 0) - t.xp + 1).toLocaleString()} XP to make the top 3</> : null}</>
