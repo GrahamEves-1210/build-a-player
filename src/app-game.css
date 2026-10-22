@@ -5589,3 +5589,8 @@ html.bap-reduce-motion :is(.ss-overlay, .ss-sheet, .ss-img, .ss-skel) { animatio
 /* icons that sit in text where an emoji was: the text's size, on its baseline */
 .ico-inline { display: inline-block; vertical-align: -.125em; }
 .ico-gold { color: #f2c94c; }
+
+/* dock: an unlit tab's icon is solid colour faded as one layer, so its lines never double up where they meet */
+.ag-tab:not(.ag-tab--on) .ag-tab-icon { color: rgb(216, 243, 220); opacity: .42; }
+html.is-bucket .ag-tab:not(.ag-tab--on) .ag-tab-icon { color: rgb(255, 237, 213); }
+@media (hover: hover) { html.app-look .ag-tab:not(.ag-tab--on):hover .ag-tab-icon { opacity: .9; } }

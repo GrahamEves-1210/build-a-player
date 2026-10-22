@@ -295,35 +295,30 @@ export const IconEye = p => (
   </S>
 )
 
-// Dock tabs that aren't lit: the same four shapes in outline (the lit tab is filled)
+// Dock tabs that aren't lit: the same four shapes in outline (the lit tab is filled).
+// Each is ONE path, so where its lines meet they're drawn once (no brighter spots where
+// two strokes cross under a see-through colour), and ends stop at the edge they meet.
 const LINE = { fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round' }
 export const IconBagLine = p => (
   <S {...p}>
-    <path {...LINE} d="M5.6 8.3h12.8c.4 0 .7.3.8.7l1 10.8c.1.7-.5 1.3-1.2 1.3H5c-.7 0-1.3-.6-1.2-1.3l1-10.8c.1-.4.4-.7.8-.7z"/>
-    <path {...LINE} d="M8.8 10.6V6.6a3.2 3.2 0 0 1 6.4 0v4"/>
+    <path {...LINE} d="M5.6 8.3h12.8c.4 0 .7.3.8.7l1 10.8c.1.7-.5 1.3-1.2 1.3H5c-.7 0-1.3-.6-1.2-1.3l1-10.8c.1-.4.4-.7.8-.7zM8.8 8.3V6.6a3.2 3.2 0 0 1 6.4 0v1.7"/>
   </S>
 )
 export const IconCalendarLine = p => (
   <S {...p}>
-    <rect {...LINE} x="3.9" y="5.2" width="16.2" height="15" rx="2.6"/>
-    <path {...LINE} d="M3.9 9.6h16.2M7.7 3v3.6M16.3 3v3.6"/>
-    <path {...LINE} strokeWidth="1.5" d="m12 12.3 1 2 2.2.3-1.6 1.6.4 2.2-2-1.1-2 1.1.4-2.2-1.6-1.6 2.2-.3z"/>
+    <path {...LINE} d="M6.5 5.2h11a2.6 2.6 0 0 1 2.6 2.6v9.8a2.6 2.6 0 0 1-2.6 2.6h-11a2.6 2.6 0 0 1-2.6-2.6V7.8a2.6 2.6 0 0 1 2.6-2.6zM3.9 9.6h16.2M8 3v2.2M16 3v2.2M12 12.3l1 2 2.2.3-1.6 1.6.4 2.2-2-1.1-2 1.1.4-2.2-1.6-1.6 2.2-.3z"/>
   </S>
 )
 export const IconTrophyLine = p => (
   <S {...p}>
-    <path {...LINE} d="M7 3.4h10v4.9a5 5 0 0 1-10 0z"/>
-    <path {...LINE} d="M7 5.4H4.3v1.4a3.2 3.2 0 0 0 3.2 3.2M17 5.4h2.7v1.4a3.2 3.2 0 0 1-3.2 3.2M12 13.3v3.5"/>
-    <path {...LINE} d="M8.3 20.6h7.4v-1.5c0-.7-.6-1.3-1.3-1.3H9.6c-.7 0-1.3.6-1.3 1.3z"/>
+    <path {...LINE} d="M7 3.4h10v4.9a5 5 0 0 1-10 0zM7 5.4H4.3v1.4a3.2 3.2 0 0 0 3.2 3.2M17 5.4h2.7v1.4a3.2 3.2 0 0 1-3.2 3.2M12 13.3v4.5M8.3 20.6h7.4v-1.5c0-.7-.6-1.3-1.3-1.3H9.6c-.7 0-1.3.6-1.3 1.3z"/>
   </S>
 )
 export const IconProfileLine = p => (
   <S {...p}>
-    <circle {...LINE} cx="12" cy="8" r="4"/>
-    <path {...LINE} d="M4.3 20.5c.9-3.9 4.1-6.3 7.7-6.3s6.8 2.4 7.7 6.3"/>
+    <path {...LINE} d="M16 8a4 4 0 1 1-8 0 4 4 0 0 1 8 0zM4.3 20.5c.9-3.9 4.1-6.3 7.7-6.3s6.8 2.4 7.7 6.3"/>
   </S>
 )
-
 // A filled direction caret (the ▲ ▼ ◀ ▶ that were typed as text): dir 'up' | 'down' | 'left' | 'right'
 const CARET_TURN = { up: 0, right: 90, down: 180, left: 270 }
 export const IconCaret = ({ dir = 'up', ...p }) => (
