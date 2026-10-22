@@ -2849,7 +2849,7 @@ html.is-app .ag-sandbox { grid-column: 1 / -1; justify-self: stretch; }
     max-width: 1200px; margin: 0 auto; padding: 18px 28px 8px;
     display: grid;
     grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr);
-    grid-template-rows: auto auto auto auto auto 1fr auto;
+    grid-template-rows: auto auto auto auto auto auto auto 1fr;
     grid-template-areas:
       "hud    hud"
       "stage  brand"
@@ -2857,6 +2857,7 @@ html.is-app .ag-sandbox { grid-column: 1 / -1; justify-self: stretch; }
       "stage  pos"
       "stage  modes"
       "stage  extras"
+      "stage  promos"
       "stage  potd";
     column-gap: 26px; row-gap: 14px;
   }
@@ -2873,6 +2874,7 @@ html.is-app .ag-sandbox { grid-column: 1 / -1; justify-self: stretch; }
   html.app-look .ag-modes { grid-area: modes; padding: 0; }
   html.app-look .ag-mode { min-height: 128px; }
   html.app-look .ag-extras { grid-area: extras; align-content: start; padding: 0; }
+  html.app-look .ag-promos { grid-area: promos; margin: 0; }   /* Builder Pass / BAP Pro: the menu column's full width, under the modes */
   html.app-look .ag-potd { grid-area: potd; margin: 6px 0 0; align-self: start; }   /* Players of the Day: under the modes, beside the (sticky) stage */
   /* the stage stays in view beside the longer card column, sized to the screen */
   html.app-look .ag-stage { grid-area: stage; align-self: start; position: sticky; top: 16px; height: clamp(440px, calc(100dvh - var(--app-bottom) - 96px), 660px); min-height: 0; margin: 0; }

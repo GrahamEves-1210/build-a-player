@@ -649,13 +649,12 @@ function onSeason(e) {
   else S.seasonXp += xp
   tally(xp, 1)
   ev('season_done', { sport: d.sport, pos: d.pos, mode: d.mode, daily: !!d.daily, ovr: d.ovr, wins: d.wins, champion: !!d.champion })
-  // a 2x XP boost: the season's XP again
+  // 2x XP running: the season's XP again
   let boost = 0
-  if (uid && xp > 0 && boostLeft('xp') > 0) {
+  if (uid && xp > 0 && xpOn()) {
     boost = xp
-    invAdd('xp', 'used', 1)
     S.bonusXp += boost; tally(boost)
-    lines.push({ label: '2x XP boost', xp: boost })
+    lines.push({ label: '2x XP', xp: boost })
   }
   S.stats.seasons++
   if (d.champion) S.stats.rings++
@@ -697,9 +696,9 @@ function onSeason(e) {
 function onXp(e) {
   const { xp, label, coins } = e.detail || {}
   if (!xp && !coins) return
-  S.bonusXp += xp || 0; tally(xp)
+  S.bonusXp += xped(xp) || 0; tally(xped(xp))
   if (coins) earn(rushed(coins), null, true)
-  const t = rewardText(xp, rushed(coins))
+  const t = rewardText(xped(xp), rushed(coins))
   if (t) toast({ kind: 'xp', title: t, sub: label || '' })
   emit()
 }
@@ -772,8 +771,8 @@ function onCompete(e) {
   pushRecent(c.recent, place)
   // real opponents move the rating; a pool of bots counts half
   const delta = rateOnline(competeDelta({ place, humans }), 'compete', { place, pbOvr, streak: c.streak })
-  const [xp, base] = COMPETE_REWARDS[place] ?? COMPETE_REWARDS[5]
-  const coins = rushed(base)
+  const [baseXp, base] = COMPETE_REWARDS[place] ?? COMPETE_REWARDS[5]
+  const xp = xped(baseXp), coins = rushed(base)
   S.bonusXp += xp; tally(xp, 1)
   earn(coins, null, true)
   bumpMissions('compete', { place })
@@ -1198,7 +1197,7 @@ export function passInfo() {
 // ── Boosts: consumables from the pass and the shop. Each device counts what it got
 // and used (inv[device]), added up across the account (two devices can't erase each other's)
 export const BOOSTS = {
-  xp:   { name: '2x XP', short: '2x XP', desc: 'Your next seasons count double XP.', unit: 'season', price: 350, per: 3 },
+  xp:   { name: '2x XP', short: '2x XP', desc: '1 hour of double XP from every game. The clock starts when you use it.', unit: 'xp', price: 350, per: 1 },
   rush: { name: 'Coin Rush', short: 'Coin Rush', desc: '3 hours of double coins from every game. The clock starts when you use it.', unit: 'rush', per: 1, passOnly: true },
   hot:  { name: 'Hot Hand', short: 'Hot Hand', desc: 'Career: +2 to every grade for your next 3 games (6 in basketball). Use it from the season screen.', unit: 'use', price: 400, per: 1 },
   heal: { name: 'Quick Heal', short: 'Quick Heal', desc: 'Career: an injury keeps you out half as long. Offered when you get hurt.', unit: 'use', price: 300, per: 1 },
@@ -1217,20 +1216,27 @@ export function spendBoost(k) {
   emit()
   return true
 }
-// Coin Rush: each one is 3 hours of double coins from games, started by hand (they stack)
-export const RUSH_MS = 3 * 3600 * 1000
-export const rushLeftMs = () => Math.max(0, (S.rushUntil || 0) - Date.now())
+// Timed boosts, started by hand (they stack): Coin Rush is 3 hours of double coins from
+// games, 2x XP an hour of double XP from games. When one ends is kept on the account.
+export const TIMED = { rush: { ms: 3 * 3600 * 1000, key: 'rushUntil' }, xp: { ms: 3600 * 1000, key: 'xpUntil' } }
+export const RUSH_MS = TIMED.rush.ms
+export const boostLeftMs = k => Math.max(0, (S[TIMED[k]?.key] || 0) - Date.now())
+export const rushLeftMs = () => boostLeftMs('rush')
 const rushOn = () => rushLeftMs() > 0
+const xpOn = () => boostLeftMs('xp') > 0
 const rushed = n => (n && walletOpen() && rushOn() ? n * 2 : n)
-export function startRush() {
-  if (!walletOpen() || boostLeft('rush') <= 0) return false
-  invAdd('rush', 'used', 1)
-  S.rushUntil = Math.max(Date.now(), S.rushUntil || 0) + RUSH_MS
-  ev('boost_use', { kind: 'rush' })
+const xped = n => (n && uid && xpOn() ? n * 2 : n)
+export function startBoost(k) {
+  const t = TIMED[k]
+  if (!t || !walletOpen() || boostLeft(k) <= 0) return false
+  invAdd(k, 'used', 1)
+  S[t.key] = Math.max(Date.now(), S[t.key] || 0) + t.ms
+  ev('boost_use', { kind: k })
   S.walletAt = Date.now()
   emit()
   return true
 }
+export const startRush = () => startBoost('rush')
 export function buyBoost(k) {
   const b = BOOSTS[k]
   if (!walletOpen()) return { ok: false, reason: 'Sign in to buy boosts' }
@@ -1372,7 +1378,7 @@ export function claimAch(id) {
 // Last change wins; items and achievements are merged, never lost.
 // ═════════════════════════════════════════════════════════════════════════════
 // potdPaid, dc, day and sets ride along so clearing the device (or a second one) can't pay a reward twice
-const WALLET_KEYS = ['coins', 'coinsEarned', 'owned', 'equip', 'ach', 'achClaimed', 'stats', 'shopFree', 'levelPaid', 'discordPaid', 'feedbackPaid', 'retired', 'potdPaid', 'dc', 'day', 'sets', 'salInf', 'streak', 'unlocks', 'cards', 'pass', 'inv', 'cupPaid', 'cupWon', 'rushUntil']
+const WALLET_KEYS = ['coins', 'coinsEarned', 'owned', 'equip', 'ach', 'achClaimed', 'stats', 'shopFree', 'levelPaid', 'discordPaid', 'feedbackPaid', 'retired', 'potdPaid', 'dc', 'day', 'sets', 'salInf', 'streak', 'unlocks', 'cards', 'pass', 'inv', 'cupPaid', 'cupWon', 'rushUntil', 'xpUntil']
 let pushTimer = null, pushing = false, pushAgain = false
 function schedulePush() {
   if (!supabase || !uid) return
@@ -1527,6 +1533,7 @@ function mergeRemote(w) {
   }
   S.unlocks = { ...(w.unlocks || {}), ...(S.unlocks || {}) }
   S.rushUntil = Math.max(S.rushUntil || 0, +w.rushUntil || 0)   // a Coin Rush started on any device
+  S.xpUntil = Math.max(S.xpUntil || 0, +w.xpUntil || 0)         // and a 2x XP hour
   // the Builder Pass: the lowest starting XP any device saw, tiers claimed on either side
   if (w.pass && typeof w.pass === 'object') {
     const lo = (a, b) => (a == null ? b ?? null : b == null ? a : Math.min(a, b))

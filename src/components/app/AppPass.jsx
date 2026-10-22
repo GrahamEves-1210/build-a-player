@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useProgress, claimPass, dayKey, walletOpen, startRush, rushLeftMs } from '../../lib/progress'
+import { useProgress, claimPass, dayKey, walletOpen, startRush, rushLeftMs, startBoost, boostLeftMs } from '../../lib/progress'
 import { TIERS, TIER_XP, PASS_PRICE, passValue, nextSeason, daysLeft as daysLeftOf, daysLeftText } from '../../lib/pass'
 import { itemById, RARITY } from '../../lib/cosmetics'
 import { openCheckout } from '../../lib/webCheckout'
@@ -29,7 +29,7 @@ export function rewardLabel(r) {
   if (!r) return ''
   if (r.coins) return `${r.coins.toLocaleString()} coins`
   if (r.freeze) return 'Streak freeze'
-  if (r.boost) return `2x XP · ${r.boost} seasons`
+  if (r.boost) return `2x XP · ${r.boost} hr${r.boost === 1 ? '' : 's'}`
   if (r.rush) return `Coin Rush${r.rush > 1 ? ` ×${r.rush}` : ''}`
   if (r.hot) return `Hot Hand${r.hot > 1 ? ` ×${r.hot}` : ''}`
   if (r.heal) return `Quick Heal${r.heal > 1 ? ` ×${r.heal}` : ''}`
@@ -43,7 +43,7 @@ export function rewardKind(r) {
   if (!r) return ''
   if (r.item) { const it = itemById(r.item); return it ? `${RARITY[it.rarity].name} · ${SLOT_NAME[it.slot] ?? ''}` : '' }
   if (r.freeze) return 'Login streak'
-  if (r.boost) return 'XP boost'
+  if (r.boost) return 'XP boost · 1 hr each'
   if (r.rush) return 'Coin boost · 3 hrs'
   if (r.hot || r.heal) return 'Career boost'
   if (r.pack) return 'Card pack'
@@ -127,7 +127,8 @@ export default function AppPass({ onClose }) {
   const daysLeft = daysLeftOf(s, dayKey())
   const maxed = bp.tier >= TIERS
   const signedIn = walletOpen()
-  const rushMs = rushLeftMs()
+  const rushMs = rushLeftMs(), xpMs = boostLeftMs('xp')
+  const useXp = () => { if (startBoost('xp')) { sfx('coins'); haptic('success') } }
   const ends = new Date(`${s.end}T12:00:00Z`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
   const useRush = () => { if (startRush()) { sfx('coins'); haptic('success') } }
 
@@ -176,10 +177,11 @@ export default function AppPass({ onClose }) {
                 : <><b>{daysLeftText(daysLeft)}</b><small>ENDS {ends.toUpperCase()}</small></>}
             </span>
           </div>
-          {(bp.owned || p.boosts?.xp > 0 || p.boosts?.rush > 0 || rushMs > 0) && (
+          {(bp.owned || p.boosts?.xp > 0 || p.boosts?.rush > 0 || rushMs > 0 || xpMs > 0) && (
             <span className="bp-hero-chips">
               {bp.owned && <span className="ag-chip ag-chip--gold is-on"><IconCrown size={12} /> PREMIUM</span>}
-              {p.boosts?.xp > 0 && <span className="ag-chip is-on"><IconBolt size={12} /> 2X XP · {p.boosts.xp}</span>}
+              {xpMs > 0 && <span className="ag-chip is-on"><IconBolt size={12} /> 2X XP · {fmtLeft(xpMs)}</span>}
+              {p.boosts?.xp > 0 && <button className="ag-chip bp-rush-use bp-xp-use" onClick={useXp}><IconBolt size={12} /> USE 2X XP{p.boosts.xp > 1 ? ` · ${p.boosts.xp}` : ''}</button>}
               {rushMs > 0 && <span className="ag-chip ag-chip--gold is-on"><span className="coin-ico coin-ico--sm" /> 2X COINS · {fmtLeft(rushMs)}</span>}
               {p.boosts?.rush > 0 && <button className="ag-chip bp-rush-use" onClick={useRush}><span className="coin-ico coin-ico--sm" /> USE COIN RUSH{p.boosts.rush > 1 ? ` · ${p.boosts.rush}` : ''}</button>}
             </span>
@@ -222,7 +224,7 @@ export default function AppPass({ onClose }) {
             )
           })}
         </div>
-        <p className="bp-note">Every {TIER_XP} XP you earn this season is a level, and your level starts over next season. Pass items are only on the pass; one you already have pays coins instead. A Coin Rush is 3 hours of double coins from every game, from when you use it. 2x XP doubles your next seasons' XP; Hot Hand and Quick Heal are for Career.</p>
+        <p className="bp-note">Every {TIER_XP} XP you earn this season is a level, and your level starts over next season. Pass items are only on the pass; one you already have pays coins instead. A Coin Rush is 3 hours of double coins from every game, and 2x XP an hour of double XP, from when you use them. Hot Hand and Quick Heal are for Career.</p>
       </div>
 
       {got && (

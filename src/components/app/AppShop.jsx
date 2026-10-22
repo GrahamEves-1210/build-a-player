@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { useProgress, buy, equip, owns, priceOf, lockReason, dealsFor, claimFreeCoins, msToReset, isPro, COINS, achStats, walletOpen, hasDiscord, claimDiscordCoins, DISCORD_COINS, FEEDBACK_COINS, AD_COINS, AD_MAX, adsLeft, claimAdCoins, BOOSTS, buyBoost, buyFreeze, startRush, rushLeftMs, FREEZE_PRICE, FREEZE_MAX } from '../../lib/progress'
+import { useProgress, buy, equip, owns, priceOf, lockReason, dealsFor, claimFreeCoins, msToReset, isPro, COINS, achStats, walletOpen, hasDiscord, claimDiscordCoins, DISCORD_COINS, FEEDBACK_COINS, AD_COINS, AD_MAX, adsLeft, claimAdCoins, BOOSTS, buyBoost, buyFreeze, startBoost, boostLeftMs, TIMED, FREEZE_PRICE, FREEZE_MAX } from '../../lib/progress'
 import { openCheckout } from '../../lib/webCheckout'
 import { sellsHere, onStorefront } from '../../lib/storefront'
 import { showRewarded, rewardedReady, REWARDED_ON } from '../../lib/rewardedAd'
@@ -206,8 +206,9 @@ function Boosts({ p, onNeedCoins }) {
   const [got, setGot] = useState(null)
   const [, tick] = useState(0)
   useEffect(() => { const t = setInterval(() => tick(n => n + 1), 30000); return () => clearInterval(t) }, [])
-  const rushMs = rushLeftMs()
-  const useRush = () => { if (startRush()) { sfx('coins'); haptic('success'); setGot('rush'); setTimeout(() => setGot(g => (g === 'rush' ? null : g)), 900) } }
+  const leftMs = k => (TIMED[k] ? boostLeftMs(k) : 0)
+  const useIt = k => { if (startBoost(k)) { sfx('coins'); haptic('success'); setGot(k); setTimeout(() => setGot(g => (g === k ? null : g)), 900) } }
+  const holding = r => (r.k === 'rush' ? `${r.have} Coin Rush${r.have === 1 ? '' : 'es'}` : r.k === 'xp' ? `${r.have} hour${r.have === 1 ? '' : 's'} of 2x XP` : r.have === 1 ? r.unit : `${r.unit}s`)
   const rows = [
     ...Object.entries(BOOSTS).map(([k, b]) => ({ k, name: b.per > 1 ? `${b.name} · ${b.per} ${b.unit}s` : b.name, desc: b.desc, price: b.price, passOnly: b.passOnly, have: p.boosts?.[k] ?? 0, unit: b.unit })),
     { k: 'freeze', name: 'Streak Freeze', desc: `Covers one missed day of your login streak. Hold up to ${FREEZE_MAX}.`, price: FREEZE_PRICE, have: p.streak?.freezes ?? 0, unit: 'freeze', full: (p.streak?.freezes ?? 0) >= FREEZE_MAX },
@@ -229,11 +230,11 @@ function Boosts({ p, onNeedCoins }) {
             <span className="bst-txt">
               <b>{r.name}</b>
               <small>{r.desc}</small>
-              {r.k === 'rush' && rushMs > 0 && <em className="bst-on">ON · {fmtLeft(rushMs)} left</em>}
-              {p.signedIn && !(r.k === 'rush' && rushMs > 0 && !r.have) && <em>{r.have > 0 ? `You have ${r.have} ${r.unit === 'season' ? `boosted season${r.have === 1 ? '' : 's'}` : r.unit === 'rush' ? `Coin Rush${r.have === 1 ? '' : 'es'}` : r.have === 1 ? r.unit : `${r.unit}s`}` : 'None yet'}</em>}
+              {leftMs(r.k) > 0 && <em className="bst-on">ON · {fmtLeft(leftMs(r.k))} left</em>}
+              {p.signedIn && !(leftMs(r.k) > 0 && !r.have) && <em>{r.have > 0 ? `You have ${holding(r)}` : 'None yet'}</em>}
             </span>
-            {r.k === 'rush' && r.have > 0
-              ? <button className="bst-buy is-use" onClick={useRush}>{rushMs > 0 ? '+3 HRS' : 'USE'}</button>
+            {TIMED[r.k] && r.have > 0
+              ? <button className="bst-buy is-use" onClick={() => useIt(r.k)}>{leftMs(r.k) > 0 ? (r.k === 'rush' ? '+3 HRS' : '+1 HR') : 'USE'}</button>
               : r.passOnly
               ? <button className="bst-buy is-pass" onClick={() => nav('pass')}>PASS</button>
               : <button className="bst-buy" onClick={() => buyIt(r.k)} disabled={r.full}>{r.full ? 'FULL' : <><span className="coin-ico coin-ico--sm" />{r.price.toLocaleString()}</>}</button>}

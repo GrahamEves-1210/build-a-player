@@ -7,6 +7,7 @@ import {
   IconTarget, IconShield, IconCoin, IconPodium, IconClipboard, IconVersus, IconWhistle, IconHelmet, IconHoop,
 } from './icons'
 import '../../app-shop.css'
+import { RUNNER, DUNKER } from './mascotPaths'
 
 // Cosmetics, drawn: a username with its color, effect and nameplate, and the
 // avatar badge. `cos` is { avatar, nameColor, nameFx, plate } (item ids) — the
@@ -22,7 +23,17 @@ function useCosFor({ self, cos, uid }) {
   return cos || theirs || {}
 }
 
+// the logo's two players as avatar glyphs (traced paths, components/app/mascotPaths.js)
+const figureGlyph = m => ({ size = 24 }) => (
+  <svg width={size} height={size} viewBox={`${-(Math.max(m.w, m.h) - m.w) / 2} ${-(Math.max(m.w, m.h) - m.h) / 2} ${Math.max(m.w, m.h)} ${Math.max(m.w, m.h)}`} aria-hidden="true">
+    <path fill="currentColor" fillRule="evenodd" d={m.d} />
+  </svg>
+)
+const IconRunner = figureGlyph(RUNNER)
+const IconDunker = figureGlyph(DUNKER)
+
 export const GLYPHS = {
+  runner: IconRunner, dunker: IconDunker,
   football: IconFootball, basketball: IconBasketball, crown: IconCrown, flame: IconFlame, bolt: IconBolt, star: IconStar,
   trophy: IconTrophy, medal: IconMedal, ring: IconRing, target: IconTarget, shield: IconShield, coin: IconCoin,
   podium: IconPodium, clipboard: IconClipboard, versus: IconVersus, whistle: IconWhistle, helmet: IconHelmet, hoop: IconHoop,

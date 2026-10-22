@@ -28,7 +28,7 @@ const qh = n => ({ heal: n })      // Quick Heal (Career)
 // tier → reward (tiers missing from the free track have nothing there)
 const S1_FREE = {
   2: c(150), 4: i('av-whistle'), 6: fz(), 8: cr(1), 10: i('pl-chalk'), 12: pk(3), 14: c(250), 16: i('rs-chrome'),
-  18: bx(3), 20: i('nc-turf'), 22: hh(1), 24: c(350), 26: i('ent-frost'), 28: pk(3, 1), 30: i('av-rivalry'),
+  18: bx(3), 20: i('nc-turf'), 22: hh(1), 24: c(350), 26: i('ent-frost'), 28: pk(3, 1), 30: i('av-s1-drive'),
 }
 const S1_PREMIUM = {
   1: i('av-storm'), 2: c(300), 3: i('nc-aurora'), 4: cr(1), 5: i('snd-nope'), 6: pk(3, 1), 7: i('nfx-frost'), 8: c(400),

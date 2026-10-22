@@ -54,7 +54,8 @@ const AV = [
   it('avatar', 'av-heatcheck', 'Heat Check', 1, 1600, { glyph: 'flame', pal: 'lava' }),
   it('avatar', 'av-podium',    'Podium Finish', 1, 1600, { glyph: 'podium', pal: 'gold' }),
   it('avatar', 'av-hardware',  'Hardware', 1, 1700, { glyph: 'trophy', pal: 'ice' }),
-  it('avatar', 'av-rivalry',   'Rivalry Week', 1, 1800, { glyph: 'versus', pal: 'crimson' }),
+  it('avatar', 'av-rivalry',   'Rivalry Week', 1, 1800, { glyph: 'versus', pal: 'crimson', vault: true }),
+  it('avatar', 'av-s1-drive',  'Opening Drive', 3, 0, { glyph: 'runner', pal: 'gold', anim: 'shine' }),   // Season 1's free level-30 reward
   it('avatar', 'av-bag',       'Secure the Bag', 1, 1900, { glyph: 'coin', pal: 'gold' }),
   it('avatar', 'av-ringchaser','Ring Chaser', 1, 2200, { glyph: 'ring', pal: 'royal' }),
   it('avatar', 'av-medal',     'All-Pro', 1, 2200, { glyph: 'medal', pal: 'mint' }),
