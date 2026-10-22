@@ -109,6 +109,7 @@ import TrophyCase from './app/TrophyCase'
 import DeleteAccount from './DeleteAccount'
 import ConnectDiscord from './ConnectDiscord'
 import { getUsername } from '../lib/discord'
+import { IconGear, IconTrophy } from './app/icons'
 
 function useCountUp(target, duration = 900, enabled = true) {
   const [val, setVal] = useState(0)
@@ -838,7 +839,7 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
                       className="wm-plus-edit-btn"
                       onClick={() => { setPlusOpen(false); onOpenCustomModal?.() }}
                     >
-                      <span>⚙️</span>
+                      <span><IconGear size="1em" className="ico-inline" /></span>
                       <span>Edit Custom Ratings</span>
                     </button>
                   )}
@@ -1307,7 +1308,7 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
                                       <BucketModelFigure build={enriched} team={ringTeam} className="prs-figure-model" headYOffset={5} />
                                       <div className="prs-info">
                                         <div className="prs-header">
-                                          <span className="prs-ring">🏆</span>
+                                          <span className="prs-ring"><IconTrophy size="1em" className="ico-inline ico-gold" /></span>
                                           {ringTeam && <img src={`/logos/nba/${ringTeam.short}.png`} alt={ringTeam.short} className="prs-team-logo" />}
                                           <span className="prs-arch">{s.archetype ?? 'Champion'}</span>
                                           <span className="prs-ovr">{s.ovr} OVR</span>
@@ -1364,7 +1365,7 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
                                   {s.ovr && <span className="pge-ovr">{s.ovr} OVR</span>}
                                 </div>
                                 <div className="pge-accolades">
-                                  {s.champion && <span className="pge-badge pge-badge--ring">🏆 Champion</span>}
+                                  {s.champion && <span className="pge-badge pge-badge--ring"><IconTrophy size="1em" className="ico-inline ico-gold" /> Champion</span>}
                                   {s.mvp === true && <span className="pge-badge pge-badge--mvp">MVP</span>}
                                   {s.dpoy === true && <span className="pge-badge pge-badge--dpoy">DPOY</span>}
                                 </div>

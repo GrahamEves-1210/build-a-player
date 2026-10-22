@@ -18,6 +18,7 @@ import { EMOTES } from '../lib/blacktop'
 import { cosFor } from '../lib/peopleCos'
 import { victory, sfx, haptic } from '../lib/juice'
 import { WhoAv, WhoName, firstName } from './app/Blacktop1v1'
+import { IconBall } from './app/icons'
 const LOOK = IS_APP || APP_LOOK
 // App + app-look website: Blacktop's 1v1, drawn with the 3v3's screens (bt-*):
 // both players are their profile picture + username, me in the first side's
@@ -692,7 +693,7 @@ function CourtVisual({ play, myColor, oppColor, myName, oppName, possession, dis
           <img src={court.src} alt="" draggable={false} className="btc-img" />
           {court.tint && <div className="btc-tint" />}<div className="btc-light" />
           <div className="btc-overlay">
-            <div className="btc-ball" style={{ left: `${ballPct.x}%`, top: `${ballPct.y}%`, transition: ballTr }}>🏀</div>
+            <div className="btc-ball" style={{ left: `${ballPct.x}%`, top: `${ballPct.y}%`, transition: ballTr }}><IconBall size="1em" className="ico-inline" /></div>
             {ps.map(([who, p, tr, col, av, nm, tagEl]) => {
               const has = dispPossession === who
               return (
@@ -726,7 +727,7 @@ function CourtVisual({ play, myColor, oppColor, myName, oppName, possession, dis
         <div className="bvr-court-overlay">
 
           {/* Ball */}
-          <div className="bvr-ball-div" style={{ left: `${ballPct.x}%`, top: `${ballPct.y}%`, transition: ballTr }}>🏀</div>
+          <div className="bvr-ball-div" style={{ left: `${ballPct.x}%`, top: `${ballPct.y}%`, transition: ballTr }}><IconBall size="1em" className="ico-inline" /></div>
 
           {/* My player */}
           <div className="bvr-pa" style={{ left: `${myPct.x}%`, top: `${myPct.y}%`, transition: myTr, zIndex: dispPossession === 'me' ? 4 : 2 }}>
@@ -1140,7 +1141,7 @@ export default function BucketVersusResult({ myData, oppData, position, oppPosit
           <span className="bt-board-name v1g-board-who">
             <WhoAv who={sides[t].who} team={t} size={22} />
             <WhoName who={sides[t].who} short />
-            <span className={`v1g-poss${shownPossession === (t === 0 ? 'me' : 'opp') ? ' is-on' : ''}`} aria-hidden="true">🏀</span>
+            <span className={`v1g-poss${shownPossession === (t === 0 ? 'me' : 'opp') ? ' is-on' : ''}`} aria-hidden="true"><IconBall size="1em" className="ico-inline" /></span>
           </span>
           <b>{scores[t]}</b>
         </div>
@@ -1302,7 +1303,7 @@ export default function BucketVersusResult({ myData, oppData, position, oppPosit
         {/* Scoreboard */}
         <div className="bvr-board bvr-board--11">
           {/* Possession ball — glides between inner score edges */}
-          <div className="bvr-poss-ball" style={{ left: shownPossession === 'me' ? 'calc(50% - 72px)' : 'calc(50% + 72px)' }}>🏀</div>
+          <div className="bvr-poss-ball" style={{ left: shownPossession === 'me' ? 'calc(50% - 72px)' : 'calc(50% + 72px)' }}><IconBall size="1em" className="ico-inline" /></div>
 
           <div className="bvr-board-team bvr-board-team--me">
             <div className="bvr-board-player">

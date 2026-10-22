@@ -21,7 +21,7 @@ import Silhouette from '../Silhouette'
 import { AvatarBadge } from './NameTag'
 import { getUsername } from '../../lib/discord'
 import { sellsHere, onStorefront } from '../../lib/storefront'
-import { IconClose, IconArrow, IconFlame, IconTrophy, IconStar, IconCrown, IconMedal, IconRing, IconCheck, IconShield, IconHelmet, IconSpin } from './icons'
+import { IconClose, IconArrow, IconFlame, IconTrophy, IconStar, IconCrown, IconMedal, IconRing, IconCheck, IconShield, IconHelmet, IconSpin, IconCaret } from './icons'
 import './career-legacy.css'
 
 // CAREER (football and basketball): the intro, the draft, the hub where a
@@ -281,7 +281,7 @@ function Draft({ c, setCareer }) {
       <div className={`ag-screen ${S.screen} cr`}>
         {head('THE INTERVIEWS', done ? 'Interviews done' : `Interview ${i + 1} of ${list.length}`)}
         <div className="ag-screen-body">
-          {flash && <div key={flash.k} className={`cr-flash${flash.up ? ' is-up' : ' is-down'}`} aria-live="polite"><img src={logoFor(flash.team)} alt="" /><span className="cr-flash-arrow">{flash.up ? '▲' : '▼'}</span><small>INTEREST {flash.up ? 'UP' : 'DOWN'}</small></div>}
+          {flash && <div key={flash.k} className={`cr-flash${flash.up ? ' is-up' : ' is-down'}`} aria-live="polite"><img src={logoFor(flash.team)} alt="" /><span className="cr-flash-arrow"><IconCaret dir={flash.up ? 'up' : 'down'} size={14} /></span><small>INTEREST {flash.up ? 'UP' : 'DOWN'}</small></div>}
           <Comp c={c} />
           {i === 0 && (
             <div className="cr-howto ag-pop">

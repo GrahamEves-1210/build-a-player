@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react'
 import { IS_APP } from '../../lib/platform'
 import { getUpdateState, subscribeUpdate, dismissUpdate, openStore } from '../../lib/versionCheck'
+import { IconClose } from './icons'
 
 // App only. Below app_config.min_version: a full-screen "Update required" that
 // can't be closed. Below latest_version: a small card, dismissible, once per
@@ -29,7 +30,7 @@ export default function UpdateGate() {
       </div>
       <button className="inf-btn inf-btn--sm" onClick={openStore}>UPDATE</button>
       <button className="inf-x" aria-label="Dismiss" onClick={dismissUpdate}>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
+        <IconClose size={14} />
       </button>
     </div>
   )

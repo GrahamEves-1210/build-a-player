@@ -4,6 +4,7 @@ import QBAvatar from '../QBAvatar'
 import { sfx } from '../../lib/juice'
 import { useProgress, equip } from '../../lib/progress'
 import { itemsFor, itemById, DEFAULTS } from '../../lib/cosmetics'
+import { IconBall } from './icons'
 
 // The Blacktop court: six players and a ball, choreographed from the play the
 // engine wrote — who checked it up, each pass, the drive or the pull-up, the
@@ -336,7 +337,7 @@ export default function BlacktopCourt({ game, play, meId, photoFor, colorFor, av
         <img src={court.src} alt="" draggable={false} className="btc-img" />
         {court.tint && <div className="btc-tint" />}<div className="btc-light" />
         <div className="btc-overlay">
-          <div className="btc-ball" style={{ left: `${ballPos.x}%`, top: `${ballPos.y}%`, transition: ballTr }}>🏀</div>
+          <div className="btc-ball" style={{ left: `${ballPos.x}%`, top: `${ballPos.y}%`, transition: ballTr }}><IconBall /></div>
           {players.map(p => {
             const s = pos[p.id] ?? TOP
             const has = holder === p.id

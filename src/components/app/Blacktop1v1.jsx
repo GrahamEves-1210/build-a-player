@@ -3,7 +3,7 @@ import { LiveLeaveButton } from './LiveLeave'
 import { NameTag, AvatarBadge } from './NameTag'
 import { liveOvr } from './AppBlacktop'
 import { sfx, haptic } from '../../lib/juice'
-import { IconClose } from './icons'
+import { IconClose, IconCheck } from './icons'
 import './blacktop-1v1.css'
 
 // BLACKTOP 1V1, drawn like the 3v3: each player is their profile picture and
@@ -88,7 +88,7 @@ export function VersusHud({ me, opp, clock = null }) {
                     <WhoAv who={s} team={t} size={24} />
                     <span className="bt-hud-p-name"><WhoName who={s} /></span>
                     <span className="bt-hud-p-bar"><span style={{ width: `${Math.min(100, (n / s.types.length) * 100)}%` }} /></span>
-                    <span className="bt-hud-p-n">{ovr != null ? <><b>{ovr}</b> OVR</> : done ? '✓' : `${n}/${s.types.length}`}</span>
+                    <span className="bt-hud-p-n">{ovr != null ? <><b>{ovr}</b> OVR</> : done ? <IconCheck size={13} /> : `${n}/${s.types.length}`}</span>
                   </span>
                 </div>
               )

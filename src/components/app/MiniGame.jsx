@@ -6,6 +6,7 @@ import { sfx, haptic } from '../../lib/juice'
 import { IS_APP } from '../../lib/platform'
 import WatchVideo from './WatchVideo'
 import { REWARDED_ON } from '../../lib/rewardedAd'
+import { IconCaret } from './icons'
 
 // The quick skill games (lib/minigames.js). <MiniGame game build seed onDone />
 // shows the card, runs the game and reports { score, hit }. A test can finish
@@ -324,8 +325,8 @@ function Lanes({ v, seed, onDone, need = 2, cue = 'RUSH' }) {
   useKeys({ ArrowLeft: () => go('L'), ArrowRight: () => go('R'), a: () => go('L'), d: () => go('R') })
   return (
     <div className="mg-play mg-play--lanes">
-      <div className={`mg-rush${from ? ` is-${from}` : ''}`}><i>{from === 'L' ? `◀ ${cue}` : from === 'R' ? `${cue} ▶` : '…'}</i></div>
-      <div className="mg-sides"><button className="mg-side" onPointerDown={() => go('L')}>◀ LEFT</button><button className="mg-side" onPointerDown={() => go('R')}>RIGHT ▶</button></div>
+      <div className={`mg-rush${from ? ` is-${from}` : ''}`}><i>{from === 'L' ? <><IconCaret dir="left" size={14} /> {cue}</> : from === 'R' ? <>{cue} <IconCaret dir="right" size={14} /></> : '…'}</i></div>
+      <div className="mg-sides"><button className="mg-side" onPointerDown={() => go('L')}><IconCaret dir="left" size={14} /> LEFT</button><button className="mg-side" onPointerDown={() => go('R')}>RIGHT <IconCaret dir="right" size={14} /></button></div>
       <span className="mg-dots">{[0, 1, 2].map(k => <i key={k} className={k < scores.length ? (scores[k] ? 'is-hit' : 'is-miss') : ''} />)}</span>
     </div>
   )
@@ -634,7 +635,7 @@ function Routes({ v, onDone }) {
   )
 }
 // ── 3-cone: six calls, each a direction; react before the window shuts ──────
-const DIRS = [['up', '▲'], ['left', '◀'], ['right', '▶'], ['down', '▼']]
+const DIRS = [['up'], ['left'], ['right'], ['down']]
 function Cone({ v, seed, onDone }) {
   const r = useRng(seed)
   const plan = useMemo(() => Array.from({ length: 6 }, () => ({ gap: 250 + r() * 400, dir: Math.floor(r() * 4) })), [r])
@@ -669,7 +670,7 @@ function Cone({ v, seed, onDone }) {
   useKeys({ ArrowUp: () => go(0), ArrowLeft: () => go(1), ArrowRight: () => go(2), ArrowDown: () => go(3), w: () => go(0), a: () => go(1), d: () => go(2), s: () => go(3) })
   return (
     <div className="mg-play mg-play--cone">
-      <span className={`mg-cue${cue != null ? ' is-on' : ''}`}>{cue != null ? DIRS[cue][1] : '•'}</span>
+      <span className={`mg-cue${cue != null ? ' is-on' : ''}`}>{cue != null ? <IconCaret dir={DIRS[cue][0]} size={44} /> : '•'}</span>
       <div className="mg-pad">{DIRS.map(([id, glyph], k) => <button key={id} className={`mg-dir mg-dir--${id}`} onPointerDown={() => go(k)} aria-label={id}>{glyph}</button>)}</div>
       <span className="mg-dots">{plan.map((_, k) => <i key={k} className={k < scores.length ? (scores[k] ? 'is-hit' : 'is-miss') : ''} />)}</span>
     </div>
@@ -726,7 +727,7 @@ function Gauntlet({ v, seed, onDone }) {
           </div>
         ))}
       </div>
-      <div className="mg-sides"><button className="mg-side" onPointerDown={() => grab(0)}>◀ CATCH</button><button className="mg-side" onPointerDown={() => grab(1)}>CATCH ▶</button></div>
+      <div className="mg-sides"><button className="mg-side" onPointerDown={() => grab(0)}><IconCaret dir="left" size={14} /> CATCH</button><button className="mg-side" onPointerDown={() => grab(1)}>CATCH <IconCaret dir="right" size={14} /></button></div>
       <span className="mg-dots">{balls.map((_, k) => <i key={k} className={st.current[k] != null ? (st.current[k] ? 'is-hit' : 'is-miss') : ''} />)}</span>
     </div>
   )

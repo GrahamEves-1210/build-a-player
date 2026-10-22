@@ -7,7 +7,7 @@ import { IS_APP, APP_LOOK } from '../lib/platform'
 const LOOK = IS_APP || APP_LOOK
 import OnlineRecord from './app/OnlineRecord'
 import { OneOnOneOptions } from './app/AppBlacktop'
-import { IconClose } from './app/icons'
+import { IconClose, IconCheck } from './app/icons'
 import { myCosmetics } from '../lib/progress'
 import { seedCos } from '../lib/peopleCos'
 import { VersusSpot, OpenSpot, uidFromVsId } from './app/Blacktop1v1'
@@ -908,8 +908,8 @@ export default function VersusLobby({ onJoin, position, gameMode, onBack, onLead
                   {friendRequests.map(req => (
                     <div key={req.id} className="vlf-request-row">
                       <span className="vlf-req-name">{req.from_username}</span>
-                      <button className="vlf-req-accept" onClick={() => respondToRequest(req.id, true)}>✓</button>
-                      <button className="vlf-req-decline" onClick={() => respondToRequest(req.id, false)}>✗</button>
+                      <button className="vlf-req-accept" onClick={() => respondToRequest(req.id, true)} aria-label="Accept"><IconCheck size={16} /></button>
+                      <button className="vlf-req-decline" onClick={() => respondToRequest(req.id, false)} aria-label="Decline"><IconClose size={14} /></button>
                     </div>
                   ))}
                 </div>

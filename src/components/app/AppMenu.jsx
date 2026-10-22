@@ -9,7 +9,7 @@ import { openCheckout, PRO_PRICE } from '../../lib/webCheckout'
 import { sellsHere } from '../../lib/storefront'
 import { isPro } from '../../lib/progress'
 import { railPreviewOn, setRailPreview } from '../../lib/fakeRail'
-import { IconQuestion, IconInfo, IconChat, IconDiscord, IconX, IconClose, IconShield, IconDoc, IconPodium, IconPlay, IconCrown, IconHome, IconGear, IconStar } from './icons'
+import { IconQuestion, IconInfo, IconChat, IconDiscord, IconX, IconClose, IconShield, IconDoc, IconPodium, IconPlay, IconCrown, IconHome, IconGear, IconStar, IconCheck } from './icons'
 import { useProgress } from '../../lib/progress'
 import AppSettings from './AppSettings'
 import { guardLeave } from '../../lib/liveLock'
@@ -60,7 +60,7 @@ function ProView({ onVault }) {
       <div className="ag-pro-perks">
         {PRO_PERKS.map(([t, d], i) => (
           <div key={t} className="ag-pro-perk ag-pop" style={{ '--d': `${60 + i * 40}ms` }}>
-            <span className="ag-pro-check">✓</span>
+            <span className="ag-pro-check"><IconCheck size={14} /></span>
             <span><b>{t}</b><small>{d}</small></span>
           </div>
         ))}

@@ -21,6 +21,7 @@ import { RingCeremony, SeasonRewards } from './app/AppSeason'
 import { createDirector } from '../lib/seasonDirector'
 import { MomentCard, NowCard, Pulse, Wire, Milestones, RecordOverlay, Leaders, SeasonStory, StretchCard, useDirectedReveal, MomentsToggle } from './app/AppSeasonPlus'
 import { rampAdd, useRailOn } from '../lib/ads'
+import { IconBall } from './app/icons'
 
 function gradeColor(val0) {
   const val = Math.round(val0 ?? 0)   // rounded like the letter (valToGrade), so a B- is always green
@@ -1913,7 +1914,7 @@ function ScreenPlayoffs({ result, onNext, autoSkip = false, isAllTime = false, a
         <div className="simp-eyebrow" style={{ textAlign: 'center' }}>{isAllTime ? 'All-Time Playoffs' : 'Playoffs'}</div>
         <div className="tipoff-header">
           <div className="tipoff-arena">
-            <span className={`tipoff-ball${ballFired ? ' tipoff-ball--fired' : ''}`}>🏀</span>
+            <span className={`tipoff-ball${ballFired ? ' tipoff-ball--fired' : ''}`}><IconBall size="1em" className="ico-inline" /></span>
           </div>
           <div className="tipoff-sub">#{seed} Seed · {teamShort}</div>
           <button className="tipoff-spin-btn" onClick={handleTipOff} disabled={ballFired}>

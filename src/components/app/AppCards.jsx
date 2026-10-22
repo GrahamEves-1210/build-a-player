@@ -134,7 +134,7 @@ function Card({ c, data, color, i, small = false, mark = false }) {
         <span className="ag-ct-name">{lastName(player.name)}</span>
         <span className="ag-ct-rar">{RARITIES[rank]}</span>
       </div>
-      {!small && <span className={`ag-ct-tag${mode === 'all-time' ? ' ag-ct-tag--at' : ''}`}>{mode === 'all-time' ? '★ ' : ''}{data.posLabel[pos]}</span>}
+      {!small && <span className={`ag-ct-tag${mode === 'all-time' ? ' ag-ct-tag--at' : ''}`}>{mode === 'all-time' ? <IconStar size={10} className="ag-ct-star" /> : null}{data.posLabel[pos]}</span>}
       {owned && count > 1 && <span className="ag-ct-count">×{count}</span>}
       {mark && <SportMark sport={c.sport} className="ag-ct-sport" />}
     </div>

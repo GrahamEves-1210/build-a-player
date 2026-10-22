@@ -10,6 +10,7 @@ import NBA_HEADSHOTS from '../data/nba-headshots.json'
 import { rampAdd } from '../lib/ads'
 import { NameTag } from './app/NameTag'
 import { IS_APP as _LB_APP, APP_LOOK as _LB_LOOK } from '../lib/platform'
+import { IconTrophy } from './app/icons'
 // App look: every name on the board wears that player's look (looked up by account id)
 const LbName = ({ name, uid }) => ((_LB_APP || _LB_LOOK) ? <NameTag name={name} uid={uid} className="lb-ntag" /> : <>{name}</>)
 
@@ -136,7 +137,7 @@ function BucketBuildExpand({ build, position, row }) {
       <div className="lb-bucket-expand-meta">
         {archetype && <span className="lb-bucket-archetype">{archetype}</span>}
         <span className="lb-bucket-team" style={{ color: teamColor }}>{team_short}</span>
-        {champion && <span className="lb-bucket-champ">🏆</span>}
+        {champion && <span className="lb-bucket-champ"><IconTrophy size="1em" className="ico-inline ico-gold" /></span>}
       </div>
       <div className="lb-bucket-stat-line">
         <span>{ppg} PPG</span>
@@ -520,7 +521,7 @@ export default function BucketLeaderboardPage({ onBack, currentUser, adsDisabled
                         <div className="lb-row-name-line">
                           <span className="lb-username">{<LbName name={row.username ?? 'Anonymous'} uid={row.uid ?? row.user_id} />}</span>
                           <PosBadge position={row.position} />
-                          {row.champion && <span className="lb-champ-icon">🏆</span>}
+                          {row.champion && <span className="lb-champ-icon"><IconTrophy size="1em" className="ico-inline ico-gold" /></span>}
                           {isYou && <span className="lb-you">you</span>}
                         </div>
                         <div className="lb-row-sub">
@@ -555,7 +556,7 @@ export default function BucketLeaderboardPage({ onBack, currentUser, adsDisabled
                         <div className="lb-row-name-line">
                           <span className="lb-username">{<LbName name={row.username ?? 'Anonymous'} uid={row.uid ?? row.user_id} />}</span>
                           <PosBadge position={row.position} />
-                          {row.champion && <span className="lb-champ-icon">🏆</span>}
+                          {row.champion && <span className="lb-champ-icon"><IconTrophy size="1em" className="ico-inline ico-gold" /></span>}
                           {isYou && <span className="lb-you">you</span>}
                         </div>
                         <div className="lb-row-sub">

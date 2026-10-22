@@ -15,7 +15,7 @@ import { VERSUS_GUARD_TYPES } from '../../data/nba-guards'
 import { VERSUS_BIG_TYPES } from '../../data/nba-bigs'
 import BlacktopCourt, { COURTS, useCourt, setCourtId } from './BlacktopCourt'
 import { owns } from '../../lib/progress'
-import { IconClose, IconArrow, IconChat, IconStar, IconSend, IconBasketball, IconVersus, IconEye } from './icons'
+import { IconClose, IconArrow, IconChat, IconStar, IconSend, IconBasketball, IconVersus, IconEye, IconCheck } from './icons'
 import { NameTag, AvatarBadge, Entrance } from './NameTag'
 import OnlineRecord, { RatingLine, LinkPill, ModeStats, TierChip } from './OnlineRecord'
 import { useProgress } from '../../lib/progress'
@@ -377,7 +377,7 @@ export function BlacktopHud({ bt, onOpenChat, unread }) {
                       <Av name={p.name} bot={asBot(p)} team={t} size={24} cos={p.cos} self={p.vid === bt.me.vid} />
                       <span className="bt-hud-p-name"><Who p={p} meVid={bt.me.vid} /> <small>{p.pos === 'big' ? 'BIG' : 'G'}</small></span>
                       <span className="bt-hud-p-bar"><span style={{ width: `${Math.min(100, ((b?.filled ?? 0) / 8) * 100)}%` }} /></span>
-                      <span className="bt-hud-p-n">{asBot(p) ? 'CPU' : !here ? 'AFK' : ovr != null ? <><b>{ovr}</b> OVR</> : b?.done ? '✓' : `${b?.filled ?? 0}/8`}</span>
+                      <span className="bt-hud-p-n">{asBot(p) ? 'CPU' : !here ? 'AFK' : ovr != null ? <><b>{ovr}</b> OVR</> : b?.done ? <IconCheck size={13} /> : `${b?.filled ?? 0}/8`}</span>
                     </span>
                   )
                 })}
@@ -705,9 +705,9 @@ export function BlacktopGame({ bt, user, photoFor, onOpenChat, unread }) {
     <div className={`ag-screen ag-screen--bucket bt-game bt-live${watch ? ' is-watch' : ''}`}>
       {watch && <WatchBar bt={bt} />}
       <div className="bt-board">
-        <div className={`bt-board-side bt-t0${score[0] > score[1] ? ' is-lead' : ''}`}><span className="bt-board-name">{names[0]}{myTeam === 0 ? ' ★' : ''}</span><b>{score[0]}</b></div>
+        <div className={`bt-board-side bt-t0${score[0] > score[1] ? ' is-lead' : ''}`}><span className="bt-board-name">{names[0]}{myTeam === 0 ? <IconStar size={11} className="bt-board-me" /> : null}</span><b>{score[0]}</b></div>
         <div className="bt-board-mid"><span className="ag-eyebrow">FIRST TO 11</span><span className="bt-board-btns"><button className={`ag-chip${showBuilds ? ' is-on' : ''}`} onClick={() => setShowBuilds(v => !v)}>BUILDS</button></span></div>
-        <div className={`bt-board-side bt-t1${score[1] > score[0] ? ' is-lead' : ''}`}><span className="bt-board-name">{names[1]}{myTeam === 1 ? ' ★' : ''}</span><b>{score[1]}</b></div>
+        <div className={`bt-board-side bt-t1${score[1] > score[0] ? ' is-lead' : ''}`}><span className="bt-board-name">{names[1]}{myTeam === 1 ? <IconStar size={11} className="bt-board-me" /> : null}</span><b>{score[1]}</b></div>
       </div>
       {/* each player on court is their profile picture and username (the CPU fill-ins say CPU) */}
       {showBuilds && <SquadBuilds game={game} names={names} meVid={bt.me.vid} onClose={() => setShowBuilds(false)} />}

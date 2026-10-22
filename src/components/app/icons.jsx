@@ -323,3 +323,26 @@ export const IconProfileLine = p => (
     <path {...LINE} d="M4.3 20.5c.9-3.9 4.1-6.3 7.7-6.3s6.8 2.4 7.7 6.3"/>
   </S>
 )
+
+// A filled direction caret (the ▲ ▼ ◀ ▶ that were typed as text): dir 'up' | 'down' | 'left' | 'right'
+const CARET_TURN = { up: 0, right: 90, down: 180, left: 270 }
+export const IconCaret = ({ dir = 'up', ...p }) => (
+  <S {...p}><path fill="currentColor" transform={`rotate(${CARET_TURN[dir] ?? 0} 12 12)`} d="M10.6 6.3a1.6 1.6 0 0 1 2.8 0l6 10.2c.6 1.1-.2 2.4-1.4 2.4H6c-1.2 0-2-1.3-1.4-2.4z"/></S>
+)
+// Sound on / off: the speaker in the set's weight
+export const IconSound = ({ muted = false, ...p }) => (
+  <S {...p}>
+    <path fill="currentColor" d="M3.5 9.6c0-.6.5-1.1 1.1-1.1h3l4.6-3.7c.7-.6 1.8-.1 1.8.9v12.6c0 1-1.1 1.5-1.8.9l-4.6-3.7h-3c-.6 0-1.1-.5-1.1-1.1z"/>
+    {muted
+      ? <path fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" d="m16.5 9.5 5 5M21.5 9.5l-5 5"/>
+      : <path fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" d="M16.6 8.8a4.6 4.6 0 0 1 0 6.4M19.2 6.3a8.2 8.2 0 0 1 0 11.4"/>}
+  </S>
+)
+// The Blacktop's ball (was the 🏀 emoji, which every phone draws differently)
+export const IconBall = p => (
+  <S {...p}>
+    <circle cx="12" cy="12" r="9.6" fill="#e8742a"/>
+    <path fill="none" stroke="#5a250a" strokeWidth="1.4" d="M2.4 12h19.2M12 2.4v19.2M5.3 5.2c3.4 3 3.4 10.6 0 13.6M18.7 5.2c-3.4 3-3.4 10.6 0 13.6"/>
+    <circle cx="12" cy="12" r="9.6" fill="none" stroke="#5a250a" strokeWidth="1.2"/>
+  </S>
+)
