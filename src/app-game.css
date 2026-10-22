@@ -1945,6 +1945,19 @@ html.is-app .about-section-title { font-family: var(--ag-font) !important; font-
 .ag-section-h { grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; margin-top: 8px; font-family: var(--ag-font); font-size: 13px; letter-spacing: 2.5px; color: var(--ag-muted); }
 .ag-section-h i { flex: 1; height: 1px; background: var(--ag-line); }
 
+/* One binder, both sports: the split under the total, a sport mark on recent pulls, a heading per sport inside each set kind */
+.ag-coll-sports { display: flex; flex-wrap: wrap; gap: 6px 14px; }
+.ag-coll-sport { display: inline-flex; align-items: center; gap: 6px; font-family: var(--ag-font); font-size: 14px; letter-spacing: 1.8px; line-height: 1; color: var(--ag-muted); }
+.ag-coll-sport svg { color: var(--ag-a1); }
+.ag-coll-sport b { font-family: var(--ag-display); font-weight: 400; font-size: 15px; letter-spacing: 0; color: #fff; font-variant-numeric: tabular-nums; }
+.ag-coll-sport small { font-family: var(--ag-display); font-size: 12px; letter-spacing: 0; margin-left: -4px; }
+.ag-ct-sport { position: absolute; top: 5px; left: 5px; width: 18px; height: 18px; border-radius: 5px; display: grid; place-items: center; color: #fff; background: rgba(0,0,0,.55); }
+.ag-sets-group { display: flex; flex-direction: column; gap: 8px; }
+.ag-sets-h { display: flex; align-items: center; gap: 8px; font-family: var(--ag-font); font-size: 15px; letter-spacing: 2.5px; line-height: 1; color: var(--ag-text); }
+.ag-sets-h svg { color: var(--ag-a1); flex: 0 0 auto; }
+.ag-sets-h i { flex: 1; height: 1px; background: var(--ag-line); }
+.ag-sets-h small { font-size: 12px; letter-spacing: 1.5px; color: var(--ag-muted); }
+
 /* ═══ Home: TAKEOVER + BLACKTOP cards ═══════════════════════════════════════ */
 .ag-takeover, .ag-blacktop {
   grid-column: 1 / -1;
