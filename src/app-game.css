@@ -3533,6 +3533,17 @@ html:is(.is-app, .app-look) .vl1-modes { margin-top: 4px; }
 .cpk:disabled { opacity: .6; cursor: default; }
 .cpk-tag { position: absolute; top: -9px; left: 50%; transform: translateX(-50%); padding: 3px 8px; border-radius: 6px; font-family: var(--ag-font); font-size: 11px; letter-spacing: 1.5px; color: #1d1503; background: linear-gradient(135deg, #f5dc8a, #d4af37); white-space: nowrap; }
 .cpk-stack { position: relative; width: 52px; height: 34px; margin-bottom: 4px; }
+/* coin pack art: same coin size on every card, only the pile grows; all sit on one baseline */
+.cpk-art { display: flex; align-items: flex-end; justify-content: center; width: 100%; height: 118px; margin-bottom: 6px; }
+.cpk-art img { display: block; max-width: 100%; height: auto; filter: drop-shadow(0 6px 10px rgba(0,0,0,.55)); }
+.cpk:nth-child(1) .cpk-art img { width: 60px; }
+.cpk:nth-child(2) .cpk-art img { width: 60px; }
+.cpk:nth-child(3) .cpk-art img { width: 60px; }
+.cpk:nth-child(4) .cpk-art img { width: 124px; }
+@media (prefers-reduced-motion: no-preference) {
+  html:not(.bap-reduce-motion) .cpk.is-tagged .cpk-art img { animation: cpk-float 3s ease-in-out infinite; }
+}
+@keyframes cpk-float { 50% { transform: translateY(-4px); } }
 /* a pile: one coin in front wearing BAP, two smaller ones peeking out behind it (no lettering,
    so the words never pile up on each other) */
 .cpk-stack .coin-ico { position: absolute; width: 24px; height: 24px; top: 8px; filter: brightness(.82) saturate(.9); }

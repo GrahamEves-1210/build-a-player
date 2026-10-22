@@ -203,3 +203,4 @@
 .fr-hero-pill b { font-family: var(--ag-font, 'Bebas Neue', sans-serif); font-weight: 400; font-size: 17px; letter-spacing: 1.2px; color: var(--ag-text, #EEF8F1); }
 .fr-hero-pill--online b { color: var(--ag-a1, #4fd6b7); }
 .fr-hero-pill--online.is-none b { color: var(--ag-muted, rgba(216,243,220,.55)); }
+.fr-guest-ico:has(svg[viewBox^="-24"]) { width: 46px; height: 50px; padding-bottom: 3px; align-items: end; }

@@ -150,8 +150,10 @@
 .pro-card-sub { font-family: var(--ag-body); font-size: 12px; font-weight: 600; color: var(--ag-muted); }
 .pro-card-go { font-family: var(--ag-font); font-size: 15px; letter-spacing: 1.8px; padding: 8px 11px 6px; border-radius: 10px; color: #1a1000; background: linear-gradient(135deg, #fde68a, #d4af37); }
 
-.ag-promos { display: grid; gap: 8px; margin-top: 12px; padding: 0 14px; }   /* same 14px gutter as the modes */
-@media (min-width: 1024px) { html.app-look .ag-promos { padding: 0; } }
+.ag-promos { display: grid; gap: 8px; margin-top: 12px; }
+/* Home: the same 14px gutter as the modes (the Shop's section keeps its own padding) */
+.ag-home .ag-promos { padding: 0 14px; }
+@media (min-width: 1024px) { html.app-look .ag-home .ag-promos { padding: 0; } }
 
 /* ── More → BAP Pro: monthly / yearly ── */
 .ag-pro-plans { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }

@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
 import { NameTag, AvatarBadge } from './NameTag'
-import { IconCheck, IconClose, IconArrow, IconProfile, IconSend } from './icons'
+import { IconCheck, IconClose, IconArrow, IconSend } from './icons'
 import { getUsername } from '../../lib/discord'
 import { loadFriends, searchPlayers, sendFriendRequest, respondToRequest } from '../../lib/friends'
 import FriendProfile from './FriendProfile'
 import './friends.css'
-import EmptyState from './EmptyState'
+import EmptyState, { Mascot } from './EmptyState'
 
 // Profile → Friends: your friends (tap one for their profile), requests waiting
 // on you, and adding someone by username. Same friend list as the Blacktop 1v1
@@ -49,7 +49,7 @@ export default function FriendsSection({ user, isBucket = false }) {
       <section className="fr-section" aria-labelledby="fr-title">
         <div className="fr-head"><h2 className="fr-title" id="fr-title">FRIENDS</h2></div>
         <div className="fr-guest">
-          <span className="fr-guest-ico"><IconProfile size={20} /></span>
+          <span className="fr-guest-ico"><svg viewBox="-24 -60 48 62" width="34" height="44" aria-hidden="true"><Mascot h={58} /></svg></span>
           <span className="fr-guest-txt">Sign in to add friends, see their best builds and play them 1v1.</span>
           <button className="ag-btn fr-guest-btn" onClick={signIn}>SIGN IN</button>
         </div>

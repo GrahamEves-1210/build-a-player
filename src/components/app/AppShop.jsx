@@ -108,6 +108,9 @@ function useSells() {
   return sells
 }
 
+// coin pack art, smallest pack to largest (public/shop, cut from the BAP coin stacks)
+const PACK_ART = ['/shop/coins-1.webp', '/shop/coins-2.webp', '/shop/coins-3.webp', '/shop/coins-4.webp']
+
 function CoinPacks({ p }) {
   const [busy, setBusy] = useState(null)
   const [note, setNote] = useState('')
@@ -124,10 +127,11 @@ function CoinPacks({ p }) {
     <div className="sh-section">
       <div className="sh-section-head"><span className="sh-section-title">BUY COINS</span><span className="sh-section-note">Secure checkout on build-a-player.com</span></div>
       <div className="cpk-grid">
-        {COIN_PACKS.map(pack => (
+        {COIN_PACKS.map((pack, i) => (
           <button key={pack.id} className={`cpk${pack.tag ? ' is-tagged' : ''}`} onClick={() => buyIt(pack)} disabled={!!busy}>
             {pack.tag && <span className="cpk-tag">{pack.tag}</span>}
-            <span className="cpk-stack" aria-hidden="true"><span className="coin-ico" /><span className="coin-ico" /><span className="coin-ico" /></span>
+            {/* the pile grows with the pack: one coin, a short stack, a tall stack, a burst */}
+            <span className="cpk-art" aria-hidden="true"><img src={PACK_ART[i] ?? PACK_ART.at(-1)} alt="" draggable={false} /></span>
             <b className="cpk-n">{pack.coins.toLocaleString()}</b>
             <span className="cpk-lbl">COINS</span>
             <span className="cpk-price">{busy === pack.id ? '…' : `$${pack.usd.toFixed(2)}`}</span>
@@ -488,7 +492,7 @@ export default function AppShop({ onClose, tab: initialTab = 'featured' }) {
             <div className="sh-section-head"><span className="sh-section-title">EARNING COINS</span></div>
             <div className="ag-card" style={{ padding: 12, fontFamily: 'var(--ag-body)', fontSize: 13, lineHeight: 1.6, color: 'var(--ag-text-2)' }}>
               Every season pays {COINS.season}+ coins, more for wins, playoffs (+{COINS.playoffs}), titles (+{COINS.ring}) and awards (+{COINS.award}).
-              Missions, login streaks, new cards, Takeover cities, Blacktop games and every level up pay too.
+              Missions, login streaks, new cards, Takeover cities, Blacktop games, achievements and the Builder Pass pay too.
               <button className="ag-chip" style={{ marginTop: 8, display: 'flex' }} onClick={() => nav('achievements')}>ACHIEVEMENTS <IconArrow size={12} /></button>
             </div>
           </div>
