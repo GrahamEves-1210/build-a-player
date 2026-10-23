@@ -208,7 +208,7 @@ const _WRS = [
   { name: 'Jalen Tolbert',       short: 'Tolbert',     team: 'MIA', teamName: 'Miami Dolphins',        skin: '#5e3c22', height: 76, weight: 205, starter: false, number: 1,
     attrs: { speed: 7,  bodyControl: 5,  vertical: 7,  routeRunning: 3,  release: 5,  hands: 3,  awareness: 3,  size: 9,  afterCatch: 3  } },
   { name: 'Malik Washington',    short: 'M. Washington', team: 'MIA', teamName: 'Miami Dolphins',      skin: '#5e3c22', height: 71, weight: 196, starter: false, number: 6,
-    attrs: { speed: 6,  bodyControl: 5,  vertical: 5,  routeRunning: 3,  release: 4,  hands: 3,  awareness: 3,  size: 5,  afterCatch: 5  } },
+    attrs: { speed: 6,  bodyControl: 5,  vertical: 10,  routeRunning: 3,  release: 4,  hands: 3,  awareness: 3,  size: 5,  afterCatch: 5  } },
   { name: 'Chris Bell',          short: 'C. Bell',     team: 'MIA', teamName: 'Miami Dolphins',        skin: '#3a2010', height: 75, weight: 205, starter: false, number: 18,
     attrs: { speed: 6,  bodyControl: 4,  vertical: 5,  routeRunning: 2,  release: 3,  hands: 3,  awareness: 2,  size: 9,  afterCatch: 6  } },
   // MIN
