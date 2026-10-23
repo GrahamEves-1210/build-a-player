@@ -115,7 +115,7 @@ export function lineupOf(squad) {
 // Each point of OVR a build has over the starter it replaces moves the team
 // (football off/def 1–10; basketball off/def out of 100)
 const MOVE = {
-  qb: { off: 0.09 }, rb: { off: 0.035 }, wr: { off: 0.03 }, te: { off: 0.025 }, db: { def: 0.035 },
+  qb: { off: 0.22 }, rb: { off: 0.09 }, wr: { off: 0.075 }, te: { off: 0.065 }, db: { def: 0.09 },
   guard: { off: 0.45, def: 0.15 }, big: { off: 0.25, def: 0.35 },
 }
 export function squadStrength(squad) {
