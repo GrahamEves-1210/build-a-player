@@ -21,10 +21,9 @@ const ProfilePage    = lazy(() => import('./components/ProfilePage'))
 const LeaderboardPage= lazy(() => import('./components/LeaderboardPage'))
 const VersusLobby    = lazy(() => import('./components/VersusLobby'))
 const VersusResult   = lazy(() => import('./components/VersusResult'))
-const AppTakeover    = lazy(() => import('./components/app/AppTakeover'))
+const AppSquad       = lazy(() => import('./components/app/AppSquad'))
 const AppCareer      = lazy(() => import('./components/app/AppCareer'))
 const CareerIntro    = lazy(() => import('./components/app/AppCareer').then(m => ({ default: m.CareerIntro })))
-const TakeoverIntro = lazy(() => import('./components/app/AppTakeover').then(m => ({ default: m.TakeoverIntro })))
 import CompeteHud from './components/app/CompeteHud'
 const AppCompete = lazy(() => import('./components/app/AppCompete'))
 const Wiki           = lazy(() => import('./components/wiki/Wiki'))
@@ -60,7 +59,7 @@ import { finishDiscordSignIn, getUsername } from './lib/discord'
 import { dailyState, setDailySpins, forfeitDaily } from './lib/progress'
 import { LiveLeaveButton } from './components/app/LiveLeave'
 import { FlipEdge, BuildComplete, useFlip, StackEdge, StackSeam, useDropMode, useDropSheet, DropBar, DropSheet } from './components/app/AppBuildTray'
-import { loadRun, newRun, cityList, ratedPool, syncRunFromCloud } from './lib/takeover'
+import { loadSquad, saveSquad, clearSquad, syncSquadFromCloud, nextToBuild, fillSlot, afterBuilding } from './lib/squad'
 import { setSandboxGate, sandboxItemFor, sandboxLocked } from './components/app/AppSandbox'
 import { rampPage, HOME_UNITS, RAIL_UNITS, RAIL_UNITS_WITH_LEFT } from './lib/ads'
 
@@ -161,7 +160,7 @@ export default function App() {
   const [showAuth, setShowAuth]         = useState(false)
   const [showTeamPicker, setShowTeamPicker] = useState(false)
   // App: today's Daily Challenge run ({ key, pos, mode, seed }) — same seeded spins for everyone
-  const [takeoverRun, setTakeoverRun] = useState(null)   // App: TAKEOVER run (the road)
+  const [squad, setSquad] = useState(null)               // App: SQUAD BUILDER (lib/squad.js)
   const [dailyRun, setDailyRun] = useState(() => ((IS_APP || APP_LOOK) && _saved?.daily?.key === dailyState().key ? _saved.daily : null))
   const [savedSpinResult, setSavedSpinResult] = useState(() => {
     try { return JSON.parse(localStorage.getItem('bap_spin_result')) } catch { return null }
@@ -316,11 +315,11 @@ export default function App() {
     if (!IS_APP && !APP_LOOK) return
     window.__bapPage = { page, sport: 'nfl' }
     window.dispatchEvent(new CustomEvent('bap:page', { detail: window.__bapPage }))
-    if (['game', 'sim', 'takeover', 'takeover-build', 'career', 'career-build'].includes(page)) lastPlayRef.current = page
+    if (['game', 'sim', 'squad', 'squad-build', 'career', 'career-build'].includes(page)) lastPlayRef.current = page
   }, [page])
   const startDailyRef = useRef(null)
-  const openTakeoverRef = useRef(null)
-  const takeoverRunRef = useRef(null); takeoverRunRef.current = takeoverRun
+  const openSquadRef = useRef(null)
+  const squadRef = useRef(null); squadRef.current = squad
   const openCareerRef = useRef(null)
   const careerRef = useRef(null)
   const lastPlayRef = useRef(null)           // the last mode page, so PLAY goes back to what you were doing
@@ -334,10 +333,10 @@ export default function App() {
       const to = e.detail
       if (to === 'home') setPage('splash')   // keeps the build in progress — PLAY resumes it
       else if (to === 'play') {
-        if (page === 'game' || page === 'sim' || page === 'salarycap' || page === 'takeover' || page === 'takeover-build' || page === 'career' || page === 'career-build') return
-        const last = lastPlayRef.current, run = takeoverRunRef.current
-        if (last === 'takeover' && run && !run.over) setPage('takeover')
-        else if (last === 'takeover-build' && gameMode) setPage('takeover-build')
+        if (page === 'game' || page === 'sim' || page === 'salarycap' || page === 'squad' || page === 'squad-build' || page === 'career' || page === 'career-build') return
+        const last = lastPlayRef.current
+        if (last === 'squad' && squadRef.current) setPage('squad')
+        else if (last === 'squad-build' && gameMode) setPage('squad-build')
         else if (last === 'career' && careerRef.current) setPage('career')
         else if (last === 'career-build' && gameMode) setPage('career-build')
         else if (gameMode === 'salarycap') setPage('salarycap')   // back to the board, as basketball's does
@@ -348,7 +347,7 @@ export default function App() {
         handleStart(String(to).slice(5), p)
       } else if (to === 'leaderboard') setPage('leaderboard')
       else if (to === 'daily-challenge') startDailyRef.current?.()
-      else if (to === 'takeover') openTakeoverRef.current?.()
+      else if (to === 'squad') openSquadRef.current?.()
       else if (to === 'career') openCareerRef.current?.()
       else if (to === 'depth-chart') setPage('depth-chart')
       else if (to === 'salarycap') handleStart('salarycap', 'qb')
@@ -380,13 +379,11 @@ export default function App() {
     rampPage({ ads: onSimulate || page === 'depth-chart' || page === 'salarycap' ? RAIL_UNITS_WITH_LEFT : RAIL_UNITS, path })
   }, [page, simResult])
 
-  // Whether the build belongs to a Takeover run: a reload goes back to the
-  // Takeover build, or to Home once the road has started (its card resumes it)
+  // Which mode the build belongs to (Squad Builder, Career, a Compete pool), saved with it
   const tkRef = useRef(_saved?.tk ?? null)
   const competeRef = useRef(false)   // set once Compete is set up below
-  if (page === 'takeover-build') tkRef.current = 'build'
+  if (page === 'squad-build') tkRef.current = 'squad'
   else if (page === 'career-build') tkRef.current = 'career'
-  else if (page === 'takeover') tkRef.current = 'road'
   else if (page === 'game') tkRef.current = competeRef.current ? 'compete' : null
   useEffect(() => {
     if (!gameMode || gameMode === 'salarycap') return
@@ -666,32 +663,42 @@ export default function App() {
   // App: Spin and Build are two sides of one card — swipe to flip, and the
   // last pick flips it to Build (drag-and-drop included)
   // Phones (app and website): the player is the screen and the spin drops down over it
-  const drop = useDropMode((IS_APP || APP_LOOK) && (page === 'game' || page === 'versus-game' || page === 'takeover-build' || page === 'career-build'))
+  const drop = useDropMode((IS_APP || APP_LOOK) && (page === 'game' || page === 'versus-game' || page === 'squad-build' || page === 'career-build'))
   const [dropOpen, setDropOpen] = useDropSheet(drop, build, activeTypes, spinResetKey)
-  const flip = useFlip(IS_APP && !drop && (page === 'game' || page === 'versus-game' || page === 'takeover-build' || page === 'career-build'), mobileView, setMobileView)
+  const flip = useFlip(IS_APP && !drop && (page === 'game' || page === 'versus-game' || page === 'squad-build' || page === 'career-build'), mobileView, setMobileView)
   const buildComplete = activeTypes.length > 0 && activeTypes.every(t => build[t])
-  useEffect(() => { if (IS_APP && buildComplete && (page === 'game' || page === 'takeover-build' || page === 'career-build')) flip('build') }, [buildComplete]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (IS_APP && buildComplete && (page === 'game' || page === 'squad-build' || page === 'career-build')) flip('build') }, [buildComplete]) // eslint-disable-line react-hooks/exhaustive-deps
   // Website: the build-complete hit (the app's BuildComplete screen plays its own)
-  useEffect(() => { if (!IS_APP && buildComplete && (page === 'game' || page === 'takeover-build' || page === 'career-build')) window.__bapJuice?.sfx('complete', 2) }, [buildComplete]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (!IS_APP && buildComplete && (page === 'game' || page === 'squad-build' || page === 'career-build')) window.__bapJuice?.sfx('complete', 2) }, [buildComplete]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── TAKEOVER (app): a saved run per account, or a fresh build first ──
-  // (the account's run from the cloud comes in a moment later: lib/takeoverCloud.js)
+  // ── SQUAD BUILDER (app): one squad per account; its players are built on the build page ──
+  // (the account's squad from the cloud comes in a moment later: lib/squadCloud.js)
   useEffect(() => {
     if (!(IS_APP || APP_LOOK)) return
-    setTakeoverRun(loadRun('nfl', user?.id))
+    setSquad(loadSquad('nfl', user?.id))
     let live = true
-    if (user?.id) syncRunFromCloud('nfl', user.id).then(r => { if (live) setTakeoverRun(cur => (cur && cur.seed === r?.seed && (cur.log?.length ?? 0) > (r?.log?.length ?? 0) ? cur : r)) })
+    if (user?.id) syncSquadFromCloud('nfl', user.id).then(sq => { if (live) setSquad(sq) })
     return () => { live = false }
   }, [user?.id])
-  const startTakeoverBuild = useCallback(() => {
-    let p = 'qb'; try { p = localStorage.getItem('lastPosition') || 'qb' } catch {}
-    if (!['qb', 'rb', 'wr', 'te', 'db'].includes(p)) p = 'qb'
-    handleStart('classic', p); setPage('takeover-build')
+  // every change is saved; null starts over (one squad at a time)
+  const putSquad = useCallback(sq => { setSquad(sq); if (sq) saveSquad(sq); else clearSquad('nfl', user?.id) }, [user?.id])
+  const openSquad = useCallback(() => { setPage('squad'); window.scrollTo({ top: 0, behavior: 'instant' }) }, [])
+  // the squad's next player to build, on the normal build page (sandbox left on from the
+  // plain modes doesn't carry in unless Squad Builder's Sandbox is unlocked: the switch goes off)
+  // the slot on the build page right now (Home and back resumes it; after a reload the saved build is it)
+  const squadBuilding = useRef(_saved?.tk === 'squad' ? 'saved' : null)
+  const startSquadBuild = useCallback(slot => {
+    handleStart('classic', slot.pos)
+    squadBuilding.current = slot.id
+    if (sandboxLocked('squad-build')) sandboxTainted.current = false
+    setPage('squad-build')
   }, [handleStart])
-  const openTakeover = useCallback(() => {
-    const run = loadRun('nfl', user?.id)
-    if (run && !run.over) { setTakeoverRun(run); setPage('takeover') } else { setPage('takeover-intro'); window.scrollTo({ top: 0, behavior: 'instant' }) }
-  }, [user?.id, startTakeoverBuild])
+  const buildSquad = useCallback(sq => {
+    const next = nextToBuild(sq)
+    if (!next) { setPage('squad'); return }
+    if ((squadBuilding.current === next.id || squadBuilding.current === 'saved') && gameMode === 'classic' && position === next.pos) { setPage('squad-build'); return }   // its build is still in progress
+    startSquadBuild(next)
+  }, [startSquadBuild, gameMode, position])
   // ── CAREER (app): one saved career per account; a fresh build starts one ──
   const [career, setCareer] = useState(null)
   careerRef.current = career
@@ -724,15 +731,19 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'instant' })
   }, [user, position, build, isCustomMode])
 
-  const hitTheRoad = useCallback(() => {
-    const pools = { qb: QBS, rb: RBS, wr: WRS, te: TES, db: DBS }
-    const ovrOf = b => position === 'db' ? calcOVRDB(b) : position === 'te' ? calcOVRTE(b) : position === 'wr' ? calcOVRWR(b) : position === 'rb' ? calcOVRRB(b) : calcOVR(b)
-    const cities = cityList('nfl', NFL_TEAMS)
-    const rated = ratedPool(pools[position] ?? QBS, activeTypes, ovrOf, cities)
-    const run = { ...newRun({ sport: 'nfl', uid: user?.id ?? null, pos: position, build, types: activeTypes, rated, cities }), sandbox: !!isCustomMode }
-    setTakeoverRun(run); setPage('takeover')
+  // A Squad Builder build is done: into its slot, then the next one (or the team)
+  const squadNext = useCallback(() => {
+    const sq = squadRef.current, slot = nextToBuild(sq)
+    if (!slot) { setPage('squad'); return }
+    if (slot.pos !== position) { startSquadBuild(slot); return }
+    const filled = fillSlot(sq, slot.id, build, activeTypes, isCustomMode || sandboxTainted.current)
+    const next = nextToBuild(filled)
+    putSquad(next ? filled : { ...filled, phase: afterBuilding(filled) })
+    if (next) startSquadBuild(next)
+    else { squadBuilding.current = null; setGameMode(null); setBuild({}); setPage('squad'); try { localStorage.removeItem('bap_progress') } catch {} }   // the builds are the squad's now
     window.scrollTo({ top: 0, behavior: 'instant' })
-  }, [user?.id, position, build, activeTypes, isCustomMode])
+  }, [position, build, activeTypes, isCustomMode, putSquad, startSquadBuild])
+  const squadLeft = squad ? squad.slots.filter(s => !s.build).length : 0
 
   useEffect(() => {
     if (cp.phase !== 'build' || !cp.match || cp.results[cp.me.vid] || competeKey.current === cp.match.code) return
@@ -770,7 +781,7 @@ export default function App() {
     setDailyRun({ key: dc.key, pos: dc.pos, mode: dc.mode, seed: dc.seed })
   }, [dailyRun, gameMode, simResult, handleStart])
   startDailyRef.current = startDaily
-  openTakeoverRef.current = openTakeover
+  openSquadRef.current = openSquad
 
   // Opened from Build-A-Bucket's Daily screen (/?daily=1)
   useEffect(() => {
@@ -826,7 +837,7 @@ export default function App() {
     try { localStorage.setItem('bap_custom_mode', on ? '1' : '0') } catch {}
     setIsCustomMode(on)
   }, [])
-  // a Career or Takeover build whose Sandbox isn't unlocked: sandbox from the plain modes doesn't carry in
+  // a Career or Squad Builder build whose Sandbox isn't unlocked: sandbox from the plain modes doesn't carry in
   useEffect(() => { if (isCustomMode && sandboxLocked(page)) handleSandboxToggle(false) }, [page]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const showSaveToast = useCallback((type, msg) => {
@@ -1275,7 +1286,7 @@ export default function App() {
   const gameIsPlay = page === 'game' || (KEEP_GAME_ON.has(page) && lastPlayRef.current === 'game')
   const filledCount = activeTypes.filter(t => build[t]).length
   const currentAttrMap = isOL ? OL_ATTR : isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : isRB ? RB_ATTR : ATTR
-  const completeOvr = IS_APP && buildComplete && (page === 'game' || page === 'takeover-build' || page === 'career-build')
+  const completeOvr = IS_APP && buildComplete && (page === 'game' || page === 'squad-build' || page === 'career-build')
     ? (isOL ? calcOVROL(build) : isDB ? calcOVRDB(build) : isTE ? calcOVRTE(build) : isWR ? calcOVRWR(build) : isRB ? calcOVRRB(build) : calcOVR(build))
     : 0
   // the build's name (the one the season screen shows), not a tier
@@ -1290,7 +1301,7 @@ export default function App() {
   const nextSeedSpin = useCallback(() => 1 + Math.max(-1, ...Object.values(seedBuildRef.current || {}).filter(Boolean).map(c => (Number.isInteger(c.spin?.i) ? c.spin.i : -1))), [])
   const competePlan = useMemo(() => (competeOn && cp.match ? { seed: cp.match.seed, getStart: nextSeedSpin, onSpin: () => {}, separateRespins: true, respinSeed: `${cp.match.seed}:${cp.me.vid}` } : null), [competeOn, cp.match?.code]) // eslint-disable-line react-hooks/exhaustive-deps
   // Sandbox is only for the plain Current and All-Time modes
-  // (Career and Takeover builds too, once that mode's Sandbox is unlocked: the switch asks)
+  // (Career and Squad Builder builds too, once that mode's Sandbox is unlocked: the switch asks)
   const sandboxOk = (gameMode === 'classic' || gameMode === 'all-time') && !dailyRun && !competeOn && page !== 'versus-game'
   setSandboxGate(sandboxItemFor(page))
 
@@ -1335,6 +1346,8 @@ export default function App() {
 
       <div className="game-page-scroll">
       {competeOn && <CompeteHud cp={cp} />}
+      {/* Squad Builder: which of the squad's players this is */}
+      {page === 'squad-build' && squad && <div className="cp-hud sq-hud" role="status"><span><small>SQUAD BUILDER · {String(position).toUpperCase()} · PLAYER {squad.slots.length - squadLeft + 1} OF {squad.slots.length}</small></span><span className="cp-hud-dots">{squad.slots.map(s => <i key={s.id} className={s.build ? 'is-in' : ''} />)}</span></div>}
       {dailyLive && page === 'game' && <div className="cp-hud dc-hud" role="status"><span><small>DAILY CHALLENGE · {String(dailyRun.pos).toUpperCase()} · ONE RUN</small></span><LiveLeaveButton /></div>}
       {IS_APP && !drop && (
         <StackEdge view={mobileView} build={build} types={activeTypes} attrMap={currentAttrMap} onFlip={flip}
@@ -1342,7 +1355,7 @@ export default function App() {
       )}
       {drop && <DropBar open={dropOpen} setOpen={setDropOpen} build={build} types={activeTypes} attrMap={currentAttrMap}
         waiting={savedSpinResult?.selectedQB?.name ?? null} complete={buildComplete} />}
-      <main className={`game-layout ${drop ? 'mobile-build ag-drop' : IS_APP ? 'mobile-build ag-stack' : `mobile-${mobileView}`}${gameMode === 'all-time' ? ' alltime-mode' : ''}${page === 'versus-game' ? ' versus-active' : ''}${page === 'takeover-build' || page === 'career-build' ? ' takeover-build' : ''}`}>
+      <main className={`game-layout ${drop ? 'mobile-build ag-drop' : IS_APP ? 'mobile-build ag-stack' : `mobile-${mobileView}`}${gameMode === 'all-time' ? ' alltime-mode' : ''}${page === 'versus-game' ? ' versus-active' : ''}`}>
         {(el => (drop ? <DropSheet open={dropOpen} setOpen={setDropOpen}>{el}</DropSheet> : el))(<SpinScreen
           gradesHidden={competeOn}
           build={build}
@@ -1401,8 +1414,8 @@ export default function App() {
         <div className="right-panel-wrap">
           <ReportCard
             build={build}
-            onSimulate={page === 'versus-game' ? handleFaceoff : page === 'takeover-build' ? hitTheRoad : page === 'career-build' ? enterDraft : competeOn ? lockInCompete : handleSimulate}
-            simLabel={page === 'takeover-build' ? 'HIT THE ROAD' : page === 'career-build' ? 'ENTER THE DRAFT' : competeOn ? 'LOCK IN' : undefined}
+            onSimulate={page === 'versus-game' ? handleFaceoff : page === 'squad-build' ? squadNext : page === 'career-build' ? enterDraft : competeOn ? lockInCompete : handleSimulate}
+            simLabel={page === 'squad-build' ? (squadLeft > 1 ? 'NEXT PLAYER' : squad?.team ? 'BACK TO THE SQUAD' : 'PICK A TEAM') : page === 'career-build' ? 'ENTER THE DRAFT' : competeOn ? 'LOCK IN' : undefined}
             onReset={competeOn || dailyLocked || page === 'versus-game' ? undefined : handleReset}
             types={activeTypes}
             hasResult={page === 'versus-game' ? false : !!simResult}
@@ -1491,7 +1504,7 @@ export default function App() {
         />
       )}
 
-      {!parked && IS_APP && (page === 'game' || page === 'takeover-build' || page === 'career-build') && <BuildComplete complete={buildComplete} ovr={completeOvr} name={completeName} build={build} types={activeTypes} attrMap={currentAttrMap} />}
+      {!parked && IS_APP && (page === 'game' || page === 'squad-build' || page === 'career-build') && <BuildComplete complete={buildComplete} ovr={completeOvr} name={completeName} build={build} types={activeTypes} attrMap={currentAttrMap} />}
 
       {!parked && showTeamPicker && (
         <TeamPickerModal onSelect={handleTeamPicked} isPlus={isCustomMode} build={build} />
@@ -1610,11 +1623,11 @@ export default function App() {
         <link rel="canonical" href="https://build-a-player.com/" />
       </Helmet>
       {IS_APP ? (
-        <AppHome sport="nfl" user={user} onStart={handleStart} onDepthChart={() => setPage('depth-chart')} onTakeover={openTakeover} takeoverRun={takeoverRun} onCareer={openCareer} career={career}
+        <AppHome sport="nfl" user={user} onStart={handleStart} onDepthChart={() => setPage('depth-chart')} onSquad={openSquad} squad={squad} onCareer={openCareer} career={career}
           onCompete={() => setPage('compete')} resume={competeOn ? { label: `Compete · pool ${cp.match.code}`, onClick: () => setPage('game') } : (gameMode && gameMode !== 'salarycap' && (simResult || Object.values(build).some(Boolean))) ? { label: `${position.toUpperCase()} · ${gameMode === 'all-time' ? 'All-Time' : gameMode === 'classic' ? 'Current' : gameMode}`, onClick: () => window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'play' })) } : null} />
       ) : APP_LOOK ? (
         <AppHome sport="nfl" user={user} onStart={handleStart} onDepthChart={() => setPage('depth-chart')}
-          onTakeover={openTakeover} takeoverRun={takeoverRun} onCareer={openCareer} career={career}
+          onSquad={openSquad} squad={squad} onCareer={openCareer} career={career}
           onCompete={() => setPage('compete')} resume={competeOn ? { label: `Compete · pool ${cp.match.code}`, onClick: () => setPage('game') } : (gameMode && gameMode !== 'salarycap' && (simResult || Object.values(build).some(Boolean))) ? { label: `${position.toUpperCase()} · ${gameMode === 'all-time' ? 'All-Time' : gameMode === 'classic' ? 'Current' : gameMode}`, onClick: () => window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'play' })) } : null}
           footer={<><SiteFeatures sport="nfl" /><SiteFooter sport="nfl" onDepthChart={() => setPage('depth-chart')} onWiki={openWiki} /></>} />
       ) : (
@@ -1654,25 +1667,11 @@ export default function App() {
     )
   }
 
-  // No run on the road: what Takeover is + your past runs, then a build
-  if (page === 'takeover-intro') {
+  if (page === 'squad') {
     return (
       <Suspense fallback={null}>
-        <TakeoverIntro sport="nfl" teams={NFL_TEAMS} onStart={startTakeoverBuild} onClose={() => setPage('splash')} />
-      </Suspense>
-    )
-  }
-  if (page === 'takeover' && takeoverRun) {
-    const pos = takeoverRun.pos
-    const pools = { qb: QBS, rb: RBS, wr: WRS, te: TES, db: DBS }
-    const attr = pos === 'db' ? DB_ATTR : pos === 'te' ? TE_ATTR : pos === 'wr' ? WR_ATTR : pos === 'rb' ? RB_ATTR : ATTR
-    const ovrOf = b => pos === 'db' ? calcOVRDB(b) : pos === 'te' ? calcOVRTE(b) : pos === 'wr' ? calcOVRWR(b) : pos === 'rb' ? calcOVRRB(b) : calcOVR(b)
-    return (
-      <Suspense fallback={null}>
-        <AppTakeover sport="nfl" run={takeoverRun} setRun={setTakeoverRun} user={user}
-          pools={pools} types={{}} attrMap={attr} photoFor={p => nflHeadshot(HEADSHOTS[p.name])}
-          calcOvr={ovrOf} teams={NFL_TEAMS} ratings={null}
-          onNewBuild={startTakeoverBuild} onExit={() => setPage('splash')} />
+        <AppSquad sport="nfl" squad={squad} setSquad={putSquad} user={user} onBuild={buildSquad} onExit={() => setPage('splash')}
+          renderPicker={(onPick, b) => <TeamPickerModal onSelect={onPick} isPlus={!!squad?.sandbox} build={b} />} />
       </Suspense>
     )
   }

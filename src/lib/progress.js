@@ -13,7 +13,7 @@
 import { useSyncExternalStore } from 'react'
 import { supabase } from './supabase'
 import { getUsername } from './discord'
-import { itemById, forSale, DEFAULTS, ITEMS } from './cosmetics'
+import { itemById, forSale, DEFAULTS, ITEMS, OWNED_AS } from './cosmetics'
 import { passSeason, seasonById, seasonOver, tierAt, xpForTier, TIER_XP, TIERS } from './pass'
 import { competeDelta, blacktopDelta, FORFEIT_RATING } from './rating'
 import { track } from './track'
@@ -213,7 +213,7 @@ const BLANK_STATS = {
   seasons: 0, rings: 0, spins: 0, best: 0,
   wins: 0, winning: 0, playoffs: 0, awards: 0, perfect: 0, ovr90: 0, ovr95: 0, allTime: 0,
   nflSeasons: 0, bucketSeasons: 0, positions: {}, daily: 0, legends: 0,
-  btGames: 0, btWins: 0, btMvp: 0, tkCities: 0, tkRuns: 0, dcBest: 0, purchases: 0,
+  btGames: 0, btWins: 0, btMvp: 0, sqSeasons: 0, sqTitles: 0, sqFull: 0, dcBest: 0, purchases: 0,
   // Compete pools: places are 1–5; avg place = placeSum / played
   compete: { played: 0, wins: 0, podiums: 0, placeSum: 0, ovrSum: 0, best: 0, streak: 0, bestStreak: 0, beaten: 0, recent: [] },
   // Blacktop career line (btGames / btWins / btMvp above are the long-standing counters)
@@ -670,6 +670,8 @@ function onSeason(e) {
   if (d.mode === 'all-time') st.allTime++
   if (d.sport === 'bucket') st.bucketSeasons++; else { st.nflSeasons++; if (d.pos) st.positions[d.pos] = 1 }
   if (d.daily) st.daily++
+  // Squad Builder: its seasons, its titles, and a squad with every spot built
+  if (d.mode === 'squad') { st.sqSeasons++; if (d.champion) st.sqTitles++; if (d.full) st.sqFull = 1 }
   // Coin Rush: the season's coins again
   const coins = seasonCoins(d)
   const rush = walletOpen() && rushOn() ? coins : 0
@@ -967,7 +969,6 @@ export function initProgress() {
   window.addEventListener('bap:xp', onXp)
   window.addEventListener('bap:blacktop', onBlacktop)
   window.addEventListener('bap:h2h', onH2H)
-  window.addEventListener('bap:takeover', e => { const d = e.detail || {}; if (d.city) { S.stats.tkCities++; tally(0, 1); ev('takeover_city') } if (d.run) { S.stats.tkRuns++; ev('takeover_run') } emit() })
   window.addEventListener('bap:compete', onCompete)
   window.addEventListener('bap:dc', e => { const n = e.detail?.streak ?? 0; if (n > S.stats.dcBest) { S.stats.dcBest = n; emit() } })
   window.addEventListener('bap:pro', () => emit(true))
@@ -1021,7 +1022,7 @@ function earn(n, label, quiet = false) {
 }
 
 export const isPro = () => { try { return localStorage.getItem('bap_subscribed') === '1' } catch { return false } }
-export const owns = id => { const i = itemById(id); return !!i && (i.free || !!S.owned[id]) }
+export const owns = id => { const i = itemById(id); return !!i && (i.free || !!S.owned[id] || !!S.owned[OWNED_AS[id]]) }
 
 // Today's deals: three items, 30% off, the same for everyone
 export function dealsFor(key = dayKey()) {

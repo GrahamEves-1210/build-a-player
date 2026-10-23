@@ -221,8 +221,8 @@ const ART = {
       </>
     ),
   },
-  // Takeover runs: a flag planted for a road taken, a city pin on it
-  takeover: {
+  // Squad Builder titles: a championship banner on its pole, a star for the squad
+  squad: {
     metal: (
       <>
         <rect x="21.6" y="8" width="2.8" height="56.5" rx="1" fill={G} />
@@ -235,8 +235,7 @@ const ART = {
         <path d="M24.4 11c8.6-3 14.6 3 25.6 0v20c-11 3-17-3-25.6 0z" style={{ fill: 'var(--tc-gem, var(--ag-a1, #4fd6b7))' }} />
         <path d="M37.5 12.3c3.6 1 7 .9 12.5-1.3v20c-5.5 2.2-8.9 2.3-12.5 1.3z" fill="#000" opacity=".2" />
         <path d="M24.4 11c8.6-3 14.6 3 25.6 0v2c-11 3-17-3-25.6 0z" fill="#fff" opacity=".22" />
-        <path d="M36.5 15.4a4.2 4.2 0 0 1 4.2 4.2c0 3.1-4.2 7.4-4.2 7.4s-4.2-4.3-4.2-7.4a4.2 4.2 0 0 1 4.2-4.2z" fill="#fff" opacity=".92" />
-        <circle cx="36.5" cy="19.6" r="1.6" style={{ fill: 'var(--tc-gem, var(--ag-a1, #4fd6b7))' }} />
+        <path d="M37 14.2l1.75 3.55 3.9.57-2.82 2.75.66 3.88L37 23.12l-3.49 1.83.67-3.88-2.82-2.75 3.9-.57z" fill="#fff" opacity=".92" />
       </>
     ),
   },

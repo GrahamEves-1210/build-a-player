@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { guardLeave } from '../../lib/liveLock'
 import { sfx, haptic } from '../../lib/juice'
 import { switchSport } from './AppHome'
-import { IconPlay, IconHome, IconBolt, IconCrown, IconTrophy, IconTarget, IconCalendar, IconHoop, IconFootball, IconBasketball } from './icons'
+import { IconPlay, IconHome, IconBolt, IconCrown, IconTrophy, IconProfile, IconCalendar, IconHoop, IconFootball, IconBasketball } from './icons'
 
 // The dock's centre button.
 //   A tap does the same everywhere: it takes you Home (on Home it stays put); it
@@ -23,7 +23,7 @@ const fanFor = sport => [
   { id: 'career', label: 'CAREER', Icon: IconTrophy, go: () => nav('career') },
   sport === 'bucket'
     ? { id: 'blacktop', label: 'BLACKTOP', Icon: IconHoop, go: () => nav('blacktop') }
-    : { id: 'takeover', label: 'TAKEOVER', Icon: IconTarget, go: () => nav('takeover') },
+    : { id: 'squad', label: 'SQUAD', Icon: IconProfile, go: () => nav('squad') },
   { id: 'daily', label: 'DAILY', Icon: IconCalendar, go: () => nav('daily') },
   sport === 'bucket'
     ? { id: 'sport', label: 'FOOTBALL', Icon: IconFootball, sport: true, go: () => switchSport('nfl') }

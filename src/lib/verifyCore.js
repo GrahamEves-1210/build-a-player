@@ -136,28 +136,6 @@ export function checkDaily(day, sent) {
   return { ovr: Math.max(0, Math.min(99, Math.round(kit.ovr(r.build) ?? 0))), build: r.build, pos: dc.pos, mode: dc.mode, sport: dc.sport }
 }
 
-// ── Takeover Duo: the partner's build, as the host's phone will play it ───────
-// Real players only, at no more than their real rating plus a bonus (ON FIRE's +1);
-// anything else plays at the real rating, an unknown name as a free agent (3).
-export function cleanPartnerBuild(sport, pos, build, bonus = 1) {
-  if (!build || typeof build !== 'object') return { build: {}, changed: true }
-  const kits = ['classic', 'all-time'].map(m => seasonKit(sport, pos, m)).filter(Boolean)
-  const pool = kits.flatMap(k => k.pool)
-  let changed = false
-  const out = {}
-  for (const [t, c] of Object.entries(build)) {
-    if (!c) { out[t] = c; continue }
-    const name = nameOf(c)
-    const p = name ? findIn(pool, name, c.team) : null
-    const real = p?.attrs?.[t]
-    const v = Number(c.val)
-    const ok = typeof real === 'number' ? Math.max(0, Math.min(11, Math.min(Number.isFinite(v) ? v : real, real + bonus))) : 3
-    if (ok !== v) changed = true
-    out[t] = { ...c, val: ok, ...(typeof real === 'number' ? {} : { qbFull: 'Free agent' }) }
-  }
-  return { build: out, changed, ovr: changed && kits[0] ? Math.round(kits[0].ovr(out) ?? 0) : null }
-}
-
 // ── Salary Cap: picks off a real board, inside the budget, at the score they make ──────
 // A play sends its five picks ({ name, price } per column, in column order). A daily play
 // must be dealable from that day's board (lib/salaryCore.js; or the copy the day froze,

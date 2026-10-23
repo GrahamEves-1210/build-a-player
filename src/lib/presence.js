@@ -21,7 +21,7 @@ function area() {
   if (page === 'compete') return 'compete'
   if (page.startsWith('blacktop') || page.startsWith('versus')) return 'blacktop'
   if (page === 'career' || page.startsWith('career')) return 'career'
-  if (page === 'takeover' || page.startsWith('takeover')) return 'takeover'
+  if (page === 'squad' || page.startsWith('squad')) return 'squad'
   if (page === 'game' || page === 'sim' || page === 'salarycap') return 'play'
   return 'home'
 }

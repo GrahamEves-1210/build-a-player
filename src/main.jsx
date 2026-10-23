@@ -100,7 +100,7 @@ function dropLoader() {
       setTimeout(() => requestAnimationFrame(() => window.__bapLoaded?.()), Math.max(0, BOOT_MIN - performance.now()))
       // the app's own files are on the phone: warm the screens people open next
       if (IS_APP) (window.requestIdleCallback ?? (f => setTimeout(f, 1500)))(() => {
-        for (const f of [() => import('./components/SimPage'), () => import('./components/app/AppCareer'), () => import('./components/app/AppCompete'), () => import('./components/app/AppTakeover')]) f().catch(() => {})
+        for (const f of [() => import('./components/SimPage'), () => import('./components/app/AppCareer'), () => import('./components/app/AppCompete'), () => import('./components/app/AppSquad')]) f().catch(() => {})
       })
     })
 }

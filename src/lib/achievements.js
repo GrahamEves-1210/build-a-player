@@ -41,8 +41,8 @@ export const ACHIEVEMENTS = [
   A('bt1',       'Live', 'Blacktop Debut',         'Win a Blacktop game',                    'hoop',     'btWins',  1,    60,   40),
   A('bt25',      'Live', 'Blacktop King',          'Win 25 Blacktop games',                  'hoop',     'btWins',  25,   360,  200, 'pl-blacktop'),
   A('btmvp5',    'Live', 'Run MVP',                'Be the MVP of 5 Blacktop games',         'star',     'btMvp',   5,    180,  100),
-  A('tkrun',     'Live', 'Road Warrior',           'Take every city on a Takeover road',     'versus',   'tkRuns',  1,    240,  160),
-  A('tk25',      'Live', 'Frequent Flyer',         'Take 25 Takeover cities',                'versus',   'tkCities',25,   180,  100),
+  A('sqtitle',   'Live', 'Super Team',             'Win a title with a Squad Builder team',  'trophy',   'sqTitles',1,    240,  160),
+  A('sqfull',    'Live', 'Full House',             'Play a season with a full Squad Builder squad', 'helmet', 'sqFull', 1, 180,  100),
   A('dc10',      'Live', 'Depth Chart Pro',        'Hit a 10 streak in The Depth Chart',     'clipboard','dcBest',  10,   90,   50),
   A('dc25',      'Live', 'Depth Chart Savant',     'Hit a 25 streak in The Depth Chart',     'clipboard','dcBest',  25,   240,  120),
   // Online (Compete pools, Blacktop, 1v1 — see progress.js rateOnline)

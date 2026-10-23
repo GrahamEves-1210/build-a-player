@@ -17,16 +17,19 @@ import { usePresence, fmtCount, crowd } from '../../lib/presence'
 import { CoinPill } from './AppShop'
 import { TierChip, Form } from './OnlineRecord'
 import { tierFor } from '../../lib/progress'
-import { W as MAP_W, H as MAP_H, OUTLINE_PATH } from '../../lib/usMap'
 import EmptyState from './EmptyState'
 
-// Card art: the road map for Takeover, the pool's podium for Compete
-function MapArt() {
+// Card art: three players for Squad Builder (the one in front is yours), the pool's podium for Compete
+function SquadArt() {
+  const fig = (x, s) => `M${x - 26 * s} 96 C${x - 26 * s} ${70 - 6 * s} ${x - 14 * s} ${60 - 4 * s} ${x} ${60 - 4 * s} C${x + 14 * s} ${60 - 4 * s} ${x + 26 * s} ${70 - 6 * s} ${x + 26 * s} 96 Z`
   return (
-    <svg className="ag-card-art ag-card-art--map" viewBox={`0 0 ${MAP_W} ${MAP_H}`} preserveAspectRatio="xMaxYMid slice" aria-hidden="true">
-      <path d={OUTLINE_PATH} className="ag-map-land" clipRule="evenodd" />
-      <path d="M190 220 L330 260 L470 190 L620 300 L760 240" className="ag-map-route" />
-      {[[190, 220], [470, 190], [760, 240]].map(([x, y], i) => <circle key={i} cx={x} cy={y} r={i === 2 ? 16 : 11} className={`ag-map-pin${i === 2 ? ' is-next' : ''}`} />)}
+    <svg className="ag-card-art ag-card-art--squad" viewBox="0 0 200 96" preserveAspectRatio="xMaxYMax meet" aria-hidden="true">
+      {[[52, .82], [148, .82], [100, 1]].map(([x, s], i) => (
+        <g key={i} className={`ag-sq-fig${i === 2 ? ' is-lead' : ''}`}>
+          <path d={fig(x, s)} />
+          <circle cx={x} cy={46 - 6 * s} r={13 * s} />
+        </g>
+      ))}
     </svg>
   )
 }
@@ -273,7 +276,7 @@ function PlayersOfDay() {
   )
 }
 
-export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus, onBlacktop, blacktop, onTakeover, takeoverRun, onCompete, onCareer, career = null, resume = null, user, renderBucketFigure, footer = null }) {
+export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus, onBlacktop, blacktop, onSquad, squad = null, onCompete, onCareer, career = null, resume = null, user, renderBucketFigure, footer = null }) {
   const prog = useProgress()
   const here = usePresence()?.areas ?? {}   // how many are in each online mode right now
   const cs = prog.stats?.compete
@@ -306,9 +309,8 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
   const fig = NFL_FIGURE[position] ?? NFL_FIGURE.qb
   const posShort = isBucket ? (position === 'big' ? 'BIG' : 'GUARD') : position.toUpperCase()
   const posName = isBucket ? (position === 'big' ? 'PF · C' : 'PG · SG · SF') : NFL_NAMES[position]
-  const tkOn = !!takeoverRun && !takeoverRun.over
-  const tkStops = takeoverRun?.route?.length ?? 12
-  const tkEndless = tkOn && takeoverRun.idx >= tkStops
+  const sqBuilt = squad ? squad.slots.filter(s => s.build).length : 0
+  const sqLast = squad?.seasons?.[squad.seasons.length - 1] ?? null
   const btLive = !!blacktop && blacktop.phase !== 'idle'
 
   return (
@@ -378,7 +380,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
         {resume && (
           <button className="ag-resume ag-resume--top ag-pop" style={{ '--d': '200ms' }} onClick={resume.onClick}>
             <span className="ag-resume-icon"><IconPlay size={18} /></span>
-            <span className="ag-takeover-txt">
+            <span className="ag-card-txt">
               <span className="ag-eyebrow">BUILD IN PROGRESS</span>
               <span className="ag-resume-title">{resume.label}</span>
             </span>
@@ -402,20 +404,20 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
               <BlacktopArt />
               <span className="ag-live-dot" />
               <span className="ag-bt-tags" aria-hidden="true"><span className="bt-mode-tag">2V2</span><span className="bt-mode-tag">3V3</span></span>
-              <span className="ag-takeover-txt">
+              <span className="ag-card-txt">
                 <span className="ag-eyebrow">{btLive ? (blacktop.phase === 'queue' ? `IN THE LOBBY · ${blacktop.queue}/6 SPOTS TAKEN` : blacktop.phase === 'build' ? 'LIVE · YOUR SQUAD IS BUILDING' : 'LIVE · GAME ON') : crowd(here.blacktop) ? `LIVE · ${fmtCount(here.blacktop)} PLAYING NOW` : 'LIVE · FIRST TO 11'}</span>
-                <span className="ag-takeover-title">BLACKTOP</span>
-                <span className="ag-takeover-sub">{btLive ? 'You\'re still in. Jump back to your run.' : (btG || h2h.played) ? `Squads ${btW}–${btG - btW} · 1v1 ${h2h.wins ?? 0}–${h2h.losses ?? 0}${ol.played ? ` · ${tierFor(ol.rating)[1]} ${ol.rating}` : ''}` : '1v1, 2v2 or 3v3. Real players.'}</span>
+                <span className="ag-card-title">BLACKTOP</span>
+                <span className="ag-card-sub">{btLive ? 'You\'re still in. Jump back to your run.' : (btG || h2h.played) ? `Squads ${btW}–${btG - btW} · 1v1 ${h2h.wins ?? 0}–${h2h.losses ?? 0}${ol.played ? ` · ${tierFor(ol.rating)[1]} ${ol.rating}` : ''}` : '1v1, 2v2 or 3v3. Real players.'}</span>
               </span>
             </button>
           )}
           {onCareer && (
             <button className={`ag-crmode ag-pop${career ? ' is-live' : ''}`} style={{ '--d': '260ms' }} onClick={onCareer}>
               <CareerArt />
-              <span className="ag-takeover-txt">
+              <span className="ag-card-txt">
                 <span className="ag-eyebrow">{career ? `${career.sport === 'bucket' ? (career.pos === 'big' ? 'BIG' : 'GUARD') : career.pos.toUpperCase()} · ${career.phase === 'draft' ? 'DRAFT DAY' : career.phase === 'retired' ? 'CAREER OVER' : `YEAR ${career.year + 1} · AGE ${career.age}`}` : 'MULTI-SEASON · SAVES AS YOU GO'}</span>
-                <span className="ag-takeover-title">CAREER</span>
-                <span className="ag-takeover-sub">{career ? (career.phase === 'draft' ? 'The combine is waiting. Go get drafted.' : career.phase === 'season' ? `${career.sport === 'bucket' ? 'Game' : 'Week'} ${(career.active?.k ?? 0) + 1} with the ${career.fit?.name ?? ''}` : career.phase === 'offseason' ? 'Offseason: a point to spend, a contract to sort' : career.phase === 'retired' ? `${career.seasons.length} seasons. See the legacy, or start a new career.` : `${career.fit?.name ?? ''} · ${career.seasons.length} ${career.seasons.length === 1 ? 'season' : 'seasons'} in`) : 'Build a player, get drafted, play a whole career. Legacy on the line.'}</span>
+                <span className="ag-card-title">CAREER</span>
+                <span className="ag-card-sub">{career ? (career.phase === 'draft' ? 'The combine is waiting. Go get drafted.' : career.phase === 'season' ? `${career.sport === 'bucket' ? 'Game' : 'Week'} ${(career.active?.k ?? 0) + 1} with the ${career.fit?.name ?? ''}` : career.phase === 'offseason' ? 'Offseason: a point to spend, a contract to sort' : career.phase === 'retired' ? `${career.seasons.length} seasons. See the legacy, or start a new career.` : `${career.fit?.name ?? ''} · ${career.seasons.length} ${career.seasons.length === 1 ? 'season' : 'seasons'} in`) : 'Build a player, get drafted, play a whole career. Legacy on the line.'}</span>
               </span>
             </button>
           )}
@@ -423,23 +425,29 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
             <button className="ag-compete ag-pop" style={{ '--d': '300ms' }} onClick={onCompete}>
               <PoolArt />
               <span className="ag-live-dot" />
-              <span className="ag-takeover-txt">
+              <span className="ag-card-txt">
                 <span className="ag-eyebrow">{crowd(here.compete) ? <>ONLINE · {fmtCount(here.compete)} PLAYING NOW</> : ol.played ? <>ONLINE · {tierFor(ol.rating)[1].toUpperCase()} · {ol.rating}</> : 'ONLINE · 5-PLAYER POOLS'}</span>
-                <span className="ag-takeover-title">COMPETE</span>
-                <span className="ag-takeover-sub">{cs?.played
+                <span className="ag-card-title">COMPETE</span>
+                <span className="ag-card-sub">{cs?.played
                   ? `${cs.wins} ${cs.wins === 1 ? 'win' : 'wins'} in ${cs.played} · avg place ${(cs.placeSum / cs.played).toFixed(1)}${cs.streak >= 2 ? ` · ${cs.streak} straight` : ''}`
                   : 'Same spins as 4 other players. Highest OVR takes the pool.'}</span>
                 {cs?.played > 0 && <span className="ag-rec"><Form items={cs.recent} mode="compete" /></span>}
               </span>
             </button>
           )}
-          {onTakeover && (
-          <button className="ag-takeover ag-pop" style={{ '--d': '350ms' }} onClick={onTakeover}>
-            <MapArt />
-            <span className="ag-takeover-txt">
-              <span className="ag-eyebrow">{tkOn ? (tkEndless ? `ENDLESS ROAD · ${takeoverRun.endlessWins} STRAIGHT` : `ON THE ROAD · ${takeoverRun.taken.length}/${tkStops} CITIES`) : 'ROAD MODE · 12 CITIES'}</span>
-              <span className="ag-takeover-title">TAKEOVER</span>
-              <span className="ag-takeover-sub">{tkOn ? `${takeoverRun.lives} ${takeoverRun.lives === 1 ? 'life' : 'lives'} left — your next stop is waiting` : 'Solo or duo. Cross the map, beat the star in every city, steal their game.'}</span>
+          {onSquad && (
+          <button className={`ag-squad ag-pop${squad ? ' is-live' : ''}`} style={{ '--d': '350ms' }} onClick={onSquad}>
+            <SquadArt />
+            <span className="ag-card-txt">
+              <span className="ag-eyebrow">{!squad ? 'ONE SEASON · YOUR SQUAD'
+                : squad.phase === 'build' ? `BUILDING · ${sqBuilt} OF ${squad.slots.length}`
+                : squad.team ? `${squad.team} · ${squad.slots.length} ${squad.slots.length === 1 ? 'BUILD' : 'BUILDS'} · SEASON ${(squad.seasons?.length ?? 0) + (squad.phase === 'result' ? 0 : 1)}`
+                : `${squad.slots.length} ${squad.slots.length === 1 ? 'BUILD' : 'BUILDS'} · PICK A TEAM`}</span>
+              <span className="ag-card-title">SQUAD BUILDER</span>
+              <span className="ag-card-sub">{!squad ? 'Build a few players, drop them on a real team, play a season together.'
+                : squad.phase === 'build' ? 'Your squad is waiting on its next build.'
+                : sqLast && squad.phase === 'result' ? `${sqLast.wins}-${sqLast.losses}${sqLast.champion ? ', champions' : sqLast.playoffs ? ', playoffs' : ''} last season. Run it back.`
+                : 'The season is ready to play.'}</span>
             </span>
           </button>
           )}

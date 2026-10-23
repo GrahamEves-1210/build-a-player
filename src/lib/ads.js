@@ -110,7 +110,7 @@ export function rampRail() {
 }
 
 // The rail again when a mode moves on without a page change (the next screen of
-// a season, a Career game, a Takeover city, a Blacktop game, an auction lot):
+// a season, a Career game, a Squad Builder screen, a Blacktop game, an auction lot):
 // whenever `key` changes after the first render. rampRail keeps it to once
 // every RAIL_GAP_MS, so a fast-changing key costs nothing extra.
 export function useRailOn(key) {

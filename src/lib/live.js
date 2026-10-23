@@ -1,6 +1,6 @@
 // Live rooms: who's here (presence) + messages (broadcast) over Supabase
 // Realtime, with a same-device BroadcastChannel fallback (two tabs, headless
-// tests, or when Realtime can't connect). Used by Blacktop (3v3), Takeover Duo
+// tests, or when Realtime can't connect). Used by Blacktop (3v3)
 // and the queue screens. One small API so screens never touch the transport:
 //
 //   const room = joinRoom('bab-blacktop-q', { vid, name, pos })

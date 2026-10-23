@@ -9,7 +9,7 @@ import { sfx, haptic, victory } from '../../lib/juice'
 // website's pill + "?" tooltip. Tap the card to switch it; when it's on, the
 // ratings editor is one tap away.
 // compact: the small version that sits in the silhouette's corner on desktop
-// the build page sets which unlock its switch needs (Career / Takeover builds), null elsewhere
+// the build page sets which unlock its switch needs (Career / Squad Builder builds), null elsewhere
 let gate = null
 export const setSandboxGate = id => { gate = id }
 export default function AppSandbox({ on, onToggle: toggle, onCustomize, compact = false }) {
@@ -26,7 +26,7 @@ export default function AppSandbox({ on, onToggle: toggle, onCustomize, compact 
         <span className="ag-sandbox-txt">
           <span className="ag-sandbox-title">SANDBOX{on && <i>ON</i>}{locked && <i className="sb-lock">{priceOf(gate).toLocaleString()} COINS</i>}</span>
           <span className="ag-sandbox-sub">{mode
-            ? (on ? `Your ratings, your rules. This ${mode.toLowerCase()} is marked SANDBOX: no XP or coins.` : locked ? `Unlock it for ${mode} and build whoever you want.` : `Edit any player's ratings. Sandbox ${mode === 'Career' ? 'careers' : 'runs'} earn no XP or coins.`)
+            ? (on ? `Your ratings, your rules. This ${mode.toLowerCase()} is marked SANDBOX: no XP or coins.` : locked ? `Unlock it for ${mode} and build whoever you want.` : `Edit any player's ratings. Sandbox ${mode === 'Career' ? 'careers' : 'squads'} earn no XP or coins.`)
             : (on ? 'Your ratings, your rules. This season won\'t save.' : 'Edit any player\'s ratings. Sandbox seasons don\'t save.')}</span>
         </span>
         <span className={`ag-switch${on ? ' is-on' : ''}`} aria-hidden="true"><span /></span>
@@ -40,9 +40,9 @@ export default function AppSandbox({ on, onToggle: toggle, onCustomize, compact 
   </>)
 }
 
-// Sandbox in Career and Takeover is bought, one mode at a time: turning the
+// Sandbox in Career and Squad Builder is bought, one mode at a time: turning the
 // switch on there opens this. Bought: the switch goes on (onUnlocked).
-export const sandboxItemFor = page => (page === 'career-build' ? 'sandbox-career' : page === 'takeover-build' ? 'sandbox-takeover' : null)
+export const sandboxItemFor = page => (page === 'career-build' ? 'sandbox-career' : page === 'squad-build' ? 'sandbox-squad' : null)
 export const sandboxLocked = page => { const id = sandboxItemFor(page); return !!id && !owns(id) }
 export function SandboxBuy({ item, onClose, onUnlocked }) {
   const p = useProgress()
@@ -60,7 +60,7 @@ export function SandboxBuy({ item, onClose, onUnlocked }) {
       <div className="ll-sheet sb-buy" role="dialog" aria-modal="true" aria-labelledby="sb-buy-title">
         <div className="ll-head"><span className="ag-eyebrow">UNLOCK · {i.mode.toUpperCase()}</span><button className="ag-round-btn" onClick={onClose} aria-label="Close"><IconClose size={15} /></button></div>
         <h2 className="ll-title" id="sb-buy-title"><IconFlask size={22} /> Sandbox in {i.mode}</h2>
-        <p className="ll-body">Edit any player's ratings and build whoever you want, in every {i.mode} from now on. Sandbox {i.mode === 'Career' ? 'careers' : 'runs'} are just for fun: no XP or coins, and they're marked SANDBOX.</p>
+        <p className="ll-body">Edit any player's ratings and build whoever you want, in every {i.mode} from now on. Sandbox {i.mode === 'Career' ? 'careers' : 'squads'} are just for fun: no XP or coins, and they're marked SANDBOX.</p>
         <div className="sb-buy-price"><span className="sb-coin">BAP</span><b>{price.toLocaleString()}</b><small>You have {coins.toLocaleString()}</small></div>
         {err && <p className="sb-buy-err">{err}</p>}
         <div className="ll-actions">

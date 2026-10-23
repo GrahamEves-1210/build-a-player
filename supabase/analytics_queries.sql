@@ -35,13 +35,14 @@ select count(distinct coalesce(user_id::text, meta->>'dev')) filter (where event
        count(distinct coalesce(user_id::text, meta->>'dev')) filter (where event = 'signup') as signed_up
   from analytics_events where created_at > now() - interval '7 days';
 
--- 4. What people play, last 7 days (players and games per mode)
+-- 4. What people play, last 7 days (players and games per mode; a Squad Builder season
+--    is a season_done with mode 'squad')
 select case event when 'season_done' then coalesce(meta->>'mode', 'season') || case when (meta->>'daily')::boolean then ' (daily)' else '' end
                   else event end as mode,
        count(distinct coalesce(user_id::text, meta->>'dev')) as players,
        count(*) as games
   from analytics_events
- where event in ('season_done', 'compete_done', 'auction_done', 'blacktop_done', 'h2h_done', 'takeover_city')
+ where event in ('season_done', 'compete_done', 'auction_done', 'blacktop_done', 'h2h_done')
    and created_at > now() - interval '7 days'
  group by 1 order by players desc;
 

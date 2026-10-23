@@ -315,8 +315,8 @@ export function playDelay(p, first = false) {
   return 1100
 }
 
-// A versus-style build from a roster player's attributes (the city's star in
-// Takeover, or a bot): every attribute the player has, as a chip they "own".
+// A versus-style build from a roster player's attributes (a bot's): every
+// attribute the player has, as a chip they "own".
 export function buildFromPlayer(player, types, photo = null) {
   const out = {}
   for (const t of types) {

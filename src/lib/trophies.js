@@ -5,7 +5,7 @@
 //                seasons only), mvp / dpoy (basketball)
 //   accounts     classic_ / alltime_ mvps, opoys, dpoys (football award counters)
 // Never the wallet (app_profile). The live-mode trophies (online tier, Compete,
-// Takeover, Blacktop) are the player's own stats (lib/progress.js), so a friend's
+// Squad Builder, Blacktop) are the player's own stats (lib/progress.js), so a friend's
 // profile only shows the shelf these rows make.
 //
 // Where each count comes from (no season counted twice):

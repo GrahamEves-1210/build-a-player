@@ -19,7 +19,7 @@ import './trophy-case.css'
 
 // Profile → Trophy Case: the player's real hardware on lit shelves (seasons: rings,
 // perfect seasons, the 90+ club; awards: MVP, OPOY, DPOY, All-Pro; live: online tier,
-// Compete, Takeover, Blacktop), and the top-OVR saved season at each position.
+// Compete, Squad Builder, Blacktop), and the top-OVR saved season at each position.
 // Tap a trophy or a build for the stats behind it.
 // Saved seasons and award counters: lib/trophies.js. Live modes: lib/progress.js stats.
 
@@ -73,9 +73,9 @@ function shelves(h, st, ach) {
       { id: 'compete', art: 'compete', label: 'POOL WINS', title: 'Compete Wins', n: n0(cp.wins),
         line: 'Finish first in a Compete pool.',
         facts: [['Pools', fmt(cp.played)], ['Top 3', fmt(cp.podiums)], ['Best streak', fmt(cp.bestStreak)], ...first('cpwin1')] },
-      { id: 'takeover', art: 'takeover', gem: ACCENT, label: 'TAKEOVERS', title: 'Takeovers', n: n0(st.tkRuns),
-        line: 'Take every city on a Takeover road.',
-        facts: [['Cities taken', fmt(st.tkCities)], ...first('tkrun')] },
+      { id: 'squad', art: 'squad', gem: ACCENT, label: 'SQUAD TITLES', title: 'Squad Builder Titles', n: n0(st.sqTitles),
+        line: 'Win a title with a Squad Builder team.',
+        facts: [['Squad seasons', fmt(st.sqSeasons)], ...first('sqtitle')] },
       { id: 'blacktop', art: 'blacktop', label: 'BLACKTOP', title: 'Blacktop Wins', n: bt.w,
         line: 'Win on the Blacktop. 3v3, 2v2 or 1v1.',
         facts: [['Record', `${fmt(bt.w)}-${fmt(Math.max(0, bt.g - bt.w))}`],

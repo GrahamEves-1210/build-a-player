@@ -5,7 +5,6 @@ import './empty.css'
 // in basketball, picked by html.is-bucket), in a small animated scene, then the copy.
 //   podium  boards nobody's on yet: the mascot hops onto the #1 block and waits there
 //   duo     friends / online games: the mascot and an open spot (its dashed outline) with + or VS
-//   road    Takeover runs: the mascot runs in place while the route draws itself to the pin
 //   cards   the binder: the front card flips over to show the mascot
 
 // The mascot standing on (0, 0): bottom centre, `h` tall. `ghost` draws it as a dashed outline.
@@ -55,17 +54,6 @@ const ART = {
       {mid === 'vs'
         ? <text x="81" y="62" className="ea-vs">VS</text>
         : <g className="ea-plus" transform="translate(118 58)"><g className="ea-plus-in"><circle r="8.5" /><path d="M-3.8 0h7.6M0-3.8v7.6" /></g></g>}
-    </svg>
-  ),
-  road: () => (
-    <svg viewBox="0 0 160 96" className="ea-svg">
-      <path className="ea-route" d="M24 80 C 52 96, 62 34, 92 48 S 128 66, 138 30" />
-      <path className="ea-route-run" pathLength="100" d="M24 80 C 52 96, 62 34, 92 48 S 128 66, 138 30" />
-      <circle cx="138" cy="30" r="10" className="ea-pin-ring" />
-      <path className="ea-pin" d="M138 34c-4.6-5-7-8.6-7-11.6a7 7 0 0 1 14 0c0 3-2.4 6.6-7 11.6z" />
-      <circle cx="138" cy="22.4" r="2.6" className="ea-pin-dot" />
-      <ellipse cx="22" cy="84.5" rx="9" ry="1.6" className="ea-shadow ea-shadow--run" />
-      <g transform="translate(22 84)"><g className="ea-run"><Mascot h={34} /></g></g>
     </svg>
   ),
   cards: () => (

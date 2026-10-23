@@ -36,7 +36,7 @@ function MainPage({ go }) {
           <tr><th>Type</th><td>Free browser game</td></tr>
           <tr><th>Games</th><td>Build-A-Player (NFL)<br />Build-A-Bucket (NBA)</td></tr>
           <tr><th>Positions</th><td>QB, RB, WR, TE, DB<br />Guard, Big</td></tr>
-          <tr><th>Modes</th><td>Career, Takeover, Compete, Trait Auction, Blacktop, Current, All-Time, Salary Cap, Head-to-Head, Depth Chart</td></tr>
+          <tr><th>Modes</th><td>Career, Squad Builder, Compete, Trait Auction, Blacktop, Current, All-Time, Salary Cap, Head-to-Head, Depth Chart</td></tr>
           <tr><th>Platform</th><td>Web browser</td></tr>
           <tr><th>Ratings as of</th><td>{fmtDate(RATINGS_AS_OF)}</td></tr>
           <tr><th>Website</th><td><a href="/">build-a-player.com</a></td></tr>
@@ -50,7 +50,7 @@ function MainPage({ go }) {
         <li><Link go={go} to="gameplay">Gameplay</Link><span>Spins, chips, respins, the 0–11 scale, and how your overall is scored.</span></li>
         <li><Link go={go} to="seasons">Seasons</Link><span>How an NFL or NBA season is simulated, game by game, through the playoffs and awards.</span></li>
         <li><Link go={go} to="career">Career</Link><span>One player from the combine to the Hall of Fame: the draft, seasons, contracts, legacy.</span></li>
-        <li><Link go={go} to="modes">Modes</Link><span>Takeover, Compete, Trait Auction, Blacktop, Current, All-Time, Salary Cap, Head-to-Head, the Depth Chart, Sandbox.</span></li>
+        <li><Link go={go} to="modes">Modes</Link><span>Squad Builder, Compete, Trait Auction, Blacktop, Current, All-Time, Salary Cap, Head-to-Head, the Depth Chart, Sandbox.</span></li>
         <li><Link go={go} to="ratings">Ratings</Link><span>Every player in every pool, sortable and searchable, with the date each pool last changed.</span></li>
         <li><Link go={go} to="creators">Creators</Link><span>YouTubers and podcasters who have played the game on camera.</span></li>
         <li><Link go={go} to="behind-the-scenes">Behind the scenes</Link><span>Where the ratings come from, how random the game is, what it runs on.</span></li>
@@ -251,14 +251,15 @@ function ModesPage({ go }) {
     <>
       <h2 id="career">Career</h2>
       <p>One player from the combine to the Hall of Fame. It has its own page: <Link go={go} to="career">Career</Link>.</p>
-      <h2 id="takeover">Takeover</h2>
-      <p>Build once, then take the build on a road trip of 12 cities across a map of the country. Each city has a real player at your position, rising from about a 70 overall to the best in the league. Basketball is a 1v1 to 11 (or 2v2 to 15 in Duo); football is one game decided by the two overalls.</p>
+      <h2 id="squad-builder">Squad Builder</h2>
+      <p>Build more than one player and play a season with all of them on the same team. Pick the positions first (in football up to a starting lineup's worth of QBs, RBs, WRs, TEs and DBs; in basketball up to three guards and two bigs), then build each one with the normal spins, one after another.</p>
       <ul>
-        <li><b>Three lives.</b> A loss costs one and you replay the city.</li>
-        <li><b>The prize.</b> After a win, pick one: steal one of the star's ratings that beats yours, a game plan that knocks two off the next opponent's best rating, rest for an extra life (solo), or cash in for coins.</li>
-        <li><b>On fire.</b> Three straight wins doubles the steal and adds one to every rating for the next game.</li>
-        <li>Clear all twelve for the big reward, then keep going in Endless against random greats.</li>
+        <li><b>The team.</b> Pick a real team. Its roster fills every spot you didn't build, and your builds take the starting jobs at their positions. A build better than the starter it replaces makes the team better; a worse one makes it worse.</li>
+        <li><b>The lineup.</b> In basketball, drag your builds onto the court: guards play the 1, 2 and 3, bigs the 4 and 5. The real starters fill the rest.</li>
+        <li><b>One season.</b> The whole squad shares one schedule and one record, playoffs included. Every build gets its own stat line and its own shot at the awards (one MVP a season).</li>
+        <li><b>Run it back.</b> After the season, add a player, cut one or change the team, and play another. One squad per sport at a time: New squad starts over.</li>
       </ul>
+      <p>A season pays XP and coins like any other. Sandbox in Squad Builder is an unlock from the Shop, and a sandbox squad earns nothing.</p>
       <h2 id="compete">Compete <span className="wk-tag">ONLINE</span></h2>
       <p>Up to five real players build at the same time from the <b>same spins</b> (respins are your own). Five minutes on the clock; the highest overall wins, and an earlier submit breaks a tie. Places pay XP and coins and move an online rating through the tiers Rookie, Starter (900), Pro (1100), All-Star (1300), MVP (1500) and Legend (1750).</p>
       <h2 id="auction">Trait Auction <span className="wk-tag">ONLINE</span></h2>
@@ -281,7 +282,7 @@ function ModesPage({ go }) {
       <p>Flip on Sandbox from the build screen and the game is yours to bend. <b>Custom Ratings</b> opens every player's grades on 0–11 sliders, one player at a time or everyone at once, with a toggle at the top to switch between current players and All-Time legends (it opens on whichever you're playing). You can drop any player straight into a slot of your build, and pick any team for the season. Sandbox seasons are yours to enjoy but never save, rank or count toward lifetime awards.</p>
       <h2 id="coins">Coins, the shop and the daily</h2>
       <ul>
-        <li><b>Coins</b> come from seasons (more for playoffs, rings and awards), levels, online places, Takeover cities, a free daily drop, and achievements.</li>
+        <li><b>Coins</b> come from seasons (more for playoffs, rings and awards), levels, online places, a free daily drop, and achievements.</li>
         <li><b>The shop</b> sells cosmetics only: avatars, name colours and effects, name plates, victory effects and sounds, and courts. Some are level-locked or earned through achievements. Nothing in the shop changes a rating.</li>
         <li><b>The daily challenge</b> rotates position and era, with the same spins for everyone. Daily logins build a streak with XP rewards at 3, 7 and 21 days.</li>
         <li><b>Cards.</b> Every player you spin is collected into binder sets: franchises, positions, legends, decades.</li>
@@ -403,8 +404,8 @@ export const PAGES = [
     toc: [['nfl', 'NFL season', 'simulate football'], ['nfl-team', 'Your team matters', 'team offense defense grade'], ['nfl-schedule', 'The schedule', '17 games weather'], ['nfl-winning', 'Win chance', 'win probability stats passing yards'], ['nfl-playoffs', 'NFL playoffs', 'bye wild card super bowl overtime'], ['nfl-awards', 'NFL awards', 'MVP OPOY DPOY'], ['nba', 'NBA season', 'simulate basketball 82 games'], ['nba-team', 'Team strength', 'ratings out of 100'], ['nba-boost', 'Your boost', 'OVR boost win chance'], ['nba-stats', 'Your numbers', 'PPG RPG APG shooting'], ['nba-playoffs', 'Play-in and playoffs', 'seed log5 best of seven finals'], ['nba-awards', 'NBA awards', 'MVP DPOY']] },
   { slug: 'career', title: 'Career', description: 'Career mode: the combine, interviews and draft, seasons and decisions, the depth chart, contracts and talks, reputation, aging, legacy and the Hall of Fame.', Component: CareerPage,
     toc: [['draft', 'The combine and the draft', 'combine drills interviews draft rookie deal pro comp'], ['seasons', 'Seasons', 'moments decisions depth chart backup goals injuries playoffs'], ['offseason', 'The offseason', 'contract talks patience trade demand camp development points'], ['reputation', 'Reputation', 'rep shoe deal signature contract'], ['aging', 'Aging and retirement', 'retire age decline'], ['legacy', 'Legacy and the Hall of Fame', 'legacy score all-time greatest hall of fame records']] },
-  { slug: 'modes', title: 'Modes', description: 'Career, Takeover, Compete, Trait Auction, Blacktop, Current, All-Time, Salary Cap, Head-to-Head, the Depth Chart mini-game, Sandbox, coins and the shop, BAP Pro, and leaderboards.', Component: ModesPage,
-    toc: [['career', 'Career'], ['takeover', 'Takeover', 'cities map lives steal prize on fire endless'], ['compete', 'Compete', 'online pool same spins rating tiers'], ['auction', 'Trait Auction', 'bid budget online'], ['blacktop', 'Blacktop', '3v3 streetball online lobby'], ['live', 'Leaving a live game', 'forfeit leave lock'], ['current', 'Current'], ['all-time', 'All-Time', 'legends'], ['salary-cap', 'Salary Cap', 'daily budget board shuffle scout'], ['head-to-head', 'Head-to-Head', 'versus 1v1 live'], ['depth-chart', 'The Depth Chart', 'mini game streak'], ['sandbox', 'Sandbox', 'custom ratings edit grades any team'], ['coins', 'Coins, the shop and the daily', 'coins shop cosmetics daily challenge streak cards'], ['pro', 'BAP Pro', 'subscription pro no ads vault badge'], ['leaderboards', 'Leaderboards and profiles', 'best builds worst builds career save']] },
+  { slug: 'modes', title: 'Modes', description: 'Career, Squad Builder, Compete, Trait Auction, Blacktop, Current, All-Time, Salary Cap, Head-to-Head, the Depth Chart mini-game, Sandbox, coins and the shop, BAP Pro, and leaderboards.', Component: ModesPage,
+    toc: [['career', 'Career'], ['squad-builder', 'Squad Builder', 'squad team lineup positions run it back season'], ['compete', 'Compete', 'online pool same spins rating tiers'], ['auction', 'Trait Auction', 'bid budget online'], ['blacktop', 'Blacktop', '3v3 streetball online lobby'], ['live', 'Leaving a live game', 'forfeit leave lock'], ['current', 'Current'], ['all-time', 'All-Time', 'legends'], ['salary-cap', 'Salary Cap', 'daily budget board shuffle scout'], ['head-to-head', 'Head-to-Head', 'versus 1v1 live'], ['depth-chart', 'The Depth Chart', 'mini game streak'], ['sandbox', 'Sandbox', 'custom ratings edit grades any team'], ['coins', 'Coins, the shop and the daily', 'coins shop cosmetics daily challenge streak cards'], ['pro', 'BAP Pro', 'subscription pro no ads vault badge'], ['leaderboards', 'Leaderboards and profiles', 'best builds worst builds career save']] },
   { slug: 'ratings', title: 'Ratings', description: 'Every player rating in Build-A-Player and Build-A-Bucket, current and all-time, sortable and searchable, with the date each pool last changed.', Component: RatingsPage,
     toc: [['table', 'All ratings', 'players table search sort']] },
   { slug: 'creators', title: 'Creators', description: 'YouTubers, podcasters and TikTok creators who have played Build-A-Player and Build-A-Bucket, with their videos and shorts.', Component: CreatorsPage,

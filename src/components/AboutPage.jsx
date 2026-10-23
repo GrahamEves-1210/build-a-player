@@ -4,7 +4,7 @@ import LegalShell, { Sec, P, Mail, Ext } from './LegalShell'
 const MODES = [
   ['Seasons', 'Build a player, then play a season: current rosters or the all-time greats.'],
   ['Career', 'One player from the combine and draft to the Hall of Fame.'],
-  ['Takeover', 'A road trip through 12 cities, beating the best player in each.'],
+  ['Squad Builder', 'Build a few players, put them on a real team and play a season together.'],
   ['Daily Challenge', 'The same spins for everyone, one run a day.'],
   ['Compete and Trait Auction', 'Build live against real players for the best overall.'],
   ['Blacktop', 'Live 1v1, 2v2 and 3v3 basketball against real players.'],

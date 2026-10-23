@@ -494,7 +494,7 @@ export default function AppShop({ onClose, tab: initialTab = 'featured' }) {
             <div className="sh-section-head"><span className="sh-section-title">EARNING COINS</span></div>
             <div className="ag-card" style={{ padding: 12, fontFamily: 'var(--ag-body)', fontSize: 13, lineHeight: 1.6, color: 'var(--ag-text-2)' }}>
               Every season pays {COINS.season}+ coins, more for wins, playoffs (+{COINS.playoffs}), titles (+{COINS.ring}) and awards (+{COINS.award}).
-              Missions, login streaks, new cards, Takeover cities, Blacktop games, achievements and the Builder Pass pay too.
+              Missions, login streaks, new cards, Blacktop games, achievements and the Builder Pass pay too.
               <button className="ag-chip" style={{ marginTop: 8, display: 'flex' }} onClick={() => nav('achievements')}>ACHIEVEMENTS <IconArrow size={12} /></button>
             </div>
           </div>

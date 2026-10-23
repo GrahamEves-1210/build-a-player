@@ -487,7 +487,7 @@ export function BlacktopChat({ bt, user, onClose, mode = 'blacktop', title = 'TE
         ) : <>
         <div className="bt-quick">{QUICK.map(q => <button key={q} className="ag-chip" onClick={() => send(q)}>{q}</button>)}</div>
         <form className="bt-chat-form" onSubmit={e => { e.preventDefault(); send(text) }}>
-          <input ref={inputRef} value={text} onChange={e => { setText(e.target.value); bt.typing?.() }} maxLength={120} placeholder={mode === 'blacktop-lobby' ? 'Message the lobby…' : mode === 'takeover' ? 'Message your partner…' : 'Message your squad…'} enterKeyHint="send" autoComplete="off" />
+          <input ref={inputRef} value={text} onChange={e => { setText(e.target.value); bt.typing?.() }} maxLength={120} placeholder={mode === 'blacktop-lobby' ? 'Message the lobby…' : 'Message your squad…'} enterKeyHint="send" autoComplete="off" />
           <button className="bt-send" type="submit" disabled={!text.trim()} aria-label="Send"><IconSend size={20} /></button>
         </form>
         </>}

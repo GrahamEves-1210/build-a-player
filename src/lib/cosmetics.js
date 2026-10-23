@@ -238,13 +238,16 @@ const EN = [
   it('entrance', 'ent-eternal',  'Eternal Flame', 3, 0, { streak: 60 }),
 ]
 
-// ── Unlocks: not looks, features. Sandbox in Career and in Takeover, bought one
+// ── Unlocks: not looks, features. Sandbox in Career and in Squad Builder, bought one
 // mode at a time (the switch is on the build screen; turning it on asks to buy)
 export const UNLOCK_PRICE = 10000
 const UL = [
   it('unlock', 'sandbox-career', 'Career Sandbox', 3, UNLOCK_PRICE, { unlock: true, mode: 'Career' }),
-  it('unlock', 'sandbox-takeover', 'Takeover Sandbox', 3, UNLOCK_PRICE, { unlock: true, mode: 'Takeover' }),
+  it('unlock', 'sandbox-squad', 'Squad Builder Sandbox', 3, UNLOCK_PRICE, { unlock: true, mode: 'Squad Builder' }),
 ]
+// An unlock that was renamed: owning the old id is owning the new one (Squad Builder
+// replaced the road mode, whose Sandbox players had already bought)
+export const OWNED_AS = { 'sandbox-squad': 'sandbox-takeover' }
 
 // Prices: the numbers above are each item's weight (the showier, the higher).
 // What it costs bends that down (a gentler climb: a top item is ~13x a cheap
@@ -271,7 +274,7 @@ export const BLURB = {
   nameColor: 'The color of your username everywhere it shows.',
   nameFx: 'An effect on your username. Stacks with any color.',
   plate: 'A nameplate behind your username on your card, in chat and in lobbies.',
-  winFx: 'Plays when you win: titles, awards, Takeover cities and Blacktop games.',
+  winFx: 'Plays when you win: titles, awards and Blacktop games.',
   winSound: 'The sound of your wins, played with your victory effect.',
   court: 'The court your Blacktop games are played on.',
   reel: 'The look of your spin reels when you build a player.',

@@ -323,7 +323,7 @@ function getDominantPlayer(build) {
 
 // `modelOnly`: just the player — figure, jersey overlay and face — with no
 // dots, cards, measurement lines or backdrop, sized to its container (the app's
-// Takeover "My build" card). Nothing else changes when it's off.
+// Career model). Nothing else changes when it's off.
 export default function Silhouette({ build, activeDrag, onDrop, activeCategory, onCategoryChange, types = TYPES, isLite = false, onReset, isRB = false, isWR = false, isTE = false, isDB = false, isOL = false, isBucket = false, isPlus = false, isCustomMode = false, onOpenCustomModal, onSandboxToggle, attrMap = ATTR, categoriesData = CATEGORIES, figureRef, modelOnly = false }) {
   // OL is drawn on the DB figure — everything figure-related follows DB
   const isDBFig = isDB || isOL
