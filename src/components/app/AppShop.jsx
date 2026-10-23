@@ -14,7 +14,8 @@ import { getUsername } from '../../lib/discord'
 import { sfx, haptic, previewVictory, warmVictory, flyCoins } from '../../lib/juice'
 import { NameTag, AvatarBadge, ItemPreview } from './NameTag'
 import { IconClose, IconLock, IconGift, IconCrown, IconPlay, IconArrow, IconStar, IconDiscord, IconBolt, IconFlame, IconShield } from './icons'
-import { PassCard, ProCard } from './Promos'
+import { ProCard } from './Promos'
+import PassStrip from './PassStrip'
 
 // The shop (app): coins buy avatars, name colors and effects, nameplates and
 // victory effects/sounds. BAP Pro opens the Pro Vault. Opened from Home (the
@@ -453,7 +454,7 @@ export default function AppShop({ onClose, tab: initialTab = 'featured' }) {
             </div>
           )}
           <div className="sh-section ag-promos" style={{ marginTop: 0 }}>
-            <PassCard />
+            <PassStrip />
           </div>
           <DiscordCoins p={p} />
           <FeedbackCoins p={p} />

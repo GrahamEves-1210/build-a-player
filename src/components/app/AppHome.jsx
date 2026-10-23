@@ -11,7 +11,8 @@ import { IS_APP } from '../../lib/platform'
 import Disclaimer from '../Disclaimer'
 import { rampAdd } from '../../lib/ads'
 import { NameTag, AvatarBadge } from './NameTag'
-import { PassCard, ProCard } from './Promos'
+import { ProCard } from './Promos'
+import PassStrip from './PassStrip'
 import { usePresence, fmtCount, crowd } from '../../lib/presence'
 import { CoinPill } from './AppShop'
 import { TierChip, Form } from './OnlineRecord'
@@ -467,7 +468,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
           {!IS_APP && <div key={`home-ad-${sport}`} id="ramp-cntr1-home" className="ag-home-ad" />}
         </div>
         <div className="ag-promos">
-          <PassCard delay="400ms" />
+          <PassStrip />
           <ProCard delay="410ms" />
         </div>
         <PlayersOfDay />
