@@ -85,7 +85,7 @@ export const QBS = [
     attrs: { 'arm': 4, 'legs': 3, 'size': 5, 'processing': 4, 'leadership': 3, 'vision': 3, 'playmaking': 3, 'accuracy': 5, 'pocket-presence': 4 } },
   // HOU
   { name: 'C.J. Stroud',        short: 'Stroud',      team: 'HOU', teamName: 'Houston Texans',        color: '#002244', color2: '#A71930', skin: '#7a5030', starter: true,  captain: true,  number: 7,
-    attrs: { 'arm': 7, 'legs': 5, 'size': 6, 'processing': 6, 'leadership': 7, 'vision': 5, 'playmaking': 6, 'accuracy': 8, 'pocket-presence': 4 } },
+    attrs: { 'arm': 7, 'legs': 5, 'size': 6, 'processing': 6, 'leadership': 7, 'vision': 6, 'playmaking': 6, 'accuracy': 8, 'pocket-presence': 4 } },
   { name: 'Davis Mills',        short: 'Mills',       team: 'HOU', teamName: 'Houston Texans',        color: '#002244', color2: '#A71930', skin: '#f2c8a4', starter: false, number: 10,
     attrs: { 'arm': 4, 'legs': 1, 'size': 8, 'processing': 5, 'leadership': 3, 'vision': 3, 'playmaking': 1, 'accuracy': 4, 'pocket-presence': 4 } },
   { name: 'Graham Mertz',       short: 'Mertz',       team: 'HOU', teamName: 'Houston Texans',        color: '#002244', color2: '#A71930', skin: '#f0c4a0', starter: false, number: 18,
@@ -162,7 +162,7 @@ export const QBS = [
     attrs: { 'arm': 7, 'legs': 4, 'size': 5, 'processing': 1, 'leadership': 2, 'vision': 2, 'playmaking': 2, 'accuracy': 1, 'pocket-presence': 0 } },
   // NYG
   { name: 'Jaxson Dart',        short: 'Dart',        team: 'NYG', teamName: 'New York Giants',       color: '#0B2265', color2: '#A71930', skin: '#f2c8a4', starter: false, number: 6,
-    attrs: { 'arm': 7, 'legs': 8, 'size': 6, 'processing': 5, 'leadership': 5, 'vision': 7, 'playmaking': 7, 'accuracy': 7, 'pocket-presence': 5 } },
+    attrs: { 'arm': 7, 'legs': 8, 'size': 6, 'processing': 5, 'leadership': 5, 'vision': 6, 'playmaking': 7, 'accuracy': 7, 'pocket-presence': 5 } },
   { name: 'Jameis Winston',     short: 'Winston',     team: 'NYG', teamName: 'New York Giants',       color: '#0B2265', color2: '#A71930', skin: '#7a5030', starter: true,  captain: true,  number: 19,
     attrs: { 'arm': 5, 'legs': 3, 'size': 8, 'processing': 4, 'leadership': 10, 'vision': 0, 'playmaking': 4, 'accuracy': 5, 'pocket-presence': 3 } },
   { name: 'J.J. McCarthy',      short: 'McCarthy',    team: 'NYG', teamName: 'New York Giants',       color: '#0B2265', color2: '#A71930', skin: '#f2c8a4', starter: false, number: 18,
