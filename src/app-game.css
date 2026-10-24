@@ -2716,22 +2716,36 @@ html.is-app .ag-sandbox { grid-column: 1 / -1; justify-self: stretch; }
   html.app-look .ag-menu { max-width: 540px; border-radius: 22px; border: 1.5px solid var(--ag-line-hi); padding-bottom: 22px; }
   html.app-look .ag-menu::before { display: none; }
 
+  /* a hero row (the stage beside the brand, sports, positions and modes, the same
+     height), then the rest the full width: the other modes two by two, then the
+     pass and Pro beside Players of the Day. Nothing slides, nothing left empty. */
   html.app-look .ag-home-inner {
     max-width: 1200px; margin: 0 auto; padding: 18px 28px 8px;
     display: grid;
-    grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr);
-    grid-template-rows: auto auto auto auto auto auto auto 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     grid-template-areas:
       "hud    hud"
       "stage  brand"
       "stage  sport"
       "stage  pos"
       "stage  modes"
-      "stage  extras"
-      "stage  promos"
-      "stage  potd";
+      "extras extras"
+      "promos potd";
     column-gap: 26px; row-gap: 14px;
   }
+  /* a build in progress: its own row, right above the modes */
+  html.app-look .ag-home-inner:has(> .ag-resume--top) {
+    grid-template-areas:
+      "hud    hud"
+      "stage  brand"
+      "stage  sport"
+      "stage  pos"
+      "stage  resume"
+      "stage  modes"
+      "extras extras"
+      "promos potd";
+  }
+  html.app-look .ag-resume--top { grid-area: resume; margin: 0; }
   html.app-look .ag-hud { grid-area: hud; padding: 0; }
   html.app-look .ag-hud .ag-player-chip { flex: 0 1 440px; }
   html.app-look .ag-hud .ag-hud-coins { margin-left: auto; }
@@ -2744,19 +2758,19 @@ html.is-app .ag-sandbox { grid-column: 1 / -1; justify-self: stretch; }
   html.app-look .ag-pos { min-width: 0; }
   html.app-look .ag-modes { grid-area: modes; padding: 0; }
   html.app-look .ag-mode { min-height: 128px; }
-  html.app-look .ag-extras { grid-area: extras; align-content: start; padding: 0; }
-  html.app-look .ag-promos { grid-area: promos; margin: 0; }   /* Builder Pass / BAP Pro: the menu column's full width, under the modes */
-  html.app-look .ag-potd { grid-area: potd; margin: 6px 0 0; align-self: start; }   /* Players of the Day: under the modes, beside the (sticky) stage */
-  /* the stage stays in view beside the longer card column, sized to the screen */
-  html.app-look .ag-stage { grid-area: stage; align-self: start; position: sticky; top: 16px; height: clamp(440px, calc(100dvh - var(--app-bottom) - 96px), 660px); min-height: 0; margin: 0; }
-  /* the figure is built at phone size; scale it up from its feet */
+  /* the other modes, two to a row (the daily minis share one) */
+  html.app-look .ag-extras { grid-area: extras; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px 26px; align-content: start; padding: 0; margin-top: 4px; }   /* the hero's column gap: the cards line up under it */
+  html.app-look .ag-extras > :is(.ag-crmode, .ag-compete, .ag-squad, .ag-blacktop) { grid-column: span 2; min-height: 104px; margin: 0; }
+  html.app-look .ag-promos { grid-area: promos; margin: 0; align-self: start; }   /* Builder Pass / BAP Pro, beside Players of the Day */
+  /* six tiers to a view, none cut off (the inset is a margin, so the row clips the 7th) */
+  html.app-look .ag-promos .ps-row { padding-inline: 0; margin-inline: 12px; }
+  html.app-look .ag-promos .ps-col { flex-basis: calc((100% - 30px) / 6); }
+  html.app-look .ag-potd { grid-area: potd; margin: 0; align-self: stretch; align-content: start; }
+  /* the stage: as tall as the column beside it */
+  html.app-look .ag-stage { grid-area: stage; align-self: stretch; height: auto; min-height: 520px; margin: 0; }
+  /* the figure is built at phone size; scale it up from its feet (the stage is ~520–580 tall) */
   html.app-look .ag-figure { bottom: 46px; transform: scale(2.15); transform-origin: 50% 100%; }
-  /* the arms-out basketball figure is width-bound in that box: scale it up more */
-  html.app-look .ag-home--bucket .ag-figure { bottom: 52px; transform: scale(2.55); }
-  @media (max-height: 860px) {
-    html.app-look .ag-figure { bottom: 40px; transform: scale(1.85); }
-    html.app-look .ag-home--bucket .ag-figure { bottom: 44px; transform: scale(2.2); }
-  }
+  html.app-look .ag-home--bucket .ag-figure { bottom: 50px; transform: scale(2.2); }
   html.app-look .ag-platform { bottom: 22px; transform: scale(2); transform-origin: 50% 50%; }
   html.app-look .ag-stage-tag { transform: scale(1.35); transform-origin: 0 100%; }
   html.app-look .ag-home-site { max-width: 1200px; margin: 28px auto 0; }
