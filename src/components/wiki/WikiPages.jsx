@@ -252,10 +252,10 @@ function ModesPage({ go }) {
       <h2 id="career">Career</h2>
       <p>One player from the combine to the Hall of Fame. It has its own page: <Link go={go} to="career">Career</Link>.</p>
       <h2 id="squad-builder">Squad Builder</h2>
-      <p>Build more than one player and play a season with all of them on the same team. Pick the positions first (in football up to a starting lineup's worth of QBs, RBs, WRs, TEs and DBs; in basketball up to three guards and two bigs), then build each one with the normal spins, one after another.</p>
+      <p>Build more than one player and play a season with all of them on the same team. Pick the positions first (in football up to a starting lineup's worth of QBs, RBs, WRs, TEs and DBs; in basketball the spots you want to fill, PG to C, one build each), then build each one with the normal spins, one after another.</p>
       <ul>
         <li><b>The team.</b> Pick a real team. Its roster fills every spot you didn't build, and your builds take the starting jobs at their positions. A build better than the starter it replaces makes the team better; a worse one makes it worse.</li>
-        <li><b>The lineup.</b> In basketball, drag your builds onto the court: guards play the 1, 2 and 3, bigs the 4 and 5. The real starters fill the rest.</li>
+        <li><b>The lineup.</b> In basketball, each build starts at the spot you picked it for. Drag them to swap: the 1, 2 and 3 trade places, so do the 4 and 5. The real starters fill the rest.</li>
         <li><b>One season.</b> The whole squad shares one schedule and one record, playoffs included. Every build gets its own stat line and its own shot at the awards (one MVP a season).</li>
         <li><b>Run it back.</b> After the season, add a player, cut one or change the team, and play another. One squad per sport at a time: New squad starts over.</li>
       </ul>

@@ -38,7 +38,7 @@ const it = (slot, id, name, rarity, price, extra = {}) => ({ slot, id, name, rar
 
 // ── Avatars: a glyph on a colorway ───────────────────────────────────────────
 // glyph: football basketball helmet crown flame bolt star trophy medal ring
-//        target shield coin podium whistle hoop clipboard versus mono (your initial)
+//        target shield coin podium whistle hoop clipboard versus runner dunker mono (your initial)
 const AV = [
   it('avatar', 'av-pigskin',   'Pigskin', 0, 350, { glyph: 'football', pal: 'mint' }),
   it('avatar', 'av-rock',      'The Rock', 0, 350, { glyph: 'basketball', pal: 'sunset' }),
@@ -55,7 +55,7 @@ const AV = [
   it('avatar', 'av-podium',    'Podium Finish', 1, 1600, { glyph: 'podium', pal: 'gold' }),
   it('avatar', 'av-hardware',  'Hardware', 1, 1700, { glyph: 'trophy', pal: 'ice' }),
   it('avatar', 'av-rivalry',   'Rivalry Week', 1, 1800, { glyph: 'versus', pal: 'crimson', vault: true }),
-  it('avatar', 'av-s1-drive',  'Opening Drive', 3, 0, { glyph: 'runner', pal: 'gold', anim: 'shine' }),   // Season 1's free level-30 reward
+  it('avatar', 'av-s1-drive',  'Opening Drive', 3, 0, { glyph: 'dunker', pal: 'gold', anim: 'shine' }),   // Season 1's free level-30 reward
   it('avatar', 'av-bag',       'Secure the Bag', 1, 1900, { glyph: 'coin', pal: 'gold' }),
   it('avatar', 'av-ringchaser','Ring Chaser', 1, 2200, { glyph: 'ring', pal: 'royal' }),
   it('avatar', 'av-medal',     'All-Pro', 1, 2200, { glyph: 'medal', pal: 'mint' }),
@@ -185,8 +185,12 @@ const WS = [
 // so the players' spots line up on each). img: the court; thumb: the shop card.
 const ct = (id, name, rarity, price) => it('court', id, name, rarity, price, { img: `/courts/${id}.webp`, thumb: `/courts/thumbs/${id}.webp` })
 const CT = [
-  // cities (Epic), then seasons (Rare), then the rest (Legendary; the free Blacktop leads them):
-  // one rarity a group, so the colours group them in the shop
+  // one rarity a group, so the colours group them: the free Blacktop, the seasons
+  // (Rare), the cities (Epic), the rest (Legendary). The shop sorts them the same way.
+  it('court', 'ct-blacktop', 'Blacktop', 0, 0, { free: true, img: '/court-blacktop1.webp', thumb: '/courts/thumbs/ct-blacktop.webp' }),
+  ct('ct-alley', 'Spring', 1, 5000),
+  ct('ct-ivy', 'Summer', 1, 5000),
+  ct('ct-snow', 'Winter', 1, 5000),
   ct('ct-overcast', 'NYC', 2, 9000),
   ct('ct-midnight', 'London', 2, 9000),
   ct('ct-autumn', 'Chicago', 2, 9000),
@@ -198,10 +202,6 @@ const CT = [
   ct('ct-tropic', 'Miami', 2, 9000),
   ct('ct-oldstone', 'Olympus', 2, 9000),
   ct('ct-retro', 'Los Angeles', 2, 9000),
-  ct('ct-alley', 'Spring', 1, 5000),
-  ct('ct-ivy', 'Summer', 1, 5000),
-  ct('ct-snow', 'Winter', 1, 5000),
-  it('court', 'ct-blacktop', 'Blacktop', 0, 0, { free: true, img: '/court-blacktop1.webp', thumb: '/courts/thumbs/ct-blacktop.webp' }),
   ct('ct-warehouse', 'Warehouse', 3, 16000),
   ct('ct-checker', 'Checkerboard', 3, 16000),
   ct('ct-neon', 'Neon Circuit', 3, 16000),

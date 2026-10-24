@@ -48,7 +48,7 @@ import { setSandboxGate, sandboxItemFor, sandboxLocked } from './app/AppSandbox'
 import { BlacktopQueue, BlacktopHud, BlacktopChat, BlacktopGame, BlacktopHub, BlacktopWatch } from './app/AppBlacktop'
 import { NameTag } from './app/NameTag'
 import { VersusHud, VersusMatchup, VersusLeaveSheet, VersusOppLeftSheet } from './app/Blacktop1v1'
-import { loadSquad, saveSquad, clearSquad, syncSquadFromCloud, nextToBuild, fillSlot, afterBuilding } from '../lib/squad'
+import { loadSquad, saveSquad, clearSquad, syncSquadFromCloud, nextToBuild, fillSlot, afterBuilding, SPOTS, spotsOf } from '../lib/squad'
 const AppSquad = lazy(() => import('./app/AppSquad'))
 const AppCareer = lazy(() => import('./app/AppCareer'))
 const CareerIntro = lazy(() => import('./app/AppCareer').then(m => ({ default: m.CareerIntro })))
@@ -1671,7 +1671,7 @@ export default function BucketApp() {
       <div className="game-page-scroll">
       {competeOn && <CompeteHud cp={cp} />}
       {/* Squad Builder: which of the squad's players this is */}
-      {page === 'squad-build' && squad && <div className="cp-hud sq-hud" role="status"><span><small>SQUAD BUILDER · {String(position).toUpperCase()} · PLAYER {squad.slots.length - squadLeft + 1} OF {squad.slots.length}</small></span><span className="cp-hud-dots">{squad.slots.map(s => <i key={s.id} className={s.build ? 'is-in' : ''} />)}</span></div>}
+      {page === 'squad-build' && squad && <div className="cp-hud sq-hud" role="status"><span><small>SQUAD BUILDER · {SPOTS[spotsOf(squad)[nextToBuild(squad)?.id]]?.label ?? String(position).toUpperCase()} · PLAYER {squad.slots.length - squadLeft + 1} OF {squad.slots.length}</small></span><span className="cp-hud-dots">{squad.slots.map(s => <i key={s.id} className={s.build ? 'is-in' : ''} />)}</span></div>}
       {liveBuild && bt.match && <BlacktopHud bt={bt} onOpenChat={openBtChat} unread={btUnread} />}
       {/* testers: fill the build in one tap (gone once it's complete, so it stays out of recordings) */}
       {liveBuild && bt.match && isTester(user) && activeTypes.some(t => !build[t]) && (

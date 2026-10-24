@@ -18,25 +18,50 @@ export const POS_LABEL = { qb: 'QB', rb: 'RB', wr: 'WR', te: 'TE', db: 'DB', gua
 export const POS_NAME = { qb: 'Quarterback', rb: 'Running Back', wr: 'Wide Receiver', te: 'Tight End', db: 'Defensive Back', guard: 'Guard', big: 'Big' }
 export const fullSize = sport => Object.values(CAPS[sport] ?? {}).reduce((a, b) => a + b, 0)
 const V = 1
+// Basketball's five spots: the 1–3 are guards, the 4–5 bigs. A basketball squad is
+// picked by spot (each one once, squad.lineup: slot id → spot); its build is the
+// spot's guard or big.
+export const SPOTS = [
+  { pos: 'guard', label: 'PG', name: 'Point Guard' }, { pos: 'guard', label: 'SG', name: 'Shooting Guard' }, { pos: 'guard', label: 'SF', name: 'Small Forward' },
+  { pos: 'big', label: 'PF', name: 'Power Forward' }, { pos: 'big', label: 'C', name: 'Center' },
+]
 
 export const countOf = (slots, pos) => slots.filter(s => s.pos === pos).length
 export const canAdd = (sport, slots, pos) => countOf(slots, pos) < (CAPS[sport]?.[pos] ?? 0)
+// Where each basketball slot plays (slot id → spot): its spot on the board, or the
+// first open one at its position (squads picked before there were spots)
+export function spotsOf(sq) {
+  const at = {}, used = new Set(), later = []
+  for (const s of sq.slots) {
+    const i = sq.lineup?.[s.id]
+    if (SPOTS[i]?.pos === s.pos && !used.has(i)) { at[s.id] = i; used.add(i) } else later.push(s)
+  }
+  for (const s of later) {
+    const i = SPOTS.findIndex((sp, j) => sp.pos === s.pos && !used.has(j))
+    if (i >= 0) { at[s.id] = i; used.add(i) }
+  }
+  return at
+}
+export const spotOpen = (sq, i) => !!SPOTS[i] && !Object.values(spotsOf(sq)).includes(i)
 export const nextToBuild = squad => squad?.slots.find(s => !s.build) ?? null
 export const isFull = squad => !!squad && squad.slots.length >= fullSize(squad.sport) && squad.slots.every(s => s.build)
 // a slot id that's never been used in this squad
 const newId = squad => `p${squad.nextId ?? squad.slots.length}`
 
-// A fresh squad from the positions picked (each one built next, in order)
+// A fresh squad from the positions picked (basketball: the spots), each one built next, in order
 export function newSquad({ sport, uid, picks }) {
   const sq = { v: V, sport, uid: uid ?? null, seed: Math.random().toString(36).slice(2, 10), slots: [], nextId: 0, team: null, lineup: {}, seasons: [], last: null, phase: 'build', sandbox: false, started: Date.now() }
   return addSlots(sq, picks)
 }
 export function addSlots(sq, picks) {
   let out = { ...sq, slots: [...sq.slots] }
-  for (const pos of picks) {
-    if (!canAdd(out.sport, out.slots, pos)) continue
-    out.slots.push({ id: newId(out), pos, build: null, types: null })
-    out = { ...out, nextId: (out.nextId ?? 0) + 1 }
+  for (const pick of picks) {
+    const spot = out.sport === 'bucket' ? pick : null
+    const pos = spot != null ? SPOTS[spot]?.pos : pick
+    if (spot != null ? !spotOpen(out, spot) : !canAdd(out.sport, out.slots, pos)) continue
+    const id = newId(out)
+    out.slots.push({ id, pos, build: null, types: null })
+    out = { ...out, nextId: (out.nextId ?? 0) + 1, ...(spot != null && { lineup: { ...out.lineup, [id]: spot } }) }
   }
   return out
 }

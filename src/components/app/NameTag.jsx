@@ -50,9 +50,10 @@ const known = (id, slot) => (itemById(id)?.slot === slot ? id : null)
 export function NameText({ name, color, fx, className = '' }) {
   const nc = known(color, 'nameColor'), nfx = known(fx, 'nameFx')
   const text = name || 'Player'
+  const wave = nfx === 'nfx-wave'
   return (
-    <span className={`nt${nc ? ` ${nc} nt-colored` : ''}${nfx ? ` ${nfx}` : ''}${className ? ` ${className}` : ''}`} data-text={text}>
-      {nfx === 'nfx-wave'
+    <span className={`nt${nc ? ` ${nc} nt-colored` : ''}${nfx ? ` ${nfx}` : ''}${className ? ` ${className}` : ''}`} data-text={text} style={wave ? { '--n': [...text].length } : undefined}>
+      {wave
         ? [...text].map((ch, i) => <span key={i} className="nt-ch" style={{ '--i': i }}>{ch === ' ' ? ' ' : ch}</span>)
         : text}
     </span>

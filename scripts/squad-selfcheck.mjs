@@ -39,11 +39,12 @@ try {
     for (const s of sq.slots) sq = fillSlot(sq, s.id, buildFor(s.pos), TYPES_OF[s.pos], false)
     return { ...sq, team }
   }
-  const full = sport => Object.entries(CAPS[sport]).flatMap(([pos, n]) => Array(n).fill(pos))
+  // football picks positions; basketball picks spots (0 PG … 4 C)
+  const full = sport => (sport === 'bucket' ? [0, 1, 2, 3, 4] : Object.entries(CAPS[sport]).flatMap(([pos, n]) => Array(n).fill(pos)))
 
   const cases = [
     ['nfl', ['qb'], 'KC'], ['nfl', ['wr', 'wr', 'db'], 'CHI'], ['nfl', full('nfl'), 'NYJ'], ['nfl', ['rb', 'rb', 'te', 'te'], 'DET'],
-    ['bucket', ['guard'], 'OKC'], ['bucket', ['guard', 'big'], 'WAS'], ['bucket', full('bucket'), 'LAL'], ['bucket', ['big', 'big'], 'BOS'],
+    ['bucket', [0], 'OKC'], ['bucket', [1, 4], 'WAS'], ['bucket', full('bucket'), 'LAL'], ['bucket', [3, 4], 'BOS'],
   ]
   let n = 0
   for (const [sport, picks, team] of cases) {
@@ -55,6 +56,7 @@ try {
       const games = sport === 'bucket' ? 82 : 17
       assert.equal(result.wins + result.losses, games, `${sport} ${team}: wins + losses = ${games}`)
       assert.equal(result.lines.length, sq.slots.length, 'a line for every build')
+      if (sport === 'bucket') assert.deepEqual(result.lines.map(l => l.spot), picks, 'each build plays the spot it was picked for')
       raw.forEach((r, i) => {
         assert.equal(r.wins, result.wins, `build ${i} shares the record (wins)`)
         assert.equal(r.losses, result.losses, `build ${i} shares the record (losses)`)

@@ -11,7 +11,7 @@
 // play back the same way.
 
 import { seeded } from './rng'
-import { CAPS, POSITIONS } from './squad'
+import { CAPS, POSITIONS, SPOTS, spotsOf } from './squad'
 import {
   calcOVR, calcOVRRB, calcOVRWR, calcOVRTE, calcOVRDB,
   runSimulation, runRBSimulation, runWRSimulation, runTESimulation, runDBSimulation, scriptNFLSeason,
@@ -77,11 +77,6 @@ export function startersOf(sport, short) {
   return out
 }
 
-// Basketball's five spots: 1–3 are guards, 4–5 bigs
-export const SPOTS = [
-  { pos: 'guard', label: 'PG' }, { pos: 'guard', label: 'SG' }, { pos: 'guard', label: 'SF' },
-  { pos: 'big', label: 'PF' }, { pos: 'big', label: 'C' },
-]
 // Who starts where. Your builds take the starting jobs at their positions; the
 // team's real starters fill the rest, best first; the ones your builds pushed
 // out sit. Basketball follows the lineup board (squad.lineup: slot id → spot).
@@ -99,11 +94,8 @@ export function lineupOf(squad) {
   if (sport !== 'bucket') return { groups, benched, starters }
   // the board: each build at its spot (or the first open one in its group), real players around them
   const spots = SPOTS.map(() => null)
-  const want = squad.lineup || {}
-  const place = (s, i) => { if (i != null && SPOTS[i]?.pos === s.pos && !spots[i]) { spots[i] = { you: s }; return true } return false }
-  const later = []
-  for (const s of built) if (!place(s, want[s.id])) later.push(s)
-  for (const s of later) place(s, SPOTS.findIndex((sp, i) => sp.pos === s.pos && !spots[i]))
+  const at = spotsOf({ ...squad, slots: built })
+  for (const s of built) if (at[s.id] != null) spots[at[s.id]] = { you: s }
   for (const pos of POSITIONS.bucket) {
     const real = groups[pos].filter(x => x.real)
     SPOTS.forEach((sp, i) => { if (sp.pos === pos && !spots[i]) spots[i] = real.shift() ?? { empty: true } })

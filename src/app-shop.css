@@ -69,6 +69,10 @@
 @keyframes nfx-sweep { 0% { background-position: 130% 0; } 60%, 100% { background-position: -30% 0; } }
 @keyframes nfx-spot { 0%,100% { background-position: -20% 50%; } 50% { background-position: 120% 50%; } }
 .nfx-wave .nt-ch { display: inline-block; animation: nfx-wave 1.6s ease-in-out infinite; animation-delay: calc(var(--i) * .07s); }
+/* a gradient color clipped to the name doesn't reach letters that move on their own (they'd
+   vanish): each letter carries its own slice of the gradient instead (--n: the letters) */
+.nt.nfx-wave.nt-colored { background: none !important; }
+.nfx-wave.nt-colored .nt-ch { background: var(--nt-bg) calc(var(--i) / max(1, var(--n) - 1) * 100%) 0 / calc(var(--n) * 100%) 100% no-repeat; -webkit-background-clip: text; background-clip: text; }
 @keyframes nfx-wave { 0%,100% { transform: translateY(0); } 30% { transform: translateY(-3px); } 60% { transform: translateY(1px); } }
 .nfx-frost    { filter: drop-shadow(0 0 4px #a5f3fc) drop-shadow(0 0 1px #e0f2fe); -webkit-text-stroke: .4px rgba(224,242,254,.8); }
 .nfx-neon     { filter: drop-shadow(0 0 4px var(--nt-glow, #e879f9)) drop-shadow(0 0 10px var(--nt-glow, #e879f9)); animation: nfx-flicker 4s linear infinite; }

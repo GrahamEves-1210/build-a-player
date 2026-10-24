@@ -3272,7 +3272,12 @@ html.app-look .navbar .nav-more-btn { width: 40px; height: 40px; border-radius: 
 /* ═══ SQUAD BUILDER (AppSquad.jsx) ═══════════════════════════════════════════ */
 /* position tiles: tap to add; past the cap the tile shakes and says so */
 .sq-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
-.sq-tiles--bucket { grid-template-columns: 1fr 1fr; }
+/* basketball's five spots: the guards (PG, SG, SF) on one row, the bigs (PF, C) under them */
+.sq-tiles--spots { grid-template-columns: repeat(6, 1fr); }
+.sq-tiles--spots .sq-tile { grid-column: span 2; min-width: 0; }
+.sq-tiles--spots .sq-tile:nth-child(n+4) { grid-column: span 3; }
+.sq-tiles--spots .sq-tile-add { min-width: 0; grid-template-areas: 'pos n' 'name name'; row-gap: 6px; padding: 10px; }
+.sq-tiles--spots .sq-tile-n { min-width: 30px; height: 30px; font-size: 18px; }
 .sq-tile { position: relative; display: flex; }
 .sq-tile-add {
   flex: 1; display: grid; grid-template-columns: 1fr auto; grid-template-areas: 'pos n' 'name n'; align-items: center; column-gap: 8px; row-gap: 2px;

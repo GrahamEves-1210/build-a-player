@@ -504,7 +504,7 @@ export default function AppShop({ onClose, tab: initialTab = 'featured' }) {
           <div className="sh-section-head"><span className="sh-section-title">{SLOTS.find(s => s.id === tab)?.label.toUpperCase()}</span><span className="sh-section-note">{BLURB[tab]}</span></div>
           <div className="sh-grid">
             {DEFAULTS[tab] === null && <DefaultCard slot={tab} equipped={!p.equip?.[tab]} onPick={() => pickDefault(tab)} name={name} />}
-            {(tab === 'court' ? shown(tab) : shown(tab).sort((a, b) => (a.pro - b.pro) || (!!a.pass - !!b.pass) || (!!(a.ach || a.streak || a.cup) - !!(b.ach || b.streak || b.cup)) || (a.rarity - b.rarity) || (a.price - b.price))).map((i, k) => (   // courts: the catalog's order (cities, seasons, the rest)
+            {shown(tab).sort((a, b) => (a.pro - b.pro) || (!!a.pass - !!b.pass) || (!!(a.ach || a.streak || a.cup) - !!(b.ach || b.streak || b.cup)) || (a.rarity - b.rarity) || (a.price - b.price)).map((i, k) => (
               <ItemCard key={i.id} item={i} deal={dealPrice(i.id)} equipped={p.equip?.[i.slot] === i.id} onOpen={setOpen} delay={k * 25} name={name} />
             ))}
           </div>
