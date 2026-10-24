@@ -2767,6 +2767,15 @@ html.is-app .ag-sandbox { grid-column: 1 / -1; justify-self: stretch; }
   html.app-look .ag-home--bucket .ag-extras > .ag-squad { order: 3; }
   html.app-look .ag-home--bucket .ag-extras > .ag-compete { order: 4; }
   html.app-look .ag-home--bucket .ag-extras > :is(.ag-mini, .ag-home-ad) { order: 5; }
+  /* basketball has one mode more than football: Career | Blacktop in halves, then Squad Builder,
+     Compete and Salary Cap in thirds (no lone full-width Salary Cap) */
+  html.app-look .ag-home--bucket .ag-extras { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  html.app-look .ag-home--bucket .ag-extras > :is(.ag-crmode, .ag-blacktop) { grid-column: span 3; }
+  html.app-look .ag-home--bucket .ag-extras > :is(.ag-squad, .ag-compete) { grid-column: span 2; }
+  html.app-look .ag-home--bucket .ag-extras > .ag-mini { grid-column: span 2 !important; min-height: 104px; }
+  html.app-look .ag-home--bucket .ag-extras > .ag-home-ad { grid-column: 1 / -1; }
+  /* a third is narrow: the card's art sits behind the words, so it steps back */
+  html.app-look .ag-home--bucket .ag-extras > :is(.ag-squad, .ag-compete) .ag-card-art { opacity: .3; }
   html.app-look .ag-promos { grid-area: promos; margin: 0; align-self: start; }   /* Builder Pass / BAP Pro, beside Players of the Day */
   /* six tiers to a view, none cut off (the inset is a margin, so the row clips the 7th) */
   html.app-look .ag-promos .ps-row { padding-inline: 0; margin-inline: 12px; }
