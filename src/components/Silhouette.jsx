@@ -1,4 +1,5 @@
 ﻿import { useState, useRef, useLayoutEffect, useEffect, useCallback, useMemo } from 'react'
+import { headFor } from '../lib/noPhotos'
 import { ATTR, TYPES, CATEGORIES, QB_PHYSICALS } from '../data/qbs'
 import { RB_CATEGORIES, RB_PHYSICALS } from '../data/rbs'
 import { WR_CATEGORIES, WR_PHYSICALS } from '../data/wrs'
@@ -386,7 +387,7 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
   const complete = types.every(t => build[t])
 
   // Headshot only from basketballIQ slot for bucket builds
-  const bucketPhoto = isBucket ? (build['basketballIQ']?.photo || null) : null
+  const bucketPhoto = isBucket ? headFor(build['basketballIQ']) : null   // app-clean: the default head, never a photo
   // the figure scales that make it fill the build screen; a model fits its box as-is
   const appBucket = (IS_APP || APP_LOOK) && isBucket && isMobile && !modelOnly
   // (the model keeps the build screen's bucket scale: the jersey overlay and the face

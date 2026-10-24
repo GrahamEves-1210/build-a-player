@@ -232,7 +232,7 @@ function simPlayoffs(mySeed, winProb, conf, standings, rand = Math.random, ratin
 
   const myShort = standings.find(t => t.isUs)?.short
   const get = seed => standings[seed - 1] ?? { short: 'OPP', wins: 40 }
-  const roundNames = ['First Round', 'Conference Semifinals', 'Conference Finals', 'NBA Finals']
+  const roundNames = ['First Round', 'Conference Semifinals', 'Conference Finals', 'Finals']
 
   // R1: standard bracket seeding
   const r1SeedMap = { 1:8, 2:7, 3:6, 4:5, 5:4, 6:3, 7:2, 8:1 }

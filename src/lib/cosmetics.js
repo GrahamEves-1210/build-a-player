@@ -68,7 +68,7 @@ const AV = [
   it('avatar', 'av-glacier',   'Glacier', 2, 6000, { glyph: 'star', pal: 'glacier', anim: 'shine' }),
   it('avatar', 'av-goat',      'G.O.A.T.', 3, 19000, { glyph: 'crown', pal: 'holo', anim: 'holo', vault: true }),
   it('avatar', 'av-galaxy',    'Galaxy Brain', 3, 26500, { glyph: 'star', pal: 'galaxy', anim: 'spin', vault: true }),
-  it('avatar', 'av-trophy-gold', 'Lombardi Gold', 3, 23000, { glyph: 'trophy', pal: 'gold', anim: 'shine', vault: true }),
+  it('avatar', 'av-trophy-gold', 'Trophy Gold', 3, 23000, { glyph: 'trophy', pal: 'gold', anim: 'shine', vault: true }),
   it('avatar', 'av-pro-diamond', 'Diamond', 3, 17000, { glyph: 'mono', pal: 'diamond', anim: 'shine', pro: true }),
   it('avatar', 'av-pro-blackgold', 'Black & Gold', 2, 5000, { glyph: 'crown', pal: 'blackgold' }),
   it('avatar', 'av-dynasty',   'Dynasty',        3, 0, { glyph: 'ring', pal: 'holo', anim: 'holo', ach: 'rings5' }),

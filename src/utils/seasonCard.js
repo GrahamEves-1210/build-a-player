@@ -533,7 +533,7 @@ const NFL_OUT = {
   'Wild Card': 'OUT IN THE WILD CARD ROUND',
   'Divisional Round': 'OUT IN THE DIVISIONAL ROUND',
   'Conference Championship': 'LOST THE CONFERENCE TITLE GAME',
-  'Super Bowl': 'LOST THE SUPER BOWL',
+  'Title Game': 'LOST THE TITLE GAME',
 }
 const NFL_AWARD = { qb: 'MVP', rb: 'OPOY', wr: 'OPOY', te: 'OPOY', db: 'DPOY', ol: 'ALL-PRO' }
 const NFL_STATS = {
@@ -559,10 +559,10 @@ export function nflSeasonCard({ result, rows = [], pos = 'qb', name, award = fal
     hero: { value: result?.ovr ?? '–', label: 'OVR' },
     sub: arch && !/remaining$/.test(arch) ? arch : null,
     record: wins != null && losses != null ? `${wins}-${losses}` : null,
-    headline: champ ? 'SUPER BOWL CHAMPIONS' : playoffs ? (NFL_OUT[sbResult?.round] ?? 'MADE THE PLAYOFFS') : 'MISSED THE PLAYOFFS',
+    headline: champ ? 'CHAMPIONS' : playoffs ? (NFL_OUT[sbResult?.round] ?? 'MADE THE PLAYOFFS') : 'MISSED THE PLAYOFFS',
     tier,
-    ribbons: [champ && 'SUPER BOWL CHAMPS', award && NFL_AWARD[pos]].filter(Boolean),
-    team: team ? { name: team.name, short: team.short, color: team.color, color2: team.color2, logo: team.logo ?? `/logos/${team.short}.png` } : null,
+    ribbons: [champ && 'CHAMPIONS', award && NFL_AWARD[pos]].filter(Boolean),
+    team: team ? { name: team.name, short: team.short, color: team.color, color2: team.color2, logo: team.logo ?? `/logos/${team.short}.svg` } : null,
     stats: statsOf((NFL_STATS[pos] ?? NFL_STATS.qb)(result ?? {})),
     chips: rows.map(r => ({ label: r.label, name: r.data?.qbFull || r.data?.qb || r.data?.name, photo: r.data?.photo, faceCenter: r.data?.faceCenter, val: r.val ?? r.data?.val })),
   }
@@ -572,7 +572,7 @@ const NBA_OUT = {
   'First Round': 'OUT IN THE FIRST ROUND',
   'Conference Semifinals': 'OUT IN THE CONFERENCE SEMIS',
   'Conference Finals': 'LOST THE CONFERENCE FINALS',
-  'NBA Finals': 'LOST THE NBA FINALS',
+  'Finals': 'LOST IN THE FINALS',
 }
 // Basketball. awards: the season's MVP / DPOY as the final report shows them
 export function bucketSeasonCard({ result, build = {}, types = [], attrMap = {}, name, mvp = false, dpoy = false, arch = null, allTime = false, salary = false }) {
@@ -580,7 +580,7 @@ export function bucketSeasonCard({ result, build = {}, types = [], attrMap = {},
   const series = playoffRounds.filter(r => r.type === 'series')
   const last = series[series.length - 1]
   const tier = champion ? 'champ' : madePlayoffs ? 'playoffs' : 'miss'
-  const headline = champion ? 'NBA CHAMPIONS'
+  const headline = champion ? 'CHAMPIONS'
     : !madePlayoffs ? 'MISSED THE PLAYOFFS'
     : last ? (NBA_OUT[last.name] ?? `OUT IN THE ${String(last.name).toUpperCase()}`)
     : playoffRounds.some(r => r.type === 'playin' && !r.advanced) ? 'OUT IN THE PLAY-IN' : 'MADE THE PLAYOFFS'
@@ -592,8 +592,8 @@ export function bucketSeasonCard({ result, build = {}, types = [], attrMap = {},
     sub: arch && !/remaining$/.test(arch) ? arch : null,
     record: wins != null && losses != null ? `${wins}-${losses}` : null,
     headline, tier,
-    ribbons: [champion && 'NBA CHAMPS', mvp && 'MVP', dpoy && 'DPOY'].filter(Boolean),
-    team: team ? { name: team.name, short: team.short, color: team.color, color2: team.color2, logo: `/logos/nba/${team.short}.png` } : null,
+    ribbons: [champion && 'CHAMPIONS', mvp && 'MVP', dpoy && 'DPOY'].filter(Boolean),
+    team: team ? { name: team.name, short: team.short, color: team.color, color2: team.color2, logo: `/logos/nba/${team.short}.svg` } : null,
     stats: statsOf([[one(result?.ppg), 'PPG'], [one(result?.rpg), 'RPG'], [one(result?.apg), 'APG']]),
     chips: types.filter(t => build[t]).map(t => ({ label: attrMap[t]?.label ?? t, name: build[t].qbFull || build[t].qb || build[t].name, photo: build[t].photo, faceCenter: build[t].faceCenter, val: build[t].val })),
   }

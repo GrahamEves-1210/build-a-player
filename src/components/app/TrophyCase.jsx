@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { playerBadge } from '../../lib/playerTeams'
 import { createPortal } from 'react-dom'
 import { useProgress, tierFor, tierIndex } from '../../lib/progress'
 import { loadHardware, loadBestBuilds, loadTrophySeasons, seasonPos, modeName, seasonAwards, seasonDate } from '../../lib/trophies'
@@ -109,8 +110,7 @@ function useWave(count, ready) {
 // A face for a trait: the game's headshot, initials when there isn't one
 function Face({ name, sport, size = 26 }) {
   const [bad, setBad] = useState(false)
-  const id = sport === 'bucket' ? NBA_HEADSHOTS[name] : HEADSHOTS[name]
-  const src = !id || bad ? null : sport === 'bucket' ? `${HEADSHOT_BASE}/nba/${id}.webp` : nflHeadshot(id)
+  const src = bad ? null : playerBadge(sport, name)   // app-clean: the team badge
   const init = String(name || '?').split(' ').filter(Boolean).map(w => w[0]).slice(0, 2).join('').toUpperCase()
   return (
     <span className="tc-face" style={{ width: size, height: size }} title={name}>

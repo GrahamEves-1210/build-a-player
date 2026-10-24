@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { playerBadge } from '../../lib/playerTeams'
 import { compsFor, POS_ATTR } from '../../lib/career'
 import { valToGrade, nflHeadshot } from '../../utils/simulation'
 
@@ -9,7 +10,7 @@ import { valToGrade, nflHeadshot } from '../../utils/simulation'
 //   who  whose build it is (the heading)   col  the left column's label (default: who's last name)
 
 const gradeColor = v0 => { const v = Math.round(v0 ?? 0); return v >= 11 ? '#a855f7' : v >= 8 ? '#3b82f6' : v >= 5 ? '#22c55e' : v >= 2 ? '#eab308' : v >= 1 ? '#f97316' : '#ef4444' }   // rounded like the letter (valToGrade)
-const photoSrc = p => (p ? (String(p).includes('/') ? p : nflHeadshot(p)) : null)
+const photoSrc = (p, bucket) => (!p ? null : String(p.photo ?? '').startsWith('/logos/') ? p.photo : playerBadge(bucket ? 'bucket' : 'nfl', p.name, p.team ?? null))   // app-clean: the team badge
 const initials = n => (n || '?').split(' ').map(w => w[0]).slice(0, 2).join('')
 // a last name (Jr., III and the like skipped)
 const lastName = n => { const w = String(n || '').trim().split(/\s+/).filter(x => !/^(jr|sr|ii|iii|iv|v)\.?$/i.test(x)); return w[w.length - 1] || n || '' }
@@ -29,7 +30,7 @@ export default function PlayerComp({ c, who, col = null, list = false, className
     <div className={`ag-card cr-comp ag-pop${className ? ` ${className}` : ''}`}>
       <div className="ag-card-head"><span className="ag-eyebrow">PLAYER COMP{who ? <> · <span className="un-keep">{who}</span></> : null}</span><span className="cr-comp-pct">{top.match}% MATCH</span></div>
       <div className="cr-comp-top">
-        <span className="crl-face">{top.photo ? <img src={photoSrc(top.photo)} alt="" loading="lazy" /> : <span className="crl-init">{initials(top.name)}</span>}</span>
+        <span className="crl-face">{photoSrc(top, c.sport === 'bucket') ? <img src={photoSrc(top, c.sport === 'bucket')} alt="" loading="lazy" /> : <span className="crl-init">{initials(top.name)}</span>}</span>
         <span className="cr-comp-name"><b>{top.name}</b><small>{era(top)}</small></span>
       </div>
       <div className={`cr-comp-grid${oneCol ? ' is-list' : ''}${wide ? ' is-wide' : ''}`}>

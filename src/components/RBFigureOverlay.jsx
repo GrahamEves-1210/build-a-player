@@ -206,7 +206,7 @@ export default function RBFigureOverlay({ build }) {
         {/* Team logo — left shoulder */}
         {has('size') && (
           <image
-            href={`/logos/${build['size'].team}.png`}
+            href={`/logos/${build['size'].team}.svg`}
             x="101" y="172" width="40" height="40"
             transform="rotate(15, 121, 192)"
             style={{ opacity: 0.88, pointerEvents: 'none' }}

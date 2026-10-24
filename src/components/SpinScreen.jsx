@@ -231,7 +231,7 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, on
 
 // ─── Chip ────────────────────────────────────────────────────────────────────
 function Chip({ type, spin = null, meta, val, selectedQB, draggingType, onChipTap, onDragStart, onDragEnd, setDraggingType, hideGrades, headshotsMap, headshotsDir, isBucket, isWR, headshotFallback = () => null }) {
-  const photo = headshotsMap[selectedQB.name] ? `${headshotsDir}${headshotsMap[selectedQB.name]}.webp` : headshotFallback(selectedQB.skin)
+  const photo = selectedQB?.team ? `/logos/${isBucket ? 'nba/' : ''}${selectedQB.team}.svg` : null   // app-clean: the team badge
   const chipData = {
     type, val,
     qb: selectedQB.short, qbFull: selectedQB.name,
@@ -554,13 +554,9 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
   useEffect(() => {
     if (!selectedTeam) return
     const logo = new Image()
-    logo.src = `${logoDir}${selectedTeam.short}.png`
+    logo.src = `${logoDir}${selectedTeam.short}.svg`
     qbReelItems.forEach(qb => {
-      const file = headshotsMap[qb.name]
-      if (file) {
-        const img = new Image()
-        img.src = `${headshotsDir}${file}.webp`
-      }
+      void qb   // app-clean: no photos to preload
     })
   }, [selectedTeam, qbReelItems])
 
@@ -684,7 +680,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
             <div className="qb-reveal-card" style={{ '--qb-color': selectedQB.color }}>
               <div className="qb-reveal-hero">
                 <QBAvatar
-                  photo={headshotsMap[selectedQB.name] ? `${headshotsDir}${headshotsMap[selectedQB.name]}.webp` : headshotFallback(selectedQB.skin)}
+                  photo={null}
                   team={selectedQB.team}
                   color={selectedQB.color}
                   size={56}

@@ -7,6 +7,7 @@
 // differs lives in SPORT below. Screens: components/app/AppCareer.jsx.
 
 import { seeded } from './rng'
+import { playerBadge } from './playerTeams'
 import { queueCloudSave, fetchCloudCareer, deleteCloudCareer } from './careerCloud'
 import { createDirector } from './seasonDirector'
 import {
@@ -62,8 +63,8 @@ const olScore = p => Object.entries(OL_ATTR_WEIGHT).reduce((s, [k, w]) => s + (p
 
 export const SPORT = {
   nfl: {
-    id: 'nfl', league: 'NFL', isBucket: false, screen: 'ag-screen--nfl',
-    teams: NFL_TEAMS, logo: s => `/logos/${s}.png`,
+    id: 'nfl', league: 'PROS', isBucket: false, screen: 'ag-screen--nfl',
+    teams: NFL_TEAMS, logo: s => `/logos/${s}.svg`,
     // a team as the career sees it: off / def on a 1–10 scale
     teamOf: short => { const t = NFL_TEAMS.find(x => x.short === short) ?? NFL_TEAMS[0]; return { short: t.short, name: t.name, color: t.color, color2: t.color2, off: t.off, def: t.def, conf: t.conf, div: t.div } },
     status: core => (core >= 7 ? 'Contender' : core >= 5.5 ? 'In the mix' : 'Rebuilding'),
@@ -79,7 +80,7 @@ export const SPORT = {
     depthLabel: (pos, i) => `${({ qb: 'QB', rb: 'RB', wr: 'WR', te: 'TE', db: 'DB' })[pos]}${i}`,
     ovr: (pos, b) => NFL_OVR[pos]?.(b) ?? 0,
     realOvr: (pos, p) => Math.round(pos === 'ol' ? (olOVR(p.attrs) ?? 72) : (p.ovr ?? NFL_OVR[pos](buildOf(NFL_POS_TYPES[pos], p)))),
-    photo: name => (HEADSHOTS[name] ? nflHeadshot(HEADSHOTS[name]) : null),
+    photo: name => playerBadge('nfl', name),   // app-clean: the team badge
     sim: pos => ({ qb: (b, t) => runSimulation(b, TYPES, t, false), rb: (b, t) => runRBSimulation(b, RB_TYPES, t, false), wr: (b, t) => runWRSimulation(b, WR_TYPES, t, false), te: (b, t) => runTESimulation(b, TE_TYPES, t, false), db: (b, t) => runDBSimulation(b, t, false) })[pos],
     // what the sim plays against: the team, its offense moved by the fit and the year's events
     // the pieces around you move your side of the ball: the offense for a skill player, the defense for a DB
@@ -147,8 +148,8 @@ export const SPORT = {
     averages: null,
     headline: { qb: ['passYds', 'tds', 'ints'], rb: ['rushYds', 'tds', 'recYds'], wr: ['recs', 'recYds', 'tds'], te: ['recs', 'recYds', 'tds'], db: ['ints', 'pbus', 'tackles'] },
     awardName: { qb: 'MVP', rb: 'OPOY', wr: 'OPOY', te: 'OPOY', db: 'DPOY' },
-    honor: 'Pro Bowl', honors: 'PRO BOWLS', first: 'All-Pro',
-    // games played to be considered (of 17): the award and All-Pro 12, the Pro Bowl 9
+    honor: 'All-Star', honors: 'ALL-STARS', first: 'All-Pro',
+    // games played to be considered (of 17): the award and All-Pro 12, the All-Star 9
     minGames: { award: 12 / 17, first: 12 / 17, honor: 9 / 17 },
     // the numbers that get a player there
     proBowl: { qb: s => s.tds >= 30 || s.passYds >= 4300, rb: s => s.rushYds >= 1200 || s.tds >= 12, wr: s => s.recYds >= 1200 || s.tds >= 10, te: s => s.recYds >= 850 || s.tds >= 8, db: s => s.ints >= 5 || (s.ints >= 3 && s.pbus >= 15) },
@@ -162,7 +163,7 @@ export const SPORT = {
     // a DB's production: picks and the ones taken back (the greats are scored the same way)
     legacyProd: (pos, st) => (pos === 'db' ? (st.ints ?? 0) * 1.3 + (st.pickSixes ?? 0) * 2 : pos === 'qb' ? (st.tds ?? 0) / 10 + (st.passYds ?? 0) / 1000 : pos === 'rb' ? (st.tds ?? 0) / 4 + (st.rushYds ?? 0) / 500 : (st.tds ?? 0) / 4 + (st.recYds ?? 0) / 500),
     made: f => !!f.playoffs,
-    rounds: ['Wild Card', 'Divisional', 'Conference Championship', 'Super Bowl'], final: 'Super Bowl', series: false,
+    rounds: ['Wild Card', 'Divisional', 'Conference Championship', 'Title Game'], final: 'Title Game', series: false,
     lineKeys: ['passYds', 'tds', 'ints', 'rushYds', 'rushTDs', 'recYds', 'rec', 'recTDs', 'tackles', 'pbus'],
     step: 1, gameWord: 'WEEK', snaps: 'snaps', injScale: 1, moneyWord: 'yards',
     injuries: [['hamstring strain', 2, 3], ['high ankle sprain', 3, 5], ['rib cartilage', 1, 2], ['concussion', 1, 2], ['MCL sprain', 4, 6], ['shoulder (AC joint)', 2, 4], ['turf toe', 2, 3]],
@@ -170,8 +171,8 @@ export const SPORT = {
     primeNote: pos => { const S = SPORT.nfl; return `Physical traits can be trained until ${S.trainUntil(pos)} and start to fade at ${S.declineAt(pos)}; skills and reads can be trained any time. Big injuries and a fragile body can cost you a grade.` },
   },
   bucket: {
-    id: 'bucket', league: 'NBA', isBucket: true, screen: 'ag-screen--bucket',
-    teams: NBA_TEAMS, logo: s => `/logos/nba/${s}.png`,
+    id: 'bucket', league: 'PROS', isBucket: true, screen: 'ag-screen--bucket',
+    teams: NBA_TEAMS, logo: s => `/logos/nba/${s}.svg`,
     // NBA ratings (about 60–85) mapped onto football's 1–10 scale, so the league's moves have the same weight
     teamOf: short => { const t = NBA_TEAMS.find(x => x.short === short) ?? NBA_TEAMS[0]; const R = NBA_RATINGS[t.short] ?? { off: 68, def: 65 }; return { short: t.short, name: t.name, color: t.color, color2: t.color2, off: clamp(r10((R.off - 55) / 3.3), 1, 10), def: clamp(r10((R.def - 55) / 3.3), 1, 10), conf: NBA_EAST.has(t.short) ? 'East' : 'West', div: NBA_DIV[t.short] ?? null } },
     status: core => (core >= 7 ? 'Contender' : core >= 5.5 ? 'In the mix' : 'Rebuilding'),
@@ -184,7 +185,7 @@ export const SPORT = {
     depthLabel: (pos, i) => `${pos === 'guard' ? 'GUARD' : 'BIG'} ${i}`,
     ovr: (pos, b) => calcBucketOVR(b, pos === 'big' ? BIG_TYPES : GUARD_TYPES, pos),
     realOvr: (pos, p) => Math.round(p.ovr ?? calcBucketOVR(buildOf(pos === 'big' ? BIG_TYPES : GUARD_TYPES, p), pos === 'big' ? BIG_TYPES : GUARD_TYPES, pos)),
-    photo: name => (NBA_HEADSHOTS[name] ? `${HEADSHOT_BASE}/nba/${NBA_HEADSHOTS[name]}.webp` : null),
+    photo: name => playerBadge('bucket', name),   // app-clean: the team badge
     sim: pos => (b, t) => runBucketSimulation(b, pos === 'big' ? BIG_TYPES : GUARD_TYPES, t, pos, null, 'classic'),
     // 1–10 like football; `career` tells the sim (and the bench games) to use these, not its own table
     // usage: your share of the offense, from how good you are and who's beside you
@@ -244,8 +245,8 @@ export const SPORT = {
     averages: { ppg: 'pts', rpg: 'reb', apg: 'ast' },      // career averages, from the totals
     headline: { guard: ['ppg', 'apg', 'rpg'], big: ['ppg', 'rpg', 'apg'] },
     awardName: { guard: 'MVP', big: 'MVP' },
-    honor: 'All-Star', honors: 'ALL-STARS', first: 'All-NBA',
-    // games played to be considered (of 82): the 65-game rule for MVP and All-NBA, 40 for an All-Star
+    honor: 'All-Star', honors: 'ALL-STARS', first: 'All-League',
+    // games played to be considered (of 82): the 65-game rule for MVP and All-League, 40 for an All-Star
     minGames: { award: 65 / 82, first: 65 / 82, honor: 40 / 82 },
     proBowl: { guard: s => s.ppg >= 21 || (s.ppg >= 17 && s.apg >= 7), big: s => s.ppg >= 20 || (s.ppg >= 16 && s.rpg >= 10) },
     allPro: { guard: s => s.ppg >= 25 || (s.ppg >= 22 && s.apg >= 8), big: s => s.ppg >= 24 || (s.ppg >= 20 && s.rpg >= 11) },
@@ -259,7 +260,7 @@ export const SPORT = {
     seasonScore: (pos, s) => { const st = s.stats; return pos === 'guard' ? st.ppg / 30 * .45 + st.apg / 10 * .25 + s.wins / 60 * .3 : st.ppg / 28 * .45 + st.rpg / 13 * .25 + s.wins / 60 * .3 },
     legacyProd: (pos, st) => (st.pts ?? 0) / 600 + ((st.reb ?? 0) + (st.ast ?? 0)) / 700,
     made: f => (f.playoffRounds?.length ?? 0) > 0,
-    rounds: ['First Round', 'Conference Semifinals', 'Conference Finals', 'NBA Finals'], final: 'NBA Finals', series: true,
+    rounds: ['First Round', 'Conference Semifinals', 'Conference Finals', 'Finals'], final: 'Finals', series: true,
     lineKeys: ['pts', 'reb', 'ast'],
     step: 10, gameWord: 'GAME', snaps: 'minutes', injScale: 17 / 82, moneyWord: 'points',
     injuries: [['ankle sprain', 3, 8], ['knee soreness', 4, 10], ['hamstring strain', 6, 14], ['concussion', 2, 5], ['back spasms', 3, 7], ['wrist sprain', 5, 12], ['calf strain', 8, 16]],
@@ -1217,7 +1218,7 @@ export function bookSeason(c) {
   for (const x of f.story?.records ?? []) if (x.id && typeof x.raw === 'number' && x.raw > (recordBook[x.id]?.value ?? -Infinity)) recordBook[x.id] = { value: x.raw, holder: `${c.name}, ${c.season}` }
   const contract = { ...c.contract, left: c.contract.left - 1 }
   const perf = seasonScore(c.pos, s)
-  // a development point a year; a second for an award or All-Pro / All-NBA season
+  // a development point a year; a second for an award or All-Pro / All-League season
   // offseason work: 2 points while young, 1 through the prime, none once the body
   // turns (an award still earns one, and so does camp)
   const S0 = sportOf(c)
@@ -1625,7 +1626,7 @@ export function careerTotals(c) {
   }
 }
 // One formula for every career, played or real. A resume: seasons, honors (Pro
-// Bowls / All-Stars), firsts (All-Pro / All-NBA), awards (the position's award,
+// Bowls / All-Stars), firsts (All-Pro / All-League), awards (the position's award,
 // one a season), rings, playoff years, the all-time records held, and the
 // career's totals (production, by position: S.legacyProd). The greats' resumes
 // are their real ones (data/legacy-resumes.js); a career's is booked season by

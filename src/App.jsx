@@ -1,5 +1,6 @@
 ﻿import { useState, useCallback, useRef, useEffect, useLayoutEffect, useMemo, lazy, Suspense } from 'react' // v2
 import { Helmet } from 'react-helmet-async'
+import { playerBadge } from './lib/playerTeams'
 import Navbar from './components/Navbar'
 import SpinScreen from './components/SpinScreen'
 import Silhouette from './components/Silhouette'
@@ -1544,7 +1545,7 @@ export default function App() {
           buildTypes={activeTypes}
           onAddToBuild={(p, playerOverrides, attrType) => {
             sandboxTainted.current = true
-            const photo = HEADSHOTS[p.name] ? `${HEADSHOT_BASE}/${HEADSHOTS[p.name]}.webp` : null
+            const photo = playerBadge('nfl', p.name)
             const chipData = {
               type: attrType,
               val: playerOverrides?.[attrType] ?? p.attrs?.[attrType] ?? 5,
@@ -1565,7 +1566,7 @@ export default function App() {
           }}
           onAddAllToBuild={(p, playerOverrides) => {
             sandboxTainted.current = true
-            const photo = HEADSHOTS[p.name] ? `${HEADSHOT_BASE}/${HEADSHOTS[p.name]}.webp` : null
+            const photo = playerBadge('nfl', p.name)
             setBuild(prev => {
               const next = { ...prev }
               activeTypes.forEach(attrType => {
@@ -1853,7 +1854,7 @@ export default function App() {
             buildTypes={activeTypes}
             onAddToBuild={(p, playerOverrides, attrType) => {
               sandboxTainted.current = true
-              const photo = HEADSHOTS[p.name] ? `${HEADSHOT_BASE}/${HEADSHOTS[p.name]}.webp` : null
+              const photo = playerBadge('nfl', p.name)
               const chipData = {
                 type: attrType,
                 val: playerOverrides?.[attrType] ?? p.attrs?.[attrType] ?? 5,
@@ -1873,7 +1874,7 @@ export default function App() {
             }}
             onAddAllToBuild={(p, playerOverrides) => {
               sandboxTainted.current = true
-              const photo = HEADSHOTS[p.name] ? `${HEADSHOT_BASE}/${HEADSHOTS[p.name]}.webp` : null
+              const photo = playerBadge('nfl', p.name)
               setBuild(prev => {
                 const next = { ...prev }
                 activeTypes.forEach(attrType => {

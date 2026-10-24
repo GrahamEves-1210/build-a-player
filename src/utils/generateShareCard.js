@@ -288,7 +288,7 @@ export async function generateCareerCard(card, figure = null) {
   // divider + the big numbers
   const DY = FT + FH + 130
   ctx.strokeStyle = 'rgba(245,220,138,.35)'; ctx.beginPath(); ctx.moveTo(PAD, DY); ctx.lineTo(W - PAD, DY); ctx.stroke()
-  const cells = [...card.head, ['RINGS', String(card.rings)], [card.awardName, String(card.awards)], [card.honorName ?? 'PRO BOWLS', String(card.proBowls)]].slice(0, 6)
+  const cells = [...card.head, ['RINGS', String(card.rings)], [card.awardName, String(card.awards)], [card.honorName ?? 'ALL-STARS', String(card.proBowls)]].slice(0, 6)
   const cw = (W - PAD * 2) / cells.length
   cells.forEach(([k, v], i) => {
     const x = PAD + cw * i + cw / 2

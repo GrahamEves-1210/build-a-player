@@ -42,7 +42,7 @@ import { seeded } from './rng'
 // ── Levels = Builder Pass tiers ──────────────────────────────────────────────
 // A player's level is their tier in this season's pass (lib/pass.js): it starts
 // over at 1 every season. Titles go by tier; spotlights stay once reached.
-const TITLES = [[30, 'GOAT'], [25, 'Hall of Famer'], [20, 'MVP'], [15, 'All-Pro'], [10, 'Pro Bowler'], [5, 'Starter'], [1, 'Rookie']]
+const TITLES = [[30, 'GOAT'], [25, 'Hall of Famer'], [20, 'MVP'], [15, 'All-Pro'], [10, 'All-Star'], [5, 'Starter'], [1, 'Rookie']]
 export const titleFor = L => TITLES.find(([min]) => L >= min)[1]
 export const TITLE_LEVELS = TITLES.map(([lvl, name]) => ({ level: lvl, name })).reverse()
 // the level for an account XP total (only this season's part of it counts)
@@ -86,7 +86,7 @@ export function seasonLines(d) {
   const lines = [{ label: 'Season played', xp: XP.season }]
   if (winning) lines.push({ label: 'Winning season', xp: XP.winning })
   if (d.playoffs && d.sport !== 'bucket') lines.push({ label: 'Made the playoffs', xp: XP.playoffs })
-  if (d.champion) lines.push({ label: d.sport === 'bucket' ? 'NBA Champions' : 'Super Bowl Champions', xp: XP.ring })
+  if (d.champion) lines.push({ label: d.sport === 'bucket' ? 'Champions' : 'Champions', xp: XP.ring })
   if (d.award) lines.push({ label: d.awardName ? `${d.awardName} award` : 'Season award', xp: XP.award })
   return lines
 }

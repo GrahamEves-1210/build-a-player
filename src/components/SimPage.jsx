@@ -1,5 +1,6 @@
 ﻿import { Fragment, useState, useEffect, useRef, useMemo } from 'react'
 import { NameTag } from './app/NameTag'
+import { playerBadge } from '../lib/playerTeams'
 import { userScrolling } from '../lib/userScroll'
 import { ATTR, TYPES } from '../data/qbs'
 import { QB_SAL_COLS } from '../data/qb-salary'
@@ -82,7 +83,7 @@ function WRDepthChart({ team, build, types, isAllTime = false, userName = 'Guest
   const merged = [
     ...teamWRs.map(w => ({
       name: w.name, ovr: w.ovr, isUser: false,
-      photo: nflHeadshot(HEADSHOTS[w.name]),
+      photo: playerBadge('nfl', w.name),
       teamColor: TEAMS.find(t => t.short === w.team)?.color,
       teamShort: w.team,
     })),
@@ -119,7 +120,7 @@ function TEDepthChart({ team, build, types, isAllTime = false, userName = 'Guest
   const merged = [
     ...teamTEs.map(te => ({
       name: te.name, ovr: te.ovr, isUser: false,
-      photo: nflHeadshot(HEADSHOTS[te.name]),
+      photo: playerBadge('nfl', te.name),
       teamColor: TEAMS.find(t => t.short === te.team)?.color,
       teamShort: te.team,
     })),
@@ -157,7 +158,7 @@ function RBDepthChart({ team, build, types, isAllTime = false, userName = 'Guest
   const merged = [
     ...teamRBs.map(rb => ({
       name: rb.name, ovr: rb.ovr, isUser: false,
-      photo: nflHeadshot(HEADSHOTS[rb.name]),
+      photo: playerBadge('nfl', rb.name),
       teamColor: TEAMS.find(t => t.short === rb.team)?.color ?? team.color,
       teamShort: rb.team,
     })),
@@ -199,7 +200,7 @@ function DBDepthChart({ team, build, types, isAllTime = false, userName = 'Guest
   })
   const toRow = d => ({
     name: d.name, ovr: d.ovr, isUser: false,
-    photo: nflHeadshot(HEADSHOTS[d.name]),
+    photo: playerBadge('nfl', d.name),
     teamColor: TEAMS.find(t => t.short === d.team)?.color ?? team.color,
     teamShort: d.team,
   })
@@ -255,7 +256,7 @@ function OLDepthChart({ team, build, types, userName = 'Guest' }) {
     const o = OLS.find(p => p.team === team.short && p.pos === spot)
     return o ? {
       label: spot, name: o.name, ovr: o.ovr, isUser: false,
-      photo: nflHeadshot(HEADSHOTS[o.name]),
+      photo: playerBadge('nfl', o.name),
       teamColor: o.color ?? team.color,
       teamShort: o.team,
     } : null
@@ -552,7 +553,7 @@ function DirectedSeason({ dr, result, pos, pool, userName, director, onNext, bui
   const wins = games.filter(g => g.won).length, losses = games.length - wins
   const last = games[games.length - 1]
   const final = dr.done ? result : null
-  const logoFor = short => `/logos/${short}.png`
+  const logoFor = short => `/logos/${short}.svg`
   const youValue = final ? (final[director.leaderKey ?? ''] ?? null) : null
   return (
     <>
@@ -909,8 +910,8 @@ function PlayoffGame({ round, opponent, home, weather, mySc, oppSc, won, overtim
         )}
       </div>
       <div className="plf-matchup">
-        <span>{round === 'Super Bowl' ? 'vs' : home ? 'vs' : '@'} {opponent}</span>
-        {round !== 'Super Bowl' && <span className="plf-venue-tag">{home ? 'HOME' : 'AWAY'}</span>}
+        <span>{round === 'Title Game' ? 'vs' : home ? 'vs' : '@'} {opponent}</span>
+        {round !== 'Title Game' && <span className="plf-venue-tag">{home ? 'HOME' : 'AWAY'}</span>}
       </div>
 
       <div className="plf-scoreboard">
@@ -1035,7 +1036,7 @@ function ScreenPlayoffs({ result, onNext, onPreSuperBowl, adsDisabled = false, n
   const [gameIdx, setGameIdx] = useState(0)
   const [status,  setStatus]  = useState('playing')
   const [started, setStarted] = useState(false)
-  const [ringOpen, setRingOpen] = useState(APP_SIM)   // app: the title moment, once the Super Bowl is won
+  const [ringOpen, setRingOpen] = useState(APP_SIM)   // app: the title moment, once the Title Game is won
 
   useEffect(() => {
     if (!playoffs) return
@@ -1057,7 +1058,7 @@ function ScreenPlayoffs({ result, onNext, onPreSuperBowl, adsDisabled = false, n
     const r = playoffRounds[gameIdx]
     if (!r.won) { setStatus('eliminated'); return }
     if (gameIdx === playoffRounds.length - 1) { setStatus('champion'); return }
-    const nextIsSB = playoffRounds[gameIdx + 1]?.round === 'Super Bowl'
+    const nextIsSB = playoffRounds[gameIdx + 1]?.round === 'Title Game'
     setStatus('between')
     if (nextIsSB && onPreSuperBowl) {
       setTimeout(() => onPreSuperBowl(advanceToSB), 2500)
@@ -1097,7 +1098,7 @@ function ScreenPlayoffs({ result, onNext, onPreSuperBowl, adsDisabled = false, n
     inner = (
       <div className="simp-screen-center plf-champion-screen" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
         <img src="/trophy.webp" alt="" className="sfb-trophy" />
-        <div className="plf-champ-label">Super Bowl Champions</div>
+        <div className="plf-champ-label">Champions</div>
         <div className="plf-champ-sub">{sb.mySc}–{sb.oppSc}{sb.overtime ? ' OT' : ''} vs {sb.opponent}</div>
         <button className="simp-cta simp-cta-in" onClick={onNext}>{nextLabel}</button>
       </div>
@@ -1107,8 +1108,8 @@ function ScreenPlayoffs({ result, onNext, onPreSuperBowl, adsDisabled = false, n
     inner = (
       <div className="simp-screen-center" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
         <div className="simp-eyebrow">Season Over</div>
-        <div className="plf-elim-title">{r.round === 'Super Bowl' ? 'Lost Super Bowl' : 'Eliminated'}</div>
-        <div className="plf-elim-round">{r.round === 'Super Bowl' ? '' : r.round}</div>
+        <div className="plf-elim-title">{r.round === 'Title Game' ? 'Lost the Title Game' : 'Eliminated'}</div>
+        <div className="plf-elim-round">{r.round === 'Title Game' ? '' : r.round}</div>
         <div className="plf-elim-score">{r.mySc} – {r.oppSc}{r.overtime ? ' OT' : ''} · vs {r.opponent}</div>
         <button className="simp-cta" onClick={onNext}>{nextLabel}</button>
       </div>
@@ -1168,7 +1169,7 @@ function ScreenPlayoffs({ result, onNext, onPreSuperBowl, adsDisabled = false, n
       {APP_SIM && <Bracket rounds={playoffRounds} gameIdx={gameIdx} status={status} hasBye={result.hasBye} />}
       {inner}
       {APP_SIM && status === 'champion' && ringOpen && (
-        <RingCeremony team={team} title="Super Bowl Champions"
+        <RingCeremony team={team} title="Champions"
           score={`${sbRound.mySc}–${sbRound.oppSc}${sbRound.overtime ? ' OT' : ''} vs ${sbRound.opponent}`}
           onClose={() => setRingOpen(false)} />
       )}
@@ -1211,7 +1212,7 @@ const NFL_TEAM = Object.fromEntries(TEAMS.map(t => [t.short, t]))
 function NflGoatCard({ rank, entry, isPlayer, team, userName }) {
   const short = isPlayer ? team?.short : entry?.team
   const color = isPlayer ? team?.color : NFL_TEAM[short]?.color
-  const photo = !isPlayer && entry ? nflHeadshot(HEADSHOTS[entry.name]) : null
+  const photo = !isPlayer && entry ? playerBadge('nfl', entry.name) : null
   const isGoat = !isPlayer && rank === 1
   return (
     <div className={`goat-card${isPlayer ? ' goat-card--you' : ''}${isGoat ? ' goat-card--rank1' : ''}`} style={{ '--accent': isPlayer ? '#e8a820' : (color ?? 'rgba(255,255,255,0.15)') }}>
@@ -1289,7 +1290,7 @@ function ScreenGOAT({ kind, result, wonAward, onNext, adsDisabled = false, userN
       {phase === 'ticker' && (
         <div className="goat-ticker" onClick={() => { setPhase('revealed'); setListIn(true) }}>
           <div className="goat-ticker-rank">#{Math.min(tick, GOAT_N)}</div>
-          <QBAvatar photo={tickEntry ? nflHeadshot(HEADSHOTS[tickEntry.name]) : null} team={tickEntry?.team} color={NFL_TEAM[tickEntry?.team]?.color} size={120} />
+          <QBAvatar photo={tickEntry ? playerBadge('nfl', tickEntry.name) : null} team={tickEntry?.team} color={NFL_TEAM[tickEntry?.team]?.color} size={120} />
           <div className="goat-ticker-name">{tickEntry?.name ?? '…'}</div>
           <div className="goat-ticker-team">{tickEntry?.team ?? ''}</div>
         </div>
@@ -1390,9 +1391,9 @@ function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = fals
       {APP_SIM && <SeasonRewards result={result} />}
       {APP_SIM && result.story && <SeasonStory story={result.story} pos={isOL ? 'ol' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'} sport="nfl" name={userName} />}
       <div className={`simp-final-banner ${champion ? 'sfb-champ' : playoffs ? 'sfb-elim' : 'sfb-miss'}`}>
-        {champion && <img src="/trophy.webp" alt="Super Bowl Trophy" className="sfb-trophy" />}
+        {champion && <img src="/trophy.webp" alt="Trophy" className="sfb-trophy" />}
         <div className="sfb-outcome">
-          {champion ? 'Super Bowl Champions' : playoffs ? (sbResult?.round === 'Super Bowl' ? 'Lost Super Bowl' : `Eliminated — ${sbResult?.round}`) : 'Missed the Playoffs'}
+          {champion ? 'Champions' : playoffs ? (sbResult?.round === 'Title Game' ? 'Lost the Title Game' : `Eliminated — ${sbResult?.round}`) : 'Missed the Playoffs'}
         </div>
         <div className="sfb-sub">{wins}–{losses} Season · OVR {ovr}</div>
       </div>
@@ -1401,7 +1402,7 @@ function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = fals
 
       {champion && (
         <div className="simp-sb-box">
-          <div className="simp-section-lbl">Super Bowl Performance</div>
+          <div className="simp-section-lbl">Title Game Performance</div>
           <div className="simp-totals">
             {isOL ? (
               <>
@@ -1547,7 +1548,7 @@ function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = fals
             <img src="/mvp.png" alt="MVP Trophy" className="sfb-mvp-row-img" />
             <div className="sfb-mvp-row-text">
               <div className="sfb-mvp-row-title">{isOL ? 'First-Team All-Pro' : isDB ? 'Defensive Player of the Year' : (isWR || isTE || isRB) ? 'Offensive Player of the Year' : 'Regular Season MVP'}</div>
-              <div className="sfb-mvp-row-sub">{isOL ? 'AP All-Pro Selection' : 'NFL Award Winner'}</div>
+              <div className="sfb-mvp-row-sub">{isOL ? 'AP All-Pro Selection' : 'Award Winner'}</div>
             </div>
           </div>
         )}
@@ -1702,7 +1703,7 @@ export default function SimPage({ result: baseResult, build, types = TYPES, onBa
   // leaving mid-season still books the season
   useEffect(() => () => { if (director && !director.finalized) onFinal?.(director.finalize()) }, []) // eslint-disable-line
   const isAllTime = !!result.team?.isAllTime
-  const reachesSB = result.playoffRounds?.some(r => r.round === 'Super Bowl') ?? false
+  const reachesSB = result.playoffRounds?.some(r => r.round === 'Title Game') ?? false
 
   const advancePage = () => {
     document.querySelector('.simp-page')?.scrollTo({ top: 0, behavior: 'instant' })

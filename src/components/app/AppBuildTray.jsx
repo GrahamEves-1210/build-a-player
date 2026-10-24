@@ -437,7 +437,7 @@ function useCountUp(target, run, ms = 1100) {
 const TIERS = [
   { min: 92, name: 'LEGENDARY', tier: 4, color: '#f2c94c' },
   { min: 87, name: 'ELITE',     tier: 3, color: '#b678ff' },
-  { min: 82, name: 'PRO BOWL',  tier: 2, color: '#4ea8ff' },
+  { min: 82, name: 'ALL-STAR',  tier: 2, color: '#4ea8ff' },
   { min: 76, name: 'STARTER',   tier: 1, color: '#34d399' },
   { min: 0,  name: 'DEVELOPING', tier: 0, color: '#9fb3a8' },
 ]

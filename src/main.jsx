@@ -1,4 +1,8 @@
 import { StrictMode, lazy, Suspense } from 'react'
+import { installNoPhotos } from './lib/noPhotos'
+
+// app-clean: no player photos or team logos, even from old saved builds
+installNoPhotos()
 
 // Adds touch class on first touch — CSS uses this to kill sticky :hover states
 document.addEventListener('touchstart', function() {

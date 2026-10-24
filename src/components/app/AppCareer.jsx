@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { badgeUrl, playerBadge } from '../../lib/playerTeams'
 import { LegacyIco, withLegacy } from './GainIcons'
 import { useRailOn } from '../../lib/ads'
 import { createPortal } from 'react-dom'
@@ -34,8 +35,9 @@ const gradeColor = v0 => { const v = Math.round(v0 ?? 0); return v >= 11 ? '#a85
 const nick = name => { const w = (name || '').split(' '); return w.length > 2 && /^(jr\.?|sr\.?|ii|iii|iv|v)$/i.test(w[w.length - 1]) ? w.slice(-2).join(' ') : w[w.length - 1] }
 const money = n => `$${n}M`
 const RUN_DATE = { month: 'short', day: 'numeric' }
-// a roster photo: a full URL (or, in a football career saved before, the headshot id)
-const photoSrc = p => (p ? (String(p).includes('/') ? p : nflHeadshot(p)) : null)
+// a roster face (app-clean): the team badge. A career saved before kept a photo URL or a
+// headshot id: the player's badge instead. Made-up rookies have none (their initials)
+const photoSrc = (p, bucket) => (!p || p.rookie ? null : String(p.photo ?? '').startsWith('/logos/') ? p.photo : playerBadge(bucket ? 'bucket' : 'nfl', p.name, p.from ?? p.team ?? null))
 // per-game averages keep one decimal; counts get commas
 const fmt = v => (typeof v === 'number' && !Number.isInteger(v) ? v.toFixed(1) : (v ?? 0).toLocaleString())
 
@@ -172,7 +174,7 @@ function Model({ c, devPick }) {
     const winTag = !w ? null : !w.open ? <em className="cr-trait-win is-closed">CLOSED</em> : w.left <= 1 ? <em className="cr-trait-win is-last">LAST CHANCE</em> : <em className="cr-trait-win">TRAIN TO AGE {w.until}</em>
     return (
       <div className={`cr-trait${canUp ? ' can-up' : ''}`} onClick={canUp ? () => devPick(t) : undefined} role={canUp ? 'button' : undefined}>
-        <span className="cr-trait-av">{ch?.photo ? <img src={ch.photo} alt="" /> : null}</span>
+        <span className="cr-trait-av">{ch?.team ? <img src={badgeUrl(c.sport === 'bucket' ? 'bucket' : 'nfl', ch.team)} alt="" /> : null}</span>
         <span className="cr-trait-txt"><b>{(attr[t]?.label ?? t).replace('/', '/\u200b')}</b><small>{nick(ch?.qbFull) || '—'}{ch?.upgraded ? ` +${ch.upgraded}` : ''}{ch?.faded ? ` −${ch.faded}` : ''}</small>{maxed ? <em className="cr-trait-max">MAXED</em> : winTag}</span>
         <span className="cr-trait-g" style={{ background: gradeColor(ch?.val ?? 0) }}>{canUp ? (cost > 1 ? `+1 · ${cost} PTS` : '+1') : valToGrade(ch?.val ?? 0)}</span>
       </div>
@@ -380,7 +382,7 @@ function Lineup({ c }) {
   const Man = ({ p, slot }) => { if (!p) return <span className="crl-man is-empty" />; const age = p.you ? c.age : p.age; return (
     <span className={`crl-man${p.you ? ' is-you' : ''}`}>
       <span className="crl-face">
-        {p.you ? <AvatarBadge self name={c.name} size={S.isBucket ? 48 : 34} /> : p.photo ? <img src={photoSrc(p.photo)} alt="" loading="lazy" /> : <span className="crl-init">{initials(p.name)}</span>}
+        {p.you ? <AvatarBadge self name={c.name} size={S.isBucket ? 48 : 34} /> : photoSrc(p, S.isBucket) ? <img src={photoSrc(p, S.isBucket)} alt="" loading="lazy" /> : <span className="crl-init">{initials(p.name)}</span>}
         <i style={{ background: gradeColor(ovrGradeVal(p.ovr)) }}>{p.ovr}</i>
       </span>
       <b>{p.you ? c.name : S.isBucket ? shortName(p.name) : nick(p.name)}</b>
@@ -498,7 +500,7 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
     setCareer(n); setTab('season')
     if (s.champion || s.award) setHonor({
       season: s.season, team: (s.teamName ?? '').toUpperCase(),
-      title: s.award && s.champion ? `${s.awardName} + ${S.isBucket ? 'CHAMPION' : 'SUPER BOWL'}` : s.award ? s.awardName : S.isBucket ? 'NBA CHAMPIONS' : 'SUPER BOWL CHAMPIONS',
+      title: s.award && s.champion ? `${s.awardName} + ${'CHAMPION'}` : s.award ? s.awardName : 'CHAMPIONS',
       sub: s.award ? `${{ MVP: 'Most Valuable Player', OPOY: 'Offensive Player of the Year', DPOY: 'Defensive Player of the Year' }[s.awardName] ?? s.awardName}${s.champion ? ', and a ring' : ''}` : `${s.wins}–${s.losses}, then all the way`,
       line: HEADLINE_STATS[c.pos].map(k => `${fmt(s.stats[k])} ${STAT_LABEL[k]}`).join(' · '),
     })
@@ -763,7 +765,7 @@ function Moves({ c, setCareer, forced }) {
           <span className="ag-eyebrow">ROSTER MOVES</span>
           {moves.map((m, i) => (
             <div key={i} className={`cr-move is-${m.kind}`}>
-              <span className="crl-face crl-face--sm">{m.p?.photo ? <img src={photoSrc(m.p.photo)} alt="" loading="lazy" /> : <span className="crl-init">{initials(m.p?.name)}</span>}</span>
+              <span className="crl-face crl-face--sm">{photoSrc(m.p, c.sport === 'bucket') ? <img src={photoSrc(m.p, c.sport === 'bucket')} alt="" loading="lazy" /> : <span className="crl-init">{initials(m.p?.name)}</span>}</span>
               <span className="cr-move-txt"><b>{m.text}</b><small>{m.pos.toUpperCase()} · {m.p?.ovr ?? 70} OVR · age {m.p?.age}</small></span>
               <span className="cr-move-tag">{MOVE_TAG[m.kind]}</span>
             </div>
@@ -959,7 +961,7 @@ function Legacy({ c, setCareer, user, onUnretire, onNewBuild, onExit }) {
     [t.records, t.records === 1 ? 'RECORD' : 'RECORDS', IconFlame, false],
   ].filter(([n]) => n > 0)
   const marks = [...new Set(c.seasons.flatMap(s => marksOf(s).slice(0, 2)))]
-  const markName = { ring: S.isBucket ? 'TITLE' : 'SUPER BOWL', award: AWARD_NAME[c.pos], first: S.first.toUpperCase(), honor: S.honor.toUpperCase() }
+  const markName = { ring: 'TITLE', award: AWARD_NAME[c.pos], first: S.first.toUpperCase(), honor: S.honor.toUpperCase() }
   const share = () => card.run(m => m.careerShareCanvas(c, { username }), { title: `${c.name}'s career`, filename: `career-${String(c.name).toLowerCase().replace(/[^a-z0-9]+/g, '-')}.png` })
   // the staged entrance: each section in turn, 100ms apart
   let n = 0
@@ -1071,7 +1073,7 @@ function Legacy({ c, setCareer, user, onUnretire, onNewBuild, onExit }) {
           <p className="cl-note">{L.ranked ? (L.above ? `${L.above.score - L.score + 1} legacy points from passing ${L.above.name}.` : 'Ahead of every real career at the position.') : `${L.above.score - L.score + 1} legacy points short of the list.`} The greats are scored from their real careers with the same formula.</p>
           {comp && (
             <div className="cl-comp">
-              <span className="cl-face">{comp.photo ? <img src={photoSrc(comp.photo)} alt="" loading="lazy" /> : <span className="crl-init">{initials(comp.name)}</span>}</span>
+              <span className="cl-face">{photoSrc(comp, S.isBucket) ? <img src={photoSrc(comp, S.isBucket)} alt="" loading="lazy" /> : <span className="crl-init">{initials(comp.name)}</span>}</span>
               <span><small>BUILT LIKE</small><b>{comp.name}</b></span>
               <em>{comp.match}%<small>MATCH</small></em>
             </div>

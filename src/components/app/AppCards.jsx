@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { playerBadge } from '../../lib/playerTeams'
 import { XpIco } from './GainIcons'
 import { useProgress, cardKey, rarityRank, RARITIES, claimSet, setReward } from '../../lib/progress'
 import { HEADSHOT_BASE, nflHeadshot } from '../../utils/simulation'
@@ -32,8 +33,8 @@ async function loadNfl() {
     },
     posLabel: NFL_POS,
     teams: teams.TEAMS,
-    logo: t => `/logos/${t}.png`,
-    photo: name => nflHeadshot(hs.default[name]),
+    logo: t => `/logos/${t}.svg`,
+    photo: name => playerBadge('nfl', name),
   }
 }
 async function loadNba() {
@@ -48,8 +49,8 @@ async function loadNba() {
     },
     posLabel: NBA_POS,
     teams: teams.NBA_TEAMS,
-    logo: t => `/logos/nba/${t}.png`,
-    photo: name => { const id = hs.default[name]; return id ? `${HEADSHOT_BASE}/nba/${id}.webp` : null },
+    logo: t => `/logos/nba/${t}.svg`,
+    photo: name => playerBadge('bucket', name),   // app-clean: the team badge
   }
 }
 const cache = {}
@@ -123,7 +124,7 @@ function buildSets(cards, data, sport) {
 
 function Card({ c, data, color, i, small = false, mark = false }) {
   const { player, rank, owned, count, pos, mode } = c
-  const photo = data.photo(player.name) ?? generic(player.skin)
+  const photo = (player.team ? data.logo(player.team) : data.photo(player.name)) ?? generic(player.skin)   // app-clean: the team badge
   return (
     <div className={`ag-ct ag-rar-${rank}${owned ? '' : ' is-locked'}`} style={{ '--tc': player.color || color, '--d': `${Math.min(i, 30) * 22}ms` }}>
       <div className="ag-ct-photo">

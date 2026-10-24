@@ -72,7 +72,7 @@ function enrichBucketBuild(savedBuild) {
         teamColor2:  teamInfo.color2 ?? '#888888',
         skinColor:   d.skin ?? '#c8956c',
         number:      d.number ?? null,
-        photo:       hsId ? `${HEADSHOT_BASE}/nba/${hsId}.webp` : null,
+        photo:       hsId ? null : null,   // app-clean: no photos
         faceCenter:  d.faceCenter ?? null,
       }]
     })
@@ -1309,15 +1309,15 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
                                       <div className="prs-info">
                                         <div className="prs-header">
                                           <span className="prs-ring"><IconTrophy size="1em" className="ico-inline ico-gold" /></span>
-                                          {ringTeam && <img src={`/logos/nba/${ringTeam.short}.png`} alt={ringTeam.short} className="prs-team-logo" />}
+                                          {ringTeam && <img src={`/logos/nba/${ringTeam.short}.svg`} alt={ringTeam.short} className="prs-team-logo" />}
                                           <span className="prs-arch">{s.archetype ?? 'Champion'}</span>
                                           <span className="prs-ovr">{s.ovr} OVR</span>
                                         </div>
                                         {s.finals_opp && s.finals_series ? (
                                           <div className="prs-finals-row">
-                                            <img src={`/logos/nba/${s.finals_opp}.png`} alt={s.finals_opp} className="prs-finals-logo" />
+                                            <img src={`/logos/nba/${s.finals_opp}.svg`} alt={s.finals_opp} className="prs-finals-logo" />
                                             <span className="prs-finals-score">{s.finals_series}</span>
-                                            <img src={`/logos/nba/${s.team_short}.png`} alt={s.team_short} className="prs-finals-logo" />
+                                            <img src={`/logos/nba/${s.team_short}.svg`} alt={s.team_short} className="prs-finals-logo" />
                                           </div>
                                         ) : (
                                           <div className="prs-record">{s.wins}–{s.losses}</div>

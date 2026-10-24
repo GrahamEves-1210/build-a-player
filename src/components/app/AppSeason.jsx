@@ -6,7 +6,7 @@ import { IconRing, IconTarget, IconCheck, IconArrow } from './icons'
 
 // App: the season reveal's extra beats, dropped into the existing sim pages —
 //   <WeekStrip>      the regular season as a strip of weeks lighting up W / L
-//   <Bracket>        the road to the Super Bowl, lit round by round
+//   <Bracket>        the road to the Title Game, lit round by round
 //   <RingCeremony>   full-screen title moment
 //   <SeasonRewards>  the XP the season earned, the level bar and missions
 
@@ -29,7 +29,7 @@ const STAGES = [
   { id: 'wc',  label: 'WILD CARD',  test: /wild/i },
   { id: 'div', label: 'DIVISIONAL', test: /divis/i },
   { id: 'cf',  label: 'CONF. FINAL', test: /conf|champ/i },
-  { id: 'sb',  label: 'SUPER BOWL', test: /super/i },
+  { id: 'sb',  label: 'TITLE GAME', test: /title game/i },
 ]
 export function Bracket({ rounds, gameIdx, status, hasBye }) {
   return (

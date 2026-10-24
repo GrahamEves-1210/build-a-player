@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react'
+import { playerBadge } from '../lib/playerTeams'
 import { NameTag } from './app/NameTag'
 import { QBS, ATTR, TYPES } from '../data/qbs'
 import { LEGENDS } from '../data/qb-legends'
@@ -132,7 +133,7 @@ const TEAM_META = Object.fromEntries(TEAMS.map(t => [t.short, t]))
 // Full-attribute lookup (row shuffle re-slices a card's attrs for its new column)
 const _playerMap = new Map(ALL_PLAYERS.map(p => [p.name, p]))
 
-const photoFor = name => nflHeadshot(HEADSHOTS[name])
+const photoFor = name => playerBadge('nfl', name)
 const teamColorOf  = p => TEAM_META[p.team]?.color  ?? p.color  ?? '#444'
 const teamColor2Of = p => TEAM_META[p.team]?.color2 ?? p.color2 ?? '#222'
 
@@ -223,12 +224,12 @@ function PlayerCard({ player, isSelected, colHasSelection, onClick, viewOnly, sh
       style={{ '--tc': player.teamColor, '--sel': isNearBlack(player.teamColor) ? '#888' : player.teamColor, '--sd': `${shuffleDelay}ms` }}
     >
       <div className="sc-card-visual" data-team={player.team}>
-        <img src={`/logos/${player.team}.png`} alt="" aria-hidden="true" className="sc-card-logo-bg"
+        <img src={`/logos/${player.team}.svg`} alt="" aria-hidden="true" className="sc-card-logo-bg"
           onError={e => { e.currentTarget.style.display = 'none' }} />
         {player.photo
           ? <img src={player.photo} alt={player.name} className="sc-card-headshot" />
           : <div className="sc-card-no-photo">
-              <img src={`/logos/${player.team}.png`} alt={player.team} style={{ width: '55%', opacity: 0.7 }} />
+              <img src={`/logos/${player.team}.svg`} alt={player.team} style={{ width: '55%', opacity: 0.7 }} />
             </div>
         }
       </div>
@@ -354,7 +355,7 @@ function InfiniteLeaderboard({ onClose }) {
                   <div key={pi} className="sc-lb-pick" title={p.name} style={{ '--tc': p.teamColor || '#444' }}>
                     {p.photo
                       ? <img src={p.photo} alt={p.name} />
-                      : <img src={`/logos/${p.team}.png`} alt={p.team} style={{ padding: '4px', opacity: 0.7 }} />
+                      : <img src={`/logos/${p.team}.svg`} alt={p.team} style={{ padding: '4px', opacity: 0.7 }} />
                     }
                   </div>
                 ))}
@@ -429,7 +430,7 @@ function SalaryLeaderboard({ dateStr, dateLabel, onClose }) {
                   >
                     {p.photo
                       ? <img src={p.photo} alt={p.name} />
-                      : <img src={`/logos/${p.team}.png`} alt={p.team} style={{ padding: '4px', opacity: 0.7 }} />
+                      : <img src={`/logos/${p.team}.svg`} alt={p.team} style={{ padding: '4px', opacity: 0.7 }} />
                     }
                   </div>
                 ))}

@@ -3,84 +3,83 @@ import { nflHeadshot, HEADSHOT_BASE } from '../utils/simulation'
 import SiteFooter from './SiteFooter'
 import SiteFeatures from './SiteFeatures'
 
-function hsUrl(id) {
-  if (!id) return null
-  if (id.startsWith('http')) return id
-  return id.includes('.') ? `${HEADSHOT_BASE}/${id}` : `${HEADSHOT_BASE}/${id}.webp`
+// app-clean: no photos; the position avatars are team badges
+function hsUrl() {
+  return null
 }
 
 export const POS_OPTIONS = [
   {
     pos: 'qb', label: 'QB', classic: true, alltime: true,
     players: [
-      { id: '6770', color: '#fb4f14' },       // Joe Burrow - CIN
-      { id: '4984', color: '#00338d' },       // Josh Allen - BUF
-      { id: '4881', color: '#241773' },       // Lamar Jackson - BAL
+      { id: '6770', team: 'CIN', color: '#fb4f14' },       // Joe Burrow - CIN
+      { id: '4984', team: 'BUF', color: '#00338d' },       // Josh Allen - BUF
+      { id: '4881', team: 'BAL', color: '#241773' },       // Lamar Jackson - BAL
     ],
   },
   {
     pos: 'rb', label: 'RB', classic: true, alltime: true,
     players: [
-      { id: '3198', color: '#241773' },       // Derrick Henry - BAL
-      { id: '9509', color: '#a71930' },       // Bijan Robinson - ATL
-      { id: '9221', color: '#0076b6' },       // Jahmyr Gibbs - DET
+      { id: '3198', team: 'BAL', color: '#241773' },       // Derrick Henry - BAL
+      { id: '9509', team: 'ATL', color: '#a71930' },       // Bijan Robinson - ATL
+      { id: '9221', team: 'DET', color: '#0076b6' },       // Jahmyr Gibbs - DET
     ],
   },
   {
     pos: 'wr', label: 'WR', classic: true, alltime: true,
     players: [
-      { id: 'espn_4262921',   color: '#4f2683' },  // Justin Jefferson - MIN
-      { id: 'espn_4241389',   color: '#003594' },  // CeeDee Lamb - DAL
-      { id: 'espn_4430878',   color: '#69be28' },  // Jaxon Smith-Njigba - SEA
+      { id: 'espn_4262921', team: 'MIN',   color: '#4f2683' },  // Justin Jefferson - MIN
+      { id: 'espn_4241389', team: 'DAL',   color: '#003594' },  // CeeDee Lamb - DAL
+      { id: 'espn_4430878', team: 'SEA',   color: '#69be28' },  // Jaxon Smith-Njigba - SEA
     ],
   },
   {
     pos: 'te', label: 'TE', classic: true, alltime: true,
     players: [
-      { id: '11604', color: '#a5acaf' },      // Brock Bowers - LV
-      { id: '4217',  color: '#aa0000' },      // George Kittle - SF
-      { id: '8130',  color: '#97233f' },      // Trey McBride - ARI
+      { id: '11604', team: 'LV', color: '#a5acaf' },      // Brock Bowers - LV
+      { id: '4217', team: 'SF',  color: '#aa0000' },      // George Kittle - SF
+      { id: '8130', team: 'ARI',  color: '#97233f' },      // Trey McBride - ARI
     ],
   },
   {
     pos: 'db', label: 'DB', classic: true, alltime: true, disabled: false,
     players: [
-      { id: 'espn_4372012', color: '#fb4f14' },  // Pat Surtain II - DEN
-      { id: 'espn_4686772', color: '#0C2340' },  // Christian Gonzalez - NE
-      { id: 'espn_4575517', color: '#241773' },  // Kyle Hamilton - BAL
+      { id: 'espn_4372012', team: 'DEN', color: '#fb4f14' },  // Pat Surtain II - DEN
+      { id: 'espn_4686772', team: 'NE', color: '#0C2340' },  // Christian Gonzalez - NE
+      { id: 'espn_4575517', team: 'BAL', color: '#241773' },  // Kyle Hamilton - BAL
     ],
   },
   {
     pos: 'ol', label: 'OL', classic: false, alltime: false, disabled: true,
     players: [
-      { id: 'espn_4373825', color: '#0076b6' },  // Penei Sewell - DET
-      { id: 'espn_4241385', color: '#e31837' },  // Creed Humphrey - KC
-      { id: 'espn_4334215', color: '#004c54' },  // Jordan Mailata - PHI
+      { id: 'espn_4373825', team: 'DET', color: '#0076b6' },  // Penei Sewell - DET
+      { id: 'espn_4241385', team: 'KC', color: '#e31837' },  // Creed Humphrey - KC
+      { id: 'espn_4334215', team: 'PHI', color: '#004c54' },  // Jordan Mailata - PHI
     ],
   },
   {
     pos: 'lb', label: 'LB', classic: false, alltime: false, disabled: true,
     players: [
-      { id: 'espn_3138826', color: '#aa0000' },  // Fred Warner - SF
-      { id: 'espn_3915189', color: '#241773' },  // Roquan Smith - BAL
-      { id: 'espn_4569465', color: '#0076b6' },  // Jack Campbell - DET
+      { id: 'espn_3138826', team: 'SF', color: '#aa0000' },  // Fred Warner - SF
+      { id: 'espn_3915189', team: 'BAL', color: '#241773' },  // Roquan Smith - BAL
+      { id: 'espn_4569465', team: 'DET', color: '#0076b6' },  // Jack Campbell - DET
     ],
   },
   {
     pos: 'dl', label: 'DL', classic: false, alltime: false, disabled: true,
     players: [
-      { id: 'espn_3122132', color: '#003594' },  // Myles Garrett - LAR
-      { id: 'espn_3916655', color: '#000000' },  // Maxx Crosby - LV
-      { id: '10892',        color: '#03202f' },  // Will Anderson Jr - HOU
+      { id: 'espn_3122132', team: 'LAR', color: '#003594' },  // Myles Garrett - LAR
+      { id: 'espn_3916655', team: 'LV', color: '#000000' },  // Maxx Crosby - LV
+      { id: '10892', team: 'HOU',        color: '#03202f' },  // Will Anderson Jr - HOU
     ],
   },
 ]
 
-function MiniAv({ id, color, size = 28 }) {
-  const src = hsUrl(id)
+function MiniAv({ team, color, size = 28 }) {
+  const src = team ? `/logos/${team}.svg` : null
   return (
     <div className="mini-av" style={{ width: size, height: size, background: color, borderRadius: '50%', overflow: 'hidden', flexShrink: 0 }}>
-      {src && <img src={src} alt="" draggable={false} style={{ width: '130%', height: '130%', objectFit: 'cover', objectPosition: 'top center', marginTop: '-3px', marginLeft: '-15%' }} onError={e => { e.currentTarget.style.display = 'none' }} />}
+      {src && <img src={src} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: 'contain' }} onError={e => { e.currentTarget.style.display = 'none' }} />}
     </div>
   )
 }
@@ -90,7 +89,7 @@ export function AvatarTrio({ players, size = 26 }) {
     <div className="splash-av-trio">
       {players.map((p, i) => (
         <div key={i} className="splash-av-trio-item" style={{ marginLeft: i === 0 ? 0 : -size * 0.32 }}>
-          <MiniAv id={p.id} color={p.color} size={size} />
+          <MiniAv team={p.team} color={p.color} size={size} />
         </div>
       ))}
     </div>

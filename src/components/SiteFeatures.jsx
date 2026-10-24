@@ -17,7 +17,7 @@ export default function SiteFeatures({ sport = 'nfl', className = '' }) {
         <div className="splash-feature-title">Spin &amp; Build</div>
         <div className="splash-feature-desc">
           {isBucket
-            ? 'Spin the wheel of real NBA players and take one part of each player’s game until you’ve built your own basketball player.'
+            ? 'Spin the wheel of real pro players and take one part of each player’s game until you’ve built your own basketball player.'
             : 'Spin the wheel of real players, and select an aspect of their game until you have a complete custom player.'}
         </div>
       </div>
@@ -43,7 +43,7 @@ export default function SiteFeatures({ sport = 'nfl', className = '' }) {
             </svg>
           </div>
           <div className="splash-feature-title">Simulate the Season</div>
-          <div className="splash-feature-desc">Watch your build play out across a full NFL season, from kickoff to the playoffs.</div>
+          <div className="splash-feature-desc">Watch your build play out across a full pro season, from kickoff to the playoffs.</div>
         </div>
       )}
       <div className="splash-feature">

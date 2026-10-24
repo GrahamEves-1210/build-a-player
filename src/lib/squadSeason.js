@@ -11,6 +11,7 @@
 // play back the same way.
 
 import { seeded } from './rng'
+import { badgeUrl, playerBadge } from './playerTeams'
 import { CAPS, POSITIONS, SPOTS, spotsOf } from './squad'
 import {
   calcOVR, calcOVRRB, calcOVRWR, calcOVRTE, calcOVRDB,
@@ -45,17 +46,16 @@ const ARCH = {
   guard: (o, b) => getBucketGuardArchetype(o, b, GUARD_TYPES), big: (o, b) => getBucketBigArchetype(o, b, BIG_TYPES),
 }
 export const nameOf = (pos, build) => { try { return ARCH[pos]?.(ovrOf(pos, build), build) ?? null } catch { return null } }
-// a build's face: the photo on its best trait
+// a build's face: the team badge of its best trait (app-clean: no photos)
 export function faceOf(build) {
-  const chips = Object.values(build || {}).filter(c => c?.photo)
-  return chips.sort((a, b) => (b.val ?? 0) - (a.val ?? 0))[0]?.photo ?? null
+  const chips = Object.values(build || {}).filter(c => c?.team)
+  const best = chips.sort((a, b) => (b.val ?? 0) - (a.val ?? 0))[0]
+  return best ? badgeUrl('basketballIQ' in build ? 'bucket' : 'nfl', best.team) : null   // every basketball build has a basketballIQ trait
 }
-const photoOf = (sport, p) => (sport === 'bucket'
-  ? (NBA_HEADSHOTS[p.name] ? `${HEADSHOT_BASE}/nba/${NBA_HEADSHOTS[p.name]}.webp` : null)
-  : nflHeadshot(NFL_HEADSHOTS[p.name]))
+const photoOf = (sport, p) => playerBadge(sport, p.name, p.team)
 export const teamsOf = sport => (sport === 'bucket' ? NBA_TEAMS : NFL_TEAMS)
 export const teamOf = (sport, short) => teamsOf(sport).find(t => t.short === short) ?? null
-export const logoOf = (sport, short) => (sport === 'bucket' ? `/logos/nba/${short}.png` : teamOf(sport, short)?.logo ?? `/logos/${short}.png`)
+export const logoOf = (sport, short) => (sport === 'bucket' ? `/logos/nba/${short}.svg` : teamOf(sport, short)?.logo ?? `/logos/${short}.svg`)
 
 // A real player's ratings read as a build (the OVR helpers only need each trait's value)
 const asBuild = (p, types) => Object.fromEntries(types.map(t => [t, { val: p.attrs?.[t] ?? 5 }]))

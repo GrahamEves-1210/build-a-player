@@ -307,7 +307,7 @@ export default function BucketFigureOverlay({ build }) {
           <path d={beltPathD} fill="rgba(0,0,0,0.03)" />
           {has('speed') && (
             <image
-              href={`/logos/nba/${build['speed'].team}.png`}
+              href={`/logos/nba/${build['speed'].team}.svg`}
               x="455.6" y="262.6"
               width="28.8" height="28.8"
               preserveAspectRatio="xMidYMid meet"

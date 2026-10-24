@@ -269,13 +269,13 @@ function LineupBoard({ squad, setSquad, owner }) {
 // ── The season's result ──────────────────────────────────────────────────────
 function outcome(r) {
   if (r.sport === 'bucket') {
-    if (r.champion) return 'NBA Champions'
+    if (r.champion) return 'Champions'
     const last = r.rounds[r.rounds.length - 1]
     if (!r.rounds.length) return `Missed the playoffs · ${r.seed}th in the ${r.conference === 'east' ? 'East' : 'West'}`
     if (last.type === 'playin' && !last.won) return 'Out in the Play-In'
     return `Lost in the ${last.name ?? 'playoffs'}${last.opponent ? ` to ${last.opponent}` : ''}${last.wins != null ? ` (${last.wins}-${last.losses})` : ''}`
   }
-  if (r.champion) return 'Super Bowl Champions'
+  if (r.champion) return 'Champions'
   if (!r.playoffs) return 'Missed the playoffs'
   const last = r.rounds[r.rounds.length - 1]
   return `Lost in the ${last?.round ?? 'playoffs'}${last ? ` to the ${lastName(last.opponent)}` : ''}`
@@ -532,8 +532,8 @@ export default function AppSquad({ sport, squad, setSquad, user, renderPicker, o
       <div className="ag-screen-body">{body}</div>
       {ring && (() => {
         const last = ring.rounds[ring.rounds.length - 1]
-        const score = sport === 'bucket' ? `${last?.wins ?? 4}–${last?.losses ?? 0} in the NBA Finals` : `${last?.mySc}–${last?.oppSc}${last?.overtime ? ' OT' : ''} vs ${last?.opponent}`
-        return <RingCeremony team={teamOf(sport, ring.team)} title={sport === 'bucket' ? 'NBA Champions' : 'Super Bowl Champions'} score={score}
+        const score = sport === 'bucket' ? `${last?.wins ?? 4}–${last?.losses ?? 0} in the Finals` : `${last?.mySc}–${last?.oppSc}${last?.overtime ? ' OT' : ''} vs ${last?.opponent}`
+        return <RingCeremony team={teamOf(sport, ring.team)} title={sport === 'bucket' ? 'Champions' : 'Champions'} score={score}
           trophy={sport === 'bucket' ? '/trophybasketball.webp' : undefined} onClose={() => setRing(null)} />
       })()}
       {confirmNew && createPortal(

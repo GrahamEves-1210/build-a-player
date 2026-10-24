@@ -6,13 +6,12 @@ import { DB_TYPES } from '../data/dbs'
 import { OL_TYPES, OLS, OL_ATTR_WEIGHT, OL_POS_BY_NAME, OL_ALL_PRO_BALLOT } from '../data/ols'
 import { NFL_TEAMS, ALLTIME_RATINGS, RB_RATINGS } from '../data/nfl-teams'
 
-export const HEADSHOT_BASE = import.meta.env.DEV
-  ? '/headshots'
-  : 'https://cdn.jsdelivr.net/gh/GrahamEves-1210/build-a-player@main/public/headshots'
+// app-clean: no player photos (the headshot maps are empty and there's no photo host);
+// every photo circle shows the team badge instead (QBAvatar, lib/noPhotos.js)
+export const HEADSHOT_BASE = ''
 
-export function nflHeadshot(id) {
-  if (!id) return null
-  return id.includes('.') ? `${HEADSHOT_BASE}/${id}` : `${HEADSHOT_BASE}/${id}.webp`
+export function nflHeadshot() {
+  return null
 }
 
 const TEAM_BY_NAME = Object.fromEntries(NFL_TEAMS.map(t => [t.name, t]))
@@ -165,7 +164,7 @@ export function getArchetype(ovr, build, types = TYPES) {
     if (top('proc') && top('lead'))   return 'Field General'
     if (top('play') && top('vis'))    return 'Playmaker'
     if (spread <= 2)                  return 'All-Around Quarterback'
-    return 'Pro Bowl Quarterback'
+    return 'All-Star Quarterback'
   }
   if (ovr >= 76) {
     if (top('legs') && up(legs))      return 'Scrambler'
@@ -350,13 +349,13 @@ export function scriptNFLSeason(team, isAllTime = false) {
       used.add(n)
       return n
     }
-    const names = hasBye ? ['Divisional Round', 'Conference Championship', 'Super Bowl'] : ['Wild Card', 'Divisional Round', 'Conference Championship', 'Super Bowl']
+    const names = hasBye ? ['Divisional Round', 'Conference Championship', 'Title Game'] : ['Wild Card', 'Divisional Round', 'Conference Championship', 'Title Game']
     const seed = hasBye && wins >= 14 ? 1 : hasBye ? 2 : wins >= 12 ? 3 : wins >= 11 ? 4 : 5
     for (const round of names) {
-      const opponent = pick(round === 'Super Bowl' ? sbPool : confPool)
-      const home = round !== 'Super Bowl' && (seed <= 2 || (round === 'Wild Card' && seed <= 4) || Math.random() < 0.1)
+      const opponent = pick(round === 'Title Game' ? sbPool : confPool)
+      const home = round !== 'Title Game' && (seed <= 2 || (round === 'Wild Card' && seed <= 4) || Math.random() < 0.1)
       const homeShort = home ? team?.short : TEAM_BY_NAME[opponent]?.short
-      const weather = playoffWeather(homeShort, round === 'Super Bowl')
+      const weather = playoffWeather(homeShort, round === 'Title Game')
       const opp = oppLookup[opponent] ?? { off: 7, def: 7 }
       const p = clamp(0.12, 0.88, 0.5 + ((team.off + team.def) - (opp.off + opp.def)) * 0.045 + (home ? 0.03 : 0))
       const won = Math.random() < p
@@ -378,7 +377,7 @@ export function scriptNFLSeason(team, isAllTime = false) {
       if (!won) break
     }
   }
-  const champion = rounds.length > 0 && rounds[rounds.length - 1].round === 'Super Bowl' && rounds[rounds.length - 1].won
+  const champion = rounds.length > 0 && rounds[rounds.length - 1].round === 'Title Game' && rounds[rounds.length - 1].won
   return { schedule, games, wins, losses, playoffs, hasBye, rounds, champion }
 }
 
@@ -442,7 +441,7 @@ export function calcMVPResult(result, isAllTime = false, teamShort = null) {
   else if (wins >= 12) p += 0.03
   else if (wins === 11) p -= 0.05
 
-  // MVP is voted on before the playoffs: a berth counts, playoff and Super Bowl results don't
+  // MVP is voted on before the playoffs: a berth counts, playoff and Title Game results don't
   if (playoffs) p += 0.02
 
   // Hard limits
@@ -691,19 +690,19 @@ export function runSimulation(build, types = TYPES, team = null, isAllTime = fal
       ? [
           { round: 'Divisional Round',        opponents: confPool },
           { round: 'Conference Championship', opponents: confPool },
-          { round: 'Super Bowl',              opponents: sbPool },
+          { round: 'Title Game',              opponents: sbPool },
         ]
       : [
           { round: 'Wild Card',               opponents: confPool },
           { round: 'Divisional Round',        opponents: confPool },
           { round: 'Conference Championship', opponents: confPool },
-          { round: 'Super Bowl',              opponents: sbPool },
+          { round: 'Title Game',              opponents: sbPool },
         ]
     const winsNeeded = hasBye ? 3 : 4
     // Estimated seed for home-field logic
     const seed = (hasBye && wins >= 14) ? 1 : hasBye ? 2 : wins >= 12 ? 3 : wins >= 11 ? 4 : 5
     const pgHomeProb = (round) => {
-      if (round === 'Super Bowl') return 0
+      if (round === 'Title Game') return 0
       if (seed === 1) return 1.0
       if (round === 'Wild Card') {
         // In the NFL, seeds 2-4 always host Wild Card; seeds 5+ always travel
@@ -732,7 +731,7 @@ export function runSimulation(build, types = TYPES, team = null, isAllTime = fal
       const opponent   = sr ? sr.opponent : pick(opponents)
       const pgHome     = sr ? sr.home : Math.random() < pgHomeProb(round)
       const homeShort  = pgHome ? team?.short : TEAM_BY_NAME[opponent]?.short
-      const weather    = sr ? sr.weather : playoffWeather(homeShort, round === 'Super Bowl')
+      const weather    = sr ? sr.weather : playoffWeather(homeShort, round === 'Title Game')
       const oppTeam    = oppLookup[opponent]
       const oppTeamAvg = ((oppTeam?.off ?? 5.5) + (oppTeam?.def ?? 5.5)) / 2
       const teamN        = (playerTeamAvg - oppTeamAvg) / 9
@@ -917,7 +916,7 @@ export function getArchetypeRB(ovr, build, types = RB_TYPES) {
     if (top('bst') && top('elu') && str < 8 && sz < 8) return 'Shifty Back'
     if (top('str') && top('bal'))                   return 'North-South Runner'
     if (spread <= 2)                                return 'Workhorse Back'
-    return 'Pro Bowl Back'
+    return 'All-Star Back'
   }
 
   if (ovr >= 84) {
@@ -1342,19 +1341,19 @@ export function runRBSimulation(build, types = RB_TYPES, team = null, isAllTime 
       ? [
           { round: 'Divisional Round',        pool: confPool },
           { round: 'Conference Championship', pool: confPool },
-          { round: 'Super Bowl',              pool: sbPool   },
+          { round: 'Title Game',              pool: sbPool   },
         ]
       : [
           { round: 'Wild Card',               pool: confPool },
           { round: 'Divisional Round',        pool: confPool },
           { round: 'Conference Championship', pool: confPool },
-          { round: 'Super Bowl',              pool: sbPool   },
+          { round: 'Title Game',              pool: sbPool   },
         ]
     const winsNeeded = hasBye ? 3 : 4
     const seed = hasBye && wins >= 14 ? 1 : hasBye ? 2 : wins >= 12 ? 3 : wins >= 11 ? 4 : 5
 
     const pgHomeProb = round => {
-      if (round === 'Super Bowl') return 0
+      if (round === 'Title Game') return 0
       if (seed === 1) return 1.0
       if (round === 'Wild Card') return seed <= 4 ? 1.0 : 0.0
       if (round === 'Divisional Round') return seed === 2 ? 0.80 : seed === 3 ? 0.10 : 0.06
@@ -1368,7 +1367,7 @@ export function runRBSimulation(build, types = RB_TYPES, team = null, isAllTime 
       const opponent  = sr ? sr.opponent : pick(pool)
       const pgHome    = sr ? sr.home : Math.random() < pgHomeProb(round)
       const homeShort = pgHome ? team?.short : TEAM_BY_NAME[opponent]?.short
-      const weather   = sr ? sr.weather : playoffWeather(homeShort, round === 'Super Bowl')
+      const weather   = sr ? sr.weather : playoffWeather(homeShort, round === 'Title Game')
 
       const oppTeam    = oppLookup[opponent]
       const oppTeamAvg = ((oppTeam?.off ?? 5.5) + (oppTeam?.def ?? 5.5)) / 2
@@ -1562,7 +1561,7 @@ export function getArchetypeWR(ovr, build, types = WR_TYPES) {
     if (big && vrt >= 9)                             return 'Red Zone Monster'
     if (slim && spd >= 9 && yac >= 9)               return 'Gadget Weapon'
     if (spread <= 2)                                 return 'Well-Rounded Receiver'
-    return 'Pro Bowl WR'
+    return 'All-Star WR'
   }
 
   if (ovr >= 82) {
@@ -1940,19 +1939,19 @@ export function runWRSimulation(build, types = WR_TYPES, team = null, isAllTime 
       ? [
           { round: 'Divisional Round',        pool: confPool },
           { round: 'Conference Championship', pool: confPool },
-          { round: 'Super Bowl',              pool: sbPool   },
+          { round: 'Title Game',              pool: sbPool   },
         ]
       : [
           { round: 'Wild Card',               pool: confPool },
           { round: 'Divisional Round',        pool: confPool },
           { round: 'Conference Championship', pool: confPool },
-          { round: 'Super Bowl',              pool: sbPool   },
+          { round: 'Title Game',              pool: sbPool   },
         ]
     const winsNeeded = hasBye ? 3 : 4
     const seed = hasBye && wins >= 14 ? 1 : hasBye ? 2 : wins >= 12 ? 3 : wins >= 11 ? 4 : 5
 
     const pgHomeProb = round => {
-      if (round === 'Super Bowl') return 0
+      if (round === 'Title Game') return 0
       if (seed === 1) return 1.0
       if (round === 'Wild Card') return seed <= 4 ? 1.0 : 0.0
       if (round === 'Divisional Round') return seed === 2 ? 0.80 : seed === 3 ? 0.10 : 0.06
@@ -1966,7 +1965,7 @@ export function runWRSimulation(build, types = WR_TYPES, team = null, isAllTime 
       const opponent  = sr ? sr.opponent : pick(pool)
       const pgHome    = sr ? sr.home : Math.random() < pgHomeProb(round)
       const homeShort = pgHome ? team?.short : TEAM_BY_NAME[opponent]?.short
-      const weather   = sr ? sr.weather : playoffWeather(homeShort, round === 'Super Bowl')
+      const weather   = sr ? sr.weather : playoffWeather(homeShort, round === 'Title Game')
 
       const oppTeam    = oppLookup[opponent]
       const oppTeamAvg = ((oppTeam?.off ?? 5.5) + (oppTeam?.def ?? 5.5)) / 2
@@ -2137,8 +2136,8 @@ export function getArchetypeTE(ovr, build, types = TE_TYPES) {
     if (top('hnd') && top('awr') && top3('rte'))    return 'Chain Mover'
     if (top('yac') && top('hnd') && slim)           return 'YAC Machine'
     if (top('blk') && top('rte'))                   return 'Versatile Weapon'
-    if (spread <= 2)                                 return 'Pro Bowl TE'
-    return 'Pro Bowl TE'
+    if (spread <= 2)                                 return 'All-Star TE'
+    return 'All-Star TE'
   }
 
   if (ovr >= 82) {
@@ -2486,19 +2485,19 @@ export function runTESimulation(build, types = TE_TYPES, team = null, isAllTime 
       ? [
           { round: 'Divisional Round',        pool: confPool },
           { round: 'Conference Championship', pool: confPool },
-          { round: 'Super Bowl',              pool: sbPool   },
+          { round: 'Title Game',              pool: sbPool   },
         ]
       : [
           { round: 'Wild Card',               pool: confPool },
           { round: 'Divisional Round',        pool: confPool },
           { round: 'Conference Championship', pool: confPool },
-          { round: 'Super Bowl',              pool: sbPool   },
+          { round: 'Title Game',              pool: sbPool   },
         ]
     const winsNeeded = hasBye ? 3 : 4
     const seed = hasBye && wins >= 14 ? 1 : hasBye ? 2 : wins >= 12 ? 3 : wins >= 11 ? 4 : 5
 
     const pgHomeProb = round => {
-      if (round === 'Super Bowl') return 0
+      if (round === 'Title Game') return 0
       if (seed === 1) return 1.0
       if (round === 'Wild Card') return seed <= 4 ? 1.0 : 0.0
       if (round === 'Divisional Round') return seed === 2 ? 0.80 : seed === 3 ? 0.10 : 0.06
@@ -2512,7 +2511,7 @@ export function runTESimulation(build, types = TE_TYPES, team = null, isAllTime 
       const opponent  = sr ? sr.opponent : pick(pool)
       const pgHome    = sr ? sr.home : Math.random() < pgHomeProb(round)
       const homeShort = pgHome ? team?.short : TEAM_BY_NAME[opponent]?.short
-      const weather   = sr ? sr.weather : playoffWeather(homeShort, round === 'Super Bowl')
+      const weather   = sr ? sr.weather : playoffWeather(homeShort, round === 'Title Game')
 
       const oppTeam    = oppLookup[opponent]
       const oppTeamAvg = ((oppTeam?.off ?? 5.5) + (oppTeam?.def ?? 5.5)) / 2
@@ -3080,19 +3079,19 @@ export function runDBSimulation(build, team = null, isAllTime = false, script = 
       ? [
           { round: 'Divisional Round',        pool: confPool },
           { round: 'Conference Championship', pool: confPool },
-          { round: 'Super Bowl',              pool: sbPool   },
+          { round: 'Title Game',              pool: sbPool   },
         ]
       : [
           { round: 'Wild Card',               pool: confPool },
           { round: 'Divisional Round',        pool: confPool },
           { round: 'Conference Championship', pool: confPool },
-          { round: 'Super Bowl',              pool: sbPool   },
+          { round: 'Title Game',              pool: sbPool   },
         ]
     const winsNeeded = hasBye ? 3 : 4
     const seed = hasBye && wins >= 14 ? 1 : hasBye ? 2 : wins >= 12 ? 3 : wins >= 11 ? 4 : 5
 
     const pgHomeProb = round => {
-      if (round === 'Super Bowl') return 0
+      if (round === 'Title Game') return 0
       if (seed === 1) return 1.0
       if (round === 'Wild Card') return seed <= 4 ? 1.0 : 0.0
       if (round === 'Divisional Round') return seed === 2 ? 0.80 : seed === 3 ? 0.10 : 0.06
@@ -3106,7 +3105,7 @@ export function runDBSimulation(build, team = null, isAllTime = false, script = 
       const opponent  = sr ? sr.opponent : pick(pool)
       const pgHome    = sr ? sr.home : Math.random() < pgHomeProb(round)
       const homeShort = pgHome ? team?.short : TEAM_BY_NAME[opponent]?.short
-      const weather   = sr ? sr.weather : playoffWeather(homeShort, round === 'Super Bowl')
+      const weather   = sr ? sr.weather : playoffWeather(homeShort, round === 'Title Game')
 
       const oppTeam    = oppLookup[opponent]
       const oppTeamAvg = ((oppTeam?.off ?? 5.5) + (oppTeam?.def ?? 5.5)) / 2
@@ -3249,7 +3248,7 @@ export function getArchetypeOL(ovr, build, types = OL_TYPES) {
     : null
 
   if (ovr >= 95) return style ? `Elite ${style}` : `All-Pro ${noun}`
-  if (ovr >= 86) return style ?? `Pro Bowl ${noun}`
+  if (ovr >= 86) return style ?? `All-Star ${noun}`
   if (ovr >= 76) return `Starting ${noun}`
   if (ovr >= 68) return group === 'tackle' ? 'Swing Tackle' : `Backup ${noun}`
   return 'Practice Squad Lineman'
@@ -3497,19 +3496,19 @@ export function runOLSimulation(build, team = null, isAllTime = false) {
       ? [
           { round: 'Divisional Round',        pool: confPool },
           { round: 'Conference Championship', pool: confPool },
-          { round: 'Super Bowl',              pool: sbPool   },
+          { round: 'Title Game',              pool: sbPool   },
         ]
       : [
           { round: 'Wild Card',               pool: confPool },
           { round: 'Divisional Round',        pool: confPool },
           { round: 'Conference Championship', pool: confPool },
-          { round: 'Super Bowl',              pool: sbPool   },
+          { round: 'Title Game',              pool: sbPool   },
         ]
     const winsNeeded = hasBye ? 3 : 4
     const seed = hasBye && wins >= 14 ? 1 : hasBye ? 2 : wins >= 12 ? 3 : wins >= 11 ? 4 : 5
 
     const pgHomeProb = round => {
-      if (round === 'Super Bowl') return 0
+      if (round === 'Title Game') return 0
       if (seed === 1) return 1.0
       if (round === 'Wild Card') return seed <= 4 ? 1.0 : 0.0
       if (round === 'Divisional Round') return seed === 2 ? 0.80 : seed === 3 ? 0.10 : 0.06
@@ -3522,7 +3521,7 @@ export function runOLSimulation(build, team = null, isAllTime = false) {
       const opponent  = pick(pool)
       const pgHome    = Math.random() < pgHomeProb(round)
       const homeShort = pgHome ? team?.short : TEAM_BY_NAME[opponent]?.short
-      const weather   = playoffWeather(homeShort, round === 'Super Bowl')
+      const weather   = playoffWeather(homeShort, round === 'Title Game')
 
       const oppTeam    = oppLookup[opponent]
       const oppTeamAvg = ((oppTeam?.off ?? 5.5) + (oppTeam?.def ?? 5.5)) / 2

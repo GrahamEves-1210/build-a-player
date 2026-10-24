@@ -1,5 +1,6 @@
 ﻿import { useState, useEffect, useRef } from 'react'
 import { loadFriends } from '../lib/friends'
+import { playerBadge } from '../lib/playerTeams'
 import { supabase } from '../lib/supabase'
 import { BUCKET_ATTR } from '../data/nba-attrs'
 import { GUARD_TYPES } from '../data/nba-guards'
@@ -156,7 +157,7 @@ function BucketBuildExpand({ build, position, row }) {
         {slots.map(k => {
           const slot  = build[k]
           const meta  = BUCKET_ATTR[k]
-          const photo = NBA_HEADSHOTS[slot.qb] ? `${HEADSHOT_BASE}/nba/${NBA_HEADSHOTS[slot.qb]}.webp` : null
+          const photo = playerBadge('bucket', slot.qb)
           const tc    = TEAM_COLOR[slot.team] ?? '#555'
           return (
             <div key={k} className="simp-attr-row simp-row-visible">

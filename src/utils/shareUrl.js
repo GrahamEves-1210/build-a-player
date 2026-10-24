@@ -1,5 +1,6 @@
 ﻿import { TEAMS } from '../data/nfl-teams'
 import { QBS, TYPES } from '../data/qbs'
+import { playerBadge } from '../lib/playerTeams'
 import HEADSHOTS from '../data/headshots.json'
 import { nflHeadshot } from './simulation'
 
@@ -88,7 +89,7 @@ export function decodeBuild(encoded) {
         team:      team.short,
         qbFull:    qb.name,
         teamColor: team.color,
-        photo:     nflHeadshot(HEADSHOTS[qb.name]),
+        photo:     playerBadge('nfl', qb.name),
       }
       decodedTypes.push(t)
     }

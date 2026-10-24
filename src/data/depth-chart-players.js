@@ -1,5 +1,6 @@
 ﻿import HEADSHOTS from './headshots.json'
 import { nflHeadshot } from '../utils/simulation'
+import { playerBadge } from '../lib/playerTeams'
 
 // Career regular-season totals. Active players are current through Week 4 of
 // the 2026 season (sources: ESPN, NFL.com, StatMuse, checked 2026-10-07).
@@ -324,7 +325,7 @@ export const WR_POOL = [
 ]
 
 export function getPlayerPhoto(name) {
-  return nflHeadshot(HEADSHOTS[name])
+  return playerBadge('nfl', name)
 }
 
 // Back-compat alias

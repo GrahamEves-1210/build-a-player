@@ -1,4 +1,5 @@
 ﻿import React, { useState, useEffect, useRef, useMemo, useCallback, useLayoutEffect } from 'react'
+import { headFor } from '../lib/noPhotos'
 import { NameTag } from './app/NameTag'
 import { createPortal } from 'react-dom'
 import { NBA_TEAMS } from '../data/nba-teams'
@@ -422,7 +423,7 @@ function NBAPlayoffGame({ gameNum, seriesName, oppShort, myColor, myShort, myFin
         {/* Away team (left) */}
         <div className="plf-score-side">
           <img
-            src={`/logos/nba/${isHome ? oppShort : myShort}.png`}
+            src={`/logos/nba/${isHome ? oppShort : myShort}.svg`}
             alt={isHome ? oppShort : myShort}
             className="plf-team-logo-img"
           />
@@ -451,7 +452,7 @@ function NBAPlayoffGame({ gameNum, seriesName, oppShort, myColor, myShort, myFin
         {/* Home team (right) */}
         <div className="plf-score-side plf-score-opp">
           <img
-            src={`/logos/nba/${isHome ? myShort : oppShort}.png`}
+            src={`/logos/nba/${isHome ? myShort : oppShort}.svg`}
             alt={isHome ? myShort : oppShort}
             className="plf-team-logo-img"
           />
@@ -598,7 +599,7 @@ export function TeamSpinModal({ isCustomMode, onTeamSelected, build = {} }) {
             {result ? (
               <div className="tpm-result" style={{ '--tpm-color': result.color }}>
                 <div className="tpm-result-bg" />
-                <img src={`/logos/nba/${result.short}.png`} alt={result.name} className="tpm-result-logo" />
+                <img src={`/logos/nba/${result.short}.svg`} alt={result.name} className="tpm-result-logo" />
                 <div className="tpm-result-name">{result.name}</div>
                 <div className="tpm-result-abbr">{result.short}</div>
               </div>
@@ -620,7 +621,7 @@ export function TeamSpinModal({ isCustomMode, onTeamSelected, build = {} }) {
                       style={{ '--t-color': team.color }}
                       onClick={() => handlePickTeam(team)}
                     >
-                      <img src={`/logos/nba/${team.short}.png`} alt={team.short} className="tpm-team-logo" />
+                      <img src={`/logos/nba/${team.short}.svg`} alt={team.short} className="tpm-team-logo" />
                       <span className="tpm-team-abbr">{team.short}</span>
                     </button>
                   ))}
@@ -651,7 +652,7 @@ export function BucketModelFigure({ build, team, className = '', style = {}, hea
     ? Object.fromEntries(Object.entries(build).map(([k, v]) => [k, v ? { ...v, teamColor: team.color, teamColor2: team.color2, team: team.short } : v]))
     : build
 
-  const bucketPhoto = build[photoKey]?.photo || null
+  const bucketPhoto = headFor(build[photoKey])   // app-clean: the default head, never a photo
 
   useLayoutEffect(() => {
     if (!modelRef.current) return
@@ -868,7 +869,7 @@ function ConferenceStandings({ standings, myShort, teamColor, conf }) {
               style={isMe ? { background: `${teamColor}22`, borderLeft: `3px solid ${teamColor}` } : {}}
             >
               <span className="bsim-std-rank">{i + 1}</span>
-              <img src={`/logos/nba/${row.short}.png`} alt={row.short} className="bsim-std-logo" />
+              <img src={`/logos/nba/${row.short}.svg`} alt={row.short} className="bsim-std-logo" />
               <span className="bsim-std-abbr">{row.short}</span>
               <span className="bsim-std-record">{row.wins}–{row.losses ?? 82 - row.wins}</span>
               <span className="bsim-std-gb">{gb}</span>
@@ -954,7 +955,7 @@ function ScreenSeason({ result, awards, onNext, adsDisabled = false, isAllTime =
           {director && <Wire items={dr.headlines} />}
           {director && (dr.moment
             ? <MomentCard moment={dr.moment} onPick={dr.choose} />
-            : <NowCard game={dr.games[dr.games.length - 1]} pos={result.position} sport="bucket" team={team} logoFor={s => `/logos/nba/${s}.png`} />)}
+            : <NowCard game={dr.games[dr.games.length - 1]} pos={result.position} sport="bucket" team={team} logoFor={s => `/logos/nba/${s}.svg`} />)}
           {director && <Milestones items={dr.fresh} />}
           {director && dr.record && <RecordOverlay record={dr.record} name={userName} onClose={dr.clearRecord} />}
           <div className="bsim-season-dots">
@@ -993,7 +994,7 @@ function ScreenSeason({ result, awards, onNext, adsDisabled = false, isAllTime =
                 <div className="sawd-award-card sawd-award-card--mvp">
                   <div className="sawd-award-label">Most Valuable Player</div>
                   <div className="sawd-award-winner">
-                    <img src={`/logos/nba/${mvp.team}.png`} alt={mvp.team} className="sawd-winner-logo" />
+                    <img src={`/logos/nba/${mvp.team}.svg`} alt={mvp.team} className="sawd-winner-logo" />
                     <div className="sawd-winner-info">
                       <div className="sawd-winner-name">{mvp.name}</div>
                       <div className="sawd-winner-stats">{mvp.ppg} PPG · {mvp.rpg} RPG · {mvp.apg} APG</div>
@@ -1006,7 +1007,7 @@ function ScreenSeason({ result, awards, onNext, adsDisabled = false, isAllTime =
                 <div className="sawd-award-card sawd-award-card--def">
                   <div className="sawd-award-label sawd-award-label--def">Defensive Player of the Year</div>
                   <div className="sawd-award-winner">
-                    <img src={`/logos/nba/${dpoy.team}.png`} alt={dpoy.team} className="sawd-winner-logo" />
+                    <img src={`/logos/nba/${dpoy.team}.svg`} alt={dpoy.team} className="sawd-winner-logo" />
                     <div className="sawd-winner-info">
                       <div className="sawd-winner-name">{dpoy.name}</div>
                       <div className="sawd-winner-stats">{dpoy.spg} SPG · {dpoy.bpg} BPG</div>
@@ -1061,7 +1062,7 @@ function ScreenAwards({ awards, onNext }) {
         <div className="sawd-award-card sawd-award-card--mvp" key="mvp-card">
           <div className="sawd-award-label">Most Valuable Player</div>
           <div className="sawd-award-winner">
-            <img src={`/logos/nba/${mvp.team}.png`} alt={mvp.team} className="sawd-winner-logo" />
+            <img src={`/logos/nba/${mvp.team}.svg`} alt={mvp.team} className="sawd-winner-logo" />
             <div className="sawd-winner-info">
               <div className="sawd-winner-name">{mvp.name}</div>
               <div className="sawd-winner-stats">{mvp.ppg} PPG · {mvp.rpg} RPG · {mvp.apg} APG</div>
@@ -1074,7 +1075,7 @@ function ScreenAwards({ awards, onNext }) {
         <div className="sawd-award-card sawd-award-card--def" key="dpoy-card">
           <div className="sawd-award-label sawd-award-label--def">Defensive Player of the Year</div>
           <div className="sawd-award-winner">
-            <img src={`/logos/nba/${dpoy.team}.png`} alt={dpoy.team} className="sawd-winner-logo" />
+            <img src={`/logos/nba/${dpoy.team}.svg`} alt={dpoy.team} className="sawd-winner-logo" />
             <div className="sawd-winner-info">
               <div className="sawd-winner-name">{dpoy.name}</div>
               <div className="sawd-winner-stats">{dpoy.spg} SPG · {dpoy.bpg} BPG</div>
@@ -1145,7 +1146,7 @@ function GoatAvatar({ entry, isPlayer, playerTeam, playerTeamColor, size = 56 })
   const teamObj    = TEAM_MAP[teamShort]
   const color      = isPlayer ? playerTeamColor : teamObj?.color
   const headshotId = !isPlayer ? NBA_HEADSHOTS[entry?.name] : null
-  const photo      = headshotId ? `${HEADSHOT_BASE}/nba/${headshotId}.webp` : null
+  const photo      = headshotId ? null : null   // app-clean: no photos (QBAvatar shows the team badge)
   return (
     <QBAvatar
       photo={photo}
@@ -1499,7 +1500,7 @@ function generateConfBracket(standings, myShort, playoffRounds) {
   }
 }
 
-// forcedChamp: the real NBA Finals opponent the player actually faced
+// forcedChamp: the real Finals opponent the player actually faced
 // (from playoffRounds[3].opponent) — without this, the bracket's "other
 // conference" was simulated completely independently of that real matchup,
 // so the displayed conference champion could (and often did) disagree with
@@ -1572,7 +1573,7 @@ function FullBracket({ myConf, confBracket, otherBracket, myShort, mySeed, teamC
         className={`brk2-team${isMyTeam ? ' brk2-team-me' : ''}${eliminated ? ' brk2-team-elim' : ''}${isChampion ? ' brk2-team-champ' : advancing ? ' brk2-team-adv' : ''}`}
         style={isMyTeam ? { '--my-color': teamColor } : {}}
       >
-        <img src={`/logos/nba/${team.short}.png`} alt={team.short} className="brk2-logo" onError={e => e.target.style.display='none'} />
+        <img src={`/logos/nba/${team.short}.svg`} alt={team.short} className="brk2-logo" onError={e => e.target.style.display='none'} />
         <span className="brk2-seed">{displaySeed}</span>
         <span className="brk2-abbr">{team.short}</span>
         {showWins && <span className="brk2-live-score">{winsDisplay}</span>}
@@ -1657,7 +1658,7 @@ function FullBracket({ myConf, confBracket, otherBracket, myShort, mySeed, teamC
     // row-reverse) for East — so it always lands visually closest to center.
     const finalsCol = showFinals && (
       <div key="finals" className="brk2-col brk2-col-finals">
-        <div className="brk2-col-lbl">NBA Finals</div>
+        <div className="brk2-col-lbl">Finals</div>
         <div className="brk2-matchups">
           <Matchup a={finalsA} b={finalsB} winner={finalsWinner} rIdx={3} matchupIdx={0} myBracket={true} />
         </div>
@@ -1726,7 +1727,7 @@ function FullBracket({ myConf, confBracket, otherBracket, myShort, mySeed, teamC
       <div className="brk2-desktop">
         <ConfBracket bracket={westBracket} conf="west" reversed={true}  finalsA={finalsA} finalsB={finalsB} finalsDone={finalsDone} />
         <div className="brk2-col brk2-col-finals brk2-col-finals-center">
-          <div className="brk2-col-lbl">NBA Finals</div>
+          <div className="brk2-col-lbl">Finals</div>
           <div className="brk2-matchups">
             <Matchup a={finalsA} b={finalsB} winner={finalsWinner} rIdx={3} matchupIdx={0} myBracket={true} />
           </div>
@@ -2095,7 +2096,7 @@ function ScreenPlayoffs({ result, onNext, autoSkip = false, isAllTime = false, a
         }
       }
 
-      // Simulate the NBA Finals between the two conf champs
+      // Simulate the Finals between the two conf champs
       const westChampTeam = conf === 'west' ? confBracket?.confChamp : otherBracket?.confChamp
       const eastChampTeam = conf === 'east' ? confBracket?.confChamp : otherBracket?.confChamp
       if (westChampTeam && eastChampTeam) {
@@ -2271,7 +2272,7 @@ function ScreenPlayoffs({ result, onNext, autoSkip = false, isAllTime = false, a
               ? <img src="/trophybasketball.webp" alt="" className="sfb-trophy plf-trophy-reveal" />
               : <button className="plf-champ-bottle" onClick={() => setChampPopped(true)} aria-label="Pop champagne">🍾</button>
             }
-            <div className="plf-champ-label">NBA Champions!</div>
+            <div className="plf-champ-label">Champions!</div>
             <div className="plf-champ-sub">{endScore.myW}–{endScore.oppW} vs {otherBracket?.confChamp?.short ?? currentRound.opponent?.short} · {currentRound.name}</div>
             {champPopped
               ? <button className="simp-cta simp-cta-in plf-report-reveal" onClick={onNext}>GOAT Status →</button>
@@ -2280,7 +2281,7 @@ function ScreenPlayoffs({ result, onNext, autoSkip = false, isAllTime = false, a
           </div>
           <PlayoffStatsLog log={playoffGameLog} playoffRounds={playoffRounds} />
           {ringOpen && (
-            <RingCeremony team={{ name: team?.name ?? teamShort, color: teamColor, color2: team?.color2 }} title="NBA Champions"
+            <RingCeremony team={{ name: team?.name ?? teamShort, color: teamColor, color2: team?.color2 }} title="Champions"
               score={`${endScore.myW}–${endScore.oppW} in the ${currentRound.name}`} trophy="/trophybasketball.webp"
               onClose={() => setRingOpen(false)} />
           )}
@@ -2293,9 +2294,9 @@ function ScreenPlayoffs({ result, onNext, autoSkip = false, isAllTime = false, a
           <div className="simp-eyebrow-row"><div className="simp-eyebrow">Playoffs</div></div>
           <div className="plf-end-card">
             <div className="simp-eyebrow">Season Over</div>
-            <div className="plf-elim-title">{currentRound.name === 'NBA Finals' ? 'Lost the Finals' : 'Eliminated'}</div>
-            <div className="plf-elim-round">{currentRound.name === 'NBA Finals' ? '' : currentRound.name}</div>
-            <div className="plf-elim-score">Lost series {endScore.myW}–{endScore.oppW} vs {currentRound.name === 'NBA Finals' ? (otherBracket?.confChamp?.short ?? currentRound.opponent?.short) : currentRound.opponent?.short}</div>
+            <div className="plf-elim-title">{currentRound.name === 'Finals' ? 'Lost the Finals' : 'Eliminated'}</div>
+            <div className="plf-elim-round">{currentRound.name === 'Finals' ? '' : currentRound.name}</div>
+            <div className="plf-elim-score">Lost series {endScore.myW}–{endScore.oppW} vs {currentRound.name === 'Finals' ? (otherBracket?.confChamp?.short ?? currentRound.opponent?.short) : currentRound.opponent?.short}</div>
             <button className="simp-cta" onClick={onNext}>GOAT Status →</button>
           </div>
           <PlayoffStatsLog log={playoffGameLog} playoffRounds={playoffRounds} />
@@ -2423,7 +2424,7 @@ function ScreenFinal({ result, awards, build, types, attrMap, onReset, onBack, a
   const playoffSummary = !madePlayoffs
     ? 'Missed the Playoffs'
     : champion
-      ? 'NBA Champions!'
+      ? 'Champions!'
       : lastSeries
         ? `Eliminated · ${lastSeries.name}`
         : playoffRounds.some(r => r.type === 'playin' && !r.advanced)
@@ -2437,7 +2438,7 @@ function ScreenFinal({ result, awards, build, types, attrMap, onReset, onBack, a
       {APP_SIM && <SeasonRewards result={result} />}
       {APP_SIM && result.story && <SeasonStory story={result.story} pos={result.position} sport="bucket" name={userName} />}
       <div className={`simp-final-banner ${champion ? 'sfb-champ' : madePlayoffs ? 'sfb-elim' : 'sfb-miss'}`}>
-        {champion && <img src="/trophybasketball.webp" alt="NBA Trophy" className="sfb-trophy" />}
+        {champion && <img src="/trophybasketball.webp" alt="Trophy" className="sfb-trophy" />}
         <div className="sfb-outcome">{playoffSummary}</div>
         <div className="sfb-sub">{wins}–{losses} Season · OVR {ovr}</div>
       </div>
@@ -2447,15 +2448,15 @@ function ScreenFinal({ result, awards, build, types, attrMap, onReset, onBack, a
 
       {champion && lastSeries && (
         <div className="sfr-finals-card">
-          <div className="sfr-finals-lbl">NBA Finals</div>
+          <div className="sfr-finals-lbl">Finals</div>
           <div className="sfr-finals-matchup">
             <div className="sfr-finals-side">
-              <img src={`/logos/nba/${result.team?.short}.png`} alt={result.team?.short} className="sfr-finals-logo" onError={e => e.target.style.display='none'} />
+              <img src={`/logos/nba/${result.team?.short}.svg`} alt={result.team?.short} className="sfr-finals-logo" onError={e => e.target.style.display='none'} />
               <span className="sfr-finals-abbr" style={{ color: result.team?.color ?? '#fb923c' }}>{result.team?.short}</span>
             </div>
             <div className="sfr-finals-score">{lastSeries.wins}–{lastSeries.losses}</div>
             <div className="sfr-finals-side">
-              <img src={`/logos/nba/${lastSeries.opponent?.short}.png`} alt={lastSeries.opponent?.short} className="sfr-finals-logo" onError={e => e.target.style.display='none'} />
+              <img src={`/logos/nba/${lastSeries.opponent?.short}.svg`} alt={lastSeries.opponent?.short} className="sfr-finals-logo" onError={e => e.target.style.display='none'} />
               <span className="sfr-finals-abbr">{lastSeries.opponent?.short}</span>
             </div>
           </div>
@@ -2729,7 +2730,7 @@ function TeamStarters({ teamShort, teamColor, isBig, iqPhoto, isAllTime = false,
       {five.map((p, k) => {
         const isMe  = !!p.you
         const hid   = !isMe && NBA_HEADSHOTS[p.name]
-        const photo = isMe ? iqPhoto : (hid ? `${HEADSHOT_BASE}/nba/${hid}.webp` : null)
+        const photo = isMe ? iqPhoto : (hid ? null : null)   // app-clean: the team badge (QBAvatar)
         return (
           <div key={isMe ? 'you' : p.name} className={`sts-starter${isMe ? ' sts-starter--you' : ''}`}>
             <QBAvatar photo={photo} team={isMe ? teamShort : p.team} color={isMe ? teamColor : teamColor + '99'} size={42} logoDir="/logos/nba/" />
@@ -2868,7 +2869,7 @@ export default function BucketSimPage({ result: baseResult, build, types, positi
         {team && screens[screen]?.key !== 'goat' && (
           <div className="simp-team-strip">
             <div className="sts-top-row">
-              <img src={`/logos/nba/${team.short}.png`} alt={team.short} className="sts-logo" />
+              <img src={`/logos/nba/${team.short}.svg`} alt={team.short} className="sts-logo" />
               <div className="sts-info">
                 <div className="sts-name-wrap">
                   <span className="sts-city">{team.name.split(' ').slice(0, -1).join(' ')}</span>

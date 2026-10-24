@@ -228,7 +228,7 @@ export default function QBFigureOverlay({ build, className }) {
           {has('arm') && build['arm'].team && (
             <g transform="rotate(-10, 409, 136)" style={{ pointerEvents: 'none' }}>
               <image
-                href={`/logos/${build['arm'].team}.png`}
+                href={`/logos/${build['arm'].team}.svg`}
                 x="393" y="148" width="43" height="43"
                 style={{ opacity: 1, mixBlendMode: 'screen' }}
               />
@@ -253,7 +253,7 @@ export default function QBFigureOverlay({ build, className }) {
           {has('processing') && build['processing'].team && !NO_HELMET_LOGO.has(build['processing'].team) && (
             <g transform="rotate(-8, 262, 40)" clipPath="url(#helmet-logo-clip)" style={{ pointerEvents: 'none' }}>
               <image
-                href={`/logos/${build['processing'].team}.png`}
+                href={`/logos/${build['processing'].team}.svg`}
                 x="210" y="-2" width="80" height="80"
                 style={{
                   mixBlendMode: WHITE_HELMET.has(build['processing'].team) ? 'multiply' : 'normal',

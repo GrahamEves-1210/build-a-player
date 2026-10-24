@@ -125,7 +125,7 @@ const _playerMap = new Map(
 function buildHardcodedGrid(nameGrid) {
   return SAL_COLS.map((col, ci) =>
     TIERS.map((price, ti) => {
-      const p = _playerMap.get(nameGrid[ci][ti]) ?? { name: nameGrid[ci][ti], team: 'NBA', attrs: {} }
+      const p = _playerMap.get(nameGrid[ci][ti]) ?? { name: nameGrid[ci][ti], team: 'FA', attrs: {} }
       const attrs = {}
       typesFor(p, col).forEach(t => { attrs[t] = p.attrs?.[t] ?? 5 })
       const hsId = NBA_HEADSHOTS[p.name]
@@ -133,7 +133,7 @@ function buildHardcodedGrid(nameGrid) {
         ...p, price, attrs,
         teamColor:  TEAM_META[p.team]?.color  ?? '#444',
         teamColor2: TEAM_META[p.team]?.color2 ?? '#222',
-        photo:  hsId ? `${HEADSHOT_BASE}/nba/${hsId}.webp` : null,
+        photo:  hsId ? null : null,   // app-clean: no photos (the card shows the team badge)
         number: p.number ?? null,
         id:     `${col.key}-${price}-${p.name}`,
       }
@@ -216,7 +216,7 @@ const POWER_SEEN_KEY = 'sal_power_seen'
 // Compute the correct salary tier for a legend in a given column by ranking
 // their catScore against the regular player pool (no rand needed — deterministic).
 // the board itself: lib/salaryCore.js (the live server checks plays against the same board)
-const { legendTierFor, pickLegendSlots, getPickedNamesForSeed, generateGrid } = salaryKit({ typesFor, look: p => { const hsId = NBA_HEADSHOTS[p.name]; return { teamColor: TEAM_META[p.team]?.color ?? '#444', teamColor2: TEAM_META[p.team]?.color2 ?? '#222', photo: hsId ? `${HEADSHOT_BASE}/nba/${hsId}.webp` : null } } })
+const { legendTierFor, pickLegendSlots, getPickedNamesForSeed, generateGrid } = salaryKit({ typesFor, look: p => { const hsId = NBA_HEADSHOTS[p.name]; return { teamColor: TEAM_META[p.team]?.color ?? '#444', teamColor2: TEAM_META[p.team]?.color2 ?? '#222', photo: hsId ? null : null } } })
 
 // Pick 2 deterministic legend slots — cycles through all legends before repeating.
 // rand() still used for column and tier nudge so placement varies day-to-day.
@@ -265,12 +265,12 @@ function PlayerCard({ player, isSelected, colHasSelection, onClick, viewOnly, sh
       style={{ '--tc': player.teamColor, '--sel': isNearBlack(player.teamColor) ? '#888' : player.teamColor, '--sd': `${shuffleDelay}ms` }}
     >
       <div className="sc-card-visual" data-team={player.team}>
-        <img src={`/logos/nba/${player.team}.png`} alt="" aria-hidden="true" className="sc-card-logo-bg"
+        <img src={`/logos/nba/${player.team}.svg`} alt="" aria-hidden="true" className="sc-card-logo-bg"
           onError={e => { e.currentTarget.style.display = 'none' }} />
         {player.photo
           ? <img src={player.photo} alt={player.name} className="sc-card-headshot" />
           : <div className="sc-card-no-photo">
-              <img src={`/logos/nba/${player.team}.png`} alt={player.team} style={{ width: '55%', opacity: 0.7 }} />
+              <img src={`/logos/nba/${player.team}.svg`} alt={player.team} style={{ width: '55%', opacity: 0.7 }} />
             </div>
         }
       </div>
@@ -385,7 +385,7 @@ function InfiniteLeaderboard({ onClose }) {
                   <div key={pi} className="sc-lb-pick" title={p.name} style={{ '--tc': p.teamColor || '#444' }}>
                     {p.photo
                       ? <img src={p.photo} alt={p.name} />
-                      : <img src={`/logos/nba/${p.team}.png`} alt={p.team} style={{ padding: '4px', opacity: 0.7 }} />
+                      : <img src={`/logos/nba/${p.team}.svg`} alt={p.team} style={{ padding: '4px', opacity: 0.7 }} />
                     }
                   </div>
                 ))}
@@ -457,7 +457,7 @@ function SalaryLeaderboard({ dateStr, dateLabel, onClose }) {
                   >
                     {p.photo
                       ? <img src={p.photo} alt={p.name} />
-                      : <img src={`/logos/nba/${p.team}.png`} alt={p.team} style={{ padding: '4px', opacity: 0.7 }} />
+                      : <img src={`/logos/nba/${p.team}.svg`} alt={p.team} style={{ padding: '4px', opacity: 0.7 }} />
                     }
                   </div>
                 ))}
@@ -539,7 +539,7 @@ export default function BucketSalaryCap({ onConfirm, onBack, user, initialDateSt
         if (at < TIER_BANDS[ti][0] - 0.2) return null
       }
     }
-    return frozen.map(col => col.map(cell => { const hs = NBA_HEADSHOTS[cell.name]; return { ...cell, photo: hs ? `${HEADSHOT_BASE}/nba/${hs}.webp` : null } }))
+    return frozen.map(col => col.map(cell => { const hs = NBA_HEADSHOTS[cell.name]; return { ...cell, photo: hs ? null : null } }))
   }
   const recentFor = (date) => {
     const yesterday = new Date(date.y, date.m - 1, date.day - 1)

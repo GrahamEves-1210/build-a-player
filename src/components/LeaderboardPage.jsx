@@ -1,5 +1,6 @@
 ﻿import { useState, useEffect, useRef } from 'react'
 import { loadFriends } from '../lib/friends'
+import { playerBadge } from '../lib/playerTeams'
 import { getUsername } from '../lib/discord'
 import { supabase } from '../lib/supabase'
 import { ATTR, TYPES } from '../data/qbs'
@@ -138,7 +139,7 @@ const ALL_METRICS = [
 ]
 
 const TEAM_COLOR = Object.fromEntries(TEAMS.map(t => [t.short, t.color]))
-const QB_PHOTO   = (name) => nflHeadshot(HEADSHOTS[name])
+const QB_PHOTO   = (name) => playerBadge('nfl', name)
 
 function ovrColor(ovr) {
   if (ovr >= 95) return '#74C69D'

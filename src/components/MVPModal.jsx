@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { playerBadge } from '../lib/playerTeams'
 import { NameTag } from './app/NameTag'
 import HEADSHOTS from '../data/headshots.json'
 import { nflHeadshot } from '../utils/simulation'
@@ -25,7 +26,7 @@ function OLAllProReveal({ mvpResult, userPhoto, userName = 'Guest' }) {
             className={`mvp-allpro-row${p.isUser ? ' mvp-allpro-row--you' : ''}${!p.isUser && p.spot === userSpot ? ' mvp-allpro-row--beat' : ''}`}
           >
             <span className="mvp-allpro-spot">{p.spot}</span>
-            <QBAvatar photo={p.isUser ? userPhoto : nflHeadshot(HEADSHOTS[p.name])} team={p.team} color={p.color} size={34} />
+            <QBAvatar photo={p.isUser ? userPhoto : playerBadge('nfl', p.name)} team={p.team} color={p.color} size={34} />
             <div className="mvp-allpro-info">
               <span className="mvp-allpro-name">{p.isUser ? <NameTag name={userName} self /> : p.name}</span>
               <span className="mvp-allpro-stats">{p.team} · {sacksAllowed(p.stats.sacks)} · {p.stats.pancakes} pancakes</span>
@@ -81,7 +82,7 @@ export default function MVPModal({ result, mvpResult, onDismiss, toSuperBowl = f
 
   const isOPOY = isRB || isWR || isTE
   const awardLabel    = isOL ? 'All-Pro Team' : isDB ? 'DPOY Award' : isOPOY ? 'OPOY Award'           : 'MVP Award'
-  const awardEyebrow  = 'NFL Regular Season'
+  const awardEyebrow  = 'Regular Season'
   const unanimousLbl  = isDB ? 'Unanimous DPOY' : isOPOY ? 'Unanimous OPOY'       : 'Unanimous MVP'
   const regularLbl    = isDB ? 'Defensive Player of the Year' : isOPOY ? 'Regular Season OPOY'  : 'Regular Season MVP'
 
@@ -92,7 +93,7 @@ export default function MVPModal({ result, mvpResult, onDismiss, toSuperBowl = f
     return () => { clearTimeout(t0); clearTimeout(t1); clearTimeout(t2) }
   }, [])
 
-  const winnerHeadshot = winner ? nflHeadshot(HEADSHOTS[winner.name]) : null
+  const winnerHeadshot = winner ? playerBadge('nfl', winner.name) : null
 
   return (
     <div className={`mvp-overlay ${visible ? 'mvp-overlay-in' : ''}`}>
@@ -490,7 +491,7 @@ export default function MVPModal({ result, mvpResult, onDismiss, toSuperBowl = f
               </>
             )}
             <button className="mvp-continue" onClick={onDismiss}>
-              {toSuperBowl ? 'Continue to Super Bowl' : nextLabel}
+              {toSuperBowl ? 'Continue to the Title Game' : nextLabel}
             </button>
           </div>
         )}

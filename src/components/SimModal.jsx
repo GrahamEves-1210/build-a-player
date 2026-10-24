@@ -147,14 +147,14 @@ function ScreenFinal({ result, onReset, onClose }) {
     <div className="sim-screen">
       <div className={`sim-final-banner ${champion ? 'sfb-champ' : playoffs ? 'sfb-elim' : 'sfb-miss'}`}>
         <div className="sfb-outcome">
-          {champion ? 'Super Bowl Champion' : playoffs ? (sbResult?.round === 'Super Bowl' ? 'Lost Super Bowl' : `Eliminated — ${sbResult?.round}`) : 'Missed the Playoffs'}
+          {champion ? 'Champion' : playoffs ? (sbResult?.round === 'Title Game' ? 'Lost the Title Game' : `Eliminated — ${sbResult?.round}`) : 'Missed the Playoffs'}
         </div>
         <div className="sfb-sub">{wins}–{losses} Season · OVR {ovr}</div>
       </div>
 
       {champion && (
         <div className="sim-sb-box">
-          <div className="sim-sb-label">Super Bowl Performance</div>
+          <div className="sim-sb-label">Title Game Performance</div>
           <div className="sim-totals-strip">
             <div className="sim-total">
               <div className="sim-total-val">{sbResult.passYds}</div>

@@ -1,5 +1,6 @@
 ﻿import { useState, useCallback, useRef, useEffect, useLayoutEffect, useMemo, lazy, Suspense } from 'react'
 import { Helmet } from 'react-helmet-async'
+import { playerBadge } from '../lib/playerTeams'
 import Navbar from './Navbar'
 import SpinScreen from './SpinScreen'
 import Silhouette from './Silhouette'
@@ -143,10 +144,10 @@ const ENRICHED_BIGS           = NBA_BIG_PLAYERS.map(enrichPlayer)
 const ENRICHED_ALLTIME_GUARDS = NBA_ALLTIME_GUARD_PLAYERS.map(enrichPlayer)
 const ENRICHED_ALLTIME_BIGS   = NBA_ALLTIME_BIG_PLAYERS.map(enrichPlayer)
 
-const withPhoto = p => ({ ...p, photo: NBA_HEADSHOTS[p.name] ? `${HEADSHOT_BASE}/nba/${NBA_HEADSHOTS[p.name]}.webp` : genericHeadshot(p.skin) })
+const withPhoto = p => ({ ...p, photo: playerBadge('bucket', p.name) })
 const LIVE_POOLS = { guard: ENRICHED_GUARDS.map(withPhoto), big: ENRICHED_BIGS.map(withPhoto) }
 const LIVE_TYPES = { guard: VERSUS_GUARD_TYPES, big: VERSUS_BIG_TYPES }
-const livePhoto = p => p?.photo ?? (NBA_HEADSHOTS[p?.name] ? `${HEADSHOT_BASE}/nba/${NBA_HEADSHOTS[p.name]}.webp` : null)
+const livePhoto = p => p?.photo ?? playerBadge('bucket', p?.name)
 
 const _dedup = arr => { const s = new Set(); return arr.filter(p => { const k = `${p.name}|${p.team}`; if (s.has(k)) return false; s.add(k); return true }) }
 const _byTeam = (a, b) => a.team.localeCompare(b.team) || a.name.localeCompare(b.name)
@@ -304,7 +305,7 @@ function BucketSplash({ onStart, onVersus }) {
         <div className="splash-modes">
           <button className="splash-mode-classic" onClick={() => { try { localStorage.setItem('bucketPosition', position) } catch {}; onStart('classic', position) }}>
             <div className="smode-title">Current</div>
-            <div className="smode-badge">Current NBA</div>
+            <div className="smode-badge">Current Players</div>
             <div className="smode-cta">
               START DRAFTING
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -317,7 +318,7 @@ function BucketSplash({ onStart, onVersus }) {
             <button className="splash-mode-alltime" onClick={() => { try { localStorage.setItem('bucketPosition', position) } catch {}; onStart('all-time', position) }}>
               <div className="smode-daily-banner" style={{ background: 'linear-gradient(135deg, #ca8a04, #eab308)' }}>NEW</div>
               <div className="smode-title">All-Time</div>
-              <div className="smode-badge">NBA Legends</div>
+              <div className="smode-badge">All-Time Legends</div>
             </button>
 
             <button className="splash-mode-salarycap" style={{ position: 'relative' }} onClick={() => { try { localStorage.setItem('bucketPosition', position) } catch {}; onStart('salarycap', position) }}>
@@ -355,13 +356,13 @@ function BucketSplash({ onStart, onVersus }) {
 // the game screen, so search engines indexed /bucket with the homepage's
 // generic title and no canonical. scripts/prerender-bucket.mjs bakes the same
 // title/description into the static bucket.html — keep the two in sync.
-const BUCKET_TITLE = 'Build-A-Bucket: Build a Basketball Player (NBA) — Player Creator & Simulator'
-const BUCKET_DESC  = 'Build a basketball player — spin the wheel to create your ultimate NBA player, simulate a full season, and compete on the all-time GOAT leaderboard. Free basketball player creator.'
+const BUCKET_TITLE = 'Build-A-Bucket: Build a Basketball Player — Player Creator & Simulator'
+const BUCKET_DESC  = 'Build a basketball player — spin the wheel to create your ultimate basketball player, simulate a full season, and compete on the all-time GOAT leaderboard. Free basketball player creator.'
 const bucketHead = (
   <Helmet>
     <title>{BUCKET_TITLE}</title>
     <meta name="description" content={BUCKET_DESC} />
-    <meta name="keywords" content="build a basketball player, create a basketball player, build a bucket, build-a-bucket, buildabucket, NBA player creator, NBA player builder, basketball player builder, basketball simulator, NBA game" />
+    <meta name="keywords" content="build a basketball player, create a basketball player, build a bucket, build-a-bucket, buildabucket, basketball player builder, basketball simulator" />
     <link rel="canonical" href="https://build-a-player.com/bucket" />
     <meta property="og:title" content={BUCKET_TITLE} />
     <meta property="og:description" content={BUCKET_DESC} />
@@ -1206,7 +1207,7 @@ export default function BucketApp() {
       const p = seededPlayer(blacktopPlan.seed, i, order[i % order.length], pool)
       if (!p) continue
       const type = activeTypes.filter(t => !next[t]).sort((a, b) => (p.attrs[b] ?? -1) - (p.attrs[a] ?? -1))[0]
-      const photo = NBA_HEADSHOTS[p.name] ? `${HEADSHOT_BASE}/nba/${NBA_HEADSHOTS[p.name]}.webp` : genericHeadshot(p.skin)
+      const photo = playerBadge('bucket', p.name)
       next[type] = {
         type, val: p.attrs[type] ?? 5,
         qb: p.short, qbFull: p.name,
@@ -1227,7 +1228,7 @@ export default function BucketApp() {
       const sorted = [...pool].sort((a, b) => (b.attrs[type] ?? 0) - (a.attrs[type] ?? 0))
       const topN = sorted.slice(0, 8)
       const p = topN[Math.floor(Math.random() * topN.length)]
-      const photo = NBA_HEADSHOTS[p.name] ? `${HEADSHOT_BASE}/nba/${NBA_HEADSHOTS[p.name]}.webp` : genericHeadshot(p.skin)
+      const photo = playerBadge('bucket', p.name)
       return [type, {
         type, val: p.attrs[type] ?? 5,
         qb: p.short, qbFull: p.name,
@@ -1890,7 +1891,7 @@ export default function BucketApp() {
               skinColor: p.skin,
               number: p.number,
               faceCenter: p.faceCenter,
-              photo: NBA_HEADSHOTS[p.name] ? `${HEADSHOT_BASE}/nba/${NBA_HEADSHOTS[p.name]}.webp` : genericHeadshot(p.skin),
+              photo: playerBadge('bucket', p.name),
               captain: p.captain ?? false,
               sandbox: true,
               height: p.height ?? parseHtToIn(p.ht) ?? null,
@@ -1915,7 +1916,7 @@ export default function BucketApp() {
                     skinColor: p.skin,
                     number: p.number,
                     faceCenter: p.faceCenter,
-                    photo: NBA_HEADSHOTS[p.name] ? `${HEADSHOT_BASE}/nba/${NBA_HEADSHOTS[p.name]}.webp` : genericHeadshot(p.skin),
+                    photo: playerBadge('bucket', p.name),
                     captain: p.captain ?? false,
                     sandbox: true,
                     height: p.height ?? parseHtToIn(p.ht) ?? null,
@@ -2266,7 +2267,7 @@ export default function BucketApp() {
                 skinColor: p.skin,
                 number: p.number,
                 faceCenter: p.faceCenter,
-                photo: NBA_HEADSHOTS[p.name] ? `${HEADSHOT_BASE}/nba/${NBA_HEADSHOTS[p.name]}.webp` : genericHeadshot(p.skin),
+                photo: playerBadge('bucket', p.name),
                 captain: p.captain ?? false,
                 sandbox: true,
                 height: p.height ?? parseHtToIn(p.ht) ?? null,
@@ -2291,7 +2292,7 @@ export default function BucketApp() {
                       skinColor: p.skin,
                       number: p.number,
                       faceCenter: p.faceCenter,
-                      photo: NBA_HEADSHOTS[p.name] ? `${HEADSHOT_BASE}/nba/${NBA_HEADSHOTS[p.name]}.webp` : genericHeadshot(p.skin),
+                      photo: playerBadge('bucket', p.name),
                       captain: p.captain ?? false,
                       sandbox: true,
                       height: p.height ?? parseHtToIn(p.ht) ?? null,

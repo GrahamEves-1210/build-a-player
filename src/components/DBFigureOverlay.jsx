@@ -329,7 +329,7 @@ export default function DBFigureOverlay({ build, numberNudgePx = null, parts = n
                 actually line up with it. The image rotates freely inside it. */}
             <g clipPath="url(#db-helmet-clip)">
               <g transform={`rotate(${BODY_ANGLE}, 297, 91)`}>
-                <image href={`/logos/${helmetTeam}.png`} x="159.5" y="13.5" width="115" height="115"
+                <image href={`/logos/${helmetTeam}.svg`} x="159.5" y="13.5" width="115" height="115"
                   style={{
                     opacity: 0.95, mixBlendMode: 'screen',
                     transform: 'rotate(10deg) scaleX(0.7)', transformBox: 'fill-box', transformOrigin: 'right center',

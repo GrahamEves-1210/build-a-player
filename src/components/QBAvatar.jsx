@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { isGenericHead } from '../lib/noPhotos'
 
 function Img({ src, className, style }) {
   const [failed, setFailed] = useState(false)
@@ -14,12 +15,14 @@ function Img({ src, className, style }) {
   )
 }
 
-export default function QBAvatar({ photo, team, color, size = 48, logoDir = '/logos/', faceCenter }) {
+export default function QBAvatar({ photo: given, team, color, size = 48, logoDir = '/logos/', faceCenter }) {
+  // app-clean: a circle is the team badge; the default heads belong on the figure, not here
+  const photo = isGenericHead(given) ? null : given
   const photoStyle = faceCenter ? { objectPosition: `${faceCenter[0]}% ${faceCenter[1]}%` } : undefined
   return (
     <div className="qb-avatar" style={{ width: size, height: size, boxShadow: color ? `0 0 0 2px ${color}` : undefined }}>
       {team && (
-        <Img key={team} className="qb-avatar-logo" src={`${logoDir}${team}.png`} />
+        <Img key={team} className="qb-avatar-logo" src={`${logoDir}${team}.svg`} />
       )}
       {photo && (
         <Img key={photo} className="qb-avatar-photo" src={photo} style={photoStyle} />

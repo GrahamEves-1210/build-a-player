@@ -17118,3 +17118,7 @@ html.app-look .cr-overlay { padding-bottom: calc(12px + var(--web-rail, 0px)) !i
 
 /* Press feedback: buttons ease to 96% (cards 98%) over 150ms, never while disabled */
 .splash-pos-option:not(.splash-pos-option--disabled) { transition: background 0.14s, border-color 0.14s, transform .15s ease-out; }
+
+/* app-clean: a team badge (public/logos/*.svg) stands in for every player photo; it's
+   drawn whole and centred wherever a photo would be cropped to a face */
+img[src^="/logos/"][src$=".svg"] { object-fit: contain !important; object-position: 50% 50% !important; }

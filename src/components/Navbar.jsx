@@ -11,29 +11,29 @@ import SoundToggle from './app/SoundToggle'
 import { PROFILE_ICON_EMOJI, initialsOf } from '../data/profile-icons'
 
 const STEPS_DESKTOP = (isRB, isWR, isTE, isDB, isOL) => [
-  { n: '1', title: 'Spin',      body: `Pull a random NFL team, then a${isOL ? 'n OL' : isWR ? ' WR' : isRB ? 'n RB' : isTE ? ' TE' : isDB ? ' DB' : 'n QB'} from their roster.` },
+  { n: '1', title: 'Spin',      body: `Pull a random pro team, then a${isOL ? 'n OL' : isWR ? ' WR' : isRB ? 'n RB' : isTE ? ' TE' : isDB ? ' DB' : 'n QB'} from their roster.` },
   { n: '2', title: 'Select',    body: 'Click a stat chip to assign it to your build — or drag it onto the matching zone.' },
   { n: '3', title: 'Repeat ×9', body: 'Fill all nine attribute slots — one per spin.' },
   { n: '4', title: 'Simulate',  body: `Hit Simulate to see how your Frankenstein ${isOL ? 'OL' : isWR ? 'WR' : isRB ? 'RB' : isTE ? 'TE' : isDB ? 'DB' : 'QB'} performs.` },
 ]
 const STEPS_MOBILE = (isRB, isWR, isTE, isDB, isOL) => [
-  { n: '1', title: 'Spin',      body: `Pull a random NFL team, then a${isOL ? 'n OL' : isWR ? ' WR' : isRB ? 'n RB' : isTE ? ' TE' : isDB ? ' DB' : 'n QB'} from their roster.` },
+  { n: '1', title: 'Spin',      body: `Pull a random pro team, then a${isOL ? 'n OL' : isWR ? ' WR' : isRB ? 'n RB' : isTE ? ' TE' : isDB ? ' DB' : 'n QB'} from their roster.` },
   { n: '2', title: 'Tap',       body: 'Tap a stat chip to instantly assign it to your build.' },
   { n: '3', title: 'Repeat ×9', body: 'Fill all nine attribute slots — one per spin.' },
   { n: '4', title: 'Simulate',  body: `Hit Simulate to see how your Frankenstein ${isOL ? 'OL' : isWR ? 'WR' : isRB ? 'RB' : isTE ? 'TE' : isDB ? 'DB' : 'QB'} performs.` },
 ]
 
 const BUCKET_STEPS_DESKTOP = [
-  { n: '1', title: 'Spin',       body: 'Pull a random NBA player from any roster.' },
+  { n: '1', title: 'Spin',       body: 'Pull a random pro player from any roster.' },
   { n: '2', title: 'Select',     body: 'Click a stat chip to assign it to your build — or drag it onto the matching zone.' },
   { n: '3', title: 'Repeat ×10', body: 'Fill all ten attribute slots — one per spin.' },
-  { n: '4', title: 'Simulate',   body: 'Spin or pick an NBA team, then run a full 82-game season.' },
+  { n: '4', title: 'Simulate',   body: 'Spin or pick a pro team, then run a full 82-game season.' },
 ]
 const BUCKET_STEPS_MOBILE = [
-  { n: '1', title: 'Spin',       body: 'Pull a random NBA player from any roster.' },
+  { n: '1', title: 'Spin',       body: 'Pull a random pro player from any roster.' },
   { n: '2', title: 'Tap',        body: 'Tap a stat chip to instantly assign it to your build.' },
   { n: '3', title: 'Repeat ×10', body: 'Fill all ten attribute slots — one per spin.' },
-  { n: '4', title: 'Simulate',   body: 'Spin or pick an NBA team, then run a full 82-game season.' },
+  { n: '4', title: 'Simulate',   body: 'Spin or pick a pro team, then run a full 82-game season.' },
 ]
 
 const POS_COLORS = { qb: '#95D5B2', rb: '#fb923c', wr: '#60a5fa', te: '#c084fc', db: '#f87171', ol: '#fbbf24' }
