@@ -2761,6 +2761,12 @@ html.is-app .ag-sandbox { grid-column: 1 / -1; justify-self: stretch; }
   /* the other modes, two to a row (the daily minis share one) */
   html.app-look .ag-extras { grid-area: extras; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px 26px; align-content: start; padding: 0; margin-top: 4px; }   /* the hero's column gap: the cards line up under it */
   html.app-look .ag-extras > :is(.ag-crmode, .ag-compete, .ag-squad, .ag-blacktop) { grid-column: span 2; min-height: 104px; margin: 0; }
+  /* basketball like football: Career and Squad Builder on the left, the online modes (Blacktop, Compete) on the right */
+  html.app-look .ag-home--bucket .ag-extras > .ag-crmode { order: 1; }
+  html.app-look .ag-home--bucket .ag-extras > .ag-blacktop { order: 2; }
+  html.app-look .ag-home--bucket .ag-extras > .ag-squad { order: 3; }
+  html.app-look .ag-home--bucket .ag-extras > .ag-compete { order: 4; }
+  html.app-look .ag-home--bucket .ag-extras > :is(.ag-mini, .ag-home-ad) { order: 5; }
   html.app-look .ag-promos { grid-area: promos; margin: 0; align-self: start; }   /* Builder Pass / BAP Pro, beside Players of the Day */
   /* six tiers to a view, none cut off (the inset is a margin, so the row clips the 7th) */
   html.app-look .ag-promos .ps-row { padding-inline: 0; margin-inline: 12px; }
