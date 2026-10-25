@@ -109,8 +109,9 @@ import TrophyCase from './app/TrophyCase'
 import DeleteAccount from './DeleteAccount'
 import ConnectDiscord from './ConnectDiscord'
 import { getUsername } from '../lib/discord'
-import { IconGear, IconTrophy } from './app/icons'
+import { IconGear, IconTrophy, IconCrown } from './app/icons'
 import { useCountUp as countUp } from '../lib/useCountUp'
+import { openBillingPortal } from '../lib/webCheckout'
 
 // the shared count-up (lib/useCountUp.js); runs once there's a number to count to
 const useCountUp = (target, duration = 900, enabled = true) => countUp(target, { run: enabled && !!target, ms: duration })
@@ -268,19 +269,8 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
     if (params.get('ad_free') === '1') window.history.replaceState({}, '', window.location.pathname)
   }, [])
 
-  const handleManageSubscription = async () => {
-    try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/create-portal`, {
-        method: 'POST',
-        headers: await apiHeaders(),
-        body: JSON.stringify({ userId: user.id }),
-      })
-      const { url } = await res.json()
-      if (!url) return
-      if (IS_APP) { const { Browser } = await import('@capacitor/browser'); await Browser.open({ url, presentationStyle: 'popover' }) }
-      else window.location.href = url
-    } catch {}
-  }
+  // Stripe's billing page: plan, card, cancel (lib/webCheckout.js)
+  const handleManageSubscription = () => openBillingPortal()
 
   const handleAdFree = async () => {
     if (adFreeLoading || adsDisabled || !user) return
@@ -802,9 +792,10 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
               <div className="prf-plus-dropdown">
                 <div className="wm-plus-body">
                   {[
+                    '+50% coins from every game',
+                    'The Pro Vault, included',
                     'No ads',
                     'Double the daily coin drop',
-                    'The Pro Vault: exclusive looks in the shop',
                     'Pro badge on leaderboard',
                   ].map(label => (
                     <div key={label} className="wm-plus-perk">
@@ -863,9 +854,15 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
         {/* ── BAP Pro: what it gives, and Manage Subscription (billing is Stripe's portal) ── */}
         {isPlus && (
           <div className={`prf-card ag-pro-card ${show ? 'prf-card-in' : ''}`} style={{ animationDelay: '0.1s' }}>
-            <div className="prf-card-hd"><span className="prf-card-title">BAP Pro</span><span className="plus-status-badge plus-status-badge--on">Active</span></div>
-            <div className="ag-pro-card-body">No ads, double the daily coin drop, the Pro Vault in the shop, and the Pro role in the Discord once your Discord is linked.</div>
-            <button className="plus-manage-btn" onClick={handleManageSubscription}>Manage Subscription</button>
+            <div className="ag-pro-card-top">
+              <span className="ag-pro-crown"><IconCrown size={24} /></span>
+              <span className="ag-pro-card-id"><b>BAP PRO</b><small>Active · thanks for backing the game</small></span>
+            </div>
+            <div className="ag-pro-card-body">+50% coins from every game, the Pro Vault's four looks, no ads, a double daily coin drop, and the Pro role in the Discord once your Discord is linked.</div>
+            <div className="ag-pro-card-btns">
+              <button className="ag-btn ag-pro-cta" onClick={() => window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'shop' }))}>PRO VAULT</button>
+              <button className="ag-btn ag-btn--ghost" onClick={handleManageSubscription}>MANAGE SUBSCRIPTION</button>
+            </div>
           </div>
         )}
 

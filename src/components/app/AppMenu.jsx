@@ -6,7 +6,7 @@ import { supabase } from '../../lib/supabase'
 import FeedbackModal from '../FeedbackModal'
 import { isMuted, setMuted } from '../../lib/juice'
 import { IS_APP } from '../../lib/platform'
-import { openCheckout, PRO_PRICE } from '../../lib/webCheckout'
+import { openCheckout, openBillingPortal, PRO_PRICE } from '../../lib/webCheckout'
 import { sellsHere } from '../../lib/storefront'
 import { isPro } from '../../lib/progress'
 import { railPreviewOn, setRailPreview } from '../../lib/fakeRail'
@@ -35,8 +35,9 @@ const nav = to => window.dispatchEvent(new CustomEvent('bap:nav', { detail: to }
 // monthly or yearly. The Builder Pass is its own thing (lib/pass.js)
 const PRO_PERKS = [
   ['No ads', 'Every page, on the website'],
-  ['The Pro Vault', 'Four members-only looks in the shop: Diamond, Pro Aura, Pro Holo and Supernova'],
-  ['Double the daily coins', 'The shop\'s free daily drop is doubled'],
+  ['+50% coins from every game', 'Seasons, Compete and Blacktop. It stacks with Coin Rush'],
+  ['The Pro Vault, included', 'Four members-only looks, yours while you\'re Pro: Diamond, Pro Aura, Pro Holo and Supernova'],
+  ['Double the daily drop', 'The shop\'s free daily coins, doubled'],
   ['Pro badge and Discord role', 'Next to your name on the leaderboards, and a Pro role in the Discord (link Discord on your profile)'],
 ]
 
@@ -51,6 +52,13 @@ function ProView({ onVault }) {
     const r = await openCheckout('pro', { plan })
     setBusy(false)
     if (r === 'error') setErr('Checkout didn\'t open. Try again.')
+  }
+  // members: Stripe's billing page (plan, card, cancel)
+  const manage = async () => {
+    setErr(null); setBusy(true)
+    const r = await openBillingPortal()
+    setBusy(false)
+    if (r === 'error') setErr('The billing page didn\'t open. Try again.')
   }
   return (
     <div className="ag-pro-view">
@@ -78,7 +86,11 @@ function ProView({ onVault }) {
         ))}
       </div>
       {pro ? (
-        <button className="ag-btn ag-pro-cta" onClick={onVault}>OPEN THE PRO VAULT</button>
+        <>
+          <button className="ag-btn ag-pro-cta" onClick={onVault}>OPEN THE PRO VAULT</button>
+          <button className="ag-btn ag-btn--ghost ag-pro-manage" onClick={manage} disabled={busy}>{busy ? 'OPENING…' : 'MANAGE SUBSCRIPTION'}</button>
+          <p className="ag-pro-note">Change your plan or card, or cancel, on Stripe's secure page. Pro stays on until the end of the period you've paid for.</p>
+        </>
       ) : sellsHere() ? (
         <>
           <button className="ag-btn ag-pro-cta" onClick={subscribe} disabled={busy}>{busy ? 'OPENING CHECKOUT…' : `GO PRO — ${plan === 'year' ? `${PRO_PRICE.year}/YR` : `${PRO_PRICE.month}/MO`}`}</button>
@@ -193,7 +205,7 @@ export default function AppMenu({ sport, onClose, initialView = 'menu' }) {
               <Tile tone="ink" Icon={IconX} title="FOLLOW" sub="@Build_A_Player" onClick={goOut(() => window.open('https://x.com/Build_A_Player', '_blank'))} delay="90ms" />
               <Tile tone="purple" Icon={IconChat} title="FEEDBACK" sub="Ideas & bugs" onClick={openFeedback} delay="120ms" />
               <Tile tone="mint" Icon={IconStar} title="BUILDER PASS" sub="This season's rewards" onClick={go(() => nav('pass'))} delay="150ms" />
-              {(isPro() || sellsHere()) && <Tile tone="gold" Icon={IconCrown} title="BAP PRO" sub={isPro() ? 'Active' : 'No ads · Pro Vault'} onClick={() => setView('pro')} delay="180ms" />}
+              {(isPro() || sellsHere()) && <Tile tone="gold" Icon={IconCrown} title="BAP PRO" sub={isPro() ? 'Active' : '+50% coins · Pro Vault'} onClick={() => setView('pro')} delay="180ms" />}
             </div>
             <button className={`ag-row-btn${muted ? ' ag-sound--off' : ''}`} onClick={() => { setMuted(!muted); setMutedState(!muted) }}>
               <span className="ag-sound-lbl">SOUND</span>

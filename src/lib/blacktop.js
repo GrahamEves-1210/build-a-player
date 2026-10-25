@@ -318,7 +318,7 @@ function useBlacktopP2P({ enabled, user, position, pools, types, build, player, 
     const won = mine && game.winner === mine.team
     const mvp = game.mvp === me.vid
     const xp = (won ? 40 : 15) + (mvp ? 20 : 0)
-    const coins = (won ? 15 : 5) + (mvp ? 8 : 0)
+    const coins = (won ? 35 : 15) + (mvp ? 10 : 0)   // a game pays at least what a solo season does
     window.dispatchEvent(new CustomEvent('bap:xp', { detail: { xp, coins, label: won ? (mvp ? 'Blacktop win · MVP' : 'Blacktop win') : 'Blacktop game' } }))
     window.dispatchEvent(new CustomEvent('bap:blacktop', { detail: { won: !!won, mvp, line: game.stats[me.vid] ?? null, bots: !!match.bots, score: game.score, team: mine?.team ?? 0 } }))
     if (user && supabase && !match.bots) {

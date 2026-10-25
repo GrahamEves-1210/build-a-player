@@ -33,6 +33,25 @@ export async function openCheckout(kind, extra = {}) {
   } catch { return 'error' }
 }
 
+// BAP Pro members: Stripe's billing page (change plan, card, cancel). Resolves 'opened' | 'signin' | 'error'
+export async function openBillingPortal() {
+  const { data } = supabase ? await supabase.auth.getSession() : { data: null }
+  const user = data?.session?.user
+  if (!user) { window.dispatchEvent(new CustomEvent('bap:auth')); return 'signin' }
+  try {
+    const res = await fetch(`${API}/api/create-portal`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${data.session.access_token}` },
+      body: JSON.stringify({ userId: user.id }),
+    })
+    const { url } = await res.json().catch(() => ({}))
+    if (!url) return 'error'
+    if (!IS_APP) { window.location.href = url; return 'opened' }
+    const { Browser } = await import('@capacitor/browser')
+    await Browser.open({ url, presentationStyle: 'popover' })
+    return 'opened'
+  } catch { return 'error' }
+}
+
 // Back in the app: the webhook may land a moment after the sheet closes
 function collect(kind, uid) {
   let tries = 0

@@ -2577,6 +2577,14 @@ html.ag-sport-leaving .ag-sport-btn.is-on { color: var(--ag-muted); }
 .ag-career-act--shop { border-color: rgba(242,201,76,.55); color: #1a0f00; background: linear-gradient(135deg, #fde68a, #f2c94c 55%, #d4a017); box-shadow: 0 6px 18px rgba(242,201,76,.28); --ag-ink: rgba(0,0,0,.4); }
 .ag-career-act .ag-tab-badge { position: absolute; top: -6px; right: -4px; }
 .ag-pro-card-body { font-family: var(--ag-body); font-size: 13.5px; line-height: 1.5; color: var(--ag-text-2); margin: 4px 0 12px; }
+/* the profile's Pro card: crown, status, what it gives, then the vault and Stripe's billing page */
+.ag-pro-card-top { display: flex; align-items: center; gap: 12px; }
+.ag-pro-card-id { display: grid; gap: 2px; }
+.ag-pro-card-id b { font-family: var(--ag-display); font-weight: 400; font-size: 26px; line-height: 1; letter-spacing: .5px; color: #fff; }
+.ag-pro-card-id small { font-family: var(--ag-body); font-size: 12.5px; font-weight: 600; color: var(--ag-gold-hi); }
+.ag-pro-card-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.ag-pro-card-btns .ag-btn { height: 46px; font-size: 16px; letter-spacing: 1.5px; }
+.ag-pro-manage { height: 48px; font-size: 17px; }
 
 .ag-rewards-coins { display: inline-flex; align-items: center; gap: 5px; margin-left: 12px; font-family: var(--ag-display); font-size: 22px; color: #fde68a; }
 .ag-toast--coins .ag-toast-icon { color: #f2c94c; }

@@ -26,7 +26,7 @@ export function ProCard({ delay }) {
       <span className="pro-card-crown"><IconCrown size={22} /></span>
       <span className="pro-card-txt">
         <span className="pro-card-title">BAP PRO</span>
-        <span className="pro-card-sub">No ads · Pro Vault · 2x daily coins · Discord role</span>
+        <span className="pro-card-sub">+50% coins · Pro Vault included · No ads · Discord role</span>
       </span>
       <span className="pro-card-go">{PRO_PRICE.month}/MO</span>
     </button>

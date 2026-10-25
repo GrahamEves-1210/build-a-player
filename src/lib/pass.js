@@ -12,7 +12,7 @@
 // cosmetics in a pass are pass-only (cosmetics.js marks them; never sold for coins).
 // Keep the season ids and prices in step with server/server.js and functions/api.
 
-export const TIER_XP = 500
+export const TIER_XP = 1000
 export const TIERS = 30
 export const PASS_PRICE = '$8.99'
 

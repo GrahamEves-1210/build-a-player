@@ -22,7 +22,7 @@ import { SPRING_LAYOUT } from '../../lib/motion'
 import { useSheetDrag, sheetMotion, overlayMotion } from './Sheet'
 
 // The shop (app): coins buy avatars, name colors and effects, nameplates and
-// victory effects/sounds. BAP Pro opens the Pro Vault. Opened from Home (the
+// victory effects/sounds. BAP Pro includes the Pro Vault. Opened from Home (the
 // coin pill) and Profile; lives over everything like Daily and Cards.
 
 const nav = to => window.dispatchEvent(new CustomEvent('bap:nav', { detail: to }))
@@ -260,6 +260,7 @@ function ItemCard({ item, deal, equipped, onOpen, delay = 0, name }) {
             : item.pass ? <span className="sh-owned" style={{ color: 'var(--ag-muted)' }}>TIER {item.pass.tier}</span>
             : item.streak ? <span className="sh-owned" style={{ color: 'var(--ag-muted)' }}>DAY {item.streak}</span>
             : item.cup ? <span className="sh-owned" style={{ color: 'var(--ag-muted)' }}>TOP 10</span>
+            : item.pro ? <span className="sh-owned" style={{ color: 'var(--ag-gold-hi)' }}>WITH PRO</span>
             : <span className="sh-price"><span className="coin-ico coin-ico--sm" />{price.toLocaleString()}{deal != null && <s>{item.price.toLocaleString()}</s>}</span>}
         </span>
       </span>
@@ -335,7 +336,7 @@ function ItemSheet({ id, onClose, name, onNeedCoins }) {
           <>
             <div className="sh-lock"><IconLock size={14} /> {lock.toUpperCase()}</div>
             {ach && <div className="sh-hint">{ach.desc} · {achNow.toLocaleString()}/{ach.goal.toLocaleString()} <button className="ag-chip" style={{ marginLeft: 6 }} onClick={() => { onClose(); nav('achievements') }}>VIEW</button></div>}
-            {item.pro && <div className="sh-hint">The Pro Vault is open to <b>BAP Pro</b> members. <button className="ag-chip" style={{ marginLeft: 6 }} onClick={() => { onClose(); nav('pro') }}>SEE PRO</button></div>}
+            {item.pro && <div className="sh-hint">Included with <b>BAP Pro</b>: every Pro Vault look is yours while you're Pro. <button className="ag-chip" style={{ marginLeft: 6 }} onClick={() => { onClose(); nav('pro') }}>SEE PRO</button></div>}
             {item.cup && <div className="sh-hint">Finish a week of Daily Challenges in the Weekly Cup's top 10. <button className="ag-chip" style={{ marginLeft: 6 }} onClick={() => { onClose(); nav('daily') }}>DAILY</button></div>}
             {item.streak && <div className="sh-hint">Log in {item.streak} days in a row, then claim it on the Daily tab. <button className="ag-chip" style={{ marginLeft: 6 }} onClick={() => { onClose(); nav('daily') }}>DAILY</button></div>}
             {item.pass && <div className="sh-hint">On the Builder Pass {item.pass.track === 'premium' ? 'premium track' : 'free track'}, tier {item.pass.tier}. Not sold for coins. <button className="ag-chip" style={{ marginLeft: 6 }} onClick={() => { onClose(); nav('pass') }}>OPEN THE PASS</button></div>}
@@ -474,7 +475,7 @@ export default function AppShop({ onClose, tab: initialTab = 'featured' }) {
               <div className="sh-vault-head">
                 <span>
                   <span className="sh-vault-title"><IconCrown size={18} /> Pro Vault</span>
-                  <span className="sh-vault-sub" style={{ display: 'block' }}>{pro ? 'Your BAP Pro membership opens these.' : 'Exclusive items for BAP Pro members.'}</span>
+                  <span className="sh-vault-sub" style={{ display: 'block' }}>{pro ? 'Included with your BAP Pro: they\'re all yours.' : 'Included with BAP Pro: all four, while you\'re a member.'}</span>
                 </span>
               </div>
               {!pro && <div style={{ marginBottom: 10 }}><ProCard /></div>}

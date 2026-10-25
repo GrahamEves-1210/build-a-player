@@ -301,7 +301,7 @@ function makeSnap() {
   const xp = totalXp()
   const lvl = levelInfo(xp)
   const claimable = ACHIEVEMENTS.filter(a => S.ach[a.id] && !S.achClaimed[a.id]).length
-  return { ...S, xp, lvl, signedIn: !!uid, user, lastSeason, pro: isPro(), claimable, freeReady: S.shopFree !== dayKey(), bp: passInfo(), boosts: Object.fromEntries(Object.keys(BOOSTS).map(k => [k, boostLeft(k)])) }
+  return { ...S, equip: wearing(), xp, lvl, signedIn: !!uid, user, lastSeason, pro: isPro(), claimable, freeReady: S.shopFree !== dayKey(), bp: passInfo(), boosts: Object.fromEntries(Object.keys(BOOSTS).map(k => [k, boostLeft(k)])) }
 }
 function emit(quiet = false) {
   startPass()
@@ -672,9 +672,9 @@ function onSeason(e) {
   if (d.daily) st.daily++
   // Squad Builder: its seasons, its titles, and a squad with every spot built
   if (d.mode === 'squad') { st.sqSeasons++; if (d.champion) st.sqTitles++; if (d.full) st.sqFull = 1 }
-  // Coin Rush: the season's coins again
+  // Coin Rush doubles the season's coins; BAP Pro adds half again
   const coins = seasonCoins(d)
-  const rush = walletOpen() && rushOn() ? coins : 0
+  const rush = rushed(coins) - coins
   earn(coins + rush, null, true)
   const missionsBefore = (S.day?.missions ?? []).map(m => m.n)
   bumpMissions('season', d)
@@ -749,7 +749,8 @@ export async function syncRating(id = uid) {
 function syncRatingSoon() { setTimeout(() => syncRating(), 4000); setTimeout(() => syncRating(), 12000) }
 
 // A Compete pool finished: your place → stats, rating, XP and coins
-export const COMPETE_REWARDS = { 1: [80, 30], 2: [50, 18], 3: [35, 10], 4: [20, 5], 5: [15, 2] }
+// [xp, coins] by place: a pool pays at least what a solo season does for the same time
+export const COMPETE_REWARDS = { 1: [80, 60], 2: [50, 40], 3: [35, 25], 4: [20, 15], 5: [15, 10] }
 // (the amounts: lib/rating.js; the live server books the real rating and syncRating brings it in)
 export { FORFEIT_RATING }
 function onCompete(e) {
@@ -1022,7 +1023,10 @@ function earn(n, label, quiet = false) {
 }
 
 export const isPro = () => { try { return localStorage.getItem('bap_subscribed') === '1' } catch { return false } }
-export const owns = id => { const i = itemById(id); return !!i && (i.free || !!S.owned[id] || !!S.owned[OWNED_AS[id]]) }
+// BAP Pro includes the Pro Vault: its looks are yours while Pro is on (bought ones stay yours)
+export const owns = id => { const i = itemById(id); return !!i && (i.free || (i.pro && isPro()) || !!S.owned[id] || !!S.owned[OWNED_AS[id]]) }
+// What's worn: a look the account doesn't own (a Pro Vault look after Pro ends) shows the default
+const wearing = () => Object.fromEntries(Object.entries(S.equip || {}).map(([slot, id]) => [slot, id && !owns(id) ? (DEFAULTS[slot] ?? null) : id]))
 
 // Today's deals: three items, 30% off, the same for everyone
 export function dealsFor(key = dayKey()) {
@@ -1078,8 +1082,8 @@ export function equip(slot, id) {
 }
 // What other players see (chat, lobbies): the look, not the sounds
 // Everything other players see of you: the look and the victory (live rooms send it; accounts.cos keeps it)
-export const myCosmetics = () => ({ avatar: S.equip.avatar ?? null, nameColor: S.equip.nameColor ?? null, nameFx: S.equip.nameFx ?? null, plate: S.equip.plate ?? null, winFx: S.equip.winFx || DEFAULTS.winFx, winSound: S.equip.winSound || DEFAULTS.winSound, entrance: S.equip.entrance ?? null })
-export const myVictory = () => ({ fx: S.equip.winFx || DEFAULTS.winFx, sound: S.equip.winSound || DEFAULTS.winSound })
+export const myCosmetics = () => { const w = wearing(); return ({ avatar: w.avatar ?? null, nameColor: w.nameColor ?? null, nameFx: w.nameFx ?? null, plate: w.plate ?? null, winFx: w.winFx || DEFAULTS.winFx, winSound: w.winSound || DEFAULTS.winSound, entrance: w.entrance ?? null }) }
+export const myVictory = () => { const w = wearing(); return ({ fx: w.winFx || DEFAULTS.winFx, sound: w.winSound || DEFAULTS.winSound }) }
 
 // Join the Discord: one-time coins once the account has Discord linked
 // (linking it also joins the server — lib/discord.js finishDiscordSignIn)
@@ -1225,7 +1229,8 @@ export const boostLeftMs = k => Math.max(0, (S[TIMED[k]?.key] || 0) - Date.now()
 export const rushLeftMs = () => boostLeftMs('rush')
 const rushOn = () => rushLeftMs() > 0
 const xpOn = () => boostLeftMs('xp') > 0
-const rushed = n => (n && walletOpen() && rushOn() ? n * 2 : n)
+// coins from games: Coin Rush doubles them, BAP Pro adds half again (they stack)
+const rushed = n => (n && walletOpen() ? Math.round(n * (rushOn() ? 2 : 1) * (isPro() ? 1.5 : 1)) : n)
 const xped = n => (n && uid && xpOn() ? n * 2 : n)
 export function startBoost(k) {
   const t = TIMED[k]

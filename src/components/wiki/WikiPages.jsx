@@ -288,7 +288,7 @@ function ModesPage({ go }) {
         <li><b>Cards.</b> Every player you spin is collected into binder sets: franchises, positions, legends, decades.</li>
       </ul>
       <h2 id="pro">BAP Pro <span className="wk-tag">SUBSCRIPTION</span></h2>
-      <p>BAP Pro is an optional subscription. It removes ads on the website, doubles the free daily coins, opens the Pro Vault in the shop, and puts a Pro badge next to your name on the leaderboards. It's managed from your profile page.</p>
+      <p>BAP Pro is an optional subscription. It adds 50% to the coins from every game, includes the Pro Vault's four looks while you're a member, removes ads on the website, doubles the free daily coins, and puts a Pro badge next to your name on the leaderboards. It's managed from your profile page.</p>
       <h2 id="leaderboards">Leaderboards and profiles</h2>
       <ul>
         <li><b>Saving.</b> Sign in and every completed season is saved with its build, record, stats and awards. Sandbox seasons and guest seasons are not saved.</li>
