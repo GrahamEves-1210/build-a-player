@@ -155,6 +155,9 @@ async function run() {
       notifications: list.map(n => ({
         id: n.id, title: n.title, body: n.body,
         schedule: { at: new Date(n.at), allowWhileIdle: false },
+        // a few minutes late is fine: exact alarms would send Android 12+ to the "Alarms &
+        // reminders" settings screen (and need a Play Console declaration)
+        isExactNotification: false,
         extra: n.extra,
       })),
     })

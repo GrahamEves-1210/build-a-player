@@ -1,13 +1,13 @@
-import { IS_APP } from './platform'
+import { IS_APP, APP_PLATFORM } from './platform'
 
 // Where the app may sell. Coins and BAP Pro are bought through our own checkout (Stripe on
-// the web), and Apple allows a link out to that only on the US App Store; everywhere else a
-// digital purchase has to be Apple's in-app purchase. So in the app, the buy buttons and the
-// Pro Vault show only on the US App Store. The website sells everywhere.
+// the web), and Apple and Google allow a link out to that only in the US; everywhere else a
+// digital purchase has to be the store's own in-app purchase. So in the app, the buy buttons
+// and the Pro Vault show only in the US. The website sells everywhere.
 //
-// Which App Store: the account's storefront from StoreKit (through RevenueCat, once its iOS key
-// is in .env.app as VITE_RC_IOS_KEY). Until then, the phone's own settings stand in: an
-// American English language and a US time zone. Either way, only "US" sells.
+// Which country: on iPhone, the account's App Store from StoreKit (through RevenueCat, once its
+// iOS key is in .env.app as VITE_RC_IOS_KEY). Otherwise (and on Android) the phone's own
+// settings stand in: an American English language and a US time zone. Only "US" sells.
 
 const US_ZONES = /^(America\/(New_York|Chicago|Denver|Phoenix|Los_Angeles|Anchorage|Juneau|Sitka|Metlakatla|Nome|Yakutat|Adak|Boise|Detroit|Menominee|Indiana\/.+|Kentucky\/.+|North_Dakota\/.+)|Pacific\/Honolulu)$/
 
@@ -22,10 +22,10 @@ function fromSettings() {
 let country = null                       // the App Store's country (ISO 3166 alpha-2), once known
 const listeners = new Set()
 
-// Ask StoreKit once, at launch (a no-op on the website and without the RevenueCat key)
+// Ask StoreKit once, at launch (a no-op on the website, on Android and without the RevenueCat key)
 export async function loadStorefront() {
   const key = import.meta.env.VITE_RC_IOS_KEY
-  if (!IS_APP || !key) return
+  if (APP_PLATFORM !== 'ios' || !key) return
   try {
     const { Purchases } = await import('@revenuecat/purchases-capacitor')
     await Purchases.configure({ apiKey: key })

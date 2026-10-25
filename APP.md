@@ -76,18 +76,46 @@ Then choose the TestFlight build and **Submit for Review**.
   and `versionName` in `android/app/build.gradle`.
 - **New icon or splash:** replace the files in `assets/`, run `npm run assets:app` and commit.
 
-## Android (optional)
+## Android (Google Play)
 
-1. Create a Google Play Console account ($25) and create the app.
-2. Make an upload key and keep it safe. If you lose it, you have to ask Google to reset it:
-   ```
-   keytool -genkey -v -keystore build-a-player-upload.jks -alias upload -keyalg RSA -keysize 2048 -validity 10000
-   ```
-3. In Codemagic go to Code signing identities → Android keystores and upload it with the reference name **build_a_player_upload**.
-4. Run the **Android → Play Store bundle** workflow, then upload the `.aab` to Play Console → Testing → Internal testing.
+The upload key is already made: `F:\bap-keys\build-a-player-upload.jks`, with its password in
+`build-a-player-upload.txt` next to it. Back that folder up somewhere safe and never commit it.
+If it's ever lost, Google can reset the upload key (Play Console → Test and release → App integrity).
+
+1. **Play Console account** ($25) at [play.google.com/console](https://play.google.com/console).
+   A personal account has to run a closed test with at least 12 testers for 14 days in a row before
+   it can publish to everyone. An organization account (needs a D-U-N-S number) skips that.
+2. **Create the app:** name Build-A-Player, Game, Free.
+3. **Codemagic:** Code signing identities → Android keystores → upload the `.jks`, reference name
+   **build_a_player_upload**, keystore password and key password from the `.txt`, alias `upload`.
+4. **Build:** Start new build → branch `app` → **Android → Play Store bundle**. Download the `.aab`.
+5. **Upload:** Play Console → Test and release → Testing → Internal testing → Create release →
+   upload the `.aab` and keep Play App Signing on. Add yourself as a tester and install it from the
+   link. With a personal account, do the same under **Closed testing** with your 12+ testers and
+   wait out the 14 days.
+6. **App content** (Policy → App content):
+   - **Privacy policy:** `https://build-a-player.com/privacy`
+   - **Ads:** No (rewarded videos are off, `REWARDED_ON` in `lib/rewardedAd.js`). Change it to Yes when they go on.
+   - **App access:** some features need an account. Give a test username and password.
+   - **Target audience:** 13–15, 16–17 and 18+. Leave out under 13, or the Families rules apply.
+   - **Content rating questionnaire:** Game; users can talk to each other (team chat in online games);
+     digital purchases; no violence, gambling or sexual content.
+   - **Data safety:** collects email address, user ID, purchase history, in-game content (chat
+     messages, builds), app interactions, crash logs and diagnostics. All linked to the account, sent
+     encrypted, none sold or used for tracking. Users can request deletion. **Deletion URL:**
+     `https://build-a-player.com/privacy` (says how: Settings in the app, or the profile on the website).
+   - **Financial features / government / health:** none. **News app:** no.
+7. **Store listing:** short description (80 characters), full description, 512 × 512 icon,
+   1024 × 500 feature graphic, at least 2 phone screenshots (1080 × 1920 works). Category: Sports.
+8. **Purchases:** coins and BAP Pro go through the Stripe web checkout, shown only to US players
+   (`lib/storefront.js`, the phone's language and time zone). Google allows US apps to link out to
+   their own checkout; if a review objects, the fallback is Google Play Billing through RevenueCat.
+9. **Production:** after the testing, Production → Create release → the same build → Send for review.
+
+New versions: start another Codemagic build (the version code goes up by itself) and upload it the same way.
 
 ## Still to do
 
 - **Playwire in-app ads:** this needs their app SDK and ad unit IDs from your Playwire contact.
-- **Selling Plus in the app:** Apple and Google in-app purchase, for example through RevenueCat.
-  In the US, a link out to the web checkout is also allowed on iOS.
+- **Selling outside the US in the app:** Apple and Google in-app purchase, for example through RevenueCat.
+  In the US the app links out to the web checkout (iOS and Android).
