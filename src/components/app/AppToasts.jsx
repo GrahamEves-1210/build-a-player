@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { AnimatePresence, motion } from 'motion/react'
 import { takeToasts, useProgress, markLevelSeen, levelUnlocks, RARITIES } from '../../lib/progress'
@@ -11,15 +11,12 @@ import { RiseText } from './MotionText'
 // full-screen level-up moment. Fed by lib/progress.js events. A toast drops in,
 // fades up and out when it's done, and the ones under it glide into its place.
 
-const PackReveal = lazy(() => import('./PackReveal'))
 const ICONS = { streak: IconFlame, mission: IconTarget, card: IconCards, xp: IconStar, coins: IconCoin, ach: IconMedal, online: IconPodium }
 let nextId = 1
 
 export default function AppToasts() {
   const [items, setItems] = useState([])
   const timers = useRef(new Map())
-  const [pack, setPack] = useState(null)        // a card pack's cards, opened together (PackReveal)
-  const packBuf = useRef([]), packT = useRef(0)
 
   useEffect(() => {
     const push = t => {
@@ -32,13 +29,6 @@ export default function AppToasts() {
     const drain = () => takeToasts().forEach(push)
     const onCard = e => {
       const c = e.detail
-      // a pack's cards arrive together: they open as one pack, not a stack of toasts
-      if (c.pack) {
-        packBuf.current.push(c)
-        clearTimeout(packT.current)
-        packT.current = setTimeout(() => { const cards = packBuf.current.splice(0); if (cards.length) setPack(cards) }, 250)
-        return
-      }
       if (!c.isNew && c.rank < 2) return
       push({ kind: 'card', rank: c.rank, title: c.isNew ? `NEW CARD · ${RARITIES[c.rank].toUpperCase()}` : `${RARITIES[c.rank].toUpperCase()} PULL`, sub: c.name, ms: 2200 })
       sfx('card', c.rank)
@@ -51,12 +41,10 @@ export default function AppToasts() {
       window.removeEventListener('bap:toast', drain)
       window.removeEventListener('bap:card', onCard)
       timers.current.forEach(clearTimeout)
-      clearTimeout(packT.current)
     }
   }, [])
 
-  return <>
-    {createPortal(
+  return createPortal(
     <div className="ag-toasts" aria-live="polite">
       <AnimatePresence mode="popLayout">
         {items.map(t => {
@@ -78,9 +66,7 @@ export default function AppToasts() {
       </AnimatePresence>
     </div>,
     document.body,
-    )}
-    <AnimatePresence>{pack && <Suspense key="pack" fallback={null}><PackReveal cards={pack} onClose={() => setPack(null)} /></Suspense>}</AnimatePresence>
-  </>
+  )
 }
 
 export function LevelUp({ hold }) {

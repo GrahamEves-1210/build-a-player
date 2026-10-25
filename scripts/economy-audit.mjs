@@ -27,7 +27,7 @@ try {
       const c = rs.reduce((a, r) => a + (r.coins || 0), 0)
       const items = rs.filter(r => r.item).map(r => cos.itemById(r.item)).filter(Boolean)
       const itemValue = items.reduce((a, i) => a + (i.price || 0), 0)
-      console.log(`${s.id} ${track.padEnd(8)} ${rs.length} rewards · ${c.toLocaleString()} coins · ${items.length} items (worth ${itemValue.toLocaleString()} coins at shop prices) · packs ${rs.filter(r => r.pack).map(r => r.pack).join('+') || 0} cards · boosts ${rs.filter(r => r.boost || r.rush || r.hot || r.heal || r.freeze).length}`)
+      console.log(`${s.id} ${track.padEnd(8)} ${rs.length} rewards · ${c.toLocaleString()} coins · ${items.length} items (worth ${itemValue.toLocaleString()} coins at shop prices) · boosts ${rs.filter(r => r.boost || r.rush || r.hot || r.heal || r.freeze).length}`)
     }
   }
 

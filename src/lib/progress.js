@@ -851,8 +851,8 @@ function onSpin(e) {
   if (!cardsOpen()) { emit(); return }
   addCard(d)
 }
-// A card into the binder (a spin, or a pack from the Builder Pass)
-function addCard({ sport, pos, mode, player, pool, pack = false }) {
+// A card into the binder (from a spin)
+function addCard({ sport, pos, mode, player, pool }) {
   const k = cardKey(sport, pos, mode, player.name, player.team)
   const isNew = !S.cards[k]
   S.cards[k] = isNew ? [1, Date.now()] : [S.cards[k][0] + 1, S.cards[k][1]]
@@ -860,7 +860,7 @@ function addCard({ sport, pos, mode, player, pool, pack = false }) {
   bumpMissions('card', { isNew, rank })
   if (isNew) { S.bonusXp += 2 + rank * 3; tally(2 + rank * 3); earn([1, 2, 5, 15][rank] ?? 1, null, true); if (rank >= 3) S.stats.legends++ }
   emit()
-  window.dispatchEvent(new CustomEvent('bap:card', { detail: { isNew, rank, rarity: RARITIES[rank], name: player.name, team: player.team, sport, pos, mode, count: S.cards[k][0], pack } }))
+  window.dispatchEvent(new CustomEvent('bap:card', { detail: { isNew, rank, rarity: RARITIES[rank], name: player.name, team: player.team, sport, pos, mode, count: S.cards[k][0] } }))
 }
 
 // ── Rebuild season XP + cards from saved seasons (signed in) ─────────────────
@@ -1278,7 +1278,6 @@ export function claimPass(track, tier) {
   else if (r.rush) { invAdd('rush', 'got', r.rush); got = { rush: r.rush } }
   else if (r.hot) { invAdd('hot', 'got', r.hot); got = { hot: r.hot } }
   else if (r.heal) { invAdd('heal', 'got', r.heal); got = { heal: r.heal } }
-  else if (r.pack) { got = { pack: r.pack, min: r.min }; openPack(r.pack, r.min) }
   else if (r.item) {
     if (S.owned[r.item]) { const n = DUP_COINS[itemById(r.item)?.rarity ?? 0]; earn(n, 'Builder Pass', true); got = { item: r.item, dup: n } }
     else { S.owned[r.item] = Date.now(); got = { item: r.item } }
@@ -1286,22 +1285,6 @@ export function claimPass(track, tier) {
   S.walletAt = Date.now()
   emit()
   return got
-}
-// A card pack: random players from the game's pools (football and basketball, current and
-// all-time); `min` is the lowest rarity of the first card (1 Rare, 2 Epic, 3 Legend)
-const PACK_POS = { nfl: ['qb', 'rb', 'wr', 'te', 'db'], bucket: ['guard', 'big'] }
-async function openPack(n, min = 0) {
-  const { seasonKit } = await import('./verifyCore')
-  const pick = list => list[Math.floor(Math.random() * list.length)]
-  for (let k = 0; k < n; k++) {
-    const sport = Math.random() < 0.7 ? 'nfl' : 'bucket'
-    const pos = pick(PACK_POS[sport])
-    const mode = Math.random() < 0.3 ? 'all-time' : 'classic'
-    const pool = seasonKit(sport, pos, mode)?.pool ?? []
-    const fits = k === 0 && min ? pool.filter(p => rarityRank(pool, p) >= min) : pool
-    const player = pick(fits.length ? fits : pool)
-    if (player) addCard({ sport, pos, mode, player, pool, pack: true })
-  }
 }
 // Who bought which season's pass (pass_owners: a player can read their own rows)
 async function loadPassOwners(id = uid) {

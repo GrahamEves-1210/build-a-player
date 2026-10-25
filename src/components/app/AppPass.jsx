@@ -9,7 +9,7 @@ import { IS_APP } from '../../lib/platform'
 import { getUsername } from '../../lib/discord'
 import { sfx, haptic, claimFx } from '../../lib/juice'
 import { AvatarBadge, ItemPreview } from './NameTag'
-import { IconClose, IconLock, IconCheck, IconShield, IconBolt, IconCards, IconCrown, IconFlame } from './icons'
+import { IconClose, IconLock, IconCheck, IconShield, IconBolt, IconCrown, IconFlame } from './icons'
 import './pass.css'
 
 // The Builder Pass (lib/pass.js): the season's two reward tracks on the XP a player
@@ -33,7 +33,6 @@ export function rewardLabel(r) {
   if (r.rush) return `Coin Rush${r.rush > 1 ? ` ×${r.rush}` : ''}`
   if (r.hot) return `Hot Hand${r.hot > 1 ? ` ×${r.hot}` : ''}`
   if (r.heal) return `Quick Heal${r.heal > 1 ? ` ×${r.heal}` : ''}`
-  if (r.pack) return `${r.pack} cards${r.min ? ` · ${['', 'Rare', 'Epic', 'Legend'][r.min]}+` : ''}`
   return itemById(r.item)?.name ?? 'Item'
 }
 
@@ -46,11 +45,10 @@ export function rewardKind(r) {
   if (r.boost) return 'XP boost · 1 hr each'
   if (r.rush) return 'Coin boost · 3 hrs'
   if (r.hot || r.heal) return 'Career boost'
-  if (r.pack) return 'Card pack'
   return ''
 }
 // what a claim paid, for the label that floats off the button (an item has its own reveal)
-export const gotLabel = g => (g?.coins ? `+${g.coins.toLocaleString()} COINS` : g?.item ? '' : g?.pack ? `+${g.pack} CARDS` : g?.freeze ? '+1 FREEZE' : g?.boost ? '2X XP' : g?.rush ? 'COIN RUSH' : g?.hot ? 'HOT HAND' : g?.heal ? 'QUICK HEAL' : '')
+export const gotLabel = g => (g?.coins ? `+${g.coins.toLocaleString()} COINS` : g?.item ? '' : g?.freeze ? '+1 FREEZE' : g?.boost ? '2X XP' : g?.rush ? 'COIN RUSH' : g?.hot ? 'HOT HAND' : g?.heal ? 'QUICK HEAL' : '')
 // "2h 14m"
 const fmtLeft = ms => { const m = Math.ceil(ms / 60000); return m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m}m` }
 
@@ -61,7 +59,6 @@ export function RewardArt({ r, name }) {
   if (r.rush) return <span className="bp-art bp-art--rush"><span className="coin-ico" /><i>2x</i></span>
   if (r.hot) return <span className="bp-art bp-art--hot"><IconFlame size={20} /></span>
   if (r.heal) return <span className="bp-art bp-art--heal"><b>+</b></span>
-  if (r.pack) return <span className="bp-art bp-art--pack"><IconCards size={20} /></span>
   const item = itemById(r.item)
   if (!item) return <span className="bp-art" />
   if (item.slot === 'avatar') return <span className="bp-art bp-art--item"><AvatarBadge cos={{ avatar: item.id }} name={name} size={34} /></span>
@@ -199,7 +196,7 @@ export default function AppPass({ onClose }) {
             <span className="bp-buy-txt">
               <span className="ag-eyebrow">PREMIUM TRACK</span>
               <b>{value.items} pass-only items · {value.coins.toLocaleString()} coins</b>
-              <small>Plus card packs, Coin Rushes and boosts. Everything you've already reached unlocks at once.</small>
+              <small>Plus coins, Coin Rushes and boosts. Everything you've already reached unlocks at once.</small>
             </span>
             <button className="ag-btn ag-pro-cta bp-buy-btn" onClick={buy} disabled={busy}>{busy ? 'OPENING…' : `UNLOCK · ${PASS_PRICE}`}</button>
             <span className="bp-fine">{IS_APP ? 'Secure Stripe checkout on build-a-player.com. ' : ''}One payment for {s.name}, no subscription.</span>

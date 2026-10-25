@@ -5749,33 +5749,3 @@ html:is(.is-app, .app-look) .auth-error { animation: auth-err .48s cubic-bezier(
   100% { transform: none; }
 }
 html.bap-reduce-motion .auth-error { animation: none !important; }
-
-/* ═══ CARD PACK (PackReveal.jsx): dealt face down into a fan, then each turns over ═══ */
-.pk {
-  position: fixed; inset: 0; z-index: 1260;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
-  padding: 20px 16px calc(var(--safe-bottom) + 24px);
-  background: radial-gradient(circle at 50% 45%, color-mix(in srgb, var(--ag-a1) 16%, transparent), transparent 64%), rgba(2,4,3,.95);
-}
-.pk-eyebrow { font-size: 16px; letter-spacing: 5px; color: var(--ag-a1); }
-.pk-hand { position: relative; width: 100%; height: 210px; display: grid; place-items: center; }
-.pk-slot { position: absolute; width: var(--pk-w, 104px); aspect-ratio: 5 / 7; perspective: 700px; }
-.pk-flip { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; transform: rotateY(180deg); transition: transform .55s cubic-bezier(.3, 1.3, .5, 1); }
-.pk-flip.is-up { transform: rotateY(0deg); }
-.pk-front, .pk-back { position: absolute; inset: 0; -webkit-backface-visibility: hidden; backface-visibility: hidden; }
-.pk-front.ag-ct { animation: none; }   /* in the collection the cards rise in; here the deal is the entrance */
-.pk-back {
-  transform: rotateY(180deg); display: grid; place-items: center; border-radius: 12px;
-  background: radial-gradient(70% 55% at 50% 45%, color-mix(in srgb, var(--ag-a1) 22%, transparent), transparent 70%), linear-gradient(160deg, #10201a, #060908);
-  border: 1.5px solid color-mix(in srgb, var(--ag-a1) 55%, transparent);
-  box-shadow: 0 8px 18px rgba(0,0,0,.45);
-}
-.pk-back img { width: 64%; height: auto; opacity: .9; }
-.pk-slot.is-legend .pk-front { animation: pk-glow 1.8s ease-in-out infinite; }
-@keyframes pk-glow { 0%, 100% { box-shadow: 0 0 18px rgba(245,220,138,.55), 0 8px 18px rgba(0,0,0,.4); } 50% { box-shadow: 0 0 34px rgba(245,220,138,.9), 0 8px 18px rgba(0,0,0,.4); } }
-.pk-new { position: absolute; top: 6px; right: 6px; padding: 1px 5px 0; border-radius: 5px; font-family: var(--ag-font); font-size: 10.5px; letter-spacing: 1.2px; color: var(--ag-on); background: var(--ag-grad); }
-.pk-sum { min-height: 22px; font-family: var(--ag-font); font-size: 18px; letter-spacing: 2.5px; color: #fff; opacity: 0; transition: opacity .3s; }
-.pk-sum.is-on { opacity: 1; }
-.pk-btn { min-width: 170px; }
-html.bap-reduce-motion .pk-flip { transition: none; }
-html.bap-reduce-motion .pk-slot.is-legend .pk-front { animation: none; box-shadow: 0 0 26px rgba(245,220,138,.75); }
