@@ -72,9 +72,9 @@ export const NBA_BIG_PLAYERS = [
     attrs: { jumpShot: 5, finishing: 6, rebounding: 6, playmaking: 5, interiorDefense: 6, speed: 5, bounce: 4, size: 7, basketballIQ: 4, clutch: 5 } },
   { name: 'Daniel Gafford', short: 'Gafford', team: 'DAL', starter: false, captain: false, number: 21, height: 83, weight: 234, wingspan: 87, skin: '#cc9278', position: 'C', faceCenter: [50, 40],
     attrs: { jumpShot: 1, finishing: 7, rebounding: 8, playmaking: 2, interiorDefense: 7, speed: 4, bounce: 5, size: 7, basketballIQ: 4, clutch: 3 } },
-  { name: 'Morez Johnson Jr.', short: 'Jr.', team: 'DAL', starter: false, captain: false, number: 14, height: 84, weight: 235, wingspan: 87, skin: '#925f4b', position: 'PF', faceCenter: [51, 43],
+  { name: 'Morez Johnson Jr.', short: 'Johnson Jr.', team: 'DAL', starter: false, captain: false, number: 14, height: 84, weight: 235, wingspan: 87, skin: '#925f4b', position: 'PF', faceCenter: [51, 43],
     attrs: { jumpShot: 3, finishing: 5, rebounding: 5, playmaking: 2, interiorDefense: 4, speed: 3, bounce: 3, size: 7, basketballIQ: 3, clutch: 3 } },
-  { name: 'Dereck Lively II', short: 'II', team: 'DAL', starter: false, captain: false, number: 2, height: 85, weight: 230, wingspan: 91, skin: '#ad8271', position: 'C', faceCenter: [50, 44],
+  { name: 'Dereck Lively II', short: 'Lively II', team: 'DAL', starter: false, captain: false, number: 2, height: 85, weight: 230, wingspan: 91, skin: '#ad8271', position: 'C', faceCenter: [50, 44],
     attrs: { jumpShot: 1, finishing: 6, rebounding: 8, playmaking: 2, interiorDefense: 7, speed: 1, bounce: 2, size: 8, basketballIQ: 5, clutch: 3 } },
   { name: 'Dwight Powell', short: 'Powell', team: 'DAL', starter: false, captain: false, number: 7, height: 82, weight: 230, wingspan: 85, skin: '#d59d84', position: 'PF', faceCenter: [50, 41],
     attrs: { jumpShot: 1, finishing: 5, rebounding: 5, playmaking: 2, interiorDefense: 5, speed: 3, bounce: 3, size: 6, basketballIQ: 3, clutch: 3 } },
@@ -82,11 +82,11 @@ export const NBA_BIG_PLAYERS = [
     attrs: { jumpShot: 5, finishing: 6, rebounding: 6, playmaking: 5, interiorDefense: 6, speed: 4, bounce: 4, size: 6, basketballIQ: 5, clutch: 4 } },
 
   // ─── DEN ───────────────────────────────────────────────────────
-  { name: 'Marvin Bagley III', short: 'III', team: 'DEN', starter: false, captain: false, number: 35, height: 83, weight: 234, wingspan: 84, skin: '#bb7d5a', position: 'PF', faceCenter: [49, 41],
+  { name: 'Marvin Bagley III', short: 'Bagley III', team: 'DEN', starter: false, captain: false, number: 35, height: 83, weight: 234, wingspan: 84, skin: '#bb7d5a', position: 'PF', faceCenter: [49, 41],
     attrs: { jumpShot: 5, finishing: 5, rebounding: 5, playmaking: 5, interiorDefense: 4, speed: 3, bounce: 3, size: 6, basketballIQ: 4, clutch: 4 } },
   { name: 'Aaron Gordon', short: 'Gordon', team: 'DEN', starter: true, captain: false, number: 32, height: 80, weight: 235, wingspan: 84, skin: '#b97961', position: 'PF', faceCenter: [50, 47], faceAdjust: { dx: 0, dy: -1, scale: 1.1 },
     attrs: { jumpShot: 5, finishing: 8, rebounding: 4, playmaking: 5, interiorDefense: 5, speed: 6, bounce: 6, size: 5, basketballIQ: 7, clutch: 6 } },
-  { name: 'DaRon Holmes II', short: 'II', team: 'DEN', starter: false, captain: false, number: 14, height: 81, weight: 220, wingspan: 85, skin: '#a56142', position: 'PF', faceCenter: [50, 40],
+  { name: 'DaRon Holmes II', short: 'Holmes II', team: 'DEN', starter: false, captain: false, number: 14, height: 81, weight: 220, wingspan: 85, skin: '#a56142', position: 'PF', faceCenter: [50, 40],
     attrs: { jumpShot: 4, finishing: 5, rebounding: 5, playmaking: 2, interiorDefense: 6, speed: 3, bounce: 3, size: 6, basketballIQ: 4, clutch: 3 } },
   { name: 'Nikola Jokic', short: 'Jokic', team: 'DEN', starter: true, captain: true, number: 15, height: 83, weight: 284, wingspan: 87, skin: '#c48067', position: 'C', faceCenter: [50, 42], faceAdjust: { dx: 0, dy: 0, scale: 1.05 },
     attrs: { jumpShot: 9, finishing: 11, rebounding: 11, playmaking: 11, interiorDefense: 3, speed: 7, bounce: 3, size: 10, basketballIQ: 11, clutch: 9 } },
@@ -254,7 +254,7 @@ export const NBA_BIG_PLAYERS = [
     attrs: { jumpShot: 4, finishing: 6, rebounding: 9, playmaking: 2, interiorDefense: 8, speed: 2, bounce: 1, size: 11, basketballIQ: 6, clutch: 3 } },
   { name: 'Yang Hansen', short: 'Hansen', team: 'POR', starter: false, captain: false, number: 16, height: 86, weight: 240, wingspan: 87, skin: '#ac8067', position: 'C', faceCenter: [52, 49],
     attrs: { jumpShot: 2, finishing: 4, rebounding: 5, playmaking: 7, interiorDefense: 3, speed: 1, bounce: 2, size: 10, basketballIQ: 5, clutch: 3 } },
-  { name: 'Robert Williams III', short: 'III', team: 'POR', starter: true, captain: false, number: 35, height: 81, weight: 237, wingspan: 90, skin: '#5d4638', position: 'C', faceCenter: [52, 39],
+  { name: 'Robert Williams III', short: 'Williams III', team: 'POR', starter: true, captain: false, number: 35, height: 81, weight: 237, wingspan: 90, skin: '#5d4638', position: 'C', faceCenter: [52, 39],
     attrs: { jumpShot: 3, finishing: 4, rebounding: 7, playmaking: 2, interiorDefense: 10, speed: 3, bounce: 5, size: 7, basketballIQ: 6, clutch: 3 } },
 
   // ─── SAC ───────────────────────────────────────────────────────
@@ -272,7 +272,7 @@ export const NBA_BIG_PLAYERS = [
     attrs: { jumpShot: 3, finishing: 5, rebounding: 6, playmaking: 2, interiorDefense: 6, speed: 1, bounce: 2, size: 10, basketballIQ: 4, clutch: 6 } },
   { name: 'Jayden Quaintance', short: 'Quaintance', team: 'SAS', starter: false, captain: false, number: 6, height: 81, weight: 225, wingspan: 89, skin: '#8e5d48', position: 'PF', faceCenter: [49, 42],
     attrs: { jumpShot: 3, finishing: 5, rebounding: 5, playmaking: 2, interiorDefense: 5, speed: 3, bounce: 5, size: 9, basketballIQ: 3, clutch: 3 } },
-  { name: 'Tarris Reed Jr.', short: 'Jr.', team: 'SAS', starter: false, captain: false, number: 32, height: 82, weight: 245, wingspan: 88, skin: '#94604e', position: 'C', faceCenter: [49, 44],
+  { name: 'Tarris Reed Jr.', short: 'Reed Jr.', team: 'SAS', starter: false, captain: false, number: 32, height: 82, weight: 245, wingspan: 88, skin: '#94604e', position: 'C', faceCenter: [49, 44],
     attrs: { jumpShot: 2, finishing: 6, rebounding: 6, playmaking: 2, interiorDefense: 4, speed: 1, bounce: 2, size: 7, basketballIQ: 4, clutch: 5 } },
   { name: 'Victor Wembanyama', short: 'Wemby', team: 'SAS', starter: true, captain: true, number: 1, height: 88, weight: 210, wingspan: 96, skin: '#a66748', position: 'C', faceCenter: [51, 42], faceAdjust: { dx: -1, dy: -2, scale: 1 },
     attrs: { jumpShot: 7, finishing: 10, rebounding: 11, playmaking: 7, interiorDefense: 11, speed: 6, bounce: 4, size: 11, basketballIQ: 9, clutch: 7 } },
