@@ -71,7 +71,7 @@
   border: 1px solid var(--ag-line); background: var(--ag-panel); color: var(--ag-text);
   font: inherit; cursor: default;
   -webkit-tap-highlight-color: transparent;
-  transition: transform .15s ease-out, border-color .15s, background-color .15s, opacity .15s;
+  transition: transform var(--press), border-color .15s, background-color .15s, opacity .15s;
 }
 .bp-cell.is-empty { border-style: dashed; background: transparent; opacity: .35; }
 .bp-cell.is-ahead { opacity: .72; }
@@ -119,7 +119,7 @@
   background: radial-gradient(ellipse 70% 120% at 0% 50%, color-mix(in srgb, var(--ag-a1) 16%, transparent), transparent 70%), var(--ag-panel);
   color: var(--ag-text); font: inherit;
   -webkit-tap-highlight-color: transparent;
-  transition: transform .15s ease-out, border-color .15s;
+  transition: transform var(--press), border-color .15s;
 }
 .bp-card:active { transform: scale(.98); }
 .bp-card.is-premium { border-color: rgba(212,175,55,.5); }
@@ -141,7 +141,7 @@
   background: radial-gradient(ellipse 70% 120% at 0% 50%, rgba(212,175,55,.16), transparent 70%), rgba(20,16,6,.55);
   color: var(--ag-text); font: inherit;
   -webkit-tap-highlight-color: transparent;
-  transition: transform .15s ease-out;
+  transition: transform var(--press);
 }
 .pro-card:active { transform: scale(.98); }
 .pro-card-crown { color: var(--ag-gold-hi); display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: rgba(212,175,55,.14); }
@@ -161,7 +161,7 @@
   position: relative; display: grid; gap: 2px; justify-items: center; padding: 12px 8px 10px; border-radius: 14px;
   border: 1.5px solid var(--ag-line); background: rgba(255,255,255,.03); color: var(--ag-text); font: inherit; cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  transition: transform .15s ease-out, border-color .15s, background-color .15s;
+  transition: transform var(--press), border-color .15s, background-color .15s;
 }
 .ag-pro-plan:active { transform: scale(.96); }
 .ag-pro-plan.is-on { border-color: rgba(242,214,117,.85); background: rgba(212,175,55,.12); }
@@ -202,7 +202,7 @@
 .ps-num { justify-self: center; font-family: var(--ag-display); font-size: 14px; color: var(--ag-muted); font-variant-numeric: tabular-nums; }
 .ps-col.is-reached .ps-num { color: var(--ag-a1); }
 .ps-col.is-now .ps-num { color: #fff; }
-.ps-tile { position: relative; display: grid; justify-items: center; align-content: start; gap: 4px; min-height: 84px; padding: 7px 4px 6px; border-radius: 11px; border: 1px solid var(--ag-line); background: rgba(0,0,0,.25); color: var(--ag-text); font: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: transform .15s ease-out, border-color .15s; }
+.ps-tile { position: relative; display: grid; justify-items: center; align-content: start; gap: 4px; min-height: 84px; padding: 7px 4px 6px; border-radius: 11px; border: 1px solid var(--ag-line); background: rgba(0,0,0,.25); color: var(--ag-text); font: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: transform var(--press), border-color .15s; }
 .ps-tile.is-empty { border-style: dashed; background: transparent; opacity: .3; cursor: default; }
 .ps-tile--p { border-color: rgba(212,175,55,.28); }
 .ps-tile.is-locked .bp-art { filter: grayscale(.5) brightness(.7); }
@@ -223,7 +223,7 @@
 .bp-ends b { font-family: var(--ag-font); font-weight: 400; font-size: 22px; letter-spacing: 1.5px; line-height: 1; color: #fff; }
 .bp-ends small { font-family: var(--ag-font); font-size: 12px; letter-spacing: 1.5px; color: var(--ag-muted); }
 .bp-ends.is-soon b { color: #ffb27a; }
-.bp-rush-use { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; color: #1a0f00; background: linear-gradient(135deg, #fde68a, #f2c94c); border: 0; -webkit-tap-highlight-color: transparent; transition: transform .15s ease-out; }
+.bp-rush-use { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; color: #1a0f00; background: linear-gradient(135deg, #fde68a, #f2c94c); border: 0; -webkit-tap-highlight-color: transparent; transition: transform var(--press); }
 .bp-rush-use:active { transform: scale(.96); }
 .bp-cell-sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 

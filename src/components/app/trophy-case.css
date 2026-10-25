@@ -85,7 +85,7 @@ html.is-bucket .tc-row::before { background: linear-gradient(180deg, rgba(255,24
   padding: 0; border: 0; border-radius: 10px; background: none;
   color: inherit; font: inherit; cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  transition: transform .15s ease-out;
+  transition: transform var(--press);
 }
 .tc-item:disabled { cursor: default; }
 .tc-item:not(:disabled):active { transform: scale(.96); }
@@ -166,7 +166,7 @@ html.is-bucket .tc-row::before { background: linear-gradient(180deg, rgba(255,24
   display: grid; place-items: center; padding: 0; border-radius: 10px;
   border: 1px solid var(--ag-line-hi, rgba(149,213,178,.3)); background: rgba(255,255,255,.05);
   color: var(--ag-text, #EEF8F1); cursor: pointer;
-  transition: transform .15s ease-out, border-color .15s ease-out;
+  transition: transform var(--press), border-color .15s ease-out;
 }
 .tc-retry { height: 34px; padding: 0 16px; font-family: var(--ag-font, sans-serif); font-size: 16px; letter-spacing: 2px; }
 .tc-close { width: 34px; height: 34px; }
@@ -204,7 +204,7 @@ html.is-bucket .tc-row::before { background: linear-gradient(180deg, rgba(255,24
     radial-gradient(130% 55% at 0% 0%, color-mix(in srgb, var(--bc) 15%, transparent), transparent 62%),
     linear-gradient(180deg, rgba(255,255,255,.04), rgba(0,0,0,.25));
   color: var(--ag-text, #EEF8F1); font: inherit; text-align: left; cursor: pointer;
-  transition: transform .15s ease-out, border-color .15s ease-out;
+  transition: transform var(--press), border-color .15s ease-out;
 }
 .tc-card:not(:disabled):active { transform: scale(.98); }
 .tc-card.is-top { border-color: color-mix(in srgb, var(--ag-gold, #D4AF37) 70%, transparent); box-shadow: 0 0 18px rgba(212,175,55,.14), inset 0 1px 0 rgba(255,243,200,.12); }

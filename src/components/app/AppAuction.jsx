@@ -10,6 +10,7 @@ import { IconTrophy } from './icons'
 import { LinkPill } from './OnlineRecord'
 import { NameTag, AvatarBadge } from './NameTag'
 import { LiveLeaveButton } from './LiveLeave'
+import { RollingNumber } from './MotionText'
 
 // TRAIT AUCTION (lib/auction.js): the queue, the floor, the results.
 // The floor: who's bidding and what they've got left, the deck shuffling and its
@@ -266,7 +267,7 @@ export default function AppAuction({ au, posName, onHome, onPlayAgain }) {
         {st.stage === 'lot' && (
           <div className="au-clock">
             <div className="au-bar">{bidding ? <Drain key={`${st.n}:${st.last}`} end={bidEnd} total={(st.last ? RESET_SECS : m.bidSecs) * 1000} /> : <i />}</div>
-            <span className="au-high">{high ? <>HIGH <b>${high.amount}</b> · {highP ? <Name p={highP} me={mine} /> : '—'}</> : bidding ? <>OPENING BID <b>$1</b></> : au.now >= st.t0 + DECK_MS ? 'BIDDING OPENS…' : 'SHUFFLING…'}</span>
+            <span className="au-high">{high ? <>HIGH <b>$<RollingNumber value={high.amount} /></b> · {highP ? <Name p={highP} me={mine} /> : '—'}</> : bidding ? <>OPENING BID <b>$1</b></> : au.now >= st.t0 + DECK_MS ? 'BIDDING OPENS…' : 'SHUFFLING…'}</span>
             <b className={`au-call${call ? ' is-on' : ''}`} key={call ?? 'tick'}>{call === 'once' ? 'GOING ONCE' : call === 'twice' ? 'GOING TWICE' : bidding ? Math.ceil(left / 1000) : ''}</b>
           </div>
         )}

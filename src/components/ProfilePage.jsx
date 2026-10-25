@@ -110,24 +110,10 @@ import DeleteAccount from './DeleteAccount'
 import ConnectDiscord from './ConnectDiscord'
 import { getUsername } from '../lib/discord'
 import { IconGear, IconTrophy } from './app/icons'
+import { useCountUp as countUp } from '../lib/useCountUp'
 
-function useCountUp(target, duration = 900, enabled = true) {
-  const [val, setVal] = useState(0)
-  useEffect(() => {
-    if (!enabled || !target) return
-    const start = Date.now()
-    let raf
-    const tick = () => {
-      const p = Math.min((Date.now() - start) / duration, 1)
-      const eased = 1 - Math.pow(1 - p, 3)
-      setVal(Math.round(eased * target))
-      if (p < 1) raf = requestAnimationFrame(tick)
-    }
-    raf = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(raf)
-  }, [target, duration, enabled])
-  return val
-}
+// the shared count-up (lib/useCountUp.js); runs once there's a number to count to
+const useCountUp = (target, duration = 900, enabled = true) => countUp(target, { run: enabled && !!target, ms: duration })
 
 function getInitials(user) {
   const name = getUsername(user) || ''

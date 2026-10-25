@@ -4,6 +4,7 @@ import { guardLeave } from '../../lib/liveLock'
 import { sfx, haptic } from '../../lib/juice'
 import { switchSport } from './AppHome'
 import { IconPlay, IconHome, IconBolt, IconCrown, IconTrophy, IconProfile, IconCalendar, IconHoop, IconFootball, IconBasketball } from './icons'
+import { RollText } from './MotionText'
 
 // The dock's centre button.
 //   A tap does the same everywhere: it takes you Home (on Home it stays put); it
@@ -99,7 +100,7 @@ export default function PlayButton({ page, sport, onTap, lit, here = false }) {
           <span className="ag-play-glyph is-play"><IconPlay size={26} /></span>
           <span className="ag-play-glyph is-home"><IconHome size={24} /></span>
         </span>
-        <span className="ag-play-label">{inMode ? 'HOME' : 'PLAY'}</span>
+        <span className="ag-play-label"><RollText text={inMode ? 'HOME' : 'PLAY'} /></span>
       </button>
     </>
   )

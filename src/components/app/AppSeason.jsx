@@ -3,6 +3,8 @@ import { XpIco } from './GainIcons'
 import { createPortal } from 'react-dom'
 import { useProgress, levelInfo, markLevelSeen, missionDef, careerRings, levelUnlocks } from '../../lib/progress'
 import { IconRing, IconTarget, IconCheck, IconArrow } from './icons'
+import { useCountUp as countUp } from '../../lib/useCountUp'
+import { RiseText } from './MotionText'
 
 // App: the season reveal's extra beats, dropped into the existing sim pages —
 //   <WeekStrip>      the regular season as a strip of weeks lighting up W / L
@@ -67,7 +69,7 @@ export function RingCeremony({ team, title, score, trophy = '/trophy.webp', onCl
       <div className="ag-ring-rays" />
       <div className="ag-ring-inner" onClick={e => e.stopPropagation()}>
         <span className="ag-eyebrow">{team?.name ?? 'Your team'}</span>
-        <h2 className="ag-ring-title">{title}</h2>
+        <h2 className="ag-ring-title is-rise"><RiseText text={title} delay={150} step={40} /></h2>
         <img src={trophy} alt="" className="ag-ring-trophy" draggable={false} />
         {score && <span className="ag-ring-score">{score}</span>}
         <span className="ag-ring-count"><IconRing size={20} /> RING #{Math.max(1, rings)}</span>
@@ -78,17 +80,8 @@ export function RingCeremony({ team, title, score, trophy = '/trophy.webp', onCl
   )
 }
 
-function useCount(target, run, ms = 900) {
-  const [v, setV] = useState(0)
-  useEffect(() => {
-    if (!run) return
-    let raf, t0
-    const step = now => { t0 ??= now; const t = Math.min(1, (now - t0) / ms); setV(Math.round(target * (1 - Math.pow(1 - t, 3)))); if (t < 1) raf = requestAnimationFrame(step) }
-    raf = requestAnimationFrame(step)
-    return () => cancelAnimationFrame(raf)
-  }, [target, run, ms])
-  return v
-}
+// the shared count-up (lib/useCountUp.js)
+const useCount = (target, run, ms = 900) => countUp(target, { run, ms })
 
 // `result` is the season on screen — the panel only shows that season's rewards
 export function SeasonRewards({ result }) {

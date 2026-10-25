@@ -7,6 +7,8 @@ import { whenStill } from '../../lib/userScroll'
 import { valToGrade } from '../../utils/simulation'
 import { IconArrow } from './icons'
 import { IS_APP } from '../../lib/platform'
+import { useCountUp as countUp } from '../../lib/useCountUp'
+import { Scramble } from './MotionText'
 
 // App: Spin and Build are one continuous field. The spin wheel sits on top and
 // your player stands right below it (the head peeks up under the SPIN button);
@@ -415,22 +417,8 @@ export function StackSeam({ build, types, onFlip }) {
   )
 }
 
-function useCountUp(target, run, ms = 1100) {
-  const [v, setV] = useState(0)
-  useEffect(() => {
-    if (!run) { setV(0); return }
-    let raf, start
-    const step = now => {
-      start ??= now
-      const t = Math.min(1, (now - start) / ms)
-      setV(Math.round(target * (1 - Math.pow(1 - t, 3))))
-      if (t < 1) raf = requestAnimationFrame(step)
-    }
-    raf = requestAnimationFrame(step)
-    return () => cancelAnimationFrame(raf)
-  }, [target, run, ms])
-  return v
-}
+// the shared count-up (lib/useCountUp.js), back to 0 whenever it's hidden
+const useCountUp = (target, run, ms = 1100) => countUp(target, { run, ms, reset: true })
 
 // The build-complete moment: the grades pop into the card one by one while the
 // OVR ring fills, then the tier stamps down on the impact of the stinger.
@@ -484,7 +472,7 @@ export function BuildComplete({ complete, ovr, name = null, label = 'OVR', build
           <span className="ag-bc-lbl">{label}</span>
         </div>
         {/* the build's own name (Boom or Bust, Gunslinger…), colored by its tier */}
-        <div className={`ag-bc-tier${String(name ?? '').length > 14 ? ' is-long' : ''}`}>{name ?? tier.name}</div>
+        <div className={`ag-bc-tier${String(name ?? '').length > 14 ? ' is-long' : ''}`}><Scramble text={name ?? tier.name} delay={250} /></div>
         {chips.length > 0 && (
           // full trait names (no abbreviations), two to a row; an odd count (football's 9) as one list
           <div className={`ag-bc-grades${chips.length % 2 ? ' is-list' : ''}`}>

@@ -16,6 +16,10 @@ import { NameTag, AvatarBadge, ItemPreview } from './NameTag'
 import { IconClose, IconLock, IconGift, IconCrown, IconPlay, IconArrow, IconStar, IconDiscord, IconBolt, IconFlame, IconShield } from './icons'
 import { ProCard } from './Promos'
 import PassStrip from './PassStrip'
+import { RollingNumber } from './MotionText'
+import { AnimatePresence, motion } from 'motion/react'
+import { SPRING_LAYOUT } from '../../lib/motion'
+import { useSheetDrag, sheetMotion, overlayMotion } from './Sheet'
 
 // The shop (app): coins buy avatars, name colors and effects, nameplates and
 // victory effects/sounds. BAP Pro opens the Pro Vault. Opened from Home (the
@@ -25,25 +29,10 @@ const nav = to => window.dispatchEvent(new CustomEvent('bap:nav', { detail: to }
 const TABS = [{ id: 'featured', label: 'Featured' }, { id: 'coins', label: 'Get Coins' }, { id: 'boosts', label: 'Boosts' }, ...SLOTS.map(s => ({ id: s.id, label: s.label }))]
 const fmtLeft = ms => { const h = Math.floor(ms / 3600000), m = Math.floor((ms % 3600000) / 60000); return h ? `${h}h ${m}m` : `${m}m` }
 
-function useCountTo(target, ms = 600) {
-  const [v, setV] = useState(target)
-  const from = useRef(target)
-  useEffect(() => {
-    const a = from.current, b = target
-    if (a === b) return
-    let raf, t0
-    const step = now => { t0 ??= now; const t = Math.min(1, (now - t0) / ms); setV(Math.round(a + (b - a) * (1 - Math.pow(1 - t, 3)))); if (t < 1) raf = requestAnimationFrame(step); else from.current = b }
-    raf = requestAnimationFrame(step)
-    return () => cancelAnimationFrame(raf)
-  }, [target, ms])
-  return v
-}
-
 const signIn = () => window.dispatchEvent(new CustomEvent('bap:auth'))
 
 export function CoinPill({ onClick, className = '' }) {
   const p = useProgress()
-  const n = useCountTo(p.coins ?? 0)
   // every hook before the sign-in branch: signing in flips it mid-session
   const [bump, setBump] = useState(false)
   const [spent, setSpent] = useState(null)   // { n, at }: a spend, shown as "−n" dropping off the pill
@@ -64,7 +53,7 @@ export function CoinPill({ onClick, className = '' }) {
   }
   return (
     <button className={`coin-pill${bump ? ' is-bump' : ''}${className ? ` ${className}` : ''}`} onClick={onClick ?? (() => nav('shop:coins'))} aria-label={`${p.coins ?? 0} coins, get more`}>
-      <span className="coin-ico" aria-hidden="true" />{n.toLocaleString()}
+      <span className="coin-ico" aria-hidden="true" /><RollingNumber value={p.coins ?? 0} />
       {spent && <span key={spent.at} className="coin-pill-spend" aria-hidden="true">−{spent.n.toLocaleString()}</span>}
     </button>
   )
@@ -93,7 +82,7 @@ function VideoCoins() {
           <span className="sh-free-title">WATCH A VIDEO</span>
           <span className="sh-free-sub">{left > 0 ? `A short video ad for ${AD_COINS} coins · ${left} of ${AD_MAX} left today` : `That's all ${AD_MAX} for today. More tomorrow.`}</span>
         </span>
-        <span className="sh-free-go">{!walletOpen() ? 'SIGN IN' : busy ? '…' : left > 0 ? `+${AD_COINS}` : 'DONE'}</span>
+        <span className="sh-free-go">{!walletOpen() ? 'SIGN IN' : busy ? <span className="bt-dots bt-dots--btn" aria-label="Working"><i /><i /><i /></span> : left > 0 ? `+${AD_COINS}` : 'DONE'}</span>
       </button>
       {note && <p className="cpk-note">{note}</p>}
     </div>
@@ -135,7 +124,7 @@ function CoinPacks({ p }) {
             <span className="cpk-art" aria-hidden="true"><img src={PACK_ART[i] ?? PACK_ART.at(-1)} alt="" draggable={false} /></span>
             <b className="cpk-n">{pack.coins.toLocaleString()}</b>
             <span className="cpk-lbl">COINS</span>
-            <span className="cpk-price">{busy === pack.id ? '…' : `$${pack.usd.toFixed(2)}`}</span>
+            <span className="cpk-price">{busy === pack.id ? <span className="bt-dots bt-dots--btn" aria-label="Working"><i /><i /><i /></span> : `$${pack.usd.toFixed(2)}`}</span>
           </button>
         ))}
       </div>
@@ -184,7 +173,7 @@ function DiscordCoins({ p }) {
           <span className="sh-free-title">JOIN THE DISCORD</span>
           <span className="sh-free-sub">{linked ? `You're in — claim your ${DISCORD_COINS} coins` : `Connect Discord, join the server, get ${DISCORD_COINS} coins`}</span>
         </span>
-        <span className="sh-free-go">{!p.signedIn ? 'SIGN IN' : linked ? 'CLAIM' : busy ? '…' : 'JOIN'}</span>
+        <span className="sh-free-go">{!p.signedIn ? 'SIGN IN' : linked ? 'CLAIM' : busy ? <span className="bt-dots bt-dots--btn" aria-label="Working"><i /><i /><i /></span> : 'JOIN'}</span>
       </button>
       {err && <p className="cpk-note">{err}</p>}
     </div>
@@ -298,6 +287,7 @@ function ItemSheet({ id, onClose, name, onNeedCoins }) {
   const [bought, setBought] = useState(false)
   const [justEquipped, setJustEquipped] = useState(false)
   const buyRef = useRef(null)
+  const { startDrag, dragProps, tap } = useSheetDrag('bottom', onClose)   // drag the grabber down to close
   if (!item) return null
   const mine = owns(item.id)
   const lock = mine ? null : lockReason(item.id)
@@ -320,9 +310,9 @@ function ItemSheet({ id, onClose, name, onNeedCoins }) {
   const ach = item.ach ? achById(item.ach) : null
   const achNow = ach ? Math.min(ach.goal, achStats()[ach.metric] ?? 0) : 0
   return createPortal(
-    <div className="sh-sheet-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="sh-sheet" style={{ '--rar': RARITY[item.rarity].color }} role="dialog" aria-label={item.name}>
-        <div className="sh-grab" onClick={onClose} />
+    <motion.div className="sh-sheet-overlay" {...overlayMotion} onClick={e => e.target === e.currentTarget && onClose()}>
+      <motion.div className="sh-sheet" style={{ '--rar': RARITY[item.rarity].color }} role="dialog" aria-label={item.name} {...sheetMotion('bottom')} {...dragProps}>
+        <div className="sh-grab" onClick={tap(onClose)} onPointerDown={startDrag} />
         <div className={`sh-sheet-stage${justEquipped ? ' is-flash' : ''}`} onClick={isFx ? preview : undefined}>
           {isFx
             ? <span style={{ display: 'grid', placeItems: 'center', gap: 10 }}><ItemPreview item={item} big /><span className="ag-chip"><IconPlay size={12} /> TAP TO {item.slot === 'winSound' ? 'PLAY' : 'PREVIEW'}</span></span>
@@ -360,7 +350,7 @@ function ItemSheet({ id, onClose, name, onNeedCoins }) {
               : <div className="sh-hint">You have <b>{(p.coins ?? 0).toLocaleString()}</b> coins.</div>}
           </>
         )}
-      </div>
+      </motion.div>
       {bought && (
         <div className="sh-bought" style={{ '--rar': RARITY[item.rarity].color }}>
           <span className="sh-bought-rays" aria-hidden="true" />
@@ -371,7 +361,7 @@ function ItemSheet({ id, onClose, name, onNeedCoins }) {
           </div>
         </div>
       )}
-    </div>,
+    </motion.div>,
     document.body,
   )
 }
@@ -423,13 +413,14 @@ export default function AppShop({ onClose, tab: initialTab = 'featured' }) {
         </span>
       </div>
 
-      <div className="sh-tabs" role="tablist">
+      <motion.div layoutScroll className="sh-tabs" role="tablist">
         {tabs.map(t => (
           <button key={t.id} role="tab" aria-selected={tab === t.id} className={`sh-tab${tab === t.id ? ' is-on' : ''}`} onClick={() => { setTab(t.id); sfx('tap') }}>
+            {tab === t.id && <motion.span layoutId="shop-tab" className="sh-tab-pill" transition={SPRING_LAYOUT} />}
             {t.label}{SLOTS.some(s => s.id === t.id) && <b>{shown(t.id).filter(i => owns(i.id)).length}/{shown(t.id).length}</b>}
           </button>
         ))}
-      </div>
+      </motion.div>
 
       {tab === 'boosts' ? (
         <Boosts p={p} onNeedCoins={() => setTab(sells ? 'coins' : 'featured')} />
@@ -510,7 +501,7 @@ export default function AppShop({ onClose, tab: initialTab = 'featured' }) {
           </div>
         </div>
       )}
-      {open && <ItemSheet id={open} name={name} onClose={() => setOpen(null)} onNeedCoins={() => setTab(sells ? 'coins' : 'featured')} />}
+      <AnimatePresence>{open && <ItemSheet key={open} id={open} name={name} onClose={() => setOpen(null)} onNeedCoins={() => setTab(sells ? 'coins' : 'featured')} />}</AnimatePresence>
     </div>
   )
 }

@@ -23,6 +23,9 @@ import { getUsername } from '../../lib/discord'
 import { sellsHere, onStorefront } from '../../lib/storefront'
 import { IconClose, IconArrow, IconFlame, IconTrophy, IconStar, IconCrown, IconMedal, IconRing, IconCheck, IconShield, IconHelmet, IconSpin, IconCaret } from './icons'
 import './career-legacy.css'
+import { Scramble } from './MotionText'
+import { motion } from 'motion/react'
+import { SPRING_LAYOUT } from '../../lib/motion'
 
 // CAREER (football and basketball): the intro, the draft, the hub where a
 // career is played (your model and traits, the season, the player, the team,
@@ -318,7 +321,7 @@ function Draft({ c, setCareer }) {
             <div key={p.o} className={`cr-pick${p.you ? ' is-you' : ''}`}>
               <span className="cr-pick-n"><small>RD {p.round}</small>{p.slot}</span>
               <img src={logoFor(p.team)} alt="" />
-              <span className="cr-pick-txt">{p.you ? <b>{c.name} · {POS_LABEL[c.pos]}</b> : <><b>{p.player}</b><small>{p.pos}</small></>}</span>
+              <span className="cr-pick-txt">{p.you ? <b><Scramble text={`${c.name} · ${POS_LABEL[c.pos]}`} ms={900} /></b> : <><b><Scramble text={p.player} ms={500} /></b><small>{p.pos}</small></>}</span>
             </div>
           ))}
           {!landed && <div className="cr-pick is-wait"><span className="bt-dots"><i /><i /><i /></span> {picks[shown] ? `The ${nick(teamName(picks[shown].team))} are on the clock…` : ''}</div>}
@@ -536,7 +539,7 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
         {c.phase !== 'season' && c.dev.points > 0 && <div className="cr-devnote ag-pop"><IconStar size={14} /> <b>{c.dev.points}</b> development {c.dev.points === 1 ? 'point' : 'points'}: tap a trait to raise it.</div>}
         <div className="ag-seg cr-tabs" role="tablist">
           {[['season', c.phase === 'offseason' ? 'OFFSEASON' : 'SEASON'], ['player', 'PLAYER'], ['team', 'TEAM'], ['career', 'CAREER']].map(([id, label]) => (
-            <button key={id} role="tab" aria-selected={tab === id} className={tab === id ? 'is-on' : ''} onClick={() => { setTab(id); sfx('tap') }}>{label}</button>
+            <button key={id} role="tab" aria-selected={tab === id} className={tab === id ? 'is-on' : ''} onClick={() => { setTab(id); sfx('tap') }}>{tab === id && <motion.span layoutId="seg-career" className="ag-seg-pill" transition={SPRING_LAYOUT} />}{label}</button>
           ))}
         </div>
 

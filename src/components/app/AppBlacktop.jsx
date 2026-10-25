@@ -21,6 +21,7 @@ import OnlineRecord, { RatingLine, LinkPill, ModeStats, TierChip } from './Onlin
 import { useProgress } from '../../lib/progress'
 import { makeMimics, isTester } from '../../lib/mimic'
 import { useLiveGames, useBlacktopWatch } from '../../lib/blacktopWatch'
+import { RollingNumber } from './MotionText'
 
 // BLACKTOP screens. The match itself lives in lib/blacktop.js (useBlacktop);
 // these only draw it: the lobby (pick a spot on a squad), the slim HUD over the
@@ -705,9 +706,9 @@ export function BlacktopGame({ bt, user, photoFor, onOpenChat, unread }) {
     <div className={`ag-screen ag-screen--bucket bt-game bt-live${watch ? ' is-watch' : ''}`}>
       {watch && <WatchBar bt={bt} />}
       <div className="bt-board">
-        <div className={`bt-board-side bt-t0${score[0] > score[1] ? ' is-lead' : ''}`}><span className="bt-board-name">{names[0]}{myTeam === 0 ? <IconStar size={11} className="bt-board-me" /> : null}</span><b>{score[0]}</b></div>
+        <div className={`bt-board-side bt-t0${score[0] > score[1] ? ' is-lead' : ''}`}><span className="bt-board-name">{names[0]}{myTeam === 0 ? <IconStar size={11} className="bt-board-me" /> : null}</span><b><RollingNumber value={score[0]} /></b></div>
         <div className="bt-board-mid"><span className="ag-eyebrow">FIRST TO 11</span><span className="bt-board-btns"><button className={`ag-chip${showBuilds ? ' is-on' : ''}`} onClick={() => setShowBuilds(v => !v)}>BUILDS</button></span></div>
-        <div className={`bt-board-side bt-t1${score[1] > score[0] ? ' is-lead' : ''}`}><span className="bt-board-name">{names[1]}{myTeam === 1 ? <IconStar size={11} className="bt-board-me" /> : null}</span><b>{score[1]}</b></div>
+        <div className={`bt-board-side bt-t1${score[1] > score[0] ? ' is-lead' : ''}`}><span className="bt-board-name">{names[1]}{myTeam === 1 ? <IconStar size={11} className="bt-board-me" /> : null}</span><b><RollingNumber value={score[1]} /></b></div>
       </div>
       {/* each player on court is their profile picture and username (the CPU fill-ins say CPU) */}
       {showBuilds && <SquadBuilds game={game} names={names} meVid={bt.me.vid} onClose={() => setShowBuilds(false)} />}

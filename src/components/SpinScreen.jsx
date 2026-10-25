@@ -63,12 +63,32 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, on
   const prevItemsRef = useRef(items)
   const onStopRef    = useRef(onStop)
   onStopRef.current  = onStop
+  const windowRef    = useRef(null)
+
+  // The drum: the rows tilt away from the middle like a slot machine's reel. Looks only:
+  // the spin, its timing and where it stops are all the track's position (posRef), untouched.
+  // Only the ~8 rows in the window are touched each frame.
+  const drum = (pos, transition = '') => {
+    const track = trackRef.current, win = windowRef.current
+    if (!track || !win) return
+    const h = win.clientHeight || 5 * ITEM_H
+    const off = track.offsetTop - (pos - CENTER * ITEM_H)    // where row 0 sits in the window
+    const first = Math.max(0, Math.floor(-off / ITEM_H) - 1)
+    const last = Math.min(track.children.length - 1, first + Math.ceil(h / ITEM_H) + 2)
+    for (let i = first; i <= last; i++) {
+      const el = track.children[i]
+      const d = (off + i * ITEM_H + ITEM_H / 2 - h / 2) / (h / 2)   // -1 top edge · 0 middle · 1 bottom edge
+      if (el.__dt !== transition) { el.style.transition = transition; el.__dt = transition }
+      el.style.transform = `rotateX(${(-d * 48).toFixed(2)}deg)`
+    }
+  }
 
   // After every React render, sync the DOM transform to posRef so React can
   // never overwrite our direct DOM updates with a stale value.
   useLayoutEffect(() => {
     if (trackRef.current) {
       trackRef.current.style.transform = `translate3d(0,${-(posRef.current - CENTER * ITEM_H)}px,0)`
+      drum(posRef.current)
     }
   })
 
@@ -85,6 +105,7 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, on
       if (trackRef.current) {
         trackRef.current.style.transition = 'none'
         trackRef.current.style.transform  = `translate3d(0,${-(posRef.current - CENTER * ITEM_H)}px,0)`
+        drum(posRef.current)
       }
       if (!spinning && !idle) return
     }
@@ -121,7 +142,7 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, on
         const over = pos - initOffset - loopH
         if (over >= 0) pos -= Math.ceil((over + 1) / loopH) * loopH
         posRef.current = pos
-        if (trackRef.current) trackRef.current.style.transform = `translate3d(0,${-(pos - CENTER * ITEM_H)}px,0)`
+        if (trackRef.current) { trackRef.current.style.transform = `translate3d(0,${-(pos - CENTER * ITEM_H)}px,0)`; drum(pos) }
         if (t < 1) { rafRef.current = requestAnimationFrame(frame); return }
         stopRef.current = setTimeout(() => {
           const idx = Math.round(posRef.current / ITEM_H)
@@ -161,6 +182,7 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, on
 
         if (trackRef.current) {
           trackRef.current.style.transform = `translate3d(0,${-(posRef.current - CENTER * ITEM_H)}px,0)`
+          drum(posRef.current)
         }
 
         if (t >= 1.0) {
@@ -170,9 +192,10 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, on
           if (trackRef.current) {
             trackRef.current.style.transition = 'transform 140ms cubic-bezier(0.25,0.46,0.45,0.94)'
             trackRef.current.style.transform  = `translate3d(0,${-(snapped - CENTER * ITEM_H)}px,0)`
+            drum(snapped, 'transform 140ms cubic-bezier(0.25,0.46,0.45,0.94)')   // the rows settle with the snap
           }
           stopRef.current = setTimeout(() => {
-            if (trackRef.current) trackRef.current.style.transition = 'none'
+            if (trackRef.current) { trackRef.current.style.transition = 'none'; drum(snapped) }
             const idx    = Math.round(snapped / ITEM_H)
             const winner = items[((idx % items.length) + items.length) % items.length]
             if (onStopRef.current) onStopRef.current(winner)
@@ -197,6 +220,7 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, on
         wrap()
         if (trackRef.current) {
           trackRef.current.style.transform = `translate3d(0,${-(posRef.current - CENTER * ITEM_H)}px,0)`
+          drum(posRef.current)
         }
         rafRef.current = requestAnimationFrame(frame)
       }
@@ -213,7 +237,7 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, on
   return (
     <div className={`reel-outer${spinning ? ' reel-spinning' : ''}${locked ? ' reel-locked' : ''}${blurred ? ' reel-blurred' : ''}`}>
       <div className="reel-label">{label}</div>
-      <div className="reel-window">
+      <div ref={windowRef} className="reel-window is-drum">
         <div className="reel-selector" />
         <div ref={trackRef} className="reel-track" style={{ willChange: 'transform' }}>
           {allItems.map((item, i) => (

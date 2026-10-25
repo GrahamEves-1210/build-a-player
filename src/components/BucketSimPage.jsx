@@ -22,6 +22,7 @@ import { createDirector } from '../lib/seasonDirector'
 import { MomentCard, NowCard, Pulse, Wire, Milestones, RecordOverlay, Leaders, SeasonStory, StretchCard, useDirectedReveal, MomentsToggle } from './app/AppSeasonPlus'
 import { rampAdd, useRailOn } from '../lib/ads'
 import { IconBall } from './app/icons'
+import { useCountUp as countUp } from '../lib/useCountUp'
 
 function gradeColor(val0) {
   const val = Math.round(val0 ?? 0)   // rounded like the letter (valToGrade), so a B- is always green
@@ -168,23 +169,8 @@ function offDefGrade(val) {
   return 'D'
 }
 
-function useCountUp(target, duration = 900, enabled = true) {
-  const [val, setVal] = useState(0)
-  useEffect(() => {
-    if (!enabled || !target) return
-    const start = Date.now()
-    let raf
-    const tick = () => {
-      const p = Math.min((Date.now() - start) / duration, 1)
-      const eased = 1 - Math.pow(1 - p, 3)
-      setVal(Math.round(eased * target))
-      if (p < 1) raf = requestAnimationFrame(tick)
-    }
-    raf = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(raf)
-  }, [target, duration, enabled])
-  return val
-}
+// the shared count-up (lib/useCountUp.js); runs once there's a number to count to
+const useCountUp = (target, duration = 900, enabled = true) => countUp(target, { run: enabled && !!target, ms: duration })
 
 function nbaScore(won) {
   const loserBase = 94 + Math.floor(Math.random() * 22)

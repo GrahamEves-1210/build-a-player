@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { AnimatePresence, motion } from 'motion/react'
 import { track } from '../../lib/track'
 import { createPortal } from 'react-dom'
 import { supabase } from '../../lib/supabase'
@@ -14,8 +15,19 @@ import { useProgress } from '../../lib/progress'
 import AppSettings from './AppSettings'
 import { guardLeave } from '../../lib/liveLock'
 import './pass.css'
+import { useSheetDrag, sheetMotion, overlayMotion } from './Sheet'
+import { EASE_OUT, SPRING_PANEL, useReducedMotionApp } from '../../lib/motion'
 
 // App "More" sheet (gear on the home screen): tiles + a How to Play view.
+// It slides in from its edge (the app: the bottom; the website: the top), drags back
+// to close, and its height follows the view (menu, Pro, Settings) instead of snapping.
+
+// a view slides in from the side it's opened toward (back: from the left)
+const VIEW = {
+  enter: d => ({ opacity: 0, x: d * 18 }),
+  show: { opacity: 1, x: 0, transition: { duration: 0.22, ease: EASE_OUT } },
+  leave: d => ({ opacity: 0, x: d * -18, transition: { duration: 0.14 } }),
+}
 
 const nav = to => window.dispatchEvent(new CustomEvent('bap:nav', { detail: to }))
 
@@ -96,7 +108,25 @@ function Tile({ tone, Icon, title, sub, onClick, delay, wide = false }) {
 }
 
 export default function AppMenu({ sport, onClose, initialView = 'menu' }) {
-  const [view, setView] = useState(initialView)       // 'menu' | 'howto' | 'pro' | 'settings'
+  const [view, setViewNow] = useState(initialView)       // 'menu' | 'howto' | 'pro' | 'settings'
+  const [dir, setDir] = useState(1)
+  const setView = v => { setDir(v === 'menu' ? -1 : 1); setViewNow(v) }
+  const from = IS_APP ? 'bottom' : 'top'   // the website's sheet drops from the top (app-game.css)
+  const { startDrag, dragProps } = useSheetDrag(from, onClose)
+  const reduce = useReducedMotionApp()
+  // the sheet's height: its content's, measured, so a new view grows or shrinks it smoothly
+  const sheetRef = useRef(null)
+  const innerRef = useRef(null)
+  const [height, setHeight] = useState(null)
+  useLayoutEffect(() => {
+    const el = innerRef.current, sheet = sheetRef.current
+    if (!el || !sheet || typeof ResizeObserver === 'undefined') return
+    const cs = getComputedStyle(sheet)
+    const extra = ['paddingTop', 'paddingBottom', 'borderTopWidth', 'borderBottomWidth'].reduce((a, k) => a + (parseFloat(cs[k]) || 0), 0)
+    const ro = new ResizeObserver(() => setHeight(Math.ceil(el.offsetHeight + extra)))
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
   const [feedbackUser, setFeedbackUser] = useState(null) // null = closed
   const [muted, setMutedState] = useState(isMuted)
   const [rail, setRailState] = useState(railPreviewOn)
@@ -115,10 +145,15 @@ export default function AppMenu({ sport, onClose, initialView = 'menu' }) {
     return <FeedbackModal user={feedbackUser || null} isBucket={isBucket} onClose={() => { setFeedbackUser(null); onClose() }} />
   }
 
+  const grab = <div className="ag-menu-grab" onPointerDown={startDrag} aria-hidden="true" />
   return createPortal(
-    <div className="ag-menu-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className={`ag-menu ag-menu--${sport}`} role="dialog" aria-label={view === 'howto' ? 'How to play' : view === 'pro' ? 'BAP Pro' : view === 'settings' ? 'Settings' : 'More'}>
-        <div className="ag-menu-head">
+    <motion.div className="ag-menu-overlay" {...overlayMotion} onClick={e => e.target === e.currentTarget && onClose()}>
+      <motion.div ref={sheetRef} className={`ag-menu ag-menu--${sport}`} role="dialog" aria-label={view === 'howto' ? 'How to play' : view === 'pro' ? 'BAP Pro' : view === 'settings' ? 'Settings' : 'More'}
+        {...sheetMotion(from)} {...dragProps}
+        animate={{ y: 0, ...(height != null ? { height } : null), transition: { y: sheetMotion(from).animate.transition, height: reduce ? { duration: 0 } : SPRING_PANEL } }}>
+        <div ref={innerRef}>
+        {from === 'bottom' && grab}
+        <div className="ag-menu-head" onPointerDown={startDrag}>
           {view !== 'menu' && !(view === 'pro' && initialView === 'pro')
             ? <button className="ag-menu-back" onClick={() => setView('menu')}>‹ BACK</button>
             : <span />}
@@ -126,6 +161,8 @@ export default function AppMenu({ sport, onClose, initialView = 'menu' }) {
           <button className="ag-round-btn" onClick={onClose} aria-label="Close"><IconClose size={16} /></button>
         </div>
 
+        <AnimatePresence mode="wait" initial={false} custom={dir}>
+        <motion.div key={view} custom={dir} variants={VIEW} initial="enter" animate="show" exit="leave">
         {view === 'settings' ? (
           <AppSettings signedIn={signedIn} onFeedback={openFeedback} onClose={onClose} />
         ) : view === 'pro' ? (
@@ -191,8 +228,12 @@ export default function AppMenu({ sport, onClose, initialView = 'menu' }) {
             </div>
           </>
         )}
-      </div>
-    </div>,
+        </motion.div>
+        </AnimatePresence>
+        {from === 'top' && grab}
+        </div>
+      </motion.div>
+    </motion.div>,
     document.body,
   )
 }

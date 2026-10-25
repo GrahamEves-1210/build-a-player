@@ -4,6 +4,8 @@ import { IconLock, IconFlame, IconCards, IconRing, IconStar, IconBag, IconMedal,
 import { TierChip, Form } from './OnlineRecord'
 import { NameTag, AvatarBadge } from './NameTag'
 import { CoinPill } from './AppShop'
+import { motion } from 'motion/react'
+import { SPRING_LAYOUT } from '../../lib/motion'
 
 // App: the top of the Profile page — your player card (level, title, XP) and
 // the locker of stage spotlights unlocked by levels and streaks.
@@ -54,20 +56,21 @@ export default function AppCareerCard({ user }) {
       </button>
       <div className="ag-locker">
         <span className="ag-eyebrow">SPOTLIGHT</span>
-        <div className="ag-locker-row">
+        <motion.div layoutScroll className="ag-locker-row">
           {SPOTLIGHTS.map(s => {
             const open = isUnlocked(s, p.lvl.level)
             const on = (p.spot || 'classic') === s.id
             return (
               <button key={s.id} className={`ag-spot${on ? ' is-on' : ''}${open ? '' : ' is-locked'}`} disabled={!open}
                 onClick={() => setSpotlight(s.id)} aria-label={`${s.name} spotlight${open ? '' : ' (locked)'}`}>
+                {on && <motion.span layoutId="spot-ring" className="ag-spot-ring" transition={SPRING_LAYOUT} />}
                 <i className={`ag-swatch ag-swatch--${s.id}`} />
                 <span className="ag-spot-name">{s.name}</span>
                 <span className="ag-spot-req">{open ? (on ? 'ON' : '') : s.streak ? <><IconLock size={10} /> {s.streak}-DAY</> : <><IconLock size={10} /> LVL {s.level}</>}</span>
               </button>
             )
           })}
-        </div>
+        </motion.div>
       </div>
     </section>
   )

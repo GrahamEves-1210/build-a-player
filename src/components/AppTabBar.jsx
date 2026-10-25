@@ -10,6 +10,8 @@ import { IconBag, IconProfile, IconCalendar, IconTrophy, IconBagLine, IconProfil
 import { slideIn } from '../lib/juice'
 import PlayButton from './app/PlayButton'
 import { startPresence } from '../lib/presence'
+import { AnimatePresence, motion } from 'motion/react'
+import { SPRING_LAYOUT } from '../lib/motion'
 
 const AppDaily = lazy(() => import('./app/AppDaily'))
 const AppHall = lazy(() => import('./app/AppHall'))
@@ -50,6 +52,7 @@ function Tab({ label, Icon, Line, active, onClick, badge }) {
   const Glyph = active ? Icon : Line
   return (
     <button className={`ag-tab${active ? ' ag-tab--on' : ''}`} aria-current={active ? 'page' : undefined} onClick={onClick}>
+      {active && <motion.span layoutId="dock-lit" className="ag-tab-lit" transition={SPRING_LAYOUT} />}
       <span className="ag-tab-icon"><Glyph size={23} /></span>
       <span className="ag-tab-label">{label}</span>
       {badge ? <span className="ag-tab-badge">{badge}</span> : null}
@@ -186,7 +189,8 @@ export default function AppTabBar() {
           <Tab label="PROFILE" Icon={IconProfile} Line={IconProfileLine} active={active === 'profile' || active === 'locker'} onClick={state.page === 'profile' && !screen ? undefined : go('profile')} />
         </nav>
       )}
-      {menuOpen && <AppMenu sport={state.sport} initialView={menuOpen === 'pro' ? 'pro' : 'menu'} onClose={() => setMenuOpen(false)} />}
+      {/* the More sheet slides back out when it closes */}
+      <AnimatePresence>{menuOpen && <AppMenu key="menu" sport={state.sport} initialView={menuOpen === 'pro' ? 'pro' : 'menu'} onClose={() => setMenuOpen(false)} />}</AnimatePresence>
       {player && <Suspense fallback={null}><PlayerSheet player={player} isBucket={state.sport === 'bucket'} onClose={() => setPlayer(null)} /></Suspense>}
       {/* The games pick up the new session from Supabase's auth listener; then open the profile */}
       {authOpen && <AuthModal onClose={() => setAuthOpen(false)} onAuth={() => setTimeout(() => nav('profile'), 400)} />}

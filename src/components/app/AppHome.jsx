@@ -18,6 +18,7 @@ import { CoinPill } from './AppShop'
 import { TierChip, Form } from './OnlineRecord'
 import { tierFor } from '../../lib/progress'
 import EmptyState from './EmptyState'
+import { RollingNumber, RollText } from './MotionText'
 
 // Card art: three players for Squad Builder (the one in front is yours), the pool's podium for Compete
 function SquadArt() {
@@ -100,7 +101,7 @@ export function PlayerChip({ user, onClick }) {
 function OnlineNow() {
   const n = crowd(usePresence()?.total ?? 0)
   if (!n) return null
-  return <span className="ag-live-count" aria-label={`${n} players online`}><b><i aria-hidden="true" />{fmtCount(n)}</b><small>ONLINE</small></span>
+  return <span className="ag-live-count" aria-label={`${n} players online`}><b><i aria-hidden="true" /><RollingNumber value={n} format={fmtCount} /></b><small>ONLINE</small></span>
 }
 
 function Hud({ user }) {
@@ -348,8 +349,8 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
           </div>
           <div className="ag-platform"><span className="ag-platform-ring" /></div>
           <div className="ag-stage-tag">
-            <span className={`ag-stage-pos${posShort.length > 3 ? ' ag-stage-pos--long' : ''}`}>{posShort}</span>
-            <span className="ag-tag"><span>{posName}</span></span>
+            <span className={`ag-stage-pos${posShort.length > 3 ? ' ag-stage-pos--long' : ''}`}><RollText text={posShort} /></span>
+            <span className="ag-tag"><span><RollText text={posName} /></span></span>
           </div>
         </div>
 
@@ -405,7 +406,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
               <span className="ag-live-dot" />
               <span className="ag-bt-tags" aria-hidden="true"><span className="bt-mode-tag">2V2</span><span className="bt-mode-tag">3V3</span></span>
               <span className="ag-card-txt">
-                <span className="ag-eyebrow">{btLive ? (blacktop.phase === 'queue' ? `IN THE LOBBY · ${blacktop.queue}/6 SPOTS TAKEN` : blacktop.phase === 'build' ? 'LIVE · YOUR SQUAD IS BUILDING' : 'LIVE · GAME ON') : crowd(here.blacktop) ? `LIVE · ${fmtCount(here.blacktop)} PLAYING NOW` : 'LIVE · FIRST TO 11'}</span>
+                <span className="ag-eyebrow"><RollText text={!btLive ? 'LIVE' : blacktop.phase === 'queue' ? 'IN THE LOBBY' : blacktop.phase === 'build' ? 'LIVE · YOUR SQUAD IS BUILDING' : 'LIVE · GAME ON'} />{btLive ? (blacktop.phase === 'queue' && <> · <RollingNumber value={blacktop.queue} />/6 SPOTS TAKEN</>) : crowd(here.blacktop) ? <> · <RollingNumber value={crowd(here.blacktop)} format={fmtCount} /> PLAYING NOW</> : ' · FIRST TO 11'}</span>
                 <span className="ag-card-title">BLACKTOP</span>
                 <span className="ag-card-sub">{btLive ? 'You\'re still in. Jump back to your run.' : (btG || h2h.played) ? `Squads ${btW}–${btG - btW} · 1v1 ${h2h.wins ?? 0}–${h2h.losses ?? 0}${ol.played ? ` · ${tierFor(ol.rating)[1]} ${ol.rating}` : ''}` : '1v1, 2v2 or 3v3. Real players.'}</span>
               </span>
@@ -426,7 +427,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
               <PoolArt />
               <span className="ag-live-dot" />
               <span className="ag-card-txt">
-                <span className="ag-eyebrow">{crowd(here.compete) ? <>ONLINE · {fmtCount(here.compete)} PLAYING NOW</> : ol.played ? <>ONLINE · {tierFor(ol.rating)[1].toUpperCase()} · {ol.rating}</> : 'ONLINE · 5-PLAYER POOLS'}</span>
+                <span className="ag-eyebrow">{crowd(here.compete) ? <>ONLINE · <RollingNumber value={crowd(here.compete)} format={fmtCount} /> PLAYING NOW</> : ol.played ? <>ONLINE · {tierFor(ol.rating)[1].toUpperCase()} · {ol.rating}</> : 'ONLINE · 5-PLAYER POOLS'}</span>
                 <span className="ag-card-title">COMPETE</span>
                 <span className="ag-card-sub">{cs?.played
                   ? `${cs.wins} ${cs.wins === 1 ? 'win' : 'wins'} in ${cs.played} · avg place ${(cs.placeSum / cs.played).toFixed(1)}${cs.streak >= 2 ? ` · ${cs.streak} straight` : ''}`

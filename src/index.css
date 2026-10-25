@@ -1831,6 +1831,9 @@ a:focus-visible {
 .reel-track {
   will-change: transform;
 }
+/* the drum (SpinScreen SlotReel drum()): rows tilt away from the middle like a slot reel */
+.reel-window.is-drum { perspective: 380px; }
+.reel-window.is-drum .reel-track { transform-style: preserve-3d; }
 
 .reel-selector {
   position: absolute;

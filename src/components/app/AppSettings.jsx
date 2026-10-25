@@ -8,6 +8,8 @@ import { supabase } from '../../lib/supabase'
 import { contactEmailOf, saveContactEmail, maskEmail } from '../../lib/contactEmail'
 import { useProgress } from '../../lib/progress'
 import { IconChat, IconDiscord, IconPlay } from './icons'
+import { AnimatePresence, motion as m } from 'motion/react'
+import { EASE_OUT } from '../../lib/motion'
 
 // More → Settings: sound, haptics, motion, notifications, the tutorial again,
 // help, and the account (delete it here — the App Store requires it in-app).
@@ -103,7 +105,13 @@ export default function AppSettings({ signedIn, onFeedback, onClose }) {
               <span className="sx-txt"><b>{q}</b></span>
               <span className="sx-chev" aria-hidden="true">{faq === i ? '−' : '+'}</span>
             </button>
-            {faq === i && <p className="sx-answer">{a}</p>}
+            <AnimatePresence initial={false}>
+              {faq === i && (
+                <m.div key="a" className="sx-answer-wrap" initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.28, ease: EASE_OUT }}>
+                  <p className="sx-answer">{a}</p>
+                </m.div>
+              )}
+            </AnimatePresence>
           </div>
         ))}
         <div className="sx-contact">

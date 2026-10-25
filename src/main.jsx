@@ -21,6 +21,7 @@ if (/iPad/.test(navigator.userAgent) || (/Mac/.test(navigator.platform) && navig
   document.documentElement.classList.add('is-tablet')
 }
 import { createRoot } from 'react-dom/client'
+import { AppMotion } from './lib/motion'
 import UsernamePrompt from './components/UsernamePrompt'
 import PasswordReset from './components/PasswordReset'
 import { HelmetProvider } from 'react-helmet-async'
@@ -112,10 +113,12 @@ createRoot(document.getElementById('root')).render(
   <StrictMode>
     <ErrorBoundary>
       <HelmetProvider>
-        {isBucket ? <BucketApp /> : <App />}
-        <UsernamePrompt />
-        <PasswordReset />
-        {AppTabBar && <Suspense fallback={null}><AppTabBar /></Suspense>}
+        <AppMotion>
+          {isBucket ? <BucketApp /> : <App />}
+          <UsernamePrompt />
+          <PasswordReset />
+          {AppTabBar && <Suspense fallback={null}><AppTabBar /></Suspense>}
+        </AppMotion>
       </HelmetProvider>
       {!IS_APP && <Analytics />}
       <AppInfra />
