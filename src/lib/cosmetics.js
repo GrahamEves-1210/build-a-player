@@ -25,6 +25,12 @@ export const SLOTS = [
   { id: 'reel',      label: 'Reel Skins',    short: 'REEL' },
   { id: 'entrance',  label: 'Entrances',     short: 'ENTRANCE' },
 ]
+// The slots in two groups, by where they show: on your name and card, or while you play.
+// The Shop's sections and the Locker's headings both follow these.
+export const SLOT_GROUPS = [
+  { id: 'profile', label: 'Profile', note: 'On your name and card', slots: ['avatar', 'nameColor', 'nameFx', 'plate'] },
+  { id: 'ingame', label: 'In Game', note: 'While you play', slots: ['winFx', 'winSound', 'entrance', 'court', 'reel'] },
+]
 export const RARITY = [
   { id: 0, name: 'Common',    color: '#9fb3a8' },
   { id: 1, name: 'Rare',      color: '#4ea8ff' },

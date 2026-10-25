@@ -620,3 +620,16 @@ html.bap-reduce-motion .ent::before, html.bap-reduce-motion .ent::after { displa
   .sh-tabs { flex-wrap: wrap; overflow-x: visible; row-gap: 8px; }
   .sh-tabs::after { display: none; }
 }
+
+/* ═══ Shop sections (AppShop GROUPS): four big tabs, then that section's chips ═══ */
+.sh-nav { position: sticky; top: calc(var(--safe-top) - 6px); z-index: 3; display: grid; gap: 8px; padding: 0 16px 10px; }
+.sh-groups { background: rgba(0,0,0,.6); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+.sh-groups button { font-size: 15px; letter-spacing: 1.6px; white-space: nowrap; min-width: 0; }
+.sh-nav .sh-tabs { position: static; flex-wrap: wrap; row-gap: 6px; overflow: visible; padding: 0; }
+.sh-nav .sh-tabs::after { display: none; }
+.sh-nav .sh-tab { height: 32px; padding: 0 12px; font-size: 14px; }
+/* Locker: the same two groups, each under its own heading */
+.lk-group { padding-top: 6px; }
+.lk-group-head { display: flex; align-items: baseline; gap: 10px; padding: 4px 16px 10px; }
+.lk-group-head .ag-eyebrow { font-size: 14px; letter-spacing: 3px; }
+.lk-group-head small { font-family: var(--ag-body); font-size: 12px; font-weight: 600; color: var(--ag-muted); }

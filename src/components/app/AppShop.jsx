@@ -8,7 +8,7 @@ import { IS_APP } from '../../lib/platform'
 import FeedbackModal from '../FeedbackModal'
 import { COIN_PACKS } from '../../lib/coins'
 import { connectDiscord, discordError } from '../../lib/discord'
-import { SLOTS, RARITY, ITEMS, itemById, itemsFor, BLURB, DEFAULTS } from '../../lib/cosmetics'
+import { SLOTS, RARITY, ITEMS, itemById, itemsFor, BLURB, DEFAULTS, SLOT_GROUPS } from '../../lib/cosmetics'
 import { achById } from '../../lib/achievements'
 import { getUsername } from '../../lib/discord'
 import { sfx, haptic, previewVictory, warmVictory, flyCoins } from '../../lib/juice'
@@ -26,7 +26,14 @@ import { useSheetDrag, sheetMotion, overlayMotion } from './Sheet'
 // coin pill) and Profile; lives over everything like Daily and Cards.
 
 const nav = to => window.dispatchEvent(new CustomEvent('bap:nav', { detail: to }))
-const TABS = [{ id: 'featured', label: 'Featured' }, { id: 'coins', label: 'Get Coins' }, { id: 'boosts', label: 'Boosts' }, ...SLOTS.map(s => ({ id: s.id, label: s.label }))]
+// Four sections, each with its own few chips (a tab is still one of these ids: deep links like
+// shop:court land on the chip, inside its section)
+const LABEL = { featured: 'Featured', coins: 'Get Coins', boosts: 'Boosts', ...Object.fromEntries(SLOTS.map(s => [s.id, s.label])) }
+const GROUPS = [
+  { id: 'featured', label: 'Featured', tabs: ['featured'] },
+  { id: 'coins', label: 'Coins', tabs: ['coins', 'boosts'] },
+  ...SLOT_GROUPS.map(g => ({ id: g.id, label: g.label, tabs: g.slots })),
+]
 const fmtLeft = ms => { const h = Math.floor(ms / 3600000), m = Math.floor((ms % 3600000) / 60000); return h ? `${h}h ${m}m` : `${m}m` }
 
 const signIn = () => window.dispatchEvent(new CustomEvent('bap:auth'))
@@ -371,13 +378,17 @@ export default function AppShop({ onClose, tab: initialTab = 'featured' }) {
   useEffect(() => { warmVictory() }, [])   // victory sounds ready for previews
   const p = useProgress()
   const [tab, setTab] = useState(initialTab)
+  const lastIn = useRef({})   // each section reopens on the chip it was left on
   const [open, setOpen] = useState(null)
   const name = getUsername(p.user) || 'Guest'
   const deals = useMemo(() => dealsFor(), [])
   const dealPrice = id => deals.find(d => d.id === id)?.price ?? null
   const pro = isPro()
   const sells = useSells()
-  const tabs = sells ? TABS : TABS.filter(t => t.id !== 'coins')
+  const groups = GROUPS.map(g => ({ ...g, tabs: g.tabs.filter(t => sells || t !== 'coins') }))
+  const group = groups.find(g => g.tabs.includes(tab)) ?? groups[0]
+  lastIn.current[group.id] = tab
+  const openGroup = g => { if (g.id === group.id) return; setTab(lastIn.current[g.id] ?? g.tabs[0]); sfx('tap') }
   const ownedCount = ITEMS.filter(i => owns(i.id) && !i.free).length
   const reach = useMemo(() => ITEMS.filter(i => !i.unlock && !owns(i.id) && !lockReason(i.id) && i.price && !i.ach && !i.vault && priceOf(i.id) <= Math.max(300, (p.coins ?? 0))).sort((a, b) => b.price - a.price).slice(0, 4), [p.coins, p.owned]) // eslint-disable-line react-hooks/exhaustive-deps
   const claim = () => {
@@ -414,14 +425,26 @@ export default function AppShop({ onClose, tab: initialTab = 'featured' }) {
         </span>
       </div>
 
-      <motion.div layoutScroll className="sh-tabs" role="tablist">
-        {tabs.map(t => (
-          <button key={t.id} role="tab" aria-selected={tab === t.id} className={`sh-tab${tab === t.id ? ' is-on' : ''}`} onClick={() => { setTab(t.id); sfx('tap') }}>
-            {tab === t.id && <motion.span layoutId="shop-tab" className="sh-tab-pill" transition={SPRING_LAYOUT} />}
-            {t.label}{SLOTS.some(s => s.id === t.id) && <b>{shown(t.id).filter(i => owns(i.id)).length}/{shown(t.id).length}</b>}
-          </button>
-        ))}
-      </motion.div>
+      <div className="sh-nav">
+        <div className="ag-seg sh-groups" role="tablist" aria-label="Shop sections" style={{ gridTemplateColumns: `repeat(${groups.length}, minmax(0, 1fr))` }}>
+          {groups.map(g => (
+            <button key={g.id} role="tab" aria-selected={g.id === group.id} className={g.id === group.id ? 'is-on' : ''} onClick={() => openGroup(g)}>
+              {g.id === group.id && <motion.span layoutId="shop-group" className="ag-seg-pill" transition={SPRING_LAYOUT} />}
+              {g.label}
+            </button>
+          ))}
+        </div>
+        {group.tabs.length > 1 && (
+          <div className="sh-tabs" role="tablist" aria-label={group.label}>
+            {group.tabs.map(id => (
+              <button key={id} role="tab" aria-selected={tab === id} className={`sh-tab${tab === id ? ' is-on' : ''}`} onClick={() => { setTab(id); sfx('tap') }}>
+                {tab === id && <motion.span layoutId={`shop-tab-${group.id}`} className="sh-tab-pill" transition={SPRING_LAYOUT} />}
+                {LABEL[id]}{SLOTS.some(s => s.id === id) && <b>{shown(id).filter(i => owns(i.id)).length}/{shown(id).length}</b>}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
 
       {tab === 'boosts' ? (
         <Boosts p={p} onNeedCoins={() => setTab(sells ? 'coins' : 'featured')} />

@@ -1,5 +1,5 @@
 import { useProgress, equip, owns, myVictory } from '../../lib/progress'
-import { SLOTS, RARITY, ITEMS, itemById, DEFAULTS } from '../../lib/cosmetics'
+import { SLOTS, SLOT_GROUPS, RARITY, ITEMS, itemById, DEFAULTS } from '../../lib/cosmetics'
 import { getUsername } from '../../lib/discord'
 import { sfx, haptic, previewVictory } from '../../lib/juice'
 import { NameTag, AvatarBadge, ItemPreview } from './NameTag'
@@ -51,7 +51,10 @@ export default function AppLocker({ onClose }) {
         <span className="lk-hero-count">{owned.filter(i => !i.free).length} items owned</span>
       </div>
 
-      {SLOTS.map(sl => {
+      {SLOT_GROUPS.map(g => (
+        <div key={g.id} className="lk-group">
+          <div className="lk-group-head"><span className="ag-eyebrow">{g.label.toUpperCase()}</span><small>{g.note}</small></div>
+      {g.slots.map(id => SLOTS.find(s => s.id === id)).map(sl => {
         const mine = ITEMS.filter(i => i.slot === sl.id && owns(i.id)).sort((a, b) => (sl.id === 'court' ? 0 : b.rarity - a.rarity))
         const cur = p.equip?.[sl.id] ?? DEFAULTS[sl.id]
         const hasNone = DEFAULTS[sl.id] === null
@@ -89,6 +92,8 @@ export default function AppLocker({ onClose }) {
           </section>
         )
       })}
+        </div>
+      ))}
     </div>
   )
 }
