@@ -782,7 +782,8 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
 
   return (
     <div className="prf-page">
-      {!isBucket && (
+      {/* the old site's stadium backdrop; the new look keeps the app's own background, like every screen */}
+      {!isBucket && !(IS_APP || APP_LOOK) && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', overflow: 'hidden' }}>
           <div style={{ position: 'absolute', inset: '-20px', backgroundImage: "url('/footballbackground.webp')", backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(4px) brightness(0.12)' }} />
         </div>
