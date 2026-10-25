@@ -5,7 +5,7 @@ import { loadHardware, loadBestBuilds, loadTrophySeasons, seasonPos, modeName, s
 import { sfx, haptic } from '../../lib/juice'
 import { TrophyArt, TrophyDefs } from './TrophyArt'
 import { IconClose, IconFootball, IconBasketball, IconRing } from './icons'
-import { HEADSHOT_BASE, nflHeadshot } from '../../utils/simulation'
+import { HEADSHOT_BASE, nflHeadshot, valToGrade } from '../../utils/simulation'
 import HEADSHOTS from '../../data/headshots.json'
 import NBA_HEADSHOTS from '../../data/nba-headshots.json'
 import { ATTR } from '../../data/qbs'
@@ -118,6 +118,9 @@ function Face({ name, sport, size = 26 }) {
     </span>
   )
 }
+
+// a trait's grade colour, like every build screen (rounded like the letter, valToGrade)
+const gradeColor = v0 => { const v = Math.round(v0 ?? 0); return v >= 11 ? '#a855f7' : v >= 8 ? '#3b82f6' : v >= 5 ? '#22c55e' : v >= 2 ? '#eab308' : v >= 1 ? '#f97316' : '#ef4444' }
 
 // The traits of a saved build, best first
 const traitsOf = row => Object.entries(row?.build || {})
@@ -398,7 +401,7 @@ function BuildSheet({ row, onClose }) {
               <b>{t.name}</b>
             </span>
             {t.team && <span className="tc-trait-team">{t.team}</span>}
-            {t.val != null && <span className={`tc-trait-val${t.val === top ? ' is-top' : ''}`}>{t.val}</span>}
+            {t.val != null && <span className={`tc-trait-val${t.val === top ? ' is-top' : ''}`} style={{ color: gradeColor(t.val) }} aria-label={`Grade ${valToGrade(t.val)}`}>{valToGrade(t.val)}</span>}
           </div>
         ))}
       </div>

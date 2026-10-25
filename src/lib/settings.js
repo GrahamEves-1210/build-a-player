@@ -11,11 +11,6 @@ export function setReduceMotion(on) {
 export const motionReduced = () => reduceMotion() || systemReduced()
 applyMotion()
 try { matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', applyMotion) } catch {}
-// The bottom nav (the dock) can be switched off; the menu button on Home and the top bar still get you everywhere
-const DOCK_KEY = 'bap_hide_dock'
-export const dockHidden = () => { try { return localStorage.getItem(DOCK_KEY) === '1' } catch { return false } }
-export function setDockHidden(on) {
-  try { on ? localStorage.setItem(DOCK_KEY, '1') : localStorage.removeItem(DOCK_KEY) } catch {}
-  document.documentElement.classList.toggle('no-dock', !!on)
-}
-if (typeof document !== 'undefined' && dockHidden()) document.documentElement.classList.add('no-dock')
+// The bottom nav (the dock) is always there. It used to have an off switch in Settings:
+// anyone who switched it off gets it back
+try { localStorage.removeItem('bap_hide_dock') } catch {}

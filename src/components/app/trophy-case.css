@@ -360,7 +360,7 @@ html.is-bucket .tc-sheet { background: radial-gradient(90% 46% at 50% 0%, rgba(2
 .tc-trait-main b { font-size: 14px; font-weight: 700; line-height: 1.2; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tc-trait-team { font-family: var(--ag-font, sans-serif); font-size: 13px; letter-spacing: 1.2px; color: var(--ag-muted, rgba(216,243,220,.78)); }
 .tc-trait-val { min-width: 30px; text-align: right; font-family: var(--ag-display, Impact, sans-serif); font-size: 21px; line-height: 1; color: #fff; }
-.tc-trait-val.is-top { color: var(--ag-gold-hi, #f2d675); }
+.tc-trait-val.is-top { text-shadow: 0 0 10px currentColor; }   /* the build's best trait glows in its grade's colour */
 
 /* ── A player's sheet (FriendProfile): the shelf, compact ───────────────── */
 .tc-mini-row { display: flex; flex-wrap: wrap; gap: 6px; }

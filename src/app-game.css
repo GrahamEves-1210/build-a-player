@@ -4872,9 +4872,6 @@ html.is-app { --drop-chrome: calc(352px + env(safe-area-inset-top) + env(safe-ar
 .lc-wait { padding: 10px 12px; border-radius: 12px; border: 1px dashed var(--ag-line); text-align: center; font-family: var(--ag-font); font-size: 13px; letter-spacing: 1.5px; color: var(--ag-text-2); }
 .crl-out { font-style: normal; color: #fca5a5; letter-spacing: 1px; }
 
-/* Settings → Bottom navigation off: no dock, and content only keeps clear of the home bar */
-html.no-dock .ag-dock { display: none !important; }
-html:is(.is-app, .app-look).no-dock { --app-bottom: calc(var(--safe-bottom) + 12px); }
 /* Sandbox unlock (Career / Squad Builder) */
 .sb-buy .ll-title { display: flex; align-items: center; gap: 8px; }
 .sb-buy-price { display: flex; align-items: baseline; gap: 8px; margin: 2px 0 12px; }
