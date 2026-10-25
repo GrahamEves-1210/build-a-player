@@ -5382,57 +5382,82 @@ a:focus-visible {
   overflow: hidden;
 }
 
-/* ── FEATURES ── */
+/* ── FEATURES (SiteFeatures.jsx): four cards, teal for football, orange for basketball ── */
 .splash-features {
+  --sf-a: #5EDBB8;
+  --sf-a-rgb: 94, 219, 184;
   position: relative;
   z-index: 2;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 28px;
-  max-width: 960px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 28px 24px 56px;
-  border-top: 1px solid rgba(149,213,178,0.09);
+  padding: 32px 24px 48px;
 }
+.splash-features--bucket { --sf-a: #fb923c; --sf-a-rgb: 251, 146, 60; }
 .splash-feature {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 12px;
-  border-left: 2px solid rgba(149,213,178,0.25);
-  padding-left: 18px;
+  gap: 10px;
+  padding: 20px 20px 22px;
+  border-radius: 18px;
+  border: 1px solid rgba(var(--sf-a-rgb), .16);
+  background:
+    radial-gradient(120% 90% at 0% 0%, rgba(var(--sf-a-rgb), .10), transparent 60%),
+    linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.015));
+  overflow: hidden;
+}
+.splash-feature::before {
+  content: '';
+  position: absolute;
+  left: 20px; right: 20px; top: 0;
+  height: 2px;
+  border-radius: 0 0 2px 2px;
+  background: linear-gradient(90deg, var(--sf-a), transparent);
+  opacity: .7;
 }
 .splash-feature-icon {
-  display: flex;
-  color: var(--accent);
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  color: var(--sf-a);
+  background: rgba(var(--sf-a-rgb), .12);
+  box-shadow: inset 0 0 0 1px rgba(var(--sf-a-rgb), .22);
 }
-.splash-feature-icon svg {
-  width: 28px;
-  height: 28px;
-}
-.splash-feature-icon--dual {
-  gap: 10px;
-}
+.splash-feature-icon svg { width: 22px; height: 22px; }
 .splash-feature-title {
-  font-family: var(--font);
-  font-size: 16px;
-  font-weight: 800;
+  margin-top: 4px;
+  font-family: var(--ag-font, 'Bebas Neue', var(--font));
+  font-size: 24px;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
   color: #fff;
-  letter-spacing: -0.1px;
 }
 .splash-feature-desc {
-  font-family: var(--font);
-  font-size: 13.5px;
+  margin: 0;
+  font-family: var(--ag-body, var(--font));
+  font-size: 14px;
   font-weight: 500;
-  line-height: 1.55;
-  color: var(--text-3);
+  line-height: 1.5;
+  color: rgba(255,255,255,.62);
 }
-@media (max-width: 768px) {
-  .splash-features {
-    grid-template-columns: 1fr;
-    gap: 32px;
-    padding: 24px 24px 40px;
-  }
+@media (max-width: 1023px) {
+  .splash-features { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 599px) {
+  .splash-features { grid-template-columns: 1fr; gap: 10px; padding: 24px 16px 36px; }
+  .splash-feature { display: grid; grid-template-columns: 42px 1fr; column-gap: 14px; row-gap: 4px; padding: 16px; }
+  .splash-feature::before { left: 16px; right: 16px; }
+  .splash-feature-icon { grid-row: span 2; }
+  .splash-feature-title { margin-top: 2px; font-size: 21px; }
+  .splash-feature-desc { font-size: 13.5px; }
 }
 
 /* ── SITE FOOTER ── */
@@ -5579,12 +5604,8 @@ a:focus-visible {
 /* Info/footer section borders are hardcoded to the NFL mint-green accent —
    override to orange on the Bucket build/sim screens so they match the
    orange-themed splash branding instead of bleeding the NFL color through. */
-[data-sport="bucket"] .splash-features,
 [data-sport="bucket"] .splash-site-footer {
   border-top-color: rgba(251,146,60,0.14);
-}
-[data-sport="bucket"] .splash-feature {
-  border-left-color: rgba(251,146,60,0.30);
 }
 [data-sport="bucket"] .splash-site-footer-bottom {
   border-top-color: rgba(251,146,60,0.12);
