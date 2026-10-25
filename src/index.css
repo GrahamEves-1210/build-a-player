@@ -12933,6 +12933,11 @@ html.is-android .tab-pill-qb {
   left: 50%;
   transform: translateX(-50%);
 }
+/* ...but not inside the position dropdown, which places it itself (it would slide half off the left edge) */
+html.is-android .nav-pos-dropdown .tab-pill-qb {
+  left: auto;
+  transform: none;
+}
 
 /* Player model: feTurbulence SVG filters render as solid blocks on Android GPU.
    Strip the SVG url() reference, keep any CSS filter functions (brightness/blur). */

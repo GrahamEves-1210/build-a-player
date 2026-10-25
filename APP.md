@@ -105,8 +105,9 @@ If it's ever lost, Google can reset the upload key (Play Console → Test and re
      encrypted, none sold or used for tracking. Users can request deletion. **Deletion URL:**
      `https://build-a-player.com/privacy` (says how: Settings in the app, or the profile on the website).
    - **Financial features / government / health:** none. **News app:** no.
-7. **Store listing:** short description (80 characters), full description, 512 × 512 icon,
-   1024 × 500 feature graphic, at least 2 phone screenshots (1080 × 1920 works). Category: Sports.
+7. **Store listing:** everything is in `F:\bap-play-store`: `listing.txt` (name, short and full
+   description, category, URLs), `icon-512.png`, `feature-graphic-1024x500.png` and six phone
+   screenshots (1080 × 2160) in `screenshots/`. Category: Sports.
 8. **Purchases:** coins and BAP Pro go through the Stripe web checkout, shown only to US players
    (`lib/storefront.js`, the phone's language and time zone). Google allows US apps to link out to
    their own checkout; if a review objects, the fallback is Google Play Billing through RevenueCat.
