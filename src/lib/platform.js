@@ -16,6 +16,9 @@ export const APP_LOOK = true
 // doesn't sell Plus (or link to Stripe) until in-app purchase is wired up.
 export const CAN_SELL_PLUS = !IS_APP
 
+// Android sells through Google Play Billing (lib/iap.js), once RevenueCat's Android key is set
+export const PLAY_BILLING = APP_PLATFORM === 'android' && !!import.meta.env.VITE_RC_ANDROID_KEY
+
 const blobToBase64 = blob => new Promise((resolve, reject) => {
   const r = new FileReader()
   r.onload = () => resolve(String(r.result).split(',')[1])

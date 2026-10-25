@@ -1,13 +1,14 @@
-import { IS_APP, APP_PLATFORM } from './platform'
+import { IS_APP, APP_PLATFORM, PLAY_BILLING } from './platform'
 
-// Where the app may sell. Coins and BAP Pro are bought through our own checkout (Stripe on
-// the web), and Apple and Google allow a link out to that only in the US; everywhere else a
-// digital purchase has to be the store's own in-app purchase. So in the app, the buy buttons
-// and the Pro Vault show only in the US. The website sells everywhere.
+// Where the app may sell. On iPhone, coins and BAP Pro are bought through our own checkout
+// (Stripe on the web), and Apple allows a link out to that only on the US App Store; everywhere
+// else a digital purchase has to be Apple's in-app purchase. So on iPhone, the buy buttons and
+// the Pro Vault show only in the US. Android buys through Google Play everywhere (lib/iap.js).
+// The website sells everywhere.
 //
-// Which country: on iPhone, the account's App Store from StoreKit (through RevenueCat, once its
-// iOS key is in .env.app as VITE_RC_IOS_KEY). Otherwise (and on Android) the phone's own
-// settings stand in: an American English language and a US time zone. Only "US" sells.
+// Which country (iPhone): the account's App Store from StoreKit (through RevenueCat, once its
+// iOS key is in .env.app as VITE_RC_IOS_KEY). Until then the phone's own settings stand in: an
+// American English language and a US time zone. Only "US" sells.
 
 const US_ZONES = /^(America\/(New_York|Chicago|Denver|Phoenix|Los_Angeles|Anchorage|Juneau|Sitka|Metlakatla|Nome|Yakutat|Adak|Boise|Detroit|Menominee|Indiana\/.+|Kentucky\/.+|North_Dakota\/.+)|Pacific\/Honolulu)$/
 
@@ -35,5 +36,6 @@ export async function loadStorefront() {
   } catch { /* the phone's settings stand in */ }
 }
 
-export const sellsHere = () => !IS_APP || (country ?? fromSettings()) === 'US'
+// Android sells everywhere through Google Play Billing (lib/iap.js), and only that way
+export const sellsHere = () => !IS_APP || (APP_PLATFORM === 'android' ? PLAY_BILLING : (country ?? fromSettings()) === 'US')
 export const onStorefront = fn => { listeners.add(fn); return () => listeners.delete(fn) }

@@ -35,7 +35,7 @@ export default function DeleteAccount({ onDeleted }) {
       <div className="prf-delete-title">Delete your account?</div>
       <p className="prf-delete-body">
         This permanently removes your account, every saved season, your leaderboard history and your friends.
-        A Plus subscription is cancelled. This can’t be undone.
+        A BAP Pro subscription paid through Stripe is cancelled; one from Google Play has to be cancelled in Google Play. This can’t be undone.
       </p>
       {error && <div className="auth-error">{error}</div>}
       <div className="prf-changepw-btns">

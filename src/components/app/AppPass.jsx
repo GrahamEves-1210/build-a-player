@@ -5,7 +5,8 @@ import { itemById, RARITY } from '../../lib/cosmetics'
 import { openCheckout } from '../../lib/webCheckout'
 import { track } from '../../lib/track'
 import { sellsHere, onStorefront } from '../../lib/storefront'
-import { IS_APP } from '../../lib/platform'
+import { IS_APP, PLAY_BILLING } from '../../lib/platform'
+import { useStorePrices, passProductId } from '../../lib/iap'
 import { getUsername } from '../../lib/discord'
 import { sfx, haptic, claimFx } from '../../lib/juice'
 import { AvatarBadge, ItemPreview } from './NameTag'
@@ -95,6 +96,7 @@ export default function AppPass({ onClose }) {
   const name = getUsername(p.user) || 'Guest'
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
+  const store = useStorePrices()   // Android: Google Play's price, in the player's currency
   const [flash, setFlash] = useState(null)
   const [got, setGot] = useState(null)
   const bodyRef = useRef(null)
@@ -198,8 +200,8 @@ export default function AppPass({ onClose }) {
               <b>{value.items} pass-only items · {value.coins.toLocaleString()} coins</b>
               <small>Plus coins, Coin Rushes and boosts. Everything you've already reached unlocks at once.</small>
             </span>
-            <button className="ag-btn ag-pro-cta bp-buy-btn" onClick={buy} disabled={busy}>{busy ? 'OPENING…' : `UNLOCK · ${PASS_PRICE}`}</button>
-            <span className="bp-fine">{IS_APP ? 'Secure Stripe checkout on build-a-player.com. ' : ''}One payment for {s.name}, no subscription.</span>
+            <button className="ag-btn ag-pro-cta bp-buy-btn" onClick={buy} disabled={busy}>{busy ? 'OPENING…' : `UNLOCK · ${store[passProductId(s.id)] ?? PASS_PRICE}`}</button>
+            <span className="bp-fine">{PLAY_BILLING ? 'Paid through Google Play. ' : IS_APP ? 'Secure Stripe checkout on build-a-player.com. ' : ''}One payment for {s.name}, no subscription.</span>
             {err && <span className="bp-fine bp-fine--err">{err}</span>}
           </div>
         )}

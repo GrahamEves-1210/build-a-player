@@ -4,7 +4,7 @@ const TOC = [['t-game', 'The game'], ['t-coins', 'Coins'], ['t-pro', 'Pro and th
 
 export default function TermsPage({ onBack }) {
   return (
-    <LegalShell eyebrow="BUILD-A-PLAYER" title="Terms of Service" updated="Effective October 12, 2026" onBack={onBack} toc={TOC}>
+    <LegalShell eyebrow="BUILD-A-PLAYER" title="Terms of Service" updated="Effective October 25, 2026" onBack={onBack} toc={TOC}>
       <Sec id="t-summary" title="The short version">
         <L items={[
           'Build-A-Player is a free fan-made game. It isn\'t connected to the NFL, the NBA, their teams or players.',
@@ -47,17 +47,17 @@ export default function TermsPage({ onBack }) {
         <L items={[
           'Coins and items are a limited license to use inside the Service. They are not property, have no cash value, and can\'t be sold, traded or moved to another account.',
           'Items are cosmetic only. Nothing you buy changes a rating, a simulation or a result.',
-          'Coin purchases are processed by Stripe (in the app, the checkout opens in a secure browser window). All purchases are final except where the law requires a refund. If coins you paid for don\'t arrive, email us and we\'ll fix it.',
+          'Coin purchases are processed by Stripe on the website and in the iOS app (where the checkout opens in a secure browser window), and by Google Play in the Android app, under Google Play\'s terms. Prices in the Android app are set in Google Play and shown in your local currency. All purchases are final except where the law requires a refund; refunds for Google Play purchases follow Google Play\'s refund policy. If coins you paid for don\'t arrive, email us and we\'ll fix it.',
           'We may change prices and add or retire items. If we retire an item you bought, we give you back the coins you spent on it.',
           'Coins or items gained through a bug, a refund or a chargeback, or by breaking these Terms, may be removed.',
         ]} />
       </Sec>
 
       <Sec id="t-pro" title="7. BAP Pro and the Builder Pass">
-        <P>BAP Pro is an optional subscription: $4.99 a month or $34.99 a year. It adds 50% to the coins you earn from games, includes the Pro Vault's looks in the Shop while you're subscribed, removes ads on the website, doubles your free daily coins, shows a Pro badge next to your name, and gives you the Pro role in our Discord server while your Discord account is linked. It renews at the end of each month or year until you cancel.</P>
-        <P>Cancel at any time from the billing portal on your profile, or by emailing <Mail />. Pro stays on until the end of the period you've paid for. We don't refund partial periods, except where the law requires it. If the price changes, we'll tell you before your next renewal.</P>
+        <P>BAP Pro is an optional subscription: $4.99 a month or $34.99 a year (in the Android app, Google Play's price in your local currency). It adds 50% to the coins you earn from games, includes the Pro Vault's looks in the Shop while you're subscribed, removes ads on the website, doubles your free daily coins, shows a Pro badge next to your name, and gives you the Pro role in our Discord server while your Discord account is linked. It renews at the end of each month or year until you cancel.</P>
+        <P>Cancel at any time from the billing portal on your profile, or by emailing <Mail />. If you subscribed in the Android app, Google Play bills it: cancel or change it in Google Play (Manage subscription takes you there), and Google Play's terms apply to the payment. Pro stays on until the end of the period you've paid for. We don't refund partial periods, except where the law requires it. If the price changes, we'll tell you before your next renewal.</P>
         <P>If we shut the Service down for good, we'll refund the unused part of any yearly plan, counted in whole months.</P>
-        <P>The Builder Pass is a season of rewards (about two months) unlocked by XP. Its free track is open to every signed-in player. Its premium track is a one-time $8.99 purchase for that season only; it doesn't renew. Rewards you reach can be claimed until a week after the season ends. Pass items are cosmetic and follow the rules for items in section 6. A refunded or charged-back pass is removed from your account.</P>
+        <P>The Builder Pass is a season of rewards (about two months) unlocked by XP. Its free track is open to every signed-in player. Its premium track is a one-time $8.99 purchase (Google Play's price in the Android app) for that season only; it doesn't renew. Rewards you reach can be claimed until a week after the season ends. Pass items are cosmetic and follow the rules for items in section 6. A refunded or charged-back pass is removed from your account.</P>
       </Sec>
 
       <Sec id="t-fair" title="8. Fair play and online games">
@@ -87,7 +87,8 @@ export default function TermsPage({ onBack }) {
       </Sec>
 
       <Sec id="t-apps" title="12. The app stores">
-        <P>If you use the iOS app, these Terms are between you and us, not Apple. Apple isn't responsible for the app or its content, has no obligation to provide support or maintenance for it, and isn't responsible for any claims about it (including product liability, legal compliance or intellectual property claims). If the app fails to meet a warranty that applies by law, you may notify Apple, and Apple may refund the purchase price of the app (the app is free). Apple and its subsidiaries are third-party beneficiaries of these Terms and may enforce them against you. You confirm you're not in a country under a U.S. government embargo and not on a U.S. government list of restricted parties. The same applies to Google for the Android app, to the extent Google Play's terms require.</P>
+        <P>If you use the iOS app, these Terms are between you and us, not Apple. Apple isn't responsible for the app or its content, has no obligation to provide support or maintenance for it, and isn't responsible for any claims about it (including product liability, legal compliance or intellectual property claims). If the app fails to meet a warranty that applies by law, you may notify Apple, and Apple may refund the purchase price of the app (the app is free). Apple and its subsidiaries are third-party beneficiaries of these Terms and may enforce them against you. You confirm you're not in a country under a U.S. government embargo and not on a U.S. government list of restricted parties.</P>
+        <P>If you use the Android app, these Terms are between you and us, not Google. Google isn't responsible for the app or its content. Purchases in the Android app are made through Google Play and are also covered by the Google Play Terms of Service and Google Play's refund policies.</P>
       </Sec>
 
       <Sec id="t-legal" title="13. Warranties and liability">

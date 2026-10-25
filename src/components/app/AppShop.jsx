@@ -4,7 +4,8 @@ import { useProgress, buy, equip, owns, priceOf, lockReason, dealsFor, claimFree
 import { openCheckout } from '../../lib/webCheckout'
 import { sellsHere, onStorefront } from '../../lib/storefront'
 import { showRewarded, rewardedReady, REWARDED_ON } from '../../lib/rewardedAd'
-import { IS_APP } from '../../lib/platform'
+import { IS_APP, PLAY_BILLING } from '../../lib/platform'
+import { useStorePrices } from '../../lib/iap'
 import FeedbackModal from '../FeedbackModal'
 import { COIN_PACKS } from '../../lib/coins'
 import { connectDiscord, discordError } from '../../lib/discord'
@@ -110,6 +111,7 @@ const PACK_ART = ['/shop/coins-1.webp', '/shop/coins-2.webp', '/shop/coins-3.web
 
 function CoinPacks({ p }) {
   const [busy, setBusy] = useState(null)
+  const store = useStorePrices()   // Android: Google Play's prices, in the player's currency
   const [note, setNote] = useState('')
   const buyIt = async pack => {
     if (busy) return
@@ -122,7 +124,7 @@ function CoinPacks({ p }) {
   }
   return (
     <div className="sh-section">
-      <div className="sh-section-head"><span className="sh-section-title">BUY COINS</span><span className="sh-section-note">Secure checkout on build-a-player.com</span></div>
+      <div className="sh-section-head"><span className="sh-section-title">BUY COINS</span><span className="sh-section-note">{PLAY_BILLING ? 'Paid through Google Play' : 'Secure checkout on build-a-player.com'}</span></div>
       <div className="cpk-grid">
         {COIN_PACKS.map((pack, i) => (
           <button key={pack.id} className={`cpk${pack.tag ? ' is-tagged' : ''}`} onClick={() => buyIt(pack)} disabled={!!busy}>
@@ -131,7 +133,7 @@ function CoinPacks({ p }) {
             <span className="cpk-art" aria-hidden="true"><img src={PACK_ART[i] ?? PACK_ART.at(-1)} alt="" draggable={false} /></span>
             <b className="cpk-n">{pack.coins.toLocaleString()}</b>
             <span className="cpk-lbl">COINS</span>
-            <span className="cpk-price">{busy === pack.id ? <span className="bt-dots bt-dots--btn" aria-label="Working"><i /><i /><i /></span> : `$${pack.usd.toFixed(2)}`}</span>
+            <span className="cpk-price">{busy === pack.id ? <span className="bt-dots bt-dots--btn" aria-label="Working"><i /><i /><i /></span> : store[pack.id] ?? `$${pack.usd.toFixed(2)}`}</span>
           </button>
         ))}
       </div>

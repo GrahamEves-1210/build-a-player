@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useProgress } from '../../lib/progress'
 import { sellsHere, onStorefront } from '../../lib/storefront'
 import { PRO_PRICE } from '../../lib/webCheckout'
+import { useStorePrices, PRO_PLAN_ID } from '../../lib/iap'
 import { IconCrown } from './icons'
 import './pass.css'
 
@@ -20,6 +21,7 @@ function useSells() {
 export function ProCard({ delay }) {
   const p = useProgress()
   const sells = useSells()
+  const store = useStorePrices()
   if (p.pro || !sells) return null
   return (
     <button className="pro-card ag-pop" style={delay ? { '--d': delay } : undefined} onClick={() => nav('pro')}>
@@ -28,7 +30,7 @@ export function ProCard({ delay }) {
         <span className="pro-card-title">BAP PRO</span>
         <span className="pro-card-sub">+50% coins · Pro Vault included · No ads · Discord role</span>
       </span>
-      <span className="pro-card-go">{PRO_PRICE.month}/MO</span>
+      <span className="pro-card-go">{store[PRO_PLAN_ID.month] ?? PRO_PRICE.month}/MO</span>
     </button>
   )
 }

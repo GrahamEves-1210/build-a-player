@@ -1,9 +1,10 @@
 // Coin packs: what real money buys. One list for everyone:
 //   website → Stripe Checkout (functions/api/create-coins-checkout.js keeps its
 //             own copy of the prices, so the browser can't change them)
-//   app     → the same Stripe Checkout, opened in the phone's browser
-//             (lib/webCheckout.js). Ids are kept as they are (the store products
-//             in lib/iap.js use them, should in-app purchase come back)
+//   iPhone  → the same Stripe Checkout, opened in the phone's browser
+//             (lib/webCheckout.js)
+//   Android → Google Play products with these same ids (lib/iap.js); the server's
+//             copy of the coins is in functions/api/revenuecat-webhook.js
 export const COIN_PACKS = [
   { id: 'bap_coins_1200',  coins: 3000,  usd: 1.99 },
   { id: 'bap_coins_3200',  coins: 8500,  usd: 4.99, tag: 'POPULAR' },

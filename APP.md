@@ -108,9 +108,28 @@ If it's ever lost, Google can reset the upload key (Play Console → Test and re
 7. **Store listing:** everything is in `F:\bap-play-store`: `listing.txt` (name, short and full
    description, category, URLs), `icon-512.png`, `feature-graphic-1024x500.png` and six phone
    screenshots (1080 × 2160) in `screenshots/`. Category: Sports.
-8. **Purchases:** coins and BAP Pro go through the Stripe web checkout, shown only to US players
-   (`lib/storefront.js`, the phone's language and time zone). Google allows US apps to link out to
-   their own checkout; if a review objects, the fallback is Google Play Billing through RevenueCat.
+8. **Purchases (Google Play Billing, `lib/iap.js`):** Android sells coins, BAP Pro and the Pass
+   through Google Play, in every country. Until the key below is in `.env.app`, Android shows no
+   buy buttons. Setup, in this order:
+   1. Play Console → Setup → **Payments profile** (the merchant account), then upload a build with
+      Billing (any build from now on) so the products page unlocks.
+   2. Play Console → Monetize → **In-app products**, each active, with these exact ids:
+      `bap_coins_1200` $1.99, `bap_coins_3200` $4.99, `bap_coins_7000` $9.99, `bap_coins_15000` $19.99,
+      `bap_pass_s1` $8.99.
+   3. Monetize → **Subscriptions** → `bap_pro`, with two auto-renewing base plans: `monthly` $4.99
+      (1 month) and `yearly` $34.99 (1 year).
+   4. [RevenueCat](https://app.revenuecat.com) (free): a project with a Google Play app
+      (`com.buildaplayer.app`), its Google service account JSON (RevenueCat's guide walks through it),
+      and the products imported. Mark `bap_pass_s1` **non-consumable**; the coin packs stay consumable.
+   5. RevenueCat → Integrations → **Webhooks**: URL `https://build-a-player.com/api/revenuecat-webhook`,
+      Authorization header any long random string. Put the same string in Cloudflare Pages → Settings →
+      Variables as `REVENUECAT_WEBHOOK_AUTH`, then redeploy.
+   6. RevenueCat → API keys → the **Google Play public key** (starts `goog_`) → `.env.app` as
+      `VITE_RC_ANDROID_KEY=goog_…`, commit, and build again.
+   7. Test with a license tester (Play Console → Settings → License testing): buy coins, Pro, the Pass.
+   Purchases are recorded by `functions/api/revenuecat-webhook.js` exactly like Stripe's (coins
+   collected in the game, refunds taken back). A Pro bought on Android is managed in Google Play
+   (Manage subscription goes there). The iPhone app keeps the Stripe checkout.
 9. **Production:** after the testing, Production → Create release → the same build → Send for review.
 
 New versions: start another Codemagic build (the version code goes up by itself) and upload it the same way.

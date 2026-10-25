@@ -4,7 +4,7 @@ const TOC = [['p-collect', 'What we collect'], ['p-use', 'How we use it'], ['p-p
 
 export default function PrivacyPage({ onBack }) {
   return (
-    <LegalShell eyebrow="BUILD-A-PLAYER" title="Privacy Policy" updated="Last updated October 12, 2026" onBack={onBack} toc={TOC}>
+    <LegalShell eyebrow="BUILD-A-PLAYER" title="Privacy Policy" updated="Last updated October 25, 2026" onBack={onBack} toc={TOC}>
       <Sec id="p-summary" title="The short version">
         <L items={[
           'We collect what the game needs to save your progress, run leaderboards and online games, and fix bugs.',
@@ -19,7 +19,7 @@ export default function PrivacyPage({ onBack }) {
         <P><strong>Your account.</strong> If you sign up, we keep your email address, your username and your password (stored hashed by our database provider, never in plain text). If you sign in with Discord or Apple, we receive the basic details they share: an account ID, a username and an email address (Apple may give us a private relay address instead of your real one).</P>
         <P><strong>Your game.</strong> Builds and saved seasons with their stats, leaderboard entries, XP and level, coins and what you bought, the cosmetic items you own and wear, achievements, your card collection, Career saves (kept with your account so you can continue on another device), and your online ratings and match results.</P>
         <P><strong>Online games.</strong> While you're in a live game, your username, avatar, cosmetics and build are sent to the other players in that game. Team chat messages go live to the players in that game and aren't stored as a chat history. If someone reports a message, the message, the game's room code and the usernames involved are saved so we can review it.</P>
-        <P><strong>Purchases.</strong> Coins and BAP Pro are paid through Stripe. We receive what you bought, the amount and a Stripe customer reference. We never see or store your card number.</P>
+        <P><strong>Purchases.</strong> On the website and in the iOS app, coins, BAP Pro and the Builder Pass are paid through Stripe; in the Android app, through Google Play, with RevenueCat checking each purchase with Google. We receive what you bought, the amount, and a Stripe or Google Play purchase reference linked to your account. We never see or store your card number.</P>
         <P><strong>Feedback.</strong> Anything you send us through the feedback form or by email, with your username if you're signed in.</P>
         <P><strong>Usage and crashes.</strong> Google Analytics tells us which pages and screens are used, for how long, on what kind of device, and from roughly which country or region. When something breaks, the game sends a crash report: the error, technical details of where it happened, the page, the app version, the platform, your browser or device type, and your account ID if you're signed in.</P>
         <P><strong>On your device.</strong> The game keeps your build in progress, your settings and a random device ID (used so a live game can reconnect and only one runs at a time) in your device's storage. That stays on your device unless it's part of your saved progress.</P>
@@ -52,7 +52,8 @@ export default function PrivacyPage({ onBack }) {
         <L items={[
           <><Ext href="https://supabase.com/privacy">Supabase</Ext>: accounts, the database and live games</>,
           <><Ext href="https://www.cloudflare.com/privacypolicy/">Cloudflare</Ext>: hosting the website</>,
-          <><Ext href="https://stripe.com/privacy">Stripe</Ext>: payments</>,
+          <><Ext href="https://stripe.com/privacy">Stripe</Ext>: payments on the website and in the iOS app</>,
+          <><Ext href="https://policies.google.com/privacy">Google Play</Ext> and <Ext href="https://www.revenuecat.com/privacy">RevenueCat</Ext>: payments in the Android app</>,
           <><Ext href="https://policies.google.com/privacy">Google</Ext>: Analytics, Ad Manager and AdMob</>,
           <><Ext href="https://www.playwire.com/privacy-policy">Playwire (Ramp)</Ext>: website ads</>,
           <>Discord and Apple: only if you sign in with them</>,
@@ -61,7 +62,7 @@ export default function PrivacyPage({ onBack }) {
       </Sec>
 
       <Sec id="p-keep" title="How long we keep it">
-        <P>Account and game data stays while your account exists. Crash reports and chat reports are kept only as long as we need them to fix the problem or review the report. When you delete your account, your account and game data are permanently deleted, and any BAP Pro subscription is cancelled.</P>
+        <P>Account and game data stays while your account exists. Crash reports and chat reports are kept only as long as we need them to fix the problem or review the report. When you delete your account, your account and game data are permanently deleted, and any BAP Pro subscription paid through Stripe is cancelled (one from Google Play is cancelled in Google Play).</P>
       </Sec>
 
       <Sec id="p-choices" title="Your choices and rights">
