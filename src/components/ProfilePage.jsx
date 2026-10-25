@@ -55,6 +55,8 @@ import { ATTR, TYPES } from '../data/qbs'
 import { BUCKET_ATTR } from '../data/nba-attrs'
 import { NBA_TEAMS } from '../data/nba-teams'
 import NBA_HEADSHOTS from '../data/nba-headshots.json'
+import { NBA_GUARD_PLAYERS } from '../data/nba-guards'
+import { NBA_BIG_PLAYERS } from '../data/nba-bigs'
 import BucketFigureOverlay from './BucketFigureOverlay'
 import { BucketModelFigure } from './BucketSimPage'
 
@@ -112,6 +114,18 @@ import { getUsername } from '../lib/discord'
 import { IconGear, IconTrophy, IconCrown } from './app/icons'
 import { useCountUp as countUp } from '../lib/useCountUp'
 import { openBillingPortal } from '../lib/webCheckout'
+
+// a trait's player by name: an older save kept only the short name (a last name, or for a few
+// players just their suffix: 'Jr.' for Michael Porter Jr.): the full name from that team's roster
+const BUCKET_POOL = [...NBA_GUARD_PLAYERS, ...NBA_BIG_PLAYERS]
+const slotName = d => {
+  if (d.qbFull || !d.qb || !d.team) return d.qbFull || d.qb
+  const q = d.qb.toLowerCase()
+  return BUCKET_POOL.find(p => p.team === d.team && (p.short?.toLowerCase() === q || p.name.toLowerCase().endsWith(` ${q}`)))?.name ?? d.qb
+}
+
+// a grade's colour, like every build screen (rounded like the letter, valToGrade)
+const gradeColor = v0 => { const v = Math.round(v0 ?? 0); return v >= 11 ? '#a855f7' : v >= 8 ? '#3b82f6' : v >= 5 ? '#22c55e' : v >= 2 ? '#eab308' : v >= 1 ? '#f97316' : '#ef4444' }
 
 // the shared count-up (lib/useCountUp.js); runs once there's a number to count to
 const useCountUp = (target, duration = 900, enabled = true) => countUp(target, { run: enabled && !!target, ms: duration })
@@ -1198,8 +1212,8 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
                               {Object.entries(bd.build).map(([slot, d]) => (
                                 <div key={slot} className="pbe-slot-row">
                                   <span className="pbe-slot-attr">{(isWRView || isTEView) && slot === 'size' ? 'SIZE' : positionAttrMap[slot]?.shortLabel ?? slot}</span>
-                                  <span className="pbe-slot-qb">{d.qb}</span>
-                                  <span className="pbe-slot-grade" style={{ background: positionAttrMap[slot]?.hex ?? '#95d5b2', color: '#111111' }}>{valToGrade(d.val)}</span>
+                                  <span className="pbe-slot-qb">{slotName(d)}</span>
+                                  <span className="pbe-slot-grade" style={{ background: gradeColor(d.val), color: '#111111' }}>{valToGrade(d.val)}</span>
                                 </div>
                               ))}
                             </div>
@@ -1381,8 +1395,8 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
                                     return (
                                       <div key={slot} className="pbe-slot-row">
                                         <span className="pbe-slot-attr">{meta?.shortLabel ?? slot}</span>
-                                        <span className="pbe-slot-qb">{d.qb}</span>
-                                        <span className="pbe-slot-grade" style={{ background: meta?.hex ?? '#95d5b2', color: '#111111' }}>{valToGrade(d.val)}</span>
+                                        <span className="pbe-slot-qb">{slotName(d)}</span>
+                                        <span className="pbe-slot-grade" style={{ background: gradeColor(d.val), color: '#111111' }}>{valToGrade(d.val)}</span>
                                       </div>
                                     )
                                   })}
@@ -1419,7 +1433,7 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
                           <div className="prf-best-season">
                             <span className="pbs-lbl">Best Day</span>
                             <span className="pbs-val">
-                              {salaryCareer.best.date_str}
+                              {/^\d{4}-\d{2}-\d{2}$/.test(salaryCareer.best.date_str ?? '') ? new Date(`${salaryCareer.best.date_str}T12:00:00Z`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : salaryCareer.best.date_str}
                               {salaryCareer.best.overall_score != null && ` · ${salaryCareer.best.overall_score} pts`}
                               {salaryCareer.best.ppg != null && ` · ${(+salaryCareer.best.ppg).toFixed(1)} PPG`}
                               {salaryCareer.best.budget_used != null && ` · $${salaryCareer.best.budget_used}M used`}
