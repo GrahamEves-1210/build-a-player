@@ -51,6 +51,8 @@ if (!IS_APP && APP_LOOK) document.documentElement.classList.add('app-look')
 if (IS_APP || APP_LOOK) import('./lib/juice').then(m => m.initJuice()).catch(() => {})
 // XP, coins, streak, missions, cards (lib/progress.js)
 if (IS_APP || APP_LOOK) import('./lib/progress').then(m => m.initProgress()).catch(() => {})
+// Cosmetic effects pause while they're off screen (lib/fxPause.js)
+if (IS_APP || APP_LOOK) import('./lib/fxPause').then(m => m.initFxPause()).catch(() => {})
 // App: Discord sign-in comes back through the app's own link
 if (IS_APP) import('./lib/appAuth').then(m => m.initAppAuth()).catch(() => {})
 // which App Store the phone shops in (buying is offered only on the US one: lib/storefront.js)

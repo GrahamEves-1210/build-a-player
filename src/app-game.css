@@ -5749,3 +5749,20 @@ html:is(.is-app, .app-look) .auth-error { animation: auth-err .48s cubic-bezier(
   100% { transform: none; }
 }
 html.bap-reduce-motion .auth-error { animation: none !important; }
+
+/* ═══ FX PAUSE: looping effects only run where someone can see them ═══ */
+/* a cosmetic effect off screen, or resting after its turn (lib/fxPause.js): its still look */
+[data-fx-off], [data-fx-off] *, [data-fx-off]::before, [data-fx-off]::after, [data-fx-off] *::before, [data-fx-off] *::after { animation: none !important; }
+/* the home under a full screen (Shop, Pass, Daily...): nothing on it is showing */
+html.ag-screen-open .ag-home, html.ag-screen-open .ag-home *, html.ag-screen-open .ag-home *::before, html.ag-screen-open .ag-home *::after { animation-play-state: paused !important; }
+/* the app's home cards: the art plays twice as the home appears, then rests (looping, it
+   repainted the home every frame); the live dots keep pulsing */
+html.is-app :is(.bt-art-net, .bt-art-shot-x, .bt-art-shot-y, .ag-pool-bar, .ag-pool-star, .ag-cr-line, .ag-cr-peak) { animation-iteration-count: 2 !important; }
+/* the Builder Pass strip's small tiles show each reward's still look (the Pass and the
+   item itself play it) */
+.ps-tile :is(.nt, .avb, .ntag, .ent, .ip-reel, .ip-fx, .ip-ent),
+.ps-tile :is(.nt, .avb, .ntag, .ent, .ip-reel, .ip-fx, .ip-ent) *,
+.ps-tile :is(.nt, .avb, .ntag, .ent, .ip-reel, .ip-fx, .ip-ent)::before,
+.ps-tile :is(.nt, .avb, .ntag, .ent, .ip-reel, .ip-fx, .ip-ent)::after,
+.ps-tile :is(.nt, .avb, .ntag, .ent, .ip-reel, .ip-fx, .ip-ent) *::before,
+.ps-tile :is(.nt, .avb, .ntag, .ent, .ip-reel, .ip-fx, .ip-ent) *::after { animation: none !important; }
