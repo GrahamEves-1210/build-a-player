@@ -1307,7 +1307,7 @@ export default function App() {
 
   const navbarProps = {
     gradesToggle: drop && !competeOn && page !== 'versus-game',   // phones: the grades switch lives in the navbar
-    onReset: competeOn ? undefined : handleReset,
+    onReset: competeOn || dailyLocked ? undefined : handleReset,   // the Daily: one run, no reset
     onAbout: () => setPage('about'),
     onHome: handleHome,
     onSignIn: () => setShowAuth(true),

@@ -139,6 +139,19 @@ function enrichPlayer(p) {
 }
 
 const ENRICHED_GUARDS         = NBA_GUARD_PLAYERS.map(enrichPlayer)
+// A 1v1 played phone to phone: the other phone's build, each trait rated from the real
+// player it names (a phone can't send its own numbers: a sandbox or an edited build).
+// A player it doesn't name plays as a free agent, as on the live server (blacktopCore)
+const OPP_FREE_AGENT_VAL = 3
+function realOppBuild(b, pos) {
+  if (!b || typeof b !== 'object') return {}
+  const pool = pos === 'big' ? NBA_BIG_PLAYERS : NBA_GUARD_PLAYERS
+  return Object.fromEntries(Object.entries(b).map(([t, c]) => {
+    if (!c || typeof c !== 'object') return [t, c]
+    const p = pool.find(x => x.name === c.qbFull && (!c.team || x.team === c.team)) ?? pool.find(x => x.name === c.qbFull)
+    return [t, { ...c, val: typeof p?.attrs?.[t] === 'number' ? p.attrs[t] : OPP_FREE_AGENT_VAL }]
+  }))
+}
 const ENRICHED_BIGS           = NBA_BIG_PLAYERS.map(enrichPlayer)
 const ENRICHED_ALLTIME_GUARDS = NBA_ALLTIME_GUARD_PLAYERS.map(enrichPlayer)
 const ENRICHED_ALLTIME_BIGS   = NBA_ALLTIME_BIG_PLAYERS.map(enrichPlayer)
@@ -418,6 +431,7 @@ export default function BucketApp() {
   // Versus mode
   const [versusRoom,     setVersusRoom]     = useState(null)
   const [oppBuild,       setOppBuild]       = useState({})
+  const oppPosRef = useRef(null)   // the opponent's position, for rating the build they send (realOppBuild)
   const [oppPlayer,      setOppPlayer]      = useState(null)
   const [leaveConfirm,   setLeaveConfirm]   = useState(null)
   const [vsRecord,       setVsRecord]       = useState({ wins: 0, losses: 0 })
@@ -749,6 +763,9 @@ export default function BucketApp() {
   }, [])
   // a Career or Squad Builder build whose Sandbox isn't unlocked: sandbox from the plain modes doesn't carry in
   useEffect(() => { if (isBucketCustomMode && sandboxLocked(page)) handleSandboxToggle(false) }, [page]) // eslint-disable-line react-hooks/exhaustive-deps
+  // and an online build (Blacktop, a 1v1) never runs on sandbox ratings (the server re-rates
+  // them anyway; the screen shouldn't show sandbox numbers while you build)
+  useEffect(() => { if (isBucketCustomMode && (page === 'blacktop-build' || page === 'versus-game')) setIsBucketCustomMode(false) }, [page]) // eslint-disable-line react-hooks/exhaustive-deps
   setSandboxGate(sandboxItemFor(page))
 
   const currentPool = useMemo(() => {
@@ -1328,7 +1345,8 @@ export default function BucketApp() {
 
   const handleVersusJoin = useCallback(({ code, role, oppId, oppName, oppCos = null, channel, matchType }) => {
     channel.on('broadcast', { event: 'bab_build' }, ({ payload }) => {
-      setOppBuild(payload.build || {})
+      if (payload.position) oppPosRef.current = payload.position
+      setOppBuild(realOppBuild(payload.build, oppPosRef.current))
       setOppPlayer(payload.player || null)
       if (payload.position) setOppPosition(payload.position)
     })
@@ -1336,6 +1354,7 @@ export default function BucketApp() {
       setPage('versus-result')
     })
     channel.on('broadcast', { event: 'bab_position' }, ({ payload }) => {
+      oppPosRef.current = payload.position || null
       setOppPosition(payload.position || null)
     })
     // Guest stores game data broadcast by host (with perspective flipped)
@@ -1395,6 +1414,7 @@ export default function BucketApp() {
     setOppBuild({})
     setOppPlayer(null)
     setOppPosition(null)
+    oppPosRef.current = null
     setOppRecord(null)
     setBuild(Object.fromEntries(activeTypes.map(t => [t, null])))
     setActiveCategory((POS_CATS[position] ?? GUARD_CATEGORIES)[0].id)
@@ -1607,7 +1627,7 @@ export default function BucketApp() {
 
   const navbarProps = {
     gradesToggle: drop && !competeOn && !liveBuild && page !== 'versus-game',   // phones: the grades switch lives in the navbar
-    onReset: competeOn ? undefined : () => guardedLeave(handleReset),
+    onReset: competeOn || dailyLocked ? undefined : () => guardedLeave(handleReset),   // the Daily: one run, no reset
     onHome: () => guardedLeave(handleHome),
     onSignIn: () => setShowAuth(true),
     onProfile: () => guardedLeave(() => user ? (window.history.pushState({}, '', '/profile'), setPage('profile')) : setShowAuth(true)),
@@ -1705,7 +1725,7 @@ export default function BucketApp() {
           onSaveResult={setSavedSpinResult}
           onPhaseChange={setSpinPhase}
           gameKey={gameKey}
-          onReset={competeOn || liveBuild || page === 'versus-game' ? undefined : handleReset}
+          onReset={competeOn || liveBuild || dailyLocked || page === 'versus-game' ? undefined : handleReset}
           adsDisabled={adsDisabled}
           cardMeta={(IS_APP || APP_LOOK) && gameIsPlay && gameMode !== 'salarycap' ? { sport: 'bucket', pos: position, mode: gameMode } : null}
           seedPlan={competePlan ?? blacktopPlan ?? dailyPlan}
@@ -1732,13 +1752,13 @@ export default function BucketApp() {
           onCategoryChange={setActiveCategory}
           types={activeTypes}
           isLite={gameMode === 'lite'}
-          onReset={competeOn || liveBuild || page === 'versus-game' ? undefined : handleReset}
+          onReset={competeOn || liveBuild || dailyLocked || page === 'versus-game' ? undefined : handleReset}
           isRB={false}
           isBucket={true}
           isPlus={isSubscribed}
           isCustomMode={isBucketCustomMode}
           onOpenCustomModal={() => setShowBucketCustomModal(true)}
-          onSandboxToggle={!isVersusMode && !competeOn && (page === 'game' || page === 'career-build' || page === 'squad-build') && (gameMode === 'classic' || gameMode === 'all-time') ? handleSandboxToggle : undefined}
+          onSandboxToggle={!isVersusMode && !competeOn && !dailyRun && (page === 'game' || page === 'career-build' || page === 'squad-build') && (gameMode === 'classic' || gameMode === 'all-time') ? handleSandboxToggle : undefined}
           attrMap={BUCKET_ATTR}
           categoriesData={activeCategories}
           figureRef={figureRef}
@@ -1749,7 +1769,7 @@ export default function BucketApp() {
             build={build}
             onSimulate={page === 'squad-build' ? squadNext : page === 'career-build' ? enterDraft : competeOn ? lockInCompete : replayOrSpin}
             simLabel={page === 'squad-build' ? (squadLeft > 1 ? 'NEXT PLAYER' : squad?.team ? 'BACK TO THE SQUAD' : 'PICK A TEAM') : page === 'career-build' ? 'ENTER THE DRAFT' : competeOn ? 'LOCK IN' : undefined}
-            onReset={competeOn || liveBuild || page === 'versus-game' ? undefined : handleReset}
+            onReset={competeOn || liveBuild || dailyLocked || page === 'versus-game' ? undefined : handleReset}
             types={activeTypes}
             hasResult={false}
             isRB={false}
@@ -1758,7 +1778,7 @@ export default function BucketApp() {
             isPlus={isSubscribed}
             isCustomMode={isBucketCustomMode}
             onOpenCustomModal={() => setShowBucketCustomModal(true)}
-            onSandboxToggle={!isVersusMode && !competeOn && (page === 'game' || page === 'career-build' || page === 'squad-build') && (gameMode === 'classic' || gameMode === 'all-time') ? handleSandboxToggle : undefined}
+            onSandboxToggle={!isVersusMode && !competeOn && !dailyRun && (page === 'game' || page === 'career-build' || page === 'squad-build') && (gameMode === 'classic' || gameMode === 'all-time') ? handleSandboxToggle : undefined}
             attrMap={BUCKET_ATTR}
             logoDir="/logos/nba/"
             captureFigure={captureFigure}

@@ -257,7 +257,7 @@ export default function AppAuction({ au, posName, onHome, onPlayAgain }) {
             <div className={`au-grade${shown ? ' is-open' : ''}`} aria-label={shown ? `Grade ${valToGrade(lot.val)}` : 'Grade hidden'}>
               <div className="au-grade-in">
                 <span className="au-grade-back">?</span>
-                <b className="au-grade-face" style={{ '--g': gradeColor(lot.val) }}>{valToGrade(lot.val)}</b>
+                {shown && <b className="au-grade-face" style={{ '--g': gradeColor(lot.val) }}>{valToGrade(lot.val)}</b>}
               </div>
             </div>
           </div>

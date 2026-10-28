@@ -56,9 +56,12 @@ export class AuctionRoom {
   // what a phone needs: the times as "how long ago", so its own clock lines them up
   view() {
     const s = this.st, now = Date.now()
+    // a lot's grade stays with the server until it's sold: the phones only ever had it
+    // face down (AppAuction), so a look at the page or the connection gave it away
+    const lot = s.lot && !s.sold ? { ...s.lot, val: undefined, vals: undefined, extra: undefined } : s.lot
     return {
       t: 'state', m: this.m, here: this.here(), ranked: this.ranked,
-      st: { n: s.n, stage: s.stage, lot: s.lot, high: s.high, passed: s.passed, sold: s.sold, L: s.L, el: now - s.t0, sinceLast: s.last ? now - s.last : null, sinceSold: s.soldAt ? now - s.soldAt : null },
+      st: { n: s.n, stage: s.stage, lot, high: s.high, passed: s.passed, sold: s.sold, L: s.L, el: now - s.t0, sinceLast: s.last ? now - s.last : null, sinceSold: s.soldAt ? now - s.soldAt : null },
     }
   }
   broadcast() { const v = this.view(); for (const ws of this.conns.keys()) send(ws, v) }
