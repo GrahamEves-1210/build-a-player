@@ -2624,7 +2624,7 @@ const TEAM_STARTERS = {
   NYK: ['Jalen Brunson','Mikal Bridges','OG Anunoby','Josh Hart','Karl-Anthony Towns'],
   OKC: ['Shai Gilgeous-Alexander','Alex Caruso','Luguentz Dort','Chet Holmgren','Isaiah Hartenstein'],
   ORL: ['Jalen Suggs','Desmond Bane','Franz Wagner','Paolo Banchero','Nikola Vucevic'],
-  PHI: ['Tyrese Maxey','Anfernee Simons','Jaylen Brown','LeBron James','Joel Embiid'],
+  PHI: ['Tyrese Maxey','VJ Edgecombe','Jaylen Brown','LeBron James','Joel Embiid'],
   PHX: ['Devin Booker','Jalen Green','Dillon Brooks','Miles Bridges','Mark Williams'],
   POR: ['Damian Lillard','Shaedon Sharpe','Deni Avdija','Toumani Camara','Donovan Clingan'],
   SAC: ['Killian Hayes','Zach LaVine',"De'Andre Hunter",'Keegan Murray','Domantas Sabonis'],

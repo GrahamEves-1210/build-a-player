@@ -65,7 +65,9 @@ const REPLACEMENT = { nfl: 62, bucket: 64 }
 // The team's real starters at each position, best first (as many as the squad's caps)
 export function startersOf(sport, short) {
   const out = {}, taken = new Set()
-  for (const pos of POSITIONS[sport]) {
+  // basketball fills the bigs first: a forward listed in both groups (LeBron, Giannis) starts
+  // at the four, the way his team plays him, and the guards fill around him
+  for (const pos of sport === 'bucket' ? ['big', 'guard'] : POSITIONS[sport]) {
     const types = TYPES_OF[pos]
     out[pos] = POOL[pos]
       .filter(p => p.team === short && p.attrs && !taken.has(p.name))
