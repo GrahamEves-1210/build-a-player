@@ -47,10 +47,13 @@ const railSlots = () => Object.entries(window.ramp?.settings?.slots ?? {})
 export const RAIL_GAP_MS = 30000
 let lastRail = 0
 
-// Phones skip the corner video: there it sat on top of half the bottom rail (an
-// ad covering an ad), so a phone runs the rail alone. Desktop keeps it.
-const onPhone = () => !!window.matchMedia?.('(max-width: 768px)').matches
-const forScreen = ads => (onPhone() ? ads.filter(a => a.type !== 'corner_ad_video') : ads)
+// The units that float over the page only run where the page leaves them room. The corner
+// video (bottom right) needs a window at least 1440 wide: narrower, it covered the dock's
+// right end and the game's own panel (on a phone it sat on half the bottom rail). The left
+// rail needs 1500: narrower, it covered the left of the page. The bottom rail always runs:
+// everything keeps clear of it (--web-rail, AppTabBar).
+const wide = px => !!window.matchMedia?.(`(min-width: ${px}px)`).matches
+const forScreen = ads => ads.filter(a => (a.type === 'corner_ad_video' ? wide(1440) : a.type === 'left_rail' ? wide(1500) : true))
 
 // ads: units to add after the destroy ([] = none)
 export function rampPage({ ads: wanted = [], path } = {}) {

@@ -78,8 +78,11 @@ function watchRail() {
     if (el && !root.classList.contains('ads-hidden')) {
       const cs = getComputedStyle(el)
       if (cs.display !== 'none' && cs.visibility !== 'hidden') {
-        h = el.getBoundingClientRect().height
-        for (const c of el.querySelectorAll('iframe, div')) h = Math.max(h, c.getBoundingClientRect().height)
+        // from the bottom of the window up to the highest part showing (the rail's close
+        // tab sits above the rail itself)
+        let top = el.getBoundingClientRect().top
+        for (const c of el.querySelectorAll('iframe, div, button, span')) { const r = c.getBoundingClientRect(); if (r.height > 0 && r.width > 0) top = Math.min(top, r.top) }
+        h = Math.min(320, Math.max(0, window.innerHeight - top))
       }
     }
     h = Math.ceil(h)
