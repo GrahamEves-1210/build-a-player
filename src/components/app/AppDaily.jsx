@@ -234,7 +234,7 @@ export default function AppDaily({ sport, onClose }) {
         <Challenge p={p} sport={sport} />
         <WeeklyCup p={p} />
         {(
-          <section className="ag-extras ag-pop" style={{ '--d': '120ms', padding: 0 }}>
+          <section className="ag-extras ag-daily-extras ag-pop" style={{ '--d': '120ms', padding: 0 }}>
             <button className="ag-mini ag-mini--purple" style={{ gridColumn: '1 / -1' }} onClick={() => { onClose(); window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'salarycap' })) }}>
               <span className="ag-mini-flag">DAILY</span>
               <span className="ag-mini-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><IconCoin size={17} /> SALARY CAP</span>

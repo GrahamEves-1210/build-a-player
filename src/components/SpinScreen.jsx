@@ -37,6 +37,11 @@ const CENTER  = 2
 const IDLE_MS = 1200
 const FAST_MS = 36   // ms per item at peak speed — defines MAX_VEL
 
+// The drum (rows tilting like a slot machine's reel) and the reels' slow idle drift are off on
+// the desktop website: a 3D reel re-tilting its rows every frame, and reels moving every frame
+// while you wait, were a big part of the spin screen's stutter there. Phones and the app keep them
+const DRUM_ON = IS_APP || !(typeof window !== 'undefined' && window.matchMedia?.('(min-width: 769px)').matches)
+
 // ─── Slot Reel ───────────────────────────────────────────────────────────────
 // Same item on both sides of a reel, even when the pool was re-mapped (custom ratings)
 const reelKey = x => `${x?.name}|${x?.team ?? x?.short}`
@@ -51,6 +56,15 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, on
     () => Array.from({ length: COPIES }, () => items).flat(),
     [items, COPIES]
   )
+  // the strip's rows (about 100) are made once per list, not on every render: the spin
+  // screen re-renders while a reel turns, and remaking them each time was most of its cost.
+  // getDisplay/getSub only read the item, so the list alone decides them
+  const rows = useMemo(() => allItems.map((item, i) => (
+    <div key={i} className="reel-row" style={{ height: ITEM_H }}>
+      <div className="reel-primary">{getDisplay(item)}</div>
+      {getSub && <div className="reel-secondary">{getSub(item)}</div>}
+    </div>
+  )), [allItems]) // eslint-disable-line react-hooks/exhaustive-deps
   const initOffset = useMemo(
     () => Math.floor(COPIES / 2) * items.length * ITEM_H + CENTER * ITEM_H,
     [COPIES, items]
@@ -67,12 +81,20 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, on
 
   // The drum: the rows tilt away from the middle like a slot machine's reel. Looks only:
   // the spin, its timing and where it stops are all the track's position (posRef), untouched.
-  // Only the ~8 rows in the window are touched each frame.
-  const drum = (pos, transition = '') => {
+  // Only the ~8 rows in the window are touched each frame. The window's height and the
+  // track's top are measured once a render (measure()), never mid-spin: reading them right
+  // after moving the track made the browser redo the page's layout every frame (desktop stutter)
+  const metricsRef = useRef(null)
+  const measure = () => {
     const track = trackRef.current, win = windowRef.current
-    if (!track || !win) return
-    const h = win.clientHeight || 5 * ITEM_H
-    const off = track.offsetTop - (pos - CENTER * ITEM_H)    // where row 0 sits in the window
+    if (track && win) metricsRef.current = { h: win.clientHeight || 5 * ITEM_H, top: track.offsetTop }
+  }
+  const drum = (pos, transition = '') => {
+    const track = trackRef.current
+    if (!track || !DRUM_ON) return
+    if (!metricsRef.current) measure()
+    const { h, top } = metricsRef.current ?? { h: 5 * ITEM_H, top: 0 }
+    const off = top - (pos - CENTER * ITEM_H)    // where row 0 sits in the window
     const first = Math.max(0, Math.floor(-off / ITEM_H) - 1)
     const last = Math.min(track.children.length - 1, first + Math.ceil(h / ITEM_H) + 2)
     for (let i = first; i <= last; i++) {
@@ -87,10 +109,13 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, on
   // never overwrite our direct DOM updates with a stale value.
   useLayoutEffect(() => {
     if (trackRef.current) {
+      if (!metricsRef.current) measure()
       trackRef.current.style.transform = `translate3d(0,${-(posRef.current - CENTER * ITEM_H)}px,0)`
       drum(posRef.current)
     }
   })
+  // a resized window: measure again on the next frame drawn
+  useEffect(() => { const r = () => { metricsRef.current = null }; window.addEventListener('resize', r); return () => window.removeEventListener('resize', r) }, [])
 
   useEffect(() => {
     cancelAnimationFrame(rafRef.current)
@@ -207,7 +232,7 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, on
 
       rafRef.current = requestAnimationFrame(frame)
 
-    } else if (idle) {
+    } else if (idle && DRUM_ON) {   // (the desktop website's reels stand still until the spin)
       const VEL     = ITEM_H / IDLE_MS   // px/ms at idle speed
       let lastFrame = performance.now()
 
@@ -237,15 +262,10 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, on
   return (
     <div className={`reel-outer${spinning ? ' reel-spinning' : ''}${locked ? ' reel-locked' : ''}${blurred ? ' reel-blurred' : ''}`}>
       <div className="reel-label">{label}</div>
-      <div ref={windowRef} className="reel-window is-drum">
+      <div ref={windowRef} className={`reel-window${DRUM_ON ? ' is-drum' : ''}`}>
         <div className="reel-selector" />
         <div ref={trackRef} className="reel-track" style={{ willChange: 'transform' }}>
-          {allItems.map((item, i) => (
-            <div key={i} className="reel-row" style={{ height: ITEM_H }}>
-              <div className="reel-primary">{getDisplay(item)}</div>
-              {getSub && <div className="reel-secondary">{getSub(item)}</div>}
-            </div>
-          ))}
+          {rows}
         </div>
       </div>
       {locked && <div className="reel-locked-pip" />}

@@ -165,6 +165,8 @@ html.is-app .splash-features { display: none !important; }
 
 @keyframes ag-rise  { from { opacity: 0; transform: translateY(14px); } }
 @keyframes ag-sweep { 0%, 70% { transform: translateX(0) skewX(-20deg); } 100% { transform: translateX(444%) skewX(-20deg); } }
+/* desktop website: no endless light sweeps on the buttons (they kept the page restyling every frame; the spin stuttered) */
+@media (min-width: 769px) { html.app-look:not(.is-app) :is(.ag-btn, .spin-btn, .sim-btn, .simp-cta)::after { animation: none !important; display: none !important; } }
 @keyframes ag-spin  { to { transform: rotate(360deg); } }
 @keyframes ag-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
 @keyframes ag-pulse { 0% { transform: scale(1); opacity: .6; } 100% { transform: scale(1.32); opacity: 0; } }
@@ -2796,6 +2798,9 @@ html.is-app .ag-sandbox { grid-column: 1 / -1; justify-self: stretch; }
   html.app-look .ag-extras > :is(.ag-crmode, .ag-compete, .ag-squad, .ag-blacktop, .ag-mini) { grid-column: span 2 !important; min-height: 104px; margin: 0; }
   html.app-look .ag-extras > .ag-crmode, html.app-look .ag-home--nfl .ag-extras > .ag-compete, html.app-look .ag-home--bucket .ag-extras > .ag-blacktop { grid-column: span 3 !important; }
   html.app-look .ag-extras > .ag-home-ad { grid-column: 1 / -1; }
+  /* the Daily screen's Salary Cap card is as wide as the cards around it (not the home's grid) */
+  html.app-look .ag-extras.ag-daily-extras { grid-template-columns: 1fr; }
+  html.app-look .ag-extras.ag-daily-extras > .ag-mini { grid-column: 1 / -1 !important; }
   html.app-look .ag-home--bucket .ag-extras > .ag-crmode { order: 1; }
   html.app-look .ag-home--bucket .ag-extras > .ag-blacktop { order: 2; }
   html.app-look .ag-home--bucket .ag-extras > .ag-squad { order: 3; }
@@ -5790,3 +5795,13 @@ html.is-app :is(.bt-art-net, .bt-art-shot-x, .bt-art-shot-y, .ag-pool-bar, .ag-p
 .ps-tile :is(.nt, .avb, .ntag, .ent, .ip-reel, .ip-fx, .ip-ent)::after,
 .ps-tile :is(.nt, .avb, .ntag, .ent, .ip-reel, .ip-fx, .ip-ent) *::before,
 .ps-tile :is(.nt, .avb, .ntag, .ent, .ip-reel, .ip-fx, .ip-ent) *::after { animation: none !important; }
+
+/* ═══ Website performance: UI glows hold still ═══
+   These loops pulse a shadow, filter or background, which repaints the card around them every
+   frame: the online lobbies, the auction and the build stuttered on desktop (the open seat's "+"
+   alone took the 3v3 lobby from ~2ms to ~500ms of painting every 3s). On the website they keep a
+   steady glow instead. The app keeps them; the cosmetics rest on their own (lib/fxPause.js). */
+html.app-look:not(.is-app) :is(.ag-milestone.is-reached, .ag-mission-claim, .ag-set-gift, .ag-bk.is-live, .ag-live-dot,
+  .bt-hud-clock, .bt-spot-plus, .ol-link i, .bt-live-dot, .cr-trait.can-up, .au-grade-back, .drop-bar-spin.is-pick, .v1g-hud-go) { animation: none !important; }
+/* an equipped reel skin's lights hold still on the website (they repainted the reel through every spin) */
+html.app-look:not(.is-app) .reels-wrap.rs-on .reel-outer { animation: none !important; }
