@@ -236,6 +236,8 @@ export const NBA_BIG_PLAYERS = [
     attrs: { jumpShot: 2, finishing: 5, rebounding: 5, playmaking: 2, interiorDefense: 2, speed: 4, bounce: 3, size: 6, basketballIQ: 3, clutch: 4 } },
   { name: 'Joel Embiid', short: 'Embiid', team: 'PHI', starter: true, captain: true, number: 21, height: 84, weight: 280, wingspan: 89, skin: '#93624a', position: 'C', faceCenter: [49, 40],
     attrs: { jumpShot: 7, finishing: 9, rebounding: 8, playmaking: 7, interiorDefense: 5, speed: 4, bounce: 4, size: 9, basketballIQ: 9, clutch: 6 } },
+  { name: 'LeBron James', short: 'LeBron', team: 'PHI', starter: true, captain: false, number: 23, height: 81, weight: 250, wingspan: 84, position: 'PF',
+    attrs: { jumpShot: 7, finishing: 10, rebounding: 6, playmaking: 10, interiorDefense: 5, speed: 7, bounce: 7, size: 7, basketballIQ: 11, clutch: 9 } },
   { name: 'Trendon Watford', short: 'Watford', team: 'NOP', starter: false, captain: false, number: 12, height: 80, weight: 236, wingspan: 86, skin: '#be8b6f', position: 'PF', faceCenter: [50, 40],
     attrs: { jumpShot: 2, finishing: 5, rebounding: 5, playmaking: 2, interiorDefense: 5, speed: 3, bounce: 3, size: 6, basketballIQ: 3, clutch: 3 } },
 
