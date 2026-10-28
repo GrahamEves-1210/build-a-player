@@ -2868,6 +2868,14 @@ html.fake-rail { --ag-dock-gap: calc(var(--web-rail) + 8px); }
   background: #050505; border-top: 1px solid rgba(255,255,255,.14);
 }
 html.is-app #bap-rail-preview { padding-bottom: var(--safe-bottom); box-sizing: border-box; }
+/* Website: the rail sits where the real one does in the stacking order (Playwire's own
+   z-index: 199 !important), so a preview shows what really covers it */
+html:not(.is-app) #bap-rail-preview { z-index: 199; }
+/* Website: the full-screen layers (home, and the screens over it: Shop, Daily, the Hall...)
+   end at the top of the bottom rail. Over it (z 1000+ against the rail's 199) they covered
+   the ad: content scrolled across it, and a viewability check saw it hidden. The dock is its
+   own layer and still floats above the rail */
+html.app-look:not(.is-app) .ag-home, html.app-look:not(.is-app) .ag-screen { bottom: var(--web-rail, 0px); }
 #bap-rail-preview span {
   width: min(320px, 100%);
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
