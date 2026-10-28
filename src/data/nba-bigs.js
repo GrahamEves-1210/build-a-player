@@ -68,9 +68,9 @@ export const NBA_BIG_PLAYERS = [
     attrs: { jumpShot: 4, finishing: 8, rebounding: 8, playmaking: 5, interiorDefense: 10, speed: 6, bounce: 6, size: 8, basketballIQ: 8, clutch: 6 } },
 
   // ─── DAL ───────────────────────────────────────────────────────
-  { name: 'Santi Aldama', short: 'Aldama', team: 'DAL', starter: true, captain: false, number: 7, height: 83, weight: 220, wingspan: 83, skin: '#d19475', position: 'PF', faceCenter: [50, 43],
+  { name: 'Santi Aldama', short: 'Aldama', team: 'DAL', starter: false, captain: false, number: 7, height: 83, weight: 220, wingspan: 83, skin: '#d19475', position: 'PF', faceCenter: [50, 43],
     attrs: { jumpShot: 5, finishing: 6, rebounding: 6, playmaking: 5, interiorDefense: 6, speed: 5, bounce: 4, size: 7, basketballIQ: 4, clutch: 5 } },
-  { name: 'Daniel Gafford', short: 'Gafford', team: 'DAL', starter: false, captain: false, number: 21, height: 83, weight: 234, wingspan: 87, skin: '#cc9278', position: 'C', faceCenter: [50, 40],
+  { name: 'Daniel Gafford', short: 'Gafford', team: 'DAL', starter: true, captain: false, number: 21, height: 83, weight: 234, wingspan: 87, skin: '#cc9278', position: 'C', faceCenter: [50, 40],
     attrs: { jumpShot: 1, finishing: 7, rebounding: 8, playmaking: 2, interiorDefense: 7, speed: 4, bounce: 5, size: 7, basketballIQ: 4, clutch: 3 } },
   { name: 'Morez Johnson Jr.', short: 'Johnson Jr.', team: 'DAL', starter: false, captain: false, number: 14, height: 84, weight: 235, wingspan: 87, skin: '#925f4b', position: 'PF', faceCenter: [51, 43],
     attrs: { jumpShot: 3, finishing: 5, rebounding: 5, playmaking: 2, interiorDefense: 4, speed: 3, bounce: 3, size: 7, basketballIQ: 3, clutch: 3 } },
@@ -180,7 +180,7 @@ export const NBA_BIG_PLAYERS = [
     attrs: { jumpShot: 3, finishing: 1, rebounding: 2, playmaking: 2, interiorDefense: 6, speed: 6, bounce: 3, size: 8, basketballIQ: 2, clutch: 3 } },
   { name: 'Myles Turner', short: 'M. Turner', team: 'MIL', starter: true, captain: false, number: 3, height: 83, weight: 250, wingspan: 88, skin: '#925f46', position: 'C', faceCenter: [52, 43],
     attrs: { jumpShot: 6, finishing: 6, rebounding: 7, playmaking: 4, interiorDefense: 8, speed: 4, bounce: 5, size: 8, basketballIQ: 6, clutch: 6 } },
-  { name: 'Kel\'el Ware', short: 'Ware', team: 'MIL', starter: true, captain: false, number: 7, height: 84, weight: 230, wingspan: 88, skin: '#aa715a', position: 'C', faceCenter: [48, 46],
+  { name: 'Kel\'el Ware', short: 'Ware', team: 'MIL', starter: false, captain: false, number: 7, height: 84, weight: 230, wingspan: 88, skin: '#aa715a', position: 'C', faceCenter: [48, 46],
     attrs: { jumpShot: 5, finishing: 6, rebounding: 8, playmaking: 2, interiorDefense: 8, speed: 3, bounce: 5, size: 7, basketballIQ: 5, clutch: 3 } },
 
   // ─── MIN ───────────────────────────────────────────────────────
@@ -232,7 +232,7 @@ export const NBA_BIG_PLAYERS = [
     attrs: { jumpShot: 5, finishing: 5, rebounding: 6, playmaking: 5, interiorDefense: 4, speed: 2, bounce: 1, size: 9, basketballIQ: 6, clutch: 6 } },
 
   // ─── PHI ───────────────────────────────────────────────────────
-  { name: 'Johni Broome', short: 'Broome', team: 'MIL', starter: true, captain: false, number: 22, height: 82, weight: 240, wingspan: 84, skin: '#d6a890', position: 'PF', faceCenter: [50, 39],
+  { name: 'Johni Broome', short: 'Broome', team: 'MIL', starter: false, captain: false, number: 22, height: 82, weight: 240, wingspan: 84, skin: '#d6a890', position: 'PF', faceCenter: [50, 39],
     attrs: { jumpShot: 2, finishing: 5, rebounding: 5, playmaking: 2, interiorDefense: 2, speed: 4, bounce: 3, size: 6, basketballIQ: 3, clutch: 4 } },
   { name: 'Joel Embiid', short: 'Embiid', team: 'PHI', starter: true, captain: true, number: 21, height: 84, weight: 280, wingspan: 89, skin: '#93624a', position: 'C', faceCenter: [49, 40],
     attrs: { jumpShot: 7, finishing: 9, rebounding: 8, playmaking: 7, interiorDefense: 5, speed: 4, bounce: 4, size: 9, basketballIQ: 9, clutch: 6 } },
@@ -262,7 +262,7 @@ export const NBA_BIG_PLAYERS = [
   // ─── SAC ───────────────────────────────────────────────────────
   { name: 'Precious Achiuwa', short: 'Achiuwa', team: 'SAC', starter: false, captain: false, number: 9, height: 80, weight: 225, wingspan: 84, skin: '#90523b', position: 'PF', faceCenter: [49, 44],
     attrs: { jumpShot: 3, finishing: 5, rebounding: 5, playmaking: 2, interiorDefense: 5, speed: 4, bounce: 3, size: 5, basketballIQ: 4, clutch: 3 } },
-  { name: 'Jonathan Mogbo', short: 'Mogbo', team: 'SAC', starter: true, captain: false, number: 13, height: 80, weight: 215, wingspan: 86, skin: '#814f30', position: 'PF', faceCenter: [49, 42],
+  { name: 'Jonathan Mogbo', short: 'Mogbo', team: 'SAC', starter: false, captain: false, number: 13, height: 80, weight: 215, wingspan: 86, skin: '#814f30', position: 'PF', faceCenter: [49, 42],
     attrs: { jumpShot: 2, finishing: 5, rebounding: 5, playmaking: 2, interiorDefense: 5, speed: 9, bounce: 5, size: 6, basketballIQ: 3, clutch: 3 } },
   { name: 'Maxime Raynaud', short: 'Raynaud', team: 'SAC', starter: false, captain: false, number: 42, height: 85, weight: 220, wingspan: 85, skin: '#b68470', position: 'C', faceCenter: [50, 44],
     attrs: { jumpShot: 2, finishing: 7, rebounding: 6, playmaking: 3, interiorDefense: 4, speed: 1, bounce: 2, size: 10, basketballIQ: 3, clutch: 3 } },
@@ -280,11 +280,11 @@ export const NBA_BIG_PLAYERS = [
     attrs: { jumpShot: 7, finishing: 10, rebounding: 11, playmaking: 7, interiorDefense: 11, speed: 6, bounce: 4, size: 11, basketballIQ: 9, clutch: 7 } },
 
   // ─── TOR ───────────────────────────────────────────────────────
-  { name: 'Trayce Jackson-Davis', short: 'Jackson-Davis', team: 'TOR', starter: true, captain: false, number: 32, height: 81, weight: 228, wingspan: 85, skin: '#ba7f76', position: 'C', faceCenter: [50, 43],
+  { name: 'Trayce Jackson-Davis', short: 'Jackson-Davis', team: 'TOR', starter: false, captain: false, number: 32, height: 81, weight: 228, wingspan: 85, skin: '#ba7f76', position: 'C', faceCenter: [50, 43],
     attrs: { jumpShot: 2, finishing: 6, rebounding: 8, playmaking: 2, interiorDefense: 6, speed: 7, bounce: 5, size: 6, basketballIQ: 3, clutch: 3 } },
-  { name: 'Collin Murray-Boyles', short: 'Murray-Boyles', team: 'TOR', starter: true, captain: false, number: 30, height: 79, weight: 240, wingspan: 84, skin: '#9b5f39', position: 'PF', faceCenter: [50, 44],
+  { name: 'Collin Murray-Boyles', short: 'Murray-Boyles', team: 'TOR', starter: false, captain: false, number: 30, height: 79, weight: 240, wingspan: 84, skin: '#9b5f39', position: 'PF', faceCenter: [50, 44],
     attrs: { jumpShot: 4, finishing: 6, rebounding: 5, playmaking: 2, interiorDefense: 5, speed: 7, bounce: 7, size: 5, basketballIQ: 4, clutch: 3 } },
-  { name: 'Jakob Poeltl', short: 'Poeltl', team: 'TOR', starter: false, captain: false, number: 19, height: 85, weight: 241, wingspan: 87, skin: '#c18c71', position: 'C', faceCenter: [50, 41],
+  { name: 'Jakob Poeltl', short: 'Poeltl', team: 'TOR', starter: true, captain: false, number: 19, height: 85, weight: 241, wingspan: 87, skin: '#c18c71', position: 'C', faceCenter: [50, 41],
     attrs: { jumpShot: 1, finishing: 6, rebounding: 8, playmaking: 4, interiorDefense: 7, speed: 1, bounce: 2, size: 7, basketballIQ: 5, clutch: 5 } },
 
   // ─── UTA ───────────────────────────────────────────────────────

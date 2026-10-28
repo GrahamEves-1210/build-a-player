@@ -65,15 +65,20 @@ const REPLACEMENT = { nfl: 62, bucket: 64 }
 // The team's real starters at each position, best first (as many as the squad's caps)
 export function startersOf(sport, short) {
   const out = {}, taken = new Set()
+  // basketball: the team's real starters (starter: true, in either list: LeBron is marked in
+  // both) start first, the same five as the season's Starting 5. Football picks by OVR (its
+  // starter marks aren't kept as a depth chart)
+  const marked = new Set(sport === 'bucket' ? POSITIONS[sport].flatMap(pos => POOL[pos].filter(p => p.team === short && p.starter).map(p => p.name)) : [])
   // basketball fills the bigs first: a forward listed in both groups (LeBron, Giannis) starts
   // at the four, the way his team plays him, and the guards fill around him
   for (const pos of sport === 'bucket' ? ['big', 'guard'] : POSITIONS[sport]) {
     const types = TYPES_OF[pos]
     out[pos] = POOL[pos]
       .filter(p => p.team === short && p.attrs && !taken.has(p.name))
-      .map(p => ({ name: p.name, short: p.short || p.name.split(' ').slice(-1)[0], number: p.number ?? null, pos, ovr: Math.round(OVR[pos](asBuild(p, types))), photo: photoOf(sport, p) }))
-      .sort((a, b) => b.ovr - a.ovr)
+      .map(p => ({ name: p.name, short: p.short || p.name.split(' ').slice(-1)[0], number: p.number ?? null, pos, ovr: Math.round(OVR[pos](asBuild(p, types))), photo: photoOf(sport, p), starter: marked.has(p.name) }))
+      .sort((a, b) => (b.starter - a.starter) || (b.ovr - a.ovr))   // marked starters, then the best of the rest
       .slice(0, CAPS[sport][pos])
+      .sort((a, b) => b.ovr - a.ovr)   // best first: a build pushes out the weakest
     out[pos].forEach(p => taken.add(p.name))   // a player listed at two spots starts at one
   }
   return out

@@ -130,7 +130,7 @@ export const NBA_GUARD_PLAYERS = [
     attrs: { jumpShot: 5, finishing: 4, passing: 3, handles: 3, perimeterDefense: 4, speed: 5, bounce: 5, size: 6, basketballIQ: 3, clutch: 3 } },
 
   // ─── DAL ───────────────────────────────────────────────────────
-  { name: 'Max Christie', short: 'Christie', team: 'DAL', starter: false, captain: false, number: 0, height: 77, weight: 190, wingspan: 80, skin: '#bc866e', position: 'SG', faceCenter: [50, 45],
+  { name: 'Max Christie', short: 'Christie', team: 'DAL', starter: true, captain: false, number: 0, height: 77, weight: 190, wingspan: 80, skin: '#bc866e', position: 'SG', faceCenter: [50, 45],
     attrs: { jumpShot: 8, finishing: 5, passing: 3, handles: 3, perimeterDefense: 6, speed: 7, bounce: 5, size: 7, basketballIQ: 3, clutch: 3 } },
   { name: 'Cooper Flagg', short: 'Flagg', team: 'DAL', starter: true, captain: true, number: 32, height: 81, weight: 210, wingspan: 84, skin: '#c59681', position: 'SF', faceCenter: [50, 40],
     attrs: { jumpShot: 5, finishing: 8, passing: 5, handles: 5, perimeterDefense: 8, speed: 7, bounce: 7, size: 9, basketballIQ: 5, clutch: 4 } },
@@ -302,7 +302,7 @@ export const NBA_GUARD_PLAYERS = [
   // ─── MIA ───────────────────────────────────────────────────────
   { name: 'Simone Fontecchio', short: 'Fontecchio', team: 'MIA', starter: false, captain: false, number: 0, height: 80, weight: 215, wingspan: 84, skin: '#b67d5e', position: 'SF', faceCenter: [50, 44],
     attrs: { jumpShot: 6, finishing: 4, passing: 3, handles: 3, perimeterDefense: 4, speed: 5, bounce: 5, size: 7, basketballIQ: 3, clutch: 3 } },
-  { name: 'Tim Hardaway Jr.', short: 'Hardaway Jr.', team: 'MIA', starter: true, captain: false, number: 10, height: 77, weight: 210, wingspan: 79, skin: '#8e635b', position: 'SG', faceCenter: [50, 36],
+  { name: 'Tim Hardaway Jr.', short: 'Hardaway Jr.', team: 'MIA', starter: false, captain: false, number: 10, height: 77, weight: 210, wingspan: 79, skin: '#8e635b', position: 'SG', faceCenter: [50, 36],
     attrs: { jumpShot: 7, finishing: 5, passing: 3, handles: 4, perimeterDefense: 3, speed: 6, bounce: 5, size: 6, basketballIQ: 5, clutch: 4 } },
   { name: 'Keshad Johnson', short: 'Johnson', team: 'MIA', starter: false, captain: false, number: 16, height: 79, weight: 210, wingspan: 83, skin: '#b26d4b', position: 'SF', faceCenter: [50, 42],
     attrs: { jumpShot: 2, finishing: 5, passing: 2, handles: 2, perimeterDefense: 4, speed: 7, bounce: 10, size: 7, basketballIQ: 3, clutch: 3 } },
@@ -338,7 +338,7 @@ export const NBA_GUARD_PLAYERS = [
     attrs: { jumpShot: 5, finishing: 4, passing: 4, handles: 6, perimeterDefense: 4, speed: 5, bounce: 6, size: 5, basketballIQ: 5, clutch: 4 } },
   { name: 'Kevin Porter Jr.', short: 'Porter Jr.', team: 'MIL', starter: false, captain: false, number: 7, height: 76, weight: 200, wingspan: 81, skin: '#956146', position: 'SG', faceCenter: [49, 40],
     attrs: { jumpShot: 7, finishing: 4, passing: 5, handles: 4, perimeterDefense: 5, speed: 7, bounce: 5, size: 5, basketballIQ: 3, clutch: 3 } },
-  { name: 'Ryan Rollins', short: 'Rollins', team: 'MIL', starter: false, captain: false, number: 13, height: 76, weight: 190, wingspan: 82, skin: '#b98466', position: 'SG', faceCenter: [49, 42],
+  { name: 'Ryan Rollins', short: 'Rollins', team: 'MIL', starter: true, captain: false, number: 13, height: 76, weight: 190, wingspan: 82, skin: '#b98466', position: 'SG', faceCenter: [49, 42],
     attrs: { jumpShot: 4, finishing: 3, passing: 3, handles: 3, perimeterDefense: 4, speed: 5, bounce: 4, size: 5, basketballIQ: 3, clutch: 3 } },
   { name: 'Gary Trent Jr.', short: 'Trent Jr.', team: 'MIL', starter: false, captain: false, number: 5, height: 78, weight: 209, wingspan: 81, skin: '#a67152', position: 'SG', faceCenter: [50, 36],
     attrs: { jumpShot: 5, finishing: 3, passing: 3, handles: 3, perimeterDefense: 4, speed: 5, bounce: 5, size: 6, basketballIQ: 3, clutch: 3 } },
@@ -506,19 +506,19 @@ export const NBA_GUARD_PLAYERS = [
     attrs: { jumpShot: 4, finishing: 8, passing: 4, handles: 6, perimeterDefense: 5, speed: 9, bounce: 9, size: 6, basketballIQ: 4, clutch: 4 } },
 
   // ─── SAC ───────────────────────────────────────────────────────
-  { name: 'Darius Acuff Jr.', short: 'Acuff Jr.', team: 'SAC', starter: false, captain: false, number: 5, height: 73, weight: 175, wingspan: 79, skin: '#bf8660', position: 'PG', faceCenter: [52, 40],
+  { name: 'Darius Acuff Jr.', short: 'Acuff Jr.', team: 'SAC', starter: true, captain: false, number: 5, height: 73, weight: 175, wingspan: 79, skin: '#bf8660', position: 'PG', faceCenter: [52, 40],
     attrs: { jumpShot: 5, finishing: 6, passing: 4, handles: 8, perimeterDefense: 1, speed: 9, bounce: 6, size: 2, basketballIQ: 5, clutch: 5 } },
   { name: 'Nique Clifford', short: 'Clifford', team: 'SAC', starter: false, captain: false, number: 5, height: 77, weight: 200, wingspan: 80, skin: '#b47a60', position: 'SG', faceCenter: [50, 44],
     attrs: { jumpShot: 5, finishing: 4, passing: 3, handles: 3, perimeterDefense: 4, speed: 5, bounce: 5, size: 5, basketballIQ: 3, clutch: 3 } },
-  { name: 'De\'Andre Hunter', short: 'Hunter', team: 'SAC', starter: false, captain: false, number: 15, height: 79, weight: 224, wingspan: 86, skin: '#9a6455', position: 'SF', faceCenter: [49, 43],
+  { name: 'De\'Andre Hunter', short: 'Hunter', team: 'SAC', starter: true, captain: false, number: 15, height: 79, weight: 224, wingspan: 86, skin: '#9a6455', position: 'SF', faceCenter: [49, 43],
     attrs: { jumpShot: 4, finishing: 6, passing: 3, handles: 3, perimeterDefense: 6, speed: 6, bounce: 7, size: 9, basketballIQ: 4, clutch: 4 } },
   { name: 'Alex Karaban', short: 'Karaban', team: 'SAC', starter: false, captain: false, number: 33, height: 81, weight: 215, wingspan: 83, skin: '#c29289', position: 'SF', faceCenter: [49, 40],
     attrs: { jumpShot: 6, finishing: 5, passing: 3, handles: 3, perimeterDefense: 4, speed: 5, bounce: 5, size: 8, basketballIQ: 3, clutch: 5 } },
   { name: 'Zach LaVine', short: 'LaVine', team: 'SAC', starter: true, captain: false, number: 8, height: 77, weight: 200, wingspan: 80, skin: '#a87159', position: 'SG', faceCenter: [50, 39],
     attrs: { jumpShot: 7, finishing: 8, passing: 5, handles: 6, perimeterDefense: 5, speed: 8, bounce: 10, size: 5, basketballIQ: 5, clutch: 6 } },
-  { name: 'Malik Monk', short: 'Monk', team: 'SAC', starter: true, captain: false, number: 0, height: 75, weight: 200, wingspan: 77, skin: '#9e5b3e', position: 'PG', faceCenter: [50, 39],
+  { name: 'Malik Monk', short: 'Monk', team: 'SAC', starter: false, captain: false, number: 0, height: 75, weight: 200, wingspan: 77, skin: '#9e5b3e', position: 'PG', faceCenter: [50, 39],
     attrs: { jumpShot: 6, finishing: 6, passing: 4, handles: 6, perimeterDefense: 4, speed: 7, bounce: 7, size: 4, basketballIQ: 5, clutch: 5 } },
-  { name: 'Keegan Murray', short: 'Murray', team: 'SAC', starter: false, captain: false, number: 13, height: 80, weight: 220, wingspan: 83, skin: '#b27a4d', position: 'SF', faceCenter: [50, 40],
+  { name: 'Keegan Murray', short: 'Murray', team: 'SAC', starter: true, captain: false, number: 13, height: 80, weight: 220, wingspan: 83, skin: '#b27a4d', position: 'SF', faceCenter: [50, 40],
     attrs: { jumpShot: 5, finishing: 6, passing: 3, handles: 3, perimeterDefense: 5, speed: 5, bounce: 6, size: 8, basketballIQ: 4, clutch: 4 } },
   // ─── SAS ───────────────────────────────────────────────────────
   { name: 'Harrison Barnes', short: 'H. Barnes', team: 'SAS', starter: false, captain: false, number: 40, height: 80, weight: 225, wingspan: 83, skin: '#88533c', position: 'SF', faceCenter: [50, 41],
@@ -537,7 +537,7 @@ export const NBA_GUARD_PLAYERS = [
     attrs: { jumpShot: 5, finishing: 5, passing: 4, handles: 3, perimeterDefense: 4, speed: 4, bounce: 4, size: 8, basketballIQ: 5, clutch: 5 } },
   { name: 'Keldon Johnson', short: 'K. Johnson', team: 'SAS', starter: false, captain: false, number: 3, height: 77, weight: 222, wingspan: 81, skin: '#a86e52', position: 'SF', faceCenter: [50, 40],
     attrs: { jumpShot: 5, finishing: 7, passing: 4, handles: 5, perimeterDefense: 6, speed: 5, bounce: 5, size: 8, basketballIQ: 5, clutch: 5 } },
-  { name: 'Devin Vassell', short: 'Vassell', team: 'SAS', starter: false, captain: false, number: 24, height: 77, weight: 195, wingspan: 82, skin: '#b37757', position: 'SG', faceCenter: [50, 45], faceAdjust: { dx: 0, dy: -3, scale: 1 },
+  { name: 'Devin Vassell', short: 'Vassell', team: 'SAS', starter: true, captain: false, number: 24, height: 77, weight: 195, wingspan: 82, skin: '#b37757', position: 'SG', faceCenter: [50, 45], faceAdjust: { dx: 0, dy: -3, scale: 1 },
     attrs: { jumpShot: 7, finishing: 5, passing: 5, handles: 6, perimeterDefense: 7, speed: 5, bounce: 5, size: 5, basketballIQ: 6, clutch: 5 } },
 
   // ─── TOR ───────────────────────────────────────────────────────
@@ -567,7 +567,7 @@ export const NBA_GUARD_PLAYERS = [
   // ─── UTA ───────────────────────────────────────────────────────
   { name: 'Ace Bailey', short: 'Bailey', team: 'UTA', starter: false, captain: false, number: 19, height: 80, weight: 200, wingspan: 85, skin: '#9b664b', position: 'SF', faceCenter: [50, 43],
     attrs: { jumpShot: 6, finishing: 6, passing: 3, handles: 5, perimeterDefense: 4, speed: 7, bounce: 5, size: 7, basketballIQ: 4, clutch: 3 } },
-  { name: 'Isaiah Collier', short: 'Collier', team: 'UTA', starter: false, captain: false, number: 8, height: 75, weight: 185, wingspan: 77, skin: '#916450', position: 'PG', faceCenter: [49, 42],
+  { name: 'Isaiah Collier', short: 'Collier', team: 'UTA', starter: true, captain: false, number: 8, height: 75, weight: 185, wingspan: 77, skin: '#916450', position: 'PG', faceCenter: [49, 42],
     attrs: { jumpShot: 2, finishing: 5, passing: 8, handles: 6, perimeterDefense: 3, speed: 9, bounce: 4, size: 3, basketballIQ: 5, clutch: 3 } },
   { name: 'Keyonte George', short: 'K. George', team: 'UTA', starter: true, captain: false, number: 3, height: 76, weight: 195, wingspan: 77, skin: '#bb8a6c', position: 'PG', faceCenter: [49, 40], faceAdjust: { dx: 1, dy: 0, scale: 1 },
     attrs: { jumpShot: 5, finishing: 7, passing: 6, handles: 7, perimeterDefense: 2, speed: 8, bounce: 7, size: 4, basketballIQ: 5, clutch: 5 } },

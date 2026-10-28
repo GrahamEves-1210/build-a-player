@@ -2600,56 +2600,29 @@ const ALLTIME_STARTERS = {
 
 const ALLTIME_VISUAL_RATINGS = ALLTIME_TEAM_RATINGS
 
-// ─── Starting 5: ordered PG → SG → SF → PF → C (2025-26 rosters from database) ─
-const TEAM_STARTERS = {
-  ATL: ['CJ McCollum','Dyson Daniels','Jalen Johnson','Zaccharie Risacher','Onyeka Okongwu'],
-  BOS: ['Payton Pritchard','Derrick White','Paul George','Jayson Tatum','Mitchell Robinson'],
-  BKN: ['Nolan Traore','Egor Demin','Keon Ellis','Noah Clowney','Julius Randle'],
-  CHA: ['Coby White','Grayson Allen','Brandon Miller','Tidjane Salaun','Moussa Diabate'],
-  CHI: ['Josh Giddey','Norman Powell','Matas Buzelis','Patrick Williams','Nic Claxton'],
-  CLE: ['Donovan Mitchell','James Harden','Tyrese Proctor','Evan Mobley','Jarrett Allen'],
-  DAL: ['Kyrie Irving','Klay Thompson','Cooper Flagg','Santi Aldama','Daniel Gafford'],
-  DEN: ['Jamal Murray','Christian Braun','Cameron Johnson','Aaron Gordon','Nikola Jokic'],
-  DET: ['Cade Cunningham','Kevin Huerter','Ronald Holland II','John Collins','Jalen Duren'],
-  GSW: ['Stephen Curry','Brandin Podziemski','Moses Moody','Draymond Green','Kristaps Porzingis'],
-  HOU: ['Marcus Smart','Amen Thompson','Kevin Durant','Jabari Smith Jr.','Alperen Sengun'],
-  IND: ['Tyrese Haliburton','Andrew Nembhard','Aaron Nesmith','Pascal Siakam','Ivica Zubac'],
-  LAC: ['Darius Garland','Bennedict Mathurin','Kawhi Leonard','Rui Hachimura','Brook Lopez'],
-  LAL: ['Luka Doncic','Collin Sexton','Dalton Knecht','Jarred Vanderbilt','Walker Kessler'],
-  MEM: ["D'Angelo Russell",'Walter Clayton Jr.','Jaylen Wells','Taylor Hendricks','Zach Edey'],
-  MIA: ['Davion Mitchell','Andrew Wiggins','Giannis Antetokounmpo','Bobby Portis','Bam Adebayo'],
-  MIL: ['Caris LeVert','Tyler Herro','Jaime Jaquez Jr.','Kyle Kuzma','Myles Turner'],
-  MIN: ['LaMelo Ball','Anthony Edwards','Josh Green','Jaden McDaniels','Rudy Gobert'],
-  NOP: ['Dejounte Murray','Jordan Hawkins','Trey Murphy III','Zion Williamson','Hunter Dickinson'],
-  NYK: ['Jalen Brunson','Mikal Bridges','OG Anunoby','Josh Hart','Karl-Anthony Towns'],
-  OKC: ['Shai Gilgeous-Alexander','Alex Caruso','Luguentz Dort','Chet Holmgren','Isaiah Hartenstein'],
-  ORL: ['Jalen Suggs','Desmond Bane','Franz Wagner','Paolo Banchero','Nikola Vucevic'],
-  PHI: ['Tyrese Maxey','VJ Edgecombe','Jaylen Brown','LeBron James','Joel Embiid'],
-  PHX: ['Devin Booker','Jalen Green','Dillon Brooks','Miles Bridges','Mark Williams'],
-  POR: ['Damian Lillard','Shaedon Sharpe','Deni Avdija','Toumani Camara','Donovan Clingan'],
-  SAC: ['Killian Hayes','Zach LaVine',"De'Andre Hunter",'Keegan Murray','Domantas Sabonis'],
-  SAS: ["De'Aaron Fox",'Stephon Castle','Devin Vassell','Keldon Johnson','Victor Wembanyama'],
-  TOR: ['Immanuel Quickley','RJ Barrett','Scottie Barnes','Brandon Ingram','Jakob Poeltl'],
-  UTA: ['Keyonte George','Isaiah Collier','Ace Bailey','Lauri Markkanen','Jaren Jackson Jr.'],
-  WAS: ['Trae Young','Bilal Coulibaly','AJ Dybantsa','Khris Middleton','Anthony Davis'],
-}
+// ─── Starting 5: the team's real starters (starter: true in data/nba-guards.js and
+// nba-bigs.js, the same marks Squad Builder starts), ordered PG → SG → SF → PF → C.
+// A player in both lists plays his bigs-list spot (LeBron, Giannis: PF). ─
+const POS_RANK = { PG: 0, SG: 1, SF: 2, PF: 3, C: 4 }
+const TEAM_STARTERS = (() => {
+  const byKey = new Map()
+  for (const p of [...NBA_GUARD_PLAYERS, ...NBA_BIG_PLAYERS]) if (p.starter) byKey.set(`${p.team}|${p.name}`, p)   // bigs come second: they win
+  const out = {}
+  for (const p of byKey.values()) (out[p.team] ??= []).push(p)
+  return out
+})()
 
-const PLAYER_INDEX = Object.fromEntries([...NBA_GUARD_PLAYERS, ...NBA_BIG_PLAYERS].map(p => [p.name, p]))
-
-// The team's five today: each listed starter still on the team keeps his spot; one traded
-// away or gone from the rosters is replaced by the team's best player left in that group
-// (guards PG–SF, bigs PF–C), so a roster change never leaves the five a man short
+// The team's five today: its marked starters; a team marked short is filled with its best
+// others, so the five is never a man down
 function startersFor(short) {
-  const listed = (TEAM_STARTERS[short] ?? []).map(n => PLAYER_INDEX[n])
-  const used = new Set(listed.filter(p => p?.team === short).map(p => p.name))
-  return SPOT_LABELS.map((_, k) => {
-    if (listed[k]?.team === short) return listed[k]
-    const best = (k < 3 ? NBA_GUARD_PLAYERS : NBA_BIG_PLAYERS)
-      .filter(p => p.team === short && p.attrs && !used.has(p.name))
-      .sort((a, b) => playerOvr(b) - playerOvr(a))[0]
-    if (best) used.add(best.name)
-    return best
-  }).filter(Boolean)
+  const five = [...(TEAM_STARTERS[short] ?? [])]
+  if (five.length < 5) {
+    const have = new Set(five.map(p => p.name))
+    const rest = [...NBA_GUARD_PLAYERS, ...NBA_BIG_PLAYERS].filter(p => p.team === short && p.attrs && !have.has(p.name))
+      .sort((a, b) => playerOvr(b) - playerOvr(a))
+    for (const p of rest) { if (five.length >= 5) break; if (!have.has(p.name)) { have.add(p.name); five.push(p) } }
+  }
+  return five.slice(0, 5).sort((a, b) => (POS_RANK[a.position] ?? 2) - (POS_RANK[b.position] ?? 2))
 }
 
 const SUFFIXES = new Set(['Jr.', 'Jr', 'II', 'III', 'IV'])
