@@ -5571,11 +5571,10 @@ a:focus-visible {
   text-align: center;
 }
 .splash-site-footer-maker {
-  font-size: 10.5px;
-  font-weight: 800;
-  letter-spacing: 2.6px;
-  text-transform: uppercase;
-  opacity: .8;
+  display: block;
+  height: 24px;
+  width: auto;
+  opacity: .85;
 }
 .splash-site-footer-legal {
   max-width: 460px;
