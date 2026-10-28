@@ -1032,7 +1032,7 @@ html:is(.is-app, .app-look) .simp-ghost:not(:disabled):active { transform: scale
 
 html:is(.is-app, .app-look) .simp-eyebrow,
 html:is(.is-app, .app-look) .simp-section-lbl,
-html.is-app .plf-round-lbl,
+html:is(.is-app, .app-look) .plf-round-lbl,
 html:is(.is-app, .app-look) .simp-record-sub,
 html:is(.is-app, .app-look) .simp-ovr-lbl {
   font-family: var(--ag-font) !important;
@@ -1044,8 +1044,8 @@ html:is(.is-app, .app-look) .simp-record-sub { font-size: 18px !important; }
 html:is(.is-app, .app-look) .simp-miss-title,
 html:is(.is-app, .app-look) .simp-archetype,
 html:is(.is-app, .app-look) .simp-final-banner,
-html.is-app .plf-champ-label,
-html.is-app .plf-elim-title {
+html:is(.is-app, .app-look) .plf-champ-label,
+html:is(.is-app, .app-look) .plf-elim-title {
   font-family: var(--ag-display) !important;
   font-weight: 400 !important;
   letter-spacing: .5px !important;
@@ -1055,7 +1055,7 @@ html:is(.is-app, .app-look) .simp-miss-title { font-size: 32px !important; color
 html:is(.is-app, .app-look) .simp-archetype { font-size: 26px !important; color: #fff !important; }
 html:is(.is-app, .app-look) .simp-ovr-num,
 html:is(.is-app, .app-look) .simp-live-record,
-html.is-app .plf-post-score {
+html:is(.is-app, .app-look) .plf-post-score {
   font-family: var(--ag-display) !important;
   font-weight: 400 !important;
   letter-spacing: 0 !important;
@@ -1066,7 +1066,7 @@ html:is(.is-app, .app-look) .simp-team-strip {
   border-radius: 14px !important;
   box-shadow: 0 10px 26px rgba(0,0,0,.4), 0 0 22px color-mix(in srgb, var(--team-color, #444) 30%, transparent) !important;
 }
-html.is-app .sts-nickname { font-family: var(--ag-display) !important; font-weight: 400 !important; text-transform: uppercase; }
+html:is(.is-app, .app-look) .sts-nickname { font-family: var(--ag-display) !important; font-weight: 400 !important; text-transform: uppercase; }
 html:is(.is-app, .app-look) .simp-games-list { border-radius: 12px !important; border: 1px solid var(--ag-line) !important; }
 html:is(.is-app, .app-look) .sgr-wk, html:is(.is-app, .app-look) .sgr-badge { font-family: var(--ag-font) !important; letter-spacing: 1.5px; }
 
@@ -1112,11 +1112,11 @@ html.is-app .save-toast {
 }
 
 /* Team picker */
-html.is-app .tpm-heading { font-family: var(--ag-display) !important; font-weight: 400 !important; font-size: 28px !important; letter-spacing: .5px; text-transform: uppercase; }
-html.is-app .tpm-eyebrow { font-family: var(--ag-font) !important; font-weight: 400 !important; letter-spacing: 3px !important; color: var(--ag-a1) !important; }
-html.is-app .tpm-tab { font-family: var(--ag-font) !important; font-weight: 400 !important; font-size: 17px !important; letter-spacing: 2px; border-radius: 9px !important; }
-html.is-app .tpm-tab-active { color: var(--ag-on) !important; background: var(--ag-grad) !important; box-shadow: 0 0 14px var(--ag-glow) !important; }
-html.is-app .tpm-card {
+html:is(.is-app, .app-look) .tpm-heading { font-family: var(--ag-display) !important; font-weight: 400 !important; font-size: 28px !important; letter-spacing: .5px; text-transform: uppercase; }
+html:is(.is-app, .app-look) .tpm-eyebrow { font-family: var(--ag-font) !important; font-weight: 400 !important; letter-spacing: 3px !important; color: var(--ag-a1) !important; }
+html:is(.is-app, .app-look) .tpm-tab { font-family: var(--ag-font) !important; font-weight: 400 !important; font-size: 17px !important; letter-spacing: 2px; border-radius: 9px !important; }
+html:is(.is-app, .app-look) .tpm-tab-active { color: var(--ag-on) !important; background: var(--ag-grad) !important; box-shadow: 0 0 14px var(--ag-glow) !important; }
+html:is(.is-app, .app-look) .tpm-card {
   border: 1.5px solid var(--ag-line-hi) !important;
   border-radius: 18px !important;
   background:
@@ -1125,8 +1125,8 @@ html.is-app .tpm-card {
   box-shadow: 0 20px 60px rgba(0,0,0,.6) !important;
   animation: ag-zoom .35s cubic-bezier(.2,.9,.25,1) both;
 }
-html.is-app .tpm-mode-tabs { border-radius: 11px !important; padding: 3px !important; background: rgba(0,0,0,.4) !important; border: 1px solid var(--ag-line) !important; }
-html.is-app .tpm-team-btn { border-radius: 12px !important; }
+html:is(.is-app, .app-look) .tpm-mode-tabs { border-radius: 11px !important; padding: 3px !important; background: rgba(0,0,0,.4) !important; border: 1px solid var(--ag-line) !important; }
+html:is(.is-app, .app-look) .tpm-team-btn { border-radius: 12px !important; }
 
 /* ═══ App screens over the game (Daily, Cards) ═════════════════════════════ */
 .ag-screen {
@@ -1885,21 +1885,21 @@ html.is-app .dc-screen {
     radial-gradient(ellipse 110% 34% at 50% 0%, rgba(229,57,53,.14), transparent 70%),
     var(--ag-bg) !important;
 }
-html.is-app .dc-title { font-family: var(--ag-display) !important; font-weight: 400 !important; letter-spacing: .5px !important; text-transform: uppercase; }
-html.is-app .dc-back-btn,
-html.is-app .dc-lb-btn { border-radius: 12px !important; border: 1px solid var(--ag-line-hi) !important; background: var(--ag-panel) !important; box-shadow: none !important; }
-html.is-app .dc-streak-bar { border: 1px solid var(--ag-line) !important; border-radius: 14px !important; background: var(--ag-panel) !important; box-shadow: none !important; }
-html.is-app .dc-streak-label,
-html.is-app .dc-sort-by,
-html.is-app .dc-instruction,
-html.is-app .dc-card-slot-label { font-family: var(--ag-font) !important; font-weight: 400 !important; letter-spacing: 2.5px !important; }
-html.is-app .dc-streak-val { font-family: var(--ag-display) !important; font-weight: 400 !important; font-size: 30px !important; color: #fbbf24 !important; }
-html.is-app .dc-sort-box { border: 0 !important; background: none !important; box-shadow: none !important; }
-html.is-app .dc-sort-val { border-radius: 12px !important; border: 1px solid var(--ag-line-hi) !important; background: var(--ag-panel) !important; }
-html.is-app .dc-sort-val { font-family: var(--ag-display) !important; font-weight: 400 !important; text-transform: uppercase; }
-html.is-app .dc-card { border: 1px solid var(--ag-line) !important; border-radius: 14px !important; box-shadow: none !important; }
-html.is-app .dc-card-name { font-family: var(--ag-display) !important; font-weight: 400 !important; letter-spacing: .2px; text-transform: uppercase; }
-html.is-app .dc-submit-btn {
+html:is(.is-app, .app-look) .dc-title { font-family: var(--ag-display) !important; font-weight: 400 !important; letter-spacing: .5px !important; text-transform: uppercase; }
+html:is(.is-app, .app-look) .dc-back-btn,
+html:is(.is-app, .app-look) .dc-lb-btn { border-radius: 12px !important; border: 1px solid var(--ag-line-hi) !important; background: var(--ag-panel) !important; box-shadow: none !important; }
+html:is(.is-app, .app-look) .dc-streak-bar { border: 1px solid var(--ag-line) !important; border-radius: 14px !important; background: var(--ag-panel) !important; box-shadow: none !important; }
+html:is(.is-app, .app-look) .dc-streak-label,
+html:is(.is-app, .app-look) .dc-sort-by,
+html:is(.is-app, .app-look) .dc-instruction,
+html:is(.is-app, .app-look) .dc-card-slot-label { font-family: var(--ag-font) !important; font-weight: 400 !important; letter-spacing: 2.5px !important; }
+html:is(.is-app, .app-look) .dc-streak-val { font-family: var(--ag-display) !important; font-weight: 400 !important; font-size: 30px !important; color: #fbbf24 !important; }
+html:is(.is-app, .app-look) .dc-sort-box { border: 0 !important; background: none !important; box-shadow: none !important; }
+html:is(.is-app, .app-look) .dc-sort-val { border-radius: 12px !important; border: 1px solid var(--ag-line-hi) !important; background: var(--ag-panel) !important; }
+html:is(.is-app, .app-look) .dc-sort-val { font-family: var(--ag-display) !important; font-weight: 400 !important; text-transform: uppercase; }
+html:is(.is-app, .app-look) .dc-card { border: 1px solid var(--ag-line) !important; border-radius: 14px !important; box-shadow: none !important; }
+html:is(.is-app, .app-look) .dc-card-name { font-family: var(--ag-display) !important; font-weight: 400 !important; letter-spacing: .2px; text-transform: uppercase; }
+html:is(.is-app, .app-look) .dc-submit-btn {
   height: 58px !important;
   border: 0 !important;
   border-radius: 14px !important;
@@ -1911,32 +1911,32 @@ html.is-app .dc-submit-btn {
   background: linear-gradient(135deg, #ef4444, #b91c1c) !important;
   box-shadow: 0 0 22px rgba(239,68,68,.3) !important;
 }
-html.is-app .dc-submit-btn:not(:disabled):active { transform: scale(.96); }
-html.is-app .dc-submit-btn--ok  { color: var(--ag-on) !important; background: var(--ag-grad) !important; box-shadow: 0 0 22px var(--ag-glow) !important; }
-html.is-app .dc-submit-btn--err { background: linear-gradient(135deg, #7f1d1d, #450a0a) !important; }
-html.is-app .dc-submit-btn--disabled { filter: saturate(.3) brightness(.65); }
+html:is(.is-app, .app-look) .dc-submit-btn:not(:disabled):active { transform: scale(.96); }
+html:is(.is-app, .app-look) .dc-submit-btn--ok  { color: var(--ag-on) !important; background: var(--ag-grad) !important; box-shadow: 0 0 22px var(--ag-glow) !important; }
+html:is(.is-app, .app-look) .dc-submit-btn--err { background: linear-gradient(135deg, #7f1d1d, #450a0a) !important; }
+html:is(.is-app, .app-look) .dc-submit-btn--disabled { filter: saturate(.3) brightness(.65); }
 
 /* ═══ Salary Cap / Head-to-Head / About ════════════════════════════════════ */
-html.is-app .sc-back-btn,
-html.is-app .sc-footer-btns button {
+html:is(.is-app, .app-look) .sc-back-btn,
+html:is(.is-app, .app-look) .sc-footer-btns button {
   font-family: var(--ag-font) !important;
   font-weight: 400 !important;
   font-size: 19px !important;
   letter-spacing: 2px !important;
   border-radius: 12px !important;
 }
-html.is-app .sc-col-label,
-html.is-app .sc-price-label { font-family: var(--ag-font) !important; font-weight: 400 !important; letter-spacing: 2px !important; font-style: normal !important; }
-html.is-app .sc-title { font-family: var(--ag-display) !important; font-weight: 400 !important; }
+html:is(.is-app, .app-look) .sc-col-label,
+html:is(.is-app, .app-look) .sc-price-label { font-family: var(--ag-font) !important; font-weight: 400 !important; letter-spacing: 2px !important; font-style: normal !important; }
+html:is(.is-app, .app-look) .sc-title { font-family: var(--ag-display) !important; font-weight: 400 !important; }
 
 html.is-app .versus-lobby { padding-top: var(--safe-top); padding-bottom: calc(var(--app-bottom) + 16px) !important; }
 html.is-app .versus-lobby > .navbar { display: none !important; }
-html.is-app .versus-lobby-title { font-family: var(--ag-display) !important; font-weight: 400 !important; }
-html.is-app .versus-lobby-sub { font-family: var(--ag-font) !important; letter-spacing: 3px !important; }
-html.is-app .versus-join-btn { font-family: var(--ag-font) !important; font-size: 19px !important; letter-spacing: 2px !important; }
+html:is(.is-app, .app-look) .versus-lobby-title { font-family: var(--ag-display) !important; font-weight: 400 !important; }
+html:is(.is-app, .app-look) .versus-lobby-sub { font-family: var(--ag-font) !important; letter-spacing: 3px !important; }
+html:is(.is-app, .app-look) .versus-join-btn { font-family: var(--ag-font) !important; font-size: 19px !important; letter-spacing: 2px !important; }
 
 html.is-app .about-page { padding-top: 10px; padding-bottom: calc(var(--app-bottom) + 20px); }
-html.is-app .about-section-title { font-family: var(--ag-font) !important; font-weight: 400 !important; font-size: 16px !important; letter-spacing: 3px !important; }
+html:is(.is-app, .app-look) .about-section-title { font-family: var(--ag-font) !important; font-weight: 400 !important; font-size: 16px !important; letter-spacing: 3px !important; }
 
 @media (prefers-reduced-motion: reduce) {
   .ag-pop, .ag-btn::after, .ag-stage-beam, .ag-play-ring, .ag-menu, .ag-menu-overlay, .ag-streak-flame,
@@ -2145,22 +2145,22 @@ html.is-app .about-section-title { font-family: var(--ag-font) !important; font-
 
 /* ═══ Head-to-head (1v1) in the app: the site identity on the versus screens ═══ */
 html.is-app .versus-result, html.is-app .bvr-live, html.is-app .bvr-reveal { padding-top: calc(var(--safe-top) + 8px); padding-bottom: calc(var(--app-bottom) + 16px); }
-html.is-app .vr-header-label, html.is-app .bvr-h2h-logo, html.is-app .bvr-eleven-label { font-family: var(--ag-font) !important; letter-spacing: 3px !important; }
-html.is-app .bvr-tipoff-text { font-family: var(--ag-display) !important; }
-html.is-app .vr-btn {
+html:is(.is-app, .app-look) .vr-header-label, html:is(.is-app, .app-look) .bvr-h2h-logo, html:is(.is-app, .app-look) .bvr-eleven-label { font-family: var(--ag-font) !important; letter-spacing: 3px !important; }
+html:is(.is-app, .app-look) .bvr-tipoff-text { font-family: var(--ag-display) !important; }
+html:is(.is-app, .app-look) .vr-btn {
   height: 52px !important; border-radius: 13px !important;
   font-family: var(--ag-font) !important; font-size: 19px !important; font-weight: 400 !important; letter-spacing: 2.5px !important;
   border: 1.5px solid var(--ag-line-hi) !important; background: var(--ag-panel) !important; color: var(--ag-text) !important; box-shadow: none !important;
 }
-html.is-app .vr-btn--primary { border: 0 !important; background: var(--ag-grad) !important; color: var(--ag-on) !important; box-shadow: 0 0 22px var(--ag-glow) !important; }
-html.is-app .vr-btn--waiting { filter: saturate(.4) brightness(.8); }
-html.is-app .bvr-adj-label { font-family: var(--ag-font) !important; letter-spacing: 2px !important; }
-html.is-app .bvr-adj-btn-main { font-family: var(--ag-font) !important; letter-spacing: 1.5px !important; border-radius: 10px !important; }
-html.is-app .bvr-board { border-radius: 14px !important; border: 1px solid var(--ag-line) !important; background: var(--ag-panel) !important; }
-html.is-app .vr-ovr-badge { font-family: var(--ag-display) !important; }
-html.is-app .vlm-btn { font-family: var(--ag-font) !important; letter-spacing: 2px !important; border-radius: 9px !important; }
-html.is-app .versus-mode-btn { border-radius: 14px !important; }
-html.is-app .vmb-title { font-family: var(--ag-font) !important; letter-spacing: 2.5px !important; font-size: 20px !important; }
+html:is(.is-app, .app-look) .vr-btn--primary { border: 0 !important; background: var(--ag-grad) !important; color: var(--ag-on) !important; box-shadow: 0 0 22px var(--ag-glow) !important; }
+html:is(.is-app, .app-look) .vr-btn--waiting { filter: saturate(.4) brightness(.8); }
+html:is(.is-app, .app-look) .bvr-adj-label { font-family: var(--ag-font) !important; letter-spacing: 2px !important; }
+html:is(.is-app, .app-look) .bvr-adj-btn-main { font-family: var(--ag-font) !important; letter-spacing: 1.5px !important; border-radius: 10px !important; }
+html:is(.is-app, .app-look) .bvr-board { border-radius: 14px !important; border: 1px solid var(--ag-line) !important; background: var(--ag-panel) !important; }
+html:is(.is-app, .app-look) .vr-ovr-badge { font-family: var(--ag-display) !important; }
+html:is(.is-app, .app-look) .vlm-btn { font-family: var(--ag-font) !important; letter-spacing: 2px !important; border-radius: 9px !important; }
+html:is(.is-app, .app-look) .versus-mode-btn { border-radius: 14px !important; }
+html:is(.is-app, .app-look) .vmb-title { font-family: var(--ag-font) !important; letter-spacing: 2.5px !important; font-size: 20px !important; }
 
 /* ═══ The season you steer (app): moments, now card, pulse, wire, story ══════ */
 .sm-moment {
@@ -2353,7 +2353,7 @@ html.is-app .vmb-title { font-family: var(--ag-font) !important; letter-spacing:
 
 /* ═══ Position picker (top bar): an app card anchored under the pill — never
    centred off the left edge, rows sized for a thumb ══════════════════════════ */
-html.is-app .nav-pos-menu {
+html:is(.is-app, .app-look) .nav-pos-menu {
   left: 0 !important; right: auto !important; transform: none !important;
   top: calc(100% + 8px) !important;
   min-width: 248px; max-width: calc(100vw - 24px);
@@ -2365,13 +2365,18 @@ html.is-app .nav-pos-menu {
   animation: agPosIn .2s cubic-bezier(.2,1.2,.3,1) both !important;
   transform-origin: 18% 0;
 }
-html.is-app.is-bucket .nav-pos-menu { background: linear-gradient(180deg, #15100a, #0a0705) !important; }
+html:is(.is-app, .app-look).is-bucket .nav-pos-menu { background: linear-gradient(180deg, #15100a, #0a0705) !important; }
 @keyframes agPosIn { from { opacity: 0; transform: translateY(-6px) scale(.94); } to { opacity: 1; transform: none; } }
-html.is-app .nav-pos-menu::before {
+/* website phones: the pill sits mid-bar (the app's is at the left), so the card is centred
+   under it instead of running off the right edge */
+@media (max-width: 768px) {
+  html.app-look:not(.is-app) .nav-pos-menu { left: 50% !important; right: auto !important; width: min(300px, calc(100vw - 24px)); min-width: 0; margin-left: calc(min(300px, calc(100vw - 24px)) / -2); transform-origin: 50% 0; }
+}
+html:is(.is-app, .app-look) .nav-pos-menu::before {
   content: 'SWITCH POSITION'; display: block; padding: 4px 8px 2px;
   font-family: var(--ag-font); font-size: 12px; letter-spacing: 2.5px; color: var(--ag-muted);
 }
-html.is-app .nav-pos-item {
+html:is(.is-app, .app-look) .nav-pos-item {
   min-height: 50px; padding: 8px 12px !important; gap: 12px !important;
   border-radius: 12px !important;
   border: 1px solid var(--ag-line) !important;
@@ -2380,11 +2385,11 @@ html.is-app .nav-pos-item {
   letter-spacing: 2px !important; text-transform: uppercase; color: var(--ag-text) !important;
   transition: transform var(--press), background .15s ease, border-color .15s ease !important;
 }
-html.is-app .nav-pos-item:not(:disabled):active { transform: scale(.96); background: color-mix(in srgb, var(--ag-a1) 14%, transparent) !important; border-color: var(--ag-line-hi) !important; }
-html.is-app .nav-pos-item .nav-pos-badge { width: 30px; height: 30px; border-radius: 9px; font-family: var(--ag-font); font-size: 15px; letter-spacing: 1px; }
-html.is-app .nav-pos-item .nav-pos-sub { order: 2; margin-left: auto; font-family: var(--ag-font); font-size: 13px; letter-spacing: 1.5px; color: var(--ag-muted); }
-html.is-app .nav-pos-item::after { content: '›'; margin-left: auto; font-family: var(--ag-body); font-size: 22px; color: var(--ag-muted); }
-html.is-app .nav-pos-item .nav-pos-sub ~ *, html.is-app .nav-pos-item:has(.nav-pos-sub)::after { margin-left: 0; }
+html:is(.is-app, .app-look) .nav-pos-item:not(:disabled):active { transform: scale(.96); background: color-mix(in srgb, var(--ag-a1) 14%, transparent) !important; border-color: var(--ag-line-hi) !important; }
+html:is(.is-app, .app-look) .nav-pos-item .nav-pos-badge { width: 30px; height: 30px; border-radius: 9px; font-family: var(--ag-font); font-size: 15px; letter-spacing: 1px; }
+html:is(.is-app, .app-look) .nav-pos-item .nav-pos-sub { order: 2; margin-left: auto; font-family: var(--ag-font); font-size: 13px; letter-spacing: 1.5px; color: var(--ag-muted); }
+html:is(.is-app, .app-look) .nav-pos-item::after { content: '›'; margin-left: auto; font-family: var(--ag-body); font-size: 22px; color: var(--ag-muted); }
+html:is(.is-app, .app-look) .nav-pos-item .nav-pos-sub ~ *, html:is(.is-app, .app-look) .nav-pos-item:has(.nav-pos-sub)::after { margin-left: 0; }
 
 /* ═══ Build side: the screen ends with the last grade (no dead space, no stray
    rules under it) ═══════════════════════════════════════════════════════════ */
@@ -2438,42 +2443,42 @@ html.is-app .cr-modal {
   font-family: var(--ag-body);
 }
 @keyframes ag-sheet-up { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
-html.is-app .cr-header { padding: 12px 16px 10px; border-bottom: 0; }
-html.is-app .cr-title { font-family: var(--ag-display); font-weight: 400; font-size: 30px; letter-spacing: .4px; text-transform: uppercase; color: var(--ag-text); }
-html.is-app .cr-mod-count { font-family: var(--ag-font); font-size: 13px; letter-spacing: 1.5px; font-weight: 400; color: #1a0f00; background: var(--ag-gold-hi); border-radius: 6px; padding: 3px 7px 2px; }
-html.is-app .cr-close { width: 38px; height: 38px; border-radius: 12px; border: 1px solid var(--ag-line-hi); background: var(--ag-panel); color: var(--ag-text); font-size: 16px; display: grid; place-items: center; padding: 0; }
-html.is-app .cr-search-wrap { padding: 0 16px 10px; border-bottom: 1px solid var(--ag-line); display: flex; flex-direction: column; gap: 10px; }
-html.is-app .cr-search { height: 44px; border-radius: 12px; border: 1px solid var(--ag-line-hi); background: rgba(255,255,255,.05); font-family: var(--ag-body); font-size: 16px; padding: 0 14px; }
-html.is-app .cr-era { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: 12px; border: 1px solid var(--ag-line); background: rgba(0,0,0,.35); }
-html.is-app .cr-era-btn { height: 38px; border-radius: 9px; font-family: var(--ag-font); font-size: 17px; letter-spacing: 2px; color: var(--ag-muted); background: transparent; border: 0; }
-html.is-app .cr-era-btn.is-on { color: #1a0f00; background: linear-gradient(135deg, var(--ag-gold-hi), var(--ag-gold)); }
-html.is-app .cr-list { padding: 6px 10px 10px; }
-html.is-app .cr-row { border: 1px solid var(--ag-line); border-radius: 12px; margin-bottom: 6px; background: var(--ag-panel); overflow: hidden; }
-html.is-app .cr-row-modified { border-color: rgba(242,214,117,.45); }
-html.is-app .cr-row-header { padding: 12px 12px; gap: 10px; }
-html.is-app .cr-row-name { font-family: var(--ag-font); font-size: 19px; font-weight: 400; letter-spacing: 1.2px; text-transform: uppercase; }
-html.is-app .cr-row-team { font-family: var(--ag-font); font-size: 13px; font-weight: 400; letter-spacing: 1.5px; color: var(--ag-text-2); background: rgba(255,255,255,.06); border-radius: 6px; }
-html.is-app .cr-mod-dot { background: var(--ag-gold-hi); box-shadow: 0 0 8px rgba(242,214,117,.6); }
-html.is-app .cr-attrs { padding: 6px 12px 12px; background: rgba(0,0,0,.25); }
-html.is-app .cr-attr-row { gap: 10px; margin-bottom: 10px; }
-html.is-app .cr-attr-label { width: 96px; font-family: var(--ag-font); font-size: 13px; font-weight: 400; letter-spacing: 1.4px; color: var(--ag-muted); }
-html.is-app .cr-attr-modified { color: var(--ag-gold-hi); }
-html.is-app .cr-slider { height: 8px; border-radius: 4px; background: rgba(255,255,255,.1); }
-html.is-app .cr-slider::-webkit-slider-thumb { width: 26px; height: 26px; background: #fff; border: 3px solid var(--ag-gold); box-shadow: 0 2px 8px rgba(0,0,0,.5); }
-html.is-app .cr-attr-val { font-family: var(--ag-display); font-weight: 400; font-size: 20px; width: 34px; }
-html.is-app .cr-quick-btns { gap: 8px; margin-top: 6px; }
-html.is-app .cr-quick-btn, html.is-app .cr-reset-player, html.is-app .cr-reset-all, html.is-app .cr-slot-cancel {
+html:is(.is-app, .app-look) .cr-header { padding: 12px 16px 10px; border-bottom: 0; }
+html:is(.is-app, .app-look) .cr-title { font-family: var(--ag-display); font-weight: 400; font-size: 30px; letter-spacing: .4px; text-transform: uppercase; color: var(--ag-text); }
+html:is(.is-app, .app-look) .cr-mod-count { font-family: var(--ag-font); font-size: 13px; letter-spacing: 1.5px; font-weight: 400; color: #1a0f00; background: var(--ag-gold-hi); border-radius: 6px; padding: 3px 7px 2px; }
+html:is(.is-app, .app-look) .cr-close { width: 38px; height: 38px; border-radius: 12px; border: 1px solid var(--ag-line-hi); background: var(--ag-panel); color: var(--ag-text); font-size: 16px; display: grid; place-items: center; padding: 0; }
+html:is(.is-app, .app-look) .cr-search-wrap { padding: 0 16px 10px; border-bottom: 1px solid var(--ag-line); display: flex; flex-direction: column; gap: 10px; }
+html:is(.is-app, .app-look) .cr-search { height: 44px; border-radius: 12px; border: 1px solid var(--ag-line-hi); background: rgba(255,255,255,.05); font-family: var(--ag-body); font-size: 16px; padding: 0 14px; }
+html:is(.is-app, .app-look) .cr-era { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: 12px; border: 1px solid var(--ag-line); background: rgba(0,0,0,.35); }
+html:is(.is-app, .app-look) .cr-era-btn { height: 38px; border-radius: 9px; font-family: var(--ag-font); font-size: 17px; letter-spacing: 2px; color: var(--ag-muted); background: transparent; border: 0; }
+html:is(.is-app, .app-look) .cr-era-btn.is-on { color: #1a0f00; background: linear-gradient(135deg, var(--ag-gold-hi), var(--ag-gold)); }
+html:is(.is-app, .app-look) .cr-list { padding: 6px 10px 10px; }
+html:is(.is-app, .app-look) .cr-row { border: 1px solid var(--ag-line); border-radius: 12px; margin-bottom: 6px; background: var(--ag-panel); overflow: hidden; }
+html:is(.is-app, .app-look) .cr-row-modified { border-color: rgba(242,214,117,.45); }
+html:is(.is-app, .app-look) .cr-row-header { padding: 12px 12px; gap: 10px; }
+html:is(.is-app, .app-look) .cr-row-name { font-family: var(--ag-font); font-size: 19px; font-weight: 400; letter-spacing: 1.2px; text-transform: uppercase; }
+html:is(.is-app, .app-look) .cr-row-team { font-family: var(--ag-font); font-size: 13px; font-weight: 400; letter-spacing: 1.5px; color: var(--ag-text-2); background: rgba(255,255,255,.06); border-radius: 6px; }
+html:is(.is-app, .app-look) .cr-mod-dot { background: var(--ag-gold-hi); box-shadow: 0 0 8px rgba(242,214,117,.6); }
+html:is(.is-app, .app-look) .cr-attrs { padding: 6px 12px 12px; background: rgba(0,0,0,.25); }
+html:is(.is-app, .app-look) .cr-attr-row { gap: 10px; margin-bottom: 10px; }
+html:is(.is-app, .app-look) .cr-attr-label { width: 96px; font-family: var(--ag-font); font-size: 13px; font-weight: 400; letter-spacing: 1.4px; color: var(--ag-muted); }
+html:is(.is-app, .app-look) .cr-attr-modified { color: var(--ag-gold-hi); }
+html:is(.is-app, .app-look) .cr-slider { height: 8px; border-radius: 4px; background: rgba(255,255,255,.1); }
+html:is(.is-app, .app-look) .cr-slider::-webkit-slider-thumb { width: 26px; height: 26px; background: #fff; border: 3px solid var(--ag-gold); box-shadow: 0 2px 8px rgba(0,0,0,.5); }
+html:is(.is-app, .app-look) .cr-attr-val { font-family: var(--ag-display); font-weight: 400; font-size: 20px; width: 34px; }
+html:is(.is-app, .app-look) .cr-quick-btns { gap: 8px; margin-top: 6px; }
+html:is(.is-app, .app-look) .cr-quick-btn, html:is(.is-app, .app-look) .cr-reset-player, html:is(.is-app, .app-look) .cr-reset-all, html:is(.is-app, .app-look) .cr-slot-cancel {
   height: 40px; padding: 0 14px; border-radius: 10px; font-family: var(--ag-font); font-size: 16px; letter-spacing: 1.8px; font-weight: 400;
   border: 1px solid var(--ag-line-hi); background: rgba(255,255,255,.05); color: var(--ag-text);
 }
-html.is-app .cr-add-build-btn, html.is-app .cr-save, html.is-app .cr-add-all-btn {
+html:is(.is-app, .app-look) .cr-add-build-btn, html:is(.is-app, .app-look) .cr-save, html:is(.is-app, .app-look) .cr-add-all-btn {
   height: 40px; border-radius: 10px; font-family: var(--ag-font); font-size: 17px; letter-spacing: 2px; font-weight: 400;
   border: 0; color: var(--ag-on); background: var(--ag-grad); box-shadow: 0 4px 16px var(--ag-glow);
 }
-html.is-app .cr-save { flex: 1; height: 48px; font-size: 20px; }
-html.is-app .cr-footer { padding: 10px 14px 4px; border-top: 1px solid var(--ag-line); background: rgba(5,7,5,.92); gap: 8px; flex-wrap: wrap; }
-html.is-app .cr-slot-label { font-family: var(--ag-body); font-size: 13px; color: var(--ag-muted); width: 100%; }
-html.is-app .cr-slot-btn { height: 36px; padding: 0 12px; border-radius: 9px; font-family: var(--ag-font); font-size: 15px; letter-spacing: 1.5px; font-weight: 400; border: 1px solid var(--ag-line-hi); background: rgba(255,255,255,.05); color: var(--ag-text); }
+html:is(.is-app, .app-look) .cr-save { flex: 1; height: 48px; font-size: 20px; }
+html:is(.is-app, .app-look) .cr-footer { padding: 10px 14px 4px; border-top: 1px solid var(--ag-line); background: rgba(5,7,5,.92); gap: 8px; flex-wrap: wrap; }
+html:is(.is-app, .app-look) .cr-slot-label { font-family: var(--ag-body); font-size: 13px; color: var(--ag-muted); width: 100%; }
+html:is(.is-app, .app-look) .cr-slot-btn { height: 36px; padding: 0 12px; border-radius: 9px; font-family: var(--ag-font); font-size: 15px; letter-spacing: 1.5px; font-weight: 400; border: 1px solid var(--ag-line-hi); background: rgba(255,255,255,.05); color: var(--ag-text); }
 
 /* App: the game screen parked (hidden, still running) while another tab is open */
 .ag-game-host { display: contents; }
@@ -4341,6 +4346,16 @@ html:is(.is-app, .app-look) .simp-final-actions { margin-top: 12px; }
 html:is(.is-app, .app-look) .logo-img-full { height: 30px; }
 /* (34px with the wordmark under it fits the navbar; 40px poked out over the top) */
 @media (min-width: 769px) { html:is(.is-app, .app-look) .logo-img-full { height: 34px; } }
+/* The game screens' navbar (website): the name alone, no mark, big and plain enough to
+   read on a creator's stream: the home's wordmark (BUILD-A-PLAYER / BUILD-A-BUCKET) */
+html.app-look .navbar .logo-img-full { display: none; }
+html.app-look .navbar .logo-text.logo-text--small {
+  font-family: 'BAP Wordmark', var(--ag-display, Impact, sans-serif); font-weight: 900; font-size: 13px;
+  letter-spacing: -.3px; line-height: 1; color: #fff; text-shadow: none; -webkit-text-stroke: 0;
+}
+html.app-look .navbar .logo-text.logo-text--small em { color: var(--ag-accent); letter-spacing: -.3px; }
+html.app-look.is-bucket .navbar .logo-text.logo-text--small em, [data-sport="bucket"] .navbar .logo-text.logo-text--small em { color: #f97316; }
+@media (min-width: 769px) { html.app-look .navbar .logo-text.logo-text--small { font-size: 22px; } }
 
 /* build complete: full trait names, two to a row (label left, grade right) */
 .ag-bc-grades { grid-template-columns: 1fr 1fr; gap: 5px; }
@@ -5290,7 +5305,7 @@ html:is(.is-app, .app-look) .mvp-continue { transition: filter 0.15s, transform 
 .ag-set { transition: transform var(--press); }
 .ag-edge { transition: transform var(--press); }
 html:is(.is-app, .app-look) .auth-submit { transition: transform var(--press), box-shadow .15s var(--ease), background .15s var(--ease); }
-html.is-app .dc-submit-btn { transition: filter .15s, transform var(--press), box-shadow .15s; }
+html:is(.is-app, .app-look) .dc-submit-btn { transition: filter .15s, transform var(--press), box-shadow .15s; }
 .ag-sandbox-edit { transition: transform var(--press); }
 .ag-career-act { transition: transform var(--press); }
 .bt-1v1 { transition: transform var(--press); }
