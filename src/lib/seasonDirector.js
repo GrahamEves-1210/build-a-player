@@ -62,7 +62,7 @@ export const MOMENTS_OFF_KEY = 'bap_moments_off'
 export const momentsOff = () => { try { return localStorage.getItem(MOMENTS_OFF_KEY) === '1' } catch { return false } }
 export const setMomentsOff = off => { try { localStorage.setItem(MOMENTS_OFF_KEY, off ? '1' : '0') } catch {} }
 // always: the moments can't be switched off (Career: they're the mode)
-export function createDirector({ sport, pos, build, team, simFn, base, seed = Math.random().toString(36).slice(2, 8), name = 'Guest', attrMap = {}, types = [], always = false, recordBook = null, deals = null }) {
+export function createDirector({ sport, pos, build, team, simFn, base, seed = Math.random().toString(36).slice(2, 8), name = 'Guest', attrMap = {}, types = [], always = false, recordBook = null, deals = null, made = null }) {
   const isBucket = sport === 'bucket'
   const total = base.games.length
   // two or three decisions in the regular season, at weeks that change every
@@ -148,7 +148,8 @@ export function createDirector({ sport, pos, build, team, simFn, base, seed = Ma
   // Did this record make the postseason? Decided once, from a run that posted
   // the same record, and kept: the playoff decision only appears when you're in,
   // and the final season is drawn to match it.
-  const madeIt = run => (isBucket ? (run?.playoffRounds?.length ?? 0) > 0 : !!run?.playoffs)
+  // (Career passes its own rule, so the playoff moment and the booked season agree)
+  const madeIt = made ?? (run => (isBucket ? (run?.playoffRounds?.length ?? 0) > 0 : !!run?.playoffs))
   D.po = null
   D.qualify = () => {
     if (D.po != null) return D.po
