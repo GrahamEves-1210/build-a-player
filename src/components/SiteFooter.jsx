@@ -76,7 +76,8 @@ export default function SiteFooter({ sport = 'nfl', onDepthChart, onWiki }) {
         </div>
       </div>
       <div className="splash-site-footer-bottom">
-        <span>Build-A-Player {new Date().getFullYear()}</span>
+        <span className="splash-site-footer-maker">A Playmaker Games game</span>
+        <span className="splash-site-footer-legal">© {new Date().getFullYear()} Playmaker Games LLC. An independent fan project. Not affiliated with or endorsed by any professional sports league, team or players' association.</span>
         <a href="https://www.playwire.com/contact-direct-sales" rel="noopener" target="_blank" className="splash-site-footer-playwire">
           <img src="https://www.playwire.com/hubfs/Powered-by-Playwire-Badges/Ads-Powered-by-playwire-2021-standalone-small-white-300px.png" alt="Ads Powered by Playwire" width="140" height="39" loading="lazy" />
         </a>

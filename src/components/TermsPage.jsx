@@ -12,7 +12,7 @@ export default function TermsPage({ onBack }) {
           'Play fair: no bots, no tampering, one account. Be decent in chat.',
           'You must be 13 or older. You can delete your account at any time.',
         ]} />
-        <P>The rest of this page is the full agreement. Build-A-Player is owned and operated by Playmaker Games LLC ("we", "us"). By using the website (build-a-player.com) or the iOS or Android app (together, the "Service") you agree to it.</P>
+        <P>The rest of this page is the full agreement. Build-A-Player is an independent fan project made by Playmaker Games LLC ("we", "us"). By using the website (build-a-player.com) or the iOS or Android app (together, the "Service") you agree to it.</P>
       </Sec>
 
       <Sec id="t-affiliation" title="1. Not affiliated">

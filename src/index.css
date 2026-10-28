@@ -5570,6 +5570,18 @@ a:focus-visible {
   color: var(--text-4, var(--text-3));
   text-align: center;
 }
+.splash-site-footer-maker {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 2.6px;
+  text-transform: uppercase;
+  opacity: .8;
+}
+.splash-site-footer-legal {
+  max-width: 460px;
+  font-weight: 500;
+  line-height: 1.6;
+}
 /* Sim screens only — a bit more space above the footer's own top border. */
 .simp-page .splash-site-footer {
   margin-top: 24px;

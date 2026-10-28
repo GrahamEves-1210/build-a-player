@@ -12,7 +12,7 @@ export default function PrivacyPage({ onBack }) {
           'Your username, look and results are public on leaderboards and in online games. Your email is not.',
           'You can delete your account and its data at any time, right in the game.',
         ]} />
-        <P>Build-A-Player is owned and operated by Playmaker Games LLC ("we", "us"). This policy covers the website (build-a-player.com) and the iOS and Android apps.</P>
+        <P>Build-A-Player is an independent fan project made by Playmaker Games LLC ("we", "us"). This policy covers the website (build-a-player.com) and the iOS and Android apps.</P>
       </Sec>
 
       <Sec id="p-collect" title="What we collect">
