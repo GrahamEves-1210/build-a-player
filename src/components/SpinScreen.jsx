@@ -37,9 +37,9 @@ const CENTER  = 2
 const IDLE_MS = 1200
 const FAST_MS = 36   // ms per item at peak speed — defines MAX_VEL
 
-// The drum (rows tilting like a slot machine's reel) and the reels' slow idle drift are off on
-// the desktop website: a 3D reel re-tilting its rows every frame, and reels moving every frame
-// while you wait, were a big part of the spin screen's stutter there. Phones and the app keep them
+// The drum (rows tilting like a slot machine's reel) is off on the desktop website: a 3D reel
+// re-tilting its rows every frame was a big part of the spin screen's stutter there. The slow idle
+// drift stays, as a GPU animation instead of a script each frame. Phones and the app keep the drum
 const DRUM_ON = IS_APP || !(typeof window !== 'undefined' && window.matchMedia?.('(min-width: 769px)').matches)
 
 // ─── Slot Reel ───────────────────────────────────────────────────────────────
@@ -73,6 +73,7 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, on
   const posRef       = useRef(initOffset)
   const trackRef     = useRef(null)
   const rafRef       = useRef(null)
+  const driftRef     = useRef(null)   // ends the desktop idle drift (it keeps its place)
   const stopRef      = useRef(null)
   const prevItemsRef = useRef(items)
   const onStopRef    = useRef(onStop)
@@ -232,7 +233,26 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, on
 
       rafRef.current = requestAnimationFrame(frame)
 
-    } else if (idle && DRUM_ON) {   // (the desktop website's reels stand still until the spin)
+    } else if (idle && !DRUM_ON) {
+      // Desktop website: the slow idle drift runs as one GPU transform animation (no script
+      // each frame); when it stops, the track keeps the place it drifted to
+      const track = trackRef.current
+      if (track) {
+        const VEL = ITEM_H / IDLE_MS
+        const y0 = -(posRef.current - CENTER * ITEM_H)
+        track.style.transition = 'none'
+        const anim = track.animate([{ transform: `translate3d(0,${y0}px,0)` }, { transform: `translate3d(0,${y0 - loopH}px,0)` }],
+          { duration: loopH / VEL, iterations: Infinity, easing: 'linear' })
+        driftRef.current = () => {
+          const t = Number(anim.currentTime) || 0
+          posRef.current += (VEL * t) % loopH
+          wrap()
+          anim.cancel()
+          track.style.transform = `translate3d(0,${-(posRef.current - CENTER * ITEM_H)}px,0)`
+        }
+      }
+
+    } else if (idle) {
       const VEL     = ITEM_H / IDLE_MS   // px/ms at idle speed
       let lastFrame = performance.now()
 
@@ -256,6 +276,7 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, on
     return () => {
       cancelAnimationFrame(rafRef.current)
       clearTimeout(stopRef.current)
+      driftRef.current?.(); driftRef.current = null   // a desktop drift ends where it got to
     }
   }, [spinning, idle, items, initOffset, fast]) // eslint-disable-line react-hooks/exhaustive-deps
 
