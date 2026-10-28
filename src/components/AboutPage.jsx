@@ -34,6 +34,12 @@ export default function AboutPage({ onBack }) {
         <P>Build-A-Player is made by Playmaker Games, a small independent studio. Enjoy it? Check out my college basketball game, <Ext href="https://32-0game.com">32-0game.com</Ext>. If you'd like to support the game, <Ext href="https://buymeacoffee.com/32and0">leave a tip here</Ext>. Ideas, bugs or questions: <Mail />.</P>
       </Sec>
 
+      <Sec id="a-fantasy" title="A free fantasy sports game">
+        <P>Build-A-Player is a free fantasy sports game, made for entertainment. You draft pieces of real players into one of your own, and an algorithm simulates how that player's seasons and careers might go. Real players' names and ratings are used the way fantasy sports games use them: to identify the players and make the game.</P>
+        <P>Every result is fictional, made up by the simulation. Seasons, stats, awards and ratings don't represent or predict how any real player, team or game will go.</P>
+        <P>There's no gambling, betting or real-money play of any kind. The game is free to play and no purchase is necessary. Records, leaderboard places and anything earned in the game have no monetary value and can't be exchanged for money. Please don't use anything in the game to make a betting decision.</P>
+      </Sec>
+
       <Sec id="a-disclaimer" title="Disclaimer">
         <p className="about-disclaimer">Build-A-Player is an independent fan project by Playmaker Games LLC and is not affiliated with, endorsed by, or sponsored by the National Football League, NFL Properties LLC, the National Basketball Association, or any of their teams, players' associations or players.</p>
         <p className="about-disclaimer">League and team names, logos, player names and images belong to their respective owners. No commercial relationship with the NFL, the NBA or their teams is implied.</p>
