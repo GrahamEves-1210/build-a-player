@@ -1,5 +1,5 @@
 ﻿import { useState, useEffect, useRef } from 'react'
-import { loadFriends } from '../lib/friends'
+import { loadFriends, useFriendsOnly } from '../lib/friends'
 import { getUsername } from '../lib/discord'
 import { supabase } from '../lib/supabase'
 import { ATTR, TYPES } from '../data/qbs'
@@ -204,13 +204,16 @@ function BuildExpand({ build, types = TYPES, attrMap = ATTR }) {
 
 export default function LeaderboardPage({ onBack, currentUser, adsDisabled = false, isRB = false, isWR = false, isTE = false, isDB = false, isOL = false, onPositionChange }) {
   // Everyone or Friends: the same boards, only friends and the player (app look)
-  const [friendsOnly, setFriendsOnly] = useState(false)
+  const [friendsOnly, setFriendsOnly] = useFriendsOnly()
   const [friendIds, setFriendIds] = useState(null)
   useEffect(() => {
     if (!friendsOnly || friendIds || !currentUser?.id) return
     loadFriends(currentUser.id).then(l => setFriendIds(new Set([currentUser.id, ...l.friends.map(f => f.id)])), () => setFriendIds(new Set([currentUser.id])))
   }, [friendsOnly, friendIds, currentUser?.id])
-  const fo = list => (friendsOnly && friendIds ? (list ?? []).filter(r => friendIds.has(r?.uid ?? r?.user_id)) : list)
+  // Friends: only friends and the player; nothing until the friends list is in (not everyone, for a moment)
+  const fo = list => (!friendsOnly ? list : friendIds ? (list ?? []).filter(r => friendIds.has(r?.uid ?? r?.user_id)) : [])
+  // the boards' numbered rows: Everyone shows the empty places too; Friends shows just the friends
+  const slotsOf = (list, n) => (friendsOnly ? list : Array.from({ length: n }, (_, i) => list[i] ?? null))
 
   // ── QB state ────────────────────────────────────────────────────────────────
   const [rows, setRows]               = useState([])
@@ -993,17 +996,17 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
     ? fo(rows).filter(r => r.count >= 10)
     : fo(rows)
   const sortedQB       = [...filteredQBRows].sort((a, b) => (b[metric] - a[metric]) || (b.wins - a.wins))
-  const qbProfileSlots = Array.from({ length: 20 }, (_, i) => sortedQB[i] ?? null)
+  const qbProfileSlots = slotsOf(sortedQB, 20)
 
   const activeLegendMetric  = QB_METRICS.find(m => m.key === legendMetric)
   const filteredLegendRows  = legendMetric === 'avgOvr' || legendMetric === 'winPct'
     ? fo(legendRows).filter(r => r.count >= 10)
     : fo(legendRows)
   const sortedLegend        = [...filteredLegendRows].sort((a, b) => (b[legendMetric] - a[legendMetric]) || (b.wins - a.wins))
-  const legendSlots         = Array.from({ length: 20 }, (_, i) => sortedLegend[i] ?? null)
+  const legendSlots         = slotsOf(sortedLegend, 20)
 
-  const qbBuildsList  = buildsTab === 'best' ? bestBuilds : worstBuilds
-  const qbBuildSlots  = Array.from({ length: buildsTab === 'best' ? 200 : 20 }, (_, i) => qbBuildsList[i] ?? null)
+  const qbBuildsList  = fo(buildsTab === 'best' ? bestBuilds : worstBuilds)
+  const qbBuildSlots  = slotsOf(qbBuildsList, buildsTab === 'best' ? 200 : 20)
 
   // ── Derived RB lists ─────────────────────────────────────────────────────────
   const activeRBMetric  = RB_METRICS.find(m => m.key === rbMetric)
@@ -1011,32 +1014,32 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
     ? fo(rbRows).filter(r => r.count >= 10)
     : fo(rbRows)
   const sortedRB        = [...filteredRBRows].sort((a, b) => (b[rbMetric] - a[rbMetric]) || (b.wins - a.wins))
-  const rbProfileSlots  = Array.from({ length: 20 }, (_, i) => sortedRB[i] ?? null)
+  const rbProfileSlots  = slotsOf(sortedRB, 20)
 
-  const rbBuildsList  = buildsTab === 'best' ? rbBestBuilds : rbWorstBuilds
-  const rbBuildSlots  = Array.from({ length: buildsTab === 'best' ? 200 : 20 }, (_, i) => rbBuildsList[i] ?? null)
+  const rbBuildsList  = fo(buildsTab === 'best' ? rbBestBuilds : rbWorstBuilds)
+  const rbBuildSlots  = slotsOf(rbBuildsList, buildsTab === 'best' ? 200 : 20)
 
   const filteredRBLegendRows = rbLegendMetric === 'avgOvr' || rbLegendMetric === 'winPct'
     ? fo(rbLegendRows).filter(r => r.count >= 10)
     : fo(rbLegendRows)
   const sortedRBLegend   = [...filteredRBLegendRows].sort((a, b) => (b[rbLegendMetric] - a[rbLegendMetric]) || (b.wins - a.wins))
-  const rbLegendSlots    = Array.from({ length: 20 }, (_, i) => sortedRBLegend[i] ?? null)
+  const rbLegendSlots    = slotsOf(sortedRBLegend, 20)
 
   const filteredWRLegendRows = wrLegendMetric === 'avgOvr' || wrLegendMetric === 'winPct'
     ? fo(wrLegendRows).filter(r => r.count >= 10)
     : fo(wrLegendRows)
   const sortedWRLegend   = [...filteredWRLegendRows].sort((a, b) => (b[wrLegendMetric] - a[wrLegendMetric]) || (b.wins - a.wins))
-  const wrLegendSlots    = Array.from({ length: 20 }, (_, i) => sortedWRLegend[i] ?? null)
+  const wrLegendSlots    = slotsOf(sortedWRLegend, 20)
   const filteredTELegendRows = teLegendMetric === 'avgOvr' || teLegendMetric === 'winPct'
     ? fo(teLegendRows).filter(r => r.count >= 10)
     : fo(teLegendRows)
   const sortedTELegend   = [...filteredTELegendRows].sort((a, b) => (b[teLegendMetric] - a[teLegendMetric]) || (b.wins - a.wins))
-  const teLegendSlots    = Array.from({ length: 20 }, (_, i) => sortedTELegend[i] ?? null)
+  const teLegendSlots    = slotsOf(sortedTELegend, 20)
   const filteredDBLegendRows = dbLegendMetric === 'avgOvr' || dbLegendMetric === 'winPct'
     ? fo(dbLegendRows).filter(r => r.count >= 10)
     : fo(dbLegendRows)
   const sortedDBLegend   = [...filteredDBLegendRows].sort((a, b) => (b[dbLegendMetric] - a[dbLegendMetric]) || (b.wins - a.wins))
-  const dbLegendSlots    = Array.from({ length: 20 }, (_, i) => sortedDBLegend[i] ?? null)
+  const dbLegendSlots    = slotsOf(sortedDBLegend, 20)
 
   // ── Derived ALL lists ────────────────────────────────────────────────────────
   const activeAllMetric = ALL_METRICS.find(m => m.key === allMetric)
@@ -1044,7 +1047,7 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
     ? fo(allRows).filter(r => r.count >= 20)
     : fo(allRows)
   const sortedAll       = [...filteredAllRows].sort((a, b) => (b[allMetric] - a[allMetric]) || (b.wins - a.wins))
-  const allProfileSlots = Array.from({ length: 20 }, (_, i) => sortedAll[i] ?? null)
+  const allProfileSlots = slotsOf(sortedAll, 20)
   const myAllEntry      = currentUser ? filteredAllRows.find(r => r.uid === currentUser.id) : null
   const myAllRank       = myAllEntry ? sortedAll.findIndex(r => r.uid === currentUser.id) + 1 : 0
   const myAllInTop20    = allProfileSlots.some(r => r?.uid === currentUser?.id)
@@ -1056,14 +1059,14 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
     ? fo(wrRows).filter(r => r.count >= 10)
     : fo(wrRows)
   const sortedWR        = [...filteredWRRows].sort((a, b) => (b[wrMetric] - a[wrMetric]) || (b.wins - a.wins))
-  const wrProfileSlots  = Array.from({ length: 20 }, (_, i) => sortedWR[i] ?? null)
+  const wrProfileSlots  = slotsOf(sortedWR, 20)
 
   const myWREntry   = currentUser ? filteredWRRows.find(r => r.uid === currentUser.id) : null
   const myWRRank    = myWREntry ? sortedWR.findIndex(r => r.uid === currentUser.id) + 1 : 0
   const myWRInTop20 = wrProfileSlots.some(r => r?.uid === currentUser?.id)
 
-  const wrBuildsList  = buildsTab === 'best' ? wrBestBuilds : wrWorstBuilds
-  const wrBuildSlots  = Array.from({ length: buildsTab === 'best' ? 200 : 20 }, (_, i) => wrBuildsList[i] ?? null)
+  const wrBuildsList  = fo(buildsTab === 'best' ? wrBestBuilds : wrWorstBuilds)
+  const wrBuildSlots  = slotsOf(wrBuildsList, buildsTab === 'best' ? 200 : 20)
 
   // ── Derived TE lists ──────────────────────────────────────────────────────────
   const activeTEMetric  = TE_METRICS.find(m => m.key === teMetric)
@@ -1071,14 +1074,14 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
     ? fo(teRows).filter(r => r.count >= 10)
     : fo(teRows)
   const sortedTE        = [...filteredTERows].sort((a, b) => (b[teMetric] - a[teMetric]) || (b.wins - a.wins))
-  const teProfileSlots  = Array.from({ length: 20 }, (_, i) => sortedTE[i] ?? null)
+  const teProfileSlots  = slotsOf(sortedTE, 20)
 
   const myTEEntry   = currentUser ? filteredTERows.find(r => r.uid === currentUser.id) : null
   const myTERank    = myTEEntry ? sortedTE.findIndex(r => r.uid === currentUser.id) + 1 : 0
   const myTEInTop20 = teProfileSlots.some(r => r?.uid === currentUser?.id)
 
-  const teBuildsList  = buildsTab === 'best' ? teBestBuilds : teWorstBuilds
-  const teBuildSlots  = Array.from({ length: buildsTab === 'best' ? 200 : 20 }, (_, i) => teBuildsList[i] ?? null)
+  const teBuildsList  = fo(buildsTab === 'best' ? teBestBuilds : teWorstBuilds)
+  const teBuildSlots  = slotsOf(teBuildsList, buildsTab === 'best' ? 200 : 20)
 
   // ── Derived DB lists ──────────────────────────────────────────────────────────
   const activeDBMetric  = DB_METRICS.find(m => m.key === dbMetric)
@@ -1086,14 +1089,14 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
     ? fo(dbRows).filter(r => r.count >= 10)
     : fo(dbRows)
   const sortedDB        = [...filteredDBRows].sort((a, b) => (b[dbMetric] - a[dbMetric]) || (b.wins - a.wins))
-  const dbProfileSlots  = Array.from({ length: 20 }, (_, i) => sortedDB[i] ?? null)
+  const dbProfileSlots  = slotsOf(sortedDB, 20)
 
   const myDBEntry   = currentUser ? filteredDBRows.find(r => r.uid === currentUser.id) : null
   const myDBRank    = myDBEntry ? sortedDB.findIndex(r => r.uid === currentUser.id) + 1 : 0
   const myDBInTop20 = dbProfileSlots.some(r => r?.uid === currentUser?.id)
 
-  const dbBuildsList  = buildsTab === 'best' ? dbBestBuilds : dbWorstBuilds
-  const dbBuildSlots  = Array.from({ length: buildsTab === 'best' ? 200 : 20 }, (_, i) => dbBuildsList[i] ?? null)
+  const dbBuildsList  = fo(buildsTab === 'best' ? dbBestBuilds : dbWorstBuilds)
+  const dbBuildSlots  = slotsOf(dbBuildsList, buildsTab === 'best' ? 200 : 20)
 
   // ── Derived OL lists ──────────────────────────────────────────────────────────
   const activeOLMetric  = OL_METRICS.find(m => m.key === olMetric)
@@ -1101,14 +1104,14 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
     ? fo(olRows).filter(r => r.count >= 10)
     : fo(olRows)
   const sortedOL        = [...filteredOLRows].sort((a, b) => (b[olMetric] - a[olMetric]) || (b.wins - a.wins))
-  const olProfileSlots  = Array.from({ length: 20 }, (_, i) => sortedOL[i] ?? null)
+  const olProfileSlots  = slotsOf(sortedOL, 20)
 
   const myOLEntry   = currentUser ? filteredOLRows.find(r => r.uid === currentUser.id) : null
   const myOLRank    = myOLEntry ? sortedOL.findIndex(r => r.uid === currentUser.id) + 1 : 0
   const myOLInTop20 = olProfileSlots.some(r => r?.uid === currentUser?.id)
 
-  const olBuildsList  = buildsTab === 'best' ? olBestBuilds : olWorstBuilds
-  const olBuildSlots  = Array.from({ length: buildsTab === 'best' ? 200 : 20 }, (_, i) => olBuildsList[i] ?? null)
+  const olBuildsList  = fo(buildsTab === 'best' ? olBestBuilds : olWorstBuilds)
+  const olBuildSlots  = slotsOf(olBuildsList, buildsTab === 'best' ? 200 : 20)
 
   // ── Render ───────────────────────────────────────────────────────────────────
   return (
@@ -1247,7 +1250,7 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
             { key: 'count', label: 'Seasons' },
           ]
           const sorted = [...fo(allDailyRows)].sort((a, b) => (b[allDailyMetric] - a[allDailyMetric]) || (b.wins - a.wins))
-          const slots  = Array.from({ length: 20 }, (_, i) => sorted[i] ?? null)
+          const slots  = slotsOf(sorted, 20)
           return (
             <>
               <div className="lb-header">
@@ -1313,7 +1316,7 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
             { key: 'wins',  label: 'Wins' },
           ]
           const sorted = [...dailyRows].sort((a, b) => (b[dailyMetric] - a[dailyMetric]) || (b.wins - a.wins))
-          const slots  = Array.from({ length: 20 }, (_, i) => sorted[i] ?? null)
+          const slots  = slotsOf(sorted, 20)
           return (
             <>
               <div className="lb-header">
@@ -1692,6 +1695,9 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
               <LBSpinner />
             ) : (
               <div className="lb-list" key={`${isOL ? 'ol-' : isDB ? 'db-' : isTE ? 'te-' : isWR ? 'wr-' : isRB ? 'rb-' : ''}builds-${buildsTab}`}>
+                {friendsOnly && friendIds && !(isOL ? olBuildSlots : isDB ? dbBuildSlots : isTE ? teBuildSlots : isWR ? wrBuildSlots : isRB ? rbBuildSlots : qbBuildSlots).length && (
+                  <p className="lb-friends-empty">No builds from you or your friends on this board yet: it keeps the top {buildsTab === 'best' ? 200 : 20}.</p>
+                )}
                 {(isOL ? olBuildSlots : isDB ? dbBuildSlots : isTE ? teBuildSlots : isWR ? wrBuildSlots : isRB ? rbBuildSlots : qbBuildSlots).map((row, i) =>
                   row ? (
                     <div key={i} className="lb-expand-wrap" style={{ animationDelay: `${i * 35}ms` }}>
@@ -2051,7 +2057,7 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
             {rbLegendMetric === 'opoys' ? (
               awardsLoading ? <LBSpinner /> : (
                 <div className="lb-list" key="rb-legend-opoys">
-                  {Array.from({ length: 20 }, (_, i) => fo(alltimeAwardsRows)[i] ?? null).map((row, i) =>
+                  {slotsOf(fo(alltimeAwardsRows), 20).map((row, i) =>
                     row ? (() => {
                       const career = rbLegendRows.find(r => r.uid === row.uid)
                       return (

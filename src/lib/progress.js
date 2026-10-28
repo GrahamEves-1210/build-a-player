@@ -24,8 +24,11 @@ import { IS_APP } from './platform'
 const NY = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' })
 const nyParts = (t = Date.now()) => Object.fromEntries(NY.formatToParts(new Date(t)).map(p => [p.type, p.value]))
 export function dayKey(offsetDays = 0) {
-  const p = nyParts(Date.now() + offsetDays * 86400000)
-  return `${p.year}-${p.month}-${p.day}`
+  const p = nyParts()
+  const key = `${p.year}-${p.month}-${p.day}`
+  // calendar days from today in New York, not 24-hour steps: a daylight-saving day is 23 or
+  // 25 hours, and "now minus 24 hours" landed two days back in the hour after that midnight
+  return offsetDays ? new Date((dayIndex(key) + offsetDays) * 86400000).toISOString().slice(0, 10) : key
 }
 export const dayIndex = key => Math.round(Date.UTC(+key.slice(0, 4), +key.slice(5, 7) - 1, +key.slice(8, 10)) / 86400000)
 export function msToReset() {

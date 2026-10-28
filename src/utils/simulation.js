@@ -449,6 +449,8 @@ export function calcMVPResult(result, isAllTime = false, teamShort = null) {
   if (totalTDs < 35) p = Math.min(p, 0.02)
   if (ints >= 14) p = Math.min(p, 0.03)
   if (wins < 11) p = 0
+  // a season nowhere near the award's level never wins it (it used to keep a 2% chance)
+  if (totalTDs < 25) p = 0
   p = Math.max(0, p)
 
   if (isAllTime) p *= 0.80
@@ -1034,6 +1036,8 @@ export function calcOPOYResult(result, isAllTime = false, teamShort = null) {
   if (seasonRushYds < 1500 && totalYds < 1700) p = Math.min(p, 0.01)
   if (totalTDs < 12)        p = Math.min(p, 0.04)
   if (wins < 7)             p = 0
+  // a season nowhere near the award's level never wins it (it used to keep a 1-4% chance)
+  if (totalYds < 1300 || totalTDs < 8) p = 0
 
   // Guaranteed thresholds — these seasons are undeniable
   if (totalYds >= 2100 && wins >= 10) {
@@ -1654,6 +1658,8 @@ export function calcWROPOYResult(result, isAllTime = false, teamShort = null) {
   if (seasonRecYds < 1100)       p = Math.min(p, 0.02)
   if (seasonRecTDs < 7)          p = Math.min(p, 0.05)
   if (wins < 7)                  p = 0
+  // a season nowhere near the award's level never wins it (560 yards and 5 TDs used to keep a 2% chance)
+  if (seasonRecYds < 1000 || seasonRecTDs < 6) p = 0
 
   // Guaranteed thresholds
   if (seasonRecYds >= 1900 && seasonRecTDs >= 12 && wins >= 10) {
@@ -2218,6 +2224,8 @@ export function calcTEOPOYResult(result, isAllTime = false, teamShort = null) {
   if (seasonRecYds < 1100)       p = Math.min(p, 0.02)
   if (seasonRecTDs < 7)          p = Math.min(p, 0.05)
   if (wins < 7)                  p = 0
+  // a season nowhere near the award's level never wins it (560 yards and 5 TDs used to keep a 2% chance)
+  if (seasonRecYds < 1000 || seasonRecTDs < 6) p = 0
 
   // Guaranteed thresholds — same as WR
   if (seasonRecYds >= 1900 && seasonRecTDs >= 12 && wins >= 10) {

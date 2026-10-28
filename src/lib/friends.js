@@ -6,12 +6,21 @@
 //   simulations      saved seasons (public: leaderboards read them)
 //   vs_results       { user_id, result }  1v1 record (the lobby reads friends' rows)
 // Nothing here reads another player's private columns (email, wallet, ads).
+import { useState } from 'react'
 import { supabase } from './supabase'
 import { seedCos } from './peopleCos'
 
 const pair = (a, b) => `and(from_id.eq.${a},to_id.eq.${b}),and(from_id.eq.${b},to_id.eq.${a})`
 
 // My friends (fresh names from accounts), requests waiting on me, and the ones I sent
+// The leaderboards' Everyone / Friends choice, kept while the app is open: switching
+// position (QB, RB...) or reopening a board remounts it, and it used to drop back to Everyone
+let friendsOnlyPick = false
+export function useFriendsOnly() {
+  const [on, setOn] = useState(friendsOnlyPick)
+  return [on, v => { friendsOnlyPick = v; setOn(v) }]
+}
+
 export async function loadFriends(uid) {
   if (!supabase || !uid) return { friends: [], incoming: [], outgoing: [] }
   const [accRes, inRes, outRes] = await Promise.all([

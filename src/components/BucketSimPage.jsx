@@ -2636,6 +2636,22 @@ const TEAM_STARTERS = {
 
 const PLAYER_INDEX = Object.fromEntries([...NBA_GUARD_PLAYERS, ...NBA_BIG_PLAYERS].map(p => [p.name, p]))
 
+// The team's five today: each listed starter still on the team keeps his spot; one traded
+// away or gone from the rosters is replaced by the team's best player left in that group
+// (guards PG–SF, bigs PF–C), so a roster change never leaves the five a man short
+function startersFor(short) {
+  const listed = (TEAM_STARTERS[short] ?? []).map(n => PLAYER_INDEX[n])
+  const used = new Set(listed.filter(p => p?.team === short).map(p => p.name))
+  return SPOT_LABELS.map((_, k) => {
+    if (listed[k]?.team === short) return listed[k]
+    const best = (k < 3 ? NBA_GUARD_PLAYERS : NBA_BIG_PLAYERS)
+      .filter(p => p.team === short && p.attrs && !used.has(p.name))
+      .sort((a, b) => playerOvr(b) - playerOvr(a))[0]
+    if (best) used.add(best.name)
+    return best
+  }).filter(Boolean)
+}
+
 const SUFFIXES = new Set(['Jr.', 'Jr', 'II', 'III', 'IV'])
 function starterDisplayName(p) {
   if (!SUFFIXES.has(p.short)) return p.short
@@ -2700,7 +2716,7 @@ function TeamStarters({ teamShort, teamColor, isBig, iqPhoto, isAllTime = false,
     const ri = ALLTIME_REPLACE_IDX[teamShort] ?? { g: 2, b: 3 }
     five = withYou(names.map(name => ({ name, label: name, team: teamShort })), isBig ? ri.b : ri.g, isBig, spot)
   } else {
-    const starters = (TEAM_STARTERS[teamShort] ?? []).map(n => PLAYER_INDEX[n]).filter(Boolean)
+    const starters = startersFor(teamShort)
     if (starters.length < 5) return null
     // the weakest real starter in your group, by OVR
     const mine = isBig ? [3, 4] : [0, 1, 2]

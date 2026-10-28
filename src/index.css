@@ -12266,7 +12266,7 @@ html.is-x-browser .mobile-tab-bar {
   padding-bottom: 2px;
   scrollbar-width: none;
   -ms-overflow-style: none;
-  touch-action: pan-x;
+  touch-action: pan-x pan-y;   /* pan-x alone swallowed a swipe down that started on the strip (iPhone) */
 }
 .lb-tabs-scroll::-webkit-scrollbar { display: none; }
 .lb-tab {
