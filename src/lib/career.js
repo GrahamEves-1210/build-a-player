@@ -264,7 +264,7 @@ export const SPORT = {
     step: 10, gameWord: 'GAME', snaps: 'minutes', injScale: 17 / 82, moneyWord: 'points',
     injuries: [['ankle sprain', 3, 8], ['knee soreness', 4, 10], ['hamstring strain', 6, 14], ['concussion', 2, 5], ['back spasms', 3, 7], ['wrist sprain', 5, 12], ['calf strain', 8, 16]],
     money: { guard: [2, 55], big: [2, 52] },
-    primeNote: () => 'Speed and bounce can be trained until 29 and start to fade at 31; skills can be trained any time. Big injuries and a fragile body can cost you a grade.',
+    primeNote: () => { const S = SPORT.bucket; return `Speed and bounce can be trained until ${S.trainUntil()} and start to fade at ${S.declineAt()}; skills can be trained any time. Big injuries and a fragile body can cost you a grade.` },
   },
 }
 export const sportOf = c => SPORT[c?.sport] ?? SPORT.nfl
@@ -1281,12 +1281,15 @@ function maybeTraded(c, r) {
   const p = c.lastRole !== 'Backup' ? 0.04 : before && before.benched >= (before.wins + before.losses) / 2 ? 0.8 : 0.45
   if (r() >= p) return c
   // a team where you'd start
+  // (by the depth chart at his own spot: a DB is weighed against that team's corners, or its safeties)
+  const contract = { ...c.contract, starter: false }
   const fits = S.teams.filter(t => t.short !== c.team).map(t => ({ t, ro: rosterOf(c, t.short) }))
-    .filter(x => (x.ro[c.pos][S.starters[c.pos] - 1]?.ovr ?? 0) < c.ovr)
+    .filter(x => depthChart({ ...c, team: x.t.short, roster: x.ro, contract, lastRole: null }, x.ro).starter)
   const pick = fits.length ? fits[Math.floor(r() * fits.length)] : null
   if (!pick) return c
   return {
     ...c, team: pick.t.short, roster: pick.ro, kept: keepRoster(c), traded: true, tradeAsked: false,
+    contract,   // a starter guarantee was the old team's promise
     events: [...c.events, { year: c.year + 1, text: `Traded to the ${pick.t.name}. A fresh start, and a starting job.` }],
     decisions: [...c.decisions, { year: c.year + 1, text: `Traded to the ${nick(pick.t.name)}` }],
   }
@@ -1501,7 +1504,8 @@ export function demandTrade(c) {
   const dest = S.teams.map(t => S.teamOf(t.short)).filter(t => t.short !== c.team).sort(() => r() - .5).sort((a, b) => (b.off + b.def) - (a.off + a.def))[Math.floor(r() * 6)]
   const roster = rosterOf(c, dest.short)
   const fit = teamFit(dest.short, c.pos, { roster, league: c.league, name: c.name, sport: c.sport })
-  return { ...c, rep, tradeAsked: true, team: dest.short, roster, kept: keepRoster(c), fit, lastRole: null, off: { ...(c.off ?? {}), moves: [] }, events: [...c.events, { year: c.year + 1, text: `Trade request granted: a ${nick(fit.name)} now.` }], decisions: [...c.decisions, { year: c.year + 1, text: `Demanded a trade, dealt to the ${fit.name}` }] }
+  // a starter guarantee was the old team's promise: it stays with them
+  return { ...c, rep, tradeAsked: true, team: dest.short, roster, kept: keepRoster(c), fit, lastRole: null, contract: { ...c.contract, starter: false }, off: { ...(c.off ?? {}), moves: [] }, events: [...c.events, { year: c.year + 1, text: `Trade request granted: a ${nick(fit.name)} now.` }], decisions: [...c.decisions, { year: c.year + 1, text: `Demanded a trade, dealt to the ${fit.name}` }] }
 }
 // Into the next season: a year older, the body moves with it
 export function nextSeason(c) {

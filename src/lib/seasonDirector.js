@@ -316,7 +316,12 @@ export function createDirector({ sport, pos, build, team, simFn, base, seed = Ma
     if (!isBucket) {
       if (pos === 'rb') { out.seasonYPC = out.seasonCarries > 0 ? Math.round((out.seasonRushYds / out.seasonCarries) * 10) / 10 : 0; out.seasonLong = Math.max(0, ...games.map(g => g.long ?? 0)); out.hundredYardGames = games.filter(g => g.rushYds >= 100).length }
       if (pos === 'wr' || pos === 'te') { out.seasonYPR = out.seasonRecs > 0 ? Math.round((out.seasonRecYds / out.seasonRecs) * 10) / 10 : 0; out.seasonLong = Math.max(0, ...games.map(g => g.long ?? 0)); out.hundredYardGames = games.filter(g => g.recYds >= 100).length; out.catchRate = out.seasonTargets > 0 ? Math.round((out.seasonRecs / out.seasonTargets) * 1000) / 10 : 0 }
-      if (pos === 'qb') out.seasonINTs = Math.max(3, out.seasonINTs)
+      // a QB who threw: at least 3 INTs; one who never got in throws none, and has no rating or
+      // completion % (they came from the season's full sim run, not his own games)
+      if (pos === 'qb') {
+        if (out.seasonPassYds > 0) out.seasonINTs = Math.max(3, out.seasonINTs)
+        else { out.seasonINTs = 0; out.seasonRating = 0; out.seasonCompPct = 0 }
+      }
     } else {
       out.gameLog = games.map(g => (g.won ? 'W' : 'L'))
       // the averages come from the games (a moment's buzzer-beater counts)
