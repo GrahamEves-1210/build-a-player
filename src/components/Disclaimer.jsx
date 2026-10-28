@@ -4,8 +4,8 @@ export default function Disclaimer({ sport = 'nfl', className = '' }) {
   return (
     <p className={`bap-disclaimer${className ? ` ${className}` : ''}`}>
       {sport === 'bucket'
-        ? 'Fan-made NBA player builder. Not affiliated with the NBA, the NBPA, or any of their teams or players.'
-        : 'Fan-made NFL player builder. Not affiliated with the NFL, the NFLPA, or any of their teams or players.'}
+        ? 'Fan-made NBA player builder by Playmaker Games, an independent studio. Not affiliated with the NBA, the NBPA, or any of their teams or players.'
+        : 'Fan-made NFL player builder by Playmaker Games, an independent studio. Not affiliated with the NFL, the NFLPA, or any of their teams or players.'}
     </p>
   )
 }

@@ -37,7 +37,8 @@ function MainPage({ go }) {
           <tr><th>Games</th><td>Build-A-Player (NFL)<br />Build-A-Bucket (NBA)</td></tr>
           <tr><th>Positions</th><td>QB, RB, WR, TE, DB<br />Guard, Big</td></tr>
           <tr><th>Modes</th><td>Career, Squad Builder, Compete, Trait Auction, Blacktop, Current, All-Time, Salary Cap, Head-to-Head, Depth Chart</td></tr>
-          <tr><th>Platform</th><td>Web browser</td></tr>
+          <tr><th>Developer</th><td>Playmaker Games (independent)</td></tr>
+          <tr><th>Platform</th><td>Web browser, iOS, Android</td></tr>
           <tr><th>Ratings as of</th><td>{fmtDate(RATINGS_AS_OF)}</td></tr>
           <tr><th>Website</th><td><a href="/">build-a-player.com</a></td></tr>
         </tbody>
@@ -390,7 +391,7 @@ function BehindPage() {
       <h2 id="random">How random the game is</h2>
       <p>Spins are random, but the daily Salary Cap board is <b>seeded</b> from the date, so everyone plays the same board on the same day. Seasons are Monte Carlo: hundreds of individual coin flips at the probabilities on the <a href="/wiki/seasons">Seasons</a> page, which is why the same build can go 13–4 and 9–8 on different days. The engines never fudge a result after the fact; the stories, awards and box scores are read from what the dice produced.</p>
       <h2 id="stack">What it runs on</h2>
-      <p>Build-A-Player is a React app built with Vite, served from Cloudflare Pages, with accounts, saves, leaderboards and the live Head-to-Head rooms on Supabase. It is an independent fan project with no affiliation to the NFL, the NBA, their teams or players.</p>
+      <p>Build-A-Player is a React app built with Vite, served from Cloudflare Pages, with accounts, saves, leaderboards and the live Head-to-Head rooms on Supabase. It is an independent fan project by Playmaker Games LLC, with no affiliation to the NFL, the NBA, their teams or players.</p>
     </>
   )
 }

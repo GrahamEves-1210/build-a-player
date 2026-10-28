@@ -126,7 +126,7 @@ export default function Wiki({ onExit }) {
             <page.Component go={go} query={loc.query} pool={loc.pool} />
             <footer className="wk-foot">
               <p>This page was last updated on {fmtDate(BUILD_DATE)}. Ratings as of {fmtDate(RATINGS_AS_OF)}; they refresh with every update to the game's data.</p>
-              <p>Build-A-Player is an independent fan project and is not affiliated with, endorsed by, or sponsored by the National Football League, the NBA, or any of their member teams, players' associations, or players. Team names, logos, player names and images belong to their respective owners.</p>
+              <p>Build-A-Player is an independent fan project by Playmaker Games LLC and is not affiliated with, endorsed by, or sponsored by the National Football League, the NBA, or any of their member teams, players' associations, or players. Team names, logos, player names and images belong to their respective owners.</p>
               <p><a href="/" onClick={e => { e.preventDefault(); onExit() }}>Game</a> · <a href="/?about">About</a> · <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a> · <a href="mailto:buildaplayer@outlook.com">Corrections</a></p>
             </footer>
           </article>

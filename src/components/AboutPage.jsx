@@ -31,11 +31,11 @@ export default function AboutPage({ onBack }) {
       </Sec>
 
       <Sec id="a-support" title="From the maker">
-        <P>Enjoy Build-A-Player? Check out my college basketball game, <Ext href="https://32-0game.com">32-0game.com</Ext>. If you'd like to support the game, <Ext href="https://buymeacoffee.com/32and0">leave a tip here</Ext>. Ideas, bugs or questions: <Mail />.</P>
+        <P>Build-A-Player is made by Playmaker Games, a small independent studio. Enjoy it? Check out my college basketball game, <Ext href="https://32-0game.com">32-0game.com</Ext>. If you'd like to support the game, <Ext href="https://buymeacoffee.com/32and0">leave a tip here</Ext>. Ideas, bugs or questions: <Mail />.</P>
       </Sec>
 
       <Sec id="a-disclaimer" title="Disclaimer">
-        <p className="about-disclaimer">Build-A-Player is an independent fan project and is not affiliated with, endorsed by, or sponsored by the National Football League, NFL Properties LLC, the National Basketball Association, or any of their teams, players' associations or players.</p>
+        <p className="about-disclaimer">Build-A-Player is an independent fan project by Playmaker Games LLC and is not affiliated with, endorsed by, or sponsored by the National Football League, NFL Properties LLC, the National Basketball Association, or any of their teams, players' associations or players.</p>
         <p className="about-disclaimer">League and team names, logos, player names and images belong to their respective owners. No commercial relationship with the NFL, the NBA or their teams is implied.</p>
       </Sec>
 
