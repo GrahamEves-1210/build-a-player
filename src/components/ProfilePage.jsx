@@ -113,7 +113,7 @@ import ConnectDiscord from './ConnectDiscord'
 import { getUsername } from '../lib/discord'
 import { IconGear, IconTrophy, IconCrown, IconFootball, IconBasketball } from './app/icons'
 import { useCountUp as countUp } from '../lib/useCountUp'
-import { openBillingPortal } from '../lib/webCheckout'
+import { openBillingPortal, BILLING_DUE } from '../lib/webCheckout'
 
 // a trait's player by name: an older save kept only the short name (a last name, or for a few
 // players just their suffix: 'Jr.' for Michael Porter Jr.): the full name from that team's roster
@@ -215,6 +215,7 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
   const [careerGame, setCareerGame] = useState(isOL ? 'ol' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb')
   const [adsDisabled, setAdsDisabled] = useState(false)
   const [adsLifetime, setAdsLifetime] = useState(false)
+  const [billingDue, setBillingDue] = useState(false)   // a Pro renewal that didn't go through
   const [adFreeLoading, setAdFreeLoading] = useState(false)
   const [activeTheme, setActiveTheme] = useState(() => {
     try { return localStorage.getItem('bap_theme') || 'default' } catch { return 'default' }
@@ -265,6 +266,7 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
       .then(({ data }) => {
         if (data?.ads_disabled) { setAdsDisabled(true); setAdsLifetime(true) }
         else if (data?.subscription_status === 'active') setAdsDisabled(true)
+        setBillingDue(BILLING_DUE.includes(data?.subscription_status))
         setMvpCounts({
           classic:     data?.classic_mvps  ?? 0,
           alltime:     data?.alltime_mvps  ?? 0,
@@ -875,8 +877,21 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
             </div>
             <div className="ag-pro-card-body">+50% coins from every game, the Pro Vault's four looks, no ads, a double daily coin drop, and the Pro role in the Discord once your Discord is linked.</div>
             <div className="ag-pro-card-btns">
-              <button className="ag-btn ag-pro-cta" onClick={() => window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'shop' }))}>PRO VAULT</button>
+              <button className="ag-btn ag-pro-cta" onClick={() => window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'shop:vault' }))}>PRO VAULT</button>
               <button className="ag-btn ag-btn--ghost" onClick={handleManageSubscription}>MANAGE SUBSCRIPTION</button>
+            </div>
+          </div>
+        )}
+        {/* a renewal that didn't go through: Pro is paused, the subscription is still there to fix or cancel */}
+        {!isPlus && billingDue && (
+          <div className={`prf-card ag-pro-card ${show ? 'prf-card-in' : ''}`} style={{ animationDelay: '0.1s' }}>
+            <div className="ag-pro-card-top">
+              <span className="ag-pro-crown"><IconCrown size={24} /></span>
+              <span className="ag-pro-card-id"><b>BAP PRO</b><small>Paused · your last payment didn't go through</small></span>
+            </div>
+            <div className="ag-pro-card-body">Update your card to turn Pro back on, or cancel so you aren't charged again.</div>
+            <div className="ag-pro-card-btns" style={{ gridTemplateColumns: '1fr' }}>
+              <button className="ag-btn ag-pro-cta" onClick={handleManageSubscription}>MANAGE SUBSCRIPTION</button>
             </div>
           </div>
         )}

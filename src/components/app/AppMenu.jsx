@@ -7,7 +7,7 @@ import FeedbackModal from '../FeedbackModal'
 import { isMuted, setMuted } from '../../lib/juice'
 import { IS_APP, PLAY_BILLING } from '../../lib/platform'
 import { useStorePrices, PRO_PLAN_ID } from '../../lib/iap'
-import { openCheckout, openBillingPortal, PRO_PRICE, perMonth } from '../../lib/webCheckout'
+import { openCheckout, openBillingPortal, billingDue, PRO_PRICE, perMonth } from '../../lib/webCheckout'
 import { sellsHere } from '../../lib/storefront'
 import { isPro } from '../../lib/progress'
 import { railPreviewOn, setRailPreview } from '../../lib/fakeRail'
@@ -47,6 +47,8 @@ function ProView({ onVault }) {
   const [err, setErr] = useState(null)
   const [plan, setPlan] = useState('year')
   const pro = isPro()
+  const [due, setDue] = useState(false)   // a renewal that didn't go through: manage it, don't buy a second one
+  useEffect(() => { if (!pro) billingDue().then(setDue).catch(() => {}) }, []) // eslint-disable-line react-hooks/exhaustive-deps
   const store = useStorePrices()   // Android: Google Play's prices, in the player's currency
   const price = { month: store[PRO_PLAN_ID.month] ?? PRO_PRICE.month, year: store[PRO_PLAN_ID.year] ?? PRO_PRICE.year }
   // the yearly plan's monthly figure: the headline on the website, small print in the apps
@@ -72,9 +74,9 @@ function ProView({ onVault }) {
       <div className={`ag-pro-hero ag-pop${pro ? ' is-on' : ''}`}>
         <span className="ag-pro-crown"><IconCrown size={30} /></span>
         <b>BAP PRO</b>
-        <span>{pro ? 'Active — thanks for backing the game.' : 'Cancel anytime'}</span>
+        <span>{pro ? 'Active — thanks for backing the game.' : due ? 'Paused — your last payment didn\'t go through.' : 'Cancel anytime'}</span>
       </div>
-      {!pro && sellsHere() && (
+      {!pro && !due && sellsHere() && (
         <div className="ag-pro-plans" role="radiogroup" aria-label="Plan">
           <button role="radio" aria-checked={plan === 'month'} className={`ag-pro-plan${plan === 'month' ? ' is-on' : ''}`} onClick={() => setPlan('month')}>
             <small>MONTHLY</small><b>{price.month}</b><span>a month</span>
@@ -97,6 +99,11 @@ function ProView({ onVault }) {
           <button className="ag-btn ag-pro-cta" onClick={onVault}>OPEN THE PRO VAULT</button>
           <button className="ag-btn ag-btn--ghost ag-pro-manage" onClick={manage} disabled={busy}>{busy ? 'OPENING…' : 'MANAGE SUBSCRIPTION'}</button>
           <p className="ag-pro-note">{PLAY_BILLING ? "Change your plan or cancel in Google Play, or on Stripe's secure page if you joined on the website." : "Change your plan or card, or cancel, on Stripe's secure page (or in Google Play, if you joined on Android)."} Pro stays on until the end of the period you've paid for.</p>
+        </>
+      ) : due ? (
+        <>
+          <button className="ag-btn ag-pro-cta" onClick={manage} disabled={busy}>{busy ? 'OPENING…' : 'MANAGE SUBSCRIPTION'}</button>
+          <p className="ag-pro-note">Update your card on Stripe's secure page to turn Pro back on, or cancel there so you aren't charged again.</p>
         </>
       ) : sellsHere() ? (
         <>
@@ -185,7 +192,7 @@ export default function AppMenu({ sport, onClose, initialView = 'menu' }) {
         {view === 'settings' ? (
           <AppSettings signedIn={signedIn} onFeedback={openFeedback} onClose={onClose} />
         ) : view === 'pro' ? (
-          <ProView onVault={go(() => nav('shop'))} />
+          <ProView onVault={go(() => nav('shop:vault'))} />
         ) : view === 'howto' ? (
           <div className="ag-steps">
             {STEPS.map((s, i) => (

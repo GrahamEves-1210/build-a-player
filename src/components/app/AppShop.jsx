@@ -20,6 +20,7 @@ import PassStrip from './PassStrip'
 import { RollingNumber } from './MotionText'
 import { AnimatePresence, motion } from 'motion/react'
 import { SPRING_LAYOUT } from '../../lib/motion'
+import { motionReduced } from '../../lib/settings'
 import { useSheetDrag, sheetMotion, overlayMotion } from './Sheet'
 
 // The shop (app): coins buy avatars, name colors and effects, nameplates and
@@ -379,7 +380,21 @@ function ItemSheet({ id, onClose, name, onNeedCoins }) {
 export default function AppShop({ onClose, tab: initialTab = 'featured' }) {
   useEffect(() => { warmVictory() }, [])   // victory sounds ready for previews
   const p = useProgress()
-  const [tab, setTab] = useState(initialTab)
+  // shop:vault opens Featured scrolled down to the Pro Vault (once the screen has slid in)
+  const [tab, setTab] = useState(initialTab === 'vault' ? 'featured' : initialTab)
+  const vaultRef = useRef(null)
+  useEffect(() => {
+    if (initialTab !== 'vault') return
+    const t = setTimeout(() => {
+      const el = vaultRef.current
+      if (!el) return
+      // clear the sticky section chips (.sh-nav)
+      const navEl = el.closest('.sh')?.querySelector('.sh-nav')
+      el.style.scrollMarginTop = `${(navEl ? (parseFloat(getComputedStyle(navEl).top) || 0) + navEl.offsetHeight : 0) + 8}px`
+      el.scrollIntoView({ behavior: motionReduced() ? 'auto' : 'smooth', block: 'start' })
+    }, 350)
+    return () => clearTimeout(t)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
   const lastIn = useRef({})   // each section reopens on the chip it was left on
   const [open, setOpen] = useState(null)
   const name = getUsername(p.user) || 'Guest'
@@ -495,7 +510,7 @@ export default function AppShop({ onClose, tab: initialTab = 'featured' }) {
               {grid(reach)}
             </div>
           )}
-          {(sells || pro) && <div className="sh-section">
+          {(sells || pro) && <div className="sh-section" ref={vaultRef}>
             <div className="sh-vault">
               <div className="sh-vault-head">
                 <span>

@@ -51,6 +51,17 @@ export async function openCheckout(kind, extra = {}) {
 // Google Play's page for the player's subscriptions (a Pro bought on Android is managed there)
 const PLAY_SUBS = 'https://play.google.com/store/account/subscriptions?sku=bap_pro&package=com.buildaplayer.app'
 
+// A Pro whose renewal didn't go through (stripe-webhook: Pro is off, Stripe still retries the card):
+// not a member, but the subscription is still there to fix or cancel on the billing page
+export const BILLING_DUE = ['past_due', 'unpaid', 'paused', 'incomplete']
+export async function billingDue() {
+  const { data } = supabase ? await supabase.auth.getSession() : { data: null }
+  const user = data?.session?.user
+  if (!user) return false
+  const { data: acc } = await supabase.from('accounts').select('subscription_status').eq('id', user.id).maybeSingle()
+  return BILLING_DUE.includes(acc?.subscription_status)
+}
+
 // BAP Pro members: Stripe's billing page (change plan, card, cancel), or Google Play's for a
 // Pro bought there (subscription_id 'play:…'). Resolves 'opened' | 'signin' | 'error'
 export async function openBillingPortal() {
