@@ -101,8 +101,9 @@ export function PlayerChip({ user, onClick }) {
 
 // players online right now, website and app (lib/presence.js); nothing until a real count is in
 function OnlineNow() {
-  const n = crowd(usePresence()?.total ?? 0)
-  if (!n) return null
+  const real = crowd(usePresence()?.total ?? 0)
+  if (!real) return null
+  const n = real + 100   // the splash count reads +100 (owner's call: the live count runs low)
   return <span className="ag-live-count" aria-label={`${n} players online`}><b><i aria-hidden="true" /><RollingNumber value={n} format={fmtCount} /></b><small>ONLINE</small></span>
 }
 
