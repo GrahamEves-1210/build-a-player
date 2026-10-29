@@ -5355,7 +5355,7 @@ html.bap-reduce-motion.is-app:is([data-flip="in-left"], [data-flip="in-right"]) 
 /* the fan-project line under the home and build screens */
 .bap-disclaimer { margin: 18px auto 0; padding: 0 20px; max-width: 520px; text-align: center; font-family: var(--ag-body, system-ui, sans-serif); font-size: 11px; line-height: 1.45; color: var(--ag-muted, rgba(216, 243, 220, .55)); text-wrap: balance; }
 /* the app's home ends with it: room to scroll it clear of the dock */
-.ag-home-maker { display: block; height: 34px; width: auto; margin: 26px auto 0; opacity: .8; }
+.ag-home-maker { display: block; height: 44px; width: auto; margin: 26px auto 0; opacity: .8; }
 html.is-app .ag-home > .bap-disclaimer { margin-bottom: calc(var(--app-bottom, 96px) + 12px); }
 
 /* forgot password (AuthModal) and the new-password step (PasswordReset) */
