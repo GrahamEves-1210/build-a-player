@@ -2899,6 +2899,9 @@ html:not(.is-app) #bap-rail-preview { z-index: 199; }
    the ad: content scrolled across it, and a viewability check saw it hidden. The dock is its
    own layer and still floats above the rail */
 html.app-look:not(.is-app) .ag-home, html.app-look:not(.is-app) .ag-screen { bottom: var(--web-rail, 0px); }
+/* Home is its own full-screen scroller: the page under it never scrolls too (something an ad
+   script adds below the fold could give the page a second scrollbar beside home's) */
+html.app-look:not(.is-app):has(.ag-home) { overflow: hidden; }
 /* so home only keeps clear of the dock (it sits 8px above home's bottom): --app-bottom counts the rail again */
 html.app-look:not(.is-app) .ag-home { padding-bottom: calc(var(--ag-dock-h) + 20px); }
 /* phones: the four "Spin & Build / Play it out…" cards are a desktop thing */
