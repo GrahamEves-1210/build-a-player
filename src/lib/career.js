@@ -407,7 +407,8 @@ function realAges(c) {
     const slots = S.slots[g]; if (!slots || !Array.isArray(ro[g])) continue
     const missing = slots.filter(sl => !ro[g].some(p => p.slot === sl))
     if (!missing.length) continue
-    const add = missing.map(sl => ({ name: rookieName(r), pos: g, ovr: clamp(Math.round(74 + (r() - 0.5) * 10), 64, 84), age: 22 + Math.floor(r() * 4), photo: null, slot: sl, rookie: true }))
+    const names = new Set(ro[g].map(p => p.name))
+    const add = missing.map(sl => ({ name: freshName(r, names), pos: g, ovr: clamp(Math.round(74 + (r() - 0.5) * 10), 64, 84), age: 22 + Math.floor(r() * 4), photo: null, slot: sl, rookie: true }))
     const all = [...ro[g], ...add]
     ro[g] = slots.map(sl => all.find(p => p.slot === sl)).filter(Boolean).concat(all.filter(p => !slots.includes(p.slot))).slice(0, S.keep[g])
   }
@@ -421,12 +422,23 @@ function realAges(c) {
 // A year's change by age, one roll 0-1: the young climb, the prime holds, the thirties slide
 const ageStep = (age, x) => (age <= 24 ? 1 + Math.floor(x * 4) : age <= 27 ? Math.floor(x * 3) : age <= 30 ? Math.floor(x * 3) - 1 : age <= 32 ? Math.floor(x * 3) - 2 : -1 - Math.floor(x * 4))
 // a pick who'll grow into the job: about 73 at 21-22, a starter by 25, now and then a star
-const genPick = (r, g, slot) => ({ name: rookieName(r), pos: g, ovr: clamp(Math.round(73 + (r() + r() + r() - 1.5) * 12), 58, 88), age: 21 + Math.floor(r() * 2), photo: null, slot, rookie: true })
+const genPick = (r, g, slot, taken) => ({ name: freshName(r, taken), pos: g, ovr: clamp(Math.round(73 + (r() + r() + r() - 1.5) * 12), 58, 88), age: 21 + Math.floor(r() * 2), photo: null, slot, rookie: true })
+// a made-up name no one on the roster already has (two picks could share one)
+function freshName(r, taken = null) {
+  let n = rookieName(r)
+  for (let i = 0; taken && taken.has(n) && i < 25; i++) n = rookieName(r)
+  taken?.add(n)
+  return n
+}
+// a DB pick goes where the room is short: a corner or a safety (one with no spot counted as a
+// corner, so over the years the safeties retired and the safety spots went empty)
+const shortSpot = list => { const s = list.filter(p => spotOf(p) === 's').length; return s < list.length - s ? 's' : 'cb' }
 // a group's spots filled and in order: an empty starting spot always gets a draft pick, so a lineup never has a hole
 function placeGroup(S, g, list, r) {
   const slots = S.slots[g]
-  for (const sl of slots ?? []) if (!list.some(p => p.slot === sl)) list.push(genPick(r, g, sl))
-  while (list.length < S.keep[g]) list.push(genPick(r, g, null))
+  const taken = new Set(list.map(p => p.name))
+  for (const sl of slots ?? []) if (!list.some(p => p.slot === sl)) list.push(genPick(r, g, sl, taken))
+  while (list.length < S.keep[g]) list.push(genPick(r, g, g === 'db' ? shortSpot(list) : null, taken))
   return slots ? slots.map(s => list.find(p => p.slot === s)).filter(Boolean).concat(list.filter(p => !slots.includes(p.slot)).sort(byOvr)).slice(0, S.keep[g]) : list.sort(byOvr).slice(0, S.keep[g])
 }
 // a group one season on: older, better or worse for it, the ones at the end retired, the gaps drafted
@@ -503,7 +515,18 @@ export function lineup(c, roster = c.roster ?? (c.team ? rosterOf(c, c.team) : n
   const out = {}
   for (const g of S.groups) out[g] = g === c.pos ? dc.all.slice(0, dc.starters) : (roster?.[g] ?? []).slice(0, S.starters[g])
   // DBs: his spot's two starters (him among them if he's won it) and the other spot's two
-  if (c.pos === 'db') out.db = [...dc.all.slice(0, 2).map(p => ({ ...p, slot: p.you ? dbSpot(c) : spotOf(p) })), ...(roster?.db ?? []).filter(p => p.name !== c.name && spotOf(p) !== dbSpot(c)).slice(0, 2).map(p => ({ ...p, slot: spotOf(p) }))]
+  // (four different players always: a spot with nobody left at it borrows the next best DB,
+  // and a name already shown isn't shown again; older saves can have both)
+  if (c.pos === 'db') {
+    const mine = dbSpot(c), other = mine === 's' ? 'cb' : 's'
+    const seen = new Set()
+    const shown = dc.all.filter(p => !seen.has(p.name) && (seen.add(p.name), true)).slice(0, 2).map(p => ({ ...p, slot: p.you ? mine : spotOf(p) }))
+    seen.clear(); shown.forEach(p => seen.add(p.name))
+    const rest = (roster?.db ?? []).filter(p => p.name !== c.name && !seen.has(p.name) && (seen.add(p.name), true))
+    const them = rest.filter(p => spotOf(p) === other).slice(0, 2)
+    for (const p of rest) if (them.length < 2 && !them.includes(p)) them.push(p)
+    out.db = [...shown, ...them.slice(0, 2).map(p => ({ ...p, slot: other }))]
+  }
   // everyone not starting, all positions, best first (basketball's bench)
   const reserves = S.groups.flatMap(g => (g === c.pos ? dc.all : roster?.[g] ?? []).slice(S.starters[g])).sort((a, b) => b.ovr - a.ovr)
   return { ...out, bench: dc.all.slice(dc.starters), reserves, depth: dc }
@@ -639,7 +662,7 @@ function rosterMoves(c, r) {
         }
       }
       const rd = 1 + Math.floor(r() * S.draft.rounds)
-      const p = { name: rookieName(r), pos: g, ovr: clamp(Math.round(79 - rd * (S.isBucket ? 3 : 1.5) + (r() + r() - 1) * 8), 60, 88), age: 22, photo: null, slot: need, rookie: true }
+      const p = { name: freshName(r, new Set([...taken, ...kept.map(x => x.name)])), pos: g, ovr: clamp(Math.round(79 - rd * (S.isBucket ? 3 : 1.5) + (r() + r() - 1) * 8), 60, 88), age: 22, photo: null, slot: need ?? (g === 'db' ? shortSpot(kept) : null), rookie: true }
       kept.push(p)
       moves.push({ kind: 'draft', pos: g, text: `Drafted ${gl(g)} ${p.name} in round ${rd}.`, p })
     }
@@ -648,7 +671,8 @@ function rosterMoves(c, r) {
   // sometimes they bring in competition at your spot
   if (r() < 0.22) {
     const rd = 1 + Math.floor(r() * 2)
-    const p = { name: rookieName(r), pos: c.pos, ovr: clamp(Math.round(c.ovr - 6 + r() * 8), 64, 92), age: 22, photo: null, rookie: true }
+    // (at your own spot: a safety's rival is a safety)
+    const p = { name: freshName(r, new Set((ro[c.pos] ?? []).map(x => x.name))), pos: c.pos, ovr: clamp(Math.round(c.ovr - 6 + r() * 8), 64, 92), age: 22, photo: null, rookie: true, ...(c.pos === 'db' ? { slot: dbSpot(c) } : {}) }
     ro[c.pos] = [...ro[c.pos], p].sort(byOvr).slice(0, S.keep[c.pos])
     moves.push({ kind: 'rival', pos: c.pos, text: `The ${nickOf(S, ro.team)} draft ${S.label[c.pos]} ${p.name} in round ${rd}. Competition for your ${S.snaps}.`, p })
   }
