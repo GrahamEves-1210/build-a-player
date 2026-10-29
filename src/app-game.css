@@ -2890,6 +2890,10 @@ html:not(.is-app) #bap-rail-preview { z-index: 199; }
    the ad: content scrolled across it, and a viewability check saw it hidden. The dock is its
    own layer and still floats above the rail */
 html.app-look:not(.is-app) .ag-home, html.app-look:not(.is-app) .ag-screen { bottom: var(--web-rail, 0px); }
+/* so home only keeps clear of the dock (it sits 8px above home's bottom): --app-bottom counts the rail again */
+html.app-look:not(.is-app) .ag-home { padding-bottom: calc(var(--ag-dock-h) + 20px); }
+/* phones: the four "Spin & Build / Play it out…" cards are a desktop thing */
+@media (max-width: 768px) { html.app-look:not(.is-app) .splash-features { display: none !important; } }
 #bap-rail-preview span {
   width: min(320px, 100%);
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
@@ -5617,6 +5621,12 @@ html.bap-reduce-motion :is(.ss-overlay, .ss-sheet, .ss-img, .ss-skel) { animatio
 @media (prefers-reduced-motion: no-preference) { html:not(.bap-reduce-motion) .ag-live-count i { animation: ag-online-pulse 2s ease-in-out infinite; } }
 @keyframes ag-online-pulse { 50% { opacity: .45; } }
 @media (min-width: 1024px) { html.app-look .ag-live-count { left: 0; } }
+/* phones: the compact stacked count (the one-line pill ran into the logo) */
+@media (max-width: 1023px) {
+  .ag-live-count { display: grid; justify-items: start; gap: 2px; padding: 5px 8px 4px; border-radius: 9px; top: 4px; }
+  .ag-live-count b { font-size: 13px; gap: 5px; }
+  .ag-live-count small { font-size: 9px; letter-spacing: 1.5px; }
+}
 
 /* Daily: the streak ladder (3 / 7 / 21 / 60) */
 .ag-streak-next { margin: 10px 0 0; display: grid; gap: 2px; font-family: var(--ag-body); font-size: 14px; color: var(--ag-text); }
