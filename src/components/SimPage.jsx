@@ -30,7 +30,7 @@ import { IS_APP, APP_LOOK } from '../lib/platform'
 const APP_SIM = IS_APP || APP_LOOK
 import { WeekStrip, Bracket, RingCeremony, SeasonRewards } from './app/AppSeason'
 import { createDirector } from '../lib/seasonDirector'
-import { MomentCard, NowCard, Pulse, Wire, Milestones, RecordOverlay, Leaders, SeasonStory, useDirectedReveal, MomentsToggle } from './app/AppSeasonPlus'
+import { MomentCard, Pulse, Wire, Milestones, RecordOverlay, Leaders, SeasonStory, useDirectedReveal, MomentsToggle } from './app/AppSeasonPlus'
 import { rampAdd, useRailOn } from '../lib/ads'
 import { ShareSeasonButton } from './app/SeasonShare'
 import { nflSeasonCard } from '../utils/seasonCard'
@@ -536,9 +536,7 @@ function GameLog({ games, total, isOL, isDB, isTE, isWR, isRB }) {
 function DirectedSeason({ dr, result, pos, pool, userName, director, onNext, build, types, isOL, isDB, isTE, isWR, isRB, adsDisabled = true }) {
   const games = dr.games
   const wins = games.filter(g => g.won).length, losses = games.length - wins
-  const last = games[games.length - 1]
   const final = dr.done ? result : null
-  const logoFor = short => `/logos/${short}.png`
   const youValue = final ? (final[director.leaderKey ?? ''] ?? null) : null
   return (
     <>
@@ -550,7 +548,8 @@ function DirectedSeason({ dr, result, pos, pool, userName, director, onNext, bui
       </div>
       <Pulse games={games} total={dr.total} playoffWins={10} />
       <Wire items={dr.headlines} />
-      {dr.moment ? <MomentCard moment={dr.moment} onPick={dr.choose} /> : <NowCard game={last} pos={pos} sport="nfl" team={result.team} logoFor={logoFor} />}
+      {/* only the moments get a card: a card per game flashed by too fast to read */}
+      {dr.moment && <MomentCard moment={dr.moment} onPick={dr.choose} />}
       <Milestones items={dr.fresh} />
       <WeekStrip games={director.games} revealed={dr.k} />
       <GameLog games={games} total={dr.total} isOL={isOL} isDB={isDB} isTE={isTE} isWR={isWR} isRB={isRB} />

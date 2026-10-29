@@ -19,7 +19,7 @@ import { IS_APP, APP_LOOK } from '../lib/platform'
 const APP_SIM = IS_APP || APP_LOOK
 import { RingCeremony, SeasonRewards } from './app/AppSeason'
 import { createDirector } from '../lib/seasonDirector'
-import { MomentCard, NowCard, Pulse, Wire, Milestones, RecordOverlay, Leaders, SeasonStory, StretchCard, useDirectedReveal, MomentsToggle } from './app/AppSeasonPlus'
+import { MomentCard, Pulse, Wire, Milestones, RecordOverlay, Leaders, SeasonStory, StretchCard, useDirectedReveal, MomentsToggle } from './app/AppSeasonPlus'
 import { rampAdd, useRailOn } from '../lib/ads'
 import { IconBall } from './app/icons'
 import { useCountUp as countUp } from '../lib/useCountUp'
@@ -938,9 +938,8 @@ function ScreenSeason({ result, awards, onNext, adsDisabled = false, isAllTime =
           </div>
           {director && <Pulse games={dr.games} total={dr.total} playoffWins={44} />}
           {director && <Wire items={dr.headlines} />}
-          {director && (dr.moment
-            ? <MomentCard moment={dr.moment} onPick={dr.choose} />
-            : <NowCard game={dr.games[dr.games.length - 1]} pos={result.position} sport="bucket" team={team} logoFor={s => `/logos/nba/${s}.png`} />)}
+          {/* only the moments get a card: a card per game flashed by too fast to read */}
+          {director && dr.moment && <MomentCard moment={dr.moment} onPick={dr.choose} />}
           {director && <Milestones items={dr.fresh} />}
           {director && dr.record && <RecordOverlay record={dr.record} name={userName} onClose={dr.clearRecord} />}
           <div className="bsim-season-dots">
