@@ -43,9 +43,9 @@ export default function SiteFooter({ sport = 'nfl', onDepthChart, onWiki }) {
           )}
           <a className="splash-site-footer-link" href="https://32-0game.com" target="_blank" rel="noopener noreferrer">32-0</a>
           {onDepthChart ? (
-            <button className="splash-site-footer-link splash-site-footer-link--btn" onClick={onDepthChart}>Depth Chart Mini-Game</button>
+            <button className="splash-site-footer-link splash-site-footer-link--btn" onClick={onDepthChart}>Depth Chart</button>
           ) : (
-            <a className="splash-site-footer-link" href="/">Depth Chart Mini-Game</a>
+            <a className="splash-site-footer-link" href="/">Depth Chart</a>
           )}
         </div>
         <div className="splash-site-footer-col">
