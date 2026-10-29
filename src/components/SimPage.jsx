@@ -1692,7 +1692,7 @@ export default function SimPage({ result: baseResult, build, types = TYPES, onBa
   const advancePage = () => {
     document.querySelector('.simp-page')?.scrollTo({ top: 0, behavior: 'instant' })
     window.scrollTo({ top: 0, behavior: 'instant' })
-    setScreen(s => s + 1)
+    setScreen(s => Math.min(s + 1, screens.length - 1))   // never past the Final Report (a blank page with no way back)
   }
 
   const triggerMVP = (continuation = null) => {

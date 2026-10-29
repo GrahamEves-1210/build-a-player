@@ -933,7 +933,9 @@ export default function App() {
   useEffect(() => {
     if (salaryStartRef.current) { salaryStartRef.current = false; handleStart('salarycap', 'qb'); return }
     if (page === 'salarycap') { if (window.location.pathname !== '/salary') { window.history.pushState({}, '', '/salary'); salaryPushedRef.current = true } }
-    else if (window.location.pathname === '/salary') window.history.replaceState({}, '', '/')
+    // (not on the way into its season: /salary stays under /simulate, so Back to Salary
+    // lands on the board and not on the build screen)
+    else if (window.location.pathname === '/salary' && page !== 'sim') window.history.replaceState({}, '', '/')
   }, [page]) // eslint-disable-line react-hooks/exhaustive-deps
   // a layout effect so this listener is added before the page's general popstate
   // handler: React renders popstate updates synchronously, so it must see /salary first
@@ -1931,8 +1933,8 @@ export default function App() {
           isTE={isTE}
           isDB={isDB}
           isOL={isOL}
-          onBack={() => { if (gameMode === 'salarycap' && window.location.pathname === '/simulate') { window.history.back(); return } setPage(gameMode === 'salarycap' ? 'salarycap' : 'game'); window.scrollTo({ top: 0, behavior: 'instant' }); document.querySelector('.game-page-scroll')?.scrollTo({ top: 0, behavior: 'instant' }) }}
-          onReset={() => { if (gameMode === 'salarycap') { if (window.location.pathname === '/simulate') { window.history.back(); return } setPage('salarycap'); window.scrollTo({ top: 0, behavior: 'instant' }); return } handleReset(); setPage('game'); window.scrollTo({ top: 0, behavior: 'instant' }); document.querySelector('.game-page-scroll')?.scrollTo({ top: 0, behavior: 'instant' }) }}
+          onBack={() => { /* straight there: stepping back through history could land on Home */ setPage(gameMode === 'salarycap' ? 'salarycap' : 'game'); window.scrollTo({ top: 0, behavior: 'instant' }); document.querySelector('.game-page-scroll')?.scrollTo({ top: 0, behavior: 'instant' }) }}
+          onReset={() => { if (gameMode === 'salarycap') { setPage('salarycap'); window.scrollTo({ top: 0, behavior: 'instant' }); return } handleReset(); setPage('game'); window.scrollTo({ top: 0, behavior: 'instant' }); document.querySelector('.game-page-scroll')?.scrollTo({ top: 0, behavior: 'instant' }) }}
           simFn={(IS_APP || APP_LOOK) && gameMode !== 'salarycap' ? simFor : null}
           onFinal={(IS_APP || APP_LOOK) && gameMode !== 'salarycap' ? commitSeason : null}
           pool={displayPool}

@@ -113,7 +113,6 @@ export const SPORT = {
       ? (f.ol < 4.5 ? 'A bad line hurts a quarterback: sacks, hits, hurried throws.' : f.weapons >= 8 ? 'Elite weapons make a quarterback\'s numbers.' : 'A workable line and honest weapons. The quarterback decides it.')
       : (f.qb >= 8 ? 'A real quarterback feeds his weapons: targets, yards, touchdowns.' : f.qb < 5 ? 'A weak quarterback caps a skill player. Fewer good balls.' : 'A middling quarterback. The plays have to be made after the catch.')),
     physical: { qb: ['legs', 'arm'], rb: ['speed', 'burst', 'elusiveness'], wr: ['speed', 'vertical', 'afterCatch'], te: ['speed', 'vertical', 'strength'], db: ['speed', 'fluidity'] },
-    durable: { qb: ['size', 'pocket-presence'], rb: ['strength', 'size', 'balance'], wr: ['size', 'bodyControl'], te: ['strength', 'size'], db: ['size', 'runSupport'] },
     ageShift: pos => (pos === 'qb' ? 2 : 0),
     // the physical traits train until this age (then the window shuts); the body fades from declineAt
     trainUntil: pos => ({ qb: 28, rb: 24, wr: 26, te: 26, db: 25 })[pos] ?? 26,
@@ -228,7 +227,6 @@ export const SPORT = {
       ? (f.frontcourt >= 8 ? 'Elite bigs set screens, clean the glass and finish the lobs. A guard eats here.' : f.frontcourt < 5 ? 'A thin frontcourt: no rim protection, no second chances. The guard has to carry it.' : 'An honest frontcourt. The backcourt decides it.')
       : (f.backcourt >= 8 ? 'Real guards feed a big: lobs, pocket passes, space to work.' : f.backcourt < 5 ? 'Weak guards starve a big. Fewer good touches.' : 'A middling backcourt. The big has to create for himself.')),
     physical: { guard: ['speed', 'bounce'], big: ['bounce', 'speed'] },
-    durable: { guard: ['size', 'basketballIQ'], big: ['size', 'basketballIQ'] },
     ageShift: () => 0,
     trainUntil: () => 25,                     // speed and bounce train only while young (drafted at 19–20)
     declineAt: () => 31,
@@ -845,7 +843,7 @@ export function newCareer({ sport = 'nfl', uid = null, pos, build, name = 'Guest
   const types = S.types[pos]
   const ovr = S.ovr(pos, build)
   const drills = S.combine[pos].map(([id, label, trait]) => ({ id, label, trait, score: null, text: null, pct: null }))
-  const dur = S.durable[pos].reduce((s, t) => s + (build[t]?.val ?? 5), 0) / S.durable[pos].length
+  const dur = build.size?.val ?? 5   // durability is the build's size
   return {
     v: CAREER_V, sport, uid, slot, owner, seed, pos, types, name, build, base: build, ovr,
     age: (S.isBucket ? 19 : 21) + Math.floor(r() * 2), year: 0, season: FIRST_SEASON,
@@ -1050,10 +1048,9 @@ export function advanceWeek(c, D) {
     last = { g, hits }
     // an injury: the body, the age and a little luck
     const r = seeded(`${c.seed}-inj-${c.year}-${k}`)
-    // (player feedback: "always hurt", even a size-S build) fewer injuries overall, and the
-    // body matters more: a season's chance of one is ~5% for a very durable build (9),
-    // ~24% for an average one (5), ~40% for a fragile one (2); NFL, before age
-    const risk = (0.016 * Math.pow((11 - c.durability) / 6, 1.5)) * (c.age >= 31 ? 1.5 : 1) * (g?.sat ? 0 : 1) * S.injScale
+    // mostly luck: about one season in five has an injury, and the body (durability, from
+    // size) only nudges it: ~14% a season at S size, ~20% at a C+, ~25% at an F (NFL, before 31)
+    const risk = (0.013 * (1 + clamp(5.5 - c.durability, -5.5, 5.5) * 0.06)) * (c.age >= 31 ? 1.25 : 1) * (g?.sat ? 0 : 1) * S.injScale
     if (k < D.total && r() < risk && !c.injuries.some(i => i.year === c.year + 1 && i.at > k - 4 / S.injScale)) {
       const [kind, lo, hi] = S.injuries[Math.floor(r() * S.injuries.length)]
       const games = lo + Math.floor(r() * (hi - lo + 1))
