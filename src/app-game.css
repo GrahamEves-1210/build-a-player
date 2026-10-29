@@ -755,11 +755,13 @@ html:is(.is-app, .app-look) .grade-toggle-btn {
   letter-spacing: 2px !important;
   padding: 5px 12px !important;
   border-radius: 8px !important;
-  border: 1px solid var(--ag-line-hi) !important;
-  background: var(--ag-panel) !important;
+  border: 1.5px solid #5edbd8 !important;
+  background: rgba(94,219,216,.14) !important;
   box-shadow: none !important;
-  color: var(--ag-text-2) !important;
+  color: #fff !important;
 }
+/* grades off: red, so the state reads at a glance */
+html:is(.is-app, .app-look) .grade-toggle-btn.grade-toggle-off { border-color: #f87171 !important; background: rgba(248,113,113,.16) !important; }
 
 /* ── Slot machine reels ── */
 html:is(.is-app, .app-look) .reel-outer {
@@ -883,7 +885,7 @@ html:is(.is-app, .app-look) .qb-reveal-card {
 @keyframes ag-card-in { from { opacity: 0; transform: perspective(600px) rotateY(-28deg) translateX(-14px); } }
 html:is(.is-app, .app-look) .qb-reveal-card::before { display: none !important; }
 html:is(.is-app, .app-look) .qb-reveal-name { font-family: var(--ag-display) !important; font-size: 19px !important; font-weight: 400 !important; letter-spacing: .3px; text-transform: uppercase; line-height: 1 !important; }
-html:is(.is-app, .app-look) .qb-reveal-meta { color: rgba(255,255,255,.8) !important; font-family: var(--ag-body) !important; font-weight: 600 !important; }
+html:is(.is-app, .app-look) .qb-reveal-meta { color: rgba(255,255,255,.8) !important; font-family: var(--ag-body) !important; font-weight: 600 !important; white-space: normal !important; overflow: visible !important; text-overflow: clip !important; line-height: 1.25; }   /* wraps: a long team name pushed "· Bench" off the card */
 /* desktop: a smaller name that wraps to a second line before it ever cuts off */
 @media (min-width: 769px) {
   html:is(.is-app, .app-look) .qb-reveal-name { font-size: 15px !important; letter-spacing: .2px; white-space: normal !important; overflow: hidden !important; text-overflow: clip !important; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow-wrap: anywhere; }
@@ -912,6 +914,13 @@ html:is(.is-app, .app-look) .attr-category-section .attr-chip:nth-child(3) { ani
 html:is(.is-app, .app-look) .attr-category-section .attr-chip:nth-child(4) { animation-delay: 120ms; }
 html:is(.is-app, .app-look) .attr-chip:not(:disabled):active { transform: scale(.98); }
 html:is(.is-app, .app-look) .chip-name { font-family: var(--ag-font) !important; font-size: 21px !important; font-weight: 400 !important; letter-spacing: 2px !important; }
+/* desktop website: slimmer pick cards (62px tall felt massive) */
+@media (min-width: 769px) {
+  html.app-look:not(.is-app) .attr-chip { min-height: 44px; padding-top: 4px; padding-bottom: 4px; }
+  html.app-look:not(.is-app) .chip-name { font-size: 18px !important; letter-spacing: 1.6px !important; }
+  html.app-look:not(.is-app) .attr-chip .chip-photo { width: 34px; height: 34px; }
+  html.app-look:not(.is-app) .attr-chip .chip-val { width: 34px !important; height: 34px !important; min-width: 34px !important; font-size: 16px !important; border-radius: 9px !important; }
+}
 /* long labels (Playmaking/Creativity) step down so they fit the card */
 html:is(.is-app, .app-look) .chip-name.is-long { font-size: 16px !important; letter-spacing: 1px !important; }
 html:is(.is-app, .app-look) .chip-qb { font-family: var(--ag-body) !important; font-weight: 600 !important; color: var(--ag-muted) !important; }
