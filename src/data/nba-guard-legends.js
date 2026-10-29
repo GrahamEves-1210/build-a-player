@@ -170,7 +170,7 @@ export const NBA_ALLTIME_GUARD_PLAYERS = [
 
   // ─── MEM ───────────────────────────────────────────────────────
   { name: 'Ja Morant', short: 'Ja', team: 'MEM', starter: true, captain: true, number: 12, height: 74, weight: 174, skin: '#c58f83', position: 'PG', years: '2019–', faceCenter: [51, 38],
-    attrs: { jumpShot: 7, finishing: 11, passing: 8, handles: 9, perimeterDefense: 4, speed: 10, bounce: 11, size: 3, basketballIQ: 7, clutch: 8 } },
+    attrs: { jumpShot: 7, finishing: 11, passing: 8, handles: 9, perimeterDefense: 4, speed: 11, bounce: 11, size: 3, basketballIQ: 7, clutch: 8 } },
   { name: 'Mike Conley', short: 'Conley', team: 'MEM', starter: true, captain: false, number: 11, height: 73, weight: 175, skin: '#8d563c', position: 'PG', years: '2007–19', faceCenter: [50, 37], faceAdjust: { dx: 1, dy: 0, scale: 1 },
     attrs: { jumpShot: 7, finishing: 6, passing: 9, handles: 8, perimeterDefense: 7, speed: 7, bounce: 3, size: 2, basketballIQ: 9, clutch: 7 } },
   { name: 'Tony Allen', short: 'T. Allen', team: 'MEM', starter: false, captain: false, number: 9, height: 76, weight: 213, years: '2010–17',
