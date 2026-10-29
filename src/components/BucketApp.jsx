@@ -1122,7 +1122,9 @@ export default function BucketApp() {
     setSavedSpinResult(null)
     setShowTeamSpin(false)
     sandboxTainted.current = isBucketCustomMode
-    setPage('game')
+    // a reset starts the build over in the same mode: a Career or Squad build stays one
+    // (it dropped to 'game', so the finished build offered a plain season, not the draft)
+    setPage(p => (p === 'career-build' || p === 'squad-build' ? p : 'game'))
     window.scrollTo({ top: 0, behavior: 'instant' })
     document.querySelector('.game-page-scroll')?.scrollTo({ top: 0, behavior: 'instant' })
   }, [activeTypes])
