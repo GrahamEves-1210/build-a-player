@@ -153,7 +153,25 @@
 .pro-card-price { display: flex; align-items: baseline; gap: 4px; margin-top: 6px; }
 .pro-card-price b { font-family: var(--ag-display); font-weight: 400; font-size: 22px; line-height: 1; color: #f5dc8a; }
 .pro-card-price small { font-family: var(--ag-font); font-size: 11px; letter-spacing: 1.4px; color: var(--ag-muted); }
-.pro-card .pro-card-go { flex: none; color: #1d1503; background: linear-gradient(135deg, #f5dc8a, #d4af37); box-shadow: 0 0 14px rgba(212,175,55,.35); white-space: nowrap; }
+/* the perks: one row of gold bullets in the card's middle (wraps under the title on a phone) */
+.pro-card { align-items: center; }
+.pro-card-perks { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 14px; flex: 1; font-family: var(--ag-body); font-size: 13px; font-weight: 600; color: rgba(255,255,255,.88); }
+.pro-card-perks li { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; }
+.pro-card-perks li::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #f5dc8a; box-shadow: 0 0 6px rgba(245,220,138,.6); }
+/* by the card's own width: the bullets beside the title when there's room, under it when not */
+.pro-card-wrap { container-type: inline-size; }
+@container (min-width: 520px) {
+  .pro-card { flex-direction: row; align-items: center; }
+  .pro-card .ag-card-txt { flex: none; }
+  .pro-card-perks { flex-wrap: nowrap; justify-content: center; }
+}
+@container (max-width: 519px) {
+  .pro-card { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .pro-card-perks { justify-content: flex-start; gap: 6px 11px; font-size: 12px; }
+  .pro-card-perks li { gap: 5px; }
+  .pro-card-perks li::before { width: 5px; height: 5px; }
+}
+@media (hover: hover) { .pro-card:hover { box-shadow: 0 0 30px rgba(212,175,55,.28); border-color: #f5dc8a; } }
 
 .ag-promos { display: grid; gap: 8px; margin-top: 12px; }
 /* Home: the same 14px gutter as the modes (the Shop's section keeps its own padding) */

@@ -4,7 +4,6 @@ import { sellsHere, onStorefront } from '../../lib/storefront'
 import { PRO_PRICE, perMonth } from '../../lib/webCheckout'
 import { IS_APP } from '../../lib/platform'
 import { useStorePrices, PRO_PLAN_ID } from '../../lib/iap'
-import { IconArrow } from './icons'
 import './pass.css'
 
 // BAP Pro, where players look: Home and the Shop (the Builder Pass is the strip, PassStrip.jsx).
@@ -42,12 +41,12 @@ export function ProCard({ delay }) {
   return (
     // Built like the mode cards (Career, Compete): an eyebrow, a display title, one line,
     // art behind, and the price where they keep their call to action
+    <div className="pro-card-wrap">
     <button className="pro-card ag-pop" style={delay ? { '--d': delay } : undefined} onClick={() => nav('pro')}>
       <ProArt />
       <span className="ag-card-txt">
-        <span className="ag-eyebrow">MEMBERSHIP · CANCEL ANYTIME</span>
+        <span className="ag-eyebrow">MEMBERSHIP</span>
         <span className="ag-card-title">BAP PRO</span>
-        <span className="ag-card-sub">+50% coins, no ads, the Pro Vault and a Discord role.</span>
         {/* website: the yearly plan's monthly figure, with what's billed; apps: the monthly plan as billed */}
         <span className="pro-card-price">
           {!IS_APP && perMonth(PRO_PRICE.year)
@@ -55,7 +54,11 @@ export function ProCard({ delay }) {
             : <><b>{store[PRO_PLAN_ID.month] ?? PRO_PRICE.month}</b><small>/MONTH</small></>}
         </span>
       </span>
-      <span className="ag-edge-go pro-card-go">GO PRO <IconArrow size={13} /></span>
+      {/* the perks: one row of bullets in the middle (the whole card is the button) */}
+      <ul className="pro-card-perks">
+        {['+50% coins', 'No ads', 'Pro Vault', 'Discord role'].map(t => <li key={t}>{t}</li>)}
+      </ul>
     </button>
+    </div>
   )
 }

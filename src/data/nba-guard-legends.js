@@ -52,7 +52,7 @@ export const NBA_ALLTIME_GUARD_PLAYERS = [
 
   // ─── CHI ───────────────────────────────────────────────────────
   { name: 'Michael Jordan', short: 'MJ', team: 'CHI', starter: true, captain: true, number: 23, height: 78, weight: 216, skin: '#8a4c30', years: '1984–98', faceAdjust: { dx: 0, dy: 5, scale: 1 },
-    attrs: { jumpShot: 9, finishing: 11, passing: 7, handles: 8, perimeterDefense: 11, speed: 10, bounce: 11, size: 7, basketballIQ: 10, clutch: 11 } },
+    attrs: { jumpShot: 9, finishing: 11, passing: 7, handles: 9, perimeterDefense: 11, speed: 10, bounce: 11, size: 7, basketballIQ: 10, clutch: 11 } },
   { name: 'Scottie Pippen', short: 'Pippen', team: 'CHI', starter: true, captain: false, number: 33, height: 80, weight: 228, skin: '#8a4830', years: '1987–98',
     attrs: { jumpShot: 7, finishing: 8, passing: 8, handles: 8, perimeterDefense: 10, speed: 8, bounce: 8, size: 8, basketballIQ: 9, clutch: 8 } },
   { name: 'Derrick Rose', short: 'D-Rose', team: 'CHI', starter: true, captain: false, number: 1, height: 75, weight: 190, years: '2008–16', faceAdjust: { dx: 1, dy: -1, scale: 1.05 },
