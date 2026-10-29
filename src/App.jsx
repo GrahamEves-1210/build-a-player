@@ -489,7 +489,8 @@ export default function App() {
       if (window.location.pathname !== targetPath) {
         window.history.pushState({}, '', targetPath)
       }
-    } else if (['/simulate', '/leaderboard', '/depth-chart'].includes(window.location.pathname) || onWikiPath) {
+    } else if (['/simulate', '/leaderboard', '/depth-chart'].includes(window.location.pathname) || onWikiPath || (page !== 'profile' && window.location.pathname === '/profile')) {
+      // (left the profile from the dock: drop /profile, or opening the site again lands there)
       window.history.replaceState({}, '', '/')
     }
   }, [page, simResult])

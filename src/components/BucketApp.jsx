@@ -586,7 +586,8 @@ export default function BucketApp() {
       if (window.location.pathname !== targetPath) {
         window.history.pushState({}, '', targetPath)
       }
-    } else if (window.location.pathname === '/bucket/simulate' || window.location.pathname === '/bucket/leaderboard' || window.location.pathname === '/bucket/salary') {
+    } else if (window.location.pathname === '/bucket/simulate' || window.location.pathname === '/bucket/leaderboard' || window.location.pathname === '/bucket/salary' || (page !== 'profile' && window.location.pathname === '/profile')) {
+      // (left the profile from the dock: drop /profile, or opening the site again lands there)
       window.history.replaceState({}, '', '/bucket')
     }
   }, [page])
