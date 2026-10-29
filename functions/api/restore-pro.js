@@ -38,7 +38,7 @@ export async function onRequestPost(context) {
     if (!sub) return Response.json({ status: null })
     const live = sub.status === 'active' || sub.status === 'trialing'
     const { error } = await supabase.from('accounts')
-      .upsert({ id: me.id, subscription_status: live ? 'active' : sub.status, subscription_id: sub.id, is_plus: live }, { onConflict: 'id' })
+      .upsert({ id: me.id, subscription_status: live ? 'active' : sub.status, subscription_id: sub.id }, { onConflict: 'id' })
     if (error) return Response.json({ error: error.message }, { status: 500 })
     return Response.json({ status: live ? 'active' : sub.status })
   } catch (err) {
