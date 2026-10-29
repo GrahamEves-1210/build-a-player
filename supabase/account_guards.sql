@@ -42,7 +42,7 @@ declare
   awards constant text[] := array['classic_mvps', 'alltime_mvps', 'classic_opoys', 'alltime_opoys', 'classic_dpoys', 'alltime_dpoys'];
   bad constant text[] := array['fuck', 'shit', 'bitch', 'cunt', 'dick', 'pussy', 'asshole', 'bastard', 'slut', 'whore',
                                'fag', 'nigg', 'retard', 'kys', 'killyourself', 'rape', 'nazi', 'porn', 'sex', 'admin', 'buildaplayer'];
-  day_max   constant int := 10000;
+  day_max   constant int := 1000000;   -- no real daily cap on the Players of the Day tally (was 10,000; the step and hourly budget still stop a forged jump)
   step_max  constant int := 1000;
   coin_cap  constant numeric := 6000;   -- the most one save can add (a full budget)
   coin_rate constant numeric := 3000;   -- budget refilled per hour
