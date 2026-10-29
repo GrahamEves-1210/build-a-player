@@ -312,7 +312,7 @@ function emit(quiet = false) {
   seenForSeason()
   checkAch(quiet)
   try { localStorage.setItem(keyFor(uid), JSON.stringify(S)) } catch {}
-  if (uid) { schedulePush(); pushCos() }   // pushCos only sends when the public profile changed
+  if (uid) schedulePush()   // (the public profile, pushCos, goes out with it)
   snap = makeSnap()
   listeners.forEach(fn => fn())
   window.dispatchEvent(new CustomEvent('bap:progress'))
@@ -1394,12 +1394,26 @@ export function claimAch(id) {
 // ═════════════════════════════════════════════════════════════════════════════
 // potdPaid, dc, day and sets ride along so clearing the device (or a second one) can't pay a reward twice
 const WALLET_KEYS = ['coins', 'coinsEarned', 'owned', 'equip', 'ach', 'achClaimed', 'stats', 'shopFree', 'levelPaid', 'discordPaid', 'feedbackPaid', 'retired', 'potdPaid', 'dc', 'day', 'sets', 'salInf', 'streak', 'unlocks', 'cards', 'pass', 'inv', 'cupPaid', 'cupWon', 'rushUntil', 'xpUntil']
-let pushTimer = null, pushing = false, pushAgain = false
+// A save reads and rewrites the whole wallet, so at most one every 30 seconds: changes in
+// between ride along with the next one (it saves what's current when it runs). Every change
+// 2.5 s later, for every player, wore the database out at launch. Leaving (tab hidden or
+// closed) saves straight away, so nothing waits on a device that's gone.
+const PUSH_GAP = 30000
+let pushTimer = null, pushFor = null, pushing = false, pushAgain = false, lastPush = 0
 function schedulePush() {
   if (!supabase || !uid) return
-  clearTimeout(pushTimer)
-  const id = uid
-  pushTimer = setTimeout(() => runPush(id), 2500)
+  if (pushTimer && pushFor === uid) return   // one's already on the way: it takes this change too
+  clearTimeout(pushTimer)                    // (one queued for another account is dropped)
+  const id = pushFor = uid
+  pushTimer = setTimeout(() => { pushTimer = null; lastPush = Date.now(); runPush(id) }, Math.max(2500, PUSH_GAP - (Date.now() - lastPush)))
+}
+function flushPush() {
+  if (!pushTimer || !uid) return
+  clearTimeout(pushTimer); pushTimer = null; lastPush = Date.now(); runPush(uid)
+}
+if (typeof window !== 'undefined') {
+  document.addEventListener('visibilitychange', () => { if (document.hidden) flushPush() })
+  window.addEventListener('pagehide', flushPush)
 }
 // This device's id: XP and today's tally are kept per device and added up across the account
 const DEV = (() => { try { let d = localStorage.getItem('bap_dev_id'); if (!d) { d = (crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2)); localStorage.setItem('bap_dev_id', d) } return d } catch { return 'dev' } })()
