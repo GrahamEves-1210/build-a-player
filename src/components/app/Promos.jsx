@@ -3,6 +3,7 @@ import { useProgress } from '../../lib/progress'
 import { sellsHere, onStorefront } from '../../lib/storefront'
 import { PRO_PRICE, perMonth } from '../../lib/webCheckout'
 import { IS_APP } from '../../lib/platform'
+import { IconArrow } from './icons'
 import { useStorePrices, PRO_PLAN_ID } from '../../lib/iap'
 import './pass.css'
 
@@ -55,9 +56,13 @@ export function ProCard({ delay }) {
         </span>
       </span>
       {/* the perks: one row of bullets in the middle (the whole card is the button) */}
-      <ul className="pro-card-perks">
-        {['+50% coins', 'No ads', 'Pro Vault', 'Discord role'].map(t => <li key={t}>{t}</li>)}
-      </ul>
+      <span className="pro-card-mid">
+        <ul className="pro-card-perks">
+          {['+50% coins', 'No ads', 'Pro Vault', 'Discord role'].map(t => <li key={t}>{t}</li>)}
+        </ul>
+        {/* a call in words, not a box: the card is the button */}
+        <span className="pro-card-go">GO PRO <IconArrow size={18} /></span>
+      </span>
     </button>
     </div>
   )

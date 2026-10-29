@@ -160,6 +160,12 @@
 .pro-card-perks li::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #f5dc8a; box-shadow: 0 0 6px rgba(245,220,138,.6); }
 /* by the card's own width: the bullets beside the title when there's room, under it when not */
 .pro-card-wrap { container-type: inline-size; }
+.pro-card-mid { display: flex; flex-direction: column; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+.pro-card-mid .pro-card-perks { flex: none; }
+/* GO PRO →: large gold words, no box */
+.pro-card-go { display: inline-flex; align-items: center; gap: 6px; font-family: var(--ag-font); font-size: 22px; letter-spacing: 3px; line-height: 1; color: #f5dc8a; text-shadow: 0 0 14px rgba(245,220,138,.35); }
+.pro-card-go svg { transition: transform .2s ease; }
+@media (hover: hover) { .pro-card:hover .pro-card-go svg { transform: translateX(4px); } }
 @container (min-width: 520px) {
   .pro-card { flex-direction: row; align-items: center; }
   .pro-card .ag-card-txt { flex: none; }
@@ -167,6 +173,8 @@
 }
 @container (max-width: 519px) {
   .pro-card { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .pro-card-mid { align-items: flex-start; }
+  .pro-card-go { font-size: 20px; }
   .pro-card-perks { justify-content: flex-start; gap: 6px 11px; font-size: 12px; }
   .pro-card-perks li { gap: 5px; }
   .pro-card-perks li::before { width: 5px; height: 5px; }
