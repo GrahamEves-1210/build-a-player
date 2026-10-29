@@ -54,7 +54,7 @@ export const QBS = [
   { name: 'Deshaun Watson',     short: 'Watson',      team: 'CLE', teamName: 'Cleveland Browns',      color: '#FF3C00', color2: '#311D00', skin: '#7a5030', starter: true,  captain: true,  number: 4,
     attrs: { 'arm': 5, 'legs': 6, 'size': 5, 'processing': 1, 'leadership': 0, 'vision': 3, 'playmaking': 5, 'accuracy': 1, 'pocket-presence': 4 } },
   { name: 'Taylen Green', short: 'Green', team: 'CLE', teamName: 'Cleveland Browns',     color: '#FF3C00', color2: '#311D00', skin: '#7a5030', starter: false, number: 15,
-    attrs: { 'arm': 6, 'legs': 8, 'size': 8, 'processing': 2, 'leadership': 2, 'vision': 2, 'playmaking': 5, 'accuracy': 2, 'pocket-presence': 2 } },
+    attrs: { 'arm': 6, 'legs': 10, 'size': 8, 'processing': 2, 'leadership': 2, 'vision': 2, 'playmaking': 5, 'accuracy': 2, 'pocket-presence': 2 } },
   // DAL
   { name: 'Dak Prescott',       short: 'Prescott',    team: 'DAL', teamName: 'Dallas Cowboys',        color: '#869397', color2: '#003594', skin: '#9a6840', starter: true,  captain: true,  number: 4,
     attrs: { 'arm': 7, 'legs': 6, 'size': 7, 'processing': 10, 'leadership': 10, 'vision': 8, 'playmaking': 6, 'accuracy': 9, 'pocket-presence': 8 } },
@@ -190,7 +190,7 @@ export const QBS = [
     attrs: { 'arm': 5, 'legs': 5, 'size': 8, 'processing': 3, 'leadership': 5, 'vision': 3, 'playmaking': 3, 'accuracy': 4, 'pocket-presence': 3 } },
   // SF
   { name: 'Brock Purdy',        short: 'Purdy',       team: 'SF',  teamName: 'San Francisco 49ers',   color: '#AA0000', color2: '#B3995D', skin: '#f0c4a0', starter: true,  captain: true,  number: 13,
-    attrs: { 'arm': 5, 'legs': 7, 'size': 5, 'processing': 7, 'leadership': 7, 'vision': 8, 'playmaking': 8, 'accuracy': 7, 'pocket-presence': 9 } },
+    attrs: { 'arm': 5, 'legs': 7, 'size': 5, 'processing': 8, 'leadership': 7, 'vision': 8, 'playmaking': 8, 'accuracy': 7, 'pocket-presence': 9 } },
   { name: 'Mac Jones',          short: 'Mac Jones',   team: 'SF',  teamName: 'San Francisco 49ers',   color: '#AA0000', color2: '#B3995D', skin: '#f2c8a4', starter: false, number: 10,
     attrs: { 'arm': 5, 'legs': 1, 'size': 6, 'processing': 5, 'leadership': 5, 'vision': 3, 'playmaking': 2, 'accuracy': 5, 'pocket-presence': 5 } },
   { name: 'Kurtis Rourke', short: 'Rourke', team: 'SF', teamName: 'San Francisco 49ers',     color: '#AA0000', color2: '#B3995D', skin: '#eec0a0', starter: false, number: 14,

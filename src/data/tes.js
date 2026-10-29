@@ -223,7 +223,7 @@ const _TES = [
   { name: 'Pat Freiermuth',    short: 'Freiermuth',  team: 'PIT', teamName: 'Pittsburgh Steelers',    skin: '#f0c4a0', height: 77, weight: 258, starter: true,  captain: true,  number: 88,
     attrs: { speed: 5, blocking: 8, vertical: 6, routeRunning: 7, strength: 7, hands: 6, awareness: 7, size: 9, afterCatch: 5 } },
   { name: 'Darnell Washington', short: 'Washington',  team: 'PIT', teamName: 'Pittsburgh Steelers',   skin: '#3a2010', height: 79, weight: 264, starter: false, number: 80,
-    attrs: { speed: 5, blocking: 10, vertical: 4, routeRunning: 2, strength: 10, hands: 7, awareness: 5, size: 11, afterCatch: 5 } },
+    attrs: { speed: 5, blocking: 10, vertical: 4, routeRunning: 2, strength: 11, hands: 7, awareness: 5, size: 11, afterCatch: 5 } },
   { name: 'Robert Tonyan',     short: 'Tonyan',      team: 'PIT', teamName: 'Pittsburgh Steelers',    skin: '#f0c4a0', height: 77, weight: 240, starter: false, number: 85,
     attrs: { speed: 5, blocking: 4, vertical: 4, routeRunning: 5, strength: 3, hands: 6, awareness: 5, size: 8, afterCatch: 4 } },
   // SEA

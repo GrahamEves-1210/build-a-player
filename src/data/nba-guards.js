@@ -501,7 +501,7 @@ export const NBA_GUARD_PLAYERS = [
   { name: 'Damian Lillard', short: 'Lillard', team: 'POR', starter: true, captain: true, number: 0, height: 74, weight: 195, wingspan: 80, skin: '#a67250', position: 'PG', faceCenter: [52, 44],
     attrs: { jumpShot: 9, finishing: 7, passing: 9, handles: 9, perimeterDefense: 4, speed: 8, bounce: 7, size: 4, basketballIQ: 8, clutch: 10 } },
   { name: 'Ja Morant', short: 'Morant', team: 'POR', starter: true, captain: true, number: 1, height: 74, weight: 174, wingspan: 79, skin: '#c58f83', position: 'PG', faceCenter: [51, 38],
-    attrs: { jumpShot: 4, finishing: 10, passing: 8, handles: 9, perimeterDefense: 5, speed: 10, bounce: 11, size: 2, basketballIQ: 6, clutch: 5 } },
+    attrs: { jumpShot: 4, finishing: 10, passing: 8, handles: 9, perimeterDefense: 5, speed: 11, bounce: 11, size: 2, basketballIQ: 6, clutch: 5 } },
   { name: 'Shaedon Sharpe', short: 'Sharpe', team: 'POR', starter: false, captain: false, number: 17, height: 77, weight: 197, wingspan: 84, skin: '#78553e', position: 'SG', faceCenter: [46, 39],
     attrs: { jumpShot: 4, finishing: 8, passing: 4, handles: 6, perimeterDefense: 5, speed: 9, bounce: 9, size: 6, basketballIQ: 4, clutch: 4 } },
 
@@ -530,7 +530,7 @@ export const NBA_GUARD_PLAYERS = [
   { name: 'Julian Champagnie', short: 'Champagnie', team: 'SAS', starter: false, captain: false, number: 30, height: 79, weight: 210, wingspan: 82, skin: '#ae7254', position: 'SF', faceCenter: [50, 39],
     attrs: { jumpShot: 8, finishing: 3, passing: 3, handles: 3, perimeterDefense: 4, speed: 5, bounce: 5, size: 7, basketballIQ: 6, clutch: 3 } },
   { name: 'De\'Aaron Fox', short: 'Fox', team: 'SAS', starter: true, captain: true, number: 4, height: 75, weight: 185, wingspan: 79, skin: '#8f5840', position: 'PG', faceCenter: [50, 41],
-    attrs: { jumpShot: 4, finishing: 7, passing: 7, handles: 8, perimeterDefense: 6, speed: 10, bounce: 6, size: 3, basketballIQ: 6, clutch: 2 } },
+    attrs: { jumpShot: 4, finishing: 7, passing: 7, handles: 8, perimeterDefense: 6, speed: 11, bounce: 6, size: 3, basketballIQ: 6, clutch: 2 } },
   { name: 'Dylan Harper', short: 'Harper', team: 'SAS', starter: true, captain: false, number: 2, height: 77, weight: 210, wingspan: 82, skin: '#aa7258', position: 'PG', faceCenter: [50, 45],
     attrs: { jumpShot: 5, finishing: 8, passing: 5, handles: 8, perimeterDefense: 3, speed: 7, bounce: 6, size: 6, basketballIQ: 7, clutch: 8 } },
   { name: 'Tobias Harris', short: 'T. Harris', team: 'SAS', starter: false, captain: false, number: 12, height: 80, weight: 226, wingspan: 83, skin: '#bd866b', position: 'SF', faceCenter: [50, 42],
