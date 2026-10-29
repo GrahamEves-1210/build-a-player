@@ -190,7 +190,7 @@ export const QBS = [
     attrs: { 'arm': 5, 'legs': 5, 'size': 8, 'processing': 3, 'leadership': 5, 'vision': 3, 'playmaking': 3, 'accuracy': 4, 'pocket-presence': 3 } },
   // SF
   { name: 'Brock Purdy',        short: 'Purdy',       team: 'SF',  teamName: 'San Francisco 49ers',   color: '#AA0000', color2: '#B3995D', skin: '#f0c4a0', starter: true,  captain: true,  number: 13,
-    attrs: { 'arm': 5, 'legs': 7, 'size': 5, 'processing': 8, 'leadership': 7, 'vision': 8, 'playmaking': 8, 'accuracy': 7, 'pocket-presence': 9 } },
+    attrs: { 'arm': 5, 'legs': 7, 'size': 5, 'processing': 8, 'leadership': 7, 'vision': 7, 'playmaking': 9, 'accuracy': 7, 'pocket-presence': 9 } },
   { name: 'Mac Jones',          short: 'Mac Jones',   team: 'SF',  teamName: 'San Francisco 49ers',   color: '#AA0000', color2: '#B3995D', skin: '#f2c8a4', starter: false, number: 10,
     attrs: { 'arm': 5, 'legs': 1, 'size': 6, 'processing': 5, 'leadership': 5, 'vision': 3, 'playmaking': 2, 'accuracy': 5, 'pocket-presence': 5 } },
   { name: 'Kurtis Rourke', short: 'Rourke', team: 'SF', teamName: 'San Francisco 49ers',     color: '#AA0000', color2: '#B3995D', skin: '#eec0a0', starter: false, number: 14,
