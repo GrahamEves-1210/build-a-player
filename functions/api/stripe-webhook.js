@@ -1,5 +1,6 @@
 import Stripe from 'stripe'
 import { createClient } from '@supabase/supabase-js'
+import { alert } from './daily-check'
 
 // BAP Pro's Discord role: given while Pro is on, taken off when it ends (the bot needs
 // Manage Roles, its role above the Pro role; DISCORD_PRO_ROLE_ID). No Discord linked: skipped.
@@ -42,7 +43,8 @@ export async function onRequestPost(context) {
   // Pro as Stripe has it now, not as the event had it: a retried event can arrive hours late,
   // after a renewal, a failed payment or a cancel
   const putPro = async (userId, subId) => {
-    const sub = await stripe.subscriptions.retrieve(subId)
+    const sub = await stripe.subscriptions.retrieve(subId).catch(e => { console.error('[webhook] subscription read failed:', e?.message); return null })
+    if (!sub) { failed = true; return }
     const live = sub.status === 'active' || sub.status === 'trialing'
     const { error } = await supabase.from('accounts')
       .upsert({ id: userId, subscription_status: live ? 'active' : sub.status, subscription_id: sub.id }, { onConflict: 'id' })
@@ -136,6 +138,10 @@ export async function onRequestPost(context) {
     }
   }
 
-  if (failed) return Response.json({ error: 'database write failed' }, { status: 500 })
+  if (failed) {
+    const o = event.data.object
+    context.waitUntil(alert(context.env, `🚨 **A payment didn't reach the game** (Stripe will retry; the daily check fixes it if not)\n${event.type} · ${event.id} · account ${o.metadata?.userId ?? '?'} · ${o.amount_total != null ? `$${(o.amount_total / 100).toFixed(2)}` : ''}\nCloudflare logs: "[webhook]"`))
+    return Response.json({ error: 'database write failed' }, { status: 500 })
+  }
   return Response.json({ received: true })
 }
