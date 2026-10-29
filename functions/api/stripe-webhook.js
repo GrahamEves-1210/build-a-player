@@ -45,7 +45,7 @@ export async function onRequestPost(context) {
     const sub = await stripe.subscriptions.retrieve(subId)
     const live = sub.status === 'active' || sub.status === 'trialing'
     const { error } = await supabase.from('accounts')
-      .upsert({ id: userId, subscription_status: live ? 'active' : sub.status, subscription_id: sub.id, is_plus: live }, { onConflict: 'id' })
+      .upsert({ id: userId, subscription_status: live ? 'active' : sub.status, subscription_id: sub.id }, { onConflict: 'id' })
     if (error) { console.error('[webhook] subscription write failed:', error); failed = true }
     proRole(userId, live)
   }
@@ -129,7 +129,7 @@ export async function onRequestPost(context) {
     if (userId) {
       const { error } = await supabase
         .from('accounts')
-        .update({ subscription_status: null, subscription_id: null, is_plus: false })
+        .update({ subscription_status: null, subscription_id: null })
         .eq('id', userId).eq('subscription_id', sub.id)   // not a newer subscription bought since
       if (error) { console.error('[webhook] subscription cancel failed:', error); failed = true }
       proRole(userId, false)

@@ -4,7 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 // has checked them with Google. Records them exactly like stripe-webhook.js records a Stripe
 // payment, and the game collects them the same way:
 //   coins → coin_purchases (claim_coin_purchases), the Pass → pass_owners,
-//   BAP Pro → accounts.subscription_status / is_plus, with subscription_id 'play:<order>'
+//   BAP Pro → accounts.subscription_status, with subscription_id 'play:<order>'
 // RevenueCat → Project settings → Integrations → Webhooks: URL https://build-a-player.com/api/revenuecat-webhook,
 // Authorization header = the REVENUECAT_WEBHOOK_AUTH variable in Cloudflare.
 
@@ -96,12 +96,12 @@ export async function onRequestPost(context) {
     const off = event.type === 'EXPIRATION' || refund
     if (on && !stripeOn) {
       const { error } = await supabase.from('accounts')
-        .update({ subscription_status: 'active', subscription_id: subRef, is_plus: true }).eq('id', userId)
+        .update({ subscription_status: 'active', subscription_id: subRef }).eq('id', userId)
       if (error) console.error('[rc webhook] subscription update failed:', error)
       await setProRole(supabase, env, userId, true)
     } else if (off && !stripeOn && String(acc?.subscription_id ?? '').startsWith('play:')) {
       const { error } = await supabase.from('accounts')
-        .update({ subscription_status: null, subscription_id: null, is_plus: false }).eq('id', userId)
+        .update({ subscription_status: null, subscription_id: null }).eq('id', userId)
       if (error) console.error('[rc webhook] subscription end failed:', error)
       await setProRole(supabase, env, userId, false)
     }
