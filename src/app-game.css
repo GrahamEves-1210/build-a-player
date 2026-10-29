@@ -4355,7 +4355,8 @@ html.app-look:not(.is-app) #ramp-cntr1-sim { min-height: 0 !important; }
 
 /* website footer, condensed: tighter spacing; on a phone the three link columns share one
    row and the X / Discord buttons sit side by side */
-html.app-look .splash-site-footer { padding-top: 22px; padding-bottom: calc(40px + var(--ad-h, 0px)); }
+/* no room for the rail here: the screen already clears the dock (--app-bottom) and stops above the rail (--web-rail) */
+html.app-look .splash-site-footer { padding-top: 22px; padding-bottom: 12px; }
 html.app-look .splash-site-footer-cols { gap: 20px; }
 html.app-look .splash-site-footer-brand { gap: 4px; }
 html.app-look .splash-site-footer-col { gap: 7px; }
@@ -4364,10 +4365,6 @@ html.app-look .splash-site-footer-social-btn { width: 36px; height: 36px; }
 html.app-look .splash-site-footer-bottom { margin-top: 18px; padding-top: 14px; gap: 8px; }
 html.app-look .splash-site-footer-legal { line-height: 1.45; }
 html.app-look .splash-site-footer-playwire img { width: 140px; }
-/* desktop: the screen already stops above the bottom rail, so no extra room under the footer */
-@media (min-width: 769px) {
-  html.app-look:not(.is-app) .splash-site-footer { padding-bottom: 16px; }
-}
 @media (max-width: 768px) {
   html.app-look .splash-site-footer { padding-left: 16px; padding-right: 16px; }
   html.app-look .splash-site-footer-cols { grid-template-columns: repeat(3, minmax(0, 1fr)); row-gap: 14px; column-gap: 12px; }

@@ -365,7 +365,7 @@ export default function App() {
   // Ads on every page change (lib/ads.js): destroy all units, then add this
   // page's off-page units with the path set explicitly (the URL sync effect
   // below runs after this). A layout effect, so it's queued before the new
-  // page's own in-page units. Home runs the bottom rail only; the left rail only
+  // page's own in-page units. Home runs the bottom rail and the corner video (wide desktops); the left rail only
   // runs on /simulate, Salary Cap and /depth-chart. Ad-free players keep forceUnits 'off'.
   useLayoutEffect(() => {
     const onSimulate = page === 'sim' && !!simResult

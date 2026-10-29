@@ -29,11 +29,11 @@ const serial = job => {
 }
 
 const OOP = type => ({ type })
-// Off-page units by page kind. Home runs the bottom rail only (the app-look
-// home keeps clear of it, see AppTabBar's --web-rail); the left rail only runs
-// on the simulate pages, Salary Cap and the Depth Chart.
-export const HOME_UNITS = [OOP('bottom_rail')]
+// Off-page units by page kind. Home runs the bottom rail and the corner video, the same as
+// the other pages (the app-look home keeps clear of the rail, see AppTabBar's --web-rail);
+// the left rail only runs on the simulate pages, Salary Cap and the Depth Chart.
 export const RAIL_UNITS = [OOP('corner_ad_video'), OOP('bottom_rail')]
+export const HOME_UNITS = RAIL_UNITS
 export const RAIL_UNITS_WITH_LEFT = [OOP('corner_ad_video'), OOP('left_rail'), OOP('bottom_rail')]
 
 // The bottom rail's slots, by name. A rail the player closed isn't always
