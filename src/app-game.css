@@ -4345,6 +4345,8 @@ html.is-app .ag-blacktop .bt-art-net, html.app-look .ag-blacktop:focus-visible .
 
 /* final report: no hole above New Build (an empty ad slot reserved up to 270px, plus the row margin) */
 html:is(.is-app, .app-look) #ramp-cntr1-sim:empty { display: none !important; min-height: 0 !important; }
+/* website: no space held for it either (an unfilled slot left a 270px gap over New Build); a filled one sizes to the ad */
+html.app-look:not(.is-app) #ramp-cntr1-sim { min-height: 0 !important; }
 html:is(.is-app, .app-look) .simp-final-actions { margin-top: 12px; }
 
 /* the BAP mark (cut from the app icon): bigger on home and in the navbar */

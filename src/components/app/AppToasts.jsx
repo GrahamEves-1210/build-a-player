@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { AnimatePresence, motion } from 'motion/react'
-import { takeToasts, useProgress, markLevelSeen, levelUnlocks, RARITIES } from '../../lib/progress'
+import { takeToasts, useProgress, markLevelSeen, levelUnlocks } from '../../lib/progress'
 import { sfx, haptic, confetti } from '../../lib/juice'
 import { IconFlame, IconCards, IconTarget, IconStar, IconCoin, IconMedal, IconPodium } from './icons'
 import { EASE_OUT, SPRING_LAYOUT } from '../../lib/motion'
 import { RiseText } from './MotionText'
 
-// Top-of-screen toasts (login streak, mission complete, new card) and the
+// Top-of-screen toasts (login streak, mission complete) and the
 // full-screen level-up moment. Fed by lib/progress.js events. A toast drops in,
 // fades up and out when it's done, and the ones under it glide into its place.
 
@@ -26,20 +26,12 @@ export default function AppToasts() {
       setItems(list => [...list.slice(-2), { id, ...t }])
       timers.current.set(id, setTimeout(() => setItems(list => list.filter(x => x.id !== id)), t.ms ?? 2600))
     }
+    // (new cards no longer pop a toast: they land in the binder quietly)
     const drain = () => takeToasts().forEach(push)
-    const onCard = e => {
-      const c = e.detail
-      if (!c.isNew && c.rank < 2) return
-      push({ kind: 'card', rank: c.rank, title: c.isNew ? `NEW CARD · ${RARITIES[c.rank].toUpperCase()}` : `${RARITIES[c.rank].toUpperCase()} PULL`, sub: c.name, ms: 2200 })
-      sfx('card', c.rank)
-      if (c.rank >= 2 && c.isNew) haptic('medium')
-    }
     drain()
     window.addEventListener('bap:toast', drain)
-    window.addEventListener('bap:card', onCard)
     return () => {
       window.removeEventListener('bap:toast', drain)
-      window.removeEventListener('bap:card', onCard)
       timers.current.forEach(clearTimeout)
     }
   }, [])
