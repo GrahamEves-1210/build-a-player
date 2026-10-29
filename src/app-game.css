@@ -1068,7 +1068,9 @@ html:is(.is-app, .app-look) .simp-team-strip {
   border-radius: 14px !important;
   box-shadow: 0 10px 26px rgba(0,0,0,.4), 0 0 22px color-mix(in srgb, var(--team-color, #444) 30%, transparent) !important;
 }
-html:is(.is-app, .app-look) .sts-nickname { font-family: var(--ag-display) !important; font-weight: 400 !important; text-transform: uppercase; }
+html:is(.is-app, .app-look) .sts-city,
+html:is(.is-app, .app-look) .sts-nickname { font-family: var(--ag-display) !important; font-weight: 400 !important; text-transform: uppercase; letter-spacing: .5px !important; }
+html:is(.is-app, .app-look) .sts-city { color: rgba(255,255,255,.6) !important; }
 html:is(.is-app, .app-look) .simp-games-list { border-radius: 12px !important; border: 1px solid var(--ag-line) !important; }
 html:is(.is-app, .app-look) .sgr-wk, html:is(.is-app, .app-look) .sgr-badge { font-family: var(--ag-font) !important; letter-spacing: 1.5px; }
 

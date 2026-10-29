@@ -7,7 +7,6 @@ import { leaderBoard } from '../../lib/seasonFacts'
 import { sfx, haptic, victory } from '../../lib/juice'
 import { IconArrow, IconStar, IconFlame, IconTrophy } from './icons'
 import { NameTag } from './NameTag'
-import { RollingNumber } from './MotionText'
 
 // Season reveal, the app version: the moment card the season pauses on, the
 // matchup card for the game just played, the season pulse, the wire of
@@ -75,7 +74,7 @@ export function NowCard({ game, pos, sport, team, logoFor, idx, total }) {
       </div>
       <div className="sm-now-match">
         <span className="sm-now-side"><img src={logoFor(team?.short)} alt="" /><b>{team?.short}</b></span>
-        <span className="sm-now-score"><b><RollingNumber value={game.mySc} from={0} /></b><i>–</i><b><RollingNumber value={game.oppSc} from={0} /></b></span>
+        <span className="sm-now-score"><b>{game.mySc}</b><i>–</i><b>{game.oppSc}</b></span>
         <span className="sm-now-side"><img src={logoFor(game.opponent)} alt="" onError={e => { e.currentTarget.style.visibility = 'hidden' }} /><b>{opp}</b></span>
       </div>
       <div className="sm-now-line">{game.sat ? 'Missed the game: the team played without them' : line}</div>
