@@ -11,7 +11,7 @@ import { openCheckout, openBillingPortal, PRO_PRICE } from '../../lib/webCheckou
 import { sellsHere } from '../../lib/storefront'
 import { isPro } from '../../lib/progress'
 import { railPreviewOn, setRailPreview } from '../../lib/fakeRail'
-import { IconQuestion, IconInfo, IconChat, IconDiscord, IconX, IconClose, IconShield, IconDoc, IconPodium, IconPlay, IconCrown, IconHome, IconGear, IconStar, IconCheck } from './icons'
+import { IconQuestion, IconInfo, IconChat, IconDiscord, IconX, IconClose, IconShield, IconDoc, IconPodium, IconPlay, IconCrown, IconHome, IconGear, IconStar } from './icons'
 import { useProgress } from '../../lib/progress'
 import AppSettings from './AppSettings'
 import { guardLeave } from '../../lib/liveLock'
@@ -80,14 +80,11 @@ function ProView({ onVault }) {
           </button>
         </div>
       )}
-      <div className="ag-pro-perks">
-        {PRO_PERKS.map(([t, d], i) => (
-          <div key={t} className="ag-pro-perk ag-pop" style={{ '--d': `${60 + i * 40}ms` }}>
-            <span className="ag-pro-check"><IconCheck size={14} /></span>
-            <span><b>{t}</b><small>{d}</small></span>
-          </div>
+      <ul className="ag-pro-perks">
+        {PRO_PERKS.map(([t, d]) => (
+          <li key={t} className="ag-pro-perk"><b>{t}</b> <small>{d}</small></li>
         ))}
-      </div>
+      </ul>
       {pro ? (
         <>
           <button className="ag-btn ag-pro-cta" onClick={onVault}>OPEN THE PRO VAULT</button>

@@ -3053,10 +3053,12 @@ html.fake-rail .sh-sheet { max-height: calc(88dvh - var(--web-rail)); padding-bo
 .ag-pro-crown { color: var(--ag-gold-hi); filter: drop-shadow(0 0 10px rgba(212,175,55,.5)); }
 .ag-pro-hero b { font-family: var(--ag-display); font-weight: 400; font-size: 34px; line-height: 1; color: #fff; letter-spacing: .5px; }
 .ag-pro-hero span { font-family: var(--ag-body); font-size: 13px; color: var(--ag-muted); }
-.ag-pro-perks { display: flex; flex-direction: column; gap: 6px; }
-.ag-pro-perk { display: grid; grid-template-columns: 26px 1fr; gap: 10px; align-items: center; padding: 9px 12px; border-radius: 12px; border: 1px solid var(--ag-line); background: rgba(255,255,255,.025); }
+/* the perks as a plain bullet list */
+.ag-pro-perks { display: flex; flex-direction: column; gap: 9px; margin: 2px 0; padding: 12px 14px 12px 32px; border-radius: 14px; border: 1px solid var(--ag-line); background: rgba(255,255,255,.025); list-style: disc; }
+.ag-pro-perk { padding-left: 2px; line-height: 1.35; }
+.ag-pro-perk::marker { color: #e8c766; font-size: 1.1em; }
 .ag-pro-check { width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; color: #1a1000; background: linear-gradient(135deg, #f5dc8a, #d4af37); font-weight: 800; }
-.ag-pro-perk b { display: block; font-family: var(--ag-font); font-weight: 400; font-size: 17px; letter-spacing: 1.6px; color: var(--ag-text); }
+.ag-pro-perk b { font-family: var(--ag-font); font-weight: 400; font-size: 16px; letter-spacing: 1.4px; color: var(--ag-text); }
 .ag-pro-perk small { display: block; font-family: var(--ag-body); font-size: 12px; color: var(--ag-muted); }
 .ag-pro-cta { height: 54px; font-size: 21px; background: linear-gradient(135deg, #FBF0A0 0%, #D4AF37 55%, #C49A10 100%) !important; color: #1a1000 !important; box-shadow: 0 0 22px rgba(212,175,55,.35) !important; }
 .ag-pro-note { margin: 0; text-align: center; font-family: var(--ag-body); font-size: 13px; line-height: 1.45; color: var(--ag-muted); }
