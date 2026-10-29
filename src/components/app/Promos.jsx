@@ -28,7 +28,9 @@ export function ProCard({ delay }) {
       <span className="pro-card-crown"><IconCrown size={22} /></span>
       <span className="pro-card-txt">
         <span className="pro-card-title">BAP PRO</span>
-        <span className="pro-card-sub">+50% coins · Pro Vault included · No ads · Discord role</span>
+        <span className="pro-card-perks">
+          {['+50% coins from every game', 'Pro Vault looks included', 'No ads', 'Pro badge and Discord role'].map(t => <span key={t}>{t}</span>)}
+        </span>
       </span>
       <span className="pro-card-go">{store[PRO_PLAN_ID.month] ?? PRO_PRICE.month}/MO</span>
     </button>

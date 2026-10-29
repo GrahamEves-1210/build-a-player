@@ -148,7 +148,10 @@
 .pro-card-txt { display: grid; gap: 3px; min-width: 0; }
 .pro-card-title { font-family: var(--ag-font); font-size: 18px; letter-spacing: 1.8px; line-height: 1; color: #fff; }
 .pro-card-sub { font-family: var(--ag-body); font-size: 12px; font-weight: 600; color: var(--ag-muted); }
-.pro-card-go { font-family: var(--ag-font); font-size: 15px; letter-spacing: 1.8px; padding: 8px 11px 6px; border-radius: 10px; color: #1a1000; background: linear-gradient(135deg, #fde68a, #d4af37); }
+/* the perks as a bullet list, one under the other */
+.pro-card-perks { display: grid; grid-template-columns: 1fr; gap: 3px; margin-top: 3px; font-family: var(--ag-body); font-size: 12px; font-weight: 600; color: var(--ag-muted); text-align: left; }
+.pro-card-perks > span { position: relative; padding-left: 12px; line-height: 1.3; }
+.pro-card-perks > span::before { content: ''; position: absolute; left: 0; top: .5em; width: 5px; height: 5px; border-radius: 50%; background: var(--ag-gold-hi, #e8c766); }.pro-card-go { font-family: var(--ag-font); font-size: 15px; letter-spacing: 1.8px; padding: 8px 11px 6px; border-radius: 10px; color: #1a1000; background: linear-gradient(135deg, #fde68a, #d4af37); }
 
 .ag-promos { display: grid; gap: 8px; margin-top: 12px; }
 /* Home: the same 14px gutter as the modes (the Shop's section keeps its own padding) */
