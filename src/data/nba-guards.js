@@ -409,7 +409,7 @@ export const NBA_GUARD_PLAYERS = [
   { name: 'Luguentz Dort', short: 'Dort', team: 'ATL', starter: false, captain: false, number: 5, height: 76, weight: 220, wingspan: 81, skin: '#895941', position: 'SG', faceCenter: [49, 45], faceAdjust: { dx: 0, dy: -3, scale: 1 },
     attrs: { jumpShot: 4, finishing: 5, passing: 4, handles: 4, perimeterDefense: 10, speed: 6, bounce: 6, size: 7, basketballIQ: 6, clutch: 4 } },
   { name: 'Shai Gilgeous-Alexander', short: 'SGA', team: 'OKC', starter: true, captain: true, number: 2, height: 78, weight: 195, wingspan: 84, skin: '#8e5b42', position: 'SG', faceCenter: [51, 44], faceAdjust: { dx: 0, dy: -4, scale: 1 },
-    attrs: { jumpShot: 8, finishing: 10, passing: 10, handles: 9, perimeterDefense: 8, speed: 9, bounce: 8, size: 6, basketballIQ: 10, clutch: 8 } },
+    attrs: { jumpShot: 8, finishing: 10, passing: 10, handles: 9, perimeterDefense: 9, speed: 9, bounce: 8, size: 6, basketballIQ: 10, clutch: 8 } },
   { name: 'Jared McCain', short: 'McCain', team: 'OKC', starter: false, captain: false, number: 3, height: 74, weight: 190, wingspan: 76, skin: '#dead92', position: 'SG', faceCenter: [50, 47],
     attrs: { jumpShot: 6, finishing: 5, passing: 3, handles: 3, perimeterDefense: 2, speed: 5, bounce: 5, size: 3, basketballIQ: 3, clutch: 3 } },
   { name: 'Ajay Mitchell', short: 'Mitchell', team: 'OKC', starter: false, captain: false, number: 25, height: 76, weight: 200, wingspan: 79, skin: '#b28263', position: 'SG', faceCenter: [50, 40],

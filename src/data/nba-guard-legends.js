@@ -234,7 +234,7 @@ export const NBA_ALLTIME_GUARD_PLAYERS = [
   { name: 'Russell Westbrook', short: 'Brodie', team: 'OKC', starter: true, captain: true, number: 0, height: 75, weight: 200, skin: '#bc7854', position: 'PG', years: '2008–19', faceCenter: [48, 44],
     attrs: { jumpShot: 5, finishing: 10, passing: 8, handles: 9, perimeterDefense: 7, speed: 11, bounce: 10, size: 5, basketballIQ: 6, clutch: 8 } },
   { name: 'Shai Gilgeous-Alexander', short: 'SGA', team: 'OKC', starter: true, captain: false, number: 2, height: 78, weight: 195, skin: '#8e5b42', position: 'SG', years: '2019–', faceCenter: [51, 44], faceAdjust: { dx: 0, dy: -4, scale: 1 },
-    attrs: { jumpShot: 8, finishing: 10, passing: 7, handles: 9, perimeterDefense: 8, speed: 8, bounce: 7, size: 7, basketballIQ: 10, clutch: 8 } },
+    attrs: { jumpShot: 8, finishing: 10, passing: 10, handles: 9, perimeterDefense: 9, speed: 9, bounce: 8, size: 6, basketballIQ: 10, clutch: 8 } },
   { name: 'Gary Payton', short: 'The Glove', team: 'OKC', starter: true, captain: false, number: 20, height: 76, weight: 190, years: '1990–03',
     attrs: { jumpShot: 6, finishing: 7, passing: 7, handles: 8, perimeterDefense: 11, speed: 8, bounce: 5, size: 5, basketballIQ: 9, clutch: 8 } },
   { name: 'Gus Williams', short: 'The Wizard', team: 'OKC', starter: false, captain: false, number: 1, height: 74, weight: 175, skin: '#8a5038', years: '1977–84',
