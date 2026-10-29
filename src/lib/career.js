@@ -1050,7 +1050,10 @@ export function advanceWeek(c, D) {
     last = { g, hits }
     // an injury: the body, the age and a little luck
     const r = seeded(`${c.seed}-inj-${c.year}-${k}`)
-    const risk = (0.028 * (11 - c.durability) / 6) * (c.age >= 31 ? 1.5 : 1) * (g?.sat ? 0 : 1) * S.injScale
+    // (player feedback: "always hurt", even a size-S build) fewer injuries overall, and the
+    // body matters more: a season's chance of one is ~5% for a very durable build (9),
+    // ~24% for an average one (5), ~40% for a fragile one (2); NFL, before age
+    const risk = (0.016 * Math.pow((11 - c.durability) / 6, 1.5)) * (c.age >= 31 ? 1.5 : 1) * (g?.sat ? 0 : 1) * S.injScale
     if (k < D.total && r() < risk && !c.injuries.some(i => i.year === c.year + 1 && i.at > k - 4 / S.injScale)) {
       const [kind, lo, hi] = S.injuries[Math.floor(r() * S.injuries.length)]
       const games = lo + Math.floor(r() * (hi - lo + 1))
@@ -1125,7 +1128,8 @@ export function resolveInjury(c, D, play, heal = false) {
   }
   const injuries = [...c.injuries, { year: c.year + 1, at, kind: inj.kind, games: inj.games, played: !!play, serious: !!inj.serious }]
   const feed = [...c.active.feed, { k: at, injuryText: text }]
-  return [withSnap({ ...c, injuries, durability: r10(Math.max(1, c.durability - 0.4)) }, D, { injury: null, feed, ...(inj.serious ? { out: true } : {}) }), text]
+  // each injury wears the body a little (0.2: at 0.4 a few early ones spiralled into a fragile career)
+  return [withSnap({ ...c, injuries, durability: r10(Math.max(1, c.durability - 0.2)) }, D, { injury: null, feed, ...(inj.serious ? { out: true } : {}) }), text]
 }
 // The regular season's over: book it, or go into the playoffs (a bracket of
 // our own, one skill moment a round, played on the hub)
@@ -1328,9 +1332,10 @@ export const offStep = (c, step) => ({ ...c, off: { ...(c.off ?? {}), step } })
 // Training camp: one hard drill. Win it for legacy points (the coaches remember)
 // and a chance at a development point: better the more cleanly it's won.
 export const CAMP_LEGACY = 3
-export function campDrill(c, score, game) {
-  const won = score >= 0.75
-  const chance = won ? clamp(0.25 + (score - 0.75) * 2, 0.25, 0.75) : 0
+// hit: the drill's own verdict (MiniGame), the same one it showed the player
+export function campDrill(c, score, game, hit = score >= 0.75) {
+  const won = !!hit
+  const chance = won ? clamp(0.25 + (score - 0.5), 0.25, 0.75) : 0
   const bonus = won && seeded(`${c.seed}-campdev-${c.year}`)() < chance ? 1 : 0
   const legacy = won ? CAMP_LEGACY : 0
   return { ...c, legacyBonus: (c.legacyBonus ?? 0) + legacy, legacyCamp: (c.legacyCamp ?? 0) + legacy, dev: { ...c.dev, points: c.dev.points + bonus }, off: { ...c.off, camp: { score, won, bonus, legacy, chance, game } } }

@@ -56,7 +56,9 @@ export default function MiniGame({ game, build, seed = 'x', onDone, autoStart = 
   const done = r => {
     if (result) return
     const perfect = !!r.raw && r.raw.of > 0 && r.raw.made === r.raw.of
-    const out = { score: clamp(r.score, 0, 1), hit: perfect || (hard ? r.score >= 0.75 : r.hit ?? r.score >= 0.5), note: r.note ?? null, raw: r.raw ?? null, out: !!r.out }
+    // the game's own call decides (camp is already tougher through the handicap above; a
+    // separate 0.75 bar there failed drills the game had shown as made)
+    const out = { score: clamp(r.score, 0, 1), hit: perfect || (r.hit ?? r.score >= 0.5), note: r.note ?? null, raw: r.raw ?? null, out: !!r.out }
     setResult(out); setStage('done')
     sfx(out.hit ? 'claim' : 'deny'); haptic(out.hit ? 'success' : 'heavy')
     // a miss that can still be replayed waits for the player's call
