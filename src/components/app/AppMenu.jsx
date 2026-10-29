@@ -7,7 +7,7 @@ import FeedbackModal from '../FeedbackModal'
 import { isMuted, setMuted } from '../../lib/juice'
 import { IS_APP, PLAY_BILLING } from '../../lib/platform'
 import { useStorePrices, PRO_PLAN_ID } from '../../lib/iap'
-import { openCheckout, openBillingPortal, billingDue, PRO_PRICE, perMonth } from '../../lib/webCheckout'
+import { openCheckout, openBillingPortal, billingDue, restorePro, PRO_PRICE, perMonth } from '../../lib/webCheckout'
 import { sellsHere } from '../../lib/storefront'
 import { isPro } from '../../lib/progress'
 import { railPreviewOn, setRailPreview } from '../../lib/fakeRail'
@@ -69,6 +69,15 @@ function ProView({ onVault }) {
     setBusy(false)
     if (r === 'error') setErr('The billing page didn\'t open. Try again.')
   }
+  // paid but Pro isn't on (the payment never reached the account): look it up in Stripe
+  const restore = async () => {
+    setErr(null); setBusy(true)
+    const r = await restorePro()
+    setBusy(false)
+    if (r === 'due') setDue(true)
+    else if (r === 'none') setErr('No Pro payment found for this account. If you paid while signed in to another account, sign in to that one.')
+    else if (r === 'error') setErr('That didn\'t work. Try again in a minute.')
+  }
   return (
     <div className="ag-pro-view">
       <div className={`ag-pro-hero ag-pop${pro ? ' is-on' : ''}`}>
@@ -109,6 +118,7 @@ function ProView({ onVault }) {
         <>
           <button className="ag-btn ag-pro-cta" onClick={subscribe} disabled={busy}>{busy ? 'OPENING CHECKOUT…' : `GO PRO — ${plan === 'year' ? (leadMo ? `${yearMo}/MO, BILLED YEARLY` : `${price.year}/YR`) : `${price.month}/MO`}`}</button>
           <p className="ag-pro-note">{PLAY_BILLING ? 'Paid through Google Play. Pro carries over to the website on this account. ' : IS_APP ? 'Opens a secure Stripe checkout on build-a-player.com. Pro carries over to the app on this account. ' : ''}Renews automatically at {plan === 'year' ? `${price.year} a year` : `${price.month} a month`} until you cancel. Cancel anytime; Pro stays on until the end of the period you've paid for.</p>
+          {!PLAY_BILLING && <p className="ag-pro-note">Already paid and Pro isn't on? <button className="ag-chip" style={{ marginLeft: 4 }} onClick={restore} disabled={busy}>{busy ? 'CHECKING…' : 'RESTORE PRO'}</button></p>}
         </>
       ) : null}
       {err && <p className="ag-pro-note ag-pro-note--err">{err}</p>}

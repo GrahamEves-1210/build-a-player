@@ -55,6 +55,7 @@ import CustomRatingsModal from './components/CustomRatingsModal'
 import SiteFooter from './components/SiteFooter'
 import SiteFeatures from './components/SiteFeatures'
 import { IS_APP, APP_LOOK } from './lib/platform'
+import { restorePro } from './lib/webCheckout'
 import AppHome from './components/app/AppHome'
 import { finishDiscordSignIn, getUsername } from './lib/discord'
 import { dailyState, setDailySpins, forfeitDaily } from './lib/progress'
@@ -423,7 +424,10 @@ export default function App() {
               if (p?.subscription_status === 'active') { setIsSubscribed(true); try { localStorage.setItem('bap_subscribed', '1') } catch {} }
               else if (p?.ads_disabled) { /* the ad-free purchase landed */ }
               else if (++attempts < 10) setTimeout(poll, 2000)
-              else { try { localStorage.removeItem('bap_subscribed'); localStorage.removeItem('bap_ads_off') } catch {} }
+              else {
+                try { localStorage.removeItem('bap_subscribed'); localStorage.removeItem('bap_ads_off') } catch {}
+                restorePro()   // 20 s and the webhook never landed: find the payment in Stripe
+              }
             })
         }
         poll()

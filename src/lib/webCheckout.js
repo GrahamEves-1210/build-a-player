@@ -62,6 +62,28 @@ export async function billingDue() {
   return BILLING_DUE.includes(acc?.subscription_status)
 }
 
+// Paid for Pro but it isn't on (the payment's webhook never landed): the server finds the
+// subscription in Stripe and puts it on the account (functions/api/restore-pro.js), then the
+// page reloads to read it. Resolves 'active' | 'due' | 'none' | 'signin' | 'error'
+export async function restorePro({ reload = true } = {}) {
+  const { data } = supabase ? await supabase.auth.getSession() : { data: null }
+  const user = data?.session?.user
+  if (!user) { window.dispatchEvent(new CustomEvent('bap:auth')); return 'signin' }
+  try {
+    const res = await fetch(`${API}/api/restore-pro`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${data.session.access_token}` },
+    })
+    if (!res.ok) return 'error'
+    const { status } = await res.json().catch(() => ({}))
+    if (status === 'active') {
+      try { localStorage.setItem('bap_subscribed', '1') } catch {}
+      if (reload) window.location.reload()
+      return 'active'
+    }
+    return BILLING_DUE.includes(status) ? 'due' : 'none'
+  } catch { return 'error' }
+}
+
 // BAP Pro members: Stripe's billing page (change plan, card, cancel), or Google Play's for a
 // Pro bought there (subscription_id 'play:…'). Resolves 'opened' | 'signin' | 'error'
 export async function openBillingPortal() {

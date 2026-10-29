@@ -34,6 +34,7 @@ import CustomRatingsModal from './CustomRatingsModal'
 import SiteFooter from './SiteFooter'
 import SiteFeatures from './SiteFeatures'
 import { IS_APP, APP_LOOK } from '../lib/platform'
+import { restorePro } from '../lib/webCheckout'
 import AppHome from './app/AppHome'
 import { FlipEdge, BuildComplete, useFlip, StackEdge, StackSeam, useDropMode, useDropSheet, DropBar, DropSheet } from './app/AppBuildTray'
 import { useCompete, botBuild } from '../lib/compete'
@@ -704,7 +705,10 @@ export default function BucketApp() {
       let attempts = 0
       const check = () => supabase.from('accounts').select('ads_disabled,subscription_status').eq('id', u.id).single()
         .then(({ data: p }) => {
-          if (adFreeReturn && !p?.ads_disabled && p?.subscription_status !== 'active' && ++attempts < 10) setTimeout(check, 2000)
+          if (adFreeReturn && !p?.ads_disabled && p?.subscription_status !== 'active') {
+            if (++attempts < 10) setTimeout(check, 2000)
+            else restorePro()   // 20 s and the webhook never landed: find the payment in Stripe
+          }
           if (p?.ads_disabled || p?.subscription_status === 'active') { setAdsDisabled(true); enableAdFreeMode() }
           if (p?.ads_disabled) { try { localStorage.setItem('bap_ads_off', '1') } catch {} }
           else { try { localStorage.removeItem('bap_ads_off') } catch {} }
