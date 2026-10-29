@@ -493,7 +493,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
       )}
       {footer && <div className="ag-home-site">{footer}</div>}
       {/* the app has no site footer: the maker's logo and the fan-project line on their own */}
-      {IS_APP && <img className="ag-home-maker" src="/playmaker-games.png" alt="A Playmaker Games game" width="78" height="26" loading="lazy" draggable={false} />}
+      {IS_APP && <img className="ag-home-maker" src="/playmaker-games.png" alt="A Playmaker Games game" width="102" height="34" loading="lazy" draggable={false} />}
       {IS_APP && <Disclaimer sport={isBucket ? 'bucket' : 'nfl'} />}
       <Tutorial onGuided={() => onStart('classic', isBucket ? 'guard' : 'qb')} />
     </div>
