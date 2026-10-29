@@ -912,6 +912,8 @@ html:is(.is-app, .app-look) .attr-category-section .attr-chip:nth-child(3) { ani
 html:is(.is-app, .app-look) .attr-category-section .attr-chip:nth-child(4) { animation-delay: 120ms; }
 html:is(.is-app, .app-look) .attr-chip:not(:disabled):active { transform: scale(.98); }
 html:is(.is-app, .app-look) .chip-name { font-family: var(--ag-font) !important; font-size: 21px !important; font-weight: 400 !important; letter-spacing: 2px !important; }
+/* long labels (Playmaking/Creativity) step down so they fit the card */
+html:is(.is-app, .app-look) .chip-name.is-long { font-size: 16px !important; letter-spacing: 1px !important; }
 html:is(.is-app, .app-look) .chip-qb { font-family: var(--ag-body) !important; font-weight: 600 !important; color: var(--ag-muted) !important; }
 html:is(.is-app, .app-look) .chip-val {
   width: 44px !important; height: 44px !important; min-width: 44px !important;

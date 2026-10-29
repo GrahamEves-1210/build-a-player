@@ -329,7 +329,7 @@ function Chip({ type, spin = null, meta, val, selectedQB, draggingType, onChipTa
     >
       {photo && <img src={photo} alt="" className="chip-photo" />}
       <div className="chip-text">
-        <span className="chip-name">{meta.label}</span>
+        <span className={`chip-name${meta.label.length > 14 ? ' is-long' : ''}`}>{meta.label}</span>
         <span className="chip-qb">{selectedQB.name}</span>
       </div>
       <span className="chip-val" style={hideGrades ? { visibility: 'hidden' } : undefined}>{valToGrade(val)}</span>
