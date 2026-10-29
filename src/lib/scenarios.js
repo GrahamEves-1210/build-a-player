@@ -428,9 +428,9 @@ const NBA_ALL = [
         o('seed', 'Chase the top seed', gam(0.8, {}, 'Played every night, healthy.', { attr: c.R('legs', -2), tag: 'BANGED UP' }, 'Banged up in a game that didn\'t matter. You carry it into the playoffs.')),
       ] }) },
   { id: 'nba-eliminated', at: ['late', 'stretch'], w: 6, when: c => c.eliminated && c.left >= 4,
-    make: c => ({ kicker: 'OUT OF IT', title: 'Play out the string', body: `${c.nick} won't make it. ${c.left} games left.`,
+    make: c => ({ kicker: 'OUT OF IT', title: 'Season\'s over', body: `${c.nick} won't make the playoffs. ${c.left} games left. Keep playing, or rest up for next year?`,
       options: [
-        o('play', 'Play it out', gam(0.85, { xp: 25 }, 'Played out the string without getting hurt. The numbers count.', { sit: c.left, dur: -1, tag: 'INJURED' }, 'Hurt in a meaningless game. Done for the year, and it follows you into next season.')),
+        o('play', 'Play it out', gam(0.85, { xp: 25 }, 'Finished the season healthy. The numbers count.', { sit: c.left, dur: -1, tag: 'INJURED' }, 'Hurt in a meaningless game. Done for the year, and it follows you into next season.')),
         o('shut', 'Shut it down', { sit: c.left, dur: 0.5, tag: 'SHUT DOWN' }, 'Healthy into the summer. A full offseason to heal.'),
       ] }) },
 ]
