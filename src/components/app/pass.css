@@ -134,52 +134,49 @@
 .bp-card-go { font-family: var(--ag-font); font-size: 15px; letter-spacing: 1.8px; padding: 8px 11px 6px; border-radius: 10px; color: var(--ag-on); background: var(--ag-grad); }
 .bp-card-go.is-quiet { color: var(--ag-text-2); background: rgba(255,255,255,.06); }
 
-/* BAP Pro on Home: a mode card in gold (the Career card's frame), a crown behind */
+/* BAP Pro on Home: one card in two parts (Promos.jsx). Left: the name and what you get,
+   left-aligned. Right, past a thin gold rule: the price, what's billed and the call,
+   right-aligned. A quiet gold wash, no art: the type does the work. */
+.pro-card-wrap { container-type: inline-size; }
 .pro-card {
-  position: relative; overflow: hidden; display: flex; align-items: flex-end; gap: 12px;
-  width: 100%; min-height: 112px; padding: 14px 16px; border-radius: 18px; text-align: left; cursor: pointer;
-  border: 1.5px solid rgba(245,220,138,.5);
-  background: linear-gradient(100deg, rgba(245,220,138,.16), transparent 62%), var(--ag-panel);
-  box-shadow: 0 0 24px rgba(212,175,55,.14);
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 18px;
+  width: 100%; padding: 18px 20px; border-radius: 18px; text-align: left; cursor: pointer;
+  border: 1px solid rgba(245,220,138,.42);
+  background:
+    linear-gradient(120deg, rgba(245,220,138,.13) 0%, rgba(245,220,138,.04) 45%, transparent 75%),
+    var(--ag-panel);
+  box-shadow: inset 0 1px 0 rgba(255,236,170,.12), 0 8px 24px rgba(0,0,0,.25);
   color: var(--ag-text); font: inherit;
   -webkit-tap-highlight-color: transparent;
-  transition: transform var(--press);
+  transition: transform var(--press), border-color .2s ease, box-shadow .2s ease;
 }
-.pro-card:active { transform: scale(.98); }
-.pro-card > :not(.pro-card-art) { position: relative; z-index: 1; }
-.pro-card-art { position: absolute; right: 0; top: 0; height: 100%; width: 48%; z-index: 0; pointer-events: none; opacity: .6; }
-.pro-card .ag-eyebrow { color: #f5dc8a; }
-.pro-card .ag-card-sub { color: rgba(255,255,255,.72); }
-.pro-card-price { display: flex; align-items: baseline; gap: 4px; margin-top: 6px; }
-.pro-card-price b { font-family: var(--ag-display); font-weight: 400; font-size: 22px; line-height: 1; color: #f5dc8a; }
-.pro-card-price small { font-family: var(--ag-font); font-size: 11px; letter-spacing: 1.4px; color: var(--ag-muted); }
-/* the perks: one row of gold bullets in the card's middle (wraps under the title on a phone) */
-.pro-card { align-items: center; }
-.pro-card-perks { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 14px; flex: 1; font-family: var(--ag-body); font-size: 13px; font-weight: 600; color: rgba(255,255,255,.88); }
-.pro-card-perks li { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; }
-.pro-card-perks li::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #f5dc8a; box-shadow: 0 0 6px rgba(245,220,138,.6); }
-/* by the card's own width: the bullets beside the title when there's room, under it when not */
-.pro-card-wrap { container-type: inline-size; }
-.pro-card-mid { display: flex; flex-direction: column; align-items: center; gap: 10px; flex: 1; min-width: 0; }
-.pro-card-mid .pro-card-perks { flex: none; }
-/* GO PRO →: large gold words, no box */
-.pro-card-go { display: inline-flex; align-items: center; gap: 6px; font-family: var(--ag-font); font-size: 22px; letter-spacing: 3px; line-height: 1; color: #f5dc8a; text-shadow: 0 0 14px rgba(245,220,138,.35); }
-.pro-card-go svg { transition: transform .2s ease; }
-@media (hover: hover) { .pro-card:hover .pro-card-go svg { transform: translateX(4px); } }
-@container (min-width: 520px) {
-  .pro-card { flex-direction: row; align-items: center; }
-  .pro-card .ag-card-txt { flex: none; }
-  .pro-card-perks { flex-wrap: nowrap; justify-content: center; }
+.pro-card:active { transform: scale(.985); }
+@media (hover: hover) { .pro-card:hover { border-color: rgba(245,220,138,.75); box-shadow: inset 0 1px 0 rgba(255,236,170,.16), 0 10px 30px rgba(212,175,55,.16); } }
+
+.pc-main { display: grid; gap: 12px; min-width: 0; }
+.pc-title { display: flex; align-items: center; gap: 9px; font-family: var(--ag-display); font-size: 28px; line-height: 1; letter-spacing: .5px; color: #fff; }
+.pc-title svg { flex: none; color: #f5dc8a; filter: drop-shadow(0 0 8px rgba(245,220,138,.35)); }
+.pc-perks { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 16px; font-family: var(--ag-body); font-size: 13px; font-weight: 600; color: rgba(255,255,255,.82); }
+.pc-perks li { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; }
+.pc-perks li::before { content: ''; flex: none; width: 5px; height: 5px; border-radius: 50%; background: #f5dc8a; }
+
+.pc-side { display: grid; justify-items: end; gap: 4px; padding-left: 20px; border-left: 1px solid rgba(245,220,138,.22); text-align: right; }
+.pc-price { display: flex; align-items: baseline; gap: 3px; }
+.pc-price b { font-family: var(--ag-display); font-weight: 400; font-size: 32px; line-height: 1; color: #f5dc8a; }
+.pc-price small { font-family: var(--ag-body); font-size: 13px; font-weight: 600; color: rgba(255,255,255,.6); }
+.pc-bill { font-family: var(--ag-body); font-size: 11px; font-weight: 500; color: rgba(255,255,255,.5); white-space: nowrap; }
+.pc-go { display: inline-flex; align-items: center; gap: 5px; margin-top: 8px; font-family: var(--ag-font); font-size: 15px; letter-spacing: 2.5px; line-height: 1; color: #f5dc8a; }
+.pc-go svg { transition: transform .2s ease; }
+@media (hover: hover) { .pro-card:hover .pc-go svg { transform: translateX(3px); } }
+
+/* a narrow card (phones): the perks two by two, a little tighter */
+@container (max-width: 459px) {
+  .pro-card { gap: 14px; padding: 16px; }
+  .pc-title { font-size: 25px; }
+  .pc-perks { display: grid; grid-template-columns: auto auto; justify-content: start; gap: 6px 14px; font-size: 12.5px; }
+  .pc-side { padding-left: 14px; }
+  .pc-price b { font-size: 28px; }
 }
-@container (max-width: 519px) {
-  .pro-card { flex-direction: column; align-items: flex-start; gap: 10px; }
-  .pro-card-mid { align-items: flex-start; }
-  .pro-card-go { font-size: 20px; }
-  .pro-card-perks { justify-content: flex-start; gap: 6px 11px; font-size: 12px; }
-  .pro-card-perks li { gap: 5px; }
-  .pro-card-perks li::before { width: 5px; height: 5px; }
-}
-@media (hover: hover) { .pro-card:hover { box-shadow: 0 0 30px rgba(212,175,55,.28); border-color: #f5dc8a; } }
 
 .ag-promos { display: grid; gap: 8px; margin-top: 12px; }
 /* Home: the same 14px gutter as the modes (the Shop's section keeps its own padding) */
