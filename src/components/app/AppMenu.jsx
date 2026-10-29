@@ -7,7 +7,7 @@ import FeedbackModal from '../FeedbackModal'
 import { isMuted, setMuted } from '../../lib/juice'
 import { IS_APP, PLAY_BILLING } from '../../lib/platform'
 import { useStorePrices, PRO_PLAN_ID } from '../../lib/iap'
-import { openCheckout, openBillingPortal, PRO_PRICE } from '../../lib/webCheckout'
+import { openCheckout, openBillingPortal, PRO_PRICE, perMonth } from '../../lib/webCheckout'
 import { sellsHere } from '../../lib/storefront'
 import { isPro } from '../../lib/progress'
 import { railPreviewOn, setRailPreview } from '../../lib/fakeRail'
@@ -49,6 +49,10 @@ function ProView({ onVault }) {
   const pro = isPro()
   const store = useStorePrices()   // Android: Google Play's prices, in the player's currency
   const price = { month: store[PRO_PLAN_ID.month] ?? PRO_PRICE.month, year: store[PRO_PLAN_ID.year] ?? PRO_PRICE.year }
+  // the yearly plan's monthly figure: the headline on the website, small print in the apps
+  // (store prices can be in other currencies: no figure then)
+  const yearMo = store[PRO_PLAN_ID.year] ? null : perMonth(price.year)
+  const leadMo = !IS_APP && !!yearMo
   useEffect(() => { if (!pro) track('pro_view') }, []) // eslint-disable-line react-hooks/exhaustive-deps
   const subscribe = async () => {
     setErr(null); setBusy(true)
@@ -76,7 +80,10 @@ function ProView({ onVault }) {
             <small>MONTHLY</small><b>{price.month}</b><span>a month</span>
           </button>
           <button role="radio" aria-checked={plan === 'year'} className={`ag-pro-plan${plan === 'year' ? ' is-on' : ''}`} onClick={() => setPlan('year')}>
-            <i>MOST POPULAR</i><small>YEARLY</small><b>{price.year}</b><span>a year · save {PRO_PRICE.save}</span>
+            <i>MOST POPULAR</i><small>YEARLY</small>
+            {leadMo
+              ? <><b>{yearMo}</b><span>a month, billed {price.year} yearly · save {PRO_PRICE.save}</span></>
+              : <><b>{price.year}</b><span>a year{yearMo ? ` (${yearMo}/mo)` : ''} · save {PRO_PRICE.save}</span></>}
           </button>
         </div>
       )}
@@ -93,7 +100,7 @@ function ProView({ onVault }) {
         </>
       ) : sellsHere() ? (
         <>
-          <button className="ag-btn ag-pro-cta" onClick={subscribe} disabled={busy}>{busy ? 'OPENING CHECKOUT…' : `GO PRO — ${plan === 'year' ? `${price.year}/YR` : `${price.month}/MO`}`}</button>
+          <button className="ag-btn ag-pro-cta" onClick={subscribe} disabled={busy}>{busy ? 'OPENING CHECKOUT…' : `GO PRO — ${plan === 'year' ? (leadMo ? `${yearMo}/MO, BILLED YEARLY` : `${price.year}/YR`) : `${price.month}/MO`}`}</button>
           <p className="ag-pro-note">{PLAY_BILLING ? 'Paid through Google Play. Pro carries over to the website on this account. ' : IS_APP ? 'Opens a secure Stripe checkout on build-a-player.com. Pro carries over to the app on this account. ' : ''}Renews automatically at {plan === 'year' ? `${price.year} a year` : `${price.month} a month`} until you cancel. Cancel anytime; Pro stays on until the end of the period you've paid for.</p>
         </>
       ) : null}

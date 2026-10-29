@@ -4,8 +4,8 @@ import { IconArrow } from './app/icons'
 // The frame the About, Privacy and Terms pages share. In the app look (the app
 // and the new website) it's an app screen: fixed to the window and scrolling on
 // its own (the page itself never scrolls there), a back button, the sections as
-// cards and a row of jump links. The classic site keeps the old about page.
-export default function LegalShell({ eyebrow, title, updated, onBack, toc = null, wide = false, children }) {
+// cards. The classic site keeps the old about page.
+export default function LegalShell({ eyebrow, title, updated, onBack, wide = false, children }) {
   if (!(IS_APP || APP_LOOK)) {
     return (
       <div className="about-page">
@@ -20,7 +20,6 @@ export default function LegalShell({ eyebrow, title, updated, onBack, toc = null
       </div>
     )
   }
-  const jump = id => e => { e.preventDefault(); document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }
   return (
     <div className={`ag-screen lg${wide ? ' lg--wide' : ''}`}>
       <div className="lg-head">
@@ -31,11 +30,6 @@ export default function LegalShell({ eyebrow, title, updated, onBack, toc = null
           {updated && <small className="lg-updated">{updated}</small>}
         </div>
       </div>
-      {toc && (
-        <nav className="lg-toc" aria-label="On this page">
-          {toc.map(([id, label]) => <a key={id} href={`#${id}`} onClick={jump(id)}>{label}</a>)}
-        </nav>
-      )}
       <div className="lg-body">{children}</div>
     </div>
   )

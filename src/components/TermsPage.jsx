@@ -1,10 +1,9 @@
 import LegalShell, { Sec, P, L, Mail } from './LegalShell'
 
-const TOC = [['t-game', 'The game'], ['t-coins', 'Coins'], ['t-pro', 'Pro and the Pass'], ['t-fair', 'Fair play'], ['t-chat', 'Chat'], ['t-apps', 'App stores'], ['t-legal', 'Legal'], ['t-contact', 'Contact']]
 
 export default function TermsPage({ onBack }) {
   return (
-    <LegalShell eyebrow="BUILD-A-PLAYER" title="Terms of Service" updated="Effective October 25, 2026" onBack={onBack} toc={TOC}>
+    <LegalShell eyebrow="BUILD-A-PLAYER" title="Terms of Service" updated="Effective October 25, 2026" onBack={onBack}>
       <Sec id="t-summary" title="The short version">
         <L items={[
           'Build-A-Player is a free fan-made game. It isn\'t connected to the NFL, the NBA, their teams or players.',

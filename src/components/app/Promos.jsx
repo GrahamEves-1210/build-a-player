@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useProgress } from '../../lib/progress'
 import { sellsHere, onStorefront } from '../../lib/storefront'
-import { PRO_PRICE } from '../../lib/webCheckout'
+import { PRO_PRICE, perMonth } from '../../lib/webCheckout'
+import { IS_APP } from '../../lib/platform'
 import { useStorePrices, PRO_PLAN_ID } from '../../lib/iap'
 import { IconCrown, IconCheck } from './icons'
 import './pass.css'
@@ -33,7 +34,8 @@ export function ProCard({ delay }) {
       </span>
       <span className="pro-card-cta">
         <span className="pro-card-go">GO PRO</span>
-        <small>{store[PRO_PLAN_ID.month] ?? PRO_PRICE.month} a month</small>
+        {/* website: from the yearly plan's monthly figure, with what's billed; apps: the monthly plan as billed */}
+        <small>{!IS_APP && perMonth(PRO_PRICE.year) ? <>from {perMonth(PRO_PRICE.year)}/mo<br />billed yearly</> : `${store[PRO_PLAN_ID.month] ?? PRO_PRICE.month} a month`}</small>
       </span>
     </button>
   )

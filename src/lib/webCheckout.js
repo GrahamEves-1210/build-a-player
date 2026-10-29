@@ -12,6 +12,14 @@ import { playBuy } from './iap'
 const API = import.meta.env.VITE_API_URL || ''
 // What BAP Pro costs (the prices themselves live in Stripe: STRIPE_PRICE_ID, STRIPE_PRICE_ID_YEARLY)
 export const PRO_PRICE = { month: '$4.99', year: '$34.99', save: '42%' }
+// The yearly plan as a monthly figure ("$2.92"), rounded up to the cent so it never
+// understates. The website leads with it, always beside the yearly total that's
+// billed; the apps lead with the billed amount (Apple 3.1.2 / Play: the charge is
+// the most prominent price) and show this small.
+export const perMonth = yearly => {
+  const n = parseFloat(String(yearly).replace(/[^0-9.]/g, ''))
+  return Number.isFinite(n) && n > 0 ? `$${(Math.ceil(n / 12 * 100) / 100).toFixed(2)}` : null
+}
 const ENDPOINT = { pro: 'create-checkout', pass: 'create-pass-checkout', coins: 'create-coins-checkout' }
 
 export async function openCheckout(kind, extra = {}) {

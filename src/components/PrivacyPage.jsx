@@ -1,10 +1,9 @@
 import LegalShell, { Sec, P, L, Mail, Ext } from './LegalShell'
 
-const TOC = [['p-collect', 'What we collect'], ['p-use', 'How we use it'], ['p-public', 'What others see'], ['p-ads', 'Ads and cookies'], ['p-share', 'Who we share with'], ['p-choices', 'Your choices'], ['p-kids', 'Kids'], ['p-contact', 'Contact']]
 
 export default function PrivacyPage({ onBack }) {
   return (
-    <LegalShell eyebrow="BUILD-A-PLAYER" title="Privacy Policy" updated="Last updated October 25, 2026" onBack={onBack} toc={TOC}>
+    <LegalShell eyebrow="BUILD-A-PLAYER" title="Privacy Policy" updated="Last updated October 25, 2026" onBack={onBack}>
       <Sec id="p-summary" title="The short version">
         <L items={[
           'We collect what the game needs to save your progress, run leaderboards and online games, and fix bugs.',
