@@ -111,7 +111,7 @@ import TrophyCase from './app/TrophyCase'
 import DeleteAccount from './DeleteAccount'
 import ConnectDiscord from './ConnectDiscord'
 import { getUsername } from '../lib/discord'
-import { IconGear, IconTrophy, IconCrown } from './app/icons'
+import { IconGear, IconTrophy, IconCrown, IconFootball, IconBasketball } from './app/icons'
 import { useCountUp as countUp } from '../lib/useCountUp'
 import { openBillingPortal } from '../lib/webCheckout'
 
@@ -953,7 +953,21 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
           return (
             <>
               {/* Top-level game switch */}
-              {showToggle && (
+              {/* new look: the home screen's FOOTBALL / BASKETBALL switch */}
+              {showToggle && (IS_APP || APP_LOOK) && (
+                <div className={`ag-sport ag-sport--${section === 'bucket' ? 'bucket' : 'nfl'} prf-sport`} role="tablist" aria-label="Sport">
+                  <span className="ag-sport-thumb" aria-hidden="true" />
+                  <button role="tab" aria-selected={section === 'nfl'} className={`ag-sport-btn ag-sport-btn--nfl${section === 'nfl' ? ' is-on' : ''}`} onClick={() => setGameSection('nfl')}>
+                    <span className="ag-sport-ico"><IconFootball size={17} /></span>
+                    <span className="ag-sport-txt"><b>FOOTBALL</b></span>
+                  </button>
+                  <button role="tab" aria-selected={section === 'bucket'} className={`ag-sport-btn ag-sport-btn--bucket${section === 'bucket' ? ' is-on' : ''}`} onClick={() => setGameSection('bucket')}>
+                    <span className="ag-sport-ico"><IconBasketball size={17} /></span>
+                    <span className="ag-sport-txt"><b>BASKETBALL</b></span>
+                  </button>
+                </div>
+              )}
+              {showToggle && !(IS_APP || APP_LOOK) && (
                 <div className={`prf-game-switch ${show ? 'prf-card-in' : ''}`} style={{ animationDelay: '0.2s' }}>
                   <button className={`prf-game-switch-btn${section === 'nfl' ? ' active' : ''}`} onClick={() => setGameSection('nfl')}>
                     <MiniPlayerLogo />
