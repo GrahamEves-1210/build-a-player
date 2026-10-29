@@ -12076,7 +12076,10 @@ html.is-x-browser .mobile-tab-bar {
 .auth-field { display: flex; flex-direction: column; gap: 6px; }
 .auth-bday { margin-bottom: 12px; }
 .auth-bday-row { display: grid; grid-template-columns: 1.4fr 1fr; gap: 8px; }
-.auth-bday-row select { appearance: auto; color-scheme: dark; }
+.auth-bday-row select { appearance: auto; color-scheme: dark; color: #fff; background-color: #161b18; font-weight: 600; }
+.auth-bday-row select:invalid, .auth-bday-row select:has(option[value=""]:checked) { color: rgba(255,255,255,.6); }
+.auth-bday-row option { color: #fff; background: #161b18; }
+.auth-bday-row option[value=""] { color: rgba(255,255,255,.6); }
 
 .auth-label {
   font-size: 11px;

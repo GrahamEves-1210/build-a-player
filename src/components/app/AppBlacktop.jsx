@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { usePresence, fmtCount, crowd } from '../../lib/presence'
+import { usePresence, fmtCount } from '../../lib/presence'
 import { useRailOn } from '../../lib/ads'
 import { LiveLeaveButton } from './LiveLeave'
 import { createPortal } from 'react-dom'
@@ -104,12 +104,12 @@ export function BlacktopHub({ onJoin3v3, onJoin2v2 = null, onJoin1v1 = null, onP
   const o = useProgress().stats?.online ?? { rating: 800 }
   // the games being played right now, under each mode (only with the live server)
   const live = useLiveGames(!!onWatch)
-  const onCourt = crowd(usePresence()?.areas?.blacktop ?? 0)   // players on the Blacktop right now (once there's a crowd)
+  const onCourt = usePresence()?.areas?.blacktop ?? 0   // players on the Blacktop right now
   return (
     <div className="ag-screen ag-screen--bucket bt-hub">
       <div className="ag-screen-head">
         <div>
-          <span className="ag-eyebrow">{onCourt ? `ONLINE · ${fmtCount(onCourt)} PLAYING NOW` : 'ONLINE · LIVE GAMES · FIRST TO 11'}</span>
+          <span className="ag-eyebrow">ONLINE · LIVE GAMES · FIRST TO 11{onCourt > 0 && <span className="ag-live-badge ag-live-badge--inline"><i aria-hidden="true" />{fmtCount(onCourt)}<small>PLAYING</small></span>}</span>
           <h1 className="ag-h1">Blacktop</h1>
         </div>
         <button className="ag-round-btn" onClick={onBack} aria-label="Home"><IconClose size={16} /></button>

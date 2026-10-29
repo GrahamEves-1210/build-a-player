@@ -5621,6 +5621,11 @@ html.bap-reduce-motion :is(.ss-overlay, .ss-sheet, .ss-img, .ss-skel) { animatio
 @media (prefers-reduced-motion: no-preference) { html:not(.bap-reduce-motion) .ag-live-count i { animation: ag-online-pulse 2s ease-in-out infinite; } }
 @keyframes ag-online-pulse { 50% { opacity: .45; } }
 @media (min-width: 1024px) { html.app-look .ag-live-count { left: 0; } }
+/* an online mode's live count: a small pill in the card's corner (and inline on its screen) */
+.ag-live-badge { position: absolute; top: 9px; right: 10px; z-index: 3; display: inline-flex; align-items: center; gap: 5px; padding: 4px 9px 3px; border-radius: 999px; background: rgba(0,0,0,.45); border: 1px solid rgba(52,211,153,.35); font-family: var(--ag-font); font-size: 13px; letter-spacing: 1px; line-height: 1; color: #fff; font-variant-numeric: tabular-nums; pointer-events: none; }
+.ag-live-badge small { font-size: 9.5px; letter-spacing: 1.4px; color: var(--ag-muted); }
+.ag-live-badge i { width: 6px; height: 6px; border-radius: 50%; background: #34d399; box-shadow: 0 0 6px #34d399; }
+.ag-live-badge--inline { position: static; vertical-align: middle; margin-left: 8px; pointer-events: auto; }
 /* phones: the compact stacked count (the one-line pill ran into the logo) */
 @media (max-width: 1023px) {
   .ag-live-count { display: grid; justify-items: start; gap: 2px; padding: 5px 8px 4px; border-radius: 9px; top: 4px; }
