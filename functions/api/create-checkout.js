@@ -24,7 +24,7 @@ export async function onRequestPost(context) {
     if (!price) return Response.json({ error: 'That plan is not available yet' }, { status: 400 })
     // the session decides whose purchase it is; older app builds without one still send their id
     const me = await sessionUser(context.request, context.env)
-    const userId = me?.id ?? body.userId, email = payEmail(me) ?? body.email
+    const userId = me?.id ?? body.userId, email = payEmail(me) ?? payEmail({ email: body.email })   // never the hidden @buildaplayer.app one: Checkout asks instead
     if (!userId) return Response.json({ error: 'userId required' }, { status: 400 })
 
     // the app (capacitor://) checks out in the phone's browser: it comes back to the website
