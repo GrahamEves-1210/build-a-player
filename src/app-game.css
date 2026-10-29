@@ -4386,7 +4386,11 @@ html.app-look .splash-site-footer-link { color: rgba(255,255,255,.72) !important
 html.app-look .splash-site-footer-bottom, html.app-look .splash-site-footer-legal { color: rgba(255,255,255,.4) !important; }
 html.app-look .splash-site-footer-brand { gap: 4px; }
 html.app-look .splash-site-footer-col { gap: 7px; }
-html.app-look .splash-site-footer-social { flex-direction: row; gap: 8px; margin-top: 2px; }
+/* Connect: Email, X, Discord as text links, one under the other like the other columns */
+.splash-site-footer-social { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; margin-top: 0; }
+html.app-look .splash-site-footer-social { gap: 7px; }
+.splash-site-footer-link--icon { display: inline-flex; align-items: center; gap: 7px; }
+.splash-site-footer-link--icon svg { flex: none; opacity: .85; }
 html.app-look .splash-site-footer-social-btn { width: 36px; height: 36px; }
 html.app-look .splash-site-footer-bottom { margin-top: 18px; padding-top: 14px; gap: 8px; }
 html.app-look .splash-site-footer-legal { line-height: 1.45; }
