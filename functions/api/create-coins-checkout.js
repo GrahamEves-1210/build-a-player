@@ -43,7 +43,7 @@ export async function onRequestPost(context) {
     const { pack, app, table } = body
     // the session decides whose purchase it is; older app builds without one still send their id
     const me = await sessionUser(context.request, context.env)
-    const userId = me?.id ?? body.userId, email = payEmail(me) ?? body.email
+    const userId = me?.id ?? body.userId, email = payEmail(me) ?? payEmail({ email: body.email })   // never the hidden @buildaplayer.app one: Checkout asks instead
     if (!userId) return Response.json({ error: 'userId required' }, { status: 400 })
     const p = (TABLES[table] ?? TABLES[1])[pack]
     if (!p) return Response.json({ error: 'unknown pack' }, { status: 400 })
