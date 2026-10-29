@@ -490,8 +490,11 @@ export default function App() {
       if (window.location.pathname !== targetPath) {
         window.history.pushState({}, '', targetPath)
       }
-    } else if (['/simulate', '/leaderboard', '/depth-chart'].includes(window.location.pathname) || onWikiPath || (page !== 'profile' && window.location.pathname === '/profile')) {
-      // (left the profile from the dock: drop /profile, or opening the site again lands there)
+    } else if (['/simulate', '/leaderboard', '/depth-chart'].includes(window.location.pathname) || onWikiPath || (page !== 'profile' && window.location.pathname === '/profile')
+      || (page !== 'privacy' && window.location.pathname === '/privacy') || (page !== 'terms' && window.location.pathname === '/terms')
+      || (page !== 'about' && new URLSearchParams(window.location.search).has('about'))) {
+      // (left the profile, Privacy, Terms or About: drop its address, or a refresh or opening
+      // the site again lands back there)
       window.history.replaceState({}, '', '/')
     }
   }, [page, simResult])
