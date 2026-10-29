@@ -1,5 +1,6 @@
 import Stripe from 'stripe'
 import { createClient } from '@supabase/supabase-js'
+import { findSubscription } from './restore-pro'
 
 // Who's asking, from their Supabase session token (never from an id in the body)
 async function sessionUser(request, env) {
@@ -26,11 +27,11 @@ export async function onRequestPost(context) {
       .eq('id', userId)
       .single()
 
-    if (!account?.subscription_id) {
-      return Response.json({ error: 'No subscription found' }, { status: 404 })
-    }
-
-    const sub = await stripe.subscriptions.retrieve(account.subscription_id)
+    // none on the account (a webhook that never landed): Stripe's, by the account it was bought for
+    const sub = account?.subscription_id && !account.subscription_id.startsWith('play:')
+      ? await stripe.subscriptions.retrieve(account.subscription_id)
+      : await findSubscription(stripe, userId)
+    if (!sub) return Response.json({ error: 'No subscription found' }, { status: 404 })
     const origin = context.request.headers.get('origin') || 'https://build-a-player.com'
 
     const portalSession = await stripe.billingPortal.sessions.create({

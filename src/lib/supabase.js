@@ -33,3 +33,13 @@ export async function apiHeaders() {
   } catch {}
   return h
 }
+
+// Back from a Pro checkout and the webhook never landed: the server finds the payment in
+// Stripe and puts it on the account (functions/api/restore-pro.js); reload to read it
+export async function restorePro() {
+  try {
+    const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/restore-pro`, { method: 'POST', headers: await apiHeaders() })
+    const { status } = res.ok ? await res.json() : {}
+    if (status === 'active') { try { localStorage.setItem('bap_subscribed', '1') } catch {}; window.location.reload() }
+  } catch {}
+}

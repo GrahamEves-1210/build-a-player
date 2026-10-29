@@ -35,7 +35,7 @@ import { LEGENDS, LEGEND_TYPES } from './data/qb-legends'
 import { RB_LEGENDS } from './data/rb-legends'
 import HEADSHOTS from './data/headshots.json'
 import { runSimulation, getArchetype, calcOVR, runRBSimulation, calcOVRRB, getArchetypeRB, runWRSimulation, calcOVRWR, getArchetypeWR, runTESimulation, calcOVRTE, getArchetypeTE, runDBSimulation, calcOVRDB, getArchetypeDB, runOLSimulation, calcOVROL, getArchetypeOL, HEADSHOT_BASE, calcMVPResult, calcOPOYResult, calcWROPOYResult, calcTEOPOYResult, calcDBDpoyResult, calcOLAllProResult } from './utils/simulation'
-import { supabase, rtSupabase, apiHeaders } from './lib/supabase'
+import { supabase, rtSupabase, apiHeaders, restorePro } from './lib/supabase'
 import { track } from './lib/track'
 import { blockReason, buildSig, markPlayed } from './lib/saveGuard'
 import CustomRatingsModal from './components/CustomRatingsModal'
@@ -332,7 +332,10 @@ export default function App() {
               if (p?.subscription_status === 'active') { setIsSubscribed(true); try { localStorage.setItem('bap_subscribed', '1') } catch {} }
               else if (p?.ads_disabled) { /* the ad-free purchase landed */ }
               else if (++attempts < 10) setTimeout(poll, 2000)
-              else { try { localStorage.removeItem('bap_subscribed'); localStorage.removeItem('bap_ads_off') } catch {} }
+              else {
+                try { localStorage.removeItem('bap_subscribed'); localStorage.removeItem('bap_ads_off') } catch {}
+                restorePro()   // 20 s and the webhook never landed: find the payment in Stripe
+              }
             })
         }
         poll()

@@ -34,6 +34,21 @@ export async function onRequestPost(context) {
   }
 
   const supabase = createClient(context.env.VITE_SUPABASE_URL, context.env.SUPABASE_SERVICE_ROLE_KEY)
+  // A write that didn't land answers 500, so Stripe sends the event again (every write here
+  // is safe to repeat); answering 200 anyway lost a paid Pro for good
+  let failed = false
+  // The Discord role runs after the answer: a slow Discord or Supabase call made Stripe time out
+  const proRole = (userId, on) => context.waitUntil(setProRole(supabase, context.env, userId, on))
+  // Pro as Stripe has it now, not as the event had it: a retried event can arrive hours late,
+  // after a renewal, a failed payment or a cancel
+  const putPro = async (userId, subId) => {
+    const sub = await stripe.subscriptions.retrieve(subId)
+    const live = sub.status === 'active' || sub.status === 'trialing'
+    const { error } = await supabase.from('accounts')
+      .upsert({ id: userId, subscription_status: live ? 'active' : sub.status, subscription_id: sub.id, is_plus: live }, { onConflict: 'id' })
+    if (error) { console.error('[webhook] subscription write failed:', error); failed = true }
+    proRole(userId, live)
+  }
 
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object
@@ -44,7 +59,7 @@ export async function onRequestPost(context) {
       if (coins > 0 && session.payment_status === 'paid') {
         const { error } = await supabase.from('coin_purchases')
           .upsert({ user_id: userId, coins, source: 'stripe', pack: session.metadata.pack ?? null, ref: session.id }, { onConflict: 'ref', ignoreDuplicates: true })
-        if (error) console.error('[webhook] coin purchase insert failed:', error)
+        if (error) { console.error('[webhook] coin purchase insert failed:', error); failed = true }
       }
     } else if (userId && session.metadata?.kind === 'pass') {
       // Builder Pass: the season's premium track (supabase/builder_pass.sql); the game reads it
@@ -52,20 +67,16 @@ export async function onRequestPost(context) {
       if (PASS_SEASONS.has(season) && session.payment_status === 'paid') {
         const { error } = await supabase.from('pass_owners')
           .upsert({ user_id: userId, season, ref: session.id }, { onConflict: 'user_id,season', ignoreDuplicates: true })
-        if (error) console.error('[webhook] pass insert failed:', error)
+        if (error) { console.error('[webhook] pass insert failed:', error); failed = true }
       }
     } else if (userId) {
       if (session.mode === 'subscription') {
-        const { error } = await supabase
-          .from('accounts')
-          .upsert({ id: userId, subscription_status: 'active', subscription_id: session.subscription, is_plus: true }, { onConflict: 'id' })
-        if (error) console.error('[webhook] subscription upsert failed:', error)
-        await setProRole(supabase, context.env, userId, true)
+        await putPro(userId, session.subscription)
       } else {
         const { error } = await supabase
           .from('accounts')
           .upsert({ id: userId, ads_disabled: true }, { onConflict: 'id' })
-        if (error) console.error('[webhook] ads_disabled upsert failed:', error)
+        if (error) { console.error('[webhook] ads_disabled upsert failed:', error); failed = true }
       }
     }
   }
@@ -109,14 +120,7 @@ export async function onRequestPost(context) {
   if (event.type === 'customer.subscription.updated') {
     const sub = event.data.object
     const userId = sub.metadata?.userId
-    if (userId) {
-      const live = sub.status === 'active' || sub.status === 'trialing'
-      const { error } = await supabase.from('accounts')
-        .update({ subscription_status: live ? 'active' : sub.status, subscription_id: sub.id, is_plus: live })
-        .eq('id', userId)
-      if (error) console.error('[webhook] subscription update failed:', error)
-      await setProRole(supabase, context.env, userId, live)
-    }
+    if (userId) await putPro(userId, sub.id)
   }
 
   if (event.type === 'customer.subscription.deleted') {
@@ -126,11 +130,12 @@ export async function onRequestPost(context) {
       const { error } = await supabase
         .from('accounts')
         .update({ subscription_status: null, subscription_id: null, is_plus: false })
-        .eq('id', userId)
-      if (error) console.error('[webhook] subscription cancel failed:', error)
-      await setProRole(supabase, context.env, userId, false)
+        .eq('id', userId).eq('subscription_id', sub.id)   // not a newer subscription bought since
+      if (error) { console.error('[webhook] subscription cancel failed:', error); failed = true }
+      proRole(userId, false)
     }
   }
 
+  if (failed) return Response.json({ error: 'database write failed' }, { status: 500 })
   return Response.json({ received: true })
 }
