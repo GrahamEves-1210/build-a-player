@@ -12074,6 +12074,9 @@ html.is-x-browser .mobile-tab-bar {
 .auth-form { display: flex; flex-direction: column; gap: 14px; }
 
 .auth-field { display: flex; flex-direction: column; gap: 6px; }
+.auth-bday { margin-bottom: 12px; }
+.auth-bday-row { display: grid; grid-template-columns: 1.4fr 1fr; gap: 8px; }
+.auth-bday-row select { appearance: auto; color-scheme: dark; }
 
 .auth-label {
   font-size: 11px;

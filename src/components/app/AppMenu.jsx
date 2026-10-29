@@ -97,7 +97,7 @@ function ProView({ onVault }) {
       ) : sellsHere() ? (
         <>
           <button className="ag-btn ag-pro-cta" onClick={subscribe} disabled={busy}>{busy ? 'OPENING CHECKOUT…' : `GO PRO — ${plan === 'year' ? `${price.year}/YR` : `${price.month}/MO`}`}</button>
-          <p className="ag-pro-note">{PLAY_BILLING ? 'Paid through Google Play. Pro carries over to the website on this account. ' : IS_APP ? 'Opens a secure Stripe checkout on build-a-player.com. Pro carries over to the app on this account. ' : ''}Cancel anytime. Pro stays on until the end of the period you've paid for.</p>
+          <p className="ag-pro-note">{PLAY_BILLING ? 'Paid through Google Play. Pro carries over to the website on this account. ' : IS_APP ? 'Opens a secure Stripe checkout on build-a-player.com. Pro carries over to the app on this account. ' : ''}Renews automatically at {plan === 'year' ? `${price.year} a year` : `${price.month} a month`} until you cancel. Cancel anytime; Pro stays on until the end of the period you've paid for.</p>
         </>
       ) : null}
       {err && <p className="ag-pro-note ag-pro-note--err">{err}</p>}

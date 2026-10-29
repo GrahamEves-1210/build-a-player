@@ -10,6 +10,20 @@ const toEmail = (username) => `${username.trim().toLowerCase()}@buildaplayer.app
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
+// COPPA: a neutral age question before an account is made (month + year, nothing
+// hinting at the answer). Under 13 can't make one, and that sticks on this device so
+// going back and picking another year doesn't get round it. The birthday isn't saved.
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+const THIS_YEAR = new Date().getFullYear()
+const YEARS = Array.from({ length: 90 }, (_, i) => THIS_YEAR - i)
+const U13_KEY = 'bap_u13'
+const isU13Device = () => { try { return localStorage.getItem(U13_KEY) === '1' } catch { return false } }
+const under13 = (m, y) => {
+  const now = new Date()
+  const age = now.getFullYear() - y - (now.getMonth() < m ? 1 : 0)
+  return age < 13
+}
+
 export default function AuthModal({ onClose, onAuth }) {
   const [tab, setTab]                 = useState('signin')
   const [username, setUsername]       = useState('')
@@ -17,6 +31,23 @@ export default function AuthModal({ onClose, onAuth }) {
   const [password, setPassword]       = useState('')
   const [error, setError]             = useState(null)
   const [loading, setLoading]         = useState(false)
+  const [bMonth, setBMonth]           = useState('')
+  const [bYear, setBYear]             = useState('')
+  const [blocked, setBlocked]         = useState(isU13Device)
+
+  // sign-up only: the birthday has to be filled and 13+ (the Apple / Discord buttons too,
+  // since on this tab they make the account)
+  const ageOk = () => {
+    if (tab !== 'signup') return true
+    if (blocked) return false
+    if (bMonth === '' || bYear === '') { setError('Please enter your birthday.'); return false }
+    if (under13(Number(bMonth), Number(bYear))) {
+      try { localStorage.setItem(U13_KEY, '1') } catch {}
+      setBlocked(true); setError(null)
+      return false
+    }
+    return true
+  }
 
   // App: Discord finishes outside this sheet (in-app browser → back to the app),
   // so close on the sign-in it brings back, and stop "loading" if the browser is dismissed
@@ -48,7 +79,7 @@ export default function AuthModal({ onClose, onAuth }) {
   }
 
   const handleDiscord = async () => {
-    if (!supabase) return
+    if (!supabase || !ageOk()) return
     setLoading(true); setError(null)
     discordPending.current = true
     const { error } = await signInWithDiscord()   // leaves for Discord on success
@@ -58,7 +89,7 @@ export default function AuthModal({ onClose, onAuth }) {
   // Sign in with Apple, the same round trip as Discord (the website leaves for Apple;
   // the app opens its in-app browser)
   const handleApple = async () => {
-    if (!supabase) return
+    if (!supabase || !ageOk()) return
     setLoading(true); setError(null)
     discordPending.current = true
     const { error } = await signInWithApple()
@@ -77,6 +108,7 @@ export default function AuthModal({ onClose, onAuth }) {
       setError('Please enter a valid email address.')
       return
     }
+    if (!ageOk()) return
     setLoading(true)
     setError(null)
 
@@ -134,6 +166,25 @@ export default function AuthModal({ onClose, onAuth }) {
           <button className={`auth-tab ${tab === 'signin' ? 'active' : ''}`} onClick={() => { setTab('signin'); setForgot(false); reset() }}>Sign In</button>
           <button className={`auth-tab ${tab === 'signup' ? 'active' : ''}`} onClick={() => { setTab('signup'); setForgot(false); reset() }}>Create Account</button>
         </div>
+
+        {tab === 'signup' && blocked ? (
+          <p className="auth-forgot-note">Sorry, you need to be 13 or older to make an account. You can still play as a guest.</p>
+        ) : (<>
+        {tab === 'signup' && (
+          <div className="auth-field auth-bday">
+            <label className="auth-label">Birthday</label>
+            <div className="auth-bday-row">
+              <select className="auth-input" aria-label="Birth month" value={bMonth} onChange={e => setBMonth(e.target.value)}>
+                <option value="" disabled>Month</option>
+                {MONTHS.map((m, i) => <option key={m} value={i}>{m}</option>)}
+              </select>
+              <select className="auth-input" aria-label="Birth year" value={bYear} onChange={e => setBYear(e.target.value)}>
+                <option value="" disabled>Year</option>
+                {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+              </select>
+            </div>
+          </div>
+        )}
 
         <button type="button" className="auth-apple" onClick={handleApple} disabled={loading}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.37 12.6c-.02-2.2 1.8-3.26 1.88-3.31-1.03-1.5-2.62-1.7-3.18-1.73-1.35-.14-2.64.8-3.33.8-.69 0-1.74-.78-2.86-.76-1.47.02-2.83.86-3.59 2.17-1.53 2.66-.39 6.6 1.1 8.76.73 1.06 1.6 2.24 2.73 2.2 1.1-.04 1.51-.71 2.84-.71 1.32 0 1.7.71 2.86.69 1.18-.02 1.93-1.07 2.65-2.13.84-1.22 1.18-2.41 1.2-2.47-.03-.01-2.28-.88-2.3-3.5zM14.2 6.13c.6-.73 1.01-1.75.9-2.76-.87.04-1.92.58-2.54 1.31-.56.65-1.05 1.68-.92 2.67.97.08 1.96-.49 2.56-1.22z"/></svg>
@@ -225,6 +276,7 @@ export default function AuthModal({ onClose, onAuth }) {
           )}
         </form>
         )}
+        </>)}
       </div>
     </div>
   )
