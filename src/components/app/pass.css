@@ -135,8 +135,8 @@
 .bp-card-go.is-quiet { color: var(--ag-text-2); background: rgba(255,255,255,.06); }
 
 .pro-card {
-  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px;
-  width: 100%; padding: 11px 14px; border-radius: 16px; text-align: left; cursor: pointer;
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 16px;
+  width: 100%; padding: 16px 18px; border-radius: 16px; text-align: left; cursor: pointer;
   border: 1.5px solid rgba(212,175,55,.4);
   background: radial-gradient(ellipse 70% 120% at 0% 50%, rgba(212,175,55,.16), transparent 70%), rgba(20,16,6,.55);
   color: var(--ag-text); font: inherit;
@@ -144,14 +144,18 @@
   transition: transform var(--press);
 }
 .pro-card:active { transform: scale(.98); }
-.pro-card-crown { color: var(--ag-gold-hi); display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: rgba(212,175,55,.14); }
-.pro-card-txt { display: grid; gap: 3px; min-width: 0; }
-.pro-card-title { font-family: var(--ag-font); font-size: 18px; letter-spacing: 1.8px; line-height: 1; color: #fff; }
+.pro-card-txt { display: grid; gap: 10px; min-width: 0; }
+.pro-card-title { display: flex; align-items: center; gap: 8px; font-family: var(--ag-font); font-size: 20px; letter-spacing: 2px; line-height: 1; color: #fff; }
+.pro-card-title svg { color: var(--ag-gold-hi, #e8c766); flex: none; }
 .pro-card-sub { font-family: var(--ag-body); font-size: 12px; font-weight: 600; color: var(--ag-muted); }
-/* the perks as a bullet list, one under the other */
-.pro-card-perks { display: grid; grid-template-columns: 1fr; gap: 3px; margin-top: 3px; font-family: var(--ag-body); font-size: 12px; font-weight: 600; color: var(--ag-muted); text-align: left; }
-.pro-card-perks > span { position: relative; padding-left: 12px; line-height: 1.3; }
-.pro-card-perks > span::before { content: ''; position: absolute; left: 0; top: .5em; width: 5px; height: 5px; border-radius: 50%; background: var(--ag-gold-hi, #e8c766); }.pro-card-go { font-family: var(--ag-font); font-size: 15px; letter-spacing: 1.8px; padding: 8px 11px 6px; border-radius: 10px; color: #1a1000; background: linear-gradient(135deg, #fde68a, #d4af37); }
+/* the perks: a gold check and the line, one under the other */
+.pro-card-perks { display: grid; gap: 6px; font-family: var(--ag-body); font-size: 13px; font-weight: 600; line-height: 1.2; color: rgba(255,255,255,.88); }
+.pro-card-perks > span { display: flex; align-items: center; gap: 8px; }
+.pro-card-perks svg { flex: none; color: var(--ag-gold-hi, #e8c766); }
+/* the call: the button, the price under it */
+.pro-card-cta { display: grid; justify-items: center; gap: 6px; }
+.pro-card-cta small { font-family: var(--ag-body); font-size: 11.5px; font-weight: 600; color: var(--ag-muted); white-space: nowrap; }
+.pro-card-go { font-family: var(--ag-font); font-size: 16px; letter-spacing: 2px; padding: 10px 18px 8px; border-radius: 11px; color: #1a1000; background: linear-gradient(135deg, #fde68a, #d4af37); box-shadow: 0 4px 14px rgba(212,175,55,.25); white-space: nowrap; }
 
 .ag-promos { display: grid; gap: 8px; margin-top: 12px; }
 /* Home: the same 14px gutter as the modes (the Shop's section keeps its own padding) */

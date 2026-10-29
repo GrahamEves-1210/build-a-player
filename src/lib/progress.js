@@ -531,13 +531,13 @@ export async function fetchPlayersOfDay(key = dayKey()) {
   if (!supabase) return { rows: [], error: true }
   const { data, error } = await supabase.from('accounts')
     .select('id,username,cos').eq('cos->today->>d', key)
-    .order('cos->today->xp', { ascending: false }).limit(3)
+    .order('cos->today->xp', { ascending: false }).limit(POTD_COINS.length)
   if (error) return { rows: [], error: true }
   return { rows: (data ?? []).filter(r => r.username && r.cos?.today?.xp > 0) }
 }
 // Yesterday's board, for the payout: a player's tally for that day is either still
 // "today" on their profile (they haven't played since) or moved to "yday"
-export const POTD_COINS = [500, 300, 200]
+export const POTD_COINS = [500, 300, 200, 150, 100]   // the top 5 are paid (the board's length too)
 export async function fetchPlayersOfDayFor(day) {
   if (!supabase) return { rows: [], error: true }
   const q = f => supabase.from('accounts').select('id,username,cos').eq(`cos->${f}->>d`, day).order(`cos->${f}->xp`, { ascending: false }).limit(10)
@@ -548,9 +548,9 @@ export async function fetchPlayersOfDayFor(day) {
     const t = r.cos?.[f]
     if (r.username && t?.d === day && t.xp > 0 && !byId.has(r.id)) byId.set(r.id, { ...r, day: t })
   }
-  return { rows: [...byId.values()].sort((x, y) => y.day.xp - x.day.xp || x.id.localeCompare(y.id)).slice(0, 3) }
+  return { rows: [...byId.values()].sort((x, y) => y.day.xp - x.day.xp || x.id.localeCompare(y.id)).slice(0, POTD_COINS.length) }
 }
-// The morning after: a top-3 finish yesterday pays once
+// The morning after: a top-5 finish yesterday pays once
 let potdChecking = false
 async function payPlayersOfDay() {
   const y = dayKey(-1)
@@ -564,7 +564,7 @@ async function payPlayersOfDay() {
     const i = r.rows.findIndex(x => x.id === uid)
     if (i >= 0) {
       earn(POTD_COINS[i], null, true)
-      toast({ kind: 'coins', title: `PLAYER OF THE DAY · ${['1ST', '2ND', '3RD'][i]}`, sub: `+${POTD_COINS[i]} coins for yesterday` })
+      toast({ kind: 'coins', title: `PLAYER OF THE DAY · ${['1ST', '2ND', '3RD', '4TH', '5TH'][i]}`, sub: `+${POTD_COINS[i]} coins for yesterday` })
     }
     emit()
   } finally { potdChecking = false }

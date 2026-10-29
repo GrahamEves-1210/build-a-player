@@ -238,7 +238,7 @@ function ModeCard({ tone, title, badge, onClick, mark: Mark, isNew, delay }) {
   )
 }
 
-// Players of the Day: the three who earned the most XP today, across every mode
+// Players of the Day: the five who earned the most XP today, across every mode
 // (fetchPlayersOfDay). Refreshes every couple of minutes while home is open.
 function PlayersOfDay() {
   const p = useProgress()
@@ -261,7 +261,7 @@ function PlayersOfDay() {
         <span className="ag-potd-titles">
           <span className="ag-eyebrow">TODAY · EVERY MODE</span>
           <b className="ag-potd-title">PLAYERS OF THE DAY</b>
-          <small className="ag-potd-pay">Top 3 at midnight ET win {POTD_COINS.map(n => n.toLocaleString()).join(' / ')} coins</small>
+          <small className="ag-potd-pay">Top {POTD_COINS.length} at midnight ET win {POTD_COINS.map(n => n.toLocaleString()).join(' / ')} coins</small>
         </span>
       </div>
       {rows.length ? (
@@ -278,7 +278,7 @@ function PlayersOfDay() {
       ) : <EmptyState kind="podium" small title="Nobody on the board yet">Play anything today to take #1.</EmptyState>}
       {!inTop && (
         <p className="ag-potd-mine">{me
-          ? <>{getUsername(p.user) || 'Player'} today: <b>{t.xp.toLocaleString()} XP</b> · {t.g} {t.g === 1 ? 'game' : 'games'}{rows.length === 3 ? <> · {Math.max(0, (rows[2].cos.today.xp ?? 0) - t.xp + 1).toLocaleString()} XP to make the top 3</> : null}</>
+          ? <>{getUsername(p.user) || 'Player'} today: <b>{t.xp.toLocaleString()} XP</b> · {t.g} {t.g === 1 ? 'game' : 'games'}{rows.length === POTD_COINS.length ? <> · {Math.max(0, (rows[rows.length - 1].cos.today.xp ?? 0) - t.xp + 1).toLocaleString()} XP to make the top {POTD_COINS.length}</> : null}</>
           : 'Sign in to get on the board.'}</p>
       )}
     </section>

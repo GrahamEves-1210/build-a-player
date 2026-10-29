@@ -3,7 +3,7 @@ import { useProgress } from '../../lib/progress'
 import { sellsHere, onStorefront } from '../../lib/storefront'
 import { PRO_PRICE } from '../../lib/webCheckout'
 import { useStorePrices, PRO_PLAN_ID } from '../../lib/iap'
-import { IconCrown } from './icons'
+import { IconCrown, IconCheck } from './icons'
 import './pass.css'
 
 // BAP Pro, where players look: Home and the Shop (the Builder Pass is the strip, PassStrip.jsx).
@@ -25,14 +25,16 @@ export function ProCard({ delay }) {
   if (p.pro || !sells) return null
   return (
     <button className="pro-card ag-pop" style={delay ? { '--d': delay } : undefined} onClick={() => nav('pro')}>
-      <span className="pro-card-crown"><IconCrown size={22} /></span>
       <span className="pro-card-txt">
-        <span className="pro-card-title">BAP PRO</span>
+        <span className="pro-card-title"><IconCrown size={18} /> BAP PRO</span>
         <span className="pro-card-perks">
-          {['+50% coins from every game', 'Pro Vault looks included', 'No ads', 'Pro badge and Discord role'].map(t => <span key={t}>{t}</span>)}
+          {['+50% coins from every game', 'Pro Vault looks included', 'No ads', 'Pro badge and Discord role'].map(t => <span key={t}><IconCheck size={13} />{t}</span>)}
         </span>
       </span>
-      <span className="pro-card-go">{store[PRO_PLAN_ID.month] ?? PRO_PRICE.month}/MO</span>
+      <span className="pro-card-cta">
+        <span className="pro-card-go">GO PRO</span>
+        <small>{store[PRO_PLAN_ID.month] ?? PRO_PRICE.month} a month</small>
+      </span>
     </button>
   )
 }
