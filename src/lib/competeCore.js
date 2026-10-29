@@ -28,7 +28,7 @@ const UNKNOWN_VAL = 3                 // a slot the server can't match to a real
 const OFF_SEED_MAX = 2
 const SEED_SLACK = 2                  // spins past one-a-slot that still count (a pick never placed)
 
-export const COMPETE_POS = { nfl: ['qb', 'rb', 'wr', 'te', 'db'], bucket: ['guard', 'big'] }
+export const COMPETE_POS = { nfl: ['qb', 'rb', 'wr'], bucket: ['guard', 'big'] }   // TE and DB pools off: not enough players to fill them
 const NFL = {
   qb: { pool: QBS, types: TYPES, ovr: b => calcOVR(b) },
   rb: { pool: RBS, types: RB_TYPES, ovr: b => calcOVRRB(b) },

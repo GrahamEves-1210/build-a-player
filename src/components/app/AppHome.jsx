@@ -430,7 +430,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
               <PoolArt />
               <span className="ag-live-dot" />
               <span className="ag-card-txt">
-                <span className="ag-eyebrow">{crowd(here.compete) ? <>ONLINE · <RollingNumber value={crowd(here.compete)} format={fmtCount} /> PLAYING NOW</> : ol.played ? <>ONLINE · {tierFor(ol.rating)[1].toUpperCase()} · {ol.rating}</> : 'ONLINE · 5-PLAYER POOLS'}</span>
+                <span className="ag-eyebrow">{here.compete > 0 ? <>ONLINE · <RollingNumber value={here.compete} format={fmtCount} /> PLAYING NOW</> : ol.played ? <>ONLINE · {tierFor(ol.rating)[1].toUpperCase()} · {ol.rating}</> : 'ONLINE · 5-PLAYER POOLS'}</span>
                 <span className="ag-card-title">COMPETE</span>
                 <span className="ag-card-sub">{cs?.played
                   ? `${cs.wins} ${cs.wins === 1 ? 'win' : 'wins'} in ${cs.played} · avg place ${(cs.placeSum / cs.played).toFixed(1)}${cs.streak >= 2 ? ` · ${cs.streak} straight` : ''}`

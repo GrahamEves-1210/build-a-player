@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
-import { usePresence, fmtCount, crowd } from '../../lib/presence'
+import { usePresence, fmtCount } from '../../lib/presence'
 import { XpIco } from './GainIcons'
 import { useProgress, COMPETE_REWARDS } from '../../lib/progress'
 import { POOL_SIZE, FILL_AFTER_SECS, MIN_POOL } from '../../lib/compete'
@@ -40,6 +40,9 @@ export default function AppCompete({ cp, au, sport, position, positions, onPosit
   const setMode = m => { setModeRaw(m); try { localStorage.setItem('bap_compete_mode', m) } catch {} }
   const auctionOn = !!au && au.phase !== 'idle'
   const showAuction = auctionOn || (!!au && mode === 'auction' && cp.phase === 'idle')
+  // players in each mode right now (lib/presence.js), shown from the first one
+  const areas = usePresence()?.areas ?? {}
+  const inPool = areas.compete ?? 0, inAuction = areas.auction ?? 0
   const auPositions = positions.filter(o => (AUCTION_POS[sport === 'bucket' ? 'bucket' : 'nfl'] ?? []).includes(o.pos))
   // the auction has no DB: switching to it moves you to a position it has
   useEffect(() => { if (showAuction && !auctionOn && auPositions.length && !auPositions.some(o => o.pos === position)) onPosition(auPositions[0].pos) }, [showAuction, position]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -145,12 +148,12 @@ export default function AppCompete({ cp, au, sport, position, positions, onPosit
         )}
         {showAuction ? (
           <div className="cp-hero ag-pop">
-            <span className="ag-eyebrow">ONLINE · 1V1 · ${BUDGET} EACH</span>
+            <span className="ag-eyebrow">ONLINE · 1V1 · ${BUDGET} EACH{inAuction > 0 ? ` · ${fmtCount(inAuction)} PLAYING NOW` : ''}</span>
             <p className="cp-how">You against one other player, <b>${BUDGET}</b> each and Salary Cap's five rating slots, empty. You always keep $1 for each of your other empty slots, and a slot still empty at the end gets a free agent (a C). A slot card is pulled, the spinner lands on a real player, and their grade stays <b>face down</b> until the gavel. Bid <b>+$1</b> or sit out: going once, going twice, and every bid puts the clock back to <b>{RESET_SECS} seconds</b>. When every slot is filled, the <b>highest OVR</b> wins.</p>
           </div>
         ) : (
           <div className="cp-hero ag-pop">
-            <span className="ag-eyebrow">ONLINE · {POOL_SIZE}-PLAYER POOLS</span>
+            <span className="ag-eyebrow">ONLINE · {POOL_SIZE}-PLAYER POOLS{inPool > 0 ? ` · ${fmtCount(inPool)} PLAYING NOW` : ''}</span>
             <p className="cp-how">You and four other players get <b>the same spins</b>. Respins are your own. Everyone builds, and the <b>highest OVR</b> takes the pool. No sandbox.</p>
           </div>
         )}
@@ -164,18 +167,16 @@ export default function AppCompete({ cp, au, sport, position, positions, onPosit
         </div>
         <button className="ag-btn cp-go ag-pop" style={{ '--d': '160ms' }} onClick={showAuction ? () => au.join() : cp.join}>{showAuction ? 'FIND AN AUCTION' : 'FIND A POOL'} <IconArrow size={16} /></button>
         <div className="cp-rewards ag-pop" style={{ '--d': '200ms' }}>
-          {[1, 2, 3, 4, 5].map(n => <span key={n}><b>{ord(n)}</b><span className="gain"><XpIco /> +{COMPETE_REWARDS[n][0]}</span> · <span className="gain"><span className="coin-ico coin-ico--sm" /> +{COMPETE_REWARDS[n][1]}</span></span>)}
+          {[1, 2, 3, 4, 5].map(n => <span key={n}><b>{ord(n)}</b><span className="gain"><XpIco /> +{COMPETE_REWARDS[n][0]}</span><span className="gain"><span className="coin-ico coin-ico--sm" /> +{COMPETE_REWARDS[n][1]}</span></span>)}
         </div>
       </>
     )
   }
 
-  const areas = usePresence()?.areas ?? {}
-  const inMode = crowd((areas.compete ?? 0) + (areas.auction ?? 0))
   return (
     <div className={`ag-screen cp cp--${isBucket ? 'bucket' : 'nfl'}`}>
       <div className="ag-screen-head">
-        <div><span className="ag-eyebrow">{isBucket ? 'BASKETBALL' : 'FOOTBALL'} · {posName}{showAuction ? ' · TRAIT AUCTION' : ''}{inMode ? ` · ${fmtCount(inMode)} PLAYING NOW` : ''}</span><h1 className="ag-h1">Compete</h1></div>
+        <div><span className="ag-eyebrow">{isBucket ? 'BASKETBALL' : 'FOOTBALL'} · {posName}{showAuction ? ' · TRAIT AUCTION' : ''}</span><h1 className="ag-h1">Compete</h1></div>
         <button className="ag-round-btn" onClick={() => guardLeave(() => { if (cp.phase === 'queue') cp.leave(); if (au?.phase === 'queue') au.leave(); onHome() })} aria-label="Home"><IconClose size={16} /></button>
       </div>
       {body}

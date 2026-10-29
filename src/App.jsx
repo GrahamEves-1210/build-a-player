@@ -38,6 +38,7 @@ import { DB_LEGENDS } from './data/db-legends'
 import { OLS, OL_TYPES, OL_LITE_TYPES, OL_CATEGORIES, OL_ATTR } from './data/ols'
 import { ALLTIME_RATINGS, NFL_TEAMS, TEAMS } from './data/nfl-teams'
 import { useCompete, botBuild } from './lib/compete'
+import { COMPETE_POS } from './lib/competeCore'
 import { setLiveLock, liveLock, guardLeave } from './lib/liveLock'
 import { useAuction } from './lib/auction'
 import { FORFEIT_RATING } from './lib/progress'
@@ -545,7 +546,7 @@ export default function App() {
   useLayoutEffect(() => { activeDragRef.current = activeDrag }, [activeDrag])
 
   // ── COMPETE: five-player pools on the same spins (lib/compete.js) ──────────
-  const [competePos, setCompetePos] = useState(() => { let p = 'qb'; try { p = localStorage.getItem('lastPosition') || 'qb' } catch {}; return ['qb', 'rb', 'wr', 'te', 'db'].includes(p) ? p : 'qb' })
+  const [competePos, setCompetePos] = useState(() => { let p = 'qb'; try { p = localStorage.getItem('lastPosition') || 'qb' } catch {}; return COMPETE_POS.nfl.includes(p) ? p : 'qb' })
   const cp = useCompete({
     enabled: IS_APP || APP_LOOK, user, sport: 'nfl', pos: competePos,
     botFor: (seed, idx, skill, pos) => botBuild({
@@ -1646,7 +1647,7 @@ export default function App() {
   if (page === 'compete') {
     return withGame(
       <Suspense fallback={null}>
-        <AppCompete cp={cp} au={au} sport="nfl" position={competePos} positions={POS_OPTIONS.filter(o => ['qb', 'rb', 'wr', 'te', 'db'].includes(o.pos))}
+        <AppCompete cp={cp} au={au} sport="nfl" position={competePos} positions={POS_OPTIONS.filter(o => COMPETE_POS.nfl.includes(o.pos))}
           onPosition={setCompetePos} onHome={() => setPage('splash')} onResumeBuild={() => setPage('game')}
           onPlayAgain={() => cp.join()} />
       </Suspense>

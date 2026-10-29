@@ -2992,7 +2992,9 @@ html.fake-rail .sh-sheet { max-height: calc(88dvh - var(--web-rail)); padding-bo
 .cp-pos .ag-pos { height: 44px; }
 .cp-go { height: 58px; font-size: 24px; gap: 8px; }
 .cp-rewards { display: grid; grid-template-columns: 1fr; gap: 4px; font-family: var(--ag-body); font-size: 12px; color: var(--ag-muted); }
-.cp-rewards span { display: flex; justify-content: space-between; }
+/* a row: place on the left, then XP and coins in fixed columns on the right */
+.cp-rewards > span { display: grid; grid-template-columns: 1fr 64px 64px; align-items: center; gap: 10px; }
+.cp-rewards > span > .gain { justify-content: flex-start; color: var(--ag-text); font-weight: 600; }
 .cp-rewards b { font-family: var(--ag-font); font-weight: 400; font-size: 14px; letter-spacing: 1.5px; color: var(--ag-text); }
 .cp-finding, .cp-podium { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; overflow: hidden; }
 .cp-pulse { position: absolute; inset: auto; width: 180px; height: 180px; top: -40px; border-radius: 50%; background: radial-gradient(circle, color-mix(in srgb, var(--ag-a1) 30%, transparent), transparent 70%); animation: cp-pulse 1.8s ease-in-out infinite; pointer-events: none; }
@@ -5115,7 +5117,9 @@ html:is(.is-app, .app-look) .sil-wrap--app-bkt .cz-player-drop { gap: 5px; }
 .xp-ico--sm, .lg-ico--sm { width: 15px; height: 15px; vertical-align: -3px; }
 .xp-ico--sm::before { font-size: 6.6px; }
 .lg-ico--sm::before { font-size: 8px; }
-.gain { white-space: nowrap; }
+/* a reward: its mark and its number side by side, centred, a little apart (everywhere) */
+.gain { white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; vertical-align: middle; }
+.gain > :is(.xp-ico, .lg-ico, .coin-ico) { vertical-align: 0; }
 .cr-legacy-extras { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 6px 0 0; font-size: 12px; color: var(--ag-muted); }
 
 /* The spin drop-down on the website: the build page has no bottom bar there, so the
@@ -5603,9 +5607,10 @@ html.bap-reduce-motion :is(.ss-overlay, .ss-sheet, .ss-img, .ss-skel) { animatio
 /* Home: players online right now (lib/presence.js): a small tag at the left of the logo,
    out of the flow so the logo doesn't move */
 .ag-brand { position: relative; }
-.ag-live-count { position: absolute; left: 14px; top: 4px; z-index: 1; display: grid; justify-items: start; gap: 1px; padding: 6px 9px 5px; border-radius: 10px; background: rgba(0,0,0,.35); border: 1px solid var(--ag-line); font-family: var(--ag-font); line-height: 1; color: var(--ag-text); }
-.ag-live-count b { display: flex; align-items: center; gap: 5px; font-weight: 400; font-size: 15px; letter-spacing: 1px; font-variant-numeric: tabular-nums; }
-.ag-live-count small { font-size: 10px; letter-spacing: 1.8px; color: var(--ag-muted); }
+/* one slim pill: ● 305 ONLINE */
+.ag-live-count { position: absolute; left: 14px; top: 6px; z-index: 1; display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; border-radius: 999px; background: rgba(0,0,0,.35); border: 1px solid var(--ag-line); font-family: var(--ag-font); line-height: 1; color: var(--ag-text); }
+.ag-live-count b { display: flex; align-items: center; gap: 6px; font-weight: 400; font-size: 14px; letter-spacing: 1px; font-variant-numeric: tabular-nums; }
+.ag-live-count small { font-size: 11px; letter-spacing: 1.6px; color: var(--ag-muted); }
 .ag-live-count i { width: 7px; height: 7px; border-radius: 50%; background: #34d399; box-shadow: 0 0 8px #34d399; }
 @media (prefers-reduced-motion: no-preference) { html:not(.bap-reduce-motion) .ag-live-count i { animation: ag-online-pulse 2s ease-in-out infinite; } }
 @keyframes ag-online-pulse { 50% { opacity: .45; } }
