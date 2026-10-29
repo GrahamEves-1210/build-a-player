@@ -40,7 +40,7 @@ const S1_PREMIUM = {
 // start / end: days in New York time; the season runs from start up to (not including) end.
 // Rewards already reached can still be claimed for CLAIM_DAYS after it ends.
 export const SEASONS = [
-  { id: 's1', name: 'Season 1', title: 'Opening Drive', start: '2026-10-21', end: '2026-12-21', free: S1_FREE, premium: S1_PREMIUM },
+  { id: 's1', name: 'Season 1', title: 'Opening Drive', start: '2026-10-29', end: '2026-12-29', free: S1_FREE, premium: S1_PREMIUM },
 ]
 export const CLAIM_DAYS = 7
 

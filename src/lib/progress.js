@@ -577,12 +577,19 @@ export const CUP_ITEM = 'av-cup'
 const keyOfIndex = i => new Date(i * 86400000).toISOString().slice(0, 10)
 export const weekOf = (key = dayKey()) => { const i = dayIndex(key); return keyOfIndex(i - ((i + 3) % 7)) }   // its Monday
 export const weekEnds = (key = dayKey()) => keyOfIndex(dayIndex(weekOf(key)) + 6)
+// The Cup started with the launch: launch week counts from this day (Thursday to Sunday),
+// and no week before it is paid
+export const CUP_START = '2026-10-29'
 export async function fetchWeeklyCup(week = weekOf()) {
   if (!supabase) return { rows: [], error: true }
-  const { data, error } = await supabase.rpc('weekly_cup', { p_start: week })
-  if (!error) return { rows: data ?? [] }
+  const from = week < CUP_START ? CUP_START : week
+  if (from === week) {
+    const { data, error } = await supabase.rpc('weekly_cup', { p_start: week })
+    if (!error) return { rows: data ?? [] }
+  }
   const end = keyOfIndex(dayIndex(week) + 6)
-  const r = await supabase.from('daily_challenge_results').select('user_id,username,ovr,created_at').gte('day', week).lte('day', end).limit(5000)
+  if (from > end) return { rows: [] }
+  const r = await supabase.from('daily_challenge_results').select('user_id,username,ovr,created_at').gte('day', from).lte('day', end).limit(5000)
   if (r.error) return { rows: [], error: true }
   const by = new Map()
   for (const x of r.data ?? []) {
@@ -596,6 +603,7 @@ let cupChecking = false
 async function payWeeklyCup() {
   const last = weekOf(keyOfIndex(dayIndex(weekOf()) - 7))
   if (!uid || !supabase || S.cupPaid === last || cupChecking || pulledFor !== uid) return
+  if (last < weekOf(CUP_START)) return   // weeks before the launch have no Cup
   cupChecking = true
   try {
     const r = await fetchWeeklyCup(last)

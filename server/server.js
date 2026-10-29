@@ -42,7 +42,7 @@ const PACKS = {
 // The Builder Pass: one season at a time, $8.99 (src/lib/pass.js). A season sells until it ends.
 // Keep in step with SEASONS there.
 const PASS_SEASONS = {
-  s1: { name: 'Builder Pass · Season 1', cents: 899, end: '2026-12-21' },
+  s1: { name: 'Builder Pass · Season 1', cents: 899, end: '2026-12-29' },
 }
 const nyDay = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date())
 
