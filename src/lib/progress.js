@@ -526,9 +526,20 @@ async function postDaily(ovr, pos, mode, build) {
   })
   if (!error || error.code === '23505') { S.dc.posted = true; emit() }   // 23505: already posted today
 }
+// The boards come from board_cache (supabase/board_cache.sql: worked out every 5 minutes
+// in the database). The old live queries are only a fallback while that table doesn't
+// exist yet (42P01 / PGRST205); any other error is just an error, so a struggling
+// database isn't asked for the expensive version on top.
+async function cached(kind, day) {
+  const { data, error } = await supabase.from('board_cache').select('rows').eq('kind', kind).eq('day', day).maybeSingle()
+  if (!error) return { rows: Array.isArray(data?.rows) ? data.rows : [] }
+  return ['42P01', 'PGRST205'].includes(error.code) ? null : { rows: [], error: true }
+}
 // Players of the Day: the most XP earned today, across every mode (accounts.cos.today)
 export async function fetchPlayersOfDay(key = dayKey()) {
   if (!supabase) return { rows: [], error: true }
+  const c = await cached('potd', key)
+  if (c) return c
   const { data, error } = await supabase.from('accounts')
     .select('id,username,cos').eq('cos->today->>d', key)
     .order('cos->today->xp', { ascending: false }).limit(POTD_COINS.length)
@@ -540,6 +551,8 @@ export async function fetchPlayersOfDay(key = dayKey()) {
 export const POTD_COINS = [500, 300, 200, 150, 100]   // the top 5 are paid (the board's length too)
 export async function fetchPlayersOfDayFor(day) {
   if (!supabase) return { rows: [], error: true }
+  const c = await cached('potd', day)
+  if (c) return c
   const q = f => supabase.from('accounts').select('id,username,cos').eq(`cos->${f}->>d`, day).order(`cos->${f}->xp`, { ascending: false }).limit(10)
   const [a, b] = await Promise.all([q('today'), q('yday')])
   if (a.error && b.error) return { rows: [], error: true }
@@ -579,9 +592,11 @@ export const weekOf = (key = dayKey()) => { const i = dayIndex(key); return keyO
 export const weekEnds = (key = dayKey()) => keyOfIndex(dayIndex(weekOf(key)) + 6)
 // The Cup started with the launch: launch week counts from this day (Thursday to Sunday),
 // and no week before it is paid
-export const CUP_START = '2026-10-29'
+export const CUP_START = '2026-10-29'   // also in supabase/board_cache.sql
 export async function fetchWeeklyCup(week = weekOf()) {
   if (!supabase) return { rows: [], error: true }
+  const c = await cached('cup', week)
+  if (c) return c
   const from = week < CUP_START ? CUP_START : week
   if (from === week) {
     const { data, error } = await supabase.rpc('weekly_cup', { p_start: week })
