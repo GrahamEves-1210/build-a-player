@@ -5279,6 +5279,11 @@ html.ag-fan-open .ag-dock { z-index: 1170; }
 /* The website's home ad: under Salary Cap / The Depth Chart, the modes grid's full width, no margins */
 .ag-home-ad { grid-column: 1 / -1; margin: 0; padding: 0; display: flex; flex-direction: column; align-items: center; overflow: hidden; }
 .ag-home-ad:empty, html.ads-hidden .ag-home-ad { display: none; }
+/* the pair: side by side, centred; it collapses while neither slot has an ad */
+.ag-home-ad--pair { flex-direction: row; justify-content: center; align-items: flex-start; gap: 24px; flex-wrap: wrap; }
+.ag-home-ad-slot { display: flex; flex-direction: column; align-items: center; }
+.ag-home-ad-slot:empty { display: none; }
+.ag-home-ad--pair:not(:has(> .ag-home-ad-slot:not(:empty))) { display: none; }
 /* Every in-page ad (not the sticky rails): a small ADVERTISEMENT label over it, once an ad is
    actually in the slot (an empty slot shows nothing) */
 :is([id^="ramp-cntr1"], [id^="ramp-season"]):has(iframe) { flex-direction: column; align-items: center; }

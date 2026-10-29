@@ -62,6 +62,8 @@ const PLURAL = { qb: 'QBs', rb: 'RBs', wr: 'WRs', te: 'TEs', db: 'DBs', guard: '
 const NEW_ALLTIME = new Set(['wr', 'te', 'db'])
 
 const nav = to => window.dispatchEvent(new CustomEvent('bap:nav', { detail: to }))
+// the website on a desktop-width screen: the home ad is a pair of boxes
+const HOME_AD_PAIR = !IS_APP && typeof matchMedia === 'function' && matchMedia('(min-width: 769px)').matches
 const openMenu = () => window.dispatchEvent(new CustomEvent('bap:menu'))
 
 export const HoopU = () => (
@@ -297,7 +299,8 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
   // the website: an in-page ad under Salary Cap / The Depth Chart (never in the app, never ad-free)
   useEffect(() => {
     if (IS_APP || document.documentElement.classList.contains('ads-hidden')) return
-    rampAdd([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-home' }])
+    // desktop: two boxes side by side (one 300x250 left the wide row mostly empty); phones: one
+    rampAdd([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-home' }, ...(HOME_AD_PAIR ? [{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-home-2' }] : [])])
   }, [sport])
 
   const pick = pos => { setPosition(pos); try { localStorage.setItem(storeKey, pos) } catch {} }
@@ -474,7 +477,12 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
             </>
           )}
           {/* website: an ad right under those, the full width, no margins of its own (collapses when there's none) */}
-          {!IS_APP && <div key={`home-ad-${sport}`} id="ramp-cntr1-home" className="ag-home-ad" />}
+          {!IS_APP && (
+            <div key={`home-ad-${sport}`} className="ag-home-ad ag-home-ad--pair">
+              <div id="ramp-cntr1-home" className="ag-home-ad-slot" />
+              {HOME_AD_PAIR && <div id="ramp-cntr1-home-2" className="ag-home-ad-slot" />}
+            </div>
+          )}
         </div>
         <div className="ag-promos">
           <PassStrip />
