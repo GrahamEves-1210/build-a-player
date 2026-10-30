@@ -189,7 +189,7 @@ export const NBA_GUARD_PLAYERS = [
   { name: 'Stephen Curry', short: 'Curry', team: 'GSW', starter: true, captain: true, number: 30, height: 75, weight: 185, wingspan: 76, skin: '#c4876d', position: 'PG', faceCenter: [49, 39],
     attrs: { jumpShot: 11, finishing: 8, passing: 9, handles: 10, perimeterDefense: 4, speed: 7, bounce: 4, size: 3, basketballIQ: 10, clutch: 10 } },
   { name: 'De\'Anthony Melton', short: 'Melton', team: 'GSW', starter: false, captain: false, number: 8, height: 76, weight: 200, wingspan: 81, skin: '#966b5e', position: 'SG', faceCenter: [44, 46],
-    attrs: { jumpShot: 5, finishing: 4, passing: 3, handles: 3, perimeterDefense: 5, speed: 5, bounce: 5, size: 5, basketballIQ: 3, clutch: 3 } },
+    attrs: { jumpShot: 5, finishing: 4, passing: 3, handles: 3, perimeterDefense: 7, speed: 5, bounce: 5, size: 5, basketballIQ: 3, clutch: 3 } },
   { name: 'Moses Moody', short: 'Moody', team: 'GSW', starter: false, captain: false, number: 4, height: 78, weight: 205, wingspan: 85, skin: '#b67452', position: 'SG', faceCenter: [50, 43],
     attrs: { jumpShot: 5, finishing: 5, passing: 3, handles: 4, perimeterDefense: 6, speed: 6, bounce: 6, size: 7, basketballIQ: 4, clutch: 4 } },
   { name: 'Gary Payton II', short: 'Payton II', team: 'GSW', starter: false, captain: false, number: 0, height: 74, weight: 178, wingspan: 80, skin: '#b67b5e', position: 'SG', faceCenter: [50, 46],
@@ -239,7 +239,7 @@ export const NBA_GUARD_PLAYERS = [
 
   // ─── LAC ───────────────────────────────────────────────────────
   { name: 'Kris Dunn', short: 'Dunn', team: 'LAC', starter: false, captain: false, number: 8, height: 76, weight: 210, wingspan: 82, skin: '#996550', position: 'PG', faceCenter: [50, 39],
-    attrs: { jumpShot: 4, finishing: 3, passing: 4, handles: 4, perimeterDefense: 6, speed: 5, bounce: 4, size: 6, basketballIQ: 4, clutch: 3 } },
+    attrs: { jumpShot: 4, finishing: 3, passing: 4, handles: 4, perimeterDefense: 8, speed: 5, bounce: 4, size: 6, basketballIQ: 4, clutch: 3 } },
   { name: 'Darius Garland', short: 'Garland', team: 'LAC', starter: true, captain: false, number: 10, height: 73, weight: 192, wingspan: 77, skin: '#965d3f', position: 'PG', faceCenter: [51, 40],
     attrs: { jumpShot: 6, finishing: 5, passing: 6, handles: 8, perimeterDefense: 1, speed: 8, bounce: 3, size: 3, basketballIQ: 7, clutch: 7 } },
   { name: 'Rui Hachimura', short: 'Hachimura', team: 'LAC', starter: false, captain: false, number: 28, height: 80, weight: 230, wingspan: 86, skin: '#9b6040', position: 'SF', faceCenter: [50, 42],
@@ -339,7 +339,7 @@ export const NBA_GUARD_PLAYERS = [
   { name: 'Kevin Porter Jr.', short: 'Porter Jr.', team: 'MIL', starter: false, captain: false, number: 7, height: 76, weight: 200, wingspan: 81, skin: '#956146', position: 'SG', faceCenter: [49, 40],
     attrs: { jumpShot: 7, finishing: 4, passing: 5, handles: 4, perimeterDefense: 5, speed: 7, bounce: 5, size: 5, basketballIQ: 3, clutch: 3 } },
   { name: 'Ryan Rollins', short: 'Rollins', team: 'MIL', starter: true, captain: false, number: 13, height: 76, weight: 190, wingspan: 82, skin: '#b98466', position: 'SG', faceCenter: [49, 42],
-    attrs: { jumpShot: 4, finishing: 3, passing: 3, handles: 3, perimeterDefense: 4, speed: 5, bounce: 4, size: 5, basketballIQ: 3, clutch: 3 } },
+    attrs: { jumpShot: 6, finishing: 3, passing: 3, handles: 3, perimeterDefense: 4, speed: 5, bounce: 4, size: 5, basketballIQ: 3, clutch: 3 } },
   { name: 'Gary Trent Jr.', short: 'Trent Jr.', team: 'MIL', starter: false, captain: false, number: 5, height: 78, weight: 209, wingspan: 81, skin: '#a67152', position: 'SG', faceCenter: [50, 36],
     attrs: { jumpShot: 5, finishing: 3, passing: 3, handles: 3, perimeterDefense: 4, speed: 5, bounce: 5, size: 6, basketballIQ: 3, clutch: 3 } },
 
