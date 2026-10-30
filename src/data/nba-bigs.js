@@ -97,7 +97,7 @@ export const NBA_BIG_PLAYERS = [
   { name: 'John Collins', short: 'Collins', team: 'DET', starter: true, captain: false, number: 20, height: 81, weight: 235, wingspan: 83, skin: '#b98169', position: 'PF', faceCenter: [50, 39],
     attrs: { jumpShot: 5, finishing: 8, rebounding: 8, playmaking: 3, interiorDefense: 5, speed: 6, bounce: 8, size: 5, basketballIQ: 4, clutch: 5 } },
   { name: 'Jalen Duren', short: 'Duren', team: 'DET', starter: true, captain: false, number: 0, height: 83, weight: 250, wingspan: 89, skin: '#8e5f46', position: 'C', faceCenter: [50, 40],
-    attrs: { jumpShot: 1, finishing: 5, rebounding: 9, playmaking: 4, interiorDefense: 6, speed: 6, bounce: 6, size: 8, basketballIQ: 2, clutch: 2 } },
+    attrs: { jumpShot: 1, finishing: 6, rebounding: 9, playmaking: 4, interiorDefense: 6, speed: 6, bounce: 8, size: 8, basketballIQ: 2, clutch: 2 } },
   { name: 'Paul Reed', short: 'Reed', team: 'DET', starter: false, captain: false, number: 7, height: 81, weight: 220, wingspan: 86, skin: '#936750', position: 'PF', faceCenter: [50, 39],
     attrs: { jumpShot: 4, finishing: 5, rebounding: 5, playmaking: 2, interiorDefense: 6, speed: 3, bounce: 3, size: 6, basketballIQ: 3, clutch: 3 } },
 
