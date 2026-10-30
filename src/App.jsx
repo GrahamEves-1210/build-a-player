@@ -1325,7 +1325,12 @@ export default function App() {
     onProfile: () => { window.history.pushState({}, '', '/profile'); setPage('profile') },
     onLeaderboard: () => setPage('leaderboard'),
     // switching position leaves the game: a live one (the Daily, a pool, an auction) asks first and forfeits
-    onSwitchPosition: (pos) => guardLeave(() => { try { localStorage.setItem('lastPosition', pos) } catch {}; handleHome() }),
+    // (a new Career's build switches in place: going home dropped the career, so RB couldn't be picked)
+    onSwitchPosition: (pos) => guardLeave(() => {
+      try { localStorage.setItem('lastPosition', pos) } catch {}
+      if (page === 'career-build' && CAREER_POS.includes(pos)) { handleStart('classic', pos); setPage('career-build') }
+      else handleHome()
+    }),
     onSubscribe: async () => {
       if (!user) { setShowAuth(true); return }
       try {

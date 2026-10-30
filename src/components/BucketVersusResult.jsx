@@ -160,6 +160,16 @@ function computeGameConsts(myBuild, oppBuild, myPosition, oppPosition, myName, o
   const oppInsideSP = clamp(oppSP + oppSizeAdv * (0.38 + oppSizeAdv * 0.70) + oppSpeedAdv * 0.18, 0.25, 0.88)
   const my2R  = clamp((v(myBuild,  'jumpShot') - 3) / 8 * 0.44 + 0.08, 0.03, 0.52)
   const opp2R = clamp((v(oppBuild, 'jumpShot') - 3) / 8 * 0.44 + 0.08, 0.03, 0.52)
+  // A 2 from outside goes in on his Jump Shot, contested by his man's defense (Blacktop's
+  // curve, lib/hoops.js). It went in at his overall offense, so a B- shooter who could
+  // finish shot it as well as an A+ one, and nobody's defense contested anything.
+  const look = x => .36 + x * .019 + x * x * .0022
+  const dRate = (b, pos) => ((pos === 'big' ? v(b, 'interiorDefense') : v(b, 'perimeterDefense')) - 5) / 6
+  const myArcSP  = clamp(look(v(myBuild,  'jumpShot')) * (myPosition  === 'big' ? .58 : .65) - dRate(oppBuild, oppPosition) * (oppPosition === 'big' ? .045 : .09), .08, .6)
+  const oppArcSP = clamp(look(v(oppBuild, 'jumpShot')) * (oppPosition === 'big' ? .58 : .65) - dRate(myBuild,  myPosition)  * (myPosition  === 'big' ? .045 : .09), .08, .6)
+  // and inside, his man's defense contests at the rim
+  const myInsideC  = dRate(oppBuild, oppPosition) * (oppPosition === 'big' ? .10 : .06)
+  const oppInsideC = dRate(myBuild,  myPosition)  * (myPosition  === 'big' ? .10 : .06)
   const myBlkR  = clamp((v(myBuild,  'size') + (myPosition  === 'big' ? v(myBuild,'interiorDefense')  : v(myBuild,'perimeterDefense')))  / 22 * 0.10 + sizeEdge * 0.06, 0, 0.14)
   const oppBlkR = clamp((v(oppBuild, 'size') + (oppPosition === 'big' ? v(oppBuild,'interiorDefense') : v(oppBuild,'perimeterDefense'))) / 22 * 0.10 - sizeEdge * 0.06, 0, 0.14)
   const myStlR  = myPosition  === 'guard'
@@ -169,7 +179,7 @@ function computeGameConsts(myBuild, oppBuild, myPosition, oppPosition, myName, o
     ? clamp(v(oppBuild,'perimeterDefense') / 11 * 0.07, 0, 0.07)
     : clamp((v(oppBuild,'speed') + v(oppBuild,'interiorDefense')) / 22 * 0.05, 0, 0.05)
 
-  return { mySP, oppSP, myInsideSP, oppInsideSP, my2R, opp2R, myBlkR, oppBlkR, myStlR, oppStlR,
+  return { mySP, oppSP, myInsideSP: clamp(myInsideSP - myInsideC, .2, .88), oppInsideSP: clamp(oppInsideSP - oppInsideC, .2, .88), myArcSP, oppArcSP, my2R, opp2R, myBlkR, oppBlkR, myStlR, oppStlR,
            myBuild, oppBuild, myPosition, oppPosition, myName, oppName }
 }
 
@@ -182,8 +192,8 @@ function generateNextPlay(consts, gsRef, myAdj, oppAdj, idRef, myCall = null, op
   const isMe    = turn === 'me'
   const adj     = isMe ? myAdj    : oppAdj
   const effMult = adj !== 'balanced' ? 0.88 : 1.0
-  const baseSP  = (isMe ? consts.mySP    : consts.oppSP)    * effMult
   const insideSP = (isMe ? consts.myInsideSP : consts.oppInsideSP) * effMult
+  const arcSP   = (isMe ? consts.myArcSP : consts.oppArcSP) * effMult
   const r2      = isMe ? consts.my2R     : consts.opp2R
   const build   = isMe ? consts.myBuild  : consts.oppBuild
   const pos     = isMe ? consts.myPosition : consts.oppPosition
@@ -211,7 +221,7 @@ function generateNextPlay(consts, gsRef, myAdj, oppAdj, idRef, myCall = null, op
     // the read (tuned so each call has a defense it beats and one it loses to)
     const arcRead = (dfc === 'sag' ? .07 : dfc === 'press' ? -.13 : dfc === 'help' ? .02 : 0) + (off === 'pullup' ? -.05 : 0)
     const inRead = (dfc === 'help' ? -.16 : dfc === 'sag' ? .1 : dfc === 'press' && off === 'post' ? .08 : 0) + (off === 'drive' ? .16 : off === 'post' ? .12 : 0)
-    const sp    = clamp(isArc ? baseSP + arcRead : insideSP + inRead, .2, .93)
+    const sp    = isArc ? clamp(arcSP + arcRead, .08, .6) : clamp(insideSP + inRead, .2, .93)
     if (Math.random() < sp) {
       const pts  = isArc ? 2 : 1
       const type = off === 'post' && !isArc && T.score1Post ? 'score1Post' : getScoreType(isArc, pos, build)

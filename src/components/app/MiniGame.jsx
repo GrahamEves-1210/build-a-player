@@ -52,13 +52,18 @@ export default function MiniGame({ game, build, seed = 'x', onDone, autoStart = 
   // hard (training camp): played as if the trait were a notch or two lower (70%), so a
   // maxed build still has to earn it. The header shows the real grade, never the handicap.
   const real = traitValue(game, build)
-  const v = hard ? Math.max(1, real * 0.7) : real
+  // a mercy rule: each miss in a row at this game plays the next one about 3/4 of a grade
+  // easier (two at most); a make resets it. The header still shows the real grade.
+  const missKey = `bap_mg_miss_${game}`
+  const [ease] = useState(() => { try { return Math.min(2, Number(localStorage.getItem(missKey)) || 0) } catch { return 0 } })
+  const v = Math.min(11, (hard ? Math.max(1, real * 0.7) : real) + ease * 0.75)
   const done = r => {
     if (result) return
     const perfect = !!r.raw && r.raw.of > 0 && r.raw.made === r.raw.of
     // the game's own call decides (camp is already tougher through the handicap above; a
     // separate 0.75 bar there failed drills the game had shown as made)
     const out = { score: clamp(r.score, 0, 1), hit: perfect || (r.hit ?? r.score >= 0.5), note: r.note ?? null, raw: r.raw ?? null, out: !!r.out }
+    try { if (out.hit) localStorage.removeItem(missKey); else localStorage.setItem(missKey, String(Math.min(2, ease + 1))) } catch {}
     setResult(out); setStage('done')
     sfx(out.hit ? 'claim' : 'deny'); haptic(out.hit ? 'success' : 'heavy')
     // a miss that can still be replayed waits for the player's call
@@ -218,6 +223,7 @@ function Power({ v, onDone }) {
 // wait, or opens beside the green one. Tapping red is a miss. Every attempt has
 // at least one, never on the first rep; it wears an X so it isn't colour alone.
 const FLASH = { 'Took the bait: red is covered.': 'RED · TOOK THE BAIT', 'Jumped early.': 'TOO EARLY', 'Wrong read.': 'WRONG READ', 'Window closed.': 'TOO SLOW' }
+const REACT_FLOOR = 220
 function Reaction({ v, seed, rounds, quick = 1, onDone }) {
   const r = useRng(seed)
   const plan = useMemo(() => {
@@ -265,9 +271,11 @@ function Reaction({ v, seed, rounds, quick = 1, onDone }) {
     if (k === decoy) { baited.current = true; settle(0, 'Took the bait: red is covered.'); return }
     if (open == null) { settle(0, 'Jumped early.'); return }
     if (k !== open) { settle(0, 'Wrong read.'); return }
-    settle(clamp(1 - (now() - openedAt.current) / T, 0.35, 1), null)
+    // a person needs ~220 ms to see green and move: that much is free (counted from 0, ELITE
+    // needed a read faster than anyone can react)
+    settle(clamp(1 - Math.max(0, now() - openedAt.current - REACT_FLOOR) / (T - REACT_FLOOR), 0.35, 1), null)
   }
-  useKeys({ 1: () => tap(0), 2: () => tap(1), 3: () => tap(2), ArrowLeft: () => tap(0), ArrowUp: () => tap(1), ArrowRight: () => tap(2) })
+  useKeys({ 1: () => tap(0), 2: () => tap(1), 3: () => tap(2), ArrowLeft: () => tap(0), ArrowUp: () => tap(1), ArrowDown: () => tap(1), ArrowRight: () => tap(2) })
   return (
     <div className="mg-play mg-play--targets">
       <div className="mg-targets">{[0, 1, 2].map(k => <button key={k} className={`mg-target${open === k ? ' is-open' : decoy === k ? ' is-decoy' : ''}`} onPointerDown={() => tap(k)} aria-label={`Target ${k + 1}`}><span /></button>)}</div>
@@ -322,7 +330,7 @@ function Lanes({ v, seed, onDone, need = 2, cue = 'RUSH' }) {
   const go = side => {
     if (from == null) { settle(0); return }
     if ((from === 'L' && side !== 'R') || (from === 'R' && side !== 'L')) { settle(0); return }
-    settle(clamp(1 - (now() - at.current) / T, 0.4, 1))
+    settle(clamp(1 - Math.max(0, now() - at.current - REACT_FLOOR) / (T - REACT_FLOOR), 0.4, 1))   // (the first ~220 ms free, as Reaction)
   }
   useKeys({ ArrowLeft: () => go('L'), ArrowRight: () => go('R'), a: () => go('L'), d: () => go('R') })
   return (

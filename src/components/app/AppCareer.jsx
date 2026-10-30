@@ -7,7 +7,7 @@ import {
   startSeason, resumeSeason, advanceWeek, chooseMoment, resolveInjury, hotHand, canHotHand, hotHandOn, hotGames, finishRegular, playoffRound, bookSeason, recordCombine, spendDev, demandTrade, nextSeason,
   OFF_STEPS, offStep, campDrill, CAMP_LEGACY, dbSpot, lineup, depthChart, gradeOf, gradeOfOvr, ovrGradeVal, SPORT, sportOf,
   openTalks, ask, closeTalks, acceptTalks, ASKS, askOdds, leverageOf,
-  retire, canRetire, mustRetire, careerTotals, legacyOf, LEGACY_TIERS, ALL_TIME, STAT_LABEL, HEADLINE_STATS, AWARD_NAME, MAX_SEASONS, retireReason, goalsFor, stockText, pickText, loadSlots, CAREER_SLOTS, maxedTrait, trainWindow, canUpgrade, upgradeCost, legacyExtras,
+  retire, canRetire, mustRetire, careerTotals, legacyOf, LEGACY_TIERS, ALL_TIME, STAT_LABEL, HEADLINE_STATS, EXTRA_STATS, AWARD_NAME, MAX_SEASONS, retireReason, goalsFor, stockText, pickText, loadSlots, CAREER_SLOTS, maxedTrait, trainWindow, canUpgrade, upgradeCost, legacyExtras,
   compsFor, seasonScore, unretire, canUnretire, comebackYear, COMEBACK_SEASONS } from '../../lib/career'
 import { GAME_LINE } from '../../lib/seasonDirector'
 import { GAMES, pickPlayoffGame } from '../../lib/minigames'
@@ -683,7 +683,7 @@ function Recap({ c, last, user }) {
   return (
     <div className={`ag-card cr-wrap ag-pop${last.champion ? ' is-ring' : ''}`}>
       <div className="ag-card-head"><span className="ag-eyebrow">{last.season} · {last.wins}–{last.losses}{last.playoffs ? ' · PLAYOFFS' : ''}</span>{last.champion && <span className="cr-ring"><IconRing size={13} /> CHAMPIONS</span>}</div>
-      <div className="cr-wrap-stats">{HEADLINE_STATS[c.pos].map(k => <span key={k}><b>{fmt(last.stats[k])}</b><small>{STAT_LABEL[k]}</small></span>)}<span><b>{last.missed}</b><small>GAMES MISSED</small></span></div>
+      <div className="cr-wrap-stats" style={EXTRA_STATS[c.pos] ? { gridTemplateColumns: `repeat(${4 + EXTRA_STATS[c.pos].length}, 1fr)` } : undefined}>{[...HEADLINE_STATS[c.pos], ...(EXTRA_STATS[c.pos] ?? [])].map(k => <span key={k}><b>{fmt(last.stats[k])}</b><small>{STAT_LABEL[k]}</small></span>)}<span><b>{last.missed}</b><small>GAMES MISSED</small></span></div>
       <div className="cr-badges">
         {last.award && <span className="cr-badge is-gold"><IconTrophy size={12} /> {last.awardName}</span>}
         {last.allPro && <span className="cr-badge is-gold"><IconMedal size={12} /> {S.first.toUpperCase()}</span>}
@@ -860,7 +860,7 @@ function CareerTab({ c, L, onDelete }) {
     <section className="cr-sec">
       <div className="ag-card cr-totals ag-pop">
         <div className="ag-card-head"><span className="ag-eyebrow">CAREER · {t.seasons} {t.seasons === 1 ? 'SEASON' : 'SEASONS'}</span></div>
-        <div className="cr-kv">{keys.map(k => <span key={k}><b>{fmt(t.stats[k])}</b><small>{STAT_LABEL[k]}</small></span>)}<span><b>{t.rings}</b><small>RINGS</small></span><span><b>{t.awards}</b><small>{AWARD_NAME[c.pos]}</small></span><span><b>{t.proBowls}</b><small>{S.honors}</small></span><span><b>{t.allPros}</b><small>{S.first.toUpperCase()}</small></span></div>
+        <div className="cr-kv">{[...keys, ...(EXTRA_STATS[c.pos] ?? [])].map(k => <span key={k}><b>{fmt(t.stats[k])}</b><small>{STAT_LABEL[k]}</small></span>)}<span><b>{t.rings}</b><small>RINGS</small></span><span><b>{t.awards}</b><small>{AWARD_NAME[c.pos]}</small></span><span><b>{t.proBowls}</b><small>{S.honors}</small></span><span><b>{t.allPros}</b><small>{S.first.toUpperCase()}</small></span></div>
         <div className="cr-rank">
           <div className="cr-rank-head"><span className="ag-eyebrow">GREATEST {S.isBucket ? '' : `${POS_LABEL[c.pos]} `}CAREERS · TOP {L.of}</span><small>LEGACY PTS</small></div>
           <RankList c={c} L={L} />

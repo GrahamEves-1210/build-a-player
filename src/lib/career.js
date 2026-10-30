@@ -298,6 +298,8 @@ export const STARTERS = { ...SPORT.nfl.starters, ...SPORT.bucket.starters }
 export const PO_ROUNDS = SPORT.nfl.rounds
 export const STAT_LABEL = { passYds: 'PASS YDS', tds: 'TD', ints: 'INT', rating: 'RTG', rushYds: 'RUSH YDS', compPct: 'CMP%', recYds: 'REC YDS', ypc: 'YPC', fumbles: 'FUM', recs: 'REC', ypr: 'YPR', pbus: 'PD', tackles: 'TKL', pickSixes: 'PICK-6', ppg: 'PPG', rpg: 'RPG', apg: 'APG', spg: 'SPG', bpg: 'BPG', pts: 'PTS', reb: 'REB', ast: 'AST' }
 export const HEADLINE_STATS = { ...SPORT.nfl.headline, ...SPORT.bucket.headline }
+// more numbers where there's room (the season wrap, the career totals): a QB's legs
+export const EXTRA_STATS = { qb: ['rushYds'] }
 export const ovrOf = (pos, build, sport = null) => (sport ? SPORT[sport] : SPORT.bucket.positions.includes(pos) ? SPORT.bucket : SPORT.nfl).ovr(pos, build) ?? 0
 const sportForPos = pos => (SPORT.bucket.positions.includes(pos) ? SPORT.bucket : SPORT.nfl)
 const fmtStat = v => (typeof v === 'number' && !Number.isInteger(v) ? v.toFixed(1) : (v ?? 0).toLocaleString())
@@ -1550,7 +1552,9 @@ export function demandTrade(c) {
   const granted = r() < 0.7
   const rep = Math.max(1, c.rep - 2)
   if (!granted) return { ...c, rep, tradeAsked: true, nextMods: { ...(c.nextMods ?? {}), off: ((c.nextMods?.off) ?? 0) - 0.5 }, events: [...c.events, { year: c.year + 1, text: `${c.name} asked for a trade. The team said no, and the locker room heard about it.` }] }
-  const dest = S.teams.map(t => S.teamOf(t.short)).filter(t => t.short !== c.team).sort(() => r() - .5).sort((a, b) => (b.off + b.def) - (a.off + a.def))[Math.floor(r() * 6)]
+  // any team in the stronger half (it was the top six: the same two or three every time)
+  const pool = S.teams.map(t => S.teamOf(t.short)).filter(t => t.short !== c.team).sort((a, b) => (b.off + b.def) - (a.off + a.def))
+  const dest = pool[Math.floor(r() * Math.ceil(pool.length / 2))]
   const roster = rosterOf(c, dest.short)
   const fit = teamFit(dest.short, c.pos, { roster, league: c.league, name: c.name, sport: c.sport })
   // a starter guarantee was the old team's promise: it stays with them
