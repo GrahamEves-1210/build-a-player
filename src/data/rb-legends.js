@@ -13,7 +13,7 @@ const _raw = [
   {
     name: 'David Johnson',   short: 'D. Johnson',  team: 'ARI', teamName: 'Arizona Cardinals',
     skin: '#7a5030', number: 31, starter: true, captain: true, years: '2015–20',
-    attrs: { speed: 9, burst: 9, strength: 8, size: 8, balance: 8, elusiveness: 8, vision: 8, hands: 10, carrying: 8 }
+    attrs: { speed: 9, burst: 8, strength: 7, size: 8, balance: 8, elusiveness: 7, vision: 8, hands: 10, carrying: 7 }
   },
   {
     name: 'Larry Centers',  short: 'Centers',     team: 'ARI', teamName: 'Arizona Cardinals',
