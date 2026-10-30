@@ -22,7 +22,7 @@ export const QBS = [
     attrs: { 'arm': 4, 'legs': 5, 'size': 9, 'processing': 3, 'leadership': 3, 'vision': 3, 'playmaking': 3, 'accuracy': 4, 'pocket-presence': 3 } },
   // BUF
   { name: 'Josh Allen',         short: 'Allen',       team: 'BUF', teamName: 'Buffalo Bills',         color: '#00338D', color2: '#C60C30', skin: '#f0c4a0', starter: true,  captain: true,  number: 17,
-    attrs: { 'arm': 11, 'legs': 9, 'size': 10, 'processing': 8, 'leadership': 9, 'vision': 10, 'playmaking': 10, 'accuracy': 8, 'pocket-presence': 9 } },
+    attrs: { 'arm': 11, 'legs': 10, 'size': 10, 'processing': 8, 'leadership': 9, 'vision': 10, 'playmaking': 10, 'accuracy': 8, 'pocket-presence': 9 } },
   { name: 'Kyle Allen',         short: 'K. Allen',    team: 'BUF', teamName: 'Buffalo Bills',         color: '#00338D', color2: '#C60C30', skin: '#f0c4a0', starter: false, number: 11,
     attrs: { 'arm': 2, 'legs': 2, 'size': 7, 'processing': 4, 'leadership': 3, 'vision': 3, 'playmaking': 2, 'accuracy': 4, 'pocket-presence': 3 } },
   { name: 'Shane Buechele',     short: 'Buechele',    team: 'BUF', teamName: 'Buffalo Bills',         color: '#00338D', color2: '#C60C30', skin: '#d4a070', starter: false, number: 6,

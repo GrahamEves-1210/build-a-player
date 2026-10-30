@@ -133,7 +133,7 @@ const _DBS = [
   { name: 'Brandon Cisse',       short: 'Cisse',          team: 'GB',  teamName: 'Green Bay Packers', skin: '#5e3c22', height: 72, weight: 189, starter: true,  number: 2, subpos: 'cb',
     attrs: { speed: 5, size: 4, fluidity: 5, press: 4, hands: 5, zoneIQ: 4, manCoverage: 4, playRecognition: 4, runSupport: 6} },
   { name: 'Evan Williams',       short: 'Ev. Williams',   team: 'GB',  teamName: 'Green Bay Packers', skin: '#b07848', height: 71, weight: 200, starter: true,  number: 33, subpos: 's',
-    attrs: { speed: 6, size: 4, fluidity: 6, press: 4, hands: 6, zoneIQ: 5, manCoverage: 5, playRecognition: 6, runSupport: 7} },
+    attrs: { speed: 6, size: 4, fluidity: 6, press: 4, hands: 6, zoneIQ: 6, manCoverage: 5, playRecognition: 7, runSupport: 8} },
   { name: 'Xavier McKinney',     short: 'McKinney',       team: 'GB',  teamName: 'Green Bay Packers', skin: '#5e3c22', height: 72, weight: 201, starter: true,  captain: true,  number: 29, subpos: 's',
     attrs: { speed: 7, size: 6, fluidity: 8, press: 5, hands: 10, zoneIQ: 9, manCoverage: 7, playRecognition: 9, runSupport: 6} },
   // HOU
