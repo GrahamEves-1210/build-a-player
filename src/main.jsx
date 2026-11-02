@@ -25,11 +25,11 @@ import { AppMotion } from './lib/motion'
 import UsernamePrompt from './components/UsernamePrompt'
 import PasswordReset from './components/PasswordReset'
 import { HelmetProvider } from 'react-helmet-async'
-import { Analytics } from '@vercel/analytics/react'
 import './index.css'
 import './app-game.css'
-import App from './App.jsx'
-import BucketApp from './components/BucketApp.jsx'
+// Football and basketball are two games: a visit loads only the one it's on
+const App = lazy(() => import('./App.jsx'))
+const BucketApp = lazy(() => import('./components/BucketApp.jsx'))
 import ErrorBoundary from './components/ErrorBoundary.jsx'
 import { initAppInfra, AppInfra } from './lib/appInfra'; initAppInfra()   // error log, deep links, notifications, rating, version (lib/appInfra.js)
 import { IS_APP, APP_LOOK, APP_PLATFORM } from './lib/platform'
@@ -67,6 +67,16 @@ if ('serviceWorker' in navigator) {
     }
   })
 }
+
+// A deploy replaced the files an open tab still asks for: reload onto the new ones (at most once a minute, never a loop)
+window.addEventListener('vite:preloadError', e => {
+  try {
+    if (Date.now() - Number(sessionStorage.getItem('bap_chunk_reload') || 0) < 60000) return
+    sessionStorage.setItem('bap_chunk_reload', String(Date.now()))
+  } catch { return }
+  e.preventDefault()
+  window.location.reload()
+})
 
 const isBucket = window.location.pathname.startsWith('/bucket')
 if ((IS_APP || APP_LOOK) && isBucket) document.documentElement.classList.add('is-bucket')   // app theme: orange accent
@@ -116,13 +126,15 @@ createRoot(document.getElementById('root')).render(
     <ErrorBoundary>
       <HelmetProvider>
         <AppMotion>
-          {isBucket ? <BucketApp /> : <App />}
-          <UsernamePrompt />
-          <PasswordReset />
-          {AppTabBar && <Suspense fallback={null}><AppTabBar /></Suspense>}
+          {/* (one boundary: the game mounts before the dock, as it did when it wasn't lazy) */}
+          <Suspense fallback={null}>
+            {isBucket ? <BucketApp /> : <App />}
+            <UsernamePrompt />
+            <PasswordReset />
+            {AppTabBar && <Suspense fallback={null}><AppTabBar /></Suspense>}
+          </Suspense>
         </AppMotion>
       </HelmetProvider>
-      {!IS_APP && <Analytics />}
       <AppInfra />
     </ErrorBoundary>
   </StrictMode>,

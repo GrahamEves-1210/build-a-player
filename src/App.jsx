@@ -48,7 +48,7 @@ import HEADSHOTS from './data/headshots.json'
 import { runSimulation, getArchetype, calcOVR, runRBSimulation, calcOVRRB, getArchetypeRB, runWRSimulation, calcOVRWR, getArchetypeWR, runTESimulation, calcOVRTE, getArchetypeTE, runDBSimulation, calcOVRDB, getArchetypeDB, runOLSimulation, calcOVROL, getArchetypeOL, HEADSHOT_BASE, nflHeadshot, calcMVPResult, calcOPOYResult, calcWROPOYResult, calcTEOPOYResult, calcDBDpoyResult, calcOLAllProResult } from './utils/simulation'
 import { supabase, rtSupabase, apiHeaders } from './lib/supabase'
 import { track } from './lib/track'
-import { loadCareer, saveCareer, newCareer, CAREER_POS, syncCareerFromCloud } from './lib/career'
+const CAREER_POS = ['qb', 'rb', 'wr', 'te', 'db']   // (SPORT.nfl.positions in lib/career.js, which loads on its own)
 import { blockReason, buildSig, markPlayed } from './lib/saveGuard'
 import { saveSeason, saveSalary } from './lib/submit'
 import CustomRatingsModal from './components/CustomRatingsModal'
@@ -713,11 +713,14 @@ export default function App() {
   careerRef.current = career
   useEffect(() => {
     if (!IS_APP && !APP_LOOK) return
-    setCareer(loadCareer('nfl', user?.id))
-    if (!user?.id) return
-    // signed in: the cloud copy (or a guest career moving onto the account) — lib/career.js
+    // (the career code loads on its own: it's big, and the first screen doesn't wait for it)
     let off = false
-    syncCareerFromCloud('nfl', user.id).then(c => { if (!off) setCareer(c) })
+    import('./lib/career').then(({ loadCareer, syncCareerFromCloud }) => {
+      if (off) return
+      setCareer(loadCareer('nfl', user?.id))
+      // signed in: the cloud copy (or a guest career moving onto the account)
+      if (user?.id) syncCareerFromCloud('nfl', user.id).then(c => { if (!off) setCareer(c) })
+    })
     return () => { off = true }
   }, [user?.id])
   const startCareerBuild = useCallback(() => {
@@ -732,7 +735,8 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'instant' })
   }, [])
   openCareerRef.current = openCareer
-  const enterDraft = useCallback(() => {
+  const enterDraft = useCallback(async () => {
+    const { newCareer, saveCareer } = await import('./lib/career')
     const owner = getUsername(user) || 'Guest'
     const c = { ...newCareer({ sport: 'nfl', uid: user?.id ?? null, pos: position, build, name: careerNew.current.name || owner, slot: careerNew.current.slot, owner }), sandbox: !!isCustomMode }
     saveCareer(c); setCareer(c); setGameMode(null); setBuild({}); setPage('career')

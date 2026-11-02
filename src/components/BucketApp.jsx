@@ -5,11 +5,12 @@ import SpinScreen from './SpinScreen'
 import Silhouette from './Silhouette'
 import ReportCard from './ReportCard'
 import AuthModal from './AuthModal'
-import BucketSimPage, { TeamSpinModal } from './BucketSimPage'
+const BucketSimPage = lazy(() => import('./BucketSimPage'))
+const TeamSpinModal = lazy(() => import('./BucketSimPage').then(m => ({ default: m.TeamSpinModal })))
 import { runBucketSimulation, getBucketGuardArchetype, getBucketBigArchetype, calcBucketOVR } from '../utils/bucketSimulation'
-import BucketLeaderboardPage from './BucketLeaderboardPage'
-import BucketSalaryCap from './BucketSalaryCap'
-import PrivacyPage from './PrivacyPage'
+const BucketLeaderboardPage = lazy(() => import('./BucketLeaderboardPage'))
+const BucketSalaryCap = lazy(() => import('./BucketSalaryCap'))
+const PrivacyPage = lazy(() => import('./PrivacyPage'))
 import {
   NBA_GUARD_PLAYERS,
   GUARD_TYPES, GUARD_CATEGORIES,
@@ -29,7 +30,7 @@ import { supabase, rtSupabase, apiHeaders } from '../lib/supabase'
 import { track } from '../lib/track'
 import { blockReason, buildSig, markPlayed } from '../lib/saveGuard'
 import { HEADSHOT_BASE } from '../utils/simulation'
-import ProfilePage from './ProfilePage'
+const ProfilePage = lazy(() => import('./ProfilePage'))
 import CustomRatingsModal from './CustomRatingsModal'
 import SiteFooter from './SiteFooter'
 import SiteFeatures from './SiteFeatures'
@@ -53,7 +54,6 @@ import { loadSquad, saveSquad, clearSquad, syncSquadFromCloud, nextToBuild, fill
 const AppSquad = lazy(() => import('./app/AppSquad'))
 const AppCareer = lazy(() => import('./app/AppCareer'))
 const CareerIntro = lazy(() => import('./app/AppCareer').then(m => ({ default: m.CareerIntro })))
-import { loadCareer, saveCareer, newCareer, syncCareerFromCloud } from '../lib/career'
 import CompeteHud from './app/CompeteHud'
 const AppCompete = lazy(() => import('./app/AppCompete'))
 // which page a live Blacktop run is on, so Home → Play (or the card) resumes it
@@ -988,11 +988,14 @@ export default function BucketApp() {
   const openCareerRef = useRef(null)
   useEffect(() => {
     if (!IS_APP && !APP_LOOK) return
-    setCareer(loadCareer('bucket', user?.id))
-    if (!user?.id) return
-    // signed in: the cloud copy (or a guest career moving onto the account)
+    // (the career code loads on its own: it's big, and the first screen doesn't wait for it)
     let off = false
-    syncCareerFromCloud('bucket', user.id).then(c => { if (!off) setCareer(c) })
+    import('../lib/career').then(({ loadCareer, syncCareerFromCloud }) => {
+      if (off) return
+      setCareer(loadCareer('bucket', user?.id))
+      // signed in: the cloud copy (or a guest career moving onto the account)
+      if (user?.id) syncCareerFromCloud('bucket', user.id).then(c => { if (!off) setCareer(c) })
+    })
     return () => { off = true }
   }, [user?.id])
   const startCareerBuild = useCallback(() => {
@@ -1006,7 +1009,8 @@ export default function BucketApp() {
     window.scrollTo({ top: 0, behavior: 'instant' })
   }, [])
   openCareerRef.current = openCareer
-  const enterDraft = useCallback(() => {
+  const enterDraft = useCallback(async () => {
+    const { newCareer, saveCareer } = await import('../lib/career')
     const owner = getUsername(user) || 'Guest'
     const c = { ...newCareer({ sport: 'bucket', uid: user?.id ?? null, pos: position, build, name: careerNew.current.name || owner, slot: careerNew.current.slot, owner }), sandbox: !!isBucketCustomMode }
     saveCareer(c); setCareer(c); setGameMode(null); setBuild({}); setPage('career')
@@ -1882,11 +1886,13 @@ export default function BucketApp() {
 
 
       {!parked && showTeamSpin && (
+        <Suspense fallback={null}>
         <TeamSpinModal
           isCustomMode={isBucketCustomMode}
           onTeamSelected={handleTeamPicked}
           build={build}
         />
+        </Suspense>
       )}
 
       {!parked && showBucketCustomModal && (
@@ -2181,6 +2187,7 @@ export default function BucketApp() {
 
   if (page === 'salarycap') {
     return (
+      <Suspense fallback={null}>
       <BucketSalaryCap
         onConfirm={handleSalaryCapConfirm}
         onBack={() => setPage('splash')}
@@ -2188,6 +2195,7 @@ export default function BucketApp() {
         initialDateStr={salaryReturnDate}
         position={position}
       />
+      </Suspense>
     )
   }
 
@@ -2196,6 +2204,7 @@ export default function BucketApp() {
     return (
       <>
         <Navbar {...navbarProps} />
+        <Suspense fallback={null}>
         <BucketSimPage
           result={simResult}
           build={build}
@@ -2212,6 +2221,7 @@ export default function BucketApp() {
           pool={currentPool}
           userName={getUsername(user) || 'Guest'}
         />
+        </Suspense>
       </>
     )
   }
@@ -2220,11 +2230,13 @@ export default function BucketApp() {
     return withGame(
       <>
         <Navbar {...navbarProps} />
+        <Suspense fallback={null}>
         <BucketLeaderboardPage
           onBack={() => { setPage(simResult ? 'sim' : 'game'); window.scrollTo({ top: 0, behavior: 'instant' }); document.querySelector('.game-page-scroll')?.scrollTo({ top: 0, behavior: 'instant' }) }}
           currentUser={user}
           adsDisabled={adsDisabled}
         />
+        </Suspense>
       </>
     )
   }
@@ -2233,7 +2245,9 @@ export default function BucketApp() {
     return withGame(
       <>
         <Navbar {...navbarProps} />
+        <Suspense fallback={null}>
         <PrivacyPage onBack={() => { setPage('game'); window.scrollTo({ top: 0, behavior: 'instant' }) }} />
+        </Suspense>
       </>
     )
   }
@@ -2242,6 +2256,7 @@ export default function BucketApp() {
   if (page === 'profile' && user) {
     return withGame(
       <>
+        <Suspense fallback={null}>
         <ProfilePage
           user={user}
           build={build}
@@ -2265,6 +2280,7 @@ export default function BucketApp() {
           }}
           onOpenBucketCustomModal={() => setShowBucketCustomModal(true)}
         />
+        </Suspense>
         {showBucketCustomModal && (
           <CustomRatingsModal
             isBucket={true}

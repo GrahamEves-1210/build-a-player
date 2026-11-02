@@ -1,7 +1,8 @@
-import svgRaw from '../assets/qb-figure-color.svg?raw'
+import { useEffect, useState } from 'react'
 import { warmSkin } from '../utils/footballSkin'
 
-const BASE_SVG = (() => {
+// The figure is 330 KB: its own file, fetched the first time a QB figure shows
+const scopeSvg = svgRaw => {
   let html = svgRaw
   html = html.replace(
     '<svg version="1.2"',
@@ -12,7 +13,9 @@ const BASE_SVG = (() => {
     return `<style>${scoped}</style>`
   })
   return html
-})()
+}
+let baseSvg = null
+const loadBaseSvg = () => import('../assets/qb-figure-color.svg?raw').then(m => { baseSvg = scopeSvg(m.default); return baseSvg })
 
 
 const HELMET_SHELL = 'M244.5 120.156L256 128.656L276 134.656L287 130.156C284.333 129.156 278.4 126.556 276 124.156C273 121.156 277.5 109.156 279 109.156C280.2 109.156 280.833 102.489 281 99.1556L276 89.1556L260.5 79.6556C252.1 72.0556 258.333 62.8222 262.5 59.1556L292 60.1556L322.5 53.1556V44.6556H345.5V43.1556C333.5 5.95558 298.167 -0.677753 282 0.65558C226.8 3.45558 212.667 44.4889 212.5 64.6556L215 68.6556C213.4 73.4556 219.333 93.9889 222.5 103.656V107.656V113.656L228.5 121.656H237.5L244.5 120.156Z'
@@ -48,6 +51,8 @@ const WHITE_HELMET = new Set(['ARI', 'IND', 'LAC', 'TEN', 'BUF'])
 const helmColor = (team, fallback) => HELMET_COLOR_OVERRIDE[team] ?? fallback
 
 export default function QBFigureOverlay({ build, className }) {
+  const [BASE_SVG, setBaseSvg] = useState(baseSvg)
+  useEffect(() => { if (!BASE_SVG) loadBaseSvg().then(setBaseSvg).catch(() => {}) }, [BASE_SVG])
   const tc  = (s) => build?.[s]?.teamColor  ?? 'transparent'
   const tc2 = (s) => build?.[s]?.teamColor2 ?? 'transparent'
   const sk  = (s) => warmSkin(build?.[s]?.skinColor  ?? 'transparent')
@@ -168,7 +173,7 @@ export default function QBFigureOverlay({ build, className }) {
       <style>{css}</style>
 
       <div className={className} style={{ mixBlendMode: 'screen' }}>
-        <div style={SVG_STYLE} dangerouslySetInnerHTML={{ __html: BASE_SVG }} />
+        <div style={SVG_STYLE} dangerouslySetInnerHTML={{ __html: BASE_SVG ?? '' }} />
 
         {/* Jersey number — after BASE_SVG in DOM so it paints on top */}
         <svg viewBox="0 0 622 844" preserveAspectRatio="xMidYMid meet"
