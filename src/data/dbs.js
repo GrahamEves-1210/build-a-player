@@ -273,7 +273,7 @@ const _DBS = [
     attrs: { speed: 5, size: 7, fluidity: 5, press: 7, hands: 7, zoneIQ: 7, manCoverage: 6, playRecognition: 8, runSupport: 7} },
   // SEA
   { name: 'Devon Witherspoon',   short: 'Witherspoon',    team: 'SEA', teamName: 'Seattle Seahawks',   skin: '#5e3c22', height: 72, weight: 185, starter: true,  captain: true,  number: 21, subpos: 'cb',
-    attrs: { speed: 8, size: 5, fluidity: 8, press: 9, hands: 9, zoneIQ: 8, manCoverage: 9, playRecognition: 8, runSupport: 10} },
+    attrs: { speed: 8, size: 5, fluidity: 8, press: 9, hands: 9, zoneIQ: 8, manCoverage: 9, playRecognition: 8, runSupport: 9} },
   { name: 'Josh Jobe',           short: 'Jobe',           team: 'SEA', teamName: 'Seattle Seahawks',   skin: '#5e3c22', height: 71, weight: 190, starter: true,  number: 29, subpos: 'cb',
     attrs: { speed: 6, size: 3, fluidity: 6, press: 5, hands: 5, zoneIQ: 6, manCoverage: 6, playRecognition: 6, runSupport: 4} },
   { name: 'Nick Emmanwori',      short: 'Emmanwori',      team: 'SEA', teamName: 'Seattle Seahawks',   skin: '#5e3c22', height: 75, weight: 220, starter: true,  captain: true,  number: 3,  subpos: 's',
