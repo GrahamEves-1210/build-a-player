@@ -489,7 +489,7 @@ export const NBA_GUARD_PLAYERS = [
 
   // ─── POR ───────────────────────────────────────────────────────
   { name: 'Deni Avdija', short: 'Avdija', team: 'POR', starter: false, captain: false, number: 8, height: 81, weight: 215, wingspan: 81, skin: '#7b6051', position: 'SF', faceCenter: [48, 35],
-    attrs: { jumpShot: 4, finishing: 7, passing: 6, handles: 5, perimeterDefense: 6, speed: 6, bounce: 7, size: 7, basketballIQ: 6, clutch: 6 } },
+    attrs: { jumpShot: 4, finishing: 8, passing: 6, handles: 5, perimeterDefense: 6, speed: 6, bounce: 7, size: 7, basketballIQ: 6, clutch: 6 } },
   { name: 'Toumani Camara', short: 'Camara', team: 'POR', starter: false, captain: false, number: 33, height: 80, weight: 210, wingspan: 85, skin: '#785c4a', position: 'SF', faceCenter: [51, 34],
     attrs: { jumpShot: 5, finishing: 4, passing: 4, handles: 4, perimeterDefense: 9, speed: 7, bounce: 6, size: 8, basketballIQ: 4, clutch: 4 } },
   { name: 'Scoot Henderson', short: 'Scoot', team: 'POR', starter: false, captain: false, number: 0, height: 74, weight: 195, wingspan: 81, skin: '#80563c', position: 'PG', faceCenter: [45, 38], faceAdjust: { dx: 0, dy: -3, scale: 1 },
@@ -544,7 +544,7 @@ export const NBA_GUARD_PLAYERS = [
   { name: 'Kyle Anderson', short: 'Anderson', team: 'TOR', starter: false, captain: false, number: 1, height: 81, weight: 235, wingspan: 87, skin: '#c49276', position: 'SF', faceCenter: [48, 44],
     attrs: { jumpShot: 3, finishing: 4, passing: 6, handles: 3, perimeterDefense: 3, speed: 0, bounce: 2, size: 10, basketballIQ: 6, clutch: 5 } },
   { name: 'Scottie Barnes', short: 'Barnes', team: 'TOR', starter: true, captain: true, number: 4, height: 80, weight: 225, wingspan: 87, skin: '#9b613e', position: 'SF', faceCenter: [50, 41],
-    attrs: { jumpShot: 5, finishing: 7, passing: 8, handles: 7, perimeterDefense: 8, speed: 8, bounce: 8, size: 9, basketballIQ: 7, clutch: 6 } },
+    attrs: { jumpShot: 5, finishing: 7, passing: 8, handles: 7, perimeterDefense: 9, speed: 8, bounce: 8, size: 9, basketballIQ: 7, clutch: 6 } },
   { name: 'RJ Barrett', short: 'Barrett', team: 'TOR', starter: true, captain: false, number: 9, height: 78, weight: 214, wingspan: 82, skin: '#7c4f30', position: 'SF', faceCenter: [50, 44],
     attrs: { jumpShot: 5, finishing: 7, passing: 6, handles: 6, perimeterDefense: 6, speed: 7, bounce: 8, size: 7, basketballIQ: 5, clutch: 6 } },
   { name: 'Jamison Battle', short: 'Battle', team: 'TOR', starter: false, captain: false, number: 77, height: 80, weight: 215, wingspan: 84, skin: '#be8968', position: 'SF', faceCenter: [50, 43],

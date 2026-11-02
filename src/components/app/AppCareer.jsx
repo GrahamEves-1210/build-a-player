@@ -683,9 +683,11 @@ function Recap({ c, last, user }) {
   return (
     <div className={`ag-card cr-wrap ag-pop${last.champion ? ' is-ring' : ''}`}>
       <div className="ag-card-head"><span className="ag-eyebrow">{last.season} · {last.wins}–{last.losses}{last.playoffs ? ' · PLAYOFFS' : ''}</span>{last.champion && <span className="cr-ring"><IconRing size={13} /> CHAMPIONS</span>}</div>
-      <div className="cr-wrap-stats" style={EXTRA_STATS[c.pos] ? { gridTemplateColumns: `repeat(${4 + EXTRA_STATS[c.pos].length}, 1fr)` } : undefined}>{[...HEADLINE_STATS[c.pos], ...(EXTRA_STATS[c.pos] ?? [])].map(k => <span key={k}><b>{fmt(last.stats[k])}</b><small>{STAT_LABEL[k]}</small></span>)}<span><b>{last.missed}</b><small>GAMES MISSED</small></span></div>
+      <div className="cr-wrap-stats" style={EXTRA_STATS[c.pos] ? { gridTemplateColumns: 'repeat(3, 1fr)' } : undefined}>{[...HEADLINE_STATS[c.pos], ...(EXTRA_STATS[c.pos] ?? [])].map(k => <span key={k}><b>{fmt(last.stats[k])}</b><small>{STAT_LABEL[k]}</small></span>)}<span><b>{last.missed}</b><small>GAMES MISSED</small></span></div>
       <div className="cr-badges">
         {last.award && <span className="cr-badge is-gold"><IconTrophy size={12} /> {last.awardName}</span>}
+        {last.fmvp && <span className="cr-badge is-gold"><IconTrophy size={12} /> {S.finalsAward}</span>}
+        {last.roy && <span className="cr-badge is-gold"><IconStar size={12} /> ROOKIE OF THE YEAR</span>}
         {last.allPro && <span className="cr-badge is-gold"><IconMedal size={12} /> {S.first.toUpperCase()}</span>}
         {last.proBowl && !last.allPro && <span className="cr-badge"><IconStar size={12} /> {S.honor.toUpperCase()}</span>}
         {last.benched > 0 && <span className="cr-badge">{c.sport === 'bucket' ? 'OFF THE BENCH' : last.benched >= last.wins + last.losses ? 'BACKUP ALL YEAR' : `${last.benched} GAMES AS THE BACKUP`}</span>}
@@ -940,7 +942,7 @@ function Legacy({ c, setCareer, user, onUnretire, onNewBuild, onExit }) {
   const username = getUsername(user) || c.owner || 'Guest'
   const best = useMemo(() => (c.seasons.length > 1 ? c.seasons.reduce((b, s) => (seasonScore(c.pos, s) > seasonScore(c.pos, b) ? s : b)) : null), [c.seasons, c.pos])
   // who the build plays like: an all-time great first, else the closest today
-  const comp = useMemo(() => { const l = compsFor(c, 6); return l.find(x => x.era === 'all-time') ?? l[0] ?? null }, [c.build, c.pos, c.sport]) // eslint-disable-line react-hooks/exhaustive-deps
+  const comp = useMemo(() => { const l = compsFor(c, 6, true); return l.find(x => x.era === 'all-time') ?? l[0] ?? null }, [c.build, c.pos, c.sport]) // eslint-disable-line react-hooks/exhaustive-deps
   // the all-time list around him: two above, two below
   const greats = ALL_TIME[c.pos] ?? []
   const at = L.rank - 1
@@ -957,6 +959,8 @@ function Legacy({ c, setCareer, user, onUnretire, onNewBuild, onExit }) {
   const hardware = [
     [t.rings, t.rings === 1 ? 'RING' : 'RINGS', IconRing, true],
     [t.awards, t.awards === 1 ? AWARD_NAME[c.pos] : `${AWARD_NAME[c.pos]}S`, IconTrophy, true],
+    [t.fmvps, S.finalsAward, IconTrophy, false],
+    [t.roy ? 1 : 0, 'ROOKIE OF THE YEAR', IconStar, false],
     [t.allPros, S.first.toUpperCase(), IconMedal, false],
     [t.proBowls, t.proBowls === 1 ? S.honor.toUpperCase() : S.honors, IconStar, false],
     [t.records, t.records === 1 ? 'RECORD' : 'RECORDS', IconFlame, false],
@@ -1052,6 +1056,8 @@ function Legacy({ c, setCareer, user, onUnretire, onNewBuild, onExit }) {
               <div className="cr-badges">
                 {best.champion && <span className="cr-badge is-gold"><IconRing size={12} /> CHAMPIONS</span>}
                 {best.award && <span className="cr-badge is-gold"><IconTrophy size={12} /> {best.awardName}</span>}
+                {best.fmvp && <span className="cr-badge is-gold"><IconTrophy size={12} /> {S.finalsAward}</span>}
+                {best.roy && <span className="cr-badge is-gold"><IconStar size={12} /> ROOKIE OF THE YEAR</span>}
                 {best.allPro && <span className="cr-badge is-gold"><IconMedal size={12} /> {S.first.toUpperCase()}</span>}
                 {best.proBowl && !best.allPro && <span className="cr-badge"><IconStar size={12} /> {S.honor.toUpperCase()}</span>}
               </div>

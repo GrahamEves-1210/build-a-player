@@ -654,7 +654,7 @@ export function runSimulation(build, types = TYPES, team = null, isAllTime = fal
     seasonAttempts    += gameAtts
     seasonCompletions += gameComps
 
-    return { wk: i + 1, opponent, home, mySc, oppSc, won, passYds: gamePassYds, tds: gameTDs, ints: gameINTs, rushYds: gameRushYds, sacks: gameSacks, rating: Math.round(rating) }
+    return { wk: i + 1, opponent, home, mySc, oppSc, won, passYds: gamePassYds, tds: gameTDs, ints: gameINTs, rushYds: gameRushYds, rushTDs: gameRushTDs, sacks: gameSacks, rating: Math.round(rating) }
   })
 
   seasonINTs = Math.max(3, seasonINTs)
