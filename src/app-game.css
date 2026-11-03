@@ -6007,7 +6007,10 @@ html .ag-stage .ag-live-count i { flex: none; width: 10px; height: 10px; border-
 .ag-mc--career { grid-column: 1 / -1; min-height: 176px; background: linear-gradient(100deg, rgba(6,22,42,.94) 30%, rgba(14,52,92,.45)), url('/footballbackground-soft.webp') center 58% / cover no-repeat, #0a1f3a; }
 .ag-home--bucket .ag-mc--career { background: linear-gradient(100deg, rgba(40,15,3,.92) 30%, rgba(124,45,10,.5)), url('/bucketbackground.webp') center 70% / cover no-repeat, #2d1307; }
 .ag-mc--career.has-team, .ag-home--bucket .ag-mc--career.has-team { background: linear-gradient(120deg, var(--team), color-mix(in srgb, var(--team) 40%, #05090c)); }
-.ag-mc--career .ag-mc-head { right: 60%; }
+/* the name up top; the caption in the clear space under the banners, on one line, however long the career's line gets */
+.ag-mc--career .ag-mc-head { right: 12px; bottom: 12px; display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between; }
+.ag-mc--career .ag-mc-head small { display: block; max-width: 66%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.ag-mc--career .ag-mc-head .ag-mc-live { display: inline-flex; }
 .ag-mc--compete { background: linear-gradient(150deg, #0f8a74, #063a31 80%); }
 .ag-home--bucket .ag-mc--compete { background: linear-gradient(150deg, #f97316, #7c2d0a 85%); }
 .ag-mc--salary { background: linear-gradient(150deg, #7c3aed, #2e1065 80%); }
@@ -6021,6 +6024,7 @@ html .ag-stage .ag-live-count i { flex: none; width: 10px; height: 10px; border-
 .ag-team { position: absolute; left: 6px; right: 0; bottom: -7%; height: 62%; z-index: 1; display: flex; justify-content: center; align-items: flex-end; pointer-events: none; }
 .ag-team img { display: block; flex: 0 1 auto; min-width: 0; height: 100%; width: auto; margin-left: -10%; object-fit: contain; object-position: bottom; }
 .ag-team img:first-child { margin-left: 0; }
+.ag-team img.is-te { height: 122%; }   /* his arms are up: at the same image height his body comes out smaller than the others */
 .ag-mc.is-small .ag-mc-head { right: 8px; }
 /* Career: banners hanging from the rafters, gold on the card's colour, the player in front */
 .ag-rafters { position: absolute; left: 39%; right: 33%; top: 0; z-index: 1; display: flex; justify-content: space-between; gap: 5px; padding-top: 7px; border-top: 3px solid rgba(255,255,255,.28); }
@@ -6095,7 +6099,8 @@ html .ag-stage .ag-live-count i { flex: none; width: 10px; height: 10px; border-
   html.app-look .ag-mc-shot { top: 96px; left: 26px; right: 26px; }
   html.app-look .ag-more { gap: 12px; }
   /* the wide second row: the art beside the words */
-  html.app-look .ag-mc.is-small .ag-team { left: 34%; right: 8px; height: 124%; bottom: -26%; justify-content: flex-end; }
+  html.app-look .ag-mc.is-small .ag-team { left: 34%; right: 8px; height: 104%; bottom: -16%; justify-content: flex-end; }
+  html.app-look .ag-team img.is-te { height: 116%; }
   html.app-look .ag-mc.is-small .ag-lineup { left: 44%; right: 14px; bottom: 16px; }
   html.app-look .ag-mc.is-small .ag-pod { left: 58%; right: 16px; height: 78%; }
   html.app-look .ag-ranks { left: 46%; right: 12px; top: 8px; bottom: 8px; grid-auto-rows: 1fr; gap: 4px; }

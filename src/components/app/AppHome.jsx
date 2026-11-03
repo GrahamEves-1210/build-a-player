@@ -196,7 +196,7 @@ const Podium = () => (
 // Squad Builder, football: the whole team, one at each position, side by side
 const TeamRow = () => (
   <span className="ag-team" aria-hidden="true">
-    {['rb', 'qb2', 'te', 'db'].map(p => <img key={p} src={`/modes/fig-${p}.webp`} alt="" loading="lazy" decoding="async" draggable={false} />)}
+    {['rb', 'qb2', 'te'].map(p => <img key={p} className={`is-${p}`} src={`/modes/fig-${p}.webp`} alt="" loading="lazy" decoding="async" draggable={false} />)}
   </span>
 )
 // Squad Builder, basketball: the five spots you fill
