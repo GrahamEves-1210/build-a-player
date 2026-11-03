@@ -1,0 +1,2 @@
+Crowd recordings in s-crowd-*.wav are mixed from BigSoundBank (LaSonotheque) clips
+0021, 0020, 0236, 0237, 2479, 2487 - CC0 / public domain. https://bigsoundbank.com/licenses.html

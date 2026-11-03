@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { connectDiscord, hasDiscord } from '../lib/discord'
+import { connectDiscord, hasDiscord, discordError } from '../lib/discord'
 import { IconDiscord } from './Navbar'
 
 // Profile button: link Discord to an existing account, which also joins the
@@ -13,7 +13,7 @@ export default function ConnectDiscord({ user }) {
   const handleConnect = async () => {
     setBusy(true); setError(null)
     const { error } = await connectDiscord()   // leaves for Discord on success
-    if (error) { setError('Could not connect Discord. Try again.'); setBusy(false) }
+    if (error) { setError(discordError(error)); setBusy(false) }
   }
 
   return (

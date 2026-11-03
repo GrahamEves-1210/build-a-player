@@ -129,7 +129,7 @@ export default function WRFigureOverlay({ build, isTE = false }) {
 
       {/* Jersey number + team name + logos */}
       <svg viewBox="0 0 568 975" preserveAspectRatio="xMidYMid meet"
-           style={SVG_STYLE} aria-hidden="true">
+           style={{ ...SVG_STYLE, willChange: 'transform' }} aria-hidden="true">
 
         <g>
           {/* Team nickname above number */}

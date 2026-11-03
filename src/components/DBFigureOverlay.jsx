@@ -221,7 +221,7 @@ export default function DBFigureOverlay({ build, numberNudgePx = null, parts = n
 
       {/* Jersey number + team name + shoulder numbers — angled to match the torso tilt */}
       <svg ref={numSvgRef} viewBox="0 0 479 1028" preserveAspectRatio="xMidYMid meet"
-           style={SVG_STYLE} aria-hidden="true">
+           style={{ ...SVG_STYLE, willChange: 'transform' }} aria-hidden="true">
         <g transform={`rotate(${BODY_ANGLE}, 252, 300)`}>
           <text
             x="272" y="345"

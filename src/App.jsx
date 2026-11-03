@@ -1,4 +1,4 @@
-﻿import { useState, useCallback, useRef, useEffect, useLayoutEffect, lazy, Suspense } from 'react' // v2
+﻿import { useState, useCallback, useRef, useEffect, useLayoutEffect, useMemo, lazy, Suspense } from 'react' // v2
 import { Helmet } from 'react-helmet-async'
 import Navbar from './components/Navbar'
 import SpinScreen from './components/SpinScreen'
@@ -6,11 +6,12 @@ import Silhouette from './components/Silhouette'
 import ReportCard from './components/ReportCard'
 import TeamPickerModal from './components/TeamPickerModal'
 import AuthModal from './components/AuthModal'
-import SplashScreen from './components/SplashScreen'
+import SplashScreen, { POS_OPTIONS } from './components/SplashScreen'
 import { decodeBuild } from './utils/shareUrl'
 
 // Lazy-loaded pages — only downloaded when the user actually navigates there
 const SimPage        = lazy(() => import('./components/SimPage'))
+const QBSalaryCap    = lazy(() => import('./components/QBSalaryCap'))
 const AboutPage      = lazy(() => import('./components/AboutPage'))
 const PrivacyPage    = lazy(() => import('./components/PrivacyPage'))
 const TermsPage      = lazy(() => import('./components/TermsPage'))
@@ -20,8 +21,13 @@ const ProfilePage    = lazy(() => import('./components/ProfilePage'))
 const LeaderboardPage= lazy(() => import('./components/LeaderboardPage'))
 const VersusLobby    = lazy(() => import('./components/VersusLobby'))
 const VersusResult   = lazy(() => import('./components/VersusResult'))
+const AppSquad       = lazy(() => import('./components/app/AppSquad'))
+const AppCareer      = lazy(() => import('./components/app/AppCareer'))
+const CareerIntro    = lazy(() => import('./components/app/AppCareer').then(m => ({ default: m.CareerIntro })))
+import CompeteHud from './components/app/CompeteHud'
+const AppCompete = lazy(() => import('./components/app/AppCompete'))
 const Wiki           = lazy(() => import('./components/wiki/Wiki'))
-import { TYPES, LITE_TYPES, QBS } from './data/qbs'
+import { TYPES, LITE_TYPES, QBS, ATTR } from './data/qbs'
 import { RBS, RB_TYPES, RB_LITE_TYPES, RB_ATTR } from './data/rbs'
 import { WRS, WR_TYPES, WR_LITE_TYPES, WR_CATEGORIES, WR_ATTR } from './data/wrs'
 import { WR_LEGENDS } from './data/wr-legends'
@@ -30,19 +36,34 @@ import { TE_LEGENDS } from './data/te-legends'
 import { DBS, DB_TYPES, DB_LITE_TYPES, DB_CATEGORIES, DB_ATTR } from './data/dbs'
 import { DB_LEGENDS } from './data/db-legends'
 import { OLS, OL_TYPES, OL_LITE_TYPES, OL_CATEGORIES, OL_ATTR } from './data/ols'
-import { ALLTIME_RATINGS } from './data/nfl-teams'
+import { ALLTIME_RATINGS, NFL_TEAMS, TEAMS } from './data/nfl-teams'
+import { useCompete, botBuild } from './lib/compete'
+import { COMPETE_POS } from './lib/competeCore'
+import { setLiveLock, liveLock, guardLeave } from './lib/liveLock'
+import { useAuction } from './lib/auction'
+import { FORFEIT_RATING } from './lib/progress'
 import { LEGENDS, LEGEND_TYPES } from './data/qb-legends'
 import { RB_LEGENDS } from './data/rb-legends'
 import HEADSHOTS from './data/headshots.json'
-import { runSimulation, getArchetype, calcOVR, runRBSimulation, calcOVRRB, getArchetypeRB, runWRSimulation, calcOVRWR, getArchetypeWR, runTESimulation, calcOVRTE, getArchetypeTE, runDBSimulation, calcOVRDB, getArchetypeDB, runOLSimulation, calcOVROL, getArchetypeOL, HEADSHOT_BASE, calcMVPResult, calcOPOYResult, calcWROPOYResult, calcTEOPOYResult, calcDBDpoyResult, calcOLAllProResult } from './utils/simulation'
-import { supabase, rtSupabase, apiHeaders, restorePro } from './lib/supabase'
+import { runSimulation, getArchetype, calcOVR, runRBSimulation, calcOVRRB, getArchetypeRB, runWRSimulation, calcOVRWR, getArchetypeWR, runTESimulation, calcOVRTE, getArchetypeTE, runDBSimulation, calcOVRDB, getArchetypeDB, runOLSimulation, calcOVROL, getArchetypeOL, HEADSHOT_BASE, nflHeadshot, calcMVPResult, calcOPOYResult, calcWROPOYResult, calcTEOPOYResult, calcDBDpoyResult, calcOLAllProResult } from './utils/simulation'
+import { supabase, rtSupabase, apiHeaders } from './lib/supabase'
 import { track } from './lib/track'
+const CAREER_POS = ['qb', 'rb', 'wr', 'te', 'db']   // (SPORT.nfl.positions in lib/career.js, which loads on its own)
 import { blockReason, buildSig, markPlayed } from './lib/saveGuard'
+import { saveSeason, saveSalary } from './lib/submit'
 import CustomRatingsModal from './components/CustomRatingsModal'
 import SiteFooter from './components/SiteFooter'
 import SiteFeatures from './components/SiteFeatures'
+import { IS_APP, APP_LOOK } from './lib/platform'
+import { restorePro } from './lib/webCheckout'
+import AppHome from './components/app/AppHome'
 import { finishDiscordSignIn, getUsername } from './lib/discord'
-import { rampPage, RAIL_UNITS, RAIL_UNITS_WITH_LEFT } from './lib/ads'
+import { dailyState, setDailySpins, forfeitDaily } from './lib/progress'
+import { LiveLeaveButton } from './components/app/LiveLeave'
+import { FlipEdge, BuildComplete, useFlip, StackEdge, StackSeam, useDropMode, useDropSheet, DropBar, DropSheet } from './components/app/AppBuildTray'
+import { loadSquad, saveSquad, clearSquad, syncSquadFromCloud, nextToBuild, fillSlot, afterBuilding } from './lib/squad'
+import { setSandboxGate, sandboxItemFor, sandboxLocked } from './components/app/AppSandbox'
+import { rampPage, HOME_UNITS, RAIL_UNITS, RAIL_UNITS_WITH_LEFT } from './lib/ads'
 
 const _dd = arr => { const s = new Set(); return arr.filter(p => { const k = `${p.name}|${p.team}`; if (s.has(k)) return false; s.add(k); return true }) }
 const _bt = (a, b) => a.team.localeCompare(b.team) || a.name.localeCompare(b.name)
@@ -71,12 +92,15 @@ const _isAbout   = !_sharedData && !_isPrivacy && !_isTerms && !_isProfile && ne
 const _isDepthChart = !_sharedData && !_isPrivacy && !_isTerms && !_isProfile && !_isAbout && window.location.pathname === '/depth-chart'
 const _isWiki     = !_sharedData && window.location.pathname.startsWith('/wiki')   // /wiki and /wiki/<page>; the wiki routes its own pages
 
+// App: switching sport from Home lands on Home (the build in progress waits for PLAY)
+const _goHome = (() => { try { const v = sessionStorage.getItem('bap_go_home') === '1'; sessionStorage.removeItem('bap_go_home'); return v } catch { return false } })()
+
 const _saved = (() => {
   if (_sharedData || _isPrivacy || _isAbout || _isProfile || _isDepthChart || _isWiki) return null
   try {
     const p = JSON.parse(localStorage.getItem('bap_progress'))
     // OL is Coming Soon — don't drop anyone back into an in-progress OL build
-    return p?.position === 'ol' ? null : p
+    return p?.position === 'ol' || p?.tk === 'compete' ? null : p
   } catch { return null }
 })()
 
@@ -113,10 +137,16 @@ function enableAdFreeMode() {
 }
 
 // Early call — fires before Ramp initializes so forceUnits takes effect
-try { if (localStorage.getItem('bap_subscribed') === '1' || localStorage.getItem('bap_ads_off') === '1') enableAdFreeMode() } catch {}
+// The app has no web ads (Ramp does not serve in-app), so it always runs ad-free here.
+try { if (IS_APP || localStorage.getItem('bap_subscribed') === '1' || localStorage.getItem('bap_ads_off') === '1') enableAdFreeMode() } catch {}
+
+// A season that was running when the app last closed (a reload, a killed app) never got
+// booked: its build counts as played, so simulating it again saves nothing and pays nothing
+const SEASON_PENDING = 'bap_season_pending'
+try { const s = localStorage.getItem(SEASON_PENDING); if (s) { markPlayed(s); localStorage.removeItem(SEASON_PENDING) } } catch {}
 
 export default function App() {
-  const [page, setPage]               = useState(_sharedData ? 'shared' : _isPrivacy ? 'privacy' : _isTerms ? 'terms' : _isProfile ? 'profile' : _isAbout ? 'about' : _isDepthChart ? 'depth-chart' : _isWiki ? 'wiki' : (_saved?.gameMode ? 'game' : 'splash'))
+  const [page, setPage]               = useState(_sharedData ? 'shared' : _isPrivacy ? 'privacy' : _isTerms ? 'terms' : _isProfile ? 'profile' : _isAbout ? 'about' : _isDepthChart ? 'depth-chart' : _isWiki ? 'wiki' : 'splash')   // opening the app lands on the menu; a saved build waits on its Resume card
   const [sharedBuild]                 = useState(_sharedData?.build ?? null)
   const [sharedTypes]                 = useState(_sharedData?.types ?? null)
   const [gameMode, setGameMode]         = useState(_saved?.gameMode ?? null)
@@ -132,11 +162,14 @@ export default function App() {
   const [user, setUser]                 = useState(null)
   const [showAuth, setShowAuth]         = useState(false)
   const [showTeamPicker, setShowTeamPicker] = useState(false)
+  // App: today's Daily Challenge run ({ key, pos, mode, seed }) — same seeded spins for everyone
+  const [squad, setSquad] = useState(null)               // App: SQUAD BUILDER (lib/squad.js)
+  const [dailyRun, setDailyRun] = useState(() => ((IS_APP || APP_LOOK) && _saved?.daily?.key === dailyState().key ? _saved.daily : null))
   const [savedSpinResult, setSavedSpinResult] = useState(() => {
     try { return JSON.parse(localStorage.getItem('bap_spin_result')) } catch { return null }
   })
   const [spinPhase, setSpinPhase] = useState('idle')
-  const [adsDisabled, setAdsDisabled] = useState(false)
+  const [adsDisabled, setAdsDisabled] = useState(IS_APP)
   const [isSubscribed, setIsSubscribed] = useState(() => {
     try { return localStorage.getItem('bap_subscribed') === '1' } catch { return false }
   })
@@ -279,27 +312,86 @@ export default function App() {
     if (meta) meta.setAttribute('content', page === 'splash' ? '#0f1612' : page === 'depth-chart' ? '#111318' : page === 'wiki' ? '#ffffff' : '#090a0d')
   }, [page])
 
+  // iOS/Android app: report the page to the bottom tab bar (AppTabBar) and
+  // follow its taps. No-ops on the website.
+  useEffect(() => {
+    if (!IS_APP && !APP_LOOK) return
+    window.__bapPage = { page, sport: 'nfl' }
+    window.dispatchEvent(new CustomEvent('bap:page', { detail: window.__bapPage }))
+    if (['game', 'sim', 'squad', 'squad-build', 'career', 'career-build'].includes(page)) lastPlayRef.current = page
+  }, [page])
+  const startDailyRef = useRef(null)
+  const openSquadRef = useRef(null)
+  const squadRef = useRef(null); squadRef.current = squad
+  const openCareerRef = useRef(null)
+  const careerRef = useRef(null)
+  const lastPlayRef = useRef(null)           // the last mode page, so PLAY goes back to what you were doing
+  useEffect(() => {
+    if (!IS_APP && !APP_LOOK) return
+    const onNav = e => {
+      // in a live game (Compete, an auction, a Blacktop build, the Daily run) every
+      // way out asks first and forfeits (deep links, the tutorial, after sign-in…);
+      // going back to the game itself doesn't
+      if (liveLock() && String(e.detail).split(':')[0] !== 'play') { guardLeave(() => onNav(e)); return }
+      const to = e.detail
+      if (to === 'home') setPage('splash')   // keeps the build in progress — PLAY resumes it
+      else if (to === 'play') {
+        if (page === 'game' || page === 'sim' || page === 'salarycap' || page === 'squad' || page === 'squad-build' || page === 'career' || page === 'career-build') return
+        const last = lastPlayRef.current
+        if (last === 'squad' && squadRef.current) setPage('squad')
+        else if (last === 'squad-build' && gameMode) setPage('squad-build')
+        else if (last === 'career' && careerRef.current) setPage('career')
+        else if (last === 'career-build' && gameMode) setPage('career-build')
+        else if (gameMode === 'salarycap') setPage('salarycap')   // back to the board, as basketball's does
+        else if (gameMode) setPage(simResult ? 'sim' : 'game')
+        else { let p = 'qb'; try { p = localStorage.getItem('lastPosition') || 'qb' } catch {}; handleStart('classic', p) }   // quick play
+      } else if (String(to).startsWith('mode:')) {   // the PLAY fan: straight into Current or All-Time
+        let p = 'qb'; try { p = localStorage.getItem('lastPosition') || 'qb' } catch {}
+        handleStart(String(to).slice(5), p)
+      } else if (to === 'leaderboard') setPage('leaderboard')
+      else if (to === 'daily-challenge') startDailyRef.current?.()
+      else if (to === 'squad') openSquadRef.current?.()
+      else if (to === 'career') openCareerRef.current?.()
+      else if (to === 'depth-chart') setPage('depth-chart')
+      else if (to === 'salarycap') handleStart('salarycap', 'qb')
+      // signed out: the dock shows sign-in itself, since only some pages render AuthModal
+      else if (to === 'profile') { if (user) { window.history.pushState({}, '', '/profile'); setPage('profile') } else window.dispatchEvent(new CustomEvent('bap:auth')) }
+      else if (to === 'about') setPage('about')
+      else if (to === 'wiki') setPage('wiki')
+      else if (to === 'compete') setPage('compete')
+      window.scrollTo({ top: 0, behavior: 'instant' })
+    }
+    window.addEventListener('bap:nav', onNav)
+    return () => window.removeEventListener('bap:nav', onNav)
+  }, [page, gameMode, simResult, user])
+
   // Ads on every page change (lib/ads.js): destroy all units, then add this
   // page's off-page units with the path set explicitly (the URL sync effect
   // below runs after this). A layout effect, so it's queued before the new
-  // page's own in-page units. The splash page runs none; the left rail only
-  // runs on /simulate and /depth-chart. Ad-free players keep forceUnits 'off'.
+  // page's own in-page units. Home runs the bottom rail and the corner video (wide desktops); the left rail only
+  // runs on /simulate, Salary Cap and /depth-chart. Ad-free players keep forceUnits 'off'.
   useLayoutEffect(() => {
     const onSimulate = page === 'sim' && !!simResult
-    if (page === 'splash') { rampPage(); return }
+    if (page === 'splash') { rampPage({ ads: HOME_UNITS, path: '/' }); return }
     const here = window.location.pathname
     const path = onSimulate ? '/simulate'
       : page === 'depth-chart' ? '/depth-chart'
       : page === 'leaderboard' ? '/leaderboard'
       : page === 'wiki' ? (here.startsWith('/wiki') ? here : '/wiki')
       : (['/simulate', '/leaderboard', '/depth-chart'].includes(here) || here.startsWith('/wiki')) ? '/' : here
-    rampPage({ ads: onSimulate || page === 'depth-chart' ? RAIL_UNITS_WITH_LEFT : RAIL_UNITS, path })
+    rampPage({ ads: onSimulate || page === 'depth-chart' || page === 'salarycap' ? RAIL_UNITS_WITH_LEFT : RAIL_UNITS, path })
   }, [page, simResult])
 
+  // Which mode the build belongs to (Squad Builder, Career, a Compete pool), saved with it
+  const tkRef = useRef(_saved?.tk ?? null)
+  const competeRef = useRef(false)   // set once Compete is set up below
+  if (page === 'squad-build') tkRef.current = 'squad'
+  else if (page === 'career-build') tkRef.current = 'career'
+  else if (page === 'game') tkRef.current = competeRef.current ? 'compete' : null
   useEffect(() => {
-    if (!gameMode) return
-    try { localStorage.setItem('bap_progress', JSON.stringify({ gameMode, position, build, sandbox: sandboxTainted.current || isCustomMode })) } catch {}
-  }, [build, gameMode, position, isCustomMode])
+    if (!gameMode || gameMode === 'salarycap') return
+    try { localStorage.setItem('bap_progress', JSON.stringify({ gameMode, position, build, daily: dailyRun, tk: tkRef.current, sandbox: sandboxTainted.current || isCustomMode })) } catch {}
+  }, [build, gameMode, position, dailyRun, page, isCustomMode])
 
   useEffect(() => {
     try {
@@ -403,7 +495,11 @@ export default function App() {
       if (window.location.pathname !== targetPath) {
         window.history.pushState({}, '', targetPath)
       }
-    } else if (['/simulate', '/leaderboard', '/depth-chart'].includes(window.location.pathname) || onWikiPath) {
+    } else if (['/simulate', '/leaderboard', '/depth-chart'].includes(window.location.pathname) || onWikiPath || (page !== 'profile' && window.location.pathname === '/profile')
+      || (page !== 'privacy' && window.location.pathname === '/privacy') || (page !== 'terms' && window.location.pathname === '/terms')
+      || (page !== 'about' && new URLSearchParams(window.location.search).has('about'))) {
+      // (left the profile, Privacy, Terms or About: drop its address, or a refresh or opening
+      // the site again lands back there)
       window.history.replaceState({}, '', '/')
     }
   }, [page, simResult])
@@ -433,12 +529,15 @@ export default function App() {
   // Theme must be declared after isPlus
   useEffect(() => {
     try {
-      if (!isPlus) { document.documentElement.removeAttribute('data-theme'); return }
+      // the new UI has no color themes (Pro opens the shop's Pro Vault instead); a theme picked before stays off
+      if (!isPlus || IS_APP || APP_LOOK) { document.documentElement.removeAttribute('data-theme'); return }
       const t = localStorage.getItem('bap_theme')
       if (t && t !== 'default') document.documentElement.setAttribute('data-theme', t)
       else document.documentElement.removeAttribute('data-theme')
     } catch {}
   }, [isPlus])
+  // App: the shop reads Pro from storage; tell it when that changes
+  useEffect(() => { if (IS_APP || APP_LOOK) window.dispatchEvent(new CustomEvent('bap:pro')) }, [isPlus])
 
   const customModeKey = isOL ? 'ol' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : `${isRB ? 'rb' : 'qb'}${gameMode === 'all-time' ? '_legends' : ''}`
   const customPoolKey = isOL ? 'ol' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'
@@ -454,7 +553,52 @@ export default function App() {
   const activeDragRef = useRef(activeDrag)
   useLayoutEffect(() => { activeDragRef.current = activeDrag }, [activeDrag])
 
+  // ── COMPETE: five-player pools on the same spins (lib/compete.js) ──────────
+  const [competePos, setCompetePos] = useState(() => { let p = 'qb'; try { p = localStorage.getItem('lastPosition') || 'qb' } catch {}; return COMPETE_POS.nfl.includes(p) ? p : 'qb' })
+  const cp = useCompete({
+    enabled: IS_APP || APP_LOOK, user, sport: 'nfl', pos: competePos,
+    botFor: (seed, idx, skill, pos) => botBuild({
+      seed, idx, skill, teams: TEAMS,
+      pool: { qb: QBS, rb: RBS, wr: WRS, te: TES, db: DBS }[pos] ?? QBS,
+      types: pos === 'db' ? DB_TYPES : pos === 'te' ? TE_TYPES : pos === 'wr' ? WR_TYPES : pos === 'rb' ? RB_TYPES : TYPES,
+      calcOvr: b => pos === 'db' ? calcOVRDB(b) : pos === 'te' ? calcOVRTE(b) : pos === 'wr' ? calcOVRWR(b) : pos === 'rb' ? calcOVRRB(b) : calcOVR(b),
+    }),
+  })
+  const competeOn = cp.phase === 'build' && !cp.results[cp.me.vid]
+  competeRef.current = competeOn
+  // A live pool: locked into the build. Leaving (dock, More, back, reload) asks
+  // first, and forfeits: last place, a rating hit, nothing earned.
+  useEffect(() => {
+    if (!competeOn) return
+    setLiveLock({
+      title: 'Leave the pool?',
+      body: `The pool plays on without you. You finish last: ${FORFEIT_RATING} rating, no XP or coins, and it counts as a loss.`,
+      forfeit: () => { cp.forfeit(); setGameMode(null); setBuild({}); try { localStorage.removeItem('bap_progress') } catch {} },
+    })
+    return () => setLiveLock(null)
+  }, [competeOn]) // eslint-disable-line react-hooks/exhaustive-deps
+  const competeKey = useRef(null)
+  // ── TRAIT AUCTION (lib/auction.js): a Compete mode, locked in like a pool ──
+  const au = useAuction({ enabled: IS_APP || APP_LOOK, user, sport: 'nfl', pos: competePos })
+  const auctionLive = au.phase === 'auction'
+  useEffect(() => {
+    if (!auctionLive) return
+    setLiveLock({
+      title: 'Leave the auction?',
+      body: `The auction goes on without you. You finish last: ${FORFEIT_RATING} rating, no XP or coins, and it counts as a loss.`,
+      forfeit: () => au.forfeit(),
+    })
+    return () => setLiveLock(null)
+  }, [auctionLive]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleStart = useCallback((mode, pos = 'qb') => {
+    // Salary Cap (QB): its own page picks the build from the day's grid
+    if (mode === 'salarycap') {
+      setPosition('qb'); setGameMode('salarycap'); setBuild({}); setSimResult(null); setDailyRun(null)
+      setPage('salarycap'); window.scrollTo(0, 0)
+      track('mode_selected', { position: 'qb', gameMode: 'salarycap' })
+      return
+    }
     setPosition(pos)
     const isRBMode = pos === 'rb'
     const isWRMode = pos === 'wr'
@@ -466,6 +610,13 @@ export default function App() {
     setBuild(Object.fromEntries(types.map(t => [t, null])))
     setActiveCategory('physical')
     setSavedSpinResult(null)
+    setDailyRun(null)
+    if (IS_APP || APP_LOOK) {   // a finished game is kept around (Home → resume), so clear it
+      setSimResult(null)
+      setMobileView('spin')
+      setSpinResetKey(k => k + 1)
+      setGameKey(k => k + 1)
+    }
     sandboxTainted.current = isCustomMode
     setPage('game')
     track('mode_selected', { position: pos, gameMode: mode })
@@ -502,7 +653,160 @@ export default function App() {
     q.then(({ error }) => { if (error) console.error('[award] failed to save award:', error) })
   }, [user])
 
+  // Daily Challenge: no resets until the run has been simulated
+  const dailyLocked = !!dailyRun && !dailyState().done
+  const dailyLockedRef = useRef(dailyLocked)
+  dailyLockedRef.current = dailyLocked
+  // The Daily Challenge plays like an online mode: one run, locked in. Leaving
+  // (dock, More, back, reload) asks first, and ends the day with no score.
+  const dailyLive = (IS_APP || APP_LOOK) && dailyLocked && (page === 'game' || page === 'sim')
+  useEffect(() => {
+    if (!dailyLive) return
+    setLiveLock({
+      title: 'Leave the Daily Challenge?',
+      body: 'One run a day. Leave now and today\'s challenge is over: no score on the board, and you can\'t play it again until tomorrow.',
+      forfeit: () => { forfeitDaily(); setDailyRun(null); setGameMode(null); setBuild({}); setSimResult(null); try { localStorage.removeItem('bap_progress') } catch {} },
+    })
+    return () => setLiveLock(null)
+  }, [dailyLive]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // App: Spin and Build are two sides of one card — swipe to flip, and the
+  // last pick flips it to Build (drag-and-drop included)
+  // Phones (app and website): the player is the screen and the spin drops down over it
+  const drop = useDropMode((IS_APP || APP_LOOK) && (page === 'game' || page === 'versus-game' || page === 'squad-build' || page === 'career-build'))
+  const [dropOpen, setDropOpen] = useDropSheet(drop, build, activeTypes, spinResetKey)
+  const flip = useFlip(IS_APP && !drop && (page === 'game' || page === 'versus-game' || page === 'squad-build' || page === 'career-build'), mobileView, setMobileView)
+  const buildComplete = activeTypes.length > 0 && activeTypes.every(t => build[t])
+  useEffect(() => { if (IS_APP && buildComplete && (page === 'game' || page === 'squad-build' || page === 'career-build')) flip('build') }, [buildComplete]) // eslint-disable-line react-hooks/exhaustive-deps
+  // Website: the build-complete hit (the app's BuildComplete screen plays its own)
+  useEffect(() => { if (!IS_APP && buildComplete && (page === 'game' || page === 'squad-build' || page === 'career-build')) window.__bapJuice?.sfx('complete', 2) }, [buildComplete]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── SQUAD BUILDER (app): one squad per account; its players are built on the build page ──
+  // (the account's squad from the cloud comes in a moment later: lib/squadCloud.js)
+  useEffect(() => {
+    if (!(IS_APP || APP_LOOK)) return
+    setSquad(loadSquad('nfl', user?.id))
+    let live = true
+    if (user?.id) syncSquadFromCloud('nfl', user.id).then(sq => { if (live) setSquad(sq) })
+    return () => { live = false }
+  }, [user?.id])
+  // every change is saved; null starts over (one squad at a time)
+  const putSquad = useCallback(sq => { setSquad(sq); if (sq) saveSquad(sq); else clearSquad('nfl', user?.id) }, [user?.id])
+  const openSquad = useCallback(() => { setPage('squad'); window.scrollTo({ top: 0, behavior: 'instant' }) }, [])
+  // the squad's next player to build, on the normal build page (sandbox left on from the
+  // plain modes doesn't carry in unless Squad Builder's Sandbox is unlocked: the switch goes off)
+  // the slot on the build page right now (Home and back resumes it; after a reload the saved build is it)
+  const squadBuilding = useRef(_saved?.tk === 'squad' ? 'saved' : null)
+  const startSquadBuild = useCallback(slot => {
+    handleStart('classic', slot.pos)
+    squadBuilding.current = slot.id
+    if (sandboxLocked('squad-build')) sandboxTainted.current = false
+    setPage('squad-build')
+  }, [handleStart])
+  const buildSquad = useCallback(sq => {
+    const next = nextToBuild(sq)
+    if (!next) { setPage('squad'); return }
+    if ((squadBuilding.current === next.id || squadBuilding.current === 'saved') && gameMode === 'classic' && position === next.pos) { setPage('squad-build'); return }   // its build is still in progress
+    startSquadBuild(next)
+  }, [startSquadBuild, gameMode, position])
+  // ── CAREER (app): one saved career per account; a fresh build starts one ──
+  const [career, setCareer] = useState(null)
+  careerRef.current = career
+  useEffect(() => {
+    if (!IS_APP && !APP_LOOK) return
+    // (the career code loads on its own: it's big, and the first screen doesn't wait for it)
+    let off = false
+    import('./lib/career').then(({ loadCareer, syncCareerFromCloud }) => {
+      if (off) return
+      setCareer(loadCareer('nfl', user?.id))
+      // signed in: the cloud copy (or a guest career moving onto the account)
+      if (user?.id) syncCareerFromCloud('nfl', user.id).then(c => { if (!off) setCareer(c) })
+    })
+    return () => { off = true }
+  }, [user?.id])
+  const startCareerBuild = useCallback(() => {
+    let p = 'qb'; try { p = localStorage.getItem('lastPosition') || 'qb' } catch {}
+    if (!CAREER_POS.includes(p)) p = 'qb'
+    handleStart('classic', p); setPage('career-build')
+  }, [handleStart])
+  // Career opens on its home: the three save slots (CareerIntro)
+  const careerNew = useRef({ slot: 0, name: null })
+  const openCareer = useCallback(() => {
+    setPage('career-intro')
+    window.scrollTo({ top: 0, behavior: 'instant' })
+  }, [])
+  openCareerRef.current = openCareer
+  const enterDraft = useCallback(async () => {
+    const { newCareer, saveCareer } = await import('./lib/career')
+    const owner = getUsername(user) || 'Guest'
+    const c = { ...newCareer({ sport: 'nfl', uid: user?.id ?? null, pos: position, build, name: careerNew.current.name || owner, slot: careerNew.current.slot, owner }), sandbox: !!isCustomMode }
+    saveCareer(c); setCareer(c); setGameMode(null); setBuild({}); setPage('career')
+    try { localStorage.removeItem('bap_progress') } catch {}   // the build is the career's now: a reload lands on Home, not the build page
+    window.scrollTo({ top: 0, behavior: 'instant' })
+  }, [user, position, build, isCustomMode])
+
+  // A Squad Builder build is done: into its slot, then the next one (or the team)
+  const squadNext = useCallback(() => {
+    const sq = squadRef.current, slot = nextToBuild(sq)
+    if (!slot) { setPage('squad'); return }
+    if (slot.pos !== position) { startSquadBuild(slot); return }
+    const filled = fillSlot(sq, slot.id, build, activeTypes, isCustomMode || sandboxTainted.current)
+    const next = nextToBuild(filled)
+    putSquad(next ? filled : { ...filled, phase: afterBuilding(filled) })
+    if (next) startSquadBuild(next)
+    else { squadBuilding.current = null; setGameMode(null); setBuild({}); setPage('squad'); try { localStorage.removeItem('bap_progress') } catch {} }   // the builds are the squad's now
+    window.scrollTo({ top: 0, behavior: 'instant' })
+  }, [position, build, activeTypes, isCustomMode, putSquad, startSquadBuild])
+  const squadLeft = squad ? squad.slots.filter(s => !s.build).length : 0
+
+  useEffect(() => {
+    if (cp.phase !== 'build' || !cp.match || cp.results[cp.me.vid] || competeKey.current === cp.match.code) return
+    competeKey.current = cp.match.code
+    // same spins for the whole pool: no custom ratings, a fresh spin screen
+    try { localStorage.setItem('bap_custom_mode', '0') } catch {}
+    setIsCustomMode(false)
+    // a Daily run in progress ends here (leaving it is a forfeit, as from anywhere)
+    if (dailyLockedRef.current) forfeitDaily()
+    handleStart('classic', cp.match.pos)
+    setSimResult(null); setMobileView('spin'); setSpinResetKey(k => k + 1); setGameKey(k => k + 1)
+    sandboxTainted.current = false
+  }, [cp.phase, cp.match?.code]) // eslint-disable-line react-hooks/exhaustive-deps
+  // LOCK IN: the build's OVR goes to the pool; the game is done with
+  const lockInCompete = useCallback(() => {
+    const ovr = Math.round((isOL ? calcOVROL(build) : isDB ? calcOVRDB(build) : isTE ? calcOVRTE(build) : isWR ? calcOVRWR(build) : isRB ? calcOVRRB(build) : calcOVR(build)) ?? 0)
+    cp.submit(ovr, build)
+    try { localStorage.removeItem('bap_progress') } catch {}
+    setGameMode(null); setBuild({}); setSavedSpinResult(null)
+    setPage('compete')
+    window.scrollTo({ top: 0, behavior: 'instant' })
+  }, [build, cp, isOL, isDB, isTE, isWR, isRB])
+
+  const startDaily = useCallback(() => {
+    const dc = dailyState()
+    if (dc.sport === 'bucket') { window.location.href = '/bucket?daily=1'; return }   // a basketball day
+    if (dc.done) { window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'daily' })); return }
+    if (dailyRun?.key === dc.key && gameMode) { setPage(simResult ? 'sim' : 'game'); return }
+    try { localStorage.setItem('lastPosition', dc.pos) } catch {}
+    // Same spins for everyone, so custom ratings are off for the run (on, they'd also stop it counting)
+    try { localStorage.setItem('bap_custom_mode', '0') } catch {}
+    setIsCustomMode(false)
+    handleStart(dc.mode, dc.pos)
+    sandboxTainted.current = false
+    setDailyRun({ key: dc.key, pos: dc.pos, mode: dc.mode, seed: dc.seed })
+  }, [dailyRun, gameMode, simResult, handleStart])
+  startDailyRef.current = startDaily
+  openSquadRef.current = openSquad
+
+  // Opened from Build-A-Bucket's Daily screen (/?daily=1)
+  useEffect(() => {
+    if ((!IS_APP && !APP_LOOK) || !new URLSearchParams(window.location.search).has('daily')) return
+    window.history.replaceState({}, '', '/')
+    startDaily()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleReset = useCallback(() => {
+    if (dailyLockedRef.current) return
+    setDailyRun(null)
     setVersusRoom(prev => {
       if (prev) { recordVsForfeiture(); cleanupVersusChannel(prev.channel) }
       return null
@@ -524,7 +828,7 @@ export default function App() {
     setBuild(prev => {
       if (prev[chipData.type] !== undefined && prev[chipData.type]) return prev
       const next = { ...prev, [chipData.type]: chipData }
-      if (activeTypes.every(t => next[t])) setMobileView('build')
+      if (!IS_APP && activeTypes.every(t => next[t])) setMobileView('build')   // the app turns the card itself
       return next
     })
     setSpinResetKey(k => k + 1)
@@ -547,6 +851,8 @@ export default function App() {
     try { localStorage.setItem('bap_custom_mode', on ? '1' : '0') } catch {}
     setIsCustomMode(on)
   }, [])
+  // a Career or Squad Builder build whose Sandbox isn't unlocked: sandbox from the plain modes doesn't carry in
+  useEffect(() => { if (isCustomMode && sandboxLocked(page)) handleSandboxToggle(false) }, [page]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const showSaveToast = useCallback((type, msg) => {
     setSaveToast({ type, msg })
@@ -554,6 +860,7 @@ export default function App() {
     saveToastTimer.current = setTimeout(() => setSaveToast(null), 4500)
   }, [])
 
+  const commitRef = useRef(null)
   const handleTeamPicked = useCallback((team) => {
     setShowTeamPicker(false)
     const atRatings = ALLTIME_RATINGS[team.short]
@@ -571,6 +878,90 @@ export default function App() {
           : isRB
             ? runRBSimulation(build, activeTypes, effectiveTeam, gameMode === 'all-time')
             : runSimulation(build, activeTypes, effectiveTeam, gameMode === 'all-time')
+    // The season is steered on the sim page (moments re-simulate the rest of
+    // the year), so it's booked when it ends — SimPage calls commitSeason.
+    if (IS_APP || APP_LOOK) {
+      // until it's booked, the build is a season in progress: a reload or a killed app
+      // before the end makes it a played build (no second run at a season by reloading)
+      if (!dailyRun) { try { localStorage.setItem(SEASON_PENDING, buildSig(gameMode, build, activeTypes)) } catch {} }
+      setSimResult(result); setSimReplaying(false); setPage('sim')
+      window.scrollTo({ top: 0, behavior: 'instant' })
+      return
+    }
+    commitRef.current?.(result)
+  }, [build, activeTypes, gameMode, isOL, isDB, isTE, isWR, isRB]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── SALARY CAP (QB): picks from the day's grid → a season on a date-seeded team ──
+  const [salaryReturnDate, setSalaryReturnDate] = useState(null)
+  const [salaryResults, setSalaryResults] = useState(false)   // View Results: straight to the final screen
+  const handleQBSalaryConfirm = useCallback((fullBuild, skipToEnd, dateStr, saveData) => {
+    setSalaryReturnDate(dateStr ?? null)
+    setPosition('qb'); setGameMode('salarycap')
+    setBuild(fullBuild)
+    // the team is seeded from the date, so "View Results" always returns the same season
+    const dateSeed = dateStr ? parseInt(dateStr.replace(/-/g, ''), 10) : Date.now()
+    let h = dateSeed | 0; h ^= h >>> 16; h = Math.imul(h, 0x45d9f3b) | 0; h ^= h >>> 16
+    const team = NFL_TEAMS[Math.floor(((h >>> 0) / 0x100000000) * NFL_TEAMS.length)]
+    // ...and the season itself plays on a date-seeded RNG (as basketball's does), so
+    // View Results replays the exact season that was saved, not a fresh roll
+    const realRandom = Math.random
+    let s = dateSeed | 0
+    Math.random = () => { s = (s + 0x6D2B79F5) | 0; let t = Math.imul(s ^ (s >>> 15), 1 | s); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296 }
+    let result
+    try {
+      result = runSimulation(fullBuild, TYPES, team, false)
+      result.award = calcMVPResult(result, false, team.short)
+    } finally { Math.random = realRandom }
+    setSimResult(result); setSimReplaying(false); setSalaryResults(!!skipToEnd)
+    // a fresh play earns season XP (kept on the device: it isn't a saved season)
+    if ((IS_APP || APP_LOOK) && !skipToEnd) {
+      window.dispatchEvent(new CustomEvent('bap:season', { detail: {
+        sport: 'nfl', pos: 'qb', mode: 'salarycap', localOnly: true, infinite: !!saveData?.infinite,
+        wins: result.wins, losses: result.losses, playoffs: !!result.playoffs,
+        champion: !!result.sbResult?.won, award: !!result.award?.userWins, awardName: 'MVP',
+        ovr: result.ovr, ref: result,
+      } }))
+    }
+    setPage('sim')
+    window.scrollTo(0, 0)
+    // the day's board (or the infinite one) — real sim OVR, fresh plays only
+    if (saveData?.userId && !saveData.noPost && supabase && !skipToEnd) {
+      const row = {
+        user_id: saveData.userId, username: saveData.username, picks: saveData.picks, overall_score: result.ovr,
+        pass_yds: result.seasonPassYds ?? saveData.passYds ?? null, pass_tds: result.seasonTDs ?? saveData.passTds ?? null,
+        ints: result.seasonINTs ?? saveData.ints ?? null, budget_used: saveData.totalCost,
+      }
+      // checked by the live server on its way to the board (lib/submit.js)
+      saveSalary({ sport: 'nfl', infinite: !!saveData.infinite, date: dateStr, picks: saveData.picks, sent: row },
+        saveData.infinite ? row : { ...row, date_str: dateStr }, saveData.infinite ? 'qb_salary_infinite_plays' : 'qb_salary_cap_plays')
+        .then(({ error }) => { if (error) console.error('[qb salary save]', error.code, error.message) })
+    }
+  }, [])
+  // Salary Cap has its own URL (/salary), like basketball's /bucket/salary: browser
+  // Back from its season returns to the board, Back from the board goes Home, and
+  // a refresh on /salary reopens it
+  const salaryStartRef = useRef(window.location.pathname === '/salary')
+  const salaryPushedRef = useRef(false)   // the entry under /salary is ours, so its Back button can step back to it
+  useEffect(() => {
+    if (salaryStartRef.current) { salaryStartRef.current = false; handleStart('salarycap', 'qb'); return }
+    if (page === 'salarycap') { if (window.location.pathname !== '/salary') { window.history.pushState({}, '', '/salary'); salaryPushedRef.current = true } }
+    // (not on the way into its season: /salary stays under /simulate, so Back to Salary
+    // lands on the board and not on the build screen)
+    else if (window.location.pathname === '/salary' && page !== 'sim') window.history.replaceState({}, '', '/')
+  }, [page]) // eslint-disable-line react-hooks/exhaustive-deps
+  // a layout effect so this listener is added before the page's general popstate
+  // handler: React renders popstate updates synchronously, so it must see /salary first
+  useLayoutEffect(() => {
+    const onPop = () => {
+      if (window.location.pathname === '/salary') setPage(prev => (prev === 'splash' ? prev : 'salarycap'))
+      else setPage(prev => (prev === 'salarycap' ? 'splash' : prev))
+    }
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [])
+
+  // Books a finished season: award, save, lifetime counters, XP
+  const commitSeason = useCallback((result) => {
     // Decide the season's award (MVP / OPOY / DPOY / All-Pro) now and save it
     // on the season's own row. Players can't edit a saved season afterwards —
     // the database ignores client updates to `simulations` — so tagging the row
@@ -579,13 +970,27 @@ export default function App() {
     const awardType = isOL ? 'allpro' : isDB ? 'dpoy' : (isRB || isWR || isTE) ? 'opoy' : 'mvp'
     const calcAward = isOL ? calcOLAllProResult : isDB ? calcDBDpoyResult : isTE ? calcTEOPOYResult
       : isWR ? calcWROPOYResult : isRB ? calcOPOYResult : calcMVPResult
-    result.award = calcAward(result, isAllTimeSeason, result.team?.short)
+    result.award = result.award ?? calcAward(result, isAllTimeSeason, result.team?.short)
     setSimResult(result)
-    track('simulate', { position, gameMode, userId: user?.id ?? null })
-    // Leaderboard guard (lib/saveGuard.js): sandbox in any form, or a build that already saved a season
+    // Leaderboard guard (lib/saveGuard.js): sandbox in any form, or a build that
+    // already saved a season. Either way: no save, and no XP or coins either.
     const saveBlock = blockReason({ mode: gameMode, build, types: activeTypes, pool: activePool, sandboxOn: isCustomMode, tainted: sandboxTainted.current })
+    try { localStorage.removeItem(SEASON_PENDING) } catch {}
+    // Season XP, coins, missions and the Daily Challenge score (lib/progress.js)
+    if (IS_APP || APP_LOOK) {
+      window.dispatchEvent(new CustomEvent('bap:season', { detail: {
+        sport: 'nfl', pos: position, mode: gameMode,
+        wins: result.wins, losses: result.losses, playoffs: !!result.playoffs,
+        champion: !!result.sbResult?.won, award: !!result.award?.userWins,
+        awardName: { mvp: 'MVP', opoy: 'OPOY', dpoy: 'DPOY', allpro: 'All-Pro' }[awardType],
+        ovr: result.ovr, sandbox: !!saveBlock, daily: !!dailyRun, ref: result,
+        build: dailyRun ? Object.fromEntries(activeTypes.filter(t => build[t]).map(t => [t, { qb: build[t].qbFull, team: build[t].team, val: build[t].val }])) : undefined,
+      } }))
+    }
+    track('simulate', { position, gameMode, userId: user?.id ?? null })
     if (!user) {
-      showSaveToast('no-auth', 'Sign in to save your stats')
+      // the new look doesn't nag guests after every season (Sign in is on Home)
+      if (!IS_APP && !APP_LOOK) showSaveToast('no-auth', 'Sign in to save your stats')
     } else if (saveBlock === 'sandbox') {
       showSaveToast('custom', 'Custom mode — results not saved')
     } else if (saveBlock === 'played') {
@@ -605,7 +1010,8 @@ export default function App() {
               ? getArchetypeRB(result.ovr, build, activeTypes)
               : getArchetype(result.ovr, build, activeTypes)
       markPlayed(buildSig(gameMode, build, activeTypes))
-      supabase.from('simulations').insert({
+      // checked by the live server on its way to the boards (lib/submit.js)
+      saveSeason('nfl', isOL ? 'ol' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb', gameMode || 'classic', {
         user_id: user.id,
         username: getUsername(user) || 'Player',
         ovr: result.ovr,
@@ -645,7 +1051,16 @@ export default function App() {
     setSimReplaying(false)
     setPage('sim')
     window.scrollTo({ top: 0, behavior: 'instant' })
-  }, [build, activeTypes, user, gameMode, position, showSaveToast, recordAward, isCustomMode, activePool])
+  }, [build, activeTypes, user, gameMode, position, showSaveToast, recordAward, dailyRun, isCustomMode, isOL, isDB, isTE, isWR, isRB, activePool])
+
+  commitRef.current = commitSeason
+
+  // The director re-simulates the rest of a season with tweaked inputs
+  const simFor = useCallback((b, t) => {
+    const at = gameMode === 'all-time'
+    return isOL ? runOLSimulation(b, t, at) : isDB ? runDBSimulation(b, t, at) : isTE ? runTESimulation(b, activeTypes, t, at)
+      : isWR ? runWRSimulation(b, activeTypes, t, at) : isRB ? runRBSimulation(b, activeTypes, t, at) : runSimulation(b, activeTypes, t, at)
+  }, [gameMode, isOL, isDB, isTE, isWR, isRB, activeTypes])
 
   const handleHome = useCallback(() => {
     setVersusRoom(prev => {
@@ -671,6 +1086,7 @@ export default function App() {
   }
 
   async function recordVsResult(result) {
+    window.dispatchEvent(new CustomEvent('bap:h2h', { detail: { result: result, sport: 'nfl' } }))
     setVsRecord(prev => result === 'win'
       ? { wins: (prev?.wins ?? 0) + 1, losses: prev?.losses ?? 0 }
       : { wins: prev?.wins ?? 0, losses: (prev?.losses ?? 0) + 1 })
@@ -688,6 +1104,7 @@ export default function App() {
   }
 
   async function recordVsForfeiture() {
+    window.dispatchEvent(new CustomEvent('bap:h2h', { detail: { result: 'forfeit', sport: 'nfl' } }))
     setVsRecord(prev => ({ wins: prev?.wins ?? 0, losses: (prev?.losses ?? 0) + 1 }))
     if (!supabase || !user) return
     const { build: b, position: pos } = vsResultRef.current
@@ -704,6 +1121,7 @@ export default function App() {
 
   // Opponent presumed gone — award the local player a win and bail to the lobby.
   function handleOppGone(ch) {
+    window.dispatchEvent(new CustomEvent('bap:h2h', { detail: { result: 'walkover', sport: 'nfl' } }))
     setVsRecord(prev => ({ wins: (prev?.wins ?? 0) + 1, losses: prev?.losses ?? 0 }))
     if (supabase && user) {
       const { build: b, position: pos } = vsResultRef.current
@@ -796,7 +1214,7 @@ export default function App() {
         if (!channel._bc) {
           const vsId = sessionStorage.getItem('bap_vs_id')
           const vid  = user?.id ? `${user.id}-${vsId}` : vsId
-          const name = getUsername(user) || 'Your Build'
+          const name = getUsername(user) || 'Guest'
           if (vid) channel.track({ vid, name }).catch(() => {})
         }
       } else if ((s === 'TIMED_OUT' || s === 'CHANNEL_ERROR') && !channel._bc && retries < 5) {
@@ -876,33 +1294,411 @@ export default function App() {
     })
   }, [page, user])
 
+  // App: the game screen stays mounted while another tab is open (parked,
+  // display:none) so a spin in flight keeps spinning, keeps its sound and
+  // nothing resets. Both the game page and the parked pages render the same
+  // shell, so React keeps the spin's state across the switch.
+  const KEEP_GAME_ON = new Set(['splash', 'profile', 'leaderboard', 'about', 'privacy', 'terms', 'depth-chart', 'compete'])
+  const gameIsPlay = page === 'game' || (KEEP_GAME_ON.has(page) && lastPlayRef.current === 'game')
+  const filledCount = activeTypes.filter(t => build[t]).length
+  const currentAttrMap = isOL ? OL_ATTR : isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : isRB ? RB_ATTR : ATTR
+  const completeOvr = IS_APP && buildComplete && (page === 'game' || page === 'squad-build' || page === 'career-build')
+    ? (isOL ? calcOVROL(build) : isDB ? calcOVRDB(build) : isTE ? calcOVRTE(build) : isWR ? calcOVRWR(build) : isRB ? calcOVRRB(build) : calcOVR(build))
+    : 0
+  // the build's name (the one the season screen shows), not a tier
+  const completeName = completeOvr
+    ? (isOL ? getArchetypeOL(completeOvr, build, activeTypes) : isDB ? getArchetypeDB(completeOvr, build, DB_TYPES) : isTE ? getArchetypeTE(completeOvr, build, activeTypes) : isWR ? getArchetypeWR(completeOvr, build, activeTypes) : isRB ? getArchetypeRB(completeOvr, build, activeTypes) : getArchetype(completeOvr, build, activeTypes))
+    : null
+  const dailyPlan = dailyRun && dailyLocked && gameIsPlay
+    ? { seed: dailyRun.seed, getStart: () => dailyState().spins, onSpin: setDailySpins }
+    : null
+  // a seeded build picks up after the last spin it placed (a reload never deals spin 0 again)
+  const seedBuildRef = useRef(null); seedBuildRef.current = build
+  const nextSeedSpin = useCallback(() => 1 + Math.max(-1, ...Object.values(seedBuildRef.current || {}).filter(Boolean).map(c => (Number.isInteger(c.spin?.i) ? c.spin.i : -1))), [])
+  const competePlan = useMemo(() => (competeOn && cp.match ? { seed: cp.match.seed, getStart: nextSeedSpin, onSpin: () => {}, separateRespins: true, respinSeed: `${cp.match.seed}:${cp.me.vid}` } : null), [competeOn, cp.match?.code]) // eslint-disable-line react-hooks/exhaustive-deps
+  // Sandbox is only for the plain Current and All-Time modes
+  // (Career and Squad Builder builds too, once that mode's Sandbox is unlocked: the switch asks)
+  const sandboxOk = (gameMode === 'classic' || gameMode === 'all-time') && !dailyRun && !competeOn && page !== 'versus-game'
+  setSandboxGate(sandboxItemFor(page))
+
+  const navbarProps = {
+    gradesToggle: drop && !competeOn && page !== 'versus-game',   // phones: the grades switch lives in the navbar
+    onReset: competeOn || dailyLocked ? undefined : handleReset,   // the Daily: one run, no reset
+    onAbout: () => setPage('about'),
+    onHome: handleHome,
+    onSignIn: () => setShowAuth(true),
+    onProfile: () => { window.history.pushState({}, '', '/profile'); setPage('profile') },
+    onLeaderboard: () => setPage('leaderboard'),
+    // switching position leaves the game: a live one (the Daily, a pool, an auction) asks first and forfeits
+    // (a new Career's build switches in place: going home dropped the career, so RB couldn't be picked)
+    onSwitchPosition: (pos) => guardLeave(() => {
+      try { localStorage.setItem('lastPosition', pos) } catch {}
+      if (page === 'career-build' && CAREER_POS.includes(pos)) { handleStart('classic', pos); setPage('career-build') }
+      else handleHome()
+    }),
+    onSubscribe: async () => {
+      if (!user) { setShowAuth(true); return }
+      try {
+        const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/create-checkout`, {
+          method: 'POST',
+          headers: await apiHeaders(),
+          body: JSON.stringify({ userId: user.id, email: user.email }),
+        })
+        const { url } = await res.json()
+        if (url) window.location.href = url
+      } catch {}
+    },
+    onOpenCustomRatings: () => setShowCustomModal(true),
+    user,
+    // the Salary Cap pill only while you're in Salary Cap (not on the board or the profile)
+    gameMode: gameMode === 'salarycap' && page !== 'salarycap' && page !== 'sim' ? null : gameMode,
+    isRB,
+    isWR,
+    isTE,
+    isDB,
+    isOL,
+    isPlus,
+  }
+
+  const renderGame = parked => (
+    <>
+      {/* a live pool has no navbar: no position switch, no way out but LEAVE */}
+      {!parked && !competeOn && !dailyLive && <Navbar {...navbarProps} />}
+
+      <div className="game-page-scroll">
+      {competeOn && <CompeteHud cp={cp} />}
+      {/* Squad Builder: which of the squad's players this is */}
+      {page === 'squad-build' && squad && <div className="cp-hud sq-hud" role="status"><span><small>SQUAD BUILDER · {String(position).toUpperCase()} · PLAYER {squad.slots.length - squadLeft + 1} OF {squad.slots.length}</small></span><span className="cp-hud-dots">{squad.slots.map(s => <i key={s.id} className={s.build ? 'is-in' : ''} />)}</span></div>}
+      {dailyLive && page === 'game' && <div className="cp-hud dc-hud" role="status"><span><small>DAILY CHALLENGE · {String(dailyRun.pos).toUpperCase()} · ONE RUN</small></span><LiveLeaveButton /></div>}
+      {IS_APP && !drop && (
+        <StackEdge view={mobileView} build={build} types={activeTypes} attrMap={currentAttrMap} onFlip={flip}
+          waiting={savedSpinResult?.selectedQB?.name ?? null} complete={buildComplete} />
+      )}
+      {drop && <DropBar open={dropOpen} setOpen={setDropOpen} build={build} types={activeTypes} attrMap={currentAttrMap}
+        waiting={savedSpinResult?.selectedQB?.name ?? null} complete={buildComplete} />}
+      <main className={`game-layout ${drop ? 'mobile-build ag-drop' : IS_APP ? 'mobile-build ag-stack' : `mobile-${mobileView}`}${gameMode === 'all-time' ? ' alltime-mode' : ''}${page === 'versus-game' ? ' versus-active' : ''}`}>
+        {(el => (drop ? <DropSheet open={dropOpen} setOpen={setDropOpen}>{el}</DropSheet> : el))(<SpinScreen
+          gradesHidden={competeOn}
+          build={build}
+          activeDrag={activeDrag}
+          onDragStart={setActiveDrag}
+          onDragEnd={() => setActiveDrag(null)}
+          activeCategory={activeCategory}
+          resetKey={spinResetKey}
+          onChipTap={handleChipTap}
+          types={activeTypes}
+          isLite={gameMode === 'lite'}
+          qbPool={displayPool}
+          savedResult={savedSpinResult}
+          onSaveResult={setSavedSpinResult}
+          onPhaseChange={setSpinPhase}
+          gameKey={gameKey}
+          onReset={dailyLocked || competeOn || page === 'versus-game' ? undefined : handleReset}
+          adsDisabled={adsDisabled}
+          seedPlan={competePlan ?? dailyPlan}
+          key={competePlan ? `cp-${cp.match.code}` : 'spin'}
+          cardMeta={(IS_APP || APP_LOOK) && gameIsPlay ? { sport: 'nfl', pos: position, mode: gameMode } : null}
+          paused={parked}
+          isRB={isRB}
+          isWR={isWR}
+          isTE={isTE}
+          isDB={isDB}
+          isOL={isOL}
+          isAllTime={gameMode === 'all-time'}
+          playerLabel={isOL ? 'OL' : isDB ? 'DB' : isTE ? 'TE' : isWR ? 'WR' : undefined}
+          attrMap={isOL ? OL_ATTR : isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : isRB ? RB_ATTR : undefined}
+          categoriesData={isOL ? OL_CATEGORIES : isDB ? DB_CATEGORIES : isTE ? TE_CATEGORIES : isWR ? WR_CATEGORIES : undefined}
+        />)}
+        {IS_APP && !drop && <StackSeam build={build} types={activeTypes} onFlip={flip} />}
+        <Silhouette
+          build={build}
+          activeDrag={activeDrag}
+          onDrop={handleDrop}
+          activeCategory={activeCategory}
+          onCategoryChange={setActiveCategory}
+          types={activeTypes}
+          isLite={gameMode === 'lite'}
+          onReset={competeOn || dailyLocked || page === 'versus-game' ? undefined : handleReset}
+          isRB={isRB}
+          isWR={isWR}
+          isTE={isTE}
+          isDB={isDB}
+          isOL={isOL}
+          categoriesData={isOL ? OL_CATEGORIES : isDB ? DB_CATEGORIES : isTE ? TE_CATEGORIES : isWR ? WR_CATEGORIES : undefined}
+          attrMap={isOL ? OL_ATTR : isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : isRB ? RB_ATTR : undefined}
+          isPlus={isPlus}
+          isCustomMode={isCustomMode}
+          onOpenCustomModal={() => setShowCustomModal(true)}
+          onSandboxToggle={sandboxOk ? handleSandboxToggle : undefined}
+        />
+
+        <div className="right-panel-wrap">
+          <ReportCard
+            build={build}
+            onSimulate={page === 'versus-game' ? handleFaceoff : page === 'squad-build' ? squadNext : page === 'career-build' ? enterDraft : competeOn ? lockInCompete : handleSimulate}
+            simLabel={page === 'squad-build' ? (squadLeft > 1 ? 'NEXT PLAYER' : squad?.team ? 'BACK TO THE SQUAD' : 'PICK A TEAM') : page === 'career-build' ? 'ENTER THE DRAFT' : competeOn ? 'LOCK IN' : undefined}
+            onReset={competeOn || dailyLocked || page === 'versus-game' ? undefined : handleReset}
+            types={activeTypes}
+            hasResult={page === 'versus-game' ? false : !!simResult}
+            isRB={isRB}
+            isWR={isWR}
+            isTE={isTE}
+            isDB={isDB}
+            isOL={isOL}
+            attrMap={isOL ? OL_ATTR : isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : isRB ? RB_ATTR : undefined}
+            isPlus={isPlus}
+            isCustomMode={isCustomMode}
+            onOpenCustomModal={() => setShowCustomModal(true)}
+            onSandboxToggle={sandboxOk ? handleSandboxToggle : undefined}
+            isVersusMode={page === 'versus-game'}
+          />
+        </div>
+
+        {/* Versus opponent status overlay */}
+        {page === 'versus-game' && versusRoom && (() => {
+          const oppFilled = activeTypes.filter(t => oppBuild[t]).length
+          const myFilled  = activeTypes.filter(t => build[t]).length
+          return (
+            <div className="versus-hud">
+              <div className="versus-hud-inner">
+                <div className="vhud-side vhud-side--me">
+                  <span className="vhud-label">YOU</span>
+                  <span className="vhud-count">{myFilled}/{activeTypes.length}</span>
+                </div>
+                <div className="vhud-vs">VS</div>
+                <div className="vhud-side vhud-side--opp">
+                  <span className="vhud-label">{versusRoom.oppName}</span>
+                  <span className="vhud-count">{oppFilled}/{activeTypes.length}</span>
+                </div>
+              </div>
+              {myFilled === activeTypes.length && (
+                <button className="vhud-faceoff-btn" onClick={handleFaceoff}>
+                  FACE OFF
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M5 12h14M12 5l7 7-7 7"/>
+                  </svg>
+                </button>
+              )}
+            </div>
+          )
+        })()}
+      </main>
+      <div className="build-footer-section">
+        <SiteFeatures sport="nfl" className="build-site-features" />
+        <SiteFooter sport="nfl" onDepthChart={() => setPage('depth-chart')} />
+      </div>
+      </div>
+
+
+      {/* Mobile bottom tab bar (phones with the drop-down spin don't need it) */}
+      {!drop && <nav className="mobile-tab-bar">
+        <button
+          className={`mtab ${mobileView === 'spin' ? 'active' : ''}`}
+          onClick={() => { setMobileView('spin'); window.scrollTo({ top: 0, behavior: 'instant' }); document.querySelector('.game-page-scroll')?.scrollTo({ top: 0, behavior: 'instant' }) }}
+        >
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="23 4 23 10 17 10"/>
+            <polyline points="1 20 1 14 7 14"/>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+          </svg>
+          Spin
+        </button>
+        <div className="mtab-sep" />
+        <button
+          className={`mtab ${mobileView === 'build' ? 'active' : ''}`}
+          onClick={() => { setMobileView('build'); window.scrollTo({ top: 0, behavior: 'instant' }); document.querySelector('.game-page-scroll')?.scrollTo({ top: 0, behavior: 'instant' }) }}
+        >
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+          </svg>
+          Build
+          {filledCount > 0 && (
+            <span className="mtab-badge">{filledCount}/{activeTypes.length}</span>
+          )}
+        </button>
+      </nav>}
+
+      {!parked && showAuth && (
+        <AuthModal
+          onClose={() => setShowAuth(false)}
+          onAuth={setUser}
+        />
+      )}
+
+      {!parked && IS_APP && (page === 'game' || page === 'squad-build' || page === 'career-build') && <BuildComplete complete={buildComplete} ovr={completeOvr} name={completeName} build={build} types={activeTypes} attrMap={currentAttrMap} />}
+
+      {!parked && showTeamPicker && (
+        <TeamPickerModal onSelect={handleTeamPicked} isPlus={isCustomMode} build={build} />
+      )}
+
+      {!parked && saveToast && (
+        <div
+          className={`save-toast save-toast--${saveToast.type}`}
+          onClick={() => setSaveToast(null)}
+        >
+          {saveToast.type === 'saved' && (
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+          )}
+          {saveToast.msg}
+        </div>
+      )}
+
+      {!parked && showCustomModal && (isPlus || isCustomMode) && (
+        <CustomRatingsModal
+          isRB={isRB}
+          isWR={isWR}
+          isTE={isTE}
+          isDB={isDB}
+          isOL={isOL}
+          gameMode={gameMode}
+          pool={CUSTOM_POOLS[customPoolKey].current}
+          poolCurrent={CUSTOM_POOLS[customPoolKey].current}
+          poolLegends={CUSTOM_POOLS[customPoolKey].legends}
+          onClose={() => setShowCustomModal(false)}
+          onSave={(ratings) => {
+            setCustomRatings(ratings)
+            try { localStorage.setItem('bap_custom_ratings', JSON.stringify(ratings)) } catch {}
+          }}
+          build={build}
+          buildTypes={activeTypes}
+          onAddToBuild={(p, playerOverrides, attrType) => {
+            sandboxTainted.current = true
+            const photo = HEADSHOTS[p.name] ? `${HEADSHOT_BASE}/${HEADSHOTS[p.name]}.webp` : null
+            const chipData = {
+              type: attrType,
+              val: playerOverrides?.[attrType] ?? p.attrs?.[attrType] ?? 5,
+              qb: p.short || p.name,
+              qbFull: p.name,
+              teamColor: p.color,
+              teamColor2: p.color2,
+              skinColor: p.skin,
+              number: p.number,
+              team: p.team,
+              captain: p.captain ?? false,
+              sandbox: true,
+              photo,
+            }
+            setBuild(prev => ({ ...prev, [attrType]: chipData }))
+            setMobileView('build')
+            setShowCustomModal(false)
+          }}
+          onAddAllToBuild={(p, playerOverrides) => {
+            sandboxTainted.current = true
+            const photo = HEADSHOTS[p.name] ? `${HEADSHOT_BASE}/${HEADSHOTS[p.name]}.webp` : null
+            setBuild(prev => {
+              const next = { ...prev }
+              activeTypes.forEach(attrType => {
+                if (!prev[attrType]) {
+                  next[attrType] = {
+                    type: attrType,
+                    val: playerOverrides?.[attrType] ?? p.attrs?.[attrType] ?? 5,
+                    qb: p.short || p.name,
+                    qbFull: p.name,
+                    teamColor: p.color,
+                    teamColor2: p.color2,
+                    skinColor: p.skin,
+                    number: p.number,
+                    team: p.team,
+                    captain: p.captain ?? false,
+                    sandbox: true,
+                    photo,
+                  }
+                }
+              })
+              return next
+            })
+            setMobileView('build')
+            setShowCustomModal(false)
+          }}
+        />
+      )}
+
+    </>
+  )
+  const shell = overlay => (
+    <>
+      <div className={`ag-game-host${overlay ? ' is-parked' : ''}`}>{renderGame(!!overlay)}</div>
+      {overlay}
+    </>
+  )
+  const withGame = el => (IS_APP && gameMode && KEEP_GAME_ON.has(page) ? shell(el) : el)
+
+  const openWiki = () => { setPage('wiki'); window.scrollTo({ top: 0, behavior: 'instant' }) }
+  const startVersus = (pos) => {
+    const p = pos || 'qb'
+    try { localStorage.setItem('lastPosition', p) } catch {}
+    setPosition(p)
+    setGameMode('classic')
+    setBuild(Object.fromEntries(
+      (p === 'rb' ? RB_TYPES : TYPES).map(t => [t, null])
+    ))
+    setPage('versus-lobby')
+  }
+
   if (page === 'splash') {
-    return (
+    return withGame(
       <>
       <Helmet>
         <link rel="canonical" href="https://build-a-player.com/" />
       </Helmet>
+      {IS_APP ? (
+        <AppHome sport="nfl" user={user} onStart={handleStart} onDepthChart={() => setPage('depth-chart')} onSquad={openSquad} squad={squad} onCareer={openCareer} career={career}
+          onCompete={() => setPage('compete')} resume={competeOn ? { label: `Compete · pool ${cp.match.code}`, onClick: () => setPage('game') } : (gameMode && gameMode !== 'salarycap' && (simResult || Object.values(build).some(Boolean))) ? { label: `${position.toUpperCase()} · ${gameMode === 'all-time' ? 'All-Time' : gameMode === 'classic' ? 'Current' : gameMode}`, onClick: () => window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'play' })) } : null} />
+      ) : APP_LOOK ? (
+        <AppHome sport="nfl" user={user} onStart={handleStart} onDepthChart={() => setPage('depth-chart')}
+          onSquad={openSquad} squad={squad} onCareer={openCareer} career={career}
+          onCompete={() => setPage('compete')} resume={competeOn ? { label: `Compete · pool ${cp.match.code}`, onClick: () => setPage('game') } : (gameMode && gameMode !== 'salarycap' && (simResult || Object.values(build).some(Boolean))) ? { label: `${position.toUpperCase()} · ${gameMode === 'all-time' ? 'All-Time' : gameMode === 'classic' ? 'Current' : gameMode}`, onClick: () => window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'play' })) } : null}
+          footer={<><SiteFeatures sport="nfl" /><SiteFooter sport="nfl" onDepthChart={() => setPage('depth-chart')} onWiki={openWiki} /></>} />
+      ) : (
       <SplashScreen
         onStart={handleStart}
         onDepthChart={() => setPage('depth-chart')}
-        onWiki={() => { setPage('wiki'); window.scrollTo({ top: 0, behavior: 'instant' }) }}
-        onVersus={(pos) => {
-          const p = pos || 'qb'
-          try { localStorage.setItem('lastPosition', p) } catch {}
-          setPosition(p)
-          setGameMode('classic')
-          setBuild(Object.fromEntries(
-            (p === 'rb' ? RB_TYPES : TYPES).map(t => [t, null])
-          ))
-          setPage('versus-lobby')
-        }}
+        onWiki={openWiki}
+        onVersus={startVersus}
       />
+      )}
       </>
     )
   }
 
-  if (page === 'depth-chart') {
+  if (page === 'compete') {
+    return withGame(
+      <Suspense fallback={null}>
+        <AppCompete cp={cp} au={au} sport="nfl" position={competePos} positions={POS_OPTIONS.filter(o => COMPETE_POS.nfl.includes(o.pos))}
+          onPosition={setCompetePos} onHome={() => setPage('splash')} onResumeBuild={() => setPage('game')}
+          onPlayAgain={() => cp.join()} />
+      </Suspense>
+    )
+  }
+
+  if (page === 'career-intro') {
     return (
+      <Suspense fallback={null}>
+        <CareerIntro uid={user?.id ?? null} onOpen={c => { setCareer(c); setPage('career'); window.scrollTo({ top: 0, behavior: 'instant' }) }} onNew={(slot, name) => { careerNew.current = { slot, name }; startCareerBuild() }} onClose={() => setPage('splash')} />
+      </Suspense>
+    )
+  }
+  if (page === 'career' && career) {
+    return (
+      <Suspense fallback={null}>
+        <AppCareer career={career} setCareer={setCareer} user={user} onNewBuild={openCareer} onExit={() => setPage('splash')} />
+      </Suspense>
+    )
+  }
+
+  if (page === 'squad') {
+    return (
+      <Suspense fallback={null}>
+        <AppSquad sport="nfl" squad={squad} setSquad={putSquad} user={user} onBuild={buildSquad} onExit={() => setPage('splash')}
+          renderPicker={(onPick, b) => <TeamPickerModal onSelect={onPick} isPlus={!!squad?.sandbox} build={b} />} />
+      </Suspense>
+    )
+  }
+
+  if (page === 'depth-chart') {
+    return withGame(
       <Suspense fallback={null}>
         <DepthChart onBack={() => setPage('splash')} user={user} />
       </Suspense>
@@ -962,39 +1758,8 @@ export default function App() {
     )
   }
 
-  const navbarProps = {
-    onReset: handleReset,
-    onAbout: () => setPage('about'),
-    onHome: handleHome,
-    onSignIn: () => setShowAuth(true),
-    onProfile: () => { window.history.pushState({}, '', '/profile'); setPage('profile') },
-    onLeaderboard: () => setPage('leaderboard'),
-    onSwitchPosition: (pos) => { try { localStorage.setItem('lastPosition', pos) } catch {}; handleHome() },
-    onSubscribe: async () => {
-      if (!user) { setShowAuth(true); return }
-      try {
-        const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/create-checkout`, {
-          method: 'POST',
-          headers: await apiHeaders(),
-          body: JSON.stringify({ userId: user.id, email: user.email }),
-        })
-        const { url } = await res.json()
-        if (url) window.location.href = url
-      } catch {}
-    },
-    onOpenCustomRatings: () => setShowCustomModal(true),
-    user,
-    gameMode,
-    isRB,
-    isWR,
-    isTE,
-    isDB,
-    isOL,
-    isPlus,
-  }
-
   if (page === 'leaderboard') {
-    return (
+    return withGame(
       <Suspense fallback={null}>
         <Navbar {...navbarProps} />
         <LeaderboardPage key={position} onBack={() => { setPage(simResult ? 'sim' : 'game'); window.scrollTo({ top: 0, behavior: 'instant' }) }} currentUser={user} adsDisabled={adsDisabled} isRB={isRB} isWR={isWR} isTE={isTE} isDB={isDB} isOL={isOL} onPositionChange={setPosition} />
@@ -1019,10 +1784,10 @@ export default function App() {
   }
 
   if (page === 'about') {
-    return (
+    return withGame(
       <Suspense fallback={null}>
         <Navbar {...navbarProps} />
-        <AboutPage onBack={() => { setPage(simResult ? 'sim' : 'game'); window.scrollTo({ top: 0, behavior: 'instant' }) }} onPrivacy={() => setPage('privacy')} />
+        <AboutPage onBack={() => { setPage(IS_APP || APP_LOOK ? 'splash' : simResult ? 'sim' : 'game'); window.scrollTo({ top: 0, behavior: 'instant' }) }} onPrivacy={() => setPage('privacy')} />
       </Suspense>
     )
   }
@@ -1037,7 +1802,7 @@ export default function App() {
   }
 
   if (page === 'privacy') {
-    return (
+    return withGame(
       <Suspense fallback={null}>
         <Navbar {...navbarProps} />
         <PrivacyPage onBack={() => setPage('about')} />
@@ -1046,7 +1811,7 @@ export default function App() {
   }
 
   if (page === 'terms') {
-    return (
+    return withGame(
       <Suspense fallback={null}>
         <Navbar {...navbarProps} />
         <TermsPage onBack={() => setPage('about')} />
@@ -1055,7 +1820,7 @@ export default function App() {
   }
 
   if (page === 'profile' && user) {
-    return (
+    return withGame(
       <Suspense fallback={null}>
         <ProfilePage
           user={user}
@@ -1083,7 +1848,8 @@ export default function App() {
             if (themeId === 'default') document.documentElement.removeAttribute('data-theme')
             else document.documentElement.setAttribute('data-theme', themeId)
           }}
-          onBack={() => { window.history.back() }}
+          // the new look: back always means Home (history could land anywhere)
+          onBack={() => { if (IS_APP || APP_LOOK) { window.history.pushState({}, '', '/'); setPage('splash') } else window.history.back() }}
           onSignOut={() => { setUser(null); window.location.href = '/' }}
           onAdsDisabled={() => { setAdsDisabled(true); setIsSubscribed(true); enableAdFreeMode() }}
           onOpenCustomModal={() => setShowCustomModal(true)}
@@ -1159,6 +1925,16 @@ export default function App() {
     )
   }
 
+  // Salary Cap (QB): the day's grid; confirm plays the season
+  if (page === 'salarycap') {
+    return (
+      <Suspense fallback={null}>
+        <QBSalaryCap user={user} initialDateStr={salaryReturnDate} onConfirm={handleQBSalaryConfirm}
+          onBack={() => { setGameMode(null); if (salaryPushedRef.current && window.location.pathname === '/salary') window.history.back(); else setPage('splash') }} />
+      </Suspense>
+    )
+  }
+
   if (page === 'sim' && simResult) {
     return (
       <Suspense fallback={null}>
@@ -1167,15 +1943,20 @@ export default function App() {
           result={simResult}
           build={build}
           types={activeTypes}
-          replay={simReplaying}
+          replay={simReplaying || (gameMode === 'salarycap' && salaryResults)}
           adsDisabled={adsDisabled}
           isRB={isRB}
           isWR={isWR}
           isTE={isTE}
           isDB={isDB}
           isOL={isOL}
-          onBack={() => { setPage('game'); window.scrollTo({ top: 0, behavior: 'instant' }); document.querySelector('.game-page-scroll')?.scrollTo({ top: 0, behavior: 'instant' }) }}
-          onReset={() => { handleReset(); setPage('game'); window.scrollTo({ top: 0, behavior: 'instant' }); document.querySelector('.game-page-scroll')?.scrollTo({ top: 0, behavior: 'instant' }) }}
+          onBack={() => { /* straight there: stepping back through history could land on Home */ setPage(gameMode === 'salarycap' ? 'salarycap' : 'game'); window.scrollTo({ top: 0, behavior: 'instant' }); document.querySelector('.game-page-scroll')?.scrollTo({ top: 0, behavior: 'instant' }) }}
+          onReset={() => { if (gameMode === 'salarycap') { setPage('salarycap'); window.scrollTo({ top: 0, behavior: 'instant' }); return } handleReset(); setPage('game'); window.scrollTo({ top: 0, behavior: 'instant' }); document.querySelector('.game-page-scroll')?.scrollTo({ top: 0, behavior: 'instant' }) }}
+          simFn={(IS_APP || APP_LOOK) && gameMode !== 'salarycap' ? simFor : null}
+          onFinal={(IS_APP || APP_LOOK) && gameMode !== 'salarycap' ? commitSeason : null}
+          pool={displayPool}
+          userName={getUsername(user) || 'Guest'}
+          isSalaryMode={gameMode === 'salarycap'}
         />
         {saveToast && (
           <div className={`save-toast save-toast--${saveToast.type}`} onClick={() => setSaveToast(null)}>
@@ -1191,245 +1972,5 @@ export default function App() {
     )
   }
 
-  const filledCount = activeTypes.filter(t => build[t]).length
-
-  return (
-    <>
-      <Navbar {...navbarProps} />
-
-      <div className="game-page-scroll">
-      <main className={`game-layout mobile-${mobileView}${gameMode === 'all-time' ? ' alltime-mode' : ''}${page === 'versus-game' ? ' versus-active' : ''}`}>
-        <SpinScreen
-          build={build}
-          activeDrag={activeDrag}
-          onDragStart={setActiveDrag}
-          onDragEnd={() => setActiveDrag(null)}
-          activeCategory={activeCategory}
-          resetKey={spinResetKey}
-          onChipTap={handleChipTap}
-          types={activeTypes}
-          isLite={gameMode === 'lite'}
-          qbPool={displayPool}
-          savedResult={savedSpinResult}
-          onSaveResult={setSavedSpinResult}
-          onPhaseChange={setSpinPhase}
-          gameKey={gameKey}
-          onReset={handleReset}
-          adsDisabled={adsDisabled}
-          isRB={isRB}
-          isWR={isWR}
-          isTE={isTE}
-          isDB={isDB}
-          isOL={isOL}
-          isAllTime={gameMode === 'all-time'}
-          playerLabel={isOL ? 'OL' : isDB ? 'DB' : isTE ? 'TE' : isWR ? 'WR' : undefined}
-          attrMap={isOL ? OL_ATTR : isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : isRB ? RB_ATTR : undefined}
-          categoriesData={isOL ? OL_CATEGORIES : isDB ? DB_CATEGORIES : isTE ? TE_CATEGORIES : isWR ? WR_CATEGORIES : undefined}
-        />
-        <Silhouette
-          build={build}
-          activeDrag={activeDrag}
-          onDrop={handleDrop}
-          activeCategory={activeCategory}
-          onCategoryChange={setActiveCategory}
-          types={activeTypes}
-          isLite={gameMode === 'lite'}
-          onReset={handleReset}
-          isRB={isRB}
-          isWR={isWR}
-          isTE={isTE}
-          isDB={isDB}
-          isOL={isOL}
-          categoriesData={isOL ? OL_CATEGORIES : isDB ? DB_CATEGORIES : isTE ? TE_CATEGORIES : isWR ? WR_CATEGORIES : undefined}
-          attrMap={isOL ? OL_ATTR : isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : isRB ? RB_ATTR : undefined}
-          isPlus={isPlus}
-          isCustomMode={isCustomMode}
-          onOpenCustomModal={() => setShowCustomModal(true)}
-          onSandboxToggle={handleSandboxToggle}
-        />
-
-        <div className="right-panel-wrap">
-          <ReportCard
-            build={build}
-            onSimulate={page === 'versus-game'
-              ? handleFaceoff
-              : handleSimulate}
-            onReset={handleReset}
-            types={activeTypes}
-            hasResult={page === 'versus-game' ? false : !!simResult}
-            isRB={isRB}
-            isWR={isWR}
-            isTE={isTE}
-            isDB={isDB}
-            isOL={isOL}
-            attrMap={isOL ? OL_ATTR : isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : isRB ? RB_ATTR : undefined}
-            isPlus={isPlus}
-            isCustomMode={isCustomMode}
-            onOpenCustomModal={() => setShowCustomModal(true)}
-            onSandboxToggle={handleSandboxToggle}
-            versusMode={page === 'versus-game'}
-          />
-        </div>
-
-        {/* Versus opponent status overlay */}
-        {page === 'versus-game' && versusRoom && (() => {
-          const oppFilled = activeTypes.filter(t => oppBuild[t]).length
-          const myFilled  = activeTypes.filter(t => build[t]).length
-          return (
-            <div className="versus-hud">
-              <div className="versus-hud-inner">
-                <div className="vhud-side vhud-side--me">
-                  <span className="vhud-label">YOU</span>
-                  <span className="vhud-count">{myFilled}/{activeTypes.length}</span>
-                </div>
-                <div className="vhud-vs">VS</div>
-                <div className="vhud-side vhud-side--opp">
-                  <span className="vhud-label">{versusRoom.oppName}</span>
-                  <span className="vhud-count">{oppFilled}/{activeTypes.length}</span>
-                </div>
-              </div>
-              {myFilled === activeTypes.length && (
-                <button className="vhud-faceoff-btn" onClick={handleFaceoff}>
-                  FACE OFF
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M5 12h14M12 5l7 7-7 7"/>
-                  </svg>
-                </button>
-              )}
-            </div>
-          )
-        })()}
-      </main>
-      <div className="build-footer-section">
-        <SiteFeatures sport="nfl" className="build-site-features" />
-        <SiteFooter sport="nfl" onDepthChart={() => setPage('depth-chart')} />
-      </div>
-      </div>
-
-
-      {/* Mobile bottom tab bar */}
-      <nav className="mobile-tab-bar">
-        <button
-          className={`mtab ${mobileView === 'spin' ? 'active' : ''}`}
-          onClick={() => { setMobileView('spin'); window.scrollTo({ top: 0, behavior: 'instant' }); document.querySelector('.game-page-scroll')?.scrollTo({ top: 0, behavior: 'instant' }) }}
-        >
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="23 4 23 10 17 10"/>
-            <polyline points="1 20 1 14 7 14"/>
-            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
-          </svg>
-          Spin
-        </button>
-        <div className="mtab-sep" />
-        <button
-          className={`mtab ${mobileView === 'build' ? 'active' : ''}`}
-          onClick={() => { setMobileView('build'); window.scrollTo({ top: 0, behavior: 'instant' }); document.querySelector('.game-page-scroll')?.scrollTo({ top: 0, behavior: 'instant' }) }}
-        >
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
-          </svg>
-          Build
-          {filledCount > 0 && (
-            <span className="mtab-badge">{filledCount}/{activeTypes.length}</span>
-          )}
-        </button>
-      </nav>
-
-      {showAuth && (
-        <AuthModal
-          onClose={() => setShowAuth(false)}
-          onAuth={setUser}
-        />
-      )}
-
-      {showTeamPicker && (
-        <TeamPickerModal onSelect={handleTeamPicked} isPlus={isCustomMode} build={build} />
-      )}
-
-      {saveToast && (
-        <div
-          className={`save-toast save-toast--${saveToast.type}`}
-          onClick={() => setSaveToast(null)}
-        >
-          {saveToast.type === 'saved' && (
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="20 6 9 17 4 12"/>
-            </svg>
-          )}
-          {saveToast.msg}
-        </div>
-      )}
-
-      {showCustomModal && (isPlus || isCustomMode) && (
-        <CustomRatingsModal
-          isRB={isRB}
-          isWR={isWR}
-          isTE={isTE}
-          isDB={isDB}
-          isOL={isOL}
-          gameMode={gameMode}
-          pool={CUSTOM_POOLS[customPoolKey].current}
-          poolCurrent={CUSTOM_POOLS[customPoolKey].current}
-          poolLegends={CUSTOM_POOLS[customPoolKey].legends}
-          onClose={() => setShowCustomModal(false)}
-          onSave={(ratings) => {
-            setCustomRatings(ratings)
-            try { localStorage.setItem('bap_custom_ratings', JSON.stringify(ratings)) } catch {}
-          }}
-          build={build}
-          buildTypes={activeTypes}
-          onAddToBuild={(p, playerOverrides, attrType) => {
-            sandboxTainted.current = true
-            const photo = HEADSHOTS[p.name] ? `${HEADSHOT_BASE}/${HEADSHOTS[p.name]}.webp` : null
-            const chipData = {
-              type: attrType,
-              val: playerOverrides?.[attrType] ?? p.attrs?.[attrType] ?? 5,
-              qb: p.short || p.name,
-              qbFull: p.name,
-              teamColor: p.color,
-              teamColor2: p.color2,
-              skinColor: p.skin,
-              number: p.number,
-              team: p.team,
-              captain: p.captain ?? false,
-              sandbox: true,
-              photo,
-            }
-            setBuild(prev => ({ ...prev, [attrType]: chipData }))
-            setMobileView('build')
-            setShowCustomModal(false)
-          }}
-          onAddAllToBuild={(p, playerOverrides) => {
-            sandboxTainted.current = true
-            const photo = HEADSHOTS[p.name] ? `${HEADSHOT_BASE}/${HEADSHOTS[p.name]}.webp` : null
-            setBuild(prev => {
-              const next = { ...prev }
-              activeTypes.forEach(attrType => {
-                if (!prev[attrType]) {
-                  next[attrType] = {
-                    type: attrType,
-                    val: playerOverrides?.[attrType] ?? p.attrs?.[attrType] ?? 5,
-                    qb: p.short || p.name,
-                    qbFull: p.name,
-                    teamColor: p.color,
-                    teamColor2: p.color2,
-                    skinColor: p.skin,
-                    number: p.number,
-                    team: p.team,
-                    captain: p.captain ?? false,
-                    sandbox: true,
-                    photo,
-                  }
-                }
-              })
-              return next
-            })
-            setMobileView('build')
-            setShowCustomModal(false)
-          }}
-        />
-      )}
-
-    </>
-  )
+  return IS_APP ? shell(null) : renderGame(false)
 }

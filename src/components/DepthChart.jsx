@@ -1,8 +1,10 @@
 import { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react'
+import { NameTag } from './app/NameTag'
 import { getPlayerPhoto, pickThreeFrom, QB_POOL, RB_POOL, WR_POOL } from '../data/depth-chart-players'
 import { supabase } from '../lib/supabase'
 import { TEAMS } from '../data/nfl-teams'
 import QBAvatar from './QBAvatar'
+import { getUsername } from '../lib/discord'
 
 const TEAM_COLOR  = Object.fromEntries(TEAMS.map(t => [t.short, t.color]))
 const SLOT_LABELS = ['STARTER', '2ND STRING', '3RD STRING']
@@ -76,7 +78,7 @@ async function fetchTopStreaks(period) {
   try {
     let q = supabase
       .from('depth_chart_streaks')
-      .select('username, streak')
+      .select('username, user_id, streak')
       .order('streak', { ascending: false })
       .order('created_at', { ascending: true })
       .limit(10)
@@ -144,7 +146,7 @@ function LeaderboardDropdown({ onClose }) {
         {rows !== null && rows.slice(0, visibleCount).map((r, i) => (
           <div key={i} className={`dc-lb-row${i === 0 ? ' dc-lb-row--top' : ''}`}>
             <span className="dc-lb-rank">{i + 1}</span>
-            <span className="dc-lb-name">{r.username || 'Anonymous'}</span>
+            <span className="dc-lb-name">{r.username ? <NameTag name={r.username} uid={r.user_id ?? null} /> : 'Anonymous'}</span>
             <span className="dc-lb-streak" style={{ color: streakColor(r.streak) }}>{r.streak}</span>
           </div>
         ))}
@@ -239,7 +241,7 @@ export default function DepthChart({ onBack, user }) {
         .order('streak', { ascending: false })
         .limit(1)
         .single()
-        .then(({ data }) => { if (data) setBestStreak(data.streak) })
+        .then(({ data }) => { if (Number.isFinite(data?.streak)) setBestStreak(data.streak) }, () => {})
     } else {
       const saved = localStorage.getItem('dc_best_streak')
       if (saved) setBestStreak(parseInt(saved, 10) || 0)
@@ -327,6 +329,7 @@ export default function DepthChart({ onBack, user }) {
     if (isCorrect) {
       const newStreak = streak + 1
       setStreak(newStreak)
+      window.dispatchEvent(new CustomEvent('bap:dc', { detail: { streak: newStreak } }))
       if (newStreak > bestStreak) setBestStreak(newStreak)
       setPhase('correct')
       setTimeout(() => loadRound(players.map(p => p.name)), 1500)
@@ -362,7 +365,7 @@ export default function DepthChart({ onBack, user }) {
   async function handleStreakEnd(s) {
     if (s < 1) return
     if (user) {
-      submitStreak(s, user.email?.split('@')[0] || 'Anonymous')
+      submitStreak(s, getUsername(user) || 'Anonymous')
     } else if (supabase) {
       // Ask for a name when the streak would make either board (all-time or this week).
       const [allTime, thisWeek] = await Promise.all([fetchTopStreaks('all'), fetchTopStreaks('week')])

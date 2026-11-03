@@ -1,21 +1,31 @@
 ﻿import React, { useState, useEffect, useRef, useMemo, useCallback, useLayoutEffect } from 'react'
+import { NameTag } from './app/NameTag'
 import { createPortal } from 'react-dom'
 import { NBA_TEAMS } from '../data/nba-teams'
 import { BUCKET_ATTR } from '../data/nba-attrs'
-import { NBA_GUARD_PLAYERS } from '../data/nba-guards'
-import { NBA_BIG_PLAYERS } from '../data/nba-bigs'
+import { NBA_GUARD_PLAYERS, GUARD_TYPES } from '../data/nba-guards'
+import { NBA_BIG_PLAYERS, BIG_TYPES } from '../data/nba-bigs'
 import NBA_HEADSHOTS from '../data/nba-headshots.json'
 import { valToGrade, HEADSHOT_BASE } from '../utils/simulation'
-import { getBucketGuardArchetype, getBucketBigArchetype, TEAM_RATINGS, ALLTIME_TEAM_RATINGS } from '../utils/bucketSimulation'
+import { getBucketGuardArchetype, getBucketBigArchetype, TEAM_RATINGS, ALLTIME_TEAM_RATINGS, calcBucketOVR } from '../utils/bucketSimulation'
 import { SAL_REP_TYPES, SAL_ATTR_MAP } from './BucketSalaryCap'
 import QBAvatar from './QBAvatar'
 import BucketFigureOverlay from './BucketFigureOverlay'
-import { ShareModal } from './ReportCard'
+import { ShareSeasonButton } from './app/SeasonShare'
+import { bucketSeasonCard } from '../utils/seasonCard'
 import SiteFooter from './SiteFooter'
+import { IS_APP, APP_LOOK } from '../lib/platform'
+// The app's season screen runs on the website too (site ads and promo stay)
+const APP_SIM = IS_APP || APP_LOOK
+import { RingCeremony, SeasonRewards } from './app/AppSeason'
+import { createDirector } from '../lib/seasonDirector'
+import { MomentCard, Pulse, Wire, Milestones, RecordOverlay, Leaders, SeasonStory, StretchCard, useDirectedReveal, MomentsToggle } from './app/AppSeasonPlus'
 import { rampAdd, useRailOn } from '../lib/ads'
+import { IconBall } from './app/icons'
+import { useCountUp as countUp } from '../lib/useCountUp'
 
 function gradeColor(val0) {
-  const val = Math.round(val0 ?? 0)   // rounded like the letter (valToGrade), so an S is always purple
+  const val = Math.round(val0 ?? 0)   // rounded like the letter (valToGrade), so a B- is always green
   if (val >= 11) return '#a855f7'
   if (val >= 8)  return '#3b82f6'
   if (val >= 5)  return '#22c55e'
@@ -159,23 +169,8 @@ function offDefGrade(val) {
   return 'D'
 }
 
-function useCountUp(target, duration = 900, enabled = true) {
-  const [val, setVal] = useState(0)
-  useEffect(() => {
-    if (!enabled || !target) return
-    const start = Date.now()
-    let raf
-    const tick = () => {
-      const p = Math.min((Date.now() - start) / duration, 1)
-      const eased = 1 - Math.pow(1 - p, 3)
-      setVal(Math.round(eased * target))
-      if (p < 1) raf = requestAnimationFrame(tick)
-    }
-    raf = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(raf)
-  }, [target, duration, enabled])
-  return val
-}
+// the shared count-up (lib/useCountUp.js); runs once there's a number to count to
+const useCountUp = (target, duration = 900, enabled = true) => countUp(target, { run: enabled && !!target, ms: duration })
 
 function nbaScore(won) {
   const loserBase = 94 + Math.floor(Math.random() * 22)
@@ -544,7 +539,7 @@ export function TeamSpinModal({ isCustomMode, onTeamSelected, build = {} }) {
     <div className="tpm-overlay">
       <div className={`tpm-card${mode === 'pick' ? ' tpm-card-pick' : ''}`} style={cardStyle}>
         <div className="tpm-eyebrow">Simulate Season</div>
-        <div className="tpm-heading">{mode === 'pick' ? 'Pick Your Team' : 'Spin Your Team'}</div>
+        <div className="tpm-heading">{mode === 'pick' ? 'Pick a Team' : 'Spin a Team'}</div>
 
         <div className="tpm-mode-tabs">
           <button
@@ -821,7 +816,7 @@ function StatCard({ ppg, rpg, apg, spg, bpg, tov, fgPct, threePct, ftPct, per })
 
       <div className="sstat-divider-line" />
       <div className="sstat-per-banner">
-        <span className="sstat-per-lbl">PLAYER EFFICIENCY RATING</span>
+        <span className="sstat-per-lbl">PER (EST.) · LEAGUE AVERAGE 15</span>
         <span className="sstat-per-val">{per ?? '—'}</span>
       </div>
     </div>
@@ -834,6 +829,7 @@ const CONF_LABEL = { east: 'Eastern', west: 'Western' }
 function ConferenceStandings({ standings, myShort, teamColor, conf }) {
   if (!standings?.length) return null
   const topWins = standings[0].wins
+  const topLosses = standings[0].losses ?? 82 - topWins
   return (
     <div className="bsim-standings">
       <div className="bsim-std-header">
@@ -844,7 +840,8 @@ function ConferenceStandings({ standings, myShort, teamColor, conf }) {
         </span>
       </div>
       {standings.map((row, i) => {
-        const gb = i === 0 ? '-' : ((topWins - row.wins) / 2).toFixed(1).replace('.0', '')
+        // games behind: half of (the wins gap + the losses gap), as the NBA counts it
+        const gb = i === 0 ? '-' : (((topWins - row.wins) + ((row.losses ?? 82 - row.wins) - topLosses)) / 2).toFixed(1).replace('.0', '')
         const isMe = row.short === myShort
         const isPlayoffLine = i === 6
         const isPlayinLine = i === 10
@@ -869,8 +866,9 @@ function ConferenceStandings({ standings, myShort, teamColor, conf }) {
   )
 }
 
-function ScreenSeason({ result, awards, onNext, adsDisabled = false, isAllTime = false }) {
+function ScreenSeason({ result, awards, onNext, adsDisabled = false, isAllTime = false, director = null, onFinal = null, pool = null, userName = 'Guest' }) {
   const { games = [], madePlayoffs, seed: rawSeed, playoffRounds = [], conference, ppg, rpg, apg, spg, bpg, tov, fgPct, threePct, ftPct, per, ovr = 0, standings, team } = result
+  const dr = useDirectedReveal({ director, pace: 70, onFinal })
   const playinRound = playoffRounds.find(r => r.type === 'playin' && r.advanced)
   const seed = playinRound?.newSeed ?? rawSeed
   const [phase,       setPhase]       = useState('loading')
@@ -878,7 +876,7 @@ function ScreenSeason({ result, awards, onNext, adsDisabled = false, isAllTime =
   const [liveWins,    setLiveWins]    = useState(0)
   const [liveLosses,  setLiveLosses]  = useState(0)
   const [awardsPhase, setAwardsPhase] = useState(0)
-  const allDone = revealed === games.length
+  const allDone = director ? dr.done : revealed === games.length
 
   useEffect(() => {
     if (!allDone || adsDisabled) return
@@ -890,6 +888,7 @@ function ScreenSeason({ result, awards, onNext, adsDisabled = false, isAllTime =
   }, [allDone])
 
   useEffect(() => {
+    if (director) { const t = setTimeout(() => setPhase('playing'), 600); return () => clearTimeout(t) }
     const loadTimer = setTimeout(() => {
       setPhase('playing')
       let i = 0, w = 0, l = 0
@@ -933,15 +932,24 @@ function ScreenSeason({ result, awards, onNext, adsDisabled = false, isAllTime =
         <>
           <div className="simp-eyebrow">{isAllTime ? 'All-Time Regular Season' : 'Regular Season'}</div>
           <div className="simp-live-record">
-            <span className="slr-w">{liveWins}</span>
+            <span className="slr-w">{director ? dr.games.filter(g => g.won).length : liveWins}</span>
             <span className="slr-sep">–</span>
-            <span className="slr-l">{liveLosses}</span>
+            <span className="slr-l">{director ? dr.games.filter(g => !g.won).length : liveLosses}</span>
           </div>
+          {director && <Pulse games={dr.games} total={dr.total} playoffWins={44} />}
+          {director && <Wire items={dr.headlines} />}
+          {/* only the moments get a card: a card per game flashed by too fast to read */}
+          {director && dr.moment && <MomentCard moment={dr.moment} onPick={dr.choose} />}
+          {director && <Milestones items={dr.fresh} />}
+          {director && dr.record && <RecordOverlay record={dr.record} name={userName} onClose={dr.clearRecord} />}
           <div className="bsim-season-dots">
-            {games.slice(0, revealed).map((g, i) => (
+            {(director ? dr.games : games.slice(0, revealed)).map((g, i) => (
               <span key={i} className={`bsim-sdot bsim-sdot--${g.won ? 'w' : 'l'}`} />
             ))}
           </div>
+          {director && dr.k >= 10 && !dr.moment && (
+            <StretchCard games={director.games} from={Math.floor((dr.k - 1) / 10) * 10} to={Math.min(dr.k, Math.floor((dr.k - 1) / 10) * 10 + 10)} pos={result.position} />
+          )}
           {allDone && (
             <ConferenceStandings standings={standings} myShort={team?.short} teamColor={team?.color} conf={conference} />
           )}
@@ -951,6 +959,7 @@ function ScreenSeason({ result, awards, onNext, adsDisabled = false, isAllTime =
           {allDone && (
             <StatCard ppg={ppg} rpg={rpg} apg={apg} spg={spg} bpg={bpg} tov={tov} fgPct={fgPct} threePct={threePct} ftPct={ftPct} per={per} />
           )}
+          {allDone && director && pool && <Leaders sport="bucket" pos={result.position} pool={pool} seed={director.seed} you={{ name: userName, team: team?.short, value: ppg }} />}
 
           {allDone && awards && (
             <>
@@ -971,7 +980,7 @@ function ScreenSeason({ result, awards, onNext, adsDisabled = false, isAllTime =
                   <div className="sawd-award-winner">
                     <img src={`/logos/nba/${mvp.team}.png`} alt={mvp.team} className="sawd-winner-logo" />
                     <div className="sawd-winner-info">
-                      <div className="sawd-winner-name">{mvp.isPlayer ? 'You' : mvp.name}</div>
+                      <div className="sawd-winner-name">{mvp.name}</div>
                       <div className="sawd-winner-stats">{mvp.ppg} PPG · {mvp.rpg} RPG · {mvp.apg} APG</div>
                     </div>
                   </div>
@@ -984,7 +993,7 @@ function ScreenSeason({ result, awards, onNext, adsDisabled = false, isAllTime =
                   <div className="sawd-award-winner">
                     <img src={`/logos/nba/${dpoy.team}.png`} alt={dpoy.team} className="sawd-winner-logo" />
                     <div className="sawd-winner-info">
-                      <div className="sawd-winner-name">{dpoy.isPlayer ? 'You' : dpoy.name}</div>
+                      <div className="sawd-winner-name">{dpoy.name}</div>
                       <div className="sawd-winner-stats">{dpoy.spg} SPG · {dpoy.bpg} BPG</div>
                     </div>
                   </div>
@@ -1039,7 +1048,7 @@ function ScreenAwards({ awards, onNext }) {
           <div className="sawd-award-winner">
             <img src={`/logos/nba/${mvp.team}.png`} alt={mvp.team} className="sawd-winner-logo" />
             <div className="sawd-winner-info">
-              <div className="sawd-winner-name">{mvp.isPlayer ? 'You' : mvp.name}</div>
+              <div className="sawd-winner-name">{mvp.name}</div>
               <div className="sawd-winner-stats">{mvp.ppg} PPG · {mvp.rpg} RPG · {mvp.apg} APG</div>
             </div>
           </div>
@@ -1052,7 +1061,7 @@ function ScreenAwards({ awards, onNext }) {
           <div className="sawd-award-winner">
             <img src={`/logos/nba/${dpoy.team}.png`} alt={dpoy.team} className="sawd-winner-logo" />
             <div className="sawd-winner-info">
-              <div className="sawd-winner-name">{dpoy.isPlayer ? 'You' : dpoy.name}</div>
+              <div className="sawd-winner-name">{dpoy.name}</div>
               <div className="sawd-winner-stats">{dpoy.spg} SPG · {dpoy.bpg} BPG</div>
             </div>
           </div>
@@ -1133,8 +1142,8 @@ function GoatAvatar({ entry, isPlayer, playerTeam, playerTeamColor, size = 56 })
   )
 }
 
-function GoatCard({ rank, entry, isPlayer, playerTeam, playerTeamColor }) {
-  const displayName = isPlayer ? 'Your Player' : (entry?.name ?? '—')
+function GoatCard({ rank, entry, isPlayer, playerTeam, playerTeamColor, userName = 'Guest' }) {
+  const displayName = isPlayer ? userName : (entry?.name ?? '—')
   const teamShort   = isPlayer ? playerTeam : entry?.team
   const teamObj     = TEAM_MAP[teamShort]
   const accentColor = isPlayer ? '#e8a820' : (teamObj?.color ?? 'rgba(255,255,255,0.15)')
@@ -1159,12 +1168,11 @@ function GoatCard({ rank, entry, isPlayer, playerTeam, playerTeamColor }) {
         {teamShort && <span className="goat-card-team">{teamShort}</span>}
       </div>
 
-      {isPlayer && <span className="goat-card-you-badge">YOU</span>}
     </div>
   )
 }
 
-function ScreenGOAT({ result, awards, onNext, onReset, onBack, adsDisabled = false }) {
+function ScreenGOAT({ result, awards, onNext, onReset, onBack, adsDisabled = false, userName = 'Guest' }) {
   const { ovr, team } = result
   const playerRank   = computeGoatRank(result, awards)
   const qualified    = playerRank !== null
@@ -1238,7 +1246,7 @@ function ScreenGOAT({ result, awards, onNext, onReset, onBack, adsDisabled = fal
       {phase === 'checking' && (
         <div className="goat-checking">
           <div className="goat-check-ring" />
-          <div className="goat-check-lbl">Checking your credentials…</div>
+          <div className="goat-check-lbl">Checking the credentials…</div>
         </div>
       )}
 
@@ -1290,6 +1298,7 @@ function ScreenGOAT({ result, awards, onNext, onReset, onBack, adsDisabled = fal
               return (
                 <React.Fragment key={r}>
                   <GoatCard
+                    userName={userName}
                     rank={r}
                     entry={eff}
                     isPlayer={isMe}
@@ -1419,13 +1428,18 @@ function generateConfBracket(standings, myShort, playoffRounds) {
   if (myPlayin) {
     const myTeamObj = [get(7), get(8), get(9), get(10)].find(t => t.short === myShort)
     if (myTeamObj) {
+      // the other team in the 7-vs-8 game (when we were in it): it takes the seed we didn't.
+      // (Taking it from the standings put our own team in both slots when we started 7th and
+      // came through as the 8, or started 8th and won the 7.)
+      const pair = [get(7), get(8)]
+      const other = pair.some(t => t.short === myShort) ? pair.find(t => t.short !== myShort) : null
       if (myPlayin.newSeed === 7) {
         playin7 = { ...myTeamObj, seed: 7 }
-        if (playin8.short === myShort) playin8 = { ...get(8), seed: 8 }
+        playin8 = { ...(other ?? get(8)), seed: 8 }
       }
       if (myPlayin.newSeed === 8) {
         playin8 = { ...myTeamObj, seed: 8 }
-        if (playin7.short === myShort) playin7 = { ...get(7), seed: 7 }
+        playin7 = { ...(other ?? get(7)), seed: 7 }
       }
     }
   }
@@ -1745,6 +1759,12 @@ function ScreenPlayoffs({ result, onNext, autoSkip = false, isAllTime = false, a
   const [showStatsLog,     setShowStatsLog]     = useState(false)
   const [parallelSeriesMap,  setParallelSeriesMap]  = useState({})
   const [champPopped,        setChampPopped]        = useState(false)
+  const [ringOpen,           setRingOpen]           = useState(false)   // app: title moment after the bottle pops
+  useEffect(() => {
+    if (!APP_SIM || !champPopped) return
+    const t = setTimeout(() => setRingOpen(true), 1300)
+    return () => clearTimeout(t)
+  }, [champPopped])
 
   // Ref so autoSkip effect can call handleSkip even though it's defined after early returns
   const handleSkipRef = useRef(null)
@@ -1879,7 +1899,7 @@ function ScreenPlayoffs({ result, onNext, autoSkip = false, isAllTime = false, a
         <div className="simp-eyebrow" style={{ textAlign: 'center' }}>{isAllTime ? 'All-Time Playoffs' : 'Playoffs'}</div>
         <div className="tipoff-header">
           <div className="tipoff-arena">
-            <span className={`tipoff-ball${ballFired ? ' tipoff-ball--fired' : ''}`}>🏀</span>
+            <span className={`tipoff-ball${ballFired ? ' tipoff-ball--fired' : ''}`}><IconBall size="1em" className="ico-inline" /></span>
           </div>
           <div className="tipoff-sub">#{seed} Seed · {teamShort}</div>
           <button className="tipoff-spin-btn" onClick={handleTipOff} disabled={ballFired}>
@@ -2244,6 +2264,11 @@ function ScreenPlayoffs({ result, onNext, autoSkip = false, isAllTime = false, a
             }
           </div>
           <PlayoffStatsLog log={playoffGameLog} playoffRounds={playoffRounds} />
+          {ringOpen && (
+            <RingCeremony team={{ name: team?.name ?? teamShort, color: teamColor, color2: team?.color2 }} title="NBA Champions"
+              score={`${endScore.myW}–${endScore.oppW} in the ${currentRound.name}`} trophy="/trophybasketball.webp"
+              onClose={() => setRingOpen(false)} />
+          )}
         </>
       )}
 
@@ -2348,13 +2373,24 @@ function ScreenPlayoffs({ result, onNext, autoSkip = false, isAllTime = false, a
 }
 
 // ─── Screen 3: Final Report ───────────────────────────────────────────────────
-function ScreenFinal({ result, awards, build, types, attrMap, onReset, onBack, adsDisabled = false, isSalaryMode = false }) {
+function ScreenFinal({ result, awards, build, types, attrMap, onReset, onBack, adsDisabled = false, isSalaryMode = false, isAllTime = false, userName = 'Guest' }) {
   const {
     ovr, wins, losses, champion, madePlayoffs, playoffRounds = [],
     ppg, rpg, apg, spg, bpg, tov, fgPct, threePct, ftPct, per, bestGame, team,
   } = result
   const goatRank = computeGoatRank(result, awards)
   const [show, setShow] = useState(false)
+
+  // the season as a share card (Share Season); the awards as this report shows them
+  const shareCard = useMemo(() => {
+    let arch = null
+    try { arch = result.position === 'big' ? getBucketBigArchetype(ovr, build, types) : getBucketGuardArchetype(ovr, build, types) } catch {}
+    return bucketSeasonCard({
+      result, build, types, attrMap, name: userName, arch, allTime: isAllTime, salary: isSalaryMode,
+      mvp: awards ? !!awards.mvp?.isPlayer : !!result.mvp,
+      dpoy: awards ? !!awards.dpoy?.isPlayer : !!result.dpoy,
+    })
+  }, [result, awards, build, types, attrMap, ovr, userName, isAllTime, isSalaryMode])
   useEffect(() => { const t = setTimeout(() => setShow(true), 200); return () => clearTimeout(t) }, [])
 
   useEffect(() => {
@@ -2383,11 +2419,14 @@ function ScreenFinal({ result, awards, build, types, attrMap, onReset, onBack, a
 
   return (
     <div className="simp-screen">
+      {APP_SIM && <SeasonRewards result={result} />}
+      {APP_SIM && result.story && <SeasonStory story={result.story} pos={result.position} sport="bucket" name={userName} />}
       <div className={`simp-final-banner ${champion ? 'sfb-champ' : madePlayoffs ? 'sfb-elim' : 'sfb-miss'}`}>
         {champion && <img src="/trophybasketball.webp" alt="NBA Trophy" className="sfb-trophy" />}
         <div className="sfb-outcome">{playoffSummary}</div>
         <div className="sfb-sub">{wins}–{losses} Season · OVR {ovr}</div>
       </div>
+      <ShareSeasonButton card={shareCard} />
 
       {team && <BucketModelFigure build={build} team={team} className="simp-team-model--final" />}
 
@@ -2453,7 +2492,7 @@ function ScreenFinal({ result, awards, build, types, attrMap, onReset, onBack, a
 
       {filled.length > 0 && (
         <div className="simp-stat-section">
-          <div className="simp-stat-group-lbl">Your Build</div>
+          <div className="simp-stat-group-lbl"><NameTag name={userName} self />'s Build</div>
           <div className="simp-attr-table simp-attr-table-sm">
             {filled.map(t => {
               const meta = attrMap[t] ?? { label: t, hex: '#888' }
@@ -2487,7 +2526,8 @@ function ScreenFinal({ result, awards, build, types, attrMap, onReset, onBack, a
         }
       </div>
 
-      <div style={{ textAlign: 'center', marginTop: '12px', fontSize: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+      {/* the 32-0 cross-promo stays on the website, not in the app */}
+      {!IS_APP && <div style={{ textAlign: 'center', marginTop: '12px', fontSize: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
         <span style={{ color: 'rgba(255,255,255,0.6)' }}>
           If you are enjoying Build-A-Player, check out my college basketball game —{' '}
           <a href="https://32-0game.com" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>32-0game.com</a>
@@ -2495,7 +2535,7 @@ function ScreenFinal({ result, awards, build, types, attrMap, onReset, onBack, a
         <a href="https://32-0game.com" target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
           <img src="/32-0logocutout.png" alt="32-0" style={{ height: '32px', width: 'auto', background: 'white', borderRadius: '5px', padding: '2px 6px', display: 'block' }} />
         </a>
-      </div>
+      </div>}
     </div>
   )
 }
@@ -2559,41 +2599,30 @@ const ALLTIME_STARTERS = {
 
 const ALLTIME_VISUAL_RATINGS = ALLTIME_TEAM_RATINGS
 
-// ─── Starting 5: ordered PG → SG → SF → PF → C (2025-26 rosters from database) ─
-const TEAM_STARTERS = {
-  ATL: ['CJ McCollum','Dyson Daniels','Jalen Johnson','Zaccharie Risacher','Onyeka Okongwu'],
-  BOS: ['Payton Pritchard','Derrick White','Paul George','Jayson Tatum','Mitchell Robinson'],
-  BKN: ['Nolan Traore','Egor Demin','Keon Ellis','Noah Clowney','Julius Randle'],
-  CHA: ['Coby White','Grayson Allen','Brandon Miller','Tidjane Salaun','Moussa Diabate'],
-  CHI: ['Josh Giddey','Norman Powell','Matas Buzelis','Patrick Williams','Nic Claxton'],
-  CLE: ['Donovan Mitchell','James Harden','Tyrese Proctor','Evan Mobley','Jarrett Allen'],
-  DAL: ['Kyrie Irving','Klay Thompson','Cooper Flagg','Santi Aldama','Daniel Gafford'],
-  DEN: ['Jamal Murray','Christian Braun','Cameron Johnson','Aaron Gordon','Nikola Jokic'],
-  DET: ['Cade Cunningham','Kevin Huerter','Ronald Holland II','John Collins','Jalen Duren'],
-  GSW: ['Stephen Curry','Brandin Podziemski','Moses Moody','Draymond Green','Kristaps Porzingis'],
-  HOU: ['Marcus Smart','Amen Thompson','Kevin Durant','Jabari Smith Jr.','Alperen Sengun'],
-  IND: ['Tyrese Haliburton','Andrew Nembhard','Aaron Nesmith','Pascal Siakam','Ivica Zubac'],
-  LAC: ['Darius Garland','Bennedict Mathurin','Kawhi Leonard','Rui Hachimura','Brook Lopez'],
-  LAL: ['Luka Doncic','Collin Sexton','Dalton Knecht','Jarred Vanderbilt','Walker Kessler'],
-  MEM: ["D'Angelo Russell",'Walter Clayton Jr.','Jaylen Wells','Taylor Hendricks','Zach Edey'],
-  MIA: ['Davion Mitchell','Andrew Wiggins','Giannis Antetokounmpo','Bobby Portis','Bam Adebayo'],
-  MIL: ['Caris LeVert','Tyler Herro','Jaime Jaquez Jr.','Kyle Kuzma','Myles Turner'],
-  MIN: ['LaMelo Ball','Anthony Edwards','Josh Green','Jaden McDaniels','Rudy Gobert'],
-  NOP: ['Dejounte Murray','Jordan Hawkins','Trey Murphy III','Zion Williamson','Hunter Dickinson'],
-  NYK: ['Jalen Brunson','Mikal Bridges','OG Anunoby','Josh Hart','Karl-Anthony Towns'],
-  OKC: ['Shai Gilgeous-Alexander','Alex Caruso','Luguentz Dort','Chet Holmgren','Isaiah Hartenstein'],
-  ORL: ['Jalen Suggs','Desmond Bane','Franz Wagner','Paolo Banchero','Nikola Vucevic'],
-  PHI: ['Tyrese Maxey','Anfernee Simons','Jaylen Brown','LeBron James','Joel Embiid'],
-  PHX: ['Devin Booker','Jalen Green','Dillon Brooks','Miles Bridges','Mark Williams'],
-  POR: ['Damian Lillard','Shaedon Sharpe','Deni Avdija','Toumani Camara','Donovan Clingan'],
-  SAC: ['Killian Hayes','Zach LaVine',"De'Andre Hunter",'Keegan Murray','Domantas Sabonis'],
-  SAS: ["De'Aaron Fox",'Stephon Castle','Devin Vassell','Keldon Johnson','Victor Wembanyama'],
-  TOR: ['Immanuel Quickley','RJ Barrett','Scottie Barnes','Brandon Ingram','Jakob Poeltl'],
-  UTA: ['Keyonte George','Isaiah Collier','Ace Bailey','Lauri Markkanen','Jaren Jackson Jr.'],
-  WAS: ['Trae Young','Bilal Coulibaly','AJ Dybantsa','Khris Middleton','Anthony Davis'],
-}
+// ─── Starting 5: the team's real starters (starter: true in data/nba-guards.js and
+// nba-bigs.js, the same marks Squad Builder starts), ordered PG → SG → SF → PF → C.
+// A player in both lists plays his bigs-list spot (LeBron, Giannis: PF). ─
+const POS_RANK = { PG: 0, SG: 1, SF: 2, PF: 3, C: 4 }
+const TEAM_STARTERS = (() => {
+  const byKey = new Map()
+  for (const p of [...NBA_GUARD_PLAYERS, ...NBA_BIG_PLAYERS]) if (p.starter) byKey.set(`${p.team}|${p.name}`, p)   // bigs come second: they win
+  const out = {}
+  for (const p of byKey.values()) (out[p.team] ??= []).push(p)
+  return out
+})()
 
-const PLAYER_INDEX = Object.fromEntries([...NBA_GUARD_PLAYERS, ...NBA_BIG_PLAYERS].map(p => [p.name, p]))
+// The team's five today: its marked starters; a team marked short is filled with its best
+// others, so the five is never a man down
+function startersFor(short) {
+  const five = [...(TEAM_STARTERS[short] ?? [])]
+  if (five.length < 5) {
+    const have = new Set(five.map(p => p.name))
+    const rest = [...NBA_GUARD_PLAYERS, ...NBA_BIG_PLAYERS].filter(p => p.team === short && p.attrs && !have.has(p.name))
+      .sort((a, b) => playerOvr(b) - playerOvr(a))
+    for (const p of rest) { if (five.length >= 5) break; if (!have.has(p.name)) { have.add(p.name); five.push(p) } }
+  }
+  return five.slice(0, 5).sort((a, b) => (POS_RANK[a.position] ?? 2) - (POS_RANK[b.position] ?? 2))
+}
 
 const SUFFIXES = new Set(['Jr.', 'Jr', 'II', 'III', 'IV'])
 function starterDisplayName(p) {
@@ -2603,59 +2632,85 @@ function starterDisplayName(p) {
   return nameParts[nameParts.length - 1]
 }
 
+// a real starter's OVR, the way the game rates a guard or a big
+const GUARD_NAMES = new Set(NBA_GUARD_PLAYERS.map(p => p.name))
 function playerOvr(p) {
   if (!p?.attrs) return 0
-  return Object.values(p.attrs).reduce((s, v) => s + (v || 0), 0)
+  const guard = GUARD_NAMES.has(p.name), types = guard ? GUARD_TYPES : BIG_TYPES
+  return calcBucketOVR(Object.fromEntries(types.map(t => [t, { val: p.attrs[t] ?? 5 }])), types, guard ? 'guard' : 'big')
 }
 
+// Your spot in the five, from your build. Each position leans on its own ratings,
+// measured against the build's own average (a flat build lands in the middle: SG, or C):
+//   PG passing, handles, IQ, speed (not size) | SG jump shot, finishing, clutch
+//   SF size, perimeter D, bounce, finishing   | PF jump shot, playmaking, speed
+//   C  size, rebounding, interior D (not speed)
+const SPOT_LEANS = {
+  guard: [
+    { passing: 1.3, handles: 1.1, basketballIQ: 0.7, speed: 0.4, size: -0.5 },
+    { jumpShot: 1.4, finishing: 0.6, clutch: 0.5, handles: 0.3, size: -0.1 },
+    { size: 1.0, perimeterDefense: 0.9, bounce: 0.6, finishing: 0.5, passing: -0.3 },
+  ],
+  big: [
+    { jumpShot: 1.2, playmaking: 0.8, speed: 0.7, bounce: 0.4, size: -0.4 },
+    { size: 1.1, rebounding: 1.0, interiorDefense: 1.1, speed: -0.5, jumpShot: -0.3 },
+  ],
+}
+export function buildSpot(build, isBig) {
+  const leans = SPOT_LEANS[isBig ? 'big' : 'guard']
+  const vals = Object.values(build ?? {}).map(c => c?.val).filter(v => typeof v === 'number')
+  if (!vals.length) return 1
+  const mean = vals.reduce((a, b) => a + b, 0) / vals.length
+  const scores = leans.map(l => Object.entries(l).reduce((sum, [t, w]) => sum + w * ((build?.[t]?.val ?? mean) - mean), 0))
+  const best = Math.max(...scores)
+  return scores.filter(x => Math.abs(x - best) < 1e-9).length > 1 ? 1 : scores.indexOf(best)   // a tie: SG, or C
+}
+// The five with you in it: the weakest starter in your group (guards 1-3, bigs 4-5)
+// comes out, you go in at your spot, and the rest of your group keep their order
+// and slide over to fill (a PG on a team whose SF is the weakest: the PG moves to
+// SG, the SG to SF)
+function withYou(five, worstIdx, isBig, spot) {
+  const [lo, hi] = isBig ? [3, 5] : [0, 3]
+  const group = five.slice(lo, hi).filter((_, i) => lo + i !== worstIdx)
+  group.splice(Math.min(spot, group.length), 0, { you: true })
+  return [...five.slice(0, lo), ...group, ...five.slice(hi)]
+}
+const SPOT_LABELS = ['PG', 'SG', 'SF', 'PF', 'C']
+
 // ─── TeamStarters ─────────────────────────────────────────────────────────────
-function TeamStarters({ teamShort, teamColor, isBig, iqPhoto, isAllTime = false }) {
+function TeamStarters({ teamShort, teamColor, isBig, iqPhoto, isAllTime = false, userName = 'Guest', build = null }) {
+  const spot = buildSpot(build, isBig)
+  let five
   if (isAllTime) {
+    // the all-time fives: the weakest in each group is picked by hand (ALLTIME_REPLACE_IDX)
     const names = ALLTIME_STARTERS[teamShort] ?? []
-    if (!names.length) return null
+    if (names.length < 5) return null
     const ri = ALLTIME_REPLACE_IDX[teamShort] ?? { g: 2, b: 3 }
-    const replaceIdx = isBig ? ri.b : ri.g
-    return (
-      <div className="sts-starters">
-        {names.map((name, i) => {
-          const isMe  = i === replaceIdx
-          const hid   = !isMe && NBA_HEADSHOTS[name]
-          const photo = isMe ? iqPhoto : (hid ? `${HEADSHOT_BASE}/nba/${hid}.webp` : null)
-          return (
-            <div key={isMe ? 'you' : name} className={`sts-starter${isMe ? ' sts-starter--you' : ''}`}>
-              <QBAvatar photo={photo} team={teamShort} color={isMe ? teamColor : teamColor + '99'} size={42} logoDir="/logos/nba/" />
-              <span className="sts-starter-name" style={isMe ? { color: teamColor, fontWeight: 700 } : undefined}>
-                {isMe ? 'YOUR BUILD' : name}
-              </span>
-            </div>
-          )
-        })}
-      </div>
-    )
+    five = withYou(names.map(name => ({ name, label: name, team: teamShort })), isBig ? ri.b : ri.g, isBig, spot)
+  } else {
+    const starters = startersFor(teamShort)
+    if (starters.length < 5) return null
+    // the weakest real starter in your group, by OVR
+    const mine = isBig ? [3, 4] : [0, 1, 2]
+    const worst = mine.reduce((w, k) => (playerOvr(starters[k]) < playerOvr(starters[w]) ? k : w), mine[0])
+    five = withYou(starters.map(p => ({ name: p.name, label: starterDisplayName(p), team: p.team })), worst, isBig, spot)
   }
-
-  const names    = TEAM_STARTERS[teamShort] ?? []
-  const starters = names.map(n => PLAYER_INDEX[n]).filter(Boolean)
-  if (!starters.length) return null
-
-  const mySlots    = isBig ? [3, 4] : [0, 1, 2]
-  const validSlots = mySlots.filter(i => starters[i])
-  const replaceIdx = validSlots.reduce((weakIdx, i) =>
-    playerOvr(starters[i]) < playerOvr(starters[weakIdx]) ? i : weakIdx
-  , validSlots[0] ?? 0)
-
+  // the team's color for my name, unless it's too dark to read on the dark card (Pacers navy)
+  const lum = h => { const m = /^#?([0-9a-f]{6})$/i.exec(h || ''); if (!m) return 1; const n = parseInt(m[1], 16); return (0.2126 * (n >> 16) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255)) / 255 }
+  const meColor = lum(teamColor) < 0.32 ? '#f1f5f9' : teamColor
   return (
     <div className="sts-starters">
-      {starters.map((p, i) => {
-        const isMe  = i === replaceIdx
+      {five.map((p, k) => {
+        const isMe  = !!p.you
         const hid   = !isMe && NBA_HEADSHOTS[p.name]
         const photo = isMe ? iqPhoto : (hid ? `${HEADSHOT_BASE}/nba/${hid}.webp` : null)
         return (
           <div key={isMe ? 'you' : p.name} className={`sts-starter${isMe ? ' sts-starter--you' : ''}`}>
-            <QBAvatar photo={photo} team={p.team} color={isMe ? teamColor : teamColor + '99'} size={42} logoDir="/logos/nba/" />
-            <span className="sts-starter-name" style={isMe ? { color: teamColor, fontWeight: 700 } : undefined}>
-              {isMe ? 'YOUR BUILD' : starterDisplayName(p)}
+            <QBAvatar photo={photo} team={isMe ? teamShort : p.team} color={isMe ? teamColor : teamColor + '99'} size={42} logoDir="/logos/nba/" />
+            <span className="sts-starter-name" style={isMe ? { color: meColor, fontWeight: 700 } : undefined}>
+              {isMe ? userName : p.label}
             </span>
+            <span className="sts-starter-pos" style={isMe ? { color: meColor } : undefined}>{SPOT_LABELS[k]}</span>
           </div>
         )
       })}
@@ -2664,9 +2719,18 @@ function TeamStarters({ teamShort, teamColor, isBig, iqPhoto, isAllTime = false 
 }
 
 // ─── Main BucketSimPage ───────────────────────────────────────────────────────
-export default function BucketSimPage({ result, build, types, position, onBack, onReset, adsDisabled = false, isSalaryMode = false, initialScreen = 0, gameMode = null }) {
-  const [screen, setScreen] = useState(initialScreen)
+export default function BucketSimPage({ result: baseResult, build, types, position, onBack, onReset, adsDisabled = false, isSalaryMode = false, initialScreen = 0, gameMode = null, simFn = null, onFinal = null, pool = null, userName = 'Guest' }) {
+  // a season already played and booked (it has its story) opens on its final report: never a second run at it
+  const [screen, setScreen] = useState(initialScreen === 0 && baseResult?.story && !isSalaryMode ? 4 : initialScreen)
   useRailOn(screen)   // each screen of the season brings the bottom rail back
+  // App: the season is steered by a director; `result` is the live version of it
+  const [live, setLive] = useState(baseResult)
+  const result = live
+  const director = useMemo(() => (APP_SIM && simFn && !isSalaryMode && initialScreen === 0 && !baseResult?.story && baseResult?.games?.length)
+    ? createDirector({ sport: 'bucket', pos: position, build, team: baseResult.team, simFn, base: baseResult, name: userName, attrMap: BUCKET_ATTR, types })
+    : null, []) // eslint-disable-line
+  const handleFinal = final => { setLive(final); onFinal?.(final) }
+  useEffect(() => () => { if (director && !director.finalized) onFinal?.(director.finalize()) }, []) // eslint-disable-line
 
   // Compute awards once — result is stable after sim runs
   const awards = useMemo(() => {
@@ -2697,9 +2761,9 @@ export default function BucketSimPage({ result, build, types, position, onBack, 
     const myScore = mvpScore(ppg, rpg, apg)
     let mvp
     if (myScore >= topScore) {
-      mvp = { name: 'You', short: 'You', team: team?.short, ppg, rpg, apg, isPlayer: true }
+      mvp = { name: userName, short: userName, team: team?.short, ppg, rpg, apg, isPlayer: true }
     } else {
-      const playerEntry = { name: 'You', short: 'You', team: team?.short, ppg, rpg, apg, isPlayer: true }
+      const playerEntry = { name: userName, short: userName, team: team?.short, ppg, rpg, apg, isPlayer: true }
       const allMVP = [...MVP_POOL, playerEntry].map(c => ({ ...c, w: Math.pow(Math.max(0, mvpScore(c.ppg, c.rpg, c.apg)), 2.5) }))
       const totalW = allMVP.reduce((s, c) => s + c.w, 0)
       let rand = Math.random() * totalW; mvp = allMVP[0]
@@ -2707,7 +2771,7 @@ export default function BucketSimPage({ result, build, types, position, onBack, 
     }
     const playerDPOY = ovr >= 80 && bpg >= 2.8 && spg >= 1.5
     const dpoy = playerDPOY
-      ? { name: 'You', short: 'You', team: team?.short, spg, bpg, isPlayer: true }
+      ? { name: userName, short: userName, team: team?.short, spg, bpg, isPlayer: true }
       : isAllTime
         ? (() => {
             const DPOY_POOL = [
@@ -2722,7 +2786,7 @@ export default function BucketSimPage({ result, build, types, position, onBack, 
           })()
         : { name: 'Victor Wembanyama', short: 'Wembanyama', team: 'SAS', spg: rb(1.2, 1.6), bpg: rb(3.2, 3.8) }
     return { mvp, dpoy }
-  }, [result]) // eslint-disable-line
+  }, [result?.wins, result?.ppg, result?.story]) // eslint-disable-line
 
   const advancePage = () => {
     document.querySelector('.simp-page')?.scrollTo({ top: 0, behavior: 'instant' })
@@ -2738,17 +2802,17 @@ export default function BucketSimPage({ result, build, types, position, onBack, 
   const simAttrMap = isSalaryMode ? SAL_ATTR_MAP  : BUCKET_ATTR
   const isAllTime  = gameMode === 'all-time'
   const screens = isSalaryMode ? [
-    <ScreenBuild    key="build"    result={result} build={build} types={simTypes} attrMap={simAttrMap} onNext={advancePage} adsDisabled={adsDisabled} isSalaryMode={isSalaryMode} />,
-    <ScreenSeason   key="season"   result={result} awards={awards} onNext={advancePage} adsDisabled={adsDisabled} isAllTime={isAllTime} />,
+    <ScreenBuild    key="build"    result={result} build={build} types={simTypes} attrMap={simAttrMap} onNext={advancePage} adsDisabled={adsDisabled} isSalaryMode={isSalaryMode} userName={userName} />,
+    <ScreenSeason   key="season"   result={result} awards={awards} onNext={advancePage} adsDisabled={adsDisabled} isAllTime={isAllTime} userName={userName} />,
     <ScreenPlayoffs key="playoffs" result={result} onNext={advancePage} autoSkip={true} isAllTime={isAllTime} adsDisabled={adsDisabled} />,
-    <ScreenGOAT     key="goat"     result={result} awards={awards} onNext={advancePage} onReset={handleReset} onBack={handleGoatBack} adsDisabled={adsDisabled} />,
-    <ScreenFinal    key="final"    result={result} awards={awards} build={build} types={simTypes} attrMap={simAttrMap} onReset={handleReset} onBack={handleBack} adsDisabled={adsDisabled} isSalaryMode={isSalaryMode} />,
+    <ScreenGOAT     key="goat"     result={result} awards={awards} onNext={advancePage} onReset={handleReset} onBack={handleGoatBack} adsDisabled={adsDisabled} userName={userName} />,
+    <ScreenFinal    key="final"    result={result} awards={awards} build={build} types={simTypes} attrMap={simAttrMap} onReset={handleReset} onBack={handleBack} adsDisabled={adsDisabled} isSalaryMode={isSalaryMode} isAllTime={isAllTime} userName={userName} />,
   ] : [
-    <ScreenBuild    key="build"    result={result} build={build} types={simTypes} attrMap={simAttrMap} onNext={advancePage} adsDisabled={adsDisabled} isSalaryMode={isSalaryMode} />,
-    <ScreenSeason   key="season"   result={result} awards={awards} onNext={advancePage} adsDisabled={adsDisabled} isAllTime={isAllTime} />,
+    <ScreenBuild    key="build"    result={result} build={build} types={simTypes} attrMap={simAttrMap} onNext={advancePage} adsDisabled={adsDisabled} isSalaryMode={isSalaryMode} userName={userName} />,
+    <ScreenSeason   key="season"   result={result} awards={awards} onNext={advancePage} adsDisabled={adsDisabled} isAllTime={isAllTime} director={director} onFinal={handleFinal} pool={pool} userName={userName} />,
     <ScreenPlayoffs key="playoffs" result={result} onNext={advancePage} isAllTime={isAllTime} adsDisabled={adsDisabled} />,
-    <ScreenGOAT     key="goat"     result={result} awards={awards} onNext={advancePage} onReset={handleReset} onBack={handleGoatBack} adsDisabled={adsDisabled} />,
-    <ScreenFinal    key="final"    result={result} awards={awards} build={build} types={simTypes} attrMap={simAttrMap} onReset={handleReset} onBack={handleBack} adsDisabled={adsDisabled} isSalaryMode={isSalaryMode} />,
+    <ScreenGOAT     key="goat"     result={result} awards={awards} onNext={advancePage} onReset={handleReset} onBack={handleGoatBack} adsDisabled={adsDisabled} userName={userName} />,
+    <ScreenFinal    key="final"    result={result} awards={awards} build={build} types={simTypes} attrMap={simAttrMap} onReset={handleReset} onBack={handleBack} adsDisabled={adsDisabled} isSalaryMode={isSalaryMode} isAllTime={isAllTime} userName={userName} />,
   ]
 
   const team      = result?.team
@@ -2765,12 +2829,16 @@ export default function BucketSimPage({ result, build, types, position, onBack, 
     <div className="simp-page" style={teamStyle}>
       <div className="simp-col">
         <div className="simp-top-bar">
-          {screen > 0 && (
+          {/* a steered season can't be backed out of: going back would replay the year and its decisions */}
+          {/* (and a season reopened on its final report, already booked, stays there: no stepping back into it) */}
+          {screen > 0 && !(director && screen <= 2) && !(baseResult?.story && initialScreen !== 0 || baseResult?.story && !director && screen >= 4) && (
             <button className="simp-back-btn" onClick={() => setScreen(s => s - 1)}>← Back</button>
           )}
           <ProgressDots screen={screen} total={screens.length} />
         </div>
 
+        {/* the moments switch sits above the team card, not on it */}
+        {team && director && screens[screen]?.key !== 'goat' && <div className="sts-moments-row"><MomentsToggle /></div>}
         {team && screens[screen]?.key !== 'goat' && (
           <div className="simp-team-strip">
             <div className="sts-top-row">
@@ -2801,7 +2869,7 @@ export default function BucketSimPage({ result, build, types, position, onBack, 
                 </div>
               )}
             </div>
-            <TeamStarters teamShort={team.short} teamColor={team.color} isBig={myIsBig} iqPhoto={myIQPhoto} isAllTime={isAllTime} />
+            <TeamStarters teamShort={team.short} teamColor={team.color} isBig={myIsBig} iqPhoto={myIQPhoto} isAllTime={isAllTime} userName={userName} build={build} />
           </div>
         )}
 

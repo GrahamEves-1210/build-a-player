@@ -1,0 +1,548 @@
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
+import { useProgress, buy, equip, owns, priceOf, lockReason, dealsFor, claimFreeCoins, msToReset, isPro, COINS, achStats, walletOpen, hasDiscord, claimDiscordCoins, DISCORD_COINS, FEEDBACK_COINS, AD_COINS, AD_MAX, adsLeft, claimAdCoins, BOOSTS, buyBoost, buyFreeze, startBoost, boostLeftMs, TIMED, FREEZE_PRICE, FREEZE_MAX } from '../../lib/progress'
+import { openCheckout } from '../../lib/webCheckout'
+import { sellsHere, onStorefront } from '../../lib/storefront'
+import { showRewarded, rewardedReady, REWARDED_ON } from '../../lib/rewardedAd'
+import { IS_APP, PLAY_BILLING } from '../../lib/platform'
+import { useStorePrices } from '../../lib/iap'
+import FeedbackModal from '../FeedbackModal'
+import { COIN_PACKS } from '../../lib/coins'
+import { connectDiscord, discordError } from '../../lib/discord'
+import { SLOTS, RARITY, ITEMS, itemById, itemsFor, BLURB, DEFAULTS, SLOT_GROUPS } from '../../lib/cosmetics'
+import { achById } from '../../lib/achievements'
+import { getUsername } from '../../lib/discord'
+import { sfx, haptic, previewVictory, warmVictory, flyCoins } from '../../lib/juice'
+import { NameTag, AvatarBadge, ItemPreview } from './NameTag'
+import { IconClose, IconLock, IconGift, IconCrown, IconPlay, IconArrow, IconStar, IconDiscord, IconBolt, IconFlame, IconShield } from './icons'
+import { ProCard } from './Promos'
+import PassStrip from './PassStrip'
+import { RollingNumber } from './MotionText'
+import { AnimatePresence, motion } from 'motion/react'
+import { SPRING_LAYOUT } from '../../lib/motion'
+import { motionReduced } from '../../lib/settings'
+import { useSheetDrag, sheetMotion, overlayMotion } from './Sheet'
+
+// The shop (app): coins buy avatars, name colors and effects, nameplates and
+// victory effects/sounds. BAP Pro includes the Pro Vault. Opened from Home (the
+// coin pill) and Profile; lives over everything like Daily and Cards.
+
+const nav = to => window.dispatchEvent(new CustomEvent('bap:nav', { detail: to }))
+// Four sections, each with its own few chips (a tab is still one of these ids: deep links like
+// shop:court land on the chip, inside its section)
+const LABEL = { featured: 'Featured', coins: 'Get Coins', boosts: 'Boosts', ...Object.fromEntries(SLOTS.map(s => [s.id, s.label])) }
+const GROUPS = [
+  { id: 'featured', label: 'Featured', tabs: ['featured'] },
+  { id: 'coins', label: 'Coins', tabs: ['coins', 'boosts'] },
+  ...SLOT_GROUPS.map(g => ({ id: g.id, label: g.label, tabs: g.slots })),
+]
+const fmtLeft = ms => { const h = Math.floor(ms / 3600000), m = Math.floor((ms % 3600000) / 60000); return h ? `${h}h ${m}m` : `${m}m` }
+
+const signIn = () => window.dispatchEvent(new CustomEvent('bap:auth'))
+
+export function CoinPill({ onClick, className = '' }) {
+  const p = useProgress()
+  // every hook before the sign-in branch: signing in flips it mid-session
+  const [bump, setBump] = useState(false)
+  const [spent, setSpent] = useState(null)   // { n, at }: a spend, shown as "−n" dropping off the pill
+  const prev = useRef(p.coins)
+  useEffect(() => {
+    const was = prev.current ?? 0, now = p.coins ?? 0
+    if (now > was) { setBump(true); setTimeout(() => setBump(false), 520) }
+    else if (now < was && prev.current != null) { const s = { n: was - now, at: Date.now() }; setSpent(s); setTimeout(() => setSpent(x => (x === s ? null : x)), 1000) }
+    prev.current = p.coins
+  }, [p.coins])
+  // website: coins need an account
+  if (!walletOpen()) {
+    return (
+      <button className={`coin-pill coin-pill--signin${className ? ` ${className}` : ''}`} onClick={signIn} aria-label="Sign in to earn coins">
+        <span className="coin-ico" aria-hidden="true" />SIGN IN
+      </button>
+    )
+  }
+  return (
+    <button className={`coin-pill${bump ? ' is-bump' : ''}${className ? ` ${className}` : ''}`} onClick={onClick ?? (() => nav('shop:coins'))} aria-label={`${p.coins ?? 0} coins, get more`}>
+      <span className="coin-ico" aria-hidden="true" /><RollingNumber value={p.coins ?? 0} />
+      {spent && <span key={spent.at} className="coin-pill-spend" aria-hidden="true">−{spent.n.toLocaleString()}</span>}
+    </button>
+  )
+}
+
+// Watch a video: 100 coins, 3 times a day
+function VideoCoins() {
+  const [busy, setBusy] = useState(false)
+  const [note, setNote] = useState('')
+  const left = adsLeft()
+  const watch = async () => {
+    if (!walletOpen()) { signIn(); return }
+    if (busy || left <= 0) return
+    setBusy(true); setNote('')
+    const r = await showRewarded()
+    setBusy(false)
+    if (r === 'rewarded') { claimAdCoins(); haptic('success') }
+    else if (r === 'closed') setNote('Watch to the end to get the coins.')
+    else setNote('No video right now. Try again in a bit.')
+  }
+  return (
+    <div className="sh-section">
+      <button className={`sh-free sh-video${left <= 0 ? ' is-claimed' : ''}`} onClick={watch} disabled={busy}>
+        <span className="sh-chest"><IconPlay size={24} /></span>
+        <span>
+          <span className="sh-free-title">WATCH A VIDEO</span>
+          <span className="sh-free-sub">{left > 0 ? `A short video ad for ${AD_COINS} coins · ${left} of ${AD_MAX} left today` : `That's all ${AD_MAX} for today. More tomorrow.`}</span>
+        </span>
+        <span className="sh-free-go">{!walletOpen() ? 'SIGN IN' : busy ? <span className="bt-dots bt-dots--btn" aria-label="Working"><i /><i /><i /></span> : left > 0 ? `+${AD_COINS}` : 'DONE'}</span>
+      </button>
+      {note && <p className="cpk-note">{note}</p>}
+    </div>
+  )
+}
+
+// Coin packs for real money: Stripe Checkout on the web (the app opens it in the
+// phone's browser and collects the coins when it closes)
+// the app outside the US App Store: no buying and no Pro Vault (lib/storefront.js)
+function useSells() {
+  const [sells, setSells] = useState(sellsHere)
+  useEffect(() => onStorefront(() => setSells(sellsHere())), [])
+  return sells
+}
+
+// coin pack art, smallest pack to largest (public/shop, cut from the BAP coin stacks)
+const PACK_ART = ['/shop/coins-1.webp', '/shop/coins-2.webp', '/shop/coins-3.webp', '/shop/coins-4.webp']
+
+function CoinPacks({ p }) {
+  const [busy, setBusy] = useState(null)
+  const store = useStorePrices()   // Android: Google Play's prices, in the player's currency
+  const [note, setNote] = useState('')
+  const buyIt = async pack => {
+    if (busy) return
+    if (!p.signedIn) { signIn(); return }
+    setBusy(pack.id); setNote(''); sfx('tap')
+    try {
+      const r = await openCheckout('coins', { pack: pack.id })
+      if (r === 'error') setNote("Couldn't open checkout. Try again.")
+    } finally { setBusy(null) }
+  }
+  return (
+    <div className="sh-section">
+      <div className="sh-section-head"><span className="sh-section-title">BUY COINS</span><span className="sh-section-note">{PLAY_BILLING ? 'Paid through Google Play' : 'Secure checkout on build-a-player.com'}</span></div>
+      <div className="cpk-grid">
+        {COIN_PACKS.map((pack, i) => (
+          <button key={pack.id} className={`cpk${pack.tag ? ' is-tagged' : ''}`} onClick={() => buyIt(pack)} disabled={!!busy}>
+            {pack.tag && <span className="cpk-tag">{pack.tag}</span>}
+            {/* the pile grows with the pack: one coin, a short stack, a tall stack, a burst */}
+            <span className="cpk-art" aria-hidden="true"><img src={PACK_ART[i] ?? PACK_ART.at(-1)} alt="" draggable={false} /></span>
+            <b className="cpk-n">{pack.coins.toLocaleString()}</b>
+            <span className="cpk-lbl">COINS</span>
+            <span className="cpk-price">{busy === pack.id ? <span className="bt-dots bt-dots--btn" aria-label="Working"><i /><i /><i /></span> : store[pack.id] ?? `$${pack.usd.toFixed(2)}`}</span>
+          </button>
+        ))}
+      </div>
+      {note && <p className="cpk-note">{note}</p>}
+      <p className="cpk-fine">{p.signedIn ? 'Paid on the web through Stripe. Coins land in your account when you come back.' : 'Sign in first: bought coins are saved to your account.'}</p>
+    </div>
+  )
+}
+
+// Send feedback: one-time coins the first time a message goes through
+function FeedbackCoins({ p }) {
+  const [open, setOpen] = useState(false)
+  if (p.feedbackPaid) return null
+  const isBucket = typeof document !== 'undefined' && document.documentElement.classList.contains('is-bucket')
+  return (
+    <div className="sh-section">
+      <button className="sh-free sh-feedback" onClick={() => { if (!walletOpen()) { signIn(); return } setOpen(true) }}>
+        <span className="sh-chest"><IconStar size={26} /></span>
+        <span>
+          <span className="sh-free-title">SEND FEEDBACK</span>
+          <span className="sh-free-sub">Tell us one thing to fix or add: {FEEDBACK_COINS} coins, first message only</span>
+        </span>
+        <span className="sh-free-go">{!walletOpen() ? 'SIGN IN' : `+${FEEDBACK_COINS}`}</span>
+      </button>
+      {open && <FeedbackModal user={p.user} isBucket={isBucket} onClose={() => setOpen(false)} />}
+    </div>
+  )
+}
+
+// Join the Discord: one-time coins (linking Discord also joins the server)
+function DiscordCoins({ p }) {
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
+  if (p.discordPaid) return null
+  const linked = hasDiscord(p.user)
+  const act = async () => {
+    if (!p.signedIn) { signIn(); return }
+    if (!linked) { setBusy(true); setErr(''); const { error } = await connectDiscord(); if (error) { setBusy(false); setErr(discordError(error)) } return }
+    if (claimDiscordCoins()) { sfx('coins'); haptic('success') }   // the payout is quiet: the coin drop here
+  }
+  return (
+    <div className="sh-section">
+      <button className="sh-free sh-discord" onClick={act} disabled={busy}>
+        <span className="sh-chest"><IconDiscord size={26} /></span>
+        <span>
+          <span className="sh-free-title">JOIN THE DISCORD</span>
+          <span className="sh-free-sub">{linked ? `You're in — claim your ${DISCORD_COINS} coins` : `Connect Discord, join the server, get ${DISCORD_COINS} coins`}</span>
+        </span>
+        <span className="sh-free-go">{!p.signedIn ? 'SIGN IN' : linked ? 'CLAIM' : busy ? <span className="bt-dots bt-dots--btn" aria-label="Working"><i /><i /><i /></span> : 'JOIN'}</span>
+      </button>
+      {err && <p className="cpk-note">{err}</p>}
+    </div>
+  )
+}
+
+// Boosts: consumables for coins (Coin Rush comes from the Builder Pass and is used here), and streak freezes
+const BOOST_ART = {
+  xp: <span className="bp-art bp-art--boost"><IconBolt size={20} /></span>,
+  rush: <span className="bp-art bp-art--rush"><span className="coin-ico" /><i>2x</i></span>,
+  hot: <span className="bp-art bp-art--hot"><IconFlame size={20} /></span>,
+  heal: <span className="bp-art bp-art--heal"><b>+</b></span>,
+  freeze: <span className="bp-art bp-art--freeze"><IconShield size={20} /></span>,
+}
+// a slot's items in the shop: vaulted ones (kept for future rewards) only once owned
+const shown = slot => itemsFor(slot).filter(i => !i.vault || owns(i.id))
+
+function Boosts({ p, onNeedCoins }) {
+  const [msg, setMsg] = useState('')
+  const [got, setGot] = useState(null)
+  const [, tick] = useState(0)
+  useEffect(() => { const t = setInterval(() => tick(n => n + 1), 30000); return () => clearInterval(t) }, [])
+  const leftMs = k => (TIMED[k] ? boostLeftMs(k) : 0)
+  const useIt = k => { if (startBoost(k)) { sfx('coins'); haptic('success'); setGot(k); setTimeout(() => setGot(g => (g === k ? null : g)), 900) } }
+  const holding = r => (r.k === 'rush' ? `${r.have} Coin Rush${r.have === 1 ? '' : 'es'}` : r.k === 'xp' ? `${r.have} hour${r.have === 1 ? '' : 's'} of 2x XP` : r.have === 1 ? r.unit : `${r.unit}s`)
+  const rows = [
+    ...Object.entries(BOOSTS).map(([k, b]) => ({ k, name: b.per > 1 ? `${b.name} · ${b.per} ${b.unit}s` : b.name, desc: b.desc, price: b.price, passOnly: b.passOnly, have: p.boosts?.[k] ?? 0, unit: b.unit })),
+    { k: 'freeze', name: 'Streak Freeze', desc: `Covers one missed day of your login streak. Hold up to ${FREEZE_MAX}.`, price: FREEZE_PRICE, have: p.streak?.freezes ?? 0, unit: 'freeze', full: (p.streak?.freezes ?? 0) >= FREEZE_MAX },
+  ]
+  const buyIt = k => {
+    if (!walletOpen()) { signIn(); return }
+    const r = k === 'freeze' ? buyFreeze() : buyBoost(k)
+    if (r.ok) { sfx('equip'); haptic('success'); setMsg(''); setGot(k); setTimeout(() => setGot(g => (g === k ? null : g)), 900) }
+    else if (r.short || /more coins/.test(r.reason || '')) { haptic('light'); onNeedCoins() }
+    else { sfx('deny'); setMsg(r.reason) }
+  }
+  return (
+    <div className="sh-section">
+      <div className="sh-section-head"><span className="sh-section-title">BOOSTS</span><span className="sh-section-note">Used up as you play</span></div>
+      <div className="bst-list">
+        {rows.map((r, i) => (
+          <div key={r.k} className={`bst-row ag-pop${got === r.k ? ' is-got' : ''}`} style={{ '--d': `${i * 40}ms` }}>
+            {BOOST_ART[r.k]}
+            <span className="bst-txt">
+              <b>{r.name}</b>
+              <small>{r.desc}</small>
+              {leftMs(r.k) > 0 && <em className="bst-on">ON · {fmtLeft(leftMs(r.k))} left</em>}
+              {p.signedIn && !(leftMs(r.k) > 0 && !r.have) && <em>{r.have > 0 ? `You have ${holding(r)}` : 'None yet'}</em>}
+            </span>
+            {TIMED[r.k] && r.have > 0
+              ? <button className="bst-buy is-use" onClick={() => useIt(r.k)}>{leftMs(r.k) > 0 ? (r.k === 'rush' ? '+3 HRS' : '+1 HR') : 'USE'}</button>
+              : r.passOnly
+              ? <button className="bst-buy is-pass" onClick={() => nav('pass')}>PASS</button>
+              : <button className="bst-buy" onClick={() => buyIt(r.k)} disabled={r.full}>{r.full ? 'FULL' : <><span className="coin-ico coin-ico--sm" />{r.price.toLocaleString()}</>}</button>}
+          </div>
+        ))}
+      </div>
+      {msg && <p className="cpk-note">{msg}</p>}
+    </div>
+  )
+}
+
+function ItemCard({ item, deal, equipped, onOpen, delay = 0, name }) {
+  const mine = owns(item.id)
+  const lock = mine ? null : lockReason(item.id)
+  const price = deal ?? item.price
+  return (
+    <button className={`sh-card${mine ? ' is-owned' : ''}${equipped ? ' is-equipped' : ''}${lock ? ' is-locked' : ''}`} style={{ '--rar': RARITY[item.rarity].color, '--d': `${delay}ms` }} onClick={() => onOpen(item.id)}>
+      <span className="sh-card-stage">
+        {item.pro && <span className="sh-flag sh-flag--pro"><IconCrown size={11} /> PRO</span>}
+        {item.pass && !mine && <span className="sh-flag sh-flag--pass"><IconStar size={10} /> PASS</span>}
+        {item.streak && !mine && <span className="sh-flag sh-flag--ach"><IconFlame size={10} /> STREAK</span>}
+        {item.cup && !mine && <span className="sh-flag sh-flag--ach"><IconStar size={10} /> CUP</span>}
+        {!item.pro && item.ach && !mine && <span className="sh-flag sh-flag--ach"><IconStar size={10} /> REWARD</span>}
+        {deal != null && !mine && <span className="sh-flag sh-flag--deal">-30%</span>}
+        <ItemPreview item={item} name={name} />
+      </span>
+      <span className="sh-card-body">
+        <span className="sh-card-name">{item.name}</span>
+        <span className="sh-card-meta">
+          <span className="sh-rar">{RARITY[item.rarity].name}</span>
+          {mine ? <span className="sh-owned">{equipped ? 'EQUIPPED' : 'OWNED'}</span>
+            : item.ach ? <span className="sh-owned" style={{ color: 'var(--ag-muted)' }}>EARN IT</span>
+            : item.pass ? <span className="sh-owned" style={{ color: 'var(--ag-muted)' }}>TIER {item.pass.tier}</span>
+            : item.streak ? <span className="sh-owned" style={{ color: 'var(--ag-muted)' }}>DAY {item.streak}</span>
+            : item.cup ? <span className="sh-owned" style={{ color: 'var(--ag-muted)' }}>TOP 10</span>
+            : item.pro ? <span className="sh-owned" style={{ color: 'var(--ag-gold-hi)' }}>WITH PRO</span>
+            : <span className="sh-price"><span className="coin-ico coin-ico--sm" />{price.toLocaleString()}{deal != null && <s>{item.price.toLocaleString()}</s>}</span>}
+        </span>
+      </span>
+    </button>
+  )
+}
+
+function DefaultCard({ slot, equipped, onPick, name }) {
+  const label = slot === 'avatar' ? 'Initial' : 'None'
+  return (
+    <button className={`sh-card is-owned${equipped ? ' is-equipped' : ''}`} style={{ '--rar': '#6ee7b7' }} onClick={onPick}>
+      <span className="sh-card-stage">
+        {slot === 'reel' || slot === 'entrance' ? <ItemPreview item={{ slot, id: null }} name={name} /> : slot === 'avatar' ? <AvatarBadge name={name} size={58} cos={{}} /> : slot === 'plate' ? <NameTag name={name} cos={{}} className="ip-name" /> : <span className="ip-name"><NameTag name={name} cos={{}} /></span>}
+      </span>
+      <span className="sh-card-body"><span className="sh-card-name">{label}</span><span className="sh-card-meta"><span className="sh-rar">Default</span><span className="sh-owned">{equipped ? 'EQUIPPED' : 'FREE'}</span></span></span>
+    </button>
+  )
+}
+
+function ItemSheet({ id, onClose, name, onNeedCoins }) {
+  const p = useProgress()
+  const item = itemById(id)
+  const [short, setShort] = useState(false)
+  const [msg, setMsg] = useState('')
+  const [bought, setBought] = useState(false)
+  const [justEquipped, setJustEquipped] = useState(false)
+  const buyRef = useRef(null)
+  const { startDrag, dragProps, tap } = useSheetDrag('bottom', onClose)   // drag the grabber down to close
+  if (!item) return null
+  const mine = owns(item.id)
+  const lock = mine ? null : lockReason(item.id)
+  const price = priceOf(item.id)
+  const equipped = p.equip?.[item.slot] === item.id
+  const isFx = item.slot === 'winFx' || item.slot === 'winSound'
+  const doBuy = () => {
+    const target = buyRef.current
+    const r = buy(item.id)
+    // the coins leave the counter for the button, then the item unlocks
+    if (r.ok) { setMsg(''); flyCoins(target).then(() => { setBought(true); setTimeout(() => setBought(false), 1700) }) }
+    else if (r.short) { haptic('light'); onClose(); onNeedCoins() }   // not enough coins: off to Get Coins
+    else { setShort(true); setMsg(r.reason); sfx('deny'); haptic('light'); setTimeout(() => setShort(false), 450) }
+  }
+  const doEquip = () => {
+    if (equipped && !isFx) { equip(item.slot, null); sfx('tap'); return }
+    if (equip(item.slot, item.id)) { sfx('equip'); haptic('medium'); setJustEquipped(true); setTimeout(() => setJustEquipped(false), 900) }
+  }
+  const preview = () => (item.slot === 'winFx' ? previewVictory(item.id, null) : item.slot === 'winSound' ? sfx(item.id) : null)
+  const ach = item.ach ? achById(item.ach) : null
+  const achNow = ach ? Math.min(ach.goal, achStats()[ach.metric] ?? 0) : 0
+  return createPortal(
+    <motion.div className="sh-sheet-overlay" {...overlayMotion} onClick={e => e.target === e.currentTarget && onClose()}>
+      <motion.div className="sh-sheet" style={{ '--rar': RARITY[item.rarity].color }} role="dialog" aria-label={item.name} {...sheetMotion('bottom')} {...dragProps}>
+        <div className="sh-grab" onClick={tap(onClose)} onPointerDown={startDrag} />
+        <div className={`sh-sheet-stage${justEquipped ? ' is-flash' : ''}`} onClick={isFx ? preview : undefined}>
+          {isFx
+            ? <span style={{ display: 'grid', placeItems: 'center', gap: 10 }}><ItemPreview item={item} big /><span className="ag-chip"><IconPlay size={12} /> TAP TO {item.slot === 'winSound' ? 'PLAY' : 'PREVIEW'}</span></span>
+            : item.slot === 'avatar'
+              ? <span style={{ display: 'flex', alignItems: 'center', gap: 14 }}><AvatarBadge cos={{ avatar: item.id }} name={name} size={96} /><NameTag self name={name} className="sh-hero-name" /></span>
+              : <ItemPreview item={item} name={name} big />}
+        </div>
+        <span className="sh-sheet-rar">{RARITY[item.rarity].name.toUpperCase()}{item.pro ? ' · PRO VAULT' : ''}{item.pass ? ' · BUILDER PASS' : ''}{item.ach ? ' · ACHIEVEMENT REWARD' : ''}</span>
+        <h2 className="sh-sheet-name">{item.name}</h2>
+        <p className="sh-sheet-blurb">{BLURB[item.slot]}</p>
+        {mine ? (
+          <div className="sh-sheet-row">
+            {isFx && <button className="sh-ghost" onClick={preview}>{item.slot === 'winSound' ? 'PLAY' : 'PREVIEW'}</button>}
+            <button className={`sh-equip${equipped ? ' is-on' : ''}${justEquipped ? ' is-just' : ''}`} onClick={doEquip}>
+              {justEquipped && <svg className="sh-equip-check" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.6l4.3 4.3L19 7.2" /></svg>}
+              {justEquipped ? 'EQUIPPED' : equipped ? (isFx ? 'EQUIPPED' : 'TAKE IT OFF') : 'EQUIP'}
+            </button>
+          </div>
+        ) : lock ? (
+          <>
+            <div className="sh-lock"><IconLock size={14} /> {lock.toUpperCase()}</div>
+            {ach && <div className="sh-hint">{ach.desc} · {achNow.toLocaleString()}/{ach.goal.toLocaleString()} <button className="ag-chip" style={{ marginLeft: 6 }} onClick={() => { onClose(); nav('achievements') }}>VIEW</button></div>}
+            {item.pro && <div className="sh-hint">Included with <b>BAP Pro</b>: every Pro Vault look is yours while you're Pro. <button className="ag-chip" style={{ marginLeft: 6 }} onClick={() => { onClose(); nav('pro') }}>SEE PRO</button></div>}
+            {item.cup && <div className="sh-hint">Finish a week of Daily Challenges in the Weekly Cup's top 10. <button className="ag-chip" style={{ marginLeft: 6 }} onClick={() => { onClose(); nav('daily') }}>DAILY</button></div>}
+            {item.streak && <div className="sh-hint">Log in {item.streak} days in a row, then claim it on the Daily tab. <button className="ag-chip" style={{ marginLeft: 6 }} onClick={() => { onClose(); nav('daily') }}>DAILY</button></div>}
+            {item.pass && <div className="sh-hint">On the Builder Pass {item.pass.track === 'premium' ? 'premium track' : 'free track'}, tier {item.pass.tier}. Not sold for coins. <button className="ag-chip" style={{ marginLeft: 6 }} onClick={() => { onClose(); nav('pass') }}>OPEN THE PASS</button></div>}
+          </>
+        ) : (
+          <>
+            <div className="sh-sheet-row">
+              {isFx && <button className="sh-ghost" onClick={preview}>{item.slot === 'winSound' ? 'PLAY' : 'PREVIEW'}</button>}
+              <button ref={buyRef} className={`sh-buy${short ? ' is-short' : ''}`} onClick={doBuy}>BUY · <span className="coin-ico" />{price.toLocaleString()}</button>
+            </div>
+            {msg ? <div className="sh-hint">{msg}. Seasons, missions, achievements and the daily drop all pay <b>coins</b>.</div>
+              : <div className="sh-hint">You have <b>{(p.coins ?? 0).toLocaleString()}</b> coins.</div>}
+          </>
+        )}
+      </motion.div>
+      {bought && (
+        <div className="sh-bought" style={{ '--rar': RARITY[item.rarity].color }}>
+          <span className="sh-bought-rays" aria-hidden="true" />
+          <div className="sh-bought-card">
+            <span className="ag-eyebrow sh-bought-in" style={{ '--i': 0 }}>UNLOCKED</span>
+            <span className="sh-bought-in" style={{ '--i': 1 }}>{item.slot === 'avatar' ? <AvatarBadge cos={{ avatar: item.id }} name={name} size={72} /> : <ItemPreview item={item} name={name} />}</span>
+            <span className="sh-bought-name sh-bought-in" style={{ '--i': 2 }}>{item.name}</span>
+          </div>
+        </div>
+      )}
+    </motion.div>,
+    document.body,
+  )
+}
+
+export default function AppShop({ onClose, tab: initialTab = 'featured' }) {
+  useEffect(() => { warmVictory() }, [])   // victory sounds ready for previews
+  const p = useProgress()
+  // shop:vault opens Featured scrolled down to the Pro Vault (once the screen has slid in)
+  const [tab, setTab] = useState(initialTab === 'vault' ? 'featured' : initialTab)
+  const vaultRef = useRef(null)
+  useEffect(() => {
+    if (initialTab !== 'vault') return
+    const t = setTimeout(() => {
+      const el = vaultRef.current
+      if (!el) return
+      // clear the sticky section chips (.sh-nav)
+      const navEl = el.closest('.sh')?.querySelector('.sh-nav')
+      el.style.scrollMarginTop = `${(navEl ? (parseFloat(getComputedStyle(navEl).top) || 0) + navEl.offsetHeight : 0) + 8}px`
+      el.scrollIntoView({ behavior: motionReduced() ? 'auto' : 'smooth', block: 'start' })
+    }, 350)
+    return () => clearTimeout(t)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  const lastIn = useRef({})   // each section reopens on the chip it was left on
+  const [open, setOpen] = useState(null)
+  const name = getUsername(p.user) || 'Guest'
+  const deals = useMemo(() => dealsFor(), [])
+  const dealPrice = id => deals.find(d => d.id === id)?.price ?? null
+  const pro = isPro()
+  const sells = useSells()
+  const groups = GROUPS.map(g => ({ ...g, tabs: g.tabs.filter(t => sells || t !== 'coins') }))
+  const group = groups.find(g => g.tabs.includes(tab)) ?? groups[0]
+  lastIn.current[group.id] = tab
+  const openGroup = g => { if (g.id === group.id) return; setTab(lastIn.current[g.id] ?? g.tabs[0]); sfx('tap') }
+  const ownedCount = ITEMS.filter(i => owns(i.id) && !i.free).length
+  const reach = useMemo(() => ITEMS.filter(i => !i.unlock && !owns(i.id) && !lockReason(i.id) && i.price && !i.ach && !i.vault && priceOf(i.id) <= Math.max(300, (p.coins ?? 0))).sort((a, b) => b.price - a.price).slice(0, 4), [p.coins, p.owned]) // eslint-disable-line react-hooks/exhaustive-deps
+  const claim = () => {
+    if (!p.freeReady) return
+    const n = claimFreeCoins()
+    if (n) { sfx('coins'); haptic('success') }
+  }
+  const pickDefault = slot => { equip(slot, null); sfx('tap') }
+  const grid = (list, cls = '') => (
+    <div className={`sh-grid${cls}`}>
+      {list.filter(i => sells || !i.pro || owns(i.id)).map((i, k) => <ItemCard key={i.id} item={i} deal={dealPrice(i.id)} equipped={p.equip?.[i.slot] === i.id} onOpen={setOpen} delay={k * 30} name={name} />)}
+    </div>
+  )
+
+  return (
+    <div className="ag-screen sh">
+      <div className="ag-screen-head">
+        <div>
+          <span className="ag-eyebrow">SPEND YOUR COINS</span>
+          <h1 className="ag-h1">Shop</h1>
+        </div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <button className="sh-locker-btn" onClick={() => nav('locker')}>LOCKER</button>
+          <CoinPill onClick={() => setTab('featured')} />
+          <button className="ag-round-btn" onClick={onClose} aria-label="Close"><IconClose size={16} /></button>
+        </div>
+      </div>
+
+      <div className="sh-hero ag-pop">
+        <AvatarBadge self name={name} size={58} level={p.signedIn ? p.lvl.level : null} />
+        <span style={{ minWidth: 0 }}>
+          <NameTag self name={name} className="sh-hero-name" />
+          <span className="sh-hero-sub">{ownedCount} owned · {!p.signedIn ? 'Sign in to level up' : `${p.lvl.title} · ${pro ? 'BAP Pro: Vault open' : 'Level ' + p.lvl.level}`}</span>
+        </span>
+      </div>
+
+      <div className="sh-nav">
+        <div className="ag-seg sh-groups" role="tablist" aria-label="Shop sections" style={{ gridTemplateColumns: `repeat(${groups.length}, minmax(0, 1fr))` }}>
+          {groups.map(g => (
+            <button key={g.id} role="tab" aria-selected={g.id === group.id} className={g.id === group.id ? 'is-on' : ''} onClick={() => openGroup(g)}>
+              {g.id === group.id && <motion.span layoutId="shop-group" className="ag-seg-pill" transition={SPRING_LAYOUT} />}
+              {g.label}
+            </button>
+          ))}
+        </div>
+        {group.tabs.length > 1 && (
+          <div className="sh-tabs" role="tablist" aria-label={group.label}>
+            {group.tabs.map(id => (
+              <button key={id} role="tab" aria-selected={tab === id} className={`sh-tab${tab === id ? ' is-on' : ''}`} onClick={() => { setTab(id); sfx('tap') }}>
+                {tab === id && <motion.span layoutId={`shop-tab-${group.id}`} className="sh-tab-pill" transition={SPRING_LAYOUT} />}
+                {LABEL[id]}{SLOTS.some(s => s.id === id) && <b>{shown(id).filter(i => owns(i.id)).length}/{shown(id).length}</b>}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {tab === 'boosts' ? (
+        <Boosts p={p} onNeedCoins={() => setTab(sells ? 'coins' : 'featured')} />
+      ) : tab === 'coins' ? (
+        <>
+          {/* videos are an app thing (AdMob); the website shows the card only once it has a rewarded ad unit */}
+          {REWARDED_ON && (IS_APP || rewardedReady()) && <VideoCoins />}
+          {sells && <CoinPacks p={p} />}
+        </>
+      ) : tab === 'featured' ? (
+        <>
+          {!walletOpen() && (
+            <div className="sh-section">
+              <button className="sh-free sh-signin" onClick={signIn}>
+                <span className="sh-chest"><IconStar size={26} /></span>
+                <span>
+                  <span className="sh-free-title">SIGN IN TO EARN COINS</span>
+                  <span className="sh-free-sub">Coins and cards are saved to your account</span>
+                </span>
+                <span className="sh-free-go">SIGN IN</span>
+              </button>
+            </div>
+          )}
+          <div className="sh-section ag-promos" style={{ marginTop: 0 }}>
+            <PassStrip />
+          </div>
+          <DiscordCoins p={p} />
+          <FeedbackCoins p={p} />
+          <div className="sh-section">
+            <button className={`sh-free${p.freeReady ? '' : ' is-claimed'}`} onClick={walletOpen() ? claim : signIn}>
+              <span className="sh-chest"><IconGift size={28} /></span>
+              <span>
+                <span className="sh-free-title">DAILY DROP</span>
+                <span className="sh-free-sub">{p.freeReady ? `${pro ? COINS.freePro : COINS.free} free coins today${pro ? ' (Pro doubles it)' : ''}` : `Next drop in ${fmtLeft(msToReset())}`}</span>
+              </span>
+              <span className="sh-free-go">{!walletOpen() ? 'SIGN IN' : p.freeReady ? 'CLAIM' : 'CLAIMED'}</span>
+            </button>
+          </div>
+          <div className="sh-section">
+            <div className="sh-section-head"><span className="sh-section-title">TODAY'S DEALS</span><span className="sh-section-note">30% off · new deals in {fmtLeft(msToReset())}</span></div>
+            {grid(deals.map(d => itemById(d.id)).filter(Boolean), ' sh-grid--3')}
+          </div>
+          {reach.length > 0 && (
+            <div className="sh-section">
+              <div className="sh-section-head"><span className="sh-section-title">WITHIN REACH</span><span className="sh-section-note">What your coins can buy now</span></div>
+              {grid(reach)}
+            </div>
+          )}
+          {(sells || pro) && <div className="sh-section" ref={vaultRef}>
+            <div className="sh-vault">
+              <div className="sh-vault-head">
+                <span>
+                  <span className="sh-vault-title"><IconCrown size={18} /> Pro Vault</span>
+                  <span className="sh-vault-sub" style={{ display: 'block' }}>{pro ? 'Included with your BAP Pro: they\'re all yours.' : 'Included with BAP Pro: all four, while you\'re a member.'}</span>
+                </span>
+              </div>
+              {!pro && <div style={{ marginBottom: 10 }}><ProCard /></div>}
+              {grid(ITEMS.filter(i => i.pro))}
+            </div>
+          </div>}
+          <div className="sh-section">
+            <div className="sh-section-head"><span className="sh-section-title">EARNING COINS</span></div>
+            <div className="ag-card" style={{ padding: 12, fontFamily: 'var(--ag-body)', fontSize: 13, lineHeight: 1.6, color: 'var(--ag-text-2)' }}>
+              Every season pays {COINS.season}+ coins, more for wins, playoffs (+{COINS.playoffs}), titles (+{COINS.ring}) and awards (+{COINS.award}).
+              Missions, login streaks, new cards, Blacktop games, achievements and the Builder Pass pay too.
+              <button className="ag-chip" style={{ marginTop: 8, display: 'flex' }} onClick={() => nav('achievements')}>ACHIEVEMENTS <IconArrow size={12} /></button>
+            </div>
+          </div>
+        </>
+      ) : (
+        <div className="sh-section">
+          <div className="sh-section-head"><span className="sh-section-title">{SLOTS.find(s => s.id === tab)?.label.toUpperCase()}</span><span className="sh-section-note">{BLURB[tab]}</span></div>
+          <div className="sh-grid">
+            {DEFAULTS[tab] === null && <DefaultCard slot={tab} equipped={!p.equip?.[tab]} onPick={() => pickDefault(tab)} name={name} />}
+            {shown(tab).sort((a, b) => (a.pro - b.pro) || (!!a.pass - !!b.pass) || (!!(a.ach || a.streak || a.cup) - !!(b.ach || b.streak || b.cup)) || (a.rarity - b.rarity) || (a.price - b.price)).map((i, k) => (
+              <ItemCard key={i.id} item={i} deal={dealPrice(i.id)} equipped={p.equip?.[i.slot] === i.id} onOpen={setOpen} delay={k * 25} name={name} />
+            ))}
+          </div>
+        </div>
+      )}
+      <AnimatePresence>{open && <ItemSheet key={open} id={open} name={name} onClose={() => setOpen(null)} onNeedCoins={() => setTab(sells ? 'coins' : 'featured')} />}</AnimatePresence>
+    </div>
+  )
+}

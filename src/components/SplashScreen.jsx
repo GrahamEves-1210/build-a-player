@@ -3,13 +3,15 @@ import { nflHeadshot, HEADSHOT_BASE } from '../utils/simulation'
 import SiteFooter from './SiteFooter'
 import SiteFeatures from './SiteFeatures'
 
-function hsUrl(id) {
+export function hsUrl(id) {
   if (!id) return null
   if (id.startsWith('http')) return id
   return id.includes('.') ? `${HEADSHOT_BASE}/${id}` : `${HEADSHOT_BASE}/${id}.webp`
 }
 
-const POS_OPTIONS = [
+import { IS_APP, APP_LOOK, setClassicLook } from '../lib/platform'
+
+export const POS_OPTIONS = [
   {
     pos: 'qb', label: 'QB', classic: true, alltime: true,
     players: [
@@ -85,7 +87,7 @@ function MiniAv({ id, color, size = 28 }) {
   )
 }
 
-function AvatarTrio({ players, size = 26 }) {
+export function AvatarTrio({ players, size = 26 }) {
   return (
     <div className="splash-av-trio">
       {players.map((p, i) => (
@@ -193,7 +195,7 @@ const QB_ATTRS = [
   { label: 'Legs',                  col: '#60a5fa', angle:   55, dist: 1.30, mx: 3,  my: 30, dox: 80 },
   { label: 'Size',                  col: '#fb923c', angle:   15, dist: 1.28, mx: 62, my: 52 },
   { label: 'Pre-Snap',              col: '#e879f9', angle:  210, dist: 1.31, mx: 4,  my: 62 },
-  { label: 'Accuracy/Touch',        col: '#34d399', angle: -130, dist: 1.30, mx: 55, my: 72 },
+  { label: 'Accuracy',              col: '#34d399', angle: -130, dist: 1.30, mx: 55, my: 72 },
   { label: 'Leadership',            col: '#a78bfa', angle:  -70, dist: 1.29, mx: 5,  my: 18, doy: -30, dox: 140 },
   { label: 'Playmaking/Creativity', col: '#fbbf24', angle:  100, dist: 1.32, mx: 68, my: 34, dox: -290 },
   { label: 'Pocket Presence',       col: '#2dd4bf', angle: -160, dist: 1.28, mx: 3,  my: 48, doy: 200 },
@@ -293,7 +295,7 @@ const STACK_MASK = {
 // attribute, using each attribute's real in-game color — clipped to the
 // exact outline of the position's silhouette image via a CSS mask, so it
 // reads as the attributes "stacking up" into the body.
-function StackedSilhouette({ position, attrs, ready }) {
+export function StackedSilhouette({ position, attrs, ready, fast = false }) {
   const visible = useRevealOnMount(ready)
   const mask = STACK_MASK[position] ?? STACK_MASK.qb
   return (
@@ -317,7 +319,7 @@ function StackedSilhouette({ position, attrs, ready }) {
             transform: visible ? 'translateY(0)' : `translateY(-${i * 100}%)`,
             // Fully sequential — each band only starts once the previous one
             // has completely finished falling (delay = full fall duration).
-            transitionDelay: visible ? `${(attrs.length - 1 - i) * 170}ms` : '0ms',
+            transitionDelay: visible ? `${(attrs.length - 1 - i) * (fast ? 24 : 170)}ms` : '0ms',
           }}
         >
           <span className="splash-stack-band-label">{a.label}</span>
@@ -326,6 +328,9 @@ function StackedSilhouette({ position, attrs, ready }) {
     </div>
   )
 }
+
+// Attribute bands per position — shared with the app home screen (components/app/AppHome)
+export const SPLASH_ATTRS = { qb: QB_ATTRS, rb: RB_ATTRS, wr: WR_ATTRS, te: TE_ATTRS, db: DB_ATTRS, ol: OL_ATTRS }
 
 export default function SplashScreen({ onStart, onDepthChart, onWiki }) {
   const [phase, setPhase] = useState(0)
@@ -448,6 +453,9 @@ export default function SplashScreen({ onStart, onDepthChart, onWiki }) {
           </div>
           <div className="splash-mg-sub">BASKETBALL BUILDER</div>
         </button>
+
+        {/* the classic look's way back (Settings → Classic look brought them here) */}
+        {!IS_APP && !APP_LOOK && <button className="splash-newlook" onClick={() => setClassicLook(false)}>Switch to the new look</button>}
       </div>
 
       <div className="splash-field-lines">

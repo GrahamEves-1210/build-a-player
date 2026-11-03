@@ -10,6 +10,7 @@ import { BUCKET_ATTR } from '../data/nba-attrs'
 import { GUARD_TYPES } from '../data/nba-guards'
 import { BIG_TYPES } from '../data/nba-bigs'
 import { valToGrade } from '../utils/simulation'
+import { IconClose, IconCaret } from './app/icons'
 
 const GRADE_COLOR = {
   S: '#c084fc', 'A+': '#34d399', A: '#34d399', 'A-': '#34d399',
@@ -111,7 +112,7 @@ export default function CustomRatingsModal({ isRB, isWR = false, isTE = false, i
         <div className="cr-header">
           <span className="cr-title">Custom Ratings</span>
           {modifiedCount > 0 && <span className="cr-mod-count">{modifiedCount} modified</span>}
-          <button className="cr-close" onClick={onClose}>✕</button>
+          <button className="cr-close" onClick={onClose} aria-label="Close"><IconClose size={16} /></button>
         </div>
 
         <div className="cr-search-wrap">
@@ -140,7 +141,7 @@ export default function CustomRatingsModal({ isRB, isWR = false, isTE = false, i
                   <span className="cr-row-name">{p.name}</span>
                   <span className="cr-row-team">{p.team}{p.years ? ` · ${p.years}` : ''}</span>
                   {isModified && <span className="cr-mod-dot" />}
-                  <span className="cr-row-chevron">{isExpanded ? '▲' : '▼'}</span>
+                  <span className="cr-row-chevron"><IconCaret dir={isExpanded ? 'up' : 'down'} size={12} /></span>
                 </button>
                 {isExpanded && (
                   <div className="cr-attrs">

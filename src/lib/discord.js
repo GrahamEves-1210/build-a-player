@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { IS_APP } from './platform'
 
 // Discord sign-in. `guilds.join` lets functions/api/discord-join.js add the
 // player to the Build-A-Player server right after they sign in.
@@ -7,18 +8,31 @@ const returnTo = () => window.location.origin + window.location.pathname
 
 // Sign in / create an account with Discord (leaves the page, comes back signed in)
 export function signInWithDiscord() {
+  if (IS_APP) return import('./appAuth').then(m => m.appDiscord('signin'))   // in-app browser, back to the app
   return supabase.auth.signInWithOAuth({ provider: 'discord', options: { scopes: SCOPES, redirectTo: returnTo() } })
 }
 
-// Sign in with Apple (leaves the page for Apple, comes back signed in), with the
-// Apple provider set up in Supabase
+// Sign in with Apple: the website goes to Apple and comes back here (like
+// Discord); the app uses its in-app browser (lib/appAuth.js). Both use the
+// Apple provider set up in Supabase.
 export function signInWithApple() {
+  if (IS_APP) return import('./appAuth').then(m => m.appApple())
   return supabase.auth.signInWithOAuth({ provider: 'apple', options: { scopes: 'name email', redirectTo: returnTo() } })
 }
 
 // Add Discord to an existing username/password account (profile page)
 export function connectDiscord() {
+  if (IS_APP) return import('./appAuth').then(m => m.appDiscord('link'))
   return supabase.auth.linkIdentity({ provider: 'discord', options: { scopes: SCOPES, redirectTo: returnTo() } })
+}
+
+// What went wrong linking Discord, in words a player can act on (the real reason, not "try again")
+export function discordError(error) {
+  const m = String(error?.message || error || '')
+  if (/manual linking/i.test(m)) return 'Linking Discord is switched off right now. Sign out and use "Continue with Discord" instead.'
+  if (/already.*(linked|exists|registered)|identity_already_exists/i.test(m)) return 'That Discord is already on another Build-A-Player account. Sign in with Discord to use that one.'
+  if (/session|jwt|not authenticated|missing/i.test(m)) return 'Your sign-in expired. Sign in again, then connect Discord.'
+  return m ? `Could not connect Discord: ${m}` : 'Could not connect Discord. Try again.'
 }
 
 export const hasDiscord = user => !!user?.identities?.some(i => i.provider === 'discord')

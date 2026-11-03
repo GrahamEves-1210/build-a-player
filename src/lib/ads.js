@@ -16,13 +16,24 @@ const queue = fn => {
   window.ramp.que.push(fn)
 }
 
-// The latest page change's destroy + re-add; in-page units wait on it
+// Every ad operation runs one at a time, in order, each finishing (its destroys and adds)
+// before the next starts: two that overlapped (a rail refresh mid page change, e.g. NEW
+// BUILD right after a spin) each added a bottom rail, and two rails stacked
 let ready = Promise.resolve()
+let pageGen = 0                       // bumped by every page change
+const serial = job => {
+  ready = ready.then(() => new Promise(resolve => {
+    queue(() => { Promise.resolve().then(job).catch(() => {}).finally(resolve) })
+  }))
+  return ready
+}
 
 const OOP = type => ({ type })
-// Off-page units by page kind. The left rail only runs on the simulate pages,
-// Salary Cap and the Depth Chart.
+// Off-page units by page kind. Home runs the bottom rail and the corner video, the same as
+// the other pages (the app-look home keeps clear of the rail, see AppTabBar's --web-rail);
+// the left rail only runs on the simulate pages, Salary Cap and the Depth Chart.
 export const RAIL_UNITS = [OOP('corner_ad_video'), OOP('bottom_rail')]
+export const HOME_UNITS = RAIL_UNITS
 export const RAIL_UNITS_WITH_LEFT = [OOP('corner_ad_video'), OOP('left_rail'), OOP('bottom_rail')]
 
 // The bottom rail's slots, by name. A rail the player closed isn't always
@@ -44,58 +55,53 @@ let lastPageUnits = ''
 const keepRunning = units => units && units === lastPageUnits && Date.now() - lastPage < RAIL_GAP_MS
   && Object.values(window.ramp?.settings?.slots ?? {}).every(s => !s?.type || units.split(',').includes(s.type))
 
-// Phones skip the corner video: there it sat on top of half the bottom rail (an
-// ad covering an ad), so a phone runs the rail alone. Desktop keeps it.
-const onPhone = () => !!window.matchMedia?.('(max-width: 768px)').matches
-const forScreen = ads => (onPhone() ? ads.filter(a => a.type !== 'corner_ad_video') : ads)
+// The units that float over the page only run where the page leaves them room. The corner
+// video (bottom right) needs a window at least 1440 wide: narrower, it covered the dock's
+// right end and the game's own panel (on a phone it sat on half the bottom rail). The left
+// rail needs 1500: narrower, it covered the left of the page. The bottom rail always runs:
+// everything keeps clear of it (--web-rail, AppTabBar).
+const wide = px => !!window.matchMedia?.(`(min-width: ${px}px)`).matches
+const forScreen = ads => ads.filter(a => (a.type === 'corner_ad_video' ? wide(1440) : a.type === 'left_rail' ? wide(1500) : true))
 
-// ads: units to add after the destroy ([] = none, e.g. the splash page)
+// ads: units to add after the destroy ([] = none)
 export function rampPage({ ads: wanted = [], path } = {}) {
   const ads = forScreen(wanted)
   const units = ads.map(a => a.type).join()
   if (keepRunning(units)) return ready
   lastPage = Date.now()
   lastPageUnits = units
-  ready = new Promise(resolve => {
-    queue(() => {
-      let destroyed
-      try { destroyed = window.ramp.destroyUnits('all') } catch { destroyed = null }
-      Promise.resolve(destroyed)
-        .catch(() => {})
-        .then(() => { const left = railSlots(); return left.length ? window.ramp.destroyUnits(left) : null })
-        .catch(() => {})
-        .then(() => {
-          if (!ads.length) return
-          if (ads.some(a => a.type === 'bottom_rail')) lastRail = Date.now()
-          return window.ramp.spaAds({ ads, countPageview: true, ...(path ? { path } : {}) })
-        })
-        .catch(() => {})
-        .finally(resolve)
-    })
+  pageGen++
+  return serial(() => {
+    let destroyed
+    try { destroyed = window.ramp.destroyUnits('all') } catch { destroyed = null }
+    return Promise.resolve(destroyed)
+      .catch(() => {})
+      .then(() => { const left = railSlots(); return left.length ? window.ramp.destroyUnits(left) : null })
+      .catch(() => {})
+      .then(() => {
+        if (!ads.length) return
+        if (ads.some(a => a.type === 'bottom_rail')) lastRail = Date.now()
+        return window.ramp.spaAds({ ads, countPageview: true, ...(path ? { path } : {}) })
+      })
   })
-  return ready
 }
 
 // In-page units (e.g. { type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-sim' })
 export function rampAdd(ads) {
   // read `ready` after the current render's effects, so a page change in the
   // same commit is waited for too
-  Promise.resolve()
-    .then(() => ready)
-    .then(() => queue(() => { try { window.ramp.spaAddAds(ads) } catch {} }))
+  Promise.resolve().then(() => serial(() => window.ramp.spaAddAds(ads)))
 }
 
 // Destroy every slot of one unit type (destroyUnits wants slot names)
 // (after any page change in progress, which may already have removed them)
 export function rampDestroyType(type) {
-  Promise.resolve()
-    .then(() => ready)
-    .then(() => queue(() => {
-      const slots = Object.entries(window.ramp?.settings?.slots ?? {})
-        .filter(([, s]) => s?.type === type)
-        .map(([name]) => name)
-      if (slots.length) { try { window.ramp.destroyUnits(slots) } catch {} }
-    }))
+  Promise.resolve().then(() => serial(() => {
+    const slots = Object.entries(window.ramp?.settings?.slots ?? {})
+      .filter(([, s]) => s?.type === type)
+      .map(([name]) => name)
+    return slots.length ? window.ramp.destroyUnits(slots) : null
+  }))
 }
 
 // The bottom rail on its own, between page changes (a tab in the nav, a spin):
@@ -105,18 +111,21 @@ export function rampRail() {
   if (Date.now() - lastRail < RAIL_GAP_MS) return
   if (document.documentElement.classList.contains('ads-hidden')) return
   lastRail = Date.now()
-  Promise.resolve()
-    .then(() => ready)
-    .then(() => queue(() => {
-      const slots = railSlots()
-      let gone
-      try { gone = slots.length ? window.ramp.destroyUnits(slots) : null } catch { gone = null }
-      Promise.resolve(gone).catch(() => {}).then(() => { try { window.ramp.spaAddAds([{ type: 'bottom_rail' }]) } catch {} })
-    }))
+  const gen = pageGen
+  Promise.resolve().then(() => serial(() => {
+    if (gen !== pageGen) return                 // a page change came in: it brings its own rail
+    const slots = railSlots()
+    let gone
+    try { gone = slots.length ? window.ramp.destroyUnits(slots) : null } catch { gone = null }
+    return Promise.resolve(gone).catch(() => {}).then(() => {
+      if (gen !== pageGen || document.querySelector('[id^="pw-oop-bottom_rail"]')) return   // never a second rail on the page
+      return window.ramp.spaAddAds([{ type: 'bottom_rail' }])
+    })
+  }))
 }
 
 // The rail again when a mode moves on without a page change (the next screen of
-// a season, a Career game, a Takeover city, a Blacktop game, an auction lot):
+// a season, a Career game, a Squad Builder screen, a Blacktop game, an auction lot):
 // whenever `key` changes after the first render. rampRail keeps it to once
 // every RAIL_GAP_MS, so a fast-changing key costs nothing extra.
 export function useRailOn(key) {

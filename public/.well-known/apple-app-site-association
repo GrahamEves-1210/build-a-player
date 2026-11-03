@@ -1,0 +1,16 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["TEAMID.com.buildaplayer.app"],
+        "components": [
+          { "/": "/share/*", "comment": "a shared build" },
+          { "/": "/join/*", "comment": "a 1v1 invite code" },
+          { "/": "/career", "comment": "Career" },
+          { "/": "/", "?": { "b": "*" }, "comment": "a shared build (?b=)" },
+          { "/": "/", "?": { "join": "*" }, "comment": "an invite code (?join=)" }
+        ]
+      }
+    ]
+  }
+}

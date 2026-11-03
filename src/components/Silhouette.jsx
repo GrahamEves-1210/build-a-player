@@ -15,6 +15,8 @@ const ALL_QB_PHYS = { ...QB_LEGEND_PHYSICALS, ...QB_PHYSICALS }
 const ALL_RB_PHYS = { ...RB_LEGEND_PHYSICALS, ...RB_PHYSICALS }
 const ALL_WR_PHYS = { ...WR_LEGEND_PHYSICALS, ...WR_PHYSICALS }
 import QBAvatar from './QBAvatar'
+import { IS_APP, APP_LOOK } from '../lib/platform'
+import AppSandbox from './app/AppSandbox'
 
 function fmtHeight(in_) { return `${Math.floor(in_ / 12)}'${in_ % 12}"` }
 function lightenHex(hex, amt) {
@@ -48,6 +50,9 @@ const RB_FIGURE_SCALE = 0.90
 const WR_FIGURE_SCALE = 0.975
 const WR_FIGURE_SCALE_MOBILE = 1.005
 const BUCKET_FIGURE_SCALE = 1.10
+// App, phone, basketball: the T-pose fills the width and the cards stack down
+// both sides below the arms (index.css / app-game.css size the cards to match)
+const APP_BKT = { scale: 0.86, cardIn: 4, cardW: 100, top: 0.36, bottom: 0.9, stub: 8, noDotRow: 0.13 }   // sized like the football figure's; Size (no dot) sits top right, above the hand
 const DB_FIGURE_SCALE = 0.86
 
 // QB anchor positions
@@ -316,7 +321,10 @@ function getDominantPlayer(build) {
   return sorted[0]?.[0] ?? null
 }
 
-export default function Silhouette({ build, activeDrag, onDrop, activeCategory, onCategoryChange, types = TYPES, isLite = false, onReset, isRB = false, isWR = false, isTE = false, isDB = false, isOL = false, isBucket = false, isPlus = false, isCustomMode = false, onOpenCustomModal, onSandboxToggle, attrMap = ATTR, categoriesData = CATEGORIES, figureRef }) {
+// `modelOnly`: just the player — figure, jersey overlay and face — with no
+// dots, cards, measurement lines or backdrop, sized to its container (the app's
+// Career model). Nothing else changes when it's off.
+export default function Silhouette({ build, activeDrag, onDrop, activeCategory, onCategoryChange, types = TYPES, isLite = false, onReset, isRB = false, isWR = false, isTE = false, isDB = false, isOL = false, isBucket = false, isPlus = false, isCustomMode = false, onOpenCustomModal, onSandboxToggle, attrMap = ATTR, categoriesData = CATEGORIES, figureRef, modelOnly = false }) {
   // OL is drawn on the DB figure — everything figure-related follows DB
   const isDBFig = isDB || isOL
   const figW   = isBucket ? BUCKET_FIG_W : isDBFig ? DB_FIG_W : (isRB || isWR || isTE ? RB_FIG_W : FIG_W)
@@ -379,6 +387,14 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
 
   // Headshot only from basketballIQ slot for bucket builds
   const bucketPhoto = isBucket ? (build['basketballIQ']?.photo || null) : null
+  // the figure scales that make it fill the build screen; a model fits its box as-is
+  const appBucket = (IS_APP || APP_LOOK) && isBucket && isMobile && !modelOnly
+  // (the model keeps the build screen's bucket scale: the jersey overlay and the face
+  // are drawn against the figure at that size, so changing it alone splits the layers)
+  const bucketScale = appBucket ? APP_BKT.scale : BUCKET_FIGURE_SCALE
+  const rbScale = modelOnly ? 1 : RB_FIGURE_SCALE
+  const dbScale = modelOnly ? 1 : DB_FIGURE_SCALE
+  const wrTransform = modelOnly ? 'none' : isMobile ? `translateY(-6px) scale(${WR_FIGURE_SCALE_MOBILE})` : `scale(${WR_FIGURE_SCALE})`
 
   // Sample bottom color + capture aspect ratio for correct objectPosition centering
   const [hsBottomColor, setHsBottomColor] = useState(null)
@@ -420,9 +436,45 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
     img.src = bucketPhoto
   }, [bucketPhoto])
 
+  // App basketball: each side's cards spaced evenly down the body. The arm dots
+  // (out past the body) take the top cards, outermost first, and the rest follow
+  // top to bottom, so the lines fan out and never cross; the top card's line runs
+  // from its top edge (its dot is out on the hand, past the card's side).
+  const appRows = useMemo(() => {
+    if (!appBucket) return null
+    const rows = {}, top = new Set()
+    const arm = z => (z.side === 'left' ? z.ax < 300 : z.ax > BUCKET_FIG_W - 300)
+    for (const side of ['left', 'right']) {
+      const out = z => (side === 'left' ? z.ax : -z.ax)   // smaller = further out
+      // a trait with no dot (Size: the height and wingspan read off the whole body) takes
+      // its own spot up top, like the live site; the rest stack down the side
+      zones.filter(z => z.side === side && types.includes(z.type) && z.noDot).forEach(z => { rows[z.type] = APP_BKT.noDotRow })
+      const list = zones.filter(z => z.side === side && types.includes(z.type) && !z.noDot)
+        .sort((a, b) => (arm(a) !== arm(b) ? (arm(a) ? -1 : 1) : arm(a) ? out(a) - out(b) : a.ay - b.ay))
+      list.forEach((z, i) => { rows[z.type] = APP_BKT.top + (APP_BKT.bottom - APP_BKT.top) * (list.length > 1 ? i / (list.length - 1) : 0.5) })
+      if (list[0] && arm(list[0]) && !list[0].noDot) top.add(list[0].type)
+    }
+    rows.top = top
+    return rows
+  }, [appBucket, zones, types])
+
   // Convert figure-space (ax, ay) → sil-wrap percentage coords
   const pos = (zone) => {
     if (!bounds) return null
+    if (appBucket) {
+      const { W, H, fx, fy, scale } = bounds
+      const dotX = ((fx + zone.ax * scale) / W * 100 - 50) * bucketScale + 50
+      const dotY = ((fy + zone.ay * scale) / H * 100 - 50) * bucketScale + 50
+      const cardY = (appRows?.[zone.type] ?? zone.cy) * 100
+      const edge = APP_BKT.cardIn + APP_BKT.cardW
+      const lineX = zone.side === 'left' ? edge / W * 100 : (W - edge) / W * 100
+      const stub = APP_BKT.stub / W * 100
+      const stubX = zone.side === 'left' ? lineX + stub : lineX - stub
+      const cardCenterX = zone.side === 'left' ? (APP_BKT.cardIn + APP_BKT.cardW / 2) / W * 100 : 100 - (APP_BKT.cardIn + APP_BKT.cardW / 2) / W * 100
+      // the top card's line leaves from its top edge (half a card, ~27px, above its middle)
+      const topY = appRows?.top?.has(zone.type) ? cardY - 27 / H * 100 : null
+      return { dotX, dotY, cardY, lineX, stubX, cardCenterX, cardHalfH: 0, anchorNudgeX: 0, anchorNudgeY: 0, side: true, topY }
+    }
     const { W, H, fx, fy, scale } = bounds
     const bucketCardScale = 0.88
     const cardEdgePx = isMobile
@@ -501,21 +553,24 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
     const map = {}
     zones.forEach(z => { map[z.type] = pos(z) })
     return map
-  }, [bounds, isMobile, isBucket, isRB, isWR, isTE, isDB, isOL, zones])
+  }, [bounds, isMobile, isBucket, isRB, isWR, isTE, isDB, isOL, zones, appRows])
 
   return (
     <section className="field-center" style={isBucket ? { backgroundColor: '#090a0d' } : undefined}>
-      {isBucket && (
+      {isBucket && !modelOnly && (
         <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', zIndex: -1, pointerEvents: 'none' }}>
           <div style={{ position: 'absolute', inset: '-20px', backgroundImage: "url('/bucketbackground.webp')", backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(4px) brightness(1.4)' }} />
         </div>
       )}
-      {!isBucket && (
+      {!isBucket && !modelOnly && (
         <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', zIndex: -1, pointerEvents: 'none' }}>
-          <div style={{ position: 'absolute', inset: '-20px', backgroundImage: "url('/footballbackground.webp')", backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(4px) brightness(0.7)' }} />
+          {/* the new UI: the blur and the dimming are baked into the image (a live filter repainted 900px every scroll frame) */}
+          {IS_APP || APP_LOOK
+            ? <div style={{ position: 'absolute', inset: '-20px', backgroundImage: "url('/footballbackground-blur.webp')", backgroundSize: 'cover', backgroundPosition: 'center' }} />
+            : <div style={{ position: 'absolute', inset: '-20px', backgroundImage: "url('/footballbackground.webp')", backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(4px) brightness(0.7)' }} />}
         </div>
       )}
-      <div className="category-pills">
+      {!modelOnly && <div className="category-pills">
         <HWTracker build={build} isRB={isRB} isWR={isWR} isTE={isTE} isDB={isDB} isOL={isOL} isBucket={isBucket} />
         {cats.map(cat => (
           <button
@@ -527,8 +582,14 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
             {cat.label}
           </button>
         ))}
-      </div>
-      {!!onSandboxToggle && (
+      </div>}
+      {/* app-look website, desktop: the compact Sandbox card in the corner (the phone gets the full card in the report card) */}
+      {!!onSandboxToggle && !IS_APP && APP_LOOK && !modelOnly && (
+        <div className="sil-sandbox-outer sil-sandbox-outer--app">
+          <AppSandbox compact on={!!isCustomMode} onToggle={v => onSandboxToggle?.(v)} onCustomize={onOpenCustomModal} />
+        </div>
+      )}
+      {!!onSandboxToggle && !IS_APP && !APP_LOOK && (
         <div className="sil-sandbox-outer">
           <div className="sil-sandbox-toprow">
             <div
@@ -569,8 +630,8 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
         </div>
       )}
 
-      <div className={`sil-wrap${isRB ? ' sil-wrap--rb' : ''}`} ref={silRef}>
-        {isBucket && (
+      <div className={`sil-wrap${isRB ? ' sil-wrap--rb' : ''}${modelOnly ? ' sil-wrap--model' : ''}${appBucket ? ' sil-wrap--app-bkt' : ''}`} ref={silRef}>
+        {isBucket && !modelOnly && !isMobile && (
           <div style={{
             position: 'absolute',
             left: '50%', top: 'calc(15% + 42px)',
@@ -583,7 +644,7 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
         )}
 
         {/* Measurement outlines — height + wingspan derived from size val */}
-        {isBucket && (build?.['size'] || build?.['heightLength']) && (() => {
+        {isBucket && !modelOnly && (build?.['size'] || build?.['heightLength']) && (() => {
           const chip = build['size'] || build['heightLength']
           const val  = chip.val ?? 5
           const col  = '#ffffff'
@@ -615,7 +676,9 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
             <svg
               viewBox="42.5 -35.2 850.9 815.5"
               preserveAspectRatio="xMidYMid meet"
-              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', overflow: 'visible' }}
+              // drawn for the website's figure (scaled BUCKET_FIGURE_SCALE); the app's phone
+              // figure is scaled differently, so the brackets follow it (like the jersey overlay)
+              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', overflow: 'visible', ...(bucketScale !== BUCKET_FIGURE_SCALE ? { transform: `scale(${bucketScale / BUCKET_FIGURE_SCALE})`, transformOrigin: 'center center' } : {}) }}
               aria-hidden="true"
             >
               {/* HEIGHT: right-side vertical bracket */}
@@ -664,23 +727,28 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
           className={`sil-img${(isRB || isWR || isTE) ? ' sil-img--rb' : ''}${isBucket ? ' sil-img--bucket' : ''}${complete ? ' sil-img--done' : ''}`}
           draggable={false}
           style={
-            isBucket   ? { transform: `scale(${BUCKET_FIGURE_SCALE})`, transformOrigin: 'center center' }
-            : (isWR || isTE) ? { transform: isMobile ? `translateY(-6px) scale(${WR_FIGURE_SCALE_MOBILE})` : `scale(${WR_FIGURE_SCALE})`, transformOrigin: 'center center', filter: complete ? 'none' : 'brightness(0.55) drop-shadow(0 0 2px rgba(255,255,255,0.60)) drop-shadow(0 0 0.5px rgba(255,255,255,0.92))' }
-            : isRB     ? { transform: `scale(${RB_FIGURE_SCALE})`, transformOrigin: 'center center' }
-            : isDBFig  ? { transform: `scale(${DB_FIGURE_SCALE})`, transformOrigin: 'center center', filter: 'brightness(0.35)' }
+            isBucket   ? { transform: `scale(${bucketScale})`, transformOrigin: 'center center' }
+            : (isWR || isTE) ? { transform: wrTransform, transformOrigin: 'center center', filter: complete ? 'none' : 'brightness(0.55) drop-shadow(0 0 2px rgba(255,255,255,0.60)) drop-shadow(0 0 0.5px rgba(255,255,255,0.92))' }
+            : isRB     ? { transform: `scale(${rbScale})`, transformOrigin: 'center center' }
+            : isDBFig  ? { transform: `scale(${dbScale})`, transformOrigin: 'center center', filter: 'brightness(0.35)' }
             : undefined
           }
         />
-        {isBucket && <BucketFigureOverlay build={build} />}
+        {isBucket && (appBucket
+          // the overlay's viewBox is cropped for the website's 1.1× figure; match the app's scale
+          // (zIndex 5: the scale makes this its own layer, which would otherwise sit under
+          // the silhouette png (z 4) and hide the jersey colours)
+          ? <div style={{ position: 'absolute', inset: 0, zIndex: 5, transform: `scale(${bucketScale / BUCKET_FIGURE_SCALE})`, transformOrigin: 'center center' }}><BucketFigureOverlay build={build} /></div>
+          : <BucketFigureOverlay build={build} />)}
         {isBucket && bucketPhoto && bounds && (() => {
           const { W, H, fx, fy, scale } = bounds
           const hxRaw    = (fx + BUCKET_HEAD.ax    * scale) / W * 100
           const collarYRaw = (fy + BUCKET_COLLAR_AY * scale) / H * 100
-          const hx       = 50 + (hxRaw     - 50) * BUCKET_FIGURE_SCALE
-          const collarY  = 50 + (collarYRaw - 50) * BUCKET_FIGURE_SCALE
+          const hx       = 50 + (hxRaw     - 50) * bucketScale
+          const collarY  = 50 + (collarYRaw - 50) * bucketScale
           const faceChip = build['basketballIQ']
           const fc = faceChip?.faceCenter
-          const hpx = BUCKET_HEAD.r * 2 * scale * 1.805 * BUCKET_FIGURE_SCALE
+          const hpx = BUCKET_HEAD.r * 2 * scale * 1.805 * bucketScale
           const R = hsImgRatio
           // Target face at ~58% of container: with clip bottom (89%) at collar,
           // this places the face near the silhouette head center
@@ -697,6 +765,9 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
           // Desktop-only nudge for the two generic (no-headshot) placeholders
           const genericDesktopX = isGeneric && !isMobile ? 2.5 : 0
           const genericDesktopY = isGeneric && !isMobile ? 16 : 0
+          // the px nudges were tuned on the website build screen (a ~131px head); a model
+          // is drawn smaller, so scale them with it or the head sinks into the collar
+          const k = modelOnly ? hpx / 131 : 1
           return (
             <div
               key={bucketPhoto}
@@ -706,7 +777,7 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
                 top: `${collarY}%`,
                 width: `${hpx}px`,
                 height: `${hpx}px`,
-                transform: `translate(calc(-50% + 0.75px + ${adj.dx + (isGeneric ? 0.75 : 0) + genericDesktopX}px), calc(-89% + 4px + ${adj.dy + genericYAdj + genericDesktopY}px))`,
+                transform: `translate(calc(-50% + ${k * (0.75 + adj.dx + (isGeneric ? 0.75 : 0) + genericDesktopX)}px), calc(-89% + ${k * (4 + adj.dy + genericYAdj + genericDesktopY)}px))`,
                 overflow: 'hidden',
                 borderRadius: '50%',
                 pointerEvents: 'none',
@@ -738,28 +809,28 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
         </div>
         {!isRB && !isWR && !isTE && !isDBFig && !isBucket && <QBFigureOverlay build={build} className="player-qbfig" />}
         {isDB && (
-          <div style={{ position: 'absolute', inset: 0, transform: `scale(${DB_FIGURE_SCALE})`, transformOrigin: 'center center' }}>
-            <DBFigureOverlay build={build} numberNudgePx={isMobile ? { x: 7, y: 7 } : null} />
+          <div style={{ position: 'absolute', inset: 0, transform: `scale(${dbScale})`, transformOrigin: 'center center' }}>
+            <DBFigureOverlay build={build} numberNudgePx={isMobile && !modelOnly ? { x: 7, y: 7 } : null} />
           </div>
         )}
         {isOL && (
-          <div style={{ position: 'absolute', inset: 0, transform: `scale(${DB_FIGURE_SCALE})`, transformOrigin: 'center center' }}>
-            <OLFigureOverlay build={build} numberNudgePx={isMobile ? { x: 7, y: 7 } : null} />
+          <div style={{ position: 'absolute', inset: 0, transform: `scale(${dbScale})`, transformOrigin: 'center center' }}>
+            <OLFigureOverlay build={build} numberNudgePx={isMobile && !modelOnly ? { x: 7, y: 7 } : null} />
           </div>
         )}
         {isRB && (
-          <div style={{ position: 'absolute', inset: 0, transform: `scale(${RB_FIGURE_SCALE})`, transformOrigin: 'center center' }}>
+          <div style={{ position: 'absolute', inset: 0, transform: `scale(${rbScale})`, transformOrigin: 'center center' }}>
             <RBFigureOverlay build={build} />
           </div>
         )}
         {(isWR || isTE) && (
-          <div style={{ position: 'absolute', inset: 0, transform: isMobile ? `translateY(-6px) scale(${WR_FIGURE_SCALE_MOBILE})` : `scale(${WR_FIGURE_SCALE})`, transformOrigin: 'center center' }}>
+          <div style={{ position: 'absolute', inset: 0, transform: wrTransform, transformOrigin: 'center center' }}>
             <WRFigureOverlay build={build} isTE={isTE} />
           </div>
         )}
 
         {/* Lines — stretch to fill sil-wrap via preserveAspectRatio="none" */}
-        <svg
+        {!modelOnly && <svg
           viewBox="0 0 100 100"
           preserveAspectRatio="none"
           className="cz-lines-svg"
@@ -772,7 +843,9 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
             const cardTopY = p.cardY - p.cardHalfH
             const anchorX = p.cardCenterX - 25 + (zone.lineAnchorOffsetX ?? 0) + (p.anchorNudgeX ?? 0)
             const anchorY = cardTopY + 10 + (p.anchorNudgeY ?? 0)
-            const d = zone.lineAnchor === 'top'
+            const d = p.topY != null
+              ? `M ${p.cardCenterX} ${p.topY} L ${p.dotX} ${p.dotY}`
+              : zone.lineAnchor === 'top' && !p.side
               ? `M ${anchorX} ${anchorY} L ${anchorX} ${anchorY - 8} L ${p.dotX} ${p.dotY}`
               : `M ${p.lineX} ${p.cardY} L ${p.stubX} ${p.cardY} L ${p.dotX} ${p.dotY}`
             return (
@@ -786,10 +859,10 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
               />
             )
           })}
-        </svg>
+        </svg>}
 
         {/* Dots + cards */}
-        <div className="cz-layer" style={{ zIndex: 10 }}>
+        {!modelOnly && <div className="cz-layer" style={{ zIndex: 10 }}>
           {zones.filter(z => types.includes(z.type)).map(zone => {
             const hiddenFromTab = !isLite && !complete && (!activeCategory || !categoryTypes?.includes(zone.type))
             const p = zonePosMap[zone.type]
@@ -818,7 +891,7 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
               </div>
             )
           })}
-        </div>
+        </div>}
 
         {onReset && (
           <button className="sil-reset-btn" onClick={onReset}>

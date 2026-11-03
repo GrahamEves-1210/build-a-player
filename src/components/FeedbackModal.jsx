@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 
 // Feedback goes straight into the `feedback` table (supabase/feedback.sql) —
 // read it in the Supabase dashboard. Players can send but never read rows.
+// A trigger also posts each one to Discord #suggestions-discussion (supabase/feedback_discord.sql).
 const KINDS = [
   { id: 'bug',     label: 'Bug' },
   { id: 'idea',    label: 'Idea' },
@@ -11,6 +12,8 @@ const KINDS = [
   { id: 'other',   label: 'Other' },
 ]
 const MAX = 1500
+// shown under the form too, for anyone who'd rather write (Contact us and Feedback both open this)
+const EMAIL = 'buildaplayer@outlook.com'
 const COOLDOWN_MS = 60_000
 
 export default function FeedbackModal({ user, isBucket, position, onClose }) {
@@ -50,6 +53,7 @@ export default function FeedbackModal({ user, isBucket, position, onClose }) {
     }
     try { localStorage.setItem('bap_feedback_at', String(Date.now())) } catch {}
     setSent(true)
+    window.dispatchEvent(new CustomEvent('bap:feedback-sent'))
   }
 
   // Portalled to <body> so the navbar's own stacking/blur can't clip the overlay
@@ -103,8 +107,10 @@ export default function FeedbackModal({ user, isBucket, position, onClose }) {
 
             {error && <div className="auth-error">{error}</div>}
             <button className="auth-submit" type="submit" disabled={sending}>{sending ? 'Sending…' : 'Send Feedback'}</button>
+            <p className="fb-public">Feedback is also posted in our Discord's #suggestions-discussion with your username. Your email never is.</p>
           </form>
         )}
+        <p className="fb-email">Or email us at <a href={`mailto:${EMAIL}`}>{EMAIL}</a></p>
       </div>
     </div>,
     document.body,

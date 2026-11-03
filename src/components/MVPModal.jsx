@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { NameTag } from './app/NameTag'
 import HEADSHOTS from '../data/headshots.json'
 import { nflHeadshot } from '../utils/simulation'
 import QBAvatar from './QBAvatar'
@@ -8,14 +9,14 @@ const sacksAllowed = n => `${n} sack${n !== 1 ? 's' : ''} allowed`
 // OL: the full five-man First-Team All-Pro line (LT, LG, C, RG, RT). Each spot
 // went to one of its three ballot names — or to your build, at its own spot,
 // if it won that vote.
-function OLAllProReveal({ mvpResult, userPhoto }) {
+function OLAllProReveal({ mvpResult, userPhoto, userName = 'Guest' }) {
   const { userWins, unanimous, line, userSpot, ballot, userStats } = mvpResult
   return (
     <>
       <div className={`mvp-winner-tag${userWins ? ' mvp-winner-tag--you' : ''}`}>
         {userWins
-          ? (unanimous ? `Unanimous — your build is the ${userSpot}` : `Your build made the team at ${userSpot}`)
-          : `Your build missed the team at ${userSpot}`}
+          ? (unanimous ? `Unanimous — ${userName} is the ${userSpot}` : `${userName} made the team at ${userSpot}`)
+          : `${userName} missed the team at ${userSpot}`}
       </div>
       <div className="mvp-allpro-line">
         {line.map(p => (
@@ -26,7 +27,7 @@ function OLAllProReveal({ mvpResult, userPhoto }) {
             <span className="mvp-allpro-spot">{p.spot}</span>
             <QBAvatar photo={p.isUser ? userPhoto : nflHeadshot(HEADSHOTS[p.name])} team={p.team} color={p.color} size={34} />
             <div className="mvp-allpro-info">
-              <span className="mvp-allpro-name">{p.name}</span>
+              <span className="mvp-allpro-name">{p.isUser ? <NameTag name={userName} self /> : p.name}</span>
               <span className="mvp-allpro-stats">{p.team} · {sacksAllowed(p.stats.sacks)} · {p.stats.pancakes} pancakes</span>
             </div>
           </div>
@@ -34,7 +35,7 @@ function OLAllProReveal({ mvpResult, userPhoto }) {
       </div>
       {!userWins && (
         <div className="mvp-allpro-note">
-          <div>{userSpot} ballot: {ballot.join(', ')} and your build</div>
+          <div>{userSpot} ballot: {ballot.join(', ')} and {userName}</div>
           <div>Your season: {sacksAllowed(userStats.sacks)} · {userStats.pressures} pressures allowed · {userStats.pancakes} pancakes</div>
         </div>
       )}
@@ -42,7 +43,7 @@ function OLAllProReveal({ mvpResult, userPhoto }) {
   )
 }
 
-export default function MVPModal({ result, mvpResult, onDismiss, toSuperBowl = false, isRB = false, isWR = false, isTE = false, isDB = false, isOL = false, userPhoto = null }) {
+export default function MVPModal({ result, mvpResult, onDismiss, toSuperBowl = false, nextLabel = 'Continue to Final Report', isRB = false, isWR = false, isTE = false, isDB = false, isOL = false, userPhoto = null, userName = 'Guest' }) {
   const [phase, setPhase] = useState('loading')
   const [barWidth, setBarWidth] = useState(0)
   const [visible, setVisible] = useState(false)
@@ -81,7 +82,6 @@ export default function MVPModal({ result, mvpResult, onDismiss, toSuperBowl = f
   const isOPOY = isRB || isWR || isTE
   const awardLabel    = isOL ? 'All-Pro Team' : isDB ? 'DPOY Award' : isOPOY ? 'OPOY Award'           : 'MVP Award'
   const awardEyebrow  = 'NFL Regular Season'
-  const userWinsLabel = isDB ? 'Your Build Wins DPOY' : isOPOY ? 'Your Build Wins OPOY' : 'Your Build Wins MVP'
   const unanimousLbl  = isDB ? 'Unanimous DPOY' : isOPOY ? 'Unanimous OPOY'       : 'Unanimous MVP'
   const regularLbl    = isDB ? 'Defensive Player of the Year' : isOPOY ? 'Regular Season OPOY'  : 'Regular Season MVP'
 
@@ -182,10 +182,10 @@ export default function MVPModal({ result, mvpResult, onDismiss, toSuperBowl = f
         {phase === 'reveal' && (
           <div className="mvp-reveal">
             {isOL ? (
-              <OLAllProReveal mvpResult={mvpResult} userPhoto={userPhoto} />
+              <OLAllProReveal mvpResult={mvpResult} userPhoto={userPhoto} userName={userName} />
             ) : userWins ? (
               <>
-                <div className="mvp-winner-tag mvp-winner-tag--you">{userWinsLabel}</div>
+                <div className="mvp-winner-tag mvp-winner-tag--you"><NameTag name={userName} self /> Wins {isDB ? 'DPOY' : isOPOY ? 'OPOY' : 'MVP'}</div>
                 <img src="/mvp.png" alt="Trophy" className="mvp-trophy-img" draggable={false} />
                 <div className="mvp-winner-name">{unanimous ? unanimousLbl : regularLbl}</div>
                 <div className="mvp-season-stats">
@@ -490,7 +490,7 @@ export default function MVPModal({ result, mvpResult, onDismiss, toSuperBowl = f
               </>
             )}
             <button className="mvp-continue" onClick={onDismiss}>
-              {toSuperBowl ? 'Continue to Super Bowl' : 'Continue to Final Report'}
+              {toSuperBowl ? 'Continue to Super Bowl' : nextLabel}
             </button>
           </div>
         )}

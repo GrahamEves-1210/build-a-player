@@ -1,6 +1,13 @@
 import { useState, useRef, useEffect } from 'react'
+import { setGradesHidden, gradesHiddenNow } from './SpinScreen'
+import { NameTag } from './app/NameTag'
+import { CAN_SELL_PLUS, IS_APP, APP_LOOK, setClassicLook } from '../lib/platform'
+// The website with the app look: the menu button opens the app's More sheet
+const MORE_SHEET = !IS_APP && APP_LOOK
 import FeedbackModal from './FeedbackModal'
 import { getUsername } from '../lib/discord'
+import { IconGear } from './app/icons'
+import SoundToggle from './app/SoundToggle'
 import { PROFILE_ICON_EMOJI, initialsOf } from '../data/profile-icons'
 
 const STEPS_DESKTOP = (isRB, isWR, isTE, isDB, isOL) => [
@@ -174,7 +181,17 @@ const PERKS = [
   'Pro badge on leaderboard entries',
 ]
 
-export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, onLeaderboard, onSwitchPosition, onSwitchBucketPosition, onSubscribe, onOpenCustomRatings, user, gameMode, isRB, isWR, isTE, isDB, isOL, position, isPlus, isBucket, bucketPosition, versusState }) {
+// The grades switch in the navbar (phones, where the spin is a drop-down)
+function GradesSwitch() {
+  const [hidden, setHidden] = useState(gradesHiddenNow)
+  useEffect(() => { const on = e => setHidden(!!e.detail); window.addEventListener('bap:grades', on); return () => window.removeEventListener('bap:grades', on) }, [])
+  return (
+    <button className={`nav-grades${hidden ? ' is-off' : ''}`} onClick={() => setGradesHidden(!hidden)} aria-pressed={!hidden} aria-label={hidden ? 'Turn grades on' : 'Turn grades off'}>
+      GRADES <b>{hidden ? 'OFF' : 'ON'}</b>
+    </button>
+  )
+}
+export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, onLeaderboard, onSwitchPosition, onSwitchBucketPosition, onSubscribe, onOpenCustomRatings, user, gameMode, isRB, isWR, isTE, isDB, isOL, position, isPlus, isBucket, bucketPosition, versusState, gradesToggle = false }) {
   const [open,         setOpen]        = useState(false)
   const [htpOpen,      setHtpOpen]     = useState(false)
   const [plusWmOpen,   setPlusWmOpen]  = useState(false)
@@ -221,12 +238,12 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
     <header className={`navbar${gameMode === 'all-time' ? ' alltime-mode' : ''}`}>
       {versusState ? (
         <div className="logo nav-h2h-logo" onClick={onHome} style={onHome ? { cursor: 'pointer' } : undefined}>
-          HEAD<span className="h2h-to bvr-h2h-to">-TO-</span>HEAD
+          {(IS_APP || APP_LOOK) ? 'BLACKTOP 1V1' : <>HEAD<span className="h2h-to bvr-h2h-to">-TO-</span>HEAD</>}
         </div>
       ) : (
         <div className="logo" onClick={onHome} style={onHome ? { cursor: 'pointer' } : undefined}>
           <div className="logo-text-stack">
-            <img src="/logo-v3.png" alt="Build-A-Player" className="logo-img-full" draggable={false} />
+            <img src="/bap-mark.webp" alt="Build-A-Player" className="logo-img-full" draggable={false} />
             <div className="logo-text-row">
               <div className="logo-text logo-text--small">
                 Buil<span className="logo-d">d</span><em>-<span className="logo-a">A</span>-</em>{isBucket ? <>B<HoopU />cket</> : 'Player'}
@@ -248,7 +265,7 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
             <span>{versusState.oppPosition === 'big' ? 'Big' : versusState.oppPosition === 'guard' ? 'Guard' : '—'}</span>
           </div>
           <div className="nvc-row">
-            <span className="nvc-side">YOU {versusState.myFilled}/{versusState.myTotal}</span>
+            <span className="nvc-side"><NameTag name={getUsername(user) || 'Guest'} self /> {versusState.myFilled}/{versusState.myTotal}</span>
             <span className="nvc-vs">VS</span>
             <span className="nvc-side">{versusState.oppName || 'Opponent'} {versusState.oppFilled}/{versusState.oppTotal}</span>
             {versusState.bothReady && !isBucket && (
@@ -272,7 +289,7 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
               onClick={() => setPosDropOpen(o => !o)}
             >
               <span className="nav-pos-sub">{BUCKET_POS_SUB[bucketPosition]}</span>
-              {bucketPosition.charAt(0).toUpperCase() + bucketPosition.slice(1)}
+              <span className="nav-pos-name">{bucketPosition.charAt(0).toUpperCase() + bucketPosition.slice(1)}</span>
               <IconChevron up={posDropOpen} />
             </button>
             {posDropOpen && (
@@ -291,6 +308,8 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
             )}
           </div>
         )
+      ) : gameMode === 'salarycap' ? (
+        <button className="tab-pill tab-pill-qb tab-pill-salary active">Salary Cap</button>
       ) : (
         <div className="nav-pos-dropdown" ref={posDropRef}>
           <button
@@ -300,7 +319,7 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
             <span className="nav-pos-badge" style={{ '--pos-col': POS_COLORS[isOL ? 'ol' : isWR ? 'wr' : isRB ? 'rb' : isTE ? 'te' : isDB ? 'db' : 'qb'] }}>
               {isOL ? 'OL' : isWR ? 'WR' : isRB ? 'RB' : isTE ? 'TE' : isDB ? 'DB' : 'QB'}
             </span>
-            {POS_NAMES[isOL ? 'ol' : isWR ? 'wr' : isRB ? 'rb' : isTE ? 'te' : isDB ? 'db' : 'qb']}
+            <span className="nav-pos-name">{POS_NAMES[isOL ? 'ol' : isWR ? 'wr' : isRB ? 'rb' : isTE ? 'te' : isDB ? 'db' : 'qb']}</span>
             <IconChevron up={posDropOpen} />
           </button>
           {posDropOpen && (
@@ -340,14 +359,28 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
         </div>
       )}
 
+      {/* the app has no right-hand group: the switch stands on its own; the website keeps it with the others */}
+      {gradesToggle && IS_APP && <GradesSwitch />}
       <div className="nav-right" ref={ref}>
-        <button
-          className={`waffle-btn${open ? ' waffle-open' : ''}`}
-          onClick={() => { setOpen(o => !o); dismissHint() }}
-          aria-label="Menu"
-        >
-          <IconGrid />
-        </button>
+        {MORE_SHEET ? (
+          <>
+            {gradesToggle && !IS_APP && <GradesSwitch />}
+            {/* desktop: sound on / off right here (the phone has it in More) */}
+            <SoundToggle className="nav-sound-btn" />
+            {/* the app's settings-and-more button (opens the More sheet) */}
+            <button className="ag-icon-btn nav-more-btn" onClick={() => { dismissHint(); window.dispatchEvent(new CustomEvent('bap:menu')) }} aria-label="Settings and more">
+              <IconGear size={21} />
+            </button>
+          </>
+        ) : (
+          <button
+            className={`waffle-btn${open ? ' waffle-open' : ''}`}
+            onClick={() => { dismissHint(); setOpen(o => !o) }}
+            aria-label="Menu"
+          >
+            <IconGrid />
+          </button>
+        )}
 
         {/* Signed-out nudge: points at the menu, where Sign In lives */}
         {!user && !open && !versusState && !hintDismissed && (
@@ -381,6 +414,13 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
                   </div>
                 ))}
               </div>
+            )}
+
+            {/* the classic look's way back (Settings → Classic look brought them here) */}
+            {!IS_APP && !APP_LOOK && (
+              <button className="wm-row" onClick={() => setClassicLook(false)}>
+                <span className="wm-label">Switch to the new look</span>
+              </button>
             )}
 
             {/* About */}
@@ -445,7 +485,7 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
               <span className="wm-label">Leaderboard</span>
             </button>
 
-            {!isPlus && (
+            {!isPlus && CAN_SELL_PLUS && (
               <>
                 <div className="wm-divider" />
                 <button

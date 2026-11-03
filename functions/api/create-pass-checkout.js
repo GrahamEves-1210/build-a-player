@@ -10,7 +10,7 @@ const payEmail = u => { const e = (u?.user_metadata?.contact_email || '').trim()
 // records it in pass_owners; the game reads that. A season sells until it ends.
 // Keep in step with src/lib/pass.js (SEASONS) and server/server.js.
 const PASS_SEASONS = {
-  s1: { name: 'Builder Pass · Season 1', cents: 899, end: '2026-12-21' },
+  s1: { name: 'Builder Pass · Season 1', cents: 899, end: '2026-12-29' },
 }
 const nyDay = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date())
 

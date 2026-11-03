@@ -63,10 +63,15 @@ jobs:
       - name: Upload to TestFlight
         run: |
           set +e
-          out=$(app-store-connect publish --path build/ios/ipa/*.ipa --testflight 2>&1); code=$?
+          out=$(app-store-connect publish --path build/ios/ipa/*.ipa --testflight --max-find-build-wait 30 2>&1); code=$?
           echo "$out"
           if [ $code -ne 0 ] && echo "$out" | grep -qE "Another build is in review|already in beta review"; then
             echo "::warning::Build uploaded and in internal testing. External beta review is busy with an earlier build; submit this one from App Store Connect once that clears."
+            exit 0
+          fi
+          # Apple still processing after the wait: the upload landed, it shows in TestFlight when done
+          if [ $code -ne 0 ] && echo "$out" | grep -q "UPLOAD SUCCEEDED" && echo "$out" | grep -qE "took longer than expected|Timeout reached"; then
+            echo "::warning::Build uploaded. Apple is still processing it; it appears in TestFlight when that finishes (submit it for beta review there if needed)."
             exit 0
           fi
           exit $code

@@ -6,7 +6,12 @@ import { valToGrade, HEADSHOT_BASE } from '../utils/simulation'
 import HEADSHOTS from '../data/headshots.json'
 import QBAvatar from './QBAvatar'
 import { track } from '../lib/track'
+import { seededShuffle, useProgress } from '../lib/progress'
+import { itemById } from '../lib/cosmetics'
 import { rampRail } from '../lib/ads'
+import { IS_APP } from '../lib/platform'
+import { LOW_POWER, sampleFrames } from '../lib/lowPower'
+import { watchFor, REWARDED_ON } from '../lib/rewardedAd'
 
 function fmtHeight(inches) {
   return `${Math.floor(inches / 12)}'${inches % 12}"`
@@ -19,7 +24,7 @@ function parseHtToIn(ht) {
 }
 
 function gradeColor(val0) {
-  const val = Math.round(val0 ?? 0)   // rounded like the letter (valToGrade), so an S is always purple
+  const val = Math.round(val0 ?? 0)   // rounded like the letter (valToGrade), so a B- is always green
   if (val >= 11) return '#a855f7'
   if (val >= 8)  return '#3b82f6'
   if (val >= 5)  return '#22c55e'
@@ -31,10 +36,22 @@ function gradeColor(val0) {
 const ITEM_H  = 44
 const CENTER  = 2
 const IDLE_MS = 1200
+const ROWS_BELOW = 4   // rows the window shows past the middle one
 const FAST_MS = 36   // ms per item at peak speed — defines MAX_VEL
 
+// The drum (rows tilting like a slot machine's reel) is off on the desktop website: a 3D reel
+// re-tilting its rows every frame was a big part of the spin screen's stutter there. The slow idle
+// drift stays, as a GPU animation instead of a script each frame. Phones and the app keep the drum,
+// unless they're weak (lib/lowPower.js)
+const DRUM_ON = !LOW_POWER && (IS_APP || !(typeof window !== 'undefined' && window.matchMedia?.('(min-width: 769px)').matches))
+// the reels stop gliding after this long with nothing happening: a screen at rest should draw nothing
+const IDLE_REST_MS = 6000
+
 // ─── Slot Reel ───────────────────────────────────────────────────────────────
-function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, onStop, blurred, fast, durationMs = 1400, jitterMs = 500 }) {
+// Same item on both sides of a reel, even when the pool was re-mapped (custom ratings)
+const reelKey = x => `${x?.name}|${x?.team ?? x?.short}`
+
+function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, onStop, blurred, fast, durationMs = 1400, jitterMs = 500, target = null }) {
   const COPIES = useMemo(() => {
     const loopH  = items.length * ITEM_H
     const needed = Math.ceil(14000 / Math.max(loopH, 1))
@@ -44,6 +61,15 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, on
     () => Array.from({ length: COPIES }, () => items).flat(),
     [items, COPIES]
   )
+  // the strip's rows (about 100) are made once per list, not on every render: the spin
+  // screen re-renders while a reel turns, and remaking them each time was most of its cost.
+  // getDisplay/getSub only read the item, so the list alone decides them
+  const rows = useMemo(() => allItems.map((item, i) => (
+    <div key={i} className="reel-row" style={{ height: ITEM_H }}>
+      <div className="reel-primary">{getDisplay(item)}</div>
+      {getSub && <div className="reel-secondary">{getSub(item)}</div>}
+    </div>
+  )), [allItems]) // eslint-disable-line react-hooks/exhaustive-deps
   const initOffset = useMemo(
     () => Math.floor(COPIES / 2) * items.length * ITEM_H + CENTER * ITEM_H,
     [COPIES, items]
@@ -52,18 +78,50 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, on
   const posRef       = useRef(initOffset)
   const trackRef     = useRef(null)
   const rafRef       = useRef(null)
+  const driftRef     = useRef(null)   // ends the desktop idle drift (it keeps its place)
   const stopRef      = useRef(null)
   const prevItemsRef = useRef(items)
   const onStopRef    = useRef(onStop)
   onStopRef.current  = onStop
+  const windowRef    = useRef(null)
+
+  // The drum: the rows tilt away from the middle like a slot machine's reel. Looks only:
+  // the spin, its timing and where it stops are all the track's position (posRef), untouched.
+  // Only the ~8 rows in the window are touched each frame. The window's height and the
+  // track's top are measured once a render (measure()), never mid-spin: reading them right
+  // after moving the track made the browser redo the page's layout every frame (desktop stutter)
+  const metricsRef = useRef(null)
+  const measure = () => {
+    const track = trackRef.current, win = windowRef.current
+    if (track && win) metricsRef.current = { h: win.clientHeight || 5 * ITEM_H, top: track.offsetTop }
+  }
+  const drum = (pos, transition = '') => {
+    const track = trackRef.current
+    if (!track || !DRUM_ON) return
+    if (!metricsRef.current) measure()
+    const { h, top } = metricsRef.current ?? { h: 5 * ITEM_H, top: 0 }
+    const off = top - (pos - CENTER * ITEM_H)    // where row 0 sits in the window
+    const first = Math.max(0, Math.floor(-off / ITEM_H) - 1)
+    const last = Math.min(track.children.length - 1, first + Math.ceil(h / ITEM_H) + 2)
+    for (let i = first; i <= last; i++) {
+      const el = track.children[i]
+      const d = (off + i * ITEM_H + ITEM_H / 2 - h / 2) / (h / 2)   // -1 top edge · 0 middle · 1 bottom edge
+      if (el.__dt !== transition) { el.style.transition = transition; el.__dt = transition }
+      el.style.transform = `rotateX(${(-d * 48).toFixed(2)}deg)`
+    }
+  }
 
   // After every React render, sync the DOM transform to posRef so React can
   // never overwrite our direct DOM updates with a stale value.
   useLayoutEffect(() => {
     if (trackRef.current) {
+      if (!metricsRef.current) measure()
       trackRef.current.style.transform = `translate3d(0,${-(posRef.current - CENTER * ITEM_H)}px,0)`
+      drum(posRef.current)
     }
   })
+  // a resized window: measure again on the next frame drawn
+  useEffect(() => { const r = () => { metricsRef.current = null }; window.addEventListener('resize', r); return () => window.removeEventListener('resize', r) }, [])
 
   useEffect(() => {
     cancelAnimationFrame(rafRef.current)
@@ -78,6 +136,7 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, on
       if (trackRef.current) {
         trackRef.current.style.transition = 'none'
         trackRef.current.style.transform  = `translate3d(0,${-(posRef.current - CENTER * ITEM_H)}px,0)`
+        drum(posRef.current)
       }
       if (!spinning && !idle) return
     }
@@ -89,7 +148,71 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, on
       if (posRef.current >= initOffset + loopH) posRef.current -= loopH
     }
 
-    if (spinning) {
+    // No drum: the whole spin is one GPU animation, the same curve sampled ahead of time, so nothing
+    // runs on the page while the reel turns and a busy page can't make it stutter. It starts from the
+    // same place on the strip's first copy (the copies are identical), so the run fits on the strip.
+    const gpuSpin = (from, dist, duration, ease, done) => {
+      const track = trackRef.current
+      const rest = ((from - CENTER * ITEM_H) % loopH + loopH) % loopH + CENTER * ITEM_H
+      if (!track || DRUM_ON || !track.animate || rest + dist + (ROWS_BELOW * ITEM_H) > allItems.length * ITEM_H) return false
+      const y = p => `translate3d(0,${-(p - CENTER * ITEM_H)}px,0)`
+      const N = 32
+      track.style.transition = 'none'
+      const anim = track.animate(Array.from({ length: N + 1 }, (_, i) => ({ transform: y(rest + dist * ease(i / N)) })), { duration, easing: 'linear', fill: 'forwards' })
+      const park = p => {
+        posRef.current = initOffset + ((p - initOffset) % loopH + loopH) % loopH
+        track.style.transform = y(posRef.current)
+        anim.cancel()
+      }
+      driftRef.current = () => { park(-new DOMMatrix(getComputedStyle(track).transform).m42 + CENTER * ITEM_H) }
+      anim.onfinish = () => { driftRef.current = null; park(rest + dist); done() }
+      return true
+    }
+
+    if (spinning) sampleFrames()
+
+    if (spinning && target) {
+      // Fixed outcome (Daily Challenge): same speed curve as a normal spin, but
+      // driven by distance so it always comes to rest on `target`.
+      const duration = fast ? 1000 : durationMs + jitterMs / 2
+      const KICK = 0.45
+      const area = KICK + (1 - KICK) * 0.5                  // ∫ of the velocity curve over 0..1
+      const start = posRef.current
+      const len = items.length
+      const tKey = reelKey(target)
+      let end = Math.ceil((start + (ITEM_H / FAST_MS) * duration * area) / ITEM_H)
+      for (let n = 0; n < len && reelKey(items[((end % len) + len) % len]) !== tKey; n++) end++
+      const dist = end * ITEM_H - start
+      const startTime = performance.now()
+      if (trackRef.current) trackRef.current.style.transition = 'none'
+      const ease = t => {
+        if (t < KICK) return t / area
+        const u = (t - KICK) / (1 - KICK)
+        return (KICK + (1 - KICK) * (u - u * u * u + (u * u * u * u) / 2)) / area
+      }
+      const settle = () => {
+        stopRef.current = setTimeout(() => {
+          const idx = Math.round(posRef.current / ITEM_H)
+          const winner = items[((idx % len) + len) % len]
+          if (onStopRef.current) onStopRef.current(winner)
+        }, 150)
+      }
+      if (gpuSpin(start, dist, duration, ease, settle)) {
+        return () => { clearTimeout(stopRef.current); driftRef.current?.(); driftRef.current = null }
+      }
+      const frame = now => {
+        const t = Math.min((now - startTime) / duration, 1)
+        let pos = start + dist * ease(t)
+        const over = pos - initOffset - loopH
+        if (over >= 0) pos -= Math.ceil((over + 1) / loopH) * loopH
+        posRef.current = pos
+        if (trackRef.current) { trackRef.current.style.transform = `translate3d(0,${-(pos - CENTER * ITEM_H)}px,0)`; drum(pos) }
+        if (t < 1) { rafRef.current = requestAnimationFrame(frame); return }
+        settle()
+      }
+      rafRef.current = requestAnimationFrame(frame)
+
+    } else if (spinning) {
       const duration = fast
         ? 900 + Math.random() * 200
         : durationMs + Math.random() * jitterMs
@@ -97,6 +220,26 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, on
       const speedMult = 0.93 + Math.random() * 0.10  // subtle ±5% speed variance
       const MAX_VEL   = (ITEM_H / FAST_MS) * speedMult
       let lastFrame   = startTime
+
+      // (as one GPU animation when there's no drum: the same speeds, added up ahead of time)
+      const KICK0 = 0.45, area0 = KICK0 + (1 - KICK0) * 0.5
+      const from0 = posRef.current
+      const stopAt = Math.round((from0 + MAX_VEL * duration * area0) / ITEM_H) * ITEM_H
+      const ease0 = t => {
+        if (t < KICK0) return t / area0
+        const u = (t - KICK0) / (1 - KICK0)
+        return (KICK0 + (1 - KICK0) * (u - u * u * u + (u * u * u * u) / 2)) / area0
+      }
+      const landed = gpuSpin(from0, stopAt - from0, duration, ease0, () => {
+        stopRef.current = setTimeout(() => {
+          const idx    = Math.round(posRef.current / ITEM_H)
+          const winner = items[((idx % items.length) + items.length) % items.length]
+          if (onStopRef.current) onStopRef.current(winner)
+        }, 150)
+      })
+      if (landed) {
+        return () => { clearTimeout(stopRef.current); driftRef.current?.(); driftRef.current = null }
+      }
 
       // Set transition once — not every frame
       if (trackRef.current) trackRef.current.style.transition = 'none'
@@ -119,6 +262,7 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, on
 
         if (trackRef.current) {
           trackRef.current.style.transform = `translate3d(0,${-(posRef.current - CENTER * ITEM_H)}px,0)`
+          drum(posRef.current)
         }
 
         if (t >= 1.0) {
@@ -128,9 +272,10 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, on
           if (trackRef.current) {
             trackRef.current.style.transition = 'transform 140ms cubic-bezier(0.25,0.46,0.45,0.94)'
             trackRef.current.style.transform  = `translate3d(0,${-(snapped - CENTER * ITEM_H)}px,0)`
+            drum(snapped, 'transform 140ms cubic-bezier(0.25,0.46,0.45,0.94)')   // the rows settle with the snap
           }
           stopRef.current = setTimeout(() => {
-            if (trackRef.current) trackRef.current.style.transition = 'none'
+            if (trackRef.current) { trackRef.current.style.transition = 'none'; drum(snapped) }
             const idx    = Math.round(snapped / ITEM_H)
             const winner = items[((idx % items.length) + items.length) % items.length]
             if (onStopRef.current) onStopRef.current(winner)
@@ -142,19 +287,45 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, on
 
       rafRef.current = requestAnimationFrame(frame)
 
+    } else if (idle && LOW_POWER) {
+      // weak machines: the reels just sit until they're spun
+    } else if (idle && !DRUM_ON) {
+      // Desktop website: the slow idle drift runs as one GPU transform animation (no script
+      // each frame), and rests after a few seconds; when it stops, the track keeps the place it drifted to
+      const track = trackRef.current
+      if (track) {
+        const VEL = ITEM_H / IDLE_MS
+        const y0 = -(posRef.current - CENTER * ITEM_H)
+        track.style.transition = 'none'
+        const anim = track.animate([{ transform: `translate3d(0,${y0}px,0)` }, { transform: `translate3d(0,${y0 - loopH}px,0)` }],
+          { duration: loopH / VEL, iterations: Infinity, easing: 'linear' })
+        const restT = setTimeout(() => anim.pause(), IDLE_REST_MS)
+        driftRef.current = () => {
+          clearTimeout(restT)
+          const t = Number(anim.currentTime) || 0
+          posRef.current += (VEL * t) % loopH
+          wrap()
+          anim.cancel()
+          track.style.transform = `translate3d(0,${-(posRef.current - CENTER * ITEM_H)}px,0)`
+        }
+      }
+
     } else if (idle) {
       const VEL     = ITEM_H / IDLE_MS   // px/ms at idle speed
       let lastFrame = performance.now()
+      const restAt = lastFrame + IDLE_REST_MS
 
       if (trackRef.current) trackRef.current.style.transition = 'none'
 
       const frame = (now) => {
+        if (now > restAt) return
         const dt  = Math.min(now - lastFrame, 50)
         lastFrame = now
         posRef.current += VEL * dt
         wrap()
         if (trackRef.current) {
           trackRef.current.style.transform = `translate3d(0,${-(posRef.current - CENTER * ITEM_H)}px,0)`
+          drum(posRef.current)
         }
         rafRef.current = requestAnimationFrame(frame)
       }
@@ -165,21 +336,17 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, on
     return () => {
       cancelAnimationFrame(rafRef.current)
       clearTimeout(stopRef.current)
+      driftRef.current?.(); driftRef.current = null   // a desktop drift ends where it got to
     }
-  }, [spinning, idle, items, initOffset, fast])
+  }, [spinning, idle, items, initOffset, fast]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div className={`reel-outer${locked ? ' reel-locked' : ''}${blurred ? ' reel-blurred' : ''}`}>
+    <div className={`reel-outer${spinning ? ' reel-spinning' : ''}${locked ? ' reel-locked' : ''}${blurred ? ' reel-blurred' : ''}`}>
       <div className="reel-label">{label}</div>
-      <div className="reel-window">
+      <div ref={windowRef} className={`reel-window${DRUM_ON ? ' is-drum' : ''}`}>
         <div className="reel-selector" />
         <div ref={trackRef} className="reel-track" style={{ willChange: 'transform' }}>
-          {allItems.map((item, i) => (
-            <div key={i} className="reel-row" style={{ height: ITEM_H }}>
-              <div className="reel-primary">{getDisplay(item)}</div>
-              {getSub && <div className="reel-secondary">{getSub(item)}</div>}
-            </div>
-          ))}
+          {rows}
         </div>
       </div>
       {locked && <div className="reel-locked-pip" />}
@@ -188,7 +355,7 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, on
 }
 
 // ─── Chip ────────────────────────────────────────────────────────────────────
-function Chip({ type, meta, val, selectedQB, draggingType, onChipTap, onDragStart, onDragEnd, setDraggingType, hideGrades, headshotsMap, headshotsDir, isBucket, isWR, headshotFallback = () => null }) {
+function Chip({ type, spin = null, meta, val, selectedQB, draggingType, onChipTap, onDragStart, onDragEnd, setDraggingType, hideGrades, headshotsMap, headshotsDir, isBucket, isWR, headshotFallback = () => null }) {
   const photo = headshotsMap[selectedQB.name] ? `${headshotsDir}${headshotsMap[selectedQB.name]}.webp` : headshotFallback(selectedQB.skin)
   const chipData = {
     type, val,
@@ -199,6 +366,7 @@ function Chip({ type, meta, val, selectedQB, draggingType, onChipTap, onDragStar
     height: selectedQB.height ?? parseHtToIn(selectedQB.ht), weight: selectedQB.weight ?? selectedQB.wt ?? null,
     attrs: selectedQB.attrs ?? null,
     subpos: selectedQB.subpos ?? null,
+    ...(spin ? { spin } : {}),
   }
   return (
     <div
@@ -221,7 +389,7 @@ function Chip({ type, meta, val, selectedQB, draggingType, onChipTap, onDragStar
     >
       {photo && <img src={photo} alt="" className="chip-photo" />}
       <div className="chip-text">
-        <span className="chip-name">{meta.label}</span>
+        <span className={`chip-name${meta.label.length > 14 ? ' is-long' : ''}`}>{meta.label}</span>
         <span className="chip-qb">{selectedQB.name}</span>
       </div>
       <span className="chip-val" style={hideGrades ? { visibility: 'hidden' } : undefined}>{valToGrade(val)}</span>
@@ -237,11 +405,24 @@ const POS_COLORS = {
   PG: '#7dd3fc', SG: '#86efac', SF: '#fdba74', PF: '#d8b4fe', C: '#fca5a5',
 }
 
+// Hide or show the grades on the spin's chips. Shared: the spin's own switch and
+// the phone navbar's both set it, and both follow it.
+export const gradesHiddenNow = () => { try { return localStorage.getItem('bap-hide-grades') === 'true' } catch { return false } }
+export function setGradesHidden(v) {
+  try { localStorage.setItem('bap-hide-grades', String(!!v)) } catch {}
+  window.dispatchEvent(new CustomEvent('bap:grades', { detail: !!v }))
+}
 // ─── SpinScreen ──────────────────────────────────────────────────────────────
-export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, activeCategory, resetKey, onChipTap, types = TYPES, isLite = false, qbPool = QBS, savedResult = null, onSaveResult, onPhaseChange, gameKey, onReset, adsDisabled = false, isRB = false, isWR = false, isTE = false, isDB = false, isOL = false, isAllTime = false, isBucket = false, isVersusMode = false, attrMap = ATTR, categoriesData = CATEGORIES, teamsPool = TEAMS, logoDir = '/logos/', playerLabel, headshotsMap = HEADSHOTS, headshotsDir = `${HEADSHOT_BASE}/`, hideTeamResult = false, headshotFallback = () => null }) {
+export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, activeCategory, resetKey, onChipTap, types = TYPES, isLite = false, qbPool = QBS, savedResult = null, onSaveResult, onPhaseChange, gameKey, onReset, adsDisabled = false, isRB = false, isWR = false, isTE = false, isDB = false, isOL = false, isAllTime = false, isBucket = false, isVersusMode = false, attrMap = ATTR, categoriesData = CATEGORIES, teamsPool = TEAMS, logoDir = '/logos/', playerLabel, headshotsMap = HEADSHOTS, headshotsDir = `${HEADSHOT_BASE}/`, hideTeamResult = false, headshotFallback = () => null, seedPlan: seedPlanProp = null, cardMeta = null, paused = false, gradesHidden = false }) {
+  // the player's reel skin (the shop's Reel Skins: app-shop.css .rs-*)
+  const equippedReel = useProgress().equip?.reel
+  const reelSkin = itemById(equippedReel)?.slot === 'reel' ? equippedReel : null
+  // live competitive modes (1v1, Compete pools): the grades stay hidden, no toggle
+  const forceHide = isVersusMode || gradesHidden
   const pLabel = playerLabel ?? (isTE ? 'TE' : isWR ? 'WR' : isRB ? 'RB' : 'QB')
-  // TE (current mode) and OL get a 2nd player respin; All-Time TE gets just 1
-  const maxPlayerRespin = (isTE && !isAllTime) || isOL ? 2 : 1
+  // one player respin (OL gets a 2nd); the app can earn one more with a video
+  const [qbRespinBonus, setQbRespinBonus] = useState(() => savedResult?.qbRespinBonus ?? 0)
+  const maxPlayerRespin = (isOL ? 2 : 1) + qbRespinBonus
   const [phase, setPhase]               = useState(() => savedResult?.selectedQB ? 'done' : 'idle')
   const [selectedTeam, setSelectedTeam] = useState(() => savedResult?.selectedTeam ?? null)
   const [selectedQB,   setSelectedQB]   = useState(() => savedResult?.selectedQB ?? null)
@@ -252,19 +433,46 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
   const [spinCount, setSpinCount]       = useState(0)
   const [hideGrades,   setHideGrades]   = useState(() => localStorage.getItem('bap-hide-grades') === 'true')
 
-  const toggleGrades = () => setHideGrades(prev => {
-    const next = !prev
-    localStorage.setItem('bap-hide-grades', next)
-    return next
-  })
+  const toggleGrades = () => setGradesHidden(!hideGrades)
+  // the switch can also live in the navbar (phones): stay in step with it
+  useEffect(() => { const on = e => setHideGrades(!!e.detail); window.addEventListener('bap:grades', on); return () => window.removeEventListener('bap:grades', on) }, [])
   const usedTeamsRef = useRef([])
   const pauseRef = useRef(null)
+  // App: every revealed player goes to the card binder ('bap:spin' → lib/progress.js)
+  const cardMetaRef = useRef(cardMeta)
+  cardMetaRef.current = cardMeta
+  const poolRef = useRef(qbPool)
+  poolRef.current = qbPool
+  // Every other build deals from its own seed too (a fresh one each build, kept with the
+  // build's saved spin), so a reload in the middle of a spin deals the same player again:
+  // reloading used to be a free reroll of any spin you didn't like
+  const newSeed = () => `b-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
+  const [autoSeed, setAutoSeed] = useState(() => (!seedPlanProp && savedResult?.seed) || newSeed())
+  const autoPlan = useMemo(() => (seedPlanProp ? null : { seed: autoSeed, getStart: () => 0, onSpin: () => {}, separateRespins: true, respinSeed: `${autoSeed}:r` }), [seedPlanProp, autoSeed])
+  const seedPlan = seedPlanProp ?? autoPlan
+  // Daily Challenge: team spin #n lands on the nth team of the day's seeded
+  // order (counted across visits, so leaving and coming back can't re-roll it)
+  const spinBase = useRef(seedPlanProp ? seedPlanProp.getStart() : (savedResult?.si ?? 0))
+  const spinCountRef = useRef(0)
+  const [playerDraw, setPlayerDraw] = useState(0)
+  // Compete (seedPlan.separateRespins): respins are this player's own draw and
+  // don't use up the pool's shared order — the next regular spin is back on it
+  const ownSpins = !!seedPlan?.separateRespins
+  const seedSpinsRef = useRef(0)
+  const [seedSpins, setSeedSpins] = useState(0)
+  const [freeTeam, setFreeTeam] = useState(false)
 
   const complete = types.every(t => build[t])
 
   const clearAll = () => clearTimeout(pauseRef.current)
 
+  // a reset (a new build) clears the reels. Only a change of resetKey: opening the screen again
+  // (out to Profile, Shop… and back) must not, or the spin you saved is wiped and you get a
+  // free reroll (people were using that to throw away a bad spin)
+  const resetRef = useRef(resetKey)
   useEffect(() => {
+    if (resetRef.current === resetKey) return
+    resetRef.current = resetKey
     usedTeamsRef.current = []
     clearAll()
     setPhase('idle')
@@ -281,17 +489,30 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
 
   useEffect(() => {
     if (!onSaveResult) return
-    if (phase === 'done' && selectedQB) onSaveResult({ selectedTeam, selectedQB, qbRespinUsed, teamRespinUsed })
-    else if (phase === 'idle') onSaveResult(null)
-  }, [phase, selectedTeam, selectedQB, qbRespinUsed])
+    // a build's own seed, and the spin to deal next (si): what a reload picks up from
+    const at = spinBase.current + seedSpins
+    const own = autoPlan ? { seed: autoPlan.seed } : {}
+    if (phase === 'done' && selectedQB) onSaveResult({ selectedTeam, selectedQB, qbRespinUsed, teamRespinUsed, qbRespinBonus, ...own, ...(autoPlan ? { si: at } : {}) })
+    // between spins the build's re-spins used still count (a reload doesn't hand them back)
+    else if (phase === 'idle') onSaveResult(qbRespinUsed || teamRespinUsed || qbRespinBonus || autoPlan ? { qbRespinUsed, teamRespinUsed, qbRespinBonus, ...own, ...(autoPlan ? { si: at } : {}) } : null)
+    // mid-spin: this spin is already dealt (a reload deals it again) and a respin is spent
+    else onSaveResult({ qbRespinUsed, teamRespinUsed, qbRespinBonus, ...own, ...(autoPlan ? { si: Math.max(0, at - 1) } : {}) })
+  }, [phase, selectedTeam, selectedQB, qbRespinUsed, teamRespinUsed, qbRespinBonus, seedSpins, autoPlan]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (onPhaseChange) onPhaseChange(phase)
   }, [phase])
 
+  // a new build gets its re-spins back; loading the same build (a reload) keeps what's used
+  const keyRef = useRef(gameKey)
   useEffect(() => {
+    if (keyRef.current === gameKey) return
+    keyRef.current = gameKey
     setQbRespinUsed(0)
     setTeamRespinUsed(0)
+    setQbRespinBonus(0)
+    // a new build: a new seed, dealt from its first spin
+    if (!seedPlanProp) { setAutoSeed(newSeed()); spinBase.current = 0; seedSpinsRef.current = 0; setSeedSpins(0) }
   }, [gameKey])
 
   // Team reel calls this when it naturally halts
@@ -306,7 +527,20 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
   const handleQBStop = useCallback((qb) => {
     setSelectedQB(qb)
     setPhase('done')
+    if (cardMetaRef.current) {
+      window.dispatchEvent(new CustomEvent('bap:spin', { detail: { ...cardMetaRef.current, player: qb, pool: poolRef.current } }))
+    }
   }, [])
+
+  const countTeamSpin = (respin = false) => {
+    spinCountRef.current += 1
+    setSpinCount(spinCountRef.current)
+    setPlayerDraw(0)
+    const own = ownSpins && respin
+    setFreeTeam(own)
+    if (!own) { seedSpinsRef.current += 1; setSeedSpins(seedSpinsRef.current) }
+    seedPlan?.onSpin(spinBase.current + (ownSpins ? seedSpinsRef.current : spinCountRef.current))
+  }
 
   const adInvokedRef = useRef(false)
 
@@ -322,8 +556,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
     setSelectedTeam(null)
     setSelectedQB(null)
     setExcludedQB(null)
-    setSpinCount(c => c + 1)
-    onSaveResult?.(null)
+    countTeamSpin()
     setPhase('team')
     triggerMobileAd()
     track('spin', {
@@ -331,14 +564,30 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
       position: isBucket ? 'bucket' : isOL ? 'ol' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb',
       gameMode: isLite ? 'lite' : null,
     })
-  }, [onSaveResult, triggerMobileAd, isBucket, isOL, isDB, isTE, isWR, isRB, isLite])
+  }, [onSaveResult, triggerMobileAd, isBucket, isOL, isDB, isTE, isWR, isRB, isLite]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleQBRespin = useCallback(() => {
     setExcludedQB(selectedQB)
     setQbRespinUsed(n => n + 1)
+    setPlayerDraw(d => d + 1)
     setSelectedQB(null)
     setPhase('qb')
   }, [selectedQB])
+
+  // Out of player respins (app only, never in a live competitive mode): a video
+  // earns one more, once a build
+  const [adBusy, setAdBusy] = useState(false)
+  const [adNote, setAdNote] = useState('')
+  const canEarn = REWARDED_ON && IS_APP && !isVersusMode && !seedPlanProp && qbRespinBonus === 0
+  const earnRespin = async () => {
+    if (adBusy) return
+    setAdBusy(true); setAdNote('')
+    const r = await watchFor()
+    setAdBusy(false)
+    if (r.ok) setQbRespinBonus(1)
+    else setAdNote(r.note)
+    setTimeout(() => setAdNote(''), 3500)
+  }
 
   const handleTeamRespin = useCallback(() => {
     clearAll()
@@ -346,9 +595,9 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
     setSelectedTeam(null)
     setExcludedQB(null)
     setTeamRespinUsed(n => n + 1)
-    setSpinCount(c => c + 1)
+    countTeamSpin(true)
     setPhase('team')
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const isSpinningTeam = phase === 'team'
   const isSpinningQB   = phase === 'qb'
@@ -365,7 +614,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
     // leaves the player reel empty and the spin stuck.
     const draftable = new Set(draftableTeams.split(','))
     const teams = teamsPool.some(t => draftable.has(t.short)) ? teamsPool.filter(t => draftable.has(t.short)) : teamsPool
-    const usedShorts = new Set(usedTeamsRef.current.map(t => t.short))
+    const usedShorts = new Set(seedPlan ? [] : usedTeamsRef.current.map(t => t.short))
     const eligible = teams.filter(t => !usedShorts.has(t.short))
     const pool = eligible.length > 0 ? eligible : [...teams]
     const finalPool = [...pool]
@@ -387,6 +636,39 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
     }
     return arr
   }, [selectedTeam, excludedQB, spinCount])
+
+  // Daily Challenge outcomes
+  const teamIndex = spinBase.current + (ownSpins ? seedSpins : spinCount) - 1
+  const teamTarget = useMemo(() => {
+    if (!seedPlan || spinCount < 1) return null
+    const sorted = [...teamReelItems].sort((a, b) => a.short.localeCompare(b.short))
+    // Compete: a respin is this seat's own draw, seeded too (respinSeed) so the server can check it
+    if (freeTeam) return seedPlan.respinSeed ? seededShuffle(sorted, `${seedPlan.respinSeed}:teams:${teamIndex}`)[0] ?? null : null
+    const order = seededShuffle(sorted, `${seedPlan.seed}:teams`)
+    return order[teamIndex % order.length]
+  }, [seedPlan, spinCount, teamReelItems, teamIndex, freeTeam])
+  const playerTarget = useMemo(() => {
+    // a respun team or a player respin is the player's own draw (seeded by the seat in Compete)
+    const own = ownSpins && (freeTeam || playerDraw > 0)
+    if (!seedPlan || !selectedTeam || (own && !seedPlan.respinSeed)) return null
+    const roster = qbPool.filter(q => q.team === selectedTeam.short).sort((a, b) => a.name.localeCompare(b.name))
+    if (!roster.length) return null
+    if (own) {
+      const mine = seededShuffle(roster, `${seedPlan.respinSeed}:${teamIndex}:${selectedTeam.short}`)
+      // a respun team: its own draws in order
+      if (freeTeam) return mine[playerDraw % mine.length]
+      // a player respin: never the player this spin dealt
+      const dealt = seededShuffle(roster, `${seedPlan.seed}:${teamIndex}:${selectedTeam.short}`)[0]
+      const rest = mine.filter(p => p.name !== dealt?.name)
+      return rest.length ? rest[(playerDraw - 1) % rest.length] : mine[0]
+    }
+    const order = seededShuffle(roster, `${seedPlan.seed}:${teamIndex}:${selectedTeam.short}`)
+    return order[playerDraw % order.length]
+  }, [seedPlan, selectedTeam, teamIndex, playerDraw, freeTeam]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Compete: which seeded draw this player came from, so the server can check it
+  // (competeCore dealtBy): spin #i, a regular spin, a player respin or a team respin
+  const chipSpin = seedPlan?.respinSeed ? { i: teamIndex, how: freeTeam ? 'tr' : playerDraw > 0 ? 'pr' : 'spin', d: playerDraw } : null
 
   const visibleCategories = isRB ? RB_CATEGORIES : categoriesData
   const hasAvailableChips = isDone && selectedQB && visibleCategories.some(cat =>
@@ -424,20 +706,20 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
       <div className="spin-panel-body">
         <div className="spin-panel-static">
           <div className="spin-top-row">
-            {!isVersusMode && (
+            {!forceHide && (
               <button className={`grade-toggle-btn${hideGrades ? ' grade-toggle-off' : ' grade-toggle-on'}`} onClick={toggleGrades}>
                 {hideGrades ? 'TURN ON GRADES' : 'TURN OFF GRADES'}
               </button>
             )}
           </div>
-          <div className="reels-wrap">
+          <div className={`reels-wrap${reelSkin ? ` rs-on ${reelSkin}` : ''}`}>
             <div className="reel-tri reel-tri-l" />
             <div className="reels-row">
               <SlotReel
                 label="TEAM"
                 items={teamReelItems}
                 spinning={isSpinningTeam}
-                idle={!isSpinning && !selectedTeam}
+                idle={!paused && !isSpinning && !selectedTeam}
                 locked={!!selectedTeam}
                 blurred={hideTeamResult && !!selectedTeam}
                 getDisplay={t => t.short}
@@ -445,12 +727,13 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
                 onStop={handleTeamStop}
                 durationMs={800}
                 jitterMs={1000}
+                target={teamTarget}
               />
               <SlotReel
                 label={pLabel}
                 items={qbReelItems}
                 spinning={isSpinningQB}
-                idle={!isSpinning && !selectedQB}
+                idle={!paused && !isSpinning && !selectedQB}
                 locked={!!selectedQB && phase === 'done'}
                 getDisplay={q => q.name.split(' ')[0]}
                 getSub={q => q.name.split(' ').slice(1).join(' ')}
@@ -459,12 +742,14 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
                 jitterMs={400}
                 blurred={phase === 'team' || phase === 'team-done'}
                 fast={qbRespinUsed > 0}
+                target={playerTarget}
               />
             </div>
             <div className="reel-tri reel-tri-r" />
           </div>
 
           <div className="spin-btn-wrap">
+            {adNote && <p className="spin-ad-note" role="status">{adNote}</p>}
             {isDone && !complete ? (
               <div className="spin-respin-split">
                 <button
@@ -481,7 +766,11 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
                   RESPIN TEAM <span className="spin-btn-badge">{Math.max(0, 1 - teamRespinUsed)}</span>
                 </button>
                 <div className="spin-respin-divider" />
-                <button
+                {qbRespinUsed >= maxPlayerRespin && canEarn ? (
+                  <button className="spin-respin-half spin-respin-player spin-respin-earn" onClick={earnRespin} disabled={adBusy}>
+                    {adBusy ? 'LOADING…' : 'WATCH VIDEO'} <span className="spin-btn-badge">AD · +1</span>
+                  </button>
+                ) : <button
                   className={`spin-respin-half spin-respin-player${qbRespinUsed >= maxPlayerRespin ? ' spin-respin-used' : ''}`}
                   onClick={qbRespinUsed < maxPlayerRespin ? handleQBRespin : undefined}
                   disabled={qbRespinUsed >= maxPlayerRespin}
@@ -493,7 +782,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
                   }}
                 >
                   RESPIN {pLabel} <span className="spin-btn-badge">{Math.max(0, maxPlayerRespin - qbRespinUsed)}</span>
-                </button>
+                </button>}
               </div>
             ) : (
               <button
@@ -555,7 +844,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
                   ? types.filter(t => !build[t]).map(t => {
                       const meta = attrMap[t]
                       const val  = selectedQB.attrs[t]
-                      return <Chip key={t} type={t} meta={meta} val={val} selectedQB={selectedQB} draggingType={draggingType} onChipTap={onChipTap} onDragStart={onDragStart} onDragEnd={onDragEnd} setDraggingType={setDraggingType} hideGrades={isVersusMode || hideGrades} headshotsMap={headshotsMap} headshotsDir={headshotsDir} isBucket={isBucket} isWR={isWR} headshotFallback={headshotFallback} />
+                      return <Chip key={t} spin={chipSpin} type={t} meta={meta} val={val} selectedQB={selectedQB} draggingType={draggingType} onChipTap={onChipTap} onDragStart={onDragStart} onDragEnd={onDragEnd} setDraggingType={setDraggingType} hideGrades={forceHide || hideGrades} headshotsMap={headshotsMap} headshotsDir={headshotsDir} isBucket={isBucket} isWR={isWR} headshotFallback={headshotFallback} />
                     })
                   : visibleCategories.map((cat, catIdx) => {
                       const available = cat.types.filter(type => types.includes(type) && !build[type])
@@ -570,7 +859,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
                           {available.map(type => {
                             const meta = attrMap[type]
                             const val  = selectedQB.attrs[type]
-                            return <Chip key={type} type={type} meta={meta} val={val} selectedQB={selectedQB} draggingType={draggingType} onChipTap={onChipTap} onDragStart={onDragStart} onDragEnd={onDragEnd} setDraggingType={setDraggingType} hideGrades={isVersusMode || hideGrades} headshotsMap={headshotsMap} headshotsDir={headshotsDir} isBucket={isBucket} isWR={isWR} headshotFallback={headshotFallback} />
+                            return <Chip key={type} spin={chipSpin} type={type} meta={meta} val={val} selectedQB={selectedQB} draggingType={draggingType} onChipTap={onChipTap} onDragStart={onDragStart} onDragEnd={onDragEnd} setDraggingType={setDraggingType} hideGrades={forceHide || hideGrades} headshotsMap={headshotsMap} headshotsDir={headshotsDir} isBucket={isBucket} isWR={isWR} headshotFallback={headshotFallback} />
                           })}
                         </div>
                       )

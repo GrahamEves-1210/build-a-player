@@ -1,10 +1,11 @@
 import { getBucketSVGMarkup } from '../components/BucketFigureOverlay'
+import { IS_APP, shareNative } from '../lib/platform'
 
 // val 0–11 → F D C- C C+ B- B B+ A- A A+ S
 const GRADES = ['F','D','C-','C','C+','B-','B','B+','A-','A','A+','S']
 
 function gradeColor(val0) {
-  const val = Math.round(val0 ?? 0)   // rounded like the letter (valToGrade), so an S is always purple
+  const val = Math.round(val0 ?? 0)   // rounded like the letter (valToGrade), so a B- is always green
   if (val >= 11) return '#a855f7'
   if (val >= 8)  return '#3b82f6'
   if (val >= 5)  return '#22c55e'
@@ -34,7 +35,42 @@ function loadImage(src) {
 // SVG viewBox aspect ratio (matches PROCESSED_SVG in BucketFigureOverlay)
 const VB_W = 850.9, VB_H = 815.5
 
-export async function generateBucketShareCard({ build, types, ovr, arch, position, attrMap }) {
+// Football: the build's silhouette as it's drawn on the game page (figure,
+// colors, numbers), without the drop zones and their lines
+export async function captureSilhouette(sel = '.game-layout .sil-wrap') {
+  const el = [...document.querySelectorAll(sel)].find(e => e.offsetParent !== null && e.getBoundingClientRect().width > 40)
+  if (!el) return null
+  try {
+    const html2canvas = (await import('html2canvas')).default
+    // html2canvas ignores object-fit: a "contain" image gets stretched to its
+    // whole box, so the silhouette came out taller than the colored overlay
+    // drawn on it. Measure where each image really draws, and lay the copy out
+    // at exactly that size and offset before the capture.
+    const fits = [...el.querySelectorAll('img')].map(img => {
+      const cs = getComputedStyle(img)
+      if (cs.objectFit !== 'contain' || !img.naturalWidth) return null
+      const bw = img.clientWidth, bh = img.clientHeight
+      const s2 = Math.min(bw / img.naturalWidth, bh / img.naturalHeight)
+      const w = img.naturalWidth * s2, h = img.naturalHeight * s2
+      const [px, py] = cs.objectPosition.split(' ').map(v => (v.endsWith('%') ? parseFloat(v) / 100 : 0.5))
+      return { w, h, x: (bw - w) * (isNaN(px) ? 0.5 : px), y: (bh - h) * (isNaN(py) ? 0.5 : py) }
+    })
+    return await html2canvas(el, {
+      backgroundColor: null, scale: 2, useCORS: true, allowTaint: true, logging: false,
+      ignoreElements: e => !!e.classList && (e.classList.contains('cz-lines-svg') || e.classList.contains('cz-layer') || e.classList.contains('sil-sandbox-outer')),
+      onclone: (doc, clone) => {
+        [...clone.querySelectorAll('img')].forEach((img, i) => {
+          const f = fits[i]; if (!f) return
+          Object.assign(img.style, { objectFit: 'fill', width: `${f.w}px`, height: `${f.h}px`, maxWidth: 'none', maxHeight: 'none', marginLeft: `${f.x}px`, marginTop: `${f.y}px` })
+        })
+      },
+    })
+  } catch { return null }
+}
+
+// The share card, both sports. Basketball draws its figure from the build;
+// football hands in `figure` (captureSilhouette). brand + posLabel head the card.
+export async function generateBucketShareCard({ build, types, ovr, arch, position, attrMap, figure = null, brand = 'BUILD-A-BUCKET', posLabel: posLabelIn = null }) {
   await document.fonts.ready
 
   const W = 1080, H = 1350
@@ -67,10 +103,10 @@ export async function generateBucketShareCard({ build, types, ovr, arch, positio
   ctx.font = '500 22px Outfit, sans-serif'
   ctx.fillStyle = 'rgba(255,255,255,0.38)'
   if ('letterSpacing' in ctx) ctx.letterSpacing = '3px'
-  ctx.fillText('BUILD-A-BUCKET', W / 2, 116)
+  ctx.fillText(brand, W / 2, 116)
   if ('letterSpacing' in ctx) ctx.letterSpacing = '0px'
 
-  const posLabel = position === 'big' ? 'BIG' : 'GUARD'
+  const posLabel = posLabelIn ?? (position === 'big' ? 'BIG' : 'GUARD')
   ctx.font = '700 18px Outfit, sans-serif'
   ctx.fillStyle = 'rgba(255,255,255,0.22)'
   ctx.textAlign = 'right'
@@ -82,8 +118,8 @@ export async function generateBucketShareCard({ build, types, ovr, arch, positio
   const FIGURE_H   = 520
   const FIGURE_BOT = FIGURE_TOP + FIGURE_H
 
-  // SVG aspect ratio from viewBox
-  const svgAR   = VB_W / VB_H   // ≈ 1.043
+  // aspect ratio: the bucket SVG's viewBox, or the captured football figure
+  const svgAR   = figure ? figure.width / figure.height : VB_W / VB_H   // bucket ≈ 1.043
   const maxFigW = W - PAD * 2
   const byH     = { h: FIGURE_H, w: FIGURE_H * svgAR }
   const { fw, fh } = byH.w <= maxFigW
@@ -92,13 +128,17 @@ export async function generateBucketShareCard({ build, types, ovr, arch, positio
   const figX = (W - fw) / 2
   const figY = FIGURE_TOP
 
-  // Draw body SVG
-  const svgMarkup = getBucketSVGMarkup(build)
-  const svgBlob   = new Blob([svgMarkup], { type: 'image/svg+xml;charset=utf-8' })
-  const svgUrl    = URL.createObjectURL(svgBlob)
-  const svgImg    = await loadImage(svgUrl)
-  URL.revokeObjectURL(svgUrl)
-  if (svgImg) ctx.drawImage(svgImg, figX, figY, fw, fh)
+  // Draw the figure: football's capture, or basketball's body SVG
+  if (figure) {
+    ctx.drawImage(figure, figX, figY, fw, fh)
+  } else if (position === 'guard' || position === 'big') {
+    const svgMarkup = getBucketSVGMarkup(build)
+    const svgBlob   = new Blob([svgMarkup], { type: 'image/svg+xml;charset=utf-8' })
+    const svgUrl    = URL.createObjectURL(svgBlob)
+    const svgImg    = await loadImage(svgUrl)
+    URL.revokeObjectURL(svgUrl)
+    if (svgImg) ctx.drawImage(svgImg, figX, figY, fw, fh)
+  }
 
 
 
@@ -198,6 +238,7 @@ export async function shareOrDownloadCard(canvas, ovr, arch) {
   return new Promise((resolve) => {
     canvas.toBlob(async (blob) => {
       if (!blob) { resolve('error'); return }
+      if (IS_APP) { resolve(await shareNative({ title: `${ovr} OVR · ${arch}`, blob, filename })); return }
       const file = new File([blob], filename, { type: 'image/png' })
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
         try {
@@ -214,4 +255,53 @@ export async function shareOrDownloadCard(canvas, ovr, arch) {
       resolve('downloaded')
     }, 'image/png')
   })
+}
+
+// ── Career card: a whole career on one image (lib/career.js careerCard) ──────
+export async function generateCareerCard(card, figure = null) {
+  await document.fonts.ready
+  const W = 1080, H = 1350, PAD = 64
+  const canvas = document.createElement('canvas'); canvas.width = W; canvas.height = H
+  const ctx = canvas.getContext('2d')
+  const gold = '#f5dc8a'
+  ctx.fillStyle = '#07120a'; ctx.fillRect(0, 0, W, H)
+  ctx.strokeStyle = 'rgba(255,255,255,0.022)'; ctx.lineWidth = 1
+  for (let x = 0; x <= W; x += 54) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke() }
+  for (let y = 0; y <= H; y += 54) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke() }
+  const g = ctx.createLinearGradient(0, 0, W, 0); g.addColorStop(0, '#d4af37'); g.addColorStop(1, gold)
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, 6)
+  const sp = (px, s) => { if ('letterSpacing' in ctx) ctx.letterSpacing = `${px}px`; ctx.fillText(s.text, s.x, s.y); if ('letterSpacing' in ctx) ctx.letterSpacing = '0px' }
+  ctx.textAlign = 'center'; ctx.fillStyle = '#fff'; ctx.font = '800 52px Outfit, sans-serif'; ctx.fillText(card.site ?? 'build-a-player.com', W / 2, 82)
+  ctx.font = '500 22px Outfit, sans-serif'; ctx.fillStyle = 'rgba(255,255,255,0.38)'; sp(3, { text: 'CAREER', x: W / 2, y: 116 })
+  ctx.textAlign = 'right'; ctx.font = '700 18px Outfit, sans-serif'; ctx.fillStyle = 'rgba(255,255,255,0.22)'; ctx.fillText(card.pos, W - PAD, 82)
+  // the player
+  const FT = 140, FH = 430
+  if (figure) { const ar = figure.width / figure.height; const fh = FH, fw = Math.min(W - PAD * 2, fh * ar); ctx.drawImage(figure, (W - fw) / 2, FT, fw, fh) }
+  ctx.textAlign = 'left'
+  ctx.font = '900 64px Outfit, sans-serif'; ctx.fillStyle = '#fff'; ctx.fillText(card.name, PAD, FT + FH + 60)
+  ctx.font = '600 22px Outfit, sans-serif'; ctx.fillStyle = 'rgba(255,255,255,0.6)'
+  ctx.fillText(`${card.pos} · ${card.years}${card.teams.length ? ` · ${card.teams.join(', ')}` : ''}`, PAD, FT + FH + 96)
+  // legacy
+  ctx.textAlign = 'right'; ctx.font = '900 70px Outfit, sans-serif'; ctx.fillStyle = gold; ctx.fillText(String(card.legacy.score), W - PAD, FT + FH + 60)
+  ctx.font = '600 18px Outfit, sans-serif'; ctx.fillStyle = 'rgba(255,255,255,0.45)'; sp(2, { text: `LEGACY · ${card.legacy.tier.toUpperCase()}`, x: W - PAD, y: FT + FH + 92 })
+  ctx.textAlign = 'left'
+  // divider + the big numbers
+  const DY = FT + FH + 130
+  ctx.strokeStyle = 'rgba(245,220,138,.35)'; ctx.beginPath(); ctx.moveTo(PAD, DY); ctx.lineTo(W - PAD, DY); ctx.stroke()
+  const cells = [...card.head, ['RINGS', String(card.rings)], [card.awardName, String(card.awards)], [card.honorName ?? 'PRO BOWLS', String(card.proBowls)]].slice(0, 6)
+  const cw = (W - PAD * 2) / cells.length
+  cells.forEach(([k, v], i) => {
+    const x = PAD + cw * i + cw / 2
+    ctx.textAlign = 'center'; ctx.font = '900 54px Outfit, sans-serif'; ctx.fillStyle = '#fff'; ctx.fillText(v, x, DY + 86)
+    ctx.font = '600 15px Outfit, sans-serif'; ctx.fillStyle = 'rgba(255,255,255,0.4)'; sp(2, { text: k, x, y: DY + 116 })
+  })
+  // ranking + hall of fame
+  const RY = DY + 190
+  ctx.textAlign = 'left'; ctx.font = '600 20px Outfit, sans-serif'; ctx.fillStyle = 'rgba(255,255,255,0.75)'
+  ctx.fillText(card.legacy.ranked === false ? `Outside the all-time top ${card.legacy.of} ${card.pos}s` : `No. ${card.legacy.rank} ${card.pos} of all time${card.legacy.above ? ` · behind ${card.legacy.above.name}` : ''}`, PAD, RY)
+  if (card.hof) { ctx.fillStyle = card.hof.in ? gold : 'rgba(255,255,255,0.5)'; ctx.fillText(card.hof.in ? `HALL OF FAME · ${card.hof.ballot.toUpperCase()} · ${card.hof.pct}%` : `Hall of Fame: ${card.hof.ballot.toLowerCase()} (${card.hof.pct}%)`, PAD, RY + 36) }
+  if (card.draft) { ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.font = '500 18px Outfit, sans-serif'; ctx.fillText(`Drafted round ${card.draft.round}, pick ${card.draft.o} · Career earnings $${Math.round(card.earnings)}M`, PAD, RY + 72) }
+  ctx.strokeStyle = 'rgba(255,255,255,0.07)'; ctx.beginPath(); ctx.moveTo(PAD, H - 48); ctx.lineTo(W - PAD, H - 48); ctx.stroke()
+  ctx.textAlign = 'center'; ctx.font = '500 15px Outfit, sans-serif'; ctx.fillStyle = 'rgba(255,255,255,0.14)'; ctx.fillText(card.site ?? 'build-a-player.com', W / 2, H - 20)
+  return canvas
 }

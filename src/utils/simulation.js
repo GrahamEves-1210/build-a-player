@@ -17,6 +17,9 @@ export function nflHeadshot(id) {
 
 const TEAM_BY_NAME = Object.fromEntries(NFL_TEAMS.map(t => [t.name, t]))
 
+// A better record counts a little in the playoffs: a point of win chance a game per win over 11
+const recordEdge = wins => Math.min(0.05, Math.max(-0.03, (wins - 11) * 0.01))
+
 // All-time ratings keyed by team name for opponent lookups
 const ALLTIME_BY_NAME = Object.fromEntries(
   NFL_TEAMS.map(t => [t.name, { ...t, ...(ALLTIME_RATINGS[t.short] ?? { off: 8, def: 8 }) }])
@@ -311,6 +314,77 @@ const ALLTIME_SB_POOLS = {
   NFC: ['New England Patriots', 'Pittsburgh Steelers', 'Baltimore Ravens', 'Kansas City Chiefs', 'Denver Broncos', 'Miami Dolphins', 'Indianapolis Colts'],
 }
 
+// ── Squad Builder: one season for a whole squad ──────────────────────────────
+// The schedule, every result and score and the playoff path, decided once from the
+// squad's team strength (off/def, already moved by its builds: lib/squadSeason.js).
+// Each build's sim then plays this same season (its `script` argument) and only
+// makes its own stat line, so the squad shares one record.
+export function scriptNFLSeason(team, isAllTime = false) {
+  const oppLookup = isAllTime ? ALLTIME_BY_NAME : TEAM_BY_NAME
+  const clamp = (lo, hi, v) => Math.min(hi, Math.max(lo, v))
+  const scoreOf = (off, def) => Math.max(0, Math.round(20 + (off - def) * 2.4 + randN() * 14))
+  const schedule = buildSchedule(team)
+  let wins = 0, losses = 0
+  const games = schedule.map(({ opponent, home }, i) => {
+    const opp = oppLookup[opponent] ?? { off: 5.5, def: 5.5 }
+    // both sides of the ball: our offense against their defense, and back
+    const edge = (team.off - opp.def) + (team.def - opp.off)
+    const won = Math.random() < clamp(0.08, 0.92, 0.5 + edge * 0.04 + (home ? 0.03 : -0.01))
+    won ? wins++ : losses++
+    let mySc = snapNFL(Math.max(3, scoreOf(team.off, opp.def)))
+    let oppSc = snapNFL(scoreOf(opp.off, team.def))
+    if (won && mySc <= oppSc) mySc = snapNFL(oppSc + 1 + Math.ceil(Math.random() * 6))
+    if (!won && oppSc <= mySc) oppSc = snapNFL(mySc + 1 + Math.ceil(Math.random() * 6))
+    if (mySc === oppSc) { if (won) mySc = snapNFL(mySc + 3); else oppSc = snapNFL(oppSc + 3) }
+    return { wk: i + 1, opponent, home, won, mySc, oppSc }
+  })
+
+  const playoffs = wins >= 10 || (wins === 9 && Math.random() < 0.50) || (wins === 8 && Math.random() < 0.06)
+  const hasBye = playoffs && (wins >= 14 ? true : wins >= 13 ? Math.random() < 0.60 : false)
+  const rounds = []
+  if (playoffs) {
+    const conf = team?.conf ?? 'AFC'
+    const confPool = (isAllTime ? ALLTIME_PLAYOFF_POOLS : PLAYOFF_POOLS)[conf].filter(n => n !== team?.name)
+    const sbPool = (isAllTime ? ALLTIME_SB_POOLS : SB_POOLS)[conf].filter(n => n !== team?.name)
+    const used = new Set()
+    const pick = pool => {
+      const left = pool.filter(n => !used.has(n))
+      const n = (left.length ? left : pool)[Math.floor(Math.random() * (left.length || pool.length))]
+      used.add(n)
+      return n
+    }
+    const names = hasBye ? ['Divisional Round', 'Conference Championship', 'Super Bowl'] : ['Wild Card', 'Divisional Round', 'Conference Championship', 'Super Bowl']
+    const seed = hasBye && wins >= 14 ? 1 : hasBye ? 2 : wins >= 12 ? 3 : wins >= 11 ? 4 : 5
+    for (const round of names) {
+      const opponent = pick(round === 'Super Bowl' ? sbPool : confPool)
+      const home = round !== 'Super Bowl' && (seed <= 2 || (round === 'Wild Card' && seed <= 4) || Math.random() < 0.1)
+      const homeShort = home ? team?.short : TEAM_BY_NAME[opponent]?.short
+      const weather = playoffWeather(homeShort, round === 'Super Bowl')
+      const opp = oppLookup[opponent] ?? { off: 7, def: 7 }
+      const p = clamp(0.12, 0.88, 0.5 + ((team.off + team.def) - (opp.off + opp.def)) * 0.045 + (home ? 0.03 : 0))
+      const won = Math.random() < p
+      const overtime = Math.random() < (1 - 2 * Math.abs(p - 0.5)) * 0.2
+      let mySc, oppSc
+      if (overtime) {
+        const tied = snapNFL(Math.max(10, scoreOf(team.off, opp.def)))
+        const ot = Math.random() < 0.27 ? 7 : 3
+        mySc = won ? tied + ot : tied
+        oppSc = won ? tied : tied + ot
+      } else {
+        const a = Math.max(7, scoreOf(team.off, opp.def)), b = Math.max(7, scoreOf(opp.off, team.def))
+        const margin = Math.ceil(Math.random() * 7)
+        mySc = snapNFL(won ? Math.max(a, b + margin) : Math.min(a, b - margin))
+        oppSc = snapNFL(won ? b : Math.max(b, a + margin))
+        if (mySc === oppSc) { if (won) mySc = snapNFL(mySc + 3); else oppSc = snapNFL(oppSc + 3) }
+      }
+      rounds.push({ round, opponent, home, weather, won, mySc, oppSc, overtime })
+      if (!won) break
+    }
+  }
+  const champion = rounds.length > 0 && rounds[rounds.length - 1].round === 'Super Bowl' && rounds[rounds.length - 1].won
+  return { schedule, games, wins, losses, playoffs, hasBye, rounds, champion }
+}
+
 // ── MVP ───────────────────────────────────────────────────────────────────────
 
 const CLASSIC_MVP_POOL = [
@@ -336,44 +410,51 @@ const ALLTIME_MVP_POOL = [
 ]
 
 export function calcMVPResult(result, isAllTime = false, teamShort = null) {
-  const { wins = 0, seasonTDs = 0, seasonRushTDs = 0, seasonPassYds = 0, seasonRushYds = 0, ovr = 70, playoffs = false } = result
+  const { wins = 0, seasonTDs = 0, seasonRushTDs = 0, seasonPassYds = 0, seasonRushYds = 0, seasonINTs = 0, ovr = 70, playoffs = false } = result
   const totalTDs = seasonTDs + seasonRushTDs
   const totalYds = seasonPassYds + seasonRushYds
+  const ints = seasonINTs
 
+  // What MVP seasons actually look like: 40+ touchdowns, single-digit picks,
+  // a top seed. 34 TD / 14 INT on a wild-card team isn't one.
   let p = 0
 
-  // TDs — most important factor
-  if (totalTDs >= 50)      p += 0.52
-  else if (totalTDs >= 45) p += 0.44
-  else if (totalTDs >= 40) p += 0.35
-  else if (totalTDs >= 35) p += 0.25
-  else if (totalTDs >= 30) p += 0.13
-  // <30 TDs contributes nothing — essentially disqualifying
+  // Touchdowns: the headline (under 35 is almost never enough)
+  if (totalTDs >= 50)      p += 0.50
+  else if (totalTDs >= 45) p += 0.38
+  else if (totalTDs >= 40) p += 0.25
+  else if (totalTDs >= 35) p += 0.10
 
-  // Yards — second most important
-  if (totalYds >= 5500)      p += 0.32
-  else if (totalYds >= 5000) p += 0.26
-  else if (totalYds >= 4500) p += 0.20
-  else if (totalYds >= 4000) p += 0.13
-  else if (totalYds >= 3500) p += 0.05
+  // Yards
+  if (totalYds >= 5500)      p += 0.22
+  else if (totalYds >= 5000) p += 0.15
+  else if (totalYds >= 4500) p += 0.08
+
+  // Interceptions: voters don't forgive them
+  if (ints <= 6)       p += 0.05
+  else if (ints >= 12) p -= 0.18
+  else if (ints >= 10) p -= 0.08
 
   // OVR
-  if (ovr >= 95)      p += 0.08
-  else if (ovr >= 90) p += 0.05
-  else if (ovr >= 85) p += 0.02
+  if (ovr >= 95)      p += 0.05
+  else if (ovr >= 90) p += 0.03
 
-  // Wins — tiebreaker only
-  if (wins >= 16)      p += 0.08
-  else if (wins >= 14) p += 0.05
+  // Wins: MVPs come from the top seeds
+  if (wins >= 15)      p += 0.12
+  else if (wins >= 14) p += 0.08
   else if (wins >= 12) p += 0.03
-  else if (wins >= 10) p += 0.01
+  else if (wins === 11) p -= 0.05
 
   // MVP is voted on before the playoffs: a berth counts, playoff and Super Bowl results don't
   if (playoffs) p += 0.02
 
-  // Hard cap: under 30 combined TDs, essentially never wins
-  if (totalTDs < 30) p = Math.min(p, 0.03)
-  if (wins < 10) p = 0
+  // Hard limits
+  if (totalTDs < 35) p = Math.min(p, 0.02)
+  if (ints >= 14) p = Math.min(p, 0.03)
+  if (wins < 11) p = 0
+  // a season nowhere near the award's level never wins it (it used to keep a 2% chance)
+  if (totalTDs < 25) p = 0
+  p = Math.max(0, p)
 
   if (isAllTime) p *= 0.80
 
@@ -410,7 +491,7 @@ export function calcMVPResult(result, isAllTime = false, teamShort = null) {
 
 // ── Core simulation ───────────────────────────────────────────────────────────
 
-export function runSimulation(build, types = TYPES, team = null, isAllTime = false) {
+export function runSimulation(build, types = TYPES, team = null, isAllTime = false, script = null) {
   const oppLookup = isAllTime ? ALLTIME_BY_NAME : TEAM_BY_NAME
   const ovr = calcOVR(build, types)
 
@@ -507,7 +588,7 @@ export function runSimulation(build, types = TYPES, team = null, isAllTime = fal
   let seasonRushYds = 0, seasonRushTDs = 0, seasonSacks = 0
   let seasonAttempts = 0, seasonCompletions = 0
 
-  const schedule = buildSchedule(team)
+  const schedule = script ? script.schedule : buildSchedule(team)
   const games = schedule.map(({ opponent, home }, i) => {
     // Per-game variance (randN is roughly ±1.5 range, centered)
     const v = () => randN()
@@ -548,7 +629,7 @@ export function runSimulation(build, types = TYPES, team = null, isAllTime = fal
     const perfBonus  = (gameTDs >= 3 ? 0.06 : gameTDs >= 2 ? 0.02 : 0)
                      - (gameINTs >= 2 ? 0.07 : gameINTs === 1 ? 0.02 : 0)
     const gameWinP   = Math.min(0.90, Math.max(0.08, winP + perfBonus + (home ? 0.05 : 0) + v() * 0.05 - oppPenalty - (isAllTime ? AT_DIFFICULTY.qb.reg : 0)))
-    const won        = Math.random() < gameWinP
+    const won        = script ? script.games[i].won : Math.random() < gameWinP
     won ? wins++ : losses++
 
     // Score: TDs * 7 (PAT assumed) + estimated field goals + team factors
@@ -565,6 +646,7 @@ export function runSimulation(build, types = TYPES, team = null, isAllTime = fal
     mySc  = snapNFL(mySc)
     oppSc = snapNFL(oppSc)
     if (mySc === oppSc) { if (won) mySc = snapNFL(mySc + 3); else oppSc = snapNFL(oppSc + 3) }
+    if (script) { mySc = script.games[i].mySc; oppSc = script.games[i].oppSc }
 
     seasonPassYds     += gamePassYds
     seasonTDs         += gameTDs
@@ -575,7 +657,7 @@ export function runSimulation(build, types = TYPES, team = null, isAllTime = fal
     seasonAttempts    += gameAtts
     seasonCompletions += gameComps
 
-    return { wk: i + 1, opponent, home, mySc, oppSc, won, passYds: gamePassYds, tds: gameTDs, ints: gameINTs, rushYds: gameRushYds, sacks: gameSacks, rating: Math.round(rating) }
+    return { wk: i + 1, opponent, home, mySc, oppSc, won, passYds: gamePassYds, tds: gameTDs, ints: gameINTs, rushYds: gameRushYds, rushTDs: gameRushTDs, sacks: gameSacks, rating: Math.round(rating) }
   })
 
   seasonINTs = Math.max(3, seasonINTs)
@@ -587,7 +669,7 @@ export function runSimulation(build, types = TYPES, team = null, isAllTime = fal
   })[0]
 
   // ── Playoffs ─────────────────────────────────────────────────────────────
-  const playoffs      = wins >= 10 || (wins === 9 && Math.random() < 0.50) || (wins === 8 && Math.random() < 0.06)
+  const playoffs      = script ? script.playoffs : wins >= 10 || (wins === 9 && Math.random() < 0.50) || (wins === 8 && Math.random() < 0.06)
   const playoffRounds = []
   let sbResult = null
   let hasBye   = false
@@ -609,7 +691,7 @@ export function runSimulation(build, types = TYPES, team = null, isAllTime = fal
       usedOpponents.add(chosen)
       return chosen
     }
-    hasBye = wins >= 14 ? true : wins >= 13 ? Math.random() < 0.60 : false
+    hasBye = script ? script.hasBye : wins >= 14 ? true : wins >= 13 ? Math.random() < 0.60 : false
     const playoffBracket = hasBye
       ? [
           { round: 'Divisional Round',        opponents: confPool },
@@ -651,18 +733,19 @@ export function runSimulation(build, types = TYPES, team = null, isAllTime = fal
 
     let pwins = 0, eliminated = null
     for (const { round, opponents } of playoffBracket) {
-      const opponent   = pick(opponents)
-      const pgHome     = Math.random() < pgHomeProb(round)
+      const sr = script?.rounds[playoffRounds.length]   // Squad Builder: the round as the squad played it
+      const opponent   = sr ? sr.opponent : pick(opponents)
+      const pgHome     = sr ? sr.home : Math.random() < pgHomeProb(round)
       const homeShort  = pgHome ? team?.short : TEAM_BY_NAME[opponent]?.short
-      const weather    = playoffWeather(homeShort, round === 'Super Bowl')
+      const weather    = sr ? sr.weather : playoffWeather(homeShort, round === 'Super Bowl')
       const oppTeam    = oppLookup[opponent]
       const oppTeamAvg = ((oppTeam?.off ?? 5.5) + (oppTeam?.def ?? 5.5)) / 2
       const teamN        = (playerTeamAvg - oppTeamAvg) / 9
       const pgOvrPenalty = ovr !== null && ovr < 85
         ? (85 - ovr) * 0.011
         : 0
-      const pgWinP     = Math.min(0.90, Math.max(0.10, 0.30 + ovrN * 0.61 + teamN * 0.41 - pgOvrPenalty + (pgHome ? 0.03 : 0) - (isAllTime ? AT_DIFFICULTY.qb.po : 0)))
-      const won        = Math.random() < pgWinP
+      const pgWinP     = Math.min(0.90, Math.max(0.10, 0.30 + ovrN * 0.61 + teamN * 0.41 - pgOvrPenalty + recordEdge(wins) + (pgHome ? 0.03 : 0) - (isAllTime ? AT_DIFFICULTY.qb.po : 0)))
+      const won        = sr ? sr.won : Math.random() < pgWinP
 
       // Playoff game stats use similar logic but with higher stakes variance
       const pgAtts  = Math.round(35 + randN() * 5)
@@ -699,7 +782,7 @@ export function runSimulation(build, types = TYPES, team = null, isAllTime = fal
         finalOpp = snapNFL(won ? opp : Math.max(opp, base + margin))
       }
 
-      playoffRounds.push({ round, opponent, home: pgHome, weather, mySc: finalMy, oppSc: finalOpp, won, overtime: pgOT, passYds: pgYds, tds: pgTDs, ints: pgINTs, rating: pgRtg })
+      playoffRounds.push({ round, opponent, home: pgHome, weather, mySc: sr ? sr.mySc : finalMy, oppSc: sr ? sr.oppSc : finalOpp, won, overtime: sr ? sr.overtime : pgOT, passYds: pgYds, tds: pgTDs, ints: pgINTs, rating: pgRtg })
       if (won) { pwins++ } else { eliminated = round; break }
     }
 
@@ -956,6 +1039,8 @@ export function calcOPOYResult(result, isAllTime = false, teamShort = null) {
   if (seasonRushYds < 1500 && totalYds < 1700) p = Math.min(p, 0.01)
   if (totalTDs < 12)        p = Math.min(p, 0.04)
   if (wins < 7)             p = 0
+  // a season nowhere near the award's level never wins it (it used to keep a 1-4% chance)
+  if (totalYds < 1300 || totalTDs < 8) p = 0
 
   // Guaranteed thresholds — these seasons are undeniable
   if (totalYds >= 2100 && wins >= 10) {
@@ -1005,7 +1090,7 @@ export function calcOPOYResult(result, isAllTime = false, teamShort = null) {
   return { userWins, winner, unanimous, winnerStats }
 }
 
-export function runRBSimulation(build, types = RB_TYPES, team = null, isAllTime = false) {
+export function runRBSimulation(build, types = RB_TYPES, team = null, isAllTime = false, script = null) {
   const oppLookup = isAllTime ? ALLTIME_BY_NAME : TEAM_BY_NAME
   const ovr = calcOVRRB(build, types)
 
@@ -1083,7 +1168,7 @@ export function runRBSimulation(build, types = RB_TYPES, team = null, isAllTime 
   let seasonRecYds  = 0, seasonRecTDs  = 0, seasonRecs    = 0
   let seasonLong    = 0, hundredYardGames = 0
 
-  const schedule = buildSchedule(team)
+  const schedule = script ? script.schedule : buildSchedule(team)
   const games = schedule.map(({ opponent, home }, i) => {
     const v = () => randN()
 
@@ -1101,7 +1186,7 @@ export function runRBSimulation(build, types = RB_TYPES, team = null, isAllTime 
     const wxFumble   = badWeather ? 0.022 : 0
 
     // Limited game: injury, illness, load management, coach's decision (~7%)
-    const isLimited = Math.random() < 0.07
+    const isLimited = Math.random() < 0.05
 
     // Opponent defense directly suppresses touches and efficiency (60% weight in classic)
     const statScale       = isAllTime ? 1.0 : 0.65
@@ -1110,7 +1195,9 @@ export function runRBSimulation(build, types = RB_TYPES, team = null, isAllTime 
 
     // Game mood — four tiers; legendary tier gated by elite OVR (88+)
     const gameMood       = Math.random()
-    const dudThreshold   = 0.16 + oppDefN * 0.12   // elite D (~0.8): ~26% duds; weak D (~-0.8): ~6%
+    // a star gets shut down less: the dud odds shrink from 80 OVR up (half at 94, 40% at 97+)
+    const dudScale       = ovr != null && ovr > 80 ? Math.max(0.4, 1 - (ovr - 80) * 0.036) : 1
+    const dudThreshold   = (0.16 + oppDefN * 0.12) * dudScale   // elite D (~0.8): ~26% duds; weak D (~-0.8): ~6% (before the star scale)
     const breakThreshold = 0.78 + oppDefN * 0.08   // elite D: breakout starts at 86%; weak D: 70%
     const isDud          = !isLimited && gameMood < dudThreshold
     const isBreakout     = !isLimited && gameMood > breakThreshold
@@ -1120,11 +1207,13 @@ export function runRBSimulation(build, types = RB_TYPES, team = null, isAllTime 
       ovr >= 88 ? Math.random() < 0.025 : false
     )
 
-    const carryMult = isDud       ? (0.42 + Math.random() * 0.22)
+    // and when a star does have an off day, it's less of one
+    const dudFloor  = ovr != null && ovr >= 88 ? 0.12 : 0
+    const carryMult = isDud       ? (0.42 + dudFloor + Math.random() * 0.22)
                     : isLegendary ? (1.22 + Math.random() * 0.32)   // 1.22–1.54×
                     : isBreakout  ? (1.08 + Math.random() * 0.22)   // 1.08–1.30×
                     : 1.0
-    const ypcMult   = isDud       ? (0.46 + Math.random() * 0.26)
+    const ypcMult   = isDud       ? (0.46 + dudFloor + Math.random() * 0.26)
                     : isLegendary ? (1.42 + Math.random() * 0.50)   // 1.42–1.92× — record pace
                     : isBreakout  ? (1.10 + Math.random() * 0.28)   // 1.10–1.38×
                     : 1.0
@@ -1174,7 +1263,7 @@ export function runRBSimulation(build, types = RB_TYPES, team = null, isAllTime 
     const gameWinP = Math.min(0.92, Math.max(0.08,
       winP + perfBonus + (home ? 0.04 : 0) + v() * 0.10 - oppPenalty - (isAllTime ? AT_DIFFICULTY.rb.reg : 0)
     ))
-    const won = Math.random() < gameWinP
+    const won = script ? script.games[i].won : Math.random() < gameWinP
     won ? wins++ : losses++
 
     // Score generation: compute before scriptAdj so margin is available for game script logic
@@ -1191,6 +1280,7 @@ export function runRBSimulation(build, types = RB_TYPES, team = null, isAllTime 
     mySc  = snapNFL(mySc)
     oppSc = snapNFL(oppSc)
     if (mySc === oppSc) { if (won) mySc = snapNFL(mySc + 3); else oppSc = snapNFL(oppSc + 3) }
+    if (script) { mySc = script.games[i].mySc; oppSc = script.games[i].oppSc }
 
     // Game script: blowout wins → more clock-kill carries; blowout losses → abandon the run
     const margin = mySc - oppSc
@@ -1233,7 +1323,7 @@ export function runRBSimulation(build, types = RB_TYPES, team = null, isAllTime 
   })[0]
 
   // ── Playoffs ──────────────────────────────────────────────────────────────
-  const playoffs = wins >= 10
+  const playoffs = script ? script.playoffs : wins >= 10
     || (wins === 9 && Math.random() < 0.50)
     || (wins === 8 && Math.random() < 0.06)
   const playoffRounds = []
@@ -1254,7 +1344,7 @@ export function runRBSimulation(build, types = RB_TYPES, team = null, isAllTime 
       return chosen
     }
 
-    hasBye = wins >= 14 ? true : wins >= 13 ? Math.random() < 0.60 : false
+    hasBye = script ? script.hasBye : wins >= 14 ? true : wins >= 13 ? Math.random() < 0.60 : false
     const bracket = hasBye
       ? [
           { round: 'Divisional Round',        pool: confPool },
@@ -1281,10 +1371,11 @@ export function runRBSimulation(build, types = RB_TYPES, team = null, isAllTime 
 
     let pwins = 0, eliminated = null
     for (const { round, pool } of bracket) {
-      const opponent  = pick(pool)
-      const pgHome    = Math.random() < pgHomeProb(round)
+      const sr = script?.rounds[playoffRounds.length]   // Squad Builder: the round as the squad played it
+      const opponent  = sr ? sr.opponent : pick(pool)
+      const pgHome    = sr ? sr.home : Math.random() < pgHomeProb(round)
       const homeShort = pgHome ? team?.short : TEAM_BY_NAME[opponent]?.short
-      const weather   = playoffWeather(homeShort, round === 'Super Bowl')
+      const weather   = sr ? sr.weather : playoffWeather(homeShort, round === 'Super Bowl')
 
       const oppTeam    = oppLookup[opponent]
       const oppTeamAvg = ((oppTeam?.off ?? 5.5) + (oppTeam?.def ?? 5.5)) / 2
@@ -1293,11 +1384,11 @@ export function runRBSimulation(build, types = RB_TYPES, team = null, isAllTime 
 
       // RBs: much flatter playoff win curve than QBs (team quality dominates)
       const pgWinP = Math.min(0.78, Math.max(0.15,
-        0.42 + ovrN * 0.22 + teamN * 0.48 - pgOvrPenalty
+        0.42 + ovrN * 0.22 + teamN * 0.48 - pgOvrPenalty + recordEdge(wins)
         + (pgHome ? 0.04 : 0)
         - (isAllTime ? AT_DIFFICULTY.rb.po : 0)
       ))
-      const won = Math.random() < pgWinP
+      const won = sr ? sr.won : Math.random() < pgWinP
 
       // Playoff game stats (slightly elevated — must-win effort)
       const pgCarries  = Math.round(14 + szN * 4 + randN() * 5)
@@ -1336,7 +1427,7 @@ export function runRBSimulation(build, types = RB_TYPES, team = null, isAllTime 
       }
 
       playoffRounds.push({
-        round, opponent, home: pgHome, weather, mySc: finalMy, oppSc: finalOpp, won, overtime: pgOT,
+        round, opponent, home: pgHome, weather, mySc: sr ? sr.mySc : finalMy, oppSc: sr ? sr.oppSc : finalOpp, won, overtime: sr ? sr.overtime : pgOT,
         rushYds: pgRushYds, rushTDs: pgRushTDs, carries: pgCarries,
         recYds: pgRecYds, recTDs: pgRecTDs, recs: pgRecs,
       })
@@ -1570,6 +1661,8 @@ export function calcWROPOYResult(result, isAllTime = false, teamShort = null) {
   if (seasonRecYds < 1100)       p = Math.min(p, 0.02)
   if (seasonRecTDs < 7)          p = Math.min(p, 0.05)
   if (wins < 7)                  p = 0
+  // a season nowhere near the award's level never wins it (560 yards and 5 TDs used to keep a 2% chance)
+  if (seasonRecYds < 1000 || seasonRecTDs < 6) p = 0
 
   // Guaranteed thresholds
   if (seasonRecYds >= 1900 && seasonRecTDs >= 12 && wins >= 10) {
@@ -1612,7 +1705,7 @@ export function calcWROPOYResult(result, isAllTime = false, teamShort = null) {
   return { userWins, winner, unanimous, winnerStats }
 }
 
-export function runWRSimulation(build, types = WR_TYPES, team = null, isAllTime = false) {
+export function runWRSimulation(build, types = WR_TYPES, team = null, isAllTime = false, script = null) {
   const oppLookup = isAllTime ? ALLTIME_BY_NAME : TEAM_BY_NAME
   const ovr = calcOVRWR(build, types)
 
@@ -1703,7 +1796,7 @@ export function runWRSimulation(build, types = WR_TYPES, team = null, isAllTime 
   let seasonRecs = 0, seasonRecYds = 0, seasonRecTDs = 0, seasonTargets = 0
   let seasonLong = 0, hundredYardGames = 0
 
-  const schedule = buildSchedule(team)
+  const schedule = script ? script.schedule : buildSchedule(team)
   const games = schedule.map(({ opponent, home }, i) => {
     const v = () => randN()
 
@@ -1790,7 +1883,7 @@ export function runWRSimulation(build, types = WR_TYPES, team = null, isAllTime 
     const perfBonus = (gameRecYds >= 130 ? 0.04 : gameRecYds >= 90 ? 0.02 : 0)
                     + (gameRecTDs >= 2 ? 0.03 : 0)
     const gameWinP  = Math.min(0.90, Math.max(0.08, winP + perfBonus + (home ? 0.04 : 0) + v() * 0.09 - oppPenalty - (isAllTime ? AT_DIFFICULTY.wr.reg : 0)))
-    const won       = Math.random() < gameWinP
+    const won       = script ? script.games[i].won : Math.random() < gameWinP
     won ? wins++ : losses++
 
     const totalTDs = Math.max(0, Math.round(1.4 + teamOffN * 1.1 + gameRecTDs + v() * 0.9))
@@ -1804,6 +1897,7 @@ export function runWRSimulation(build, types = WR_TYPES, team = null, isAllTime 
     mySc  = snapNFL(mySc)
     oppSc = snapNFL(oppSc)
     if (mySc === oppSc) { if (won) mySc = snapNFL(mySc + 3); else oppSc = snapNFL(oppSc + 3) }
+    if (script) { mySc = script.games[i].mySc; oppSc = script.games[i].oppSc }
 
     seasonRecs    += gameRecs
     seasonRecYds  += gameRecYds
@@ -1829,7 +1923,7 @@ export function runWRSimulation(build, types = WR_TYPES, team = null, isAllTime 
   })[0]
 
   // ── Playoffs ──────────────────────────────────────────────────────────────
-  const playoffs = wins >= 10
+  const playoffs = script ? script.playoffs : wins >= 10
     || (wins === 9 && Math.random() < 0.50)
     || (wins === 8 && Math.random() < 0.06)
   const playoffRounds = []
@@ -1850,7 +1944,7 @@ export function runWRSimulation(build, types = WR_TYPES, team = null, isAllTime 
       return chosen
     }
 
-    hasBye = wins >= 14 ? true : wins >= 13 ? Math.random() < 0.60 : false
+    hasBye = script ? script.hasBye : wins >= 14 ? true : wins >= 13 ? Math.random() < 0.60 : false
     const bracket = hasBye
       ? [
           { round: 'Divisional Round',        pool: confPool },
@@ -1877,10 +1971,11 @@ export function runWRSimulation(build, types = WR_TYPES, team = null, isAllTime 
 
     let pwins = 0, eliminated = null
     for (const { round, pool } of bracket) {
-      const opponent  = pick(pool)
-      const pgHome    = Math.random() < pgHomeProb(round)
+      const sr = script?.rounds[playoffRounds.length]   // Squad Builder: the round as the squad played it
+      const opponent  = sr ? sr.opponent : pick(pool)
+      const pgHome    = sr ? sr.home : Math.random() < pgHomeProb(round)
       const homeShort = pgHome ? team?.short : TEAM_BY_NAME[opponent]?.short
-      const weather   = playoffWeather(homeShort, round === 'Super Bowl')
+      const weather   = sr ? sr.weather : playoffWeather(homeShort, round === 'Super Bowl')
 
       const oppTeam    = oppLookup[opponent]
       const oppTeamAvg = ((oppTeam?.off ?? 5.5) + (oppTeam?.def ?? 5.5)) / 2
@@ -1888,11 +1983,11 @@ export function runWRSimulation(build, types = WR_TYPES, team = null, isAllTime 
       const pgOvrPenalty = ovr !== null && ovr < 82 ? (82 - ovr) * 0.007 : 0
 
       const pgWinP = Math.min(0.78, Math.max(0.15,
-        0.42 + ovrN * 0.20 + teamN * 0.46 - pgOvrPenalty
+        0.42 + ovrN * 0.20 + teamN * 0.46 - pgOvrPenalty + recordEdge(wins)
         + (pgHome ? 0.04 : 0)
         - (isAllTime ? AT_DIFFICULTY.wr.po : 0)
       ))
-      const won = Math.random() < pgWinP
+      const won = sr ? sr.won : Math.random() < pgWinP
 
       const wMult     = weather === 'snow' ? 0.88 : weather === 'rain' ? 0.92 : 1.0
       const pgTargets = Math.round(5 + relN * 3 + rteN * 2 + randN() * 2)
@@ -1924,7 +2019,7 @@ export function runWRSimulation(build, types = WR_TYPES, team = null, isAllTime 
       }
 
       playoffRounds.push({
-        round, opponent, home: pgHome, weather, mySc: finalMy, oppSc: finalOpp, won, overtime: pgOT,
+        round, opponent, home: pgHome, weather, mySc: sr ? sr.mySc : finalMy, oppSc: sr ? sr.oppSc : finalOpp, won, overtime: sr ? sr.overtime : pgOT,
         rec: pgRecs, recYds: pgRecYds, recTDs: pgRecTDs, targets: pgTargets,
       })
       if (won) pwins++
@@ -2132,6 +2227,8 @@ export function calcTEOPOYResult(result, isAllTime = false, teamShort = null) {
   if (seasonRecYds < 1100)       p = Math.min(p, 0.02)
   if (seasonRecTDs < 7)          p = Math.min(p, 0.05)
   if (wins < 7)                  p = 0
+  // a season nowhere near the award's level never wins it (560 yards and 5 TDs used to keep a 2% chance)
+  if (seasonRecYds < 1000 || seasonRecTDs < 6) p = 0
 
   // Guaranteed thresholds — same as WR
   if (seasonRecYds >= 1900 && seasonRecTDs >= 12 && wins >= 10) {
@@ -2174,7 +2271,7 @@ export function calcTEOPOYResult(result, isAllTime = false, teamShort = null) {
   return { userWins, winner, unanimous, winnerStats }
 }
 
-export function runTESimulation(build, types = TE_TYPES, team = null, isAllTime = false) {
+export function runTESimulation(build, types = TE_TYPES, team = null, isAllTime = false, script = null) {
   const oppLookup = isAllTime ? ALLTIME_BY_NAME : TEAM_BY_NAME
   const ovr = calcOVRTE(build, types)
 
@@ -2255,7 +2352,7 @@ export function runTESimulation(build, types = TE_TYPES, team = null, isAllTime 
   let seasonRecs = 0, seasonRecYds = 0, seasonRecTDs = 0, seasonTargets = 0
   let seasonLong = 0, hundredYardGames = 0
 
-  const schedule = buildSchedule(team)
+  const schedule = script ? script.schedule : buildSchedule(team)
   const games = schedule.map(({ opponent, home }, i) => {
     const v = () => randN()
 
@@ -2334,7 +2431,7 @@ export function runTESimulation(build, types = TE_TYPES, team = null, isAllTime 
     const perfBonus = (gameRecYds >= 100 ? 0.04 : gameRecYds >= 70 ? 0.02 : 0)
                     + (gameRecTDs >= 2 ? 0.03 : 0)
     const gameWinP  = Math.min(0.90, Math.max(0.08, winP + perfBonus + (home ? 0.04 : 0) + v() * 0.09 - oppPenalty - (isAllTime ? AT_DIFFICULTY.te.reg : 0)))
-    const won       = Math.random() < gameWinP
+    const won       = script ? script.games[i].won : Math.random() < gameWinP
     won ? wins++ : losses++
 
     const totalTDs = Math.max(0, Math.round(1.4 + teamOffN * 1.1 + gameRecTDs + v() * 0.9))
@@ -2348,6 +2445,7 @@ export function runTESimulation(build, types = TE_TYPES, team = null, isAllTime 
     mySc  = snapNFL(mySc)
     oppSc = snapNFL(oppSc)
     if (mySc === oppSc) { if (won) mySc = snapNFL(mySc + 3); else oppSc = snapNFL(oppSc + 3) }
+    if (script) { mySc = script.games[i].mySc; oppSc = script.games[i].oppSc }
 
     seasonRecs    += gameRecs
     seasonRecYds  += gameRecYds
@@ -2373,7 +2471,7 @@ export function runTESimulation(build, types = TE_TYPES, team = null, isAllTime 
   })[0]
 
   // ── Playoffs ──────────────────────────────────────────────────────────────
-  const playoffs = wins >= 10
+  const playoffs = script ? script.playoffs : wins >= 10
     || (wins === 9 && Math.random() < 0.50)
     || (wins === 8 && Math.random() < 0.06)
   const playoffRounds = []
@@ -2394,7 +2492,7 @@ export function runTESimulation(build, types = TE_TYPES, team = null, isAllTime 
       return chosen
     }
 
-    hasBye = wins >= 14 ? true : wins >= 13 ? Math.random() < 0.60 : false
+    hasBye = script ? script.hasBye : wins >= 14 ? true : wins >= 13 ? Math.random() < 0.60 : false
     const bracket = hasBye
       ? [
           { round: 'Divisional Round',        pool: confPool },
@@ -2421,10 +2519,11 @@ export function runTESimulation(build, types = TE_TYPES, team = null, isAllTime 
 
     let pwins = 0, eliminated = null
     for (const { round, pool } of bracket) {
-      const opponent  = pick(pool)
-      const pgHome    = Math.random() < pgHomeProb(round)
+      const sr = script?.rounds[playoffRounds.length]   // Squad Builder: the round as the squad played it
+      const opponent  = sr ? sr.opponent : pick(pool)
+      const pgHome    = sr ? sr.home : Math.random() < pgHomeProb(round)
       const homeShort = pgHome ? team?.short : TEAM_BY_NAME[opponent]?.short
-      const weather   = playoffWeather(homeShort, round === 'Super Bowl')
+      const weather   = sr ? sr.weather : playoffWeather(homeShort, round === 'Super Bowl')
 
       const oppTeam    = oppLookup[opponent]
       const oppTeamAvg = ((oppTeam?.off ?? 5.5) + (oppTeam?.def ?? 5.5)) / 2
@@ -2432,11 +2531,11 @@ export function runTESimulation(build, types = TE_TYPES, team = null, isAllTime 
       const pgOvrPenalty = ovr !== null && ovr < 82 ? (82 - ovr) * 0.007 : 0
 
       const pgWinP = Math.min(0.78, Math.max(0.15,
-        0.42 + ovrN * 0.20 + teamN * 0.46 - pgOvrPenalty
+        0.42 + ovrN * 0.20 + teamN * 0.46 - pgOvrPenalty + recordEdge(wins)
         + (pgHome ? 0.04 : 0)
         - (isAllTime ? AT_DIFFICULTY.te.po : 0)
       ))
-      const won = Math.random() < pgWinP
+      const won = sr ? sr.won : Math.random() < pgWinP
 
       const wMult     = weather === 'snow' ? 0.88 : weather === 'rain' ? 0.92 : 1.0
       const pgTargets = Math.round(4 + strN * 2.5 + rteN * 2 + randN() * 2)
@@ -2468,7 +2567,7 @@ export function runTESimulation(build, types = TE_TYPES, team = null, isAllTime 
       }
 
       playoffRounds.push({
-        round, opponent, home: pgHome, weather, mySc: finalMy, oppSc: finalOpp, won, overtime: pgOT,
+        round, opponent, home: pgHome, weather, mySc: sr ? sr.mySc : finalMy, oppSc: sr ? sr.oppSc : finalOpp, won, overtime: sr ? sr.overtime : pgOT,
         rec: pgRecs, recYds: pgRecYds, recTDs: pgRecTDs, targets: pgTargets,
       })
       if (won) pwins++
@@ -2814,7 +2913,7 @@ function poissonSample(lambda) {
   return k - 1
 }
 
-export function runDBSimulation(build, team = null, isAllTime = false) {
+export function runDBSimulation(build, team = null, isAllTime = false, script = null) {
   const oppLookup = isAllTime ? ALLTIME_BY_NAME : TEAM_BY_NAME
   const ovr = calcOVRDB(build) ?? 60
 
@@ -2900,7 +2999,7 @@ export function runDBSimulation(build, team = null, isAllTime = false) {
   let wins = 0, losses = 0
   let seasonINTs = 0, seasonPBUs = 0, seasonTackles = 0, seasonTFL = 0, seasonPickSixes = 0, seasonFF = 0
 
-  const schedule = buildSchedule(team)
+  const schedule = script ? script.schedule : buildSchedule(team)
   const games = schedule.map(({ opponent, home }, i) => {
     const v = () => randN()
     const oppTeam = oppLookup[opponent]
@@ -2937,7 +3036,7 @@ export function runDBSimulation(build, team = null, isAllTime = false) {
     const winP = Math.min(0.88, Math.max(0.14,
       0.50 + teamOffN * 0.20 + teamDefBoost * 0.24 + (home ? 0.045 : -0.02) + perfBonus + v() * 0.09 - oppOffN * 0.10 - oppDefN * 0.04 - (isAllTime ? AT_DIFFICULTY.db.reg : 0)
     ))
-    const won = Math.random() < winP
+    const won = script ? script.games[i].won : Math.random() < winP
     won ? wins++ : losses++
 
     const teamTDs = Math.max(0, Math.round(1.5 + teamOffN * 1.1 + v() * 0.9))
@@ -2952,6 +3051,7 @@ export function runDBSimulation(build, team = null, isAllTime = false) {
     mySc  = snapNFL(mySc)
     oppSc = snapNFL(oppSc)
     if (mySc === oppSc) { if (won) mySc = snapNFL(mySc + 3); else oppSc = snapNFL(oppSc + 3) }
+    if (script) { mySc = script.games[i].mySc; oppSc = script.games[i].oppSc }
 
     return {
       wk: i + 1, opponent, home, mySc, oppSc, won,
@@ -2965,7 +3065,7 @@ export function runDBSimulation(build, team = null, isAllTime = false) {
   })[0]
 
   // ── Playoffs ──────────────────────────────────────────────────────────────
-  const playoffs = wins >= 10
+  const playoffs = script ? script.playoffs : wins >= 10
     || (wins === 9 && Math.random() < 0.50)
     || (wins === 8 && Math.random() < 0.06)
   const playoffRounds = []
@@ -2986,7 +3086,7 @@ export function runDBSimulation(build, team = null, isAllTime = false) {
       return chosen
     }
 
-    hasBye = wins >= 14 ? true : wins >= 13 ? Math.random() < 0.60 : false
+    hasBye = script ? script.hasBye : wins >= 14 ? true : wins >= 13 ? Math.random() < 0.60 : false
     const bracket = hasBye
       ? [
           { round: 'Divisional Round',        pool: confPool },
@@ -3013,10 +3113,11 @@ export function runDBSimulation(build, team = null, isAllTime = false) {
 
     let pwins = 0, eliminated = null
     for (const { round, pool } of bracket) {
-      const opponent  = pick(pool)
-      const pgHome    = Math.random() < pgHomeProb(round)
+      const sr = script?.rounds[playoffRounds.length]   // Squad Builder: the round as the squad played it
+      const opponent  = sr ? sr.opponent : pick(pool)
+      const pgHome    = sr ? sr.home : Math.random() < pgHomeProb(round)
       const homeShort = pgHome ? team?.short : TEAM_BY_NAME[opponent]?.short
-      const weather   = playoffWeather(homeShort, round === 'Super Bowl')
+      const weather   = sr ? sr.weather : playoffWeather(homeShort, round === 'Super Bowl')
 
       const oppTeam    = oppLookup[opponent]
       const oppTeamAvg = ((oppTeam?.off ?? 5.5) + (oppTeam?.def ?? 5.5)) / 2
@@ -3024,9 +3125,9 @@ export function runDBSimulation(build, team = null, isAllTime = false) {
       const pgOvrPenalty = ovr < 82 ? (82 - ovr) * 0.007 : 0
 
       const pgWinP = Math.min(0.78, Math.max(0.15,
-        0.42 + ovrN * 0.20 + teamN * 0.46 - pgOvrPenalty + (pgHome ? 0.04 : 0) - (isAllTime ? AT_DIFFICULTY.db.po : 0)
+        0.42 + ovrN * 0.20 + teamN * 0.46 - pgOvrPenalty + recordEdge(wins) + (pgHome ? 0.04 : 0) - (isAllTime ? AT_DIFFICULTY.db.po : 0)
       ))
-      const won = Math.random() < pgWinP
+      const won = sr ? sr.won : Math.random() < pgWinP
 
       const wMult = weather === 'snow' ? 0.90 : weather === 'rain' ? 0.94 : 1.0
       const pgInt = poissonSample(Math.max(0, intLambdaBase * 1.1 * wMult))
@@ -3063,7 +3164,7 @@ export function runDBSimulation(build, team = null, isAllTime = false) {
       seasonFF      += pgFF
 
       playoffRounds.push({
-        round, opponent, home: pgHome, weather, mySc: finalMy, oppSc: finalOpp, won, overtime: pgOT,
+        round, opponent, home: pgHome, weather, mySc: sr ? sr.mySc : finalMy, oppSc: sr ? sr.oppSc : finalOpp, won, overtime: sr ? sr.overtime : pgOT,
         ints: pgInt, pbus: pgPbu, tackles: pgTkl, ff: pgFF,
       })
       if (won) pwins++
@@ -3440,7 +3541,7 @@ export function runOLSimulation(build, team = null, isAllTime = false) {
       const pgOvrPenalty = ovr < 82 ? (82 - ovr) * 0.007 : 0
 
       const pgWinP = Math.min(0.78, Math.max(0.15,
-        0.42 + ovrN * 0.20 + teamN * 0.46 - pgOvrPenalty + (pgHome ? 0.04 : 0) - (isAllTime ? AT_DIFFICULTY.ol.po : 0)
+        0.42 + ovrN * 0.20 + teamN * 0.46 - pgOvrPenalty + recordEdge(wins) + (pgHome ? 0.04 : 0) - (isAllTime ? AT_DIFFICULTY.ol.po : 0)
       ))
       const won = Math.random() < pgWinP
 

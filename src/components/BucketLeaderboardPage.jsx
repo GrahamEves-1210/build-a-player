@@ -1,4 +1,5 @@
 ﻿import { useState, useEffect, useRef } from 'react'
+import { loadFriends, useFriendsOnly } from '../lib/friends'
 import { supabase } from '../lib/supabase'
 import { BUCKET_ATTR } from '../data/nba-attrs'
 import { GUARD_TYPES } from '../data/nba-guards'
@@ -7,6 +8,11 @@ import { NBA_TEAMS } from '../data/nba-teams'
 import { valToGrade, HEADSHOT_BASE } from '../utils/simulation'
 import NBA_HEADSHOTS from '../data/nba-headshots.json'
 import { rampAdd } from '../lib/ads'
+import { NameTag } from './app/NameTag'
+import { IS_APP as _LB_APP, APP_LOOK as _LB_LOOK } from '../lib/platform'
+import { IconTrophy } from './app/icons'
+// App look: every name on the board wears that player's look (looked up by account id)
+const LbName = ({ name, uid }) => ((_LB_APP || _LB_LOOK) ? <NameTag name={name} uid={uid} className="lb-ntag" /> : <>{name}</>)
 
 const TEAM_COLOR = Object.fromEntries(NBA_TEAMS.map(t => [t.short, t.color]))
 const SLOTS = 20
@@ -131,7 +137,7 @@ function BucketBuildExpand({ build, position, row }) {
       <div className="lb-bucket-expand-meta">
         {archetype && <span className="lb-bucket-archetype">{archetype}</span>}
         <span className="lb-bucket-team" style={{ color: teamColor }}>{team_short}</span>
-        {champion && <span className="lb-bucket-champ">🏆</span>}
+        {champion && <span className="lb-bucket-champ"><IconTrophy size="1em" className="ico-inline ico-gold" /></span>}
       </div>
       <div className="lb-bucket-stat-line">
         <span>{ppg} PPG</span>
@@ -174,6 +180,15 @@ function BucketBuildExpand({ build, position, row }) {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function BucketLeaderboardPage({ onBack, currentUser, adsDisabled = false }) {
+  // Everyone or Friends: the same boards, only friends and the player (app look)
+  const [friendsOnly, setFriendsOnly] = useFriendsOnly()
+  const [friendIds, setFriendIds] = useState(null)
+  useEffect(() => {
+    if (!friendsOnly || friendIds || !currentUser?.id) return
+    loadFriends(currentUser.id).then(l => setFriendIds(new Set([currentUser.id, ...l.friends.map(f => f.id)])), () => setFriendIds(new Set([currentUser.id])))
+  }, [friendsOnly, friendIds, currentUser?.id])
+  // Friends: only friends and the player; nothing until the friends list is in (not everyone, for a moment)
+  const fo = list => (!friendsOnly ? list : friendIds ? (list ?? []).filter(r => friendIds.has(r?.uid ?? r?.user_id)) : [])
   const [view,      setView]      = useState('profiles')
   const [lbMode,    setLbMode]    = useState('classic')
   const [posFilter, setPosFilter] = useState('guard')
@@ -240,7 +255,6 @@ export default function BucketLeaderboardPage({ onBack, currentUser, adsDisabled
         count,
         avgOvr:    count ? Math.round(u.total_ovr / count) : 0,
         avgPpg,
-        playoffs:  0,
         totalWins: u.wins,
         totalPts:  Math.round(avgPpg * count * 82),
         winPct:    u.wins + u.losses > 0 ? Math.round((u.wins / (u.wins + u.losses)) * 100) : 0,
@@ -343,9 +357,10 @@ export default function BucketLeaderboardPage({ onBack, currentUser, adsDisabled
   }
 
   const meId    = currentUser?.id
-  const display = isGoatView
-    ? rows
-    : Array.from({ length: SLOTS }, (_, i) => rows[i] ?? null)
+  const shown   = fo(rows)
+  const display = isGoatView || friendsOnly   // Friends: just the friends, no empty places
+    ? shown
+    : Array.from({ length: SLOTS }, (_, i) => shown[i] ?? null)
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
@@ -358,6 +373,14 @@ export default function BucketLeaderboardPage({ onBack, currentUser, adsDisabled
           <h2 className="lb-title">Leaderboard</h2>
         </div>
 
+
+        {(_LB_APP || _LB_LOOK) && currentUser && (
+          <div className="lb-main-seg lb-friends-seg" role="tablist" aria-label="Whose scores">
+            <button role="tab" aria-selected={!friendsOnly} className={`lb-main-seg-btn ${!friendsOnly ? 'lb-main-seg-active' : ''}`} onClick={() => setFriendsOnly(false)}>Everyone</button>
+            <button role="tab" aria-selected={friendsOnly} className={`lb-main-seg-btn ${friendsOnly ? 'lb-main-seg-active' : ''}`} onClick={() => setFriendsOnly(true)}>Friends</button>
+          </div>
+        )}
+        {friendsOnly && friendIds && friendIds.size <= 1 && <p className="lb-friends-empty">No friends yet: add some from Profile → Friends, or tap a name on any board.</p>}
 
         {/* View tabs */}
         <div className="lb-view-tabs">
@@ -468,13 +491,13 @@ export default function BucketLeaderboardPage({ onBack, currentUser, adsDisabled
                     <RankBadge rank={i + 1} />
                     <div className="lb-row-info">
                       <div className="lb-row-name-line">
-                        <span className="lb-username">{row.username ?? 'Anonymous'}</span>
+                        <span className="lb-username">{<LbName name={row.username ?? 'Anonymous'} uid={row.uid ?? row.user_id} />}</span>
                         {isPlus && <span className="lb-plus-badge" title="BAP Pro">PRO</span>}
                         {isYou  && <span className="lb-you">you</span>}
                       </div>
                       <div className="lb-row-sub">
+                        {/* (basketball seasons don't record playoff trips: no playoffs count here) */}
                         {row.wins}W · {row.losses}L · {row.rings} ring{row.rings !== 1 ? 's' : ''}
-                        · {row.playoffs} playoff{row.playoffs !== 1 ? 's' : ''}
                         · {row.count} season{row.count !== 1 ? 's' : ''}
                       </div>
                     </div>
@@ -497,9 +520,9 @@ export default function BucketLeaderboardPage({ onBack, currentUser, adsDisabled
                       </div>
                       <div className="lb-row-info">
                         <div className="lb-row-name-line">
-                          <span className="lb-username">{row.username ?? 'Anonymous'}</span>
+                          <span className="lb-username">{<LbName name={row.username ?? 'Anonymous'} uid={row.uid ?? row.user_id} />}</span>
                           <PosBadge position={row.position} />
-                          {row.champion && <span className="lb-champ-icon">🏆</span>}
+                          {row.champion && <span className="lb-champ-icon"><IconTrophy size="1em" className="ico-inline ico-gold" /></span>}
                           {isYou && <span className="lb-you">you</span>}
                         </div>
                         <div className="lb-row-sub">
@@ -532,9 +555,9 @@ export default function BucketLeaderboardPage({ onBack, currentUser, adsDisabled
                       <RankBadge rank={i + 1} />
                       <div className="lb-row-info">
                         <div className="lb-row-name-line">
-                          <span className="lb-username">{row.username ?? 'Anonymous'}</span>
+                          <span className="lb-username">{<LbName name={row.username ?? 'Anonymous'} uid={row.uid ?? row.user_id} />}</span>
                           <PosBadge position={row.position} />
-                          {row.champion && <span className="lb-champ-icon">🏆</span>}
+                          {row.champion && <span className="lb-champ-icon"><IconTrophy size="1em" className="ico-inline ico-gold" /></span>}
                           {isYou && <span className="lb-you">you</span>}
                         </div>
                         <div className="lb-row-sub">

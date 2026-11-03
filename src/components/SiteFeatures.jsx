@@ -1,62 +1,46 @@
-export default function SiteFeatures({ sport = 'nfl', className = '' }) {
-  const isBucket = sport === 'bucket'
+// The website's "what is this" strip under the home menu and the build screens: four parts,
+// one per part of the game (the app hides it: app-game.css)
+const I = { width: 22, height: 22, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true }
 
+const IconSpin = () => (
+  <svg {...I}><path d="M21 12a9 9 0 1 1-2.64-6.36" /><polyline points="21 3 21 9 15 9" /><circle cx="12" cy="12" r="2.5" /></svg>
+)
+const IconTrophy = () => (
+  <svg {...I}><path d="M8 21h8M12 17v4M7 4h10l-1 8a4 4 0 0 1-8 0L7 4z" /><path d="M5 4h2v4a3 3 0 0 1-3-3V4zM19 4h-2v4a3 3 0 0 0 3-3V4z" /></svg>
+)
+const IconLive = () => (
+  <svg {...I}><circle cx="12" cy="12" r="2" /><path d="M16.24 7.76a6 6 0 0 1 0 8.48M7.76 16.24a6 6 0 0 1 0-8.48M19.07 4.93a10 10 0 0 1 0 14.14M4.93 19.07a10 10 0 0 1 0-14.14" /></svg>
+)
+const IconClimb = () => (
+  <svg {...I}><rect x="3" y="13" width="4" height="8" rx="1" /><rect x="10" y="8" width="4" height="13" rx="1" /><rect x="17" y="3" width="4" height="18" rx="1" /></svg>
+)
+
+const FEATURES = {
+  nfl: [
+    { Icon: IconSpin, title: 'Build a player', text: "Spin a team, land on a real player and take one trait from him. Josh Allen's arm, Saquon's legs, whatever the wheel gives you. Keep going until every slot is full." },
+    { Icon: IconTrophy, title: 'Play the season', text: 'He plays 17 games and the playoffs, and you find out if he wins MVP or a Super Bowl. Or start a Career and play him from draft day until he retires.' },
+    { Icon: IconLive, title: 'Beat real people', text: 'Compete puts five people in a pool with the same spins, and the highest overall wins. In the Trait Auction you get $100 to outbid two other people for traits.' },
+    { Icon: IconClimb, title: 'Climb the leaderboards', text: 'Games earn XP and coins toward your level and the Builder Pass. Your best builds stay on your profile, and the top ones go on the leaderboards.' },
+  ],
+  bucket: [
+    { Icon: IconSpin, title: 'Build a player', text: "Spin a team, land on a real player and take one trait from him. Steph's jumper, Kyrie's handles, whatever the wheel gives you. Keep going until every slot is full." },
+    { Icon: IconTrophy, title: 'Play the season', text: 'He plays 82 games and the playoffs, and you find out if he wins MVP or a ring. Or start a Career and play him from draft day until he retires.' },
+    { Icon: IconLive, title: 'Beat real people', text: 'Blacktop is live 1v1, 2v2 and 3v3, played to 11. Compete puts five people in a pool with the same spins, and the highest overall wins.' },
+    { Icon: IconClimb, title: 'Climb the leaderboards', text: 'Games earn XP and coins toward your level and the Builder Pass. Your best builds stay on your profile, and the top ones go on the leaderboards.' },
+  ],
+}
+
+export default function SiteFeatures({ sport = 'nfl', className = '' }) {
+  const list = FEATURES[sport === 'bucket' ? 'bucket' : 'nfl']
   return (
-    <section className={`splash-features ${className}`}>
-      <div className="splash-feature">
-        <div className="splash-feature-icon splash-feature-icon--dual">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="23 4 23 10 17 10"/>
-            <polyline points="1 20 1 14 7 14"/>
-            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
-          </svg>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
-          </svg>
+    <section className={`splash-features${sport === 'bucket' ? ' splash-features--bucket' : ''} ${className}`} aria-label="How it plays">
+      {list.map(({ Icon, title, text }, i) => (
+        <div key={title} className="splash-feature" style={{ '--i': i }}>
+          <span className="splash-feature-icon"><Icon /></span>
+          <div className="splash-feature-title">{title}</div>
+          <p className="splash-feature-desc">{text}</p>
         </div>
-        <div className="splash-feature-title">Spin &amp; Build</div>
-        <div className="splash-feature-desc">
-          {isBucket
-            ? 'Spin the wheel of real NBA players and take one part of each player’s game until you’ve built your own basketball player.'
-            : 'Spin the wheel of real players, and select an aspect of their game until you have a complete custom player.'}
-        </div>
-      </div>
-      {isBucket ? (
-        <div className="splash-feature">
-          <div className="splash-feature-icon">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-              <circle cx="9" cy="7" r="4"/>
-              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-              <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-            </svg>
-          </div>
-          <div className="splash-feature-title">Head-to-Head</div>
-          <div className="splash-feature-desc">Challenge a friend to a live 1v1 build-off, or get matched with a random opponent.</div>
-        </div>
-      ) : (
-        <div className="splash-feature">
-          <div className="splash-feature-icon">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M8 21h8M12 17v4M7 4h10l-1 9a4 4 0 0 1-8 0L7 4z"/>
-              <path d="M5 4h2v4a3 3 0 0 1-3-3V4zM19 4h-2v4a3 3 0 0 0 3-3V4z"/>
-            </svg>
-          </div>
-          <div className="splash-feature-title">Simulate the Season</div>
-          <div className="splash-feature-desc">Watch your build play out across a full NFL season, from kickoff to the playoffs.</div>
-        </div>
-      )}
-      <div className="splash-feature">
-        <div className="splash-feature-icon">
-          <svg width="22" height="22" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="1" y="7" width="3" height="5" rx="0.5"/>
-            <rect x="5" y="4" width="3" height="8" rx="0.5"/>
-            <rect x="9" y="1" width="3" height="11" rx="0.5"/>
-          </svg>
-        </div>
-        <div className="splash-feature-title">Climb the Leaderboard</div>
-        <div className="splash-feature-desc">Save your best builds and compete against everyone else for the highest OVR and career stats.</div>
-      </div>
+      ))}
     </section>
   )
 }

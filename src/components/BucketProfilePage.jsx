@@ -6,7 +6,7 @@ import { calcBucketOVR, getBucketGuardArchetype, getBucketBigArchetype } from '.
 import { valToGrade, HEADSHOT_BASE } from '../utils/simulation'
 
 function gradeColor(val0) {
-  const val = Math.round(val0 ?? 0)   // rounded like the letter (valToGrade), so an S is always purple
+  const val = Math.round(val0 ?? 0)   // rounded like the letter (valToGrade), so a B- is always green
   if (val >= 11) return '#a855f7'
   if (val >= 8)  return '#3b82f6'
   if (val >= 5)  return '#22c55e'
@@ -15,8 +15,11 @@ function gradeColor(val0) {
   return '#ef4444'
 }
 import NBA_HEADSHOTS from '../data/nba-headshots.json'
+import { CAN_SELL_PLUS } from '../lib/platform'
+import DeleteAccount from './DeleteAccount'
 import ConnectDiscord from './ConnectDiscord'
 import { getUsername } from '../lib/discord'
+import { useCountUp as countUp } from '../lib/useCountUp'
 
 // ─── Shared helpers (mirrors ProfilePage) ────────────────────────────────────
 function PrfSpinner() {
@@ -30,22 +33,8 @@ function PrfSpinner() {
   )
 }
 
-function useCountUp(target, duration = 900, enabled = true) {
-  const [val, setVal] = useState(0)
-  useEffect(() => {
-    if (!enabled || !target) return
-    const start = Date.now()
-    let raf
-    const tick = () => {
-      const p = Math.min((Date.now() - start) / duration, 1)
-      setVal(Math.round((1 - Math.pow(1 - p, 3)) * target))
-      if (p < 1) raf = requestAnimationFrame(tick)
-    }
-    raf = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(raf)
-  }, [target, duration, enabled])
-  return val
-}
+// the shared count-up (lib/useCountUp.js); runs once there's a number to count to
+const useCountUp = (target, duration = 900, enabled = true) => countUp(target, { run: enabled && !!target, ms: duration })
 
 function getInitials(user) {
   const name = getUsername(user) || ''
@@ -233,14 +222,16 @@ export default function BucketProfilePage({
         <div className="prf-top-nav">
           <button className="prf-top-back" onClick={onBack}>← Back to Build</button>
           <div className="prf-plus-wrap" ref={plusRef}>
-            <button
-              className={`prf-top-adfree${isPlus ? ' prf-top-adfree--on' : ''}`}
-              onClick={isPlus ? undefined : () => setPlusOpen(o => !o)}
-              style={isPlus ? { cursor: 'default' } : undefined}
-            >
-              {isPlus ? '✦ Pro Active' : '✦ BAP Pro'}
-            </button>
-            {!isPlus && plusOpen && (
+            {(isPlus || CAN_SELL_PLUS) && (
+              <button
+                className={`prf-top-adfree${isPlus ? ' prf-top-adfree--on' : ''}`}
+                onClick={isPlus ? undefined : () => setPlusOpen(o => !o)}
+                style={isPlus ? { cursor: 'default' } : undefined}
+              >
+                {isPlus ? '✦ Pro Active' : '✦ BAP Pro'}
+              </button>
+            )}
+            {!isPlus && CAN_SELL_PLUS && plusOpen && (
               <div className="prf-plus-dropdown">
                 <div className="wm-plus-body">
                   {['No ads', 'Custom color themes', 'Custom profile icons', 'Pro badge on leaderboard'].map(label => (
@@ -317,9 +308,11 @@ export default function BucketProfilePage({
                   ))}
                 </div>
               </div>
-              <button className="plus-manage-btn" onClick={handleManageSubscription}>
-                Manage Subscription
-              </button>
+              {CAN_SELL_PLUS && (
+                <button className="plus-manage-btn" onClick={handleManageSubscription}>
+                  Manage Subscription
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -500,6 +493,7 @@ export default function BucketProfilePage({
           {emailSuccess && <div className="prf-pw-success">Email saved.</div>}
           <ConnectDiscord user={user} />
           <button className="prf-signout-btn" onClick={handleSignOut}>Sign Out</button>
+          <DeleteAccount onDeleted={() => onSignOut?.()} />
         </div>
 
       </div>

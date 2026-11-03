@@ -1,0 +1,240 @@
+import { useEffect, useRef, useState } from 'react'
+import { useProgress, claimPass, dayKey, walletOpen, startRush, rushLeftMs, startBoost, boostLeftMs } from '../../lib/progress'
+import { TIERS, TIER_XP, PASS_PRICE, passValue, nextSeason, daysLeft as daysLeftOf, daysLeftText } from '../../lib/pass'
+import { itemById, RARITY } from '../../lib/cosmetics'
+import { openCheckout } from '../../lib/webCheckout'
+import { track } from '../../lib/track'
+import { sellsHere, onStorefront } from '../../lib/storefront'
+import { IS_APP, PLAY_BILLING } from '../../lib/platform'
+import { useStorePrices, passProductId } from '../../lib/iap'
+import { getUsername } from '../../lib/discord'
+import { sfx, haptic, claimFx } from '../../lib/juice'
+import { AvatarBadge, ItemPreview } from './NameTag'
+import { IconClose, IconLock, IconCheck, IconShield, IconBolt, IconCrown, IconFlame } from './icons'
+import './pass.css'
+
+// The Builder Pass (lib/pass.js): the season's two reward tracks on the XP a player
+// already earns. Free for everyone signed in; premium for the season's pass holders.
+// Opened from Home, the Shop and More (AppTabBar screen 'pass').
+
+const signIn = () => window.dispatchEvent(new CustomEvent('bap:auth'))
+
+function useSells() {
+  const [sells, setSells] = useState(sellsHere)
+  useEffect(() => onStorefront(() => setSells(sellsHere())), [])
+  return sells
+}
+
+// What a reward is, in a few words
+export function rewardLabel(r) {
+  if (!r) return ''
+  if (r.coins) return `${r.coins.toLocaleString()} coins`
+  if (r.freeze) return 'Streak freeze'
+  if (r.boost) return `2x XP · ${r.boost} hr${r.boost === 1 ? '' : 's'}`
+  if (r.rush) return `Coin Rush${r.rush > 1 ? ` ×${r.rush}` : ''}`
+  if (r.hot) return `Hot Hand${r.hot > 1 ? ` ×${r.hot}` : ''}`
+  if (r.heal) return `Quick Heal${r.heal > 1 ? ` ×${r.heal}` : ''}`
+  return itemById(r.item)?.name ?? 'Item'
+}
+
+// What kind of reward it is: the line under its name ("Epic · Avatar", "XP boost")
+const SLOT_NAME = { avatar: 'Avatar', nameColor: 'Color', nameFx: 'Name FX', plate: 'Plate', winFx: 'Victory', winSound: 'Sound', court: 'Court', reel: 'Reel', entrance: 'Entrance' }
+export function rewardKind(r) {
+  if (!r) return ''
+  if (r.item) { const it = itemById(r.item); return it ? `${RARITY[it.rarity].name} · ${SLOT_NAME[it.slot] ?? ''}` : '' }
+  if (r.freeze) return 'Login streak'
+  if (r.boost) return 'XP boost · 1 hr each'
+  if (r.rush) return 'Coin boost · 3 hrs'
+  if (r.hot || r.heal) return 'Career boost'
+  return ''
+}
+// what a claim paid, for the label that floats off the button (an item has its own reveal)
+export const gotLabel = g => (g?.coins ? `+${g.coins.toLocaleString()} COINS` : g?.item ? '' : g?.freeze ? '+1 FREEZE' : g?.boost ? '2X XP' : g?.rush ? 'COIN RUSH' : g?.hot ? 'HOT HAND' : g?.heal ? 'QUICK HEAL' : '')
+// "2h 14m"
+const fmtLeft = ms => { const m = Math.ceil(ms / 60000); return m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m}m` }
+
+export function RewardArt({ r, name }) {
+  if (r.coins) return <span className="bp-art bp-art--coins"><span className="coin-ico" /></span>
+  if (r.freeze) return <span className="bp-art bp-art--freeze"><IconShield size={20} /></span>
+  if (r.boost) return <span className="bp-art bp-art--boost"><IconBolt size={20} /></span>
+  if (r.rush) return <span className="bp-art bp-art--rush"><span className="coin-ico" /><i>2x</i></span>
+  if (r.hot) return <span className="bp-art bp-art--hot"><IconFlame size={20} /></span>
+  if (r.heal) return <span className="bp-art bp-art--heal"><b>+</b></span>
+  const item = itemById(r.item)
+  if (!item) return <span className="bp-art" />
+  if (item.slot === 'avatar') return <span className="bp-art bp-art--item"><AvatarBadge cos={{ avatar: item.id }} name={name} size={34} /></span>
+  if (item.slot === 'court') return <span className="bp-art bp-art--item"><img src={item.thumb} alt="" loading="lazy" draggable={false} /></span>
+  // names, effects and sounds: a small sample ("Aa" in the color, the effect's tile)
+  return <span className={`bp-art bp-art--item bp-art--${item.slot}`}><ItemPreview item={item} name="Aa" /></span>
+}
+
+function Cell({ r, tier, track, reached, claimed, locked, name, onClaim, flash }) {
+  if (!r) return <span className="bp-cell is-empty" aria-hidden="true" />
+  const item = r.item ? itemById(r.item) : null
+  const ready = reached && !claimed && !locked
+  const state = claimed ? 'is-claimed' : ready ? 'is-ready' : locked ? 'is-locked' : 'is-ahead'
+  return (
+    <button className={`bp-cell bp-cell--${track} ${state}${flash ? ' is-flash' : ''}`} style={item ? { '--rar': RARITY[item.rarity].color } : undefined}
+      onClick={ready ? e => onClaim(track, tier, e.currentTarget) : undefined} aria-disabled={!ready}
+      aria-label={`Tier ${tier} ${track === 'p' ? 'premium' : 'free'}: ${rewardLabel(r)}${claimed ? ', claimed' : ready ? ', claim' : locked ? ', premium' : ''}`}>
+      <RewardArt r={r} name={name} />
+      <span className="bp-cell-txt">
+        <span className="bp-cell-name">{rewardLabel(r)}</span>
+        {rewardKind(r) && <span className="bp-cell-sub">{rewardKind(r)}</span>}
+      </span>
+      <span className="bp-cell-state">
+        {claimed ? <IconCheck size={14} /> : ready ? 'CLAIM' : locked ? <IconLock size={13} /> : null}
+      </span>
+    </button>
+  )
+}
+
+export default function AppPass({ onClose }) {
+  const p = useProgress()
+  const bp = p.bp
+  const sells = useSells()
+  const name = getUsername(p.user) || 'Guest'
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
+  const store = useStorePrices()   // Android: Google Play's price, in the player's currency
+  const [flash, setFlash] = useState(null)
+  const [got, setGot] = useState(null)
+  const bodyRef = useRef(null)
+  const [, tick] = useState(0)
+  useEffect(() => { const t = setInterval(() => tick(n => n + 1), 30000); return () => clearInterval(t) }, [])
+  useEffect(() => { track('pass_view', { meta: { owned: !!bp?.owned, tier: bp?.tier ?? null } }) }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (!got) return; const t = setTimeout(() => setGot(null), 1800); return () => clearTimeout(t) }, [got])
+
+  // always opens at the top
+  useEffect(() => { bodyRef.current?.scrollTo(0, 0) }, [])
+
+  if (!bp) {
+    const next = nextSeason(dayKey())
+    return (
+      <div className="ag-screen bp">
+        <div className="ag-screen-head">
+          <div><span className="ag-eyebrow">BUILDER PASS</span><h1 className="ag-h1">Between seasons</h1></div>
+          <button className="ag-round-btn" onClick={onClose} aria-label="Close"><IconClose size={16} /></button>
+        </div>
+        <div className="ag-screen-body"><p className="bp-note">{next ? `${next.name} starts ${new Date(`${next.start}T12:00:00Z`).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}.` : 'The next season is on its way.'}</p></div>
+      </div>
+    )
+  }
+
+  const s = bp.season
+  const value = passValue(s)
+  const daysLeft = daysLeftOf(s, dayKey())
+  const maxed = bp.tier >= TIERS
+  const signedIn = walletOpen()
+  const rushMs = rushLeftMs(), xpMs = boostLeftMs('xp')
+  const useXp = () => { if (startBoost('xp')) { sfx('coins'); haptic('success') } }
+  const ends = new Date(`${s.end}T12:00:00Z`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  const useRush = () => { if (startRush()) { sfx('coins'); haptic('success') } }
+
+  const claim = (track, tier, el) => {
+    const r = claimPass(track, tier)
+    if (!r) { sfx('deny'); return }
+    claimFx(el, gotLabel(r))
+    setFlash(`${track}${tier}`); setTimeout(() => setFlash(null), 700)
+    sfx(r.coins ? 'coins' : 'equip'); haptic('success')
+    if (r.item && !r.dup) setGot(r.item)
+  }
+  const claimAll = () => {
+    let n = 0
+    for (let t = 1; t <= bp.tier; t++) {
+      for (const tr of bp.owned ? ['f', 'p'] : ['f']) {
+        const reward = (tr === 'p' ? s.premium : s.free)[t]
+        if (reward && !bp.claimed[tr][t] && claimPass(tr, t)) n++
+      }
+    }
+    if (n) { sfx('coins'); haptic('success') }
+  }
+  const buy = async () => {
+    if (!signedIn) { signIn(); return }
+    setErr(''); setBusy(true)
+    const r = await openCheckout('pass', { season: s.id })
+    setBusy(false)
+    if (r === 'error') setErr('Checkout didn\'t open. Try again.')
+  }
+
+  return (
+    <div className="ag-screen bp" ref={bodyRef}>
+      <div className="ag-screen-head">
+        <div>
+          <span className="ag-eyebrow">BUILDER PASS · {s.name.toUpperCase()}</span>
+          <h1 className="ag-h1">{s.title}</h1>
+        </div>
+        <button className="ag-round-btn" onClick={onClose} aria-label="Close"><IconClose size={16} /></button>
+      </div>
+
+      <div className="ag-screen-body">
+        <div className={`bp-hero ag-pop${bp.owned ? ' is-premium' : ''}`}>
+          <div className="bp-hero-top">
+            <span className="bp-tier"><small>LEVEL</small><b>{bp.tier}</b><small>/ {TIERS}</small></span>
+            <span className={`bp-ends${!bp.over && daysLeft <= 7 ? ' is-soon' : ''}`}>
+              {bp.over ? <><b>SEASON OVER</b><small>CLAIM BY {ends.toUpperCase()}</small></>
+                : <><b>{daysLeftText(daysLeft)}</b><small>ENDS {ends.toUpperCase()}</small></>}
+            </span>
+          </div>
+          {(bp.owned || p.boosts?.xp > 0 || p.boosts?.rush > 0 || rushMs > 0 || xpMs > 0) && (
+            <span className="bp-hero-chips">
+              {bp.owned && <span className="ag-chip ag-chip--gold is-on"><IconCrown size={12} /> PREMIUM</span>}
+              {xpMs > 0 && <span className="ag-chip is-on"><IconBolt size={12} /> 2X XP · {fmtLeft(xpMs)}</span>}
+              {p.boosts?.xp > 0 && <button className="ag-chip bp-rush-use bp-xp-use" onClick={useXp}><IconBolt size={12} /> USE 2X XP{p.boosts.xp > 1 ? ` · ${p.boosts.xp}` : ''}</button>}
+              {rushMs > 0 && <span className="ag-chip ag-chip--gold is-on"><span className="coin-ico coin-ico--sm" /> 2X COINS · {fmtLeft(rushMs)}</span>}
+              {p.boosts?.rush > 0 && <button className="ag-chip bp-rush-use" onClick={useRush}><span className="coin-ico coin-ico--sm" /> USE COIN RUSH{p.boosts.rush > 1 ? ` · ${p.boosts.rush}` : ''}</button>}
+            </span>
+          )}
+          <div className="bp-bar" role="progressbar" aria-valuemin={0} aria-valuemax={TIER_XP} aria-valuenow={maxed ? TIER_XP : bp.into} aria-label="XP to the next tier">
+            <span style={{ width: `${maxed ? 100 : Math.min(100, (bp.into / TIER_XP) * 100)}%` }} />
+          </div>
+          <span className="bp-hero-sub">{!signedIn ? 'Sign in to start earning tiers.' : maxed ? `Every level reached · ${bp.xp.toLocaleString()} XP this season` : `${bp.into.toLocaleString()} / ${TIER_XP} XP to level ${bp.tier + 1} · seasons, missions, live games and the daily login all count`}</span>
+          {!signedIn && <button className="ag-btn bp-cta" onClick={signIn}>SIGN IN</button>}
+          {signedIn && bp.ready > 0 && <button className="ag-btn bp-cta" onClick={claimAll}>CLAIM ALL · {bp.ready}</button>}
+        </div>
+
+        {!bp.owned && sells && !bp.over && (
+          <div className="bp-buy ag-pop" style={{ '--d': '60ms' }}>
+            <span className="bp-buy-txt">
+              <span className="ag-eyebrow">PREMIUM TRACK</span>
+              <b>{value.items} pass-only items · {value.coins.toLocaleString()} coins</b>
+              <small>Plus coins, Coin Rushes and boosts. Everything you've already reached unlocks at once.</small>
+            </span>
+            <button className="ag-btn ag-pro-cta bp-buy-btn" onClick={buy} disabled={busy}>{busy ? 'OPENING…' : `UNLOCK · ${store[passProductId(s.id)] ?? PASS_PRICE}`}</button>
+            <span className="bp-fine">{PLAY_BILLING ? 'Paid through Google Play. ' : IS_APP ? 'Secure Stripe checkout on build-a-player.com. ' : ''}One payment for {s.name}, no subscription.</span>
+            {err && <span className="bp-fine bp-fine--err">{err}</span>}
+          </div>
+        )}
+
+        <div className="bp-track">
+          <div className="bp-head" aria-hidden="true">
+            <span className="bp-head-lvl">LVL</span>
+            <span className="bp-head-pill bp-head-pill--f">FREE</span>
+            <span className="bp-head-pill bp-head-pill--p"><IconCrown size={12} /> PREMIUM{bp.owned ? null : <IconLock size={11} />}</span>
+          </div>
+          {Array.from({ length: TIERS }, (_, k) => k + 1).map(t => {
+            const reached = signedIn && bp.started && t <= bp.tier
+            return (
+              <div key={t} data-tier={t} className={`bp-row${reached ? ' is-reached' : ''}${t === bp.tier ? ' is-now' : ''}`}>
+                <span className="bp-num">{t}</span>
+                <Cell r={s.free[t]} tier={t} track="f" reached={reached} claimed={!!bp.claimed.f[t]} locked={false} name={name} onClaim={claim} flash={flash === `f${t}`} />
+                <Cell r={s.premium[t]} tier={t} track="p" reached={reached} claimed={!!bp.claimed.p[t]} locked={!bp.owned} name={name} onClaim={claim} flash={flash === `p${t}`} />
+              </div>
+            )
+          })}
+        </div>
+        <p className="bp-note">Every {TIER_XP} XP you earn this season is a level, and your level starts over next season. Pass items are only on the pass; one you already have pays coins instead. A Coin Rush is 3 hours of double coins from every game, and 2x XP an hour of double XP, from when you use them. Hot Hand and Quick Heal are for Career.</p>
+      </div>
+
+      {got && (
+        <div className="sh-bought" style={{ '--rar': RARITY[itemById(got)?.rarity ?? 0].color }} onClick={() => setGot(null)}>
+          <div className="sh-bought-card">
+            <span className="ag-eyebrow">UNLOCKED · IN YOUR LOCKER</span>
+            {itemById(got)?.slot === 'avatar' ? <AvatarBadge cos={{ avatar: got }} name={name} size={72} /> : <ItemPreview item={itemById(got)} name={name} />}
+            <span className="sh-bought-name">{itemById(got)?.name}</span>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}

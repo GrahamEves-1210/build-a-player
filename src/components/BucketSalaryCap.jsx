@@ -1,8 +1,10 @@
 ﻿import React, { useState, useMemo, useEffect } from 'react'
+import { NameTag } from './app/NameTag'
 import { NBA_GUARD_PLAYERS } from '../data/nba-guards'
 import { NBA_BIG_PLAYERS } from '../data/nba-bigs'
 import { NBA_TEAMS } from '../data/nba-teams'
 import NBA_HEADSHOTS from '../data/nba-headshots.json'
+import { salaryKit } from '../lib/salaryCore'
 import { supabase } from '../lib/supabase'
 import { valToGrade, HEADSHOT_BASE } from '../utils/simulation'
 import { getUsername } from '../lib/discord'
@@ -44,90 +46,8 @@ import { getUsername } from '../lib/discord'
   );
 */
 
-// ─── All-time legends (only players with headshots) ──────────────────────────
-const GOAT_SALARY_PLAYERS = [
-  {
-    name: 'Michael Jordan', team: 'CHI', legend: true, posGroup: 'guard',
-    attrs: { jumpShot:7, finishing:11, perimeterDefense:11, interiorDefense:7, passing:8, handles:9, playmaking:8, size:9, speed:10, bounce:11 },
-  },
-  {
-    name: 'Kobe Bryant', team: 'LAL', legend: true, posGroup: 'guard',
-    attrs: { jumpShot:9, finishing:10, perimeterDefense:8, interiorDefense:6, passing:6, handles:9, playmaking:8, size:7, speed:9, bounce:9 },
-  },
-  {
-    name: 'Larry Bird', team: 'BOS', legend: true, posGroup: 'guard',
-    attrs: { jumpShot:10, finishing:9, perimeterDefense:6, interiorDefense:6, passing:10, handles:7, playmaking:10, size:8, speed:3, bounce:3 },
-  },
-  {
-    name: 'Allen Iverson', team: 'PHI', legend: true, posGroup: 'guard',
-    attrs: { jumpShot:8, finishing:9, perimeterDefense:6, interiorDefense:3, passing:9, handles:11, playmaking:10, size:2, speed:11, bounce:9 },
-  },
-  {
-    name: 'Dwyane Wade', team: 'MIA', legend: true, posGroup: 'guard',
-    attrs: { jumpShot:7, finishing:10, perimeterDefense:9, interiorDefense:5, passing:8, handles:9, playmaking:8, size:7, speed:10, bounce:10 },
-  },
-  {
-    name: 'Chris Paul', team: 'PHX', legend: true, posGroup: 'guard',
-    attrs: { jumpShot:7, finishing:7, perimeterDefense:10, interiorDefense:4, passing:11, handles:10, playmaking:11, size:3, speed:8, bounce:7 },
-  },
-  {
-    name: 'Kareem Abdul-Jabbar', team: 'LAL', legend: true, posGroup: 'big',
-    attrs: { jumpShot:2, finishing:11, perimeterDefense:6, interiorDefense:10, passing:5, handles:3, playmaking:6, size:10, speed:5, bounce:10 },
-  },
-  {
-    name: "Shaquille O'Neal", team: 'LAL', legend: true, posGroup: 'big',
-    attrs: { jumpShot:0, finishing:11, perimeterDefense:4, interiorDefense:10, passing:5, handles:3, playmaking:6, size:11, speed:8, bounce:11 },
-  },
-  {
-    name: 'Tim Duncan', team: 'SAS', legend: true, posGroup: 'big',
-    attrs: { jumpShot:7, finishing:10, perimeterDefense:7, interiorDefense:11, passing:8, handles:5, playmaking:8, size:9, speed:5, bounce:6 },
-  },
-  {
-    name: 'Wilt Chamberlain', team: 'PHI', legend: true, posGroup: 'big',
-    attrs: { jumpShot:0, finishing:11, perimeterDefense:5, interiorDefense:11, passing:6, handles:4, playmaking:6, size:11, speed:9, bounce:11 },
-  },
-  {
-    name: 'Charles Barkley', team: 'PHX', legend: true, posGroup: 'big',
-    attrs: { jumpShot:6, finishing:9, perimeterDefense:7, interiorDefense:9, passing:6, handles:6, playmaking:6, size:9, speed:8, bounce:8 },
-  },
-  {
-    name: 'Dirk Nowitzki', team: 'DAL', legend: true, posGroup: 'big',
-    attrs: { jumpShot:10, finishing:8, perimeterDefense:6, interiorDefense:6, passing:7, handles:5, playmaking:7, size:10, speed:4, bounce:5 },
-  },
-  {
-    name: 'Bill Russell', team: 'BOS', legend: true, posGroup: 'big',
-    attrs: { jumpShot:0, finishing:9, perimeterDefense:6, interiorDefense:11, passing:6, handles:3, playmaking:6, size:9, speed:8, bounce:9 },
-  },
-  {
-    name: 'Tracy McGrady', team: 'ORL', legend: true, posGroup: 'guard',
-    attrs: { jumpShot:9, finishing:9, perimeterDefense:7, interiorDefense:5, passing:7, handles:9, playmaking:8, size:8, speed:8, bounce:9 },
-  },
-  {
-    name: 'Carmelo Anthony', team: 'NYK', legend: true, posGroup: 'guard',
-    attrs: { jumpShot:9, finishing:9, perimeterDefense:5, interiorDefense:5, passing:6, handles:9, playmaking:9, size:8, speed:6, bounce:7 },
-  },
-  {
-    name: 'Paul Pierce', team: 'BOS', legend: true, posGroup: 'guard',
-    attrs: { jumpShot:9, finishing:8, perimeterDefense:7, interiorDefense:6, passing:7, handles:7, playmaking:7, size:7, speed:5, bounce:6 },
-  },
-  {
-    name: 'Ray Allen', team: 'BOS', legend: true, posGroup: 'guard',
-    attrs: { jumpShot:11, finishing:6, perimeterDefense:8, interiorDefense:5, passing:6, handles:6, playmaking:6, size:6, speed:8, bounce:6 },
-  },
-  {
-    name: 'Steve Nash', team: 'PHX', legend: true, posGroup: 'guard',
-    attrs: { jumpShot:10, finishing:7, perimeterDefense:4, interiorDefense:3, passing:11, handles:11, playmaking:11, size:4, speed:8, bounce:6 },
-  },
-]
-
-// ─── Player pool (Jul 18+ and infinite) ──────────────────────────────────────
-const ALL_PLAYERS = [...NBA_GUARD_PLAYERS, ...NBA_BIG_PLAYERS, ...GOAT_SALARY_PLAYERS]
-  .filter(p => {
-    if (!p.attrs) return false
-    const vals = Object.values(p.attrs)
-    return vals.reduce((s, v) => s + v, 0) / vals.length >= 3.0
-  })
-  .filter((p, i, a) => a.findIndex(q => q.name === p.name) === i)
+import { BUCKET_SAL_POOL as ALL_PLAYERS, GOAT_SALARY_PLAYERS, SAL_COLS, playerPosGroup, salTypesFor as typesFor } from '../data/nba-salary'
+export { SAL_COLS }
 
 // ─── Seeded RNG (mulberry32 variant) ──────────────────────────────────────────
 function seededRandom(seed) {
@@ -182,24 +102,6 @@ const TIER_BANDS = [
   [0.60, 0.80],
   [0.80, 1.00],
 ]
-
-export const SAL_COLS = [
-  { key: 'finishing',  label: 'FINISHING',          guardTypes: ['finishing'],                          bigTypes: ['finishing'] },
-  { key: 'shooting',   label: 'SHOOTING',           guardTypes: ['jumpShot'],                           bigTypes: ['jumpShot'] },
-  { key: 'defense',    label: 'DEFENSE',            guardTypes: ['perimeterDefense'],                   bigTypes: ['interiorDefense'] },
-  { key: 'playmaking', label: 'PLAYMAKING',         guardTypes: ['handles', 'passing'],                 bigTypes: ['playmaking'] },
-  { key: 'size',       label: 'SIZE & ATHLETICISM', guardTypes: ['speed', 'bounce', 'size'],             bigTypes: ['size', 'bounce'] },
-]
-
-function playerPosGroup(player) {
-  if (player.posGroup) return player.posGroup
-  const pos = player.position
-  return (pos === 'C' || pos === 'PF') ? 'big' : 'guard'
-}
-
-function typesFor(player, col) {
-  return playerPosGroup(player) === 'big' ? col.bigTypes : col.guardTypes
-}
 
 // One representative type per category (for ReportCard / SimPage display)
 export const SAL_REP_TYPES = ['finishing', 'jumpShot', 'perimeterDefense', 'passing', 'size']
@@ -301,6 +203,10 @@ function calcStats(sel) {
 
 const PLAYED_KEY     = (str, uid) => uid ? `sal_play_${uid}_${str}`     : `sal_play_${str}`
 const SHUFFLED_KEY   = (str, uid) => uid ? `sal_shuffled_${uid}_${str}` : `sal_shuffled_${str}`
+// A day's shuffle as saved: a column ({ ci, players }) or a row ({ ti, row })
+const parseShuffle = saved => {
+  try { const v = JSON.parse(saved); return { col: v?.players ? { [v.ci]: v.players } : {}, row: v?.row ? { [v.ti]: v.row } : {} } } catch { return { col: {}, row: {} } }
+}
 const SCOUTED_KEY    = (str, uid) => uid ? `sal_scouted_${uid}_${str}`  : `sal_scouted_${str}`
 const POWER_SEEN_KEY = 'sal_power_seen'
 
@@ -309,173 +215,13 @@ const POWER_SEEN_KEY = 'sal_power_seen'
 // detect back-to-back appearances and apply a penalty the following day).
 // Compute the correct salary tier for a legend in a given column by ranking
 // their catScore against the regular player pool (no rand needed — deterministic).
-function legendTierFor(legend, col, regulars) {
-  const legTypes  = typesFor(legend, col)
-  const legScore  = legTypes.reduce((s, t) => s + (legend.attrs?.[t] ?? 5), 0) / legTypes.length
-  const sorted    = regulars
-    .map(p => { const ts = typesFor(p, col); return ts.reduce((s, t) => s + (p.attrs?.[t] ?? 5), 0) / ts.length })
-    .sort((a, b) => b - a)
-  const rank = sorted.findIndex(s => s <= legScore)
-  // rank === -1 means no player scored as low as the legend → legend is the worst → pct = 1.0
-  const pct  = rank === -1 ? 1.0 : rank / sorted.length
-  if (pct < 0.20) return 0  // $50
-  if (pct < 0.40) return 1  // $40
-  if (pct < 0.60) return 2  // $30
-  if (pct < 0.80) return 3  // $20
-  return 4                   // $10
-}
+// the board itself: lib/salaryCore.js (the live server checks plays against the same board)
+const { legendTierFor, pickLegendSlots, getPickedNamesForSeed, generateGrid } = salaryKit({ typesFor, look: p => { const hsId = NBA_HEADSHOTS[p.name]; return { teamColor: TEAM_META[p.team]?.color ?? '#444', teamColor2: TEAM_META[p.team]?.color2 ?? '#222', photo: hsId ? `${HEADSHOT_BASE}/nba/${hsId}.webp` : null } } })
 
 // Pick 2 deterministic legend slots — cycles through all legends before repeating.
 // rand() still used for column and tier nudge so placement varies day-to-day.
-function pickLegendSlots(rand, cols, legends, regulars, seed) {
-  // Compute sequential day index from seed (yyyymmdd format)
-  const y   = Math.floor(seed / 10000)
-  const m   = Math.floor((seed % 10000) / 100)
-  const day = seed % 100
-  const epochMs = new Date(2026, 0, 1).getTime()
-  const dayIdx  = Math.round((new Date(y, m - 1, day).getTime() - epochMs) / 86400000)
 
-  // Fixed shuffle of legend list so pair order isn't biased toward list order
-  const fixedR = seededRandom(0xBADC0FFE)
-  const shuffled = [...legends]
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(fixedR() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
-  }
 
-  // Pick pair based on day index — all legends appear before any repeats
-  const n = shuffled.length
-  const leg0 = shuffled[((dayIdx * 2)     % n + n) % n]
-  const leg1 = shuffled[((dayIdx * 2 + 1) % n + n) % n]
-
-  const usedLegends = new Set()
-  if (leg0) usedLegends.add(leg0.name)
-  if (leg1) usedLegends.add(leg1.name)
-
-  // Column placement still uses daily rand() for variation; tier is the
-  // legend's actual rank-based tier — no randomized nudge off of it.
-  const li0c = Math.floor(rand() * cols.length)
-  const li1c = Math.floor(rand() * cols.length)
-
-  let li0t = leg0 ? legendTierFor(leg0, cols[li0c], regulars) : 0
-  let li1t = leg1 ? legendTierFor(leg1, cols[li1c], regulars) : 1
-  // If both land in the same (col, tier) slot, shift whichever one actually
-  // scores lower to the adjacent tier — toward cheaper, unless it's already
-  // at the cheapest tier (then toward the next-cheapest instead of wrapping
-  // around to the most expensive, which could put the weaker legend at $50).
-  if (leg0 && leg1 && li1c === li0c && li1t === li0t) {
-    const scoreOf = leg => {
-      const ts = typesFor(leg, cols[li0c])
-      return ts.reduce((s, t) => s + (leg.attrs?.[t] ?? 5), 0) / ts.length
-    }
-    const shift = t => t < TIERS.length - 1 ? t + 1 : t - 1
-    if (scoreOf(leg0) <= scoreOf(leg1)) li0t = shift(li0t)
-    else li1t = shift(li1t)
-  }
-
-  const map = new Map()
-  if (leg0) map.set(`${li0c}-${li0t}`, leg0)
-  if (leg1) map.set(`${li1c}-${li1t}`, leg1)
-  return { map, usedLegends }
-}
-
-function getPickedNamesForSeed(seed, cols, players) {
-  const rand     = seededRandom(seed)
-  const legends  = players.filter(p => p.legend)
-  const regulars = players.filter(p => !p.legend)
-  const { map: legendMap, usedLegends } = pickLegendSlots(rand, cols, legends, regulars, seed)
-
-  const used = new Set([...usedLegends])
-
-  for (const [key] of legendMap) used.add(legendMap.get(key).name)
-
-  cols.forEach((col, ci) => {
-    const scored = regulars
-      .map(p => ({
-        name: p.name,
-        catScore: (() => { const ts = typesFor(p, col); return ts.reduce((s, t) => s + (p.attrs?.[t] ?? 5), 0) / ts.length })(),
-      }))
-      .sort((a, b) => b.catScore - a.catScore)
-    const n = scored.length
-    for (let ti = 0; ti < TIERS.length; ti++) {
-      if (legendMap.has(`${ci}-${ti}`)) continue
-      const [lo, hi] = TIER_BANDS[ti]
-      let pool = scored
-        .slice(Math.floor(lo * n), Math.max(Math.floor(lo * n) + 1, Math.floor(hi * n)))
-        .filter(p => !used.has(p.name))
-      if (!pool.length) pool = scored.filter(p => !used.has(p.name))
-      if (!pool.length) pool = scored
-      const player = pool[Math.floor(rand() * pool.length)]
-      used.add(player.name)
-    }
-  })
-  return used
-}
-
-function generateGrid(cols, players, rand, recentlyUsed = new Set(), seed = 0) {
-  const RECENT_PENALTY = 3.5
-  const legends  = players.filter(p => p.legend)
-  const regulars = players.filter(p => !p.legend)
-
-  // 2 rand() calls to place exactly 2 legends — same for all users on the same day
-  const { map: legendMap, usedLegends } = pickLegendSlots(rand, cols, legends, regulars, seed)
-
-  function buildCard(p, col, price) {
-    const attrs = {}
-    const pts = typesFor(p, col)
-    pts.forEach(t => { attrs[t] = p.attrs?.[t] ?? 5 })
-    const hsId = NBA_HEADSHOTS[p.name]
-    return {
-      ...p,
-      price, attrs, fullAttrs: p.attrs,
-      catScore: pts.reduce((s, t) => s + (p.attrs?.[t] ?? 5), 0) / pts.length,
-      teamColor:  TEAM_META[p.team]?.color  ?? '#444',
-      teamColor2: TEAM_META[p.team]?.color2 ?? '#222',
-      photo:  hsId ? `${HEADSHOT_BASE}/nba/${hsId}.webp` : null,
-      number: p.number ?? null,
-      id:     `${col.key}-${price}-${p.name}`,
-    }
-  }
-
-  const used = new Set([...usedLegends])
-
-  return cols.map((col, ci) => {
-    const scored = regulars
-      .map(p => ({
-        ...p,
-        teamColor:  TEAM_META[p.team]?.color  ?? '#444',
-        teamColor2: TEAM_META[p.team]?.color2 ?? '#222',
-        catScore: (() => { const ts = typesFor(p, col); return ts.reduce((s, t) => s + (p.attrs?.[t] ?? 5), 0) / ts.length })()
-                  - (recentlyUsed.has(p.name) ? RECENT_PENALTY : 0),
-      }))
-      .sort((a, b) => b.catScore - a.catScore)
-    const n = scored.length
-    return TIERS.map((price, ti) => {
-      const legKey = `${ci}-${ti}`
-      if (legendMap.has(legKey)) return buildCard(legendMap.get(legKey), col, price)
-
-      const [lo, hi] = TIER_BANDS[ti]
-      let pool = scored
-        .slice(Math.floor(lo * n), Math.max(Math.floor(lo * n) + 1, Math.floor(hi * n)))
-        .filter(p => !used.has(p.name))
-      if (!pool.length) pool = scored.filter(p => !used.has(p.name))
-      if (!pool.length) pool = scored
-      const player = pool[Math.floor(rand() * pool.length)]
-      used.add(player.name)
-      const attrs = {}
-      typesFor(player, col).forEach(t => { attrs[t] = player.attrs?.[t] ?? 5 })
-      const hsId = NBA_HEADSHOTS[player.name]
-      return {
-        ...player,
-        price, attrs, fullAttrs: player.attrs,
-        catScore: player.catScore,
-        photo:  hsId ? `${HEADSHOT_BASE}/nba/${hsId}.webp` : null,
-        number: player.number ?? null,
-        id:     `${col.key}-${price}-${player.name}`,
-      }
-    })
-  })
-}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function isNearBlack(hex) {
@@ -611,7 +357,7 @@ function InfiniteLeaderboard({ onClose }) {
     if (!supabase) { setRows([]); return }
     supabase
       .from('salary_infinite_plays')
-      .select('username, picks, overall_score, ppg, apg, rpg')
+      .select('username, user_id, picks, overall_score, ppg, apg, rpg')
       .order('overall_score', { ascending: false })
       .limit(10)
       .then(({ data }) => setRows((data || []).slice(0, 10)))
@@ -630,7 +376,7 @@ function InfiniteLeaderboard({ onClose }) {
           <div key={i} className={`sc-lb-row${i === 0 ? ' sc-lb-row--top' : ''}`} style={{ animationDelay: `${i * 0.04}s` }}>
             <div className="sc-lb-row-main">
               <span className="sc-lb-rank">{i + 1}</span>
-              <span className="sc-lb-name">{r.username || 'Anonymous'}</span>
+              <span className="sc-lb-name">{r.username ? <NameTag name={r.username} uid={r.user_id ?? null} /> : 'Anonymous'}</span>
               <span className="sc-lb-ovr">{r.overall_score} OVR</span>
             </div>
             {r.picks && (
@@ -661,7 +407,7 @@ function SalaryLeaderboard({ dateStr, dateLabel, onClose }) {
     if (!supabase) { setRows([]); return }
     supabase
       .from('salary_cap_plays')
-      .select('username, picks, overall_score, ppg, apg, rpg, budget_used')
+      .select('username, user_id, picks, overall_score, ppg, apg, rpg, budget_used')
       .eq('date_str', dateStr)
       .order('overall_score', { ascending: false })
       .limit(200)
@@ -694,7 +440,7 @@ function SalaryLeaderboard({ dateStr, dateLabel, onClose }) {
           >
             <div className="sc-lb-row-main">
               <span className="sc-lb-rank">{i + 1}</span>
-              <span className="sc-lb-name">{r.username || 'Anonymous'}</span>
+              <span className="sc-lb-name">{r.username ? <NameTag name={r.username} uid={r.user_id ?? null} /> : 'Anonymous'}</span>
               <span className="sc-lb-ovr">{r.overall_score} OVR</span>
               {r.budget_used != null && budget - r.budget_used > 0 && (
                 <span className="sc-lb-spare">+${budget - r.budget_used}M</span>
@@ -742,12 +488,14 @@ export default function BucketSalaryCap({ onConfirm, onBack, user, initialDateSt
   const [shufflesLeft,    setShufflesLeft]    = useState(() => localStorage.getItem(SHUFFLED_KEY(getESTDate(0).str, user?.id)) ? 0 : 1)
   const [shuffleOverride, setShuffleOverride] = useState(() => {
     const saved = localStorage.getItem(SHUFFLED_KEY(getESTDate(0).str, user?.id))
-    if (!saved) return {}
-    try { const { ci, players } = JSON.parse(saved); return { [ci]: players } } catch { return {} }
+    return saved ? parseShuffle(saved).col : {}
   })
   const [shufflingCol,    setShufflingCol]    = useState(null)
   const [shufflingRow,    setShufflingRow]    = useState(null)
-  const [rowOverrides,    setRowOverrides]    = useState({})
+  const [rowOverrides,    setRowOverrides]    = useState(() => {
+    const saved = localStorage.getItem(SHUFFLED_KEY(getESTDate(0).str, user?.id))
+    return saved ? parseShuffle(saved).row : {}
+  })
   const [shufflePhase,    setShufflePhase]    = useState(null)
   const [shuffleMode,     setShuffleMode]     = useState(false)
   const [hoveredShuffle,  setHoveredShuffle]  = useState(null)
@@ -766,6 +514,38 @@ export default function BucketSalaryCap({ onConfirm, onBack, user, initialDateSt
   // under players who already submitted picks for it — regenerating on the
   // fly (the old behavior) breaks the moment the underlying roster data
   // changes, since the same seed then picks different actual players.
+  // A stored board is only as good as whoever wrote it (any signed-in player can), so it's
+  // taken only if it's a real one: every price its tier's, every player real at their real
+  // ratings, and most cells the same as the board this phone makes from the day's seed.
+  // Photos are always our own. Anything else: the phone's own board.
+  const trustedFrozen = (frozen) => {
+    if (!Array.isArray(frozen) || frozen.length !== SAL_COLS.length || !frozen.every(col => Array.isArray(col) && col.length === TIERS.length)) return null
+    // the generator's own ranking (yesterday's players marked down the same way), so a
+    // re-rate since the freeze still passes but a star dropped into a cheap tier doesn't
+    const recent = recentFor(activeDate)
+    const regulars = ALL_PLAYERS.filter(p => !p.legend)
+    let legends = 0
+    for (let ci = 0; ci < frozen.length; ci++) {
+      const col = SAL_COLS[ci]
+      const score = p => { const ts = typesFor(p, col); return ts.reduce((s, x) => s + (p.attrs?.[x] ?? 5), 0) / ts.length - (recent.has(p.name) ? 3.5 : 0) }
+      const ranked = regulars.map(p => [p.name, score(p)]).sort((x, y) => y[1] - x[1]).map(x => x[0])
+      for (let ti = 0; ti < TIERS.length; ti++) {
+        const cell = frozen[ci][ti]
+        if (!cell || cell.price !== TIERS[ti] || typeof cell.name !== 'string') return null
+        const real = ALL_PLAYERS.find(p => p.name === cell.name && p.team === cell.team) ?? ALL_PLAYERS.find(p => p.name === cell.name)
+        if (!real || Object.entries(cell.attrs || {}).some(([k, v]) => v !== (real.attrs?.[k] ?? 5))) return null
+        if (real.legend) { if (++legends > 2) return null; continue }
+        const at = ranked.indexOf(real.name) / Math.max(1, ranked.length)
+        if (at < TIER_BANDS[ti][0] - 0.2) return null
+      }
+    }
+    return frozen.map(col => col.map(cell => { const hs = NBA_HEADSHOTS[cell.name]; return { ...cell, photo: hs ? `${HEADSHOT_BASE}/nba/${hs}.webp` : null } }))
+  }
+  const recentFor = (date) => {
+    const yesterday = new Date(date.y, date.m - 1, date.day - 1)
+    const yy = yesterday.getFullYear(), ym = yesterday.getMonth() + 1, yd = yesterday.getDate()
+    return getPickedNamesForSeed(yy * 10000 + ym * 100 + yd, SAL_COLS, ALL_PLAYERS)
+  }
   const localGenerateGrid = (date) => {
     const rand = seededRandom(date.seed)
     const yesterday = new Date(date.y, date.m - 1, date.day - 1)
@@ -810,8 +590,10 @@ export default function BucketSalaryCap({ onConfirm, onBack, user, initialDateSt
       .then(({ data, error }) => {
         if (cancelled) return
         if (error) { console.error('[salary-cap] grid fetch failed:', error); return }
-        if (data?.grid) {
-          setGrid(data.grid) // swap to the historically-accurate frozen board
+        const frozen = data?.grid ? trustedFrozen(data.grid) : null
+        if (data?.grid && !frozen) { console.warn(`[${'salary-cap'}] the stored board for ${activeDate.str} didn't check out; using this phone's own`); return }
+        if (frozen) {
+          setGrid(frozen) // swap to the historically-accurate frozen board
         } else {
           // No frozen record yet (first visitor of the day, or a past date
           // from before this fix shipped) — lock in our local regeneration
@@ -924,7 +706,10 @@ export default function BucketSalaryCap({ onConfirm, onBack, user, initialDateSt
         return next
       })
       if (mode === 'infinite') { setInfShufflesLeft(0) }
-      else { setShufflesLeft(0) }
+      else {
+        localStorage.setItem(SHUFFLED_KEY(activeDate.str, user?.id), JSON.stringify({ ti, row: newMap }))
+        setShufflesLeft(0)
+      }
       setShufflePhase('in')
       setTimeout(() => { setShufflingRow(null); setShufflePhase(null) }, 500)
     }, 380)
@@ -950,14 +735,11 @@ export default function BucketSalaryCap({ onConfirm, onBack, user, initialDateSt
     const uid = user?.id
     const savedShuffle = localStorage.getItem(SHUFFLED_KEY(activeDate.str, uid))
     setShufflesLeft(savedShuffle ? 0 : 1)
-    if (savedShuffle) {
-      try {
-        const { ci, players } = JSON.parse(savedShuffle)
-        setShuffleOverride({ [ci]: players })
-      } catch { setShuffleOverride({}) }
-    } else {
-      setShuffleOverride({})
-    }
+    // the day's shuffle comes back with it (column or row), so a played board
+    // shows the picks where they were made
+    const restored = savedShuffle ? parseShuffle(savedShuffle) : { col: {}, row: {} }
+    setShuffleOverride(restored.col)
+    setRowOverrides(restored.row)
     setShuffleMode(false)
     const savedScouted = localStorage.getItem(SCOUTED_KEY(activeDate.str, uid))
     setScoutsLeft(savedScouted ? 0 : 1)
@@ -1153,6 +935,11 @@ export default function BucketSalaryCap({ onConfirm, onBack, user, initialDateSt
     })
     const playData = { picks, overall: stats.overall, ppg: stats.ppg, apg: stats.apg, rpg: stats.rpg }
 
+    // the day's board was already played on this device by someone else (a guest, another
+    // account): they've seen every pick on the board, so this play doesn't post
+    const devKey = `sal_dev_${activeDate.str}`, me = user?.id || 'guest'
+    let scouted = false
+    if (mode !== 'infinite') { try { const by = localStorage.getItem(devKey); if (by && by !== me) scouted = true; else if (!by) localStorage.setItem(devKey, me) } catch {} }
     localStorage.setItem(PLAYED_KEY(activeDate.str, user?.id), JSON.stringify(playData))
     setAlreadyPlayed(playData)
 
@@ -1163,6 +950,7 @@ export default function BucketSalaryCap({ onConfirm, onBack, user, initialDateSt
       apg:      stats.apg,
       rpg:      stats.rpg,
       userId:   user?.id ?? null,
+      noPost:   scouted,
       username: getUsername(user) || null,
       totalCost,
     }

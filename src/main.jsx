@@ -1,4 +1,4 @@
-import { StrictMode } from 'react'
+import { StrictMode, lazy, Suspense } from 'react'
 
 // Adds touch class on first touch — CSS uses this to kill sticky :hover states
 document.addEventListener('touchstart', function() {
@@ -21,13 +21,44 @@ if (/iPad/.test(navigator.userAgent) || (/Mac/.test(navigator.platform) && navig
   document.documentElement.classList.add('is-tablet')
 }
 import { createRoot } from 'react-dom/client'
+import { AppMotion } from './lib/motion'
 import UsernamePrompt from './components/UsernamePrompt'
+import PasswordReset from './components/PasswordReset'
 import { HelmetProvider } from 'react-helmet-async'
-import { Analytics } from '@vercel/analytics/react'
 import './index.css'
-import App from './App.jsx'
-import BucketApp from './components/BucketApp.jsx'
+import './app-game.css'
+// Football and basketball are two games: a visit loads only the one it's on
+const App = lazy(() => import('./App.jsx'))
+const BucketApp = lazy(() => import('./components/BucketApp.jsx'))
 import ErrorBoundary from './components/ErrorBoundary.jsx'
+import { initAppInfra, AppInfra } from './lib/appInfra'; initAppInfra()   // error log, deep links, notifications, rating, version (lib/appInfra.js)
+import { IS_APP, APP_LOOK, APP_PLATFORM } from './lib/platform'
+// App shell (dock, Daily, Cards, shop, toasts). The website loads it too for
+// the app-look home and profile screens (APP_LOOK in lib/platform.js).
+const AppTabBar = (IS_APP || APP_LOOK) ? lazy(() => import('./components/AppTabBar.jsx')) : null
+
+if (IS_APP) {
+  document.documentElement.classList.add('is-app')
+  // Android's WebView is far slower at live blur and big animated layers than iOS (app-game.css)
+  if (APP_PLATFORM === 'android') document.documentElement.classList.add('is-android')
+  // No pinch/auto zoom in the app: iOS zooms into any focused field under 16px
+  // (chat, search); a fixed scale keeps the screen still while you type.
+  document.querySelector('meta[name="viewport"]')?.setAttribute('content', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover')
+}
+// Website with the app look: the app's colours and type (app-game.css)
+if (!IS_APP && APP_LOOK) document.documentElement.classList.add('app-look')
+// Sound effects, haptics and confetti (lib/juice.js); sound starts off on the website
+if (IS_APP || APP_LOOK) import('./lib/juice').then(m => m.initJuice()).catch(() => {})
+// XP, coins, streak, missions, cards (lib/progress.js)
+if (IS_APP || APP_LOOK) import('./lib/progress').then(m => m.initProgress()).catch(() => {})
+// Cosmetic effects pause while they're off screen (lib/fxPause.js)
+if (IS_APP || APP_LOOK) import('./lib/fxPause').then(m => m.initFxPause()).catch(() => {})
+// App: Discord sign-in comes back through the app's own link
+if (IS_APP) import('./lib/appAuth').then(m => m.initAppAuth()).catch(() => {})
+// which App Store the phone shops in (buying is offered only on the US one: lib/storefront.js)
+if (IS_APP) import('./lib/storefront').then(m => m.loadStorefront()).catch(() => {})
+// Ad rail preview (More → Ad rail preview, or ?rail on the website)
+import('./lib/fakeRail').then(m => m.initRailPreview()).catch(() => {})
 
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.getRegistrations().then(regs => {
@@ -37,22 +68,78 @@ if ('serviceWorker' in navigator) {
   })
 }
 
+// A deploy replaced the files an open tab still asks for: reload onto the new ones (at most once a minute, never a loop)
+window.addEventListener('vite:preloadError', e => {
+  try {
+    if (Date.now() - Number(sessionStorage.getItem('bap_chunk_reload') || 0) < 60000) return
+    sessionStorage.setItem('bap_chunk_reload', String(Date.now()))
+  } catch { return }
+  e.preventDefault()
+  window.location.reload()
+})
+
 const isBucket = window.location.pathname.startsWith('/bucket')
+if ((IS_APP || APP_LOOK) && isBucket) document.documentElement.classList.add('is-bucket')   // app theme: orange accent
 
 // the boot guard in index.html: the app's code is running
 window.__bapStarted = true
 
+// The loading screen (index.html) fills with real progress: the code is running
+// now, then the fonts, the account (who's signed in, their coins, level and
+// seasons, so home doesn't open as a guest and then change), the first real
+// screen drawn and its pictures. A cold start holds it at least BOOT_MIN so the
+// animation gets to play; nothing it waits on can hold it past its cap.
+const BOOT_MIN = 1600
+window.__bapLoad?.(0.6)
+try { document.fonts?.ready?.then(() => window.__bapLoad?.(0.7)) } catch {}
+function dropLoader() {
+  if (!document.getElementById('bap-loader')) return
+  const root = document.getElementById('root')
+  const t0 = performance.now()
+  const cap = (p, ms) => Promise.race([p, new Promise(r => setTimeout(r, ms))])
+  const ready = () => root && root.children.length > 0 && root.querySelector('.ag-screen, .ag-home, main, .game-layout, .ag-shell, section, header')
+  const account = (IS_APP || APP_LOOK)
+    ? cap(import('./lib/progress').then(m => { m.prefetchPlayersOfDay(); return Promise.all([m.progressSettled, m.cachedPlayersOfDay()]) }), 3000).catch(() => {})
+    : Promise.resolve()
+  account.then(() => window.__bapLoad?.(0.85))
+  const drawn = new Promise(r => {
+    const tick = () => (ready() || performance.now() - t0 > 12000 ? r() : requestAnimationFrame(tick))
+    requestAnimationFrame(tick)
+  })
+  Promise.all([account, drawn])
+    .then(() => cap(Promise.all([...root.querySelectorAll('img')].filter(img => img.getBoundingClientRect().top < innerHeight).map(img => (img.complete ? 0 : img.decode().catch(() => 0)))), 2000))
+    .then(() => {
+      window.__bapLoad?.(0.95)
+      setTimeout(() => requestAnimationFrame(() => window.__bapLoaded?.()), Math.max(0, BOOT_MIN - performance.now()))
+      // the app's own files are on the phone: warm the screens people open next
+      if (IS_APP) (window.requestIdleCallback ?? (f => setTimeout(f, 1500)))(() => {
+        for (const f of [() => import('./components/SimPage'), () => import('./components/app/AppCareer'), () => import('./components/app/AppCompete'), () => import('./components/app/AppSquad')]) f().catch(() => {})
+      })
+    })
+}
+
 // the website's bottom rail: under the nav, its close button on top (lib/railLayer.js)
-import('./lib/railLayer').then(m => m.startRailLayer()).catch(() => {})
+if (!IS_APP) import('./lib/railLayer').then(m => m.startRailLayer()).catch(() => {})
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <ErrorBoundary>
       <HelmetProvider>
-        {isBucket ? <BucketApp /> : <App />}
-        <UsernamePrompt />
+        <AppMotion>
+          {/* (one boundary: the game mounts before the dock, as it did when it wasn't lazy) */}
+          <Suspense fallback={null}>
+            {isBucket ? <BucketApp /> : <App />}
+            <UsernamePrompt />
+            <PasswordReset />
+            {AppTabBar && <Suspense fallback={null}><AppTabBar /></Suspense>}
+          </Suspense>
+        </AppMotion>
       </HelmetProvider>
-      <Analytics />
+      <AppInfra />
     </ErrorBoundary>
   </StrictMode>,
 )
+// the native splash waits for the loading screen (capacitor.config.json); index.html
+// lets it go as soon as it paints, and this is the backup once the app's code runs
+if (IS_APP) import('@capacitor/splash-screen').then(m => m.SplashScreen.hide({ fadeOutDuration: 150 })).catch(() => {})
+dropLoader()

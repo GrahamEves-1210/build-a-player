@@ -300,23 +300,88 @@ function simPlayoffs(mySeed, winProb, conf, standings, rand = Math.random, ratin
   return { rounds, champion: !eliminated && seriesWins === 4 }
 }
 
+// ─── Squad Builder: one season for a whole squad ─────────────────────────────
+// `tr` is the squad's team strength (off/def out of 100, moved by its builds:
+// lib/squadSeason.js). The 82 games, the standings and the playoffs are decided
+// once here; every build's runBucketSimulation then plays this same season.
+export function scriptBucketSeason(team, tr, rngSeed) {
+  const rand = seededRandom(rngSeed)
+  const score = (tr.off + tr.def) / 200
+  const winProb = Math.max(0.13, Math.min(0.87, 0.20 + (score - 0.59) / 0.24 * 0.57))
+  const allOpps = [...CONF_TEAMS.east, ...CONF_TEAMS.west].filter(s => s !== team.short)
+  let wins = 0, losses = 0
+  const games = []
+  for (let i = 0; i < 82; i++) {
+    const won = rand() < winProb
+    if (won) wins++; else losses++
+    const loserBase = 94 + Math.floor(rand() * 22)
+    const margin = 3 + Math.floor(rand() * 17)
+    games.push({ g: i + 1, won, home: rand() < 0.5, opponent: allOpps[Math.floor(rand() * allOpps.length)], mySc: won ? loserBase + margin : loserBase, oppSc: won ? loserBase : loserBase + margin })
+  }
+  const conf = EAST.has(team.short) ? 'east' : 'west'
+  const { seed, standings } = simConferenceStandings(wins, team.short, conf, rand)
+  let playoffRounds = [], champion = false
+  if (seed <= 10) {
+    const po = simPlayoffs(seed, Math.min(0.85, winProb + 0.04), conf, standings, rand)
+    playoffRounds = po.rounds
+    champion = po.champion
+  }
+  const playin = playoffRounds.find(r => r.type === 'playin')
+  const madePlayoffs = seed <= 6 || (seed <= 10 && playin?.advanced === true)
+  return { games, wins, losses, conference: conf, seed, standings, playoffRounds, champion, madePlayoffs, winProb }
+}
+
 // ─── Main Simulation Entry Point ─────────────────────────────────────────────
-export function runBucketSimulation(build, types, team, position = 'guard', rngSeed = null, gameMode = 'classic') {
+// `script` (Squad Builder, lib/squadSeason.js): the squad's one season, already played
+// (scriptBucketSeason): the games, the standings and the playoffs come from it and this
+// build only makes its own stat line. `team.usage` there is the build's share of the ball.
+// Real PER (Hollinger's formula, as Basketball-Reference runs it), against the 2025-26 league
+// (team per-game averages). A box score here is per game; league and team pace are taken as equal.
+const LG = { mp: 241.3, fg: 42, fga: 89.1, tp: 13.3, ft: 18.4, fta: 23.5, orb: 11.4, trb: 43.8, ast: 26.7, stl: 8.4, blk: 4.8, tov: 14.5, pf: 19.9, pts: 115.6 }
+const LG_FACTOR = (2 / 3) - (0.5 * (LG.ast / LG.fg)) / (2 * (LG.fg / LG.ft))
+const LG_VOP = LG.pts / (LG.fga - LG.orb + LG.tov + 0.44 * LG.fta)
+const LG_DRB = (LG.trb - LG.orb) / LG.trb
+function uPER(b) {
+  const astFg = LG.ast / LG.fg
+  return (1 / b.mp) * (
+    b.tp + (2 / 3) * b.ast
+    + (2 - LG_FACTOR * astFg) * b.fg
+    + b.ft * 0.5 * (1 + (1 - astFg) + (2 / 3) * astFg)
+    - LG_VOP * b.tov
+    - LG_VOP * LG_DRB * (b.fga - b.fg)
+    - LG_VOP * 0.44 * (0.44 + 0.56 * LG_DRB) * (b.fta - b.ft)
+    + LG_VOP * (1 - LG_DRB) * (b.trb - b.orb)
+    + LG_VOP * LG_DRB * b.orb
+    + LG_VOP * b.stl
+    + LG_VOP * LG_DRB * b.blk
+    - b.pf * (LG.ft / LG.pf - 0.44 * (LG.fta / LG.pf) * LG_VOP)
+  )
+}
+const LG_UPER = uPER(LG)   // the league's own rate is what 15 means
+export const perOf = box => uPER(box) * (15 / LG_UPER)
+
+export function runBucketSimulation(build, types, team, position = 'guard', rngSeed = null, gameMode = 'classic', script = null) {
   const rand = rngSeed != null ? seededRandom(rngSeed) : Math.random
   const ovr = calcBucketOVR(build, types, position)
   const isAllTime = gameMode === 'all-time'
   const simRatings  = isAllTime ? ALLTIME_TEAM_RATINGS : TEAM_RATINGS
   const simConfElite = isAllTime ? ALLTIME_CONF_ELITE : CONF_ELITE
-  const tr = simRatings[team.short] ?? { off: 68, def: 65 }
+  // Career passes its own team (1–10 scale, moved by the roster and the year's events)
+  const tr = team.career ? { off: 55 + team.off * 3.3, def: 55 + team.def * 3.3 } : simRatings[team.short] ?? { off: 68, def: 65 }
 
   // Team strength → baseline WP (same formula as standings generator)
   const teamScore = (tr.off + tr.def) / 200
-  const teamWP    = Math.max(0.13, Math.min(0.77, 0.20 + (teamScore - 0.59) / 0.24 * 0.57))
+  const baseWP    = Math.max(0.13, Math.min(0.77, 0.20 + (teamScore - 0.59) / 0.24 * 0.57))
+  // Current mode: one star carries a team further than the roster alone says (the worst
+  // team's floor and the best team's ceiling both pull in a little, and a high OVR lifts
+  // more). All-Time (a role player among legends) and Career keep the roster's weight.
+  const starMode  = !isAllTime && !team.career
+  const teamWP    = starMode ? 0.5 + (baseWP - 0.5) * 0.8 : baseWP
   // OVR boost: in all-time you're one role player among legends — team strength dominates
   const rawDelta  = (ovr - 82) / 17
   const boostMult = isAllTime ? 0.45 : 1.0
   const ovrBoost  = rawDelta >= 0
-    ? Math.min(isAllTime ? 0.09 : 0.20, rawDelta * 0.20 * boostMult)
+    ? Math.min(isAllTime ? 0.09 : starMode ? 0.30 : 0.20, rawDelta * (starMode ? 0.32 : 0.20) * boostMult)
     : Math.max(isAllTime ? -0.05 : -0.10, rawDelta * 0.10 * boostMult)
   const winProb   = Math.min(isAllTime ? 0.91 : 0.87, Math.max(0.12, teamWP + ovrBoost))
 
@@ -352,14 +417,18 @@ export function runBucketSimulation(build, types, team, position = 'guard', rngS
 
   // --- per-game stats (calibrated to realistic NBA ranges) ---
   // PPG: guard 4–40+, big 5–32 (A+ build ~33.5, S tier can exceed)
-  const ppg = +(Math.max(isBig ? 5 : 4, (isBig ? -2 : -3.5) + rn(-1, 1, rand) + scoringRaw * (isBig ? 3.5 : 4.0))).toFixed(1)
+  // Career: your share of the offense (a rookie next to a star scores less than the star version of you)
+  const use = (team.career || team.squad) && team.usage ? team.usage : 1, useSide = 0.5 + use / 2
+  const ppg = +(use * Math.max(isBig ? 5 : 4, (isBig ? -2 : -3.5) + rn(-1, 1, rand) + scoringRaw * (isBig ? 3.5 : 4.0))).toFixed(1)
   // RPG: guard 1.5–9+, big 6–15 (A+ build ~10, S tier can exceed)
-  const rpg = +(Math.max(isBig ? 5 : 1.5, (isBig ? 4.0 : 0.5) + rn(-0.4, 0.4, rand) + rebRaw * (isBig ? 0.82 : 0.75))).toFixed(1)
+  // (a career starter's boards aren't a share of the offense: he keeps them all; off the bench the minutes cost him)
+  const rebSide = team.career && !team.bench ? 1 : useSide
+  const rpg = +(rebSide * Math.max(isBig ? 5 : 1.5, (isBig ? 4.0 : 0.5) + rn(-0.4, 0.4, rand) + rebRaw * (isBig ? 0.82 : 0.75))).toFixed(1)
   // APG: guard 1–11+, big 0.5–11 (quadratic for steep drop-off — S-tier passer bigs reach Jokic ~11)
   const bigApgBase = astRaw >= 8
     ? Math.max(0.5, 0.125 * astRaw * astRaw - 0.375 * astRaw)
     : (3.8 * astRaw + 4.6) / 7
-  const apg = +(Math.max(isBig ? 0.5 : 1.0, (isBig ? bigApgBase : (-1.0 + astRaw * 1.1)) + rn(-0.3, 0.3, rand))).toFixed(1)
+  const apg = +(useSide * Math.max(isBig ? 0.5 : 1.0, (isBig ? bigApgBase : (-1.0 + astRaw * 1.1)) + rn(-0.3, 0.3, rand))).toFixed(1)
   // SPG: 0.2–2.3+ (A+ build ~2.0, S tier can exceed)
   const spg = +(Math.max(0.2, stlRaw * 0.21 + rn(-0.1, 0.14, rand))).toFixed(1)
   // BPG: guard 0–1.3, big 0.4–3.1
@@ -389,12 +458,24 @@ export function runBucketSimulation(build, types, team, position = 'guard', rngS
     iq  * 1.2 +
     (isBig ? 0 : hnd * 0.5)
   )))
-  const per      = +(Math.max(8, rn(-1, 1, rand) + 8 + (ovr - 60) * 0.55)).toFixed(1)
+  rn(-1, 1, rand)   // (a draw kept so seeded seasons stay the same; it was once part of a made-up rating)
 
   const tovRaw   = isBig
     ? 2.0 - ((pm + iq) / 2) * 0.18 + ppg * 0.04
     : 2.6 - ((hnd + pas + iq) / 3) * 0.24 + ppg * 0.05
   const tov      = +(Math.max(0.5, Math.min(5.5, tovRaw + rn(-0.4, 0.4, rand)))).toFixed(1)
+
+  // PER needs what the sim doesn't track, so those come from the build: how many of his shots are
+  // threes (the jumper), how often he gets to the line (finishing), and the rest typical for a
+  // starter or a sub at the position. Shots are solved so they add up to his points at his percentages.
+  const threeShare = js === 0 ? 0 : Math.min(0.62, isBig ? 0.03 + js * 0.03 : 0.18 + js * 0.03)
+  const ftRate = (isBig ? 0.2 : 0.14) + fin * 0.015
+  const makes = 2 * (fgPct / 100) + threeShare * (threePct / 100) + ftRate * (ftPct / 100)
+  const fga = makes > 0 ? ppg / makes : 0
+  const per = +Math.max(0, perOf({
+    mp: team.career && team.bench ? 22 : 34, fg: fga * (fgPct / 100), fga, tp: fga * threeShare * (threePct / 100), ft: fga * ftRate * (ftPct / 100), fta: fga * ftRate,
+    orb: rpg * (isBig ? 0.24 : 0.12), trb: rpg, ast: apg, stl: spg, blk: bpg, tov, pf: isBig ? 2.8 : 2.1,
+  })).toFixed(1)
 
   // 82-game regular season with per-game data
   let wins = 0, losses = 0
@@ -404,33 +485,37 @@ export function runBucketSimulation(build, types, team, position = 'guard', rngS
   const allOpps = [...CONF_TEAMS.east, ...CONF_TEAMS.west].filter(s => s !== team.short)
 
   for (let i = 0; i < 82; i++) {
-    const w = rand() < winProb
+    const sg = script?.games[i]
+    const w = sg ? sg.won : rand() < winProb
     if (w) { wins++ } else { losses++ }
     gameLog.push(w ? 'W' : 'L')
 
     const loserBase = 94 + Math.floor(rand() * 22)
     const margin    = 3  + Math.floor(rand() * 17)
-    const mySc  = w ? loserBase + margin : loserBase
-    const oppSc = w ? loserBase : loserBase + margin
-    const oppShort = allOpps[Math.floor(rand() * allOpps.length)]
+    const mySc  = sg ? sg.mySc : w ? loserBase + margin : loserBase
+    const oppSc = sg ? sg.oppSc : w ? loserBase : loserBase + margin
+    const oppShort = sg ? sg.opponent : allOpps[Math.floor(rand() * allOpps.length)]
 
     const gamePts = Math.max(0, Math.round(ppg + rn(-7, 10, rand)))
     const gameReb = Math.max(0, Math.round(rpg + rn(-3, 3, rand)))
     const gameAst = Math.max(0, Math.round(apg + rn(-2, 2.5, rand)))
 
-    const game = { g: i + 1, won: w, home: rand() < 0.5, opponent: oppShort, mySc, oppSc, pts: gamePts, reb: gameReb, ast: gameAst }
+    const game = { g: i + 1, won: w, home: sg ? sg.home : rand() < 0.5, opponent: oppShort, mySc, oppSc, pts: gamePts, reb: gameReb, ast: gameAst }
     games.push(game)
     if (!bestGame || gamePts > bestGame.pts) bestGame = game
   }
 
   const conf = EAST.has(team.short) ? 'east' : 'west'
-  const { seed, standings } = simConferenceStandings(wins, team.short, conf, rand, simRatings)
+  const { seed, standings } = script ?? simConferenceStandings(wins, team.short, conf, rand, simRatings)
 
   // Seeds 1-6 go directly; seeds 7-10 must survive play-in
   const playinEligible = seed <= 10
   let playoffRounds = [], champion = false
 
-  if (playinEligible) {
+  if (script) {
+    playoffRounds = script.playoffRounds
+    champion = script.champion
+  } else if (playinEligible) {
     const playoffWinProb = Math.min(isAllTime ? 0.89 : 0.85, winProb + 0.04)
     const po = simPlayoffs(seed, playoffWinProb, conf, standings, rand, simRatings, simConfElite)
     playoffRounds = po.rounds

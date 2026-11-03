@@ -1,5 +1,8 @@
-﻿import { useState, useEffect, useRef } from 'react'
+﻿import { Fragment, useState, useEffect, useRef, useMemo } from 'react'
+import { NameTag } from './app/NameTag'
+import { userScrolling } from '../lib/userScroll'
 import { ATTR, TYPES } from '../data/qbs'
+import { QB_SAL_COLS } from '../data/qb-salary'
 import { TEAMS } from '../data/nfl-teams'
 import { WR_ATTR, WRS } from '../data/wrs'
 import { WR_LEGENDS } from '../data/wr-legends'
@@ -12,6 +15,7 @@ import { DB_ATTR, DBS, DB_TYPES } from '../data/dbs'
 import { DB_LEGENDS } from '../data/db-legends'
 import { OL_ATTR, OLS } from '../data/ols'
 import HEADSHOTS from '../data/headshots.json'
+import { NFL_GOAT } from '../data/nfl-goat'
 import RBFigureOverlay from './RBFigureOverlay'
 import WRFigureOverlay from './WRFigureOverlay'
 import DBFigureOverlay from './DBFigureOverlay'
@@ -20,7 +24,17 @@ import QBAvatar from './QBAvatar'
 import QBFigureOverlay from './QBFigureOverlay'
 import SiteFooter from './SiteFooter'
 import MVPModal from './MVPModal'
+import { IS_APP, APP_LOOK } from '../lib/platform'
+// The app's season screen (moments, week strip, bracket, rewards, story) runs
+// on the website too; the site keeps its in-page ads and the 32-0 promo
+const APP_SIM = IS_APP || APP_LOOK
+import { WeekStrip, Bracket, RingCeremony, SeasonRewards } from './app/AppSeason'
+import { createDirector } from '../lib/seasonDirector'
+import { MomentCard, Pulse, Wire, Milestones, RecordOverlay, Leaders, SeasonStory, useDirectedReveal, MomentsToggle } from './app/AppSeasonPlus'
 import { rampAdd, useRailOn } from '../lib/ads'
+import { ShareSeasonButton } from './app/SeasonShare'
+import { nflSeasonCard } from '../utils/seasonCard'
+import { useCountUp as countUp } from '../lib/useCountUp'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -37,27 +51,12 @@ function offDefGrade(val) {
   return 'D'
 }
 
-function useCountUp(target, duration = 900, enabled = true) {
-  const [val, setVal] = useState(0)
-  useEffect(() => {
-    if (!enabled || !target) return
-    const start = Date.now()
-    let raf
-    const tick = () => {
-      const p = Math.min((Date.now() - start) / duration, 1)
-      const eased = 1 - Math.pow(1 - p, 3)
-      setVal(Math.round(eased * target))
-      if (p < 1) raf = requestAnimationFrame(tick)
-    }
-    raf = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(raf)
-  }, [target, duration, enabled])
-  return val
-}
+// the shared count-up (lib/useCountUp.js); runs once there's a number to count to
+const useCountUp = (target, duration = 900, enabled = true) => countUp(target, { run: enabled && !!target, ms: duration })
 
 // ── WR Depth Chart Card ───────────────────────────────────────────────────────
 
-function WRDepthChart({ team, build, types, isAllTime = false }) {
+function WRDepthChart({ team, build, types, isAllTime = false, userName = 'Guest' }) {
   const userOVR = calcOVRWR(build, types)
 
   const pool = isAllTime ? WR_LEGENDS : WRS
@@ -73,7 +72,7 @@ function WRDepthChart({ team, build, types, isAllTime = false }) {
       teamColor: TEAMS.find(t => t.short === w.team)?.color,
       teamShort: w.team,
     })),
-    { name: 'Your Build', ovr: userOVR, isUser: true, photo: build['awareness']?.photo ?? null, teamColor: team.color, teamShort: team.short },
+    { name: userName, ovr: userOVR, isUser: true, photo: build['awareness']?.photo ?? null, teamColor: team.color, teamShort: team.short },
   ].sort((a, b) => b.ovr - a.ovr || (a.isUser ? 1 : -1))
 
   const labels = ['WR1', 'WR2', 'WR3', 'WR4']
@@ -94,7 +93,7 @@ function WRDepthChart({ team, build, types, isAllTime = false }) {
   )
 }
 
-function TEDepthChart({ team, build, types, isAllTime = false }) {
+function TEDepthChart({ team, build, types, isAllTime = false, userName = 'Guest' }) {
   const userOVR = calcOVRTE(build, types)
 
   const pool = isAllTime ? TE_LEGENDS : TES
@@ -110,7 +109,7 @@ function TEDepthChart({ team, build, types, isAllTime = false }) {
       teamColor: TEAMS.find(t => t.short === te.team)?.color,
       teamShort: te.team,
     })),
-    { name: 'Your Build', ovr: userOVR, isUser: true, photo: build['awareness']?.photo ?? null, teamColor: team.color, teamShort: team.short },
+    { name: userName, ovr: userOVR, isUser: true, photo: build['awareness']?.photo ?? null, teamColor: team.color, teamShort: team.short },
   ].sort((a, b) => b.ovr - a.ovr || (a.isUser ? 1 : -1))
 
   const labels = ['TE1', 'TE2', 'TE3']
@@ -131,7 +130,7 @@ function TEDepthChart({ team, build, types, isAllTime = false }) {
   )
 }
 
-function RBDepthChart({ team, build, types, isAllTime = false }) {
+function RBDepthChart({ team, build, types, isAllTime = false, userName = 'Guest' }) {
   const userOVR = calcOVRRB(build, types)
 
   const pool = isAllTime ? RB_LEGENDS : RBS
@@ -148,7 +147,7 @@ function RBDepthChart({ team, build, types, isAllTime = false }) {
       teamColor: TEAMS.find(t => t.short === rb.team)?.color ?? team.color,
       teamShort: rb.team,
     })),
-    { name: 'Your Build', ovr: userOVR, isUser: true, photo: null, teamColor: team.color, teamShort: team.short },
+    { name: userName, ovr: userOVR, isUser: true, photo: null, teamColor: team.color, teamShort: team.short },
   ].sort((a, b) => b.ovr - a.ovr || (a.isUser ? 1 : -1))
 
   const labels = ['RB1', 'RB2', 'RB3']
@@ -169,7 +168,7 @@ function RBDepthChart({ team, build, types, isAllTime = false }) {
   )
 }
 
-function DBDepthChart({ team, build, types, isAllTime = false }) {
+function DBDepthChart({ team, build, types, isAllTime = false, userName = 'Guest' }) {
   const userOVR = calcOVRDB(build, types)
 
   const g = k => build[k]?.val ?? 0
@@ -190,7 +189,7 @@ function DBDepthChart({ team, build, types, isAllTime = false }) {
     teamColor: TEAMS.find(t => t.short === d.team)?.color ?? team.color,
     teamShort: d.team,
   })
-  const userRow = { name: 'Your Build', ovr: userOVR, isUser: true, photo: userPhoto, teamColor: team.color, teamShort: team.short }
+  const userRow = { name: userName, ovr: userOVR, isUser: true, photo: userPhoto, teamColor: team.color, teamShort: team.short }
 
   // Always two starters per position: your build takes one of the two spots in
   // its own group (the team's best player keeps the other), so the chart is
@@ -229,7 +228,7 @@ function DBDepthChart({ team, build, types, isAllTime = false }) {
 // HT/WT), and the team's other four real starters fill out the rest.
 const OL_SPOTS = ['LT', 'LG', 'C', 'RG', 'RT']
 
-function OLDepthChart({ team, build, types }) {
+function OLDepthChart({ team, build, types, userName = 'Guest' }) {
   const userOVR  = calcOVROL(build, types)
   const buildSpot = olBuildSpot(build)
   const userSpot = OL_SPOTS.includes(buildSpot) ? buildSpot : 'LT'
@@ -237,7 +236,7 @@ function OLDepthChart({ team, build, types }) {
 
   const rows = OL_SPOTS.map(spot => {
     if (spot === userSpot) {
-      return { label: spot, name: 'Your Build', ovr: userOVR, isUser: true, photo: userPhoto, teamColor: team.color, teamShort: team.short }
+      return { label: spot, name: userName, ovr: userOVR, isUser: true, photo: userPhoto, teamColor: team.color, teamShort: team.short }
     }
     const o = OLS.find(p => p.team === team.short && p.pos === spot)
     return o ? {
@@ -330,7 +329,7 @@ function statCols(kind, r) {
   }
 }
 
-function StatLineTable({ result, build, kind, values = {}, ready = true }) {
+function StatLineTable({ result, build, kind, values = {}, ready = true, userName = 'Guest' }) {
   const team = result.team
   const pos = kind === 'db' ? (build?.['size']?.subpos === 's' ? 'S' : 'CB') : kind === 'ol' ? (result.spot ?? 'OL') : kind.toUpperCase()
   const cols = statCols(kind, result)
@@ -347,7 +346,7 @@ function StatLineTable({ result, build, kind, values = {}, ready = true }) {
           <tbody>
             <tr>
               <th scope="row" className="dbt-name">
-                <span className="dbt-player">Your Build</span>
+                <span className="dbt-player">{userName}</span>
                 <span className="dbt-meta">{team?.short ?? '—'} · {pos}</span>
               </th>
               {cols.map(c => {
@@ -364,7 +363,7 @@ function StatLineTable({ result, build, kind, values = {}, ready = true }) {
 }
 
 function gradeColor(val0) {
-  const val = Math.round(val0 ?? 0)   // rounded like the letter (valToGrade), so an S is always purple
+  const val = Math.round(val0 ?? 0)   // rounded like the letter (valToGrade), so a B- is always green
   if (val >= 11) return '#a855f7'
   if (val >= 8)  return '#3b82f6'
   if (val >= 5)  return '#22c55e'
@@ -375,12 +374,24 @@ function gradeColor(val0) {
 
 // ── Screen 1: Build Overview ──────────────────────────────────────────────────
 
-function ScreenBuild({ result, build, types, onNext, isRB, isWR, isTE, isDB, isOL }) {
+// The build as rows: one per trait, or for QB Salary Cap one per column you
+// picked (like basketball's), graded on the average of the traits it covers
+function buildRows(build, types, meta, salaryQB) {
+  if (salaryQB) {
+    return QB_SAL_COLS.filter(c => build[c.types[0]]).map(c => {
+      const vals = c.types.map(t => build[t]?.val).filter(v => v != null)
+      return { key: c.key, label: c.label, data: build[c.types[0]], val: vals.reduce((a, b) => a + b, 0) / (vals.length || 1) }
+    })
+  }
+  return types.filter(t => build[t]).map(t => ({ key: t, label: meta[t]?.label ?? t, data: build[t], val: build[t].val }))
+}
+
+function ScreenBuild({ result, build, types, onNext, isRB, isWR, isTE, isDB, isOL, isSalaryMode = false }) {
   const { ovr } = result
   const archetype = isOL ? getArchetypeOL(ovr, build, types) : isDB ? getArchetypeDB(ovr, build, types) : isTE ? getArchetypeTE(ovr, build, types) : isWR ? getArchetypeWR(ovr, build, types) : isRB ? getArchetypeRB(ovr, build, types) : getArchetype(ovr, build, types)
   const ovrDisplay = useCountUp(ovr, 900)
   const [rowsVisible, setRowsVisible] = useState(0)
-  const filled = types.filter(t => build[t])
+  const filled = buildRows(build, types, isOL ? OL_ATTR : isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : isRB ? RB_ATTR : ATTR, isSalaryMode && !isRB && !isWR && !isTE && !isDB && !isOL)
 
   const team = result.team
   const monoTeamBuild = team
@@ -451,21 +462,19 @@ function ScreenBuild({ result, build, types, onNext, isRB, isWR, isTE, isDB, isO
       )}
 
       <div className="simp-attr-table">
-        {filled.map((t, i) => {
-          const meta = (isOL ? OL_ATTR : isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : isRB ? RB_ATTR : ATTR)[t]
-          const data = build[t]
+        {filled.map(({ key, label, data, val }, i) => {
           return (
             <div
-              key={t}
+              key={key}
               className={`simp-attr-row${i < rowsVisible ? ' simp-row-visible' : ''}`}
             >
               <QBAvatar photo={data.photo} team={data.team} color={data.teamColor} size={46} />
               <div className="simp-attr-info">
-                <span className="simp-attr-name">{meta.label}</span>
+                <span className="simp-attr-name">{label}</span>
                 <span className="simp-attr-qb">{data.qbFull}</span>
               </div>
-              <span className="simp-grade-circle" style={{ background: gradeColor(data.val), color: '#07120a' }}>
-                {valToGrade(data.val)}
+              <span className="simp-grade-circle" style={{ background: gradeColor(val), color: '#07120a' }}>
+                {valToGrade(val)}
               </span>
             </div>
           )
@@ -475,10 +484,98 @@ function ScreenBuild({ result, build, types, onNext, isRB, isWR, isTE, isDB, isO
   )
 }
 
+// App: every week of the season in one scrolling window. Played weeks show the
+// result, weeks still to come wait as numbered rows, and the window keeps the
+// newest result in view while the season plays out (scroll back any time).
+function GameLog({ games, total, isOL, isDB, isTE, isWR, isRB }) {
+  const boxRef = useRef(null)
+  const follow = useRef(true)
+  useEffect(() => {
+    const el = boxRef.current
+    if (!el || !follow.current || userScrolling()) return
+    const row = el.children[Math.max(0, games.length - 1)]
+    if (row) el.scrollTo({ top: Math.max(0, row.offsetTop - el.clientHeight + row.offsetHeight + 4), behavior: 'smooth' })
+  }, [games.length])
+  // the player scrolls it: stop following; scroll back to the bottom to follow again
+  const userMoved = () => { follow.current = false }
+  const statFor = g => g.sat ? 'DNP' : (isOL ? `${g.pancakes} pnk · ${g.sacks} sck` : isDB ? `${g.tackles} tkl · ${g.ints} int` : (isWR || isTE) ? `${g.rec} rec · ${g.recYds} yds` : isRB ? `${g.rushYds} rush · ${g.rushTDs + g.recTDs} td` : `${g.passYds} yds · ${g.tds} td`)
+  return (
+    <div className="sm-log-wrap">
+      <div className="sm-log-head"><span>SCHEDULE</span><span>{games.length}/{total}</span></div>
+      <div
+        ref={boxRef}
+        className="simp-games-list sm-log"
+        onTouchStart={userMoved} onWheel={userMoved}
+        onScroll={e => { const el = e.currentTarget; if (el.scrollHeight - el.scrollTop - el.clientHeight < 8) follow.current = true }}
+      >
+        {Array.from({ length: total }, (_, i) => {
+          const g = games[i]
+          if (!g) return (
+            <div key={`up-${i}`} className="simp-game-row sgr-up">
+              <span className="sgr-wk">WK {i + 1}</span>
+              <span className="sgr-badge sgr-badge-up">–</span>
+              <span className="sgr-opp sgr-opp-up">Upcoming</span>
+            </div>
+          )
+          return (
+            <div key={g.wk} className={`simp-game-row ${g.won ? 'sgr-w' : 'sgr-l'} sgr-in`}>
+              <span className="sgr-wk">WK {g.wk}</span>
+              <span className={`sgr-badge ${g.won ? 'sgr-badge-w' : 'sgr-badge-l'}`}>{g.won ? 'W' : 'L'}</span>
+              <span className="sgr-opp"><span className="sgr-venue">{g.home ? 'vs' : '@'}</span>{g.opponent}{g.tags?.length > 0 && <span className="sm-tag sm-tag--row">{g.tags[0]}</span>}</span>
+              <span className="sgr-score">{g.mySc}–{g.oppSc}</span>
+              <span className="sgr-stat">{statFor(g)}</span>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// ── Screen 2 (app): the season you steer ─────────────────────────────────────
+function DirectedSeason({ dr, result, pos, pool, userName, director, onNext, build, types, isOL, isDB, isTE, isWR, isRB, adsDisabled = true }) {
+  const games = dr.games
+  const wins = games.filter(g => g.won).length, losses = games.length - wins
+  const final = dr.done ? result : null
+  const youValue = final ? (final[director.leaderKey ?? ''] ?? null) : null
+  return (
+    <>
+      <div className="simp-eyebrow">Regular Season</div>
+      <div className="simp-live-record">
+        <span className="slr-w">{wins}</span>
+        <span className="slr-sep">–</span>
+        <span className="slr-l">{losses}</span>
+      </div>
+      <Pulse games={games} total={dr.total} playoffWins={10} />
+      <Wire items={dr.headlines} />
+      {/* only the moments get a card: a card per game flashed by too fast to read */}
+      {dr.moment && <MomentCard moment={dr.moment} onPick={dr.choose} />}
+      <Milestones items={dr.fresh} />
+      <WeekStrip games={director.games} revealed={dr.k} />
+      <GameLog games={games} total={dr.total} isOL={isOL} isDB={isDB} isTE={isTE} isWR={isWR} isRB={isRB} />
+      {!adsDisabled && <div id="ramp-cntr1-season" className="plf-banner-ad" style={{ minHeight: 0 }} />}
+      {dr.record && <RecordOverlay record={dr.record} name={userName} onClose={dr.clearRecord} />}
+      {final && (
+        <div className="simp-stat-section simp-totals-in">
+          {!adsDisabled && <div id="ramp-season-prod" className="simp-season-ad" />}
+          <div className="simp-eyebrow">Production</div>
+          <StatLineTable result={final} build={build} userName={userName} kind={isOL ? 'ol' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'} />
+          {pool && <Leaders sport="nfl" pos={pos} pool={pool} seed={director.seed} you={{ name: userName, team: result.team?.short, value: leaderValue(final, pos) }} />}
+          <button className="simp-cta simp-cta-in" onClick={onNext}>{final.playoffs ? 'Enter Playoffs' : 'Season Summary'}</button>
+        </div>
+      )}
+    </>
+  )
+}
+const leaderValue = (r, pos) => pos === 'qb' ? r.seasonPassYds : pos === 'rb' ? r.seasonRushYds : pos === 'db' ? r.seasonINTs : pos === 'ol' ? r.seasonPancakes : r.seasonRecYds
+
 // ── Screen 2: Regular Season ──────────────────────────────────────────────────
 
-function ScreenSeason({ result, onNext, isRB = false, isWR = false, isTE = false, isDB = false, isOL = false, adsDisabled = false, build = null, types = [] }) {
+function ScreenSeason({ result, onNext, isRB = false, isWR = false, isTE = false, isDB = false, isOL = false, adsDisabled = false, build = null, types = [], director = null, onFinal = null, pool = null, userName = 'Guest' }) {
   const { games, playoffs, hasBye } = result
+  const pos = isOL ? 'ol' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'
+  // App: the director reveals the season and pauses on its moments
+  const dr = useDirectedReveal({ director, pace: 240, onFinal })
   const { seasonPassYds, seasonTDs, seasonINTs: qbSeasonINTs, seasonRating, seasonCompPct, seasonRushYds: qbRushYds, seasonRushTDs: qbRushTDs, seasonSacks } = result
   const { seasonRushYds: rbRushYds, seasonRushTDs: rbRushTDs, seasonYPC, seasonFumbles, seasonRecYds, seasonRecTDs, seasonRecs, seasonLong, seasonYPR, seasonTargets } = result
   const { seasonINTs: dbINTs, seasonPBUs, seasonTackles, seasonTFL, seasonPickSixes } = result
@@ -488,7 +585,7 @@ function ScreenSeason({ result, onNext, isRB = false, isWR = false, isTE = false
   const [liveWins, setLiveWins]     = useState(0)
   const [liveLosses, setLiveLosses] = useState(0)
 
-  const allDone = revealed === games.length
+  const allDone = director ? dr.done : revealed === games.length
 
   useEffect(() => {
     if (adsDisabled) return
@@ -501,6 +598,7 @@ function ScreenSeason({ result, onNext, isRB = false, isWR = false, isTE = false
   }, [allDone])
 
   useEffect(() => {
+    if (director) { const t = setTimeout(() => setPhase('playing'), 600); return () => clearTimeout(t) }
     const loadTimer = setTimeout(() => {
       setPhase('playing')
       let i = 0, w = 0, l = 0
@@ -532,7 +630,10 @@ function ScreenSeason({ result, onNext, isRB = false, isWR = false, isTE = false
         </div>
       )}
 
-      {phase !== 'loading' && (
+      {phase !== 'loading' && director && (
+        <DirectedSeason dr={dr} result={result} pos={pos} pool={pool} userName={userName} director={director} onNext={onNext} build={build} types={types} isOL={isOL} isDB={isDB} isTE={isTE} isWR={isWR} isRB={isRB} adsDisabled={adsDisabled} />
+      )}
+      {phase !== 'loading' && !director && (
         <>
           <div className="simp-eyebrow">Regular Season</div>
           <div className="simp-live-record">
@@ -540,6 +641,7 @@ function ScreenSeason({ result, onNext, isRB = false, isWR = false, isTE = false
             <span className="slr-sep">–</span>
             <span className="slr-l">{liveLosses}</span>
           </div>
+          {APP_SIM && <WeekStrip games={games} revealed={revealed} />}
           {allDone && (
             <div className="simp-record-sub simp-record-sub-in">
               {playoffs ? 'Playoff Bound' : 'Missed the Playoffs'}
@@ -587,7 +689,7 @@ function ScreenSeason({ result, onNext, isRB = false, isWR = false, isTE = false
             <div className="simp-stat-section simp-totals-in">
               {!adsDisabled && <div id="ramp-season-prod" className="simp-season-ad" />}
               <div className="simp-eyebrow">Production</div>
-              <StatLineTable result={result} build={build} kind={isOL ? 'ol' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'} />
+              <StatLineTable result={result} build={build} userName={userName} kind={isOL ? 'ol' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'} />
             </div>
           )}
 
@@ -887,11 +989,38 @@ function PlayoffGame({ round, opponent, home, weather, mySc, oppSc, won, overtim
 
 // ── Screen 3: Playoffs ────────────────────────────────────────────────────────
 
-function ScreenPlayoffs({ result, onNext, onPreSuperBowl, adsDisabled = false }) {
+// Your line in a playoff game, whatever the position (the round carries its own stats)
+function poLine(r) {
+  if (r.passYds != null) return `${r.passYds} pass yds · ${r.tds ?? 0} TD · ${r.ints ?? 0} INT${r.rating != null ? ` · ${Math.round(r.rating)} rtg` : ''}`
+  if (r.carries != null) return `${r.carries} car · ${r.rushYds ?? 0} rush yds · ${r.recs ?? 0} rec · ${r.recYds ?? 0} rec yds · ${(r.rushTDs ?? 0) + (r.recTDs ?? 0)} TD`
+  if (r.targets != null) return `${r.rec ?? 0} rec · ${r.recYds ?? 0} yds · ${r.recTDs ?? 0} TD · ${r.targets} tgt`
+  if (r.tackles != null) return `${r.tackles} tkl · ${r.ints ?? 0} INT · ${r.pbus ?? 0} PD${r.ff ? ` · ${r.ff} FF` : ''}`
+  if (r.pancakes != null) return `${r.pancakes} pancakes · ${r.pressures ?? 0} pressures · ${r.sacks ?? 0} sacks allowed`
+  return ''
+}
+// The playoff run, game by game: the round, the result, your line
+function PlayoffLog({ rounds }) {
+  if (!rounds?.length) return null
+  return (
+    <div className="po-glog">
+      <div className="po-glog-hd">Playoff Game Log</div>
+      {rounds.map((r, i) => (
+        <div key={i} className={`po-glog-row${r.won ? ' is-w' : ' is-l'}`}>
+          <span className="po-glog-rd">{r.round}</span>
+          <span className="po-glog-res"><b>{r.won ? 'W' : 'L'}</b> {r.mySc}–{r.oppSc}{r.overtime ? ' OT' : ''} {r.home ? 'vs' : '@'} {r.opponent}</span>
+          <span className="po-glog-line">{poLine(r)}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function ScreenPlayoffs({ result, onNext, onPreSuperBowl, adsDisabled = false, nextLabel = 'Final Report' }) {
   const { wins, losses, playoffs, playoffRounds, team } = result
   const [gameIdx, setGameIdx] = useState(0)
   const [status,  setStatus]  = useState('playing')
   const [started, setStarted] = useState(false)
+  const [ringOpen, setRingOpen] = useState(APP_SIM)   // app: the title moment, once the Super Bowl is won
 
   useEffect(() => {
     if (!playoffs) return
@@ -955,7 +1084,7 @@ function ScreenPlayoffs({ result, onNext, onPreSuperBowl, adsDisabled = false })
         <img src="/trophy.webp" alt="" className="sfb-trophy" />
         <div className="plf-champ-label">Super Bowl Champions</div>
         <div className="plf-champ-sub">{sb.mySc}–{sb.oppSc}{sb.overtime ? ' OT' : ''} vs {sb.opponent}</div>
-        <button className="simp-cta simp-cta-in" onClick={onNext}>Final Report</button>
+        <button className="simp-cta simp-cta-in" onClick={onNext}>{nextLabel}</button>
       </div>
     )
   } else if (status === 'eliminated') {
@@ -966,7 +1095,7 @@ function ScreenPlayoffs({ result, onNext, onPreSuperBowl, adsDisabled = false })
         <div className="plf-elim-title">{r.round === 'Super Bowl' ? 'Lost Super Bowl' : 'Eliminated'}</div>
         <div className="plf-elim-round">{r.round === 'Super Bowl' ? '' : r.round}</div>
         <div className="plf-elim-score">{r.mySc} – {r.oppSc}{r.overtime ? ' OT' : ''} · vs {r.opponent}</div>
-        <button className="simp-cta" onClick={onNext}>Final Report</button>
+        <button className="simp-cta" onClick={onNext}>{nextLabel}</button>
       </div>
     )
   } else if (status === 'between') {
@@ -1010,6 +1139,7 @@ function ScreenPlayoffs({ result, onNext, onPreSuperBowl, adsDisabled = false })
             onDone={handleGameDone}
           />
         )}
+        {started && <PlayoffLog rounds={playoffRounds.slice(0, status === 'playing' ? gameIdx : gameIdx + 1)} />}
         {!adsDisabled && (
           <div id="ramp-cntr1-plf" className="plf-banner-ad" style={{ minHeight: 0 }} />
         )}
@@ -1017,16 +1147,155 @@ function ScreenPlayoffs({ result, onNext, onPreSuperBowl, adsDisabled = false })
     )
   }
 
+  const sbRound = playoffRounds[playoffRounds.length - 1]
   return (
     <div className="simp-screen">
+      {APP_SIM && <Bracket rounds={playoffRounds} gameIdx={gameIdx} status={status} hasBye={result.hasBye} />}
       {inner}
+      {APP_SIM && status === 'champion' && ringOpen && (
+        <RingCeremony team={team} title="Super Bowl Champions"
+          score={`${sbRound.mySc}–${sbRound.oppSc}${sbRound.overtime ? ' OT' : ''} vs ${sbRound.opponent}`}
+          onClose={() => setRingOpen(false)} />
+      )}
     </div>
   )
 }
 
 // ── Screen 4: Final Report ────────────────────────────────────────────────────
 
-function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = false, mvpWon = false, isRB = false, isWR = false, isTE = false, isDB = false, isOL = false }) {
+// ─── GOAT Status: where this season ranks among the all-time top 25 ──────────
+// (football's version of basketball's GOAT screen; the lists are data/nfl-goat.js)
+const GOAT_POS = { qb: 'QBs', rb: 'Running Backs', wr: 'Wide Receivers', te: 'Tight Ends', db: 'Defensive Backs' }
+const GOAT_N = 25
+
+// Your season's spot: OVR sets it (90 just makes the list, 99 is near the top), a
+// monster stat line moves it up a few, the season award and a ring more. The top
+// spots need the hardware: no ring, no top 4; #1 takes a 99, the award and a ring.
+function nflGoatRank(kind, result, wonAward) {
+  const { ovr = 0, sbResult } = result
+  if (ovr < 90) return null
+  const ring = !!sbResult?.won
+  const r = result
+  const pts = (v, steps) => steps.filter(x => (v ?? 0) >= x).length
+  const stat = kind === 'qb' ? pts(r.seasonPassYds, [4500, 5200]) + pts(r.seasonTDs, [38, 48])
+    : kind === 'rb' ? pts(r.seasonRushYds, [1600, 2000]) + pts((r.seasonRushTDs ?? 0) + (r.seasonRecTDs ?? 0), [16, 22]) + pts(r.seasonRecYds, [600])
+    : kind === 'wr' ? pts(r.seasonRecYds, [1500, 1800]) + pts(r.seasonRecTDs, [13, 17])
+    : kind === 'te' ? pts(r.seasonRecYds, [1200, 1500]) + pts(r.seasonRecTDs, [11, 15])
+    : pts(r.seasonINTs, [7, 10]) + pts(r.seasonPickSixes, [2]) + pts(r.seasonPBUs, [18])
+  let rank = Math.round(GOAT_N - ((ovr - 90) / 9) * 21) - Math.min(4, stat) - (wonAward ? 3 : 0) - (ring ? 2 : 0)
+  if (!ring) rank = Math.max(rank, 5)
+  if (rank <= 3 && !(ring && ovr >= 97)) rank = 4
+  if (rank <= 2 && !(ring && wonAward && ovr >= 97)) rank = 3
+  if (rank <= 1 && !(ring && wonAward && ovr >= 99)) rank = 2
+  rank = Math.max(1, rank)
+  return rank <= GOAT_N ? rank : null
+}
+
+const NFL_TEAM = Object.fromEntries(TEAMS.map(t => [t.short, t]))
+
+function NflGoatCard({ rank, entry, isPlayer, team, userName }) {
+  const short = isPlayer ? team?.short : entry?.team
+  const color = isPlayer ? team?.color : NFL_TEAM[short]?.color
+  const photo = !isPlayer && entry ? nflHeadshot(HEADSHOTS[entry.name]) : null
+  const isGoat = !isPlayer && rank === 1
+  return (
+    <div className={`goat-card${isPlayer ? ' goat-card--you' : ''}${isGoat ? ' goat-card--rank1' : ''}`} style={{ '--accent': isPlayer ? '#e8a820' : (color ?? 'rgba(255,255,255,0.15)') }}>
+      {isGoat && <span className="goat-card-watermark" aria-hidden="true">G.O.A.T.</span>}
+      <span className="goat-card-rank">{rank}</span>
+      <QBAvatar photo={photo} team={short} color={color} size={isPlayer ? 56 : 44} />
+      <div className="goat-card-info">
+        <span className="goat-card-name">{isPlayer ? userName : (entry?.name ?? '—')}</span>
+        {short && <span className="goat-card-team">{short}{!isPlayer && entry?.years ? ` · ${entry.years}` : ''}</span>}
+      </div>
+    </div>
+  )
+}
+
+function GoatRows({ withYou, rank, byRank, team, userName, listIn, listRef }) {
+  // with you in the list, everyone from your spot down moves down one
+  const entryAt = r => (r < rank ? byRank[r] : r === rank ? null : byRank[r - 1] ?? null)
+  return (
+    <div ref={listRef} className={`goat-full-list${listIn ? ' goat-list-in' : ''}`}>
+      {Array.from({ length: GOAT_N }, (_, i) => GOAT_N - i).map(r => (
+        <Fragment key={r}>
+          <NflGoatCard rank={r} entry={withYou ? entryAt(r) : byRank[r]} isPlayer={withYou && r === rank} team={team} userName={userName} />
+          {(r === 21 || r === 11) && <div id={`ramp-cntr1-nflgoat-${r}`} className="ad-cntr1-mobile" />}
+        </Fragment>
+      ))}
+    </div>
+  )
+}
+
+function ScreenGOAT({ kind, result, wonAward, onNext, adsDisabled = false, userName = 'Guest' }) {
+  const byRank = useMemo(() => Object.fromEntries((NFL_GOAT[kind] ?? []).map(g => [g.rank, g])), [kind])
+  const playerRank = useMemo(() => nflGoatRank(kind, result, wonAward), [kind, result, wonAward])
+  const qualified = playerRank != null
+  const team = result.team
+  const [phase, setPhase] = useState('checking')
+  const [tick, setTick] = useState(GOAT_N + 1)
+  const [listIn, setListIn] = useState(false)
+  const listRef = useRef(null)
+
+  useEffect(() => {
+    const t = setTimeout(() => { setPhase(qualified ? 'ticker' : 'miss'); if (!qualified) setListIn(true) }, 2000)
+    return () => clearTimeout(t)
+  }, [qualified])
+  // the countdown from #25 to your spot (it never shows who's at your spot)
+  useEffect(() => {
+    if (phase !== 'ticker') return
+    if (tick <= playerRank) {
+      const t = setTimeout(() => {
+        setPhase('revealed')
+        setTimeout(() => { setListIn(true); setTimeout(() => listRef.current?.querySelector('.goat-card--you')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 500) }, 500)
+      }, 1000)
+      return () => clearTimeout(t)
+    }
+    const dist = tick - playerRank
+    const t = setTimeout(() => setTick(r => r - 1), dist > 10 ? 80 : dist > 4 ? 160 : 280)
+    return () => clearTimeout(t)
+  }, [phase, tick, playerRank])
+  // phones: a banner every ten rows (after 21 and 11), like basketball's list
+  useEffect(() => {
+    if (!listIn || adsDisabled || window.innerWidth > 768) return
+    rampAdd([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-nflgoat-21' }, { type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-nflgoat-11' }])
+  }, [listIn]) // eslint-disable-line
+
+  const tickEntry = tick > GOAT_N ? null : tick > playerRank ? byRank[tick - 1] : byRank[tick]
+  const rowProps = { rank: playerRank, byRank, team, userName, listIn, listRef }
+
+  return (
+    <div className="simp-screen goat-screen">
+      <div className="goat-screen-title">GOAT STATUS</div>
+      <div className="goat-page-title">Top 25 {GOAT_POS[kind]}</div>
+      <div className="goat-eyebrow">OF ALL TIME</div>
+      {phase === 'checking' && (
+        <div className="goat-checking"><div className="goat-check-ring" /><div className="goat-check-lbl">Checking the resume…</div></div>
+      )}
+      {phase === 'ticker' && (
+        <div className="goat-ticker" onClick={() => { setPhase('revealed'); setListIn(true) }}>
+          <div className="goat-ticker-rank">#{Math.min(tick, GOAT_N)}</div>
+          <QBAvatar photo={tickEntry ? nflHeadshot(HEADSHOTS[tickEntry.name]) : null} team={tickEntry?.team} color={NFL_TEAM[tickEntry?.team]?.color} size={120} />
+          <div className="goat-ticker-name">{tickEntry?.name ?? '…'}</div>
+          <div className="goat-ticker-team">{tickEntry?.team ?? ''}</div>
+        </div>
+      )}
+      {phase === 'miss' && <>
+        <div className="goat-miss-card"><div className="goat-miss-title">Missed the Cut</div><div className="goat-miss-ovr">OVR {result.ovr}</div></div>
+        <button className="simp-cta simp-cta-in" onClick={onNext} style={{ marginBottom: 8 }}>Final Report →</button>
+        <GoatRows withYou={false} {...rowProps} />
+        <button className="simp-cta simp-cta-in" onClick={onNext} style={{ marginTop: 12 }}>Final Report →</button>
+      </>}
+      {phase === 'revealed' && <>
+        <div className="goat-reveal-banner"><div className="goat-reveal-you">{userName} is ranked</div><div className="goat-reveal-rank">#{playerRank}</div></div>
+        <button className="simp-cta simp-cta-in" onClick={onNext} style={{ marginBottom: 8 }}>Final Report →</button>
+        <GoatRows withYou {...rowProps} />
+        <button className="simp-cta simp-cta-in" onClick={onNext} style={{ marginTop: 12 }}>Final Report →</button>
+      </>}
+    </div>
+  )
+}
+
+function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = false, mvpWon = false, isRB = false, isWR = false, isTE = false, isDB = false, isOL = false, userName = 'Guest', isSalaryMode = false }) {
   const { ovr, wins, losses, playoffs, sbResult, bestGame } = result
 
   // QB stats
@@ -1045,6 +1314,21 @@ function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = fals
 
   const champion = sbResult?.won
   const [show, setShow] = useState(false)
+
+  // the season as a share card (Share Season)
+  const kind = isOL ? 'ol' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'
+  const shareCard = useMemo(() => {
+    if (!build || !types) return null
+    const meta = isOL ? OL_ATTR : isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : isRB ? RB_ATTR : ATTR
+    const archFn = { ol: getArchetypeOL, db: getArchetypeDB, te: getArchetypeTE, wr: getArchetypeWR, rb: getArchetypeRB, qb: getArchetype }[kind]
+    let arch = null
+    try { arch = archFn(ovr, build, types) } catch {}
+    return nflSeasonCard({
+      result, pos: kind, name: userName, arch, salary: isSalaryMode,
+      award: mvpWon || !!result.award?.userWins,
+      rows: buildRows(build, types, meta, isSalaryMode && kind === 'qb'),
+    })
+  }, [result, build, types, kind, ovr, userName, isSalaryMode, mvpWon])
 
   const team = result.team
   const monoTeamBuild = team
@@ -1088,6 +1372,8 @@ function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = fals
 
   return (
     <div className="simp-screen">
+      {APP_SIM && <SeasonRewards result={result} />}
+      {APP_SIM && result.story && <SeasonStory story={result.story} pos={isOL ? 'ol' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'} sport="nfl" name={userName} />}
       <div className={`simp-final-banner ${champion ? 'sfb-champ' : playoffs ? 'sfb-elim' : 'sfb-miss'}`}>
         {champion && <img src="/trophy.webp" alt="Super Bowl Trophy" className="sfb-trophy" />}
         <div className="sfb-outcome">
@@ -1095,6 +1381,8 @@ function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = fals
         </div>
         <div className="sfb-sub">{wins}–{losses} Season · OVR {ovr}</div>
       </div>
+      <ShareSeasonButton card={shareCard} />
+      {playoffs && <PlayoffLog rounds={result.playoffRounds} />}
 
       {champion && (
         <div className="simp-sb-box">
@@ -1229,7 +1517,7 @@ function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = fals
         <div className="simp-eyebrow">Production</div>
 
         <StatLineTable
-          result={result} build={build} ready={show} kind={isOL ? 'ol' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'}
+          result={result} build={build} ready={show} userName={userName} kind={isOL ? 'ol' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'}
           values={
             isOL ? { pnk: olPancakesAnim, prs: olPressuresAnim }
             : isDB ? { tkl: dbTacklesAnim, pd: dbPBUsAnim, int: dbINTsAnim }
@@ -1252,20 +1540,18 @@ function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = fals
 
       {build && types && (
         <div className="simp-stat-section">
-          <div className="simp-stat-group-lbl">Your Build</div>
+          <div className="simp-stat-group-lbl"><NameTag name={userName} self />'s Build</div>
           <div className="simp-attr-table simp-attr-table-sm">
-            {types.filter(t => build[t]).map(t => {
-              const meta = (isOL ? OL_ATTR : isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : isRB ? RB_ATTR : ATTR)[t]
-              const data = build[t]
+            {buildRows(build, types, isOL ? OL_ATTR : isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : isRB ? RB_ATTR : ATTR, isSalaryMode && !isRB && !isWR && !isTE && !isDB && !isOL).map(({ key, label, data, val }) => {
               return (
-                <div key={t} className="simp-attr-row simp-row-visible">
+                <div key={key} className="simp-attr-row simp-row-visible">
                   <QBAvatar photo={data.photo} team={data.team} color={data.teamColor} size={36} />
                   <div className="simp-attr-info">
-                    <span className="simp-attr-name">{meta.label}</span>
+                    <span className="simp-attr-name">{label}</span>
                     <span className="simp-attr-qb">{data.qbFull}</span>
                   </div>
-                  <span className="simp-grade-circle" style={{ background: gradeColor(data.val), color: '#07120a' }}>
-                    {valToGrade(data.val)}
+                  <span className="simp-grade-circle" style={{ background: gradeColor(val), color: '#07120a' }}>
+                    {valToGrade(val)}
                   </span>
                 </div>
               )
@@ -1345,11 +1631,16 @@ function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = fals
       <div id="ramp-cntr1-sim" className="ad-cntr1-mobile" />
 
       <div className="simp-final-actions">
-        <button className="simp-cta" onClick={onReset}>New Build</button>
-        <button className="simp-ghost" onClick={onBack}>Back to Build</button>
+        {isSalaryMode
+          ? <button className="simp-cta" onClick={onBack}>← Back to Salary</button>
+          : <>
+              <button className="simp-cta" onClick={onReset}>New Build</button>
+              <button className="simp-ghost" onClick={onBack}>Back to Build</button>
+            </>}
       </div>
 
-      <div style={{ textAlign: 'center', marginTop: '12px', fontSize: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+      {/* the 32-0 cross-promo stays on the website, not in the app */}
+      {!IS_APP && <div style={{ textAlign: 'center', marginTop: '12px', fontSize: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
         <span style={{ color: 'rgba(255,255,255,0.6)' }}>
           If you are enjoying Build-A-Player, check out my college basketball game —{' '}
           <a href="https://32-0game.com" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>32-0game.com</a>
@@ -1357,7 +1648,7 @@ function ScreenFinal({ result, build, types, onReset, onBack, adsDisabled = fals
         <a href="https://32-0game.com" target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
           <img src="/32-0logocutout.png" alt="32-0" style={{ height: '32px', width: 'auto', background: 'white', borderRadius: '5px', padding: '2px 6px', display: 'block' }} />
         </a>
-      </div>
+      </div>}
     </div>
   )
 }
@@ -1376,19 +1667,32 @@ function ProgressDots({ screen, total }) {
 
 // ── SimPage ───────────────────────────────────────────────────────────────────
 
-export default function SimPage({ result, build, types = TYPES, onBack, onReset, replay = false, adsDisabled = false, isRB = false, isWR = false, isTE = false, isDB = false, isOL = false, onMVPWon }) {
-  const [screen, setScreen] = useState(replay ? 3 : 0)
+export default function SimPage({ result: baseResult, build, types = TYPES, onBack, onReset, replay = false, adsDisabled = false, isRB = false, isWR = false, isTE = false, isDB = false, isOL = false, onMVPWon, simFn = null, onFinal = null, pool = null, userName = 'Guest', isSalaryMode = false }) {
+  // a replay opens on the final report (after the GOAT screen; OL has none), and so does coming back
+  // to a season that was already played and booked (it has its story): never a second run at it
+  const [screen, setScreen] = useState(replay || baseResult.story ? (isOL ? 3 : 4) : 0)
   useRailOn(screen)   // each screen of the season brings the bottom rail back
   const [mvpResult, setMvpResult] = useState(null)
   const [mvpWon, setMvpWon] = useState(false)
   const [mvpContinuation, setMvpContinuation] = useState(null)
+  // App: the season is steered by a director; `result` is the live version of it
+  const [live, setLive] = useState(baseResult)
+  const result = live
+  const position = isOL ? 'ol' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'
+  const attrMap = isOL ? OL_ATTR : isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : isRB ? RB_ATTR : ATTR
+  const director = useMemo(() => (APP_SIM && simFn && !replay && !baseResult.story && baseResult.games?.length)
+    ? createDirector({ sport: 'nfl', pos: position, build, team: baseResult.team, simFn, base: baseResult, name: userName, attrMap, types })
+    : null, []) // eslint-disable-line
+  const handleFinal = final => { setLive(final); onFinal?.(final) }
+  // leaving mid-season still books the season
+  useEffect(() => () => { if (director && !director.finalized) onFinal?.(director.finalize()) }, []) // eslint-disable-line
   const isAllTime = !!result.team?.isAllTime
   const reachesSB = result.playoffRounds?.some(r => r.round === 'Super Bowl') ?? false
 
   const advancePage = () => {
     document.querySelector('.simp-page')?.scrollTo({ top: 0, behavior: 'instant' })
     window.scrollTo({ top: 0, behavior: 'instant' })
-    setScreen(s => s + 1)
+    setScreen(s => Math.min(s + 1, screens.length - 1))   // never past the Final Report (a blank page with no way back)
   }
 
   const triggerMVP = (continuation = null) => {
@@ -1440,10 +1744,12 @@ export default function SimPage({ result, build, types = TYPES, onBack, onReset,
   const handleBack  = () => { setScreen(0); onBack()  }
 
   const screens = [
-    <ScreenBuild    key="build"    result={result} build={build} types={types} onNext={next} isRB={isRB} isWR={isWR} isTE={isTE} isDB={isDB} isOL={isOL} />,
-    <ScreenSeason   key="season"   result={result} onNext={next} isRB={isRB} isWR={isWR} isTE={isTE} isDB={isDB} isOL={isOL} adsDisabled={adsDisabled} build={build} types={types} />,
-    <ScreenPlayoffs key="playoffs" result={result} onNext={next} onPreSuperBowl={handlePreSuperBowl} adsDisabled={adsDisabled} />,
-    <ScreenFinal    key="final"    result={result} build={build} types={types} onReset={handleReset} onBack={handleBack} adsDisabled={adsDisabled} mvpWon={mvpWon} isRB={isRB} isWR={isWR} isTE={isTE} isDB={isDB} isOL={isOL} />,
+    <ScreenBuild    key="build"    result={result} build={build} types={types} onNext={next} isRB={isRB} isWR={isWR} isTE={isTE} isDB={isDB} isOL={isOL} isSalaryMode={isSalaryMode} />,
+    <ScreenSeason   key="season"   result={result} onNext={next} isRB={isRB} isWR={isWR} isTE={isTE} isDB={isDB} isOL={isOL} adsDisabled={adsDisabled} build={build} types={types} director={director} onFinal={handleFinal} pool={pool} userName={userName} />,
+    <ScreenPlayoffs key="playoffs" result={result} onNext={next} onPreSuperBowl={handlePreSuperBowl} adsDisabled={adsDisabled} nextLabel={isOL ? 'Final Report' : 'GOAT Status'} />,
+    // where the season ranks among the all-time top 25 at the position (no OL list)
+    ...(isOL ? [] : [<ScreenGOAT key="goat" kind={isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'} result={result} wonAward={mvpWon} onNext={next} adsDisabled={adsDisabled} userName={userName} />]),
+    <ScreenFinal    key="final"    result={result} build={build} types={types} onReset={handleReset} onBack={handleBack} adsDisabled={adsDisabled} mvpWon={mvpWon} isRB={isRB} isWR={isWR} isTE={isTE} isDB={isDB} isOL={isOL} userName={userName} isSalaryMode={isSalaryMode} />,
   ]
 
   const team = result.team
@@ -1455,12 +1761,15 @@ export default function SimPage({ result, build, types = TYPES, onBack, onReset,
     <div className="simp-page" style={teamStyle}>
       <div className="simp-col">
         <div className="simp-top-bar">
-          {screen > 0 && screen < screens.length - 1 && (
+          {/* a steered season can't be backed out of: going back would replay the year and its decisions */}
+          {screen > 0 && screen < screens.length - 1 && !(director && screen <= 2) && (
             <button className="simp-back-btn" onClick={() => setScreen(s => s - 1)}>← Back</button>
           )}
           <ProgressDots screen={screen} total={screens.length} />
         </div>
 
+        {/* the moments switch sits above the team card, not on it */}
+        {team && director && <div className="sts-moments-row"><MomentsToggle /></div>}
         {team && (
           <div className="simp-team-strip">
             <div className="sts-top-row">
@@ -1499,19 +1808,19 @@ export default function SimPage({ result, build, types = TYPES, onBack, onReset,
         )}
 
         {isWR && team && build && (
-          <WRDepthChart team={team} build={build} types={types} isAllTime={isAllTime} />
+          <WRDepthChart team={team} build={build} types={types} isAllTime={isAllTime} userName={userName} />
         )}
         {isTE && team && build && (
-          <TEDepthChart team={team} build={build} types={types} isAllTime={isAllTime} />
+          <TEDepthChart team={team} build={build} types={types} isAllTime={isAllTime} userName={userName} />
         )}
         {isRB && team && build && (
-          <RBDepthChart team={team} build={build} types={types} isAllTime={isAllTime} />
+          <RBDepthChart team={team} build={build} types={types} isAllTime={isAllTime} userName={userName} />
         )}
         {isDB && team && build && (
-          <DBDepthChart team={team} build={build} types={types} isAllTime={isAllTime} />
+          <DBDepthChart team={team} build={build} types={types} isAllTime={isAllTime} userName={userName} />
         )}
         {isOL && team && build && (
-          <OLDepthChart team={team} build={build} types={types} />
+          <OLDepthChart team={team} build={build} types={types} userName={userName} />
         )}
 
         {screens[screen]}
@@ -1520,6 +1829,7 @@ export default function SimPage({ result, build, types = TYPES, onBack, onReset,
 
       {mvpResult && (
         <MVPModal
+          nextLabel={isOL ? 'Continue to Final Report' : 'Continue to GOAT Status'}
           result={result}
           mvpResult={mvpResult}
           onDismiss={handleMVPDismiss}
@@ -1530,6 +1840,7 @@ export default function SimPage({ result, build, types = TYPES, onBack, onReset,
           isDB={isDB}
           isOL={isOL}
           userPhoto={isOL ? (build?.size?.photo ?? null) : null}
+          userName={userName}
         />
       )}
     </div>

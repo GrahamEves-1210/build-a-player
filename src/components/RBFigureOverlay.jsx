@@ -150,7 +150,7 @@ export default function RBFigureOverlay({ build }) {
 
       {/* Jersey number + logos */}
       <svg viewBox="0 0 574 865" preserveAspectRatio="xMidYMid meet"
-           style={SVG_STYLE} aria-hidden="true">
+           style={{ ...SVG_STYLE, willChange: 'transform' }} aria-hidden="true">
         {/* Chest number */}
         <text
           x="285" y="355"

@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
+import Disclaimer from './Disclaimer'
 import { createPortal } from 'react-dom'
 import { ATTR, TYPES, QB_PHYSICALS } from '../data/qbs'
 import { RB_PHYSICALS } from '../data/rbs'
@@ -19,13 +20,21 @@ const ALL_TE_PHYS = { ...Object.fromEntries(TE_LEGENDS.map(t => [t.name, { heigh
 import { calcOVR, calcOVRRB, calcOVRWR, calcOVRTE, calcOVRDB, calcOVROL, getArchetype, getArchetypeRB, getArchetypeWR, getArchetypeTE, getArchetypeDB, getArchetypeOL, calcBalance, valToGrade } from '../utils/simulation'
 import { calcBucketOVR, getBucketGuardArchetype, getBucketBigArchetype } from '../utils/bucketSimulation'
 import { buildShareUrl } from '../utils/shareUrl'
-import { generateBucketShareCard, shareOrDownloadCard } from '../utils/generateShareCard'
+import { shareOrDownloadCard } from '../utils/generateShareCard'
+import { drawSeasonCard } from '../utils/seasonCard'
 import QBAvatar from './QBAvatar'
+import { IS_APP, APP_LOOK, shareNative } from '../lib/platform'
+import AppSandbox from './app/AppSandbox'
+import PlayerComp from './app/PlayerComp'
+import { rampAdd } from '../lib/ads'
+import { compsFor } from '../lib/career'
+import { useProgress } from '../lib/progress'
+import { getUsername } from '../lib/discord'
 
 function fmtHeight(inches) { return `${Math.floor(inches / 12)}'${inches % 12}"` }
 
 function gradeColor(val0) {
-  const val = Math.round(val0 ?? 0)   // rounded like the letter (valToGrade), so an S is always purple
+  const val = Math.round(val0 ?? 0)   // rounded like the letter (valToGrade), so a B- is always green
   if (val >= 11) return '#a855f7'
   if (val >= 8)  return '#3b82f6'
   if (val >= 5)  return '#22c55e'
@@ -114,20 +123,30 @@ export function ShareModal({ ovr, arch, build, types, onClose, isBucket = false,
   const [copied, setCopied]       = useState(false)
   const [cardDataUrl, setCardDataUrl] = useState(null)
   const [cardBlob, setCardBlob]       = useState(null)
+  const who = getUsername(useProgress().user) || 'Guest'
 
   const posWord    = isOL ? 'offensive lineman' : isDB ? 'defensive back' : isWR ? 'wide receiver' : isRB ? 'running back' : isTE ? 'tight end' : 'quarterback'
   const bucketText = `I built a ${ovr} OVR ${arch}. Think you can do better?`
   const shareText  = isBucket ? bucketText : `I made a ${ovr} overall ${arch} ${posWord}, think you can do better?`
   const shareUrl   = buildShareUrl(build, types)
-  const filename   = `bucket-build-${ovr}-${arch.toLowerCase().replace(/\s+/g, '-')}.png`
+  const filename   = `${isBucket ? 'bucket' : 'player'}-build-${ovr}-${arch.toLowerCase().replace(/\s+/g, '-')}.png`
 
-  // Auto-generate card on open for bucket builds
+  // The image card, made when the sheet opens: the same look as the season card
+  // (utils/seasonCard.js), without a season: the OVR, the build and who made it
   useEffect(() => {
-    if (!isBucket) return
-    generateBucketShareCard({ build, types, ovr, arch, position, attrMap }).then(canvas => {
+    let live = true
+    ;(async () => {
+      const posLabel = isBucket ? (position === 'big' ? 'BIG' : 'GUARD') : isOL ? 'OL' : isDB ? 'DB' : isTE ? 'TE' : isWR ? 'WR' : isRB ? 'RB' : 'QB'
+      const canvas = await drawSeasonCard({
+        sport: isBucket ? 'bucket' : 'nfl', name: who, tag: isBucket ? posLabel : posWord.toUpperCase(),
+        hero: { value: ovr, label: 'OVR' }, sub: arch && !/remaining$/.test(arch) ? arch : null,
+        chips: types.filter(t => build[t]).map(t => ({ label: attrMap[t]?.label ?? t, name: build[t].qbFull || build[t].qb || build[t].name, photo: build[t].photo, faceCenter: build[t].faceCenter, val: build[t].val })),
+      }, { format: 'story' })
+      if (!live) return
       setCardDataUrl(canvas.toDataURL('image/png'))
       canvas.toBlob(b => setCardBlob(b), 'image/png')
-    }).catch(console.error)
+    })().catch(console.error)
+    return () => { live = false }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   function legacyCopy(text) {
@@ -143,6 +162,10 @@ export function ShareModal({ ovr, arch, build, types, onClose, isBucket = false,
   // On desktop: fall back to link-only or download
   const handleNativeShare = async (e) => {
     e?.preventDefault()
+    if (IS_APP) {
+      await shareNative({ title: `${ovr} OVR · ${arch}`, text: shareText, url: shareUrl, blob: cardBlob, filename })
+      return
+    }
     const file = cardBlob ? new File([cardBlob], filename, { type: 'image/png' }) : null
     const shareData = {
       title: `${ovr} OVR · ${arch}`,
@@ -162,7 +185,7 @@ export function ShareModal({ ovr, arch, build, types, onClose, isBucket = false,
   const handleTweet = (e) => {
     e.preventDefault()
     const isMobile = /iPhone|iPad|Android/i.test(navigator.userAgent)
-    if (isMobile && navigator.share) { handleNativeShare(e); return }
+    if (IS_APP || (isMobile && navigator.share)) { handleNativeShare(e); return }
     window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`, '_blank')
   }
 
@@ -179,6 +202,8 @@ export function ShareModal({ ovr, arch, build, types, onClose, isBucket = false,
 
   const handleDownload = () => {
     if (!cardBlob) return
+    // In the app, "Save Image" lives in the share sheet
+    if (IS_APP) { shareNative({ title: `${ovr} OVR · ${arch}`, blob: cardBlob, filename }); return }
     const url = URL.createObjectURL(cardBlob)
     const a = document.createElement('a')
     a.href = url; a.download = filename; a.click()
@@ -204,8 +229,8 @@ export function ShareModal({ ovr, arch, build, types, onClose, isBucket = false,
 
         <div className="share-modal-title">Share Your Build</div>
 
-        {/* Card preview — bucket only, auto-generated */}
-        {isBucket && (
+        {/* Card preview, auto-generated (both sports) */}
+        {(
           <div className="share-card-preview-wrap">
             {cardDataUrl
               ? <img src={cardDataUrl} alt="Build card" className="share-card-preview" />
@@ -224,18 +249,6 @@ export function ShareModal({ ovr, arch, build, types, onClose, isBucket = false,
           </div>
         )}
 
-        {!isBucket && (
-          <div className="share-og-card">
-            <div className="share-og-img-wrap">
-              <img src="/logo-v2.png" alt="" className="share-og-img" />
-            </div>
-            <div className="share-og-body">
-              <div className="share-og-domain">build-a-player.com</div>
-              <div className="share-og-title">{ovr} OVR · {arch}</div>
-              <div className="share-og-desc">{shareText}</div>
-            </div>
-          </div>
-        )}
 
         {/* 2×2 share grid */}
         <div className="share-icons-grid">
@@ -290,7 +303,7 @@ export function ShareModal({ ovr, arch, build, types, onClose, isBucket = false,
 
 // ── ReportCard ────────────────────────────────────────────────────────────────
 
-export default function ReportCard({ build, onSimulate, onReset, types = TYPES, hasResult = false, isRB = false, isWR = false, isTE = false, isDB = false, isOL = false, isBucket = false, bucketPosition = 'guard', isPlus = false, isCustomMode = false, onOpenCustomModal, onSandboxToggle, attrMap = ATTR, logoDir = '/logos/', captureFigure, isSalaryMode = false, isVersusMode = false, oppPosition = null, oppFilledCount = 0, oppTotal = null }) {
+export default function ReportCard({ build, onSimulate, onReset, types = TYPES, hasResult = false, isRB = false, isWR = false, isTE = false, isDB = false, isOL = false, isBucket = false, bucketPosition = 'guard', isPlus = false, isCustomMode = false, onOpenCustomModal, onSandboxToggle, attrMap = ATTR, logoDir = '/logos/', captureFigure, isSalaryMode = false, isVersusMode = false, oppPosition = null, oppFilledCount = 0, oppTotal = null, simLabel = null }) {
   const filled = types.filter(t => build[t])
   const ovr = isBucket ? calcBucketOVR(build, types, bucketPosition) : isOL ? calcOVROL(build, types) : isDB ? calcOVRDB(build, types) : isTE ? calcOVRTE(build, types) : isWR ? calcOVRWR(build, types) : isRB ? calcOVRRB(build, types) : calcOVR(build, types)
   const arch = isBucket
@@ -298,6 +311,24 @@ export default function ReportCard({ build, onSimulate, onReset, types = TYPES, 
     : isOL ? getArchetypeOL(ovr, build, types) : isDB ? getArchetypeDB(ovr, build, types) : isTE ? getArchetypeTE(ovr, build, types) : isWR ? getArchetypeWR(ovr, build, types) : isRB ? getArchetypeRB(ovr, build, types) : getArchetype(ovr, build, types)
   const balance = calcBalance(build, types)
   const complete = filled.length === types.length
+  // The player comp: once the build is complete, who it plays like. A phone shows it under
+  // the OVR; on a desktop the report card gets a switch that flips its list over to it.
+  const prog = useProgress()
+  const who = getUsername(prog.user) || 'Guest'
+  const compPos = isBucket ? (bucketPosition === 'big' ? 'big' : 'guard') : isOL ? 'ol' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'
+  const comp = useMemo(() => {
+    if (!complete) return null
+    const c = { sport: isBucket ? 'bucket' : 'nfl', pos: compPos, types, build }
+    return compsFor(c, 1).length ? c : null
+  }, [complete, isBucket, compPos, types, build])
+  const [view, setView] = useState('card')   // desktop: 'card' (the trait list) or 'comp'
+  useEffect(() => { if (!comp) setView('card') }, [comp])
+  // the website on a phone: an in-page ad above the Sandbox card (never in the app or ad-free)
+  const sandboxAd = !IS_APP && APP_LOOK && !isVersusMode && !!onSandboxToggle
+  useEffect(() => {
+    if (!sandboxAd || window.innerWidth > 768 || document.documentElement.classList.contains('ads-hidden')) return
+    rampAdd([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-sandbox' }])
+  }, [sandboxAd])
   const [showChevron, setShowChevron] = useState(true)
   const [showShare, setShowShare]     = useState(false)
   const [showSandboxInfo, setShowSandboxInfo] = useState(false)
@@ -353,8 +384,9 @@ export default function ReportCard({ build, onSimulate, onReset, types = TYPES, 
   }
 
   return (
-    <aside className="panel-right" ref={panelRef}>
-      <div className="ovr-block">
+    <aside className={`panel-right${comp && view === 'comp' ? ' rc-view--comp' : ''}`} ref={panelRef}>
+      {/* solo: no Simulate button beside the ring (Blacktop, Versus); a phone sets height and weight either side of it */}
+      <div className={`ovr-block${isVersusMode ? ' ovr-block--solo' : ''}`}>
         <div className="ovr-ring-row">
           <div className="ovr-hw-mobile">
             <div className="ohm-stat">
@@ -385,7 +417,8 @@ export default function ReportCard({ build, onSimulate, onReset, types = TYPES, 
         </div>
 
         <div className="ovr-arch-row">
-          <div className={`ovr-arch${!filled.length ? ' ovr-arch-idle' : ''}`}>{arch}</div>
+          {/* until the build is done the archetype is just "N attributes remaining": the slots box says it already */}
+          {!/remaining$/.test(arch || '') && <div className={`ovr-arch${!filled.length ? ' ovr-arch-idle' : ''}`}>{arch}</div>}
         </div>
 
         {complete && !isVersusMode && (
@@ -394,7 +427,15 @@ export default function ReportCard({ build, onSimulate, onReset, types = TYPES, 
           </button>
         )}
 
-        {!isVersusMode && ((isBucket && !isSalaryMode) || !!onSandboxToggle) ? (
+        {!isVersusMode && !!onSandboxToggle && IS_APP ? (
+          <AppSandbox on={!!isCustomMode} onToggle={v => onSandboxToggle?.(v)} onCustomize={onOpenCustomModal} />
+        ) : !isVersusMode && !!onSandboxToggle && APP_LOOK ? (
+          // website: the card on a phone (full width); on desktop Silhouette shows the compact one in its corner
+          <div className="rc-sandbox-outer rc-sandbox-outer--app">
+            <div id="ramp-cntr1-sandbox" className="rc-sandbox-ad" />
+            <AppSandbox on={!!isCustomMode} onToggle={v => onSandboxToggle?.(v)} onCustomize={onOpenCustomModal} />
+          </div>
+        ) : !isVersusMode && !!onSandboxToggle ? (
           <div className="rc-sandbox-outer">
             <div className="rc-sandbox-toprow">
               <div
@@ -454,10 +495,18 @@ export default function ReportCard({ build, onSimulate, onReset, types = TYPES, 
             onClick={complete ? onSimulate : undefined}
             disabled={!complete}
           >
-            {!complete ? `${types.length - filled.length} slots remaining` : hasResult ? 'View Results' : 'Simulate Season'}
+            {!complete ? `${types.length - filled.length} slots remaining` : hasResult ? 'View Results' : (simLabel ?? 'Simulate Season')}
           </button>
         )}
       </div>
+
+      {comp && (
+        <div className="rc-comp-switch" role="tablist" aria-label="Report card or player comp">
+          <button type="button" role="tab" aria-selected={view === 'card'} className={view === 'card' ? 'is-on' : ''} onClick={() => setView('card')}>REPORT CARD</button>
+          <button type="button" role="tab" aria-selected={view === 'comp'} className={view === 'comp' ? 'is-on' : ''} onClick={() => setView('comp')}>PLAYER COMP</button>
+        </div>
+      )}
+      {comp && <PlayerComp c={comp} who={who} col={who} className="rc-comp" />}
 
       <div className="build-slots">
         {types.map(t => (
@@ -466,11 +515,14 @@ export default function ReportCard({ build, onSimulate, onReset, types = TYPES, 
         <hr className="bs-bottom-line" />
       </div>
 
-      {!isVersusMode && (
+      {!isVersusMode && onReset && (
         <div className="panel-footer">
           <button className="reset-btn" onClick={onReset}>Reset Build</button>
         </div>
       )}
+
+      {/* the fan-project line, at the foot of the build screen */}
+      <Disclaimer sport={isBucket ? 'bucket' : 'nfl'} className="bap-disclaimer--build" />
 
       {showShare && createPortal(
         <ShareModal ovr={ovr} arch={arch} build={build} types={types} onClose={() => setShowShare(false)}

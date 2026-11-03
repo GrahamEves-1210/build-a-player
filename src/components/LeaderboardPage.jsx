@@ -1,4 +1,6 @@
 ﻿import { useState, useEffect, useRef } from 'react'
+import { loadFriends, useFriendsOnly } from '../lib/friends'
+import { getUsername } from '../lib/discord'
 import { supabase } from '../lib/supabase'
 import { ATTR, TYPES } from '../data/qbs'
 import { TEAMS } from '../data/nfl-teams'
@@ -10,6 +12,10 @@ import { OL_TYPES, OL_ATTR } from '../data/ols'
 import { valToGrade, nflHeadshot } from '../utils/simulation'
 import QBAvatar from './QBAvatar'
 import HEADSHOTS from '../data/headshots.json'
+import { NameTag } from './app/NameTag'
+import { IS_APP as _LB_APP, APP_LOOK as _LB_LOOK } from '../lib/platform'
+// App look: every name on the board wears that player's look (looked up by account id)
+const LbName = ({ name, uid }) => ((_LB_APP || _LB_LOOK) ? <NameTag name={name} uid={uid} className="lb-ntag" /> : <>{name}</>)
 
 // S grade = val 11 (see GRADES in utils/simulation.js). Best Builds ranks by
 // how many maxed-out slots a build has, not raw OVR, so a build with more S's
@@ -197,6 +203,18 @@ function BuildExpand({ build, types = TYPES, attrMap = ATTR }) {
 }
 
 export default function LeaderboardPage({ onBack, currentUser, adsDisabled = false, isRB = false, isWR = false, isTE = false, isDB = false, isOL = false, onPositionChange }) {
+  // Everyone or Friends: the same boards, only friends and the player (app look)
+  const [friendsOnly, setFriendsOnly] = useFriendsOnly()
+  const [friendIds, setFriendIds] = useState(null)
+  useEffect(() => {
+    if (!friendsOnly || friendIds || !currentUser?.id) return
+    loadFriends(currentUser.id).then(l => setFriendIds(new Set([currentUser.id, ...l.friends.map(f => f.id)])), () => setFriendIds(new Set([currentUser.id])))
+  }, [friendsOnly, friendIds, currentUser?.id])
+  // Friends: only friends and the player; nothing until the friends list is in (not everyone, for a moment)
+  const fo = list => (!friendsOnly ? list : friendIds ? (list ?? []).filter(r => friendIds.has(r?.uid ?? r?.user_id)) : [])
+  // the boards' numbered rows: Everyone shows the empty places too; Friends shows just the friends
+  const slotsOf = (list, n) => (friendsOnly ? list : Array.from({ length: n }, (_, i) => list[i] ?? null))
+
   // ── QB state ────────────────────────────────────────────────────────────────
   const [rows, setRows]               = useState([])
   const [bestBuilds, setBestBuilds]   = useState([])
@@ -975,61 +993,61 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
   // ── Derived QB lists ─────────────────────────────────────────────────────────
   const activeQBMetric = QB_METRICS.find(m => m.key === metric)
   const filteredQBRows = metric === 'avgOvr' || metric === 'winPct'
-    ? rows.filter(r => r.count >= 10)
-    : rows
+    ? fo(rows).filter(r => r.count >= 10)
+    : fo(rows)
   const sortedQB       = [...filteredQBRows].sort((a, b) => (b[metric] - a[metric]) || (b.wins - a.wins))
-  const qbProfileSlots = Array.from({ length: 20 }, (_, i) => sortedQB[i] ?? null)
+  const qbProfileSlots = slotsOf(sortedQB, 20)
 
   const activeLegendMetric  = QB_METRICS.find(m => m.key === legendMetric)
   const filteredLegendRows  = legendMetric === 'avgOvr' || legendMetric === 'winPct'
-    ? legendRows.filter(r => r.count >= 10)
-    : legendRows
+    ? fo(legendRows).filter(r => r.count >= 10)
+    : fo(legendRows)
   const sortedLegend        = [...filteredLegendRows].sort((a, b) => (b[legendMetric] - a[legendMetric]) || (b.wins - a.wins))
-  const legendSlots         = Array.from({ length: 20 }, (_, i) => sortedLegend[i] ?? null)
+  const legendSlots         = slotsOf(sortedLegend, 20)
 
-  const qbBuildsList  = buildsTab === 'best' ? bestBuilds : worstBuilds
-  const qbBuildSlots  = Array.from({ length: buildsTab === 'best' ? 200 : 20 }, (_, i) => qbBuildsList[i] ?? null)
+  const qbBuildsList  = fo(buildsTab === 'best' ? bestBuilds : worstBuilds)
+  const qbBuildSlots  = slotsOf(qbBuildsList, buildsTab === 'best' ? 200 : 20)
 
   // ── Derived RB lists ─────────────────────────────────────────────────────────
   const activeRBMetric  = RB_METRICS.find(m => m.key === rbMetric)
   const filteredRBRows  = rbMetric === 'avgOvr' || rbMetric === 'winPct'
-    ? rbRows.filter(r => r.count >= 10)
-    : rbRows
+    ? fo(rbRows).filter(r => r.count >= 10)
+    : fo(rbRows)
   const sortedRB        = [...filteredRBRows].sort((a, b) => (b[rbMetric] - a[rbMetric]) || (b.wins - a.wins))
-  const rbProfileSlots  = Array.from({ length: 20 }, (_, i) => sortedRB[i] ?? null)
+  const rbProfileSlots  = slotsOf(sortedRB, 20)
 
-  const rbBuildsList  = buildsTab === 'best' ? rbBestBuilds : rbWorstBuilds
-  const rbBuildSlots  = Array.from({ length: buildsTab === 'best' ? 200 : 20 }, (_, i) => rbBuildsList[i] ?? null)
+  const rbBuildsList  = fo(buildsTab === 'best' ? rbBestBuilds : rbWorstBuilds)
+  const rbBuildSlots  = slotsOf(rbBuildsList, buildsTab === 'best' ? 200 : 20)
 
   const filteredRBLegendRows = rbLegendMetric === 'avgOvr' || rbLegendMetric === 'winPct'
-    ? rbLegendRows.filter(r => r.count >= 10)
-    : rbLegendRows
+    ? fo(rbLegendRows).filter(r => r.count >= 10)
+    : fo(rbLegendRows)
   const sortedRBLegend   = [...filteredRBLegendRows].sort((a, b) => (b[rbLegendMetric] - a[rbLegendMetric]) || (b.wins - a.wins))
-  const rbLegendSlots    = Array.from({ length: 20 }, (_, i) => sortedRBLegend[i] ?? null)
+  const rbLegendSlots    = slotsOf(sortedRBLegend, 20)
 
   const filteredWRLegendRows = wrLegendMetric === 'avgOvr' || wrLegendMetric === 'winPct'
-    ? wrLegendRows.filter(r => r.count >= 10)
-    : wrLegendRows
+    ? fo(wrLegendRows).filter(r => r.count >= 10)
+    : fo(wrLegendRows)
   const sortedWRLegend   = [...filteredWRLegendRows].sort((a, b) => (b[wrLegendMetric] - a[wrLegendMetric]) || (b.wins - a.wins))
-  const wrLegendSlots    = Array.from({ length: 20 }, (_, i) => sortedWRLegend[i] ?? null)
+  const wrLegendSlots    = slotsOf(sortedWRLegend, 20)
   const filteredTELegendRows = teLegendMetric === 'avgOvr' || teLegendMetric === 'winPct'
-    ? teLegendRows.filter(r => r.count >= 10)
-    : teLegendRows
+    ? fo(teLegendRows).filter(r => r.count >= 10)
+    : fo(teLegendRows)
   const sortedTELegend   = [...filteredTELegendRows].sort((a, b) => (b[teLegendMetric] - a[teLegendMetric]) || (b.wins - a.wins))
-  const teLegendSlots    = Array.from({ length: 20 }, (_, i) => sortedTELegend[i] ?? null)
+  const teLegendSlots    = slotsOf(sortedTELegend, 20)
   const filteredDBLegendRows = dbLegendMetric === 'avgOvr' || dbLegendMetric === 'winPct'
-    ? dbLegendRows.filter(r => r.count >= 10)
-    : dbLegendRows
+    ? fo(dbLegendRows).filter(r => r.count >= 10)
+    : fo(dbLegendRows)
   const sortedDBLegend   = [...filteredDBLegendRows].sort((a, b) => (b[dbLegendMetric] - a[dbLegendMetric]) || (b.wins - a.wins))
-  const dbLegendSlots    = Array.from({ length: 20 }, (_, i) => sortedDBLegend[i] ?? null)
+  const dbLegendSlots    = slotsOf(sortedDBLegend, 20)
 
   // ── Derived ALL lists ────────────────────────────────────────────────────────
   const activeAllMetric = ALL_METRICS.find(m => m.key === allMetric)
   const filteredAllRows = allMetric === 'avgOvr'
-    ? allRows.filter(r => r.count >= 20)
-    : allRows
+    ? fo(allRows).filter(r => r.count >= 20)
+    : fo(allRows)
   const sortedAll       = [...filteredAllRows].sort((a, b) => (b[allMetric] - a[allMetric]) || (b.wins - a.wins))
-  const allProfileSlots = Array.from({ length: 20 }, (_, i) => sortedAll[i] ?? null)
+  const allProfileSlots = slotsOf(sortedAll, 20)
   const myAllEntry      = currentUser ? filteredAllRows.find(r => r.uid === currentUser.id) : null
   const myAllRank       = myAllEntry ? sortedAll.findIndex(r => r.uid === currentUser.id) + 1 : 0
   const myAllInTop20    = allProfileSlots.some(r => r?.uid === currentUser?.id)
@@ -1038,62 +1056,62 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
   // ── Derived WR lists ─────────────────────────────────────────────────────────
   const activeWRMetric  = WR_METRICS.find(m => m.key === wrMetric)
   const filteredWRRows  = wrMetric === 'avgOvr' || wrMetric === 'winPct'
-    ? wrRows.filter(r => r.count >= 10)
-    : wrRows
+    ? fo(wrRows).filter(r => r.count >= 10)
+    : fo(wrRows)
   const sortedWR        = [...filteredWRRows].sort((a, b) => (b[wrMetric] - a[wrMetric]) || (b.wins - a.wins))
-  const wrProfileSlots  = Array.from({ length: 20 }, (_, i) => sortedWR[i] ?? null)
+  const wrProfileSlots  = slotsOf(sortedWR, 20)
 
   const myWREntry   = currentUser ? filteredWRRows.find(r => r.uid === currentUser.id) : null
   const myWRRank    = myWREntry ? sortedWR.findIndex(r => r.uid === currentUser.id) + 1 : 0
   const myWRInTop20 = wrProfileSlots.some(r => r?.uid === currentUser?.id)
 
-  const wrBuildsList  = buildsTab === 'best' ? wrBestBuilds : wrWorstBuilds
-  const wrBuildSlots  = Array.from({ length: buildsTab === 'best' ? 200 : 20 }, (_, i) => wrBuildsList[i] ?? null)
+  const wrBuildsList  = fo(buildsTab === 'best' ? wrBestBuilds : wrWorstBuilds)
+  const wrBuildSlots  = slotsOf(wrBuildsList, buildsTab === 'best' ? 200 : 20)
 
   // ── Derived TE lists ──────────────────────────────────────────────────────────
   const activeTEMetric  = TE_METRICS.find(m => m.key === teMetric)
   const filteredTERows  = teMetric === 'avgOvr' || teMetric === 'winPct'
-    ? teRows.filter(r => r.count >= 10)
-    : teRows
+    ? fo(teRows).filter(r => r.count >= 10)
+    : fo(teRows)
   const sortedTE        = [...filteredTERows].sort((a, b) => (b[teMetric] - a[teMetric]) || (b.wins - a.wins))
-  const teProfileSlots  = Array.from({ length: 20 }, (_, i) => sortedTE[i] ?? null)
+  const teProfileSlots  = slotsOf(sortedTE, 20)
 
   const myTEEntry   = currentUser ? filteredTERows.find(r => r.uid === currentUser.id) : null
   const myTERank    = myTEEntry ? sortedTE.findIndex(r => r.uid === currentUser.id) + 1 : 0
   const myTEInTop20 = teProfileSlots.some(r => r?.uid === currentUser?.id)
 
-  const teBuildsList  = buildsTab === 'best' ? teBestBuilds : teWorstBuilds
-  const teBuildSlots  = Array.from({ length: buildsTab === 'best' ? 200 : 20 }, (_, i) => teBuildsList[i] ?? null)
+  const teBuildsList  = fo(buildsTab === 'best' ? teBestBuilds : teWorstBuilds)
+  const teBuildSlots  = slotsOf(teBuildsList, buildsTab === 'best' ? 200 : 20)
 
   // ── Derived DB lists ──────────────────────────────────────────────────────────
   const activeDBMetric  = DB_METRICS.find(m => m.key === dbMetric)
   const filteredDBRows  = dbMetric === 'avgOvr' || dbMetric === 'winPct'
-    ? dbRows.filter(r => r.count >= 10)
-    : dbRows
+    ? fo(dbRows).filter(r => r.count >= 10)
+    : fo(dbRows)
   const sortedDB        = [...filteredDBRows].sort((a, b) => (b[dbMetric] - a[dbMetric]) || (b.wins - a.wins))
-  const dbProfileSlots  = Array.from({ length: 20 }, (_, i) => sortedDB[i] ?? null)
+  const dbProfileSlots  = slotsOf(sortedDB, 20)
 
   const myDBEntry   = currentUser ? filteredDBRows.find(r => r.uid === currentUser.id) : null
   const myDBRank    = myDBEntry ? sortedDB.findIndex(r => r.uid === currentUser.id) + 1 : 0
   const myDBInTop20 = dbProfileSlots.some(r => r?.uid === currentUser?.id)
 
-  const dbBuildsList  = buildsTab === 'best' ? dbBestBuilds : dbWorstBuilds
-  const dbBuildSlots  = Array.from({ length: buildsTab === 'best' ? 200 : 20 }, (_, i) => dbBuildsList[i] ?? null)
+  const dbBuildsList  = fo(buildsTab === 'best' ? dbBestBuilds : dbWorstBuilds)
+  const dbBuildSlots  = slotsOf(dbBuildsList, buildsTab === 'best' ? 200 : 20)
 
   // ── Derived OL lists ──────────────────────────────────────────────────────────
   const activeOLMetric  = OL_METRICS.find(m => m.key === olMetric)
   const filteredOLRows  = olMetric === 'avgOvr' || olMetric === 'winPct'
-    ? olRows.filter(r => r.count >= 10)
-    : olRows
+    ? fo(olRows).filter(r => r.count >= 10)
+    : fo(olRows)
   const sortedOL        = [...filteredOLRows].sort((a, b) => (b[olMetric] - a[olMetric]) || (b.wins - a.wins))
-  const olProfileSlots  = Array.from({ length: 20 }, (_, i) => sortedOL[i] ?? null)
+  const olProfileSlots  = slotsOf(sortedOL, 20)
 
   const myOLEntry   = currentUser ? filteredOLRows.find(r => r.uid === currentUser.id) : null
   const myOLRank    = myOLEntry ? sortedOL.findIndex(r => r.uid === currentUser.id) + 1 : 0
   const myOLInTop20 = olProfileSlots.some(r => r?.uid === currentUser?.id)
 
-  const olBuildsList  = buildsTab === 'best' ? olBestBuilds : olWorstBuilds
-  const olBuildSlots  = Array.from({ length: buildsTab === 'best' ? 200 : 20 }, (_, i) => olBuildsList[i] ?? null)
+  const olBuildsList  = fo(buildsTab === 'best' ? olBestBuilds : olWorstBuilds)
+  const olBuildSlots  = slotsOf(olBuildsList, buildsTab === 'best' ? 200 : 20)
 
   // ── Render ───────────────────────────────────────────────────────────────────
   return (
@@ -1104,6 +1122,13 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
           <button className="prf-top-back" onClick={onBack}>← Back to Build</button>
         </div>
 
+        {(_LB_APP || _LB_LOOK) && currentUser && (
+          <div className="lb-main-seg lb-friends-seg" role="tablist" aria-label="Whose scores">
+            <button role="tab" aria-selected={!friendsOnly} className={`lb-main-seg-btn ${!friendsOnly ? 'lb-main-seg-active' : ''}`} onClick={() => setFriendsOnly(false)}>Everyone</button>
+            <button role="tab" aria-selected={friendsOnly} className={`lb-main-seg-btn ${friendsOnly ? 'lb-main-seg-active' : ''}`} onClick={() => setFriendsOnly(true)}>Friends</button>
+          </div>
+        )}
+        {friendsOnly && friendIds && friendIds.size <= 1 && <p className="lb-friends-empty">No friends yet: add some from Profile → Friends, or tap a name on any board.</p>}
         {onPositionChange && (
           <div className="lb-main-seg lb-pos-switcher">
             <button
@@ -1224,8 +1249,8 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
             { key: 'mvps',  label: 'MVPs/POYs' },
             { key: 'count', label: 'Seasons' },
           ]
-          const sorted = [...allDailyRows].sort((a, b) => (b[allDailyMetric] - a[allDailyMetric]) || (b.wins - a.wins))
-          const slots  = Array.from({ length: 20 }, (_, i) => sorted[i] ?? null)
+          const sorted = [...fo(allDailyRows)].sort((a, b) => (b[allDailyMetric] - a[allDailyMetric]) || (b.wins - a.wins))
+          const slots  = slotsOf(sorted, 20)
           return (
             <>
               <div className="lb-header">
@@ -1260,7 +1285,7 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
                         <RankBadge rank={i + 1} />
                         <div className="lb-row-info">
                           <div className="lb-row-name">
-                            {row.username}
+                            {<LbName name={row.username} uid={row.uid ?? row.user_id} />}
                             {plusUids.has(row.uid) && <span className="lb-plus-badge" title="BAP Pro">PRO</span>}
                             {currentUser && row.uid === currentUser.id && <span className="lb-you">you</span>}
                           </div>
@@ -1291,7 +1316,7 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
             { key: 'wins',  label: 'Wins' },
           ]
           const sorted = [...dailyRows].sort((a, b) => (b[dailyMetric] - a[dailyMetric]) || (b.wins - a.wins))
-          const slots  = Array.from({ length: 20 }, (_, i) => sorted[i] ?? null)
+          const slots  = slotsOf(sorted, 20)
           return (
             <>
               <div className="lb-header">
@@ -1326,7 +1351,7 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
                         <RankBadge rank={i + 1} />
                         <div className="lb-row-info">
                           <div className="lb-row-name">
-                            {row.username}
+                            {<LbName name={row.username} uid={row.uid ?? row.user_id} />}
                             {plusUids.has(row.uid) && <span className="lb-plus-badge" title="BAP Pro">PRO</span>}
                             {currentUser && row.uid === currentUser.id && <span className="lb-you">you</span>}
                           </div>
@@ -1377,11 +1402,11 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
             {isAllAwardsMetric ? (
               allAwardsLoading ? (
                 <LBSpinner />
-              ) : allAwardsRows.length === 0 ? (
+              ) : fo(allAwardsRows).length === 0 ? (
                 <div className="lb-loading lb-legends-empty">No MVP/OPOY/DPOY awards yet.</div>
               ) : (
                 <div className="lb-list" key="all-mvps">
-                  {allAwardsRows.map((row, i) => {
+                  {fo(allAwardsRows).map((row, i) => {
                     // accounts.username is stored lowercase (a Supabase-side trigger
                     // issue) — leaderboard_user_stats keeps the real casing, so prefer
                     // that whenever this user has a matching row there.
@@ -1395,7 +1420,7 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
                       <RankBadge rank={i + 1} />
                       <div className="lb-row-info">
                         <div className="lb-row-name">
-                          {c?.username || row.username}
+                          {<LbName name={c?.username || row.username} uid={row.uid ?? row.user_id} />}
                           {plusUids.has(row.uid) && <span className="lb-plus-badge" title="BAP Pro">PRO</span>}
                           {currentUser && row.uid === currentUser.id && <span className="lb-you">you</span>}
                         </div>
@@ -1421,7 +1446,7 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
                       <RankBadge rank={i + 1} />
                       <div className="lb-row-info">
                         <div className="lb-row-name">
-                          {row.username}
+                          {<LbName name={row.username} uid={row.uid ?? row.user_id} />}
                           {plusUids.has(row.uid) && <span className="lb-plus-badge" title="BAP Pro">PRO</span>}
                           {currentUser && row.uid === currentUser.id && <span className="lb-you">you</span>}
                         </div>
@@ -1445,12 +1470,12 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
                 )}
                 {myAllEntry && !myAllInTop20 && (
                   <>
-                    <div className="lb-you-sep">YOUR RANK · #{myAllRank}</div>
+                    <div className="lb-you-sep"><span className="un-keep">{(getUsername(currentUser) || 'Guest').toUpperCase()}</span> · RANK #{myAllRank}</div>
                     <div className="lb-row lb-row-me">
                       <RankBadge rank={myAllRank} />
                       <div className="lb-row-info">
                         <div className="lb-row-name">
-                          {myAllEntry.username}
+                          {<LbName name={myAllEntry.username} uid={myAllEntry.uid ?? myAllEntry.user_id} />}
                           {plusUids.has(myAllEntry.uid) && <span className="lb-plus-badge" title="BAP Pro">PRO</span>}
                           <span className="lb-you">you</span>
                         </div>
@@ -1495,11 +1520,11 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
             {isAwardsMetric ? (
               awardsLoading ? (
                 <LBSpinner />
-              ) : awardsRows.length === 0 ? (
+              ) : fo(awardsRows).length === 0 ? (
               <div className="lb-loading lb-legends-empty">No {isOL ? 'All-Pro' : isDB ? 'DPOY' : isRB ? 'OPOY' : 'MVP'} awards yet.</div>
             ) : (
               <div className="lb-list" key={isOL ? 'allpros' : isDB ? 'dpoys' : isRB ? 'opoys' : 'mvps'}>
-                {awardsRows.map((row, i) => {
+                {fo(awardsRows).map((row, i) => {
                   // accounts.username is stored lowercase (a Supabase-side trigger
                   // issue) — leaderboard_user_stats keeps the real casing, so prefer
                   // that whenever this user has a matching row there.
@@ -1513,7 +1538,7 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
                     <RankBadge rank={i + 1} />
                     <div className="lb-row-info">
                       <div className="lb-row-name">
-                        {c?.username || row.username}
+                        {<LbName name={c?.username || row.username} uid={row.uid ?? row.user_id} />}
                         {plusUids.has(row.uid) && <span className="lb-plus-badge" title="BAP Pro">PRO</span>}
                         {currentUser && row.uid === currentUser.id && <span className="lb-you">you</span>}
                       </div>
@@ -1539,7 +1564,7 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
                       <RankBadge rank={i + 1} />
                       <div className="lb-row-info">
                         <div className="lb-row-name">
-                          {row.username}
+                          {<LbName name={row.username} uid={row.uid ?? row.user_id} />}
                           {plusUids.has(row.uid) && <span className="lb-plus-badge" title="BAP Pro">PRO</span>}
                           {currentUser && row.uid === currentUser.id && <span className="lb-you">you</span>}
                         </div>
@@ -1563,12 +1588,12 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
                 )}
                 {isWR && myWREntry && !myWRInTop20 && (
                   <>
-                    <div className="lb-you-sep">YOUR RANK · #{myWRRank}</div>
+                    <div className="lb-you-sep"><span className="un-keep">{(getUsername(currentUser) || 'Guest').toUpperCase()}</span> · RANK #{myWRRank}</div>
                     <div className="lb-row lb-row-wr lb-row-me">
                       <RankBadge rank={myWRRank} />
                       <div className="lb-row-info">
                         <div className="lb-row-name">
-                          {myWREntry.username}
+                          {<LbName name={myWREntry.username} uid={myWREntry.uid ?? myWREntry.user_id} />}
                           {plusUids.has(myWREntry.uid) && <span className="lb-plus-badge" title="BAP Pro">PRO</span>}
                           <span className="lb-you">you</span>
                         </div>
@@ -1582,12 +1607,12 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
                 )}
                 {isTE && myTEEntry && !myTEInTop20 && (
                   <>
-                    <div className="lb-you-sep">YOUR RANK · #{myTERank}</div>
+                    <div className="lb-you-sep"><span className="un-keep">{(getUsername(currentUser) || 'Guest').toUpperCase()}</span> · RANK #{myTERank}</div>
                     <div className="lb-row lb-row-wr lb-row-me">
                       <RankBadge rank={myTERank} />
                       <div className="lb-row-info">
                         <div className="lb-row-name">
-                          {myTEEntry.username}
+                          {<LbName name={myTEEntry.username} uid={myTEEntry.uid ?? myTEEntry.user_id} />}
                           {plusUids.has(myTEEntry.uid) && <span className="lb-plus-badge" title="BAP Pro">PRO</span>}
                           <span className="lb-you">you</span>
                         </div>
@@ -1601,12 +1626,12 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
                 )}
                 {isDB && myDBEntry && !myDBInTop20 && (
                   <>
-                    <div className="lb-you-sep">YOUR RANK · #{myDBRank}</div>
+                    <div className="lb-you-sep"><span className="un-keep">{(getUsername(currentUser) || 'Guest').toUpperCase()}</span> · RANK #{myDBRank}</div>
                     <div className="lb-row lb-row-wr lb-row-me">
                       <RankBadge rank={myDBRank} />
                       <div className="lb-row-info">
                         <div className="lb-row-name">
-                          {myDBEntry.username}
+                          {<LbName name={myDBEntry.username} uid={myDBEntry.uid ?? myDBEntry.user_id} />}
                           {plusUids.has(myDBEntry.uid) && <span className="lb-plus-badge" title="BAP Pro">PRO</span>}
                           <span className="lb-you">you</span>
                         </div>
@@ -1620,12 +1645,12 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
                 )}
                 {isOL && myOLEntry && !myOLInTop20 && (
                   <>
-                    <div className="lb-you-sep">YOUR RANK · #{myOLRank}</div>
+                    <div className="lb-you-sep"><span className="un-keep">{(getUsername(currentUser) || 'Guest').toUpperCase()}</span> · RANK #{myOLRank}</div>
                     <div className="lb-row lb-row-wr lb-row-me">
                       <RankBadge rank={myOLRank} />
                       <div className="lb-row-info">
                         <div className="lb-row-name">
-                          {myOLEntry.username}
+                          {<LbName name={myOLEntry.username} uid={myOLEntry.uid ?? myOLEntry.user_id} />}
                           {plusUids.has(myOLEntry.uid) && <span className="lb-plus-badge" title="BAP Pro">PRO</span>}
                           <span className="lb-you">you</span>
                         </div>
@@ -1670,6 +1695,9 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
               <LBSpinner />
             ) : (
               <div className="lb-list" key={`${isOL ? 'ol-' : isDB ? 'db-' : isTE ? 'te-' : isWR ? 'wr-' : isRB ? 'rb-' : ''}builds-${buildsTab}`}>
+                {friendsOnly && friendIds && !(isOL ? olBuildSlots : isDB ? dbBuildSlots : isTE ? teBuildSlots : isWR ? wrBuildSlots : isRB ? rbBuildSlots : qbBuildSlots).length && (
+                  <p className="lb-friends-empty">No builds from you or your friends on this board yet: it keeps the top {buildsTab === 'best' ? 200 : 20}.</p>
+                )}
                 {(isOL ? olBuildSlots : isDB ? dbBuildSlots : isTE ? teBuildSlots : isWR ? wrBuildSlots : isRB ? rbBuildSlots : qbBuildSlots).map((row, i) =>
                   row ? (
                     <div key={i} className="lb-expand-wrap" style={{ animationDelay: `${i * 35}ms` }}>
@@ -1679,7 +1707,7 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
                       >
                         <RankBadge rank={i + 1} />
                         <div className="lb-row-info">
-                          <div className="lb-row-name">{row.username || '—'}</div>
+                          <div className="lb-row-name">{<LbName name={row.username || '—'} uid={row.uid ?? row.user_id} />}</div>
                           <div className="lb-row-sub">{row.wins}W · {row.losses}L</div>
                         </div>
                         <div className="lb-row-ovr">
@@ -1739,11 +1767,11 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
 
             {legendMetric === 'mvps' ? (
               awardsLoading ? <LBSpinner /> :
-              alltimeAwardsRows.length === 0 ? (
+              fo(alltimeAwardsRows).length === 0 ? (
                 <div className="lb-loading lb-legends-empty">No All-Time MVP awards yet.</div>
               ) : (
                 <div className="lb-list" key="legend-mvps">
-                  {alltimeAwardsRows.map((row, i) => {
+                  {fo(alltimeAwardsRows).map((row, i) => {
                     const career = legendRows.find(r => r.uid === row.uid)
                     return (
                       <div
@@ -1754,7 +1782,7 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
                         <RankBadge rank={i + 1} />
                         <div className="lb-row-info">
                           <div className="lb-row-name">
-                            {career?.username || row.username}
+                            {<LbName name={career?.username || row.username} uid={row.uid ?? row.user_id} />}
                             {currentUser && row.uid === currentUser.id && <span className="lb-you">you</span>}
                           </div>
                           {career && (
@@ -1785,7 +1813,7 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
                       <RankBadge rank={i + 1} />
                       <div className="lb-row-info">
                         <div className="lb-row-name">
-                          {row.username}
+                          {<LbName name={row.username} uid={row.uid ?? row.user_id} />}
                           {plusUids.has(row.uid) && <span className="lb-plus-badge" title="BAP Pro">PRO</span>}
                           {currentUser && row.uid === currentUser.id && <span className="lb-you">you</span>}
                         </div>
@@ -1847,7 +1875,7 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
                       <RankBadge rank={i + 1} />
                       <div className="lb-row-info">
                         <div className="lb-row-name">
-                          {row.username}
+                          {<LbName name={row.username} uid={row.uid ?? row.user_id} />}
                           {plusUids.has(row.uid) && <span className="lb-plus-badge" title="BAP Pro">PRO</span>}
                           {currentUser && row.uid === currentUser.id && <span className="lb-you">you</span>}
                         </div>
@@ -1912,7 +1940,7 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
                       <RankBadge rank={i + 1} />
                       <div className="lb-row-info">
                         <div className="lb-row-name">
-                          {row.username}
+                          {<LbName name={row.username} uid={row.uid ?? row.user_id} />}
                           {plusUids.has(row.uid) && <span className="lb-plus-badge" title="BAP Pro">PRO</span>}
                           {currentUser && row.uid === currentUser.id && <span className="lb-you">you</span>}
                         </div>
@@ -1976,7 +2004,7 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
                       <RankBadge rank={i + 1} />
                       <div className="lb-row-info">
                         <div className="lb-row-name">
-                          {row.username}
+                          {<LbName name={row.username} uid={row.uid ?? row.user_id} />}
                           {plusUids.has(row.uid) && <span className="lb-plus-badge" title="BAP Pro">PRO</span>}
                           {currentUser && row.uid === currentUser.id && <span className="lb-you">you</span>}
                         </div>
@@ -2029,7 +2057,7 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
             {rbLegendMetric === 'opoys' ? (
               awardsLoading ? <LBSpinner /> : (
                 <div className="lb-list" key="rb-legend-opoys">
-                  {Array.from({ length: 20 }, (_, i) => alltimeAwardsRows[i] ?? null).map((row, i) =>
+                  {slotsOf(fo(alltimeAwardsRows), 20).map((row, i) =>
                     row ? (() => {
                       const career = rbLegendRows.find(r => r.uid === row.uid)
                       return (
@@ -2041,7 +2069,7 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
                           <RankBadge rank={i + 1} />
                           <div className="lb-row-info">
                             <div className="lb-row-name">
-                              {career?.username || row.username}
+                              {<LbName name={career?.username || row.username} uid={row.uid ?? row.user_id} />}
                               {currentUser && row.uid === currentUser.id && <span className="lb-you">you</span>}
                             </div>
                             {career && (
@@ -2077,7 +2105,7 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
                       <RankBadge rank={i + 1} />
                       <div className="lb-row-info">
                         <div className="lb-row-name">
-                          {row.username}
+                          {<LbName name={row.username} uid={row.uid ?? row.user_id} />}
                           {plusUids.has(row.uid) && <span className="lb-plus-badge" title="BAP Pro">PRO</span>}
                           {currentUser && row.uid === currentUser.id && <span className="lb-you">you</span>}
                         </div>

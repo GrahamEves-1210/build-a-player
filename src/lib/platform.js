@@ -1,0 +1,57 @@
+import { Capacitor } from '@capacitor/core'
+
+// True inside the iOS/Android app (Capacitor), false on the website.
+export const IS_APP = Capacitor.isNativePlatform()
+// 'ios' | 'android' | 'web'
+export const APP_PLATFORM = Capacitor.getPlatform()
+
+// The website uses the app's look for its home and profile screens: the app's
+// home menu, profile card, shop, achievements, locker and the More sheet.
+// Game screens keep the website's own layout. IS_APP still decides anything
+// that needs the phone itself (in-app browser, haptics, no ads, share sheet).
+// Settings → Classic look turns it off on this browser, for the original home (the
+// position dropdown, no new modes). The app is always the app.
+const CLASSIC_LOOK = 'bap_classic_look'
+const classicLook = () => { try { return localStorage.getItem(CLASSIC_LOOK) === '1' } catch { return false } }
+export const APP_LOOK = IS_APP || !classicLook()
+export function setClassicLook(on) {
+  try { if (on) localStorage.setItem(CLASSIC_LOOK, '1'); else localStorage.removeItem(CLASSIC_LOOK) } catch {}
+  window.location.href = window.location.pathname.startsWith('/bucket') ? '/bucket' : '/'
+}
+
+// Plus is sold through Stripe on the website. The App Store and Google Play
+// require their own in-app purchase for digital subscriptions, so the app
+// doesn't sell Plus (or link to Stripe) until in-app purchase is wired up.
+export const CAN_SELL_PLUS = !IS_APP
+
+// Android sells through Google Play Billing (lib/iap.js), once RevenueCat's Android key is set
+export const PLAY_BILLING = APP_PLATFORM === 'android' && !!import.meta.env.VITE_RC_ANDROID_KEY
+
+const blobToBase64 = blob => new Promise((resolve, reject) => {
+  const r = new FileReader()
+  r.onload = () => resolve(String(r.result).split(',')[1])
+  r.onerror = reject
+  r.readAsDataURL(blob)
+})
+
+// Open the phone's share sheet (text, link and/or an image). The app's WebView
+// can't download files and its web share API is unreliable with files, so the
+// image is written to the app's cache folder and shared as a file.
+// Resolves 'shared' or 'aborted' (user closed the sheet).
+export async function shareNative({ title, text, url, blob, filename }) {
+  const [{ Filesystem, Directory }, { Share }] = await Promise.all([
+    import('@capacitor/filesystem'),
+    import('@capacitor/share'),
+  ])
+  const files = []
+  if (blob) {
+    const { uri } = await Filesystem.writeFile({ path: filename, data: await blobToBase64(blob), directory: Directory.Cache })
+    files.push(uri)
+  }
+  try {
+    await Share.share({ title, text, url, ...(files.length ? { files } : {}) })
+    return 'shared'
+  } catch {
+    return 'aborted'
+  }
+}

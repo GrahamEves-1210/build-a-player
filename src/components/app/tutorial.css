@@ -1,0 +1,104 @@
+/* First-run tutorial (components/app/Tutorial.jsx): the spotlight tour of Home
+   and the coach marks for the guided game. New UI only (html.is-app /
+   html.app-look supply the --ag-* tokens; fallbacks keep it readable anyway).
+   Light on purpose: no blur, no looping animations, one moving piece. */
+
+#bap-tutorial { position: relative; z-index: 1400; }
+
+/* ── The spotlight ───────────────────────────────────────────────────────── */
+.tut-tour { position: fixed; inset: 0; z-index: 1400; font-family: var(--ag-body, 'Outfit', system-ui, sans-serif); }
+.tut-catch { position: fixed; inset: 0; }                        /* the page underneath waits */
+.tut-dim { position: fixed; inset: 0; background: rgba(3, 6, 5, .74); animation: tut-fade .2s ease both; }
+/* a cut-out: the section stays lit, everything around it dims (its shadow) */
+.tut-hole {
+  position: fixed; top: 0; left: 0; border-radius: 18px; pointer-events: none;
+  box-shadow: 0 0 0 2px var(--ag-a1, #4fd6b7), 0 0 0 200vmax rgba(3, 6, 5, .74);
+  transition: transform .32s cubic-bezier(.2, .8, .2, 1), width .32s cubic-bezier(.2, .8, .2, 1), height .32s cubic-bezier(.2, .8, .2, 1);
+  will-change: transform;
+}
+/* the guided game: a lighter dim, and the page stays playable through it */
+.tut-hole--coach { box-shadow: 0 0 0 2px var(--ag-a1, #4fd6b7), 0 0 0 200vmax rgba(3, 6, 5, .5); }
+.tut-hole--clear { box-shadow: 0 0 0 2px var(--ag-a1, #4fd6b7), 0 0 0 6px color-mix(in srgb, var(--ag-a1, #4fd6b7) 25%, transparent); }
+
+/* the low-key skip */
+.tut-skip {
+  border: 0; background: none; padding: 6px 2px; margin: -6px -2px;
+  font-family: var(--ag-body, 'Outfit', system-ui, sans-serif); font-size: 12.5px; font-weight: 600;
+  color: var(--ag-muted, rgba(216,243,220,.55));
+  text-decoration: underline; text-decoration-color: rgba(216,243,220,.25); text-underline-offset: 3px;
+  cursor: pointer;
+}
+@media (hover: hover) { .tut-skip:hover { color: var(--ag-text, #EEF8F1); } }
+.tut-skip:focus-visible, .tut-bubble-ok:focus-visible, .tut-bubble-btn:focus-visible { outline: 2px solid var(--ag-a1, #4fd6b7); outline-offset: 2px; }
+
+/* ── The prompt ──────────────────────────────────────────────────────────── */
+.tut-coach { position: fixed; inset: 0; z-index: 1350; pointer-events: none; font-family: var(--ag-body, 'Outfit', system-ui, sans-serif); }
+.tut-bubble {
+  position: fixed; pointer-events: auto;
+  padding: 12px 14px 12px; border-radius: 16px;
+  border: 1.5px solid color-mix(in srgb, var(--ag-a1, #4fd6b7) 60%, transparent);
+  background: linear-gradient(160deg, color-mix(in srgb, var(--ag-a1, #4fd6b7) 14%, transparent), transparent 60%), rgb(8, 13, 11);
+  box-shadow: 0 14px 40px rgba(0,0,0,.55);
+  color: var(--ag-text, #EEF8F1);
+  animation: tut-pop .2s ease-out both;
+}
+.tut-bubble--dock {
+  left: 50%; transform: translateX(-50%); width: min(360px, calc(100vw - 24px));
+  bottom: calc(max(14px, env(safe-area-inset-bottom, 0px)) + var(--web-rail, 0px) + 10px);
+  animation-name: tut-fade;
+}
+html.is-app .tut-bubble--dock { bottom: calc(var(--app-bottom, 90px) + 8px); }
+.tut-bubble-arrow {
+  position: absolute; width: 14px; height: 14px; margin-left: -7px;
+  background: rgb(14,24,20); transform: rotate(45deg);
+  border: 1.5px solid color-mix(in srgb, var(--ag-a1, #4fd6b7) 60%, transparent);
+}
+.tut-bubble--below .tut-bubble-arrow { top: -8px; border-right: 0; border-bottom: 0; }
+.tut-bubble--above .tut-bubble-arrow { bottom: -8px; border-left: 0; border-top: 0; background: rgb(8,13,11); }
+.tut-bubble-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.tut-bubble-step { font-family: var(--ag-font, 'Bebas Neue', Impact, sans-serif); font-size: 13px; letter-spacing: 2.4px; color: var(--ag-a1, #4fd6b7); }
+.tut-skip--sm { font-size: 12px; }
+.tut-bubble-title { font-family: var(--ag-display, 'Anton', Impact, sans-serif); font-size: 22px; line-height: 1.05; margin-top: 4px; text-transform: uppercase; }
+.tut-bubble-text { margin: 5px 0 0; font-size: 14px; line-height: 1.4; color: rgba(238,248,241,.86); }
+.tut-bubble-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
+.tut-bubble-ok {
+  min-height: 38px; padding: 0 14px; border-radius: 10px; cursor: pointer;
+  border: 1.5px solid var(--ag-line-hi, rgba(149,213,178,.3)); background: rgba(255,255,255,.04);
+  font-family: var(--ag-font, 'Bebas Neue', Impact, sans-serif); font-size: 16px; letter-spacing: 2px; color: var(--ag-text, #EEF8F1);
+}
+.tut-bubble-back { margin-right: auto; }
+.tut-bubble-btn { min-height: 40px; font-size: 17px; letter-spacing: 1.8px; padding: 0 18px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+.tut-bubble--tour .tut-bubble-btn::after { display: none; }
+
+.tut-skip--pill {
+  position: fixed; left: 50%; transform: translateX(-50%); pointer-events: auto;
+  bottom: calc(max(12px, env(safe-area-inset-bottom, 0px)) + var(--web-rail, 0px) + 8px);
+  margin: 0; padding: 7px 14px; border-radius: 99px;
+  background: rgba(8,13,11,.94); border: 1px solid var(--ag-line-hi, rgba(149,213,178,.3));
+  text-decoration: none; font-size: 12px; white-space: nowrap;
+}
+html.is-app .tut-skip--pill { bottom: calc(var(--app-bottom, 90px) + 6px); }
+
+/* basketball: the orange accent comes through --ag-a1 already; warm the panels */
+html.is-bucket .tut-bubble { background: linear-gradient(160deg, color-mix(in srgb, var(--ag-a1, #f97316) 14%, transparent), transparent 60%), rgb(16,10,6); }
+html.is-bucket .tut-bubble-arrow { background: rgb(24,16,10); }
+html.is-bucket .tut-bubble--above .tut-bubble-arrow { background: rgb(16,10,6); }
+
+@keyframes tut-fade { from { opacity: 0; } }
+@keyframes tut-pop  { from { opacity: 0; transform: translateY(6px); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .tut-bubble, .tut-dim { animation: none !important; }
+  .tut-hole { transition: none; }
+}
+
+/* the first page: centered, before the spotlight starts */
+.tut-bubble--center {
+  left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(380px, calc(100vw - 32px));
+  padding: 16px 18px 16px; text-align: center; animation-name: tut-fade;
+}
+.tut-welcome-logo { display: block; width: 150px; max-width: 60%; height: auto; margin: 10px auto 4px; }
+.tut-welcome-title { font-size: 28px; line-height: 1.05; }
+.tut-welcome-text { font-size: 15px; margin-top: 8px; }
+.tut-bubble--center .tut-bubble-actions { justify-content: stretch; }
+.tut-welcome-go { width: 100%; justify-content: center; min-height: 48px; font-size: 19px; }

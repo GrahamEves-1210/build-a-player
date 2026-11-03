@@ -44,7 +44,8 @@ export async function onRequestPost({ request, env }) {
 
   try {
     const { data: account } = await supabase.from('accounts').select('subscription_id').eq('id', user.id).maybeSingle()
-    if (account?.subscription_id) {
+    // a Pro bought in the Android app is Google Play's: only the player can cancel it there
+    if (account?.subscription_id && !String(account.subscription_id).startsWith('play:')) {
       const stripe = new Stripe(env.STRIPE_SECRET_KEY)
       try { await stripe.subscriptions.cancel(account.subscription_id) }
       catch (e) { if (e?.code !== 'resource_missing') throw e }   // already gone in Stripe

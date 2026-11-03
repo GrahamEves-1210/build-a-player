@@ -55,6 +55,8 @@ import { ATTR, TYPES } from '../data/qbs'
 import { BUCKET_ATTR } from '../data/nba-attrs'
 import { NBA_TEAMS } from '../data/nba-teams'
 import NBA_HEADSHOTS from '../data/nba-headshots.json'
+import { NBA_GUARD_PLAYERS } from '../data/nba-guards'
+import { NBA_BIG_PLAYERS } from '../data/nba-bigs'
 import BucketFigureOverlay from './BucketFigureOverlay'
 import { BucketModelFigure } from './BucketSimPage'
 
@@ -100,26 +102,33 @@ import { WR_TYPES, WR_ATTR } from '../data/wrs'
 import { TE_ATTR } from '../data/tes'
 import { DB_ATTR } from '../data/dbs'
 import { OL_ATTR } from '../data/ols'
+import { CAN_SELL_PLUS, IS_APP, APP_LOOK } from '../lib/platform'
+import AppCareerCard from './app/AppCareerCard'
+import FriendsSection from './app/FriendsSection'
+import PassStrip from './app/PassStrip'
+import { contactEmailOf, saveContactEmail } from '../lib/contactEmail'
+import TrophyCase from './app/TrophyCase'
+import DeleteAccount from './DeleteAccount'
 import ConnectDiscord from './ConnectDiscord'
 import { getUsername } from '../lib/discord'
+import { IconGear, IconTrophy, IconCrown, IconFootball, IconBasketball } from './app/icons'
+import { useCountUp as countUp } from '../lib/useCountUp'
+import { openBillingPortal, BILLING_DUE } from '../lib/webCheckout'
 
-function useCountUp(target, duration = 900, enabled = true) {
-  const [val, setVal] = useState(0)
-  useEffect(() => {
-    if (!enabled || !target) return
-    const start = Date.now()
-    let raf
-    const tick = () => {
-      const p = Math.min((Date.now() - start) / duration, 1)
-      const eased = 1 - Math.pow(1 - p, 3)
-      setVal(Math.round(eased * target))
-      if (p < 1) raf = requestAnimationFrame(tick)
-    }
-    raf = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(raf)
-  }, [target, duration, enabled])
-  return val
+// a trait's player by name: an older save kept only the short name (a last name, or for a few
+// players just their suffix: 'Jr.' for Michael Porter Jr.): the full name from that team's roster
+const BUCKET_POOL = [...NBA_GUARD_PLAYERS, ...NBA_BIG_PLAYERS]
+const slotName = d => {
+  if (d.qbFull || !d.qb || !d.team) return d.qbFull || d.qb
+  const q = d.qb.toLowerCase()
+  return BUCKET_POOL.find(p => p.team === d.team && (p.short?.toLowerCase() === q || p.name.toLowerCase().endsWith(` ${q}`)))?.name ?? d.qb
 }
+
+// a grade's colour, like every build screen (rounded like the letter, valToGrade)
+const gradeColor = v0 => { const v = Math.round(v0 ?? 0); return v >= 11 ? '#a855f7' : v >= 8 ? '#3b82f6' : v >= 5 ? '#22c55e' : v >= 2 ? '#eab308' : v >= 1 ? '#f97316' : '#ef4444' }
+
+// the shared count-up (lib/useCountUp.js); runs once there's a number to count to
+const useCountUp = (target, duration = 900, enabled = true) => countUp(target, { run: enabled && !!target, ms: duration })
 
 function getInitials(user) {
   const name = getUsername(user) || ''
@@ -202,10 +211,11 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
   const [showRings, setShowRings] = useState(false)
   const [salaryCareer, setSalaryCareer] = useState(null)
   const [salaryCareerLoad, setSalaryCareerLoad] = useState(true)
-  const [gameSection, setGameSection] = useState('nfl')
+  const [gameSection, setGameSection] = useState((IS_APP || APP_LOOK) && isBucket ? 'bucket' : 'nfl')
   const [careerGame, setCareerGame] = useState(isOL ? 'ol' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb')
   const [adsDisabled, setAdsDisabled] = useState(false)
   const [adsLifetime, setAdsLifetime] = useState(false)
+  const [billingDue, setBillingDue] = useState(false)   // a Pro renewal that didn't go through
   const [adFreeLoading, setAdFreeLoading] = useState(false)
   const [activeTheme, setActiveTheme] = useState(() => {
     try { return localStorage.getItem('bap_theme') || 'default' } catch { return 'default' }
@@ -229,10 +239,14 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
   const [emailSuccess, setEmailSuccess] = useState(false)
   const [emailLoading, setEmailLoading] = useState(false)
 
+  // the reset email: private sign-in data (lib/contactEmail.js); older accounts may still
+  // have it on the accounts row until supabase/private_email.sql moves it
   useEffect(() => {
-    if (!supabase || !user) return
-    supabase.from('accounts').select('email').eq('id', user.id).single()
-      .then(({ data }) => { if (data?.email) { setEmailOnFile(data.email); setContactEmail(data.email) } })
+    if (!user) return
+    const own = contactEmailOf(user)
+    if (own) { setEmailOnFile(own); setContactEmail(own); return }
+    supabase?.from('accounts').select('email').eq('id', user.id).maybeSingle()
+      .then(({ data }) => { if (data?.email) { setEmailOnFile(data.email); setContactEmail(data.email) } }, () => {})
   }, [user])
 
   useEffect(() => {
@@ -252,6 +266,7 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
       .then(({ data }) => {
         if (data?.ads_disabled) { setAdsDisabled(true); setAdsLifetime(true) }
         else if (data?.subscription_status === 'active') setAdsDisabled(true)
+        setBillingDue(BILLING_DUE.includes(data?.subscription_status))
         setMvpCounts({
           classic:     data?.classic_mvps  ?? 0,
           alltime:     data?.alltime_mvps  ?? 0,
@@ -270,17 +285,8 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
     if (params.get('ad_free') === '1') window.history.replaceState({}, '', window.location.pathname)
   }, [])
 
-  const handleManageSubscription = async () => {
-    try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/create-portal`, {
-        method: 'POST',
-        headers: await apiHeaders(),
-        body: JSON.stringify({ userId: user.id }),
-      })
-      const { url } = await res.json()
-      if (url) window.location.href = url
-    } catch {}
-  }
+  // Stripe's billing page: plan, card, cancel (lib/webCheckout.js)
+  const handleManageSubscription = () => openBillingPortal()
 
   const handleAdFree = async () => {
     if (adFreeLoading || adsDisabled || !user) return
@@ -752,11 +758,10 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
   const handleSaveEmail = async (e) => {
     e.preventDefault()
     setEmailError(null)
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail.trim())) { setEmailError('Please enter a valid email address.'); return }
     setEmailLoading(true)
-    const { error } = await supabase.from('accounts').update({ email: contactEmail.trim() }).eq('id', user.id)
+    const error = await saveContactEmail(contactEmail)
     setEmailLoading(false)
-    if (error) { setEmailError(error.message); return }
+    if (error) { setEmailError(error); return }
     setEmailOnFile(contactEmail.trim())
     setEmailSuccess(true)
     setShowEmailForm(false)
@@ -779,7 +784,8 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
 
   return (
     <div className="prf-page">
-      {!isBucket && (
+      {/* the old site's stadium backdrop; the new look keeps the app's own background, like every screen */}
+      {!isBucket && !(IS_APP || APP_LOOK) && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', overflow: 'hidden' }}>
           <div style={{ position: 'absolute', inset: '-20px', backgroundImage: "url('/footballbackground.webp')", backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(4px) brightness(0.12)' }} />
         </div>
@@ -790,20 +796,23 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
         <div className="prf-top-nav">
           <button className="prf-top-back" onClick={onBack}>← Back to Build</button>
           <div className="prf-plus-wrap" ref={plusRef}>
-            <button
-              className={`prf-top-adfree${isPlus ? ' prf-top-adfree--on' : ''}`}
-              onClick={isPlus ? undefined : () => setPlusOpen(o => !o)}
-              style={isPlus ? { cursor: 'default' } : undefined}
-            >
-              {isPlus ? '✦ Pro Active' : '✦ BAP Pro'}
-            </button>
-            {!isPlus && plusOpen && (
+            {(isPlus || CAN_SELL_PLUS) && (
+              <button
+                className={`prf-top-adfree${isPlus ? ' prf-top-adfree--on' : ''}`}
+                onClick={isPlus ? undefined : (IS_APP || APP_LOOK) ? () => window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'pro' })) : () => setPlusOpen(o => !o)}
+                style={isPlus ? { cursor: 'default' } : undefined}
+              >
+                {isPlus ? '✦ Pro Active' : '✦ BAP Pro'}
+              </button>
+            )}
+            {!isPlus && CAN_SELL_PLUS && plusOpen && (
               <div className="prf-plus-dropdown">
                 <div className="wm-plus-body">
                   {[
+                    '+50% coins from every game',
+                    'The Pro Vault, included',
                     'No ads',
-                    'Custom color themes',
-                    'Custom profile icons',
+                    'Double the daily coin drop',
                     'Pro badge on leaderboard',
                   ].map(label => (
                     <div key={label} className="wm-plus-perk">
@@ -824,7 +833,7 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
                       className="wm-plus-edit-btn"
                       onClick={() => { setPlusOpen(false); onOpenCustomModal?.() }}
                     >
-                      <span>⚙️</span>
+                      <span><IconGear size="1em" className="ico-inline" /></span>
                       <span>Edit Custom Ratings</span>
                     </button>
                   )}
@@ -834,13 +843,22 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
           </div>
         </div>
 
+        {/* App look: player card with level, XP and spotlights (replaces the hero below) */}
+        {(IS_APP || APP_LOOK) && <AppCareerCard user={user} />}
+
+        {/* App look: the Builder Pass, a strip of tiers to scroll through */}
+        {(IS_APP || APP_LOOK) && <PassStrip />}
+        {/* App look: trophy case (hardware won, best build at each position) */}
+        {(IS_APP || APP_LOOK) && <TrophyCase user={user} />}
+
+        {/* App look: friends (tap one for their profile) */}
+        {(IS_APP || APP_LOOK) && <FriendsSection user={user} isBucket={isBucket} />}
+
         {/* ── Hero header ── */}
         <div className={`prf-hero ${show ? 'prf-hero-in' : ''}`}>
           <div className="prf-avatar-wrap">
             <div className="prf-avatar">
-              {(isPlus && profileIcon)
-                ? <span className="prf-avatar-emoji">{PROFILE_ICONS.find(i => i.id === profileIcon)?.e ?? initials}</span>
-                : initials}
+              {initials}
             </div>
             <div className="prf-avatar-ring" />
           </div>
@@ -850,77 +868,32 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
           </div>
         </div>
 
-        {/* ── BAP Pro ── */}
+        {/* ── BAP Pro: what it gives, and Manage Subscription (billing is Stripe's portal) ── */}
         {isPlus && (
-        <div className={`prf-card ${show ? 'prf-card-in' : ''}`} style={{ animationDelay: '0.1s' }}>
-          <div className="prf-card-hd">
-            <span className="prf-card-title">BAP Pro</span>
-            <span className="plus-status-badge plus-status-badge--on">Active</span>
-          </div>
-
-          <div className="plus-content">
-
-              <div className="plus-adfree-row">
-                <span className="plus-adfree-check">✓</span>
-                <span className="plus-adfree-label">Ad-Free</span>
-              </div>
-
-              <div className="plus-section">
-                <span className="plus-section-label">Color Theme</span>
-                {isBucket ? (
-                  <span className="plus-coming-soon">Not available for Build-A-Bucket yet</span>
-                ) : (
-                  <div className="plus-theme-row">
-                    {THEMES.map(t => (
-                      <button
-                        key={t.id}
-                        className={`plus-theme-swatch${activeTheme === t.id ? ' plus-theme-swatch--on' : ''}`}
-                        onClick={() => {
-                          setActiveTheme(t.id)
-                          try { localStorage.setItem('bap_theme', t.id) } catch {}
-                          onThemeChange?.(t.id)
-                        }}
-                      >
-                        <div
-                          className="plus-theme-bar"
-                          style={{ background: `linear-gradient(135deg, ${t.dots[0]}, ${t.dots[2]})` }}
-                        />
-                        <span className="plus-theme-name">{t.label}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div className="plus-section">
-                <span className="plus-section-label">Profile Icon</span>
-                <div className="plus-icon-grid">
-                  <button
-                    className={`plus-icon-btn${!profileIcon ? ' plus-icon-btn--on' : ''}`}
-                    onClick={() => { setProfileIcon(null); try { localStorage.removeItem('bap_profile_icon') } catch {} }}
-                  >
-                    <span className="plus-icon-initials">{initials}</span>
-                  </button>
-                  {PROFILE_ICONS.map(icon => (
-                    <button
-                      key={icon.id}
-                      className={`plus-icon-btn${profileIcon === icon.id ? ' plus-icon-btn--on' : ''}`}
-                      onClick={() => { setProfileIcon(icon.id); try { localStorage.setItem('bap_profile_icon', icon.id) } catch {} }}
-                    >
-                      {icon.e}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-
-
-              <button className="plus-manage-btn" onClick={handleManageSubscription}>
-                Manage Subscription
-              </button>
-
+          <div className={`prf-card ag-pro-card ${show ? 'prf-card-in' : ''}`} style={{ animationDelay: '0.1s' }}>
+            <div className="ag-pro-card-top">
+              <span className="ag-pro-crown"><IconCrown size={24} /></span>
+              <span className="ag-pro-card-id"><b>BAP PRO</b><small>Active · thanks for backing the game</small></span>
             </div>
-        </div>
+            <div className="ag-pro-card-body">+50% coins from every game, the Pro Vault's four looks, no ads, a double daily coin drop, and the Pro role in the Discord once your Discord is linked.</div>
+            <div className="ag-pro-card-btns">
+              <button className="ag-btn ag-pro-cta" onClick={() => window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'shop:vault' }))}>PRO VAULT</button>
+              <button className="ag-btn ag-btn--ghost" onClick={handleManageSubscription}>MANAGE SUBSCRIPTION</button>
+            </div>
+          </div>
+        )}
+        {/* a renewal that didn't go through: Pro is paused, the subscription is still there to fix or cancel */}
+        {!isPlus && billingDue && (
+          <div className={`prf-card ag-pro-card ${show ? 'prf-card-in' : ''}`} style={{ animationDelay: '0.1s' }}>
+            <div className="ag-pro-card-top">
+              <span className="ag-pro-crown"><IconCrown size={24} /></span>
+              <span className="ag-pro-card-id"><b>BAP PRO</b><small>Paused · your last payment didn't go through</small></span>
+            </div>
+            <div className="ag-pro-card-body">Update your card to turn Pro back on, or cancel so you aren't charged again.</div>
+            <div className="ag-pro-card-btns" style={{ gridTemplateColumns: '1fr' }}>
+              <button className="ag-btn ag-pro-cta" onClick={handleManageSubscription}>MANAGE SUBSCRIPTION</button>
+            </div>
+          </div>
         )}
 
         {/* ── Career ── */}
@@ -995,7 +968,21 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
           return (
             <>
               {/* Top-level game switch */}
-              {showToggle && (
+              {/* new look: the home screen's FOOTBALL / BASKETBALL switch */}
+              {showToggle && (IS_APP || APP_LOOK) && (
+                <div className={`ag-sport ag-sport--${section === 'bucket' ? 'bucket' : 'nfl'} prf-sport`} role="tablist" aria-label="Sport">
+                  <span className="ag-sport-thumb" aria-hidden="true" />
+                  <button role="tab" aria-selected={section === 'nfl'} className={`ag-sport-btn ag-sport-btn--nfl${section === 'nfl' ? ' is-on' : ''}`} onClick={() => setGameSection('nfl')}>
+                    <span className="ag-sport-ico"><IconFootball size={17} /></span>
+                    <span className="ag-sport-txt"><b>FOOTBALL</b></span>
+                  </button>
+                  <button role="tab" aria-selected={section === 'bucket'} className={`ag-sport-btn ag-sport-btn--bucket${section === 'bucket' ? ' is-on' : ''}`} onClick={() => setGameSection('bucket')}>
+                    <span className="ag-sport-ico"><IconBasketball size={17} /></span>
+                    <span className="ag-sport-txt"><b>BASKETBALL</b></span>
+                  </button>
+                </div>
+              )}
+              {showToggle && !(IS_APP || APP_LOOK) && (
                 <div className={`prf-game-switch ${show ? 'prf-card-in' : ''}`} style={{ animationDelay: '0.2s' }}>
                   <button className={`prf-game-switch-btn${section === 'nfl' ? ' active' : ''}`} onClick={() => setGameSection('nfl')}>
                     <MiniPlayerLogo />
@@ -1255,8 +1242,8 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
                               {Object.entries(bd.build).map(([slot, d]) => (
                                 <div key={slot} className="pbe-slot-row">
                                   <span className="pbe-slot-attr">{(isWRView || isTEView) && slot === 'size' ? 'SIZE' : positionAttrMap[slot]?.shortLabel ?? slot}</span>
-                                  <span className="pbe-slot-qb">{d.qb}</span>
-                                  <span className="pbe-slot-grade" style={{ background: positionAttrMap[slot]?.hex ?? '#95d5b2', color: '#111111' }}>{valToGrade(d.val)}</span>
+                                  <span className="pbe-slot-qb">{slotName(d)}</span>
+                                  <span className="pbe-slot-grade" style={{ background: gradeColor(d.val), color: '#111111' }}>{valToGrade(d.val)}</span>
                                 </div>
                               ))}
                             </div>
@@ -1348,7 +1335,7 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
                                       <BucketModelFigure build={enriched} team={ringTeam} className="prs-figure-model" headYOffset={5} />
                                       <div className="prs-info">
                                         <div className="prs-header">
-                                          <span className="prs-ring">🏆</span>
+                                          <span className="prs-ring"><IconTrophy size="1em" className="ico-inline ico-gold" /></span>
                                           {ringTeam && <img src={`/logos/nba/${ringTeam.short}.png`} alt={ringTeam.short} className="prs-team-logo" />}
                                           <span className="prs-arch">{s.archetype ?? 'Champion'}</span>
                                           <span className="prs-ovr">{s.ovr} OVR</span>
@@ -1405,7 +1392,7 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
                                   {s.ovr && <span className="pge-ovr">{s.ovr} OVR</span>}
                                 </div>
                                 <div className="pge-accolades">
-                                  {s.champion && <span className="pge-badge pge-badge--ring">🏆 Champion</span>}
+                                  {s.champion && <span className="pge-badge pge-badge--ring"><IconTrophy size="1em" className="ico-inline ico-gold" /> Champion</span>}
                                   {s.mvp === true && <span className="pge-badge pge-badge--mvp">MVP</span>}
                                   {s.dpoy === true && <span className="pge-badge pge-badge--dpoy">DPOY</span>}
                                 </div>
@@ -1438,8 +1425,8 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
                                     return (
                                       <div key={slot} className="pbe-slot-row">
                                         <span className="pbe-slot-attr">{meta?.shortLabel ?? slot}</span>
-                                        <span className="pbe-slot-qb">{d.qb}</span>
-                                        <span className="pbe-slot-grade" style={{ background: meta?.hex ?? '#95d5b2', color: '#111111' }}>{valToGrade(d.val)}</span>
+                                        <span className="pbe-slot-qb">{slotName(d)}</span>
+                                        <span className="pbe-slot-grade" style={{ background: gradeColor(d.val), color: '#111111' }}>{valToGrade(d.val)}</span>
                                       </div>
                                     )
                                   })}
@@ -1476,7 +1463,7 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
                           <div className="prf-best-season">
                             <span className="pbs-lbl">Best Day</span>
                             <span className="pbs-val">
-                              {salaryCareer.best.date_str}
+                              {/^\d{4}-\d{2}-\d{2}$/.test(salaryCareer.best.date_str ?? '') ? new Date(`${salaryCareer.best.date_str}T12:00:00Z`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : salaryCareer.best.date_str}
                               {salaryCareer.best.overall_score != null && ` · ${salaryCareer.best.overall_score} pts`}
                               {salaryCareer.best.ppg != null && ` · ${(+salaryCareer.best.ppg).toFixed(1)} PPG`}
                               {salaryCareer.best.budget_used != null && ` · $${salaryCareer.best.budget_used}M used`}
@@ -1497,7 +1484,7 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
           {!showEmailForm ? (
             <>
               {!emailOnFile && (
-                <div className="prf-email-hint">Add your email for easier account recovery and occasional game updates.</div>
+                <div className="prf-email-hint">Add an email so a forgotten password can be reset. Only the account can see it.</div>
               )}
               <button className="prf-changepw-btn" onClick={() => { setShowEmailForm(true); setEmailError(null); setEmailSuccess(false) }}>
                 {emailOnFile ? 'Update Email' : 'Add Email'}
@@ -1559,6 +1546,7 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
           )}
           <ConnectDiscord user={user} />
           <button className="prf-signout-btn" onClick={handleSignOut}>Sign Out</button>
+          <DeleteAccount onDeleted={() => onSignOut?.()} />
         </div>
 
       </div>
