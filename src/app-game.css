@@ -5222,7 +5222,7 @@ html.ag-fan-open .ag-dock { z-index: 1170; }
   .rc-comp-switch button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
   .panel-right:not(.rc-view--comp) > .rc-comp { display: none; }
   .panel-right.rc-view--comp > .build-slots { display: none; }
-  .panel-right > .rc-comp { margin: 10px 13px; overflow-y: auto; overscroll-behavior: contain; }
+  .panel-right > .rc-comp { flex: 1 1 auto; min-height: 0; margin: 10px 13px; overflow-y: auto; overscroll-behavior: contain; }
   .panel-right > .rc-comp .cr-comp-grid { grid-template-columns: 1fr; }
   .panel-right > .rc-comp .cr-comp-pct { white-space: nowrap; flex: none; }
   .panel-right > .rc-comp .ag-card-head { gap: 8px; align-items: flex-start; }
@@ -6014,7 +6014,7 @@ html .ag-stage .ag-live-count i { flex: none; width: 10px; height: 10px; border-
 .ag-team { position: absolute; left: 6px; right: 0; bottom: -7%; height: 62%; z-index: 1; display: flex; justify-content: center; align-items: flex-end; pointer-events: none; }
 .ag-team img { display: block; flex: 0 1 auto; min-width: 0; height: 100%; width: auto; margin-left: -10%; object-fit: contain; object-position: bottom; }
 .ag-team img:first-child { margin-left: 0; }
-.ag-team img.is-wr { height: 114%; transform: scaleX(1.18); transform-origin: 50% 100%; margin-left: -2%; }   /* his arms are up: at the same image height his body comes out smaller than the others */
+.ag-team img.is-wr { height: 116%; margin-left: -6%; }   /* his arms are up: at the same image height his body comes out smaller than the others */
 .ag-mc.is-small .ag-mc-head { right: 8px; }
 /* Career: banners hanging from the rafters, gold on the card's colour, the player in front */
 .ag-rafters { position: absolute; left: 39%; right: 33%; top: 0; z-index: 1; display: flex; justify-content: space-between; gap: 5px; padding-top: 7px; border-top: 3px solid rgba(255,255,255,.28); }
@@ -6090,7 +6090,7 @@ html .ag-stage .ag-live-count i { flex: none; width: 10px; height: 10px; border-
   html.app-look .ag-more { gap: 12px; }
   /* the wide second row: the art beside the words */
   html.app-look .ag-mc.is-small .ag-team { left: 34%; right: 8px; height: 104%; bottom: -16%; justify-content: flex-end; }
-  html.app-look .ag-team img.is-wr { height: 114%; }
+  html.app-look .ag-team img.is-wr { height: 116%; }
   html.app-look .ag-mc.is-small .ag-lineup { left: 44%; right: 14px; bottom: 16px; }
   html.app-look .ag-mc.is-small .ag-pod { left: 58%; right: 16px; height: 78%; }
   html.app-look .ag-ranks { left: 46%; right: 12px; top: 8px; bottom: 8px; grid-auto-rows: 1fr; gap: 4px; }
@@ -6227,4 +6227,46 @@ html:is(.is-app, .app-look) .right-panel-wrap::before {
 html:is(.is-app, .app-look) [data-sport="bucket"] .right-panel-wrap::before, html[data-sport="bucket"]:is(.is-app, .app-look) .right-panel-wrap::before {
   background-image: linear-gradient(rgba(251,146,60,.1) 1px, transparent 1px);
   background-size: 100% 22px;
+}
+
+/* Home's Career card: the career's own player, where the stock QB stands without one */
+.ag-career-fig { position: absolute; right: -3%; top: 2%; bottom: -14%; width: 37%; z-index: 1; pointer-events: none; }
+.ag-career-fig .field-center { position: absolute; inset: 0; padding: 0 !important; background: none !important; isolation: auto; display: block; }
+.ag-career-fig .sil-wrap { position: absolute; inset: 0; width: auto; height: auto !important; margin-top: 0 !important; transform: none !important; }
+
+/* Career: every season in one table. The first column stays put as the numbers scroll sideways */
+.cr-seasons { display: flex; flex-direction: column; gap: 8px; }
+.cr-seasons-scroll { overflow-x: auto; overscroll-behavior-x: contain; margin: 0 -12px -6px; padding-bottom: 6px; }
+.cr-seasons table { width: 100%; min-width: max-content; border-collapse: collapse; font-family: var(--ag-font); font-size: 16px; letter-spacing: .4px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.cr-seasons th, .cr-seasons td { padding: 8px 12px; text-align: right; font-weight: 400; border-bottom: 1px solid rgba(255,255,255,.09); }
+.cr-seasons thead th { font-size: 13px; letter-spacing: 1px; color: var(--ag-muted); border-bottom: 1px solid rgba(255,255,255,.28); }
+.cr-seasons :is(thead, tbody, tfoot) th:first-child { position: sticky; left: 0; z-index: 1; text-align: left; background: #111816; }
+.cr-seasons .cr-seasons-team { text-align: left; }
+.cr-seasons thead th:nth-child(2) { text-align: left; }
+.cr-seasons-team img { width: 18px; height: 18px; margin-right: 6px; object-fit: contain; vertical-align: -4px; }
+.cr-seasons tbody tr.is-ring :is(th, td) { color: #f5dc8a; }
+.cr-seasons tfoot :is(th, td) { color: #fff; border-top: 1px solid rgba(255,255,255,.28); border-bottom: 0; }
+.cr-seasons-ico { min-width: 44px; } .cr-seasons-ico svg { margin-left: 3px; vertical-align: -2px; color: #f5dc8a; }
+
+/* Scrollbars: slim, in the game's colours, wherever something scrolls (the browser's own is a grey slab) */
+html:is(.is-app, .app-look) ::-webkit-scrollbar { width: 8px; height: 8px; }
+html:is(.is-app, .app-look) ::-webkit-scrollbar-track { background: transparent; }
+html:is(.is-app, .app-look) ::-webkit-scrollbar-corner { background: transparent; }
+html:is(.is-app, .app-look) ::-webkit-scrollbar-thumb { border: 2px solid transparent; border-radius: 8px; background: rgba(255,255,255,.26) padding-box; }
+html:is(.is-app, .app-look) ::-webkit-scrollbar-thumb:hover { background: var(--ag-a1, #4fd8b4) padding-box; }
+/* (Chrome ignores all of that on anything with scrollbar-color set; Firefox only has scrollbar-color) */
+html:is(.is-app, .app-look) .spin-panel-scroll { scrollbar-color: auto; scrollbar-width: auto; }
+@supports (-moz-appearance: none) {
+  html:is(.is-app, .app-look) { scrollbar-color: rgba(255,255,255,.26) transparent; }
+  html:is(.is-app, .app-look) .spin-panel-scroll, html:is(.is-app, .app-look) .cr-rank-list { scrollbar-color: rgba(255,255,255,.26) transparent; scrollbar-width: thin; }
+}
+
+@media (min-width: 769px) {
+  .panel-right > .rc-comp { gap: 6px; padding: 8px 10px; margin: 8px 13px; }
+  .panel-right > .rc-comp .cr-comp-top { gap: 8px; }
+  .panel-right > .rc-comp .crl-face { width: 36px; height: 36px; }
+  .panel-right > .rc-comp .cr-comp-name b { font-size: 19px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .panel-right > .rc-comp .cr-comp-grid { row-gap: 2px; }
+  .panel-right > .rc-comp .cr-comp-row b { height: 18px; font-size: 11px; }
+  .panel-right > .rc-comp .cr-comp-more { gap: 3px 6px; font-size: 11px; }
 }

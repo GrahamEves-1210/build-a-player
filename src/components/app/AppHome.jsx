@@ -1,4 +1,4 @@
-import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { lazy, memo, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { APP_STORE_URL } from '../../lib/storeLinks'
 import { POS_OPTIONS, hsUrl, StackedSilhouette, SPLASH_ATTRS } from '../SplashScreen'
 import { getUsername } from '../../lib/discord'
@@ -165,6 +165,7 @@ function ModeArt({ kind, tone, small = false, title, line, live = 0, color, onCl
   )
 }
 const Art = ({ src, cls }) => <img className={`ag-art ${cls}`} src={`/modes/${src}.webp`} alt="" loading="lazy" decoding="async" draggable={false} aria-hidden="true" />
+const CareerFigure = lazy(() => import('./CareerFigure'))
 // Career: what ends up in the rafters. A career's real count lights each banner; before one starts they all hang
 function Rafters({ career }) {
   const s = career?.seasons ?? []
@@ -393,7 +394,9 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
         {onCareer && (
           <ModeArt kind="career" tone="career" title="CAREER" line={crLine} color={career?.fit?.color} onClick={onCareer}>
             <Rafters career={career} />
-            {!isBucket && <Art src="fig-qb" cls="ag-art--hero" />}
+            {!isBucket && (career?.build
+              ? <Suspense fallback={null}><CareerFigure c={career} /></Suspense>
+              : <Art src="fig-qb" cls="ag-art--hero" />)}
           </ModeArt>
         )}
         {/* Basketball: Blacktop is the online hub, 2v2 / 3v3 lobbies and 1v1 from inside it */}
@@ -432,7 +435,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
         )}
       </div>
     </section>
-  ), [sp, isBucket, career?.fit?.color, crLine, cpLine, btLine, btLive, sqLine, here.blacktop, here.compete, onCareer, onBlacktop, onCompete, onSquad, onDepthChart])
+  ), [sp, isBucket, career, crLine, cpLine, btLine, btLive, sqLine, here.blacktop, here.compete, onCareer, onBlacktop, onCompete, onSquad, onDepthChart])
 
   return (
     <div className={`ag-home ag-home--${sport}`} ref={homeRef}>

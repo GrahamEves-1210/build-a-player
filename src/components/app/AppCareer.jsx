@@ -8,7 +8,7 @@ import {
   OFF_STEPS, offStep, campDrill, CAMP_LEGACY, dbSpot, lineup, depthChart, gradeOf, gradeOfOvr, ovrGradeVal, SPORT, sportOf,
   openTalks, ask, closeTalks, acceptTalks, ASKS, askOdds, leverageOf,
   retire, canRetire, mustRetire, careerTotals, legacyOf, LEGACY_TIERS, ALL_TIME, STAT_LABEL, HEADLINE_STATS, EXTRA_STATS, AWARD_NAME, MAX_SEASONS, retireReason, goalsFor, stockText, pickText, loadSlots, CAREER_SLOTS, maxedTrait, trainWindow, canUpgrade, upgradeCost, legacyExtras,
-  compsFor, seasonScore, unretire, canUnretire, comebackYear, COMEBACK_SEASONS } from '../../lib/career'
+  compsFor, seasonScore, unretire, canUnretire, comebackYear, COMEBACK_SEASONS, inTeamColors } from '../../lib/career'
 import { GAME_LINE } from '../../lib/seasonDirector'
 import { GAMES, pickPlayoffGame } from '../../lib/minigames'
 import MiniGame from './MiniGame'
@@ -172,7 +172,6 @@ export function CareerIntro({ sport = 'nfl', uid = null, onOpen, onNew, onClose 
 
 // ── The player: model + the traits around it ─────────────────────────────────
 // The model wears the team's colors (the chips keep their players, grades and faces)
-const inTeamColors = (build, fit) => (fit ? Object.fromEntries(Object.entries(build).map(([t, ch]) => [t, ch ? { ...ch, teamColor: fit.color, teamColor2: fit.color2, team: fit.short } : ch])) : build)
 function Model({ c, devPick }) {
   const attr = POS_ATTR[c.pos]
   const shown = useMemo(() => inTeamColors(c.build, c.fit), [c.build, c.fit])
@@ -921,13 +920,61 @@ function RankList({ c, L }) {
     </div>
   )
 }
+// Every season, one row each and the career under them, like a player page on ESPN
+const SEASON_COLS = {
+  qb: ['compPct', 'passYds', 'tds', 'ints', 'rating', 'rushYds', 'rushTDs'],
+  rb: ['rushYds', 'ypc', 'tds', 'recYds', 'fumbles'],
+  wr: ['recs', 'recYds', 'ypr', 'tds'], te: ['recs', 'recYds', 'ypr', 'tds'],
+  db: ['tackles', 'tfl', 'ints', 'pbus', 'ff', 'pickSixes'],
+  guard: ['ppg', 'rpg', 'apg', 'spg', 'bpg'], big: ['ppg', 'rpg', 'apg', 'spg', 'bpg'],
+}
+const COL_LABEL = { tfl: 'TFL', ff: 'FF' }
+const gamesIn = s => s.stats.gp ?? (s.wins + s.losses - (s.missed ?? 0))
+function SeasonTable({ c, t }) {
+  const S = sportOf(c)
+  const cols = (SEASON_COLS[c.pos] ?? HEADLINE_STATS[c.pos]).filter(k => c.seasons.some(s => s.stats[k] != null))
+  // a rate over the career: weighted by games, as the seasons carry no attempts to divide by
+  const career = k => {
+    if (t.stats[k] != null && (!S.rateKeys.includes(k) || S.averages?.[k])) return t.stats[k]
+    const g = c.seasons.reduce((a, s) => a + gamesIn(s), 0)
+    return g ? Math.round((c.seasons.reduce((a, s) => a + (s.stats[k] ?? 0) * gamesIn(s), 0) / g) * 10) / 10 : 0
+  }
+  return (
+    <div className="ag-card cr-seasons ag-pop">
+      <div className="ag-card-head"><span className="ag-eyebrow">SEASON BY SEASON</span></div>
+      <div className="cr-seasons-scroll" tabIndex={0} role="region" aria-label="Season by season stats">
+        <table>
+          <thead>
+            <tr><th scope="col">SEASON</th><th scope="col">TEAM</th><th scope="col">GP</th><th scope="col">W-L</th>{cols.map(k => <th key={k} scope="col">{STAT_LABEL[k] ?? COL_LABEL[k] ?? k.toUpperCase()}</th>)}<th scope="col" aria-label="Honors" /></tr>
+          </thead>
+          <tbody>
+            {c.seasons.map(s => (
+              <tr key={s.year} className={s.champion ? 'is-ring' : ''}>
+                <th scope="row">{s.season}</th>
+                <td className="cr-seasons-team"><img src={S.logo(s.team)} alt="" loading="lazy" />{s.team}</td>
+                <td>{gamesIn(s)}</td>
+                <td>{s.wins}-{s.losses}</td>
+                {cols.map(k => <td key={k}>{fmt(s.stats[k])}</td>)}
+                <td className="cr-seasons-ico">{s.champion && <IconRing size={13} />}{s.award && <IconTrophy size={13} />}{s.allPro ? <IconMedal size={13} /> : s.proBowl ? <IconStar size={13} /> : null}</td>
+              </tr>
+            ))}
+          </tbody>
+          <tfoot>
+            <tr><th scope="row">CAREER</th><td /><td>{t.games}</td><td>{t.wins}-{t.losses}</td>{cols.map(k => <td key={k}>{fmt(career(k))}</td>)}<td /></tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  )
+}
 function CareerTab({ c, L, onDelete }) {
   const [ask, setAsk] = useState(false)
-  const S = sportOf(c), logoFor = S.logo
+  const S = sportOf(c)
   const t = careerTotals(c)
   const keys = HEADLINE_STATS[c.pos]
   return (
     <section className="cr-sec">
+      {c.seasons.length > 0 && <SeasonTable c={c} t={t} />}
       <div className="ag-card cr-totals ag-pop">
         <div className="ag-card-head"><span className="ag-eyebrow">CAREER · {t.seasons} {t.seasons === 1 ? 'SEASON' : 'SEASONS'}</span></div>
         <div className="cr-kv">{[...keys, ...(EXTRA_STATS[c.pos] ?? [])].map(k => <span key={k}><b>{fmt(t.stats[k])}</b><small>{STAT_LABEL[k]}</small></span>)}<span><b>{t.rings}</b><small>RINGS</small></span><span><b>{t.awards}</b><small>{AWARD_NAME[c.pos]}</small></span><span><b>{t.proBowls}</b><small>{S.honors}</small></span><span><b>{t.allPros}</b><small>{S.first.toUpperCase()}</small></span></div>
@@ -937,18 +984,6 @@ function CareerTab({ c, L, onDelete }) {
           {!L.ranked && <small className="cr-rank-note">{L.above.score - L.score + 1} more legacy points to crack the top {L.of}.</small>}
         </div>
       </div>
-      {c.seasons.length > 0 && (
-        <div className="ag-card cr-table ag-pop" style={{ '--d': '60ms' }}>
-          <div className="cr-yr cr-yr--head"><span>YR</span><span>TEAM</span><span>W–L</span>{keys.map(k => <span key={k}>{STAT_LABEL[k]}</span>)}<span /></div>
-          {[...c.seasons].reverse().map(s => (
-            <div key={s.year} className={`cr-yr${s.champion ? ' is-ring' : ''}`}>
-              <span>{s.season}</span><span><img src={logoFor(s.team)} alt="" />{s.team}</span><span>{s.wins}–{s.losses}</span>
-              {keys.map(k => <span key={k}>{fmt(s.stats[k])}</span>)}
-              <span className="cr-yr-ico">{s.champion && <IconRing size={12} />}{s.award && <IconTrophy size={12} />}{s.allPro ? <IconMedal size={12} /> : s.proBowl ? <IconStar size={12} /> : null}</span>
-            </div>
-          ))}
-        </div>
-      )}
       <AnalyticsByYear c={c} />
       {(c.decisions.length > 0 || c.events.length > 0) && (
         <div className="ag-card cr-log ag-pop" style={{ '--d': '90ms' }}>

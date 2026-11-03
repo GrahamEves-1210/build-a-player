@@ -35,7 +35,7 @@ function useKeys(map, on = true) {
   const m = useRef(map); m.current = map
   useEffect(() => {
     if (!on) return
-    const h = e => { const fn = m.current[e.key] ?? m.current[e.key.toLowerCase()]; if (fn && !e.repeat) { e.preventDefault(); fn() } }
+    const h = e => { const fn = m.current[e.key] ?? m.current[e.key.toLowerCase()]; if (fn && !e.repeat) { e.preventDefault(); fn(e) } }
     window.addEventListener('keydown', h)
     return () => window.removeEventListener('keydown', h)
   }, [on])
@@ -715,18 +715,21 @@ function Gauntlet({ v, seed, onDone }) {
       return false
     }
   })
-  const grab = lane => {
-    const t = (now() - T0.current) / 1000
+  // judged at the moment of the press (the event's own time): on a busy page the handler can run
+  // well after the tap, and the ball would have moved on
+  const grab = (lane, e) => {
+    const at = e?.timeStamp > 0 ? Math.min(e.timeStamp, now()) : now()
+    const t = (at - T0.current) / 1000
     // the lowest ball in the air in this lane
     let best = -1, bp = -1
     balls.forEach((b, k) => { const p = posOf(b, t); if (b.lane === lane && st.current[k] == null && p >= 0 && p > bp) { best = k; bp = p } })
     if (best < 0) { sfx('deny'); return }
     const d = Math.abs(bp - (100 - zone / 2))
-    st.current[best] = d <= zone / 2 + 2 ? clamp(1 - d / zone, 0.5, 1) : 0
+    st.current[best] = d <= zone / 2 + 5 ? clamp(1 - d / zone, 0.5, 1) : 0   // a little past the zone counts: a screen and a mouse add their own delay
     sfx(st.current[best] ? 'tap' : 'pop'); haptic(st.current[best] ? 'light' : 'heavy')
     force(x => x + 1)
   }
-  useKeys({ ArrowLeft: () => grab(0), ArrowRight: () => grab(1), f: () => grab(0), j: () => grab(1) })
+  useKeys({ ArrowLeft: e => grab(0, e), ArrowRight: e => grab(1, e), f: e => grab(0, e), j: e => grab(1, e) })
   return (
     <div className="mg-play mg-play--gauntlet">
       <div className="mg-lanes">
@@ -737,7 +740,7 @@ function Gauntlet({ v, seed, onDone }) {
           </div>
         ))}
       </div>
-      <div className="mg-sides"><button className="mg-side" onPointerDown={() => grab(0)}><IconCaret dir="left" size={14} /> CATCH</button><button className="mg-side" onPointerDown={() => grab(1)}>CATCH <IconCaret dir="right" size={14} /></button></div>
+      <div className="mg-sides"><button className="mg-side" onPointerDown={e => grab(0, e)}><IconCaret dir="left" size={14} /> CATCH</button><button className="mg-side" onPointerDown={e => grab(1, e)}>CATCH <IconCaret dir="right" size={14} /></button></div>
       <span className="mg-dots">{balls.map((_, k) => <i key={k} className={st.current[k] != null ? (st.current[k] ? 'is-hit' : 'is-miss') : ''} />)}</span>
     </div>
   )

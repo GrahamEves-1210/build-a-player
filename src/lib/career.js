@@ -305,6 +305,8 @@ export const POS_ATTR = { ...SPORT.nfl.attr, ...SPORT.bucket.attr }
 export const AWARD_NAME = { ...SPORT.nfl.awardName, ...SPORT.bucket.awardName }
 export const STARTERS = { ...SPORT.nfl.starters, ...SPORT.bucket.starters }
 export const PO_ROUNDS = SPORT.nfl.rounds
+// a build dressed in its team's colours (the model on Career and on home's Career card)
+export const inTeamColors = (build, fit) => (fit ? Object.fromEntries(Object.entries(build).map(([t, ch]) => [t, ch ? { ...ch, teamColor: fit.color, teamColor2: fit.color2, team: fit.short } : ch])) : build)
 export const STAT_LABEL = { passYds: 'PASS YDS', tds: 'TD', ints: 'INT', rating: 'RTG', rushYds: 'RUSH YDS', rushTDs: 'RUSH TD', compPct: 'CMP%', recYds: 'REC YDS', ypc: 'YPC', fumbles: 'FUM', recs: 'REC', ypr: 'YPR', pbus: 'PD', tackles: 'TKL', pickSixes: 'PICK-6', ppg: 'PPG', rpg: 'RPG', apg: 'APG', spg: 'SPG', bpg: 'BPG', pts: 'PTS', reb: 'REB', ast: 'AST' }
 export const HEADLINE_STATS = { ...SPORT.nfl.headline, ...SPORT.bucket.headline }
 // more numbers where there's room (the season wrap, the career totals): a QB's legs
