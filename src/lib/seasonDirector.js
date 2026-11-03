@@ -50,6 +50,9 @@ function applyMods(build, team, mods) {
   const t = { ...team }
   if (mods.team?.off) t.off = (t.off ?? 5) + mods.team.off
   if (mods.team?.def) t.def = (t.def ?? 5) + mods.team.def
+  // (basketball outside Career rates a team from its own table, so it reads the change itself)
+  t.offMod = mods.team?.off ?? 0
+  t.defMod = mods.team?.def ?? 0
   return { build: b, team: t }
 }
 const addMods = (a, b) => ({

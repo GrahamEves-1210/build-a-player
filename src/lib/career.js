@@ -1227,14 +1227,19 @@ function watchBracket(c, po) {
   const won = !!last?.won && last.name === S.final
   return { ...po, rounds: po.rounds.map((x, i) => line[i] ?? x), line, idx: line.length - 1, stage: 'done', won, out: !won }
 }
+// The game turns on its moment, so the moment decides it: land it and you usually win, miss it and
+// you usually don't. p is the matchup (0.18-0.84): it moves the odds, it doesn't outweigh the play.
+export const momentOdds = (p, hit, score = 0.75) => (hit
+  ? clamp(0.78 + (p - 0.5) * 0.4 + (score - 0.75) * 0.2, 0.62, 0.93)
+  : clamp(0.22 + (p - 0.5) * 0.4, 0.08, 0.38))
 // This round's moment is in: the result, with a stat line sized to the season
-export function playoffRound(c, score, game = null) {
+// hit: the drill's own verdict (MiniGame), the same one it showed the player
+export function playoffRound(c, score, game = null, hit = score >= 0.5) {
   const S = sportOf(c)
   const a = c.active, po = a.po, f = a.final
   const rd = po.rounds[po.idx]
   const r = seeded(`${c.seed}-por-${c.year}-${po.idx}`)
-  const p = clamp(rd.p + (score - 0.5) * 0.36, 0.08, 0.92)
-  const won = r() < p
+  const won = r() < momentOdds(rd.p, hit, score)
   const k = 0.82 + score * 0.5 + (r() - 0.5) * 0.2             // the moment sets the day: 0.6–1.4× a normal game
   let mySc, oppSc, line
   if (S.isBucket) {
@@ -1253,7 +1258,7 @@ export function playoffRound(c, score, game = null) {
       : c.pos === 'rb' ? { rushYds: n(f.seasonRushYds), rushTDs: n(f.seasonRushTDs, won ? 1.2 : 0.7), recTDs: 0, recYds: n(f.seasonRecYds), carries: n(f.seasonCarries) }
       : { rec: n(f.seasonRecs), recYds: n(f.seasonRecYds), recTDs: n(f.seasonRecTDs, won ? 1.3 : 0.6) }
   }
-  const entry = { ...rd, played: true, won, mySc, oppSc, score, game, ...line }
+  const entry = { ...rd, played: true, won, mySc, oppSc, score, hit, game, ...line }
   const rounds = po.rounds.map((x, i) => (i === po.idx ? entry : x))
   const fin = rd.name === S.final
   const done = !won || fin

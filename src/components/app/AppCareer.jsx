@@ -8,7 +8,7 @@ import {
   OFF_STEPS, offStep, campDrill, CAMP_LEGACY, dbSpot, lineup, depthChart, gradeOf, gradeOfOvr, ovrGradeVal, SPORT, sportOf,
   openTalks, ask, closeTalks, acceptTalks, ASKS, askOdds, leverageOf,
   retire, canRetire, mustRetire, careerTotals, legacyOf, LEGACY_TIERS, ALL_TIME, STAT_LABEL, HEADLINE_STATS, EXTRA_STATS, AWARD_NAME, MAX_SEASONS, retireReason, goalsFor, stockText, pickText, loadSlots, CAREER_SLOTS, maxedTrait, trainWindow, canUpgrade, upgradeCost, legacyExtras,
-  compsFor, seasonScore, unretire, canUnretire, comebackYear, COMEBACK_SEASONS, inTeamColors } from '../../lib/career'
+  compsFor, seasonScore, unretire, canUnretire, comebackYear, COMEBACK_SEASONS, inTeamColors, momentOdds } from '../../lib/career'
 import { GAME_LINE } from '../../lib/seasonDirector'
 import { GAMES, pickPlayoffGame } from '../../lib/minigames'
 import MiniGame from './MiniGame'
@@ -1247,7 +1247,7 @@ function Playoffs({ c, setCareer, onBook }) {
   const last = po.line[po.line.length - 1]
   const [step, setStep] = useState(po.stage === 'done' ? 'result' : last && !rd?.played && po.line.length ? 'result' : 'card')
   const game = useMemo(() => pickPlayoffGame(c.pos, `${c.seed}-${c.year}-${po.idx}`, po.line.map(x => x.game).filter(Boolean)), [c.seed, c.year, po.idx]) // eslint-disable-line
-  const odds = Math.round((rd?.p ?? 0.5) * 100)
+  const landIt = Math.round(momentOdds(rd?.p ?? 0.5, true) * 100), missIt = Math.round(momentOdds(rd?.p ?? 0.5, false) * 100)
   if (po.stage === 'done' || step === 'result') {
     const x = last
     return (
@@ -1256,7 +1256,7 @@ function Playoffs({ c, setCareer, onBook }) {
           <div className={`ag-card cr-po-result ag-pop${x.won ? ' is-w' : ' is-l'}`}>
             <span className="ag-eyebrow">{x.name.toUpperCase()} · {x.won ? 'W' : 'L'} {x.mySc}–{x.oppSc}</span>
             <b>{x.won ? (x.name === S.final ? 'Champions.' : `Through to the ${po.rounds[po.rounds.findIndex(r => r.name === x.name) + 1]?.name ?? 'next round'}.`) : `Season over in the ${x.name}.`}</b>
-            <small>{GAME_LINE[c.pos]?.(x) ?? ''}{x.perGame ? ' a game' : ''} · the moment went {x.score >= 0.85 ? 'perfectly' : x.score >= 0.5 ? 'your way' : 'wrong'}</small>
+            <small>{GAME_LINE[c.pos]?.(x) ?? ''}{x.perGame ? ' a game' : ''} · the moment went {!(x.hit ?? x.score >= 0.5) ? 'wrong' : x.score >= 0.85 ? 'perfectly' : 'your way'}</small>
           </div>
         )}
         {po.stage === 'done'
@@ -1268,7 +1268,7 @@ function Playoffs({ c, setCareer, onBook }) {
   if (step === 'game') return (
     <div className="cr-po">
       <div className="cr-po-head"><span className="ag-eyebrow">{rd.name.toUpperCase()} · vs {rd.oppName.toUpperCase()}</span></div>
-      <MiniGame retry key={`${po.idx}-${game}`} game={game} build={c.build} seed={`${c.seed}-${c.year}-${po.idx}`} lock={`${c.seed}-${c.year}-${po.idx}`} onDone={res => { setCareer(playoffRound(c, res.score, game)); setStep('result') }} />
+      <MiniGame retry key={`${po.idx}-${game}`} game={game} build={c.build} seed={`${c.seed}-${c.year}-${po.idx}`} lock={`${c.seed}-${c.year}-${po.idx}`} onDone={res => { setCareer(playoffRound(c, res.score, game, res.hit)); setStep('result') }} />
     </div>
   )
   return (
@@ -1276,7 +1276,7 @@ function Playoffs({ c, setCareer, onBook }) {
       <div className="ag-card cr-po-card ag-pop">
         <span className="ag-eyebrow">PLAYOFFS · {rd.name.toUpperCase()}{rd.series ? ' · BEST OF 7' : ''}</span>
         <div className="cr-po-match"><img src={logoFor(c.team)} alt="" /><b>{c.team}</b><i>vs</i><b>{rd.opp}</b><img src={logoFor(rd.opp)} alt="" /></div>
-        <small>{rd.home === null ? 'Neutral site' : rd.home ? 'At home' : 'On the road'} · {odds}% to win · the {rd.series ? 'series' : 'game'} turns on one moment: <b>{GAMES[game]?.title}</b></small>
+        <small>{rd.home === null ? 'Neutral site' : rd.home ? 'At home' : 'On the road'} · the {rd.series ? 'series' : 'game'} turns on one moment: <b>{GAMES[game]?.title}</b>. Land it: about {landIt}% to win. Miss it: about {missIt}%</small>
         <button className="ag-btn ag-btn--gold tk-intro-go" onClick={() => { setStep('game'); sfx('whistle') }}>PLAY THE MOMENT <IconArrow size={16} /></button>
       </div>
       {po.line.length > 0 && <div className="cr-goals">{po.line.map(x => <span key={x.name} className={`cr-goal${x.won ? ' is-met' : ' is-miss'}`}>{x.name}: {x.won ? 'W' : 'L'} {x.mySc}–{x.oppSc}</span>)}</div>}

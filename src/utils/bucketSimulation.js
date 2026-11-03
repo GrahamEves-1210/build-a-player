@@ -367,7 +367,9 @@ export function runBucketSimulation(build, types, team, position = 'guard', rngS
   const simRatings  = isAllTime ? ALLTIME_TEAM_RATINGS : TEAM_RATINGS
   const simConfElite = isAllTime ? ALLTIME_CONF_ELITE : CONF_ELITE
   // Career passes its own team (1–10 scale, moved by the roster and the year's events)
-  const tr = team.career ? { off: 55 + team.off * 3.3, def: 55 + team.def * 3.3 } : simRatings[team.short] ?? { off: 68, def: 65 }
+  // Otherwise its table, plus whatever a season's moments did to the team (on the same scale)
+  const rated = simRatings[team.short] ?? { off: 68, def: 65 }
+  const tr = team.career ? { off: 55 + team.off * 3.3, def: 55 + team.def * 3.3 } : { off: rated.off + (team.offMod ?? 0) * 3.3, def: rated.def + (team.defMod ?? 0) * 3.3 }
 
   // Team strength → baseline WP (same formula as standings generator)
   const teamScore = (tr.off + tr.def) / 200
