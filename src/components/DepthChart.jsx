@@ -412,6 +412,12 @@ export default function DepthChart({ onBack, user }) {
     setDragSrc(null)
     setDragDst(null)
     if (lastDst !== null && lastDst !== srcIdx) {
+      const snap = {}
+      orderRef.current.forEach((playerIdx, slotIdx) => {
+        const el = cardRefs.current[slotIdx]
+        if (el) snap[players[playerIdx].name] = el.getBoundingClientRect()
+      })
+      flipSnap.current = snap
       setOrder(prev => {
         const next = [...prev]
         ;[next[srcIdx], next[lastDst]] = [next[lastDst], next[srcIdx]]

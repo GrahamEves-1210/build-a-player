@@ -6014,7 +6014,7 @@ html .ag-stage .ag-live-count i { flex: none; width: 10px; height: 10px; border-
 .ag-team { position: absolute; left: 6px; right: 0; bottom: -7%; height: 62%; z-index: 1; display: flex; justify-content: center; align-items: flex-end; pointer-events: none; }
 .ag-team img { display: block; flex: 0 1 auto; min-width: 0; height: 100%; width: auto; margin-left: -10%; object-fit: contain; object-position: bottom; }
 .ag-team img:first-child { margin-left: 0; }
-.ag-team img.is-wr { height: 124%; }   /* his arms are up: at the same image height his body comes out smaller than the others */
+.ag-team img.is-wr { height: 114%; transform: scaleX(1.18); transform-origin: 50% 100%; margin-left: -2%; }   /* his arms are up: at the same image height his body comes out smaller than the others */
 .ag-mc.is-small .ag-mc-head { right: 8px; }
 /* Career: banners hanging from the rafters, gold on the card's colour, the player in front */
 .ag-rafters { position: absolute; left: 39%; right: 33%; top: 0; z-index: 1; display: flex; justify-content: space-between; gap: 5px; padding-top: 7px; border-top: 3px solid rgba(255,255,255,.28); }
@@ -6036,7 +6036,7 @@ html .ag-stage .ag-live-count i { flex: none; width: 10px; height: 10px; border-
 /* Squad Builder: the five spots */
 .ag-lineup { position: absolute; left: 10px; right: 10px; bottom: 10px; z-index: 1; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; }
 .ag-lineup i { display: grid; place-items: center; aspect-ratio: 1; max-height: 42px; justify-self: center; width: 100%; max-width: 42px; border-radius: 50%; font-style: normal; font-family: var(--ag-display); font-size: 14px; line-height: 1; color: #2c1c00; background: linear-gradient(180deg, #fbe28c, #d9a520); }
-.ag-mc-court { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .8; }
+.ag-mc-court { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; opacity: .8; }
 .ag-mc--blacktop::after { content: ''; position: absolute; inset: 0; z-index: 1; background: linear-gradient(180deg, rgba(0,0,0,.6), transparent 45%, rgba(0,0,0,.4)); }
 .ag-paint { position: absolute; left: 12px; right: 12px; bottom: 11px; z-index: 2; display: flex; justify-content: space-between; gap: 6px; }
 .ag-paint b { font-family: var(--ag-display); font-weight: 400; font-size: clamp(22px, 6.4vw, 34px); line-height: 1; color: #fff; transform: rotate(-5deg); text-shadow: 0 2px 0 rgba(0,0,0,.45); }
@@ -6090,7 +6090,7 @@ html .ag-stage .ag-live-count i { flex: none; width: 10px; height: 10px; border-
   html.app-look .ag-more { gap: 12px; }
   /* the wide second row: the art beside the words */
   html.app-look .ag-mc.is-small .ag-team { left: 34%; right: 8px; height: 104%; bottom: -16%; justify-content: flex-end; }
-  html.app-look .ag-team img.is-wr { height: 120%; }
+  html.app-look .ag-team img.is-wr { height: 114%; }
   html.app-look .ag-mc.is-small .ag-lineup { left: 44%; right: 14px; bottom: 16px; }
   html.app-look .ag-mc.is-small .ag-pod { left: 58%; right: 16px; height: 78%; }
   html.app-look .ag-ranks { left: 46%; right: 12px; top: 8px; bottom: 8px; grid-auto-rows: 1fr; gap: 4px; }
@@ -6191,7 +6191,10 @@ html:is(.is-app, .app-look) .dc-sort-val:not([style*="transparent"]) { color: #f
 html:is(.is-app, .app-look) .dc-sort-val[style*="transparent"] { background: #111816 !important; }   /* before the round: nothing to show yet */
 html:is(.is-app, .app-look) .dc-instruction { font-family: var(--ag-body) !important; font-size: 13px !important; font-weight: 600; letter-spacing: 0 !important; color: rgba(255,255,255,.75); }
 /* the three cards: flat, ranked in the home card's gold, silver and bronze */
-html:is(.is-app, .app-look) .dc-card { border-radius: 5px !important; border-color: rgba(255,255,255,.12) !important; background: #111816 !important; border-left: 4px solid var(--dc-rank, #f7cf55) !important; }
+html:is(.is-app, .app-look) .dc-card { border-radius: 5px !important; border-color: rgba(255,255,255,.12) !important; background: #111816 !important; border-left: 4px solid var(--dc-rank, #f7cf55) !important; transition: opacity .22s ease, transform .22s ease, border-color .15s, background-color .15s; }
+/* where a dragged card will land, and the card in hand */
+html:is(.is-app, .app-look) .dc-card--dragover { background: #243029 !important; border-color: var(--dc-rank, #f7cf55) !important; animation: none; }
+html:is(.is-app, .app-look) .dc-card--dragging { opacity: .55; transform: scale(.97); }
 html:is(.is-app, .app-look) .dc-card:nth-child(2) { --dc-rank: #e8edf0; }
 html:is(.is-app, .app-look) .dc-card:nth-child(3) { --dc-rank: #d29a6a; }
 html:is(.is-app, .app-look) .dc-card-slot-label { font-size: 15px !important; letter-spacing: 1.2px !important; text-align: left; padding: 8px 12px 0; color: var(--dc-rank, #f7cf55); }
@@ -6206,3 +6209,22 @@ html:is(.is-app, .app-look) .dc-timer-fill { border-radius: 0; background: var(-
 html:is(.is-app, .app-look) .dc-submit-btn { border-radius: 5px !important; background: var(--dc-a) !important; box-shadow: none !important; font-family: var(--ag-display) !important; font-size: 26px !important; letter-spacing: 1px !important; }
 html:is(.is-app, .app-look) .dc-submit-btn--ok { background: #22c55e !important; color: #06120d !important; box-shadow: none !important; }
 html:is(.is-app, .app-look) .dc-submit-btn--err { background: #7f1d1d !important; box-shadow: none !important; }
+
+/* Website: both screens scroll on their own, far enough that everything comes up clear of the bottom ad rail */
+html.app-look:not(.is-app) .sc-screen { height: 100dvh; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-bottom: calc(var(--web-rail, 0px) + 20px); }
+html.app-look:not(.is-app) .sc-screen > * { flex-shrink: 0; }   /* the board keeps its size; the screen scrolls */
+html.app-look:not(.is-app) .sc-grid-wrap { flex: 0 0 auto; overflow: visible; }
+html.app-look:not(.is-app) .sc-footer { padding-bottom: 12px; bottom: 0; }   /* a sticky bar already keeps inside the padding above, which clears the rail */
+html.app-look:not(.is-app) .dc-screen { padding-bottom: calc(var(--web-rail, 0px) + 24px); }
+
+/* The build screen's right panel has the left panel's background: its own 18px lines over the page's 80px ones read as a jumble */
+html:is(.is-app, .app-look) .right-panel-wrap::before {
+  background-image: linear-gradient(45deg, rgba(149,213,178,.2) 1px, transparent 1px), linear-gradient(-45deg, rgba(149,213,178,.2) 1px, transparent 1px);
+  background-size: 22px 22px;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, transparent 60%, black 100%);
+  mask-image: linear-gradient(to bottom, transparent 0%, transparent 60%, black 100%);
+}
+html:is(.is-app, .app-look) [data-sport="bucket"] .right-panel-wrap::before, html[data-sport="bucket"]:is(.is-app, .app-look) .right-panel-wrap::before {
+  background-image: linear-gradient(rgba(251,146,60,.1) 1px, transparent 1px);
+  background-size: 100% 22px;
+}
