@@ -413,7 +413,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
           {/* the website doesn't open the tutorial by itself (cleared browser data
               would bring it back every visit): it's here when someone wants it */}
           {!IS_APP && <button className="ag-howto" onClick={() => { sfx('tap'); startTutorial() }}><span aria-hidden="true">?</span> HOW TO PLAY</button>}
-          <div className={`ag-figure${isBucket ? ' ag-figure--nba' : ''}`} key={position} style={{ '--from': `${dir.current * 14}px` }}>
+          <div className={`ag-figure ag-figure--${isBucket ? 'nba' : position}`} key={position} style={{ '--from': `${dir.current * 14}px` }}>
             {isBucket
               ? renderBucketFigure?.(position, ready, fast || picked)
               : (

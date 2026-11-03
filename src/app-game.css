@@ -4050,8 +4050,8 @@ html.bap-reduce-motion .mg-clock span { animation-duration: var(--mg-ms) !import
 .ag-stage-beam { animation: none; opacity: .8; will-change: auto; }
 /* the light sweep stays on the big calls to action only (Spin, Sim, the season) */
 .ag-btn::after { animation: none; display: none; }
-/* the website's dock: a near-solid panel instead of a live blur (re-blurring the page under it on every scroll frame) */
-html.app-look:not(.is-app) .ag-dock { backdrop-filter: none; -webkit-backdrop-filter: none; background: rgba(10, 14, 12, .96); }
+/* the website's dock: a solid panel instead of a live blur (re-blurring the page under it on every scroll frame), so cards don't ghost behind its labels */
+html.app-look:not(.is-app) .ag-dock { backdrop-filter: none; -webkit-backdrop-filter: none; background: rgb(10, 14, 12); }
 
 /* ═══ Career, basketball: runs of games, the starting five on a court ═════ */
 .cr-chunk { display: flex; flex-direction: column; gap: 8px; padding: 12px; }
@@ -5934,6 +5934,17 @@ html.ag-sport-leaving .ag-home-inner > *:not(.ag-sport):not(.ag-hud) { opacity: 
 }
 @keyframes ag-roll-in { from { opacity: 0; transform: translateY(14%); } }
 .ag-figure { bottom: 62px; animation: ag-fig-in .16s ease-out both; }
+/* Phone and tablet: the figure fits the stage above the position row. WR, TE and DB art is drawn larger
+   about its centre (STACK_MASK's 1.18 and 1.05): --fig-k shrinks the box to cancel it, --fig-o keeps the feet up */
+@media (max-width: 1023px) {
+  .ag-figure:not(.ag-figure--nba) {
+    --fig-h: calc(min(214px, clamp(250px, 36dvh, 330px) - 66px) * var(--fig-k, 1));
+    height: var(--fig-h); width: calc(var(--fig-h) * .869); margin-left: calc(var(--fig-h) * -.4345);
+    bottom: calc(62px + var(--fig-h) * var(--fig-o, 0));
+  }
+  .ag-figure--wr, .ag-figure--te { --fig-k: .847; --fig-o: .09; }
+  .ag-figure--db { --fig-k: .952; --fig-o: .025; }
+}
 @keyframes ag-fig-in { from { opacity: 0; translate: var(--from, 14px) 0; } }
 .ag-platform { bottom: 48px; }
 .ag-stage .ag-live-count { position: absolute; left: 12px; top: 12px; bottom: auto; z-index: 5; display: inline-flex; align-items: center; gap: 7px; padding: 0; border: 0; border-radius: 0; background: none; font-family: var(--ag-body); font-size: 16px; font-weight: 700; line-height: 1; letter-spacing: 0; font-variant-numeric: tabular-nums; color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,.8); }
