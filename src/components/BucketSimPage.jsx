@@ -2726,8 +2726,8 @@ export default function BucketSimPage({ result: baseResult, build, types, positi
   // App: the season is steered by a director; `result` is the live version of it
   const [live, setLive] = useState(baseResult)
   const result = live
-  const director = useMemo(() => (APP_SIM && simFn && !isSalaryMode && initialScreen === 0 && !baseResult?.story && baseResult?.games?.length)
-    ? createDirector({ sport: 'bucket', pos: position, build, team: baseResult.team, simFn, base: baseResult, name: userName, attrMap: BUCKET_ATTR, types })
+  const director = useMemo(() => (APP_SIM && (simFn || isSalaryMode) && initialScreen === 0 && !baseResult?.story && baseResult?.games?.length)
+    ? createDirector({ sport: 'bucket', pos: position, build, team: baseResult.team, simFn: simFn ?? (() => baseResult), locked: isSalaryMode, base: baseResult, name: userName, attrMap: BUCKET_ATTR, types })
     : null, []) // eslint-disable-line
   const handleFinal = final => { setLive(final); onFinal?.(final) }
   useEffect(() => () => { if (director && !director.finalized) onFinal?.(director.finalize()) }, []) // eslint-disable-line
@@ -2801,13 +2801,7 @@ export default function BucketSimPage({ result: baseResult, build, types, positi
   const simTypes   = isSalaryMode ? SAL_REP_TYPES : types
   const simAttrMap = isSalaryMode ? SAL_ATTR_MAP  : BUCKET_ATTR
   const isAllTime  = gameMode === 'all-time'
-  const screens = isSalaryMode ? [
-    <ScreenBuild    key="build"    result={result} build={build} types={simTypes} attrMap={simAttrMap} onNext={advancePage} adsDisabled={adsDisabled} isSalaryMode={isSalaryMode} userName={userName} />,
-    <ScreenSeason   key="season"   result={result} awards={awards} onNext={advancePage} adsDisabled={adsDisabled} isAllTime={isAllTime} userName={userName} />,
-    <ScreenPlayoffs key="playoffs" result={result} onNext={advancePage} autoSkip={true} isAllTime={isAllTime} adsDisabled={adsDisabled} />,
-    <ScreenGOAT     key="goat"     result={result} awards={awards} onNext={advancePage} onReset={handleReset} onBack={handleGoatBack} adsDisabled={adsDisabled} userName={userName} />,
-    <ScreenFinal    key="final"    result={result} awards={awards} build={build} types={simTypes} attrMap={simAttrMap} onReset={handleReset} onBack={handleBack} adsDisabled={adsDisabled} isSalaryMode={isSalaryMode} isAllTime={isAllTime} userName={userName} />,
-  ] : [
+  const screens = [
     <ScreenBuild    key="build"    result={result} build={build} types={simTypes} attrMap={simAttrMap} onNext={advancePage} adsDisabled={adsDisabled} isSalaryMode={isSalaryMode} userName={userName} />,
     <ScreenSeason   key="season"   result={result} awards={awards} onNext={advancePage} adsDisabled={adsDisabled} isAllTime={isAllTime} director={director} onFinal={handleFinal} pool={pool} userName={userName} />,
     <ScreenPlayoffs key="playoffs" result={result} onNext={advancePage} isAllTime={isAllTime} adsDisabled={adsDisabled} />,
@@ -2838,7 +2832,7 @@ export default function BucketSimPage({ result: baseResult, build, types, positi
         </div>
 
         {/* the moments switch sits above the team card, not on it */}
-        {team && director && screens[screen]?.key !== 'goat' && <div className="sts-moments-row"><MomentsToggle /></div>}
+        {team && director && !isSalaryMode && screens[screen]?.key !== 'goat' && <div className="sts-moments-row"><MomentsToggle /></div>}
         {team && screens[screen]?.key !== 'goat' && (
           <div className="simp-team-strip">
             <div className="sts-top-row">

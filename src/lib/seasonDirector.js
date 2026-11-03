@@ -62,7 +62,9 @@ export const MOMENTS_OFF_KEY = 'bap_moments_off'
 export const momentsOff = () => { try { return localStorage.getItem(MOMENTS_OFF_KEY) === '1' } catch { return false } }
 export const setMomentsOff = off => { try { localStorage.setItem(MOMENTS_OFF_KEY, off ? '1' : '0') } catch {} }
 // always: the moments can't be switched off (Career: they're the mode)
-export function createDirector({ sport, pos, build, team, simFn, base, seed = Math.random().toString(36).slice(2, 8), name = 'Guest', attrMap = {}, types = [], always = false, recordBook = null, deals = null, made = null }) {
+// locked: no moments, and the season stays exactly the one simulated (Salary Cap: its score and
+// stats went on the day's board when it was locked in, and View Results replays that same season)
+export function createDirector({ sport, pos, build, team, simFn, base, seed = Math.random().toString(36).slice(2, 8), name = 'Guest', attrMap = {}, types = [], always = false, locked = false, recordBook = null, deals = null, made = null }) {
   const isBucket = sport === 'bucket'
   const total = base.games.length
   // two or three decisions in the regular season, at weeks that change every
@@ -165,7 +167,7 @@ export function createDirector({ sport, pos, build, team, simFn, base, seed = Ma
     return D.po
   }
   D.open = stop => {
-    if (!always && momentsOff()) return null
+    if (locked || (!always && momentsOff())) return null
     if (stop.kind === 'playoffs' && !D.qualify()) return null
     const k = Math.min(stop.at, total)
     const ctx = D.ctxAt(k)
@@ -340,6 +342,11 @@ export function createDirector({ sport, pos, build, team, simFn, base, seed = Ma
   D.finalize = () => {
     if (D.finalized) return D.final
     const t = D.totals()
+    if (locked) {
+      D.final = { ...base, story: { moments: [], milestones: D.milestones, records: D.records.concat(D.endRecords = seasonRecords(base, t)), headlines: D.headlines, xp: D.xp, sat: 0 } }
+      D.finalized = true
+      return D.final
+    }
     const want = t.wins
     const mods = addMods(D.cum, D.playoffMods)
     // the run that books the season: same record and, once decided, the same

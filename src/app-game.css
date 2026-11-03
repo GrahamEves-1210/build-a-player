@@ -51,7 +51,8 @@ html:is(.is-app, .app-look) {
   --spot1: var(--ag-a1);
   --spot2: var(--ag-a2);
 
-  --safe-top: env(safe-area-inset-top, 0px);
+  /* the top inset, 10px tighter on a notch or Dynamic Island (their inset has room under the clock); a 20px status bar keeps all of it */
+  --safe-top: max(min(env(safe-area-inset-top, 0px), 20px), calc(env(safe-area-inset-top, 0px) - 10px));
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --ag-dock-h: 64px;
   --ag-dock-gap: max(8px, calc(var(--safe-bottom) - 14px));      /* dock floats above the home bar */
@@ -695,18 +696,7 @@ html.is-app .bd-screen { height: calc(100dvh - 54px - var(--safe-top) - var(--ap
   }
 }
 
-/* Status-bar scrim: content that scrolls up never shows under the clock. A
-   frosted pane (like iOS's own bars), not a solid strip: the screen's color runs
-   all the way up to the top edge. */
-html.is-app body::before {
-  content: '';
-  position: fixed; left: 0; right: 0; top: 0;
-  height: var(--safe-top);
-  z-index: 1100;
-  background: color-mix(in srgb, var(--ag-bg, #0a0e0c) 55%, transparent);
-  -webkit-backdrop-filter: blur(14px) saturate(1.2); backdrop-filter: blur(14px) saturate(1.2);
-  pointer-events: none;
-}
+/* The status bar has no strip of its own: the screen runs up behind the clock and battery (overlaysWebView) */
 
 /* ═══ Game screens (spin / build) ══════════════════════════════════════════ */
 html.is-app body,

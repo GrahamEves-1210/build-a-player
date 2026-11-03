@@ -1681,8 +1681,8 @@ export default function SimPage({ result: baseResult, build, types = TYPES, onBa
   const result = live
   const position = isOL ? 'ol' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'
   const attrMap = isOL ? OL_ATTR : isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : isRB ? RB_ATTR : ATTR
-  const director = useMemo(() => (APP_SIM && simFn && !replay && !baseResult.story && baseResult.games?.length)
-    ? createDirector({ sport: 'nfl', pos: position, build, team: baseResult.team, simFn, base: baseResult, name: userName, attrMap, types })
+  const director = useMemo(() => (APP_SIM && (simFn || isSalaryMode) && !replay && !baseResult.story && baseResult.games?.length)
+    ? createDirector({ sport: 'nfl', pos: position, build, team: baseResult.team, simFn: simFn ?? (() => baseResult), locked: isSalaryMode, base: baseResult, name: userName, attrMap, types })
     : null, []) // eslint-disable-line
   const handleFinal = final => { setLive(final); onFinal?.(final) }
   // leaving mid-season still books the season
@@ -1770,7 +1770,7 @@ export default function SimPage({ result: baseResult, build, types = TYPES, onBa
         </div>
 
         {/* the moments switch sits above the team card, not on it */}
-        {team && director && <div className="sts-moments-row"><MomentsToggle /></div>}
+        {team && director && !isSalaryMode && <div className="sts-moments-row"><MomentsToggle /></div>}
         {team && (
           <div className="simp-team-strip">
             <div className="sts-top-row">
