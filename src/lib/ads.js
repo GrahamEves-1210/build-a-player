@@ -36,6 +36,14 @@ const railSlots = () => Object.entries(window.ramp?.settings?.slots ?? {})
 export const RAIL_GAP_MS = 30000
 let lastRail = 0
 
+// A page change that wants exactly what's already running, inside the gap, leaves it running:
+// tearing an ad down seconds after it loaded wastes the request and counts against viewability.
+// Anything else on the page (an in-page unit the new page won't have) needs the full reset.
+let lastPage = 0
+let lastPageUnits = ''
+const keepRunning = units => units && units === lastPageUnits && Date.now() - lastPage < RAIL_GAP_MS
+  && Object.values(window.ramp?.settings?.slots ?? {}).every(s => !s?.type || units.split(',').includes(s.type))
+
 // Phones skip the corner video: there it sat on top of half the bottom rail (an
 // ad covering an ad), so a phone runs the rail alone. Desktop keeps it.
 const onPhone = () => !!window.matchMedia?.('(max-width: 768px)').matches
@@ -44,6 +52,10 @@ const forScreen = ads => (onPhone() ? ads.filter(a => a.type !== 'corner_ad_vide
 // ads: units to add after the destroy ([] = none, e.g. the splash page)
 export function rampPage({ ads: wanted = [], path } = {}) {
   const ads = forScreen(wanted)
+  const units = ads.map(a => a.type).join()
+  if (keepRunning(units)) return ready
+  lastPage = Date.now()
+  lastPageUnits = units
   ready = new Promise(resolve => {
     queue(() => {
       let destroyed

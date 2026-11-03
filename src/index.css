@@ -13049,16 +13049,12 @@ html.is-touch .alltime-mode .spin-respin-half:hover:not(:disabled) {
   }
 }
 
-/* Hide Playwire corner/floating/interstitial video ads */
-[id*="corner_video"],
+/* Hide Playwire floating/interstitial video ads (the corner video is requested, so it shows) */
 [id*="floating_video"],
-[id*="corner-video"],
-[class*="corner_video"],
 [class*="floating_video"],
 [id*="interstitial"],
 [class*="interstitial"],
 [id^="pw-oop-video"],
-[id^="pw-oop-corner"],
 [id^="pw-oop-interstitial"] {
   display: none !important;
 }
