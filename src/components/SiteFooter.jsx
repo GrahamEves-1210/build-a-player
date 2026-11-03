@@ -14,7 +14,7 @@ const HoopU = () => (
   </svg>
 )
 
-export default function SiteFooter({ sport = 'nfl', onDepthChart, onWiki }) {
+export default function SiteFooter({ sport = 'nfl', onWiki }) {
   const isBucket = sport === 'bucket'
   // null = closed; otherwise holds the signed-in user (or false when signed out)
   const [feedbackUser, setFeedbackUser] = useState(null)
@@ -42,11 +42,7 @@ export default function SiteFooter({ sport = 'nfl', onDepthChart, onWiki }) {
             <a className="splash-site-footer-link" href="/bucket">Build-A-Bucket</a>
           )}
           <a className="splash-site-footer-link" href="https://32-0game.com" target="_blank" rel="noopener noreferrer">32-0</a>
-          {onDepthChart ? (
-            <button className="splash-site-footer-link splash-site-footer-link--btn" onClick={onDepthChart}>Depth Chart</button>
-          ) : (
-            <a className="splash-site-footer-link" href="/">Depth Chart</a>
-          )}
+          <a className="splash-site-footer-link" href="https://whosthatprospect.com" target="_blank" rel="noopener noreferrer">Who's That Prospect</a>
         </div>
         <div className="splash-site-footer-col">
           <div className="splash-site-footer-head">Info</div>

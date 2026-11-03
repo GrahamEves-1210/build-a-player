@@ -4574,6 +4574,9 @@ html.is-app .game-layout.ag-stack .spin-panel-body { padding-bottom: 6px !import
 .cr-slot--empty span { font-size: 22px; line-height: 1; color: #f5dc8a; }
 .cr-slot--empty small { font-size: 11px; color: var(--ag-muted); letter-spacing: 1.5px; }
 .cr-slot--new, .cr-slot--ask { flex-direction: column; gap: 10px; padding: 12px; }
+.cr-pos { display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); gap: 6px; }
+.cr-pos button { height: 42px; border: 1.5px solid var(--ag-line-hi); border-radius: 10px; background: rgba(255,255,255,.05); color: var(--ag-text); font-family: var(--ag-font); font-size: 19px; letter-spacing: 1px; line-height: 1; cursor: pointer; }
+.cr-pos button.is-on { border-color: transparent; background: var(--ag-grad); color: var(--ag-on); }
 .cr-slot--ask p, .cr-delete p { margin: 0; font-family: var(--ag-body); font-size: 14px; color: var(--ag-text-2); }
 .cr-name-row { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; }
 .cr-name-rand { width: 46px; display: grid; place-items: center; border-radius: 10px; border: 1.5px solid var(--ag-line-hi); background: rgba(255,255,255,.05); color: #f5dc8a; cursor: pointer; }
@@ -5986,19 +5989,19 @@ html .ag-stage .ag-live-count i { flex: none; width: 10px; height: 10px; border-
 
 /* the modes: each card is its colour and the game's own built players; Salary Cap shows its board */
 .ag-ways { display: block; min-width: 0; margin: 6px 0 0; padding: 0 14px; border: 0; border-radius: 0; background: none; }
-.ag-ways-label { display: flex; align-items: center; gap: 12px; margin: 10px 0 12px; font-family: var(--ag-font); font-weight: 400; font-size: 15px; line-height: 1; letter-spacing: 2px; color: rgba(255,255,255,.66); white-space: nowrap; }
-.ag-ways-label::after { content: ''; flex: 1; height: 1px; background: rgba(255,255,255,.16); }
+.ag-ways-label { display: flex; align-items: center; gap: 14px; margin: 12px 0 14px; font-family: var(--ag-font); font-weight: 400; font-size: 23px; line-height: 1; letter-spacing: 2.5px; color: #fff; white-space: nowrap; }
+.ag-ways-label::after { content: ''; flex: 1; height: 2px; background: rgba(255,255,255,.28); }
 .ag-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .ag-way { cursor: pointer; }
 .ag-way:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
 .ag-mc { position: relative; display: block; min-width: 0; min-height: 196px; padding: 0; overflow: hidden; border: 0; border-radius: 10px; color: #fff; text-align: left; box-shadow: inset 0 0 0 1px rgba(255,255,255,.14), 0 8px 18px rgba(0,0,0,.35); transition: transform .12s ease-out; }
 .ag-mc:active { transform: scale(.98); }
-.ag-mc-head { position: absolute; left: 13px; top: 12px; right: 12px; z-index: 3; display: grid; gap: 3px; }
+.ag-mc-head { position: absolute; left: 13px; top: 12px; right: 12px; z-index: 3; display: grid; gap: 6px; }
 .ag-mc-head b { font-family: var(--ag-display); font-weight: 400; font-size: 29px; line-height: 1; letter-spacing: .5px; text-shadow: 0 2px 8px rgba(0,0,0,.45); }
-.ag-mc-head small { font-family: var(--ag-body); font-size: 12.5px; font-weight: 600; line-height: 1.2; color: rgba(255,255,255,.9); text-shadow: 0 1px 4px rgba(0,0,0,.5); }
-.ag-mc-head .ag-mc-live { display: inline-flex; align-items: center; gap: 5px; font-weight: 700; color: #fff; }
+.ag-mc-head small { justify-self: start; max-width: 100%; padding: 3px 8px; border-radius: 4px; background: rgba(0,0,0,.42); font-family: var(--ag-body); font-size: 13.5px; font-weight: 700; line-height: 1.2; color: #fff; }
+.ag-mc-head .ag-mc-live { display: inline-flex; align-items: center; gap: 6px; color: #fff; }
 .ag-mc-live i { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; }
-.ag-mc-shot { position: absolute; top: 66px; left: 14px; right: -14px; z-index: 1; display: block; border-radius: 9px; overflow: hidden; background: #050807; box-shadow: 0 0 0 1px rgba(255,255,255,.2), -6px 10px 24px rgba(0,0,0,.55); transform: rotate(-4deg); transform-origin: 0 0; transition: transform .16s ease-out; }
+.ag-mc-shot { position: absolute; top: 78px; left: 14px; right: -14px; z-index: 1; display: block; border-radius: 9px; overflow: hidden; background: #050807; box-shadow: 0 0 0 1px rgba(255,255,255,.2), -6px 10px 24px rgba(0,0,0,.55); transform: rotate(-4deg); transform-origin: 0 0; transition: transform .16s ease-out; }
 .ag-mc-shot img { display: block; width: 100%; height: auto; }
 
 .ag-mc--career { grid-column: 1 / -1; min-height: 176px; background: linear-gradient(100deg, rgba(6,22,42,.94) 30%, rgba(14,52,92,.45)), url('/footballbackground-soft.webp') center 58% / cover no-repeat, #0a1f3a; }
@@ -6009,17 +6012,15 @@ html .ag-stage .ag-live-count i { flex: none; width: 10px; height: 10px; border-
 .ag-home--bucket .ag-mc--compete { background: linear-gradient(150deg, #f97316, #7c2d0a 85%); }
 .ag-mc--salary { background: linear-gradient(150deg, #7c3aed, #2e1065 80%); }
 .ag-mc--squad { background: linear-gradient(150deg, #a57f1e, #3a2b08 80%); }
-.ag-playbook { position: absolute; inset: 0; z-index: 0; width: 100%; height: 100%; fill: none; stroke: rgba(255,255,255,.3); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
-.ag-playbook .is-los { stroke-dasharray: 2 7; }
 .ag-mc--blacktop { background: #1c1c1e; }
 .ag-mc--depth { background: linear-gradient(150deg, #c9222e, #4d0b11 80%); }
 
 /* the art: the built players standing on the card's floor and running off it */
 .ag-art { position: absolute; z-index: 1; display: block; height: 118%; width: auto; max-width: none; bottom: -6%; pointer-events: none; }
 .ag-art--hero { right: -3%; height: 112%; bottom: -15%; }
-.ag-art--team-a { right: 44%; height: 58%; bottom: -8%; }
-.ag-art--team-b { right: 20%; height: 60%; bottom: -8%; }
-.ag-art--team-c { right: -9%; height: 60%; bottom: -8%; }
+.ag-team { position: absolute; left: 6px; right: 0; bottom: -7%; height: 62%; z-index: 1; display: flex; justify-content: center; align-items: flex-end; pointer-events: none; }
+.ag-team img { display: block; flex: 0 1 auto; min-width: 0; height: 100%; width: auto; margin-left: -10%; object-fit: contain; object-position: bottom; }
+.ag-team img:first-child { margin-left: 0; }
 .ag-mc.is-small .ag-mc-head { right: 8px; }
 /* Career: banners hanging from the rafters, gold on the card's colour, the player in front */
 .ag-rafters { position: absolute; left: 39%; right: 33%; top: 0; z-index: 1; display: flex; justify-content: space-between; gap: 5px; padding-top: 7px; border-top: 3px solid rgba(255,255,255,.28); }
@@ -6045,18 +6046,19 @@ html .ag-stage .ag-live-count i { flex: none; width: 10px; height: 10px; border-
 .ag-mc--blacktop::after { content: ''; position: absolute; inset: 0; z-index: 1; background: linear-gradient(180deg, rgba(0,0,0,.6), transparent 45%, rgba(0,0,0,.4)); }
 .ag-paint { position: absolute; left: 12px; right: 12px; bottom: 11px; z-index: 2; display: flex; justify-content: space-between; gap: 6px; }
 .ag-paint b { font-family: var(--ag-display); font-weight: 400; font-size: clamp(22px, 6.4vw, 34px); line-height: 1; color: #fff; transform: rotate(-5deg); text-shadow: 0 2px 0 rgba(0,0,0,.45); }
-.ag-ranks { position: absolute; left: 12px; right: -8px; bottom: -5px; z-index: 1; display: grid; gap: 4px; transform: rotate(-3deg); transform-origin: 0 100%; }
-.ag-ranks img { display: block; height: 100%; width: auto; margin-left: 8px; object-fit: contain; object-position: bottom; }
-.ag-ranks u { width: 15px; height: 9px; margin: 0 22px 0 auto; flex: none; text-decoration: none; opacity: .5; background: linear-gradient(currentColor 0 0) 0 0 / 100% 2px no-repeat, linear-gradient(currentColor 0 0) 0 50% / 100% 2px no-repeat, linear-gradient(currentColor 0 0) 0 100% / 100% 2px no-repeat; }
-.ag-ranks i { display: flex; align-items: center; overflow: hidden; height: 20px; padding-left: 10px; border-radius: 6px; background: rgba(255,255,255,.14); font-style: normal; }
+.ag-ranks { position: absolute; left: 9px; right: 9px; bottom: 9px; z-index: 1; display: grid; gap: 3px; }
+.ag-ranks img { display: block; flex: none; align-self: flex-end; height: 100%; width: auto; object-fit: contain; object-position: bottom; }
+.ag-ranks em { font-family: var(--ag-display); font-style: normal; font-size: 15px; line-height: 1; letter-spacing: .3px; white-space: nowrap; }
+.ag-ranks u { width: 16px; height: 10px; margin-left: auto; flex: none; text-decoration: none; opacity: .55; background: linear-gradient(currentColor 0 0) 0 0 / 100% 2px no-repeat, linear-gradient(currentColor 0 0) 0 50% / 100% 2px no-repeat, linear-gradient(currentColor 0 0) 0 100% / 100% 2px no-repeat; }
+.ag-ranks i { display: flex; align-items: center; gap: 6px; overflow: hidden; height: 27px; padding: 0 9px; border-radius: 5px; background: rgba(255,255,255,.14); font-style: normal; }
 .ag-ranks i:first-child { background: #f7cf55; color: #2c1c00; }
 .ag-ranks i:nth-child(2) { background: #e8edf0; color: #1d2428; }
 .ag-ranks i:nth-child(3) { background: #d29a6a; color: #2a1407; }
-.ag-ranks b { font-family: var(--ag-display); font-weight: 400; font-size: 16px; line-height: 1; }
+.ag-ranks b { flex: none; width: 13px; font-family: var(--ag-display); font-weight: 400; font-size: 20px; line-height: 1; text-align: center; }
 
 /* the second row: the same cards, shorter */
 .ag-more { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
-.ag-mc.is-small { min-height: 118px; }
+.ag-mc.is-small { min-height: 164px; }
 .ag-mc.is-small .ag-mc-head b { font-size: 22px; }
 
 /* the Builder Pass strip and Pro, as they were: side by side on a computer */
@@ -6088,17 +6090,20 @@ html .ag-stage .ag-live-count i { flex: none; width: 10px; height: 10px; border-
   html.app-look .ag-ways { padding: 0; margin-top: 10px; }
   html.app-look .ag-cards { grid-template-columns: 1.45fr 1fr 1fr; gap: 12px; }
   html.app-look .ag-mc { min-height: 226px; grid-column: auto; }
-  html.app-look .ag-mc.is-small { min-height: 104px; }
+  html.app-look .ag-mc.is-small { min-height: 128px; }
   html.app-look .ag-mc-head b { font-size: 36px; }
-  html.app-look .ag-mc-shot { top: 78px; left: 26px; right: 26px; }
+  html.app-look .ag-mc-shot { top: 96px; left: 26px; right: 26px; }
   html.app-look .ag-more { gap: 12px; }
   /* the wide second row: the art beside the words */
-  html.app-look .ag-mc.is-small .ag-art--team-a { right: 30%; height: 104%; bottom: -24%; }
-  html.app-look .ag-mc.is-small .ag-art--team-b { right: 15%; height: 112%; bottom: -24%; }
-  html.app-look .ag-mc.is-small .ag-art--team-c { right: -2%; height: 108%; bottom: -24%; }
+  html.app-look .ag-mc.is-small .ag-team { left: 34%; right: 8px; height: 124%; bottom: -26%; justify-content: flex-end; }
   html.app-look .ag-mc.is-small .ag-lineup { left: 44%; right: 14px; bottom: 16px; }
   html.app-look .ag-mc.is-small .ag-pod { left: 58%; right: 16px; height: 78%; }
-  html.app-look .ag-ranks { left: 46%; right: -8px; bottom: 6px; }
+  html.app-look .ag-ranks { left: 46%; right: 12px; top: 8px; bottom: 8px; grid-auto-rows: 1fr; gap: 4px; }
+  html.app-look .ag-ranks i { height: auto; gap: 10px; padding: 0 14px; }
+  html.app-look .ag-ranks em { font-size: 20px; }
+  html.app-look .ag-ranks b { width: 16px; font-size: 24px; }
+  html.app-look .ag-mc-head small { font-size: 15px; padding: 4px 9px; }
+  html.app-look .ag-ways-label { font-size: 28px; margin: 14px 0 16px; }
   /* the day's top five across the page */
   html.app-look .ag-potd-list { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
   html.app-look .ag-potd-row { grid-template-columns: auto minmax(0, 1fr); column-gap: 9px; row-gap: 6px; padding: 10px; }

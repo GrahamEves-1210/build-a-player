@@ -193,20 +193,12 @@ const Podium = () => (
     ))}
   </span>
 )
-// Squad Builder: the team drawn up in chalk, behind the players or the five spots
-const Playbook = ({ sport }) => (sport === 'bucket' ? (
-  <svg className="ag-playbook" viewBox="0 0 320 120" preserveAspectRatio="xMaxYMid slice" aria-hidden="true">
-    <path d="M130 120V54h96v66M150 54a28 28 0 0 1 56 0M60 120a118 118 0 0 1 236 0" />
-    <circle cx="178" cy="108" r="7" />
-  </svg>
-) : (
-  <svg className="ag-playbook" viewBox="0 0 320 120" preserveAspectRatio="xMaxYMid slice" aria-hidden="true">
-    <path className="is-los" d="M96 84H320" />
-    <path d="M122 94c0-26 18-46 44-54m-7-5 8 4-4 8M206 94V34c0-8 8-12 18-12m-6-6 7 6-7 6M284 94c0-22-12-38-34-48m3-8-4 8 8 4" />
-    <circle cx="122" cy="96" r="6" /><circle cx="206" cy="96" r="6" /><circle cx="284" cy="96" r="6" />
-    <path d="M154 66l8 8m0-8l-8 8M236 60l8 8m0-8l-8 8M296 64l8 8m0-8l-8 8" />
-  </svg>
-))
+// Squad Builder, football: the whole team, one at each position, side by side
+const TeamRow = () => (
+  <span className="ag-team" aria-hidden="true">
+    {['rb', 'qb2', 'te', 'db'].map(p => <img key={p} src={`/modes/fig-${p}.webp`} alt="" loading="lazy" decoding="async" draggable={false} />)}
+  </span>
+)
 // Squad Builder, basketball: the five spots you fill
 const Lineup = () => (
   <span className="ag-lineup" aria-hidden="true">
@@ -214,9 +206,17 @@ const Lineup = () => (
   </span>
 )
 // Depth Chart: the game itself, in numbers: stars in order, one stat
+const DEPTH_NAMES = ['BRADY', 'MANNING', 'BREES']   // GREATS.qb, in order
 const DepthArt = () => (
   <span className="ag-ranks" aria-hidden="true">
-    {GREATS.qb.map((f, i) => <i key={f.id}><b>{i + 1}</b><img src={hsUrl(f.id)} alt="" width="96" height="70" loading="lazy" decoding="async" draggable={false} /><u /></i>)}
+    {GREATS.qb.map((f, i) => (
+      <i key={f.id}>
+        <b>{i + 1}</b>
+        <img src={hsUrl(f.id)} alt="" width="96" height="70" loading="lazy" decoding="async" draggable={false} />
+        <em>{DEPTH_NAMES[i]}</em>
+        <u />
+      </i>
+    ))}
   </span>
 )
 
@@ -410,7 +410,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
             </ModeArt>
           ))}
         <button className="ag-way ag-mc ag-mc--salary ag-way--quick" onClick={() => startRef.current('salarycap')}>
-          <span className="ag-mc-head"><b>SALARY CAP</b><small>Daily puzzle</small></span>
+          <span className="ag-mc-head"><b>SALARY CAP</b><small>Daily grid</small></span>
           <span className="ag-mc-shot" aria-hidden="true"><img src={`/modes/${sp}-salary.webp`} alt="" loading="lazy" decoding="async" draggable={false} /></span>
         </button>
       </div>
@@ -422,10 +422,9 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
         )}
         {onSquad && (
           <ModeArt small kind="squad" tone="squad" title="SQUAD BUILDER" line={sqLine} onClick={onSquad}>
-            <Playbook sport={sport} />
             {isBucket
               ? <Lineup />
-              : <><Art src="fig-rb" cls="ag-art--team-a" /><Art src="fig-te" cls="ag-art--team-b" /><Art src="fig-qb" cls="ag-art--team-c" /></>}
+              : <TeamRow />}
           </ModeArt>
         )}
         {!isBucket && (

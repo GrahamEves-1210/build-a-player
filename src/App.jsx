@@ -724,9 +724,8 @@ export default function App() {
     })
     return () => { off = true }
   }, [user?.id])
-  const startCareerBuild = useCallback(() => {
-    let p = 'qb'; try { p = localStorage.getItem('lastPosition') || 'qb' } catch {}
-    if (!CAREER_POS.includes(p)) p = 'qb'
+  const startCareerBuild = useCallback(pos => {
+    const p = CAREER_POS.includes(pos) ? pos : 'qb'
     handleStart('classic', p); setPage('career-build')
   }, [handleStart])
   // Career opens on its home: the three save slots (CareerIntro)
@@ -1485,7 +1484,7 @@ export default function App() {
       </main>
       <div className="build-footer-section">
         <SiteFeatures sport="nfl" className="build-site-features" />
-        <SiteFooter sport="nfl" onDepthChart={() => setPage('depth-chart')} />
+        <SiteFooter sport="nfl" />
       </div>
       </div>
 
@@ -1650,7 +1649,7 @@ export default function App() {
         <AppHome sport="nfl" user={user} onStart={handleStart} onDepthChart={() => setPage('depth-chart')}
           onSquad={openSquad} squad={squad} onCareer={openCareer} career={career}
           onCompete={() => setPage('compete')} resume={competeOn ? { label: `Compete · pool ${cp.match.code}`, onClick: () => setPage('game') } : (gameMode && gameMode !== 'salarycap' && (simResult || Object.values(build).some(Boolean))) ? { label: `${position.toUpperCase()} · ${gameMode === 'all-time' ? 'All-Time' : gameMode === 'classic' ? 'Current' : gameMode}`, onClick: () => window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'play' })) } : null}
-          footer={<><SiteFeatures sport="nfl" /><SiteFooter sport="nfl" onDepthChart={() => setPage('depth-chart')} onWiki={openWiki} /></>} />
+          footer={<><SiteFeatures sport="nfl" /><SiteFooter sport="nfl" onWiki={openWiki} /></>} />
       ) : (
       <SplashScreen
         onStart={handleStart}
@@ -1676,7 +1675,7 @@ export default function App() {
   if (page === 'career-intro') {
     return (
       <Suspense fallback={null}>
-        <CareerIntro uid={user?.id ?? null} onOpen={c => { setCareer(c); setPage('career'); window.scrollTo({ top: 0, behavior: 'instant' }) }} onNew={(slot, name) => { careerNew.current = { slot, name }; startCareerBuild() }} onClose={() => setPage('splash')} />
+        <CareerIntro uid={user?.id ?? null} onOpen={c => { setCareer(c); setPage('career'); window.scrollTo({ top: 0, behavior: 'instant' }) }} onNew={(slot, name, pos) => { careerNew.current = { slot, name }; startCareerBuild(pos) }} onClose={() => setPage('splash')} />
       </Suspense>
     )
   }

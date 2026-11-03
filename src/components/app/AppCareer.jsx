@@ -50,8 +50,14 @@ const cleanName = v => v.replace(/[^A-Za-z\u00C0-\u017F' .-]/g, '').replace(/\s+
 const FIRST_NAMES = ['Marcus', 'Jalen', 'Tre', 'DeShawn', 'Cole', 'Isaiah', 'Brock', 'Malik', 'Darius', 'Kade', 'Xavier', 'Jordan', 'Bryce', 'Tyson', 'Elijah', 'Grant', 'Rashad', 'Mason', 'Caleb', 'Jaylen', 'Devin', 'Trey', 'Andre', 'Dominic', 'Quentin', 'Zion', 'Myles', 'Cam', 'Jace', 'Amari', 'Keon', 'Luca', 'Nico', 'Reggie', 'Terrell', 'Bo', 'Cooper', 'Dante', 'Gavin', 'Hunter', 'Jamal', 'Khalil', 'Lamont', 'Micah', 'Owen', 'Preston', 'Rome', 'Silas', 'Tavon', 'Wyatt']
 const LAST_NAMES = ['Williams', 'Johnson', 'Carter', 'Brooks', 'Mitchell', 'Hayes', 'Coleman', 'Bennett', 'Sanders', 'Reed', 'Washington', 'Harrison', 'Fletcher', 'Dawson', 'Holloway', 'Pierce', 'Sterling', 'Vance', 'Whitfield', 'Graves', 'McKenzie', 'Ellison', 'Booker', 'Calloway', 'Dupree', 'Fontaine', 'Gaines', 'Hollins', 'Jennings', 'Kingsley', 'Lockhart', 'Maddox', 'Norwood', 'Okafor', 'Prescott', 'Quarles', 'Rhodes', 'Stokes', 'Thornton', 'Underwood', 'Varner', 'Whitaker', 'Yates', 'Abernathy', 'Blackwell', 'Crawford', 'Delgado', 'Easley', 'Freeman', 'Gentry']
 const pickName = list => list[Math.floor(Math.random() * list.length)]
-function NewSlot({ onStart, onCancel }) {
+function NewSlot({ S, onStart, onCancel }) {
   const [first, setFirst] = useState(''), [last, setLast] = useState('')
+  // opens on the position last played; changing it here is all a new career needs
+  const [pos, setPos] = useState(() => {
+    let saved = null
+    try { saved = localStorage.getItem(S.isBucket ? 'bucketPosition' : 'lastPosition') } catch {}
+    return S.positions.includes(saved) ? saved : S.positions[0]
+  })
   // a new name every tap (never the same one twice in a row)
   const randomize = () => {
     let f, l
@@ -60,7 +66,13 @@ function NewSlot({ onStart, onCancel }) {
   }
   const ok = first.trim().length >= 2 && last.trim().length >= 2
   return (
-    <form className="cr-slot cr-slot--new" onSubmit={e => { e.preventDefault(); if (ok) onStart(`${first.trim()} ${last.trim()}`) }}>
+    <form className="cr-slot cr-slot--new" onSubmit={e => { e.preventDefault(); if (ok) onStart(`${first.trim()} ${last.trim()}`, pos) }}>
+      <span className="ag-eyebrow">POSITION</span>
+      <div className="cr-pos" role="radiogroup" aria-label="Position" style={{ '--n': S.positions.length }}>
+        {S.positions.map(p => (
+          <button key={p} type="button" role="radio" aria-checked={pos === p} className={pos === p ? 'is-on' : ''} onClick={() => { setPos(p); sfx('tap') }}>{POS_LABEL[p]}</button>
+        ))}
+      </div>
       <span className="ag-eyebrow">NAME YOUR PLAYER</span>
       <div className="cr-name-row">
         <input className="cr-name-in" value={first} onChange={e => setFirst(cleanName(e.target.value))} placeholder="First name" autoComplete="off" autoFocus aria-label="First name" />
@@ -121,7 +133,7 @@ export function CareerIntro({ sport = 'nfl', uid = null, onOpen, onNew, onClose 
           <div className="ag-card-head"><span className="ag-eyebrow">SAVES · {CAREER_SLOTS} SLOTS</span></div>
           {!slots ? <div className="tk-runs-empty">Loading your saves…</div> : slots.map((c, i) => (
             c ? <SlotCard key={`c${i}`} c={c} S={S} onOpen={() => onOpen(c)} onDelete={() => { clearCareer(sport, uid, i); setSlots(l => l.map((x, k) => (k === i ? null : x))) }} />
-              : naming === i ? <NewSlot key={`n${i}`} onStart={name => onNew(i, name)} onCancel={() => setNaming(null)} />
+              : naming === i ? <NewSlot key={`n${i}`} S={S} onStart={(name, pos) => onNew(i, name, pos)} onCancel={() => setNaming(null)} />
               : <button key={`e${i}`} className="cr-slot cr-slot--empty" onClick={() => { setNaming(i); sfx('tap') }}><span>+</span> NEW CAREER <small>SLOT {i + 1}</small></button>
           ))}
         </section>

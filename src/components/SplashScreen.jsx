@@ -467,7 +467,7 @@ export default function SplashScreen({ onStart, onDepthChart, onWiki }) {
 
     <SiteFeatures sport="nfl" />
 
-    <SiteFooter sport="nfl" onDepthChart={onDepthChart} onWiki={onWiki} />
+    <SiteFooter sport="nfl" onWiki={onWiki} />
     </div>
   )
 }

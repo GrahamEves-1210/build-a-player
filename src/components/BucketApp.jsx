@@ -1001,9 +1001,8 @@ export default function BucketApp() {
     })
     return () => { off = true }
   }, [user?.id])
-  const startCareerBuild = useCallback(() => {
-    let p = 'guard'; try { p = localStorage.getItem('bucketPosition') || 'guard' } catch {}
-    handleStart('classic', p === 'big' ? 'big' : 'guard'); setPage('career-build')
+  const startCareerBuild = useCallback(pos => {
+    handleStart('classic', pos === 'big' ? 'big' : 'guard'); setPage('career-build')
   }, [handleStart])
   // Career opens on its home: the three save slots (CareerIntro)
   const careerNew = useRef({ slot: 0, name: null })
@@ -2084,7 +2083,7 @@ export default function BucketApp() {
   if (page === 'career-intro') {
     return (
       <Suspense fallback={null}>
-        <CareerIntro sport="bucket" uid={user?.id ?? null} onOpen={c => { setCareer(c); setPage('career'); window.scrollTo({ top: 0, behavior: 'instant' }) }} onNew={(slot, name) => { careerNew.current = { slot, name }; startCareerBuild() }} onClose={() => setPage('splash')} />
+        <CareerIntro sport="bucket" uid={user?.id ?? null} onOpen={c => { setCareer(c); setPage('career'); window.scrollTo({ top: 0, behavior: 'instant' }) }} onNew={(slot, name, pos) => { careerNew.current = { slot, name }; startCareerBuild(pos) }} onClose={() => setPage('splash')} />
       </Suspense>
     )
   }
