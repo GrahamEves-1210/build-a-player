@@ -38,6 +38,7 @@ import { NBA_ALLTIME_GUARD_PLAYERS } from '../data/nba-guard-legends'
 import { NBA_ALLTIME_BIG_PLAYERS } from '../data/nba-big-legends'
 import { RESUMES } from '../data/legacy-resumes'
 import { RECORDS } from './seasonFacts'
+import { seasonRaw } from './careerStats'
 
 export const CAREER_V = 1
 const FIRST_SEASON = 2026
@@ -164,6 +165,8 @@ export const SPORT = {
     // (and about one year in four somebody else has the season of his life: a star won ~45% of his prime)
     award: (c, f, s) => {
       const bar = { db: () => s.ints >= 7 || (s.ints >= 6 && (s.pickSixes ?? 0) >= 1), qb: () => (s.tds ?? 0) + (f.seasonRushTDs ?? 0) >= 36 && s.passYds >= 4400 && f.wins >= 11, rb: () => s.rushYds >= 1800 || (s.rushYds >= 1600 && s.tds >= 16), wr: () => s.recYds >= 1600 && s.tds >= 11, te: () => s.recYds >= 1300 && s.tds >= 10 }
+      // a tight end past both the yards and TD records on a winner: nobody out-votes that
+      if (c.pos === 'te' && s.recYds > 1416 && s.tds > 18 && f.wins >= 10) return true
       if (seeded(`${c.seed}-poy-${c.year}`)() < 0.28) return false
       return !!NFL_AWARD[c.pos](f, false, c.team).userWins && bar[c.pos]()
     },
@@ -210,7 +213,7 @@ export const SPORT = {
       // weak one doesn't ride a good roster into the playoffs most years (a 99 keeps it all)
       // (the cost a game, turned into off and def: 0.039 a game is one point of off + def)
       const x = clamp((c.ovr - 82) / 17, 0, 1), cost = 0.2 * x * (1 - x) + 0.02 * (1 - x) + clamp((86 - c.ovr) * 0.006, 0, 0.1), bend = cost / 0.078
-      return { ...t, off: clamp(fit.off + fit.adj + (m.off ?? 0) - bend, 1, 10), def: clamp(fit.def + (m.def ?? 0) - bend, 1, 10), career: true, usage }
+      return { ...t, off: clamp(fit.off + fit.adj + (m.off ?? 0) - bend, 1, 10), def: clamp(fit.def + (m.def ?? 0) - bend, 1, 10), career: true, usage, bench: !!c.benchRole }
     },
     fit: (ro, pos, notMe) => {
       const guards = ro.guard.filter(notMe).sort((a, b) => b.ovr - a.ovr).slice(0, 3), bigs = ro.big.filter(notMe).sort((a, b) => b.ovr - a.ovr).slice(0, 2)
@@ -251,7 +254,7 @@ export const SPORT = {
     },
     goals: {
       guard: ovr => [['ppg', 'Average', ovr >= 90 ? 26 : ovr >= 82 ? 21 : 16, 'points'], ['apg', 'Average', ovr >= 90 ? 8 : ovr >= 82 ? 6 : 4, 'assists'], ['wins', 'Win', ovr >= 90 ? 55 : ovr >= 82 ? 48 : 40, 'games']],
-      big: ovr => [['ppg', 'Average', ovr >= 90 ? 25 : ovr >= 82 ? 20 : 15, 'points'], ['rpg', 'Average', ovr >= 90 ? 12 : ovr >= 82 ? 10 : 7, 'rebounds'], ['wins', 'Win', ovr >= 90 ? 55 : ovr >= 82 ? 48 : 40, 'games']],
+      big: ovr => [['ppg', 'Average', ovr >= 90 ? 25 : ovr >= 82 ? 20 : 15, 'points'], ['rpg', 'Average', ovr >= 90 ? 12 : ovr >= 82 ? 10 : 9, 'rebounds'], ['wins', 'Win', ovr >= 90 ? 55 : ovr >= 82 ? 48 : 40, 'games']],
     },
     // the season's numbers come from the games you played (a bench stint counts for nothing)
     seasonStats: (pos, f) => {
@@ -997,7 +1000,8 @@ export function startSeason(c) {
     const gap = ahead.ovr - c.ovr
     const T = plain(c.build, team).games.length
     const frac = gap <= 2 ? 0.18 + rr() * 0.22 : gap <= 6 ? (rr() < 0.5 ? 0.4 + rr() * 0.35 : 1) : (rr() < 0.45 ? 0.35 + rr() * 0.45 : 1)
-    weeks = Math.max(1, Math.min(T, Math.round(frac * T)))
+    // (the job goes to the next man up: with a backup still ahead of you, it isn't coming)
+    weeks = dc.idx > dc.starters ? T : Math.max(1, Math.min(T, Math.round(frac * T)))
     // everyone but a quarterback still plays until then, at a share of the snaps
     const u = backupShare(c.pos, dc.idx - dc.starters)
     if (u > 0) share = { u, weeks }
@@ -1272,7 +1276,7 @@ export function bookSeason(c) {
   const s = {
     year: c.year + 1, season: c.season, age: c.age, team: c.team, teamName: c.fit.name, ovr: c.ovr, role: c.role,
     wins: f.wins, losses: f.losses, playoffs: S.made(f) && !(po?.line?.[0]?.name === 'Play-In' && !po.line[0].won), champion: !!po?.won, rounds, sb: fin ? { won: fin.won, mySc: fin.mySc, oppSc: fin.oppSc, series: fin.series } : null,
-    stats, award, awardName: S.awardName[c.pos], proBowl: (can('honor') && S.proBowl[c.pos](stats)) || award || allPro, allPro: allPro || (award && S.allProNear[c.pos](stats)),
+    stats, adv: seasonRaw(c.pos, f, started), award, awardName: S.awardName[c.pos], proBowl: (can('honor') && S.proBowl[c.pos](stats)) || award || allPro, allPro: allPro || (award && S.allProNear[c.pos](stats)),
     missed, benched, records: (f.story?.records ?? []).map(x => x.label ?? x.id), milestones: (f.story?.milestones ?? []).filter(m => m.big).map(m => m.label),
     goals: started.length || c.role !== 'Backup' ? c.goals.map(g => ({ ...g, met: goalMet(g, { stats, wins: f.wins, starts: started.length, startWins: started.filter(x => x.won).length }) })) : [], xp: f.story?.xp ?? 0, bestGame: f.bestGame ?? null,
     poStats: po && po.line.some(x => !x.sat) ? po.line.filter(x => !x.sat).reduce((acc, x) => { for (const k of S.lineKeys) if (x[k] != null) acc[k] = (acc[k] ?? 0) + x[k]; return acc }, { games: po.line.filter(x => !x.sat).length }) : null,
@@ -1297,6 +1301,11 @@ export function bookSeason(c) {
   const lastRole = benched < (f.wins + f.losses || 17) / 2 ? 'Starter' : 'Backup'
   let next = { ...c, recordBook, phase: 'offseason', seasons: [...c.seasons, s], contract, dev, rep, lastRole, active: null, simTeam: null, goals: [], earnings: r10(c.earnings + c.contract.perYear + (c.shoe?.perYear ?? 0)), nextMods: null, talks: null, tradeAsked: false }
   // the offseason: the league moves, your team's roster turns over, the news
+  const b = c.active.benched
+  if (b?.why?.kind === 'traded') {
+    const ro = next.roster ?? rosterOf(next, next.team)
+    next = { ...next, roster: Object.fromEntries(Object.entries(ro).map(([k, v]) => [k, Array.isArray(v) ? v.filter(p => p.name !== b.behind) : v])), dealt: { ...(next.dealt ?? {}), [b.behind]: b.why.to } }
+  }
   const r = seeded(`${c.seed}-off-${c.year}`)
   const league = driftLeague(next, r)
   const { roster, moves } = rosterMoves(next, r)

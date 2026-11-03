@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { setGradesHidden, gradesHiddenNow } from './SpinScreen'
 import { NameTag } from './app/NameTag'
-import { CAN_SELL_PLUS, IS_APP, APP_LOOK } from '../lib/platform'
+import { CAN_SELL_PLUS, IS_APP, APP_LOOK, setClassicLook } from '../lib/platform'
 // The website with the app look: the menu button opens the app's More sheet
 const MORE_SHEET = !IS_APP && APP_LOOK
 import FeedbackModal from './FeedbackModal'
@@ -414,6 +414,13 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
                   </div>
                 ))}
               </div>
+            )}
+
+            {/* the classic look's way back (Settings → Classic look brought them here) */}
+            {!IS_APP && !APP_LOOK && (
+              <button className="wm-row" onClick={() => setClassicLook(false)}>
+                <span className="wm-label">Switch to the new look</span>
+              </button>
             )}
 
             {/* About */}

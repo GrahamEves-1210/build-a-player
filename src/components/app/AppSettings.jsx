@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { IS_APP } from '../../lib/platform'
+import { IS_APP, setClassicLook } from '../../lib/platform'
 import { isMuted, setMuted, hapticsOff, setHapticsOff, haptic } from '../../lib/juice'
 import { reduceMotion, setReduceMotion } from '../../lib/settings'
 import { NOTIF_KINDS, notifPrefs, setNotifPref } from '../../lib/notify'
@@ -86,6 +86,12 @@ export default function AppSettings({ signedIn, onFeedback, onClose }) {
           <span className="sx-txt"><b>Replay the tutorial</b><small>The basics and every mode, then a guided game</small></span>
           <IconPlay size={16} />
         </button>
+        {!IS_APP && (
+          <button className="sx-row" onClick={() => setClassicLook(true)}>
+            <span className="sx-txt"><b>Switch to the classic look</b><small>The original site: pick a position and play. Your account and stats stay.</small></span>
+            <span className="sx-chev" aria-hidden="true">GO</span>
+          </button>
+        )}
       </div>
 
       {IS_APP && (

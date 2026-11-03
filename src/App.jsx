@@ -105,11 +105,12 @@ const _saved = (() => {
 })()
 
 function hideVideoAds() {
-  const sel = '[id*="corner_video"],[id*="floating_video"],[id*="corner-video"],[class*="corner_video"],[class*="floating_video"],[id^="pw-oop-video"],[id^="pw-oop-corner"],[id^="pw-oop-interstitial"],[id*="interstitial"],[class*="interstitial"],[id*="video_corner"],[id*="vid_corner"],[class*="video_corner"]'
+  const sel = '[id*="floating_video"],[class*="floating_video"],[id^="pw-oop-video"],[id^="pw-oop-interstitial"],[id*="interstitial"],[class*="interstitial"]'
   document.querySelectorAll(sel).forEach(el => el.style.setProperty('display', 'none', 'important'))
   document.querySelectorAll('div[id^="pw-"]').forEach(el => {
     const id = el.id.toLowerCase()
-    if (id.includes('video') || id.includes('corner') || id.includes('interstitial')) el.style.setProperty('display', 'none', 'important')
+    if (id.includes('corner')) return // the corner video is requested on purpose (lib/ads.js)
+    if (id.includes('video') || id.includes('interstitial')) el.style.setProperty('display', 'none', 'important')
   })
 }
 

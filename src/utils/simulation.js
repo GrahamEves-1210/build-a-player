@@ -17,6 +17,9 @@ export function nflHeadshot(id) {
 
 const TEAM_BY_NAME = Object.fromEntries(NFL_TEAMS.map(t => [t.name, t]))
 
+// A better record counts a little in the playoffs: a point of win chance a game per win over 11
+const recordEdge = wins => Math.min(0.05, Math.max(-0.03, (wins - 11) * 0.01))
+
 // All-time ratings keyed by team name for opponent lookups
 const ALLTIME_BY_NAME = Object.fromEntries(
   NFL_TEAMS.map(t => [t.name, { ...t, ...(ALLTIME_RATINGS[t.short] ?? { off: 8, def: 8 }) }])
@@ -741,7 +744,7 @@ export function runSimulation(build, types = TYPES, team = null, isAllTime = fal
       const pgOvrPenalty = ovr !== null && ovr < 85
         ? (85 - ovr) * 0.011
         : 0
-      const pgWinP     = Math.min(0.90, Math.max(0.10, 0.30 + ovrN * 0.61 + teamN * 0.41 - pgOvrPenalty + (pgHome ? 0.03 : 0) - (isAllTime ? AT_DIFFICULTY.qb.po : 0)))
+      const pgWinP     = Math.min(0.90, Math.max(0.10, 0.30 + ovrN * 0.61 + teamN * 0.41 - pgOvrPenalty + recordEdge(wins) + (pgHome ? 0.03 : 0) - (isAllTime ? AT_DIFFICULTY.qb.po : 0)))
       const won        = sr ? sr.won : Math.random() < pgWinP
 
       // Playoff game stats use similar logic but with higher stakes variance
@@ -1381,7 +1384,7 @@ export function runRBSimulation(build, types = RB_TYPES, team = null, isAllTime 
 
       // RBs: much flatter playoff win curve than QBs (team quality dominates)
       const pgWinP = Math.min(0.78, Math.max(0.15,
-        0.42 + ovrN * 0.22 + teamN * 0.48 - pgOvrPenalty
+        0.42 + ovrN * 0.22 + teamN * 0.48 - pgOvrPenalty + recordEdge(wins)
         + (pgHome ? 0.04 : 0)
         - (isAllTime ? AT_DIFFICULTY.rb.po : 0)
       ))
@@ -1980,7 +1983,7 @@ export function runWRSimulation(build, types = WR_TYPES, team = null, isAllTime 
       const pgOvrPenalty = ovr !== null && ovr < 82 ? (82 - ovr) * 0.007 : 0
 
       const pgWinP = Math.min(0.78, Math.max(0.15,
-        0.42 + ovrN * 0.20 + teamN * 0.46 - pgOvrPenalty
+        0.42 + ovrN * 0.20 + teamN * 0.46 - pgOvrPenalty + recordEdge(wins)
         + (pgHome ? 0.04 : 0)
         - (isAllTime ? AT_DIFFICULTY.wr.po : 0)
       ))
@@ -2528,7 +2531,7 @@ export function runTESimulation(build, types = TE_TYPES, team = null, isAllTime 
       const pgOvrPenalty = ovr !== null && ovr < 82 ? (82 - ovr) * 0.007 : 0
 
       const pgWinP = Math.min(0.78, Math.max(0.15,
-        0.42 + ovrN * 0.20 + teamN * 0.46 - pgOvrPenalty
+        0.42 + ovrN * 0.20 + teamN * 0.46 - pgOvrPenalty + recordEdge(wins)
         + (pgHome ? 0.04 : 0)
         - (isAllTime ? AT_DIFFICULTY.te.po : 0)
       ))
@@ -3122,7 +3125,7 @@ export function runDBSimulation(build, team = null, isAllTime = false, script = 
       const pgOvrPenalty = ovr < 82 ? (82 - ovr) * 0.007 : 0
 
       const pgWinP = Math.min(0.78, Math.max(0.15,
-        0.42 + ovrN * 0.20 + teamN * 0.46 - pgOvrPenalty + (pgHome ? 0.04 : 0) - (isAllTime ? AT_DIFFICULTY.db.po : 0)
+        0.42 + ovrN * 0.20 + teamN * 0.46 - pgOvrPenalty + recordEdge(wins) + (pgHome ? 0.04 : 0) - (isAllTime ? AT_DIFFICULTY.db.po : 0)
       ))
       const won = sr ? sr.won : Math.random() < pgWinP
 
@@ -3538,7 +3541,7 @@ export function runOLSimulation(build, team = null, isAllTime = false) {
       const pgOvrPenalty = ovr < 82 ? (82 - ovr) * 0.007 : 0
 
       const pgWinP = Math.min(0.78, Math.max(0.15,
-        0.42 + ovrN * 0.20 + teamN * 0.46 - pgOvrPenalty + (pgHome ? 0.04 : 0) - (isAllTime ? AT_DIFFICULTY.ol.po : 0)
+        0.42 + ovrN * 0.20 + teamN * 0.46 - pgOvrPenalty + recordEdge(wins) + (pgHome ? 0.04 : 0) - (isAllTime ? AT_DIFFICULTY.ol.po : 0)
       ))
       const won = Math.random() < pgWinP
 

@@ -4,12 +4,11 @@ import { guardLeave } from '../../lib/liveLock'
 import { sfx, haptic } from '../../lib/juice'
 import { switchSport } from './AppHome'
 import { IconPlay, IconHome, IconBolt, IconCrown, IconTrophy, IconProfile, IconCalendar, IconHoop, IconFootball, IconBasketball } from './icons'
-import { RollText } from './MotionText'
 
 // The dock's centre button.
 //   A tap does the same everywhere: it takes you Home (on Home it stays put); it
-//     never drops you straight into a game. It reads PLAY, and HOME inside a game
-//     mode (the build waits).
+//     never drops you straight into a game (the build waits). It reads HOME: PLAY is
+//     the big button on Home.
 //   Hold it anywhere: the modes fan out above it (and the other sport); tap one,
 //     or slide onto one and let go. A live game still asks before it lets you out.
 
@@ -91,8 +90,8 @@ export default function PlayButton({ page, sport, onTap, lit, here = false }) {
         </div>,
         document.body,
       )}
-      <button className={`ag-play${lit ? ' ag-play--on' : ''}${inMode ? ' is-home' : ''}${fan ? ' is-fan' : ''}${here && !fan ? ' is-here' : ''}`}
-        aria-label={inMode ? 'Home (hold for modes)' : 'Play (hold for modes)'} aria-haspopup="menu" aria-expanded={fan}
+      <button className={`ag-play${lit ? ' ag-play--on' : ''} is-home${fan ? ' is-fan' : ''}${here && !fan ? ' is-here' : ''}`}
+        aria-label="Home (hold for modes)" aria-haspopup="menu" aria-expanded={fan}
         onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={cancel} onPointerLeave={e => { if (!opened.current && e.pointerType === 'mouse') cancel() }}
         onContextMenu={e => { e.preventDefault(); if (!fan) { opened.current = true; setFan(true) } }}
         onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTap(inMode) } else if (e.key === 'ArrowUp') { e.preventDefault(); setFan(true) } else if (e.key === 'Escape') setFan(false) }}>
@@ -100,7 +99,7 @@ export default function PlayButton({ page, sport, onTap, lit, here = false }) {
           <span className="ag-play-glyph is-play"><IconPlay size={26} /></span>
           <span className="ag-play-glyph is-home"><IconHome size={24} /></span>
         </span>
-        <span className="ag-play-label"><RollText text={inMode ? 'HOME' : 'PLAY'} /></span>
+        <span className="ag-play-label">HOME</span>
       </button>
     </>
   )

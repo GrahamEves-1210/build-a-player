@@ -1,4 +1,4 @@
-// The website's "what is this" strip under the home menu and the build screens: four cards,
+// The website's "what is this" strip under the home menu and the build screens: four parts,
 // one per part of the game (the app hides it: app-game.css)
 const I = { width: 22, height: 22, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true }
 
@@ -17,16 +17,16 @@ const IconClimb = () => (
 
 const FEATURES = {
   nfl: [
-    { Icon: IconSpin, title: 'Spin & Build', text: 'Every spin lands on a real player. Keep one piece of their game, an arm here and a pair of legs there, until your player is complete.' },
-    { Icon: IconTrophy, title: 'Play It Out', text: 'Sim a full season, or take your build through a whole career: draft night, awards, titles and a legacy.' },
-    { Icon: IconLive, title: 'Go Live', text: 'Compete against real builders in live pools and the Trait Auction: same spins, best build wins.' },
-    { Icon: IconClimb, title: 'Climb the Hall', text: 'Level up, work through the Builder Pass and chase the leaderboards. Your best builds live on your profile.' },
+    { Icon: IconSpin, title: 'Build a player', text: "Spin a team, land on a real player and take one trait from him. Josh Allen's arm, Saquon's legs, whatever the wheel gives you. Keep going until every slot is full." },
+    { Icon: IconTrophy, title: 'Play the season', text: 'He plays 17 games and the playoffs, and you find out if he wins MVP or a Super Bowl. Or start a Career and play him from draft day until he retires.' },
+    { Icon: IconLive, title: 'Beat real people', text: 'Compete puts five people in a pool with the same spins, and the highest overall wins. In the Trait Auction you get $100 to outbid two other people for traits.' },
+    { Icon: IconClimb, title: 'Climb the leaderboards', text: 'Games earn XP and coins toward your level and the Builder Pass. Your best builds stay on your profile, and the top ones go on the leaderboards.' },
   ],
   bucket: [
-    { Icon: IconSpin, title: 'Spin & Build', text: 'Every spin lands on a real player. Keep one piece of their game, a jumper here and handles there, until your player is complete.' },
-    { Icon: IconTrophy, title: 'Play It Out', text: 'Sim a full season, or take your build through a whole career: draft night, playoff series, rings and a legacy.' },
-    { Icon: IconLive, title: 'Go Live', text: 'Blacktop: live 2v2 and 3v3, first to 11, or a 1v1. Plus Compete pools and the Trait Auction against real builders.' },
-    { Icon: IconClimb, title: 'Climb the Hall', text: 'Level up, work through the Builder Pass and chase the leaderboards. Your best builds live on your profile.' },
+    { Icon: IconSpin, title: 'Build a player', text: "Spin a team, land on a real player and take one trait from him. Steph's jumper, Kyrie's handles, whatever the wheel gives you. Keep going until every slot is full." },
+    { Icon: IconTrophy, title: 'Play the season', text: 'He plays 82 games and the playoffs, and you find out if he wins MVP or a ring. Or start a Career and play him from draft day until he retires.' },
+    { Icon: IconLive, title: 'Beat real people', text: 'Blacktop is live 1v1, 2v2 and 3v3, played to 11. Compete puts five people in a pool with the same spins, and the highest overall wins.' },
+    { Icon: IconClimb, title: 'Climb the leaderboards', text: 'Games earn XP and coins toward your level and the Builder Pass. Your best builds stay on your profile, and the top ones go on the leaderboards.' },
   ],
 }
 

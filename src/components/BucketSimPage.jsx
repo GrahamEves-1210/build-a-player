@@ -816,7 +816,7 @@ function StatCard({ ppg, rpg, apg, spg, bpg, tov, fgPct, threePct, ftPct, per })
 
       <div className="sstat-divider-line" />
       <div className="sstat-per-banner">
-        <span className="sstat-per-lbl">PLAYER EFFICIENCY RATING</span>
+        <span className="sstat-per-lbl">PER (EST.) · LEAGUE AVERAGE 15</span>
         <span className="sstat-per-val">{per ?? '—'}</span>
       </div>
     </div>

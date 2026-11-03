@@ -62,6 +62,13 @@ html.bap-reduce-motion .cl-in { animation-name: cl-fade; }
 /* every season: a tile in the team's color */
 .cl-strip { display: grid; grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)); gap: 6px; }
 .cl-yr { position: relative; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 7px 3px 6px; border-radius: 12px; border: 1.5px solid color-mix(in srgb, var(--yc, #fff) 50%, transparent); background: linear-gradient(180deg, color-mix(in srgb, var(--yc, #fff) 26%, transparent), transparent 85%), rgba(0,0,0,.25); }
+button.cl-yr { width: 100%; color: inherit; font: inherit; cursor: pointer; }
+.cl-yr.is-open { outline: 2px solid #fff; outline-offset: 1px; }
+.cl-small--season { margin-top: 0; }
+.cl-season-notes { display: grid; gap: 6px; }
+.cl-season-notes:empty { display: none; }
+.cl-season-notes p { margin: 0; font-family: var(--ag-body); font-size: 13px; line-height: 1.35; color: var(--ag-text-2); }
+.cl-season-notes b { margin-right: 4px; font-family: var(--ag-font); font-weight: 400; letter-spacing: 1px; color: #fff; }
 .cl-yr small { font-family: var(--ag-font); font-size: 12px; letter-spacing: 1px; line-height: 1; color: var(--ag-muted); }
 .cl-yr img { width: 28px; height: 28px; object-fit: contain; }
 .cl-yr b { font-family: var(--ag-font); font-weight: 400; font-size: 14px; letter-spacing: .4px; line-height: 1; font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -135,3 +142,29 @@ html.bap-reduce-motion .cl-in { animation-name: cl-fade; }
   .cl-tier b { font-size: 48px; }
   .cl-score b { font-size: 62px; }
 }
+
+/* the numbers behind a season (lib/careerStats.js): a word and a bar against the real league; tap to read what it means */
+.crs { display: grid; gap: 6px; margin-top: 2px; }
+.crs > .ag-eyebrow { font-size: 13px; }
+.crs-row { display: grid; gap: 5px; width: 100%; padding: 9px 11px; border: 0; border-radius: 9px; background: rgba(255,255,255,.05); color: var(--ag-text); font: inherit; text-align: left; cursor: pointer; }
+.crs-row:focus-visible, .crs-more:focus-visible { outline: 2px solid var(--ag-a1); outline-offset: 2px; }
+.crs-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.crs-name { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; min-width: 0; font-family: var(--ag-font); font-size: 14.5px; letter-spacing: 1px; line-height: 1.1; color: var(--ag-text-2); }
+.crs-name em { font-style: normal; font-size: 11.5px; letter-spacing: 1px; color: var(--ag-gold-hi); }
+.crs-top b { flex: none; font-family: var(--ag-display); font-weight: 400; font-size: 23px; line-height: 1; color: #fff; font-variant-numeric: tabular-nums; }
+.crs-line { display: grid; grid-template-columns: minmax(0, 1fr) 92px; align-items: center; gap: 10px; }
+.crs-bar { position: relative; display: block; height: 5px; border-radius: 3px; background: rgba(255,255,255,.1); }
+.crs-bar i { display: block; height: 100%; border-radius: inherit; background: #9aa5a0; }
+.crs-bar u { position: absolute; left: 40%; top: -3px; width: 2px; height: 11px; background: #fff; text-decoration: none; opacity: .8; }
+.crs-tier { font-family: var(--ag-font); font-size: 12px; letter-spacing: .8px; line-height: 1; text-align: right; color: #9aa5a0; white-space: nowrap; }
+.crs-row.is-good .crs-bar i { background: var(--ag-a1); } .crs-row.is-good .crs-tier { color: var(--ag-a1); }
+.crs-row.is-elite .crs-bar i { background: var(--ag-gold-hi); } .crs-row.is-elite .crs-tier { color: var(--ag-gold-hi); }
+.crs-row.is-low .crs-bar i { background: #e0705f; } .crs-row.is-low .crs-tier { color: #e8897a; }
+.crs-says { display: grid; gap: 3px; font-family: var(--ag-body); font-size: 13px; font-weight: 500; line-height: 1.35; color: var(--ag-text-2); }
+.crs-says small { font-size: 12px; color: var(--ag-muted); }
+.crs-more { justify-self: start; padding: 7px 0 2px; border: 0; background: none; color: var(--ag-a1); font-family: var(--ag-font); font-size: 14px; letter-spacing: 1.2px; cursor: pointer; }
+.crs-yr { display: grid; grid-template-columns: 44px repeat(3, minmax(0, 1fr)); gap: 8px; align-items: center; padding: 7px 4px; border-bottom: 1px solid var(--ag-line); font-family: var(--ag-body); font-size: 14px; font-variant-numeric: tabular-nums; }
+.crs-yr:last-child { border-bottom: 0; }
+.crs-yr--head { align-items: end; font-family: var(--ag-font); font-size: 11px; letter-spacing: .8px; line-height: 1.1; color: var(--ag-muted); }
+.crs-yr .is-good { color: var(--ag-a1); } .crs-yr .is-elite { color: var(--ag-gold-hi); } .crs-yr .is-low { color: #e8897a; }
+.crs-yr .is-best { font-weight: 800; text-decoration: underline; text-underline-offset: 3px; }

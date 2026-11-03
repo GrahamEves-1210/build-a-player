@@ -9,7 +9,15 @@ export const APP_PLATFORM = Capacitor.getPlatform()
 // home menu, profile card, shop, achievements, locker and the More sheet.
 // Game screens keep the website's own layout. IS_APP still decides anything
 // that needs the phone itself (in-app browser, haptics, no ads, share sheet).
-export const APP_LOOK = true
+// Settings → Classic look turns it off on this browser, for the original home (the
+// position dropdown, no new modes). The app is always the app.
+const CLASSIC_LOOK = 'bap_classic_look'
+const classicLook = () => { try { return localStorage.getItem(CLASSIC_LOOK) === '1' } catch { return false } }
+export const APP_LOOK = IS_APP || !classicLook()
+export function setClassicLook(on) {
+  try { if (on) localStorage.setItem(CLASSIC_LOOK, '1'); else localStorage.removeItem(CLASSIC_LOOK) } catch {}
+  window.location.href = window.location.pathname.startsWith('/bucket') ? '/bucket' : '/'
+}
 
 // Plus is sold through Stripe on the website. The App Store and Google Play
 // require their own in-app purchase for digital subscriptions, so the app

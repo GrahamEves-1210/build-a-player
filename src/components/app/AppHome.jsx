@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react'
+import { memo, useEffect, useMemo, useRef, useState } from 'react'
 import { APP_STORE_URL } from '../../lib/storeLinks'
-import { POS_OPTIONS, AvatarTrio, StackedSilhouette, SPLASH_ATTRS } from '../SplashScreen'
+import { POS_OPTIONS, hsUrl, StackedSilhouette, SPLASH_ATTRS } from '../SplashScreen'
 import { getUsername } from '../../lib/discord'
 import { useProgress, fetchPlayersOfDay, cachedPlayersOfDay, myToday, POTD_COINS } from '../../lib/progress'
-import { IconCrown, IconBolt, IconClipboard, IconCoin, IconLock, IconProfile, IconArrow, IconGear, IconPodium, IconFootball, IconBasketball, IconPlay } from './icons'
+import { IconProfile, IconGear, IconPodium, IconFootball, IconBasketball, IconPlay, IconCrown, IconCoin, IconTrophy, IconRing, IconMedal } from './icons'
 import { sfx } from '../../lib/juice'
 import SoundToggle from './SoundToggle'
 import Tutorial, { startTutorial } from './Tutorial'
@@ -15,39 +15,18 @@ import { ProCard } from './Promos'
 import PassStrip from './PassStrip'
 import { usePresence, fmtCount, crowd } from '../../lib/presence'
 import { CoinPill } from './AppShop'
-import { TierChip, Form } from './OnlineRecord'
 import { tierFor } from '../../lib/progress'
 import EmptyState from './EmptyState'
-import { RollingNumber, RollText } from './MotionText'
-
-// Card art: three players for Squad Builder (the one in front is yours), the pool's podium for Compete
-function SquadArt() {
-  const fig = (x, s) => `M${x - 26 * s} 96 C${x - 26 * s} ${70 - 6 * s} ${x - 14 * s} ${60 - 4 * s} ${x} ${60 - 4 * s} C${x + 14 * s} ${60 - 4 * s} ${x + 26 * s} ${70 - 6 * s} ${x + 26 * s} 96 Z`
-  return (
-    <svg className="ag-card-art ag-card-art--squad" viewBox="0 0 200 96" preserveAspectRatio="xMaxYMax meet" aria-hidden="true">
-      {[[52, .82], [148, .82], [100, 1]].map(([x, s], i) => (
-        <g key={i} className={`ag-sq-fig${i === 2 ? ' is-lead' : ''}`}>
-          <path d={fig(x, s)} />
-          <circle cx={x} cy={46 - 6 * s} r={13 * s} />
-        </g>
-      ))}
-    </svg>
-  )
-}
-function PoolArt() {
-  const bars = [[0, 42], [1, 64], [2, 34], [3, 26], [4, 18]]   // 2nd · 1st · 3rd · 4th · 5th
-  return (
-    <svg className="ag-card-art ag-card-art--pool" viewBox="0 0 150 80" preserveAspectRatio="xMaxYMax meet" aria-hidden="true">
-      {bars.map(([i, h]) => <rect key={i} x={8 + i * 28} y={76 - h} width={22} height={h} rx={5} className={`ag-pool-bar${i === 1 ? ' is-first' : ''}`} />)}
-      <path d="M47 6 l2.6 5.3 5.9.9-4.3 4.1 1 5.8L47 19.4 41.8 22l1-5.8-4.3-4.1 5.9-.9z" className="ag-pool-star" />
-    </svg>
-  )
-}
+import { RollingNumber } from './MotionText'
 
 // Home screen — a game main menu. The app and the website (APP_LOOK) both use
 // it in place of the old splash; same callbacks, so nothing else changes.
 // Modes only show when their callback is passed (1v1 lives inside Blacktop).
 // `footer` is the website's features + links, under the menu.
+// Built like a game's main menu: the sports, the stage, its positions, the pool and PLAY
+// are one block (each remembers the last pick, so a return visit is one press). Under
+// it each mode is a card with the game's own built players on it (Salary Cap: its board).
+// No entrance animations: the player photos and the type carry the page.
 // Styling: src/app-game.css.
 
 const NFL_FIGURE = {
@@ -57,11 +36,28 @@ const NFL_FIGURE = {
   te: { src: '/wr-silhouette.png', scale: 1.18 },
   db: { src: '/db-silhouette.png', scale: 1.05 },
 }
-const NFL_NAMES = { qb: 'Quarterback', rb: 'Running Back', wr: 'Wide Receiver', te: 'Tight End', db: 'Defensive Back', ol: 'O-Line' }
 const PLURAL = { qb: 'QBs', rb: 'RBs', wr: 'WRs', te: 'TEs', db: 'DBs', guard: 'Guards', big: 'Bigs' }
-const NEW_ALLTIME = new Set(['wr', 'te', 'db'])
+const NFL_NAMES = { qb: 'Quarterback', rb: 'Running Back', wr: 'Wide Receiver', te: 'Tight End', db: 'Defensive Back', ol: 'O-Line' }
+// Who's on the Current and All-Time buttons, for the position picked (football's current
+// faces are POS_OPTIONS.players). Every one of them is in that pool.
+const face = (id, color) => ({ id, color })
+const GREATS = {
+  qb: [face('167', '#002244'), face('294', '#003b7b'), face('289', '#9f8958')],                  // Brady, P. Manning, Brees
+  rb: [face('2553', '#0080c6'), face('184', '#4f2683'), face('10456', '#69be28')],               // Tomlinson, A. Peterson, Lynch
+  wr: [face('espn_1433', '#4f2683'), face('espn_1056', '#aa0000'), face('223', '#97233f')],      // Moss, Owens, Fitzgerald
+  te: [face('espn_13229', '#002244'), face('espn_1231', '#e31837'), face('espn_5362', '#0080c6')], // Gronkowski, Gonzalez, Gates
+  db: [face('espn_3552', '#241773'), face('espn_4474', '#a5acaf'), face('espn_10458', '#125740')], // Reed, Polamalu, Revis
+  guard: [face('nba/893', '#ce1141'), face('nba/977', '#552583'), face('nba/77142', '#fdb927')],  // Jordan, Kobe, Magic
+  big: [face('nba/406', '#552583'), face('nba/1495', '#8a8d8f'), face('nba/76003', '#00471b')],  // Shaq, Duncan, Kareem
+}
+const BUCKET_NOW = {
+  guard: [face('nba/4278073', '#007ac1'), face('nba/4594268', '#0c2340'), face('nba/3945274', '#552583')],  // Gilgeous-Alexander, Edwards, Doncic
+  big: [face('nba/3112335', '#0e2240'), face('nba/5104157', '#8a8d8f'), face('nba/3032977', '#00471b')],    // Jokic, Wembanyama, Giannis
+}
 
 const nav = to => window.dispatchEvent(new CustomEvent('bap:nav', { detail: to }))
+// the figure's bands fall one by one once a page load, then just arrive
+let figureShown = false
 // the website on a desktop-width screen: the home ad is a pair of boxes
 const HOME_AD_PAIR = !IS_APP && typeof matchMedia === 'function' && matchMedia('(min-width: 769px)').matches
 const openMenu = () => window.dispatchEvent(new CustomEvent('bap:menu'))
@@ -93,7 +89,7 @@ export function PlayerChip({ user, onClick }) {
           {name && <span className="ag-player-title">{p.lvl.title}</span>}
         </span>
         {name && <span className="ag-xpbar"><span style={{ width: `${Math.max(3, p.lvl.pct * 100)}%` }} /></span>}
-        <span className="ag-player-sub">{name ? `${p.lvl.title} · ${p.lvl.into.toLocaleString()}/${p.lvl.need.toLocaleString()} XP` : 'Sign in to earn XP and level up'}</span>
+        <span className="ag-player-sub">{name ? `${p.lvl.title} · ${p.lvl.into.toLocaleString()}/${p.lvl.need.toLocaleString()} XP` : 'Sign in to save'}</span>
       </span>
     </button>
   )
@@ -104,18 +100,12 @@ function OnlineNow() {
   const real = crowd(usePresence()?.total ?? 0)
   if (!real) return null
   const n = real + 100   // the splash count reads +100 (owner's call: the live count runs low)
-  return <span className="ag-live-count" aria-label={`${n} players online`}><b><i aria-hidden="true" /><RollingNumber value={n} format={fmtCount} /></b><small>ONLINE</small></span>
-}
-
-// an online mode's corner: how many are in it right now (a pill), else the plain live dot
-function LiveCorner({ n }) {
-  if (!(n > 0)) return <span className="ag-live-dot" />
-  return <span className="ag-live-badge" aria-label={`${n} playing now`}><i aria-hidden="true" /><RollingNumber value={n} format={fmtCount} /><small>PLAYING</small></span>
+  return <span className="ag-live-count" aria-label={`${n} players online`}><i aria-hidden="true" /><RollingNumber value={n} format={fmtCount} /> online</span>
 }
 
 function Hud({ user }) {
   return (
-    <div className="ag-hud ag-pop" style={{ '--d': '0ms' }}>
+    <div className="ag-hud">
       <PlayerChip user={user} onClick={() => nav('profile')} />
       <CoinPill className="ag-hud-coins" />
       <button className="ag-icon-btn" onClick={() => nav('leaderboard')} aria-label="Leaderboards"><IconPodium size={22} /></button>
@@ -135,7 +125,7 @@ export function switchSport(to) {
 function SportSwitch({ sport }) {
   const go = to => { if (to === sport) return; sfx('swap'); switchSport(to) }
   return (
-    <div className={`ag-sport ag-sport--${sport} ag-pop`} style={{ '--d': '30ms' }} role="tablist" aria-label="Sport">
+    <div className={`ag-sport ag-sport--${sport}`} role="tablist" aria-label="Sport">
       <span className="ag-sport-thumb" aria-hidden="true" />
       <button role="tab" aria-selected={sport === 'nfl'} className={`ag-sport-btn ag-sport-btn--nfl${sport === 'nfl' ? ' is-on' : ''}`} onClick={() => go('nfl')}>
         <span className="ag-sport-ico"><IconFootball size={17} /></span>
@@ -149,135 +139,111 @@ function SportSwitch({ sport }) {
   )
 }
 
-// Blacktop card art: a half court
-// Blacktop card art: a night run. Chain-link fence, a sodium streetlight, a
-// hoop with a chain net, worn paint on the asphalt, three on three, and a
-// ball that goes up and rattles the chains every few seconds (CSS, transforms only).
-function BlacktopArt() {
-  const squads = [[[150, 99], [178, 104], [214, 100]], [[198, 93], [224, 88]]]
+// The pool: the players in it, standing there. It only picks; PLAY starts.
+function ModeCard({ gold = false, title, line, faces, on, onClick }) {
   return (
-    <svg className="bt-art" viewBox="0 0 240 110" aria-hidden="true" preserveAspectRatio="xMaxYMax meet">
-      <defs>
-        <pattern id="btFence" width="9" height="9" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-          <path d="M0 0V9M0 0H9" stroke="rgba(255,236,214,.16)" strokeWidth=".7" fill="none" />
-        </pattern>
-        <linearGradient id="btFenceFade" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#fff" stopOpacity="1" /><stop offset=".85" stopColor="#fff" stopOpacity="0" />
-        </linearGradient>
-        <mask id="btFenceMask"><rect width="240" height="78" fill="url(#btFenceFade)" /></mask>
-        <radialGradient id="btLamp" cx="62" cy="10" r="150" gradientUnits="userSpaceOnUse">
-          <stop offset="0" stopColor="#ffb661" stopOpacity=".55" /><stop offset=".35" stopColor="#ff9a3d" stopOpacity=".16" /><stop offset="1" stopColor="#ff9a3d" stopOpacity="0" />
-        </radialGradient>
-        <linearGradient id="btCone" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#ffc47a" stopOpacity=".34" /><stop offset="1" stopColor="#ffc47a" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <rect width="240" height="110" fill="url(#btLamp)" className="bt-art-glow" />
-      {/* the fence: mesh, a top rail, posts */}
-      <rect width="240" height="78" fill="url(#btFence)" mask="url(#btFenceMask)" />
-      <path d="M0 3H240M24 3V78M104 3V78M232 3V78" stroke="rgba(255,236,214,.14)" strokeWidth="1.4" fill="none" />
-      {/* the asphalt and its paint: baseline, the lane, the arcs */}
-      <rect y="80" width="240" height="30" fill="rgba(255,236,214,.035)" />
-      <g className="bt-art-paint" fill="none" stroke="rgba(255,244,230,.42)" strokeWidth="1.3" strokeLinecap="round">
-        <path d="M70 80H240" />
-        <path d="M160 80L150 97H200L190 80" strokeDasharray="22 2 9 3 30 2" />
-        <path d="M150 97A25 5.5 0 0 0 200 97" strokeDasharray="12 3 18 2" />
-        <path d="M96 80Q175 128 254 80" strokeDasharray="40 3 26 2 50 4" opacity=".75" />
-      </g>
-      {/* the streetlight and its cone */}
-      <polygon points="58,12 66,12 120,110 4,110" fill="url(#btCone)" className="bt-art-cone" />
-      <path d="M48 110V8H63" stroke="rgba(255,236,214,.3)" strokeWidth="2" fill="none" />
-      <rect x="57" y="7" width="12" height="4" rx="2" fill="#ffe2b0" className="bt-art-bulb" />
-      {/* the hoop: pole, backboard, rim, chain net */}
-      <path d="M175 46V80" stroke="rgba(255,236,214,.35)" strokeWidth="2.6" />
-      <rect x="157" y="22" width="36" height="24" rx="1.5" fill="rgba(10,8,8,.55)" stroke="rgba(255,244,230,.7)" strokeWidth="1.4" />
-      <rect x="168" y="31" width="14" height="10" fill="none" stroke="rgba(255,244,230,.55)" strokeWidth="1.1" />
-      <g className="bt-art-net">
-        <path d="M167.5 48L169.5 52L171.5 48L173.5 52L175 48L176.5 52L178.5 48L180.5 52L182.5 48M169.5 52L171 57L173 53L175 57L177 53L179 57L180.5 52M171 57L172.5 62L175 59L177.5 62L179 57"
-          stroke="#c9ccd2" strokeWidth=".9" fill="none" strokeLinejoin="round" />
-      </g>
-      <ellipse cx="175" cy="47.5" rx="8.5" ry="2.2" fill="none" stroke="#ff7a2a" strokeWidth="1.8" />
-      {/* three on three */}
-      {squads.map((sq, t) => sq.map(([x, y], i) => (
-        <g key={`${t}${i}`} className={`bt-art-p bt-art-p--${t}`}>
-          <ellipse cx={x} cy={y + 3.6} rx="4.2" ry="1.2" fill="rgba(0,0,0,.45)" />
-          <circle cx={x} cy={y} r="3.1" />
-        </g>
-      )))}
-      {/* the shot: x runs linear, y rises and falls, so the ball arcs */}
-      <g className="bt-art-shot-x"><g className="bt-art-shot-y">
-        <circle cx="150" cy="93" r="3.3" fill="#ff8a3d" />
-        <path d="M146.8 93H153.2M150 89.7V96.3" stroke="rgba(60,20,0,.55)" strokeWidth=".6" />
-      </g></g>
-    </svg>
-  )
-}
-
-// Career card art: a stadium bowl and a rising legacy line
-function CareerArt() {
-  return (
-    <svg className="ag-crmode-art" viewBox="0 0 220 110" aria-hidden="true" preserveAspectRatio="xMaxYMid slice">
-      <defs><linearGradient id="crg" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stopColor="#f5dc8a" stopOpacity=".1" /><stop offset="1" stopColor="#f5dc8a" stopOpacity=".55" /></linearGradient></defs>
-      <ellipse cx="150" cy="118" rx="120" ry="42" fill="none" stroke="rgba(255,255,255,.14)" strokeWidth="2" />
-      <ellipse cx="150" cy="118" rx="92" ry="30" fill="none" stroke="rgba(255,255,255,.1)" strokeWidth="2" />
-      <polyline points="20,96 60,84 95,88 130,60 165,48 205,18" fill="none" stroke="url(#crg)" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" className="ag-cr-line" pathLength="100" />
-      <circle cx="205" cy="18" r="6" fill="#f5dc8a" className="ag-cr-peak" />
-      <circle cx="130" cy="60" r="3.5" fill="rgba(245,220,138,.7)" /><circle cx="60" cy="84" r="3.5" fill="rgba(245,220,138,.5)" />
-    </svg>
-  )
-}
-
-function ModeCard({ tone, title, badge, onClick, mark: Mark, isNew, delay }) {
-  return (
-    <button className={`ag-mode${tone ? ` ag-mode--${tone}` : ''} ag-pop`} style={{ '--d': delay }} onClick={onClick}>
-      {Mark && <span className="ag-mode-mark"><Mark size={92} /></span>}
-      {isNew && <span className="ag-mode-new">NEW</span>}
+    <button role="radio" aria-checked={on} className={`ag-mode${gold ? ' ag-mode--gold' : ''}${on ? ' is-on' : ''}`} onClick={onClick}>
       <span className="ag-mode-title">{title}</span>
-      <span className="ag-mode-badge">{badge}</span>
-      <span className="ag-mode-cta">START DRAFTING <IconArrow size={15} /></span>
+      <span className="ag-mode-line">{line}</span>
+      <span className="ag-mode-faces" aria-hidden="true">
+        {faces?.map(f => <img key={f.id} src={hsUrl(f.id)} alt="" width="96" height="70" decoding="async" draggable={false} />)}
+      </span>
     </button>
   )
 }
+
+// a live mode's line: how many are in it right now, when any are
+const LiveLine = ({ n, line }) => (n > 0 ? <small className="ag-mc-live"><i aria-hidden="true" />{fmtCount(n)} playing</small> : <small>{line}</small>)
+
+// A mode's card: its colour, its name, where it stands, and its art (public/modes)
+function ModeArt({ kind, tone, small = false, title, line, live = 0, color, onClick, children }) {
+  return (
+    <button className={`ag-way ag-mc ag-mc--${tone} ag-way--${kind}${small ? ' is-small' : ''}${color ? ' has-team' : ''}`} style={color ? { '--team': color } : undefined} onClick={onClick}>
+      <span className="ag-mc-head"><b>{title}</b><LiveLine n={live} line={line} /></span>
+      {children}
+    </button>
+  )
+}
+const Art = ({ src, cls }) => <img className={`ag-art ${cls}`} src={`/modes/${src}.webp`} alt="" loading="lazy" decoding="async" draggable={false} aria-hidden="true" />
+// Career: what ends up in the rafters. A career's real count lights each banner; before one starts they all hang
+function Rafters({ career }) {
+  const s = career?.seasons ?? []
+  const count = k => s.filter(x => x[k]).length
+  const flags = [
+    { Icon: IconRing, n: count('champion'), word: 'RINGS' },
+    { Icon: IconTrophy, n: count('award'), word: s.find(x => x.awardName)?.awardName ?? 'MVP' },
+    { Icon: IconMedal, n: career?.hof?.in ? 1 : 0, word: 'HOF' },
+  ]
+  return (
+    <span className="ag-rafters" aria-hidden="true">
+      {flags.map(({ Icon, n, word }) => (
+        <i key={word} className={`ag-banner${career && !n ? ' is-dark' : ''}`}><Icon size={17} /><b>{career && word !== 'HOF' ? `${n}X` : word === 'RINGS' ? 'RING' : word}</b>{career && word !== 'HOF' && <small>{word}</small>}</i>
+      ))}
+    </span>
+  )
+}
+// Compete: same spins, one board, and three of them make the podium
+const Podium = () => (
+  <span className="ag-pod" aria-hidden="true">
+    {[2, 1, 3].map(rank => <span key={rank} className={`ag-pod-col is-${rank}`}><b>{rank}</b></span>)}
+  </span>
+)
+// Squad Builder, basketball: the five spots you fill
+const Lineup = () => (
+  <span className="ag-lineup" aria-hidden="true">
+    {['PG', 'SG', 'SF', 'PF', 'C'].map(p => <i key={p}>{p}</i>)}
+  </span>
+)
+// Depth Chart: the game itself, in numbers: stars in order, one stat
+const DepthArt = () => (
+  <span className="ag-ranks" aria-hidden="true">
+    <i><b>1</b></i><i><b>2</b></i><i><b>3</b></i>
+  </span>
+)
 
 // Players of the Day: the five who earned the most XP today, across every mode
 // (fetchPlayersOfDay). Refreshes every couple of minutes while home is open.
 function PlayersOfDay() {
   const p = useProgress()
   const [rows, setRows] = useState(null)
+  const [failed, setFailed] = useState(false)
   useEffect(() => {
     let live = true
-    const get = (first = false) => ((first && cachedPlayersOfDay()) || fetchPlayersOfDay()).then(r => { if (live && !r.error) setRows(r.rows) })
+    const get = (first = false) => ((first && cachedPlayersOfDay()) || fetchPlayersOfDay()).then(r => { if (!live) return; setFailed(!!r.error); if (!r.error) setRows(r.rows) })
     get(true)
     const id = setInterval(get, 120000)
     return () => { live = false; clearInterval(id) }
   }, [])
-  if (!rows) return null
   const me = p.user?.id
   const t = myToday()
-  const inTop = rows.some(r => r.id === me)
+  const inTop = !!rows?.some(r => r.id === me)
   return (
-    <section className="ag-potd ag-pop" style={{ '--d': '420ms' }} aria-label="Players of the Day">
+    <section className="ag-potd" aria-label="Players of the Day">
       <div className="ag-potd-head">
         <span className="ag-potd-crown"><IconCrown size={18} /></span>
         <span className="ag-potd-titles">
           <span className="ag-eyebrow">TODAY · EVERY MODE</span>
-          <b className="ag-potd-title">PLAYERS OF THE DAY</b>
+          <h2 className="ag-potd-title">PLAYERS OF THE DAY</h2>
           <small className="ag-potd-pay">Top {POTD_COINS.length} at midnight ET win {POTD_COINS.map(n => n.toLocaleString()).join(' / ')} coins</small>
         </span>
       </div>
-      {rows.length ? (
+      {!rows ? (
+        failed ? <p className="ag-potd-mine">Today's board didn't load. It'll try again in a minute.</p>
+          : <ol className="ag-potd-list" aria-hidden="true">{POTD_COINS.map((_, i) => <li key={i} className="ag-potd-row is-wait" />)}</ol>
+      ) : rows.length ? (
         <ol className="ag-potd-list">
           {rows.map((r, i) => (
             <li key={r.id} className={`ag-potd-row is-${i + 1}${r.id === me ? ' is-me' : ''}`}>
               <span className="ag-potd-rank">{i + 1}</span>
               <AvatarBadge cos={r.cos} uid={r.id} self={r.id === me} name={r.username} size={36} />
               <span className="ag-potd-name"><NameTag name={r.username} cos={r.cos} uid={r.id} self={r.id === me} /></span>
+              <span className="ag-potd-prize"><IconCoin size={14} />{POTD_COINS[i]}</span>
               <span className="ag-potd-xp"><span><b>{(r.cos.today.xp ?? 0).toLocaleString()}</b> XP</span><small>{r.cos.today.g ?? 0} {r.cos.today.g === 1 ? 'game' : 'games'}</small></span>
             </li>
           ))}
         </ol>
       ) : <EmptyState kind="podium" small title="Nobody on the board yet">Play anything today to take #1.</EmptyState>}
-      {!inTop && (
+      {rows && !inTop && (
         <p className="ag-potd-mine">{me
           ? <>{getUsername(p.user) || 'Player'} today: <b>{t.xp.toLocaleString()} XP</b> · {t.g} {t.g === 1 ? 'game' : 'games'}{rows.length === POTD_COINS.length ? <> · {Math.max(0, (rows[rows.length - 1].cos.today.xp ?? 0) - t.xp + 1).toLocaleString()} XP to make the top {POTD_COINS.length}</> : null}</>
           : 'Sign in to get on the board.'}</p>
@@ -285,6 +251,18 @@ function PlayersOfDay() {
     </section>
   )
 }
+
+const HudOnce = memo(Hud)
+const SportOnce = memo(SportSwitch)
+const BoardOnce = memo(PlayersOfDay)
+const PromosOnce = memo(function Promos() {
+  return (
+    <div className="ag-promos">
+      <PassStrip />
+      <ProCard />
+    </div>
+  )
+})
 
 export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus, onBlacktop, blacktop, onSquad, squad = null, onCompete, onCareer, career = null, resume = null, user, renderBucketFigure, footer = null }) {
   const prog = useProgress()
@@ -301,201 +279,196 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
     if (isBucket) return saved === 'big' ? 'big' : 'guard'
     return POS_OPTIONS.some(o => o.pos === saved && !o.disabled) ? saved : 'qb'
   })
+  const poolKey = isBucket ? 'bucketPool' : 'lastPool'
+  const [pool, setPool] = useState(() => { try { return localStorage.getItem(poolKey) === 'all-time' ? 'all-time' : 'classic' } catch { return 'classic' } })
   const [ready, setReady] = useState(false)
-  useEffect(() => { const t = setTimeout(() => setReady(true), 450); return () => clearTimeout(t) }, [])
-  // the website: an in-page ad under Salary Cap / The Depth Chart (never in the app, never ad-free)
+  useEffect(() => { const t = setTimeout(() => setReady(true), figureShown ? 0 : 450); return () => clearTimeout(t) }, [])
+  const [fast] = useState(() => figureShown)
+  const [picked, setPicked] = useState(false)
+  useEffect(() => { figureShown = true }, [])
+  // the website: an in-page ad under the lists (never in the app, never ad-free)
   useEffect(() => {
     if (IS_APP || document.documentElement.classList.contains('ads-hidden')) return
     // desktop: two boxes side by side (one 300x250 left the wide row mostly empty); phones: one
     rampAdd([{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-home' }, ...(HOME_AD_PAIR ? [{ type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-home-2' }] : [])])
   }, [sport])
 
-  const pick = pos => { setPosition(pos); try { localStorage.setItem(storeKey, pos) } catch {} }
+  const pick = pos => { setPicked(true); setPosition(pos); try { localStorage.setItem(storeKey, pos) } catch {} }
+  const pickPool = m => { setPool(m); try { localStorage.setItem(poolKey, m) } catch {} }
   const start = mode => { try { localStorage.setItem(storeKey, position) } catch {}; onStart(mode, position) }
+  const startRef = useRef(start); startRef.current = start
 
   const positions = isBucket
     ? [{ pos: 'guard', label: 'GUARD', sub: 'PG · SG · SF' }, { pos: 'big', label: 'BIG', sub: 'PF · C' }]
-    : POS_OPTIONS
+    : POS_OPTIONS.filter(o => !o.disabled)
+  const posIdx = Math.max(0, positions.findIndex(o => o.pos === position))
+  // next or last position: swipe the stage, or the arrow keys on a computer
+  const dir = useRef(1)
+  const step = by => { dir.current = by; sfx('swap'); pick(positions[(posIdx + by + positions.length) % positions.length].pos) }
+  const swipeFrom = useRef(null)
+  const stepRef = useRef(step); stepRef.current = step
+  useEffect(() => {
+    const onKey = e => {
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return
+      if (e.target.closest?.('input, textarea, select, [contenteditable]') || document.querySelector('.ag-menu-overlay, [role="dialog"]')) return
+      stepRef.current(e.key === 'ArrowRight' ? 1 : -1)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
 
   const fig = NFL_FIGURE[position] ?? NFL_FIGURE.qb
   const posShort = isBucket ? (position === 'big' ? 'BIG' : 'GUARD') : position.toUpperCase()
-  const posName = isBucket ? (position === 'big' ? 'PF · C' : 'PG · SG · SF') : NFL_NAMES[position]
+  const posWord = isBucket ? posShort : NFL_NAMES[position]
   const sqBuilt = squad ? squad.slots.filter(s => s.build).length : 0
   const sqLast = squad?.seasons?.[squad.seasons.length - 1] ?? null
   const btLive = !!blacktop && blacktop.phase !== 'idle'
+  const facesNow = isBucket ? BUCKET_NOW[position] : positions.find(o => o.pos === position)?.players
+  const crLine = !career ? 'Draft day to the Hall'
+    : career.phase === 'draft' ? 'Draft day'
+    : career.phase === 'season' ? `${career.sport === 'bucket' ? 'Game' : 'Week'} ${(career.active?.k ?? 0) + 1} with the ${career.fit?.name ?? ''}`
+    : career.phase === 'offseason' ? `Year ${career.year + 1} · offseason`
+    : career.phase === 'retired' ? `Retired after ${career.seasons.length}`
+    : `${career.fit?.name ?? ''} · ${career.seasons.length} ${career.seasons.length === 1 ? 'season' : 'seasons'} in`
+  const cpLine = cs?.played
+    ? `${ol.played ? `${tierFor(ol.rating)[1]} ${ol.rating} · ` : ''}${cs.wins} ${cs.wins === 1 ? 'win' : 'wins'} in ${cs.played}${cs.streak >= 2 ? ` · ${cs.streak} straight` : ''}`
+    : 'Live pools of five'
+  const btStatus = !btLive ? null : blacktop.phase === 'queue' ? `In the lobby · ${blacktop.queue}/6` : blacktop.phase === 'build' ? 'Building' : 'Game on'
+  const btLine = btStatus ?? ((btG || h2h.played) ? `Squads ${btW}–${btG - btW} · 1v1 ${h2h.wins ?? 0}–${h2h.losses ?? 0}${ol.played ? ` · ${tierFor(ol.rating)[1]} ${ol.rating}` : ''}` : '1v1, 2v2, 3v3')
+  const sqLine = !squad ? 'Build a whole team'
+    : squad.phase === 'build' ? `Building · ${sqBuilt} of ${squad.slots.length}`
+    : sqLast && squad.phase === 'result' ? `Last year ${sqLast.wins}-${sqLast.losses}${sqLast.champion ? ', champions' : sqLast.playoffs ? ', playoffs' : ''}`
+    : squad.team ? 'Ready to play' : 'Needs a team'
+
+  const sp = isBucket ? 'bucket' : 'nfl'
+  const modes = useMemo(() => (
+    <section className="ag-ways" aria-label="Game modes">
+      <div className="ag-cards">
+        {onCareer && (
+          <ModeArt kind="career" tone="career" title="CAREER" line={crLine} color={career?.fit?.color} onClick={onCareer}>
+            <Rafters career={career} />
+            {!isBucket && <Art src="fig-qb" cls="ag-art--hero" />}
+          </ModeArt>
+        )}
+        {/* Basketball: Blacktop is the online hub, 2v2 / 3v3 lobbies and 1v1 from inside it */}
+        {isBucket
+          ? (onBlacktop && (
+            <ModeArt kind="blacktop" tone="blacktop" title="BLACKTOP" line={btLine} live={btLive ? 0 : here.blacktop} onClick={onBlacktop}>
+              <img className="ag-mc-court" src="/courts/thumbs/ct-blacktop.webp" alt="" loading="lazy" decoding="async" draggable={false} />
+              <span className="ag-paint" aria-hidden="true"><b>1V1</b><b>2V2</b><b>3V3</b></span>
+            </ModeArt>
+          ))
+          : (onCompete && (
+            <ModeArt kind="compete" tone="compete" title="COMPETE" line={cpLine} live={here.compete} onClick={onCompete}>
+              <Podium />
+            </ModeArt>
+          ))}
+        <button className="ag-way ag-mc ag-mc--salary ag-way--quick" onClick={() => startRef.current('salarycap')}>
+          <span className="ag-mc-head"><b>SALARY CAP</b><small>Today's puzzle</small></span>
+          <span className="ag-mc-shot" aria-hidden="true"><img src={`/modes/${sp}-salary.webp`} alt="" loading="lazy" decoding="async" draggable={false} /></span>
+        </button>
+      </div>
+      <div className="ag-more">
+        {isBucket && onCompete && (
+          <ModeArt small kind="compete" tone="compete" title="COMPETE" line={cpLine} live={here.compete} onClick={onCompete}>
+            <Podium />
+          </ModeArt>
+        )}
+        {onSquad && (
+          <ModeArt small kind="squad" tone="squad" title="SQUAD BUILDER" line={sqLine} onClick={onSquad}>
+            {isBucket
+              ? <Lineup />
+              : <><Art src="fig-rb" cls="ag-art--team-a" /><Art src="fig-te" cls="ag-art--team-b" /><Art src="fig-qb" cls="ag-art--team-c" /></>}
+          </ModeArt>
+        )}
+        {!isBucket && (
+          <ModeArt small kind="quick" tone="depth" title="DEPTH CHART" line="Mini game" onClick={onDepthChart}><DepthArt /></ModeArt>
+        )}
+      </div>
+    </section>
+  ), [sp, isBucket, career?.fit?.color, crLine, cpLine, btLine, btLive, sqLine, here.blacktop, here.compete, onCareer, onBlacktop, onCompete, onSquad, onDepthChart])
 
   return (
     <div className={`ag-home ag-home--${sport}`}>
-      <div className="ag-bg" aria-hidden="true"><div className="ag-bg-lines" /></div>
-
       <div className="ag-home-inner">
-        <Hud user={user} />
-        <SportSwitch sport={sport} />
-
-        <div className="ag-brand ag-pop" style={{ '--d': '60ms' }}>
-          <OnlineNow />
+        <HudOnce user={user} />
+        <div className="ag-brand">
           <img src="/bap-mark.webp" alt="" className="ag-brand-mark" draggable={false} />
           <div className="ag-wordmark">
             BUILD<em>-A-</em>{isBucket ? <>B<HoopU />CKET</> : 'PLAYER'}
           </div>
+        </div>
+
+        <SportOnce sport={sport} />
+
+        {/* Character-select stage under stadium lights: swipe it, or tap a position */}
+        <div className="ag-stage"
+          onPointerDown={e => { swipeFrom.current = e.clientX }}
+          onPointerUp={e => { const from = swipeFrom.current; swipeFrom.current = null; if (from != null && Math.abs(e.clientX - from) > 48 && !e.target.closest('.ag-positions')) step(e.clientX < from ? 1 : -1) }}
+          onPointerCancel={() => { swipeFrom.current = null }}>
+          <div className="ag-stage-photo" />
+          <div className="ag-stage-beam" />
+          <span key={posWord} className="ag-stage-word" style={{ '--len': posWord.length }} aria-hidden="true">{posWord}</span>
+          <OnlineNow />
           {/* the website doesn't open the tutorial by itself (cleared browser data
               would bring it back every visit): it's here when someone wants it */}
           {!IS_APP && <button className="ag-howto" onClick={() => { sfx('tap'); startTutorial() }}><span aria-hidden="true">?</span> HOW TO PLAY</button>}
-        </div>
-
-        {/* Character-select stage under stadium lights */}
-        <div className="ag-stage ag-pop" style={{ '--d': '120ms' }}>
-          <div className="ag-stage-photo" />
-          <div className="ag-stage-beam" />
-          <div className={`ag-figure${isBucket ? ' ag-figure--nba' : ''}`} key={position}>
+          <div className={`ag-figure${isBucket ? ' ag-figure--nba' : ''}`} key={position} style={{ '--from': `${dir.current * 14}px` }}>
             {isBucket
-              ? renderBucketFigure?.(position, ready)
+              ? renderBucketFigure?.(position, ready, fast || picked)
               : (
                 <>
                   <img src={fig.src} alt="" draggable={false} className="ag-figure-base" style={fig.scale !== 1 ? { transform: `scale(${fig.scale})` } : undefined} />
-                  <StackedSilhouette position={position} attrs={SPLASH_ATTRS[position]} ready={ready} />
+                  <StackedSilhouette position={position} attrs={SPLASH_ATTRS[position]} ready={ready} fast={fast || picked} />
                 </>
               )}
           </div>
           <div className="ag-platform"><span className="ag-platform-ring" /></div>
-          <div className="ag-stage-tag">
-            <span className={`ag-stage-pos${posShort.length > 3 ? ' ag-stage-pos--long' : ''}`}><RollText text={posShort} /></span>
-            <span className="ag-tag"><span><RollText text={posName} /></span></span>
-          </div>
-        </div>
-
-        {/* Position select */}
-        <div className={`ag-positions${isBucket ? ' ag-positions--two' : ''} ag-pop`} style={{ '--d': '180ms' }} role="tablist" aria-label="Position">
-          {positions.map(o => {
-            const on = o.pos === position
-            if (o.disabled) {
-              return (
-                <div key={o.pos} className="ag-pos ag-pos--locked" aria-disabled="true">
-                  <span className="ag-pos-lock"><IconLock size={14} /></span>
-                  <span className="ag-pos-label">{o.label}</span>
-                  <span className="ag-pos-soon">SOON</span>
-                </div>
-              )
-            }
-            return (
-              <button key={o.pos} role="tab" aria-selected={on} className={`ag-pos${on ? ' ag-pos--on' : ''}`} onClick={() => pick(o.pos)}>
-                {o.players && <span className="ag-pos-avs"><AvatarTrio players={o.players} size={20} /></span>}
+          <div className={`ag-positions${isBucket ? ' ag-positions--two' : ''}`} style={{ '--n': positions.length, '--i': posIdx }} role="tablist" aria-label="Position">
+            {positions.map((o, i) => (
+              <button key={o.pos} role="tab" aria-selected={o.pos === position} className={`ag-pos${o.pos === position ? ' ag-pos--on' : ''}`} onClick={() => { dir.current = i < posIdx ? -1 : 1; pick(o.pos) }}>
                 <span className="ag-pos-label">{o.label}</span>
                 {o.sub && <span className="ag-pos-sub">{o.sub}</span>}
               </button>
-            )
-          })}
+            ))}
+          </div>
         </div>
 
-        {/* a build in progress: PLAY is Home now, so it waits here, right above the modes */}
+        {/* a build in progress waits right above PLAY */}
         {resume && (
-          <button className="ag-resume ag-resume--top ag-pop" style={{ '--d': '200ms' }} onClick={resume.onClick}>
+          <button className="ag-resume ag-resume--top" onClick={resume.onClick}>
             <span className="ag-resume-icon"><IconPlay size={18} /></span>
             <span className="ag-card-txt">
-              <span className="ag-eyebrow">BUILD IN PROGRESS</span>
+              <span className="ag-eyebrow">CONTINUE</span>
               <span className="ag-resume-title">{resume.label}</span>
             </span>
           </button>
         )}
 
-        {/* Modes — the website's cards */}
-        <div className="ag-modes">
-          <ModeCard title="CURRENT" badge={`Current ${PLURAL[position] ?? ''}`} mark={IconBolt} delay="230ms" onClick={() => start('classic')}
-            tone={isBucket ? 'orange' : null} />
-          <ModeCard tone="gold" title="ALL-TIME" badge="Draft the Greats" mark={IconCrown} delay="270ms" onClick={() => start('all-time')}
-            isNew={isBucket || NEW_ALLTIME.has(position)} />
+        <div className="ag-modes" role="radiogroup" aria-label="Player pool">
+          <ModeCard title="CURRENT" line={`Today's ${PLURAL[position] ?? ''}`} faces={facesNow} on={pool === 'classic'} onClick={() => pickPool('classic')} />
+          <ModeCard gold title="ALL-TIME" line={`The greatest ${PLURAL[position] ?? ''}`} faces={GREATS[position]} on={pool === 'all-time'} onClick={() => pickPool('all-time')} />
         </div>
 
-        <div className="ag-extras">
-          {/* the flagship: one player, a whole career */}
-          {/* Basketball: Blacktop is the online hub — 3v3 lobbies, and 1v1 from inside it.
-              Styled like the Blacktop menu it opens: the orange 3V3 / 1V1 tags, warm panel, orange go */}
-          {isBucket && onBlacktop && (
-            <button className={`ag-blacktop ag-blacktop--menu ag-pop${btLive ? ' is-live' : ''}`} style={{ '--d': '250ms' }} onClick={onBlacktop}>
-              <BlacktopArt />
-              <LiveCorner n={btLive ? 0 : here.blacktop} />
-              <span className="ag-bt-tags" aria-hidden="true"><span className="bt-mode-tag">2V2</span><span className="bt-mode-tag">3V3</span></span>
-              <span className="ag-card-txt">
-                <span className="ag-eyebrow"><RollText text={!btLive ? 'LIVE' : blacktop.phase === 'queue' ? 'IN THE LOBBY' : blacktop.phase === 'build' ? 'LIVE · YOUR SQUAD IS BUILDING' : 'LIVE · GAME ON'} />{btLive ? (blacktop.phase === 'queue' && <> · <RollingNumber value={blacktop.queue} />/6 SPOTS TAKEN</>) : ' · FIRST TO 11'}</span>
-                <span className="ag-card-title">BLACKTOP</span>
-                <span className="ag-card-sub">{btLive ? 'You\'re still in. Jump back to your run.' : (btG || h2h.played) ? `Squads ${btW}–${btG - btW} · 1v1 ${h2h.wins ?? 0}–${h2h.losses ?? 0}${ol.played ? ` · ${tierFor(ol.rating)[1]} ${ol.rating}` : ''}` : '1v1, 2v2 or 3v3. Real players.'}</span>
-              </span>
-            </button>
-          )}
-          {onCareer && (
-            <button className={`ag-crmode ag-pop${career ? ' is-live' : ''}`} style={{ '--d': '260ms' }} onClick={onCareer}>
-              <CareerArt />
-              <span className="ag-card-txt">
-                <span className="ag-eyebrow">{career ? `${career.sport === 'bucket' ? (career.pos === 'big' ? 'BIG' : 'GUARD') : career.pos.toUpperCase()} · ${career.phase === 'draft' ? 'DRAFT DAY' : career.phase === 'retired' ? 'CAREER OVER' : `YEAR ${career.year + 1} · AGE ${career.age}`}` : 'MULTI-SEASON · SAVES AS YOU GO'}</span>
-                <span className="ag-card-title">CAREER</span>
-                <span className="ag-card-sub">{career ? (career.phase === 'draft' ? 'The combine is waiting. Go get drafted.' : career.phase === 'season' ? `${career.sport === 'bucket' ? 'Game' : 'Week'} ${(career.active?.k ?? 0) + 1} with the ${career.fit?.name ?? ''}` : career.phase === 'offseason' ? 'Offseason: a point to spend, a contract to sort' : career.phase === 'retired' ? `${career.seasons.length} seasons. See the legacy, or start a new career.` : `${career.fit?.name ?? ''} · ${career.seasons.length} ${career.seasons.length === 1 ? 'season' : 'seasons'} in`) : 'Build a player, get drafted, play a whole career. Legacy on the line.'}</span>
-              </span>
-            </button>
-          )}
-          {onCompete && (
-            <button className="ag-compete ag-pop" style={{ '--d': '300ms' }} onClick={onCompete}>
-              <PoolArt />
-              <LiveCorner n={here.compete} />
-              <span className="ag-card-txt">
-                <span className="ag-eyebrow">{ol.played ? <>ONLINE · {tierFor(ol.rating)[1].toUpperCase()} · {ol.rating}</> : 'ONLINE · 5-PLAYER POOLS'}</span>
-                <span className="ag-card-title">COMPETE</span>
-                <span className="ag-card-sub">{cs?.played
-                  ? `${cs.wins} ${cs.wins === 1 ? 'win' : 'wins'} in ${cs.played} · avg place ${(cs.placeSum / cs.played).toFixed(1)}${cs.streak >= 2 ? ` · ${cs.streak} straight` : ''}`
-                  : 'Same spins as 4 other players. Highest OVR takes the pool.'}</span>
-                {cs?.played > 0 && <span className="ag-rec"><Form items={cs.recent} mode="compete" /></span>}
-              </span>
-            </button>
-          )}
-          {onSquad && (
-          <button className={`ag-squad ag-pop${squad ? ' is-live' : ''}`} style={{ '--d': '350ms' }} onClick={onSquad}>
-            <SquadArt />
-            <span className="ag-card-txt">
-              <span className="ag-eyebrow">{!squad ? 'ONE SEASON · YOUR SQUAD'
-                : squad.phase === 'build' ? `BUILDING · ${sqBuilt} OF ${squad.slots.length}`
-                : squad.team ? `${squad.team} · ${squad.slots.length} ${squad.slots.length === 1 ? 'BUILD' : 'BUILDS'} · SEASON ${(squad.seasons?.length ?? 0) + (squad.phase === 'result' ? 0 : 1)}`
-                : `${squad.slots.length} ${squad.slots.length === 1 ? 'BUILD' : 'BUILDS'} · PICK A TEAM`}</span>
-              <span className="ag-card-title">SQUAD BUILDER</span>
-              <span className="ag-card-sub">{!squad ? 'Build a few players, drop them on a real team, play a season together.'
-                : squad.phase === 'build' ? 'Your squad is waiting on its next build.'
-                : sqLast && squad.phase === 'result' ? `${sqLast.wins}-${sqLast.losses}${sqLast.champion ? ', champions' : sqLast.playoffs ? ', playoffs' : ''} last season. Run it back.`
-                : 'The season is ready to play.'}</span>
-            </span>
-          </button>
-          )}
-          {isBucket ? (
-            <>
-              <button className="ag-mini ag-mini--purple ag-pop" style={{ '--d': '380ms', gridColumn: '1 / -1' }} onClick={() => start('salarycap')}>
-                <span className="ag-mini-flag">DAILY</span>
-                <span className="ag-mini-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><IconCoin size={17} /> SALARY CAP</span>
-                <span className="ag-mini-sub">Build on a budget</span>
-              </button>
-            </>
-          ) : (
-            <>
-              <button className="ag-mini ag-mini--purple ag-pop" style={{ '--d': '330ms' }} onClick={() => start('salarycap')}>
-                <span className="ag-mini-flag">DAILY</span>
-                <span className="ag-mini-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><IconCoin size={17} /> SALARY CAP</span>
-                <span className="ag-mini-sub">Build a QB on a budget</span>
-              </button>
-              <button className="ag-mini ag-pop" style={{ '--d': '360ms' }} onClick={onDepthChart}>
-                <span className="ag-mini-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><IconClipboard size={17} /> THE DEPTH CHART</span>
-                <span className="ag-mini-sub" style={{ color: '#fbbf24' }}>Sort the stars by the stat</span>
-              </button>
-            </>
-          )}
-          {/* website: an ad right under those, the full width, no margins of its own (collapses when there's none) */}
-          {!IS_APP && (
-            <div key={`home-ad-${sport}`} className="ag-home-ad ag-home-ad--pair">
-              <div id="ramp-cntr1-home" className="ag-home-ad-slot" />
-              {HOME_AD_PAIR && <div id="ramp-cntr1-home-2" className="ag-home-ad-slot" />}
-            </div>
-          )}
-        </div>
-        <div className="ag-promos">
-          <PassStrip />
-          <ProCard delay="410ms" />
-        </div>
-        <PlayersOfDay />
+        <button className={`ag-start${pool === 'all-time' ? ' is-gold' : ''}`} onClick={() => start(pool)}>
+          <b>PLAY</b>
+          <small>{posShort} · {pool === 'all-time' ? 'ALL-TIME' : 'CURRENT'}</small>
+        </button>
+
+        {modes}
+
+        <PromosOnce />
+
+        <BoardOnce />
+
+        {/* website: an ad under those, the full width, no margins of its own (collapses when there's none) */}
+        {!IS_APP && (
+          <div key={`home-ad-${sport}`} className="ag-home-ad ag-home-ad--pair">
+            <div id="ramp-cntr1-home" className="ag-home-ad-slot" />
+            {HOME_AD_PAIR && <div id="ramp-cntr1-home-2" className="ag-home-ad-slot" />}
+          </div>
+        )}
+
       </div>
       {/* website: get the app (the official badge; hidden until the App Store link is set) */}
       {!IS_APP && APP_STORE_URL && (

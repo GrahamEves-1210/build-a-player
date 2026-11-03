@@ -146,7 +146,7 @@ export default function QBFigureOverlay({ build, className }) {
 
           {/* Skin surface displacement */}
           <filter id="skin-tex" x="-3%" y="-3%" width="106%" height="106%" colorInterpolationFilters="sRGB">
-            <feTurbulence type="fractalNoise" baseFrequency="0.85 0.65" numOctaves="4" seed="12" result="noise" />
+            <feTurbulence type="fractalNoise" baseFrequency="0.85 0.65" numOctaves="2" seed="12" result="noise" />
             <feDisplacementMap in="SourceGraphic" in2="noise" scale="2.2" xChannelSelector="R" yChannelSelector="G" />
           </filter>
 
@@ -175,9 +175,10 @@ export default function QBFigureOverlay({ build, className }) {
       <div className={className} style={{ mixBlendMode: 'screen' }}>
         <div style={SVG_STYLE} dangerouslySetInnerHTML={{ __html: BASE_SVG ?? '' }} />
 
-        {/* Jersey number — after BASE_SVG in DOM so it paints on top */}
+        {/* Jersey number — after BASE_SVG in DOM so it paints on top. Its own layer: without
+            it, a number appearing inside the blended figure costs 200+ ms of repaint */}
         <svg viewBox="0 0 622 844" preserveAspectRatio="xMidYMid meet"
-             style={SVG_STYLE} aria-hidden="true">
+             style={{ ...SVG_STYLE, willChange: 'transform' }} aria-hidden="true">
           {/* Chest number */}
           <text
             x="298" y="343"

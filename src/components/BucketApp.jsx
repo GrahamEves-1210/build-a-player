@@ -34,7 +34,7 @@ const ProfilePage = lazy(() => import('./ProfilePage'))
 import CustomRatingsModal from './CustomRatingsModal'
 import SiteFooter from './SiteFooter'
 import SiteFeatures from './SiteFeatures'
-import { IS_APP, APP_LOOK } from '../lib/platform'
+import { IS_APP, APP_LOOK, setClassicLook } from '../lib/platform'
 import { restorePro } from '../lib/webCheckout'
 import AppHome from './app/AppHome'
 import { FlipEdge, BuildComplete, useFlip, StackEdge, StackSeam, useDropMode, useDropSheet, DropBar, DropSheet } from './app/AppBuildTray'
@@ -223,7 +223,7 @@ function useRevealOnMount(ready) {
 // Silhouette body re-rendered as stacked, color-coded bands — one per build
 // attribute, using each attribute's real in-game color — clipped to the
 // silhouette's outline via a CSS mask.
-function BucketStackedSilhouette({ attrs, ready }) {
+function BucketStackedSilhouette({ attrs, ready, fast = false }) {
   const visible = useRevealOnMount(ready)
   return (
     <div
@@ -246,7 +246,7 @@ function BucketStackedSilhouette({ attrs, ready }) {
             transform: visible ? 'translateY(0)' : `translateY(-${i * 100}%)`,
             // Fully sequential — each band only starts once the previous one
             // has completely finished falling (delay = full fall duration).
-            transitionDelay: visible ? `${(attrs.length - 1 - i) * 170}ms` : '0ms',
+            transitionDelay: visible ? `${(attrs.length - 1 - i) * (fast ? 24 : 170)}ms` : '0ms',
           }}
         >
           <span className="splash-stack-band-label">{a.label}</span>
@@ -354,6 +354,9 @@ function BucketSplash({ onStart, onVersus }) {
           </div>
           <div className="splash-mg-sub">FOOTBALL BUILDER</div>
         </button>
+
+        {/* the classic look's way back (Settings → Classic look brought them here) */}
+        {!IS_APP && !APP_LOOK && <button className="splash-newlook" onClick={() => setClassicLook(false)}>Switch to the new look</button>}
       </div>
     </div>
 
@@ -2028,10 +2031,10 @@ export default function BucketApp() {
               onCompete={() => setPage('compete')}
               resume={competeOn ? { label: `Compete · pool ${cp.match.code}`, onClick: () => setPage('game') } : (gameMode && gameMode !== 'salarycap' && (simResult || Object.values(build).some(Boolean))) ? { label: `${position === 'big' ? 'BIG' : 'GUARD'} · ${gameMode === 'all-time' ? 'All-Time' : 'Current'}`, onClick: () => window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'play' })) } : null}
               footer={IS_APP ? null : <><SiteFeatures sport="bucket" /><SiteFooter sport="bucket" /></>}
-              renderBucketFigure={(pos, ready) => (
+              renderBucketFigure={(pos, ready, fast) => (
                 <>
                   <img src="/basketballsilhouette.png" className="splash-figure" alt="" draggable={false} style={{ position: 'absolute', inset: 0 }} />
-                  <BucketStackedSilhouette attrs={BUCKET_SPLASH_ATTRS[pos]} ready={ready} />
+                  <BucketStackedSilhouette attrs={BUCKET_SPLASH_ATTRS[pos]} ready={ready} fast={fast} />
                 </>
               )}
             />

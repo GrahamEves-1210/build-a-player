@@ -187,18 +187,18 @@ function tourSteps(sport) {
   const nba = sport === 'bucket'
   return [
     // the first page: no spotlight yet, just the game in a sentence
-    { id: 'welcome', sel: [], center: true, title: nba ? 'Welcome to Build-A-Bucket' : 'Welcome to Build-A-Player',
+    { id: 'welcome', sel: [], center: true, title: 'Welcome to Build-A-Player',
       text: `Spin real football and basketball players, take the best trait from each one, and build a player nobody else has. Then play a season and see how far it goes. Here's a quick look around.` },
     { id: 'sport', sel: ['.ag-sport'], title: 'Two games in one', text: 'Football and basketball. Switch here any time: each has its own modes, leaderboards and records.' },
     { id: 'pos', sel: ['.ag-positions'], title: 'Pick a position', text: nba ? 'Guard (PG · SG · SF) or Big (PF · C). Each one has its own traits.' : 'QB, RB, WR, TE or DB. Each position has its own traits and its own leaderboard.' },
     { id: 'modes', sel: ['.ag-modes'], title: 'The main game', text: `Spin a team, then a real player from it, and tap the trait you want from him. Fill every slot, then play a season. Current uses today's rosters, All-Time the legends.` },
-    { id: 'career', sel: ['.ag-crmode'], title: 'Career', text: 'One player, a whole career: the combine, the draft, season after season, contracts and a legacy.' },
-    { id: 'compete', sel: ['.ag-compete'], title: 'Compete', text: 'Online pools of five. Everyone gets the same spins, and the best build takes the pool.' },
-    { id: 'blacktop', sel: ['.ag-blacktop'], title: 'Blacktop', text: 'Live games against real players: 1v1, 2v2 or 3v3.' },
-    { id: 'squad', sel: ['.ag-squad'], title: 'Squad Builder', text: 'Build a few players, drop them on a real team and play a season together. Then run it back.' },
-    { id: 'quick', sel: ['.ag-mini'], all: true, title: 'Quick games', text: nba ? 'Salary Cap: a new puzzle every day. The best player you can build on a budget.' : 'Salary Cap is a daily puzzle: the best QB you can build on a budget. The Depth Chart: sort the stars by one stat.' },
+    { id: 'career', sel: ['.ag-way--career'], title: 'Career', text: 'One player, a whole career: the combine, the draft, season after season, contracts and a legacy.' },
+    { id: 'compete', sel: ['.ag-way--compete'], title: 'Compete', text: 'Online pools of five. Everyone gets the same spins, and the best build takes the pool.' },
+    { id: 'blacktop', sel: ['.ag-way--blacktop'], title: 'Blacktop', text: 'Live games against real players: 1v1, 2v2 or 3v3.' },
+    { id: 'squad', sel: ['.ag-way--squad'], title: 'Squad Builder', text: 'Build a few players, drop them on a real team and play a season together. Then run it back.' },
+    { id: 'quick', sel: ['.ag-way--quick'], all: true, title: 'Quick games', text: nba ? 'Salary Cap: a new puzzle every day. The best player you can build on a budget.' : 'Salary Cap is a daily puzzle: the best QB you can build on a budget. The Depth Chart: sort the stars by one stat.' },
     { id: 'coins', sel: ['.ag-dock', '.ag-hud-coins'], title: 'Coins and looks', text: 'Every game pays XP and coins, and Daily missions pay more. The Shop turns coins into name colors, effects and avatars everyone sees.' },
-    { id: 'go', sel: ['.ag-mode'], title: 'Let\'s play one', text: 'A guided Current game: spin, draft, play the season. About two minutes.', last: true },
+    { id: 'go', sel: ['.ag-start'], title: 'Let\'s play one', text: 'A guided Current game: spin, draft, play the season. About two minutes.', last: true },
   ]
 }
 

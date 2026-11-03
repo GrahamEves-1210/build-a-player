@@ -2762,34 +2762,39 @@ html.is-app .ag-sandbox { grid-column: 1 / -1; justify-self: stretch; }
   html.app-look .ag-menu { max-width: 540px; border-radius: 22px; border: 1.5px solid var(--ag-line-hi); padding-bottom: 22px; }
   html.app-look.is-app .ag-menu-grab { display: none; }
 
-  /* a hero row (the stage beside the brand, sports, positions and modes, the same
-     height), then the rest the full width: the other modes two by two, then the
-     pass and Pro beside Players of the Day. Nothing slides, nothing left empty. */
+  /* a hero row (the stage beside the brand, sports, pool and PLAY, the same height), the
+     modes across, then the day's top five, the ad, the pass and Pro. */
   html.app-look .ag-home-inner {
     max-width: 1200px; margin: 0 auto; padding: 18px 28px 8px;
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+    grid-template-rows: auto 1fr auto auto auto;
     grid-template-areas:
       "hud    hud"
       "stage  brand"
       "stage  sport"
-      "stage  pos"
       "stage  modes"
-      "extras extras"
-      "promos potd";
-    column-gap: 26px; row-gap: 14px;
+      "stage  start"
+      "ways   ways"
+      "perks  perks"
+      "potd   potd"
+      "ad     ad";
+    column-gap: 32px; row-gap: 12px;
   }
-  /* a build in progress: its own row, right above the modes */
+  /* a build in progress: its own row, right above PLAY */
   html.app-look .ag-home-inner:has(> .ag-resume--top) {
+    grid-template-rows: auto 1fr auto auto auto auto;
     grid-template-areas:
       "hud    hud"
       "stage  brand"
       "stage  sport"
-      "stage  pos"
-      "stage  resume"
       "stage  modes"
-      "extras extras"
-      "promos potd";
+      "stage  resume"
+      "stage  start"
+      "ways   ways"
+      "perks  perks"
+      "potd   potd"
+      "ad     ad";
   }
   html.app-look .ag-resume--top { grid-area: resume; margin: 0; }
   html.app-look .ag-hud { grid-area: hud; padding: 0; }
@@ -2799,42 +2804,26 @@ html.is-app .ag-sandbox { grid-column: 1 / -1; justify-self: stretch; }
   html.app-look .ag-brand-mark { height: 64px; }
   html.app-look .ag-wordmark { font-size: 30px; }   /* the wide wordmark face runs about twice as wide as the old Anton */
   html.app-look .ag-sport { grid-area: sport; margin: 0; }
-  html.app-look .ag-positions { grid-area: pos; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; padding: 0; overflow: visible; }
-  html.app-look .ag-positions--two { grid-template-columns: 1fr 1fr; }
-  html.app-look .ag-pos { min-width: 0; }
-  html.app-look .ag-modes { grid-area: modes; padding: 0; }
-  html.app-look .ag-mode { min-height: 128px; }
-  /* the other modes, both sports alike: two in halves (lined up under the hero's columns),
-     then three in thirds. Football: Career | Compete, then Squad Builder · Salary Cap · The
-     Depth Chart. Basketball: Career | Blacktop, then Squad Builder · Compete · Salary Cap */
-  html.app-look .ag-extras { grid-area: extras; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 14px 26px; align-content: start; padding: 0; margin-top: 4px; }
-  html.app-look .ag-extras > :is(.ag-crmode, .ag-compete, .ag-squad, .ag-blacktop, .ag-mini) { grid-column: span 2 !important; min-height: 104px; margin: 0; }
-  html.app-look .ag-extras > .ag-crmode, html.app-look .ag-home--nfl .ag-extras > .ag-compete, html.app-look .ag-home--bucket .ag-extras > .ag-blacktop { grid-column: span 3 !important; }
-  html.app-look .ag-extras > .ag-home-ad { grid-column: 1 / -1; }
+  html.app-look .ag-modes { grid-area: modes; }
+  html.app-look .ag-start { grid-area: start; margin: 0; }
+  html.app-look .ag-ways { grid-area: ways; padding: 0; margin-top: 4px; }
+  html.app-look .ag-home-ad { grid-area: ad; }
+  html.app-look .ag-home .ag-promos { grid-area: perks; padding: 0; grid-template-columns: minmax(0, 1.75fr) minmax(0, 1fr); gap: 12px; }
+  html.app-look .ag-modes, html.app-look .ag-sect-row { padding-inline: 0; }
+  html.app-look .ag-list { margin-inline: 0; }
   /* the Daily screen's Salary Cap card is as wide as the cards around it (not the home's grid) */
   html.app-look .ag-extras.ag-daily-extras { grid-template-columns: 1fr; }
   html.app-look .ag-extras.ag-daily-extras > .ag-mini { grid-column: 1 / -1 !important; }
-  html.app-look .ag-home--bucket .ag-extras > .ag-crmode { order: 1; }
-  html.app-look .ag-home--bucket .ag-extras > .ag-blacktop { order: 2; }
-  html.app-look .ag-home--bucket .ag-extras > .ag-squad { order: 3; }
-  html.app-look .ag-home--bucket .ag-extras > .ag-compete { order: 4; }
-  html.app-look .ag-home--bucket .ag-extras > :is(.ag-mini, .ag-home-ad) { order: 5; }
-  /* a third is narrow: the card's art sits behind the words, so it steps back */
-  html.app-look .ag-home--nfl .ag-extras > .ag-squad .ag-card-art,
-  html.app-look .ag-home--bucket .ag-extras > :is(.ag-squad, .ag-compete) .ag-card-art { opacity: .3; }
-  html.app-look .ag-promos { grid-area: promos; margin: 0; align-self: start; }   /* Builder Pass / BAP Pro, beside Players of the Day */
-  /* six tiers to a view, none cut off (the inset is a margin, so the row clips the 7th) */
   html.app-look .ag-promos .ps-row { padding-inline: 0; margin-inline: 12px; }
   html.app-look .ag-promos .ps-col { flex-basis: calc((100% - 30px) / 6); }
-  html.app-look .ag-potd { grid-area: potd; margin: 0; align-self: stretch; align-content: start; }
+  html.app-look .ag-potd { grid-area: potd; margin: 10px 0 0; }
   /* the stage: as tall as the column beside it */
-  html.app-look .ag-stage { grid-area: stage; align-self: stretch; height: auto; min-height: 520px; margin: 0; }
+  html.app-look .ag-stage { grid-area: stage; align-self: stretch; height: auto; min-height: 470px; margin: 0; }
   /* the figure is built at phone size; scale it up from its feet (the stage is ~520–580 tall) */
-  html.app-look .ag-figure { bottom: 46px; transform: scale(2.15); transform-origin: 50% 100%; }
-  html.app-look .ag-home--bucket .ag-figure { bottom: 50px; transform: scale(2.2); }
-  html.app-look .ag-platform { bottom: 22px; transform: scale(2); transform-origin: 50% 50%; }
-  html.app-look .ag-stage-tag { transform: scale(1.35); transform-origin: 0 100%; }
-  html.app-look .ag-home-site { max-width: 1200px; margin: 28px auto 0; }
+  html.app-look .ag-figure { bottom: 76px; transform: scale(1.65); transform-origin: 50% 100%; }
+  html.app-look .ag-home--bucket .ag-figure { bottom: 78px; transform: scale(1.65); }
+  html.app-look .ag-platform { bottom: 60px; transform: scale(1.7); transform-origin: 50% 50%; }
+  html.app-look .ag-home-site { margin: 28px 0 0; }
 
   /* Blacktop court: fit the screen height instead of the width */
   html.app-look .btc-wrap { max-width: min(100%, calc((100dvh - 300px) * 4 / 3)); margin: 0 auto; }
@@ -3091,14 +3080,15 @@ html.ag-scrolling :is(button, a, [role="button"], .ag-btn, .attr-chip, .ag-chip,
 
 /* ═══ Website hovers (mouse / trackpad only — never on touch) ════════════════ */
 @media (hover: hover) and (pointer: fine) {
-  html.app-look :is(.ag-mode, .ag-mini, .ag-squad, .ag-crmode, .ag-blacktop, .ag-compete, .ag-resume, .ag-tile, .ag-daily-banner, .ag-player-chip, .sh-card, .sh-item, .ag-ach, .cp-seat, .ag-online-btn) {
+  html.app-look :is(.ag-mc, .ag-start, .ag-mode, .ag-mini, .ag-squad, .ag-crmode, .ag-blacktop, .ag-compete, .ag-resume, .ag-tile, .ag-daily-banner, .ag-player-chip, .sh-card, .sh-item, .ag-ach, .cp-seat, .ag-online-btn) {
     transition: transform var(--press), box-shadow .18s ease, border-color .18s ease, filter .18s ease;
   }
-  html.app-look :is(.ag-mode, .ag-mini, .ag-squad, .ag-crmode, .ag-blacktop, .ag-compete, .ag-resume, .ag-tile, .ag-daily-banner, .sh-card, .sh-item, .ag-ach, .bt-mode-go, .cpk):hover {
+  html.app-look :is(.ag-mc, .ag-start, .ag-mode, .ag-mini, .ag-squad, .ag-crmode, .ag-blacktop, .ag-compete, .ag-resume, .ag-tile, .ag-daily-banner, .sh-card, .sh-item, .ag-ach, .bt-mode-go, .cpk):hover {
     transform: translateY(-3px);
     filter: brightness(1.08);
     box-shadow: 0 12px 28px rgba(0,0,0,.45), 0 0 0 1px color-mix(in srgb, var(--ag-a1) 35%, transparent);
   }
+  html.app-look :is(.ag-mc, .ag-start, .ag-mode:not(:disabled)):active { transform: scale(.98); }
   /* Career lifts with a gold edge, like its card */
   html.app-look .ag-crmode:hover { box-shadow: 0 12px 28px rgba(0,0,0,.45), 0 0 0 1px rgba(245,220,138,.55), 0 0 24px rgba(212,175,55,.22); }
   html.app-look .ag-player-chip:hover { border-color: var(--ag-line-hi); filter: brightness(1.08); }
@@ -5897,3 +5887,265 @@ html.app-look:not(.is-app) :is(.ag-milestone.is-reached, .ag-mission-claim, .ag-
   .bt-hud-clock, .bt-spot-plus, .ol-link i, .bt-live-dot, .cr-trait.can-up, .au-grade-back, .drop-bar-spin.is-pick, .v1g-hud-go) { animation: none !important; }
 /* an equipped reel skin's lights hold still on the website (they repainted the reel through every spin) */
 html.app-look:not(.is-app) .reels-wrap.rs-on .reel-outer { animation: none !important; }
+
+/* ═══ HOME: a game's main menu ══════════════════════════════════════════════
+   One flat accent per sport, small corners, hairlines instead of boxes, and the
+   player photos and the type carrying the page. No gradients, glows or entrance
+   animations here. On a phone the block runs edge to edge. */
+.ag-home { --hm-r: 5px; --hm-on: #06120d; --hm-a: #4fd8b4; background: #070b0a; }
+.ag-home--bucket { --hm-on: #1c0a02; --hm-a: #f97316; background: #0b0806; }
+
+/* the top bar: no boxes */
+.ag-home .ag-hud { padding: 8px 14px 0; }
+.ag-home .ag-player-chip { padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; }
+.ag-home .ag-avatar { border-radius: var(--hm-r); background: rgba(255,255,255,.08); color: #fff; box-shadow: none; }
+.ag-home .ag-icon-btn { border: 0; border-radius: var(--hm-r); background: none; box-shadow: none; }
+.ag-home .ag-player-sub { white-space: nowrap; }
+
+/* the brand: one line on a phone, so PLAY is on the first screen */
+.ag-brand { flex-direction: row; justify-content: center; gap: 10px; margin: 0; }
+.ag-brand-mark { height: 50px; filter: none; transform: scale(1.22); transform-origin: 100% 50%; }
+.ag-home--bucket .ag-brand-mark { transform: scale(1.08); }
+@media (min-width: 1024px) { html.app-look .ag-brand { flex-direction: column; gap: 4px; align-self: center; } html.app-look .ag-brand-mark, html.app-look .ag-home--bucket .ag-brand-mark { height: 88px; transform: scale(1.28); transform-origin: 50% 100%; } }
+
+/* the sports: two flat blocks with the slash between them, sitting on the stage */
+.ag-home .ag-sport { height: 52px; margin: 0 0 -12px; padding: 0; overflow: hidden; border: 0; border-radius: 0; background: #111816; box-shadow: none; }
+.ag-home--bucket .ag-sport { background: #1a1410; }
+.ag-home .ag-sport-thumb { top: 0; bottom: 0; left: -10%; width: 60%; border-radius: 0; overflow: visible; box-shadow: none; background: var(--hm-a); transform: skewX(-14deg); transition: transform .2s cubic-bezier(.3,1,.5,1); }
+.ag-home .ag-sport--bucket .ag-sport-thumb { background: var(--hm-a); transform: translateX(100%) skewX(-14deg); }
+html.ag-sport-leaving .ag-home .ag-sport--nfl .ag-sport-thumb { background: #f97316; transform: translateX(100%) skewX(-14deg); }
+html.ag-sport-leaving .ag-home .ag-sport--bucket .ag-sport-thumb { background: #4fd8b4; transform: skewX(-14deg); }
+html.ag-sport-leaving .ag-home-inner > *:not(.ag-sport):not(.ag-hud) { opacity: 1; }
+.ag-home .ag-sport-btn { gap: 8px; padding: 0 8px; }
+.ag-home .ag-sport-ico { display: none; }
+.ag-home .ag-sport-txt b { font-size: 22px; letter-spacing: 1px; }
+.ag-home .ag-sport-btn.is-on { color: var(--hm-on); }
+.ag-home .ag-sport-btn:not(.is-on) { color: #9aa5a0; }
+@media (hover: hover) { .ag-home .ag-sport-btn:not(.is-on):hover { color: #fff; } }
+.ag-home .ag-sport-btn:focus-visible { outline: 2px solid #fff; outline-offset: -4px; }
+
+/* the stage: edge to edge; the position's name stands behind the figure */
+.ag-stage { height: clamp(250px, 36dvh, 330px); margin: 0; border: 0; border-radius: 0; touch-action: pan-y; container-type: inline-size; }
+.ag-stage-photo { filter: saturate(.8) brightness(.55); }
+.ag-stage-word {
+  position: absolute; left: 0; right: 0; top: 6px; z-index: 1; text-align: center; white-space: nowrap;
+  font-family: var(--ag-display); font-size: min(calc(96cqw / (var(--len) * .46)), 130px); line-height: 1; text-transform: uppercase;
+  color: rgba(255,255,255,.17); animation: ag-roll-in .14s ease-out both;
+}
+@keyframes ag-roll-in { from { opacity: 0; transform: translateY(14%); } }
+.ag-figure { bottom: 62px; animation: ag-fig-in .16s ease-out both; }
+@keyframes ag-fig-in { from { opacity: 0; translate: var(--from, 14px) 0; } }
+.ag-platform { bottom: 48px; }
+.ag-stage .ag-live-count { position: absolute; left: 12px; top: 12px; bottom: auto; z-index: 5; display: inline-flex; align-items: center; gap: 7px; padding: 0; border: 0; border-radius: 0; background: none; font-family: var(--ag-body); font-size: 16px; font-weight: 700; line-height: 1; letter-spacing: 0; font-variant-numeric: tabular-nums; color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,.8); }
+.ag-stage .ag-howto { position: absolute; right: 10px; top: 9px; z-index: 5; margin: 0; background: rgba(0,0,0,.55); }
+html .ag-stage .ag-live-count i { flex: none; width: 10px; height: 10px; border-radius: 50%; background: #22c55e; box-shadow: none; animation: none; }
+.ag-stage .ag-positions {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 4;
+  display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); gap: 0; height: 52px; padding: 0; overflow: hidden;
+  background: #182220; border-top: 1px solid rgba(255,255,255,.14);
+}
+.ag-home--bucket .ag-stage .ag-positions { background: #241c16; }
+.ag-stage .ag-positions::before {   /* the picked one is a solid block, and it slides there */
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: calc(100% / var(--n)); background: var(--hm-a);
+  transform: translateX(calc(var(--i) * 100%));
+  transition: transform .16s ease-out;
+}
+.ag-stage .ag-pos { position: relative; z-index: 1; flex-direction: row; gap: 8px; min-width: 0; height: 100%; padding: 0; border: 0; border-left: 1px solid rgba(255,255,255,.1); border-radius: 0; background: none; box-shadow: none; color: #eef3f0; transition: color .1s; }
+.ag-stage .ag-pos:first-child { border-left: 0; }
+.ag-stage .ag-pos--on { border-color: transparent; color: var(--hm-on); background: none; box-shadow: none; }
+.ag-stage .ag-pos--on .ag-pos-label { color: var(--hm-on); }
+.ag-stage .ag-pos-label { font-size: 25px; letter-spacing: 1px; }
+.ag-stage .ag-pos-sub { font-size: 12px; font-weight: 600; letter-spacing: 0; opacity: .8; white-space: nowrap; }
+.ag-stage .ag-pos:not(:disabled):active { transform: none; opacity: .7; }
+@media (hover: hover) { .ag-stage .ag-pos:not(.ag-pos--on):hover { color: var(--hm-a); transform: none; } }
+.ag-stage .ag-pos:focus-visible { outline: 2px solid #fff; outline-offset: -3px; }
+
+/* the pool: the players themselves. Picked is the accent, full stop */
+.ag-modes { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 0 14px; }
+.ag-mode { position: relative; display: block; min-height: 112px; padding: 0; overflow: hidden; border: 0; border-radius: var(--hm-r); background: #141b19; color: #fff; text-align: left; transition: transform .1s ease-out; }
+.ag-home--bucket .ag-mode { background: #1d1612; }
+.ag-mode.is-on, .ag-home--bucket .ag-mode.is-on { background: var(--hm-a); color: var(--hm-on); }
+/* (All-Time is gold in both sports, picked or not, its highlight too) */
+.ag-home .ag-mode--gold { background: linear-gradient(135deg, rgba(245,200,66,.2), rgba(184,134,11,.1)), #15110a; }
+.ag-home .ag-mode--gold .ag-mode-title { color: #f7cf55; }
+.ag-home .ag-mode--gold.is-on { background: linear-gradient(135deg, #fbe28c 0%, #f0bd2e 48%, #c8920f 100%); color: #1d1503; }
+.ag-home .ag-mode--gold.is-on .ag-mode-title { color: #1d1503; }
+.ag-home .ag-mode--gold:focus-visible { outline-color: #f7cf55; }
+.ag-mode-title { position: absolute; left: 11px; top: 9px; z-index: 1; font-family: var(--ag-display); font-size: 21px; line-height: 1; letter-spacing: .5px; white-space: nowrap; }
+.ag-mode-line { position: absolute; left: 11px; right: 8px; top: 32px; z-index: 1; overflow: hidden; font-family: var(--ag-body); font-size: 12.5px; font-weight: 600; line-height: 1.2; white-space: nowrap; text-overflow: ellipsis; opacity: .85; }
+.ag-mode-faces { position: absolute; left: 0; right: 0; bottom: 0; display: flex; justify-content: center; align-items: flex-end; height: 62px; padding: 0 6px; }
+.ag-mode-faces img { flex: 0 1 auto; width: auto; height: 100%; min-width: 0; margin: 0 -9px; object-fit: contain; object-position: bottom; opacity: .78; }
+.ag-mode.is-on .ag-mode-faces img { opacity: 1; }
+.ag-mode:not(:disabled):active { transform: scale(.98); }
+.ag-mode:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
+/* PLAY: the one big solid thing */
+.ag-start { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 0 14px; padding: 13px 16px 11px; border: 0; border-radius: var(--hm-r); background: #fff; color: #07100c; cursor: pointer; transition: transform .1s ease-out; }
+.ag-start b { font-family: var(--ag-display); font-weight: 400; font-size: 36px; line-height: 1; letter-spacing: 1px; }
+.ag-start small { font-family: var(--ag-body); font-size: 13.5px; font-weight: 600; white-space: nowrap; }
+.ag-start:active { transform: scale(.985); }
+.ag-start:focus-visible { outline: 3px solid var(--hm-a); outline-offset: 2px; }
+.ag-start.is-gold:focus-visible { outline-color: #f7cf55; }
+/* PLAY stays white; its hover is the picked pool's colour */
+@media (hover: hover) {
+  .ag-start:hover { background: var(--hm-a); }
+  .ag-start.is-gold:hover { background: linear-gradient(135deg, #fbe28c 0%, #f0bd2e 48%, #c8920f 100%); }
+}
+
+/* continue a build: the same weight as a row */
+.ag-home .ag-resume--top { margin: 0 14px; padding: 10px 12px; border: 1px solid var(--hm-a); border-radius: var(--hm-r); background: none; box-shadow: none; }
+.ag-home .ag-resume-icon { border-radius: var(--hm-r); background: none; color: var(--hm-a); box-shadow: none; }
+.ag-home .ag-resume .ag-eyebrow { color: var(--hm-a); }
+
+/* the modes: each card is its colour and the game's own built players; Salary Cap shows its board */
+.ag-ways { display: block; min-width: 0; margin: 6px 0 0; padding: 0 14px; border: 0; border-radius: 0; background: none; }
+.ag-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.ag-way { cursor: pointer; }
+.ag-way:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.ag-mc { position: relative; display: block; min-width: 0; min-height: 196px; padding: 0; overflow: hidden; border: 0; border-radius: 10px; color: #fff; text-align: left; box-shadow: inset 0 0 0 1px rgba(255,255,255,.14), 0 8px 18px rgba(0,0,0,.35); transition: transform .12s ease-out; }
+.ag-mc:active { transform: scale(.98); }
+.ag-mc-head { position: absolute; left: 13px; top: 12px; right: 12px; z-index: 3; display: grid; gap: 3px; }
+.ag-mc-head b { font-family: var(--ag-display); font-weight: 400; font-size: 29px; line-height: 1; letter-spacing: .5px; text-shadow: 0 2px 8px rgba(0,0,0,.45); }
+.ag-mc-head small { font-family: var(--ag-body); font-size: 12.5px; font-weight: 600; line-height: 1.2; color: rgba(255,255,255,.9); text-shadow: 0 1px 4px rgba(0,0,0,.5); }
+.ag-mc-head .ag-mc-live { display: inline-flex; align-items: center; gap: 5px; font-weight: 700; color: #fff; }
+.ag-mc-live i { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; }
+.ag-mc-shot { position: absolute; top: 66px; left: 14px; right: -14px; z-index: 1; display: block; border-radius: 9px; overflow: hidden; background: #050807; box-shadow: 0 0 0 1px rgba(255,255,255,.2), -6px 10px 24px rgba(0,0,0,.55); transform: rotate(-4deg); transform-origin: 0 0; transition: transform .16s ease-out; }
+.ag-mc-shot img { display: block; width: 100%; height: auto; }
+
+.ag-mc--career { grid-column: 1 / -1; min-height: 176px; background: linear-gradient(100deg, rgba(6,22,42,.94) 30%, rgba(14,52,92,.45)), url('/footballbackground-soft.webp') center 58% / cover no-repeat, #0a1f3a; }
+.ag-home--bucket .ag-mc--career { background: linear-gradient(100deg, rgba(40,15,3,.92) 30%, rgba(124,45,10,.5)), url('/bucketbackground.webp') center 70% / cover no-repeat, #2d1307; }
+.ag-mc--career.has-team, .ag-home--bucket .ag-mc--career.has-team { background: linear-gradient(120deg, var(--team), color-mix(in srgb, var(--team) 40%, #05090c)); }
+.ag-mc--career .ag-mc-head { right: 60%; }
+.ag-mc--compete { background: linear-gradient(150deg, #0f8a74, #063a31 80%); }
+.ag-home--bucket .ag-mc--compete { background: linear-gradient(150deg, #f97316, #7c2d0a 85%); }
+.ag-mc--salary { background: linear-gradient(150deg, #7c3aed, #2e1065 80%); }
+.ag-mc--squad { background: linear-gradient(150deg, #a57f1e, #3a2b08 80%); }
+.ag-mc--blacktop { background: #1c1c1e; }
+.ag-mc--depth { background: linear-gradient(150deg, #c9222e, #4d0b11 80%); }
+
+/* the art: the built players standing on the card's floor and running off it */
+.ag-art { position: absolute; z-index: 1; display: block; height: 118%; width: auto; max-width: none; bottom: -6%; pointer-events: none; }
+.ag-art--hero { right: -3%; height: 112%; bottom: -15%; }
+.ag-art--team-a { right: 44%; height: 58%; bottom: -8%; }
+.ag-art--team-b { right: 20%; height: 60%; bottom: -8%; }
+.ag-art--team-c { right: -9%; height: 60%; bottom: -8%; }
+.ag-mc.is-small .ag-mc-head { right: 8px; }
+/* Career: banners hanging from the rafters, gold on the card's colour, the player in front */
+.ag-rafters { position: absolute; left: 39%; right: 33%; top: 0; z-index: 1; display: flex; justify-content: space-between; gap: 5px; padding-top: 7px; border-top: 3px solid rgba(255,255,255,.28); }
+.ag-home--bucket .ag-rafters { right: 7%; gap: 9px; }
+.ag-banner { flex: 1 1 0; min-width: 0; display: grid; justify-items: center; align-content: start; gap: 3px; height: 112px; padding: 9px 2px 0; font-style: normal; color: #1d1503; background: linear-gradient(180deg, #fbe28c, #d9a520); clip-path: polygon(0 0, 100% 0, 100% 86%, 50% 100%, 0 86%); }
+.ag-banner:nth-child(2) { height: 128px; }
+.ag-banner b { font-family: var(--ag-display); font-weight: 400; font-size: 15px; line-height: 1; letter-spacing: .3px; }
+.ag-banner small { font-family: var(--ag-font); font-size: 10.5px; line-height: 1; letter-spacing: .4px; }
+.ag-banner.is-dark { color: rgba(255,255,255,.55); background: rgba(255,255,255,.13); }
+/* Compete: the podium, a spotlight on the winner */
+.ag-pod { position: absolute; left: 44%; right: 7px; bottom: 0; height: 62%; z-index: 1; display: grid; grid-template-columns: 1fr 1.16fr 1fr; gap: 3px; align-items: end; }
+.ag-mc:not(.is-small) .ag-pod { left: 14px; right: 14px; height: 56%; }
+.ag-pod-col { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; min-width: 0; }
+.ag-pod-col b { display: grid; place-items: center; width: 100%; height: 58%; border-radius: 3px 3px 0 0; font-family: var(--ag-display); font-weight: 400; font-size: 21px; line-height: 1; color: #1d2428; background: linear-gradient(180deg, #e8edf0, #a8b2b9); }
+.ag-pod-col.is-1 b { height: 88%; font-size: 28px; color: #2c1c00; background: linear-gradient(180deg, #fbe28c, #d9a520); }
+.ag-pod-col.is-3 b { height: 38%; font-size: 16px; color: #2a1407; background: linear-gradient(180deg, #e0a773, #a9673a); }
+/* Squad Builder: the five spots */
+.ag-lineup { position: absolute; left: 10px; right: 10px; bottom: 10px; z-index: 1; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; }
+.ag-lineup i { display: grid; place-items: center; aspect-ratio: 1; max-height: 42px; justify-self: center; width: 100%; max-width: 42px; border-radius: 50%; font-style: normal; font-family: var(--ag-display); font-size: 14px; line-height: 1; color: #2c1c00; background: linear-gradient(180deg, #fbe28c, #d9a520); }
+.ag-mc-court { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .8; }
+.ag-mc--blacktop::after { content: ''; position: absolute; inset: 0; z-index: 1; background: linear-gradient(180deg, rgba(0,0,0,.6), transparent 45%, rgba(0,0,0,.4)); }
+.ag-paint { position: absolute; left: 12px; right: 12px; bottom: 11px; z-index: 2; display: flex; justify-content: space-between; gap: 6px; }
+.ag-paint b { font-family: var(--ag-display); font-weight: 400; font-size: clamp(22px, 6.4vw, 34px); line-height: 1; color: #fff; transform: rotate(-5deg); text-shadow: 0 2px 0 rgba(0,0,0,.45); }
+.ag-ranks { position: absolute; left: 12px; right: -8px; bottom: -5px; z-index: 1; display: grid; gap: 4px; transform: rotate(-3deg); transform-origin: 0 100%; }
+.ag-ranks i { display: flex; align-items: center; height: 20px; padding-left: 10px; border-radius: 6px; background: rgba(255,255,255,.14); font-style: normal; }
+.ag-ranks i:first-child { background: #f7cf55; color: #2c1c00; }
+.ag-ranks i:nth-child(2) { background: #e8edf0; color: #1d2428; }
+.ag-ranks i:nth-child(3) { background: #d29a6a; color: #2a1407; }
+.ag-ranks b { font-family: var(--ag-display); font-weight: 400; font-size: 16px; line-height: 1; }
+
+/* the second row: the same cards, shorter */
+.ag-more { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+.ag-mc.is-small { min-height: 118px; }
+.ag-mc.is-small .ag-mc-head b { font-size: 22px; }
+
+/* the Builder Pass strip and Pro, as they were: side by side on a computer */
+.ag-home .ag-promos { display: grid; gap: 10px; margin-top: 4px; padding: 0 14px; }
+.ag-home .ag-promos .ps { margin: 0; min-width: 0; }
+.ag-home .ag-promos .pro-card-wrap { min-width: 0; margin: 0; }
+
+/* Players of the Day: the numbers (place, what it pays, XP, games), on real names */
+.ag-potd-list { display: grid; gap: 6px; }
+.ag-potd-row { grid-template-columns: 26px auto minmax(0, 1fr) auto auto; }
+.ag-potd-row.is-wait { min-height: 52px; }
+.ag-potd-row.is-wait::before { content: ''; grid-column: 1 / -1; height: 11px; width: 55%; border-radius: 2px; background: rgba(255,255,255,.07); }
+.ag-potd-prize { display: inline-flex; align-items: center; gap: 4px; font-family: var(--ag-font); font-size: 15px; letter-spacing: .5px; color: var(--ag-gold-hi); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ag-potd-xp b { font-size: 21px; }
+.ag-potd-title { margin: 0; }
+
+/* the classic look's way back to this one */
+.splash-newlook { display: block; margin: 10px auto 0; padding: 8px 14px; border: 1px solid rgba(255,255,255,.18); border-radius: 999px; background: none; color: rgba(255,255,255,.75); font-size: 13px; font-weight: 600; cursor: pointer; }
+.splash-newlook:hover { color: #fff; border-color: rgba(255,255,255,.4); }
+
+@media (min-width: 1024px) {
+  html.app-look .ag-sport { margin: 0; border-radius: var(--hm-r); }
+  html.app-look .ag-stage { border-radius: var(--hm-r); }
+  html.app-look .ag-stage .ag-live-count { left: 14px; top: 14px; font-size: 18px; }
+  html.app-look .ag-modes { padding: 0; }
+  html.app-look .ag-mode { min-height: 134px; }
+  html.app-look .ag-mode-faces { height: 84px; }
+  html.app-look .ag-start { margin: 0; }
+  html.app-look .ag-ways { padding: 0; margin-top: 8px; }
+  html.app-look .ag-cards { grid-template-columns: 1.45fr 1fr 1fr; gap: 12px; }
+  html.app-look .ag-mc { min-height: 226px; grid-column: auto; }
+  html.app-look .ag-mc.is-small { min-height: 104px; }
+  html.app-look .ag-mc-head b { font-size: 36px; }
+  html.app-look .ag-mc-shot { top: 78px; left: 26px; right: 26px; }
+  html.app-look .ag-more { gap: 12px; }
+  /* the wide second row: the art beside the words */
+  html.app-look .ag-mc.is-small .ag-art--team-a { right: 30%; height: 104%; bottom: -24%; }
+  html.app-look .ag-mc.is-small .ag-art--team-b { right: 15%; height: 112%; bottom: -24%; }
+  html.app-look .ag-mc.is-small .ag-art--team-c { right: -2%; height: 108%; bottom: -24%; }
+  html.app-look .ag-mc.is-small .ag-lineup { left: 44%; right: 14px; bottom: 16px; }
+  html.app-look .ag-mc.is-small .ag-pod { left: 58%; right: 16px; height: 78%; }
+  html.app-look .ag-ranks { left: 46%; right: -8px; bottom: 6px; }
+  /* the day's top five across the page */
+  html.app-look .ag-potd-list { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+  html.app-look .ag-potd-row { grid-template-columns: auto minmax(0, 1fr); column-gap: 9px; row-gap: 6px; padding: 10px; }
+  html.app-look .ag-potd-name { grid-column: 1 / -1; }
+  html.app-look .ag-potd-xp { justify-items: start; order: 5; }
+  html.app-look .ag-potd-prize { order: 6; justify-self: end; align-self: end; }
+}
+@media (prefers-reduced-motion: reduce) { .ag-figure, .ag-stage-word { animation: none; } }
+html.bap-reduce-motion .ag-figure, html.bap-reduce-motion .ag-stage-word { animation: none; }
+
+/* the website's "how it plays": as on the spin screens, cards on desktop and no strip on a phone */
+.ag-home-site { background: radial-gradient(ellipse 100% 280px at 50% 0%, rgba(149,213,178,.16) 0%, transparent 70%), #050705; }
+.ag-home--bucket .ag-home-site { background: radial-gradient(ellipse 100% 280px at 50% 0%, rgba(149,213,178,.12) 0%, transparent 70%), radial-gradient(ellipse 90% 280px at 50% 0%, rgba(249,115,22,.16) 0%, transparent 65%), #0a0603; }
+@media (max-width: 768px) { .ag-home-site .splash-features { display: none; } }
+
+@media (min-width: 1024px) {
+  html.app-look .ag-home .ag-promos .pro-card-wrap, html.app-look .ag-home .ag-promos .pro-card { height: 100%; }
+  html.app-look .ag-home .ag-promos .pro-card { display: flex; flex-direction: column; justify-content: space-between; align-items: stretch; gap: 16px; padding: 20px; }
+  html.app-look .ag-home .ag-promos .pc-main { gap: 16px; }
+  html.app-look .ag-home .ag-promos .pc-title { font-size: 40px; }
+  html.app-look .ag-home .ag-promos .pc-title svg { width: 30px; height: 30px; }
+  html.app-look .ag-home .ag-promos .pc-perks { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; font-size: 15px; }
+  html.app-look .ag-home .ag-promos .pc-side { display: grid; grid-template-columns: auto 1fr; align-items: baseline; justify-items: start; gap: 2px 10px; padding: 0; border: 0; text-align: left; }
+  html.app-look .ag-home .ag-promos .pc-price b { font-size: 44px; }
+  html.app-look .ag-home .ag-promos .pc-bill { justify-self: end; font-size: 12.5px; }
+  html.app-look .ag-home .ag-promos .pc-go { grid-column: 1 / -1; justify-self: stretch; justify-content: center; margin-top: 10px; padding: 14px; border-radius: 8px; font-size: 19px; color: #1d1503; background: linear-gradient(135deg, #fbe28c, #f0bd2e 48%, #c8920f); }
+  html.app-look .ag-potd-row .ag-potd-rank { justify-self: start; }
+  html.app-look .ag-potd-row > :nth-child(2) { justify-self: start; }
+}
+
+/* the "how it plays" strip on the new look (home and spin screens): big words and thin lines, no cards */
+html.app-look .splash-features { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 48px; padding: 26px 28px 34px; }
+html.app-look .splash-feature { display: block; padding: 15px 0 18px; border: 0; border-top: 1px solid rgba(255,255,255,.14); border-radius: 0; background: none; box-shadow: none; overflow: visible; transform: none; }
+html.app-look .splash-feature::before, html.app-look .splash-feature-icon { display: none; }
+html.app-look .splash-feature-title { margin: 0 0 6px; font-family: var(--ag-display); font-size: 34px; font-weight: 400; line-height: 1; letter-spacing: .5px; text-transform: uppercase; color: #fff; }
+html.app-look .splash-feature-desc { max-width: 46ch; margin: 0; font-size: 14.5px; line-height: 1.45; color: #aeb8b3; }
+
+/* ═══ LOW POWER ═══════════════════════════════════════════════════════════════
+   The film grain was a full-screen layer with a blend mode: every frame anything moved,
+   the browser had to re-blend the whole page. It barely shows on this dark look. */
+html:is(.is-app, .app-look) body::after { display: none; }
+/* weak machines (lib/lowPower.js): the figure's texture filters and colour fades repaint it,
+   filters and all, every frame of a pick */
+html.low-power .sil-wrap svg, html.low-power .sil-wrap svg *, html.low-power .player-qbfig * { filter: none !important; transition: none !important; }
+html.low-power .reel-tri { filter: none; }

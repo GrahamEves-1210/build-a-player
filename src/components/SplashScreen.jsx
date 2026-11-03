@@ -3,11 +3,13 @@ import { nflHeadshot, HEADSHOT_BASE } from '../utils/simulation'
 import SiteFooter from './SiteFooter'
 import SiteFeatures from './SiteFeatures'
 
-function hsUrl(id) {
+export function hsUrl(id) {
   if (!id) return null
   if (id.startsWith('http')) return id
   return id.includes('.') ? `${HEADSHOT_BASE}/${id}` : `${HEADSHOT_BASE}/${id}.webp`
 }
+
+import { IS_APP, APP_LOOK, setClassicLook } from '../lib/platform'
 
 export const POS_OPTIONS = [
   {
@@ -293,7 +295,7 @@ const STACK_MASK = {
 // attribute, using each attribute's real in-game color — clipped to the
 // exact outline of the position's silhouette image via a CSS mask, so it
 // reads as the attributes "stacking up" into the body.
-export function StackedSilhouette({ position, attrs, ready }) {
+export function StackedSilhouette({ position, attrs, ready, fast = false }) {
   const visible = useRevealOnMount(ready)
   const mask = STACK_MASK[position] ?? STACK_MASK.qb
   return (
@@ -317,7 +319,7 @@ export function StackedSilhouette({ position, attrs, ready }) {
             transform: visible ? 'translateY(0)' : `translateY(-${i * 100}%)`,
             // Fully sequential — each band only starts once the previous one
             // has completely finished falling (delay = full fall duration).
-            transitionDelay: visible ? `${(attrs.length - 1 - i) * 170}ms` : '0ms',
+            transitionDelay: visible ? `${(attrs.length - 1 - i) * (fast ? 24 : 170)}ms` : '0ms',
           }}
         >
           <span className="splash-stack-band-label">{a.label}</span>
@@ -451,6 +453,9 @@ export default function SplashScreen({ onStart, onDepthChart, onWiki }) {
           </div>
           <div className="splash-mg-sub">BASKETBALL BUILDER</div>
         </button>
+
+        {/* the classic look's way back (Settings → Classic look brought them here) */}
+        {!IS_APP && !APP_LOOK && <button className="splash-newlook" onClick={() => setClassicLook(false)}>Switch to the new look</button>}
       </div>
 
       <div className="splash-field-lines">

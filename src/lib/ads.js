@@ -47,6 +47,14 @@ const railSlots = () => Object.entries(window.ramp?.settings?.slots ?? {})
 export const RAIL_GAP_MS = 30000
 let lastRail = 0
 
+// A page change that wants exactly what's already running, inside the gap, leaves it running:
+// tearing an ad down seconds after it loaded wastes the request and counts against viewability.
+// Anything else on the page (an in-page unit the new page won't have) needs the full reset.
+let lastPage = 0
+let lastPageUnits = ''
+const keepRunning = units => units && units === lastPageUnits && Date.now() - lastPage < RAIL_GAP_MS
+  && Object.values(window.ramp?.settings?.slots ?? {}).every(s => !s?.type || units.split(',').includes(s.type))
+
 // The units that float over the page only run where the page leaves them room. The corner
 // video (bottom right) needs a window at least 1440 wide: narrower, it covered the dock's
 // right end and the game's own panel (on a phone it sat on half the bottom rail). The left
@@ -58,6 +66,10 @@ const forScreen = ads => ads.filter(a => (a.type === 'corner_ad_video' ? wide(14
 // ads: units to add after the destroy ([] = none)
 export function rampPage({ ads: wanted = [], path } = {}) {
   const ads = forScreen(wanted)
+  const units = ads.map(a => a.type).join()
+  if (keepRunning(units)) return ready
+  lastPage = Date.now()
+  lastPageUnits = units
   pageGen++
   return serial(() => {
     let destroyed

@@ -10,6 +10,7 @@ import { seededShuffle, useProgress } from '../lib/progress'
 import { itemById } from '../lib/cosmetics'
 import { rampRail } from '../lib/ads'
 import { IS_APP } from '../lib/platform'
+import { LOW_POWER, sampleFrames } from '../lib/lowPower'
 import { watchFor, REWARDED_ON } from '../lib/rewardedAd'
 
 function fmtHeight(inches) {
@@ -35,12 +36,16 @@ function gradeColor(val0) {
 const ITEM_H  = 44
 const CENTER  = 2
 const IDLE_MS = 1200
+const ROWS_BELOW = 4   // rows the window shows past the middle one
 const FAST_MS = 36   // ms per item at peak speed — defines MAX_VEL
 
 // The drum (rows tilting like a slot machine's reel) is off on the desktop website: a 3D reel
 // re-tilting its rows every frame was a big part of the spin screen's stutter there. The slow idle
-// drift stays, as a GPU animation instead of a script each frame. Phones and the app keep the drum
-const DRUM_ON = IS_APP || !(typeof window !== 'undefined' && window.matchMedia?.('(min-width: 769px)').matches)
+// drift stays, as a GPU animation instead of a script each frame. Phones and the app keep the drum,
+// unless they're weak (lib/lowPower.js)
+const DRUM_ON = !LOW_POWER && (IS_APP || !(typeof window !== 'undefined' && window.matchMedia?.('(min-width: 769px)').matches))
+// the reels stop gliding after this long with nothing happening: a screen at rest should draw nothing
+const IDLE_REST_MS = 6000
 
 // ─── Slot Reel ───────────────────────────────────────────────────────────────
 // Same item on both sides of a reel, even when the pool was re-mapped (custom ratings)
@@ -143,6 +148,29 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, on
       if (posRef.current >= initOffset + loopH) posRef.current -= loopH
     }
 
+    // No drum: the whole spin is one GPU animation, the same curve sampled ahead of time, so nothing
+    // runs on the page while the reel turns and a busy page can't make it stutter. It starts from the
+    // same place on the strip's first copy (the copies are identical), so the run fits on the strip.
+    const gpuSpin = (from, dist, duration, ease, done) => {
+      const track = trackRef.current
+      const rest = ((from - CENTER * ITEM_H) % loopH + loopH) % loopH + CENTER * ITEM_H
+      if (!track || DRUM_ON || !track.animate || rest + dist + (ROWS_BELOW * ITEM_H) > allItems.length * ITEM_H) return false
+      const y = p => `translate3d(0,${-(p - CENTER * ITEM_H)}px,0)`
+      const N = 32
+      track.style.transition = 'none'
+      const anim = track.animate(Array.from({ length: N + 1 }, (_, i) => ({ transform: y(rest + dist * ease(i / N)) })), { duration, easing: 'linear', fill: 'forwards' })
+      const park = p => {
+        posRef.current = initOffset + ((p - initOffset) % loopH + loopH) % loopH
+        track.style.transform = y(posRef.current)
+        anim.cancel()
+      }
+      driftRef.current = () => { park(-new DOMMatrix(getComputedStyle(track).transform).m42 + CENTER * ITEM_H) }
+      anim.onfinish = () => { driftRef.current = null; park(rest + dist); done() }
+      return true
+    }
+
+    if (spinning) sampleFrames()
+
     if (spinning && target) {
       // Fixed outcome (Daily Challenge): same speed curve as a normal spin, but
       // driven by distance so it always comes to rest on `target`.
@@ -162,6 +190,16 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, on
         const u = (t - KICK) / (1 - KICK)
         return (KICK + (1 - KICK) * (u - u * u * u + (u * u * u * u) / 2)) / area
       }
+      const settle = () => {
+        stopRef.current = setTimeout(() => {
+          const idx = Math.round(posRef.current / ITEM_H)
+          const winner = items[((idx % len) + len) % len]
+          if (onStopRef.current) onStopRef.current(winner)
+        }, 150)
+      }
+      if (gpuSpin(start, dist, duration, ease, settle)) {
+        return () => { clearTimeout(stopRef.current); driftRef.current?.(); driftRef.current = null }
+      }
       const frame = now => {
         const t = Math.min((now - startTime) / duration, 1)
         let pos = start + dist * ease(t)
@@ -170,11 +208,7 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, on
         posRef.current = pos
         if (trackRef.current) { trackRef.current.style.transform = `translate3d(0,${-(pos - CENTER * ITEM_H)}px,0)`; drum(pos) }
         if (t < 1) { rafRef.current = requestAnimationFrame(frame); return }
-        stopRef.current = setTimeout(() => {
-          const idx = Math.round(posRef.current / ITEM_H)
-          const winner = items[((idx % len) + len) % len]
-          if (onStopRef.current) onStopRef.current(winner)
-        }, 150)
+        settle()
       }
       rafRef.current = requestAnimationFrame(frame)
 
@@ -186,6 +220,26 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, on
       const speedMult = 0.93 + Math.random() * 0.10  // subtle ±5% speed variance
       const MAX_VEL   = (ITEM_H / FAST_MS) * speedMult
       let lastFrame   = startTime
+
+      // (as one GPU animation when there's no drum: the same speeds, added up ahead of time)
+      const KICK0 = 0.45, area0 = KICK0 + (1 - KICK0) * 0.5
+      const from0 = posRef.current
+      const stopAt = Math.round((from0 + MAX_VEL * duration * area0) / ITEM_H) * ITEM_H
+      const ease0 = t => {
+        if (t < KICK0) return t / area0
+        const u = (t - KICK0) / (1 - KICK0)
+        return (KICK0 + (1 - KICK0) * (u - u * u * u + (u * u * u * u) / 2)) / area0
+      }
+      const landed = gpuSpin(from0, stopAt - from0, duration, ease0, () => {
+        stopRef.current = setTimeout(() => {
+          const idx    = Math.round(posRef.current / ITEM_H)
+          const winner = items[((idx % items.length) + items.length) % items.length]
+          if (onStopRef.current) onStopRef.current(winner)
+        }, 150)
+      })
+      if (landed) {
+        return () => { clearTimeout(stopRef.current); driftRef.current?.(); driftRef.current = null }
+      }
 
       // Set transition once — not every frame
       if (trackRef.current) trackRef.current.style.transition = 'none'
@@ -233,9 +287,11 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, on
 
       rafRef.current = requestAnimationFrame(frame)
 
+    } else if (idle && LOW_POWER) {
+      // weak machines: the reels just sit until they're spun
     } else if (idle && !DRUM_ON) {
       // Desktop website: the slow idle drift runs as one GPU transform animation (no script
-      // each frame); when it stops, the track keeps the place it drifted to
+      // each frame), and rests after a few seconds; when it stops, the track keeps the place it drifted to
       const track = trackRef.current
       if (track) {
         const VEL = ITEM_H / IDLE_MS
@@ -243,7 +299,9 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, on
         track.style.transition = 'none'
         const anim = track.animate([{ transform: `translate3d(0,${y0}px,0)` }, { transform: `translate3d(0,${y0 - loopH}px,0)` }],
           { duration: loopH / VEL, iterations: Infinity, easing: 'linear' })
+        const restT = setTimeout(() => anim.pause(), IDLE_REST_MS)
         driftRef.current = () => {
+          clearTimeout(restT)
           const t = Number(anim.currentTime) || 0
           posRef.current += (VEL * t) % loopH
           wrap()
@@ -255,10 +313,12 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, on
     } else if (idle) {
       const VEL     = ITEM_H / IDLE_MS   // px/ms at idle speed
       let lastFrame = performance.now()
+      const restAt = lastFrame + IDLE_REST_MS
 
       if (trackRef.current) trackRef.current.style.transition = 'none'
 
       const frame = (now) => {
+        if (now > restAt) return
         const dt  = Math.min(now - lastFrame, 50)
         lastFrame = now
         posRef.current += VEL * dt

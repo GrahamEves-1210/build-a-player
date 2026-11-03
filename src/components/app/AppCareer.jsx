@@ -23,6 +23,7 @@ import { getUsername } from '../../lib/discord'
 import { sellsHere, onStorefront } from '../../lib/storefront'
 import { IconClose, IconArrow, IconFlame, IconTrophy, IconStar, IconCrown, IconMedal, IconRing, IconCheck, IconShield, IconHelmet, IconSpin, IconCaret } from './icons'
 import './career-legacy.css'
+import { seasonAnalytics, careerBests, TIER_WORD } from '../../lib/careerStats'
 import { Scramble } from './MotionText'
 import { motion } from 'motion/react'
 import { SPRING_LAYOUT } from '../../lib/motion'
@@ -675,6 +676,60 @@ function Offseason({ c, setCareer, last, setTab, user }) {
     </section>
   )
 }
+// The numbers behind a season: the three that matter most, the rest a tap away. Each is rated
+// against the real league, and tapping one says what it means (lib/careerStats.js).
+function Analytic({ a, best }) {
+  const [open, setOpen] = useState(false)
+  const isBest = best != null && a.value === best
+  return (
+    <button type="button" className={`crs-row${a.tier ? ` is-${a.tier}` : ''}`} aria-expanded={open} onClick={() => setOpen(o => !o)}>
+      <span className="crs-top">
+        <span className="crs-name">{a.label}{isBest && <em>CAREER BEST</em>}</span>
+        <b>{a.text}</b>
+      </span>
+      {a.mark != null && (
+        <span className="crs-line">
+          <span className="crs-bar" aria-hidden="true"><i style={{ width: `${a.mark}%` }} /><u /></span>
+          <span className="crs-tier">{TIER_WORD[a.tier]}</span>
+        </span>
+      )}
+      {open && <span className="crs-says">{a.says}{a.avgText != null && <small>Average {a.avgText} · elite {a.low ? 'under' : 'over'} {a.eliteText}</small>}</span>}
+    </button>
+  )
+}
+function Analytics({ c, s }) {
+  const [more, setMore] = useState(false)
+  const all = seasonAnalytics(c.pos, s)
+  if (!all.length) return null
+  const best = c.seasons.length > 1 ? careerBests(c.pos, c.seasons) : {}
+  return (
+    <div className="crs">
+      <span className="ag-eyebrow">THE NUMBERS BEHIND IT · TAP ONE</span>
+      {(more ? all : all.slice(0, 3)).map(a => <Analytic key={a.key} a={a} best={best[a.key]} />)}
+      {all.length > 3 && <button type="button" className="crs-more" onClick={() => setMore(m => !m)}>{more ? 'FEWER' : `ALL ${all.length} NUMBERS`}</button>}
+    </div>
+  )
+}
+// the top three by year (a season from before these existed has none)
+function AnalyticsByYear({ c }) {
+  const rows = c.seasons.map(s => ({ s, a: seasonAnalytics(c.pos, s) })).filter(r => r.a.length)
+  if (!rows.length) return null
+  const heads = rows[0].a.slice(0, 3)
+  const best = careerBests(c.pos, c.seasons)
+  return (
+    <div className="ag-card cr-table crs-table ag-pop" style={{ '--d': '70ms' }}>
+      <div className="ag-card-head"><span className="ag-eyebrow">THE NUMBERS BY YEAR</span></div>
+      <div className="crs-yr crs-yr--head"><span>YR</span>{heads.map(h => <span key={h.key}>{h.label}</span>)}</div>
+      {[...rows].reverse().map(({ s, a }) => (
+        <div key={s.year} className="crs-yr">
+          <span>{s.season}</span>
+          {a.slice(0, 3).map(x => <span key={x.key} className={`${x.tier ? `is-${x.tier}` : ''}${c.seasons.length > 1 && x.value === best[x.key] ? ' is-best' : ''}`}>{x.text}</span>)}
+        </div>
+      ))}
+    </div>
+  )
+}
+
 function Recap({ c, last, user }) {
   const S = sportOf(c)
   const met = last.goals.filter(g => g.met).length
@@ -694,6 +749,7 @@ function Recap({ c, last, user }) {
         {last.records.map((r, i) => <span key={i} className="cr-badge is-rec"><IconFlame size={12} /> {r}</span>)}
       </div>
       {last.sb && <p className="cr-note">{last.sb.won ? `${S.final} champions${last.sb.series ? `, ${last.sb.mySc}–${last.sb.oppSc} in the series` : `: ${last.sb.mySc ?? ''}${last.sb.oppSc != null ? `–${last.sb.oppSc}` : ''}`}.` : `Lost the ${S.final}${last.sb.series ? ` ${last.sb.mySc}–${last.sb.oppSc}` : ''}. Close.`}</p>}
+      <Analytics c={c} s={last} />
       {!last.sb && last.rounds?.length > 0 && <p className="cr-note">Playoffs: {last.rounds.map(r => `${r.won ? 'W' : 'L'} ${r.mySc}–${r.oppSc} ${nick(r.opponent)}`).join(' · ')}</p>}
       {last.goals.length > 0 && <div className="cr-goals"><span className="ag-eyebrow">GOALS · {met}/{last.goals.length}</span>{last.goals.map(g => <span key={g.k} className={`cr-goal${g.met ? ' is-met' : ' is-miss'}`}>{g.met ? <IconCheck size={11} /> : null} {g.label}</span>)}</div>}
       <button className="ag-btn ag-btn--ghost cl-season-share" onClick={shareSeason} disabled={card.busy}>{card.busy ? 'MAKING THE CARD…' : `SHARE THE ${last.season} SEASON`}</button>
@@ -881,6 +937,7 @@ function CareerTab({ c, L, onDelete }) {
           ))}
         </div>
       )}
+      <AnalyticsByYear c={c} />
       {(c.decisions.length > 0 || c.events.length > 0) && (
         <div className="ag-card cr-log ag-pop" style={{ '--d': '90ms' }}>
           <div className="ag-card-head"><span className="ag-eyebrow">THE STORY</span></div>
@@ -929,6 +986,42 @@ const nav = to => window.dispatchEvent(new CustomEvent('bap:nav', { detail: to }
 const tcOf = (S, short) => { const t = S.teamOf(short); return lum(t.color) < 0.12 ? t.color2 : t.color }
 const MARKS = { ring: IconRing, award: IconTrophy, first: IconMedal, honor: IconStar }
 // a season's marks, the biggest first (a tile has room for two)
+// One season of a finished career, in full: every number it has, the playoffs, the honors, what it cost
+function SeasonOpen({ c, s, isBest, keys, S, logoFor, st }) {
+  const rest = Object.keys(s.stats).filter(k => !keys.includes(k) && STAT_LABEL[k] && s.stats[k] != null)
+  const hurt = c.injuries.filter(i => i.year === s.year)
+  const met = (s.goals ?? []).filter(g => g.met).length
+  return (
+    <section key={s.year} className="ag-card cl-best cl-in" style={{ ...st, '--yc': tcOf(S, s.team) }}>
+      <div className="cl-best-head">
+        <img src={logoFor(s.team)} alt="" />
+        <span><small>{isBest ? 'BEST SEASON' : 'SEASON'} · {s.season}</small><b>{s.teamName ?? S.teamOf(s.team).name}</b><em>Age {s.age} · {s.ovr} OVR · {s.champion ? `${S.final} champions` : s.playoffs ? 'Playoffs' : 'No playoffs'}</em></span>
+        <span className="cl-best-rec"><b>{s.wins}–{s.losses}</b><small>RECORD</small></span>
+      </div>
+      <div className="cl-big cl-big--sm">{keys.map(k => <span key={k}><b>{fmt(s.stats[k])}</b><small>{STAT_LABEL[k]}</small></span>)}</div>
+      {rest.length > 0 && <div className="cl-small cl-small--season">{rest.map(k => <span key={k}><b>{fmt(s.stats[k])}</b><small>{STAT_LABEL[k]}</small></span>)}</div>}
+      {(s.award || s.allPro || s.proBowl || s.champion) && (
+        <div className="cr-badges">
+          {s.champion && <span className="cr-badge is-gold"><IconRing size={12} /> CHAMPIONS</span>}
+          {s.award && <span className="cr-badge is-gold"><IconTrophy size={12} /> {s.awardName}</span>}
+          {s.fmvp && <span className="cr-badge is-gold"><IconTrophy size={12} /> {S.finalsAward}</span>}
+          {s.roy && <span className="cr-badge is-gold"><IconStar size={12} /> ROOKIE OF THE YEAR</span>}
+          {s.allPro && <span className="cr-badge is-gold"><IconMedal size={12} /> {S.first.toUpperCase()}</span>}
+          {s.proBowl && !s.allPro && <span className="cr-badge"><IconStar size={12} /> {S.honor.toUpperCase()}</span>}
+        </div>
+      )}
+      <Analytics key={s.year} c={c} s={s} />
+      <div className="cl-season-notes">
+        {s.rounds?.length > 0 && <p><b>Playoffs</b> {s.rounds.map(r => `${r.won ? 'W' : 'L'} ${r.mySc}–${r.oppSc} ${String(r.opponent ?? '').split(' ').pop()}`).join(' · ')}</p>}
+        {(s.goals ?? []).length > 0 && <p><b>Goals</b> {met} of {s.goals.length} met</p>}
+        {s.records?.length > 0 && <p><b>Records</b> {s.records.join(' · ')}</p>}
+        {hurt.length > 0 && <p><b>Injuries</b> {hurt.map(i => `${i.kind}, ${i.games} ${i.games === 1 ? 'game' : 'games'}${i.played ? ' (played through)' : ''}`).join(' · ')}</p>}
+        {s.missed > 0 && !hurt.length && <p><b>Missed</b> {s.missed} {s.missed === 1 ? 'game' : 'games'}</p>}
+      </div>
+    </section>
+  )
+}
+
 const marksOf = s => [s.champion && 'ring', s.award && 'award', s.allPro && 'first', s.proBowl && !s.allPro && 'honor'].filter(Boolean)
 function Legacy({ c, setCareer, user, onUnretire, onNewBuild, onExit }) {
   const S = sportOf(c), logoFor = S.logo
@@ -941,6 +1034,9 @@ function Legacy({ c, setCareer, user, onUnretire, onNewBuild, onExit }) {
   const cb = comebackYear(c)
   const username = getUsername(user) || c.owner || 'Guest'
   const best = useMemo(() => (c.seasons.length > 1 ? c.seasons.reduce((b, s) => (seasonScore(c.pos, s) > seasonScore(c.pos, b) ? s : b)) : null), [c.seasons, c.pos])
+  // the season open under the strip: tap one to read it; it opens on the best
+  const [pickedYear, setPickedYear] = useState(null)
+  const open = c.seasons.find(s => s.year === pickedYear) ?? best ?? c.seasons[0] ?? null
   // who the build plays like: an all-time great first, else the closest today
   const comp = useMemo(() => { const l = compsFor(c, 6, true); return l.find(x => x.era === 'all-time') ?? l[0] ?? null }, [c.build, c.pos, c.sport]) // eslint-disable-line react-hooks/exhaustive-deps
   // the all-time list around him: two above, two below
@@ -1020,18 +1116,18 @@ function Legacy({ c, setCareer, user, onUnretire, onNewBuild, onExit }) {
         )}
 
         <section className="ag-card cl-in" style={st()}>
-          <span className="ag-eyebrow cl-label">SEASON BY SEASON</span>
+          <span className="ag-eyebrow cl-label">SEASON BY SEASON · TAP A YEAR</span>
           <div className="cl-strip">
             {c.seasons.map(s => {
               const ms = marksOf(s).slice(0, 2)
               const back = c.unretired && s.year >= c.unretired.year
               return (
-                <span key={s.year} className={`cl-yr${s === best ? ' is-best' : ''}${s.champion ? ' is-ring' : ''}${back ? ' is-cb' : ''}`} style={{ '--yc': tcOf(S, s.team) }} title={`${s.season} · ${s.teamName ?? s.team} · ${s.wins}–${s.losses}${s.champion ? ' · champions' : ''}${s.award ? ` · ${s.awardName}` : ''}`}>
+                <button key={s.year} type="button" aria-pressed={s === open} onClick={() => { setPickedYear(s.year); sfx('tap') }} className={`cl-yr${s === best ? ' is-best' : ''}${s === open ? ' is-open' : ''}${s.champion ? ' is-ring' : ''}${back ? ' is-cb' : ''}`} style={{ '--yc': tcOf(S, s.team) }} title={`${s.season} · ${s.teamName ?? s.team} · ${s.wins}–${s.losses}${s.champion ? ' · champions' : ''}${s.award ? ` · ${s.awardName}` : ''}`}>
                   <small>{s.season}</small>
                   <img src={logoFor(s.team)} alt={s.team} loading="lazy" />
                   <b>{s.wins}–{s.losses}</b>
                   <i>{ms.length ? ms.map(k => { const Ico = MARKS[k]; return <Ico key={k} size={13} className={`is-${k}`} /> }) : <em />}</i>
-                </span>
+                </button>
               )
             })}
           </div>
@@ -1044,26 +1140,8 @@ function Legacy({ c, setCareer, user, onUnretire, onNewBuild, onExit }) {
           )}
         </section>
 
-        {best && (
-          <section className="ag-card cl-best cl-in" style={{ ...st(), '--yc': tcOf(S, best.team) }}>
-            <div className="cl-best-head">
-              <img src={logoFor(best.team)} alt="" />
-              <span><small>BEST SEASON · {best.season}</small><b>{best.teamName ?? S.teamOf(best.team).name}</b><em>Age {best.age} · {best.ovr} OVR · {best.champion ? `${S.final} champions` : best.playoffs ? 'Playoffs' : 'No playoffs'}</em></span>
-              <span className="cl-best-rec"><b>{best.wins}–{best.losses}</b><small>RECORD</small></span>
-            </div>
-            <div className="cl-big cl-big--sm">{keys.map(k => <span key={k}><b>{fmt(best.stats[k])}</b><small>{STAT_LABEL[k]}</small></span>)}</div>
-            {(best.award || best.allPro || best.proBowl || best.champion) && (
-              <div className="cr-badges">
-                {best.champion && <span className="cr-badge is-gold"><IconRing size={12} /> CHAMPIONS</span>}
-                {best.award && <span className="cr-badge is-gold"><IconTrophy size={12} /> {best.awardName}</span>}
-                {best.fmvp && <span className="cr-badge is-gold"><IconTrophy size={12} /> {S.finalsAward}</span>}
-                {best.roy && <span className="cr-badge is-gold"><IconStar size={12} /> ROOKIE OF THE YEAR</span>}
-                {best.allPro && <span className="cr-badge is-gold"><IconMedal size={12} /> {S.first.toUpperCase()}</span>}
-                {best.proBowl && !best.allPro && <span className="cr-badge"><IconStar size={12} /> {S.honor.toUpperCase()}</span>}
-              </div>
-            )}
-          </section>
-        )}
+        {open && <SeasonOpen c={c} s={open} isBest={open === best} keys={keys} S={S} logoFor={logoFor} st={st()} />}
+        <AnalyticsByYear c={c} />
 
         <section className="ag-card cl-greats cl-in" style={st()}>
           <div className="cl-greats-head">
