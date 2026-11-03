@@ -1229,9 +1229,13 @@ function watchBracket(c, po) {
 }
 // The game turns on its moment, so the moment decides it: land it and you usually win, miss it and
 // you usually don't. p is the matchup (0.18-0.84): it moves the odds, it doesn't outweigh the play.
-export const momentOdds = (p, hit, score = 0.75) => (hit
-  ? clamp(0.78 + (p - 0.5) * 0.4 + (score - 0.75) * 0.2, 0.62, 0.93)
-  : clamp(0.22 + (p - 0.5) * 0.4, 0.08, 0.38))
+// Each round is harder, the final the hardest, so a ring stays rare: a 60% team landing 70% of
+// its moments wins about 7% of its title runs (17% on the old nudge), landing 90% about 16%.
+export const momentOdds = (p, hit, score = 0.75, round = 0) => (hit
+  ? clamp(0.70 - 0.03 * round + (p - 0.5) * 0.3 + (score - 0.75) * 0.2, 0.55, 0.85)
+  : clamp(0.14 - 0.01 * round + (p - 0.5) * 0.2, 0.05, 0.25))
+// how deep a round is, counted back from the final (3): the same with a bye or a play-in
+export const momentRound = po => Math.max(0, 3 - (po.rounds.length - 1 - po.idx))
 // This round's moment is in: the result, with a stat line sized to the season
 // hit: the drill's own verdict (MiniGame), the same one it showed the player
 export function playoffRound(c, score, game = null, hit = score >= 0.5) {
@@ -1239,7 +1243,7 @@ export function playoffRound(c, score, game = null, hit = score >= 0.5) {
   const a = c.active, po = a.po, f = a.final
   const rd = po.rounds[po.idx]
   const r = seeded(`${c.seed}-por-${c.year}-${po.idx}`)
-  const won = r() < momentOdds(rd.p, hit, score)
+  const won = r() < momentOdds(rd.p, hit, score, momentRound(po))
   const k = 0.82 + score * 0.5 + (r() - 0.5) * 0.2             // the moment sets the day: 0.6–1.4× a normal game
   let mySc, oppSc, line
   if (S.isBucket) {

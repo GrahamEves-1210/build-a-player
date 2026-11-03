@@ -8,7 +8,7 @@ import {
   OFF_STEPS, offStep, campDrill, CAMP_LEGACY, dbSpot, lineup, depthChart, gradeOf, gradeOfOvr, ovrGradeVal, SPORT, sportOf,
   openTalks, ask, closeTalks, acceptTalks, ASKS, askOdds, leverageOf,
   retire, canRetire, mustRetire, careerTotals, legacyOf, LEGACY_TIERS, ALL_TIME, STAT_LABEL, HEADLINE_STATS, EXTRA_STATS, AWARD_NAME, MAX_SEASONS, retireReason, goalsFor, stockText, pickText, loadSlots, CAREER_SLOTS, maxedTrait, trainWindow, canUpgrade, upgradeCost, legacyExtras,
-  compsFor, seasonScore, unretire, canUnretire, comebackYear, COMEBACK_SEASONS, inTeamColors, momentOdds } from '../../lib/career'
+  compsFor, seasonScore, unretire, canUnretire, comebackYear, COMEBACK_SEASONS, inTeamColors, momentOdds, momentRound } from '../../lib/career'
 import { GAME_LINE } from '../../lib/seasonDirector'
 import { GAMES, pickPlayoffGame } from '../../lib/minigames'
 import MiniGame from './MiniGame'
@@ -1247,7 +1247,7 @@ function Playoffs({ c, setCareer, onBook }) {
   const last = po.line[po.line.length - 1]
   const [step, setStep] = useState(po.stage === 'done' ? 'result' : last && !rd?.played && po.line.length ? 'result' : 'card')
   const game = useMemo(() => pickPlayoffGame(c.pos, `${c.seed}-${c.year}-${po.idx}`, po.line.map(x => x.game).filter(Boolean)), [c.seed, c.year, po.idx]) // eslint-disable-line
-  const landIt = Math.round(momentOdds(rd?.p ?? 0.5, true) * 100), missIt = Math.round(momentOdds(rd?.p ?? 0.5, false) * 100)
+  const landIt = Math.round(momentOdds(rd?.p ?? 0.5, true, 0.75, momentRound(po)) * 100), missIt = Math.round(momentOdds(rd?.p ?? 0.5, false, 0.75, momentRound(po)) * 100)
   if (po.stage === 'done' || step === 'result') {
     const x = last
     return (
