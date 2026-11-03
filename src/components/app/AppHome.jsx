@@ -503,17 +503,18 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
 
         {modes}
 
-        <PromosOnce />
-
-        <BoardOnce />
-
-        {/* website: an ad under those, the full width, no margins of its own (collapses when there's none) */}
+        {/* website: an ad under the mode cards, above the Builder Pass: the full width, no margins of its own (collapses when there's none) */}
         {!IS_APP && (
           <div key={`home-ad-${sport}`} className="ag-home-ad ag-home-ad--pair">
             <div id="ramp-cntr1-home" className="ag-home-ad-slot" />
             {HOME_AD_PAIR && <div id="ramp-cntr1-home-2" className="ag-home-ad-slot" />}
           </div>
         )}
+
+        <PromosOnce />
+
+        <BoardOnce />
+
 
       </div>
       {/* website: get the app (the official badge; hidden until the App Store link is set) */}

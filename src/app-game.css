@@ -2776,9 +2776,9 @@ html.is-app .ag-sandbox { grid-column: 1 / -1; justify-self: stretch; }
       "stage  modes"
       "stage  start"
       "ways   ways"
+      "ad     ad"
       "perks  perks"
-      "potd   potd"
-      "ad     ad";
+      "potd   potd";
     column-gap: 32px; row-gap: 12px;
   }
   /* a build in progress: its own row, right above PLAY */
@@ -2792,9 +2792,9 @@ html.is-app .ag-sandbox { grid-column: 1 / -1; justify-self: stretch; }
       "stage  resume"
       "stage  start"
       "ways   ways"
+      "ad     ad"
       "perks  perks"
-      "potd   potd"
-      "ad     ad";
+      "potd   potd";
   }
   html.app-look .ag-resume--top { grid-area: resume; margin: 0; }
   html.app-look .ag-hud { grid-area: hud; padding: 0; }
