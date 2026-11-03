@@ -44,7 +44,7 @@ export default function AppAchievements({ onClose, hall = null }) {
       <div className="ag-screen-head">
         <div>
           <span className="ag-eyebrow">LIFETIME GOALS</span>
-          <h1 className="ag-h1">{hall ? 'The Hall' : 'Achievements'}</h1>
+          <h1 className="ag-h1">{hall ? 'HOF' : 'Achievements'}</h1>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <CoinPill />

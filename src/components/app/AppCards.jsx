@@ -214,7 +214,7 @@ export default function AppCards({ sport: startSport, onClose, hall = null }) {
       <div className="ag-screen-head">
         <div>
           <span className="ag-eyebrow">COLLECTION · {Object.keys(p.cards).length} CARDS</span>
-          <h1 className="ag-h1">{hall ? 'The Hall' : 'Cards'}</h1>
+          <h1 className="ag-h1">{hall ? 'HOF' : 'Cards'}</h1>
         </div>
         <button className="ag-round-btn" onClick={onClose} aria-label="Close"><IconClose size={16} /></button>
       </div>

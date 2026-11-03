@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { APP_STORE_URL } from '../../lib/storeLinks'
 import { POS_OPTIONS, hsUrl, StackedSilhouette, SPLASH_ATTRS } from '../SplashScreen'
 import { getUsername } from '../../lib/discord'
@@ -183,9 +183,14 @@ function Rafters({ career }) {
   )
 }
 // Compete: same spins, one board, and three of them make the podium
-const Podium = () => (
+const Podium = ({ faces }) => (
   <span className="ag-pod" aria-hidden="true">
-    {[2, 1, 3].map(rank => <span key={rank} className={`ag-pod-col is-${rank}`}><b>{rank}</b></span>)}
+    {[2, 1, 3].map(rank => (
+      <span key={rank} className={`ag-pod-col is-${rank}`}>
+        {faces?.[rank - 1] && <img src={hsUrl(faces[rank - 1].id)} alt="" width="96" height="70" loading="lazy" decoding="async" draggable={false} />}
+        <b>{rank}</b>
+      </span>
+    ))}
   </span>
 )
 // Squad Builder, basketball: the five spots you fill
@@ -197,7 +202,7 @@ const Lineup = () => (
 // Depth Chart: the game itself, in numbers: stars in order, one stat
 const DepthArt = () => (
   <span className="ag-ranks" aria-hidden="true">
-    <i><b>1</b></i><i><b>2</b></i><i><b>3</b></i>
+    {GREATS.qb.map((f, i) => <i key={f.id}><b>{i + 1}</b><img src={hsUrl(f.id)} alt="" width="96" height="70" loading="lazy" decoding="async" draggable={false} /></i>)}
   </span>
 )
 
@@ -264,8 +269,34 @@ const PromosOnce = memo(function Promos() {
   )
 })
 
+// Where the player was on home: a mode unmounts it, so this outlives the visit (a reload starts at the top)
+let homeScroll = 0
+
 export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus, onBlacktop, blacktop, onSquad, squad = null, onCompete, onCareer, career = null, resume = null, user, renderBucketFigure, footer = null }) {
   const prog = useProgress()
+  // Back from a mode, home opens where it was left. The lists on it fill in as they load, so the
+  // spot is put back as the page grows, for a moment, until the player moves it themselves.
+  const homeRef = useRef(null)
+  useLayoutEffect(() => {
+    const el = homeRef.current
+    const target = homeScroll
+    let settling = target > 0
+    const put = () => { if (settling) el.scrollTop = target }
+    const settle = () => { settling = false }
+    const save = () => { if (!settling) homeScroll = el.scrollTop }
+    put()
+    const grown = new ResizeObserver(put)
+    if (settling) grown.observe(el.firstElementChild)
+    const done = setTimeout(() => { settle(); grown.disconnect() }, 1500)
+    const touched = ['wheel', 'touchstart', 'pointerdown', 'keydown']
+    touched.forEach(t => el.addEventListener(t, settle, { passive: true }))
+    el.addEventListener('scroll', save, { passive: true })
+    return () => {
+      clearTimeout(done); grown.disconnect()
+      touched.forEach(t => el.removeEventListener(t, settle))
+      el.removeEventListener('scroll', save)
+    }
+  }, [])
   const here = usePresence()?.areas ?? {}   // how many are in each online mode right now
   const cs = prog.stats?.compete
   const ol = prog.stats?.online ?? { rating: 800, played: 0 }
@@ -324,7 +355,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
   const sqLast = squad?.seasons?.[squad.seasons.length - 1] ?? null
   const btLive = !!blacktop && blacktop.phase !== 'idle'
   const facesNow = isBucket ? BUCKET_NOW[position] : positions.find(o => o.pos === position)?.players
-  const crLine = !career ? 'Draft day to the Hall'
+  const crLine = !career ? 'Draft day to the HOF'
     : career.phase === 'draft' ? 'Draft day'
     : career.phase === 'season' ? `${career.sport === 'bucket' ? 'Game' : 'Week'} ${(career.active?.k ?? 0) + 1} with the ${career.fit?.name ?? ''}`
     : career.phase === 'offseason' ? `Year ${career.year + 1} · offseason`
@@ -335,14 +366,16 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
     : 'Live pools of five'
   const btStatus = !btLive ? null : blacktop.phase === 'queue' ? `In the lobby · ${blacktop.queue}/6` : blacktop.phase === 'build' ? 'Building' : 'Game on'
   const btLine = btStatus ?? ((btG || h2h.played) ? `Squads ${btW}–${btG - btW} · 1v1 ${h2h.wins ?? 0}–${h2h.losses ?? 0}${ol.played ? ` · ${tierFor(ol.rating)[1]} ${ol.rating}` : ''}` : '1v1, 2v2, 3v3')
-  const sqLine = !squad ? 'Build a whole team'
+  const sqLine = !squad ? 'Build your whole team'
     : squad.phase === 'build' ? `Building · ${sqBuilt} of ${squad.slots.length}`
     : sqLast && squad.phase === 'result' ? `Last year ${sqLast.wins}-${sqLast.losses}${sqLast.champion ? ', champions' : sqLast.playoffs ? ', playoffs' : ''}`
     : squad.team ? 'Ready to play' : 'Needs a team'
 
   const sp = isBucket ? 'bucket' : 'nfl'
+  const podiumFaces = isBucket ? BUCKET_NOW.guard : GREATS.qb
   const modes = useMemo(() => (
-    <section className="ag-ways" aria-label="Game modes">
+    <section className="ag-ways" aria-label="More ways to play">
+      <h2 className="ag-ways-label">MORE WAYS TO PLAY</h2>
       <div className="ag-cards">
         {onCareer && (
           <ModeArt kind="career" tone="career" title="CAREER" line={crLine} color={career?.fit?.color} onClick={onCareer}>
@@ -360,18 +393,18 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
           ))
           : (onCompete && (
             <ModeArt kind="compete" tone="compete" title="COMPETE" line={cpLine} live={here.compete} onClick={onCompete}>
-              <Podium />
+              <Podium faces={podiumFaces} />
             </ModeArt>
           ))}
         <button className="ag-way ag-mc ag-mc--salary ag-way--quick" onClick={() => startRef.current('salarycap')}>
-          <span className="ag-mc-head"><b>SALARY CAP</b><small>Today's puzzle</small></span>
+          <span className="ag-mc-head"><b>SALARY CAP</b><small>Daily puzzle</small></span>
           <span className="ag-mc-shot" aria-hidden="true"><img src={`/modes/${sp}-salary.webp`} alt="" loading="lazy" decoding="async" draggable={false} /></span>
         </button>
       </div>
       <div className="ag-more">
         {isBucket && onCompete && (
           <ModeArt small kind="compete" tone="compete" title="COMPETE" line={cpLine} live={here.compete} onClick={onCompete}>
-            <Podium />
+            <Podium faces={podiumFaces} />
           </ModeArt>
         )}
         {onSquad && (
@@ -389,7 +422,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
   ), [sp, isBucket, career?.fit?.color, crLine, cpLine, btLine, btLive, sqLine, here.blacktop, here.compete, onCareer, onBlacktop, onCompete, onSquad, onDepthChart])
 
   return (
-    <div className={`ag-home ag-home--${sport}`}>
+    <div className={`ag-home ag-home--${sport}`} ref={homeRef}>
       <div className="ag-home-inner">
         <HudOnce user={user} />
         <div className="ag-brand">

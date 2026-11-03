@@ -1003,7 +1003,7 @@ function ScreenSeason({ result, awards, onNext, adsDisabled = false, isAllTime =
           )}
 
           {awardsPhase >= 5 && (
-            <button className="simp-cta simp-cta-in" onClick={onNext}>Enter Playoffs</button>
+            <button className="simp-cta simp-cta-in simp-cta--pin" onClick={onNext}>Enter Playoffs</button>
           )}
         </>
       )}
@@ -1069,7 +1069,7 @@ function ScreenAwards({ awards, onNext }) {
       )}
 
       {phase >= 5 && (
-        <button className="simp-cta simp-cta-in" onClick={onNext}>Enter Playoffs</button>
+        <button className="simp-cta simp-cta-in simp-cta--pin" onClick={onNext}>Enter Playoffs</button>
       )}
     </div>
   )

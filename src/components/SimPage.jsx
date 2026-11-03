@@ -561,9 +561,10 @@ function DirectedSeason({ dr, result, pos, pool, userName, director, onNext, bui
           <div className="simp-eyebrow">Production</div>
           <StatLineTable result={final} build={build} userName={userName} kind={isOL ? 'ol' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'} />
           {pool && <Leaders sport="nfl" pos={pos} pool={pool} seed={director.seed} you={{ name: userName, team: result.team?.short, value: leaderValue(final, pos) }} />}
-          <button className="simp-cta simp-cta-in" onClick={onNext}>{final.playoffs ? 'Enter Playoffs' : 'Season Summary'}</button>
         </div>
       )}
+      {/* outside the section above: it has to stick to the whole screen, not just that section */}
+      {final && <button className="simp-cta simp-cta-in simp-cta--pin" onClick={onNext}>{final.playoffs ? 'Enter Playoffs' : 'Season Summary'}</button>}
     </>
   )
 }
@@ -694,7 +695,7 @@ function ScreenSeason({ result, onNext, isRB = false, isWR = false, isTE = false
           )}
 
           {allDone && (
-            <button className="simp-cta simp-cta-in" onClick={onNext}>
+            <button className="simp-cta simp-cta-in simp-cta--pin" onClick={onNext}>
               {playoffs ? 'Enter Playoffs' : 'Season Summary'}
             </button>
           )}

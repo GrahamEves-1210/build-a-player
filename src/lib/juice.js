@@ -553,7 +553,7 @@ export const slideIn = dir => document.documentElement.style.setProperty('--ag-i
 // step (the unlock) follows them. No counter on screen, or reduced motion: resolves now.
 export function flyCoins(toEl, { from = '.coin-pill', n = 5 } = {}) {
   // the counter that's on top: an open screen's own, else the page's
-  const shown = [...document.querySelectorAll(from)].filter(e => e.getBoundingClientRect().width > 0)
+  const shown = [...document.querySelectorAll(from)].filter(e => e.getBoundingClientRect().width > 0 && getComputedStyle(e).visibility !== 'hidden')
   const src = shown.filter(e => e.closest('.ag-screen')).at(-1) ?? shown[0]
   if (!src || !toEl?.getBoundingClientRect || reduced() || !Element.prototype.animate) return Promise.resolve()
   const a = src.getBoundingClientRect(), b = toEl.getBoundingClientRect()

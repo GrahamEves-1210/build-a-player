@@ -10,7 +10,6 @@ import { useStorePrices, PRO_PLAN_ID } from '../../lib/iap'
 import { openCheckout, openBillingPortal, billingDue, restorePro, PRO_PRICE, perMonth } from '../../lib/webCheckout'
 import { sellsHere } from '../../lib/storefront'
 import { isPro } from '../../lib/progress'
-import { railPreviewOn, setRailPreview } from '../../lib/fakeRail'
 import { IconQuestion, IconInfo, IconChat, IconDiscord, IconX, IconClose, IconShield, IconDoc, IconPodium, IconPlay, IconCrown, IconHome, IconGear, IconStar } from './icons'
 import { useProgress } from '../../lib/progress'
 import AppSettings from './AppSettings'
@@ -165,7 +164,6 @@ export default function AppMenu({ sport, onClose, initialView = 'menu' }) {
   }, [])
   const [feedbackUser, setFeedbackUser] = useState(null) // null = closed
   const [muted, setMutedState] = useState(isMuted)
-  const [rail, setRailState] = useState(railPreviewOn)
   const signedIn = useProgress().signedIn
   const isBucket = sport === 'bucket'
 
@@ -239,12 +237,7 @@ export default function AppMenu({ sport, onClose, initialView = 'menu' }) {
             <button className="ag-row-btn" onClick={() => setView('settings')}>
               <IconGear size={18} /><span className="ag-sound-lbl">SETTINGS · HELP · ACCOUNT</span>
             </button>
-            {/* testing tools: only in a local dev build, never for players */}
-            {import.meta.env.DEV && <button className={`ag-row-btn${rail ? '' : ' ag-sound--off'}`} onClick={() => { setRailPreview(!rail); setRailState(!rail) }}>
-              <span className="ag-sound-lbl">AD RAIL PREVIEW</span>
-              <span className="ag-sound-switch"><span className="ag-sound-knob" /></span>
-              <span className="ag-sound-state">{rail ? 'ON' : 'OFF'}</span>
-            </button>}
+            {/* testing tool: only in a local dev build, never for players */}
             {import.meta.env.DEV && IS_APP && (
               <button className="ag-row-btn" onClick={go(() => nav('soundlab'))}>
                 <IconPlay size={18} /><span className="ag-sound-lbl">SOUND LAB · PICK THE SOUNDS</span>

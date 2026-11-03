@@ -187,7 +187,7 @@ export default function AppTabBar() {
           <PlayButton page={state.page} sport={state.sport} lit={active === 'play'} here={state.page === 'splash' && !screen}
             onTap={() => { if (state.page === 'splash' && !screen) return; go('home')() }} />
           {/* website: cards are saved to an account */}
-          <Tab label="HALL" Icon={IconTrophy} Line={IconTrophyLine} active={active === 'hall'} badge={claimable}
+          <Tab label="HOF" Icon={IconTrophy} Line={IconTrophyLine} active={active === 'hall'} badge={claimable}
             onClick={screen === 'hall' ? undefined : cardsOpen() ? () => guardLeave(() => { setMenuOpen(false); slideTo('hall'); setHallTab(claimable ? 'achievements' : 'cards'); setHallFrom('dock'); setScreen('hall') }) : () => guardLeave(() => { setMenuOpen(false); setAuthOpen(true) })} />
           <Tab label="PROFILE" Icon={IconProfile} Line={IconProfileLine} active={active === 'profile' || active === 'locker'} onClick={state.page === 'profile' && !screen ? undefined : go('profile')} />
         </nav>
