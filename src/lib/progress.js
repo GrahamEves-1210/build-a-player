@@ -1227,11 +1227,13 @@ export function passInfo() {
 }
 // ── Boosts: consumables from the pass and the shop. Each device counts what it got
 // and used (inv[device]), added up across the account (two devices can't erase each other's)
+// Priced against what a game pays (about 30 coins for a 10-win season) and what each one does:
+// a boost that lasts a few games costs a few seasons of coins, not a dozen
 export const BOOSTS = {
-  xp:   { name: '2x XP', short: '2x XP', desc: '1 hour of double XP from every game. The clock starts when you use it.', unit: 'xp', price: 350, per: 1 },
+  xp:   { name: '2x XP', short: '2x XP', desc: '1 hour of double XP from every game. The clock starts when you use it.', unit: 'xp', price: 100, per: 1 },
   rush: { name: 'Coin Rush', short: 'Coin Rush', desc: '3 hours of double coins from every game. The clock starts when you use it.', unit: 'rush', per: 1, passOnly: true },
-  hot:  { name: 'Hot Hand', short: 'Hot Hand', desc: 'Career: +2 to every grade for your next 3 games (6 in basketball). Use it from the season screen.', unit: 'use', price: 400, per: 1 },
-  heal: { name: 'Quick Heal', short: 'Quick Heal', desc: 'Career: an injury keeps you out half as long. Offered when you get hurt.', unit: 'use', price: 300, per: 1 },
+  hot:  { name: 'Hot Hand', short: 'Hot Hand', desc: 'Career: +2 to every grade for your next 3 games (6 in basketball). Use it from the season screen.', unit: 'use', price: 75, per: 1 },
+  heal: { name: 'Quick Heal', short: 'Quick Heal', desc: 'Career: an injury keeps you out half as long. Offered when you get hurt.', unit: 'use', price: 50, per: 1 },
 }
 const invSum = (k, f) => Object.values(S.inv || {}).reduce((a, d) => a + (+d?.[f]?.[k] || 0), 0)
 export const boostLeft = k => (uid ? Math.max(0, invSum(k, 'got') - invSum(k, 'used')) : 0)

@@ -36,11 +36,7 @@ export default function SiteFooter({ sport = 'nfl', onWiki }) {
         </div>
         <div className="splash-site-footer-col">
           <div className="splash-site-footer-head">Games</div>
-          {isBucket ? (
-            <a className="splash-site-footer-link" href="/">Build-A-Player</a>
-          ) : (
-            <a className="splash-site-footer-link" href="/bucket">Build-A-Bucket</a>
-          )}
+          <a className="splash-site-footer-link" href="/">Build-A-Player</a>
           <a className="splash-site-footer-link" href="https://32-0game.com" target="_blank" rel="noopener noreferrer">32-0</a>
           <a className="splash-site-footer-link" href="https://whosthatprospect.com" target="_blank" rel="noopener noreferrer">Who's That Prospect</a>
         </div>
@@ -49,7 +45,6 @@ export default function SiteFooter({ sport = 'nfl', onWiki }) {
           <a className="splash-site-footer-link" href="/?about">About</a>
           <a className="splash-site-footer-link" href="/privacy">Privacy Policy</a>
           <a className="splash-site-footer-link" href="/terms">Terms</a>
-          <button className="splash-site-footer-link splash-site-footer-link--btn" onClick={openFeedback}>Send Feedback</button>
           {onWiki
             ? <button className="splash-site-footer-link splash-site-footer-link--btn" onClick={onWiki}>Wiki</button>
             : <a className="splash-site-footer-link" href="/wiki">Wiki</a>}
@@ -57,6 +52,7 @@ export default function SiteFooter({ sport = 'nfl', onWiki }) {
         <div className="splash-site-footer-col">
           <div className="splash-site-footer-head">Connect</div>
           <a className="splash-site-footer-link" href="mailto:buildaplayer@outlook.com">Email</a>
+          <button className="splash-site-footer-link splash-site-footer-link--btn" onClick={openFeedback}>Send Feedback</button>
           {/* text links with a small mark, one under the other like the other columns */}
           <div className="splash-site-footer-social">
             <a className="splash-site-footer-link splash-site-footer-link--icon" href="https://x.com/Build_A_Player" target="_blank" rel="noopener noreferrer" aria-label="Follow on X">
