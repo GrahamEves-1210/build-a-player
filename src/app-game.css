@@ -6014,7 +6014,8 @@ html .ag-stage .ag-live-count i { flex: none; width: 10px; height: 10px; border-
 .ag-team { position: absolute; left: 6px; right: 0; bottom: -7%; height: 62%; z-index: 1; display: flex; justify-content: center; align-items: flex-end; pointer-events: none; }
 .ag-team img { display: block; flex: 0 1 auto; min-width: 0; height: 100%; width: auto; margin-left: -10%; object-fit: contain; object-position: bottom; }
 .ag-team img:first-child { margin-left: 0; }
-.ag-team img.is-wr { height: 116%; margin-left: -6%; }   /* his arms are up: at the same image height his body comes out smaller than the others */
+.ag-team img.is-wr { height: 116%; margin-left: -6%; transform: translateY(7.4%); }   /* his helmet level with the RB's */
+.ag-team img.is-rb { height: 90%; }   /* his arms are up: at the same image height his body comes out smaller than the others */
 .ag-mc.is-small .ag-mc-head { right: 8px; }
 /* Career: banners hanging from the rafters, gold on the card's colour, the player in front */
 .ag-rafters { position: absolute; left: 39%; right: 33%; top: 0; z-index: 1; display: flex; justify-content: space-between; gap: 5px; padding-top: 7px; border-top: 3px solid rgba(255,255,255,.28); }
@@ -6036,7 +6037,9 @@ html .ag-stage .ag-live-count i { flex: none; width: 10px; height: 10px; border-
 /* Squad Builder: the five spots */
 .ag-lineup { position: absolute; left: 10px; right: 10px; bottom: 10px; z-index: 1; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; }
 .ag-lineup i { display: grid; place-items: center; aspect-ratio: 1; max-height: 42px; justify-self: center; width: 100%; max-width: 42px; border-radius: 50%; font-style: normal; font-family: var(--ag-display); font-size: 14px; line-height: 1; color: #2c1c00; background: linear-gradient(180deg, #fbe28c, #d9a520); }
-.ag-mc-court { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; opacity: .8; }
+/* (a phone's card is near square, the art 4:3: part crop, part squeeze, so the court fits without looking stretched) */
+.ag-mc-court { position: absolute; top: 0; left: -8%; width: 116%; height: 100%; max-width: none; object-fit: fill; opacity: .8; }
+@media (min-width: 1024px) { .ag-mc-court { left: 0; width: 100%; } }
 .ag-mc--blacktop::after { content: ''; position: absolute; inset: 0; z-index: 1; background: linear-gradient(180deg, rgba(0,0,0,.6), transparent 45%, rgba(0,0,0,.4)); }
 .ag-paint { position: absolute; left: 12px; right: 12px; bottom: 11px; z-index: 2; display: flex; justify-content: space-between; gap: 6px; }
 .ag-paint b { font-family: var(--ag-display); font-weight: 400; font-size: clamp(22px, 6.4vw, 34px); line-height: 1; color: #fff; transform: rotate(-5deg); text-shadow: 0 2px 0 rgba(0,0,0,.45); }

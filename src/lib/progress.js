@@ -548,7 +548,7 @@ export async function fetchPlayersOfDay(key = dayKey()) {
 }
 // Yesterday's board, for the payout: a player's tally for that day is either still
 // "today" on their profile (they haven't played since) or moved to "yday"
-export const POTD_COINS = [500, 300, 200, 150, 100]   // the top 5 are paid (the board's length too)
+export const POTD_COINS = [750, 500, 350, 250, 150]   // the top 5 are paid (the board's length too)
 export async function fetchPlayersOfDayFor(day) {
   if (!supabase) return { rows: [], error: true }
   const c = await cached('potd', day)

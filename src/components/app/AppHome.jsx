@@ -172,13 +172,13 @@ function Rafters({ career }) {
   const count = k => s.filter(x => x[k]).length
   const flags = [
     { Icon: IconRing, n: count('champion'), word: 'RINGS' },
-    { Icon: IconTrophy, n: count('award'), word: s.find(x => x.awardName)?.awardName ?? 'MVP' },
+    { Icon: IconTrophy, n: count('award'), word: `${s.find(x => x.awardName)?.awardName ?? 'MVP'}S` },
     { Icon: IconMedal, n: career?.hof?.in ? 1 : 0, word: 'HOF' },
   ]
   return (
     <span className="ag-rafters" aria-hidden="true">
       {flags.map(({ Icon, n, word }) => (
-        <i key={word} className={`ag-banner${career && !n ? ' is-dark' : ''}`}><Icon size={17} /><b>{career && word !== 'HOF' ? `${n}X` : word === 'RINGS' ? 'RING' : word}</b>{career && word !== 'HOF' && <small>{word}</small>}</i>
+        <i key={word} className={`ag-banner${career && !n ? ' is-dark' : ''}`}><Icon size={17} /><b>{career && word !== 'HOF' ? `${n}X` : word}</b>{career && word !== 'HOF' && <small>{word}</small>}</i>
       ))}
     </span>
   )
