@@ -1256,7 +1256,7 @@ function Playoffs({ c, setCareer, onBook }) {
           <div className={`ag-card cr-po-result ag-pop${x.won ? ' is-w' : ' is-l'}`}>
             <span className="ag-eyebrow">{x.name.toUpperCase()} · {x.won ? 'W' : 'L'} {x.mySc}–{x.oppSc}</span>
             <b>{x.won ? (x.name === S.final ? 'Champions.' : `Through to the ${po.rounds[po.rounds.findIndex(r => r.name === x.name) + 1]?.name ?? 'next round'}.`) : `Season over in the ${x.name}.`}</b>
-            <small>{GAME_LINE[c.pos]?.(x) ?? ''}{x.perGame ? ' a game' : ''} · the moment went {!(x.hit ?? x.score >= 0.5) ? 'wrong' : x.score >= 0.85 ? 'perfectly' : 'your way'}</small>
+            <small>{GAME_LINE[c.pos]?.(x) ?? ''}{x.perGame ? ' a game' : ''} · {x.auto ? (x.won ? 'never in doubt' : 'never close') : `the moment went ${!(x.hit ?? x.score >= 0.5) ? 'wrong' : x.score >= 0.85 ? 'perfectly' : 'your way'}`}</small>
           </div>
         )}
         {po.stage === 'done'
@@ -1267,7 +1267,7 @@ function Playoffs({ c, setCareer, onBook }) {
   }
   if (step === 'game') return (
     <div className="cr-po">
-      <div className="cr-po-head"><span className="ag-eyebrow">{rd.name.toUpperCase()} · vs {rd.oppName.toUpperCase()}</span></div>
+      <div className="cr-po-head"><span className="ag-eyebrow">{rd.name.toUpperCase()} · vs {rd.oppName.toUpperCase()}</span><small className="cr-po-stakes">It's close, and it comes down to this. Land it: about {landIt}% to win. Miss it: about {missIt}%.</small></div>
       <MiniGame retry key={`${po.idx}-${game}`} game={game} build={c.build} seed={`${c.seed}-${c.year}-${po.idx}`} lock={`${c.seed}-${c.year}-${po.idx}`} onDone={res => { setCareer(playoffRound(c, res.score, game, res.hit)); setStep('result') }} />
     </div>
   )
@@ -1276,8 +1276,8 @@ function Playoffs({ c, setCareer, onBook }) {
       <div className="ag-card cr-po-card ag-pop">
         <span className="ag-eyebrow">PLAYOFFS · {rd.name.toUpperCase()}{rd.series ? ' · BEST OF 7' : ''}</span>
         <div className="cr-po-match"><img src={logoFor(c.team)} alt="" /><b>{c.team}</b><i>vs</i><b>{rd.opp}</b><img src={logoFor(rd.opp)} alt="" /></div>
-        <small>{rd.home === null ? 'Neutral site' : rd.home ? 'At home' : 'On the road'} · the {rd.series ? 'series' : 'game'} turns on one moment: <b>{GAMES[game]?.title}</b>. Land it: about {landIt}% to win. Miss it: about {missIt}%</small>
-        <button className="ag-btn ag-btn--gold tk-intro-go" onClick={() => { setStep('game'); sfx('whistle') }}>PLAY THE MOMENT <IconArrow size={16} /></button>
+        <small>{rd.home === null ? 'Neutral site' : rd.home ? 'At home' : 'On the road'}{rd.name === S.final ? <> · it comes down to one moment</> : null}</small>
+        <button className="ag-btn ag-btn--gold tk-intro-go" onClick={() => { sfx('whistle'); if (rd.close === false) { setCareer(playoffRound(c, 0.5)); setStep('result') } else setStep('game') }}>PLAY THE {rd.series ? 'SERIES' : 'GAME'} <IconArrow size={16} /></button>
       </div>
       {po.line.length > 0 && <div className="cr-goals">{po.line.map(x => <span key={x.name} className={`cr-goal${x.won ? ' is-met' : ' is-miss'}`}>{x.name}: {x.won ? 'W' : 'L'} {x.mySc}–{x.oppSc}</span>)}</div>}
     </div>

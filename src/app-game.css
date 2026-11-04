@@ -6270,3 +6270,5 @@ html:is(.is-app, .app-look) .spin-panel-scroll { scrollbar-color: auto; scrollba
   .panel-right > .rc-comp .cr-comp-row b { height: 18px; font-size: 11px; }
   .panel-right > .rc-comp .cr-comp-more { gap: 3px 6px; font-size: 11px; }
 }
+
+.cr-po-stakes { display: block; margin-top: 4px; font-family: var(--ag-body); font-size: 13px; font-weight: 600; color: var(--ag-text-2); }

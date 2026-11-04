@@ -1187,6 +1187,8 @@ export function finishRegular(c, D) {
   return { ...c, active: { ...c.active, final: f, po: buildBracket(c, f) } }
 }
 const strength = t => ((t.off ?? 5) + (t.def ?? 5)) / 2
+// How often a playoff game comes down to the end: about half of them, fewer the more lopsided it is
+export const closeChance = p => clamp(0.62 - Math.abs(p - 0.5) * 0.8, 0.35, 0.62)
 function buildBracket(c, f) {
   const S = sportOf(c)
   const r = seeded(`${c.seed}-po-${c.year}`)
@@ -1205,7 +1207,9 @@ function buildBracket(c, f) {
     const home = fin ? null : S.isBucket ? (playIn ? seed <= 8 : ri === 0 ? seed <= 4 : seed <= 2) : f.hasBye ? i === 0 : i === 0 && f.wins >= 11
     // (a true star tilts a series or a playoff game more: up to +0.07 more at 99)
     const base = 0.5 + (myStr - strength(opp)) * 0.08 + (home ? 0.06 : home === false ? -0.03 : 0) + ((c.ovr - 76) / 100) * 0.35 + Math.max(0, c.ovr - 95) * 0.018
-    return { name, opp: opp.short, oppName: opp.name, home, p: clamp(Math.round(base * 100) / 100, 0.18, 0.84), played: false, series: S.series && !playIn }
+    const p = clamp(Math.round(base * 100) / 100, 0.18, 0.84)
+    // a game only has a key moment if it's close when it counts; the final always is
+    return { name, opp: opp.short, oppName: opp.name, home, p, played: false, series: S.series && !playIn, close: fin || r() < closeChance(p) }
   })
   return { idx: 0, rounds, line: [], used: [], stage: 'round', won: false, out: false }
 }
@@ -1236,6 +1240,8 @@ export const momentOdds = (p, hit, score = 0.75, round = 0) => (hit
   : clamp(0.14 - 0.01 * round + (p - 0.5) * 0.2, 0.05, 0.25))
 // how deep a round is, counted back from the final (3): the same with a bye or a play-in
 export const momentRound = po => Math.max(0, 3 - (po.rounds.length - 1 - po.idx))
+// A game that wasn't close: no moment, the better team usually took it
+export const blowoutOdds = (p, round = 0) => clamp(p - 0.07 - 0.03 * round, 0.1, 0.8)
 // This round's moment is in: the result, with a stat line sized to the season
 // hit: the drill's own verdict (MiniGame), the same one it showed the player
 export function playoffRound(c, score, game = null, hit = score >= 0.5) {
@@ -1243,12 +1249,16 @@ export function playoffRound(c, score, game = null, hit = score >= 0.5) {
   const a = c.active, po = a.po, f = a.final
   const rd = po.rounds[po.idx]
   const r = seeded(`${c.seed}-por-${c.year}-${po.idx}`)
-  const won = r() < momentOdds(rd.p, hit, score, momentRound(po))
+  // (a round from before games could be one-sided has no `close`: it plays its moment)
+  const auto = rd.close === false
+  const won = r() < (auto ? blowoutOdds(rd.p, momentRound(po)) : momentOdds(rd.p, hit, score, momentRound(po)))
+  if (auto) score = won ? 0.8 : 0.25
   const k = 0.82 + score * 0.5 + (r() - 0.5) * 0.2             // the moment sets the day: 0.6–1.4× a normal game
   let mySc, oppSc, line
   if (S.isBucket) {
-    if (rd.series) { const other = won ? [0, 1, 1, 2, 2, 3][Math.floor(r() * 6)] : [0, 1, 1, 2, 2, 3][Math.floor(r() * 6)]; mySc = won ? 4 : other; oppSc = won ? other : 4 }
-    else { mySc = Math.round(100 + score * 12 + r() * 10); oppSc = won ? Math.max(85, mySc - 2 - Math.floor(r() * 14)) : mySc + 1 + Math.floor(r() * 12) }
+    // a close series goes six or seven; a one-sided one, four or five
+    if (rd.series) { const other = auto ? [0, 0, 1, 1][Math.floor(r() * 4)] : [2, 3, 3][Math.floor(r() * 3)]; mySc = won ? 4 : other; oppSc = won ? other : 4 }
+    else { const gap = auto ? 15 + Math.floor(r() * 16) : 1 + Math.floor(r() * 8); mySc = Math.round(100 + score * 12 + r() * 10); oppSc = won ? Math.max(80, mySc - gap) : mySc + gap }
     const st = seasonStats(c.pos, f)
     // a series is four to seven games: the average barely moves off the season's (0.85–1.15×), never past a real ceiling
     const kb = clamp(0.9 + score * 0.18 + (r() - 0.5) * 0.08 + (won ? 0.02 : -0.03), 0.84, 1.15)
@@ -1256,13 +1266,15 @@ export function playoffRound(c, score, game = null, hit = score >= 0.5) {
   } else {
     const g = f.wins + f.losses || 17
     const n = (sum, mult = 1) => Math.max(0, Math.round(((sum ?? 0) / g) * k * mult))
-    mySc = Math.round(17 + (c.simTeam?.off ?? 5) * 1.2 + score * 8 + r() * 6); oppSc = won ? Math.max(3, mySc - 3 - Math.floor(r() * 14)) : mySc + 1 + Math.floor(r() * 12)
+    // close: one score. Not close: two scores or more
+    const gap = auto ? 14 + Math.floor(r() * 15) : 1 + Math.floor(r() * 8)
+    mySc = Math.round(17 + (c.simTeam?.off ?? 5) * 1.2 + score * 8 + r() * 6); oppSc = won ? Math.max(3, mySc - gap) : mySc + gap
     line = c.pos === 'qb' ? { passYds: n(f.seasonPassYds), tds: n(f.seasonTDs, won ? 1.1 : 0.8), ints: Math.round((1 - score) * 2 * r()), rushYds: n(f.seasonRushYds) }
       : c.pos === 'db' ? { tackles: n(f.seasonTackles), ints: n(f.seasonINTs, won ? 1.4 : 0.6), pbus: n(f.seasonPBUs) }
       : c.pos === 'rb' ? { rushYds: n(f.seasonRushYds), rushTDs: n(f.seasonRushTDs, won ? 1.2 : 0.7), recTDs: 0, recYds: n(f.seasonRecYds), carries: n(f.seasonCarries) }
       : { rec: n(f.seasonRecs), recYds: n(f.seasonRecYds), recTDs: n(f.seasonRecTDs, won ? 1.3 : 0.6) }
   }
-  const entry = { ...rd, played: true, won, mySc, oppSc, score, hit, game, ...line }
+  const entry = { ...rd, played: true, won, mySc, oppSc, score, hit, auto, game: auto ? null : game, ...line }
   const rounds = po.rounds.map((x, i) => (i === po.idx ? entry : x))
   const fin = rd.name === S.final
   const done = !won || fin
