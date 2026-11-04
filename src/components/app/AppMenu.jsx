@@ -34,7 +34,7 @@ const nav = to => window.dispatchEvent(new CustomEvent('bap:nav', { detail: to }
 // BAP Pro: Stripe on the web (the app opens the checkout in the phone's browser),
 // monthly or yearly. The Builder Pass is its own thing (lib/pass.js)
 const PRO_PERKS = [
-  ['No ads', 'Every page, on the website'],
+  ['No ads', 'Every page on the website'],
   ['+50% coins from every game', 'Seasons, Compete and Blacktop. It stacks with Coin Rush'],
   ['The Pro Vault, included', 'Four members-only looks, yours while you\'re Pro: Diamond, Pro Aura, Pro Holo and Supernova'],
   ['Double the daily drop', 'The shop\'s free daily coins, doubled'],
