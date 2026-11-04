@@ -346,7 +346,8 @@ export function createDirector({ sport, pos, build, team, simFn, base, seed = Ma
     if (D.finalized) return D.final
     const t = D.totals()
     if (locked) {
-      D.final = { ...base, story: { moments: [], milestones: D.milestones, records: D.records.concat(D.endRecords = seasonRecords(base, t)), headlines: D.headlines, xp: D.xp, sat: 0 } }
+      // (seasonOf: the season the game booked, which the rewards panel looks for)
+      D.final = { ...base, seasonOf: base, story: { moments: [], milestones: D.milestones, records: D.records.concat(D.endRecords = seasonRecords(base, t)), headlines: D.headlines, xp: D.xp, sat: 0 } }
       D.finalized = true
       return D.final
     }

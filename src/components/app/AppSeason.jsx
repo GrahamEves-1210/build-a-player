@@ -86,7 +86,7 @@ const useCount = (target, run, ms = 900) => countUp(target, { run, ms })
 // `result` is the season on screen — the panel only shows that season's rewards
 export function SeasonRewards({ result }) {
   const p = useProgress()
-  const s = p.lastSeason && (!result || p.lastSeason.ref === result) ? p.lastSeason : null
+  const s = p.lastSeason && (!result || p.lastSeason.ref === (result.seasonOf ?? result)) ? p.lastSeason : null
   const [stage, setStage] = useState(0)    // 0 lines → 1 bar fills → 2 level-up callout
   const seenRef = useRef(false)
   useEffect(() => {

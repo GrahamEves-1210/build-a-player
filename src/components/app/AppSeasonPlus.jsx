@@ -223,7 +223,7 @@ export function SeasonStory({ story, pos, sport, name }) {
             <span className="sm-story-txt"><b>{m.moment.title}</b> — {m.option.label}{m.outcome ? <i className={m.outcome.hit ? ' is-hit' : ' is-miss'}> · {m.outcome.hit ? 'paid off' : 'backfired'}</i> : null}</span>
           </div>
         ))}
-        {moments.length === 0 && <div className="sm-story-moment"><span className="sm-story-at">—</span><span className="sm-story-txt">A straight run, no surprises.</span></div>}
+        {moments.length === 0 && milestones.length === 0 && top.length === 0 && <div className="sm-story-moment"><span className="sm-story-at">—</span><span className="sm-story-txt">A straight run, no surprises.</span></div>}
       </div>
       {milestones.length > 0 && <div className="sm-ms">{milestones.map(m => <span key={m.id} className={`sm-ms-chip${m.big ? ' is-big' : ''}`}><IconStar size={11} /> {m.label}</span>)}</div>}
       {top.length > 0 && <div className="sm-story-wire">{top.map((h, i) => <div key={i}><span className="sm-wire-tag">WIRE</span> {h.text}</div>)}</div>}
