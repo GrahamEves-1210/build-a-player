@@ -6,7 +6,7 @@ import AppMenu from './app/AppMenu'
 import AuthModal from './AuthModal'
 import AppToasts, { LevelUp } from './app/AppToasts'
 import { useProgress, STREAK_REWARDS, missionDef, cardsOpen } from '../lib/progress'
-import { IconBag, IconProfile, IconCalendar, IconTrophy, IconBagLine, IconProfileLine, IconCalendarLine, IconTrophyLine } from './app/icons'
+import { IconBag, IconProfile, IconCalendar, IconPodium, IconBagLine, IconProfileLine, IconCalendarLine, IconPodiumLine } from './app/icons'
 import { slideIn } from '../lib/juice'
 import PlayButton from './app/PlayButton'
 import { startPresence } from '../lib/presence'
@@ -14,7 +14,8 @@ import { AnimatePresence, motion } from 'motion/react'
 import { SPRING_LAYOUT } from '../lib/motion'
 
 const AppDaily = lazy(() => import('./app/AppDaily'))
-const AppHall = lazy(() => import('./app/AppHall'))
+const AppCards = lazy(() => import('./app/AppCards'))
+const AppAchievements = lazy(() => import('./app/AppAchievements'))
 const AppShop = lazy(() => import('./app/AppShop'))
 const AppLocker = lazy(() => import('./app/AppLocker'))
 const AppSoundLab = lazy(() => import('./app/AppSoundLab'))
@@ -22,7 +23,7 @@ const AppOnline = lazy(() => import('./app/AppOnline'))
 const AppPass = lazy(() => import('./app/AppPass'))
 const PlayerSheet = lazy(() => import('./app/PlayerSheet'))
 
-// iOS/Android app only: floating game dock (Home · Daily · PLAY · Cards ·
+// iOS/Android app only: floating game dock (Shop · Daily · Home · Ranks ·
 // Profile) that replaces the website's menu, plus the app-only screens and
 // layers that sit on top of whichever game page is open (Daily hub, card
 // binder, toasts, level-up). Rendered once from main.jsx; talks to App /
@@ -34,7 +35,7 @@ const PlayerSheet = lazy(() => import('./app/PlayerSheet'))
 //   anyone → dock: 'bap:player' { id, username }  (a player's profile, from a name anywhere)
 
 // PLAY is Home: it's lit on Home and on the game screens
-const TAB_FOR_PAGE = { splash: 'play', profile: 'profile', leaderboard: null, 'pvp-leaderboard': null, about: null }
+const TAB_FOR_PAGE = { splash: 'play', profile: 'profile', leaderboard: 'leaderboard', 'pvp-leaderboard': null, about: null }
 // Full-screen pages that hide the dock (a head-to-head match in progress)
 const HIDE_ON = new Set(['versus-game', 'versus-result', 'shared'])
 // Website: the game screens keep the site's navbar, so the dock is only on the
@@ -44,8 +45,8 @@ const WEB_DOCK_ON = new Set(['splash', 'profile', 'career', 'career-intro', 'squ
 const nav = to => window.dispatchEvent(new CustomEvent('bap:nav', { detail: to }))
 
 // the dock's order, for which way a screen slides in (Home is PLAY, in the middle)
-const TAB_ORDER = { shop: 0, daily: 1, play: 2, hall: 3, profile: 4, locker: 4 }
-const DOCK_TABS = new Set(['shop', 'daily', 'hall'])
+const TAB_ORDER = { shop: 0, daily: 1, play: 2, leaderboard: 3, profile: 4, locker: 4, cards: 4, achievements: 4 }
+const DOCK_TABS = new Set(['shop', 'daily', 'leaderboard'])
 
 // outline when it's not lit, filled when it is
 function Tab({ label, Icon, Line, active, onClick, badge }) {
@@ -102,8 +103,6 @@ export default function AppTabBar() {
   const [menuOpen, setMenuOpen] = useState(false)   // false | true (More) | 'pro' (More → BAP Pro)
   const [player, setPlayer]     = useState(null)    // { id, username }: their profile sheet
   const [shopTab, setShopTab]   = useState('featured')
-  const [hallTab, setHallTab]   = useState('cards')     // the Hall: 'cards' | 'achievements'
-  const [hallFrom, setHallFrom] = useState('dock')      // where the Hall was opened: its X goes back there
   const [authOpen, setAuthOpen] = useState(false)
   const [screen, setScreen]     = useState(null)   // 'daily' | 'cards' | 'shop' | 'achievements' | null
   const badge = useDailyBadge()
@@ -119,13 +118,11 @@ export default function AppTabBar() {
     const onMenu = () => setMenuOpen(true)
     const onNav = e => {
       const [to, arg] = String(e.detail).split(':')
-      // web: cards live on an account, so a guest gets the sign-in sheet (from Daily, Shop, anywhere)
+      // web: cards live on an account, so a guest gets the sign-in sheet
       if (to === 'cards' && !cardsOpen()) { setMenuOpen(false); setAuthOpen(true); return }
       if (to === 'pro') { setMenuOpen('pro'); return }
-      // Cards and Achievements live together in the Hall
-      slideTo(to === 'cards' || to === 'achievements' ? 'hall' : to)
-      if (to === 'cards' || to === 'achievements' || to === 'hall') { setMenuOpen(false); setHallTab(to === 'achievements' || arg === 'achievements' ? 'achievements' : 'cards'); setHallFrom(arg === 'dock' ? 'dock' : 'page'); setScreen('hall'); return }
-      if (['daily', 'shop', 'locker', 'soundlab', 'online', 'pass'].includes(to)) { setMenuOpen(false); if (to === 'shop') setShopTab(arg || 'featured'); setScreen(to) }
+      slideTo(to)
+      if (['daily', 'shop', 'locker', 'soundlab', 'online', 'pass', 'cards', 'achievements'].includes(to)) { setMenuOpen(false); if (to === 'shop') setShopTab(arg || 'featured'); setScreen(to) }
       else setScreen(null)
     }
     window.addEventListener('bap:page', onPage)
@@ -155,6 +152,8 @@ export default function AppTabBar() {
   if (!IS_APP && !APP_LOOK) return null
   const hidden = HIDE_ON.has(state.page) || (!IS_APP && !screen && !WEB_DOCK_ON.has(state.page))
   const active = screen ?? (state.page in TAB_FOR_PAGE ? TAB_FOR_PAGE[state.page] : 'play')
+  // Home itself, with nothing over it: only then does the Home button sit dimmed
+  const atHome = state.page === 'splash' && !screen && !menuOpen && !authOpen && !player
   activeRef.current = active
   // in a live game every tab is a way out: it asks first (lib/liveLock.js)
   const go = to => () => guardLeave(() => { setMenuOpen(false); setScreen(null); slideTo(to); nav(to) })
@@ -174,7 +173,8 @@ export default function AppTabBar() {
             : screen === 'locker' ? <AppLocker onClose={() => setScreen(null)} />
             : screen === 'soundlab' ? <AppSoundLab onClose={() => setScreen(null)} />
             : screen === 'online' ? <AppOnline sport={state.sport} onClose={() => setScreen(null)} />
-            : screen === 'hall' ? <AppHall key={hallTab} tab={hallTab} sport={state.sport} onClose={hallFrom === 'dock' ? closeHome : () => setScreen(null)} />
+            : screen === 'cards' ? <AppCards sport={state.sport} onClose={() => setScreen(null)} />
+            : screen === 'achievements' ? <AppAchievements onClose={() => setScreen(null)} />
             : screen === 'pass' ? <AppPass onClose={() => setScreen(null)} />
             : null}
         </Suspense>
@@ -184,12 +184,11 @@ export default function AppTabBar() {
           <Tab label="SHOP" Icon={IconBag} Line={IconBagLine} active={active === 'shop'} onClick={open('shop')} />
           <Tab label="DAILY" Icon={IconCalendar} Line={IconCalendarLine} active={active === 'daily'} onClick={open('daily')} badge={badge} />
           {/* a tap goes Home (PLAY, or HOME inside a game mode); hold for the modes anywhere */}
-          <PlayButton page={state.page} sport={state.sport} lit={active === 'play'} here={state.page === 'splash' && !screen}
-            onTap={() => { if (state.page === 'splash' && !screen) return; go('home')() }} />
-          {/* website: cards are saved to an account */}
-          <Tab label="HOF" Icon={IconTrophy} Line={IconTrophyLine} active={active === 'hall'} badge={claimable}
-            onClick={screen === 'hall' ? undefined : cardsOpen() ? () => guardLeave(() => { setMenuOpen(false); slideTo('hall'); setHallTab(claimable ? 'achievements' : 'cards'); setHallFrom('dock'); setScreen('hall') }) : () => guardLeave(() => { setMenuOpen(false); setAuthOpen(true) })} />
-          <Tab label="PROFILE" Icon={IconProfile} Line={IconProfileLine} active={active === 'profile' || active === 'locker'} onClick={state.page === 'profile' && !screen ? undefined : go('profile')} />
+          <PlayButton page={state.page} sport={state.sport} lit={active === 'play'} here={atHome}
+            onTap={() => { if (!atHome) go('home')() }} />
+          <Tab label="RANKS" Icon={IconPodium} Line={IconPodiumLine} active={active === 'leaderboard'} onClick={state.page === 'leaderboard' && !screen ? undefined : go('leaderboard')} />
+          {/* unclaimed achievements show here and on the profile's own button */}
+          <Tab label="PROFILE" Icon={IconProfile} Line={IconProfileLine} active={['profile', 'locker', 'cards', 'achievements'].includes(active)} badge={claimable} onClick={state.page === 'profile' && !screen ? undefined : go('profile')} />
         </nav>
       )}
       {/* the More sheet slides back out when it closes */}

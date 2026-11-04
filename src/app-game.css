@@ -5479,16 +5479,6 @@ html:is(.is-app, .app-look) .reels-wrap.rs-holo .reel-outer { border-width: 2px 
   html:is(.is-app, .app-look):not(.bap-reduce-motion) .reels-wrap.rs-wildfire .reel-outer { animation: rs-wildfire 1.6s ease-in-out infinite; }
 }
 
-/* The Hall: Cards | Achievements */
-/* both tabs stay mounted once opened (AppHall): the one that's off is only hidden, and the second one opened appears at once */
-.hall-pane.is-off { visibility: hidden; }
-.hall-pane.is-later > .ag-screen { animation: none; }
-.hall-tabs { margin: 0 14px 12px; }
-.hall-tabs button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; position: relative; }
-.hall-tabs button small { font-family: var(--ag-body); font-size: 11px; font-weight: 700; letter-spacing: 0; opacity: .7; }
-.hall-tabs button.is-on { color: var(--ag-on); }
-.hall-badge { position: static !important; transform: none !important; }
-
 /* Settings → Account: the email password resets go to */
 .sx-email.is-missing > .sx-row { border-color: rgba(255,180,90,.45); }
 .sx-email .sx-chev { width: auto; font-size: 14px; letter-spacing: 1.5px; }
@@ -6275,3 +6265,70 @@ html:is(.is-app, .app-look) .spin-panel-scroll { scrollbar-color: auto; scrollba
 }
 
 .cr-po-stakes { display: block; margin-top: 4px; font-family: var(--ag-body); font-size: 13px; font-weight: 600; color: var(--ag-text-2); }
+
+/* ── Leaderboards (dock → Ranks): AppLeaderboards.jsx ── */
+.lbd-wrap { max-width: 680px; margin: 0 auto; padding: 8px 16px 0; }
+.lbd-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+.lbd-top .ag-h1 { font-size: 40px; }
+.lbd-scope { display: flex; gap: 14px; }
+.lbd-scope button { padding: 6px 0; border: 0; border-bottom: 2px solid transparent; background: none; color: var(--ag-muted); font-family: var(--ag-font); font-size: 14px; letter-spacing: 1.5px; cursor: pointer; }
+.lbd-scope button.is-on { color: #fff; border-bottom-color: var(--ag-a1); }
+.lbd-tabs { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.lbd-sub { display: flex; gap: 16px; margin-top: 12px; overflow-x: auto; scrollbar-width: none; border-bottom: 1px solid var(--ag-line); }
+.lbd-sub::-webkit-scrollbar { display: none; }
+.lbd-sub button { flex: 0 0 auto; padding: 8px 0 9px; margin-bottom: -1px; border: 0; border-bottom: 2px solid transparent; background: none; color: var(--ag-muted); font-family: var(--ag-font); font-size: 15px; letter-spacing: .6px; white-space: nowrap; cursor: pointer; }
+.lbd-sub button.is-on { color: #fff; border-bottom-color: var(--ag-a1); }
+.lbd-back { display: inline-flex; align-items: center; gap: 4px; margin-top: 14px; padding: 4px 0; border: 0; background: none; color: var(--ag-muted); font-family: var(--ag-font); font-size: 15px; letter-spacing: 1px; cursor: pointer; }
+.lbd-title { display: flex; align-items: baseline; gap: 10px; margin: 2px 0 0; font-family: var(--ag-display); font-weight: 400; font-size: 30px; line-height: 1.05; color: #fff; text-transform: uppercase; }
+.lbd-title i { font-style: normal; font-size: 18px; color: var(--ag-a1); }
+
+/* the player's own standing: the biggest thing on the page */
+.lbd-me { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; margin-top: 12px; padding: 12px 14px; border-radius: 12px; border: 1px solid color-mix(in srgb, var(--ag-a1) 40%, transparent); background: color-mix(in srgb, var(--ag-a1) 11%, rgba(0,0,0,.25)); }
+.lbd-me--out { grid-template-columns: minmax(0, 1fr) auto; }
+.lbd-me-rank { font-family: var(--ag-display); font-size: 42px; line-height: 1; color: #fff; font-variant-numeric: tabular-nums; }
+.lbd-me-rank i { font-style: normal; font-size: 22px; color: var(--ag-a1); margin-right: 1px; }
+.lbd-me-mid { display: grid; gap: 4px; min-width: 0; }
+.lbd-me-who { display: flex; align-items: center; gap: 8px; min-width: 0; font-family: var(--ag-body); font-size: 15px; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; }
+.lbd-me-name { overflow: hidden; text-overflow: ellipsis; }
+.lbd-me-chase { font-family: var(--ag-font); font-size: 13.5px; letter-spacing: .8px; line-height: 1.1; color: var(--ag-text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lbd-me-chase b { font-weight: 400; }
+.lbd-me-val { display: grid; justify-items: end; font-family: var(--ag-display); font-size: 30px; line-height: 1; color: #fff; font-variant-numeric: tabular-nums; }
+.lbd-me-val i { font-style: normal; font-family: var(--ag-font); font-size: 11.5px; letter-spacing: 1.5px; margin-top: 3px; color: var(--ag-muted); }
+.lbd-me-go { width: auto !important; min-height: 40px; padding: 0 14px !important; font-size: 15px !important; white-space: nowrap; }
+
+.lbd-champ { display: grid; grid-template-columns: 1fr auto; column-gap: 12px; align-items: center; margin-top: 10px; padding: 9px 2px; border-bottom: 1px solid var(--ag-line); }
+.lbd-champ span { grid-column: 1 / -1; font-family: var(--ag-font); font-size: 12.5px; letter-spacing: 1.5px; color: #f2d675; }
+.lbd-champ b { font-family: var(--ag-body); font-size: 15px; font-weight: 700; color: #fff; min-width: 0; overflow: hidden; }
+.lbd-champ em { font-style: normal; font-family: var(--ag-display); font-size: 20px; color: #fff; }
+
+/* one list for every board: flex, so rows can sit around the ad slot (see BoardList) */
+.lbd-list { display: flex; flex-direction: column; margin-top: 8px; }
+@media (min-width: 769px) { .lbd-list .ad-cntr1-mobile { display: none; } }
+.lbd-head { display: flex; justify-content: space-between; padding: 8px 2px 7px; font-family: var(--ag-font); font-size: 12.5px; letter-spacing: 2px; color: var(--ag-muted); border-bottom: 1px solid var(--ag-line); }
+.lbd-row { display: grid; grid-template-columns: 30px minmax(0, 1fr) auto auto; align-items: center; column-gap: 10px; min-height: 48px; padding: 7px 2px; border-bottom: 1px solid rgba(255,255,255,.05); }
+.lbd-row.is-me { margin-inline: -8px; padding-inline: 10px; background: color-mix(in srgb, var(--ag-a1) 12%, transparent); box-shadow: inset 2px 0 0 var(--ag-a1); }
+.lbd-rank { font-family: var(--ag-display); font-size: 18px; text-align: center; color: var(--ag-muted); font-variant-numeric: tabular-nums; }
+.lbd-name { display: flex; align-items: center; gap: 9px; min-width: 0; font-family: var(--ag-body); font-size: 15px; font-weight: 600; color: #fff; white-space: nowrap; overflow: hidden; }
+.lbd-name .ntag, .lbd-name .ntag-link, .lbd-rec-holder .ntag { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.lbd-sub-val { font-family: var(--ag-font); font-size: 13px; letter-spacing: .8px; color: var(--ag-muted); white-space: nowrap; }
+.lbd-val { min-width: 42px; text-align: right; font-family: var(--ag-display); font-size: 21px; color: #fff; font-variant-numeric: tabular-nums; }
+.lbd-row--1 { min-height: 62px; }
+.lbd-row--1 .lbd-rank { font-size: 26px; color: #f2d675; }
+.lbd-row--1 .lbd-name { font-size: 17px; font-weight: 700; }
+.lbd-row--1 .lbd-val { font-size: 28px; color: #f2d675; }
+.lbd-row--2 .lbd-rank { font-size: 21px; color: #d9dee4; }
+.lbd-row--3 .lbd-rank { font-size: 21px; color: #e09a62; }
+.lbd-row--2 .lbd-val, .lbd-row--3 .lbd-val { font-size: 23px; }
+
+/* Records: the book. A label, who holds it, and the number. */
+.lbd-group { padding: 16px 2px 6px; font-family: var(--ag-font); font-size: 13px; letter-spacing: 2.5px; color: var(--ag-a1); border-bottom: 1px solid var(--ag-line); }
+.lbd-group:first-child { padding-top: 6px; }
+.lbd-rec { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "label val" "holder val"; align-items: center; column-gap: 12px; row-gap: 3px; width: 100%; padding: 10px 2px; border: 0; border-bottom: 1px solid rgba(255,255,255,.05); background: none; color: inherit; text-align: left; cursor: pointer; }
+.lbd-rec:disabled { cursor: default; opacity: .55; }
+.lbd-rec-label { grid-area: label; font-family: var(--ag-font); font-size: 18px; letter-spacing: .6px; line-height: 1.1; color: #fff; }
+.lbd-rec-holder { grid-area: holder; display: flex; align-items: center; gap: 7px; min-width: 0; min-height: 22px; font-family: var(--ag-body); font-size: 13.5px; font-weight: 600; color: var(--ag-text-2); white-space: nowrap; overflow: hidden; }
+.lbd-rec-wait { width: 110px; height: 11px; border-radius: 3px; background: rgba(255,255,255,.07); }
+.lbd-rec-none { color: var(--ag-muted); }
+.lbd-rec-val { grid-area: val; display: grid; justify-items: end; font-family: var(--ag-display); font-size: 30px; line-height: 1; color: #fff; font-variant-numeric: tabular-nums; }
+.lbd-rec-val i { font-style: normal; font-family: var(--ag-font); font-size: 11.5px; letter-spacing: 1.5px; margin-top: 3px; color: var(--ag-muted); }
+@media (hover: hover) { .lbd-rec:not(:disabled):hover .lbd-rec-label { color: var(--ag-a1); } }

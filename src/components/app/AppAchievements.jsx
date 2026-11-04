@@ -10,7 +10,7 @@ import { CoinPill } from './AppShop'
 // Achievements (app): every goal, its progress, and the reward waiting to be
 // claimed (XP, coins, and a few cosmetics you can't buy).
 
-export default function AppAchievements({ onClose, hall = null }) {
+export default function AppAchievements({ onClose }) {
   const p = useProgress()
   const st = achStats()
   const done = ACHIEVEMENTS.filter(a => p.ach?.[a.id]).length
@@ -44,14 +44,13 @@ export default function AppAchievements({ onClose, hall = null }) {
       <div className="ag-screen-head">
         <div>
           <span className="ag-eyebrow">LIFETIME GOALS</span>
-          <h1 className="ag-h1">{hall ? 'HOF' : 'Achievements'}</h1>
+          <h1 className="ag-h1">Achievements</h1>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <CoinPill />
           <button className="ag-round-btn" onClick={onClose} aria-label="Close"><IconClose size={16} /></button>
         </div>
       </div>
-      {hall}
       <div className="ach-summary ag-pop">
         <span className="ach-ring" style={{ '--p': pct }}><span>{pct}%</span></span>
         <span>

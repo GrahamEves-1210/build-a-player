@@ -9,6 +9,7 @@ const BucketSimPage = lazy(() => import('./BucketSimPage'))
 const TeamSpinModal = lazy(() => import('./BucketSimPage').then(m => ({ default: m.TeamSpinModal })))
 import { runBucketSimulation, getBucketGuardArchetype, getBucketBigArchetype, calcBucketOVR } from '../utils/bucketSimulation'
 const BucketLeaderboardPage = lazy(() => import('./BucketLeaderboardPage'))
+const AppLeaderboards = lazy(() => import('./app/AppLeaderboards'))
 const BucketSalaryCap = lazy(() => import('./BucketSalaryCap'))
 const PrivacyPage = lazy(() => import('./PrivacyPage'))
 import {
@@ -564,7 +565,7 @@ export default function BucketApp() {
         changed = true
       }
       if (path !== '/bucket/leaderboard') {
-        setPage(prev => prev === 'leaderboard' ? 'game' : prev)
+        setPage(prev => prev === 'leaderboard' ? (IS_APP || APP_LOOK ? 'splash' : 'game') : prev)
         changed = true
       }
       if (path === '/bucket/salary') {
@@ -2229,6 +2230,11 @@ export default function BucketApp() {
   }
 
   if (page === 'leaderboard') {
+    if (IS_APP || APP_LOOK) return withGame(
+      <Suspense fallback={<div className="ag-screen ag-screen--wait" />}>
+        <AppLeaderboards sport="bucket" adsDisabled={adsDisabled} />
+      </Suspense>
+    )
     return withGame(
       <>
         <Navbar {...navbarProps} />

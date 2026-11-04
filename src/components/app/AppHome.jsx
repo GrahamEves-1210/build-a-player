@@ -3,7 +3,7 @@ import { APP_STORE_URL } from '../../lib/storeLinks'
 import { POS_OPTIONS, hsUrl, StackedSilhouette, SPLASH_ATTRS } from '../SplashScreen'
 import { getUsername } from '../../lib/discord'
 import { useProgress, fetchPlayersOfDay, cachedPlayersOfDay, myToday, POTD_COINS } from '../../lib/progress'
-import { IconProfile, IconGear, IconPodium, IconFootball, IconBasketball, IconPlay, IconCrown, IconCoin, IconTrophy, IconRing, IconMedal } from './icons'
+import { IconProfile, IconGear, IconFootball, IconBasketball, IconPlay, IconCrown, IconCoin, IconTrophy, IconRing, IconMedal } from './icons'
 import { sfx } from '../../lib/juice'
 import SoundToggle from './SoundToggle'
 import Tutorial, { startTutorial } from './Tutorial'
@@ -108,7 +108,6 @@ function Hud({ user }) {
     <div className="ag-hud">
       <PlayerChip user={user} onClick={() => nav('profile')} />
       <CoinPill className="ag-hud-coins" />
-      <button className="ag-icon-btn" onClick={() => nav('leaderboard')} aria-label="Leaderboards"><IconPodium size={22} /></button>
       {!IS_APP && <SoundToggle className="ag-hud-sound" />}
       <button className="ag-icon-btn" onClick={openMenu} aria-label="Settings and more"><IconGear size={22} /></button>
     </div>

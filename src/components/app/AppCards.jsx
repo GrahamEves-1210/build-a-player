@@ -161,7 +161,7 @@ function SetTile({ s, onOpen, i }) {
   )
 }
 
-export default function AppCards({ sport: startSport, onClose, hall = null }) {
+export default function AppCards({ sport: startSport, onClose }) {
   const p = useProgress()
   const saved = (() => { try { return JSON.parse(localStorage.getItem('ag_cards_view')) || {} } catch { return {} } })()
   const [kind, setKind] = useState(KINDS.some(k => k.id === saved.kind) ? saved.kind : 'team')
@@ -214,11 +214,10 @@ export default function AppCards({ sport: startSport, onClose, hall = null }) {
       <div className="ag-screen-head">
         <div>
           <span className="ag-eyebrow">COLLECTION · {Object.keys(p.cards).length} CARDS</span>
-          <h1 className="ag-h1">{hall ? 'HOF' : 'Cards'}</h1>
+          <h1 className="ag-h1">Cards</h1>
         </div>
         <button className="ag-round-btn" onClick={onClose} aria-label="Close"><IconClose size={16} /></button>
       </div>
-      {hall}
 
       <div className="ag-screen-body">
         <div className="ag-card ag-coll-sum ag-pop" style={{ '--d': '0ms' }}>

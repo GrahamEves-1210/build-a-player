@@ -19,6 +19,7 @@ const SharedBuildPage= lazy(() => import('./components/SharedBuildPage'))
 const DepthChart     = lazy(() => import('./components/DepthChart'))
 const ProfilePage    = lazy(() => import('./components/ProfilePage'))
 const LeaderboardPage= lazy(() => import('./components/LeaderboardPage'))
+const AppLeaderboards = lazy(() => import('./components/app/AppLeaderboards'))
 const VersusLobby    = lazy(() => import('./components/VersusLobby'))
 const VersusResult   = lazy(() => import('./components/VersusResult'))
 const AppSquad       = lazy(() => import('./components/app/AppSquad'))
@@ -468,7 +469,7 @@ export default function App() {
         changed = true
       }
       if (path !== '/leaderboard') {
-        setPage(prev => prev === 'leaderboard' ? 'game' : prev)
+        setPage(prev => prev === 'leaderboard' ? (IS_APP || APP_LOOK ? 'splash' : 'game') : prev)
         changed = true
       }
       if (path !== '/depth-chart') {
@@ -1758,6 +1759,11 @@ export default function App() {
   }
 
   if (page === 'leaderboard') {
+    if (IS_APP || APP_LOOK) return withGame(
+      <Suspense fallback={<div className="ag-screen ag-screen--wait" />}>
+        <AppLeaderboards sport="nfl" adsDisabled={adsDisabled} />
+      </Suspense>
+    )
     return withGame(
       <Suspense fallback={null}>
         <Navbar {...navbarProps} />
