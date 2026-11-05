@@ -1,3 +1,4 @@
+import { minigameOpen } from '../../lib/ads'
 import { useEffect, useRef, useState } from 'react'
 import { GAMES, traitValue } from '../../lib/minigames'
 import { engineFor, BUCKET_GAMES } from '../../lib/mg'
@@ -23,6 +24,8 @@ const NEEDS_SCORE = new Set(['two-minute', 'clutch-shot', 'goal-line'])
 // sim (Career's Mini Games switch): no game, the trait decides, about as an average player would do
 export default function MiniGame({ home = 'team', superBowl = null, game, build, seed = 'x', onDone, autoStart = false, hard = false, retry = false, lock = null, team = null, opp = null, pos = null, cast = null, situation = null, labV = null, sim = false, onSkipAll = null, children = null }) {
   const def = GAMES[game]
+  // its own address, with no ads on it, for as long as it's open
+  useEffect(() => (sim ? undefined : minigameOpen()), [sim])
   const [stage, setStage] = useState(autoStart ? 'play' : 'intro')
   const [result, setResult] = useState(null)
   const [tries, setTries] = useState(0)          // replays bought with a video (one at most)

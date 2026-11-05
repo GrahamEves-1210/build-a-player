@@ -10,6 +10,8 @@ import { useEffect, useRef } from 'react'
 // asked for. destroyUnits takes 'all' or slot names (e.g. pw-oop-left_rail),
 // not unit types — rampDestroyType() maps a type to the slots that use it.
 
+import { IS_APP } from './platform'
+
 const queue = fn => {
   window.ramp = window.ramp || {}
   window.ramp.que = window.ramp.que || []
@@ -65,6 +67,8 @@ const forScreen = ads => ads.filter(a => (a.type === 'corner_ad_video' ? wide(14
 
 // ads: units to add after the destroy ([] = none)
 export function rampPage({ ads: wanted = [], path } = {}) {
+  pageWants = { ads: wanted, path }; inPage = []
+  if (inGame) return ready
   const ads = forScreen(wanted)
   const units = ads.map(a => a.type).join()
   if (keepRunning(units)) return ready
@@ -88,6 +92,8 @@ export function rampPage({ ads: wanted = [], path } = {}) {
 
 // In-page units (e.g. { type: 'standard_iab_cntr1', selectorId: 'ramp-cntr1-sim' })
 export function rampAdd(ads) {
+  inPage.push(...ads)
+  if (inGame) return
   // read `ready` after the current render's effects, so a page change in the
   // same commit is waited for too
   Promise.resolve().then(() => serial(() => window.ramp.spaAddAds(ads)))
@@ -108,6 +114,7 @@ export function rampDestroyType(type) {
 // its slots removed, then requested again, closed or not. At most once every
 // RAIL_GAP_MS; never for ad-free players
 export function rampRail() {
+  if (inGame) return
   if (Date.now() - lastRail < RAIL_GAP_MS) return
   if (document.documentElement.classList.contains('ads-hidden')) return
   lastRail = Date.now()
@@ -135,4 +142,58 @@ export function useRailOn(key) {
     seen.current = key
     rampRail()
   }, [key])
+}
+
+// ── /minigame: no ads while a mini game is open ─────────────────────────────
+// A video and a rail running beside a canvas game cost it frames, so a mini game gets its own address
+// with nothing on it. The address replaces the current one (no new history entry, so Back never lands
+// on it) and is put back the moment the game closes. A refresh there, or Forward onto it, goes Home.
+const GAME_PATH = '/minigame'
+const leaveGameUrl = to => { if (window.location.pathname === GAME_PATH) window.history.replaceState(window.history.state, '', to) }
+if (!IS_APP && typeof window !== 'undefined') {
+  leaveGameUrl('/')
+  window.addEventListener('popstate', () => { if (!games) leaveGameUrl('/') })
+}
+let inGame = false, games = 0, cameFrom = '/', adsBack = 0, hidHere = false
+let pageWants = null, inPage = []
+export function minigameOpen() {
+  if (IS_APP) return () => {}
+  clearTimeout(adsBack)
+  games++
+  if (window.location.pathname !== GAME_PATH) {
+    cameFrom = window.location.pathname + window.location.search + window.location.hash
+    window.history.replaceState(window.history.state, '', GAME_PATH + window.location.search)
+  }
+  if (!inGame) {
+    inGame = true
+    pageGen++
+    const root = document.documentElement
+    if (!root.classList.contains('ads-hidden')) { root.classList.add('ads-hidden'); hidHere = true }   // (the rail's room goes too)
+    Promise.resolve().then(() => serial(() => {
+      let gone
+      try { gone = window.ramp.destroyUnits('all') } catch { gone = null }
+      return Promise.resolve(gone).catch(() => {}).then(() => { const left = railSlots(); return left.length ? window.ramp.destroyUnits(left) : null })
+    }))
+  }
+  let closed = false
+  return () => {
+    if (closed) return
+    closed = true
+    games--
+    if (games) return
+    leaveGameUrl(cameFrom)
+    // (a wait for the ads: the next drill in a combine, or AGAIN, opens straight away)
+    adsBack = setTimeout(() => {
+      if (games || !inGame) return
+      inGame = false
+      const root = document.documentElement
+      if (!hidHere) return   // an ad-free player: nothing to bring back
+      hidHere = false
+      root.classList.remove('ads-hidden')
+      lastPageUnits = ''
+      const held = inPage.filter(a => !a.selectorId || document.getElementById(a.selectorId))
+      if (pageWants) rampPage(pageWants)
+      if (held.length) rampAdd(held)
+    }, 500)
+  }
 }
