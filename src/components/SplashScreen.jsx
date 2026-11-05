@@ -69,11 +69,11 @@ export const POS_OPTIONS = [
     ],
   },
   {
-    pos: 'dl', label: 'DL', classic: false, alltime: false, disabled: true,
+    pos: 'dl', label: 'DL', classic: true, alltime: true, disabled: false,
     players: [
       { id: 'espn_3122132', color: '#003594' },  // Myles Garrett - LAR
       { id: 'espn_3916655', color: '#000000' },  // Maxx Crosby - LV
-      { id: '10892',        color: '#03202f' },  // Will Anderson Jr - HOU
+      { id: 'espn_4685724',  color: '#002244' },  // Will Anderson Jr - HOU
     ],
   },
 ]
@@ -138,7 +138,7 @@ function PositionPicker({ position, onChange }) {
               onClick={() => select(opt.pos)}
               tabIndex={!open ? -1 : 0}
             >
-              {opt.pos === 'db' && <span className="splash-pos-new-tag">NEW</span>}
+              {(opt.pos === 'db' || opt.pos === 'dl') && <span className="splash-pos-new-tag">NEW</span>}
               <div className="splash-pos-option-top">
                 <AvatarTrio players={opt.players} size={40} />
                 <span className="splash-pos-option-name">{opt.label}</span>
@@ -249,6 +249,18 @@ const DB_ATTRS = [
   { label: 'Run Support',      col: '#fbbf24', angle:   80, dist: 1.31, mx: 74, my: 44, dox: 270 },
 ]
 
+const DL_ATTRS = [
+  { label: 'Get Off',          col: '#f87171' },
+  { label: 'Speed',            col: '#60a5fa' },
+  { label: 'Size',             col: '#38bdf8' },
+  { label: 'Power', col: '#fb923c' },
+  { label: 'Finesse', col: '#34d399' },
+  { label: 'Strength',         col: '#fbbf24' },
+  { label: 'Play Rec', col: '#e879f9' },
+  { label: 'Bend',             col: '#a78bfa' },
+  { label: 'Shed', col: '#2dd4bf' },
+]
+
 const OL_ATTRS = [
   { label: 'Size',         col: '#fb923c' },
   { label: 'Length',       col: '#34d399' },
@@ -288,6 +300,7 @@ const STACK_MASK = {
   wr: { src: '/wr-silhouette.png',  scale: 1.18 },
   te: { src: '/wr-silhouette.png',  scale: 1.18 },
   db: { src: '/db-silhouette.png',  scale: 1.05 },
+  dl: { src: '/dl-silhouette.webp',  scale: 1 },
   ol: { src: '/db-silhouette.png',  scale: 1.05 },
 }
 
@@ -330,7 +343,7 @@ export function StackedSilhouette({ position, attrs, ready, fast = false }) {
 }
 
 // Attribute bands per position — shared with the app home screen (components/app/AppHome)
-export const SPLASH_ATTRS = { qb: QB_ATTRS, rb: RB_ATTRS, wr: WR_ATTRS, te: TE_ATTRS, db: DB_ATTRS, ol: OL_ATTRS }
+export const SPLASH_ATTRS = { qb: QB_ATTRS, rb: RB_ATTRS, wr: WR_ATTRS, te: TE_ATTRS, db: DB_ATTRS, dl: DL_ATTRS, ol: OL_ATTRS }
 
 export default function SplashScreen({ onStart, onDepthChart, onWiki }) {
   const [phase, setPhase] = useState(0)
@@ -360,7 +373,7 @@ export default function SplashScreen({ onStart, onDepthChart, onWiki }) {
     return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3) }
   }, [])
 
-  const attrs = position === 'ol' ? OL_ATTRS : position === 'db' ? DB_ATTRS : position === 'te' ? TE_ATTRS : position === 'wr' ? WR_ATTRS : position === 'rb' ? RB_ATTRS : QB_ATTRS
+  const attrs = position === 'ol' ? OL_ATTRS : position === 'dl' ? DL_ATTRS : position === 'db' ? DB_ATTRS : position === 'te' ? TE_ATTRS : position === 'wr' ? WR_ATTRS : position === 'rb' ? RB_ATTRS : QB_ATTRS
 
   return (
     <div className={`splash-screen ${phase >= 1 ? 'splash-in' : ''}`}>
@@ -389,6 +402,8 @@ export default function SplashScreen({ onStart, onDepthChart, onWiki }) {
             style={{ position: 'absolute', inset: 0, opacity: (position === 'wr' || position === 'te') ? 1 : 0, transform: 'scale(1.18)', transformOrigin: 'center center' }} />
           <img src="/db-silhouette.png" className="splash-figure" alt="" draggable={false}
             style={{ position: 'absolute', inset: 0, opacity: (position === 'db' || position === 'ol') ? 1 : 0, transform: 'scale(1.05)', transformOrigin: 'center center' }} />
+          {/* (a large file: only fetched once DL is picked) */}
+          {position === 'dl' && <img src="/dl-silhouette.webp" className="splash-figure" alt="" draggable={false} style={{ position: 'absolute', inset: 0, filter: 'none' }} />}
           <StackedSilhouette key={position} position={position} attrs={attrs} ready={phase >= 3} />
           <div className="splash-figure-glow" />
         </div>
@@ -401,7 +416,7 @@ export default function SplashScreen({ onStart, onDepthChart, onWiki }) {
         <div className="splash-modes">
           <button className="splash-mode-classic" onClick={() => { try { localStorage.setItem('lastPosition', position) } catch {}; onStart('classic', position) }}>
             <div className="smode-title">Current</div>
-            <div className="smode-badge">Current {position === 'rb' ? 'RBs' : position === 'wr' ? 'WRs' : position === 'te' ? 'TEs' : position === 'db' ? 'DBs' : position === 'ol' ? 'OLs' : 'QBs'}</div>
+            <div className="smode-badge">Current {position === 'rb' ? 'RBs' : position === 'wr' ? 'WRs' : position === 'te' ? 'TEs' : position === 'db' ? 'DBs' : position === 'dl' ? 'DLs' : position === 'ol' ? 'OLs' : 'QBs'}</div>
             <div className="smode-cta">
               START DRAFTING
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -429,7 +444,7 @@ export default function SplashScreen({ onStart, onDepthChart, onWiki }) {
             >
               <div className="smode-title smode-title--alltime">
                 All-Time
-                {(position === 'wr' || position === 'db' || position === 'te') && <span className="splash-alltime-new-tag">NEW</span>}
+                {(position === 'wr' || position === 'db' || position === 'te' || position === 'dl') && <span className="splash-alltime-new-tag">NEW</span>}
               </div>
               <div className="smode-badge smode-badge--alltime">Draft the Greats</div>
               <div className="smode-cta smode-cta--alltime">

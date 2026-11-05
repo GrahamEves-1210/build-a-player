@@ -146,7 +146,7 @@ button.cl-yr { width: 100%; color: inherit; font: inherit; cursor: pointer; }
 /* the numbers behind a season (lib/careerStats.js): a word and a bar against the real league; tap to read what it means */
 .crs { display: grid; gap: 6px; margin-top: 2px; }
 .crs > .ag-eyebrow { font-size: 13px; }
-.crs-row { display: grid; gap: 5px; width: 100%; padding: 9px 11px; border: 0; border-radius: 9px; background: rgba(255,255,255,.05); color: var(--ag-text); font: inherit; text-align: left; cursor: pointer; }
+.crs-row { display: grid; gap: 5px; width: 100%; padding: 9px 11px; border: 0; border-radius: 9px; background: rgba(255,255,255,.05); color: var(--ag-text); font: inherit; text-align: left; }
 .crs-row:focus-visible, .crs-more:focus-visible { outline: 2px solid var(--ag-a1); outline-offset: 2px; }
 .crs-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
 .crs-name { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; min-width: 0; font-family: var(--ag-font); font-size: 14.5px; letter-spacing: 1px; line-height: 1.1; color: var(--ag-text-2); }

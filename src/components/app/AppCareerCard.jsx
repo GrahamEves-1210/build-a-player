@@ -1,14 +1,14 @@
-import { useProgress, SPOTLIGHTS, isUnlocked, setSpotlight, careerRings, careerSeasons, TITLE_LEVELS } from '../../lib/progress'
+import { lazy, Suspense } from 'react'
+import { useProgress, careerRings, careerSeasons, TITLE_LEVELS } from '../../lib/progress'
 import { getUsername } from '../../lib/discord'
-import { IconLock, IconFlame, IconCards, IconRing, IconStar, IconBag, IconMedal, IconCrown, IconPodium, IconArrow } from './icons'
+import { IconFlame, IconRing, IconStar, IconBag, IconMedal, IconCrown, IconPodium, IconArrow } from './icons'
 import { TierChip, Form } from './OnlineRecord'
 import { NameTag, AvatarBadge } from './NameTag'
 import { CoinPill } from './AppShop'
-import { motion } from 'motion/react'
-import { SPRING_LAYOUT } from '../../lib/motion'
 
-// App: the top of the Profile page — your player card (level, title, XP) and
-// the locker of stage spotlights unlocked by levels and streaks.
+const CardsStrip = lazy(() => import('./AppCards').then(m => ({ default: m.CardsStrip })))
+
+// App: the top of the Profile page: the player card (level, title, XP) and the cards.
 
 const nav = to => window.dispatchEvent(new CustomEvent('bap:nav', { detail: to }))
 
@@ -30,7 +30,7 @@ export default function AppCareerCard({ user }) {
       <div className="ag-career-actions">
         <button className="ag-career-act ag-career-act--shop" onClick={() => nav('shop')}><IconBag size={18} /> SHOP</button>
         <button className="ag-career-act" onClick={() => nav('locker')}><IconCrown size={18} /> LOCKER</button>
-        <button className="ag-career-act ag-career-act--wide" onClick={() => nav('achievements')}><IconMedal size={18} /> ACHIEVEMENTS{p.claimable ? <span className="ag-tab-badge">{p.claimable}</span> : null}</button>
+        <button className={`ag-career-act ag-career-act--wide${p.claimable ? ' ag-career-act--shop' : ''}`} onClick={() => nav('achievements')}><IconMedal size={18} /> ACHIEVEMENTS{p.claimable ? <span className="ag-tab-badge">{p.claimable}</span> : null}</button>
       </div>
       <div className="ag-career-xp">
         <span className="ag-xpbar ag-xpbar--big"><span style={{ width: `${Math.max(2, p.lvl.pct * 100)}%` }} /></span>
@@ -43,7 +43,6 @@ export default function AppCareerCard({ user }) {
       <div className="ag-career-stats">
         <span><IconStar size={15} /><b>{seasons.toLocaleString()}</b>SEASONS</span>
         <span><IconRing size={15} /><b>{careerRings().toLocaleString()}</b>RINGS</span>
-        <button onClick={() => nav('cards')}><IconCards size={15} /><b>{Object.keys(p.cards).length.toLocaleString()}</b>CARDS</button>
         <button onClick={() => nav('daily')}><IconFlame size={15} /><b>{p.streak.count}</b>STREAK</button>
       </div>
       <button className="ag-career-online" onClick={() => nav('online')}>
@@ -54,24 +53,7 @@ export default function AppCareerCard({ user }) {
         </span>
         <IconArrow size={14} />
       </button>
-      <div className="ag-locker">
-        <span className="ag-eyebrow">SPOTLIGHT</span>
-        <motion.div layoutScroll className="ag-locker-row">
-          {SPOTLIGHTS.map(s => {
-            const open = isUnlocked(s, p.lvl.level)
-            const on = (p.spot || 'classic') === s.id
-            return (
-              <button key={s.id} className={`ag-spot${on ? ' is-on' : ''}${open ? '' : ' is-locked'}`} disabled={!open}
-                onClick={() => setSpotlight(s.id)} aria-label={`${s.name} spotlight${open ? '' : ' (locked)'}`}>
-                {on && <motion.span layoutId="spot-ring" className="ag-spot-ring" transition={SPRING_LAYOUT} />}
-                <i className={`ag-swatch ag-swatch--${s.id}`} />
-                <span className="ag-spot-name">{s.name}</span>
-                <span className="ag-spot-req">{open ? (on ? 'ON' : '') : s.streak ? <><IconLock size={10} /> {s.streak}-DAY</> : <><IconLock size={10} /> LVL {s.level}</>}</span>
-              </button>
-            )
-          })}
-        </motion.div>
-      </div>
+      <Suspense fallback={<div className="ag-cards-tile" />}><CardsStrip /></Suspense>
     </section>
   )
 }

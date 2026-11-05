@@ -331,6 +331,107 @@ NFL.te = {
   protect: NFL.wr.protect,
 }
 
+// The defensive line. Two jobs, and each spot wins them its own way: an edge rusher wins on the arc
+// (get-off, bend, his hands), a tackle in a phone booth (first step, power, strength). A sack counts
+// as a QB hit, a tackle and, nearly always, a TFL, the same as the sim's own lines.
+const dlRush = c => (c.spot === 'dt' ? ['powerMoves', 'getOff', 'strength'] : ['getOff', 'bend', 'finesseMoves'])
+const sackLine = (more = {}) => ({ sacks: 1, qbHits: 1, tfl: 1, tackles: 1, ...more })
+const DL_PROTECT = {
+  // The two-minute drill: go for the strip, or keep him in the pocket and let the clock run out
+  strip: (c, g, m) => {
+    const rush = odds(c, 0.27, dlRush(c))
+    const lane = odds(c, 0.55, ['playRecognition', 'blockShed', 'strength'])
+    const ls = [g.mySc, g.mySc + (7 - m)], burned = 0.75
+    return {
+      title: `Up ${m}, their last drive`,
+      body: `${score(g.mySc, g.oppSc)} over the ${nick(g.opponent)}. 1:04 left, no timeouts, they're past midfield and the quarterback can move. He has been holding the ball all day.`,
+      options: [
+        { id: 'strip', label: 'Pin your ears back, go for the strip', o: rush,
+          outcomes: outs([
+            { p: rush.p, ...win(g, g.mySc, g.oppSc, sackLine({ ff: 1 }), `Beat him clean and took the ball out on the way down. Game over. ${c.nick} win ${score(g.mySc, g.oppSc)}.`, 'GAME-SEALING STRIP SACK') },
+            { p: (1 - rush.p) * (1 - burned), ...win(g, g.mySc, g.oppSc, { qbHits: 1 }, `Got there a beat late and hit him as he threw. It sailed, and the clock ran out. ${score(g.mySc, g.oppSc)}.`, 'HURRIED IT') },
+            { p: (1 - rush.p) * burned, ...loss(g, ...ls, {}, `Rushed past him. He stepped up through the lane you left and ran it in. ${c.nick} lose ${score(...ls)}.`, 'LOST CONTAIN') },
+          ]),
+          sub: `Win ${pc(rush.p + (1 - rush.p) * (1 - burned))}. Strip-sack ${pc(rush.p)}${rush.why ? ` (your ${rush.why})` : ''}; miss it and you've usually opened the lane he needs.` },
+        { id: 'lane', label: 'Stay in your lane, collapse the pocket', o: lane,
+          outcomes: [{ p: lane.p, ...win(g, g.mySc, g.oppSc, { qbHits: 1, pbus: 1, tackles: 1 }, `Nowhere to step, nowhere to run. You got a hand on the last throw. ${c.nick} win ${score(g.mySc, g.oppSc)}.`, 'CLOSED IT OUT') },
+            { p: 1 - lane.p, ...loss(g, ...ls, { tackles: 1 }, `He had all day behind a pocket that never broke. They score with 0:09 left. ${score(...ls)}.`, 'BLEW THE LEAD') }],
+          sub: sub(lane, 'the pocket holds him and the clock wins', 'too much time, and they score') },
+      ],
+    }
+  },
+  // A goal-line stand: first and goal, four cracks at it. Anchor, or shoot the gap
+  goal: (c, g, m) => {
+    const anchor = odds(c, 0.48, ['strength', 'blockShed', 'powerMoves'])
+    const shoot = odds(c, 0.36, ['getOff', 'playRecognition', 'finesseMoves'])
+    const ls = [g.mySc, g.mySc + (7 - m)]
+    return {
+      title: `Up ${m}, first and goal at the 2`,
+      body: `${score(g.mySc, g.oppSc)} over the ${nick(g.opponent)}, 0:48 left. Heavy personnel, everybody tight. They're going to run it right at you until somebody quits.`,
+      options: [
+        { id: 'anchor', label: 'Get low, take on the double, hold the line', o: anchor,
+          outcomes: [{ p: anchor.p, ...win(g, g.mySc, g.oppSc, { tackles: 3 }, `Four snaps, no push. The back never got to the goal line. ${c.nick} win ${score(g.mySc, g.oppSc)}.`, 'GOAL-LINE STAND') },
+            { p: 1 - anchor.p, ...loss(g, ...ls, { tackles: 2 }, `Moved back a yard at a time, and the fourth one got in. ${c.nick} lose ${score(...ls)}.`, 'PUSHED BACK') }],
+          sub: sub(anchor, 'the stand holds and the game is over', 'they push it in') },
+        { id: 'shoot', label: 'Shoot the gap on the snap', o: shoot,
+          outcomes: [{ p: shoot.p, ...win(g, g.mySc, g.oppSc, { tackles: 2, tfl: 1, ff: 1 }, `Under the guard before he stood up. You hit the back in the backfield and the ball came out. ${c.nick} win ${score(g.mySc, g.oppSc)}.`, 'BLEW UP THE RUN') },
+            { p: 1 - shoot.p, ...loss(g, ...ls, {}, `Guessed wrong. The hole you left is where they ran it. Walk-in touchdown. ${score(...ls)}.`, 'WASHED OUT') }],
+          sub: sub(shoot, 'a stop in the backfield, and a fumble', 'guess wrong and it is a walk-in') },
+      ],
+    }
+  },
+}
+const DL_COMEBACK = {
+  // Fourth and short: they're going for it to end the game, and one stop gets the ball back
+  fourth: (c, g, d) => {
+    const stuff = odds(c, 0.5, ['blockShed', 'strength', 'playRecognition'])
+    const shoot = odds(c, 0.36, ['getOff', 'finesseMoves', 'playRecognition'])
+    const team = teamScore(c), my = g.mySc + 7
+    return {
+      title: `Down ${d}, 4th and 1`,
+      body: `${score(g.mySc, g.oppSc)}, 2:12 left. The ${nick(g.opponent)} are going for it at your 42 to end the game. Everybody in the building knows it's a run.`,
+      options: [
+        { id: 'stuff', label: 'Win your gap, stack it up', o: { p: stuff.p * team },
+          outcomes: [{ p: stuff.p * team, ...win(g, my, g.oppSc, { tackles: 1 }, `No gain. Ball back, and the offense goes 58 yards. ${c.nick} win ${score(my, g.oppSc)}.`, 'FOURTH-DOWN STOP') },
+            { p: 1 - stuff.p * team, ...loss(g, g.mySc, g.oppSc, { tackles: 1 }, `${stuff.p > 0.5 ? 'You got the stop, but the offense couldn\'t cash it' : 'They got the yard and kneeled'}. ${score(g.mySc, g.oppSc)}.`, 'COMEBACK FALLS SHORT') }],
+          sub: `${pc(stuff.p * team)}: the stop (${pc(stuff.p)}${stuff.why ? `, your ${stuff.why}` : ''}), then the offense has to score (${pc(team)}).` },
+        { id: 'shoot', label: 'Time the snap count and shoot it', o: { p: shoot.p * (team + 0.1) },
+          outcomes: outs([
+            { p: shoot.p * (team + 0.1), ...win(g, my, g.oppSc, { tackles: 1, tfl: 1 }, `Off on the first sound. You dropped him for a loss of three, and the short field did the rest. ${c.nick} win ${score(my, g.oppSc)}.`, 'FOURTH-DOWN STOP') },
+            { p: shoot.p * (0.9 - team), ...loss(g, g.mySc, g.oppSc, { tackles: 1, tfl: 1 }, `Dropped him for a loss, but the offense couldn't finish. ${score(g.mySc, g.oppSc)}.`, 'COMEBACK FALLS SHORT') },
+            { p: 1 - shoot.p, ...loss(g, g.mySc, g.oppSc, {}, `Jumped it. Neutral zone, first down, game over. ${score(g.mySc, g.oppSc)}.`, 'OFFSIDES') },
+          ]),
+          sub: `Win ${pc(shoot.p * (team + 0.1))}. Beat the snap ${pc(shoot.p)}${shoot.why ? ` (your ${shoot.why})` : ''} for a better field; jump it and they get the first down for free.` },
+      ],
+    }
+  },
+  // Backed up at their own 2 and they have to throw: a safety is points and the ball
+  safety: (c, g, d) => {
+    const rush = odds(c, 0.24, dlRush(c))
+    const steady = odds(c, 0.5, ['playRecognition', 'blockShed', 'powerMoves'])
+    const team = teamScore(c), my = g.mySc + 2 + (d === 1 ? 0 : 3)
+    return {
+      title: `Down ${d}, they're backed up at the 2`,
+      body: `${score(g.mySc, g.oppSc)}, 2:40 left. The ${nick(g.opponent)} are at their own 2 on third and long. They have to throw, and the quarterback has one step to work with.`,
+      options: [
+        { id: 'safety', label: 'Everything you have, get him in the end zone', o: rush,
+          outcomes: [{ p: rush.p, ...win(g, my, g.oppSc, sackLine({ safeties: 1 }), `Wrapped him up in the paint. Two points and the ball back. ${c.nick} win ${score(my, g.oppSc)}.`, 'SAFETY') },
+            { p: 1 - rush.p, ...loss(g, g.mySc, g.oppSc, { qbHits: 1 }, `He got it out with you on his back. First down, and that was the game. ${score(g.mySc, g.oppSc)}.`, 'JUST MISSED') }],
+          sub: sub(rush, `the safety and a ${score(my, g.oppSc)} win`, 'he gets it out, and the game') },
+        { id: 'steady', label: 'Stay square, force the punt', o: { p: steady.p * team },
+          outcomes: [{ p: steady.p * team, ...win(g, g.mySc + 7, g.oppSc, { tackles: 1 }, `Three and out, a short punt, and the offense only needed 40. ${c.nick} win ${score(g.mySc + 7, g.oppSc)}.`, 'COMEBACK') },
+            { p: 1 - steady.p * team, ...loss(g, g.mySc, g.oppSc, { tackles: 1 }, `${steady.p > 0.5 ? 'You got the punt, but the offense stalled' : 'They moved the chains and bled it out'}. ${score(g.mySc, g.oppSc)}.`, 'COMEBACK FALLS SHORT') }],
+          sub: `${pc(steady.p * team)}: the stop (${pc(steady.p)}${steady.why ? `, your ${steady.why}` : ''}), then the offense has to score (${pc(team)}).` },
+      ],
+    }
+  },
+}
+NFL.dl = {
+  protect: (c, g, m) => (c.r() < 0.6 ? DL_PROTECT.strip : DL_PROTECT.goal)(c, g, m),
+  // (a safety only turns it when two points and a field goal are enough)
+  comeback: (c, g, d) => (d <= 2 && c.r() < 0.5 ? DL_COMEBACK.safety : DL_COMEBACK.fourth)(c, g, d),
+}
+
 // The rest: a lopsided game, nothing to decide but your own stat line (and your body)
 function blowout(c, g, ahead) {
   const m = Math.abs(g.mySc - g.oppSc)
@@ -343,11 +444,11 @@ function blowout(c, g, ahead) {
     te: { rec: 2, recYds: rr(c, 22, 40), targets: 3 },
     db: { tackles: 3, pbus: 1 },
     ol: { pancakes: 2 },
-  }[pos] ?? {}
+  }[pos] ?? (pos === 'dl' ? (c.r() < 0.4 ? { tackles: 3, qbHits: 2, sacks: 1, tfl: 1 } : { tackles: 3, qbHits: 1 }) : {})
   const keepGoing = !ahead && pos === 'qb'
   const stayLabel = ahead ? 'Stay in, pad the numbers' : keepGoing ? 'Keep slinging it' : 'Stay in and play it out'
   const pickRisk = keepGoing ? 0.45 : 0
-  const statsTxt = Object.entries(pad).filter(([, v]) => v).map(([k, v]) => `${v} ${({ passYds: 'yds', tds: 'TD', rushYds: 'rush yds', carries: 'carries', rushTDs: 'TD', rec: 'rec', recYds: 'yds', targets: 'targets', tackles: 'tackles', pbus: 'PD', pancakes: 'pancakes' })[k] ?? k}`).join(', ')
+  const statsTxt = Object.entries(pad).filter(([, v]) => v).map(([k, v]) => `${v} ${({ passYds: 'yds', tds: 'TD', rushYds: 'rush yds', carries: 'carries', rushTDs: 'TD', rec: 'rec', recYds: 'yds', targets: 'targets', tackles: 'tackles', pbus: 'PD', pancakes: 'pancakes', sacks: 'sack', qbHits: 'QB hits', tfl: 'TFL' })[k] ?? k}`).join(', ')
   return {
     title: ahead ? `Up ${m} in the 4th` : `Down ${m} in the 4th`,
     body: ahead ? `${score(g.mySc, g.oppSc)} over the ${nick(g.opponent)}. The game is over. The coach asks if you want to come out or keep adding to your season.`

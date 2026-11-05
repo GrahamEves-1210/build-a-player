@@ -47,7 +47,7 @@ import { setLiveLock, liveLock, guardLeave } from '../lib/liveLock'
 import { useAuction } from '../lib/auction'
 import { FORFEIT_RATING, dailyState, setDailySpins, forfeitDaily } from '../lib/progress'
 import { useBlacktop } from '../lib/blacktop'
-import { setSandboxGate, sandboxItemFor, sandboxLocked } from './app/AppSandbox'
+import { setSandboxGate, sandboxItemFor, sandboxLocked, clearSandboxHint } from './app/AppSandbox'
 import { BlacktopQueue, BlacktopHud, BlacktopChat, BlacktopGame, BlacktopHub, BlacktopWatch } from './app/AppBlacktop'
 import { NameTag } from './app/NameTag'
 import { VersusHud, VersusMatchup, VersusLeaveSheet, VersusOppLeftSheet } from './app/Blacktop1v1'
@@ -423,7 +423,7 @@ export default function BucketApp() {
   const [simInitialScreen, setSimInitialScreen] = useState(0)
   const [salaryReturnDate, setSalaryReturnDate] = useState(null)
   const [savedSpinResult, setSavedSpinResult] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('bab_spin_result')) } catch { return null }
+    try { const r = JSON.parse(localStorage.getItem('bab_spin_result')); return r?.starters ? null : r } catch { return null }
   })
   const [isBucketCustomMode, setIsBucketCustomMode] = useState(() => {
     try { return localStorage.getItem('bab_custom_mode') === '1' } catch { return false }
@@ -432,6 +432,8 @@ export default function BucketApp() {
     try { return JSON.parse(localStorage.getItem('bab_bucket_custom_ratings') || '{}') } catch { return {} }
   })
   const [showBucketCustomModal, setShowBucketCustomModal] = useState(false)
+  // Sandbox's Starters Only, for this build (in memory: a reload ends the build too). Only ever read through startersOn
+  const [startersPick, setStartersPick] = useState(false)
 
   // Versus mode
   const [versusRoom,     setVersusRoom]     = useState(null)
@@ -471,7 +473,7 @@ export default function BucketApp() {
   // until reset — prevents toggle-on → edit → toggle-off → simulate exploit
   const sandboxTainted = useRef(isBucketCustomMode)
   useEffect(() => {
-    if (isBucketCustomMode) sandboxTainted.current = true
+    if (isBucketCustomMode) { sandboxTainted.current = true; clearSandboxHint() }
   }, [isBucketCustomMode])
 
   // Blocks the rubber-band bounce only at the bottom of .game-page-scroll,
@@ -816,6 +818,7 @@ export default function BucketApp() {
     setBuild(Object.fromEntries(types.map(t => [t, null])))
     setActiveCategory((POS_CATS[pos] ?? GUARD_CATEGORIES)[0].id)
     sandboxTainted.current = isBucketCustomMode
+    setStartersPick(false)   // a new build starts without it
     setPage(mode === 'salarycap' ? 'salarycap' : 'game')
     window.scrollTo(0, 0)
   }, [isBucketCustomMode])
@@ -1302,6 +1305,21 @@ export default function BucketApp() {
     sandboxTainted.current = isBucketCustomMode
   }, [isBucketCustomMode])
 
+  // Starters Only needs Sandbox on, on a plain build: so it also means the save guard is blocking this build
+  const startersOk = !isVersusMode && !competeOn && !dailyRun && page !== 'career-build' && page !== 'squad-build' && (gameMode === 'classic' || gameMode === 'all-time')
+  const startersOn = startersPick && isBucketCustomMode && startersOk
+  useEffect(() => { if (startersPick && !startersOn) setStartersPick(false) }, [startersPick, startersOn])
+  // switching it needs a build that hasn't started: flipping it can't throw away a spin
+  const startersProp = startersOk && page === 'game' ? { on: startersOn, locked: spinPhase !== 'idle' || activeTypes.some(t => build[t]), onToggle: setStartersPick } : null
+  // Sandbox off during a Starters Only build ends it: the build starts over, as a normal one
+  const sandboxSwitch = on => {
+    if (on || !startersOn) { handleSandboxToggle(on); return }
+    handleSandboxToggle(false)
+    setStartersPick(false)
+    handleReset()
+    sandboxTainted.current = false
+  }
+
   const handleNavPositionSwitch = useCallback((pos) => {
     try { localStorage.setItem('bucketPosition', pos) } catch {}
     handleHome()
@@ -1743,6 +1761,7 @@ export default function BucketApp() {
           adsDisabled={adsDisabled}
           cardMeta={(IS_APP || APP_LOOK) && gameIsPlay && gameMode !== 'salarycap' ? { sport: 'bucket', pos: position, mode: gameMode } : null}
           seedPlan={competePlan ?? blacktopPlan ?? dailyPlan}
+          startersOnly={startersOn}
           key={competePlan ? `cp-${cp.match.code}` : blacktopPlan ? `bt-${bt.match.code}` : dailyPlan ? `dc-${dailyRun.key}` : 'spin'}
           paused={parked}
           isRB={false}
@@ -1772,7 +1791,8 @@ export default function BucketApp() {
           isPlus={isSubscribed}
           isCustomMode={isBucketCustomMode}
           onOpenCustomModal={() => setShowBucketCustomModal(true)}
-          onSandboxToggle={!isVersusMode && !competeOn && !dailyRun && (page === 'game' || page === 'career-build' || page === 'squad-build') && (gameMode === 'classic' || gameMode === 'all-time') ? handleSandboxToggle : undefined}
+          onSandboxToggle={!isVersusMode && !competeOn && !dailyRun && (page === 'game' || page === 'career-build' || page === 'squad-build') && (gameMode === 'classic' || gameMode === 'all-time') ? sandboxSwitch : undefined}
+          sandboxStarters={startersProp}
           attrMap={BUCKET_ATTR}
           categoriesData={activeCategories}
           figureRef={figureRef}
@@ -1792,7 +1812,8 @@ export default function BucketApp() {
             isPlus={isSubscribed}
             isCustomMode={isBucketCustomMode}
             onOpenCustomModal={() => setShowBucketCustomModal(true)}
-            onSandboxToggle={!isVersusMode && !competeOn && !dailyRun && (page === 'game' || page === 'career-build' || page === 'squad-build') && (gameMode === 'classic' || gameMode === 'all-time') ? handleSandboxToggle : undefined}
+            onSandboxToggle={!isVersusMode && !competeOn && !dailyRun && (page === 'game' || page === 'career-build' || page === 'squad-build') && (gameMode === 'classic' || gameMode === 'all-time') ? sandboxSwitch : undefined}
+            sandboxStarters={startersProp}
             attrMap={BUCKET_ATTR}
             logoDir="/logos/nba/"
             captureFigure={captureFigure}
@@ -1900,6 +1921,7 @@ export default function BucketApp() {
 
       {!parked && showBucketCustomModal && (
         <CustomRatingsModal
+          noPicks={startersOn}
           isBucket={true}
           bucketPosition={position}
           gameMode={gameMode}

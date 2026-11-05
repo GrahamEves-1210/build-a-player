@@ -598,6 +598,41 @@ export function claimFx(el, label = '') {
 }
 const reduced = () => document.documentElement.classList.contains('bap-reduce-motion') || !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 
+// A title: paper in the team's colours falling from the top of the screen, a few seconds of it.
+// A small canvas, stretched: it's paper, and a slow machine shouldn't pay for full-screen pixels
+export function titleConfetti(colors = []) {
+  if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
+  const cols = [...new Set(colors.filter(Boolean))]
+  if (!cols.length) cols.push('#D4AF37', '#ffffff')
+  const c = document.createElement('canvas')
+  c.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:2147482000'
+  const scale = innerWidth * innerHeight > 1100 * 800 ? 1 : Math.min(1.5, window.devicePixelRatio || 1)
+  c.width = innerWidth * scale; c.height = innerHeight * scale
+  document.body.appendChild(c)
+  const g = c.getContext('2d'), W = innerWidth, H = innerHeight, TOTAL = 5200, N = Math.round(Math.min(170, W / 5 + 70))
+  const parts = Array.from({ length: N }, (_, i) => ({
+    x: Math.random() * W, y: -20 - Math.random() * H * 0.55, col: cols[i % cols.length],
+    v: 0.2 + Math.random() * 0.17, sway: 0.6 + Math.random() * 1.2, ph: Math.random() * 6.3, w: 6 + Math.random() * 5, h: 9 + Math.random() * 7, spin: Math.random() * 6.3, vs: 0.003 + Math.random() * 0.006,
+  }))
+  const start = performance.now()
+  let last = start
+  const frame = now => {
+    const t = now - start, dt = Math.min(50, now - last)
+    last = now
+    g.setTransform(scale, 0, 0, scale, 0, 0); g.clearRect(0, 0, W, H)
+    g.globalAlpha = t > TOTAL - 900 ? Math.max(0, (TOTAL - t) / 900) : 1
+    for (const p of parts) {
+      p.y += p.v * dt; p.ph += 0.003 * dt; p.spin += p.vs * dt
+      if (p.y > H + 20) { if (t > TOTAL - 1500) continue; p.y = -20; p.x = Math.random() * W }
+      const flip = Math.cos(p.spin)
+      g.fillStyle = p.col
+      g.fillRect(p.x + Math.sin(p.ph) * p.sway * 10 - p.w / 2, p.y, p.w, p.h * Math.max(0.2, Math.abs(flip)))
+    }
+    if (t < TOTAL) requestAnimationFrame(frame); else c.remove()
+  }
+  requestAnimationFrame(frame)
+}
+
 // ── Confetti ─────────────────────────────────────────────────────────────────
 export function confetti(amount = 140) {
   if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return

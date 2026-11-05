@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { XpIco } from './GainIcons'
-import { useProgress, cardKey, rarityRank, RARITIES, claimSet, setReward } from '../../lib/progress'
+import { useProgress, getProgress, cardKey, rarityRank, RARITIES, claimSet, setReward, noteSetsReady } from '../../lib/progress'
 import { HEADSHOT_BASE, nflHeadshot } from '../../utils/simulation'
 import { sfx, haptic } from '../../lib/juice'
 import { IconClose, IconCheck, IconGift, IconCrown, IconStar, IconArrow, IconFootball, IconBasketball } from './icons'
@@ -13,14 +13,14 @@ import EmptyState, { PassLoader } from './EmptyState'
 // carry the sport, so claimed sets stay claimed) and each set kind lists the
 // football sets, then the basketball sets. Both rosters load in parallel.
 
-const NFL_POS = { qb: 'QB', rb: 'RB', wr: 'WR', te: 'TE', db: 'DB' }
+const NFL_POS = { qb: 'QB', rb: 'RB', wr: 'WR', te: 'TE', db: 'DB', dl: 'DL' }
 const NBA_POS = { guard: 'GUARD', big: 'BIG' }
 
 async function loadNfl() {
-  const [qbs, rbs, wrs, tes, dbs, ql, rl, wl, tl, dl, teams, hs] = await Promise.all([
+  const [qbs, rbs, wrs, tes, dbs, ql, rl, wl, tl, dl, teams, hs, dls, dll] = await Promise.all([
     import('../../data/qbs'), import('../../data/rbs'), import('../../data/wrs'), import('../../data/tes'), import('../../data/dbs'),
     import('../../data/qb-legends'), import('../../data/rb-legends'), import('../../data/wr-legends'), import('../../data/te-legends'), import('../../data/db-legends'),
-    import('../../data/nfl-teams'), import('../../data/headshots.json'),
+    import('../../data/nfl-teams'), import('../../data/headshots.json'), import('../../data/dls'), import('../../data/dl-legends'),
   ])
   return {
     pools: {
@@ -29,11 +29,12 @@ async function loadNfl() {
       wr: { classic: wrs.WRS, 'all-time': wl.WR_LEGENDS },
       te: { classic: tes.TES, 'all-time': tl.TE_LEGENDS },
       db: { classic: dbs.DBS, 'all-time': dl.DB_LEGENDS },
+      dl: { classic: dls.DLS, 'all-time': dll.DL_LEGENDS },
     },
     posLabel: NFL_POS,
     teams: teams.TEAMS,
     logo: t => `/logos/${t}.png`,
-    photo: name => nflHeadshot(hs.default[name]),
+    photo: (name, p) => nflHeadshot(p?.headshot ?? hs.default[name]),
   }
 }
 async function loadNba() {
@@ -121,13 +122,18 @@ function buildSets(cards, data, sport) {
   return sets
 }
 
-function Card({ c, data, color, i, small = false, mark = false }) {
+function Card({ c, data, color, i, small = false }) {
   const { player, rank, owned, count, pos, mode } = c
-  const photo = data.photo(player.name) ?? generic(player.skin)
+  const photo = data.photo(player.name, player) ?? generic(player.skin)
+  // his own card: his team's colors, its logo, his number behind him
+  const team = (data.teamBy ??= new Map(data.teams.map(t => [t.short, t]))).get(player.team)
+  const c1 = player.color || team?.color || color || '#2a3038', c2 = player.color2 || team?.color2 || '#000000'
   return (
-    <div className={`ag-ct ag-rar-${rank}${owned ? '' : ' is-locked'}`} style={{ '--tc': player.color || color, '--d': `${Math.min(i, 30) * 22}ms` }}>
+    <div className={`ag-ct ag-rar-${rank}${owned ? '' : ' is-locked'}`} style={{ '--tc': c1, '--tc2': c2, '--d': `${Math.min(i, 30) * 22}ms` }}>
       <div className="ag-ct-photo">
-        <img src={photo} alt="" loading="lazy" draggable={false} onError={e => { e.currentTarget.src = generic(player.skin) }} />
+        {owned && player.number != null && <span className="ag-ct-num">{player.number}</span>}
+        <img className="ag-ct-logo" src={data.logo(player.team)} alt="" loading="lazy" draggable={false} onError={e => { e.currentTarget.style.display = 'none' }} />
+        <img className="ag-ct-face" src={photo} alt="" loading="lazy" draggable={false} onError={e => { e.currentTarget.src = generic(player.skin) }} />
         {!owned && <span className="ag-ct-q">?</span>}
       </div>
       <div className="ag-ct-foot">
@@ -136,15 +142,10 @@ function Card({ c, data, color, i, small = false, mark = false }) {
       </div>
       {!small && <span className={`ag-ct-tag${mode === 'all-time' ? ' ag-ct-tag--at' : ''}`}>{mode === 'all-time' ? <IconStar size={10} className="ag-ct-star" /> : null}{data.posLabel[pos]}</span>}
       {owned && count > 1 && <span className="ag-ct-count">×{count}</span>}
-      {mark && <SportMark sport={c.sport} className="ag-ct-sport" />}
     </div>
   )
 }
 
-function SportMark({ sport, className, size = 12 }) {
-  const S = SPORTS.find(x => x.id === sport) ?? SPORTS[0]
-  return <span className={className} role="img" aria-label={S.label.toLowerCase()}><S.Icon size={size} /></span>
-}
 
 function SetTile({ s, onOpen, i }) {
   const done = s.owned === s.total
@@ -157,6 +158,47 @@ function SetTile({ s, onOpen, i }) {
       <span className="ag-set-tile-bar"><span style={{ width: `${(s.owned / s.total) * 100}%` }} /></span>
       <span className="ag-set-tile-n">{s.owned}/{s.total}{s.kind !== 'team' && !done ? ` · ${setReward(s.total)} XP` : ''}</span>
       {done && (s.claimed ? <span className="ag-set-tick"><IconCheck size={12} /></span> : <span className="ag-set-gift"><IconGift size={14} /></span>)}
+    </button>
+  )
+}
+
+const allSets = (data, owned, claimed) => {
+  const cards = SPORTS.flatMap(s => allCards(data[s.id], s.id, owned))
+  const sets = SPORTS.flatMap(S => buildSets(cards.filter(c => c.sport === S.id), data[S.id], S.id)).map(s => ({ ...s, claimed: !!claimed?.[s.id] }))
+  return { cards, sets }
+}
+const readyOf = sets => sets.filter(s => s.owned === s.total && !s.claimed)
+// after a new card: did that finish a set?
+export async function checkSets() {
+  const data = await loadAll(), p = getProgress()
+  noteSetsReady(readyOf(allSets(data, p.cards, p.sets).sets).map(s => ({ id: s.id, title: s.title })))
+}
+
+// The Profile's one Cards panel: how far along, the last pulls, and what's next. All of it opens the binder.
+export function CardsStrip() {
+  const p = useProgress()
+  const [data, setData] = useState(null)
+  useEffect(() => { let live = true; loadAll().then(d => live && setData(d)); return () => { live = false } }, [])
+  const all = useMemo(() => (data ? allSets(data, p.cards, p.sets) : null), [data, p.cards, p.sets])
+  const owned = Object.keys(p.cards).length, total = all?.cards.length ?? 0
+  const ready = all ? readyOf(all.sets) : []
+  const readyKey = ready.map(s => s.id).join()
+  useEffect(() => { if (all) noteSetsReady(ready.map(s => ({ id: s.id, title: s.title }))) }, [!!all, readyKey])   // eslint-disable-line react-hooks/exhaustive-deps
+  const recent = all ? all.cards.filter(c => c.owned).sort((a, b) => b.seen - a.seen).slice(0, 5) : []
+  // the set closest to done
+  const closest = all && !ready.length ? all.sets.filter(s => s.owned > 0 && s.owned < s.total && s.total >= 5).sort((a, b) => (b.owned / b.total) - (a.owned / a.total))[0] : null
+  return (
+    <button className="ag-cards-tile" onClick={() => window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'cards' }))}>
+      <span className="ag-cards-top">
+        <b>CARDS</b>
+        <span className="ag-cards-n">{owned.toLocaleString()}{total > 0 && <small>/{total.toLocaleString()}</small>}</span>
+        <IconArrow size={14} />
+      </span>
+      <span className="ag-coll-bar"><span style={{ width: `${total ? (owned / total) * 100 : 0}%` }} /></span>
+      {recent.length > 0 && <span className="ag-cards-recent">{recent.map((c, i) => <Card key={c.key} c={c} data={data[c.sport]} i={i} small />)}</span>}
+      {ready.length > 0
+        ? <span className="ag-cards-foot ag-career-act--shop"><IconGift size={16} /> {ready.length > 1 ? 'SETS' : 'SET'} COMPLETE <span className="ag-tab-badge">{ready.length}</span></span>
+        : closest && <span className="ag-cards-foot"><i>CLOSEST SET</i><b>{closest.title}</b><i>{closest.owned}/{closest.total}</i></span>}
     </button>
   )
 }
@@ -192,7 +234,7 @@ export default function AppCards({ sport: startSport, onClose }) {
   const openSet = open && sets.find(s => s.id === open)
   const openData = openSet ? data[openSet.sport] : null
   const claim = s => { if (claimSet(s.id, s.total)) { sfx('coins'); haptic('success') } }   // a set pays coins too
-  const readyToClaim = sets.filter(s => s.owned === s.total && !s.claimed).length
+  const readySets = readyOf(sets), readyToClaim = readySets.length
 
   // A big set reads better in sections (a franchise: by position and era)
   const sections = useMemo(() => {
@@ -239,7 +281,7 @@ export default function AppCards({ sport: startSport, onClose }) {
               <span key={r} className={`ag-rar-pill ag-rar-${r}`}><b>{totals.rar[r]}</b>/{totals.rarTotal[r]} {RARITIES[r]}</span>
             ))}
           </div>
-          {readyToClaim > 0 && <div className="ag-coll-ready"><IconGift size={14} /> {readyToClaim} set{readyToClaim > 1 ? 's' : ''} complete — open to claim</div>}
+          {readyToClaim > 0 && <button className="ag-btn ag-btn--gold ag-coll-ready" onClick={() => setOpen(readySets[0].id)}><IconGift size={16} /> {readyToClaim} SET{readyToClaim > 1 ? 'S' : ''} COMPLETE</button>}
         </div>
 
         {!data && <PassLoader label="Loading cards" />}
@@ -250,7 +292,7 @@ export default function AppCards({ sport: startSport, onClose }) {
           <section className="ag-pop" style={{ '--d': '40ms' }}>
             <div className="ag-row-head"><span className="ag-eyebrow">RECENT PULLS</span></div>
             <div className="ag-recent">
-              {recent.map((c, i) => <Card key={c.key} c={c} data={data[c.sport]} i={i} small mark />)}
+              {recent.map((c, i) => <Card key={c.key} c={c} data={data[c.sport]} i={i} small />)}
             </div>
           </section>
         )}

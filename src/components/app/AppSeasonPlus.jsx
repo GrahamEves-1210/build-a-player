@@ -4,7 +4,7 @@ import { useRailOn } from '../../lib/ads'
 import { createPortal } from 'react-dom'
 import { GAME_LINE, momentsOff, setMomentsOff } from '../../lib/seasonDirector'
 import { leaderBoard } from '../../lib/seasonFacts'
-import { sfx, haptic, victory } from '../../lib/juice'
+import { sfx, haptic, victory, titleConfetti } from '../../lib/juice'
 import { IconArrow, IconStar, IconFlame, IconTrophy } from './icons'
 import { NameTag } from './NameTag'
 
@@ -20,6 +20,12 @@ const nick = opp => (opp || '').split(' ').slice(-1)[0]
 // through, no decisions; the milestones and records still fire.
 export function MomentsToggle() {
   const [off, setOff] = useState(() => momentsOff())
+  // (a moment's own button can turn them off while this is on screen)
+  useEffect(() => {
+    const sync = () => setOff(momentsOff())
+    window.addEventListener('bap:moments-off', sync)
+    return () => window.removeEventListener('bap:moments-off', sync)
+  }, [])
   return (
     <button className={`sts-moments${off ? ' is-off' : ''}`} onClick={() => { setMomentsOff(!off); setOff(!off); sfx('tap') }} aria-pressed={!off} title={off ? 'Turn the season\'s moments back on' : 'Play the season straight through, no decisions'}>
       <span className="sts-moments-knob" /><span>MOMENTS {off ? 'OFF' : 'ON'}</span>
@@ -27,7 +33,7 @@ export function MomentsToggle() {
   )
 }
 
-export function MomentCard({ moment, onPick }) {
+export function MomentCard({ moment, onPick, onTurnOff = null }) {
   const [picked, setPicked] = useState(null)
   const [outcome, setOutcome] = useState(null)
   // a moment that lands low on the screen comes up into view (clear of the dock / ad rail)
@@ -53,6 +59,7 @@ export function MomentCard({ moment, onPick }) {
           </button>
         ))}
       </div>
+      {onTurnOff && !picked && <button className="ag-btn ag-btn--ghost sm-moments-off" onClick={() => { sfx('tap'); onTurnOff() }}>TURN OFF MOMENTS</button>}
       {/* a gamble shows how it landed; a straight choice speaks for itself */}
       {picked && outcome && (
         <div className={`sm-outcome ag-pop${outcome.hit ? ' is-hit' : ' is-miss'}`}>{outcome.line}</div>
@@ -152,7 +159,11 @@ export function RecordOverlay({ record, name, onClose }) {
 
 // An award or a title: the full-screen beat (the confetti says why)
 export function HonorOverlay({ honor, name, onClose }) {
-  useEffect(() => { victory({ big: true }); const t = setTimeout(onClose, 6500); return () => clearTimeout(t) }, []) // eslint-disable-line
+  useEffect(() => {
+    victory({ big: true })
+    if (honor.colors) titleConfetti(honor.colors)   // a title: paper in the team's colours
+    const t = setTimeout(onClose, 6500); return () => clearTimeout(t)
+  }, []) // eslint-disable-line
   return createPortal(
     <div className="ag-ring sm-record sm-honor" onClick={onClose}>
       <div className="ag-ring-rays" />
@@ -284,5 +295,11 @@ export function useDirectedReveal({ director, pace, onFinal }) {
     setTimeout(() => { setMoment(null); setTick(t => t + 1) }, out ? 1900 : 700)
     return out
   }
-  return { k, games: director ? director.games.slice(0, k) : [], moment, choose, fresh, record, clearRecord: () => setRecord(null), done, headlines: director?.headlines ?? [], total }
+  // Off from the card itself: this one goes away with nothing changed, and the season plays straight through
+  const turnOff = () => {
+    setMomentsOff(true)
+    window.dispatchEvent(new Event('bap:moments-off'))
+    setMoment(null); setTick(t => t + 1)
+  }
+  return { k, games: director ? director.games.slice(0, k) : [], moment, choose, turnOff, fresh, record, clearRecord: () => setRecord(null), done, headlines: director?.headlines ?? [], total }
 }

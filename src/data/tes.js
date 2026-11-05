@@ -41,7 +41,7 @@ const _TES = [
   { name: 'Trey McBride',      short: 'McBride',     team: 'ARI', teamName: 'Arizona Cardinals',      skin: '#f0c4a0', height: 76, weight: 258, starter: true,  captain: true,  number: 85,
     attrs: { speed: 8, blocking: 5, vertical: 7, routeRunning: 11, strength: 6, hands: 11, awareness: 10, size: 7, afterCatch: 8 } },
   { name: 'Elijah Higgins',    short: 'Higgins',     team: 'ARI', teamName: 'Arizona Cardinals',      skin: '#5e3c22', height: 74, weight: 235, starter: false, number: 84,
-    attrs: { speed: 6, blocking: 5, vertical: 6, routeRunning: 5, strength: 4, hands: 6, awareness: 5, size: 2, afterCatch: 5 } },
+    attrs: { speed: 6, blocking: 6, vertical: 6, routeRunning: 6, strength: 4, hands: 6, awareness: 5, size: 2, afterCatch: 5 } },
   { name: 'Tip Reiman',        short: 'Reiman',      team: 'ARI', teamName: 'Arizona Cardinals',      skin: '#f0c4a0', height: 77, weight: 252, starter: false, number: 87,
     attrs: { speed: 4, blocking: 6, vertical: 5, routeRunning: 3, strength: 6, hands: 3, awareness: 4, size: 9, afterCatch: 3 } },
   // ATL
@@ -60,7 +60,7 @@ const _TES = [
     attrs: { speed: 3, blocking: 4, vertical: 3, routeRunning: 3, strength: 6, hands: 3, awareness: 4, size: 9, afterCatch: 2 } },
   // BUF
   { name: 'Dalton Kincaid',    short: 'Kincaid',     team: 'BUF', teamName: 'Buffalo Bills',          skin: '#f0c4a0', height: 76, weight: 236, starter: true,  captain: true,  number: 86,
-    attrs: { speed: 5, blocking: 3, vertical: 7, routeRunning: 8, strength: 4, hands: 7, awareness: 6, size: 5, afterCatch: 7 } },
+    attrs: { speed: 5, blocking: 3, vertical: 7, routeRunning: 8, strength: 4, hands: 8, awareness: 6, size: 5, afterCatch: 7 } },
   { name: 'Dawson Knox',       short: 'Knox',        team: 'BUF', teamName: 'Buffalo Bills',          skin: '#f0c4a0', height: 76, weight: 254, starter: false, number: 88,
     attrs: { speed: 8, blocking: 5, vertical: 5, routeRunning: 6, strength: 6, hands: 5, awareness: 6, size: 7, afterCatch: 5 } },
   { name: 'Jackson Hawes',     short: 'Hawes',       team: 'BUF', teamName: 'Buffalo Bills',          skin: '#f0c4a0', height: 76, weight: 237, starter: false, number: 85,
@@ -83,12 +83,12 @@ const _TES = [
   { name: 'Drew Sample',       short: 'Sample',      team: 'CIN', teamName: 'Cincinnati Bengals',     skin: '#f0c4a0', height: 77, weight: 242, starter: true,  captain: true,  number: 89,
     attrs: { speed: 3, blocking: 6, vertical: 3, routeRunning: 3, strength: 6, hands: 4, awareness: 5, size: 8, afterCatch: 2 } },
   { name: 'Mike Gesicki',      short: 'Gesicki',     team: 'CIN', teamName: 'Cincinnati Bengals',     skin: '#f0c4a0', height: 78, weight: 247, starter: false, number: 88,
-    attrs: { speed: 7, blocking: 3, vertical: 10, routeRunning: 7, strength: 4, hands: 7, awareness: 5, size: 10, afterCatch: 6 } },
+    attrs: { speed: 7, blocking: 3, vertical: 10, routeRunning: 7, strength: 4, hands: 8, awareness: 5, size: 10, afterCatch: 6 } },
   { name: 'Tanner Hudson',     short: 'Hudson',      team: 'CIN', teamName: 'Cincinnati Bengals',     skin: '#f0c4a0', height: 77, weight: 246, starter: false, number: 87,
     attrs: { speed: 3, blocking: 5, vertical: 5, routeRunning: 5, strength: 4, hands: 5, awareness: 5, size: 8, afterCatch: 5 } },
   // CLE
   { name: 'Harold Fannin Jr.', short: 'Fannin',      team: 'CLE', teamName: 'Cleveland Browns',       skin: '#3a2010', height: 76, weight: 241, starter: true,  captain: true,  number: 44,
-    attrs: { speed: 6, blocking: 2, vertical: 7, routeRunning: 9, strength: 3, hands: 9, awareness: 7, size: 6, afterCatch: 7 } },
+    attrs: { speed: 6, blocking: 2, vertical: 8, routeRunning: 9, strength: 3, hands: 9, awareness: 7, size: 6, afterCatch: 7 } },
   { name: 'Blake Whiteheart',  short: 'Whiteheart',  team: 'CLE', teamName: 'Cleveland Browns',       skin: '#f0c4a0', height: 77, weight: 248, starter: false, number: 86,
     attrs: { speed: 4, blocking: 6, vertical: 4, routeRunning: 3, strength: 5, hands: 4, awareness: 4, size: 8, afterCatch: 3 } },
   { name: 'Joe Royer',         short: 'Royer',       team: 'CLE', teamName: 'Cleveland Browns',       skin: '#f0c4a0', height: 76, weight: 242, starter: false, number: 18,
@@ -109,7 +109,7 @@ const _TES = [
     attrs: { speed: 4, blocking: 7, vertical: 3, routeRunning: 3, strength: 7, hands: 4, awareness: 5, size: 5, afterCatch: 3 } },
   // DET
   { name: 'Sam LaPorta',       short: 'LaPorta',     team: 'DET', teamName: 'Detroit Lions',          skin: '#f0c4a0', height: 75, weight: 245, starter: true,  captain: true,  number: 87,
-    attrs: { speed: 7, blocking: 5, vertical: 7, routeRunning: 6, strength: 5, hands: 8, awareness: 6, size: 4, afterCatch: 6 } },
+    attrs: { speed: 7, blocking: 5, vertical: 7, routeRunning: 8, strength: 5, hands: 9, awareness: 6, size: 4, afterCatch: 7 } },
   { name: 'Brock Wright',      short: 'Wright',      team: 'DET', teamName: 'Detroit Lions',          skin: '#f0c4a0', height: 76, weight: 246, starter: false, number: 89,
     attrs: { speed: 4, blocking: 5, vertical: 3, routeRunning: 3, strength: 6, hands: 4, awareness: 4, size: 6, afterCatch: 3 } },
   { name: 'Tyler Conklin',     short: 'Conklin',     team: 'DET', teamName: 'Detroit Lions',          skin: '#f0c4a0', height: 75, weight: 240, starter: false, number: 83,
@@ -144,7 +144,7 @@ const _TES = [
     attrs: { speed: 4, blocking: 5, vertical: 3, routeRunning: 3, strength: 5, hands: 4, awareness: 3, size: 6, afterCatch: 3 } },
   // KC
   { name: 'Travis Kelce',      short: 'Kelce',       team: 'KC',  teamName: 'Kansas City Chiefs',     skin: '#f0c4a0', height: 77, weight: 256, starter: true,  captain: true,  number: 87,
-    attrs: { speed: 5, blocking: 6, vertical: 4, routeRunning: 11, strength: 6, hands: 9, awareness: 10, size: 9, afterCatch: 7 } },
+    attrs: { speed: 5, blocking: 6, vertical: 4, routeRunning: 11, strength: 6, hands: 10, awareness: 10, size: 9, afterCatch: 9 } },
   { name: 'Noah Gray',         short: 'N. Gray',     team: 'KC',  teamName: 'Kansas City Chiefs',     skin: '#f0c4a0', height: 76, weight: 246, starter: false, number: 83,
     attrs: { speed: 5, blocking: 5, vertical: 5, routeRunning: 6, strength: 5, hands: 6, awareness: 6, size: 6, afterCatch: 5 } },
   { name: 'Jared Wiley',       short: 'Wiley',       team: 'KC',  teamName: 'Kansas City Chiefs',     skin: '#f0c4a0', height: 78, weight: 249, starter: false, number: 12,
@@ -165,7 +165,7 @@ const _TES = [
     attrs: { speed: 7, blocking: 3, vertical: 6, routeRunning: 5, strength: 4, hands: 5, awareness: 4, size: 9, afterCatch: 5 } },
   // LV
   { name: 'Brock Bowers',      short: 'Bowers',      team: 'LV',  teamName: 'Las Vegas Raiders',      skin: '#f0c4a0', height: 76, weight: 230, starter: true,  captain: true,  number: 89,
-    attrs: { speed: 8, blocking: 4, vertical: 8, routeRunning: 10, strength: 4, hands: 9, awareness: 9, size: 5, afterCatch: 9 } },
+    attrs: { speed: 8, blocking: 4, vertical: 9, routeRunning: 11, strength: 4, hands: 9, awareness: 9, size: 5, afterCatch: 9 } },
   { name: 'Michael Mayer',     short: 'Mayer',       team: 'LV',  teamName: 'Las Vegas Raiders',      skin: '#f0c4a0', height: 76, weight: 260, starter: false, number: 87,
     attrs: { speed: 4, blocking: 7, vertical: 5, routeRunning: 5, strength: 8, hands: 6, awareness: 5, size: 7, afterCatch: 4 } },
   { name: 'Ian Thomas',        short: 'Thomas',      team: 'LV',  teamName: 'Las Vegas Raiders',      skin: '#5e3c22', height: 76, weight: 259, starter: false, number: 80,
@@ -179,14 +179,14 @@ const _TES = [
     attrs: { speed: 5, blocking: 4, vertical: 5, routeRunning: 3, strength: 5, hands: 4, awareness: 4, size: 8, afterCatch: 4 } },
   // MIN
   { name: 'T.J. Hockenson',    short: 'Hockenson',   team: 'MIN', teamName: 'Minnesota Vikings',      skin: '#f0c4a0', height: 76, weight: 251, starter: true,  captain: true,  number: 87,
-    attrs: { speed: 6, blocking: 5, vertical: 6, routeRunning: 7, strength: 6, hands: 7, awareness: 6, size: 7, afterCatch: 6 } },
+    attrs: { speed: 6, blocking: 5, vertical: 6, routeRunning: 8, strength: 6, hands: 9, awareness: 6, size: 7, afterCatch: 6 } },
   { name: 'Josh Oliver',       short: 'Oliver',      team: 'MIN', teamName: 'Minnesota Vikings',      skin: '#b07848', height: 77, weight: 249, starter: false, number: 84,
     attrs: { speed: 5, blocking: 9, vertical: 5, routeRunning: 4, strength: 5, hands: 6, awareness: 6, size: 8, afterCatch: 5 } },
   { name: 'Ben Yurosek',       short: 'Yurosek',     team: 'MIN', teamName: 'Minnesota Vikings',      skin: '#f0c4a0', height: 77, weight: 246, starter: false, number: 85,
     attrs: { speed: 5, blocking: 4, vertical: 5, routeRunning: 4, strength: 4, hands: 3, awareness: 5, size: 8, afterCatch: 3 } },
   // NE
   { name: 'Hunter Henry',      short: 'Henry',       team: 'NE',  teamName: 'New England Patriots',   skin: '#f0c4a0', height: 77, weight: 250, starter: true,  captain: true,  number: 85,
-    attrs: { speed: 5, blocking: 6, vertical: 6, routeRunning: 7, strength: 6, hands: 8, awareness: 7, size: 9, afterCatch: 5 } },
+    attrs: { speed: 5, blocking: 6, vertical: 6, routeRunning: 8, strength: 6, hands: 10, awareness: 7, size: 9, afterCatch: 5 } },
   { name: 'Eli Raridon',       short: 'Raridon',     team: 'NE',  teamName: 'New England Patriots',   skin: '#f0c4a0', height: 78, weight: 252, starter: false, number: 82,
     attrs: { speed: 5, blocking: 5, vertical: 5, routeRunning: 5, strength: 7, hands: 5, awareness: 4, size: 10, afterCatch: 5 } },
   { name: 'Cameron Latu',          short: 'Latu',         team: 'NE',  teamName: 'New England Patriots', skin: '#b07848', height: 77, weight: 244, starter: false, number: 36,
@@ -200,7 +200,7 @@ const _TES = [
     attrs: { speed: 6, blocking: 4, vertical: 5, routeRunning: 5, strength: 6, hands: 5, awareness: 4, size: 8, afterCatch: 5 } },
   // NYG
   { name: 'Isaiah Likely',     short: 'Likely',      team: 'NYG', teamName: 'New York Giants',        skin: '#5e3c22', height: 76, weight: 245, starter: true,  captain: true,  number: 9,
-    attrs: { speed: 7, blocking: 3, vertical: 7, routeRunning: 7, strength: 4, hands: 7, awareness: 7, size: 6, afterCatch: 6 } },
+    attrs: { speed: 7, blocking: 3, vertical: 7, routeRunning: 8, strength: 4, hands: 7, awareness: 7, size: 6, afterCatch: 6 } },
   { name: 'Theo Johnson',      short: 'T. Johnson',  team: 'NYG', teamName: 'New York Giants',        skin: '#b07848', height: 78, weight: 259, starter: false, number: 84,
     attrs: { speed: 5, blocking: 5, vertical: 8, routeRunning: 5, strength: 7, hands: 6, awareness: 5, size: 10, afterCatch: 6 } },
   { name: 'Chris Manhertz',    short: 'Manhertz',    team: 'NYG', teamName: 'New York Giants',        skin: '#5e3c22', height: 77, weight: 247, starter: false, number: 85,
@@ -223,7 +223,7 @@ const _TES = [
   { name: 'Pat Freiermuth',    short: 'Freiermuth',  team: 'PIT', teamName: 'Pittsburgh Steelers',    skin: '#f0c4a0', height: 77, weight: 258, starter: true,  captain: true,  number: 88,
     attrs: { speed: 5, blocking: 8, vertical: 6, routeRunning: 7, strength: 7, hands: 6, awareness: 7, size: 9, afterCatch: 5 } },
   { name: 'Darnell Washington', short: 'Washington',  team: 'PIT', teamName: 'Pittsburgh Steelers',   skin: '#3a2010', height: 79, weight: 264, starter: false, number: 80,
-    attrs: { speed: 5, blocking: 10, vertical: 4, routeRunning: 2, strength: 11, hands: 7, awareness: 5, size: 11, afterCatch: 5 } },
+    attrs: { speed: 5, blocking: 11, vertical: 4, routeRunning: 2, strength: 11, hands: 7, awareness: 5, size: 11, afterCatch: 7 } },
   { name: 'Robert Tonyan',     short: 'Tonyan',      team: 'PIT', teamName: 'Pittsburgh Steelers',    skin: '#f0c4a0', height: 77, weight: 240, starter: false, number: 85,
     attrs: { speed: 5, blocking: 4, vertical: 4, routeRunning: 5, strength: 3, hands: 6, awareness: 5, size: 8, afterCatch: 4 } },
   // SEA
@@ -235,7 +235,7 @@ const _TES = [
     attrs: { speed: 6, blocking: 4, vertical: 6, routeRunning: 6, strength: 3, hands: 5, awareness: 4, size: 9, afterCatch: 6 } },
   // SF
   { name: 'George Kittle',     short: 'Kittle',      team: 'SF',  teamName: 'San Francisco 49ers',    skin: '#f0c4a0', height: 76, weight: 250, starter: true,  captain: true,  number: 85,
-    attrs: { speed: 9, blocking: 11, vertical: 6, routeRunning: 9, strength: 10, hands: 9, awareness: 9, size: 6, afterCatch: 11 } },
+    attrs: { speed: 9, blocking: 11, vertical: 6, routeRunning: 10, strength: 10, hands: 9, awareness: 9, size: 6, afterCatch: 11 } },
   { name: 'Jake Tonges',       short: 'Tonges',      team: 'SF',  teamName: 'San Francisco 49ers',    skin: '#f0c4a0', height: 77, weight: 252, starter: false, number: 88,
     attrs: { speed: 4, blocking: 6, vertical: 5, routeRunning: 4, strength: 7, hands: 5, awareness: 4, size: 9, afterCatch: 4 } },
   { name: 'Luke Farrell',      short: 'Farrell',     team: 'SF',  teamName: 'San Francisco 49ers',    skin: '#f0c4a0', height: 77, weight: 249, starter: false, number: 89,

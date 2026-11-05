@@ -30,7 +30,17 @@ export default function AppToasts() {
     const drain = () => takeToasts().forEach(push)
     drain()
     window.addEventListener('bap:toast', drain)
+    // a new card can finish a set: checked when things are quiet (this loads the rosters)
+    let setCheck = 0
+    const onCard = e => {
+      if (!e.detail?.isNew) return
+      clearTimeout(setCheck)
+      setCheck = setTimeout(() => import('./AppCards').then(m => m.checkSets()).catch(() => {}), 2500)
+    }
+    window.addEventListener('bap:card', onCard)
     return () => {
+      clearTimeout(setCheck)
+      window.removeEventListener('bap:card', onCard)
       window.removeEventListener('bap:toast', drain)
       timers.current.forEach(clearTimeout)
     }
@@ -79,17 +89,16 @@ export function LevelUp({ hold }) {
     }
   }, [show, p.lvl.level])
   if (!show || !due) return null
-  const { title, spots } = levelUnlocks(p.lvl.level, p.seenLevel)
+  const { title } = levelUnlocks(p.lvl.level, p.seenLevel)
   return createPortal(
     <div className="ag-levelup" onClick={markLevelSeen}>
       <div className="ag-levelup-card" onClick={e => e.stopPropagation()}>
         <span className="ag-eyebrow">LEVEL UP</span>
         <span className="ag-levelup-numwrap"><img className="ag-levelup-star" src="/fx/star.webp" alt="" aria-hidden="true" draggable={false} /><span className="ag-levelup-num">{p.lvl.level}</span></span>
         <span className="ag-levelup-title"><RiseText text={p.lvl.title} delay={320} /></span>
-        {(title || spots.length > 0) && (
+        {title && (
           <div className="ag-levelup-unlocks">
             {title && <span className="ag-unlock"><b>NEW TITLE</b>{title}</span>}
-            {spots.map(s => <span key={s.id} className="ag-unlock"><b>NEW SPOTLIGHT</b><i className={`ag-swatch ag-swatch--${s.id}`} />{s.name}</span>)}
           </div>
         )}
         {p.bp?.ready > 0 && <span className="ag-levelup-pass">{p.bp.ready === 1 ? 'A reward is' : `${p.bp.ready} rewards are`} waiting on the Builder Pass</span>}

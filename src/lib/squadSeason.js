@@ -13,10 +13,10 @@
 import { seeded } from './rng'
 import { CAPS, POSITIONS, SPOTS, spotsOf } from './squad'
 import {
-  calcOVR, calcOVRRB, calcOVRWR, calcOVRTE, calcOVRDB,
-  runSimulation, runRBSimulation, runWRSimulation, runTESimulation, runDBSimulation, scriptNFLSeason,
-  calcMVPResult, calcOPOYResult, calcWROPOYResult, calcTEOPOYResult, calcDBDpoyResult,
-  getArchetype, getArchetypeRB, getArchetypeWR, getArchetypeTE, getArchetypeDB, nflHeadshot, HEADSHOT_BASE,
+  calcOVR, calcOVRRB, calcOVRWR, calcOVRTE, calcOVRDB, calcOVRDL,
+  runSimulation, runRBSimulation, runWRSimulation, runTESimulation, runDBSimulation, runDLSimulation, scriptNFLSeason,
+  calcMVPResult, calcOPOYResult, calcWROPOYResult, calcTEOPOYResult, calcDBDpoyResult, calcDLDpoyResult,
+  getArchetype, getArchetypeRB, getArchetypeWR, getArchetypeTE, getArchetypeDB, getArchetypeDL, dlBuildSpot, nflHeadshot, HEADSHOT_BASE,
 } from '../utils/simulation'
 import { runBucketSimulation, scriptBucketSeason, calcBucketOVR, TEAM_RATINGS, getBucketGuardArchetype, getBucketBigArchetype } from '../utils/bucketSimulation'
 import { QBS, TYPES } from '../data/qbs'
@@ -24,6 +24,7 @@ import { RBS, RB_TYPES } from '../data/rbs'
 import { WRS, WR_TYPES } from '../data/wrs'
 import { TES, TE_TYPES } from '../data/tes'
 import { DBS, DB_TYPES } from '../data/dbs'
+import { DLS, DL_TYPES } from '../data/dls'
 import { NFL_TEAMS } from '../data/nfl-teams'
 import { NBA_GUARD_PLAYERS, GUARD_TYPES } from '../data/nba-guards'
 import { NBA_BIG_PLAYERS, BIG_TYPES } from '../data/nba-bigs'
@@ -32,16 +33,16 @@ import NFL_HEADSHOTS from '../data/headshots.json'
 import NBA_HEADSHOTS from '../data/nba-headshots.json'
 
 // ── Per position ─────────────────────────────────────────────────────────────
-const POOL = { qb: QBS, rb: RBS, wr: WRS, te: TES, db: DBS, guard: NBA_GUARD_PLAYERS, big: NBA_BIG_PLAYERS }
-export const TYPES_OF = { qb: TYPES, rb: RB_TYPES, wr: WR_TYPES, te: TE_TYPES, db: DB_TYPES, guard: GUARD_TYPES, big: BIG_TYPES }
+const POOL = { qb: QBS, rb: RBS, wr: WRS, te: TES, db: DBS, dl: DLS, guard: NBA_GUARD_PLAYERS, big: NBA_BIG_PLAYERS }
+export const TYPES_OF = { qb: TYPES, rb: RB_TYPES, wr: WR_TYPES, te: TE_TYPES, db: DB_TYPES, dl: DL_TYPES, guard: GUARD_TYPES, big: BIG_TYPES }
 const OVR = {
-  qb: b => calcOVR(b, TYPES), rb: b => calcOVRRB(b, RB_TYPES), wr: b => calcOVRWR(b, WR_TYPES), te: b => calcOVRTE(b, TE_TYPES), db: b => calcOVRDB(b, DB_TYPES),
+  qb: b => calcOVR(b, TYPES), rb: b => calcOVRRB(b, RB_TYPES), wr: b => calcOVRWR(b, WR_TYPES), te: b => calcOVRTE(b, TE_TYPES), db: b => calcOVRDB(b, DB_TYPES), dl: b => calcOVRDL(b, DL_TYPES),
   guard: b => calcBucketOVR(b, GUARD_TYPES, 'guard'), big: b => calcBucketOVR(b, BIG_TYPES, 'big'),
 }
 export const ovrOf = (pos, build) => Math.round(OVR[pos]?.(build || {}) ?? 0)
 const ARCH = {
   qb: (o, b) => getArchetype(o, b, TYPES), rb: (o, b) => getArchetypeRB(o, b, RB_TYPES), wr: (o, b) => getArchetypeWR(o, b, WR_TYPES),
-  te: (o, b) => getArchetypeTE(o, b, TE_TYPES), db: (o, b) => getArchetypeDB(o, b, DB_TYPES),
+  te: (o, b) => getArchetypeTE(o, b, TE_TYPES), db: (o, b) => getArchetypeDB(o, b, DB_TYPES), dl: (o, b) => getArchetypeDL(o, b, DL_TYPES),
   guard: (o, b) => getBucketGuardArchetype(o, b, GUARD_TYPES), big: (o, b) => getBucketBigArchetype(o, b, BIG_TYPES),
 }
 export const nameOf = (pos, build) => { try { return ARCH[pos]?.(ovrOf(pos, build), build) ?? null } catch { return null } }
@@ -52,7 +53,7 @@ export function faceOf(build) {
 }
 const photoOf = (sport, p) => (sport === 'bucket'
   ? (NBA_HEADSHOTS[p.name] ? `${HEADSHOT_BASE}/nba/${NBA_HEADSHOTS[p.name]}.webp` : null)
-  : nflHeadshot(NFL_HEADSHOTS[p.name]))
+  : nflHeadshot(p.headshot ?? NFL_HEADSHOTS[p.name]))
 export const teamsOf = sport => (sport === 'bucket' ? NBA_TEAMS : NFL_TEAMS)
 export const teamOf = (sport, short) => teamsOf(sport).find(t => t.short === short) ?? null
 export const logoOf = (sport, short) => (sport === 'bucket' ? `/logos/nba/${short}.png` : teamOf(sport, short)?.logo ?? `/logos/${short}.png`)
@@ -63,6 +64,7 @@ const asBuild = (p, types) => Object.fromEntries(types.map(t => [t, { val: p.att
 const REPLACEMENT = { nfl: 62, bucket: 64 }
 
 // The team's real starters at each position, best first (as many as the squad's caps)
+const dlSpotIn = name => (POOL.dl.find(p => p.name === name)?.subpos === 'dt' ? 'dt' : 'edge')
 export function startersOf(sport, short) {
   const out = {}, taken = new Set()
   // basketball: the team's real starters (starter: true, in either list: LeBron is marked in
@@ -75,13 +77,35 @@ export function startersOf(sport, short) {
     const types = TYPES_OF[pos]
     out[pos] = POOL[pos]
       .filter(p => p.team === short && p.attrs && !taken.has(p.name))
-      .map(p => ({ name: p.name, short: p.short || p.name.split(' ').slice(-1)[0], number: p.number ?? null, pos, ovr: Math.round(OVR[pos](asBuild(p, types))), photo: photoOf(sport, p), starter: marked.has(p.name) }))
+      .map(p => ({ name: p.name, short: p.short || p.name.split(' ').slice(-1)[0], number: p.number ?? null, pos, ovr: Math.round(OVR[pos](asBuild(p, types))), photo: photoOf(sport, p), starter: marked.has(p.name), ...(pos === 'dl' && { spot: p.subpos === 'dt' ? 'dt' : 'edge' }) }))
       .sort((a, b) => (b.starter - a.starter) || (b.ovr - a.ovr))   // marked starters, then the best of the rest
-      .slice(0, CAPS[sport][pos])
+      // (a line starts two ends and two tackles, the best at each; everyone else the best to the cap)
+      .filter((p, i, all) => (pos === 'dl' ? all.slice(0, i + 1).filter(x => dlSpotIn(x.name) === dlSpotIn(p.name)).length <= 2 : i < CAPS[sport][pos]))
       .sort((a, b) => b.ovr - a.ovr)   // best first: a build pushes out the weakest
     out[pos].forEach(p => taken.add(p.name))   // a player listed at two spots starts at one
   }
   return out
+}
+
+// A DL build's spot on the line (its Size chip), and how a spot reads on screen
+export const spotOfBuild = dlBuildSpot
+export const SPOT_LABEL = { edge: 'EDGE', dt: 'DT' }
+
+// A front lines up two on the edge and two inside. The builds take their spots; the real
+// starters who fill the rest are the ones the line is short of (best first), then the best
+// left. So an EDGE build sits the real EDGE he beats out, not a tackle he doesn't play over.
+function dlFront(mine, real) {
+  const open = Math.max(0, CAPS.nfl.dl - mine.length), rest = [...real], start = []
+  for (const spot of ['edge', 'dt']) {
+    let need = 2 - mine.filter(s => dlBuildSpot(s.build) === spot).length
+    while (need-- > 0 && start.length < open) {
+      const i = rest.findIndex(p => p.spot === spot)
+      if (i < 0) break
+      start.push(rest.splice(i, 1)[0])
+    }
+  }
+  while (start.length < open && rest.length) start.push(rest.shift())
+  return { start: start.sort((a, b) => b.ovr - a.ovr), sit: rest }
 }
 
 // Who starts where. Your builds take the starting jobs at their positions; the
@@ -95,8 +119,9 @@ export function lineupOf(squad) {
   for (const pos of POSITIONS[sport]) {
     const mine = built.filter(s => s.pos === pos)
     const open = Math.max(0, CAPS[sport][pos] - mine.length)
-    groups[pos] = [...mine.map(s => ({ you: s })), ...starters[pos].slice(0, open).map(p => ({ real: p }))]
-    benched[pos] = starters[pos].slice(open)
+    const { start, sit } = pos === 'dl' ? dlFront(mine, starters[pos]) : { start: starters[pos].slice(0, open), sit: starters[pos].slice(open) }
+    groups[pos] = [...mine.map(s => ({ you: s })), ...start.map(p => ({ real: p }))]
+    benched[pos] = sit
   }
   if (sport !== 'bucket') return { groups, benched, starters }
   // the board: each build at its spot (or the first open one in its group), real players around them
@@ -114,7 +139,7 @@ export function lineupOf(squad) {
 // Each point of OVR a build has over the starter it replaces moves the team
 // (football off/def 1–10; basketball off/def out of 100)
 const MOVE = {
-  qb: { off: 0.22 }, rb: { off: 0.09 }, wr: { off: 0.075 }, te: { off: 0.065 }, db: { def: 0.09 },
+  qb: { off: 0.22 }, rb: { off: 0.09 }, wr: { off: 0.075 }, te: { off: 0.065 }, db: { def: 0.09 }, dl: { def: 0.10 },
   guard: { off: 0.45, def: 0.15 }, big: { off: 0.25, def: 0.35 },
 }
 export function squadStrength(squad) {
@@ -132,7 +157,7 @@ export function squadStrength(squad) {
     const cap = CAPS[sport][pos]
     const out = [...starters[pos]]
     while (out.length < cap) out.push({ ovr: REPLACEMENT[sport] })
-    const pushed = out.slice(cap - mine.length)
+    const pushed = pos === 'dl' ? dlFront(mine, out).sit : out.slice(cap - mine.length)
     const delta = mine.reduce((a, s) => a + ovrOf(pos, s.build), 0) - pushed.reduce((a, p) => a + p.ovr, 0)
     off += delta * (MOVE[pos].off ?? 0)
     def += delta * (MOVE[pos].def ?? 0)
@@ -161,6 +186,31 @@ function share(res, pos, n) {
   if (pos === 'rb' && out.seasonCarries) out.seasonYPC = r1(out.seasonRushYds / out.seasonCarries)
   return out
 }
+// A line shares the quarterback the same way: four rushers can't each have the season one has
+// by himself (the most a whole team has ever had is 72). A sack a teammate got instead comes off
+// the game it was in, with the TFL and the tackle it counted as, so every total still adds up.
+const DL_SHARE = [1, 0.92, 0.84, 0.76]
+const DL_TOTALS = { sacks: 'seasonSacks', tfl: 'seasonTFL', tackles: 'seasonTackles', qbHits: 'seasonQBHits', ff: 'seasonFF', fr: 'seasonFR', pbus: 'seasonPBUs', safeties: 'seasonSafeties' }
+const keepOf = (n, p) => { let c = 0; for (let i = 0; i < n; i++) if (Math.random() < p) c++; return c }
+function shareDLGame(g, k) {
+  const sacks = keepOf(g.sacks, k), lost = g.sacks - sacks
+  // run stops thin less: the run comes at each man about as often. Only what can't be a sack's TFL can go here.
+  const runLost = keepOf(Math.max(0, g.tfl - g.sacks), (1 - k) / 2)
+  const sackTflLost = Math.min(g.tfl - runLost, keepOf(lost, 0.85))   // 85% of sacks are also TFLs (runDLSimulation)
+  const tfl = g.tfl - runLost - sackTflLost
+  return { ...g, sacks, tfl, tackles: g.tackles - lost - runLost, qbHits: sacks + keepOf(g.qbHits - g.sacks, k), ff: keepOf(g.ff, k), safeties: Math.min(g.safeties, tfl) }
+}
+function shareDL(res, n) {
+  const k = DL_SHARE[n - 1]
+  if (!k || k === 1) return res
+  const games = res.games.map(g => shareDLGame(g, k)), playoffRounds = (res.playoffRounds ?? []).map(g => shareDLGame(g, k))
+  const out = { ...res, games, playoffRounds, bestGame: games.find(g => g.wk === res.bestGame?.wk) ?? res.bestGame }
+  for (const [f, total] of Object.entries(DL_TOTALS)) out[total] = [...games, ...playoffRounds].reduce((a, g) => a + g[f], 0)
+  const last = playoffRounds[playoffRounds.length - 1]
+  if (res.sbResult?.won && last) out.sbResult = { won: true, ...Object.fromEntries(Object.keys(DL_TOTALS).map(f => [f, last[f]])) }
+  return out
+}
+
 const NFL = {
   qb: { sim: (b, t, team, s) => runSimulation(b, t, team, false, s), award: ['MVP', calcMVPResult],
     line: r => [['YDS', r.seasonPassYds], ['TD', r.seasonTDs], ['INT', r.seasonINTs], ['RTG', r.seasonRating]] },
@@ -172,6 +222,8 @@ const NFL = {
     line: r => [['REC', r.seasonRecs], ['YDS', r.seasonRecYds], ['TD', r.seasonRecTDs], ['YPR', r1(r.seasonYPR)]] },
   db: { sim: (b, t, team, s) => runDBSimulation(b, team, false, s), award: ['DPOY', calcDBDpoyResult],
     line: r => [['TKL', r.seasonTackles], ['INT', r.seasonINTs], ['PBU', r.seasonPBUs], ['FF', r.seasonFF]] },
+  dl: { sim: (b, t, team, s) => runDLSimulation(b, team, false, s), award: ['DPOY', calcDLDpoyResult],
+    line: r => [['SCK', r.seasonSacks], ['TFL', r.seasonTFL], ['TKL', r.seasonTackles], ['QBH', r.seasonQBHits]] },
 }
 
 // Math.random, seeded, for the length of fn (the football sims and awards roll it)
@@ -212,11 +264,12 @@ function footballSeason(squad) {
   for (const s of built) {
     const P = NFL[s.pos]
     const n = built.filter(x => x.pos === s.pos).length
-    const res = share(P.sim(s.build, s.types ?? TYPES_OF[s.pos], simTeam, script), s.pos, n)
+    const played = P.sim(s.build, s.types ?? TYPES_OF[s.pos], simTeam, script)
+    const res = s.pos === 'dl' ? shareDL(played, n) : share(played, s.pos, n)
     const aw = P.award[1](res, false, base.short)
     const ovr = ovrOf(s.pos, s.build)
     raw.push(res)
-    lines.push({ id: s.id, pos: s.pos, ovr, name: nameOf(s.pos, s.build), face: faceOf(s.build), stats: P.line(res), award: { name: P.award[0], won: !!aw.userWins, winner: aw.winner?.name ?? null } })
+    lines.push({ id: s.id, pos: s.pos, ovr, name: nameOf(s.pos, s.build), face: faceOf(s.build), stats: P.line(res), award: { name: P.award[0], won: !!aw.userWins, winner: aw.winner?.name ?? null }, ...(s.pos === 'dl' && { tag: res.spot }) })
   }
   oneEach(lines)
   return {

@@ -5,13 +5,14 @@
 // so a phone can't claim a number it never drew.
 
 import { seeded, seededShuffle } from './rng'
-import { calcOVR, calcOVRRB, calcOVRWR, calcOVRTE, calcOVRDB } from '../utils/simulation'
+import { calcOVR, calcOVRRB, calcOVRWR, calcOVRTE, calcOVRDB, calcOVRDL } from '../utils/simulation'
 import { calcBucketOVR } from '../utils/bucketSimulation'
 import { QBS, TYPES } from '../data/qbs'
 import { RBS, RB_TYPES } from '../data/rbs'
 import { WRS, WR_TYPES } from '../data/wrs'
 import { TES, TE_TYPES } from '../data/tes'
 import { DBS, DB_TYPES } from '../data/dbs'
+import { DLS, DL_TYPES } from '../data/dls'
 import { NBA_GUARD_PLAYERS, GUARD_TYPES } from '../data/nba-guards'
 import { NBA_BIG_PLAYERS, BIG_TYPES } from '../data/nba-bigs'
 import { TEAMS } from '../data/nfl-teams'
@@ -28,13 +29,14 @@ const UNKNOWN_VAL = 3                 // a slot the server can't match to a real
 const OFF_SEED_MAX = 2
 const SEED_SLACK = 2                  // spins past one-a-slot that still count (a pick never placed)
 
-export const COMPETE_POS = { nfl: ['qb', 'rb', 'wr'], bucket: ['guard', 'big'] }   // TE and DB pools off: not enough players to fill them
+export const COMPETE_POS = { nfl: ['qb', 'rb', 'wr'], bucket: ['guard', 'big'] }   // TE, DB and DL pools off: not enough players to fill them
 const NFL = {
   qb: { pool: QBS, types: TYPES, ovr: b => calcOVR(b) },
   rb: { pool: RBS, types: RB_TYPES, ovr: b => calcOVRRB(b) },
   wr: { pool: WRS, types: WR_TYPES, ovr: b => calcOVRWR(b) },
   te: { pool: TES, types: TE_TYPES, ovr: b => calcOVRTE(b) },
   db: { pool: DBS, types: DB_TYPES, ovr: b => calcOVRDB(b) },
+  dl: { pool: DLS, types: DL_TYPES, ovr: b => calcOVRDL(b) },
 }
 const BUCKET = {
   guard: { pool: NBA_GUARD_PLAYERS, types: GUARD_TYPES, ovr: b => calcBucketOVR(b, GUARD_TYPES, 'guard') },

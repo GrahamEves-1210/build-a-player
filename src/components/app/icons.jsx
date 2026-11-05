@@ -155,10 +155,9 @@ export const IconStar = p => (
 export const IconCalendar = p => (
   <S {...p}>
     <rect x="3" y="4.5" width="18" height="16.5" rx="3" fill="currentColor"/>
-    <rect x="6.5" y="2.5" width="2.4" height="4.5" rx="1.2" fill="currentColor"/>
-    <rect x="15.1" y="2.5" width="2.4" height="4.5" rx="1.2" fill="currentColor"/>
-    <rect x="3" y="8.5" width="18" height="1.6" style={INK} opacity=".35"/>
-    <path style={INK} d="m12 11.6 1.3 2.6 2.8.4-2 2 .5 2.8-2.6-1.4-2.6 1.4.5-2.8-2-2 2.8-.4z"/>
+    <rect x="7" y="2.5" width="2.2" height="4.5" rx="1.1" fill="currentColor"/>
+    <rect x="14.8" y="2.5" width="2.2" height="4.5" rx="1.1" fill="currentColor"/>
+    <path fill="none" {...INK_S} strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" d="m8.2 14 2.6 2.6 5-5"/>
   </S>
 )
 
@@ -220,10 +219,9 @@ export const IconRing = p => (
 
 export const IconPodium = p => (
   <S {...p}>
-    <rect x="8.6" y="7" width="6.8" height="14" rx="1.4" fill="currentColor"/>
-    <rect x="2" y="11.5" width="6.2" height="9.5" rx="1.4" fill="currentColor" opacity=".72"/>
-    <rect x="15.8" y="14" width="6.2" height="7" rx="1.4" fill="currentColor" opacity=".55"/>
-    <path fill="currentColor" d="m12 1.6 1 2 2.2.3-1.6 1.6.4 2.2-2-1-2 1 .4-2.2-1.6-1.6 2.2-.3z"/>
+    <rect x="2.5" y="11" width="6" height="10" rx="1" fill="currentColor"/>
+    <rect x="9" y="5.5" width="6" height="15.5" rx="1" fill="currentColor"/>
+    <rect x="15.5" y="14" width="6" height="7" rx="1" fill="currentColor"/>
   </S>
 )
 
@@ -306,7 +304,7 @@ export const IconBagLine = p => (
 )
 export const IconCalendarLine = p => (
   <S {...p}>
-    <path {...LINE} d="M6.5 5.2h11a2.6 2.6 0 0 1 2.6 2.6v9.8a2.6 2.6 0 0 1-2.6 2.6h-11a2.6 2.6 0 0 1-2.6-2.6V7.8a2.6 2.6 0 0 1 2.6-2.6zM3.9 9.6h16.2M8 3v2.2M16 3v2.2M12 12.3l1 2 2.2.3-1.6 1.6.4 2.2-2-1.1-2 1.1.4-2.2-1.6-1.6 2.2-.3z"/>
+    <path {...LINE} d="M6 5h12a2.5 2.5 0 0 1 2.5 2.5v11A2.5 2.5 0 0 1 18 21H6a2.5 2.5 0 0 1-2.5-2.5v-11A2.5 2.5 0 0 1 6 5zM8 3v4M16 3v4M3.5 10h17M8.6 15.2l2.3 2.3 4.5-4.5"/>
   </S>
 )
 export const IconTrophyLine = p => (
@@ -316,7 +314,7 @@ export const IconTrophyLine = p => (
 )
 export const IconPodiumLine = p => (
   <S {...p}>
-    <path {...LINE} d="M9 20.5V9.8c0-.5.4-.9.9-.9h4.2c.5 0 .9.4.9.9v10.7M9 13H4.4c-.5 0-.9.4-.9.9v6.6M15 15.4h4.6c.5 0 .9.4.9.9v4.2M2.6 20.5h18.8"/>
+    <path {...LINE} d="M3 21v-9a1 1 0 0 1 1-1h5V7a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v7h5a1 1 0 0 1 1 1v6zM9 11v10M15 14v7"/>
   </S>
 )
 export const IconProfileLine = p => (

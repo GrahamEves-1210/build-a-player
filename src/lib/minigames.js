@@ -17,40 +17,44 @@
 //   route      pick a route (easy to hard), then hit its window
 //   choice     two ways to play it, each its own game
 
-import { seeded } from './rng'
+import { seeded } from './rng.js'
 
 export const GAMES = {
   // ── QB ──
   'hot-read':    { kind: 'reaction', traits: ['processing', 'vision'], title: 'HOT READ', how: 'Four snaps, three receivers. One comes open in green: tap him before the window shuts. Red is covered: never throw it there.', rounds: 4 },
   'bomb':        { kind: 'power', traits: ['arm'], title: 'BOMB IT', how: 'Hold to load the deep shot. Let go near the top: a stronger arm gets a bigger window.' },
   'escape':      { kind: 'lanes', traits: ['legs'], title: 'ESCAPE', how: 'The rush collapses from one side. Step the other way, three times.' },
-  'sneak':       { kind: 'timing', traits: ['size', 'legs'], title: 'SNEAK', how: 'Fourth and inches. Hit the snap window and punch it in.' },
+  'sneak':       { kind: 'timing', traits: ['size'], title: 'SNEAK', how: 'Fourth and inches. Hit the snap window and punch it in.' },
   'two-minute':  { kind: 'sequence', traits: ['leadership', 'processing'], title: 'TWO-MINUTE DRILL', how: 'Four calls in a row, each on a clock. Composure buys time.' },
+  'goal-line':   { kind: 'route', anyPos: true, traits: ['accuracy', 'routeRunning', 'hands'], title: 'FOURTH & GOAL', how: 'Fourth and goal at the five. Tap CUT as the ring closes on the spot, then press the shoulder the ball comes over. At quarterback: press where the ball goes.' },
   'third-long':  { kind: 'route', traits: ['accuracy', 'arm'], title: 'THIRD & LONG', how: 'Pick the route, then hit the throw window. The deeper the route, the tighter the window, the bigger the play.' },
   'audible':     { kind: 'audible', traits: ['processing', 'vision'], title: 'AUDIBLE', how: 'Read the look. Pick the counter before the play clock runs out.' },
   // ── RB ──
   'gap':         { kind: 'reaction', traits: ['vision'], title: 'PICK THE GAP', how: 'Four plays. One gap opens green each time: hit it, fast. Red is a linebacker filling it: stay out.', rounds: 4, quick: 0.72 },
   'juke':        { kind: 'lanes', traits: ['elusiveness'], title: 'JUKE', how: 'The tackler commits to a side. Cut the other way, three times.' },
   // ── WR / TE ──
-  'catch':       { kind: 'taps', traits: ['hands'], title: 'CATCH WINDOW', how: 'Three balls. Tap each one in the window. Each one comes in hotter.', n: 3 },
+  'catch':       { kind: 'taps', traits: ['hands'], title: 'CONTESTED CATCH', how: 'Three balls. Tap each one in the window. Each one comes in hotter.', n: 3 },
   'juke-wr':     { kind: 'lanes', traits: ['bodyControl', 'afterCatch'], title: 'MAKE A MAN MISS', how: 'The defender commits. Cut the other way, three times.' },
   'release':     { kind: 'timing', traits: ['release'], title: 'BEAT THE PRESS', how: 'The corner jams at the line. Hit the window to get a clean release.' },
-  'seal':        { kind: 'timing', traits: ['blocking', 'strength'], title: 'SEAL THE EDGE', how: 'Hit the snap window and wall off the edge.' },
+  'seal':        { kind: 'timing', traits: ['blocking', 'strength'], title: 'SEAL THE EDGE', how: 'Press the side he pushes to keep the bar in the green until the back is by.' },
   'juke-te':     { kind: 'lanes', traits: ['afterCatch'], title: 'RUN AFTER THE CATCH', how: 'A tackler commits. Cut the other way, three times.' },
   // ── DB (for when the position comes to Career) ──
   'jump-route':  { kind: 'reaction', traits: ['playRecognition', 'zoneIQ'], title: 'JUMP THE ROUTE', how: 'Four snaps, three routes. One breaks green: jump it. Red is a double move: let it go.', rounds: 4 },
   'tackle-angle':{ kind: 'lanes', traits: ['speed', 'runSupport'], title: 'TACKLE ANGLE', how: 'The back cuts. Take the right angle, three times.' },
+  // ── DL ──
+  'pass-rush':   { kind: 'rush', traits: ['getOff', 'finesseMoves', 'powerMoves'], title: 'PASS RUSH', how: 'GET OFF when the ball moves. Then read him. He kicks wide: INSIDE. He steps up and leans: EDGE. He backs off tall: BULL.' },
+  'run-stuff':   { kind: 'rush', traits: ['playRecognition', 'blockShed', 'strength', 'size'], title: 'STUFF THE RUN', how: 'Read the line and the back. Tap the side the run is going, then SHED as the back gets to you. Too soon and he cuts away.', rounds: 4 },
   // ── Combine ──
-  'forty':       { kind: 'dash', traits: ['legs', 'speed'], title: '40-YARD DASH', how: 'Wait for the gun (jump it and that is a false start), then alternate LEFT and RIGHT as fast as you can. Same foot twice is a stumble. Speed makes every step longer.' },
+  'forty':       { kind: 'dash', traits: ['legs', 'speed', 'getOff'], title: '40-YARD DASH', how: 'Wait for the gun (jump it and that is a false start), then alternate LEFT and RIGHT as fast as you can. Same foot twice is a stumble. Speed makes every step longer.' },
   'velo':        { kind: 'velo', traits: ['arm'], title: 'THROWING VELOCITY', how: 'Three throws. Hold to wind up and let go inside the small green window. It moves every throw and the wind-up gets faster. A stronger arm gets a bigger window.' },
   'acc':         { kind: 'routes', traits: ['accuracy'], title: 'ACCURACY DRILL', how: 'Throw to receivers on four routes: slant, out, post, go. Tap to throw. The ball takes a moment to get there, so lead him: it has to land while he\'s open (the bright part of the route). Accuracy keeps him open longer.' },
-  'cone':        { kind: 'cone', traits: ['elusiveness', 'routeRunning', 'fluidity'], title: '3-CONE DRILL', how: 'Six cuts. An arrow flashes: hit that direction before the window shuts. Wrong way or late is a slip. The windows get shorter.' },
+  'cone':        { kind: 'cone', traits: ['elusiveness', 'routeRunning', 'fluidity', 'bend'], title: '3-CONE DRILL', how: 'Six cuts. An arrow flashes: hit that direction before the window shuts. Wrong way or late is a slip. The windows get shorter.' },
   'gauntlet':    { kind: 'gauntlet', traits: ['hands'], title: 'GAUNTLET', how: 'Balls come down two lanes, faster and closer together. Catch each one in the green zone at the bottom. Hands make the zone bigger.' },
   'bench':       { kind: 'bench', traits: ['strength'], title: 'BENCH PRESS', how: 'Tap fast to drive the bar up to lockout. Every rep gets heavier. As many reps as you can in 12 seconds.' },
   // ── Basketball ──
-  'iso':         { kind: 'lanes', need: 3, traits: ['handles', 'speed'], title: 'ISO', how: 'Your man cuts off one side. Cross him up and go the other way, three times. All three or he stays in front.', cue: 'DEFENDER' },
-  'pnr':         { kind: 'reaction', traits: ['basketballIQ', 'passing'], title: 'PICK-AND-ROLL READ', how: 'Four trips. Roll man, corner, pull-up: one comes open in green. Hit it before the help recovers. Red is a trap: the help is already there.', rounds: 4 },
-  'clutch-shot': { kind: 'timing', traits: ['jumpShot', 'clutch'], title: 'CLUTCH SHOT', how: 'Down one, ball in your hands, clock running out. Hit the release window.' },
+  'iso':         { kind: 'lanes', need: 3, traits: ['handles', 'speed', 'playmaking'], title: 'ISO', how: 'Your man cuts off one side. Cross him up and go the other way, three times. All three or he stays in front.', cue: 'DEFENDER' },
+  'pnr':         { kind: 'reaction', traits: ['basketballIQ', 'passing', 'playmaking'], title: 'PICK-AND-ROLL READ', how: 'Four trips. Roll man, corner, pull-up: one comes open in green. Hit it before the help recovers. Red is a trap: the help is already there.', rounds: 4 },
+  'clutch-shot': { kind: 'timing', traits: ['jumpShot', 'clutch'], title: 'CLUTCH SHOT', how: 'Behind, ball in his hands, clock running out. Hit the release window.' },
   'free-throws': { kind: 'taps', traits: ['jumpShot', 'clutch'], title: 'FREE THROWS', how: 'Two shots with the game on the line. Hit each window. Nerves: the second one wobbles.', n: 2 },
   'post-up':     { kind: 'lanes', traits: ['finishing', 'size'], title: 'POST MOVE', how: 'The defender cuts off one side. Spin off him the other way, three times.', cue: 'DEFENDER' },
   'board':       { kind: 'timing', traits: ['rebounding', 'bounce'], title: 'CRASH THE GLASS', how: 'The shot goes up. Time the jump and take the rebound.' },
@@ -64,20 +68,29 @@ export const GAMES = {
 }
 // which games a position plays in the playoffs
 export const PLAYOFF_GAMES = {
-  qb: ['hot-read', 'bomb', 'escape', 'sneak', 'two-minute', 'third-long', 'audible'],
-  rb: ['gap', 'juke'],
-  wr: ['catch', 'juke-wr', 'release'],
-  te: ['catch', 'seal', 'juke-te'],
+  qb: ['hot-read', 'bomb', 'escape', 'sneak', 'two-minute', 'third-long', 'audible', 'goal-line'],
+  rb: ['gap', 'juke', 'goal-line'],
+  wr: ['catch', 'juke-wr', 'release', 'goal-line'],
+  te: ['catch', 'seal', 'juke-te', 'goal-line'],
   db: ['jump-route', 'tackle-angle'],
+  dl: ['pass-rush', 'run-stuff'],
   guard: ['iso', 'pnr', 'clutch-shot', 'free-throws'],
-  big: ['post-up', 'board', 'rim-protect', 'free-throws'],
+  big: ['post-up', 'board', 'rim-protect', 'free-throws', 'clutch-shot'],
 }
+// and the ones it borrows, because the job really overlaps: a tight end beats the press, an end runs a
+// man down in the open, a guard crashes the glass, a big faces up or runs the pick-and-roll.
+// (never a second copy of a mode it has: Juke, Make a Man Miss and Run After the Catch are one game)
+export const ALSO_PLAYS = { te: ['release'], dl: ['tackle-angle'], guard: ['board'], big: ['iso', 'pnr'] }
+export const momentsOf = pos => [...(PLAYOFF_GAMES[pos] ?? PLAYOFF_GAMES.qb), ...(ALSO_PLAYS[pos] ?? [])]
+// a borrowed game's grade, for a position without the game's own ratings
+const BORROWED_TRAITS = { release: ['routeRunning', 'strength'] }
 // the combine: three games a position runs (the test is its own step)
-export const COMBINE_GAMES = { qb: ['forty', 'velo', 'acc'], rb: ['forty', 'cone', 'bench'], wr: ['forty', 'cone', 'gauntlet'], te: ['forty', 'bench', 'gauntlet'] }
+export const COMBINE_GAMES = { qb: ['forty', 'velo', 'acc'], rb: ['forty', 'cone', 'bench'], wr: ['forty', 'cone', 'gauntlet'], te: ['forty', 'bench', 'gauntlet'], dl: ['forty', 'bench', 'cone'] }
 
 // the trait value a game plays at: the average of its traits in the build (5 when none)
 export function traitValue(game, build, traits = null) {
-  const list = (traits ?? GAMES[game]?.traits ?? []).filter(t => build?.[t])
+  const has = l => l.filter(t => build?.[t])
+  const own = has(traits ?? GAMES[game]?.traits ?? []), list = own.length || traits ? own : has(BORROWED_TRAITS[game] ?? [])
   return list.length ? list.reduce((s, t) => s + (build[t].val ?? 5), 0) / list.length : 5
 }
 // forgiveness from the trait (1–11): a window, in % of the bar, or a time in ms
@@ -108,9 +121,23 @@ export const LOOKS = [
   { s: 'COVER 0 · EVERYONE BLITZING', a: ['Screen', 'Deep shot to the single', 'Draw'], c: 1, why: 'No safety help: take the one-on-one deep.' },
 ]
 // one playoff moment per round, seeded, never the same twice in a run
+// A playoff moment's game fits the moment: the game's situation comes first, then a game for it.
+// Trailing late: the two-minute drive, the last shot. At the goal line: fourth and goal. Otherwise any of the rest.
+const SITUATION = { 'two-minute': 'trailing', 'clutch-shot': 'trailing', 'goal-line': 'goal' }
+export function pickMomentGame(pos, seed, used = []) {
+  const all = momentsOf(pos)
+  const r = seeded(`mg-${seed}`)
+  const roll = r(), want = roll < 0.3 ? 'trailing' : roll < 0.5 ? 'goal' : null
+  const of = sit => all.filter(g => (SITUATION[g] ?? null) === sit)
+  // (a position with no game for that situation plays one of its usual ones)
+  const fit = want && of(want).length ? of(want) : of(null).length ? of(null) : all
+  const fresh = fit.filter(g => !used.includes(g))
+  const pool = fresh.length ? fresh : fit
+  return pool[Math.floor(r() * pool.length)]
+}
 export function pickPlayoffGame(pos, seed, used = []) {
-  const list = (PLAYOFF_GAMES[pos] ?? PLAYOFF_GAMES.qb).filter(g => !used.includes(g))
-  const pool = list.length ? list : PLAYOFF_GAMES[pos] ?? PLAYOFF_GAMES.qb
+  const list = momentsOf(pos).filter(g => !used.includes(g))
+  const pool = list.length ? list : momentsOf(pos)
   const r = seeded(`mg-${seed}`)
   return pool[Math.floor(r() * pool.length)]
 }

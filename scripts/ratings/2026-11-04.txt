@@ -1,0 +1,545 @@
+# sport nfl
+## QB
+Josh Allen
+A- Accuracy → A Accuracy  (8.7 yards per attempt and league-leading passing efficiency.)
+Lamar Jackson
+A- Accuracy → A+ Accuracy  (71.6% completion rate and +7.4 completion percentage over expected across his starts.)
+A Post-snap Processing → A+ Post-snap Processing  (Exceptional efficiency per dropback.)
+Joe Burrow
+A Post-snap Processing → A+ Post-snap Processing  (Twenty passing touchdowns and a 73% completion rate.)
+A Pocket Presence → A+ Pocket Presence  (High completion percentage while producing more than 300 passing yards per game.)
+Trevor Lawrence
+B Post-snap Processing → A- Post-snap Processing  (+0.283 EPA per dropback and 51.1% success rate place him among the most effective quarterbacks this season.)
+B+ Accuracy → A Accuracy  (+3.9 completion percentage over expected and 7.8% passing touchdown rate.)
+B Pocket Presence → B+ Pocket Presence  (5.9% sack rate and positive passing efficiency.)
+Jared Goff
+B+ Post-snap Processing → A Post-snap Processing  (+0.255 EPA per dropback and 50.6% success rate.)
+B+ Pocket Presence → A- Pocket Presence  (Avoided high-impact mistakes while managing a moderately pressured pocket.)
+Kirk Cousins
+B- Post-snap Processing → A- Post-snap Processing  (19 passing touchdowns, five interceptions and positive dropback efficiency.)
+B Pocket Presence → A- Pocket Presence  (3.7% sack rate across nearly 300 dropbacks.)
+Caleb Williams
+B Accuracy → A- Accuracy  (Ranks near the top of qualifying passers at +9.0 completion percentage over expected and +0.348 EPA per dropback.)
+A- Post-snap Processing → A Post-snap Processing  (51.3% successful-dropback rate.)
+Jordan Love
+A- Accuracy → B Accuracy  (61.5% completion rate and -1.1 completion percentage over expected across 327 dropbacks.)
+B+ Pocket Presence → B Pocket Presence  (Middle-of-the-pack decision efficiency this season.)
+Justin Herbert
+B Post-snap Processing → C Post-snap Processing  (Posting -0.236 EPA per dropback with only 36.1% successful plays across 255 dropbacks.)
+B+ Pocket Presence → C Pocket Presence  (9.0% sack rate and consistently poor results under pressure.)
+A- Accuracy → B- Accuracy  (-4.2 completion percentage over expected and repeated inefficiency.)
+Sam Darnold
+C+ Post-snap Processing → C- Post-snap Processing  (Negative EPA per dropback and 4.1% turnover rate mark repeated mistakes.)
+B- Pocket Presence → C- Pocket Presence  (7.1% sack rate and frequent costly plays.)
+A- Accuracy → B- Accuracy  (62.9% completion rate with an average completion-over-expected mark.)
+Daniel Jones
+C+ Pocket Presence → D Pocket Presence  (7.4% sack rate and repeated negative-value dropbacks.)
+C+ Post-snap Processing → D Post-snap Processing  (-0.178 EPA per dropback and 1.7% touchdown rate.)
+B Accuracy → C Accuracy  (-3.7 completion percentage over expected and 60.7% completions over 299 dropbacks.)
+Geno Smith
+C- Pocket Presence → D Pocket Presence  (Twenty-three sacks and 194 yards lost on sacks.)
+B Accuracy → A- Accuracy  (+6.0 completion percentage over expected and 69.3% completions.)
+Bryce Young
+A- Pocket Presence → B+ Pocket Presence  (7.8% sack rate and modest passing efficiency.)
+A- Accuracy → B+ Accuracy  (59.2% completions and near-neutral accuracy over nearly 300 dropbacks.)
+A- Post-snap Processing → B+ Post-snap Processing  (42.9% successful dropbacks, below league average.)
+Bo Nix
+B+ Playmaking → B- Playmaking
+B+ Post-snap Processing → C+ Post-snap Processing  (37.3% success rate and negative EPA per dropback are significant sustained processing concerns.)
+B+ Accuracy → B- Accuracy  (-2.6 completion percentage over expected and 59.6% completion rate.)
+Brock Purdy
+B+ Accuracy → A- Accuracy  (69.9% completions and +4.3 completion percentage over expected have held up over 231 dropbacks.)
+B+ Post-snap Processing → A Post-snap Processing  (Converting 54.1% of dropbacks into successful plays, among the NFL's best marks.)
+A Pocket Presence → A+ Pocket Presence  (3.0% sack rate across 231 dropbacks is exceptional evidence of pocket navigation.)
+Drake Maye
+B+ Accuracy → A Accuracy  (+7.3 completion percentage over expected across 275 dropbacks is an elite sustained mark.)
+B+ Post-snap Processing → A- Post-snap Processing  (52.4% successful-dropback rate.)
+C.J. Stroud
+B Post-snap Processing → A- Post-snap Processing  (Above league average in EPA per dropback and success rate despite attacking deep.)
+C+ Pocket Presence → B Pocket Presence  (5.6% sack rate with a deep passing approach.)
+B+ Arm Strength → A- Arm Strength  (9.3-yard average target depth with regular explosive completions.)
+Jayden Daniels
+A- Accuracy → A Accuracy  (+5.6 completion percentage over expected.)
+Matthew Stafford
+A+ Post-snap Processing → A- Post-snap Processing  (Eight interceptions through eight games and less efficient dropback production.)
+Baker Mayfield
+B Post-snap Processing → C+ Post-snap Processing  (-0.216 EPA per dropback and 37.3% success rate.)
+A- Accuracy → B Accuracy  (A negative completion percentage over expected and limited passing efficiency.)
+B+ Pocket Presence → C+ Pocket Presence  (Sacks on more than one in ten dropbacks.)
+Aaron Rodgers
+A- Post-snap Processing → C+ Post-snap Processing  (-0.085 EPA per dropback over 311 attempts at this point.)
+B+ Accuracy → B- Accuracy  (-1.9 completion percentage over expected.)
+B+ Pocket Presence → C Pocket Presence  (7.4% sack rate and extended negative dropback efficiency are major downgrades from his former pocket form.)
+Jalen Hurts
+B+ Post-snap Processing → C+ Post-snap Processing  (38.0% successful-dropback rate and negative EPA persist across his passing workload.)
+B+ Accuracy → B- Accuracy  (57.8% completion rate and -2.2 completion percentage over expected.)
+B Pocket Presence → C+ Pocket Presence  (7.3% sack rate and limited efficiency outside designed rushing situations.)
+Kyler Murray
+B- Post-snap Processing → C Post-snap Processing  (39.7% successful-dropback rate places his decision results well below a strong starter's level.)
+B- Pocket Presence → C+ Pocket Presence  (8.2% sack rate and nearly neutral passing EPA.)
+Malik Willis
+B Accuracy → C Accuracy  (-5.4 completion percentage over expected across 225 dropbacks.)
+C+ Pocket Presence → D Pocket Presence  (9.3% sack rate illustrates sustained difficulty escaping pressure without losing plays.)
+B Post-snap Processing → C+ Post-snap Processing  (Producing only 43.1% successful dropbacks despite good physical improvisation ability.)
+Deshaun Watson
+C+ Pocket Presence → D Pocket Presence  (10.8% sack rate over 306 dropbacks is among the worst for regular starters.)
+C- Post-snap Processing → D Post-snap Processing  (2.3% passing touchdown rate and near-zero EPA per dropback.)
+Cam Ward
+B Post-snap Processing → C Post-snap Processing  (Negative EPA per dropback and a 42.4% success rate.)
+B- Accuracy → C+ Accuracy  (62.5% completion rate and negative completion percentage over expected.)
+## RB
+Bijan Robinson
+A Vision → A+ Vision  (League-leading 780 rushing yards at 5.2 per carry.)
+Jahmyr Gibbs
+A+ Vision → S Vision  (Produced 773 rushing yards in seven games and leads in rushing first downs, displaying exceptional anticipation.)
+Kenneth Walker III
+A- Vision → A+ Vision  (770 rushing yards on 141 carries and 5.5 yards per carry.)
+A Burst → A+ Burst  (Long 76-yard rush.)
+Bucky Irving
+B+ Vision → A Vision  (Accumulated 728 rushing yards at five yards per carry over eight games.)
+B Speed → B+ Speed  (72-yard rushing gain.)
+Jaylen Warren
+B+ Vision → A Vision  (5.9-yard rushing average and positive per-run EPA.)
+A- Burst → A Burst  (Explosive runs, including a gain of 51 yards.)
+James Cook
+A- Vision → A+ Vision  (50.4% run success rate and league-leading explosive frequency.)
+A Burst → A+ Burst  (An 18.8% explosive-run rate, the best among qualifying runners, and exceeds five yards per carry.)
+B- Carrying → C Carrying  (4 fumbles through 7 games.)
+Ashton Jeanty
+B Hands → B+ Hands  (37 catches and 376 receiving yards rank at the top of the running-back receiving group.)
+B Vision → C- Vision  (Averaging only 3.1 yards per carry with a 31.1% run success rate and league-worst qualifying rushing EPA.)
+B+ Elusiveness → C+ Elusiveness  (4.7% explosive-run rate.)
+B+ Burst → B- Burst  (Rarely reached the second level on more than a hundred rushes this season.)
+Braelon Allen
+C Vision → B Vision  (Rushed for 565 yards at five yards per carry while expanding his role.)
+B- Burst → B+ Burst  (15.4% explosive-run rate.)
+Kyle Monangai
+B- Vision → B+ Vision  (5.4 yards per carry and a +0.097 EPA per designed run.)
+B- Burst → B+ Burst  (61-yard rushing gain.)
+D'Andre Swift
+C Vision → B+ Vision  (Frequent touchdown runs and productive rushing workload.)
+Javonte Williams
+B Vision → A- Vision  (+0.104 EPA per designed run and 47.3% success rate.)
+Chuba Hubbard
+B+ Vision → A Vision  (+0.067 EPA per designed run and 46.6% success rate.)
+Bhayshul Tuten
+B- Vision → B Vision  (Nearly 500 yards in seven games.)
+Blake Corum
+B Vision → A- Vision  (53.1% designed-run success rate and +0.136 EPA per run rank among the strongest in the league.)
+B- Burst → B Burst  (14.1% rate of ten-yard runs highlights more acceleration through openings.)
+B- Elusiveness → B+ Elusiveness  (Consistently added value to the offense after first contact and on cutbacks.)
+Christian McCaffrey
+A Vision → S Vision  (League-leading +0.144 EPA per designed run and 53.6% success rate.)
+B Balance → B+ Balance  (Repeatedly turns modest openings into positive gains and maintains one of the top run success rates.)
+J.K. Dobbins
+A- Vision → C+ Vision  (29.9% rushing success rate and 3.3 yards per carry.)
+B+ Burst → B- Burst  (Generated explosive gains on just 5.7% of designed runs this season.)
+Derrick Henry
+A Vision → B- Vision  (Averaging only four yards per carry with a 38.1% run success rate across 147 designed runs.)
+C+ Burst → C Burst  (A modest 9.5% explosive-run rate and short longest run.)
+A Balance → B+ Balance  (Early-down success rate is markedly lower than elite standard through eight games.)
+Breece Hall
+B Vision → C+ Vision  (33.3% run success rate and -0.173 EPA per designed run.)
+A- Elusiveness → B Elusiveness  (A negative rushing efficiency record and limited reliable gains call for a substantial decrease.)
+Chase Brown
+B- Vision → C Vision  (Only 340 yards on 94 carries and a 37.8% designed-run success rate.)
+A Burst → B+ Burst  (7.3% explosive-run rate is low for a player rated near the top in burst.)
+Rhamondre Stevenson
+B Vision → C Vision  (36.4% run success rate and negative EPA per designed run.)
+B- Burst → C+ Burst  (Averaging only 3.8 yards per carry and generating few explosive runs.)
+Quinshon Judkins
+B- Vision → C- Vision  (31.1% rushing success rate and 3.4 yards per carry.)
+A- Burst → B+ Burst  (An explosive-run rate of just 6.7%.)
+Omarion Hampton
+C+ Vision → C- Vision  (33.8% run success rate and low rushing EPA.)
+B- Burst → C Burst  (Produced explosive gains on fewer than 9% of designed runs.)
+Kendre Miller
+B- Vision → C- Vision  (24.6% success rate is among the lowest for qualifying runners.)
+C+ Burst → C- Burst  (Only 1.8% of his designed rushes have gone for ten yards or more.)
+Aaron Jones
+B+ Vision → B- Vision  (35.2% designed-run success rate and negative EPA per carry.)
+David Montgomery
+B+ Vision → C+ Vision  (25.0% success rate and just 2.65 yards per designed run.)
+MarShawn Lloyd
+C+ Vision → C- Vision  (2.6-yard rushing average and 31.6% designed-run success rate.)
+B+ Burst → B- Burst  (Only 3.5% of his designed runs have reached ten yards.)
+Woody Marks
+B Vision → C Vision  (33.8% run success rate and 3.5 yards per carry.)
+B+ Burst → B- Burst  (Posting a below-average 9.1% explosive-run rate over a substantial rushing sample.)
+Cam Skattebo
+B Vision → C+ Vision  (36.7% run success rate and negative EPA per carry.)
+B- Burst → C+ Burst  (Ten-yard-run rate is below league average despite a high workload.)
+## WR
+Jaxon Smith-Njigba
+B+ Vertical → A Vertical  (League-leading 985 receiving yards and ten-yard average target depth.)
+B+ Yards After Catch → A- Yards After Catch  (Repeated explosive gains and an 82-yard reception add evidence for better open-field production.)
+Tee Higgins
+B Route Running → A- Route Running  (726 receiving yards in seven games while regularly winning intermediate and deep routes.)
+Christian Watson
+B+ Vertical → A Vertical  (708 receiving yards through eight games with consistent chunk plays.)
+B Route Running → A- Route Running  (Repeated separation downfield has produced more than eighty yards per game.)
+Chris Olave
+A- Hands → A Hands  (Forty-nine catches and 636 yards.)
+Drake London
+B+ Release → A- Release  (Thirty-nine catches at 16 yards per reception.)
+B Yards After Catch → A- Yards After Catch  (7.3 yards after catch per reception.)
+Matthew Golden
+B Route Running → B+ Route Running  (619 receiving yards and 43 receptions.)
+B+ Hands → C+ Hands  (9 drops through 8 games.)
+Malik Nabers
+A- Hands → A Hands  (Forty-eight receptions and more than 600 yards.)
+Zay Flowers
+A- Yards After Catch → A+ Yards After Catch  (Gaining roughly 7.8 yards after each catch and is one of the most efficient receivers on the move.)
+Luther Burden III
+A- Yards After Catch → A Yards After Catch  (After-catch production is well above expectation, matching the best open-field receivers.)
+B Hands → B+ Hands  (Catching roughly three-quarters of his targets.)
+B- Awareness → B+ Awareness  (Reliable featured role and strong yards-after-catch production.)
+Davante Adams
+B- Yards After Catch → B Yards After Catch  (After-catch production is above expectation despite a relatively modest catch rate.)
+Jahan Dotson
+B- Yards After Catch → B+ Yards After Catch  (Gain after the catch exceeds expectations by about 3.7 yards.)
+Malachi Fields
+B Yards After Catch → B+ Yards After Catch  (Producing roughly 2.8 yards more after the catch than expected on tracked touches.)
+Chris Bell
+B Yards After Catch → B+ Yards After Catch  (Open-field gains have exceeded expectation by more than two yards per opportunity.)
+Rome Odunze
+A Vertical → A+ Vertical  (Consistently threatening deep coverage.)
+Jameson Williams
+B+ Vertical → A- Vertical  (Explosive receiving production and frequent long gains.)
+Ladd McConkey
+B Vertical → A- Vertical  (An average target depth above thirteen yards and strong catch efficiency.)
+Adonai Mitchell
+B Vertical → B+ Vertical  (16.6-yard average.)
+Deebo Samuel
+B Vertical → B+ Vertical  (80-yard reception this season.)
+Michael Wilson
+B Hands → B+ Hands  (Forty-five receptions this season.)
+Darius Slayton
+TEAM IND → FA  (Indianapolis released Slayton in October 2026.)
+Tetairoa McMillan
+B+ Route Running → A- Route Running  (569 yards in seven games.)
+Mike Evans
+B Route Running → A- Route Running  (Consistently generated exceptional efficiency on downfield targets.)
+B+ Release → A- Release  (A league-leading +1.022 EPA per target among established contributors.)
+Nico Collins
+B Vertical → A- Vertical  (Averaging 12.5 air yards per target and producing explosive plays on 17.1% of targets.)
+Jakobi Meyers
+B Route Running → A- Route Running  (10.2 yards per target and positive target efficiency.)
+Rashod Bateman
+B Vertical → A- Vertical  (A fourteen-yard average target depth and high per-target efficiency.)
+Keon Coleman
+B+ Body Control → A- Body Control  (Caught nearly 80% of his targets despite a 14.3-yard average target depth.)
+C+ Route Running → B Route Running  (3rd in team receptions and generally open more.)
+## TE
+Brock Bowers
+A+ Route Running → S Route Running  (Leads qualified tight ends in overall grading and continues to win as a receiver.)
+A- Vertical → A Vertical  (More than 540 receiving yards in six games.)
+Darnell Washington
+A+ Blocking → S Blocking  (Heavy blocking workload and consistently strong blocking performance.)
+B- Yards After Catch → B+ Yards After Catch  (Leads qualifying receivers in yards after catch above expectation by nearly four yards.)
+T.J. Hockenson
+B+ Route Running → A- Route Running  (Consistent separation and route execution this season.)
+B+ Hands → A Hands  (84.4% catch rate across 32 targets.)
+Isaiah Likely
+B+ Route Running → A- Route Running  (Five receiving touchdowns this season.)
+Dalton Kincaid
+B+ Hands → A- Hands  (Reliable catching and productive receiving performances.)
+Elijah Higgins
+B- Blocking → B Blocking  (Earned one of the better tight-end grades while doing meaningful blocking work.)
+B- Route Running → B Route Running  (Receiving contribution in a well-rounded role.)
+Harold Fannin Jr.
+B+ Vertical → A- Vertical  (154-yard receiving game with multiple explosive gains.)
+Mike Gesicki
+B+ Hands → A- Hands  (Six receiving touchdowns.)
+George Kittle
+A Route Running → A+ Route Running  (425 receiving yards and five touchdowns.)
+Sam LaPorta
+B Route Running → A- Route Running  (8.6 yards per target and +0.847 EPA per target.)
+A- Hands → A Hands  (Converted nearly 72% of targets into catches with strong scoring efficiency.)
+B Yards After Catch → B+ Yards After Catch  (Five yards after catch per reception.)
+Hunter Henry
+A- Hands → A+ Hands  (Catches nearly 84% of his targets and converts most opportunities into reliable gains.)
+B+ Route Running → A- Route Running  (67.7% receiving success rate.)
+Travis Kelce
+B+ Yards After Catch → A Yards After Catch  (Averaging 9.7 yards after each catch, among the highest tight-end marks.)
+A Hands → A+ Hands  (A strong veteran target role and consistently positive receiving efficiency.)
+## DB
+Trent McDuffie
+A Press → A+ Press  (Strong coverage technique and disruption at the line.)
+A+ Man Coverage → S Man Coverage  (Among the highest-graded cornerbacks this season.)
+Denzel Ward
+A- Zone IQ → A Zone IQ  (Strong coverage anticipation and route recognition.)
+B+ Play Recognition → A- Play Recognition  (Consistent coverage production this season.)
+Isaiah Rodgers
+B+ Man Coverage → A- Man Coverage  (Top-three cornerback grading in man coverage.)
+C+ Press → B- Press  (Strong coverage production this season.)
+Jamel Dean
+B+ Man Coverage → A- Man Coverage  (Eight passes defended and top-five cornerback grading.)
+Jacob Parrish
+C+ Press → B- Press  (Thirteen passes defended.)
+B Play Recognition → A- Play Recognition  (Thirteen passes defended and strong coverage results.)
+B+ Man Coverage → A- Man Coverage  (Consistent one-on-one coverage.)
+Jaylen Watson
+B+ Press → A- Press  (Nine passes defended and strong coverage disruption.)
+B Play Recognition → B+ Play Recognition  (Repeated breakups.)
+Mansoor Delane
+B Press → B+ Press  (Top-ten cornerback performance as a rookie.)
+A- Man Coverage → A Man Coverage  (Top-ten cornerback grading as a rookie.)
+Evan Williams
+B Zone IQ → A Zone IQ  (Seventy tackles and consistent route anticipation.)
+A- Run Support → A+ Run Support  (Leads defensive backs in tackles with seventy through Week 8.)
+Kyle Hamilton
+B+ Press → A- Press  (Strong safety performance and extensive versatile usage.)
+Amani Hooker
+B Hands → A+ Hands  (Five interceptions through Week 8 lead all defensive backs.)
+B Zone IQ → A- Zone IQ  (League-leading interception total.)
+Xavier McKinney
+A Zone IQ → A+ Zone IQ  (Three interceptions and strong coverage awareness.)
+A+ Ball Skills → S Ball Skills
+Jevón Holland
+A Hands → A+ Hands  (Three interceptions in six games.)
+B+ Play Recognition → A- Play Recognition  (Frequent interceptions and strong passing-lane recognition.)
+Jordan Battle
+B Hands → B+ Hands  (Three interceptions.)
+B- Zone IQ → A- Zone IQ  (Three interceptions and productive defensive reads.)
+Renardo Green
+C+ Hands → B+ Hands  (Three interceptions.)
+C+ Play Recognition → B- Play Recognition  (Repeated takeaways.)
+Byron Murphy Jr.
+B+ Hands → A Hands  (Three interceptions.)
+Zyon McCollum
+B Play Recognition → A- Play Recognition  (Nine passes defended and two interceptions.)
+B Hands → B+ Hands  (Two interceptions.)
+Deonte Banks
+C Play Recognition → B- Play Recognition  (Improved pass-breakup production this season.)
+C+ Press → B- Press  (2026 breakup production.)
+Nick Emmanwori
+B Press → B+ Press  (Two sacks from varied defensive alignments.)
+A- Run Support → A Run Support  (Added two sacks while contributing as an active box defender.)
+Quinyon Mitchell
+A- Play Recognition → A Play Recognition  (Eight PBUs.)
+Brandon Jones
+B+ Run Support → A- Run Support  (54 tackles rank among the most productive defensive-back totals.)
+Dane Belton
+B+ Run Support → A- Run Support  (Sixty-seven tackles through eight weeks rank second among defensive backs.)
+Jeremy Chinn
+A Run Support → A+ Run Support  (56 tackles.)
+B+ Play Recognition → A- Play Recognition  (Consistently diagnosed plays while producing more than fifty tackles.)
+A+ Size → S Size  (6'3 220lbs as a safety.)
+# sport nba
+## Guards
+Luka Doncic
+A+ Jump Shot → S Jump Shot  (Making nearly six threes per game at 42.7%, combining record-level volume with strong accuracy.)
+A+ Finishing → S Finishing  (League-leading 38.3 points per game and strong scoring efficiency.)
+Stephen Curry
+A- Finishing → A Finishing  (Thirty points per game on 46.8% shooting.)
+Anthony Edwards
+A Jump Shot → A+ Jump Shot  (Making 4.5 threes per game at 40%.)
+Tyrese Maxey
+A- Finishing → A+ Finishing  (29.1 points per game on 50.3% shooting.)
+B Perimeter Defense → B+ Perimeter Defense  (1.8 steals and 0.9 blocks per game.)
+A- Jump Shot → A Jump Shot  (Averaging 29.1 points while shooting 50.3% overall.)
+Jamal Murray
+B+ Jump Shot → A Jump Shot  (Made 27 threes in six games at 51.9%.)
+A- Finishing → A Finishing  (Averaging 27.3 points on 48.6% shooting in the early season.)
+Ty Jerome
+B Jump Shot → B+ Jump Shot  (Averaging 28.2 points at 42.1% from three.)
+B- Finishing → A- Finishing  (Scoring 28.2 points on 50.4% field-goal shooting in an expanded role.)
+B Passing → B+ Passing  (5.5 assists per game.)
+Darius Acuff Jr.
+B Finishing → B+ Finishing  (Scoring 26.1 points per game, displaying meaningful self-created scoring despite uneven efficiency.)
+C+ Passing → B+ Passing  (Averaging 6.3 assists per game as a first-year lead creator.)
+B- Jump Shot → B Jump Shot  (Making three threes a game despite inconsistent overall percentages.)
+Cooper Flagg
+A- Finishing → A Finishing  (Scoring 25.2 points per game on 48.6% shooting in his early NBA games.)
+B- Passing → B+ Passing  (Averaging 6.5 assists in a primary offensive role.)
+A- Perimeter Defense → A+ Perimeter Defense  (2.5 steals per game and defensive versatility.)
+B- IQ → B+ IQ  (Two-way decisions and expanded ball-handling responsibility.)
+Jayson Tatum
+B Passing → A Passing  (Averaging 7.9 assists over seven games, a much larger facilitating role.)
+A- Jump Shot → B+ Jump Shot  (Struggling from three, with productive mid-range pull-ups and turnaround jumpers.)
+Deni Avdija
+B+ Finishing → A Finishing  (Scoring 23.8 points on 48.5% shooting with strong attacking efficiency.)
+B Passing → A- Passing  (5.5 assists per game.)
+Cade Cunningham
+A Passing → A+ Passing  (Averaging 7.1 assists.)
+A- Finishing → A Finishing  (Scoring 23.7 points per game on 48.3% shooting.)
+Scottie Barnes
+A- Perimeter Defense → A+ Perimeter Defense  (2.1 steals and 0.9 blocks per game.)
+Jalen Johnson
+B+ Passing → A Passing  (Averaging 7.9 assists per game, among the league's best creators.)
+Austin Reaves
+B+ Jump Shot → A Jump Shot  (Making 44.4% of his threes while averaging 23.6 points.)
+B+ Finishing → A Finishing  (Scoring 23.6 points on 53.9% shooting.)
+Nickeil Alexander-Walker
+B+ Jump Shot → A- Jump Shot  (Making 3.9 threes per game at 40.3% accuracy.)
+B- Finishing → B Finishing  (21.1 points per game.)
+Duncan Robinson
+A Jump Shot → A+ Jump Shot  (Four made threes per game on 45.2% shooting.)
+Toumani Camara
+B- Jump Shot → B+ Jump Shot  (Maintained 50% shooting from deep in an expanded floor-spacing role.)
+Tyler Herro
+B+ Jump Shot → A- Jump Shot  (Making 3.6 threes per game at 43.1%.)
+Klay Thompson
+A- Jump Shot → A Jump Shot  (Converting over 40% of his threes on substantial volume.)
+Andrew Nembhard
+B- Passing → A- Passing  (7.3 assists per game.)
+B+ Jump Shot → A- Jump Shot  (41.7% three-point shooting.)
+Davion Mitchell
+B Passing → A- Passing  (Producing 8.2 assists per game through his first six appearances.)
+B Jump Shot → B+ Jump Shot  (Hitting 45.7% of threes in the early season.)
+B- Finishing → B Finishing  (51.8% overall shooting.)
+Tyrese Haliburton
+B+ Finishing → A- Finishing  (Converting 51.6% of his attempts while averaging 21.8 points.)
+Trae Young
+A+ Passing → S Passing  (Averaging a league-leading 10 assists per game.)
+B+ Jump Shot → B Jump Shot  (27.1% three-point start.)
+Darius Garland
+A- Handles → B+ Handles  (Averaging 5.4 turnovers per game.)
+B Passing → A- Passing  (Produced 6.3 assists per game as a lead guard.)
+Franz Wagner
+B Passing → A Passing  (Averaging 7.6 assists as a major offensive creator.)
+B Jump Shot → B- Jump Shot  (20% three-point start.)
+Jalen Brunson
+A Jump Shot → A- Jump Shot  (Strong mid-range pull-ups despite early three-point struggles.)
+LaMelo Ball
+B Jump Shot → B+ Jump Shot  (Making 3.3 threes a game, though efficiency remains moderate.)
+Jrue Holiday
+B- Finishing → B Finishing  (51.9% shooting.)
+Christian Braun
+B- Finishing → B Finishing  (Shooting 53% from the floor while scoring 15.2 points per game.)
+B Jump Shot → B+ Jump Shot  (40.6% three-point mark.)
+Grayson Allen
+A Jump Shot → A+ Jump Shot  (Making 3.4 threes per game on 46.6% accuracy.)
+Anthony Black
+B- Jump Shot → B Jump Shot  (Connecting on 47.4% of threes in a modest but promising sample.)
+Dylan Harper
+A- Finishing → A Finishing  (Scoring 18.3 points on 48.5% shooting in his sophomore season.)
+B- Passing → B Passing  (5.3 assists.)
+Anfernee Simons
+B Jump Shot → B+ Jump Shot  (Making 2.8 threes per game, maintaining a substantial perimeter volume.)
+Ayo Dosunmu
+B+ Jump Shot → A- Jump Shot  (Shooting 41.9% from three with productive shot selection.)
+B Finishing → B+ Finishing  (51.5% field-goal mark.)
+Michael Porter Jr.
+B Finishing → B+ Finishing  (20.7 points per game on 46.2% shooting.)
+Brandon Miller
+B+ Jump Shot → B- Jump Shot  (Perimeter shooting has been inconsistent across several games.)
+B+ Finishing → B- Finishing  (37.8% overall field-goal rate has remained poor through eight games.)
+Devin Booker
+A- Finishing → A Finishing  (23 points per game on 48.8% shooting.)
+Ajay Mitchell
+B+ Finishing → A- Finishing  (Averaging 17 points on 50% shooting with a larger offensive role.)
+Immanuel Quickley
+B+ Handles → A- Handles  (Just one turnover per game while producing 5.6 assists.)
+B+ Passing → A- Passing  (6.2 assists per game.)
+Dillon Brooks
+C+ Jump Shot → B- Jump Shot  (Shooting 47.8% from three in the early season.)
+Jaime Jaquez Jr.
+B- Jump Shot → B Jump Shot  (Making 44% of his three-point attempts this season.)
+De'Aaron Fox
+B+ Finishing → A- Finishing  (58.2% field-goal mark.)
+B Passing → B+ Passing  (Handing out 6.4 assists per game.)
+LeBron James
+B+ Jump Shot → B Jump Shot  (Hitting 23.8% of threes in the early season.)
+Zach LaVine
+A- Finishing → A Finishing  (Averaging 23.4 points on 50.5% shooting.)
+B+ Jump Shot → A- Jump Shot  (Making almost three threes a game on 37% shooting.)
+Fred VanVleet
+B+ Passing → A- Passing  (6.8 assists per game.)
+Josh Giddey
+A- Passing → A Passing  (Generating 7.9 assists per game with consistent transition and half-court reads.)
+De'Anthony Melton
+B- Jump Shot → B+ Jump Shot  (Hit 19 of 36 threes, or 52.8%, through seven games.)
+Cedric Coward
+C+ Jump Shot → B+ Jump Shot  (Hit 15 of 26 threes for 57.7%.)
+Cam Spencer
+B+ Jump Shot → A Jump Shot  (Shooting 56% from three on 25 attempts.)
+AJ Green
+A- Jump Shot → A+ Jump Shot  (Made 47.1% of his threes in a specialist shooting role.)
+Matisse Thybulle
+B- Jump Shot → B+ Jump Shot  (Three-point percentage stands at 48.4% through seven games.)
+Derrick Jones Jr.
+C+ Jump Shot → B+ Jump Shot  (Shooting 52% from three on 25 attempts.)
+Walter Clayton Jr.
+B Jump Shot → A- Jump Shot  (Made eight of fourteen threes at 57.1%.)
+Jake LaRavia
+C+ Jump Shot → B Jump Shot  (Hitting 53.3% of his early threes.)
+Corey Kispert
+A Jump Shot → A+ Jump Shot  (Opened at 57.1% from three in a shooting-specialist role.)
+Landry Shamet
+B+ Jump Shot → A- Jump Shot  (Shooting 45.7% from three over seven games.)
+Brice Sensabaugh
+B Jump Shot → A- Jump Shot  (Hitting 44.8% of his threes.)
+Tristan da Silva
+B Jump Shot → A- Jump Shot  (Making 44.2% of his threes through seven games.)
+Julian Champagnie
+A- Jump Shot → A Jump Shot  (Shooting 46.8% from deep.)
+## Bigs
+Giannis Antetokounmpo
+A- Rebounding → A+ Rebounding  (Ranks third in the NBA with 12.3 rebounds per game.)
+Karl-Anthony Towns
+A+ Rebounding → S Rebounding  (13.9 rebounds per game place him near the top of the NBA this season.)
+Domantas Sabonis
+A Rebounding → S Rebounding  (Leads the league with 14.6 rebounds per game.)
+B+ Finishing → A- Finishing  (Shooting 72.4% from the field, converting chances extremely efficiently.)
+Alperen Sengun
+A- Finishing → A+ Finishing  (Averaging 23.3 points on 57.4% shooting.)
+A- Playmaking → A+ Playmaking  (7.8 assists per game put him among the league's top creators at any position.)
+B- Jump Shot → B Jump Shot  (Hit 53.8% of his early three-point attempts.)
+Evan Mobley
+C+ Jump Shot → B Jump Shot  (Hitting 53.3% of his threes across seven games.)
+Jabari Smith Jr.
+B Jump Shot → A- Jump Shot  (Making 48.1% of his threes.)
+B Finishing → B+ Finishing  (Shooting 48.5% from the floor while averaging 18.4 points.)
+Zion Williamson
+A+ Finishing → S Finishing  (Converting 62.9% of his field goals while scoring over 21 per game.)
+Cameron Boozer
+B- Rebounding → A- Rebounding  (Grabbing 10.3 rebounds per game through seven games.)
+B Playmaking → B+ Playmaking  (5.6 assists per game.)
+B+ Finishing → B Finishing  (Shooting 38.5% from the field.)
+Yaxel Lendeborg
+C+ Jump Shot → A- Jump Shot  (Scoring 21.5 points per game with 2.5 made threes at 40%.)
+B Finishing → A- Finishing  (Converting half of his shots in a high-usage scoring role.)
+C- Playmaking → B- Playmaking  (3.9 assists per game.)
+Walker Kessler
+B- Finishing → B Finishing  (Shot 71.4% from the field on a substantial center workload.)
+A- Rebounding → A+ Rebounding  (Averaging 10.5 rebounds per game with consistent board control.)
+A- Interior Defense → A Interior Defense  (2.5 blocks per game.)
+Naz Reid
+B Rebounding → B+ Rebounding  (Averaging 8.3 rebounds per game in an expanded role.)
+Joel Embiid
+A Finishing → B+ Finishing  (Converting only about 41% of his field goals so far.)
+B+ Jump Shot → B Jump Shot  (Struggling from three, but maintaining effective mid-range pull-ups and face-up jumpers.)
+Jaren Jackson Jr.
+A Rebounding → B Rebounding  (Averaging around five rebounds per game.)
+A+ Interior Defense → A- Interior Defense  (Early block rate has dropped to roughly one per game.)
+Julius Randle
+A- Finishing → B+ Finishing  (41.5% shooting from the field.)
+Pascal Siakam
+A- Finishing → A Finishing  (21.4 points on 50% shooting.)
+Myles Turner
+A- Interior Defense → A Interior Defense  (A five-block performance and continued defensive activity.)
+B Jump Shot → C+ Jump Shot  (25% from 3 through 7 games.)
+Jarrett Allen
+B+ Finishing → A Finishing  (Converting 63.1% of his field goals.)
+Paul Reed
+B- Finishing → B Finishing  (Converting 65% of his shots in a useful frontcourt role.)
+Rudy Gobert
+A Rebounding → A+ Rebounding  (Averaging about 12 rebounds per game, among the league leaders.)
+Nikola Jokic
+A Jump Shot → A- Jump Shot  (Early three-point slump is partly offset by reliable mid-range touch and soft turnaround jumpers.)
+Victor Wembanyama
+B+ Jump Shot → B Jump Shot  (26.2% from three.)
+Isaiah Stewart
+B- Jump Shot → B+ Jump Shot  (Made eight of fourteen threes at 57.1% through six games.)
+Moritz Wagner
+C+ Jump Shot → B- Jump Shot  (9 of 16 from three.)
+Jonathan Kuminga
+C+ Jump Shot → B Jump Shot  (44.1% from 3 across eight games.)
+Moussa Diabate
+B- Rebounding → A Rebounding  (Averaging 9.5 rebounds per game through eight games.)
+Donovan Clingan
+A Rebounding → A+ Rebounding  (Collecting more than ten rebounds per game in limited minutes.)
+Bobby Portis
+A- Jump Shot → A Jump Shot  (Hitting more than forty percent of his threes.)

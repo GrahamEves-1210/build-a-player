@@ -17,7 +17,6 @@ const f1 = v => v.toFixed(1)
 const f2 = v => v.toFixed(2)
 const pct = v => `${v.toFixed(1)}%`
 const int = v => Math.round(v).toLocaleString()
-const SACK_YDS = 6.48     // the data has sacks, not sack yards: the 2025 league's yards a sack, within 0.2 ANY/A for every starter
 
 const perGame = (n, s) => n / Math.max(1, s.adv.gp)
 // (half PPR's cousin: receptions count a full point; fumbles lost isn't in the data, so it's left out)
@@ -37,9 +36,26 @@ const catcher = (avgTgt, eliteTgt, avgYds, eliteYds, avgCatch, eliteCatch, avgYp
 // the real formula on the sim's box score; fouls, minutes, offensive boards and the shot mix are estimates (utils/bucketSimulation.js)
 const PER = { key: 'per', label: 'PER (EST.)', get: s => s.adv.per, fmt: f1, avg: 15, elite: 27, says: 'Player Efficiency Rating: one number for everything in the box score. League average is always 15. It loves scoring and undersells defense.' }
 
+// A lineman's averages and his elite marks by spot: a starting edge about 7 sacks and an elite one 13,
+// a starting tackle about 3 and an elite one 8. Sacks swing from year to year, hits on the quarterback hold up
+// better, and the tackles a line makes depend on how the run comes at it (official counts, 2024-25: StatMuse;
+// the starters' averages are estimates).
+const line = (sacks, hits, tfl) => [
+  { key: 'sacks', label: 'SACKS', get: s => s.stats.sacks, fmt: int, avg: sacks[0], elite: sacks[1], says: 'The stat a pass rusher gets paid for. It swings a lot from year to year.' },
+  { key: 'hits', label: 'QB HITS', get: s => s.stats.qbHits, fmt: int, avg: hits[0], elite: hits[1], says: 'Every time he put the quarterback on the ground, sacks included. It holds up better from year to year than sacks do.' },
+  { key: 'tfl', label: 'TACKLES FOR LOSS', get: s => s.stats.tfl, fmt: int, avg: tfl[0], elite: tfl[1], says: 'Plays stopped behind the line, run or pass. The best read on how much of the backfield he lives in.' },
+  { key: 'hitRate', label: 'HITS / GAME', get: s => perGame(s.stats.qbHits, s), fmt: f1, says: 'How often he gets home in a game, for a season cut short by injury.' },
+  { key: 'multi', label: 'MULTI-SACK GAMES', get: s => s.adv.multi ?? 0, fmt: int, says: 'Games with two sacks or more.' },
+  { key: 'tackles', label: 'TACKLES', get: s => s.stats.tackles, fmt: int, says: 'Not a grade: how many come his way depends on the scheme and how teams run at him.' },
+  { key: 'ff', label: 'FORCED FUMBLES', get: s => s.stats.ff ?? 0, fmt: int, says: 'Times he knocked the ball loose, mostly strips on the quarterback.' },
+  { key: 'fr', label: 'FUMBLE RECOVERIES', get: s => s.stats.fr ?? 0, fmt: int, says: 'Loose balls he fell on. Mostly luck and hustle.' },
+  { key: 'pd', label: 'PASSES BATTED', get: s => s.stats.pbus ?? 0, fmt: int, says: 'Throws he got a hand on at the line. A tall man\'s stat.' },
+  { key: 'safeties', label: 'SAFETIES', get: s => s.stats.safeties ?? 0, fmt: int, says: 'Two points and the ball back. Most careers have one at most.' },
+]
+const DL_DEFS = { edge: line([7, 13], [14, 27], [9, 17]), dt: line([3, 8], [9, 20], [6, 13]) }
+
 const DEFS = {
   qb: [
-    { key: 'anya', label: 'ANY/A (EST.)', get: s => (s.stats.passYds + 20 * s.stats.tds - 45 * s.stats.ints - s.adv.sacks * SACK_YDS) / Math.max(1, s.adv.att + s.adv.sacks), fmt: f2, avg: 6.04, elite: 7.5, says: 'Yards every time he drops back, with a bonus for TDs and a penalty for picks and sacks. The best QB number you can get from a box score.' },
     { key: 'rating', label: 'PASSER RATING', get: s => s.stats.rating, fmt: f1, avg: 91.4, elite: 105, says: 'The classic grade of completions, yards, TDs and picks. It ignores sacks.' },
     { key: 'sackPct', label: 'SACK RATE', get: s => (s.adv.sacks / Math.max(1, s.adv.att + s.adv.sacks)) * 100, fmt: pct, avg: 6.9, elite: 5.2, low: true, says: 'How often he goes down before he can throw. Lower is better, and his line shares the blame.' },
     { key: 'ya', label: 'YARDS / ATTEMPT', get: s => s.stats.passYds / Math.max(1, s.adv.att), fmt: f2, avg: 7.02, elite: 8.4, says: 'Yards every time he throws it.' },
@@ -109,6 +125,7 @@ export function seasonRaw(pos, f, played) {
   }
   if (pos === 'rb') return { gp, carries: f.seasonCarries ?? 0, recs: f.seasonRecs ?? 0, long: f.seasonLong ?? 0, hundreds: count(g => g.rushYds >= 100) }
   if (pos === 'wr' || pos === 'te') return { gp, targets: f.seasonTargets ?? 0, long: f.seasonLong ?? 0, hundreds: count(g => g.recYds >= 100) }
+  if (pos === 'dl') return { gp, multi: count(g => g.sacks >= 2) }
   return { gp }
 }
 
@@ -127,9 +144,10 @@ export const TIER_WORD = { low: 'BELOW AVERAGE', avg: 'AVERAGE', good: 'GOOD', e
 // Every analytic for one season, most important first ([] for a season from before these existed).
 // `mark` is where the value sits on its bar (avg 40, elite 85).
 export function seasonAnalytics(pos, s) {
-  if (!s?.adv || !DEFS[pos]) return []
+  const defs = pos === 'dl' ? DL_DEFS[s?.spot === 'dt' ? 'dt' : 'edge'] : DEFS[pos]
+  if (!s?.adv || !defs) return []
   const graded = enough(pos, s)
-  return DEFS[pos].filter(d => d.get(s) != null).map(d => {
+  return defs.filter(d => d.get(s) != null).map(d => {
     const value = d.get(s)
     const out = { key: d.key, label: d.label, says: d.says, value, text: d.fmt(value), avg: d.avg, elite: d.elite, low: !!d.low, avgText: d.avg != null ? d.fmt(d.avg) : null, eliteText: d.elite != null ? d.fmt(d.elite) : null, tier: null, mark: null }
     if (d.avg == null || !graded) return out

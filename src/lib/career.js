@@ -6,13 +6,15 @@
 // mid-season. Football and basketball run on the same engine: everything that
 // differs lives in SPORT below. Screens: components/app/AppCareer.jsx.
 
+import { dashTarget, dashTypical, benchTypical, coneShift } from './mg/combineNorms.js'
 import { seeded } from './rng'
+import { momentSituation, finalScore } from './situations'
 import { queueCloudSave, fetchCloudCareer, deleteCloudCareer } from './careerCloud'
 import { createDirector } from './seasonDirector'
 import {
-  runSimulation, runRBSimulation, runWRSimulation, runTESimulation, runDBSimulation,
-  calcOVR, calcOVRRB, calcOVRWR, calcOVRTE, calcOVRDB,
-  calcMVPResult, calcOPOYResult, calcWROPOYResult, calcTEOPOYResult, calcDBDpoyResult, valToGrade, nflHeadshot, HEADSHOT_BASE,
+  runSimulation, runRBSimulation, runWRSimulation, runTESimulation, runDBSimulation, runDLSimulation,
+  calcOVR, calcOVRRB, calcOVRWR, calcOVRTE, calcOVRDB, calcOVRDL, dlBuildSpot,
+  calcMVPResult, calcOPOYResult, calcWROPOYResult, calcTEOPOYResult, calcDBDpoyResult, calcDLDpoyResult, valToGrade, nflHeadshot, HEADSHOT_BASE,
 } from '../utils/simulation'
 import { runBucketSimulation, calcBucketOVR, TEAM_RATINGS as NBA_RATINGS } from '../utils/bucketSimulation'
 import { TYPES, ATTR, QBS } from '../data/qbs'
@@ -20,6 +22,7 @@ import { RB_TYPES, RB_ATTR, RBS } from '../data/rbs'
 import { WR_TYPES, WR_ATTR, WRS } from '../data/wrs'
 import { TE_TYPES, TE_ATTR, TES } from '../data/tes'
 import { DB_TYPES, DB_ATTR, DBS } from '../data/dbs'
+import { DL_TYPES, DL_ATTR, DLS, dlSizeGrade } from '../data/dls'
 import { OLS, OL_ATTR_WEIGHT, olOVR } from '../data/ols'
 import HEADSHOTS from '../data/headshots.json'
 import NBA_HEADSHOTS from '../data/nba-headshots.json'
@@ -34,6 +37,7 @@ import { RB_LEGENDS } from '../data/rb-legends'
 import { WR_LEGENDS } from '../data/wr-legends'
 import { TE_LEGENDS } from '../data/te-legends'
 import { DB_LEGENDS } from '../data/db-legends'
+import { DL_LEGENDS } from '../data/dl-legends'
 import { NBA_ALLTIME_GUARD_PLAYERS } from '../data/nba-guard-legends'
 import { NBA_ALLTIME_BIG_PLAYERS } from '../data/nba-big-legends'
 import { RESUMES } from '../data/legacy-resumes'
@@ -56,9 +60,9 @@ const NBA_DIV = Object.fromEntries(Object.entries({
   Atlantic: ['BOS', 'BKN', 'NYK', 'PHI', 'TOR'], Central: ['CHI', 'CLE', 'DET', 'IND', 'MIL'], Southeast: ['ATL', 'CHA', 'MIA', 'ORL', 'WAS'],
   Northwest: ['DEN', 'MIN', 'OKC', 'POR', 'UTA'], Pacific: ['GSW', 'LAC', 'LAL', 'PHX', 'SAC'], Southwest: ['DAL', 'HOU', 'MEM', 'NOP', 'SAS'],
 }).flatMap(([d, list]) => list.map(t => [t, d])))
-const NFL_POS_TYPES = { qb: TYPES, rb: RB_TYPES, wr: WR_TYPES, te: TE_TYPES, db: DB_TYPES }
-const NFL_OVR = { qb: b => calcOVR(b, TYPES), rb: b => calcOVRRB(b, RB_TYPES), wr: b => calcOVRWR(b, WR_TYPES), te: b => calcOVRTE(b, TE_TYPES), db: b => calcOVRDB(b, DB_TYPES) }
-const NFL_AWARD = { qb: calcMVPResult, rb: calcOPOYResult, wr: calcWROPOYResult, te: calcTEOPOYResult, db: calcDBDpoyResult }
+const NFL_POS_TYPES = { qb: TYPES, rb: RB_TYPES, wr: WR_TYPES, te: TE_TYPES, db: DB_TYPES, dl: DL_TYPES }
+const NFL_OVR = { qb: b => calcOVR(b, TYPES), rb: b => calcOVRRB(b, RB_TYPES), wr: b => calcOVRWR(b, WR_TYPES), te: b => calcOVRTE(b, TE_TYPES), db: b => calcOVRDB(b, DB_TYPES), dl: b => calcOVRDL(b, DL_TYPES) }
+const NFL_AWARD = { qb: calcMVPResult, rb: calcOPOYResult, wr: calcWROPOYResult, te: calcTEOPOYResult, db: calcDBDpoyResult, dl: calcDLDpoyResult }
 const olScore = p => Object.entries(OL_ATTR_WEIGHT).reduce((s, [k, w]) => s + (p.attrs?.[k] ?? 5) * w, 0) / Object.values(OL_ATTR_WEIGHT).reduce((a, b) => a + b, 0)
 
 export const SPORT = {
@@ -68,36 +72,48 @@ export const SPORT = {
     // a team as the career sees it: off / def on a 1–10 scale
     teamOf: short => { const t = NFL_TEAMS.find(x => x.short === short) ?? NFL_TEAMS[0]; return { short: t.short, name: t.name, color: t.color, color2: t.color2, off: t.off, def: t.def, conf: t.conf, div: t.div } },
     status: core => (core >= 7 ? 'Contender' : core >= 5.5 ? 'In the mix' : 'Rebuilding'),
-    // the career positions, and which side of the ball each plays (DL and LB join the defense later)
-    positions: ['qb', 'rb', 'wr', 'te', 'db'],
-    side: { qb: 'off', rb: 'off', wr: 'off', te: 'off', db: 'def' },
-    label: { qb: 'QB', rb: 'RB', wr: 'WR', te: 'TE', db: 'DB' }, posName: { qb: 'Quarterback', rb: 'Running back', wr: 'Wide receiver', te: 'Tight end', db: 'Defensive back' },
-    types: NFL_POS_TYPES, attr: { qb: ATTR, rb: RB_ATTR, wr: WR_ATTR, te: TE_ATTR, db: DB_ATTR },
-    pool: { qb: QBS, rb: RBS, wr: WRS, te: TES, ol: OLS, db: DBS },
-    // every roster group a team keeps: the offense, then the defense (dl, lb go here when their data lands)
-    groups: ['qb', 'rb', 'wr', 'te', 'ol', 'db'], starters: { qb: 1, rb: 1, wr: 3, te: 1, ol: 5, db: 4 }, keep: { qb: 2, rb: 2, wr: 4, te: 2, ol: 5, db: 5 },
+    // the career positions, and which side of the ball each plays (LB joins the defense later)
+    positions: ['qb', 'rb', 'wr', 'te', 'db', 'dl'],
+    side: { qb: 'off', rb: 'off', wr: 'off', te: 'off', db: 'def', dl: 'def' },
+    label: { qb: 'QB', rb: 'RB', wr: 'WR', te: 'TE', db: 'DB', dl: 'DL' }, posName: { qb: 'Quarterback', rb: 'Running back', wr: 'Wide receiver', te: 'Tight end', db: 'Defensive back', dl: 'Defensive lineman' },
+    types: NFL_POS_TYPES, attr: { qb: ATTR, rb: RB_ATTR, wr: WR_ATTR, te: TE_ATTR, db: DB_ATTR, dl: DL_ATTR },
+    pool: { qb: QBS, rb: RBS, wr: WRS, te: TES, ol: OLS, db: DBS, dl: DLS },
+    // every roster group a team keeps: the offense, then the defense (lb goes here when its data lands)
+    // (dl stays last: rosters are dealt in this order from one seeded stream, so everyone else's come out the same)
+    groups: ['qb', 'rb', 'wr', 'te', 'ol', 'db', 'dl'], starters: { qb: 1, rb: 1, wr: 3, te: 1, ol: 5, db: 4, dl: 4 }, keep: { qb: 2, rb: 2, wr: 4, te: 2, ol: 5, db: 5, dl: 5 },
     slots: { ol: ['LT', 'LG', 'C', 'RG', 'RT'] },
-    depthLabel: (pos, i) => `${({ qb: 'QB', rb: 'RB', wr: 'WR', te: 'TE', db: 'DB' })[pos]}${i}`,
+    depthLabel: (pos, i) => `${({ qb: 'QB', rb: 'RB', wr: 'WR', te: 'TE', db: 'DB', dl: 'DL' })[pos]}${i}`,
     ovr: (pos, b) => NFL_OVR[pos]?.(b) ?? 0,
     realOvr: (pos, p) => Math.round(pos === 'ol' ? (olOVR(p.attrs) ?? 72) : (p.ovr ?? NFL_OVR[pos](buildOf(NFL_POS_TYPES[pos], p)))),
     photo: name => (HEADSHOTS[name] ? nflHeadshot(HEADSHOTS[name]) : null),
-    sim: pos => ({ qb: (b, t) => runSimulation(b, TYPES, t, false), rb: (b, t) => runRBSimulation(b, RB_TYPES, t, false), wr: (b, t) => runWRSimulation(b, WR_TYPES, t, false), te: (b, t) => runTESimulation(b, TE_TYPES, t, false), db: (b, t) => runDBSimulation(b, t, false) })[pos],
+    sim: pos => ({ qb: (b, t) => runSimulation(b, TYPES, t, false), rb: (b, t) => runRBSimulation(b, RB_TYPES, t, false), wr: (b, t) => runWRSimulation(b, WR_TYPES, t, false), te: (b, t) => runTESimulation(b, TE_TYPES, t, false), db: (b, t) => runDBSimulation(b, t, false), dl: (b, t) => runDLSimulation(b, t, false) })[pos],
     // what the sim plays against: the team, its offense moved by the fit and the year's events
     // the pieces around you move your side of the ball: the offense for a skill player, the defense for a DB
     // a true star (93+) lifts his side of the ball too: the sims barely let a DB or a receiver
     // move a team (a 99 DB's teams went 8-9), so a career adds it (a quarterback already carries one)
     simTeam: (t, fit, m, c) => {
       const def = SPORT.nfl.side[c?.pos] === 'def'
-      const star = clamp(((c?.ovr ?? 0) - 92) / 7, 0, 1) * ({ rb: 1, wr: 1.4, te: 1, db: 3 }[c?.pos] ?? 0)
+      const star = clamp(((c?.ovr ?? 0) - 92) / 7, 0, 1) * ({ rb: 1, wr: 1.4, te: 1, db: 3, dl: 3 }[c?.pos] ?? 0)
       return { ...t, off: clamp(fit.off + (def ? 0 : fit.adj + star) + (m.off ?? 0), 1, 10), def: clamp(fit.def + (def ? fit.adj + star : 0) + (m.def ?? 0), 1, 10) }
     },
     // the pieces of the offense around you, graded 0–11
-    fit: (ro, pos, notMe) => {
+    fit: (ro, pos, notMe, spot = null) => {
+      // a lineman's world: the men beside him on the line (a real rush means fewer double teams),
+      // then the coverage behind it (a quarterback who holds the ball is a sack)
+      if (pos === 'dl') {
+        const room = (ro.dl ?? []).filter(notMe)
+        const mates = dlFront(room, spot)
+        const rushG = r10(ovrGradeVal(avgOvr(mates)))
+        const back = (ro.db ?? []).slice(0, 4), secG = r10(ovrGradeVal(avgOvr(back)))
+        // what a team needs: the starters at his spot, when it's known; else the whole line
+        const atSpot = spot ? room.filter(p => dlSpotOf(p) === spot).sort(byOvr).slice(0, 2) : mates
+        return { groups: [{ k: 'PASS RUSH', v: rushG, names: mates.map(p => p.name) }, { k: 'SECONDARY', v: secG, names: back.map(p => p.name) }], adj: (rushG - 6) * 0.25 + (secG - 6) * 0.15, need: 11 - r10(ovrGradeVal(avgOvr(atSpot))), rush: rushG, secondary: secG }
+      }
       if (SPORT.nfl.side[pos] === 'def') {
-        // a DB's world: the rest of the secondary (the pass rush and linebackers join when they're in the game)
+        // a DB's world: the rest of the secondary, and the pass rush in front of it (linebackers join when they're in the game)
         const mates = (ro.db ?? []).filter(notMe).sort((a, b) => b.ovr - a.ovr).slice(0, 3)
         const secG = r10(ovrGradeVal(avgOvr(mates)))
-        const front = ['dl', 'lb'].filter(g => ro[g]?.length).map(g => ({ k: g === 'dl' ? 'PASS RUSH' : 'LINEBACKERS', v: r10(ovrGradeVal(avgOvr(ro[g].slice(0, g === 'dl' ? 4 : 3)))), names: ro[g].slice(0, 4).map(p => p.name) }))
+        const front = ['dl', 'lb'].filter(g => ro[g]?.length).map(g => { const men = g === 'dl' ? dlFront(ro.dl) : ro[g].slice(0, 3); return { k: g === 'dl' ? 'PASS RUSH' : 'LINEBACKERS', v: r10(ovrGradeVal(avgOvr(men))), names: men.map(p => p.name) } })
         const frontAdj = front.reduce((s, g) => s + (g.v - 6) * 0.15, 0)
         return { groups: [{ k: 'SECONDARY', v: secG, names: mates.map(p => p.name) }, ...front], adj: (secG - 6) * 0.25 + frontAdj, need: 11 - secG, secondary: secG }
       }
@@ -110,27 +126,48 @@ export const SPORT = {
       const need = pos === 'qb' ? 11 - qbG : 11 - wpG
       return { groups, adj, need, ol: olG, weapons: wpG, qb: qbG }
     },
-    fitNote: (f, pos) => (pos === 'db' ? 'The secondary around him decides how often he is left on an island.' : pos === 'qb'
+    fitNote: (f, pos) => (pos === 'dl' ? (f.rush >= 8 ? 'Real rushers beside him mean one-on-ones and fewer double teams.' : f.rush < 5 ? 'Nobody else on the line scares a quarterback. Every slide comes his way.' : 'An honest line around him. He has to win his own matchups.') : pos === 'db' ? 'The secondary around him decides how often he is left on an island.' : pos === 'qb'
       ? (f.ol < 4.5 ? 'A bad line hurts a quarterback: sacks, hits, hurried throws.' : f.weapons >= 8 ? 'Elite weapons make a quarterback\'s numbers.' : 'A workable line and honest weapons. The quarterback decides it.')
       : (f.qb >= 8 ? 'A real quarterback feeds his weapons: targets, yards, touchdowns.' : f.qb < 5 ? 'A weak quarterback caps a skill player. Fewer good balls.' : 'A middling quarterback. The plays have to be made after the catch.')),
-    physical: { qb: ['legs', 'arm'], rb: ['speed', 'burst', 'elusiveness'], wr: ['speed', 'vertical', 'afterCatch'], te: ['speed', 'vertical', 'strength'], db: ['speed', 'fluidity'] },
+    physical: { qb: ['legs', 'arm'], rb: ['speed', 'burst', 'elusiveness'], wr: ['speed', 'vertical', 'afterCatch'], te: ['speed', 'vertical', 'strength'], db: ['speed', 'fluidity'], dl: ['getOff', 'speed', 'bend'] },
     // the reads: age doesn't take these
     ageless: ['processing', 'leadership', 'vision', 'pocket-presence', 'awareness', 'zoneIQ', 'playRecognition'],
     finalsAward: 'SUPER BOWL MVP',
     ageShift: pos => (pos === 'qb' ? 2 : 0),
     // the physical traits train until this age (then the window shuts); the body fades from declineAt
-    trainUntil: pos => ({ qb: 28, rb: 24, wr: 26, te: 26, db: 25 })[pos] ?? 26,
+    trainUntil: pos => ({ qb: 28, rb: 24, wr: 26, te: 26, db: 25, dl: 26 })[pos] ?? 26,
     // offseason work: 2 points a year through this age, then 1 until the body turns
     devYoung: () => 23, devPrime: pos => SPORT.nfl.declineAt(pos),
-    declineAt: pos => ({ qb: 33, rb: 27, wr: 30, te: 30, db: 28 })[pos] ?? 31,
+    declineAt: pos => ({ qb: 33, rb: 27, wr: 30, te: 30, db: 28, dl: 30 })[pos] ?? 31,
     bigInjury: 6,
     draft: {
       rounds: 7,
       // positional value: a quarterback is slotted as if ~4 better (any 90+ goes first),
-      // receivers and DBs at face value, a tight end ~2 worse, a running back ~3 worse
-      stock: (ovr0, pos) => { if (pos === 'qb' && ovr0 >= 90) return [1, 1]; const ovr = ovr0 + ({ qb: 4, te: -2, rb: -3 }[pos] ?? 0); return (ovr >= 95 ? [1, 5] : ovr >= 90 ? [3, 12] : ovr >= 86 ? [8, 24] : ovr >= 82 ? [18, 45] : ovr >= 78 ? [36, 80] : ovr >= 74 ? [70, 130] : ovr >= 70 ? [110, 180] : [160, 224]) },
+      // receivers and DBs at face value, a tight end ~2 worse, a running back ~3 worse;
+      // an edge rusher ~2 better (the premium spot after quarterback), an interior lineman ~1 worse
+      stock: (ovr0, pos, c = null) => { if (pos === 'qb' && ovr0 >= 90) return [1, 1]; const ovr = ovr0 + (pos === 'dl' ? (c && dlSpot(c) === 'dt' ? -1 : 2) : { qb: 4, te: -2, rb: -3 }[pos] ?? 0); return (ovr >= 95 ? [1, 5] : ovr >= 90 ? [3, 12] : ovr >= 86 ? [8, 24] : ovr >= 82 ? [18, 45] : ovr >= 78 ? [36, 80] : ovr >= 74 ? [70, 130] : ovr >= 70 ? [110, 180] : [160, 224]) },
       rookie: o => ({ kind: 'rookie', years: 4, left: 4, perYear: o <= 5 ? 9.5 : o <= 10 ? 6.5 : o <= 16 ? 4.5 : o <= 32 ? 3.2 : o <= 64 ? 1.8 : o <= 100 ? 1.3 : 1.0, option: o <= 32 }),
       posList: ['EDGE', 'OT', 'CB', 'WR', 'QB', 'LB', 'DT', 'S', 'RB', 'TE', 'G', 'C'],
+      // How much a team wants this position with this pick (1 = neutral), on top of its need:
+      // a team with its quarterback doesn't spend a first on another one, and a young good
+      // quarterback means the first-rounders go to his line and his receivers, not a back
+      want: (ro, pos, round) => {
+        const qb = ro.qb?.[0], ovr = qb?.ovr ?? 0, age = qb?.age ?? 30, starter = ro[pos]?.[0]
+        const franchise = ovr >= 80 && age <= 31
+        if (pos === 'qb') {
+          if (franchise || (age <= 25 && ovr >= 72)) return round === 1 ? 0.01 : round <= 3 ? 0.08 : 0.4
+          if (ovr < 74) return 4
+          if (age >= 35) return 2.5
+          return ovr >= 80 ? 0.3 : 2
+        }
+        if (pos === 'rb') {
+          const young = ovr >= 80 && age <= 28
+          let w = round === 1 && young ? 0.015 : round === 2 && young ? 0.5 : 1
+          if ((starter?.ovr ?? 0) >= 84 && (starter?.age ?? 30) <= 26) w *= round === 1 ? 0.15 : 0.5
+          return w
+        }
+        return 1
+      },
     },
     combine: {
       qb: [['forty', '40-yard dash', 'legs'], ['velo', 'Throwing velocity', 'arm'], ['acc', 'Accuracy drill', 'accuracy']],
@@ -138,49 +175,55 @@ export const SPORT = {
       wr: [['forty', '40-yard dash', 'speed'], ['cone', '3-cone drill', 'routeRunning'], ['gauntlet', 'Gauntlet drill', 'hands']],
       te: [['forty', '40-yard dash', 'speed'], ['bench', 'Bench press', 'strength'], ['gauntlet', 'Gauntlet drill', 'hands']],
       db: [['forty', '40-yard dash', 'speed'], ['cone', '3-cone drill', 'fluidity'], ['gauntlet', 'Ball skills drill', 'hands']],
+      dl: [['forty', '40-yard dash', 'speed'], ['bench', 'Bench press', 'strength'], ['cone', '3-cone drill', 'bend']],
     },
     goals: {
       qb: ovr => [['passYds', 'Throw for', ovr >= 90 ? 4000 : ovr >= 82 ? 3500 : 3000, 'yards'], ['tds', 'Throw', ovr >= 90 ? 30 : ovr >= 82 ? 24 : 18, 'TDs'], ['wins', 'Win', ovr >= 90 ? 11 : ovr >= 82 ? 9 : 7, 'games']],
       rb: ovr => [['rushYds', 'Rush for', ovr >= 90 ? 1300 : ovr >= 82 ? 1000 : 750, 'yards'], ['tds', 'Score', ovr >= 90 ? 13 : ovr >= 82 ? 9 : 6, 'TDs'], ['wins', 'Win', ovr >= 90 ? 10 : 8, 'games']],
       wr: ovr => [['recYds', 'Catch', ovr >= 90 ? 1300 : ovr >= 82 ? 1000 : 750, 'yards'], ['tds', 'Score', ovr >= 90 ? 11 : ovr >= 82 ? 8 : 5, 'TDs'], ['recs', 'Make', ovr >= 90 ? 95 : ovr >= 82 ? 75 : 55, 'catches']],
       db: ovr => [['ints', 'Pick off', ovr >= 90 ? 6 : ovr >= 82 ? 4 : 2, 'passes'], ['pbus', 'Defend', ovr >= 90 ? 18 : ovr >= 82 ? 13 : 9, 'passes'], ['tackles', 'Make', ovr >= 90 ? 75 : ovr >= 82 ? 62 : 50, 'tackles']],
+      // (a tackle's sacks are not an edge's: 8 from inside is a big year)
+      dl: (ovr, c) => { const dt = c && dlSpot(c) === 'dt'; return [['sacks', 'Get', dt ? (ovr >= 90 ? 8 : ovr >= 82 ? 5 : 3) : (ovr >= 90 ? 13 : ovr >= 82 ? 9 : 6), 'sacks'], ['tfl', 'Make', dt ? (ovr >= 90 ? 12 : ovr >= 82 ? 8 : 5) : (ovr >= 90 ? 16 : ovr >= 82 ? 11 : 8), 'TFL'], ['tackles', 'Make', ovr >= 90 ? 50 : ovr >= 82 ? 42 : 34, 'tackles']] },
       te: ovr => [['recYds', 'Catch', ovr >= 90 ? 1000 : ovr >= 82 ? 750 : 550, 'yards'], ['tds', 'Score', ovr >= 90 ? 9 : ovr >= 82 ? 6 : 4, 'TDs'], ['recs', 'Make', ovr >= 90 ? 80 : ovr >= 82 ? 60 : 45, 'catches']],
     },
     seasonStats: (pos, f) => pos === 'qb'
       ? { passYds: f.seasonPassYds, tds: f.seasonTDs, ints: f.seasonINTs, rating: f.seasonRating, rushYds: f.seasonRushYds, rushTDs: f.seasonRushTDs ?? 0, compPct: f.seasonCompPct }
       : pos === 'db' ? { ints: f.seasonINTs, pbus: f.seasonPBUs, tackles: f.seasonTackles, tfl: f.seasonTFL, ff: f.seasonFF, pickSixes: f.seasonPickSixes }
+      : pos === 'dl' ? { sacks: f.seasonSacks, tfl: f.seasonTFL, tackles: f.seasonTackles, qbHits: f.seasonQBHits, ff: f.seasonFF, fr: f.seasonFR, pbus: f.seasonPBUs, safeties: f.seasonSafeties }
       : pos === 'rb' ? { rushYds: f.seasonRushYds, tds: (f.seasonRushTDs ?? 0) + (f.seasonRecTDs ?? 0), recYds: f.seasonRecYds, ypc: f.seasonYPC, fumbles: f.seasonFumbles }
       : { recs: f.seasonRecs, recYds: f.seasonRecYds, tds: f.seasonRecTDs, ypr: f.seasonYPR },
     rateKeys: ['rating', 'compPct', 'ypc', 'ypr'],     // per-game rates: never summed into career totals
     averages: null,
-    headline: { qb: ['passYds', 'tds', 'ints'], rb: ['rushYds', 'tds', 'recYds'], wr: ['recs', 'recYds', 'tds'], te: ['recs', 'recYds', 'tds'], db: ['ints', 'pbus', 'tackles'] },
-    awardName: { qb: 'MVP', rb: 'OPOY', wr: 'OPOY', te: 'OPOY', db: 'DPOY' },
+    headline: { qb: ['passYds', 'tds', 'ints'], rb: ['rushYds', 'tds', 'recYds'], wr: ['recs', 'recYds', 'tds'], te: ['recs', 'recYds', 'tds'], db: ['ints', 'pbus', 'tackles'], dl: ['sacks', 'tfl', 'tackles'] },
+    awardName: { qb: 'MVP', rb: 'OPOY', wr: 'OPOY', te: 'OPOY', db: 'DPOY', dl: 'DPOY' },
     honor: 'Pro Bowl', honors: 'PRO BOWLS', first: 'All-Pro',
     // games played to be considered (of 17): the award and All-Pro 12, the Pro Bowl 9
     minGames: { award: 12 / 17, first: 12 / 17, honor: 9 / 17 },
-    // the numbers that get a player there
-    proBowl: { qb: s => s.tds >= 30 || s.passYds >= 4300, rb: s => s.rushYds >= 1200 || s.tds >= 12, wr: s => s.recYds >= 1200 || s.tds >= 10, te: s => s.recYds >= 850 || s.tds >= 8, db: s => s.ints >= 5 || (s.ints >= 3 && s.pbus >= 15) },
-    allPro: { db: s => s.ints >= 7 || (s.ints >= 5 && s.pbus >= 18), qb: s => s.tds >= 38 || (s.tds >= 34 && s.passYds >= 4600), rb: s => s.rushYds >= 1550 || (s.rushYds >= 1350 && s.tds >= 14), wr: s => s.recYds >= 1500 || (s.recYds >= 1350 && s.tds >= 12), te: s => s.recYds >= 1150 || (s.recYds >= 1000 && s.tds >= 10) },
-    allProNear: { qb: s => s.tds >= 32, rb: s => s.rushYds >= 1300, wr: s => s.recYds >= 1300, te: s => s.recYds >= 950, db: s => s.ints >= 6 },
+    // the numbers that get a player there (a lineman by his spot: c is the career)
+    proBowl: { qb: s => s.tds >= 30 || s.passYds >= 4300, rb: s => s.rushYds >= 1200 || s.tds >= 12, wr: s => s.recYds >= 1200 || s.tds >= 10, te: s => s.recYds >= 850 || s.tds >= 8, db: s => s.ints >= 5 || (s.ints >= 3 && s.pbus >= 15), dl: (s, c) => (dlSpot(c) === 'dt' ? s.sacks >= 7 || (s.sacks >= 5 && s.tfl >= 11) : s.sacks >= 11 || (s.sacks >= 9 && s.tfl >= 15)) },
+    allPro: { db: s => s.ints >= 7 || (s.ints >= 5 && s.pbus >= 18), qb: s => s.tds >= 38 || (s.tds >= 34 && s.passYds >= 4600), rb: s => s.rushYds >= 1550 || (s.rushYds >= 1350 && s.tds >= 14), wr: s => s.recYds >= 1500 || (s.recYds >= 1350 && s.tds >= 12), te: s => s.recYds >= 1150 || (s.recYds >= 1000 && s.tds >= 10), dl: (s, c) => (dlSpot(c) === 'dt' ? s.sacks >= 12 || (s.sacks >= 10 && s.tfl >= 15) : s.sacks >= 16 || (s.sacks >= 14 && s.tfl >= 20)) },
+    allProNear: { qb: s => s.tds >= 32, rb: s => s.rushYds >= 1300, wr: s => s.recYds >= 1300, te: s => s.recYds >= 950, db: s => s.ints >= 6, dl: (s, c) => s.sacks >= (dlSpot(c) === 'dt' ? 9 : 14) },
     // (and about one year in four somebody else has the season of his life: a star won ~45% of his prime)
     award: (c, f, s) => {
-      const bar = { db: () => s.ints >= 7 || (s.ints >= 6 && (s.pickSixes ?? 0) >= 1), qb: () => (s.tds ?? 0) + (f.seasonRushTDs ?? 0) >= 36 && s.passYds >= 4400 && f.wins >= 11, rb: () => s.rushYds >= 1800 || (s.rushYds >= 1600 && s.tds >= 16), wr: () => s.recYds >= 1600 && s.tds >= 11, te: () => s.recYds >= 1300 && s.tds >= 10 }
+      const bar = { db: () => s.ints >= 7 || (s.ints >= 6 && (s.pickSixes ?? 0) >= 1), qb: () => (s.tds ?? 0) + (f.seasonRushTDs ?? 0) >= 36 && s.passYds >= 4400 && f.wins >= 11, rb: () => s.rushYds >= 1800 || (s.rushYds >= 1600 && s.tds >= 16), wr: () => s.recYds >= 1600 && s.tds >= 11, te: () => s.recYds >= 1300 && s.tds >= 10, dl: () => (dlSpot(c) === 'dt' ? s.sacks >= 13 || (s.sacks >= 11 && s.tfl >= 18) : s.sacks >= 17 || (s.sacks >= 15 && s.ff >= 4)) }
       // a tight end past both the yards and TD records on a winner: nobody out-votes that
       if (c.pos === 'te' && s.recYds > 1416 && s.tds > 18 && f.wins >= 10) return true
       if (seeded(`${c.seed}-poy-${c.year}`)() < 0.28) return false
       return !!NFL_AWARD[c.pos](f, false, c.team).userWins && bar[c.pos]()
     },
-    seasonScore: (pos, s) => { const st = s.stats; return pos === 'db' ? (st.ints ?? 0) / 7 * .45 + (st.pbus ?? 0) / 20 * .25 + s.wins / 15 * .3 : pos === 'qb' ? st.tds / 40 * .4 + st.passYds / 5000 * .3 + s.wins / 15 * .3 : pos === 'rb' ? st.rushYds / 1700 * .5 + st.tds / 18 * .3 + s.wins / 15 * .2 : st.recYds / 1600 * .5 + st.tds / 14 * .3 + s.wins / 15 * .2 },
-    // a DB's production: picks and the ones taken back (the greats are scored the same way)
-    legacyProd: (pos, st) => (pos === 'db' ? (st.ints ?? 0) * 1.3 + (st.pickSixes ?? 0) * 2 : pos === 'qb' ? (st.tds ?? 0) / 10 + (st.passYds ?? 0) / 1000 : pos === 'rb' ? (st.tds ?? 0) / 4 + (st.rushYds ?? 0) / 500 : (st.tds ?? 0) / 4 + (st.recYds ?? 0) / 500),
+    seasonScore: (pos, s) => { const st = s.stats; return pos === 'dl' ? (s.spot === 'dt' ? (st.sacks ?? 0) / 10 * .45 + (st.tfl ?? 0) / 14 * .25 : (st.sacks ?? 0) / 16 * .45 + (st.tfl ?? 0) / 20 * .25) + s.wins / 15 * .3 : pos === 'db' ? (st.ints ?? 0) / 7 * .45 + (st.pbus ?? 0) / 20 * .25 + s.wins / 15 * .3 : pos === 'qb' ? st.tds / 40 * .4 + st.passYds / 5000 * .3 + s.wins / 15 * .3 : pos === 'rb' ? st.rushYds / 1700 * .5 + st.tds / 18 * .3 + s.wins / 15 * .2 : st.recYds / 1600 * .5 + st.tds / 14 * .3 + s.wins / 15 * .2 },
+    // a DB's production: picks and the ones taken back; a lineman's: sacks (the greats are scored the same way)
+    legacyProd: (pos, st) => (pos === 'dl' ? (st.sacks ?? 0) * 0.5 : pos === 'db' ? (st.ints ?? 0) * 1.3 + (st.pickSixes ?? 0) * 2 : pos === 'qb' ? (st.tds ?? 0) / 10 + (st.passYds ?? 0) / 1000 : pos === 'rb' ? (st.tds ?? 0) / 4 + (st.rushYds ?? 0) / 500 : (st.tds ?? 0) / 4 + (st.recYds ?? 0) / 500),
     // the sim lets every 10-win team in; here 11 is safe, 10 needs the tiebreakers (the sim's own
     // first playoff game, a coin the booked season keeps) and 9 needs them twice
     made: f => { const po = f.playoffRounds ?? []; return !!f.playoffs && (f.wins >= 11 || (f.wins === 10 && !!po[0]?.won) || (f.wins === 9 && !!po[0]?.won && !!po[1]?.won)) },
     rounds: ['Wild Card', 'Divisional', 'Conference Championship', 'Super Bowl'], final: 'Super Bowl', series: false,
-    lineKeys: ['passYds', 'tds', 'ints', 'rushYds', 'rushTDs', 'recYds', 'rec', 'recTDs', 'tackles', 'pbus'],
+    lineKeys: ['passYds', 'tds', 'ints', 'rushYds', 'rushTDs', 'recYds', 'rec', 'recTDs', 'tackles', 'pbus', 'sacks', 'tfl', 'qbHits', 'ff'],
     step: 1, gameWord: 'WEEK', snaps: 'snaps', injScale: 1, moneyWord: 'yards',
     injuries: [['hamstring strain', 2, 3], ['high ankle sprain', 3, 5], ['rib cartilage', 1, 2], ['concussion', 1, 2], ['MCL sprain', 4, 6], ['shoulder (AC joint)', 2, 4], ['turf toe', 2, 3]],
-    money: { qb: [8, 58], rb: [2, 18], wr: [4, 34], te: [2, 19], db: [2, 22] },
+    money: { qb: [8, 58], rb: [2, 18], wr: [4, 34], te: [2, 19], db: [2, 22], dl: [3, 44] },
+    // (a career's range: S.moneyOf. An elite edge is paid past a top receiver, a tackle tops out about $32M)
+    moneyOf: c => (c.pos === 'dl' && dlSpot(c) === 'dt' ? [2, 32] : SPORT.nfl.money[c.pos]),
     primeNote: pos => { const S = SPORT.nfl; return `Physical traits can be trained until ${S.trainUntil(pos)} and start to fade at ${S.declineAt(pos)}; skills and reads can be trained any time. Big injuries and a fragile body can cost you a grade.` },
   },
   bucket: {
@@ -291,6 +334,7 @@ export const SPORT = {
     step: 10, gameWord: 'GAME', snaps: 'minutes', injScale: 17 / 82, moneyWord: 'points',
     injuries: [['ankle sprain', 3, 8], ['knee soreness', 4, 10], ['hamstring strain', 6, 14], ['concussion', 2, 5], ['back spasms', 3, 7], ['wrist sprain', 5, 12], ['calf strain', 8, 16]],
     money: { guard: [2, 55], big: [2, 52] },
+    moneyOf: c => SPORT.bucket.money[c.pos],
     primeNote: () => { const S = SPORT.bucket; return `Speed and bounce can be trained until ${S.trainUntil()} and start to fade at ${S.declineAt()}; skills can be trained any time. The shot, passing, IQ and clutch never fade. Big injuries and a fragile body can cost you a grade.` },
   },
 }
@@ -307,10 +351,10 @@ export const STARTERS = { ...SPORT.nfl.starters, ...SPORT.bucket.starters }
 export const PO_ROUNDS = SPORT.nfl.rounds
 // a build dressed in its team's colours (the model on Career and on home's Career card)
 export const inTeamColors = (build, fit) => (fit ? Object.fromEntries(Object.entries(build).map(([t, ch]) => [t, ch ? { ...ch, teamColor: fit.color, teamColor2: fit.color2, team: fit.short } : ch])) : build)
-export const STAT_LABEL = { passYds: 'PASS YDS', tds: 'TD', ints: 'INT', rating: 'RTG', rushYds: 'RUSH YDS', rushTDs: 'RUSH TD', compPct: 'CMP%', recYds: 'REC YDS', ypc: 'YPC', fumbles: 'FUM', recs: 'REC', ypr: 'YPR', pbus: 'PD', tackles: 'TKL', pickSixes: 'PICK-6', ppg: 'PPG', rpg: 'RPG', apg: 'APG', spg: 'SPG', bpg: 'BPG', pts: 'PTS', reb: 'REB', ast: 'AST' }
+export const STAT_LABEL = { passYds: 'PASS YDS', tds: 'TD', ints: 'INT', rating: 'RTG', rushYds: 'RUSH YDS', rushTDs: 'RUSH TD', compPct: 'CMP%', recYds: 'REC YDS', ypc: 'YPC', fumbles: 'FUM', recs: 'REC', ypr: 'YPR', pbus: 'PD', tackles: 'TKL', pickSixes: 'PICK-6', sacks: 'SCK', tfl: 'TFL', qbHits: 'QB HITS', ff: 'FF', fr: 'FR', safeties: 'SFTY', ppg: 'PPG', rpg: 'RPG', apg: 'APG', spg: 'SPG', bpg: 'BPG', pts: 'PTS', reb: 'REB', ast: 'AST' }
 export const HEADLINE_STATS = { ...SPORT.nfl.headline, ...SPORT.bucket.headline }
 // more numbers where there's room (the season wrap, the career totals): a QB's legs
-export const EXTRA_STATS = { qb: ['rushYds', 'rushTDs'] }
+export const EXTRA_STATS = { qb: ['rushYds', 'rushTDs'], dl: ['qbHits', 'ff'] }
 export const ovrOf = (pos, build, sport = null) => (sport ? SPORT[sport] : SPORT.bucket.positions.includes(pos) ? SPORT.bucket : SPORT.nfl).ovr(pos, build) ?? 0
 const sportForPos = pos => (SPORT.bucket.positions.includes(pos) ? SPORT.bucket : SPORT.nfl)
 const fmtStat = v => (typeof v === 'number' && !Number.isInteger(v) ? v.toFixed(1) : (v ?? 0).toLocaleString())
@@ -396,14 +440,24 @@ export const ovrGradeVal = ovr => clamp((ovr - 60) / 3.5, 0, 11)
 export const gradeOfOvr = ovr => valToGrade(ovrGradeVal(ovr))
 export const gradeOf = v => valToGrade(clamp(v, 0, 11))
 const hashN = s => { let h = 7; for (const ch of String(s)) h = (h * 31 + ch.charCodeAt(0)) | 0; return Math.abs(h) }
+// A saved roster missing a whole group: that team's real group for the year this career is in
+function withGroups(c, ro, short) {
+  const S = sportOf(c)
+  const missing = S.groups.filter(g => !Array.isArray(ro[g]))
+  if (!missing.length) return { ...ro }
+  const made = makeRoster(short, c.sport, rosterYrs(c), outOf(c, short))
+  return { ...ro, ...Object.fromEntries(missing.map(g => [g, made[g]])) }
+}
 // Real ages: the birth year against the season (yrs = seasons past the first)
 const born = (sport, name) => BIRTH[sport === 'bucket' ? 'bucket' : 'nfl'][name]
 const ageOf = (sport, name, yrs = 0) => (born(sport, name) ? FIRST_SEASON - born(sport, name) : 23 + (hashN(name) % 6)) + yrs
 // how long a position lasts: gone at the cap, maybe gone in the two years before it
 const RETIRE_AT = { qb: 41, rb: 33, wr: 35, te: 35, ol: 36, db: 35, dl: 35, lb: 35, guard: 38, big: 38 }
+// a real player too old to be on a team this many seasons on (room: years short of the cap that already count). Year one is today's league as it is.
+const pastCap = (sport, g, name, yrs, room = 0) => yrs > 0 && ageOf(sport, name, yrs) >= RETIRE_AT[g] - room
 // how many seasons past the first a roster is for (in the offseason, the one coming up)
 const rosterYrs = c => Math.max(0, (c.season ?? FIRST_SEASON) + (c.phase === 'offseason' ? 1 : 0) - FIRST_SEASON)
-const man = (S, pos, p, yrs = 0) => ({ name: p.name, pos, ovr: S.realOvr(pos, p), age: ageOf(S.id, p.name, yrs), photo: S.photo(p.name), slot: p.pos ?? p.subpos ?? null, from: p.team })
+const man = (S, pos, p, yrs = 0) => ({ name: p.name, pos, ovr: S.realOvr(pos, p), age: ageOf(S.id, p.name, yrs), photo: p.headshot ? nflHeadshot(p.headshot) : S.photo(p.name), slot: p.pos ?? p.subpos ?? null, from: p.team, ...(pos === 'dl' ? { height: p.height, weight: p.weight, size: p.attrs?.size } : {}) })
 const byOvr = (a, b) => b.ovr - a.ovr
 const avgOvr = list => (list.length ? list.reduce((s, p) => s + p.ovr, 0) / list.length : 72)
 // A team's real roster (the depth the lineup needs, the five starting linemen in football)
@@ -414,11 +468,20 @@ function realAges(c0) {
   const left = c0.contract?.left
   const c = left == null || left > 0 ? c0 : { ...c0, contract: { ...c0.contract, left: c0.phase === 'preseason' || c0.phase === 'season' ? 1 : 0 } }
   const yrs = rosterYrs(c)
-  const ro = { ...c.roster }
   const S = sportOf(c)
+  // a group this save has never heard of (a career from before the line was in the game): the team's real one, years on
+  const ro = c.team ? withGroups(c, c.roster, c.team) : { ...c.roster }
   for (const g of S.groups) if (Array.isArray(ro[g])) ro[g] = ro[g].map(p => (born(c.sport, p.name) && !p.rookie ? { ...p, age: ageOf(c.sport, p.name, yrs) } : p))
-  // a starting spot left empty by an older save (a veteran dropped too early): a rookie fills it
+  // a real player an older save still has past his position's cap (a deadline deal for a 50-year-old): a draft pick has his spot
   const r = seeded(`${c.seed}-fill-${c.year}`)
+  let replaced = false
+  for (const g of S.groups) {
+    if (!Array.isArray(ro[g]) || !ro[g].some(p => born(c.sport, p.name) && !p.rookie && pastCap(c.sport, g, p.name, yrs))) continue
+    replaced = true
+    const taken = new Set(ro[g].map(p => p.name))
+    ro[g] = ro[g].map(p => (born(c.sport, p.name) && !p.rookie && pastCap(c.sport, g, p.name, yrs) ? genPick(r, g, g === 'db' ? spotOf(p) : g === 'dl' ? dlSpotOf(p) : p.slot, taken) : p))
+  }
+  // a starting spot left empty by an older save (a veteran dropped too early): a rookie fills it
   for (const g of S.groups) {
     const slots = S.slots[g]; if (!slots || !Array.isArray(ro[g])) continue
     const missing = slots.filter(sl => !ro[g].some(p => p.slot === sl))
@@ -428,7 +491,8 @@ function realAges(c0) {
     const all = [...ro[g], ...add]
     ro[g] = slots.map(sl => all.find(p => p.slot === sl)).filter(Boolean).concat(all.filter(p => !slots.includes(p.slot))).slice(0, S.keep[g])
   }
-  return { ...c, roster: ro }
+  const next = { ...c, roster: ro }
+  return replaced && c.team && c.fit ? { ...next, fit: fitFor(next) } : next
 }
 // Years into a career the league has lived those years: every season each
 // player is a year older and better or worse for it (the young ones grow, the
@@ -440,7 +504,15 @@ const ageStep = (age, x) => (age <= 24 ? 1 + Math.floor(x * 4) : age <= 27 ? Mat
 // a made-up pick climbs normally to about 82, slowly after that, and tops out at 90 (they were all turning into 95s)
 const grownOvr = (p, step) => (p.rookie && step > 0 && p.ovr >= 82 ? Math.max(p.ovr, Math.min(90, p.ovr + Math.ceil(step / 3))) : p.ovr + step)
 // a pick who'll grow into the job: about 73 at 21-22, a starter by 25, now and then a star
-const genPick = (r, g, slot, taken) => ({ name: freshName(r, taken), pos: g, ovr: clamp(Math.round(73 + (r() + r() + r() - 1.5) * 12), 58, 88), age: 21 + Math.floor(r() * 2), photo: null, slot, rookie: true })
+const genPick = (r, g, slot, taken) => withBody({ name: freshName(r, taken), pos: g, ovr: clamp(Math.round(73 + (r() + r() + r() - 1.5) * 12), 58, 88), age: 21 + Math.floor(r() * 2), photo: null, slot, rookie: true })
+// a made-up lineman's body, fixed by his name (no dice, so nobody else's rolls move): a real edge's or a
+// real tackle's height and weight, and the size grade those give (the same one the real players carry)
+const withBody = p => {
+  if (p.pos !== 'dl') return p
+  const h = hashN(`${p.name}-body`), dt = dlSpotOf(p) === 'dt'
+  const height = (dt ? 73 : 74) + h % 6, weight = dt ? 290 + (h >> 3) % 46 : 245 + (h >> 3) % 36
+  return { ...p, height, weight, size: dlSizeGrade(height, weight) }
+}
 // a made-up name no one on the roster already has (two picks could share one)
 function freshName(r, taken = null) {
   let n = rookieName(r)
@@ -451,11 +523,25 @@ function freshName(r, taken = null) {
 // a DB pick goes where the room is short: a corner or a safety (one with no spot counted as a
 // corner, so over the years the safeties retired and the safety spots went empty)
 const shortSpot = list => { const s = list.filter(p => spotOf(p) === 's').length; return s < list.length - s ? 's' : 'cb' }
+// the same for a line: an edge or a tackle, whichever the room is short of
+const shortLine = list => { const dt = list.filter(p => dlSpotOf(p) === 'dt').length; return dt < list.length - dt ? 'dt' : 'edge' }
+// who a line keeps: the two best at each spot first (two ends and two tackles always start), then the best of the rest
+function keepLine(list, n) {
+  const sorted = [...list].sort(byOvr)
+  const sure = new Set(['edge', 'dt'].flatMap(sp => sorted.filter(p => dlSpotOf(p) === sp).slice(0, 2)))
+  return sorted.filter(p => sure.has(p)).concat(sorted.filter(p => !sure.has(p))).slice(0, n).sort(byOvr)
+}
 // a group's spots filled and in order: an empty starting spot always gets a draft pick, so a lineup never has a hole
 function placeGroup(S, g, list, r) {
   const slots = S.slots[g]
   const taken = new Set(list.map(p => p.name))
   for (const sl of slots ?? []) if (!list.some(p => p.slot === sl)) list.push(genPick(r, g, sl, taken))
+  if (g === 'dl') {
+    for (const sp of ['edge', 'dt']) while (list.filter(p => dlSpotOf(p) === sp).length < 2) list.push(genPick(r, g, sp, taken))
+    // (the rest of the room are backups: a made-up pick never comes in ahead of the men already there)
+    while (list.length < S.keep[g]) { const low = Math.min(...list.map(p => p.ovr)), p = genPick(r, g, shortLine(list), taken); list.push({ ...p, ovr: Math.max(55, Math.min(p.ovr, low - 1)) }) }
+    return keepLine(list, S.keep[g])
+  }
   while (list.length < S.keep[g]) list.push(genPick(r, g, g === 'db' ? shortSpot(list) : null, taken))
   return slots ? slots.map(s => list.find(p => p.slot === s)).filter(Boolean).concat(list.filter(p => !slots.includes(p.slot)).sort(byOvr)).slice(0, S.keep[g]) : list.sort(byOvr).slice(0, S.keep[g])
 }
@@ -481,7 +567,7 @@ function keptRoster(c, short) {
   const k = c.kept?.[short]
   if (!k?.roster || k.roster.team !== short) return null
   const S = sportOf(c), years = rosterYrs(c) - k.yrs
-  if (years <= 0) return k.roster
+  if (years <= 0) return withGroups(c, k.roster, short)
   const r = seeded(`${c.seed}-back-${short}-${k.yrs}`)
   const ro = { team: short, sport: k.roster.sport ?? c.sport }
   for (const g of S.groups) { let list = [...(k.roster[g] ?? [])]; for (let y = 0; y < years; y++) list = ageGroup(S, g, list, r); ro[g] = list }
@@ -494,6 +580,50 @@ const keepRoster = c => (c.team && c.roster?.team === c.team ? { ...(c.kept ?? {
 const outOf = (c, short = null) => [...(c.gone ?? []), ...Object.entries(c.dealt ?? {}).filter(([, t]) => t !== short).map(([n]) => n)]
 const rosterOf = (c, short) => keptRoster(c, short) ?? makeRoster(short, c.sport, rosterYrs(c), outOf(c, short))
 const rosterFor = (c, short = c.team) => (c.roster?.team === short ? c.roster : rosterOf(c, short))
+// The real men in a Key Moment: both teams' starters by group, each with his number, skin, last name and
+// speed (-1 to 1 around a B). Whoever isn't in the data (a drafted name years on) gets a steady made-up look.
+const CAST_NUM = { qb: [3, 19], rb: [20, 39], wr: [10, 19], te: [80, 89], ol: [60, 79], db: [20, 39], dl: [50, 99], guard: [0, 30], big: [10, 55] }
+const CAST_SKIN = ['#8d5a3b', '#5e3c22', '#7a5030', '#c09060', '#f0c4a0', '#9a6840']
+const castData = {}
+const castIndex = S => (castData[S.id] ??= new Map(S.groups.flatMap(g => S.pool[g].map(p => [p.name, p]))))
+const hashOf = t => { let h = 0; for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) | 0; return Math.abs(h) }
+function castMan(S, g, p) {
+  const raw = castIndex(S).get(p.name), h = hashOf(p.name), [lo, hi] = CAST_NUM[g] ?? [10, 99]
+  // his last name: the data's short name if it is one (St. Brown), never a nickname (LUKA)
+  const short = (raw?.short ?? '').replace(/^[A-Z]\.\s*/, '')
+  const words = p.name.replace(/\s+(Jr\.?|Sr\.?|II|III|IV|V)$/i, '').split(' ')
+  const last = short && p.name.replace(/\s+(Jr\.?|Sr\.?|II|III|IV|V)$/i, '').endsWith(short) ? short : words[words.length - 1]
+  return {
+    name: last.toUpperCase(), number: raw?.number ?? lo + h % (hi - lo + 1), skin: raw?.skin ?? CAST_SKIN[h % CAST_SKIN.length],
+    speed: Math.max(-1, Math.min(1, ((raw?.attrs?.speed ?? 6) - 6) / 5)),
+  }
+}
+function castTeam(c, S, short) {
+  const ro = rosterFor(c, short), out = {}
+  for (const g of S.groups) out[g] = [...(ro?.[g] ?? [])].filter(p => p.name !== c.name).sort(byOvr).slice(0, (S.starters[g] ?? 1) + 2).map(p => castMan(S, g, p))
+  // the line stands in its real order, left tackle to right tackle: the games read it by spot
+  if (S.slots?.ol && ro?.ol) {
+    const left = [...ro.ol].filter(p => p.name !== c.name).sort(byOvr)
+    const raw = n => castIndex(S).get(n)
+    const line = S.slots.ol.map(slot => {
+      const i = left.findIndex(p => (p.slot ?? raw(p.name)?.pos ?? raw(p.name)?.subpos) === slot)
+      return i >= 0 ? left.splice(i, 1)[0] : null
+    })
+    out.ol = line.map(p => p ?? left.shift()).filter(Boolean).map(p => castMan(S, 'ol', p))
+  }
+  return out
+}
+// (opp: the other team's short name; a camp plays against its own)
+// which rating gives a position its face (the same as its figure)
+export const FACE_RATING = { qb: 'processing', rb: 'vision', wr: 'awareness', te: 'awareness', db: 'zoneIQ', dl: 'playRecognition', guard: 'basketballIQ', big: 'basketballIQ' }
+export function gameCast(c, opp = null) {
+  const S = sportOf(c)
+  const us = castTeam(c, S, c.team), them = castTeam(c, S, opp ?? c.team)
+  const last = String(c.name ?? 'Guest').trim().split(/\s+/).slice(-1)[0].toUpperCase()
+  const me = { name: last, number: c.number ?? castMan(S, c.pos, { name: c.name ?? 'Guest' }).number, skin: c.skin ?? c.build?.[FACE_RATING[c.pos]]?.skinColor ?? c.build?.skin ?? CAST_SKIN[0], speed: Math.max(-1, Math.min(1, ((c.build?.speed?.val ?? c.build?.legs?.val ?? 6) - 6) / 5)), me: true }
+  us[c.pos] = [me, ...(us[c.pos] ?? [])]
+  return { us, them, me }
+}
 // Where you stand at your spot: the group best-first with you in it. Last
 // year's starter keeps the job in a tie (+2), a starter guarantee keeps it.
 // A DB's spot: a corner or a safety (his build says which); the depth chart is that spot's
@@ -501,11 +631,27 @@ export const dbSpot = c => (c.build?.size?.subpos === 's' ? 's' : 'cb')
 // (a corner or a safety: on the player, else from the DB data by name, for rosters saved before it was kept)
 const DB_SPOT = Object.fromEntries(DBS.map(p => [p.name, p.subpos === 's' ? 's' : 'cb']))
 const spotOf = p => (p.slot === 's' || p.slot === 'cb' ? p.slot : DB_SPOT[p.name] ?? 'cb')
+// A lineman's spot: an edge or a tackle (his build's Size chip says which, like a DB's); two of each start
+export const dlSpot = c => dlBuildSpot(c.build)
+export const dlSpotLabel = sp => (sp === 'dt' ? 'DT' : 'EDGE')
+// (on the player, from the data's EDGE / DT or a pick's edge / dt; else from the DL data by name)
+const DL_SPOT = Object.fromEntries(DLS.map(p => [p.name, p.subpos === 'dt' ? 'dt' : 'edge']))
+function dlSpotOf(p) { const s = String(p.slot ?? '').toLowerCase(); return s === 'edge' || s === 'dt' ? s : DL_SPOT[p.name] ?? 'edge' }
+// the starting line from a room: two ends and two tackles. With his spot, the three beside him
+// (a spot with nobody left borrows the next best man, so a line is never short)
+function dlFront(room, spot = null) {
+  const sorted = [...room].sort(byOvr)
+  const take = (sp, n) => sorted.filter(p => dlSpotOf(p) === sp).slice(0, n)
+  const men = [...take('edge', spot === 'edge' ? 1 : 2), ...take('dt', spot === 'dt' ? 1 : 2)]
+  const want = spot ? 3 : 4
+  for (const p of sorted) if (men.length < want && !men.includes(p)) men.push(p)
+  return men
+}
 export function depthChart(c, roster = c.roster ?? (c.team ? rosterOf(c, c.team) : null)) {
   const S = sportOf(c)
-  // DBs: only the players at his spot (corners with corners, safeties with safeties), two start
-  const db = c.pos === 'db'
-  const group = (roster?.[c.pos] ?? []).filter(p => p.name !== c.name && (!db || spotOf(p) === dbSpot(c)))
+  // DBs: only the players at his spot (corners with corners, safeties with safeties), two start; a line the same (edges, tackles)
+  const db = c.pos === 'db', dl = c.pos === 'dl'
+  const group = (roster?.[c.pos] ?? []).filter(p => p.name !== c.name && (db ? spotOf(p) === dbSpot(c) : !dl || dlSpotOf(p) === dlSpot(c)))
   const me = { name: c.name, pos: c.pos, ovr: c.ovr, age: c.age, you: true }
   // last year's starter keeps it in a tie; the coaches trust a good name (+1) and doubt a bad one (−1)
   const trust = (c.rep ?? 5) >= 8 ? 1 : (c.rep ?? 5) <= 3 ? -1 : 0
@@ -523,8 +669,8 @@ export function depthChart(c, roster = c.roster ?? (c.team ? rosterOf(c, c.team)
     all.splice(him && w?.kind !== 'traded' ? at : Math.min(at, all.length), 0, me)
   }
   const idx = all.findIndex(p => p.you)
-  const starters = db ? 2 : S.starters[c.pos]
-  return { all, idx, starters, starter: idx < starters, ahead: all.slice(0, idx), label: db ? `${dbSpot(c) === 's' ? 'S' : 'CB'}${idx + 1}` : S.depthLabel(c.pos, idx + 1) }
+  const starters = db || dl ? 2 : S.starters[c.pos]
+  return { all, idx, starters, starter: idx < starters, ahead: all.slice(0, idx), label: dl ? `${dlSpotLabel(dlSpot(c))}${idx + 1}` : db ? `${dbSpot(c) === 's' ? 'S' : 'CB'}${idx + 1}` : S.depthLabel(c.pos, idx + 1) }
 }
 // The starters, you in your spot if you've won it
 export function lineup(c, roster = c.roster ?? (c.team ? rosterOf(c, c.team) : null)) {
@@ -545,16 +691,36 @@ export function lineup(c, roster = c.roster ?? (c.team ? rosterOf(c, c.team) : n
     for (const p of rest) if (them.length < 2 && !them.includes(p)) them.push(p)
     out.db = [...shown, ...them.slice(0, 2).map(p => ({ ...p, slot: other }))]
   }
+  // a line: his spot's two starters (him among them if he's won it) and the other spot's two
+  if (c.pos === 'dl') {
+    const mine = dlSpot(c), other = mine === 'dt' ? 'edge' : 'dt'
+    const seen = new Set()
+    const shown = dc.all.filter(p => !seen.has(p.name) && (seen.add(p.name), true)).slice(0, 2).map(p => ({ ...p, slot: p.you ? mine : dlSpotOf(p) }))
+    seen.clear(); shown.forEach(p => seen.add(p.name))
+    const rest = (roster?.dl ?? []).filter(p => p.name !== c.name && !seen.has(p.name) && (seen.add(p.name), true))
+    const them = rest.filter(p => dlSpotOf(p) === other).sort(byOvr).slice(0, 2)
+    for (const p of rest) if (them.length < 2 && !them.includes(p)) them.push(p)
+    out.dl = [...shown, ...them.slice(0, 2).map(p => ({ ...p, slot: other }))]
+  }
+  // the other unit of a defense, for the full formation: its best two at each spot
+  const twoEach = (list, spot, a, b) => {
+    const best = (list ?? []).filter(p => p.name !== c.name).sort(byOvr)
+    const A = best.filter(p => spot(p) === a).slice(0, 2), B = best.filter(p => spot(p) === b).slice(0, 2)
+    for (const p of best) { if (A.includes(p) || B.includes(p)) continue; if (A.length < 2) A.push(p); else if (B.length < 2) B.push(p) }
+    return [...A.map(p => ({ ...p, slot: a })), ...B.map(p => ({ ...p, slot: b }))]
+  }
+  if (c.pos === 'db') out.dl = twoEach(roster?.dl, dlSpotOf, 'edge', 'dt')
+  if (c.pos === 'dl') out.db = twoEach(roster?.db, spotOf, 'cb', 's')
   // everyone not starting, all positions, best first (basketball's bench)
   const reserves = S.groups.flatMap(g => (g === c.pos ? dc.all : roster?.[g] ?? []).slice(S.starters[g])).sort((a, b) => b.ovr - a.ovr)
   return { ...out, bench: dc.all.slice(dc.starters), reserves, depth: dc }
 }
 // Grades (0–11) for the pieces of the team around you, from the roster you'd play with
-export function teamFit(short, pos, { roster = null, league = null, name = null, sport = 'nfl', yrs = 0, gone = [] } = {}) {
+export function teamFit(short, pos, { roster = null, league = null, name = null, sport = 'nfl', yrs = 0, gone = [], spot = null } = {}) {
   const S = SPORT[sport] ?? SPORT.nfl
   const t = S.teamOf(short)
   const ro = roster?.team === short ? roster : makeRoster(short, sport, yrs, gone)
-  const f = S.fit(ro, pos, p => p.name !== name)
+  const f = S.fit(ro, pos, p => p.name !== name, spot)
   const drift = league?.[short] ?? { off: 0, def: 0 }
   const off = clamp(r10(t.off + drift.off), 1, 10), def = clamp(r10(t.def + drift.def), 1, 10)
   return {
@@ -562,7 +728,8 @@ export function teamFit(short, pos, { roster = null, league = null, name = null,
     ...f, adj: clamp(Math.round(f.adj * 2) / 2, -1.5, 1.5),
   }
 }
-const fitFor = (c, short = c.team) => teamFit(short, c.pos, { roster: c.roster, league: c.league, name: c.name, sport: c.sport, yrs: rosterYrs(c), gone: outOf(c, short) })
+const lineSpot = c => (c.pos === 'dl' ? dlSpot(c) : null)
+const fitFor = (c, short = c.team) => teamFit(short, c.pos, { roster: c.roster, league: c.league, name: c.name, sport: c.sport, yrs: rosterYrs(c), gone: outOf(c, short), spot: lineSpot(c) })
 function simTeam(c, fit) { const S = sportOf(c); return S.simTeam(S.teamOf(c.team), fit, c.nextMods ?? {}, c) }
 // ── The front office deals for a player (the trade deadline) ─────────────────
 // He joins the roster for real: in his own spot (a lineman) or by his overall,
@@ -578,7 +745,7 @@ function rosterWith(c, p, g) {
   if (slots && slots.includes(add.slot)) list = list.map(x => (x.slot === add.slot ? { ...x, slot: null } : x))
   else if (slots) add.slot = null
   list = [...list, add]
-  ro[g] = slots ? slots.map(sl => list.find(x => x.slot === sl)).filter(Boolean).concat(list.filter(x => !slots.includes(x.slot)).sort(byOvr)).slice(0, S.keep[g]) : list.sort(byOvr).slice(0, S.keep[g])
+  ro[g] = g === 'dl' ? keepLine(list, S.keep[g]) : slots ? slots.map(sl => list.find(x => x.slot === sl)).filter(Boolean).concat(list.filter(x => !slots.includes(x.slot)).sort(byOvr)).slice(0, S.keep[g]) : list.sort(byOvr).slice(0, S.keep[g])
   return ro
 }
 // the team the sim plays, and its grades, with a given roster
@@ -604,8 +771,10 @@ function dealsFor(c) {
     // and never one who takes the career's own starting job
     ok: (p, g) => {
       if (!S.groups.includes(g) || mine.has(p.name) || out.has(p.name) || p.name === c.name) return false
+      // (the same line a free-agent signing has: years on, the real players age out of the deadline too)
+      if (pastCap(S.id, g, p.name, rosterYrs(c), 1)) return false
       const o = S.realOvr(g, p), list = ro[g] ?? []
-      const vs = S.slots[g] ? list.find(x => x.slot === (p.pos ?? p.subpos)) : list[Math.min(list.length, S.starters[g]) - 1]
+      const vs = g === 'dl' ? list.filter(x => dlSpotOf(x) === dlSpotOf(p)).sort(byOvr)[1] : S.slots[g] ? list.find(x => x.slot === (p.pos ?? p.subpos)) : list[Math.min(list.length, S.starters[g]) - 1]
       if (vs && o <= vs.ovr) return false
       if (g === c.pos && startsNow && !depthChart({ ...c, roster: rosterWith({ ...c, roster: ro }, p, g) }).starter) return false
       const f = fx(p, g)
@@ -618,7 +787,8 @@ function dealsFor(c) {
 function signDeal(c, tr) {
   const S = sportOf(c)
   const p = (S.pool[tr.group] ?? []).find(x => x.name === tr.name)
-  if (!p) return c
+  // (a card an older save still has open can name someone past his cap: no deal)
+  if (!p || pastCap(S.id, tr.group, p.name, rosterYrs(c))) return c
   const ro = c.roster ?? rosterOf(c, c.team)
   const roster = rosterWith({ ...c, roster: ro }, p, tr.group)
   const left = (ro[tr.group] ?? []).filter(x => !roster[tr.group].some(y => y.name === x.name)).map(x => x.name)
@@ -650,17 +820,22 @@ function rosterMoves(c, r) {
   const old = rosterFor(c)
   const ro = { team: old.team, sport: c.sport }
   const moves = []
-  const taken = new Set(S.groups.flatMap(g => old[g].map(p => p.name)))
-  const grow = age => ageStep(age, r())   // the same curve as the rest of the league (makeRoster)
-  const gl = g => (S.isBucket ? (g === 'guard' ? 'G' : 'F/C') : g.toUpperCase())
+  // (the line rolls its own dice and keeps its own names, so everyone else's moves come out as they did before it)
+  const taken0 = new Set(S.groups.filter(g => g !== 'dl').flatMap(g => (old[g] ?? []).map(p => p.name)))
+  const takenDL = new Set((old.dl ?? []).map(p => p.name))
+  const rDL = seeded(`${c.seed}-off-dl-${c.year}`)
+  const r0 = r
+  const gl = (g, p = null) => (S.isBucket ? (g === 'guard' ? 'G' : 'F/C') : g === 'dl' && p ? dlSpotLabel(dlSpotOf(p)) : g.toUpperCase())
   for (const g of S.groups) {
+    const r = g === 'dl' ? rDL : r0, taken = g === 'dl' ? takenDL : taken0
+    const grow = age => ageStep(age, r())   // the same curve as the rest of the league (makeRoster)
     const kept = []
-    for (const p0 of old[g]) {
+    for (const p0 of old[g] ?? []) {
       const p = { ...p0, age: p0.age + 1, ovr: clamp(grownOvr(p0, grow(p0.age + 1)), 55, 99) }
-      if (p.age >= RETIRE_AT[g] || (p.age >= RETIRE_AT[g] - 2 && r() < 0.35)) { moves.push({ kind: 'retire', pos: g, text: `${p.name} retires after ${p.age - 22} seasons.`, p }); continue }
+      if (p.age >= RETIRE_AT[g] || (p.age >= RETIRE_AT[g] - 2 && r() < 0.35)) { moves.push({ kind: 'retire', pos: g, label: gl(g, p), text: `${p.name} retires after ${p.age - 22} seasons.`, p }); continue }
       if (p.age > 25 && r() < 0.11) {   // the young ones are still on rookie deals
         const to = S.teams[Math.floor(r() * S.teams.length)].short
-        if (to !== ro.team) { moves.push({ kind: 'leave', pos: g, text: `${p.name} leaves in free agency for the ${nickOf(S, to)}.`, p }); continue }
+        if (to !== ro.team) { moves.push({ kind: 'leave', pos: g, label: gl(g, p), text: `${p.name} leaves in free agency for the ${nickOf(S, to)}.`, p }); continue }
       }
       kept.push(p)
     }
@@ -668,25 +843,28 @@ function rosterMoves(c, r) {
     const slots = S.slots[g]
     while (kept.length < S.keep[g]) {
       const need = slots ? (slots.find(s => !kept.some(p => p.slot === s)) ?? null) : null
+      // (a line signs and drafts at the spot it's short of)
+      const lineNeed = g === 'dl' ? shortLine(kept) : null
       if (r() < 0.55) {
-        const pool = S.pool[g].filter(p => p.team !== ro.team && !taken.has(p.name) && !outOf(c).includes(p.name) && (!need || p.pos === need))
+        const pool = S.pool[g].filter(p => p.team !== ro.team && !taken.has(p.name) && !outOf(c).includes(p.name) && (!need || p.pos === need) && (!lineNeed || p.subpos === lineNeed))
         const pick = pool[Math.floor(r() * pool.length)]
         if (pick) {
           const p = { ...man(S, g, pick, rosterYrs(c)), slot: need ?? pick.pos ?? null }
           if (p.age >= RETIRE_AT[g] - 1) continue
           taken.add(p.name); kept.push(p)
-          moves.push({ kind: 'sign', pos: g, text: `Signed ${gl(g)} ${p.name} from the ${nickOf(S, pick.team)}.`, p })
+          moves.push({ kind: 'sign', pos: g, label: gl(g, p), text: `Signed ${gl(g, p)} ${p.name} from the ${nickOf(S, pick.team)}.`, p })
           continue
         }
       }
       const rd = 1 + Math.floor(r() * S.draft.rounds)
       // (at a one-starter position, your pick comes in behind you: a backup, not a new star)
       const pickOvr = clamp(Math.round(79 - rd * (S.isBucket ? 3 : 1.5) + (r() + r() - 1) * 8), 60, 88)
-      const p = { name: freshName(r, new Set([...taken, ...kept.map(x => x.name)])), pos: g, ovr: g === c.pos && S.starters[g] === 1 ? Math.max(60, Math.min(pickOvr, c.ovr - 8)) : pickOvr, age: 22, photo: null, slot: need ?? (g === 'db' ? shortSpot(kept) : null), rookie: true }
+      const p0 = { name: freshName(r, new Set([...taken, ...kept.map(x => x.name)])), pos: g, ovr: g === c.pos && S.starters[g] === 1 ? Math.max(60, Math.min(pickOvr, c.ovr - 8)) : pickOvr, age: 22, photo: null, slot: need ?? lineNeed ?? (g === 'db' ? shortSpot(kept) : null), rookie: true }
+      const p = withBody(p0)
       kept.push(p)
-      moves.push({ kind: 'draft', pos: g, text: `Drafted ${gl(g)} ${p.name} in round ${rd}.`, p })
+      moves.push({ kind: 'draft', pos: g, label: gl(g, p), text: `Drafted ${gl(g, p)} ${p.name} in round ${rd}.`, p })
     }
-    ro[g] = slots ? slots.map(s => kept.find(p => p.slot === s)).filter(Boolean).concat(kept.filter(p => !slots.includes(p.slot))).slice(0, S.keep[g]) : kept.sort(byOvr)
+    ro[g] = g === 'dl' ? keepLine(kept, Math.max(S.keep[g], kept.length)) : slots ? slots.map(s => kept.find(p => p.slot === s)).filter(Boolean).concat(kept.filter(p => !slots.includes(p.slot))).slice(0, S.keep[g]) : kept.sort(byOvr)
   }
   // sometimes they bring in competition at your spot. Where only one starts (QB, RB, TE): never
   // at a star's (88+), rarely at a good starter's (80+), and not while the last young one's around.
@@ -696,9 +874,9 @@ function rosterMoves(c, r) {
   if (r() < rivalOdds && !(oneJob && (ro[c.pos] ?? []).some(p => p.rookie && p.age <= 24))) {
     const rd = 1 + Math.floor(r() * 2)
     // (at your own spot: a safety's rival is a safety)
-    const p = { name: freshName(r, new Set((ro[c.pos] ?? []).map(x => x.name))), pos: c.pos, ovr: clamp(Math.round(c.ovr - 6 + r() * 8), 64, 84), age: 22, photo: null, rookie: true, ...(c.pos === 'db' ? { slot: dbSpot(c) } : {}) }
-    ro[c.pos] = [...ro[c.pos], p].sort(byOvr).slice(0, S.keep[c.pos])
-    moves.push({ kind: 'rival', pos: c.pos, text: `The ${nickOf(S, ro.team)} draft ${S.label[c.pos]} ${p.name} in round ${rd}. Competition for your ${S.snaps}.`, p })
+    const p = withBody({ name: freshName(r, new Set((ro[c.pos] ?? []).map(x => x.name))), pos: c.pos, ovr: clamp(Math.round(c.ovr - 6 + r() * 8), 64, 84), age: 22, photo: null, rookie: true, ...(c.pos === 'db' ? { slot: dbSpot(c) } : c.pos === 'dl' ? { slot: dlSpot(c) } : {}) })
+    ro[c.pos] = c.pos === 'dl' ? keepLine([...ro.dl, p], S.keep.dl) : [...ro[c.pos], p].sort(byOvr).slice(0, S.keep[c.pos])
+    moves.push({ kind: 'rival', pos: c.pos, label: gl(c.pos, p), text: `The ${nickOf(S, ro.team)} draft ${c.pos === 'dl' ? gl('dl', p) : S.label[c.pos]} ${p.name} in round ${rd}. Competition for your ${S.snaps}.`, p })
   }
   return { roster: ro, moves }
 }
@@ -785,41 +963,73 @@ export const INTERVIEWS = {
       { t: 'Not even close. Me, then everyone else.', stock: -1, persona: 'cocky' } ] },
   ],
 }
+// A lineman's room: nobody asks him where the ball goes. The offensive questions swap for these
+const DL_INTERVIEWS = [
+  { who: 'Defensive line coach', q: 'The tackle sets vertical on you and jumps out fast. What\'s the counter?', a: [
+    { t: 'Long arm right into his chest. If he\'s jumping out, he\'s already off balance.', stock: 2, persona: 'confident' },
+    { t: 'Inside move off the first step. Make him pay for overplaying the edge.', stock: 1, persona: 'grinder' },
+    { t: 'Doesn\'t matter. I just run past him.', stock: -1, persona: 'cocky' } ] },
+  { who: 'Defensive coordinator', q: 'Third and two, they\'re in shotgun, and the guard\'s weight is back. What are you thinking?', a: [
+    { t: 'Pass. Get off on the ball and win the gap, but finish the rush lane.', stock: 2, persona: 'grinder' },
+    { t: 'He\'s tipping it. I\'ll be in the backfield before he sets.', stock: 1, persona: 'confident' },
+    { t: 'I don\'t read guards. I rush the passer.', stock: -1, persona: 'cocky' } ] },
+  { who: 'Defensive coordinator', q: 'We\'d ask you to two-gap on early downs. Fewer sacks, more dirty work. Problem?', a: [
+    { t: 'No. If the run stops, I get the third downs I want.', stock: 2, persona: 'grinder' },
+    { t: 'I\'ll do it, and I\'ll still get mine on third down.', stock: 1, persona: 'confident' },
+    { t: 'You\'re not paying me to take on doubles.', stock: -2, persona: 'cocky' } ] },
+  { who: 'Head coach', q: 'Tell me about the last time you got benched.', a: [
+    { t: 'Junior year, three offsides in a half. I fixed it, and I earned it back.', stock: 2, persona: 'grinder' },
+    { t: 'I haven\'t been benched since high school.', stock: 0, persona: 'confident' },
+    { t: 'It was the coach\'s fault, honestly.', stock: -2, persona: 'cocky' } ] },
+]
+const DL_SWAPS = q => q.who !== 'Offensive coordinator' && !/benched/.test(q.q)
 // The combine: three quick drills (components/app/MiniGame.jsx). A counted drill
 // (reps, catches, nets, shots) shows exactly what was done in it: the trait already
 // sets how hard the drill plays. A measured one (40, cone, velocity, vertical)
 // starts from the trait's real-world range, and the run moves it inside that.
 // pct (about -1 to 1) is where it lands against a typical prospect, for the scouts.
 export const COMBINE_DRILLS = { ...SPORT.nfl.combine, ...SPORT.bucket.combine }
-const drillValue = (id, v, score, raw) => {
+const drillValue = (id, v, score, raw, pos) => {
   const t = clamp(v, 0, 11) / 11, run = score - 0.6               // run: a decent go is about 0
   const cnt = (of, lo = 0) => (raw?.made != null ? raw.made : Math.round(lo + score * (of - lo)))
   const pc = x => clamp(x, -1, 1)
   switch (id) {
-    case 'forty': { const s = 4.95 - t * 0.6 - run * 0.2; return { text: `${s.toFixed(2)}s`, pct: pc((4.62 - s) / 0.22) } }
-    case 'sprint': { const s = 3.55 - t * 0.4 - run * 0.14; return { text: `${s.toFixed(2)}s`, pct: pc((3.33 - s) / 0.15) } }
+    case 'forty': { const s = raw?.secs ?? dashTarget(id, pos, v) + 0.1 - run * 0.2; return { text: `${s.toFixed(2)}s`, pct: pc((dashTypical(id, pos) - s) / 0.22) } }
+    case 'sprint': { const s = raw?.secs ?? dashTarget(id, pos, v) + 0.08 - run * 0.14; return { text: `${s.toFixed(2)}s`, pct: pc((dashTypical(id, pos) - s) / 0.15) } }
     // real combine throws run about 50-62 mph (Josh Allen's 62 among the best)
-    case 'velo': { const m = Math.round(48 + t * 12 + run * 6); return { text: `${m} mph`, pct: pc((m - 55) / 5) } }
-    case 'vert': { const i = r10(26 + t * 16 + run * 7); return { text: `${i}" vertical`, pct: pc((i - 33) / 6) } }
-    case 'cone': { const of = raw?.of ?? 6, slips = of - cnt(of, 2); const s = 7.45 - t * 0.75 + slips * 0.07 - run * 0.08; return { text: `${s.toFixed(2)}s`, pct: pc((7.05 - s) / 0.3) } }
-    case 'lane': { const of = raw?.of ?? 6, slips = of - cnt(of, 2); const s = 11.9 - t * 1.4 + slips * 0.12 - run * 0.15; return { text: `${s.toFixed(2)}s`, pct: pc((11.2 - s) / 0.6) } }
+    case 'velo': { const m = raw?.mph ?? Math.round(48 + t * 12 + run * 6); return { text: `${m} mph`, pct: pc((m - 55) / 5) } }
+    case 'vert': { const i = raw?.inches ?? r10(26 + t * 16 + run * 7); return { text: `${i}" vertical`, pct: pc((i - 33) / 6) } }
+    case 'cone': {
+      // (raw.secs is the drill's clock, which already runs on the player's own scale)
+      const shift = coneShift(pos)
+      const of = raw?.of ?? 6, slips = of - cnt(of, 2); const s = raw?.secs ?? 7.45 + shift - t * 0.75 + slips * 0.07 - run * 0.08
+      return { text: `${s.toFixed(2)}s`, pct: pc((7.05 + shift - s) / 0.3) }
+    }
+    case 'lane': { const of = raw?.of ?? 6, slips = of - cnt(of, 2); const s = raw?.secs ?? 11.9 - t * 1.4 + slips * 0.12 - run * 0.15; return { text: `${s.toFixed(2)}s`, pct: pc((11.2 - s) / 0.6) } }
     case 'acc': { const of = raw?.of ?? 4, m = cnt(of); return { text: `${m} of ${of} completed`, pct: pc((m / of - 0.55) * 2.2) } }
     case 'spot': { const of = raw?.of ?? 4, m = cnt(of); return { text: `${m} of ${of} made`, pct: pc((m / of - 0.5) * 2.2) } }
     case 'gauntlet': { const of = raw?.of ?? 7, m = cnt(of, 2); return { text: `${m} of ${of} caught`, pct: pc((m / of - 0.7) * 3.3) } }
-    case 'bench': { const n = raw?.reps ?? Math.round(8 + score * 22); return { text: `${n} reps`, pct: pc((n - 18) / 8) } }
-    case 'nbench': { const n = raw?.reps ?? Math.round(4 + score * 16); return { text: `${n} reps`, pct: pc((n - 10) / 6) } }
+    case 'bench': { const typ = benchTypical(id, pos), n = raw?.reps ?? Math.round(typ * (0.45 + score * 1.1)); return { text: `${n} reps`, pct: pc((n - typ) / 8) } }
+    case 'nbench': { const typ = benchTypical(id, pos), n = raw?.reps ?? Math.round(typ * (0.45 + score * 1.1)); return { text: `${n} reps`, pct: pc((n - typ) / 6) } }
     default: return { text: '—', pct: 0 }
   }
 }
+// who the combine's norms read: a lineman runs by his spot (a tackle isn't timed like an edge)
+export const combinePos = c => (c.pos === 'dl' ? dlSpot(c) : c.pos)
+// Skipping the rest of the workout: scouts write down a poor one, whatever the trait
+export function skipCombine(c) {
+  const combine = c.draft.combine.map(d => (d.score != null ? d : { ...d, score: 0.3, ...drillValue(d.id, Math.min(c.build[d.trait]?.val ?? 5, 3), 0.3, null, combinePos(c)) }))
+  return { ...c, draft: { ...c.draft, combine } }
+}
 export function recordCombine(c, id, score, raw = null) {
-  const combine = c.draft.combine.map(d => (d.id === id ? { ...d, score, ...drillValue(id, c.build[d.trait]?.val ?? 5, score, raw) } : d))
+  const combine = c.draft.combine.map(d => (d.id === id ? { ...d, score, ...drillValue(id, c.build[d.trait]?.val ?? 5, score, raw, combinePos(c)) } : d))
   return { ...c, draft: { ...c.draft, combine } }
 }
 const maxPick = S => S.teams.length * S.draft.rounds
 export const pickLabel = (overall, sport = 'nfl') => { const n = (SPORT[sport] ?? SPORT.nfl).teams.length; const round = Math.ceil(overall / n); return { round, slot: overall - (round - 1) * n } }
 export function stockOf(c) {
   const S = sportOf(c), d = c.draft
-  const [lo0, hi0] = S.draft.stock(c.ovr, c.pos)
+  const [lo0, hi0] = S.draft.stock(c.ovr, c.pos, c)
   // the combine moves the window, the interviews too (less, in a two-round draft).
   // A combine barely moves a top pick (the tape already decided it) and can be
   // worth a round or more to a mid-rounder
@@ -856,6 +1066,11 @@ export function teamPick(c, team) {
 }
 // How a room took an answer
 export const REACTION = st => (st >= 2 ? 'Loved it' : st >= 1 ? 'Liked it' : st === 0 ? 'No change' : st >= -1 ? 'Not a fan' : 'Turned off')
+// How much this team wants this position at this round, from its roster (basketball: need alone)
+function wantFor(c, short, round) {
+  const want = sportOf(c).draft.want
+  return want ? want(makeRoster(short, c.sport), c.pos, round) : 1
+}
 // The order: worst teams first, with some noise
 function draftOrder(c) {
   const S = sportOf(c)
@@ -880,8 +1095,10 @@ export function setupInterviews(c) {
   const { lo, hi } = stockOf(c)
   const near = []
   for (let o = Math.max(1, lo - 6); o <= Math.min(maxPick(S), hi + 6) && near.length < N; o++) { const t = order[(o - 1) % N]; if (!near.includes(t)) near.push(t) }
-  const teams = near.sort(() => r() - 0.5).slice(0, 4)
-  const qs = [...(INTERVIEWS[c.sport] ?? INTERVIEWS.nfl)].sort(() => r() - 0.5).slice(0, teams.length)
+  // (the rooms that actually want the position; a random order among them)
+  const wantOf = t => wantFor(c, t, Math.ceil(order.indexOf(t) < 0 ? 1 : pickLabel(clamp(teamPick(c, t), 1, maxPick(S)), c.sport).round))
+  const teams = near.map(t => ({ t, k: Math.pow(r(), 1 / Math.max(0.001, wantOf(t))) })).sort((a, b) => b.k - a.k).slice(0, 4).map(x => x.t)
+  const qs = [...(c.pos === 'dl' ? [...INTERVIEWS.nfl.filter(DL_SWAPS), ...DL_INTERVIEWS] : INTERVIEWS[c.sport] ?? INTERVIEWS.nfl)].sort(() => r() - 0.5).slice(0, teams.length)
   return { ...c, draft: { ...c.draft, interviews: qs.map((q, i) => ({ ...q, a: [...q.a].sort(() => r() - 0.5), team: teams[i], answer: null })) } }   // (the answers in a random order: the best one isn't always first)
 }
 export function newCareer({ sport = 'nfl', uid = null, pos, build, name = 'Guest', slot = 0, owner = null }) {
@@ -920,9 +1137,19 @@ export function runDraft(c) {
   const picks = []
   const interest = {}
   for (const x of c.draft.interviews ?? []) if (x.answer != null) interest[x.team] = (interest[x.team] ?? 0) + x.a[x.answer].stock
-  const need = short => teamFit(short, c.pos, { sport: c.sport }).need
-  const cands = []
-  for (let o = lo; o <= hi; o++) { const team = order[(o - 1) % N]; cands.push({ o, team, w: need(team) ** 2 + 1 + Math.max(0, interest[team] ?? 0) * 8 }) }
+  const need = short => teamFit(short, c.pos, { sport: c.sport, spot: lineSpot(c) }).need
+  const weigh = (team, round) => {
+    const want = wantFor(c, team, round)
+    return { want, w: (need(team) ** 2 + 1 + Math.max(0, interest[team] ?? 0) * 8) * want }
+  }
+  let cands = []
+  for (let o = lo; o <= hi; o++) { const team = order[(o - 1) % N]; cands.push({ o, team, ...weigh(team, pickLabel(o, c.sport).round) }) }
+  // nobody on the clock has a use for him: a team that does trades up to his slot
+  if (Math.max(...cands.map(x => x.want)) < 0.3) {
+    const round = pickLabel(lo, c.sport).round
+    cands = order.map(team => ({ o: lo, team, trade: true, ...weigh(team, round) })).filter(x => x.want >= 1)
+    if (!cands.length) cands = [{ o: lo, team: order[(lo - 1) % N], w: 1 }]
+  }
   const total = cands.reduce((s, x) => s + x.w, 0)
   let roll = r() * total, mine = cands[0]
   for (const x of cands) { roll -= x.w; if (roll <= 0) { mine = x; break } }
@@ -930,14 +1157,19 @@ export function runDraft(c) {
   const names = ['Caleb Rowe', 'D.J. Harrow', 'Malik Sterling', 'Tyrese Oduya', 'Brock Wendell', 'Jalen Pike', 'Mason Trask', 'Kyren Bello', 'Luther Vance', 'Nico Amari', 'Trey Holcomb', 'Zion Marsh', 'Cole Brandt', 'Elijah Rook', 'Dante Ferris', 'Ty Castellano']
   const posList = S.draft.posList
   const from = Math.max(1, mine.o - 6)
-  for (let o = from; o < mine.o; o++) picks.push({ o, ...pickLabel(o, c.sport), team: order[(o - 1) % N], player: names[(o * 7) % names.length], pos: posList[(o * 5) % posList.length] })
-  picks.push({ o: mine.o, ...pickLabel(mine.o, c.sport), team: mine.team, you: true })
+  // (the picks before yours make sense too: no quarterback for a team that has one)
+  const tickerPos = (o, team) => {
+    const p = posList[(o * 5) % posList.length], g = { QB: 'qb', RB: 'rb' }[p]
+    return g && S.draft.want?.(makeRoster(team, c.sport), g, pickLabel(o, c.sport).round) < 0.3 ? ['OT', 'EDGE', 'CB', 'WR'][o % 4] : p
+  }
+  for (let o = from; o < mine.o; o++) { const team = order[(o - 1) % N]; picks.push({ o, ...pickLabel(o, c.sport), team, player: names[(o * 7) % names.length], pos: tickerPos(o, team) }) }
+  picks.push({ o: mine.o, ...pickLabel(mine.o, c.sport), team: mine.team, you: true, trade: !!mine.trade })
   const roster = makeRoster(mine.team, c.sport)
-  const fit = teamFit(mine.team, c.pos, { roster, name: c.name, sport: c.sport })
+  const fit = teamFit(mine.team, c.pos, { roster, name: c.name, sport: c.sport, spot: lineSpot(c) })
   const contract = S.draft.rookie(mine.o)
   const met = (c.draft.interviews ?? []).some(x => x.team === mine.team)
   const lbl = pickLabel(mine.o, c.sport)
-  return { ...c, phase: 'draft', step: 'day', draft: { ...c.draft, picks, pick: picks[picks.length - 1] }, team: mine.team, roster, fit, contract, decisions: [...c.decisions, { year: 1, text: `Drafted in round ${lbl.round}, pick ${lbl.slot} (No. ${mine.o} overall) by the ${fit.name}${met ? ' (they interviewed you)' : ''}` }] }
+  return { ...c, phase: 'draft', step: 'day', draft: { ...c.draft, picks, pick: picks[picks.length - 1] }, team: mine.team, roster, fit, contract, decisions: [...c.decisions, { year: 1, text: `${mine.trade ? 'Traded up and drafted' : 'Drafted'} in round ${lbl.round}, pick ${lbl.slot} (No. ${mine.o} overall) by the ${fit.name}${met ? ' (they interviewed you)' : ''}` }] }
 }
 
 // ── Goals for a season ───────────────────────────────────────────────────────
@@ -948,7 +1180,7 @@ export function runDraft(c) {
 const r1 = x => Math.round(x * 10) / 10
 export const goalsFor = c => {
   const S = sportOf(c)
-  const raw = S.goals[c.pos](c.ovr)
+  const raw = S.goals[c.pos](c.ovr, c)
   const full = raw.map(([k, verb, n, unit]) => ({ k, label: `${verb} ${n.toLocaleString()} ${unit}`, n }))
   const dc = c.team ? depthChart(c) : null
   if (!dc || dc.starter) return full
@@ -969,7 +1201,8 @@ export const seasonStats = (pos, f) => sportForPos(pos).seasonStats(pos, f)
 // A backup still plays (except a backup quarterback): RB2 splits the carries,
 // a fourth receiver or second tight end gets packages, the fifth DB plays
 // nickel. Share of a starter's workload, by how far down the depth chart.
-const SHARE = { rb: [0.45, 0.18], wr: [0.35, 0.15], te: [0.35, 0.12], db: [0.5, 0.25] }
+// (a line rotates more than any room on the team: the third end plays half the snaps)
+const SHARE = { rb: [0.45, 0.18], wr: [0.35, 0.15], te: [0.35, 0.12], db: [0.5, 0.25], dl: [0.55, 0.25] }
 export const backupShare = (pos, beyond) => (SHARE[pos] ? SHARE[pos][beyond] ?? 0.1 : 0)
 const NOT_COUNTS = new Set(['wk', 'g', 'mySc', 'oppSc', 'won', 'long', 'rating', 'compPct', 'ypc', 'ypr', 'catchRate', 'q'])
 const unit = s => { let h = 2166136261; for (const ch of s) h = Math.imul(h ^ ch.charCodeAt(0), 16777619); return (h >>> 0) / 4294967296 }
@@ -1271,10 +1504,24 @@ export function playoffRound(c, score, game = null, hit = score >= 0.5) {
     mySc = Math.round(17 + (c.simTeam?.off ?? 5) * 1.2 + score * 8 + r() * 6); oppSc = won ? Math.max(3, mySc - gap) : mySc + gap
     line = c.pos === 'qb' ? { passYds: n(f.seasonPassYds), tds: n(f.seasonTDs, won ? 1.1 : 0.8), ints: Math.round((1 - score) * 2 * r()), rushYds: n(f.seasonRushYds) }
       : c.pos === 'db' ? { tackles: n(f.seasonTackles), ints: n(f.seasonINTs, won ? 1.4 : 0.6), pbus: n(f.seasonPBUs) }
+      // (sacks come in ones: a rate rounds to the same number every game, so it's a roll around his rate)
+      : c.pos === 'dl' ? (() => { const roll = (sum, mult = 1) => Math.floor(((sum ?? 0) / g) * k * mult + r()); const sacks = roll(f.seasonSacks, won ? 1.25 : 0.75); return { sacks, tfl: sacks + roll(Math.max(0, (f.seasonTFL ?? 0) - (f.seasonSacks ?? 0))), tackles: Math.max(sacks, n(f.seasonTackles)), qbHits: sacks + roll(Math.max(0, (f.seasonQBHits ?? 0) - (f.seasonSacks ?? 0))), ff: roll(f.seasonFF), fr: 0, pbus: roll(f.seasonPBUs), safeties: 0 } })()
       : c.pos === 'rb' ? { rushYds: n(f.seasonRushYds), rushTDs: n(f.seasonRushTDs, won ? 1.2 : 0.7), recTDs: 0, recYds: n(f.seasonRecYds), carries: n(f.seasonCarries) }
       : { rec: n(f.seasonRecs), recYds: n(f.seasonRecYds), recTDs: n(f.seasonRecTDs, won ? 1.3 : 0.6) }
   }
-  const entry = { ...rd, played: true, won, mySc, oppSc, score, hit, auto, game: auto ? null : game, ...line }
+  // a one-game moment: the final grows out of the score it was played at (the odds above decided who won)
+  let swing = null
+  if (!auto && !rd.series && game) {
+    const seed = `${c.seed}-${c.year}-${po.idx}`
+    const end = finalScore(momentSituation(game, seed, { us: c.team, them: rd.opp }), game, won, hit, seed)
+    mySc = end.mine; oppSc = end.opp; swing = end.note
+    // (he can't score the touchdown that won it and have none in the box score)
+    if (hit && (game === 'two-minute' || game === 'goal-line')) {
+      const key = c.pos === 'qb' ? 'tds' : c.pos === 'rb' ? 'rushTDs' : 'recTDs'
+      if (line[key] != null) line[key] = Math.max(1, line[key])
+    }
+  }
+  const entry = { ...rd, played: true, won, mySc, oppSc, score, hit, auto, swing, game: auto ? null : game, ...line }
   const rounds = po.rounds.map((x, i) => (i === po.idx ? entry : x))
   const fin = rd.name === S.final
   const done = !won || fin
@@ -1291,15 +1538,15 @@ export function bookSeason(c) {
   const share = started.length / Math.max(1, (f.games ?? []).length)
   const can = k => share >= S.minGames[k] - 1e-9
   const award = can('award') && S.award(c, f, stats)
-  const allPro = can('first') && S.allPro[c.pos](stats)
+  const allPro = can('first') && S.allPro[c.pos](stats, c)
   const missed = (f.story?.sat ?? 0)
   const benched = c.active.benched?.weeks ?? 0
   const rounds = (po?.line ?? []).map(x => ({ round: x.name, opponent: x.oppName, won: x.won, mySc: x.mySc, oppSc: x.oppSc, series: !!x.series }))
   const fin = rounds.find(x => x.round === S.final)
   const s = {
-    year: c.year + 1, season: c.season, age: c.age, team: c.team, teamName: c.fit.name, ovr: c.ovr, role: c.role,
+    year: c.year + 1, season: c.season, age: c.age, team: c.team, teamName: c.fit.name, ovr: c.ovr, role: c.role, ...(c.pos === 'dl' ? { spot: dlSpot(c) } : {}),
     wins: f.wins, losses: f.losses, playoffs: S.made(f) && !(po?.line?.[0]?.name === 'Play-In' && !po.line[0].won), champion: !!po?.won, rounds, sb: fin ? { won: fin.won, mySc: fin.mySc, oppSc: fin.oppSc, series: fin.series } : null,
-    stats, adv: seasonRaw(c.pos, f, started), award, awardName: S.awardName[c.pos], proBowl: (can('honor') && S.proBowl[c.pos](stats)) || award || allPro, allPro: allPro || (award && S.allProNear[c.pos](stats)),
+    stats, adv: seasonRaw(c.pos, f, started), award, awardName: S.awardName[c.pos], proBowl: (can('honor') && S.proBowl[c.pos](stats, c)) || award || allPro, allPro: allPro || (award && S.allProNear[c.pos](stats, c)),
     missed, benched, records: (f.story?.records ?? []).map(x => x.label ?? x.id), milestones: (f.story?.milestones ?? []).filter(m => m.big).map(m => m.label),
     goals: started.length || c.role !== 'Backup' ? c.goals.map(g => ({ ...g, met: goalMet(g, { stats, wins: f.wins, starts: started.length, startWins: started.filter(x => x.won).length }) })) : [], xp: f.story?.xp ?? 0, bestGame: f.bestGame ?? null,
     poStats: po && po.line.some(x => !x.sat) ? po.line.filter(x => !x.sat).reduce((acc, x) => { for (const k of S.lineKeys) if (x[k] != null) acc[k] = (acc[k] ?? 0) + x[k]; return acc }, { games: po.line.filter(x => !x.sat).length }) : null,
@@ -1313,13 +1560,12 @@ export function bookSeason(c) {
   s.roy = c.seasons.length === 0 && can('honor') && perf >= 0.55
   const finLine = po?.line?.find(x => x.name === S.final)
   s.fmvp = !!po?.won && !!finLine && !finLine.sat && seeded(`${c.seed}-fmvp-${c.year}`)() < (c.role === 'Backup' ? 0.05 : c.pos === 'qb' ? 0.85 : perf >= 0.7 ? 0.8 : perf >= 0.45 ? 0.45 : 0.1)
-  // a development point a year; a second for an award or All-Pro / All-NBA season
+  // a development point a year; one more for an award (MVP, OPOY, DPOY, Rookie of the Year), one more for All-Pro / All-NBA
   // offseason work: 2 points while young, 1 through the prime, none once the body
-  // turns (an award still earns one, and so does camp)
+  // turns (honors still earn theirs, and so does camp)
   const S0 = sportOf(c)
-  // (a running back's career is short and steep: a third point while he's 23 or under)
-  const base = (c.age <= S0.devYoung(c.pos) ? 2 : c.age < S0.devPrime(c.pos) ? 1 : 0) + (c.pos === 'rb' && c.age <= 23 ? 1 : 0)
-  const dev = { ...c.dev, points: c.dev.points + base + (s.award || s.allPro ? 1 : 0) }
+  const base = (c.age <= S0.devYoung(c.pos) ? 2 : c.age < S0.devPrime(c.pos) ? 1 : 0)
+  const dev = { ...c.dev, points: c.dev.points + base + (s.award || s.roy ? 1 : 0) + (s.allPro ? 1 : 0) }
   const rep = clamp(c.rep + (s.goals.filter(g => g.met).length >= 2 ? 1 : 0) + (s.champion ? 1 : 0) - (perf < 0.25 ? 1 : 0), 1, 10)
   const lastRole = benched < (f.wins + f.losses || 17) / 2 ? 'Starter' : 'Backup'
   let next = { ...c, recordBook, phase: 'offseason', seasons: [...c.seasons, s], contract, dev, rep, lastRole, active: null, simTeam: null, goals: [], earnings: r10(c.earnings + c.contract.perYear + (c.shoe?.perYear ?? 0)), nextMods: null, talks: null, tradeAsked: false }
@@ -1422,8 +1668,8 @@ export function campDrill(c, score, game, hit = score >= 0.75) {
 const traitName = (c, t) => POS_ATTR[c.pos][t]?.label ?? t
 // A trait is maxed once it shows S (grades are rounded: 10.5 and up is S)
 // How far offseason work can take a trait: you can't train much height. Size
-// moves twice in a career, the explosive traits (speed, bounce) three times.
-export const UPGRADE_CAP = { size: 2, heightLength: 2, speed: 3, bounce: 3 }
+// moves twice in a career, the explosive traits (speed, bounce, a get-off, bend) three times.
+export const UPGRADE_CAP = { size: 2, heightLength: 2, speed: 3, bounce: 3, getOff: 3, bend: 3 }
 // at the top of the scale, or out of upgrades for that trait
 export const maxedTrait = (v, ch = null, type = null) => Math.round(v ?? 0) >= 11 || (type != null && UPGRADE_CAP[type] != null && (ch?.upgraded ?? 0) >= UPGRADE_CAP[type])
 // The last step costs more: A+ to S takes 2 points, everything else 1
@@ -1438,6 +1684,7 @@ export function trainWindow(c, type) {
 }
 export function canUpgrade(c, type) {
   const ch = c.build[type]
+  if (c.pos === 'dl' && type === 'size') return false   // a lineman's size is his body, not something to train
   if (!ch || maxedTrait(ch.val, ch, type)) return false
   const w = trainWindow(c, type)
   if (w && !w.open) return false
@@ -1459,9 +1706,9 @@ const EVENTS = {
     { id: 'trainer', w: 2, text: () => `A new strength staff and a full offseason in the building. The body feels bulletproof.`, apply: c => ({ durability: r10(Math.min(10, c.durability + 0.6)) }) },
     { id: 'holdout', w: 1, when: c => c.contract.kind === 'rookie' && c.contract.left === 1 && c.rep >= 6, text: () => `The agent wants an extension now. Talks stall into camp.`, apply: c => ({ nextMods: { off: -0.5 }, rep: Math.max(1, c.rep - 1) }) },
     { id: 'captain', w: 2, when: c => c.rep >= 7, text: t => `The ${t} vote you a team captain. The locker room is yours.`, apply: c => ({ rep: Math.min(10, c.rep + 1) }) },
-    { id: 'scheme-fit', w: 2, text: t => `The ${t} redesign the playbook around their best players. More touches are coming.`, apply: () => ({ nextMods: { off: 0.5 } }) },
+    { id: 'scheme-fit', w: 2, text: (t, c) => (c?.pos === 'dl' ? `The ${t} redesign the front around their best players. More one-on-ones are coming.` : `The ${t} redesign the playbook around their best players. More touches are coming.`), apply: c => ({ nextMods: c?.pos === 'dl' ? { def: 0.5 } : { off: 0.5 } }) },
     { id: 'mentor', w: 2, good: true, when: c => c.age <= 25, text: (t, c) => `A ten-year veteran on the ${t} takes ${c.name} under his wing. Film every morning, extra reps every night.`, apply: c => ({ dev: { ...c.dev, points: c.dev.points + 1 } }) },
-    { id: 'built-around', w: 2, good: true, when: c => c.rep >= 6, text: (t, c) => `The ${t} coaching staff builds the game plan around ${c.name}. More touches are coming.`, apply: () => ({ nextMods: { off: 0.75 } }) },
+    { id: 'built-around', w: 2, good: true, when: c => c.rep >= 6, text: (t, c) => (c.pos === 'dl' ? `The ${t} coaching staff builds the front around ${c.name}. More stunts, more one-on-ones.` : `The ${t} coaching staff builds the game plan around ${c.name}. More touches are coming.`), apply: c => ({ nextMods: c?.pos === 'dl' ? { def: 0.75 } : { off: 0.75 } }) },
     { id: 'rift', w: 2, bad: true, when: c => c.rep <= 4, text: t => `Teammates haven't forgotten last year. The ${t} locker room is split, and the coaches notice.`, apply: c => ({ nextMods: { off: -0.5, def: -0.5 }, rep: Math.max(1, c.rep - 1) }) },
     { id: 'camp-tweak', w: 2, bad: true, text: () => `A hamstring tweak in OTAs. Nothing serious, but it lingers into the season.`, apply: c => ({ durability: r10(Math.max(1, c.durability - 0.4)) }) },
     { id: 'line-rebuilt', w: 2, text: t => `The ${t} lose two starting linemen in free agency. The rebuild up front starts now.`, apply: () => ({ nextMods: { off: -0.75 } }) },
@@ -1504,7 +1751,7 @@ function marketValue(c) {
   const last = c.seasons.slice(-2)
   const perf = last.length ? last.reduce((s, x) => s + seasonScore(c.pos, x), 0) / last.length : 0.3
   const ageCut = c.age >= 33 ? 0.6 : c.age >= 30 ? 0.8 : 1
-  const [lo, hi] = S.money[c.pos]
+  const [lo, hi] = S.moneyOf(c)
   // reputation moves the number a little: a good name is worth up to +10%, a bad one −8%
   const repCut = 0.9 + (c.rep ?? 5) * 0.02
   return r10((lo + (hi - lo) * clamp(perf, 0, 1) * ageCut) * repCut)
@@ -1529,7 +1776,7 @@ function contractSituation(c, fresh = false) {
   // a comeback's deals never run past its last season
   const cap = y => (fresh ? 1 : left != null ? Math.min(y, left) : y)
   const years = clamp((c.age >= 32 ? 1 + Math.floor(r() * 2) : c.age >= 29 ? 2 + Math.floor(r() * 2) : 3 + Math.floor(r() * 3)) + repYrs, 1, 6)
-  const fitAt = short => teamFit(short, c.pos, { roster: c.roster, league: c.league, name: c.name, sport: c.sport, yrs: rosterYrs(c), gone: outOf(c, short) })
+  const fitAt = short => teamFit(short, c.pos, { roster: c.roster, league: c.league, name: c.name, sport: c.sport, yrs: rosterYrs(c), gone: outOf(c, short), spot: lineSpot(c) })
   const others = S.teams.filter(t => t.short !== c.team).sort(() => r() - .5).map(t => fitAt(t.short))
   const good = 7, bad = 6
   const contender = others.find(f => (f.off + f.def) / 2 >= good) ?? others[0]
@@ -1537,7 +1784,7 @@ function contractSituation(c, fresh = false) {
   // where you'd stand on each team's depth chart
   const standAt = short => { const dc = depthChart({ ...c, contract: {}, lastRole: short === c.team ? c.lastRole : null }, short === c.team ? c.roster : rosterOf(c, short)); return { starter: dc.starter, behind: dc.ahead[dc.ahead.length - 1]?.name ?? null, label: dc.label } }
   // (never past the position's money range: a payer's premium tops out at the max)
-  const mk = (fit, perYear, yrs, pitch, kind) => ({ team: fit.short, fit, perYear: r10(clamp(perYear, S.money[c.pos][0], S.money[c.pos][1])), years: yrs, pitch, kind, stand: standAt(fit.short) })
+  const mk = (fit, perYear, yrs, pitch, kind) => ({ team: fit.short, fit, perYear: r10(clamp(perYear, S.moneyOf(c)[0], S.moneyOf(c)[1])), years: yrs, pitch, kind, stand: standAt(fit.short) })
   return [
     mk(fitAt(c.team), value * (0.92 + r() * .1), cap(years), fresh ? 'Back where he left off. One more run here.' : 'Stay. Finish what you started here.', 'stay'),
     mk(contender, value * (0.68 + r() * .12), cap(Math.max(1, years - 1)), fresh ? 'A year on a contender. One more shot at a ring.' : 'Less money. A real shot at a ring.', 'contender'),
@@ -1549,7 +1796,7 @@ export function signOffer(c, o) {
   const extras = [o.noTrade ? 'no-trade clause' : null, o.starter ? 'starter guarantee' : null].filter(Boolean)
   const roster = change ? rosterOf(c, o.team) : c.roster
   return {
-    ...c, team: o.team, roster, ...(change ? { kept: keepRoster(c) } : {}), fit: teamFit(o.team, c.pos, { roster, league: c.league, name: c.name, sport: c.sport }), offers: null, talks: null, tradeAsked: false, lastRole: change ? null : c.lastRole, ...(change && c.off ? { off: { ...c.off, moves: [] } } : {}),
+    ...c, team: o.team, roster, ...(change ? { kept: keepRoster(c) } : {}), fit: teamFit(o.team, c.pos, { roster, league: c.league, name: c.name, sport: c.sport, spot: lineSpot(c) }), offers: null, talks: null, tradeAsked: false, lastRole: change ? null : c.lastRole, ...(change && c.off ? { off: { ...c.off, moves: [] } } : {}),
     contract: { kind: change ? 'fa' : 'ext', years: o.years, left: o.years, perYear: o.perYear, noTrade: !!o.noTrade, starter: !!o.starter },
     decisions: [...c.decisions, { year: c.year + 1, text: `${change ? 'Signed with' : 'Re-signed with'} the ${o.fit.name}: ${o.years} yrs, $${o.perYear}M a year${extras.length ? ` (${extras.join(', ')})` : ''}` }],
   }
@@ -1593,7 +1840,7 @@ export function ask(c, kind) {
     const fallback = offers.length ? offers : [{ ...t, perYear: r10(t.base * 0.85), years: Math.max(1, t.years - 1), kind: 'late', pitch: 'Late in free agency. The market moved on; this is what\'s left.', noTrade: false, starter: false }]
     return { ...c, offers: fallback, talks: { ...t, walked: true, patience: 0, lines: [...t.lines, 'The GM closes the folder. "We\'re done here."'] }, events: [...c.events, { year: c.year + 1, text: `Talks with the ${t.fit.name} collapsed over a ${a.label.toLowerCase()}.` }] }
   }
-  const pushed = kind === 'money' ? r10(Math.min(t.perYear * 1.08, sportOf(c).money[c.pos][1])) : t.perYear
+  const pushed = kind === 'money' ? r10(Math.min(t.perYear * 1.08, sportOf(c).moneyOf(c)[1])) : t.perYear
   const years = kind === 'years' ? t.years + 1 : t.years
   const tone = (big ? 'That one stung. ' : '') + (patience >= 2 ? 'A nod. "We can do that."' : patience === 1 ? '"…Fine. But that\'s about it."' : 'A long pause. "Last one."')
   return { ...c, talks: { ...t, patience, perYear: pushed, years, noTrade: t.noTrade || kind === 'notrade', starter: t.starter || kind === 'starter', asked: [...t.asked, kind], lines: [...t.lines, tone] } }
@@ -1612,7 +1859,7 @@ export function demandTrade(c) {
   const pool = S.teams.map(t => S.teamOf(t.short)).filter(t => t.short !== c.team).sort((a, b) => (b.off + b.def) - (a.off + a.def))
   const dest = pool[Math.floor(r() * Math.ceil(pool.length / 2))]
   const roster = rosterOf(c, dest.short)
-  const fit = teamFit(dest.short, c.pos, { roster, league: c.league, name: c.name, sport: c.sport })
+  const fit = teamFit(dest.short, c.pos, { roster, league: c.league, name: c.name, sport: c.sport, spot: lineSpot(c) })
   // a starter guarantee was the old team's promise: it stays with them
   return { ...c, rep, tradeAsked: true, team: dest.short, roster, kept: keepRoster(c), fit, lastRole: null, contract: { ...c.contract, starter: false }, off: { ...(c.off ?? {}), moves: [] }, events: [...c.events, { year: c.year + 1, text: `Trade request granted: a ${nick(fit.name)} now.` }], decisions: [...c.decisions, { year: c.year + 1, text: `Demanded a trade, dealt to the ${fit.name}` }] }
 }
@@ -1632,8 +1879,9 @@ export function nextSeason(c) {
     build[t] = { ...ch, val: to, ...(d > 0 ? { grew: (ch.grew ?? 0) + 1 } : { faded: (ch.faded ?? 0) + 1 }) }
     notes.push(`${why}: ${traitName(c, t)} ${valToGrade(ch.val)} → ${valToGrade(to)}`)
   }
-  if (age <= 24 && r() < 0.45) move(c.types[Math.floor(r() * c.types.length)], 1, 'Still growing')
-  else if (age <= 28 && r() < 0.2) move(c.types[Math.floor(r() * c.types.length)], 1, 'A step forward')
+  const grows = c.pos === 'dl' ? c.types.filter(t => t !== 'size') : c.types
+  if (age <= 24 && r() < 0.45) move(grows[Math.floor(r() * grows.length)], 1, 'Still growing')
+  else if (age <= 28 && r() < 0.2) move(grows[Math.floor(r() * grows.length)], 1, 'A step forward')
   const phys = S.physical[c.pos]
   const pickPhys = () => phys[Math.floor(r() * phys.length)]
   // the body fades from the position's age (an RB first, a QB last)
@@ -1667,7 +1915,7 @@ export const canRetire = c => c.age >= 29 || c.seasons.length >= 8
 // The age a career ends, by position; elite (90+) and durable (7+) buys two more years
 export const retireAge = c => {
   const S = sportOf(c)
-  const base = S.isBucket ? 38 : ({ qb: 42, rb: 33, wr: 36, te: 36, db: 35 })[c.pos] ?? 36
+  const base = S.isBucket ? 38 : ({ qb: 42, rb: 33, wr: 36, te: 36, db: 35, dl: 37 })[c.pos] ?? 36
   return base + ((c.ovr ?? 0) >= 90 && (c.durability ?? 5) >= 7 ? 2 : 0)
 }
 export function retireReason(c) {
@@ -1773,6 +2021,10 @@ export function legacyOf(c) {
   const rank = list.filter(x => x.score > score).length + 1
   return { score, tier, ranked: rank <= list.length, next: next ? { at: next[0], name: next[1] } : null, rank, of: list.length, above: list.filter(x => x.score > score).slice(-1)[0] ?? null, below: list.find(x => x.score <= score) ?? null }
 }
+// The legacy that gets a career voted in (hofVote: 80% of the vote, give or take a few points)
+export const HOF_LEGACY = 209
+// How far along the road to the Hall a career is: Home's HOF banner
+export const hofProgress = c => (c?.hof?.in ? 100 : Math.max(0, Math.min(99, Math.floor((legacyOf(c).score / HOF_LEGACY) * 100))))
 function hofVote(c, L) {
   const r = seeded(`${c.seed}-hof`)
   const pct = clamp(Math.round(20 + (L.score - 100) * 0.55 + (r() - .5) * 8), 2, 99)
@@ -1789,14 +2041,14 @@ const greats = list => list.sort((a, b) => b.score - a.score).map((x, i) => ({ .
 // basketball: one list, the 25 greatest careers at any position
 const NBA_GREATS = greats([...scored('bucket', 'guard'), ...scored('bucket', 'big')]).slice(0, 25)
 export const ALL_TIME = {
-  qb: greats(scored('nfl', 'qb')), rb: greats(scored('nfl', 'rb')), wr: greats(scored('nfl', 'wr')), te: greats(scored('nfl', 'te')), db: greats(scored('nfl', 'db')),
+  qb: greats(scored('nfl', 'qb')), rb: greats(scored('nfl', 'rb')), wr: greats(scored('nfl', 'wr')), te: greats(scored('nfl', 'te')), db: greats(scored('nfl', 'db')), dl: greats(scored('nfl', 'dl')),
   guard: NBA_GREATS,
   big: NBA_GREATS,
 }
 
 // The player comp: the real players (today's and all-time) whose grades sit
 // closest to this build's, trait by trait. A player listed for several teams counts once.
-const ALL_TIME_POOL = { qb: LEGENDS, rb: RB_LEGENDS, wr: WR_LEGENDS, te: TE_LEGENDS, db: DB_LEGENDS, guard: NBA_ALLTIME_GUARD_PLAYERS, big: NBA_ALLTIME_BIG_PLAYERS }
+const ALL_TIME_POOL = { qb: LEGENDS, rb: RB_LEGENDS, wr: WR_LEGENDS, te: TE_LEGENDS, db: DB_LEGENDS, dl: DL_LEGENDS, guard: NBA_ALLTIME_GUARD_PLAYERS, big: NBA_ALLTIME_BIG_PLAYERS }
 // prime: as he was before age and injuries took their grades (the career summary: no one's "built like" his 38-year-old legs)
 export function compsFor(c, n = 5, prime = false) {
   const S = sportOf(c)
@@ -1804,12 +2056,14 @@ export function compsFor(c, n = 5, prime = false) {
   const valOf = t => { const ch = c.build[t]; return Math.min(11, (ch?.val ?? 5) + (prime ? ch?.faded ?? 0 : 0)) }
   const consider = (p, era) => {
     if (!p?.attrs || !p.name) return
+    // (an edge plays like edges, a tackle like tackles)
+    if (c.pos === 'dl' && p.subpos !== dlSpot(c)) return
     let d = 0, k = 0
     for (const t of c.types) { const v = p.attrs[t]; if (v == null) continue; d += Math.abs(valOf(t) - v); k++ }
     if (k < c.types.length - 1) return
     const dist = d / k
     const prev = best.get(p.name)
-    if (!prev || dist < prev.dist || (dist === prev.dist && era === 'current')) best.set(p.name, { name: p.name, team: p.team, years: p.years ?? null, era, dist, attrs: p.attrs, photo: S.photo(p.name) })
+    if (!prev || dist < prev.dist || (dist === prev.dist && era === 'current')) best.set(p.name, { name: p.name, team: p.team, years: p.years ?? null, era, dist, attrs: p.attrs, photo: p.headshot ? nflHeadshot(p.headshot) : S.photo(p.name) })
   }
   for (const p of S.pool[c.pos] ?? []) consider(p, 'current')
   for (const p of ALL_TIME_POOL[c.pos] ?? []) consider(p, 'all-time')

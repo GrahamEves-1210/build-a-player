@@ -535,13 +535,14 @@ const NFL_OUT = {
   'Conference Championship': 'LOST THE CONFERENCE TITLE GAME',
   'Super Bowl': 'LOST THE SUPER BOWL',
 }
-const NFL_AWARD = { qb: 'MVP', rb: 'OPOY', wr: 'OPOY', te: 'OPOY', db: 'DPOY', ol: 'ALL-PRO' }
+const NFL_AWARD = { qb: 'MVP', rb: 'OPOY', wr: 'OPOY', te: 'OPOY', db: 'DPOY', dl: 'DPOY', ol: 'ALL-PRO' }
 const NFL_STATS = {
   qb: r => [[fmt(r.seasonPassYds), 'YDS'], [fmt(r.seasonTDs), 'TD'], [one(r.seasonRating), 'RTG']],
   rb: r => [[fmt(r.seasonRushYds), 'RUSH YDS'], [fmt((n(r.seasonRushTDs) ?? 0) + (n(r.seasonRecTDs) ?? 0)), 'TD'], [one(r.seasonYPC), 'YPC']],
   wr: r => [[fmt(r.seasonRecs), 'REC'], [fmt(r.seasonRecYds), 'YDS'], [fmt(r.seasonRecTDs), 'TD']],
   te: r => [[fmt(r.seasonRecs), 'REC'], [fmt(r.seasonRecYds), 'YDS'], [fmt(r.seasonRecTDs), 'TD']],
   db: r => [[fmt(r.seasonINTs), 'INT'], [fmt(r.seasonPBUs), 'PBU'], [fmt(r.seasonTackles), 'TKL']],
+  dl: r => [[fmt(r.seasonSacks), 'SCK'], [fmt(r.seasonTFL), 'TFL'], [fmt(r.seasonTackles), 'TKL']],
   ol: r => [[fmt(r.seasonPancakes), 'PANCAKES'], [fmt(r.seasonSacksAllowed), 'SACKS ALLOWED']],
 }
 const statsOf = list => list.filter(([v]) => v != null).map(([v, k]) => ({ v, k }))

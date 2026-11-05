@@ -8,7 +8,7 @@
 // list that only holds the top N) is only known while the player is inside the list read.
 import { supabase } from './supabase'
 import { seedCos } from './peopleCos'
-import { tierFor, dayKey, weekOf, fetchPlayersOfDay, fetchWeeklyCup } from './progress'
+import { tierFor, dayKey, weekOf, fetchWeeklyCup, POTD_COINS, CUP_COINS } from './progress'
 
 const TTL = 2 * 60 * 1000
 const MAX_ROWS = 50
@@ -51,12 +51,10 @@ function memo(key, fn) {
 // ── People: names, Pro and looks, from accounts ───────────────────────────────
 const people = new Map()   // uid → { name, pro }
 const asking = new Map()   // uid → the batch it's waiting on
-const askedNames = new Map()   // lower-case username → uid | null (h2h rows only have a name)
 let batch = null
 
 function remember(r) {
   people.set(r.id, { name: r.username || null, pro: !!r.ads_disabled || r.subscription_status === 'active' })
-  if (r.username) askedNames.set(r.username.toLowerCase(), r.id)
   // {} for no look: cosFor would otherwise ask for this player again, one by one
   seedCos(r.id, r.cos || {})
 }
@@ -94,17 +92,6 @@ function hydrate(ids) {
   }
   return Promise.all(waits)
 }
-// Head-to-head names: no user_id on those rows, so the Pro badge goes by the current username
-async function hydrateNames(names) {
-  const need = [...new Set(names.filter(n => !askedNames.has(n.toLowerCase())))]
-  if (!need.length) return
-  try {
-    const { data, error } = await supabase.from('accounts').select(ACCOUNT_COLS).in('username', need)
-    if (error) return
-    for (const r of data ?? []) remember(r)
-    for (const n of need) if (!askedNames.has(n.toLowerCase())) askedNames.set(n.toLowerCase(), null)
-  } catch {}
-}
 
 const cleanName = n => {
   const s = typeof n === 'string' ? n.trim() : ''
@@ -116,8 +103,9 @@ const finish = r => ({
   uid: r.uid ?? null,
   name: cleanName(people.get(r.uid)?.name) ?? cleanName(r.name) ?? 'Player',
   value: Number(r.value),
-  display: display(r.value),
+  display: r.display ?? display(r.value),
   sub: r.sub ?? null,
+  coins: r.coins ?? null,
   pro: r.pro ?? !!people.get(r.uid)?.pro,
 })
 
@@ -131,7 +119,7 @@ function onePerPlayer(list) {
     return true
   })
 }
-const placed = (r, rank) => ({ rank, value: Number(r.value), display: display(r.value), sub: r.sub ?? null })
+const placed = (r, rank) => ({ rank, value: Number(r.value), display: r.display ?? display(r.value), sub: r.sub ?? null })
 function mineInList(list, uid) {
   if (!uid) return null
   const i = list.findIndex(r => r.uid === uid)
@@ -161,24 +149,6 @@ async function onlineBoard(id, ctx) {
   }
   return { list, mine }
 }
-async function h2hBoard(ctx) {
-  await hydrate([ctx.uid, ...(ctx.ids ?? [])])
-  const names = ctx.ids ? ctx.ids.map(id => cleanName(people.get(id)?.name)).filter(Boolean) : null
-  if (names && !names.length) return { list: [], mine: null }
-  const { data } = await read(() => {
-    let q = supabase.rpc('get_h2h_leaderboard').order('wins', { ascending: false })
-    if (names) q = q.in('username', names)
-    return q.limit(MAX_ROWS)
-  })
-  const list = onePerPlayer((data ?? []).filter(r => cleanName(r.username)).map(r => ({
-    uid: null, name: r.username, value: Number(r.wins), sub: `${Number(r.wins)}-${Number(r.losses)}`,
-  })))
-  await hydrateNames(list.map(r => r.name))
-  for (const r of list) r.pro = !!people.get(askedNames.get(r.name.toLowerCase()))?.pro
-  const myName = cleanName(people.get(ctx.uid)?.name)?.toLowerCase()
-  const i = myName ? list.findIndex(r => r.name.toLowerCase() === myName) : -1
-  return { list, mine: i >= 0 ? placed(list[i], i + 1) : null }
-}
 
 // ── Today ─────────────────────────────────────────────────────────────────────
 async function dailyBoard(ctx) {
@@ -200,31 +170,6 @@ async function dailyBoard(ctx) {
 }
 // board_cache rows are { id, username, cos, day: { d, xp, g } }; its fallback's are
 // { id, username, cos } with the tally on cos.today
-async function potdBoard(ctx) {
-  const key = dayKey()
-  const res = await memo(`raw-potd|${key}`, async () => {
-    const r = await fetchPlayersOfDay(key)
-    if (r.error) throw new Error('potd')
-    return r
-  })
-  const all = (res.rows ?? []).map(r => {
-    const t = r.day ?? r.cos?.today ?? {}
-    return { uid: r.id, name: r.username, value: Number(t.xp) || 0, sub: t.g != null ? plural(t.g, 'game') : null }
-  }).filter(r => r.value > 0)
-  const list = onlyAmong(all, ctx)
-  return { list, mine: mineInList(list, ctx.uid) }
-}
-async function cupBoard(ctx) {
-  const week = weekOf()
-  const res = await memo(`raw-cup|${week}`, async () => {
-    const r = await fetchWeeklyCup(week)
-    if (r.error) throw new Error('cup')
-    return r
-  })
-  const all = (res.rows ?? []).map(r => ({ uid: r.user_id, name: r.username, value: Number(r.total) || 0, sub: r.days != null ? plural(Number(r.days), 'day') : null }))
-  const list = onlyAmong(all, ctx)
-  return { list, mine: mineInList(list, ctx.uid) }
-}
 // Same tiebreaks as the Salary Cap screens' own boards (no `picks`: it's most of the row)
 const GRID = {
   nfl: {
@@ -262,30 +207,18 @@ async function gridBoard(ctx) {
 // ── Records ───────────────────────────────────────────────────────────────────
 const MODES = {
   QB: ['classic', 'all-time'], RB: ['rb-classic', 'rb-all-time'], WR: ['wr-classic', 'wr-all-time'],
-  TE: ['te-classic', 'te-all-time'], DB: ['db-classic', 'db-all-time'], OL: ['ol-classic', null],
+  TE: ['te-classic', 'te-all-time'], DB: ['db-classic', 'db-all-time'], DL: ['dl-classic', 'dl-all-time'], OL: ['ol-classic', null],
 }
 const BUCKET_MODES = ['bucket-classic', 'bucket-all-time']
-const BUCKET_POS = { GUARD: 'guard', BIG: 'big' }
 const modesFor = (sport, position) => (sport === 'bucket' ? BUCKET_MODES : MODES[position] ?? MODES.QB)
 // The award a position's season pays (App.jsx awardType). Football only. RB, WR and TE share
-// one counter on accounts (OPOY), so it can't be a record for any one of them.
-const AWARD = { QB: ['classic_mvps', 'MVP'], DB: ['classic_dpoys', 'DPOY'] }
+// one counter on accounts (OPOY), so it can't be a record for any one of them. DL's DPOYs stay
+// off classic_dpoys (that's DB's record): each one is a season tagged 'dpoy', counted from the seasons.
+const AWARD = { QB: ['classic_mvps', 'MVP'], DB: ['classic_dpoys', 'DPOY'], DL: ['dl-classic', 'DPOY'] }
 const awardFor = (sport, position) => (sport === 'bucket' ? null : AWARD[position ?? 'QB'] ?? null)
-// salary_infinite_plays has no index on overall_score, and that sort times out (57014, about
-// 3s of the database's time, each try). Turn this on once the index exists.
-const BUCKET_INFINITE_INDEXED = false
+// (salary_infinite_plays needs its overall_score index for this sort; it has had it since 11-03)
+const BUCKET_INFINITE_INDEXED = true
 
-// `build is not null` is what puts these on simulations_mode_ovr_wins / simulations_mode_pos_ovr
-async function bestBoard(ctx, mode) {
-  const pos = ctx.sport === 'bucket' ? BUCKET_POS[ctx.position] : null
-  const { data } = await read(() => {
-    let q = supabase.from('simulations').select('user_id,username,ovr,wins,losses').eq('game_mode', mode).not('build', 'is', null)
-    if (pos) q = q.eq('position', pos)
-    return among(q, 'user_id', ctx).order('ovr', { ascending: false }).order('wins', { ascending: false }).limit(200)
-  })
-  const list = onePerPlayer((data ?? []).map(r => ({ uid: r.user_id, name: r.username, value: r.ovr, sub: `${r.wins ?? 0}-${r.losses ?? 0}` })))
-  return { list, mine: mineInList(list, ctx.uid) }
-}
 // leaderboard_user_stats: one row per (game_mode, user_id), refreshed hourly
 const STAT_COLS = 'user_id,username,wins,losses,rings,sims_count,total_ovr'
 const STAT = {
@@ -293,8 +226,8 @@ const STAT = {
   wins: { col: 'wins', sub: r => `${r.wins ?? 0}-${r.losses ?? 0}` },
   seasons: { col: 'sims_count', sub: r => (r.sims_count > 0 ? `${(r.total_ovr / r.sims_count).toFixed(1)} avg OVR` : null) },
 }
-async function statBoard(id, ctx) {
-  const { col, sub } = STAT[id], mode = modesFor(ctx.sport, ctx.position)[0]
+async function statBoard(id, ctx, which = 0) {
+  const { col, sub } = STAT[id], mode = modesFor(ctx.sport, ctx.position)[which]
   const toRow = r => ({ uid: r.user_id, name: r.username, value: r[col], sub: sub(r) })
   const { data } = await read(() => among(supabase.from('leaderboard_user_stats').select(STAT_COLS).eq('game_mode', mode).gt(col, 0), 'user_id', ctx)
     .order(col, { ascending: false }).limit(MAX_ROWS))
@@ -327,6 +260,13 @@ async function awardBoard(ctx) {
   }
   return { list, mine }
 }
+async function dlAwardBoard(ctx) {
+  const { data } = await read(() => among(supabase.from('simulations').select('user_id,username').eq('game_mode', 'dl-classic').eq('season_award', 'dpoy').not('build', 'is', null), 'user_id', ctx).limit(5000))
+  const by = new Map()
+  for (const r of data ?? []) if (r.user_id) by.set(r.user_id, { uid: r.user_id, name: r.username, value: (by.get(r.user_id)?.value ?? 0) + 1, sub: null })
+  const list = [...by.values()].sort((a, b) => b.value - a.value)
+  return { list, mine: mineInList(list, ctx.uid) }
+}
 async function gridBestBoard(ctx) {
   const g = GRID[ctx.sport]
   const { data } = await read(() => among(supabase.from(g.infinite).select(g.cols), 'user_id', ctx)
@@ -349,24 +289,22 @@ const BOARDS = {
   rating: { load: ctx => onlineBoard('rating', ctx) },
   peak: { load: ctx => onlineBoard('peak', ctx) },
   played: { load: ctx => onlineBoard('played', ctx) },
-  h2h: { load: h2hBoard },
+  bt: { load: ctx => blacktopBoard(ctx, null) },
+  bt1: { load: ctx => blacktopBoard(ctx, '1v1') },
+  bt2: { load: ctx => blacktopBoard(ctx, '2v2') },
+  bt3: { load: ctx => blacktopBoard(ctx, '3v3') },
   daily: { load: dailyBoard },
   potd: { load: potdBoard },
   cup: { load: cupBoard },
   grid: { scope: sportScope, load: gridBoard },
-  best: {
-    scope: ctx => `${modeScope(ctx)}|${ctx.sport === 'bucket' ? BUCKET_POS[ctx.position] ?? '' : ''}`,
-    load: ctx => bestBoard(ctx, modesFor(ctx.sport, ctx.position)[0]),
-  },
-  bestAll: {
-    ok: ctx => !!modesFor(ctx.sport, ctx.position)[1],
-    scope: ctx => `${modeScope(ctx)}|${ctx.sport === 'bucket' ? BUCKET_POS[ctx.position] ?? '' : ''}`,
-    load: ctx => bestBoard(ctx, modesFor(ctx.sport, ctx.position)[1]),
-  },
   rings: { scope: modeScope, load: ctx => statBoard('rings', ctx) },
   wins: { scope: modeScope, load: ctx => statBoard('wins', ctx) },
-  seasons: { scope: modeScope, load: ctx => statBoard('seasons', ctx) },
-  awards: { ok: ctx => !!awardFor(ctx.sport, ctx.position), scope: ctx => awardFor(ctx.sport, ctx.position)?.[0], load: awardBoard },
+  ringsAll: { ok: ctx => !!modesFor(ctx.sport, ctx.position)[1], scope: ctx => modesFor(ctx.sport, ctx.position)[1], load: ctx => statBoard('rings', ctx, 1) },
+  winsAll: { ok: ctx => !!modesFor(ctx.sport, ctx.position)[1], scope: ctx => modesFor(ctx.sport, ctx.position)[1], load: ctx => statBoard('wins', ctx, 1) },
+  winPct: { scope: modeScope, load: ctx => rateBoard(ctx, RATE.winPct) },
+  avgOvr: { scope: modeScope, load: ctx => rateBoard(ctx, RATE.avgOvr) },
+  perSeason: { scope: modeScope, load: ctx => perSeasonBoard(ctx) },
+  awards: { ok: ctx => !!awardFor(ctx.sport, ctx.position), scope: ctx => awardFor(ctx.sport, ctx.position)?.[0], load: ctx => (ctx.position === 'DL' ? dlAwardBoard(ctx) : awardBoard(ctx)) },
   gridBest: { ok: ctx => ctx.sport === 'nfl' || BUCKET_INFINITE_INDEXED, scope: sportScope, load: gridBestBoard },
   depth: { ok: ctx => ctx.sport === 'nfl', scope: sportScope, load: depthBoard },
 }
@@ -383,10 +321,9 @@ function keyOf(id, ctx) {
 // ── Exports ───────────────────────────────────────────────────────────────────
 export function onlineBoards() {
   return [
-    { id: 'rating', label: 'Rating', unit: 'RATING' },
-    { id: 'peak', label: 'Best Ever', unit: 'BEST' },
-    { id: 'played', label: 'Games', unit: 'GAMES' },
-    { id: 'h2h', label: '1v1 Wins', unit: 'WINS' },
+    { id: 'rating', label: 'Online Rating', unit: 'ONLINE RATING' },
+    { id: 'played', label: 'Games Played', unit: 'GAMES PLAYED' },
+    { id: 'bt', label: 'Blacktop', unit: 'WINS' },
   ]
 }
 export function todayBoards() {
@@ -397,23 +334,29 @@ export function todayBoards() {
     { id: 'grid', label: 'Daily Grid', unit: 'SCORE' },
   ]
 }
+// Blacktop's own choice: the total, or one size of game
+export const blacktopModes = () => [{ id: 'bt', label: 'Total' }, { id: 'bt1', label: '1v1' }, { id: 'bt2', label: '2v2' }, { id: 'bt3', label: '3v3' }]
 export function recordBoards(sport, position) {
   const ctx = contextOf({ sport, position })
   const award = awardFor(ctx.sport, ctx.position)
   return [
-    { id: 'best', label: 'Best Season', unit: 'OVR', group: 'SEASONS' },
-    ...(modesFor(ctx.sport, ctx.position)[1] ? [{ id: 'bestAll', label: 'Best All-Time Season', unit: 'OVR', group: 'SEASONS' }] : []),
-    { id: 'rings', label: 'Most Rings', unit: 'RINGS', group: 'SEASONS' },
-    { id: 'wins', label: 'Most Wins', unit: 'WINS', group: 'SEASONS' },
-    { id: 'seasons', label: 'Most Seasons', unit: 'SEASONS', group: 'SEASONS' },
-    ...(award ? [{ id: 'awards', label: `Most ${award[1]}s`, unit: `${award[1]}S`, group: 'SEASONS' }] : []),
+    { id: 'rings', label: 'Most Rings', unit: 'RINGS', group: 'CURRENT' },
+    { id: 'wins', label: 'Most Wins', unit: 'WINS', group: 'CURRENT' },
+    { id: 'winPct', label: 'Best Win %', unit: 'WIN %', group: 'CURRENT', note: `${MIN_SEASONS}+ SEASONS` },
+    { id: 'avgOvr', label: 'Best Average OVR', unit: 'OVR', group: 'CURRENT', note: `${MIN_SEASONS}+ SEASONS` },
+    { id: 'perSeason', label: perSeasonOf(ctx)[0], unit: perSeasonOf(ctx)[1], group: 'CURRENT', note: `${MIN_SEASONS}+ SEASONS` },
+    ...(award ? [{ id: 'awards', label: `Most ${award[1]}s`, unit: `${award[1]}S`, group: 'CURRENT' }] : []),
+    ...(modesFor(ctx.sport, ctx.position)[1] ? [
+      { id: 'ringsAll', label: 'Most Rings', unit: 'RINGS', group: 'ALL-TIME' },
+      { id: 'winsAll', label: 'Most Wins', unit: 'WINS', group: 'ALL-TIME' },
+    ] : []),
     ...(BOARDS.gridBest.ok(ctx) ? [{ id: 'gridBest', label: 'Best Infinite Grid', unit: 'SCORE', group: 'MODES' }] : []),
     ...(BOARDS.depth.ok(ctx) ? [{ id: 'depth', label: 'Depth Chart Streak', unit: 'STREAK', group: 'MODES' }] : []),
   ]
 }
 // Basketball's filter only moves the two Best Season boards: the other records aren't kept by position
 // (no OL: nobody plays it, and the old board had no tab for it either)
-export const positionsFor = sport => (sport === 'bucket' ? Object.keys(BUCKET_POS) : Object.keys(MODES).filter(x => x !== 'OL'))
+export const positionsFor = sport => (sport === 'bucket' ? [] : Object.keys(MODES).filter(x => x !== 'OL'))
 
 export async function loadBoard(id, opts) {
   const ctx = contextOf(opts)
@@ -438,6 +381,82 @@ export function peekBoard(id, opts) {
 }
 
 // Last week's Weekly Cup winner: only the first entry of its cache row
+// Players of the Day: the top 20 (the Home board and the payout are still the top 5, from board_cache)
+const POTD_SHOWN = 20
+async function potdBoard(ctx) {
+  const key = dayKey()
+  const { data } = await read(() => among(supabase.from('accounts').select('id,username,cos').eq('cos->today->>d', key), 'id', ctx)
+    .order('cos->today->xp', { ascending: false }).limit(POTD_SHOWN))
+  const list = (data ?? []).filter(r => Number(r.cos?.today?.xp) > 0).map((r, i) => {
+    const t = r.cos.today
+    // (a prize is for a place on the whole board, so a friends-only list shows none)
+    return { uid: r.id, name: r.username, value: Number(t.xp), sub: t.g != null ? plural(t.g, 'game') : null, coins: ctx.ids ? null : POTD_COINS[i] ?? null }
+  })
+  return { list, mine: mineInList(list, ctx.uid) }
+}
+async function cupBoard(ctx) {
+  const week = weekOf()
+  const res = await memo(`raw-cup|${week}`, async () => {
+    const r = await fetchWeeklyCup(week)
+    if (r.error) throw new Error('cup')
+    return r
+  })
+  const all = (res.rows ?? []).map((r, i) => ({ uid: r.user_id, name: r.username, value: Number(r.total) || 0, sub: r.days != null ? plural(Number(r.days), 'day') : null, coins: CUP_COINS[i] ?? null }))
+  const list = onlyAmong(all, ctx)
+  return { list, mine: mineInList(list, ctx.uid) }
+}
+
+// Blacktop, from the games the live server books (bots never count). Wins first, then fewest losses;
+// a forfeit is a loss. All of it is one read, sliced by mode.
+const blacktopRows = () => memo('raw-blacktop', async () => {
+  const { data } = await read(() => supabase.from('vs_results').select('user_id,username,result,match_type').in('match_type', ['1v1', '2v2', '3v3']).limit(10000))
+  return data ?? []
+})
+async function blacktopBoard(ctx, mode) {
+  const by = new Map()
+  for (const r of await blacktopRows()) {
+    if (!r.user_id || (mode && r.match_type !== mode)) continue
+    const o = by.get(r.user_id) ?? { uid: r.user_id, name: r.username, w: 0, l: 0 }
+    if (r.result === 'win') o.w++; else o.l++
+    by.set(r.user_id, o)
+  }
+  const all = onlyAmong([...by.values()].filter(o => o.w > 0).sort((a, b) => b.w - a.w || a.l - b.l), ctx)
+    .map(o => ({ uid: o.uid, name: o.name, value: o.w, sub: `${o.w}-${o.l}` }))
+  return { list: all, mine: mineInList(all, ctx.uid) }
+}
+
+// The records that take a real career to hold: rates, over everyone with enough seasons to count
+export const MIN_SEASONS = 50
+const qualified = (ctx, mode) => memo(`raw-q|${mode}|${ctx.ids ? ctx.ids.join() : '*'}`, async () => {
+  const { data } = await read(() => among(supabase.from('leaderboard_user_stats').select('user_id,username,wins,losses,sims_count,total_ovr,total_pass_yds,total_tds,total_ppg').eq('game_mode', mode).gte('sims_count', MIN_SEASONS), 'user_id', ctx).limit(5000))
+  return data ?? []
+})
+const seasonsOf = r => plural(r.sims_count, 'season')
+const RATE = {
+  winPct: { value: r => (r.wins + r.losses > 0 ? (r.wins / (r.wins + r.losses)) * 100 : null), display: v => `${v.toFixed(1)}%`, sub: r => `${display(r.wins)}-${display(r.losses)}` },
+  avgOvr: { value: r => r.total_ovr / r.sims_count, display: v => v.toFixed(1), sub: seasonsOf },
+}
+// A season's production, by position. WR/TE keep receiving yards in total_pass_yds, RB rushing yards,
+// DB tackles (with interceptions in total_tds), DL tackles (with sacks in total_tds): see the simulations insert in App.jsx
+const PER_SEASON = {
+  QB: ['Passing Yards a Season', 'YDS', 'total_pass_yds', 0], RB: ['Rushing Yards a Season', 'YDS', 'total_pass_yds', 0],
+  WR: ['Receiving Yards a Season', 'YDS', 'total_pass_yds', 0], TE: ['Receiving Yards a Season', 'YDS', 'total_pass_yds', 0],
+  DB: ['Interceptions a Season', 'INT', 'total_tds', 1], DL: ['Sacks a Season', 'SCK', 'total_tds', 1], bucket:['Points a Game', 'PPG', 'total_ppg', 1],
+}
+const perSeasonOf = ctx => PER_SEASON[ctx.sport === 'bucket' ? 'bucket' : ctx.position ?? 'QB'] ?? PER_SEASON.QB
+async function rateBoard(ctx, rate) {
+  const rows = await qualified(ctx, modesFor(ctx.sport, ctx.position)[0])
+  const list = rows.map(r => {
+    const v = rate.value(r)
+    return v == null || !Number.isFinite(v) ? null : { uid: r.user_id, name: r.username, value: v, display: rate.display(v), sub: rate.sub(r) }
+  }).filter(Boolean).sort((a, b) => b.value - a.value)
+  return { list, mine: mineInList(list, ctx.uid) }
+}
+const perSeasonBoard = ctx => {
+  const [, , col, dp] = perSeasonOf(ctx)
+  return rateBoard(ctx, { value: r => (Number(r[col]) || 0) / r.sims_count, display: v => v.toLocaleString(undefined, { minimumFractionDigits: dp, maximumFractionDigits: dp }), sub: seasonsOf })
+}
+
 export async function lastWeekChampion() {
   if (!supabase) return null
   const week = weekOf(dayKey(-7))

@@ -22,6 +22,7 @@ const RATINGS_DATES = {
   wr:    lastChanged([d + 'wrs.js', d + 'wr-legends.js']),
   te:    lastChanged([d + 'tes.js', d + 'te-legends.js']),
   db:    lastChanged([d + 'dbs.js', d + 'db-legends.js']),
+  dl:    lastChanged([d + 'dls.js', d + 'dl-legends.js']),
   guard: lastChanged([d + 'nba-guards.js', d + 'nba-guard-legends.js']),
   big:   lastChanged([d + 'nba-bigs.js', d + 'nba-big-legends.js']),
 }

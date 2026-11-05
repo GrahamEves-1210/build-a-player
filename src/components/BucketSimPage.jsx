@@ -1,6 +1,7 @@
 ﻿import React, { useState, useEffect, useRef, useMemo, useCallback, useLayoutEffect } from 'react'
 import { NameTag } from './app/NameTag'
 import { createPortal } from 'react-dom'
+import { useTapGuard } from '../lib/tapGuard'
 import { NBA_TEAMS } from '../data/nba-teams'
 import { BUCKET_ATTR } from '../data/nba-attrs'
 import { NBA_GUARD_PLAYERS, GUARD_TYPES } from '../data/nba-guards'
@@ -489,6 +490,7 @@ function NBAPlayoffGame({ gameNum, seriesName, oppShort, myColor, myShort, myFin
 
 // ─── ScreenTeamSpin ────────────────────────────────────────────────────────────
 export function TeamSpinModal({ isCustomMode, onTeamSelected, build = {} }) {
+  const tapGuard = useTapGuard()   // the second tap on Simulate isn't a spin
   const [phase,      setPhase]      = useState('idle')
   const [result,     setResult]     = useState(null)
   const [spinCount,  setSpinCount]  = useState(0)
@@ -536,7 +538,7 @@ export function TeamSpinModal({ isCustomMode, onTeamSelected, build = {} }) {
     : undefined
 
   return (
-    <div className="tpm-overlay">
+    <div className="tpm-overlay" onClickCapture={tapGuard.onClickCapture}>
       <div className={`tpm-card${mode === 'pick' ? ' tpm-card-pick' : ''}`} style={cardStyle}>
         <div className="tpm-eyebrow">Simulate Season</div>
         <div className="tpm-heading">{mode === 'pick' ? 'Pick a Team' : 'Spin a Team'}</div>
@@ -939,7 +941,7 @@ function ScreenSeason({ result, awards, onNext, adsDisabled = false, isAllTime =
           {director && <Pulse games={dr.games} total={dr.total} playoffWins={44} />}
           {director && <Wire items={dr.headlines} />}
           {/* only the moments get a card: a card per game flashed by too fast to read */}
-          {director && dr.moment && <MomentCard moment={dr.moment} onPick={dr.choose} />}
+          {director && dr.moment && <MomentCard moment={dr.moment} onPick={dr.choose} onTurnOff={dr.turnOff} />}
           {director && <Milestones items={dr.fresh} />}
           {director && dr.record && <RecordOverlay record={dr.record} name={userName} onClose={dr.clearRecord} />}
           <div className="bsim-season-dots">
@@ -2720,6 +2722,7 @@ function TeamStarters({ teamShort, teamColor, isBig, iqPhoto, isAllTime = false,
 
 // ─── Main BucketSimPage ───────────────────────────────────────────────────────
 export default function BucketSimPage({ result: baseResult, build, types, position, onBack, onReset, adsDisabled = false, isSalaryMode = false, initialScreen = 0, gameMode = null, simFn = null, onFinal = null, pool = null, userName = 'Guest' }) {
+  const tapGuard = useTapGuard()
   // a season already played and booked (it has its story) opens on its final report: never a second run at it
   const [screen, setScreen] = useState(initialScreen === 0 && baseResult?.story && !isSalaryMode ? 4 : initialScreen)
   useRailOn(screen)   // each screen of the season brings the bottom rail back
@@ -2789,6 +2792,7 @@ export default function BucketSimPage({ result: baseResult, build, types, positi
   }, [result?.wins, result?.ppg, result?.story]) // eslint-disable-line
 
   const advancePage = () => {
+    tapGuard.mark()
     document.querySelector('.simp-page')?.scrollTo({ top: 0, behavior: 'instant' })
     window.scrollTo({ top: 0, behavior: 'instant' })
     setScreen(s => s + 1)
@@ -2820,7 +2824,7 @@ export default function BucketSimPage({ result: baseResult, build, types, positi
   const myIQPhoto = build?.basketballIQ?.photo ?? null
 
   return (
-    <div className="simp-page" style={teamStyle}>
+    <div className="simp-page" style={teamStyle} onClickCapture={tapGuard.onClickCapture}>
       <div className="simp-col">
         <div className="simp-top-bar">
           {/* a steered season can't be backed out of: going back would replay the year and its decisions */}

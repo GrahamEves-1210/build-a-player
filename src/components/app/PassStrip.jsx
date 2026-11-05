@@ -24,6 +24,7 @@ export default function PassStrip() {
   if (!bp) return null
   const s = bp.season
   const live = p.signedIn && bp.started
+  const left = daysLeft(s, dayKey())
   const tap = (track, t, ready, el) => {
     if (!ready) { nav('pass'); return }
     const g = claimPass(track, t)
@@ -47,10 +48,14 @@ export default function PassStrip() {
     <section className="ps ag-pop" aria-label="Builder Pass">
       <button className="ps-head" onClick={() => nav('pass')}>
         <span className="ps-head-txt">
-          <span className="ag-eyebrow">BUILDER PASS · {s.name.toUpperCase()}{bp.over ? ' · OVER' : ` · ${daysLeftText(daysLeft(s, dayKey()))}`}</span>
-          <b>LEVEL {bp.tier}<small> / {TIERS}</small>{bp.owned && <i><IconCrown size={11} /> PREMIUM</i>}</b>
+          <b className="ps-name">BUILDER PASS</b>
+          <span className="ps-season">{s.name.toUpperCase()}{s.title ? <em>{s.title.toUpperCase()}</em> : null}</span>
         </span>
-        <span className="ps-head-go">{bp.ready > 0 ? `${bp.ready} TO CLAIM` : 'OPEN'} <IconArrow size={12} /></span>
+        <span className="ps-head-side">
+          <span className={`ps-days${bp.over ? ' is-over' : left <= 7 ? ' is-soon' : ''}`}>{bp.over ? 'SEASON OVER' : daysLeftText(left)}</span>
+          <span className="ps-level">LEVEL {bp.tier}<small> / {TIERS}</small>{bp.owned && <i><IconCrown size={11} /> PREMIUM</i>}</span>
+          <span className="ps-head-go">{bp.ready > 0 ? `${bp.ready} TO CLAIM` : 'OPEN'} <IconArrow size={12} /></span>
+        </span>
       </button>
       <span className="bp-bar ps-bar" aria-hidden="true"><span style={{ width: `${bp.tier >= TIERS ? 100 : Math.min(100, (bp.into / TIER_XP) * 100)}%` }} /></span>
       <div className="ps-row" ref={rowRef}>

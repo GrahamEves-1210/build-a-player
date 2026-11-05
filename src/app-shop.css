@@ -58,16 +58,15 @@
 .nfx-outline  { -webkit-text-stroke: .9px rgba(255,255,255,.95); paint-order: stroke fill; filter: drop-shadow(0 0 1px rgba(0,0,0,.9)); }
 .nfx-pulse    { animation: nfx-pulse 1.8s ease-in-out infinite; }
 @keyframes nfx-pulse { 0%,100% { filter: drop-shadow(0 0 0 transparent); } 50% { filter: drop-shadow(0 0 7px var(--nt-glow, #fff)); } }
-.nfx-shimmer::after, .nfx-spotlight::after {
+.nfx-shimmer::after {
   content: attr(data-text); position: absolute; inset: 0; pointer-events: none;
   background: linear-gradient(110deg, transparent 38%, rgba(255,255,255,.95) 50%, transparent 62%) 0 0 / 260% 100%;
   -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent;
   animation: nfx-sweep 2.6s ease-in-out infinite;
 }
-.nfx-spotlight::after { background: radial-gradient(ellipse 40% 60% at center, rgba(255,255,255,.75), transparent 70%) 0 50% / 45% 200% no-repeat; animation: nfx-spot 3.4s ease-in-out infinite; }
 .nfx-spotlight { filter: drop-shadow(0 0 6px rgba(255,255,255,.35)); }
 @keyframes nfx-sweep { 0% { background-position: 130% 0; } 60%, 100% { background-position: -30% 0; } }
-@keyframes nfx-spot { 0%,100% { background-position: -20% 50%; } 50% { background-position: 120% 50%; } }
+@keyframes nfx-spot { 0%,100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
 .nfx-wave .nt-ch { display: inline-block; animation: nfx-wave 1.6s ease-in-out infinite; animation-delay: calc(var(--i) * .07s); }
 /* a gradient color clipped to the name doesn't reach letters that move on their own (they'd
    vanish): each letter carries its own slice of the gradient instead (--n: the letters) */
@@ -78,9 +77,9 @@
 .nfx-neon     { filter: drop-shadow(0 0 4px var(--nt-glow, #e879f9)) drop-shadow(0 0 10px var(--nt-glow, #e879f9)); animation: nfx-flicker 4s linear infinite; }
 @keyframes nfx-flicker { 0%, 18%, 22%, 25%, 53%, 57%, 100% { opacity: 1; } 20%, 24%, 55% { opacity: .35; } }
 .nfx-glitch::before, .nfx-glitch::after { content: attr(data-text); position: absolute; inset: 0; pointer-events: none; -webkit-text-fill-color: currentColor; background: none; }
-.nfx-glitch::before { color: #22d3ee; transform: translate(-1px, 0); clip-path: inset(0 0 60% 0); animation: nfx-glitch 2.2s steps(2) infinite; mix-blend-mode: screen; }
-.nfx-glitch::after  { color: #f43f5e; transform: translate(1px, 0); clip-path: inset(55% 0 0 0); animation: nfx-glitch 1.7s steps(2) infinite reverse; mix-blend-mode: screen; }
-@keyframes nfx-glitch { 0%, 80% { transform: translate(0); } 82% { transform: translate(-2px, 1px); } 86% { transform: translate(2px, -1px); } 90% { transform: translate(-1px, 0); } }
+.nfx-glitch::before { color: #22d3ee; opacity: 0; clip-path: inset(0 0 58% 0); animation: nfx-glitch 2.2s steps(1) infinite; }
+.nfx-glitch::after  { color: #f43f5e; opacity: 0; clip-path: inset(52% 0 0 0); animation: nfx-glitch 2.2s steps(1) .07s infinite; }
+@keyframes nfx-glitch { 0%, 72%, 96%, 100% { opacity: 0; transform: translate(0); } 74% { opacity: 1; transform: translate(-3px, 1px); } 78% { opacity: 1; transform: translate(3px, -1px); } 82% { opacity: 0; } 86% { opacity: 1; transform: translate(-2px, 0); } 91% { opacity: 1; transform: translate(2px, 1px); } }
 .nfx-heat     { animation: nfx-heat 1.4s ease-in-out infinite; filter: drop-shadow(0 -1px 4px rgba(251,146,60,.85)) drop-shadow(0 0 1px #fde047); }
 @keyframes nfx-heat { 0%,100% { transform: skewX(0) translateY(0); } 25% { transform: skewX(-2deg) translateY(-.5px); } 75% { transform: skewX(2deg) translateY(.5px); } }
 .nfx-electric { filter: drop-shadow(0 0 1px #a5f3fc) drop-shadow(0 0 3px rgba(59,130,246,.7)); animation: nfx-charge 2.2s steps(1) infinite; }
@@ -99,13 +98,21 @@
   58% { opacity: 1; transform: translate(-.6px, -.4px); clip-path: inset(30% 0 25% 40%); }
 }
 @keyframes nfx-charge { 0%, 100% { filter: drop-shadow(0 0 1px #a5f3fc) drop-shadow(0 0 3px rgba(59,130,246,.7)); } 10%, 58% { filter: drop-shadow(0 0 1.5px #fff) drop-shadow(0 0 5px #67e8f9); } }
-.nfx-pro-aura { isolation: isolate; filter: drop-shadow(0 0 4px rgba(242,201,76,.8)); }
-.nfx-pro-aura::before { content: ''; position: absolute; inset: -6px -10px; z-index: -1; border-radius: 999px; background: conic-gradient(from 0deg, rgba(242,201,76,.0), rgba(242,201,76,.55), rgba(167,139,250,.5), rgba(242,201,76,.0)); filter: blur(8px); animation: nfx-aura 3s linear infinite; }
+.nfx-pro-aura { filter: drop-shadow(0 0 4px rgba(242,201,76,.8)); }
+/* the glows that sit under the name: a layer of their own behind it, so they never tint the letters (a gradient name is painted as a background) */
+.nt-halo-host { position: relative; display: inline-flex; isolation: isolate; min-width: 0; max-width: 100%; }
+.nt-halo { position: absolute; z-index: -1; pointer-events: none; }
+.nt-halo--nfx-pro-aura { inset: -.3em -.35em; border-radius: 999px; background: radial-gradient(ellipse closest-side, rgba(242,201,76,.62), rgba(167,139,250,.34) 62%, transparent); animation: nfx-aura-breathe 2.8s ease-in-out infinite; }
+.nt-halo--nfx-spotlight { inset: -.35em -.5em; border-radius: 999px; background: radial-gradient(ellipse closest-side, rgba(255,255,255,.62), rgba(255,255,255,.2) 55%, transparent) 0 50% / 42% 100% no-repeat; animation: nfx-spot 3.4s ease-in-out infinite; }
+@keyframes nfx-aura-breathe { 0%,100% { opacity: .62; transform: scale(.96, .9); } 50% { opacity: 1; transform: scale(1.02, 1.04); } }
 @keyframes nfx-aura { to { transform: rotate(360deg); } }
 
 /* ── Nameplates ────────────────────────────────────────────────────────────── */
 .ntag { display: inline-flex; align-items: center; min-width: 0; max-width: 100%; }
-.ntag .nt { overflow: hidden; text-overflow: ellipsis; }
+.ntag .nt { overflow: hidden; text-overflow: ellipsis; padding: .32em .5em; margin: -.32em -.5em; }
+.ntag .nt::before, .ntag .nt::after { padding: inherit; box-sizing: border-box; }
+.ntag .nfx-legend::before { padding: 0; }
+.ntag .nfx-legend::before { right: .55em; top: .34em; }
 .np {
   position: relative; isolation: isolate; overflow: hidden;
   padding: .18em .62em .14em; border-radius: .42em;
@@ -200,7 +207,7 @@
 @keyframes ava-pulse { 50% { box-shadow: 0 0 22px rgba(232,121,249,.8), inset 0 0 12px rgba(34,211,238,.5); } }
 .ava-spin .avb-ring { animation: nfx-aura 4s linear infinite; }
 @media (prefers-reduced-motion: reduce) {
-  .nt, .nt *, .np, .np *, .avb, .avb * { animation: none !important; }
+  .nt, .nt *, .nt-halo, .np, .np *, .avb, .avb * { animation: none !important; }
 }
 
 /* ═══ Shop ══════════════════════════════════════════════════════════════════ */
@@ -288,7 +295,7 @@
 .sh-flag--lvl, .sh-flag--ach { color: var(--ag-text); background: rgba(0,0,0,.65); border: 1px solid var(--ag-line-hi); }
 .sh-card.is-locked .sh-card-stage > *:not(.sh-flag) { filter: saturate(.4) brightness(.7); }
 
-.ip-name { font-family: var(--ag-font); font-size: 22px; letter-spacing: 1.6px; max-width: 100%; overflow: hidden; }
+.ip-name { font-family: var(--ag-font); font-size: 22px; letter-spacing: 1.6px; max-width: calc(100% + 1.2em); overflow: hidden; padding: .5em .6em; margin: -.5em -.6em; }
 .ip-plate { font-family: var(--ag-font); font-size: 18px; letter-spacing: 1.4px; }
 .ip-fx { position: relative; width: 64px; height: 64px; display: grid; place-items: center; }
 .ip-fx-ico { width: 58px; height: 58px; border-radius: 16px; background: var(--ip-bg, rgba(255,255,255,.08)); box-shadow: inset 0 1px 0 rgba(255,255,255,.2); position: relative; overflow: hidden; }

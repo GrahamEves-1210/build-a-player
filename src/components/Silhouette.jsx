@@ -5,6 +5,8 @@ import { WR_CATEGORIES, WR_PHYSICALS } from '../data/wrs'
 import { TE_PHYSICALS } from '../data/tes'
 import { TE_LEGENDS } from '../data/te-legends'
 import { DBS } from '../data/dbs'
+import { DLS } from '../data/dls'
+import { DL_LEGENDS } from '../data/dl-legends'
 import { DB_LEGENDS } from '../data/db-legends'
 import { OL_PHYSICALS } from '../data/ols'
 import { QB_LEGEND_PHYSICALS } from '../data/qb-legends'
@@ -31,9 +33,11 @@ import RBFigureOverlay from './RBFigureOverlay'
 import WRFigureOverlay from './WRFigureOverlay'
 import DBFigureOverlay from './DBFigureOverlay'
 import OLFigureOverlay from './OLFigureOverlay'
+import DLFigureOverlay from './DLFigureOverlay'
 import BucketFigureOverlay from './BucketFigureOverlay'
 
 const DB_PHYS = Object.fromEntries([...DBS, ...DB_LEGENDS].map(d => [d.name, { height: d.height, weight: d.weight }]))
+const DL_PHYS = Object.fromEntries([...DLS, ...DL_LEGENDS].map(d => [d.name, { height: d.height, weight: d.weight }]))
 const ALL_TE_PHYS = { ...Object.fromEntries(TE_LEGENDS.map(t => [t.name, { height: t.height, weight: t.weight }])), ...TE_PHYSICALS }
 
 // Figure coordinate space (matches QB silhouette dimensions)
@@ -143,6 +147,24 @@ const DB_ZONES = [
   { type: 'manCoverage',     ax: 45, ay: 555, side: 'left',  cy: 0.68 }, // shoe
 ]
 
+// DL silhouette coordinate space: public/dl-silhouette.webp, wider than DB's figure.
+const DL_FIG_W = 912
+const DL_FIG_H = 1496
+const DL_FIGURE_SCALE = 0.86
+
+// DL zones: DB's nine card heights, dots on the part each trait colors (see DLFigureOverlay).
+const DL_ZONES = [
+  { type: 'playRecognition', ax: 531, ay:  82, side: 'right', cy: 0.23 }, // helmet
+  { type: 'strength',        ax: 780, ay: 470, side: 'right', cy: 0.41 }, // bare arm
+  { type: 'powerMoves',      ax: 838, ay: 590, side: 'right', cy: 0.59 }, // elbow pad
+  { type: 'getOff',          ax: 793, ay: 1367, side: 'right', cy: 0.77 }, // shoe
+  { type: 'blockShed',       ax: 148, ay: 370, side: 'left',  cy: 0.14 }, // arm sleeve
+  { type: 'size',            ax: 420, ay: 500, side: 'left',  cy: 0.32 }, // jersey chest
+  { type: 'finesseMoves',    ax: 90,  ay: 717, side: 'left',  cy: 0.50 }, // glove
+  { type: 'bend',            ax: 441, ay: 913, side: 'left',  cy: 0.68 }, // knee
+  { type: 'speed',           ax: 410, ay: 1043, side: 'left', cy: 0.86 }, // sock
+]
+
 // OL zones — same figure as DB (see OLFigureOverlay). Every dot sits on the
 // body part that OL chip colors, and only on parts that stay visible between
 // the cards (the gloves and left sleeve tuck under the cards on desktop).
@@ -227,9 +249,13 @@ function CZCard({ zone, cardY, build, activeDrag, hidden, invisible, isMobile, a
   )
 }
 
-function HWTracker({ build, isRB = false, isWR = false, isTE = false, isBucket = false, isDB = false, isOL = false }) {
+function HWTracker({ build, isRB = false, isWR = false, isTE = false, isBucket = false, isDB = false, isOL = false, isDL = false }) {
   let ht, wt
-  if (isOL) {
+  if (isDL) {
+    const dlPhys = build['size'] ? (build['size'].height ? build['size'] : DL_PHYS[build['size'].qbFull]) : null
+    ht = dlPhys?.height ? fmtHeight(dlPhys.height) : null
+    wt = dlPhys?.weight ?? null
+  } else if (isOL) {
     const chip = build['size']
     const olPhys = chip ? (OL_PHYSICALS[chip.qbFull] ?? (chip.height ? { height: chip.height, weight: chip.weight } : null)) : null
     ht = olPhys?.height ? fmtHeight(olPhys.height) : null
@@ -324,12 +350,12 @@ function getDominantPlayer(build) {
 // `modelOnly`: just the player — figure, jersey overlay and face — with no
 // dots, cards, measurement lines or backdrop, sized to its container (the app's
 // Career model). Nothing else changes when it's off.
-export default function Silhouette({ build, activeDrag, onDrop, activeCategory, onCategoryChange, types = TYPES, isLite = false, onReset, isRB = false, isWR = false, isTE = false, isDB = false, isOL = false, isBucket = false, isPlus = false, isCustomMode = false, onOpenCustomModal, onSandboxToggle, attrMap = ATTR, categoriesData = CATEGORIES, figureRef, modelOnly = false }) {
+export default function Silhouette({ build, activeDrag, onDrop, activeCategory, onCategoryChange, types = TYPES, isLite = false, onReset, isRB = false, isWR = false, isTE = false, isDB = false, isOL = false, isDL = false, isBucket = false, isPlus = false, isCustomMode = false, onOpenCustomModal, onSandboxToggle, sandboxStarters = null, attrMap = ATTR, categoriesData = CATEGORIES, figureRef, modelOnly = false }) {
   // OL is drawn on the DB figure — everything figure-related follows DB
   const isDBFig = isDB || isOL
-  const figW   = isBucket ? BUCKET_FIG_W : isDBFig ? DB_FIG_W : (isRB || isWR || isTE ? RB_FIG_W : FIG_W)
-  const figH   = isBucket ? BUCKET_FIG_H : isDBFig ? DB_FIG_H : (isRB || isWR || isTE ? RB_FIG_H : FIG_H)
-  const zones  = isBucket ? (types.includes('interiorDefense') ? BUCKET_BIG_ZONES : BUCKET_ZONES) : isOL ? OL_ZONES : isDB ? DB_ZONES : isTE ? TE_ZONES : isWR ? WR_ZONES : isRB ? RB_ZONES : ZONES
+  const figW   = isBucket ? BUCKET_FIG_W : isDL ? DL_FIG_W : isDBFig ? DB_FIG_W : (isRB || isWR || isTE ? RB_FIG_W : FIG_W)
+  const figH   = isBucket ? BUCKET_FIG_H : isDL ? DL_FIG_H : isDBFig ? DB_FIG_H : (isRB || isWR || isTE ? RB_FIG_H : FIG_H)
+  const zones  = isBucket ? (types.includes('interiorDefense') ? BUCKET_BIG_ZONES : BUCKET_ZONES) : isDL ? DL_ZONES : isOL ? OL_ZONES : isDB ? DB_ZONES : isTE ? TE_ZONES : isWR ? WR_ZONES : isRB ? RB_ZONES : ZONES
   const silRef = useRef(null)
   const bounds = useFigureBounds(silRef, figW, figH)
   const boundsRef = useRef(bounds)
@@ -394,6 +420,9 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
   const bucketScale = appBucket ? APP_BKT.scale : BUCKET_FIGURE_SCALE
   const rbScale = modelOnly ? 1 : RB_FIGURE_SCALE
   const dbScale = modelOnly ? 1 : DB_FIGURE_SCALE
+  const dlScale = modelOnly ? 1 : DL_FIGURE_SCALE
+  // the build screen: his arm out to one side pulls the body off centre, so the whole figure sits a little left
+  const dlTransform = modelOnly ? 'none' : `translateX(-5%) scale(${dlScale})`
   const wrTransform = modelOnly ? 'none' : isMobile ? `translateY(-6px) scale(${WR_FIGURE_SCALE_MOBILE})` : `scale(${WR_FIGURE_SCALE})`
 
   // Sample bottom color + capture aspect ratio for correct objectPosition centering
@@ -499,6 +528,11 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
       dotX = (dotX - 50) * BUCKET_FIGURE_SCALE + 50
       dotY = (dotY - 50) * BUCKET_FIGURE_SCALE + 50
     }
+    if (isDL) {
+      dotX = (dotX - 50) * DL_FIGURE_SCALE + 50
+      dotY = (dotY - 50) * DL_FIGURE_SCALE + 50
+      dotX -= 5
+    }
     if (isDBFig) {
       dotX = (dotX - 50) * DB_FIGURE_SCALE + 50
       dotY = (dotY - 50) * DB_FIGURE_SCALE + 50
@@ -512,7 +546,7 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
       ? (zone.type === 'passing' || zone.type === 'rebounding' ? -15 : zone.type === 'speed' ? 25 : zone.type === 'size' ? -100 : zone.type === 'handles' || zone.type === 'playmaking' ? -10 : 0)
       : 0
     const cardY = isMobile
-      ? ((zone.cy - 0.5) * (isDBFig ? 0.98 : 0.92) + 0.5) * 100
+      ? ((zone.cy - 0.5) * (isDBFig || isDL ? 0.98 : 0.92) + 0.5) * 100
       : zone.cy * 100 + (zoneCardYNudgePx / H) * 100
     const lineInsetPx = (!isMobile && isBucket) ? 10 : 0
     // Per-zone desktop line X nudge (positive = inward for both sides)
@@ -553,7 +587,7 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
     const map = {}
     zones.forEach(z => { map[z.type] = pos(z) })
     return map
-  }, [bounds, isMobile, isBucket, isRB, isWR, isTE, isDB, isOL, zones, appRows])
+  }, [bounds, isMobile, isBucket, isRB, isWR, isTE, isDB, isOL, isDL, zones, appRows])
 
   return (
     <section className="field-center" style={isBucket ? { backgroundColor: '#090a0d' } : undefined}>
@@ -571,7 +605,7 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
         </div>
       )}
       {!modelOnly && <div className="category-pills">
-        <HWTracker build={build} isRB={isRB} isWR={isWR} isTE={isTE} isDB={isDB} isOL={isOL} isBucket={isBucket} />
+        <HWTracker build={build} isRB={isRB} isWR={isWR} isTE={isTE} isDB={isDB} isOL={isOL} isDL={isDL} isBucket={isBucket} />
         {cats.map(cat => (
           <button
             key={cat.id}
@@ -586,7 +620,7 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
       {/* app-look website, desktop: the compact Sandbox card in the corner (the phone gets the full card in the report card) */}
       {!!onSandboxToggle && !IS_APP && APP_LOOK && !modelOnly && (
         <div className="sil-sandbox-outer sil-sandbox-outer--app">
-          <AppSandbox compact on={!!isCustomMode} onToggle={v => onSandboxToggle?.(v)} onCustomize={onOpenCustomModal} />
+          <AppSandbox compact on={!!isCustomMode} onToggle={v => onSandboxToggle?.(v)} onCustomize={onOpenCustomModal} starters={sandboxStarters} />
         </div>
       )}
       {!!onSandboxToggle && !IS_APP && !APP_LOOK && (
@@ -718,6 +752,7 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
           src={
             isBucket
               ? (bucketPhoto ? '/basketballsilhouetteheadless.png' : '/basketballsilhouette.png')
+              : isDL ? '/dl-silhouette.webp'
               : isDBFig ? '/db-silhouette.png'
               : (isWR || isTE) ? '/wr-silhouette.png'
               : isRB ? '/rb-silhouette.webp'
@@ -730,6 +765,7 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
             isBucket   ? { transform: `scale(${bucketScale})`, transformOrigin: 'center center' }
             : (isWR || isTE) ? { transform: wrTransform, transformOrigin: 'center center', filter: complete ? 'none' : 'brightness(0.55) drop-shadow(0 0 2px rgba(255,255,255,0.60)) drop-shadow(0 0 0.5px rgba(255,255,255,0.92))' }
             : isRB     ? { transform: `scale(${rbScale})`, transformOrigin: 'center center' }
+            : isDL     ? { transform: dlTransform, transformOrigin: 'center center' }
             : isDBFig  ? { transform: `scale(${dbScale})`, transformOrigin: 'center center', filter: 'brightness(0.35)' }
             : undefined
           }
@@ -807,10 +843,15 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
           )
         })()}
         </div>
-        {!isRB && !isWR && !isTE && !isDBFig && !isBucket && <QBFigureOverlay build={build} className="player-qbfig" />}
+        {!isRB && !isWR && !isTE && !isDBFig && !isDL && !isBucket && <QBFigureOverlay build={build} className="player-qbfig" />}
         {isDB && (
           <div style={{ position: 'absolute', inset: 0, transform: `scale(${dbScale})`, transformOrigin: 'center center' }}>
             <DBFigureOverlay build={build} numberNudgePx={isMobile && !modelOnly ? { x: 7, y: 7 } : null} />
+          </div>
+        )}
+        {isDL && (
+          <div style={{ position: 'absolute', inset: 0, transform: dlTransform, transformOrigin: 'center center' }}>
+            <DLFigureOverlay build={build} numberNudgePx={null} nameNudge={isMobile && !modelOnly ? { x: -12, y: 12 } : null} />
           </div>
         )}
         {isOL && (

@@ -1635,6 +1635,10 @@ a:focus-visible {
 }
 @media (min-width: 769px) {
   .build-footer-section .build-site-features { display: grid; }
+  .build-footer-section { border-top: 1px solid rgba(255,255,255,.26); }
+  /* (edge to edge: the strip itself is narrower than the page) */
+  .ag-home .splash-features { position: relative; }
+  .ag-home .splash-features::before { content: ''; position: absolute; top: 0; left: 50%; width: 100vw; height: 1px; transform: translateX(-50%); background: rgba(255,255,255,.26); pointer-events: none; }
   .build-footer-section { margin-top: -50px; }
 }
 

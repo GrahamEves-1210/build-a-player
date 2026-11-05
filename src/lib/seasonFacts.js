@@ -45,6 +45,15 @@ export const RECORDS = {
       { id: 'pick6', label: 'Pick-sixes',   stat: 'seasonPickSixes', value: 4, holder: 'Ken Houston, Jim Kearney & Eric Allen' },
       { id: 'g-ints', label: 'INTs in a game', game: 'ints', value: 4, holder: 'many' },
     ],
+    // Sacks official since 1982 (Al Baker's 23 in 1978 is unofficial). TFL since 1999,
+    // forced fumbles unofficial but tracked since 1978.
+    dl: [
+      { id: 'sacks', label: 'Sacks', stat: 'seasonSacks', value: 23, holder: 'Myles Garrett, 2025' },
+      { id: 'tfl',   label: 'Tackles for loss', stat: 'seasonTFL', value: 39, holder: 'J.J. Watt, 2012' },
+      { id: 'ff',    label: 'Forced fumbles',   stat: 'seasonFF',  value: 10, holder: 'Osi Umenyiora, 2010 & Charles Tillman, 2012' },
+      { id: 'dtsacks', label: 'Sacks by a DT', get: t => (t.spot === 'DT' ? t.seasonSacks : null), value: 20.5, holder: 'Aaron Donald, 2018', end: true },
+      { id: 'g-sacks', label: 'Sacks in a game', game: 'sacks', value: 7, holder: 'Derrick Thomas, 1990' },
+    ],
     ol: [],
     team: [{ id: 'wins', label: 'Perfect regular season', statFn: r => r.losses === 0 && r.wins >= 17, holder: '2007 Patriots (16-0)' }],
   },
@@ -87,6 +96,9 @@ export const MILESTONES = {
       { id: 'g-120', label: '120-yard game', test: c => c.last?.recYds >= 120 }],
     db: [...steps('int', '{n} interceptions', 'ints', [3, 6, 9, 12]), ...steps('pbu', '{n} passes defended', 'pbus', [10, 15, 20]),
       { id: 'pick6', label: 'Pick-six', test: c => c.last?.pickSixes >= 1, big: true }, { id: 'g-2int', label: 'Two-INT game', test: c => c.last?.ints >= 2 }],
+    dl: [...steps('sck', '{n} sacks', 'sacks', [5, 10, 15, 20]), ...steps('tfl', '{n} tackles for loss', 'tfl', [10, 20, 30]),
+      { id: 'g-2sck', label: 'Two-sack game', test: c => c.last?.sacks >= 2 }, { id: 'g-3sck', label: 'Three-sack game', test: c => c.last?.sacks >= 3, big: true },
+      { id: 'safety', label: 'Safety', test: c => c.last?.safeties >= 1, big: true }],
     ol: [...steps('pnk', '{n} pancakes', 'pancakes', [20, 40, 60]),
       { id: 'clean-3', label: 'Three straight clean sheets', test: c => c.games.length >= 3 && c.games.slice(-3).every(g => g.sacks === 0) }],
   },
@@ -111,6 +123,9 @@ const LEADER_STAT = {
     wr: { key: 'seasonRecYds', label: 'REC YDS', base: 930, per: 210, noise: 150 },
     te: { key: 'seasonRecYds', label: 'REC YDS', base: 620, per: 160, noise: 120 },
     db: { key: 'seasonINTs', label: 'INT', base: 2.4, per: 1.1, noise: 1.2, int: true },
+    // a good year leads the league at 15-19 and the sixth man has about 12. Rated on the pass rush
+    // alone, and from inside it comes harder (a DT in the top ten is rare)
+    dl: { key: 'seasonSacks', label: 'SACKS', base: 5.5, per: 2, noise: 3.5, int: true, unique: true, rate: p => { const a = p.attrs; const r = ((a.getOff ?? 5) * 1.2 + (a.bend ?? 5) + (a.finesseMoves ?? 5) + (a.powerMoves ?? 5) * 0.8 + (a.speed ?? 5) * 0.8) / 4.8; return p.subpos === 'dt' ? r - 1.5 : r } },
     ol: { key: 'seasonPancakes', label: 'PANCAKES', base: 34, per: 7, noise: 6, int: true },
   },
   bucket: {
@@ -149,8 +164,10 @@ export function leaderBoard({ sport, pos, pool, seed, you }) {
     const all = [...top, mine].sort((a, b) => b.value - a.value)
     return { label: def.label, key: def.key, rows: all.slice(0, 6), rank: all.indexOf(mine) + 1, of: all.length }
   }
-  const rows = [...(pool || [])].filter(p => p.attrs).sort((a, b) => avgAttr(b) - avgAttr(a)).slice(0, 7).map(p => {
-    let v = def.base + (avgAttr(p) - 5.2) * def.per + (r() - 0.5) * 2 * def.noise
+  const rate = def.rate ?? avgAttr
+  const named = new Set()   // (an all-time pool can list a player twice, once per team)
+  const rows = [...(pool || [])].filter(p => p.attrs && (!def.unique || (!named.has(p.name) && named.add(p.name)))).sort((a, b) => rate(b) - rate(a)).slice(0, 7).map(p => {
+    let v = def.base + (rate(p) - 5.2) * def.per + (r() - 0.5) * 2 * def.noise
     v = def.int ? Math.max(0, Math.round(v)) : def.dec ? +Math.max(0, v).toFixed(def.dec) : Math.max(0, Math.round(v))
     return { name: p.name, team: p.team, value: v }
   })

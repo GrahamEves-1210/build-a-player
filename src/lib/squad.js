@@ -10,12 +10,12 @@ import { queueSquadSave, deleteCloudSquad, fetchCloudSquad, mergeSquads } from '
 
 // How many of each position a squad can carry (never shown as text: the tile shakes)
 export const CAPS = {
-  nfl: { qb: 1, rb: 2, wr: 3, te: 2, db: 4 },
+  nfl: { qb: 1, rb: 2, wr: 3, te: 2, db: 4, dl: 4 },
   bucket: { guard: 3, big: 2 },
 }
-export const POSITIONS = { nfl: ['qb', 'rb', 'wr', 'te', 'db'], bucket: ['guard', 'big'] }
-export const POS_LABEL = { qb: 'QB', rb: 'RB', wr: 'WR', te: 'TE', db: 'DB', guard: 'GUARD', big: 'BIG' }
-export const POS_NAME = { qb: 'Quarterback', rb: 'Running Back', wr: 'Wide Receiver', te: 'Tight End', db: 'Defensive Back', guard: 'Guard', big: 'Big' }
+export const POSITIONS = { nfl: ['qb', 'rb', 'wr', 'te', 'db', 'dl'], bucket: ['guard', 'big'] }
+export const POS_LABEL = { qb: 'QB', rb: 'RB', wr: 'WR', te: 'TE', db: 'DB', dl: 'DL', guard: 'GUARD', big: 'BIG' }
+export const POS_NAME = { qb: 'Quarterback', rb: 'Running Back', wr: 'Wide Receiver', te: 'Tight End', db: 'Defensive Back', dl: 'Defensive Line', guard: 'Guard', big: 'Big' }
 export const fullSize = sport => Object.values(CAPS[sport] ?? {}).reduce((a, b) => a + b, 0)
 const V = 1
 // Basketball's five spots: the 1–3 are guards, the 4–5 bigs. A basketball squad is
@@ -44,7 +44,9 @@ export function spotsOf(sq) {
 }
 export const spotOpen = (sq, i) => !!SPOTS[i] && !Object.values(spotsOf(sq)).includes(i)
 export const nextToBuild = squad => squad?.slots.find(s => !s.build) ?? null
-export const isFull = squad => !!squad && squad.slots.length >= fullSize(squad.sport) && squad.slots.every(s => s.build)
+// Full House: every position at its cap, built. The DL came later and doesn't count against
+// it, so a squad that was full before stays full.
+export const isFull = squad => !!squad && squad.slots.every(s => s.build) && POSITIONS[squad.sport].every(pos => pos === 'dl' || countOf(squad.slots, pos) >= CAPS[squad.sport][pos])
 // a slot id that's never been used in this squad
 const newId = squad => `p${squad.nextId ?? squad.slots.length}`
 
@@ -56,6 +58,7 @@ export function newSquad({ sport, uid, picks }) {
 export function addSlots(sq, picks) {
   let out = { ...sq, slots: [...sq.slots] }
   for (const pick of picks) {
+    if (pick === 'dl' && out.sport === 'bucket') continue   // the line is football's
     const spot = out.sport === 'bucket' ? pick : null
     const pos = spot != null ? SPOTS[spot]?.pos : pick
     if (spot != null ? !spotOpen(out, spot) : !canAdd(out.sport, out.slots, pos)) continue

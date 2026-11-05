@@ -217,11 +217,18 @@
 
 /* ── Profile: the pass as a sideways strip (PassStrip.jsx) ── */
 .ps { display: grid; gap: 8px; margin: 12px 0; padding: 12px 0 10px; border-radius: 16px; border: 1.5px solid color-mix(in srgb, var(--ag-a1) 30%, transparent); background: var(--ag-panel); overflow: hidden; }
-.ps-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; padding: 0 12px; border: 0; background: none; color: var(--ag-text); font: inherit; text-align: left; cursor: pointer; }
+.ps-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; padding: 0 12px; border: 0; background: none; color: var(--ag-text); font: inherit; text-align: left; cursor: pointer; }
 .ps-head-txt { display: grid; gap: 4px; }
-.ps-head-txt b { display: flex; align-items: baseline; gap: 6px; font-family: var(--ag-display); font-weight: 400; font-size: 24px; line-height: 1; }
-.ps-head-txt b small { font-family: var(--ag-font); font-size: 13px; letter-spacing: 1.5px; color: var(--ag-muted); }
-.ps-head-txt b i { display: inline-flex; align-items: center; gap: 3px; font-style: normal; font-family: var(--ag-font); font-size: 12px; letter-spacing: 1.5px; color: var(--ag-gold-hi); }
+.ps-name { font-family: var(--ag-display); font-weight: 400; font-size: 34px; line-height: .95; letter-spacing: .01em; color: var(--ag-text); }
+.ps-season { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; font-family: var(--ag-font); font-size: 15px; letter-spacing: 1.5px; color: var(--ag-a1); }
+.ps-season em { font-style: normal; color: var(--ag-text-2); }
+.ps-head-side { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 10px 14px; }
+.ps-days { padding: 6px 10px; border-radius: 6px; background: var(--ag-a1); color: #06100c; font-family: var(--ag-display); font-size: 17px; line-height: 1; letter-spacing: .03em; white-space: nowrap; }
+.ps-days.is-soon { background: #ff6a4d; color: #1a0703; }
+.ps-days.is-over { background: rgba(255,255,255,.14); color: var(--ag-text-2); }
+.ps-level { display: inline-flex; align-items: baseline; gap: 5px; font-family: var(--ag-display); font-size: 20px; line-height: 1; white-space: nowrap; }
+.ps-level small { font-family: var(--ag-font); font-size: 13px; letter-spacing: 1.5px; color: var(--ag-muted); }
+.ps-level i { display: inline-flex; align-items: center; gap: 3px; font-style: normal; font-family: var(--ag-font); font-size: 12px; letter-spacing: 1.5px; color: var(--ag-gold-hi); }
 .ps-head-go { display: inline-flex; align-items: center; gap: 4px; font-family: var(--ag-font); font-size: 13px; letter-spacing: 1.5px; color: var(--ag-text-2); white-space: nowrap; }
 .ps-bar { margin: 0 12px; height: 6px; }
 .ps-row { display: flex; gap: 6px; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x proximity; padding: 2px 12px 4px; scrollbar-width: none; }

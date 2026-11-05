@@ -11,8 +11,14 @@ import { sfx, haptic, victory } from '../../lib/juice'
 // compact: the small version that sits in the silhouette's corner on desktop
 // the build page sets which unlock its switch needs (Career / Squad Builder builds), null elsewhere
 let gate = null
+// The line above the switch: this device only, gone for good once Sandbox has been on (the pages call clear on any route)
+const HINT_OFF = 'bap_sandbox_hint_off'
+let hintOff = false
+const hintGone = () => { if (!hintOff) { try { hintOff = localStorage.getItem(HINT_OFF) === '1' } catch {} } return hintOff }
+export const clearSandboxHint = () => { hintOff = true; try { localStorage.setItem(HINT_OFF, '1') } catch {} }
 export const setSandboxGate = id => { gate = id }
-export default function AppSandbox({ on, onToggle: toggle, onCustomize, compact = false }) {
+// starters: { on, locked, onToggle } on a plain Current / All-Time build (see the pages' startersOk), else nothing
+export default function AppSandbox({ on, onToggle: toggle, onCustomize, compact = false, starters = null }) {
   useProgress()                       // (re-render when the unlock is bought)
   const [ask, setAsk] = useState(null)
   const locked = !!gate && !owns(gate)
@@ -21,6 +27,7 @@ export default function AppSandbox({ on, onToggle: toggle, onCustomize, compact 
   return (<>
     {ask && <SandboxBuy item={ask} onClose={() => setAsk(null)} onUnlocked={() => { setAsk(null); toggle?.(true) }} />}
     <div className={`ag-sandbox${on ? ' is-on' : ''}${compact ? ' ag-sandbox--compact' : ''}`}>
+      {!on && !hintGone() && <span className="ag-sandbox-hint">Try out Starters Only mode</span>}
       <button className="ag-sandbox-main" role="switch" aria-checked={on} onClick={e => { const card = e.currentTarget.parentElement; onToggle?.(!on); if (!on) setTimeout(() => card.querySelector('.ag-sandbox-edit')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 60) }}>
         <span className="ag-sandbox-icon"><IconFlask size={22} /></span>
         <span className="ag-sandbox-txt">
@@ -31,9 +38,15 @@ export default function AppSandbox({ on, onToggle: toggle, onCustomize, compact 
         </span>
         <span className={`ag-switch${on ? ' is-on' : ''}`} aria-hidden="true"><span /></span>
       </button>
+      {on && starters && (
+        <button className={`ag-sandbox-starters${starters.on ? ' is-on' : ''}`} role="switch" aria-checked={starters.on} disabled={starters.locked} aria-label={starters.locked ? 'Starters Only. Reset the build to change it' : 'Starters Only'} onClick={() => starters.onToggle(!starters.on)}>
+          <span className="ag-sandbox-starters-lbl">STARTERS ONLY{starters.locked && <i>RESET TO CHANGE</i>}</span>
+          <span className={`ag-switch${starters.on ? ' is-on' : ''}`} aria-hidden="true"><span /></span>
+        </button>
+      )}
       {on && (
-        <button className="ag-sandbox-edit" onClick={onCustomize} aria-label="Edit ratings and build">
-          <IconSliders size={17} /> EDIT RATINGS &amp; BUILD <IconArrow size={14} />
+        <button className="ag-sandbox-edit" onClick={onCustomize} aria-label={starters?.on ? 'Edit ratings' : 'Edit ratings and build'}>
+          <IconSliders size={17} /> {starters?.on ? 'EDIT RATINGS' : <>EDIT RATINGS &amp; BUILD</>} <IconArrow size={14} />
         </button>
       )}
     </div>

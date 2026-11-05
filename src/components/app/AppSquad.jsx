@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { POSITIONS, POS_LABEL, POS_NAME, SPOTS, countOf, canAdd, spotsOf, nextToBuild, newSquad, addSlots, dropSlot, isFull, fullSize, afterBuilding } from '../../lib/squad'
-import { runSquadSeason, lineupOf, squadStrength, teamOf, logoOf, ovrOf, nameOf, faceOf } from '../../lib/squadSeason'
+import { runSquadSeason, lineupOf, squadStrength, teamOf, logoOf, ovrOf, nameOf, faceOf, spotOfBuild, SPOT_LABEL } from '../../lib/squadSeason'
 import { WeekStrip, Bracket, RingCeremony, SeasonRewards } from './AppSeason'
 import { useRailOn } from '../../lib/ads'
 import { sfx, haptic, victory } from '../../lib/juice'
@@ -45,12 +45,12 @@ function PosTiles({ sport, slots, onAdd, onRemove }) {
         const n = countOf(slots, pos), hot = maxed?.pos === pos
         return (
           <div key={`${pos}-${hot ? maxed.k : 0}`} className={`sq-tile${n ? ' is-on' : ''}${hot ? ' is-max' : ''}`}>
-            <button className="sq-tile-add" onClick={() => add(pos)} aria-label={`Add a ${POS_NAME[pos]}`}>
+            <button className="sq-tile-add" onClick={() => add(pos)} aria-label={`Add a ${pos === 'dl' ? 'Defensive Lineman' : POS_NAME[pos]}`}>
               <span className="sq-tile-pos">{POS_LABEL[pos]}</span>
               <span className="sq-tile-name">{hot ? <em>Max amount for position</em> : POS_NAME[pos]}</span>
               <span className="sq-tile-n">{n ? `×${n}` : '+'}</span>
             </button>
-            {n > 0 && onRemove && <button className="sq-tile-minus" onClick={() => { onRemove(pos); sfx('back') }} aria-label={`Take a ${POS_NAME[pos]} off`}>−</button>}
+            {n > 0 && onRemove && <button className="sq-tile-minus" onClick={() => { onRemove(pos); sfx('back') }} aria-label={`Take a ${pos === 'dl' ? 'Defensive Lineman' : POS_NAME[pos]} off`}>−</button>}
           </div>
         )
       })}
@@ -92,8 +92,15 @@ function SpotTiles({ taken, built = [], onAdd, onRemove }) {
   )
 }
 
-// What a build is called: its position (basketball: its spot, PG to C)
+// What a build is called: its position (basketball: its spot, PG to C; the line: EDGE or
+// DT from its Size chip, once it's built)
+const DL_SPOT_NAME = { edge: 'Edge Rusher', dt: 'Defensive Tackle' }
 function tagOf(sq, s) {
+  if (s.pos === 'dl') {
+    if (!s.build) return { label: POS_LABEL.dl, name: 'Defensive Lineman' }
+    const spot = spotOfBuild(s.build)
+    return { label: SPOT_LABEL[spot], name: DL_SPOT_NAME[spot] }
+  }
   const i = sq?.sport === 'bucket' ? spotsOf(sq)[s.id] : null
   return i != null ? SPOTS[i] : { label: POS_LABEL[s.pos], name: POS_NAME[s.pos] }
 }
@@ -165,8 +172,8 @@ function DepthChart({ squad, owner }) {
           <span className="sq-depth-pos">{POS_LABEL[pos]}</span>
           <div className="sq-depth-list">
             {groups[pos].map((x, i) => x.you
-              ? <span key={x.you.id} className="sq-chip is-mine"><Face src={faceOf(x.you.build)} name={POS_LABEL[pos]} mine size={30} /><b>{nameOf(pos, x.you.build)}</b><small>{ovrOf(pos, x.you.build)} · {owner}</small></span>
-              : <span key={x.real.name + i} className="sq-chip"><Face src={x.real.photo} name={x.real.name} size={30} /><b>{lastName(x.real.name)}</b><small>{x.real.ovr}</small></span>)}
+              ? <span key={x.you.id} className="sq-chip is-mine"><Face src={faceOf(x.you.build)} name={POS_LABEL[pos]} mine size={30} /><b>{nameOf(pos, x.you.build)}</b><small>{pos === 'dl' && `${SPOT_LABEL[spotOfBuild(x.you.build)]} · `}{ovrOf(pos, x.you.build)} · {owner}</small></span>
+              : <span key={x.real.name + i} className="sq-chip"><Face src={x.real.photo} name={x.real.name} size={30} /><b>{lastName(x.real.name)}</b><small>{x.real.spot && `${SPOT_LABEL[x.real.spot]} · `}{x.real.ovr}</small></span>)}
             {benched[pos].length > 0 && <span className="sq-bench">To the bench: {benched[pos].map(p => lastName(p.name)).join(', ')}</span>}
           </div>
         </div>
@@ -291,7 +298,7 @@ function SeasonLines({ r, squad, owner }) {
             <Face src={l.face} name={POS_LABEL[l.pos]} mine />
             <span className="sq-row-txt">
               <b>{l.name ?? POS_NAME[l.pos]}</b>
-              <small>{SPOTS[l.spot]?.label ?? POS_LABEL[l.pos]} · {owner}{bySlot[l.id] ? '' : ' · cut'}</small>
+              <small>{l.tag ?? SPOTS[l.spot]?.label ?? POS_LABEL[l.pos]} · {owner}{bySlot[l.id] ? '' : ' · cut'}</small>
             </span>
             {l.award?.won && <span className="sq-award"><IconTrophy size={13} /> {l.award.name}</span>}
             <span className="sq-ovr"><b>{l.ovr}</b><small>OVR</small></span>
@@ -417,7 +424,7 @@ export default function AppSquad({ sport, squad, setSquad, user, renderPicker, o
 
   const exit = <button className="ag-round-btn" onClick={onExit} aria-label="Home"><IconClose size={16} /></button>
   const steps = [
-    sport === 'bucket' ? ['Pick your spots', 'PG to C: fill one spot or all five.'] : ['Pick your positions', 'QB, RBs, WRs, TEs and DBs: as many as a starting lineup holds.'],
+    sport === 'bucket' ? ['Pick your spots', 'PG to C: fill one spot or all five.'] : ['Pick your positions', 'QB, RBs, WRs, TEs, DBs and DLs: as many as a starting lineup holds.'],
     ['Build each one', 'The normal spins, one player after another.'],
     ['Pick a team', 'Its real roster fills every spot you didn\'t build. Your builds start.'],
     ['Play the season', 'One schedule, one record, a stat line and awards for every build. Then run it back.'],

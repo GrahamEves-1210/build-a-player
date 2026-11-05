@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { titleConfetti } from '../../lib/juice'
 import { XpIco } from './GainIcons'
 import { createPortal } from 'react-dom'
 import { useProgress, levelInfo, markLevelSeen, missionDef, careerRings, levelUnlocks } from '../../lib/progress'
@@ -64,6 +65,7 @@ export function Bracket({ rounds, gameIdx, status, hasBye }) {
 
 export function RingCeremony({ team, title, score, trophy = '/trophy.webp', onClose }) {
   const rings = useMemo(() => careerRings(), [])
+  useEffect(() => { titleConfetti([team?.color, team?.color2, '#ffffff']) }, []) // eslint-disable-line react-hooks/exhaustive-deps
   return createPortal(
     <div className="ag-ring" style={{ '--tc': team?.color || 'var(--ag-a1)', '--tc2': team?.color2 || '#000' }} onClick={onClose}>
       <div className="ag-ring-rays" />
@@ -127,7 +129,7 @@ export function SeasonRewards({ result }) {
       <div className="ag-rewards-lines">
         {s.lines.map((l, i) => (
           <div key={l.label} className="ag-rline" style={{ '--d': `${200 + i * 220}ms` }}>
-            <span>{l.label}</span><b>+{l.xp}</b>
+            <span>{l.label}</span><b>{l.xp < 0 ? `−${-l.xp}` : `+${l.xp}`}</b>
           </div>
         ))}
       </div>
@@ -139,7 +141,7 @@ export function SeasonRewards({ result }) {
       {leveled && stage >= 2 && (
         <div className="ag-rewards-up">
           <span className="ag-rewards-up-n">LEVEL {after.level}</span>
-          <span className="ag-rewards-up-t">{after.title}{unlocks?.spots.length ? ` · ${unlocks.spots.map(s => s.name).join(' + ')} spotlight unlocked` : ''}</span>
+          <span className="ag-rewards-up-t">{after.title}</span>
         </div>
       )}
       {!p.signedIn && <div className="ag-rewards-note">Playing as a guest — <button onClick={() => window.dispatchEvent(new CustomEvent('bap:auth'))}>sign in</button> to keep your career.</div>}

@@ -13,6 +13,7 @@ import { RB_ATTR } from '../../data/rbs'
 import { WR_ATTR } from '../../data/wrs'
 import { TE_ATTR } from '../../data/tes'
 import { DB_ATTR } from '../../data/dbs'
+import { DL_ATTR } from '../../data/dls'
 import { OL_ATTR } from '../../data/ols'
 import { BUCKET_ATTR } from '../../data/nba-attrs'
 import './trophy-case.css'
@@ -25,7 +26,7 @@ import './trophy-case.css'
 
 const TIER_GEM = { Rookie: '#9aa7a0', Starter: '#5EDBD8', Pro: '#60a5fa', 'All-Star': '#a78bfa', MVP: '#fb923c', Legend: '#f5dc8a' }
 const ACCENT = 'var(--ag-a1, #4fd6b7)'
-const ATTRS = { qb: ATTR, rb: RB_ATTR, wr: WR_ATTR, te: TE_ATTR, db: DB_ATTR, ol: OL_ATTR, guard: BUCKET_ATTR, big: BUCKET_ATTR }
+const ATTRS = { qb: ATTR, rb: RB_ATTR, wr: WR_ATTR, te: TE_ATTR, db: DB_ATTR, dl: DL_ATTR, ol: OL_ATTR, guard: BUCKET_ATTR, big: BUCKET_ATTR }
 const SPORT_TINT = { nfl: '#4fd6b7', bucket: '#fb923c' }
 
 const n0 = v => (Number.isFinite(v) ? v : 0)
@@ -62,7 +63,7 @@ function shelves(h, st, ach) {
       { id: 'opoy', art: 'opoy', label: 'OPOY', title: 'Offensive POY', n: h.opoy.total, rows: true, unlisted: h.opoy.unlisted,
         line: 'Top offensive season at RB, WR or TE.' },
       { id: 'dpoy', art: 'dpoy', label: 'DPOY', title: 'Defensive POY', n: h.dpoy.total, rows: true, unlisted: h.dpoy.unlisted,
-        line: 'Top defender. DB in football, any build in basketball.', facts: bySport(h.dpoy) },
+        line: 'Top defender. DB or DL in football, any build in basketball.', facts: bySport(h.dpoy) },
       { id: 'allpro', art: 'allpro', label: 'ALL-PRO', title: 'All-Pro', n: h.allpro, rows: true,
         line: 'Make All-Pro at OL in a Current season.' },
     ] },
@@ -171,7 +172,8 @@ export default function TrophyCase({ user }) {
   const won = hw ? all.filter(t => t.n > 0).length : 0
 
   const [shelfRefs, shelfOn] = useWave(list.length, !!hw)
-  const [railRefs, railOn] = useWave(1, Array.isArray(best) && best.length > 0)
+  const eras = best ? [['CURRENT', best.current], ['ALL-TIME', best.alltime]].filter(([, rows]) => rows.length) : []
+  const [railRefs, railOn] = useWave(2, eras.length > 0)
 
   const tap = item => { sfx('tap'); haptic('light'); setOpen(item) }
 
@@ -225,10 +227,12 @@ export default function TrophyCase({ user }) {
       </div>
       {best === undefined && <div className="tc-rail" aria-label="Loading best builds"><span className="tc-card-ghost" /><span className="tc-card-ghost" /><span className="tc-card-ghost" /></div>}
       {best === null && <p className="tc-note">Couldn't load builds. <button type="button" className="tc-link" onClick={load}>Retry</button></p>}
-      {Array.isArray(best) && best.length === 0 && <p className="tc-note">No saved seasons yet.</p>}
-      {Array.isArray(best) && best.length > 0 && (
-        <div className={`tc-rail${railOn[0] != null ? ' is-on' : ''}`} data-wave={0} ref={el => { railRefs.current[0] = el }}>
-          {best.map((row, i) => {
+      {best && eras.length === 0 && <p className="tc-note">No saved seasons yet.</p>}
+      {eras.map(([label, rows], w) => (
+        <div key={label}>
+        <div className="tc-era">{label}</div>
+        <div className={`tc-rail${railOn[w] != null ? ' is-on' : ''}`} data-wave={w} ref={el => { railRefs.current[w] = el }}>
+          {rows.map((row, i) => {
             const traits = traitsOf(row).sort((a, b) => n0(b.val) - n0(a.val))
             const sport = row.pos.sport
             return (
@@ -238,7 +242,6 @@ export default function TrophyCase({ user }) {
                 aria-label={`Best ${row.pos.label} build: ${row.ovr} OVR, ${row.wins ?? 0}-${row.losses ?? 0}, ${modeName(row).toLowerCase()}`}>
                 <span className="tc-card-top">
                   <span className="tc-card-pos"><SportIcon sport={sport} size={12} />{row.pos.label}</span>
-                  <span className="tc-card-mode">{modeName(row)}</span>
                 </span>
                 <span className="tc-card-ovr"><b>{row.ovr}</b><small>OVR</small></span>
                 {row.archetype && <span className="tc-card-arch">{row.archetype}</span>}
@@ -256,7 +259,8 @@ export default function TrophyCase({ user }) {
             )
           })}
         </div>
-      )}
+        </div>
+      ))}
 
       {open?.trophy && <TrophySheet uid={uid} t={open.trophy} onClose={() => setOpen(null)} />}
       {open?.build && <BuildSheet row={open.build} onClose={() => setOpen(null)} />}

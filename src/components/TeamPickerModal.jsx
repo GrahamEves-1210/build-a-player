@@ -1,5 +1,6 @@
 import { useRef, useEffect, useLayoutEffect, useMemo, useCallback, useState } from 'react'
 import { NFL_TEAMS } from '../data/nfl-teams'
+import { useTapGuard } from '../lib/tapGuard'
 
 const ITEM_H  = 44
 const CENTER  = 2
@@ -134,6 +135,7 @@ function SlotReel({ items, spinning, idle, onStop }) {
 }
 
 export default function TeamPickerModal({ onSelect, isPlus = false, build = {} }) {
+  const tapGuard = useTapGuard()   // the second tap on Simulate isn't a spin
   const [phase, setPhase]       = useState('idle')
   const [result, setResult]     = useState(null)
   const [spinCount, setSpinCount] = useState(0)
@@ -181,7 +183,7 @@ export default function TeamPickerModal({ onSelect, isPlus = false, build = {} }
     : undefined
 
   return (
-    <div className="tpm-overlay">
+    <div className="tpm-overlay" onClickCapture={tapGuard.onClickCapture}>
       <div className={`tpm-card${mode === 'pick' ? ' tpm-card-pick' : ''}`} style={cardStyle}>
         <div className="tpm-eyebrow">Simulate Season</div>
         <div className="tpm-heading">{mode === 'pick' ? 'Pick a Team' : 'Spin a Team'}</div>

@@ -1,0 +1,1364 @@
+// Read: four plays. There's one right answer on each and the only way to know it is to read the play:
+// nothing on the field is painted. From the second play there can be a bait: someone who looks right,
+// with the reason he isn't there to see if you scan. Tapping the bait, tapping early or tapping the
+// wrong man is a miss, and the clock is in the scene: the pocket, the hole, the ball, the shot.
+//   hot-read     11 on 11: tap the open receiver to throw it to him
+//   gap          RB behind a real line: tap the side of the hole the blocks open
+//   jump-route   you're the deep safety, the corners are on their men: tap the receiver who beats his corner
+//   pnr          5 on 5: the screen comes, the coverage decides. Tap the handler, the roller or the corner
+//   rim-protect  a 3-on-1 fast break: they move it as they come, one goes up: tap him and go block it
+//
+// The rules are in make(); what can be tapped moves by formula there, so it plays the same with no
+// screen. Everyone else on the picture is a body with a target and a top speed, stepped in draw()
+// (bodies below): they run out of room and bump into each other, they can't teleport or pass through.
+import { reactMs } from '../minigames.js'
+import { clamp, lerp, prog, outcome, rngOf, easeOut, layer, themOf, football, basketball, text, circle, COURT_FT, DISPLAY, manOf, paceOf, keyCap, THREE_KEYS } from './kit.js'
+import { crowdRows, goalPosts, tilt, ground, stands, floodlight, vignette, athlete, paintGrass, skinOf, dirOf, airBall as artBall, ballShadow, nameTag } from './art.js'
+import { paintFieldFlat, qbPose, snapBall, SNAP_MS } from './throw.js'
+import { arenaCam, dolly, arenaStage, manAt, POSE, RUN as RUN_F, liftPose, tapGap, chestOf, tagAt, tagsDown, flyTo, dropThrough, shotApex, hoopWith, AB } from './arena.js'
+import { ballIn, easedState, easedPose, newPose, copyPose, smoothT, CLK, IN_HANDS, PT, FIG_FT, BALL_R, RIM_Y as RIM_FT } from './meter.js'
+
+export const how = {
+  'hot-read': 'Tap the receiver who gets open. Not the one with a defender closing on him.',
+  gap: 'Tap the side of the hole the blocks really open. A backer filling it means no.',
+  'jump-route': "You're the deep safety. When a receiver beats his corner, tap him and jump the route. Not the double move.",
+  pnr: 'Big drops: tap the handler to shoot. Trap: tap the roller. Help tags the roller: tap the far corner.',
+  'rim-protect': 'Three on one, coming at you. When one goes up, tap him and block it. Too soon and he goes by you.',
+}
+
+const WORDS = {
+  'hot-read':    { wait: 'FIND THE OPEN MAN', good: 'COMPLETE', wrong: 'PICKED OFF', bait: 'PICKED OFF', early: 'PICKED OFF', late: 'SACKED', win: 'DIALED IN', lose: 'NO READ', flight: 340, baitFlight: 520, stampY: 0.885, stampSize: 46, reach: 1.11, open: 'OPEN', n: 4, tap: 46, floor: 840, decoy: [0, 0.55, 0.8, 0.9] },
+  gap:           { wait: 'READ THE BLOCKS', good: 'NICE RUN', wrong: 'STUFFED', bait: 'STUFFED', early: 'STUFFED', late: 'STUFFED', win: 'MOVING THE CHAINS', lose: 'NO GAIN', flight: 240, stampY: 0.885, stampSize: 46, open: 'THE HOLE', n: 3, floor: 850, decoy: [0.35, 0.7, 0.85, 0.9], beat: 900 },
+  'jump-route':  { wait: 'READ THE QB', good: 'PICK', wrong: 'WRONG MAN', bait: 'DOUBLE MOVE', early: 'WRONG MAN', late: 'CAUGHT', far: 'BIG GAIN', win: 'BALL HAWK', lose: 'TORCHED', flight: 340, stampY: 0.885, stampSize: 46, open: 'OPEN', n: 4, tap: 46, floor: 930, after: 1.9, decoy: [0, 0.55, 0.8, 0.9] },
+  pnr:           { wait: 'READ THE COVERAGE', good: 'BUCKET', wrong: 'STOLEN', bait: 'STOLEN', early: 'STOLEN', late: 'STRIPPED', win: 'FLOOR GENERAL', lose: 'TURNOVERS', flight: 560, stampY: 0.84, open: 'OPEN', n: 3, tap: 50, floor: 985, after: 0.5, decoy: [0, 0.55, 0.8, 0.9] },
+  'rim-protect': { wait: 'WATCH THE BALL', good: 'BLOCKED', wrong: 'WRONG MAN', bait: 'TOO SOON', early: 'TOO SOON', late: 'OVER HIM', win: 'SHUT DOWN', lose: 'POSTERIZED', flight: 240, stampY: 0.84, open: 'HIM', n: 3, tap: 52, floor: 435, per: 0.42, after: 0.6, decoy: [0, 0, 0, 0] },
+}
+const NOTES = { wrong: 'Wrong read', bait: 'Took the bait', early: 'Went early', late: 'Too slow', far: 'Tackled too deep' }
+// A real scan takes time and a read should feel earned, so the floor is high (each game's own: W.floor)
+// and the difficulty is in the bait. The grade buys the first plays the most time.
+const WINDOWS = [{ add: 80, per: 0.55 }, { add: 40, per: 0.45 }, { add: 10, per: 0.25 }, { add: 0, per: 0.14 }]
+const PRE = 320          // the set before the snap: a press here counts for nothing
+const REACT_FLOOR = 600  // the scan itself: free for the score
+const FLASH = 600        // how long an early bait looks right
+const PASS_MS = 210      // a pass in the 3-on-1: flat and quick
+const windowMs = (v, k, W) => { const w = WINDOWS[k] ?? WINDOWS[3]; return ((W.floor ?? 840) + w.add + (reactMs(v) - reactMs(1)) * w.per * (W.per ?? 1)) * (W.reach ?? 1) }
+
+function planPnr(p, k, r, W, last) {
+  // the coverage is the read: drop → the handler shoots. Hedge or trap → the roller. Tag → the corner.
+  let open = Math.floor(r() * 3)
+  if (open === last && r() < 0.7) open = (open + 1 + Math.floor(r() * 2)) % 3
+  p.open = open
+  p.delay = PRE + 640 + r() * 340
+  if (r() < (W.decoy[k] ?? 0.8)) {
+    const early = open !== 2 && r() < 0.45
+    const dk = open === 2 ? 1 : open === 0 && early ? 1 : 2
+    p.decoy = { k: dk, early, at: early ? PRE + (p.delay - PRE) * (0.35 + r() * 0.25) : p.delay, flash: 480 }
+  } else p.decoy = null
+}
+function planRim(p, k, r) {
+  // who ends up with it: the ball goes round, a pass at a time, and any catch could be the shot
+  const passes = k === 0 ? 1 + Math.floor(r() * 2) : 1 + Math.floor(r() * 3)
+  let t = PRE + 260 + r() * 200, who = 1
+  p.seq = []
+  for (let i = 0; i < passes; i++) {
+    const to = (who + 1 + Math.floor(r() * 2)) % 3
+    p.seq.push({ to, at: t })
+    who = to
+    t += PASS_MS + 230 + r() * 190
+  }
+  p.open = who
+  p.delay = t
+  p.decoy = null
+}
+
+// Who's who on the field, from the real rosters (all null in practice: each man keeps the scene's own look).
+// A route's man: X, the slot, the tight end, Z. Linemen keep their number and face; on the ball at this
+// camera they're too tight for names, so only Gap, with room between them, tags them.
+const ROUTE_MEN = [['wr', 0], ['wr', 2], ['te', 0], ['wr', 1]]
+const HOT_DB = [0, 2, -1, 1]    // on X, the slot, Z; the Sam on the tight end has no data
+const J_DB = [1, 3, 4, 2]       // us.db[0] is the safety himself
+const bare = m => m && { number: m.number, skin: m.skin }
+function fieldWho(game, cast) {
+  const off = game === 'jump-route' ? 'them' : 'us', dfn = off === 'us' ? 'them' : 'us'
+  const ol = [0, 1, 2, 3, 4].map(i => manOf(cast, off, 'ol', i)), db = i => (i < 0 ? null : manOf(cast, dfn, 'db', i))
+  const on = game === 'jump-route' ? J_DB : HOT_DB
+  return {
+    qb: manOf(cast, off, 'qb', 0), rb: manOf(cast, off, 'rb', 0), rbPace: paceOf(cast, off, 'rb', 0),
+    rcv: ROUTE_MEN.map(([gr, i]) => manOf(cast, off, gr, i)),
+    pace: ROUTE_MEN.map(([gr, i]) => paceOf(cast, off, gr, i)),
+    ol: game === 'gap' ? ol : ol.map(bare),
+    // in the order of each scene's defenders: hot-read's S.all, jump-route's corners, gap's safeties
+    def: game === 'gap' ? [db(0), db(1)] : game === 'hot-read' ? [...on.map(db), null, null, db(3)] : on.map(db),
+    cpace: on.map(i => (i < 0 ? 1 : paceOf(cast, dfn, 'db', i))),
+    sPace: [paceOf(cast, dfn, 'db', game === 'gap' ? 0 : 3), paceOf(cast, dfn, 'db', 1)],
+    safety: game === 'jump-route' ? manOf(cast, 'us', 'db', 0) : null,
+    // the front four, when the roster has them: on the ball they keep a number and a face, and Gap tags them too
+    dl: [0, 1, 2, 3].map(i => (cast?.[dfn]?.dl?.length > i ? (game === 'gap' ? manOf(cast, dfn, 'dl', i) : bare(manOf(cast, dfn, 'dl', i))) : null)),
+  }
+}
+
+export function make({ v, seed, def, game, cast }) {
+  const W = WORDS[game] ?? WORDS['hot-read']
+  const r = rngOf(seed)
+  const quick = def?.quick ?? 1
+  const n = W.n, tapped = W.tap != null, routes = game === 'hot-read' || game === 'jump-route'
+  const onCourt = game === 'pnr' || game === 'rim-protect'
+  const rounds = def?.rounds ?? 4
+  const who = game === 'hot-read' || game === 'gap' || game === 'jump-route' ? fieldWho(game, cast) : null
+  let lastOpen = -1, yard = Math.floor(r() * 236)
+  const plan = Array.from({ length: rounds }, (_, k) => {
+    const p = {
+      T: windowMs(v, k, W), at: 0, res: null, yard: (yard += 50 + Math.floor(r() * 60)),
+      dir: r() < 0.5 ? -1 : 1,                       // which way a thing breaks when it could go either
+      ph: [r() * 6.28, r() * 6.28, r() * 6.28, r() * 6.28],                                       // each man's own route
+      side: [r() < 0.5 ? -1 : 1, r() < 0.5 ? -1 : 1, r() < 0.5 ? -1 : 1, r() < 0.5 ? -1 : 1],     // which shoulder his man plays
+      flip: r() < 0.5,                               // which way the formation lines up
+      big: r() < 0.14,                               // gap: this one breaks long if he hits it
+    }
+    if (game === 'pnr') planPnr(p, k, r, W, lastOpen)
+    else if (game === 'rim-protect') planRim(p, k, r)
+    else {
+      let open = Math.floor(r() * n)
+      if (open === lastOpen && r() < 0.6) open = (open + 1 + Math.floor(r() * (n - 1))) % n
+      const other = (open + 1 + Math.floor(r() * (n - 1))) % n
+      p.open = open
+      p.delay = (PRE + (k === 0 ? 500 : 380) + (routes ? 120 : 0) + r() * 400) * lerp(1, quick, 0.6)
+      const early = r() < 0.5
+      p.decoy = r() < (W.decoy[k] ?? 0.8) ? { k: other, early, at: early ? PRE + (p.delay - PRE) * (0.2 + r() * 0.25) : p.delay } : null
+    }
+    lastOpen = p.open
+    if (routes) {
+      p.stem = ROUTES.map(s => lerp(s.stem[0], s.stem[1], r()))
+      p.ang = ROUTES.map(s => lerp(s.ang[0], s.ang[1], r()))
+      p.cut = ROUTES.map(s => s.cut * lerp(0.92, 1.15, r()))
+      // about half the plays go deep: a long stem, then a go, a post or a corner
+      if (game === 'jump-route' && r() < 0.5) {
+        p.deep = true
+        p.delay += 420 + r() * 480
+        const kind = r()
+        p.cut[p.open] = kind < 0.34 ? 0 : (kind < 0.67 ? 1 : -1) * (0.38 + r() * 0.3)
+      }
+      p.pace = who.pace; p.cpace = who.cpace       // how fast each man really is, and the man on him
+    }
+    return p
+  })
+  if (game !== 'pnr' && game !== 'rim-protect' && rounds > 1 && !plan.some(p => p.decoy)) { const p = plan[rounds - 1]; p.decoy = { k: (p.open + 1) % n, early: false, at: p.delay } }
+  const pace = courtPace(game, cast)
+  if (pace) for (const p of plan) p.pace = pace
+
+  const where = { 'hot-read': routeOf, 'jump-route': routeJ, pnr: pnrAt, 'rim-protect': rimAt }[game]
+  const place = (rep, age) => { for (let k = 0; k < n; k++) { const p = where(rep, k, age, g.h); g.men[k].x = p.x; g.men[k].y = p.y } }
+  const g = {
+    t: 0, game, zones: tapped ? 'none' : 'three', aim: tapped, fx: [], done: null, outro: 1500, stamp: null, later: null,
+    plan, i: 0, rep: plan[0], W, who,
+    // what the play is showing on each man right now: null, 'open' or 'bait'. Nothing marks it: it's
+    // in how the men move. (This is what a bot gets to read, at the price of a scan.)
+    cues: Array.from({ length: n }, () => null),
+    // the men who can be tapped: where they are, in the units a tap arrives in. draw() keeps h right.
+    h: 700, men: tapped ? Array.from({ length: n }, () => ({ x: 0, y: 0 })) : null, cam: { w: 360, h: 700 },
+    // where a man's body is on the screen: his chest, above the field point under his feet
+    keyTargets: tapped ? () => {
+      if (g.done || g.rep.res) return null
+      const out = Array.from({ length: n }, (_, m) => { const q = g.aimAt(m); return { x: q.x, y: q.y } })
+      // pick-and-roll's keys never move: SPACE shoots, up to the big, and only the arrow on the side the shooter's on
+      if (game === 'pnr') {
+        Object.assign(out[0], { label: 'SPACE', keys: [' ', 'Enter'] })
+        Object.assign(out[1], { label: THREE_KEYS[1], keys: ['ArrowUp'] })
+        const left = out[2].x < 180
+        Object.assign(out[2], { label: left ? THREE_KEYS[0] : THREE_KEYS[2], keys: [left ? 'ArrowLeft' : 'ArrowRight'] })
+      }
+      return out
+    } : null,
+    aimAt(m) {
+      if (onCourt) return chestOf(courtCam(g).cam, xFt(g.men[m].x), zFt(g.men[m].y, g.h), {})
+      const q = tilt(g.cam, g.men[m].x, g.men[m].y); return { x: q.x, y: q.y - 24 * q.s }
+    },
+    hud: { prompt: W.wait, dots: plan.map(() => null) },
+    tick(dt) {
+      g.t += dt
+      if (g.later && g.t >= g.later.at) { g.stamp = g.later; g.later = null }
+      const rep = g.rep
+      if (rep.res) {
+        if (!g.done && g.t - rep.res.at >= rep.res.beat) next()
+        return
+      }
+      const age = g.t - rep.at, d = rep.decoy
+      for (let k = 0; k < n; k++) g.cues[k] = null
+      if (d && age >= d.at && (!d.early || age < d.at + (d.flash ?? FLASH))) g.cues[d.k] = 'bait'
+      if (age >= rep.delay) g.cues[rep.open] = 'open'
+      if (tapped) place(rep, age)
+      if (game === 'rim-protect') g.carrier = carrierAt(rep, age)
+      if (age > rep.delay + rep.T) settle('late', rep.open)
+    },
+    input(a) {
+      if (a.kind !== 'down' || g.done) return
+      const rep = g.rep
+      if (rep.res) return
+      let k = a.zone
+      if (tapped) {
+        // it goes to the man you touched: the nearest one, as long as you were near someone
+        k = -1
+        let best = W.tap
+        for (let m = 0; m < n; m++) {
+          const q = g.aimAt(m), dist = Math.hypot(q.x - a.x, q.y - a.y)
+          // (on the court a close man is a big target: anywhere on his body is on him)
+          if (onCourt) { const gap = tapGap(courtCam(g).cam, xFt(g.men[m].x), zFt(g.men[m].y, g.h), a.x, a.y) + dist * 0.01; if (gap < best) { best = gap; k = m } continue }
+          if (dist < best) { best = dist; k = m }
+        }
+        if (k < 0) { g.fx.push('h:light'); return }
+      } else if (k !== 0 && k !== 1 && k !== 2) return
+      const age = g.t - rep.at
+      if (age < PRE) return
+      if (g.cues[k] === 'bait') settle('bait', k)
+      else if (age < rep.delay) settle('early', k)
+      else if (g.cues[k] !== 'open') settle('wrong', k)
+      else settle('good', k, age - rep.delay)
+    },
+  }
+  if (tapped) place(plan[0], 0)
+  function word(kind, k, ms) {
+    const rep = g.rep
+    if (game === 'rim-protect' && kind === 'good') return ms <= rep.T * 0.72 ? 'BLOCKED' : 'CONTESTED'
+    if (game === 'jump-route' && kind === 'good') return rep.how === 'pick' ? 'PICK' : rep.how === 'swat' ? 'KNOCKED OUT' : rep.gainYd > 0 ? `${rep.gainYd} YARD GAIN` : 'TACKLE'
+    if (game === 'pnr') {
+      if (kind === 'good') return k === 1 ? 'DUNK' : k === 2 ? 'THREE' : 'BUCKET'
+      if (kind !== 'late') return k === 0 ? 'BLOCKED' : k === 1 ? 'STOLEN' : 'CLOSED OUT'
+    }
+    return W[kind]
+  }
+  function settle(kind, k, ms = 0) {
+    const rep = g.rep
+    if (game === 'jump-route' && kind === 'good') {
+      // the race: the ball's spot is fixed when he lets it go. You run at one speed from where you are.
+      const age = g.t - rep.at, land = jumpLand(rep, g.h), L = { ...routeJ(rep, k, land, g.h) }
+      const sy = safetyY(g.h), arrive = age + Math.hypot(L.x - 180, L.y - sy) / SAFETY_V
+      rep.how = arrive <= land - PICK_BY ? 'pick' : arrive <= land + SWAT_BY ? 'swat' : 'tackle'
+      rep.meet = land
+      if (rep.how === 'tackle') {
+        // he's caught it, and he's running. You take your angle at him, and it's wherever you meet
+        let sx = 180, syy = sy, t = age
+        for (; t < land + 2600; t += 16) {
+          const q = routeJ(rep, k, t, g.h), dx = q.x - sx, dy = q.y - syy, d = Math.hypot(dx, dy)
+          if (t >= land && d <= MEET_R) break
+          sx += (dx / (d || 1)) * SAFETY_V * 16; syy += (dy / (d || 1)) * SAFETY_V * 16
+        }
+        const q = routeJ(rep, k, t, g.h), after = Math.hypot(q.x - L.x, q.y - L.y)
+        rep.meet = t
+        rep.gainYd = Math.max(0, Math.round(after / JUMP_YD))
+        if (after > SHORT_GAIN) kind = 'far'
+      }
+    }
+    const good = kind === 'good'
+    let flight = kind === 'late' ? 0 : kind === 'bait' && W.baitFlight ? W.baitFlight : W.flight
+    // the safety has to get there, at a safety's speed: from his spot to the man you tapped
+    if (game === 'jump-route') {
+      const age = g.t - rep.at, land = jumpLand(rep, g.h)
+      flight = rep.how && (good || kind === 'far') ? Math.max(0, rep.meet - age) : Math.max(0, land - age)
+    }
+    rep.res = { kind, k, at: g.t, ms, flight, beat: Math.max(W.beat ?? 0, flight + (good ? 420 : 620) * (W.after ?? 1)), score: good ? clamp(1 - Math.max(0, ms - REACT_FLOOR) / Math.max(1, rep.T - REACT_FLOOR), 0.35, 1) * (game === 'jump-route' && rep.how !== 'pick' ? 0.6 : 1) : 0 }
+    for (let m = 0; m < n; m++) g.cues[m] = null
+    g.hud.dots[g.i] = good
+    g.hud.prompt = null
+    g.fx.push(kind === 'late' ? 'pop' : 'swoosh', good ? 'h:light' : 'h:medium')
+    const txt = word(kind, k, ms)
+    g.stamp = { text: txt, good, at: g.t + (game === 'jump-route' ? (good ? flight : Math.min(flight * 0.5, 200)) : flight + (game === 'gap' ? 420 : 0)), ms: game === 'gap' ? 560 : game === 'jump-route' ? 1500 : 460, size: W.stampSize ?? (txt.length > 11 ? 30 : 38) }
+    const made = plan.filter(p => p.res?.kind === 'good').length
+    if (plan.every(p => p.res)) {
+      const avg = plan.reduce((s, p) => s + p.res.score, 0) / rounds
+      const misses = plan.filter(p => p.res.kind !== 'good')
+      const outs = misses.filter(p => p.res.kind === 'late').length
+      const hit = made >= rounds - 1
+      const baited = misses.some(p => p.res.kind === 'bait')
+      g.done = outcome(hit ? Math.max(avg, 0.5) : Math.min(avg, 0.45), hit,
+        hit ? `${made} of ${rounds} reads` : baited ? `${made} of ${rounds} · took the bait` : `${made} of ${rounds}${NOTES[misses[misses.length - 1].res.kind] ? ` · ${NOTES[misses[misses.length - 1].res.kind]}` : ''}`,
+        { made, of: rounds }, !hit && outs > 0 && outs >= misses.length)
+      const tw = hit ? W.win : W.lose
+      g.later = { text: tw, good: hit, at: g.t + rep.res.beat - 120, size: tw.length > 11 ? 32 : 46 }
+    }
+  }
+  function next() {
+    g.i++
+    g.rep = plan[g.i]
+    g.rep.at = g.t
+    g.stamp = null
+    g.hud.prompt = W.wait
+    if (tapped) place(g.rep, 0)
+  }
+  return g
+}
+
+// ── Bodies: the picture's own physics ───────────────────────────────────────
+const body = (x, y) => ({ x, y, tx: x, ty: y, v: 0.1, turn: 0, moving: false })
+function seek(b, dt) {
+  const dx = b.tx - b.x, dy = b.ty - b.y, d = Math.hypot(dx, dy), s = Math.min(b.v * dt, d)
+  b.moving = d > 1.5
+  if (d > 0.01) { b.x += (dx / d) * s; b.y += (dy / d) * s }
+}
+// two bodies can't share the ground. w: how much of the push goes on a (the rest on b)
+function apart(a, b, min, w = 0.5) {
+  const dx = a.x - b.x, dy = a.y - b.y, d = Math.hypot(dx, dy) || 0.01
+  if (d >= min) return false
+  const o = min - d
+  a.x += (dx / d) * o * w; a.y += (dy / d) * o * w
+  b.x -= (dx / d) * o * (1 - w); b.y -= (dy / d) * o * (1 - w)
+  return true
+}
+// the hard cap: whatever pushed him, nobody covers more ground than this in a step
+function mark(list) { for (const b of list) { b.lx = b.x; b.ly = b.y } }
+function capped(list, max, dt) {
+  for (const b of list) {
+    if (b.lx == null) continue
+    const dx = b.x - b.lx, dy = b.y - b.ly, d = Math.hypot(dx, dy), m = max * dt
+    if (d > m && d > 0) { b.x = b.lx + (dx / d) * m; b.y = b.ly + (dy / d) * m }
+  }
+}
+const SUB = 1000 / 60
+// run the picture's bodies up to the rules' time; a new play gets a new set
+function stepScene(g, h, build, step) {
+  if (g.simI !== g.i || !g.sim) { g.simI = g.i; g.sim = build(g.rep, h); g.simT = g.rep.at; step(g, g.rep, g.sim, 0, h, 0) }
+  if (g.t - g.simT > 400) g.simT = g.t - 400
+  while (g.simT < g.t) { step(g, g.rep, g.sim, SUB, h, g.simT - g.rep.at); g.simT += SUB }
+  return g.sim
+}
+// how a man's getting about: his feet move because he's covered ground, his body faces where he's going.
+// Standing or slowly drifting, step is null and he's planted. key: who he is, for the length of the game.
+export function walk(g, key, x, y, stride = 8) {
+  const m = g.gaits ?? (g.gaits = {}), s = m[key] ?? (m[key] = { x, y, d: 0, v: 0, dx: 0, dy: 0, t: g.t, step: null })
+  const dt = g.t - s.t
+  if (dt > 0) {
+    let dx = x - s.x, dy = y - s.y, mv = Math.hypot(dx, dy)
+    if (mv > 40) { dx = dy = mv = 0 }     // a new play: he didn't run there
+    s.d += mv; s.v += (mv / dt - s.v) * Math.min(1, dt / 70)
+    if (mv > 0.01) { const f = Math.min(1, dt / 90); s.dx += (dx / mv - s.dx) * f; s.dy += (dy / mv - s.dy) * f }
+    s.x = x; s.y = y; s.t = g.t
+  }
+  s.step = s.v > 0.03 ? Math.floor(s.d / stride) % 4 : null
+  return s
+}
+const dirFrom = (s, still) => (s.step == null ? still : dirOf(s.dx, s.dy))
+
+// ── The stage: a broadcast camera on the real thing ─────────────────────────
+// A football ground: flat paint through the camera, under the stands, one baked picture.
+// closeY: a flat-field y for the stands to come right down to (the back of an end zone), with the posts on it
+export function fieldStage(ctx, view, key, paint, closeY = null) {
+  const c = view.colors, hy = tilt(view, 0, 0).y
+  layer(ctx, view, `${key}|${c.us}|${c.trim}`, x => {
+    stands(x, view, 'field', [c.us, c.trim])
+    ground(x, view, f => paint(f, view), `flat|${key}`, 0, Math.round((view.h - hy) * view.px * 0.7))
+    if (closeY != null) {
+      // the stands right up to the field: the same picture, nearer, its foot on the back line
+      const at = tilt(view, 180, closeY - 75).y, k = at / hy
+      x.save(); x.beginPath(); x.rect(0, 0, view.w, at); x.clip()
+      x.translate(view.w / 2, 0); x.scale(k, k); x.translate(-view.w / 2, 0)
+      stands(x, view, 'field-close', [c.us, c.trim])
+      x.restore()
+      goalPosts(x, view, closeY, 2.1)
+    } else goalPosts(x, view, view.field?.backY)
+    floodlight(x, view)
+    const them = themOf(view), knots = [0.2, 0.235, 0.27, 0.4, 0.44, 0.47, 0.62, 0.655, 0.8]
+    const nearest = closeY != null ? tilt(view, 180, closeY).y + 24 : 0
+    knots.forEach((f, n) => {
+      if (tilt(view, 0, view.h * f).y < nearest || tilt(view, 0, view.h * (1.02 - f) - 40).y < nearest) return
+      // (the men on each sideline watch the field)
+      athlete(x, view, -14 - ((n * 7) % 3) * 8, view.h * f, { color: c.us, trim: c.trim, pants: c.trim, skin: skinOf(n * 3), dir: 'right', pose: 'ready', size: 0.72 })
+      athlete(x, view, view.w + 14 + ((n * 5) % 3) * 8, view.h * (1.02 - f) - 40, { color: them.color, trim: them.trim, pants: them.trim, skin: skinOf(n * 5 + 1), dir: 'left', pose: 'ready', size: 0.72 })
+    })
+  })
+}
+// yard numbers on the flat field, every ten yards, from a line up and back: the whole field has them
+export function paintNumbers(x, view, line, band) {
+  const { w, h } = view
+  for (let k = -12; k <= 12; k++) {
+    const y = line - k * band * 2
+    if (y < 8 || y > h + 10) continue
+    const n = 30 + k * 10, value = n > 50 ? 100 - n : n
+    if (value <= 0) continue
+    text(x, String(value), 34, y, { font: DISPLAY, size: 21, color: 'rgba(245,247,243,.62)' })
+    text(x, String(value), w - 34, y, { font: DISPLAY, size: 21, color: 'rgba(245,247,243,.62)' })
+  }
+}
+function lineColors(x, view, los, first) {
+  const inset = 8
+  x.fillStyle = '#3f86ff'; x.fillRect(inset, los - 1.6, view.w - inset * 2, 3.2)
+  if (first != null) { x.fillStyle = '#f7d64a'; x.fillRect(inset, first - 2, view.w - inset * 2, 4) }
+}
+// the men on the field, drawn back to front
+const CAST = []
+let castN = 0
+const TAGS = [], TAG_MAX = 1.15    // (a big man up close keeps a small name)
+export function put(x, y, team, o) {
+  const c = CAST[castN] ?? (CAST[castN] = {})
+  castN++
+  c.x = x; c.y = y; c.z = o.z ?? y
+  c.color = team.color; c.trim = team.trim; c.pants = team.pants ?? team.trim; c.skin = o.skin ?? '#8d5a3b'
+  c.number = o.number ?? null; c.dir = o.dir ?? 'up'; c.step = o.step ?? null; c.pose = o.pose ?? null
+  c.carry = !!o.carry; c.size = o.size ?? 0.9; c.fall = o.fall ?? 0; c.fallX = o.fallX ?? 0; c.kit = 'pads'; c.squat = o.squat ?? 0; c.lean = o.lean ?? 0
+  c.tag = o.name ?? null
+}
+export function action(ctx, view) {
+  const list = CAST.slice(0, castN).sort((a, b) => a.z - b.z)
+  castN = 0
+  let n = 0
+  for (const c of list) {
+    let p
+    if (c.lean) {
+      const q = tilt(view, c.x, c.y)
+      ctx.save(); ctx.translate(q.x, q.y); ctx.transform(1, 0, -c.lean, 1, 0, 0); ctx.translate(-q.x, -q.y)
+      p = athlete(ctx, view, c.x, c.y, c)
+      ctx.restore()
+    } else p = athlete(ctx, view, c.x, c.y, c)
+    // (on a small canvas the linemen's names only cover the numbers)
+    if (c.tag && !c.fall && !(view.px < 1.6 && (c.pose === 'block' || c.pose === 'stance'))) {
+      // his name goes down with him: a man nearer the camera stands in front of it
+      const k = Math.min(TAG_MAX, Math.max(0.8, p.s * c.size)), w = (c.tag.length * 5.6 + 6) * k
+      nameTag(ctx, view, clamp(p.x, w / 2 + 1, view.w - w / 2 - 1), p.y, c.tag, k)
+    }
+  }
+}
+// a football in the air at a field point, z up off the ground, its shadow where it would fall
+export function ballInAir(ctx, view, x, y, z, ang, size = 1) {
+  const q = ballShadow(ctx, view, x, y, z)
+  // (the same ball as the throwing games: ang here is 0 for straight upfield)
+  artBall(ctx, q.x, q.y - z * q.s, { axis: [Math.sin(ang), Math.cos(ang), 0.15], len: (14 + z * 0.016) * size * q.s, spin: performance.now() / 180 })
+}
+export const teamOf = (c, side) => (side ? { color: c.them, trim: c.themTrim } : { color: c.us, trim: c.trim })
+
+export function draw(ctx, g, view) {
+  if (g.men) { g.h = view.h; g.cam = view }
+  if (g.stamp && g.stamp.y == null) g.stamp.y = view.h * g.W.stampY
+  if (g.later && g.later.y == null) g.later.y = view.h * g.W.stampY
+  ;(SCENES[g.game] ?? drawHot)(ctx, g, view)
+  if (g.game !== 'pnr' && g.game !== 'rim-protect') vignette(ctx, view)
+}
+
+const P = { x: 0, y: 0, by: 0 }
+
+// ── Hot read: 11 on 11 ──────────────────────────────────────────────────────
+// A legal doubles set from the gun. On the line (7): X split wide, the five linemen, the tight end
+// as the end man on his side. Off it (4): the slot, Z, the QB, the back. Four men run routes. The
+// defense is a 4-3 over it: a corner each on X and Z, the Sam on the tight end, a safety down on the
+// slot, the Mike and Will in the box, a safety deep.
+//   Open: he breaks hard and his man is turned round, carried upfield, trailing.
+//   Bait: he breaks just the same, but a backer or the deep safety is driving on him.
+const RUN = 0.08        // route speed, logical units per ms. A break is the top of it: 0.104
+const BURST = 1.3
+const TOP_SPEED = 0.13  // no defender in this scene goes faster (give or take the real man's speed)
+const COV_TRAIL = 18, COV_LAG = 70, COV_CARRY = 360, COV_HIPS = 380
+const HOOK = [128, 232]
+const OL_GAP = 24
+// Third & Long's yard, on any screen
+const TL_PYD = h => (Math.round(h * 0.76) - 58) / 60
+// everybody's numbers, on every field
+const OL_NUM = [71, 64, 55, 66, 77], DL_NUM = [94, 97, 91, 99]
+const losOf = h => Math.round(h * 0.84)
+const ROUTES = [
+  { x: 28, y: 10, cov: 34, cut: 2.55, stem: [90, 150], ang: [-0.02, 0.3] },   // X, on the line
+  { x: 94, y: 22, cov: 44, cut: 1.4, stem: [50, 100], ang: [0.3, 0.7] },      // the slot, off it
+  { x: 270, y: 10, cov: 46, cut: -1.4, stem: [50, 110], ang: [-0.6, -0.2] },  // the tight end, on it
+  { x: 332, y: 22, cov: 44, cut: -2.55, stem: [90, 150], ang: [-0.3, 0.02] }, // Z, off it
+]
+const sharpOf = (rep, k) => k === rep.open || rep.decoy?.k === k
+const breakAt = (rep, k) => (k === rep.open ? rep.delay : rep.decoy?.k === k ? rep.decoy.at : PRE + rep.stem[k] / (RUN * rep.pace[k]))
+// where receiver k is at this age of the play. Rules and picture both ask here.
+function routeOf(rep, k, age, h) {
+  const s = ROUTES[k], sharp = sharpOf(rep, k), run = RUN * rep.pace[k], d = Math.max(0, age - PRE) * run
+  const stem = Math.max(0, breakAt(rep, k) - PRE) * run, a = sharp ? rep.cut[k] : rep.ang[k]
+  let rest = Math.max(0, d - stem) * (sharp ? BURST : 1)
+  if (k !== rep.open && rep.decoy?.k === k && rep.decoy.early) rest = Math.min(rest, 70)   // an early one settles down
+  if (Math.abs(s.cut) > 2) rest = Math.min(rest, 62)   // a comeback settles, he doesn't run back to the line
+  const x = s.x + Math.sin(a) * rest
+  P.x = clamp(rep.flip ? 360 - x : x, 14, 346)
+  P.y = losOf(h) + s.y - Math.min(d, stem) - Math.cos(a) * rest
+  return P
+}
+function paintHot(f, view) {
+  const los = losOf(view.h), pyd = TL_PYD(view.h)
+  paintFieldFlat(f, view, los - 50 * pyd, pyd, view.colors.us)
+  lineColors(f, view, los, los - 10 * pyd)
+}
+function buildHot(rep, h) {
+  const los = losOf(h), S = { cov: [], lb: [], deep: null, rob: null, catcher: null, recv: [{}, {}, {}, {}] }
+  for (let k = 0; k < 4; k++) {
+    const p = routeOf(rep, k, 0, h)
+    S.cov.push(body(clamp(p.x + rep.side[k] * 15, 14, 346), p.y - ROUTES[k].cov))
+  }
+  S.lb = [body(150, los - 46), body(210, los - 46)]
+  S.deep = body(180, Math.max(82, los - 150))
+  S.all = [...S.cov, S.lb[0], S.lb[1], S.deep]
+  S.top = TOP_SPEED * Math.max(...rep.cpace)
+  return S
+}
+function stepHot(g, rep, S, dt, h, age) {
+  const res = rep.res, los = losOf(h), frozen = res ? res.at - rep.at : age
+  const run = res ? frozen + Math.min(age - frozen, 260) : age, d = rep.decoy
+  for (let k = 0; k < 4; k++) { const p = routeOf(rep, k, run, h); S.recv[k].x = p.x; S.recv[k].y = p.y }
+  // his man. Off him at the snap and backpedalling, then the hips turn and he's on his hip, a beat behind
+  // whatever he does; a real speed gap shows in that step. Only on the real break is he carried past it, and
+  // only then is there daylight.
+  for (let k = 0; k < 4; k++) {
+    const c = S.cov[k], s = ROUTES[k], on = rep.side[k], cp = rep.cpace[k]
+    const lag = routeOf(rep, k, Math.max(0, run - COV_LAG), h), lx = lag.x, ly = lag.y
+    const gapY = lerp(s.cov, COV_TRAIL + (rep.pace[k] / cp - 1) * 40, clamp((run - PRE) * RUN / 60, 0, 1))
+    c.tx = clamp(lx + on * 15, 14, 346); c.ty = ly - gapY; c.v = TOP_SPEED * cp
+    if (sharpOf(rep, k) && run > breakAt(rep, k)) {
+      const bt = breakAt(rep, k), open = k === rep.open
+      if (run < bt + COV_CARRY) {
+        const bp = routeOf(rep, k, bt, h)
+        c.tx = clamp(bp.x + on * 15, 14, 346); c.ty = bp.y - gapY - 62; c.v = 0.09 * cp
+      } else if (open || !d?.early) c.v = 0.06 * cp
+      else if (run < bt + FLASH) c.v = 0.08 * cp
+    }
+  }
+  // the zones. Mike and Will open to their hook windows and sit there, leaning to whoever's working under them
+  // (off an open man: somebody else has them). The safety stays over the deepest man and rotates away from an
+  // open one. One of them may be the robber.
+  const opened = frozen >= rep.delay, drop = Math.min(36, Math.max(0, run - PRE) * 0.03)
+  S.lb.forEach((b, i) => {
+    const home = HOOK[i], kk = Math.abs(S.recv[1].x - home) < Math.abs(S.recv[2].x - home) ? 1 : 2
+    const lean = clamp(S.recv[kk].x - home, -24, 24)
+    b.tx = run < PRE ? b.x : home + (opened && kk === rep.open ? -lean * 0.8 : lean * 0.6)
+    b.ty = los - 46 - drop; b.v = 0.075
+  })
+  let top = S.recv[0]
+  for (let k = 1; k < 4; k++) if (S.recv[k].y < top.y) top = S.recv[k]
+  const away = opened ? (S.recv[rep.open].x < 180 ? 70 : -70) : 0
+  S.deep.tx = 180 + clamp(top.x - 180, -30, 30) * 0.5 + away; S.deep.ty = Math.max(82, Math.min(los - 150, top.y - 60)); S.deep.v = 0.1 * g.who.sPace[0]
+  if (d && run >= d.at) {
+    if (!S.rob) S.rob = d.k === 0 || d.k === 3 ? S.deep : S.recv[d.k].x < 180 ? S.lb[0] : S.lb[1]
+    const t = S.recv[d.k]
+    S.rob.tx = t.x + (180 - t.x) * 0.08; S.rob.ty = t.y + 20; S.rob.v = TOP_SPEED
+  }
+  // the ball: whoever's going to pick it off goes and gets it, then takes it back
+  if (res && res.kind !== 'good' && res.kind !== 'late') {
+    const t = S.recv[res.k], since = age - frozen
+    if (!S.catcher) S.catcher = res.kind === 'bait' && S.rob ? S.rob : S.cov[res.k]
+    if (since < res.flight) { S.catcher.tx = t.x; S.catcher.ty = t.y + 22; S.catcher.v = TOP_SPEED }
+    else { S.catcher.tx = S.catcher.x; S.catcher.ty = los + 400; S.catcher.v = TOP_SPEED }
+  }
+  mark(S.all)
+  for (const c of S.all) seek(c, dt)
+  // nobody shares the ground: defenders give way to each other and to the routes
+  for (let a = 0; a < S.all.length; a++) {
+    for (let b = a + 1; b < S.all.length; b++) apart(S.all[a], S.all[b], 22, a < 4 && b >= 4 && S.all[b] !== S.rob ? 0 : 0.5)   // (a man in the zone gives way to a man on his man)
+    if (S.all[a] !== S.catcher) for (let k = 0; k < 4; k++) apart(S.all[a], S.recv[k], 20, 1)
+  }
+  capped(S.all, S.top, dt)
+}
+// which way a man in coverage is facing: eyes in on the backpedal, then running with the route; once he's
+// been carried past the break he's planted and looking back at his man
+function hipsHot(rep, k, run, w, b, rv) {
+  if (run < PRE + COV_HIPS) return 'down'
+  if (sharpOf(rep, k) && run > breakAt(rep, k) + COV_CARRY) return dirOf(rv.x - b.x, rv.y - b.y)
+  return dirFrom(w, 'up')
+}
+const HOT_NUM = [11, 84, 87, 15], DEF_NUM = [24, 21, 29, 26, 52, 45, 38]
+function drawHot(ctx, g, view) {
+  const { h } = view, rep = g.rep, res = rep.res, c = view.colors
+  const age = g.t - rep.at, frozen = res ? res.at - rep.at : age, since = res ? g.t - res.at : -1
+  fieldStage(ctx, view, 'hot', paintHot)
+  const S = stepScene(g, h, buildHot, stepHot)
+  const us = teamOf(c, 0), them = teamOf(c, 1), who = g.who
+  const los = losOf(h), qy = los + 52, qx = 180, snap = age >= PRE
+  const sacked = res?.kind === 'late', ok = res?.kind === 'good', flight = res?.flight ?? g.W.flight
+  // the pocket: the clock of the whole play. It reaches the QB exactly when the time is up.
+  const pc = frozen < rep.delay ? 0.42 * easeOut(prog(frozen, PRE, rep.delay)) : 0.42 + 0.58 * prog(frozen, rep.delay, rep.delay + rep.T)
+  const runAge = res ? frozen + Math.min(since, 260) : age, rs = rep.flip ? -1 : 1
+  const fall = sacked ? clamp((since - 40) / 320, 0, 1) : 0
+  // coverage and the second level
+  S.all.forEach((b, i) => {
+    const w = walk(g, `d${i}`, b.x, b.y)
+    const dir = b === S.catcher || b === S.rob ? dirFrom(w, 'down') : i < 4 ? hipsHot(rep, i, runAge, w, b, S.recv[i]) : 'down'
+    put(b.x, b.y, them, { dir, step: snap ? w.step : null, pose: snap && w.step != null ? null : 'ready', carry: b === S.catcher && since > flight, skin: skinOf(i * 3 + 1), number: DEF_NUM[i], size: 0.86, ...who.def[i] })
+  })
+  // the front four and the five: heads down, hands on each other. The ends get round the edge.
+  const push = pc * (qy - 24 - (los + 10))
+  for (let i = -1; i <= 1; i += 2) {
+    put(180 + i * OL_GAP * 0.72, los + push - 10, them, { dir: 'down', pose: snap ? 'block' : 'stance', skin: skinOf(i + 3), number: DL_NUM[i < 0 ? 1 : 2], size: 0.94, ...who.dl[i < 0 ? 1 : 2] })
+    const held = i === rs
+    const ex = 180 + i * (66 + Math.sin(pc * Math.PI) * 14 - pc * pc * (held ? 26 : 40)), ey = lerp(los - 10, held ? qy - 22 : qy - 2, pc)
+    const w = walk(g, `e${i}`, ex, ey, 7)
+    const wrap = sacked && !held
+    put(ex, ey, them, { dir: wrap ? (i < 0 ? 'right' : 'left') : snap ? dirFrom(w, 'down') : 'down', step: wrap ? null : w.step, pose: wrap ? 'wrap' : snap ? (w.step == null ? 'block' : null) : 'stance', fall: wrap ? fall : 0, fallX: -i, z: wrap ? qy + 1 : undefined, skin: skinOf(i + 6), number: DL_NUM[i < 0 ? 0 : 3], size: 0.94, ...who.dl[i < 0 ? 0 : 3] })
+  }
+  for (let i = -2; i <= 2; i++) put(180 + i * (OL_GAP - pc * 2), los + 10 + push * (1 - Math.abs(i) * 0.12), us, { dir: 'up', pose: snap ? 'block' : 'stance', skin: skinOf(i + 11), number: OL_NUM[i + 2], size: 0.94, ...who.ol[i + 2] })
+  // the receivers
+  let tx = 0, ty = 0
+  for (let k = 0; k < 4; k++) {
+    const p = routeOf(rep, k, runAge, h), x = p.x
+    let y = p.y
+    if (ok && res.k === k) y -= Math.max(0, since - flight) * 0.05 * rep.pace[k]    // he catches it and keeps going
+    const w = walk(g, `r${k}`, x, y)
+    put(x, y, us, { dir: dirFrom(w, 'up'), step: snap ? w.step : null, pose: snap ? null : 'ready', carry: ok && res.k === k && since > flight, skin: skinOf(k * 2), number: HOT_NUM[k], size: 0.86, ...who.rcv[k] })
+    if (res?.k === k) { tx = x; ty = y }
+  }
+  // the back stays in to block, the QB in the gun
+  put(qx + rs * 30, qy + 2 - pc * 14, us, { dir: 'up', pose: 'ready', skin: skinOf(5), number: 28, size: 0.86, ...who.rb })
+  const arm = res && !sacked ? qbPose(null, since) : null
+  put(qx, qy, us, { dir: arm ? (tx < qx ? 'left' : 'right') : 'up', carry: (!res || sacked) && age >= PRE + SNAP_MS, fall, fallX: rs, skin: skinOf(9), number: 7, size: 0.9, pose: arm, ...who.qb })
+  action(ctx, view)
+  snapBall(ctx, view, 180, los + 8, qx, qy, age - PRE)
+  // the men you can throw to, circled
+  if (!res) {
+    ctx.save(); ctx.strokeStyle = 'rgba(255,255,255,.82)'; ctx.lineWidth = 2
+    for (let k = 0; k < 4; k++) { const q = g.aimAt(k), r = tilt(g.cam, g.men[k].x, g.men[k].y).s * 27; ctx.beginPath(); ctx.arc(q.x, q.y, r, 0, Math.PI * 2); ctx.stroke() }
+    ctx.restore()
+  }
+  // the throw: to him if he's open, and it lands on whoever's going to pick it off if he isn't
+  if (res && !sacked) {
+    const f = clamp(since / flight, 0, 1), cb = S.catcher
+    const ex = ok ? tx : cb ? cb.x : tx, ey = ok ? ty : cb ? cb.y : ty
+    if (f < 1) ballInAir(ctx, view, lerp(qx, ex, f), lerp(qy, ey, f), 32 + Math.sin(f * Math.PI) * 40, Math.atan2(ex - qx, qy - ey), 1)
+  }
+}
+
+// ── Pick the gap ────────────────────────────────────────────────────────────
+// A real front: five linemen, four down, three backers, two safeties. Every gap is a fight, breathing
+// open and shut. One hole gets blocked open for real: its man is driven out AND a lineman climbs to the
+// backer over it. On the bait the man is driven out but nobody gets to the backer, and he fills it.
+// The back goes where you tap and runs into whatever's there: a good read gets a real gain and he's
+// tackled by whoever gets to him; only sometimes, when a safety takes a bad angle, does it break long.
+const YARD = 13
+const OLX = [56, 118, 180, 242, 304]
+const G_SIZE = 1.08
+const G_LB = [52, 58, 54], G_S = [26, 38]
+const lineOf = h => Math.round(h * 0.78)
+const holesOf = rep => [87, rep.dir > 0 ? 211 : 149, 273]
+function paintGap(f, view) {
+  const line = lineOf(view.h)
+  paintFieldFlat(f, view, line - 50 * YARD, YARD, view.colors.us)
+  lineColors(f, view, line, line - YARD * 10)
+}
+function buildGap(rep, h) {
+  const line = lineOf(h), H = holesOf(rep)
+  const nose = rep.dir > 0 ? 149 : 211
+  const S = {
+    line, H,
+    ol: OLX.map(x => body(x, line + 16)),
+    dl: [...H, nose].map(x => body(x, line - 16)),
+    lb: [87, 180, 273].map(x => body(x, line - 66)),
+    s: [body(120, line - 150), body(240, line - 150)],
+    qb: body(180, line + 50),
+    rb: body(180 - rep.dir * 16, line + 92),
+    down: false, by: null, gain: null, told: false, fall: null,
+  }
+  S.dl.forEach((b, i) => { b.hx = b.x; b.i = i; b.num = DL_NUM[i]; b.sk = i + 1 })
+  S.ol.forEach(b => { b.hx = b.x; b.hy = b.y })
+  S.lb.forEach((b, i) => { b.hx = b.x; b.hy = b.y; b.num = G_LB[i]; b.sk = i + 5 })
+  S.s.forEach((b, i) => { b.num = G_S[i]; b.sk = i + 8; b.si = i })
+  S.bodies = [...S.dl, ...S.lb, ...S.s]
+  S.everyone = [...S.bodies, ...S.ol, S.qb, S.rb]
+  return S
+}
+function stepGap(g, rep, S, dt, h, age) {
+  const res = rep.res, ok = res?.kind === 'good', late = res?.kind === 'late', d = rep.decoy, line = S.line, want = rep.open
+  const frozen = res ? res.at - rep.at : age, since = res ? age - frozen : -1, t = g.simT
+  const flow = age >= PRE ? rep.dir * 14 : 0
+  // how far each hole has been blocked open
+  const openBy = k => {
+    let s = 0
+    if (k === want && frozen >= rep.delay) {
+      s = prog(frozen, rep.delay, rep.delay + 180) * (1 - prog(frozen, rep.delay + rep.T * 0.6, rep.delay + rep.T) * 0.8)
+      if (ok) s = 1
+      if (late) s = 0
+    }
+    if (d?.k === k && frozen >= d.at) {
+      s = prog(frozen, d.at, d.at + 180)
+      if (d.early) s *= 1 - prog(frozen, d.at + FLASH - 160, d.at + FLASH)
+      else s *= 1 - prog(frozen, rep.delay + rep.T * 0.6, rep.delay + rep.T) * 0.8
+    }
+    return s
+  }
+  // every gap breathes: a hole opening a little means nothing. The man in it is what to watch.
+  S.dl.forEach((b, i) => {
+    const o = i < 3 ? openBy(i) : 0, sway = Math.sin(t / 230 + rep.ph[i]) * (age >= PRE ? 9 : 0)
+    const out = i < 3 ? (i === 0 ? -1 : i === 2 ? 1 : rep.dir) : 0
+    b.tx = b.hx + flow * 0.5 + sway * (1 - o) + out * o * 42
+    b.ty = line - 16 - o * 26 + Math.sin(t / 190 + i) * (age >= PRE ? 3 : 0)
+    b.v = 0.14
+  })
+  S.ol.forEach((b, i) => {
+    const left = S.H.findIndex(x => x > b.hx && x - b.hx < 40), right = S.H.findIndex(x => x < b.hx && b.hx - x < 40)
+    const gap = (left >= 0 ? -openBy(left) * 16 : 0) + (right >= 0 ? openBy(right) * 16 : 0)
+    b.tx = b.hx + flow * 0.5 + gap + Math.sin(t / 260 + i * 1.7) * (age >= PRE ? 4 : 0)
+    b.ty = b.hy - (age >= PRE ? 4 : 0)
+    b.v = 0.14
+  })
+  // the climb: on the real hole a lineman gets up to the backer over it
+  const climbI = OLX.findIndex(x => Math.abs(x - S.H[want]) < 40)
+  const lbI = want === 0 ? 0 : want === 2 ? 2 : 1
+  if (frozen >= rep.delay && climbI >= 0) { const c = S.ol[climbI]; c.tx = S.lb[lbI].x; c.ty = S.lb[lbI].y + 28; c.v = 0.16 }
+  // the backers flow with the play. The bait's backer comes downhill into his hole.
+  const baitI = d ? (d.k === 0 ? 0 : d.k === 2 ? 2 : 1) : -1
+  S.lb.forEach((b, i) => {
+    b.tx = b.hx + flow * 1.2 + Math.sin(t / 320 + i * 2) * 5; b.ty = b.hy; b.v = 0.12
+    if (i === baitI && age >= d.at) { b.tx = S.H[d.k]; b.ty = line - 36; b.v = 0.17 }
+  })
+  S.s[0].tx = 120 + flow * 0.5; S.s[1].tx = 240 + flow * 0.5; S.s[0].ty = S.s[1].ty = line - 150 + Math.min(16, Math.max(0, age - PRE) * 0.02); S.s[0].v = 0.12 * g.who.sPace[0]; S.s[1].v = 0.12 * g.who.sPace[1]
+  S.qb.tx = 180 + rep.dir * 26; S.qb.ty = line + 46; S.qb.v = 0.08
+  if (res) { S.qb.tx = late ? 180 + rep.dir * 64 : S.H[res.k] < 180 ? 244 : 116; S.qb.ty = line + 58; S.qb.v = 0.15 }
+  // the back: closing on the line, which is the clock. Then he goes where he's told.
+  const rb = S.rb
+  if (!res) {
+    const near = frozen < rep.delay ? 0.3 * prog(frozen, PRE, rep.delay) : 0.3 + 0.7 * prog(frozen, rep.delay, rep.delay + rep.T)
+    rb.tx = 180 + rep.dir * 12; rb.ty = lerp(line + 92, line + 72, near); rb.v = 0.16 * g.who.rbPace
+  } else if (!S.down) {
+    const hx = late ? 180 : S.H[res.k]
+    rb.tx = hx; rb.v = 0.28 * g.who.rbPace
+    // along behind the line to his hole, then up through it
+    rb.ty = Math.abs(rb.x - hx) > 10 && rb.y > line + 40 ? Math.min(rb.y, line + 62) : -200
+    // the pursuit once he's through
+    if (ok && rb.y < line - 24) {
+      S.lb.forEach((b, i) => { if (i !== lbI) { b.tx = rb.x; b.ty = rb.y - 30; b.v = 0.14 } })
+      S.s.forEach((b, i) => {
+        b.v = 0.16 * g.who.sPace[i]
+        if (rep.big) { b.tx = rb.x + (i ? 70 : -70); b.ty = rb.y + 40 }    // a bad angle: he overruns it
+        else { b.tx = rb.x; b.ty = rb.y - 14 }
+      })
+      // a long one angles away from the man who missed
+      if (rep.big) rb.tx = rb.x
+    }
+    if (late && since > 60) { S.dl[3].tx = rb.x; S.dl[3].ty = rb.y - 28; S.dl[3].v = 0.24 }
+  }
+  const bodies = S.bodies
+  mark(S.everyone)
+  for (const b of bodies) seek(b, dt)
+  for (const b of S.ol) seek(b, dt)
+  seek(S.qb, dt)
+  if (!S.down) {
+    // past the line he makes his cuts: a new angle every so often, the odd sharp one
+    if (ok && rb.y < line - 8) {
+      if (!(g.simT < (S.cutUntil ?? 0))) {
+        const b = Math.sin(g.simT * 12.9898 + g.i) * 43758.5453, u = b - Math.floor(b), juke = u < 0.1
+        S.cutTo = (u * 100 % 2 < 1 ? -1 : 1) * (juke ? 40 : 8 + u * 14)
+        S.cutUntil = g.simT + (juke ? 130 : 620 + u * 500)
+      }
+      rb.tx = clamp(rb.x + S.cutTo, 24, 336)
+    }
+    seek(rb, dt)
+  }
+  // nobody passes through anybody
+  for (let a = 0; a < bodies.length; a++) for (let b = a + 1; b < bodies.length; b++) apart(bodies[a], bodies[b], 30)
+  for (let a = 0; a < S.ol.length; a++) {
+    for (let b = a + 1; b < S.ol.length; b++) apart(S.ol[a], S.ol[b], 34)
+    for (const m of bodies) apart(S.ol[a], m, 28)
+    if (!S.down) apart(S.ol[a], rb, 28, ok ? 1 : 0.5)
+  }
+  apart(S.qb, rb, 28, 1)
+  capped(S.everyone, 0.3, dt)
+  // the hit. Anyone in front of him stops him: he's tackled where he is.
+  if (res && !S.down) {
+    for (const m of bodies) {
+      const dist = Math.hypot(m.x - rb.x, m.y - rb.y)
+      // (on a good read the down men are blocked out of it, and so is the backer the lineman climbed to)
+      if (dist < 31 && !(ok && (S.dl.includes(m) || m === S.lb[lbI] || (rep.big && S.s.includes(m))))) {
+        S.down = true; S.by = m
+        S.fall = { at: g.simT, x: Math.sign(rb.x - m.x) || rep.dir }
+        S.gain = Math.round((line - rb.y) / YARD)
+        if (g.stamp && !g.done && ok) g.stamp.text = `GAIN OF ${Math.max(1, S.gain)}`
+        break
+      }
+    }
+    if (rb.y < -20 && !S.told) { S.told = true; if (g.stamp) g.stamp.text = 'BREAKAWAY' }
+  } else if (S.down) {
+    // the rest pull up around the pile; they don't run through it
+    for (const m of bodies) { if (m !== S.by) { apart(m, rb, 38, 1) } }
+    S.by.tx = S.by.x; S.by.ty = S.by.y
+  }
+}
+const PITCH_MS = 130
+function drawGap(ctx, g, view) {
+  const { h } = view, rep = g.rep, res = rep.res, c = view.colors
+  const age = g.t - rep.at, snap = age >= PRE
+  fieldStage(ctx, view, 'gap', paintGap)
+  const S = stepScene(g, h, buildGap, stepGap), rb = S.rb
+  const us = teamOf(c, 0), them = teamOf(c, 1), who = g.who
+  const fall = S.down ? clamp((g.simT - S.fall.at - 60) / 300, 0, 1) : 0
+  S.dl.forEach(b => { if (b !== S.by) put(b.x, b.y, them, { dir: 'down', pose: snap ? 'block' : 'stance', skin: skinOf(b.sk), number: b.num, size: G_SIZE, ...who.dl[b.i] }) })
+  const defs = [...S.lb, ...S.s]
+  defs.forEach((b, i) => {
+    if (b === S.by) return
+    const w = walk(g, `l${i}`, b.x, b.y, 10)
+    put(b.x, b.y, them, { dir: dirFrom(w, 'down'), step: w.step, pose: w.step == null ? 'ready' : null, skin: skinOf(b.sk), number: b.num, size: G_SIZE * 0.92, ...(b.si != null ? who.def[b.si] : null) })
+  })
+  S.ol.forEach((b, i) => put(b.x, b.y, us, { dir: 'up', pose: snap ? 'block' : 'stance', skin: skinOf(i + 3), number: OL_NUM[i], size: G_SIZE, ...who.ol[i] }))
+  // the ball's his until you pick the hole, then a quick pitch to the back
+  const since = res ? g.t - res.at : -1, pitched = since >= PITCH_MS
+  const qw = walk(g, 'qb', S.qb.x, S.qb.y, 10)
+  put(S.qb.x, S.qb.y, us, { dir: dirFrom(qw, 'up'), step: qw.step, pose: qw.step == null ? 'ready' : null, carry: !res && age >= PRE + SNAP_MS, skin: skinOf(9), number: 7, size: G_SIZE * 0.95, ...who.qb })
+  const w = walk(g, 'rb', rb.x, rb.y, 11)
+  put(rb.x, rb.y, us, { dir: S.down ? 'up' : dirFrom(w, 'up'), step: S.down ? null : w.step, carry: pitched, fall, fallX: S.down ? S.fall.x : 0, skin: skinOf(6), number: 28, size: G_SIZE * 0.92, ...who.rb })
+  const closeIn = S.down ? clamp((g.simT - S.fall.at) / 100, 0, 1) : 0
+  if (S.by) put(lerp(S.by.x, rb.x - S.fall.x * 16, closeIn), lerp(S.by.y, rb.y - 6, closeIn), them, { dir: S.fall.x > 0 ? 'right' : 'left', pose: 'wrap', fall, fallX: S.fall.x, z: rb.y + 1, skin: skinOf(S.by.sk), number: S.by.num, size: G_SIZE * 0.92, ...(S.by.si != null ? who.def[S.by.si] : S.by.i != null ? who.dl[S.by.i] : null) })
+  action(ctx, view)
+  snapBall(ctx, view, 180, S.qb.y - 42, S.qb.x, S.qb.y, age - PRE)
+  if (res && !pitched) { const f = since / PITCH_MS; ballInAir(ctx, view, lerp(S.qb.x, rb.x, f), lerp(S.qb.y, rb.y, f), 30, Math.atan2(rb.x - S.qb.x, S.qb.y - rb.y)) }
+  // the three gaps to pick: a see-through arrow on each hole (the whole third of the screen counts)
+  if (!res) {
+    ctx.save(); ctx.globalAlpha = 0.7
+    ;[[-92, -0.42], [0, 0], [92, 0.42]].forEach(([dx, ang], i) => {
+      const q = tilt(view, 180 + dx, S.line - 14)
+      ctx.save(); ctx.translate(q.x, q.y); ctx.rotate(ang)
+      ctx.beginPath()
+      ctx.moveTo(0, -15); ctx.lineTo(12, -2); ctx.lineTo(5, -2); ctx.lineTo(5, 13); ctx.lineTo(-5, 13); ctx.lineTo(-5, -2); ctx.lineTo(-12, -2); ctx.closePath()
+      ctx.fillStyle = '#35d46f'; ctx.fill()
+      ctx.strokeStyle = 'rgba(8,12,16,.82)'; ctx.lineWidth = 1.4; ctx.lineJoin = 'round'; ctx.stroke()
+      ctx.restore()
+      if (view.keys) { ctx.globalAlpha = 1; keyCap(ctx, q.x, q.y + 24, THREE_KEYS[i]); ctx.globalAlpha = 0.7 }
+    })
+    ctx.restore()
+  }
+}
+
+// ── Jump the route ──────────────────────────────────────────────────────────
+// You're the deep safety, in the middle of the field. The offense comes down the field at you; the
+// corners and the rest are on their men, in man. Sooner or later a receiver beats his corner: he breaks,
+// the corner's carried past it, the QB's shoulders open, the ball comes out. Tap THAT RECEIVER: you break on
+// him. Get there before the ball and you take it away. Get there with it and you hit him and jar it loose.
+// Tap the wrong man and you've run to the wrong side while he catches it. The bait is a double move: he
+// stutters and sells it, the QB isn't looking there, and if you jump it he goes by you.
+const J_RUN = 0.076
+const losJ = h => Math.round(h * 0.56)
+// the rules measure the safety's run from here, off the receiver's start: the same however the picture's framed
+const jumpFrom = h => losJ(h) - 10 + h * 0.32 - 16
+const J_X = [30, 104, 256, 330]
+function paintJump(f, view) {
+  const los = losJ(view.h), pyd = TL_PYD(view.h)
+  paintFieldFlat(f, view, los - 70 * pyd, pyd, view.colors.us)
+  lineColors(f, view, los, los + 10 * pyd)
+}
+const stutterOf = (rep, k) => (rep.decoy?.k === k ? rep.decoy : null)
+function routeJ(rep, k, age, h) {
+  const R = ROUTES[k], sharp = k === rep.open, s = stutterOf(rep, k), run = J_RUN * rep.pace[k]
+  const a = sharp || s ? 0 : rep.ang[k]
+  let d, x = J_X[k], y = 0
+  if (s && age > s.at) {
+    // stem, stutter and jab, then gone
+    const stem = Math.max(0, s.at - PRE) * run, t = age - s.at
+    const inward = k < 2 ? 1 : -1
+    d = stem + Math.min(t, 300) * run * 0.2 + Math.max(0, t - 300) * run * 1.4
+    x += inward * Math.sin(clamp(t / 340, 0, 1) * Math.PI) * 26
+    y = d
+  } else if (sharp && age > rep.delay) {
+    const stem = Math.max(0, rep.delay - PRE) * run
+    let rest = (age - rep.delay) * run * BURST
+    if (Math.abs(R.cut) > 2 && !rep.deep) rest = Math.min(rest, 62)
+    x += Math.sin(rep.cut[k]) * rest
+    y = stem + Math.cos(rep.cut[k]) * rest
+  } else {
+    d = Math.max(0, age - PRE) * run
+    const stem = sharp || s ? 1e9 : rep.stem[k], rest = Math.max(0, d - stem)
+    x += Math.sin(a) * rest
+    y = Math.min(d, stem) + Math.cos(a) * rest
+  }
+  P.x = clamp(rep.flip ? 360 - x : x, 16, 344)
+  P.y = losJ(h) - 10 + y
+  return P
+}
+// where his corner is: backpedalling, then on his hip, deep side, a beat behind him. Only the man who really
+// beats him leaves him: carried on past the break, deep and turned, then getting back. On a double move he
+// sits down on the stutter and comes up a step, gets turned, and runs back on to the hip: covered.
+const J_TRAIL = 18, J_CARRY = 380, J_HIPS = 440
+function cornerAt(rep, k, age, h) {
+  const on = (k < 2 ? -1 : 1) * (rep.flip ? -1 : 1), s = stutterOf(rep, k)
+  const now = routeJ(rep, k, Math.max(0, age - 90), h)
+  const nx = now.x + on * 16, ny = now.y
+  const trail = lerp(48, J_TRAIL + (rep.pace[k] / rep.cpace[k] - 1) * 40, clamp((age - PRE) * J_RUN / 60, 0, 1))
+  let x = nx, y = ny + trail
+  if (k === rep.open && age > rep.delay) {
+    const b = routeJ(rep, k, rep.delay - 90, h), bx = b.x + on * 16, by = b.y + trail
+    const over = prog(age, rep.delay, rep.delay + J_CARRY)
+    const back = prog(age, rep.delay + J_CARRY, rep.delay + rep.T) * 0.45
+    x = lerp(bx, nx, back); y = lerp(by + over * J_CARRY * J_RUN * 1.05 * rep.cpace[k], ny + trail, back)
+  } else if (s && age > s.at) {
+    const t = age - s.at
+    y -= (t < 300 ? t / 300 : Math.max(0, 1 - (t - 300) / 420)) * 14
+  }
+  P.x = clamp(x, 16, 344); P.y = y
+  return P
+}
+// which way he's facing: squared up on the backpedal and on a stutter, then running with him; beaten, he's
+// planted and looking back at his man
+function hipsJ(rep, k, age, w, cx, cy, rx, ry) {
+  const s = stutterOf(rep, k)
+  if (age < PRE + J_HIPS || (s && age > s.at && age < s.at + 300)) return 'up'
+  if (k === rep.open && age > rep.delay + J_CARRY) return dirOf(rx - cx, ry - cy)
+  return dirFrom(w, 'up')
+}
+// the backers: they open to their hook windows and sit there, stepping off anyone working through
+function backerJ(rep, i, age, h) {
+  const t = easeOut(prog(age, PRE, PRE + 620))
+  let x = 180 + i * lerp(44, 58, t), y = losJ(h) + 46 + 34 * t
+  for (let k = 1; k <= 2; k++) {
+    const q = routeJ(rep, k, age, h), dx = x - q.x, dy = y - q.y, d = Math.hypot(dx, dy) || 1
+    if (d < 30) { x += (dx / d) * (30 - d); y += (dy / d) * (30 - d) }
+  }
+  P.x = x; P.y = y
+  return P
+}
+const safetyY = h => Math.round(h * 0.86)
+const SAFETY_V = 0.34          // the safety's one speed, units a ms
+const PICK_BY = 90, SWAT_BY = 50  // ms: there this far ahead of the ball, it's his; about even, he gets a hand on it
+const MEET_R = 16, JUMP_YD = 8.4, SHORT_GAIN = 8 * JUMP_YD   // how near is a tackle; a tackle within eight yards of the catch is a good play
+const BALL_V = 0.41, BALL_OFF = 110   // a thrown ball: units a ms, and what getting it out takes. Further takes longer
+const jumpRel = rep => rep.delay + rep.T * 0.2
+const jumpLand = (rep, h) => {
+  if (rep.landH === h) return rep.land
+  // (where he'll be depends on when it lands, and when it lands on where he'll be: settle it in a few goes)
+  const rel = jumpRel(rep), qy = losJ(h) - 44
+  let land = rel + 400
+  for (let i = 0; i < 5; i++) { const q = routeJ(rep, rep.open, land, h); land = rel + BALL_OFF + Math.hypot(q.x - 180, q.y - qy) / BALL_V }
+  rep.land = land; rep.landH = h
+  return land
+}
+const jumpRun = (res, age, frozen) => (res ? frozen + Math.min(age - frozen, Math.max(1500, res.flight)) : age)
+function buildJump(rep, h) { return { s: body(180, safetyY(h)), others: Array.from({ length: 10 }, () => ({ x: 0, y: 0 })), hit: false } }
+function stepJump(g, rep, S, dt, h, age) {
+  const res = rep.res, frozen = res ? res.at - rep.at : age, run = jumpRun(res, age, frozen)
+  for (let k = 0; k < 4; k++) {
+    const p = routeJ(rep, k, run, h); S.others[k * 2].x = p.x; S.others[k * 2].y = p.y
+    const q = cornerAt(rep, k, run, h); S.others[k * 2 + 1].x = q.x; S.others[k * 2 + 1].y = q.y
+  }
+  for (let i = 0; i < 2; i++) { const q = backerJ(rep, i * 2 - 1, run, h); S.others[8 + i].x = q.x; S.others[8 + i].y = q.y }   // the backers underneath
+  const b = S.s
+  if (res && res.kind !== 'late') {
+    // a straight shot at the man he tapped, through anyone in between, at one speed
+    const t = S.others[res.k * 2]
+    if (res.kind === 'good' && rep.how !== 'tackle') { const at = routeJ(rep, res.k, jumpLand(rep, h), h); b.tx = at.x; b.ty = at.y - 12 }
+    else { b.tx = t.x; b.ty = t.y - 12 }
+    b.v = SAFETY_V
+    seek(b, dt)
+    return
+  }
+  b.tx = 180 + Math.sin(g.simT / 300 + rep.ph[1]) * 5; b.ty = safetyY(h) + Math.min(14, Math.max(0, run - PRE) * 0.012); b.v = 0.09
+  seek(b, dt)
+  for (let i = 0; i < 10; i++) apart(b, S.others[i], 30, 1)
+}
+const J_CB = [24, 21, 29, 26], J_WR = [11, 84, 87, 15]
+const QB_LOOK = (qx, x) => (Math.abs(x - qx) < 34 ? 'down' : x < qx ? 'left' : 'right')
+function drawJump(ctx, g, view) {
+  const { h } = view, rep = g.rep, res = rep.res, c = view.colors
+  const age = g.t - rep.at, frozen = res ? res.at - rep.at : age, since = res ? g.t - res.at : -1, d = rep.decoy
+  fieldStage(ctx, view, 'jump', paintJump)
+  const S = stepScene(g, h, buildJump, stepJump)
+  const us = teamOf(c, 0), them = teamOf(c, 1), who = g.who
+  const los = losJ(h), qx = 180, qy = los - 44, snap = age >= PRE
+  const ok = res?.kind === 'good', late = res?.kind === 'late', flight = res?.flight ?? 340
+  const runAge = jumpRun(res, age, frozen)
+  const picked = ok && rep.how === 'pick', swatted = ok && rep.how === 'swat', jarred = (ok && rep.how === 'tackle') || res?.kind === 'far', land = jumpLand(rep, h)
+  const missed = res && !ok && !late
+  // the matchups: each receiver and the man on him
+  let ox = 0, oy = 0, tx = 0, ty = 0
+  const hitAt = frozen + flight, hitFall = jarred ? clamp((age - hitAt) / 280, 0, 1) : 0
+  for (let k = 0; k < 4; k++) {
+    const p = routeJ(rep, k, runAge, h), rx = p.x, ry = p.y
+    const q = cornerAt(rep, k, runAge, h), cx = q.x, cy = q.y
+    const cw = walk(g, `c${k}`, cx, cy), rw = walk(g, `w${k}`, rx, ry)
+    put(cx, cy, us, { dir: hipsJ(rep, k, runAge, cw, cx, cy, rx, ry), step: snap ? cw.step : null, pose: snap ? null : 'ready', skin: skinOf(k * 3), number: J_CB[k], size: 0.86, ...who.def[k] })
+    const stut = stutterOf(rep, k), stopped = stut && runAge >= stut.at && runAge < stut.at + 300
+    const hitHim = jarred && res.k === k && hitFall > 0
+    put(rx, ry, them, { dir: hitHim ? 'down' : dirFrom(rw, 'down'), step: snap && !stopped && !hitHim ? rw.step : null, pose: snap ? null : 'ready', carry: age >= land && !picked && !swatted && k === (res?.kind === 'bait' ? res.k : rep.open), fall: hitHim ? hitFall : 0, fallX: hitHim ? (rx < 180 ? -1 : 1) : 0, carry: age > land && (jarred ? res.k === k : !picked && res && k === rep.open), skin: skinOf(k * 3 + 2), number: J_WR[k], size: 0.86, ...who.rcv[k] })
+    if (k === rep.open) { ox = rx; oy = ry }
+    if (res?.k === k) { tx = rx; ty = ry }
+  }
+  // the front, on each other
+  for (let i = -2; i <= 2; i++) put(180 + i * OL_GAP, los - 10 - Math.min(16, Math.max(0, runAge - PRE) * 0.012), them, { dir: 'down', pose: snap ? 'block' : 'stance', skin: skinOf(i + 7), number: OL_NUM[i + 2], size: 0.94, ...who.ol[i + 2] })
+  for (let i = -3; i <= 3; i += 2) put(180 + i * 14, los + 10 - Math.min(16, Math.max(0, runAge - PRE) * 0.012), us, { dir: 'up', pose: snap ? 'block' : 'stance', skin: skinOf(i + 9), number: DL_NUM[(i + 3) / 2], size: 0.94, ...who.dl[(i + 3) / 2] })
+  for (let i = -1; i <= 1; i += 2) {
+    const q = backerJ(rep, i, runAge, h), bx = q.x, by = q.y, w = walk(g, `jb${i}`, bx, by)
+    put(bx, by, us, { dir: 'up', step: w.step, pose: w.step == null ? 'ready' : null, skin: skinOf(i + 4), number: i < 0 ? 52 : 45, size: 0.86 })
+  }
+  // the QB: he scans; his shoulders open to the man he's going to, then the ball's out. On an early bait
+  // they swing that way and come back: a pump. If you've run to the wrong man he doesn't wait.
+  const bx = res?.kind === 'bait' ? tx : ox, by = res?.kind === 'bait' ? ty : oy
+  const scan = Math.sin(g.t / 520 + rep.ph[0])
+  let look = scan > 0.72 ? 'left' : scan < -0.72 ? 'right' : 'down'
+  if (runAge >= rep.delay || missed) look = QB_LOOK(qx, bx)
+  else if (d?.early && runAge >= d.at && runAge < d.at + FLASH) { const p = routeJ(rep, d.k, runAge, h); look = QB_LOOK(qx, p.x) }
+  const rel = jumpRel(rep)
+  const fa = prog(age, rel, land)
+  // his arm: cocked once he's found his man, then the release
+  const arm = qbPose(runAge >= rep.delay && age < rel ? 1 : null, age >= rel ? age - rel : -1)
+  put(qx, qy, them, { dir: arm ? (bx < qx ? 'left' : 'right') : look, pose: arm, carry: !arm && fa <= 0 && age >= PRE + SNAP_MS, skin: skinOf(2), number: 9, size: 0.9, ...who.qb })
+  // him: the safety
+  const b = S.s, sw = walk(g, 'safety', b.x, b.y, 9)
+  const hitNow = jarred && hitFall > 0
+  snapBall(ctx, view, 180, qy + 42, qx, qy, age - PRE)
+  put(b.x, b.y, us, { carry: picked && age >= land, dir: hitNow ? 'up' : dirFrom(sw, 'up'), step: hitNow ? null : sw.step, pose: hitNow ? 'wrap' : sw.step == null ? 'ready' : null, fall: hitNow ? hitFall : 0, fallX: hitNow ? (tx < 180 ? -1 : 1) : 0, carry: picked && age > land, z: hitNow ? ty + 1 : undefined, skin: skinOf(4), number: 38, size: 0.86, ...who.safety })
+  action(ctx, view)
+  // a light ring round each receiver: who there is to press
+  if (!res) {
+    ctx.strokeStyle = 'rgba(255,255,255,.5)'; ctx.lineWidth = 2
+    for (let k = 0; k < 4; k++) { const q = g.aimAt(k), a = tilt(view, g.men[k].x, g.men[k].y); ctx.beginPath(); ctx.arc(q.x, q.y, 25 * a.s, 0, Math.PI * 2); ctx.stroke() }
+  }
+  // the ball, and where it goes
+  // it was thrown at one spot, where his man would be, and it goes there whatever happens around it
+  const toK = res?.kind === 'bait' ? res.k : rep.open
+  const L = routeJ(rep, toK, land, h), Lx = L.x, Ly = L.y
+  if (fa > 0 && fa < 1) ballInAir(ctx, view, lerp(qx, Lx, fa), lerp(qy, Ly, fa), 34 + Math.sin(fa * Math.PI) * 44, Math.atan2(Lx - qx, qy - Ly))
+  else if (swatted && age >= land && age < land + 420) {
+    // a hand on it: down it goes
+    const f = (age - land) / 420
+    ballInAir(ctx, view, Lx + (Lx < 180 ? 18 : -18) * f, Ly + 16 * f, 34 * (1 - f * f), f * 6)
+  }
+}
+
+// ── The court: to scale, through the same camera ────────────────────────────
+const FT = COURT_FT
+const INK = 'rgba(8,12,16,.82)'
+// the result word: one place and one size (used by the cone drills)
+export function placeStamp(s, view) {
+  if (!s || s.placed) return
+  s.placed = true; s.y = view.h - 126
+  s.size = s.text.length > 11 ? 34 : s.size >= 40 ? 44 : 38
+}
+const rimOf = h => Math.round(h * 0.4)
+const courtX = fx => 180 + fx * FT
+const courtY = (fy, h) => rimOf(h) + fy * FT
+// Where a field point is in the arena's feet (lib/mg/arena.js)
+const xFt = x => (x - 180) / FT
+const zFt = (y, h) => -(y - rimOf(h)) / FT
+const CORNER_FT = 16.8
+// the two reads' cameras: down on the floor, level with the rim. Pick-and-roll stands behind the handler, wide
+// enough for both corners. The 3-on-1 runs with the break, and stops short of the rim when the shot goes up.
+const PNR_CAM = { H: 10, D: 37, F: 294, maxF: 320, hzAt: 0.385 }, RIM_CAM = { H: 10, D: 26, F: 256, maxF: 280, hzAt: 0.385 }
+function courtCam(g, age = g.rep.res ? g.rep.res.at - g.rep.at : g.t - g.rep.at) {
+  if (!g.arena || g.arena.h !== g.h) g.arena = arenaCam(g.h, g.game === 'pnr' ? PNR_CAM : RIM_CAM)
+  return g.arena
+}
+const whoOf = (man, number, skin) => man ?? { number, skin, name: null }
+const HSKIN = [skinOf(0), skinOf(1), skinOf(3), skinOf(5), skinOf(2)]
+// The real five on the floor (career's gameCast; null in practice): the man you are, or on the other side
+// the man on him, then two more guards and two bigs. A big's five has him first, and the other big as his roller.
+const FIVE = [['guard', 0], ['guard', 1], ['guard', 2], ['big', 0], ['big', 1]]
+const FIVE_BIG = [['big', 0], ['guard', 0], ['guard', 1], ['big', 1], ['guard', 2]]
+const fiveOf = cast => (cast.us?.big?.[0] === cast.me ? FIVE_BIG : FIVE)
+export function castMen(g, view) {
+  const cast = view.cast
+  if (!cast) return null
+  if (!g.castMen) {
+    const five = fiveOf(cast), of = side => five.map(([group, i]) => manOf(cast, side, group, i))
+    g.castMen = { us: of('us'), them: of('them'), rush: [1, 0, 2].map(i => manOf(cast, 'them', 'guard', i)) }
+    g.castMen.key = [...g.castMen.us, ...g.castMen.them].map(m => `${m.name}${m.number}${m.skin}`).join('')   // (for what's baked in)
+  }
+  return g.castMen
+}
+// Who's quick, a little. men: the ones who can be tapped, by k. d: the bodies that seek. It goes on the rep, so
+// the tap targets and the picture agree.
+function courtPace(game, cast) {
+  if (!cast) return null
+  if (game === 'pnr') {
+    const five = fiveOf(cast), at = (side, n) => paceOf(cast, side, ...five[n])
+    return { men: [at('us', 0), at('us', 3), 1], d: [0, 3, 1, 2, 4].map(n => at('them', n)) }
+  }
+  if (game === 'rim-protect') return { men: [1, 0, 2].map(i => paceOf(cast, 'them', 'guard', i)), d: [paceOf(cast, 'us', ...fiveOf(cast)[0])] }
+  return null
+}
+// ── Pick-and-roll: 5 on 5 ───────────────────────────────────────────────────
+// The handler up top, a big coming to screen, a shooter in each corner and one in the far slot. The
+// screen comes and the defense shows you its coverage:
+//   DROP: the big backs into the paint and the on-ball man is chasing over the top → the handler has his pull-up
+//   TRAP: the big jumps out at the ball with the on-ball man → the roller's alone going down the lane
+//   TAG:  the far corner's man leaves him to tag the roller → the corner three
+// Those are the three men you can tap. The bait is the man the help's going to, or a show-and-recover.
+// A turnover is a defender getting a hand on it, and then he has it, going the other way.
+// We're on the floor behind the handler, level with the rim, looking down the play at the hoop.
+function pnrAt(rep, k, age, h) {
+  const dir = rep.dir
+  if (k === 0) {
+    const f = easeOut(prog(age, PRE + 300, PRE + 300 + (rep.delay - 100 - PRE) / (rep.pace?.men[0] ?? 1)))
+    P.x = courtX(lerp(-dir * 1.5, dir * 4.2, f)); P.y = courtY(lerp(28, 26.4, f), h)
+  } else if (k === 1) {
+    const set = easeOut(prog(age, 0, PRE + 400)), roll = prog(age, rep.delay - 100, rep.delay - 100 + 1050 / (rep.pace?.men[1] ?? 1))
+    P.x = courtX(lerp(lerp(dir * 7, dir * 2.2, set), dir * 1.5, roll)); P.y = courtY(lerp(lerp(16, 22, set), 8, roll), h)
+  } else {
+    P.x = courtX(-dir * CORNER_FT); P.y = courtY(3.2, h)
+  }
+  return P
+}
+const COVER = ['drop', 'trap', 'tag']
+const PNR_D = [0, 3, 1, 2, 4]   // (each defender, by who he's on in the five)
+function buildPnr(rep, h) {
+  const dir = rep.dir
+  const S = {
+    d1: body(courtX(-dir * 4), courtY(23, h)),                 // on the ball
+    d5: body(courtX(dir * 6), courtY(13, h)),                    // on the big
+    d4: body(courtX(-dir * 14.4), courtY(5.2, h)),                 // on the far corner
+    d2: body(courtX(dir * 14.4), courtY(5.2, h)),                  // on the near corner
+    d3: body(courtX(-dir * 6.4), courtY(16, h)),                 // on the slot
+    h: {}, r: {}, c: {}, thief: null,
+  }
+  S.all = [S.d1, S.d5, S.d4, S.d2, S.d3]
+  return S
+}
+function stepPnr(g, rep, S, dt, h, age) {
+  const dir = rep.dir, cov = COVER[rep.open], res = rep.res, d = rep.decoy
+  const frozen = res ? res.at - rep.at : age
+  const a = pnrAt(rep, 0, age, h); S.h.x = a.x; S.h.y = a.y
+  const b = pnrAt(rep, 1, age, h); S.r.x = b.x; S.r.y = b.y
+  const c = pnrAt(rep, 2, age, h); S.c.x = c.x; S.c.y = c.y
+  const on = age >= rep.delay, Hx = S.h.x, Hy = S.h.y
+  // before the coverage shows: on the ball, on the screener, everyone home. All goal side of their men
+  S.d1.tx = Hx - dir * 2.6 * FT; S.d1.ty = Hy - 5 * FT; S.d1.v = 0.15
+  S.d5.tx = S.r.x + dir * 1 * FT; S.d5.ty = S.r.y - 4 * FT; S.d5.v = 0.15
+  S.d4.tx = courtX(-dir * 14.4); S.d4.ty = courtY(5.2, h); S.d4.v = 0.16
+  S.d2.tx = courtX(dir * 14.4); S.d2.ty = courtY(5.2, h); S.d2.v = 0.12
+  S.d3.tx = courtX(-dir * 6.4); S.d3.ty = courtY(16, h); S.d3.v = 0.12
+  if (on) {
+    if (cov === 'drop') {
+      // back into the paint; the on-ball man is trailing over the top
+      S.d5.tx = courtX(dir * 1.5); S.d5.ty = courtY(11, h); S.d5.v = 0.15
+      S.d1.tx = Hx - dir * 5 * FT; S.d1.ty = Hy - 1 * FT; S.d1.v = 0.1
+    } else if (cov === 'trap') {
+      // both on the ball
+      S.d5.tx = Hx + dir * 1.7 * FT; S.d5.ty = Hy - 3.2 * FT; S.d5.v = 0.18
+      S.d1.tx = Hx - dir * 2.2 * FT; S.d1.ty = Hy - 3 * FT; S.d1.v = 0.16
+    } else {
+      // the big's up with the ball; the far corner's man comes across to tag the roller
+      S.d5.tx = Hx + dir * 1.2 * FT; S.d5.ty = Hy - 5 * FT; S.d5.v = 0.15
+      S.d4.tx = S.r.x - dir * 3 * FT; S.d4.ty = S.r.y - 1 * FT; S.d4.v = 0.17
+    }
+  }
+  if (d && age >= d.at && (!d.early || age < d.at + d.flash)) {
+    // the look that isn't: a show up high that goes back, or the corner's man cheating in and coming home
+    if (d.k === 1 && d.early) { S.d5.tx = S.r.x + dir * 3 * FT; S.d5.ty = S.r.y - 1 * FT; S.d5.v = 0.17 }
+    if (d.k === 2 && cov !== 'tag') { S.d4.tx = courtX(-dir * 9.5); S.d4.ty = courtY(7, h); S.d4.v = 0.14 }
+  }
+  // the turnover: who gets a hand on it. On a pass, the man nearest where it's going steps into the lane.
+  if (res && res.kind !== 'good' && !(res.k === 2 && res.kind !== 'late')) {
+    if (!S.thief) {
+      const t = res.kind === 'late' || res.k === 0 ? S.h : res.k === 1 ? S.r : S.c
+      let best = 1e9
+      for (const m of S.all) { const dd = Math.hypot(m.x - t.x, m.y - t.y); if (dd < best) { best = dd; S.thief = m } }
+      S.thiefAt = { x: lerp(S.h.x, t.x, 0.72), y: lerp(S.h.y, t.y, 0.72) }
+    }
+    const since = age - frozen, th = S.thief, lane = res.kind === 'late' || res.k === 0
+    if (since < 240) { th.tx = lane ? S.h.x + (th.x < S.h.x ? -14 : 14) : S.thiefAt.x; th.ty = lane ? S.h.y - 14 : S.thiefAt.y; th.v = 0.2 }
+    else { th.tx = th.x + (th.x < 180 ? -300 : 300); th.ty = courtY(26, h); th.v = 0.2 }   // ...and away up the floor, past us
+  }
+  // the man on the corner closes out when the ball comes to him
+  if (res?.kind !== 'good' && res?.k === 2 && res?.kind !== 'late') { S.d4.tx = S.c.x + (S.c.x < 180 ? 18 : -18); S.d4.ty = S.c.y - 8; S.d4.v = 0.2 }
+  mark(S.all)
+  for (let i = 0; i < 5; i++) { S.all[i].v *= rep.pace?.d[i] ?? 1; seek(S.all[i], dt) }
+  for (let i = 0; i < 5; i++) {
+    for (let j = i + 1; j < 5; j++) apart(S.all[i], S.all[j], 22)
+    apart(S.all[i], S.h, 20, 1); apart(S.all[i], S.r, 20, 1); apart(S.all[i], S.c, 20, 1)
+  }
+  capped(S.all, 0.2, dt)
+}
+// what's going on the floor this frame, far to near
+const FLOOR = []
+const putMan = (x, y, h, P2, team, back, who, extra) => { FLOOR.push({ x: xFt(x), z: zFt(y, h), P: P2, team, back, who, ...extra }) }
+function floorDown(ctx, view, G, M) {
+  FLOOR.sort((a, b) => b.z - a.z)
+  for (const m of FLOOR) {
+    if (!manAt(ctx, view, G.cam, m.x, m.z, m.P, { jersey: m.team.color, trim: m.team.trim, skin: m.who.skin, num: m.who.number, back: m.back, ball: m.ball, spin: m.spin, live: m.live })) continue
+    if (M && PT.x > 6 && PT.x < view.w - 6) tagAt(PT.x, PT.y, m.who.name, PT.k / FIG_FT)   // (a man off the side of the picture keeps his name to himself)
+  }
+  FLOOR.length = 0
+  if (M) tagsDown(ctx, view)
+}
+const moveOf = (w, still) => (w.step != null ? RUN_F[w.step] : still)
+const stillD = (g, i) => (Math.floor(g.t / 340 + i * 0.7) % 2 ? POSE.guardA : POSE.guardB)
+const HANDLER = easedState(), DRIB = newPose()
+function drawPnr(ctx, g, view) {
+  const { h } = view, rep = g.rep, res = rep.res, c = view.colors, dir = rep.dir
+  const age = g.t - rep.at, frozen = res ? res.at - rep.at : age, since = res ? g.t - res.at : -1
+  smoothT(g)
+  const G = courtCam(g)
+  arenaStage(ctx, view, G, `pnr-${h}`)
+  const S = stepScene(g, h, buildPnr, stepPnr)
+  const us = teamOf(c, 0), them = teamOf(c, 1)
+  const ok = res?.kind === 'good', late = res?.kind === 'late'
+  const runAge = res ? frozen + Math.min(since, 300) : age
+  const M = castMen(g, view)
+  const R = pnrAt(rep, 1, runAge, h), rx = R.x, ry = R.y
+  const C = pnrAt(rep, 2, runAge, h), cx = C.x, cy = C.y
+  const H = pnrAt(rep, 0, runAge, h), hx = H.x, hy = H.y
+  // your men: who shoots, when
+  const shootK = ok ? res.k : res && !late && res.k === 2 ? 2 : -1
+  const pass = !res || res.k === 0 || late ? 0 : 190, catchAt = pass + 90, up = since - catchAt, dur = 360
+  const shooting = k => shootK === k && up > -40 && up < dur + 160
+  const lifted = (k, top) => (shooting(k) ? Math.sin(clamp((up + 40) / (dur + 200), 0, 1) * Math.PI) * top : 0)
+  // the ball, worked out first: the rim needs to know if it's in there
+  const tk = res ? res.k : 0, tx = tk === 0 ? hx : tk === 1 ? rx : cx, ty = tk === 0 ? hy : tk === 1 ? ry : cy
+  const th = S.thief
+  let ball = null, netAge = null, spin = g.t / 180
+  const X = xFt, Z = y => zFt(y, h)
+  if (!res) {
+    const b = Math.abs(Math.sin(g.t / 170))
+    ball = AB; AB.x = X(hx) + dir * (29 / FIG_FT); AB.z = Z(hy) - 0.3; AB.y = lerp(BALL_R, (36 - 3) / FIG_FT - BALL_R, b)
+  } else if (ok || (tk === 2 && !late)) {
+    if (since < pass) { const f = since / pass; ball = flyTo(X(hx) + dir * 0.9, 3.9, Z(hy), X(tx), 4.2, Z(ty), f, 0.25); spin = 0 }
+    else if (up <= 0) ball = null    // (it's in his hands)
+    else {
+      const f = up / dur, D = Math.hypot(X(tx), Z(ty)), hi = 8.2 + lifted(tk, 26) / FIG_FT
+      if (f < 1) ball = flyTo(X(tx), hi, Z(ty), 0, RIM_FT + 0.35, 0, f, shotApex(D))
+      else if (ok) { ball = dropThrough(up - dur); netAge = up - dur }
+      else { const t = (up - dur) / 420, o = tx < 180 ? 1 : -1; ball = flyTo(0, RIM_FT + 0.35, -0.5, o * 7, BALL_R, -7, clamp(t, 0, 1), 1.6) }   // over a man in his face: off the iron, and out
+      spin = since / 60
+    }
+  } else if (th && since < 230) {
+    // a hand on it: the ball goes to the man who got it, and then it's his, the other way
+    const f = since / 230
+    ball = flyTo(X(hx) + dir * 1.2, tk === 0 && !late ? 7.5 : 3.6, Z(hy), X(th.x), 3.6, Z(th.y), f); spin = 0
+  } else if (th) {
+    const b = Math.abs(Math.sin(g.t / 130))
+    ball = AB; AB.x = X(th.x) + (th.x < 180 ? -1.4 : 1.4); AB.z = Z(th.y) - 0.2; AB.y = BALL_R + b * 2
+  }
+  const atIron = hoopWith(ctx, G.cam, ball, netAge, spin)
+  // the two who aren't options: near corner, far slot
+  putMan(courtX(dir * CORNER_FT), courtY(3.2, h), h, POSE.off, us, true, whoOf(M?.us[2], 3, HSKIN[2]))
+  putMan(courtX(-dir * 8.4), courtY(20, h), h, POSE.off, us, true, whoOf(M?.us[4], 11, HSKIN[3]))
+  // the defense
+  S.all.forEach((m, i) => {
+    const w = walk(g, `d${i}`, m.x, m.y, 9)
+    const jump = res?.k === 0 && m === S.thief && since < 300 && !ok
+    const P2 = jump ? liftPose(POSE.hands, Math.sin((since / 300) * Math.PI) * 26) : moveOf(w, stillD(g, i))
+    putMan(m.x, m.y, h, P2, them, false, whoOf(M?.them[PNR_D[i]], 20 + i, HSKIN[(i + 1) % 5]))
+  })
+  // your men
+  const rw = walk(g, 'roll', rx, ry, 9), hw = walk(g, 'hand', hx, hy, 9)
+  const inHands = k => (shootK === k && !ok && up <= 0) || (shootK === k && ok && since >= pass && up <= 0)
+  const shotP = k => (up < 0 ? POSE.gather : liftPose(POSE.shoot, lifted(k, 26)))
+  putMan(rx, ry, h, shooting(1) ? shotP(1) : moveOf(rw, POSE.hold), us, true, whoOf(M?.us[3], 44, HSKIN[1]), { ball: inHands(1) ? IN_HANDS : null })
+  putMan(cx, cy, h, shooting(2) ? shotP(2) : POSE.off, us, true, whoOf(M?.us[1], 8, HSKIN[0]), { ball: inHands(2) ? IN_HANDS : null })
+  // the handler's dribbling: his ball hand's low on the side he's going
+  if (shooting(0)) copyPose(shotP(0), DRIB)
+  else if (res) copyPose(POSE.hold, DRIB)
+  else {
+    copyPose(hw.step != null ? RUN_F[hw.step] : dir > 0 ? POSE.dribR : POSE.dribL, DRIB)
+    const b = Math.abs(Math.sin(g.t / 170))
+    if (dir > 0) { DRIB.hFx = 29; DRIB.hFy = 28 + b * 8 } else { DRIB.hBx = -29; DRIB.hBy = 28 + b * 8 }
+  }
+  putMan(hx, hy, h, easedPose(HANDLER, DRIB, g, CLK.dt, 28), us, true, whoOf(M?.us[0], 1, HSKIN[4]), { live: true, ball: inHands(0) ? IN_HANDS : null })
+  floorDown(ctx, view, G, M)
+  if (ball && !atIron) ballIn(ctx, G.cam, ball.x, ball.y, ball.z, spin)
+}
+
+// ── Protect the rim: a 3-on-1 fast break ────────────────────────────────────
+// You're the big, alone, back. Three of them are coming from half court, spread lane-wide, moving it
+// as they come: flat, quick passes, a different number each trip. One of them goes up: a gather, then
+// he's off the floor with the ball overhead. Tap him: your big steps up, leaves the floor with both
+// hands high and knocks it out of the air. Too soon and he's gone by you. Too late and it's over him.
+// We're running with them, on the floor behind them, and the hoop and your big come up to meet us.
+const carrierAt = (rep, age) => {
+  let who = 1
+  for (const s of rep.seq) { if (age >= s.at + PASS_MS) who = s.to; else if (age >= s.at) return -1 }
+  return who
+}
+const RIM_X = [-7, 2.6, 7], RIM_Y = [4.5, 8, 4.5]   // (the middle man off the rim's line, so your big's in the clear between them)
+const leftOf = (rep, age) => 13 * clamp(1 - age / rep.delay, 0, 1)   // feet to go: they cover it all by the shot
+function rimAt(rep, k, age, h) {
+  // they run to their spots as the shot comes, lanes narrowing on the way in
+  // (a quicker man has come from further back in the same time)
+  const left = leftOf(rep, age) * (rep.pace?.men[k] ?? 1)
+  const lat = 1 + left / 200
+  P.x = courtX(clamp((k === 1 && rep.flip ? -RIM_X[k] : RIM_X[k]) * lat + Math.sin(rep.ph[k]) * 0.5, -21, 21))
+  P.y = courtY(RIM_Y[k] + left, h)
+  return P
+}
+const CLOSE = 30   // how near he gets to a shooter: an arm's length, on the rim side of him
+function buildRim(rep, h) { return { big: body(180, courtY(5, h)), m: [{}, {}, {}], knock: null } }
+function stepRim(g, rep, S, dt, h, age) {
+  const res = rep.res, big = S.big, frozen = res ? res.at - rep.at : age
+  for (let k = 0; k < 3; k++) { const p = rimAt(rep, k, Math.min(age, frozen), h); S.m[k].x = p.x; S.m[k].y = p.y }
+  if (!res || res.kind === 'late') {
+    // he stays between the ball and the rim, giving ground toward it
+    const c = carrierAt(rep, frozen)
+    if (c >= 0) { big.tx = lerp(180, S.m[c].x, 0.3); big.ty = Math.min(courtY(7, h), lerp(courtY(1, h), S.m[c].y, 0.28)) }
+    big.v = 0.09
+  } else {
+    // he steps up on the man you sent him at, and stops an arm's length off, on the rim side
+    const t = S.m[res.k], rx = 180, ry = rimOf(h), d = Math.hypot(rx - t.x, ry - t.y) || 1
+    big.tx = t.x + ((rx - t.x) / d) * CLOSE; big.ty = t.y + ((ry - t.y) / d) * CLOSE
+    big.v = 0.3
+  }
+  big.v *= rep.pace?.d[0] ?? 1
+  seek(big, dt)
+}
+const SHOOTER_ST = [easedState(), easedState(), easedState()], BIG_ST = easedState(), BIG_OUT = newPose()
+function drawRim(ctx, g, view) {
+  const { h } = view, rep = g.rep, res = rep.res, c = view.colors
+  const age = g.t - rep.at, frozen = res ? res.at - rep.at : age, since = res ? g.t - res.at : -1, flight = g.W.flight
+  smoothT(g)
+  const G = courtCam(g, Math.min(age, frozen))
+  arenaStage(ctx, view, G, `rim-${h}`, false)
+  const S = stepScene(g, h, buildRim, stepRim)
+  const us = teamOf(c, 0), them = teamOf(c, 1)
+  const ok = res?.kind === 'good', late = res?.kind === 'late'
+  const blocked = ok && res.ms <= rep.T * 0.72
+  const carrier = carrierAt(rep, frozen)
+  // who the ball ends up going up from: the shooter, or whoever's left when you went too soon
+  const scorer = res && !ok ? (frozen >= rep.delay ? rep.open : carrier >= 0 ? carrier : rep.seq.find(q => frozen < q.at + PASS_MS)?.to ?? rep.open) : rep.open
+  const sTime = res && !ok && !late ? since - 120 : 1e9     // (he takes his time when nobody's on him)
+  const X = xFt, Z = y => zFt(y, h)
+  let bx = 0, by = 0, by2 = 3.5, shooterJ = 0, sx = 0, sy = 0, scorerJ = 0
+  const M = castMen(g, view)
+  for (let k = 0; k < 3; k++) {
+    const p = rimAt(rep, k, frozen, h), x = p.x, y = p.y
+    let j = 0, gather = 0
+    const isShot = k === rep.open && frozen >= rep.delay
+    if (isShot) {
+      gather = prog(frozen, rep.delay, rep.delay + 90)
+      j = easeOut(prog(frozen, rep.delay + 70, rep.delay + rep.T * 0.72)) * 30
+      if (res) j *= 1 - clamp((since - 260) / 320, 0, 1)      // and he comes down
+    }
+    if (k === scorer && sTime > 0 && sTime < 400 && !isShot) { j = Math.sin(clamp(sTime / 400, 0, 1) * Math.PI) * 24; gather = 1 }
+    const w = walk(g, `a${k}`, x, y, 10)
+    const has = k === carrier, upNow = j > 1 || gather > 0.6
+    const Pp = upNow ? POSE.layup : gather > 0 ? POSE.gather : moveOf(w, POSE.hold)
+    if (has) { bx = x + (x < 180 ? 7 : -7); by = y; by2 = upNow ? 8.2 + j / FIG_FT : gather > 0 ? 5 : 3.4 }
+    if (k === rep.open) { sx = x; sy = y; shooterJ = j }
+    if (k === scorer) scorerJ = j
+    const shown = easedPose(SHOOTER_ST[k], upNow ? liftPose(Pp, j) : Pp, g, CLK.dt, 24)
+    putMan(x, y, h, shown, them, true, whoOf(M?.rush[k], [10, 3, 23][k], HSKIN[k]), { live: true })
+  }
+  // a pass: flat, fast, hands to hands
+  if (carrier < 0) {
+    const s = rep.seq.find(q => frozen >= q.at && frozen < q.at + PASS_MS), f = (frozen - s.at) / PASS_MS
+    let from = 1
+    for (const q of rep.seq) { if (q === s) break; from = q.to }
+    const a = rimAt(rep, from, s.at, h), ax = a.x, ay = a.y, b = rimAt(rep, s.to, s.at + PASS_MS, h)
+    bx = lerp(ax, b.x, f); by = lerp(ay, b.y, f); by2 = 3.8
+  }
+  // the ball: it's what you follow
+  let ball = AB, netAge = null, spin = 0
+  const m = res ? rimAt(rep, scorer, frozen, h) : null, mx = m?.x, my = m?.y
+  const fromRim = res ? Math.hypot(X(mx), Z(my)) : 0, topY = 8.2 + scorerJ / FIG_FT
+  if (!res) { AB.x = X(bx); AB.z = Z(by); AB.y = by2 + (carrier >= 0 && by2 < 4 ? Math.sin(g.t / 120) * 0.2 : 0) }
+  else if (blocked) {
+    // on its way up when his hands get there, and it goes the other way
+    const hitY = 9.2 + shooterJ * 0.03, hx = lerp(sx, S.big.x, 0.42), hy = lerp(sy, S.big.y, 0.42)
+    if (since < flight) flyTo(X(sx), 8.2 + shooterJ / FIG_FT, Z(sy), X(hx), hitY, Z(hy), since / flight)
+    else {
+      const t = clamp((since - flight) / 560, 0, 1), o = sx < 180 ? -1 : 1
+      flyTo(X(hx), hitY, Z(hy), X(hx) + o * 13, BALL_R, Z(hy) - 13, t, 2.2); spin = since / 40
+    }
+  } else if (ok) {
+    // he got a hand up: it goes up short, off the iron
+    const f = since / 400
+    if (f < 1) flyTo(X(mx), topY, Z(my), 0, RIM_FT + 0.2, -0.55, f, shotApex(fromRim))
+    else { const t = clamp((since - 400) / 300, 0, 1), o = mx <= 180 ? 1 : -1; flyTo(0, RIM_FT + 0.2, -0.55, o * 7, BALL_R, -7, t, 1.2) }
+    spin = since / 60
+  } else {
+    // nobody there, or too late: up with an arc, and in
+    const wait = late ? 0 : 160, f = (since - wait) / 380
+    if (f <= 0) { AB.x = X(mx); AB.z = Z(my); AB.y = 6 }
+    else if (f < 1) flyTo(X(mx), topY, Z(my), 0, RIM_FT + 0.35, 0, f, shotApex(fromRim))
+    else { dropThrough(since - wait - 380); netAge = since - wait - 380 }
+    spin = since / 60
+  }
+  const atIron = hoopWith(ctx, G.cam, ball, netAge, spin)
+  // him: both hands up when he goes, off the floor
+  const big = S.big, went = res && !late, bw = walk(g, 'big', big.x, big.y, 10)
+  const jump = went ? easeOut(clamp(since / flight, 0, 1)) * (1 - clamp((since - flight - 170) / 300, 0, 1)) : 0
+  // (arms straight out to the sides on the way, straight up when he goes)
+  // (his feet shuffle under him; his body stays level and his arms stay put)
+  copyPose(moveOf(bw, POSE.guardA), BIG_OUT); BIG_OUT.hx = 0; BIG_OUT.lean = 0; BIG_OUT.hy = 43; BIG_OUT.hFx = 50; BIG_OUT.hFy = 79; BIG_OUT.hBx = -50; BIG_OUT.hBy = 79
+  const Pb = jump > 0.02 ? liftPose(POSE.hands, jump * 36) : BIG_OUT
+  putMan(big.x, big.y, h, easedPose(BIG_ST, Pb, g, CLK.dt, 24), us, false, whoOf(M?.us[0], 34, HSKIN[1]), { live: true })
+  floorDown(ctx, view, G, M)
+  if (!atIron) ballIn(ctx, G.cam, AB.x, AB.y, AB.z, spin)
+}
+
+const SCENES = { 'hot-read': drawHot, gap: drawGap, 'jump-route': drawJump, pnr: drawPnr, 'rim-protect': drawRim }

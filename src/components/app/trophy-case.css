@@ -177,6 +177,7 @@ html.is-bucket .tc-row::before { background: linear-gradient(180deg, rgba(255,24
 .tc-sub-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin: 16px 2px 8px; }
 .tc-sub-head small { font-family: var(--ag-font, sans-serif); font-size: 11.5px; letter-spacing: 1.6px; color: var(--ag-muted, rgba(216,243,220,.78)); white-space: nowrap; }
 .tc-sub-head--sheet { margin: 16px 0 8px; }
+.tc-era { margin: 10px 2px 6px; font-family: var(--ag-font, sans-serif); font-size: 12.5px; letter-spacing: 1.6px; color: #fff; }
 .tc-note { margin: 4px 2px 0; font-size: 12.5px; line-height: 1.45; font-weight: 600; color: var(--ag-muted, rgba(216,243,220,.78)); }
 .tc-link { padding: 0; border: 0; background: none; color: var(--ag-text-2, #95D5B2); font: inherit; text-decoration: underline; cursor: pointer; }
 

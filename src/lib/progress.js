@@ -11,6 +11,7 @@
 // rebuild are held as "pending" until the database counts include them.
 
 import { useSyncExternalStore } from 'react'
+import { baseFor, mergedCoins, pendingOf } from './coinSync.js'
 import { supabase } from './supabase'
 import { getUsername } from './discord'
 import { itemById, forSale, DEFAULTS, ITEMS, OWNED_AS } from './cosmetics'
@@ -177,6 +178,7 @@ const blank = () => ({
   bonusOther: {},             // the same from the account's other devices (device id → XP)
   todayOther: {},             // today's tally on the account's other devices (device id → { d, xp, g })
   seasonXp: 0,                // guest seasons
+  seasonDay: null,            // { d: day, n }: seasons played today (past 50, half XP)
   today: null,                // { d: day, xp, g }: today's XP and games (Player of the Day)
   sync: null,                 // { xp, at, ... } rebuilt from saved seasons (signed in)
   pending: [],                // [{ at, xp }] signed-in seasons since the last rebuild
@@ -206,6 +208,7 @@ const blank = () => ({
   ach: {},                    // id → when it was unlocked
   achClaimed: {},             // id → when its reward was claimed
   walletAt: 0,                // last change to coins/items/achievements (server sync)
+  coinPush: null,             // a wallet save not yet known to have landed (lib/coinSync.js)
   coinsSynced: null,          // the account's coins as of the last sync: coins move by what changed here since
   // the Builder Pass (lib/pass.js): season id → { base: the account's XP when it first saw the
   // season, final: the season's XP once it ended, f / p: free / premium tiers claimed }
@@ -424,10 +427,22 @@ export function claimStreak(days) {
 }
 // Completing a team's set in the binder (every player on that roster) pays once
 export const setReward = size => Math.min(600, 10 * size)
+// The completed sets not claimed yet, each announced once like an achievement. The first look
+// at a save only counts them: those weren't just completed. Their number is what the badges show.
+export function noteSetsReady(ready) {
+  const first = !S.setsNoted
+  const fresh = ready.filter(r => !S.setsNoted?.[r.id])
+  if (!fresh.length && (S.setsReady ?? 0) === ready.length && !first) return
+  S.setsNoted = { ...S.setsNoted, ...Object.fromEntries(fresh.map(r => [r.id, 1])) }
+  S.setsReady = ready.length
+  if (!first) fresh.forEach(r => toast({ kind: 'ach', title: 'SET COMPLETE', sub: r.title, ms: 3200 }))
+  emit()
+}
 export function claimSet(key, size) {
-  S.sets ??= {}
-  if (S.sets[key]) return 0
-  S.sets[key] = true
+  if (S.sets?.[key]) return 0
+  // (a new object: the binder watches it, and the claim button only goes away when it changes)
+  S.sets = { ...S.sets, [key]: true }
+  S.setsReady = Math.max(0, (S.setsReady ?? 0) - 1)
   S.bonusXp += setReward(size)
   earn(Math.round(setReward(size) / 4), null, true)
   emit()
@@ -548,7 +563,7 @@ export async function fetchPlayersOfDay(key = dayKey()) {
 }
 // Yesterday's board, for the payout: a player's tally for that day is either still
 // "today" on their profile (they haven't played since) or moved to "yday"
-export const POTD_COINS = [750, 500, 350, 250, 150]   // the top 5 are paid (the board's length too)
+export const POTD_COINS = [1000, 750, 500, 350, 200]   // the top 5 are paid (the board's length too)
 export async function fetchPlayersOfDayFor(day) {
   if (!supabase) return { rows: [], error: true }
   const c = await cached('potd', day)
@@ -585,7 +600,7 @@ async function payPlayersOfDay() {
 // ── The Weekly Cup: every Daily posted Monday to Sunday (New York) adds its OVR; the top 10
 // win coins and the Cup Contender avatar, paid the next time they open the game
 // (supabase/weekly_cup.sql weekly_cup). The board falls back to adding up the rows here.
-export const CUP_COINS = [2000, 1200, 800, 500, 500, 500, 500, 500, 500, 500]
+export const CUP_COINS = [5000, 2000, 1000, 500, 500, 500, 500, 500, 500, 500]
 export const CUP_ITEM = 'av-cup'
 const keyOfIndex = i => new Date(i * 86400000).toISOString().slice(0, 10)
 export const weekOf = (key = dayKey()) => { const i = dayIndex(key); return keyOfIndex(i - ((i + 3) % 7)) }   // its Monday
@@ -651,6 +666,9 @@ export async function fetchDailyBoard(key = dayKey()) {
 
 // ── Events from the games ────────────────────────────────────────────────────
 const INFINITE_PAID = 10
+// A day's first 50 seasons pay full XP, in any mode; after that, half (keeps Players of the Day
+// and the pass from going to whoever sims the most)
+export const SEASONS_FULL_XP = 50
 function onSeason(e) {
   const d = e.detail || {}
   if (d.sandbox) {   // custom ratings: no XP, no rewards panel
@@ -669,9 +687,19 @@ function onSeason(e) {
   }
   const before = totalXp()
   const lines = seasonLines(d)
-  const xp = lines.reduce((a, l) => a + l.xp, 0)
+  const dayK = dayKey(0)
+  if (S.seasonDay?.d !== dayK) S.seasonDay = { d: dayK, n: 0 }
+  S.seasonDay.n++
+  const full = lines.reduce((a, l) => a + l.xp, 0)
+  const cut = S.seasonDay.n > SEASONS_FULL_XP ? Math.ceil(full / 2) : 0
+  if (cut) lines.push({ label: `Past ${SEASONS_FULL_XP} seasons today`, xp: -cut })
+  const xp = full - cut
   if (d.localOnly) S.bonusXp += xp                       // modes the database doesn't keep (Salary Cap)
-  else if (uid) S.pending.push({ at: Date.now(), xp, ring: !!d.champion })
+  else if (uid) {
+    // the rebuild from saved seasons counts every one in full, so the cut is booked on its own
+    S.pending.push({ at: Date.now(), xp: full, ring: !!d.champion })
+    S.bonusXp -= cut
+  }
   else S.seasonXp += xp
   tally(xp, 1)
   ev('season_done', { sport: d.sport, pos: d.pos, mode: d.mode, daily: !!d.daily, ovr: d.ovr, wins: d.wins, champion: !!d.champion })
@@ -901,17 +929,18 @@ async function sync(force = false) {
   try {
     const count = q => q.then(r => (r.error ? null : r.count ?? 0))
     const base = () => supabase.from('simulations').select('id', { count: 'exact', head: true }).eq('user_id', id)
-    const [seasons, playoffs, rings, winning, bucketAwards, allPros, acct] = await Promise.all([
+    const [seasons, playoffs, rings, winning, bucketAwards, allPros, dlDpoys, acct] = await Promise.all([
       count(base()),
       count(base().eq('playoffs', true)),
       count(base().eq('champion', true)),
       count(base().or('and(game_mode.like.bucket*,wins.gte.50),and(game_mode.not.like.bucket*,wins.gte.10)')),
       count(base().or('mvp.is.true,dpoy.is.true')),
       count(base().eq('season_award', 'allpro')),
+      count(base().eq('season_award', 'dpoy').like('game_mode', 'dl-%')),   // no counter on accounts, like All-Pros
       supabase.from('accounts').select('classic_mvps,alltime_mvps,classic_opoys,alltime_opoys,classic_dpoys,alltime_dpoys').eq('id', id).maybeSingle().then(r => r.data ?? {}, () => ({})),
     ])
     if (uid !== id || seasons == null) return
-    const awards = Object.values(acct).reduce((a, v) => a + (Number.isFinite(v) ? v : 0), 0) + (bucketAwards ?? 0) + (allPros ?? 0)
+    const awards = Object.values(acct).reduce((a, v) => a + (Number.isFinite(v) ? v : 0), 0) + (bucketAwards ?? 0) + (allPros ?? 0) + (dlDpoys ?? 0)
     const xp = seasons * XP.season + (winning ?? 0) * XP.winning + (playoffs ?? 0) * XP.playoffs + (rings ?? 0) * XP.ring + awards * XP.award
     const beforeTotal = totalXp()
     S.sync = { xp, at: startedAt, seasons, playoffs, rings, awards }
@@ -935,7 +964,7 @@ async function syncCards(id) {
     const gm = row.game_mode || 'classic'
     let sport = 'nfl', pos = 'qb', mode = gm.includes('all-time') ? 'all-time' : 'classic'
     if (gm.startsWith('bucket')) { sport = 'bucket'; pos = row.position === 'big' ? 'big' : 'guard' }
-    else if (/^(rb|wr|te|db)-/.test(gm)) pos = gm.slice(0, 2)
+    else if (/^(rb|wr|te|db|dl)-/.test(gm)) pos = gm.slice(0, 2)
     else if (gm.startsWith('ol-')) continue
     for (const v of Object.values(row.build || {})) {
       if (!v?.qb || !v.team) continue
@@ -1355,7 +1384,7 @@ export function achStats() {
   return {
     ...st,
     seasons: Math.max(st.seasons, careerSeasons()), rings: Math.max(st.rings, careerRings()),
-    positions: ['qb', 'rb', 'wr', 'te', 'db'].filter(p => pos[p]).length,
+    positions: ['qb', 'rb', 'wr', 'te', 'db', 'dl'].filter(p => pos[p]).length,
     twoSport: st.nflSeasons > 0 && st.bucketSeasons > 0 ? 1 : 0,
     cards: Object.keys(S.cards).length, streak: S.streak.best ?? 0, level: L,
     cpPlayed: st.compete?.played ?? 0, cpWins: st.compete?.wins ?? 0, cpPodiums: st.compete?.podiums ?? 0, cpStreak: st.compete?.bestStreak ?? 0, cpBeaten: st.compete?.beaten ?? 0,
@@ -1441,11 +1470,20 @@ async function runPush(id) {
       const w = data?.app_profile
       if (w) mergeRemote(w)
       const app_profile = { ...walletOut(), rev: `${DEV.slice(0, 8)}-${Date.now().toString(36)}-${tries}` }
+      // on the device before it goes out: if the answer never comes back, the next sync can still tell
+      S.coinPush = pendingOf(app_profile.rev, w?.rev, app_profile.coins)
+      try { localStorage.setItem(keyFor(id), JSON.stringify(S)) } catch {}
       let q = supabase.from('accounts').update({ app_profile }).eq('id', id)
       if (w?.rev) q = q.eq('app_profile->>rev', w.rev)
-      const { data: saved, error: wErr } = await q.select('id')
-      if (wErr) break
-      if (saved?.length) { S.coinsSynced = app_profile.coins; break }
+      const { data: saved, error: wErr } = await q.select('id, saved:app_profile->coins')
+      if (wErr) break   // (it may still have landed: coinPush stays for the next sync to settle)
+      S.coinPush = null  // answered: it landed, or someone saved first and we go round again
+      if (saved?.length) {
+        // what the account really holds: the server caps a save's gain, and what it cut goes out again next time
+        const held = saved[0].saved
+        S.coinsSynced = typeof held === 'number' ? held : app_profile.coins
+        break
+      }
     }
     settleLocal()
     pushCos(id)
@@ -1537,8 +1575,9 @@ function mergeRemote(w) {
   }) }))
   if (typeof w.coins === 'number') {
     // what this device earned or spent since the last sync, on top of the account's coins now
-    if (S.coinsSynced != null) S.coins = Math.max(0, w.coins + (S.coins - S.coinsSynced))
+    if (S.coinsSynced != null) S.coins = mergedCoins(S.coins, baseFor(S.coinsSynced, S.coinPush, w), w)
     else S.coins = newer ? w.coins : Math.max(w.coins, S.coins || 0)
+    S.coinPush = null
     S.coinsSynced = w.coins
   }
   // XP from missions, logins, cards…: each device's own count, added up

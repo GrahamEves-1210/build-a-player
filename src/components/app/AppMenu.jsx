@@ -10,7 +10,8 @@ import { useStorePrices, PRO_PLAN_ID } from '../../lib/iap'
 import { openCheckout, openBillingPortal, billingDue, restorePro, PRO_PRICE, perMonth } from '../../lib/webCheckout'
 import { sellsHere } from '../../lib/storefront'
 import { isPro } from '../../lib/progress'
-import { IconQuestion, IconInfo, IconChat, IconDiscord, IconX, IconClose, IconShield, IconDoc, IconPodium, IconPlay, IconCrown, IconHome, IconGear, IconStar } from './icons'
+import { IconQuestion, IconInfo, IconChat, IconDiscord, IconX, IconClose, IconShield, IconDoc, IconPodium, IconPlay, IconCrown, IconHome, IconGear, IconStar, IconFlame, IconTarget } from './icons'
+import { WHATS_NEW } from '../../lib/whatsNew'
 import { useProgress } from '../../lib/progress'
 import AppSettings from './AppSettings'
 import { guardLeave } from '../../lib/liveLock'
@@ -220,12 +221,11 @@ export default function AppMenu({ sport, onClose, initialView = 'menu' }) {
               {/* website: the dock isn't on the game pages, so Home lives here too (Sign in and
                   BAP Pro are on Home's player card and the profile, not here: too many buttons) */}
               {!IS_APP && <Tile tone="mint" Icon={IconHome} title="HOME" sub="Modes and more" onClick={go(() => nav('home'))} delay="0ms" />}
-              {/* the same guided tour as Home's How to play (it opens on Home) */}
-              <Tile tone="mint" Icon={IconQuestion} title="HOW TO PLAY" sub="The guided tour" onClick={() => { onClose(); setTimeout(() => window.dispatchEvent(new CustomEvent('bap:tutorial')), 250) }} delay="0ms" />
-              <Tile tone="gold" Icon={IconPodium} title="LEADERBOARDS" sub="Top builds" onClick={go(() => nav('leaderboard'))} delay="30ms" />
-              <Tile tone="discord" Icon={IconDiscord} title="DISCORD" sub="Join the community" onClick={goOut(() => window.open('https://discord.gg/zdZBu2VjUD', '_blank'))} delay="60ms" />
+              <Tile tone="purple" Icon={IconFlame} title="PATCH NOTES" sub={WHATS_NEW.date} onClick={go(() => nav('whatsnew'))} delay="15ms" />
+              <Tile tone="mint" Icon={IconTarget} title="PRACTICE" sub="Mini games" onClick={go(() => nav('mglab'))} delay="20ms" />
+              <Tile tone="purple" Icon={IconChat} title="FEEDBACK" sub="Ideas & bugs" onClick={openFeedback} delay="60ms" />
               <Tile tone="ink" Icon={IconX} title="FOLLOW" sub="@Build_A_Player" onClick={goOut(() => window.open('https://x.com/Build_A_Player', '_blank'))} delay="90ms" />
-              <Tile tone="purple" Icon={IconChat} title="FEEDBACK" sub="Ideas & bugs" onClick={openFeedback} delay="120ms" />
+              <Tile tone="discord" Icon={IconDiscord} title="DISCORD" sub="Join the community" onClick={goOut(() => window.open('https://discord.gg/zdZBu2VjUD', '_blank'))} delay="120ms" />
               <Tile tone="mint" Icon={IconStar} title="BUILDER PASS" sub="This season's rewards" onClick={go(() => nav('pass'))} delay="150ms" />
               {(isPro() || sellsHere()) && <Tile tone="gold" Icon={IconCrown} title="BAP PRO" sub={isPro() ? 'Active' : '+50% coins · Pro Vault'} onClick={() => setView('pro')} delay="180ms" />}
             </div>

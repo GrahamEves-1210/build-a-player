@@ -122,7 +122,7 @@ const ratingOf = id => supabase.from('online_ratings').select('rating').eq('user
 export async function loadPublicProfile(id) {
   if (!supabase || !id) return null
   const base = () => supabase.from('simulations').select('id', { count: 'exact', head: true }).eq('user_id', id)
-  const [acct, seasons, rings, best, vs, booked] = await Promise.all([
+  const [acct, seasons, rings, best, vs, booked, dlDpoys] = await Promise.all([
     supabase.from('accounts').select('username, cos, classic_mvps, alltime_mvps, classic_opoys, alltime_opoys, classic_dpoys, alltime_dpoys').eq('id', id).maybeSingle()
       .then(r => r.data ?? null, () => null),
     countOf(base()),
@@ -133,10 +133,11 @@ export async function loadPublicProfile(id) {
       .then(r => r.data ?? [], () => []),
     supabase.from('vs_results').select('result').eq('user_id', id).then(r => r.data ?? [], () => []),
     ratingOf(id),
+    countOf(base().eq('season_award', 'dpoy').like('game_mode', 'dl-%')),   // DL's DPOYs have no counter on accounts
   ])
   if (acct?.cos) seedCos(id, acct.cos)
-  const awards = acct ? ['classic_mvps', 'alltime_mvps', 'classic_opoys', 'alltime_opoys', 'classic_dpoys', 'alltime_dpoys']
-    .reduce((s, k) => s + (Number.isFinite(acct[k]) ? acct[k] : 0), 0) : 0
+  const awards = (acct ? ['classic_mvps', 'alltime_mvps', 'classic_opoys', 'alltime_opoys', 'classic_dpoys', 'alltime_dpoys']
+    .reduce((s, k) => s + (Number.isFinite(acct[k]) ? acct[k] : 0), 0) : 0) + (dlDpoys ?? 0)
   const level = Number.isFinite(acct?.cos?.level) ? acct.cos.level : null   // only if their game shares it
   // the server's rating; before it books any (or without its table), what their game shares
   const rating = booked !== undefined && booked !== null ? booked : Number.isFinite(acct?.cos?.rating) ? acct.cos.rating : null   // null: no online games yet
@@ -150,7 +151,7 @@ export async function loadPublicProfile(id) {
 }
 
 // "QB · Classic", "Guard · All-Time" …
-const POS = { rb: 'RB', wr: 'WR', te: 'TE', db: 'DB', ol: 'OL' }
+const POS = { rb: 'RB', wr: 'WR', te: 'TE', db: 'DB', dl: 'DL', ol: 'OL' }
 export function modeLabel(gameMode, position) {
   const m = String(gameMode || 'classic')
   if (m.startsWith('bucket-')) {

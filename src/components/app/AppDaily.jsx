@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { XpIco } from './GainIcons'
-import { useProgress, dailyState, fetchDailyBoard, fetchWeeklyCup, weekOf, weekEnds, CUP_COINS, CUP_ITEM, msToReset, claimMission, claimStreak, missionDef, STREAK_REWARDS, SPOTLIGHTS, buyFreeze, FREEZE_PRICE, FREEZE_MAX, streakLost, restoreStreak } from '../../lib/progress'
+import { useProgress, dailyState, fetchDailyBoard, fetchWeeklyCup, weekOf, weekEnds, CUP_COINS, CUP_ITEM, msToReset, claimMission, claimStreak, missionDef, STREAK_REWARDS, buyFreeze, FREEZE_PRICE, FREEZE_MAX, streakLost, restoreStreak } from '../../lib/progress'
 import { sfx, haptic, claimFx } from '../../lib/juice'
 import { IS_APP } from '../../lib/platform'
 import WatchVideo from './WatchVideo'
@@ -69,7 +69,6 @@ function Streak({ p }) {
         {STREAK_REWARDS.map(r => {
           const reached = st.count >= r.days
           const claimed = !!st.claimed?.[r.days]
-          const spot = r.unlock && SPOTLIGHTS.find(s => s.id === r.unlock)
           const item = itemById(r.item)
           return (
             <button key={r.days} className={`ag-milestone${reached ? ' is-reached' : ''}${claimed ? ' is-claimed' : ''}`} style={item ? { '--rar': RARITY[item.rarity].color } : undefined}
@@ -78,7 +77,6 @@ function Streak({ p }) {
               <span className="ag-milestone-prize">{item ? <ItemPreview item={item} name={getUsername(p.user) || 'Guest'} /> : <span className="ag-milestone-xpbig"><XpIco /></span>}</span>
               <span className="ag-milestone-name">{item?.name ?? 'XP Bonus'}</span>
               <span className="ag-milestone-xp">{p.signedIn ? <span className="gain"><XpIco /> +{r.xp}</span> : 'SIGN IN'}</span>
-              {spot && <span className="ag-milestone-extra"><i className={`ag-swatch ag-swatch--${spot.id}`} />{spot.name}</span>}
               <span className="ag-milestone-state">{claimed ? <IconCheck size={16} /> : reached ? <span className="ag-milestone-claim">CLAIM</span> : <IconLock size={14} />}</span>
             </button>
           )

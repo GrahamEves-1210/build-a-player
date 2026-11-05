@@ -1,17 +1,17 @@
 import { useEffect, useMemo, useState } from 'react'
 import { motion } from 'motion/react'
-import { useProgress, tierFor, nextTier } from '../../lib/progress'
-import { onlineBoards, todayBoards, recordBoards, positionsFor, loadBoard, peekBoard, lastWeekChampion } from '../../lib/boards'
+import { useProgress, tierFor, nextTier, dayKey, dayIndex, weekEnds } from '../../lib/progress'
+import { onlineBoards, todayBoards, recordBoards, blacktopModes, positionsFor, loadBoard, peekBoard, lastWeekChampion } from '../../lib/boards'
 import { loadFriends, useFriendsOnly } from '../../lib/friends'
 import { getUsername } from '../../lib/discord'
 import { rampAdd } from '../../lib/ads'
 import { sfx } from '../../lib/juice'
 import { SPRING_LAYOUT } from '../../lib/motion'
 import { NameTag, AvatarBadge } from './NameTag'
-import { IconArrow } from './icons'
+import { IconArrow, IconCoin } from './icons'
 import EmptyState, { PassLoader } from './EmptyState'
 
-// Leaderboards (dock → Ranks). Three questions, one tab each: where do I stand online,
+// Ranks (the dock's tab). Three questions, one tab each: where do I stand online,
 // who's winning today, and who holds the records. Every board is the same list; the
 // player's own standing sits above it. Data: lib/boards.js.
 
@@ -19,7 +19,11 @@ const nav = to => window.dispatchEvent(new CustomEvent('bap:nav', { detail: to }
 const TABS = [['online', 'ONLINE'], ['today', 'TODAY'], ['records', 'RECORDS']]
 const TIER_COLOR = { Rookie: '#9aa7a0', Starter: '#5EDBD8', Pro: '#60a5fa', 'All-Star': '#a78bfa', MVP: '#fb923c', Legend: '#f5dc8a' }
 // what gets a player onto a board they aren't on yet
-const PLAY = { rating: ['PLAY ONLINE', 'online'], peak: ['PLAY ONLINE', 'online'], played: ['PLAY ONLINE', 'online'], daily: ['PLAY DAILY PUZZLE', 'daily'], cup: ['PLAY DAILY PUZZLE', 'daily'] }
+// the Cup's days left, today counted: it ends with Sunday
+const cupLeft = () => { const n = dayIndex(weekEnds()) - dayIndex(dayKey()) + 1; return n <= 1 ? 'LAST DAY' : `${n} DAYS LEFT` }
+const PLAY = { rating: ['PLAY ONLINE', 'online'], played: ['PLAY ONLINE', 'online'], bt: ['PLAY ONLINE', 'online'], bt1: ['PLAY ONLINE', 'online'], bt2: ['PLAY ONLINE', 'online'], bt3: ['PLAY ONLINE', 'online'], daily: ['PLAY DAILY PUZZLE', 'daily'], cup: ['PLAY DAILY PUZZLE', 'daily'], grid: ['PLAY DAILY GRID', 'salarycap'] }
+const SPORTS = [{ id: 'nfl', label: 'Football' }, { id: 'bucket', label: 'Basketball' }]
+const gapText = x => x.toLocaleString(undefined, { maximumFractionDigits: 1 })
 const AD_AFTER = 10
 const AD_ID = 'ramp-cntr1-lbd-mob-1'
 
@@ -49,8 +53,14 @@ function SubTabs({ items, value, onPick, label }) {
   )
 }
 
+// Go play it. The Daily Grid belongs to a sport: the other sport's is a page load away
+function goPlay(to, sport, boardSport) {
+  if (to === 'salarycap' && (boardSport === 'bucket') !== (sport === 'bucket')) window.location.href = boardSport === 'bucket' ? '/bucket/salary' : '/salary'
+  else nav(to)
+}
+
 // The player's own line: the one thing on the page that's about them
-function Standing({ boardId, board, unit, p }) {
+function Standing({ boardId, board, unit, p, sport, boardSport }) {
   const name = p.signedIn ? getUsername(p.user) || 'Player' : 'Guest'
   const play = PLAY[boardId]
   if (!board || board.error) return null
@@ -66,7 +76,7 @@ function Standing({ boardId, board, unit, p }) {
     return (
       <section className="lbd-me lbd-me--out">
         <span className="lbd-me-who"><AvatarBadge self name={name} size={40} /><NameTag name={name} self /></span>
-        <button className="ag-btn lbd-me-go" onClick={() => nav(play[1])}>{play[0]} <IconArrow size={16} /></button>
+        <button className="ag-btn lbd-me-go" onClick={() => goPlay(play[1], sport, boardSport)}>{play[0]} <IconArrow size={16} /></button>
       </section>
     )
   }
@@ -75,8 +85,8 @@ function Standing({ boardId, board, unit, p }) {
   const tier = boardId === 'rating' ? tierFor(mine.value)[1] : null
   const next = boardId === 'rating' ? nextTier(mine.value) : null
   const chase = mine.rank === 1 ? 'FIRST PLACE'
-    : next ? `${(next[0] - mine.value).toLocaleString()} TO ${next[1].toUpperCase()}`
-    : ahead ? `${(ahead.value - mine.value).toLocaleString()} BEHIND ${(ahead.name || 'Player').toUpperCase()}`
+    : next ? `${gapText(next[0] - mine.value)} TO ${next[1].toUpperCase()}`
+    : ahead ? `${gapText(ahead.value - mine.value)} BEHIND ${(ahead.name || 'Player').toUpperCase()}`
     : null
   return (
     <section className="lbd-me">
@@ -90,17 +100,24 @@ function Standing({ boardId, board, unit, p }) {
   )
 }
 
-function Row({ r, i, me, style, tierSub }) {
+function Row({ r, i, me, style, tierSub, prizes }) {
   return (
     <div className={`lbd-row lbd-row--${Math.min(i + 1, 4)}${r.uid && r.uid === me ? ' is-me' : ''}`} style={style}>
       <span className="lbd-rank">{i + 1}</span>
+      <AvatarBadge name={r.name} uid={r.uid} size={32} className="lbd-av" />
       <span className="lbd-name">
-        <AvatarBadge name={r.name} uid={r.uid} size={i === 0 ? 36 : i < 3 ? 30 : 26} />
         <NameTag name={r.name || 'Player'} uid={r.uid} />
         {r.pro && <span className="lb-plus-badge" title="BAP Pro">PRO</span>}
       </span>
-      {r.sub && <span className="lbd-sub-val" style={tierSub ? { color: TIER_COLOR[r.sub] } : undefined}>{tierSub ? r.sub.toUpperCase() : r.sub}</span>}
-      <span className="lbd-val">{r.display}</span>
+      {prizes
+        ? <>
+            {r.coins ? <span className="lbd-coins"><IconCoin size={14} />{r.coins.toLocaleString()}</span> : <span />}
+            <span className="lbd-stack"><span className="lbd-val">{r.display}</span>{r.sub && <small>{r.sub}</small>}</span>
+          </>
+        : <>
+            <span className="lbd-sub-val" style={tierSub ? { color: TIER_COLOR[r.sub] } : undefined}>{r.sub ? (tierSub ? r.sub.toUpperCase() : r.sub) : ''}</span>
+            <span className="lbd-val">{r.display}</span>
+          </>}
     </div>
   )
 }
@@ -116,7 +133,7 @@ function BoardList({ boardId, board, unit, me, friends }) {
   return (
     <>
       <div className="lbd-head" style={{ order: -1 }}><span>PLAYER</span><span>{unit}</span></div>
-      {board.rows.map((r, i) => <Row key={r.uid ?? `${r.name}-${i}`} r={r} i={i} me={me} tierSub={boardId === 'rating' || boardId === 'peak'} style={{ order: i < AD_AFTER ? i : i + 2 }} />)}
+      {board.rows.map((r, i) => <Row key={r.uid ?? `${r.name}-${i}`} r={r} i={i} me={me} tierSub={boardId === 'rating' || boardId === 'played'} prizes={boardId === 'potd' || boardId === 'cup'} style={{ order: i < AD_AFTER ? i : i + 2 }} />)}
     </>
   )
 }
@@ -157,24 +174,30 @@ export default function AppLeaderboards({ sport, adsDisabled = false }) {
     return () => { live = false }
   }, [friendsOn, uid])
 
-  const positions = useMemo(() => positionsFor(sport), [sport])
-  const [position, setPosition] = useState(() => {
+  // Records and the Daily Grid belong to a sport: starts on the one being played, either can be read
+  const [boardSport, setBoardSport] = useState(sport === 'bucket' ? 'bucket' : 'nfl')
+  const positions = useMemo(() => positionsFor(boardSport), [boardSport])
+  const [footballPos, setPosition] = useState(() => {
+    const all = positionsFor('nfl')
     let last = ''
     try { last = (localStorage.getItem('lastPosition') || '').toUpperCase() } catch {}
-    return positions.includes(last) ? last : positions[0] ?? null
+    return all.includes(last) ? last : all[0]
   })
+  const position = boardSport === 'bucket' ? null : footballPos
   const [pick, setPick] = useState({ online: 'rating', today: 'daily' })
+  const [btMode, setBtMode] = useState('bt')
   const [open, setOpen] = useState(null)   // a record's full board
 
-  const opts = { sport, position, uid, friendIds: friendsOn ? friendIds ?? [] : undefined }
+  const opts = { sport: boardSport, position, uid, friendIds: friendsOn ? friendIds ?? [] : undefined }
   const boards = tab === 'online' ? onlineBoards(sport) : tab === 'today' ? todayBoards(sport) : null
-  // boards that can't be narrowed to friends: 1v1 has no account ids, Players of the Day and the
-  // Cup are cached top lists that a friend is rarely on
-  const shown = friendsOn && boards ? boards.filter(b => !['h2h', 'potd', 'cup'].includes(b.id)) : boards
-  const current = tab === 'records' ? open : shown.find(b => b.id === pick[tab]) ?? shown[0]
+  // (the Cup is a cached top 50 that a friend is rarely on: it can't be narrowed to friends)
+  const shown = friendsOn && boards ? boards.filter(b => b.id !== 'cup') : boards
+  const picked = tab === 'records' ? open : shown.find(b => b.id === pick[tab]) ?? shown[0]
+  const isBlacktop = picked?.id === 'bt'
+  const current = isBlacktop ? { ...picked, id: btMode } : picked
   const board = useBoard(current?.id, opts)
 
-  const records = useMemo(() => recordBoards(sport, position), [sport, position])
+  const records = useMemo(() => recordBoards(boardSport, position), [boardSport, position])
   const groups = useMemo(() => [...new Set(records.map(r => r.group))], [records])
 
   const [champ, setChamp] = useState(null)
@@ -186,14 +209,14 @@ export default function AppLeaderboards({ sport, adsDisabled = false }) {
     rampAdd([{ type: 'standard_iab_cntr1', selectorId: AD_ID }])
   }, [adsDisabled])
 
-  const pickTab = id => { setTab(id); setOpen(null); sfx('tap'); document.querySelector('.lbd-screen')?.scrollTo({ top: 0 }) }
   const overview = tab === 'records' && !open
+  const pickTab = id => { setTab(id); setOpen(null); sfx('tap'); document.querySelector('.lbd-screen')?.scrollTo({ top: 0 }) }
 
   return (
     <div className="ag-screen lbd-screen">
       <div className="lbd-wrap">
         <header className="lbd-top">
-          <h1 className="ag-h1">Leaderboards</h1>
+          <h1 className="ag-h1">Ranks</h1>
           {!!uid && (
             <div className="lbd-scope" role="group" aria-label="Whose scores">
               <button className={friendsOn ? '' : 'is-on'} aria-pressed={!friendsOn} onClick={() => setFriendsPick(false)}>EVERYONE</button>
@@ -202,7 +225,7 @@ export default function AppLeaderboards({ sport, adsDisabled = false }) {
           )}
         </header>
 
-        <div className="ag-seg lbd-tabs" role="tablist" aria-label="Leaderboards">
+        <div className="ag-seg lbd-tabs" role="tablist" aria-label="Ranks">
           {TABS.map(([id, label]) => (
             <button key={id} role="tab" aria-selected={tab === id} className={tab === id ? 'is-on' : ''} onClick={() => pickTab(id)}>
               {tab === id && <motion.span layoutId="lbd-tab" className="ag-seg-pill" transition={SPRING_LAYOUT} />}
@@ -211,16 +234,19 @@ export default function AppLeaderboards({ sport, adsDisabled = false }) {
           ))}
         </div>
 
-        {boards && <SubTabs items={shown} value={current.id} onPick={id => setPick(s => ({ ...s, [tab]: id }))} label="Boards" />}
-        {tab === 'records' && !open && positions.length > 0 && (
+        {boards && <SubTabs items={shown} value={picked.id} onPick={id => setPick(s => ({ ...s, [tab]: id }))} label="Boards" />}
+        {isBlacktop && <SubTabs items={blacktopModes()} value={btMode} onPick={setBtMode} label="Game size" />}
+        {(overview || current?.id === 'grid') && <SubTabs items={SPORTS} value={boardSport} onPick={id => { setBoardSport(id); setOpen(null) }} label="Sport" />}
+        {overview && positions.length > 0 && (
           <SubTabs items={positions.map(x => ({ id: x, label: x }))} value={position} onPick={setPosition} label="Position" />
         )}
         {open && (
           <button className="lbd-back" onClick={() => { setOpen(null); sfx('tap') }}><IconArrow size={16} style={{ transform: 'rotate(180deg)' }} /> RECORDS</button>
         )}
-        {open && <h2 className="lbd-title">{open.label}{open.group === 'SEASONS' && position ? <i>{position}</i> : null}</h2>}
+        {open && <h2 className="lbd-title">{open.label}<i>{[open.group === 'MODES' ? null : position ?? 'BASKETBALL', open.group === 'ALL-TIME' ? 'ALL-TIME' : null].filter(Boolean).join(' · ')}</i>{open.note && <em>{open.note}</em>}</h2>}
 
-        {current && <Standing boardId={current.id} board={board} unit={current.unit} p={p} />}
+        {tab === 'today' && current?.id === 'cup' && <div className="lbd-left">{cupLeft()}</div>}
+        {current && <Standing boardId={current.id} board={board} unit={current.unit} p={p} sport={sport} boardSport={boardSport} />}
         {tab === 'today' && current?.id === 'cup' && champ && (
           <div className="lbd-champ"><span>LAST WEEK'S CHAMPION</span><b><NameTag name={champ.name} uid={champ.uid} /></b><em>{champ.display}</em></div>
         )}

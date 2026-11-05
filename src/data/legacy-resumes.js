@@ -8,15 +8,17 @@
 //   firsts    AP First-Team All-Pro / All-NBA selections of any team (All-ABA counts)
 //   awards    the award the game gives his position, once a season: QB, MVP;
 //             RB, WR, TE, Offensive Player of the Year or MVP; DB, Defensive
-//             Player of the Year; NBA, MVP (ABA MVP counts)
+//             Player of the Year; DL, Defensive Player of the Year (AP from 1971, NEA before);
+//             NBA, MVP (ABA MVP counts)
 //   rings     championships (Super Bowls, pre-merger NFL / AAFC / AFL titles, NBA / ABA titles)
 //   playoffs  seasons his team made the postseason with him on it at season's end
 //   stats     regular-season career totals the position's production reads:
 //             QB passing TDs and yards; RB rushing + receiving TDs and rushing
 //             yards; WR, TE receiving TDs and yards; DB interceptions and
-//             pick-sixes; NBA points, rebounds, assists
+//             pick-sixes; DL sacks (pre-1982 unofficial, Pro Football Reference's count); NBA points,
+//             rebounds, assists
 // Counted from Pro-Football-Reference and Basketball-Reference (the AP All-Pro
-// lists for firsts); active players through the 2024 NFL / 2024-25 NBA season.
+// lists for firsts); active players through the 2024 NFL / 2024-25 NBA season (DL, the 2025 NFL season).
 // All-time records held aren't listed here: career.js reads them from the
 // game's own record book (seasonFacts.js), the one a career chases.
 
@@ -55,7 +57,7 @@ export const RESUMES = {
     R('Jim Brown', 9, 9, 8, 3, 1, 4, { tds: 126, rushYds: 12312 }),
     R('Walter Payton', 13, 9, 5, 1, 1, 6, { tds: 125, rushYds: 16726 }),
     R('Marshall Faulk', 12, 7, 3, 3, 1, 7, { tds: 136, rushYds: 12279 }),
-    R('Barry Sanders', 10, 10, 6, 2, 0, 5, { tds: 109, rushYds: 15269 }),
+    { ...R('Barry Sanders', 10, 10, 6, 2, 0, 5, { tds: 109, rushYds: 15269 }), bonus: 46 },   // (ahead of Jim Brown: the resume's numbers don't say what his film does)
     R('Marcus Allen', 16, 6, 2, 1, 1, 10, { tds: 144, rushYds: 12243 }),
     R('Adrian Peterson', 15, 7, 4, 1, 0, 4, { tds: 126, rushYds: 14918 }),
     R('O.J. Simpson', 11, 6, 5, 2, 0, 1, { tds: 75, rushYds: 11236 }),
@@ -137,6 +139,33 @@ export const RESUMES = {
     R('Richard Sherman', 11, 5, 3, 0, 1, 7, { ints: 37, pickSixes: 3 }),
     R('Lem Barney', 11, 7, 2, 0, 0, 1, { ints: 56, pickSixes: 7 }),
     R('Jalen Ramsey', 10, 8, 3, 0, 1, 5, { ints: 25, pickSixes: 1 }),
+  ],
+  dl: [
+    R('Reggie White', 15, 13, 8, 2, 1, 10, { sacks: 198 }),
+    R('Bruce Smith', 19, 11, 8, 2, 0, 10, { sacks: 200 }),
+    R('Aaron Donald', 10, 10, 8, 3, 1, 5, { sacks: 111 }),
+    R('Deacon Jones', 14, 8, 5, 2, 0, 3, { sacks: 173.5 }),
+    R('Mean Joe Greene', 13, 10, 5, 2, 4, 8, { sacks: 77.5 }),
+    R('JJ Watt', 12, 5, 5, 3, 0, 7, { sacks: 114.5 }),
+    R('Alan Page', 15, 9, 5, 1, 1, 10, { sacks: 148.5 }),
+    R('Merlin Olsen', 15, 14, 5, 0, 0, 6, { sacks: 91 }),
+    R('Bob Lilly', 14, 11, 7, 0, 1, 8, { sacks: 95.5 }),
+    R('Gino Marchetti', 14, 11, 7, 0, 2, 3, { sacks: 56 }),
+    R('Randy White', 14, 9, 8, 0, 1, 10, { sacks: 111 }),
+    R('Michael Strahan', 15, 7, 4, 1, 1, 7, { sacks: 141.5 }),
+    R('Myles Garrett', 9, 7, 5, 2, 0, 2, { sacks: 125.5 }),
+    R('Warren Sapp', 13, 7, 4, 1, 1, 5, { sacks: 96.5 }),
+    R('Julius Peppers', 17, 9, 3, 0, 0, 9, { sacks: 159.5 }),
+    R('DeMarcus Ware', 12, 9, 4, 0, 1, 5, { sacks: 138.5 }),
+    R('John Randle', 14, 7, 6, 0, 0, 9, { sacks: 137.5 }),
+    R('Von Miller', 15, 8, 3, 0, 2, 9, { sacks: 138.5 }),
+    R('Jack Youngblood', 14, 7, 5, 0, 0, 10, { sacks: 151.5 }),
+    R('Carl Eller', 16, 6, 5, 0, 1, 10, { sacks: 133.5 }),
+    R('T.J. Watt', 9, 8, 4, 1, 0, 6, { sacks: 115 }),
+    R('Jason Taylor', 15, 6, 3, 1, 0, 6, { sacks: 139.5 }),
+    R('Richard Dent', 15, 4, 1, 0, 2, 9, { sacks: 137.5 }),
+    R('Howie Long', 13, 8, 2, 0, 1, 7, { sacks: 84 }),
+    R('Dan Hampton', 12, 4, 1, 0, 1, 7, { sacks: 82 }),
   ],
   guard: [
     R('LeBron James', 23, 22, 21, 4, 4, 19, { pts: 43440, reb: 12095, ast: 12016 }),

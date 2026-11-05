@@ -4,7 +4,7 @@
 // the same way the game works it out (the run*Simulation functions).
 
 import { seededShuffle } from './rng'
-import { calcOVR, calcOVRRB, calcOVRWR, calcOVRTE, calcOVRDB, calcOVROL, runSimulation } from '../utils/simulation'
+import { calcOVR, calcOVRRB, calcOVRWR, calcOVRTE, calcOVRDB, calcOVRDL, calcOVROL, runSimulation } from '../utils/simulation'
 import { calcBucketOVR } from '../utils/bucketSimulation'
 import { QBS, TYPES, LITE_TYPES } from '../data/qbs'
 import { LEGENDS, LEGEND_TYPES } from '../data/qb-legends'
@@ -16,6 +16,8 @@ import { TES, TE_TYPES, TE_LITE_TYPES } from '../data/tes'
 import { TE_LEGENDS } from '../data/te-legends'
 import { DBS, DB_TYPES, DB_LITE_TYPES } from '../data/dbs'
 import { DB_LEGENDS } from '../data/db-legends'
+import { DLS, DL_TYPES, DL_LITE_TYPES } from '../data/dls'
+import { DL_LEGENDS } from '../data/dl-legends'
 import { OLS, OL_TYPES, OL_LITE_TYPES } from '../data/ols'
 import { NBA_GUARD_PLAYERS, GUARD_TYPES } from '../data/nba-guards'
 import { NBA_BIG_PLAYERS, BIG_TYPES } from '../data/nba-bigs'
@@ -59,8 +61,9 @@ export function seasonKit(sport, pos, mode) {
     rb: { pool: allTime ? RB_LEGENDS : RBS, types: lite ? RB_LITE_TYPES : RB_TYPES, ovr: (b, t) => calcOVRRB(b, t) },
     wr: { pool: allTime ? WR_LEGENDS : WRS, types: lite ? WR_LITE_TYPES : WR_TYPES, ovr: (b, t) => calcOVRWR(b, t) },
     te: { pool: allTime ? TE_LEGENDS : TES, types: lite ? TE_LITE_TYPES : TE_TYPES, ovr: (b, t) => calcOVRTE(b, t) },
-    // runDBSimulation / OL work the OVR out on their full trait lists, lite or not
+    // runDBSimulation / DL / OL work the OVR out on their full trait lists, lite or not
     db: { pool: allTime ? DB_LEGENDS : DBS, types: lite ? DB_LITE_TYPES : DB_TYPES, ovr: b => calcOVRDB(b) },
+    dl: { pool: allTime ? DL_LEGENDS : DLS, types: lite ? DL_LITE_TYPES : DL_TYPES, ovr: b => calcOVRDL(b) },
     ol: { pool: OLS, types: lite ? OL_LITE_TYPES : OL_TYPES, ovr: b => calcOVROL(b) },
   }[pos]
   return k ? { ...k, teams: TEAMS, ovr: b => k.ovr(b, k.types) } : null

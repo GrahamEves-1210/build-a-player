@@ -13,12 +13,16 @@ const TABLE = 'careers'
 const DEBOUNCE_MS = 3000
 const FETCH_TIMEOUT_MS = 2500
 const rowKey = sport => `squad:${sport}`
+// App binaries from before the DL crash on a DL build, and they read only `squad:<sport>`. A squad
+// with a DL saves to its own row, which they never see. Everything else stays where it was.
+const lineKey = sport => `squad-dl:${sport}`
+const hasLine = sq => !!sq?.slots?.some(s => s.pos === 'dl') || [...(sq?.seasons ?? []), sq?.last].some(y => y?.lines?.some(l => l.pos === 'dl'))
 let pending = null   // { timer, sq }
 
 async function push(sq) {
   if (!supabase || !sq?.uid) return
   try {
-    await supabase.from(TABLE).upsert({ user_id: sq.uid, sport: rowKey(sq.sport), data: sq, updated_at: new Date(sq.updatedAt || Date.now()).toISOString() }, { onConflict: 'user_id,sport' })
+    await supabase.from(TABLE).upsert({ user_id: sq.uid, sport: hasLine(sq) ? lineKey(sq.sport) : rowKey(sq.sport), data: sq, updated_at: new Date(sq.updatedAt || Date.now()).toISOString() }, { onConflict: 'user_id,sport' })
   } catch {}
 }
 export function queueSquadSave(sq) {
@@ -36,15 +40,15 @@ if (typeof window !== 'undefined') {
 export function deleteCloudSquad(sport, uid) {
   if (!supabase || !uid) return
   if (pending?.sq?.sport === sport) { clearTimeout(pending.timer); pending = null }
-  try { supabase.from(TABLE).delete().eq('user_id', uid).eq('sport', rowKey(sport)).then(() => {}, () => {}) } catch {}
+  try { supabase.from(TABLE).delete().eq('user_id', uid).in('sport', [rowKey(sport), lineKey(sport)]).then(() => {}, () => {}) } catch {}
 }
 
 // The account's copy: the squad, null when there's none, undefined when the cloud couldn't be reached
 export async function fetchCloudSquad(sport, uid) {
   if (!supabase || !uid) return undefined
   try {
-    const q = supabase.from(TABLE).select('data').eq('user_id', uid).eq('sport', rowKey(sport)).maybeSingle()
-      .then(({ data, error }) => (error ? undefined : (data?.data ?? null)))
+    const q = supabase.from(TABLE).select('data').eq('user_id', uid).in('sport', [rowKey(sport), lineKey(sport)])
+      .then(({ data, error }) => (error ? undefined : (data ?? []).reduce((keep, r) => mergeSquads(keep, r.data), null)))
     return await Promise.race([q, new Promise(res => setTimeout(() => res(undefined), FETCH_TIMEOUT_MS))])
   } catch { return undefined }
 }

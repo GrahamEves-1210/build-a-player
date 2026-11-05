@@ -16,6 +16,8 @@
 //             never tagged). Plus basketball seasons (mvp / dpoy). Basketball never
 //             touches the counters and football never sets mvp / dpoy.
 //   opoy      football only, as above
+//             DL's DPOYs never touch the counters (classic_dpoys is DB's board): every one
+//             is a season tagged 'dpoy' on a dl- row, All-Time too, added on top.
 //   allpro    OL current-mode seasons tagged 'allpro' (no counter exists)
 //   perfect   seasons with no losses and at least one win
 //   ovr90     seasons played with a 90+ build (95+ is counted inside it, not twice)
@@ -39,7 +41,7 @@ export const HARDWARE_ROWS = {
 export async function loadHardware(uid) {
   if (!supabase || !uid) return null
   const base = () => supabase.from('simulations').select('id', { count: 'exact', head: true }).eq('user_id', uid)
-  const [acct, rings, bRings, perfect, ovr90, ovr95, allpro, fMvp, fOpoy, fDpoy, bMvp, bDpoy] = await Promise.all([
+  const [acct, rings, bRings, perfect, ovr90, ovr95, allpro, fMvp, fOpoy, fDpoy, dlDpoy, bMvp, bDpoy] = await Promise.all([
     supabase.from('accounts').select('classic_mvps, alltime_mvps, classic_opoys, alltime_opoys, classic_dpoys, alltime_dpoys').eq('id', uid).maybeSingle()
       .then(r => r.data ?? {}, () => ({})),
     countOf(HARDWARE_ROWS.rings(base())),
@@ -51,14 +53,16 @@ export async function loadHardware(uid) {
     countOf(base().eq('season_award', 'mvp')),
     countOf(base().eq('season_award', 'opoy')),
     countOf(base().eq('season_award', 'dpoy')),
+    countOf(base().eq('season_award', 'dpoy').like('game_mode', 'dl-%')),
     countOf(base().like('game_mode', BUCKET).eq('mvp', true)),
     countOf(base().like('game_mode', BUCKET).eq('dpoy', true)),
   ])
   if (rings == null && ovr90 == null) return null
   const n = k => (Number.isFinite(acct[k]) ? acct[k] : 0)
   // unlisted: counted, but with no tagged season to show (All-Time, or from before tagging)
-  const award = (cur, at, tagged, bucket) => {
-    const fb = Math.max(n(cur), tagged ?? 0) + n(at)
+  const award = (cur, at, tagged, bucket, tagOnly = 0) => {
+    const counted = (tagged ?? 0) - tagOnly   // the tagged seasons the counter also holds
+    const fb = Math.max(n(cur), counted) + n(at) + tagOnly
     const b = bucket ?? 0
     return { football: fb, bucket: b, total: fb + b, unlisted: Math.max(0, fb - (tagged ?? 0)) }
   }
@@ -68,20 +72,21 @@ export async function loadHardware(uid) {
     perfect: perfect ?? 0, ovr90: ovr90 ?? 0, ovr95: Math.min(ovr95 ?? 0, ovr90 ?? 0), allpro: allpro ?? 0,
     mvp: award('classic_mvps', 'alltime_mvps', fMvp, bMvp),
     opoy: award('classic_opoys', 'alltime_opoys', fOpoy, 0),
-    dpoy: award('classic_dpoys', 'alltime_dpoys', fDpoy, bDpoy),
+    dpoy: award('classic_dpoys', 'alltime_dpoys', fDpoy, bDpoy, dlDpoy ?? 0),
   }
 }
 
 // Positions a saved season can be. Football rows have no position column: the mode says
 // it ('rb-classic' …). A QB season's mode is the bare mode ('classic', 'all-time', 'lite',
 // 'legends' …), so QB is every row without a position prefix (or with no mode at all).
-const NOT_QB = ['bucket', 'rb', 'wr', 'te', 'db', 'ol'].map(p => `game_mode.not.like.${p}-*`).join(',')
+const NOT_QB = ['bucket', 'rb', 'wr', 'te', 'db', 'dl', 'ol'].map(p => `game_mode.not.like.${p}-*`).join(',')
 export const POSITIONS = [
   { key: 'qb',    label: 'QB',    sport: 'nfl',    where: q => q.or(`game_mode.is.null,and(${NOT_QB})`) },
   { key: 'rb',    label: 'RB',    sport: 'nfl',    where: q => q.like('game_mode', 'rb-%') },
   { key: 'wr',    label: 'WR',    sport: 'nfl',    where: q => q.like('game_mode', 'wr-%') },
   { key: 'te',    label: 'TE',    sport: 'nfl',    where: q => q.like('game_mode', 'te-%') },
   { key: 'db',    label: 'DB',    sport: 'nfl',    where: q => q.like('game_mode', 'db-%') },
+  { key: 'dl',    label: 'DL',    sport: 'nfl',    where: q => q.like('game_mode', 'dl-%') },
   { key: 'ol',    label: 'OL',    sport: 'nfl',    where: q => q.like('game_mode', 'ol-%') },
   { key: 'guard', label: 'GUARD', sport: 'bucket', where: q => q.like('game_mode', 'bucket-%').eq('position', 'guard') },
   { key: 'big',   label: 'BIG',   sport: 'bucket', where: q => q.like('game_mode', 'bucket-%').eq('position', 'big') },
@@ -110,15 +115,23 @@ export const seasonDate = iso => {
 
 const BUILD_COLS = 'game_mode, position, ovr, archetype, wins, losses, champion, playoffs, season_award, mvp, dpoy, build, created_at'
 
-// The best saved season at each position (highest OVR, then wins): one row per position
+// the same test as isAllTime, for the query (an old QB row has no game_mode: that's current)
+export const CURRENT_ONLY = 'game_mode.is.null,and(game_mode.not.ilike.%all-time%,game_mode.not.ilike.%legends%)'
+export const ALLTIME_ONLY = 'game_mode.ilike.%all-time%,game_mode.ilike.%legends%'
+// The best saved season at each position (highest OVR, then wins), in current and in all-time:
+// kept apart, or the all-time one would be the best at every position
 export async function loadBestBuilds(uid) {
   if (!supabase || !uid) return null
-  const rows = await Promise.all(POSITIONS.map(p =>
-    p.where(supabase.from('simulations').select(BUILD_COLS).eq('user_id', uid).not('build', 'is', null).not('ovr', 'is', null))
-      .order('ovr', { ascending: false }).order('wins', { ascending: false }).limit(1)
-      .then(r => (r.error ? undefined : r.data?.[0] ? { ...r.data[0], pos: p } : null), () => undefined)))
-  if (rows.every(r => r === undefined)) return null
-  return rows.filter(Boolean).sort((a, b) => (b.ovr ?? 0) - (a.ovr ?? 0) || (b.wins ?? 0) - (a.wins ?? 0))
+  const era = async only => {
+    const rows = await Promise.all(POSITIONS.map(p =>
+      p.where(supabase.from('simulations').select(BUILD_COLS).eq('user_id', uid).not('build', 'is', null).not('ovr', 'is', null)).or(only)
+        .order('ovr', { ascending: false }).order('wins', { ascending: false }).limit(1)
+        .then(r => (r.error ? undefined : r.data?.[0] ? { ...r.data[0], pos: p } : null), () => undefined)))
+    return { failed: rows.every(r => r === undefined), rows: rows.filter(Boolean).sort((a, b) => (b.ovr ?? 0) - (a.ovr ?? 0) || (b.wins ?? 0) - (a.wins ?? 0)) }
+  }
+  const [cur, all] = await Promise.all([era(CURRENT_ONLY), era(ALLTIME_ONLY)])
+  if (cur.failed && all.failed) return null
+  return { current: cur.rows, alltime: all.rows }
 }
 
 const LITE_COLS = 'game_mode, position, ovr, archetype, wins, losses, champion, season_award, mvp, dpoy, created_at'

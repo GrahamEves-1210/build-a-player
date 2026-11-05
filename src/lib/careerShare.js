@@ -161,7 +161,12 @@ export async function careerShareCanvas(c, { username } = {}) {
   ctx.fillStyle = 'rgba(8,12,10,.62)'; ctx.fill()
   ctx.strokeStyle = 'rgba(242,214,117,.6)'; ctx.lineWidth = 3; ctx.stroke()
   const IX = PAD + 46, IR = W - PAD - 46
+  // the tier and, beside it, where the career ranks among the all-time greats
+  const goat = L.ranked ? `NO. ${L.rank} ${S.isBucket ? '' : `${POS_LABEL[c.pos]} `}OF ALL TIME` : `OUTSIDE THE ALL-TIME TOP ${L.of}`
   text(ctx, 'LEGACY TIER', IX, PY + 62, { font: `32px ${BEBAS}`, color: 'rgba(255,255,255,.6)', spacing: 5 })
+  ctx.font = `32px ${BEBAS}`
+  const goatX = IX + ctx.measureText('LEGACY TIER').width + 11 * 5 + 28
+  text(ctx, goat, goatX, PY + 62, { font: `${fit(ctx, goat, BEBAS, 32, IR - 230 - goatX, 3)}px ${BEBAS}`, color: L.ranked ? GOLD : 'rgba(255,255,255,.6)', spacing: 3 })
   text(ctx, 'LEGACY PTS', IR, PY + 62, { font: `32px ${BEBAS}`, color: 'rgba(255,255,255,.6)', align: 'right', spacing: 5 })
   const tier = L.tier.toUpperCase()
   ctx.font = `116px ${ANTON}`
@@ -180,9 +185,8 @@ export async function careerShareCanvas(c, { username } = {}) {
     text(ctx, n, x + segW / 2, PY + 256, { font: `${fit(ctx, n, BEBAS, 28, segW - 4, 2)}px ${BEBAS}`, color: i === reached - 1 ? GOLD : i < reached ? 'rgba(242,214,117,.6)' : 'rgba(255,255,255,.4)', align: 'center', spacing: 2 })
   })
 
-  // the ribbon: the Hall of Fame, else where he ranks all-time
+  // the ribbon: the Hall of Fame, else his years in the league
   const RY = PY + PH + 28
-  const ranked = L.ranked ? `NO. ${L.rank} ${S.isBucket ? 'CAREER' : `${POS_LABEL[c.pos]} CAREER`} OF ALL TIME` : null
   if (c.hof?.in) {
     box(ctx, PAD, RY, W - PAD * 2, 96, 48); ctx.fillStyle = goldGrad(ctx, PAD, W - PAD); ctx.fill()
     const s = `HALL OF FAME · ${c.hof.ballot.toUpperCase()}`
@@ -191,7 +195,7 @@ export async function careerShareCanvas(c, { username } = {}) {
     icon(ctx, 'crown', W / 2 - sw / 2 - 30, RY + 27, 42, '#1d1503')
     text(ctx, s, W / 2 + 22, RY + 66, { font: `${fs}px ${BEBAS}`, color: '#1d1503', align: 'center', spacing: 4 })
   } else {
-    const s = ranked ?? `${t.seasons} ${t.seasons === 1 ? 'SEASON' : 'SEASONS'} IN THE ${S.league}`
+    const s = `${t.seasons} ${t.seasons === 1 ? 'SEASON' : 'SEASONS'} IN THE ${S.league}`
     box(ctx, PAD, RY, W - PAD * 2, 96, 48); ctx.fillStyle = 'rgba(255,255,255,.05)'; ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,.22)'; ctx.lineWidth = 3; ctx.stroke()
     text(ctx, s, W / 2, RY + 66, { font: `${fit(ctx, s, BEBAS, 50, W - PAD * 2 - 80, 4)}px ${BEBAS}`, color: '#fff', align: 'center', spacing: 4 })
   }

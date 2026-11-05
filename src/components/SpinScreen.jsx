@@ -37,6 +37,7 @@ const ITEM_H  = 44
 const CENTER  = 2
 const IDLE_MS = 1200
 const ROWS_BELOW = 4   // rows the window shows past the middle one
+const WHEEL_ROWS = 30   // rows on Starters Only's one wheel
 const FAST_MS = 36   // ms per item at peak speed — defines MAX_VEL
 
 // The drum (rows tilting like a slot machine's reel) is off on the desktop website: a 3D reel
@@ -44,8 +45,6 @@ const FAST_MS = 36   // ms per item at peak speed — defines MAX_VEL
 // drift stays, as a GPU animation instead of a script each frame. Phones and the app keep the drum,
 // unless they're weak (lib/lowPower.js)
 const DRUM_ON = !LOW_POWER && (IS_APP || !(typeof window !== 'undefined' && window.matchMedia?.('(min-width: 769px)').matches))
-// the reels stop gliding after this long with nothing happening: a screen at rest should draw nothing
-const IDLE_REST_MS = 6000
 
 // ─── Slot Reel ───────────────────────────────────────────────────────────────
 // Same item on both sides of a reel, even when the pool was re-mapped (custom ratings)
@@ -291,7 +290,7 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, on
       // weak machines: the reels just sit until they're spun
     } else if (idle && !DRUM_ON) {
       // Desktop website: the slow idle drift runs as one GPU transform animation (no script
-      // each frame), and rests after a few seconds; when it stops, the track keeps the place it drifted to
+      // each frame). When it stops, the track keeps the place it drifted to
       const track = trackRef.current
       if (track) {
         const VEL = ITEM_H / IDLE_MS
@@ -299,9 +298,7 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, on
         track.style.transition = 'none'
         const anim = track.animate([{ transform: `translate3d(0,${y0}px,0)` }, { transform: `translate3d(0,${y0 - loopH}px,0)` }],
           { duration: loopH / VEL, iterations: Infinity, easing: 'linear' })
-        const restT = setTimeout(() => anim.pause(), IDLE_REST_MS)
         driftRef.current = () => {
-          clearTimeout(restT)
           const t = Number(anim.currentTime) || 0
           posRef.current += (VEL * t) % loopH
           wrap()
@@ -313,12 +310,10 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, on
     } else if (idle) {
       const VEL     = ITEM_H / IDLE_MS   // px/ms at idle speed
       let lastFrame = performance.now()
-      const restAt = lastFrame + IDLE_REST_MS
 
       if (trackRef.current) trackRef.current.style.transition = 'none'
 
       const frame = (now) => {
-        if (now > restAt) return
         const dt  = Math.min(now - lastFrame, 50)
         lastFrame = now
         posRef.current += VEL * dt
@@ -355,8 +350,9 @@ function SlotReel({ label, items, spinning, idle, locked, getDisplay, getSub, on
 }
 
 // ─── Chip ────────────────────────────────────────────────────────────────────
-function Chip({ type, spin = null, meta, val, selectedQB, draggingType, onChipTap, onDragStart, onDragEnd, setDraggingType, hideGrades, headshotsMap, headshotsDir, isBucket, isWR, headshotFallback = () => null }) {
-  const photo = headshotsMap[selectedQB.name] ? `${headshotsDir}${headshotsMap[selectedQB.name]}.webp` : headshotFallback(selectedQB.skin)
+function Chip({ type, spin = null, sandbox = false, meta, val, selectedQB, draggingType, onChipTap, onDragStart, onDragEnd, setDraggingType, hideGrades, headshotsMap, headshotsDir, isBucket, isWR, headshotFallback = () => null }) {
+  const hsKey = selectedQB.headshot ?? headshotsMap[selectedQB.name]   // (a player whose name's key is somebody else's carries his own)
+  const photo = hsKey ? `${headshotsDir}${hsKey}.webp` : headshotFallback(selectedQB.skin)
   const chipData = {
     type, val,
     qb: selectedQB.short, qbFull: selectedQB.name,
@@ -367,6 +363,7 @@ function Chip({ type, spin = null, meta, val, selectedQB, draggingType, onChipTa
     attrs: selectedQB.attrs ?? null,
     subpos: selectedQB.subpos ?? null,
     ...(spin ? { spin } : {}),
+    ...(sandbox ? { sandbox: true } : {}),   // saveGuard's hasSandboxChip: the mark survives a reload with the build
   }
   return (
     <div
@@ -389,7 +386,7 @@ function Chip({ type, spin = null, meta, val, selectedQB, draggingType, onChipTa
     >
       {photo && <img src={photo} alt="" className="chip-photo" />}
       <div className="chip-text">
-        <span className={`chip-name${meta.label.length > 14 ? ' is-long' : ''}`}>{meta.label}</span>
+        <span className={`chip-name${meta.label.length > 14 ? ' is-long' : ''}`}>{meta.label.replace('/', '/​')}</span>
         <span className="chip-qb">{selectedQB.name}</span>
       </div>
       <span className="chip-val" style={hideGrades ? { visibility: 'hidden' } : undefined}>{valToGrade(val)}</span>
@@ -413,7 +410,12 @@ export function setGradesHidden(v) {
   window.dispatchEvent(new CustomEvent('bap:grades', { detail: !!v }))
 }
 // ─── SpinScreen ──────────────────────────────────────────────────────────────
-export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, activeCategory, resetKey, onChipTap, types = TYPES, isLite = false, qbPool = QBS, savedResult = null, onSaveResult, onPhaseChange, gameKey, onReset, adsDisabled = false, isRB = false, isWR = false, isTE = false, isDB = false, isOL = false, isAllTime = false, isBucket = false, isVersusMode = false, attrMap = ATTR, categoriesData = CATEGORIES, teamsPool = TEAMS, logoDir = '/logos/', playerLabel, headshotsMap = HEADSHOTS, headshotsDir = `${HEADSHOT_BASE}/`, hideTeamResult = false, headshotFallback = () => null, seedPlan: seedPlanProp = null, cardMeta = null, paused = false, gradesHidden = false }) {
+export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, activeCategory, resetKey, onChipTap, types = TYPES, isLite = false, qbPool = QBS, savedResult = null, onSaveResult, onPhaseChange, gameKey, onReset, adsDisabled = false, isRB = false, isWR = false, isTE = false, isDB = false, isDL = false, isOL = false, isAllTime = false, isBucket = false, isVersusMode = false, attrMap = ATTR, categoriesData = CATEGORIES, teamsPool = TEAMS, logoDir = '/logos/', playerLabel, headshotsMap = HEADSHOTS, headshotsDir = `${HEADSHOT_BASE}/`, hideTeamResult = false, headshotFallback = () => null, seedPlan: seedPlanProp = null, cardMeta = null, paused = false, gradesHidden = false, startersOnly = false }) {
+  // Sandbox's Starters Only: one wheel of the pool's starters, no team spin, no respins. Never on a
+  // seeded plan (the Daily, a Compete pool, Blacktop) or a live game, whatever the page hands in
+  const oneWheel = startersOnly && !seedPlanProp && !isVersusMode
+  const oneWheelRef = useRef(oneWheel)
+  oneWheelRef.current = oneWheel
   // the player's reel skin (the shop's Reel Skins: app-shop.css .rs-*)
   const equippedReel = useProgress().equip?.reel
   const reelSkin = itemById(equippedReel)?.slot === 'reel' ? equippedReel : null
@@ -492,12 +494,13 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
     // a build's own seed, and the spin to deal next (si): what a reload picks up from
     const at = spinBase.current + seedSpins
     const own = autoPlan ? { seed: autoPlan.seed } : {}
-    if (phase === 'done' && selectedQB) onSaveResult({ selectedTeam, selectedQB, qbRespinUsed, teamRespinUsed, qbRespinBonus, ...own, ...(autoPlan ? { si: at } : {}) })
+    const mark = oneWheel ? { starters: true } : {}
+    if (phase === 'done' && selectedQB) onSaveResult({ selectedTeam, selectedQB, qbRespinUsed, teamRespinUsed, qbRespinBonus, ...mark, ...own, ...(autoPlan ? { si: at } : {}) })
     // between spins the build's re-spins used still count (a reload doesn't hand them back)
-    else if (phase === 'idle') onSaveResult(qbRespinUsed || teamRespinUsed || qbRespinBonus || autoPlan ? { qbRespinUsed, teamRespinUsed, qbRespinBonus, ...own, ...(autoPlan ? { si: at } : {}) } : null)
+    else if (phase === 'idle') onSaveResult(qbRespinUsed || teamRespinUsed || qbRespinBonus || autoPlan ? { qbRespinUsed, teamRespinUsed, qbRespinBonus, ...mark, ...own, ...(autoPlan ? { si: at } : {}) } : null)
     // mid-spin: this spin is already dealt (a reload deals it again) and a respin is spent
-    else onSaveResult({ qbRespinUsed, teamRespinUsed, qbRespinBonus, ...own, ...(autoPlan ? { si: Math.max(0, at - 1) } : {}) })
-  }, [phase, selectedTeam, selectedQB, qbRespinUsed, teamRespinUsed, qbRespinBonus, seedSpins, autoPlan]) // eslint-disable-line react-hooks/exhaustive-deps
+    else onSaveResult({ qbRespinUsed, teamRespinUsed, qbRespinBonus, ...mark, ...own, ...(autoPlan ? { si: Math.max(0, at - 1) } : {}) })
+  }, [phase, selectedTeam, selectedQB, qbRespinUsed, teamRespinUsed, qbRespinBonus, seedSpins, autoPlan, oneWheel]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (onPhaseChange) onPhaseChange(phase)
@@ -527,7 +530,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
   const handleQBStop = useCallback((qb) => {
     setSelectedQB(qb)
     setPhase('done')
-    if (cardMetaRef.current) {
+    if (cardMetaRef.current && !oneWheelRef.current) {
       window.dispatchEvent(new CustomEvent('bap:spin', { detail: { ...cardMetaRef.current, player: qb, pool: poolRef.current } }))
     }
   }, [])
@@ -557,16 +560,17 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
     setSelectedQB(null)
     setExcludedQB(null)
     countTeamSpin()
-    setPhase('team')
+    setPhase(oneWheelRef.current ? 'qb' : 'team')
     triggerMobileAd()
     track('spin', {
       app: isBucket ? 'bucket' : 'nfl',
-      position: isBucket ? 'bucket' : isOL ? 'ol' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb',
+      position: isBucket ? 'bucket' : isOL ? 'ol' : isDL ? 'dl' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb',
       gameMode: isLite ? 'lite' : null,
     })
-  }, [onSaveResult, triggerMobileAd, isBucket, isOL, isDB, isTE, isWR, isRB, isLite]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [onSaveResult, triggerMobileAd, isBucket, isOL, isDB, isDL, isTE, isWR, isRB, isLite]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleQBRespin = useCallback(() => {
+    if (oneWheelRef.current) return
     setExcludedQB(selectedQB)
     setQbRespinUsed(n => n + 1)
     setPlayerDraw(d => d + 1)
@@ -578,9 +582,9 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
   // earns one more, once a build
   const [adBusy, setAdBusy] = useState(false)
   const [adNote, setAdNote] = useState('')
-  const canEarn = REWARDED_ON && IS_APP && !isVersusMode && !seedPlanProp && qbRespinBonus === 0
+  const canEarn = REWARDED_ON && IS_APP && !isVersusMode && !seedPlanProp && !oneWheel && qbRespinBonus === 0
   const earnRespin = async () => {
-    if (adBusy) return
+    if (adBusy || oneWheelRef.current) return
     setAdBusy(true); setAdNote('')
     const r = await watchFor()
     setAdBusy(false)
@@ -590,6 +594,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
   }
 
   const handleTeamRespin = useCallback(() => {
+    if (oneWheelRef.current) return
     clearAll()
     setSelectedQB(null)
     setSelectedTeam(null)
@@ -625,17 +630,30 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
     return finalPool
   }, [spinCount, teamsPool, draftableTeams])
 
+  // The one wheel: seeded like every build's spins, so a reload deals the same player. The winner is
+  // the first of the whole pool's shuffle; the reel carries a sample of it (some pools run to 150)
+  const starterKeys = oneWheel ? qbPool.filter(q => q.starter === true).map(reelKey).sort().join(',') : ''
+  const wheelIndex = Math.max(0, spinBase.current + seedSpins - 1)
+  const starterDraw = useMemo(() => {
+    if (!oneWheel) return []
+    const all = qbPool.filter(q => q.starter === true).sort((a, b) => reelKey(a).localeCompare(reelKey(b)))
+    const order = seededShuffle(all, `${seedPlan?.seed}:starters`)   // one order per build: nobody lands twice until the pool runs out
+    return Array.from({ length: Math.min(WHEEL_ROWS, order.length) }, (_, k) => order[(wheelIndex + k) % order.length])
+  }, [oneWheel, starterKeys, seedPlan?.seed, wheelIndex]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // Stable QB items — minimal placeholder until team is selected (QB reel is blurred/hidden)
   const qbReelItems = useMemo(() => {
+    if (oneWheel) return starterDraw
     if (!selectedTeam) return qbPool.slice(0, 3)
     const base = qbPool.filter(q => q.team === selectedTeam.short)
-    const arr = excludedQB ? base.filter(q => q !== excludedQB) : [...base]
+    // (a respin on a team of two keeps both in: taking one out would just hand over the other)
+    const arr = excludedQB && base.length > 2 ? base.filter(q => q !== excludedQB) : [...base]
     for (let i = arr.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1))
       ;[arr[i], arr[j]] = [arr[j], arr[i]]
     }
     return arr
-  }, [selectedTeam, excludedQB, spinCount])
+  }, [selectedTeam, excludedQB, spinCount, oneWheel, starterDraw])
 
   // Daily Challenge outcomes
   const teamIndex = spinBase.current + (ownSpins ? seedSpins : spinCount) - 1
@@ -659,7 +677,8 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
       if (freeTeam) return mine[playerDraw % mine.length]
       // a player respin: never the player this spin dealt
       const dealt = seededShuffle(roster, `${seedPlan.seed}:${teamIndex}:${selectedTeam.short}`)[0]
-      const rest = mine.filter(p => p.name !== dealt?.name)
+      // (Compete's rule stays: the live server checks it. Elsewhere a team of two keeps both in the draw)
+      const rest = !seedPlanProp && roster.length <= 2 ? mine : mine.filter(p => p.name !== dealt?.name)
       return rest.length ? rest[(playerDraw - 1) % rest.length] : mine[0]
     }
     const order = seededShuffle(roster, `${seedPlan.seed}:${teamIndex}:${selectedTeam.short}`)
@@ -681,7 +700,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
     const logo = new Image()
     logo.src = `${logoDir}${selectedTeam.short}.png`
     qbReelItems.forEach(qb => {
-      const file = headshotsMap[qb.name]
+      const file = qb.headshot ?? headshotsMap[qb.name]
       if (file) {
         const img = new Image()
         img.src = `${headshotsDir}${file}.webp`
@@ -715,7 +734,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
           <div className={`reels-wrap${reelSkin ? ` rs-on ${reelSkin}` : ''}`}>
             <div className="reel-tri reel-tri-l" />
             <div className="reels-row">
-              <SlotReel
+              {!oneWheel && <SlotReel
                 label="TEAM"
                 items={teamReelItems}
                 spinning={isSpinningTeam}
@@ -728,7 +747,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
                 durationMs={800}
                 jitterMs={1000}
                 target={teamTarget}
-              />
+              />}
               <SlotReel
                 label={pLabel}
                 items={qbReelItems}
@@ -738,11 +757,11 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
                 getDisplay={q => q.name.split(' ')[0]}
                 getSub={q => q.name.split(' ').slice(1).join(' ')}
                 onStop={handleQBStop}
-                durationMs={1100}
+                durationMs={oneWheel ? 1700 : 1100}
                 jitterMs={400}
                 blurred={phase === 'team' || phase === 'team-done'}
                 fast={qbRespinUsed > 0}
-                target={playerTarget}
+                target={oneWheel ? starterDraw[0] ?? null : playerTarget}
               />
             </div>
             <div className="reel-tri reel-tri-r" />
@@ -750,7 +769,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
 
           <div className="spin-btn-wrap">
             {adNote && <p className="spin-ad-note" role="status">{adNote}</p>}
-            {isDone && !complete ? (
+            {isDone && !complete && !oneWheel ? (
               <div className="spin-respin-split">
                 <button
                   className={`spin-respin-half spin-respin-team${teamRespinUsed >= 1 ? ' spin-respin-used' : ''}`}
@@ -786,9 +805,9 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
               </div>
             ) : (
               <button
-                className={`spin-btn${isDone && complete ? ' spin-btn-wait' : ''}`}
+                className={`spin-btn${isDone && (complete || oneWheel) ? ' spin-btn-wait' : ''}`}
                 onClick={handleSpin}
-                disabled={isSpinning || complete}
+                disabled={isSpinning || complete || (oneWheel && (isDone || !starterDraw.length))}
               >
                 SPIN
               </button>
@@ -809,7 +828,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
             <div className="qb-reveal-card" style={{ '--qb-color': selectedQB.color }}>
               <div className="qb-reveal-hero">
                 <QBAvatar
-                  photo={headshotsMap[selectedQB.name] ? `${headshotsDir}${headshotsMap[selectedQB.name]}.webp` : headshotFallback(selectedQB.skin)}
+                  photo={(selectedQB.headshot ?? headshotsMap[selectedQB.name]) ? `${headshotsDir}${selectedQB.headshot ?? headshotsMap[selectedQB.name]}.webp` : headshotFallback(selectedQB.skin)}
                   team={selectedQB.team}
                   color={selectedQB.color}
                   size={56}
@@ -820,7 +839,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
                 <div className="qb-reveal-name">{selectedQB.name}</div>
                 <div className="qb-reveal-meta">
                   {selectedQB.teamName ?? selectedQB.team}
-                  {isOL && selectedQB.pos ? ` · ${selectedQB.pos}` : ''}
+                  {(isOL || isDL) && selectedQB.pos ? ` · ${selectedQB.pos}` : ''}
                   {!isBucket && !isWR && (selectedQB.starter ? '' : ' · Bench')}
                 </div>
                 {selectedQB.years && (
@@ -844,7 +863,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
                   ? types.filter(t => !build[t]).map(t => {
                       const meta = attrMap[t]
                       const val  = selectedQB.attrs[t]
-                      return <Chip key={t} spin={chipSpin} type={t} meta={meta} val={val} selectedQB={selectedQB} draggingType={draggingType} onChipTap={onChipTap} onDragStart={onDragStart} onDragEnd={onDragEnd} setDraggingType={setDraggingType} hideGrades={forceHide || hideGrades} headshotsMap={headshotsMap} headshotsDir={headshotsDir} isBucket={isBucket} isWR={isWR} headshotFallback={headshotFallback} />
+                      return <Chip key={t} spin={chipSpin} sandbox={oneWheel} type={t} meta={meta} val={val} selectedQB={selectedQB} draggingType={draggingType} onChipTap={onChipTap} onDragStart={onDragStart} onDragEnd={onDragEnd} setDraggingType={setDraggingType} hideGrades={forceHide || hideGrades} headshotsMap={headshotsMap} headshotsDir={headshotsDir} isBucket={isBucket} isWR={isWR} headshotFallback={headshotFallback} />
                     })
                   : visibleCategories.map((cat, catIdx) => {
                       const available = cat.types.filter(type => types.includes(type) && !build[type])
@@ -859,7 +878,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
                           {available.map(type => {
                             const meta = attrMap[type]
                             const val  = selectedQB.attrs[type]
-                            return <Chip key={type} spin={chipSpin} type={type} meta={meta} val={val} selectedQB={selectedQB} draggingType={draggingType} onChipTap={onChipTap} onDragStart={onDragStart} onDragEnd={onDragEnd} setDraggingType={setDraggingType} hideGrades={forceHide || hideGrades} headshotsMap={headshotsMap} headshotsDir={headshotsDir} isBucket={isBucket} isWR={isWR} headshotFallback={headshotFallback} />
+                            return <Chip key={type} spin={chipSpin} sandbox={oneWheel} type={type} meta={meta} val={val} selectedQB={selectedQB} draggingType={draggingType} onChipTap={onChipTap} onDragStart={onDragStart} onDragEnd={onDragEnd} setDraggingType={setDraggingType} hideGrades={forceHide || hideGrades} headshotsMap={headshotsMap} headshotsDir={headshotsDir} isBucket={isBucket} isWR={isWR} headshotFallback={headshotFallback} />
                           })}
                         </div>
                       )

@@ -51,13 +51,16 @@ export function NameText({ name, color, fx, className = '' }) {
   const nc = known(color, 'nameColor'), nfx = known(fx, 'nameFx')
   const text = name || 'Player'
   const wave = nfx === 'nfx-wave'
-  return (
+  const el = (
     <span className={`nt${nc ? ` ${nc} nt-colored` : ''}${nfx ? ` ${nfx}` : ''}${className ? ` ${className}` : ''}`} data-text={text} style={wave ? { '--n': [...text].length } : undefined}>
       {wave
         ? [...text].map((ch, i) => <span key={i} className="nt-ch" style={{ '--i': i }}>{ch === ' ' ? ' ' : ch}</span>)
         : text}
     </span>
   )
+  // these two glow from a layer behind the name, not from the name itself
+  if (nfx === 'nfx-pro-aura' || nfx === 'nfx-spotlight') return <span className="nt-halo-host"><span className={`nt-halo nt-halo--${nfx}`} aria-hidden="true" />{el}</span>
+  return el
 }
 
 // A name with its look. plate: draw the nameplate behind it (cards, chat, lobby).

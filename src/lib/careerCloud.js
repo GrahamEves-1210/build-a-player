@@ -14,9 +14,12 @@ const pending = new Map()   // `${uid}:${sport}` → { timer, c }
 
 // a slot is its own row: 'nfl', 'nfl#1', 'nfl#2'
 const sportKey = (sport, slot = 0) => (slot ? `${sport}#${slot}` : sport)
+// App binaries from before the DL crash on a DL career, and they read only the rows above.
+// A DL career saves to its own row, which they never see.
+const lineKey = (sport, slot = 0) => `dl:${sportKey(sport, slot)}`
 const rowOf = c => ({
   user_id: c.uid,
-  sport: sportKey(c.sport, c.slot),
+  sport: c.pos === 'dl' ? lineKey(c.sport, c.slot) : sportKey(c.sport, c.slot),
   data: c,
   updated_at: new Date(c.updatedAt || Date.now()).toISOString(),
 })
@@ -53,8 +56,8 @@ if (typeof window !== 'undefined') {
 export async function fetchCloudCareer(sport, uid, slot = 0) {
   if (!supabase || !uid) return undefined
   try {
-    const q = supabase.from('careers').select('data').eq('user_id', uid).eq('sport', sportKey(sport, slot)).maybeSingle()
-      .then(({ data, error }) => (error ? undefined : (data?.data ?? null)))
+    const q = supabase.from('careers').select('data').eq('user_id', uid).in('sport', [sportKey(sport, slot), lineKey(sport, slot)])
+      .then(({ data, error }) => (error ? undefined : (data ?? []).reduce((keep, r) => (!keep || (r.data?.updatedAt ?? 0) > (keep.updatedAt ?? 0) ? r.data : keep), null)))
     const timeout = new Promise(res => setTimeout(() => res(undefined), FETCH_TIMEOUT_MS))
     return await Promise.race([q, timeout])
   } catch { return undefined }
@@ -68,7 +71,7 @@ export function deleteCloudCareer(sport, uid, slot = 0) {
   const prev = pending.get(k)
   if (prev) { clearTimeout(prev.timer); pending.delete(k) }
   try {
-    supabase.from('careers').delete().eq('user_id', uid).eq('sport', sportKey(sport, slot))
+    supabase.from('careers').delete().eq('user_id', uid).in('sport', [sportKey(sport, slot), lineKey(sport, slot)])
       .then(({ error }) => { if (error) console.warn('[career cloud] delete failed:', error.code, error.message) }, () => {})
   } catch {}
 }

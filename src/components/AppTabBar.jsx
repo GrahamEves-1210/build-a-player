@@ -6,6 +6,7 @@ import AppMenu from './app/AppMenu'
 import AuthModal from './AuthModal'
 import AppToasts, { LevelUp } from './app/AppToasts'
 import { useProgress, STREAK_REWARDS, missionDef, cardsOpen } from '../lib/progress'
+import { whatsNewSeen, markWhatsNewSeen } from '../lib/whatsNew'
 import { IconBag, IconProfile, IconCalendar, IconPodium, IconBagLine, IconProfileLine, IconCalendarLine, IconPodiumLine } from './app/icons'
 import { slideIn } from '../lib/juice'
 import PlayButton from './app/PlayButton'
@@ -15,6 +16,8 @@ import { SPRING_LAYOUT } from '../lib/motion'
 
 const AppDaily = lazy(() => import('./app/AppDaily'))
 const AppCards = lazy(() => import('./app/AppCards'))
+const MiniGameLab = lazy(() => import('./app/MiniGameLab'))
+const AppWhatsNew = lazy(() => import('./app/AppWhatsNew'))
 const AppAchievements = lazy(() => import('./app/AppAchievements'))
 const AppShop = lazy(() => import('./app/AppShop'))
 const AppLocker = lazy(() => import('./app/AppLocker'))
@@ -106,7 +109,15 @@ export default function AppTabBar() {
   const [authOpen, setAuthOpen] = useState(false)
   const [screen, setScreen]     = useState(null)   // 'daily' | 'cards' | 'shop' | 'achievements' | null
   const badge = useDailyBadge()
-  const claimable = useProgress().claimable || 0
+  const progress = useProgress()
+  const claimable = (progress.claimable || 0) + (progress.setsReady || 0)
+  // What's New opens once after an update, on Home, for someone who has played before
+  const playedBefore = (progress.stats?.seasons ?? 0) > 0
+  useEffect(() => {
+    if (state.page !== 'splash' || !playedBefore || whatsNewSeen() || new URLSearchParams(window.location.search).has('mg')) return
+    const t = setTimeout(() => { markWhatsNewSeen(); setScreen(s => s ?? 'whatsnew') }, 1200)
+    return () => clearTimeout(t)
+  }, [state.page, playedBefore])
   const activeRef = useRef('play')   // the lit tab, for the nav listener (set every render)
   const slideTo = to => slideIn(DOCK_TABS.has(to) || to === 'profile' || to === 'play' || to === 'home'
     ? Math.sign((TAB_ORDER[to === 'home' ? 'play' : to] ?? 2) - (TAB_ORDER[activeRef.current] ?? 2))
@@ -122,7 +133,7 @@ export default function AppTabBar() {
       if (to === 'cards' && !cardsOpen()) { setMenuOpen(false); setAuthOpen(true); return }
       if (to === 'pro') { setMenuOpen('pro'); return }
       slideTo(to)
-      if (['daily', 'shop', 'locker', 'soundlab', 'online', 'pass', 'cards', 'achievements'].includes(to)) { setMenuOpen(false); if (to === 'shop') setShopTab(arg || 'featured'); setScreen(to) }
+      if (['daily', 'shop', 'locker', 'soundlab', 'online', 'pass', 'cards', 'achievements', 'mglab', 'whatsnew'].includes(to)) { setMenuOpen(false); if (to === 'shop') setShopTab(arg || 'featured'); setScreen(to) }
       else setScreen(null)
     }
     window.addEventListener('bap:page', onPage)
@@ -130,6 +141,7 @@ export default function AppTabBar() {
     window.addEventListener('bap:menu', onMenu)
     window.addEventListener('bap:nav', onNav)
     const onPlayer = e => { if (e.detail?.id) setPlayer(e.detail) }
+    if (new URLSearchParams(window.location.search).has('mg')) setScreen('mglab')
     window.addEventListener('bap:player', onPlayer)
     return () => {
       window.removeEventListener('bap:player', onPlayer)
@@ -173,6 +185,8 @@ export default function AppTabBar() {
             : screen === 'locker' ? <AppLocker onClose={() => setScreen(null)} />
             : screen === 'soundlab' ? <AppSoundLab onClose={() => setScreen(null)} />
             : screen === 'online' ? <AppOnline sport={state.sport} onClose={() => setScreen(null)} />
+            : screen === 'mglab' ? <MiniGameLab onClose={() => setScreen(null)} />
+            : screen === 'whatsnew' ? <AppWhatsNew onClose={() => setScreen(null)} />
             : screen === 'cards' ? <AppCards sport={state.sport} onClose={() => setScreen(null)} />
             : screen === 'achievements' ? <AppAchievements onClose={() => setScreen(null)} />
             : screen === 'pass' ? <AppPass onClose={() => setScreen(null)} />
@@ -187,7 +201,7 @@ export default function AppTabBar() {
           <PlayButton page={state.page} sport={state.sport} lit={active === 'play'} here={atHome}
             onTap={() => { if (!atHome) go('home')() }} />
           <Tab label="RANKS" Icon={IconPodium} Line={IconPodiumLine} active={active === 'leaderboard'} onClick={state.page === 'leaderboard' && !screen ? undefined : go('leaderboard')} />
-          {/* unclaimed achievements show here and on the profile's own button */}
+          {/* unclaimed achievements and completed sets show here and on the profile's own buttons */}
           <Tab label="PROFILE" Icon={IconProfile} Line={IconProfileLine} active={['profile', 'locker', 'cards', 'achievements'].includes(active)} badge={claimable} onClick={state.page === 'profile' && !screen ? undefined : go('profile')} />
         </nav>
       )}

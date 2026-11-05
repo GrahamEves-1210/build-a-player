@@ -35,9 +35,10 @@ const NFL_FIGURE = {
   wr: { src: '/wr-silhouette.png', scale: 1.18 },
   te: { src: '/wr-silhouette.png', scale: 1.18 },
   db: { src: '/db-silhouette.png', scale: 1.05 },
+  dl: { src: '/dl-silhouette.webp', scale: 1 },
 }
-const PLURAL = { qb: 'QBs', rb: 'RBs', wr: 'WRs', te: 'TEs', db: 'DBs', guard: 'Guards', big: 'Bigs' }
-const NFL_NAMES = { qb: 'Quarterback', rb: 'Running Back', wr: 'Wide Receiver', te: 'Tight End', db: 'Defensive Back', ol: 'O-Line' }
+const PLURAL = { qb: 'QBs', rb: 'RBs', wr: 'WRs', te: 'TEs', db: 'DBs', dl: 'DLs', guard: 'Guards', big: 'Bigs' }
+const NFL_NAMES = { qb: 'Quarterback', rb: 'Running Back', wr: 'Wide Receiver', te: 'Tight End', db: 'Defensive Back', dl: 'Defensive Line', ol: 'O-Line' }
 // Who's on the Current and All-Time buttons, for the position picked (football's current
 // faces are POS_OPTIONS.players). Every one of them is in that pool.
 const face = (id, color) => ({ id, color })
@@ -47,6 +48,7 @@ const GREATS = {
   wr: [face('espn_1433', '#4f2683'), face('espn_1056', '#aa0000'), face('223', '#97233f')],      // Moss, Owens, Fitzgerald
   te: [face('espn_13229', '#002244'), face('espn_1231', '#e31837'), face('espn_5362', '#0080c6')], // Gronkowski, Gonzalez, Gates
   db: [face('espn_3552', '#241773'), face('espn_4474', '#a5acaf'), face('espn_10458', '#125740')], // Reed, Polamalu, Revis
+  dl: [face('espn_16716', '#003594'), face('espn_13979', '#002244'), face('espn_3530', '#0085ca')], // Donald, Watt, Peppers
   guard: [face('nba/893', '#ce1141'), face('nba/977', '#552583'), face('nba/77142', '#fdb927')],  // Jordan, Kobe, Magic
   big: [face('nba/406', '#552583'), face('nba/1495', '#8a8d8f'), face('nba/76003', '#00471b')],  // Shaq, Duncan, Kareem
 }
@@ -155,10 +157,10 @@ function ModeCard({ gold = false, title, line, faces, on, onClick }) {
 const LiveLine = ({ n, line }) => (n > 0 ? <small className="ag-mc-live"><i aria-hidden="true" />{fmtCount(n)} playing</small> : <small>{line}</small>)
 
 // A mode's card: its colour, its name, where it stands, and its art (public/modes)
-function ModeArt({ kind, tone, small = false, title, line, live = 0, color, onClick, children }) {
+function ModeArt({ kind, tone, small = false, title, line, live = 0, color, onClick, children, tag = null }) {
   return (
     <button className={`ag-way ag-mc ag-mc--${tone} ag-way--${kind}${small ? ' is-small' : ''}${color ? ' has-team' : ''}`} style={color ? { '--team': color } : undefined} onClick={onClick}>
-      <span className="ag-mc-head"><b>{title}</b><LiveLine n={live} line={line} /></span>
+      <span className="ag-mc-head"><b>{title}{tag && <i className="ag-mc-tag">{tag}</i>}</b><LiveLine n={live} line={line} /></span>
       {children}
     </button>
   )
@@ -169,15 +171,23 @@ const CareerFigure = lazy(() => import('./CareerFigure'))
 function Rafters({ career }) {
   const s = career?.seasons ?? []
   const count = k => s.filter(x => x[k]).length
+  // legacy toward the Hall (lib/career.js loads on its own: there's a career, so it's already here)
+  const [hof, setHof] = useState(null)
+  useEffect(() => {
+    if (!career) { setHof(null); return }
+    let live = true
+    import('../../lib/career').then(m => { if (live) setHof(m.hofProgress(career)) }, () => {})
+    return () => { live = false }
+  }, [career])
   const flags = [
     { Icon: IconRing, n: count('champion'), word: 'RINGS' },
     { Icon: IconTrophy, n: count('award'), word: `${s.find(x => x.awardName)?.awardName ?? 'MVP'}S` },
-    { Icon: IconMedal, n: career?.hof?.in ? 1 : 0, word: 'HOF' },
+    { Icon: IconMedal, n: hof ?? 0, word: 'HOF', stat: hof == null ? null : `${hof}%`, meter: hof },
   ]
   return (
     <span className="ag-rafters" aria-hidden="true">
-      {flags.map(({ Icon, n, word }) => (
-        <i key={word} className={`ag-banner${career && !n ? ' is-dark' : ''}`}><Icon size={17} /><b>{career && word !== 'HOF' ? `${n}X` : word}</b>{career && word !== 'HOF' && <small>{word}</small>}</i>
+      {flags.map(({ Icon, n, word, stat, meter }) => (
+        <i key={word} className={`ag-banner${career && !n ? ' is-dark' : ''}`}><Icon size={17} /><b>{career ? stat ?? `${n}X` : word}</b>{career && <small>{word}</small>}{career && meter != null && <em className="ag-banner-meter"><span style={{ width: `${meter}%` }} /></em>}</i>
       ))}
     </span>
   )
@@ -391,7 +401,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
       <h2 className="ag-ways-label">MORE WAYS TO PLAY</h2>
       <div className="ag-cards">
         {onCareer && (
-          <ModeArt kind="career" tone="career" title="CAREER" line={crLine} color={career?.fit?.color} onClick={onCareer}>
+          <ModeArt kind="career" tone="career" title="CAREER" tag="POPULAR" line={crLine} color={career?.fit?.color} onClick={onCareer}>
             <Rafters career={career} />
             {!isBucket && (career?.build
               ? <Suspense fallback={null}><CareerFigure c={career} /></Suspense>
@@ -475,7 +485,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
           <div className={`ag-positions${isBucket ? ' ag-positions--two' : ''}`} style={{ '--n': positions.length, '--i': posIdx }} role="tablist" aria-label="Position">
             {positions.map((o, i) => (
               <button key={o.pos} role="tab" aria-selected={o.pos === position} className={`ag-pos${o.pos === position ? ' ag-pos--on' : ''}`} onClick={() => { dir.current = i < posIdx ? -1 : 1; pick(o.pos) }}>
-                <span className="ag-pos-label">{o.label}</span>
+                {o.pos === 'dl' && <span className="ag-pos-new">NEW</span>}<span className="ag-pos-label">{o.label}</span>
                 {o.sub && <span className="ag-pos-sub">{o.sub}</span>}
               </button>
             ))}
