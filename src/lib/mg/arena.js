@@ -73,8 +73,8 @@ export const POSE = named({
   dropL: { hx: -5, hy: 40, lean: -0.1, fFx: 11, fBx: -27, hFx: 12, hFy: 60, hBx: -6, hBy: 60 },
   dropR: { hx: 5, hy: 40, lean: 0.1, fFx: 27, fBx: -11, hFx: 6, hFy: 60, hBx: -12, hBy: 60 },
   layup: { hy: 50, lean: 0.06, fFx: 10, fFy: 24, fBx: -6, fBy: 0, hFx: 12, hFy: 128, hBx: -16, hBy: 62 },   // up off one foot, the far hand laying it in
-  shoot: { hy: 49, fFx: 8, fBx: -8, fFy: 1, fBy: 2, hFx: 12, hFy: 128, hBx: -11, hBy: 112 },
-  gather: { hy: 45, fFx: 11, fBx: -11, hFx: 13, hFy: 96, hBx: 0, hBy: 98 },
+  shoot: { hy: 49, fFx: 8, fBx: -8, fFy: 1, fBy: 2, hFx: 13, hFy: 130, hBx: -21, hBy: 100 },
+  gather: { hy: 43, fFx: 12, fBx: -12, hFx: 15, hFy: 94, hBx: 2.5, hBy: 95 },
   hands: { hy: 49, fFx: 8, fBx: -8, fFy: 2, fBy: 4, hFx: 11, hFy: 125, hBx: -11, hBy: 123 },   // straight up, the boards' reach
   slideA: { hy: 40, fFx: 21, fBx: -13, hFx: 27, hFy: 72, hBx: -27, hBy: 72 },
   slideB: { hy: 41, fFx: 13, fBx: -21, hFx: 27, hFy: 72, hBx: -27, hBy: 72 },

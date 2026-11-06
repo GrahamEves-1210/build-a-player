@@ -22,7 +22,7 @@ export const validSportPos = (sport, pos) => !!AUCTION_POS[sport]?.includes(pos)
 
 // ── The queue ─────────────────────────────────────────────────────────────────
 export class AuctionQueue extends BaseQueue {
-  constructor(state, env) { super(state, env, { size: AUCTION_SIZE, min: AUCTION_MIN, fillSecs: AUCTION_FILL_SECS, room: 'AUCTION_ROOM' }) }
+  constructor(state, env) { super(state, env, { size: AUCTION_SIZE, min: AUCTION_MIN, fillSecs: AUCTION_FILL_SECS, room: 'AUCTION_ROOM', kind: 'au' }) }
 }
 
 // ── The room: one auction ─────────────────────────────────────────────────────

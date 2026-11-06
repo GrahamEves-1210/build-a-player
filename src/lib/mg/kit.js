@@ -41,10 +41,10 @@ export const BODY = `Outfit, system-ui, sans-serif`
 export function text(ctx, str, x, y, { font = LABEL, size = 16, color = '#fff', align = 'center', base = 'middle', track = 0, weight = '' } = {}) {
   ctx.font = `${weight ? `${weight} ` : ''}${size}px ${font}`
   ctx.textAlign = align; ctx.textBaseline = base
-  if ('letterSpacing' in ctx) ctx.letterSpacing = `${track}px`
   ctx.fillStyle = color
-  ctx.fillText(str, x, y)
-  if ('letterSpacing' in ctx) ctx.letterSpacing = '0px'
+  // (only when it's asked for: setting it is a parse, and text is drawn every frame)
+  if (track && 'letterSpacing' in ctx) { ctx.letterSpacing = `${track}px`; ctx.fillText(str, x, y); ctx.letterSpacing = '0px' }
+  else ctx.fillText(str, x, y)
 }
 export function rr(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.roundRect(x, y, w, h, r) }
 export const circle = (ctx, x, y, r) => { ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2) }
@@ -82,6 +82,7 @@ export function fieldFor(home, superBowl = null) {
   if (e?.ok) { f.logo = e.img; f.id = `${home.short}|logo` }
   return f
 }
+export const dressDims = new Map()
 function endZone(x, f, top, H, SL, SR) {
   x.fillStyle = f.end; x.fillRect(SL, top, SR - SL, H)
   const size = H * 0.72
@@ -97,12 +98,57 @@ function endZone(x, f, top, H, SL, SR) {
   x.restore()
   x.fillStyle = 'rgba(255,255,255,.92)'; x.fillRect(SL, top + H - 2, SR - SL, 3.5); x.fillRect(SL - 3, top - 2, SR - SL + 6, 3)
 }
+// A field that's had a season on it: the middle between the hashes scuffed thin, more of it round midfield and in front of
+// the goal line. Baked into the flat field, seeded, the same every game.
+function paintWear(x, view, ez, pyd, SL, SR) {
+  let seed = 23
+  const R = () => (seed = (seed * 16807) % 2147483647) / 2147483647
+  const cx = (SL + SR) / 2, half = (SR - SL) * 0.17
+  const y0 = ez, y1 = ez + 100 * pyd
+  x.save(); x.beginPath(); x.rect(SL, Math.max(y0, 0), SR - SL, Math.min(y1, view.h) - Math.max(y0, 0)); x.clip()
+  const patch = (px, py, rx, ry, a) => { x.fillStyle = `rgba(116,92,58,${a.toFixed(3)})`; x.beginPath(); x.ellipse(px, py, rx, ry, 0, 0, Math.PI * 2); x.fill() }
+  // the worn corridor, in scuffs. (Only what's on this picture of the field.)
+  const n = Math.round(view.h / 3)
+  for (let i = 0; i < n; i++) {
+    const py = R() * view.h, off = (R() + R() - 1) * half * 1.5, a = 0.09 + R() * 0.11
+    patch(cx + off, py, 2 + R() * 9, 0.8 + R() * 2.2, a)
+  }
+  // heavier where everyone plays: the 50 and the goal mouth
+  for (const at of [ez + 50 * pyd, ez + 2 * pyd]) {
+    if (at < -30 || at > view.h + 30) continue
+    for (let i = 0; i < 26; i++) patch(cx + (R() + R() - 1) * half * (at === ez + 50 * pyd ? 1.3 : 0.8), at + (R() + R() - 1) * pyd * 3, 2 + R() * 7, 1 + R() * 2.5, 0.1 + R() * 0.12)
+  }
+  x.restore()
+}
+// What's over the sideline: the coaches' box (a yellow line between the 25s), the benches and the coolers behind it, both sides.
+function paintSideline(x, view, f, ez, pyd, SL, SR) {
+  const a = ez + 25 * pyd, b = ez + 75 * pyd
+  for (const sd of [-1, 1]) {
+    const edge = sd < 0 ? SL : SR, at = d => edge + sd * d
+    x.fillStyle = 'rgba(247,214,74,.62)'
+    const y0 = Math.max(a, -4), y1 = Math.min(b, view.h + 4)
+    if (y1 <= y0) continue
+    x.fillRect(Math.min(at(30), at(32)), y0, 2, y1 - y0)
+    // benches: long dark bars in runs, a cooler at the end of each
+    for (let y = a + 3 * pyd; y < b - 6 * pyd; y += 7 * pyd) {
+      if (y < -8 * pyd || y > view.h + 8 * pyd) continue
+      const bx = at(52), bw = 7
+      x.fillStyle = '#0b1218'; x.fillRect(bx - bw / 2 - 1, y - 1, bw + 2, 5 * pyd + 2)
+      x.fillStyle = sd < 0 ? (f.color ?? '#1d3a5f') : '#20303e'; x.fillRect(bx - bw / 2, y, bw, 5 * pyd)
+      x.fillStyle = '#e8772e'; x.fillRect(bx - 3, y + 5.6 * pyd, 6, 0.8 * pyd)
+    }
+  }
+}
 // ez: where the far goal line is painted; pyd: units a yard along the field. A yard across it is about 6.8 units.
 export function paintFieldDress(x, view, ez, pyd, SL, SR) {
   const f = view.field
   if (!f) return
   const H = pyd * 10, ACROSS = 6.8
   f.backY = null
+  // (the pylons go on the corners. A flat field is kept from game to game: it's remembered here for the next one that reuses it)
+  dressDims.set(`${f.word}|${stage.tag}`, { pyd, SL, SR })
+  paintWear(x, view, ez, pyd, SL, SR)
+  paintSideline(x, view, f, ez, pyd, SL, SR)
   if (ez > 0 && ez - H < view.h) {
     // past the back line the field's over: a flat apron out to the stands
     if (ez - H > 0) { x.fillStyle = '#123f23'; x.fillRect(-view.w * 0.25, 0, view.w * 1.5, ez - H) }
@@ -259,6 +305,7 @@ export function paintArena(x, view, { floor = 0.74, wall = '#10181c', ground = '
 // ── Players from above ──────────────────────────────────────────────────────
 // A shadow, the shoulders, the helmet. face: radians, 0 = up the screen. stride: 0-1 of a step
 export function player(ctx, x, y, { color = '#1b6fd1', trim = '#fff', face = 0, stride = null, scale = 1.55, helmet = true, skin = '#8d5a3b', num = null } = {}) {
+  skin = warmSkin(skin)
   ctx.save()
   ctx.translate(x, y); ctx.scale(scale, scale)
   ctx.fillStyle = 'rgba(0,0,0,.28)'; ctx.beginPath(); ctx.ellipse(2.5, 3.5, 13, 9.5, face, 0, Math.PI * 2); ctx.fill()
@@ -312,6 +359,7 @@ export const GOOD = '#35e07a', BAD = '#ff5a48', GOLD = '#f5dc8a'
 // 0 = straight down, positive = forward (toward +x): hip, knee (bend), shoulder, elbow, for each
 // side, plus lean (torso, from upright). Everything hangs off the hip at x, y.
 export function figure(ctx, x, y, pose, { color = '#1b6fd1', skin = '#8d5a3b', shorts = '#20262c', scale = 1, flip = false } = {}) {
+  skin = warmSkin(skin)
   const U = 21, L = 21, A = 15, F = 15, T = 34
   const { lean = 0, hipF = 0, kneeF = 0, hipB = 0, kneeB = 0, armF = 0, elbF = 0, armB = 0, elbB = 0 } = pose
   ctx.save(); ctx.translate(x, y); ctx.scale(flip ? -scale : scale, scale)
@@ -402,6 +450,99 @@ export function stamp(ctx, view, g) {
   ctx.restore()
 }
 
+// ── Juice: small, cheap, cosmetic. None of it touches the rules or the game's rng ──
+// (The crowd getting up on a big moment is crowdPop, in art.js.)
+//
+// particles: a fixed pool, so a game can't allocate or pile up. Nothing to tick: each piece's path comes from its
+// age, so a burst costs nothing per frame unless it's in the air, and nothing at all once they've landed. Make it
+// in make() and fire it from the rules or from draw:
+//   g.dirt = particles(40)                                        (the cap: the oldest piece gets reused)
+//   const p = tilt(view, x, y)
+//   g.dirt.burst('turf', p.x, p.y, g.t, { n: 10, s: p.s, ang: -Math.PI / 2, spread: 1.1 })
+//   g.dirt.draw(ctx, g.t)                                         (once a frame, where it belongs in depth)
+// x, y are screen units. kinds: 'turf' clods off a cut or a hit, 'dust' a soft puff, 'confetti' (pass colors: [c.us, c.trim, '#fff']).
+// Options: n, s (the size there: a tilt's p.s), ang (radians, -PI/2 is straight up), spread (radians either side),
+// speed (multiplies the kind's own), colors, life (ms). Confetti from the top of the screen: burst at y 30, ang PI/2.
+const P_KINDS = {
+  turf: { life: 430, speed: 105, grav: 620, size: 1.5, grow: 0, alpha: 1, land: true, colors: ['#2d8a4c', '#1f6b3a', '#5c4326', '#7c5c36', '#bfd3a8'] },
+  dust: { life: 520, speed: 34, grav: -14, size: 3, grow: 2.4, alpha: 0.42, land: false, colors: ['#c9b48e', '#a8947a', '#d8cdb6'] },
+  confetti: { life: 1900, speed: 120, grav: 95, size: 2.1, grow: 0, alpha: 1, land: false, flutter: true, colors: ['#ffffff', '#e8c15a', '#c9423a'] },
+}
+const P_NAMES = Object.keys(P_KINDS)
+export function particles(cap = 40, seed = 1) {
+  const x = new Float32Array(cap), y = new Float32Array(cap), vx = new Float32Array(cap), vy = new Float32Array(cap)
+  const born = new Float64Array(cap), life = new Float32Array(cap), size = new Float32Array(cap), kind = new Uint8Array(cap)
+  const color = new Array(cap).fill('#fff')
+  let next = 0, until = -Infinity, s = (seed * 2654435761 + 1) >>> 0
+  const rnd = () => { s ^= s << 13; s ^= s >>> 17; s ^= s << 5; s >>>= 0; return s / 4294967296 }
+  return {
+    burst(name, px, py, t, { n = 8, s: scale = 1, ang = -Math.PI / 2, spread = 1, speed = 1, colors = null, life: ms = null } = {}) {
+      const k = P_KINDS[name]
+      if (!k) return
+      const kindId = P_NAMES.indexOf(name), pal = colors ?? k.colors
+      for (let i = 0; i < n; i++) {
+        const j = next; next = (next + 1) % cap
+        const a = ang + (rnd() * 2 - 1) * spread, v = k.speed * speed * scale * (0.45 + rnd() * 0.75)
+        x[j] = px + (rnd() - 0.5) * 5 * scale; y[j] = py + (rnd() - 0.5) * 2 * scale
+        vx[j] = Math.cos(a) * v; vy[j] = Math.sin(a) * v
+        born[j] = t; life[j] = (ms ?? k.life) * (0.65 + rnd() * 0.5)
+        size[j] = k.size * scale * (0.7 + rnd() * 0.7); kind[j] = kindId
+        color[j] = pal[Math.floor(rnd() * pal.length)]
+        if (t + life[j] > until) until = t + life[j]
+      }
+    },
+    draw(ctx, t) {
+      if (t > until || lightMode()) return
+      let last = null, alpha = 1
+      for (let j = 0; j < cap; j++) {
+        const age = t - born[j]
+        if (age < 0 || age >= life[j]) continue
+        const k = P_KINDS[P_NAMES[kind[j]]], sec = age / 1000, f = age / life[j]
+        const py = y[j] + vy[j] * sec + 0.5 * k.grav * sec * sec
+        if (k.land && py > y[j] + 1 && sec > 0.04) continue   // (back down on the turf: gone)
+        const px = x[j] + vx[j] * sec * (k.flutter ? 1 - f * 0.6 : 1)
+        const sz = size[j] * (1 + k.grow * f), a = k.alpha * (f > 0.6 ? (1 - f) / 0.4 : 1)
+        if (a !== alpha) { ctx.globalAlpha = a; alpha = a }
+        if (color[j] !== last) { ctx.fillStyle = color[j]; last = color[j] }
+        if (k.flutter) {
+          // (a flat scrap turning over in the air: it narrows and comes back)
+          const turn = Math.abs(Math.cos(age / 95 + j))
+          ctx.fillRect(px + Math.sin(age / 210 + j) * 5 - sz * turn, py - sz * 0.6, Math.max(0.5, sz * 2 * turn), sz * 1.2)
+        } else ctx.fillRect(px - sz / 2, py - sz / 2, sz, sz * (k.land ? 0.72 : 1))
+      }
+      if (alpha !== 1) ctx.globalAlpha = 1
+    },
+  }
+}
+// Reduce Motion: the in-app switch and the phone's own setting both end up on this class (lib/settings.js)
+export const reduceMotion = () => typeof document !== 'undefined' && document.documentElement.classList.contains('bap-reduce-motion')
+// the light version: Reduce Motion, or a weak machine (html.low-power). No particles and no crowd getting up
+export const lightMode = () => typeof document !== 'undefined' && (document.documentElement.classList.contains('low-power') || document.documentElement.classList.contains('bap-reduce-motion'))
+// nudge: the camera takes a hit, brief and small, then settles. The host does the rest: put it on the game and kick it.
+//   g.nudge = nudge()                            in make()
+//   g.nudge?.kick(g.t, 5, 0, 1)                  on the hit. power: logical units (3 a thump, 5 a big hit, 8 at most).
+//                                                dirX, dirY: which way the picture goes. ms: how long (190)
+// The host wraps the game's draw in it, so the HUD, the pads and the stamp hold still. Does nothing under Reduce Motion.
+// A game that kicks from draw is fine too, it's only a number. Don't kick it every tick: a bigger kick replaces a smaller one, never adds.
+export function nudge() {
+  let at = -Infinity, power = 0, dx = 0, dy = 1, len = 190
+  const now = t => { const f = (t - at) / len; return f >= 0 && f < 1 ? power * (1 - f) * (1 - f) * Math.cos(f * 11) : 0 }
+  return {
+    kick(t, p = 4, dirX = 0, dirY = 1, ms = 190) {
+      if (Math.abs(now(t)) > p) return
+      at = t; power = Math.min(8, p); len = ms
+      const m = Math.hypot(dirX, dirY) || 1; dx = dirX / m; dy = dirY / m
+    },
+    apply(ctx, t, view) {
+      const a = now(t)
+      if (!a || reduceMotion()) return
+      // (a touch of push-in as it moves, so the edge of the picture never shows)
+      const z = 1 + (2 * Math.abs(a)) / view.w, cx = view.w / 2, cy = view.h / 2
+      ctx.translate(cx + dx * a, cy + dy * a); ctx.scale(z, z); ctx.translate(-cx, -cy)
+    },
+  }
+}
+
 // The real men in a Key Moment, from career's gameCast: view.cast / the make() arg. side: 'us' or 'them'; group: 'qb', 'wr', 'guard'...
 // Null outside a career (practice): the scene keeps its own look. Spread it over a sprite's options:
 //   athlete(ctx, view, x, y, { ...look, ...manOf(view.cast, 'them', 'wr', 0) })
@@ -415,4 +556,30 @@ export const manOf = (cast, side, group, i = 0) => {
 export const paceOf = (cast, side, group, i = 0) => {
   const list = cast?.[side]?.[group]
   return list?.length ? 1 + (list[i % list.length].speed ?? 0) * 0.06 : 1
+}
+
+// Skin reads as skin only with red in it: a tone gone gray (too little saturation for its lightness) or off the
+// natural hue range is pulled back to a warm brown at the same lightness. Natural tones come through untouched.
+const WARM = new Map()
+export function warmSkin(hex) {
+  if (typeof hex !== 'string' || hex[0] !== '#' || hex.length < 7) return hex
+  let w = WARM.get(hex)
+  if (w) return w
+  const n = parseInt(hex.slice(1, 7), 16), r = ((n >> 16) & 255) / 255, g = ((n >> 8) & 255) / 255, b = (n & 255) / 255
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2, d = mx - mn
+  let h = 0, s = 0
+  if (d > 0) {
+    s = d / (1 - Math.abs(2 * l - 1))
+    h = mx === r ? ((g - b) / d + 6) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4
+    h *= 60
+  }
+  const sMin = l < 0.3 ? 0.4 : l < 0.6 ? 0.38 : 0.42
+  const h2 = d === 0 ? 22 : Math.min(30, Math.max(14, h > 180 ? 14 : h)), s2 = Math.max(s, sMin)
+  if (h2 === h && s2 === s) { WARM.set(hex, hex); return hex }
+  const c = (1 - Math.abs(2 * l - 1)) * s2, x = c * (1 - Math.abs(((h2 / 60) % 2) - 1)), m = l - c / 2
+  const [r1, g1, b1] = h2 < 60 ? [c, x, 0] : [x, c, 0]
+  const to = v => Math.round(Math.min(1, Math.max(0, v + m)) * 255).toString(16).padStart(2, '0')
+  w = `#${to(r1)}${to(g1)}${to(b1)}`
+  WARM.set(hex, w)
+  return w
 }

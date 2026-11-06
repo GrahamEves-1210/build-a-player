@@ -137,6 +137,8 @@ export default function AppTabBar() {
       else setScreen(null)
     }
     window.addEventListener('bap:page', onPage)
+    // (a page set before this listened, e.g. opening /wiki directly, would leave the dock on the old page)
+    if (window.__bapPage && window.__bapPage.page !== undefined) setState(s => (s.page === window.__bapPage.page && s.sport === window.__bapPage.sport ? s : window.__bapPage))
     window.addEventListener('bap:auth', onAuth)
     window.addEventListener('bap:menu', onMenu)
     window.addEventListener('bap:nav', onNav)

@@ -5,11 +5,11 @@
 //   audible      one look, one call
 //   two-minute   an actual drive: down, distance and clock are real and move with every play.
 //                It runs until the touchdown, the clock, fourth down or a turnover
-import { keyCap, THREE_KEYS, clamp, lerp, outcome, football, rngOf, prog, easeOut, easeInOut, themOf, GOOD, BAD, text, DISPLAY, rr, manOf, paceOf } from './kit.js'
-import { nameTag,  goalPosts, breakupPose, tilt, untilt, athlete, warmQb, qbStance, skinOf, dirOf, airBall, ballShadow, rollingField, turfLine, stands, floodlight, vignette } from './art.js'
+import { keyCap, THREE_KEYS, clamp, lerp, outcome, football, rngOf, prog, easeOut, easeInOut, themOf, GOOD, BAD, text, DISPLAY, rr, manOf, paceOf, particles, nudge } from './kit.js'
+import { nameTag,  goalPosts, breakupPose, tilt, untilt, athlete, warmQb, qbStance, skinOf, dirOf, airBall, ballShadow, rollingField, turfLine, stands, floodlight, vignette, crowdPop, warmAthlete } from './art.js'
 import { callMs } from '../minigames.js'
 import { momentSituation } from '../situations.js'
-import { SPIKE_MS, snapBall, SNAP_MS, paintFieldFlat, flightAt, looseBall, qbPose, handsFor, SL, SR, startTags, tag, drawTags } from './throw.js'
+import { SPIKE_MS, snapBall, SNAP_MS, paintFieldFlat, flightAt, looseBall, qbPose, handsFor, SL, SR, startTags, tag, drawTags, flairOf, lightFx, popCrowd, hop, kickUp, puffAt, scorerDance, stopperDance, official, coach, endZonePylons, chainStick, leanIn } from './throw.js'
 
 export const how = {
   audible: 'Read the defense. Pick the play before the clock runs out.',
@@ -254,14 +254,21 @@ export function make({ v, seed, game, situation = null }) {
     return call
   }
   const g = {
-    t: 0, delays: 0, game, zones: 'three', fx: [], done: null, outro: drive ? 1700 : 2200, stamp: null,
+    t: 0, delays: 0, game, zones: 'three', fx: [], done: null, outro: drive ? 1900 : 2200, stamp: null,
+    flair: flairOf(seed), nudge: nudge(), dirt: particles(40, flairOf(seed) + 5),
     sit, beat: drive, drive, call: null, i: 0, end: null, phase: 'read', T, made: 0, outs: 0, ball: drive ? START_G : 40, nextAt: Infinity, st,
     hud: { prompt: null, dots: null },
     tick(dt) {
       g.t += dt
       const c = g.call
       if (g.beat && g.t >= c.at) { g.beat = false; g.fx.push('tap') }
-      if (g.phase === 'read') { if (g.t >= c.at + T) answer(-1); return }
+      if (g.phase === 'read') {
+        // the last three on the play clock, out loud
+        const left = Math.ceil((c.at + T - g.t) / 1000)
+        if (left !== c.lastSec) { c.lastSec = left; if (left <= 3 && left > 0 && !g.beat) g.fx.push('tick') }
+        if (g.t >= c.at + T) answer(-1)
+        return
+      }
       if (g.phase === 'play') {
         const p = c.play
         if (!c.blown && g.t >= c.pickAt + p.T) {
@@ -296,6 +303,9 @@ export function make({ v, seed, game, situation = null }) {
     const score = hit ? clamp(0.62 + 0.38 * (st.clock / 60), 0.62, 1) : clamp((START_G - st.G) / START_G, 0, 1) * 0.46
     g.done = outcome(score, hit, note, { made: g.made, of: g.i + 1 }, g.end === 'delay' || (g.end === 'time' && g.outs > 0))
     g.stamp = { text: word, good: hit, at: g.t + 60, size: word.length > 12 ? 34 : 44 }
+    // (a touchdown drive gets its moment; a pick, the man showing off the ball)
+    if (hit) g.outro = 3500
+    else if (g.end === 'pick') g.outro = 2800
     g.fx.push(hit ? 'h:heavy' : 'h:medium')
   }
   function next() {
@@ -540,6 +550,10 @@ export function draw(ctx, g, view) {
     G = lerp(c.G0, Math.max(c.G1, 6), easeInOut(prog(pt, camFrom, camEnd)))
   }
   const dy = (c.G0 - G) * pyd
+  // the camera leans in on the end of the drive (or a man going down hard), and back out for the next snap
+  ctx.save()
+  if (playing && p?.focus && (c.final || pt < p.T + 120)) { leanIn(ctx, g, view, p.focus.x, p.focus.y, p.focus.size, 1.9, 0.5); g.lastFx = p.focus.x; g.lastFy = p.focus.y }
+  else if ((g.cz ?? 1) > 1.002) leanIn(ctx, g, view, g.lastFx ?? 180, g.lastFy ?? los, 0)
   // the whole field, painted once; the goal line sits this far down the painting
   const goalAt = los + 24, gMax = 78
   rollingField(ctx, view, {
@@ -549,22 +563,50 @@ export function draw(ctx, g, view) {
     paint: x => paintFieldFlat(x, { w, h: h + goalAt - los + gMax * pyd, px: view.px, field: view.field }, goalAt, pyd, col.us),
     under: x => stands(x, view, 'field', [col.us, col.trim]),
     // (the benches go by with the field, and are only redrawn when it moves)
-    over: x => { floodlight(x, view); if (view.field) goalPosts(x, view, los - G * pyd - 10 * pyd); drawBenches(x, view, los - G * pyd, pyd, col, them) },
+    over: x => { floodlight(x, view); if (view.field) goalPosts(x, view, los - G * pyd - 10 * pyd); endZonePylons(x, view, los - G * pyd, pyd); drawBenches(x, view, los - G * pyd, pyd, col, them) },
     strips: 96,
   })
+  const lite = lightFx()
+  if (!lite) crowdPop(ctx, view, g.popTeam ?? (g.popTeam = [col.us, col.trim]), g.t - (g.popAt ?? -1e9), { ms: g.popMs ?? 1500, power: g.popP ?? 1 })
   turfLine(ctx, view, SL, SR, los + dy, '#3f86ff', 3)
   if (g.drive && c.st && !c.td && c.G0 > c.st.dist) turfLine(ctx, view, SL, SR, los + dy - c.st.dist * pyd, '#f7d64a', 4)
   else if (!g.drive) turfLine(ctx, view, SL, SR, los - 10 * pyd, '#f7d64a', 4)
+  // the chain crew, on the sideline
+  if (g.drive && c.st) {
+    chainStick(ctx, view, SR + 5, los + dy, String(c.st.down))
+    if (!c.td && c.G0 > c.st.dist) chainStick(ctx, view, SR + 5, los + dy - c.st.dist * pyd)
+  }
   if (!playing) {
     ctx.drawImage(sprite(view, `pre|${baseKey}`, x => drawSet(x, view, c, los, pyd, col, them, 0)), 0, 0, w, h)
     const qbLook = castOf(c, view.cast).qb
     warmQb({ color: col.us, trim: col.trim, pants: col.trim, skin: qbLook?.skin ?? skinOf(QB_NUM * 7), number: qbLook?.number ?? QB_NUM, kit: 'pads' })
+    // what comes after, a few a frame, so the payoff doesn't cost a frame: his reactions, both sidelines
+    if (!g.warmList) {
+      const us = { color: col.us, trim: col.trim, pants: col.trim, step: null, kit: 'pads', carry: false }, th = { color: them.color, trim: them.trim, pants: them.trim, step: null, kit: 'pads', carry: false }
+      g.warmList = []
+      for (const pose of ['arms-up', 'reach-r', 'hands-head', 'hips']) g.warmList.push({ ...us, skin: qbLook?.skin ?? skinOf(QB_NUM * 7), number: qbLook?.number ?? QB_NUM, dir: 'up', pose })
+      for (let n = 0; n <= 6; n++) {
+        const pose = n % 3 === 2 ? 'reach-r' : 'arms-up'
+        g.warmList.push({ ...us, skin: skinOf(n), number: null, dir: 'side', pose }, { ...th, skin: skinOf(n + 3), number: null, dir: 'side', pose })
+      }
+    }
+    for (let n = 0; n < 3 && g.warmList.length; n++) warmAthlete(g.warmList.pop())
   } else if (p?.kind === 'delay') drawSet(ctx, view, c, los, pyd, col, them, dy)
   else drawPlay(ctx, g, view, c, p, pt, los, pyd, col, them, dy)
+  if (!lite) g.dirt.draw(ctx, g.t)
+  ctx.restore()
   vignette(ctx, view)
 
   // the words at the top
-  if (g.drive) ctx.drawImage(sprite(view, `board|${c.key}|${c.st.trail}`, x => paintBoard(x, view, c)), 0, 0, w, h)
+  if (g.drive) {
+    ctx.drawImage(sprite(view, `board|${c.key}|${c.st.trail}`, x => paintBoard(x, view, c)), 0, 0, w, h)
+    // the clock on the board runs while the play does
+    if (playing && p && p.kind !== 'delay' && g.st.clock !== c.st.clock) {
+      const secs = Math.round(lerp(c.st.clock, g.st.clock, prog(pt, 0, p.T)))
+      ctx.fillStyle = '#080c0f'; ctx.fillRect(w / 2 + 22 - 62, 50, 124, 30)
+      text(ctx, `${c.st.period} ${clockText(secs)}`, w / 2 + 22, 66, { font: DISPLAY, size: 27, color: '#ffd24a' })
+    }
+  }
   else if (!playing) ctx.drawImage(sprite(view, `words|${c.key}`, x => paintLookWords(x, view, c)), 0, 0, w, h)
   if (showWhy) {
     ctx.fillStyle = 'rgba(6,10,12,.82)'; ctx.fillRect(0, bandY, w, 58)
@@ -615,7 +657,7 @@ export function draw(ctx, g, view) {
 }
 
 // one man on the field, in the broadcast's look
-const M = { color: '', trim: '', pants: null, skin: '', number: null, dir: 'up', step: null, kit: 'pads', carry: false, size: 1, pose: null, fall: 0, fallX: 0 }
+const M = { color: '', trim: '', pants: null, skin: '', number: null, dir: 'up', step: null, kit: 'pads', carry: false, size: 1, pose: null, fall: 0, fallX: 0, lift: 0 }
 function drawCast(ctx, view, list, col, them) {
   // back to front; a man with his arms round another is drawn on top of him
   list.sort((a, b) => a.y + (a.top ? 2 : 0) - (b.y + (b.top ? 2 : 0)))
@@ -632,6 +674,7 @@ function drawCast(ctx, view, list, col, them) {
     M.fall = m.fall ?? 0
     M.fallX = m.fallX ?? 0
     M.carry = !!m.carry
+    M.lift = m.lift ?? 0
     athlete(ctx, view, m.x, m.y, M)
     // his name goes down with him: a man nearer the camera stands in front of it
     if (m.look && !m.fall) {
@@ -664,6 +707,7 @@ function numbersFor(form) {
 }
 const OL_NUM = [71, 64, 55, 66, 77], WR_NUM = [11, 84, 15], TE_NUM = 87, RB_NUM = 28, QB_NUM = 7
 const stride = (g, slow = 76) => Math.floor(g.t / slow) % 4
+const PICK_RUN = 1050   // a pick: how long he runs it back before he stops to show it off
 // before the snap: everyone in his stance
 function drawSet(ctx, view, c, los, pyd, col, them, dy) {
   const m = c.mirror, list = [], men = castOf(c, view.cast)
@@ -675,6 +719,9 @@ function drawSet(ctx, view, c, los, pyd, col, them, dy) {
   const nums = numbersFor(c.form)
   c.form.forEach((d, i) => list.push({ x: d.x, y: yOf(d.yd, los, pyd) + dy, n: nums[i], d: 1, pose: d.t === 'd' ? 'stance' : 'ready', size: d.t === 'd' ? 0.94 : 0.86, look: men.def[i], ol: d.t === 'd' ? 1 : 0, lo: d.t === 'd' ? i % 2 : 0 }))
   drawCast(ctx, view, list, col, them)
+  // the man in stripes and the head coach, in their places
+  official(ctx, view, SR + 3, los - 9 * pyd + dy, null, null)
+  coach(ctx, view, SL - 7, los - 3.5 * pyd + dy, col.us, col.trim, null)
   snapBall(ctx, view, 180, los + 6 + dy, fx(QB.x, m), yOf(QB.yd, los, pyd) + dy, -1)
   // he's coming: a chevron at his feet
   for (const d of c.form) {
@@ -687,7 +734,7 @@ function drawSet(ctx, view, c, los, pyd, col, them, dy) {
 }
 // the benches: painted at their yard lines, so they go by as the camera comes up the field
 function drawBenches(ctx, view, goalY, pyd, col, them) {
-  M.pose = 'ready'; M.step = null; M.carry = false; M.fall = 0; M.fallX = 0; M.size = 0.72; M.number = null; M.kit = 'pads'
+  M.pose = 'ready'; M.step = null; M.carry = false; M.fall = 0; M.fallX = 0; M.lift = 0; M.size = 0.72; M.number = null; M.kit = 'pads'
   for (let yd = -5; yd < 90; yd += 6) {
     const n = Math.abs(yd * 7) % 11
     if (n > 6) continue
@@ -701,6 +748,21 @@ function drawBenches(ctx, view, goalY, pyd, col, them) {
   }
 }
 
+// whoever this is good for, going mad on their sideline: over the men painted there. side: -1 ours, 1 theirs
+function benchUp(ctx, view, goalY, pyd, look, side, t) {
+  M.step = null; M.carry = false; M.fall = 0; M.fallX = 0; M.size = 0.72; M.number = null; M.kit = 'pads'
+  M.color = look.color; M.trim = look.trim; M.pants = look.trim
+  for (let yd = -5; yd < 90; yd += 6) {
+    const n = Math.abs(yd * 7) % 11
+    if (n > 6) continue
+    const y = goalY + yd * pyd
+    if (y < 60 || y > view.h - CARD_H + 30) continue
+    M.pose = n % 3 === 2 ? 'reach-r' : 'arms-up'; M.lift = hop(t + n * 83, 370 + (n % 3) * 60, 7)
+    if (side < 0) { M.dir = 'right'; M.skin = skinOf(n); athlete(ctx, view, -14 - (n % 3) * 8, y, M) }
+    else { M.dir = 'left'; M.skin = skinOf(n + 3); athlete(ctx, view, view.w + 14 + (n % 3) * 8, y + 12, M) }
+  }
+  M.lift = 0
+}
 // What each of the seven behind the line does, read off how the look lines up. Press corners and a
 // nickel on the line are man; soft corners bail deep; squatting corners take the flat; a high safety
 // plays over the top; the rest drop underneath. who: 0-2 receivers, 3 the tight end, 4 the back.
@@ -779,12 +841,19 @@ function drawPlay(ctx, g, view, c, p, pt, los, pyd, col, them, dy) {
   }
   // a man goes down only with someone on him: from the wrap until they're flat
   const tackled = (run || (k === 'catch' && !p.td && !oob)) && p.tacklers.length > 0
-  const fall = tackled || sack ? clamp((pt - p.Tc - 100) / 320, 0, 1) : 0
+  const fall0 = tackled || sack ? clamp((pt - p.Tc - 100) / 320, 0, 1) : 0
+  // once they're down: the man who made the stop is up first. With a first down, the ball carrier's up right after him
+  const firstDown = tackled && p.res === 'FIRST DOWN'
+  const risen = clamp((pt - p.T - 170) / 240, 0, 1)
+  const fall = fall0 * (1 - risen)
+  const manRisen = firstDown ? clamp((pt - p.T - 300) / 240, 0, 1) : 0
+  const fallMan = sack ? fall0 : fall0 * (1 - manRisen)
   const qside = qbx < (p.tacklers[0]?.x ?? 0) ? -1 : 1
+  const olUp = p.td && pt >= p.T + 100
 
   // the rest of the offense: the line holds, everyone else goes
   const men = castOf(c, view.cast)
-  for (let i = 0; i < OL.length; i++) list.push({ x: OL[i], y: los + 14 + dy + flow * 4, n: OL_NUM[i], pose: 'block', size: 0.94, look: men.ol[i], ol: 1, lo: i % 2 })
+  for (let i = 0; i < OL.length; i++) list.push({ x: OL[i], y: los + 14 + dy + flow * 4, n: OL_NUM[i], pose: olUp ? 'arms-up' : 'block', lift: olUp ? hop(pt + i * 90, 470, 7) : 0, size: 0.94, look: men.ol[i], ol: 1, lo: i % 2 })
   const teGoAt = t => (!(run || sack) ? easeOut(prog(t, 0, 900)) * 7 * pyd : 0)
   const teGo = teGoAt(pt)
   list.push({ x: fx(TE, m), y: los + 14 + dy - teGo, n: TE_NUM, size: 0.94, step: teGo && pt < 900 ? stride(g, 90) : null, pose: run || sack ? 'block' : null, look: men.te })
@@ -817,7 +886,47 @@ function drawPlay(ctx, g, view, c, p, pt, los, pyd, col, them, dy) {
     const hasBall = run ? pt > 180 : k === 'catch' && pt >= p.tLand
     // the hands go up as it gets there
     const going = pass && pt >= p.tLand - 190 && pt < p.tLand + (k === 'catch' ? 0 : 100)
-    list.push({ x: tx, y: ty, n: num, dir: going ? 'up' : fall > 0 ? 'up' : tdir, pose: going ? handsFor(qbx, tx, k === 'catch') : p.td && pt > p.T + 160 && pt < p.T + 160 + SPIKE_MS ? 'spike-up' : null, fall, step: fall > 0 || (blow && oob) || (pt > p.T && k !== 'catch') ? null : stride(g), carry: hasBall && !(p.td && pt >= p.T + 160 + SPIKE_MS), look })
+    const man = { x: tx, y: ty, n: num, dir: going ? 'up' : fallMan > 0 ? 'up' : tdir, pose: going ? handsFor(qbx, tx, k === 'catch') : p.td && pt > p.T + 160 && pt < p.T + 160 + SPIKE_MS ? 'spike-up' : null, fall: fallMan, step: fallMan > 0 || (blow && oob) || (pt > p.T && k !== 'catch') ? null : stride(g), carry: hasBall && !(p.td && pt >= p.T + 160 + SPIKE_MS), look }
+    // his own, once it's spiked. The first down: up, and which way it's going. Beaten: he can't believe it
+    if (p.td && pt >= p.T + 160 + SPIKE_MS + 220) { man.dir = 'down'; scorerDance(man, g.flair, pt - p.T - 160 - SPIKE_MS - 220) }
+    else if (firstDown && manRisen >= 1) { man.dir = 'down'; man.step = null; man.pose = man.x < 180 ? 'point-r' : 'point-l' }
+    else if (k === 'pick' && pt >= p.tLand + 380) { man.dir = 'up'; man.step = null; man.pose = 'hands-head' }
+    else if (k === 'swat' && pt >= p.tLand + 420) { man.dir = 'up'; man.step = null; man.pose = 'hips' }
+    list.push(man)
+  }
+  // what the play's done to the grass and the camera, the frame it happens
+  if (k !== 'spike' && k !== 'kick' && !p.fxSnap) {
+    p.fxSnap = true
+    for (const d of c.form) if (d.t === 'd') kickUp(g, view, d.x, Yo(d.yd), 3, 0.6)
+  }
+  if (k === 'catch' && pt >= p.tLand && !p.fxC) { p.fxC = true; g.fx.push('catchball'); puffAt(g, view, tx, ty, 2); g.nudge.kick(g.t, 1.3, 0, 1, 120) }
+  if ((run || (k === 'catch' && pt >= p.tLand)) && pt < p.Tc && g.t >= (p.fxClod ?? 0)) { p.fxClod = g.t + 190; kickUp(g, view, tx, ty, 1, 0.5, 0.8) }
+  if ((tackled || sack) && pt >= p.Tc && !p.fxT) {
+    p.fxT = true; g.fx.push('lock')
+    const hx = sack ? qbx : tx, hy = sack ? qby : ty
+    kickUp(g, view, hx, hy, sack ? 14 : 12, 1.15, 1.45); puffAt(g, view, hx, hy, 3)
+    g.nudge.kick(g.t, sack ? 6 : 4, hx > 180 ? 0.7 : -0.7, 1, sack ? 260 : 210)
+  }
+  if ((tackled || sack) && pt >= p.Tc + 340 && !p.fxT2) { p.fxT2 = true; const hx = sack ? qbx + qside * 1.2 * pyd : tx, hy = sack ? qby : ty; kickUp(g, view, hx, hy, 6, 0.7, 1.4); puffAt(g, view, hx, hy, 2) }
+  if (k === 'swat' && pt >= p.tLand + 170 && !p.fxB) {
+    p.fxB = true
+    const e0 = p.pts[p.pts.length - 1]
+    kickUp(g, view, e0[0], p.w === 3 ? Y(e0[1]) : Yo(start.yd) - e0[1] * pyd, 4, 0.6)
+  }
+  if (p.td && pt >= p.T + 160 + SPIKE_MS && !p.fxS) { p.fxS = true; g.fx.push('pop', 'h:medium'); kickUp(g, view, tx + 6, ty, 8, 1); g.nudge.kick(g.t, 2.4, 0, 1, 160) }
+  // the bowl
+  if (!p.fxP && (p.td ? (run || pt >= p.tLand) : (sack || tackled) ? pt >= p.Tc : k === 'pick' || k === 'swat' ? pt >= p.tLand : false)) {
+    p.fxP = true
+    if (p.td) popCrowd(g, 4000)
+    else if (sack) popCrowd(g, 1500)
+    else if (k === 'pick') popCrowd(g, 2100)
+    else if (k === 'swat') popCrowd(g, 900, 0.5)
+    else if (firstDown) popCrowd(g, 1500, 0.7)
+  }
+  // where the camera wants to be, if it wants to be anywhere
+  if (p.td ? (run || pt >= p.tLand) : sack ? pt >= p.Tc - 120 : k === 'pick' ? pt >= p.tLand : tackled && c.final && pt >= p.Tc - 200) {
+    p.focus ??= { x: 0, y: 0, size: p.td ? 1.3 : sack ? 1.45 : 1.3 }
+    p.focus.x = sack ? qbx : tx; p.focus.y = sack ? qby : ty
   }
 
   // the defense: every man has a job until the ball tells him otherwise. Then the two who get there go
@@ -883,6 +992,7 @@ function drawPlay(ctx, g, view, c, p, pt, los, pyd, col, them, dy) {
     return { d, i, sx, sy, cx, cy, up }
   })
   const skill = list.filter(o => !o.ol), out = []
+  const PICK_SHOW = k === 'pick' && pt >= p.tLand + PICK_RUN
   for (let i = 0; i < c.form.length; i++) {
     const { d, cx, cy, up } = defs[i]
     let x, y
@@ -892,7 +1002,7 @@ function drawPlay(ctx, g, view, c, p, pt, los, pyd, col, them, dy) {
       const f = pass ? easeInOut(prog(pt, brk, end)) : prog(pt, sack ? 60 : brk, end)
       const inX = pass && k !== 'catch' ? (cx < tsx ? -11 : 11) : -3    // (at the catch he's beside him with a hand in, not in him)
       x = lerp(cx, tsx + inX, f * (miss ? 0.82 : 1)); y = lerp(cy, tsy - 3, f * (miss ? 0.82 : 1))
-      if (k === 'pick' && pt > p.tLand) y += (pt - p.tLand) * 0.05
+      if (k === 'pick' && pt > p.tLand) y += Math.min(pt - p.tLand, PICK_RUN) * 0.05
       if ((tackled || sack) && pt > p.Tc) {
         const hold = prog(pt, p.Tc, p.Tc + 120)
         const hx = sack ? qbx + qside * fall * 1.2 * pyd - qside * 4 : tx - 4
@@ -922,6 +1032,16 @@ function drawPlay(ctx, g, view, c, p, pt, los, pyd, col, them, dy) {
       step: onHim || d.t === 'd' && !hunter || settled || (d === t2 && pt > p.T) ? null : stride(g, hunter ? 76 : 110),
       fall: onHim ? fall : 0, fallX: onHim && sack ? qside : 0, top: onHim, carry: k === 'pick' && d === t1 && pt > p.tLand,
     }
+    // and after: the man who made the stop lets everyone know; if he gave up the first, he's blowing.
+    // A pick: he shows them the ball, the rest of them get to him. A touchdown: they've seen this before.
+    const o2 = out[i]
+    if (onHim && risen >= 1) {
+      o2.dir = 'down'; o2.fall = 0; o2.fallX = 0; o2.top = false; o2.pose = 'hips'; o2.step = null
+      if (!firstDown && !p.td) stopperDance(o2, g.flair, pt - p.T - 410)
+    } else if (PICK_SHOW && d === t1) { o2.dir = 'down'; o2.step = null; o2.pose = 'spike-up'; o2.carry = true; o2.lift = hop(pt - p.tLand - PICK_RUN, 430, 11) }
+    else if (k === 'pick' && !o2.dl && pt >= p.tLand + 620) { o2.dir = 'down'; o2.step = null; o2.pose = 'arms-up'; o2.lift = hop(pt + i * 110, 450, 9) }
+    else if (sack && d.t === 'd' && pt >= p.Tc + 260 && d !== t1) { o2.dir = 'down'; o2.step = null; o2.pose = 'arms-up'; o2.lift = hop(pt + i * 110, 430, 9) }
+    else if (p.td && !o2.dl && pt >= p.T + 80) { o2.dir = 'up'; o2.step = null; o2.pose = i % 3 ? 'hips' : 'hands-head' }
   }
   // Nobody stands in anybody: standing men are tall on the screen, so off a man means beside him. A
   // shove grows as he gets level, and no man's feet move faster than feet do, so it never shows as a jump.
@@ -952,10 +1072,30 @@ function drawPlay(ctx, g, view, c, p, pt, los, pyd, col, them, dy) {
   // a pass or a sack: the short drop first, then the stance. Going to throw he's side on, front shoulder at his man.
   const qset = pt >= SNAP_MS && ((pass && armUp === 'qb-hold') || (sack && !fall)) ? qbStance(pt - SNAP_MS) : null
   const qdrop = qset?.pose === 'qb-drop' || (sack && qset)
-  list.push({ x: sack ? qbx + qside * fall * 1.2 * pyd : qbx, y: qby, n: QB_NUM, size: 0.9, dir: qdrop ? 'up' : armDir, pose: qdrop ? qset.pose : armUp, step: qdrop ? qset.step : null, fall: sack ? fall : 0, fallX: sack ? qside : 0, carry: !qdrop && pt >= SNAP_MS && (armUp === 'qb-hold' || (!armUp && (sack || (run && pt < 180)))), look: men.qb })
+  const qbm = { x: sack ? qbx + qside * fall0 * 1.2 * pyd : qbx, y: qby, n: QB_NUM, size: 0.9, dir: qdrop ? 'up' : armDir, pose: qdrop ? qset.pose : armUp, step: qdrop ? qset.step : null, fall: sack ? fall0 : 0, fallX: sack ? qside : 0, carry: !qdrop && pt >= SNAP_MS && (armUp === 'qb-hold' || (!armUp && (sack || (run && pt < 180)))), look: men.qb }
+  // and how he takes it
+  if (!sack && k !== 'spike' && k !== 'kick') {
+    const mood = p.td && pt >= p.T + 60 ? 'arms-up' : firstDown && pt >= p.T + 100 ? 'reach-r' : k === 'pick' && pt >= p.tLand + 420 ? 'hands-head' : (k === 'swat' && pt >= p.tLand + 520) || (k === 'stuff' && pt >= p.T + 120) ? 'hips' : null
+    if (mood) { qbm.dir = 'up'; qbm.step = null; qbm.carry = false; qbm.pose = mood; qbm.lift = mood === 'arms-up' ? hop(pt - p.T, 450, 13) : 0 }
+  }
+  list.push(qbm)
   snapBall(ctx, view, 180, Y(0) + 6, qbx, qby, pt)
   if (p.td && (run || pass) && pt >= p.T + 160 + SPIKE_MS) looseBall(ctx, view, tx + 6, ty, pt - p.T - 160 - SPIKE_MS, true)
   drawCast(ctx, view, list, col, them)
+  // the man in stripes comes down to the spot and calls it. The head coach beside his bench.
+  const yard = sack ? qby : (run || pass) ? ty : Y(0)
+  const go = easeOut(prog(pt, 200, p.T))
+  const sig = p.td && pt >= p.T + 40 ? 'arms-up' : firstDown && pt >= p.T + 120 ? 'point-l' : k === 'swat' && pt >= p.tLand + 520 ? (Math.floor(pt / 150) % 2 ? 'wave-a' : 'wave-b') : null
+  official(ctx, view, SR + 3, lerp(Y(9), yard, go), sig, !sig && go > 0 && go < 0.98 ? stride(g, 95) : null)
+  const badEnd = k === 'pick' || sack || (c.final && !p.td)
+  const up = p.td ? 'arms-up' : firstDown ? 'reach-r' : badEnd ? 'hands-head' : k === 'swat' || k === 'stuff' ? 'hips' : null
+  const said = pt >= p.T + 80 || (k === 'pick' && pt >= p.tLand + 200)
+  coach(ctx, view, SL - 7, Y(3.5), col.us, col.trim, said ? up : null, said && p.td ? hop(pt - p.T, 470, 11) : 0)
+  // the sidelines: whoever this is good for
+  const goalY = los - c.G0 * pyd + dy
+  const lite = lightFx()
+  if (!lite && (p.td || firstDown) && pt >= p.T + 100) benchUp(ctx, view, goalY, pyd, { color: col.us, trim: col.trim }, -1, pt - p.T)
+  else if (!lite && (k === 'pick' || sack) && pt >= (sack ? p.Tc + 240 : p.tLand + 240)) benchUp(ctx, view, goalY, pyd, them, 1, pt)
 
   // the ball
   if (k === 'spike' && pt >= 120) looseBall(ctx, view, qbx + 6, qby - 6, pt - 120, false)

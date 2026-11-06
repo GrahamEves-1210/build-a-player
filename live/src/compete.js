@@ -17,7 +17,7 @@ const EMPTY_MS = 90000          // everyone gone this long: the pool is closed
 export const validCompete = (sport, pos) => !!COMPETE_POS[sport]?.includes(pos)
 
 export class CompeteQueue extends BaseQueue {
-  constructor(state, env) { super(state, env, { size: POOL_SIZE, min: MIN_POOL, fillSecs: FILL_AFTER_SECS, room: 'COMPETE_ROOM' }) }
+  constructor(state, env) { super(state, env, { size: POOL_SIZE, min: MIN_POOL, fillSecs: FILL_AFTER_SECS, room: 'COMPETE_ROOM', kind: 'cp' }) }
 }
 
 export class CompeteRoom {

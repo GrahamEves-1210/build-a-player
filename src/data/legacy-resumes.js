@@ -15,7 +15,8 @@
 //   stats     regular-season career totals the position's production reads:
 //             QB passing TDs and yards; RB rushing + receiving TDs and rushing
 //             yards; WR, TE receiving TDs and yards; DB interceptions and
-//             pick-sixes; DL sacks (pre-1982 unofficial, Pro Football Reference's count); NBA points,
+//             pick-sixes; DL sacks (pre-1982 unofficial, Pro Football Reference's count); LB tackles
+//             (combined, team-credited and unofficial before 2001: estimates), interceptions and sacks; NBA points,
 //             rebounds, assists
 // Counted from Pro-Football-Reference and Basketball-Reference (the AP All-Pro
 // lists for firsts); active players through the 2024 NFL / 2024-25 NBA season (DL, the 2025 NFL season).
@@ -142,6 +143,7 @@ export const RESUMES = {
   ],
   dl: [
     R('Reggie White', 15, 13, 8, 2, 1, 10, { sacks: 198 }),
+    R('Lawrence Taylor', 13, 10, 8, 3, 2, 7, { sacks: 142 }),
     R('Bruce Smith', 19, 11, 8, 2, 0, 10, { sacks: 200 }),
     R('Aaron Donald', 10, 10, 8, 3, 1, 5, { sacks: 111 }),
     R('Deacon Jones', 14, 8, 5, 2, 0, 3, { sacks: 173.5 }),
@@ -166,6 +168,38 @@ export const RESUMES = {
     R('Richard Dent', 15, 4, 1, 0, 2, 9, { sacks: 137.5 }),
     R('Howie Long', 13, 8, 2, 0, 1, 7, { sacks: 84 }),
     R('Dan Hampton', 12, 4, 1, 0, 1, 7, { sacks: 82 }),
+    R('Derrick Thomas', 11, 9, 2, 0, 0, 7, { sacks: 126.5 }),
+    R('Kevin Greene', 15, 5, 2, 0, 0, 8, { sacks: 160 }),
+  ],
+  // LB: off-ball linebackers (the pass-rushing outside linebackers are in dl). DPOY counts NEA before 1971.
+  // ESTIMATES: tackles are unofficial for most of these careers; the owner's numbers replace them.
+  lb: [
+    R('Ray Lewis', 17, 13, 7, 2, 2, 9, { tackles: 2059, ints: 31, sacks: 41.5 }),
+    R('Dick Butkus', 9, 8, 5, 2, 0, 0, { tackles: 1020, ints: 22, sacks: 0 }),
+    R('Jack Lambert', 11, 9, 6, 1, 4, 8, { tackles: 1479, ints: 28, sacks: 23.5 }),
+    R('Mike Singletary', 12, 10, 7, 2, 1, 7, { tackles: 1488, ints: 7, sacks: 19 }),
+    R('Derrick Brooks', 14, 11, 5, 1, 1, 7, { tackles: 1715, ints: 25, sacks: 13.5 }),
+    R('Junior Seau', 20, 12, 6, 0, 0, 7, { tackles: 1849, ints: 18, sacks: 56.5 }),
+    R('Jack Ham', 12, 8, 6, 0, 4, 8, { tackles: 1030, ints: 32, sacks: 25.5 }),
+    R('Ray Nitschke', 15, 1, 2, 0, 5, 6, { tackles: 1100, ints: 25, sacks: 0 }),
+    R('Bobby Wagner', 14, 10, 6, 0, 1, 10, { tackles: 1900, ints: 14, sacks: 37.5 }),
+    R('Brian Urlacher', 13, 8, 4, 1, 0, 4, { tackles: 1353, ints: 22, sacks: 41.5 }),
+    R('Luke Kuechly', 8, 7, 5, 1, 0, 4, { tackles: 1092, ints: 18, sacks: 12.5 }),
+    R('Willie Lanier', 11, 8, 3, 0, 1, 2, { tackles: 1000, ints: 27, sacks: 0 }),
+    R('Joe Schmidt', 13, 10, 8, 0, 2, 3, { tackles: 900, ints: 24, sacks: 0 }),
+    R('Chuck Bednarik', 14, 8, 6, 0, 2, 2, { tackles: 900, ints: 20, sacks: 0 }),
+    R('Patrick Willis', 8, 7, 5, 0, 0, 3, { tackles: 950, ints: 8, sacks: 20.5 }),
+    R('Bobby Bell', 12, 9, 6, 0, 1, 3, { tackles: 900, ints: 26, sacks: 40 }),
+    R('Ted Hendricks', 15, 8, 4, 0, 4, 10, { tackles: 900, ints: 26, sacks: 25 }),
+    R('Zach Thomas', 13, 7, 5, 0, 0, 6, { tackles: 1734, ints: 17, sacks: 20.5 }),
+    R('Nick Buoniconti', 14, 8, 3, 0, 2, 5, { tackles: 1100, ints: 32, sacks: 0 }),
+    R('Chuck Howley', 15, 6, 5, 0, 1, 8, { tackles: 1000, ints: 25, sacks: 0 }),
+    R('Randy Gradishar', 10, 7, 2, 1, 0, 4, { tackles: 2049, ints: 20, sacks: 20 }),
+    R('Fred Warner', 8, 5, 4, 0, 0, 5, { tackles: 1000, ints: 13, sacks: 8 }),
+    R('Sam Mills', 12, 5, 0, 0, 0, 5, { tackles: 1265, ints: 11, sacks: 20.5 }),
+    R('London Fletcher', 16, 4, 0, 0, 1, 6, { tackles: 2039, ints: 23, sacks: 39 }),
+    R('Lee Roy Jordan', 14, 5, 1, 0, 1, 9, { tackles: 1236, ints: 32, sacks: 0 }),
+    R('Roquan Smith', 8, 4, 3, 0, 0, 5, { tackles: 1050, ints: 9, sacks: 20 }),
   ],
   guard: [
     R('LeBron James', 23, 22, 21, 4, 4, 19, { pts: 43440, reb: 12095, ast: 12016 }),

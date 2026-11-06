@@ -9,6 +9,7 @@
 import { supabase } from './supabase'
 import { seedCos } from './peopleCos'
 import { tierFor, dayKey, weekOf, fetchWeeklyCup, POTD_COINS, CUP_COINS } from './progress'
+import { LB_LIVE } from './lbLive'
 
 const TTL = 2 * 60 * 1000
 const MAX_ROWS = 50
@@ -207,14 +208,14 @@ async function gridBoard(ctx) {
 // ── Records ───────────────────────────────────────────────────────────────────
 const MODES = {
   QB: ['classic', 'all-time'], RB: ['rb-classic', 'rb-all-time'], WR: ['wr-classic', 'wr-all-time'],
-  TE: ['te-classic', 'te-all-time'], DB: ['db-classic', 'db-all-time'], DL: ['dl-classic', 'dl-all-time'], OL: ['ol-classic', null],
+  TE: ['te-classic', 'te-all-time'], DB: ['db-classic', 'db-all-time'], DL: ['dl-classic', 'dl-all-time'], ...(LB_LIVE ? { LB: ['lb-classic', 'lb-all-time'] } : {}), OL: ['ol-classic', null],
 }
 const BUCKET_MODES = ['bucket-classic', 'bucket-all-time']
 const modesFor = (sport, position) => (sport === 'bucket' ? BUCKET_MODES : MODES[position] ?? MODES.QB)
 // The award a position's season pays (App.jsx awardType). Football only. RB, WR and TE share
-// one counter on accounts (OPOY), so it can't be a record for any one of them. DL's DPOYs stay
+// one counter on accounts (OPOY), so it can't be a record for any one of them. DL's (and LB's) DPOYs stay
 // off classic_dpoys (that's DB's record): each one is a season tagged 'dpoy', counted from the seasons.
-const AWARD = { QB: ['classic_mvps', 'MVP'], DB: ['classic_dpoys', 'DPOY'], DL: ['dl-classic', 'DPOY'] }
+const AWARD = { QB: ['classic_mvps', 'MVP'], DB: ['classic_dpoys', 'DPOY'], DL: ['dl-classic', 'DPOY'], LB: ['lb-classic', 'DPOY'] }
 const awardFor = (sport, position) => (sport === 'bucket' ? null : AWARD[position ?? 'QB'] ?? null)
 // (salary_infinite_plays needs its overall_score index for this sort; it has had it since 11-03)
 const BUCKET_INFINITE_INDEXED = true
@@ -260,8 +261,8 @@ async function awardBoard(ctx) {
   }
   return { list, mine }
 }
-async function dlAwardBoard(ctx) {
-  const { data } = await read(() => among(supabase.from('simulations').select('user_id,username').eq('game_mode', 'dl-classic').eq('season_award', 'dpoy').not('build', 'is', null), 'user_id', ctx).limit(5000))
+async function dlAwardBoard(ctx, mode = 'dl-classic') {
+  const { data } = await read(() => among(supabase.from('simulations').select('user_id,username').eq('game_mode', mode).eq('season_award', 'dpoy').not('build', 'is', null), 'user_id', ctx).limit(5000))
   const by = new Map()
   for (const r of data ?? []) if (r.user_id) by.set(r.user_id, { uid: r.user_id, name: r.username, value: (by.get(r.user_id)?.value ?? 0) + 1, sub: null })
   const list = [...by.values()].sort((a, b) => b.value - a.value)
@@ -269,8 +270,13 @@ async function dlAwardBoard(ctx) {
 }
 async function gridBestBoard(ctx) {
   const g = GRID[ctx.sport]
-  const { data } = await read(() => among(supabase.from(g.infinite).select(g.cols), 'user_id', ctx)
+  const best = only => read(() => only(among(supabase.from(g.infinite).select(g.cols), 'user_id', ctx))
     .order('overall_score', { ascending: false }).limit(100))
+  // football's other positions play Infinite into the same table, tagged by pos
+  // (supabase/salary_positions.sql): this board is QB's. Until that column exists the
+  // table only has QB plays, so it's read as it is
+  const { data } = ctx.sport === 'bucket' ? await best(q => q)
+    : await best(q => q.eq('pos', 'qb')).catch(() => best(q => q))
   const list = onePerPlayer(gridRows(data, g))
   return { list, mine: mineInList(list, ctx.uid) }
 }
@@ -304,7 +310,7 @@ const BOARDS = {
   winPct: { scope: modeScope, load: ctx => rateBoard(ctx, RATE.winPct) },
   avgOvr: { scope: modeScope, load: ctx => rateBoard(ctx, RATE.avgOvr) },
   perSeason: { scope: modeScope, load: ctx => perSeasonBoard(ctx) },
-  awards: { ok: ctx => !!awardFor(ctx.sport, ctx.position), scope: ctx => awardFor(ctx.sport, ctx.position)?.[0], load: ctx => (ctx.position === 'DL' ? dlAwardBoard(ctx) : awardBoard(ctx)) },
+  awards: { ok: ctx => !!awardFor(ctx.sport, ctx.position), scope: ctx => awardFor(ctx.sport, ctx.position)?.[0], load: ctx => (ctx.position === 'DL' ? dlAwardBoard(ctx) : ctx.position === 'LB' ? dlAwardBoard(ctx, 'lb-classic') : awardBoard(ctx)) },
   gridBest: { ok: ctx => ctx.sport === 'nfl' || BUCKET_INFINITE_INDEXED, scope: sportScope, load: gridBestBoard },
   depth: { ok: ctx => ctx.sport === 'nfl', scope: sportScope, load: depthBoard },
 }
@@ -437,11 +443,11 @@ const RATE = {
   avgOvr: { value: r => r.total_ovr / r.sims_count, display: v => v.toFixed(1), sub: seasonsOf },
 }
 // A season's production, by position. WR/TE keep receiving yards in total_pass_yds, RB rushing yards,
-// DB tackles (with interceptions in total_tds), DL tackles (with sacks in total_tds): see the simulations insert in App.jsx
+// DB tackles (with interceptions in total_tds), DL and LB tackles (with sacks in total_tds): see the simulations insert in App.jsx
 const PER_SEASON = {
   QB: ['Passing Yards a Season', 'YDS', 'total_pass_yds', 0], RB: ['Rushing Yards a Season', 'YDS', 'total_pass_yds', 0],
   WR: ['Receiving Yards a Season', 'YDS', 'total_pass_yds', 0], TE: ['Receiving Yards a Season', 'YDS', 'total_pass_yds', 0],
-  DB: ['Interceptions a Season', 'INT', 'total_tds', 1], DL: ['Sacks a Season', 'SCK', 'total_tds', 1], bucket:['Points a Game', 'PPG', 'total_ppg', 1],
+  DB: ['Interceptions a Season', 'INT', 'total_tds', 1], DL: ['Sacks a Season', 'SCK', 'total_tds', 1], LB: ['Tackles a Season', 'TKL', 'total_pass_yds', 0], bucket:['Points a Game', 'PPG', 'total_ppg', 1],
 }
 const perSeasonOf = ctx => PER_SEASON[ctx.sport === 'bucket' ? 'bucket' : ctx.position ?? 'QB'] ?? PER_SEASON.QB
 async function rateBoard(ctx, rate) {

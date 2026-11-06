@@ -90,7 +90,8 @@ export async function handleSubmit(req, env, kind) {
       const g = await fetch(`${env.SUPABASE_URL}/rest/v1/${bucket ? 'salary_cap_grids' : 'qb_salary_cap_grids'}?date_str=eq.${date}&select=grid&limit=1`, { headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}` } }).catch(() => null)
       frozen = g?.ok ? ((await g.json().catch(() => null))?.[0]?.grid ?? null) : null
     }
-    const r = checkSalaryCap({ sport: bucket ? 'bucket' : 'nfl', date, infinite: !!infinite, picks, pos: pos === 'big' ? 'big' : 'guard', frozen, sent: sent || {} })
+    // football's position: QB, or another one's Infinite board (verifyCore.js checks it; the row carries it)
+    const r = checkSalaryCap({ sport: bucket ? 'bucket' : 'nfl', date, infinite: !!infinite, picks, pos: bucket ? (pos === 'big' ? 'big' : 'guard') : (typeof pos === 'string' ? pos : 'qb'), frozen, sent: sent || {} })
     if (r.error) return json({ error: r.error }, 422, cors)
     const table = bucket ? (infinite ? 'salary_infinite_plays' : 'salary_cap_plays') : (infinite ? 'qb_salary_infinite_plays' : 'qb_salary_cap_plays')
     const res = await insert(env, table, { ...r.row, user_id: user.id, ...(infinite ? {} : { date_str: date }) }, user.id)

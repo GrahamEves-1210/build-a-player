@@ -1,9 +1,16 @@
 // Player settings that change the whole page (applied on load)
+import { DEVICE_LOW } from './lowPower'
 const MOTION_KEY = 'bap_reduce_motion'
 export const reduceMotion = () => { try { return localStorage.getItem(MOTION_KEY) === '1' } catch { return false } }
 // the phone's own Reduce Motion setting does everything the in-app switch does (and follows it live)
 const systemReduced = () => typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches
-const applyMotion = () => { if (typeof document !== 'undefined') document.documentElement.classList.toggle('bap-reduce-motion', reduceMotion() || systemReduced()) }
+// Reduce motion is the light version of the whole site: no animation, and the weak-machine look (html.low-power) too
+const applyMotion = () => {
+  if (typeof document === 'undefined') return
+  const on = reduceMotion() || systemReduced()
+  document.documentElement.classList.toggle('bap-reduce-motion', on)
+  document.documentElement.classList.toggle('low-power', on || DEVICE_LOW)
+}
 export function setReduceMotion(on) {
   try { on ? localStorage.setItem(MOTION_KEY, '1') : localStorage.removeItem(MOTION_KEY) } catch {}
   applyMotion()

@@ -4,7 +4,7 @@
 // the same way the game works it out (the run*Simulation functions).
 
 import { seededShuffle } from './rng'
-import { calcOVR, calcOVRRB, calcOVRWR, calcOVRTE, calcOVRDB, calcOVRDL, calcOVROL, runSimulation } from '../utils/simulation'
+import { calcOVR, calcOVRRB, calcOVRWR, calcOVRTE, calcOVRDB, calcOVRDL, calcOVRLB, calcOVROL, runSimulation } from '../utils/simulation'
 import { calcBucketOVR } from '../utils/bucketSimulation'
 import { QBS, TYPES, LITE_TYPES } from '../data/qbs'
 import { LEGENDS, LEGEND_TYPES } from '../data/qb-legends'
@@ -18,6 +18,8 @@ import { DBS, DB_TYPES, DB_LITE_TYPES } from '../data/dbs'
 import { DB_LEGENDS } from '../data/db-legends'
 import { DLS, DL_TYPES, DL_LITE_TYPES } from '../data/dls'
 import { DL_LEGENDS } from '../data/dl-legends'
+import { LBS, LB_TYPES, LB_LITE_TYPES } from '../data/lbs'
+import { LB_LEGENDS } from '../data/lb-legends'
 import { OLS, OL_TYPES, OL_LITE_TYPES } from '../data/ols'
 import { NBA_GUARD_PLAYERS, GUARD_TYPES } from '../data/nba-guards'
 import { NBA_BIG_PLAYERS, BIG_TYPES } from '../data/nba-bigs'
@@ -26,6 +28,7 @@ import { NBA_ALLTIME_BIG_PLAYERS } from '../data/nba-big-legends'
 import { TEAMS, NFL_TEAMS } from '../data/nfl-teams'
 import { NBA_TEAMS } from '../data/nba-teams'
 import { QB_SAL_POOL, QB_SAL_COLS } from '../data/qb-salary'
+import { FB_SAL } from '../data/fb-salary'
 import { BUCKET_SAL_POOL, SAL_COLS, salTypesFor, playerPosGroup } from '../data/nba-salary'
 import { salaryKit, TIERS, TIER_BANDS, BUDGET_OPTIONS, RECENT_PENALTY, budgetForDateStr, yesterdaySeedOf } from './salaryCore'
 
@@ -61,9 +64,10 @@ export function seasonKit(sport, pos, mode) {
     rb: { pool: allTime ? RB_LEGENDS : RBS, types: lite ? RB_LITE_TYPES : RB_TYPES, ovr: (b, t) => calcOVRRB(b, t) },
     wr: { pool: allTime ? WR_LEGENDS : WRS, types: lite ? WR_LITE_TYPES : WR_TYPES, ovr: (b, t) => calcOVRWR(b, t) },
     te: { pool: allTime ? TE_LEGENDS : TES, types: lite ? TE_LITE_TYPES : TE_TYPES, ovr: (b, t) => calcOVRTE(b, t) },
-    // runDBSimulation / DL / OL work the OVR out on their full trait lists, lite or not
+    // runDBSimulation / DL / LB / OL work the OVR out on their full trait lists, lite or not
     db: { pool: allTime ? DB_LEGENDS : DBS, types: lite ? DB_LITE_TYPES : DB_TYPES, ovr: b => calcOVRDB(b) },
     dl: { pool: allTime ? DL_LEGENDS : DLS, types: lite ? DL_LITE_TYPES : DL_TYPES, ovr: b => calcOVRDL(b) },
+    lb: { pool: allTime ? LB_LEGENDS : LBS, types: lite ? LB_LITE_TYPES : LB_TYPES, ovr: b => calcOVRLB(b) },
     ol: { pool: OLS, types: lite ? OL_LITE_TYPES : OL_TYPES, ovr: b => calcOVROL(b) },
   }[pos]
   return k ? { ...k, teams: TEAMS, ovr: b => k.ovr(b, k.types) } : null
@@ -150,6 +154,12 @@ const SAL = {
   nfl: { cols: QB_SAL_COLS, pool: QB_SAL_POOL, kit: salaryKit({ typesFor: (p, col) => col.types }), typesFor: (p, col) => col.types },
   bucket: { cols: SAL_COLS, pool: BUCKET_SAL_POOL, kit: salaryKit({ typesFor: salTypesFor }), typesFor: salTypesFor },
 }
+// Football's other positions (QBSalaryCap.jsx Change Position): Infinite boards only, each
+// from its own pool and columns (data/fb-salary.js), priced the same way
+const FB_SAL_KIT = salaryKit({ typesFor: (p, col) => col.types })
+for (const [p, s] of Object.entries(FB_SAL)) {
+  if (p !== 'qb') SAL[`nfl-${p}`] = { cols: s.cols, pool: s.pool, kit: FB_SAL_KIT, typesFor: (q, col) => col.types, pos: p }
+}
 const salTier = price => TIERS.indexOf(Number(price))
 // picks legal on a board: as dealt, or with one column / one tier shuffled
 function legalOn(grid, picks) {
@@ -206,7 +216,10 @@ const clampN = (v, lo, hi) => (Number.isFinite(Number(v)) && v !== null && v !==
 // traits); frozen: the day's frozen board if there is one; sent: what the phone reported
 // (an Infinite play's season stats, which can't be replayed)
 export function checkSalaryCap({ sport, date, infinite = false, picks, pos = 'guard', frozen = null, sent = {} }) {
-  const S = SAL[sport === 'bucket' ? 'bucket' : 'nfl']
+  // football: QB (no pos, or 'qb') plays the daily board and Infinite; any other position Infinite only
+  const fbPos = sport !== 'bucket' && pos && pos !== 'qb' && pos !== 'guard' ? pos : null
+  if (fbPos && (!infinite || !SAL[`nfl-${fbPos}`])) return { error: 'unknown position' }
+  const S = SAL[sport === 'bucket' ? 'bucket' : fbPos ? `nfl-${fbPos}` : 'nfl']
   if (!Array.isArray(picks) || picks.length !== S.cols.length) return { error: 'five picks' }
   const real = []
   for (let ci = 0; ci < picks.length; ci++) {
@@ -225,6 +238,15 @@ export function checkSalaryCap({ sport, date, infinite = false, picks, pos = 'gu
   const okColor = c => (typeof c === 'string' && /^#[0-9a-f]{3,8}$/i.test(c) ? c : null)
   const clean = picks.map((p, ci) => ({ name: real[ci].name, team: real[ci].team, price: Number(p.price), photo: okPhoto(p.photo), teamColor: okColor(p.teamColor), number: Number.isInteger(p.number) && p.number >= 0 && p.number <= 99 ? p.number : null }))
 
+  if (S.pos) {
+    // another football position's Infinite play: its columns' traits at real ratings, scored
+    // the way that position's season scores them; the row says which position it was
+    const build = {}
+    S.cols.forEach((col, ci) => col.types.forEach(type => { build[type] = { type, val: real[ci].attrs?.[type] ?? 5, qbFull: real[ci].name, team: real[ci].team, ...(S.pos === 'dl' ? { subpos: real[ci].subpos ?? null } : {}) } }))
+    const kit = seasonKit('nfl', S.pos, 'classic')
+    return { row: { picks: clean, overall_score: Math.max(0, Math.min(99, Math.round(kit.ovr(build) ?? 0))), budget_used: spent,
+      pass_yds: null, pass_tds: null, ints: null, pos: S.pos } }
+  }
   if (S === SAL.nfl) {
     // QBSalaryCap.jsx buildFromSel: each column's traits at the player's real ratings
     const build = {}

@@ -410,7 +410,7 @@ export function setGradesHidden(v) {
   window.dispatchEvent(new CustomEvent('bap:grades', { detail: !!v }))
 }
 // ─── SpinScreen ──────────────────────────────────────────────────────────────
-export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, activeCategory, resetKey, onChipTap, types = TYPES, isLite = false, qbPool = QBS, savedResult = null, onSaveResult, onPhaseChange, gameKey, onReset, adsDisabled = false, isRB = false, isWR = false, isTE = false, isDB = false, isDL = false, isOL = false, isAllTime = false, isBucket = false, isVersusMode = false, attrMap = ATTR, categoriesData = CATEGORIES, teamsPool = TEAMS, logoDir = '/logos/', playerLabel, headshotsMap = HEADSHOTS, headshotsDir = `${HEADSHOT_BASE}/`, hideTeamResult = false, headshotFallback = () => null, seedPlan: seedPlanProp = null, cardMeta = null, paused = false, gradesHidden = false, startersOnly = false }) {
+export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, activeCategory, resetKey, onChipTap, types = TYPES, isLite = false, qbPool = QBS, savedResult = null, onSaveResult, onPhaseChange, gameKey, onReset, adsDisabled = false, isRB = false, isWR = false, isTE = false, isDB = false, isDL = false, isLB = false, isOL = false, isAllTime = false, isBucket = false, isVersusMode = false, attrMap = ATTR, categoriesData = CATEGORIES, teamsPool = TEAMS, logoDir = '/logos/', playerLabel, headshotsMap = HEADSHOTS, headshotsDir = `${HEADSHOT_BASE}/`, hideTeamResult = false, headshotFallback = () => null, seedPlan: seedPlanProp = null, cardMeta = null, paused = false, gradesHidden = false, startersOnly = false }) {
   // Sandbox's Starters Only: one wheel of the pool's starters, no team spin, no respins. Never on a
   // seeded plan (the Daily, a Compete pool, Blacktop) or a live game, whatever the page hands in
   const oneWheel = startersOnly && !seedPlanProp && !isVersusMode
@@ -556,6 +556,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
 
   const handleSpin = useCallback(() => {
     clearAll()
+    respunFrom.current = null
     setSelectedTeam(null)
     setSelectedQB(null)
     setExcludedQB(null)
@@ -564,10 +565,10 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
     triggerMobileAd()
     track('spin', {
       app: isBucket ? 'bucket' : 'nfl',
-      position: isBucket ? 'bucket' : isOL ? 'ol' : isDL ? 'dl' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb',
+      position: isBucket ? 'bucket' : isOL ? 'ol' : isDL ? 'dl' : isLB ? 'lb' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb',
       gameMode: isLite ? 'lite' : null,
     })
-  }, [onSaveResult, triggerMobileAd, isBucket, isOL, isDB, isDL, isTE, isWR, isRB, isLite]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [onSaveResult, triggerMobileAd, isBucket, isOL, isDB, isDL, isLB, isTE, isWR, isRB, isLite]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleQBRespin = useCallback(() => {
     if (oneWheelRef.current) return
@@ -593,11 +594,14 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
     setTimeout(() => setAdNote(''), 3500)
   }
 
+  // a respin never deals the team it's respinning (an unseeded build: Squad Builder, a normal build). Seeded
+  // spins (the Daily, Compete) keep their own order, which the server checks
+  const respunFrom = useRef(null)
   const handleTeamRespin = useCallback(() => {
     if (oneWheelRef.current) return
     clearAll()
     setSelectedQB(null)
-    setSelectedTeam(null)
+    setSelectedTeam(prev => { respunFrom.current = prev?.short ?? null; return null })
     setExcludedQB(null)
     setTeamRespinUsed(n => n + 1)
     countTeamSpin(true)
@@ -620,6 +624,7 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
     const draftable = new Set(draftableTeams.split(','))
     const teams = teamsPool.some(t => draftable.has(t.short)) ? teamsPool.filter(t => draftable.has(t.short)) : teamsPool
     const usedShorts = new Set(seedPlan ? [] : usedTeamsRef.current.map(t => t.short))
+    if (!seedPlan && respunFrom.current) usedShorts.add(respunFrom.current)
     const eligible = teams.filter(t => !usedShorts.has(t.short))
     const pool = eligible.length > 0 ? eligible : [...teams]
     const finalPool = [...pool]

@@ -37,7 +37,7 @@ import SiteFooter from './SiteFooter'
 import SiteFeatures from './SiteFeatures'
 import { IS_APP, APP_LOOK, setClassicLook } from '../lib/platform'
 import { restorePro } from '../lib/webCheckout'
-import AppHome from './app/AppHome'
+import AppHome from './app/AppHomeSwitch'   // today's Home, or the classic one (Settings → Classic Home)
 import { FlipEdge, BuildComplete, useFlip, StackEdge, StackSeam, useDropMode, useDropSheet, DropBar, DropSheet } from './app/AppBuildTray'
 import { useCompete, botBuild } from '../lib/compete'
 import { saveSeason, saveSalary } from '../lib/submit'
@@ -1018,7 +1018,7 @@ export default function BucketApp() {
   const enterDraft = useCallback(async () => {
     const { newCareer, saveCareer } = await import('../lib/career')
     const owner = getUsername(user) || 'Guest'
-    const c = { ...newCareer({ sport: 'bucket', uid: user?.id ?? null, pos: position, build, name: careerNew.current.name || owner, slot: careerNew.current.slot, owner }), sandbox: !!isBucketCustomMode }
+    const c = { ...newCareer({ sport: 'bucket', uid: user?.id ?? null, pos: position, build, name: careerNew.current.name || owner, slot: careerNew.current.slot, owner, games: careerNew.current.games }), sandbox: !!isBucketCustomMode }
     saveCareer(c); setCareer(c); setGameMode(null); setBuild({}); setPage('career')
     window.scrollTo({ top: 0, behavior: 'instant' })
   }, [user, position, build, isBucketCustomMode])
@@ -2106,7 +2106,7 @@ export default function BucketApp() {
   if (page === 'career-intro') {
     return (
       <Suspense fallback={null}>
-        <CareerIntro sport="bucket" uid={user?.id ?? null} onOpen={c => { setCareer(c); setPage('career'); window.scrollTo({ top: 0, behavior: 'instant' }) }} onNew={(slot, name, pos) => { careerNew.current = { slot, name }; startCareerBuild(pos) }} onClose={() => setPage('splash')} />
+        <CareerIntro sport="bucket" uid={user?.id ?? null} onOpen={c => { setCareer(c); setPage('career'); window.scrollTo({ top: 0, behavior: 'instant' }) }} onNew={(slot, name, pos, games) => { careerNew.current = { slot, name, games }; startCareerBuild(pos) }} onClose={() => setPage('splash')} />
       </Suspense>
     )
   }

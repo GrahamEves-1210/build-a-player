@@ -18,6 +18,7 @@ import { CoinPill } from './AppShop'
 import { tierFor } from '../../lib/progress'
 import EmptyState from './EmptyState'
 import { RollingNumber } from './MotionText'
+import { LB_LIVE } from '../../lib/lbLive'
 
 // Home screen — a game main menu. The app and the website (APP_LOOK) both use
 // it in place of the old splash; same callbacks, so nothing else changes.
@@ -36,9 +37,10 @@ const NFL_FIGURE = {
   te: { src: '/wr-silhouette.png', scale: 1.18 },
   db: { src: '/db-silhouette.png', scale: 1.05 },
   dl: { src: '/dl-silhouette.webp', scale: 1 },
+  lb: { src: '/dl-silhouette.webp', scale: 1 },   // LB placeholder: the DL figure until LB has its own
 }
-const PLURAL = { qb: 'QBs', rb: 'RBs', wr: 'WRs', te: 'TEs', db: 'DBs', dl: 'DLs', guard: 'Guards', big: 'Bigs' }
-const NFL_NAMES = { qb: 'Quarterback', rb: 'Running Back', wr: 'Wide Receiver', te: 'Tight End', db: 'Defensive Back', dl: 'Defensive Line', ol: 'O-Line' }
+const PLURAL = { qb: 'QBs', rb: 'RBs', wr: 'WRs', te: 'TEs', db: 'DBs', dl: 'DLs', lb: 'LBs', guard: 'Guards', big: 'Bigs' }
+const NFL_NAMES = { qb: 'Quarterback', rb: 'Running Back', wr: 'Wide Receiver', te: 'Tight End', db: 'Defensive Back', dl: 'Defensive Line', lb: 'Linebacker', ol: 'O-Line' }
 // Who's on the Current and All-Time buttons, for the position picked (football's current
 // faces are POS_OPTIONS.players). Every one of them is in that pool.
 const face = (id, color) => ({ id, color })
@@ -49,6 +51,7 @@ const GREATS = {
   te: [face('espn_13229', '#002244'), face('espn_1231', '#e31837'), face('espn_5362', '#0080c6')], // Gronkowski, Gonzalez, Gates
   db: [face('espn_3552', '#241773'), face('espn_4474', '#a5acaf'), face('espn_10458', '#125740')], // Reed, Polamalu, Revis
   dl: [face('espn_16716', '#003594'), face('espn_13979', '#002244'), face('espn_3530', '#0085ca')], // Donald, Watt, Peppers
+  lb: [face('espn_964', '#241773')],                                                              // Ray Lewis (the only all-time LB with an ESPN photo)
   guard: [face('nba/893', '#ce1141'), face('nba/977', '#552583'), face('nba/77142', '#fdb927')],  // Jordan, Kobe, Magic
   big: [face('nba/406', '#552583'), face('nba/1495', '#8a8d8f'), face('nba/76003', '#00471b')],  // Shaq, Duncan, Kareem
 }
@@ -322,6 +325,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
     }
   }, [])
   const here = usePresence()?.areas ?? {}   // how many are in each online mode right now
+  const cpHere = (here.compete ?? 0) + (here.auction ?? 0)   // Compete counts its Trait Auction too
   const cs = prog.stats?.compete
   const ol = prog.stats?.online ?? { rating: 800, played: 0 }
   const h2h = prog.stats?.h2h ?? {}
@@ -417,7 +421,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
             </ModeArt>
           ))
           : (onCompete && (
-            <ModeArt kind="compete" tone="compete" title="COMPETE" line={cpLine} live={here.compete} onClick={onCompete}>
+            <ModeArt kind="compete" tone="compete" title="COMPETE" line={cpLine} live={cpHere} onClick={onCompete}>
               <Podium />
             </ModeArt>
           ))}
@@ -428,7 +432,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
       </div>
       <div className="ag-more">
         {isBucket && onCompete && (
-          <ModeArt small kind="compete" tone="compete" title="COMPETE" line={cpLine} live={here.compete} onClick={onCompete}>
+          <ModeArt small kind="compete" tone="compete" title="COMPETE" line={cpLine} live={cpHere} onClick={onCompete}>
             <Podium />
           </ModeArt>
         )}
@@ -444,7 +448,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
         )}
       </div>
     </section>
-  ), [sp, isBucket, career, crLine, cpLine, btLine, btLive, sqLine, here.blacktop, here.compete, onCareer, onBlacktop, onCompete, onSquad, onDepthChart])
+  ), [sp, isBucket, career, crLine, cpLine, btLine, btLive, sqLine, here.blacktop, cpHere, onCareer, onBlacktop, onCompete, onSquad, onDepthChart])
 
   return (
     <div className={`ag-home ag-home--${sport}`} ref={homeRef}>
@@ -485,7 +489,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
           <div className={`ag-positions${isBucket ? ' ag-positions--two' : ''}`} style={{ '--n': positions.length, '--i': posIdx }} role="tablist" aria-label="Position">
             {positions.map((o, i) => (
               <button key={o.pos} role="tab" aria-selected={o.pos === position} className={`ag-pos${o.pos === position ? ' ag-pos--on' : ''}`} onClick={() => { dir.current = i < posIdx ? -1 : 1; pick(o.pos) }}>
-                {o.pos === 'dl' && <span className="ag-pos-new">NEW</span>}<span className="ag-pos-label">{o.label}</span>
+                {(o.pos === 'dl' || (o.pos === 'lb' && LB_LIVE)) && <span className="ag-pos-new">NEW</span>}<span className="ag-pos-label">{o.label}</span>
                 {o.sub && <span className="ag-pos-sub">{o.sub}</span>}
               </button>
             ))}

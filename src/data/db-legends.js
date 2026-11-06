@@ -6,6 +6,7 @@
 // Skin: #f0c4a0 white · #b07848 mixed/Polynesian · #5e3c22 Black · #3a2010 very dark
 
 import { TEAMS } from './nfl-teams'
+import { dbSizeGrade } from './dbs'
 
 const TEAM_COLOR = Object.fromEntries(TEAMS.map(t => [t.short, { color: t.color, color2: t.color2 }]))
 
@@ -486,7 +487,7 @@ const _raw = [
 
 ]
 
-export const DB_LEGENDS = _raw.map(p => ({
+export const DB_LEGENDS = _raw.map(p0 => ({ ...p0, attrs: { ...p0.attrs, size: dbSizeGrade(p0.height, p0.weight, p0.subpos) } })).map(p => ({
   ...p,
   ovr:    _dbOVR(p.attrs),
   color:  TEAM_COLOR[p.team]?.color  ?? '#888888',

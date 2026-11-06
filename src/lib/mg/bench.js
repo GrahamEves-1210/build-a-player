@@ -3,8 +3,8 @@
 // counts and it comes down on its own. Every rep is heavier: strength sets a real ceiling. As the
 // reps climb the taps a rep needs climb too, until the taps can't beat gravity any more: the bar
 // grinds, and that's the set. Faster thumbs get closer to the ceiling, never past it.
-import { clamp, lerp, outcome, rngOf, prog, easeOut, layer, circle, text, DISPLAY, LABEL, GOOD, BAD } from './kit.js'
-import { HEAD_R, curve, GEAR, GEAR_NBA, INK, clockSlab, line, runLeg, armThrough, torsoSide, sideHead, hand, paintRoom, standAt, SCOUT, FOLK_SKIN } from './dash.js'
+import { clamp, lerp, outcome, rngOf, prog, easeOut, easeInOut, layer, circle, text, keyCap, particles, nudge, DISPLAY, LABEL, GOOD, BAD, GOLD } from './kit.js'
+import { HEAD_R, curve, GEAR, GEAR_NBA, INK, clockSlab, line, runLeg, armThrough, torsoSide, sideHead, hand, paintRoom, standAt, SCOUT, FOLK_SKIN, officialStrip, officialPunch, OFFICIAL_MS, clipboard, calm } from './dash.js'
 import { benchCeil } from './combineNorms.js'
 
 export const how = {
@@ -38,7 +38,7 @@ export function make({ v, seed, def, game, pos }) {
   const failAt = k => Math.min(0.995, Math.pow(k / ceil, P_FAIL))
   const end = SECS * 1000
   const g = {
-    t: 0, game, zones: 'none', fx: [], done: null, outro: 1700, stamp: null,
+    t: 0, game, zones: 'none', fx: [], done: null, outro: 2500, stamp: null,
     load, ceil, need, reps: 0, h: 0, vel: 0, phase: 'press', lowerAt: 0, preload: 0,
     lastTap: -300, power: 0, strain: 0, repAt: -999, tapAt: -999, overAt: null, passedAt: null,
     left: SECS, hud: { prompt: 'TAP TAP TAP' },
@@ -91,7 +91,7 @@ export function make({ v, seed, def, game, pos }) {
     g.overAt = g.t; g.overH = g.h
     g.hud.prompt = null
     // (the count is up on the wall, in the result's colour: the stamp says what it means)
-    g.stamp = { text: hit ? 'GOOD SET' : 'TOO FEW', good: hit, at: g.t + 300, size: 46 }
+    g.stamp = { text: hit ? 'GOOD SET' : 'TOO FEW', good: hit, at: g.t + OFFICIAL_MS + 160, size: 46 }
   }
   return g
 }
@@ -124,6 +124,19 @@ function plate(ctx, x, y, R) {
   ctx.fillStyle = STEEL; ctx.strokeStyle = INK; ctx.lineWidth = 1
   circle(ctx, x, y, R * 0.2); ctx.fill(); ctx.stroke()
 }
+// his face as it comes up: a few tones, worked out once each
+const flushes = new Map()
+function flushed(hex, f) {
+  const lvl = Math.round(clamp(f, 0, 1) * 3), id = hex + lvl
+  let c = flushes.get(id)
+  if (!c) {
+    const n = parseInt(hex.slice(1), 16), a = lvl * 0.11, mix = (v, to) => Math.round(v + (to - v) * a)
+    c = `rgb(${mix((n >> 16) & 255, 190)},${mix((n >> 8) & 255, 54)},${mix(n & 255, 38)})`
+    flushes.set(id, c)
+  }
+  return c
+}
+const CHALK = ['#ffffff', '#e6eaee', '#d7dde2'], SWEAT = ['#d9ecf7', '#ffffff']
 export function draw(ctx, g, view) {
   const { w, h } = view
   const k = clamp((h - 520) / 260, 0, 1)
@@ -141,20 +154,53 @@ export function draw(ctx, g, view) {
   let hh = g.h
   if (g.done) hh = lerp(g.overH ?? g.h, 1.03, easeOut(prog(g.t, g.overAt, g.overAt + 480)))
   const strain = g.done ? 0 : g.strain
+  const over = g.done ? g.t - g.overAt : -1
+  const RACK = 700                               // ms after the clock: the bar's on the hooks, with the spotter's hands on it
+  const rack = g.done ? easeInOut(prog(over, 440, RACK)) : 0, off = g.done ? easeOut(prog(over, RACK + 60, RACK + 320)) : 0
   const tick = g.t / 16
   const shake = (strain * strain * 1.6) / b
-  const barY = lerp(botY, topY, hh) + Math.sin(tick * 1.9) * shake + Math.sin(tick * 3.1) * shake * 0.5
+  const barY = lerp(botY, topY, hh) - rack * 3.8 + Math.sin(tick * 1.9) * shake + Math.sin(tick * 3.1) * shake * 0.5
   const raised = g.t - g.repAt < 240 && !g.done
   const R = court ? 12.5 : 14
   const bx = -7                                 // the middle of the bar, over his chest
-  const onBar = dx => [bx + dx, barY + dx * SLANT]
+  // the bar's a spring with weight on its ends: they hang, they whip at the top of a rep, they jump at a tap
+  const ageRep = g.t - g.repAt, ageTap = g.t - g.tapAt, ageRack = over - RACK
+  let flex = (court ? 1.1 : 1.8) + strain * 1.1
+  if (ageRep < 560) flex += 3.3 * (1 + strain * 0.5) * Math.exp(-ageRep / 170) * Math.cos(ageRep / 26)
+  if (ageTap < 170 && !g.done) flex += 1 * Math.exp(-ageTap / 70)
+  if (ageRack > 0 && ageRack < 520) flex += 3 * Math.exp(-ageRack / 150) * Math.cos(ageRack / 24)
+  const onBar = dx => [bx + dx, barY + dx * SLANT + (flex * dx * dx) / 900]
   const END_N = 30, END_F = 22                  // (the far half of the bar is further off, so shorter)
-
-  // scouts along the far side, one with a hand up on every rep
-  if (!court) {
-    standAt(ctx, w - 72, hz + 7, { ...SCOUT, skin: FOLK_SKIN[1], size: 1.62 })
-    standAt(ctx, w - 28, hz + 7, { ...SCOUT, skin: FOLK_SKIN[2], size: 1.62, pose: raised ? 'reach-r' : null })
+  // what happens once. Particles and the camera are the picture's: the rules never see them
+  g.dirt ??= particles(24, g.need + 3)
+  g.nudge ??= nudge()
+  const toX = X => cx + X * b, toY = Y => base + Y * b
+  if (g.tapAt > 0 && !g.chalked) {
+    g.chalked = true
+    const [hx, hy] = onBar(11.5)
+    g.dirt.burst('dust', toX(hx), toY(hy), g.t, { n: 6, s: b * 0.5, colors: CHALK, spread: 1.5 })
   }
+  if (g.reps !== g.seenRep) {
+    g.seenRep = g.reps
+    if (g.reps) {
+      const hard = g.strain > 0.45
+      if (hard) g.nudge.kick(g.t, 1.1, 0, -1, 130)
+      if (g.reps > 2) g.dirt.burst('turf', toX(-31.5), toY(-44), g.t, { n: hard ? 4 : 2, s: b * 0.55, colors: SWEAT, ang: -Math.PI / 2 - 0.3, spread: 0.9, speed: 0.75, life: 300 })
+      const [hx, hy] = onBar(11.5)
+      if (g.reps % 4 === 0) g.dirt.burst('dust', toX(hx), toY(hy), g.t, { n: 3, s: b * 0.4, colors: CHALK, spread: 1.4 })
+    }
+  }
+  if (g.done && !g.racked && over >= RACK) {
+    g.racked = true
+    g.fx.push('lock', 'h:medium'); g.nudge.kick(g.t, 2.6, 0, 1, 170)
+  }
+  if (g.done && !g.official && over >= OFFICIAL_MS) { g.official = true; g.fx.push('stamp') }
+
+  // the scouts along the far side: one writing it down, one with a hand up on every rep, and up for good on a good set
+  const nod = g.t - g.repAt < 150 && !g.done ? 1.4 : 0, passedUp = g.done?.hit && over >= OFFICIAL_MS
+  standAt(ctx, w - 72, hz + 7 + nod, { ...SCOUT, skin: FOLK_SKIN[1], size: 1.62, pose: 'wave-b' })
+  clipboard(ctx, w - 72, hz + 7 + nod - 44, 1.45)
+  standAt(ctx, w - 28, hz + 7, { ...SCOUT, skin: FOLK_SKIN[2], size: 1.62, pose: raised || passedUp ? 'reach-r' : null })
 
   ctx.save()
   ctx.translate(cx, base); ctx.scale(b, b)
@@ -175,7 +221,8 @@ export function draw(ctx, g, view) {
   plate(ctx, fpx, fpy, R * 0.92, null)
 
   // the spotter, on his feet at the head of the bench, bent to the bar
-  const spHipX = -62, spHipY = -47, spLean = 0.26
+  // (he bends in as it gets hard)
+  const spHipX = -62, spHipY = -47, spLean = 0.26 + strain * 0.1 + rack * 0.06
   const ssx = spHipX + Math.sin(spLean) * 28, ssy = spHipY - Math.cos(spLean) * 28
   ctx.save(); ctx.translate(spHipX, spHipY)
   runLeg(ctx, -0.05, 0.15, -0.2, true, SPOTTER)
@@ -193,22 +240,26 @@ export function draw(ctx, g, view) {
   ctx.beginPath(); ctx.roundRect(-46, -28, 66, 7.5, 2.4); ctx.fill(); ctx.stroke()
 
   // him, the far side first. The hips sit on the pad, the thighs run out level, the shins come straight down
-  const hipX = 14, hipY = -34.5
+  // (his back arches off the pad on a grind, and it goes up and down when it's over)
+  const heave = off * Math.sin(g.t / 230) * 0.7
+  const hipX = 14, hipY = -34.5 - strain * 1
   ctx.save(); ctx.translate(hipX - 1.5, hipY - 1); runLeg(ctx, 1.22, 1.28, -0.06, true, c); ctx.restore()
   // far arm, up to the bar behind the chest
-  const [fhx, fhy] = onBar(-2)
+  let [fhx, fhy] = onBar(-2)
+  if (off) { fhx = lerp(fhx, shX + 3, off); fhy = lerp(fhy, -24, off) }
   reach(shX - 2, shY - 3, fhx, fhy, ARM, ARM, -1)
   const fex = jx, fey = jy
   armThrough(ctx, shX - 2, shY - 3, fex, fey, fhx, fhy, true, c)
   // the bar, plate to plate
-  line(ctx, fpx, fpy, npx, npy, 3.2, INK); line(ctx, fpx, fpy, npx, npy, 1.7, STEEL)
+  const mdx = (END_N - END_F) / 2, bcY = fpy + (SLANT - (2 * flex * END_F) / 900) * (mdx + END_F)
+  for (const [bw, col] of [[3.2, INK], [1.7, STEEL]]) { ctx.strokeStyle = col; ctx.lineWidth = bw; ctx.beginPath(); ctx.moveTo(fpx, fpy); ctx.quadraticCurveTo(bx + mdx, bcY, npx, npy); ctx.stroke() }
   hand(ctx, fhx, fhy, 3.5, '#6f452c')
   // the torso, flat: the spine runs to the left, the chest faces up
-  ctx.save(); ctx.translate(hipX, hipY); ctx.rotate(-Math.PI / 2); torsoSide(ctx, c); ctx.restore()
+  ctx.save(); ctx.translate(hipX, hipY); ctx.rotate(-Math.PI / 2 + strain * 0.03 - heave * 0.018); torsoSide(ctx, c); ctx.restore()
   // the head, on the pad, face to the ceiling
-  const hdX = -31.5, hdY = -39.5
+  const hdX = -31.5 + strain * 0.8, hdY = -39.5 - strain * 1.8 - (strain > 0.5 ? Math.sin(tick * 2.3) * 0.35 : 0)
   line(ctx, -19, -38, hdX, hdY, 8.4, INK); line(ctx, -19, -38, hdX, hdY, 6.5, c.skinD)
-  sideHead(ctx, hdX, hdY, HEAD_R, c.skin, c.hair, -Math.PI / 2)
+  sideHead(ctx, hdX, hdY, HEAD_R, flushed(c.skin, g.done ? 0.5 * (1 - off) : strain), c.hair, -Math.PI / 2 + strain * 0.2)
   // the near leg
   ctx.save(); ctx.translate(hipX, hipY); runLeg(ctx, 1.22, 1.28, -0.06, false, c); ctx.restore()
 
@@ -219,13 +270,24 @@ export function draw(ctx, g, view) {
     armThrough(ctx, ssx, ssy + 1, jx, jy, hx, hy, dx < -8, SPOTTER)
   }
   // his near arm, the fist round the bar
-  const [nhx, nhy] = onBar(11.5)
+  let [nhx, nhy] = onBar(11.5)
+  // (off the bar once it's racked: the arm drops off the side of the bench)
+  if (off) { nhx = lerp(nhx, shX + 7, off); nhy = lerp(nhy, -12, off) }
   reach(shX + 1, shY, nhx, nhy, ARM, ARM, -1)
   armThrough(ctx, shX + 1, shY, jx + (strain * strain * Math.sin(tick * 2.7)) / b, jy, nhx, nhy, false, c)
   // the near plates, in front of everything: two, side by side
-  plate(ctx, npx - 2.6, npy - 2.6 * SLANT, R, null)
+  const rattle = ageRep < 200 && !g.done ? 0.7 * (1 - ageRep / 200) : 0
+  plate(ctx, npx - 2.6 - rattle, npy - 2.6 * SLANT, R, null)
   plate(ctx, npx, npy, R)
   ctx.restore()
+  if (!calm()) g.dirt.draw(ctx, g.t)
+  // the spotter, in his ear
+  if (!g.done && g.reps > 0 && strain > 0.55 && Math.floor(g.t / 460) % 2 === 0) {
+    const ux = cx + (shx + 12) * b, uy = base + (shy - 15) * b
+    text(ctx, 'UP!', ux + 1, uy + 1, { font: DISPLAY, size: 21, color: 'rgba(0,0,0,.6)' })
+    text(ctx, 'UP!', ux, uy, { font: DISPLAY, size: 21, color: '#fff' })
+  }
+  if (view.keys && !g.done && g.reps === 0) keyCap(ctx, w / 2, h - 58, 'SPACE')
 
   drawBoard(ctx, g, view, base + (topY - END_F * SLANT - R) * b)
 }
@@ -233,7 +295,8 @@ export function draw(ctx, g, view) {
 function drawBoard(ctx, g, view, roomBottom) {
   const { w } = view
   const y = 44, ph = 52
-  clockSlab(ctx, view, g.left.toFixed(2), g.done ? (g.done.hit ? GOOD : BAD) : g.left < 3 ? BAD : '#fff', g.left / SECS)
+  const over = g.done ? g.t - g.overAt : -1, official = over >= OFFICIAL_MS, result = g.done?.hit ? GOOD : BAD
+  clockSlab(ctx, view, g.left.toFixed(2), official ? result : g.done ? '#fff' : g.left < 3 ? BAD : '#fff', g.left / SECS)
   const passed = g.reps >= g.need
   const dim = 'rgba(255,255,255,.72)', row = y + ph / 2 - 1
   const pair = (x, align, label, value, col) => {
@@ -246,11 +309,19 @@ function drawBoard(ctx, g, view, roomBottom) {
   pair(12, 'left', 'NEED', String(g.need), passed ? GOOD : '#fff')
   const top = y + ph, room = Math.max(70, roomBottom - top)
   if (g.stamp) g.stamp.y = view.h * 0.885
-  // the reps, punched on each one
+  // the reps, punched on each one, and once more as it goes official
   const big = Math.min(100, room * 0.8)
   const a = g.t - g.repAt
-  const q = 1 + 0.2 * (1 - easeOut(clamp(a / 130, 0, 1)))
-  ctx.save(); ctx.translate(w / 2, top + room / 2); ctx.scale(q, q)
-  text(ctx, String(g.reps), 0, 2, { font: DISPLAY, size: big, color: g.done ? (g.done.hit ? GOOD : BAD) : passed ? GOOD : '#fff' })
+  const q = (1 + 0.2 * (1 - easeOut(clamp(a / 130, 0, 1)))) * (g.done ? officialPunch(over) : 1)
+  const my = top + room / 2
+  ctx.save(); ctx.translate(w / 2, my); ctx.scale(q, q)
+  text(ctx, String(g.reps), 0, 2, { font: DISPLAY, size: big, color: official ? result : g.done ? '#fff' : passed ? GOOD : '#fff' })
   ctx.restore()
+  // a tick a rep, up to what he needs; past it they go gold, and there's no telling how far they go
+  const tickW = Math.min(9, 230 / Math.max(g.need, g.reps)) - 2.2, step = tickW + 2.2, n = Math.max(g.need, g.reps), x0 = w / 2 - (n * step) / 2, ty = my + big * 0.56
+  for (let i = 0; i < n; i++) {
+    ctx.fillStyle = i >= g.need ? GOLD : i < g.reps ? (passed ? GOOD : '#fff') : 'rgba(255,255,255,.2)'
+    ctx.fillRect(x0 + i * step, ty, tickW, 4)
+  }
+  if (g.done) officialStrip(ctx, view, over, g.done.hit, `${g.load < 1 ? 185 : 225} LB   ${g.reps} REP${g.reps === 1 ? '' : 'S'}`)
 }

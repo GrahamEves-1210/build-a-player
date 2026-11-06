@@ -22,6 +22,7 @@ const COUNTS = {
     te: { seasonRecs: 'rec', seasonRecYds: 'recYds', seasonRecTDs: 'recTDs', seasonTargets: 'targets' },
     db: { seasonINTs: 'ints', seasonPBUs: 'pbus', seasonTackles: 'tackles', seasonTFL: 'tfl', seasonFF: 'ff', seasonPickSixes: 'pickSixes' },
     dl: { seasonSacks: 'sacks', seasonTFL: 'tfl', seasonTackles: 'tackles', seasonQBHits: 'qbHits', seasonFF: 'ff', seasonFR: 'fr', seasonPBUs: 'pbus', seasonSafeties: 'safeties' },
+    lb: { seasonTackles: 'tackles', seasonTFL: 'tfl', seasonSacks: 'sacks', seasonQBHits: 'qbHits', seasonPDs: 'pds', seasonINTs: 'ints', seasonPickSixes: 'pickSixes', seasonFF: 'ff', seasonFR: 'fr', seasonMissed: 'missed' },
     ol: { seasonPressures: 'pressures', seasonSacksAllowed: 'sacks', seasonPenalties: 'penalties', seasonPancakes: 'pancakes' },
   },
 }
@@ -32,6 +33,7 @@ const BEST = {
   te: g => g.recYds * .16 + g.recTDs * 14 + g.rec * 1.5,
   db: g => g.ints * 5 + g.pickSixes * 6 + g.pbus * 1.5 + g.tackles * .3 + g.tfl * 1.2 + g.ff * 3,
   dl: g => g.sacks * 5 + g.safeties * 6 + g.ff * 3.5 + g.fr * 2.5 + g.tfl * 1.2 + g.qbHits * .8 + g.pbus + g.tackles * .3,
+  lb: g => g.pickSixes * 7 + g.ints * 4.5 + g.sacks * 3.5 + g.ff * 3 + g.fr * 2.5 + g.tfl * 1.4 + g.pds + g.qbHits * .6 + g.tackles * .45,
   ol: g => g.pancakes * 1.5 - g.sacks * 4 - g.pressures * 1.2 - g.penalties * 2 + (g.won ? 1.5 : 0),
   guard: g => g.pts, big: g => g.pts,
 }
@@ -40,11 +42,12 @@ export const GAME_LINE = {
   qb: g => `${g.passYds} yds, ${g.tds} TD`, rb: g => `${g.rushYds} rush yds, ${g.rushTDs + (g.recTDs ?? 0)} TD`,
   wr: g => `${g.rec} rec, ${g.recYds} yds${g.recTDs ? `, ${g.recTDs} TD` : ''}`, te: g => `${g.rec} rec, ${g.recYds} yds${g.recTDs ? `, ${g.recTDs} TD` : ''}`,
   db: g => `${g.tackles} TKL${g.ints ? `, ${g.ints} INT` : ''}${g.pbus ? `, ${g.pbus} PD` : ''}`, dl: g => `${g.sacks} sack${g.sacks === 1 ? '' : 's'}, ${g.tackles} TKL${g.ff ? `, ${g.ff} FF` : ''}`,
+  lb: g => `${g.tackles} TKL${g.sacks ? `, ${g.sacks} sack${g.sacks === 1 ? '' : 's'}` : ''}${g.ints ? `, ${g.ints} INT` : ''}${g.ff ? `, ${g.ff} FF` : ''}`,
   ol: g => `${g.pancakes} pancakes, ${g.sacks} sacks allowed`,
   guard: g => `${g.pts} pts, ${g.reb} reb, ${g.ast} ast`, big: g => `${g.pts} pts, ${g.reb} reb, ${g.ast} ast`,
 }
-const BIG_GAME = { qb: g => g.passYds >= 330 || g.tds >= 4, rb: g => g.rushYds >= 140 || g.rushTDs + (g.recTDs ?? 0) >= 3, wr: g => g.recYds >= 130 || g.recTDs >= 2, te: g => g.recYds >= 100 || g.recTDs >= 2, db: g => g.ints >= 2 || g.pickSixes >= 1, dl: g => g.sacks >= 2 || g.ff >= 2 || g.safeties >= 1, ol: g => g.pancakes >= 6 && g.sacks === 0, guard: g => g.pts >= 38, big: g => g.pts >= 35 || g.reb >= 18 }
-const BUST_GAME = { qb: g => g.ints >= 3 || g.passYds < 150, rb: g => g.rushYds < 40, wr: g => g.recYds < 30, te: g => g.recYds < 20, db: g => false, dl: g => g.sacks === 0 && g.tfl === 0 && g.qbHits === 0 && g.tackles <= 1, ol: g => g.sacks >= 3, guard: g => g.pts < 10, big: g => g.pts < 8 }
+const BIG_GAME = { qb: g => g.passYds >= 330 || g.tds >= 4, rb: g => g.rushYds >= 140 || g.rushTDs + (g.recTDs ?? 0) >= 3, wr: g => g.recYds >= 130 || g.recTDs >= 2, te: g => g.recYds >= 100 || g.recTDs >= 2, db: g => g.ints >= 2 || g.pickSixes >= 1, dl: g => g.sacks >= 2 || g.ff >= 2 || g.safeties >= 1, lb: g => g.tackles >= 13 || g.ints >= 1 || g.sacks >= 2 || g.ff >= 2, ol: g => g.pancakes >= 6 && g.sacks === 0, guard: g => g.pts >= 38, big: g => g.pts >= 35 || g.reb >= 18 }
+const BUST_GAME = { qb: g => g.ints >= 3 || g.passYds < 150, rb: g => g.rushYds < 40, wr: g => g.recYds < 30, te: g => g.recYds < 20, db: g => false, dl: g => g.sacks === 0 && g.tfl === 0 && g.qbHits === 0 && g.tackles <= 1, lb: g => g.tackles <= 2 && g.missed >= 2, ol: g => g.sacks >= 3, guard: g => g.pts < 10, big: g => g.pts < 8 }
 
 const clampVal = v => Math.max(1, Math.min(11, v))
 function applyMods(build, team, mods) {

@@ -2,11 +2,10 @@
 // SET, the gun at a moment nobody can time, then LEFT RIGHT LEFT RIGHT as fast as you can go. The faster
 // you alternate, the faster he runs, up to the top speed his trait gives him. The same foot twice does
 // nothing. His legs run at his speed, not at your presses. The stopwatch is the real result.
-import { clamp, lerp, outcome, rngOf, prog, easeOut, circle, text, DISPLAY, LABEL, GOOD, BAD, GOLD } from './kit.js'
+import { clamp, lerp, outcome, rngOf, prog, easeOut, circle, text, DISPLAY, LABEL, GOOD, BAD, GOLD, particles, nudge, reduceMotion } from './kit.js'
 import { dashTarget } from './combineNorms.js'
 import { athlete } from './art.js'
 import { placeStamp } from './read.js'
-import { paintRoom as arenaRoom } from './meter.js'
 
 export const how = {
   forty: 'Wait for the gun. Then alternate LEFT and RIGHT as fast as you can.',
@@ -302,24 +301,20 @@ function tile(view, key, W, H, paint, alpha = false) {
 }
 const VENUE_W = 720
 function paintVenue(x, W, H, court) {
-  // the far side of a big indoor room: dark steel, tiers of seats you can't make out, a lit wall
+  // the far side of a big indoor room: dark steel, the roof trusses, a lit padded wall. Nobody in the seats: it's a workout
   const g = x.createLinearGradient(0, 0, 0, H)
   g.addColorStop(0, court ? '#07090d' : '#0c1219'); g.addColorStop(0.55, court ? '#11151c' : '#161f28'); g.addColorStop(1, court ? '#1a1f28' : '#1f2b35')
   x.fillStyle = g; x.fillRect(0, 0, W, H)
-  // the crowd: small and still, seat by seat
   const wallTop = H - 62
-  const shirts = court ? ['#3a4150', '#59616e', '#2b313c', '#7c6a5e', '#c9531e'] : ['#3a4a5a', '#5b6b7a', '#2c3a48', '#7c6a5e', '#2f7fb8']
-  let seed = 19
-  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647
-  for (let y = wallTop - 150, row = 0; y < wallTop - 4; y += 9, row++) {
-    x.fillStyle = row % 2 ? 'rgba(0,0,0,.2)' : 'rgba(255,255,255,.03)'; x.fillRect(0, y, W, 9)
-    for (let i = row % 2 ? 3 : 7; i < W - 3; i += 7) {
-      if (rnd() < 0.1) continue
-      x.fillStyle = shirts[Math.floor(rnd() * shirts.length)]; x.fillRect(i, y + 3.6, 4.6, 4.6)
-      x.fillStyle = rnd() < 0.5 ? '#a97f60' : '#6e4a33'; x.fillRect(i + 1, y + 1, 2.6, 2.6)
-    }
-  }
-  x.fillStyle = 'rgba(10,16,24,.5)'; x.fillRect(0, wallTop - 150, W, 150)
+  // the steel siding, sheet by sheet
+  for (let i = 0; i < W; i += 44) { x.fillStyle = 'rgba(0,0,0,.26)'; x.fillRect(i, 0, 1.5, wallTop); x.fillStyle = 'rgba(255,255,255,.022)'; x.fillRect(i + 1.5, 0, 1, wallTop) }
+  // a truss across the room, and the lights hung off it
+  const truss = Math.max(58, wallTop * 0.42)
+  x.fillStyle = BEAM; x.fillRect(0, truss, W, 5); x.fillRect(0, truss + 21, W, 3)
+  x.strokeStyle = BEAM; x.lineWidth = 1.6; x.beginPath()
+  for (let i = 0; i < W; i += 24) { x.moveTo(i, truss + 4); x.lineTo(i + 12, truss + 22); x.lineTo(i + 24, truss + 4) }
+  x.stroke()
+  for (let i = 45; i < W; i += 90) { x.fillStyle = BEAM; x.fillRect(i - 1, truss + 24, 2, 7); x.fillRect(i - 15, truss + 31, 30, 4); x.fillStyle = '#c9d3da'; x.fillRect(i - 13, truss + 35, 26, 1.6) }
   // the wall at the far side of the field, the one thing with colour
   x.fillStyle = court ? '#3a1a0c' : '#102a44'; x.fillRect(0, wallTop, W, 62)
   x.fillStyle = court ? '#ee7a2c' : '#2f7fb8'; x.fillRect(0, wallTop, W, 4); x.fillRect(0, H - 6, W, 3)
@@ -337,10 +332,33 @@ export const SCOUT = { color: '#20262c', pants: '#a89a80', kit: 'plain', dir: 'd
 export const FOLK_SKIN = ['#8d5a3b', '#c09060', '#5e3c22', '#a87548', '#7a5030']
 // The whole room, still, for a drill that doesn't travel: hz the far edge of the floor, gy the floor under him
 export function paintRoom(x, view, hz, gy, court) {
-  // (a drill on a court is in the arena: Crash the Glass's room and floor)
-  if (court) { arenaRoom(x, view, { wallY: hz }, view.colors, 'board'); return }
   paintVenue(x, view.w, hz, court)
   paintFloorTile(x, { w: view.w, h: view.h, hz, gy }, court, false)
+}
+// The light version: Reduce Motion, or a machine that asked for less. No particles, no shake, no flashes, no crowd getting up
+export const calm = () => typeof document !== 'undefined' && (reduceMotion() || document.documentElement.classList.contains('low-power'))
+// ── What every timed drill shares at the end ────────────────────────────────
+// The time goes up unofficial and white. A beat later it's official, in the result's colour, with what it was made of.
+export const OFFICIAL_MS = 620
+// the strip under the slab: over: ms since the drill ended. right: what the number was made of
+export function officialStrip(ctx, view, over, ok, right = null) {
+  const y = 96, ph = 22, official = over >= OFFICIAL_MS
+  ctx.fillStyle = 'rgba(5,8,11,.88)'; ctx.fillRect(0, y, view.w, ph)
+  text(ctx, official ? 'OFFICIAL' : 'UNOFFICIAL', 12, y + ph / 2, { font: LABEL, size: 16, track: 1.2, align: 'left', color: official ? (ok ? GOOD : BAD) : 'rgba(255,255,255,.62)' })
+  if (official && right) text(ctx, right, view.w - 12, y + ph / 2, { font: LABEL, size: 16, track: 0.6, align: 'right', color: '#fff' })
+}
+// the clock settling as it goes official: returns the scale
+export const officialPunch = over => 1 + 0.16 * (1 - easeOut(clamp((over - OFFICIAL_MS) / 150, 0, 1))) * (over >= OFFICIAL_MS ? 1 : 0)
+// A scout's stopwatch, or his clipboard, in his hand. x, y: the hand. k: his size
+export function stopwatch(ctx, x, y, k) {
+  ctx.fillStyle = '#d7dde2'; ctx.strokeStyle = INK; ctx.lineWidth = 0.7 * k
+  circle(ctx, x, y, 2.7 * k); ctx.fill(); ctx.stroke()
+  ctx.fillStyle = '#10151a'; ctx.fillRect(x - 0.5 * k, y - 4.1 * k, k, 1.3 * k)
+}
+export function clipboard(ctx, x, y, k) {
+  ctx.fillStyle = '#6a4a2c'; ctx.strokeStyle = INK; ctx.lineWidth = 0.7 * k
+  ctx.fillRect(x - 3.6 * k, y - 4.6 * k, 7.2 * k, 9.2 * k); ctx.strokeRect(x - 3.6 * k, y - 4.6 * k, 7.2 * k, 9.2 * k)
+  ctx.fillStyle = '#eef1f4'; ctx.fillRect(x - 2.8 * k, y - 3.4 * k, 5.6 * k, 7.2 * k)
 }
 function paintFloorTile(x, cam, court, lanes = true) {
   const { w, h, hz, gy } = cam
@@ -579,6 +597,69 @@ function drawStarter(ctx, g, view) {
   }
 }
 
+// ── The men with the watches ────────────────────────────────────────────────
+// One each side of the finish with his arm up, thumb on the button, and three more down by the end wall who
+// read their watches when it's over. Painted once per look and stamped, like the starter.
+function scoutTile(view, skin, up) {
+  return tile(view, `dash-scout-${skin}-${up ? 1 : 0}`, STARTER_W, STARTER_H, x => {
+    standAt(x, STARTER_W / 2, STARTER_FOOT, { ...STARTER, skin: FOLK_SKIN[skin], color: skin % 2 ? '#20262c' : '#2a3540', pose: up ? 'reach-r' : undefined })
+    if (up) stopwatch(x, STARTER_W / 2 + 22.5, STARTER_FOOT - 80, 1.5)
+  }, true)
+}
+function scoutAt(ctx, view, X, Z, skin, up) {
+  const d = Z - C.z
+  if (d < NEAR_D + 0.6) return
+  const s = (C.F / d) * 2 / STARTER_TALL, sx = X_(X, d), fy = Y_(0, d)
+  if (sx > view.w + 60 * s || sx < -60 * s) return
+  const img = scoutTile(view, skin, up)
+  if (!img) return
+  ctx.fillStyle = 'rgba(0,18,8,.26)'; ctx.beginPath(); ctx.ellipse(sx, fy, 17 * s, 4 * s, 0, 0, Math.PI * 2); ctx.fill()
+  ctx.drawImage(img, sx - STARTER_W / 2 * s, fy - STARTER_FOOT * s, STARTER_W * s, STARTER_H * s)
+}
+function drawScouts(ctx, g, view, hall) {
+  const crossedAt = g.crossed
+  // at the line: thumb on it until he's through
+  const running = crossedAt == null || g.t < crossedAt + 240
+  scoutAt(ctx, view, -LANE - 2.3, g.dist + 0.6, 1, running)
+  scoutAt(ctx, view, LANE + 2.3, g.dist + 0.6, 2, running)
+  // and down at the wall: a watch comes up when it goes official, and if it's a good one, a second
+  const over = crossedAt == null ? -1 : g.t - crossedAt, wall = hall.endZ - 1.2, good = g.done?.hit
+  scoutAt(ctx, view, -3.6, wall, 3, over >= OFFICIAL_MS && good)
+  scoutAt(ctx, view, -2.1, wall - 1, 4, false)
+  scoutAt(ctx, view, 3.1, wall, 0, over >= OFFICIAL_MS)
+}
+// The beam across the finish, until he breaks it
+function finishBeam(ctx, g, view) {
+  const d = g.dist - C.z
+  if (d < NEAR_D) return
+  const broken = g.y >= g.dist, age = g.crossed == null ? 99999 : g.t - g.crossed
+  if (broken && age > 110) return
+  const y = Y_(1.15, d) - 0.18 * C.F / d * 0.5, a = X_(-LANE - 0.5, d), b = X_(LANE + 0.5, d), th = Math.max(1, 0.03 * C.F / d)
+  ctx.fillStyle = broken ? '#ffffff' : BAD
+  ctx.fillRect(a, y - th / 2, b - a, broken ? th * 3 : th)
+}
+// What comes up off his cleats: the rubber crumbs in the turf, or the dust off the boards. It stays where he left it.
+const CRUMB = ['#10140f', '#1f6b3a', '#0b0e0a', '#2d8a4c', '#10140f'], BOARD_DUST = ['#efd9b8', '#e2c79e', '#f5ead6', '#e2c79e', '#efd9b8']
+function drawKicks(ctx, g, court) {
+  const list = court ? BOARD_DUST : CRUMB
+  for (let i = 0; i < g.kicks.length; i++) {
+    const K = g.kicks[i], age = g.t - K.t
+    if (age < 0 || age > 340) continue
+    const f = age / 340, side = i % 2 ? 0.14 : -0.14
+    for (let n = 0; n < 5; n++) {
+      const hash = (i * 7 + n * 13 + Math.floor(K.y * 3)) % 11 / 11
+      const Z = K.y - (0.28 + hash * 1.05) * f, X = side + (n - 2) * 0.09 * f, up = (0.28 + hash * 0.5) * 4 * f * (1 - f)
+      const d = Z - C.z
+      if (d < NEAR_D) continue
+      const sz = Math.max(1, (court ? 0.075 : 0.058) * C.F / d)
+      ctx.fillStyle = list[n]
+      if (court) ctx.globalAlpha = 0.5 * (1 - f)
+      ctx.fillRect(X_(X, d) - sz / 2, Y_(up, d) - sz / 2, sz, sz)
+    }
+  }
+  if (court) ctx.globalAlpha = 1
+}
+
 // ── The sprinter, from behind ───────────────────────────────────────────────
 // A real figure in three dimensions: joints worked out in his own frame (x across him, y up, z the way he's
 // going, in units of a hundred to his height), put through the same lens as the floor, then drawn back to front.
@@ -777,6 +858,15 @@ function drawRunner(ctx, g, view, c, court) {
   if (firstAt == null) rest = 1
   const breath = rest * Math.sin(g.t / 300)
   runPose(g, rise, rest, breath, RUN)
+  // it's over and he's stopped: hands on his hips, chest going
+  if (g.crossed != null && rest > 0) {
+    const shy = RUN[SH_R * 3 + 1], hipY = RUN[HIP_R * 3 + 1], heave = Math.sin(g.t / 210) * 1.1 * rest
+    for (const i of [SH_L, SH_R, NECK, HEAD]) RUN[i * 3 + 1] += heave
+    for (const [el, ha, sd] of [[EL_L, HA_L, -1], [EL_R, HA_R, 1]]) {
+      RUN[el * 3] = lerp(RUN[el * 3], sd * 21, rest); RUN[el * 3 + 1] = lerp(RUN[el * 3 + 1], shy - 15, rest); RUN[el * 3 + 2] = lerp(RUN[el * 3 + 2], -2, rest)
+      RUN[ha * 3] = lerp(RUN[ha * 3], sd * 9.5, rest); RUN[ha * 3 + 1] = lerp(RUN[ha * 3 + 1], hipY + 7, rest); RUN[ha * 3 + 2] = lerp(RUN[ha * 3 + 2], -3, rest)
+    }
+  }
   // a false start: up and forward off the line, and back down into it
   let mix = up, off = lerp(-0.56, 0, up), yaw = lerp(YAW_SET, YAW_RUN, up)
   const fsAge = g.t - g.fsAt
@@ -831,6 +921,29 @@ export function draw(ctx, g, view) {
   // the camera's on a cart: back a little for the stance, in as he gets going. He pulls away from it at speed, and it catches him as he slows
   C.camD = CAM_D * (1 + 0.01 * g.speed + 0.12 * (1 - smooth(prog(g.y, 0, 5))))
   C.z = g.y - C.camD
+  // ── what happens once, as it happens. The picture's business: none of this touches the rules ──
+  g.dirt ??= particles(28, g.gunT)
+  g.nudge ??= nudge()
+  if (g.goAt != null && !g.gunFelt) { g.gunFelt = true; if (g.S.gun === 'gun') g.nudge.kick(g.t, 2.2, 0, 1, 150) }
+  if (g.firstPress != null && !g.blockFelt) {
+    // out of the stance: his back foot throws the turf
+    g.blockFelt = true
+    const d = C.camD - 0.45, q = C.F / d / 60
+    g.dirt.burst(court ? 'dust' : 'turf', X_(0.14, d), Y_(0, d), g.t, { n: court ? 7 : 12, s: q, ang: Math.PI / 2 + 0.2, spread: 1.15, speed: court ? 1.4 : 1, colors: court ? BOARD_DUST : CRUMB })
+    g.nudge.kick(g.t, 1.6, 0, -1, 130)
+  }
+  if (g.goAt != null && !g.done) g.topMph = Math.max(g.topMph ?? 0, g.speed * MPH)
+  if (g.done && g.crossed != null && !g.settled) {
+    // the result lands a beat after the line: the watches first, then the number, then what it means
+    g.settled = true
+    if (g.stamp) g.stamp.at += OFFICIAL_MS
+    g.outro = (g.outro ?? 1700) + OFFICIAL_MS
+  }
+  if (g.crossed != null && !g.official && g.t - g.crossed >= OFFICIAL_MS) { g.official = true; g.fx.push('stamp') }
+  // the cart's on a rough floor, and it's moving fast: only at speed
+  const quiet = calm()
+  const rock = quiet ? 0 : Math.sin(g.cycle * Math.PI * 4) * clamp(g.speed / g.cap, 0, 1) * 0.9
+  ctx.save(); ctx.translate(0, rock)
   // ── the room and the floor, baked; the seams and the end wall going by ──
   const base = tile(view, `dash-hall-${g.game}-${h}`, w, h, x => paintHall(x, view, hall, court))
   if (base) ctx.drawImage(base, 0, 0, w, h)
@@ -850,10 +963,15 @@ export function draw(ctx, g, view) {
   // ── gates, and whoever's on the track ──
   const gates = court ? GATES_COURT : GATES_TURF
   drawStarter(ctx, g, view)
+  drawScouts(ctx, g, view, hall)
   for (let i = 0; i < gates.length; i++) if (gates[i] > g.y + 0.3) { gatePost(ctx, g, -LANE - 0.5, gates[i], gates[i] === g.dist); gatePost(ctx, g, LANE + 0.5, gates[i], gates[i] === g.dist) }
+  if (!(quiet && g.y >= g.dist)) finishBeam(ctx, g, view)
   const c = court ? GEAR_NBA : GEAR
+  if (!quiet) drawKicks(ctx, g, court)
   drawRunner(ctx, g, view, c, court)
   for (let i = 0; i < gates.length; i++) if (gates[i] <= g.y + 0.3) { gatePost(ctx, g, -LANE - 0.5, gates[i], gates[i] === g.dist); gatePost(ctx, g, LANE + 0.5, gates[i], gates[i] === g.dist) }
+  if (!quiet) g.dirt.draw(ctx, g.t)
+  ctx.restore()
 
   drawClock(ctx, g, view)
   // the live words up on the wall, clear of him. The result lands where it does in every game
@@ -885,12 +1003,31 @@ export function clockSlab(ctx, view, str, col, bar = 0) {
     else { ctx.fillText(ch, x + adv / 2, y + ph / 2 - 1); x += adv }
   }
 }
+const MPH = 2.045   // yards a second to miles an hour
 function drawClock(ctx, g, view) {
   const { w } = view
   const y = 44, ph = 52
-  clockSlab(ctx, view, Math.min(g.clock(), 99.99).toFixed(2), g.done ? (g.done.hit ? GOOD : BAD) : g.goAt != null ? '#fff' : 'rgba(255,255,255,.5)', g.y / g.dist)
+  const over = g.crossed == null ? -1 : g.t - g.crossed, official = over >= OFFICIAL_MS || (g.done && g.crossed == null)
+  const col = official ? (g.done.hit ? GOOD : BAD) : g.goAt != null ? '#fff' : 'rgba(255,255,255,.5)'
+  const q = over >= 0 ? officialPunch(over) : 1
+  if (q !== 1) { ctx.save(); ctx.translate(w / 2, y + ph / 2); ctx.scale(q, q); ctx.translate(-w / 2, -(y + ph / 2)) }
+  clockSlab(ctx, view, Math.min(g.clock(), 99.99).toFixed(2), col, g.y / g.dist)
+  if (q !== 1) ctx.restore()
   const dim = 'rgba(255,255,255,.72)'
-  if (g.split != null) text(ctx, `${g.game === 'sprint' ? '30 FT' : '10 YD'} ${g.split.toFixed(2)}`, 12, y + ph / 2 - 1, { font: LABEL, size: 17, align: 'left', color: dim })
+  // the split, as he breaks the beam
+  if (g.split != null) {
+    const fresh = g.t - g.splitAt < 520
+    text(ctx, `${g.game === 'sprint' ? '30 FT' : '10 YD'} ${g.split.toFixed(2)}`, 12, y + ph / 2 - 1, { font: LABEL, size: 17, align: 'left', color: fresh ? GOLD : dim })
+  }
   const left = g.game === 'sprint' ? Math.min(75, Math.floor(g.y * 3)) : Math.min(40, Math.floor(g.y))
-  text(ctx, `${left} ${g.game === 'sprint' ? 'FT' : 'YD'}`, w - 12, y + ph / 2 - 1, { font: LABEL, size: 17, align: 'right', color: dim })
+  // how far, and how fast. It goes gold when he's flat out: that's all he has
+  text(ctx, `${left} ${g.game === 'sprint' ? 'FT' : 'YD'}`, w - 12, y + ph / 2 - 11, { font: LABEL, size: 16, align: 'right', color: dim })
+  if (g.goAt != null) {
+    const flat = !g.done && g.speed >= g.cap * 0.965
+    text(ctx, `${(g.done ? g.topMph ?? 0 : g.speed * MPH).toFixed(1)} MPH`, w - 12, y + ph / 2 + 9, { font: LABEL, size: 16, align: 'right', color: flat ? GOLD : dim })
+  }
+  if (over >= 0) {
+    const react = g.firstPress != null ? Math.max(0, (g.firstPress - g.goAt) / 1000) : 0
+    officialStrip(ctx, view, over, g.done?.hit, `REACTION ${react.toFixed(2)}   TOP ${(g.topMph ?? 0).toFixed(1)} MPH`)
+  }
 }

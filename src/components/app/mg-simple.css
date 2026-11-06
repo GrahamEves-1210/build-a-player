@@ -1,0 +1,285 @@
+/* Simple mini games (MiniGameSimple.jsx). Everything is scoped to .mg--simple so the Advanced
+   card (MiniGame.jsx, same .mg card rules in app-game.css) is untouched.
+   One look for every kind: a flat translucent card, the sport's accent, green for the zone to
+   hit and red for a miss, Anton for the word a press gets, Bebas for the one-line instruction.
+   No gradients, no glows. Only transform and opacity move. */
+.mg.mg--simple, .mg.mg--simple.is-hit, .mg.mg--simple.is-miss { background: var(--ag-panel); }
+.mg.mg--simple { border: 1.5px solid var(--ag-line-hi); gap: 8px; }
+.mg.mg--simple.is-hit { border-color: #4ade80; } .mg.mg--simple.is-miss { border-color: #f87171; }
+.mg--simple .mg-head .ag-eyebrow { color: var(--ag-accent); }
+.mg--simple .mg-body { position: relative; }
+
+/* the play area: the main visual in a box, the word over it, the instruction and the dots under */
+.mg--simple .mg-play { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; min-height: 216px; padding-top: 30px; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+.mg--simple .mg-play--targets, .mg--simple .mg-play--calls, .mg--simple .mg-play--lanes, .mg--simple .mg-play--dash, .mg--simple .mg-play--cone, .mg--simple .mg-play--gauntlet { cursor: default; }
+.mg--simple .mg-play--power { touch-action: none; -webkit-touch-callout: none; }
+.mg--simple .mg-box { position: relative; width: 100%; display: flex; justify-content: center; }
+.mg--simple .mg-fx { position: absolute; left: 50%; bottom: calc(100% + 5px); z-index: 4; transform: translate(-50%, 0); opacity: 0; pointer-events: none; white-space: nowrap; font-family: var(--ag-display); font-size: 26px; line-height: 1; letter-spacing: .5px; color: #fff; }
+.mg--simple .mg-fx[data-tone="hit"] { color: #4ade80; } .mg--simple .mg-fx[data-tone="miss"] { color: #f87171; }
+.mg--simple .mg-fl { position: absolute; inset: 0; z-index: 2; border-radius: inherit; background: #4ade80; opacity: 0; pointer-events: none; }
+.mg--simple .mg-fl[data-tone="miss"] { background: #f87171; }
+.mg--simple .mg-hint { font-family: var(--ag-font); font-size: 15px; letter-spacing: 1.5px; line-height: 1.1; color: var(--ag-text-2); text-align: center; }
+.mg--simple .mg-hint b { font-weight: inherit; color: var(--ag-text); }
+.mg--simple .mg-on-desk, .mg--simple .mg-kbd { display: none; }
+@media (hover: hover) and (pointer: fine) {
+  .mg--simple .mg-on-touch { display: none; } .mg--simple .mg-on-desk { display: inline; }
+  .mg--simple .mg-kbd { display: block; position: absolute; top: 6px; right: 7px; z-index: 3; padding: 0 5px; border: 1px solid var(--ag-line-hi); border-radius: 4px; font-family: var(--ag-font); font-size: 12px; line-height: 16px; letter-spacing: .5px; color: var(--ag-muted); pointer-events: none; }
+}
+.mg--simple .mg-dots { display: flex; gap: 6px; min-height: 10px; }
+.mg--simple .mg-dots i { width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,.14); }
+.mg--simple .mg-dots i.is-hit { background: #4ade80; } .mg--simple .mg-dots i.is-miss { background: #f87171; }
+
+/* buttons: at least 52px tall, the press answered by their own flash */
+.mg--simple .mg-target, .mg--simple .mg-call, .mg--simple .mg-side, .mg--simple .mg-foot, .mg--simple .mg-dir { position: relative; overflow: hidden; touch-action: manipulation; -webkit-tap-highlight-color: transparent; cursor: pointer; border: 1.5px solid var(--ag-line-hi); background: rgba(255,255,255,.05); color: var(--ag-text); }
+.mg--simple .mg-side:active, .mg--simple .mg-foot:active, .mg--simple .mg-dir:active, .mg--simple .mg-call:active { background: rgba(255,255,255,.12); }
+
+/* the bar (Timing, Taps, Route): a zone with a brighter PERFECT third, a marker */
+.mg--simple .mg-bar { position: relative; width: 100%; height: 56px; border-radius: 10px; background: rgba(0,0,0,.45); border: 1px solid var(--ag-line-hi); overflow: hidden; isolation: isolate; contain: paint; }
+.mg--simple .mg-bar .mg-zone { position: absolute; top: 0; bottom: 0; background: rgba(74,222,128,.2); border-inline: 2px solid #4ade80; }
+.mg--simple .mg-zone-mid { position: absolute; top: 0; bottom: 0; left: 35%; width: 30%; background: rgba(74,222,128,.3); }
+/* (inset by the marker's half-width: at either end of the sweep it stays fully on the bar instead of being half clipped) */
+.mg--simple .mg-track { position: absolute; top: 0; bottom: 0; left: 2px; right: 2px; z-index: 3; pointer-events: none; backface-visibility: hidden; }
+.mg--simple .mg-marker { position: absolute; left: 0; top: 5px; bottom: 5px; width: 4px; margin-left: -2px; border-radius: 2px; background: #fff; }
+.mg--simple .mg-bar-label { position: absolute; left: 10px; top: 50%; z-index: 1; transform: translateY(-50%); font-style: normal; font-family: var(--ag-font); font-size: 13px; letter-spacing: 1.5px; color: var(--ag-muted); }
+
+/* the meter (Power, Velo) */
+.mg--simple .mg-meter { position: relative; width: 76px; height: 176px; border-radius: 12px; background: rgba(0,0,0,.45); border: 1px solid var(--ag-line-hi); overflow: hidden; }
+.mg--simple .mg-meter--wide { width: 92px; }
+.mg--simple .mg-meter-zone { position: absolute; top: 0; left: 0; right: 0; z-index: 1; background: rgba(74,222,128,.22); border-bottom: 2px solid #4ade80; }
+.mg--simple .mg-meter-spot { position: absolute; left: 0; right: 0; z-index: 1; background: rgba(74,222,128,.3); border-block: 2px solid #4ade80; }
+.mg--simple .mg-meter-fill { position: absolute; left: 0; right: 0; bottom: 0; height: 100%; transform-origin: bottom; transform: scaleY(0); background: var(--ag-accent); opacity: .85; }
+
+/* Reaction: three targets */
+.mg--simple .mg-targets { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; width: 100%; }
+.mg--simple .mg-target { height: 104px; border-radius: 12px; display: grid; place-items: center; background: rgba(255,255,255,.04); }
+.mg--simple .mg-target span { width: 34px; height: 34px; border-radius: 50%; background: rgba(255,255,255,.14); }
+.mg--simple .mg-target.is-open { border-color: #4ade80; background: rgba(74,222,128,.18); } .mg--simple .mg-target.is-open span { background: #4ade80; }
+.mg--simple .mg-target.is-decoy { border-color: #f87171; background: rgba(248,113,113,.18); }
+.mg--simple .mg-target.is-decoy span { position: relative; background: #f87171; }
+.mg--simple .mg-target.is-decoy span::before, .mg--simple .mg-target.is-decoy span::after { content: ''; position: absolute; left: 50%; top: 50%; width: 18px; height: 3px; margin: -1.5px 0 0 -9px; border-radius: 2px; background: #3b0a0a; transform: rotate(45deg); }
+.mg--simple .mg-target.is-decoy span::after { transform: rotate(-45deg); }
+
+/* Audible, Sequence, Route and Choice: a look, then calls */
+.mg--simple .mg-clock { width: 100%; height: 6px; border-radius: 3px; background: rgba(255,255,255,.1); overflow: hidden; }
+.mg--simple .mg-clock span { display: block; width: 100%; height: 100%; transform-origin: left; background: var(--ag-accent); }
+@keyframes mg-drain { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+html.bap-reduce-motion .mg--simple .mg-clock span { animation-duration: var(--mg-ms) !important; }
+.mg--simple .mg-play--calls { padding-top: 26px; min-height: 0; }
+.mg--simple .mg-look { font-family: var(--ag-font); font-size: 18px; letter-spacing: 1.2px; line-height: 1.15; text-align: center; color: var(--ag-text); }
+.mg--simple .mg-calls { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+.mg--simple .mg-call { min-height: 52px; padding: 8px 40px 8px 14px; border-radius: 10px; font-family: var(--ag-body); font-size: 15px; font-weight: 700; text-align: left; display: flex; align-items: center; }
+.mg--simple .mg-call-txt { position: relative; z-index: 3; display: flex; flex-direction: column; gap: 1px; }
+.mg--simple .mg-call small { font-weight: 500; font-size: 12px; color: var(--ag-muted); }
+.mg--simple .mg-call .mg-kbd { top: 50%; right: 12px; transform: translateY(-50%); }
+
+/* Lanes: where the pressure comes from, two sides */
+.mg--simple .mg-rush { position: relative; height: 52px; width: 100%; display: grid; place-items: center; overflow: hidden; border-radius: 10px; background: rgba(0,0,0,.35); border: 1px solid var(--ag-line); font-family: var(--ag-font); font-size: 20px; letter-spacing: 2px; color: var(--ag-muted); }
+.mg--simple .mg-rush i { position: relative; z-index: 1; font-style: normal; }
+.mg--simple .mg-rush.is-L, .mg--simple .mg-rush.is-R { color: #fca5a5; }
+.mg--simple .mg-rush.is-L::before, .mg--simple .mg-rush.is-R::before { content: ''; position: absolute; top: 0; bottom: 0; width: 50%; background: rgba(248,113,113,.26); }
+.mg--simple .mg-rush.is-L::before { left: 0; border-left: 3px solid #f87171; } .mg--simple .mg-rush.is-R::before { right: 0; border-right: 3px solid #f87171; }
+.mg--simple .mg-sides { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; }
+.mg--simple .mg-side { height: 64px; border-radius: 12px; font-family: var(--ag-font); font-size: 19px; letter-spacing: 2px; }
+.mg--simple .mg-side svg, .mg--simple .mg-rush svg { vertical-align: -2px; }
+
+/* the 40 / the sprint */
+.mg--simple .mg-call-out { font-family: var(--ag-display); font-size: 34px; line-height: 1; color: var(--ag-text-2); }
+.mg--simple .mg-call-out.is-go { color: #4ade80; }
+.mg--simple .mg-lane { position: relative; width: 100%; height: 40px; border-radius: 10px; overflow: hidden; background: repeating-linear-gradient(90deg, rgba(34,197,94,.15) 0 10%, rgba(34,197,94,.07) 10% 20%); border: 1px solid var(--ag-line-hi); }
+.mg--simple .mg-runner-track { position: absolute; inset: 0; pointer-events: none; }
+.mg--simple .mg-runner { position: absolute; left: 4px; top: 50%; width: 22px; height: 22px; margin-top: -11px; border-radius: 50%; background: var(--ag-accent); }
+.mg--simple .mg-goal { position: absolute; right: 0; top: 0; bottom: 0; width: 4px; background: #fff; }
+.mg--simple .mg-yds { font-variant-numeric: tabular-nums; }
+.mg--simple .mg-feet { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; }
+.mg--simple .mg-foot { height: 84px; border-radius: 14px; font-family: var(--ag-font); font-size: 22px; letter-spacing: 2px; transition: transform .06s; }
+.mg--simple .mg-foot:active { transform: scale(.97); }
+
+/* the field (Aim, Routes) */
+.mg--simple .mg-field { position: relative; width: 100%; aspect-ratio: 5 / 3; border-radius: 12px; overflow: hidden; background: rgba(34,197,94,.1); border: 1px solid var(--ag-line-hi); }
+.mg--simple .mg-aimat { position: absolute; aspect-ratio: 1; transform: translate(-50%, -50%); pointer-events: none; }
+.mg--simple .mg-aimat svg { position: absolute; left: -10%; top: -10%; width: 120%; height: 120%; overflow: visible; }
+.mg--simple .mg-aimat .mg-zone { fill: rgba(74,222,128,.18); stroke: rgba(74,222,128,.7); stroke-width: 1.5; stroke-dasharray: 4 4; }
+.mg--simple .mg-line-x, .mg--simple .mg-line-y { position: absolute; inset: 0; pointer-events: none; }
+.mg--simple .mg-line-x::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 2px; background: #fff; }
+.mg--simple .mg-line-y::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: #fff; }
+.mg--simple .mg-line-x:not(.is-live)::before, .mg--simple .mg-line-y:not(.is-live)::before { background: var(--ag-accent); }
+.mg--simple .mg-ball { position: absolute; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; background: #f87171; border: 2px solid #fff; }
+.mg--simple .mg-ball.is-hit { background: #4ade80; }
+.mg--simple .mg-field--routes { container-type: inline-size; background: repeating-linear-gradient(180deg, rgba(34,197,94,.13) 0 10%, rgba(34,197,94,.07) 10% 20%), rgba(0,0,0,.3); }
+.mg--simple .mg-routes-svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.mg--simple .mg-los { stroke: rgba(255,255,255,.35); stroke-width: .4; stroke-dasharray: 1.4 1; }
+.mg--simple .mg-route { fill: none; stroke: rgba(255,255,255,.35); stroke-width: .7; stroke-dasharray: 1.6 1.2; stroke-linecap: round; stroke-linejoin: round; }
+.mg--simple .mg-route-open { fill: none; stroke: #4ade80; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.mg--simple .mg-qb, .mg--simple .mg-wr, .mg--simple .mg-fb { position: absolute; left: 0; top: 0; }
+.mg--simple .mg-qb { width: 30px; height: 30px; margin: -15px 0 0 -15px; display: grid; place-items: center; border-radius: 50%; background: var(--ag-accent); color: #06110d; font-family: var(--ag-font); font-size: 12px; letter-spacing: .5px; }
+.mg--simple .mg-wr { width: 22px; height: 22px; margin: -11px 0 0 -11px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 3px rgba(255,255,255,.25); }
+.mg--simple .mg-fb { width: 12px; height: 8px; margin: -4px 0 0 -6px; border-radius: 50%; background: #a0522d; border: 1px solid #f4efe6; }
+.mg--simple .mg-fb.is-hit { background: #4ade80; } .mg--simple .mg-fb.is-miss { background: #f87171; }
+
+/* 3-cone / lane agility */
+.mg--simple .mg-cue { display: grid; place-items: center; min-height: 52px; color: var(--ag-muted); }
+.mg--simple .mg-cue.is-on { color: var(--ag-accent); }
+.mg--simple .mg-cue svg { display: block; }
+.mg--simple .mg-cue-wait { width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,.3); }
+.mg--simple .mg-pad { display: grid; grid-template-columns: repeat(3, 76px); grid-template-rows: repeat(3, 60px); gap: 8px; }
+.mg--simple .mg-dir { border-radius: 12px; display: grid; place-items: center; }
+.mg--simple .mg-dir svg { position: relative; z-index: 3; }
+.mg--simple .mg-dir--up { grid-area: 1 / 2; } .mg--simple .mg-dir--left { grid-area: 2 / 1; } .mg--simple .mg-dir--right { grid-area: 2 / 3; } .mg--simple .mg-dir--down { grid-area: 3 / 2; }
+
+/* Gauntlet */
+.mg--simple .mg-lanes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; }
+.mg--simple .mg-glane { position: relative; height: 190px; border-radius: 12px; overflow: hidden; background: rgba(0,0,0,.4); border: 1px solid var(--ag-line-hi); }
+.mg--simple .mg-gzone { position: absolute; left: 0; right: 0; bottom: 0; background: rgba(74,222,128,.22); border-top: 2px solid #4ade80; }
+.mg--simple .mg-gtrack { position: absolute; inset: 0; z-index: 3; pointer-events: none; visibility: hidden; }
+.mg--simple .mg-gball { position: absolute; left: 50%; top: -9px; width: 26px; height: 18px; margin-left: -13px; border-radius: 50%; background: #b45309; border: 2px solid #fde68a; }
+
+/* Bench */
+.mg--simple .mg-play--bench { padding-top: 6px; }
+.mg--simple .mg-secs { font-family: var(--ag-display); font-size: 30px; line-height: 1; color: var(--ag-text); font-variant-numeric: tabular-nums; margin-bottom: 26px; }
+.mg--simple .mg-rack { position: relative; width: 120px; height: 170px; border-radius: 12px; background: rgba(0,0,0,.4); border: 1px solid var(--ag-line-hi); overflow: hidden; }
+.mg--simple .mg-lockout { position: absolute; left: 0; right: 0; top: 0; height: 14px; background: rgba(74,222,128,.4); border-bottom: 2px solid #4ade80; }
+.mg--simple .mg-barbell-track { position: absolute; left: 0; right: 0; bottom: 6px; top: 6px; pointer-events: none; }
+.mg--simple .mg-barbell { position: absolute; left: 8px; right: 8px; bottom: 0; height: 8px; border-radius: 4px; background: #e5e7eb; box-shadow: -6px 0 0 4px #6b7280, 6px 0 0 4px #6b7280; }
+.mg--simple .mg-reps { font-family: var(--ag-display); font-size: 20px; letter-spacing: .5px; color: var(--ag-text); }
+
+/* the result lands over the frozen play a beat after the last press */
+.mg--simple .mg-result { position: absolute; inset: 0; z-index: 6; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 12px; border-radius: 10px; background: rgba(8,12,11,.88); animation: mg-res-in .18s ease-out .32s both; }
+.mg--simple .mg-result b { font-family: var(--ag-display); font-size: 46px; font-weight: 400; line-height: 1; }
+.mg--simple .mg-result small { font-family: var(--ag-body); font-size: 14px; line-height: 1.35; color: var(--ag-text-2); text-align: center; max-width: 32ch; }
+@keyframes mg-res-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+html.bap-reduce-motion .mg--simple .mg-result { animation-name: mg-res-fade; }
+@keyframes mg-res-fade { from { opacity: 0; } to { opacity: 1; } }
+
+/* sneak: the pile's momentum, under the ball */
+.mg--simple .mg-pile .mg-pile-fill { position: absolute; inset: 0; background: rgba(74,222,128,.28); transform-origin: left center; transform: scaleX(0); pointer-events: none; }
+.mg--simple .mg-push { width: 100%; min-height: 64px; font-size: 26px; }
+
+/* two-minute drill: the board, the field, the calls */
+.mg--simple .mg-drive-board { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; width: 100%; font-family: var(--ag-font); font-size: 16px; letter-spacing: 1.4px; color: var(--ag-text-2); }
+.mg--simple .mg-drive-board b { font-family: var(--ag-display); font-weight: 400; font-size: 34px; line-height: 1; color: #fff; font-variant-numeric: tabular-nums; }
+.mg--simple .mg-drive-board b.is-late { color: #f87171; }
+.mg--simple .mg-drive-field .mg-runner-track { transition: transform .45s ease-out; }
+.mg--simple .mg-drive-chains { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: #facc15; transition: left .45s ease-out; }
+.mg--simple .mg-drive-throw { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+.mg--simple .mg-drive-fx { min-height: 34px; }
+.mg--simple .mg-call--spike { min-height: 44px; opacity: .85; }
+.mg--simple .mg-call:disabled { opacity: .45; }
+
+/* audible: the look is the whole game */
+.mg--simple .mg-box--look { flex-direction: column; gap: 6px; padding: 14px 10px; }
+.mg--simple .mg-look-eyebrow { font-family: var(--ag-font); font-size: 13px; letter-spacing: 2px; color: var(--ag-muted); }
+.mg--simple .mg-look--big { font-family: var(--ag-display); font-size: 30px; line-height: 1.05; letter-spacing: .5px; color: #fff; }
+
+/* every moving marker glides on the compositor (a Web Animation on its transform): its own layer */
+.mg--simple .mg-track, .mg--simple .mg-line-x, .mg--simple .mg-line-y, .mg--simple .mg-gtrack, .mg--simple .mg-wr, .mg--simple .mg-vm-track, .mg--simple .mg-vm-lit, .mg--simple .mg-vm-lit > .mg-vm-blocks, .mg--simple .mg-stuff-track { will-change: transform; }
+
+/* the result: a short reaction line under the verdict */
+.mg--simple .mg-react { font-family: var(--ag-font); font-size: 18px; letter-spacing: 1.2px; line-height: 1.1; color: var(--ag-text); text-align: center; }
+/* a measured combine drill: the official number, big, on a scoreboard plate */
+.mg--simple .mg-result--stat { gap: 4px; animation-delay: .1s; background: rgba(8,12,11,.96); }
+.mg--simple .mg-result--stat small { margin-top: 2px; }
+.mg--simple .mg-official { font-family: var(--ag-font); font-size: 14px; letter-spacing: 2.2px; color: var(--ag-muted); text-align: center; }
+.mg--simple .mg-stat { display: flex; align-items: baseline; gap: 8px; padding: 6px 18px 4px; border-radius: 8px; background: #05080a; border: 1.5px solid var(--ag-line-hi); }
+.mg.mg--simple .mg-result .mg-stat b { font-family: var(--ag-display); font-weight: 400; font-size: 64px; line-height: 1; color: #fff; font-variant-numeric: tabular-nums; letter-spacing: .5px; }
+.mg--simple .mg-stat i { font-style: normal; font-family: var(--ag-font); font-size: 20px; letter-spacing: 1.5px; color: var(--ag-text-2); }
+.mg--simple .mg-verdict { font-family: var(--ag-display); font-size: 24px; line-height: 1; margin-top: 4px; }
+.mg--simple .mg-verdict.is-hit { color: #4ade80; } .mg--simple .mg-verdict.is-miss { color: #f87171; }
+
+/* velocity / vertical: the Advanced game's peak meter and a radar */
+.mg--simple .mg-play--velo { padding-top: 34px; }
+.mg--simple .mg-velo { align-items: stretch; justify-content: center; gap: 22px; }
+.mg--simple .mg-vm { position: relative; width: 44px; padding-top: 30px; }
+.mg--simple .mg-vm-cap { position: absolute; left: -6px; right: -6px; top: 0; height: 22px; display: grid; place-items: center; border-radius: 3px; background: #f5c542; color: #1a1405; font-family: var(--ag-display); font-size: 15px; letter-spacing: .5px; }
+.mg--simple .mg-vm-stack { position: relative; height: 196px; }
+.mg--simple .mg-vm-clip { position: absolute; inset: 0; overflow: hidden; border-radius: 4px; background: #07090c; outline: 1.5px solid rgba(255,255,255,.24); outline-offset: 3px; }
+.mg--simple .mg-vm-blocks { position: absolute; inset: 0; display: flex; flex-direction: column-reverse; gap: 2.5px; }
+.mg--simple .mg-vm-blocks i { flex: 1; background: rgba(255,255,255,.1); }
+.mg--simple .mg-vm-blocks i.is-band { background: rgba(53,224,122,.26); }
+.mg--simple .mg-vm-lit { position: absolute; inset: 0; overflow: hidden; transform: translate3d(0,100%,0); }
+.mg--simple .mg-vm-lit > .mg-vm-blocks { transform: translate3d(0,-100%,0); }
+.mg--simple .mg-vm-track { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
+.mg--simple .mg-vm-needle { position: absolute; left: -8px; right: -8px; bottom: -4px; height: 8px; border-radius: 2px; background: #fff; border: 2px solid #07100b; }
+.mg--simple .mg-vm-mark { position: absolute; right: -14px; width: 8px; height: 4px; margin-bottom: -2px; border-radius: 1px; background: rgba(255,255,255,.55); z-index: 1; }
+.mg--simple .mg-vm-mark.is-early { right: auto; left: -14px; }
+.mg--simple .mg-vm-mark.is-in { background: #35e07a; }
+.mg--simple .mg-radar { align-self: center; display: grid; justify-items: center; gap: 2px; min-width: 150px; padding: 12px 16px; border-radius: 10px; background: #05080a; border: 1.5px solid var(--ag-line-hi); }
+.mg--simple .mg-radar-lbl, .mg--simple .mg-radar-unit { font-family: var(--ag-font); font-size: 14px; letter-spacing: 2.2px; color: var(--ag-muted); }
+.mg--simple .mg-radar b { font-family: var(--ag-display); font-weight: 400; font-size: 58px; line-height: 1; color: #fff; font-variant-numeric: tabular-nums; }
+.mg--simple .mg-radar b.is-idle { color: rgba(255,255,255,.35); } .mg--simple .mg-radar b.is-in { color: #4ade80; }
+.mg--simple .mg-radar-reps { display: flex; gap: 12px; margin-top: 6px; }
+.mg--simple .mg-radar-reps em { font-style: normal; font-family: var(--ag-display); font-size: 20px; line-height: 1; min-width: 24px; text-align: center; color: rgba(255,255,255,.3); font-variant-numeric: tabular-nums; }
+.mg--simple .mg-radar-reps em.is-in { color: #fff; } .mg--simple .mg-radar-reps em.is-out { color: rgba(255,255,255,.55); } .mg--simple .mg-radar-reps em.is-best { color: #f5c542; }
+
+/* Fourth & Goal */
+.mg--simple .mg-goal-head { flex-direction: column; align-items: center; gap: 4px; }
+.mg--simple .mg-clock.is-spent { opacity: .35; }
+.mg--simple .mg-men .mg-target { height: 92px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+.mg--simple .mg-man b { position: relative; z-index: 3; font-family: var(--ag-display); font-weight: 400; font-size: 30px; line-height: 1; }
+.mg--simple .mg-man small { position: relative; z-index: 3; font-family: var(--ag-font); font-size: 14px; letter-spacing: 1.4px; color: var(--ag-text-2); }
+.mg--simple .mg-man em { position: relative; z-index: 3; font-style: normal; font-family: var(--ag-font); font-size: 13px; letter-spacing: 1.4px; color: var(--ag-muted); }
+.mg--simple .mg-man.is-open em { color: #4ade80; }
+
+/* Beat the Press: the corner's hands, the FREE meter */
+.mg--simple .mg-jam { display: grid; grid-template-columns: 1fr auto 1fr; align-items: stretch; width: 100%; height: 58px; border-radius: 10px; overflow: hidden; background: rgba(0,0,0,.35); border: 1px solid var(--ag-line); }
+.mg--simple .mg-jam b { display: grid; place-items: center; padding: 0 14px; font-family: var(--ag-font); font-weight: 400; font-size: 20px; letter-spacing: 2px; color: var(--ag-text-2); }
+.mg--simple .mg-jam-hand { display: grid; place-items: center; font-family: var(--ag-font); font-size: 18px; letter-spacing: 2px; color: #fca5a5; }
+.mg--simple .mg-jam.is-L .mg-jam-hand:first-child, .mg--simple .mg-jam.is-R .mg-jam-hand:last-child { background: rgba(248,113,113,.26); }
+.mg--simple .mg-jam.is-L .mg-jam-hand:first-child { border-left: 3px solid #f87171; } .mg--simple .mg-jam.is-R .mg-jam-hand:last-child { border-right: 3px solid #f87171; }
+.mg--simple .mg-free { background: rgba(0,0,0,.4); }
+.mg--simple .mg-free-lbl { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-style: normal; font-family: var(--ag-font); font-size: 14px; letter-spacing: 2px; color: var(--ag-text-2); }
+
+/* Seal the Edge: the needle, the band, the push */
+.mg--simple .mg-play--seal { touch-action: none; -webkit-touch-callout: none; padding-top: 34px; }
+.mg--simple .mg-seal .mg-seal-band { z-index: 1; }
+.mg--simple .mg-seal-end { position: absolute; top: 50%; transform: translateY(-50%); z-index: 1; font-style: normal; font-family: var(--ag-font); font-size: 12px; letter-spacing: 1.4px; color: var(--ag-muted); }
+.mg--simple .mg-seal-end.is-l { left: 8px; } .mg--simple .mg-seal-end.is-r { right: 8px; }
+.mg--simple .mg-seal-surge { position: absolute; left: 50%; top: 4px; z-index: 2; transform: translateX(-50%); padding: 0 6px; border-radius: 3px; font-family: var(--ag-font); font-size: 13px; letter-spacing: 1.6px; color: #fff; background: #dc2626; opacity: 0; }
+.mg--simple .mg-seal-surge.is-on { opacity: 1; }
+.mg--simple .mg-seal-prog { position: relative; width: 100%; height: 22px; border-radius: 6px; overflow: hidden; background: rgba(0,0,0,.4); border: 1px solid var(--ag-line-hi); }
+.mg--simple .mg-seal-prog span { position: absolute; inset: 0; transform-origin: left center; transform: scaleX(0); background: rgba(74,222,128,.5); }
+.mg--simple .mg-seal-prog i { position: absolute; left: 8px; top: 50%; z-index: 1; transform: translateY(-50%); font-style: normal; font-family: var(--ag-font); font-size: 13px; letter-spacing: 1.8px; color: var(--ag-text); }
+.mg--simple .mg-push.is-held { background: rgba(255,255,255,.14); transform: scale(.98); }
+
+/* Pass Rush: the tackle's set */
+.mg--simple .mg-set .mg-look--big { color: var(--ag-text-2); }
+.mg--simple .mg-set.is-on .mg-look--big { color: #fff; }
+.mg--simple .mg-set-tell { font-family: var(--ag-body); font-size: 13px; color: var(--ag-muted); text-align: center; }
+.mg--simple .mg-set.is-on .mg-set-tell { color: var(--ag-text-2); }
+
+/* Stuff the Run: the line, the back, the gaps */
+.mg--simple .mg-stuff { position: relative; width: 100%; height: 140px; border-radius: 12px; overflow: hidden; background: rgba(34,197,94,.1); border: 1px solid var(--ag-line-hi); }
+.mg--simple .mg-stuff-los { position: absolute; left: 0; right: 0; top: 40%; height: 0; border-top: 2px dashed rgba(255,255,255,.3); }
+.mg--simple .mg-stuff-ol { position: absolute; top: 40%; width: 34px; height: 20px; margin: -10px 0 0 -17px; border-radius: 5px; background: #e5e7eb; }
+.mg--simple .mg-stuff-track { position: absolute; inset: 0; pointer-events: none; z-index: 2; transform: translate3d(50%,86%,0); }
+.mg--simple .mg-stuff-back { position: absolute; left: 0; top: 0; width: 22px; height: 22px; margin: -11px 0 0 -11px; border-radius: 50%; background: var(--ag-accent); border: 2px solid #fff; }
+.mg--simple .mg-gaps .mg-gap { height: 66px; }
+.mg--simple .mg-gap b { position: relative; z-index: 3; font-family: var(--ag-font); font-weight: 400; font-size: 19px; letter-spacing: 2px; }
+
+/* Basketball courts (Lockdown, Fast Break, Alley-Oop): flat lines, dots on compositor tracks */
+.mg--simple .mg-play--lock, .mg--simple .mg-play--break { cursor: default; }
+.mg--simple .mg-court { position: relative; width: 100%; height: 150px; border-radius: 12px; overflow: hidden; background: rgba(0,0,0,.35); border: 1px solid var(--ag-line-hi); contain: paint; }
+.mg--simple .mg-court-arc { position: absolute; left: 10%; right: 10%; height: 160%; border: 2px solid rgba(255,255,255,.13); border-radius: 50%; }
+.mg--simple .mg-court-paint { position: absolute; left: 35%; width: 30%; height: 34%; border: 2px solid rgba(255,255,255,.16); }
+.mg--simple .mg-court--lock .mg-court-arc { bottom: -100%; } .mg--simple .mg-court--lock .mg-court-paint { bottom: -2px; }
+.mg--simple .mg-court--break .mg-court-arc { top: -100%; } .mg--simple .mg-court--break .mg-court-paint { top: -2px; }
+.mg--simple .mg-court-rim { position: absolute; left: 50%; top: 9%; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; border: 2px solid #f97316; }
+.mg--simple .mg-court-tag { position: absolute; left: 10px; top: 8px; z-index: 1; font-style: normal; font-family: var(--ag-font); font-size: 13px; letter-spacing: 1.6px; color: var(--ag-muted); }
+.mg--simple .mg-pt { position: absolute; inset: 0; z-index: 2; pointer-events: none; will-change: transform; backface-visibility: hidden; }
+.mg--simple .mg-dot { position: absolute; left: 0; top: 0; width: 22px; height: 22px; margin: -11px 0 0 -11px; border-radius: 50%; background: #fff; }
+.mg--simple .mg-dot.is-me { background: var(--ag-accent); border: 2px solid #fff; }
+.mg--simple .mg-dot.is-mate { background: #e5e7eb; }
+.mg--simple .mg-dot.is-d { background: #f87171; border: 2px solid #fff; }
+.mg--simple .mg-dot.is-them::after { content: ''; position: absolute; right: -6px; bottom: -4px; width: 11px; height: 11px; border-radius: 50%; background: #f97316; border: 1.5px solid #1a0d05; }
+.mg--simple .mg-dot.is-ball { width: 13px; height: 13px; margin: -6.5px 0 0 -6.5px; background: #f97316; border: 1.5px solid #1a0d05; }
+.mg--simple .mg-gap.is-empty b { opacity: .4; }
+
+/* Alley-Oop: side on, the wing at the left, the rim at the right */
+.mg--simple .mg-oop { height: 176px; }
+.mg--simple .mg-oop-floor { position: absolute; left: 0; right: 0; top: 88%; border-top: 2px solid rgba(255,255,255,.16); }
+.mg--simple .mg-oop-board { position: absolute; left: 80%; top: 16%; width: 4px; height: 34%; border-radius: 1px; background: rgba(255,255,255,.55); }
+.mg--simple .mg-oop-rim { position: absolute; left: 67%; top: 46%; width: 13%; height: 3px; border-radius: 2px; background: #f97316; z-index: 3; }
+.mg--simple .mg-oop-net { position: absolute; left: 68.5%; top: calc(46% + 3px); width: 10%; height: 12%; border-inline: 1.5px dashed rgba(255,255,255,.35); border-bottom: 1.5px dashed rgba(255,255,255,.2); }
+.mg--simple .mg-oop-spot { position: absolute; left: 63%; top: 24%; width: 30px; height: 30px; margin: -15px 0 0 -15px; border-radius: 50%; border: 1.5px dashed rgba(74,222,128,.7); background: rgba(74,222,128,.12); }
+.mg--simple .mg-oop-wing { position: absolute; left: 7%; top: calc(76% + 14px); transform: translateX(-50%); font-style: normal; font-family: var(--ag-font); font-size: 12px; letter-spacing: 1.4px; color: var(--ag-muted); }
+.mg--simple .mg-play--oop .mg-push { touch-action: manipulation; }
+.mg--simple .mg-push.is-slam { border-color: #4ade80; }

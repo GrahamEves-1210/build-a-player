@@ -119,7 +119,8 @@
 .wk-rt-meta b { color: var(--wk-dark); }
 .wk-rt-legend { display: inline-flex; align-items: center; gap: 3px; }
 .wk-rt-legend i { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 4px; font-style: normal; font-size: 10px; font-weight: 800; color: #0f1612; background: var(--g); border: 1px solid rgba(0,0,0,.14); }
-.wk-rt-scroll { overflow: auto; max-height: 72vh; border: 1px solid var(--wk-line); border-radius: 8px; }
+/* the page scrolls, not a box inside it: a scroll area inside the page caught the wheel and threw the table around. Sideways only, when it has to */
+.wk-rt-scroll { overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; border: 1px solid var(--wk-line); border-radius: 8px; }
 .wk .wk-rt-table { margin: 0; border: 0; width: 100%; }
 .wk .wk-rt-table thead th { position: sticky; top: 0; z-index: 2; background: var(--wk-tint); cursor: pointer; user-select: none; white-space: nowrap; text-align: center; font-size: 11.5px; letter-spacing: .3px; }
 .wk .wk-rt-table thead th:first-child { text-align: left; left: 0; z-index: 3; }

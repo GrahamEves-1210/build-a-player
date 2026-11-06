@@ -4,6 +4,7 @@ import { WR_TYPES, WRS } from '../data/wrs'
 import { TE_TYPES, TES } from '../data/tes'
 import { DB_TYPES } from '../data/dbs'
 import { DL_TYPES } from '../data/dls'
+import { LB_TYPES } from '../data/lbs'
 import { OL_TYPES, OLS, OL_ATTR_WEIGHT, OL_POS_BY_NAME, OL_ALL_PRO_BALLOT } from '../data/ols'
 import { NFL_TEAMS, ALLTIME_RATINGS, RB_RATINGS } from '../data/nfl-teams'
 
@@ -43,6 +44,7 @@ export const AT_DIFFICULTY = {
   db: { reg: 0.17,  po: -0.015 },
   ol: { reg: 0.17,  po: -0.015 },
   dl: { reg: 0.17,  po: -0.015 }, // the same win formula as DB, so the same offset
+  lb: { reg: 0.17,  po: -0.015 }, // the same win formula as DB and DL
 }
 
 // Snap to nearest score expressible as 7a + 3b (no safeties)
@@ -3447,7 +3449,8 @@ export function runDLSimulation(build, team = null, isAllTime = false, script = 
   // year-to-year totals. Rush: a wide-nine front, or a coach who sends him on
   // every third down, against a two-gap job. Tackles: how much the run comes at
   // him. Batted passes swing the most of all.
-  const rushRole = Math.max(0.74, Math.min(1.28, 1 + randN() * 0.20))
+  // (a pass rusher's year swings less than a box score: an elite edge doesn't vanish for a season he plays all of)
+  const rushRole = Math.max(0.84, Math.min(1.18, 1 + randN() * 0.14))
   const tklRole  = Math.max(0.75, Math.min(1.30, 1 + randN() * 0.20))
   const pbuRole  = Math.max(0.55, Math.min(1.60, 1 + randN() * 0.40))
 
@@ -3508,7 +3511,7 @@ export function runDLSimulation(build, team = null, isAllTime = false, script = 
     const gameMood   = Math.random()
     const isDud      = gameMood < 0.16
     const isBreakout = gameMood > 0.82
-    const boost      = isDud ? (0.35 + Math.random() * 0.25) : isBreakout ? (1.45 + Math.random() * 0.55) : 1.0
+    const boost      = isDud ? (0.5 + Math.random() * 0.25) : isBreakout ? (1.45 + Math.random() * 0.55) : 1.0
     const oppResist  = 1 - oppOffN * 0.16
     const playAhead  = 1 + teamOffN * 0.08 // a lead makes them throw into his rush
 
@@ -3664,6 +3667,390 @@ export function runDLSimulation(build, team = null, isAllTime = false, script = 
     games,
     seasonSacks, seasonTFL, seasonTackles, seasonQBHits, seasonFF, seasonFR, seasonPBUs, seasonSafeties,
     spot: isEdge ? 'EDGE' : 'DT',
+    bestGame, minAttrVal, buildNames,
+    playoffs, playoffRounds, sbResult, hasBye: playoffs && hasBye,
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ── LB SIMULATION ─────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+
+// What an off-ball linebacker's season looks like, 17 games (a TFL includes most
+// sacks, a QB hit includes the sack, tackles include both):
+//   average starter  90-110 tkl · 1-3 sacks · 0-1 INT · 3-5 PD · 5-8 TFL · 1 FF · 8-14 missed
+//   elite            140-170 tkl · 3-6 sacks · 2-4 INT · 7-11 PD · 10-14 TFL · 2-4 FF · under 6 missed
+//   Luke Kuechly 2013: 156 tkl, 2 sacks, 4 INT (DPOY) · Ray Lewis 2003: 161 tkl, 1.5 sacks, 6 INT (DPOY)
+//   Brian Urlacher 2005: 121 tkl, 6 sacks (DPOY) · Derrick Brooks 2002: 117 tkl, 5 INT, 3 TD (DPOY)
+//   Roquan Smith 2022: 169 tkl, 4.5 sacks, 3 INT · Fred Warner 2023: 132 tkl, 4 INT, 2.5 sacks
+
+const LB_ATTR_WEIGHT = {
+  'range':           0.15,
+  'tackling':        0.15,
+  'playRecognition': 0.14,
+  'zoneInstincts':   0.12,
+  'blockShed':       0.11,
+  'power':           0.09,
+  'passRush':        0.08,
+  'leadership':      0.08,
+  'size':            0.08,
+}
+
+export function calcOVRLB(build, types = LB_TYPES) {
+  const filled = types.filter(t => build[t])
+  if (!filled.length) return null
+
+  const totalW = filled.reduce((s, t) => s + (LB_ATTR_WEIGHT[t] ?? 0.05), 0)
+  const avg    = filled.reduce((s, t) => s + build[t].val * (LB_ATTR_WEIGHT[t] ?? 0.05) / totalW, 0)
+  const vals   = filled.map(t => build[t].val)
+  const base   = 60 + 2.1 * avg + 0.21 * avg * avg
+
+  let bonus = 0
+  if (filled.length === types.length) {
+    const minVal = Math.min(...vals)
+    // (no bonus for a balanced build: raising a rating must never lower the OVR)
+    if (minVal >= 9) bonus += 2.0
+    else if (minVal >= 8) bonus += 0.5
+  }
+
+  return Math.min(99, Math.max(0, Math.round(base + bonus)))
+}
+
+export function getArchetypeLB(ovr, build, types = LB_TYPES) {
+  const filled = types.filter(t => build[t])
+  if (!filled.length) return 'Spin to start building'
+  const rem = types.length - filled.length
+  if (rem > 0) return `${rem} attribute${rem !== 1 ? 's' : ''} remaining`
+
+  const g   = k => build[k]?.val ?? 0
+  const rng = g('range'), pwr = g('power'), tkl = g('tackling'), shd = g('blockShed')
+  const zon = g('zoneInstincts'), rsh = g('passRush'), rec = g('playRecognition'), ldr = g('leadership')
+
+  // How he plays: drops and covers, comes downhill and takes on guards, gets
+  // after the quarterback, or runs the defense from the middle. Close to even
+  // across all of them is a complete linebacker.
+  const styles = [
+    { k: 'cover',   v: (zon + rng) / 2 },
+    { k: 'thumper', v: (pwr + shd + tkl) / 3 },
+    { k: 'blitz',   v: rsh - 0.5 },
+    { k: 'general', v: (rec + ldr) / 2 - 0.25 },
+  ].sort((a, b) => b.v - a.v)
+  const style = styles[0].v - styles[3].v <= 0.75 ? 'complete' : styles[0].k
+  const name = (cover, thumper, blitz, general, complete) => ({ cover, thumper, blitz, general, complete })[style]
+  if (ovr >= 95) return name('Sideline-to-Sideline Eraser', 'Downhill Enforcer', 'Unblockable Blitzer', 'Defensive Quarterback', 'Generational Linebacker')
+  if (ovr >= 84) return name('Coverage Linebacker', 'Thumper', 'Blitzing Linebacker', 'Field General', 'Pro Bowl Linebacker')
+  if (ovr >= 76) return name('Starting WILL', 'Starting MIKE', 'Starting SAM', 'Starting MIKE', 'Starting Linebacker')
+  if (ovr >= 68) return name('Sub-Package Linebacker', 'Two-Down Linebacker', 'Situational Blitzer', 'Two-Down Linebacker', 'Rotational Linebacker')
+  if (ovr >= 60) return 'Backup Linebacker'
+  return 'Practice Squad Linebacker'
+}
+
+// ── Defensive Player of the Year ─────────────────────────────────────────────
+// Off-ball linebackers win it on a monster all-around year: Kuechly 2013 (156 tkl,
+// 4 INT), Ray Lewis 2003 (161 tkl, 6 INT), Urlacher 2005, Brooks 2002. Rarer than
+// a pass rusher's, so the gates sit high: the build elite and the season historic.
+export function calcLBDpoyResult(result, isAllTime = false, teamShort = null) {
+  const {
+    ovr = 60, seasonTackles = 0, seasonINTs = 0, seasonSacks = 0, seasonPDs = 0, seasonFF = 0, seasonTFL = 0,
+    seasonPickSixes = 0, minAttrVal = 0, buildNames = [],
+  } = result
+
+  const tklCase  = Math.min(1, seasonTackles / 165)
+  const intCase  = Math.min(1, seasonINTs / 5)
+  const sackCase = Math.min(1, seasonSacks / 8)
+  const pdCase   = Math.min(1, seasonPDs / 13)
+  const ffCase   = Math.min(1, seasonFF / 5)
+  const tflCase  = Math.min(1, seasonTFL / 17)
+  const ovrCase  = Math.max(0, Math.min(1, (ovr - 90) / 9))
+
+  const caseStrength = tklCase * 0.30 + intCase * 0.18 + sackCase * 0.12 + pdCase * 0.07 + ffCase * 0.08 + tflCase * 0.10 + ovrCase * 0.15
+
+  const BUILD_OVR_GATE = 94
+  const SEASON_GATE = 0.72
+  let winP = 0
+  if (ovr >= BUILD_OVR_GATE && caseStrength >= SEASON_GATE) {
+    const t = (caseStrength - SEASON_GATE) / (1 - SEASON_GATE)
+    winP = 0.40 + t * 0.55
+  }
+  const unanimous = seasonTackles >= 165 && (seasonINTs >= 4 || seasonSacks >= 7 || seasonPickSixes >= 2)
+  // Every single attribute A+ or S wins it on any strong season
+  if (minAttrVal >= 10 && seasonTackles >= 140) {
+    return { userWins: true, winner: null, unanimous, winnerStats: null }
+  }
+  if (isAllTime) winP *= 0.75
+  if (Math.random() < winP) {
+    return { userWins: true, winner: null, unanimous, winnerStats: null }
+  }
+
+  // The real rivals, less anyone on the build's own team and anyone the build is made of
+  const pool = isAllTime ? ALLTIME_DPOY_POOL : CLASSIC_DPOY_POOL
+  const filteredPool = pool.filter(c => c.team !== teamShort && !buildNames.includes(c.name))
+  const activePool = filteredPool.length ? filteredPool : pool
+  const candidate = pickWeighted(activePool)
+  const stats = genDPOYCandidateStats(candidate)
+  // A linebacker who beat him out made more tackles
+  if ((candidate.statsAs ?? candidate.pos) === 'LB' && stats.tackles <= seasonTackles) stats.tackles = seasonTackles + 1 + Math.round(Math.random() * 6)
+  const team = DB_TEAM_BY_SHORT[candidate.team]
+  return {
+    userWins: false,
+    winner: { name: candidate.name, team: candidate.team, pos: candidate.pos, color: team?.color },
+    winnerStats: stats,
+    winnerStatLine: dpoyStatLine(candidate.statsAs ?? candidate.pos, stats),
+    unanimous: false,
+  }
+}
+
+export function runLBSimulation(build, team = null, isAllTime = false, script = null) {
+  const oppLookup = isAllTime ? ALLTIME_BY_NAME : TEAM_BY_NAME
+  const ovr = calcOVRLB(build) ?? 60
+
+  function statVal(attr) { return build[attr]?.val ?? 5 }
+  const rng = statVal('range'), sz = statVal('size'), pwr = statVal('power'), tkl = statVal('tackling')
+  const shd = statVal('blockShed'), zon = statVal('zoneInstincts'), rsh = statVal('passRush')
+  const rec = statVal('playRecognition'), ldr = statVal('leadership')
+  const rngN = rng / 11, szN = sz / 11, pwrN = pwr / 11, tklN = tkl / 11, shdN = shd / 11
+  const zonN = zon / 11, rshN = rsh / 11, recN = rec / 11, ldrN = ldr / 11
+
+  // Every rating drives the stats it should:
+  //   Range: tackles (sideline to sideline) and coverage reach. Tackling: tackles,
+  //   and fewer missed. Zone Instincts: passes defended and picks. Pass Rush: sacks
+  //   and hits. Block Shed and Power: TFL and run stops. Play Recognition: a bit of
+  //   everything (he's there first). Leadership: a small lift to the whole defense.
+  const recMult = 0.94 + recN * 0.12
+  const tklSkill = rngN * 0.30 + tklN * 0.30 + recN * 0.14 + shdN * 0.12 + pwrN * 0.05 + szN * 0.05 + zonN * 0.04
+  const rushSkill = rshN * 0.55 + rngN * 0.12 + pwrN * 0.12 + recN * 0.11 + shdN * 0.10
+  const tflSkill = shdN * 0.30 + pwrN * 0.22 + recN * 0.18 + rngN * 0.12 + tklN * 0.10 + szN * 0.08
+  const covSkill = zonN * 0.48 + rngN * 0.26 + recN * 0.20 + szN * 0.03 + ldrN * 0.03
+  const intSkill = zonN * 0.52 + recN * 0.26 + rngN * 0.16 + ldrN * 0.06
+  const ffSkill  = tklN * 0.28 + pwrN * 0.30 + rshN * 0.14 + rngN * 0.14 + recN * 0.10 + szN * 0.04
+  const frSkill  = recN * 0.45 + rngN * 0.30 + tklN * 0.10 + ldrN * 0.15
+
+  // Per-game Poisson means, calibrated to the benchmarks at the top of this section.
+  const tklLambdaBase  = (2.1 + 6.0 * Math.pow(tklSkill, 1.2)) * recMult
+  const missLambdaBase = 0.08 + 1.6 * Math.pow(1 - tklN, 1.3) * (1.06 - recN * 0.12)
+  const sackLambdaBase = (0.01 + 0.42 * Math.pow(rushSkill, 2)) * recMult
+  const hitLambdaBase  = 0.45 * Math.pow(rushSkill, 1.6) * recMult
+  const tflLambdaBase  = 0.55 * Math.pow(tflSkill, 1.4) * recMult
+  const pdLambdaBase   = 0.45 * Math.pow(covSkill, 1.6) * recMult
+  const intLambdaBase  = 0.27 * Math.pow(intSkill, 3.2) * recMult
+  const ffLambdaBase   = (0.015 + 0.10 * Math.pow(ffSkill, 1.5)) * recMult
+  const frLambdaBase   = 0.015 + 0.04 * Math.pow(frSkill, 1.2)
+  const stripChance    = 0.08 + ffSkill * 0.08
+
+  // Season-long role/scheme luck: how often he's sent, how much the run comes at
+  // him, how often they throw at his zone.
+  const tklRole  = Math.max(0.82, Math.min(1.18, 1 + randN() * 0.12))
+  const rushRole = Math.max(0.60, Math.min(1.45, 1 + randN() * 0.30))
+  const covRole  = Math.max(0.65, Math.min(1.40, 1 + randN() * 0.26))
+
+  const teamOffN = team ? (team.off - 5) / 5 : 0
+  const teamDefN = team ? (team.def - 5) / 5 : 0
+  const ovrN = (ovr - 78) / 20
+  const teamDefBoost = teamDefN + ovrN * 0.12 + (ldrN - 0.5) * 0.10
+  const playerTeamAvg = ((team?.off ?? 5.5) + (team?.def ?? 5.5)) / 2
+
+  let wins = 0, losses = 0
+  let seasonTackles = 0, seasonTFL = 0, seasonSacks = 0, seasonQBHits = 0, seasonPDs = 0
+  let seasonINTs = 0, seasonPickSixes = 0, seasonFF = 0, seasonFR = 0, seasonMissed = 0
+
+  const playLine = (passMult, runMult) => {
+    const sacks = poissonSample(Math.max(0, sackLambdaBase * rushRole * passMult))
+    const qbHits = sacks + poissonSample(Math.max(0, hitLambdaBase * rushRole * passMult))
+    const runTfl = poissonSample(Math.max(0, tflLambdaBase * tklRole * runMult))
+    let tfl = runTfl
+    let ff = poissonSample(Math.max(0, ffLambdaBase * runMult))
+    for (let k = 0; k < sacks; k++) {
+      if (Math.random() < 0.85) tfl++
+      if (Math.random() < stripChance) ff++
+    }
+    const tackles = sacks + runTfl + poissonSample(Math.max(0, tklLambdaBase * tklRole * runMult))
+    const ints = poissonSample(Math.max(0, intLambdaBase * covRole * passMult))
+    const pds  = ints + poissonSample(Math.max(0, pdLambdaBase * covRole * passMult))
+    let pickSixes = 0
+    for (let k = 0; k < ints; k++) if (Math.random() < 0.08 + rngN * 0.05) pickSixes++
+    const fr = poissonSample(frLambdaBase)
+    const missed = poissonSample(Math.max(0, missLambdaBase * runMult))
+    return { tackles, tfl, sacks, qbHits, pds, ints, pickSixes, ff, fr, missed }
+  }
+  const addLine = l => {
+    seasonTackles   += l.tackles
+    seasonTFL       += l.tfl
+    seasonSacks     += l.sacks
+    seasonQBHits    += l.qbHits
+    seasonPDs       += l.pds
+    seasonINTs      += l.ints
+    seasonPickSixes += l.pickSixes
+    seasonFF        += l.ff
+    seasonFR        += l.fr
+    seasonMissed    += l.missed
+  }
+
+  const schedule = script ? script.schedule : buildSchedule(team)
+  const games = schedule.map(({ opponent, home }, i) => {
+    const v = () => randN()
+    const oppTeam = oppLookup[opponent]
+    const oppOffN = oppTeam ? (oppTeam.off - 5) / 5 : 0
+    const oppDefN = oppTeam ? (oppTeam.def - 5) / 5 : 0
+
+    const homeShort  = home ? (team?.short ?? '') : (oppTeam?.short ?? '')
+    const badWeather = !DOME_TEAMS.has(homeShort) && COLD_TEAMS.has(homeShort) && Math.random() < 0.15
+
+    const gameMood   = Math.random()
+    const isDud      = gameMood < 0.14
+    const isBreakout = gameMood > 0.85
+    const boost      = isDud ? (0.65 + Math.random() * 0.2) : isBreakout ? (1.3 + Math.random() * 0.4) : 1.0
+    const playAhead  = 1 + teamOffN * 0.08 // a lead makes them throw
+
+    const line = playLine(
+      boost * playAhead * (1 - oppOffN * 0.08) * (badWeather ? 0.88 : 1.0),
+      boost * (1 + oppOffN * 0.04) * (badWeather ? 1.06 : 1.0),
+    )
+    addLine(line)
+
+    const perfBonus = (line.ints >= 1 ? 0.04 : 0) + (line.pickSixes ? 0.03 : 0) + (line.sacks >= 1 ? 0.015 : 0) + (line.ff >= 1 ? 0.02 : 0)
+    const winP = Math.min(0.88, Math.max(0.14,
+      0.50 + teamOffN * 0.20 + teamDefBoost * 0.24 + (home ? 0.045 : -0.02) + perfBonus + v() * 0.09 - oppOffN * 0.10 - oppDefN * 0.04 - (isAllTime ? AT_DIFFICULTY.lb.reg : 0)
+    ))
+    const won = script ? script.games[i].won : Math.random() < winP
+    won ? wins++ : losses++
+
+    const teamTDs = Math.max(0, Math.round(1.5 + teamOffN * 1.1 + v() * 0.9))
+    const teamFGs = Math.max(0, Math.round(1.5 - teamTDs * 0.3 + Math.random() * 1.5))
+    let mySc = Math.max(3, teamTDs * 7 + teamFGs * 3)
+    const oppTDs = Math.max(0, Math.floor(1.2 + Math.random() * 3 + oppOffN * 0.9 - teamDefBoost * 0.6))
+    const oppFGs = Math.max(0, Math.round(1 - oppTDs * 0.3 + Math.random()))
+    let oppSc = Math.max(0, oppTDs * 7 + oppFGs * 3)
+    if (line.pickSixes > 0) mySc += line.pickSixes * 7
+    if (won  && mySc  <= oppSc) mySc  = oppSc + 1 + Math.ceil(Math.random() * 4)
+    if (!won && oppSc <= mySc)  oppSc = mySc  + 1 + Math.ceil(Math.random() * 4)
+    mySc  = snapNFL(mySc)
+    oppSc = snapNFL(oppSc)
+    if (mySc === oppSc) { if (won) mySc = snapNFL(mySc + 3); else oppSc = snapNFL(oppSc + 3) }
+    if (script) { mySc = script.games[i].mySc; oppSc = script.games[i].oppSc }
+
+    return { wk: i + 1, opponent, home, mySc, oppSc, won, ...line }
+  })
+
+  const bestGame = [...games].sort((a, b) => {
+    const score = g => g.pickSixes * 7 + g.ints * 4.5 + g.sacks * 3.5 + g.ff * 3 + g.fr * 2.5 + g.tfl * 1.4 + g.pds * 1 + g.qbHits * 0.6 + g.tackles * 0.45
+    return score(b) - score(a)
+  })[0]
+
+  // ── Playoffs ──────────────────────────────────────────────────────────────
+  const playoffs = script ? script.playoffs : wins >= 10
+    || (wins === 9 && Math.random() < 0.50)
+    || (wins === 8 && Math.random() < 0.06)
+  const playoffRounds = []
+  let sbResult = null
+  let hasBye = false
+
+  if (playoffs) {
+    const conf = team?.conf ?? 'AFC'
+    const activePlayoffPools = isAllTime ? ALLTIME_PLAYOFF_POOLS : PLAYOFF_POOLS
+    const activeSbPools      = isAllTime ? ALLTIME_SB_POOLS      : SB_POOLS
+    const confPool = activePlayoffPools[conf].filter(n => n !== team?.name)
+    const sbPool   = activeSbPools[conf].filter(n => n !== team?.name)
+    const usedOpponents = new Set()
+    const pick = pool => {
+      const avail = pool.filter(n => !usedOpponents.has(n))
+      const chosen = (avail.length > 0 ? avail : pool)[Math.floor(Math.random() * (avail.length || pool.length))]
+      usedOpponents.add(chosen)
+      return chosen
+    }
+
+    hasBye = script ? script.hasBye : wins >= 14 ? true : wins >= 13 ? Math.random() < 0.60 : false
+    const bracket = hasBye
+      ? [
+          { round: 'Divisional Round',        pool: confPool },
+          { round: 'Conference Championship', pool: confPool },
+          { round: 'Super Bowl',              pool: sbPool   },
+        ]
+      : [
+          { round: 'Wild Card',               pool: confPool },
+          { round: 'Divisional Round',        pool: confPool },
+          { round: 'Conference Championship', pool: confPool },
+          { round: 'Super Bowl',              pool: sbPool   },
+        ]
+    const winsNeeded = hasBye ? 3 : 4
+    const seed = hasBye && wins >= 14 ? 1 : hasBye ? 2 : wins >= 12 ? 3 : wins >= 11 ? 4 : 5
+
+    const pgHomeProb = round => {
+      if (round === 'Super Bowl') return 0
+      if (seed === 1) return 1.0
+      if (round === 'Wild Card') return seed <= 4 ? 1.0 : 0.0
+      if (round === 'Divisional Round') return seed === 2 ? 0.80 : seed === 3 ? 0.10 : 0.06
+      if (round === 'Conference Championship') return seed === 2 ? 0.60 : seed === 3 ? 0.20 : 0.10
+      return 0
+    }
+
+    let pwins = 0, eliminated = null
+    for (const { round, pool } of bracket) {
+      const sr = script?.rounds[playoffRounds.length]   // Squad Builder: the round as the squad played it
+      const opponent  = sr ? sr.opponent : pick(pool)
+      const pgHome    = sr ? sr.home : Math.random() < pgHomeProb(round)
+      const homeShort = pgHome ? team?.short : TEAM_BY_NAME[opponent]?.short
+      const weather   = sr ? sr.weather : playoffWeather(homeShort, round === 'Super Bowl')
+
+      const oppTeam    = oppLookup[opponent]
+      const oppTeamAvg = ((oppTeam?.off ?? 5.5) + (oppTeam?.def ?? 5.5)) / 2
+      const teamN      = (playerTeamAvg - oppTeamAvg) / 9
+      const pgOvrPenalty = ovr < 82 ? (82 - ovr) * 0.007 : 0
+
+      const pgWinP = Math.min(0.78, Math.max(0.15,
+        0.42 + ovrN * 0.20 + teamN * 0.46 - pgOvrPenalty + recordEdge(wins) + (pgHome ? 0.04 : 0) - (isAllTime ? AT_DIFFICULTY.lb.po : 0)
+      ))
+      const won = sr ? sr.won : Math.random() < pgWinP
+
+      const oppTeamOffN = oppTeam ? (oppTeam.off - 5) / 5 : 0
+      const wMult = weather === 'snow' ? 0.90 : weather === 'rain' ? 0.94 : 1.0
+      const line = playLine((1 - oppTeamOffN * 0.08) * wMult, 2 - wMult)
+      addLine(line)
+
+      const pgTmTDs = Math.max(0, Math.round(1.4 + teamOffN * 1.0 + randN() * 0.8))
+      const pgFGs   = Math.max(0, Math.round(1.2 - pgTmTDs * 0.3 + Math.random() * 1.2))
+      const base    = Math.max(3, Math.round((pgTmTDs * 7 + pgFGs * 3) * wMult))
+      const oppPTDs = Math.max(0, Math.floor(1 + Math.random() * 3 + oppTeamOffN * 0.8))
+      const oppPFGs = Math.max(0, Math.round(1 - oppPTDs * 0.3 + Math.random()))
+      const opp     = Math.max(7, Math.round((oppPTDs * 7 + oppPFGs * 3) * wMult))
+      const pgCloseness = 1 - 2 * Math.abs(pgWinP - 0.5)
+      const pgOT = Math.random() < pgCloseness * 0.22
+      let finalMy, finalOpp
+      if (pgOT) {
+        const baseTDs2 = Math.max(pgTmTDs, Math.floor(1 + Math.random() * 3 + oppTeamOffN * 0.8), 1)
+        const tiedSc = snapNFL(Math.max(10, baseTDs2 * 7 + Math.floor(Math.random() * 3) * 3))
+        const otPts  = Math.random() < 0.27 ? 7 : 3
+        finalMy  = won ? tiedSc + otPts : tiedSc
+        finalOpp = won ? tiedSc : tiedSc + otPts
+      } else {
+        const margin = Math.ceil(Math.random() * 7)
+        finalMy  = snapNFL(won ? Math.max(base, opp + margin) : Math.min(base, opp - margin))
+        finalOpp = snapNFL(won ? opp : Math.max(opp, base + margin))
+      }
+
+      playoffRounds.push({
+        round, opponent, home: pgHome, weather, mySc: sr ? sr.mySc : finalMy, oppSc: sr ? sr.oppSc : finalOpp, won, overtime: sr ? sr.overtime : pgOT,
+        ...line,
+      })
+      if (won) pwins++
+      else { eliminated = round; break }
+    }
+
+    if (pwins === winsNeeded) {
+      const { tackles, tfl, sacks, qbHits, pds, ints, pickSixes, ff, fr, missed } = playoffRounds[playoffRounds.length - 1]
+      sbResult = { won: true, tackles, tfl, sacks, qbHits, pds, ints, pickSixes, ff, fr, missed }
+    } else {
+      sbResult = { won: false, round: eliminated, pwins }
+    }
+  }
+
+  const minAttrVal = Math.min(rng, sz, pwr, tkl, shd, zon, rsh, rec, ldr)
+  const buildNames = [...new Set(LB_TYPES.map(t => build[t]?.qbFull).filter(Boolean))]
+
+  return {
+    team, ovr, wins, losses,
+    games,
+    seasonTackles, seasonTFL, seasonSacks, seasonQBHits, seasonPDs, seasonINTs, seasonPickSixes, seasonFF, seasonFR, seasonMissed,
+    spot: 'LB',
     bestGame, minAttrVal, buildNames,
     playoffs, playoffRounds, sbResult, hasBye: playoffs && hasBye,
   }

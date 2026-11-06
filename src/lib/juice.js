@@ -601,7 +601,7 @@ const reduced = () => document.documentElement.classList.contains('bap-reduce-mo
 // A title: paper in the team's colours falling from the top of the screen, a few seconds of it.
 // A small canvas, stretched: it's paper, and a slow machine shouldn't pay for full-screen pixels
 export function titleConfetti(colors = []) {
-  if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
+  if (reduced()) return
   const cols = [...new Set(colors.filter(Boolean))]
   if (!cols.length) cols.push('#D4AF37', '#ffffff')
   const c = document.createElement('canvas')
@@ -635,7 +635,7 @@ export function titleConfetti(colors = []) {
 
 // ── Confetti ─────────────────────────────────────────────────────────────────
 export function confetti(amount = 140) {
-  if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
+  if (reduced()) return
   const c = document.createElement('canvas')
   c.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:1300'
   // big screens draw at 1×: a retina-sized full-screen canvas is 4× the pixels to clear every frame

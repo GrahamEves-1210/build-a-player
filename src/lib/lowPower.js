@@ -13,7 +13,10 @@ const weakSpecs = () => {
   return (mem != null && mem <= 4) || (cores != null && cores <= 4)
 }
 
-export const LOW_POWER = saved() || weakSpecs()
+// the machine's own verdict, and the player's: Reduce motion (lib/settings.js) asks for the light version too
+export const DEVICE_LOW = saved() || weakSpecs()
+const reduceAsked = () => { try { return localStorage.getItem('bap_reduce_motion') === '1' || matchMedia('(prefers-reduced-motion: reduce)').matches } catch { return false } }
+export const LOW_POWER = DEVICE_LOW || reduceAsked()
 if (LOW_POWER && typeof document !== 'undefined') document.documentElement.classList.add('low-power')
 
 // Once a page load, over the first spin: if the page can't keep 25 frames a second, it's weak

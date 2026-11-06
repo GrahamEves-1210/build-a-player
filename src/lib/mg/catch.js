@@ -8,10 +8,11 @@
 //              A catch moves the chains; a miss is the next down from the same spot.
 //   release    press coverage: the corner is squared up over him at the line, he jabs, the
 //              receiver swipes the hand away and gets by.
-import { byV, clamp, circle, lerp, outcome, layer, football, rngOf, prog, easeOut, easeIn, easeInOut, themOf, ring, rr, GOOD, BAD, GOLD, text, DISPLAY, LABEL, manOf, paceOf, stage } from './kit.js'
-import { nameTag, tilt, untilt, ground, stands, floodlight, vignette, paintGrass, athlete, warmAthlete, skinOf, goalPosts, rollingField, turfLine, breakupPose, ballShadow, airBall as artBall } from './art.js'
+import { byV, clamp, circle, lerp, outcome, layer, football, rngOf, prog, easeOut, easeIn, easeInOut, themOf, ring, rr, GOOD, BAD, GOLD, text, DISPLAY, LABEL, manOf, paceOf, stage, particles, nudge } from './kit.js'
+import { nameTag, tilt, untilt, ground, stands, floodlight, vignette, paintGrass, athlete, warmAthlete, skinOf, goalPosts, rollingField, turfLine, breakupPose, ballShadow, airBall as artBall, crowdPop } from './art.js'
 import { placeStamp, put, action } from './read.js'
-import { drawTags, paintFieldFlat, flightAt, snapBall, looseBall, qbPose, SNAP_MS, SL, SR } from './throw.js'
+import { calm } from './dash.js'
+import { drawTags, paintFieldFlat, flightAt, snapBall, looseBall, qbPose, SNAP_MS, SPIKE_MS, SL, SR } from './throw.js'
 
 export const how = {
   gauntlet: 'Seven QBs, side to side. Press the side of the throw as the ball reaches his hands.',
@@ -57,6 +58,8 @@ const C_AIR = 1000, C_THROW = 950, C_SET = 800, C_PLAYOUT = 1300, C_ARC = 92
 const C_SPLIT = 104, C_FADE = 12, C_HIP = 24, C_CLEAN = 0.8, C_TACK = 430
 const C_RING = 650, C_R0 = 36, C_R = 11
 const C_TAKEOFF = 170            // a throw that leads him: how long before the ball he leaves his feet
+const TD_HOLD = 1500             // ms: a touchdown gets its moment. Whatever's left of the drive waits for it
+const TD_STOP = 5.5, SPIKE_AT = 300   // yards he eases up over in the end zone; ms past the goal line before the ball goes up
 // the hand fight at the line eats his first steps; then he's gone
 const routeYards = sec => {
   if (sec <= 0) return 0
@@ -91,6 +94,7 @@ function snaps(r, S, pace) {
 
 // ── The release: the hand fight, from the snap ──────────────────────────────
 const R_SNAP = 850
+const R_THROW = 330, R_AIR = 760   // ms after the last jab: the throw that says he's open, and its flight. Only the picture
 function jabs(r, S) {
   let at = R_SNAP + 180, last = null, run = 0
   const AIR = [620, 560, 500]
@@ -171,9 +175,18 @@ export function make({ v, seed, game, cast = null, pos = null }) {
     b.res = ok ? clamp(1 - (off / win) * 0.5, 0.5, 1) : 0
     b.at = g.t; b.off = off; b.why = why
     g.hud.dots[k] = ok
+    if (game === 'catch' && ok) {
+      const G = lineOf(g, k)
+      if (b.depth + yacAt(b, C_PLAYOUT, g.pace) >= G) {
+        b.td = true
+        b.tdAt = b.arrive + (Math.max(0, G - b.depth) / (C_V * g.pace)) * 1000 + (b.lead ? 120 : 0)
+        // (the picture's moment, not a rule: the later throws just come later)
+        for (let j = k + 1; j < balls.length; j++) { const x = balls[j]; x.t0 += TD_HOLD; x.snap += TD_HOLD; x.from += TD_HOLD; x.arrive += TD_HOLD; x.end += TD_HOLD }
+      }
+    }
     g.prevSide = b.side; g.lastAt = g.t
     g.fx.push(ok ? 'tap' : 'pop', ok ? 'h:light' : 'h:medium')
-    if (game === 'catch' && k < balls.length - 1) g.stamp = { text: ok ? 'CAUGHT' : b.lead ? 'INCOMPLETE' : 'BROKEN UP', good: ok, at: Math.max(g.t, b.arrive), ms: 1000, size: 46 }
+    if (game === 'catch' && k < balls.length - 1) g.stamp = b.td ? { text: 'TOUCHDOWN', good: true, at: b.tdAt, ms: 1500, size: 46 } : { text: ok ? 'CAUGHT' : b.lead ? 'INCOMPLETE' : 'BROKEN UP', good: ok, at: Math.max(g.t, b.arrive), ms: 1000, size: 46 }
     if (balls.every(x => x.res != null)) {
       const made = balls.filter(x => x.res).length
       const score = balls.reduce((s, x) => s + x.res, 0) / balls.length
@@ -181,13 +194,13 @@ export function make({ v, seed, game, cast = null, pos = null }) {
       g.done = outcome(score, hit, `${made} of ${balls.length} ${S.verb.toLowerCase()}`, { made, of: balls.length })
       g.made = made; g.doneAt = g.t
       g.hud.prompt = null; g.hud.hot = false
-      const word = game === 'catch' ? (ok ? 'CAUGHT' : b.lead ? 'INCOMPLETE' : 'BROKEN UP')
+      const word = game === 'catch' ? (b.td ? 'TOUCHDOWN' : ok ? 'CAUGHT' : b.lead ? 'INCOMPLETE' : 'BROKEN UP')
         : game === 'release' ? (hit ? 'CLEAN RELEASE' : 'JAMMED')
           : hit ? (made === balls.length ? 'PERFECT' : 'GOOD HANDS') : 'DROPPED'
       // (the catch game's word is this rep's. The others wait, so the last rep's own result shows first)
-      g.stamp = { text: word, good: game === 'catch' ? ok : hit, at: Math.max(g.t, b.arrive) + (game === 'catch' ? 120 : 900), size: 46 }
-      g.verdictAt = Math.max(g.t, b.arrive) + 900
-      g.outro = (g.outro ?? 1500) + 800
+      g.stamp = { text: word, good: game === 'catch' ? ok : hit, at: b.td ? b.tdAt : Math.max(g.t, b.arrive) + (game === 'catch' ? 120 : 900), size: 46 }
+      g.verdictAt = Math.max(g.t, b.td ? b.tdAt : b.arrive) + 900
+      g.outro = (g.outro ?? 1500) + 800 + (b.td ? TD_HOLD : 0)
     }
   }
   return g
@@ -216,7 +229,7 @@ function lights(ctx, view) {
 function band(ctx, view, y0, y1, color) {
   const ya = Math.max(0, y0), yb = Math.min(view.h, y1)
   if (yb <= ya) return
-  const a = tilt(view, -90, ya), b = tilt(view, 450, ya), c = tilt(view, 450, yb), d = tilt(view, -90, yb)
+  const a = tilt(view, -900, ya), b = tilt(view, 1260, ya), c = tilt(view, 1260, yb), d = tilt(view, -900, yb)
   ctx.fillStyle = color
   ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.lineTo(c.x, c.y); ctx.lineTo(d.x, d.y); ctx.closePath(); ctx.fill()
 }
@@ -276,7 +289,7 @@ function drawGauntlet(ctx, g, view) {
   const fy = wy => A - (wy - y)
   // nothing but field, all the way up the screen
   ctx.fillStyle = '#1f6b3a'; ctx.fillRect(0, 0, w, h)
-  ground(ctx, view, f => paintTurned(f, view), 'gauntlet', y, 60)
+  ground(ctx, view, f => paintTurned(f, view), 'gauntlet', y, 60, true)
   // the hash marks: a tick a yard, in rows across his path
   ctx.fillStyle = 'rgba(245,247,243,.8)'
   for (let i = 0; i < HASH_ROWS.length; i++) {
@@ -301,7 +314,9 @@ function drawGauntlet(ctx, g, view) {
   if (farLine > -8) { band(ctx, view, 0, farLine - 7, '#123f23'); band(ctx, view, farLine - 7, farLine + 7, '#f4f6f2') }
   // the scouts past the far sideline
   // (the coaches stand off to the sides: his line runs on between them)
-  if (farLine - 44 > 2) for (let i = 0; i < 3; i++) athlete(ctx, view, X + [-125, 85, 140][i], farLine - 44, { color: COACH, pants: '#a89a80', skin: QB_SKIN[i], kit: 'plain', dir: 'down', size: 1.15 })
+  // (and when it's in, they say what they thought of it)
+  const verdict = g.done && t >= g.verdictAt, perfect = g.made === balls.length
+  if (farLine - 44 > 2) for (let i = 0; i < 3; i++) athlete(ctx, view, X + [-125, 85, 140][i], farLine - 44, { color: COACH, pants: '#a89a80', skin: QB_SKIN[i], kit: 'plain', dir: 'down', size: 1.15, pose: !verdict ? null : perfect ? (i === 1 ? 'arms-up' : 'reach-r') : g.done.hit && i === 1 ? 'reach-r' : null })
   // balls he's finished with, lying where they came down
   for (let k = 0; k < balls.length; k++) drawSpent(ctx, g, view, balls[k], fy)
   // the quarterbacks further up the field than him, far to near: planted, they never move
@@ -315,11 +330,26 @@ function drawGauntlet(ctx, g, view) {
   const tossing = balls.find(b => b.res && t >= Math.max(b.at, b.arrive) + 190 && t < Math.max(b.at, b.arrive) + 300)
   const lookSide = t < g.lastAt + 90 ? g.prevSide : live ? live.side : g.prevSide
   const go = t >= G_LEAD
+  // (through the far sideline he's done: hands on his hips, or both up if he didn't drop one)
+  const pulledUp = g.done && t > g.doneAt + 1050
   const pose = !go ? 'ready'
     : reaching ? `catch-${reaching.side ? 'r' : 'l'}`
       : tossing ? `toss-${tossing.side ? 'r' : 'l'}`
-        : g.done ? null : `look-${lookSide ? 'r' : 'l'}`
-  const me = athlete(ctx, view, X, A, { color: DRILL_TOP, kit: 'plain', dir: 'up', step: go ? (Math.floor(y / 10) % 8) / 2 : null, pose, size: G_SIZE })
+        : pulledUp ? (perfect ? 'arms-up' : 'hips') : g.done ? null : `look-${lookSide ? 'r' : 'l'}`
+  const me = athlete(ctx, view, X, A, { color: DRILL_TOP, kit: 'plain', dir: 'up', step: go && !pulledUp ? (Math.floor(y / 10) % 8) / 2 : null, pose, size: G_SIZE })
+  // his cleats, and the leather hitting his hands. Once each
+  g.dirt ??= particles(36, balls[0].qx + 301); g.nudge ??= nudge()
+  const kick = Math.floor(y / 46)
+  if (go && kick !== g.kick && y < G_END) { g.kick = kick; g.dirt.burst('turf', me.x + (kick % 2 ? 5 : -5) * me.s, me.y, t, { n: 3, s: me.s * 0.95, ang: Math.PI / 2, spread: 0.8, speed: 0.75 }) }
+  for (let k = 0; k < balls.length; k++) {
+    const b = balls[k]
+    if (b.res == null || b.felt || t < Math.max(b.at, b.arrive)) continue
+    b.felt = true
+    const s = b.side ? 1 : -1, hx = me.x + s * 7 * me.s * G_SIZE, hy = me.y - 46 * me.s * G_SIZE
+    if (b.res) { g.fx.push('catchball', 'h:medium'); g.nudge.kick(t, 1.5, -s, -0.4, 130); g.dirt.burst('dust', hx, hy, t, { n: 3, s: me.s * 0.7, colors: ['#ffffff', '#e8e2d2'], spread: 1.6, life: 240 }) }
+    else g.nudge.kick(t, 1, s, 0, 110)
+  }
+  if (!calm()) g.dirt.draw(ctx, t)
   // the ball in the air: from that QB's hand to his hands
   for (let k = 0; k < balls.length; k++) {
     const b = balls[k]
@@ -363,6 +393,9 @@ function drawSpent(ctx, g, view, b, fy) {
     const f = clamp(age / 430, 0, 1)
     bx = s * (G_HAND + 92 * f); by = b.cy + 100 * easeOut(f)
     lift = lerp(HANDS, 0, f) + Math.sin(f * Math.PI) * 26; ang = age * 0.02 * (1 - f) + 1.35
+    // and it never lands flat: a football takes two funny hops
+    const d = Math.min(Math.max(0, age - 430), 560)
+    if (d) { lift = Math.abs(Math.sin(d / 88)) * 15 * Math.exp(-d / 190); bx += s * d * 0.035; by += d * (b.cy % 2 > 1 ? 0.03 : -0.018); ang = 1.35 + d * 0.016 }
   } else {
     const age = t - base
     if (age < 0) return
@@ -370,6 +403,8 @@ function drawSpent(ctx, g, view, b, fy) {
     const f = clamp(age / 460, 0, 1)
     bx = s * G_HAND - s * (10 + 120 * easeOut(f)); by = b.cy + 30 * f
     lift = HANDS * (1 - f) * (1 - f); ang = age * 0.025 * (1 - f) + 1.35
+    const d = Math.min(Math.max(0, age - 460), 560)
+    if (d) { lift = Math.abs(Math.sin(d / 80)) * 18 * Math.exp(-d / 180); bx -= s * d * 0.05; by += d * 0.02; ang = 1.35 + d * 0.018 }
   }
   const row = fy(by)
   if (row < 2 || row > view.h + 20) return
@@ -407,12 +442,13 @@ const WR_SIZE = 0.8, MEN_SIZE = 0.8, SF_SIZE = 0.8
 const HAND_UP = 40, HAND_OUT = 14    // his hands at the ball: how high and how far out from his middle, in sprite units
 function lineOf(g, k) {
   let G = C_START
-  for (let j = 0; j < k; j++) { const b = g.balls[j]; if (b.res) G = Math.max(C_MIN, G - b.depth - yacAt(b, C_PLAYOUT, g.pace)) }
+  // (a touchdown: they got the ball back, and it's a new drive)
+  for (let j = 0; j < k; j++) { const b = g.balls[j]; if (b.td) G = C_START; else if (b.res) G = Math.max(C_MIN, G - b.depth - yacAt(b, C_PLAYOUT, g.pace)) }
   return G
 }
 function downOf(balls, k) {
   let d = 1
-  for (let j = 0; j < k; j++) d = balls[j].res ? 1 : d + 1
+  for (let j = 0; j < k; j++) d = balls[j].res ? 1 : d + 1   // (a catch moves the chains, or scores)
   return d
 }
 const lookOf = (m, number, skin) => (m ? { number: m.number, skin: m.skin, name: m.name } : { number, skin })
@@ -437,6 +473,9 @@ function drawCatch(ctx, g, view) {
   // ── the camera: the formation and the QB, until he's run into the shot; then it goes with him
   const padTop = h - 96, catchV = untilt(view, 180, padTop - 150).y, L0 = untilt(view, 180, padTop - 50).y - 7 * PYD, lock = L0 - catchV
   let wy = sec <= 0 ? 0 : age < 0 ? routeYards(sec) * g.pace : b.depth + yacAt(b, age, g.pace)
+  // past the goal line it's over: he eases up in the end zone, and how far past it says how long since he scored
+  const scored = b.td && age >= 0 ? (wy - G) / (C_V * g.pace) * 1000 : -1
+  if (b.td && age >= 0) { const B = Math.max(G, b.depth); if (wy > B) wy = B + TD_STOP * (1 - Math.exp(-(wy - B) / TD_STOP)) }
   wy = Math.min(wy, G + 9)        // (the back of the end zone)
   const L = L0 + (age < 0 ? Math.max(0, Math.min(b.depth, G + 9) * PYD - lock) * Math.pow(prog(sec, 0.45, b.sa), 1.3) : Math.max(0, wy * PYD - lock))
   const fl = yd => L - yd * PYD, goalY = fl(G)
@@ -452,6 +491,9 @@ function drawCatch(ctx, g, view) {
       sidelines(x, view, goalY, col, them)
     },
   })
+  // the crowd comes up on a catch, and all the way up on a touchdown
+  g.popTeam ??= [col.us, col.trim]
+  crowdPop(ctx, view, g.popTeam, calm() ? -1 : b.td ? t - b.tdAt : caught ? age : -1, { ms: b.td ? 2800 : 1100, power: b.td ? 1 : 0.5 })
   const los = fl(0)
   if (los < h) turfLine(ctx, view, SL, SR, los, '#3f86ff', 2.4)
   if (G >= 10) turfLine(ctx, view, SL, SR, fl(10), '#f7d64a', 2.8)
@@ -472,12 +514,17 @@ function drawCatch(ctx, g, view) {
         : age > -300 ? `shoulder-${s}` : null
   const stopped = missed && age > 620
   const wrLook = lookOf(men.me, 88, skinOf(4))
+  // the touchdown: the ball goes up, it goes down, and then he's got his own way of saying it. A DB's stops chasing by itself
+  const tdNow = !lead && scored >= 0, spikeAge = tdNow ? scored - SPIKE_AT : -1, spiking = spikeAge >= 0 && spikeAge < SPIKE_MS, spiked = spikeAge >= SPIKE_MS
+  const party = Math.floor(b.arrive) % 4
+  const showing = !spiked ? null : party === 0 ? 'flex' : party === 1 ? 'point-up' : party === 2 ? (Math.floor(spikeAge / 150) % 2 ? 'griddy-a' : 'griddy-b') : 'arms-up'
   // the layout: he's in the air before it's decided, and it's his hands that get there or don't
   const rise = lead ? prog(age, caught ? 980 : 720, (caught ? 980 : 720) + 220) : 0
   const layout = lead ? prog(age, -C_TAKEOFF, 70) * (1 - rise) : 0
   if (!layout) {
     const up = lead && rise >= 1
-    put(wx, fl(wy), usT, { ...wrLook, dir: 'up', step: !on || stopped || down || up ? null : stride, pose: up ? (caught ? null : 'ready') : lead ? (age > -300 ? `shoulder-${s}` : wrPose) : wrPose, carry: tucked, fall: down, size: WR_SIZE })
+    const lost = stopped && !lead   // (it was right there)
+    put(wx, fl(wy), usT, { ...wrLook, dir: 'up', step: !on || stopped || down || up || spikeAge >= -60 && tdNow ? null : stride, pose: spiking ? 'spike-up' : showing ?? (lost ? 'hands-head' : up ? (caught ? (b.td ? 'arms-up' : null) : 'ready') : lead ? (age > -300 ? `shoulder-${s}` : wrPose) : wrPose), carry: tucked && !spiked, fall: down, size: WR_SIZE })
   }
   // ── the corner: pressed up on him, hands on him. He gets turned, gives up a step, and recovers to the hip the ball isn't going to
   const off = sec < 0.24 ? 9 : lerp(9, C_HIP, easeInOut(prog(sec, 0.24, 0.62)))
@@ -515,7 +562,7 @@ function drawCatch(ctx, g, view) {
   // (wrapped up, one name's plenty: his would sit on top of the receiver's)
   put(cbx, fl(cby), themT, { ...(cbPose === 'wrap' ? bare : lookOf)(men.cb, 24, skinOf(3)), dir: cbDir, step: cbStep, pose: cbPose, fall: cbFall, size: WR_SIZE, z: fl(cby) + cbZ })
   // ── the safety, deep, coming to it a beat late
-  const sfGo = prog(t, b.from + 150, b.arrive + 1000), sfBase = 27 + Math.min(Math.max(sec, 0), 0.9) * 2
+  const sfGo = prog(b.td ? Math.min(t, b.tdAt) : t, b.from + 150, b.arrive + 1000), sfBase = 27 + Math.min(Math.max(sec, 0), 0.9) * 2
   const sfx0 = 180 - b.wide * 34, sfy = Math.min(lerp(sfBase, b.depth + 9, sfGo), G + 9.5), sfx = lerp(sfx0, wx - b.wide * 36, sfGo)
   if (fl(sfy) > 6) put(sfx, fl(sfy), themT, { ...lookOf(men.sf, 31, skinOf(6)), dir: 'down', step: sfGo > 0 ? stride : null, pose: sfGo > 0 ? null : 'ready', size: SF_SIZE })
   // ── the rest of them, at the line
@@ -531,6 +578,28 @@ function drawCatch(ctx, g, view) {
   }
   action(ctx, view)
   if (sec < SNAP_MS / 1000 && los < h) snapBall(ctx, view, 180, los, 180, qbY, sec * 1000)
+  // ── what happens once, in the picture: turf, the hit, the ball on the ground ──
+  g.dirt ??= particles(40, balls[0].wx + 77); g.nudge ??= nudge()
+  const feet = tilt(view, wx, fl(wy)), cbFeet = tilt(view, cbx, fl(cby))
+  if (on && sec >= 0.26 && !b.offLine) { b.offLine = true; g.dirt.burst('turf', feet.x, feet.y, t, { n: 7, s: feet.s, ang: Math.PI / 2, spread: 0.9 }) }
+  if (hurt && age >= C_TACK && !b.hitFelt) {
+    b.hitFelt = true
+    g.fx.push('stamp', 'h:heavy'); g.nudge.kick(t, 4.5, 0, 1)
+    g.dirt.burst('turf', feet.x, feet.y, t, { n: 13, s: feet.s * 1.15, spread: 1.3, speed: 1.15 })
+  }
+  if (clean && !b.td && age >= 480 && !b.cbFelt) { b.cbFelt = true; g.dirt.burst('turf', cbFeet.x, cbFeet.y, t, { n: 6, s: cbFeet.s, spread: 1.2 }) }
+  if (lead && b.res != null && age >= 170) {
+    if (!b.slid) { b.slid = true; g.nudge.kick(t, 3, 0, 1); g.fx.push('h:heavy') }
+    const tear = Math.floor(age / 55)
+    if (age < 520 && tear !== b.tear) { b.tear = tear; g.dirt.burst('turf', feet.x + sgn * 22 * feet.s, feet.y, t, { n: 3, s: feet.s, ang: -Math.PI / 2 + sgn * 0.5, spread: 0.7 }) }
+  }
+  if (spiked && !b.spikeFelt) {
+    b.spikeFelt = true
+    g.fx.push('stamp', 'h:medium'); g.nudge.kick(t, 2.4, 0, 1, 150)
+    g.dirt.burst('turf', feet.x + 6 * feet.s, feet.y, t, { n: 8, s: feet.s, spread: 1.2 })
+  }
+  if (spiked) looseBall(ctx, view, wx + 6, fl(wy), spikeAge - SPIKE_MS, true)
+  if (!calm()) g.dirt.draw(ctx, t)
   // him in the air: the same sprite pitched over from his feet, up off the grass by the jump. A baked stamp, no new figure.
   const q0 = tilt(view, wx, fl(wy)), k0 = q0.s * WR_SIZE * 0.92
   const hop = lead ? Math.sin(prog(age, -C_TAKEOFF, 190) * Math.PI) * 15 * k0 : 0
@@ -551,6 +620,14 @@ function drawCatch(ctx, g, view) {
   const depth = Math.min(b.depth, G + 9), spot = fl(depth), wrEnd = b.wx + sgn * (9 + C_FADE), ka = tilt(view, wrEnd, spot), kk = ka.s * WR_SIZE * 0.92
   // where his hands will be when it gets there: at the shoulder, or at full stretch, in the air
   const handOut = lead ? 44 : HAND_OUT, cx = wrEnd + sgn * handOut * kk / ka.g, lift2 = (lead ? 28 : HAND_UP) * kk
+  // the ball gets there: a thump in his hands, or a defender's arm through it
+  if (b.res != null && t >= b.arrive && !b.felt) {
+    b.felt = true
+    const q = tilt(view, cx, spot)
+    if (caught) { g.fx.push('catchball', 'h:medium'); g.nudge.kick(t, 1.6, 0, 1, 130) }
+    else if (!lead) { g.fx.push('h:heavy'); g.nudge.kick(t, 2.8, sgn, 0.3, 150) }
+    g.dirt.burst('dust', q.x, q.y - lift2, t, { n: caught ? 3 : 5, s: q.s * 0.8, colors: ['#ffffff', '#e8e2d2'], spread: 1.7, life: 260 })
+  }
   if (b.res == null || t < b.arrive) {
     if (t >= b.from) {
       const f = prog(t, b.from, b.arrive), qx = 180 + b.wide * 6
@@ -592,7 +669,7 @@ function drawCatch(ctx, g, view) {
   if (t >= b.t0 && !on) {
     const dn = ['1ST', '2ND', '3RD', '4TH'][downOf(balls, i) - 1] ?? '4TH', spotText = G > 50 ? `OWN ${100 - Math.round(G)}` : G < 50 ? `OPP ${Math.round(G)}` : 'MIDFIELD'
     const say = `${dn} & ${G < 10 ? 'GOAL' : 10}  ·  ${spotText}`
-    ctx.fillStyle = 'rgba(6,10,12,.78)'; rr(ctx, w / 2 - 92, 54, 184, 28, 4); ctx.fill()
+    ctx.fillStyle = '#060a0c'; rr(ctx, w / 2 - 92, 54, 184, 28, 4); ctx.fill()
     text(ctx, say, w / 2, 69, { size: 17, track: 1.2 })
   }
   // why it was a miss, under the word
@@ -619,6 +696,8 @@ function drawRelease(ctx, g, view) {
     band(x, view, row - bd * 2 - 1.6, row - bd * 2 + 1.6, '#f2d21f')
     floodlight(x, view)
   })
+  g.popTeam ??= [c.us, c.trim]
+  crowdPop(ctx, view, g.popTeam, !calm() && g.done?.hit ? t - g.doneAt - R_THROW - R_AIR : -1, { ms: 1500, power: 0.7 })
   const sec = (t - R_SNAP) / 1000, moving = sec > 0
   // the hand fight moves them: a swiped jab gains him ground, a landed one costs it
   let wrx = base, wry = row + 10, cbx = base, cby = row - 34
@@ -632,8 +711,9 @@ function drawRelease(ctx, g, view) {
   // decided: he's by him at a receiver's speed, or he's ridden off his line
   const end = g.done ? g.doneAt : 0
   let cbDir = 'down', dist = 0
+  const wrx0 = wrx, wry0 = wry, lastSgn = balls[balls.length - 1].sgn
   if (end) {
-    const age = t - end, lastSgn = balls[balls.length - 1].sgn
+    const age = t - end
     if (g.done.hit) {
       const run = Math.max(0, age - 60) / 1000
       dist = 125 * g.pace * (run - 0.34 * (1 - Math.exp(-run / 0.34)))
@@ -649,15 +729,42 @@ function drawRelease(ctx, g, view) {
   // the safety deep, then the corner and the receiver, then the line and the backfield in front
   real(ctx, view, base - s * 50, row - bd * 3.2, men.sf, { color: them.color, trim: them.trim, pants: them.trim, dir: 'down', pose: 'ready', size: 1 })
   const swiping = balls.find(b => b.res && t >= b.at && t < b.at + 200)
-  const wrPose = !moving ? 'ready' : swiping ? `swipe-${swiping.side ? 'r' : 'l'}` : null
-  const cbPose = !moving ? 'ready' : cbDir === 'up' ? null : 'ready'
+  // he's gone: the quarterback lets it go as he clears the corner, and it drops in over his shoulder
+  const won = end && g.done.hit, lostIt = end && !g.done.hit, endAge = end ? t - end : -1
+  const tossAge = won ? endAge - R_THROW : -1, gotIt = won && endAge >= R_THROW + R_AIR, ballNear = won && endAge >= R_THROW + R_AIR - 300
+  const toQb = s > 0 ? 'l' : 'r'
+  const wrPose = !moving ? 'ready' : swiping ? `swipe-${swiping.side ? 'r' : 'l'}` : gotIt ? null : ballNear ? `shoulder-${toQb}` : lostIt && endAge > 760 ? 'hands-head' : null
+  // and if he's been stonewalled, the corner lets everyone know
+  const cbShow = lostIt && endAge > 560 ? breakupPose(endAge - 560, Math.floor(balls[0].arrive)) : null
+  const cbPose = cbShow ?? (!moving ? 'ready' : cbDir === 'up' ? null : 'ready')
   let cbP, wrP
-  const drawCB = () => { cbP = real(ctx, view, cbx, cby, men.cb, { color: them.color, trim: them.trim, pants: them.trim, dir: cbDir, step: stepNow, pose: cbPose, size }, -s * 23) }
-  const drawWR = () => { wrP = real(ctx, view, wrx, wry, men.me, { ...us(c), dir: 'up', step: stepNow, pose: wrPose, size }) }
+  const drawCB = () => { cbP = real(ctx, view, cbx, cby, men.cb, { color: them.color, trim: them.trim, pants: them.trim, dir: cbDir, step: cbShow ? null : stepNow, pose: cbPose, size }, -s * 23) }
+  const drawWR = () => { wrP = real(ctx, view, wrx, wry, men.me, { ...us(c), dir: 'up', step: lostIt && endAge > 700 ? null : stepNow, pose: wrPose, carry: gotIt, size }) }
   if (wry < cby) { drawWR(); drawCB() } else { drawCB(); drawWR() }
   for (let i = 0; i < 3; i++) athlete(ctx, view, base - s * (104 + i * 32), row - 13, { color: them.color, trim: them.trim, pants: them.trim, dir: 'down', pose: moving ? 'block' : 'stance', size: 0.98 })
   for (let i = 0; i < 4; i++) liner(ctx, view, base - s * (90 + i * 32), row + 13, men.ol[i], { ...us(c), dir: 'up', pose: moving ? 'block' : 'stance', size: 0.98 }, i % 2)
-  real(ctx, view, base - s * 150, row + 44 + 20 * easeOut(prog(sec, 0, 0.8)), men.qb, { ...us(c), dir: 'up', carry: true, size: 0.98 })
+  const qbx = base - s * 150, qby = row + 44 + 20 * easeOut(prog(sec, 0, 0.8))
+  const qbNow = won && endAge > R_THROW - 220 ? (tossAge < 0 ? 'qb-cock' : qbPose(null, tossAge)) : null
+  real(ctx, view, qbx, qby, men.qb, { ...us(c), dir: qbNow ? (s > 0 ? 'right' : 'left') : 'up', carry: !qbNow && !(won && tossAge > 0), pose: qbNow, size: 0.98 })
+  // the turf and the hands: once each
+  g.dirt ??= particles(36, balls[0].from); g.nudge ??= nudge()
+  for (let k = 0; k < balls.length; k++) {
+    const b = balls[k]
+    if (b.res == null || b.felt || t < b.at) continue
+    b.felt = true
+    if (b.res) g.dirt.burst('turf', wrP.x, wrP.y, t, { n: 5, s: wrP.s, ang: Math.PI / 2 + b.sgn * 0.5, spread: 0.8 })
+    else { g.nudge.kick(t, 2.8, 0, 1, 160); g.fx.push('h:heavy'); g.dirt.burst('turf', wrP.x, wrP.y, t, { n: 8, s: wrP.s, spread: 1.3 }) }
+  }
+  if (won && endAge >= 60 && !g.burst) { g.burst = true; g.fx.push('swoosh'); g.nudge.kick(t, 1.6, 0, 1, 130); g.dirt.burst('turf', wrP.x, wrP.y, t, { n: 12, s: wrP.s * 1.1, ang: Math.PI / 2, spread: 0.85, speed: 1.1 }) }
+  // the throw
+  if (won && tossAge >= 0 && !gotIt) {
+    const run = (R_THROW + R_AIR - 60) / 1000, far = 125 * g.pace * (run - 0.34 * (1 - Math.exp(-run / 0.34)))
+    const air = flightAt(view, qbx + s * 6, qby, wrx0 - lastSgn * 32, wry0 - far, tossAge / R_AIR, 58)
+    ballShadow(ctx, view, air.gx, air.gy, air.lift)
+    artBall(ctx, air.x, air.y, { axis: air.axis, len: air.len, spin: tossAge / 180 })
+  }
+  if (gotIt && !g.gotFelt) { g.gotFelt = true; g.fx.push('catchball', 'h:medium') }
+  if (!calm()) g.dirt.draw(ctx, t)
   // his jab: the arm comes from the corner's shoulder to the receiver's chest
   ctx.lineCap = 'round'
   const kc = cbP.s * size, kw = wrP.s * size, cbSkin = men.cb?.skin ?? '#8d5a3b'
@@ -747,6 +854,7 @@ function catchLooks(g, view) {
   for (const pose of ['fight-l', 'fight-r', 'fight2-l', 'fight2-r']) add({ ...d, dir: 'down', pose })
   for (const pose of ['wave-a', 'wave-m', 'wave-b', 'belt-a', 'belt-m', 'belt-b']) add({ ...d, dir: 'down', pose })
   add({ ...d, dir: 'up', pose: 'wrap' })
+  add({ ...m, dir: 'up', pose: 'spike-up', carry: true }); for (const pose of ['flex', 'point-up', 'griddy-a', 'griddy-b', 'arms-up', 'hands-head']) add({ ...m, dir: 'up', pose })
   men.ol.forEach((o, k) => { for (const pose of ['stance', 'block']) add({ ...usT, number: o?.number ?? 70 + k, skin: o?.skin ?? skinOf(k + 9), dir: 'up', pose }) })
   for (let k = 0; k < DL_F.length; k++) for (const pose of ['stance', 'block']) add({ ...hisT, number: 90 + k, skin: skinOf(k + 2), dir: 'down', pose })
   const q = { ...usT, number: men.qb?.number ?? 7, skin: men.qb?.skin ?? skinOf(9) }
@@ -764,6 +872,8 @@ function looksOf(g, view) {
   if (g.game === 'gauntlet') {
     const plain = { kit: 'plain', trim: '#f4efe6', pants: '#20262c' }
     add({ ...plain, color: DRILL_TOP, dir: 'up', pose: 'ready' })
+    for (const pose of ['hips', 'arms-up']) add({ ...plain, color: DRILL_TOP, dir: 'up', pose })
+    QB_SKIN.slice(0, 3).forEach(skin => { for (const pose of [null, 'reach-r', 'arms-up']) add({ ...plain, color: COACH, pants: '#a89a80', skin, dir: 'down', pose }) })
     for (const step of STEPS) for (const pose of [null, 'look-l', 'look-r', 'catch-l', 'catch-r', 'toss-l', 'toss-r']) add({ ...plain, color: DRILL_TOP, dir: 'up', step, pose })
     QB_SKIN.forEach(skin => {
       add({ ...plain, color: QB_TOP, skin, dir: 'side', pose: 'qb-hold', carry: true })
@@ -781,7 +891,13 @@ function looksOf(g, view) {
   men.ol.forEach(m => { if (m) for (const pose of ['stance', 'block']) add({ ...plain, ...lookOf(m), dir: 'up', pose }) })
   if (men.qb) { add({ ...plain, ...lookOf(men.qb), dir: 'up', carry: true }); add({ ...plain, ...lookOf(men.qb), dir: 'up' }) }
   if (men.sf) { add({ ...his, ...lookOf(men.sf), dir: 'down', pose: 'ready' }); for (const step of STEPS) add({ ...his, ...lookOf(men.sf), dir: 'down', step }) }
+  add({ ...mine, dir: 'up', pose: 'hands-head' })
+  for (const pose of ['wave-a', 'wave-m', 'wave-b', 'belt-a', 'belt-m', 'belt-b']) add({ ...his, dir: 'down', pose })
+  if (men.qb) for (const pose of ['qb-cock', 'qb-rel', 'qb-follow']) add({ ...plain, skin: men.qb.skin, dir: 'side', pose })
+  else for (const pose of ['qb-cock', 'qb-rel', 'qb-follow']) add({ ...plain, dir: 'side', pose })
   for (const step of STEPS) {
+    for (const pose of ['shoulder-l', 'shoulder-r']) add({ ...mine, dir: 'up', step, pose })
+    add({ ...mine, dir: 'up', step, carry: true })
     for (const pose of [null, 'swipe-l', 'swipe-r']) add({ ...mine, dir: 'up', step, pose })
     for (const dir of ['up', 'down']) add({ ...his, dir, step })
     add({ ...his, dir: 'down', step, pose: 'ready' })

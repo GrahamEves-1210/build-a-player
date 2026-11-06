@@ -27,6 +27,16 @@ export const DB_ATTR = {
 // skin: #f0c4a0 white  #b07848 mixed/Polynesian  #5e3c22 Black  #3a2010 very dark Black
 // Rosters reflect 2026 season depth charts (Ourlads, Sept 2026) cross-referenced with PFF 2026 CB/S rankings
 
+// Size: worked out from the bio against his own spot, like a lineman's. A corner is measured against corners (175 lb
+// and 5'9" = F, 210 lb and 6'3" = S, length counting for more: 70% weight, 30% height) and a safety against safeties
+// (185 lb = F, 218 lb = S, 80% weight). The Size chip's man decides which spot the build plays
+export const DB_SIZE_SCALE = { cb: { lb: [175, 210], in: [69, 75], w: 0.7 }, s: { lb: [185, 218], in: [69, 75], w: 0.8 } }
+export const dbSizeGrade = (height, weight, spot = 'cb') => {
+  const g = (v, [lo, hi]) => Math.max(0, Math.min(11, (v - lo) / (hi - lo) * 11))
+  const s = DB_SIZE_SCALE[spot === 's' ? 's' : 'cb']
+  return Math.round(g(weight, s.lb) * s.w + g(height, s.in) * (1 - s.w))
+}
+
 const _DBS = [
   // ARI
   { name: 'Garrett Williams',      short: 'G. Williams',  team: 'ARI', teamName: 'Arizona Cardinals', skin: '#5e3c22', height: 70, weight: 192, starter: true, number: 21, subpos: 'cb',
@@ -328,4 +338,4 @@ const _dedupe = arr => {
   })
 }
 
-export const DBS = _dedupe(_DBS).map(db => ({ ...db, ...TEAM_COLOR[db.team] }))
+export const DBS = _dedupe(_DBS).map(db => ({ ...db, ...TEAM_COLOR[db.team], attrs: { ...db.attrs, size: dbSizeGrade(db.height, db.weight, db.subpos) } }))

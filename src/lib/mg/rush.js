@@ -11,8 +11,9 @@
 //
 // The rules are all here with no screen, in field units: x across, d up the field from the line of
 // scrimmage (the QB is at a big d). Nothing is painted on the field: the read is in the men's feet.
-import { byV, clamp, lerp, outcome, rngOf, layer, manOf, paceOf } from './kit.js'
-import { tilt, untilt, ground, stands, floodlight, vignette, skinOf, airBall, warmAthlete } from './art.js'
+import { byV, clamp, lerp, outcome, rngOf, layer, manOf, paceOf, easeOut, particles, nudge } from './kit.js'
+import { tilt, untilt, ground, stands, floodlight, vignette, skinOf, airBall, warmAthlete, crowdPop } from './art.js'
+import { afterStop, fxSeed, hitFx, plantFx, landFx, pushIn } from './contact.js'
 import { paintFieldFlat, qbPose } from './throw.js'
 import { put, action, teamOf, walk, ballInAir } from './read.js'
 
@@ -90,7 +91,7 @@ function makeRush({ v, seed, pos, cast }) {
     }
   })
   const g = {
-    t: 0, game: 'pass-rush', zones: 'three', anyKey: true, pads: ['GET OFF'], padLit: null, litAt: -999, fx: [], done: null, outro: 1500, stamp: null, later: null,
+    t: 0, game: 'pass-rush', zones: 'three', anyKey: true, pads: ['GET OFF'], padLit: null, litAt: -999, fx: [], done: null, outro: 1500, stamp: null, later: null, dirt: particles(44, fxSeed(seed)), nudge: nudge(),
     plan, i: 0, rep: plan[0], phase: 'set', nextAt: 0, who: castOf(cast), spot: dt0 ? 'dt' : 'edge',
     sacks: 0, pressures: 0,
     // what a player can see of him: all a bot gets
@@ -205,7 +206,8 @@ function makeRush({ v, seed, pos, cast }) {
     const words = { sack: 'SACK', pressure: 'PRESSURE', whiff: "BALL'S OUT", offside: 'OFFSIDE' }
     const beat = { sack: 1250, pressure: 1150, whiff: 1000, offside: 1000 }[kind]
     g.stamp = { text: words[kind], good, at: g.t, ms: beat - 120, size: 46 }
-    g.fx.push(kind === 'sack' ? 'pop' : 'tap', kind === 'sack' ? 'h:heavy' : 'h:medium')
+    g.fx.push(kind === 'sack' ? 'stamp' : 'tap', kind === 'sack' ? 'h:heavy' : 'h:medium')
+    if (kind === 'sack') g.popAt = g.t
     if (kind === 'offside') g.fx.push('whistle')
     g.phase = 'beat'
     g.nextAt = g.t + beat
@@ -314,7 +316,7 @@ function makeRun({ v, seed, def, pos, cast }) {
     }
   })
   const g = {
-    t: 0, game: 'run-stuff', zones: 'three', anyKey: false, pads: ['LEFT', 'SHED', 'RIGHT'], padLit: null, litAt: -999, fx: [], done: null, outro: 1500, stamp: null, later: null,
+    t: 0, game: 'run-stuff', zones: 'three', anyKey: false, pads: ['LEFT', 'SHED', 'RIGHT'], padLit: null, litAt: -999, fx: [], done: null, outro: 1500, stamp: null, later: null, dirt: particles(44, fxSeed(seed)), nudge: nudge(),
     plan, i: 0, rep: plan[0], phase: 'set', nextAt: 0, who: castOf(cast), spot: dt0 ? 'dt' : 'edge', tfl: 0, stuffs: 0, shorts: 0, yards: 0,
     tell: { flow: 0, commit: false, D: Infinity, snapped: false },
     hud: { prompt: 'READ THE RUN', dots: plan.map(() => null) },
@@ -369,11 +371,13 @@ function makeRun({ v, seed, def, pos, cast }) {
     if (kind === 'short') g.shorts++
     g.yards += yards
     g.hud.dots[g.i] = stop
-    g.hud.prompt = null
+    // (why it got away, in two words: too soon off the block, the wrong gap, or the shed never came in time)
+    g.hud.prompt = stop ? null : rep.cut ? 'TOO SOON' : rep.gap !== rep.dir ? 'WRONG GAP' : 'TOO LATE'
+    if (stop) g.popAt = g.t
     const word = { tfl: 'TACKLE FOR LOSS', stuff: 'STUFFED', short: 'SHORT GAIN', big: 'BIG RUN' }[kind]
     const beat = kind === 'big' ? 1050 : 1200
     g.stamp = { text: word, good: stop ? true : kind === 'big' ? false : null, at: g.t, ms: beat - 120, size: word.length > 11 ? 34 : 46 }
-    g.fx.push(stop ? 'pop' : 'tap', stop ? 'h:heavy' : 'h:light')
+    g.fx.push(stop ? 'stamp' : 'tap', stop ? 'h:heavy' : 'h:light')
     g.phase = 'beat'
     g.nextAt = g.t + beat
     if (plan.every(p => p.res)) {
@@ -504,16 +508,33 @@ function warmList(g, us, them) {
   return list
 }
 
-function drawRush(ctx, g, view) {
-  const c = view.colors, us = teamOf(c, 0), them = teamOf(c, 1), rep = g.rep, res = rep.res, who = g.who
-  const los = losOf(view, ME_D)
-  stage(ctx, view, los)
-  const fy = d => los - d
+function drawRush(ctx, g, view0) {
+  const c = view0.colors, us = teamOf(c, 0), them = teamOf(c, 1), rep = g.rep, res = rep.res, who = g.who
+  const los = losOf(view0, ME_D)
   const s = rep.s, snapped = g.phase !== 'set' && !rep.dead, age = g.t - rep.snapAt, since = res ? g.t - res.at : -1
-  const pc = snapped ? clamp(age / rep.rel, 0, 1) : 0
   const sack = res?.kind === 'sack', me = rep.me, ot = rep.ot, qb = rep.qb
-  const qFall = sack ? clamp((since - 40) / 300, 0, 1) : res?.kind === 'pressure' ? clamp((far(me, qb) < 30 ? since - 120 : -1) / 340, 0, 1) : 0
+  // the camera leans in on a sack, and eases back for the next rep
+  const fy = d => los - d
+  const qAt = tilt(view0, qb.x, fy(qb.d))
+  const lean = sack ? easeOut(clamp(since / 240, 0, 1)) : 0
+  const view = pushIn(ctx, g, view0, 1 + 0.34 * lean, qAt.x, qAt.y - 30, 1.34, lerp(qAt.x, 180, lean), lerp(qAt.y - 30, view0.h * 0.5, lean))
+  stage(ctx, view, los)
+  crowdPop(ctx, view, [c.us, c.trim], g.t - (g.popAt ?? -1e9))
+  const pc = snapped ? clamp(age / rep.rel, 0, 1) : 0
+  const s2 = sack ? afterStop(since) : since
+  const qFall = sack ? clamp((s2 - 10) / 240, 0, 1) : res?.kind === 'pressure' ? clamp((far(me, qb) < 30 ? since - 120 : -1) / 340, 0, 1) : 0
   const fallX = Math.sign(qb.x - me.x) || s
+  // the snap: the line comes off. Each exchange: pads and hands, and turf under them
+  if (snapped && !rep.snapFx) { rep.snapFx = true; plantFx(g, view, me.x, fy(me.d), 0, 3); plantFx(g, view, ot.x, fy(ot.d), 0, 3) }
+  if (snapped && rep.go && !rep.goFx) { rep.goFx = true; plantFx(g, view, me.x, fy(me.d), 0, rep.clean ? 8 : 4, 1.1) }
+  if (rep.stones !== (rep.stoneSeen ?? 0)) { rep.stoneSeen = rep.stones; hitFx(g, view, (me.x + ot.x) / 2, (fy(me.d) + fy(ot.d)) / 2, { power: 2.8, n: 6, dust: 0, s: 0.9, up: 40 }) }
+  // a move that wins: turf goes up where he rips by, and a bull drives on through it
+  if (rep.won && !rep.winFx) { rep.winFx = true; hitFx(g, view, ot.x, fy(ot.d), { power: rep.won === 'bull' ? 4 : 2.4, n: 9, dust: 2, side: rep.won === 'inside' ? -s : s, s: 0.9, up: 30 }) }
+  if (rep.won === 'bull' && rep.bull === 1 && Math.floor(g.t / 110) !== rep.dig) { rep.dig = Math.floor(g.t / 110); plantFx(g, view, me.x, fy(me.d), s, 2, 0.9) }
+  if (rep.won === 'bull' && rep.bull === 2 && g.t - rep.shedAt > 250 && !rep.flatFx) { rep.flatFx = true; landFx(g, view, ot.x, fy(ot.d), { side: s, power: 3.2 }) }
+  if (sack && !rep.hitFx) { rep.hitFx = true; hitFx(g, view, qb.x, fy(qb.d), { power: 7.5, n: 16, dust: 4, side: fallX, up: 26 }) }
+  if (sack && s2 > 260 && !rep.landFx) { rep.landFx = true; landFx(g, view, qb.x, fy(qb.d), { side: fallX, power: 3 }) }
+  if (res?.kind === 'pressure' && qFall > 0 && !rep.hitFx) { rep.hitFx = true; hitFx(g, view, qb.x, fy(qb.d), { power: 4, n: 8, dust: 2, side: fallX, up: 24 }); g.fx.push('stamp') }
   // the other four, and the men beside him
   for (let i = -2; i <= 2; i++) {
     if (i === rep.b) continue
@@ -561,16 +582,29 @@ function drawRush(ctx, g, view) {
   // him
   const wm = walk(g, `me${g.i}`, me.x, me.d, 8)
   const M = { size: SIZE, number: 94, skin: skinOf(3), ...who.me, dir: 'up', pose: 'touch', step: null }
-  if (sack || (qFall > 0 && res?.kind === 'pressure')) {
-    M.dir = sideName(fallX); M.pose = 'wrap'; M.fall = qFall; M.fallX = fallX; M.z = fy(qb.d) + 1
-  } else if (rep.dead) { M.pose = 'ready' }
+  // he's put him down: back on his feet, turned round to the camera, and everyone knows about it. A different one each time.
+  const party = sack ? clamp((s2 - 560) / 170, 0, 1) : 0
+  if (party >= 1) {
+    M.dir = 'down'; M.fall = 0
+    M.pose = rep.k === 0 ? 'flex' : rep.k === 1 ? (Math.floor(g.t / 170) % 2 ? 'griddy-a' : 'griddy-b') : 'point-up'
+    M.z = fy(qb.d) + 1
+  } else if (sack || (qFall > 0 && res?.kind === 'pressure')) {
+    M.dir = sideName(fallX); M.pose = 'wrap'; M.fall = qFall * (1 - party); M.fallX = fallX; M.z = fy(qb.d) + 1
+  } else if (rep.dead) { M.pose = 'hands-head' }
+  else if (res?.kind === 'whiff' && since > 280) { M.pose = 'hips'; M.step = null }
+  else if (rep.won && rep.won !== 'bull' && g.t - rep.wonAt < 200) {
+    // the arm over, or under, and through
+    const side = rep.won === 'inside' ? -s : s
+    M.pose = side < 0 ? 'swipe-l' : 'swipe-r'; M.step = null; M.dir = 'up'
+  }
   else if (snapped && rep.go) {
     M.step = wm.step
     M.pose = wm.step == null ? 'block' : null
     M.dir = dirFrom(wm, 'up')
     if (g.t < rep.lockUntil || (rep.won === 'bull' && rep.bull === 1)) { M.pose = 'block'; M.step = null; M.dir = 'up' }
   }
-  put(sack ? lerp(me.x, qb.x - fallX * 14, clamp(since / 100, 0, 1)) : me.x, sack ? lerp(fy(me.d), fy(qb.d) + 6, clamp(since / 100, 0, 1)) : fy(me.d), us, M)
+  const close = clamp(since / 55, 0, 1)
+  put(sack ? lerp(me.x, qb.x - fallX * 14, close) + party * fallX * -16 : me.x, sack ? lerp(fy(me.d), fy(qb.d) + 6, close) + party * 10 : fy(me.d), us, M)
   action(ctx, view)
   // the ball: on the ground under the center, back to the QB on the snap, away when he throws
   const bx = rep.cx
@@ -586,17 +620,35 @@ function drawRush(ctx, g, view) {
     const f = thrown / 460
     ballInAir(ctx, view, lerp(qb.x, qThrowTo, f), lerp(fy(qb.d), fy(-70), f), 34 + Math.sin(f * Math.PI) * 26, Math.atan2(qThrowTo - qb.x, fy(-70) - fy(qb.d)), 1.1)
   }
+  g.dirt.draw(ctx, g.t)
+  ctx.restore()
   // the first look at a rep bakes its men
   if (g.phase === 'set') { if (g.warmFor !== g.i) { g.warmFor = g.i; g.warmed = 0; g.warmL = warmList(g, us, them) } warm(g, g.warmL) }
 }
 
-function drawRun(ctx, g, view) {
-  const c = view.colors, us = teamOf(c, 0), them = teamOf(c, 1), rep = g.rep, res = rep.res, who = g.who
-  const los = losOf(view, RUN_ME)
-  stage(ctx, view, los)
-  const fy = d => los - d
+function drawRun(ctx, g, view0) {
+  const c = view0.colors, us = teamOf(c, 0), them = teamOf(c, 1), rep = g.rep, res = rep.res, who = g.who
+  const los = losOf(view0, RUN_ME)
   const snapped = g.phase !== 'set', age = g.t - rep.snapAt, since = res ? g.t - res.at : -1
   const me = rep.me, ol = rep.ol, rb = rep.rb, qb = rep.qb, s = rep.s
+  const fy = d => los - d
+  const rAt = tilt(view0, rb.x, fy(rb.d)), big = res && rep.tackled && (res.kind === 'tfl' || res.kind === 'stuff')
+  const lean = big ? easeOut(clamp(since / 240, 0, 1)) : 0
+  const view = pushIn(ctx, g, view0, 1 + 0.26 * lean, rAt.x, rAt.y - 30, 1.26, lerp(rAt.x, 180, lean * 0.7), lerp(rAt.y - 30, view0.h * 0.5, lean * 0.7))
+  stage(ctx, view, los)
+  crowdPop(ctx, view, [c.us, c.trim], g.t - (g.popAt ?? -1e9))
+  const s2 = rep.tackled ? afterStop(since) : since
+  // the snap, a gap taken, a man thrown off, and the hit
+  if (snapped && !rep.snapFx) { rep.snapFx = true; plantFx(g, view, me.x, fy(me.d), 0, 3); plantFx(g, view, ol.x, fy(ol.d), 0, 3) }
+  if (rep.gap !== (rep.gapSeen ?? 0)) { rep.gapSeen = rep.gap; if (rep.gap) plantFx(g, view, me.x, fy(me.d), rep.gap, 6) }
+  if (rep.free && rep.free !== Infinity && g.t >= rep.free && !rep.shedFx) { rep.shedFx = true; hitFx(g, view, ol.x, fy(ol.d), { power: 2.6, n: 8, dust: 1, side: -s, s: 0.9, up: 30 }) }
+  if (rep.free && g.t >= rep.free + 300 && !rep.flatFx) { rep.flatFx = true; if (rep.free !== Infinity) landFx(g, view, ol.x, fy(ol.d), { side: -s, power: 1.6, s: 0.9 }) }
+  if (rep.tackled && !rep.hitFx) {
+    rep.hitFx = true
+    const hard = res.kind === 'tfl' ? 7.5 : res.kind === 'stuff' ? 6 : 3.5
+    hitFx(g, view, rb.x, fy(rb.d), { power: hard, n: hard > 4 ? 16 : 8, dust: hard > 4 ? 4 : 2, side: rep.tackled.side, up: 26 })
+  }
+  if (rep.tackled && s2 > 260 && !rep.landFx) { rep.landFx = true; landFx(g, view, rb.x, fy(rb.d), { side: rep.tackled.side, power: big ? 3 : 1.6 }) }
   // the flow: everybody's first step says where it's going
   const flow = rep.shownDir ?? 0
   const flowX = rep.fx0 = (rep.fx0 ?? 0) + clamp(flow * FLOW_X - (rep.fx0 ?? 0), -2, 2)
@@ -622,8 +674,10 @@ function drawRun(ctx, g, view) {
   if (thrown) { OLS.fall = clamp((g.t - rep.free) / 300, 0, 0.8); OLS.fallX = -s }
   put(ol.x, fy(ol.d), them, OLS)
   // the back
-  const rw = walk(g, `rb${g.i}`, rb.x, rb.d, 9), tk = rep.tackled, fall = tk ? clamp((since - 50) / 300, 0, 1) : 0
-  put(rb.x, fy(rb.d), them, { dir: tk ? 'down' : dirFrom(rw, 'down'), step: tk ? null : rw.step, pose: !snapped ? 'ready' : null, carry: rep.handed, fall, fallX: tk ? tk.side : 0, skin: skinOf(6), number: 28, size: SIZE, ...who.rb })
+  const rw = walk(g, `rb${g.i}`, rb.x, rb.d, 9), tk = rep.tackled, fall = tk ? clamp((s2 - 10) / 240, 0, 1) : 0
+  // (a real stop drives him back the way he came)
+  const drive = big ? easeOut(clamp(s2 / 300, 0, 1)) * 24 : 0
+  put(rb.x, fy(rb.d) - drive, them, { dir: tk ? 'down' : dirFrom(rw, 'down'), step: tk ? null : rw.step, pose: !snapped ? 'ready' : null, carry: rep.handed, fall, fallX: tk ? tk.side : 0, skin: skinOf(6), number: 28, size: SIZE, ...who.rb })
   // the QB
   const qw = walk(g, `qb${g.i}`, qb.x, qb.d, 9)
   put(qb.x, fy(qb.d), them, { dir: dirFrom(qw, 'down'), step: qw.step, pose: qw.step == null ? 'ready' : null, carry: snapped && age >= SNAP_MS && !rep.handed, skin: skinOf(9), number: 7, size: SIZE, ...who.qb })
@@ -631,10 +685,19 @@ function drawRun(ctx, g, view) {
   const wm = walk(g, `me${g.i}`, me.x, me.d, 8)
   const M = { size: SIZE, number: 94, skin: skinOf(3), ...who.me, dir: 'up', pose: 'touch', step: null }
   const off = rep.free && g.t >= rep.free
-  if (tk) { M.dir = sideName(tk.side); M.pose = 'wrap'; M.fall = fall; M.fallX = tk.side; M.z = fy(rb.d) + 1 }
+  // a stop: up off him, facing the camera, and nobody needs telling. A different one each play.
+  const party = big ? clamp((s2 - 600) / 170, 0, 1) : 0
+  if (party >= 1) { M.dir = 'down'; M.fall = 0; M.pose = ['flex', 'point-up', 'griddy', 'hands-head'][rep.k % 4]; if (M.pose === 'griddy') M.pose = Math.floor(g.t / 170) % 2 ? 'griddy-a' : 'griddy-b'; M.z = fy(rb.d) + 1 }
+  else if (tk) { M.dir = sideName(tk.side); M.pose = 'wrap'; M.fall = fall; M.fallX = tk.side; M.z = fy(rb.d) - drive + 1 }
+  else if (res?.kind === 'big' && off) {
+    // gone: he lays out after him and gets nothing but turf
+    const dive = clamp((since - 20) / 220, 0, 0.94), sd = Math.sign(rb.x - me.x) || s
+    M.dir = sideName(sd); M.pose = 'dive'; M.fall = dive; M.fallX = sd; M.step = null
+    if (since > 240 && !rep.whiffFx) { rep.whiffFx = true; landFx(g, view, me.x, fy(me.d), { side: sd, power: 1.5 }) }
+  }
   else if (off) { M.step = wm.step; M.pose = wm.step == null ? 'wrap' : null; M.dir = dirFrom(wm, 'up') }
   else if (snapped) { M.pose = 'block'; M.step = null }
-  put(me.x, fy(me.d), us, M)
+  put(me.x, fy(me.d) - drive, us, M)
   action(ctx, view)
   // the ball: on the ground under the center, then back to the QB
   const bx = rep.cx
@@ -655,4 +718,6 @@ function drawRun(ctx, g, view) {
     }
     warm(g, g.warmL)
   }
+  g.dirt.draw(ctx, g.t)
+  ctx.restore()
 }

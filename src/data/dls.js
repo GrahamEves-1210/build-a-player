@@ -25,10 +25,14 @@ export const DL_ATTR = {
   blockShed:       { label: 'Block Shed',       shortLabel: 'SHD', category: 'skill',    col: 'var(--c-pkt)',  hex: '#2dd4bf', bodyZone: 'arm'  },
   playRecognition: { label: 'Play Recognition', shortLabel: 'REC', category: 'skill',   col: 'var(--c-iq)',   hex: '#e879f9', bodyZone: 'head' },
 }
-// Size, the 9th rating: worked out from the bio, 80% weight, 20% height (230 lb and 5'11" = F, 340 lb and 6'9" = S).
-export const dlSizeGrade = (height, weight) => {
-  const g = (v, lo, hi) => Math.max(0, Math.min(11, (v - lo) / (hi - lo) * 11))
-  return Math.round(g(weight, 230, 340) * 0.8 + g(height, 71, 81) * 0.2)
+// Size, the 9th rating: worked out from the bio, 85% weight, 15% height, against his own spot, so the average
+// man at the spot is a B. An edge is measured against edges (233 lb = F, 280 lb = S) and a tackle against tackles
+// (257 lb = F, 345 lb = S). The Size chip's man decides which spot the build plays
+export const DL_SIZE_SCALE = { edge: { lb: [233, 280], in: [73, 78] }, dt: { lb: [257, 345], in: [72, 78] } }
+export const dlSizeGrade = (height, weight, spot = 'edge') => {
+  const g = (v, [lo, hi]) => Math.max(0, Math.min(11, (v - lo) / (hi - lo) * 11))
+  const s = DL_SIZE_SCALE[spot === 'dt' ? 'dt' : 'edge']
+  return Math.round(g(weight, s.lb) * 0.85 + g(height, s.in) * 0.15)
 }
 // how much of a pass rusher he is: get-off, bend, the moves, the speed
 export const passRush = p => { const a = p.attrs; return ((a.getOff ?? 5) * 1.2 + (a.bend ?? 5) + (a.finesseMoves ?? 5) + (a.powerMoves ?? 5) * 0.8 + (a.speed ?? 5) * 0.8) / 4.8 }
@@ -337,4 +341,4 @@ const _DLS = [
   { name: "Dorance Armstrong", short: "Armstrong", team: 'WAS', teamName: "Washington Commanders", pos: 'EDGE', subpos: 'edge', skin: '#5e3c22', height: 76, weight: 255, number: 92, starter: true, years: "2024-",
     attrs: { getOff: 6, speed: 7, powerMoves: 6, finesseMoves: 6, strength: 6, playRecognition: 6, bend: 6, blockShed: 5 } }, // proposed rating
 ]
-export const DLS = _DLS.map(p => ({ ...p, ...TEAM_COLOR[p.team], attrs: { ...p.attrs, size: dlSizeGrade(p.height, p.weight) } }))
+export const DLS = _DLS.map(p => ({ ...p, ...TEAM_COLOR[p.team], attrs: { ...p.attrs, size: dlSizeGrade(p.height, p.weight, p.subpos) } }))

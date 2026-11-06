@@ -12,6 +12,9 @@ import * as bench from './bench.js'
 import * as cone from './cone.js'
 import * as rush from './rush.js'
 import * as goalline from './goalline.js'
+import * as lockdown from './lockdown.js'
+import * as fastbreak from './fastbreak.js'
+import * as oop from './oop.js'
 import { useCamera } from './art.js'
 
 // (make sets the game's camera first, so the layout it works out goes through the same one as the picture)
@@ -31,8 +34,11 @@ export const ENGINES = {
   ...map(cone, 'cone', ['cone', 'lane']),
   ...map(rush, 'rush', ['pass-rush', 'run-stuff']),
   ...map(goalline, 'goalline', ['goal-line']),
+  ...map(lockdown, 'lockdown', ['lockdown']),
+  ...map(fastbreak, 'fastbreak', ['fast-break']),
+  ...map(oop, 'oop', ['alley-oop']),
 }
 export const engineFor = game => ENGINES[game] ?? null
 export const GAME_IDS = Object.keys(ENGINES)
 // the games played on a court
-export const BUCKET_GAMES = new Set(['pnr', 'rim-protect', 'iso', 'post-up', 'clutch-shot', 'free-throws', 'spot', 'vert', 'board', 'sprint', 'lane', 'nbench'])
+export const BUCKET_GAMES = new Set(['pnr', 'rim-protect', 'iso', 'post-up', 'clutch-shot', 'free-throws', 'spot', 'vert', 'board', 'sprint', 'lane', 'nbench', 'lockdown', 'fast-break', 'alley-oop'])

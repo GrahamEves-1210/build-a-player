@@ -27,7 +27,24 @@ export const accept = (self) => {
 // fill a pool to farm it (src/lib/live.js liveElsewhere does the same on the device)
 export const ONE_PER_DEVICE = true
 
-// cfg: { size, min, fillSecs, room: env binding name of the room class }
+// How many are waiting here, for the menus' "3 searching" (live/src/games.js keeps them).
+// Only the number goes, and only when it changes (or once a minute while it's above zero,
+// so one a redeploy cut off goes stale there instead of standing for ever).
+export function countPoster(env, key) {
+  let last = -1, timer = null
+  const post = n => {
+    if (!env.GAMES) return
+    const ns = env.GAMES
+    ns.get(ns.idFromName('blacktop')).fetch('https://games/count', { method: 'POST', body: JSON.stringify({ key, n }) }).catch(() => {})
+  }
+  return n => {
+    if (n !== last) { last = n; post(n) }
+    if (n > 0 && !timer) timer = setInterval(() => post(last), 60000)
+    if (n === 0 && timer) { clearInterval(timer); timer = null }
+  }
+}
+
+// cfg: { size, min, fillSecs, room: env binding name of the room class, kind: 'cp' / 'au' for the counts }
 export class BaseQueue {
   constructor(state, env, cfg) {
     this.env = env; this.cfg = cfg
@@ -38,6 +55,7 @@ export class BaseQueue {
   async fetch(req) {
     const url = new URL(req.url)
     this.sport ??= url.searchParams.get('sport'); this.pos ??= url.searchParams.get('pos')
+    if (this.cfg.kind && !this.count) this.count = countPoster(this.env, `${this.cfg.kind}:${this.sport}-${this.pos}`)
     return accept(this)
   }
   waiting() {
@@ -49,7 +67,7 @@ export class BaseQueue {
     })
   }
   state() { return { t: 'queue', list: this.waiting().map(pub), startsIn: this.startsAt ? Math.max(0, this.startsAt - Date.now()) : null, size: this.cfg.size } }
-  broadcast() { const s = this.state(); for (const ws of this.conns.keys()) send(ws, s) }
+  broadcast() { const s = this.state(); for (const ws of this.conns.keys()) send(ws, s); this.count?.(s.list.length) }
   rearm(joined) {
     const n = this.waiting().length
     if (n < this.cfg.min) { clearTimeout(this.timer); this.timer = null; this.startsAt = null; return }

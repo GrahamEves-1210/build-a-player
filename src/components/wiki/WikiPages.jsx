@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import RatingsTable, { POOLS, RATINGS_AS_OF, RATINGS_DATES, fmtDate, poolCounts, gradeColor } from '../RatingsTable'
 import { CREATORS, CREATORS_AS_OF } from '../../data/creators'
+import { LB_LIVE } from '../../lib/lbLive'
 
 // The wiki's pages. Each exports its content as a component plus a table of
 // contents the shell uses for the sidebar and search. Everything here is
@@ -21,6 +22,7 @@ const RB_W = [['Elusiveness', 15], ['Speed', 14], ['Burst', 14], ['Strength', 14
 const WR_W = [['Hands', 14], ['Route running', 14], ['Speed', 14], ['Size', 14], ['Awareness', 10], ['After the catch', 10], ['Body control', 8], ['Vertical', 8], ['Release', 8]]
 const TE_W = [['Hands', 16], ['Route running', 15], ['Size', 12], ['Awareness', 11], ['After the catch', 11], ['Blocking', 9], ['Strength', 9], ['Vertical', 9], ['Speed', 8]]
 const DB_W = [['Man coverage', 15], ['Speed', 14], ['Play recognition', 14], ['Zone IQ', 13], ['Press', 11], ['Fluidity', 10], ['Hands', 10], ['Run support', 7], ['Size', 6]]
+const LB_W = [['Range', 15], ['Tackling', 15], ['Play recognition', 14], ['Zone instincts', 12], ['Block shed', 11], ['Power', 9], ['Pass rush', 8], ['Leadership', 8], ['Size', 8]]
 const DL_W = [['Get off', 16], ['Bend', 13], ['Block shed', 13], ['Power moves', 12], ['Finesse moves', 12], ['Play recognition', 11], ['Strength', 10], ['Speed', 7], ['Size', 6]]
 const G_W = [['Jump shot', 14], ['Speed', 14], ['Size', 14], ['Finishing', 14], ['Basketball IQ', 14], ['Passing', 8], ['Handles', 8], ['Perimeter defense', 8], ['Bounce', 3], ['Clutch', 3]]
 const B_W = [['Finishing', 15], ['Size', 15], ['Interior defense', 15], ['Rebounding', 15], ['Jump shot', 9], ['Bounce', 7], ['Playmaking', 7], ['Basketball IQ', 7], ['Speed', 7], ['Clutch', 3]]
@@ -36,7 +38,7 @@ function MainPage({ go }) {
           <tr><td colSpan={2}><img src="/bap-mark.webp" alt="Build-A-Player logo" /></td></tr>
           <tr><th>Type</th><td>Free browser game</td></tr>
           <tr><th>Games</th><td>Build-A-Player (NFL)<br />Build-A-Bucket (NBA)</td></tr>
-          <tr><th>Positions</th><td>QB, RB, WR, TE, DB, DL<br />Guard, Big</td></tr>
+          <tr><th>Positions</th><td>QB, RB, WR, TE, DB, DL{LB_LIVE ? ', LB' : ''}<br />Guard, Big</td></tr>
           <tr><th>Modes</th><td>Career, Squad Builder, Compete, Trait Auction, Blacktop, Current, All-Time, Salary Cap, Head-to-Head, Depth Chart</td></tr>
           <tr><th>Developer</th><td>Playmaker Games (independent)</td></tr>
           <tr><th>Platform</th><td>Web browser, iOS, Android</td></tr>
@@ -59,7 +61,7 @@ function MainPage({ go }) {
       </ul>
 
       <h2 id="two-games">The two games</h2>
-      <p><b>Build-A-Player</b> is the football game: quarterbacks, running backs, wide receivers, tight ends, defensive backs and defensive linemen, each with nine attributes, simulated through a 17-game NFL season with playoffs, a Super Bowl and an awards vote. <b>Build-A-Bucket</b> is the basketball game at <a href="/bucket">build-a-player.com/bucket</a>: guards and bigs with ten attributes, an 82-game season, the play-in, four rounds of best-of-seven, and an MVP race.</p>
+      <p><b>Build-A-Player</b> is the football game: quarterbacks, running backs, wide receivers, tight ends, defensive backs{LB_LIVE ? ', defensive linemen and linebackers' : ' and defensive linemen'}, each with nine attributes, simulated through a 17-game NFL season with playoffs, a Super Bowl and an awards vote. <b>Build-A-Bucket</b> is the basketball game at <a href="/bucket">build-a-player.com/bucket</a>: guards and bigs with ten attributes, an 82-game season, the play-in, four rounds of best-of-seven, and an MVP race.</p>
 
       <h2 id="numbers">By the numbers</h2>
       <div className="wk-table-wrap">
@@ -106,6 +108,7 @@ function GameplayPage({ go }) {
             <tr><td>Tight end</td><td>Hands, Route Running, Size, Awareness, After the Catch, Blocking, Strength, Vertical, Speed</td></tr>
             <tr><td>Defensive back</td><td>Speed, Size, Fluidity, Press, Hands, Zone IQ, Man Coverage, Play Recognition, Run Support</td></tr>
             <tr><td>Defensive line (EDGE · DT)</td><td>Get Off, Speed, Size, Power Moves, Finesse Moves, Strength, Play Recognition, Bend, Block Shed</td></tr>
+            {LB_LIVE && <tr><td>Linebacker</td><td>Range, Size, Power, Tackling, Block Shed, Zone Instincts, Pass Rush, Play Recognition, Leadership</td></tr>}
             <tr><td>Guard (PG · SG · SF)</td><td>Jump Shot, Finishing, Passing, Handles, Perimeter Defense, Speed, Bounce, Size, Basketball IQ, Clutch</td></tr>
             <tr><td>Big (PF · C)</td><td>Jump Shot, Finishing, Playmaking, Interior Defense, Rebounding, Speed, Bounce, Size, Basketball IQ, Clutch</td></tr>
           </tbody>
@@ -125,13 +128,13 @@ OVR = min(99, round(base + balance bonus + floor bonus))`}</pre>
             <tr><td>Quarterback</td><td>58 + 2.2 × avg + 0.24 × avg²</td><td>+3 / +1.5 / +0.5</td><td>+2.5 / +0.8</td></tr>
             <tr><td>Running back</td><td>62 + 2.0 × avg + 0.19 × avg²</td><td>+2.5 / +1 / +0.3</td><td>+2 / +0.5</td></tr>
             <tr><td>Wide receiver, tight end, defensive back</td><td>60 + 2.1 × avg + 0.21 × avg²</td><td>+2.5 / +1 / +0.3</td><td>+2 / +0.5</td></tr>
-            <tr><td>Defensive line</td><td>60 + 2.1 × avg + 0.21 × avg²</td><td>None</td><td>+2 / +0.5</td></tr>
+            <tr><td>{LB_LIVE ? 'Defensive line, linebacker' : 'Defensive line'}</td><td>60 + 2.1 × avg + 0.21 × avg²</td><td>None</td><td>+2 / +0.5</td></tr>
           </tbody>
         </table>
       </div>
       <p>Bonuses only apply to complete builds, and a quarterback loses his balance bonus if any rating is an F. For reference, a complete build with every rating the same scores: all 3s (C) 70 to 72 depending on position, all 5s (B-) 78 or 79, all 8s (A-) 93 to 95, and nine S ratings hit the 99 cap.</p>
       <div className="wk-weights">
-        <Weights title="Quarterback" rows={QB_W} /><Weights title="Running back" rows={RB_W} /><Weights title="Wide receiver" rows={WR_W} /><Weights title="Tight end" rows={TE_W} /><Weights title="Defensive back" rows={DB_W} /><Weights title="Defensive line" rows={DL_W} />
+        <Weights title="Quarterback" rows={QB_W} /><Weights title="Running back" rows={RB_W} /><Weights title="Wide receiver" rows={WR_W} /><Weights title="Tight end" rows={TE_W} /><Weights title="Defensive back" rows={DB_W} /><Weights title="Defensive line" rows={DL_W} />{LB_LIVE && <Weights title="Linebacker" rows={LB_W} />}
       </div>
       <h3 id="overall-nba">Basketball</h3>
       <pre className="wk-pre">{`avg = weighted average of your ten ratings
@@ -204,7 +207,7 @@ win chance = team baseline + boost, clamped 12% to 87% (All-Time 91%)`}</pre>
 function CareerPage({ go }) {
   return (
     <>
-      <p className="wk-lead"><b>Career</b> follows one player you build from the combine to retirement, in football (QB, RB, WR, TE, DB, DL) or basketball (guard, big). You name him, and every season, contract and decision is his. There are three save slots per sport, and a career runs at most 20 seasons, starting in 2026.</p>
+      <p className="wk-lead"><b>Career</b> follows one player you build from the combine to retirement, in football (QB, RB, WR, TE, DB, DL{LB_LIVE ? ', LB' : ''}) or basketball (guard, big). You name him, and every season, contract and decision is his. There are three save slots per sport, and a career runs at most 20 seasons, starting in 2026.</p>
 
       <h2 id="draft">The combine and the draft</h2>
       <ul>
@@ -241,9 +244,10 @@ function CareerPage({ go }) {
       <p>Young players can grow a trait on their own; from 31 (33 for quarterbacks) the physical traits start to fade. A player can retire from 29 or after eight seasons. The career ends on its own at 40 (42 for quarterbacks), after 20 seasons, or when free agency brings no offers.</p>
 
       <h2 id="legacy">Legacy and the Hall of Fame</h2>
-      <pre className="wk-pre">{`legacy = seasons × 2 + Pro Bowls/All-Stars × 6 + All-Pro/All-NBA × 10
-       + awards × 18 + rings × 20 + playoff years × 3
-       + production + records × 8 + camp and shoe-deal bonuses`}</pre>
+      <pre className="wk-pre">{`legacy = seasons × 2 + Pro Bowls/All-Stars × 6 (half after the 8th)
+       + All-Pro/All-NBA × 10 + awards × 18 (+10 for each after the first)
+       + rings × 20 + playoff years × 3 + production + records × 8
+       + small camp, shoe-deal and earnings bonuses`}</pre>
       <p>The same formula scores the real greats from their real careers (seasons, Pro Bowls or All-Star picks, AP First-Team All-Pro or All-NBA teams, the position's award counted once a season, rings, playoff years, career stats and the all-time records they hold), so a finished career slots into the all-time list for its position (one top 25 for basketball). Records count once each, however many times a career raises its own. Camp and shoe-deal bonuses are the only points the greats don't get. Tiers run Starter, Star (80), Superstar (170) and All-Time Great (280). At retirement a Hall of Fame vote is held: 80% gets in, 93% is first ballot. Each career also keeps its own record book: break an all-time record and that number becomes the bar for the rest of the career.</p>
     </>
   )
@@ -265,7 +269,7 @@ function ModesPage({ go }) {
       </ul>
       <p>A season pays XP and coins like any other. Sandbox in Squad Builder is an unlock from the Shop, and a sandbox squad earns nothing.</p>
       <h2 id="compete">Compete <span className="wk-tag">ONLINE</span></h2>
-      <p>Up to five real players build at the same time from the <b>same spins</b> (respins are your own). Five minutes on the clock; the highest overall wins, and an earlier submit breaks a tie. Places pay XP and coins and move an online rating through the tiers Rookie, Starter (900), Pro (1100), All-Star (1300), MVP (1500) and Legend (1750).</p>
+      <p>Up to five real players build at the same time from the <b>same spins</b> (respins are your own). Three minutes on the clock; the highest overall wins, and an earlier submit breaks a tie. Places pay XP and coins and move an online rating through the tiers Rookie, Starter (900), Pro (1100), All-Star (1300), MVP (1500) and Legend (1750).</p>
       <h2 id="auction">Trait Auction <span className="wk-tag">ONLINE</span></h2>
       <p>1v1: two players, $20 each. A slot card is pulled and a real player is spun for it, his grade face down until the gavel. Bids go up $1 at a time: going once, going twice, and every bid puts the clock back up. You always keep $1 for each of your other empty slots, and a slot still empty when the auction ends gets a free agent (a C). The best overall wins; money left breaks ties.</p>
       <h2 id="blacktop">Blacktop <span className="wk-tag">ONLINE · NBA</span></h2>
@@ -403,7 +407,7 @@ export const PAGES = [
   { slug: 'main', title: 'Main Page', heading: 'Build-A-Player Wiki', description: 'How Build-A-Player and Build-A-Bucket work: spins, ratings, overall formulas, season simulation, modes, every player rating, and the creators who play.', Component: MainPage,
     toc: [['start', 'Start here'], ['two-games', 'The two games'], ['numbers', 'By the numbers']] },
   { slug: 'gameplay', title: 'Gameplay', description: 'Spins, chips and respins, the 0–11 rating scale, positions and attributes, and the exact overall formulas and weights per position.', Component: GameplayPage,
-    toc: [['spinning', 'Spinning', 'spin reel respin team player chips tap'], ['scale', 'The 0–11 scale', 'grades letter F S rating scale'], ['positions', 'Positions and attributes', 'QB RB WR TE DB DL guard big attributes'], ['overall', 'Overall rating', 'OVR formula weights weighted average balance bonus'], ['overall-nfl', 'Football overall', 'OVR formula'], ['overall-nba', 'Basketball overall', 'OVR formula'], ['archetypes', 'Archetypes', 'gunslinger dual threat franchise cornerstone']] },
+    toc: [['spinning', 'Spinning', 'spin reel respin team player chips tap'], ['scale', 'The 0–11 scale', 'grades letter F S rating scale'], ['positions', 'Positions and attributes', `QB RB WR TE DB DL${LB_LIVE ? ' LB' : ''} guard big attributes`], ['overall', 'Overall rating', 'OVR formula weights weighted average balance bonus'], ['overall-nfl', 'Football overall', 'OVR formula'], ['overall-nba', 'Basketball overall', 'OVR formula'], ['archetypes', 'Archetypes', 'gunslinger dual threat franchise cornerstone']] },
   { slug: 'seasons', title: 'Seasons', description: 'How an NFL or NBA season is simulated: team grades, schedules, win chances, stats, playoffs, the Super Bowl, the play-in and awards.', Component: SeasonsPage,
     toc: [['nfl', 'NFL season', 'simulate football'], ['nfl-team', 'Your team matters', 'team offense defense grade'], ['nfl-schedule', 'The schedule', '17 games weather'], ['nfl-winning', 'Win chance', 'win probability stats passing yards'], ['nfl-playoffs', 'NFL playoffs', 'bye wild card super bowl overtime'], ['nfl-awards', 'NFL awards', 'MVP OPOY DPOY'], ['nba', 'NBA season', 'simulate basketball 82 games'], ['nba-team', 'Team strength', 'ratings out of 100'], ['nba-boost', 'Your boost', 'OVR boost win chance'], ['nba-stats', 'Your numbers', 'PPG RPG APG shooting'], ['nba-playoffs', 'Play-in and playoffs', 'seed log5 best of seven finals'], ['nba-awards', 'NBA awards', 'MVP DPOY']] },
   { slug: 'career', title: 'Career', description: 'Career mode: the combine, interviews and draft, seasons and decisions, the depth chart, contracts and talks, reputation, aging, legacy and the Hall of Fame.', Component: CareerPage,

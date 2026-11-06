@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { usePresence, fmtCount } from '../../lib/presence'
+import { useLiveCounts, searching } from '../../lib/liveCounts'
 import { useRailOn } from '../../lib/ads'
 import { LiveLeaveButton } from './LiveLeave'
 import { createPortal } from 'react-dom'
@@ -105,6 +106,9 @@ export function BlacktopHub({ onJoin3v3, onJoin2v2 = null, onJoin1v1 = null, onP
   // the games being played right now, under each mode (only with the live server)
   const live = useLiveGames(!!onWatch)
   const onCourt = usePresence()?.areas?.blacktop ?? 0   // players on the Blacktop right now
+  // the spots taken in each lobby right now (lib/liveCounts.js): nothing until the server says
+  const waiting = useLiveCounts(true)
+  const searchingTag = size => { const n = searching(waiting, `bt:${size}`); return n ? <span className="bt-mode-n">{n} SEARCHING</span> : null }
   return (
     <div className="ag-screen ag-screen--bucket bt-hub">
       <div className="ag-screen-head">
@@ -123,6 +127,7 @@ export function BlacktopHub({ onJoin3v3, onJoin2v2 = null, onJoin1v1 = null, onP
           <div className="bt-mode-head">
             <span className="bt-mode-tag">1V1</span>
             <span className="bt-mode-txt"><b>1v1</b><small>One on one. Take a spot as a guard or a big, build, run it.</small></span>
+            {onJoin1v1 && searchingTag(1)}
           </div>
           {onJoin1v1 ? <>
             <button className="ag-btn bt-mode-go" onClick={() => { sfx('tap'); onJoin1v1() }}>JOIN LOBBY <IconArrow size={16} /></button>
@@ -140,6 +145,7 @@ export function BlacktopHub({ onJoin3v3, onJoin2v2 = null, onJoin1v1 = null, onP
             <div className="bt-mode-head">
               <span className="bt-mode-tag">2V2</span>
               <span className="bt-mode-txt"><b>2v2</b><small>A guard and a big a side. Take a spot, build your role, run it.</small></span>
+              {searchingTag(2)}
             </div>
             <button className="ag-btn bt-mode-go" onClick={() => { sfx('tap'); onJoin2v2() }}>JOIN LOBBY <IconArrow size={16} /></button>
             {onPractice && <button className="ag-btn ag-btn--ghost bt-practice" onClick={() => { sfx('tap'); onPractice(2) }}>PRACTICE · WITH 3 CPUS</button>}
@@ -151,6 +157,7 @@ export function BlacktopHub({ onJoin3v3, onJoin2v2 = null, onJoin1v1 = null, onP
           <div className="bt-mode-head">
             <span className="bt-mode-tag">3V3</span>
             <span className="bt-mode-txt"><b>Squads</b><small>Two guards and a big a side. Take a spot, build your role, run it.</small></span>
+            {searchingTag(3)}
           </div>
           <button className="ag-btn bt-mode-go" onClick={() => { sfx('tap'); onJoin3v3() }}>JOIN LOBBY <IconArrow size={16} /></button>
           {onPractice && <button className="ag-btn ag-btn--ghost bt-practice" onClick={() => { sfx('tap'); onPractice(3) }}>PRACTICE · WITH 5 CPUS</button>}

@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { usePresence, fmtCount } from '../../lib/presence'
+import { useLiveCounts, searching } from '../../lib/liveCounts'
 import { XpIco } from './GainIcons'
 import { useProgress, COMPETE_REWARDS } from '../../lib/progress'
 import { POOL_SIZE, FILL_AFTER_SECS, MIN_POOL } from '../../lib/compete'
@@ -40,9 +41,13 @@ export default function AppCompete({ cp, au, sport, position, positions, onPosit
   const setMode = m => { setModeRaw(m); try { localStorage.setItem('bap_compete_mode', m) } catch {} }
   const auctionOn = !!au && au.phase !== 'idle'
   const showAuction = auctionOn || (!!au && mode === 'auction' && cp.phase === 'idle')
-  // players in each mode right now (lib/presence.js), shown from the first one
+  // players in Compete right now, the Trait Auction's with the pools' (lib/presence.js), shown from the first one
   const areas = usePresence()?.areas ?? {}
-  const inPool = areas.compete ?? 0, inAuction = areas.auction ?? 0
+  const inCompete = (areas.compete ?? 0) + (areas.auction ?? 0)
+  // how many are waiting in each position's queue (lib/liveCounts.js), while the lobby's up
+  const lobbyUp = cp.phase !== 'busy' && au?.phase !== 'busy' && !auctionOn && !['queue', 'build', 'result'].includes(cp.phase)
+  const waiting = useLiveCounts(lobbyUp)
+  const qKey = pos => `${showAuction ? 'au' : 'cp'}:${sport === 'bucket' ? 'bucket' : 'nfl'}-${pos}`
   const auPositions = positions.filter(o => (AUCTION_POS[sport === 'bucket' ? 'bucket' : 'nfl'] ?? []).includes(o.pos))
   // the auction has no DB: switching to it moves you to a position it has
   useEffect(() => { if (showAuction && !auctionOn && auPositions.length && !auPositions.some(o => o.pos === position)) onPosition(auPositions[0].pos) }, [showAuction, position]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -148,22 +153,26 @@ export default function AppCompete({ cp, au, sport, position, positions, onPosit
         )}
         {showAuction ? (
           <div className="cp-hero ag-pop">
-            <span className="ag-eyebrow">ONLINE · 1V1 · ${BUDGET} EACH{inAuction > 0 && <span className="ag-live-badge ag-live-badge--inline"><i aria-hidden="true" />{fmtCount(inAuction)}<small>PLAYING</small></span>}</span>
+            <span className="ag-eyebrow">ONLINE · 1V1 · ${BUDGET} EACH{inCompete > 0 && <span className="ag-live-badge ag-live-badge--inline"><i aria-hidden="true" />{fmtCount(inCompete)}<small>PLAYING</small></span>}</span>
             <p className="cp-how">You against one other player, <b>${BUDGET}</b> each and Salary Cap's five rating slots, empty. You always keep $1 for each of your other empty slots, and a slot still empty at the end gets a free agent (a C). A slot card is pulled, the spinner lands on a real player, and their grade stays <b>face down</b> until the gavel. Bid <b>+$1</b> or sit out: going once, going twice, and every bid puts the clock back to <b>{RESET_SECS} seconds</b>. When every slot is filled, the <b>highest OVR</b> wins.</p>
           </div>
         ) : (
           <div className="cp-hero ag-pop">
-            <span className="ag-eyebrow">ONLINE · {POOL_SIZE}-PLAYER POOLS{inPool > 0 && <span className="ag-live-badge ag-live-badge--inline"><i aria-hidden="true" />{fmtCount(inPool)}<small>PLAYING</small></span>}</span>
+            <span className="ag-eyebrow">ONLINE · {POOL_SIZE}-PLAYER POOLS{inCompete > 0 && <span className="ag-live-badge ag-live-badge--inline"><i aria-hidden="true" />{fmtCount(inCompete)}<small>PLAYING</small></span>}</span>
             <p className="cp-how">You and four other players get <b>the same spins</b>. Respins are your own. Everyone builds, and the <b>highest OVR</b> takes the pool. No sandbox.</p>
           </div>
         )}
         <OnlineRecord mode="compete" title="COMPETE RECORD" />
         <div className="cp-pos ag-pop" style={{ '--d': '120ms' }} role="tablist" aria-label="Position">
-          {(showAuction ? auPositions : positions).filter(o => !o.disabled).map(o => (
-            <button key={o.pos} role="tab" aria-selected={o.pos === position} className={`ag-pos${o.pos === position ? ' ag-pos--on' : ''}`} onClick={() => onPosition(o.pos)}>
-              <span className="ag-pos-label">{o.label}</span>
-            </button>
-          ))}
+          {(showAuction ? auPositions : positions).filter(o => !o.disabled).map(o => {
+            const n = searching(waiting, qKey(o.pos))
+            return (
+              <button key={o.pos} role="tab" aria-selected={o.pos === position} className={`ag-pos${o.pos === position ? ' ag-pos--on' : ''}`} onClick={() => onPosition(o.pos)}>
+                {n && <span className="cp-pos-n">{n} SEARCHING</span>}
+                <span className="ag-pos-label">{o.label}</span>
+              </button>
+            )
+          })}
         </div>
         <button className="ag-btn cp-go ag-pop" style={{ '--d': '160ms' }} onClick={showAuction ? () => au.join() : cp.join}>{showAuction ? 'FIND AN AUCTION' : 'FIND A POOL'} <IconArrow size={16} /></button>
         <div className="cp-rewards ag-pop" style={{ '--d': '200ms' }}>

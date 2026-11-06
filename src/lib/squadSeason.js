@@ -13,10 +13,10 @@
 import { seeded } from './rng'
 import { CAPS, POSITIONS, SPOTS, spotsOf } from './squad'
 import {
-  calcOVR, calcOVRRB, calcOVRWR, calcOVRTE, calcOVRDB, calcOVRDL,
-  runSimulation, runRBSimulation, runWRSimulation, runTESimulation, runDBSimulation, runDLSimulation, scriptNFLSeason,
-  calcMVPResult, calcOPOYResult, calcWROPOYResult, calcTEOPOYResult, calcDBDpoyResult, calcDLDpoyResult,
-  getArchetype, getArchetypeRB, getArchetypeWR, getArchetypeTE, getArchetypeDB, getArchetypeDL, dlBuildSpot, nflHeadshot, HEADSHOT_BASE,
+  calcOVR, calcOVRRB, calcOVRWR, calcOVRTE, calcOVRDB, calcOVRDL, calcOVRLB,
+  runSimulation, runRBSimulation, runWRSimulation, runTESimulation, runDBSimulation, runDLSimulation, runLBSimulation, scriptNFLSeason,
+  calcMVPResult, calcOPOYResult, calcWROPOYResult, calcTEOPOYResult, calcDBDpoyResult, calcDLDpoyResult, calcLBDpoyResult,
+  getArchetype, getArchetypeRB, getArchetypeWR, getArchetypeTE, getArchetypeDB, getArchetypeDL, getArchetypeLB, dlBuildSpot, nflHeadshot, HEADSHOT_BASE,
 } from '../utils/simulation'
 import { runBucketSimulation, scriptBucketSeason, calcBucketOVR, TEAM_RATINGS, getBucketGuardArchetype, getBucketBigArchetype } from '../utils/bucketSimulation'
 import { QBS, TYPES } from '../data/qbs'
@@ -25,6 +25,7 @@ import { WRS, WR_TYPES } from '../data/wrs'
 import { TES, TE_TYPES } from '../data/tes'
 import { DBS, DB_TYPES } from '../data/dbs'
 import { DLS, DL_TYPES } from '../data/dls'
+import { LBS, LB_TYPES } from '../data/lbs'
 import { NFL_TEAMS } from '../data/nfl-teams'
 import { NBA_GUARD_PLAYERS, GUARD_TYPES } from '../data/nba-guards'
 import { NBA_BIG_PLAYERS, BIG_TYPES } from '../data/nba-bigs'
@@ -33,16 +34,16 @@ import NFL_HEADSHOTS from '../data/headshots.json'
 import NBA_HEADSHOTS from '../data/nba-headshots.json'
 
 // ── Per position ─────────────────────────────────────────────────────────────
-const POOL = { qb: QBS, rb: RBS, wr: WRS, te: TES, db: DBS, dl: DLS, guard: NBA_GUARD_PLAYERS, big: NBA_BIG_PLAYERS }
-export const TYPES_OF = { qb: TYPES, rb: RB_TYPES, wr: WR_TYPES, te: TE_TYPES, db: DB_TYPES, dl: DL_TYPES, guard: GUARD_TYPES, big: BIG_TYPES }
+const POOL = { qb: QBS, rb: RBS, wr: WRS, te: TES, db: DBS, dl: DLS, lb: LBS, guard: NBA_GUARD_PLAYERS, big: NBA_BIG_PLAYERS }
+export const TYPES_OF = { qb: TYPES, rb: RB_TYPES, wr: WR_TYPES, te: TE_TYPES, db: DB_TYPES, dl: DL_TYPES, lb: LB_TYPES, guard: GUARD_TYPES, big: BIG_TYPES }
 const OVR = {
-  qb: b => calcOVR(b, TYPES), rb: b => calcOVRRB(b, RB_TYPES), wr: b => calcOVRWR(b, WR_TYPES), te: b => calcOVRTE(b, TE_TYPES), db: b => calcOVRDB(b, DB_TYPES), dl: b => calcOVRDL(b, DL_TYPES),
+  qb: b => calcOVR(b, TYPES), rb: b => calcOVRRB(b, RB_TYPES), wr: b => calcOVRWR(b, WR_TYPES), te: b => calcOVRTE(b, TE_TYPES), db: b => calcOVRDB(b, DB_TYPES), dl: b => calcOVRDL(b, DL_TYPES), lb: b => calcOVRLB(b, LB_TYPES),
   guard: b => calcBucketOVR(b, GUARD_TYPES, 'guard'), big: b => calcBucketOVR(b, BIG_TYPES, 'big'),
 }
 export const ovrOf = (pos, build) => Math.round(OVR[pos]?.(build || {}) ?? 0)
 const ARCH = {
   qb: (o, b) => getArchetype(o, b, TYPES), rb: (o, b) => getArchetypeRB(o, b, RB_TYPES), wr: (o, b) => getArchetypeWR(o, b, WR_TYPES),
-  te: (o, b) => getArchetypeTE(o, b, TE_TYPES), db: (o, b) => getArchetypeDB(o, b, DB_TYPES), dl: (o, b) => getArchetypeDL(o, b, DL_TYPES),
+  te: (o, b) => getArchetypeTE(o, b, TE_TYPES), db: (o, b) => getArchetypeDB(o, b, DB_TYPES), dl: (o, b) => getArchetypeDL(o, b, DL_TYPES), lb: (o, b) => getArchetypeLB(o, b, LB_TYPES),
   guard: (o, b) => getBucketGuardArchetype(o, b, GUARD_TYPES), big: (o, b) => getBucketBigArchetype(o, b, BIG_TYPES),
 }
 export const nameOf = (pos, build) => { try { return ARCH[pos]?.(ovrOf(pos, build), build) ?? null } catch { return null } }
@@ -139,7 +140,7 @@ export function lineupOf(squad) {
 // Each point of OVR a build has over the starter it replaces moves the team
 // (football off/def 1–10; basketball off/def out of 100)
 const MOVE = {
-  qb: { off: 0.22 }, rb: { off: 0.09 }, wr: { off: 0.075 }, te: { off: 0.065 }, db: { def: 0.09 }, dl: { def: 0.10 },
+  qb: { off: 0.22 }, rb: { off: 0.09 }, wr: { off: 0.075 }, te: { off: 0.065 }, db: { def: 0.09 }, dl: { def: 0.10 }, lb: { def: 0.08 },
   guard: { off: 0.45, def: 0.15 }, big: { off: 0.25, def: 0.35 },
 }
 export function squadStrength(squad) {
@@ -172,11 +173,12 @@ export function squadStrength(squad) {
 const r1 = v => Math.round((v ?? 0) * 10) / 10
 // Two backs split the carries, three receivers the targets (football's sims each
 // play one player as the whole position)
-const SHARE = { rb: [1, 0.62], wr: [1, 0.75, 0.6], te: [1, 0.6] }
+const SHARE = { rb: [1, 0.62], wr: [1, 0.75, 0.6], te: [1, 0.6], lb: [1, 0.88, 0.78] }   // (linebackers split the tackles)
 const SHARED_KEYS = {
   rb: ['seasonRushYds', 'seasonRushTDs', 'seasonCarries', 'seasonRecYds', 'seasonRecTDs', 'seasonRecs', 'hundredYardGames'],
   wr: ['seasonRecs', 'seasonRecYds', 'seasonRecTDs', 'seasonTargets', 'hundredYardGames'],
   te: ['seasonRecs', 'seasonRecYds', 'seasonRecTDs', 'seasonTargets', 'hundredYardGames'],
+  lb: ['seasonTackles', 'seasonTFL', 'seasonSacks', 'seasonQBHits', 'seasonPDs', 'seasonINTs', 'seasonFF'],
 }
 function share(res, pos, n) {
   const k = SHARE[pos]?.[n - 1]
@@ -224,6 +226,8 @@ const NFL = {
     line: r => [['TKL', r.seasonTackles], ['INT', r.seasonINTs], ['PBU', r.seasonPBUs], ['FF', r.seasonFF]] },
   dl: { sim: (b, t, team, s) => runDLSimulation(b, team, false, s), award: ['DPOY', calcDLDpoyResult],
     line: r => [['SCK', r.seasonSacks], ['TFL', r.seasonTFL], ['TKL', r.seasonTackles], ['QBH', r.seasonQBHits]] },
+  lb: { sim: (b, t, team, s) => runLBSimulation(b, team, false, s), award: ['DPOY', calcLBDpoyResult],
+    line: r => [['TKL', r.seasonTackles], ['SCK', r.seasonSacks], ['INT', r.seasonINTs], ['PD', r.seasonPDs]] },
 }
 
 // Math.random, seeded, for the length of fn (the football sims and awards roll it)

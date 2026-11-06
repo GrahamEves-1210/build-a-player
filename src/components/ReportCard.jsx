@@ -17,7 +17,7 @@ const DB_PHYS = Object.fromEntries([...DBS, ...DB_LEGENDS].map(d => [d.name, { h
 const ALL_RB_PHYS = { ...RB_LEGEND_PHYSICALS, ...RB_PHYSICALS }
 const ALL_WR_PHYS = { ...WR_LEGEND_PHYSICALS, ...WR_PHYSICALS }
 const ALL_TE_PHYS = { ...Object.fromEntries(TE_LEGENDS.map(t => [t.name, { height: t.height, weight: t.weight }])), ...TE_PHYSICALS }
-import { calcOVR, calcOVRRB, calcOVRWR, calcOVRTE, calcOVRDB, calcOVRDL, calcOVROL, getArchetype, getArchetypeRB, getArchetypeWR, getArchetypeTE, getArchetypeDB, getArchetypeDL, getArchetypeOL, calcBalance, valToGrade } from '../utils/simulation'
+import { calcOVR, calcOVRRB, calcOVRWR, calcOVRTE, calcOVRDB, calcOVRDL, calcOVRLB, calcOVROL, getArchetype, getArchetypeRB, getArchetypeWR, getArchetypeTE, getArchetypeDB, getArchetypeDL, getArchetypeLB, getArchetypeOL, calcBalance, valToGrade } from '../utils/simulation'
 import { calcBucketOVR, getBucketGuardArchetype, getBucketBigArchetype } from '../utils/bucketSimulation'
 import { buildShareUrl } from '../utils/shareUrl'
 import { shareOrDownloadCard } from '../utils/generateShareCard'
@@ -119,13 +119,13 @@ function BuildSlot({ type, data, attrMap = ATTR, logoDir = '/logos/' }) {
 
 // ── Share Modal ───────────────────────────────────────────────────────────────
 
-export function ShareModal({ ovr, arch, build, types, onClose, isBucket = false, attrMap = {}, position = 'guard', isRB = false, isWR = false, isTE = false, isDB = false, isDL = false, isOL = false, captureFigure }) {
+export function ShareModal({ ovr, arch, build, types, onClose, isBucket = false, attrMap = {}, position = 'guard', isRB = false, isWR = false, isTE = false, isDB = false, isDL = false, isLB = false, isOL = false, captureFigure }) {
   const [copied, setCopied]       = useState(false)
   const [cardDataUrl, setCardDataUrl] = useState(null)
   const [cardBlob, setCardBlob]       = useState(null)
   const who = getUsername(useProgress().user) || 'Guest'
 
-  const posWord    = isOL ? 'offensive lineman' : isDL ? 'defensive lineman' : isDB ? 'defensive back' : isWR ? 'wide receiver' : isRB ? 'running back' : isTE ? 'tight end' : 'quarterback'
+  const posWord    = isOL ? 'offensive lineman' : isDL ? 'defensive lineman' : isLB ? 'linebacker' : isDB ? 'defensive back' : isWR ? 'wide receiver' : isRB ? 'running back' : isTE ? 'tight end' : 'quarterback'
   const bucketText = `I built a ${ovr} OVR ${arch}. Think you can do better?`
   const shareText  = isBucket ? bucketText : `I made a ${ovr} overall ${arch} ${posWord}, think you can do better?`
   const shareUrl   = buildShareUrl(build, types)
@@ -136,7 +136,7 @@ export function ShareModal({ ovr, arch, build, types, onClose, isBucket = false,
   useEffect(() => {
     let live = true
     ;(async () => {
-      const posLabel = isBucket ? (position === 'big' ? 'BIG' : 'GUARD') : isOL ? 'OL' : isDL ? 'DL' : isDB ? 'DB' : isTE ? 'TE' : isWR ? 'WR' : isRB ? 'RB' : 'QB'
+      const posLabel = isBucket ? (position === 'big' ? 'BIG' : 'GUARD') : isOL ? 'OL' : isDL ? 'DL' : isLB ? 'LB' : isDB ? 'DB' : isTE ? 'TE' : isWR ? 'WR' : isRB ? 'RB' : 'QB'
       const canvas = await drawSeasonCard({
         sport: isBucket ? 'bucket' : 'nfl', name: who, tag: isBucket ? posLabel : posWord.toUpperCase(),
         hero: { value: ovr, label: 'OVR' }, sub: arch && !/remaining$/.test(arch) ? arch : null,
@@ -303,19 +303,19 @@ export function ShareModal({ ovr, arch, build, types, onClose, isBucket = false,
 
 // ── ReportCard ────────────────────────────────────────────────────────────────
 
-export default function ReportCard({ build, onSimulate, onReset, types = TYPES, hasResult = false, isRB = false, isWR = false, isTE = false, isDB = false, isDL = false, isOL = false, isBucket = false, bucketPosition = 'guard', isPlus = false, isCustomMode = false, onOpenCustomModal, onSandboxToggle, sandboxStarters = null, attrMap = ATTR, logoDir = '/logos/', captureFigure, isSalaryMode = false, isVersusMode = false, oppPosition = null, oppFilledCount = 0, oppTotal = null, simLabel = null }) {
+export default function ReportCard({ build, onSimulate, onReset, types = TYPES, hasResult = false, isRB = false, isWR = false, isTE = false, isDB = false, isDL = false, isLB = false, isOL = false, isBucket = false, bucketPosition = 'guard', isPlus = false, isCustomMode = false, onOpenCustomModal, onSandboxToggle, sandboxStarters = null, attrMap = ATTR, logoDir = '/logos/', captureFigure, isSalaryMode = false, isVersusMode = false, oppPosition = null, oppFilledCount = 0, oppTotal = null, simLabel = null }) {
   const filled = types.filter(t => build[t])
-  const ovr = isBucket ? calcBucketOVR(build, types, bucketPosition) : isOL ? calcOVROL(build, types) : isDL ? calcOVRDL(build, types) : isDB ? calcOVRDB(build, types) : isTE ? calcOVRTE(build, types) : isWR ? calcOVRWR(build, types) : isRB ? calcOVRRB(build, types) : calcOVR(build, types)
+  const ovr = isBucket ? calcBucketOVR(build, types, bucketPosition) : isOL ? calcOVROL(build, types) : isDL ? calcOVRDL(build, types) : isLB ? calcOVRLB(build, types) : isDB ? calcOVRDB(build, types) : isTE ? calcOVRTE(build, types) : isWR ? calcOVRWR(build, types) : isRB ? calcOVRRB(build, types) : calcOVR(build, types)
   const arch = isBucket
     ? (bucketPosition === 'big' ? getBucketBigArchetype(ovr, build, types) : getBucketGuardArchetype(ovr, build, types))
-    : isOL ? getArchetypeOL(ovr, build, types) : isDL ? getArchetypeDL(ovr, build, types) : isDB ? getArchetypeDB(ovr, build, types) : isTE ? getArchetypeTE(ovr, build, types) : isWR ? getArchetypeWR(ovr, build, types) : isRB ? getArchetypeRB(ovr, build, types) : getArchetype(ovr, build, types)
+    : isOL ? getArchetypeOL(ovr, build, types) : isDL ? getArchetypeDL(ovr, build, types) : isLB ? getArchetypeLB(ovr, build, types) : isDB ? getArchetypeDB(ovr, build, types) : isTE ? getArchetypeTE(ovr, build, types) : isWR ? getArchetypeWR(ovr, build, types) : isRB ? getArchetypeRB(ovr, build, types) : getArchetype(ovr, build, types)
   const balance = calcBalance(build, types)
   const complete = filled.length === types.length
   // The player comp: once the build is complete, who it plays like. A phone shows it under
   // the OVR; on a desktop the report card gets a switch that flips its list over to it.
   const prog = useProgress()
   const who = getUsername(prog.user) || 'Guest'
-  const compPos = isBucket ? (bucketPosition === 'big' ? 'big' : 'guard') : isOL ? 'ol' : isDL ? 'dl' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'
+  const compPos = isBucket ? (bucketPosition === 'big' ? 'big' : 'guard') : isOL ? 'ol' : isDL ? 'dl' : isLB ? 'lb' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'
   const comp = useMemo(() => {
     if (!complete) return null
     const c = { sport: isBucket ? 'bucket' : 'nfl', pos: compPos, types, build }
@@ -360,7 +360,7 @@ export default function ReportCard({ build, onSimulate, onReset, types = TYPES, 
     const slot = build['size'] || build['heightLength']
     heightStr = slot?.height ? fmtHeight(slot.height) : null
     weightLbs = slot?.weight ?? null
-  } else if (isDL) {
+  } else if (isDL || isLB) {
     // off the chip itself: the same name can be on two teams at two sizes
     const dlChip = build['size']
     heightStr = dlChip?.height ? fmtHeight(dlChip.height) : null
@@ -486,13 +486,7 @@ export default function ReportCard({ build, onSimulate, onReset, types = TYPES, 
               </button>
             )}
           </div>
-        ) : !isVersusMode && isPlus && (
-          <button
-            className={`rc-custom-ratings-btn--mobile${!isCustomMode ? ' rc-custom-ratings-btn--off' : ''}`}
-            onClick={isCustomMode ? onOpenCustomModal : undefined}
-            disabled={!isCustomMode}
-          >Custom Build</button>
-        )}
+        ) : null}
 
         {!isVersusMode && (
           <button
@@ -531,7 +525,7 @@ export default function ReportCard({ build, onSimulate, onReset, types = TYPES, 
 
       {showShare && createPortal(
         <ShareModal ovr={ovr} arch={arch} build={build} types={types} onClose={() => setShowShare(false)}
-          isBucket={isBucket} attrMap={attrMap} position={bucketPosition} isRB={isRB} isWR={isWR} isTE={isTE} isDB={isDB} isDL={isDL} isOL={isOL} captureFigure={captureFigure} />,
+          isBucket={isBucket} attrMap={attrMap} position={bucketPosition} isRB={isRB} isWR={isWR} isTE={isTE} isDB={isDB} isDL={isDL} isLB={isLB} isOL={isOL} captureFigure={captureFigure} />,
         document.body
       )}
     </aside>

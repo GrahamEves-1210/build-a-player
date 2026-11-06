@@ -15781,6 +15781,55 @@ html.is-mac [id^="pw-oop-bottom_rail"] > * {
 }
 
 /* header left — no longer used */
+/* Salary Cap (football): the title is the board's position, the label under it its mode
+   (the day, or Infinite); the POSITION button beside the header's others opens the picker */
+.sc-title-block { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.sc-title-block .sc-title { flex: none; white-space: nowrap; }
+.sc-title-mode {
+  font-family: var(--ag-font, 'Bebas Neue'), 'Bebas Neue', sans-serif;
+  font-size: 13px;
+  line-height: 1;
+  letter-spacing: 0.8px;
+  color: #d8b4fe;
+  white-space: nowrap;
+}
+.sc-pos-wrap { position: relative; flex-shrink: 0; }
+.sc-pos-btn {
+  all: unset;
+  box-sizing: border-box;
+  height: 42px;
+  padding: 0 11px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 5px;
+  border: 1px solid rgba(168,85,247,0.7);
+  background: #111816;
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.sc-pos-btn-label {
+  font-family: var(--ag-font, 'Bebas Neue'), 'Bebas Neue', sans-serif;
+  font-size: 16px;
+  line-height: 1;
+  letter-spacing: 0.8px;
+}
+.sc-pos-btn svg { color: #d8b4fe; flex-shrink: 0; }
+@media (min-width: 768px) { .sc-pos-btn { height: 50px; padding: 0 14px; } }
+@media (hover: hover) { .sc-pos-btn:hover { background: rgba(168,85,247,0.16); } }
+.sc-pos-btn--open { background: rgba(168,85,247,0.16); }
+.sc-pos-btn:focus-visible { outline: 2px solid #a855f7; outline-offset: 2px; }
+.sc-pos-dropdown { min-width: 170px; border-radius: 6px; }
+.sc-pos-dropdown .sc-date-item { padding: 9px 10px; border-radius: 4px; }
+.sc-pos-item-pos {
+  font-family: var(--ag-display, 'Anton'), 'Anton', sans-serif;
+  font-size: 17px;
+  line-height: 1;
+  color: #fff;
+}
+.sc-pos-dropdown .sc-date-item-reset { font-size: 11px; letter-spacing: 0.8px; color: rgba(216,180,254,0.8); }
+
 .sc-header-left {
   display: flex;
   flex-direction: row;

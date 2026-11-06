@@ -936,7 +936,7 @@ async function sync(force = false) {
       count(base().or('and(game_mode.like.bucket*,wins.gte.50),and(game_mode.not.like.bucket*,wins.gte.10)')),
       count(base().or('mvp.is.true,dpoy.is.true')),
       count(base().eq('season_award', 'allpro')),
-      count(base().eq('season_award', 'dpoy').like('game_mode', 'dl-%')),   // no counter on accounts, like All-Pros
+      count(base().eq('season_award', 'dpoy').or('game_mode.like.dl-*,game_mode.like.lb-*')),   // DL's and LB's: no counter on accounts, like All-Pros
       supabase.from('accounts').select('classic_mvps,alltime_mvps,classic_opoys,alltime_opoys,classic_dpoys,alltime_dpoys').eq('id', id).maybeSingle().then(r => r.data ?? {}, () => ({})),
     ])
     if (uid !== id || seasons == null) return
@@ -964,7 +964,7 @@ async function syncCards(id) {
     const gm = row.game_mode || 'classic'
     let sport = 'nfl', pos = 'qb', mode = gm.includes('all-time') ? 'all-time' : 'classic'
     if (gm.startsWith('bucket')) { sport = 'bucket'; pos = row.position === 'big' ? 'big' : 'guard' }
-    else if (/^(rb|wr|te|db|dl)-/.test(gm)) pos = gm.slice(0, 2)
+    else if (/^(rb|wr|te|db|dl|lb)-/.test(gm)) pos = gm.slice(0, 2)
     else if (gm.startsWith('ol-')) continue
     for (const v of Object.values(row.build || {})) {
       if (!v?.qb || !v.team) continue

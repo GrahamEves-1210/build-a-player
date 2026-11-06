@@ -8,11 +8,12 @@ const DASH = {
     te: [5.05, 4.68, 4.42], db: [4.8, 4.47, 4.25],
     // a lineman by his spot: an edge runs like a big tight end, an interior man like nobody else
     edge: [5.05, 4.72, 4.48], dt: [5.4, 5.02, 4.72], dl: [5.05, 4.72, 4.48],
+    lb: [4.95, 4.65, 4.42],
   },
   sprint: { guard: [3.6, 3.25, 3.02], big: [3.8, 3.42, 3.18] },
 }
 const BENCH = {
-  bench: { qb: [10, 17, 25], rb: [13, 24, 35], wr: [9, 16, 24], te: [15, 27, 38], db: [10, 17, 25], edge: [14, 24, 34], dt: [18, 30, 44], dl: [14, 24, 34] },
+  bench: { qb: [10, 17, 25], rb: [13, 24, 35], wr: [9, 16, 24], te: [15, 27, 38], db: [10, 17, 25], edge: [14, 24, 34], dt: [18, 30, 44], dl: [14, 24, 34], lb: [12, 21, 32] },
   nbench: { guard: [2, 10, 18], big: [5, 16, 26] },
 }
 // A lineman's 3-cone runs on his own scale, seconds slower than a skill player's at the same grade:

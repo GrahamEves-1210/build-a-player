@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { motion } from 'motion/react'
 import MiniGame from './MiniGame'
+import MiniGameSimple from './MiniGameSimple'
 import { GAMES, PLAYOFF_GAMES, COMBINE_GAMES, momentsOf } from '../../lib/minigames'
 import { GAME_IDS } from '../../lib/mg'
+import { SIMPLE_GAMES } from '../../lib/minigamesSimple'
 import { SPORT, gameCast } from '../../lib/career'
 import { getProgress } from '../../lib/progress'
 import { getUsername } from '../../lib/discord'
@@ -10,12 +12,14 @@ import { romanOf } from '../../lib/mg/kit'
 import { SPRING_LAYOUT } from '../../lib/motion'
 import { sfx } from '../../lib/juice'
 import { IconClose } from './icons'
+import { LB_LIVE } from '../../lib/lbLive'
 
 // Practice (settings menu): any mini game at any grade. Nothing here touches a career.
 // ?mg=<game>&v=<grade>&auto=1 opens straight on a game (scripts/mg's browser tests).
-const GRADES = [[1, 'F'], [3, 'D'], [5, 'C'], [7, 'B'], [9, 'A'], [11, 'S']]
+// (the game's own 0–11 scale, so the button and the card agree: F 0, D 1, C 3, B 6, A 9, S 11)
+const GRADES = [[0, 'F'], [1, 'D'], [3, 'C'], [6, 'B'], [9, 'A'], [11, 'S']]
 const SPORTS = [['nfl', 'FOOTBALL'], ['bucket', 'BASKETBALL']]
-const POS = { nfl: [['QB', 'qb'], ['RB', 'rb'], ['WR', 'wr'], ['TE', 'te'], ['DB', 'db'], ['DL', 'dl']], bucket: [['GUARD', 'guard'], ['BIG', 'big']] }
+const POS = { nfl: [['QB', 'qb'], ['RB', 'rb'], ['WR', 'wr'], ['TE', 'te'], ['DB', 'db'], ['DL', 'dl'], ...(LB_LIVE ? [['LB', 'lb']] : [])], bucket: [['GUARD', 'guard'], ['BIG', 'big']] }
 const COMBINE = { nfl: ['forty', 'cone', 'gauntlet', 'bench', 'velo', 'acc'], bucket: ['sprint', 'lane', 'spot', 'vert', 'nbench'] }
 
 // each game once, under the first position that plays it
@@ -43,11 +47,15 @@ export default function MiniGameLab({ onClose }) {
   const q = new URLSearchParams(window.location.search)
   const start = GAME_IDS.includes(q.get('mg')) ? q.get('mg') : null
   const [sport, setSport] = useState(() => (start ? gameSport(start) : window.__bapPage?.sport === 'bucket' ? 'bucket' : 'nfl'))
-  const [v, setV] = useState(() => Number(q.get('v')) || 5)
+  const [v, setV] = useState(() => (q.has('v') ? Number(q.get('v')) : 6))
   const [game, setGame] = useState(start)
   const [auto, setAuto] = useState(q.has('auto'))
   const [run, setRun] = useState(0)
   const [role, setRole] = useState(null)   // Fourth & Goal: which position you're playing
+  // the two versions a career can play: Simple (the quick ones) or Advanced (the full games). Kept per device
+  // (a ?mg= link, the test tools', opens the full game)
+  const [mode, setMode] = useState(() => { if (new URLSearchParams(window.location.search).has('mg')) return 'advanced'; try { return localStorage.getItem('bap_practice_mode') === 'simple' ? 'simple' : 'advanced' } catch { return 'advanced' } })
+  const pickMode = m => { setMode(m); try { localStorage.setItem('bap_practice_mode', m) } catch {} ; sfx('tap') }
   const [log, setLog] = useState({})
   const lists = useMemo(() => listFor(sport), [sport])
 
@@ -65,6 +73,19 @@ export default function MiniGameLab({ onClose }) {
   const back = () => { setGame(null); setAuto(false); sfx('back') }
   const again = () => { setRun(r => r + 1); setAuto(true); sfx('tap') }
 
+  if (game && mode === 'simple' && SIMPLE_GAMES[game]) return (
+    <div className="ag-screen pr-screen">
+      <div className="pr-wrap">
+        <div className="pr-stagebar pr-stagebar--simple"><button onClick={back}>EXIT</button><button onClick={again}>AGAIN</button></div>
+        <MiniGameSimple key={`${game}-${v}-${run}`} game={game} pos={role} build={null} labV={v} seed={`lab-${run}`} autoStart={auto}
+          onDone={r => setLog(l => ({ ...l, [`${game}-${run}`]: r, [game]: r }))} />
+        <div className="pr-after">
+          {res && <button className="ag-btn" onClick={again}>GO AGAIN</button>}
+          <button className="ag-btn ag-btn--ghost" onClick={back}>ALL GAMES</button>
+        </div>
+      </div>
+    </div>
+  )
   if (game) return (
     <div className="ag-screen pr-screen">
       <div className="pr-wrap">
@@ -101,6 +122,14 @@ export default function MiniGameLab({ onClose }) {
           {SPORTS.map(([id, label]) => (
             <button key={id} role="tab" aria-selected={sport === id} className={sport === id ? 'is-on' : ''} onClick={() => { setSport(id); sfx('tap') }}>
               {sport === id && <motion.span layoutId="pr-sport" className="ag-seg-pill" transition={SPRING_LAYOUT} />}
+              {label}
+            </button>
+          ))}
+        </div>
+        <div className="ag-seg pr-mode" role="tablist" aria-label="Version">
+          {[['advanced', 'ADVANCED'], ['simple', 'SIMPLE']].map(([id, label]) => (
+            <button key={id} role="tab" aria-selected={mode === id} className={mode === id ? 'is-on' : ''} onClick={() => pickMode(id)}>
+              {mode === id && <motion.span layoutId="pr-mode" className="ag-seg-pill" transition={SPRING_LAYOUT} />}
               {label}
             </button>
           ))}

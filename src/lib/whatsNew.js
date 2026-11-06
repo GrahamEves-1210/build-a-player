@@ -49,7 +49,10 @@ export const WHATS_NEW = {
       name: 'Career',
       items: [
         'Added season by season stats',
-        'Added a key moments on/off switch',
+        'New careers pick their mini games: Advanced, Simple or None',
+        'Simple brings back the classic mini games',
+        'Advanced is the new full-screen games, None simulates them from your grades',
+        'Change it any time on the career screen',
         'Added position picker on new career',
         'Draft picks now follow team needs',
         'Career card now shows your player',
@@ -110,9 +113,9 @@ export const WHATS_NEW = {
     {
       name: 'Rosters',
       items: [
-        'Added Dillon Gabriel, Drew Allar, Jake Haener, George Holani, Laquon Treadwell and Jalen Farmer',
-        'Removed Joe Mixon, Darius Slayton, Kevin Porter Jr., Andy Dalton, Deshaun Watson, J.J. McCarthy, Mason Rudolph, Kayshon Boutte and Christian Haynes',
-        'Moved Joe Milton III to the Eagles',
+        'Added Dillon Gabriel, Drew Allar, George Holani, Laquon Treadwell and Jalen Farmer',
+        'Removed Joe Mixon, Darius Slayton, Kevin Porter Jr., Andy Dalton, Deshaun Watson, J.J. McCarthy, Mason Rudolph, Kayshon Boutte, Christian Haynes and Jake Haener',
+        'Moved Joe Milton III to the Eagles and Jacoby Brissett to the Ravens',
         'Updated Onyeka Okongwu and Nate Ament height and weight',
       ],
     },

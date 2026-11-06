@@ -16,7 +16,9 @@ const rowKey = sport => `squad:${sport}`
 // App binaries from before the DL crash on a DL build, and they read only `squad:<sport>`. A squad
 // with a DL saves to its own row, which they never see. Everything else stays where it was.
 const lineKey = sport => `squad-dl:${sport}`
-const hasLine = sq => !!sq?.slots?.some(s => s.pos === 'dl') || [...(sq?.seasons ?? []), sq?.last].some(y => y?.lines?.some(l => l.pos === 'dl'))
+// (an LB slot too: the same old binaries can't sim one)
+const NEW_POS = new Set(['dl', 'lb'])
+const hasLine = sq => !!sq?.slots?.some(s => NEW_POS.has(s.pos)) || [...(sq?.seasons ?? []), sq?.last].some(y => y?.lines?.some(l => NEW_POS.has(l.pos)))
 let pending = null   // { timer, sq }
 
 async function push(sq) {

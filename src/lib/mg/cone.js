@@ -7,12 +7,12 @@
 //          the baseline, slide across it, backpedal up the lane, slide across the foul line. Then
 //          the other way round: slide across, sprint to the baseline, slide back, backpedal home.
 //          He faces the baseline the whole way.
-import { byV, clamp, lerp, outcome, layer, rngOf, prog, easeOut, GOOD, BAD, GOLD, text, DISPLAY, LABEL } from './kit.js'
-import { tilt, ground, stands, floodlight, vignette, paintGrass, athlete, warmAthlete, skinOf, dirOf } from './art.js'
+import { byV, clamp, lerp, outcome, layer, rngOf, prog, easeOut, GOOD, BAD, text, DISPLAY, particles, nudge } from './kit.js'
+import { tilt, ground, floodlight, vignette, paintGrass, athlete, warmAthlete, skinOf, dirOf } from './art.js'
 import { placeStamp } from './read.js'
-import { arenaCam, arenaStage, manAt, POSE, RUN as RUN_F, hoopWith } from './arena.js'
-import { project, PT, paintBoard, easedState, easedPose, smoothT, CLK } from './meter.js'
-import { clockSlab } from './dash.js'
+import { arenaCam, manAt, POSE, RUN as RUN_F, hoopWith } from './arena.js'
+import { project, PT, paintBoard, paintLines, paintHoop, easedState, easedPose, smoothT, CLK } from './meter.js'
+import { clockSlab, paintRoom, officialStrip, officialPunch, OFFICIAL_MS, stopwatch, calm } from './dash.js'
 import { coneShift } from './combineNorms.js'
 
 export const how = {
@@ -20,6 +20,8 @@ export const how = {
   lane: 'Tap PLANT as he reaches each corner. Clean plants are the time.',
 }
 
+const OUT_T = { cone: 150, lane: 170 }     // ms: how fast he pulls up through the line
+const WALK = { cone: 1.3, lane: 3.6 }       // what he walks back at, when it's over
 const LEAD = 900         // ms in his stance before he goes
 const GATE = 180         // ms before the window that a press still counts as a (too early) press
 const RING_MS = 620      // the closing ring always takes this long, so its speed can be learned
@@ -107,7 +109,7 @@ export function make({ v, seed, game, pos }) {
   const cuts = Array.from({ length: n }, () => ({ res: null, why: null, at: 0 }))
   const start = legs[0].pts
   const g = {
-    t: 0, game, zones: 'none', pads: ['PLANT'], padLit: null, fx: [], done: null, outro: 1900, stamp: null, litAt: -999,
+    t: 0, game, zones: 'none', pads: ['PLANT'], padLit: null, fx: [], done: null, outro: 2500, stamp: null, litAt: -999,
     legs, cuts, win, S, lane, n, mirror,
     phase: 'set', k: 0, legId: 0,
     x: start[0], y: start[1], ux: 0, uy: 1, sp: 0,
@@ -150,7 +152,13 @@ export function make({ v, seed, game, pos }) {
         g.stride += (g.sp * dt) / 1000 / g.strideLen
         if (f >= 1) { g.k++; startLeg(g.x, g.y, g.sp, true) }
       } else if (g.phase === 'out') {
-        g.sp *= Math.exp(-dt / 380)
+        // through the line, up, and walking back to see what he ran
+        const walk = WALK[game] ?? 1.3
+        if (g.sp > walk) g.sp = Math.max(walk, g.sp * Math.exp(-dt / (OUT_T[game] ?? 150)))
+        else {
+          const dx = g.homeX - g.x, dy = g.homeY - g.y, dd = Math.hypot(dx, dy)
+          if (dd < 0.3) { g.sp = 0 } else { g.ux += (dx / dd - g.ux) * Math.min(1, dt / 160); g.uy += (dy / dd - g.uy) * Math.min(1, dt / 160) }
+        }
         g.x += (g.ux * g.sp * dt) / 1000; g.y += (g.uy * g.sp * dt) / 1000
         g.stride += (g.sp * dt) / 1000 / g.strideLen
       }
@@ -172,6 +180,7 @@ export function make({ v, seed, game, pos }) {
     },
   }
   g.strideLen = lane ? 5.2 : 1.7
+  g.homeX = lane ? -2 : start[0] * 0.5; g.homeY = lane ? 5 : 1.5
 
   function startLeg(x, y, v0, slipped = false) {
     const def = legs[g.k]
@@ -208,14 +217,14 @@ export function make({ v, seed, game, pos }) {
     g.x = p[i] + (p[i + 2] - p[i]) * f; g.y = p[i + 1] + (p[i + 3] - p[i + 1]) * f
   }
   function plant() {
-    g.plantAt = g.t
+    g.plantAt = g.t; cuts[g.k].hitAt = g.t
     const carry = g.sp * legs[g.k + 1].keep
     g.k++
     startLeg(g.x, g.y, carry)
   }
   // He goes wide, or chops his feet: on the way he was going, shedding speed. Nobody falls.
   function slideOut() {
-    g.phase = 'slide'; g.slideAt = g.t
+    g.phase = 'slide'; g.slideAt = g.t; cuts[g.k].hitAt = g.t
     g.slideT = S.slide
     g.slideV0 = g.sp; g.slideV1 = g.sp * S.slip
     g.hud.hot = false
@@ -239,7 +248,7 @@ export function make({ v, seed, game, pos }) {
     g.phase = 'out'
     g.hud.prompt = null; g.hud.hot = false
     // (the time is on the slab, in the result's colour: the stamp says what it means)
-    g.stamp = { text: made === n ? 'PERFECT' : hit ? 'GOOD CUTS' : 'SLOPPY', good: hit, at: g.t + 90, size: 46 }
+    g.stamp = { text: made === n ? 'PERFECT' : hit ? 'GOOD CUTS' : 'SLOPPY', good: hit, at: g.t + OFFICIAL_MS + 60, size: 46 }
   }
   // In the 3-cone he turns to run where he's going. In the lane he faces the baseline, always.
   function turnBody(dt) {
@@ -273,12 +282,18 @@ function coneSprite() {
   x.fillStyle = 'rgba(0,0,0,.16)'; x.beginPath(); x.moveTo(1.2, -24); x.lineTo(1.6, -24); x.lineTo(8, 0); x.quadraticCurveTo(5, 1.4, 2.4, 1.6); x.closePath(); x.fill()
   return coneC
 }
-function cone(ctx, view, fx, fy, size = 1) {
+function stampCone(ctx, c, x, y, k, ang) {
+  if (!ang) { ctx.drawImage(c, x - (CONE_W / 2) * k, y - (CONE_H - 3) * k, CONE_W * k, CONE_H * k); return }
+  ctx.save(); ctx.translate(x, y); ctx.rotate(ang)
+  ctx.drawImage(c, -(CONE_W / 2) * k, -(CONE_H - 3) * k, CONE_W * k, CONE_H * k)
+  ctx.restore()
+}
+function cone(ctx, view, fx, fy, size = 1, ang = 0) {
   const p = tilt(view, fx, fy), c = coneSprite()
   if (!c) return
   const k = p.s * size
   ctx.fillStyle = 'rgba(0,0,0,.28)'; ctx.beginPath(); ctx.ellipse(p.x + 4 * k, p.y + 0.5 * k, 12 * k, 3.2 * k, 0.1, 0, Math.PI * 2); ctx.fill()
-  ctx.drawImage(c, p.x - (CONE_W / 2) * k, p.y - (CONE_H - 3) * k, CONE_W * k, CONE_H * k)
+  stampCone(ctx, c, p.x, p.y, k, ang)
 }
 // a ring lying flat on the field
 function turfRing(ctx, view, x, y, r) {
@@ -293,12 +308,64 @@ function coneLayout(h) {
 }
 function bakeL(x, view, g, c) {
   const { h } = view, { u, ay } = coneLayout(h), hy = tilt(view, 0, 0).y
-  stands(x, view, 'field', [c.us, c.trim])
+  // the same fieldhouse as the 40: a workout, nobody in the seats
+  paintRoom(x, view, Math.round(hy), h, false)
+  x.fillStyle = '#123f23'; x.fillRect(0, Math.round(hy), view.w, h - hy)
   ground(x, view, f => paintGrass(f, view, { yards: u, offset: ay }), `cone-grass|${g.mirror}`, 0, Math.round((h - hy) * view.px * 0.7))
   floodlight(x, view)
-  // the scouts past the far line, in plain gear, with their watches
-  const row = ay - u * 5 - 92
-  for (let i = 0; i < 4; i++) athlete(x, view, 66 + i * 76, row - (i % 2) * 8, { color: '#20262c', pants: '#a89a80', skin: skinOf(i * 3), kit: 'plain', dir: 'down', size: 1 })
+}
+// the scouts past the far line, in plain gear: watches up from the whistle, down when he's through. Then they read them
+const SCOUT_X = [66, 142, 218, 294]
+function drawConeScouts(ctx, view, g, row) {
+  const running = g.phase !== 'set' && !g.done, over = g.done ? g.t - g.finishAt : -1
+  for (let i = 0; i < 4; i++) {
+    const watch = (i === 0 || i === 2) && (running || (g.done && over < 160)), read = over >= OFFICIAL_MS && (i === 1 || (i === 3 && g.done?.hit))
+    const up = watch || read, y = row - (i % 2) * 8
+    const p = athlete(ctx, view, SCOUT_X[i], y, { color: '#20262c', pants: '#a89a80', skin: skinOf(i * 3), kit: 'plain', dir: 'down', size: 1, pose: up ? 'reach-r' : null })
+    if (up) { const k = p.s; stopwatch(ctx, p.x + 14 * k, p.y - 43 * k, 0.8 * k) }
+  }
+}
+// ── Cones are things: he clips them ─────────────────────────────────────────
+// Where each plant's nearest cone is, in the drill's own units, worked out once
+function plantCones(g, list) {
+  if (g.plantOf) return g.plantOf
+  g.plantOf = g.legs.slice(0, g.n).map(L => {
+    const e = L.pts.length - 2, ex = L.pts[e], ey = L.pts[e + 1]
+    let best = 0, dist = 1e9
+    for (let i = 0; i < list.length; i++) { const dd = Math.hypot(list[i][0] - ex, list[i][1] - ey); if (dd < dist) { dist = dd; best = i } }
+    return best
+  })
+  g.coneAng = new Float32Array(list.length); g.coneSide = new Float32Array(list.length)
+  return g.plantOf
+}
+// how far each cone's over right now. A clean plant rocks it. Too late and he's gone through it: it's on its side for the rest of the drill.
+function coneState(g, list) {
+  const of = plantCones(g, list), t = g.t
+  g.coneAng.fill(0); g.coneSide.fill(0)
+  for (let i = 0; i < g.n; i++) {
+    const c = g.cuts[i]
+    if (c.hitAt == null) continue
+    const j = of[i], age = t - c.hitAt, side = i % 2 ? 1 : -1
+    if (c.res === false && c.why === 'late') { g.coneSide[j] = side; g.coneAng[j] = side * 1.42 * Math.min(1, easeOut(age / 210)) + (age < 340 ? side * Math.sin(age / 40) * 0.05 * (1 - age / 340) : 0) }
+    else if (!g.coneSide[j] && age < 620) g.coneAng[j] = side * (c.res ? 0.1 : 0.3) * Math.exp(-age / 190) * Math.cos(age / 36)
+  }
+}
+// the marks he leaves, and the turf, or the floor dust, off the plant. Once a plant.
+function plantFx(g, view, q, i, cut, court, chalk, ang) {
+  if (cut.hitAt == null || cut.fxd) return
+  cut.fxd = true
+  g.dirt.burst(chalk ? 'dust' : court ? 'dust' : 'turf', q.x, q.y, g.t, { n: chalk ? 6 : cut.res ? 8 : 14, s: Math.max(0.7, q.s * 1.15), ang, spread: 0.95, speed: cut.res ? 1 : 1.35, colors: chalk ? CHALK : court ? FLOOR_DUST : null })
+  if (cut.res === false) g.nudge.kick(g.t, 2.4, 0, 1, 170)
+}
+const CHALK = ['#ffffff', '#e6eaee', '#d7dde2'], FLOOR_DUST = ['#f5ead6', '#efd9b8', '#e2c79e']
+// a lean: into a clean cut, away from a bad one. Around his feet, on top of the baked sprite
+function leanOf(g) {
+  const a = g.t - g.plantAt
+  let lean = 0
+  if (g.phase === 'slide') lean = -g.ux * 0.3 * (1 - prog(g.t, g.slideAt, g.slideAt + g.slideT))
+  else if (a < 300) lean = g.ux * 0.2 * Math.exp(-a / 130)
+  if (g.phase === 'run') lean += g.ux * 0.05
+  return lean
 }
 // ── The lane, in the arena ──────────────────────────────────────────────────
 // The camera's on the floor behind the foul line, looking down the lane at the hoop, as in Crash the Glass.
@@ -311,20 +378,32 @@ function ringOn(ctx, cam, x, z, r) {
   const rf = r / FT_RING
   ctx.beginPath(); ctx.ellipse(PT.x, PT.y, Math.max(0.5, rf * PT.k), Math.max(0.5, (rf * PT.k * cam.H) / PT.z), 0, 0, Math.PI * 2)
 }
-function coneOn(ctx, cam, x, z) {
+function coneOn(ctx, cam, x, z, ang = 0) {
   const c = coneSprite()
   project(cam, x, 0, z)
   if (!c) return
   const k = (PT.k * 1.6) / 24
   ctx.fillStyle = 'rgba(0,0,0,.28)'; ctx.beginPath(); ctx.ellipse(PT.x, PT.y + 0.5 * k, 12 * k, 3.2 * k, 0, 0, Math.PI * 2); ctx.fill()
-  ctx.drawImage(c, PT.x - (CONE_W / 2) * k, PT.y - (CONE_H - 3) * k, CONE_W * k, CONE_H * k)
+  stampCone(ctx, c, PT.x, PT.y, k, ang)
 }
+const CORNERS = [[-LW, LH], [LW, LH], [-LW, 0], [LW, 0]]
 function drawLane(ctx, g, view) {
   const t = g.t, cuts = g.cuts, n = g.n
   smoothT(g)
   if (!g.arena || g.arena.h !== view.h) g.arena = arenaCam(view.h, LANE_CAM)
   const G = g.arena, cam = G.cam
-  arenaStage(ctx, view, G, `lane-${view.h}`)
+  g.dirt ??= particles(28, g.n + 11); g.nudge ??= nudge()
+  // the practice gym: the wall, the floor, the lane and the one hoop, and nobody in the seats
+  layer(ctx, view, `lane-gym-${view.h}-${view.colors.us}`, x => { paintRoom(x, view, Math.round(G.wallY), view.h, true); paintLines(x, cam, view.colors.us); paintHoop(x, cam, view.colors.us) })
+  // two scouts by the baseline
+  for (let i = 0; i < 2; i++) manAt(ctx, view, cam, i ? 13.5 : -13.5, laneZ(LH) + 2, g.done && t - g.finishAt >= OFFICIAL_MS && i ? POSE.hands : POSE.hold, { jersey: '#20262c', trim: '#a89a80', skin: i ? '#6d4229' : '#c09060', num: null, back: false })
+  // his marks on the floor
+  ctx.fillStyle = 'rgba(40,20,6,.28)'
+  for (let i = 0; i < n; i++) {
+    if (cuts[i].hitAt == null) continue
+    const pts = g.legs[i].pts, e = pts.length - 2
+    ringOn(ctx, cam, pts[e], laneZ(pts[e + 1]), cuts[i].res ? 3.4 : 6); ctx.fill()
+  }
   // the way he's going, on this leg only, chalked on the floor
   if (g.phase !== 'out') {
     const pts = g.phase === 'set' ? g.legs[0].pts : g.phase === 'run' || g.phase === 'coast' ? g.leg.pts : g.k + 1 < g.legs.length ? g.legs[g.k + 1].pts : null
@@ -350,16 +429,23 @@ function drawLane(ctx, g, view) {
   // him, and the cones in depth around him. He faces the baseline all the way: the feet tell you what he's doing
   const myZ = laneZ(g.y), def = g.legs[Math.min(g.k, g.legs.length - 1)], set = g.phase === 'set'
   const step = Math.floor(g.stride * 4) % 4
-  const P = set ? POSE.off : g.phase !== 'out' && def.mode === 'slide' ? (step % 2 ? POSE.slideA : POSE.slideB) : RUN_F[step]
-  const CORNERS = [[-LW, LH], [LW, LH], [-LW, 0], [LW, 0]]
-  for (const [cx, cy] of CORNERS) if (laneZ(cy) >= myZ) coneOn(ctx, cam, cx, laneZ(cy))
+  const P = set || (g.phase === 'out' && g.sp === 0) ? POSE.off : g.phase !== 'out' && def.mode === 'slide' ? (step % 2 ? POSE.slideA : POSE.slideB) : RUN_F[step]
+  coneState(g, CORNERS)
+  for (let i = 0; i < 4; i++) if (laneZ(CORNERS[i][1]) >= myZ) coneOn(ctx, cam, CORNERS[i][0], laneZ(CORNERS[i][1]), g.coneAng[i])
   const behind = myZ > 0.1
-  const me = () => manAt(ctx, view, cam, g.x, myZ, easedPose(ME_EASE, P, g, CLK.dt, 34), { jersey: '#1d57a8', trim: '#ffffff', skin: '#8d5a3b', num: null, back: true, live: true })
+  const me = () => {
+    project(cam, g.x, 0, myZ)
+    const lean = leanOf(g), fx = PT.x, fy = PT.y
+    if (lean) { ctx.save(); ctx.translate(fx, fy); ctx.rotate(lean); ctx.translate(-fx, -fy) }
+    manAt(ctx, view, cam, g.x, myZ, easedPose(ME_EASE, P, g, CLK.dt, 34), { jersey: '#1d57a8', trim: '#ffffff', skin: '#8d5a3b', num: null, back: true, live: true })
+    if (lean) ctx.restore()
+  }
   if (behind) me()
   if (behind) paintBoard(ctx, cam)
   hoopWith(ctx, cam, null, null)
   if (!behind) me()
-  for (const [cx, cy] of CORNERS) if (laneZ(cy) < myZ) coneOn(ctx, cam, cx, laneZ(cy))
+  for (let i = 0; i < 4; i++) if (laneZ(CORNERS[i][1]) < myZ) coneOn(ctx, cam, CORNERS[i][0], laneZ(CORNERS[i][1]), g.coneAng[i])
+  if (!calm()) g.dirt.draw(ctx, t)
   // and a word as he plants
   for (let i = 0; i < n; i++) {
     const cut = cuts[i]
@@ -369,7 +455,7 @@ function drawLane(ctx, g, view) {
     const pts = g.legs[i].pts, e = pts.length - 2
     project(cam, pts[e], 0, laneZ(pts[e + 1]))
     const qx = PT.x, qy = PT.y, k = PT.k
-    if (age < 300) spray(ctx, qx, qy, age, 300, i + 1, '#f4e4cf', cut.res ? 6 : 12, cut.res ? 24 : 44)
+    plantFx(g, view, { x: qx, y: qy, s: k / 14 }, i, cut, true, false, -Math.PI / 2)
     const word = cut.res ? 'CLEAN' : cut.why === 'early' ? 'TOO SOON' : 'TOO LATE'
     const x = clamp(qx, 62, view.w - 62), y = qy - Math.max(70, 7.4 * k)
     text(ctx, word, x + 1, y + 1, { font: DISPLAY, size: 24, color: 'rgba(0,0,0,.6)' })
@@ -379,23 +465,15 @@ function drawLane(ctx, g, view) {
 }
 // the stopwatch, always: the same slab as the 40; and the payoff by the stamp
 function coneTail(ctx, g, view) {
-  const { h } = view, n = g.n, t = g.t
-  clockSlab(ctx, view, g.clock.toFixed(2), g.done ? (g.done.hit ? GOOD : BAD) : '#fff')
+  const { w } = view, n = g.n
+  const over = g.done ? g.t - g.finishAt : -1, official = over >= OFFICIAL_MS
+  if (g.done && !g.official && official) { g.official = true; g.fx.push('stamp') }
+  const q = g.done ? officialPunch(over) : 1
+  if (q !== 1) { ctx.save(); ctx.translate(w / 2, 70); ctx.scale(q, q); ctx.translate(-w / 2, -70) }
+  clockSlab(ctx, view, g.clock.toFixed(2), official ? (g.done.hit ? GOOD : BAD) : '#fff')
+  if (q !== 1) ctx.restore()
   placeStamp(g.stamp, view)
-  if (g.done && g.stamp && t >= g.stamp.at + 180) {
-    const y = h - 126 - 54, all = g.made === n
-    ctx.fillStyle = 'rgba(6,10,12,.86)'; ctx.fillRect(180 - 112, y - 19, 224, 38)
-    text(ctx, `${g.made} OF ${n} CLEAN`, 180, y + 1, { font: LABEL, size: 26, track: 1.5, color: all ? GOLD : '#fff' })
-  }
-}
-// floor or grass flying off a plant
-function spray(ctx, x, y, age, life, seed, color, n, reach) {
-  const f = age / life
-  ctx.fillStyle = color
-  for (let i = 0; i < n; i++) {
-    const a = seed * 2.1 + i * 2.399, d = reach * (0.45 + ((i * 37) % 10) * 0.055) * easeOut(f), sz = 3.5 * (1 - f) + 1
-    ctx.fillRect(x + Math.cos(a) * d - sz / 2, y + Math.sin(a) * d * 0.55 - sz / 2, sz, sz)
-  }
+  if (g.done) officialStrip(ctx, view, over, g.done.hit, `${g.made} OF ${n} CLEAN`)
 }
 
 // every look he'll need, a few a frame while he's in his stance
@@ -408,7 +486,11 @@ function warmUp(g) {
       else for (const dir of ['up', 'down', 'side']) g.warmList.push({ ...me, dir, step, pose: null })
     }
     if (g.lane) g.warmList.push({ ...me, dir: 'up', step: null, pose: 'ready' })
-    else for (const dir of ['up', 'down']) g.warmList.push({ ...me, dir, step: null, pose: 'touch' })
+    else {
+      for (const dir of ['up', 'down']) g.warmList.push({ ...me, dir, step: null, pose: 'touch' })
+      g.warmList.push({ ...me, dir: 'up', step: null, pose: 'hips' })
+      for (let i = 0; i < 4; i++) for (const pose of [null, 'reach-r']) g.warmList.push({ color: '#20262c', trim: '#f4efe6', pants: '#a89a80', skin: skinOf(i * 3), number: null, kit: 'plain', carry: false, dir: 'down', step: null, pose })
+    }
   }
   for (let i = 0; i < 3 && g.warmList.length; i++) warmAthlete(g.warmList.pop())
 }
@@ -418,9 +500,24 @@ export function draw(ctx, g, view) {
   const { w, h } = view, t = g.t, cuts = g.cuts, n = g.n, c = view.colors
   // the drill's own units to the flat field
   const m = coneLayout(h)
-  layer(ctx, view, `cone-l|${g.mirror}|${c.us}|${c.trim}`, x => bakeL(x, view, g, c))
+  g.dirt ??= particles(30, g.n + 7); g.nudge ??= nudge()
+  layer(ctx, view, `cone-gym|${g.mirror}`, x => bakeL(x, view, g, c))
   const ox = 180 - g.mirror * 2.5 * m.u, oy = m.ay, ux = m.u
   const fx = wx => ox + wx * ux, fy = wy => oy - wy * ux
+  drawConeScouts(ctx, view, g, oy - ux * 5 - 92)
+  // the timing gate, at the start and the finish: red until he's through it
+  for (const X of [-2.3, 2.3]) {
+    const p = tilt(view, fx(X * 0.72 - 0.2), fy(0)), k = p.s
+    ctx.fillStyle = '#14181c'; ctx.fillRect(p.x - k, p.y - 30 * k, 2 * k, 30 * k); ctx.fillRect(p.x - 5 * k, p.y - 36 * k, 10 * k, 7 * k)
+    ctx.fillStyle = g.done ? GOOD : BAD; ctx.fillRect(p.x - 2.4 * k, p.y - 34 * k, 4.8 * k, 3.4 * k)
+  }
+  // the marks his cleats have torn up so far
+  ctx.fillStyle = 'rgba(8,28,14,.42)'
+  for (let i = 0; i < n; i++) {
+    if (cuts[i].hitAt == null) continue
+    const pts = g.legs[i].pts, e = pts.length - 2
+    turfRing(ctx, view, fx(pts[e]), fy(pts[e + 1]), cuts[i].res ? 5 : 9); ctx.fill()
+  }
 
   // the way he's going, on this leg only, chalked on the ground
   if (g.phase !== 'out') {
@@ -448,12 +545,15 @@ export function draw(ctx, g, view) {
 
   // him, and the cones in depth around him
   const rowMe = fy(g.y)
-  const coneAt = (cx, cy) => { const row = fy(cy); return row <= rowMe ? cone(ctx, view, fx(cx), row, 1.2) : null }
-  const coneNear = (cx, cy) => { const row = fy(cy); return row > rowMe ? cone(ctx, view, fx(cx), row, 1.2) : null }
-  const eachCone = fn => {
-    fn(0, 5); fn(g.mirror * 5, 5); fn(0, 0)
+  const L_CONES = g.lCones ?? (g.lCones = [[0, 5], [g.mirror * 5, 5], [0, 0]])
+  coneState(g, L_CONES)
+  const eachCone = near => {
+    for (let i = 0; i < 3; i++) {
+      const row = fy(L_CONES[i][1])
+      if ((row > rowMe) === near) cone(ctx, view, fx(L_CONES[i][0]), row, 1.2, g.coneAng[i])
+    }
   }
-  eachCone(coneAt)
+  eachCone(false)
   const def = g.legs[Math.min(g.k, g.legs.length - 1)]
   const set = g.phase === 'set'
   const touching = !g.lane && g.phase === 'run' && t < g.leg.t0
@@ -462,8 +562,14 @@ export function draw(ctx, g, view) {
     dir = set ? 'up' : g.leg.pts[3] > g.leg.pts[1] ? 'down' : 'up'
     pose = 'touch'; step = null
   } else dir = dirOf(g.ux, -g.uy)
+  // the drill's over: he's walked back and got his hands on his hips
+  if (g.phase === 'out' && g.sp === 0) { dir = 'up'; step = null; pose = 'hips' }
+  const lean = leanOf(g), me = tilt(view, fx(g.x), rowMe)
+  if (lean) { ctx.save(); ctx.translate(me.x, me.y); ctx.rotate(lean); ctx.translate(-me.x, -me.y) }
   athlete(ctx, view, fx(g.x), rowMe, { color: '#eef1f4', skin: '#8d5a3b', kit: 'plain', dir, step, pose, size: 1.35 })
-  eachCone(coneNear)
+  if (lean) ctx.restore()
+  eachCone(true)
+  if (!calm()) g.dirt.draw(ctx, t)
   vignette(ctx, view)
   // and a word as he plants
   for (let i = 0; i < n; i++) {
@@ -472,7 +578,7 @@ export function draw(ctx, g, view) {
     const age = t - cut.at
     if (age > 440) continue
     const pts = g.legs[i].pts, e = pts.length - 2, q = tilt(view, fx(pts[e]), fy(pts[e + 1]))
-    if (age < 300) spray(ctx, q.x, q.y, age, 300, i + 1, '#0b3b1c', cut.res ? 6 : 12, cut.res ? 24 : 44)
+    plantFx(g, view, q, i, cut, false, !!g.legs[i].touch, Math.atan2(g.uy * 0.6, -g.ux) )
     const word = cut.res ? 'CLEAN' : cut.why === 'early' ? 'TOO SOON' : 'TOO LATE'
     const x = clamp(q.x, 62, w - 62), y = q.y - 62 * q.s
     text(ctx, word, x + 1, y + 1, { font: DISPLAY, size: 24, color: 'rgba(0,0,0,.6)' })

@@ -8,12 +8,20 @@
 // The menu keeps a socket open here and gets the whole list whenever it changes.
 // The sockets hibernate (a menu left open costs nothing while nothing happens), so
 // the list lives in storage too, for when this wakes back up.
+//
+// The counts: how many are waiting in each Compete and Trait Auction queue and each
+// Blacktop lobby, so the menus can show "3 searching" without anyone joining. Each
+// queue posts its own number here when it changes (and every minute while it's above
+// zero); the menus listen on /counts and get only the numbers, never who.
 
 import { send, str } from './queue.js'
 
 const STALE_MS = 2 * 60 * 1000     // a game that hasn't checked in for two minutes is gone
 const PER_SIZE = 12                // the most one mode lists
 const MAX_GAMES = 120
+const COUNT_STALE_MS = 3 * 60 * 1000   // a queue that hasn't posted for three minutes is empty (a redeploy drops them)
+const COUNT_EVERY_MS = 3000            // the menus hear the counts at most this often
+const COUNT_KEY = /^(cp|au):[a-z]{2,8}-[a-z]{2,8}$|^bt:[123]$/
 
 const sizeOf = v => (v === 1 || v === 2 ? v : 3)
 const scoreOf = s => (Array.isArray(s) && s.length === 2 && s.every(n => Number.isInteger(n) && n >= 0 && n <= 99) ? [s[0], s[1]] : null)
@@ -23,9 +31,12 @@ export class Games {
   constructor(state) {
     this.state = state
     this.games = new Map()          // code → { code, size, players, score, pn, started, watchers, ts }
+    this.counts = {}                // 'cp:nfl-qb' | 'au:bucket-big' | 'bt:3' → { n, ts }
+    this.countTimer = null; this.countSent = 0
     state.blockConcurrencyWhile(async () => {
       const rows = await state.storage.list({ prefix: 'g:' })
       for (const g of rows.values()) if (g?.code) this.games.set(g.code, g)
+      this.counts = (await state.storage.get('counts')) || {}
     })
   }
   async fetch(req) {
@@ -36,9 +47,21 @@ export class Games {
       if (b && typeof b.code === 'string') await this.update(b)
       return new Response('ok')
     }
+    // a queue or lobby, about how many are waiting in it (only from inside, too)
+    if (url.pathname === '/count' && req.method === 'POST') {
+      const b = await req.json().catch(() => null)
+      if (b && typeof b.key === 'string' && COUNT_KEY.test(b.key)) await this.setCount(b.key, b.n)
+      return new Response('ok')
+    }
     if (req.headers.get('Upgrade') !== 'websocket') return new Response('watch list', { status: 426 })
     const [client, server] = Object.values(new WebSocketPair())
-    this.state.acceptWebSocket(server)
+    // the counts' listeners: just the numbers
+    if (url.pathname === '/counts') {
+      this.state.acceptWebSocket(server, ['counts'])
+      send(server, this.countsMsg())
+      return new Response(null, { status: 101, webSocket: client })
+    }
+    this.state.acceptWebSocket(server, ['games'])
     await this.prune()
     send(server, this.list())
     return new Response(null, { status: 101, webSocket: client })
@@ -83,6 +106,30 @@ export class Games {
   }
   broadcast() {
     const msg = this.list()
-    for (const ws of this.state.getWebSockets()) send(ws, msg)
+    // a list socket from before the counts (no tag) still gets it
+    for (const ws of this.state.getWebSockets()) if (!this.state.getTags(ws).includes('counts')) send(ws, msg)
+  }
+  async setCount(k, n) {
+    n = Math.max(0, Math.min(99, n | 0))
+    const was = this.counts[k]?.n ?? 0
+    if (n) this.counts[k] = { n, ts: Date.now() }; else delete this.counts[k]
+    await this.state.storage.put('counts', this.counts)
+    if (n !== was) this.pushCounts()
+  }
+  // only the numbers above zero, and only the fresh ones
+  countsMsg() {
+    const now = Date.now(), counts = {}
+    for (const [k, c] of Object.entries(this.counts)) if (c?.n > 0 && now - c.ts < COUNT_STALE_MS) counts[k] = c.n
+    return { t: 'counts', counts }
+  }
+  // at most one push every few seconds: a busy queue's comings and goings ride together
+  pushCounts() {
+    if (this.countTimer) return
+    const wait = Math.max(0, this.countSent + COUNT_EVERY_MS - Date.now())
+    this.countTimer = setTimeout(() => {
+      this.countTimer = null; this.countSent = Date.now()
+      const msg = this.countsMsg()
+      for (const ws of this.state.getWebSockets('counts')) send(ws, msg)
+    }, wait)
   }
 }

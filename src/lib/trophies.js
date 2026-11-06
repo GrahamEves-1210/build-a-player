@@ -17,11 +17,12 @@
 //             touches the counters and football never sets mvp / dpoy.
 //   opoy      football only, as above
 //             DL's DPOYs never touch the counters (classic_dpoys is DB's board): every one
-//             is a season tagged 'dpoy' on a dl- row, All-Time too, added on top.
+//             is a season tagged 'dpoy' on a dl- row, All-Time too, added on top. LB's the same (lb- rows).
 //   allpro    OL current-mode seasons tagged 'allpro' (no counter exists)
 //   perfect   seasons with no losses and at least one win
 //   ovr90     seasons played with a 90+ build (95+ is counted inside it, not twice)
 import { supabase } from './supabase'
+import { LB_LIVE } from './lbLive'
 
 const countOf = q => q.then(r => (r.error ? null : r.count ?? 0), () => null)
 const BUCKET = 'bucket-%'
@@ -53,7 +54,7 @@ export async function loadHardware(uid) {
     countOf(base().eq('season_award', 'mvp')),
     countOf(base().eq('season_award', 'opoy')),
     countOf(base().eq('season_award', 'dpoy')),
-    countOf(base().eq('season_award', 'dpoy').like('game_mode', 'dl-%')),
+    countOf(base().eq('season_award', 'dpoy').or('game_mode.like.dl-*,game_mode.like.lb-*')),
     countOf(base().like('game_mode', BUCKET).eq('mvp', true)),
     countOf(base().like('game_mode', BUCKET).eq('dpoy', true)),
   ])
@@ -79,7 +80,7 @@ export async function loadHardware(uid) {
 // Positions a saved season can be. Football rows have no position column: the mode says
 // it ('rb-classic' …). A QB season's mode is the bare mode ('classic', 'all-time', 'lite',
 // 'legends' …), so QB is every row without a position prefix (or with no mode at all).
-const NOT_QB = ['bucket', 'rb', 'wr', 'te', 'db', 'dl', 'ol'].map(p => `game_mode.not.like.${p}-*`).join(',')
+const NOT_QB = ['bucket', 'rb', 'wr', 'te', 'db', 'dl', 'lb', 'ol'].map(p => `game_mode.not.like.${p}-*`).join(',')
 export const POSITIONS = [
   { key: 'qb',    label: 'QB',    sport: 'nfl',    where: q => q.or(`game_mode.is.null,and(${NOT_QB})`) },
   { key: 'rb',    label: 'RB',    sport: 'nfl',    where: q => q.like('game_mode', 'rb-%') },
@@ -87,6 +88,7 @@ export const POSITIONS = [
   { key: 'te',    label: 'TE',    sport: 'nfl',    where: q => q.like('game_mode', 'te-%') },
   { key: 'db',    label: 'DB',    sport: 'nfl',    where: q => q.like('game_mode', 'db-%') },
   { key: 'dl',    label: 'DL',    sport: 'nfl',    where: q => q.like('game_mode', 'dl-%') },
+  ...(LB_LIVE ? [{ key: 'lb',    label: 'LB',    sport: 'nfl',    where: q => q.like('game_mode', 'lb-%') }] : []),
   { key: 'ol',    label: 'OL',    sport: 'nfl',    where: q => q.like('game_mode', 'ol-%') },
   { key: 'guard', label: 'GUARD', sport: 'bucket', where: q => q.like('game_mode', 'bucket-%').eq('position', 'guard') },
   { key: 'big',   label: 'BIG',   sport: 'bucket', where: q => q.like('game_mode', 'bucket-%').eq('position', 'big') },

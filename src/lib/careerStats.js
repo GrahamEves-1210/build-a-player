@@ -76,6 +76,17 @@ const DEFS = {
   // (judged: the league's averages count everyone, so starters' numbers here are estimates; leaders from 2025)
   wr: catcher(6, 8.2, 50, 80, 65, 73, 8.2, 10),
   te: catcher(4.5, 7.5, 35, 60, 70, 78, 7.5, 9),
+  // (a starting linebacker about 100 tackles and an elite one 150; estimates)
+  lb: [
+    { key: 'tackles', label: 'TACKLES', get: s => s.stats.tackles, fmt: int, avg: 100, elite: 150, says: 'The linebacker stat. Range and a sure tackle make it; so does a defense that lets the run get to him.' },
+    { key: 'tfl', label: 'TACKLES FOR LOSS', get: s => s.stats.tfl ?? 0, fmt: int, avg: 6, elite: 13, says: 'Plays stopped behind the line. Shedding blocks and a quick read.' },
+    { key: 'pd', label: 'PASSES DEFENDED', get: s => s.stats.pds ?? 0, fmt: int, avg: 4, elite: 9, says: 'Throws he got a hand on in coverage.' },
+    { key: 'sacks', label: 'SACKS', get: s => s.stats.sacks ?? 0, fmt: int, avg: 2, elite: 5, says: 'How often he gets home when they send him.' },
+    { key: 'ints', label: 'INTERCEPTIONS', get: s => s.stats.ints ?? 0, fmt: int, says: 'Rare for a linebacker. Two in a year is a good one.' },
+    { key: 'tklG', label: 'TACKLES / GAME', get: s => perGame(s.stats.tackles, s), fmt: f1, says: 'Tackles a game, for a season cut short.' },
+    { key: 'big', label: '10-TACKLE GAMES', get: s => s.adv.big ?? 0, fmt: int, says: 'Games with ten tackles or more.' },
+    { key: 'ff', label: 'FORCED FUMBLES', get: s => s.stats.ff ?? 0, fmt: int, says: 'Times he knocked the ball loose.' },
+  ],
   db: [
     { key: 'pd', label: 'PASSES DEFENDED', get: s => s.stats.pbus, fmt: int, avg: 8, elite: 15, says: 'Throws he got a hand on. The best sign of good coverage in a box score.' },
     { key: 'ints', label: 'INTERCEPTIONS', get: s => s.stats.ints, fmt: int, avg: 2, elite: 5, says: 'Throws he caught. Fun, but it swings a lot from year to year.' },
@@ -126,6 +137,7 @@ export function seasonRaw(pos, f, played) {
   if (pos === 'rb') return { gp, carries: f.seasonCarries ?? 0, recs: f.seasonRecs ?? 0, long: f.seasonLong ?? 0, hundreds: count(g => g.rushYds >= 100) }
   if (pos === 'wr' || pos === 'te') return { gp, targets: f.seasonTargets ?? 0, long: f.seasonLong ?? 0, hundreds: count(g => g.recYds >= 100) }
   if (pos === 'dl') return { gp, multi: count(g => g.sacks >= 2) }
+  if (pos === 'lb') return { gp, big: count(g => g.tackles >= 10) }
   return { gp }
 }
 

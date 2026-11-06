@@ -34,6 +34,7 @@ import { bookRatings, bookVs } from './rating.js'
 import { handleSubmit } from './submit.js'
 import { whoIs } from './auth.js'
 import { handleReset } from './reset.js'
+import { countPoster } from './queue.js'
 export { AuctionQueue, AuctionRoom, CompeteQueue, CompeteRoom, Games }
 
 const BUILD_SECS = 180
@@ -91,6 +92,8 @@ export default {
     if (url.pathname === '/lobby1') return env.LOBBY.get(env.LOBBY.idFromName('blacktop1')).fetch(req)
     // the live games, for the Blacktop menu (games.js)
     if (url.pathname === '/games') return env.GAMES ? env.GAMES.get(env.GAMES.idFromName('blacktop')).fetch(req) : new Response('not found', { status: 404 })
+    // how many are waiting in each Compete / Trait Auction queue and Blacktop lobby: numbers only (games.js)
+    if (url.pathname === '/counts') return env.GAMES ? env.GAMES.get(env.GAMES.idFromName('blacktop')).fetch(req) : new Response('not found', { status: 404 })
     if (url.pathname === '/auction/q') {
       const sport = url.searchParams.get('sport'), pos = url.searchParams.get('pos')
       if (!validSportPos(sport, pos)) return new Response('bad', { status: 400 })
@@ -160,7 +163,11 @@ export class Lobby {
     }
     return { t: 'lobby', size: this.size, spots: Object.fromEntries(this.slots.map(sl => [sl.id, show(sl)])), here: [...this.conns.values()].map(pub) }
   }
-  broadcast(msg) { for (const ws of this.conns.keys()) send(ws, msg) }
+  broadcast(msg) {
+    for (const ws of this.conns.keys()) send(ws, msg)
+    // the spots taken, for the Blacktop menu's "3 searching" (games.js): the number only
+    if (msg?.t === 'lobby') { this.count ??= countPoster(this.env, `bt:${this.size}`); this.count(Object.values(msg.spots).filter(Boolean).length) }
+  }
   async onMessage(ws, data) {
     const m = parse(data); if (!m) return
     if (m.t === 'hello') {

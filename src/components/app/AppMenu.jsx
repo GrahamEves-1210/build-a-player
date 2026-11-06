@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom'
 import { supabase } from '../../lib/supabase'
 import FeedbackModal from '../FeedbackModal'
 import { isMuted, setMuted } from '../../lib/juice'
+import { reduceMotion, setReduceMotion } from '../../lib/settings'
 import { IS_APP, PLAY_BILLING } from '../../lib/platform'
 import { useStorePrices, PRO_PLAN_ID } from '../../lib/iap'
 import { openCheckout, openBillingPortal, billingDue, restorePro, PRO_PRICE, perMonth } from '../../lib/webCheckout'
@@ -165,6 +166,7 @@ export default function AppMenu({ sport, onClose, initialView = 'menu' }) {
   }, [])
   const [feedbackUser, setFeedbackUser] = useState(null) // null = closed
   const [muted, setMutedState] = useState(isMuted)
+  const [calm, setCalm] = useState(reduceMotion)
   const signedIn = useProgress().signedIn
   const isBucket = sport === 'bucket'
 
@@ -234,6 +236,11 @@ export default function AppMenu({ sport, onClose, initialView = 'menu' }) {
               <span className="ag-sound-switch"><span className="ag-sound-knob" /></span>
               <span className="ag-sound-state">{muted ? 'OFF' : 'ON'}</span>
             </button>
+            <button className={`ag-row-btn${calm ? '' : ' ag-sound--off'}`} role="switch" aria-checked={calm} onClick={() => { setReduceMotion(!calm); setCalm(!calm) }}>
+              <span className="ag-sound-lbl">REDUCE MOTION</span>
+              <span className="ag-sound-switch"><span className="ag-sound-knob" /></span>
+              <span className="ag-sound-state">{calm ? 'ON' : 'OFF'}</span>
+            </button>
             <button className="ag-row-btn" onClick={() => setView('settings')}>
               <IconGear size={18} /><span className="ag-sound-lbl">SETTINGS · HELP · ACCOUNT</span>
             </button>
@@ -248,12 +255,10 @@ export default function AppMenu({ sport, onClose, initialView = 'menu' }) {
                 <IconDoc size={19} /><span className="ag-sound-lbl">PLAYER WIKI</span>
               </button>
             )}
-            <button className="ag-row-btn" onClick={go(() => nav('about'))}>
-              <IconInfo size={20} /><span className="ag-sound-lbl">ABOUT THE GAME</span>
-            </button>
             <div className="ag-menu-links">
               <button onClick={go(() => { window.location.href = '/privacy' })}><IconShield size={15} /> Privacy</button>
               <button onClick={go(() => { window.location.href = '/terms' })}><IconDoc size={15} /> Terms</button>
+              <button onClick={go(() => nav('about'))}><IconInfo size={15} /> About</button>
             </div>
           </>
         )}

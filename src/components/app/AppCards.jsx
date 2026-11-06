@@ -13,14 +13,15 @@ import EmptyState, { PassLoader } from './EmptyState'
 // carry the sport, so claimed sets stay claimed) and each set kind lists the
 // football sets, then the basketball sets. Both rosters load in parallel.
 
-const NFL_POS = { qb: 'QB', rb: 'RB', wr: 'WR', te: 'TE', db: 'DB', dl: 'DL' }
+const NFL_POS = { qb: 'QB', rb: 'RB', wr: 'WR', te: 'TE', db: 'DB', dl: 'DL', lb: 'LB' }
 const NBA_POS = { guard: 'GUARD', big: 'BIG' }
 
 async function loadNfl() {
-  const [qbs, rbs, wrs, tes, dbs, ql, rl, wl, tl, dl, teams, hs, dls, dll] = await Promise.all([
+  const [qbs, rbs, wrs, tes, dbs, ql, rl, wl, tl, dl, teams, hs, dls, dll, lbs, lbl] = await Promise.all([
     import('../../data/qbs'), import('../../data/rbs'), import('../../data/wrs'), import('../../data/tes'), import('../../data/dbs'),
     import('../../data/qb-legends'), import('../../data/rb-legends'), import('../../data/wr-legends'), import('../../data/te-legends'), import('../../data/db-legends'),
     import('../../data/nfl-teams'), import('../../data/headshots.json'), import('../../data/dls'), import('../../data/dl-legends'),
+    import('../../data/lbs'), import('../../data/lb-legends'),
   ])
   return {
     pools: {
@@ -30,6 +31,7 @@ async function loadNfl() {
       te: { classic: tes.TES, 'all-time': tl.TE_LEGENDS },
       db: { classic: dbs.DBS, 'all-time': dl.DB_LEGENDS },
       dl: { classic: dls.DLS, 'all-time': dll.DL_LEGENDS },
+      ...(lbs.LB_LIVE ? { lb: { classic: lbs.LBS, 'all-time': lbl.LB_LEGENDS } } : {}),
     },
     posLabel: NFL_POS,
     teams: teams.TEAMS,

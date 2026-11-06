@@ -128,6 +128,27 @@ const unionShown = sel => {
   const right = Math.max(...hits.map(h => h.r.right)), bottom = Math.max(...hits.map(h => h.r.bottom))
   return { el: hits[0].el, r: { top, left, right, bottom, width: right - left, height: bottom - top } }
 }
+// the part of a rectangle its scrolling parents actually show (the attribute buttons run on
+// below the spin panel's fold, and the outline and the prompt must go by what can be seen)
+function clipToParents(el, r) {
+  let top = r.top, left = r.left, right = r.right, bottom = r.bottom
+  for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) {
+    const cs = getComputedStyle(p)
+    if (cs.overflowY === 'visible' && cs.overflowX === 'visible') continue
+    const pr = p.getBoundingClientRect()
+    top = Math.max(top, pr.top); left = Math.max(left, pr.left); right = Math.min(right, pr.right); bottom = Math.min(bottom, pr.bottom)
+  }
+  top = Math.max(top, 0); bottom = Math.min(bottom, window.innerHeight)
+  if (bottom - top < 2 || right - left < 2) return null
+  return { top, left, right, bottom, width: right - left, height: bottom - top }
+}
+const unionVisible = sel => {
+  const hits = [...document.querySelectorAll(sel)].map(el => { const r = shown(el); return { el, r: r && clipToParents(el, r) } }).filter(x => x.r)
+  if (!hits.length) return null
+  const top = Math.min(...hits.map(h => h.r.top)), left = Math.min(...hits.map(h => h.r.left))
+  const right = Math.max(...hits.map(h => h.r.right)), bottom = Math.max(...hits.map(h => h.r.bottom))
+  return { el: hits[0].el, r: { top, left, right, bottom, width: right - left, height: bottom - top }, union: true }
+}
 const findTarget = step => {
   for (const sel of step.sel) { const hit = step.all ? unionShown(sel) : firstShown(sel); if (hit) return hit }
   return null
@@ -156,6 +177,19 @@ function place(r, floor, h, preferAbove = false) {
   const below = preferAbove ? !fitsAbove && (fitsBelow || floor - r.bottom > r.top) : fitsBelow || (!fitsAbove && floor - r.bottom > r.top)
   const top = below ? r.bottom + 18 : r.top - 18 - h
   return { pos: { left, top: Math.max(8, Math.min(floor - h - 8, top)), width: w }, arrow: Math.max(22, Math.min(w - 22, r.left + r.width / 2 - left)), below }
+}
+// the guided game's version: the prompt never sits on what it points at (it covered the attribute
+// buttons when there was no room above or below them). Above, below, then beside; null when none fits
+function placeClear(r, floor, h, preferAbove = false) {
+  const p = place(r, floor, h, preferAbove)
+  const t = p.pos.top
+  if (t + h <= r.top - 4 || t >= r.bottom + 4) return p
+  const vw = window.innerWidth
+  const w = Math.min(340, vw - 24)
+  const top = Math.max(8, Math.min(floor - h - 8, r.top + r.height / 2 - h / 2))
+  if (r.right + 18 + w <= vw - 12) return { pos: { left: r.right + 18, top, width: w }, arrow: null, below: false, side: true }
+  if (r.left - 18 - w >= 12) return { pos: { left: r.left - 18 - w, top, width: w }, arrow: null, below: false, side: true }
+  return null
 }
 // follows a target as the page scrolls or resizes (polls lightly; no per-frame work)
 function useTracked(read, deps) {
@@ -329,7 +363,7 @@ function readStep(m) {
   if (chip) {
     m.chips = true
     // all the chips as one target, so the tip sits beside them rather than on them
-    return { step: m.picks === 0 ? 'pick' : 'quiet', a: bar ?? unionShown('.attr-chip') ?? chip }
+    return { step: m.picks === 0 ? 'pick' : 'quiet', a: bar ?? unionVisible('.attr-chip') ?? chip }
   }
   const spin = firstShown('.spin-btn')
   if (spin && !spin.el.disabled) {
@@ -353,7 +387,10 @@ function Coach({ sport }) {
     if (a && !m.scrolled[step]) {   // bring the target into view once per step
       m.scrolled[step] = true
       const floor = floorY()
-      if (a.r.top < 70 || a.r.bottom > floor - 30) a.el.scrollIntoView({ block: 'center', behavior: 'auto' })
+      // (the attribute buttons as a group: only the first one is brought in, by the least scroll,
+      // so the build screen doesn't jump up under the page's footer)
+      if (a.union) { const er = a.el.getBoundingClientRect(); if (er.top < 70 || er.bottom > floor - 30) a.el.scrollIntoView({ block: 'nearest', behavior: 'auto' }) }
+      else if (a.r.top < 70 || a.r.bottom > floor - 30) a.el.scrollIntoView({ block: 'center', behavior: 'auto' })
     }
     return { key: step, hit: a }
   }, [])
@@ -366,18 +403,21 @@ function Coach({ sport }) {
   const c = copy[step]
   const showBubble = c && !hidden[step]
   const r = view.r
-  const p = showBubble && r ? place(r, view.floor ?? window.innerHeight, bh, c.above) : null
+  const p = showBubble && r ? placeClear(r, view.floor ?? window.innerHeight, bh, c.above) : null
+  // nowhere to put the prompt clear of its target (a short screen, the attribute buttons filling it):
+  // no prompt then, just the outline and the small skip pill, so every button stays tappable
+  const noRoom = showBubble && r && !p
   const pad = 6
   return (
     <div className="tut-coach" aria-live="polite">
-      {showBubble && r && (
+      {showBubble && r && !noRoom && (
         <div className={`tut-hole tut-hole--coach${c.dim ? '' : ' tut-hole--clear'}`} aria-hidden="true"
           style={{ transform: `translate(${r.left - pad}px, ${r.top - pad}px)`, width: r.width + pad * 2, height: r.height + pad * 2, ...(view.animate ? {} : { transition: 'none' }) }} />
       )}
-      {showBubble ? (
-        <div ref={bubble} className={`tut-bubble${p ? (p.below ? ' tut-bubble--below' : ' tut-bubble--above') : ' tut-bubble--dock'}`}
+      {showBubble && !noRoom ? (
+        <div ref={bubble} className={`tut-bubble${p ? (p.side ? '' : p.below ? ' tut-bubble--below' : ' tut-bubble--above') : ' tut-bubble--dock'}`}
           style={p?.pos} role="dialog" aria-label={`Tutorial step ${c.n} of 4: ${c.title}`}>
-          {p && <span className="tut-bubble-arrow" style={{ left: p.arrow }} aria-hidden="true" />}
+          {p && p.arrow != null && <span className="tut-bubble-arrow" style={{ left: p.arrow }} aria-hidden="true" />}
           <div className="tut-bubble-head">
             <span className="tut-bubble-step">STEP {c.n} OF 4</span>
             <button type="button" className="tut-skip tut-skip--sm" onClick={finish}>Skip tutorial</button>

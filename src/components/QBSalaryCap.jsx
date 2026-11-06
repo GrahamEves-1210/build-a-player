@@ -50,7 +50,13 @@ import { getUsername } from '../lib/discord'
 */
 
 import { QB_SAL_POOL as ALL_PLAYERS, QB_SAL_COLS } from '../data/qb-salary'
+import { FB_SAL, FB_SAL_POS, fbSalFor } from '../data/fb-salary'
 export { QB_SAL_COLS }
+
+// Change Position: the daily board is QB's; every other position plays Infinite. The pick
+// is kept on this device, so the board reopens at it (and a refresh on /salary does too)
+const SAL_POS_KEY = 'bap_fbsal_pos'
+const savedSalPos = () => { try { const p = localStorage.getItem(SAL_POS_KEY); return FB_SAL_POS.includes(p) ? p : 'qb' } catch { return 'qb' } }
 
 // ─── Seeded RNG (mulberry32 variant) ──────────────────────────────────────────
 function seededRandom(seed) {
@@ -129,10 +135,11 @@ export const QB_SAL_ATTR_MAP = {
 
 const TEAM_META = Object.fromEntries(TEAMS.map(t => [t.short, t]))
 
-// Full-attribute lookup (row shuffle re-slices a card's attrs for its new column)
-const _playerMap = new Map(ALL_PLAYERS.map(p => [p.name, p]))
+// Full-attribute lookup (row shuffle re-slices a card's attrs for its new column), per position
+const _playerMaps = {}
+const playerMapFor = pos => (_playerMaps[pos] ??= new Map(fbSalFor(pos).pool.map(p => [p.name, p])))
 
-const photoFor = name => nflHeadshot(HEADSHOTS[name])
+const photoFor = (name, p) => nflHeadshot(HEADSHOTS[name] ?? p?.headshot)
 const teamColorOf  = p => TEAM_META[p.team]?.color  ?? p.color  ?? '#444'
 const teamColor2Of = p => TEAM_META[p.team]?.color2 ?? p.color2 ?? '#222'
 
@@ -174,7 +181,7 @@ const POWER_SEEN_KEY = 'qbsal_power_seen'
 // Compute the correct salary tier for a legend in a given column by ranking
 // their catScore against the regular player pool (no rand needed — deterministic).
 // the board itself: lib/salaryCore.js (the live server checks plays against the same board)
-const { legendTierFor, pickLegendSlots, getPickedNamesForSeed, generateGrid } = salaryKit({ typesFor, look: p => ({ teamColor: teamColorOf(p), teamColor2: teamColor2Of(p), photo: photoFor(p.name) }) })
+const { legendTierFor, pickLegendSlots, getPickedNamesForSeed, generateGrid } = salaryKit({ typesFor, look: p => ({ teamColor: teamColorOf(p), teamColor2: teamColor2Of(p), photo: photoFor(p.name, p) }) })
 
 // Pick 2 deterministic legend slots — cycles through all legends before repeating.
 // rand() still used for column and tier nudge so placement varies day-to-day.
@@ -319,18 +326,28 @@ function LbStatLine({ row }) {
 }
 
 // ─── InfiniteLeaderboard ─────────────────────────────────────────────────────
-function InfiniteLeaderboard({ onClose }) {
+// One position's board: rows carry their position (supabase/salary_positions.sql). Until
+// that column exists there are only QB rows, so QB reads the table as it is and the
+// other positions show nothing
+function InfiniteLeaderboard({ onClose, pos = 'qb' }) {
   const [rows, setRows] = useState(null)
   useEffect(() => {
     if (!supabase) { setRows([]); return }
-    supabase
-      .from('qb_salary_infinite_plays')
+    let cancelled = false
+    const q = () => supabase.from('qb_salary_infinite_plays')
       .select('username, user_id, picks, overall_score, pass_yds, pass_tds, ints')
       .order('overall_score', { ascending: false })
       .limit(10)
-      .then(({ data }) => setRows((data || []).slice(0, 10)))
-      .catch(() => setRows([]))
-  }, [])
+    const done = data => { if (!cancelled) setRows((data || []).slice(0, 10)) }
+    q().eq('pos', pos)
+      .then(({ data, error }) => {
+        if (!error) return done(data)
+        if (pos !== 'qb') return done([])
+        return q().then(({ data: d }) => done(d))
+      })
+      .catch(() => done([]))
+    return () => { cancelled = true }
+  }, [pos])
   return (
     <>
       <div className="sc-lb-backdrop" onClick={onClose} />
@@ -364,6 +381,34 @@ function InfiniteLeaderboard({ onClose }) {
         ))}
       </div>
     </>
+  )
+}
+
+// ─── Change Position ──────────────────────────────────────────────────────────
+// a header button like the others beside it; the title above the board says the position
+function PositionButton({ position, onPick }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="sc-pos-wrap">
+        <button className={`sc-pos-btn${open ? ' sc-pos-btn--open' : ''}`} onClick={() => setOpen(v => !v)} aria-expanded={open} aria-label="Change position">
+          <span className="sc-pos-btn-label">POSITION</span>
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+        {open && (
+          <>
+            <div className="sc-date-backdrop" onClick={() => setOpen(false)} />
+            <div className="sc-date-dropdown sc-pos-dropdown">
+              {FB_SAL_POS.map(p => (
+                <button key={p} className={`sc-date-item${p === position ? ' sc-date-item--active' : ''}`}
+                  onClick={() => { setOpen(false); onPick(p) }}>
+                  <span className="sc-pos-item-pos">{FB_SAL[p].label}</span>
+                  <span className="sc-date-item-reset">{p === 'qb' ? 'DAILY' : p === position ? 'NEW BOARD' : 'INFINITE'}</span>
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+    </div>
   )
 }
 
@@ -453,19 +498,24 @@ export default function QBSalaryCap({ onConfirm, onBack, user, initialDateStr })
     }
     return getESTDate(0)
   })
+  // the position (QB: the daily board or Infinite; any other: Infinite at that position)
+  const [position,      setPosition]      = useState(savedSalPos)
+  const S = fbSalFor(position)
+  const [mode,          setMode]          = useState(() => (position === 'qb' ? 'daily' : 'infinite'))
+  const startDaily = mode === 'daily'   // a day's saved shuffle only belongs on the daily board
   const [sel,           setSel]           = useState({})
   const [alreadyPlayed, setAlreadyPlayed] = useState(null)
   const [showLB,        setShowLB]        = useState(false)
   const [showLBPrompt,  setShowLBPrompt]  = useState(false)
   const [shufflesLeft,    setShufflesLeft]    = useState(() => localStorage.getItem(SHUFFLED_KEY(getESTDate(0).str, user?.id)) ? 0 : 1)
   const [shuffleOverride, setShuffleOverride] = useState(() => {
-    const saved = localStorage.getItem(SHUFFLED_KEY(getESTDate(0).str, user?.id))
+    const saved = startDaily && localStorage.getItem(SHUFFLED_KEY(getESTDate(0).str, user?.id))
     return saved ? parseShuffle(saved).col : {}
   })
   const [shufflingCol,    setShufflingCol]    = useState(null)
   const [shufflingRow,    setShufflingRow]    = useState(null)
   const [rowOverrides,    setRowOverrides]    = useState(() => {
-    const saved = localStorage.getItem(SHUFFLED_KEY(getESTDate(0).str, user?.id))
+    const saved = startDaily && localStorage.getItem(SHUFFLED_KEY(getESTDate(0).str, user?.id))
     return saved ? parseShuffle(saved).row : {}
   })
   const [shufflePhase,    setShufflePhase]    = useState(null)
@@ -476,7 +526,6 @@ export default function QBSalaryCap({ onConfirm, onBack, user, initialDateStr })
   const [scoutedGrades,   setScoutedGrades]   = useState({})
   const [powerMenuOpen,   setPowerMenuOpen]   = useState(false)
   const [powerSeen,       setPowerSeen]       = useState(() => !!localStorage.getItem(POWER_SEEN_KEY))
-  const [mode,            setMode]            = useState('daily')
   const [infiniteSeed,    setInfiniteSeed]    = useState(() => Math.random() * 0x7FFFFFFF | 0)
   const [infShufflesLeft, setInfShufflesLeft] = useState(1)
   const [infScoutsLeft,   setInfScoutsLeft]   = useState(1)
@@ -529,8 +578,9 @@ export default function QBSalaryCap({ onConfirm, onBack, user, initialDateStr })
   }
   const computeGridSync = (date, currentMode, seed) => {
     if (currentMode === 'infinite') {
+      // the position's own pool and columns, priced the same way as QB's (lib/salaryCore.js)
       const rand = seededRandom(seed)
-      return generateGrid(QB_SAL_COLS, ALL_PLAYERS, rand, new Set(), seed)
+      return generateGrid(S.cols, S.pool, rand, new Set(), seed)
     }
     return localGenerateGrid(date)
   }
@@ -542,7 +592,7 @@ export default function QBSalaryCap({ onConfirm, onBack, user, initialDateStr })
 
   useEffect(() => {
     setGrid(computeGridSync(activeDate, mode, infiniteSeed))
-  }, [mode, infiniteSeed, activeDate.seed, activeDate.y, activeDate.m, activeDate.day])
+  }, [mode, position, infiniteSeed, activeDate.seed, activeDate.y, activeDate.m, activeDate.day])
 
   useEffect(() => {
     if (mode === 'infinite' || !supabase) return
@@ -661,8 +711,8 @@ export default function QBSalaryCap({ onConfirm, onBack, user, initialDateStr })
       const price = TIERS[ti]
       const newMap = {}
       current.forEach((p, ci) => {
-        const col = QB_SAL_COLS[ci]
-        const srcAttrs = _playerMap.get(p.name)?.attrs ?? p.fullAttrs ?? p.attrs ?? {}
+        const col = S.cols[ci]
+        const srcAttrs = playerMapFor(position).get(p.name)?.attrs ?? p.fullAttrs ?? p.attrs ?? {}
         const attrs = {}
         typesFor({ ...p, attrs: srcAttrs }, col).forEach(t => { attrs[t] = srcAttrs[t] ?? 5 })
         newMap[ci] = { ...p, price, attrs, id: `${col.key}-${price}-${p.name}-r` }
@@ -670,7 +720,7 @@ export default function QBSalaryCap({ onConfirm, onBack, user, initialDateStr })
       setRowOverrides(prev => ({ ...prev, [ti]: newMap }))
       setSel(prev => {
         const next = { ...prev }
-        QB_SAL_COLS.forEach((_, ci) => {
+        S.cols.forEach((_, ci) => {
           if (next[ci] && original[ci]?.name === next[ci]?.name) delete next[ci]
         })
         return next
@@ -700,10 +750,10 @@ export default function QBSalaryCap({ onConfirm, onBack, user, initialDateStr })
     setScoutMode(false)
   }
 
-  // Check localStorage on date/account change; clear sel for unplayed dates
-  useEffect(() => {
+  // A day's board as this device left it: its shuffle, scout, and the play if it was played
+  const restoreDay = (dateStr) => {
     const uid = user?.id
-    const savedShuffle = localStorage.getItem(SHUFFLED_KEY(activeDate.str, uid))
+    const savedShuffle = localStorage.getItem(SHUFFLED_KEY(dateStr, uid))
     setShufflesLeft(savedShuffle ? 0 : 1)
     // the day's shuffle comes back with it (column or row), so a played board
     // shows the picks where they were made
@@ -717,7 +767,7 @@ export default function QBSalaryCap({ onConfirm, onBack, user, initialDateStr })
     setScoutMode(false)
     setPowerMenuOpen(false)
     try {
-      const s = localStorage.getItem(PLAYED_KEY(activeDate.str, uid))
+      const s = localStorage.getItem(PLAYED_KEY(dateStr, uid))
       if (s) {
         setAlreadyPlayed(JSON.parse(s))
         return
@@ -725,7 +775,12 @@ export default function QBSalaryCap({ onConfirm, onBack, user, initialDateStr })
     } catch {}
     setAlreadyPlayed(null)
     setSel({})
-  }, [activeDate.str, user?.id])
+  }
+  // on a date or account change (an Infinite board is left alone: going back to the daily
+  // one restores the day then)
+  useEffect(() => {
+    if (mode === 'daily') restoreDay(activeDate.str)
+  }, [activeDate.str, user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // For logged-in users: cross-device check via Supabase
   useEffect(() => {
@@ -755,7 +810,7 @@ export default function QBSalaryCap({ onConfirm, onBack, user, initialDateStr })
 
   // Re-populate sel from saved picks so the grid shows their previous selections
   useEffect(() => {
-    if (!alreadyPlayed?.picks || !effectiveGrid) return
+    if (mode !== 'daily' || !alreadyPlayed?.picks || !effectiveGrid) return
     const newSel = {}
     alreadyPlayed.picks.forEach((savedPlayer, ci) => {
       if (!savedPlayer) return
@@ -768,11 +823,13 @@ export default function QBSalaryCap({ onConfirm, onBack, user, initialDateStr })
   }, [alreadyPlayed, effectiveGrid])
 
   const totalCost       = Object.values(sel).reduce((s, p) => s + p.price, 0)
-  const pickedAll       = Object.keys(sel).length === QB_SAL_COLS.length
+  const pickedAll       = Object.keys(sel).length === S.cols.length
   const overBudget      = totalCost > dailyBudget
+  // a played day locks the daily board only (an Infinite board is always open)
+  const lockedDaily     = mode === 'daily' && !!alreadyPlayed
 
   const pick = (ci, player) => {
-    if (alreadyPlayed) return
+    if (lockedDaily) return
     if (scoutMode) { executeScout(player); return }
     setSel(prev =>
       prev[ci]?.id === player.id
@@ -813,11 +870,37 @@ export default function QBSalaryCap({ onConfirm, onBack, user, initialDateStr })
     setShowLBPrompt(false)
   }
 
-  // Build keyed by all 9 QB types; each pick fills its column's types with
+  // Change Position: another position deals a fresh Infinite board from its own pool;
+  // QB goes back to the daily board (today's, as this device left it)
+  const handlePosition = (pos) => {
+    if (!FB_SAL_POS.includes(pos)) return
+    try { localStorage.setItem(SAL_POS_KEY, pos) } catch {}
+    if (pos === 'qb') {
+      if (position === 'qb' && mode === 'daily') return
+      setPosition('qb')
+      backToDaily(getESTDate(0))
+      return
+    }
+    // (the position it's on: a fresh board, as the date menu's Infinite does for QB)
+    setPosition(pos)
+    handleInfinite()
+  }
+  const backToDaily = (date) => {
+    setMode('daily')
+    setActiveDate(date)
+    setShowLB(false)
+    setShowLBPrompt(false)
+    setShufflingCol(null)
+    setShufflingRow(null)
+    setShufflePhase(null)
+    restoreDay(date.str)
+  }
+
+  // Build keyed by all 9 of the position's types; each pick fills its column's types with
   // a chip shaped like the main game's spin chips.
   const buildFromSel = () => {
     const build = {}
-    QB_SAL_COLS.forEach((col, ci) => {
+    S.cols.forEach((col, ci) => {
       const p = sel[ci]
       if (!p) return
       col.types.forEach(type => {
@@ -833,14 +916,16 @@ export default function QBSalaryCap({ onConfirm, onBack, user, initialDateStr })
           number:     p.number ?? null,
           captain:    !!p.captain,
           photo:      p.photo ?? null,
+          // DL: the Size pick's spot (edge or tackle) decides the season it plays
+          ...(position === 'dl' ? { subpos: p.subpos ?? null, height: p.height ?? null, weight: p.weight ?? null } : {}),
         }
       })
     })
-    // Safety net: every QB type should already be covered by a column.
+    // Safety net: every type should already be covered by a column.
     const anchor = sel[0]
-    TYPES.forEach(type => {
+    S.types.forEach(type => {
       if (build[type] || !anchor) return
-      build[type] = { ...build[QB_SAL_COLS[0].types[0]], type, val: anchor.fullAttrs?.[type] ?? 5 }
+      build[type] = { ...build[S.cols[0].types[0]], type, val: anchor.fullAttrs?.[type] ?? 5 }
     })
     return build
   }
@@ -851,15 +936,16 @@ export default function QBSalaryCap({ onConfirm, onBack, user, initialDateStr })
     if (mode === 'infinite') {
       if (overBudget) return
       const build = buildFromSel()
-      const stats = calcStats(sel)
-      const picks = QB_SAL_COLS.map((col, ci) => {
+      // the board's passing line is a QB's; the other positions post the score alone
+      const stats = position === 'qb' ? calcStats(sel) : {}
+      const picks = S.cols.map((col, ci) => {
         const p = sel[ci]
         return { name: p.name, team: p.team, price: p.price, photo: p.photo, teamColor: p.teamColor, number: p.number }
       })
       const saveData = {
-        picks, passYds: stats.passYds, passTds: stats.passTds, ints: stats.ints,
+        picks, passYds: stats.passYds ?? null, passTds: stats.passTds ?? null, ints: stats.ints ?? null,
         userId: user?.id ?? null, username: getUsername(user) || null,
-        totalCost, infinite: true,
+        totalCost, infinite: true, pos: position,
       }
       onConfirm(build, false, null, saveData)
       return
@@ -912,7 +998,7 @@ export default function QBSalaryCap({ onConfirm, onBack, user, initialDateStr })
 
   const effectiveShufflesLeft = mode === 'infinite' ? infShufflesLeft : shufflesLeft
   const effectiveScoutsLeft   = mode === 'infinite' ? infScoutsLeft   : scoutsLeft
-  const missing   = QB_SAL_COLS.length - Object.keys(sel).length
+  const missing   = S.cols.length - Object.keys(sel).length
   const viewReady = mode === 'daily' && alreadyPlayed && pickedAll
   const disabled  = viewReady ? false : (!pickedAll || overBudget)
   const ctaLabel  = mode === 'daily' && alreadyPlayed
@@ -926,8 +1012,13 @@ export default function QBSalaryCap({ onConfirm, onBack, user, initialDateStr })
   return (
     <div className="sc-screen">
       <div className="sc-header">
-        <div className="sc-title">BUILD<span style={{ color: '#a855f7' }}>-A-</span>PLAYER <span style={{ color: '#a855f7' }}>SALARY</span></div>
+        {/* the board's position is the title; its mode (the day, or Infinite) the label under it */}
+        <div className="sc-title-block">
+          <div className="sc-title">{S.label} <span style={{ color: '#a855f7' }}>SALARY</span></div>
+          <div className="sc-title-mode">{mode === 'infinite' ? 'INFINITE' : `DAILY · ${activeDate.label.toUpperCase()}`}</div>
+        </div>
         <div className="sc-footer-icons">
+          <PositionButton position={position} onPick={handlePosition} />
           {(effectiveShufflesLeft > 0 || effectiveScoutsLeft > 0) && (mode === 'infinite' || !alreadyPlayed) && (
             <div className="sc-power-wrap">
               <button
@@ -1021,17 +1112,24 @@ export default function QBSalaryCap({ onConfirm, onBack, user, initialDateStr })
             {showLBPrompt && (
               <div className="sc-lb-prompt">Play today's game to unlock</div>
             )}
-            {showLB && mode === 'infinite' && <InfiniteLeaderboard onClose={() => setShowLB(false)} />}
+            {showLB && mode === 'infinite' && <InfiniteLeaderboard pos={position} onClose={() => setShowLB(false)} />}
             {showLB && mode === 'daily' && <SalaryLeaderboard dateStr={activeDate.str} dateLabel={activeDate.label} onClose={() => setShowLB(false)} />}
           </div>
         </div>
-        <DatePicker
-          activeDate={activeDate}
-          dates={dates}
-          onSelect={date => { setMode('daily'); setSel({}); handleSelectDate(date) }}
-          mode={mode}
-          onInfinite={handleInfinite}
-        />
+        {/* the dates are QB's daily boards: another position is Infinite only, so no dates */}
+        {position === 'qb' && (
+          <DatePicker
+            activeDate={activeDate}
+            dates={dates}
+            onSelect={date => {
+              // off QB's Infinite board, back to that day's
+              if (mode === 'infinite') { backToDaily(date); return }
+              setMode('daily'); setSel({}); handleSelectDate(date)
+            }}
+            mode={mode}
+            onInfinite={handleInfinite}
+          />
+        )}
       </div>
 
       {mode === 'daily' && alreadyPlayed && (
@@ -1045,9 +1143,9 @@ export default function QBSalaryCap({ onConfirm, onBack, user, initialDateStr })
       )}
 
       <div className="sc-grid-wrap">
-        <div className={`sc-grid${shuffleMode ? ' sc-grid--shuffle-mode' : ''}${scoutMode ? ' sc-grid--scout-mode' : ''}`} style={{ gridTemplateColumns: `var(--price-col, 40px) repeat(${QB_SAL_COLS.length}, 1fr)` }}>
+        <div className={`sc-grid${shuffleMode ? ' sc-grid--shuffle-mode' : ''}${scoutMode ? ' sc-grid--scout-mode' : ''}`} style={{ gridTemplateColumns: `var(--price-col, 40px) repeat(${S.cols.length}, 1fr)` }}>
           <div />
-          {QB_SAL_COLS.map((col, ci) => (
+          {S.cols.map((col, ci) => (
             <div key={col.key} className="sc-col-header">
               <span className="sc-col-label">{col.label}</span>
               {shuffleMode && (
@@ -1073,14 +1171,14 @@ export default function QBSalaryCap({ onConfirm, onBack, user, initialDateStr })
                   </button>
                 )}
               </div>
-              {QB_SAL_COLS.map((col, ci) => (
+              {S.cols.map((col, ci) => (
                 <PlayerCard
                   key={effectiveGrid[ci][ti].id}
                   player={effectiveGrid[ci][ti]}
                   isSelected={sel[ci]?.id === effectiveGrid[ci][ti].id}
                   colHasSelection={!!sel[ci]}
                   onClick={() => pick(ci, effectiveGrid[ci][ti])}
-                  viewOnly={!!alreadyPlayed}
+                  viewOnly={lockedDaily}
                   shufflePhase={(shufflingCol === ci || shufflingRow === ti) ? shufflePhase : null}
                   shuffleDelay={shufflingRow === ti ? ci * 45 : ti * 45}
                   scoutGrade={scoutedGrades[effectiveGrid[ci][ti].name] ?? null}

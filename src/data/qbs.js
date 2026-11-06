@@ -1,8 +1,6 @@
 export const QBS = [
   // ARI
-  { name: 'Jacoby Brissett',    short: 'Brissett',    team: 'ARI', teamName: 'Arizona Cardinals',     color: '#97233F', color2: '#000000', skin: '#9a6840', starter: true,  captain: true,  number: 7,
-    attrs: { 'arm': 5, 'legs': 3, 'size': 9, 'processing': 7, 'leadership': 6, 'vision': 6, 'playmaking': 1, 'accuracy': 6, 'pocket-presence': 6 } },
-  { name: 'Gardner Minshew',    short: 'Minshew',     team: 'ARI', teamName: 'Arizona Cardinals',     color: '#97233F', color2: '#000000', skin: '#eec0a0', starter: false, number: 15,
+  { name: 'Gardner Minshew',    short: 'Minshew',     team: 'ARI', teamName: 'Arizona Cardinals',     color: '#97233F', color2: '#000000', skin: '#eec0a0', starter: true,  captain: true, number: 15,
     attrs: { 'arm': 1, 'legs': 4, 'size': 5, 'processing': 5, 'leadership': 5, 'vision': 5, 'playmaking': 3, 'accuracy': 4, 'pocket-presence': 4 } },
   { name: 'Carson Beck',        short: 'Beck',        team: 'ARI', teamName: 'Arizona Cardinals',     color: '#97233F', color2: '#000000', skin: '#f0c4a0', starter: false, number: 19,
     attrs: { 'arm': 5, 'legs': 4, 'size': 8, 'processing': 2, 'leadership': 1, 'vision': 3, 'playmaking': 4, 'accuracy': 3, 'pocket-presence': 2 } },
@@ -18,6 +16,8 @@ export const QBS = [
     attrs: { 'arm': 8, 'legs': 11, 'size': 5, 'processing': 6, 'leadership': 7, 'vision': 10, 'playmaking': 10, 'accuracy': 10, 'pocket-presence': 9 } },
   { name: 'Tyler Huntley',      short: 'Huntley',     team: 'BAL', teamName: 'Baltimore Ravens',      color: '#241773', color2: '#9E7C0C', skin: '#7a5030', starter: false, number: 5,
     attrs: { 'arm': 4, 'legs': 6, 'size': 4, 'processing': 3, 'leadership': 4, 'vision': 5, 'playmaking': 4, 'accuracy': 3, 'pocket-presence': 4 } },
+  { name: 'Jacoby Brissett',    short: 'Brissett',    team: 'BAL', teamName: 'Baltimore Ravens',      color: '#241773', color2: '#9E7C0C', skin: '#9a6840', starter: false, number: 7,
+    attrs: { 'arm': 5, 'legs': 3, 'size': 9, 'processing': 7, 'leadership': 6, 'vision': 6, 'playmaking': 1, 'accuracy': 6, 'pocket-presence': 6 } },
   { name: 'Joe Fagnano', short: 'Fagnano', team: 'BAL', teamName: 'Baltimore Ravens',     color: '#241773', color2: '#9E7C0C', skin: '#eec0a0', starter: false, number: 12,
     attrs: { 'arm': 4, 'legs': 5, 'size': 9, 'processing': 3, 'leadership': 3, 'vision': 3, 'playmaking': 3, 'accuracy': 4, 'pocket-presence': 3 } },
   // BUF
@@ -163,8 +163,6 @@ export const QBS = [
     attrs: { 'arm': 7, 'legs': 8, 'size': 6, 'processing': 5, 'leadership': 5, 'vision': 6, 'playmaking': 7, 'accuracy': 7, 'pocket-presence': 5 } },
   { name: 'Jameis Winston',     short: 'Winston',     team: 'NYG', teamName: 'New York Giants',       color: '#0B2265', color2: '#A71930', skin: '#7a5030', starter: true,  captain: true,  number: 19,
     attrs: { 'arm': 5, 'legs': 3, 'size': 8, 'processing': 4, 'leadership': 10, 'vision': 0, 'playmaking': 4, 'accuracy': 5, 'pocket-presence': 3 } },
-  { name: 'Jake Haener', short: 'Haener', team: 'NYG', teamName: 'New York Giants', color: '#0B2265', color2: '#A71930', skin: '#f0c4a0', starter: false, number: 3,
-    attrs: { 'arm': 4, 'legs': 3, 'size': 1, 'processing': 6, 'leadership': 6, 'vision': 5, 'playmaking': 4, 'accuracy': 5, 'pocket-presence': 5 } },
   // NYJ
   { name: 'Geno Smith',         short: 'G. Smith',    team: 'NYJ', teamName: 'New York Jets',         color: '#125740', color2: '#000000', skin: '#9a6840', starter: true,  captain: true,  number: 7,
     attrs: { 'arm': 5, 'legs': 4, 'size': 6, 'processing': 7, 'leadership': 6, 'vision': 5, 'playmaking': 4, 'accuracy': 8, 'pocket-presence': 1 } },

@@ -341,6 +341,7 @@ export default function ProfilePage({ user, build, simResult, types = TYPES, isR
       .not('game_mode', 'ilike', 'te-%')
       .not('game_mode', 'ilike', 'db-%')
       .not('game_mode', 'ilike', 'dl-%')
+      .not('game_mode', 'ilike', 'lb-%')
       .not('game_mode', 'ilike', 'ol-%')
       .not('game_mode', 'ilike', 'bucket-%')
       .order('created_at', { ascending: false })

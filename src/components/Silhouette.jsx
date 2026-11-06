@@ -7,6 +7,8 @@ import { TE_LEGENDS } from '../data/te-legends'
 import { DBS } from '../data/dbs'
 import { DLS } from '../data/dls'
 import { DL_LEGENDS } from '../data/dl-legends'
+import { LBS, LB_AS_DL, lbAsDlBuild, LB_SILHOUETTE } from '../data/lbs'
+import { LB_LEGENDS } from '../data/lb-legends'
 import { DB_LEGENDS } from '../data/db-legends'
 import { OL_PHYSICALS } from '../data/ols'
 import { QB_LEGEND_PHYSICALS } from '../data/qb-legends'
@@ -38,6 +40,7 @@ import BucketFigureOverlay from './BucketFigureOverlay'
 
 const DB_PHYS = Object.fromEntries([...DBS, ...DB_LEGENDS].map(d => [d.name, { height: d.height, weight: d.weight }]))
 const DL_PHYS = Object.fromEntries([...DLS, ...DL_LEGENDS].map(d => [d.name, { height: d.height, weight: d.weight }]))
+const LB_PHYS = Object.fromEntries([...LBS, ...LB_LEGENDS].map(d => [d.name, { height: d.height, weight: d.weight }]))
 const ALL_TE_PHYS = { ...Object.fromEntries(TE_LEGENDS.map(t => [t.name, { height: t.height, weight: t.weight }])), ...TE_PHYSICALS }
 
 // Figure coordinate space (matches QB silhouette dimensions)
@@ -165,6 +168,12 @@ const DL_ZONES = [
   { type: 'speed',           ax: 410, ay: 1043, side: 'left', cy: 0.86 }, // sock
 ]
 
+// LB PLACEHOLDER: there's no linebacker art yet, so LB is drawn on the DL figure (Silhouette
+// treats isLB as isDL for the figure, see LB_SILHOUETTE below). Each LB trait takes a DL trait's
+// spot and body part: LB_AS_DL maps LB trait -> the DL trait whose zone and colored part it uses.
+// (LB_AS_DL, lbAsDlBuild and LB_SILHOUETTE are in data/lbs.js, shared with the season screens)
+const LB_ZONES = DL_ZONES.map(z => ({ ...z, type: Object.keys(LB_AS_DL).find(k => LB_AS_DL[k] === z.type) }))
+
 // OL zones — same figure as DB (see OLFigureOverlay). Every dot sits on the
 // body part that OL chip colors, and only on parts that stay visible between
 // the cards (the gloves and left sleeve tuck under the cards on desktop).
@@ -249,9 +258,13 @@ function CZCard({ zone, cardY, build, activeDrag, hidden, invisible, isMobile, a
   )
 }
 
-function HWTracker({ build, isRB = false, isWR = false, isTE = false, isBucket = false, isDB = false, isOL = false, isDL = false }) {
+function HWTracker({ build, isRB = false, isWR = false, isTE = false, isBucket = false, isDB = false, isOL = false, isDL = false, isLB = false }) {
   let ht, wt
-  if (isDL) {
+  if (isLB) {
+    const lbPhys = build['size'] ? (build['size'].height ? build['size'] : LB_PHYS[build['size'].qbFull]) : null
+    ht = lbPhys?.height ? fmtHeight(lbPhys.height) : null
+    wt = lbPhys?.weight ?? null
+  } else if (isDL) {
     const dlPhys = build['size'] ? (build['size'].height ? build['size'] : DL_PHYS[build['size'].qbFull]) : null
     ht = dlPhys?.height ? fmtHeight(dlPhys.height) : null
     wt = dlPhys?.weight ?? null
@@ -350,12 +363,14 @@ function getDominantPlayer(build) {
 // `modelOnly`: just the player — figure, jersey overlay and face — with no
 // dots, cards, measurement lines or backdrop, sized to its container (the app's
 // Career model). Nothing else changes when it's off.
-export default function Silhouette({ build, activeDrag, onDrop, activeCategory, onCategoryChange, types = TYPES, isLite = false, onReset, isRB = false, isWR = false, isTE = false, isDB = false, isOL = false, isDL = false, isBucket = false, isPlus = false, isCustomMode = false, onOpenCustomModal, onSandboxToggle, sandboxStarters = null, attrMap = ATTR, categoriesData = CATEGORIES, figureRef, modelOnly = false }) {
+export default function Silhouette({ build, activeDrag, onDrop, activeCategory, onCategoryChange, types = TYPES, isLite = false, onReset, isRB = false, isWR = false, isTE = false, isDB = false, isOL = false, isDL: isDLPos = false, isLB = false, isBucket = false, isPlus = false, isCustomMode = false, onOpenCustomModal, onSandboxToggle, sandboxStarters = null, attrMap = ATTR, categoriesData = CATEGORIES, figureRef, modelOnly = false }) {
   // OL is drawn on the DB figure — everything figure-related follows DB
   const isDBFig = isDB || isOL
+  // LB is drawn on the DL figure for now (LB PLACEHOLDER above): everything figure-related follows DL
+  const isDL = isDLPos || isLB
   const figW   = isBucket ? BUCKET_FIG_W : isDL ? DL_FIG_W : isDBFig ? DB_FIG_W : (isRB || isWR || isTE ? RB_FIG_W : FIG_W)
   const figH   = isBucket ? BUCKET_FIG_H : isDL ? DL_FIG_H : isDBFig ? DB_FIG_H : (isRB || isWR || isTE ? RB_FIG_H : FIG_H)
-  const zones  = isBucket ? (types.includes('interiorDefense') ? BUCKET_BIG_ZONES : BUCKET_ZONES) : isDL ? DL_ZONES : isOL ? OL_ZONES : isDB ? DB_ZONES : isTE ? TE_ZONES : isWR ? WR_ZONES : isRB ? RB_ZONES : ZONES
+  const zones  = isBucket ? (types.includes('interiorDefense') ? BUCKET_BIG_ZONES : BUCKET_ZONES) : isLB ? LB_ZONES : isDL ? DL_ZONES : isOL ? OL_ZONES : isDB ? DB_ZONES : isTE ? TE_ZONES : isWR ? WR_ZONES : isRB ? RB_ZONES : ZONES
   const silRef = useRef(null)
   const bounds = useFigureBounds(silRef, figW, figH)
   const boundsRef = useRef(bounds)
@@ -605,7 +620,7 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
         </div>
       )}
       {!modelOnly && <div className="category-pills">
-        <HWTracker build={build} isRB={isRB} isWR={isWR} isTE={isTE} isDB={isDB} isOL={isOL} isDL={isDL} isBucket={isBucket} />
+        <HWTracker build={build} isRB={isRB} isWR={isWR} isTE={isTE} isDB={isDB} isOL={isOL} isDL={isDLPos} isLB={isLB} isBucket={isBucket} />
         {cats.map(cat => (
           <button
             key={cat.id}
@@ -752,6 +767,7 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
           src={
             isBucket
               ? (bucketPhoto ? '/basketballsilhouetteheadless.png' : '/basketballsilhouette.png')
+              : isLB ? LB_SILHOUETTE
               : isDL ? '/dl-silhouette.webp'
               : isDBFig ? '/db-silhouette.png'
               : (isWR || isTE) ? '/wr-silhouette.png'
@@ -851,7 +867,7 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
         )}
         {isDL && (
           <div style={{ position: 'absolute', inset: 0, transform: dlTransform, transformOrigin: 'center center' }}>
-            <DLFigureOverlay build={build} numberNudgePx={null} nameNudge={isMobile && !modelOnly ? { x: -12, y: 12 } : null} />
+            <DLFigureOverlay build={isLB ? lbAsDlBuild(build) : build} numberNudgePx={null} nameNudge={isMobile && !modelOnly ? { x: -12, y: 12 } : null} />
           </div>
         )}
         {isOL && (
@@ -942,13 +958,6 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
             </svg>
             <span>Reset</span>
           </button>
-        )}
-        {!isBucket && !onSandboxToggle && isPlus && (
-          <button
-            className={`sil-custom-ratings-btn${!isCustomMode ? ' sil-custom-ratings-btn--off' : ''}`}
-            onClick={isCustomMode ? onOpenCustomModal : undefined}
-            disabled={!isCustomMode}
-          >Custom Build</button>
         )}
 
       </div>

@@ -10,7 +10,7 @@
 //
 // Sprites are painted once per look (team colours, number, facing, step) and stamped, so 22 players
 // cost 22 drawImages a frame. Nothing here touches the rules: a game keeps its field coordinates.
-import { circle, rr, text, stage, lerp, DISPLAY, LABEL } from './kit.js'
+import { circle, rr, text, stage, lerp, lightMode, dressDims, DISPLAY, LABEL, warmSkin } from './kit.js'
 
 // ── The camera ──────────────────────────────────────────────────────────────
 // k: how much smaller the far end of the field is than the near end. topFrac: where the far end sits.
@@ -41,7 +41,7 @@ export function useCamera(game) {
   if (next === CAM) return
   CAM = next; far = 1 / (1 + CAM.k); stage.tag = CAM === COURT ? '' : CAM.id
   CAM_U[1] = Math.sin(CAM.e); CAM_U[2] = Math.cos(CAM.e); CAM_V[1] = Math.cos(CAM.e); CAM_V[2] = -Math.sin(CAM.e)
-  sprites.clear(); spriteBytes = 0
+  sprites.clear(); spriteBytes = 0; nearLook.clear(); bakeQ.length = 0; bakeIds.clear()
 }
 const horizon = view => view.h * CAM.topFrac
 export function tilt(view, x, y) {
@@ -105,6 +105,14 @@ export function goalPosts(ctx, view, y, big = 1) {
   const q = tilt(view, 180, y), ft = big * (view.w - 16) * q.g / 160, base = q.y - 1, bar = base - 10 * ft * 1.25, half = 9.25 * ft, top = bar - 20 * ft * 1.25
   const neck = base - (bar - base) * -0.45, lean = 3.5 * ft
   ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round'
+  // the pylons, on the four corners of the end zone
+  const f = view.field && dressDims.get(`${view.field.word}|${stage.tag}`)
+  if (f) for (const py of [y, y + 10 * f.pyd]) for (const px of [f.SL, f.SR]) {
+    const p = tilt(view, px, py), pw = Math.max(1.6, (view.w - 16) * p.g / 160 * big * 0.75), ph = pw * 3.1
+    ctx.fillStyle = '#ff6a13'; ctx.fillRect(p.x - pw / 2, p.y - ph, pw, ph)
+    ctx.fillStyle = '#c64a06'; ctx.fillRect(p.x, p.y - ph, pw / 2, ph)
+    ctx.fillStyle = '#fff'; ctx.fillRect(p.x - pw / 2, p.y - ph * 0.62, pw, Math.max(0.6, ph * 0.1))
+  }
   // the pad round its foot
   ctx.fillStyle = '#20262c'; ctx.fillRect(q.x - 1.6 * ft, neck, 3.2 * ft, base - neck)
   // the post, curving forward to the middle of the bar, then the bar and the two uprights
@@ -184,6 +192,70 @@ const lumOf = hex => { const n = parseInt(String(hex).replace('#', '').slice(0, 
 export const inkOn = (bg, want) => (Math.abs(lumOf(bg) - lumOf(want)) > 0.2 ? want : lumOf(bg) > 0.55 ? '#10151a' : '#fff')
 // the same for a stadium board, which sits under a 28% shade: ink a little darker than the shaded board is dark on dark
 export const boardInk = (bg, want) => { const s = lumOf(bg) * 0.72, w = lumOf(want); return w < s && s - w < 0.35 ? '#fff' : inkOn(bg, want) }
+// A stadium, not a wall of dots: the bowl's aisles and decks, the ribbon board between them, the shade under the
+// overhang, the light banks, the video board over the far end. A big game gets gold on the boards and the bulbs going off. Baked once.
+function bowlDress(x, view, foot, top, us, trim) {
+  const { w } = view, U = view.h / 640, f = view.field, big = !!f?.superBowl
+  const rib = top + (foot - top) * 0.46, gold = '#e8c15a', ledBg = big ? '#0b1f3a' : '#060a0e'
+  // the upper deck sits back in the shade, and the overhang throws more on the rows just under it
+  x.fillStyle = 'rgba(3,6,10,.3)'; x.fillRect(0, top, w, rib - top)
+  const under = x.createLinearGradient(0, rib, 0, rib + 14 * U)
+  under.addColorStop(0, 'rgba(3,6,10,.62)'); under.addColorStop(1, 'rgba(3,6,10,0)')
+  x.fillStyle = under; x.fillRect(0, rib, w, 14 * U)
+  // the aisles, running up each deck toward the far rim: they cut the rows into sections
+  const aisle = (y0, y1, n, off) => {
+    x.fillStyle = 'rgba(4,7,11,.5)'
+    x.beginPath()
+    for (let i = 0; i <= n; i++) {
+      const fx = w * ((i + off) / n), lean = (fx - w / 2) * 0.16, wide = 2.6 * U
+      x.moveTo(fx - wide / 2, y1); x.lineTo(fx + wide / 2, y1); x.lineTo(fx - lean + wide * 0.36, y0); x.lineTo(fx - lean - wide * 0.36, y0); x.closePath()
+    }
+    x.fill()
+  }
+  aisle(rib + 5 * U, foot, 6, 0.5)
+  aisle(top + 2 * U, rib - 4 * U, 8, 0)
+  // the ribbon board: the home name running round the bowl
+  const rh = 8 * U, led = big ? gold : us, ink = big ? '#0b1f3a' : boardInk(us, trim)
+  x.fillStyle = '#04070b'; x.fillRect(0, rib - rh / 2 - 1.2 * U, w, rh + 2.4 * U)
+  x.fillStyle = ledBg; x.fillRect(0, rib - rh / 2, w, rh)
+  const word = big ? 'SUPER BOWL' : f?.word ?? 'BUILD-A-PLAYER', segs = 4
+  for (let i = 0; i < segs; i++) {
+    const a = (i * w) / segs, b = w / segs
+    x.fillStyle = led; x.globalAlpha = big ? 1 : 0.9; x.fillRect(a + 1, rib - rh / 2 + 0.8 * U, b - 2, rh - 1.6 * U); x.globalAlpha = 1
+    text(x, word, a + b / 2, rib + 0.3 * U, { font: DISPLAY, size: 5.8 * U, track: 0.7, color: ink })
+  }
+  // the light banks along the rim of the upper deck
+  for (const c of [0.1, 0.3, 0.7, 0.9]) {
+    const bw = 36 * U, bx = w * c - bw / 2, by = top - 5 * U
+    x.fillStyle = '#080c11'; x.fillRect(bx - 1.5, by - 1.5, bw + 3, 7 * U + 3)
+    x.fillStyle = '#eef4fb'
+    for (let i = 0; i < 9; i++) for (let j = 0; j < 2; j++) x.fillRect(bx + 1 + i * (bw / 9), by + 0.5 + j * 3.4 * U, bw / 9 - 2, 2.2 * U)
+  }
+  // the video board over the far end, on its two legs
+  const room = rib - rh / 2 - 3 * U - Math.max(46, top - 8 * U)
+  if (room > 16 * U) {
+    const bh = Math.min(room, 30 * U), bw = bh * 3.5, bx = w / 2 - bw / 2, by = rib - rh / 2 - 3 * U - bh
+    x.fillStyle = '#06090d'; x.fillRect(bx + bw * 0.14, by + bh, 3 * U, 4 * U); x.fillRect(bx + bw * 0.86 - 3 * U, by + bh, 3 * U, 4 * U)
+    x.fillStyle = '#0a0e13'; x.fillRect(bx - 2 * U, by - 2 * U, bw + 4 * U, bh + 4 * U)
+    x.fillStyle = big ? '#0b1f3a' : '#10161d'; x.fillRect(bx, by, bw, bh)
+    // a band of the home colour along the top and the foot, the name big in between
+    const band = bh * 0.14
+    x.fillStyle = big ? gold : us; x.fillRect(bx, by, bw, band); x.fillRect(bx, by + bh - band, bw, band)
+    const line = big ? `SUPER BOWL ${f.superBowl}` : word
+    x.save(); x.font = `${bh * 0.5}px ${DISPLAY}`; x.textAlign = 'center'; x.textBaseline = 'middle'
+    const tw = x.measureText(line).width, fit = Math.min(1, (bw * 0.86) / tw)
+    x.translate(w / 2, by + bh / 2 + 0.5); x.scale(fit, 1)
+    x.fillStyle = big ? gold : boardInk('#10161d', trim === '#f4efe6' ? '#ffffff' : trim); x.fillText(line, 0, 0)
+    x.restore()
+  }
+  // a big game: bulbs going off all over the building, caught mid-flash
+  if (big) {
+    let seed = 91
+    const R = () => (seed = (seed * 16807) % 2147483647) / 2147483647
+    x.fillStyle = '#fffdf0'
+    for (let i = 0; i < 46; i++) { const d = (0.8 + R() * 0.8) * U; x.fillRect(R() * w, top + R() * (foot - top), d, d) }
+  }
+}
 // close: the people as they look up close, bigger, with heads (Fourth & Goal)
 function paintFieldBowl(x, view, team, close = false) {
   const { w, h } = view, hy = horizon(view), U = h / 640, us = team[0]
@@ -220,6 +292,7 @@ function paintFieldBowl(x, view, team, close = false) {
   b.addColorStop(0, 'rgba(255,246,228,.09)'); b.addColorStop(1, 'rgba(255,246,228,0)')
   x.fillStyle = b
   for (const c of [62, 180, 298]) { x.beginPath(); x.moveTo(c - 11, 44); x.lineTo(c + 11, 44); x.lineTo(c + 70, hy); x.lineTo(c - 70, hy); x.fill() }
+  if (!close) bowlDress(x, view, hy - 19 * U, 50 * U, us, team[1])
   // the boards down each side, then across the far end
   const bh = 19 * U, ink = boardInk(us, team[1])
   for (const sd of [-1, 1]) {
@@ -256,7 +329,7 @@ function paintFieldBowl(x, view, team, close = false) {
   for (let i = 0; i < n; i++) text(x, 'BUILD-A-PLAYER', c0 + ((c1 - c0) * (i + 0.5)) / n, hy - bh / 2 + 0.5, { font: DISPLAY, size: 11 * U, color: ink, track: 1 })
 }
 export function stands(ctx, view, tone = 'field', team = ['#39424c', '#aab0b6']) {
-  const id = `${tone}|${team.join()}|${view.h}|${view.px}|${CAM.id}`
+  const id = `${tone}|${team.join()}|${view.h}|${view.px}|${CAM.id}|${view.field?.word ?? ''}|${view.field?.superBowl ?? ''}`
   let c = backs.get(id)
   if (!c && typeof document !== 'undefined') {
     if (backs.size > 8) backs.clear()
@@ -266,15 +339,125 @@ export function stands(ctx, view, tone = 'field', team = ['#39424c', '#aab0b6'])
   }
   if (c) ctx.drawImage(c, 0, 0, view.w, view.h)
 }
+// The crowd getting up on a big moment: a touchdown, a sack, a pick. Not marks on top of the stands: the rows that are
+// already there come up a little and catch the light, in their own colours, a raised arm here and there in the home
+// colour, whole sections at a time. Two baked frames (arms up, arms coming down), one drawImage a frame while it lasts
+// and nothing at all otherwise. Call it every frame, right after the stage and before the men:
+//   crowdPop(ctx, view, [c.us, c.trim], g.t - (g.popAt ?? -1e9))      and set g.popAt = g.t on the moment
+// The first call paints the frames whatever the age, so call it from the first frame and the moment itself costs nothing.
+// Options: ms (1500), power (0-1, how much of it shows), foot, top (logical y of the rows to fill: default the football bowl.
+// In an arena pass foot: G.wallY - 22 * view.h / 640). Reduce Motion or a weak machine (lightMode): nothing.
+const pops = new Map()
+function popFrames(view, team, top, foot) {
+  const id = `${team.join()}|${view.h}|${view.px}|${Math.round(top)}|${Math.round(foot)}|${CAM.id}`
+  let f = pops.get(id)
+  if (f || typeof document === 'undefined') return f
+  if (pops.size > 4) pops.clear()
+  const { w, h } = view, U = h / 640, hy = horizon(view), res = Math.min(2, view.px), bottom = CAM === COURT ? foot : Math.min(h * 0.62, hy + (h - hy) * 0.38)
+  const edge = y => w / 2 - w * 0.75 * CAM.zoom * (far + ((y - hy) / (h - hy)) * (1 - far))
+  // the bowl's own people: the same muted shirts the seated rows are painted in, and the home colour
+  const us = team[0], pal = ['#2b323b', '#37404a', '#434d57', '#4d4a45', '#26394a', '#5b5850', us, us]
+  f = { frames: [], h: bottom }
+  // whole sections go up together, others stay in their seats
+  const sect = (px, row) => Math.sin(px * 0.031 + row * 0.13) + Math.sin(px * 0.09 + 1.7) * 0.5 > 0.25
+  // (the football bowl's ribbon and video board aren't people: nobody stands up in front of them)
+  const bowl = CAM !== COURT, rib = top + (foot + 2 * U - top) * 0.46
+  const onBoard = (px, y, hs) => bowl && ((y > rib - 7 * U && y < rib + 9 * U + hs * 1.5) || (y < rib && Math.abs(px - w / 2) < 60 * U))
+  for (let n = 0; n < 2; n++) {
+    const c = document.createElement('canvas'); c.width = Math.round(w * res); c.height = Math.round(bottom * res)
+    const x = c.getContext('2d'); x.scale(res, res)
+    let seed = 41
+    const R = () => (seed = (seed * 16807) % 2147483647) / 2147483647
+    // the light catching a section on its feet: a faint warm lift over its rows, nothing you'd see as a shape
+    const wash = (x0, y0, ww, hh) => { x.fillStyle = 'rgba(255,238,210,.07)'; x.fillRect(x0, y0, ww, hh) }
+    // one person up: the shirt a touch higher than the seat, a head, and maybe an arm (rarely two) in the home colour.
+    // (the seats are the same both frames: only whose arm is up changes)
+    const man = (px, py, hs, low) => {
+      const a = R(), b = R(), up = py - hs * (low ? 0.5 : 0.4)
+      x.globalAlpha = low ? 0.6 : 0.55
+      x.fillStyle = pal[Math.floor(b * pal.length)]
+      x.fillRect(px - hs * 0.85, up, hs * 1.7, hs * 2)
+      x.fillStyle = a < 0.5 ? '#5e4636' : '#3e2d22'
+      x.fillRect(px - hs * 0.5, up - hs * 0.95, hs, hs)
+      const raised = (a * 7) % 1, wave = n === (b < 0.5 ? 0 : 1)
+      if (raised < 0.5) {
+        x.fillStyle = raised < 0.36 ? us : pal[Math.floor(a * 5)]
+        const arm = wave ? hs * 1.3 : hs * 0.75, side = raised < 0.21 ? -1 : 1
+        x.fillRect(px + side * hs * 0.65 - hs * 0.2, up - arm, hs * 0.4, arm)
+        if (raised < 0.07) x.fillRect(px - side * hs * 0.65 - hs * 0.2, up - arm, hs * 0.4, arm)
+      }
+      x.globalAlpha = 1
+    }
+    // (the people the size of the rows under them: an arena's bowl is close and big, the football bowl's far off)
+    const court = CAM === COURT
+    let y = top + 3 * U, row = 0
+    while (y < foot) {
+      const hs = (court ? lerp(2.4, 5, y / Math.max(1, foot)) * 0.92 : lerp(1.2, 2.3, (y - top) / Math.max(1, foot - top))) * U, gap = hs * (court ? 2.5 : 2.6)
+      let runAt = null
+      for (let px = (row % 2) * gap * 0.5; px < w + gap; px += gap) {
+        const on = sect(px, row) && !onBoard(px, y, hs)
+        if (on && runAt == null) runAt = px
+        if (!on && runAt != null) { wash(runAt - gap / 2, y - hs * 1.4, px - runAt, hs * 3.2); runAt = null }
+        if (on && R() < 0.62) man(px, y, hs, false)
+      }
+      if (runAt != null) wash(runAt - gap / 2, y - hs * 1.4, w - runAt + gap, hs * 3.2)
+      y += hs * (court ? 2.7 : 2.6); row++
+    }
+    // down each side, where this camera sees the side stands, outside the boards
+    if (CAM !== COURT) {
+      y = hy + 6 * U; row = 0
+      while (y < bottom) {
+        const hs = lerp(2.3, 3.3, (y - hy) / (bottom - hy)) * U, gap = hs * 2.6, room = edge(y) - 4 * U - 19 * U * (1 + 2.4 * ((y - hy) / (h - hy))) * 0.2
+        for (let px = (row % 2) * gap * 0.5; px < room; px += gap) {
+          if (sect(px, row) && R() < 0.62) man(px, y, hs, true)
+          if (sect(w - px, row) && R() < 0.62) man(w - px, y, hs, true)
+        }
+        y += hs * 2.6; row++
+      }
+    }
+    f.frames.push(c)
+  }
+  pops.set(id, f)
+  return f
+}
+export function crowdPop(ctx, view, team, age, { ms = 1500, power = 1, top = null, foot = null } = {}) {
+  if (lightMode()) return   // (the light version: they stay in their seats, and nothing's painted for it)
+  const U = view.h / 640
+  const f = popFrames(view, team, top ?? 50 * U, foot ?? (horizon(view) - 21 * U))
+  if (!f || !(age >= 0) || age >= ms) return
+  // up over a quarter of a second, held, back down over half a second
+  const rise = age < 260 ? age / 260 : age > ms - 500 ? (ms - age) / 500 : 1
+  ctx.globalAlpha = rise * Math.min(1, power)
+  ctx.drawImage(f.frames[Math.floor(age / 240) % 2], 0, 0, view.w, f.h)
+  ctx.globalAlpha = 1
+}
 // what the lights do to the field: haze at the far end, a pool of light on the middle, the near end falling off
+const lightPics = new Map()
 export function floodlight(x, view) {
   const { w, h } = view, hy = h * CAM.topFrac
   if (CAM !== COURT) {
     // as on the hardwood: the far end falls off into the crowd's shadow, the lights land on the near grass
-    const fall = x.createLinearGradient(0, hy, 0, hy + (h - hy) * 0.5)
-    fall.addColorStop(0, 'rgba(4,10,6,.34)'); fall.addColorStop(1, 'rgba(4,10,6,0)')
-    x.fillStyle = fall; x.fillRect(0, hy, w, (h - hy) * 0.5)
-    x.fillStyle = 'rgba(0,0,0,.3)'; x.fillRect(0, hy, w, 2)
+    // (one picture, painted once: a field going by lays this over itself every frame)
+    const id = `${h}|${CAM.id}`
+    let c = lightPics.get(id)
+    if (!c && typeof document !== 'undefined') {
+      if (lightPics.size > 6) lightPics.clear()
+      c = document.createElement('canvas'); c.width = w; c.height = h
+      const l = c.getContext('2d')
+      const fall = l.createLinearGradient(0, hy, 0, hy + (h - hy) * 0.5)
+      fall.addColorStop(0, 'rgba(4,10,6,.34)'); fall.addColorStop(1, 'rgba(4,10,6,0)')
+      l.fillStyle = fall; l.fillRect(0, hy, w, (h - hy) * 0.5)
+      l.fillStyle = 'rgba(0,0,0,.3)'; l.fillRect(0, hy, w, 2)
+      // the banks' light landing on the grass: a pool down the middle of the field, falling off toward each sideline
+      const my = hy + (h - hy) * 0.58, r = (h - hy) * 0.62
+      l.save(); l.translate(w / 2, my); l.scale(1, 0.72)
+      const pool = l.createRadialGradient(0, 0, r * 0.12, 0, 0, r)
+      pool.addColorStop(0, 'rgba(255,252,235,.075)'); pool.addColorStop(1, 'rgba(255,252,235,0)')
+      l.fillStyle = pool; l.fillRect(-r, -r, r * 2, r * 2)
+      l.restore()
+      lightPics.set(id, c)
+    }
+    if (c) x.drawImage(c, 0, 0, w, h)
     return
   }
   const haze = x.createLinearGradient(0, hy, 0, hy + (h - hy) * 0.3)
@@ -366,6 +549,9 @@ const DRILL_ARMS = {
   'fight-l': [-17, -26, 8, -19], 'fight-r': [-8, -19, 17, -26], 'fight2-l': [-16, -31, 8, -21], 'fight2-r': [-8, -21, 16, -31],  // a hand on the man beside him
   'toss-l': [-20, -24, 8, -17], 'toss-r': [-8, -17, 20, -24],    // flicking a caught ball aside
   slide: [-16, -24, 16, -24], back: [-12, -25, 12, -25],           // a defender's hands
+  'hands-head': [-9, -40, 9, -40], hips: [-15, -21, 15, -21], flex: [-20, -36, 20, -36], 'point-up': [-11, -19, 9, -49],   // after the play: can't believe it, a breather, the guns, one finger at the sky
+  'griddy-a': [-5, -37, 15, -22], 'griddy-b': [-15, -22, 5, -37],  // the dance
+  'point-l': [-27, -31, 8, -17], 'point-r': [-8, -17, 27, -31],    // an arm straight out: first down, that way
   touch: [-11, -20, 9, -6],                                        // low, a hand on the ground
 }
 // A quarterback from the side: [farX, farY, nearX, nearY]
@@ -415,6 +601,25 @@ function padsPose(dir, step, pose, carry) {
   // qb-set: knees soft, feet staggered, the ball up by his throwing shoulder
   if (pose === 'qb-drop') { o.hy = 52; o.lx = -8; o.rx = 8; o.ly = swing > 0 ? -6 * swing : 0; o.ry = swing < 0 ? 6 * swing : 0; o.lean = swing * 0.025; o.hlx = 8; o.hly = -70; o.hrx = -8; o.hry = -70; return o }
   if (pose === 'qb-set') { o.hy = 50; o.lean = 0.02; o.lx = -10; o.ly = -3; o.rx = 10; o.ry = 0; o.hlx = 7; o.hly = -84; o.hrx = 17; o.hry = -90; return o }
+  // a back at full speed (the juke drills): heels up behind him, a moment off the ground between strides, arms pumping
+  if (pose === 'sprint') {
+    const s = Math.sin(((step ?? 0) / 4) * Math.PI * 2), up = Math.abs(s), fly = 1 - up
+    o.lx = -4.4 - Math.max(0, s) * 2.6; o.rx = 4.4 + Math.max(0, -s) * 2.6
+    o.ly = -Math.max(0, s) * 34 - fly * 3.5; o.ry = -Math.max(0, -s) * 34 - fly * 3.5
+    o.hy = 52 + fly * 4; o.lean = s * 0.08
+    o.hlx = -15 + s * 2; o.hly = -56 + s * 13; o.hrx = 15 + s * 2; o.hry = -56 - s * 13
+    if (carry) { o.hlx = -19; o.hly = -60 }
+    return o
+  }
+  // the cut: sat down, the outside foot planted way out, everything going over the other way
+  if (pose === 'plant-l' || pose === 'plant-r') {
+    const sd = pose === 'plant-r' ? 1 : -1
+    o.hy = 43; o.lean = sd * 0.3
+    if (sd > 0) { o.lx = -31; o.ly = 0; o.rx = 9; o.ry = -11 } else { o.rx = 31; o.ry = 0; o.lx = -9; o.ly = -11 }
+    o.hlx = sd > 0 ? -27 : -8; o.hly = sd > 0 ? -52 : -38; o.hrx = sd > 0 ? 8 : 27; o.hry = sd > 0 ? -38 : -52
+    if (carry) { o.hlx = -19; o.hly = -55 }
+    return o
+  }
   const drill = DRILL_ARMS[pose]   // (the table's hands are in the old figure's units)
   if (drill) {
     const shift = pose === 'touch' ? 10 : pose === 'slide' ? 5 : pose === 'back' ? 3 : 0
@@ -712,7 +917,7 @@ function paintPads(x, { color, trim, pants, skin, number, dir, step, carry, pose
   const ballAt = () => padsBall(x, o.hlx - 3, o.hly - 2, 0.25)
   const face = back ? 'back' : 'front'
   // arms hanging or held out go behind the jersey, shoulder under the armhole. Only hands on the chest cross in front.
-  const armsOver = !back && pose && pose !== 'slide' && pose !== 'ready' && pose !== 'back' && pose !== 'touch'
+  const armsOver = !back && pose && pose !== 'slide' && pose !== 'ready' && pose !== 'back' && pose !== 'touch' && pose !== 'sprint' && pose !== 'plant-l' && pose !== 'plant-r'
   if (!armsOver) {
     if (back && carry && !DRILL_ARMS[pose]) ballAt()
     padsSleeveArm(x, lx, ly, o.hlx, o.hly, -1, color, trim, skin, glove)
@@ -915,7 +1120,8 @@ export function nameTag(ctx, view, px, py, name, k = 1) {
   }
   if (c) ctx.drawImage(c, px - (c.w * k) / 2, py + 1.5 * k, c.w * k, c.h * k)
 }
-export function warmAthlete(opts) { spriteOf({ pose: null, ...opts }) }
+// (queued, not painted: the host paints what fits between frames, bakeSome below, so a long warm list can't cost a frame)
+export function warmAthlete(opts) { queueBake({ pose: null, ...opts }) }
 // The quarterback after the snap, by how long it's been since the ball got to him: three short steps back, then set.
 // (Only the picture: where he is and when the ball goes are the game's.)
 const QB_STANCE = { pose: 'qb-set', step: null }, QB_STEPS = [1, 0, 3]
@@ -940,44 +1146,100 @@ export function warmQb(look) {
 const sprites = new Map()
 const BOX = 56, FEET = 50
 const RES_TIERS = [1.5, 2, 2.5, 3, 4, 5]
-const SPRITE_BYTES = 40e6       // past this the oldest looks go, a few at a time
-let spriteBytes = 0, lastPx = 2
+// past this the looks unused longest go, a few at a time (11 on 11, each number his own sprite, needs the room on a big screen)
+const SPRITE_BYTES = (typeof navigator !== 'undefined' && navigator.deviceMemory && navigator.deviceMemory < 4) ? 40e6 : 90e6
+let spriteBytes = 0, lastPx = 2, spriteTick = 0, bakeSpent = 0, bakeRoom = Infinity
 // how many sprite pixels a man needs: his biggest on this camera (at the near end), on this screen
 // (one per camera, so a look warmed up before the snap is the same sprite the play draws)
 const resFor = () => {
-  const need = CAM.zoom * CAM.men * 1.25 * lastPx
+  // (past 2x there's sharpness to spare: a man's near-end size on the nose, a third less to paint and to hold)
+  const need = CAM.zoom * CAM.men * (lastPx > 2 ? 1 : 1.25) * lastPx
   return RES_TIERS.find(t => t >= need) ?? RES_TIERS[RES_TIERS.length - 1]
 }
-const spriteId = (opts, res) => [opts.color, opts.trim, opts.pants, opts.skin, opts.number, opts.dir, opts.step, opts.kit, opts.carry, opts.pose, opts.fallStage ?? 0, res].join('|')
+// (every man, every frame: no array to throw away. A missing field reads the same as a null one.)
+const sk = v => (v == null ? '' : v)
+const spriteId = (o, res) => `${sk(o.color)}|${sk(o.trim)}|${sk(o.pants)}|${sk(o.skin)}|${sk(o.number)}|${sk(o.dir)}|${sk(o.step)}|${sk(o.kit)}|${sk(o.carry)}|${sk(o.pose)}|${o.fallStage ?? 0}|${res}`
+// (the small man's outline is worked out on these two, so it costs one new canvas a sprite, not three)
+let scratchA = null, scratchB = null
 function spriteOf(opts, res = resFor()) {
   const id = spriteId(opts, res)
   let c = sprites.get(id)
-  if (!c && typeof document !== 'undefined') {
-    const px = BOX * res
-    while (spriteBytes > SPRITE_BYTES && sprites.size) {
-      const [k, old] = sprites.entries().next().value
-      spriteBytes -= old.width * old.height * 4
-      sprites.delete(k)
-    }
-    c = document.createElement('canvas'); c.width = px; c.height = px
-    const x = c.getContext('2d')
-    x.scale(res, res); x.translate(BOX / 2, FEET)
-    if (opts.kit === 'pads' || opts.kit === 'plain') paintPads(x, opts); else paintAthlete(x, opts)
-    // a small man: his outline goes round once more, so he still reads at thirty pixels tall (done once, here)
-    if (res <= 2) {
-      const tint = document.createElement('canvas'); tint.width = px; tint.height = px
-      const t = tint.getContext('2d')
-      t.drawImage(c, 0, 0); t.globalCompositeOperation = 'source-in'; t.fillStyle = 'rgb(8,12,16)'; t.fillRect(0, 0, px, px)
-      const out = document.createElement('canvas'); out.width = px; out.height = px
-      const o = out.getContext('2d'), d = Math.max(0.7, res * 0.34)
-      for (const [dx, dy] of [[-d, 0], [d, 0], [0, -d], [0, d]]) o.drawImage(tint, dx, dy)
-      o.drawImage(c, 0, 0)
-      c = out
-    }
-    sprites.set(id, c)
-    spriteBytes += px * px * 4
+  if (c) {
+    // (most recently used goes last, once a frame, so what's on the field is the last thing to go)
+    if (c.used !== spriteTick) { c.used = spriteTick; sprites.delete(id); sprites.set(id, c) }
+    return c
   }
+  if (typeof document === 'undefined') return c
+  const px = BOX * res
+  while (spriteBytes > SPRITE_BYTES && sprites.size) {
+    const [k, old] = sprites.entries().next().value
+    if (old.used === spriteTick) break
+    spriteBytes -= old.width * old.height * 4
+    sprites.delete(k)
+  }
+  const small = res <= 2
+  if (small) {
+    if (!scratchA || scratchA.width !== px) {
+      scratchA = document.createElement('canvas'); scratchA.width = px; scratchA.height = px
+      scratchB = document.createElement('canvas'); scratchB.width = px; scratchB.height = px
+    }
+    c = scratchA
+  } else { c = document.createElement('canvas'); c.width = px; c.height = px }
+  const x = c.getContext('2d')
+  x.setTransform(1, 0, 0, 1, 0, 0); if (small) x.clearRect(0, 0, px, px)
+  x.scale(res, res); x.translate(BOX / 2, FEET)
+  if (opts.kit === 'pads' || opts.kit === 'plain') paintPads(x, opts); else paintAthlete(x, opts)
+  // a small man: his outline goes round once more, so he still reads at thirty pixels tall (done once, here)
+  if (small) {
+    const t = scratchB.getContext('2d')
+    t.globalCompositeOperation = 'copy'; t.drawImage(c, 0, 0); t.globalCompositeOperation = 'source-in'; t.fillStyle = 'rgb(8,12,16)'; t.fillRect(0, 0, px, px)
+    const out = document.createElement('canvas'); out.width = px; out.height = px
+    const o = out.getContext('2d'), d = Math.max(0.7, res * 0.34)
+    for (const [dx, dy] of [[-d, 0], [d, 0], [0, -d], [0, d]]) o.drawImage(scratchB, dx, dy)
+    o.drawImage(c, 0, 0)
+    c = out
+  }
+  c.used = spriteTick
+  sprites.set(id, c)
+  spriteBytes += px * px * 4
   return c
+}
+// ── Painting sprites without costing a frame ──
+// A look the field hasn't needed yet is painted between frames from a queue. If a man needs one right now and this
+// frame has already spent its time, he wears the nearest look there is for a frame or two (same team, same way, usually the
+// same pose) and his own is painted next. The host calls spriteFrame at the top of a frame, bakeSome at the end.
+const nearLook = new Map(), bakeQ = [], bakeIds = new Set()
+let liveCtx = null
+const nowMs = () => (typeof performance !== 'undefined' ? performance.now() : 0)
+function queueBake(o) {
+  if (typeof document === 'undefined') return
+  const id = spriteId(o, resFor())
+  if (sprites.has(id) || bakeIds.has(id) || bakeQ.length > 240) return
+  bakeIds.add(id); bakeQ.push(o)
+}
+const remember = (o, c) => { nearLook.set(`${o.color}|${o.dir}|${o.kit}|${o.pose}|${o.step}`, c); nearLook.set(`${o.color}|${o.dir}|${o.kit}`, c) }
+function bakeOne(o) { const a = nowMs(), c = spriteOf(o); bakeSpent += nowMs() - a; if (c) remember(o, c); return c }
+export function spritePx(px) { lastPx = px }
+// room: ms this frame's men may spend on sprites they need (Infinity: paint them all, nobody's playing yet)
+export function spriteFrame(room = 4, live = null) { spriteTick++; bakeSpent = 0; bakeRoom = room; liveCtx = live }
+// the queue, for up to ms. Returns how many are still waiting.
+export function bakeSome(ms = 2) {
+  const end = nowMs() + ms
+  while (bakeQ.length && nowMs() < end) {
+    const o = bakeQ.shift()
+    bakeIds.delete(spriteId(o, resFor()))
+    bakeOne(o)
+  }
+  return bakeQ.length
+}
+function lookFor(o, live) {
+  const id = spriteId(o, resFor()), c = sprites.get(id)
+  if (c) { if (c.used !== spriteTick) { c.used = spriteTick; sprites.delete(id); sprites.set(id, c) } return c }
+  if (!live || bakeSpent < bakeRoom) return bakeOne(o)   // (going into a baked picture: it stays there, so it has to be his own)
+  const near = nearLook.get(`${o.color}|${o.dir}|${o.kit}|${o.pose}|${o.step}`) ?? nearLook.get(`${o.color}|${o.dir}|${o.kit}`)
+  if (!near) return bakeOne(o)
+  queueBake(o)
+  return near
 }
 const SKINS = ['#8d5a3b', '#5e3c22', '#7a5030', '#c09060', '#f0c4a0', '#9a6840', '#5e3c22', '#a87548']
 export const skinOf = i => SKINS[Math.abs(i) % SKINS.length]
@@ -985,7 +1247,8 @@ export const skinOf = i => SKINS[Math.abs(i) % SKINS.length]
 export const dirOf = (dx, dy) => (Math.abs(dx) > Math.abs(dy) * 1.2 ? (dx > 0 ? 'right' : 'left') : dy > 0 ? 'down' : 'up')
 
 // x, y: the field point under his feet. size: 1 is a player the height the camera gives him at the near end
-export function athlete(ctx, view, x, y, { color = '#1b6fd1', trim = '#f4efe6', pants = null, skin = '#8d5a3b', number = null, dir = 'up', step = null, kit = 'pads', carry = false, size = 1, name = null, pose = null, fall = 0, fallX = 0, squat = 0 } = {}) {
+export function athlete(ctx, view, x, y, { color = '#1b6fd1', trim = '#f4efe6', pants = null, skin = '#8d5a3b', number = null, dir = 'up', step = null, kit = 'pads', carry = false, size = 1, name = null, pose = null, fall = 0, fallX = 0, squat = 0, lift = 0 } = {}) {
+  skin = warmSkin(skin)
   const p = tilt(view, x, y)
   const k = p.s * size * (kit === 'pads' ? 0.92 : 1)
   if (view.px) lastPx = view.px
@@ -995,9 +1258,9 @@ export function athlete(ctx, view, x, y, { color = '#1b6fd1', trim = '#f4efe6', 
   ctx.fillStyle = 'rgba(0,0,0,.3)'
   ctx.beginPath(); ctx.ellipse(p.x + (5 + fallX * fall * 26) * k, p.y + 0.5 * k - fall * 6 * k, (13 + fall * 3) * k, (4 + fall * 5) * k, 0.12, 0, Math.PI * 2); ctx.fill()
   const flip = dir === 'left'
-  const c = spriteOf({ color, trim, pants: pants ?? (kit === 'pads' ? '#eceae2' : '#20262c'), skin, number: dir === 'up' || dir === 'down' ? number : null, dir: dir === 'left' || dir === 'right' ? 'side' : dir, step, kit, carry, pose, fallStage })
+  const c = lookFor({ color, trim, pants: pants ?? (kit === 'pads' ? '#eceae2' : '#20262c'), skin, number: dir === 'up' || dir === 'down' ? number : null, dir: dir === 'left' || dir === 'right' ? 'side' : dir, step, kit, carry, pose, fallStage }, ctx === liveCtx)
   if (!c) return p
-  const w = BOX * k, top = p.y - FEET * k
+  const w = BOX * k, top = p.y - (FEET + lift) * k   // (lift: off the ground, in his own units, his shadow staying down)
   // going down: he pitches over from the feet the way he was going (fallX -1 left, 0 away from the
   // camera, 1 right) and lies flat on the turf. No spin. fall: 0 up, 1 all the way down.
   if (fall > 0 && fallX) {
@@ -1138,4 +1401,12 @@ export function turfLine(ctx, view, x0, x1, y, color, width = 3) {
   const a = tilt(view, x0, y), b = tilt(view, x1, y)
   ctx.fillStyle = color
   ctx.fillRect(a.x, a.y - (width * a.s) / 2, b.x - a.x, width * a.s)
+  // the line to gain has the chain crew's stick at the end of it, just over the sideline
+  if (color === '#f7d64a' && b.x < view.w - 4) sideStick(ctx, b.x + 9 * b.g, b.y, b.g)
+}
+function sideStick(ctx, x, y, g) {
+  const tall = 36 * g, wd = Math.max(1, 1.9 * g)
+  ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.fillRect(x, y - 0.5, tall * 0.42, Math.max(1, 1.6 * g))
+  ctx.fillStyle = '#f2f4f1'; ctx.fillRect(x - wd / 2, y - tall, wd, tall)
+  ctx.fillStyle = '#ff6a13'; ctx.fillRect(x - wd * 2.6, y - tall - 8 * g, wd * 5.2, 9 * g)
 }

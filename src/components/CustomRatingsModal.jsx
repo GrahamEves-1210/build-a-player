@@ -5,6 +5,7 @@ import { WR_TYPES, WR_LITE_TYPES, WR_ATTR } from '../data/wrs'
 import { TE_ATTR, TE_TYPES, TE_LITE_TYPES } from '../data/tes'
 import { DB_ATTR, DB_TYPES, DB_LITE_TYPES } from '../data/dbs'
 import { DL_ATTR, DL_TYPES, DL_LITE_TYPES } from '../data/dls'
+import { LB_ATTR, LB_TYPES, LB_LITE_TYPES } from '../data/lbs'
 import { OL_ATTR, OL_TYPES, OL_LITE_TYPES } from '../data/ols'
 import { LEGEND_TYPES } from '../data/qb-legends'
 import { BUCKET_ATTR } from '../data/nba-attrs'
@@ -37,21 +38,22 @@ const RB_ATTR = {
 // starts on the mode you're playing; `pool` alone (no legends) hides the toggle.
 // Edits made under All-Time save under that mode's key (qb_legends, rb_legends),
 // so each mode's spins pick up its own overrides.
-export default function CustomRatingsModal({ isRB, isWR = false, isTE = false, isDB = false, isDL = false, isOL = false, isBucket = false, bucketPosition = 'guard', gameMode, pool, poolCurrent = null, poolLegends = null, build = {}, buildTypes: _buildTypesProp, onClose, onSave, onAddToBuild, onAddAllToBuild, noPicks = false }) {
+export default function CustomRatingsModal({ isRB, isWR = false, isTE = false, isDB = false, isDL = false, isLB = false, isOL = false, isBucket = false, bucketPosition = 'guard', gameMode, pool, poolCurrent = null, poolLegends = null, build = {}, buildTypes: _buildTypesProp, onClose, onSave, onAddToBuild, onAddAllToBuild, noPicks = false }) {
   const storageKey = isBucket ? 'bab_bucket_custom_ratings' : 'bap_custom_ratings'
   const hasToggle = !!(poolLegends && poolLegends.length)
   const [era, setEra] = useState(() => (hasToggle && gameMode === 'all-time' ? 'all-time' : 'classic'))
   const keyFor = e => isBucket
     ? `bucket_${bucketPosition}`
-    : isOL ? 'ol' : isDL ? 'dl' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : `${isRB ? 'rb' : 'qb'}${e === 'all-time' ? '_legends' : ''}`
+    : isOL ? 'ol' : isDL ? 'dl' : isLB ? 'lb' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : `${isRB ? 'rb' : 'qb'}${e === 'all-time' ? '_legends' : ''}`
   const modeKey = keyFor(hasToggle ? era : (gameMode === 'all-time' ? 'all-time' : 'classic'))
   const list = hasToggle ? (era === 'all-time' ? poolLegends : (poolCurrent || pool)) : (poolCurrent || pool)
-  const attrMeta = isBucket ? BUCKET_ATTR : isOL ? OL_ATTR : isDL ? DL_ATTR : isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : isRB ? RB_ATTR : ATTR
+  const attrMeta = isBucket ? BUCKET_ATTR : isOL ? OL_ATTR : isDL ? DL_ATTR : isLB ? LB_ATTR : isDB ? DB_ATTR : isTE ? TE_ATTR : isWR ? WR_ATTR : isRB ? RB_ATTR : ATTR
   const buildTypes = (_buildTypesProp && _buildTypesProp.length > 0)
     ? _buildTypesProp
     : isBucket ? (bucketPosition === 'big' ? BIG_TYPES : GUARD_TYPES)
     : isOL ? (gameMode === 'lite' ? OL_LITE_TYPES : OL_TYPES)
     : isDL ? (gameMode === 'lite' ? DL_LITE_TYPES : DL_TYPES)
+    : isLB ? (gameMode === 'lite' ? LB_LITE_TYPES : LB_TYPES)
     : isDB ? (gameMode === 'lite' ? DB_LITE_TYPES : DB_TYPES)
     : isTE ? (gameMode === 'lite' ? TE_LITE_TYPES : TE_TYPES)
     : isWR ? (gameMode === 'lite' ? WR_LITE_TYPES : WR_TYPES)

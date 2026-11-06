@@ -15,11 +15,11 @@ const pending = new Map()   // `${uid}:${sport}` → { timer, c }
 // a slot is its own row: 'nfl', 'nfl#1', 'nfl#2'
 const sportKey = (sport, slot = 0) => (slot ? `${sport}#${slot}` : sport)
 // App binaries from before the DL crash on a DL career, and they read only the rows above.
-// A DL career saves to its own row, which they never see.
+// A DL career saves to its own row, which they never see. An LB career goes in the same row (they crash on it too).
 const lineKey = (sport, slot = 0) => `dl:${sportKey(sport, slot)}`
 const rowOf = c => ({
   user_id: c.uid,
-  sport: c.pos === 'dl' ? lineKey(c.sport, c.slot) : sportKey(c.sport, c.slot),
+  sport: c.pos === 'dl' || c.pos === 'lb' ? lineKey(c.sport, c.slot) : sportKey(c.sport, c.slot),
   data: c,
   updated_at: new Date(c.updatedAt || Date.now()).toISOString(),
 })

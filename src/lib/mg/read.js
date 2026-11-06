@@ -12,11 +12,11 @@
 // screen. Everyone else on the picture is a body with a target and a top speed, stepped in draw()
 // (bodies below): they run out of room and bump into each other, they can't teleport or pass through.
 import { reactMs } from '../minigames.js'
-import { clamp, lerp, prog, outcome, rngOf, easeOut, layer, themOf, football, basketball, text, circle, COURT_FT, DISPLAY, manOf, paceOf, keyCap, THREE_KEYS } from './kit.js'
-import { crowdRows, goalPosts, tilt, ground, stands, floodlight, vignette, athlete, paintGrass, skinOf, dirOf, airBall as artBall, ballShadow, nameTag } from './art.js'
-import { paintFieldFlat, qbPose, snapBall, SNAP_MS } from './throw.js'
+import { clamp, lerp, prog, outcome, rngOf, easeOut, layer, themOf, football, basketball, text, circle, COURT_FT, DISPLAY, manOf, paceOf, keyCap, THREE_KEYS, particles, nudge, reduceMotion } from './kit.js'
+import { crowdRows, goalPosts, tilt, ground, stands, floodlight, vignette, athlete, paintGrass, skinOf, dirOf, airBall as artBall, ballShadow, nameTag, breakupPose, crowdPop } from './art.js'
+import { paintFieldFlat, qbPose, snapBall, SNAP_MS, looseBall } from './throw.js'
 import { arenaCam, dolly, arenaStage, manAt, POSE, RUN as RUN_F, liftPose, tapGap, chestOf, tagAt, tagsDown, flyTo, dropThrough, shotApex, hoopWith, AB } from './arena.js'
-import { ballIn, easedState, easedPose, newPose, copyPose, smoothT, CLK, IN_HANDS, PT, FIG_FT, BALL_R, RIM_Y as RIM_FT } from './meter.js'
+import { ballIn, easedState, easedPose, newPose, copyPose, smoothT, CLK, IN_HANDS, PT, FIG_FT, BALL_R, RIM_Y as RIM_FT, pose as figPose, project } from './meter.js'
 
 export const how = {
   'hot-read': 'Tap the receiver who gets open. Not the one with a defender closing on him.',
@@ -27,11 +27,11 @@ export const how = {
 }
 
 const WORDS = {
-  'hot-read':    { wait: 'FIND THE OPEN MAN', good: 'COMPLETE', wrong: 'PICKED OFF', bait: 'PICKED OFF', early: 'PICKED OFF', late: 'SACKED', win: 'DIALED IN', lose: 'NO READ', flight: 340, baitFlight: 520, stampY: 0.885, stampSize: 46, reach: 1.11, open: 'OPEN', n: 4, tap: 46, floor: 840, decoy: [0, 0.55, 0.8, 0.9] },
-  gap:           { wait: 'READ THE BLOCKS', good: 'NICE RUN', wrong: 'STUFFED', bait: 'STUFFED', early: 'STUFFED', late: 'STUFFED', win: 'MOVING THE CHAINS', lose: 'NO GAIN', flight: 240, stampY: 0.885, stampSize: 46, open: 'THE HOLE', n: 3, floor: 850, decoy: [0.35, 0.7, 0.85, 0.9], beat: 900 },
-  'jump-route':  { wait: 'READ THE QB', good: 'PICK', wrong: 'WRONG MAN', bait: 'DOUBLE MOVE', early: 'WRONG MAN', late: 'CAUGHT', far: 'BIG GAIN', win: 'BALL HAWK', lose: 'TORCHED', flight: 340, stampY: 0.885, stampSize: 46, open: 'OPEN', n: 4, tap: 46, floor: 930, after: 1.9, decoy: [0, 0.55, 0.8, 0.9] },
-  pnr:           { wait: 'READ THE COVERAGE', good: 'BUCKET', wrong: 'STOLEN', bait: 'STOLEN', early: 'STOLEN', late: 'STRIPPED', win: 'FLOOR GENERAL', lose: 'TURNOVERS', flight: 560, stampY: 0.84, open: 'OPEN', n: 3, tap: 50, floor: 985, after: 0.5, decoy: [0, 0.55, 0.8, 0.9] },
-  'rim-protect': { wait: 'WATCH THE BALL', good: 'BLOCKED', wrong: 'WRONG MAN', bait: 'TOO SOON', early: 'TOO SOON', late: 'OVER HIM', win: 'SHUT DOWN', lose: 'POSTERIZED', flight: 240, stampY: 0.84, open: 'HIM', n: 3, tap: 52, floor: 435, per: 0.42, after: 0.6, decoy: [0, 0, 0, 0] },
+  'hot-read':    { wait: 'FIND THE OPEN MAN', good: 'COMPLETE', wrong: 'PICKED OFF', bait: 'ROBBED', early: 'THREW IT EARLY', late: 'SACKED', win: 'DIALED IN', lose: 'NO READ', flight: 340, baitFlight: 520, stampY: 0.885, stampSize: 46, reach: 1.11, open: 'OPEN', n: 4, tap: 46, floor: 840, after: 1.6, decoy: [0, 0.55, 0.8, 0.9] },
+  gap:           { wait: 'READ THE BLOCKS', good: 'NICE RUN', wrong: 'STUFFED', bait: 'BACKER FILLED', early: 'TOO EARLY', late: 'STUFFED', win: 'MOVING THE CHAINS', lose: 'NO GAIN', flight: 240, stampY: 0.885, stampSize: 46, open: 'THE HOLE', n: 3, floor: 850, decoy: [0.35, 0.7, 0.85, 0.9], beat: 1300 },
+  'jump-route':  { wait: 'READ THE QB', good: 'PICK', wrong: 'WRONG MAN', bait: 'DOUBLE MOVE', early: 'TOO SOON', late: 'CAUGHT', far: 'BIG GAIN', win: 'BALL HAWK', lose: 'TORCHED', flight: 340, stampY: 0.885, stampSize: 46, open: 'OPEN', n: 4, tap: 46, floor: 930, after: 1.9, afterGood: 2.6, decoy: [0, 0.55, 0.8, 0.9] },
+  pnr:           { wait: 'READ THE COVERAGE', good: 'BUCKET', wrong: 'STOLEN', bait: 'STOLEN', early: 'STOLEN', late: 'STRIPPED', win: 'FLOOR GENERAL', lose: 'TURNOVERS', flight: 560, stampY: 0.84, open: 'OPEN', n: 3, tap: 50, floor: 985, after: 1.15, decoy: [0, 0.55, 0.8, 0.9] },
+  'rim-protect': { wait: 'WATCH THE BALL', good: 'BLOCKED', wrong: 'WRONG MAN', bait: 'TOO SOON', early: 'TOO SOON', late: 'OVER HIM', win: 'SHUT DOWN', lose: 'SCORED ON', flight: 240, stampY: 0.84, open: 'HIM', n: 3, tap: 52, floor: 435, per: 0.42, after: 1.9, afterGood: 2.5, decoy: [0, 0, 0, 0] },
 }
 const NOTES = { wrong: 'Wrong read', bait: 'Took the bait', early: 'Went early', late: 'Too slow', far: 'Tackled too deep' }
 // A real scan takes time and a read should feel earned, so the floor is high (each game's own: W.floor)
@@ -151,6 +151,7 @@ export function make({ v, seed, def, game, cast }) {
   const g = {
     t: 0, game, zones: tapped ? 'none' : 'three', aim: tapped, fx: [], done: null, outro: 1500, stamp: null, later: null,
     plan, i: 0, rep: plan[0], W, who,
+    nudge: nudge(), dirt: particles(30, Math.floor(rngOf(`${seed}|look`)() * 1e6)), look: Math.floor(rngOf(`${seed}|look2`)() * 1e6),
     // what the play is showing on each man right now: null, 'open' or 'bait'. Nothing marks it: it's
     // in how the men move. (This is what a bot gets to read, at the price of a scan.)
     cues: Array.from({ length: n }, () => null),
@@ -219,9 +220,11 @@ export function make({ v, seed, def, game, cast }) {
   function word(kind, k, ms) {
     const rep = g.rep
     if (game === 'rim-protect' && kind === 'good') return ms <= rep.T * 0.72 ? 'BLOCKED' : 'CONTESTED'
+    if (game === 'jump-route' && kind === 'far') return `BIG GAIN · ${rep.gainYd} YDS`
     if (game === 'jump-route' && kind === 'good') return rep.how === 'pick' ? 'PICK' : rep.how === 'swat' ? 'KNOCKED OUT' : rep.gainYd > 0 ? `${rep.gainYd} YARD GAIN` : 'TACKLE'
     if (game === 'pnr') {
       if (kind === 'good') return k === 1 ? 'DUNK' : k === 2 ? 'THREE' : 'BUCKET'
+      if (kind === 'early') return 'TOO EARLY'
       if (kind !== 'late') return k === 0 ? 'BLOCKED' : k === 1 ? 'STOLEN' : 'CLOSED OUT'
     }
     return W[kind]
@@ -244,7 +247,7 @@ export function make({ v, seed, def, game, cast }) {
         }
         const q = routeJ(rep, k, t, g.h), after = Math.hypot(q.x - L.x, q.y - L.y)
         rep.meet = t
-        rep.gainYd = Math.max(0, Math.round(after / JUMP_YD))
+        rep.gainYd = Math.max(0, Math.round((q.y - (losJ(g.h) - 10)) / TL_PYD(g.h)))   // (from the line, in the field's own yards)
         if (after > SHORT_GAIN) kind = 'far'
       }
     }
@@ -255,13 +258,13 @@ export function make({ v, seed, def, game, cast }) {
       const age = g.t - rep.at, land = jumpLand(rep, g.h)
       flight = rep.how && (good || kind === 'far') ? Math.max(0, rep.meet - age) : Math.max(0, land - age)
     }
-    rep.res = { kind, k, at: g.t, ms, flight, beat: Math.max(W.beat ?? 0, flight + (good ? 420 : 620) * (W.after ?? 1)), score: good ? clamp(1 - Math.max(0, ms - REACT_FLOOR) / Math.max(1, rep.T - REACT_FLOOR), 0.35, 1) * (game === 'jump-route' && rep.how !== 'pick' ? 0.6 : 1) : 0 }
+    rep.res = { kind, k, at: g.t, ms, flight, beat: Math.max(W.beat ?? 0, flight + (good ? 420 * (W.afterGood ?? W.after ?? 1) : 620 * (W.after ?? 1))), score: good ? clamp(1 - Math.max(0, ms - REACT_FLOOR) / Math.max(1, rep.T - REACT_FLOOR), 0.35, 1) * (game === 'jump-route' && rep.how !== 'pick' ? 0.6 : 1) : 0 }
     for (let m = 0; m < n; m++) g.cues[m] = null
     g.hud.dots[g.i] = good
     g.hud.prompt = null
     g.fx.push(kind === 'late' ? 'pop' : 'swoosh', good ? 'h:light' : 'h:medium')
     const txt = word(kind, k, ms)
-    g.stamp = { text: txt, good, at: g.t + (game === 'jump-route' ? (good ? flight : Math.min(flight * 0.5, 200)) : flight + (game === 'gap' ? 420 : 0)), ms: game === 'gap' ? 560 : game === 'jump-route' ? 1500 : 460, size: W.stampSize ?? (txt.length > 11 ? 30 : 38) }
+    g.stamp = { text: txt, good, at: g.t + (game === 'jump-route' ? (good ? flight : Math.min(flight * 0.5, 200)) : flight + (game === 'gap' ? 420 : 0)), ms: game === 'gap' ? 760 : game === 'jump-route' ? 1500 : Math.max(460, rep.res.beat - flight), size: W.stampSize ?? (txt.length > 11 ? 30 : 38) }
     const made = plan.filter(p => p.res?.kind === 'good').length
     if (plan.every(p => p.res)) {
       const avg = plan.reduce((s, p) => s + p.res.score, 0) / rounds
@@ -336,6 +339,32 @@ export function walk(g, key, x, y, stride = 8) {
   return s
 }
 const dirFrom = (s, still) => (s.step == null ? still : dirOf(s.dx, s.dy))
+// The result beat's camera: from the moment it's decided the picture pushes in on what matters, and cuts back for the next play.
+// One transform over the baked stage and the sprites, nothing repainted. Nothing's tappable while it's in, so taps never see it.
+// (Pair with ctx.restore() at the end of the scene. fx, fy: the point on the screen to hold.)
+export function pushCam(ctx, g, view, fx, fy, to) {
+  const Z = g.pcam ?? (g.pcam = { i: -1, z: 1, x: 0, y: 0, last: 0 })
+  if (Z.i !== g.i) { Z.i = g.i; Z.z = 1; Z.x = fx; Z.y = fy; Z.last = g.t }
+  const k = 1 - Math.exp(-(g.t - Z.last) / 200)
+  Z.last = g.t
+  Z.z += (to - Z.z) * k; Z.x += (fx - Z.x) * k; Z.y += (fy - Z.y) * k
+  ctx.save()
+  ctx.translate(clamp(view.w / 2 - Z.x * Z.z, view.w * (1 - Z.z), 0), clamp(view.h * 0.5 - Z.y * Z.z, view.h * (1 - Z.z), 0))
+  ctx.scale(Z.z, Z.z)
+}
+const once = (o, k) => (o[k] ? false : (o[k] = true))
+// the building gets up: right after the stage, every frame (the first call bakes it). rep.popAt says when
+function crowd(ctx, g, view, rep, foot = null) {
+  const team = g.popTeam ?? (g.popTeam = [view.colors.us, view.colors.trim])
+  crowdPop(ctx, view, team, g.t - (rep.popAt ?? -1e9), { ms: 1400, power: (g.done?.hit || rep.popBig ? 0.85 : 0.6) * (foot == null ? 1 : 0.62), foot })
+}
+const jump = (t, i, a = 7) => Math.abs(Math.sin(t / 135 + i * 1.9)) * a
+// a hit on the turf: up it comes
+function hitTurf(g, view, x, y, big = 1) {
+  const a = tilt(view, x, y)
+  g.dirt.burst('turf', a.x, a.y, g.t, { n: Math.round(9 * big), s: a.s * 1.1, spread: 1.25 })
+  g.dirt.burst('dust', a.x, a.y - 3 * a.s, g.t, { n: 3, s: a.s * 0.7, spread: 1.4 })
+}
 
 // ── The stage: a broadcast camera on the real thing ─────────────────────────
 // A football ground: flat paint through the camera, under the stands, one baked picture.
@@ -528,12 +557,13 @@ function stepHot(g, rep, S, dt, h, age) {
     const t = S.recv[d.k]
     S.rob.tx = t.x + (180 - t.x) * 0.08; S.rob.ty = t.y + 20; S.rob.v = TOP_SPEED
   }
-  // the ball: whoever's going to pick it off goes and gets it, then takes it back
+  // the ball: whoever's going to pick it off goes and gets it, takes it back, and pulls up to let everyone know
   if (res && res.kind !== 'good' && res.kind !== 'late') {
     const t = S.recv[res.k], since = age - frozen
     if (!S.catcher) S.catcher = res.kind === 'bait' && S.rob ? S.rob : S.cov[res.k]
     if (since < res.flight) { S.catcher.tx = t.x; S.catcher.ty = t.y + 22; S.catcher.v = TOP_SPEED }
-    else { S.catcher.tx = S.catcher.x; S.catcher.ty = los + 400; S.catcher.v = TOP_SPEED }
+    else if (since < res.flight + 620) { S.catcher.tx = S.catcher.x; S.catcher.ty = los + 400; S.catcher.v = TOP_SPEED }
+    else { S.catcher.tx = S.catcher.x; S.catcher.ty = S.catcher.y; S.catcher.v = 0.02 }
   }
   mark(S.all)
   for (const c of S.all) seek(c, dt)
@@ -552,14 +582,26 @@ function hipsHot(rep, k, run, w, b, rv) {
   return dirFrom(w, 'up')
 }
 const HOT_NUM = [11, 84, 87, 15], DEF_NUM = [24, 21, 29, 26, 52, 45, 38]
+const RUN_ON = 0.085   // the catch and run
 function drawHot(ctx, g, view) {
   const { h } = view, rep = g.rep, res = rep.res, c = view.colors
   const age = g.t - rep.at, frozen = res ? res.at - rep.at : age, since = res ? g.t - res.at : -1
-  fieldStage(ctx, view, 'hot', paintHot)
   const S = stepScene(g, h, buildHot, stepHot)
   const us = teamOf(c, 0), them = teamOf(c, 1), who = g.who
   const los = losOf(h), qy = los + 52, qx = 180, snap = age >= PRE
   const sacked = res?.kind === 'late', ok = res?.kind === 'good', flight = res?.flight ?? g.W.flight
+  const caught = res && !sacked && since >= flight, picked = caught && !ok
+  const pushed = !!res && !reduceMotion()
+  if (pushed) {
+    // on the QB going down, the man it was picked by, or the man it's going to
+    let fx = qx, fy = qy
+    if (!sacked && !ok && S.catcher) { fx = S.catcher.x; fy = S.catcher.y }
+    else if (!sacked) { const p = routeOf(rep, res.k, frozen + Math.min(since, 260), h); fx = p.x; fy = p.y - (ok ? Math.max(0, since - flight) * RUN_ON * rep.pace[res.k] : 0) }
+    const q = tilt(view, fx, fy)
+    pushCam(ctx, g, view, q.x, q.y - 22 * q.s, sacked ? 1.34 : 1.5)
+  }
+  fieldStage(ctx, view, 'hot', paintHot)
+  crowd(ctx, g, view, rep)
   // the pocket: the clock of the whole play. It reaches the QB exactly when the time is up.
   const pc = frozen < rep.delay ? 0.42 * easeOut(prog(frozen, PRE, rep.delay)) : 0.42 + 0.58 * prog(frozen, rep.delay, rep.delay + rep.T)
   const runAge = res ? frozen + Math.min(since, 260) : age, rs = rep.flip ? -1 : 1
@@ -568,7 +610,16 @@ function drawHot(ctx, g, view) {
   S.all.forEach((b, i) => {
     const w = walk(g, `d${i}`, b.x, b.y)
     const dir = b === S.catcher || b === S.rob ? dirFrom(w, 'down') : i < 4 ? hipsHot(rep, i, runAge, w, b, S.recv[i]) : 'down'
-    put(b.x, b.y, them, { dir, step: snap ? w.step : null, pose: snap && w.step != null ? null : 'ready', carry: b === S.catcher && since > flight, skin: skinOf(i * 3 + 1), number: DEF_NUM[i], size: 0.86, ...who.def[i] })
+    const look = { skin: skinOf(i * 3 + 1), number: DEF_NUM[i], size: 0.86, ...who.def[i] }
+    if (b === S.catcher && since > flight - 130) {
+      // he goes up for it, he's off with it, and then he's telling everybody
+      if (since < flight + 40) return put(b.x, b.y, them, { ...look, dir: 'up', pose: b.x < S.recv[res.k].x ? 'catch-r' : 'catch-l' })
+      if (since > flight + 680) return put(b.x, b.y - jump(since, 1, 7), them, { ...look, dir: 'down', pose: 'arms-up', z: b.y })
+    }
+    // a pick: the rest of them are up. A catch: the man who was on him can't believe it
+    if (picked && since > flight + 260 && b !== S.catcher) return put(b.x, b.y - jump(since, i, 5), them, { ...look, dir: 'down', pose: 'arms-up', z: b.y })
+    if (ok && caught && since > flight + 340 && i === res.k) return put(b.x, b.y, them, { ...look, dir: 'up', step: null, pose: 'hands-head' })
+    put(b.x, b.y, them, { ...look, dir, step: snap ? w.step : null, pose: snap && w.step != null ? null : 'ready', carry: b === S.catcher && since > flight })
   })
   // the front four and the five: heads down, hands on each other. The ends get round the edge.
   const push = pc * (qy - 24 - (los + 10))
@@ -578,6 +629,8 @@ function drawHot(ctx, g, view) {
     const ex = 180 + i * (66 + Math.sin(pc * Math.PI) * 14 - pc * pc * (held ? 26 : 40)), ey = lerp(los - 10, held ? qy - 22 : qy - 2, pc)
     const w = walk(g, `e${i}`, ex, ey, 7)
     const wrap = sacked && !held
+    // up off him, and he lets you know
+    if (wrap && since > 800) { put(ex - i * 6, ey - jump(since, 0, 4), them, { dir: 'down', pose: since % 680 < 340 ? 'flex' : 'arms-up', z: ey, skin: skinOf(i + 6), number: DL_NUM[i < 0 ? 0 : 3], size: 0.94, ...who.dl[i < 0 ? 0 : 3] }); continue }
     put(ex, ey, them, { dir: wrap ? (i < 0 ? 'right' : 'left') : snap ? dirFrom(w, 'down') : 'down', step: wrap ? null : w.step, pose: wrap ? 'wrap' : snap ? (w.step == null ? 'block' : null) : 'stance', fall: wrap ? fall : 0, fallX: -i, z: wrap ? qy + 1 : undefined, skin: skinOf(i + 6), number: DL_NUM[i < 0 ? 0 : 3], size: 0.94, ...who.dl[i < 0 ? 0 : 3] })
   }
   for (let i = -2; i <= 2; i++) put(180 + i * (OL_GAP - pc * 2), los + 10 + push * (1 - Math.abs(i) * 0.12), us, { dir: 'up', pose: snap ? 'block' : 'stance', skin: skinOf(i + 11), number: OL_NUM[i + 2], size: 0.94, ...who.ol[i + 2] })
@@ -586,16 +639,26 @@ function drawHot(ctx, g, view) {
   for (let k = 0; k < 4; k++) {
     const p = routeOf(rep, k, runAge, h), x = p.x
     let y = p.y
-    if (ok && res.k === k) y -= Math.max(0, since - flight) * 0.05 * rep.pace[k]    // he catches it and keeps going
-    const w = walk(g, `r${k}`, x, y)
-    put(x, y, us, { dir: dirFrom(w, 'up'), step: snap ? w.step : null, pose: snap ? null : 'ready', carry: ok && res.k === k && since > flight, skin: skinOf(k * 2), number: HOT_NUM[k], size: 0.86, ...who.rcv[k] })
+    if (ok && res.k === k) y -= Math.max(0, since - flight) * RUN_ON * rep.pace[k]    // he catches it and keeps going
+    const w = walk(g, `r${k}`, x, y), look = { skin: skinOf(k * 2), number: HOT_NUM[k], size: 0.86, ...who.rcv[k] }
+    const his = res?.k === k && !sacked
+    if (his && since > flight - 130 && since < flight + 50) put(x, y, us, { ...look, dir: 'up', pose: x < qx ? 'catch-r' : 'catch-l' })   // (hands up to it)
+    else if (his && picked && since > flight + 240) put(x, y, us, { ...look, dir: 'up', step: null, pose: 'hands-head' })
+    else put(x, y, us, { ...look, dir: dirFrom(w, 'up'), step: snap ? w.step : null, pose: snap ? null : 'ready', carry: ok && res.k === k && since > flight })
     if (res?.k === k) { tx = x; ty = y }
   }
   // the back stays in to block, the QB in the gun
   put(qx + rs * 30, qy + 2 - pc * 14, us, { dir: 'up', pose: 'ready', skin: skinOf(5), number: 28, size: 0.86, ...who.rb })
   const arm = res && !sacked ? qbPose(null, since) : null
-  put(qx, qy, us, { dir: arm ? (tx < qx ? 'left' : 'right') : 'up', carry: (!res || sacked) && age >= PRE + SNAP_MS, fall, fallX: rs, skin: skinOf(9), number: 7, size: 0.9, pose: arm, ...who.qb })
+  // (he sees where it went: one hand up on a catch, both on his helmet on a pick)
+  const qbAfter = !arm && caught ? (ok ? 'point-up' : 'hands-head') : arm
+  put(qx, qy, us, { dir: arm ? (tx < qx ? 'left' : 'right') : 'up', carry: (!res || sacked) && age >= PRE + SNAP_MS && !(sacked && since > 90 && g.look % 2), fall, fallX: rs, skin: skinOf(9), number: 7, size: 0.9, pose: qbAfter, ...who.qb })
   action(ctx, view)
+  if (sacked && once(rep, '_hit')) { hitTurf(g, view, qx, qy, 1.3); g.nudge.kick(g.t, 6, rs * -1, 0.6, 240); g.fx.push('stamp', 'h:heavy') }
+  if (caught && once(rep, '_got')) { const q = tilt(view, tx, ty); g.dirt.burst('turf', q.x, q.y, g.t, { n: 5, s: q.s, spread: 1 }); g.nudge.kick(g.t, picked ? 3 : 2, 0, 1, 150); g.fx.push(picked ? 'stamp' : 'catchball', picked ? 'h:heavy' : 'h:medium'); rep.popAt = g.t; rep.popBig = picked }
+  // a strip sack, now and then: it's out, and bouncing
+  if (sacked && g.look % 2 && since > 90) looseBall(ctx, view, qx - rs * 8, qy, since - 90, true)
+  g.dirt.draw(ctx, g.t)
   snapBall(ctx, view, 180, los + 8, qx, qy, age - PRE)
   // the men you can throw to, circled
   if (!res) {
@@ -609,6 +672,7 @@ function drawHot(ctx, g, view) {
     const ex = ok ? tx : cb ? cb.x : tx, ey = ok ? ty : cb ? cb.y : ty
     if (f < 1) ballInAir(ctx, view, lerp(qx, ex, f), lerp(qy, ey, f), 32 + Math.sin(f * Math.PI) * 40, Math.atan2(ex - qx, qy - ey), 1)
   }
+  if (pushed) ctx.restore()
 }
 
 // ── Pick the gap ────────────────────────────────────────────────────────────
@@ -754,7 +818,7 @@ function stepGap(g, rep, S, dt, h, age) {
         S.down = true; S.by = m
         S.fall = { at: g.simT, x: Math.sign(rb.x - m.x) || rep.dir }
         S.gain = Math.round((line - rb.y) / YARD)
-        if (g.stamp && !g.done && ok) g.stamp.text = `GAIN OF ${Math.max(1, S.gain)}`
+        if (g.stamp && !g.done && ok) g.stamp.text = S.gain >= 10 ? 'FIRST DOWN' : `GAIN OF ${Math.max(1, S.gain)}`
         break
       }
     }
@@ -769,15 +833,33 @@ const PITCH_MS = 130
 function drawGap(ctx, g, view) {
   const { h } = view, rep = g.rep, res = rep.res, c = view.colors
   const age = g.t - rep.at, snap = age >= PRE
-  fieldStage(ctx, view, 'gap', paintGap)
   const S = stepScene(g, h, buildGap, stepGap), rb = S.rb
   const us = teamOf(c, 0), them = teamOf(c, 1), who = g.who
+  const pushed = !!res && !reduceMotion()
+  if (pushed) { const q = tilt(view, rb.x, rb.y); pushCam(ctx, g, view, q.x, q.y - 24 * q.s, 1.42) }
+  fieldStage(ctx, view, 'gap', paintGap)
+  crowd(ctx, g, view, rep)
   const fall = S.down ? clamp((g.simT - S.fall.at - 60) / 300, 0, 1) : 0
-  S.dl.forEach(b => { if (b !== S.by) put(b.x, b.y, them, { dir: 'down', pose: snap ? 'block' : 'stance', skin: skinOf(b.sk), number: b.num, size: G_SIZE, ...who.dl[b.i] }) })
+  const downAge = S.down ? g.simT - S.fall.at : -1, stuffed = S.down && res?.kind !== 'good'
+  // the second man gets there and goes in on top
+  if (S.down && S.pile === undefined) {
+    S.pile = null
+    let bd = 74
+    for (const m of S.bodies) { if (m === S.by) continue; const e = Math.hypot(m.x - rb.x, m.y - rb.y); if (e < bd) { bd = e; S.pile = m } }
+  }
+  const pile = S.pile && downAge > 120 ? S.pile : null
+  // stopped: they're up and shouting. Gone by them: heads down
+  const after = (b, i, base) => (downAge > 760 && stuffed ? { ...base, pose: i % 2 ? 'flex' : 'arms-up' } : base)
+  S.dl.forEach(b => {
+    if (b === S.by || b === pile) return
+    const base = { dir: 'down', pose: snap ? 'block' : 'stance', skin: skinOf(b.sk), number: b.num, size: G_SIZE, ...who.dl[b.i] }
+    put(b.x, b.y - (downAge > 760 && stuffed ? jump(downAge, b.i, 5) : 0), them, { ...after(b, b.i, base), z: b.y })
+  })
   const defs = [...S.lb, ...S.s]
   defs.forEach((b, i) => {
-    if (b === S.by) return
+    if (b === S.by || b === pile) return
     const w = walk(g, `l${i}`, b.x, b.y, 10)
+    if (downAge > 620 && stuffed) return put(b.x, b.y - jump(downAge, i + 3, 7), them, { dir: 'down', pose: i % 2 ? 'arms-up' : 'flex', z: b.y, skin: skinOf(b.sk), number: b.num, size: G_SIZE * 0.92, ...(b.si != null ? who.def[b.si] : null) })
     put(b.x, b.y, them, { dir: dirFrom(w, 'down'), step: w.step, pose: w.step == null ? 'ready' : null, skin: skinOf(b.sk), number: b.num, size: G_SIZE * 0.92, ...(b.si != null ? who.def[b.si] : null) })
   })
   S.ol.forEach((b, i) => put(b.x, b.y, us, { dir: 'up', pose: snap ? 'block' : 'stance', skin: skinOf(i + 3), number: OL_NUM[i], size: G_SIZE, ...who.ol[i] }))
@@ -786,10 +868,21 @@ function drawGap(ctx, g, view) {
   const qw = walk(g, 'qb', S.qb.x, S.qb.y, 10)
   put(S.qb.x, S.qb.y, us, { dir: dirFrom(qw, 'up'), step: qw.step, pose: qw.step == null ? 'ready' : null, carry: !res && age >= PRE + SNAP_MS, skin: skinOf(9), number: 7, size: G_SIZE * 0.95, ...who.qb })
   const w = walk(g, 'rb', rb.x, rb.y, 11)
-  put(rb.x, rb.y, us, { dir: S.down ? 'up' : dirFrom(w, 'up'), step: S.down ? null : w.step, carry: pitched, fall, fallX: S.down ? S.fall.x : 0, skin: skinOf(6), number: 28, size: G_SIZE * 0.92, ...who.rb })
+  // a good run: he's back up and showing them where it's going. Stuffed, he stays down
+  const rbUp = downAge > 820 && !stuffed
+  put(rb.x, rb.y - (rbUp ? jump(downAge, 0, 3) : 0), us, { dir: rbUp ? 'down' : S.down ? 'up' : dirFrom(w, 'up'), step: S.down ? null : w.step, carry: pitched && !rbUp, fall: rbUp ? 0 : fall, fallX: rbUp ? 0 : S.down ? S.fall.x : 0, pose: rbUp ? (S.gain >= 10 ? 'point-up' : 'flex') : null, z: rb.y, skin: skinOf(6), number: 28, size: G_SIZE * 0.92, ...who.rb })
+  if (pile) {
+    const f2 = clamp((downAge - 120) / 130, 0, 1), sd = -S.fall.x || 1
+    put(lerp(pile.x, rb.x + sd * 13, f2), lerp(pile.y, rb.y + 2, f2), them, { dir: sd < 0 ? 'right' : 'left', pose: 'wrap', fall: clamp((downAge - 180) / 260, 0, 1), fallX: -sd, z: rb.y + 2, skin: skinOf(pile.sk), number: pile.num, size: G_SIZE * 0.92, ...(pile.si != null ? who.def[pile.si] : pile.i != null ? who.dl[pile.i] : null) })
+  }
   const closeIn = S.down ? clamp((g.simT - S.fall.at) / 100, 0, 1) : 0
   if (S.by) put(lerp(S.by.x, rb.x - S.fall.x * 16, closeIn), lerp(S.by.y, rb.y - 6, closeIn), them, { dir: S.fall.x > 0 ? 'right' : 'left', pose: 'wrap', fall, fallX: S.fall.x, z: rb.y + 1, skin: skinOf(S.by.sk), number: S.by.num, size: G_SIZE * 0.92, ...(S.by.si != null ? who.def[S.by.si] : S.by.i != null ? who.dl[S.by.i] : null) })
   action(ctx, view)
+  if (S.down && once(rep, '_hit')) { hitTurf(g, view, rb.x, rb.y, 1.2); g.nudge.kick(g.t, stuffed ? 6 : 4, S.fall.x, -0.7, 230); g.fx.push('stamp', 'h:heavy'); rep.popAt = g.t; rep.popBig = stuffed || S.gain >= 10 }
+  if (res && !S.down && S.told && once(rep, '_gone')) { rep.popAt = g.t; rep.popBig = true }
+  // he plants, and the turf goes
+  if (res && !S.down && S.cutUntil != null && S.cutSeen !== S.cutUntil) { S.cutSeen = S.cutUntil; const q = tilt(view, rb.x, rb.y); g.dirt.burst('turf', q.x, q.y, g.t, { n: 5, s: q.s, ang: S.cutTo > 0 ? -2.5 : -0.64, spread: 0.6 }) }
+  g.dirt.draw(ctx, g.t)
   snapBall(ctx, view, 180, S.qb.y - 42, S.qb.x, S.qb.y, age - PRE)
   if (res && !pitched) { const f = since / PITCH_MS; ballInAir(ctx, view, lerp(S.qb.x, rb.x, f), lerp(S.qb.y, rb.y, f), 30, Math.atan2(rb.x - S.qb.x, S.qb.y - rb.y)) }
   // the three gaps to pick: a see-through arrow on each hole (the whole third of the screen counts)
@@ -807,6 +900,7 @@ function drawGap(ctx, g, view) {
     })
     ctx.restore()
   }
+  if (pushed) ctx.restore()
 }
 
 // ── Jump the route ──────────────────────────────────────────────────────────
@@ -899,7 +993,7 @@ const safetyY = h => Math.round(h * 0.86)
 const SAFETY_V = 0.34          // the safety's one speed, units a ms
 const PICK_BY = 90, SWAT_BY = 50  // ms: there this far ahead of the ball, it's his; about even, he gets a hand on it
 const MEET_R = 16, JUMP_YD = 8.4, SHORT_GAIN = 8 * JUMP_YD   // how near is a tackle; a tackle within eight yards of the catch is a good play
-const BALL_V = 0.41, BALL_OFF = 110   // a thrown ball: units a ms, and what getting it out takes. Further takes longer
+const BALL_V = 0.36, BALL_OFF = 110   // a thrown ball: units a ms, and what getting it out takes. Further takes longer
 const jumpRel = rep => rep.delay + rep.T * 0.2
 const jumpLand = (rep, h) => {
   if (rep.landH === h) return rep.land
@@ -910,10 +1004,12 @@ const jumpLand = (rep, h) => {
   rep.land = land; rep.landH = h
   return land
 }
-const jumpRun = (res, age, frozen) => (res ? frozen + Math.min(age - frozen, Math.max(1500, res.flight)) : age)
+const jumpRun = (res, age, frozen, rep) => (!res ? age
+  : res.kind === 'far' || (res.kind === 'good' && rep?.how === 'tackle') ? frozen + Math.min(age - frozen, res.flight)
+  : frozen + Math.min(age - frozen, Math.max(1500, res.flight)))
 function buildJump(rep, h) { return { s: body(180, safetyY(h)), others: Array.from({ length: 10 }, () => ({ x: 0, y: 0 })), hit: false } }
 function stepJump(g, rep, S, dt, h, age) {
-  const res = rep.res, frozen = res ? res.at - rep.at : age, run = jumpRun(res, age, frozen)
+  const res = rep.res, frozen = res ? res.at - rep.at : age, run = jumpRun(res, age, frozen, rep)
   for (let k = 0; k < 4; k++) {
     const p = routeJ(rep, k, run, h); S.others[k * 2].x = p.x; S.others[k * 2].y = p.y
     const q = cornerAt(rep, k, run, h); S.others[k * 2 + 1].x = q.x; S.others[k * 2 + 1].y = q.y
@@ -923,6 +1019,14 @@ function stepJump(g, rep, S, dt, h, age) {
   if (res && res.kind !== 'late') {
     // a straight shot at the man he tapped, through anyone in between, at one speed
     const t = S.others[res.k * 2]
+    if (res.kind === 'good' && rep.how === 'pick' && age > jumpLand(rep, h) + 40) {
+      // he's got it, and he's gone the other way: a lane up the field, away from the man he took it from
+      const left = age - jumpLand(rep, h)
+      if (left > 880) { b.tx = b.x; b.ty = b.y; b.v = 0.02; seek(b, dt); return }
+      b.tx = b.x + (b.x < 180 ? 40 : -40); b.ty = b.y - 200; b.v = 0.2 * (g.who.sPace?.[0] ?? 1)
+      seek(b, dt)
+      return
+    }
     if (res.kind === 'good' && rep.how !== 'tackle') { const at = routeJ(rep, res.k, jumpLand(rep, h), h); b.tx = at.x; b.ty = at.y - 12 }
     else { b.tx = t.x; b.ty = t.y - 12 }
     b.v = SAFETY_V
@@ -935,15 +1039,25 @@ function stepJump(g, rep, S, dt, h, age) {
 }
 const J_CB = [24, 21, 29, 26], J_WR = [11, 84, 87, 15]
 const QB_LOOK = (qx, x) => (Math.abs(x - qx) < 34 ? 'down' : x < qx ? 'left' : 'right')
+const Lx0 = (rep, h) => routeJ(rep, rep.open, jumpLand(rep, h), h).x   // (where the ball's coming down, across the field)
 function drawJump(ctx, g, view) {
   const { h } = view, rep = g.rep, res = rep.res, c = view.colors
   const age = g.t - rep.at, frozen = res ? res.at - rep.at : age, since = res ? g.t - res.at : -1, d = rep.decoy
-  fieldStage(ctx, view, 'jump', paintJump)
   const S = stepScene(g, h, buildJump, stepJump)
   const us = teamOf(c, 0), them = teamOf(c, 1), who = g.who
+  const pushed = !!res && !reduceMotion()
+  if (pushed) {
+    // on the safety when he's got there. Beaten, on the man who's beaten him
+    let fx = S.s.x, fy = S.s.y
+    if (res.kind !== 'good' && res.kind !== 'far') { const p = routeJ(rep, res.kind === 'bait' ? res.k : rep.open, jumpRun(res, age, frozen, rep), h); fx = p.x; fy = p.y }
+    const q = tilt(view, fx, fy)
+    pushCam(ctx, g, view, q.x, q.y - 22 * q.s, 1.5)
+  }
+  fieldStage(ctx, view, 'jump', paintJump)
+  crowd(ctx, g, view, rep)
   const los = losJ(h), qx = 180, qy = los - 44, snap = age >= PRE
   const ok = res?.kind === 'good', late = res?.kind === 'late', flight = res?.flight ?? 340
-  const runAge = jumpRun(res, age, frozen)
+  const runAge = jumpRun(res, age, frozen, rep)
   const picked = ok && rep.how === 'pick', swatted = ok && rep.how === 'swat', jarred = (ok && rep.how === 'tackle') || res?.kind === 'far', land = jumpLand(rep, h)
   const missed = res && !ok && !late
   // the matchups: each receiver and the man on him
@@ -953,10 +1067,15 @@ function drawJump(ctx, g, view) {
     const p = routeJ(rep, k, runAge, h), rx = p.x, ry = p.y
     const q = cornerAt(rep, k, runAge, h), cx = q.x, cy = q.y
     const cw = walk(g, `c${k}`, cx, cy), rw = walk(g, `w${k}`, rx, ry)
-    put(cx, cy, us, { dir: hipsJ(rep, k, runAge, cw, cx, cy, rx, ry), step: snap ? cw.step : null, pose: snap ? null : 'ready', skin: skinOf(k * 3), number: J_CB[k], size: 0.86, ...who.def[k] })
+    // a takeaway: the corners are up for it
+    if ((picked || swatted) && age > land + 240) put(cx, cy - jump(age, k, 6), us, { dir: 'up', pose: 'arms-up', z: cy, skin: skinOf(k * 3), number: J_CB[k], size: 0.86, ...who.def[k] })
+    else put(cx, cy, us, { dir: hipsJ(rep, k, runAge, cw, cx, cy, rx, ry), step: snap ? cw.step : null, pose: snap ? null : 'ready', skin: skinOf(k * 3), number: J_CB[k], size: 0.86, ...who.def[k] })
     const stut = stutterOf(rep, k), stopped = stut && runAge >= stut.at && runAge < stut.at + 300
     const hitHim = jarred && res.k === k && hitFall > 0
-    put(rx, ry, them, { dir: hitHim ? 'down' : dirFrom(rw, 'down'), step: snap && !stopped && !hitHim ? rw.step : null, pose: snap ? null : 'ready', carry: age >= land && !picked && !swatted && k === (res?.kind === 'bait' ? res.k : rep.open), fall: hitHim ? hitFall : 0, fallX: hitHim ? (rx < 180 ? -1 : 1) : 0, carry: age > land && (jarred ? res.k === k : !picked && res && k === rep.open), skin: skinOf(k * 3 + 2), number: J_WR[k], size: 0.86, ...who.rcv[k] })
+    // his hands go up for it. If it never gets there, he's got his hands on his helmet
+    const toHim = k === (res?.kind === 'bait' ? res.k : rep.open), going = res && toHim && age > land - 130 && age < land + 40 && !hitHim
+    const robbed = res && toHim && (picked || swatted) && age > land + 300
+    put(rx, ry, them, { dir: hitHim ? 'down' : going || robbed ? 'down' : dirFrom(rw, 'down'), step: snap && !stopped && !hitHim && !going && !robbed ? rw.step : null, pose: going ? (rx < qx ? 'catch-r' : 'catch-l') : robbed ? 'hands-head' : snap ? null : 'ready', fall: hitHim ? hitFall : 0, fallX: hitHim ? (rx < 180 ? -1 : 1) : 0, carry: age > land && !going && (jarred ? res.k === k : !picked && res && k === rep.open), skin: skinOf(k * 3 + 2), number: J_WR[k], size: 0.86, ...who.rcv[k] })
     if (k === rep.open) { ox = rx; oy = ry }
     if (res?.k === k) { tx = rx; ty = ry }
   }
@@ -965,7 +1084,8 @@ function drawJump(ctx, g, view) {
   for (let i = -3; i <= 3; i += 2) put(180 + i * 14, los + 10 - Math.min(16, Math.max(0, runAge - PRE) * 0.012), us, { dir: 'up', pose: snap ? 'block' : 'stance', skin: skinOf(i + 9), number: DL_NUM[(i + 3) / 2], size: 0.94, ...who.dl[(i + 3) / 2] })
   for (let i = -1; i <= 1; i += 2) {
     const q = backerJ(rep, i, runAge, h), bx = q.x, by = q.y, w = walk(g, `jb${i}`, bx, by)
-    put(bx, by, us, { dir: 'up', step: w.step, pose: w.step == null ? 'ready' : null, skin: skinOf(i + 4), number: i < 0 ? 52 : 45, size: 0.86 })
+    if ((picked || swatted) && age > land + 300) put(bx, by - jump(age, i + 2, 6), us, { dir: 'up', pose: 'arms-up', z: by, skin: skinOf(i + 4), number: i < 0 ? 52 : 45, size: 0.86 })
+    else put(bx, by, us, { dir: 'up', step: w.step, pose: w.step == null ? 'ready' : null, skin: skinOf(i + 4), number: i < 0 ? 52 : 45, size: 0.86 })
   }
   // the QB: he scans; his shoulders open to the man he's going to, then the ball's out. On an early bait
   // they swing that way and come back: a pump. If you've run to the wrong man he doesn't wait.
@@ -978,13 +1098,26 @@ function drawJump(ctx, g, view) {
   const fa = prog(age, rel, land)
   // his arm: cocked once he's found his man, then the release
   const arm = qbPose(runAge >= rep.delay && age < rel ? 1 : null, age >= rel ? age - rel : -1)
-  put(qx, qy, them, { dir: arm ? (bx < qx ? 'left' : 'right') : look, pose: arm, carry: !arm && fa <= 0 && age >= PRE + SNAP_MS, skin: skinOf(2), number: 9, size: 0.9, ...who.qb })
+  // (he's watched it get taken away)
+  const qbSad = (picked || swatted) && age > land + 360
+  put(qx, qy, them, { dir: qbSad ? 'down' : arm ? (bx < qx ? 'left' : 'right') : look, pose: qbSad ? (picked ? 'hands-head' : 'hips') : arm, carry: !arm && fa <= 0 && age >= PRE + SNAP_MS, skin: skinOf(2), number: 9, size: 0.9, ...who.qb })
   // him: the safety
   const b = S.s, sw = walk(g, 'safety', b.x, b.y, 9)
   const hitNow = jarred && hitFall > 0
   snapBall(ctx, view, 180, qy + 42, qx, qy, age - PRE)
-  put(b.x, b.y, us, { carry: picked && age >= land, dir: hitNow ? 'up' : dirFrom(sw, 'up'), step: hitNow ? null : sw.step, pose: hitNow ? 'wrap' : sw.step == null ? 'ready' : null, fall: hitNow ? hitFall : 0, fallX: hitNow ? (tx < 180 ? -1 : 1) : 0, carry: picked && age > land, z: hitNow ? ty + 1 : undefined, skin: skinOf(4), number: 38, size: 0.86, ...who.safety })
+  // him: high-pointing it, running it back, then pulling up to let them hear about it. A breakup gets the owner's two signals
+  const sLook = { skin: skinOf(4), number: 38, size: 0.86, ...who.safety }
+  const atBall = (picked || swatted) && age > land - 140 && age < land + 50
+  const beatBy = res && !ok && !late && age > land + 260
+  if (atBall) put(b.x, b.y, us, { ...sLook, dir: 'up', pose: picked ? (b.x < Lx0(rep, h) ? 'catch-r' : 'catch-l') : b.x < Lx0(rep, h) ? 'swipe-r' : 'swipe-l' })
+  else if (picked && age > land + 900) put(b.x, b.y - jump(age, 0, 8), us, { ...sLook, dir: 'down', pose: g.look % 2 ? 'arms-up' : 'flex', z: b.y })
+  else if (swatted && age > land + 280) put(b.x, b.y, us, { ...sLook, dir: 'down', pose: breakupPose(age - land - 280, g.look + g.i) })
+  else if (beatBy) put(b.x, b.y, us, { ...sLook, dir: 'up', step: null, pose: 'hands-head' })
+  else put(b.x, b.y, us, { ...sLook, dir: hitNow ? 'up' : dirFrom(sw, 'up'), step: hitNow ? null : sw.step, pose: hitNow ? 'wrap' : sw.step == null ? 'ready' : null, fall: hitNow ? hitFall : 0, fallX: hitNow ? (tx < 180 ? -1 : 1) : 0, carry: picked && age > land, z: hitNow ? ty + 1 : undefined })
   action(ctx, view)
+  if (hitFall > 0 && once(rep, '_hit')) { hitTurf(g, view, tx, ty, 1.3); g.nudge.kick(g.t, 6, tx < 180 ? -1 : 1, 0.5, 240); g.fx.push('stamp', 'h:heavy'); rep.popAt = g.t }
+  if ((picked || swatted) && age >= land && once(rep, '_got')) { const q = tilt(view, b.x, b.y); g.dirt.burst('turf', q.x, q.y, g.t, { n: 6, s: q.s, spread: 1 }); g.nudge.kick(g.t, 3, 0, 1, 160); g.fx.push(picked ? 'catchball' : 'stamp', 'h:heavy'); rep.popAt = g.t; rep.popBig = picked }
+  g.dirt.draw(ctx, g.t)
   // a light ring round each receiver: who there is to press
   if (!res) {
     ctx.strokeStyle = 'rgba(255,255,255,.5)'; ctx.lineWidth = 2
@@ -995,11 +1128,9 @@ function drawJump(ctx, g, view) {
   const toK = res?.kind === 'bait' ? res.k : rep.open
   const L = routeJ(rep, toK, land, h), Lx = L.x, Ly = L.y
   if (fa > 0 && fa < 1) ballInAir(ctx, view, lerp(qx, Lx, fa), lerp(qy, Ly, fa), 34 + Math.sin(fa * Math.PI) * 44, Math.atan2(Lx - qx, qy - Ly))
-  else if (swatted && age >= land && age < land + 420) {
-    // a hand on it: down it goes
-    const f = (age - land) / 420
-    ballInAir(ctx, view, Lx + (Lx < 180 ? 18 : -18) * f, Ly + 16 * f, 34 * (1 - f * f), f * 6)
-  }
+  // a hand on it: it's dead on the turf
+  else if (swatted && age >= land) looseBall(ctx, view, Lx, Ly + 8, age - land, true)
+  if (pushed) ctx.restore()
 }
 
 // ── The court: to scale, through the same camera ────────────────────────────
@@ -1038,7 +1169,10 @@ export function castMen(g, view) {
   if (!g.castMen) {
     const five = fiveOf(cast), of = side => five.map(([group, i]) => manOf(cast, side, group, i))
     g.castMen = { us: of('us'), them: of('them'), rush: [1, 0, 2].map(i => manOf(cast, 'them', 'guard', i)) }
-    g.castMen.key = [...g.castMen.us, ...g.castMen.them].map(m => `${m.name}${m.number}${m.skin}`).join('')   // (for what's baked in)
+    // (two men in one uniform can't wear one number: if a real teammate has his, he takes the next free one)
+    const me = g.castMen.us[0], taken = new Set(g.castMen.us.slice(1).filter(Boolean).map(m => m.number))
+    if (me && taken.has(me.number)) { let n = (me.number ?? 0) + 1; while (taken.has(n % 100)) n++; g.castMen.us[0] = { ...me, number: n % 100 } }
+    g.castMen.key = [...g.castMen.us, ...g.castMen.them].map(m => (m ? `${m.name}${m.number}${m.skin}` : "-")).join('')   // (for what's baked in)
   }
   return g.castMen
 }
@@ -1152,7 +1286,8 @@ function floorDown(ctx, view, G, M) {
   FLOOR.sort((a, b) => b.z - a.z)
   for (const m of FLOOR) {
     if (!manAt(ctx, view, G.cam, m.x, m.z, m.P, { jersey: m.team.color, trim: m.team.trim, skin: m.who.skin, num: m.who.number, back: m.back, ball: m.ball, spin: m.spin, live: m.live })) continue
-    if (M && PT.x > 6 && PT.x < view.w - 6) tagAt(PT.x, PT.y, m.who.name, PT.k / FIG_FT)   // (a man off the side of the picture keeps his name to himself)
+    // (a man off the side of the picture keeps his name to himself; a man in the air takes his up with him)
+    if (M && PT.x > 6 && PT.x < view.w - 6) tagAt(PT.x, PT.y - (m.lift ?? 0) * (PT.k / FIG_FT), m.who.name, PT.k / FIG_FT)
   }
   FLOOR.length = 0
   if (M) tagsDown(ctx, view)
@@ -1160,24 +1295,51 @@ function floorDown(ctx, view, G, M) {
 const moveOf = (w, still) => (w.step != null ? RUN_F[w.step] : still)
 const stillD = (g, i) => (Math.floor(g.t / 340 + i * 0.7) % 2 ? POSE.guardA : POSE.guardB)
 const HANDLER = easedState(), DRIB = newPose()
+// after the whistle, on the floor. (No id: he's drawn live for the second or two these last)
+const HEADS = figPose({ hy: 46, fFx: 11, fBx: -11, hFx: 12, hFy: 104, hBx: -12, hBy: 104 })   // hands on his head
+const GUNS = figPose({ hy: 46, fFx: 14, fBx: -14, hFx: 31, hFy: 94, hBx: -31, hBy: 94 })       // the guns, after a slam
+const WAG = figPose({ hy: 47, fFx: 13, fBx: -13, hFx: 16, hFy: 120, hBx: -20, hBy: 47 })       // not in here: one arm up, the hand going
+const SLAM_AT = 640, DRIVE_AT = 300   // the roller: he's caught it, two steps, and he's up
+const rattle = age => (age < 0 ? 0 : Math.sin(age / 26) * 3.2 * Math.exp(-age / 200))
+const FOCUS = { x: 0, y: 0 }
 function drawPnr(ctx, g, view) {
   const { h } = view, rep = g.rep, res = rep.res, c = view.colors, dir = rep.dir
   const age = g.t - rep.at, frozen = res ? res.at - rep.at : age, since = res ? g.t - res.at : -1
   smoothT(g)
   const G = courtCam(g)
-  arenaStage(ctx, view, G, `pnr-${h}`)
   const S = stepScene(g, h, buildPnr, stepPnr)
   const us = teamOf(c, 0), them = teamOf(c, 1)
   const ok = res?.kind === 'good', late = res?.kind === 'late'
+  const dunk = ok && res.k === 1, slam = dunk ? since - SLAM_AT : -1
+  // the camera goes in on the rim on a dunk, between the shooter and the rim on a shot, on the thief on a turnover
+  const pushed = !!res && !reduceMotion()
+  if (pushed) {
+    project(G.cam, 0, RIM_FT, 0)
+    const rx0 = PT.x, ry0 = PT.y
+    const open = ok || (res.k === 2 && !late)
+    const on = open ? pnrAt(rep, res.k, frozen, h) : S.thief ?? S.h
+    chestOf(G.cam, xFt(on.x), zFt(on.y, h), FOCUS)
+    const f = dunk ? 0.86 : open ? 0.5 : 0
+    pushCam(ctx, g, view, lerp(FOCUS.x, rx0, f), lerp(FOCUS.y, ry0, f), dunk ? 1.8 : open ? 1.34 : 1.26)
+  }
+  arenaStage(ctx, view, G, `pnr-${h}`)
+  crowd(ctx, g, view, rep, G.wallY - (22 * h) / 640)
   const runAge = res ? frozen + Math.min(since, 300) : age
   const M = castMen(g, view)
   const R = pnrAt(rep, 1, runAge, h), rx = R.x, ry = R.y
   const C = pnrAt(rep, 2, runAge, h), cx = C.x, cy = C.y
   const H = pnrAt(rep, 0, runAge, h), hx = H.x, hy = H.y
+  // the dunk: from where he caught it to the front of the rim, and he goes up
+  let dx = rx, dy = ry, dj = 0
+  if (dunk) {
+    const f = easeOut(prog(since, DRIVE_AT, SLAM_AT - 60))
+    dx = lerp(rx, courtX(dir * 1.1), f); dy = lerp(ry, courtY(2.7, h), f)
+    dj = prog(since, SLAM_AT - 240, SLAM_AT - 30) * 46 * (1 - prog(slam, 180, 460))
+  }
   // your men: who shoots, when
   const shootK = ok ? res.k : res && !late && res.k === 2 ? 2 : -1
   const pass = !res || res.k === 0 || late ? 0 : 190, catchAt = pass + 90, up = since - catchAt, dur = 360
-  const shooting = k => shootK === k && up > -40 && up < dur + 160
+  const shooting = k => shootK === k && up > -40 && up < dur + (ok ? 620 : 160)     // (he holds the follow-through on a make)
   const lifted = (k, top) => (shooting(k) ? Math.sin(clamp((up + 40) / (dur + 200), 0, 1) * Math.PI) * top : 0)
   // the ball, worked out first: the rim needs to know if it's in there
   const tk = res ? res.k : 0, tx = tk === 0 ? hx : tk === 1 ? rx : cx, ty = tk === 0 ? hy : tk === 1 ? ry : cy
@@ -1187,6 +1349,10 @@ function drawPnr(ctx, g, view) {
   if (!res) {
     const b = Math.abs(Math.sin(g.t / 170))
     ball = AB; AB.x = X(hx) + dir * (29 / FIG_FT); AB.z = Z(hy) - 0.3; AB.y = lerp(BALL_R, (36 - 3) / FIG_FT - BALL_R, b)
+  } else if (dunk && since >= pass) {
+    // in his hands all the way up, then down through it hard
+    if (slam < 0) { ball = AB; const held = since >= SLAM_AT - 240; AB.x = X(dx) + (held ? 13 : 4) / FIG_FT; AB.z = Z(dy) + 0.2; AB.y = held ? (130 + dj) / FIG_FT : 4.2; spin = 0 }
+    else { ball = dropThrough(slam * 1.5); netAge = slam; spin = since / 60 }
   } else if (ok || (tk === 2 && !late)) {
     if (since < pass) { const f = since / pass; ball = flyTo(X(hx) + dir * 0.9, 3.9, Z(hy), X(tx), 4.2, Z(ty), f, 0.25); spin = 0 }
     else if (up <= 0) ball = null    // (it's in his hands)
@@ -1205,25 +1371,37 @@ function drawPnr(ctx, g, view) {
     const b = Math.abs(Math.sin(g.t / 130))
     ball = AB; AB.x = X(th.x) + (th.x < 180 ? -1.4 : 1.4); AB.z = Z(th.y) - 0.2; AB.y = BALL_R + b * 2
   }
-  const atIron = hoopWith(ctx, G.cam, ball, netAge, spin)
-  // the two who aren't options: near corner, far slot
-  putMan(courtX(dir * CORNER_FT), courtY(3.2, h), h, POSE.off, us, true, whoOf(M?.us[2], 3, HSKIN[2]))
-  putMan(courtX(-dir * 8.4), courtY(20, h), h, POSE.off, us, true, whoOf(M?.us[4], 11, HSKIN[3]))
+  const atIron = hoopWith(ctx, G.cam, ball, netAge, spin, dunk ? rattle(slam) : 0)
+  // the sounds of it, off the picture
+  if (dunk && slam >= 0 && once(rep, '_in')) { g.nudge.kick(g.t, 5, 0, 1, 240); g.fx.push('make', 'stamp', 'h:heavy'); rep.popAt = g.t; rep.popBig = true }
+  else if (netAge != null && !dunk && once(rep, '_in')) { g.fx.push('make', 'h:medium'); if (ok) rep.popAt = g.t }
+  const made = ok && (dunk ? slam > 60 : netAge != null), lost = res && !ok && since > 620
+  // the two who aren't options: near corner, far slot. Up off the bench of it when it goes in
+  const offP = (made ? POSE.hands : POSE.off)
+  putMan(courtX(dir * CORNER_FT), courtY(3.2, h), h, offP, us, true, whoOf(M?.us[2], 3, HSKIN[2]))
+  putMan(courtX(-dir * 8.4), courtY(20, h), h, offP, us, true, whoOf(M?.us[4], 11, HSKIN[3]))
   // the defense
   S.all.forEach((m, i) => {
     const w = walk(g, `d${i}`, m.x, m.y, 9)
     const jump = res?.k === 0 && m === S.thief && since < 300 && !ok
-    const P2 = jump ? liftPose(POSE.hands, Math.sin((since / 300) * Math.PI) * 26) : moveOf(w, stillD(g, i))
+    if (jump && since > 120 && once(rep, '_blk')) { g.nudge.kick(g.t, 3.5, 0, 1); g.fx.push('stamp', 'h:heavy') }
+    const P2 = jump ? liftPose(POSE.hands, Math.sin((since / 300) * Math.PI) * 26) : made && w.step == null ? POSE.off : moveOf(w, stillD(g, i))
     putMan(m.x, m.y, h, P2, them, false, whoOf(M?.them[PNR_D[i]], 20 + i, HSKIN[(i + 1) % 5]))
   })
   // your men
   const rw = walk(g, 'roll', rx, ry, 9), hw = walk(g, 'hand', hx, hy, 9)
   const inHands = k => (shootK === k && !ok && up <= 0) || (shootK === k && ok && since >= pass && up <= 0)
   const shotP = k => (up < 0 ? POSE.gather : liftPose(POSE.shoot, lifted(k, 26)))
-  putMan(rx, ry, h, shooting(1) ? shotP(1) : moveOf(rw, POSE.hold), us, true, whoOf(M?.us[3], 44, HSKIN[1]), { ball: inHands(1) ? IN_HANDS : null })
+  if (dunk && since >= pass) {
+    // up with it, hung on the rim a moment, and down with a word for somebody
+    const P3 = slam > 460 ? GUNS : since < SLAM_AT - 240 ? (since < DRIVE_AT ? POSE.gather : RUN_F[Math.floor(since / 80) % 4]) : liftPose(POSE.layup, dj)
+    putMan(dx, dy, h, P3, us, true, whoOf(M?.us[3], 44, HSKIN[1]), { live: true })
+  } else putMan(rx, ry, h, shooting(1) ? shotP(1) : moveOf(rw, POSE.hold), us, true, whoOf(M?.us[3], 44, HSKIN[1]), { ball: inHands(1) ? IN_HANDS : null })
   putMan(cx, cy, h, shooting(2) ? shotP(2) : POSE.off, us, true, whoOf(M?.us[1], 8, HSKIN[0]), { ball: inHands(2) ? IN_HANDS : null })
   // the handler's dribbling: his ball hand's low on the side he's going
   if (shooting(0)) copyPose(shotP(0), DRIB)
+  else if (lost) copyPose(HEADS, DRIB)
+  else if (made && !shooting(1) && !shooting(2) && res.k !== 0) copyPose(POSE.hands, DRIB)
   else if (res) copyPose(POSE.hold, DRIB)
   else {
     copyPose(hw.step != null ? RUN_F[hw.step] : dir > 0 ? POSE.dribR : POSE.dribL, DRIB)
@@ -1233,6 +1411,7 @@ function drawPnr(ctx, g, view) {
   putMan(hx, hy, h, easedPose(HANDLER, DRIB, g, CLK.dt, 28), us, true, whoOf(M?.us[0], 1, HSKIN[4]), { live: true, ball: inHands(0) ? IN_HANDS : null })
   floorDown(ctx, view, G, M)
   if (ball && !atIron) ballIn(ctx, G.cam, ball.x, ball.y, ball.z, spin)
+  if (pushed) ctx.restore()
 }
 
 // ── Protect the rim: a 3-on-1 fast break ────────────────────────────────────
@@ -1283,6 +1462,7 @@ function drawRim(ctx, g, view) {
   smoothT(g)
   const G = courtCam(g, Math.min(age, frozen))
   arenaStage(ctx, view, G, `rim-${h}`, false)
+  crowd(ctx, g, view, rep, G.wallY - (22 * h) / 640)
   const S = stepScene(g, h, buildRim, stepRim)
   const us = teamOf(c, 0), them = teamOf(c, 1)
   const ok = res?.kind === 'good', late = res?.kind === 'late'
@@ -1306,12 +1486,14 @@ function drawRim(ctx, g, view) {
     if (k === scorer && sTime > 0 && sTime < 400 && !isShot) { j = Math.sin(clamp(sTime / 400, 0, 1) * Math.PI) * 24; gather = 1 }
     const w = walk(g, `a${k}`, x, y, 10)
     const has = k === carrier, upNow = j > 1 || gather > 0.6
-    const Pp = upNow ? POSE.layup : gather > 0 ? POSE.gather : moveOf(w, POSE.hold)
+    // blocked: it's gone, and he comes down off balance
+    const knocked = blocked && k === rep.open && since > flight
+    const Pp = knocked ? (since > flight + 380 ? POSE.land : x < 180 ? POSE.stumbleL : POSE.stumbleR) : upNow ? POSE.layup : gather > 0 ? POSE.gather : moveOf(w, POSE.hold)
     if (has) { bx = x + (x < 180 ? 7 : -7); by = y; by2 = upNow ? 8.2 + j / FIG_FT : gather > 0 ? 5 : 3.4 }
     if (k === rep.open) { sx = x; sy = y; shooterJ = j }
     if (k === scorer) scorerJ = j
-    const shown = easedPose(SHOOTER_ST[k], upNow ? liftPose(Pp, j) : Pp, g, CLK.dt, 24)
-    putMan(x, y, h, shown, them, true, whoOf(M?.rush[k], [10, 3, 23][k], HSKIN[k]), { live: true })
+    const shown = easedPose(SHOOTER_ST[k], upNow || knocked ? liftPose(Pp, j) : Pp, g, CLK.dt, 24)
+    putMan(x, y, h, shown, them, true, whoOf(M?.rush[k], [10, 3, 23][k], HSKIN[k]), { live: true, lift: upNow || knocked ? j : 0 })
   }
   // a pass: flat, fast, hands to hands
   if (carrier < 0) {
@@ -1331,8 +1513,10 @@ function drawRim(ctx, g, view) {
     const hitY = 9.2 + shooterJ * 0.03, hx = lerp(sx, S.big.x, 0.42), hy = lerp(sy, S.big.y, 0.42)
     if (since < flight) flyTo(X(sx), 8.2 + shooterJ / FIG_FT, Z(sy), X(hx), hitY, Z(hy), since / flight)
     else {
-      const t = clamp((since - flight) / 560, 0, 1), o = sx < 180 ? -1 : 1
-      flyTo(X(hx), hitY, Z(hy), X(hx) + o * 13, BALL_R, Z(hy) - 13, t, 2.2); spin = since / 40
+      const t = clamp((since - flight) / 560, 0, 1), o = sx < 180 ? 1 : -1, endX = X(hx) * 0.45, endZ = -14
+      flyTo(X(hx), hitY, Z(hy), endX, BALL_R, endZ, t, 3.4); spin = since / 40
+      // ...and it keeps coming, bouncing away down the floor
+      if (t >= 1) { const a = (since - flight - 560) / 1000; AB.x = endX + o * a * 3; AB.z = endZ - a * 6; AB.y = BALL_R + Math.abs(Math.sin(a * 8)) * 2.6 * Math.exp(-a * 3) }
     }
   } else if (ok) {
     // he got a hand up: it goes up short, off the iron
@@ -1348,14 +1532,24 @@ function drawRim(ctx, g, view) {
     else { dropThrough(since - wait - 380); netAge = since - wait - 380 }
     spin = since / 60
   }
-  const atIron = hoopWith(ctx, G.cam, ball, netAge, spin)
+  // off the iron (the short one), it shakes
+  const irony = ok && !blocked ? rattle(since - 400) * 0.7 : 0
+  const atIron = hoopWith(ctx, G.cam, ball, netAge, spin, irony)
+  if (blocked && since >= flight && once(rep, '_blk')) { g.nudge.kick(g.t, 4, 0, 1, 200); g.fx.push('stamp', 'h:heavy'); rep.popAt = g.t; rep.popBig = true }
+  if (blocked && since >= flight + 560 && once(rep, '_bnc')) g.fx.push('dribble')
+  if (ok && !blocked && since >= 400 && once(rep, '_iron')) g.fx.push('rimmiss', 'h:medium')
+  if (netAge != null && once(rep, '_in')) g.fx.push('make', 'h:medium')
   // him: both hands up when he goes, off the floor
   const big = S.big, went = res && !late, bw = walk(g, 'big', big.x, big.y, 10)
   const jump = went ? easeOut(clamp(since / flight, 0, 1)) * (1 - clamp((since - flight - 170) / 300, 0, 1)) : 0
   // (arms straight out to the sides on the way, straight up when he goes)
   // (his feet shuffle under him; his body stays level and his arms stay put)
   copyPose(moveOf(bw, POSE.guardA), BIG_OUT); BIG_OUT.hx = 0; BIG_OUT.lean = 0; BIG_OUT.hy = 43; BIG_OUT.hFx = 50; BIG_OUT.hFy = 79; BIG_OUT.hBx = -50; BIG_OUT.hBy = 79
-  const Pb = jump > 0.02 ? liftPose(POSE.hands, jump * 36) : BIG_OUT
+  // he's sent it into the seats: not in here. And when it's over him, hands on his head
+  const down = since > flight + 470
+  let Pb = jump > 0.02 ? liftPose(POSE.hands, jump * 36) : BIG_OUT
+  if (blocked && down) { WAG.hFx = 16 + Math.sin(since / 62) * 10; Pb = WAG }
+  else if (res && !ok && since > (late ? 420 : 620)) Pb = HEADS
   putMan(big.x, big.y, h, easedPose(BIG_ST, Pb, g, CLK.dt, 24), us, false, whoOf(M?.us[0], 34, HSKIN[1]), { live: true })
   floorDown(ctx, view, G, M)
   if (!atIron) ballIn(ctx, G.cam, AB.x, AB.y, AB.z, spin)

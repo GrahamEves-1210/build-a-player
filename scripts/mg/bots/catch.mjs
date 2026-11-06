@@ -7,11 +7,11 @@ export default function makeBot(g, human, r, game) {
   const plan = g.balls.map((b, k) => {
     const gap = k ? b.arrive - g.balls[k - 1].arrive : 1000
     const quick = game === 'gauntlet' ? clamp(850 / gap, 0.9, 1.15) : game === 'release' ? clamp(620 / b.air, 1, 1.25) : 1
-    return { at: b.arrive + gauss(r) * human.timing * quick, side: r() < human.slip ? 1 - b.side : b.side }
+    return { off: gauss(r) * human.timing * quick, side: r() < human.slip ? 1 - b.side : b.side }
   })
   let i = 0
   return () => {
-    if (i < plan.length && g.t >= plan[i].at) {
+    if (i < plan.length && g.t >= g.balls[i].arrive + plan[i].off) {
       const p = plan[i++]
       return [{ kind: 'down', zone: p.side ? 'R' : 'L', x: 0, y: 0 }]
     }

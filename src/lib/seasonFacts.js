@@ -54,6 +54,7 @@ export const RECORDS = {
       { id: 'dtsacks', label: 'Sacks by a DT', get: t => (t.spot === 'DT' ? t.seasonSacks : null), value: 20.5, holder: 'Aaron Donald, 2018', end: true },
       { id: 'g-sacks', label: 'Sacks in a game', game: 'sacks', value: 7, holder: 'Derrick Thomas, 1990' },
     ],
+    lb: [],
     ol: [],
     team: [{ id: 'wins', label: 'Perfect regular season', statFn: r => r.losses === 0 && r.wins >= 17, holder: '2007 Patriots (16-0)' }],
   },
@@ -99,6 +100,9 @@ export const MILESTONES = {
     dl: [...steps('sck', '{n} sacks', 'sacks', [5, 10, 15, 20]), ...steps('tfl', '{n} tackles for loss', 'tfl', [10, 20, 30]),
       { id: 'g-2sck', label: 'Two-sack game', test: c => c.last?.sacks >= 2 }, { id: 'g-3sck', label: 'Three-sack game', test: c => c.last?.sacks >= 3, big: true },
       { id: 'safety', label: 'Safety', test: c => c.last?.safeties >= 1, big: true }],
+    lb: [...steps('tkl', '{n} tackles', 'tackles', [50, 100, 150]), ...steps('lbsck', '{n} sacks', 'sacks', [3, 6]), ...steps('lbint', '{n} interceptions', 'ints', [2, 4]),
+      { id: 'g-12tkl', label: 'Twelve-tackle game', test: c => c.last?.tackles >= 12 }, { id: 'g-int', label: 'Interception', test: c => c.last?.ints >= 1 },
+      { id: 'pick6', label: 'Pick-six', test: c => c.last?.pickSixes >= 1, big: true }],
     ol: [...steps('pnk', '{n} pancakes', 'pancakes', [20, 40, 60]),
       { id: 'clean-3', label: 'Three straight clean sheets', test: c => c.games.length >= 3 && c.games.slice(-3).every(g => g.sacks === 0) }],
   },
@@ -126,6 +130,8 @@ const LEADER_STAT = {
     // a good year leads the league at 15-19 and the sixth man has about 12. Rated on the pass rush
     // alone, and from inside it comes harder (a DT in the top ten is rare)
     dl: { key: 'seasonSacks', label: 'SACKS', base: 5.5, per: 2, noise: 3.5, int: true, unique: true, rate: p => { const a = p.attrs; const r = ((a.getOff ?? 5) * 1.2 + (a.bend ?? 5) + (a.finesseMoves ?? 5) + (a.powerMoves ?? 5) * 0.8 + (a.speed ?? 5) * 0.8) / 4.8; return p.subpos === 'dt' ? r - 1.5 : r } },
+    // the tackle race: the leader has about 150-170; rated on the range, the tackling and the read
+    lb: { key: 'seasonTackles', label: 'TACKLES', base: 105, per: 13, noise: 9, int: true, unique: true, rate: p => { const a = p.attrs; return ((a.range ?? 5) + (a.tackling ?? 5) + (a.playRecognition ?? 5) * 0.6) / 2.6 } },
     ol: { key: 'seasonPancakes', label: 'PANCAKES', base: 34, per: 7, noise: 6, int: true },
   },
   bucket: {

@@ -8,11 +8,14 @@ import {
   OFF_STEPS, offStep, campDrill, CAMP_LEGACY, dbSpot, dlSpot, dlSpotLabel, combinePos, lineup, depthChart, gradeOf, gradeOfOvr, ovrGradeVal, SPORT, sportOf,
   openTalks, ask, closeTalks, acceptTalks, ASKS, askOdds, leverageOf,
   retire, canRetire, mustRetire, careerTotals, legacyOf, LEGACY_TIERS, ALL_TIME, STAT_LABEL, HEADLINE_STATS, EXTRA_STATS, AWARD_NAME, MAX_SEASONS, retireReason, goalsFor, stockText, pickText, loadSlots, CAREER_SLOTS, maxedTrait, trainWindow, canUpgrade, upgradeCost, legacyExtras,
-  compsFor, seasonScore, unretire, canUnretire, comebackYear, COMEBACK_SEASONS, inTeamColors, momentOdds, momentRound, gameCast, FACE_RATING } from '../../lib/career'
+  compsFor, seasonScore, unretire, canUnretire, comebackYear, COMEBACK_SEASONS, inTeamColors, momentOdds, momentRound, gameCast, FACE_RATING,
+  GAMES_MODES, gamesMode, setGamesMode } from '../../lib/career'
 import { GAME_LINE } from '../../lib/seasonDirector'
 import { GAMES, pickPlayoffGame, pickMomentGame } from '../../lib/minigames'
 import { momentSituation } from '../../lib/situations'
 import MiniGame from './MiniGame'
+import MiniGameSimple from './MiniGameSimple'
+import { SIMPLE_GAMES } from '../../lib/minigamesSimple'
 import PlayerComp from './PlayerComp'
 import { valToGrade, nflHeadshot } from '../../utils/simulation'
 import { sfx, haptic, victory } from '../../lib/juice'
@@ -28,6 +31,7 @@ import { seasonAnalytics, careerBests, TIER_WORD } from '../../lib/careerStats'
 import { Scramble } from './MotionText'
 import { motion } from 'motion/react'
 import { SPRING_LAYOUT } from '../../lib/motion'
+import { LB_LIVE } from '../../lib/lbLive'
 
 // CAREER (football and basketball): the intro, the draft, the hub where a
 // career is played (your model and traits, the season, the player, the team,
@@ -61,6 +65,17 @@ const cleanName = v => v.replace(/[^A-Za-z\u00C0-\u017F' .-]/g, '').replace(/\s+
 const FIRST_NAMES = ['Marcus', 'Jalen', 'Tre', 'DeShawn', 'Cole', 'Isaiah', 'Brock', 'Malik', 'Darius', 'Kade', 'Xavier', 'Jordan', 'Bryce', 'Tyson', 'Elijah', 'Grant', 'Rashad', 'Mason', 'Caleb', 'Jaylen', 'Devin', 'Trey', 'Andre', 'Dominic', 'Quentin', 'Zion', 'Myles', 'Cam', 'Jace', 'Amari', 'Keon', 'Luca', 'Nico', 'Reggie', 'Terrell', 'Bo', 'Cooper', 'Dante', 'Gavin', 'Hunter', 'Jamal', 'Khalil', 'Lamont', 'Micah', 'Owen', 'Preston', 'Rome', 'Silas', 'Tavon', 'Wyatt']
 const LAST_NAMES = ['Williams', 'Johnson', 'Carter', 'Brooks', 'Mitchell', 'Hayes', 'Coleman', 'Bennett', 'Sanders', 'Reed', 'Washington', 'Harrison', 'Fletcher', 'Dawson', 'Holloway', 'Pierce', 'Sterling', 'Vance', 'Whitfield', 'Graves', 'McKenzie', 'Ellison', 'Booker', 'Calloway', 'Dupree', 'Fontaine', 'Gaines', 'Hollins', 'Jennings', 'Kingsley', 'Lockhart', 'Maddox', 'Norwood', 'Okafor', 'Prescott', 'Quarles', 'Rhodes', 'Stokes', 'Thornton', 'Underwood', 'Varner', 'Whitaker', 'Yates', 'Abernathy', 'Blackwell', 'Crawford', 'Delgado', 'Easley', 'Freeman', 'Gentry']
 const pickName = list => list[Math.floor(Math.random() * list.length)]
+// the career's mini games mode, in a few words under the choice
+const GAMES_WHAT = { advanced: 'Full-screen games', simple: 'Quick tap games', off: 'Simulated games' }
+// A career mini game (combine drill, camp drill, playoff moment) in the career's own mode:
+// SIMPLE plays the original quick games, ADVANCED the full-screen ones, OFF simulates it
+function CareerGame({ c, setCareer, skipAll = true, ...p }) {
+  const mode = gamesMode(c)
+  const onSkipAll = skipAll ? () => setCareer(setGamesMode(c, 'off')) : null
+  if (mode === 'simple') return <MiniGameSimple game={p.game} build={p.build} pos={c.pos} seed={p.seed} lock={p.lock} hard={p.hard} retry={p.retry} onDone={p.onDone} onSkipAll={onSkipAll} />
+  return <MiniGame {...p} sim={mode === 'off'} onSkipAll={onSkipAll} />
+}
+const gameTitle = (c, game) => (gamesMode(c) === 'simple' ? SIMPLE_GAMES[game]?.title : null) ?? GAMES[game]?.title
 function NewSlot({ S, onStart, onCancel }) {
   const [first, setFirst] = useState(''), [last, setLast] = useState('')
   // opens on the position last played; changing it here is all a new career needs
@@ -75,9 +90,10 @@ function NewSlot({ S, onStart, onCancel }) {
     do { f = pickName(FIRST_NAMES); l = pickName(LAST_NAMES) } while (f === first && l === last)
     setFirst(f); setLast(l); sfx('tap')
   }
+  const [games, setGames] = useState('advanced')
   const ok = first.trim().length >= 2 && last.trim().length >= 2
   return (
-    <form className="cr-slot cr-slot--new" onSubmit={e => { e.preventDefault(); if (ok) onStart(`${first.trim()} ${last.trim()}`, pos) }}>
+    <form className="cr-slot cr-slot--new" onSubmit={e => { e.preventDefault(); if (ok) onStart(`${first.trim()} ${last.trim()}`, pos, games) }}>
       <span className="ag-eyebrow">POSITION</span>
       <div className="cr-pos" role="radiogroup" aria-label="Position" style={{ '--n': S.positions.length }}>
         {S.positions.map(p => (
@@ -89,6 +105,13 @@ function NewSlot({ S, onStart, onCancel }) {
         <input className="cr-name-in" value={first} onChange={e => setFirst(cleanName(e.target.value))} placeholder="First name" autoComplete="off" autoFocus aria-label="First name" />
         <input className="cr-name-in" value={last} onChange={e => setLast(cleanName(e.target.value))} placeholder="Last name" autoComplete="off" aria-label="Last name" />
         <button type="button" className="cr-name-rand" onClick={randomize} aria-label="Random name" title="Random name"><IconSpin size={18} /></button>
+      </div>
+      {/* the career's mini games, for the whole career (it can still be changed on the career screen) */}
+      <span className="ag-eyebrow cr-games-label">MINI GAMES</span>
+      <div className="cr-pos cr-games" role="radiogroup" aria-label="Mini games" style={{ '--n': GAMES_MODES.length }}>
+        {GAMES_MODES.map(([m, label]) => (
+          <button key={m} type="button" role="radio" aria-checked={games === m} className={games === m ? 'is-on' : ''} onClick={() => { setGames(m); sfx('tap') }}>{label}<small>{GAMES_WHAT[m]}</small></button>
+        ))}
       </div>
       <div className="cr-slot-acts">
         <button type="button" className="ag-btn ag-btn--ghost" onClick={onCancel}>CANCEL</button>
@@ -144,13 +167,13 @@ export function CareerIntro({ sport = 'nfl', uid = null, onOpen, onNew, onClose 
           <div className="ag-card-head"><span className="ag-eyebrow">SAVES · {CAREER_SLOTS} SLOTS</span></div>
           {!slots ? <div className="tk-runs-empty">Loading your saves…</div> : slots.map((c, i) => (
             c ? <SlotCard key={`c${i}`} c={c} S={S} onOpen={() => onOpen(c)} onDelete={() => { clearCareer(sport, uid, i); setSlots(l => l.map((x, k) => (k === i ? null : x))) }} />
-              : naming === i ? <NewSlot key={`n${i}`} S={S} onStart={(name, pos) => onNew(i, name, pos)} onCancel={() => setNaming(null)} />
+              : naming === i ? <NewSlot key={`n${i}`} S={S} onStart={(name, pos, games) => onNew(i, name, pos, games)} onCancel={() => setNaming(null)} />
               : <button key={`e${i}`} className="cr-slot cr-slot--empty" onClick={() => { setNaming(i); sfx('tap') }}><span>+</span> NEW CAREER <small>SLOT {i + 1}</small></button>
           ))}
         </section>
         <div className="cr-intro-hero ag-pop" style={{ '--d': '60ms' }}>
           <span className="cr-intro-kicker">ONE PLAYER. A WHOLE CAREER.</span>
-          <p>Up to {MAX_SEASONS} seasons, saved every step so you can leave and come back. {S.isBucket ? 'Guard or big.' : 'QB, RB, WR, TE, DB or DL.'}</p>
+          <p>Up to {MAX_SEASONS} seasons, saved every step so you can leave and come back. {S.isBucket ? 'Guard or big.' : (LB_LIVE ? 'QB, RB, WR, TE, DB, DL or LB.' : 'QB, RB, WR, TE, DB or DL.')}</p>
         </div>
         <ol className="tk-steps ag-pop" style={{ '--d': '80ms' }}>
           {steps.map(([t, d], i) => <li key={t}><span className="tk-step-n">{i + 1}</span><span className="tk-step-txt"><b>{t}</b><small>{d}</small></span></li>)}
@@ -207,7 +230,7 @@ function Model({ c, devPick }) {
   return (
     <div className="cr-model-wrap ag-pop">
       <div className={`cr-model${c.sport === 'bucket' ? ' cr-model--bucket' : ''}`}>
-        <Silhouette build={shown} types={c.types} attrMap={attr} isBucket={c.sport === 'bucket'} isRB={c.pos === 'rb'} isWR={c.pos === 'wr'} isTE={c.pos === 'te'} isDB={c.pos === 'db'} isDL={c.pos === 'dl'} modelOnly />
+        <Silhouette build={shown} types={c.types} attrMap={attr} isBucket={c.sport === 'bucket'} isRB={c.pos === 'rb'} isWR={c.pos === 'wr'} isTE={c.pos === 'te'} isDB={c.pos === 'db'} isDL={c.pos === 'dl'} isLB={c.pos === 'lb'} modelOnly />
         <span className="cr-model-ovr"><b>{c.ovr}</b><small>OVR</small></span>
       </div>
       <div className={`cr-traits${c.types.length % 2 ? ' is-list' : ''}`}>
@@ -277,7 +300,7 @@ function Draft({ c, setCareer }) {
       <div className={`ag-screen ${S.screen} cr`}>
         {head(`THE COMBINE · ${POS_LABEL[c.pos]}`, allDone ? 'Your numbers' : next.label)}
         <div className="ag-screen-body">
-          {!allDone && <MiniGame retry key={next.id} game={next.id} build={c.build} pos={combinePos(c)} seed={`${c.seed}-cb-${next.id}`} lock={`${c.seed}-cb-${next.id}`} onDone={res => setCareer(recordCombine(c, next.id, res.score, res.raw))} />}
+          {!allDone && <CareerGame c={c} setCareer={setCareer} skipAll={false} retry key={next.id} game={next.id} build={c.build} pos={combinePos(c)} seed={`${c.seed}-cb-${next.id}`} lock={`${c.seed}-cb-${next.id}`} onDone={res => setCareer(recordCombine(c, next.id, res.score, res.raw))} />}
           <div className="cr-drills ag-pop" style={{ '--d': '60ms' }}>
             {c.draft.combine.map((d, i) => (
               <div key={d.id} className={`cr-drill${d.score == null ? ' is-wait' : ''}`} style={{ '--d': `${80 + i * 70}ms` }}>
@@ -430,7 +453,7 @@ function Lineup({ c }) {
       <div className="ag-card-head"><span className="ag-eyebrow">{c.fit?.name?.toUpperCase()} · {S.isBucket ? 'STARTING FIVE' : S.side?.[c.pos] === 'def' ? 'STARTING DEFENSE' : 'STARTING OFFENSE'}</span><span className={`crl-role${dc.starter ? ' is-on' : ''}`}>{S.isBucket ? (dc.starter ? 'STARTER' : 'BENCH') : `${dc.starter ? 'STARTER' : 'BACKUP'} · ${dc.label}`}</span></div>
       {S.side?.[c.pos] === 'def' ? (
         // the defense, seen from behind it: the four down linemen on the line, a corner
-        // out wide on each side and the safeties deep (the game has no linebackers)
+        // out wide on each side, the linebackers behind the line and the safeties deep
         <div className="crl-field crl-form crl-form--def">
           {(() => {
             const dl = L.dl ?? [], edges = dl.filter(p => p.slot === 'edge'), dts = dl.filter(p => p.slot === 'dt')
@@ -439,6 +462,7 @@ function Lineup({ c }) {
             const cbs = db.filter(p => p.slot === 'cb'), ss = db.filter(p => p.slot === 's')
             while (cbs.length > 2) ss.push(cbs.pop()); while (ss.length > 2) cbs.push(ss.pop())
             const front = [cbs[0], edges[0], dts[0], dts[1], edges[1], cbs[1]]
+            const lbs = L.lb ?? [], back = lbs.length ? 3 : 2
             const tight = front.some(p => p && (p.you ? c.name : nick(p.name)).length > 8)
             return <>
               <i className="crl-los" />
@@ -448,8 +472,11 @@ function Lineup({ c }) {
               <At p={dts[1]} slot="DT2" col={4} row={1} low={tight} />
               <At p={edges[1]} slot="REDGE" col={5} row={1} />
               <At p={cbs[1]} slot="CB" col={6} row={1} edge="r" low={tight} />
-              <At p={ss[0]} slot="S" col={2} row={2} />
-              <At p={ss[1]} slot="S" col={5} row={2} />
+              <At p={lbs[1]} slot="WILL" col={2} row={2} />
+              <At p={lbs[0]} slot="MIKE" col="3 / 5" row={2} />
+              <At p={lbs[2]} slot="SAM" col={5} row={2} />
+              <At p={ss[0]} slot="S" col={2} row={back} />
+              <At p={ss[1]} slot="S" col={5} row={back} />
             </>
           })()}
         </div>
@@ -886,16 +913,16 @@ function Moves({ c, setCareer, forced }) {
   )
 }
 function Camp({ c, setCareer }) {
-  const game = useMemo(() => pickPlayoffGame(c.pos, `${c.seed}-camp-${c.year}`), [c.seed, c.year, c.pos])
+  const game = useMemo(() => pickPlayoffGame(c.pos, `${c.seed}-camp-${c.year}`, [], gamesMode(c) === 'simple' ? g => !!SIMPLE_GAMES[g] : null), [c.seed, c.year, c.pos]) // eslint-disable-line
   const done = c.off?.camp
   return (
     <div className="ag-card cr-camp ag-pop">
-      <span className="ag-eyebrow">TRAINING CAMP · {GAMES[game]?.title}</span>
+      <span className="ag-eyebrow">TRAINING CAMP · {gameTitle(c, game)}</span>
       {done
         ? <p className="cr-note">{(done.won ?? done.bonus) ? <>Won the drill in front of the coaches: <span className="gain">+{done.legacy ?? 0} <LegacyIco /> legacy</span>{done.bonus ? ', and +1 development point.' : '. No development point this time.'}</> : 'Lost the drill. Nothing this year.'}</p>
         : <>
             <p className="cr-note">One hard drill in front of the coaching staff. Win it for <span className="gain">+{CAMP_LEGACY} <LegacyIco /> legacy</span> and a shot at a development point (the cleaner the win, the better the shot).</p>
-            <MiniGame retry sim={!!c.simGames} onSkipAll={() => setCareer({ ...c, simGames: true })} team={c.fit} opp={c.fit} pos={combinePos(c)} cast={gameCast(c)} key={game} game={game} build={c.build} hard seed={`${c.seed}-camp-${c.year}`} lock={`${c.seed}-camp-${c.year}`} onDone={res => setCareer(campDrill(c, res.score, game, res.hit))} />
+            <CareerGame c={c} setCareer={setCareer} retry team={c.fit} opp={c.fit} pos={combinePos(c)} cast={gameCast(c)} key={game} game={game} build={c.build} hard seed={`${c.seed}-camp-${c.year}`} lock={`${c.seed}-camp-${c.year}`} onDone={res => setCareer(campDrill(c, res.score, game, res.hit))} />
           </>}
       {c.dev.points > 0 && <div className="cr-devnote"><IconStar size={14} /> <b>{c.dev.points}</b> development {c.dev.points === 1 ? 'point' : 'points'}: tap a trait on the player above to raise it.</div>}
     </div>
@@ -921,17 +948,21 @@ function Contract({ c, setCareer }) {
   )
 }
 
-// The dashboard's Mini Games switch: play the key moments and camp drills, or have them simulated
+// The dashboard's Mini Games choice (the one made on the New Career screen, still changeable):
+// SIMPLE, ADVANCED or OFF for the key moments, camp drills and the combine. PRACTICE opens the lab
 function GamesSwitch({ c, setCareer }) {
-  const games = !c.simGames
-  const flip = () => { setCareer({ ...c, simGames: games }); sfx('tap') }
+  const mode = gamesMode(c)
   return (
-    <div className="cr-gamesw" role="switch" tabIndex={0} aria-checked={games} onClick={flip} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); flip() } }}>
-      <span><b>KEY MOMENTS MINI GAMES</b><small>{games ? 'On: play them yourself' : "Off: simulated from this player's grades"}</small></span>
-      <span className="cr-gamesw-end">
-        <button className="cr-gamesw-practice" onClick={e => { e.stopPropagation(); sfx('tap'); window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'mglab' })) }}>PRACTICE <IconArrow size={12} /></button>
-        <span className={`ag-switch${games ? ' is-on' : ''}`} aria-hidden="true"><span /></span>
-      </span>
+    <div className="cr-gamesw cr-gamesw--3">
+      <div className="cr-gamesw-top">
+        <span><b>KEY MOMENTS MINI GAMES</b></span>
+        <button className="cr-gamesw-practice" onClick={() => { sfx('tap'); window.dispatchEvent(new CustomEvent('bap:nav', { detail: 'mglab' })) }}>PRACTICE <IconArrow size={12} /></button>
+      </div>
+      <div className="cr-pos cr-games" role="radiogroup" aria-label="Mini games" style={{ '--n': GAMES_MODES.length }}>
+        {GAMES_MODES.map(([m, label]) => (
+          <button key={m} type="button" role="radio" aria-checked={mode === m} className={mode === m ? 'is-on' : ''} onClick={() => { if (m !== mode) { setCareer(setGamesMode(c, m)); sfx('tap') } }}>{label}<small>{GAMES_WHAT[m]}</small></button>
+        ))}
+      </div>
     </div>
   )
 }
@@ -974,12 +1005,24 @@ const SEASON_COLS = {
   wr: ['recs', 'recYds', 'ypr', 'tds'], te: ['recs', 'recYds', 'ypr', 'tds'],
   db: ['tackles', 'tfl', 'ints', 'pbus', 'ff', 'pickSixes'],
   dl: ['sacks', 'tfl', 'tackles', 'qbHits', 'ff', 'fr', 'pbus', 'safeties'],
+  lb: ['tackles', 'tfl', 'sacks', 'qbHits', 'pds', 'ints', 'ff', 'fr'],
   guard: ['ppg', 'rpg', 'apg', 'spg', 'bpg'], big: ['ppg', 'rpg', 'apg', 'spg', 'bpg'],
 }
 const COL_LABEL = { tfl: 'TFL', ff: 'FF' }
 const gamesIn = s => s.stats.gp ?? (s.wins + s.losses - (s.missed ?? 0))
+// a season's hardware, in words
+const honorsOf = (s, S, pos) => [
+  s.champion && `${S.final} champion`,
+  s.award && (AWARD_NAME[pos] ?? 'Season award'),
+  s.fmvp && `${S.final} MVP`,
+  s.roy && 'Rookie of the Year',
+  s.allPro ? (S.isBucket ? 'All-NBA' : 'All-Pro') : s.proBowl ? (S.isBucket ? 'All-Star' : 'Pro Bowl') : null,
+].filter(Boolean)
 function SeasonTable({ c, t }) {
   const S = sportOf(c)
+  // tap a year to open its numbers
+  const [open, setOpen] = useState(null)
+  const flip = y => { setOpen(o => (o === y ? null : y)); sfx('tap') }
   const cols = (SEASON_COLS[c.pos] ?? HEADLINE_STATS[c.pos]).filter(k => c.seasons.some(s => s.stats[k] != null))
   // a rate over the career: weighted by games, as the seasons carry no attempts to divide by
   const career = k => {
@@ -996,16 +1039,27 @@ function SeasonTable({ c, t }) {
             <tr><th scope="col">SEASON</th><th scope="col">TEAM</th><th scope="col">GP</th><th scope="col">W-L</th>{cols.map(k => <th key={k} scope="col">{STAT_LABEL[k] ?? COL_LABEL[k] ?? k.toUpperCase()}</th>)}<th scope="col" aria-label="Honors" /></tr>
           </thead>
           <tbody>
-            {c.seasons.map(s => (
-              <tr key={s.year} className={s.champion ? 'is-ring' : ''}>
-                <th scope="row">{s.season}</th>
+            {c.seasons.map(s => [
+              <tr key={s.year} className={`cr-seasons-row${s.champion ? ' is-ring' : ''}${open === s.year ? ' is-open' : ''}`}
+                tabIndex={0} aria-expanded={open === s.year} onClick={() => flip(s.year)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); flip(s.year) } }}>
+                <th scope="row"><IconArrow size={10} className="cr-seasons-chev" />{s.season}</th>
                 <td className="cr-seasons-team"><img src={S.logo(s.team)} alt="" loading="lazy" />{s.team}</td>
                 <td>{gamesIn(s)}</td>
                 <td>{s.wins}-{s.losses}</td>
                 {cols.map(k => <td key={k}>{fmt(s.stats[k])}</td>)}
                 <td className="cr-seasons-ico">{s.champion && <IconRing size={13} />}{s.award && <IconTrophy size={13} />}{s.allPro ? <IconMedal size={13} /> : s.proBowl ? <IconStar size={13} /> : null}</td>
-              </tr>
-            ))}
+              </tr>,
+              open === s.year && (
+                <tr key={`${s.year}-more`} className="cr-seasons-more">
+                  <td colSpan={cols.length + 5}>
+                    <div className="cr-seasons-detail">
+                      {honorsOf(s, S, c.pos).length > 0 && <p className="cr-seasons-honors">{honorsOf(s, S, c.pos).join(' · ')}</p>}
+                      <Analytics c={c} s={s} />
+                    </div>
+                  </td>
+                </tr>
+              ),
+            ])}
           </tbody>
           <tfoot>
             <tr><th scope="row">CAREER</th><td /><td>{t.games}</td><td>{t.wins}-{t.losses}</td>{cols.map(k => <td key={k}>{fmt(career(k))}</td>)}<td /></tr>
@@ -1296,7 +1350,8 @@ function Playoffs({ c, setCareer, onBook }) {
   const rd = po.rounds[po.idx]
   const last = po.line[po.line.length - 1]
   const [step, setStep] = useState(po.stage === 'done' ? 'result' : last && !rd?.played && po.line.length ? 'result' : 'card')
-  const game = useMemo(() => pickMomentGame(c.pos, `${c.seed}-${c.year}-${po.idx}`, po.line.map(x => x.game).filter(Boolean)), [c.seed, c.year, po.idx]) // eslint-disable-line
+  // (Simple mode only deals the games with a quick version)
+  const game = useMemo(() => pickMomentGame(c.pos, `${c.seed}-${c.year}-${po.idx}`, po.line.map(x => x.game).filter(Boolean), gamesMode(c) === 'simple' ? g => !!SIMPLE_GAMES[g] : null), [c.seed, c.year, po.idx]) // eslint-disable-line
   const sit = useMemo(() => momentSituation(game, `${c.seed}-${c.year}-${po.idx}`, { us: c.team, them: rd?.opp }), [c.seed, c.year, po.idx, game]) // eslint-disable-line
   const landIt = Math.round(momentOdds(rd?.p ?? 0.5, true, 0.75, momentRound(po)) * 100), missIt = Math.round(momentOdds(rd?.p ?? 0.5, false, 0.75, momentRound(po)) * 100)
   if (po.stage === 'done' || step === 'result') {
@@ -1328,7 +1383,7 @@ function Playoffs({ c, setCareer, onBook }) {
   if (step === 'game') return (
     <div className="cr-po">
       <div className="cr-po-head"><span className="ag-eyebrow">{rd.name.toUpperCase()} · vs {rd.oppName.toUpperCase()}</span><small className="cr-po-stakes">{sit.line}{sit.tail ? ` ${sit.tail}` : ''} Land it: about {landIt}% to win. Miss it: about {missIt}%.</small></div>
-      <MiniGame home={rd.home === false ? 'opp' : 'team'} superBowl={c.sport !== 'bucket' && rd.name === 'Super Bowl' ? romanOf((c.season ?? 2026) - 1965) : null} retry sim={!!c.simGames} onSkipAll={() => setCareer({ ...c, simGames: true })} team={c.fit} pos={combinePos(c)} opp={sportOf(c).teamOf(rd.opp)} cast={gameCast(c, rd.opp)} situation={sit} key={`${po.idx}-${game}`} game={game} build={c.build} seed={`${c.seed}-${c.year}-${po.idx}`} lock={`${c.seed}-${c.year}-${po.idx}`} onDone={res => { setCareer(playoffRound(c, res.score, game, res.hit)); setStep('result') }} />
+      <CareerGame home={rd.home === false ? 'opp' : 'team'} superBowl={c.sport !== 'bucket' && rd.name === 'Super Bowl' ? romanOf((c.season ?? 2026) - 1965) : null} retry c={c} setCareer={setCareer} team={c.fit} pos={combinePos(c)} opp={sportOf(c).teamOf(rd.opp)} cast={gameCast(c, rd.opp)} situation={sit} key={`${po.idx}-${game}`} game={game} build={c.build} seed={`${c.seed}-${c.year}-${po.idx}`} lock={`${c.seed}-${c.year}-${po.idx}`} onDone={res => { setCareer(playoffRound(c, res.score, game, res.hit, res.raw?.pts ?? null)); setStep('result') }} />
     </div>
   )
   return (

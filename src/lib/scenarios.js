@@ -39,6 +39,7 @@ import { gameMoment } from './gameMoments'
 import { NBA_GUARD_PLAYERS } from '../data/nba-guards'
 import { NBA_BIG_PLAYERS } from '../data/nba-bigs'
 import { DLS, passRush } from '../data/dls'
+import { LBS } from '../data/lbs'
 import { WRS } from '../data/wrs'
 import { TES } from '../data/tes'
 import { OLS, olOVR } from '../data/ols'
@@ -105,6 +106,7 @@ const ROLE = {
   te:    { legs: ['speed'], feel: ['routeRunning', 'hands'], mind: ['awareness'], nerve: ['hands'], power: ['blocking', 'strength'], make: ['afterCatch'] },
   db:    { legs: ['speed', 'fluidity'], feel: ['manCoverage'], mind: ['zoneIQ', 'playRecognition'], nerve: ['playRecognition'], power: ['runSupport', 'press'], make: ['hands'] },
   dl:    { legs: ['getOff', 'speed', 'bend'], feel: ['finesseMoves', 'powerMoves'], mind: ['playRecognition'], nerve: ['playRecognition'], power: ['strength', 'blockShed'], make: ['bend', 'finesseMoves', 'powerMoves'] },
+  lb:    { legs: ['range'], feel: ['zoneInstincts', 'tackling'], mind: ['playRecognition'], nerve: ['leadership'], power: ['power', 'blockShed'], make: ['passRush', 'zoneInstincts'] },
   ol:    { legs: ['mobility'], feel: ['passPro'], mind: ['blitzPickup', 'discipline'], nerve: ['discipline'], power: ['anchor', 'runBlock'], make: ['pancake'] },
   guard: { legs: ['speed', 'bounce'], feel: ['jumpShot'], mind: ['basketballIQ'], nerve: ['clutch'], power: ['finishing'], make: ['handles', 'passing'] },
   big:   { legs: ['bounce', 'speed'], feel: ['finishing'], mind: ['basketballIQ'], nerve: ['clutch'], power: ['rebounding', 'interiorDefense'], make: ['playmaking'] },
@@ -159,6 +161,13 @@ const INJURIES = {
     { name: 'Broken hand, playing in a club', hit: { finesseMoves: -3, blockShed: -2 }, out: 2, hurt: 5 },
     { name: 'Turf toe', hit: { getOff: -3, bend: -2 }, out: 2, hurt: 4 },
     { name: 'Back spasms', hit: { strength: -2, powerMoves: -2 }, out: 1, hurt: 3 },
+  ],
+  lb: [
+    { name: 'Hamstring strain', hit: { range: -3, passRush: -1 }, out: 2, hurt: 4 },
+    { name: 'High ankle sprain', hit: { range: -3, tackling: -1 }, out: 3, hurt: 4 },
+    { name: 'Stinger', hit: { power: -2, tackling: -2, blockShed: -1 }, out: 1, hurt: 3 },
+    { name: 'Sprained shoulder', hit: { tackling: -3, blockShed: -2 }, out: 2, hurt: 4 },
+    { name: 'MCL sprain', hit: { range: -3, power: -1 }, out: 3, hurt: 5 },
   ],
   ol: [
     { name: 'Knee sprain', hit: { mobility: -3, anchor: -2 }, out: 3, hurt: 4 },
@@ -220,7 +229,7 @@ export function phaseOf(stop) {
 
 function context({ sport, pos, stop, ctx, build, types, attrMap, teamNick, name, seed, team, lastBig, lastBust, deals = null }) {
   const isBucket = sport === 'bucket'
-  const onDef = pos === 'db' || pos === 'dl'
+  const onDef = pos === 'db' || pos === 'dl' || pos === 'lb'
   const k = ctx.games.length, total = stop.total, left = total - k
   const { wins, losses, streak, skid } = ctx
   const pace = k ? (wins / k) * total : 0
@@ -381,7 +390,7 @@ const QB = [
         o('fight', 'Fight for the job in practice', gam(0.5, {}, 'You win the room back. You start Sunday.', { sit: 3, tag: 'BENCHED' }, 'The coach doesn\'t budge. Three weeks on the bench.')),
       ] }) },
 ]
-const RB = [], WR = [], TE = [], DB = [], OL = []
+const RB = [], WR = [], TE = [], DB = [], OL = [], LB = []
 // The line's own season. Real choices up front: a slide coming your way, a snap count on film,
 // an early-down job that costs sacks, your weight in December, a coordinator on the way out.
 const DL = [
@@ -424,8 +433,11 @@ const DL = [
 // A Career's deadline (football): two real players who'd start, from other teams,
 // a weapon and a lineman for an offense, a corner and a safety for a DB. The one
 // picked joins the roster (career.js), and the fine print is what that does to the team.
+const LB_TARGETS = d => LBS.map(p => ({ ...p, group: 'lb', role: 'linebacker', ovr: d.ovr('lb', p) })).sort((a, b) => b.ovr - a.ovr)
 function careerDeadline(c, d) {
-  const lists = c.pos === 'dl'
+  const lists = c.pos === 'lb'
+    ? [LB_TARGETS(d), DLS.filter(p => p.subpos !== 'dt').map(p => ({ ...p, group: 'dl', role: 'edge rusher', ovr: d.ovr('dl', p) })).sort((a, b) => b.ovr - a.ovr)]
+    : c.pos === 'dl'
     ? ['edge', 'dt'].map(sp => DLS.filter(p => p.subpos === sp).map(p => ({ ...p, group: 'dl', role: sp === 'dt' ? 'defensive tackle' : 'edge rusher', ovr: d.ovr('dl', p) })).sort((a, b) => b.ovr - a.ovr))
     : c.isDef
     ? ['cb', 's'].map(sp => DBS.filter(p => (p.subpos === 's' ? 's' : 'cb') === sp).map(p => ({ ...p, group: 'db', role: sp === 's' ? 'safety' : 'corner', ovr: d.ovr('db', p) })).sort((a, b) => b.ovr - a.ovr))
@@ -434,7 +446,7 @@ function careerDeadline(c, d) {
   const b = dealTarget(c.r, lists[1], c.team, { ok: d.ok, not: a?.name })
   if (!a || !b) return null
   const from = p => p.teamName ?? p.team
-  const joins = p => (p.group === 'ol' ? `${last(p.name)} takes over at ${p.pos} the rest of the way.` : p.group === 'db' || p.group === 'dl' ? `${last(p.name)} lines up at ${p.role} the rest of the way.` : `${last(p.name)} is a new target at ${p.role} the rest of the way.`)
+  const joins = p => (p.group === 'ol' ? `${last(p.name)} takes over at ${p.pos} the rest of the way.` : p.group === 'db' || p.group === 'dl' || p.group === 'lb' ? `${last(p.name)} lines up at ${p.role} the rest of the way.` : `${last(p.name)} is a new target at ${p.role} the rest of the way.`)
   return { kicker: 'TRADE DEADLINE', title: 'The GM has one pick to spend',
     body: `${c.nick} are buying, and there's one pick to spend. Two calls are live: ${a.name} from the ${from(a)} or ${b.name} from the ${from(b)}. The GM asks the leaders.`,
     options: [
@@ -506,7 +518,7 @@ const NBA_PLAYOFFS = [
 ]
 
 const BANK = {
-  nfl: { all: [...NFL_ALL, ...INJURY], qb: QB, rb: RB, wr: WR, te: TE, db: DB, dl: DL, ol: OL, playoffs: [...NFL_PLAYOFFS, ...PO_INJURY] },
+  nfl: { all: [...NFL_ALL, ...INJURY], qb: QB, rb: RB, wr: WR, te: TE, db: DB, dl: DL, lb: LB, ol: OL, playoffs: [...NFL_PLAYOFFS, ...PO_INJURY] },
   bucket: { all: [...NBA_ALL, ...INJURY.filter(s => s.id !== 'concussion')], guard: GUARD, big: BIG, playoffs: [...NBA_PLAYOFFS, ...PO_INJURY] },
 }
 // How many scenarios each position can draw from (for the record)

@@ -15,9 +15,23 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 // going back and picking another year doesn't get round it. The birthday isn't saved.
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
 const THIS_YEAR = new Date().getFullYear()
-const YEARS = Array.from({ length: 90 }, (_, i) => THIS_YEAR - i)
+// The list starts 5 years back, not at this year: a phone's year wheel opens on the first year and
+// closing it picks that one, so one tap of Done answered "born this year" and locked the device out
+// for good. Every under-13 year is still on the list (the question stays neutral).
+const YEARS = Array.from({ length: 90 }, (_, i) => THIS_YEAR - 5 - i)
 const U13_KEY = 'bap_u13'
-const isU13Device = () => { try { return localStorage.getItem(U13_KEY) === '1' } catch { return false } }
+// The lock holds for a day: a misclick doesn't shut a device out for good, and a real 12-year-old
+// can't just answer again straight away. (It's saved as the time it was set; the old '1' from
+// before this, which never ran out, is treated as run out, so those devices get back in.)
+const U13_MS = 24 * 60 * 60 * 1000
+const isU13Device = () => {
+  try {
+    const at = Number(localStorage.getItem(U13_KEY))
+    if (at > 1 && Date.now() - at < U13_MS) return true
+    localStorage.removeItem(U13_KEY)
+    return false
+  } catch { return false }
+}
 const under13 = (m, y) => {
   const now = new Date()
   const age = now.getFullYear() - y - (now.getMonth() < m ? 1 : 0)
@@ -42,7 +56,7 @@ export default function AuthModal({ onClose, onAuth }) {
     if (blocked) return false
     if (bMonth === '' || bYear === '') { setError('Please enter your birthday.'); return false }
     if (under13(Number(bMonth), Number(bYear))) {
-      try { localStorage.setItem(U13_KEY, '1') } catch {}
+      try { localStorage.setItem(U13_KEY, String(Date.now())) } catch {}
       setBlocked(true); setError(null)
       return false
     }

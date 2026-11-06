@@ -220,8 +220,8 @@ const NFL = {
   },
   db: {
     protect: (c, g, m) => {
-      const jump = odds(c, 0.26, ['hands', 'playRecognition', 'manCoverage'])
-      const safe = odds(c, 0.56, ['zoneIQ', 'manCoverage', 'runSupport'])
+      const jump = odds(c, 0.26, ['hands', 'playRecognition', 'manCoverage', 'zoneInstincts'])
+      const safe = odds(c, 0.56, ['zoneIQ', 'manCoverage', 'runSupport', 'zoneInstincts', 'range'])
       const ls = [g.mySc, g.mySc + (7 - m)]
       const bigPlay = 0.8                  // jump it and miss: usually a big play
       return {
@@ -243,8 +243,8 @@ const NFL = {
       }
     },
     comeback: (c, g, d) => {
-      const strip = odds(c, 0.22, ['runSupport', 'hands'])
-      const stop = odds(c, 0.5, ['runSupport', 'zoneIQ', 'playRecognition'])
+      const strip = odds(c, 0.22, ['runSupport', 'hands', 'tackling', 'power'])
+      const stop = odds(c, 0.5, ['runSupport', 'zoneIQ', 'playRecognition', 'tackling'])
       const team = teamScore(c), my = g.mySc + 7
       return {
         title: `Down ${d}, they're running out the clock`,
@@ -362,8 +362,8 @@ const DL_PROTECT = {
   },
   // A goal-line stand: first and goal, four cracks at it. Anchor, or shoot the gap
   goal: (c, g, m) => {
-    const anchor = odds(c, 0.48, ['strength', 'blockShed', 'powerMoves'])
-    const shoot = odds(c, 0.36, ['getOff', 'playRecognition', 'finesseMoves'])
+    const anchor = odds(c, 0.48, ['strength', 'blockShed', 'powerMoves', 'power', 'tackling'])
+    const shoot = odds(c, 0.36, ['getOff', 'playRecognition', 'finesseMoves', 'range'])
     const ls = [g.mySc, g.mySc + (7 - m)]
     return {
       title: `Up ${m}, first and goal at the 2`,
@@ -384,8 +384,8 @@ const DL_PROTECT = {
 const DL_COMEBACK = {
   // Fourth and short: they're going for it to end the game, and one stop gets the ball back
   fourth: (c, g, d) => {
-    const stuff = odds(c, 0.5, ['blockShed', 'strength', 'playRecognition'])
-    const shoot = odds(c, 0.36, ['getOff', 'finesseMoves', 'playRecognition'])
+    const stuff = odds(c, 0.5, ['blockShed', 'strength', 'playRecognition', 'power', 'tackling'])
+    const shoot = odds(c, 0.36, ['getOff', 'finesseMoves', 'playRecognition', 'range'])
     const team = teamScore(c), my = g.mySc + 7
     return {
       title: `Down ${d}, 4th and 1`,
@@ -431,6 +431,11 @@ NFL.dl = {
   // (a safety only turns it when two points and a field goal are enough)
   comeback: (c, g, d) => (d <= 2 && c.r() < 0.5 ? DL_COMEBACK.safety : DL_COMEBACK.fourth)(c, g, d),
 }
+// A linebacker: the DB's coverage moments half the time, the line's goal-line and fourth-down stands the rest
+NFL.lb = {
+  protect: (c, g, m) => (c.r() < 0.5 ? NFL.db.protect : DL_PROTECT.goal)(c, g, m),
+  comeback: (c, g, d) => (c.r() < 0.5 ? NFL.db.comeback : DL_COMEBACK.fourth)(c, g, d),
+}
 
 // The rest: a lopsided game, nothing to decide but your own stat line (and your body)
 function blowout(c, g, ahead) {
@@ -444,6 +449,7 @@ function blowout(c, g, ahead) {
     te: { rec: 2, recYds: rr(c, 22, 40), targets: 3 },
     db: { tackles: 3, pbus: 1 },
     ol: { pancakes: 2 },
+    lb: { tackles: 5, tfl: c.r() < 0.4 ? 1 : 0 },
   }[pos] ?? (pos === 'dl' ? (c.r() < 0.4 ? { tackles: 3, qbHits: 2, sacks: 1, tfl: 1 } : { tackles: 3, qbHits: 1 }) : {})
   const keepGoing = !ahead && pos === 'qb'
   const stayLabel = ahead ? 'Stay in, pad the numbers' : keepGoing ? 'Keep slinging it' : 'Stay in and play it out'

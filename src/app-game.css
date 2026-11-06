@@ -497,9 +497,15 @@ html[data-spot="holo"] .ag-avatar { background: linear-gradient(135deg, #8ff7ff,
 /* (these figures are drawn larger about their centre, STACK_MASK: the words stay the same size as everyone's) */
 .ag-figure--wr .splash-stack-band-label, .ag-figure--te .splash-stack-band-label { font-size: calc(11px / 1.18); }
 .ag-figure--db .splash-stack-band-label { font-size: calc(11px / 1.05); }
+/* (these figures are drawn larger about their centre, STACK_MASK: the words stay the same size as everyone's) */
+.ag-figure--wr .splash-stack-band-label, .ag-figure--te .splash-stack-band-label { font-size: calc(11px / 1.18); }
+.ag-figure--db .splash-stack-band-label { font-size: calc(11px / 1.05); }
 /* DL: the arm out to the left pushes his head and body right of the art's centre: line the body up over the platform, and the words on the body */
 .ag-figure--dl { left: calc(50% - 9px); }
 .ag-figure--dl .splash-stack-band-label { transform: translateX(9px); }
+/* LB is on the DL figure for now */
+.ag-figure--lb { left: calc(50% - 9px); }
+.ag-figure--lb .splash-stack-band-label { transform: translateX(9px); }
 .ag-figure-base {
   position: absolute; inset: 0;
   width: 100%; height: 100%;
@@ -3881,7 +3887,11 @@ html.app-look .navbar .nav-sound-btn.is-off, .ag-sound-btn { opacity: 1 !importa
 /* Reduce motion (Settings), same as the phone's own setting */
 html.bap-reduce-motion *, html.bap-reduce-motion *::before, html.bap-reduce-motion *::after {
   animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important;
+  /* the costly paint: frosted glass blurs what's behind it on every scroll, and layers held in memory for animations that no longer run */
+  -webkit-backdrop-filter: none !important; backdrop-filter: none !important; will-change: auto !important;
 }
+/* glass gone, the cards get a solid enough backing to stay readable */
+html.bap-reduce-motion :is(.ag-card, .ag-sheet, .ag-menu, .ag-dock, .ag-tabbar, .ag-toast, .ag-screen-head) { background-color: rgba(10, 14, 12, .94); }
 /* Blacktop chat: the rules, agreed to once */
 .bt-rules { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--ag-line-hi); background: rgba(0,0,0,.35); }
 .bt-rules > b { font-family: var(--ag-font); font-weight: 400; font-size: 18px; letter-spacing: 2px; }
@@ -6193,7 +6203,10 @@ html:is(.is-app, .app-look) .dc-submit-btn--err { background: #7f1d1d !important
 html.app-look:not(.is-app) .sc-screen { height: 100dvh; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-bottom: calc(var(--web-rail, 0px) + 20px); }
 html.app-look:not(.is-app) .sc-screen > * { flex-shrink: 0; }   /* the board keeps its size; the screen scrolls */
 html.app-look:not(.is-app) .sc-grid-wrap { flex: 0 0 auto; overflow: visible; }
-html.app-look:not(.is-app) .sc-footer { padding-bottom: 12px; bottom: 0; }   /* a sticky bar already keeps inside the padding above, which clears the rail */
+/* Back / Lock In stay pinned just above the rail at every width (a laptop's sat under the
+   board, below the fold, under the rail). bottom: 0 is right: a sticky bar keeps inside the
+   screen's padding, and that padding is the rail's height + 20px */
+html.app-look:not(.is-app) .sc-footer { position: sticky; bottom: 0; z-index: 6; margin: 0; padding-top: 10px; padding-bottom: 12px; background: #070b0a; }
 html.app-look:not(.is-app) .dc-screen { padding-bottom: calc(var(--web-rail, 0px) + 24px); }
 
 /* The build screen's right panel has the left panel's background: its own 18px lines over the page's 80px ones read as a jumble */
@@ -6457,13 +6470,58 @@ html:is(.is-app, .app-look) .qb-reveal-year { color: rgba(255,255,255,.8) !impor
   html:is(.is-app, .app-look) .tab-pill-salary { font-size: 13px !important; letter-spacing: 1.4px !important; padding: 5px 10px !important; height: auto !important; min-height: 0 !important; line-height: 1.2 !important; white-space: nowrap; }
 }
 
-/* Desktop spin panel: the attribute buttons share the room there is, down to a floor, so all of them show at once.
-   Past the floor (a very short window) the panel still scrolls. */
+/* (Desktop spin panel: the Nov 5 squeeze that shrank the attribute buttons to share the panel's height is reverted.
+   They're back to the 44px cards with the 34px grade badge, and the panel scrolls.) */
+/* Desktop website build screen: the footer under it no longer rides up over its bottom 50px, where it covered the
+   last report-card grades and the last attribute buttons. It starts where the build screen ends. */
 @media (min-width: 769px) {
-  html.app-look:not(.is-app):not(.is-tablet) .spin-panel-scroll { display: flex; flex-direction: column; gap: 2px; padding-bottom: 54px; }   /* (the footer overlaps the bottom 50px) */
-  html.app-look:not(.is-app):not(.is-tablet) .spin-panel-scroll .attr-category-section { display: contents; }
-  html.app-look:not(.is-app):not(.is-tablet) .spin-panel-scroll .attr-category-hd { flex: none; margin: 0; }
-  html.app-look:not(.is-app):not(.is-tablet) .spin-panel-scroll .attr-chip { flex: 1 1 0; min-height: 20px; max-height: 44px; padding-top: 1px; padding-bottom: 1px; }
-  html.app-look:not(.is-app):not(.is-tablet) .spin-panel-scroll .attr-chip .chip-photo { width: 22px; height: 22px; }
-  html.app-look:not(.is-app):not(.is-tablet) .spin-panel-scroll .attr-chip .chip-val { width: 24px !important; height: 17px !important; min-width: 24px !important; font-size: 13px !important; border-radius: 6px !important; }
+  html.app-look:not(.is-app) .build-footer-section { margin-top: 0; }
+  /* and the report card's last grades scroll up clear of the bottom ad rail */
+  html.app-look:not(.is-app):not(.is-tablet) .build-slots { padding-bottom: calc(11px + var(--web-rail, 0px)); }
+}
+
+/* Compete and Blacktop: how many are waiting in each queue right now (lib/liveCounts.js), only when someone is */
+.cp-pos .ag-pos:has(.cp-pos-n) { gap: 1px; padding-top: 4px; padding-bottom: 4px; }
+.cp-pos-n { font-family: var(--ag-body); font-size: 10px; font-weight: 700; letter-spacing: .6px; line-height: 1; color: #a3e635; white-space: nowrap; }
+.bt-mode-n { flex: none; margin-left: auto; align-self: flex-start; font-family: var(--ag-font); font-size: 13px; letter-spacing: 1px; line-height: 1.2; color: #a3e635; white-space: nowrap; }
+
+/* Career: the mini games mode (SIMPLE | ADVANCED | OFF), on the New Career form and the career screen */
+.cr-games-label { margin-top: 2px; }
+.cr-games button { font-size: 17px; height: auto; min-height: 56px; padding: 8px 4px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; line-height: 1; }
+/* each mode's line, under its name: always there, in the label face */
+.cr-games button small { font-family: var(--ag-font); font-size: 12px; letter-spacing: 1px; text-transform: uppercase; color: var(--ag-text-2); opacity: .9; }
+.cr-games button.is-on small { color: inherit; opacity: .85; }
+.cr-games-what { margin-top: -2px; font-family: var(--ag-font); font-size: 15px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--ag-text); }
+.cr-gamesw--3 { flex-direction: column; align-items: stretch; gap: 8px; cursor: default; }
+.cr-gamesw-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.cr-gamesw--3 .cr-games button { min-height: 50px; font-size: 16px; }
+
+/* the season's final banner: Anton has one weight (a 900 here was a fake bold that smeared it), set wide enough to read */
+html:is(.is-app, .app-look) .sfb-outcome { font-weight: 400 !important; font-size: 28px; letter-spacing: 1px; line-height: 1.05; }
+html:is(.is-app, .app-look) .sfb-sub { font-family: var(--ag-font); font-weight: 400; font-size: 16px; letter-spacing: 1.6px; }
+
+/* season by season: tap a year for its numbers */
+.cr-seasons-row { cursor: pointer; }
+.cr-seasons-row:hover :is(th, td) { background-color: rgba(255,255,255,.04); }
+.cr-seasons-row:focus-visible { outline: 2px solid var(--ag-a1); outline-offset: -2px; }
+.cr-seasons-chev { margin-right: 6px; vertical-align: 0; color: var(--ag-muted); transition: transform .15s; }
+.cr-seasons-row.is-open .cr-seasons-chev { transform: rotate(90deg); color: var(--ag-a1); }
+.cr-seasons-row.is-open :is(th, td) { border-bottom-color: transparent; }
+.cr-seasons tbody tr.cr-seasons-more > td { padding: 0 0 10px; text-align: left; }
+/* (the table scrolls sideways: the panel stays put at the left, the width of the card) */
+.cr-seasons-detail { position: sticky; left: 0; width: min(100vw - 56px, 560px); padding: 4px 12px 0; font-family: var(--ag-body); letter-spacing: 0; }
+.cr-seasons-honors { margin: 0 0 8px; font-family: var(--ag-font); font-size: 14px; letter-spacing: 1px; color: #f5dc8a; }
+
+/* Practice: Simple or Advanced */
+.pr-mode { margin-top: 8px; }
+.pr-stagebar--simple { border-radius: 12px; margin-bottom: 8px; }
+
+/* New Career: the section names read as headings, not fine print */
+.cr-slot--new > .ag-eyebrow { font-size: 17px; letter-spacing: 2px; color: #fff; margin-top: 4px; }
+
+/* Salary Cap on a phone: the budget gets its own line over the buttons (at the end of the row it ran off the screen) */
+@media (max-width: 768px) {
+  html:is(.is-app, .app-look) .sc-footer { flex-wrap: wrap; row-gap: 8px; }
+  html:is(.is-app, .app-look) .sc-footer .sc-budget { order: -1; width: 100%; }
+  html:is(.is-app, .app-look) .sc-footer .sc-budget-track { width: 100%; }
 }

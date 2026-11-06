@@ -24,6 +24,8 @@ const SPOTS = {
   'free-throws': { margin: [1, 1, 0], tenths: [0.8, 5.5], hoops: true, tail: 'Two shots at the line.' },
   iso: HOOP, pnr: HOOP, 'post-up': HOOP, board: { ...HOOP, tail: 'The shot goes up.' },
   'rim-protect': { margin: [-1, -2, -2], span: [6, 30], hoops: true, stop: true },
+  lockdown: { margin: [-1, -2, -2], span: [6, 24], hoops: true, stop: true },
+  'fast-break': { ...HOOP, tail: 'A steal, and they\u2019re running.' }, 'alley-oop': HOOP,
 }
 // these end in the end zone, whatever else he's short of
 const TD_GAMES = new Set(['two-minute', 'goal-line'])
@@ -50,13 +52,13 @@ const over = (n, hoops) => (hoops ? (n <= 1 ? 2 : n + 1) : n < 3 ? 3 : n <= 6 ? 
 
 // The final, from that score. won and hit are already decided; they can disagree (he lands it and
 // they still lose, he misses and they still win), so note says how: { mine, opp, note }.
-export function finalScore(sit, game, won, hit, seed = 'x') {
+export function finalScore(sit, game, won, hit, seed = 'x', pts = null) {
   const r = seeded(`sitf-${seed}-${game}`)
   const { hoops, them } = sit
   const need = sit.opp - sit.mine
   let mine = sit.mine, opp = sit.opp, note = null
   // what landing it put on the board
-  const play = game === 'clutch-shot' ? 3 : game === 'free-throws' ? 2 : TD_GAMES.has(game) ? over(need, false) : need < 0 ? 0 : over(need, hoops)
+  const play = game === 'clutch-shot' ? pts ?? 3 : game === 'free-throws' ? 2 : TD_GAMES.has(game) ? over(need, false) : need < 0 ? 0 : over(need, hoops)
   if (won) {
     if (hit) mine += play
     else if (need < 0) { if (hoops ? -need >= 2 : -need > 3) opp += hoops ? 1 : 3; note = `${them} couldn't finish it.` }

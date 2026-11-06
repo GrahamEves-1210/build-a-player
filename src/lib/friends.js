@@ -133,7 +133,7 @@ export async function loadPublicProfile(id) {
       .then(r => r.data ?? [], () => []),
     supabase.from('vs_results').select('result').eq('user_id', id).then(r => r.data ?? [], () => []),
     ratingOf(id),
-    countOf(base().eq('season_award', 'dpoy').like('game_mode', 'dl-%')),   // DL's DPOYs have no counter on accounts
+    countOf(base().eq('season_award', 'dpoy').or('game_mode.like.dl-*,game_mode.like.lb-*')),   // DL's and LB's DPOYs have no counter on accounts
   ])
   if (acct?.cos) seedCos(id, acct.cos)
   const awards = (acct ? ['classic_mvps', 'alltime_mvps', 'classic_opoys', 'alltime_opoys', 'classic_dpoys', 'alltime_dpoys']
@@ -151,7 +151,7 @@ export async function loadPublicProfile(id) {
 }
 
 // "QB · Classic", "Guard · All-Time" …
-const POS = { rb: 'RB', wr: 'WR', te: 'TE', db: 'DB', dl: 'DL', ol: 'OL' }
+const POS = { rb: 'RB', wr: 'WR', te: 'TE', db: 'DB', dl: 'DL', lb: 'LB', ol: 'OL' }
 export function modeLabel(gameMode, position) {
   const m = String(gameMode || 'classic')
   if (m.startsWith('bucket-')) {

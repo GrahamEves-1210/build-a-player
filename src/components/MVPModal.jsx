@@ -43,7 +43,7 @@ function OLAllProReveal({ mvpResult, userPhoto, userName = 'Guest' }) {
   )
 }
 
-export default function MVPModal({ result, mvpResult, onDismiss, toSuperBowl = false, nextLabel = 'Continue to Final Report', isRB = false, isWR = false, isTE = false, isDB = false, isDL = false, isOL = false, userPhoto = null, userName = 'Guest' }) {
+export default function MVPModal({ result, mvpResult, onDismiss, toSuperBowl = false, nextLabel = 'Continue to Final Report', isRB = false, isWR = false, isTE = false, isDB = false, isDL = false, isLB = false, isOL = false, userPhoto = null, userName = 'Guest' }) {
   const [phase, setPhase] = useState('loading')
   const [barWidth, setBarWidth] = useState(0)
   const [visible, setVisible] = useState(false)
@@ -63,6 +63,14 @@ export default function MVPModal({ result, mvpResult, onDismiss, toSuperBowl = f
   const dlTackles = result.seasonTackles ?? 0
   const dlQBHits  = result.seasonQBHits  ?? 0
   const dlFF      = result.seasonFF      ?? 0
+
+  // LB totals
+  const lbTackles = result.seasonTackles ?? 0
+  const lbSacks   = result.seasonSacks   ?? 0
+  const lbINTs    = result.seasonINTs    ?? 0
+  const lbTFL     = result.seasonTFL     ?? 0
+  const lbPDs     = result.seasonPDs     ?? 0
+  const lbFF      = result.seasonFF      ?? 0
 
   // OL totals
   const olSacks     = result.seasonSacksAllowed ?? 0
@@ -87,7 +95,7 @@ export default function MVPModal({ result, mvpResult, onDismiss, toSuperBowl = f
   const qbTotalYds = (seasonPassYds ?? 0) + (seasonRushYds ?? 0)
 
   const isOPOY = isRB || isWR || isTE
-  const isDPOY = isDB || isDL
+  const isDPOY = isDB || isDL || isLB
   const awardLabel    = isOL ? 'All-Pro Team' : isDPOY ? 'DPOY Award' : isOPOY ? 'OPOY Award'           : 'MVP Award'
   const awardEyebrow  = 'NFL Regular Season'
   const unanimousLbl  = isDPOY ? 'Unanimous DPOY' : isOPOY ? 'Unanimous OPOY'       : 'Unanimous MVP'
@@ -132,6 +140,18 @@ export default function MVPModal({ result, mvpResult, onDismiss, toSuperBowl = f
                   </div>
                   <div className="mvp-stat-pill">
                     <span>{olPancakes}</span><span>Pancakes</span>
+                  </div>
+                </>
+              ) : isLB ? (
+                <>
+                  <div className="mvp-stat-pill">
+                    <span>{lbTackles}</span><span>Tackles</span>
+                  </div>
+                  <div className="mvp-stat-pill">
+                    <span>{lbSacks}</span><span>Sacks</span>
+                  </div>
+                  <div className="mvp-stat-pill">
+                    <span>{lbINTs}</span><span>INTs</span>
                   </div>
                 </>
               ) : isDL ? (
@@ -209,7 +229,38 @@ export default function MVPModal({ result, mvpResult, onDismiss, toSuperBowl = f
                 <img src="/mvp.png" alt="Trophy" className="mvp-trophy-img" draggable={false} />
                 <div className="mvp-winner-name">{unanimous ? unanimousLbl : regularLbl}</div>
                 <div className="mvp-season-stats">
-                  {isDL ? (
+                  {isLB ? (
+                    <>
+                      <div className="mvp-stat-row">
+                        <span className="mvp-stat-label">Record</span>
+                        <span className="mvp-stat-val">{wins}–{losses}</span>
+                      </div>
+                      <div className="mvp-stat-row">
+                        <span className="mvp-stat-label">Tackles</span>
+                        <span className="mvp-stat-val">{lbTackles}</span>
+                      </div>
+                      <div className="mvp-stat-row">
+                        <span className="mvp-stat-label">Tackles for Loss</span>
+                        <span className="mvp-stat-val">{lbTFL}</span>
+                      </div>
+                      <div className="mvp-stat-row">
+                        <span className="mvp-stat-label">Sacks</span>
+                        <span className="mvp-stat-val">{lbSacks}</span>
+                      </div>
+                      <div className="mvp-stat-row">
+                        <span className="mvp-stat-label">Interceptions</span>
+                        <span className="mvp-stat-val">{lbINTs}</span>
+                      </div>
+                      <div className="mvp-stat-row">
+                        <span className="mvp-stat-label">Passes Defended</span>
+                        <span className="mvp-stat-val">{lbPDs}</span>
+                      </div>
+                      <div className="mvp-stat-row">
+                        <span className="mvp-stat-label">Forced Fumbles</span>
+                        <span className="mvp-stat-val">{lbFF}</span>
+                      </div>
+                    </>
+                  ) : isDL ? (
                     <>
                       <div className="mvp-stat-row">
                         <span className="mvp-stat-label">Record</span>

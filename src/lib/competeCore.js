@@ -5,7 +5,7 @@
 // so a phone can't claim a number it never drew.
 
 import { seeded, seededShuffle } from './rng'
-import { calcOVR, calcOVRRB, calcOVRWR, calcOVRTE, calcOVRDB, calcOVRDL } from '../utils/simulation'
+import { calcOVR, calcOVRRB, calcOVRWR, calcOVRTE, calcOVRDB, calcOVRDL, calcOVRLB } from '../utils/simulation'
 import { calcBucketOVR } from '../utils/bucketSimulation'
 import { QBS, TYPES } from '../data/qbs'
 import { RBS, RB_TYPES } from '../data/rbs'
@@ -13,6 +13,7 @@ import { WRS, WR_TYPES } from '../data/wrs'
 import { TES, TE_TYPES } from '../data/tes'
 import { DBS, DB_TYPES } from '../data/dbs'
 import { DLS, DL_TYPES } from '../data/dls'
+import { LBS, LB_TYPES } from '../data/lbs'
 import { NBA_GUARD_PLAYERS, GUARD_TYPES } from '../data/nba-guards'
 import { NBA_BIG_PLAYERS, BIG_TYPES } from '../data/nba-bigs'
 import { TEAMS } from '../data/nfl-teams'
@@ -21,7 +22,7 @@ import { NBA_TEAMS } from '../data/nba-teams'
 export const POOL_SIZE = 5
 export const FILL_AFTER_SECS = 60     // the countdown: starts over every time someone joins
 export const MIN_POOL = 2             // real players only; five starts at once, fewer when the countdown runs out
-export const BUILD_SECS = 300
+export const BUILD_SECS = 180          // the build clock (the live worker reads it from here too): was 300 until 11-05
 const UNKNOWN_VAL = 3                 // a slot the server can't match to a real player: a free agent
 // A pool's regular spins follow its seed (seededTeams / seededPlayer), so the server knows
 // every player they deal. Respins are each player's own draw (SpinScreen separateRespins):
@@ -29,7 +30,7 @@ const UNKNOWN_VAL = 3                 // a slot the server can't match to a real
 const OFF_SEED_MAX = 2
 const SEED_SLACK = 2                  // spins past one-a-slot that still count (a pick never placed)
 
-export const COMPETE_POS = { nfl: ['qb', 'rb', 'wr'], bucket: ['guard', 'big'] }   // TE, DB and DL pools off: not enough players to fill them
+export const COMPETE_POS = { nfl: ['qb', 'rb', 'wr'], bucket: ['guard', 'big'] }   // TE, DB, DL and LB pools off: not enough players to fill them
 const NFL = {
   qb: { pool: QBS, types: TYPES, ovr: b => calcOVR(b) },
   rb: { pool: RBS, types: RB_TYPES, ovr: b => calcOVRRB(b) },
@@ -37,6 +38,7 @@ const NFL = {
   te: { pool: TES, types: TE_TYPES, ovr: b => calcOVRTE(b) },
   db: { pool: DBS, types: DB_TYPES, ovr: b => calcOVRDB(b) },
   dl: { pool: DLS, types: DL_TYPES, ovr: b => calcOVRDL(b) },
+  lb: { pool: LBS, types: LB_TYPES, ovr: b => calcOVRLB(b) },
 }
 const BUCKET = {
   guard: { pool: NBA_GUARD_PLAYERS, types: GUARD_TYPES, ovr: b => calcBucketOVR(b, GUARD_TYPES, 'guard') },
