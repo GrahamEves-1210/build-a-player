@@ -4893,8 +4893,10 @@ html.is-android .ag-toast { background: rgba(8,12,10,.97); }
 
 /* the player: the whole screen under the bar */
 .game-layout.ag-drop .field-center { display: flex !important; flex: none !important; height: calc(100svh - var(--drop-chrome)) !important; min-height: 300px !important; }
-/* what's around the player: the top bar, the build bar, the OVR row under him, the dock (app) or the ad rail (website) */
-html { --drop-chrome: calc(330px + var(--web-rail, 0px)); }
+/* what's around the player: the top bar, the build bar, the OVR row under him, the dock (app). On the website the player
+   no longer gives up room to the ad rail: he stayed full size until the rail loaded, then the photo shrank mid-spin.
+   The page under him already scrolls clear of the rail (game-page-scroll's padding) */
+html { --drop-chrome: 330px; }
 html.is-app { --drop-chrome: calc(352px + env(safe-area-inset-top) + env(safe-area-inset-bottom)); }
 
 /* ── About, Privacy, Terms (components/LegalShell.jsx): an app screen that
