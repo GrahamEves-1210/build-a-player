@@ -6675,8 +6675,6 @@ html:is(.is-app, .app-look) .sfb-sub { font-family: var(--ag-font); font-weight:
     border: 1.5px dashed rgba(255,255,255,.28); border-radius: 2px; background: rgba(255,255,255,.04); }
   html.app-look:not(.is-app) .spin-ad-dummy small { position: absolute; left: 0; right: 0; bottom: 100%; text-align: center; font-family: var(--ag-body, sans-serif); font-size: 7.5px; font-weight: 600; letter-spacing: 1.2px; line-height: 9px; color: rgba(255,255,255,.4); }
   html.app-look:not(.is-app) .spin-ad-dummy span { font-family: var(--ag-font, Bebas Neue, sans-serif); font-size: 13px; letter-spacing: 2px; color: rgba(255,255,255,.5); }
-  /* the spin panel's last row (the traits) ends above the bottom rail, never under it */
-  html.app-look:not(.is-app) .spin-panel-body { padding-bottom: calc(var(--web-rail, 0px) + 6px) !important; }
 }
 
 /* ═══ Mini-games: the how-to-play demo on the card (MgDemo) ═════════════════ */
