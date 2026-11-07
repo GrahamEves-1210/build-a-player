@@ -489,7 +489,8 @@ function NBAPlayoffGame({ gameNum, seriesName, oppShort, myColor, myShort, myFin
 }
 
 // ─── ScreenTeamSpin ────────────────────────────────────────────────────────────
-export function TeamSpinModal({ isCustomMode, onTeamSelected, build = {} }) {
+// anyTeam: every team is on offer (Squad Builder), not only the build's
+export function TeamSpinModal({ isCustomMode, onTeamSelected, build = {}, anyTeam = false, eyebrow = 'Simulate Season' }) {
   const tapGuard = useTapGuard()   // the second tap on Simulate isn't a spin
   const [phase,      setPhase]      = useState('idle')
   const [result,     setResult]     = useState(null)
@@ -503,7 +504,7 @@ export function TeamSpinModal({ isCustomMode, onTeamSelected, build = {} }) {
     const shorts = [...new Set(Object.values(build).filter(Boolean).map(c => c.team))]
     return shorts.map(s => NBA_TEAMS.find(t => t.short === s)).filter(Boolean)
   }, [build])
-  const pickPool = isCustomMode ? NBA_TEAMS : draftedTeamsPool
+  const pickPool = isCustomMode || anyTeam ? NBA_TEAMS : draftedTeamsPool
 
   const items = useMemo(() => [...NBA_TEAMS].sort(() => Math.random() - 0.5), [spinCount])
 
@@ -540,7 +541,7 @@ export function TeamSpinModal({ isCustomMode, onTeamSelected, build = {} }) {
   return (
     <div className="tpm-overlay" onClickCapture={tapGuard.onClickCapture}>
       <div className={`tpm-card${mode === 'pick' ? ' tpm-card-pick' : ''}`} style={cardStyle}>
-        <div className="tpm-eyebrow">Simulate Season</div>
+        <div className="tpm-eyebrow">{eyebrow}</div>
         <div className="tpm-heading">{mode === 'pick' ? 'Pick a Team' : 'Spin a Team'}</div>
 
         <div className="tpm-mode-tabs">

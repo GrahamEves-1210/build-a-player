@@ -10,6 +10,7 @@ import { IconGear } from './app/icons'
 import SoundToggle from './app/SoundToggle'
 import { PROFILE_ICON_EMOJI, initialsOf } from '../data/profile-icons'
 import { LB_LIVE } from '../lib/lbLive'
+import { OL_LIVE } from '../lib/olLive'
 
 const STEPS_DESKTOP = (isRB, isWR, isTE, isDB, isOL, isDL, isLB) => [
   { n: '1', title: 'Spin',      body: `Pull a random NFL team, then a${isOL ? 'n OL' : isWR ? ' WR' : isRB ? 'n RB' : isTE ? ' TE' : isDL ? ' DL' : isLB ? 'n LB' : isDB ? ' DB' : 'n QB'} from their roster.` },
@@ -359,6 +360,12 @@ export default function Navbar({ onReset, onAbout, onHome, onSignIn, onProfile, 
                 <button className="nav-pos-item" onClick={() => { setPosDropOpen(false); onSwitchPosition?.('lb') }}>
                   <span className="nav-pos-badge" style={{ '--pos-col': POS_COLORS.lb }}>LB</span>
                   {POS_NAMES.lb}
+                </button>
+              )}
+              {OL_LIVE && !isOL && (
+                <button className="nav-pos-item" onClick={() => { setPosDropOpen(false); onSwitchPosition?.('ol') }}>
+                  <span className="nav-pos-badge" style={{ '--pos-col': POS_COLORS.ol }}>OL</span>
+                  {POS_NAMES.ol}
                 </button>
               )}
               {(isRB || isWR || isTE || isDB || isDL || isLB || isOL) && (

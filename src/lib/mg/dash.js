@@ -6,6 +6,7 @@ import { clamp, lerp, outcome, rngOf, prog, easeOut, circle, text, DISPLAY, LABE
 import { dashTarget } from './combineNorms.js'
 import { athlete } from './art.js'
 import { placeStamp } from './read.js'
+import { paintFigure } from './rig.js'
 
 export const how = {
   forty: 'Wait for the gun. Then alternate LEFT and RIGHT as fast as you can.',
@@ -284,16 +285,16 @@ export function torsoSide(ctx, c) {
 }
 
 const tiles = new Map()
-function tile(view, key, W, H, paint, alpha = false) {
-  const id = `${key}|${view.px}`
+function tile(view, key, W, H, paint, alpha = false, res = view.px) {
+  const id = `${key}|${res}`
   let c = tiles.get(id)
   if (!c) {
     if (typeof document === 'undefined') return null
-    if (tiles.size > 16) tiles.clear()
+    if (tiles.size > 24) tiles.delete(tiles.keys().next().value)   // (the oldest goes: a scout seen at a new size doesn't cost every other picture)
     c = document.createElement('canvas')
-    c.width = Math.round(W * view.px); c.height = Math.round(H * view.px)
+    c.width = Math.round(W * res); c.height = Math.round(H * res)
     const x = c.getContext('2d', { alpha })
-    x.scale(view.px, view.px)
+    x.scale(res, res)
     paint(x, W, H)
     tiles.set(id, c)
   }
@@ -388,12 +389,12 @@ function paintFloorTile(x, cam, court, lanes = true) {
 const CAM_H = 4, CAM_D = 7, CAM_SIDE = 0
 const NEAR_D = 1.05         // nothing nearer the lens than this
 const UY = 50               // the figure's units to a yard: a hundred tall
-const C = { F: 400, hz: 300, vx: 230, z: 0, S: 76, gy: 500 }
+const C = { F: 400, hz: 300, vx: 230, z: 0, S: 76, gy: 500, h: CAM_H }
 const X_ = (X, d) => C.vx + (X - CAM_SIDE) * C.F / d
-const Y_ = (Y, d) => C.hz + (CAM_H - Y) * C.F / d
+const Y_ = (Y, d) => C.hz + (C.h - Y) * C.F / d
 function setShot(view) {
   const k = clamp((view.h - 520) / 260, 0, 1)
-  C.S = lerp(46, 60, k)
+  C.S = lerp(46, 60, k); C.h = CAM_H
   C.F = C.S * CAM_D
   C.gy = view.h - 96 - lerp(52, 76, k)
   C.hz = Math.round(C.gy - CAM_H * C.S)
@@ -466,12 +467,12 @@ function wallsGoBy(ctx, view, hall) {
 function lineAcross(ctx, Z, wYd, X0, X1) {
   const d = Z - C.z
   if (d < NEAR_D) return
-  const row = Y_(0, d), th = Math.max(0.55, 0.5 * wYd * CAM_H * C.F / (d * d))
+  const row = Y_(0, d), th = Math.max(0.55, 0.5 * wYd * C.h * C.F / (d * d))
   const a = X_(X0, d), b = X_(X1, d)
   ctx.rect(a, row - th, b - a, th * 2)
 }
-function floorQuad(ctx, X0, X1, Z0, Z1) {
-  const d0 = Math.max(Z0 - C.z, NEAR_D), d1 = Z1 - C.z
+function floorQuad(ctx, X0, X1, Z0, Z1, near = NEAR_D) {
+  const d0 = Math.max(Z0 - C.z, near), d1 = Z1 - C.z
   if (d1 <= d0) return
   ctx.moveTo(X_(X0, d0), Y_(0, d0)); ctx.lineTo(X_(X1, d0), Y_(0, d0)); ctx.lineTo(X_(X1, d1), Y_(0, d1)); ctx.lineTo(X_(X0, d1), Y_(0, d1)); ctx.closePath()
 }
@@ -507,18 +508,18 @@ function turfGoesBy(ctx, g, hall) {
   }
   ctx.fill()
 }
-function courtGoesBy(ctx, g) {
+function courtGoesBy(ctx, g, near = NEAR_D) {   // near: how close in the floor is drawn (first person: right to his feet)
   const { side: S, keyW, ftz, half, len, r, arc, arcZ } = HOOP
   // the paint at each end
-  ctx.fillStyle = '#1c3f6e'
-  ctx.beginPath(); floorQuad(ctx, -keyW, keyW, -0.11, ftz); floorQuad(ctx, -keyW, keyW, len - ftz, len); ctx.fill()
+  ctx.fillStyle = '#9e5c34'   // (the paint: a darker stain on the maple, as plenty of real floors have it)
+  ctx.beginPath(); floorQuad(ctx, -keyW, keyW, -0.11, ftz, near); floorQuad(ctx, -keyW, keyW, len - ftz, len, near); ctx.fill()
   // half court, the baselines, the free-throw lines, and the circles
   ctx.fillStyle = '#f5f1e8'
   ctx.beginPath()
   lineAcross(ctx, 0, 0.22, -S, S); lineAcross(ctx, len, 0.14, -S, S); lineAcross(ctx, half, 0.14, -S, S)
   lineAcross(ctx, ftz, 0.12, -keyW, keyW)
   // (the far foul line is the finish: it's drawn in gold)
-  floorQuad(ctx, -keyW - 0.06, -keyW + 0.06, -0.11, ftz); floorQuad(ctx, keyW - 0.06, keyW + 0.06, -0.11, ftz)
+  floorQuad(ctx, -keyW - 0.06, -keyW + 0.06, -0.11, ftz, near); floorQuad(ctx, keyW - 0.06, keyW + 0.06, -0.11, ftz, near)
   floorQuad(ctx, -keyW - 0.06, -keyW + 0.06, len - ftz, len); floorQuad(ctx, keyW - 0.06, keyW + 0.06, len - ftz, len)
   floorRing(ctx, half, r, 0.12)
   floorRing(ctx, ftz, r, 0.12)
@@ -540,15 +541,15 @@ const DIGITS = {
   4: [[0, T2, T, 1.6], [0, T2, 1, T3], [0.7, 0, 1, 1.6]],
 }
 const NUM_W = 1.5, NUM_D = 2.6    // a yard and a half wide; v runs 0 to 1.6 down four yards of turf
-function numberOnTurf(ctx, Xc, Zc, str) {
-  const dig = str.length, gap = 0.45, total = dig * NUM_W + (dig - 1) * gap
-  const z0 = Zc - 0.8 * NUM_D - C.z
-  if (z0 + 1.6 * NUM_D < 0.6) return                 // (behind the lens)
+function numberOnTurf(ctx, Xc, Zc, str, k = 1) {
+  const NW = NUM_W * k, ND = NUM_D * k, dig = str.length, gap = 0.45 * k, total = dig * NW + (dig - 1) * gap
+  const z0 = Zc - 0.8 * ND - C.z
+  if (z0 + 1.6 * ND < 0.6) return                 // (behind the lens)
   for (let i = 0; i < dig; i++) {
-    const X0 = Xc - total / 2 + i * (NUM_W + gap), rects = DIGITS[str[i]]
+    const X0 = Xc - total / 2 + i * (NW + gap), rects = DIGITS[str[i]]
     for (let k = 0; k < rects.length; k++) {
       const r = rects[k]
-      const da = Math.max(z0 + r[1] * NUM_D, 0.6), db = Math.max(z0 + r[3] * NUM_D, 0.6), xa = X0 + r[0] * NUM_W, xb = X0 + r[2] * NUM_W
+      const da = Math.max(z0 + r[1] * ND, 0.6), db = Math.max(z0 + r[3] * ND, 0.6), xa = X0 + r[0] * NW, xb = X0 + r[2] * NW
       ctx.moveTo(X_(xa, da), Y_(0, da)); ctx.lineTo(X_(xb, da), Y_(0, da)); ctx.lineTo(X_(xb, db), Y_(0, db)); ctx.lineTo(X_(xa, db), Y_(0, db)); ctx.closePath()
     }
   }
@@ -912,8 +913,21 @@ function drawRunner(ctx, g, view, c, court) {
   drawUpperArm(ctx, SH_R, EL_R, c)
 }
 
+// what happens once, as it happens, whichever camera: the top speed, the result landing a beat after the line
+function beats(g) {
+  if (g.goAt != null && !g.done) g.topMph = Math.max(g.topMph ?? 0, g.speed * MPH)
+  if (g.done && g.crossed != null && !g.settled) {
+    // the result lands a beat after the line: the watches first, then the number, then what it means
+    g.settled = true
+    if (g.stamp) g.stamp.at += OFFICIAL_MS
+    g.outro = (g.outro ?? 1700) + OFFICIAL_MS
+  }
+  if (g.crossed != null && !g.official && g.t - g.crossed >= OFFICIAL_MS) { g.official = true; g.fx.push('stamp') }
+}
 // ── A frame ─────────────────────────────────────────────────────────────────
-export function draw(ctx, g, view) {
+// Both runs are in first person now (below). The chase camera behind the runner is kept, unused, for now
+export function draw(ctx, g, view) { drawFirstPerson(ctx, g, view) }
+export function drawChase(ctx, g, view) {
   const { w, h } = view
   const court = g.game === 'sprint'
   const hall = HALLS[court ? 'sprint' : 'forty']
@@ -932,14 +946,7 @@ export function draw(ctx, g, view) {
     g.dirt.burst(court ? 'dust' : 'turf', X_(0.14, d), Y_(0, d), g.t, { n: court ? 7 : 12, s: q, ang: Math.PI / 2 + 0.2, spread: 1.15, speed: court ? 1.4 : 1, colors: court ? BOARD_DUST : CRUMB })
     g.nudge.kick(g.t, 1.6, 0, -1, 130)
   }
-  if (g.goAt != null && !g.done) g.topMph = Math.max(g.topMph ?? 0, g.speed * MPH)
-  if (g.done && g.crossed != null && !g.settled) {
-    // the result lands a beat after the line: the watches first, then the number, then what it means
-    g.settled = true
-    if (g.stamp) g.stamp.at += OFFICIAL_MS
-    g.outro = (g.outro ?? 1700) + OFFICIAL_MS
-  }
-  if (g.crossed != null && !g.official && g.t - g.crossed >= OFFICIAL_MS) { g.official = true; g.fx.push('stamp') }
+  beats(g)
   // the cart's on a rough floor, and it's moving fast: only at speed
   const quiet = calm()
   const rock = quiet ? 0 : Math.sin(g.cycle * Math.PI * 4) * clamp(g.speed / g.cap, 0, 1) * 0.9
@@ -1029,5 +1036,242 @@ function drawClock(ctx, g, view) {
   if (over >= 0) {
     const react = g.firstPress != null ? Math.max(0, (g.firstPress - g.goAt) / 1000) : 0
     officialStrip(ctx, view, over, g.done?.hit, `REACTION ${react.toFixed(2)}   TOP ${(g.topMph ?? 0).toFixed(1)} MPH`)
+  }
+}
+
+// ── The 40, in first person ─────────────────────────────────────────────────
+// You're the one in the stance. Eyes on the line; the gun, and you come up out of it and the
+// lane comes at you: the lines, the yard markers and the gates going by at the edges, the stride in the camera, the
+// walls well out to either side, and at the end of it all the finish banner, the men with
+// the watches and the board with your time on it, all of it big enough to read from the line.
+// A dark room and a few crisp things in it. The same lens as the old shot (X_, Y_ and C), moved to your eyes.
+const FPH = { endZ: 56, W: 20, Hp: 2.4, Hc: 9 }   // (the walls well out: open turf either side of the lane)
+const FP = { void: '#06090c', wall: '#0b1116', pad: '#101a21', turf: '#123422', band: 'rgba(0,0,0,.16)', lane: '#164029', line: '#eef2ee', mint: '#3ddcb0', lamp: '#cdd6dc' }
+const FP_NEAR = 0.32
+// what differs between the two runs: the 40 on turf, and the 3/4-court sprint on hardwood, both in the same dark room
+const FPG = {
+  forty: { endZ: 56, floor: '#123422', label: '40-YARD DASH', marks: [[40, '40'], [30, '30'], [20, '20'], [10, '10']], gates: [10, 20, 40], court: false },
+  sprint: { endZ: 40, floor: '#cf9a5e', plank: '#c38c52', label: '3/4 COURT', marks: [[25, '75'], [20, '60'], [10, '30']], gates: [10, 25], court: true },
+}
+let FPX = FPG.forty
+// the parts of the shot that follow the rules, worked out once a frame
+const FPS = { up: 0, rest: 1, top: 0, amp: 0, near: 0, fs: 0 }
+function fpCamera(g, view) {
+  const first = g.firstPress, quiet = calm()
+  const up = first == null ? 0 : smooth(prog(g.t, first, first + 300))
+  const rise = smooth(clamp(g.y / 14, 0, 1))
+  const late = first == null ? 0 : g.done ? 1 : prog(g.t, first + 700, first + 1100)
+  let rest = late * (1 - smooth(prog(g.speed, 1.4, 5.2)))
+  if (first == null) rest = 1
+  // a false start: up and forward off the line, and back down into it
+  let fs = 0
+  const fsAge = g.t - g.fsAt
+  if (fsAge < RESET && first == null) fs = fsAge < 200 ? easeOut(fsAge / 200) : 1 - easeOut((fsAge - 200) / (RESET - 200))
+  const top = clamp(g.speed / (g.cap * 0.72), 0, 1), amp = 1 - rest
+  const bob = quiet ? 0 : Math.sin(g.cycle * Math.PI * 4) * 0.05 * top * amp + Math.sin(g.t / 300) * 0.012 * rest * up
+  const lift = Math.max(up, fs * 0.55)
+  // a longer lens than a pair of eyes: the far end, where it all happens, is big enough to read
+  C.F = 250 * view.w / 360
+  C.vx = view.w / 2
+  C.h = lerp(0.95, lerp(1.5, 1.85, rise), lift) + bob
+  // eyes down at the line in the stance, and even up and running he looks down the lane: the turf fills the frame
+  const room = view.h - 192
+  C.hz = Math.round(96 + room * lerp(0.17, lerp(0.2, 0.23, rise), lift) + (quiet ? 0 : Math.cos(g.cycle * Math.PI * 4) * 1.4 * top * amp))
+  C.z = g.y - lerp(0.3, 0, up) + fs * 0.32
+  FPS.up = up; FPS.rest = rest; FPS.top = top; FPS.amp = amp; FPS.fs = fs
+  FPS.near = ((g.cycle % 1) + 1) % 1
+}
+// the side walls' panels: a dark seam every six yards going by, the one thing on them that moves
+function wallSeams(ctx, quad) {
+  const { W, Hp, Hc, endZ } = FPH
+  ctx.fillStyle = '#070b0e'; ctx.beginPath()
+  for (let Z = Math.ceil((C.z + 1) / 6) * 6; Z < endZ; Z += 6) { const a = Z - C.z, b = a + 0.5; quad(0, 0, Hp + 0.09, Hc, -W, a, b); quad(0, 0, Hp + 0.09, Hc, W, a, b) }
+  ctx.fill()
+}
+// the room: plain dark walls well out to each side and across the end, the pads with a mint stripe, lamps on top
+function fpRoom(ctx, view) {
+  const { W, Hp, Hc, endZ } = FPH, dn = FP_NEAR, df = endZ - C.z
+  ctx.fillStyle = FP.void; ctx.fillRect(0, 0, view.w, view.h)
+  // the floor first, all of it to the bottom of the frame: the walls stand on it
+  const floorY = Y_(0, df)
+  ctx.fillStyle = FPX.floor; ctx.fillRect(0, floorY, view.w, view.h - floorY)
+  const quad = (X0, X1, Y0, Y1, side, z0 = dn, z1 = df) => {
+    z0 = Math.max(z0, dn)
+    if (side) { ctx.moveTo(X_(side, z0), Y_(Y0, z0)); ctx.lineTo(X_(side, z1), Y_(Y0, z1)); ctx.lineTo(X_(side, z1), Y_(Y1, z1)); ctx.lineTo(X_(side, z0), Y_(Y1, z0)); ctx.closePath() }
+    else ctx.rect(X_(X0, df), Y_(Y1, df), X_(X1, df) - X_(X0, df), Y_(Y0, df) - Y_(Y1, df))
+  }
+  ctx.fillStyle = FP.wall; ctx.beginPath(); quad(0, 0, 0, Hc + 3, -W); quad(0, 0, 0, Hc + 3, W); quad(-W, W, 0, Hc + 3, 0); ctx.fill()
+  wallSeams(ctx, quad)
+  ctx.fillStyle = FP.pad; ctx.beginPath(); quad(0, 0, 0, Hp, -W); quad(0, 0, 0, Hp, W); quad(-W, W, 0, Hp, 0); ctx.fill()
+  ctx.fillStyle = FP.mint; ctx.beginPath(); quad(0, 0, Hp, Hp + 0.09, -W); quad(0, 0, Hp, Hp + 0.09, W); quad(-W, W, Hp, Hp + 0.09, 0); ctx.fill()
+  // the lamps along the roof line, every eight yards, and a row of them over the end
+  ctx.fillStyle = '#05080b'; ctx.beginPath(); quad(0, 0, Hc, Hc + 0.5, -W); quad(0, 0, Hc, Hc + 0.5, W); quad(-W, W, Hc, Hc + 0.5, 0); ctx.fill()
+  ctx.fillStyle = FP.lamp; ctx.beginPath()
+  for (let Z = Math.ceil((C.z + 2) / 8) * 8; Z < endZ; Z += 8) { quad(0, 0, Hc + 0.12, Hc + 0.38, -W, Z - C.z, Z + 1.6 - C.z); quad(0, 0, Hc + 0.12, Hc + 0.38, W, Z - C.z, Z + 1.6 - C.z) }
+  for (let X = -W + 1; X < W; X += 2.5) ctx.rect(X_(X, df), Y_(Hc + 0.38, df), 1.4 * C.F / df, 0.26 * C.F / df)
+  ctx.fill()
+  if (FPX.court) {
+    // the boards: long planks down the length of the floor, one in two a shade lighter
+    ctx.fillStyle = FPX.plank; ctx.beginPath()
+    for (let X = -W; X < W; X += 0.5) floorQuad(ctx, X, X + 0.25, C.z, endZ, dn)
+    ctx.fill()
+    return
+  }
+  // the lane a shade lighter, a mown band every five yards
+  ctx.fillStyle = FP.lane; ctx.beginPath(); floorQuad(ctx, -LANE, LANE, C.z, endZ, dn); ctx.fill()
+  ctx.fillStyle = FP.band; ctx.beginPath()
+  for (let Z = Math.floor(C.z / 10) * 10 + 5; Z < endZ; Z += 10) floorQuad(ctx, -W, W, Z, Math.min(Z + 5, endZ), dn)
+  ctx.fill()
+}
+function fpTurf(ctx, g) {
+  const { W, endZ } = FPH
+  if (FPX.court) {
+    // the court's lines and the paint go by under you; the baseline under you in the stance; the far foul line the finish
+    courtGoesBy(ctx, g, FP_NEAR)
+    // (the baseline his toes are on: in the stance the lens is a step behind it, so it's drawn as the band in front of
+    // his feet that it is, not a line's width that falls behind the lens)
+    ctx.fillStyle = '#f5f1e8'; ctx.beginPath(); floorQuad(ctx, -HOOP.side, HOOP.side, 0.28, 0.38, FP_NEAR)
+    floorQuad(ctx, -HOOP.side - 0.07, -HOOP.side + 0.07, C.z, HOOP.len, FP_NEAR); floorQuad(ctx, HOOP.side - 0.07, HOOP.side + 0.07, C.z, HOOP.len, FP_NEAR); ctx.fill()
+    return   // (no finish line on a basketball floor: the far foul line is the end, and the clock on the wall times it)
+  }
+  ctx.fillStyle = FP.line; ctx.beginPath()
+  floorQuad(ctx, -LANE - 0.06, -LANE + 0.06, C.z, endZ, FP_NEAR); floorQuad(ctx, LANE - 0.06, LANE + 0.06, C.z, endZ, FP_NEAR)
+  // (the start line's right under you in the stance: drawn as the strip of turf it is, not a line's width at a distance)
+  floorQuad(ctx, -W, W, -0.06, 0.06, FP_NEAR)
+  for (let Z = Math.max(5, Math.ceil(C.z / 5) * 5); Z <= endZ; Z += 5) if (Z !== g.dist) lineAcross(ctx, Z, 0.11, -W, W)
+  for (let Z = Math.max(1, Math.ceil(C.z)); Z < Math.min(endZ, C.z + 24); Z++) {
+    if (Z % 5 === 0) continue
+    lineAcross(ctx, Z, 0.08, -LANE - 0.45, -LANE); lineAcross(ctx, Z, 0.08, LANE, LANE + 0.45)
+  }
+  ctx.fill()
+  // the finish, gold and wide
+  ctx.fillStyle = GOLD; ctx.beginPath(); lineAcross(ctx, g.dist, 0.5, -LANE - 0.9, LANE + 0.9); ctx.fill()
+}
+// A sign facing you, standing on the turf: posts at X0 and X1, the face from Y0 to Y1. Flat, so it never stretches
+function sign(ctx, Z, X0, X1, Y0, Y1, face, post = '#05080b') {
+  const d = Z - C.z
+  if (d < NEAR_D) return null
+  const s = C.F / d, a = X_(X0, d), b = X_(X1, d), top = Y_(Y1, d), bot = Y_(Y0, d), base = Y_(0, d), pw = Math.max(1, 0.1 * s)
+  if (b < -4 || a > C.vx * 2 + 4) return null
+  ctx.fillStyle = post
+  if (Y0 > 0) { ctx.fillRect(a + pw * 0.2, bot, pw, base - bot); ctx.fillRect(b - pw * 1.2, bot, pw, base - bot) }
+  ctx.fillStyle = face; ctx.fillRect(a, top, b - a, bot - top)
+  return { a, b, top, bot, s }
+}
+const label = (ctx, str, x, y, size, col, font = DISPLAY) => {
+  ctx.font = `${size.toFixed(1)}px ${font}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = col
+  ctx.fillText(str, x, y + size * 0.04)
+}
+// the yard markers down each side of the lane: a board on a post every ten, the number big on it
+function fpMarkers(ctx, g) {
+  for (const [Z, str] of FPX.marks) for (const side of [-1, 1]) {
+    const X = side * (Z === g.dist ? 4.6 : 3.7)
+    const r = sign(ctx, Z, X - 0.62, X + 0.62, 0.5, 1.6, '#0b1116')
+    if (!r) continue
+    ctx.fillStyle = Z === g.dist ? GOLD : FP.mint; ctx.fillRect(r.a, r.top, r.b - r.a, Math.max(1, 0.1 * r.s))
+    const size = (r.bot - r.top) * 0.66
+    if (size >= 3) label(ctx, str, (r.a + r.b) / 2, (r.top + r.bot) / 2 + 0.04 * r.s, size, '#fff')
+  }
+}
+// the banner over the finish: gold, the word on it, on two posts either side of the lane
+function fpBanner(ctx, g) {
+  const r = sign(ctx, g.dist, -3.6, 3.6, 2.05, 3.05, GOLD)
+  if (!r) return
+  ctx.fillStyle = '#05080b'; ctx.fillRect(r.a, r.bot - Math.max(1, 0.12 * r.s), r.b - r.a, Math.max(1, 0.12 * r.s))
+  const size = (r.bot - r.top) * 0.72
+  if (size >= 3) label(ctx, 'FINISH', (r.a + r.b) / 2, (r.top + r.bot) / 2 - 0.04 * r.s, size, '#0b1014')
+}
+// The board on the end wall: the clock, a real thing in the room, big from the line and huge by the end. The slab up top is the official one
+const clockCol = g => {
+  const over = g.crossed == null ? -1 : g.t - g.crossed, official = over >= OFFICIAL_MS || (g.done && g.crossed == null)
+  return official ? (g.done.hit ? GOOD : BAD) : g.goAt != null ? '#fff' : 'rgba(255,255,255,.5)'
+}
+function fpBoard(ctx, g) {
+  const df = FPH.endZ - 0.05 - C.z, s = C.F / df
+  const x0 = X_(-5.2, df), x1 = X_(5.2, df), top = Y_(6.2, df), bot = Y_(3.6, df)
+  ctx.fillStyle = '#04070a'; ctx.fillRect(x0 - 0.15 * s, top - 0.15 * s, x1 - x0 + 0.3 * s, bot - top + 0.3 * s)
+  ctx.fillStyle = '#080d11'; ctx.fillRect(x0, top, x1 - x0, bot - top)
+  ctx.fillStyle = FP.mint; ctx.fillRect(x0, bot - 0.14 * s, x1 - x0, 0.14 * s)
+  const h = bot - top
+  if (h * 0.16 >= 4) label(ctx, FPX.label, (x0 + x1) / 2, top + h * 0.15, h * 0.16, 'rgba(255,255,255,.62)', LABEL)
+  label(ctx, Math.min(g.clock(), 99.99).toFixed(2), (x0 + x1) / 2, top + h * 0.58, h * 0.6, clockCol(g))
+}
+// The staff, in the new figure: painted once per look into a tile at the size they're seen, and stamped
+const STAFF = { color: '#20262c', trim: '#20262c', pants: '#a89a80', skin: '#6d4229', kit: 'plain', dir: 'down', pose: null, step: null, number: null }
+const STAFF_K = 1.62
+const tierOf = n => [0.5, 0.75, 1, 1.5, 2, 3].find(t => t >= n) ?? 3
+function staffTile(view, key, s, look, extra) {
+  const res = view.px * tierOf(s)
+  return tile(view, `${key}|fp`, STARTER_W, STARTER_H, x => {
+    x.save(); x.translate(STARTER_W / 2, STARTER_FOOT); x.scale(STAFF_K, STAFF_K); paintFigure(x, look); x.restore()
+    extra?.(x)
+  }, true, res)
+}
+// the hand that's up, in the tile: the drill table's reach, through the same scale
+const HAND_X = STARTER_W / 2 + 14 * STAFF_K, HAND_Y = STARTER_FOOT - 41 * STAFF_K
+// tall: how many yards he stands (a touch over life: the men you're running at have to read from the line)
+function fpStaff(ctx, view, X, Z, key, look, extra, tall = 2) {
+  const d = Z - C.z
+  if (d < NEAR_D + 0.4) return
+  const s = (C.F / d) * tall / STARTER_TALL, sx = X_(X, d), fy = Y_(0, d)
+  if (sx > view.w + 60 * s || sx < -60 * s) return
+  const img = staffTile(view, key, s, look, extra)
+  if (!img) return
+  ctx.fillStyle = 'rgba(0,0,0,.34)'; ctx.beginPath(); ctx.ellipse(sx, fy, 15 * s, 3.4 * s, 0, 0, Math.PI * 2); ctx.fill()
+  ctx.drawImage(img, sx - STARTER_W / 2 * s, fy - STARTER_FOOT * s, STARTER_W * s, STARTER_H * s)
+  return { sx, fy, s }
+}
+const SCOUT_LOOK = [0, 1, 2, 3, 4].map(i => [false, true].map(up => ({ ...STAFF, skin: FOLK_SKIN[i], color: i % 2 ? '#20262c' : '#2a3540', trim: i % 2 ? '#20262c' : '#2a3540', pose: up ? 'reach-r' : null })))
+const STARTER_LOOK = [false, true].map(up => ({ ...STAFF, pose: up ? 'reach-r' : null }))
+const watchIn = x => stopwatch(x, HAND_X, HAND_Y - 3, 1.5)
+const gunIn = x => { x.fillStyle = '#10141a'; x.fillRect(HAND_X - 1.5, HAND_Y - 12, 3, 9) }
+function fpScout(ctx, view, X, Z, i, up, tall) { fpStaff(ctx, view, X, Z, `dash-scout-${i}-${up ? 1 : 0}`, SCOUT_LOOK[i][up ? 1 : 0], up ? watchIn : null, tall) }
+function fpStarter(ctx, g, view) {
+  const up = !(g.goAt != null && g.t - g.goAt > 460), gun = g.S.gun === 'gun'
+  const at = fpStaff(ctx, view, 3.2, 6, `dash-starter-${up ? 1 : 0}-${g.S.gun}`, STARTER_LOOK[up ? 1 : 0], up && gun ? gunIn : null)
+  if (!at || g.goAt == null || !gun || g.t - g.goAt >= 380) return
+  const a = (g.t - g.goAt) / 380, s = at.s, fx = at.sx + (HAND_X - STARTER_W / 2) * s, fyy = at.fy - (STARTER_FOOT - HAND_Y + 12) * s
+  if (a < 0.22) {
+    ctx.fillStyle = GOLD; ctx.beginPath()
+    for (let q = 0; q < 12; q++) { const r = (q % 2 ? 3 : 8) * Math.max(s, 0.8), an = (q / 12) * Math.PI * 2; ctx.lineTo(fx + Math.cos(an) * r, fyy + Math.sin(an) * r) }
+    ctx.closePath(); ctx.fill()
+  } else { ctx.fillStyle = 'rgba(226,232,238,.55)'; circle(ctx, fx, fyy - a * 10, 3 + a * 9); ctx.fill() }
+}
+function drawFirstPerson(ctx, g, view) {
+  FPX = FPG[g.game] ?? FPG.forty; FPH.endZ = FPX.endZ
+  fpCamera(g, view)
+  g.nudge ??= nudge()
+  if (g.goAt != null && !g.gunFelt) { g.gunFelt = true; if (g.S.gun === 'gun') g.nudge.kick(g.t, 2.2, 0, 1, 150) }
+  if (g.firstPress != null && !g.blockFelt) { g.blockFelt = true; g.nudge.kick(g.t, 1.6, 0, -1, 130) }
+  beats(g)
+  fpRoom(ctx, view)
+  fpBoard(ctx, g)
+  fpTurf(ctx, g)
+  // far to near: the men at the wall, the men at the line, the banner, the markers and gates, the starter
+  const crossedAt = g.crossed, over = crossedAt == null ? -1 : g.t - crossedAt, good = g.done?.hit, wall = FPH.endZ - 1.6
+  fpScout(ctx, view, -3.6, wall, 3, over >= OFFICIAL_MS && good, 2.3)
+  fpScout(ctx, view, 3.1, wall, 0, over >= OFFICIAL_MS, 2.3)
+  fpScout(ctx, view, -2.1, wall - 1, 4, false, 2.3)
+  const running = crossedAt == null || g.t < crossedAt + 240
+  fpScout(ctx, view, -LANE - 1.6, g.dist + 0.8, 1, running, 2.3)
+  fpScout(ctx, view, LANE + 1.6, g.dist + 0.8, 2, running, 2.3)
+  // (the track's things: the finish banner, the yard boards, the gates and the beam. Not on a basketball floor)
+  if (!FPX.court) {
+    fpBanner(ctx, g)
+    fpMarkers(ctx, g)
+    for (let i = FPX.gates.length - 1; i >= 0; i--) { const Z = FPX.gates[i]; gatePost(ctx, g, -LANE - 0.5, Z, Z === g.dist); gatePost(ctx, g, LANE + 0.5, Z, Z === g.dist) }
+    if (!(calm() && g.y >= g.dist)) finishBeam(ctx, g, view)
+  }
+  fpStarter(ctx, g, view)
+  drawClock(ctx, g, view)
+  // (the words go on the turf in front of you, clear of the finish and the board)
+  const { w } = view, wordY = C.hz + Math.min(150, (view.h - 96 - C.hz) * 0.3)
+  placeStamp(g.stamp, view)
+  if (g.phase === 'set' && g.t >= g.fsAt + RESET) text(ctx, 'SET', w / 2, wordY, { font: DISPLAY, size: 46, color: '#fff' })
+  else if (g.phase === 'run' && !g.done && g.t - g.goAt < 420) {
+    const q = 1 + 0.4 * (1 - easeOut(clamp((g.t - g.goAt) / 110, 0, 1)))
+    ctx.save(); ctx.translate(w / 2, wordY); ctx.scale(q, q)
+    text(ctx, 'GO', 0, 0, { font: DISPLAY, size: 62, color: GOLD })
+    ctx.restore()
   }
 }

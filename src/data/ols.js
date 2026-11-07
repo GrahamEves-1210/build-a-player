@@ -263,6 +263,9 @@ export function olOVR(vals) {
   return Math.min(99, Math.max(0, Math.round(base + bonus)))
 }
 
+// Size from the bio, the rule in the header: index = weight + 4 lb per inch over 6'5" (minus 4 under), every 6.5 over 280 is a grade.
+export const olSizeGrade = (height, weight) => Math.max(0, Math.min(11, Math.round((weight + 4 * (height - 77) - 280) / 6.5)))
+
 // Last name for reel/chip short labels — skips generational suffixes so
 // "Jon Runyan Jr." reads "Runyan", not "Jr.".
 const SUFFIXES = new Set(['Jr.', 'Jr', 'Sr.', 'Sr', 'II', 'III', 'IV', 'V'])
@@ -299,3 +302,9 @@ export const OL_ALL_PRO_BALLOT = {
 
 export const OL_PHYSICALS = Object.fromEntries(_OLS.map(ol => [ol.name, { height: ol.height, weight: ol.weight }]))
 export const OL_POS_BY_NAME = Object.fromEntries(_OLS.map(ol => [ol.name, ol.pos]))
+
+// OL PLACEHOLDER FIGURE: there's no lineman art yet, so OL is drawn on the DB figure (OLFigureOverlay maps each
+// OL trait to a DB body part). The one line to swap when OL gets its own silhouette (then give it its own zones
+// in Silhouette.jsx and its own overlay). OL stays hidden from players until then: OL_LIVE in lib/olLive.js.
+export const OL_SILHOUETTE = '/db-silhouette.png'
+export { OL_LIVE } from '../lib/olLive'

@@ -13,6 +13,8 @@ import { DB_LEGENDS, DB_LEGEND_TYPES } from '../data/db-legends'
 import { DL_LEGENDS, DL_LEGEND_TYPES } from '../data/dl-legends'
 import { LBS, LB_ATTR, LB_TYPES, LB_LIVE } from '../data/lbs'
 import { LB_LEGENDS, LB_LEGEND_TYPES } from '../data/lb-legends'
+import { OLS, OL_ATTR, OL_TYPES, OL_LIVE } from '../data/ols'
+import { OL_LEGENDS, OL_LEGEND_TYPES } from '../data/ol-legends'
 import { NBA_GUARD_PLAYERS, GUARD_TYPES } from '../data/nba-guards'
 import { NBA_BIG_PLAYERS, BIG_TYPES } from '../data/nba-bigs'
 import { NBA_ALLTIME_GUARD_PLAYERS } from '../data/nba-guard-legends'
@@ -39,6 +41,7 @@ export const POOLS = [
   { id: 'db',    sport: 'nfl', label: 'DB',     plural: 'defensive backs', players: DBS, legends: DB_LEGENDS, types: DB_TYPES, legendTypes: DB_LEGEND_TYPES, attr: DB_ATTR },
   { id: 'dl',    sport: 'nfl', label: 'DL',     plural: 'defensive linemen', players: DLS, legends: DL_LEGENDS, types: DL_TYPES, legendTypes: DL_LEGEND_TYPES, attr: DL_ATTR },
   ...(LB_LIVE ? [{ id: 'lb',    sport: 'nfl', label: 'LB',     plural: 'linebackers', players: LBS, legends: LB_LEGENDS, types: LB_TYPES, legendTypes: LB_LEGEND_TYPES, attr: LB_ATTR }] : []),
+  ...(OL_LIVE ? [{ id: 'ol',    sport: 'nfl', label: 'OL',     plural: 'offensive linemen', players: OLS, legends: OL_LEGENDS, types: OL_TYPES, legendTypes: OL_LEGEND_TYPES, attr: OL_ATTR }] : []),
   { id: 'guard', sport: 'nba', label: 'Guards', plural: 'guards',          players: NBA_GUARD_PLAYERS, legends: NBA_ALLTIME_GUARD_PLAYERS, types: GUARD_TYPES, legendTypes: GUARD_TYPES, attr: BUCKET_ATTR },
   { id: 'big',   sport: 'nba', label: 'Bigs',   plural: 'bigs',            players: NBA_BIG_PLAYERS,   legends: NBA_ALLTIME_BIG_PLAYERS,   types: BIG_TYPES,   legendTypes: BIG_TYPES,   attr: BUCKET_ATTR },
 ]

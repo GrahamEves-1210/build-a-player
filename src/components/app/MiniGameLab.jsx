@@ -13,13 +13,14 @@ import { SPRING_LAYOUT } from '../../lib/motion'
 import { sfx } from '../../lib/juice'
 import { IconClose } from './icons'
 import { LB_LIVE } from '../../lib/lbLive'
+import { OL_LIVE } from '../../lib/olLive'
 
 // Practice (settings menu): any mini game at any grade. Nothing here touches a career.
 // ?mg=<game>&v=<grade>&auto=1 opens straight on a game (scripts/mg's browser tests).
 // (the game's own 0–11 scale, so the button and the card agree: F 0, D 1, C 3, B 6, A 9, S 11)
 const GRADES = [[0, 'F'], [1, 'D'], [3, 'C'], [6, 'B'], [9, 'A'], [11, 'S']]
 const SPORTS = [['nfl', 'FOOTBALL'], ['bucket', 'BASKETBALL']]
-const POS = { nfl: [['QB', 'qb'], ['RB', 'rb'], ['WR', 'wr'], ['TE', 'te'], ['DB', 'db'], ['DL', 'dl'], ...(LB_LIVE ? [['LB', 'lb']] : [])], bucket: [['GUARD', 'guard'], ['BIG', 'big']] }
+const POS = { nfl: [['QB', 'qb'], ['RB', 'rb'], ['WR', 'wr'], ['TE', 'te'], ['DB', 'db'], ['DL', 'dl'], ...(LB_LIVE ? [['LB', 'lb']] : []), ...(OL_LIVE ? [['OL', 'ol']] : [])], bucket: [['GUARD', 'guard'], ['BIG', 'big']] }
 const COMBINE = { nfl: ['forty', 'cone', 'gauntlet', 'bench', 'velo', 'acc'], bucket: ['sprint', 'lane', 'spot', 'vert', 'nbench'] }
 
 // each game once, under the first position that plays it
@@ -27,7 +28,8 @@ function listFor(sport) {
   const seen = new Set()
   const moments = POS[sport].flatMap(([label, pos]) => (PLAYOFF_GAMES[pos] ?? []).filter(g => !seen.has(g) && seen.add(g)).map(g => ({ id: g, tag: POS[sport].filter(([, p]) => momentsOf(p).includes(g)).map(([l]) => l).join(' / ') })))
   // (Fourth & Goal plays differently for each: a row for each)
-  const rows = moments.flatMap(g => (g.id === 'goal-line' ? ['qb', 'rb', 'wr', 'te'].map(role => ({ id: g.id, role, tag: role.toUpperCase() })) : [g]))
+  // (and Seal the Edge, a tight end's or a lineman's, once the line's in)
+  const rows = moments.flatMap(g => (g.id === 'goal-line' ? ['qb', 'rb', 'wr', 'te'].map(role => ({ id: g.id, role, tag: role.toUpperCase() })) : g.id === 'seal' && OL_LIVE ? ['te', 'ol'].map(role => ({ id: g.id, role, tag: role.toUpperCase() })) : [g]))
   return { moments: rows, combine: COMBINE[sport].map(g => ({ id: g, tag: null })) }
 }
 const gameSport = game => (COMBINE.bucket.includes(game) || POS.bucket.some(([, p]) => PLAYOFF_GAMES[p]?.includes(game)) ? 'bucket' : 'nfl')

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { motion } from 'motion/react'
-import { WHATS_NEW } from '../../lib/whatsNew'
+import { PATCH_NOTES } from '../../lib/whatsNew'
 import { RATINGS_PATCH } from '../../data/ratings-patch'
 import { SPRING_LAYOUT } from '../../lib/motion'
 import { sfx } from '../../lib/juice'
@@ -43,25 +43,37 @@ function Ratings() {
 
 export default function AppWhatsNew({ onClose }) {
   const [tab, setTab] = useState('notes')
+  const [at, setAt] = useState(0)   // which update: 0 is the newest (the date menu goes back through them)
+  const N = PATCH_NOTES[at]
+  const tabs = N.ratings ? TABS : TABS.slice(0, 1)
+  const view = N.ratings ? tab : 'notes'
   return (
     <div className="ag-screen wn-screen">
       <div className="wn-wrap">
         <header className="wn-top">
-          <div><span className="ag-eyebrow">{WHATS_NEW.fullDate}</span><h1 className="ag-h1">Patch Notes</h1></div>
+          <div>
+            <label className="wn-date">
+              <span className="ag-eyebrow">{N.fullDate}</span>
+              <select value={at} aria-label="Update date" onChange={e => { setAt(Number(e.target.value)); setTab('notes'); sfx('tap') }}>
+                {PATCH_NOTES.map((p, i) => <option key={p.id} value={i}>{p.fullDate}</option>)}
+              </select>
+            </label>
+            <h1 className="ag-h1">Patch Notes</h1>
+          </div>
           <button className="ag-round-btn" onClick={onClose} aria-label="Close"><IconClose size={16} /></button>
         </header>
-        <div className="ag-seg wn-tabs" role="tablist" aria-label="Patch notes">
-          {TABS.map(([id, label]) => (
+        {tabs.length > 1 && <div className="ag-seg wn-tabs" role="tablist" aria-label="Patch notes">
+          {tabs.map(([id, label]) => (
             <button key={id} role="tab" aria-selected={tab === id} className={tab === id ? 'is-on' : ''} onClick={() => { setTab(id); sfx('tap') }}>
               {tab === id && <motion.span layoutId="wn-tab" className="ag-seg-pill" transition={SPRING_LAYOUT} />}
               {label}
             </button>
           ))}
-        </div>
-        {tab === 'notes' ? WHATS_NEW.sections.map(s => (
-          <section key={s.name} className="wn-sec">
+        </div>}
+        {view === 'notes' ? N.sections.map(s => (
+          <section key={`${N.id}-${s.name}`} className="wn-sec">
             <h2>{s.name}</h2>
-            {s.image && <img className="wn-shot" src={s.image.src} alt={s.image.alt} width="240" height="409" loading="lazy" />}
+            {s.image && <img className="wn-shot" src={s.image.src} alt={s.image.alt} width={s.image.w ?? 240} height={s.image.h ?? 409} style={s.image.w > 240 ? { width: s.image.w } : undefined} loading="lazy" />}
             <ul>{s.items.map(text => <li key={text}>{text}</li>)}</ul>
           </section>
         )) : <Ratings />}

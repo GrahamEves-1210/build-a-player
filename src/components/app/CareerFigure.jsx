@@ -8,7 +8,7 @@ export default function CareerFigure({ c }) {
   const shown = useMemo(() => inTeamColors(c.build, c.fit), [c.build, c.fit])
   return (
     <span className="ag-career-fig" aria-hidden="true">
-      <Silhouette build={shown} types={c.types} attrMap={POS_ATTR[c.pos]} isRB={c.pos === 'rb'} isWR={c.pos === 'wr'} isTE={c.pos === 'te'} isDB={c.pos === 'db'} isDL={c.pos === 'dl'} isLB={c.pos === 'lb'} modelOnly />
+      <Silhouette build={shown} types={c.types} attrMap={POS_ATTR[c.pos]} isRB={c.pos === 'rb'} isWR={c.pos === 'wr'} isTE={c.pos === 'te'} isDB={c.pos === 'db'} isDL={c.pos === 'dl'} isLB={c.pos === 'lb'} isOL={c.pos === 'ol'} modelOnly />
     </span>
   )
 }

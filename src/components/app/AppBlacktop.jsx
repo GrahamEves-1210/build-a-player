@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { usePresence, fmtCount } from '../../lib/presence'
 import { useLiveCounts, searching } from '../../lib/liveCounts'
-import { useRailOn } from '../../lib/ads'
 import { LiveLeaveButton } from './LiveLeave'
 import { createPortal } from 'react-dom'
 import { ROOM_SIZE as ALL_SIZE, ROLES, SLOTS as ALL_SLOTS, teamName, captainOf, EMOTES } from '../../lib/blacktop'
@@ -590,7 +589,6 @@ export function BlacktopGame({ bt, user, photoFor, onOpenChat, unread }) {
   const myTeam = watch ? -1 : mine?.team ?? 0
   const colorFor = t => TEAM_COLORS[t]
   const names = useMemo(() => [teamName(match, 0), teamName(match, 1)], [match])
-  useRailOn(`${stage}|${idx >= plays.length - 1}`)   // tip-off and the final buzzer bring the bottom rail back
 
   useEffect(() => { const t = setTimeout(() => setStage(s => (s === 'reveal' ? 'live' : s)), 4200); return () => clearTimeout(t) }, [])
   useEffect(() => {

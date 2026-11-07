@@ -69,6 +69,10 @@ export default function AppSettings({ signedIn, onFeedback, onClose }) {
   const [sound, setSound] = useState(() => !isMuted())
   const [haptics, setHaptics] = useState(() => !hapticsOff())
   const [oldHome, setOldHome] = useState(classicHome)
+  // Retro mini games (the default): the pixel look with scanlines. Off is the clean look from before. The mini game
+  // host reads these every time a game opens (components/app/MgStage.jsx)
+  const [retro, setRetro] = useState(() => { try { return localStorage.getItem('bap_mg_pixel') !== '0' } catch { return true } })
+  const flipRetro = v => { try { if (v) { localStorage.removeItem('bap_mg_pixel'); localStorage.removeItem('bap_mg_pixel_pt'); localStorage.removeItem('bap_mg_tex') } else { localStorage.setItem('bap_mg_pixel', '0'); localStorage.setItem('bap_mg_tex', '') } } catch {}; setRetro(v) }
   const [notifs, setNotifs] = useState(notifPrefs)
   const [faq, setFaq] = useState(null)
 
@@ -81,6 +85,7 @@ export default function AppSettings({ signedIn, onFeedback, onClose }) {
         <span className="ag-eyebrow">GAME</span>
         <Toggle label="Sound" on={sound} onFlip={v => { setMuted(!v); setSound(v); window.dispatchEvent(new CustomEvent('bap:sound')) }} />
         {IS_APP && <Toggle label="Haptics" sub="Taps and buzzes on the phone" on={haptics} onFlip={v => { setHapticsOff(!v); setHaptics(v); if (v) haptic('medium') }} />}
+        <Toggle label="Retro mini games" sub="Pixels and scanlines in the mini games" on={retro} onFlip={flipRetro} />
         {CLASSIC_HOME_SWITCH && <Toggle label="Classic Home" sub="The Home from before the Nov 5 update" on={oldHome} onFlip={v => { setClassicHome(v); setOldHome(v) }} />}
         <button className="sx-row" onClick={replay}>
           <span className="sx-txt"><b>Replay the tutorial</b><small>The basics and every mode, then a guided game</small></span>

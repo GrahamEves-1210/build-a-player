@@ -15,7 +15,7 @@ import { TE_ATTR } from '../../data/tes'
 import { DB_ATTR } from '../../data/dbs'
 import { DL_ATTR } from '../../data/dls'
 import { LB_ATTR, LB_LIVE } from '../../data/lbs'
-import { OL_ATTR } from '../../data/ols'
+import { OL_ATTR, OL_LIVE } from '../../data/ols'
 import { BUCKET_ATTR } from '../../data/nba-attrs'
 import './trophy-case.css'
 
@@ -65,8 +65,9 @@ function shelves(h, st, ach) {
         line: 'Top offensive season at RB, WR or TE.' },
       { id: 'dpoy', art: 'dpoy', label: 'DPOY', title: 'Defensive POY', n: h.dpoy.total, rows: true, unlisted: h.dpoy.unlisted,
         line: LB_LIVE ? 'Top defender. DB, DL or LB in football, any build in basketball.' : 'Top defender. DB or DL in football, any build in basketball.', facts: bySport(h.dpoy) },
-      { id: 'allpro', art: 'allpro', label: 'ALL-PRO', title: 'All-Pro', n: h.allpro, rows: true,
-        line: 'Make All-Pro at OL in a Current season.' },
+      // (OL is hidden until OL_LIVE: the shelf shows only to someone who made All-Pro in the old OL mode)
+      ...(OL_LIVE || h.allpro > 0 ? [{ id: 'allpro', art: 'allpro', label: 'ALL-PRO', title: 'All-Pro', n: h.allpro, rows: true,
+        line: 'Make First-Team All-Pro at OL.' }] : []),
     ] },
     { id: 'live', label: 'LIVE', live: true, items: [
       { id: 'tier', art: 'tier', gem: TIER_GEM[tier], tier: tierIndex(best), label: 'TIER', title: 'Online Tier', n: best >= TIER_LIT ? 1 : 0, word: tier.toUpperCase(),

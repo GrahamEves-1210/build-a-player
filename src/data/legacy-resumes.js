@@ -16,10 +16,11 @@
 //             QB passing TDs and yards; RB rushing + receiving TDs and rushing
 //             yards; WR, TE receiving TDs and yards; DB interceptions and
 //             pick-sixes; DL sacks (pre-1982 unofficial, Pro Football Reference's count); LB tackles
-//             (combined, team-credited and unofficial before 2001: estimates), interceptions and sacks; NBA points,
+//             (combined, team-credited and unofficial before 2001: estimates), interceptions and sacks;
+//             OL games played and games started; NBA points,
 //             rebounds, assists
 // Counted from Pro-Football-Reference and Basketball-Reference (the AP All-Pro
-// lists for firsts); active players through the 2024 NFL / 2024-25 NBA season (DL, the 2025 NFL season).
+// lists for firsts); active players through the 2024 NFL / 2024-25 NBA season (DL and OL, the 2025 NFL season).
 // All-time records held aren't listed here: career.js reads them from the
 // game's own record book (seasonFacts.js), the one a career chases.
 
@@ -200,6 +201,46 @@ export const RESUMES = {
     R('London Fletcher', 16, 4, 0, 0, 1, 6, { tackles: 2039, ints: 23, sacks: 39 }),
     R('Lee Roy Jordan', 14, 5, 1, 0, 1, 9, { tackles: 1236, ints: 32, sacks: 0 }),
     R('Roquan Smith', 8, 4, 3, 0, 0, 5, { tackles: 1050, ints: 9, sacks: 20 }),
+  ],
+  // OL: no award for the position (Mel Hein's 1938 MVP isn't counted), so awards is 0 for all.
+  // honors count AFL All-Star games; firsts count All-AFL first teams (Otto, Mix). Starts are PFR's where it has them;
+  // Rayfield Wright's aren't on record, so his are estimated as his games.
+  ol: [
+    R('Anthony Muñoz', 13, 11, 9, 0, 0, 4, { games: 185, starts: 182 }),
+    R('Bruce Matthews', 19, 14, 7, 0, 0, 9, { games: 296, starts: 293 }),
+    R('Jonathan Ogden', 12, 11, 4, 0, 1, 4, { games: 177, starts: 176 }),
+    R('Larry Allen', 14, 11, 6, 0, 1, 6, { games: 203, starts: 197 }),
+    R('Randall McDaniel', 14, 12, 7, 0, 0, 9, { games: 222, starts: 220 }),
+    R('John Hannah', 13, 9, 7, 0, 0, 4, { games: 183, starts: 183 }),
+    R('Forrest Gregg', 15, 9, 7, 0, 6, 7, { games: 193, starts: 156 }),
+    R('Jim Parker', 11, 8, 8, 0, 2, 4, { games: 135, starts: 133 }),
+    R('Walter Jones', 12, 9, 4, 0, 0, 6, { games: 180, starts: 180 }),
+    R('Joe Thomas', 11, 10, 6, 0, 0, 0, { games: 167, starts: 167 }),
+    R('Mike Webster', 17, 9, 5, 0, 4, 10, { games: 245, starts: 217 }),
+    R('Jim Otto', 15, 12, 10, 0, 1, 7, { games: 210, starts: 210 }),
+    R('Zack Martin', 11, 9, 7, 0, 0, 6, { games: 162, starts: 162 }),
+    R('Art Shell', 15, 8, 2, 0, 2, 11, { games: 207, starts: 169 }),
+    R('Gene Upshaw', 15, 7, 3, 0, 3, 11, { games: 217, starts: 207 }),
+    R('Willie Roaf', 13, 11, 4, 0, 0, 2, { games: 189, starts: 189 }),
+    R('Orlando Pace', 13, 7, 3, 0, 1, 5, { games: 169, starts: 165 }),
+    R('Dermontti Dawson', 13, 7, 6, 0, 0, 7, { games: 184, starts: 181 }),
+    R('Jason Kelce', 13, 7, 6, 0, 1, 7, { games: 193, starts: 193 }),
+    R('Ron Yary', 15, 7, 6, 0, 1, 11, { games: 207, starts: 180 }),
+    R('Mel Hein', 15, 4, 8, 0, 2, 8, { games: 170, starts: 153 }),
+    R('Will Shields', 14, 12, 3, 0, 0, 6, { games: 224, starts: 223 }),
+    R('Alan Faneca', 13, 9, 6, 0, 1, 6, { games: 206, starts: 201 }),
+    R('Gary Zimmerman', 12, 7, 3, 0, 1, 7, { games: 184, starts: 184 }),
+    R('Steve Hutchinson', 12, 7, 5, 0, 0, 5, { games: 169, starts: 169 }),
+    R('Trent Williams', 15, 12, 3, 0, 0, 5, { games: 211, starts: 210 }),
+    R('Ron Mix', 11, 8, 9, 0, 1, 5, { games: 142, starts: 130 }),
+    R('Dwight Stephenson', 8, 5, 4, 0, 0, 5, { games: 114, starts: 87 }),
+    R('Roosevelt Brown', 13, 9, 6, 0, 1, 6, { games: 162, starts: 161 }),
+    R('Mike Munchak', 12, 9, 4, 0, 0, 7, { games: 159, starts: 156 }),
+    R('Jim Langer', 12, 6, 3, 0, 2, 8, { games: 151, starts: 110 }),
+    R('Tom Mack', 13, 11, 4, 0, 0, 8, { games: 184, starts: 176 }),
+    R('Rayfield Wright', 13, 6, 3, 0, 2, 12, { games: 166, starts: 166 }),
+    R('Jackie Slater', 20, 7, 1, 0, 0, 11, { games: 259, starts: 211 }),
+    R('Tony Boselli', 7, 5, 3, 0, 0, 4, { games: 91, starts: 90 }),
   ],
   guard: [
     R('LeBron James', 23, 22, 21, 4, 4, 19, { pts: 43440, reb: 12095, ast: 12016 }),

@@ -916,8 +916,8 @@ export default function QBSalaryCap({ onConfirm, onBack, user, initialDateStr })
           number:     p.number ?? null,
           captain:    !!p.captain,
           photo:      p.photo ?? null,
-          // DL: the Size pick's spot (edge or tackle) decides the season it plays
-          ...(position === 'dl' ? { subpos: p.subpos ?? null, height: p.height ?? null, weight: p.weight ?? null } : {}),
+          // DL / OL: the Size pick's spot (edge or tackle; LT to RT) decides the season it plays
+          ...(position === 'dl' || position === 'ol' ? { subpos: p.subpos ?? null, height: p.height ?? null, weight: p.weight ?? null } : {}),
         }
       })
     })

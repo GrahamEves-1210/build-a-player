@@ -10,9 +10,9 @@ import { byV, clamp, lerp, outcome, layer, rngOf, prog, easeOut, easeIn, themOf,
 import { goalPosts, breakupPose, tilt, untilt, ground, stands, floodlight, vignette, athlete, warmAthlete, warmQb, qbStance, skinOf, dirOf, airBall, ballShadow, nameTag, crowdPop } from './art.js'
 
 export const how = {
-  acc: 'Press where the ball goes and lead him. Tap for a lob. Hold for a bullet: it fires when the ring closes.',
-  'third-long': 'Find the open man past the yellow line. Press the spot. Tap for a lob. Hold for a bullet: it fires when the ring closes.',
-  bomb: 'Find the man running free deep. Press the spot. Tap for a lob. Hold for a bullet: it fires when the ring closes.',
+  acc: 'Press where the ball goes and lead him. Tap for a lob. Hold for a bullet.',
+  'third-long': 'Find the open man past the yellow line. Press the spot. Tap for a lob. Hold for a bullet.',
+  bomb: 'Find the man running free deep. Press the spot. Tap for a lob. Hold for a bullet.',
 }
 
 // ── The field. x: 0-360 across, the sidelines at 8 and 352 (53 1/3 yards). y: up from the line of
@@ -1302,11 +1302,11 @@ function drawBroadcast(ctx, g, view) {
       }
       // his mates, when they get there. The defense stops where it is, and it's seen this before.
       if (mood === 'td' && !isD && res.runner !== p && res.tdAt != null && g.t >= res.tdAt && Math.hypot(p.x - res.runner.x, p.y - res.runner.y) < CLOSE + 8) { O.dir = 'down'; O.step = null; O.pose = 'arms-up'; O.lift = hop(g.t + p.x * 7, 440, 12) }
-      if (mood === 'td' && isD && res.tdAt != null && g.t >= res.tdAt + 80) { O.dir = 'up'; O.step = null; O.pose = NUMS[p.id] % 3 ? 'hips' : 'hands-head' }
+      if (mood === 'td' && isD && res.tdAt != null && g.t >= res.tdAt + 80) { O.dir = 'up'; O.step = null; O.pose = 'hips' }   // (scored on: hands on hips, never up)
       // the man he beat, once the catch is made and he's not the one bringing him down
       if (isD && res?.cover === p && p !== onTop && mood && g.t >= res.at + 520) {
         O.dir = 'down'; O.step = null; O.carry = false
-        O.pose = mood === 'td' ? 'hands-head' : (Math.floor(res.at) >> 4) % 2 ? 'hips' : 'hands-head'
+        O.pose = 'hips'   // (beaten: hands on his hips, never up)
       }
       if (tk && res.runner === p) {
         O.dir = 'up'

@@ -16,9 +16,13 @@ import { DBS, DB_TYPES } from './dbs'
 import { DB_LEGENDS } from './db-legends'
 import { DLS, DL_TYPES } from './dls'
 import { DL_LEGENDS } from './dl-legends'
+import { OLS, OL_TYPES } from './ols'
+import { OL_LEGENDS } from './ol-legends'
+import { OL_LIVE } from '../lib/olLive'
 
-// the positions Change Position offers, in the game's order (OL is Coming Soon; LB isn't here)
-export const FB_SAL_POS = ['qb', 'rb', 'wr', 'te', 'db', 'dl']
+// the positions Change Position offers, in the game's order (LB isn't here; OL only once it's live:
+// OL_LIVE, lib/olLive.js. Its board is below either way, so the live server already checks an OL play)
+export const FB_SAL_POS = ['qb', 'rb', 'wr', 'te', 'db', 'dl', ...(OL_LIVE ? ['ol'] : [])]
 
 // A position's pool, built the way QB's is: the current players, plus the strongest 18
 // all-time legends who aren't on a current roster; everyone fully rated, an average of 3+
@@ -75,6 +79,14 @@ export const FB_SAL = {
     { key: 'finesse', label: 'FINESSE',  types: ['finesseMoves', 'bend'] },
     { key: 'runstop', label: 'RUN STOP', types: ['blockShed', 'playRecognition'] },
     { key: 'size',    label: 'SIZE',     types: ['size'] },
+  ] },
+  // the line: Size, from the bio, is its own column again, and that pick decides the build's spot (LT to RT)
+  ol: { label: 'OL', types: OL_TYPES, pool: salPool(OLS, OL_LEGENDS, OL_TYPES), cols: [
+    { key: 'passpro', label: 'PASS PRO',  types: ['passPro', 'blitzPickup'] },
+    { key: 'runblk',  label: 'RUN BLOCK', types: ['runBlock', 'pancake'] },
+    { key: 'anchor',  label: 'ANCHOR',    types: ['anchor', 'length'] },
+    { key: 'feet',    label: 'FEET',      types: ['mobility', 'discipline'] },
+    { key: 'size',    label: 'SIZE',      types: ['size'] },
   ] },
 }
 export const fbSalFor = pos => FB_SAL[pos] ?? FB_SAL.qb

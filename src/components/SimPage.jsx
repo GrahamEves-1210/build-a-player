@@ -357,10 +357,12 @@ function statCols(kind, r) {
       gp,
       { key: 'sck',  label: 'Sacks Allowed',     val: r.seasonSacksAllowed },
       { key: 'prs',  label: 'Pressures Allowed', val: r.seasonPressures },
+      ...(r.seasonQBHits != null ? [{ key: 'qbh', label: 'QB Hits Allowed', val: r.seasonQBHits }] : []),
       { key: 'pen',  label: 'Penalties',         val: r.seasonPenalties },
       { key: 'pnk',  label: 'Pancakes',          val: r.seasonPancakes },
       { key: 'pbwr', label: 'Pass Block Win Rate', val: r.seasonPBWR, fmt: n => `${dec1(n)}%` },
       { key: 'rbwr', label: 'Run Block Win Rate',  val: r.seasonRBWR, fmt: n => `${dec1(n)}%` },
+      ...(r.seasonGrade != null ? [{ key: 'grd', label: 'Grade', val: r.seasonGrade, fmt: n => dec1(n) }] : []),
     ]
     case 'dl': return [
       gp,
@@ -1285,7 +1287,7 @@ function ScreenPlayoffs({ result, onNext, onPreSuperBowl, adsDisabled = false, n
 
 // ─── GOAT Status: where this season ranks among the all-time top 25 ──────────
 // (football's version of basketball's GOAT screen; the lists are data/nfl-goat.js)
-const GOAT_POS = { qb: 'QBs', rb: 'Running Backs', wr: 'Wide Receivers', te: 'Tight Ends', db: 'Defensive Backs', dl: 'Defensive Linemen', lb: 'Linebackers' }
+const GOAT_POS = { qb: 'QBs', rb: 'Running Backs', wr: 'Wide Receivers', te: 'Tight Ends', db: 'Defensive Backs', dl: 'Defensive Linemen', lb: 'Linebackers', ol: 'Offensive Linemen' }
 const GOAT_N = 25
 
 // Your season's spot: OVR sets it (90 just makes the list, 99 is near the top), a
@@ -1302,6 +1304,7 @@ function nflGoatRank(kind, result, wonAward) {
     : kind === 'wr' ? pts(r.seasonRecYds, [1500, 1800]) + pts(r.seasonRecTDs, [13, 17])
     : kind === 'te' ? pts(r.seasonRecYds, [1200, 1500]) + pts(r.seasonRecTDs, [11, 15])
     : kind === 'lb' ? pts(r.seasonTackles, [150, 170]) + pts(r.seasonINTs, [4, 6]) + pts(r.seasonSacks, [6]) + pts(r.seasonFF, [4])
+    : kind === 'ol' ? pts(4 - (r.seasonSacksAllowed ?? 9), [2, 4]) + pts(r.seasonGrade, [88, 92]) + pts(r.seasonPancakes, [55])
     : kind === 'dl' ? pts(r.seasonSacks, r.spot === 'DT' ? [12, 16] : [16, 20]) + pts(r.seasonTFL, [22, 28]) + pts(r.seasonFF, [5])
     : pts(r.seasonINTs, [7, 10]) + pts(r.seasonPickSixes, [2]) + pts(r.seasonPBUs, [18])
   let rank = Math.round(GOAT_N - ((ovr - 90) / 9) * 21) - Math.min(4, stat) - (wonAward ? 3 : 0) - (ring ? 2 : 0)
@@ -1885,7 +1888,7 @@ function ProgressDots({ screen, total }) {
 export default function SimPage({ result: baseResult, build, types = TYPES, onBack, onReset, replay = false, adsDisabled = false, isRB = false, isWR = false, isTE = false, isDB = false, isDL = false, isLB = false, isOL = false, onMVPWon, simFn = null, onFinal = null, pool = null, userName = 'Guest', isSalaryMode = false }) {
   // a replay opens on the final report (after the GOAT screen; OL has none), and so does coming back
   // to a season that was already played and booked (it has its story): never a second run at it
-  const [screen, setScreen] = useState(replay || baseResult.story ? (isOL ? 3 : 4) : 0)
+  const [screen, setScreen] = useState(replay || baseResult.story ? 4 : 0)
   useRailOn(screen)   // each screen of the season brings the bottom rail back
   const tapGuard = useTapGuard()
   const [mvpResult, setMvpResult] = useState(null)
@@ -1968,9 +1971,9 @@ export default function SimPage({ result: baseResult, build, types = TYPES, onBa
   const screens = [
     <ScreenBuild    key="build"    result={result} build={build} types={types} onNext={next} isRB={isRB} isWR={isWR} isTE={isTE} isDB={isDB} isDL={isDL} isLB={isLB} isOL={isOL} isSalaryMode={isSalaryMode} />,
     <ScreenSeason   key="season"   result={result} onNext={next} isRB={isRB} isWR={isWR} isTE={isTE} isDB={isDB} isDL={isDL} isLB={isLB} isOL={isOL} adsDisabled={adsDisabled} build={build} types={types} director={director} onFinal={handleFinal} pool={pool} userName={userName} />,
-    <ScreenPlayoffs key="playoffs" result={result} onNext={next} onPreSuperBowl={handlePreSuperBowl} adsDisabled={adsDisabled} nextLabel={isOL ? 'Final Report' : 'GOAT Status'} />,
+    <ScreenPlayoffs key="playoffs" result={result} onNext={next} onPreSuperBowl={handlePreSuperBowl} adsDisabled={adsDisabled} nextLabel="GOAT Status" />,
     // where the season ranks among the all-time top 25 at the position (no OL list)
-    ...(isOL ? [] : [<ScreenGOAT key="goat" kind={isDL ? 'dl' : isLB ? 'lb' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'} result={result} wonAward={mvpWon} onNext={next} adsDisabled={adsDisabled} userName={userName} />]),
+    ...([<ScreenGOAT key="goat" kind={isOL ? 'ol' : isDL ? 'dl' : isLB ? 'lb' : isDB ? 'db' : isTE ? 'te' : isWR ? 'wr' : isRB ? 'rb' : 'qb'} result={result} wonAward={mvpWon} onNext={next} adsDisabled={adsDisabled} userName={userName} />]),
     <ScreenFinal    key="final"    result={result} build={build} types={types} onReset={handleReset} onBack={handleBack} adsDisabled={adsDisabled} mvpWon={mvpWon} isRB={isRB} isWR={isWR} isTE={isTE} isDB={isDB} isDL={isDL} isLB={isLB} isOL={isOL} userName={userName} isSalaryMode={isSalaryMode} />,
   ]
 
@@ -2057,7 +2060,7 @@ export default function SimPage({ result: baseResult, build, types = TYPES, onBa
 
       {mvpResult && (
         <MVPModal
-          nextLabel={isOL ? 'Continue to Final Report' : 'Continue to GOAT Status'}
+          nextLabel="Continue to GOAT Status"
           result={result}
           mvpResult={mvpResult}
           onDismiss={handleMVPDismiss}

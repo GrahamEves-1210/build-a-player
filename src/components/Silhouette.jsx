@@ -8,6 +8,7 @@ import { DBS } from '../data/dbs'
 import { DLS } from '../data/dls'
 import { DL_LEGENDS } from '../data/dl-legends'
 import { LBS, LB_AS_DL, lbAsDlBuild, LB_SILHOUETTE } from '../data/lbs'
+import { OL_SILHOUETTE } from '../data/ols'
 import { LB_LEGENDS } from '../data/lb-legends'
 import { DB_LEGENDS } from '../data/db-legends'
 import { OL_PHYSICALS } from '../data/ols'
@@ -769,6 +770,7 @@ export default function Silhouette({ build, activeDrag, onDrop, activeCategory, 
               ? (bucketPhoto ? '/basketballsilhouetteheadless.png' : '/basketballsilhouette.png')
               : isLB ? LB_SILHOUETTE
               : isDL ? '/dl-silhouette.webp'
+              : isOL ? OL_SILHOUETTE
               : isDBFig ? '/db-silhouette.png'
               : (isWR || isTE) ? '/wr-silhouette.png'
               : isRB ? '/rb-silhouette.webp'

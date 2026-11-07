@@ -134,7 +134,8 @@ function SlotReel({ items, spinning, idle, onStop }) {
   )
 }
 
-export default function TeamPickerModal({ onSelect, isPlus = false, build = {} }) {
+// anyTeam: every team is on offer (Squad Builder), not only the build's
+export default function TeamPickerModal({ onSelect, isPlus = false, build = {}, anyTeam = false, eyebrow = 'Simulate Season' }) {
   const tapGuard = useTapGuard()   // the second tap on Simulate isn't a spin
   const [phase, setPhase]       = useState('idle')
   const [result, setResult]     = useState(null)
@@ -168,7 +169,7 @@ export default function TeamPickerModal({ onSelect, isPlus = false, build = {} }
     const shorts = [...new Set(Object.values(build).filter(Boolean).map(c => c.team))]
     return shorts.map(s => NFL_TEAMS.find(t => t.short === s)).filter(Boolean)
   }, [build])
-  const pickPool = isPlus ? NFL_TEAMS : draftedTeamsPool
+  const pickPool = isPlus || anyTeam ? NFL_TEAMS : draftedTeamsPool
 
   const filteredTeams = useMemo(() => {
     if (!search) return pickPool
@@ -185,7 +186,7 @@ export default function TeamPickerModal({ onSelect, isPlus = false, build = {} }
   return (
     <div className="tpm-overlay" onClickCapture={tapGuard.onClickCapture}>
       <div className={`tpm-card${mode === 'pick' ? ' tpm-card-pick' : ''}`} style={cardStyle}>
-        <div className="tpm-eyebrow">Simulate Season</div>
+        <div className="tpm-eyebrow">{eyebrow}</div>
         <div className="tpm-heading">{mode === 'pick' ? 'Pick a Team' : 'Spin a Team'}</div>
 
         <div className="tpm-mode-tabs">

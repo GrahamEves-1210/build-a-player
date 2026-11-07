@@ -23,6 +23,7 @@
 //   ovr90     seasons played with a 90+ build (95+ is counted inside it, not twice)
 import { supabase } from './supabase'
 import { LB_LIVE } from './lbLive'
+import { OL_LIVE } from './olLive'
 
 const countOf = q => q.then(r => (r.error ? null : r.count ?? 0), () => null)
 const BUCKET = 'bucket-%'
@@ -81,6 +82,8 @@ export async function loadHardware(uid) {
 // it ('rb-classic' …). A QB season's mode is the bare mode ('classic', 'all-time', 'lite',
 // 'legends' …), so QB is every row without a position prefix (or with no mode at all).
 const NOT_QB = ['bucket', 'rb', 'wr', 'te', 'db', 'dl', 'lb', 'ol'].map(p => `game_mode.not.like.${p}-*`).join(',')
+// (OL's row: a filter only once OL is live, but a season saved in the old OL mode still reads as OL)
+const OL_ROW = { key: 'ol', label: 'OL', sport: 'nfl', where: q => q.like('game_mode', 'ol-%') }
 export const POSITIONS = [
   { key: 'qb',    label: 'QB',    sport: 'nfl',    where: q => q.or(`game_mode.is.null,and(${NOT_QB})`) },
   { key: 'rb',    label: 'RB',    sport: 'nfl',    where: q => q.like('game_mode', 'rb-%') },
@@ -89,11 +92,11 @@ export const POSITIONS = [
   { key: 'db',    label: 'DB',    sport: 'nfl',    where: q => q.like('game_mode', 'db-%') },
   { key: 'dl',    label: 'DL',    sport: 'nfl',    where: q => q.like('game_mode', 'dl-%') },
   ...(LB_LIVE ? [{ key: 'lb',    label: 'LB',    sport: 'nfl',    where: q => q.like('game_mode', 'lb-%') }] : []),
-  { key: 'ol',    label: 'OL',    sport: 'nfl',    where: q => q.like('game_mode', 'ol-%') },
+  ...(OL_LIVE ? [OL_ROW] : []),   // OL_LIVE: lib/olLive.js
   { key: 'guard', label: 'GUARD', sport: 'bucket', where: q => q.like('game_mode', 'bucket-%').eq('position', 'guard') },
   { key: 'big',   label: 'BIG',   sport: 'bucket', where: q => q.like('game_mode', 'bucket-%').eq('position', 'big') },
 ]
-const POS_BY_KEY = Object.fromEntries(POSITIONS.map(p => [p.key, p]))
+const POS_BY_KEY = Object.fromEntries([...POSITIONS, OL_ROW].map(p => [p.key, p]))
 
 export function seasonPos(row) {
   const gm = String(row?.game_mode || 'classic')

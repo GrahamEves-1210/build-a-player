@@ -29,15 +29,17 @@ const SPAM_MS = 90                    // two presses closer than this: the secon
 const SWITCH_MS = 170                 // changing sides takes a beat: flailing both ways does nothing
 const OVERSHOOT = 0.12                // a good press can set you a little the other side of him, no further
 const RIP_AT = 0.82                   // the back's nearly there: the rusher's last one is always a rip
-function makeSeal({ v, seed }) {
+function makeSeal({ v, seed, pos, cast }) {
   const r = rngOf(seed)
+  // (an offensive lineman plays it too: the same fight, drawn as the tackle on the end of the line. The rules don't change)
+  const lineman = pos === 'ol' || !!cast?.us?.ol?.[0]?.me
   const green = byV(v, 0.36, 0.5)    // the middle of the bar. Blocking widens it...
   const force = byV(v, 0.92, 0.6)     // ...slows his push (bar a second)...
   const tellMs = byV(v, 360, 480)     // ...gives more warning...
   const loseMs = byV(v, 1150, 1600)   // ...and more time out of the green before he's by
   let run = 0
   const g = {
-    t: 0, game: 'seal', zones: 'lr', pads: ['LEFT', 'RIGHT'], padLit: null, fx: [], done: null, outro: 1900, stamp: null, dirt: particles(40, fxSeed(seed)), nudge: nudge(),
+    t: 0, game: 'seal', lineman, zones: 'lr', pads: ['LEFT', 'RIGHT'], padLit: null, fx: [], done: null, outro: 1900, stamp: null, dirt: particles(40, fxSeed(seed)), nudge: nudge(),
     green, bar: 0, shown: 0, back: 0, strain: 0, past: 0, inGreen: 0, played: 0, cur: null, lastPress: -999, popAt: -999, popDir: 0, litAt: -999,
     lastRip: false, held: false, yards: 0, doneAt: null,
     hud: { prompt: 'STAY IN FRONT OF HIM', dots: [] },
@@ -233,6 +235,12 @@ function bake(ctx, view, key, ez, withPosts = false) {
     const hy = tilt(view, 0, 0).y
     const pyd = PYD(h)
     ground(x, view, f => paintFieldFlat(f, view, ez, pyd, c.us), `flat|${key}`, 0, Math.round((h - hy) * view.px * 0.7))
+    // at the goal line (the sneak): the stands right up to the back of the end zone, the way Fourth & Goal has them,
+    // the same picture nearer, its foot on the end line (no green field going on past it)
+    if (withPosts) {
+      const at = tilt(view, 180, ez - pyd * 10 - pyd * 1.4).y, k = at / hy   // (a step behind the end line, scaled to this closer camera)
+      if (at > 0) { x.save(); x.beginPath(); x.rect(0, 0, view.w, at); x.clip(); x.translate(view.w / 2, 0); x.scale(k, k); x.translate(-view.w / 2, 0); stands(x, view, 'field-close', [c.us, c.trim]); x.restore() }
+    }
     floodlight(x, view)
     // the benches, in knots down each sideline
     const knots = [0.2, 0.235, 0.27, 0.4, 0.44, 0.47, 0.62, 0.655, 0.8]
@@ -306,7 +314,10 @@ function drawSeal(ctx, g, view0) {
   ctx.fillStyle = '#f7d64a'; turf(ctx, view, SL, los - 10 * P - 2, SR, los - 10 * P + 2)
 
   const cx0 = 268, m = g.done ? null : g.cur
-  const men = g.men ?? (g.men = { te: realMan(view.cast, 'te', 0), rb: realMan(view.cast, 'rb', 0), pace: paceOf(view.cast, 'us', 'rb', 0), ol: [0, 1, 2, 3, 4].map(i => realMan(view.cast, 'ol', i)) })
+  // our man: the tight end, or (a lineman's game) the tackle himself, with the four inside him
+  const OL = g.lineman
+  const men = g.men ?? (g.men = { te: realMan(view.cast, OL ? 'ol' : 'te', 0), rb: realMan(view.cast, 'rb', 0), pace: paceOf(view.cast, 'us', 'rb', 0), ol: OL ? [null, 4, 3, 2, 1].map(i => (i == null ? null : realMan(view.cast, 'ol', i))) : [0, 1, 2, 3, 4].map(i => realMan(view.cast, 'ol', i)) })
+  const myNum = OL ? 76 : 88, lineN = OL ? 4 : 5
   const age = g.doneAt != null ? g.t - g.doneAt : 0
   const shed = g.done && !g.held, heldOut = g.done && g.held
   // his shoulder: most of it in the first 150 ms, so the eye has it, and it stays dropped while he pushes
@@ -367,10 +378,10 @@ function drawSeal(ctx, g, view0) {
   const te = () => {
     const beat = g.past
     // (the man he put down, and he stands over him)
-    if (heldOut && age > 780) { man(ctx, view, tx, ty, 0, c, them, 7, BIG, 'down', 'flex', { number: 88, look: men.te }); return }
+    if (heldOut && age > 780) { man(ctx, view, tx, ty, 0, c, them, 7, BIG, 'down', 'flex', { number: myNum, look: men.te }); return }
     const q = tilt(view, tx, ty)
     ctx.save(); ctx.translate(q.x, q.y); ctx.rotate(-Math.sign(g.shown) * beat * 0.16 + recoil * 0.06); ctx.translate(-q.x, -q.y)
-    man(ctx, view, tx, ty, 0, c, them, 7, BIG, 'up', 'block', { number: 88, look: men.te })
+    man(ctx, view, tx, ty, 0, c, them, 7, BIG, 'up', 'block', { number: myNum, look: men.te })
     ctx.restore()
   }
   const backFirst = heldOut && by < ry
@@ -378,7 +389,7 @@ function drawSeal(ctx, g, view0) {
   // (once he's level with our man he's the nearer of the two only when he's lower on the screen)
   const rushFirst = ry <= ty
   if (rushFirst) rusher()
-  for (let i = 1; i <= 5; i++) man(ctx, view, cx0 - 12 - i * SP - wig, los + 2, 0, c, them, 20 + i, S, 'up', 'block', { number: 64 + i, look: men.ol[5 - i], ol: 1, lo: i % 2 })
+  for (let i = 1; i <= lineN; i++) man(ctx, view, cx0 - 12 - i * SP - wig, los + 2, 0, c, them, 20 + i, S, 'up', 'block', { number: 64 + i, look: men.ol[5 - i], ol: 1, lo: i % 2 })
   te()
   if (!rushFirst) rusher()
   // the pop: pads meeting, a crack of three short lines where they hit

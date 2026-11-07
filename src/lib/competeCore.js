@@ -5,7 +5,7 @@
 // so a phone can't claim a number it never drew.
 
 import { seeded, seededShuffle } from './rng'
-import { calcOVR, calcOVRRB, calcOVRWR, calcOVRTE, calcOVRDB, calcOVRDL, calcOVRLB } from '../utils/simulation'
+import { calcOVR, calcOVRRB, calcOVRWR, calcOVRTE, calcOVRDB, calcOVRDL, calcOVRLB, calcOVROL } from '../utils/simulation'
 import { calcBucketOVR } from '../utils/bucketSimulation'
 import { QBS, TYPES } from '../data/qbs'
 import { RBS, RB_TYPES } from '../data/rbs'
@@ -14,6 +14,7 @@ import { TES, TE_TYPES } from '../data/tes'
 import { DBS, DB_TYPES } from '../data/dbs'
 import { DLS, DL_TYPES } from '../data/dls'
 import { LBS, LB_TYPES } from '../data/lbs'
+import { OLS, OL_TYPES } from '../data/ols'
 import { NBA_GUARD_PLAYERS, GUARD_TYPES } from '../data/nba-guards'
 import { NBA_BIG_PLAYERS, BIG_TYPES } from '../data/nba-bigs'
 import { TEAMS } from '../data/nfl-teams'
@@ -30,7 +31,7 @@ const UNKNOWN_VAL = 3                 // a slot the server can't match to a real
 const OFF_SEED_MAX = 2
 const SEED_SLACK = 2                  // spins past one-a-slot that still count (a pick never placed)
 
-export const COMPETE_POS = { nfl: ['qb', 'rb', 'wr'], bucket: ['guard', 'big'] }   // TE, DB, DL and LB pools off: not enough players to fill them
+export const COMPETE_POS = { nfl: ['qb', 'rb', 'wr'], bucket: ['guard', 'big'] }   // TE, DB, DL, LB and OL pools off: not enough players to fill them
 const NFL = {
   qb: { pool: QBS, types: TYPES, ovr: b => calcOVR(b) },
   rb: { pool: RBS, types: RB_TYPES, ovr: b => calcOVRRB(b) },
@@ -39,6 +40,8 @@ const NFL = {
   db: { pool: DBS, types: DB_TYPES, ovr: b => calcOVRDB(b) },
   dl: { pool: DLS, types: DL_TYPES, ovr: b => calcOVRDL(b) },
   lb: { pool: LBS, types: LB_TYPES, ovr: b => calcOVRLB(b) },
+  // (OL: scored like the others, so a build the server re-reads keeps its Size chip's spot: scoreBuild copies subpos)
+  ol: { pool: OLS, types: OL_TYPES, ovr: b => calcOVROL(b) },
 }
 const BUCKET = {
   guard: { pool: NBA_GUARD_PLAYERS, types: GUARD_TYPES, ovr: b => calcBucketOVR(b, GUARD_TYPES, 'guard') },

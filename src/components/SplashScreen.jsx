@@ -11,6 +11,7 @@ export function hsUrl(id) {
 
 import { IS_APP, APP_LOOK, setClassicLook } from '../lib/platform'
 import { LB_LIVE } from '../lib/lbLive'
+import { OL_LIVE } from '../lib/olLive'
 
 export const POS_OPTIONS = [
   {
@@ -54,7 +55,7 @@ export const POS_OPTIONS = [
     ],
   },
   {
-    pos: 'ol', label: 'OL', classic: false, alltime: false, disabled: true,
+    pos: 'ol', label: 'OL', classic: OL_LIVE, alltime: OL_LIVE, disabled: !OL_LIVE,   // OL_LIVE: lib/olLive.js
     players: [
       { id: 'espn_4373825', color: '#0076b6' },  // Penei Sewell - DET
       { id: 'espn_4241385', color: '#e31837' },  // Creed Humphrey - KC
@@ -139,7 +140,7 @@ function PositionPicker({ position, onChange }) {
               onClick={() => select(opt.pos)}
               tabIndex={!open ? -1 : 0}
             >
-              {(opt.pos === 'db' || opt.pos === 'dl' || (opt.pos === 'lb' && LB_LIVE)) && <span className="splash-pos-new-tag">NEW</span>}
+              {(opt.pos === 'db' || opt.pos === 'dl' || (opt.pos === 'lb' && LB_LIVE) || (opt.pos === 'ol' && OL_LIVE)) && <span className="splash-pos-new-tag">NEW</span>}
               <div className="splash-pos-option-top">
                 <AvatarTrio players={opt.players} size={40} />
                 <span className="splash-pos-option-name">{opt.label}</span>

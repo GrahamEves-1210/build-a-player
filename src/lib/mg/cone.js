@@ -346,8 +346,17 @@ function coneState(g, list) {
     const c = g.cuts[i]
     if (c.hitAt == null) continue
     const j = of[i], age = t - c.hitAt, side = i % 2 ? 1 : -1
-    if (c.res === false && c.why === 'late') { g.coneSide[j] = side; g.coneAng[j] = side * 1.42 * Math.min(1, easeOut(age / 210)) + (age < 340 ? side * Math.sin(age / 40) * 0.05 * (1 - age / 340) : 0) }
-    else if (!g.coneSide[j] && age < 620) g.coneAng[j] = side * (c.res ? 0.1 : 0.3) * Math.exp(-age / 190) * Math.cos(age / 36)
+    if (c.res === false && c.why === 'late') {
+      // knocked over: it goes down once, on the side it was first hit from, and stays there (the drill comes back round
+      // the same cone: a second knock flipped it from side to side)
+      if (g.coneSide[j]) continue
+      g.coneSide[j] = side
+      const f = Math.min(1, age / 260), fall = f * f * (3 - 2 * f)
+      const settle = age > 260 && age < 440 ? Math.sin(((age - 260) / 180) * Math.PI) * 0.07 : 0   // (one small bounce as it lands)
+      g.coneAng[j] = side * (1.42 * fall - settle)
+    }
+    // brushed: a rock that starts from upright and swings slowly out (it used to start at full tilt in one frame and buzz)
+    else if (!g.coneSide[j] && age < 760) g.coneAng[j] = side * (c.res ? 0.07 : 0.2) * Math.exp(-age / 240) * Math.sin(age / 68)
   }
 }
 // the marks he leaves, and the turf, or the floor dust, off the plant. Once a plant.

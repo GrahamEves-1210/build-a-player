@@ -15,11 +15,14 @@ import * as goalline from './goalline.js'
 import * as lockdown from './lockdown.js'
 import * as fastbreak from './fastbreak.js'
 import * as oop from './oop.js'
+import * as halfcourt from './halfcourt.js'
+import * as passpro from './passpro.js'
 import { useCamera } from './art.js'
 
-// (make sets the game's camera first, so the layout it works out goes through the same one as the picture)
-const withBot = (mod, botName) => ({ ...mod, botName, make: o => { useCamera(o.game); return mod.make(o) } })
-const map = (mod, botName, ids) => Object.fromEntries(ids.map(id => [id, withBot(mod, botName)]))
+// (make sets the game's camera first, so the layout it works out goes through the same one as the picture.
+// cam: another game's camera, for a game shot the same way: Pass Pro is Pass Rush from the other side)
+const withBot = (mod, botName, cam = null) => ({ ...mod, botName, make: o => { useCamera(cam ?? o.game); return mod.make(o) } })
+const map = (mod, botName, ids, cam = null) => Object.fromEntries(ids.map(id => [id, withBot(mod, botName, cam)]))
 export const ENGINES = {
   ...map(catchGame, 'catch', ['gauntlet', 'catch', 'release']),
   ...map(read, 'read', ['hot-read', 'gap', 'jump-route', 'pnr', 'rim-protect']),
@@ -37,8 +40,10 @@ export const ENGINES = {
   ...map(lockdown, 'lockdown', ['lockdown']),
   ...map(fastbreak, 'fastbreak', ['fast-break']),
   ...map(oop, 'oop', ['alley-oop']),
+  ...map(halfcourt, 'halfcourt', ['half-court']),
+  ...map(passpro, 'passpro', ['pass-pro'], 'pass-rush'),
 }
 export const engineFor = game => ENGINES[game] ?? null
 export const GAME_IDS = Object.keys(ENGINES)
 // the games played on a court
-export const BUCKET_GAMES = new Set(['pnr', 'rim-protect', 'iso', 'post-up', 'clutch-shot', 'free-throws', 'spot', 'vert', 'board', 'sprint', 'lane', 'nbench', 'lockdown', 'fast-break', 'alley-oop'])
+export const BUCKET_GAMES = new Set(['pnr', 'rim-protect', 'iso', 'post-up', 'clutch-shot', 'free-throws', 'spot', 'vert', 'board', 'sprint', 'lane', 'nbench', 'lockdown', 'fast-break', 'alley-oop', 'half-court'])

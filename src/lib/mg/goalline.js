@@ -12,7 +12,7 @@ import { paintFieldFlat, looseBall, qbPose, handsFor, HOLD_MS, YD, scatterOf, ca
 import { walk, put, action, fieldStage, ballInAir, teamOf } from './read.js'
 
 export const how = {
-  'goal-line': 'Tap CUT as the ring closes on the spot. Then press the shoulder the ball comes over as it gets to you. At quarterback: press where the ball goes.',
+  'goal-line': 'Tap CUT as the ring closes on the spot. Then press the side the ball is thrown to as it gets there. At quarterback: press where the ball goes.',
 }
 
 const GOAL = 5                // yards from the line of scrimmage
@@ -500,7 +500,7 @@ export function draw(ctx, g, view) {
       return put(g.QB.x - hitBy * 15, fl(d.y) - hop(since, 0, 4), them, { ...look, pose: since % 700 < 350 ? 'flex' : 'arms-up', z: fl(d.y) })
     }
     if (theyWon) return put(d.x, fl(d.y) - hop(loseAge, i, 6), them, { ...look, pose: 'arms-up', z: fl(d.y) })
-    if (td && tdAge > 300) return put(d.x, fl(d.y), them, { ...look, pose: i % 2 ? 'hips' : 'hands-head' })
+    if (td && tdAge > 300) return put(d.x, fl(d.y), them, { ...look, pose: 'hips' })
     if (d.free == null) return put(d.x, fl(d.y), them, { ...look, pose: sn ? 'block' : 'stance' })
     // through the line with his arms up, and onto the QB
     put(d.x, fl(d.y), them, { ...look, pose: 'arms-up', step: res ? null : Math.floor(g.t / 90) % 4 })
@@ -521,7 +521,7 @@ export function draw(ctx, g, view) {
     const w = walk(g, `lb${i}`, l.x, fl(l.y), 11), look = { dir: 'down', skin: skinOf(i + 6), number: LB_NUM[i], size: SIZE }
     if (carrier?.tk?.by === l && tkAge < 800) return tackler(l, look)
     if (theyWon) return put(l.x, fl(l.y) - hop(loseAge, i + 5, 7), them, { ...look, pose: i ? 'flex' : 'arms-up', z: fl(l.y) })
-    if (td && tdAge > 360) return put(l.x, fl(l.y), them, { ...look, pose: i ? 'hips' : 'hands-head' })
+    if (td && tdAge > 360) return put(l.x, fl(l.y), them, { ...look, pose: 'hips' })
     put(l.x, fl(l.y), them, { ...look, step: w.step, pose: w.step == null ? 'ready' : null })
   })
   // the man on each receiver
@@ -539,7 +539,7 @@ export function draw(ctx, g, view) {
     const look = { dir: 'down', skin: skinOf(i + 3), number: DB_NUM[i], size: SIZE, ...man }
     if (carrier?.tk?.by === d && tkAge < 800) return tackler(d, look)
     if (g.diver === d) { const sd = star.x < d.x ? -1 : 1; return put(d.x, fl(d.y), them, { ...look, dir: sd < 0 ? 'left' : 'right', pose: 'dive', fall: clamp(tdAge / 280, 0, 1), fallX: sd }) }
-    if (td && tdAge > 420) return put(d.x, fl(d.y), them, { ...look, step: null, pose: (i + g.dance) % 3 === 0 ? 'hips' : 'hands-head', squat: (i + g.dance) % 3 === 2 ? 0.34 : 0 })
+    if (td && tdAge > 420) return put(d.x, fl(d.y), them, { ...look, step: null, pose: 'hips', squat: (i + g.dance) % 3 === 2 ? 0.34 : 0 })
     if (theyWon && !wave) return put(d.x, fl(d.y) - hop(loseAge, i + 2, 7), them, { ...look, pose: (i + g.dance) % 2 ? 'flex' : 'arms-up', z: fl(d.y) })
     // beaten at the break: he's caught leaning the wrong way, his feet going out from under him
     const leaning = d.on.cutAt != null && g.t < d.chaseAt && !res

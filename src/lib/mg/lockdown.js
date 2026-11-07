@@ -479,7 +479,7 @@ export function draw(ctx, g, view) {
     if (f?.kind === 'score') {
       const u = ge - RIM_RUN
       if (u > 0) { mixPose(MP, POSE.hands, clamp(u / 160, 0, 1), MP); MP.j = 14 * Math.sin(Math.PI * clamp((u - 40) / 460, 0, 1)) }
-      if (T > f.make + 200) { back = true; copyPose(T > f.make + 520 ? R_HEAD : R_HIPS, MP) }
+      if (T > f.make + 200) { back = true; copyPose(R_HIPS, MP) }
     }
   } else if (res && !res.ok && !reset) {
     if (p) copyPose(D_BIT[p.side], MP)

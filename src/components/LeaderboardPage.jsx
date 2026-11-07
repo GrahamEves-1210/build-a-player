@@ -15,6 +15,7 @@ import QBAvatar from './QBAvatar'
 import HEADSHOTS from '../data/headshots.json'
 import { NameTag } from './app/NameTag'
 import { IS_APP as _LB_APP, APP_LOOK as _LB_LOOK } from '../lib/platform'
+import { OL_LIVE } from '../lib/olLive'
 // App look: every name on the board wears that player's look (looked up by account id)
 const LbName = ({ name, uid }) => ((_LB_APP || _LB_LOOK) ? <NameTag name={name} uid={uid} className="lb-ntag" /> : <>{name}</>)
 
@@ -1299,6 +1300,7 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
               { pos: 'te', label: 'TE', active: !isAllView && isTE },
               { pos: 'db', label: 'DB', active: !isAllView && isDB },
               { pos: 'dl', label: 'DL', active: !isAllView && isDL },
+              ...(OL_LIVE ? [{ pos: 'ol', label: 'OL', active: !isAllView && isOL }] : []),
             ].map(({ pos, label, active }) => (
               <button
                 key={pos}
@@ -1545,7 +1547,7 @@ export default function LeaderboardPage({ onBack, currentUser, adsDisabled = fal
           <>
             <div className="lb-header">
               <div className="lb-title">All-Mode Leaderboard</div>
-              <div className="lb-subtitle">QB + RB + WR + TE + DB + DL + OL combined · career stats · all players ranked</div>
+              <div className="lb-subtitle">QB + RB + WR + TE + DB + DL{OL_LIVE ? ' + OL' : ''} combined · career stats · all players ranked</div>
               <div className="lb-header-line" />
             </div>
 

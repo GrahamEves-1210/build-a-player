@@ -5,7 +5,8 @@ import { TE_TYPES, TES } from '../data/tes'
 import { DB_TYPES } from '../data/dbs'
 import { DL_TYPES } from '../data/dls'
 import { LB_TYPES } from '../data/lbs'
-import { OL_TYPES, OLS, OL_ATTR_WEIGHT, OL_POS_BY_NAME, OL_ALL_PRO_BALLOT } from '../data/ols'
+import { OL_TYPES, OLS, OL_ATTR_WEIGHT, OL_POS_BY_NAME, OL_ALL_PRO_BALLOT, olOVR } from '../data/ols'
+import { OL_LEGENDS } from '../data/ol-legends'
 import { NFL_TEAMS, ALLTIME_RATINGS, RB_RATINGS } from '../data/nfl-teams'
 
 export const HEADSHOT_BASE = import.meta.env.DEV
@@ -285,10 +286,11 @@ function buildSchedule(team) {
 const DOME_TEAMS = new Set(['ARI','ATL','DAL','DET','HOU','IND','LV','MIN','NO'])
 const COLD_TEAMS = new Set(['BAL','BUF','CHI','CIN','CLE','DEN','GB','KC','NE','NYG','NYJ','PHI','PIT','WAS'])
 
-function playoffWeather(homeShort, isSuperBowl) {
+// (rand: a seeded draw for a career's playoff game, so a reload plays it in the same weather)
+export function playoffWeather(homeShort, isSuperBowl, rand = Math.random) {
   if (isSuperBowl) return 'dome'
   if (!homeShort || DOME_TEAMS.has(homeShort)) return 'dome'
-  const r = Math.random()
+  const r = rand()
   if (COLD_TEAMS.has(homeShort)) {
     if (r < 0.62) return 'clear'
     if (r < 0.84) return 'snow'
@@ -4086,7 +4088,7 @@ export function calcOVROL(build, types = OL_TYPES) {
 // All-Pro ballot all agree on whether this is a tackle, guard or center.
 export function olBuildSpot(build) {
   const chip = build?.['size']
-  return OL_POS_BY_NAME[chip?.qbFull] ?? chip?.subpos ?? null
+  return chip?.subpos ?? OL_POS_BY_NAME[chip?.qbFull] ?? null
 }
 
 function olSpotGroup(spot, fallback = 'tackle') {
@@ -4149,7 +4151,11 @@ function olAllProStatLine(s) {
 // A spot's ballot: the first three listed names. The real starter on the
 // build's own team at the build's spot is off that ballot — the build took
 // his job — so the listed alternate moves up into his place.
-function olAllProBallot(spot, excludeTeam = null) {
+// All-Time: the three best legends at the spot (by OVR) are the ballot.
+const OL_ALLTIME_BALLOT = Object.fromEntries(['LT', 'LG', 'C', 'RG', 'RT'].map(s => [s,
+  OL_LEGENDS.filter(o => o.pos === s).sort((a, b) => (olOVR(b.attrs) ?? 0) - (olOVR(a.attrs) ?? 0)).slice(0, 4)]))
+function olAllProBallot(spot, excludeTeam = null, isAllTime = false) {
+  if (isAllTime) return (OL_ALLTIME_BALLOT[spot] ?? []).filter(o => o.team !== excludeTeam).slice(0, 3)
   return (OL_ALL_PRO_BALLOT[spot] ?? [])
     .map(name => OLS.find(o => o.name === name))
     .filter(o => o && o.team !== excludeTeam)
@@ -4201,9 +4207,9 @@ export function calcOLAllProResult(result, isAllTime = false, teamShort = null) 
   // them — unless it's the build's spot and the build won it.
   const line = OL_SPOTS.map(s => {
     if (s === userSpot && userWins) {
-      return { spot: s, isUser: true, name: 'Your Build', team: teamShort, color: OL_TEAM_BY_SHORT[teamShort]?.color, stats: userStats }
+      return { spot: s, isUser: true, name: 'Guest', team: teamShort, color: OL_TEAM_BY_SHORT[teamShort]?.color, stats: userStats }
     }
-    const ballot = olAllProBallot(s, s === userSpot ? teamShort : null)
+    const ballot = olAllProBallot(s, s === userSpot ? teamShort : null, isAllTime)
     const pick = pickWeighted(ballot.map((o, i) => ({ ...o, weight: [45, 33, 22][i] })))
     return { spot: s, isUser: false, name: pick.name, team: pick.team, color: OL_TEAM_BY_SHORT[pick.team]?.color, stats: olAllProSeason() }
   })
@@ -4216,11 +4222,39 @@ export function calcOLAllProResult(result, isAllTime = false, teamShort = null) 
     userSpot,
     userStats,
     // the three real names the build was up against at its spot
-    ballot: olAllProBallot(userSpot, teamShort).map(o => o.name),
+    ballot: olAllProBallot(userSpot, teamShort, isAllTime).map(o => o.name),
+    // Pro Bowl: the All-Pros go, and so does a clearly good season short of the vote
+    proBowl: userWins || (ovr >= 84 && caseStrength >= 0.52 && Math.random() < 0.35 + (caseStrength - 0.52) * 2.2),
     winner: userWins ? null : { name: spotWinner.name, team: spotWinner.team, pos: userSpot, color: spotWinner.color },
     winnerStats: userWins ? null : spotWinner.stats,
     winnerStatLine: userWins ? null : olAllProStatLine(spotWinner.stats),
   }
+}
+
+// A game's snaps, QB hits and which flags they were (see the ranges in runOLSimulation).
+// Offenses run ~62-68 plays a game; a pass-heavy year a few more.
+function olGameExtras(prs, sacks, pen, passVol = 1, mobN = 0.5) {
+  const snaps = Math.max(48, Math.round(62 + (passVol - 1) * 10 + randN() * 4.5))
+  let qbHits = 0
+  for (let k = sacks; k < prs; k++) if (Math.random() < 0.21) qbHits++
+  let holding = 0, falseStarts = 0
+  // a heavy-footed lineman jumps early more; a quick one gets beat and grabs
+  const fsShare = 0.40 + (0.5 - mobN) * 0.10
+  for (let k = 0; k < pen; k++) { const r = Math.random(); if (r < 0.50) holding++; else if (r < 0.50 + fsShare) falseStarts++ }
+  return { snaps, qbHits, holding, falseStarts }
+}
+
+// PFF-style 0-100 season grades from the line itself: the pass grade from his pressure rate
+// (~2% → ~89, ~4% → ~78, ~5.5% → ~70, ~8% → ~56) less the sacks, the run grade from his run
+// block win rate and finishes, and the overall leaning 60/40 to the pass with the flags off it.
+export function olSeasonGrades({ pressures = 0, sacks = 0, penalties = 0, pancakes = 0, snaps = 1100, passShare = 0.58, rbwr = 70 }) {
+  const clamp = v => Math.max(30, Math.min(95, v))
+  const sets = Math.max(1, snaps * Math.max(0.45, Math.min(0.7, passShare)))
+  const rate = pressures / sets * 100
+  const passGrade = clamp(100 - 5.4 * rate - 1.2 * sacks + randN() * 1.2)
+  const runGrade = clamp(40 + (rbwr - 60) * 1.75 + Math.min(10, pancakes / 6) + randN() * 1.5)
+  const grade = clamp(passGrade * 0.6 + runGrade * 0.4 - Math.max(0, penalties - 5) * 0.8)
+  return { passGrade: +passGrade.toFixed(1), runGrade: +runGrade.toFixed(1), grade: +grade.toFixed(1) }
 }
 
 export function runOLSimulation(build, team = null, isAllTime = false) {
@@ -4248,16 +4282,27 @@ export function runOLSimulation(build, team = null, isAllTime = false) {
   // Pancakes: finishing power first, then run-block drive and sheer mass.
   const finishSkill = pnkN * 0.40 + rbN * 0.22 + ancN * 0.16 + mobN * 0.08 + szN * 0.14
 
-  // Per-game means, calibrated to a 17-game season of real OL charting:
-  // pressures allowed ≈ 15 elite / 35 average starter / 55+ liability ·
-  // sacks allowed 0-2 elite / 4-5 average / 8+ liability · penalties 1-2
-  // elite / ~5 average / 10+ liability · pancakes 50-60 elite / ~25 average.
-  const prsLambdaBase = 0.75 + 3.4 * Math.pow(1 - passSkill, 1.3)
+  // Per-game means, calibrated to a 17-game season of a full-time starter
+  // (real ranges, per season, ~1,050-1,150 offensive snaps, ~600-680 of them in pass pro):
+  //               sacks   pressures  QB hits  flags   pass/run grade (PFF-style)
+  //   elite       0-2     10-20      1-4      1-4     85-92 / 80-90   (Wirfs 2024: 0 sacks, 12-13 pressures, 1.9% rate)
+  //   good        2-4     20-30      3-6      4-7     75-84 / 70-80   (Moses 2024: 16 pressures on 433 sets, 3.7%)
+  //   average     4-6     30-40      5-8      6-9     62-72 / 60-70
+  //   poor        7-12    45-60+     8-12     10-17   <55             (2024 high: 12 sacks by one LT; Tunsil led the NFL with 17 flags)
+  // Pressure rate (pressures / pass-block snap): ~2% elite, ~4% good, ~5.5% average, 8%+ poor.
+  // About a fifth of the pressures that aren't sacks are QB hits, the rest hurries. Of a
+  // lineman's flags about half are holding and four in ten false starts (2024 league totals:
+  // 660 offensive holds, 678 false starts), the rest illegal formation / hands to the face / unnecessary roughness.
+  // Sources: PFF pressure-rate and grade articles (pff.com/news/nfl-highest-graded-offensive-tackles-2024-nfl-season,
+  // pff.com/news/nfl-pff-awards-2024-tristan-wirfs-wins-best-pass-blocker, pff.com/news/ranking-the-nfls-most-penalized-players-since-2021),
+  // Pro-Football-Reference (pro-football-reference.com/years/2024/ol_penalties.htm, /years/2024/penalties.htm),
+  // ESPN pass/run block win rate (PBWR ~93-95% elite, ~88% average; RBWR ~78% elite, ~72% average).
+  const prsLambdaBase = 0.9 * (0.75 + 3.4 * Math.pow(1 - passSkill, 1.3))
   // Share of pressures that finish as sacks — picking up the free rusher and
   // not collapsing the pocket are what keep a pressure from becoming a sack.
   const sackRate      = Math.max(0.04, 0.17 - blzN * 0.07 - ancN * 0.03 - szN * 0.01 - ppN * 0.02)
   const penLambdaBase = 0.05 + 0.70 * Math.pow(1 - disN, 1.5)
-  const pnkLambdaBase = 0.40 + 3.6 * Math.pow(finishSkill, 1.8)
+  const pnkLambdaBase = 0.85 * (0.40 + 3.6 * Math.pow(finishSkill, 1.8))   // pancakes: unofficial charting, ~40-60 for the best finishers
 
   // Season-long scheme luck: a pass-heavy offense puts him in more pass sets
   // (more chances to allow pressure), a run-first one gives him more chances
@@ -4274,6 +4319,7 @@ export function runOLSimulation(build, team = null, isAllTime = false) {
 
   let wins = 0, losses = 0
   let seasonPressures = 0, seasonSacksAllowed = 0, seasonPenalties = 0, seasonPancakes = 0
+  let seasonQBHits = 0, seasonHolding = 0, seasonFalseStarts = 0, seasonSnaps = 0
 
   const schedule = buildSchedule(team)
   const games = schedule.map(({ opponent, home }, i) => {
@@ -4305,6 +4351,8 @@ export function runOLSimulation(build, team = null, isAllTime = false) {
     seasonSacksAllowed += gameSacks
     seasonPenalties    += gamePen
     seasonPancakes     += gamePnk
+    const gx = olGameExtras(gamePrs, gameSacks, gamePen, passVol, mobN)
+    seasonQBHits += gx.qbHits; seasonHolding += gx.holding; seasonFalseStarts += gx.falseStarts; seasonSnaps += gx.snaps
 
     // Team result — mostly team quality, nudged by how this lineman's day went
     const perfBonus = (gameSacks === 0 && gamePrs <= 1 ? 0.03 : 0) + (gamePnk >= 4 ? 0.02 : 0)
@@ -4330,6 +4378,7 @@ export function runOLSimulation(build, team = null, isAllTime = false) {
     return {
       wk: i + 1, opponent, home, mySc, oppSc, won,
       pressures: gamePrs, sacks: gameSacks, penalties: gamePen, pancakes: gamePnk,
+      qbHits: gx.qbHits, holding: gx.holding, falseStarts: gx.falseStarts, snaps: gx.snaps,
     }
   })
 
@@ -4341,6 +4390,9 @@ export function runOLSimulation(build, team = null, isAllTime = false) {
   const prsDev = (seasonPressures - expPrs) / Math.max(expPrs, 1)
   const seasonPBWR = +Math.max(72, Math.min(97.5, 80 + 15 * Math.pow(passSkill, 0.9) - prsDev * 2.5 + randN() * 0.6)).toFixed(1)
   const seasonRBWR = +Math.max(60, Math.min(84, 64 + 16 * Math.pow(runSkill, 0.9) + randN() * 1.0)).toFixed(1)
+  // PFF-style grades (regular season), read off what he actually allowed and finished
+  const { passGrade: seasonPassGrade, runGrade: seasonRunGrade, grade: seasonGrade } =
+    olSeasonGrades({ pressures: seasonPressures, sacks: seasonSacksAllowed, penalties: seasonPenalties, pancakes: seasonPancakes, snaps: seasonSnaps, passShare: 0.58 * passVol / ((passVol + runVol) / 2), rbwr: seasonRBWR })
 
   const bestGame = [...games].sort((a, b) => {
     const score = g => g.pancakes * 1.5 - g.sacks * 4 - g.pressures * 1.2 - g.penalties * 2 + (g.won ? 1.5 : 0)
@@ -4447,10 +4499,13 @@ export function runOLSimulation(build, team = null, isAllTime = false) {
       seasonSacksAllowed += pgSacks
       seasonPenalties    += pgPen
       seasonPancakes     += pgPnk
+      const pgx = olGameExtras(pgPrs, pgSacks, pgPen, passVol, mobN)
+      seasonQBHits += pgx.qbHits; seasonHolding += pgx.holding; seasonFalseStarts += pgx.falseStarts; seasonSnaps += pgx.snaps
 
       playoffRounds.push({
         round, opponent, home: pgHome, weather, mySc: finalMy, oppSc: finalOpp, won, overtime: pgOT,
         pressures: pgPrs, sacks: pgSacks, penalties: pgPen, pancakes: pgPnk,
+        qbHits: pgx.qbHits, holding: pgx.holding, falseStarts: pgx.falseStarts, snaps: pgx.snaps,
       })
       if (won) pwins++
       else { eliminated = round; break }
@@ -4470,6 +4525,7 @@ export function runOLSimulation(build, team = null, isAllTime = false) {
     team, ovr, wins, losses,
     games,
     seasonPressures, seasonSacksAllowed, seasonPenalties, seasonPancakes, seasonPBWR, seasonRBWR,
+    seasonQBHits, seasonHolding, seasonFalseStarts, seasonSnaps, seasonPassGrade, seasonRunGrade, seasonGrade,
     bestGame, minAttrVal, spot: olBuildSpot(build),
     playoffs, playoffRounds, sbResult, hasBye: playoffs && hasBye,
   }

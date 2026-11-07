@@ -11,6 +11,7 @@ import { IS_APP } from '../../lib/platform'
 import WatchVideo from './WatchVideo'
 import { REWARDED_ON } from '../../lib/rewardedAd'
 import MgStage from './MgStage'
+import MgDemo from './MgDemo'
 
 // The quick skill games. <MiniGame game build seed onDone /> shows the card, plays the game on its
 // own full-screen stage (MgStage) and reports { score, hit, note, raw, out }. The games themselves
@@ -22,14 +23,17 @@ const NEEDS_SCORE = new Set(['two-minute', 'clutch-shot', 'goal-line'])
 // retry (Career, app): a miss can be played again for a video, once
 // labV (the test lab): plays at this grade instead of the build's
 // sim (Career's Mini Games switch): no game, the trait decides, about as an average player would do
-export default function MiniGame({ home = 'team', superBowl = null, game, build, seed = 'x', onDone, autoStart = false, hard = false, retry = false, lock = null, team = null, opp = null, pos = null, cast = null, situation = null, labV = null, sim = false, onSkipAll = null, children = null }) {
+export default function MiniGame({ home = 'team', superBowl = null, game, build, seed = 'x', onDone, autoStart = false, hard = false, retry = false, redo = false, lock = null, team = null, opp = null, pos = null, cast = null, situation = null, weather = null, labV = null, sim = false, onSkipAll = null, children = null }) {
   const def = GAMES[game]
   // its own address, with no ads on it, for as long as it's open
   useEffect(() => (sim ? undefined : minigameOpen()), [sim])
   const [stage, setStage] = useState(autoStart ? 'play' : 'intro')
   const [result, setResult] = useState(null)
   const [tries, setTries] = useState(0)          // replays bought with a video (one at most)
-  const offerRetry = REWARDED_ON && retry && IS_APP && tries === 0
+  // redo (the combine): one more run of any result, free, and the better of the two counts
+  const [first, setFirst] = useState(null)
+  const offerRedo = redo && !first && labV == null
+  const offerRetry = REWARDED_ON && retry && IS_APP && tries === 0 && !redo
   // hard (training camp): played as if the trait were a notch or two lower (70%), so a
   // maxed build still has to earn it. The header shows the real grade, never the handicap.
   const real = labV ?? traitValue(game, build)
@@ -46,8 +50,15 @@ export default function MiniGame({ home = 'team', superBowl = null, game, build,
     // the game's own call decides (camp is already tougher through the handicap above)
     const out = { score: clamp(r.score, 0, 1), hit: perfect || (r.hit ?? r.score >= 0.5), note: r.note ?? null, raw: r.raw ?? null, out: !!r.out }
     if (labV == null) try { if (out.hit) localStorage.removeItem(missKey); else localStorage.setItem(missKey, String(Math.min(2, ease + 1))) } catch {}
+    if (first) {
+      // the redo's in: the better run counts
+      const best = out.score >= first.score ? out : first
+      setResult({ ...out, note: best === out ? 'The redo counts' : 'The first run counts' }); setStage('done')
+      unlock(); onDone?.(best); return
+    }
     setResult(out); setStage('done')
-    // a miss that can still be replayed waits for the player's call
+    // one redo on offer, or a miss that can still be replayed: the player's call
+    if (offerRedo) return
     if (!out.hit && offerRetry) return
     unlock(); onDone?.(out)
   }
@@ -84,15 +95,22 @@ export default function MiniGame({ home = 'team', superBowl = null, game, build,
       {stage === 'intro' && (
         <div className="mg-intro">
           <p>{how}</p>
+          {engine && <MgDemo game={game} def={def} pos={pos} sport={sport} team={team} opp={opp} home={home} superBowl={superBowl} />}
           <button className="ag-btn ag-btn--gold" onClick={() => { setStage('play'); sfx('whistle') }}>READY</button>
           {onSkipAll && <button className="ag-btn ag-btn--ghost mg-skipall" onClick={() => { sfx('tap'); onSkipAll() }}>TURN OFF KEY MOMENTS</button>}
         </div>
       )}
-      {stage === 'play' && <MgStage key={tries} home={home} superBowl={superBowl} game={game} def={def} v={v} arm={labV ?? traitValue('bomb', build)} seed={tries ? `${seed}-again` : seed} sport={sport} team={team} opp={opp} pos={pos} cast={cast} situation={shown} onDone={done}>{children}</MgStage>}
+      {stage === 'play' && <MgStage key={tries} home={home} superBowl={superBowl} game={game} def={def} v={v} arm={labV ?? traitValue('bomb', build)} seed={tries ? `${seed}-again` : seed} sport={sport} team={team} opp={opp} pos={pos} cast={cast} situation={shown} weather={weather} onDone={done}>{children}</MgStage>}
       {stage === 'done' && result && (
         <div className="mg-result">
           <b>{result.hit ? (result.score >= 0.85 ? 'ELITE' : 'GOOD') : result.out ? 'OUT OF TIME' : 'NO GOOD'}</b>
           {result.note && <small>{result.note}</small>}
+          {offerRedo && (
+            <div className="mg-retry">
+              <button className="ag-btn ag-btn--gold" onClick={() => { setFirst(result); setTries(1); setResult(null); setStage('play'); sfx('whistle') }}>REDO · BETTER RUN COUNTS</button>
+              <button className="ag-btn ag-btn--ghost" onClick={() => { unlock(); onDone?.(result) }}>KEEP IT</button>
+            </div>
+          )}
           {!result.hit && offerRetry && (
             <div className="mg-retry">
               <WatchVideo label="WATCH VIDEO · TRY AGAIN" sub="A short video ad, then one more shot at it. Once." onReward={() => { setTries(1); setResult(null); setStage('play') }} />

@@ -209,7 +209,8 @@ export async function careerShareCanvas(c, { username } = {}) {
   tiles(ctx, [
     { v: String(t.seasons), k: t.seasons === 1 ? 'SEASON' : 'SEASONS' },
     { v: String(t.rings), k: t.rings === 1 ? 'RING' : 'RINGS', icon: 'ring', gold: t.rings > 0 },
-    { v: String(t.awards), k: t.awards === 1 ? award : `${award}S`, icon: 'trophy', gold: t.awards > 0 },
+    // (a lineman has no award: his All-Pros are his trophies)
+    ...[c.pos === 'ol' ? t.allPros : t.awards].map(n => ({ v: String(n), k: n === 1 ? award : `${award}S`, icon: 'trophy', gold: n > 0 })),
     { v: String(t.proBowls), k: t.proBowls === 1 ? S.honor.toUpperCase() : S.honors, icon: 'star' },
   ], TY)
 

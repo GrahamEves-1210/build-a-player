@@ -76,7 +76,10 @@ function watchRail() {
   const root = document.documentElement
   let last = -1, ro = null, seen = null
   const measure = () => {
-    const el = document.querySelector('[id^="pw-oop-bottom_rail"], [id^="pw-oop"][data-pw-status="loaded"][style*="bottom"]')
+    // (the rail, or the taller sticky unit Playwire sometimes stacks there: whichever reaches higher is what to clear)
+    const all = [...document.querySelectorAll('[id^="pw-oop-bottom_rail"], [id^="pw-oop"][data-pw-status="loaded"][style*="bottom"], .st-adunit-ad')]
+      .filter(e => { const r = e.getBoundingClientRect(); return r.height > 0 && r.bottom > window.innerHeight - 4 })
+    const el = all.sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top)[0] ?? null
     if (el !== seen) { ro?.disconnect(); ro = null; seen = el; if (el && window.ResizeObserver) { ro = new ResizeObserver(measure); ro.observe(el) } }
     let h = 0
     if (el && !root.classList.contains('ads-hidden')) {

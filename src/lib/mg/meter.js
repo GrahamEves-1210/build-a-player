@@ -532,29 +532,40 @@ function arcLine(x, c, cx, cz, R, a0, a1, n, w = 0.11) {
   }
 }
 // the floor: boards, the paint, and only the lines a real half court has, each where it belongs
-export function paintLines(x, c, paint) {
+// full: the whole half court (sidelines, the half-court line). sc: the court's lines drawn smaller about the rim
+// (a game that wants less floor to cover)
+export function paintLines(x, c, paint, full = false, sc = 1) {
+  const BL = BASELINE * sc, LN = LANE * sc, FT = FT_Z * sc, TH = THREE * sc, CO = CORNER * sc, CZ = CORNER_Z * sc
   // past the baseline the floor goes dark
-  x.fillStyle = 'rgba(10,8,6,.3)'; x.beginPath(); fan(x, c, [[-70, BASELINE], [70, BASELINE], [70, 40], [-70, 40]]); x.fill()
+  x.fillStyle = 'rgba(10,8,6,.3)'; x.beginPath(); fan(x, c, [[-70, BL], [70, BL], [70, 40], [-70, 40]]); x.fill()
   // the boards run the length of the court
   x.strokeStyle = 'rgba(70,35,10,.13)'; x.lineWidth = 1; x.beginPath()
   for (let u = -46; u <= 46 && !c.bare; u += 2) {   // (bare: the arena's floor, plain the whole way as the camera travels)
-    project(c, u, 0, BASELINE); if (PT.z < 3) continue
+    project(c, u, 0, BL); if (PT.z < 3) continue
     const ax = PT.x, ay = PT.y; project(c, u, 0, -46); if (PT.z < 3) continue
     x.moveTo(ax, ay); x.lineTo(PT.x, PT.y)
   }
   x.stroke()
   // the paint
-  x.fillStyle = paint; x.globalAlpha = 0.72; x.beginPath(); fan(x, c, [[-LANE, BASELINE], [LANE, BASELINE], [LANE, FT_Z], [-LANE, FT_Z]]); x.fill()
+  x.fillStyle = paint; x.globalAlpha = 0.72; x.beginPath(); fan(x, c, [[-LN, BL], [LN, BL], [LN, FT], [-LN, FT]]); x.fill()
   x.globalAlpha = 1
   x.fillStyle = '#f7f5ef'; x.beginPath()
-  line(x, c, -30, BASELINE, 30, BASELINE, 12)
-  line(x, c, -LANE, BASELINE, -LANE, FT_Z, 5); line(x, c, LANE, BASELINE, LANE, FT_Z, 5); line(x, c, -LANE, FT_Z, LANE, FT_Z, 5)
-  arcLine(x, c, 0, FT_Z, 6, -Math.PI / 2, Math.PI / 2, 24)
+  line(x, c, -30, BL, 30, BL, 12)
+  line(x, c, -LN, BL, -LN, FT, 5); line(x, c, LN, BL, LN, FT, 5); line(x, c, -LN, FT, LN, FT, 5)
+  arcLine(x, c, 0, FT, 6 * sc, -Math.PI / 2, Math.PI / 2, 24)
   arcLine(x, c, 0, 0, 4, -Math.PI / 2, Math.PI / 2, 28, 0.09)
   const a = Math.asin(CORNER / THREE)
-  arcLine(x, c, 0, 0, THREE, -a, a, 64)
-  line(x, c, -CORNER, BASELINE, -CORNER, CORNER_Z, 4); line(x, c, CORNER, BASELINE, CORNER, CORNER_Z, 4)
+  arcLine(x, c, 0, 0, TH, -a, a, 64)
+  line(x, c, -CO, BL, -CO, CZ, 4); line(x, c, CO, BL, CO, CZ, 4)
+  if (full) {
+    const SL = 25 * sc, HALF = BL - 47 * sc
+    line(x, c, -SL, BL, -SL, HALF - 6, 12); line(x, c, SL, BL, SL, HALF - 6, 12)
+    line(x, c, -SL, HALF, SL, HALF, 8)
+    arcLine(x, c, 0, HALF, 6 * sc, -Math.PI / 2, Math.PI / 2, 24)
+  }
   x.fill()
+  // out of bounds, past the sidelines, a shade darker
+  if (full) { const SL = 25 * sc + 0.5; x.fillStyle = 'rgba(10,8,6,.22)'; x.beginPath(); fan(x, c, [[-70, BL], [-SL, BL], [-SL, -60], [-70, -60]]); x.fill(); x.beginPath(); fan(x, c, [[SL, BL], [70, BL], [70, -60], [SL, -60]]); x.fill() }
 }
 function fan(x, c, pts) {
   let n = 0
@@ -1767,7 +1778,7 @@ function drawCourtScene(ctx, g, view) {
       }
       if (m.landed) {
         const a = g.t - m.landAt
-        if (m.res.in) { mixPose(Q, a > 900 ? R_HIPS : R_HEAD, smooth01(prog(a, 60, 260)), Q); Q.j = 0 }
+        if (m.res.in) { mixPose(Q, a > 900 ? R_HIPS : R_KNEES, smooth01(prog(a, 60, 260)), Q); Q.j = 0 }   // (he gave it up: hands to his knees, then his hips)
         else { mixPose(Q, R_UP, smooth01(prog(a, 80, 260)), Q); Q.j = Math.abs(Math.sin(a / 150)) * 12 * prog(a, 80, 260) }
       }
       athleteFront(ctx, dx, fy, easedPose(poseGuard, Q, g, CLK.dt, 45), { jersey: them.color, trim: them.trim, s: k / FIG_FT, back: o.back, num: M?.them[0].number ?? 21, skin: M?.them[0].skin ?? SKINS[3] })

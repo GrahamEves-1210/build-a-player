@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { LegacyIco, withLegacy } from './GainIcons'
-import { useRailOn } from '../../lib/ads'
+import { seeded } from '../../lib/rng'
+import { playoffWeather } from '../../utils/simulation'
 import { createPortal } from 'react-dom'
 import {
   POS_LABEL, POS_NAME, POS_ATTR, OFFENSE_POS, pastCareers, saveCareer, clearCareer, stockOf, answerInterview, setupInterviews, runDraft,
   startSeason, resumeSeason, advanceWeek, chooseMoment, resolveInjury, hotHand, canHotHand, hotHandOn, hotGames, finishRegular, playoffRound, bookSeason, recordCombine, skipCombine, spendDev, demandTrade, nextSeason,
-  OFF_STEPS, offStep, campDrill, CAMP_LEGACY, dbSpot, dlSpot, dlSpotLabel, combinePos, lineup, depthChart, gradeOf, gradeOfOvr, ovrGradeVal, SPORT, sportOf,
+  OFF_STEPS, offStep, campDrill, CAMP_LEGACY, dbSpot, dlSpot, dlSpotLabel, olSpot, OL_SPOT_NAME, combinePos, lineup, depthChart, gradeOf, gradeOfOvr, ovrGradeVal, SPORT, sportOf,
   openTalks, ask, closeTalks, acceptTalks, ASKS, askOdds, leverageOf,
-  retire, canRetire, mustRetire, careerTotals, legacyOf, LEGACY_TIERS, ALL_TIME, STAT_LABEL, HEADLINE_STATS, EXTRA_STATS, AWARD_NAME, MAX_SEASONS, retireReason, goalsFor, stockText, pickText, loadSlots, CAREER_SLOTS, maxedTrait, trainWindow, canUpgrade, upgradeCost, legacyExtras,
+  retire, canRetire, mustRetire, careerTotals, legacyOf, LEGACY_TIERS, ALL_TIME, STAT_LABEL, HEADLINE_STATS, EXTRA_STATS, AWARD_NAME, MAX_SEASONS, retireReason, goalsFor, stockText, pickText, loadSlots, CAREER_SLOTS, maxedTrait, trainWindow, canUpgrade, upgradeCost, bodyWork, canBodyWork, bodyCost, BODY_MAX, upgradeBlock, legacyExtras,
   compsFor, seasonScore, unretire, canUnretire, comebackYear, COMEBACK_SEASONS, inTeamColors, momentOdds, momentRound, gameCast, FACE_RATING,
   GAMES_MODES, gamesMode, setGamesMode } from '../../lib/career'
 import { GAME_LINE } from '../../lib/seasonDirector'
@@ -31,7 +32,6 @@ import { seasonAnalytics, careerBests, TIER_WORD } from '../../lib/careerStats'
 import { Scramble } from './MotionText'
 import { motion } from 'motion/react'
 import { SPRING_LAYOUT } from '../../lib/motion'
-import { LB_LIVE } from '../../lib/lbLive'
 
 // CAREER (football and basketball): the intro, the draft, the hub where a
 // career is played (your model and traits, the season, the player, the team,
@@ -72,7 +72,7 @@ const GAMES_WHAT = { advanced: 'Full-screen games', simple: 'Quick tap games', o
 function CareerGame({ c, setCareer, skipAll = true, ...p }) {
   const mode = gamesMode(c)
   const onSkipAll = skipAll ? () => setCareer(setGamesMode(c, 'off')) : null
-  if (mode === 'simple') return <MiniGameSimple game={p.game} build={p.build} pos={c.pos} seed={p.seed} lock={p.lock} hard={p.hard} retry={p.retry} onDone={p.onDone} onSkipAll={onSkipAll} />
+  if (mode === 'simple') return <MiniGameSimple game={p.game} build={p.build} pos={c.pos} seed={p.seed} lock={p.lock} hard={p.hard} retry={p.retry} redo={p.redo} onDone={p.onDone} onSkipAll={onSkipAll} />
   return <MiniGame {...p} sim={mode === 'off'} onSkipAll={onSkipAll} />
 }
 const gameTitle = (c, game) => (gamesMode(c) === 'simple' ? SIMPLE_GAMES[game]?.title : null) ?? GAMES[game]?.title
@@ -173,7 +173,7 @@ export function CareerIntro({ sport = 'nfl', uid = null, onOpen, onNew, onClose 
         </section>
         <div className="cr-intro-hero ag-pop" style={{ '--d': '60ms' }}>
           <span className="cr-intro-kicker">ONE PLAYER. A WHOLE CAREER.</span>
-          <p>Up to {MAX_SEASONS} seasons, saved every step so you can leave and come back. {S.isBucket ? 'Guard or big.' : (LB_LIVE ? 'QB, RB, WR, TE, DB, DL or LB.' : 'QB, RB, WR, TE, DB or DL.')}</p>
+          <p>Up to {MAX_SEASONS} seasons, saved every step so you can leave and come back. {S.isBucket ? 'Guard or big.' : `${S.positions.slice(0, -1).map(p => POS_LABEL[p]).join(', ')} or ${POS_LABEL[S.positions[S.positions.length - 1]]}.`}</p>
         </div>
         <ol className="tk-steps ag-pop" style={{ '--d': '80ms' }}>
           {steps.map(([t, d], i) => <li key={t}><span className="tk-step-n">{i + 1}</span><span className="tk-step-txt"><b>{t}</b><small>{d}</small></span></li>)}
@@ -208,6 +208,11 @@ export function CareerIntro({ sport = 'nfl', uid = null, onOpen, onNew, onClose 
 // The model wears the team's colors (the chips keep their players, grades and faces)
 function Model({ c, devPick }) {
   const attr = POS_ATTR[c.pos]
+  // a trait that can't go up says why when it's tapped
+  const [why, setWhy] = useState(null)
+  const whyT = useRef(0)
+  useEffect(() => () => clearTimeout(whyT.current), [])
+  const tellWhy = t => { const w = upgradeBlock(c, t); if (!w) return; clearTimeout(whyT.current); setWhy({ text: w, k: Date.now() }); whyT.current = setTimeout(() => setWhy(null), 3200); sfx('tap') }
   const shown = useMemo(() => inTeamColors(c.build, c.fit), [c.build, c.fit])
   const Card = ({ t }) => {
     const ch = c.build[t]
@@ -220,7 +225,7 @@ function Model({ c, devPick }) {
     const w = !maxed && (c.dev?.points ?? 0) > 0 ? trainWindow(c, t) : null
     const winTag = !w ? null : !w.open ? <em className="cr-trait-win is-closed">CLOSED</em> : w.left <= 1 ? <em className="cr-trait-win is-last">LAST CHANCE</em> : <em className="cr-trait-win">TRAIN TO AGE {w.until}</em>
     return (
-      <div className={`cr-trait${canUp ? ' can-up' : ''}`} onClick={canUp ? () => devPick(t) : undefined} role={canUp ? 'button' : undefined}>
+      <div className={`cr-trait${canUp ? ' can-up' : ''}`} onClick={canUp ? () => devPick(t) : () => tellWhy(t)} role="button">
         <span className="cr-trait-av">{ch?.photo ? <img src={ch.photo} alt="" /> : null}</span>
         <span className="cr-trait-txt"><b>{(attr[t]?.label ?? t).replace('/', '/\u200b')}</b><small>{nick(ch?.qbFull) || '—'}{ch?.upgraded ? ` +${ch.upgraded}` : ''}{ch?.faded ? ` −${ch.faded}` : ''}</small>{maxed ? <em className="cr-trait-max">MAXED</em> : winTag}</span>
         <span className="cr-trait-g" style={{ background: gradeColor(ch?.val ?? 0) }}>{valToGrade(ch?.val ?? 0)}{canUp && cost > 1 ? ` · ${cost} PTS` : ''}</span>
@@ -230,7 +235,7 @@ function Model({ c, devPick }) {
   return (
     <div className="cr-model-wrap ag-pop">
       <div className={`cr-model${c.sport === 'bucket' ? ' cr-model--bucket' : ''}`}>
-        <Silhouette build={shown} types={c.types} attrMap={attr} isBucket={c.sport === 'bucket'} isRB={c.pos === 'rb'} isWR={c.pos === 'wr'} isTE={c.pos === 'te'} isDB={c.pos === 'db'} isDL={c.pos === 'dl'} isLB={c.pos === 'lb'} modelOnly />
+        <Silhouette build={shown} types={c.types} attrMap={attr} isBucket={c.sport === 'bucket'} isRB={c.pos === 'rb'} isWR={c.pos === 'wr'} isTE={c.pos === 'te'} isDB={c.pos === 'db'} isDL={c.pos === 'dl'} isLB={c.pos === 'lb'} isOL={c.pos === 'ol'} modelOnly />
         <span className="cr-model-ovr"><b>{c.ovr}</b><small>OVR</small></span>
       </div>
       <div className={`cr-traits${c.types.length % 2 ? ' is-list' : ''}`}>
@@ -243,6 +248,20 @@ function Model({ c, devPick }) {
         })()}
         {c.types.map(t => <Card key={t} t={t} />)}
       </div>
+      {/* body work: a point into durability, fewer games missed. Always shown: tapped when it can't go up, it says why */}
+      {(() => {
+        const maxed = (c.durability ?? 5) >= BODY_MAX, can = !!devPick && canBodyWork(c), cost = bodyCost(c)
+        return (
+          <div className="cr-traits is-list cr-body">
+            <div className={`cr-trait${can ? ' can-up' : ''}`} onClick={can ? () => devPick('__body') : () => tellWhy('__body')} role="button">
+              <span className="cr-trait-av" aria-hidden="true"><IconShield size={16} /></span>
+              <span className="cr-trait-txt"><b>DURABILITY</b><small>Body work: fewer injuries, a longer career{c.bodyWork ? ` +${c.bodyWork}` : ''}</small>{maxed && <em className="cr-trait-max">MAXED</em>}</span>
+              <span className="cr-trait-g" style={{ background: gradeColor((c.durability ?? 5) * 1.1) }}>{gradeOf((c.durability ?? 5) * 1.1)}{can && cost > 1 ? ` · ${cost} PTS` : ''}</span>
+            </div>
+          </div>
+        )
+      })()}
+      {why && <p key={why.k} className="cr-why ag-pop" role="status">{why.text}</p>}
     </div>
   )
 }
@@ -263,7 +282,7 @@ function LegacyMeter({ c }) {
       <div className="cr-legacy-top"><span className="ag-eyebrow">LEGACY TIER · {L.tier.toUpperCase()}</span><b><LegacyIco sm={false} /> {L.score}<small> LEGACY PTS</small></b></div>
       <div className="cr-legacy-bar"><span style={{ width: `${Math.max(3, pct)}%` }} /></div>
       <div className="cr-legacy-foot"><span>{L.next ? `${L.next.at - L.score} more points to reach the ${L.next.name} tier` : 'The top tier'}</span><span>{L.ranked ? `No. ${L.rank} ${POS_LABEL[c.pos]} career ever` : `Outside the top ${L.of} ${POS_LABEL[c.pos]} careers`}</span></div>
-      <p className="cr-legacy-how">Points come from seasons played, {sportOf(c).honor}s, {sportOf(c).first} teams, {AWARD_NAME[c.pos]}s, rings, playoff runs, records and the career's numbers: the same formula that scores the all-time greats' real careers.</p>
+      <p className="cr-legacy-how">Points come from seasons played, {sportOf(c).honor}s, {sportOf(c).first} teams, {c.pos === 'ol' ? '' : `${AWARD_NAME[c.pos]}s, `}rings, playoff runs, records and the career's numbers: the same formula that scores the all-time greats' real careers.</p>
       <Extras c={c} />
     </div>
   )
@@ -300,7 +319,7 @@ function Draft({ c, setCareer }) {
       <div className={`ag-screen ${S.screen} cr`}>
         {head(`THE COMBINE · ${POS_LABEL[c.pos]}`, allDone ? 'Your numbers' : next.label)}
         <div className="ag-screen-body">
-          {!allDone && <CareerGame c={c} setCareer={setCareer} skipAll={false} retry key={next.id} game={next.id} build={c.build} pos={combinePos(c)} seed={`${c.seed}-cb-${next.id}`} lock={`${c.seed}-cb-${next.id}`} onDone={res => setCareer(recordCombine(c, next.id, res.score, res.raw))} />}
+          {!allDone && <CareerGame c={c} setCareer={setCareer} skipAll={false} retry redo key={next.id} game={next.id} build={c.build} pos={combinePos(c)} seed={`${c.seed}-cb-${next.id}`} lock={`${c.seed}-cb-${next.id}`} onDone={res => setCareer(recordCombine(c, next.id, res.score, res.raw))} />}
           <div className="cr-drills ag-pop" style={{ '--d': '60ms' }}>
             {c.draft.combine.map((d, i) => (
               <div key={d.id} className={`cr-drill${d.score == null ? ' is-wait' : ''}`} style={{ '--d': `${80 + i * 70}ms` }}>
@@ -509,9 +528,9 @@ function Lineup({ c }) {
       </div>
       ) : (
       <div className="crl-bench">
-        <span className="ag-eyebrow">DEPTH CHART · {c.pos === 'dl' ? (dlSpot(c) === 'dt' ? 'DEFENSIVE TACKLE' : 'EDGE') : c.pos === 'db' ? (dbSpot(c) === 's' ? 'SAFETY' : 'CORNERBACK') : POS_NAME[c.pos].toUpperCase()}</span>
+        <span className="ag-eyebrow">DEPTH CHART · {c.pos === 'ol' ? OL_SPOT_NAME[olSpot(c)] : c.pos === 'dl' ? (dlSpot(c) === 'dt' ? 'DEFENSIVE TACKLE' : 'EDGE') : c.pos === 'db' ? (dbSpot(c) === 's' ? 'SAFETY' : 'CORNERBACK') : POS_NAME[c.pos].toUpperCase()}</span>
         {dc.all.map((p, i) => (
-          <span key={p.name + i} className={`crl-depth${p.you ? ' is-you' : ''}`}><i>{S.isBucket ? i + 1 : `${c.pos === 'dl' ? dlSpotLabel(dlSpot(c)) : c.pos === 'db' ? (dbSpot(c) === 's' ? 'S' : 'CB') : POS_LABEL[c.pos]}${i + 1}`}</i><b>{p.name}</b><small>{p.out ? <em className="crl-out">{p.out}</em> : `${p.ovr} OVR · age ${p.age}`}</small></span>
+          <span key={p.name + i} className={`crl-depth${p.you ? ' is-you' : ''}`}><i>{S.isBucket ? i + 1 : `${c.pos === 'ol' ? olSpot(c) : c.pos === 'dl' ? dlSpotLabel(dlSpot(c)) : c.pos === 'db' ? (dbSpot(c) === 's' ? 'S' : 'CB') : POS_LABEL[c.pos]}${i + 1}`}</i><b>{p.name}</b><small>{p.out ? <em className="crl-out">{p.out}</em> : `${p.ovr} OVR · age ${p.age}`}</small></span>
         ))}
       </div>
       )}
@@ -523,7 +542,6 @@ function Lineup({ c }) {
 // ── Hub ─────────────────────────────────────────────────────────────────────
 export default function AppCareer({ career: c, setCareer, user, onNewBuild, onExit }) {
   const [tab, setTab] = useState('season')
-  useRailOn(`${c.phase}|${c.year}|${tab}`)   // a new phase, season or tab brings the bottom rail back
   const [recHit, setRecHit] = useState(null)       // an all-time record just fell
   const [honor, setHonor] = useState(null)         // an award or a title, just won
   const D = useRef(null)
@@ -607,7 +625,7 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
       </div>
       <div className="ag-screen-body">
         <LegacyMeter c={c} />
-        <Model c={c} devPick={c.phase !== 'season' && c.dev.points > 0 ? t => { setCareer(spendDev(c, t)); sfx('claim'); haptic('success') } : null} />
+        <Model c={c} devPick={c.phase !== 'season' && c.dev.points > 0 ? t => { setCareer(t === '__body' ? bodyWork(c) : spendDev(c, t)); sfx('claim'); haptic('success') } : null} />
         {c.phase !== 'season' && c.dev.points > 0 && <div className="cr-devnote ag-pop"><IconStar size={14} /> <b>{c.dev.points}</b> development {c.dev.points === 1 ? 'point' : 'points'}: tap a trait to raise it.</div>}
         <GamesSwitch c={c} setCareer={setCareer} />
         <div className="ag-seg cr-tabs" role="tablist">
@@ -640,7 +658,7 @@ export default function AppCareer({ career: c, setCareer, user, onNewBuild, onEx
                 <p className="sm-moment-body">{a.injury.serious ? 'The trainers don\'t need a second look. Your season is over.' : `The doctors say ${a.injury.games} ${a.injury.games === 1 ? 'game' : 'games'}. You could play through it: not at your best for longer, and it can get worse.`}</p>
                 <div className="sm-options">
                   <button className="sm-option" onClick={() => injury(false)}><b>{a.injury.serious ? 'Shut it down' : `Sit out ${a.injury.games} ${a.injury.games === 1 ? 'game' : 'games'}`}</b><small>Heal up. The team plays on without you.</small></button>
-                  {!a.injury.serious && <button className="sm-option" onClick={() => injury(true)}><b>Play through it</b><small>Two traits down for {a.injury.games + 2} games. 35% it gets worse.</small></button>}
+                  {!a.injury.serious && <button className="sm-option" onClick={() => injury(true)}><b>Play through it</b><small>Two traits down for {a.injury.games + 2} games. 35% it gets worse. Costs durability.</small></button>}
                   {!a.injury.serious && boosts.heal > 0 && <button className="sm-option cr-boost-opt" onClick={() => injury(false, true)}><b>Quick Heal: out {Math.max(1, Math.ceil(a.injury.games / 2))} {Math.ceil(a.injury.games / 2) <= 1 ? 'game' : 'games'}</b><small>Uses 1 of your {boosts.heal} Quick Heal{boosts.heal === 1 ? '' : 's'}. Back twice as fast.</small></button>}
                 </div>
               </div>
@@ -806,7 +824,7 @@ function Recap({ c, last, user }) {
   return (
     <div className={`ag-card cr-wrap ag-pop${last.champion ? ' is-ring' : ''}`}>
       <div className="ag-card-head"><span className="ag-eyebrow">{last.season} · {last.wins}–{last.losses}{last.playoffs ? ' · PLAYOFFS' : ''}</span>{last.champion && <span className="cr-ring"><IconRing size={13} /> CHAMPIONS</span>}</div>
-      <div className="cr-wrap-stats" style={EXTRA_STATS[c.pos] ? { gridTemplateColumns: 'repeat(3, 1fr)' } : undefined}>{[...HEADLINE_STATS[c.pos], ...(EXTRA_STATS[c.pos] ?? [])].map(k => <span key={k}><b>{fmt(last.stats[k])}</b><small>{STAT_LABEL[k]}</small></span>)}<span><b>{last.missed}</b><small>GAMES MISSED</small></span></div>
+      <div className="cr-wrap-stats" style={EXTRA_STATS[c.pos] ? { gridTemplateColumns: 'repeat(3, 1fr)' } : undefined}>{[...HEADLINE_STATS[c.pos], ...(EXTRA_STATS[c.pos] ?? []).filter(k => last.stats[k] != null)].map(k => <span key={k}><b>{fmt(last.stats[k])}</b><small>{STAT_LABEL[k]}</small></span>)}<span><b>{last.missed}</b><small>GAMES MISSED</small></span></div>
       <div className="cr-badges">
         {last.award && <span className="cr-badge is-gold"><IconTrophy size={12} /> {last.awardName}</span>}
         {last.fmvp && <span className="cr-badge is-gold"><IconTrophy size={12} /> {S.finalsAward}</span>}
@@ -896,14 +914,14 @@ function Moves({ c, setCareer, forced }) {
           {moves.map((m, i) => (
             <div key={i} className={`cr-move is-${m.kind}`}>
               <span className="crl-face crl-face--sm">{m.p?.photo ? <img src={photoSrc(m.p.photo)} alt="" loading="lazy" /> : <span className="crl-init">{initials(m.p?.name)}</span>}</span>
-              <span className="cr-move-txt"><b>{m.text}</b><small>{m.pos === 'dl' ? m.label : m.pos.toUpperCase()} · {m.p?.ovr ?? 70} OVR · age {m.p?.age}</small></span>
+              <span className="cr-move-txt"><b>{m.text}</b><small>{m.pos === 'dl' || m.pos === 'ol' ? m.label : m.pos.toUpperCase()} · {m.p?.ovr ?? 70} OVR · age {m.p?.age}</small></span>
               <span className="cr-move-tag">{MOVE_TAG[m.kind]}</span>
             </div>
           ))}
         </div>
       )}
       <div className={`ag-card cr-depthnote ag-pop${dc.starter ? ' is-on' : ''}`} style={{ '--d': '70ms' }}>
-        <span className="ag-eyebrow">{c.sport === 'bucket' ? 'ROLE' : `DEPTH CHART · ${c.pos === 'dl' ? dlSpotLabel(dlSpot(c)) : c.pos === 'db' ? (dbSpot(c) === 's' ? 'S' : 'CB') : POS_LABEL[c.pos]}`}</span>
+        <span className="ag-eyebrow">{c.sport === 'bucket' ? 'ROLE' : `DEPTH CHART · ${c.pos === 'ol' ? olSpot(c) : c.pos === 'dl' ? dlSpotLabel(dlSpot(c)) : c.pos === 'db' ? (dbSpot(c) === 's' ? 'S' : 'CB') : POS_LABEL[c.pos]}`}</span>
         <p>{dc.starter ? `${c.name} goes into camp as a starter.` : `${c.name} goes into camp ${c.sport === 'bucket' ? 'coming off the bench' : `as ${dc.label}`}, behind ${dc.ahead[dc.ahead.length - 1].name}.`}</p>
         {!forced && !c.tradeAsked && c.contract.left > 0 && !c.contract.noTrade && <button className="ag-btn ag-btn--ghost cr-trade-btn" onClick={() => { setAskTrade(true); sfx('tap') }}>DEMAND A TRADE</button>}
       </div>
@@ -1003,9 +1021,10 @@ const SEASON_COLS = {
   qb: ['compPct', 'passYds', 'tds', 'ints', 'rating', 'rushYds', 'rushTDs'],
   rb: ['rushYds', 'ypc', 'tds', 'recYds', 'fumbles'],
   wr: ['recs', 'recYds', 'ypr', 'tds'], te: ['recs', 'recYds', 'ypr', 'tds'],
-  db: ['tackles', 'tfl', 'ints', 'pbus', 'ff', 'pickSixes'],
+  db: ['tackles', 'tfl', 'ints', 'pbus', 'ff', 'pickSixes', 'rtgA'],
   dl: ['sacks', 'tfl', 'tackles', 'qbHits', 'ff', 'fr', 'pbus', 'safeties'],
   lb: ['tackles', 'tfl', 'sacks', 'qbHits', 'pds', 'ints', 'ff', 'fr'],
+  ol: ['grade', 'sacksA', 'prs', 'pancakes', 'pen', 'starts'],
   guard: ['ppg', 'rpg', 'apg', 'spg', 'bpg'], big: ['ppg', 'rpg', 'apg', 'spg', 'bpg'],
 }
 const COL_LABEL = { tfl: 'TFL', ff: 'FF' }
@@ -1046,7 +1065,7 @@ function SeasonTable({ c, t }) {
                 <td className="cr-seasons-team"><img src={S.logo(s.team)} alt="" loading="lazy" />{s.team}</td>
                 <td>{gamesIn(s)}</td>
                 <td>{s.wins}-{s.losses}</td>
-                {cols.map(k => <td key={k}>{fmt(s.stats[k])}</td>)}
+                {cols.map(k => <td key={k}>{k === 'grade' && s.stats[k] == null ? '—' : fmt(s.stats[k])}</td>)}
                 <td className="cr-seasons-ico">{s.champion && <IconRing size={13} />}{s.award && <IconTrophy size={13} />}{s.allPro ? <IconMedal size={13} /> : s.proBowl ? <IconStar size={13} /> : null}</td>
               </tr>,
               open === s.year && (
@@ -1079,7 +1098,7 @@ function CareerTab({ c, L, onDelete }) {
       {c.seasons.length > 0 && <SeasonTable c={c} t={t} />}
       <div className="ag-card cr-totals ag-pop">
         <div className="ag-card-head"><span className="ag-eyebrow">CAREER · {t.seasons} {t.seasons === 1 ? 'SEASON' : 'SEASONS'}</span></div>
-        <div className="cr-kv">{[...keys, ...(EXTRA_STATS[c.pos] ?? [])].map(k => <span key={k}><b>{fmt(t.stats[k])}</b><small>{STAT_LABEL[k]}</small></span>)}<span><b>{t.rings}</b><small>RINGS</small></span><span><b>{t.awards}</b><small>{AWARD_NAME[c.pos]}</small></span><span><b>{t.proBowls}</b><small>{S.honors}</small></span><span><b>{t.allPros}</b><small>{S.first.toUpperCase()}</small></span></div>
+        <div className="cr-kv">{[...keys, ...(EXTRA_STATS[c.pos] ?? []).filter(k => t.stats[k] != null)].map(k => <span key={k}><b>{fmt(t.stats[k])}</b><small>{STAT_LABEL[k]}</small></span>)}<span><b>{t.rings}</b><small>RINGS</small></span>{c.pos !== 'ol' && <span><b>{t.awards}</b><small>{AWARD_NAME[c.pos]}</small></span>}<span><b>{t.proBowls}</b><small>{S.honors}</small></span><span><b>{t.allPros}</b><small>{S.first.toUpperCase()}</small></span></div>
         <div className="cr-rank">
           <div className="cr-rank-head"><span className="ag-eyebrow">GREATEST {S.isBucket ? '' : `${POS_LABEL[c.pos]} `}CAREERS · TOP {L.of}</span><small>LEGACY PTS</small></div>
           <RankList c={c} L={L} />
@@ -1383,7 +1402,7 @@ function Playoffs({ c, setCareer, onBook }) {
   if (step === 'game') return (
     <div className="cr-po">
       <div className="cr-po-head"><span className="ag-eyebrow">{rd.name.toUpperCase()} · vs {rd.oppName.toUpperCase()}</span><small className="cr-po-stakes">{sit.line}{sit.tail ? ` ${sit.tail}` : ''} Land it: about {landIt}% to win. Miss it: about {missIt}%.</small></div>
-      <CareerGame home={rd.home === false ? 'opp' : 'team'} superBowl={c.sport !== 'bucket' && rd.name === 'Super Bowl' ? romanOf((c.season ?? 2026) - 1965) : null} retry c={c} setCareer={setCareer} team={c.fit} pos={combinePos(c)} opp={sportOf(c).teamOf(rd.opp)} cast={gameCast(c, rd.opp)} situation={sit} key={`${po.idx}-${game}`} game={game} build={c.build} seed={`${c.seed}-${c.year}-${po.idx}`} lock={`${c.seed}-${c.year}-${po.idx}`} onDone={res => { setCareer(playoffRound(c, res.score, game, res.hit, res.raw?.pts ?? null)); setStep('result') }} />
+      <CareerGame weather={c.sport !== 'bucket' ? playoffWeather(rd.home === false ? rd.opp : c.team, rd.name === 'Super Bowl', seeded(`${c.seed}-${c.year}-${po.idx}-wx`)) : null} home={rd.home === false ? 'opp' : 'team'} superBowl={c.sport !== 'bucket' && rd.name === 'Super Bowl' ? romanOf((c.season ?? 2026) - 1965) : null} retry c={c} setCareer={setCareer} team={c.fit} pos={combinePos(c)} opp={sportOf(c).teamOf(rd.opp)} cast={gameCast(c, rd.opp)} situation={sit} key={`${po.idx}-${game}`} game={game} build={c.build} seed={`${c.seed}-${c.year}-${po.idx}`} lock={`${c.seed}-${c.year}-${po.idx}`} onDone={res => { setCareer(playoffRound(c, res.score, game, res.hit, res.raw?.pts ?? (game === 'fast-break' && res.raw ? (res.raw.made ?? 0) * 2 : null))); setStep('result') }} />
     </div>
   )
   return (

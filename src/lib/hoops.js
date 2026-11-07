@@ -27,7 +27,7 @@ const v = (b, k, d = 5) => (b?.[k]?.val ?? d)
 
 // ── Play text ────────────────────────────────────────────────────────────────
 const T = {
-  arc:      ['{n} pulls up — TWO!', '{n} step-back — SPLASH!', '{n} fires — GOOD!', '{n} rises up — TWO!', '{n} lets it fly — WET!'],
+  arc:      ['{n} pulls up — TWO!', '{n} step-back — SPLASH!', '{n} fires — GOOD!', '{n} rises up — TWO!', '{n} lets it fly — GOT IT!'],
   // catch-and-shoot: the jumper straight off a pass (only ever with a passer)
   arca:     ['{a} kicks it out, {n} catch and shoot — SPLASH!', '{a} finds {n} spotting up — TWO!', '{a} swings it, {n} fires off the catch — GOOD!', '{n} catches from {a} and lets it go — TWO!'],
   mida:     ['{a} to {n} — catch and shoot, one.', '{n} off the catch from {a} — one.', '{a} finds {n} at the elbow — knocks it down.'],

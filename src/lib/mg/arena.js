@@ -36,7 +36,7 @@ export function arenaStage(ctx, view, G, key, moving = false) {
       const dy = wallNow(G) - G.wallY
       x.save(); x.translate(0, dy); paintRoom(x, view, G, c, 'board'); x.restore()
       if (dy < 0) { x.fillStyle = '#dbaa72'; x.fillRect(0, view.h + dy - 1, view.w, 2 - dy) }
-      paintLines(x, G.cam, c.us); paintHoop(x, G.cam, c.us)
+      paintLines(x, G.cam, c.us, !!G.full, G.sc ?? 1); paintHoop(x, G.cam, c.us)
     })
     return
   }
@@ -45,7 +45,7 @@ export function arenaStage(ctx, view, G, key, moving = false) {
   layer(ctx, view, `${id}-room-${Math.round(G.wallY)}`, x => paintRoom(x, view, G, c, 'board'))
   ctx.restore()
   if (dy < 0) { ctx.fillStyle = '#dbaa72'; ctx.fillRect(0, view.h + dy - 1, view.w, 2 - dy) }
-  paintLines(ctx, G.cam, c.us)
+  paintLines(ctx, G.cam, c.us, !!G.full, G.sc ?? 1)
   paintHoop(ctx, G.cam, c.us)
 }
 

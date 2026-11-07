@@ -71,6 +71,9 @@
     })()
     </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <!-- tablets (iPad, which reports itself as a Mac, and Android tablets) lay the page out 768 wide, scaled to the screen:
+         the phone layout, every phone rule with it. Before any module runs, since some decide their layout on load -->
+    <script>(function(){try{var u=navigator.userAgent,t=/iPad/.test(u)||(/Mac/.test(navigator.platform)&&navigator.maxTouchPoints>1)||(/Android/.test(u)&&!/Mobile/.test(u));var app=window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform();if(t&&!app){document.querySelector('meta[name=viewport]').setAttribute('content','width=768, viewport-fit=cover')}}catch(e){}})()</script>
     <meta name="theme-color" content="#090a0d" />
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />

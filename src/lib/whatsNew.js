@@ -1,9 +1,87 @@
-// The patch notes (components/app/AppWhatsNew.jsx). A new update: change `id` and it opens once for
-// every returning player. Only what's new against the live site. The Ratings tab: data/ratings-patch.js
-export const WHATS_NEW = {
+// The patch notes (components/app/AppWhatsNew.jsx), newest first. A new update: add one at the top, with a new
+// `id`, and it opens once for every returning player; the date menu goes back through the older ones.
+// Only what's new against the live site. ratings: the Ratings tab (data/ratings-patch.js) belongs to that one
+const NOV_7 = {
+  id: '2026-11-07',
+  date: 'NOV 7',
+  fullDate: 'NOV 7, 2026',
+  sections: [
+    {
+      name: 'New Key Moment: Get a Bucket',
+      image: { src: '/patch/get-a-bucket.webp', alt: 'Get a Bucket: five on five in a packed arena, the ball handler at the top of the key with the stick and shoot buttons', w: 240, h: 520 },
+      items: [
+        'Added Get a Bucket for guards: five on five, one possession, score before the shot clock',
+        'Move with the stick or the arrows',
+        'Change sides to cross over, roll the stick to spin',
+        'Same meter as Clutch Shot, and layups use it too',
+        'The green gets smaller the deeper you shoot and bigger the more open you are',
+        'Pass to an open teammate and he shoots it',
+      ],
+    },
+    {
+      name: 'Key Moments',
+      items: [
+        'Added Lockdown, Fast Break and Alley-Oop for basketball',
+        'New retro pixel look for every Advanced mini game',
+        'Turn it off with Retro mini games in settings',
+        'Every Advanced mini game now shows a how to play clip',
+        'First-person 40, 3/4 sprint and bench',
+        'New look for the juke and tackle moments',
+        'Playoff snow and rain now show up in football mini games',
+        'Every combine drill now gets one redo, and the better run counts',
+        'Alley-Oop is now two taps: jump, then throw it down',
+        'Throwing moments: tap for a lob, hold for a bullet',
+      ],
+    },
+    {
+      name: 'Career',
+      image: { src: '/patch/durability.webp', alt: 'The new Durability row under the traits, raised with development points', w: 320, h: 185 },
+      items: [
+        'Spend development points on Durability for fewer injuries and a longer career',
+        'Durability now decides how often injuries happen',
+        'Playing through an injury now costs durability',
+        'More realistic injuries: concussions and most injuries never end a season',
+        'Making the last play of a playoff game now always wins it',
+        'Final scores now match what happened in the mini game',
+        'DB careers now track targets, catches and passer rating allowed',
+        'Added a passes defended record',
+      ],
+    },
+    {
+      name: 'Squad Builder',
+      items: [
+        'The season is now played as your team: your players on a real roster',
+        'New season screen built around your team',
+        'Picking your team now opens over the build page',
+      ],
+    },
+    {
+      name: 'Spin',
+      items: [
+        'On a team with two QBs, a respin now always gives you the other one',
+        'The idle wheel spin is back on phones',
+      ],
+    },
+    {
+      name: 'Fixes',
+      items: [
+        'iPad now uses the phone layout and scrolls',
+        'Fixed black boxes around some bottom ads',
+        'Fixed bottom ads covering buttons',
+        'Fixed cones shaking in the 3-cone drill',
+        'Fixed Jump the Route calling a loss a big gain',
+        'Fixed defenders celebrating plays they gave up',
+        'Fixed two players wearing the same number',
+        'Guest stats now carry over when you sign in',
+      ],
+    },
+  ],
+}
+const NOV_5 = {
   id: '2026-11-05',
   date: 'NOV 5',
   fullDate: 'NOV 5, 2026',
+  ratings: true,
   sections: [
     {
       name: 'New Position: Defensive Line',
@@ -129,6 +207,8 @@ export const WHATS_NEW = {
     },
   ],
 }
+export const PATCH_NOTES = [NOV_7, NOV_5]
+export const WHATS_NEW = PATCH_NOTES[0]
 const KEY = 'bap_whatsnew'
 export const whatsNewSeen = () => { try { return localStorage.getItem(KEY) === WHATS_NEW.id } catch { return true } }
 export const markWhatsNewSeen = () => { try { localStorage.setItem(KEY, WHATS_NEW.id) } catch {} }

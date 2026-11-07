@@ -62,6 +62,7 @@ function posOf(build) {
   if (build.zoneIQ || build.runSupport) return 'db'
   if (build.bodyControl || build.release) return 'wr'
   if (build.elusiveness) return 'rb'
+  if (build.passPro || build.runBlock) return 'ol'
   if (build.jumpShot || build.handles || build.rebounding) return (build.size?.val ?? 5) >= 7 ? 'big' : 'guard'
   return null
 }
@@ -164,6 +165,8 @@ const LINES = {
   'lockdown': [['Locked him up.', 'Stayed in front.'], ['Blown by.', 'Bit on the hesi.']],
   'fast-break': [['Made the right read.', 'Easy two the other way.'], ['Turned it over.', 'Wrong read on the break.']],
   'alley-oop': [['Threw it down.', 'Hammered it home.'], ['Off the fingertips.', 'Could not finish the lob.']],
+  'half-court': [['Got a bucket.', 'Cooked him.'], ['Came up empty.', 'They got the stop.']],
+  'pass-pro': [['Kept the pocket clean.', 'Nobody got home.'], ['The pocket caved in.', 'Beat off the edge.']],
 }
 const reactLine = (game, out, seed) => { const l = LINES[game]; return l ? pick1(seeded(`line-${seed}-${game}`), l[out.hit ? 0 : 1]) : null }
 // the play's own sound at the result: [made, missed] (contact, a catch, a make, the rim)
@@ -172,20 +175,23 @@ const SOUND = {
   'sneak': HIT, 'seal': HIT, 'release': HIT, 'pass-rush': HIT, 'run-stuff': HIT, 'tackle-angle': HIT, 'juke': HIT, 'juke-wr': HIT, 'juke-te': HIT, 'post-up': HIT,
   'catch': ['catchball', 'deny'], 'goal-line': ['stamp', 'deny'], 'jump-route': ['catchball', 'deny'],
   'clutch-shot': ['make', 'rimmiss'], 'free-throws': ['make', 'rimmiss'], 'board': ['catchball', 'rimmiss'], 'rim-protect': ['stamp', 'make'],
-  'lockdown': HIT, 'fast-break': ['make', 'deny'], 'alley-oop': ['make', 'rimmiss'],
+  'lockdown': HIT, 'fast-break': ['make', 'deny'], 'alley-oop': ['make', 'rimmiss'], 'half-court': ['make', 'rimmiss'], 'pass-pro': HIT,
 }
 
 // retry (Career, app): a miss can be played again for a video, once
 // onSkipAll (Career): the intro's TURN OFF KEY MOMENTS, as on the Advanced card
 // pos (optional): the position the build plays, where the build alone can't say (Practice's
 // Fourth & Goal rows); without it, Fourth & Goal in Practice asks which side of the ball first
-export default function MiniGameSimple({ game, build, seed = 'x', onDone, autoStart = false, hard = false, retry = false, lock = null, onSkipAll = null, labV = null, pos = null }) {
+export default function MiniGameSimple({ game, build, seed = 'x', onDone, autoStart = false, hard = false, retry = false, redo = false, lock = null, onSkipAll = null, labV = null, pos = null }) {
   const def = GAMES[game]
   const [stage, setStage] = useState(autoStart ? 'play' : 'intro')
   const [result, setResult] = useState(null)
   const [tries, setTries] = useState(0)          // replays bought with a video (one at most)
   const sent = useRef(false)
-  const offerRetry = REWARDED_ON && retry && IS_APP && tries === 0
+  // redo (the combine): one more run of any result, free, and the better of the two counts
+  const [first, setFirst] = useState(null)
+  const offerRedo = redo && !first && labV == null
+  const offerRetry = REWARDED_ON && retry && IS_APP && tries === 0 && !redo
   // hard (training camp): played as if the trait were a notch or two lower (70%), so a
   // maxed build still has to earn it. The header shows the real grade, never the handicap.
   // (Practice picks the grade: labV)
@@ -213,7 +219,10 @@ export default function MiniGameSimple({ game, build, seed = 'x', onDone, autoSt
     // drill's number goes up at once, with the board's ka-chunk
     const snd = r.stat ? 'lock' : (out.hit ? SOUND[game]?.[0] : SOUND[game]?.[1]) ?? (out.hit ? 'claim' : 'deny')
     timers(() => { sfx(snd); if (r.stat && out.hit) timers(() => sfx('claim'), 260); haptic(out.hit ? 'success' : 'heavy') }, r.stat ? 120 : 300)
-    // a miss that can still be replayed waits for the player's call
+    // the redo's in: the better run counts (its number stays up to read, then on)
+    if (first) { const best = out.score >= first.score ? out : first; timers(() => { unlock(); onDone?.(best) }, r.stat ? 2300 : 1250); return }
+    // one redo on offer, or a miss that can still be replayed: the player's call
+    if (offerRedo) return
     if (!out.hit && offerRetry) return
     // (a measured number stays up long enough to read it)
     timers(() => { unlock(); onDone?.(out) }, r.stat ? 2300 : 1250)
@@ -264,6 +273,12 @@ export default function MiniGameSimple({ game, build, seed = 'x', onDone, autoSt
           ))}
         </div>
       )}
+      {result && offerRedo && (
+        <div className="mg-retry">
+          <button className="ag-btn ag-btn--gold" onClick={() => { sent.current = false; setFirst(result); setTries(1); setResult(null); setStat(null); setLine(null); setStage('play') }}>REDO · BETTER RUN COUNTS</button>
+          <button className="ag-btn ag-btn--ghost" onClick={() => { unlock(); onDone?.(result) }}>KEEP IT</button>
+        </div>
+      )}
       {result && !result.hit && offerRetry && (
         <div className="mg-retry">
           <WatchVideo label="WATCH VIDEO · TRY AGAIN" sub="A short video ad, then one more shot at it. Once." onReward={() => { sent.current = false; setTries(1); setResult(null); setStage('play') }} />
@@ -296,6 +311,8 @@ function Game({ def, v, seed, build, pos, onDone }) {
     case 'lockdown': return <Lockdown v={v} seed={seed} onDone={onDone} />
     case 'break': return <FastBreak v={v} seed={seed} onDone={onDone} />
     case 'oop': return <Oop v={v} seed={seed} onDone={onDone} />
+    case 'bucket': return <Bucket v={v} seed={seed} onDone={onDone} />
+    case 'pro': return <Pro v={v} seed={seed} onDone={onDone} />
     // the combine
     case 'dash': return <Dash v={v} seed={seed} onDone={onDone} unit={def.unit} dist={def.dist} game={def.drill} pos={at} />
     case 'velo': return <Velo v={v} seed={seed} onDone={onDone} noun={def.noun} />
@@ -1296,6 +1313,272 @@ function Lockdown({ v, seed, onDone }) {
         <button className="mg-side" ref={el => { btns.current.R = el }} onPointerDown={e => slide('R', e)}>SLIDE <IconCaret dir="right" size={14} /><Fl /></button>
       </div>
       <Dots n={3} of={scores} />
+    </div>
+  )
+}
+
+// ── Get a Bucket: one possession, two beats ─────────────────────────────────
+// His man shows you what he's giving you. He leans a side: cross him the other way and you're downhill to the
+// rim, a layup's window. He sags off: pull up, a jumper's window (tighter). Hesitate and he's set, guess before
+// he shows anything and he picks your pocket. Then the finish: the bar, in the zone.
+function Bucket({ v, seed, onDone }) {
+  const r = useRng(seed)
+  const plan = useMemo(() => ({ look: r() < 0.68 ? (r() < 0.5 ? 'L' : 'R') : 'sag', delay: 650 + r() * 700, zone: 30 + r() * 40, speed: 1.55 + r() * 0.25 }), [r])
+  const [phase, setPhase] = useState('read')   // read, then shot, then done
+  const [cue, setCue] = useState(null)
+  const [drive, setDrive] = useState(false)
+  const S = useRef({ at: 0, T: 0, done: false, readQ: 1 })
+  const btns = useRef({}), fx = useRef(null), him = useRef(null), me = useRef(null), shotTap = useRef(null)
+  const [end, ended] = useOnce(onDone)
+  const later = useTimers()
+  useLayoutEffect(() => {
+    const T = lanesMs(v) * 0.9
+    S.current = { at: now() + plan.delay, T, done: false, readQ: 1 }
+    const ts = [
+      setTimeout(() => { setCue(plan.look); haptic('light'); if (plan.look !== 'sag') moveTo(him.current, LOCK_X[plan.look] * 0.5 + 25, 30, 220); else moveTo(him.current, 50, 18, 260) }, plan.delay),
+      setTimeout(() => { if (!S.current.done) lose('CUT OFF', 'Too slow: he sat down in front of you.', true) }, plan.delay + T + 60),
+    ]
+    return () => ts.forEach(clearTimeout)
+  }, []) // eslint-disable-line
+  const lose = (word, note, out = false) => {
+    const st = S.current
+    if (st.done) return
+    st.done = true
+    say(fx.current, word, 'miss'); bad()
+    setPhase('done')
+    later(() => end({ score: 0.1, hit: false, note, out, raw: { made: 0, of: 1, pts: 2 } }), 650)
+  }
+  const pick = (k, e) => {
+    const st = S.current
+    if (st.done || phase !== 'read') return
+    const ts = pressAt(e)
+    flash(btns.current[k], 'hit')
+    if (ts < st.at) return lose(k === 'S' ? 'FORCED IT' : 'STRIPPED', 'Went before he showed you anything.')
+    const want = plan.look === 'sag' ? 'S' : flip(plan.look)
+    if (k !== want) return lose(k === 'S' ? 'BLOCKED' : plan.look === 'sag' ? 'CUT OFF' : 'STRIPPED', plan.look === 'sag' ? 'He gave you the shot.' : 'Went right into him.')
+    st.done = true
+    st.readQ = clamp(1 - Math.max(0, ts - st.at - 380) / Math.max(1, st.T - 380), 0.5, 1)
+    good(st.readQ > 0.85)
+    if (k !== 'S') { setDrive(true); moveTo(me.current, LOCK_X[k], 22, 300); say(fx.current, 'CROSSED HIM', 'hit') }
+    else say(fx.current, 'SPACE', 'hit')
+    later(() => setPhase('shot'), 420)
+  }
+  useKeys({ ArrowLeft: e => pick('L', e), ArrowRight: e => pick('R', e), a: e => pick('L', e), d: e => pick('R', e), ' ': e => pick('S', e), Enter: e => pick('S', e) })
+  const word = cue === 'sag' ? 'HE SAGS OFF' : cue ? 'HE LEANS' : 'SIZE HIM UP'
+  const shot = j => end({ score: j.hit ? clamp(0.55 + 0.45 * j.q * S.current.readQ, 0, 1) : 0.2, hit: j.hit, note: j.hit ? (drive ? 'Crossed him, finished at the rim' : 'Pulled up over him') : j.note, raw: { made: j.hit ? 1 : 0, of: 1, pts: 2 } })
+  return (
+    <div className="mg-play mg-play--lanes mg-play--lock" onPointerDown={phase === 'shot' ? primary(e => shotTap.current?.(e)) : undefined}>
+      {phase === 'shot' ? <BucketShot v={v} zone={plan.zone} speed={plan.speed} drive={drive} ended={ended} onShot={shot} tapRef={shotTap} /> : (
+        <div className="mg-box">
+          <Fx r={fx} />
+          <div className={`mg-rush${cue === 'L' || cue === 'R' ? ` is-${cue}` : ''}`}><i>{cue === 'L' ? <><IconCaret dir="left" size={14} /> {word}</> : cue === 'R' ? <>{word} <IconCaret dir="right" size={14} /></> : word}</i></div>
+        </div>
+      )}
+      <div className="mg-court mg-court--lock" aria-hidden="true">
+        <span className="mg-court-arc" /><span className="mg-court-paint" />
+        <span className="mg-pt" ref={him} style={{ transform: at2(50, 30) }}><span className="mg-dot is-them" /></span>
+        <span className="mg-pt" ref={me} style={{ transform: at2(50, 62) }}><span className="mg-dot is-me" /></span>
+      </div>
+      {phase === 'shot' ? null : (
+        <div className="mg-sides mg-sides--pro">
+          <button className="mg-side" ref={el => { btns.current.L = el }} onPointerDown={e => pick('L', e)}><IconCaret dir="left" size={14} /> CROSS<Fl /></button>
+          <button className="mg-side mg-side--punch" ref={el => { btns.current.S = el }} onPointerDown={e => pick('S', e)}>SHOOT<Fl /></button>
+          <button className="mg-side" ref={el => { btns.current.R = el }} onPointerDown={e => pick('R', e)}>CROSS <IconCaret dir="right" size={14} /><Fl /></button>
+        </div>
+      )}
+    </div>
+  )
+}
+// the finish: its own piece, so the bar starts sweeping as it comes up
+function BucketShot({ v, zone, speed, drive, ended, onShot, tapRef }) {
+  const width = zw(v) * (drive ? 1.35 : 1)
+  const mark = useRef(null), zoneEl = useRef(null), fx = useRef(null), done = useRef(false)
+  const { at, dir, stop } = useSweep(mark, speed)
+  const tap = e => {
+    if (done.current || ended.current) return
+    done.current = true
+    const ts = pressAt(e), p = at(ts) * 100, j = judgeBar(p, zone, width, dir(ts))
+    stop(p); flash(zoneEl.current, j.hit ? 'hit' : 'miss'); say(fx.current, j.hit ? (drive ? 'AND IN' : 'BUCKET') : j.word, j.hit ? 'hit' : 'miss')
+    j.hit ? good(j.q >= 0.85) : bad()
+    onShot(j)
+  }
+  tapRef.current = tap
+  useKeys({ ' ': tap, Enter: tap })
+  return (
+    <div>
+      <Bar markRef={mark} zoneRef={zoneEl} fx={fx} zone={zone} width={width} label={drive ? 'LAYUP' : 'JUMPER'} />
+      <Hint touch="TAP" desk="SPACE">IN THE ZONE</Hint>
+    </div>
+  )
+}
+
+// ── Pass Pro: a tackle's pass set ───────────────────────────────────────────
+// Four snaps, each a little quicker. He shows his rush: a speed rush wide, a counter (wide, then back
+// inside), a bull straight on, or on the last snap two men at once (a twist or a blitz). Slide the way he
+// really goes, then PUNCH as the ring closes on him. Against the bull, hold PUNCH until he's stopped.
+// Early punch: he swipes it. Late: he's into your chest. Either way the QB's hurried. Wrong way, too slow,
+// or walked into the QB: a sack. Moving before the snap is a false start. Clean 2, hurried 1: five holds it.
+const PRO_STALL = v => 820 - v * 20, PRO_GIVE = v => 0.65 - v * 0.025, PRO_DRIVE = 650
+const PRO_WORD = { speed: 'SPEED RUSH', counter: 'COUNTER', bull: 'BULL RUSH', stunt: 'TWIST', blitz: 'BLITZ' }
+function Pro({ v, seed, onDone }) {
+  const r = useRng(seed)
+  const plan = useMemo(() => {
+    const s = r() < 0.5 ? -1 : 1, A = r() < 0.5 ? 'counter' : 'bull'
+    const kinds = ['speed', A, A === 'counter' ? 'bull' : 'counter', r() < 0.5 ? 'stunt' : 'blitz']
+    return { s, snaps: kinds.map((kind, k) => ({ kind, delay: (750 + r() * 600) * (1 - k * 0.06), hard: k > 0 && r() < 0.45 ? 0.45 + r() * 0.25 : null, pace: [1, 0.96, 0.92, 0.9][k] })) }
+  }, [r])
+  const s = plan.s, MX = 50 + s * 20
+  const [i, setI] = useState(0)
+  const [cue, setCue] = useState(null)            // { word, side }
+  const [ring, setRing] = useState(false)
+  const [anchor, setAnchor] = useState(false)
+  const [scores, setScores] = useState([])
+  const R = useRef({ phase: 'set', done: true })
+  const pts = useRef({ clean: 0, hurried: 0, sacks: 0, flags: 0 })
+  const fx = useRef(null), him = useRef(null), two = useRef(null), me = useRef(null), ringEl = useRef(null), holdEl = useRef(null), btns = useRef({})
+  const [end] = useOnce(onDone)
+  const later = useTimers()
+  useLayoutEffect(() => {
+    const p = plan.snaps[i], T = lanesMs(v) * 0.84 * p.pace * (p.kind === 'stunt' || p.kind === 'blitz' ? 1.12 : 1)
+    const snapAt = now() + p.delay, showAt = snapAt + 150
+    const fake = p.kind === 'counter' ? s : null
+    const dir = p.kind === 'speed' ? s : p.kind === 'counter' ? -s : p.kind === 'stunt' ? s : p.kind === 'blitz' ? -s : 0
+    const goAt = p.kind === 'counter' ? showAt + 300 : p.kind === 'stunt' || p.kind === 'blitz' ? showAt + 220 : showAt
+    R.current = { phase: 'set', done: false, kind: p.kind, snapAt, showAt, goAt, fake, dir, T, until: goAt + T, bit: false, depth: 0, holdMs: 0, held: false, last: 0, hardAt: p.hard != null ? snapAt - p.delay * (1 - p.hard) : null }
+    setCue(null); setRing(false); setAnchor(false)
+    const two0 = p.kind === 'stunt' ? [MX - s * 22, 30] : p.kind === 'blitz' ? [MX - s * 10, 10] : null
+    for (const [el, x, y] of [[me.current, MX, 66], [him.current, MX + s * 9, 36], [two.current, ...(two0 ?? [MX, -20])]]) { if (el) { halt(el); el.style.transform = at2(x, y) } }
+    if (two.current) two.current.style.opacity = two0 ? 1 : 0
+    const ts = []
+    if (R.current.hardAt != null) ts.push(setTimeout(() => { if (R.current.phase === 'set') { setCue({ word: 'HUT…' }); haptic('light') } }, R.current.hardAt - now()))
+    ts.push(setTimeout(() => { if (R.current.done) return; R.current.phase = 'snap'; setCue({ word: 'SNAP' }); sfx('whistle') }, snapAt - now()))
+    ts.push(setTimeout(() => {
+      const S = R.current
+      if (S.done) return
+      S.phase = p.kind === 'bull' ? 'bull' : 'read'
+      if (p.kind === 'speed') { setCue({ word: PRO_WORD.speed, side: s }); moveTo(him.current, MX + s * 26, 54, T + 150) }
+      else if (p.kind === 'counter') { setCue({ word: PRO_WORD.speed, side: s }); moveTo(him.current, MX + s * 20, 44, 300) }
+      else if (p.kind === 'bull') {
+        setCue({ word: PRO_WORD.bull }); moveTo(him.current, MX, 56, 300, 'ease-in')
+        S.contactAt = now() + 300
+        later(() => { if (!R.current.done) { R.current.phase = 'anchor'; R.current.last = now(); setAnchor(true) } }, 300)
+      } else {
+        setCue({ word: PRO_WORD[p.kind] })
+        moveTo(him.current, MX + s * 2, 42, 220); moveTo(two.current, MX - s * 4, 32, 220)
+      }
+      haptic('light')
+    }, showAt - now()))
+    if (p.kind === 'counter') ts.push(setTimeout(() => { if (!R.current.done && R.current.phase === 'read') { setCue({ word: PRO_WORD.counter, side: -s }); moveTo(him.current, MX - s * 12, 56, T) } }, goAt - now()))
+    if (p.kind === 'stunt' || p.kind === 'blitz') ts.push(setTimeout(() => {
+      if (R.current.done || R.current.phase !== 'read') return
+      setCue({ word: 'FREE MAN', side: dir })
+      if (p.kind === 'stunt') { moveTo(him.current, MX - s * 22, 46, 300); moveTo(two.current, MX + s * 22, 56, T) }   // the end crashes inside, the tackle loops round
+      else { moveTo(him.current, MX + s * 30, 12, 400); moveTo(two.current, MX - s * 12, 56, T) }                     // the end drops out, the backer comes
+    }, goAt - now()))
+    if (p.kind !== 'bull') ts.push(setTimeout(() => { if (!R.current.done && R.current.phase === 'read') settle('sack', 'TOO SLOW') }, goAt + T + 60 - now()))
+    return () => ts.forEach(clearTimeout)
+  }, [i]) // eslint-disable-line
+  // the man he has: the dot that's coming at him
+  const rusher = () => (R.current.kind === 'stunt' || R.current.kind === 'blitz' ? two.current : him.current)
+  const settle = (kind, word = null) => {
+    const S = R.current
+    if (S.done) return
+    S.done = true; S.phase = 'done'
+    setRing(false); setAnchor(false)
+    if (kind === 'clean') { pts.current.clean++; say(fx.current, word ?? 'CLEAN POCKET', 'hit'); sfx('stamp'); haptic('medium') }
+    else if (kind === 'hurried') { pts.current.hurried++; say(fx.current, word ?? 'HURRIED', 'hit'); haptic('light') }
+    else {
+      if (kind === 'sack') { pts.current.sacks++; moveTo(rusher(), 50, 90, 320, 'ease-in') } else pts.current.flags++
+      say(fx.current, word ?? (kind === 'flag' ? 'FALSE START' : 'SACK'), 'miss'); bad()
+    }
+    const q = kind === 'clean' ? 0.6 + 0.4 * (S.q ?? 1) : kind === 'hurried' ? 0.35 : 0
+    const next = [...scores, kind === 'clean' || kind === 'hurried' ? q : 0]
+    setScores(next)
+    if (i + 1 >= plan.snaps.length) {
+      const P = pts.current, total = P.clean * 2 + P.hurried, hit = total >= 5, avg = next.reduce((a, b) => a + b, 0) / plan.snaps.length
+      later(() => end({ score: hit ? Math.max(avg, 0.5) : Math.min(avg, 0.45), hit, note: [`${P.clean} clean`, P.hurried && `${P.hurried} hurried`, P.sacks && `${P.sacks} sack${P.sacks === 1 ? '' : 's'}`, P.flags && `${P.flags} false start${P.flags === 1 ? '' : 's'}`].filter(Boolean).join(' · '), out: P.sacks > 0 && !hit, raw: { made: P.clean, of: plan.snaps.length } }), 300)
+    } else later(() => setI(i + 1), 850)
+  }
+  // with him: he closes, and the ring closes on him
+  const toPunch = ts => {
+    const S = R.current, side = S.dir
+    S.q = clamp(1 - Math.max(0, ts - S.goAt - REACT_FLOOR) / (S.T - REACT_FLOOR), 0.4, 1)
+    S.phase = 'punch'
+    const ms = 380 * plan.snaps[i].pace, W = 120 + v * 10
+    S.contactAt = now() + ms; S.early = S.contactAt - W / 2 - 25; S.late = S.contactAt + W / 2
+    moveTo(me.current, MX + side * 10, 64, 160)
+    moveTo(rusher(), MX + side * 12, 54, ms, 'linear')
+    setRing(true)
+    requestAnimationFrame(() => { const el = ringEl.current; if (el) glide(el, [{ transform: 'scale(2.6)', opacity: 0.4 }, { transform: 'scale(1)', opacity: 1 }], ms, now(), { easing: 'linear' }) })
+    later(() => { if (!R.current.done && R.current.phase === 'punch') settle('hurried', 'INTO HIS CHEST') }, S.late - now() + 30)
+  }
+  const slide = (side, e) => {
+    const S = R.current
+    if (S.done) return
+    const ts = pressAt(e)
+    if (S.phase === 'set') return settle('flag')
+    if (S.phase === 'bull' || S.phase === 'anchor') { S.depth = Math.min(0.98, S.depth + 0.2); flash(btns.current[side], 'miss'); haptic('light'); return }
+    if (S.phase !== 'read' || ts < S.showAt) return
+    flash(btns.current[side], side === S.dir && ts >= S.goAt ? 'hit' : 'miss')
+    if (S.fake && ts < S.goAt) {
+      if (side === S.fake && !S.bit) { S.bit = true; S.until -= S.T * 0.3; moveTo(me.current, MX + side * 12, 66, 160) }
+      else if (side !== S.fake) settle('sack', 'GUESSED')
+      return
+    }
+    if ((S.kind === 'stunt' || S.kind === 'blitz') && ts < S.goAt) return
+    if (side !== S.dir) return settle('sack', S.kind === 'stunt' || S.kind === 'blitz' ? 'FREE RUSHER' : 'BEAT')
+    if (ts > S.until) return settle('sack', 'TOO SLOW')
+    toPunch(ts)
+  }
+  const punchDown = e => {
+    const S = R.current
+    if (S.done) return
+    const ts = pressAt(e)
+    S.held = true
+    if (S.phase === 'set') return settle('flag')
+    if (S.phase === 'bull' || S.phase === 'anchor') { holdEl.current?.classList.add('is-held'); return }
+    if (S.phase === 'read' && ts >= S.showAt) return settle('hurried', 'LUNGED')
+    if (S.phase !== 'punch') return
+    flash(btns.current.P, ts >= S.early ? 'hit' : 'miss')
+    if (ts < S.early) return settle('hurried', 'SWIPED')
+    moveTo(rusher(), MX + S.dir * 12, 46, 180)
+    settle('clean', Math.abs(ts - S.contactAt) <= (120 + v * 10) * 0.12 ? 'PANCAKE' : 'STONED')
+  }
+  const punchUp = () => { R.current.held = false; holdEl.current?.classList.remove('is-held') }
+  // the bull: he drives, the anchor gives a little ground, and holding long enough stops his feet
+  useLoop(ts => {
+    const S = R.current
+    if (S.done || S.phase !== 'anchor') return false
+    const dt = Math.min(50, ts - (S.last || ts)); S.last = ts
+    if (S.held) S.holdMs += dt
+    S.depth += (dt / PRO_DRIVE) * (S.held ? PRO_GIVE(v) : 1)
+    if (holdEl.current) holdEl.current.firstChild.style.transform = `scaleX(${Math.min(1, S.holdMs / PRO_STALL(v))})`
+    if (me.current) { halt(me.current); me.current.style.transform = at2(MX, 66 + Math.min(1, S.depth) * 18) }
+    if (him.current) { halt(him.current); him.current.style.transform = at2(MX, 56 + Math.min(1, S.depth) * 18) }
+    if (S.depth >= 1) { settle('sack', 'WALKED BACK'); return false }
+    if (S.holdMs >= PRO_STALL(v)) { S.q = 1 - S.depth * 0.5; settle('clean', 'ANCHORED'); return false }
+  }, anchor)
+  useKeys({ ArrowLeft: e => slide(-1, e), ArrowRight: e => slide(1, e), a: e => slide(-1, e), d: e => slide(1, e), ' ': punchDown, ArrowUp: punchDown }, { ' ': punchUp, ArrowUp: punchUp })
+  const arrow = cue?.side ? <IconCaret dir={cue.side < 0 ? 'left' : 'right'} size={14} /> : null
+  return (
+    <div className="mg-play mg-play--lanes mg-play--pro">
+      <div className="mg-box">
+        <Fx r={fx} />
+        <div className={`mg-rush${cue?.side ? ` is-${cue.side < 0 ? 'L' : 'R'}` : ''}`}><i>{cue ? (cue.side < 0 ? <>{arrow} {cue.word}</> : cue.side > 0 ? <>{cue.word} {arrow}</> : cue.word) : `SNAP ${i + 1} OF ${plan.snaps.length}`}</i></div>
+      </div>
+      <div className="mg-court mg-court--pro" aria-hidden="true">
+        <span className="mg-pro-los" /><span className="mg-pro-qb" />
+        <span className="mg-pt" ref={two} style={{ transform: at2(MX, -20), opacity: 0 }}><span className="mg-dot is-d" /></span>
+        <span className="mg-pt" ref={him} style={{ transform: at2(MX + s * 9, 36) }}><span className="mg-dot is-d" /></span>
+        <span className="mg-pt" ref={me} style={{ transform: at2(MX, 66) }}><span className="mg-dot is-me" />{ring && <span className="mg-pro-ring" ref={ringEl} />}</span>
+      </div>
+      <div className="mg-seal-prog mg-pro-hold" ref={holdEl} style={{ visibility: anchor ? 'visible' : 'hidden' }}><span /><i>ANCHOR · HOLD PUNCH</i></div>
+      <div className="mg-sides mg-sides--pro">
+        <button className="mg-side" ref={el => { btns.current[-1] = el }} onPointerDown={e => slide(-1, e)}><IconCaret dir="left" size={14} /> {s < 0 ? 'OUTSIDE' : 'INSIDE'}<Fl /></button>
+        <button className="mg-side mg-side--punch" ref={el => { btns.current.P = el }} onPointerDown={primary(punchDown)} onPointerUp={punchUp} onPointerCancel={punchUp} onPointerLeave={punchUp}>PUNCH<Kbd k="SPACE" /><Fl /></button>
+        <button className="mg-side" ref={el => { btns.current[1] = el }} onPointerDown={e => slide(1, e)}>{s > 0 ? 'OUTSIDE' : 'INSIDE'} <IconCaret dir="right" size={14} /><Fl /></button>
+      </div>
+      <Dots n={plan.snaps.length} of={scores} />
     </div>
   )
 }

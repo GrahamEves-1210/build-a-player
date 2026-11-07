@@ -412,11 +412,43 @@ export function hud(ctx, view, g, title) {
   }
 }
 // On a computer: the key that presses it, in a small keycap
+// A real keyboard key: a light keycap face on its darker edge, with a shadow under it. Pressed (lit), it sits down
+// into the edge. The arrows are drawn, not typed (a font's arrow is a different shape on every machine); SPACE is a
+// spacebar; ARROWS is the arrow cluster, one key up top and three under it
+const ARROW_DIR = { '←': [-1, 0], '→': [1, 0], '↑': [0, -1], '↓': [0, 1] }
+function capAt(ctx, x, y, w, h, lit) {
+  const edge = 2.5, down = lit ? 1.6 : 0, top = y - h / 2
+  ctx.fillStyle = 'rgba(0,0,0,.42)'; rr(ctx, x - w / 2 - 0.5, top + 1.5, w + 1, h + edge, 3.5); ctx.fill()
+  ctx.fillStyle = lit ? '#8f9aa1' : '#a9b2b8'; rr(ctx, x - w / 2, top + down, w, h + edge - down, 3.5); ctx.fill()
+  const fy = top + down, gr = ctx.createLinearGradient(0, fy, 0, fy + h)
+  gr.addColorStop(0, lit ? '#e4e9ec' : '#fbfcfc'); gr.addColorStop(1, lit ? '#cdd4d8' : '#e2e6e9')
+  ctx.fillStyle = gr; rr(ctx, x - w / 2 + 0.8, fy, w - 1.6, h - 1, 3); ctx.fill()
+  return fy + (h - 1) / 2
+}
+function arrowGlyph(ctx, x, y, [dx, dy], k) {
+  ctx.fillStyle = '#1b2429'; ctx.beginPath()
+  const px = -dy, py = dx
+  ctx.moveTo(x + dx * k, y + dy * k)
+  ctx.lineTo(x - dx * k * 0.7 + px * k * 0.85, y - dy * k * 0.7 + py * k * 0.85)
+  ctx.lineTo(x - dx * k * 0.7 - px * k * 0.85, y - dy * k * 0.7 - py * k * 0.85)
+  ctx.closePath(); ctx.fill()
+}
 export function keyCap(ctx, x, y, label, dark = false) {
-  const w = label.length > 1 ? 46 : 20, h = 16
-  ctx.fillStyle = dark ? 'rgba(6,16,12,.16)' : 'rgba(8,12,16,.72)'
-  rr(ctx, x - w / 2, y - h / 2, w, h, 3); ctx.fill()
-  text(ctx, label, x, y + 0.5, { font: 'system-ui, sans-serif', size: label.length > 1 ? 9.5 : 12, weight: '700', color: dark ? '#06100c' : '#fff', track: label.length > 1 ? 0.6 : 0 })
+  const lit = !!dark
+  if (label === 'ARROWS') {
+    // the arrow cluster: ↑ over ← ↓ →
+    const k = 12, h = 10.5, g = 1.6
+    for (const [cx, cy, d] of [[x, y - h / 2 - g / 2 - 1.2, '↑'], [x - k - g, y + h / 2 + g / 2 - 1.2, '←'], [x, y + h / 2 + g / 2 - 1.2, '↓'], [x + k + g, y + h / 2 + g / 2 - 1.2, '→']]) {
+      const fy = capAt(ctx, cx, cy, k, h, lit)
+      arrowGlyph(ctx, cx, fy, ARROW_DIR[d], 2.6)
+    }
+    return
+  }
+  const dir = ARROW_DIR[label]
+  const w = label === 'SPACE' ? 64 : dir || label.length === 1 ? 20 : Math.max(30, label.length * 7 + 12), h = 17
+  const fy = capAt(ctx, x, y, w, h, lit)
+  if (dir) arrowGlyph(ctx, x, fy, dir, 4)
+  else text(ctx, label, x, fy + 0.5, { font: 'system-ui, sans-serif', size: label.length > 1 ? 8.5 : 11, weight: '700', color: '#1b2429', track: label.length > 1 ? 0.5 : 0 })
 }
 export const LR_KEYS = ['←', '→'], THREE_KEYS = ['←', '↑', '→']
 const keyOfPad = (g, i) => (g.pads.length === 1 ? (g.zones === 'three' ? THREE_KEYS[1] : 'SPACE') : g.zones === 'lr' ? LR_KEYS[i] : THREE_KEYS[i])
@@ -491,7 +523,8 @@ export function particles(cap = 40, seed = 1) {
         if (t + life[j] > until) until = t + life[j]
       }
     },
-    draw(ctx, t) {
+    // round: dots instead of squares (the flat, clean look: a square at that size reads as a stray pixel block)
+    draw(ctx, t, round = false) {
       if (t > until || lightMode()) return
       let last = null, alpha = 1
       for (let j = 0; j < cap; j++) {
@@ -508,7 +541,8 @@ export function particles(cap = 40, seed = 1) {
           // (a flat scrap turning over in the air: it narrows and comes back)
           const turn = Math.abs(Math.cos(age / 95 + j))
           ctx.fillRect(px + Math.sin(age / 210 + j) * 5 - sz * turn, py - sz * 0.6, Math.max(0.5, sz * 2 * turn), sz * 1.2)
-        } else ctx.fillRect(px - sz / 2, py - sz / 2, sz, sz * (k.land ? 0.72 : 1))
+        } else if (round) { ctx.beginPath(); ctx.ellipse(px, py, sz / 2, sz * (k.land ? 0.36 : 0.5), 0, 0, 6.2832); ctx.fill() }
+        else ctx.fillRect(px - sz / 2, py - sz / 2, sz, sz * (k.land ? 0.72 : 1))
       }
       if (alpha !== 1) ctx.globalAlpha = 1
     },

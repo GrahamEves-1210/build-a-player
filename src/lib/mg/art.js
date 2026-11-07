@@ -570,7 +570,7 @@ const rigBone = (x, x0, y0, r0, x1, y1, r1) => {
   x.arc(x0, y0, r0, a + q, a - q); x.arc(x1, y1, r1, a - q, a + q); x.closePath()
 }
 // where the elbow goes: off the line to the hand, toward (px, py), as far as the arm's length makes it
-const rigArm = (ax, ay, tx, ty, px, py) => {
+export const rigArm = (ax, ay, tx, ty, px, py) => {
   let dx = tx - ax, dy = ty - ay, d = Math.hypot(dx, dy) || 0.001
   const mx = R_UARM + R_FARM - 0.02
   if (d > mx) { dx *= mx / d; dy *= mx / d; d = mx }
@@ -578,7 +578,7 @@ const rigArm = (ax, ay, tx, ty, px, py) => {
   return { jx: ax + dx / 2 + (px - ux * along) * h, jy: ay + dy / 2 + (py - uy * along) * h, ex: ax + dx, ey: ay + dy }
 }
 // the body for a pose: hip height, feet, hands (y up is negative), a little lean
-function padsPose(dir, step, pose, carry) {
+export function padsPose(dir, step, pose, carry) {
   const swing = step == null ? 0 : Math.round(Math.sin((step / 4) * Math.PI * 2) * 100) / 100
   const o = { hy: 53, lean: 0, lx: -8, ly: 0, rx: 8, ry: 0, hlx: -16, hly: -47, hrx: 16, hry: -47 }
   const low = pose === 'touch' ? 15 : pose === 'block' || pose === 'stance' ? 9 : pose === 'slide' ? 6 : pose === 'ready' || pose === 'wrap' || pose === 'back' ? 4 : 0

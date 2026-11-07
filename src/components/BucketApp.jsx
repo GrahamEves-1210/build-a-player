@@ -1029,11 +1029,23 @@ export default function BucketApp() {
     if (slot.pos !== position) { startSquadBuild(slot); return }
     const filled = fillSlot(sq, slot.id, build, activeTypes, isBucketCustomMode || sandboxTainted.current)
     const next = nextToBuild(filled)
+    // the last build of a squad with no team yet: the team pick opens right here, over the build,
+    // the way Simulate Season's does (the squad screen comes after it)
+    if (!next && !filled.team) { putSquad({ ...filled, phase: 'team' }); setSquadPick(true); return }
     putSquad(next ? filled : { ...filled, phase: afterBuilding(filled) })
     if (next) startSquadBuild(next)
     else { squadBuilding.current = null; setGameMode(null); setBuild({}); setPage('squad') }   // the builds are the squad's now
     window.scrollTo({ top: 0, behavior: 'instant' })
   }, [position, build, activeTypes, isBucketCustomMode, putSquad, startSquadBuild])
+  const [squadPick, setSquadPick] = useState(false)
+  const squadPicked = useCallback(t => {
+    setSquadPick(false)
+    putSquad({ ...squadRef.current, team: t.short, phase: 'ready' })
+    squadBuilding.current = null; setGameMode(null); setBuild({}); setPage('squad')
+    window.scrollTo({ top: 0, behavior: 'instant' })
+  }, [putSquad])
+  // the team spin lives in the sim page's chunk: have it ready before the squad's team pick needs it
+  useEffect(() => { if (page === 'squad' || page === 'squad-build') import('./BucketSimPage') }, [page])
   const squadLeft = squad ? squad.slots.filter(s => !s.build).length : 0
 
   // Opened (or refreshed) straight on /bucket/salary → go to Salary Cap. Read
@@ -1918,6 +1930,7 @@ export default function BucketApp() {
         />
         </Suspense>
       )}
+      {!parked && squadPick && page === 'squad-build' && <Suspense fallback={null}><TeamSpinModal isCustomMode={false} onTeamSelected={squadPicked} build={build} anyTeam eyebrow="Squad Builder" /></Suspense>}
 
       {!parked && showBucketCustomModal && (
         <CustomRatingsModal
@@ -2121,7 +2134,7 @@ export default function BucketApp() {
     return (
       <Suspense fallback={null}>
         <AppSquad sport="bucket" squad={squad} setSquad={putSquad} user={user} onBuild={buildSquad} onExit={() => setPage('splash')}
-          renderPicker={(onPick, b) => <TeamSpinModal isCustomMode={!!squad?.sandbox} onTeamSelected={onPick} build={b} />} />
+          renderPicker={(onPick, b) => <Suspense fallback={null}><TeamSpinModal isCustomMode={!!squad?.sandbox} onTeamSelected={onPick} build={b} anyTeam eyebrow="Squad Builder" /></Suspense>} />
       </Suspense>
     )
   }

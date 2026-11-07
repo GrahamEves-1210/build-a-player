@@ -20,7 +20,7 @@ const COUNTS = {
     rb: { seasonRushYds: 'rushYds', seasonRushTDs: 'rushTDs', seasonCarries: 'carries', seasonRecYds: 'recYds', seasonRecTDs: 'recTDs', seasonRecs: 'recs', seasonFumbles: 'fumbles' },
     wr: { seasonRecs: 'rec', seasonRecYds: 'recYds', seasonRecTDs: 'recTDs', seasonTargets: 'targets' },
     te: { seasonRecs: 'rec', seasonRecYds: 'recYds', seasonRecTDs: 'recTDs', seasonTargets: 'targets' },
-    db: { seasonINTs: 'ints', seasonPBUs: 'pbus', seasonTackles: 'tackles', seasonTFL: 'tfl', seasonFF: 'ff', seasonPickSixes: 'pickSixes' },
+    db: { seasonINTs: 'ints', seasonPBUs: 'pbus', seasonTackles: 'tackles', seasonTFL: 'tfl', seasonFF: 'ff', seasonPickSixes: 'pickSixes', seasonTgtA: 'tgtA', seasonCmpA: 'cmpA', seasonYdsA: 'ydsA', seasonTdA: 'tdA' },   // (the coverage four: a career DB's games carry them, lib/career.js careerPicks)
     dl: { seasonSacks: 'sacks', seasonTFL: 'tfl', seasonTackles: 'tackles', seasonQBHits: 'qbHits', seasonFF: 'ff', seasonFR: 'fr', seasonPBUs: 'pbus', seasonSafeties: 'safeties' },
     lb: { seasonTackles: 'tackles', seasonTFL: 'tfl', seasonSacks: 'sacks', seasonQBHits: 'qbHits', seasonPDs: 'pds', seasonINTs: 'ints', seasonPickSixes: 'pickSixes', seasonFF: 'ff', seasonFR: 'fr', seasonMissed: 'missed' },
     ol: { seasonPressures: 'pressures', seasonSacksAllowed: 'sacks', seasonPenalties: 'penalties', seasonPancakes: 'pancakes' },
@@ -43,7 +43,7 @@ export const GAME_LINE = {
   wr: g => `${g.rec} rec, ${g.recYds} yds${g.recTDs ? `, ${g.recTDs} TD` : ''}`, te: g => `${g.rec} rec, ${g.recYds} yds${g.recTDs ? `, ${g.recTDs} TD` : ''}`,
   db: g => `${g.tackles} TKL${g.ints ? `, ${g.ints} INT` : ''}${g.pbus ? `, ${g.pbus} PD` : ''}`, dl: g => `${g.sacks} sack${g.sacks === 1 ? '' : 's'}, ${g.tackles} TKL${g.ff ? `, ${g.ff} FF` : ''}`,
   lb: g => `${g.tackles} TKL${g.sacks ? `, ${g.sacks} sack${g.sacks === 1 ? '' : 's'}` : ''}${g.ints ? `, ${g.ints} INT` : ''}${g.ff ? `, ${g.ff} FF` : ''}`,
-  ol: g => `${g.pancakes} pancakes, ${g.sacks} sacks allowed`,
+  ol: g => `${g.pancakes} pancake${g.pancakes === 1 ? '' : 's'}, ${g.sacks} sack${g.sacks === 1 ? '' : 's'} allowed`,
   guard: g => `${g.pts} pts, ${g.reb} reb, ${g.ast} ast`, big: g => `${g.pts} pts, ${g.reb} reb, ${g.ast} ast`,
 }
 const BIG_GAME = { qb: g => g.passYds >= 330 || g.tds >= 4, rb: g => g.rushYds >= 140 || g.rushTDs + (g.recTDs ?? 0) >= 3, wr: g => g.recYds >= 130 || g.recTDs >= 2, te: g => g.recYds >= 100 || g.recTDs >= 2, db: g => g.ints >= 2 || g.pickSixes >= 1, dl: g => g.sacks >= 2 || g.ff >= 2 || g.safeties >= 1, lb: g => g.tackles >= 13 || g.ints >= 1 || g.sacks >= 2 || g.ff >= 2, ol: g => g.pancakes >= 6 && g.sacks === 0, guard: g => g.pts >= 38, big: g => g.pts >= 35 || g.reb >= 18 }
@@ -73,7 +73,7 @@ export const setMomentsOff = off => { try { localStorage.setItem(MOMENTS_OFF_KEY
 // always: the moments can't be switched off (Career: they're the mode)
 // locked: no moments, and the season stays exactly the one simulated (Salary Cap: its score and
 // stats went on the day's board when it was locked in, and View Results replays that same season)
-export function createDirector({ sport, pos, build, team, simFn, base, seed = Math.random().toString(36).slice(2, 8), name = 'Guest', attrMap = {}, types = [], always = false, locked = false, recordBook = null, deals = null, made = null }) {
+export function createDirector({ sport, pos, build, team, simFn, base, seed = Math.random().toString(36).slice(2, 8), name = 'Guest', attrMap = {}, types = [], always = false, locked = false, recordBook = null, deals = null, made = null, injuryOdds = null }) {
   const isBucket = sport === 'bucket'
   const total = base.games.length
   // two or three decisions in the regular season, at weeks that change every
@@ -92,9 +92,11 @@ export function createDirector({ sport, pos, build, team, simFn, base, seed = Ma
   const teamNick = team?.name?.split(' ').slice(-1)[0] ?? 'Your team'
   const r = seeded(`director-${seed}`)
   // Injury cards are rare in a one-off season: decided up front, one at most, so they aren't simply
-  // whichever card is left at a stop. (Career plays them as before.)
+  // whichever card is left at a stop. (Career: injuryOdds, from the player's durability; without them, as before)
   const injuryRoll = seeded(`injury-${seed}`)
-  const seasonInjury = always || injuryRoll() < 0.2, playoffInjury = always || injuryRoll() < 0.1
+  const rated = !!injuryOdds
+  const seasonInjury = rated ? injuryRoll() < injuryOdds.season : always || injuryRoll() < 0.2
+  const playoffInjury = rated ? injuryRoll() < injuryOdds.playoffs : always || injuryRoll() < 0.1
 
   const D = {
     sport, pos, total, stops, seed, name, teamNick,
@@ -185,7 +187,7 @@ export function createDirector({ sport, pos, build, team, simFn, base, seed = Ma
     const k = Math.min(stop.at, total)
     const ctx = D.ctxAt(k)
     const last = ctx.last
-    const noInjury = !always && ([...D.used].some(id => INJURY_CARDS.has(id)) || !(stop.kind === 'playoffs' ? playoffInjury : seasonInjury))
+    const noInjury = (rated || !always) && ([...D.used].some(id => INJURY_CARDS.has(id)) || !(stop.kind === 'playoffs' ? playoffInjury : seasonInjury))
     const m = pickScenario({
       noInjury, sport, pos, stop, ctx, build: applyMods(build, team, D.cum).build, types, attrMap, seed, teamNick, name, team: applyMods(build, team, D.cum).team, deals: D.deals,
       next: stop.kind !== 'playoffs' && k < total ? D.games[k] : null,

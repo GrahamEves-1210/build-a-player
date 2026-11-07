@@ -18,7 +18,7 @@ import { paintFieldFlat, qbPose } from './throw.js'
 import { put, action, teamOf, walk, ballInAir } from './read.js'
 
 export const how = {
-  'pass-rush': 'GET OFF when the ball moves. Then read him. He kicks wide: INSIDE. He steps up and leans: EDGE. He backs off tall: BULL.',
+  'pass-rush': 'GET OFF when the ball moves. Then read him. He oversets wide: go INSIDE. He leans on you: take the EDGE. He sits back high: BULL him.',
   // (a tackle goes outside the guard: there's no edge in there, and the pad says so)
   'pass-rush:dt': 'GET OFF when the ball moves. Then read him. He kicks wide: INSIDE. He steps up and leans: OUTSIDE. He backs off tall: BULL.',
   'run-stuff': 'Read the line and the back. Tap the side the run is going, then SHED as the back gets to you. Too soon and he cuts away.',

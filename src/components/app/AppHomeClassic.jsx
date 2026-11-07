@@ -21,6 +21,7 @@ import { RollingNumber, RollText } from './MotionText'
 import { HoopU, switchSport } from './AppHome'
 import './home-classic.css'
 import { LB_LIVE } from '../../lib/lbLive'
+import { OL_LIVE } from '../../lib/olLive'
 
 // Classic Home: the Home as it was live before the Nov 5 update (commit bb8f997, pushed
 // Oct 29), put back beside today's for comparison. lib/homeLook.js picks which one shows.
@@ -63,12 +64,14 @@ const NFL_FIGURE = {
   db: { src: '/db-silhouette.png', scale: 1.05 },
   dl: { src: '/dl-silhouette.webp', scale: 1 },
   lb: { src: '/dl-silhouette.webp', scale: 1 },   // LB placeholder: the DL figure
+  ol: { src: '/db-silhouette.png', scale: 1.05 },   // OL placeholder: the DB figure until OL has its own (OL_SILHOUETTE)
 }
 const NFL_NAMES = { qb: 'Quarterback', rb: 'Running Back', wr: 'Wide Receiver', te: 'Tight End', db: 'Defensive Back', dl: 'Defensive Line', lb: 'Linebacker', ol: 'O-Line' }
-const PLURAL = { qb: 'QBs', rb: 'RBs', wr: 'WRs', te: 'TEs', db: 'DBs', dl: 'DLs', lb: 'LBs', guard: 'Guards', big: 'Bigs' }
+const PLURAL = { qb: 'QBs', rb: 'RBs', wr: 'WRs', te: 'TEs', db: 'DBs', dl: 'DLs', lb: 'LBs', ol: 'Linemen', guard: 'Guards', big: 'Bigs' }
 const NEW_ALLTIME = new Set(['wr', 'te', 'db'])
 // the open positions first (DL opened after this Home), then the ones still to come
-const NFL_POSITIONS = [...POS_OPTIONS.filter(o => !o.disabled), ...POS_OPTIONS.filter(o => o.disabled)]
+// (LB and OL are hidden, not shown as SOON, until their flags: lib/lbLive.js, lib/olLive.js)
+const NFL_POSITIONS = [...POS_OPTIONS.filter(o => !o.disabled), ...POS_OPTIONS.filter(o => o.disabled && o.pos !== 'ol' && o.pos !== 'lb')]
 
 const nav = to => window.dispatchEvent(new CustomEvent('bap:nav', { detail: to }))
 // the figure's bands fall one by one once a page load, then just arrive
@@ -404,7 +407,7 @@ export default function AppHomeClassic({ sport = 'nfl', onStart, onDepthChart, o
             }
             return (
               <button key={o.pos} role="tab" aria-selected={on} className={`ag-pos${on ? ' ag-pos--on' : ''}`} onClick={() => pick(o.pos)}>
-                {(o.pos === 'dl' || (o.pos === 'lb' && LB_LIVE)) && <span className="ag-pos-new">NEW</span>}
+                {(o.pos === 'dl' || (o.pos === 'lb' && LB_LIVE) || (o.pos === 'ol' && OL_LIVE)) && <span className="ag-pos-new">NEW</span>}
                 {o.players && <span className="agc-pos-avs"><AvatarTrio players={o.players} size={20} /></span>}
                 <span className="agc-pos-label">{o.label}</span>
                 {o.sub && <span className="agc-pos-sub">{o.sub}</span>}
@@ -477,12 +480,12 @@ export default function AppHomeClassic({ sport = 'nfl', onStart, onDepthChart, o
             <span className="ag-card-txt">
               <span className="ag-eyebrow">{!squad ? 'ONE SEASON · YOUR SQUAD'
                 : squad.phase === 'build' ? `BUILDING · ${sqBuilt} OF ${squad.slots.length}`
-                : squad.team ? `${squad.team} · ${squad.slots.length} ${squad.slots.length === 1 ? 'BUILD' : 'BUILDS'} · SEASON ${(squad.seasons?.length ?? 0) + (squad.phase === 'result' ? 0 : 1)}`
+                : squad.team ? `${squad.team} · ${squad.slots.length} ${squad.slots.length === 1 ? 'BUILD' : 'BUILDS'}`
                 : `${squad.slots.length} ${squad.slots.length === 1 ? 'BUILD' : 'BUILDS'} · PICK A TEAM`}</span>
               <span className="ag-card-title">SQUAD BUILDER</span>
               <span className="ag-card-sub">{!squad ? 'Build a few players, drop them on a real team, play a season together.'
                 : squad.phase === 'build' ? 'Your squad is waiting on its next build.'
-                : sqLast && squad.phase === 'result' ? `${sqLast.wins}-${sqLast.losses}${sqLast.champion ? ', champions' : sqLast.playoffs ? ', playoffs' : ''} last season. Run it back.`
+                : sqLast && squad.phase === 'result' ? `${sqLast.wins}-${sqLast.losses}${sqLast.champion ? ', champions' : sqLast.playoffs ? ', playoffs' : ''} with the ${sqLast.team}. Run it back.`
                 : 'The season is ready to play.'}</span>
             </span>
           </button>

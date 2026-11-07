@@ -6,9 +6,15 @@
 import { IS_APP } from './platform'
 
 const KEY = 'bap_low_power'
-const saved = () => { try { return localStorage.getItem(KEY) === '1' } catch { return false } }
+// (a slow spin's verdict lasts a week, then the machine is measured again: one bad moment, a busy tab, used to switch
+// the light version on for good. The old '1' had no date: it's measured again too)
+const WEEK = 7 * 864e5
+const saved = () => { try { const v = Number(localStorage.getItem(KEY)); return v > 1 && Date.now() - v < WEEK } catch { return false } }
 const weakSpecs = () => {
   if (IS_APP || typeof navigator === 'undefined') return false
+  // phones and tablets: judged by measuring only, like the app (they report their memory and cores very differently;
+  // most read as weak, and lost the reel drift for nothing)
+  try { if (matchMedia('(pointer: coarse)').matches) return false } catch {}
   const mem = navigator.deviceMemory, cores = navigator.hardwareConcurrency
   return (mem != null && mem <= 4) || (cores != null && cores <= 4)
 }
@@ -32,7 +38,7 @@ export function sampleFrames() {
     n++
     if (now - t0 < 1200) { requestAnimationFrame(tick); return }
     if ((now - t0) / n > 40) {
-      try { localStorage.setItem(KEY, '1') } catch {}
+      try { localStorage.setItem(KEY, String(Date.now())) } catch {}
       document.documentElement.classList.add('low-power')
     }
   }

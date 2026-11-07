@@ -87,6 +87,21 @@ const DEFS = {
     { key: 'big', label: '10-TACKLE GAMES', get: s => s.adv.big ?? 0, fmt: int, says: 'Games with ten tackles or more.' },
     { key: 'ff', label: 'FORCED FUMBLES', get: s => s.stats.ff ?? 0, fmt: int, says: 'Times he knocked the ball loose.' },
   ],
+  // An offensive lineman, graded the way the charting services do it (PFF-style grades; pressure rate
+  // over his pass sets, about 58% of his snaps). A starting tackle allows about 5 sacks and 35 pressures
+  // with 6-9 flags; an elite one 0-2 sacks, 10-20 pressures, 1-4 flags (estimates from PFF and PFR, 2024).
+  ol: [
+    { key: 'grade', label: 'OVERALL GRADE', get: s => s.stats.grade, fmt: f1, avg: 65, elite: 86, says: 'One grade for every snap, PFF style: pass blocking about 60%, run blocking 40%, less for the flags.' },
+    { key: 'sacksA', label: 'SACKS ALLOWED', get: s => s.stats.sacksA, fmt: int, avg: 5, elite: 1, low: true, says: 'The one everyone sees. Lower is better, and some of them belong to the quarterback.' },
+    { key: 'prsRate', label: 'PRESSURE RATE', get: s => (s.stats.snaps ? (s.stats.prs / (s.stats.snaps * 0.58)) * 100 : null), fmt: pct, avg: 5.5, elite: 2.5, low: true, says: 'How often his man got to the quarterback on a pass play: sacks, hits and hurries. The best read on pass blocking.' },
+    { key: 'pen', label: 'PENALTIES', get: s => s.stats.pen, fmt: int, avg: 7, elite: 3, low: true, says: 'Holding, false starts and the rest. Every one costs a drive yards.' },
+    { key: 'pancakes', label: 'PANCAKES', get: s => s.stats.pancakes, fmt: int, avg: 30, elite: 50, says: 'Blocks that put his man on the ground. Nobody keeps an official count; these are charted.' },
+    { key: 'passGrade', label: 'PASS BLOCK GRADE', get: s => s.stats.passGrade, fmt: f1, says: 'Pass protection alone: the pressures he gave up, and the sacks most of all.' },
+    { key: 'runGrade', label: 'RUN BLOCK GRADE', get: s => s.stats.runGrade, fmt: f1, says: 'Run blocking alone: how often he won his block, and how many he finished.' },
+    { key: 'clean', label: 'CLEAN GAMES', get: s => s.adv.clean ?? 0, fmt: int, says: 'Games with no sacks and at most one pressure allowed.' },
+    { key: 'hitsA', label: 'QB HITS ALLOWED', get: s => s.stats.hitsA ?? 0, fmt: int, says: 'Times his man hit the quarterback without the sack.' },
+    { key: 'starts', label: 'STARTS', get: s => s.stats.starts ?? 0, fmt: int, says: 'Games he started. A lineman\'s career is counted in them.' },
+  ],
   db: [
     { key: 'pd', label: 'PASSES DEFENDED', get: s => s.stats.pbus, fmt: int, avg: 8, elite: 15, says: 'Throws he got a hand on. The best sign of good coverage in a box score.' },
     { key: 'ints', label: 'INTERCEPTIONS', get: s => s.stats.ints, fmt: int, avg: 2, elite: 5, says: 'Throws he caught. Fun, but it swings a lot from year to year.' },
@@ -138,6 +153,7 @@ export function seasonRaw(pos, f, played) {
   if (pos === 'wr' || pos === 'te') return { gp, targets: f.seasonTargets ?? 0, long: f.seasonLong ?? 0, hundreds: count(g => g.recYds >= 100) }
   if (pos === 'dl') return { gp, multi: count(g => g.sacks >= 2) }
   if (pos === 'lb') return { gp, big: count(g => g.tackles >= 10) }
+  if (pos === 'ol') return { gp, clean: count(g => (g.sacks ?? 0) === 0 && (g.pressures ?? 0) <= 1) }
   return { gp }
 }
 

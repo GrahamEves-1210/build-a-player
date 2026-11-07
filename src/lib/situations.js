@@ -26,6 +26,7 @@ const SPOTS = {
   'rim-protect': { margin: [-1, -2, -2], span: [6, 30], hoops: true, stop: true },
   lockdown: { margin: [-1, -2, -2], span: [6, 24], hoops: true, stop: true },
   'fast-break': { ...HOOP, tail: 'A steal, and they\u2019re running.' }, 'alley-oop': HOOP,
+  'half-court': { ...HOOP, tail: 'One possession. Get a bucket.' },
 }
 // these end in the end zone, whatever else he's short of
 const TD_GAMES = new Set(['two-minute', 'goal-line'])
@@ -58,9 +59,11 @@ export function finalScore(sit, game, won, hit, seed = 'x', pts = null) {
   const need = sit.opp - sit.mine
   let mine = sit.mine, opp = sit.opp, note = null
   // what landing it put on the board
-  const play = game === 'clutch-shot' ? pts ?? 3 : game === 'free-throws' ? 2 : TD_GAMES.has(game) ? over(need, false) : need < 0 ? 0 : over(need, hoops)
+  // (what the moment itself put on the board when it says so: the clutch shot's 2 or 3, a fast break's makes. A touchdown
+  // is a touchdown, the same as the drive's own scoreboard: 7, or enough to go ahead with the two-point try)
+  const play = pts != null ? pts : game === 'clutch-shot' ? 3 : game === 'free-throws' ? 2 : TD_GAMES.has(game) ? Math.max(7, need + 1) : need < 0 ? 0 : over(need, hoops)
   if (won) {
-    if (hit) mine += play
+    if (hit) { mine += play; if (mine <= opp) mine = opp + (hoops ? 2 : 3) }   // (short of it on the play: they closed it out after)
     else if (need < 0) { if (hoops ? -need >= 2 : -need > 3) opp += hoops ? 1 : 3; note = `${them} couldn't finish it.` }
     else { mine += over(need, hoops); note = hoops ? 'Got one more chance and made it count.' : 'Got the ball back and won it late.' }
   } else if (hit) {

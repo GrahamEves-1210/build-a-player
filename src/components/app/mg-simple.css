@@ -23,7 +23,8 @@
 .mg--simple .mg-on-desk, .mg--simple .mg-kbd { display: none; }
 @media (hover: hover) and (pointer: fine) {
   .mg--simple .mg-on-touch { display: none; } .mg--simple .mg-on-desk { display: inline; }
-  .mg--simple .mg-kbd { display: block; position: absolute; top: 6px; right: 7px; z-index: 3; padding: 0 5px; border: 1px solid var(--ag-line-hi); border-radius: 4px; font-family: var(--ag-font); font-size: 12px; line-height: 16px; letter-spacing: .5px; color: var(--ag-muted); pointer-events: none; }
+  /* a real keyboard key: a light face on its darker edge, with a shadow under it */
+  .mg--simple .mg-kbd { display: block; position: absolute; top: 6px; right: 7px; z-index: 3; min-width: 20px; padding: 0 5px; border: 1px solid #a9b2b8; border-bottom-width: 3px; border-radius: 4px; background: linear-gradient(#fbfcfc, #e2e6e9); box-shadow: 0 1px 2px rgba(0,0,0,.45); font-family: system-ui, sans-serif; font-size: 11px; font-weight: 700; line-height: 15px; text-align: center; letter-spacing: .4px; color: #1b2429; pointer-events: none; }
 }
 .mg--simple .mg-dots { display: flex; gap: 6px; min-height: 10px; }
 .mg--simple .mg-dots i { width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,.14); }
@@ -283,3 +284,12 @@ html.bap-reduce-motion .mg--simple .mg-result { animation-name: mg-res-fade; }
 .mg--simple .mg-oop-wing { position: absolute; left: 7%; top: calc(76% + 14px); transform: translateX(-50%); font-style: normal; font-family: var(--ag-font); font-size: 12px; letter-spacing: 1.4px; color: var(--ag-muted); }
 .mg--simple .mg-play--oop .mg-push { touch-action: manipulation; }
 .mg--simple .mg-push.is-slam { border-color: #4ade80; }
+/* Pass Pro: the pocket from behind, the line of scrimmage across it, the QB at the bottom */
+.mg--simple .mg-play--pro { cursor: default; }
+.mg--simple .mg-court--pro { background: rgba(10,40,22,.45); }
+.mg--simple .mg-pro-los { position: absolute; left: 0; right: 0; top: 46%; height: 2px; background: rgba(96,165,250,.7); }
+.mg--simple .mg-pro-qb { position: absolute; left: 50%; top: 88%; width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%; background: #e5e7eb; border: 2px solid rgba(255,255,255,.5); }
+.mg--simple .mg-pro-ring { position: absolute; left: 0; top: -26px; width: 26px; height: 26px; margin: -13px 0 0 -13px; border-radius: 50%; border: 2.5px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.35); will-change: transform, opacity; }
+.mg--simple .mg-sides--pro { grid-template-columns: 1fr 1.15fr 1fr; }
+.mg--simple .mg-side--punch { font-size: 21px; }
+.mg--simple .mg-pro-hold.is-held span { background: rgba(74,222,128,.7); }

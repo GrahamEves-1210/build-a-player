@@ -41,6 +41,8 @@ import { DL_LEGENDS } from './data/dl-legends'
 import { LBS, LB_TYPES, LB_LITE_TYPES, LB_CATEGORIES, LB_ATTR, LB_LIVE } from './data/lbs'
 import { LB_LEGENDS } from './data/lb-legends'
 import { OLS, OL_TYPES, OL_LITE_TYPES, OL_CATEGORIES, OL_ATTR } from './data/ols'
+import { OL_LEGENDS } from './data/ol-legends'
+import { OL_LIVE } from './lib/olLive'
 import { ALLTIME_RATINGS, NFL_TEAMS, TEAMS } from './data/nfl-teams'
 import { useCompete, botBuild } from './lib/compete'
 import { COMPETE_POS } from './lib/competeCore'
@@ -53,7 +55,7 @@ import HEADSHOTS from './data/headshots.json'
 import { runSimulation, getArchetype, calcOVR, runRBSimulation, calcOVRRB, getArchetypeRB, runWRSimulation, calcOVRWR, getArchetypeWR, runTESimulation, calcOVRTE, getArchetypeTE, runDBSimulation, calcOVRDB, getArchetypeDB, runDLSimulation, calcOVRDL, getArchetypeDL, runLBSimulation, calcOVRLB, getArchetypeLB, runOLSimulation, calcOVROL, getArchetypeOL, HEADSHOT_BASE, nflHeadshot, calcMVPResult, calcOPOYResult, calcWROPOYResult, calcTEOPOYResult, calcDBDpoyResult, calcDLDpoyResult, calcLBDpoyResult, calcOLAllProResult } from './utils/simulation'
 import { supabase, rtSupabase, apiHeaders } from './lib/supabase'
 import { track } from './lib/track'
-const CAREER_POS = ['qb', 'rb', 'wr', 'te', 'db', 'dl', ...(LB_LIVE ? ['lb'] : [])]   // (SPORT.nfl.positions in lib/career.js, which loads on its own)
+const CAREER_POS = ['qb', 'rb', 'wr', 'te', 'db', 'dl', ...(LB_LIVE ? ['lb'] : []), ...(OL_LIVE ? ['ol'] : [])]   // (SPORT.nfl.positions in lib/career.js, which loads on its own)
 import { blockReason, buildSig, markPlayed } from './lib/saveGuard'
 import { saveSeason, saveSalary } from './lib/submit'
 import CustomRatingsModal from './components/CustomRatingsModal'
@@ -81,6 +83,7 @@ const SAL_SEASON = {
   te: { sim: (b, t) => runTESimulation(b, TE_TYPES, t, false), award: calcTEOPOYResult, awardName: 'OPOY' },
   db: { sim: (b, t) => runDBSimulation(b, t, false), award: calcDBDpoyResult, awardName: 'DPOY' },
   dl: { sim: (b, t) => runDLSimulation(b, t, false), award: calcDLDpoyResult, awardName: 'DPOY' },
+  ol: { sim: (b, t) => runOLSimulation(b, t, false), award: calcOLAllProResult, awardName: 'All-Pro' },   // offered only when OL_LIVE (FB_SAL_POS)
 }
 // Custom Ratings pools: current players and legends kept apart so the modal's
 // Current / All-Time toggle can show one or the other (OL has no legends)
@@ -92,7 +95,7 @@ const CUSTOM_POOLS = {
   db: { current: _dd(DBS).sort(_bt), legends: _dd(DB_LEGENDS).sort(_bt) },
   dl: { current: _dd(DLS).sort(_bt), legends: _dd(DL_LEGENDS).sort(_bt) },
   lb: { current: _dd(LBS).sort(_bt), legends: _dd(LB_LEGENDS).sort(_bt) },
-  ol: { current: _dd(OLS).sort(_bt), legends: null },
+  ol: { current: _dd(OLS).sort(_bt), legends: _dd(OL_LEGENDS).sort(_bt) },
 }
 
 // Detect shared build at module load time — before any React rendering
@@ -117,7 +120,7 @@ const _saved = (() => {
   try {
     const p = JSON.parse(localStorage.getItem('bap_progress'))
     // OL is Coming Soon — don't drop anyone back into an in-progress OL build
-    return p?.position === 'ol' || p?.tk === 'compete' ? null : p
+    return (p?.position === 'ol' && !OL_LIVE) || p?.tk === 'compete' ? null : p   // OL waits on OL_LIVE (lib/olLive.js)
   } catch { return null }
 })()
 
@@ -535,7 +538,7 @@ export default function App() {
   const isLB        = position === 'lb'
   const isOL        = position === 'ol'
   const activeTypes = isOL ? (gameMode === 'lite' ? OL_LITE_TYPES : OL_TYPES) : isDL ? (gameMode === 'lite' ? DL_LITE_TYPES : DL_TYPES) : isLB ? (gameMode === 'lite' ? LB_LITE_TYPES : LB_TYPES) : isDB ? (gameMode === 'lite' ? DB_LITE_TYPES : DB_TYPES) : isTE ? (gameMode === 'lite' ? TE_LITE_TYPES : TE_TYPES) : isWR ? (gameMode === 'lite' ? WR_LITE_TYPES : WR_TYPES) : gameMode === 'lite' ? (isRB ? RB_LITE_TYPES : LITE_TYPES) : (gameMode === 'all-time' && !isRB) ? LEGEND_TYPES : (isRB ? RB_TYPES : TYPES)
-  const activePool  = isOL ? OLS : isDL ? (gameMode === 'all-time' ? DL_LEGENDS : DLS) : isLB ? (gameMode === 'all-time' ? LB_LEGENDS : LBS) : isDB ? (gameMode === 'all-time' ? DB_LEGENDS : DBS) : isTE ? (gameMode === 'all-time' ? TE_LEGENDS : TES) : isWR ? (gameMode === 'all-time' ? WR_LEGENDS : WRS) : gameMode === 'all-time' ? (isRB ? RB_LEGENDS : LEGENDS) : (isRB ? RBS : QBS)
+  const activePool  = isOL ? (gameMode === 'all-time' ? OL_LEGENDS : OLS) : isDL ? (gameMode === 'all-time' ? DL_LEGENDS : DLS) : isLB ? (gameMode === 'all-time' ? LB_LEGENDS : LBS) : isDB ? (gameMode === 'all-time' ? DB_LEGENDS : DBS) : isTE ? (gameMode === 'all-time' ? TE_LEGENDS : TES) : isWR ? (gameMode === 'all-time' ? WR_LEGENDS : WRS) : gameMode === 'all-time' ? (isRB ? RB_LEGENDS : LEGENDS) : (isRB ? RBS : QBS)
   const isPlus      = isSubscribed
 
   // Tracks once per completed build (resets when the build becomes incomplete
@@ -584,9 +587,9 @@ export default function App() {
     enabled: IS_APP || APP_LOOK, user, sport: 'nfl', pos: competePos,
     botFor: (seed, idx, skill, pos) => botBuild({
       seed, idx, skill, teams: TEAMS,
-      pool: { qb: QBS, rb: RBS, wr: WRS, te: TES, db: DBS, dl: DLS, lb: LBS }[pos] ?? QBS,
-      types: pos === 'dl' ? DL_TYPES : pos === 'lb' ? LB_TYPES : pos === 'db' ? DB_TYPES : pos === 'te' ? TE_TYPES : pos === 'wr' ? WR_TYPES : pos === 'rb' ? RB_TYPES : TYPES,
-      calcOvr: b => pos === 'dl' ? calcOVRDL(b) : pos === 'lb' ? calcOVRLB(b) : pos === 'db' ? calcOVRDB(b) : pos === 'te' ? calcOVRTE(b) : pos === 'wr' ? calcOVRWR(b) : pos === 'rb' ? calcOVRRB(b) : calcOVR(b),
+      pool: { qb: QBS, rb: RBS, wr: WRS, te: TES, db: DBS, dl: DLS, lb: LBS, ol: OLS }[pos] ?? QBS,
+      types: pos === 'dl' ? DL_TYPES : pos === 'lb' ? LB_TYPES : pos === 'ol' ? OL_TYPES : pos === 'db' ? DB_TYPES : pos === 'te' ? TE_TYPES : pos === 'wr' ? WR_TYPES : pos === 'rb' ? RB_TYPES : TYPES,
+      calcOvr: b => pos === 'dl' ? calcOVRDL(b) : pos === 'lb' ? calcOVRLB(b) : pos === 'ol' ? calcOVROL(b) : pos === 'db' ? calcOVRDB(b) : pos === 'te' ? calcOVRTE(b) : pos === 'wr' ? calcOVRWR(b) : pos === 'rb' ? calcOVRRB(b) : calcOVR(b),
     }),
   })
   const competeOn = cp.phase === 'build' && !cp.results[cp.me.vid]
@@ -779,11 +782,21 @@ export default function App() {
     if (slot.pos !== position) { startSquadBuild(slot); return }
     const filled = fillSlot(sq, slot.id, build, activeTypes, isCustomMode || sandboxTainted.current)
     const next = nextToBuild(filled)
+    // the last build of a squad with no team yet: the team pick opens right here, over the build,
+    // the way Simulate Season's does (the squad screen comes after it)
+    if (!next && !filled.team) { putSquad({ ...filled, phase: 'team' }); setSquadPick(true); return }
     putSquad(next ? filled : { ...filled, phase: afterBuilding(filled) })
     if (next) startSquadBuild(next)
     else { squadBuilding.current = null; setGameMode(null); setBuild({}); setPage('squad'); try { localStorage.removeItem('bap_progress') } catch {} }   // the builds are the squad's now
     window.scrollTo({ top: 0, behavior: 'instant' })
   }, [position, build, activeTypes, isCustomMode, putSquad, startSquadBuild])
+  const [squadPick, setSquadPick] = useState(false)
+  const squadPicked = useCallback(t => {
+    setSquadPick(false)
+    putSquad({ ...squadRef.current, team: t.short, phase: 'ready' })
+    squadBuilding.current = null; setGameMode(null); setBuild({}); setPage('squad'); try { localStorage.removeItem('bap_progress') } catch {}
+    window.scrollTo({ top: 0, behavior: 'instant' })
+  }, [putSquad])
   const squadLeft = squad ? squad.slots.filter(s => !s.build).length : 0
 
   useEffect(() => {
@@ -1072,7 +1085,7 @@ export default function App() {
         playoffs: result.playoffs,
         champion: result.sbResult?.won ?? false,
         // Daily's per-day award counts and OL All-Pros read this (current-mode seasons only)
-        season_award: (!isAllTimeSeason || isDL || isLB) && result.award.userWins ? awardType : null,
+        season_award: (!isAllTimeSeason || isDL || isLB || isOL) && result.award.userWins ? awardType : null,
         build: Object.fromEntries(
           activeTypes.filter(t => build[t]).map(t => [t, {
             qb: build[t].qbFull || build[t].name, team: build[t].team, val: build[t].val,
@@ -1598,6 +1611,7 @@ export default function App() {
       {!parked && showTeamPicker && (
         <TeamPickerModal onSelect={handleTeamPicked} isPlus={isCustomMode} build={build} />
       )}
+      {!parked && squadPick && page === 'squad-build' && <TeamPickerModal onSelect={squadPicked} anyTeam eyebrow="Squad Builder" build={build} />}
 
       {!parked && saveToast && (
         <div
@@ -1649,7 +1663,7 @@ export default function App() {
               team: p.team,
               captain: p.captain ?? false,
               sandbox: true,
-              ...((isDL || isLB) ? { subpos: p.subpos ?? null, height: p.height ?? null, weight: p.weight ?? null } : {}),
+              ...((isDL || isLB || isOL) ? { subpos: p.subpos ?? null, height: p.height ?? null, weight: p.weight ?? null } : {}),
               photo,
             }
             setBuild(prev => ({ ...prev, [attrType]: chipData }))
@@ -1675,7 +1689,7 @@ export default function App() {
                     team: p.team,
                     captain: p.captain ?? false,
                     sandbox: true,
-                    ...((isDL || isLB) ? { subpos: p.subpos ?? null, height: p.height ?? null, weight: p.weight ?? null } : {}),
+                    ...((isDL || isLB || isOL) ? { subpos: p.subpos ?? null, height: p.height ?? null, weight: p.weight ?? null } : {}),
                     photo,
                   }
                 }
@@ -1765,7 +1779,7 @@ export default function App() {
     return (
       <Suspense fallback={null}>
         <AppSquad sport="nfl" squad={squad} setSquad={putSquad} user={user} onBuild={buildSquad} onExit={() => setPage('splash')}
-          renderPicker={(onPick, b) => <TeamPickerModal onSelect={onPick} isPlus={!!squad?.sandbox} build={b} />} />
+          renderPicker={(onPick, b) => <TeamPickerModal onSelect={onPick} isPlus={!!squad?.sandbox} build={b} anyTeam eyebrow="Squad Builder" />} />
       </Suspense>
     )
   }
@@ -1969,7 +1983,7 @@ export default function App() {
                 team: p.team,
                 captain: p.captain ?? false,
                 sandbox: true,
-                ...((isDL || isLB) ? { subpos: p.subpos ?? null, height: p.height ?? null, weight: p.weight ?? null } : {}),
+                ...((isDL || isLB || isOL) ? { subpos: p.subpos ?? null, height: p.height ?? null, weight: p.weight ?? null } : {}),
                 photo,
               }
               setBuild(prev => ({ ...prev, [attrType]: chipData }))
@@ -1994,7 +2008,7 @@ export default function App() {
                       team: p.team,
                       captain: p.captain ?? false,
                       sandbox: true,
-                      ...((isDL || isLB) ? { subpos: p.subpos ?? null, height: p.height ?? null, weight: p.weight ?? null } : {}),
+                      ...((isDL || isLB || isOL) ? { subpos: p.subpos ?? null, height: p.height ?? null, weight: p.weight ?? null } : {}),
                       photo,
                     }
                   }

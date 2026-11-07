@@ -43,6 +43,8 @@ export const RECORDS = {
     db: [
       { id: 'ints', label: 'Interceptions', stat: 'seasonINTs', value: 14, holder: 'Dick "Night Train" Lane, 1952' },
       { id: 'pick6', label: 'Pick-sixes',   stat: 'seasonPickSixes', value: 4, holder: 'Ken Houston, Jim Kearney & Eric Allen' },
+      // (the game's PD is the breakups, picks apart: Revis's 31 is the mark it chases)
+      { id: 'pd', label: 'Passes defended', stat: 'seasonPBUs', value: 31, holder: 'Darrelle Revis, 2009' },
       { id: 'g-ints', label: 'INTs in a game', game: 'ints', value: 4, holder: 'many' },
     ],
     // Sacks official since 1982 (Al Baker's 23 in 1978 is unofficial). TFL since 1999,
@@ -55,7 +57,14 @@ export const RECORDS = {
       { id: 'g-sacks', label: 'Sacks in a game', game: 'sacks', value: 7, holder: 'Derrick Thomas, 1990' },
     ],
     lb: [],
-    ol: [],
+    // A lineman's marks are a career's: nobody keeps an official count of a season's sacks allowed or
+    // pancakes (and a sackless year can be matched, never beaten). `career` reads the career totals
+    // (lib/career.js bookSeason: the season he passes it); the season director skips these.
+    ol: [
+      { id: 'olpb', label: 'Pro Bowls by an offensive lineman', career: t => t.proBowls, value: 14, holder: 'Bruce Matthews, 1983-2001', end: true },
+      { id: 'olap', label: 'First-team All-Pros by an offensive lineman', career: t => t.allPros, value: 10, holder: 'Jim Otto, 1960-69', end: true },
+      { id: 'olgs', label: 'Starts by an offensive lineman', career: t => t.stats?.starts, value: 293, holder: 'Bruce Matthews, 1983-2001', end: true },
+    ],
     team: [{ id: 'wins', label: 'Perfect regular season', statFn: r => r.losses === 0 && r.wins >= 17, holder: '2007 Patriots (16-0)' }],
   },
   bucket: {

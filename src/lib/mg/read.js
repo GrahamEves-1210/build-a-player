@@ -221,7 +221,7 @@ export function make({ v, seed, def, game, cast }) {
     const rep = g.rep
     if (game === 'rim-protect' && kind === 'good') return ms <= rep.T * 0.72 ? 'BLOCKED' : 'CONTESTED'
     if (game === 'jump-route' && kind === 'far') return `BIG GAIN · ${rep.gainYd} YDS`
-    if (game === 'jump-route' && kind === 'good') return rep.how === 'pick' ? 'PICK' : rep.how === 'swat' ? 'KNOCKED OUT' : rep.gainYd > 0 ? `${rep.gainYd} YARD GAIN` : 'TACKLE'
+    if (game === 'jump-route' && kind === 'good') return rep.how === 'pick' ? 'PICK' : rep.how === 'swat' ? 'KNOCKED OUT' : rep.gainYd > 0 ? `${rep.gainYd} YARD GAIN` : rep.gainYd < 0 ? `${-rep.gainYd} YARD LOSS` : 'TACKLE'
     if (game === 'pnr') {
       if (kind === 'good') return k === 1 ? 'DUNK' : k === 2 ? 'THREE' : 'BUCKET'
       if (kind === 'early') return 'TOO EARLY'
@@ -247,8 +247,11 @@ export function make({ v, seed, def, game, cast }) {
         }
         const q = routeJ(rep, k, t, g.h), after = Math.hypot(q.x - L.x, q.y - L.y)
         rep.meet = t
-        rep.gainYd = Math.max(0, Math.round((q.y - (losJ(g.h) - 10)) / TL_PYD(g.h)))   // (from the line, in the field's own yards)
-        if (after > SHORT_GAIN) kind = 'far'
+        rep.gainYd = Math.round((q.y - (losJ(g.h) - 10)) / TL_PYD(g.h))   // (from the line, in the field's own yards: below zero is a loss)
+        // a big gain is ground gained: downfield after the catch, not just a long way run. (A comeback caught and taken back
+        // toward the line, or across the field, was called BIG GAIN on a play that lost yards)
+        void after
+        if (q.y - L.y > SHORT_GAIN) kind = 'far'
       }
     }
     const good = kind === 'good'
@@ -618,7 +621,7 @@ function drawHot(ctx, g, view) {
     }
     // a pick: the rest of them are up. A catch: the man who was on him can't believe it
     if (picked && since > flight + 260 && b !== S.catcher) return put(b.x, b.y - jump(since, i, 5), them, { ...look, dir: 'down', pose: 'arms-up', z: b.y })
-    if (ok && caught && since > flight + 340 && i === res.k) return put(b.x, b.y, them, { ...look, dir: 'up', step: null, pose: 'hands-head' })
+    if (ok && caught && since > flight + 340 && i === res.k) return put(b.x, b.y, them, { ...look, dir: 'up', step: null, pose: 'hips' })
     put(b.x, b.y, them, { ...look, dir, step: snap ? w.step : null, pose: snap && w.step != null ? null : 'ready', carry: b === S.catcher && since > flight })
   })
   // the front four and the five: heads down, hands on each other. The ends get round the edge.
@@ -1112,7 +1115,7 @@ function drawJump(ctx, g, view) {
   if (atBall) put(b.x, b.y, us, { ...sLook, dir: 'up', pose: picked ? (b.x < Lx0(rep, h) ? 'catch-r' : 'catch-l') : b.x < Lx0(rep, h) ? 'swipe-r' : 'swipe-l' })
   else if (picked && age > land + 900) put(b.x, b.y - jump(age, 0, 8), us, { ...sLook, dir: 'down', pose: g.look % 2 ? 'arms-up' : 'flex', z: b.y })
   else if (swatted && age > land + 280) put(b.x, b.y, us, { ...sLook, dir: 'down', pose: breakupPose(age - land - 280, g.look + g.i) })
-  else if (beatBy) put(b.x, b.y, us, { ...sLook, dir: 'up', step: null, pose: 'hands-head' })
+  else if (beatBy) put(b.x, b.y, us, { ...sLook, dir: 'up', step: null, pose: 'hips' })
   else put(b.x, b.y, us, { ...sLook, dir: hitNow ? 'up' : dirFrom(sw, 'up'), step: hitNow ? null : sw.step, pose: hitNow ? 'wrap' : sw.step == null ? 'ready' : null, fall: hitNow ? hitFall : 0, fallX: hitNow ? (tx < 180 ? -1 : 1) : 0, carry: picked && age > land, z: hitNow ? ty + 1 : undefined })
   action(ctx, view)
   if (hitFall > 0 && once(rep, '_hit')) { hitTurf(g, view, tx, ty, 1.3); g.nudge.kick(g.t, 6, tx < 180 ? -1 : 1, 0.5, 240); g.fx.push('stamp', 'h:heavy'); rep.popAt = g.t }

@@ -984,12 +984,24 @@ export const progressSettled = new Promise(r => { settle = r })
 // on page load must land on the player who left, not on a guest store)
 const readyFns = []
 export function whenProgressReady(fn) { if (loaded) setTimeout(fn, 0); else readyFns.push(fn) }
+// A guest's lifetime stats (seasons, wins, rings, awards: what the achievements count) come along to the account the
+// first time it loads on this device, like the binder: counts add up, bests and best streaks take the higher, a flag
+// (a position played) carries, a running streak stays the account's. The guest store is zeroed and marked after, so a
+// second account can't collect them again. (A guest's career showed under the account while its seasons didn't count)
+function mergeStats(into, from) {
+  for (const [k, v] of Object.entries(from || {})) {
+    if (Array.isArray(v)) continue
+    if (typeof v === 'number') into[k] = /best|high/i.test(k) ? Math.max(into[k] ?? 0, v) : k === 'streak' ? (into[k] ?? 0) : (into[k] ?? 0) + v
+    else if (typeof v === 'boolean') into[k] = !!into[k] || v
+    else if (v && typeof v === 'object') { if (!into[k] || typeof into[k] !== 'object') into[k] = {}; mergeStats(into[k], v) }
+  }
+}
 function switchUser(u) {
   const id = u?.id ?? null
   user = u ?? null
   if (loaded && id === uid) { emit(); return }
   loaded = true
-  const guestCards = id ? load(null).cards : null
+  const guest = id ? load(null) : null, guestCards = guest?.cards ?? null
   uid = id
   S = retireItems(load(id))
   passOwn = new Set(cachedPassOwn(id))
@@ -997,6 +1009,12 @@ function switchUser(u) {
     for (const [k, v] of Object.entries(guestCards)) if (!S.cards[k]) S.cards[k] = v
     S.mergedGuest = true
   }
+  if (id && guest && !S.mergedGuestStats && !guest.statsMovedTo && (guest.stats?.seasons || guest.stats?.btGames || guest.stats?.spins)) {
+    mergeStats(S.stats, guest.stats)
+    S.stats = fixStats(S.stats)
+    try { localStorage.setItem(keyFor(null), JSON.stringify({ ...guest, stats: { ...BLANK_STATS }, statsMovedTo: id })) } catch {}
+  }
+  if (id) S.mergedGuestStats = true
   rollDay()
   markOpen()
   if (!S.seenLevel) S.seenLevel = levelInfo(totalXp()).level

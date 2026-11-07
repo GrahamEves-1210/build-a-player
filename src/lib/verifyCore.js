@@ -21,6 +21,7 @@ import { DL_LEGENDS } from '../data/dl-legends'
 import { LBS, LB_TYPES, LB_LITE_TYPES } from '../data/lbs'
 import { LB_LEGENDS } from '../data/lb-legends'
 import { OLS, OL_TYPES, OL_LITE_TYPES } from '../data/ols'
+import { OL_LEGENDS } from '../data/ol-legends'
 import { NBA_GUARD_PLAYERS, GUARD_TYPES } from '../data/nba-guards'
 import { NBA_BIG_PLAYERS, BIG_TYPES } from '../data/nba-bigs'
 import { NBA_ALLTIME_GUARD_PLAYERS } from '../data/nba-guard-legends'
@@ -68,7 +69,7 @@ export function seasonKit(sport, pos, mode) {
     db: { pool: allTime ? DB_LEGENDS : DBS, types: lite ? DB_LITE_TYPES : DB_TYPES, ovr: b => calcOVRDB(b) },
     dl: { pool: allTime ? DL_LEGENDS : DLS, types: lite ? DL_LITE_TYPES : DL_TYPES, ovr: b => calcOVRDL(b) },
     lb: { pool: allTime ? LB_LEGENDS : LBS, types: lite ? LB_LITE_TYPES : LB_TYPES, ovr: b => calcOVRLB(b) },
-    ol: { pool: OLS, types: lite ? OL_LITE_TYPES : OL_TYPES, ovr: b => calcOVROL(b) },
+    ol: { pool: allTime ? OL_LEGENDS : OLS, types: lite ? OL_LITE_TYPES : OL_TYPES, ovr: b => calcOVROL(b) },
   }[pos]
   return k ? { ...k, teams: TEAMS, ovr: b => k.ovr(b, k.types) } : null
 }
@@ -242,7 +243,7 @@ export function checkSalaryCap({ sport, date, infinite = false, picks, pos = 'gu
     // another football position's Infinite play: its columns' traits at real ratings, scored
     // the way that position's season scores them; the row says which position it was
     const build = {}
-    S.cols.forEach((col, ci) => col.types.forEach(type => { build[type] = { type, val: real[ci].attrs?.[type] ?? 5, qbFull: real[ci].name, team: real[ci].team, ...(S.pos === 'dl' ? { subpos: real[ci].subpos ?? null } : {}) } }))
+    S.cols.forEach((col, ci) => col.types.forEach(type => { build[type] = { type, val: real[ci].attrs?.[type] ?? 5, qbFull: real[ci].name, team: real[ci].team, ...(S.pos === 'dl' || S.pos === 'ol' ? { subpos: real[ci].subpos ?? null } : {}) } }))
     const kit = seasonKit('nfl', S.pos, 'classic')
     return { row: { picks: clean, overall_score: Math.max(0, Math.min(99, Math.round(kit.ovr(build) ?? 0))), budget_used: spent,
       pass_yds: null, pass_tds: null, ints: null, pos: S.pos } }

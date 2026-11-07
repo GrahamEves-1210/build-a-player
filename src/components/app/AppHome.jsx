@@ -19,6 +19,7 @@ import { tierFor } from '../../lib/progress'
 import EmptyState from './EmptyState'
 import { RollingNumber } from './MotionText'
 import { LB_LIVE } from '../../lib/lbLive'
+import { OL_LIVE } from '../../lib/olLive'
 
 // Home screen — a game main menu. The app and the website (APP_LOOK) both use
 // it in place of the old splash; same callbacks, so nothing else changes.
@@ -38,8 +39,9 @@ const NFL_FIGURE = {
   db: { src: '/db-silhouette.png', scale: 1.05 },
   dl: { src: '/dl-silhouette.webp', scale: 1 },
   lb: { src: '/dl-silhouette.webp', scale: 1 },   // LB placeholder: the DL figure until LB has its own
+  ol: { src: '/db-silhouette.png', scale: 1.05 },   // OL placeholder: the DB figure until OL has its own (OL_SILHOUETTE)
 }
-const PLURAL = { qb: 'QBs', rb: 'RBs', wr: 'WRs', te: 'TEs', db: 'DBs', dl: 'DLs', lb: 'LBs', guard: 'Guards', big: 'Bigs' }
+const PLURAL = { qb: 'QBs', rb: 'RBs', wr: 'WRs', te: 'TEs', db: 'DBs', dl: 'DLs', lb: 'LBs', ol: 'Linemen', guard: 'Guards', big: 'Bigs' }
 const NFL_NAMES = { qb: 'Quarterback', rb: 'Running Back', wr: 'Wide Receiver', te: 'Tight End', db: 'Defensive Back', dl: 'Defensive Line', lb: 'Linebacker', ol: 'O-Line' }
 // Who's on the Current and All-Time buttons, for the position picked (football's current
 // faces are POS_OPTIONS.players). Every one of them is in that pool.
@@ -52,6 +54,7 @@ const GREATS = {
   db: [face('espn_3552', '#241773'), face('espn_4474', '#a5acaf'), face('espn_10458', '#125740')], // Reed, Polamalu, Revis
   dl: [face('espn_16716', '#003594'), face('espn_13979', '#002244'), face('espn_3530', '#0085ca')], // Donald, Watt, Peppers
   lb: [face('espn_964', '#241773')],                                                              // Ray Lewis (the only all-time LB with an ESPN photo)
+  ol: [face('espn_10448', '#311d00'), face('espn_13241', '#aa0000'), face('espn_16709', '#003594')],  // Joe Thomas, Trent Williams, Zack Martin
   guard: [face('nba/893', '#ce1141'), face('nba/977', '#552583'), face('nba/77142', '#fdb927')],  // Jordan, Kobe, Magic
   big: [face('nba/406', '#552583'), face('nba/1495', '#8a8d8f'), face('nba/76003', '#00471b')],  // Shaq, Duncan, Kareem
 }
@@ -184,7 +187,8 @@ function Rafters({ career }) {
   }, [career])
   const flags = [
     { Icon: IconRing, n: count('champion'), word: 'RINGS' },
-    { Icon: IconTrophy, n: count('award'), word: `${s.find(x => x.awardName)?.awardName ?? 'MVP'}S` },
+    // (a lineman has no award: his All-Pros hang there)
+    { Icon: IconTrophy, n: count(career?.pos === 'ol' ? 'allPro' : 'award'), word: `${s.find(x => x.awardName)?.awardName ?? 'MVP'}S` },
     { Icon: IconMedal, n: hof ?? 0, word: 'HOF', stat: hof == null ? null : `${hof}%`, meter: hof },
   ]
   return (
@@ -396,7 +400,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
   const btLine = btStatus ?? ((btG || h2h.played) ? `Squads ${btW}–${btG - btW} · 1v1 ${h2h.wins ?? 0}–${h2h.losses ?? 0}${ol.played ? ` · ${tierFor(ol.rating)[1]} ${ol.rating}` : ''}` : '1v1, 2v2, 3v3')
   const sqLine = !squad ? 'Build your whole team'
     : squad.phase === 'build' ? `Building · ${sqBuilt} of ${squad.slots.length}`
-    : sqLast && squad.phase === 'result' ? `Last year ${sqLast.wins}-${sqLast.losses}${sqLast.champion ? ', champions' : sqLast.playoffs ? ', playoffs' : ''}`
+    : sqLast && squad.phase === 'result' ? `${sqLast.team} ${sqLast.wins}-${sqLast.losses}${sqLast.champion ? ', champions' : sqLast.playoffs ? ', playoffs' : ''}`
     : squad.team ? 'Ready to play' : 'Needs a team'
 
   const sp = isBucket ? 'bucket' : 'nfl'
@@ -437,7 +441,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
           </ModeArt>
         )}
         {onSquad && (
-          <ModeArt small kind="squad" tone="squad" title="SQUAD BUILDER" line={sqLine} onClick={onSquad}>
+          <ModeArt small kind="squad" tone="squad" title="SQUAD BUILDER" tag="UPDATED" line={sqLine} onClick={onSquad}>
             {isBucket
               ? <Lineup />
               : <TeamRow />}
@@ -489,7 +493,7 @@ export default function AppHome({ sport = 'nfl', onStart, onDepthChart, onVersus
           <div className={`ag-positions${isBucket ? ' ag-positions--two' : ''}`} style={{ '--n': positions.length, '--i': posIdx }} role="tablist" aria-label="Position">
             {positions.map((o, i) => (
               <button key={o.pos} role="tab" aria-selected={o.pos === position} className={`ag-pos${o.pos === position ? ' ag-pos--on' : ''}`} onClick={() => { dir.current = i < posIdx ? -1 : 1; pick(o.pos) }}>
-                {(o.pos === 'dl' || (o.pos === 'lb' && LB_LIVE)) && <span className="ag-pos-new">NEW</span>}<span className="ag-pos-label">{o.label}</span>
+                {(o.pos === 'dl' || (o.pos === 'lb' && LB_LIVE) || (o.pos === 'ol' && OL_LIVE)) && <span className="ag-pos-new">NEW</span>}<span className="ag-pos-label">{o.label}</span>
                 {o.sub && <span className="ag-pos-sub">{o.sub}</span>}
               </button>
             ))}

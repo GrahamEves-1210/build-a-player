@@ -13227,37 +13227,37 @@ html.ads-hidden .square-ad {
 
 
 /* â”€â”€ iPad layout â€” force mobile-style single-panel view â”€â”€ */
-html.is-tablet body { background-color: var(--bg-raised); background-image: none; overflow-y: auto; overflow-x: hidden; }
-html.is-tablet #root { height: auto; min-height: 100dvh; }
+html.is-tablet:not(.app-look) body { background-color: var(--bg-raised); background-image: none; overflow-y: auto; overflow-x: hidden; }
+html.is-tablet:not(.app-look) #root { height: auto; min-height: 100dvh; }
 
-html.is-tablet .game-layout {
+html.is-tablet:not(.app-look) .game-layout {
   display: flex;
   flex-direction: column;
   height: calc(100svh - 52px - env(safe-area-inset-top) - 64px - 50px);
   overflow: hidden;
   background: var(--bg-raised);
 }
-html.is-tablet .game-layout.mobile-spin {
+html.is-tablet:not(.app-look) .game-layout.mobile-spin {
   height: auto;
   overflow: visible;
   min-height: calc(100svh - 52px - env(safe-area-inset-top) - 64px - 50px);
 }
-html.is-tablet .game-layout.mobile-build {
+html.is-tablet:not(.app-look) .game-layout.mobile-build {
   height: auto;
   overflow: visible;
   padding-bottom: calc(60px + var(--ad-h));
 }
 
 /* Panel show/hide */
-html.is-tablet .mobile-spin  .spin-panel        { display: flex; }
-html.is-tablet .mobile-spin  .field-center      { display: none; }
-html.is-tablet .mobile-spin  .right-panel-wrap  { display: none; }
-html.is-tablet .mobile-build .spin-panel        { display: none; }
-html.is-tablet .mobile-build .field-center      { display: flex; flex: none; }
-html.is-tablet .mobile-build .right-panel-wrap  { display: flex; flex-shrink: 0; }
+html.is-tablet:not(.app-look) .mobile-spin  .spin-panel        { display: flex; }
+html.is-tablet:not(.app-look) .mobile-spin  .field-center      { display: none; }
+html.is-tablet:not(.app-look) .mobile-spin  .right-panel-wrap  { display: none; }
+html.is-tablet:not(.app-look) .mobile-build .spin-panel        { display: none; }
+html.is-tablet:not(.app-look) .mobile-build .field-center      { display: flex; flex: none; }
+html.is-tablet:not(.app-look) .mobile-build .right-panel-wrap  { display: flex; flex-shrink: 0; }
 
 /* Spin panel */
-html.is-tablet .spin-panel {
+html.is-tablet:not(.app-look) .spin-panel {
   width: 100%;
   flex: 1;
   overflow-y: visible;
@@ -13268,57 +13268,57 @@ html.is-tablet .spin-panel {
   background-image: none;
   min-height: calc(100svh - 52px - env(safe-area-inset-top) - 64px);
 }
-html.is-tablet .spin-panel::before { display: none; }
-html.is-tablet .spin-panel-body {
+html.is-tablet:not(.app-look) .spin-panel::before { display: none; }
+html.is-tablet:not(.app-look) .spin-panel-body {
   flex: none;
   overflow-y: visible;
   padding: 10px 14px calc(140px + var(--ad-h));
   margin-top: -30px;
   gap: 14px;
 }
-html.is-tablet .spin-panel-scroll { overflow: visible !important; padding-bottom: 0; }
+html.is-tablet:not(.app-look) .spin-panel-scroll { overflow: visible !important; padding-bottom: 0; }
 
 /* Mobile tab bar */
-html.is-tablet .mobile-tab-bar { display: flex; }
+html.is-tablet:not(.app-look) .mobile-tab-bar { display: flex; }
 
 /* Center figure */
-html.is-tablet .field-center {
+html.is-tablet:not(.app-look) .field-center {
   width: 100%;
   height: 420px;
   padding: 0 16px 8px;
   overflow: hidden;
   flex-shrink: 0;
 }
-html.is-tablet .cz-card { display: none; }
-html.is-tablet .cz-lines-svg { display: none; }
-html.is-tablet .sil-wrap { height: calc(100% - 60px); margin-top: 6px; transform: none; }
+html.is-tablet:not(.app-look) .cz-card { display: none; }
+html.is-tablet:not(.app-look) .cz-lines-svg { display: none; }
+html.is-tablet:not(.app-look) .sil-wrap { height: calc(100% - 60px); margin-top: 6px; transform: none; }
 
 /* Right panel */
-html.is-tablet .right-panel-wrap {
+html.is-tablet:not(.app-look) .right-panel-wrap {
   width: 100%;
   flex-shrink: 0;
   box-shadow: inset 0 2px 0 rgba(149,213,178,0.55);
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
-html.is-tablet .panel-right {
+html.is-tablet:not(.app-look) .panel-right {
   border-left: none;
   border-top: 1px solid var(--border-hi);
   overflow: visible;
 }
 
 /* Chips */
-html.is-tablet .attr-chip { cursor: pointer; touch-action: manipulation; padding: 8px 8px 8px 12px; border-radius: 10px; }
-html.is-tablet .chip-hint { display: none; }
-html.is-tablet .hint-mobile-assign { display: inline; }
+html.is-tablet:not(.app-look) .attr-chip { cursor: pointer; touch-action: manipulation; padding: 8px 8px 8px 12px; border-radius: 10px; }
+html.is-tablet:not(.app-look) .chip-hint { display: none; }
+html.is-tablet:not(.app-look) .hint-mobile-assign { display: inline; }
 
 /* Spin button */
-html.is-tablet .spin-btn { width: 62%; align-self: center; height: 56px; min-height: 56px; }
-html.is-tablet .spin-respin-split { width: 62%; align-self: center; height: 56px; min-height: 56px; }
+html.is-tablet:not(.app-look) .spin-btn { width: 62%; align-self: center; height: 56px; min-height: 56px; }
+html.is-tablet:not(.app-look) .spin-respin-split { width: 62%; align-self: center; height: 56px; min-height: 56px; }
 
 /* Desktop overrides that should not apply on tablet */
-html.is-tablet .attr-chip { padding: 8px 8px 8px 12px !important; }
-html.is-tablet .chip-val { width: 38px !important; height: 38px !important; font-size: 13px !important; }
-html.is-tablet .attr-category-section { gap: 8px !important; }
+html.is-tablet:not(.app-look) .attr-chip { padding: 8px 8px 8px 12px !important; }
+html.is-tablet:not(.app-look) .chip-val { width: 38px !important; height: 38px !important; font-size: 13px !important; }
+html.is-tablet:not(.app-look) .attr-category-section { gap: 8px !important; }
 
 /* On Mac the bottom rail overlaps the spin panel and blocks scroll gestures */
 html.is-mac [id^="pw-oop-bottom_rail"] {

@@ -8,16 +8,18 @@
 
 import { queueSquadSave, deleteCloudSquad, fetchCloudSquad, mergeSquads } from './squadCloud'
 import { LB_LIVE } from './lbLive'
+import { OL_LIVE } from './olLive'
 
 // How many of each position a squad can carry (never shown as text: the tile shakes)
 export const CAPS = {
-  nfl: { qb: 1, rb: 2, wr: 3, te: 2, db: 4, dl: 4, lb: 3 },
+  nfl: { qb: 1, rb: 2, wr: 3, te: 2, db: 4, dl: 4, lb: 3, ol: 5 },
   bucket: { guard: 3, big: 2 },
 }
-export const POSITIONS = { nfl: ['qb', 'rb', 'wr', 'te', 'db', 'dl', ...(LB_LIVE ? ['lb'] : [])], bucket: ['guard', 'big'] }
-export const POS_LABEL = { qb: 'QB', rb: 'RB', wr: 'WR', te: 'TE', db: 'DB', dl: 'DL', lb: 'LB', guard: 'GUARD', big: 'BIG' }
-export const POS_NAME = { qb: 'Quarterback', rb: 'Running Back', wr: 'Wide Receiver', te: 'Tight End', db: 'Defensive Back', dl: 'Defensive Line', lb: 'Linebacker', guard: 'Guard', big: 'Big' }
-export const fullSize = sport => Object.values(CAPS[sport] ?? {}).reduce((a, b) => a + b, 0)
+export const POSITIONS = { nfl: ['qb', 'rb', 'wr', 'te', 'db', 'dl', ...(LB_LIVE ? ['lb'] : []), ...(OL_LIVE ? ['ol'] : [])], bucket: ['guard', 'big'] }
+export const POS_LABEL = { qb: 'QB', rb: 'RB', wr: 'WR', te: 'TE', db: 'DB', dl: 'DL', lb: 'LB', ol: 'OL', guard: 'GUARD', big: 'BIG' }
+export const POS_NAME = { qb: 'Quarterback', rb: 'Running Back', wr: 'Wide Receiver', te: 'Tight End', db: 'Defensive Back', dl: 'Defensive Line', lb: 'Linebacker', ol: 'Offensive Line', guard: 'Guard', big: 'Big' }
+// (OL counts only once it's live: OL_LIVE, lib/olLive.js)
+export const fullSize = sport => Object.entries(CAPS[sport] ?? {}).filter(([pos]) => pos !== 'ol' || POSITIONS[sport]?.includes('ol')).reduce((a, [, n]) => a + n, 0)
 const V = 1
 // Basketball's five spots: the 1–3 are guards, the 4–5 bigs. A basketball squad is
 // picked by spot (each one once, squad.lineup: slot id → spot); its build is the
@@ -45,9 +47,9 @@ export function spotsOf(sq) {
 }
 export const spotOpen = (sq, i) => !!SPOTS[i] && !Object.values(spotsOf(sq)).includes(i)
 export const nextToBuild = squad => squad?.slots.find(s => !s.build) ?? null
-// Full House: every position at its cap, built. The DL and LB came later and don't count against
+// Full House: every position at its cap, built. The DL, LB and OL came later and don't count against
 // it, so a squad that was full before stays full.
-export const isFull = squad => !!squad && squad.slots.every(s => s.build) && POSITIONS[squad.sport].every(pos => pos === 'dl' || pos === 'lb' || countOf(squad.slots, pos) >= CAPS[squad.sport][pos])
+export const isFull = squad => !!squad && squad.slots.every(s => s.build) && POSITIONS[squad.sport].every(pos => pos === 'dl' || pos === 'lb' || pos === 'ol' || countOf(squad.slots, pos) >= CAPS[squad.sport][pos])
 // a slot id that's never been used in this squad
 const newId = squad => `p${squad.nextId ?? squad.slots.length}`
 
@@ -59,7 +61,7 @@ export function newSquad({ sport, uid, picks }) {
 export function addSlots(sq, picks) {
   let out = { ...sq, slots: [...sq.slots] }
   for (const pick of picks) {
-    if ((pick === 'dl' || pick === 'lb') && out.sport === 'bucket') continue   // the line and the linebackers are football's
+    if ((pick === 'dl' || pick === 'lb' || pick === 'ol') && out.sport === 'bucket') continue   // the lines and the linebackers are football's
     const spot = out.sport === 'bucket' ? pick : null
     const pos = spot != null ? SPOTS[spot]?.pos : pick
     if (spot != null ? !spotOpen(out, spot) : !canAdd(out.sport, out.slots, pos)) continue

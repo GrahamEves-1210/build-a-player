@@ -1041,7 +1041,7 @@ function drawPlay(ctx, g, view, c, p, pt, los, pyd, col, them, dy) {
     } else if (PICK_SHOW && d === t1) { o2.dir = 'down'; o2.step = null; o2.pose = 'spike-up'; o2.carry = true; o2.lift = hop(pt - p.tLand - PICK_RUN, 430, 11) }
     else if (k === 'pick' && !o2.dl && pt >= p.tLand + 620) { o2.dir = 'down'; o2.step = null; o2.pose = 'arms-up'; o2.lift = hop(pt + i * 110, 450, 9) }
     else if (sack && d.t === 'd' && pt >= p.Tc + 260 && d !== t1) { o2.dir = 'down'; o2.step = null; o2.pose = 'arms-up'; o2.lift = hop(pt + i * 110, 430, 9) }
-    else if (p.td && !o2.dl && pt >= p.T + 80) { o2.dir = 'up'; o2.step = null; o2.pose = i % 3 ? 'hips' : 'hands-head' }
+    else if (p.td && !o2.dl && pt >= p.T + 80) { o2.dir = 'up'; o2.step = null; o2.pose = 'hips' }
   }
   // Nobody stands in anybody: standing men are tall on the screen, so off a man means beside him. A
   // shove grows as he gets level, and no man's feet move faster than feet do, so it never shows as a jump.

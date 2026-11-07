@@ -10,11 +10,12 @@
 //   iso                      close up at the top of the key: cross him over when his hand comes for the ball
 //   post-up                  on the low block, back to the basket, a spin for each touch
 import { lanesMs } from '../minigames.js'
-import { clamp, lerp, prog, outcome, rngOf, easeOut, easeIn, layer, manOf, paceOf, stage, particles, nudge } from './kit.js'
+import { clamp, lerp, prog, outcome, rngOf, easeOut, easeIn, layer, manOf, paceOf, stage, particles, nudge, text, DISPLAY } from './kit.js'
 import { HIT_STOP, afterStop, fxSeed, hitFx, plantFx, landFx, pushIn, warmSome } from './contact.js'
 import { tilt, untilt, ground, stands, floodlight, vignette, paintGrass, skinOf, athlete , cleanEdges } from './art.js'
 import { paintFieldFlat, SL, SR, qbPose } from './throw.js'
-import { walk, put, action, fieldStage, paintNumbers, ballInAir, teamOf, castMen } from './read.js'
+import { put as rigPut, action as rigAction } from './rig.js'
+import { walk, put, put as putArt, action, fieldStage, paintNumbers, ballInAir, teamOf, castMen } from './read.js'
 import { arenaCam, CRASH_CAM, dolly, arenaStage, manAt, POSE, RUN as RUN_F, tagAt, tagsDown, flyTo, dropThrough, hoopWith, AB } from './arena.js'
 import { ballIn, easedState, easedPose, newPose, copyPose, mixPose, pose, project, smoothT, CLK, IN_HANDS, PT, FIG_FT, BALL_R, RIM_R, RIM_Y as RIM_FT } from './meter.js'
 
@@ -25,7 +26,7 @@ export const how = {
   'juke-te': "He'll sell it with a jab. Wait till he really commits, then cut the other way.",
   'tackle-angle': 'Stay square through his jab. When he really cuts, go with him.',
   iso: "Cross when his hand comes for the ball. Too soon and he slides with you. Stay and he strips you.",
-  'post-up': 'On the block, back to the rim. See which side he plays, spin to the other.',
+  'post-up': 'On the block, back to the basket. Feel which shoulder he plays, spin off the other.',
 }
 
 const RUN = { skin: 'run', n: 4, floor: 590, yards: true, wait: 'WAIT FOR HIM', good: 'JUKED', bad: 'TACKLED', win: 'BROKE FREE', lose: 'BROUGHT DOWN', stampY: 0.3 }
@@ -240,7 +241,7 @@ export function draw(ctx, g, view) {
   else if (skin === 'court') drawIso(ctx, g, view)
   else if (skin === 'post') drawPost(ctx, g, view)
   else drawRun(ctx, g, view)
-  if (skin !== 'court' && skin !== 'post') vignette(ctx, view)
+  if (skin !== 'court' && skin !== 'post' && !BAP_LOOK.has(g.game)) vignette(ctx, view)
 }
 
 // ── The open field ──────────────────────────────────────────────────────────
@@ -256,6 +257,70 @@ const paintRun = (f, view) => {
   f.fillStyle = 'rgba(255,255,255,.55)'
   const tick = band / 5
   for (let y = tick / 2; y < view.h; y += tick) for (const x of [150, 210]) f.fillRect(x - 4, y, 8, 1.3)
+}
+// The Build-A-Player look (rig.js's figures on a dark, clean field). The pilot: the other open-field drills join with one word here
+const BAP_LOOK = new Set(['juke', 'juke-wr', 'juke-te', 'tackle-angle'])
+// Dark turf in two tones, crisp white lines every five yards, big Anton numbers every ten. Nothing else on it.
+const NUMS = ['30', '40', '50', '40']
+// The same field drawn every frame as flat shapes, each put where the camera sees it: the bands and lines are
+// rows across the screen, the numbers keep one shape and only grow as they come nearer. Nothing is baked and
+// resampled in strips, so nothing on it changes shape as it goes by (the strips stretched the numbers tall near
+// the camera, flattened them wide at the far end and tore one band at the seam).
+const NUM_SQUASH = 0.72
+function fieldBap(ctx, view, scroll) {
+  const h = view.h, band = h / RUN_BANDS, off = ((scroll % h) + h) % h, w = view.w
+  const rowY = y => tilt(view, 180, y).y
+  // the darker bands: one in two, the pattern repeating every two bands
+  ctx.fillStyle = '#10341f'; ctx.beginPath()
+  for (let k = -RUN_BANDS; k <= RUN_BANDS; k++) {
+    if (((k % 2) + 2) % 2 === 0) continue
+    const a = (k - 0.5) * band + off, b = a + band
+    if (b < 0 || a > h) continue
+    const ya = rowY(Math.max(0, a)), yb = rowY(Math.min(h, b))
+    ctx.rect(0, ya, w, yb - ya)
+  }
+  ctx.fill()
+  // the five-yard lines, and a yard at a time down the hashes
+  ctx.fillStyle = 'rgba(244,247,242,.9)'; ctx.beginPath()
+  for (let k = -RUN_BANDS; k <= RUN_BANDS; k++) {
+    const y = (k + 0.5) * band + off
+    if (y < 0 || y > h) continue
+    const q = tilt(view, 180, y), th = Math.max(1, 2.2 * q.g)
+    ctx.rect(0, q.y - th / 2, w, th)
+  }
+  ctx.fill()
+  ctx.fillStyle = 'rgba(244,247,242,.55)'; ctx.beginPath()
+  const tick = band / 5
+  for (let y = ((off + tick / 2) % tick) - tick; y < h; y += tick) {
+    if (y < 0) continue
+    for (const x of [150, 210]) { const q = tilt(view, x, y), tw = 8 * q.g, th = Math.max(0.8, 1.2 * q.g); ctx.rect(q.x - tw / 2, q.y - th / 2, tw, th) }
+  }
+  ctx.fill()
+  // the numbers on every other line, standing up toward the camera
+  for (let k = -RUN_BANDS - 1; k <= RUN_BANDS; k += 2) {
+    const y = (k + 0.5) * band + off
+    if (y < band * 0.4 || y > h + band) continue
+    const str = NUMS[((((k - 1) / 2) % NUMS.length) + NUMS.length) % NUMS.length]
+    for (const x of [64, 296]) {
+      const q = tilt(view, x, y)
+      ctx.save(); ctx.translate(q.x, q.y + 1 * q.g); ctx.scale(q.g, q.g * NUM_SQUASH)
+      text(ctx, str, 0, 0, { font: DISPLAY, size: band * 0.62, color: 'rgba(244,247,242,.86)', track: band * 0.05 })
+      ctx.restore()
+    }
+  }
+}
+// what each man he beat gave him, painted on the turf where it happened: it goes by with the field
+function turfCallouts(ctx, g, view, scroll) {
+  const list = g.callouts
+  if (!list) return
+  for (const m of list) {
+    const y = m.y + (scroll - m.s)
+    if (y > view.h + 40 || y < 0) continue
+    const q = tilt(view, m.x, y), age = g.t - m.at, k = q.g * (1 + 0.25 * (1 - easeOut(clamp(age / 160, 0, 1))))
+    ctx.save(); ctx.translate(q.x, q.y); ctx.scale(k, k * 0.5)
+    text(ctx, m.text, 0, 0, { font: DISPLAY, size: 40, color: m.good ? '#3ddcb0' : 'rgba(255,90,72,.9)', track: 1 })
+    ctx.restore()
+  }
 }
 // both benches, going by with the field, far ones first
 const BENCH = [0.2, 0.27, 0.44, 0.62, 0.8]
@@ -303,7 +368,7 @@ function farEnd(ctx, view, g, color0) {
 }
 // the rest of the play, out wide and going by: a block being held on each side
 const FIGHTS = [[-132, 0.2], [128, 0.7]]
-function fights(view, g, us, them, scroll) {
+function fights(view, g, us, them, scroll, put) {
   const h = view.h, M = g.who.fights
   FIGHTS.forEach(([dx, at], i) => {
     const y = (((h * at + scroll) % h) + h) % h
@@ -316,10 +381,12 @@ function fights(view, g, us, them, scroll) {
 }
 function drawRun(ctx, g, view) {
   const c = view.colors, us = teamOf(c, 0), them = teamOf(c, 1), d = g.cur, res = d.res, since = res ? g.t - res.at : -1
+  const bap = BAP_LOOK.has(g.game), put = bap ? rigPut : putArt
   // nothing but field
-  ctx.fillStyle = '#1e6e39'; ctx.fillRect(0, 0, view.w, view.h)
+  ctx.fillStyle = bap ? '#133b25' : '#1e6e39'; ctx.fillRect(0, 0, view.w, view.h)
   const scroll = g.dist * RUN_SCROLL
-  ground(ctx, view, paintRun, 'cut-run', scroll, 60, true)
+  if (bap) fieldBap(ctx, view, scroll)
+  else ground(ctx, view, paintRun, 'cut-run', scroll, 60, true)
   const num = CARRIER_NUM[g.game] ?? 28, me = g.who.me, man = d.man, go = d.run * 0.5
   const py = nearY(view), size = RUN_SIZE, x = 180 + shownPx(g) * LANE
   const y0 = closing(d, g, py), dx0 = 180 + shiftOf(d, g)
@@ -340,7 +407,16 @@ function drawRun(ctx, g, view) {
     d.dugAt = jabbed
     plantFx(g, view, dx0 - (d.lunge || d.lean) * 8, y0, d.lunge || d.lean, 5, 0.8)
   }
-  fights(view, g, us, them, scroll)
+  fights(view, g, us, them, scroll, put)
+  if (bap) {
+    // the yards he got off each man he beat, on the turf where he beat him
+    if (res && d.calloutAt !== res.at) {
+      d.calloutAt = res.at
+      ;(g.callouts ??= []).push({ x: 180, y: py - 120, s: scroll, at: g.t, good: res.ok, text: g.rev ? (res.ok ? 'STOP' : 'MISS') : res.ok ? `+${d.yd}` : '+1' })
+      if (g.callouts.length > 4) g.callouts.shift()
+    }
+    turfCallouts(ctx, g, view, scroll)
+  }
   // the man with the ball, on his feet: stride, cut, and once he's clear of the last man, the ball up
   const youRun = extra => {
     const clear = g.done?.hit && res?.ok && since > 620
@@ -399,9 +475,9 @@ function drawRun(ctx, g, view) {
       put(x, py, us, { dir: 'up', step: moving ? Math.floor(g.t / 80) % 4 : null, pose: planted ? plantOf(g.cutSide) : moving ? null : 'ready', lean, skin: skinOf(6), number: 26, size, ...me })
     }
   }
-  action(ctx, view)
-  g.dirt.draw(ctx, g.t)
-  warmSome(g, () => runLooks(g, us, them, num, me))
+  if (bap) rigAction(ctx, view); else action(ctx, view)
+  g.dirt.draw(ctx, g.t, bap)
+  if (!bap) warmSome(g, () => runLooks(g, us, them, num, me))
 }
 // everyone he'll meet, ahead of time: their strides, their cuts and their shuffles
 function runLooks(g, us, them, num, me) {

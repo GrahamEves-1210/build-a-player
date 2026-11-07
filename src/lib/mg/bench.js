@@ -1,10 +1,11 @@
-// Bench: the combine's 225 (the NBA's 185). In the same room as the 40, side on: the same athlete flat
-// on the bench, a bar with round plates, the spotter at his head with his hands on it, scouts counting. Each tap drives the bar, gravity takes it back, at lockout the rep
+// Bench: the combine's 225 (the NBA's 185). In first person, flat on your back: the bar across your view with
+// its plates, your fists round it, the spotter leaning in over your head, the count on a board on the ceiling. Each tap drives the bar, gravity takes it back, at lockout the rep
 // counts and it comes down on its own. Every rep is heavier: strength sets a real ceiling. As the
 // reps climb the taps a rep needs climb too, until the taps can't beat gravity any more: the bar
 // grinds, and that's the set. Faster thumbs get closer to the ceiling, never past it.
 import { clamp, lerp, outcome, rngOf, prog, easeOut, easeInOut, layer, circle, text, keyCap, particles, nudge, DISPLAY, LABEL, GOOD, BAD, GOLD } from './kit.js'
-import { HEAD_R, curve, GEAR, GEAR_NBA, INK, clockSlab, line, runLeg, armThrough, torsoSide, sideHead, hand, paintRoom, standAt, SCOUT, FOLK_SKIN, officialStrip, officialPunch, OFFICIAL_MS, clipboard, calm } from './dash.js'
+import { curve, GEAR, GEAR_NBA, clockSlab, taper, officialStrip, officialPunch, OFFICIAL_MS, calm } from './dash.js'
+import { INK, tone } from './rig.js'
 import { benchCeil } from './combineNorms.js'
 
 export const how = {
@@ -97,14 +98,13 @@ export function make({ v, seed, def, game, pos }) {
 }
 
 // ── The picture ─────────────────────────────────────────────────────────
-// The room the 40 runs in, and the runner's own body lying on a bench, drawn at his scale. Everything
-// here is in his units: x along the bench, feet to the right, y up from the floor (negative). The bar
-// runs away from the camera at a slant, so the hands, the chest and the face all stay in view: the
-// near plates sit over his hips, the far ones up past his head.
-const STEEL = '#c6ccd1', STEEL_D = '#8c949b'
-const SPOTTER = { top: '#8b949c', pants: '#a89a80', shorts: '#a89a80', skin: '#6d4229', skinD: '#553220', shoe: '#20262c', sole: '#e8ebe6', hair: '#17120e' }
-const SLANT = 0.2                 // how far the bar drops on the screen per unit it comes toward the camera
-const ARM = 20.5                   // his upper arm and forearm. (A shade longer than the runner's: the press needs the travel)
+// You, on your back, looking up: the dark ceiling and its lamps, the board with the count hung from it, the
+// spotter leaning over your head with his hands ready under the bar, and the bar itself across your view, coming
+// at you as it comes down and going away from you, smaller, as you lock it out. Your fists are round it, your arms
+// up from the bottom corners. Clean shapes in two tones, one ink line, the plates' 45s in Anton.
+const STEEL = '#c6ccd1', STEEL_D = '#8c949b', RUBBER = '#1b2228'
+const SPOT = { top: '#2a3540', skin: '#6d4229', hair: '#17120e' }
+const CEIL = '#070a0d', CEIL_T = '#0b1015', MINT = '#3ddcb0'
 let jx = 0, jy = 0
 // two-bone reach: the elbow, on the given side of the line from a to b
 function reach(ax, ay, bx, by, l1, l2, side) {
@@ -115,42 +115,49 @@ function reach(ax, ay, bx, by, l1, l2, side) {
   jx = ax + (dx / full) * a + side * h * (dy / full)
   jy = ay + (dy / full) * a - side * h * (dx / full)
 }
-// A plate, flat on to the camera: rubber, a raised rim, its weight, the steel hub
-function plate(ctx, x, y, R) {
-  ctx.fillStyle = '#1d2329'; ctx.strokeStyle = INK; ctx.lineWidth = 1.6
-  circle(ctx, x, y, R); ctx.fill(); ctx.stroke()
-  ctx.strokeStyle = 'rgba(255,255,255,.26)'; ctx.lineWidth = 0.8
-  circle(ctx, x, y, R * 0.82); ctx.stroke()
-  ctx.fillStyle = STEEL; ctx.strokeStyle = INK; ctx.lineWidth = 1
-  circle(ctx, x, y, R * 0.2); ctx.fill(); ctx.stroke()
+// a limb in two tones under one ink line
+function limb(ctx, x1, y1, r1, x2, y2, r2, col, inkW = 2.4) {
+  ctx.fillStyle = INK; taper(ctx, x1, y1, r1 + inkW, x2, y2, r2 + inkW)
+  ctx.fillStyle = tone(col, 0.74); taper(ctx, x1, y1, r1, x2, y2, r2)
+  ctx.fillStyle = col; taper(ctx, x1 - r1 * 0.2, y1 - r1 * 0.12, r1 * 0.68, x2 - r2 * 0.2, y2 - r2 * 0.12, r2 * 0.68)
 }
-// his face as it comes up: a few tones, worked out once each
-const flushes = new Map()
-function flushed(hex, f) {
-  const lvl = Math.round(clamp(f, 0, 1) * 3), id = hex + lvl
-  let c = flushes.get(id)
-  if (!c) {
-    const n = parseInt(hex.slice(1), 16), a = lvl * 0.11, mix = (v, to) => Math.round(v + (to - v) * a)
-    c = `rgb(${mix((n >> 16) & 255, 190)},${mix((n >> 8) & 255, 54)},${mix(n & 255, 38)})`
-    flushes.set(id, c)
+// A plate seen from the middle of the bar: a tall disc, its inner face toward you with the 45 on it
+function plate(ctx, x, y, s, side) {
+  const rx = 19 * s, ry = 70 * s
+  ctx.fillStyle = INK; ctx.beginPath(); ctx.ellipse(x, y, rx + 2.2, ry + 2.2, 0, 0, 6.2832); ctx.fill()
+  ctx.fillStyle = RUBBER; ctx.beginPath(); ctx.ellipse(x, y, rx, ry, 0, 0, 6.2832); ctx.fill()
+  ctx.fillStyle = '#242c33'; ctx.beginPath(); ctx.ellipse(x - side * rx * 0.18, y, rx * 0.72, ry * 0.86, 0, 0, 6.2832); ctx.fill()
+  if (ry > 14) { ctx.save(); ctx.translate(x - side * rx * 0.18, y - ry * 0.48); ctx.scale(0.42, 1); text(ctx, '45', 0, 0, { font: DISPLAY, size: ry * 0.34, color: 'rgba(238,242,246,.86)' }); ctx.restore() }
+}
+// a fist round the bar: the knuckles over it, a crease between each finger
+function fist(ctx, x, y, s, skin) {
+  const W = 34 * s, H = 30 * s
+  ctx.fillStyle = INK; ctx.beginPath(); ctx.roundRect(x - W / 2 - 2.4, y - H * 0.62 - 2.4, W + 4.8, H + 4.8, 10 * s + 2.4); ctx.fill()
+  ctx.fillStyle = tone(skin, 0.74); ctx.beginPath(); ctx.roundRect(x - W / 2, y - H * 0.62, W, H, 10 * s); ctx.fill()
+  ctx.fillStyle = skin; ctx.beginPath(); ctx.roundRect(x - W / 2 + 3 * s, y - H * 0.62 + 2 * s, W - 9 * s, H * 0.62, 8 * s); ctx.fill()
+  ctx.strokeStyle = tone(skin, 0.6); ctx.lineWidth = Math.max(1, 1.6 * s); ctx.lineCap = 'round'
+  for (let k = 1; k < 4; k++) { const fx = x - W / 2 + (W * k) / 4; ctx.beginPath(); ctx.moveTo(fx, y - H * 0.5); ctx.lineTo(fx, y - H * 0.2); ctx.stroke() }
+}
+const CHALK = ['#ffffff', '#e6eaee', '#d7dde2']
+// the ceiling: dark tiles, two long lamps down it. Baked; nothing on it moves
+function paintCeiling(x, view) {
+  const { w, h } = view
+  x.fillStyle = CEIL; x.fillRect(0, 0, w, h)
+  x.fillStyle = CEIL_T
+  for (let gx = -10; gx < w; gx += 60) for (let gy = 96; gy < h; gy += 60) x.fillRect(gx + 2, gy + 2, 56, 56)
+  // the lamps: short flat panels in two rows, set into the tiles
+  for (let gy = 96 + 60 * 2; gy < h; gy += 60 * 3) for (const gx of [w / 2 - 150, w / 2 + 90]) {
+    x.fillStyle = '#05080b'; x.fillRect(gx - 2, gy + 14, 64, 32)
+    x.fillStyle = '#6f7b84'; x.fillRect(gx + 2, gy + 18, 56, 24)
   }
-  return c
 }
-const CHALK = ['#ffffff', '#e6eaee', '#d7dde2'], SWEAT = ['#d9ecf7', '#ffffff']
 export function draw(ctx, g, view) {
   const { w, h } = view
-  const k = clamp((h - 520) / 260, 0, 1)
-  const b = lerp(1.4, 2.05, k)                 // his scale: a step closer than the runner, nobody's running
-  const base = Math.round(h - lerp(96, 124, k)) // the floor under him: the prompt and the stamp sit below his feet
-  const hz = Math.round(base - 34 * b)
   const court = g.load < 1
-  const cx = w / 2 - 2 * b
-  layer(ctx, view, `bench-room-${g.game}-${hz}-${court ? view.colors.us + view.colors.trim : ''}`, x => paintRoom(x, view, hz, base, court))
   const c = court ? GEAR_NBA : GEAR
+  layer(ctx, view, `bench-fp-${h}`, x => paintCeiling(x, view))
 
-  // the bar's travel. Bottom: just off his chest. Top: arms locked
-  const shX = -14, shY = -37
-  const botY = shY - 18, topY = shY - ARM * 2 * 0.97
+  // the bar's travel: down at your chest, near and big; locked out over your shoulders, further and smaller
   let hh = g.h
   if (g.done) hh = lerp(g.overH ?? g.h, 1.03, easeOut(prog(g.t, g.overAt, g.overAt + 480)))
   const strain = g.done ? 0 : g.strain
@@ -158,36 +165,33 @@ export function draw(ctx, g, view) {
   const RACK = 700                               // ms after the clock: the bar's on the hooks, with the spotter's hands on it
   const rack = g.done ? easeInOut(prog(over, 440, RACK)) : 0, off = g.done ? easeOut(prog(over, RACK + 60, RACK + 320)) : 0
   const tick = g.t / 16
-  const shake = (strain * strain * 1.6) / b
-  const barY = lerp(botY, topY, hh) - rack * 3.8 + Math.sin(tick * 1.9) * shake + Math.sin(tick * 3.1) * shake * 0.5
-  const raised = g.t - g.repAt < 240 && !g.done
-  const R = court ? 12.5 : 14
-  const bx = -7                                 // the middle of the bar, over his chest
+  const shake = strain * strain * 2.6
+  const chestY = h * 0.72, lockY = h * 0.45, rackY = h * 0.39
+  const sb = lerp(lerp(1.02, 0.66, hh), 0.56, rack)
+  const barY = lerp(lerp(chestY, lockY, hh), rackY, rack) + Math.sin(tick * 1.9) * shake + Math.sin(tick * 3.1) * shake * 0.5
   // the bar's a spring with weight on its ends: they hang, they whip at the top of a rep, they jump at a tap
   const ageRep = g.t - g.repAt, ageTap = g.t - g.tapAt, ageRack = over - RACK
   let flex = (court ? 1.1 : 1.8) + strain * 1.1
   if (ageRep < 560) flex += 3.3 * (1 + strain * 0.5) * Math.exp(-ageRep / 170) * Math.cos(ageRep / 26)
   if (ageTap < 170 && !g.done) flex += 1 * Math.exp(-ageTap / 70)
   if (ageRack > 0 && ageRack < 520) flex += 3 * Math.exp(-ageRack / 150) * Math.cos(ageRack / 24)
-  const onBar = dx => [bx + dx, barY + dx * SLANT + (flex * dx * dx) / 900]
-  const END_N = 30, END_F = 22                  // (the far half of the bar is further off, so shorter)
+  const onBar = dx => [w / 2 + dx * sb, barY + (flex * dx * dx * sb) / 5200]
   // what happens once. Particles and the camera are the picture's: the rules never see them
   g.dirt ??= particles(24, g.need + 3)
   g.nudge ??= nudge()
-  const toX = X => cx + X * b, toY = Y => base + Y * b
+  const GRIP = 98
   if (g.tapAt > 0 && !g.chalked) {
     g.chalked = true
-    const [hx, hy] = onBar(11.5)
-    g.dirt.burst('dust', toX(hx), toY(hy), g.t, { n: 6, s: b * 0.5, colors: CHALK, spread: 1.5 })
+    const [hx, hy] = onBar(GRIP)
+    g.dirt.burst('dust', hx, hy, g.t, { n: 6, s: sb * 2, colors: CHALK, spread: 1.5 })
   }
   if (g.reps !== g.seenRep) {
     g.seenRep = g.reps
     if (g.reps) {
       const hard = g.strain > 0.45
       if (hard) g.nudge.kick(g.t, 1.1, 0, -1, 130)
-      if (g.reps > 2) g.dirt.burst('turf', toX(-31.5), toY(-44), g.t, { n: hard ? 4 : 2, s: b * 0.55, colors: SWEAT, ang: -Math.PI / 2 - 0.3, spread: 0.9, speed: 0.75, life: 300 })
-      const [hx, hy] = onBar(11.5)
-      if (g.reps % 4 === 0) g.dirt.burst('dust', toX(hx), toY(hy), g.t, { n: 3, s: b * 0.4, colors: CHALK, spread: 1.4 })
+      const [hx, hy] = onBar(g.reps % 2 ? GRIP : -GRIP)
+      if (g.reps % 4 === 0) g.dirt.burst('dust', hx, hy, g.t, { n: 3, s: sb * 1.6, colors: CHALK, spread: 1.4 })
     }
   }
   if (g.done && !g.racked && over >= RACK) {
@@ -196,106 +200,88 @@ export function draw(ctx, g, view) {
   }
   if (g.done && !g.official && over >= OFFICIAL_MS) { g.official = true; g.fx.push('stamp') }
 
-  // the scouts along the far side: one writing it down, one with a hand up on every rep, and up for good on a good set
-  const nod = g.t - g.repAt < 150 && !g.done ? 1.4 : 0, passedUp = g.done?.hit && over >= OFFICIAL_MS
-  standAt(ctx, w - 72, hz + 7 + nod, { ...SCOUT, skin: FOLK_SKIN[1], size: 1.62, pose: 'wave-b' })
-  clipboard(ctx, w - 72, hz + 7 + nod - 44, 1.45)
-  standAt(ctx, w - 28, hz + 7, { ...SCOUT, skin: FOLK_SKIN[2], size: 1.62, pose: raised || passedUp ? 'reach-r' : null })
+  // the board on the ceiling, with the count on it (the slab's over it, as in every timed drill)
+  const boardTop = 104, boardBot = Math.round(Math.min(186, h * 0.24))
+  drawBoard(ctx, g, view, boardTop, boardBot)
 
-  ctx.save()
-  ctx.translate(cx, base); ctx.scale(b, b)
-  ctx.lineCap = 'round'; ctx.lineJoin = 'round'
-  const [fpx, fpy] = onBar(-END_F), [npx, npy] = onBar(END_N)
-
-  // the shadow on the floor
-  ctx.fillStyle = court ? 'rgba(40,18,4,.3)' : 'rgba(0,18,6,.32)'
-  ctx.beginPath(); ctx.ellipse(-8, 1, 62, 3.6, 0, 0, Math.PI * 2); ctx.fill()
-  // the rack: two uprights behind him, a hook at the top of each
-  for (const dx of [-14, 14]) {
-    const [px] = onBar(dx), ty = topY - 8
-    line(ctx, px, ty, px, dx < 0 ? -6 : -1, 3.4, INK); line(ctx, px, ty, px, dx < 0 ? -6 : -1, 1.8, STEEL_D)
-    ctx.fillStyle = INK; ctx.fillRect(px - 2.6, ty + 5, 5.2, 2.2)
+  // the hooks the bar goes back to, on the uprights either side of your head
+  for (const sd of [-1, 1]) {
+    const hx = w / 2 + sd * 172 * 0.56, hy = rackY + 4
+    ctx.fillStyle = INK; ctx.fillRect(hx - 9, hy - 2, 18, 16)
+    ctx.fillStyle = STEEL_D; ctx.fillRect(hx - 7, hy, 14, 12)
   }
-  // the far plates, past him
-  plate(ctx, fpx + 2.4, fpy + 2.4 * SLANT, R * 0.92, null)
-  plate(ctx, fpx, fpy, R * 0.92, null)
-
-  // the spotter, on his feet at the head of the bench, bent to the bar
-  // (he bends in as it gets hard)
-  const spHipX = -62, spHipY = -47, spLean = 0.26 + strain * 0.1 + rack * 0.06
-  const ssx = spHipX + Math.sin(spLean) * 28, ssy = spHipY - Math.cos(spLean) * 28
-  ctx.save(); ctx.translate(spHipX, spHipY)
-  runLeg(ctx, -0.05, 0.15, -0.2, true, SPOTTER)
-  ctx.rotate(spLean); torsoSide(ctx, SPOTTER); ctx.rotate(-spLean)
-  runLeg(ctx, 0.3, 0.5, -0.2, false, SPOTTER)
-  ctx.restore()
-  const shx = ssx + 6, shy = ssy - 16
-  line(ctx, ssx + 3, ssy - 4, shx, shy, 8.4, INK); line(ctx, ssx + 3, ssy - 4, shx, shy, 6.5, SPOTTER.skinD)
-  sideHead(ctx, shx, shy, HEAD_R, SPOTTER.skin, SPOTTER.hair, 0.4)
-
-  // the bench
-  ctx.fillStyle = STEEL_D; ctx.strokeStyle = INK; ctx.lineWidth = 1.2
-  for (const lx of [-34, 8]) { ctx.beginPath(); ctx.rect(lx - 1.8, -22, 3.6, 22); ctx.fill(); ctx.stroke(); ctx.beginPath(); ctx.rect(lx - 7, -2, 14, 2.4); ctx.fill(); ctx.stroke() }
-  ctx.fillStyle = '#1a2230'; ctx.lineWidth = 1.6
-  ctx.beginPath(); ctx.roundRect(-46, -28, 66, 7.5, 2.4); ctx.fill(); ctx.stroke()
-
-  // him, the far side first. The hips sit on the pad, the thighs run out level, the shins come straight down
-  // (his back arches off the pad on a grind, and it goes up and down when it's over)
-  const heave = off * Math.sin(g.t / 230) * 0.7
-  const hipX = 14, hipY = -34.5 - strain * 1
-  ctx.save(); ctx.translate(hipX - 1.5, hipY - 1); runLeg(ctx, 1.22, 1.28, -0.06, true, c); ctx.restore()
-  // far arm, up to the bar behind the chest
-  let [fhx, fhy] = onBar(-2)
-  if (off) { fhx = lerp(fhx, shX + 3, off); fhy = lerp(fhy, -24, off) }
-  reach(shX - 2, shY - 3, fhx, fhy, ARM, ARM, -1)
-  const fex = jx, fey = jy
-  armThrough(ctx, shX - 2, shY - 3, fex, fey, fhx, fhy, true, c)
-  // the bar, plate to plate
-  const mdx = (END_N - END_F) / 2, bcY = fpy + (SLANT - (2 * flex * END_F) / 900) * (mdx + END_F)
-  for (const [bw, col] of [[3.2, INK], [1.7, STEEL]]) { ctx.strokeStyle = col; ctx.lineWidth = bw; ctx.beginPath(); ctx.moveTo(fpx, fpy); ctx.quadraticCurveTo(bx + mdx, bcY, npx, npy); ctx.stroke() }
-  hand(ctx, fhx, fhy, 3.5, '#6f452c')
-  // the torso, flat: the spine runs to the left, the chest faces up
-  ctx.save(); ctx.translate(hipX, hipY); ctx.rotate(-Math.PI / 2 + strain * 0.03 - heave * 0.018); torsoSide(ctx, c); ctx.restore()
-  // the head, on the pad, face to the ceiling
-  const hdX = -31.5 + strain * 0.8, hdY = -39.5 - strain * 1.8 - (strain > 0.5 ? Math.sin(tick * 2.3) * 0.35 : 0)
-  line(ctx, -19, -38, hdX, hdY, 8.4, INK); line(ctx, -19, -38, hdX, hdY, 6.5, c.skinD)
-  sideHead(ctx, hdX, hdY, HEAD_R, flushed(c.skin, g.done ? 0.5 * (1 - off) : strain), c.hair, -Math.PI / 2 + strain * 0.2)
-  // the near leg
-  ctx.save(); ctx.translate(hipX, hipY); runLeg(ctx, 1.22, 1.28, -0.06, false, c); ctx.restore()
-
-  // the spotter's arms: both hands on the bar, between his
-  for (const dx of [-12, -7]) {
-    const [hx, hy] = onBar(dx)
-    reach(ssx, ssy + 1, hx, hy, 23, 22, -1)
-    armThrough(ctx, ssx, ssy + 1, jx, jy, hx, hy, dx < -8, SPOTTER)
+  // the spotter, leaning in over your head: his shoulders, his head between them, his hands under the bar
+  const lean = strain * 8 + rack * 10, shY = boardBot + 22 + lean, hdY = shY + 38 + lean * 0.4
+  ctx.fillStyle = INK; ctx.beginPath(); ctx.roundRect(w / 2 - 82, shY - 26, 164, 58, 26); ctx.fill()
+  ctx.fillStyle = tone(SPOT.top, 0.74); ctx.beginPath(); ctx.roundRect(w / 2 - 79.6, shY - 23.6, 159.2, 53.2, 24); ctx.fill()
+  ctx.fillStyle = SPOT.top; ctx.beginPath(); ctx.roundRect(w / 2 - 74, shY - 21, 140, 40, 20); ctx.fill()
+  for (const sd of [-1, 1]) {
+    const sx = w / 2 + sd * 60, sy = shY + 6
+    // his hands: on the bar near the top, ready under it below (he can only reach so far)
+    const [bx, by] = onBar(sd * 30)
+    const dx = bx - sx, dy = by + 6 - sy, dl = Math.hypot(dx, dy) || 1, far = Math.min(1, 176 / dl)
+    const hx = sx + dx * far, hy = sy + dy * far
+    reach(sx, sy, hx, hy, 92, 92, sd)
+    const ex = jx, ey = jy
+    limb(ctx, sx, sy, 15, ex, ey, 12, SPOT.top)
+    limb(ctx, ex, ey, 12, hx, hy, 9, SPOT.skin)
+    ctx.fillStyle = INK; circle(ctx, hx, hy, 11.4); ctx.fill(); ctx.fillStyle = tone(SPOT.skin, 0.74); circle(ctx, hx, hy, 9.2); ctx.fill()
   }
-  // his near arm, the fist round the bar
-  let [nhx, nhy] = onBar(11.5)
-  // (off the bar once it's racked: the arm drops off the side of the bench)
-  if (off) { nhx = lerp(nhx, shX + 7, off); nhy = lerp(nhy, -12, off) }
-  reach(shX + 1, shY, nhx, nhy, ARM, ARM, -1)
-  armThrough(ctx, shX + 1, shY, jx + (strain * strain * Math.sin(tick * 2.7)) / b, jy, nhx, nhy, false, c)
-  // the near plates, in front of everything: two, side by side
-  const rattle = ageRep < 200 && !g.done ? 0.7 * (1 - ageRep / 200) : 0
-  plate(ctx, npx - 2.6 - rattle, npy - 2.6 * SLANT, R, null)
-  plate(ctx, npx, npy, R)
-  ctx.restore()
-  if (!calm()) g.dirt.draw(ctx, g.t)
-  // the spotter, in his ear
+  ctx.fillStyle = INK; circle(ctx, w / 2, hdY, 31.4); ctx.fill()
+  ctx.fillStyle = tone(SPOT.skin, 0.74); circle(ctx, w / 2, hdY, 29); ctx.fill()
+  ctx.fillStyle = SPOT.skin; circle(ctx, w / 2 - 5, hdY + 3, 21); ctx.fill()
+  // (looking down at you: the crown of his head toward the top, the hair on it)
+  ctx.fillStyle = SPOT.hair; ctx.beginPath(); ctx.arc(w / 2, hdY, 29, Math.PI * 1.08, Math.PI * 1.92); ctx.quadraticCurveTo(w / 2, hdY - 14, w / 2 - 28, hdY - 9); ctx.fill()
   if (!g.done && g.reps > 0 && strain > 0.55 && Math.floor(g.t / 460) % 2 === 0) {
-    const ux = cx + (shx + 12) * b, uy = base + (shy - 15) * b
-    text(ctx, 'UP!', ux + 1, uy + 1, { font: DISPLAY, size: 21, color: 'rgba(0,0,0,.6)' })
-    text(ctx, 'UP!', ux, uy, { font: DISPLAY, size: 21, color: '#fff' })
+    text(ctx, 'UP!', w / 2 + 78, hdY + 6, { font: DISPLAY, size: 26, color: '#fff' })
   }
-  if (view.keys && !g.done && g.reps === 0) keyCap(ctx, w / 2, h - 58, 'SPACE')
 
-  drawBoard(ctx, g, view, base + (topY - END_F * SLANT - R) * b)
+  // the bar, plate to plate, and the plates
+  const [lx, ly] = onBar(-200), [rx, ry] = onBar(200), [mx, my] = onBar(0)
+  const by0 = 2 * my - (ly + ry) / 2
+  for (const [bw, col] of [[9 * sb + 4.4, INK], [9 * sb, STEEL_D], [4 * sb, STEEL]]) {
+    ctx.strokeStyle = col; ctx.lineWidth = bw; ctx.lineCap = 'butt'
+    ctx.beginPath(); ctx.moveTo(lx, ly); ctx.quadraticCurveTo(mx, by0, rx, ry); ctx.stroke()
+  }
+  // the knurl where you hold it
+  ctx.fillStyle = 'rgba(8,12,16,.35)'
+  for (const sd of [-1, 1]) { const [kx, ky] = onBar(sd * GRIP); ctx.fillRect(kx - 26 * sb, ky - 4.5 * sb, 52 * sb, 9 * sb) }
+  const rattle = ageRep < 200 && !g.done ? 3 * (1 - ageRep / 200) : 0
+  for (const sd of [-1, 1]) {
+    const [cx2, cy2] = onBar(sd * 150)
+    ctx.fillStyle = INK; ctx.fillRect(cx2 - 6 * sb, cy2 - 15 * sb, 12 * sb, 30 * sb); ctx.fillStyle = STEEL; ctx.fillRect(cx2 - 4.5 * sb, cy2 - 13.5 * sb, 9 * sb, 27 * sb)
+    for (const off2 of [176, 160]) { const [px, py] = onBar(sd * off2); plate(ctx, px + sd * rattle, py, sb, sd) }
+  }
+
+  // your arms, up from the bottom corners, and your fists round the bar
+  for (const sd of [-1, 1]) {
+    let [hx, hy] = onBar(sd * GRIP)
+    // (off the bar once it's racked: the arms drop away)
+    if (off) { hx = lerp(hx, w / 2 + sd * 150, off); hy = lerp(hy, h + 120, off) }
+    const sx = w / 2 + sd * 182, sy = h + 16
+    reach(sx, sy, hx, hy + 14, 205, 205, -sd)
+    const ex = jx + (strain * strain * Math.sin(tick * 2.7 + sd)) * 3, ey = jy
+    const s = lerp(1.15, 0.8, (h - hy) / h)
+    limb(ctx, sx, sy, 44, ex, ey, 34, c.top, 2.8)
+    ctx.strokeStyle = c.trim ?? '#1b2127'; ctx.lineWidth = 5; ctx.lineCap = 'butt'
+    const ux = ex - sx, uy = ey - sy, ul = Math.hypot(ux, uy) || 1, bx = lerp(sx, ex, 0.82), byy = lerp(sy, ey, 0.82), br = lerp(44, 34, 0.82)
+    ctx.beginPath(); ctx.moveTo(bx - (uy / ul) * br, byy + (ux / ul) * br); ctx.lineTo(bx + (uy / ul) * br, byy - (ux / ul) * br); ctx.stroke()
+    limb(ctx, ex, ey, 31, hx, hy + 10, 21, c.skin, 2.8)
+    fist(ctx, hx, hy, s * (0.86 + sb * 0.3), c.skin)
+  }
+  if (!calm()) g.dirt.draw(ctx, g.t, true)
+  if (view.keys && !g.done && g.reps === 0) keyCap(ctx, w / 2, h - 58, 'SPACE')
 }
-// the slab on top, the same as the 40's; the rep count big over the crowd
-function drawBoard(ctx, g, view, roomBottom) {
+// the slab on top, the same as the 40's; the rep count big on the board hung from the ceiling
+function drawBoard(ctx, g, view, top0, bottom) {
   const { w } = view
   const y = 44, ph = 52
   const over = g.done ? g.t - g.overAt : -1, official = over >= OFFICIAL_MS, result = g.done?.hit ? GOOD : BAD
+  // the board itself (it drops a little clear of the official strip once that's up)
+  const bt = top0 + (over >= 0 ? 22 : 0), bb = bottom + (over >= 0 ? 14 : 0)
+  ctx.fillStyle = INK; ctx.fillRect(20, bt, w - 40, bb - bt)
+  ctx.fillStyle = '#080d11'; ctx.fillRect(23, bt + 3, w - 46, bb - bt - 6)
+  ctx.fillStyle = MINT; ctx.fillRect(23, bb - 6, w - 46, 3)
   clockSlab(ctx, view, g.left.toFixed(2), official ? result : g.done ? '#fff' : g.left < 3 ? BAD : '#fff', g.left / SECS)
   const passed = g.reps >= g.need
   const dim = 'rgba(255,255,255,.72)', row = y + ph / 2 - 1
@@ -307,18 +293,19 @@ function drawBoard(ctx, g, view, roomBottom) {
     text(ctx, value, x0 + lw, row, { font: DISPLAY, size: 24, align: 'left', color: col })
   }
   pair(12, 'left', 'NEED', String(g.need), passed ? GOOD : '#fff')
-  const top = y + ph, room = Math.max(70, roomBottom - top)
+  const room = Math.max(40, bb - bt - 12)
   if (g.stamp) g.stamp.y = view.h * 0.885
   // the reps, punched on each one, and once more as it goes official
-  const big = Math.min(100, room * 0.8)
+  const big = Math.min(100, room * 0.72)
   const a = g.t - g.repAt
   const q = (1 + 0.2 * (1 - easeOut(clamp(a / 130, 0, 1)))) * (g.done ? officialPunch(over) : 1)
-  const my = top + room / 2
+  const my = bt + 4 + room * 0.42
+  text(ctx, 'REPS', 36, bt + 16, { font: LABEL, size: 15, align: 'left', color: dim })
   ctx.save(); ctx.translate(w / 2, my); ctx.scale(q, q)
   text(ctx, String(g.reps), 0, 2, { font: DISPLAY, size: big, color: official ? result : g.done ? '#fff' : passed ? GOOD : '#fff' })
   ctx.restore()
   // a tick a rep, up to what he needs; past it they go gold, and there's no telling how far they go
-  const tickW = Math.min(9, 230 / Math.max(g.need, g.reps)) - 2.2, step = tickW + 2.2, n = Math.max(g.need, g.reps), x0 = w / 2 - (n * step) / 2, ty = my + big * 0.56
+  const tickW = Math.min(9, 230 / Math.max(g.need, g.reps)) - 2.2, step = tickW + 2.2, n = Math.max(g.need, g.reps), x0 = w / 2 - (n * step) / 2, ty = bb - 16
   for (let i = 0; i < n; i++) {
     ctx.fillStyle = i >= g.need ? GOLD : i < g.reps ? (passed ? GOOD : '#fff') : 'rgba(255,255,255,.2)'
     ctx.fillRect(x0 + i * step, ty, tickW, 4)

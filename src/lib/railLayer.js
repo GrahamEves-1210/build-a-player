@@ -13,14 +13,18 @@ const CLOSE = '[id*="close" i], [class*="close" i], [aria-label*="close" i], but
 const isClose = el => /close/i.test(`${el.id} ${el.className} ${el.getAttribute?.('aria-label') ?? ''}`)
 const force = (el, z) => { if (el.style.getPropertyValue('z-index') !== String(z) || el.style.getPropertyPriority('z-index') !== 'important') el.style.setProperty('z-index', String(z), 'important') }
 
+// The new website: the rail sits over the screens (home 1000, screens 1040) and under the dock (1050) and every sheet,
+// so a screen running to the bottom shows through beside the ad and never covers it. Elsewhere, one under the old tab bar
+const railZ = () => { const c = document.documentElement.classList; return c.contains('app-look') && !c.contains('is-app') ? 1045 : 199 }
 function apply() {
+  const z = railZ()
   for (const el of document.querySelectorAll(RAIL)) {
     if (isClose(el)) { force(el, 2147483647); continue }
-    force(el, 199)
+    force(el, z)
     for (const c of el.querySelectorAll(CLOSE)) force(c, 2147483647)
   }
   for (const el of document.querySelectorAll(STICKY)) {
-    force(el, 199)
+    force(el, z)
     for (const c of el.querySelectorAll(CLOSE)) force(c, 2147483647)
   }
   // a close button Playwire put next to the rail rather than inside it

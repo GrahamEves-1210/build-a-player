@@ -682,8 +682,9 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
       if (freeTeam) return mine[playerDraw % mine.length]
       // a player respin: never the player this spin dealt
       const dealt = seededShuffle(roster, `${seedPlan.seed}:${teamIndex}:${selectedTeam.short}`)[0]
-      // (Compete's rule stays: the live server checks it. Elsewhere a team of two keeps both in the draw)
-      const rest = !seedPlanProp && roster.length <= 2 ? mine : mine.filter(p => p.name !== dealt?.name)
+      // (everywhere, the same rule as Compete's server check: a team of two shows both on the wheel, and the respin
+      // always lands on the other one: landing the same player again was just a wasted respin)
+      const rest = mine.filter(p => p.name !== dealt?.name)
       return rest.length ? rest[(playerDraw - 1) % rest.length] : mine[0]
     }
     const order = seededShuffle(roster, `${seedPlan.seed}:${teamIndex}:${selectedTeam.short}`)
@@ -860,6 +861,8 @@ export default function SpinScreen({ build, activeDrag, onDragStart, onDragEnd, 
           )}
         </div>
 
+        {/* DUMMY (dev server only): where a 320x50 under the wheels would sit on a phone, to judge the spot before a real unit */}
+        {import.meta.env.DEV && <div className="spin-ad-dummy" aria-hidden="true"><small>ADVERTISEMENT</small><span>AD · 320×50</span></div>}
         <div className="spin-panel-scroll">
           {isDone && selectedQB && (
             hasAvailableChips ? (
