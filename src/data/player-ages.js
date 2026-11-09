@@ -455,6 +455,8 @@ export const BIRTH_NFL = {
   "Jordan Addison": 2002,
   "Jordan Battle": 2001,
   "Jordan Davis": 2000,
+  "Ty Robinson": 2001,
+  "Christen Miller": 2004,
   "Jordan James": 2004,
   "Jordan Love": 1999,
   "Jordan Mailata": 1997,

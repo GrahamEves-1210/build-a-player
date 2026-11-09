@@ -2,7 +2,7 @@ import { useState, useRef, useLayoutEffect } from 'react'
 import svgRaw from '../assets/lb-figure-color.svg?raw'
 import { warmSkin, warmSkinLight } from '../utils/footballSkin'
 
-// The linebacker's figure (public/lb-silhouette.png), squared up in his stance: the team colors laid over
+// The linebacker's figure (public/lb-silhouette.webp), squared up in his stance: the team colors laid over
 // the art from src/assets/lb-figure-color.svg (its parts named by side of the picture: "r" is the right of the image)
 const FIG_W = 1005
 const FIG_H = 1267

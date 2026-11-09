@@ -37,8 +37,8 @@ export const lbSizeGrade = (height, weight) => {
   return Math.round(g(weight, LB_SIZE_SCALE.lb) * 0.5 + g(height, LB_SIZE_SCALE.in) * 0.5)
 }
 
-// LB's own figure (public/lb-silhouette.png, colored by components/LBFigureOverlay.jsx, zones in Silhouette.jsx LB_ZONES).
-export const LB_SILHOUETTE = '/lb-silhouette.png'
+// LB's own figure (public/lb-silhouette.webp, colored by components/LBFigureOverlay.jsx, zones in Silhouette.jsx LB_ZONES).
+export const LB_SILHOUETTE = '/lb-silhouette.webp'
 
 const _LBS = [
   // ARI

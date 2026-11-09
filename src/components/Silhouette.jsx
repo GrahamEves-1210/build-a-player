@@ -172,7 +172,7 @@ const DL_ZONES = [
   { type: 'speed',           ax: 410, ay: 1043, side: 'left', cy: 0.86 }, // sock
 ]
 
-// LB silhouette coordinate space: public/lb-silhouette.png, squared up in his stance (wider and shorter than DL's).
+// LB silhouette coordinate space: public/lb-silhouette.webp, squared up in his stance (wider and shorter than DL's).
 const LB_FIG_W = 1005
 const LB_FIG_H = 1267
 const LB_FIGURE_SCALE = 0.9
