@@ -98,6 +98,8 @@ const NOV_10 = {
       name: 'Fixes',
       items: [
         'Fixed playoff games ending in a tie with no overtime',
+        'Fixed the QB Super Bowl Performance box not matching the Super Bowl line in the game log',
+        'The Super Bowl now reads "vs" in the game log, not "@"',
         'Fixed impossible football scores like 4 points',
         'Fixed teams scoring fewer points than the player\'s touchdowns',
         'Fixed the NBA Finals bracket showing the result before the games were played',

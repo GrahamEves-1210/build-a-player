@@ -212,6 +212,8 @@ export function poLine(r) {
   return ''
 }
 // The playoff run, game by game: the round, the result, your line
+// (a title game is on neutral ground: "vs", never "@")
+const NEUTRAL = /^(Super Bowl|CFP National Championship|National Championship)/i
 export function PlayoffLog({ rounds, title = 'Playoff Game Log' }) {
   if (!rounds?.length) return null
   return (
@@ -220,7 +222,7 @@ export function PlayoffLog({ rounds, title = 'Playoff Game Log' }) {
       {rounds.map((r, i) => (
         <div key={i} className={`po-glog-row${r.won ? ' is-w' : ' is-l'}`}>
           <span className="po-glog-rd">{r.round}</span>
-          <span className="po-glog-res"><b>{r.won ? 'W' : 'L'}</b> {r.mySc}–{r.oppSc}{r.overtime ? ' OT' : ''} {r.home ? 'vs' : '@'} {r.opponent}</span>
+          <span className="po-glog-res"><b>{r.won ? 'W' : 'L'}</b> {r.mySc}–{r.oppSc}{r.overtime ? ' OT' : ''} {r.home || r.neutral || NEUTRAL.test(r.round ?? '') ? 'vs' : '@'} {r.opponent}</span>
           <span className="po-glog-line">{poLine(r)}</span>
         </div>
       ))}
