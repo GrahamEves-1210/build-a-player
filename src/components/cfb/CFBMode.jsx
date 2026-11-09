@@ -150,7 +150,8 @@ export default function CFBMode({ user, onHome, onCareer }) {
   const [build, setBuild] = useState(saved?.build ?? emptyBuild(saved?.pos ?? 'qb'))
   const [spin, setSpin] = useState(saved?.spin ?? null)
   const [result, setResult] = useState(saved?.result ?? null)
-  const [stage, setStage] = useState(saved?.stage ?? 0)   // how far the season page has played out
+  const [stage, setStage] = useState(saved?.stage ?? 'pre')   // the season page it's on ('pre' … 'final'; an older save's number, CFBSimPage reads both)
+  const [story, setStory] = useState(saved?.story ?? null)   // the regular season as it played out (the final report's season story)
   const [activeDrag, setActiveDrag] = useState(null)
   const [activeCategory, setActiveCategory] = useState('physical')
   const [spinResetKey, setSpinResetKey] = useState(0)
@@ -220,6 +221,12 @@ export default function CFBMode({ user, onHome, onCareer }) {
     },
   }), [])
   const schools = useMemo(() => (data?.teams ?? []).map(t => ({ ...t, logo: cfbLogo(t.short) })), [data])
+  // a real player's headshot by name and school (the season page's draft board and Heisman card)
+  const photoOf = useMemo(() => {
+    const m = new Map()
+    for (const k of ['qb', 'rb', 'wr']) for (const p of data?.pools[k] ?? []) if (p.headshot) m.set(`${p.name}|${p.team}`, `${HEADSHOT_BASE}/${p.headshot}.webp`)
+    return (name, school) => m.get(`${name}|${school}`) ?? null
+  }, [data])
 
   // a chip carries the college player's school, conference, class and size with it
   const withCollege = useCallback(chip => {
@@ -230,9 +237,9 @@ export default function CFBMode({ user, onHome, onCareer }) {
   // kept on the device: a reload, or Home and back, picks the build (or the season) back up
   useEffect(() => {
     if (phase === 'pick') return
-    const p = { pos, build, spin, result, stage, sandbox: tainted.current, starters: startersPick, at: Date.now() }
+    const p = { pos, build, spin, result, stage, story, sandbox: tainted.current, starters: startersPick, at: Date.now() }
     saveProgress(p); setProgress(p)
-  }, [phase, pos, build, spin, result, stage, startersPick])
+  }, [phase, pos, build, spin, result, stage, story, startersPick])
 
   const activeDragRef = useRef(activeDrag)
   activeDragRef.current = activeDrag
@@ -251,7 +258,7 @@ export default function CFBMode({ user, onHome, onCareer }) {
   }, [withCollege])
 
   const freshBuild = useCallback(p => {
-    setPos(p); setBuild(emptyBuild(p)); setSpin(null); setResult(null); setStage(0); setActiveDrag(null)
+    setPos(p); setBuild(emptyBuild(p)); setSpin(null); setResult(null); setStage('pre'); setStory(null); setActiveDrag(null)
     setActiveCategory('physical'); setSpinResetKey(k => k + 1); setGameKey(k => k + 1); setStartersPick(false)
     tainted.current = sandboxOn
   }, [sandboxOn])
@@ -285,7 +292,7 @@ export default function CFBMode({ user, onHome, onCareer }) {
     r.seed = r.seed ?? seed
     const sb = tainted.current || P.types.some(t => build[t]?.sandbox)
     r.sandbox = sb
-    setResult(r); setStage(0)
+    setResult(r); setStage('pre'); setStory(null)
     // kept on this device (cfbShared saveSeasonLocal; the boards hook is there for later), and booked
     // for XP, coins and achievements the way any season is (lib/progress.js; a Sandbox season pays nothing)
     saveSeasonLocal({ ...summaryOf(r, { pos, build, types: P.types, ovr: P.ovr(build, P.types), name: P.arch(P.ovr(build, P.types), build, P.types), userName }), sandbox: sb }, sb ? null : user)
@@ -315,12 +322,13 @@ export default function CFBMode({ user, onHome, onCareer }) {
   if (phase === 'season' && result) {
     return (
       <>
-        <CFBSimPage result={result} build={build} types={P.types} pos={pos} userName={userName} teams={teamsBy}
+        {/* football's season page, page for page (the navbar over it, as App.jsx puts football's) */}
+        <CFBSimPage result={result} build={build} types={P.types} attrMap={P.attr} pos={pos} userName={userName} teams={teamsBy}
           archetype={P.arch(P.ovr(build, P.types), build, P.types)}
+          nav={<CFBNav pos={pos} onHome={close} grades={false} />}
           stage={stage} onStage={setStage}
-          onBack={() => { setPhase('build'); window.scrollTo(0, 0) }}
+          story={story} onStory={setStory} photoOf={photoOf}
           onAgain={() => start(pos)}
-          onPositions={() => { freshBuild(pos); setPhase('pick') }}
           onDraft={() => setDrafting(true)}
           onHome={close} />
         {drafting && (

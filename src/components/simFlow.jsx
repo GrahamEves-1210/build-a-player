@@ -285,10 +285,10 @@ export function MomentsToggle() {
 
 // League leaders (basketball's board): the top of a race, his place under it
 // rows: [{ name, team, value, me, rank }] (names already labelled: the build is the username)
-export function LeadersBoard({ label, rows, rank, who }) {
+export function LeadersBoard({ label, rows, rank, who, title = 'LEAGUE LEADERS' }) {
   return (
     <div className="sm-leaders ag-pop">
-      <div className="sm-leaders-head"><span className="ag-eyebrow">LEAGUE LEADERS · {label}</span>{rank ? <span className="sm-leaders-rank">{who}: #{rank}</span> : null}</div>
+      <div className="sm-leaders-head"><span className="ag-eyebrow">{title} · {label}</span>{rank ? <span className="sm-leaders-rank">{who}: #{rank}</span> : null}</div>
       {rows.map((r, i) => (
         <div key={i} className={`sm-leader${r.me ? ' is-me' : ''}`}>
           <span className="sm-leader-n">{r.rank ?? i + 1}</span>

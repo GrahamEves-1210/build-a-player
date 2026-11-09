@@ -507,9 +507,8 @@ html[data-spot="holo"] .ag-avatar { background: linear-gradient(135deg, #8ff7ff,
 .ag-figure .splash-stack-band-label.is-sm { font-size: 9px; }
 .ag-figure .splash-stack-band-label.is-xs { font-size: 8px; }
 .splash-stack-band-label.is-v { writing-mode: vertical-rl; line-height: 1; }
-/* LB is on the DL figure for now */
-.ag-figure--lb { left: calc(50% - 9px); }
-.ag-figure--lb .splash-stack-band-label { transform: translateX(9px); }
+/* LB: the body sits right of the art's centre: line it up over the platform (LB_ATTRS' x puts the words on the body) */
+.ag-figure--lb { left: calc(50% - 10px); }
 .ag-figure-base {
   position: absolute; inset: 0;
   width: 100%; height: 100%;
@@ -7270,14 +7269,14 @@ html.bap-reduce-motion .ag-side-track { transition: none; }
   .ag-home .ag-sport-txt b { font-size: 19px; }
   .ag-home .ag-sport--three .ag-sport-txt b { font-size: 17px; }
   .ag-home .ag-sport-btn.is-soon .ag-sport-soon { font-size: 10px !important; }
-  .ag-stage .ag-positions { height: 46px; }
+  .ag-stage .ag-positions { height: 54px; }   /* (tall enough to hit with a thumb, after the page's zoom) */
   .ag-stage .ag-pos-label { font-size: 21px; }
   .ag-stage .ag-pos--soon .ag-pos-label { font-size: 17px; }
   .ag-side-word { font-size: 13px; }
   .ag-stage .ag-live-count { font-size: 14px; }
-  .ag-figure { bottom: 56px; }
-  .ag-figure:not(.ag-figure--nba) { bottom: calc(56px + var(--fig-h) * var(--fig-o, 0)); }
-  .ag-platform { bottom: 42px; }
+  .ag-figure { bottom: 64px; }
+  .ag-figure:not(.ag-figure--nba) { bottom: calc(64px + var(--fig-h) * var(--fig-o, 0)); }
+  .ag-platform { bottom: 50px; }
 }
 @media (max-width: 380px) { .ag-home .ag-sport--three .ag-sport-txt b { font-size: 15px; } }
 /* (a 360 phone hides the sport subtitles, but not soccer's COMING SOON) */

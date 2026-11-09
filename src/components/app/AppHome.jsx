@@ -43,7 +43,7 @@ const NFL_FIGURE = {
   te: { src: '/wr-silhouette.png', scale: 1.18 },
   db: { src: '/db-silhouette.png', scale: 1.05 },
   dl: { src: '/dl-silhouette.webp', scale: 1 },
-  lb: { src: '/dl-silhouette.webp', scale: 1 },   // LB placeholder: the DL figure until LB has its own
+  lb: { src: '/lb-silhouette.png', scale: 1 },
   ol: { src: '/db-silhouette.png', scale: 1.05 },   // OL placeholder: the DB figure until OL has its own (OL_SILHOUETTE)
 }
 const reducedMotion = () => document.documentElement.classList.contains('bap-reduce-motion') || !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches

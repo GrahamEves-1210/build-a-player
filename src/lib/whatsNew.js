@@ -88,6 +88,7 @@ const NOV_10 = {
         'Added Mitchell Evans to the Panthers in place of Ja\'Tavion Sanders',
         'Moved Jessie Bates III to the Jaguars, and DeMarcco Hellams starts for the Falcons',
         'Moved Nique Clifford to the Thunder and Walter Clayton Jr. to the Mavericks',
+        'Moved Jordan Davis and Davon Godchaux to the Jaguars',
         'Updated Ja\'Kobi Lane height and weight',
         'Rating updates for Amon-Ra St. Brown, Darren Waller, Tommy Tremble, Chuba Hubbard, Kyle Monangai, Nik Bonitto and Jonathon Cooper',
       ],

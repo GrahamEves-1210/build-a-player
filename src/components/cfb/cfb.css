@@ -441,3 +441,42 @@ html.app-look:not(.is-app) .cfb-nav .nav-pos-trigger .nav-pos-name { display: in
 .cfbs-live-season .sm-pulse { display: block; width: 100%; height: 56px; }
 /* room under the last thing on the screen (a live game, the next button) to scroll it clear of the dock and the ad rail */
 .cfbs .cfbs-body { padding-bottom: calc(var(--app-bottom, 16px) + var(--web-rail, 0px) + 28px); }
+
+/* ═══ The season (CFBSimPage): football's season page (SimPage's simp-* markup), page for page, in the college
+   blue. Only the colours change: the navy base, NCAA blue where football has its mint, flat surfaces ═══ */
+html.is-cfb .simp-page.cfbp {
+  background: var(--cfb-navy);
+  --grey-900: var(--cfb-navy-2); --grey-800: var(--cfb-navy-3); --surface: rgba(255,255,255,.035);
+}
+.cfbp .simp-team-strip { background: color-mix(in srgb, var(--team-color) 14%, var(--cfb-navy-2)); }
+.cfbp .simp-attr-table { background: var(--cfb-navy-2); border-color: var(--cfb-line); }
+.cfbp .simp-attr-row:not(:last-child) { border-bottom-color: var(--cfb-line); }
+.cfbp .simp-game-row.sgr-w { background: rgba(26,95,209,.16); }
+.cfbp .sgr-badge-w { background: rgba(26,95,209,.34); color: #fff; }
+.cfbp .sgr-w .sgr-score { color: #9fc1ff; }
+.cfbp .ag-week.is-w { background: rgba(26,95,209,.28); border-color: rgba(64,132,245,.7); }
+.cfbp .ag-week.is-w .ag-week-r { color: #8fbaff; }
+.cfbp .sm-wire-tag { background: var(--cfb-blue-hi); color: #fff; }
+.cfbp .goat-miss-card { background: var(--cfb-navy-2); border-color: var(--cfb-line); }
+.cfbp .goat-card { background: rgba(255,255,255,.035); }
+.cfbp .po-glog-row { border-left-color: var(--cfb-blue-hi); }
+.cfbp .po-glog-res b { color: #9fc1ff; }
+.cfbp .simp-best-game, .cfbp .dbt { border-color: var(--cfb-line); }
+
+/* the AP poll under the schedule */
+.cfbp-poll .cfbs-rank { padding: 2px 4px 0; }
+/* selection day: where the committee put him, as big as football's record */
+.cfbp-sel-big { font-family: var(--ag-display, 'Bebas Neue', sans-serif); font-weight: 400; font-size: 46px; line-height: .95; letter-spacing: .5px; text-transform: uppercase; color: #fff; }
+.cfbp-sel-sub { margin-top: -4px; text-align: left; }
+.cfbp .cfbs-field { margin-top: 0; }
+/* draft stock: the tier in football's GOAT card, in the display face */
+.cfbp-draft .goat-miss-ovr.cfbp-draft-tier { font-family: var(--ag-display, 'Bebas Neue', sans-serif); font-weight: 400; font-size: 46px; line-height: .95; letter-spacing: .5px; text-transform: uppercase; }
+.cfbp-draft-note { margin-top: 8px; font-size: 13px; font-weight: 600; color: var(--cfb-muted); }
+.cfbp-draft-gap { padding: 4px 0; text-align: center; letter-spacing: 4px; color: var(--cfb-faint); }
+/* the Heisman card: the other finalists under his (or the winner's) line */
+.cfbp-heis-fin { margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,.1); }
+.cfbp-heis-fin .mvp-stat-row.is-me .mvp-stat-label { color: #fff; }
+/* a Career's college season: the season's name and the way home over the pager, his role on the team card */
+.cfbp-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: calc(var(--safe-top, 0px) + 2px) 0 8px; }
+.cfbp-role { display: block; margin-top: 3px; font-family: var(--ag-body); font-size: 12px; color: var(--cfb-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cfbp .cfbs-actions { width: 100%; }

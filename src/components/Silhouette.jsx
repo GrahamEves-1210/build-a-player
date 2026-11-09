@@ -7,7 +7,7 @@ import { TE_LEGENDS } from '../data/te-legends'
 import { DBS } from '../data/dbs'
 import { DLS } from '../data/dls'
 import { DL_LEGENDS } from '../data/dl-legends'
-import { LBS, LB_AS_DL, lbAsDlBuild, LB_SILHOUETTE } from '../data/lbs'
+import { LBS, LB_SILHOUETTE } from '../data/lbs'
 import { OL_SILHOUETTE } from '../data/ols'
 import { LB_LEGENDS } from '../data/lb-legends'
 import { DB_LEGENDS } from '../data/db-legends'
@@ -37,6 +37,7 @@ import WRFigureOverlay from './WRFigureOverlay'
 import DBFigureOverlay from './DBFigureOverlay'
 import OLFigureOverlay from './OLFigureOverlay'
 import DLFigureOverlay from './DLFigureOverlay'
+import LBFigureOverlay from './LBFigureOverlay'
 import BucketFigureOverlay from './BucketFigureOverlay'
 import { SOCCER_SILHOUETTE, SOCCER_AS_BUCKET, soccerAsBucketBuild } from '../lib/soccerUi'
 import { BASEBALL_SILHOUETTE, BASEBALL_AS_BUCKET } from '../lib/baseballUi'
@@ -171,11 +172,25 @@ const DL_ZONES = [
   { type: 'speed',           ax: 410, ay: 1043, side: 'left', cy: 0.86 }, // sock
 ]
 
-// LB PLACEHOLDER: there's no linebacker art yet, so LB is drawn on the DL figure (Silhouette
-// treats isLB as isDL for the figure, see LB_SILHOUETTE below). Each LB trait takes a DL trait's
-// spot and body part: LB_AS_DL maps LB trait -> the DL trait whose zone and colored part it uses.
-// (LB_AS_DL, lbAsDlBuild and LB_SILHOUETTE are in data/lbs.js, shared with the season screens)
-const LB_ZONES = DL_ZONES.map(z => ({ ...z, type: Object.keys(LB_AS_DL).find(k => LB_AS_DL[k] === z.type) }))
+// LB silhouette coordinate space: public/lb-silhouette.png, squared up in his stance (wider and shorter than DL's).
+const LB_FIG_W = 1005
+const LB_FIG_H = 1267
+const LB_FIGURE_SCALE = 0.9
+
+// LB zones: DB's nine card heights, each dot on the part its trait colors (see LBFigureOverlay; the centres
+// of the parts in src/assets/lb-figure-color.svg). Left cards top to bottom: neck, chest, arm, glove, lower leg;
+// right: helmet, wristband, pants, shoe, so no two lines cross.
+const LB_ZONES = [
+  { type: 'leadership',      ax: 548, ay: 262, side: 'left',  cy: 0.14 }, // face + neck
+  { type: 'size',            ax: 470, ay: 455, side: 'left',  cy: 0.32 }, // jersey chest
+  { type: 'power',           ax: 268, ay: 470, side: 'left',  cy: 0.50 }, // bare arm
+  { type: 'zoneInstincts',   ax: 165, ay: 757, side: 'left',  cy: 0.68 }, // glove
+  { type: 'tackling',        ax: 223, ay: 1009, side: 'left', cy: 0.86 }, // lower leg
+  { type: 'playRecognition', ax: 605, ay: 48,  side: 'right', cy: 0.23 }, // helmet
+  { type: 'blockShed',       ax: 908, ay: 689, side: 'right', cy: 0.41 }, // wristband
+  { type: 'passRush',        ax: 560, ay: 700, side: 'right', cy: 0.59 }, // pants, the middle (clear of the cards)
+  { type: 'range',           ax: 833, ay: 1184, side: 'right', cy: 0.77 }, // shoe
+]
 
 // OL zones — same figure as DB (see OLFigureOverlay). Every dot sits on the
 // body part that OL chip colors, and only on parts that stay visible between
@@ -408,8 +423,8 @@ function SilhouetteFigure({ build, activeDrag, onDrop, activeCategory, onCategor
   const isDBFig = isDB || isOL
   // LB is drawn on the DL figure for now (LB PLACEHOLDER above): everything figure-related follows DL
   const isDL = isDLPos || isLB
-  const figW   = isBucket ? BUCKET_FIG_W : isDL ? DL_FIG_W : isDBFig ? DB_FIG_W : (isRB || isWR || isTE ? RB_FIG_W : FIG_W)
-  const figH   = isBucket ? BUCKET_FIG_H : isDL ? DL_FIG_H : isDBFig ? DB_FIG_H : (isRB || isWR || isTE ? RB_FIG_H : FIG_H)
+  const figW   = isBucket ? BUCKET_FIG_W : isLB ? LB_FIG_W : isDL ? DL_FIG_W : isDBFig ? DB_FIG_W : (isRB || isWR || isTE ? RB_FIG_W : FIG_W)
+  const figH   = isBucket ? BUCKET_FIG_H : isLB ? LB_FIG_H : isDL ? DL_FIG_H : isDBFig ? DB_FIG_H : (isRB || isWR || isTE ? RB_FIG_H : FIG_H)
   const zones  = isBucket ? (types.includes('interiorDefense') ? BUCKET_BIG_ZONES : BUCKET_ZONES) : isLB ? LB_ZONES : isDL ? DL_ZONES : isOL ? OL_ZONES : isDB ? DB_ZONES : isTE ? TE_ZONES : isWR ? WR_ZONES : isRB ? RB_ZONES : ZONES
   const silRef = useRef(null)
   const bounds = useFigureBounds(silRef, figW, figH)
@@ -478,6 +493,8 @@ function SilhouetteFigure({ build, activeDrag, onDrop, activeCategory, onCategor
   const dlScale = modelOnly ? 1 : DL_FIGURE_SCALE
   // the build screen: his arm out to one side pulls the body off centre, so the whole figure sits a little left
   const dlTransform = modelOnly ? 'none' : `translateX(-5%) scale(${dlScale})`
+  // (the linebacker's body sits right of the art's centre too: the same nudge left)
+  const lbTransform = modelOnly ? 'none' : `translateX(-5%) scale(${LB_FIGURE_SCALE})`
   const wrTransform = modelOnly ? 'none' : isMobile ? `translateY(-6px) scale(${WR_FIGURE_SCALE_MOBILE})` : `scale(${WR_FIGURE_SCALE})`
 
   // Sample bottom color + capture aspect ratio for correct objectPosition centering
@@ -583,7 +600,11 @@ function SilhouetteFigure({ build, activeDrag, onDrop, activeCategory, onCategor
       dotX = (dotX - 50) * BUCKET_FIGURE_SCALE + 50
       dotY = (dotY - 50) * BUCKET_FIGURE_SCALE + 50
     }
-    if (isDL) {
+    if (isLB) {
+      dotX = (dotX - 50) * LB_FIGURE_SCALE + 50
+      dotY = (dotY - 50) * LB_FIGURE_SCALE + 50
+      dotX -= 5
+    } else if (isDL) {
       dotX = (dotX - 50) * DL_FIGURE_SCALE + 50
       dotY = (dotY - 50) * DL_FIGURE_SCALE + 50
       dotX -= 5
@@ -825,6 +846,7 @@ function SilhouetteFigure({ build, activeDrag, onDrop, activeCategory, onCategor
             isBucket   ? { transform: `scale(${bucketScale})`, transformOrigin: 'center center' }
             : (isWR || isTE) ? { transform: wrTransform, transformOrigin: 'center center', filter: complete ? 'none' : 'brightness(0.55) drop-shadow(0 0 2px rgba(255,255,255,0.60)) drop-shadow(0 0 0.5px rgba(255,255,255,0.92))' }
             : isRB     ? { transform: `scale(${rbScale})`, transformOrigin: 'center center' }
+            : isLB     ? { transform: lbTransform, transformOrigin: 'center center' }
             : isDL     ? { transform: dlTransform, transformOrigin: 'center center' }
             : isDBFig  ? { transform: `scale(${dbScale})`, transformOrigin: 'center center', filter: 'brightness(0.35)' }
             : undefined
@@ -909,9 +931,14 @@ function SilhouetteFigure({ build, activeDrag, onDrop, activeCategory, onCategor
             <DBFigureOverlay build={build} numberNudgePx={isMobile && !modelOnly ? { x: 7, y: 7 } : null} />
           </div>
         )}
-        {isDL && (
+        {isDLPos && (
           <div style={{ position: 'absolute', inset: 0, transform: dlTransform, transformOrigin: 'center center' }}>
-            <DLFigureOverlay build={isLB ? lbAsDlBuild(build) : build} numberNudgePx={null} nameNudge={isMobile && !modelOnly ? { x: -12, y: 12 } : null} />
+            <DLFigureOverlay build={build} numberNudgePx={null} nameNudge={isMobile && !modelOnly ? { x: -12, y: 12 } : null} />
+          </div>
+        )}
+        {isLB && (
+          <div style={{ position: 'absolute', inset: 0, transform: lbTransform, transformOrigin: 'center center' }}>
+            <LBFigureOverlay build={build} />
           </div>
         )}
         {isOL && (

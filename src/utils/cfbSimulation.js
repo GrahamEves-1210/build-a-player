@@ -57,7 +57,8 @@
 //       allAmerica: { first: { qb, rb, wr }, second: { qb, rb, wr }, user: 'first' | 'second' | null },
 //       allConference: { conf, first, second, user }, confPOY: { award, winner, userWon },
 //     },
-//     draft: { year, eligible, declares, tier, label, round, note, draftYear, boardRank, boardOf, board (the top 5 at his position) }
+//     leaders: null | { key, label, rows: [{ name, team, year, isUser, value }] (top 10), rank, of }   (regular season, every FBS starter at his position)
+//     draft: { year, eligible, declares, tier, label, round, note, draftYear, boardRank, boardOf, board (the top 25 at his position: { name, team, year, ovr, isUser }) }
 //   }
 // }
 // Players in award lists: { name, team (short), teamName, pos ('QB'|'RB'|'WR'), conf, year, isUser, line: 'season line text', stats }
@@ -1305,7 +1306,7 @@ function draftBoard(L, R, pos, cands, awards, career = null) {
   const declareLine = BOARD_SLOTS[pos][2] * 2
   const cls = rows.filter((x, k) => x.c.isUser || sen(x.c) || k < declareLine)
   const rank = cls.findIndex(x => x.c.isUser) + 1
-  return { rank, of: cls.length, eligible: rows.length, score: cls[rank - 1].score, top: cls.slice(0, 5).map(x => ({ name: x.c.name, team: x.c.team, year: x.c.year, ovr: x.c.ovr, isUser: !!x.c.isUser })) }
+  return { rank, of: cls.length, eligible: rows.length, score: cls[rank - 1].score, top: cls.slice(0, 25).map(x => ({ name: x.c.name, team: x.c.team, year: x.c.year, ovr: x.c.ovr, isUser: !!x.c.isUser })) }
 }
 
 function draftStock(pos, ovr, t, awards, year, board = null, career = null) {
@@ -1335,7 +1336,7 @@ function draftStock(pos, ovr, t, awards, year, board = null, career = null) {
     const ci = CLASS_ORDER.indexOf(yr)
     const yearsOut = yr === 'FR' ? 2 : yr === 'RS-FR' || yr === 'SO' ? 1 : 1
     const draftYear = 2027 + Math.max(1, yearsOut)
-    return { year: yr, eligible: false, declares: false, tier, label: `Not draft-eligible yet (${yr})`, round: ROUND[tier], draftYear, boardRank: board?.rank ?? null, boardOf: board?.of ?? null,
+    return { year: yr, eligible: false, declares: false, tier, label: `Not draft-eligible yet (${yr})`, round: ROUND[tier], draftYear, boardRank: board?.rank ?? null, boardOf: board?.of ?? null, board: board?.top ?? null,
       note: `Eligible for the ${draftYear} NFL Draft. Early board: ${LABEL[tier].replace('Projected ', '')}`, classIndex: ci }
   }
   const senior = /SR|GR|5TH/.test(yr)
@@ -1397,10 +1398,11 @@ export function runCFBSimulation(build, types = null, team = null, position = 'q
 
   // ── box scores: every team's regular season and title game (the award races), the build's postseason too ──
   const cands = new Map()
-  const addLine = (who, ti, line, p, wrSlot) => {
+  const addLine = (who, ti, line, p, gameKey) => {
     if (!who) return
-    const c = cands.get(who.key) ?? { key: who.key, name: who.name, team: L.teams[ti].short, teamName: L.teams[ti].name, conf: L.teams[ti].confShort, ti, pos: p, year: who.year, ovr: who.ovr, isUser: !!who.isUser, games: [] }
+    const c = cands.get(who.key) ?? { key: who.key, name: who.name, team: L.teams[ti].short, teamName: L.teams[ti].name, conf: L.teams[ti].confShort, ti, pos: p, year: who.year, ovr: who.ovr, isUser: !!who.isUser, games: [], reg: [] }
     c.games.push(line)
+    if (/^g/.test(gameKey)) c.reg.push(line)   // (regular-season games: the leaders below)
     cands.set(who.key, c)
   }
   const units = L.teams.map(t => unitFor(L, t, user))
@@ -1414,9 +1416,9 @@ export function runCFBSimulation(build, types = null, team = null, position = 'q
     for (const x of list) {
       const box = boxOf(ti, x.key, x.my, x.op, x.oi, x.oppD)
       const u = units[ti]
-      addLine(u.qb.who, ti, box.qb, 'qb')
-      addLine(u.rb.who, ti, box.rb, 'rb')
-      u.wrs.forEach((w, k) => addLine(w.who, ti, box.wrs[k], 'wr'))
+      addLine(u.qb.who, ti, box.qb, 'qb', x.key)
+      addLine(u.rb.who, ti, box.rb, 'rb', x.key)
+      u.wrs.forEach((w, k) => addLine(w.who, ti, box.wrs[k], 'wr', x.key))
       if (ti === me) {
         const slot = pos === 'wr' ? Math.max(0, u.wrs.findIndex(w => w.who?.isUser)) : 0
         userGames.push({ x, line: decorate(pos, lineFor(pos, box, slot)) })
@@ -1497,6 +1499,36 @@ export function runCFBSimulation(build, types = null, team = null, position = 'q
   const meCand = candList.find(c => c.isUser)
   if (meCand) { meCand.t = throughCCG; meCand.line = lineText(pos, throughCCG) }
   const awards = lite ? LITE_AWARDS : runAwards(L, R, candList, seeded(`${seed}|awards`), user)
+  // the regular season's FBS leaders at his position: every team's starters (the teams the award races skipped get
+  // their box scores here, for this list only: each box has its own seeded draw, so nothing above changes). His
+  // line is his games as played
+  const LEAD = { qb: ['seasonPassYds', 'PASS YDS'], rb: ['seasonRushYds', 'RUSH YDS'], wr: ['seasonRecYds', 'REC YDS'] }
+  let leaders = null
+  if (!lite) {
+    const [lk, label] = LEAD[pos]
+    const rest = new Map()
+    for (let ti = 0; ti < L.teams.length; ti++) {
+      if (boxTeams.has(ti)) continue
+      const u = units[ti]
+      const whos = pos === 'qb' ? [u.qb] : pos === 'rb' ? [u.rb] : u.wrs
+      if (!whos.some(w => w?.who)) continue
+      for (const x of perTeam[ti]) {
+        if (!/^g/.test(x.key)) continue
+        const box = boxOf(ti, x.key, x.my, x.op, x.oi, x.oppD)
+        whos.forEach((w, k) => {
+          if (!w?.who) return
+          const c = rest.get(w.who.key) ?? { name: w.who.name, team: L.teams[ti].short, year: w.who.year, pos, isUser: false, reg: [] }
+          c.reg.push(lineFor(pos, box, k))
+          rest.set(w.who.key, c)
+        })
+      }
+    }
+    const rows = [...cands.values(), ...rest.values()].filter(c => c.pos === pos && (c.isUser || c.reg.length >= 6))
+      .map(c => ({ name: c.name, team: c.team, year: c.year ?? null, isUser: !!c.isUser, value: c.isUser ? (reg[lk] ?? 0) : (cfbSeasonTotals(pos, c.reg)[lk] ?? 0) }))
+      .sort((a, b) => b.value - a.value || (a.isUser ? -1 : 1))
+    const at = rows.findIndex(x => x.isUser)
+    leaders = { key: lk, label, rows: rows.slice(0, 10), rank: at >= 0 ? at + 1 : null, of: rows.length }
+  }
   const draft = draftStock(pos, ovr, throughCCG, awards, user.year, lite ? null : draftBoard(L, R, pos, candList, awards, opts?.career ?? null), opts?.career ?? null)
 
   const madeCFP = R.field.has(me)
@@ -1548,6 +1580,7 @@ export function runCFBSimulation(build, types = null, team = null, position = 'q
       },
       bowls: R.bowls,
       awards,
+      leaders,
       draft,
       user: { name: user.name, year: user.year, replaced: L.depth[base.short]?.[pos]?.[0]?.name ?? null, teamShift: Math.round(user.shift * 10) / 10,
         attrs: Object.fromEntries(types.map(t => [t, build?.[t]?.val ?? null])), types },

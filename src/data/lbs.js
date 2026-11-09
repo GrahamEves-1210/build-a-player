@@ -37,22 +37,8 @@ export const lbSizeGrade = (height, weight) => {
   return Math.round(g(weight, LB_SIZE_SCALE.lb) * 0.5 + g(height, LB_SIZE_SCALE.in) * 0.5)
 }
 
-// LB PLACEHOLDER FIGURE: there's no linebacker art yet, so LB is drawn on the DL figure (public/dl-silhouette.webp
-// with DLFigureOverlay). Each LB trait takes a DL trait's dot and colored body part: LB trait -> DL trait.
-export const LB_AS_DL = {
-  playRecognition: 'playRecognition', // helmet
-  power:           'strength',        // bare arm
-  blockShed:       'powerMoves',      // elbow pad
-  range:           'getOff',          // shoe
-  tackling:        'blockShed',       // arm sleeve
-  size:            'size',            // jersey chest
-  zoneInstincts:   'finesseMoves',    // glove
-  passRush:        'bend',            // knee
-  leadership:      'speed',           // sock
-}
-export const lbAsDlBuild = build => Object.fromEntries(Object.entries(LB_AS_DL).map(([lb, dl]) => [dl, build?.[lb]]))
-// The one line to swap when LB gets its own figure (then give LB its own zones in Silhouette.jsx and its own overlay)
-export const LB_SILHOUETTE = '/dl-silhouette.webp'
+// LB's own figure (public/lb-silhouette.png, colored by components/LBFigureOverlay.jsx, zones in Silhouette.jsx LB_ZONES).
+export const LB_SILHOUETTE = '/lb-silhouette.png'
 
 const _LBS = [
   // ARI

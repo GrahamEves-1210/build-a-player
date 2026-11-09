@@ -268,16 +268,18 @@ const DL_ATTRS = [
 ]
 
 // (in LB_ATTR's colors, data/lbs.js; on the DL figure for now, laid out the same way)
+// (on public/lb-silhouette.png, measured off the art's outline: each word on the widest solid stretch of its band,
+// from the thighs down on one leg, a size down; x is the % of the figure's box to move the word off centre)
 const LB_ATTRS = [
-  { label: 'Power',      col: '#fb923c' },
-  { label: 'Leadership', col: '#a78bfa' },
-  { label: 'Tackling',   col: '#f87171' },
-  { label: 'Pass Rush',  col: '#fbbf24', x: 8.6 },
-  { label: 'Play Rec',   col: '#e879f9' },
-  { label: 'Range',      col: '#60a5fa', x: 12.9, sm: true },
-  { label: 'Zone',       col: '#34d399', x: 16.7, sm: true },
-  { label: 'Size',       col: '#38bdf8', x: 18.3, xs: true, v: true },
-  { label: 'Shed',       col: '#2dd4bf', x: 22.4, xs: true },
+  { label: 'Power',      col: '#fb923c', x: 6 },
+  { label: 'Leadership', col: '#a78bfa', x: 3.7 },
+  { label: 'Tackling',   col: '#f87171', x: 3.9 },
+  { label: 'Pass Rush',  col: '#fbbf24', x: 3.7 },
+  { label: 'Play Rec',   col: '#e879f9', x: 4.3 },
+  { label: 'Range',      col: '#60a5fa', x: 17.7, sm: true },
+  { label: 'Zone',       col: '#34d399', x: -18.6, sm: true },
+  { label: 'Size',       col: '#38bdf8', x: -29.5, xs: true },
+  { label: 'Shed',       col: '#2dd4bf', x: 28.7, xs: true },
 ]
 
 const OL_ATTRS = [
@@ -320,7 +322,7 @@ const STACK_MASK = {
   te: { src: '/wr-silhouette.png',  scale: 1.18 },
   db: { src: '/db-silhouette.png',  scale: 1.05 },
   dl: { src: '/dl-silhouette.webp',  scale: 1 },
-  lb: { src: '/dl-silhouette.webp',  scale: 1 },   // LB placeholder: the DL figure until LB has its own
+  lb: { src: '/lb-silhouette.png',  scale: 1 },
   ol: { src: '/db-silhouette.png',  scale: 1.05 },
 }
 
@@ -423,7 +425,7 @@ export default function SplashScreen({ onStart, onDepthChart, onWiki }) {
           <img src="/db-silhouette.png" className="splash-figure" alt="" draggable={false}
             style={{ position: 'absolute', inset: 0, opacity: (position === 'db' || position === 'ol') ? 1 : 0, transform: 'scale(1.05)', transformOrigin: 'center center' }} />
           {/* (a large file: only fetched once DL is picked) */}
-          {(position === 'dl' || position === 'lb') && <img src="/dl-silhouette.webp" className="splash-figure" alt="" draggable={false} style={{ position: 'absolute', inset: 0, filter: 'none' }} />}
+          {(position === 'dl' || position === 'lb') && <img src={position === 'lb' ? '/lb-silhouette.png' : '/dl-silhouette.webp'} className="splash-figure" alt="" draggable={false} style={{ position: 'absolute', inset: 0, filter: 'none' }} />}
           <StackedSilhouette key={position} position={position} attrs={attrs} ready={phase >= 3} />
           <div className="splash-figure-glow" />
         </div>
